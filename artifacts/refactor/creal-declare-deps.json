@@ -452,6 +452,14 @@
     "pow_succ_gt_one": "CReal.pow_succ_gt_one",
     "pow_succ_lt_one": "CReal.pow_succ_lt_one",
     "pow_zero": "CReal.pow_zero",
+    "power_series.abs_pow_le": "CReal.abs_pow_le",
+    "power_series.cos_series_partial_is_power_series": "CReal.cosSeriesPartialIsPowerSeries",
+    "power_series.exp_series_partial_is_power_series": "CReal.expSeriesPartialIsPowerSeries",
+    "power_series.one_pow": "CReal.one_pow",
+    "power_series.power_series_cauchy_within_radius": "CReal.powerSeriesCauchyWithinRadius",
+    "power_series.power_series_converges_within_radius": "CReal.powerSeriesConvergesWithinRadius",
+    "power_series.power_series_partial": "CReal.powerSeriesPartial",
+    "power_series.power_series_term_radius_bound": "CReal.powerSeriesTermRadiusBound",
     "power_series_term": "CReal.powerSeriesTerm",
     "power_series_term_abs_le": "CReal.powerSeriesTerm_abs_le",
     "power_series_term_congr": "CReal.powerSeriesTerm_congr",
@@ -661,6 +669,7 @@
       "pi": 1,
       "polynomial": 1,
       "power": 4,
+      "power_series": 8,
       "product": 2,
       "ratio_test": 2,
       "rolle": 1,
@@ -819,6 +828,16 @@
         "power::declare_power_series_term",
         "power::declare_power_series_term_congr",
         "power::declare_power_series_term_abs_le"
+      ],
+      "power_series": [
+        "power_series::declare_abs_pow_le",
+        "power_series::declare_one_pow",
+        "power_series::declare_power_series_partial",
+        "power_series::declare_power_series_term_radius_bound",
+        "power_series::declare_power_series_cauchy_within_radius",
+        "power_series::declare_power_series_converges_within_radius",
+        "power_series::declare_exp_series_partial_is_power_series",
+        "power_series::declare_cos_series_partial_is_power_series"
       ],
       "product": [
         "product::declare_product",
@@ -1179,6 +1198,26 @@
         "index": 216,
         "label": "field_setoid_instance::declare_field_s_all",
         "module": "field_setoid_instance"
+      },
+      {
+        "index": 221,
+        "label": "power_series::declare_power_series_cauchy_within_radius",
+        "module": "power_series"
+      },
+      {
+        "index": 222,
+        "label": "power_series::declare_power_series_converges_within_radius",
+        "module": "power_series"
+      },
+      {
+        "index": 223,
+        "label": "power_series::declare_exp_series_partial_is_power_series",
+        "module": "power_series"
+      },
+      {
+        "index": 224,
+        "label": "power_series::declare_cos_series_partial_is_power_series",
+        "module": "power_series"
       }
     ],
     "table_gaps": []
@@ -1186,10 +1225,10 @@
   "produced_by": "scripts/creal-declare-deps.py",
   "schema": "creal-declare-deps/v1",
   "source": {
-    "creal_prelude_fields": 620,
-    "creal_rs_lines": 11548,
-    "fields_in_module_registries": 78,
-    "functions_indexed": 1970,
+    "creal_prelude_fields": 628,
+    "creal_rs_lines": 11596,
+    "fields_in_module_registries": 86,
+    "functions_indexed": 1994,
     "module_registries": {
       "completeness": "CompletenessNames",
       "cos_sign": "CosSignNames",
@@ -1206,10 +1245,11 @@
       "omniscience": "CRealOmniscienceNames",
       "pi": "PiNames",
       "polynomial": "PolynomialNames",
+      "power_series": "PowerSeriesNames",
       "ratio_test": "RatioTestNames"
     },
-    "modules_indexed": 52,
-    "steps": 217
+    "modules_indexed": 53,
+    "steps": 225
   },
   "steps": [
     {
@@ -15570,6 +15610,376 @@
       "module": "field_setoid_instance",
       "reachable_fns": 9,
       "run": "field_setoid_instance::declare_field_s_all"
+    },
+    {
+      "declared_provides": [
+        "power_series.abs_pow_le"
+      ],
+      "declared_requires": [
+        "abs",
+        "abs_le",
+        "abs_mul_le_of_bounds",
+        "add",
+        "add_comm",
+        "add_neg",
+        "add_zero",
+        "creal",
+        "equiv_refl",
+        "equiv_symm",
+        "equiv_trans",
+        "le",
+        "le_congr",
+        "le_of_lt",
+        "le_refl",
+        "le_trans",
+        "neg",
+        "neg_le_neg",
+        "one",
+        "pow",
+        "zero",
+        "zero_lt_one"
+      ],
+      "index": 217,
+      "label": "power_series::declare_abs_pow_le",
+      "measured_provides": [
+        "power_series.abs_pow_le"
+      ],
+      "measured_requires": [
+        "abs",
+        "abs_le",
+        "abs_mul_le_of_bounds",
+        "add",
+        "add_comm",
+        "add_neg",
+        "add_zero",
+        "creal",
+        "equiv_refl",
+        "equiv_symm",
+        "equiv_trans",
+        "le",
+        "le_congr",
+        "le_of_lt",
+        "le_refl",
+        "le_trans",
+        "neg",
+        "neg_le_neg",
+        "one",
+        "pow",
+        "zero",
+        "zero_lt_one"
+      ],
+      "module": "power_series",
+      "reachable_fns": 13,
+      "run": "power_series::declare_abs_pow_le"
+    },
+    {
+      "declared_provides": [
+        "power_series.one_pow"
+      ],
+      "declared_requires": [
+        "equiv",
+        "equiv_refl",
+        "equiv_trans",
+        "mul",
+        "mul_one",
+        "one",
+        "pow"
+      ],
+      "index": 218,
+      "label": "power_series::declare_one_pow",
+      "measured_provides": [
+        "power_series.one_pow"
+      ],
+      "measured_requires": [
+        "equiv",
+        "equiv_refl",
+        "equiv_trans",
+        "mul",
+        "mul_one",
+        "one",
+        "pow"
+      ],
+      "module": "power_series",
+      "reachable_fns": 5,
+      "run": "power_series::declare_one_pow"
+    },
+    {
+      "declared_provides": [
+        "power_series.power_series_partial"
+      ],
+      "declared_requires": [
+        "creal",
+        "power_series_term",
+        "sum_range"
+      ],
+      "index": 219,
+      "label": "power_series::declare_power_series_partial",
+      "measured_provides": [
+        "power_series.power_series_partial"
+      ],
+      "measured_requires": [
+        "creal",
+        "power_series_term",
+        "sum_range"
+      ],
+      "module": "power_series",
+      "reachable_fns": 3,
+      "run": "power_series::declare_power_series_partial"
+    },
+    {
+      "declared_provides": [
+        "power_series.power_series_term_radius_bound"
+      ],
+      "declared_requires": [
+        "abs",
+        "abs_mul_le_of_bounds",
+        "creal",
+        "equiv_refl",
+        "equiv_symm",
+        "equiv_trans",
+        "le",
+        "le_congr",
+        "le_refl",
+        "le_trans",
+        "mul",
+        "mul_assoc",
+        "mul_comm",
+        "mul_congr",
+        "mul_le_mul_of_nonneg_left",
+        "pow",
+        "pow_mul_distrib",
+        "pow_nonneg",
+        "power_series.abs_pow_le",
+        "power_series_term",
+        "zero"
+      ],
+      "index": 220,
+      "label": "power_series::declare_power_series_term_radius_bound",
+      "measured_provides": [
+        "power_series.power_series_term_radius_bound"
+      ],
+      "measured_requires": [
+        "abs",
+        "abs_mul_le_of_bounds",
+        "creal",
+        "equiv_refl",
+        "equiv_symm",
+        "equiv_trans",
+        "le",
+        "le_congr",
+        "le_refl",
+        "le_trans",
+        "mul",
+        "mul_assoc",
+        "mul_comm",
+        "mul_congr",
+        "mul_le_mul_of_nonneg_left",
+        "pow",
+        "pow_mul_distrib",
+        "pow_nonneg",
+        "power_series.abs_pow_le",
+        "power_series_term",
+        "zero"
+      ],
+      "module": "power_series",
+      "reachable_fns": 8,
+      "run": "power_series::declare_power_series_term_radius_bound"
+    },
+    {
+      "declared_provides": [
+        "power_series.power_series_cauchy_within_radius"
+      ],
+      "declared_requires": [
+        "abs",
+        "add",
+        "cauchy",
+        "le",
+        "lt",
+        "mul",
+        "neg",
+        "one",
+        "pos_bound",
+        "pow",
+        "power_series.power_series_partial",
+        "power_series.power_series_term_radius_bound",
+        "power_series_term",
+        "ratio_test.geom_scaled_cauchy_of_lt",
+        "sum_range_cauchy_of_dominated",
+        "zero"
+      ],
+      "index": 221,
+      "label": "power_series::declare_power_series_cauchy_within_radius",
+      "measured_provides": [
+        "power_series.power_series_cauchy_within_radius"
+      ],
+      "measured_requires": [
+        "abs",
+        "add",
+        "cauchy",
+        "le",
+        "lt",
+        "mul",
+        "neg",
+        "one",
+        "pos_bound",
+        "pow",
+        "power_series.power_series_partial",
+        "power_series.power_series_term_radius_bound",
+        "power_series_term",
+        "ratio_test.geom_scaled_cauchy_of_lt",
+        "sum_range_cauchy_of_dominated",
+        "zero"
+      ],
+      "module": "power_series",
+      "reachable_fns": 13,
+      "run": "power_series::declare_power_series_cauchy_within_radius"
+    },
+    {
+      "declared_provides": [
+        "power_series.power_series_converges_within_radius"
+      ],
+      "declared_requires": [
+        "abs",
+        "add",
+        "converges",
+        "converges_of_cauchy",
+        "creal",
+        "le",
+        "lt",
+        "mul",
+        "neg",
+        "one",
+        "pos_bound",
+        "pow",
+        "power_series.power_series_partial",
+        "power_series.power_series_term_radius_bound",
+        "power_series_term",
+        "ratio_test.geom_scaled_cauchy_of_lt",
+        "sum_range_cauchy_of_dominated",
+        "zero"
+      ],
+      "index": 222,
+      "label": "power_series::declare_power_series_converges_within_radius",
+      "measured_provides": [
+        "power_series.power_series_converges_within_radius"
+      ],
+      "measured_requires": [
+        "abs",
+        "add",
+        "converges",
+        "converges_of_cauchy",
+        "creal",
+        "le",
+        "lt",
+        "mul",
+        "neg",
+        "one",
+        "pos_bound",
+        "pow",
+        "power_series.power_series_partial",
+        "power_series.power_series_term_radius_bound",
+        "power_series_term",
+        "ratio_test.geom_scaled_cauchy_of_lt",
+        "sum_range_cauchy_of_dominated",
+        "zero"
+      ],
+      "module": "power_series",
+      "reachable_fns": 15,
+      "run": "power_series::declare_power_series_converges_within_radius"
+    },
+    {
+      "declared_provides": [
+        "power_series.exp_series_partial_is_power_series"
+      ],
+      "declared_requires": [
+        "equiv",
+        "equiv_refl",
+        "equiv_symm",
+        "equiv_trans",
+        "exp_series_partial",
+        "exp_term",
+        "mul",
+        "mul_congr",
+        "mul_one",
+        "one",
+        "pow",
+        "power_series.one_pow",
+        "power_series.power_series_partial",
+        "power_series_term",
+        "sum_range_congr"
+      ],
+      "index": 223,
+      "label": "power_series::declare_exp_series_partial_is_power_series",
+      "measured_provides": [
+        "power_series.exp_series_partial_is_power_series"
+      ],
+      "measured_requires": [
+        "equiv",
+        "equiv_refl",
+        "equiv_symm",
+        "equiv_trans",
+        "exp_series_partial",
+        "exp_term",
+        "mul",
+        "mul_congr",
+        "mul_one",
+        "one",
+        "pow",
+        "power_series.one_pow",
+        "power_series.power_series_partial",
+        "power_series_term",
+        "sum_range_congr"
+      ],
+      "module": "power_series",
+      "reachable_fns": 7,
+      "run": "power_series::declare_exp_series_partial_is_power_series"
+    },
+    {
+      "declared_provides": [
+        "power_series.cos_series_partial_is_power_series"
+      ],
+      "declared_requires": [
+        "cos_series_partial",
+        "cos_term",
+        "equiv",
+        "equiv_refl",
+        "equiv_symm",
+        "equiv_trans",
+        "mul",
+        "mul_congr",
+        "mul_one",
+        "one",
+        "pow",
+        "power_series.one_pow",
+        "power_series.power_series_partial",
+        "power_series_term",
+        "sum_range_congr"
+      ],
+      "index": 224,
+      "label": "power_series::declare_cos_series_partial_is_power_series",
+      "measured_provides": [
+        "power_series.cos_series_partial_is_power_series"
+      ],
+      "measured_requires": [
+        "cos_series_partial",
+        "cos_term",
+        "equiv",
+        "equiv_refl",
+        "equiv_symm",
+        "equiv_trans",
+        "mul",
+        "mul_congr",
+        "mul_one",
+        "one",
+        "pow",
+        "power_series.one_pow",
+        "power_series.power_series_partial",
+        "power_series_term",
+        "sum_range_congr"
+      ],
+      "module": "power_series",
+      "reachable_fns": 7,
+      "run": "power_series::declare_cos_series_partial_is_power_series"
     }
   ]
 }

@@ -296,6 +296,24 @@ fn every_named_complex_declaration_is_checked_and_footprint_free() {
             "Complex.factorQuotient_succ_eq",
             p.poly.factor_quotient_succ_eq,
         ),
+        ("Complex.abs_zero", p.deriv.abs_zero),
+        ("Complex.InDisc", p.deriv.in_disc),
+        ("Complex.HasDerivativeOn", p.deriv.has_derivative_on),
+        ("Complex.HasDerivativeOn.mk", p.deriv.hd_mk),
+        ("Complex.HasDerivativeOn.rec", p.deriv.hd_rec),
+        ("Complex.HasDerivativeOn.modulus", p.deriv.hd_modulus),
+        ("Complex.HasDerivativeOn.spec", p.deriv.hd_spec),
+        ("Complex.hasDerivative_const", p.deriv.has_derivative_const),
+        ("Complex.hasDerivative_id", p.deriv.has_derivative_id),
+        ("Complex.hasDerivative_neg", p.deriv.has_derivative_neg),
+        ("Complex.hasDerivative_add", p.deriv.has_derivative_add),
+        ("Complex.HolomorphicOn", p.deriv.holomorphic_on),
+        ("Complex.holomorphicDeriv", p.deriv.holomorphic_deriv),
+        ("Complex.holomorphic_spec", p.deriv.holomorphic_spec),
+        ("Complex.holomorphic_const", p.deriv.holomorphic_const),
+        ("Complex.holomorphic_id", p.deriv.holomorphic_id),
+        ("Complex.holomorphic_neg", p.deriv.holomorphic_neg),
+        ("Complex.holomorphic_add", p.deriv.holomorphic_add),
     ];
     // COVERAGE, checked against the ENVIRONMENT rather than against `named`
     // itself.
@@ -3008,7 +3026,7 @@ fn factor_quotient_succ_eq_matches_the_correction_term_at_a_nonzero_middle_coeff
 /// steps downstream. Recount by re-running the extraction described in
 /// `docs/research/11-design-review/2026-08-27-prelude-build-spike.md`, never
 /// by hand-editing this list to make a failure go away.
-const EXPECTED_STEP_ORDER: [&str; 92] = [
+const EXPECTED_STEP_ORDER: [&str; 93] = [
     "declare_carrier",
     "declare_projections",
     "declare_equiv",
@@ -3101,6 +3119,7 @@ const EXPECTED_STEP_ORDER: [&str; 92] = [
     "declare_abs_add_le",
     "declare_abs_neg",
     "declare_abs_le_add_abs_sub",
+    "deriv::declare_derivative",
 ];
 
 /// `STEPS` (the data-driven build order that replaced the hand-written call
@@ -3192,5 +3211,778 @@ fn order_violation_reports_missing_provider_as_table_bug() {
     assert_eq!(
         violation.provider, None,
         "no step in this table provides `equiv`, so provider must be None"
+    );
+}
+
+// ---------------------------------------------------------------------------
+// `complex/deriv.rs`: the complex derivative on a disc
+// ---------------------------------------------------------------------------
+
+/// `Complex.abs_zero` is stated `CReal.Equiv (Complex.abs Complex.zero)
+/// CReal.zero` — the value on the right is `CReal.zero`, not `CReal.one`
+/// (which is what `Complex.abs_one` says of a DIFFERENT argument, and is the
+/// mistake a copy of that proof would make).
+#[test]
+fn abs_zero_is_stated_as_creal_zero() {
+    let (kernel, p) = built();
+    let ty = match kernel
+        .environment()
+        .get(p.deriv.abs_zero)
+        .expect("Complex.abs_zero must be declared")
+    {
+        Declaration::Theorem { ty, .. } => kernel.render_lean(*ty),
+        other => panic!("{other:?} is not a theorem"),
+    };
+    assert!(
+        ty.contains("Complex.abs Complex.zero"),
+        "abs_zero's subject must be `abs zero`: {ty}"
+    );
+    assert!(
+        ty.contains("CReal.zero") && !ty.contains("CReal.one"),
+        "abs_zero's value must be CReal.zero and nothing else: {ty}"
+    );
+}
+
+/// Negative control for [`abs_zero_is_stated_as_creal_zero`]: the SAME proof
+/// term must be REFUSED against `Equiv (abs zero) CReal.one`. Without this the
+/// test above only reads a rendering, and a checker that never rejects is
+/// worse than no checker.
+#[test]
+fn abs_zero_value_is_load_bearing() {
+    let (mut kernel, p) = built();
+    let anon = kernel.anon();
+    let proof = kernel.const_(p.deriv.abs_zero, vec![]);
+
+    let zero_z = kernel.const_(p.zero, vec![]);
+    let abs_name = kernel.const_(p.abs, vec![]);
+    let abs_zero_z = kernel.app(abs_name, zero_z);
+    let one_real = kernel.const_(p.creal.one, vec![]);
+    let equiv = kernel.const_(p.creal.equiv, vec![]);
+    let partial = kernel.app(equiv, abs_zero_z);
+    let wrong = kernel.app(partial, one_real);
+
+    let name = kernel.name_str(anon, "Check.abs_zero_is_one");
+    let admitted = kernel.add_declaration(Declaration::Theorem {
+        name,
+        uparams: vec![],
+        ty: wrong,
+        value: proof,
+    });
+    assert!(
+        admitted.is_err(),
+        "abs_zero's proof must NOT check against `Equiv (abs zero) CReal.one`"
+    );
+}
+
+/// `Complex.InDisc c r z` unfolds to EXACTLY
+/// `CReal.le (Complex.abs (add z (neg c))) r`, checked at FREE VARIABLES.
+///
+/// The proof term is the identity `fun c r z h => h`, which type-checks
+/// precisely when the kernel's δ-unfolding of `InDisc` is the term written on
+/// the right — so this is an evaluation test on the definition, not on any
+/// theorem about it.
+///
+/// **It has to be symbolic.** The first version of this test used closed
+/// arguments (`centre one, radius 1, point zero`) and its negative control
+/// PASSED THE WRONG CLAIM: `|z − c| = |c − z|` always, and at closed arguments
+/// the kernel simply COMPUTES both moduli to the same `CReal` and accepts the
+/// exchanged form. No closed instance can distinguish the argument order. At
+/// free variables the equality of the two moduli is a theorem rather than a
+/// reduction, so the kernel must refuse — see
+/// [`in_disc_argument_order_is_load_bearing`].
+#[test]
+fn in_disc_unfolds_to_the_distance_from_the_centre() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+
+    let (mut kernel, p) = built();
+    let anon = kernel.anon();
+    let mut d = IntDev::new(&mut kernel, p.creal.rat.int);
+    let creal = p.creal;
+    let carrier = d.kernel().const_(p.complex, vec![]);
+    let real = d.kernel().const_(creal.creal, vec![]);
+
+    let c_fv = d.fresh_fvar();
+    let c = d.kernel().fvar(c_fv);
+    let r_fv = d.fresh_fvar();
+    let r = d.kernel().fvar(r_fv);
+    let z_fv = d.fresh_fvar();
+    let z = d.kernel().fvar(z_fv);
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+
+    let hypothesis = d.const_app(p.deriv.in_disc, &[c, r, z]);
+    let neg_c = d.const_app(p.neg, &[c]);
+    let diff = d.const_app(p.add, &[z, neg_c]);
+    let abs_diff = d.const_app(p.abs, &[diff]);
+    let claim = d.const_app(creal.le, &[abs_diff, r]);
+
+    let value = {
+        let with_h = d.lam_fv(h_fv, hypothesis, h);
+        let with_z = d.lam_fv(z_fv, carrier, with_h);
+        let with_r = d.lam_fv(r_fv, real, with_z);
+        d.lam_fv(c_fv, carrier, with_r)
+    };
+    let ty = {
+        let with_h = d.arrow(hypothesis, claim);
+        let with_z = d.pi_fv(z_fv, carrier, with_h);
+        let with_r = d.pi_fv(r_fv, real, with_z);
+        d.pi_fv(c_fv, carrier, with_r)
+    };
+
+    let name = d
+        .kernel()
+        .name_str(anon, "Check.in_disc_unfolds_to_distance");
+    let admitted = d.kernel().add_declaration(Declaration::Theorem {
+        name,
+        uparams: vec![],
+        ty,
+        value,
+    });
+    assert!(
+        admitted.is_ok(),
+        "InDisc c r z must unfold to EXACTLY CReal.le (abs (add z (neg c))) r: \
+         {admitted:?}"
+    );
+}
+
+/// Negative control for [`in_disc_unfolds_to_the_distance_from_the_centre`]:
+/// the SAME identity proof must be REFUSED against
+/// `CReal.le (Complex.abs (add c (neg z))) r` — centre and point exchanged.
+///
+/// Without this, `InDisc c r z := CReal.le (abs (c − z)) r` passes the positive
+/// test above, and every derivative witness in the module would still build,
+/// because nothing else in `deriv.rs` ever unfolds `InDisc`.
+#[test]
+fn in_disc_argument_order_is_load_bearing() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+
+    let (mut kernel, p) = built();
+    let anon = kernel.anon();
+    let mut d = IntDev::new(&mut kernel, p.creal.rat.int);
+    let creal = p.creal;
+    let carrier = d.kernel().const_(p.complex, vec![]);
+    let real = d.kernel().const_(creal.creal, vec![]);
+
+    let c_fv = d.fresh_fvar();
+    let c = d.kernel().fvar(c_fv);
+    let r_fv = d.fresh_fvar();
+    let r = d.kernel().fvar(r_fv);
+    let z_fv = d.fresh_fvar();
+    let z = d.kernel().fvar(z_fv);
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+
+    let hypothesis = d.const_app(p.deriv.in_disc, &[c, r, z]);
+    // Exchanged: `abs (c - z)` where the definition says `abs (z - c)`.
+    let neg_z = d.const_app(p.neg, &[z]);
+    let diff = d.const_app(p.add, &[c, neg_z]);
+    let abs_diff = d.const_app(p.abs, &[diff]);
+    let claim = d.const_app(creal.le, &[abs_diff, r]);
+
+    let value = {
+        let with_h = d.lam_fv(h_fv, hypothesis, h);
+        let with_z = d.lam_fv(z_fv, carrier, with_h);
+        let with_r = d.lam_fv(r_fv, real, with_z);
+        d.lam_fv(c_fv, carrier, with_r)
+    };
+    let ty = {
+        let with_h = d.arrow(hypothesis, claim);
+        let with_z = d.pi_fv(z_fv, carrier, with_h);
+        let with_r = d.pi_fv(r_fv, real, with_z);
+        d.pi_fv(c_fv, carrier, with_r)
+    };
+
+    let name = d
+        .kernel()
+        .name_str(anon, "Check.in_disc_arguments_exchanged");
+    let admitted = d.kernel().add_declaration(Declaration::Theorem {
+        name,
+        uparams: vec![],
+        ty,
+        value,
+    });
+    assert!(
+        admitted.is_err(),
+        "`abs (z - c)` and `abs (c - z)` are EQUAL but not definitionally so at \
+         free variables -- the kernel must refuse the exchanged unfolding"
+    );
+}
+
+/// The modulus is **data**: `Complex.HasDerivativeOn` is an `Inductive` in
+/// `Type 0` (not a `Prop`), and `Complex.HasDerivativeOn.modulus` is a
+/// `Definition` that eliminates a witness into `Nat → Nat`.
+///
+/// This is the property the whole design rests on (`creal/derivative.rs`'s
+/// module documentation: the witness cannot be pulled out of an `Exists` and
+/// used to build anything in `Type`), so it is read out of the kernel rather
+/// than assumed from the source.
+#[test]
+fn has_derivative_on_carries_its_modulus_as_data() {
+    let (kernel, p) = built();
+    assert!(
+        matches!(
+            kernel
+                .environment()
+                .get(p.deriv.has_derivative_on)
+                .expect("Complex.HasDerivativeOn must be declared"),
+            Declaration::Inductive { .. }
+        ),
+        "HasDerivativeOn must be an inductive"
+    );
+    let modulus_ty = match kernel
+        .environment()
+        .get(p.deriv.hd_modulus)
+        .expect("Complex.HasDerivativeOn.modulus must be declared")
+    {
+        Declaration::Definition { ty, .. } => kernel.render_lean(*ty),
+        other => panic!("{other:?} is not a definition"),
+    };
+    assert!(
+        modulus_ty.contains(": AxNat) -> AxNat"),
+        "modulus must land in `Nat -> Nat`, which is what makes it data. \
+         (`Nat -> Nat` renders as `(x : AxNat) -> AxNat`, not `AxNat -> AxNat`; \
+         an earlier version of this assertion looked for the latter and failed \
+         on a correct declaration.) {modulus_ty}"
+    );
+    assert!(
+        modulus_ty.contains("Complex.HasDerivativeOn"),
+        "modulus must consume a HasDerivativeOn witness: {modulus_ty}"
+    );
+}
+
+/// The spec's output bound is `(1/(e+1)) · |y − x|` and its input hypothesis
+/// is `|y − x| ≤ 1/(modulus e + 1)` — read out of
+/// `Complex.HasDerivativeOn.spec`'s own rendered type, so a bound that stopped
+/// scaling with `|y − x|` (which would make `hasDerivative_id` unprovable but
+/// `hasDerivative_const` still provable) fails here.
+#[test]
+fn has_derivative_spec_is_the_scaled_error_bound() {
+    let (kernel, p) = built();
+    let ty = match kernel
+        .environment()
+        .get(p.deriv.hd_spec)
+        .expect("Complex.HasDerivativeOn.spec must be declared")
+    {
+        Declaration::Theorem { ty, .. } => kernel.render_lean(*ty),
+        other => panic!("{other:?} is not a theorem"),
+    };
+    assert!(
+        ty.contains("Complex.InDisc"),
+        "the spec's range hypotheses must be disc memberships: {ty}"
+    );
+    assert!(
+        ty.contains("Rat.natDivSucc"),
+        "the spec's bounds must be `1/(n+1)` rationals: {ty}"
+    );
+    assert!(
+        ty.contains("CReal.mul") && ty.contains("Complex.abs"),
+        "the output bound must be a PRODUCT with the complex modulus of the \
+         increment, not a bare rational: {ty}"
+    );
+}
+
+/// A concrete instantiation of `Complex.hasDerivative_const` at the constant
+/// `Complex.I`, on the unit disc about the origin: the derivative of a
+/// constant is `Complex.zero`, admitted as its own checked theorem.
+#[test]
+fn has_derivative_const_concrete_instantiation() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+
+    let (mut kernel, p) = built();
+    let anon = kernel.anon();
+    let mut d = IntDev::new(&mut kernel, p.creal.rat.int);
+
+    let i_c = d.kernel().const_(p.i, vec![]);
+    let zero_z = d.kernel().const_(p.zero, vec![]);
+    let one_real = d.kernel().const_(p.creal.one, vec![]);
+    let carrier = d.kernel().const_(p.complex, vec![]);
+
+    let proof = d.lemma(p.deriv.has_derivative_const, &[i_c, zero_z, one_real]);
+
+    let const_i = {
+        let fv = d.fresh_fvar();
+        d.lam_fv(fv, carrier, i_c)
+    };
+    let const_zero = {
+        let fv = d.fresh_fvar();
+        d.lam_fv(fv, carrier, zero_z)
+    };
+    let ty = d.const_app(
+        p.deriv.has_derivative_on,
+        &[const_i, const_zero, zero_z, one_real],
+    );
+
+    let name = d.kernel().name_str(anon, "Check.hasDerivative_const_at_I");
+    let admitted = d.kernel().add_declaration(Declaration::Theorem {
+        name,
+        uparams: vec![],
+        ty,
+        value: proof,
+    });
+    assert!(
+        admitted.is_ok(),
+        "hasDerivative_const at I must give EXACTLY \
+         HasDerivativeOn (fun _ => I) (fun _ => zero) zero 1: {admitted:?}"
+    );
+}
+
+/// Negative control for [`has_derivative_const_concrete_instantiation`]: the
+/// SAME proof must be REFUSED when the claimed derivative is `Complex.one`
+/// instead of `Complex.zero`.
+#[test]
+fn has_derivative_const_derivative_value_is_load_bearing() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+
+    let (mut kernel, p) = built();
+    let anon = kernel.anon();
+    let mut d = IntDev::new(&mut kernel, p.creal.rat.int);
+
+    let i_c = d.kernel().const_(p.i, vec![]);
+    let zero_z = d.kernel().const_(p.zero, vec![]);
+    let one_z = d.kernel().const_(p.one, vec![]);
+    let one_real = d.kernel().const_(p.creal.one, vec![]);
+    let carrier = d.kernel().const_(p.complex, vec![]);
+
+    let proof = d.lemma(p.deriv.has_derivative_const, &[i_c, zero_z, one_real]);
+
+    let const_i = {
+        let fv = d.fresh_fvar();
+        d.lam_fv(fv, carrier, i_c)
+    };
+    let const_one = {
+        let fv = d.fresh_fvar();
+        d.lam_fv(fv, carrier, one_z)
+    };
+    let ty = d.const_app(
+        p.deriv.has_derivative_on,
+        &[const_i, const_one, zero_z, one_real],
+    );
+
+    let name = d
+        .kernel()
+        .name_str(anon, "Check.hasDerivative_const_derivative_is_one");
+    let admitted = d.kernel().add_declaration(Declaration::Theorem {
+        name,
+        uparams: vec![],
+        ty,
+        value: proof,
+    });
+    assert!(
+        admitted.is_err(),
+        "a constant's derivative is zero, not one -- the kernel must refuse"
+    );
+}
+
+/// A concrete instantiation of `Complex.hasDerivative_id` on the unit disc
+/// about the origin: the identity's derivative is the constant `Complex.one`.
+#[test]
+fn has_derivative_id_concrete_instantiation() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+
+    let (mut kernel, p) = built();
+    let anon = kernel.anon();
+    let mut d = IntDev::new(&mut kernel, p.creal.rat.int);
+
+    let zero_z = d.kernel().const_(p.zero, vec![]);
+    let one_z = d.kernel().const_(p.one, vec![]);
+    let one_real = d.kernel().const_(p.creal.one, vec![]);
+    let carrier = d.kernel().const_(p.complex, vec![]);
+
+    let proof = d.lemma(p.deriv.has_derivative_id, &[zero_z, one_real]);
+
+    let id_fn = {
+        let fv = d.fresh_fvar();
+        let z = d.kernel().fvar(fv);
+        d.lam_fv(fv, carrier, z)
+    };
+    let const_one = {
+        let fv = d.fresh_fvar();
+        d.lam_fv(fv, carrier, one_z)
+    };
+    let ty = d.const_app(
+        p.deriv.has_derivative_on,
+        &[id_fn, const_one, zero_z, one_real],
+    );
+
+    let name = d
+        .kernel()
+        .name_str(anon, "Check.hasDerivative_id_on_unit_disc");
+    let admitted = d.kernel().add_declaration(Declaration::Theorem {
+        name,
+        uparams: vec![],
+        ty,
+        value: proof,
+    });
+    assert!(
+        admitted.is_ok(),
+        "hasDerivative_id must give EXACTLY \
+         HasDerivativeOn (fun z => z) (fun _ => one) zero 1: {admitted:?}"
+    );
+}
+
+/// `Complex.hasDerivative_add` composed with two `hasDerivative_const`
+/// witnesses: the sum rule applied to `I` and `one` must land on
+/// `HasDerivativeOn (fun z => add I one) (fun z => add zero zero) zero 1`.
+///
+/// This is the only test here that exercises the sum rule's actual content —
+/// its combined modulus, its two `natDivSucc_antitone` steps and its
+/// bound fusion all run inside the term the kernel re-checks.
+#[test]
+fn has_derivative_add_composes_two_constants() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+
+    let (mut kernel, p) = built();
+    let anon = kernel.anon();
+    let mut d = IntDev::new(&mut kernel, p.creal.rat.int);
+
+    let i_c = d.kernel().const_(p.i, vec![]);
+    let one_z = d.kernel().const_(p.one, vec![]);
+    let zero_z = d.kernel().const_(p.zero, vec![]);
+    let one_real = d.kernel().const_(p.creal.one, vec![]);
+    let carrier = d.kernel().const_(p.complex, vec![]);
+
+    let const_of = |d: &mut IntDev<'_>, v: crate::ExprId| {
+        let fv = d.fresh_fvar();
+        d.lam_fv(fv, carrier, v)
+    };
+    let const_i = const_of(&mut d, i_c);
+    let const_one = const_of(&mut d, one_z);
+    let const_zero_a = const_of(&mut d, zero_z);
+    let const_zero_b = const_of(&mut d, zero_z);
+
+    let hf = d.lemma(p.deriv.has_derivative_const, &[i_c, zero_z, one_real]);
+    let hg = d.lemma(p.deriv.has_derivative_const, &[one_z, zero_z, one_real]);
+    let proof = d.lemma(
+        p.deriv.has_derivative_add,
+        &[
+            const_i,
+            const_zero_a,
+            const_one,
+            const_zero_b,
+            zero_z,
+            one_real,
+            hf,
+            hg,
+        ],
+    );
+
+    let sum_fn = {
+        let fv = d.fresh_fvar();
+        let z = d.kernel().fvar(fv);
+        let a = d.apply(const_i, &[z]);
+        let b = d.apply(const_one, &[z]);
+        let body = d.const_app(p.add, &[a, b]);
+        d.lam_fv(fv, carrier, body)
+    };
+    let sum_deriv = {
+        let fv = d.fresh_fvar();
+        let z = d.kernel().fvar(fv);
+        let a = d.apply(const_zero_a, &[z]);
+        let b = d.apply(const_zero_b, &[z]);
+        let body = d.const_app(p.add, &[a, b]);
+        d.lam_fv(fv, carrier, body)
+    };
+    let ty = d.const_app(
+        p.deriv.has_derivative_on,
+        &[sum_fn, sum_deriv, zero_z, one_real],
+    );
+
+    let name = d
+        .kernel()
+        .name_str(anon, "Check.hasDerivative_add_of_two_constants");
+    let admitted = d.kernel().add_declaration(Declaration::Theorem {
+        name,
+        uparams: vec![],
+        ty,
+        value: proof,
+    });
+    assert!(
+        admitted.is_ok(),
+        "hasDerivative_add of two constant witnesses must give the pointwise \
+         sum and the pointwise sum of derivatives: {admitted:?}"
+    );
+}
+
+/// `Complex.hasDerivative_neg` applied to `hasDerivative_id`: the derivative
+/// of `fun z => neg z` is the constant `neg one`.
+#[test]
+fn has_derivative_neg_composes_with_id() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+
+    let (mut kernel, p) = built();
+    let anon = kernel.anon();
+    let mut d = IntDev::new(&mut kernel, p.creal.rat.int);
+
+    let zero_z = d.kernel().const_(p.zero, vec![]);
+    let one_z = d.kernel().const_(p.one, vec![]);
+    let one_real = d.kernel().const_(p.creal.one, vec![]);
+    let carrier = d.kernel().const_(p.complex, vec![]);
+
+    let id_fn = {
+        let fv = d.fresh_fvar();
+        let z = d.kernel().fvar(fv);
+        d.lam_fv(fv, carrier, z)
+    };
+    let const_one = {
+        let fv = d.fresh_fvar();
+        d.lam_fv(fv, carrier, one_z)
+    };
+    let hid = d.lemma(p.deriv.has_derivative_id, &[zero_z, one_real]);
+    let proof = d.lemma(
+        p.deriv.has_derivative_neg,
+        &[id_fn, const_one, zero_z, one_real, hid],
+    );
+
+    let neg_id = {
+        let fv = d.fresh_fvar();
+        let z = d.kernel().fvar(fv);
+        let inner = d.apply(id_fn, &[z]);
+        let body = d.const_app(p.neg, &[inner]);
+        d.lam_fv(fv, carrier, body)
+    };
+    let neg_one_fn = {
+        let fv = d.fresh_fvar();
+        let z = d.kernel().fvar(fv);
+        let inner = d.apply(const_one, &[z]);
+        let body = d.const_app(p.neg, &[inner]);
+        d.lam_fv(fv, carrier, body)
+    };
+    let ty = d.const_app(
+        p.deriv.has_derivative_on,
+        &[neg_id, neg_one_fn, zero_z, one_real],
+    );
+
+    let name = d.kernel().name_str(anon, "Check.hasDerivative_neg_of_id");
+    let admitted = d.kernel().add_declaration(Declaration::Theorem {
+        name,
+        uparams: vec![],
+        ty,
+        value: proof,
+    });
+    assert!(
+        admitted.is_ok(),
+        "hasDerivative_neg of the identity witness must give \
+         HasDerivativeOn (fun z => neg z) (fun z => neg one) zero 1: {admitted:?}"
+    );
+}
+
+/// `Complex.HolomorphicOn` is a `Sigma`, not an `Exists`, and its second
+/// component is the derivative predicate — read out of the kernel's own
+/// rendering of the definition's value.
+///
+/// This is the design point ADR-1642 records: `Exists`'s predicate must land
+/// in `Prop` and `HasDerivativeOn` is in `Type 0`, so the ∃-form is not
+/// available at all — and the `Sigma` is the stronger statement anyway,
+/// because it hands the derivative back.
+#[test]
+fn holomorphic_on_is_a_sigma_over_the_derivative_predicate() {
+    let (kernel, p) = built();
+    let (ty, value) = match kernel
+        .environment()
+        .get(p.deriv.holomorphic_on)
+        .expect("Complex.HolomorphicOn must be declared")
+    {
+        Declaration::Definition { ty, value, .. } => {
+            (kernel.render_lean(*ty), kernel.render_lean(*value))
+        }
+        other => panic!("{other:?} is not a definition"),
+    };
+    assert!(
+        value.contains("Sigma") && !value.contains("Exists"),
+        "HolomorphicOn must be a Sigma, never an Exists: {value}"
+    );
+    assert!(
+        value.contains("Complex.HasDerivativeOn"),
+        "HolomorphicOn's second component must be the derivative predicate: {value}"
+    );
+    assert!(
+        ty.contains("Complex") && ty.contains("CReal"),
+        "HolomorphicOn must be indexed by a centre and a radius: {ty}"
+    );
+}
+
+/// The `Sigma` a `holomorphic_*` constructor builds carries the RIGHT
+/// derivative, not merely some derivative: `holomorphic_spec` applied to
+/// `holomorphic_id` must check against
+/// `HasDerivativeOn (fun z => z) (fun _ => one) zero 1`.
+///
+/// `holomorphic_spec`'s own type mentions
+/// `holomorphicDeriv F c r (holomorphic_id c r)`, so admitting it at the
+/// literal `fun _ => one` is exactly the ι-reduction of `Sigma.fst` on the
+/// constructor. Nothing else in this file pins which function the pair stores.
+#[test]
+fn holomorphic_id_stores_the_constant_one_as_its_derivative() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+
+    let (mut kernel, p) = built();
+    let anon = kernel.anon();
+    let mut d = IntDev::new(&mut kernel, p.creal.rat.int);
+
+    let zero_z = d.kernel().const_(p.zero, vec![]);
+    let one_z = d.kernel().const_(p.one, vec![]);
+    let one_real = d.kernel().const_(p.creal.one, vec![]);
+    let carrier = d.kernel().const_(p.complex, vec![]);
+
+    let id_fn = {
+        let fv = d.fresh_fvar();
+        let z = d.kernel().fvar(fv);
+        d.lam_fv(fv, carrier, z)
+    };
+    let one_fn = {
+        let fv = d.fresh_fvar();
+        d.lam_fv(fv, carrier, one_z)
+    };
+
+    let holo = d.lemma(p.deriv.holomorphic_id, &[zero_z, one_real]);
+    let proof = d.lemma(p.deriv.holomorphic_spec, &[id_fn, zero_z, one_real, holo]);
+    let ty = d.const_app(
+        p.deriv.has_derivative_on,
+        &[id_fn, one_fn, zero_z, one_real],
+    );
+
+    let name = d
+        .kernel()
+        .name_str(anon, "Check.holomorphic_id_derivative_is_one");
+    let admitted = d.kernel().add_declaration(Declaration::Theorem {
+        name,
+        uparams: vec![],
+        ty,
+        value: proof,
+    });
+    assert!(
+        admitted.is_ok(),
+        "holomorphic_spec at holomorphic_id must reduce to the constant `one`: \
+         {admitted:?}"
+    );
+}
+
+/// Negative control for
+/// [`holomorphic_id_stores_the_constant_one_as_its_derivative`]: the SAME
+/// proof must be REFUSED when the claimed stored derivative is
+/// `fun _ => Complex.zero`.
+///
+/// Without this, a `holomorphic_id` that packed the wrong function into its
+/// pair would pass — the pair's TYPE does not mention which function it is.
+#[test]
+fn holomorphic_id_stored_derivative_is_load_bearing() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+
+    let (mut kernel, p) = built();
+    let anon = kernel.anon();
+    let mut d = IntDev::new(&mut kernel, p.creal.rat.int);
+
+    let zero_z = d.kernel().const_(p.zero, vec![]);
+    let one_real = d.kernel().const_(p.creal.one, vec![]);
+    let carrier = d.kernel().const_(p.complex, vec![]);
+
+    let id_fn = {
+        let fv = d.fresh_fvar();
+        let z = d.kernel().fvar(fv);
+        d.lam_fv(fv, carrier, z)
+    };
+    let zero_fn = {
+        let fv = d.fresh_fvar();
+        d.lam_fv(fv, carrier, zero_z)
+    };
+
+    let holo = d.lemma(p.deriv.holomorphic_id, &[zero_z, one_real]);
+    let proof = d.lemma(p.deriv.holomorphic_spec, &[id_fn, zero_z, one_real, holo]);
+    let ty = d.const_app(
+        p.deriv.has_derivative_on,
+        &[id_fn, zero_fn, zero_z, one_real],
+    );
+
+    let name = d
+        .kernel()
+        .name_str(anon, "Check.holomorphic_id_derivative_is_zero");
+    let admitted = d.kernel().add_declaration(Declaration::Theorem {
+        name,
+        uparams: vec![],
+        ty,
+        value: proof,
+    });
+    assert!(
+        admitted.is_err(),
+        "the identity's stored derivative is `one`, not `zero` -- the kernel \
+         must refuse"
+    );
+}
+
+/// `Complex.holomorphic_add` of the identity with itself stores the POINTWISE
+/// SUM of the two stored derivatives: `holomorphic_spec` at it must check
+/// against `HasDerivativeOn (fun z => add z z) (fun _ => add one one) zero 1`.
+///
+/// Both `Sigma.fst` reductions happen inside the type the kernel re-derives,
+/// so this is what distinguishes a sum rule that combines the derivatives from
+/// one that keeps only the first.
+#[test]
+fn holomorphic_add_stores_the_pointwise_sum_of_the_derivatives() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+
+    let (mut kernel, p) = built();
+    let anon = kernel.anon();
+    let mut d = IntDev::new(&mut kernel, p.creal.rat.int);
+
+    let zero_z = d.kernel().const_(p.zero, vec![]);
+    let one_z = d.kernel().const_(p.one, vec![]);
+    let one_real = d.kernel().const_(p.creal.one, vec![]);
+    let carrier = d.kernel().const_(p.complex, vec![]);
+
+    let id_fn = {
+        let fv = d.fresh_fvar();
+        let z = d.kernel().fvar(fv);
+        d.lam_fv(fv, carrier, z)
+    };
+
+    let holo = d.lemma(p.deriv.holomorphic_id, &[zero_z, one_real]);
+    let sum_holo = d.lemma(
+        p.deriv.holomorphic_add,
+        &[id_fn, id_fn, zero_z, one_real, holo, holo],
+    );
+
+    let sum_fn = {
+        let fv = d.fresh_fvar();
+        let z = d.kernel().fvar(fv);
+        let body = d.const_app(p.add, &[z, z]);
+        d.lam_fv(fv, carrier, body)
+    };
+    let proof = d.lemma(
+        p.deriv.holomorphic_spec,
+        &[sum_fn, zero_z, one_real, sum_holo],
+    );
+
+    let sum_deriv = {
+        let fv = d.fresh_fvar();
+        let body = d.const_app(p.add, &[one_z, one_z]);
+        d.lam_fv(fv, carrier, body)
+    };
+    let ty = d.const_app(
+        p.deriv.has_derivative_on,
+        &[sum_fn, sum_deriv, zero_z, one_real],
+    );
+
+    let name = d
+        .kernel()
+        .name_str(anon, "Check.holomorphic_add_id_id_derivative");
+    let admitted = d.kernel().add_declaration(Declaration::Theorem {
+        name,
+        uparams: vec![],
+        ty,
+        value: proof,
+    });
+    assert!(
+        admitted.is_ok(),
+        "holomorphic_add of the identity with itself must store \
+         `fun _ => add one one`: {admitted:?}"
     );
 }

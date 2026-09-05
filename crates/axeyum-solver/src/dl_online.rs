@@ -87,7 +87,7 @@ use axeyum_ir::{Op, Rational, Sort, SymbolId, TermArena, TermId, TermNode, Value
 
 use crate::backend::{CheckResult, SolverConfig, UnknownKind, UnknownReason};
 use crate::cdclt::{CdclT, Lit as CdcltLit, Outcome};
-use crate::euf_egraph::{TheoryLit, TheoryProp, TheorySolver};
+use crate::euf_egraph::{ExplanationId, PropagationQueue, TheoryLit, TheoryProp, TheorySolver};
 use crate::lra::{FarkasAtom, FarkasCertificate};
 use crate::lra_online::{Encoder, Lit};
 use crate::model::Model;
@@ -1433,6 +1433,23 @@ pub(crate) fn conjunctive_farkas_certificate(
 // ---------------------------------------------------------------------------
 
 /// The online difference-logic [`TheorySolver`].
+/// The cycle behind one deferred propagation (ADR-1701): enough to rebuild the
+/// explanation, and nothing rebuilt until the driver asks for it.
+///
+/// `depth` is the decision depth the propagation was made at, so [`DlTheory::pop`]
+/// drops exactly the handles whose literals the driver has just unassigned — the
+/// trait's contract that a handle stays resolvable while its literal is assigned.
+#[derive(Debug, Clone)]
+struct PendingCycle {
+    handle: u64,
+    depth: usize,
+    steps: Vec<CycleStep>,
+    trigger: TheoryLit,
+    /// The atom this cycle explains; it is excluded from the reason, exactly as
+    /// the eager `propagate` filters it out.
+    propagated: usize,
+}
+
 struct DlTheory {
     atoms: Vec<AtomKind>,
     graph: DlGraph,
@@ -1443,6 +1460,11 @@ struct DlTheory {
     deadline: Option<Instant>,
     /// Reusable detection working memory (see [`Scratch`]).
     scratch: Scratch,
+    /// Cycles behind propagations the driver has not asked to explain
+    /// (ADR-1701). Bounded by the propagation caps and pruned on `pop`.
+    pending: Vec<PendingCycle>,
+    /// Monotone handle counter, so a handle is never reused across scopes.
+    next_handle: u64,
 }
 
 impl DlTheory {
@@ -1457,6 +1479,8 @@ impl DlTheory {
             scopes: Vec::new(),
             deadline,
             scratch: Scratch::new(scan.symbols.len()),
+            pending: Vec::new(),
+            next_handle: 1,
         }
     }
 
@@ -1532,6 +1556,34 @@ impl DlTheory {
             }
         }
     }
+
+    /// The verified negative cycle that asserting `atom` at `value` would close,
+    /// or `None`. The `&mut self` counterpart of [`Self::would_conflict`]: it
+    /// reuses the theory's [`Scratch`] rather than allocating one per probe, and
+    /// stops at the cycle instead of walking it into literals (ADR-1701).
+    fn cycle_for(&mut self, atom: usize, value: bool) -> Option<Vec<CycleStep>> {
+        let AtomKind::Diff { pos, neg } = &self.atoms[atom] else {
+            return None;
+        };
+        let spec = if value { *pos } else { *neg };
+        if spec.from == spec.to {
+            let steps = vec![CycleStep { spec, index: None }];
+            return (spec.w.is_negative() && Self::verified(&steps)).then_some(steps);
+        }
+        let rc = self.graph.reduced(spec.from, spec.to, spec.w)?;
+        if !rc.is_negative() {
+            return None;
+        }
+        self.scratch.reset();
+        let GammaOutcome::Cycle =
+            self.graph
+                .propagate_gamma(spec, rc, self.deadline, &mut self.scratch)
+        else {
+            return None;
+        };
+        let steps = self.graph.extract_cycle(&self.scratch.parent, spec)?;
+        Self::verified(&steps).then_some(steps)
+    }
 }
 
 impl TheorySolver for DlTheory {
@@ -1596,6 +1648,12 @@ impl TheorySolver for DlTheory {
             let atom = self.assigned_log.pop().expect("non-empty by the guard");
             self.assigned[atom] = None;
         }
+        // Drop every deferred explanation whose propagated literal the driver
+        // has just unassigned (ADR-1701): a handle never outlives the theory
+        // state that justifies it, and the driver drops its side in the same
+        // step.
+        let depth = self.scopes.len();
+        self.pending.retain(|entry| entry.depth <= depth);
     }
 
     fn propagate(&self) -> Vec<TheoryProp> {
@@ -1629,6 +1687,75 @@ impl TheorySolver for DlTheory {
             }
         }
         out
+    }
+
+    /// ADR-1701: the same negation-probe scan as [`Self::propagate`], but into
+    /// the driver-owned queue and with **deferred** explanations.
+    ///
+    /// Two differences from the `&self` form, both of which need `&mut self`:
+    /// the probe reuses the theory's own [`Scratch`] instead of allocating one
+    /// per probe (`Scratch::new` is three `O(|V|)` vectors, and this scan makes
+    /// up to `MAX_PROPAGATION_PROBES` of them per call); and the cycle behind an
+    /// entailment is *stored*, not walked into literals, so
+    /// [`TheorySolver::explain`] pays for the explanation only when 1-UIP
+    /// analysis actually reaches the propagated literal.
+    ///
+    /// What is **not** deferred is the Farkas re-check: a cycle is only reported
+    /// once [`Self::verified`] has accepted it, exactly as before. Reporting an
+    /// entailment the independent checker has not accepted would be a soundness
+    /// change, not a laziness one.
+    fn propagate_into(&mut self, queue: &mut PropagationQueue) {
+        if self.symbols.len() > MAX_PROPAGATION_VERTICES || past_deadline(self.deadline) {
+            return;
+        }
+        let depth = self.scopes.len();
+        let mut probes = 0_usize;
+        for atom in 0..self.atoms.len() {
+            if probes >= MAX_PROPAGATION_PROBES || past_deadline(self.deadline) {
+                break;
+            }
+            if self.assigned[atom].is_some() {
+                continue;
+            }
+            probes += 1;
+            for value in [true, false] {
+                let Some(steps) = self.cycle_for(atom, !value) else {
+                    continue;
+                };
+                let trigger = TheoryLit {
+                    atom,
+                    value: !value,
+                };
+                let handle = self.next_handle;
+                self.next_handle += 1;
+                self.pending.push(PendingCycle {
+                    handle,
+                    depth,
+                    steps,
+                    trigger,
+                    propagated: atom,
+                });
+                queue.push_lazy(TheoryLit { atom, value }, ExplanationId(handle));
+                break;
+            }
+        }
+    }
+
+    /// Resolves a deferred cycle handle into the literals it stands for
+    /// (ADR-1701). `None` when the handle is unknown, which the driver treats as
+    /// a theory bug and answers `Unknown` to — never a verdict.
+    fn explain(&mut self, handle: ExplanationId) -> Option<Vec<TheoryLit>> {
+        let entry = self
+            .pending
+            .iter()
+            .find(|entry| entry.handle == handle.0)?
+            .clone();
+        let lits = self.cycle_literals(&entry.steps, entry.trigger);
+        Some(
+            lits.into_iter()
+                .filter(|l| l.atom != entry.propagated)
+                .collect(),
+        )
     }
 }
 

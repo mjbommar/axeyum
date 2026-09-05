@@ -2262,7 +2262,7 @@ mod tests {
         // than fail, and a hang reads like a slow machine. The count assertion
         // below is derived from the corpus so the list cannot silently shrink,
         // but nothing can make "does not return" cheap to probe.
-        const UNREACHED_BY_BUCHBERGER: [&str; 4] = [
+        const UNREACHED_BY_BUCHBERGER: [&str; 5] = [
             "euler-line",
             "rhombus-diagonals-perpendicular",
             "pappus-hexagon",
@@ -2276,6 +2276,15 @@ mod tests {
             // which is exactly what the warning above predicted and exactly how
             // it presented.
             "simson-line",
+            // `tetrahedron-medians-concurrent` joined the corpus on 2026-09-05
+            // from `geometry_beyond` and did exactly what the paragraph above
+            // predicts: the debug crate sweep sat in this test for an hour with
+            // one core spinning and no failure. Its search costs 769 s in
+            // release on the certifier's route (the linear-block detector is
+            // scoped per conclusion and each per-axis conclusion sees one of
+            // the three coordinates); the theorem is re-checked from its
+            // committed artifact by `geometry_certificate_artifacts` instead.
+            "tetrahedron-medians-concurrent",
         ];
         let corpus = crate::geometry_corpus::corpus();
         let expected = corpus.len() - UNREACHED_BY_BUCHBERGER.len();

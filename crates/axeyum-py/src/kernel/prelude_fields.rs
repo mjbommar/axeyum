@@ -178,7 +178,7 @@ pub(super) fn list(p: &ListPrelude) -> Fields {
     }
 }
 
-/// The `NatPrelude` field table (1395 names,
+/// The `NatPrelude` field table (1410 names,
 /// 0 name lists, 1 sub-packages).
 ///
 /// 113 of the names come from ADR-1512 per-module registries and
@@ -2010,6 +2010,30 @@ pub(super) fn nat(p: &NatPrelude) -> Fields {
                 "subsets_inclusion_exclusion_two",
                 p.subsets_inclusion_exclusion_two,
             ),
+            ("primorial", p.primorial),
+            ("primorial_zero", p.primorial_zero),
+            ("primorial_succ", p.primorial_succ),
+            ("min_fac_eq_self_of_prime", p.min_fac_eq_self_of_prime),
+            ("prime_of_min_fac_eq_self", p.prime_of_min_fac_eq_self),
+            ("primorial_succ_of_prime", p.primorial_succ_of_prime),
+            ("primorial_succ_of_not_prime", p.primorial_succ_of_not_prime),
+            ("primorial_pos", p.primorial_pos),
+            ("primorial_le_succ", p.primorial_le_succ),
+            ("primorial_mono", p.primorial_mono),
+            ("mul_two_eq_add_self", p.mul_two_eq_add_self),
+            ("le_of_add_self_le_add_self", p.le_of_add_self_le_add_self),
+            (
+                "four_pow_eq_two_pow_add_self",
+                p.four_pow_eq_two_pow_add_self,
+            ),
+            (
+                "choose_two_mul_succ_le_two_pow",
+                p.choose_two_mul_succ_le_two_pow,
+            ),
+            (
+                "choose_two_mul_succ_le_four_pow",
+                p.choose_two_mul_succ_le_four_pow,
+            ),
         ],
         lists: Vec::new(),
     }
@@ -3459,10 +3483,10 @@ pub(super) fn arith_sub(p: &ArithPrelude) -> Vec<(&'static str, Sub)> {
     vec![("logic", Sub::Logic(Box::new(p.logic)))]
 }
 
-/// The `CRealPrelude` field table (620 names,
+/// The `CRealPrelude` field table (628 names,
 /// 0 name lists, 1 sub-packages).
 ///
-/// 78 of the names come from ADR-1512 per-module registries and
+/// 86 of the names come from ADR-1512 per-module registries and
 /// carry a dotted field name (`pi.pi_le_four`); the rest are flat
 /// fields on `CRealPrelude` itself.
 #[must_use]
@@ -3839,6 +3863,32 @@ pub(super) fn creal(p: &CRealPrelude) -> Fields {
             (
                 "ratio_test.sum_range_ratio_test",
                 p.ratio_test.sum_range_ratio_test,
+            ),
+            ("power_series.abs_pow_le", p.power_series.abs_pow_le),
+            ("power_series.one_pow", p.power_series.one_pow),
+            (
+                "power_series.power_series_partial",
+                p.power_series.power_series_partial,
+            ),
+            (
+                "power_series.power_series_term_radius_bound",
+                p.power_series.power_series_term_radius_bound,
+            ),
+            (
+                "power_series.power_series_cauchy_within_radius",
+                p.power_series.power_series_cauchy_within_radius,
+            ),
+            (
+                "power_series.power_series_converges_within_radius",
+                p.power_series.power_series_converges_within_radius,
+            ),
+            (
+                "power_series.exp_series_partial_is_power_series",
+                p.power_series.exp_series_partial_is_power_series,
+            ),
+            (
+                "power_series.cos_series_partial_is_power_series",
+                p.power_series.cos_series_partial_is_power_series,
             ),
             ("one_le_pow_of_one_le", p.one_le_pow_of_one_le),
             ("pow_le_pow_of_one_le", p.pow_le_pow_of_one_le),
@@ -4365,10 +4415,10 @@ pub(super) fn creal_sub(p: &CRealPrelude) -> Vec<(&'static str, Sub)> {
     vec![("rat", Sub::Rat(Box::new(p.rat)))]
 }
 
-/// The `ComplexPrelude` field table (150 names,
+/// The `ComplexPrelude` field table (168 names,
 /// 0 name lists, 1 sub-packages).
 ///
-/// 21 of the names come from ADR-1512 per-module registries and
+/// 39 of the names come from ADR-1512 per-module registries and
 /// carry a dotted field name (`pi.pi_le_four`); the rest are flat
 /// fields on `ComplexPrelude` itself.
 #[must_use]
@@ -4561,6 +4611,24 @@ pub(super) fn complex(p: &ComplexPrelude) -> Fields {
                 "poly.factor_quotient_succ_eq",
                 p.poly.factor_quotient_succ_eq,
             ),
+            ("deriv.abs_zero", p.deriv.abs_zero),
+            ("deriv.in_disc", p.deriv.in_disc),
+            ("deriv.has_derivative_on", p.deriv.has_derivative_on),
+            ("deriv.hd_mk", p.deriv.hd_mk),
+            ("deriv.hd_rec", p.deriv.hd_rec),
+            ("deriv.hd_modulus", p.deriv.hd_modulus),
+            ("deriv.hd_spec", p.deriv.hd_spec),
+            ("deriv.has_derivative_const", p.deriv.has_derivative_const),
+            ("deriv.has_derivative_id", p.deriv.has_derivative_id),
+            ("deriv.has_derivative_neg", p.deriv.has_derivative_neg),
+            ("deriv.has_derivative_add", p.deriv.has_derivative_add),
+            ("deriv.holomorphic_on", p.deriv.holomorphic_on),
+            ("deriv.holomorphic_deriv", p.deriv.holomorphic_deriv),
+            ("deriv.holomorphic_spec", p.deriv.holomorphic_spec),
+            ("deriv.holomorphic_const", p.deriv.holomorphic_const),
+            ("deriv.holomorphic_id", p.deriv.holomorphic_id),
+            ("deriv.holomorphic_neg", p.deriv.holomorphic_neg),
+            ("deriv.holomorphic_add", p.deriv.holomorphic_add),
             ("comm_ring_s", p.comm_ring_s),
         ],
         lists: Vec::new(),

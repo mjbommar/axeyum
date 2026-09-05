@@ -68,7 +68,7 @@ use axeyum_ir::{Sort, TermArena, TermId, TermNode, Value};
 
 use crate::backend::{CheckResult, SolverConfig, SolverError, UnknownKind, UnknownReason};
 use crate::cdclt::{CdclT, Lit as CdcltLit, Outcome};
-use crate::euf_egraph::{TheoryLit, TheoryProp, TheorySolver};
+use crate::euf_egraph::{FinalCheckOutcome, PropagationQueue, TheoryLit, TheoryProp, TheorySolver};
 use crate::lra_online::{Encoder, Lit, LraTheory, LraTheoryBuildStop, collect_lra_atoms, replays};
 use crate::model::Model;
 
@@ -125,7 +125,12 @@ impl CdcltLraTheory {
         deadline: Option<Instant>,
     ) -> Result<Self, LraTheoryBuildStop> {
         Ok(Self {
-            inner: LraTheory::try_new_with_deadline(arena, atom_terms, deadline)?,
+            // ADR-1701: this adapter is driven by `CdclT`, which calls
+            // `final_check` at every total Boolean assignment, so the wrapped
+            // theory may keep only the cheap bound check on `assert` and run
+            // the complete simplex decision once per candidate model.
+            inner: LraTheory::try_new_with_deadline(arena, atom_terms, deadline)?
+                .with_deferred_final_check(),
         })
     }
 
@@ -159,6 +164,19 @@ impl TheorySolver for CdcltLraTheory {
 
     fn propagate(&self) -> Vec<TheoryProp> {
         self.inner.propagate()
+    }
+
+    /// Forwards the wrapped theory's complete check (ADR-1701). The driver
+    /// backjumps to the highest level a final-check core names before analysing
+    /// it, so — unlike an `assert` conflict — this core does not need the
+    /// trigger literal folded in.
+    fn final_check(&mut self) -> FinalCheckOutcome {
+        self.inner.final_check()
+    }
+
+    /// Forwards the wrapped theory's queue-based propagation (ADR-1701).
+    fn propagate_into(&mut self, queue: &mut PropagationQueue) {
+        self.inner.propagate_into(queue);
     }
 }
 
@@ -483,6 +501,50 @@ mod tests {
             check_with_lra(&arena, &assertions).expect("offline decidable"),
             CheckResult::Unsat,
             "offline route agrees",
+        );
+    }
+
+    /// [`crate::layers::TheoryLayerStats`] must come back with real, nonzero
+    /// content on a query that forces at least one theory conflict: the same
+    /// `x < 0 ∧ x > 0` fixture as [`strict_bounds_unsat_via_cdclt`], but with
+    /// collection enabled via [`crate::cdclt::TheoryLayerStatsGuard`]. This is
+    /// the CDCL(T) counterpart to `BvLayerStats` coming back populated for the
+    /// `sat-bv` backend.
+    #[test]
+    fn theory_layer_stats_are_populated_on_a_theory_conflict() {
+        let mut arena = TermArena::new();
+        let x = rvar(&mut arena, "x");
+        let zero = rconst(&mut arena, 0);
+        let lt = arena.real_lt(x, zero).expect("x<0");
+        let gt = arena.real_gt(x, zero).expect("x>0");
+        let assertions = [lt, gt];
+
+        // Baseline: no guard, no collection — a caller who never opts in sees
+        // no stats at all, and the query still decides the same way.
+        assert_eq!(
+            check_qf_lra_online_cdclt(&arena, &assertions, &SolverConfig::default())
+                .expect("decidable"),
+            CheckResult::Unsat,
+        );
+
+        let guard = crate::cdclt::TheoryLayerStatsGuard::enable();
+        assert_eq!(
+            check_qf_lra_online_cdclt(&arena, &assertions, &SolverConfig::default())
+                .expect("decidable"),
+            CheckResult::Unsat,
+            "collection must never change the verdict",
+        );
+        let stats = crate::cdclt::last_theory_layer_stats()
+            .expect("stats collected once the guard is active");
+        drop(guard);
+
+        assert!(
+            stats.theory_conflicts >= 1,
+            "x<0 ∧ x>0 must force at least one theory conflict: {stats:?}"
+        );
+        assert!(
+            stats.theory_assert > std::time::Duration::ZERO,
+            "at least one TheorySolver::assert call must be timed: {stats:?}"
         );
     }
 

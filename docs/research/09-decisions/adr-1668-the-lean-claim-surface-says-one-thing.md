@@ -63,18 +63,19 @@ of them said something false. Measured 2026-09-05, before this lane:
 surface is either a verbatim quote of it or a measured edit to it — never a
 fresh, independently-drifting sentence.**
 
-The paragraph (120 words, reused character-for-character in every location
-below):
+The paragraph (118 words, reused character-for-character in every location
+below; the replay sentence was updated 2026-09-05 the same day, once ADR-1661
+extended the census from `creal` alone to every carrier):
 
 > "Lean compatible" means what the compatibility matrix measures: K0 1/1 and
 > K1 6/6 (an independent checker and a versioned import route), K2 through K6
 > at 0 — no native source, tactics, workflow, runtime, or ecosystem yet. Two
 > pins are distinct and every claim names which: `lean-toolchain`, the
-> cross-check pin (currently 4.34.0-rc1, ADR-1594/1660), and the Mathlib
-> corpus pin (Lean 4.30.0, mathlib4 `c5ea0035`, lean4export `a3e35a58`).
-> Independent checkability is measured by replay in pinned Lean: `creal`
-> only, 1,972 of 2,045 theorems, 48 `Type`-valued theorems Lean refuses, 25
-> blocked behind them (ADR-0760). Imports are a labeled tier, never the
+> cross-check pin (4.34.0-rc1, ADR-1594/1660), and the Mathlib corpus pin
+> (Lean 4.30.0, mathlib4 `c5ea0035`, lean4export `a3e35a58`). Independent
+> checkability is measured by replay in pinned Lean: 4,478 proved
+> declarations, 4,394 accepted, 50 `Type`-valued theorems Lean refuses, 34
+> blocked behind them (ADR-1661). Imports are a labeled tier, never the
 > axiom-free headline (ADR-0601, ADR-1664). `by axeyum` lets Lean check
 > axeyum-produced terms as a tactic (ADR-1666). Cross-library statement
 > identity runs through the carrier correspondence ledger (ADR-1665).
@@ -130,14 +131,29 @@ official-execution programme (3,723 CTest cases, 111 not-run attempts, zero
 credit since July) historical rather than resumed, since that roadmap is
 where U2 is described.
 
+**Update, 2026-09-05 (same day, after merging Next Ten item 2's landing).**
+The replay sentence above is edited in place, per this ADR's own rule that a
+Lean claim on a claim surface is a verbatim quote or a measured update to
+both the paragraph and this ADR together. ADR-1661 (lane
+`lean-replay-census-all`) extended the census this paragraph cites from
+`creal` alone to every carrier the kernel builds: of 4,478 proved
+declarations pinned Lean's kernel accepts 4,394, 50 are `Type`-valued
+theorems it refuses as theorems, and 34 are blocked behind one of those.
+The paragraph now cites ADR-1661 in place of ADR-0760 for this figure; the
+paragraph is otherwise unchanged and stays within the 120-word budget (118).
+
 ## Evidence
 
 - `docs/math-department/14-lean-lang.md`, "What the Lean boundary has today"
   table and the Next Ten list, measured 2026-09-05 at `f67ce41d2` — the
-  source of every figure quoted in the paragraph above.
-- ADR-1660 (the two pins), ADR-0760 (the `creal` replay census grading),
-  ADR-0601 and ADR-1664 (imports never headline), ADR-1666 (`by axeyum`),
-  ADR-1665 (the carrier correspondence ledger).
+  source of every figure quoted in the paragraph above at the time this ADR
+  was accepted.
+- `artifacts/measurements/lean-replay-census-2026-09-05.md` and
+  [ADR-1661](adr-1661-the-replay-census-covers-every-carrier-and-type-valued-theorems-are-a-named-class.md) —
+  the source of the replay figures after the same-day update above.
+- ADR-1660 (the two pins), ADR-0760 (the predecessor `creal`-only replay
+  census this extends), ADR-0601 and ADR-1664 (imports never headline),
+  ADR-1666 (`by axeyum`), ADR-1665 (the carrier correspondence ledger).
 - `scripts/check-lean-gate.sh --print-toolchain` — resolves both installed
   toolchains despite `command -v lean` returning nothing.
 - `python3 scripts/gen-lean-compatibility.py --check` and

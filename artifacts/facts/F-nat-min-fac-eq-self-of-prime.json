@@ -1,0 +1,55 @@
+{
+  "schema_version": 1,
+  "id": "F:nat-min-fac-eq-self-of-prime",
+  "title": "A prime is its own least prime factor",
+  "statement": "For every natural n, if n is prime -- spelled inline as 2 <= n and every divisor of n is 1 or n, this kernel having no Prime predicate -- then Nat.minFac n = n. With its converse Nat.prime_of_min_fac_eq_self (2 <= n and minFac n = n imply n prime) this turns the propositional primality condition into a COMPUTABLE Bool test, `Nat.beq (Nat.minFac n) n`, which is what a product or a count over the primes needs in order to be a fold rather than a choice. This is a kernel term with an empty axiom footprint.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Nat.min_fac_eq_self_of_prime : ((x0 : AxNat) -> ((x1 : And (AxNat.le (AxNat.succ (AxNat.succ AxNat.zero)) x0) (((x1 : AxNat) -> ((x2 : AxNat.dvd x1 x0) -> Or (Eq.{1} AxNat x1 (AxNat.succ AxNat.zero)) (Eq.{1} AxNat x1 x0))))) -> Eq.{1} AxNat (AxNat.minFac x0) x0))",
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.min_fac_eq_self_of_prime",
+    "free_symbols": []
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "proof_route": "kernel-lean",
+  "axiom_footprint": [],
+  "depends_on": ["F:nat-min-fac-dvd", "F:nat-min-fac-two-le", "F:nat-not-succ-le-self"],
+  "evidence": [
+    {
+      "id": "kernel-Nat.min_fac_eq_self_of_prime",
+      "kind": "kernel-term",
+      "kernel_declaration": "Nat.min_fac_eq_self_of_prime",
+      "supports": "Nat.min_fac_eq_self_of_prime is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q --release -p axeyum-lean-kernel --example nat_theorem_inventory -- min_fac_eq_self_of_prime 2>/dev/null | grep -Fc 'Nat.min_fac_eq_self_of_prime\t4\t((x0 : AxNat) -> ((x1 : And (AxNat.le (AxNat.succ (AxNat.succ AxNat.zero)) x0) (((x1 : AxNat) -> ((x2 : AxNat.dvd x1 x0) -> Or (Eq.{1} AxNat x1 (AxNat.succ AxNat.zero)) (Eq.{1} AxNat x1 x0))))) -> Eq.{1} AxNat (AxNat.minFac x0) x0))')\" -ge 1",
+      "notes": "No new induction: `Nat.min_fac_dvd` gives `minFac n | n` (its `2 <= n` premise is primality's left conjunct), primality's right conjunct turns that into `minFac n = 1 \\/ minFac n = n`, and `Or.resolve_left` discharges the left disjunct by transporting `Nat.min_fac_two_le` along `minFac n = 1` into `Le 2 1`, refuted by `Nat.not_succ_le_self`."
+    },
+    {
+      "id": "statement-Nat.min_fac_eq_self_of_prime",
+      "kind": "kernel-term",
+      "kernel_declaration": "Nat.min_fac_eq_self_of_prime",
+      "supports": "The DECLARED type is `forall n, prime_condition n -> minFac n = n`, and not the trivial `minFac n = minFac n`; the converse's declared type concludes primality of `n`, not of `minFac n` (which is Nat.min_fac_prime, already in the environment).",
+      "check_status": "checked",
+      "checker_command": "cargo test --release -p axeyum-lean-kernel --lib -- nat_prelude::primorial_tests:: --test-threads=4",
+      "checkers": [
+        "Kernel::def_eq"
+      ],
+      "notes": "Both directions take a Prop-typed hypothesis, so the test compares the DECLARED type against a hand-rebuilt statement rather than inferring an application: `pi_fv` abstracts the bound variable to a de Bruijn index, so the fresh-fvar id is irrelevant to the comparison. Each direction carries a negative control naming a specific weaker statement of the same shape -- without the converse's control the test would pass for a duplicate of `Nat.min_fac_prime`."
+    },
+    {
+      "id": "footprint-Nat.min_fac_eq_self_of_prime",
+      "kind": "instance-pin",
+      "supports": "axiom_footprint: [] -- the Nat environment admits no trusted declaration",
+      "check_status": "checked",
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "notes": "`the_primorial_shelf_is_admitted_and_axiom_free` asserts `Environment::contains` FIRST for each name and only then an empty `Kernel::axiom_footprint`, because the footprint of an absent name is also empty. `nat_axiom_inventory` bounds it independently over the whole trusted surface."
+    }
+  ],
+  "provenance": {
+    "date": "2026-09-05",
+    "established_by": "axeyum-lean-kernel build_nat_prelude, lane chebyshev-pi",
+    "source": "theorem name and canonical type read directly via nat_theorem_inventory, which prints render_lean of the admitted type."
+  },
+  "notes": "ADR-1637. This bridge is why the primorial in this kernel is a product over `Nat.minFac` and not over the `Nat.isPrime` that `prime_counting.rs` already declares. `Nat.isPrime` is a DIVISOR COUNT (`beq (countRange (fun d => beq (n % (d+1)) 0) n) 2`) about which ADR-0653 forbids that file from declaring any theorem, so bridging it to `prime_condition` would mean proving 'a natural number has exactly two divisors iff it is prime' -- a counting argument in its own right. The `minFac` bridge needs only three lemmas `min_fac_dvd.rs` already had."
+}

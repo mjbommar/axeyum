@@ -92,7 +92,9 @@ cd "$(dirname "$0")/.." || exit 2
 # invocation in the gate (the `everything` carrier, the union of all of them)
 # and keeps its sixteen nested per-carrier censuses behind `--ignored`, because
 # seventeen debug-mode full-kernel replays were unmeasured and this gate is in
-# the push hook. The lane's release run measured 738.79 s for all seventeen.
+# the push hook. The lane's release run measured 738.79 s for all seventeen;
+# the `everything` census alone, debug profile, measured 441.79 s (2026-09-05,
+# host load ~20) -- the cost this gate actually pays.
 # One per
 # carrier when run `-- --ignored`. `real_lean_replay_census` (ADR-0760) graded independent replay per
 # declaration over the constructed reals only; this extends the same harness --

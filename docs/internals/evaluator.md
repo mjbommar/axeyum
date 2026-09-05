@@ -28,10 +28,18 @@ the model, the assignment carries that choice. Missing assignments, sort
 mismatches, malformed applications, and exceeded representation limits remain
 explicit failures.
 
-The current concrete `Int` values and rational numerator/denominator components
-are `i128`-based. Arithmetic outside that reference range returns
-`IrError::ArithmeticOverflow`; a solver route must decline the dependent model
-or verdict rather than wrap, panic, or reinterpret the formula.
+Concrete `Int` values are `i128`-based, and integer arithmetic outside that
+reference range returns `IrError::ArithmeticOverflow`; a solver route must
+decline the dependent model or verdict rather than wrap, panic, or reinterpret
+the formula.
+
+Rational arithmetic can exceed `i128`, but only where a route opts in
+(ADR-1702). The evaluator's `Real` path uses the **declining** family, so
+`real_add`/`real_mul`/`real_neg` still return `IrError::ArithmeticOverflow`
+outside `i128` range; the opt-in `Rational::wide_*` family, used by the
+exact-rational simplex, promotes instead. Both families compute the same
+mathematical value, so widening a route can only turn an `unknown` into a
+decision.
 
 ## Replay is a pipeline property
 

@@ -325,7 +325,7 @@ pub fn export_qf_bv_unsat_proof_with_progress(
     deadline: Option<Instant>,
     max_conflicts: usize,
     progress_interval: usize,
-    progress: &mut dyn FnMut(&axeyum_cnf::ProofSearchProgress),
+    progress: &mut (dyn FnMut(&axeyum_cnf::ProofSearchProgress) + Send),
     check_budget: CheckBudget<'_>,
 ) -> Result<UnsatProofOutcome, SolverError> {
     let encoding = qf_bv_cnf_encoding(arena, assertions)?;

@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "id": "F:metric-product-completeness-transfer",
+  "title": "Completeness transfers to the product of two metric spaces",
+  "statement": "For any two metric spaces M and N, if M and N are each `Metric.Complete` then their product `Metric.prod M N` (carried by `Sigma.{0,0} M.carrier (fun _ => N.carrier)`, distance the max metric `dist (x,y) := CReal.max (M.dist (fst x)(fst y)) (N.dist (snd x)(snd y))`) is `Metric.Complete` too. The Cauchy-ness of each projected component sequence needs no combination of moduli -- the product's own Cauchy witness already bounds both components at the same rate, via `le_max_left`/`le_max_right`. Recombining the two limits' own (independently witnessed) TendsToAt moduli into one witness for the pair DOES need a combination step: `Rat.natDivSucc` is monotone increasing in its numerator, so the SUM of the two moduli dominates both, standing in for \"the max of the two moduli\" (no `Nat.max` primitive is threaded through `Rat.natDivSucc`'s own lemmas; the sum has the same domination property a max would, which is the only property this proof needs).",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Metric.prod_complete : (x0 : Metric) -> (x1 : Metric) -> (x2 : Metric.Complete x0) -> (x3 : Metric.Complete x1) -> Metric.Complete (Metric.prod x0 x1)",
+    "fragment": "Metric",
+    "free_symbols": [],
+    "kernel_theorem": "Metric.prod_complete"
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Metric.prod_complete",
+      "kind": "kernel-term",
+      "supports": "Metric.prod_complete is admitted by the trusted kernel gate with the type recorded in formal.statement, and Kernel::axiom_footprint reports 0 assumed names.",
+      "check_status": "checked",
+      "checkers": [
+        "producing-build (Kernel::add_declaration, which re-derives the type from the proof term)",
+        "metric_prod_theorem_inventory (this lane's own inventory example, since Metric.prod sits on top of kernel_declaration_projection's build_metric_prelude and that tool does not build it)"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example metric_prod_theorem_inventory -- prod_complete",
+      "checker_seconds": 300,
+      "kernel_declaration": "Metric.prod_complete",
+      "notes": "--release is mandatory: the Metric/CPoint/CReal preludes this sits on top of overflow the default debug thread stack, and the debug kernel is measured up to 32x slower on proof terms of this size. A filter matching zero theorems exits non-zero (an absent theorem is a failure, not an empty report), the same discipline nat_theorem_inventory/kernel_declaration_projection use."
+    },
+    {
+      "id": "suite-every_metric_prod_declaration_is_axiom_free",
+      "kind": "exhaustive-enumeration",
+      "supports": "All twelve names this lane's file declares, including Metric.prod_complete, have an empty Kernel::axiom_footprint. The test derives its name list from MetricProdNames::all(), not from a literal, so a new declaration cannot escape it.",
+      "check_status": "checked",
+      "checkers": [
+        "metric_prod::metric_prod_tests, run against a freshly built kernel environment"
+      ],
+      "checker_command": "cargo test --release -p axeyum-lean-kernel --lib -- metric_prod::metric_prod_tests::every_metric_prod_declaration_is_axiom_free --test-threads=4 2>&1 | grep -cE '^test result: ok\\. 1 passed'",
+      "checker_seconds": 200,
+      "notes": "`cargo test -- <filter>` runs ZERO tests and exits 0 when the filter matches nothing, so the exact `1 passed` count is load-bearing, not the exit status alone. --release avoids the debug-build stack overflow this prelude's upstream (CReal/CPoint/Metric) is already documented as needing."
+    }
+  ],
+  "provenance": {
+    "date": "2026-09-05",
+    "curation": "curated",
+    "established_by": "axeyum-lean-kernel build_metric_prod_prelude (crates/axeyum-lean-kernel/src/metric_prod.rs)",
+    "source": "Lane `metric-products`, roadmap W2-10 (the product-of-two-metric-spaces half `metric/subspace.rs` left open). ADR-1639. formal.statement is Kernel::render_lean of the declaration's type, taken verbatim from this lane's own metric_prod_theorem_inventory example (kernel_declaration_projection does not build this prelude, so it could not supply it)."
+  },
+  "notes": "WHAT THIS DOES NOT SAY. It does not say Metric.cpoint (the Euclidean plane) is Metric.prod Metric.creal Metric.creal -- that pair is shown carrier-EQUIVALENT (Metric.prod_of_cpoint_of_prod / Metric.cpoint_of_prod_of_cpoint, both round trips up to each side's own equivalence), not isometric: Metric.cpoint's distance is Euclidean (sqrt of the squared distance) and Metric.prod's is the max metric built here, genuinely different formulas that are bi-Lipschitz equivalent but not equal. It also does not say Metric.cpoint is complete -- F:metric-space-completeness-of-the-real-line's own notes flagged that gap (\"it needs completeness of CReal x CReal, which is not in tree\"); this fact puts CReal x CReal's completeness in tree (Metric.prod Metric.creal Metric.creal, an instance of Metric.prod_complete), but closing the gap for Metric.cpoint itself still needs the missing isometry/bi-Lipschitz statement, not proved this round."
+}

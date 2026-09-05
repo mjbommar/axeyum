@@ -1,6 +1,15 @@
-//! MEASUREMENT harness (slice 1, not production wiring): how far off batsat is
-//! the in-tree native CDCL core (`solve_with_drat_proof_within`) as a primary
-//! SAT search?
+//! MEASUREMENT harness: how far off the retired `rustsat-batsat` adapter is the
+//! in-tree native CDCL core (`solve_with_drat_proof_within`), on identical CNF.
+//!
+//! # THIS FILE COMPILES TO ZERO TESTS WITHOUT `--features batsat-reference`
+//!
+//! ADR-1703 made the native core the production engine and demoted the adapter
+//! to a differential/measurement referee, so this harness now needs
+//! `--features full,batsat-reference` and prints `running 0 tests ... ok` with
+//! exit 0 without it. Confirm a nonzero count before believing a pass. The
+//! *verdict* differential lives in
+//! `crates/axeyum-cnf/tests/native_vs_batsat_differential.rs`; this file is
+//! about wall-clock.
 //!
 //! This is an `#[ignore]`-by-default integration test. It reproduces
 //! `sat_bv_backend`'s lowering→encoding path (parse SMT-LIB → `lower_terms` →
@@ -13,10 +22,10 @@
 //!
 //! Run it explicitly (release for honest timings):
 //! ```sh
-//! cargo test -p axeyum-solver --release --test native_cdcl_baseline \
-//!     -- --ignored --nocapture
+//! cargo test -p axeyum-solver --release --features full,batsat-reference \
+//!     --test native_cdcl_baseline -- --ignored --nocapture
 //! ```
-#![cfg(feature = "full")]
+#![cfg(all(feature = "full", feature = "batsat-reference"))]
 
 use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};

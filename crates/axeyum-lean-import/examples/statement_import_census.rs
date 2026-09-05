@@ -161,6 +161,13 @@ fn census() -> Result<(), String> {
                         "admitted_declarations": report.admitted_declarations,
                         "names": report.names,
                         "expressions": report.expressions,
+                        // Which admission feature actually carried this row.
+                        // An admitted row that named neither crossed on its
+                        // own; a row that names one is direct evidence the
+                        // feature fired, rather than an inference from the
+                        // count going up.
+                        "substituted_theorems": report.substituted_theorems,
+                        "native_quotient_package": report.native_quotient_package,
                         "elapsed_ms": elapsed_ms,
                     })
                 );

@@ -68,6 +68,11 @@ pub trait TheorySolver {
     /// resulting theory state is inconsistent (so `¬⋀lits` is a valid lemma);
     /// otherwise `Ok(())`. Assertions accumulate until the next [`Self::pop`].
     ///
+    /// Under [ADR-1701](../../../docs/research/09-decisions/adr-1701-the-theory-interface-gains-final-check-a-driver-owned-queue-lazy-explanation-and-dynamic-atoms.md)
+    /// this is the **cheap partial check**: a theory that has an expensive
+    /// complete decision procedure should do bookkeeping plus whatever is cheap
+    /// here, and put the complete decision in [`Self::final_check`].
+    ///
     /// # Errors
     ///
     /// Returns the conflicting literals when the assertion makes the theory state
@@ -82,6 +87,166 @@ pub trait TheorySolver {
     /// A CDCL(T) loop can assign these without a decision. Only genuinely-entailed
     /// literals are emitted — an under-approximation that never fabricates one.
     fn propagate(&self) -> Vec<TheoryProp>;
+
+    /// The **complete** check, run once the Boolean search has a *total*
+    /// assignment of the active variables (ADR-1701). A theory whose
+    /// [`Self::assert`] already decides everything needs no second opinion and
+    /// keeps the default, [`FinalCheckOutcome::Sat`] — which is why widening the
+    /// trait leaves every existing implementor byte-identical.
+    ///
+    /// The three answers are the three a complete check can honestly give:
+    /// `Sat` (the assignment is theory-consistent), `Conflict` (a valid theory
+    /// lemma `¬⋀core`), and [`FinalCheckOutcome::Unknown`] — a budget or an
+    /// arithmetic overflow inside the check, on which the driver degrades the
+    /// whole search to `Unknown`. `Unknown` is never a verdict.
+    fn final_check(&mut self) -> FinalCheckOutcome {
+        FinalCheckOutcome::Sat
+    }
+
+    /// Sound theory propagation into a **driver-owned** queue (ADR-1701).
+    ///
+    /// The default drains [`Self::propagate`] into `queue`, so an implementor
+    /// that has not opted in propagates exactly what it propagated before, in
+    /// the same order. An implementor that overrides this avoids the per-call
+    /// `Vec` allocation and may attach a deferred explanation
+    /// ([`PropagationQueue::push_lazy`]) instead of materialising every reason.
+    ///
+    /// The queue arrives empty; the driver clears and reuses it.
+    fn propagate_into(&mut self, queue: &mut PropagationQueue) {
+        for prop in self.propagate() {
+            queue.push_eager(prop.lit, prop.reason);
+        }
+    }
+
+    /// Resolves a deferred explanation handle this theory emitted (ADR-1701),
+    /// returning the asserted literals whose conjunction justifies it.
+    ///
+    /// The default returns `None`, which is correct for every theory that never
+    /// emits a handle. A `None` for a handle the theory *did* emit is a theory
+    /// bug, and the driver treats it as one: it abandons the search and returns
+    /// `Unknown`. It never treats a missing explanation as an empty clause,
+    /// which would be a wrong `unsat`.
+    ///
+    /// **Contract.** A handle must stay resolvable for as long as the literal it
+    /// explains is assigned. The driver drops every outstanding handle in the
+    /// same step it pops the theory, so a handle never outlives the theory state
+    /// that justifies it.
+    fn explain(&mut self, handle: ExplanationId) -> Option<Vec<TheoryLit>> {
+        let _ = handle;
+        None
+    }
+
+    /// The number of theory atoms this theory has registered since the previous
+    /// call (ADR-1701). The driver appends and activates exactly that many SAT
+    /// variables, keeping the atom↔variable maps aligned without a side table
+    /// owned by each adapter.
+    ///
+    /// Newly registered atoms must occupy the next consecutive atom indices, so
+    /// a count is the whole registration signal. The default is `0`.
+    fn take_new_atoms(&mut self) -> usize {
+        0
+    }
+}
+
+/// An opaque, theory-owned handle to an explanation the theory has **not**
+/// materialised (ADR-1701). The driver carries it alongside the literal it
+/// explains and calls [`TheorySolver::explain`] only when conflict analysis
+/// actually reaches that literal — which, for most propagated literals, never
+/// happens.
+///
+/// The value is meaningful only to the theory that produced it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct ExplanationId(pub u64);
+
+/// A theory conflict core or propagation reason: either the literals themselves,
+/// or a handle the driver resolves on demand (ADR-1701).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum TheoryExplanation {
+    /// The literals, materialised now. This is what the default
+    /// [`TheorySolver::propagate_into`] produces, so an implementor that has not
+    /// opted in never takes the deferred path.
+    Eager(Vec<TheoryLit>),
+    /// A handle resolved through [`TheorySolver::explain`] when — and only when
+    /// — the driver needs the reason.
+    Lazy(ExplanationId),
+}
+
+/// The answer a theory gives to [`TheorySolver::final_check`] (ADR-1701).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum FinalCheckOutcome {
+    /// The total assignment is theory-consistent.
+    Sat,
+    /// The total assignment is theory-inconsistent; `¬⋀core` is a valid theory
+    /// lemma. The core need **not** name a current-decision-level literal — the
+    /// driver backjumps to the highest level the core names before analysing it.
+    Conflict(TheoryExplanation),
+    /// The check could not be completed (budget, size guard, arithmetic
+    /// overflow). The driver degrades the search to `Unknown`, which is always a
+    /// permitted verdict.
+    Unknown,
+}
+
+/// The driver-owned propagation queue handed to [`TheorySolver::propagate_into`]
+/// (ADR-1701).
+///
+/// Replaces the freshly allocated `Vec<TheoryProp>` that [`TheorySolver::propagate`]
+/// returns per call: the driver keeps one queue for the whole search, clears it
+/// between fixpoint iterations, and so keeps its capacity.
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
+pub struct PropagationQueue {
+    items: Vec<(TheoryLit, TheoryExplanation)>,
+}
+
+impl PropagationQueue {
+    /// An empty queue.
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Enqueues `lit` with an explanation that is already materialised.
+    pub fn push_eager(&mut self, lit: TheoryLit, reason: Vec<TheoryLit>) {
+        self.items.push((lit, TheoryExplanation::Eager(reason)));
+    }
+
+    /// Enqueues `lit` with a **deferred** explanation the driver will resolve
+    /// through [`TheorySolver::explain`] if it ever needs the reason.
+    pub fn push_lazy(&mut self, lit: TheoryLit, handle: ExplanationId) {
+        self.items.push((lit, TheoryExplanation::Lazy(handle)));
+    }
+
+    /// Enqueues `lit` with either explanation form.
+    pub fn push(&mut self, lit: TheoryLit, reason: TheoryExplanation) {
+        self.items.push((lit, reason));
+    }
+
+    /// Number of queued propagations.
+    #[must_use]
+    pub fn len(&self) -> usize {
+        self.items.len()
+    }
+
+    /// Whether the queue is empty.
+    #[must_use]
+    pub fn is_empty(&self) -> bool {
+        self.items.is_empty()
+    }
+
+    /// Empties the queue, retaining its allocation.
+    pub fn clear(&mut self) {
+        self.items.clear();
+    }
+
+    /// The queued propagations, in enqueue order.
+    #[must_use]
+    pub fn entries(&self) -> &[(TheoryLit, TheoryExplanation)] {
+        &self.items
+    }
+
+    /// Removes and returns every queued propagation, retaining the allocation.
+    pub fn drain(&mut self) -> std::vec::Drain<'_, (TheoryLit, TheoryExplanation)> {
+        self.items.drain(..)
+    }
 }
 
 /// Online EUF theory solver over the backtrackable congruence-closure e-graph

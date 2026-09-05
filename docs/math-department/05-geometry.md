@@ -114,7 +114,7 @@ Different per seat, and none of them is `Quot.sound` in the first instance:
 - [~] **3. Isometries of the plane** — *monoid and instances done 2026-09-04; classification sized, not started.*, as maps preserving `distSq`, with
       composition and the classification into translations, rotations and
       reflections. Reachable now, and the first real use of transformations.
-- [ ] **4. A synthetic incidence development with the coordinate plane as a
+- [~] **4. A synthetic incidence development with the coordinate plane as a*** — *record and the rational plane model landed 2026-09-05; the real plane and Playfair are open.* **
       model.** Tarski's axioms are finitely many first-order sentences; proving
       the constructed plane satisfies them is a genuine result and exactly the
       kind of thing this kernel is good at.
@@ -130,6 +130,7 @@ Different per seat, and none of them is `Quot.sound` in the first instance:
 | 2026-09-04 | **Next Five item 2 landed** (roadmap W2-4): ℝⁿ as a coefficient function with the dimension carried by the equivalence rather than the type, 58 declarations, footprint 0. **Unsquared Cauchy–Schwarz at symbolic dimension**, whose induction step is exactly the plane's `dotLeSqrtMul` at the points `(‖u‖ₙ, uₙ)` and `(‖v‖ₙ, vₙ)` — the plane lemma became the engine of the general one, and no case split on whether the norm vanishes was needed, which is fortunate because `CReal` has no `le_total`. Minkowski, a `Metric` instance, and `CPoint` embedded as a setoid map with agreement on `dot`, `distSq` and the metric distance. Not landed: the inverse of the embedding, since two `Metric` values with different carriers admit no equality without a transport this kernel lacks. (ADR-1606.) | `d00d2a33c`; `rn::` 24 passed |
 | 2026-09-04 | **Next Five items 1 and 3 landed** (roadmap W1-8, W2-13; ADR-1615): the seam this reviewer called the most conspicuous in the shelf is closed, cosine-first. `norm`, `crossV`, the Lagrange identity, the laws of cosines and sines, and `sin² + cos² = 1` for the angle ratios, proved with no trigonometric name in the closure. The analytic `sin_fn`/`cos_fn` are still not connected to the angle; the brief's assumption that the analytic Pythagorean identity existed was false; `arccos` is sized at three analytic results deep. Isometries as a monoid with translations, rotations and reflections, the doubling map refused; the classification sized at 25–40 declarations, blocked on nothing. Five doc comments in `creal_point.rs` still claim `sqrt` does not exist. | `c7ddfeca1`; `creal_point::` 69 passed |
 
+| 2026-09-05 | **Item 4, first slice** (roadmap W3-8, ADR-1635): `Geo.Incidence` as a setoid record with Hilbert's incidence axioms, five derived theorems, and the rational coordinate plane as a full model — 75 axiom-free declarations. Distinctness is a field because only the uniqueness axiom consumes it. The real plane did not land: its uniqueness axiom needs the cancellation route through `PosBound` and `CReal.inv`. Along the way the rational ring producer gained the cancellation pass it lacked. | `992de4c54` |
 
 ## How to re-measure
 

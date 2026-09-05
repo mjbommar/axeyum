@@ -32,6 +32,13 @@
 
 use core::fmt::Write as _;
 
+// Native uses the std clock; wasm uses the `web_time` drop-in (ADR-0017),
+// matching the shim already used at the dispatch call sites in `auto.rs`.
+#[cfg(not(target_arch = "wasm32"))]
+use std::time::{Duration, Instant};
+#[cfg(target_arch = "wasm32")]
+use web_time::{Duration, Instant};
+
 use crate::backend::{CheckResult, UnknownKind, UnknownReason};
 
 /// A decisive verdict recorded against a route — the satisfiability answer a
@@ -147,13 +154,56 @@ impl core::fmt::Display for RouteAttempt {
 ///
 /// See the [module documentation](crate::route_trace) for the verdict-invariance
 /// contract this telemetry upholds.
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
+///
+/// # Timing
+///
+/// Each recorded attempt also carries the wall-clock time elapsed since the
+/// *previous* recorded attempt (or since the trace was created, for the
+/// first) — see [`Self::elapsed`] / [`Self::total_elapsed`]. This is what
+/// makes a declined route's cost visible: a route that ran for 20 of a 24 s
+/// budget before giving up otherwise leaves no trace of where the time went.
+///
+/// Timing is **not** part of [`RouteTrace`]'s [`PartialEq`]/[`Eq`]: those
+/// compare only the recorded `attempts` (route, outcome), never the elapsed
+/// durations. Wall-clock time is inherently non-reproducible run to run, and
+/// the determinism contract this module upholds (see the module docs, and
+/// `tests/route_trace.rs::trace_is_deterministic_across_runs`) is about
+/// dispatch *order and outcome*, not timing. Comparing two traces for
+/// equality therefore still answers exactly the question it always did.
+#[derive(Debug, Clone)]
 pub struct RouteTrace {
     attempts: Vec<RouteAttempt>,
+    /// Wall-clock elapsed per attempt, aligned by index with `attempts`.
+    /// Deliberately excluded from `PartialEq`/`Eq` — see the struct docs.
+    elapsed: Vec<Duration>,
+    /// The instant the most recently recorded attempt was recorded (or the
+    /// instant the trace was created, before any attempt exists). Used to
+    /// compute the next `elapsed` entry.
+    last: Instant,
 }
 
+impl Default for RouteTrace {
+    fn default() -> Self {
+        Self {
+            attempts: Vec::new(),
+            elapsed: Vec::new(),
+            last: Instant::now(),
+        }
+    }
+}
+
+/// Structural equality: same recorded `(route, outcome)` sequence. Timing is
+/// deliberately excluded — see the [`RouteTrace`] struct docs.
+impl PartialEq for RouteTrace {
+    fn eq(&self, other: &Self) -> bool {
+        self.attempts == other.attempts
+    }
+}
+
+impl Eq for RouteTrace {}
+
 impl RouteTrace {
-    /// An empty trace.
+    /// An empty trace. Starts its elapsed-time clock now.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
@@ -163,6 +213,25 @@ impl RouteTrace {
     #[must_use]
     pub fn attempts(&self) -> &[RouteAttempt] {
         &self.attempts
+    }
+
+    /// Wall-clock elapsed per recorded attempt, aligned by index with
+    /// [`Self::attempts`]: `elapsed()[i]` is the time from the previous
+    /// attempt's record call (or trace creation, for `i == 0`) to attempt
+    /// `i`'s record call. Always the same length as `attempts`.
+    #[must_use]
+    pub fn elapsed(&self) -> &[Duration] {
+        &self.elapsed
+    }
+
+    /// The sum of [`Self::elapsed`] — the total wall-clock time spent inside
+    /// dispatch since the trace was created, across every recorded attempt.
+    #[must_use]
+    pub fn total_elapsed(&self) -> Duration {
+        self.elapsed
+            .iter()
+            .copied()
+            .fold(Duration::ZERO, |acc, d| acc + d)
     }
 
     /// Whether the trace recorded no attempts.
@@ -177,6 +246,16 @@ impl RouteTrace {
         self.attempts.last()
     }
 
+    /// Records the wall-clock time since the previous record call (or trace
+    /// creation) as the next `elapsed` entry. Called once per `record_*`
+    /// method, immediately alongside the corresponding `attempts` push, so
+    /// the two vectors stay aligned.
+    fn tick(&mut self) {
+        let now = Instant::now();
+        self.elapsed.push(now.saturating_duration_since(self.last));
+        self.last = now;
+    }
+
     /// Records the probe preamble: the detected fragment and planned route
     /// ordering. Conventionally the first entry of a trace.
     pub fn record_probe(&mut self, detail: impl Into<String>) {
@@ -184,6 +263,7 @@ impl RouteTrace {
             route: "probe",
             outcome: RouteOutcome::Probe(detail.into()),
         });
+        self.tick();
     }
 
     /// Records that `route` decided the query with `verdict`.
@@ -192,6 +272,7 @@ impl RouteTrace {
             route,
             outcome: RouteOutcome::Decided(verdict),
         });
+        self.tick();
     }
 
     /// Records that `route` declined for `reason`.
@@ -200,6 +281,7 @@ impl RouteTrace {
             route,
             outcome: RouteOutcome::Declined(reason),
         });
+        self.tick();
     }
 
     /// Records the terminal outcome derived from a [`CheckResult`]: a `Decided`
@@ -315,7 +397,38 @@ impl RouteTrace {
     /// classification.
     #[must_use]
     pub fn to_json(&self) -> String {
-        let mut out = String::with_capacity(64 + self.attempts.len() * 64);
+        self.render_json(false)
+    }
+
+    /// Renders the trace exactly like [`Self::to_json`], with one addition:
+    /// each attempt object carries an extra `"elapsed_ns"` member giving that
+    /// attempt's [`Self::elapsed`] entry as whole nanoseconds.
+    ///
+    /// This is the opt-in serializer the timing feature adds. [`Self::to_json`]
+    /// is left byte-for-byte unchanged by design (see the `RouteTrace` struct
+    /// docs and `tests/route_trace.rs`) precisely so every existing consumer —
+    /// golden tests, committed bench artifacts, the bridge-catalogue replay
+    /// validator — keeps parsing the schema it already expects. A caller that
+    /// wants to see where a declined route's time went (`explain_corpus`,
+    /// `smtcomp_cli`'s trace output) opts in explicitly by calling this method
+    /// instead.
+    ///
+    /// # Schema
+    ///
+    /// ```text
+    /// {"schema_version":1,"attempts":[
+    ///   {"route":"probe","outcome":"probe","detail":"…","elapsed_ns":1200},
+    ///   {"route":"qf-bv","outcome":"decided","verdict":"unsat","elapsed_ns":48200000}
+    /// ]}
+    /// ```
+    #[must_use]
+    pub fn to_json_with_timing(&self) -> String {
+        self.render_json(true)
+    }
+
+    fn render_json(&self, include_timing: bool) -> String {
+        let per_attempt_capacity = if include_timing { 96 } else { 64 };
+        let mut out = String::with_capacity(64 + self.attempts.len() * per_attempt_capacity);
         out.push_str("{\"schema_version\":");
         out.push_str(&ROUTE_TRACE_JSON_SCHEMA_VERSION.to_string());
         out.push_str(",\"attempts\":[");
@@ -368,6 +481,10 @@ impl RouteTrace {
                         }
                     }
                 }
+            }
+            if include_timing {
+                out.push_str(",\"elapsed_ns\":");
+                out.push_str(&self.elapsed[i].as_nanos().to_string());
             }
             out.push('}');
         }
@@ -475,5 +592,115 @@ mod json_tests {
         let first = rendered.find("first").expect("first route present");
         let second = rendered.find("second").expect("second route present");
         assert!(first < second, "attempts must keep dispatch order");
+    }
+
+    /// A declined route followed by a decided one records two elapsed values
+    /// (one per attempt), and their sum equals the trace's total — the
+    /// invariant that makes a declined route's cost visible instead of just
+    /// its outcome.
+    #[test]
+    fn declined_then_decided_carries_two_elapsed_values_summing_to_total() {
+        let mut trace = RouteTrace::new();
+        trace.record_declined("a", DeclineReason::Unsupported);
+        std::thread::sleep(Duration::from_millis(2));
+        trace.record_decided("b", Verdict::Sat);
+
+        let elapsed = trace.elapsed();
+        assert_eq!(elapsed.len(), 2, "one elapsed entry per attempt");
+        assert_eq!(elapsed.len(), trace.attempts().len());
+
+        let summed = elapsed.iter().copied().fold(Duration::ZERO, |a, d| a + d);
+        assert_eq!(summed, trace.total_elapsed());
+
+        // The sleep between the two records means the second attempt's
+        // elapsed dominates and is observably nonzero.
+        assert!(
+            elapsed[1] >= Duration::from_millis(1),
+            "declined route's cost must be visible: elapsed[1]={:?}",
+            elapsed[1]
+        );
+    }
+
+    /// Adding per-attempt timing must not change [`RouteTrace::to_json`]'s
+    /// output: it is pinned against the same literal
+    /// [`every_outcome_variant_renders_its_documented_shape`] already checks,
+    /// built the identical way. Timing is opt-in via
+    /// [`RouteTrace::to_json_with_timing`] only.
+    #[test]
+    fn default_to_json_is_unchanged_by_timing_support() {
+        let mut trace = RouteTrace::new();
+        trace.record_probe("bv");
+        trace.record_declined("a", DeclineReason::Unsupported);
+        trace.record_declined("b", DeclineReason::NotApplicable);
+        trace.record_declined("c", DeclineReason::Budget("nodes".into()));
+        trace.record_declined(
+            "d",
+            DeclineReason::Incomplete(UnknownReason {
+                kind: UnknownKind::Incomplete,
+                detail: "nl".into(),
+            }),
+        );
+        trace.record_declined("e", DeclineReason::VerifierRejected("replay".into()));
+        trace.record_decided("f", Verdict::Unsat);
+        assert_eq!(
+            trace.to_json(),
+            "{\"schema_version\":1,\"attempts\":[\
+{\"route\":\"probe\",\"outcome\":\"probe\",\"detail\":\"bv\"},\
+{\"route\":\"a\",\"outcome\":\"declined\",\"reason\":\"unsupported\"},\
+{\"route\":\"b\",\"outcome\":\"declined\",\"reason\":\"not-applicable\"},\
+{\"route\":\"c\",\"outcome\":\"declined\",\"reason\":\"budget\",\"detail\":\"nodes\"},\
+{\"route\":\"d\",\"outcome\":\"declined\",\"reason\":\"incomplete\",\
+\"kind\":\"incomplete\",\"detail\":\"nl\"},\
+{\"route\":\"e\",\"outcome\":\"declined\",\"reason\":\"verifier-rejected\",\
+\"detail\":\"replay\"},\
+{\"route\":\"f\",\"outcome\":\"decided\",\"verdict\":\"unsat\"}]}",
+            "to_json must stay byte-identical once timing support lands"
+        );
+    }
+
+    /// The opt-in timed serializer adds `elapsed_ns` per attempt and nothing
+    /// else: same route/outcome content as `to_json`, one extra member.
+    #[test]
+    fn to_json_with_timing_adds_elapsed_ns_per_attempt_only() {
+        let mut trace = RouteTrace::new();
+        trace.record_declined("a", DeclineReason::Unsupported);
+        trace.record_decided("b", Verdict::Sat);
+
+        let plain = trace.to_json();
+        let timed = trace.to_json_with_timing();
+        assert_ne!(plain, timed, "timed rendering must differ from the default");
+        assert_eq!(
+            timed.matches("\"elapsed_ns\":").count(),
+            2,
+            "one elapsed_ns member per attempt"
+        );
+        // Stripping every `,"elapsed_ns":<digits>` from the timed rendering
+        // must recover the plain rendering exactly.
+        let mut stripped = String::new();
+        let mut rest = timed.as_str();
+        while let Some(pos) = rest.find(",\"elapsed_ns\":") {
+            stripped.push_str(&rest[..pos]);
+            rest = &rest[pos + ",\"elapsed_ns\":".len()..];
+            let digits_end = rest
+                .find(|c: char| !c.is_ascii_digit())
+                .unwrap_or(rest.len());
+            rest = &rest[digits_end..];
+        }
+        stripped.push_str(rest);
+        assert_eq!(stripped, plain);
+    }
+
+    #[test]
+    fn route_trace_equality_ignores_timing() {
+        let mut a = RouteTrace::new();
+        a.record_decided("x", Verdict::Sat);
+        std::thread::sleep(Duration::from_millis(2));
+        let mut b = RouteTrace::new();
+        b.record_decided("x", Verdict::Sat);
+
+        // Real wall-clock elapsed will differ between the two traces, but
+        // structural equality (route/outcome only) must still hold.
+        assert_ne!(a.elapsed()[0], b.elapsed()[0]);
+        assert_eq!(a, b, "RouteTrace equality must ignore timing");
     }
 }

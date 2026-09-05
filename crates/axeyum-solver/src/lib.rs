@@ -699,7 +699,10 @@ pub mod theories {
         pub use crate::aufbv::check_with_arrays_and_functions;
         pub use crate::combined::check_with_all_theories;
         pub use crate::euf::{check_with_uf_arithmetic, check_with_uf_arithmetic_lazy};
-        pub use crate::euf_egraph::{TheoryLit, TheoryProp, TheorySolver};
+        pub use crate::euf_egraph::{
+            ExplanationId, FinalCheckOutcome, PropagationQueue, TheoryExplanation, TheoryLit,
+            TheoryProp, TheorySolver,
+        };
         pub use crate::theory_combination::{
             InterfaceStatus, classify_interface_equalities, combination_conflict, interface_th_eqs,
             propose_interface_equalities, shared_terms,
@@ -707,6 +710,17 @@ pub mod theories {
         pub use crate::ufbv_online::{check_qf_aufbv_online_cdclt, check_qf_ufbv_online_cdclt};
         pub use crate::uflia_online::check_qf_uflia_online;
         pub use crate::uflra_online::check_qf_uflra_online;
+    }
+
+    /// Stage/counter attribution for the generic CDCL(T) driver
+    /// (`crate::cdclt::CdclT`), shared by every arithmetic/EUF/string/combined
+    /// theory route above — the counterpart to
+    /// [`crate::layers::BvLayerStats`] for the pure bit-blast pipeline. Off by
+    /// default (each `CdclT::new` reads no clock beyond the deadline check
+    /// unless a [`TheoryLayerStatsGuard`] is active): see [`TheoryLayerStatsGuard::enable`].
+    pub mod cdclt_diagnostics {
+        pub use crate::cdclt::{TheoryLayerStatsGuard, last_theory_layer_stats};
+        pub use crate::layers::TheoryLayerStats;
     }
 }
 
@@ -1059,7 +1073,8 @@ macro_rules! full_exports {
         pub use euf_alethe::prove_qf_uf_unsat_alethe;
         #[doc(hidden)]
         pub use euf_egraph::{
-            EufConflict, EufTheory, TheoryLit, TheoryProp, TheorySolver, check_qf_uf,
+            EufConflict, EufTheory, ExplanationId, FinalCheckOutcome, PropagationQueue,
+            TheoryExplanation, TheoryLit, TheoryProp, TheorySolver, check_qf_uf,
             check_qf_uf_online_cdclt, check_qf_uf_with_config, prove_unsat_by_congruence,
             prove_unsat_lazy, prove_unsat_qf_uf_online, solve_qf_uf_online,
         };

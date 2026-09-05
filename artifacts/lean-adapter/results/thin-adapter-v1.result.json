@@ -6,7 +6,7 @@
   "lean_commit": "d024af099ca4bf2c86f649261ebf59565dc8c622",
   "environment_id": "lean-4.30.0@d024af099ca4bf2c86f649261ebf59565dc8c622:thin-adapter-v1",
   "subject": "Nat.add_comm",
-  "borrowed": "Nat.le_refl",
+  "borrowed": "Nat.le_of_succ_le_succ",
   "outcomes": [
     {
       "category": "success",

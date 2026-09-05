@@ -11,11 +11,23 @@ keywords.workspace = true
 categories.workspace = true
 publish = false
 
+[features]
+default = []
+# ADR-1703: the `rustsat-batsat` adapter is retired as a shipping engine and
+# kept ONLY as a differential oracle, the role ADR-0002 gives Z3. It is not in
+# `default`, so the default dependency graph contains none of the three crates
+# below -- check with `cargo tree -e normal -p axeyum-cnf`. Slice 2 of ADR-1703
+# removes the feature and `src/batsat_reference.rs` together.
+#
+# A suite behind this feature compiles to ZERO tests without it and exits 0, the
+# same trap as `--features z3`. Always confirm a NONZERO test count.
+batsat-reference = ["dep:batsat", "dep:rustsat", "dep:rustsat-batsat"]
+
 [dependencies]
 axeyum-aig.workspace = true
-batsat.workspace = true
-rustsat.workspace = true
-rustsat-batsat.workspace = true
+batsat = { workspace = true, optional = true }
+rustsat = { workspace = true, optional = true }
+rustsat-batsat = { workspace = true, optional = true }
 
 # Browser-compatible monotonic clock for timeouts/telemetry (ADR-0017); only on
 # wasm32, where `std::time::Instant` has no clock in the browser.

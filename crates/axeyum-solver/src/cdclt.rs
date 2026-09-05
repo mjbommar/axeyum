@@ -72,9 +72,64 @@
 //!   forever on a pathological theory. Exhaustion is *sound* — `Unknown` is always a
 //!   permitted verdict — never a wrong sat/unsat.
 
-use std::time::Instant;
+use std::cell::Cell;
+use std::time::{Duration, Instant};
 
-use crate::euf_egraph::{TheoryLit, TheorySolver};
+use crate::euf_egraph::{
+    ExplanationId, FinalCheckOutcome, PropagationQueue, TheoryExplanation, TheoryLit, TheorySolver,
+};
+use crate::layers::TheoryLayerStats;
+
+thread_local! {
+    /// Whether the *next* [`CdclT::new`] should collect [`TheoryLayerStats`]
+    /// timing. Scoped this way (rather than threaded through the ~10
+    /// `CdclT::new` call sites across the arithmetic/EUF/string/combined
+    /// theory adapters) for the same reason `nra_real_root::ISOLATE_DEADLINE`
+    /// is thread-local: one opt-in knob at the top of a solve, read at the
+    /// handful of internal construction points, instead of a parameter
+    /// threaded through every adapter. See [`TheoryLayerStatsGuard`].
+    static COLLECT_LAYER_STATS: Cell<bool> = const { Cell::new(false) };
+    /// The [`TheoryLayerStats`] collected by the most recently completed
+    /// [`CdclT::solve`] call while collection was enabled. `None` until
+    /// collection has been enabled and a search has completed.
+    static LAST_THEORY_LAYER_STATS: Cell<Option<TheoryLayerStats>> = const { Cell::new(None) };
+}
+
+/// Enables [`TheoryLayerStats`] collection for every `CdclT` search
+/// constructed for the lifetime of the returned guard, restoring the previous
+/// setting on drop (so nested/recursive solves compose correctly). Off by
+/// default: constructing no guard means no extra clock read beyond the
+/// existing deadline check.
+///
+/// ```ignore
+/// let _guard = TheoryLayerStatsGuard::enable();
+/// let _ = axeyum_solver::solve_smtlib(text, &config);
+/// let stats = last_theory_layer_stats(); // Some(..) if a CDCL(T) route ran
+/// ```
+pub struct TheoryLayerStatsGuard(bool);
+
+impl TheoryLayerStatsGuard {
+    /// Enables collection for the lifetime of the returned guard.
+    #[must_use]
+    pub fn enable() -> Self {
+        TheoryLayerStatsGuard(COLLECT_LAYER_STATS.with(|c| c.replace(true)))
+    }
+}
+
+impl Drop for TheoryLayerStatsGuard {
+    fn drop(&mut self) {
+        COLLECT_LAYER_STATS.with(|c| c.set(self.0));
+    }
+}
+
+/// The [`TheoryLayerStats`] collected by the most recently completed
+/// [`CdclT::solve`] call on this thread while a [`TheoryLayerStatsGuard`] was
+/// active. `None` if collection was never enabled, or no CDCL(T) search has
+/// completed yet on this thread.
+#[must_use]
+pub fn last_theory_layer_stats() -> Option<TheoryLayerStats> {
+    LAST_THEORY_LAYER_STATS.with(Cell::get)
+}
 
 /// A CNF literal in the online skeleton: a variable index and its polarity.
 /// Initial theory atoms occupy the first slots, while dynamically added theory
@@ -193,6 +248,24 @@ enum Learn {
     Continue,
     /// The conflict was implied at level 0: UNSAT.
     Unsat,
+    /// A theory failed to resolve a deferred explanation handle it emitted
+    /// (ADR-1701). The search abandons with [`Outcome::Unknown`] — sound, never
+    /// a verdict.
+    Abort,
+}
+
+/// What [`CdclT::run_final_check`] decided at a total Boolean assignment
+/// (ADR-1701).
+enum FinalCheck {
+    /// The theory accepted the assignment: the search is `Sat`.
+    Sat,
+    /// The theory's conflict was implied at level 0: the search is `Unsat`.
+    Unsat,
+    /// The theory could not complete the check, or could not explain its own
+    /// conflict: the search degrades to `Unknown`.
+    Unknown,
+    /// The conflict was learned and the search backjumped: keep searching.
+    Continue,
 }
 
 /// A generic online CDCL(T) search over a CNF skeleton, driving any
@@ -283,6 +356,54 @@ pub struct CdclT {
     /// Test-only first-reduction budget override.
     #[cfg(test)]
     reduce_first_override: Option<usize>,
+    /// Whether this search collects [`TheoryLayerStats`] timing (read once at
+    /// construction from [`COLLECT_LAYER_STATS`]). When `false`, every
+    /// `time_*`/stage-timing field below stays at its initial `Duration::ZERO`
+    /// — no extra `Instant::now()` call is made.
+    collect_layer_stats: bool,
+    /// Time inside Boolean unit propagation passes (`Self::unit_propagate`).
+    time_boolean_propagate: Duration,
+    /// Time inside `TheorySolver::assert` calls.
+    time_theory_assert: Duration,
+    /// Time inside `TheorySolver::propagate` calls.
+    time_theory_propagate: Duration,
+    /// Time inside `TheorySolver::push`/`pop` calls.
+    time_theory_push_pop: Duration,
+    /// Time inside 1-UIP conflict analysis (`Self::analyze_conflict`).
+    time_conflict_analysis: Duration,
+    /// Time inside `TheorySolver::final_check` calls (ADR-1701).
+    time_theory_final_check: Duration,
+    /// Time inside `TheorySolver::explain` calls resolving deferred explanation
+    /// handles (ADR-1701).
+    time_theory_explain: Duration,
+    /// Conflicts whose falsified clause traces to a theory inconsistency
+    /// (`Conflict::is_theory`), as opposed to a purely Boolean conflict.
+    /// Counted unconditionally (a plain increment, not a clock read).
+    theory_conflicts: usize,
+    /// Search decisions taken (`Self::pick_unassigned` choices). Counted
+    /// unconditionally.
+    decisions: usize,
+    /// Completed [`TheorySolver::final_check`] calls (ADR-1701). Counted
+    /// unconditionally; stays `0` for every theory keeping the trait default,
+    /// because the driver still calls it — the *default body* is what does
+    /// nothing. (It is counted so a diagnosis can tell "never reached a total
+    /// assignment" from "reached one and the theory accepted it".)
+    final_checks: usize,
+    /// Per variable, the **deferred** explanation handle behind its theory
+    /// propagation, when the theory chose not to materialise the reason
+    /// (ADR-1701). `reason[var]` is `None` exactly while this is `Some`;
+    /// `Self::reason_for` resolves it on first use and moves it into `reason`.
+    /// Cleared in lockstep with `reason` on backjump, so a handle never outlives
+    /// the theory state that justifies it.
+    deferred_reason: Vec<Option<ExplanationId>>,
+    /// The driver-owned propagation queue (ADR-1701), reused across every
+    /// propagation fixpoint iteration so a theory that overrides
+    /// `propagate_into` allocates nothing per call.
+    prop_queue: PropagationQueue,
+    /// Set when a theory could not resolve a handle it emitted. The search then
+    /// returns [`Outcome::Unknown`] — sound, never a verdict — rather than
+    /// treating a missing explanation as an empty clause.
+    explanation_unresolved: bool,
 }
 
 impl CdclT {
@@ -348,6 +469,20 @@ impl CdclT {
             reductions: 0,
             #[cfg(test)]
             reduce_first_override: None,
+            collect_layer_stats: COLLECT_LAYER_STATS.with(Cell::get),
+            time_boolean_propagate: Duration::ZERO,
+            time_theory_assert: Duration::ZERO,
+            time_theory_propagate: Duration::ZERO,
+            time_theory_push_pop: Duration::ZERO,
+            time_conflict_analysis: Duration::ZERO,
+            time_theory_final_check: Duration::ZERO,
+            time_theory_explain: Duration::ZERO,
+            theory_conflicts: 0,
+            decisions: 0,
+            final_checks: 0,
+            deferred_reason: vec![None; var_count],
+            prop_queue: PropagationQueue::new(),
+            explanation_unresolved: false,
         }
     }
 
@@ -386,6 +521,7 @@ impl CdclT {
         self.reason.push(None);
         self.reason_theory.push(false);
         self.reason_clause.push(None);
+        self.deferred_reason.push(None);
         self.activity.push(0.0);
         self.saved_phase.push(true);
         (variable, atom)
@@ -454,8 +590,8 @@ impl CdclT {
         self
     }
 
-    /// Number of completed restarts.
-    #[cfg(test)]
+    /// Number of completed restarts. Used by tests and by
+    /// [`Self::theory_layer_stats`].
     fn restarts(&self) -> u64 {
         self.restart_index - 1
     }
@@ -548,7 +684,14 @@ impl CdclT {
         self.reason_clause[var] = None;
         self.trail.push((var, value, cause));
         if let Some(atom) = self.theory_atom_for_var[var] {
-            theory.assert(atom, value)?;
+            if self.collect_layer_stats {
+                let started = Instant::now();
+                let outcome = theory.assert(atom, value);
+                self.time_theory_assert += started.elapsed();
+                outcome?;
+            } else {
+                theory.assert(atom, value)?;
+            }
         }
         Ok(())
     }
@@ -631,60 +774,158 @@ impl CdclT {
         Ok(())
     }
 
+    /// Materialises `explanation` into literals, resolving a deferred handle
+    /// through [`TheorySolver::explain`] (ADR-1701). `None` means the theory
+    /// could not resolve a handle it emitted: a theory bug, recorded so the
+    /// search degrades to [`Outcome::Unknown`] instead of learning from a
+    /// reason nobody can state.
+    fn resolve_explanation<T: TheorySolver>(
+        &mut self,
+        theory: &mut T,
+        explanation: TheoryExplanation,
+    ) -> Option<Vec<TheoryLit>> {
+        match explanation {
+            TheoryExplanation::Eager(lits) => Some(lits),
+            TheoryExplanation::Lazy(handle) => {
+                let resolved = if self.collect_layer_stats {
+                    let started = Instant::now();
+                    let resolved = theory.explain(handle);
+                    self.time_theory_explain += started.elapsed();
+                    resolved
+                } else {
+                    theory.explain(handle)
+                };
+                if resolved.is_none() {
+                    self.explanation_unresolved = true;
+                }
+                resolved
+            }
+        }
+    }
+
+    /// The reason clause of an implied literal, resolving a deferred theory
+    /// explanation on first use and caching it in `reason` (ADR-1701). `None`
+    /// only when a theory failed to resolve its own handle.
+    fn reason_for<T: TheorySolver>(&mut self, theory: &mut T, var: usize) -> Option<Vec<Lit>> {
+        if let Some(reason) = &self.reason[var] {
+            return Some(reason.clone());
+        }
+        let handle = self.deferred_reason[var]?;
+        let atom = self.theory_atom_for_var[var]
+            .expect("a deferred reason belongs to a theory-mapped variable");
+        let value = self.value[var].expect("a deferred reason belongs to an assigned variable");
+        let reason_lits = self.resolve_explanation(theory, TheoryExplanation::Lazy(handle))?;
+        let clause = self.theory_reason_clause(&reason_lits, TheoryLit { atom, value });
+        self.reason[var] = Some(clause.clone());
+        self.deferred_reason[var] = None;
+        Some(clause)
+    }
+
+    /// Registers the theory atoms created since the previous call (ADR-1701):
+    /// one appended, activated SAT variable each. A theory keeping the trait
+    /// default reports `0`, so this is a single comparison per fixpoint round.
+    fn register_new_atoms<T: TheorySolver>(&mut self, theory: &mut T) {
+        let fresh = theory.take_new_atoms();
+        for _ in 0..fresh {
+            let (variable, _atom) = self.add_theory_variable();
+            self.active[variable] = true;
+        }
+    }
+
     /// Applies sound theory propagations to the trail until fixpoint. Returns the
     /// learned theory-conflict clause on a theory conflict, else `Ok(())`.
     fn theory_propagate<T: TheorySolver>(&mut self, theory: &mut T) -> Result<(), Conflict> {
         loop {
-            let props = theory.propagate();
+            self.register_new_atoms(theory);
+            // Take the driver-owned queue so `self` stays freely borrowable while
+            // the batch is applied; it goes back at the end of the iteration with
+            // its allocation intact (ADR-1701).
+            let mut queue = std::mem::take(&mut self.prop_queue);
+            queue.clear();
+            if self.collect_layer_stats {
+                let started = Instant::now();
+                theory.propagate_into(&mut queue);
+                self.time_theory_propagate += started.elapsed();
+            } else {
+                theory.propagate_into(&mut queue);
+            }
             let mut progress = false;
-            for prop in props {
+            let mut outcome = Ok(());
+            for (lit, explanation) in queue.drain() {
                 // Intra-batch deadline check (see `unit_propagate`): each
                 // applied propagation pays the theory's per-assert cost.
                 if self.timed_out() {
-                    return Ok(());
+                    break;
                 }
-                let Some(var) = self.theory_variable(prop.lit.atom) else {
+                let Some(var) = self.theory_variable(lit.atom) else {
                     continue;
                 };
                 if !self.active[var] {
                     continue;
                 }
                 match self.value[var] {
-                    Some(v) if v == prop.lit.value => {}
+                    Some(v) if v == lit.value => {}
                     Some(_) => {
                         // The theory entails the opposite of the current value: learn
-                        // ¬(reason ∧ current literal).
-                        let mut core = prop.reason.clone();
+                        // ¬(reason ∧ current literal). The reason is needed *now*, so
+                        // a deferred handle is resolved here.
+                        let Some(mut core) = self.resolve_explanation(theory, explanation) else {
+                            outcome = Ok(());
+                            break;
+                        };
                         core.push(TheoryLit {
-                            atom: prop.lit.atom,
-                            value: !prop.lit.value,
+                            atom: lit.atom,
+                            value: !lit.value,
                         });
-                        return Err(Conflict {
+                        outcome = Err(Conflict {
                             clause: self.theory_conflict_clause(&core),
                             is_theory: true,
                         });
+                        break;
                     }
                     None => {
-                        let reason_clause = self.theory_reason_clause(&prop.reason, prop.lit);
-                        if let Err(c) = self.assign(
+                        // A deferred reason is *not* resolved here — that is the
+                        // whole point of the handle. The variable is assigned with
+                        // no stored reason clause and the handle recorded beside
+                        // it; `Self::reason_for` materialises it only if conflict
+                        // analysis reaches this literal.
+                        let reason_clause = match &explanation {
+                            TheoryExplanation::Eager(reason) => {
+                                Some(self.theory_reason_clause(reason, lit))
+                            }
+                            TheoryExplanation::Lazy(_) => None,
+                        };
+                        let deferred = match explanation {
+                            TheoryExplanation::Eager(_) => None,
+                            TheoryExplanation::Lazy(handle) => Some(handle),
+                        };
+                        match self.assign(
                             theory,
                             var,
-                            prop.lit.value,
+                            lit.value,
                             Cause::Implied,
-                            Some(reason_clause),
+                            reason_clause,
                             true,
                         ) {
-                            return Err(Conflict {
-                                clause: self.theory_conflict_clause(&c),
-                                is_theory: true,
-                            });
+                            Ok(()) => {}
+                            Err(c) => {
+                                outcome = Err(Conflict {
+                                    clause: self.theory_conflict_clause(&c),
+                                    is_theory: true,
+                                });
+                                break;
+                            }
                         }
+                        self.deferred_reason[var] = deferred;
                         self.theory_propagations += 1;
                         progress = true;
                     }
                 }
             }
-            if !progress {
+            queue.clear();
+            self.prop_queue = queue;
+            outcome?;
+            if self.explanation_unresolved || self.timed_out() || !progress {
                 return Ok(());
             }
         }
@@ -725,11 +966,16 @@ impl CdclT {
     /// literal — the first UIP — remains. Returns the asserting clause (UIP at index
     /// 0, lower-level literals after), the backjump level, and whether the clause is a
     /// pure theory lemma (resolved through theory clauses only).
-    fn analyze_conflict(
+    /// Returns `None` when a deferred theory explanation could not be resolved
+    /// (ADR-1701): the caller then abandons the search as `Unknown`. It never
+    /// returns the empty asserting clause for that case, which would be a wrong
+    /// `unsat`.
+    fn analyze_conflict<T: TheorySolver>(
         &mut self,
+        theory: &mut T,
         conflict: &[Lit],
         seed_is_theory: bool,
-    ) -> (Vec<Lit>, usize, bool) {
+    ) -> Option<(Vec<Lit>, usize, bool)> {
         let mut seen = vec![false; self.var_count];
         let mut lower: Vec<Lit> = Vec::new();
         let mut path_count = 0_usize;
@@ -764,7 +1010,7 @@ impl CdclT {
             }
             if !found {
                 // Implied at level 0: the empty asserting clause (UNSAT).
-                return (Vec::new(), 0, all_theory);
+                return Some((Vec::new(), 0, all_theory));
             }
 
             let var = self.trail[index].0;
@@ -777,15 +1023,23 @@ impl CdclT {
                 learned.push(self.true_literal(var).negate());
                 learned.extend(lower);
                 let backjump = Self::backjump_level(&self.level, &learned);
-                return (learned, backjump, all_theory);
+                return Some((learned, backjump, all_theory));
             }
 
             all_theory = all_theory && self.reason_theory[var];
-            clause.clone_from(
-                self.reason[var]
-                    .as_ref()
-                    .expect("a current-level implied literal has a reason clause"),
+            // Resolving against this literal is the *only* moment its reason is
+            // needed, which is why a theory may hand the driver a handle instead
+            // of the literals (ADR-1701).
+            assert!(
+                self.reason[var].is_some() || self.deferred_reason[var].is_some(),
+                "a current-level implied literal has a reason clause"
             );
+            let Some(reason) = self.reason_for(theory, var) else {
+                // The theory could not resolve a handle it emitted. Abandon the
+                // search; never learn from a reason nobody can state.
+                return None;
+            };
+            clause = reason;
         }
     }
 
@@ -814,8 +1068,18 @@ impl CdclT {
             self.reason[var] = None;
             self.reason_theory[var] = false;
             self.reason_clause[var] = None;
+            // A deferred explanation handle is dropped in the same step the
+            // theory is popped past the level that justified it (ADR-1701), so a
+            // handle can never outlive the theory state behind it.
+            self.deferred_reason[var] = None;
             if cause == Cause::Decision {
-                theory.pop();
+                if self.collect_layer_stats {
+                    let started = Instant::now();
+                    theory.pop();
+                    self.time_theory_push_pop += started.elapsed();
+                } else {
+                    theory.pop();
+                }
             }
         }
         self.decision_level = target_level;
@@ -878,7 +1142,14 @@ impl CdclT {
             if self.timed_out() {
                 return Ok(());
             }
-            self.unit_propagate(theory)?;
+            if self.collect_layer_stats {
+                let started = Instant::now();
+                let outcome = self.unit_propagate(theory);
+                self.time_boolean_propagate += started.elapsed();
+                outcome?;
+            } else {
+                self.unit_propagate(theory)?;
+            }
             let before = self.trail.len();
             self.theory_propagate(theory)?;
             if self.trail.len() == before {
@@ -896,8 +1167,20 @@ impl CdclT {
         theory: &mut T,
         conflict: &Conflict,
     ) -> Learn {
-        let (learned, backjump, is_theory_lemma) =
-            self.analyze_conflict(&conflict.clause, conflict.is_theory);
+        if conflict.is_theory {
+            self.theory_conflicts += 1;
+        }
+        let analyzed = if self.collect_layer_stats {
+            let started = Instant::now();
+            let result = self.analyze_conflict(theory, &conflict.clause, conflict.is_theory);
+            self.time_conflict_analysis += started.elapsed();
+            result
+        } else {
+            self.analyze_conflict(theory, &conflict.clause, conflict.is_theory)
+        };
+        let Some((learned, backjump, is_theory_lemma)) = analyzed else {
+            return Learn::Abort;
+        };
         self.decay_activity();
         self.conflicts_since_restart += 1;
         if learned.is_empty() {
@@ -1014,7 +1297,104 @@ impl CdclT {
     ///
     /// `pub` bench-only (see the type doc); reachable outside the crate only
     /// via [`crate::bench_internals`].
+    ///
+    /// Thin wrapper over [`Self::solve_inner`]: publishes [`TheoryLayerStats`]
+    /// to [`last_theory_layer_stats`] on the way out when collection is
+    /// enabled, so every early `return` inside the search loop has exactly
+    /// one place recording the final snapshot.
     pub fn solve<T: TheorySolver>(&mut self, theory: &mut T) -> Outcome {
+        let outcome = self.solve_inner(theory);
+        if self.collect_layer_stats {
+            let stats = self.theory_layer_stats();
+            LAST_THEORY_LAYER_STATS.with(|c| c.set(Some(stats)));
+        }
+        outcome
+    }
+
+    /// [`Self::theory_layer_stats`]-producing counterpart of
+    /// [`crate::layers::BvLayerStats::from_solve_stats`]: lifts this search's
+    /// accumulated stage timings and counters into the typed, named
+    /// [`TheoryLayerStats`] a caller can compare or print, exactly as
+    /// `BvLayerStats` lifts the `sat-bv` backend's counters.
+    fn theory_layer_stats(&self) -> TheoryLayerStats {
+        TheoryLayerStats {
+            boolean_propagate: self.time_boolean_propagate,
+            theory_assert: self.time_theory_assert,
+            theory_propagate: self.time_theory_propagate,
+            theory_push_pop: self.time_theory_push_pop,
+            conflict_analysis: self.time_conflict_analysis,
+            theory_final_check: self.time_theory_final_check,
+            theory_explain: self.time_theory_explain,
+            #[allow(clippy::cast_possible_truncation)]
+            final_checks: self.final_checks as u64,
+            #[allow(clippy::cast_possible_truncation)] // Conflict/decision counts fit u64 in practice.
+            theory_conflicts: self.theory_conflicts as u64,
+            #[allow(clippy::cast_possible_truncation)]
+            theory_propagations: self.theory_propagations as u64,
+            #[allow(clippy::cast_possible_truncation)]
+            decisions: self.decisions as u64,
+            restarts: self.restarts(),
+            // The generic `TheorySolver` trait has no pivot-count method
+            // (D2, 2026-09-05 architecture review); a concrete simplex-backed
+            // theory would need to expose one before this can be `Some`.
+            simplex_pivots: None,
+        }
+    }
+
+    /// Runs [`TheorySolver::final_check`] at a total Boolean assignment and turns
+    /// its answer into a search step (ADR-1701).
+    ///
+    /// The core of a final-check conflict is **not** required to name a
+    /// current-decision-level literal — a complete check looks at the whole
+    /// assignment, not at the literal that just arrived — so it cannot be handed
+    /// straight to 1-UIP analysis, whose path counter assumes the trigger-literal
+    /// invariant. This backjumps to the highest decision level the core names
+    /// first. An all-level-0 core then makes 1-UIP derive the empty asserting
+    /// clause, which is the correct `Unsat`.
+    fn run_final_check<T: TheorySolver>(&mut self, theory: &mut T) -> FinalCheck {
+        let outcome = if self.collect_layer_stats {
+            let started = Instant::now();
+            let outcome = theory.final_check();
+            self.time_theory_final_check += started.elapsed();
+            outcome
+        } else {
+            theory.final_check()
+        };
+        self.final_checks += 1;
+        let explanation = match outcome {
+            FinalCheckOutcome::Sat => return FinalCheck::Sat,
+            FinalCheckOutcome::Unknown => return FinalCheck::Unknown,
+            FinalCheckOutcome::Conflict(explanation) => explanation,
+        };
+        let Some(core) = self.resolve_explanation(theory, explanation) else {
+            return FinalCheck::Unknown;
+        };
+        if core.is_empty() {
+            // A conflict with no core names nothing to learn from; treating it as
+            // the empty clause would be a wrong `unsat`.
+            return FinalCheck::Unknown;
+        }
+        let clause = self.theory_conflict_clause(&core);
+        let trigger_level = clause
+            .iter()
+            .map(|lit| self.level[lit.var])
+            .max()
+            .unwrap_or(0);
+        if trigger_level < self.decision_level {
+            self.backjump_to(theory, trigger_level);
+        }
+        let conflict = Conflict {
+            clause,
+            is_theory: true,
+        };
+        match self.learn_and_backjump(theory, &conflict) {
+            Learn::Unsat => FinalCheck::Unsat,
+            Learn::Abort => FinalCheck::Unknown,
+            Learn::Continue => FinalCheck::Continue,
+        }
+    }
+
+    fn solve_inner<T: TheorySolver>(&mut self, theory: &mut T) -> Outcome {
         loop {
             // Defense in depth against a non-monotone-theory livelock: bound the
             // main-loop iterations even with no deadline. Sound — `Unknown` is a
@@ -1031,8 +1411,12 @@ impl CdclT {
                 Ok(()) => {}
                 Err(conflict) => match self.learn_and_backjump(theory, &conflict) {
                     Learn::Unsat => return Outcome::Unsat,
+                    Learn::Abort => return Outcome::Unknown,
                     Learn::Continue => continue,
                 },
+            }
+            if self.explanation_unresolved {
+                return Outcome::Unknown;
             }
             if self.timed_out() {
                 return Outcome::Unknown;
@@ -1044,10 +1428,26 @@ impl CdclT {
                 continue;
             }
             match self.pick_unassigned() {
-                None => return Outcome::Sat,
+                // A *total* assignment of the active variables: the one moment a
+                // theory's complete check is due (ADR-1701). A theory keeping the
+                // trait default answers `Sat` here, so this is byte-identical to
+                // the previous unconditional `return Outcome::Sat`.
+                None => match self.run_final_check(theory) {
+                    FinalCheck::Sat => return Outcome::Sat,
+                    FinalCheck::Unknown => return Outcome::Unknown,
+                    FinalCheck::Unsat => return Outcome::Unsat,
+                    FinalCheck::Continue => {}
+                },
                 Some(var) => {
                     self.decision_level += 1;
-                    theory.push();
+                    self.decisions += 1;
+                    if self.collect_layer_stats {
+                        let started = Instant::now();
+                        theory.push();
+                        self.time_theory_push_pop += started.elapsed();
+                    } else {
+                        theory.push();
+                    }
                     let polarity = self.saved_phase[var];
                     if let Err(core) =
                         self.assign(theory, var, polarity, Cause::Decision, None, false)
@@ -1056,8 +1456,10 @@ impl CdclT {
                             clause: self.theory_conflict_clause(&core),
                             is_theory: true,
                         };
-                        if let Learn::Unsat = self.learn_and_backjump(theory, &conflict) {
-                            return Outcome::Unsat;
+                        match self.learn_and_backjump(theory, &conflict) {
+                            Learn::Unsat => return Outcome::Unsat,
+                            Learn::Abort => return Outcome::Unknown,
+                            Learn::Continue => {}
                         }
                     }
                 }
@@ -1470,6 +1872,19 @@ mod termination_tests {
     #[test]
     fn vsids_bumps_conflict_vars_and_reorders_decisions_deterministically() {
         fn run() -> (Vec<f64>, Vec<Lit>) {
+            // A conflict over four purely Boolean variables: the analysis never
+            // reaches the theory, but the signature takes one (ADR-1701).
+            struct NoTheory;
+            impl TheorySolver for NoTheory {
+                fn assert(&mut self, _atom: usize, _value: bool) -> Result<(), Vec<TheoryLit>> {
+                    Ok(())
+                }
+                fn push(&mut self) {}
+                fn pop(&mut self) {}
+                fn propagate(&self) -> Vec<TheoryProp> {
+                    Vec::new()
+                }
+            }
             let mut solver = CdclT::new(4, 0, Vec::new(), None);
             solver.decision_level = 1;
             solver.value[0] = Some(true);
@@ -1498,7 +1913,9 @@ mod termination_tests {
                     positive: false,
                 },
             ];
-            let (learned, _, _) = solver.analyze_conflict(&conflict, false);
+            let (learned, _, _) = solver
+                .analyze_conflict(&mut NoTheory, &conflict, false)
+                .expect("a purely Boolean analysis never defers an explanation");
             (solver.activity, learned)
         }
 
@@ -1914,5 +2331,543 @@ mod termination_tests {
 
         assert_eq!(solver.solve(&mut theory), Outcome::Unsat);
         assert!(theory.assigned.contains(&(1, false)));
+    }
+}
+
+#[cfg(test)]
+mod adr1701_tests {
+    //! Adversarial coverage for the four capabilities
+    //! [ADR-1701](../../../docs/research/09-decisions/adr-1701-the-theory-interface-gains-final-check-a-driver-owned-queue-lazy-explanation-and-dynamic-atoms.md)
+    //! added to [`TheorySolver`]: a complete check at a total assignment, a
+    //! driver-owned propagation queue, deferred explanation handles, and
+    //! dynamic atom registration.
+    //!
+    //! Every mock here is hostile in the specific way the corresponding hook
+    //! has to survive: a theory that accepts every `assert` and only refutes
+    //! the *complete* assignment; a theory that fails loudly if the driver ever
+    //! hands it a queue it did not drain; a theory that counts how often the
+    //! driver actually needed a reason; and a theory that grows its atom set
+    //! mid-search and then conflicts on the atom it grew.
+
+    use super::{CdclT, Lit, Outcome};
+    use crate::euf_egraph::{
+        ExplanationId, FinalCheckOutcome, PropagationQueue, TheoryExplanation, TheoryLit,
+        TheoryProp, TheorySolver,
+    };
+
+    /// A backtrackable record of what the search has asserted, shared by the
+    /// mocks below.
+    #[derive(Default)]
+    struct Trail {
+        assigned: Vec<Option<bool>>,
+        log: Vec<usize>,
+        scopes: Vec<usize>,
+    }
+
+    impl Trail {
+        fn new(atoms: usize) -> Self {
+            Self {
+                assigned: vec![None; atoms],
+                log: Vec::new(),
+                scopes: Vec::new(),
+            }
+        }
+
+        fn set(&mut self, atom: usize, value: bool) {
+            if atom >= self.assigned.len() {
+                self.assigned.resize(atom + 1, None);
+            }
+            if self.assigned[atom].is_none() {
+                self.log.push(atom);
+            }
+            self.assigned[atom] = Some(value);
+        }
+
+        fn push(&mut self) {
+            self.scopes.push(self.log.len());
+        }
+
+        fn pop(&mut self) {
+            let Some(mark) = self.scopes.pop() else {
+                return;
+            };
+            while self.log.len() > mark {
+                let atom = self.log.pop().expect("non-empty above the mark");
+                self.assigned[atom] = None;
+            }
+        }
+
+        fn value(&self, atom: usize) -> Option<bool> {
+            self.assigned.get(atom).copied().flatten()
+        }
+    }
+
+    // -----------------------------------------------------------------------
+    // (a) final check
+    // -----------------------------------------------------------------------
+
+    /// Accepts **every** `assert` and refutes at [`TheorySolver::final_check`].
+    /// Its truth is `forbid_all` ? "no total assignment is consistent" :
+    /// "not both atom 0 and atom 1 true" — neither of which any single assert
+    /// can detect, which is exactly the separation `final_check` exists for.
+    struct FinalCheckOnly {
+        trail: Trail,
+        forbid_all: bool,
+        final_checks: usize,
+        accepted: Option<Vec<Option<bool>>>,
+    }
+
+    impl FinalCheckOnly {
+        fn new(atoms: usize, forbid_all: bool) -> Self {
+            Self {
+                trail: Trail::new(atoms),
+                forbid_all,
+                final_checks: 0,
+                accepted: None,
+            }
+        }
+    }
+
+    impl TheorySolver for FinalCheckOnly {
+        fn assert(&mut self, atom: usize, value: bool) -> Result<(), Vec<TheoryLit>> {
+            self.trail.set(atom, value);
+            Ok(())
+        }
+        fn push(&mut self) {
+            self.trail.push();
+        }
+        fn pop(&mut self) {
+            self.trail.pop();
+        }
+        fn propagate(&self) -> Vec<TheoryProp> {
+            Vec::new()
+        }
+        fn final_check(&mut self) -> FinalCheckOutcome {
+            self.final_checks += 1;
+            if self.forbid_all {
+                let core = self
+                    .trail
+                    .log
+                    .iter()
+                    .map(|&atom| TheoryLit {
+                        atom,
+                        value: self.trail.value(atom).expect("logged atoms are assigned"),
+                    })
+                    .collect::<Vec<_>>();
+                return FinalCheckOutcome::Conflict(TheoryExplanation::Eager(core));
+            }
+            if self.trail.value(0) == Some(true) && self.trail.value(1) == Some(true) {
+                return FinalCheckOutcome::Conflict(TheoryExplanation::Eager(vec![
+                    TheoryLit {
+                        atom: 0,
+                        value: true,
+                    },
+                    TheoryLit {
+                        atom: 1,
+                        value: true,
+                    },
+                ]));
+            }
+            self.accepted = Some(self.trail.assigned.clone());
+            FinalCheckOutcome::Sat
+        }
+    }
+
+    fn lit(var: usize, positive: bool) -> Lit {
+        Lit { var, positive }
+    }
+
+    /// The complete check rejects a total assignment every partial check
+    /// accepted, and the search recovers from it (first half) or refutes on it
+    /// (second half).
+    ///
+    /// **This is the test the `final_check` call site is mutation-checked
+    /// against.** Delete `CdclT::run_final_check`'s call to
+    /// `TheorySolver::final_check` (or restore the bare `return Outcome::Sat`)
+    /// and the driver hands back the very assignment the theory refuses.
+    #[test]
+    fn final_check_rejects_a_total_assignment_the_asserts_accepted() {
+        // (x0 ∨ x1), theory truth "not both true": the Boolean search reaches
+        // {x0, x1} first (phase saving is true-first) and only the complete
+        // check can see the problem.
+        let clauses = vec![vec![lit(0, true), lit(1, true)]];
+        let mut solver = CdclT::new(2, 2, clauses, None);
+        let mut theory = FinalCheckOnly::new(2, false);
+        assert_eq!(solver.solve(&mut theory), Outcome::Sat);
+        assert!(
+            theory.final_checks >= 2,
+            "the first total assignment must have been refused and a second one reached, \
+             got {} final checks",
+            theory.final_checks
+        );
+        let accepted = theory
+            .accepted
+            .as_ref()
+            .expect("a Sat verdict comes from an accepted final check");
+        assert!(
+            !(accepted[0] == Some(true) && accepted[1] == Some(true)),
+            "the search returned Sat on an assignment the theory refutes: {accepted:?}"
+        );
+
+        // A theory that refutes every total assignment turns a Boolean-SAT
+        // skeleton into Unsat.
+        let mut solver = CdclT::new(1, 1, vec![vec![lit(0, true)]], None);
+        let mut theory = FinalCheckOnly::new(1, true);
+        assert_eq!(solver.solve(&mut theory), Outcome::Unsat);
+        assert_eq!(theory.final_checks, 1);
+    }
+
+    // -----------------------------------------------------------------------
+    // (b) the driver-owned propagation queue
+    // -----------------------------------------------------------------------
+
+    /// Propagates through the driver-owned queue and **fails the test** if the
+    /// driver ever hands it a queue it did not drain, or drains one twice.
+    struct QueueTheory {
+        trail: Trail,
+        /// Set if `propagate_into` was ever entered with a non-empty queue.
+        saw_dirty_queue: bool,
+        /// Total `(atom, value)` pairs pushed across every call.
+        pushed: usize,
+        calls: usize,
+    }
+
+    impl QueueTheory {
+        fn new(atoms: usize) -> Self {
+            Self {
+                trail: Trail::new(atoms),
+                saw_dirty_queue: false,
+                pushed: 0,
+                calls: 0,
+            }
+        }
+    }
+
+    impl TheorySolver for QueueTheory {
+        fn assert(&mut self, atom: usize, value: bool) -> Result<(), Vec<TheoryLit>> {
+            self.trail.set(atom, value);
+            Ok(())
+        }
+        fn push(&mut self) {
+            self.trail.push();
+        }
+        fn pop(&mut self) {
+            self.trail.pop();
+        }
+        fn propagate(&self) -> Vec<TheoryProp> {
+            unreachable!("propagate_into is overridden; the default must not be reached")
+        }
+        fn propagate_into(&mut self, queue: &mut PropagationQueue) {
+            self.calls += 1;
+            if !queue.is_empty() {
+                self.saw_dirty_queue = true;
+            }
+            // atom 0 true entails atom 1 true; atom 1 true entails atom 2 true.
+            if self.trail.value(0) == Some(true) && self.trail.value(1).is_none() {
+                queue.push_eager(
+                    TheoryLit {
+                        atom: 1,
+                        value: true,
+                    },
+                    vec![TheoryLit {
+                        atom: 0,
+                        value: true,
+                    }],
+                );
+                self.pushed += 1;
+            }
+            if self.trail.value(1) == Some(true) && self.trail.value(2).is_none() {
+                queue.push_eager(
+                    TheoryLit {
+                        atom: 2,
+                        value: true,
+                    },
+                    vec![TheoryLit {
+                        atom: 1,
+                        value: true,
+                    }],
+                );
+                self.pushed += 1;
+            }
+        }
+    }
+
+    /// The queue arrives empty on every call, and every queued propagation is
+    /// applied exactly once.
+    #[test]
+    fn propagation_queue_arrives_empty_and_is_drained_exactly_once() {
+        let mut solver = CdclT::new(3, 3, vec![vec![lit(0, true)]], None);
+        let mut theory = QueueTheory::new(3);
+        assert_eq!(solver.solve(&mut theory), Outcome::Sat);
+        assert!(
+            !theory.saw_dirty_queue,
+            "the driver handed the theory a queue it had not drained"
+        );
+        assert!(theory.calls > 0, "propagate_into was never called");
+        assert_eq!(
+            theory.pushed, 2,
+            "each entailed literal is offered once, and is assigned before the next call"
+        );
+        assert_eq!(
+            solver.theory_propagations(),
+            2,
+            "both queued propagations must reach the trail exactly once"
+        );
+        assert_eq!(solver.value(1), Some(true));
+        assert_eq!(solver.value(2), Some(true));
+    }
+
+    // -----------------------------------------------------------------------
+    // (c) lazy explanation
+    // -----------------------------------------------------------------------
+
+    /// Propagates with **deferred** handles and counts how often the driver
+    /// actually asked for a reason. `broken` makes it refuse to resolve a
+    /// handle it emitted — the theory-bug case the driver must survive.
+    struct LazyTheory {
+        trail: Trail,
+        /// Atoms entailed true once atom 0 is true.
+        entailed: Vec<usize>,
+        handles: Vec<(u64, usize)>,
+        next_handle: u64,
+        lazy_pushes: usize,
+        explains: usize,
+        broken: bool,
+        eager: bool,
+    }
+
+    impl LazyTheory {
+        fn new(atoms: usize, entailed: Vec<usize>, broken: bool, eager: bool) -> Self {
+            Self {
+                trail: Trail::new(atoms),
+                entailed,
+                handles: Vec::new(),
+                next_handle: 1,
+                lazy_pushes: 0,
+                explains: 0,
+                broken,
+                eager,
+            }
+        }
+    }
+
+    impl TheorySolver for LazyTheory {
+        fn assert(&mut self, atom: usize, value: bool) -> Result<(), Vec<TheoryLit>> {
+            self.trail.set(atom, value);
+            Ok(())
+        }
+        fn push(&mut self) {
+            self.trail.push();
+        }
+        fn pop(&mut self) {
+            self.trail.pop();
+        }
+        fn propagate(&self) -> Vec<TheoryProp> {
+            unreachable!("propagate_into is overridden")
+        }
+        fn propagate_into(&mut self, queue: &mut PropagationQueue) {
+            if self.trail.value(0) != Some(true) {
+                return;
+            }
+            for index in 0..self.entailed.len() {
+                let atom = self.entailed[index];
+                // Deliberately NOT skipped when the search has already set the
+                // atom false: that collision is what forces the driver to ask
+                // for the reason, and is the only literal it asks about.
+                if self.trail.value(atom) == Some(true) {
+                    continue;
+                }
+                let lit = TheoryLit { atom, value: true };
+                if self.eager {
+                    queue.push_eager(
+                        lit,
+                        vec![TheoryLit {
+                            atom: 0,
+                            value: true,
+                        }],
+                    );
+                } else {
+                    let handle = self.next_handle;
+                    self.next_handle += 1;
+                    self.handles.push((handle, atom));
+                    queue.push_lazy(lit, ExplanationId(handle));
+                    self.lazy_pushes += 1;
+                }
+            }
+        }
+        fn explain(&mut self, handle: ExplanationId) -> Option<Vec<TheoryLit>> {
+            self.explains += 1;
+            if self.broken {
+                return None;
+            }
+            self.handles
+                .iter()
+                .find(|(id, _)| *id == handle.0)
+                .map(|_| {
+                    vec![TheoryLit {
+                        atom: 0,
+                        value: true,
+                    }]
+                })
+        }
+    }
+
+    /// The driver resolves a deferred handle only for the literal it actually
+    /// needs a reason for, and leaves the rest unexplained.
+    #[test]
+    fn lazy_explanation_is_resolved_only_when_the_driver_needs_the_reason() {
+        // `[¬x3]` fixes atom 3 false at level 0, so the theory's propagation of
+        // atom 3 true collides and needs its reason. Atoms 1, 2 and 4 are
+        // propagated and never asked about.
+        let clauses = vec![vec![lit(3, false)], vec![lit(0, true), lit(5, true)]];
+        let mut solver = CdclT::new(6, 6, clauses, None);
+        let mut theory = LazyTheory::new(6, vec![1, 2, 3, 4], false, false);
+        let outcome = solver.solve(&mut theory);
+        assert_eq!(outcome, Outcome::Sat);
+        assert!(
+            theory.lazy_pushes >= 3,
+            "expected several deferred propagations, got {}",
+            theory.lazy_pushes
+        );
+        assert_eq!(
+            theory.explains, 1,
+            "exactly the one colliding literal needed its reason; {} deferred pushes were made",
+            theory.lazy_pushes
+        );
+    }
+
+    /// A deferred explanation and the same explanation materialised eagerly
+    /// give the same verdict — including on the path where 1-UIP analysis is
+    /// what forces the resolution.
+    #[test]
+    fn lazy_and_eager_explanations_agree_on_the_verdict() {
+        for clauses in [
+            vec![
+                vec![lit(1, false), lit(2, false)],
+                vec![lit(0, true), lit(5, true)],
+            ],
+            vec![vec![lit(3, false)], vec![lit(0, true), lit(5, true)]],
+        ] {
+            let mut lazy_solver = CdclT::new(6, 6, clauses.clone(), None);
+            let mut lazy = LazyTheory::new(6, vec![1, 2, 3, 4], false, false);
+            let lazy_outcome = lazy_solver.solve(&mut lazy);
+
+            let mut eager_solver = CdclT::new(6, 6, clauses.clone(), None);
+            let mut eager = LazyTheory::new(6, vec![1, 2, 3, 4], false, true);
+            let eager_outcome = eager_solver.solve(&mut eager);
+
+            assert_eq!(
+                lazy_outcome, eager_outcome,
+                "deferred and materialised explanations disagreed on {clauses:?}"
+            );
+            assert_eq!(eager.explains, 0, "the eager arm must never be asked");
+        }
+    }
+
+    /// A theory that cannot resolve a handle it emitted is a theory bug. The
+    /// driver must degrade to `Unknown` — never to a verdict, and never treat
+    /// the missing reason as an empty clause (which would be a wrong `unsat`).
+    #[test]
+    fn an_unresolvable_lazy_handle_degrades_to_unknown_not_to_a_verdict() {
+        // `x0` is a *decision*, not a level-0 unit, so the Boolean conflict on
+        // `(¬x1 ∨ ¬x2)` sits above level 0 and 1-UIP analysis must resolve a
+        // deferred reason to proceed.
+        let clauses = vec![
+            vec![lit(1, false), lit(2, false)],
+            vec![lit(0, true), lit(5, true)],
+        ];
+        let mut solver = CdclT::new(6, 6, clauses, None);
+        let mut theory = LazyTheory::new(6, vec![1, 2, 3, 4], true, false);
+        assert_eq!(solver.solve(&mut theory), Outcome::Unknown);
+        assert!(theory.explains > 0, "the driver never asked for the reason");
+    }
+
+    // -----------------------------------------------------------------------
+    // (d) dynamic atom registration
+    // -----------------------------------------------------------------------
+
+    /// Registers a second atom once the first is asserted true, then conflicts
+    /// on the pair — so the atom it grew has to be a first-class search
+    /// variable, not a dormant one.
+    struct GrowingTheory {
+        trail: Trail,
+        registered: usize,
+        pending: usize,
+        conflicts: usize,
+        asserts: Vec<(usize, bool)>,
+    }
+
+    impl GrowingTheory {
+        fn new() -> Self {
+            Self {
+                trail: Trail::new(1),
+                registered: 1,
+                pending: 0,
+                conflicts: 0,
+                asserts: Vec::new(),
+            }
+        }
+    }
+
+    impl TheorySolver for GrowingTheory {
+        fn assert(&mut self, atom: usize, value: bool) -> Result<(), Vec<TheoryLit>> {
+            self.asserts.push((atom, value));
+            self.trail.set(atom, value);
+            if atom == 0 && value && self.registered == 1 {
+                self.registered = 2;
+                self.pending = 1;
+            }
+            // Truth: atom 0 and atom 1 cannot both be true.
+            if self.trail.value(0) == Some(true) && self.trail.value(1) == Some(true) {
+                self.conflicts += 1;
+                return Err(vec![
+                    TheoryLit {
+                        atom: 0,
+                        value: true,
+                    },
+                    TheoryLit {
+                        atom: 1,
+                        value: true,
+                    },
+                ]);
+            }
+            Ok(())
+        }
+        fn push(&mut self) {
+            self.trail.push();
+        }
+        fn pop(&mut self) {
+            self.trail.pop();
+        }
+        fn propagate(&self) -> Vec<TheoryProp> {
+            Vec::new()
+        }
+        fn take_new_atoms(&mut self) -> usize {
+            std::mem::take(&mut self.pending)
+        }
+    }
+
+    /// An atom registered mid-search becomes a search variable and its conflict
+    /// is learned like any other.
+    #[test]
+    fn an_atom_registered_mid_search_participates_in_a_conflict() {
+        let mut solver = CdclT::new(1, 1, vec![vec![lit(0, true)]], None);
+        let mut theory = GrowingTheory::new();
+        assert_eq!(solver.solve(&mut theory), Outcome::Sat);
+        assert_eq!(
+            solver.variable_count(),
+            2,
+            "the driver must have appended a SAT variable for the registered atom"
+        );
+        assert_eq!(
+            theory.conflicts, 1,
+            "the registered atom must have been decided true once and refuted"
+        );
+        assert!(
+            theory.asserts.contains(&(1, true)) && theory.asserts.contains(&(1, false)),
+            "the registered atom must have been searched over both polarities, got {:?}",
+            theory.asserts
+        );
+        assert_eq!(solver.value(1), Some(false));
     }
 }

@@ -333,6 +333,20 @@ pub enum KernelError {
         /// The universe parameter that is free in the declaration.
         param: crate::name::NameId,
     },
+    /// A declaration bound the same universe parameter twice.
+    ///
+    /// `Const(c, us)` substitutes `us` positionally for `c`'s declared
+    /// parameters, so a name that appears twice in the binding list has two
+    /// candidate substitutions at every instantiation site and the declaration
+    /// does not denote one thing. Lean rejects it; this kernel admitted it
+    /// until ADR-1663 (the public conformance corpus's `tut06_bad01` case,
+    /// `docs/plan/lean-divergences.md` D2).
+    DuplicateUniverseParam {
+        /// The declaration that bound it twice.
+        declaration: crate::name::NameId,
+        /// The universe parameter that appears more than once.
+        param: crate::name::NameId,
+    },
     /// A declaration's type did not infer/WHNF to a `Sort` (every declaration's
     /// type must itself be a type).
     DeclarationTypeNotASort {
@@ -1533,6 +1547,8 @@ impl Kernel {
     /// # Errors
     ///
     /// Returns [`KernelError::DeclarationExists`] for a duplicate name,
+    /// [`KernelError::DuplicateUniverseParam`] if the declaration binds the same
+    /// universe parameter twice,
     /// [`KernelError::UndeclaredUniverseParam`] if the type or value mentions a
     /// universe parameter the declaration does not bind,
     /// [`KernelError::DeclarationTypeNotASort`] if the type is not a type,
@@ -1557,6 +1573,25 @@ impl Kernel {
     /// Check one declaration's ordinary type/value contract without inserting
     /// it. Privileged package gates use this after their own shape validation.
     pub(crate) fn check_declaration(&mut self, decl: &Declaration) -> Result<(), KernelError> {
+        // (1a) The binding list must not repeat a name. This is not hygiene
+        // either: `Const(c, us)` substitutes positionally, so a repeated
+        // parameter has two candidate substitutions at every use and the
+        // declaration denotes nothing definite. Lean refuses it; this kernel
+        // admitted it until the public conformance corpus's `tut06_bad01` case
+        // measured the divergence (ADR-1663, `docs/plan/lean-divergences.md` D2).
+        //
+        // Linear in a list that is one or two long in practice, so the quadratic
+        // scan is cheaper than allocating a set on every admission.
+        let uparams = decl.uparams();
+        for (index, &param) in uparams.iter().enumerate() {
+            if uparams[..index].contains(&param) {
+                return Err(KernelError::DuplicateUniverseParam {
+                    declaration: decl.name(),
+                    param,
+                });
+            }
+        }
+
         // (1b) Universe closure: every `Param` the type or the value mentions
         // must be one this declaration binds.
         //

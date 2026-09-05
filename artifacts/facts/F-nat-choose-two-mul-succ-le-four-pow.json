@@ -1,0 +1,64 @@
+{
+  "schema_version": 1,
+  "id": "F:nat-choose-two-mul-succ-le-four-pow",
+  "title": "The odd central binomial coefficient is at most 4^m",
+  "statement": "For every natural m, the binomial coefficient choose(2m+1, m) is at most 4^m. This is strictly sharper than the row bound this kernel already had: Nat.choose_le_two_pow gives choose(2m+1, m) <= 2^(2m+1) = 2*4^m, and the missing factor of two is exactly what Erdos's induction for the primorial bound cannot afford. The sharpening comes from the row sum carrying the middle coefficient TWICE -- choose(2m+1, m) = choose(2m+1, m+1) -- so twice the coefficient is at most the whole row sum 2^(2m+1) = 4^m + 4^m. This is a kernel term with an empty axiom footprint.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Nat.choose_two_mul_succ_le_four_pow : ((x0 : AxNat) -> AxNat.le (AxNat.choose (AxNat.succ (AxNat.add x0 x0)) x0) (AxNat.pow (AxNat.succ (AxNat.succ (AxNat.succ (AxNat.succ AxNat.zero)))) x0))",
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.choose_two_mul_succ_le_four_pow",
+    "free_symbols": []
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "proof_route": "kernel-lean",
+  "axiom_footprint": [],
+  "depends_on": [],
+  "evidence": [
+    {
+      "id": "kernel-Nat.choose_two_mul_succ_le_four_pow",
+      "kind": "kernel-term",
+      "kernel_declaration": "Nat.choose_two_mul_succ_le_four_pow",
+      "supports": "Nat.choose_two_mul_succ_le_four_pow is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q --release -p axeyum-lean-kernel --example nat_theorem_inventory -- choose_two_mul_succ_le_four_pow 2>/dev/null | grep -Fc 'Nat.choose_two_mul_succ_le_four_pow\t1\t((x0 : AxNat) -> AxNat.le (AxNat.choose (AxNat.succ (AxNat.add x0 x0)) x0) (AxNat.pow (AxNat.succ (AxNat.succ (AxNat.succ (AxNat.succ AxNat.zero)))) x0))')\" -ge 1",
+      "notes": "`build_nat_prelude` admits this only through the trusted `Kernel::add_declaration` gate, which re-derives the type from the proof term. The check matches the FULL RENDERED TYPE rather than the name: a name-only checker survives a weakened statement, and the weakening that matters here is exactly the one this theorem exists to rule out -- `pow 2 (add m m)` replaced by `pow 2 (succ (add m m))`, which is `choose_le_two_pow` and was already available."
+    },
+    {
+      "id": "instantiate-Nat.choose_two_mul_succ_le_four_pow",
+      "kind": "kernel-term",
+      "kernel_declaration": "Nat.choose_two_mul_succ_le_four_pow",
+      "supports": "The bound instantiates at m = 0,1,2,3 with both sides independently evaluated (choose 7 3 = 35, 4^3 = 64), and 4^3 is a DIFFERENT numeral from 2^7 = 128 -- the bound choose_le_two_pow already gave.",
+      "check_status": "checked",
+      "checker_command": "cargo test --release -p axeyum-lean-kernel --lib -- nat_prelude::central_binomial_tests:: --test-threads=4",
+      "checkers": [
+        "Kernel::infer",
+        "Kernel::def_eq"
+      ],
+      "notes": "The sharpness check is the reason the suite exists: `the_bound_is_sharper_than_choose_le_two_pow` asserts `4^3` and `2^7` are NOT def-eq, so a 'sharpening' that happened to restate the weaker theorem would fail. The instantiation test asserts the applied type against a hand-rebuilt `Le (choose (2m+1) m) (pow 4 m)` at each m and, separately, that each side reduces to the hand-computed numeral."
+    },
+    {
+      "id": "footprint-Nat.choose_two_mul_succ_le_four_pow",
+      "kind": "instance-pin",
+      "supports": "axiom_footprint: [] -- the Nat environment admits no trusted declaration",
+      "check_status": "checked",
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "notes": "The suite's own `the_central_binomial_shelf_is_admitted_and_axiom_free` asserts `Environment::contains` FIRST for each of the five names and only then an empty `Kernel::axiom_footprint`: the footprint of a name that is not in the environment is also empty, so the footprint assertion alone would pass for a declaration that was never made. `nat_axiom_inventory` bounds it independently by enumerating the whole trusted surface."
+    }
+  ],
+  "provenance": {
+    "date": "2026-09-05",
+    "established_by": "axeyum-lean-kernel build_nat_prelude, lane chebyshev-pi",
+    "source": "theorem name and canonical type read directly via nat_theorem_inventory, which prints render_lean of the admitted type. The proof is the standard one: Nat.sum_choose_row for the row sum, Nat.choose_symm_of_eq_add for the middle symmetry, Nat.sumRange_split (with one add_comm, because Nat.add recurses on its RIGHT argument and the split bound is stuck otherwise) and two Nat.sumRange_succ peels for the two-term lower bound, and a new Nat.le_of_add_self_le_add_self for the final cancellation.",
+    "prior_art": [
+      {
+        "who": "Paul Erdos",
+        "what": "the central binomial bound used in the elementary proof of Bertrand's postulate and of the primorial bound",
+        "year": 1932,
+        "attribution": "standard textbook attribution; this lane did not consult the primary source"
+      }
+    ]
+  },
+  "notes": "Roadmap W3-11, ADR-1637. `2m+1` is spelled `succ (add m m)` and not `add (mul 2 m) 1`: `mul 2 m` is stuck at a symbolic `m` because multiplication recurses on its right argument, whereas `add m (succ m)` iota-reduces to `succ (add m m)` -- which is why the `choose_symm_of_eq_add` hypothesis is `Eq.refl` here and needs no arithmetic. The companion `Nat.choose_two_mul_succ_le_two_pow` states the same bound as `pow 2 (add m m)`, which needs no `4^m = 2^(2m)` bridge at all; `Nat.four_pow_eq_two_pow_add_self` is that bridge and is what turns one into the other."
+}

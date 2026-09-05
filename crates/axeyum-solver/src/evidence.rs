@@ -157,7 +157,9 @@ pub struct LayerVersions {
     pub bitblaster: &'static str,
     /// `axeyum-cnf` Tseitin/DIMACS encoder version.
     pub cnf: &'static str,
-    /// SAT adapter identity/behavior version (e.g. `rustsat-batsat`).
+    /// SAT engine identity/behaviour version. ADR-1703 made the in-tree native
+    /// CDCL core the engine on every path, so this reads `axeyum-native-cdcl`
+    /// where it used to read `rustsat-batsat`.
     pub sat_adapter: &'static str,
     /// `axeyum-fp` floating-point circuit semantics version.
     pub fp_semantics: &'static str,
@@ -173,7 +175,7 @@ impl LayerVersions {
         rewrite: "1",
         bitblaster: "1",
         cnf: "1",
-        sat_adapter: "rustsat-batsat",
+        sat_adapter: "axeyum-native-cdcl",
         fp_semantics: "1",
         parser: "1",
         lift_map: "1",

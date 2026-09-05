@@ -180,3 +180,20 @@ not as a sentence claiming it passed.
   upstream.
 
 
+
+## A green summary line with a guard that has no subject
+
+- **A gate that prints `PASS` and exits 0 can carry, inside that same line, a
+  guard reading `skipped(tool-failed)` or `not-answerable`.** Measured
+  2026-09-05 by the `incidence-geometry` lane: `check-merge-hygiene.sh` printed
+  `...|shape_duplicates=skipped(tool-failed)|kernel_projection=not-answerable|PASS`
+  with exit 0 while `shape_search --include-constructed` was panicking on its
+  own coverage assertion (a prelude group indexed but not declared). Two guards
+  had no subject, so neither could fail, and the aggregate verdict inherited
+  their silence. The lane caught it by reading the summary fields, not the
+  exit status.
+- **Rule:** a guard whose subject did not load must set the aggregate verdict
+  to FAILED, not to a field value the aggregate ignores. Until the script is
+  changed, read every `=` field of the summary line before believing `PASS`;
+  the coordinator's post-merge pass now greps for `skipped|not-answerable` and
+  treats either as red.

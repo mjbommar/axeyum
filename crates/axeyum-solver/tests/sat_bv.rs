@@ -67,7 +67,7 @@ fn deterministic_sat_resource_limit_is_classified_unknown() {
             .unwrap(),
         CheckResult::Unknown(reason)
             if reason.kind == UnknownKind::ResourceLimit
-                && reason.detail.contains("progress-check budget 0 exhausted")
+                && reason.detail.contains("conflict budget 0 exhausted")
     ));
 }
 
@@ -115,10 +115,12 @@ fn unsat_is_drat_proof_checked_when_requested() {
 }
 
 #[test]
-fn prove_unsat_native_inline_proof_matches_batsat_verdict() {
+fn prove_unsat_inline_proof_matches_the_default_path_verdict() {
     // DISAGREE=0 sanity: a small BV corpus must reach the same sat/unsat verdict
-    // whether prove_unsat (native inline-proof engine) or the default batsat
-    // engine is used. The native unsat additionally carries a checked proof.
+    // with and without `prove_unsat`. Since ADR-1703 both configurations run the
+    // native core; the difference is that `prove_unsat` verifies the DRAT proof
+    // inline and stamps the `unsat` checked. Spending or not spending the
+    // checking time must not move a verdict.
     fn build(arena: &mut TermArena, idx: usize) -> (TermId, bool) {
         let x = arena.bv_var(&format!("x{idx}"), 4).unwrap();
         let y = arena.bv_var(&format!("y{idx}"), 4).unwrap();
@@ -166,22 +168,30 @@ fn prove_unsat_native_inline_proof_matches_batsat_verdict() {
         let native = SatBvBackend::new()
             .check(&arena, &[term], &prove_cfg)
             .unwrap();
-        let batsat = SatBvBackend::new()
+        let default_path = SatBvBackend::new()
             .check(&arena, &[term], &SolverConfig::default())
             .unwrap();
 
         if expected_sat {
             assert!(
                 matches!(native, CheckResult::Sat(_)),
-                "case {idx}: prove_unsat (native) should be sat, got {native:?}"
+                "case {idx}: prove_unsat should be sat, got {native:?}"
             );
             assert!(
-                matches!(batsat, CheckResult::Sat(_)),
-                "case {idx}: batsat should be sat, got {batsat:?}"
+                matches!(default_path, CheckResult::Sat(_)),
+                "case {idx}: the default path should be sat, got {default_path:?}"
             );
         } else {
-            assert_eq!(native, CheckResult::Unsat, "case {idx}: native verdict");
-            assert_eq!(batsat, CheckResult::Unsat, "case {idx}: batsat verdict");
+            assert_eq!(
+                native,
+                CheckResult::Unsat,
+                "case {idx}: prove_unsat verdict"
+            );
+            assert_eq!(
+                default_path,
+                CheckResult::Unsat,
+                "case {idx}: default-path verdict"
+            );
         }
     }
 }
@@ -1198,9 +1208,11 @@ fn just_under_ceiling_4096bit_multiply_is_refused_not_trapped() {
     );
 }
 
-/// End-to-end checks of the flag-gated native CDCL primary search (slice 1):
-/// the native core decides BV queries, its `sat` models still replay against the
-/// original terms, and its verdicts agree with the default `BatSat` path.
+/// End-to-end checks of the native CDCL primary search: it decides BV queries,
+/// its `sat` models still replay against the original terms, and -- since
+/// ADR-1703 retired `SolverConfig::native_cdcl` to a no-op -- setting or
+/// clearing that flag changes no verdict, because both settings select the same
+/// engine.
 mod native_cdcl {
     use super::{CheckResult, SatBvBackend, SolverBackend, SolverConfig, Value};
     use axeyum_ir::{Sort, TermArena, TermId, eval};
@@ -1218,10 +1230,16 @@ mod native_cdcl {
             .expect("native CDCL backend invocation succeeds")
     }
 
-    fn check_batsat(arena: &TermArena, assertions: &[TermId]) -> CheckResult {
+    /// The default configuration. Before ADR-1703 this selected the
+    /// `rustsat-batsat` adapter; it now selects the native core, which is what
+    /// makes `the_retired_native_cdcl_flag_changes_no_verdict` a test of the
+    /// no-op claim rather than a cross-engine differential. The cross-engine
+    /// differential moved to
+    /// `crates/axeyum-cnf/tests/native_vs_batsat_differential.rs`.
+    fn check_default_config(arena: &TermArena, assertions: &[TermId]) -> CheckResult {
         SatBvBackend::new()
             .check(arena, assertions, &SolverConfig::default())
-            .expect("batsat backend invocation succeeds")
+            .expect("default backend invocation succeeds")
     }
 
     /// A satisfiable BV query solved by the native core must produce a model that
@@ -1278,10 +1296,12 @@ mod native_cdcl {
         );
     }
 
-    /// The native core and the default `BatSat` path agree (sat-vs-unsat) on a
-    /// spread of small BV queries — the soundness agreement gate for the wiring.
+    /// `SolverConfig::native_cdcl` is a retired no-op (ADR-1703): setting it must
+    /// change no verdict on a spread of small BV queries, because the native core
+    /// runs either way. This is a *no-op* check, deliberately not a cross-engine
+    /// differential — that one lives in `axeyum-cnf` behind `batsat-reference`.
     #[test]
-    fn native_agrees_with_batsat_on_bv_queries() {
+    fn the_retired_native_cdcl_flag_changes_no_verdict() {
         // (a) sat: x = 3 over 4 bits.
         let mut a = TermArena::new();
         let xa = a.bv_var("x", 4).unwrap();
@@ -1309,14 +1329,17 @@ mod native_cdcl {
             (&b, vec![lt_one, gt_zero]),
             (&c, vec![q_c]),
         ] {
-            let native = check_native(arena, &terms);
-            let batsat = check_batsat(arena, &terms);
+            let flagged = check_native(arena, &terms);
+            let default_path = check_default_config(arena, &terms);
             let agree = matches!(
-                (&native, &batsat),
+                (&flagged, &default_path),
                 (CheckResult::Sat(_), CheckResult::Sat(_))
                     | (CheckResult::Unsat, CheckResult::Unsat)
             );
-            assert!(agree, "native={native:?} batsat={batsat:?} must agree");
+            assert!(
+                agree,
+                "the retired flag moved a verdict: flagged={flagged:?} default={default_path:?}"
+            );
         }
     }
 }

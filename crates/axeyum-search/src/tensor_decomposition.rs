@@ -901,7 +901,7 @@ mod tests {
     use super::*;
     use axeyum_cnf::cube::{boolean_product_cubes, covering_formula};
     use axeyum_cnf::{
-        ProofSolveOutcome, SatResult, check_drat, solve_with_drat_proof, solve_with_rustsat_batsat,
+        ProofSolveOutcome, SatResult, check_drat, solve_with_drat_proof, solve_with_native_core,
     };
 
     fn karatsuba() -> Gf2TensorDecomposition {
@@ -1007,7 +1007,7 @@ mod tests {
         let mut witness = karatsuba();
         witness.terms.reverse();
         let pinned = encoding.formula_with_witness(&witness).unwrap();
-        let SatResult::Sat(model) = solve_with_rustsat_batsat(&pinned).unwrap() else {
+        let SatResult::Sat(model) = solve_with_native_core(&pinned).unwrap() else {
             panic!("canonicalized Karatsuba witness must remain satisfiable");
         };
         assert_eq!(encoding.lift_model(&model).unwrap().terms.len(), 3);
@@ -1048,7 +1048,7 @@ mod tests {
             formula.clauses().len(),
             exact.formula().clauses().len() + 3 * 3
         );
-        let SatResult::Sat(model) = solve_with_rustsat_batsat(&formula).unwrap() else {
+        let SatResult::Sat(model) = solve_with_native_core(&formula).unwrap() else {
             panic!("the exact P2 rank-three normal form must remain satisfiable");
         };
         let witness = exact.lift_model(&model).unwrap();
@@ -1147,7 +1147,7 @@ mod tests {
         let target = Gf2Tensor::matrix_multiplication(2, 2, 2).unwrap();
         let encoding = encode_tensor_rank(&target, 7, TensorRankEncodingLimits::default()).unwrap();
         let pinned = encoding.formula_with_witness(&strassen()).unwrap();
-        let SatResult::Sat(model) = solve_with_rustsat_batsat(&pinned).unwrap() else {
+        let SatResult::Sat(model) = solve_with_native_core(&pinned).unwrap() else {
             panic!("pinned Strassen witness must be satisfiable");
         };
         let lifted = encoding.lift_model(&model).unwrap();
@@ -1163,7 +1163,7 @@ mod tests {
         let mut witness = strassen();
         witness.terms.reverse();
         let pinned = encoding.formula_with_witness(&witness).unwrap();
-        let SatResult::Sat(model) = solve_with_rustsat_batsat(&pinned).unwrap() else {
+        let SatResult::Sat(model) = solve_with_native_core(&pinned).unwrap() else {
             panic!("term sorting must preserve a padded decomposition");
         };
         let lifted = encoding.lift_model(&model).unwrap();
@@ -1210,10 +1210,7 @@ mod tests {
                     }
                 }
                 assert_eq!(
-                    matches!(
-                        solve_with_rustsat_batsat(&formula).unwrap(),
-                        SatResult::Sat(_)
-                    ),
+                    matches!(solve_with_native_core(&formula).unwrap(), SatResult::Sat(_)),
                     left_value <= right_value,
                     "left={left_value:02b} right={right_value:02b}"
                 );
@@ -1253,7 +1250,7 @@ mod tests {
         };
         assert_eq!(check_drat(&covering, &covering_proof), Ok(true));
         let pinned = encoding.formula_with_witness(&strassen()).unwrap();
-        let SatResult::Sat(model) = solve_with_rustsat_batsat(&pinned).unwrap() else {
+        let SatResult::Sat(model) = solve_with_native_core(&pinned).unwrap() else {
             panic!("normalized Strassen witness must remain satisfiable");
         };
         assert_eq!(encoding.lift_model(&model).unwrap().terms.len(), 7);

@@ -200,6 +200,24 @@ pub struct ImportReport {
     /// caller must consult to tell "our own derivation" apart from "an
     /// admitted trusted declaration".
     pub substituted_theorems: Vec<String>,
+    /// Exact rendered names of the quotient primitives this import admitted
+    /// through [`axeyum_lean_kernel::Kernel::add_quotient_package`], which
+    /// derives all four package types itself and checks the delivered
+    /// candidates against them — the stream's own `quot.type` records are
+    /// never admitted as written.
+    ///
+    /// Populated only once the complete four-declaration package has been
+    /// validated, so a partial or reordered package leaves it empty. It is
+    /// the field [`import_statement_ndjson`]'s proof-isolation gate consults
+    /// to tell "this kernel's own quotient package" apart from "a trusted
+    /// declaration the stream delivered": the four names here carry no
+    /// proposition (`Quot.sound`, the one that does, has no representation in
+    /// this exporter's `quot.kind` at all and cannot enter through this
+    /// route). Every name here still reports [`DeclarationKind::Quotient`] in
+    /// `declaration_identities`, structurally true, and still counts toward
+    /// [`axeyum_lean_kernel::Kernel::axiom_footprint`] for any theorem that
+    /// later uses it.
+    pub native_quotient_package: Vec<String>,
 }
 
 /// One completely translated and independently admitted import.
@@ -230,6 +248,7 @@ pub struct ImportReport {
 ///     axiom_identities: vec![],
 ///     declaration_identities: vec![],
 ///     substituted_theorems: vec![],
+///     native_quotient_package: vec![],
 /// };
 /// let forged = CompletedImport { kernel: Kernel::new(), report };
 /// ```
@@ -547,6 +566,11 @@ struct ImportState<'kernel> {
     /// cannot affect a general (non-proof-isolated) import.
     trusted_substitution: bool,
     substituted_theorems: Vec<String>,
+    /// Rendered names of the four quotient primitives, recorded only once
+    /// `Kernel::add_quotient_package` has validated the complete package
+    /// against its own independently derived contracts. See
+    /// [`ImportReport::native_quotient_package`].
+    native_quotient_package: Vec<String>,
 }
 
 #[derive(Debug)]
@@ -583,6 +607,7 @@ impl<'kernel> ImportState<'kernel> {
             quotient_complete: false,
             trusted_substitution,
             substituted_theorems: Vec::new(),
+            native_quotient_package: Vec::new(),
         }
     }
 
@@ -972,6 +997,17 @@ impl<'kernel> ImportState<'kernel> {
                     declaration: "quotient package".to_owned(),
                     source,
                 })?;
+            // Record the four names ONLY on the success path: the kernel has
+            // now checked each candidate against a contract it derived itself
+            // (`quotient.rs::validate_quotient_package`), so these names stand
+            // for this kernel's own quotient package rather than the stream's.
+            // Read back from the ADMITTED declarations, never from the wire
+            // records, so a stream that renamed one of them cannot get its
+            // spelling onto this list.
+            for declaration in &self.pending_quotient {
+                self.native_quotient_package
+                    .push(self.kernel.display_name(declaration.name()).to_string());
+            }
             self.pending_quotient.clear();
             self.quotient_complete = true;
         }
@@ -1962,6 +1998,54 @@ fn is_exempted_trusted_declaration(
     kind == DeclarationKind::Theorem && substituted_theorems.iter().any(|n| n == name)
 }
 
+/// The exact four declarations Lean 4.30's quotient package consists of, and
+/// the only names [`is_exempted_native_quotient`] will ever let through.
+///
+/// `Quot.sound` is deliberately absent and is not an oversight: it is the one
+/// member of Lean's quotient story that STATES a proposition
+/// (`r a b -> Quot.mk r a = Quot.mk r b`), this kernel does not have it at all
+/// (ADR-0456/ADR-1595), and `lean4export`'s `quot.kind` has no spelling for it
+/// — so a stream cannot deliver it through this route even if it tried. A
+/// fifth quotient record of any kind is rejected by
+/// `ImportState::import_quotient` before reaching the gate.
+const NATIVE_QUOTIENT_PACKAGE: [&str; 4] = ["Quot", "Quot.mk", "Quot.lift", "Quot.ind"];
+
+/// Whether `import_statement_ndjson`'s trusted-declaration gate must let a
+/// `Quotient`-kind `name` through.
+///
+/// Measured 2026-09-05 (ADR-1662): 73 of 756 pinned Mathlib statement mirrors
+/// are refused with `Quot` as the first blocker, because a statement whose
+/// definition closure mentions a quotient-carried structure exports the
+/// quotient package. But the package is a type former and its eliminators —
+/// the same shape as an `Inductive` and its recursor — not a proof of
+/// anything, and the kernel does not take the stream's word for any of it:
+/// `Kernel::add_quotient_package` derives all four types itself and checks the
+/// delivered candidates against them, atomically, before any of them enters
+/// the environment.
+///
+/// So the only way through here is: the declaration is structurally a
+/// `Quotient` (never a `Theorem`, `Axiom`, or `Opaque`), its exact name is one
+/// of [`NATIVE_QUOTIENT_PACKAGE`], **and** this import actually recorded
+/// admitting the complete validated package under that name in
+/// `report.native_quotient_package`. A partial package never reaches
+/// `add_quotient_package`, so it never populates that list and never gets
+/// through — and no `Theorem` or `Axiom` can be exempted here regardless of
+/// what either list claims.
+///
+/// This exemption is about ADMISSION, not about axiom accounting:
+/// `Kernel::axiom_footprint` still reports every quotient primitive a proof
+/// reaches, so a theorem that uses `Quot.lift` is still visibly not
+/// axiom-free.
+fn is_exempted_native_quotient(
+    kind: DeclarationKind,
+    name: &str,
+    native_quotient_package: &[String],
+) -> bool {
+    kind == DeclarationKind::Quotient
+        && NATIVE_QUOTIENT_PACKAGE.contains(&name)
+        && native_quotient_package.iter().any(|n| n == name)
+}
+
 #[cfg(test)]
 mod statement_isolation_tests {
     use super::{DeclarationKind, is_exempted_trusted_declaration};
@@ -2028,6 +2112,86 @@ mod statement_isolation_tests {
     }
 }
 
+/// Controls for the native-quotient exemption (ADR-1667). Each guard inside
+/// [`is_exempted_native_quotient`] — the kind check, the fixed-name check, and
+/// the "this import actually admitted the validated package" check — is
+/// exercised on its own, so deleting any one of the three kills exactly one of
+/// these tests.
+#[cfg(test)]
+mod native_quotient_tests {
+    use super::{DeclarationKind, NATIVE_QUOTIENT_PACKAGE, is_exempted_native_quotient};
+
+    fn admitted_package() -> Vec<String> {
+        NATIVE_QUOTIENT_PACKAGE
+            .iter()
+            .map(|name| (*name).to_owned())
+            .collect()
+    }
+
+    #[test]
+    fn every_member_of_the_admitted_package_is_exempted() {
+        let admitted = admitted_package();
+        for name in NATIVE_QUOTIENT_PACKAGE {
+            assert!(
+                is_exempted_native_quotient(DeclarationKind::Quotient, name, &admitted),
+                "{name} must be exempted once the package is admitted"
+            );
+        }
+    }
+
+    /// Kind guard. `Quot.sound` is Lean's own name for the one quotient fact
+    /// that STATES something; whatever kind it arrives as, it is not in
+    /// [`NATIVE_QUOTIENT_PACKAGE`] and must never be exempted. A `Theorem` or
+    /// `Axiom` sharing a package name must not be either.
+    #[test]
+    fn only_the_quotient_kind_is_exempted() {
+        let admitted = admitted_package();
+        for kind in [
+            DeclarationKind::Theorem,
+            DeclarationKind::Axiom,
+            DeclarationKind::Opaque,
+        ] {
+            assert!(
+                !is_exempted_native_quotient(kind, "Quot.lift", &admitted),
+                "{kind:?} named Quot.lift must not be exempted"
+            );
+        }
+    }
+
+    /// Fixed-name guard: `Quot.sound` is deliberately absent from
+    /// [`NATIVE_QUOTIENT_PACKAGE`], so even a stream that somehow reported it
+    /// as an admitted package member is refused.
+    #[test]
+    fn quot_sound_is_never_exempted() {
+        let mut admitted = admitted_package();
+        admitted.push("Quot.sound".to_owned());
+        assert!(!is_exempted_native_quotient(
+            DeclarationKind::Quotient,
+            "Quot.sound",
+            &admitted
+        ));
+        assert!(!is_exempted_native_quotient(
+            DeclarationKind::Quotient,
+            "Quot.somethingElse",
+            &admitted
+        ));
+    }
+
+    /// Admission guard: the names alone are not enough. An import that never
+    /// completed a package (so `Kernel::add_quotient_package` never ran and
+    /// never validated anything) exempts nothing.
+    #[test]
+    fn an_unadmitted_package_exempts_nothing() {
+        for name in NATIVE_QUOTIENT_PACKAGE {
+            assert!(!is_exempted_native_quotient(
+                DeclarationKind::Quotient,
+                name,
+                &[]
+            ));
+        }
+    }
+}
+
 /// Import one proof-free statement stream and publish its checked target
 /// proposition as a goal.
 ///
@@ -2058,6 +2222,13 @@ pub fn import_statement_ndjson<R: BufRead>(
             identity.kind,
             &identity.name,
             &report.substituted_theorems,
+        ) {
+            continue;
+        }
+        if is_exempted_native_quotient(
+            identity.kind,
+            &identity.name,
+            &report.native_quotient_package,
         ) {
             continue;
         }
@@ -2152,6 +2323,13 @@ pub fn import_candidate_statement_ndjson<R: BufRead>(
             identity.kind,
             &identity.name,
             &report.substituted_theorems,
+        ) {
+            continue;
+        }
+        if is_exempted_native_quotient(
+            identity.kind,
+            &identity.name,
+            &report.native_quotient_package,
         ) {
             continue;
         }
@@ -2596,6 +2774,7 @@ fn drive_stream<R: BufRead>(
         axiom_identities,
         declaration_identities,
         substituted_theorems: state.substituted_theorems,
+        native_quotient_package: state.native_quotient_package,
     })
 }
 

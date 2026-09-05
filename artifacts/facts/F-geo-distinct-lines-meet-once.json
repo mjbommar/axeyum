@@ -1,0 +1,81 @@
+{
+  "schema_version": 1,
+  "id": "F:geo-distinct-lines-meet-once",
+  "title": "Two distinct lines meet in at most one point, in any incidence structure",
+  "statement": "In any incidence structure -- any inhabitant of the record Geo.Incidence, not any particular plane -- two lines that are not equal cannot both carry two points that are apart. Stated contrapositively, which is the form this kernel can express without subtracting points: given lines l and m, points P and Q that are apart, and all four incidences (P and Q each on both l and m), the assumption that l and m are unequal is refuted. This is the classical 'two distinct lines meet in at most one point' and it is a THEOREM about the axioms rather than a fact about coordinates: its proof is the uniqueness half of Hilbert I.1 applied to the four incidences, and nothing else. The distinctness of the two points is an apartness in the structure's own sense, not the negation of point equality, which is what lets one statement serve a model over the rationals and a model over the reals.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Geo.Incidence.distinct_lines_meet_once : ((x0 : Geo.Incidence) -> ((x1 : Geo.Incidence.point x0) -> ((x2 : Geo.Incidence.point x0) -> ((x3 : Geo.Incidence.line x0) -> ((x4 : Geo.Incidence.line x0) -> ((x5 : ((x5 : Geo.Incidence.lEq x0 x3 x4) -> False)) -> ((x6 : Geo.Incidence.apart x0 x1 x2) -> ((x7 : Geo.Incidence.on x0 x1 x3) -> ((x8 : Geo.Incidence.on x0 x2 x3) -> ((x9 : Geo.Incidence.on x0 x1 x4) -> ((x10 : Geo.Incidence.on x0 x2 x4) -> False)))))))))))",
+    "fragment": "Prop",
+    "free_symbols": [
+      "x0",
+      "x1",
+      "x2",
+      "x3",
+      "x4",
+      "x5",
+      "x6",
+      "x7",
+      "x8",
+      "x9",
+      "x10"
+    ],
+    "kernel_theorem": "Geo.Incidence.distinct_lines_meet_once"
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:geo-incidence-model-rational-plane"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Geo.Incidence.distinct_lines_meet_once",
+      "kind": "kernel-term",
+      "supports": "Geo.Incidence.distinct_lines_meet_once is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checkers": [
+        "producing-build (Kernel::add_declaration, inside build_geo_prelude)",
+        "kernel_declaration_projection --require-declaration with --require-kind theorem"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example kernel_declaration_projection -- --require-declaration Geo.Incidence.distinct_lines_meet_once --require-kind theorem",
+      "checker_seconds": 400,
+      "kernel_declaration": "Geo.Incidence.distinct_lines_meet_once",
+      "notes": "The exit status depends on the finding: --require-declaration exits 1 when no constructed prelude's environment holds a declaration with that exact rendered name, and --require-kind exits 1 when the match is of a different kind. --release is MANDATORY: the binary builds the constructed carriers and overflows the default debug thread stack."
+    },
+    {
+      "id": "generality-Geo.Incidence.distinct_lines_meet_once",
+      "kind": "instance-pin",
+      "supports": "The theorem really is stated over an ARBITRARY incidence structure and not over a fixed plane: its type binds Geo.Incidence itself.",
+      "check_status": "checked",
+      "checkers": [
+        "crates/axeyum-lean-kernel/src/geo/geo_tests.rs::every_derived_theorem_quantifies_over_the_record",
+        "crate::Kernel::render_lean of the ADMITTED type, not of the source text"
+      ],
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib -- geo::geo_tests::every_derived_theorem_quantifies_over_the_record",
+      "checker_seconds": 440,
+      "notes": "The test reads each derived declaration's type back out of the environment and requires `Geo.Incidence` to appear in it. A theorem specialised to Geo.qplane would render the model's name instead and fail. The population is the five derived declarations, listed against the prelude handle -- the same handle the axiom-freedom test's environment-derived set equality covers."
+    },
+    {
+      "id": "footprint-Geo.Incidence.distinct_lines_meet_once",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the theorem's transitive dependencies contain no Axiom, Opaque or Quotient declaration.",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "geo_tests::every_declaration_is_present_and_axiom_free over an environment-derived population"
+      ],
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib -- geo::geo_tests::every_declaration_is_present_and_axiom_free",
+      "checker_seconds": 440,
+      "notes": "Environment::contains is asserted BEFORE the footprint: an empty Kernel::axiom_footprint is also what a missing name returns, so the two assertions together are what makes the empty footprint mean something. Confirm a NONZERO test count."
+    }
+  ],
+  "provenance": {
+    "date": "2026-09-05",
+    "curation": "curated",
+    "established_by": "axeyum-lean-kernel build_geo_prelude (crates/axeyum-lean-kernel/src/geo.rs)",
+    "source": "ADR-1635 (docs/research/09-decisions/adr-1635-incidence-geometry-needs-apartness-in-exactly-one-axiom-and-the-rational-ring-normalizer-could-not-cancel.md); roadmap W3-8. formal.statement is the rendered type of the admitted declaration, taken verbatim from the unfiltered emit of `cargo run -q --release -p axeyum-lean-kernel --example kernel_declaration_projection`."
+  },
+  "notes": "The contrapositive form is not a weakening for convenience, it is what the kernel can say. The direct form -- 'if l and m are distinct then any two points on both are equal' -- would need to CONCLUDE a point equality, and the structure's point equality is an abstract setoid relation whose only introduction rules are its own reflexivity and the congruence fields; there is nothing to conclude it FROM. The contrapositive consumes an apartness instead, which the structure does supply. This is the same shape the rest of this kernel's constructive statements take, and the reason `Geo.Incidence` carries an apartness field at all is recorded in ADR-1635."
+}

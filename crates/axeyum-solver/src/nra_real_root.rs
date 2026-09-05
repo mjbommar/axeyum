@@ -1645,7 +1645,10 @@ trait SignOfRational {
 
 impl SignOfRational for Sign {
     fn of_rational(r: Rational) -> Sign {
-        match r.numerator().cmp(&0) {
+        // Compare the VALUE, not `numerator()`: since ADR-1702 a `Rational` can
+        // be promoted past `i128`, and `numerator()` panics on such a value
+        // rather than truncate. The sign is representation-independent.
+        match r.cmp(&Rational::zero()) {
             core::cmp::Ordering::Less => Sign::Neg,
             core::cmp::Ordering::Equal => Sign::Zero,
             core::cmp::Ordering::Greater => Sign::Pos,

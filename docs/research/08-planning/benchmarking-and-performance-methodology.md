@@ -188,6 +188,38 @@ fast path costs seconds, two to three orders of magnitude above the ceiling.
 are still compared to nothing; this slice ratchets the five oracle-free
 parametric families only. Extending the same calibrated-band scheme to
 `par2_mean_s` is the natural next slice.
+## Theory-route stage attribution
+
+Layer attribution (above) existed only for the pure bit-blast `sat-bv` path
+(`BvLayerStats`, `crates/axeyum-solver/src/layers.rs`); the CDCL(T) driver
+behind every arithmetic, EUF, string, and combined-theory route
+(`crates/axeyum-solver/src/cdclt.rs`) had none. The 2026-08-21
+linear-arithmetic diagnosis classified ~800 files by hand from per-file TSVs
+for exactly this reason: no instrument said whether a query's 24 s went to
+Boolean propagation, theory `assert`/`propagate`, or conflict analysis.
+
+`TheoryLayerStats` (same module) now names those stages — time in Boolean
+unit propagation, `TheorySolver::assert`, `TheorySolver::propagate`,
+`TheorySolver::push`/`pop`, and 1-UIP conflict analysis, plus counts of
+theory conflicts, theory propagations, decisions, and restarts (`simplex_pivots`
+stays `None` until a concrete theory adapter exposes a pivot count — the
+generic `TheorySolver` trait has no such method, D2 in the 2026-09-05
+architecture review). Collection is **off by default**: a `CdclT` search
+reads no extra clock beyond its existing deadline check unless
+`axeyum_solver::theories::cdclt_diagnostics::TheoryLayerStatsGuard::enable()`
+is active for the current thread (a thread-local toggle, the same pattern
+`nra_real_root::ISOLATE_DEADLINE` uses to avoid threading a parameter through
+every one of the ~10 `CdclT::new` call sites), so turning it on can never
+change what number a recorded baseline reports. Reading is only at stage
+*boundaries* (once per `assert`/`propagate`/`push`/`pop` call and once per
+Boolean-propagation pass or conflict analysis), never per trail literal.
+
+Companion to this: `RouteTrace` (`crates/axeyum-solver/src/route_trace.rs`)
+now carries wall-clock elapsed time per dispatch attempt, so a *declined*
+route's cost is visible too — the other half of "where did the 24 s go" that
+per-file TSV hand-classification was standing in for. `RouteTrace::to_json`
+is unchanged byte-for-byte; `RouteTrace::to_json_with_timing` is the opt-in
+serializer that adds it, consumed by `explain_corpus`'s JSON mode.
 
 ## Parity Sweep Resume Identity
 

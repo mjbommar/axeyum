@@ -44,10 +44,40 @@ only a subset, but the shared IR must not force the solver architecture into a
 quantifier-free corner.
 
 Concrete model values are similarly typed. Bit-vector values retain their
-width, integer and rational values are exact within the current `i128` reference
-range, and wide bit-vector values do not silently truncate to machine integers.
-Out-of-range integer or rational evaluation is an explicit
-`ArithmeticOverflow`, never wrapped arithmetic. The canonical bit convention is
+width, and wide bit-vector values do not silently truncate to machine integers.
+Integer values are exact within the current `i128` reference range, and
+out-of-range integer evaluation is an explicit `ArithmeticOverflow`, never
+wrapped arithmetic.
+
+**Rational values can be unbounded, but only where a route asks for it**
+(ADR-1702). `Rational` carries an `i128` fast path and an arbitrary-precision
+slow path, and promotion is **opt-in per route**: `new`, the `checked_*` family
+and the arithmetic operators still decline (or panic) on `i128` overflow exactly
+as before, while a parallel `wide_new` / `wide_add` / `wide_sub` / `wide_mul` /
+`wide_div` / `wide_neg` / `wide_recip` family promotes to a
+`num_rational::BigRational` held in a capped, deduplicating process-global pool.
+Any result that fits `i128` again is *demoted* back, so the fast path is retaken
+after transient growth.
+
+Global promotion was implemented first and rejected on measurement: it broke
+`axeyum-cas`, which uses `i128` exhaustion as a cost bound and a termination
+argument. The one exception to opt-in is comparison — `Ord::cmp` is now always
+exact and can no longer panic, because comparing allocates nothing.
+
+The type stays `Copy` and two `i128` fields wide (a promoted value is identified
+by the otherwise-impossible `den == 0`), and `Eq`, `Ord`, `Hash` and `Display`
+are all defined on the *value*, never on the pool id, so determinism is
+unaffected. The declining family accepts promoted operands: it computes exactly
+and demotes, returning `None` if the result does not fit, so a promoted value
+never produces a wrong answer anywhere. The one place representation shows
+through is `numerator()`/`denominator()`, which return `i128` and therefore panic
+rather than truncate on a promoted value; a route that opts in must keep such
+values internal or use `checked_numerator()` / `numerator_big()`. The first —
+and so far only — route to opt in is the exact-rational simplex, which narrows
+at its own boundary. Raising the same ceiling for `Value::Int` and the SMT-LIB
+integer-literal parser is ADR-1702's slice 2, and is not landed.
+
+The canonical bit convention is
 **least significant bit first** when a value is converted to a vector of
 Boolean bits; the bit-blaster and model lifter use the same convention.
 

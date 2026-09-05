@@ -55,6 +55,7 @@
 //! normalization, feasibility, propagation, and model reconstruction.
 
 use std::cell::RefCell;
+use std::cmp::Ordering;
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::fmt;
 use std::time::Instant;
@@ -64,7 +65,9 @@ use axeyum_ir::{
 };
 
 use crate::backend::{CheckResult, SolverConfig, SolverError, UnknownKind, UnknownReason};
-use crate::euf_egraph::{TheoryLit, TheoryProp, TheorySolver};
+use crate::euf_egraph::{
+    FinalCheckOutcome, PropagationQueue, TheoryExplanation, TheoryLit, TheoryProp, TheorySolver,
+};
 use crate::model::Model;
 use crate::simplex;
 
@@ -355,6 +358,47 @@ pub struct LraTheory {
     /// *mutated* by a check (it warm-starts) while [`LraTheory::propagate`] and
     /// [`LraTheory::model`] hold only `&self`.
     simplex: Option<RefCell<SimplexEngine>>,
+    /// Whether [`TheorySolver::assert`] defers the **complete** simplex
+    /// feasibility decision to [`TheorySolver::final_check`] (ADR-1701,
+    /// Dutertre–de Moura). Off by default, and deliberately so: the
+    /// [`crate::uflra_online`] combination loop and the self-contained
+    /// [`Dpll`] search below drive this theory with searches of their own that
+    /// never call `final_check`, and would silently lose their per-assert
+    /// completeness if this flipped globally. Only the `CdclT`-driven adapter
+    /// ([`crate::lra_theory::check_qf_lra_online_cdclt`]) turns it on.
+    deferred_final_check: bool,
+    /// Per real variable, the tightest currently-asserted lower bound and the
+    /// atom that imposed it. Maintained only in `deferred_final_check` mode: it
+    /// is the O(1) partial check `assert` keeps once the complete decision has
+    /// moved to `final_check`, and the source of the cheap bound-implication
+    /// propagation.
+    bound_lower: Vec<Option<VarBound>>,
+    /// Per real variable, the tightest currently-asserted upper bound.
+    bound_upper: Vec<Option<VarBound>>,
+    /// One entry per [`Self::live`] constraint (in `deferred_final_check` mode):
+    /// the bound slot that constraint overwrote, so `pop` restores the bound
+    /// tables in lockstep with `live.truncate`.
+    bound_log: Vec<Option<BoundUndo>>,
+}
+
+/// A one-variable bound currently asserted, with the atom that imposed it — the
+/// state behind `assert`'s cheap partial check (ADR-1701).
+#[derive(Debug, Clone)]
+struct VarBound {
+    /// The bound's value: `x <= value` for an upper bound, `x >= value` for a
+    /// lower one (strictly, when `strict`).
+    value: Rational,
+    strict: bool,
+    /// The registered atom that imposed it.
+    atom: usize,
+}
+
+/// What one live constraint changed in the bound tables, so `pop` can undo it.
+#[derive(Debug, Clone)]
+struct BoundUndo {
+    var: usize,
+    upper: bool,
+    previous: Option<VarBound>,
 }
 
 /// Why construction of an online LRA theory stopped before all atoms were
@@ -432,6 +476,10 @@ impl LraTheory {
             vars: builder.vars,
             deadline,
             simplex,
+            deferred_final_check: false,
+            bound_lower: vec![None; nvars],
+            bound_upper: vec![None; nvars],
+            bound_log: Vec::new(),
         })
     }
 
@@ -454,6 +502,219 @@ impl LraTheory {
     pub(crate) fn with_deadline(mut self, deadline: Option<Instant>) -> Self {
         self.deadline = deadline;
         self
+    }
+
+    /// Turns on the ADR-1701 split: `assert` keeps only bound bookkeeping plus
+    /// the O(1) bound-crossing check, and the **complete** simplex feasibility
+    /// decision moves to [`TheorySolver::final_check`], which the `CdclT` driver
+    /// calls once the Boolean assignment is total.
+    ///
+    /// Only a driver that calls `final_check` may enable this. Enabling it under
+    /// a search that does not would drop the per-assert completeness this
+    /// theory's `sat` side is otherwise argued from — which is why it is opt-in
+    /// per instance rather than a property of the type.
+    #[must_use]
+    pub(crate) fn with_deferred_final_check(mut self) -> Self {
+        self.deferred_final_check = true;
+        self
+    }
+
+    /// The one-variable bound a constraint imposes, or `None` when it names
+    /// zero or several variables (nothing cheap to say about it).
+    ///
+    /// `a·x + k {<,≤} 0` is `x ≤ -k/a` for `a > 0` and `x ≥ -k/a` for `a < 0`.
+    fn unit_bound(c: &Constraint) -> Option<(usize, bool, Rational, bool)> {
+        if c.expr.coeffs.len() != 1 {
+            return None;
+        }
+        let (&var, &a) = c.expr.coeffs.iter().next()?;
+        if a.is_zero() {
+            return None;
+        }
+        let value = c.expr.constant.checked_neg()?.checked_div(a)?;
+        // `a > 0` keeps the relation direction (upper bound); `a < 0` flips it.
+        let upper = a.checked_cmp(&Rational::zero())? == Ordering::Greater;
+        Some((var, upper, value, c.strict))
+    }
+
+    /// Whether `candidate` is strictly tighter than `current` on the same side.
+    fn tighter(candidate: (&Rational, bool), current: &VarBound, upper: bool) -> Option<bool> {
+        let ordering = candidate.0.checked_cmp(&current.value)?;
+        let strictly_better = if upper {
+            ordering == Ordering::Less
+        } else {
+            ordering == Ordering::Greater
+        };
+        Some(strictly_better || (ordering == Ordering::Equal && candidate.1 && !current.strict))
+    }
+
+    /// Installs the one-variable bounds of `added` (the constraints `assert`
+    /// just pushed onto [`Self::live`]) and returns the two-literal conflict
+    /// core if a bound now crosses its opposite (ADR-1701's cheap partial
+    /// check).
+    ///
+    /// The core is `{the atom that imposed the crossing bound, the atom holding
+    /// the opposite bound}` — exact and minimal by construction: two bounds on
+    /// one variable that cross are infeasible on their own, so `¬(l₁ ∧ l₂)` is a
+    /// valid theory lemma with no simplex run at all.
+    ///
+    /// One `bound_log` entry is appended per constraint, so the log stays
+    /// positionally aligned with `live` and [`TheorySolver::pop`] can undo it by
+    /// truncation.
+    fn install_bounds(&mut self, first: usize) -> Option<Vec<TheoryLit>> {
+        let mut conflict: Option<Vec<TheoryLit>> = None;
+        for index in first..self.live.len() {
+            let Some((var, upper, value, strict)) = Self::unit_bound(&self.live[index]) else {
+                self.bound_log.push(None);
+                continue;
+            };
+            let atom = self.live[index].atom;
+            let current = if upper {
+                &self.bound_upper[var]
+            } else {
+                &self.bound_lower[var]
+            };
+            let install = match current {
+                None => true,
+                Some(existing) => Self::tighter((&value, strict), existing, upper).unwrap_or(false),
+            };
+            if install {
+                let previous = if upper {
+                    self.bound_upper[var].replace(VarBound {
+                        value,
+                        strict,
+                        atom,
+                    })
+                } else {
+                    self.bound_lower[var].replace(VarBound {
+                        value,
+                        strict,
+                        atom,
+                    })
+                };
+                self.bound_log.push(Some(BoundUndo {
+                    var,
+                    upper,
+                    previous,
+                }));
+            } else {
+                self.bound_log.push(None);
+            }
+            if conflict.is_none() {
+                conflict = self.bound_crossing(var);
+            }
+        }
+        conflict
+    }
+
+    /// The two-literal core when variable `var`'s lower and upper bounds cross,
+    /// else `None`. Inconclusive arithmetic (an overflowed comparison) reports
+    /// nothing — a missed conflict costs completeness, never soundness.
+    fn bound_crossing(&self, var: usize) -> Option<Vec<TheoryLit>> {
+        let lower = self.bound_lower[var].as_ref()?;
+        let upper = self.bound_upper[var].as_ref()?;
+        let ordering = lower.value.checked_cmp(&upper.value)?;
+        let crosses = ordering == Ordering::Greater
+            || (ordering == Ordering::Equal && (lower.strict || upper.strict));
+        if !crosses {
+            return None;
+        }
+        let mut core = Vec::with_capacity(2);
+        for atom in [lower.atom, upper.atom] {
+            let Some(value) = self.assigned.get(atom).copied().flatten() else {
+                // A bound whose atom is no longer asserted cannot appear in a
+                // core; without both literals there is nothing to learn.
+                return None;
+            };
+            if !core.iter().any(|l: &TheoryLit| l.atom == atom) {
+                core.push(TheoryLit { atom, value });
+            }
+        }
+        Some(core)
+    }
+
+    /// Undoes every bound change recorded at or above `live_len`, restoring the
+    /// tables to the state that matches `live[..live_len]`.
+    fn undo_bounds(&mut self, live_len: usize) {
+        while self.bound_log.len() > live_len {
+            let Some(entry) = self.bound_log.pop() else {
+                continue;
+            };
+            let Some(undo) = entry else { continue };
+            if undo.upper {
+                self.bound_upper[undo.var] = undo.previous;
+            } else {
+                self.bound_lower[undo.var] = undo.previous;
+            }
+        }
+    }
+
+    /// Cheap bound-implication propagation (ADR-1701): an unassigned order atom
+    /// whose *true* polarity is a one-variable bound already entailed by the
+    /// tightest asserted bound on that variable is propagated true, explained by
+    /// the single atom holding that bound; symmetrically for its false polarity.
+    ///
+    /// This is the propagation the bound tables already expose — one comparison
+    /// per atom, no simplex probe — and it replaces the negation probe while the
+    /// complete decision is deferred. Only genuinely-entailed literals are
+    /// emitted: an inconclusive comparison yields nothing.
+    fn propagate_bounds(&self, queue: &mut PropagationQueue) {
+        for atom in 0..self.atoms.len() {
+            if past_deadline(self.deadline) {
+                return;
+            }
+            if self.assigned.get(atom).copied().flatten().is_some() {
+                continue;
+            }
+            let AtomKind::Order {
+                when_true,
+                when_false,
+            } = &self.atoms[atom]
+            else {
+                continue;
+            };
+            for (constraint, value) in [(when_true, true), (when_false, false)] {
+                let Some((var, upper, bound, strict)) = Self::unit_bound(constraint) else {
+                    continue;
+                };
+                // `constraint` says `x ≤ bound` (or `x ≥ bound`). It is entailed
+                // when the already-asserted bound on the same side is at least
+                // as tight.
+                let held = if upper {
+                    self.bound_upper[var].as_ref()
+                } else {
+                    self.bound_lower[var].as_ref()
+                };
+                let Some(held) = held else { continue };
+                let Some(ordering) = held.value.checked_cmp(&bound) else {
+                    continue;
+                };
+                let entailed = if upper {
+                    ordering == Ordering::Less
+                        || (ordering == Ordering::Equal && (held.strict || !strict))
+                } else {
+                    ordering == Ordering::Greater
+                        || (ordering == Ordering::Equal && (held.strict || !strict))
+                };
+                if !entailed {
+                    continue;
+                }
+                let Some(reason_value) = self.assigned.get(held.atom).copied().flatten() else {
+                    continue;
+                };
+                if held.atom == atom {
+                    continue;
+                }
+                queue.push_eager(
+                    TheoryLit { atom, value },
+                    vec![TheoryLit {
+                        atom: held.atom,
+                        value: reason_value,
+                    }],
+                );
+                break;
+            }
+        }
     }
 
     /// A real witness for the currently-asserted constraints, over the original
@@ -734,8 +995,19 @@ impl TheorySolver for LraTheory {
             // Equality-false (disjunction) and unsupported atoms add nothing.
             (AtomKind::Equality { .. }, false) | (AtomKind::Unsupported, _) => Vec::new(),
         };
+        let first_new = self.live.len();
         for c in added {
             self.live.push(c);
+        }
+
+        if self.deferred_final_check {
+            // ADR-1701: the cheap partial check only. Bound bookkeeping plus an
+            // O(1) crossing test; the complete simplex decision runs once, in
+            // `final_check`, at a total Boolean assignment.
+            return match self.install_bounds(first_new) {
+                Some(core) => Err(core),
+                None => Ok(()),
+            };
         }
 
         match self.feasibility() {
@@ -760,11 +1032,54 @@ impl TheorySolver for LraTheory {
             let atom = self.assigned_log.pop().expect("log non-empty above marker");
             self.assigned[atom] = None;
         }
+        if self.deferred_final_check {
+            self.undo_bounds(live_len);
+        }
         self.live.truncate(live_len);
     }
 
     fn propagate(&self) -> Vec<TheoryProp> {
         LraTheory::propagate(self)
+    }
+
+    /// The **complete** feasibility decision, deferred here from `assert` when
+    /// this instance opted into the ADR-1701 split. A theory left in the
+    /// eager mode answers `Sat` — it already decided every assert, so there is
+    /// nothing left to check and the driver's behaviour is unchanged.
+    ///
+    /// An inconclusive check (`Feasibility::Unknown`: arithmetic overflow or a
+    /// size guard) answers `Sat`, exactly as `assert` treated it before —
+    /// "feasible, don't know" — and the caller's model replay against the
+    /// original assertions remains what gates a `sat`. Answering `Unknown`
+    /// here would be more conservative than the route has ever been and would
+    /// lose files the replay decides.
+    fn final_check(&mut self) -> FinalCheckOutcome {
+        if !self.deferred_final_check {
+            return FinalCheckOutcome::Sat;
+        }
+        match self.feasibility() {
+            Feasibility::Sat | Feasibility::Unknown => FinalCheckOutcome::Sat,
+            Feasibility::Unsat(rows) => {
+                let core = self.rows_to_core(&rows);
+                if core.is_empty() {
+                    return FinalCheckOutcome::Sat;
+                }
+                FinalCheckOutcome::Conflict(TheoryExplanation::Eager(core))
+            }
+        }
+    }
+
+    /// In the deferred mode this is the cheap bound-implication propagation the
+    /// bound tables already expose (ADR-1701); in the eager mode it is the
+    /// existing negation probe, unchanged.
+    fn propagate_into(&mut self, queue: &mut PropagationQueue) {
+        if self.deferred_final_check {
+            self.propagate_bounds(queue);
+            return;
+        }
+        for prop in LraTheory::propagate(self) {
+            queue.push_eager(prop.lit, prop.reason);
+        }
     }
 }
 
@@ -3127,6 +3442,10 @@ fn run_online_diag(arena: &TermArena, assertions: &[TermId]) -> Option<OnlineDia
         vars: builder.vars,
         deadline: None,
         simplex,
+        deferred_final_check: false,
+        bound_lower: vec![None; nvars],
+        bound_upper: vec![None; nvars],
+        bound_log: Vec::new(),
     };
     let mut solver = Dpll::new(enc.var_count, atom_count, clauses);
     let _ = solver.solve(&mut theory);
@@ -4030,6 +4349,10 @@ mod tests {
             vars: builder.vars,
             deadline: None,
             simplex,
+            deferred_final_check: false,
+            bound_lower: vec![None; nvars],
+            bound_upper: vec![None; nvars],
+            bound_log: Vec::new(),
         };
         let solver = Dpll::new(enc.var_count, atom_count, clauses);
         (solver, theory)

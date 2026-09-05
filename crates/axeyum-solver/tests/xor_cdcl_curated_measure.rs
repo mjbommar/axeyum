@@ -16,7 +16,11 @@
 //! ```sh
 //! cargo test -p axeyum-solver --test xor_cdcl_curated_measure -- --ignored --nocapture
 //! ```
-#![cfg(feature = "full")]
+// ADR-1703: this harness times the CDCL(XOR) core against the RETIRED
+// `rustsat-batsat` adapter, so it needs `batsat-reference` as well as
+// `full`. Without both it compiles to ZERO tests and exits 0 -- confirm a
+// nonzero count before believing a pass.
+#![cfg(all(feature = "full", feature = "batsat-reference"))]
 
 use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};

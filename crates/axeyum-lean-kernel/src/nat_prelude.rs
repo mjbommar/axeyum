@@ -160,6 +160,7 @@ mod cantor;
 mod cardinality;
 mod catalan;
 pub mod category_setoid;
+mod central_binomial;
 mod choose;
 mod choose_factorial_add;
 mod clog;
@@ -279,6 +280,7 @@ mod prime_counting;
 mod prime_dvd_factorial_lcm;
 mod prime_dvd_mirrors;
 mod primes;
+mod primorial;
 mod primrec;
 mod quadratic_reciprocity_count;
 mod rado;
@@ -374,6 +376,9 @@ use ble::declare_boolean_le;
 use cantor::declare_cantor_all;
 use cardinality::declare_nat_pigeonhole;
 use catalan::declare_catalan_all;
+use central_binomial::{
+    declare_add_self_cancellation, declare_central_binomial_bound, declare_four_pow_bridge,
+};
 use choose::declare_choose_all;
 use choose_factorial_add::declare_add_choose_mul_factorial_mul_factorial;
 use clog::declare_clog_all;
@@ -516,6 +521,10 @@ use primes::{
     declare_prime_dvd_iff_not_coprime, declare_prime_dvd_mul_of_dvd_ne,
     declare_prime_dvd_of_dvd_pow, declare_prime_even_iff, declare_prime_not_dvd_mul,
     declare_prime_odd_of_ne_two, declare_prime_pred_pos, declare_primes, declare_succ_pred_prime,
+};
+use primorial::{
+    declare_min_fac_prime_bridge, declare_primorial, declare_primorial_defining_equations,
+    declare_primorial_order,
 };
 use primrec::declare_primrec_all;
 use quadratic_reciprocity_count::declare_quadratic_reciprocity_count_all;
@@ -7197,6 +7206,62 @@ pub struct NatPrelude {
     /// statement, so a general result that failed to specialise would not
     /// compile.
     pub subsets_inclusion_exclusion_two: NameId,
+
+    // --- the primorial (`primorial.rs`, ADR-1637) --------------------------
+    /// `Nat.primorial n : Nat` — the product of every prime `p ≤ n`, spelled
+    /// `prodRangeIf (fun i => beq (minFac i) i) (fun i => i) (succ n)`.
+    /// `minFac 1 = 1` makes `i = 1` pass the predicate; it contributes the
+    /// factor `1`, so the value is still exactly `∏ {p prime, p ≤ n}` (see
+    /// `primorial.rs`'s module doc for the table and why a COUNT could not
+    /// reuse this predicate).
+    pub primorial: NameId,
+    /// `Nat.primorial_zero : Eq (primorial 0) 1` — `Eq.refl`.
+    pub primorial_zero: NameId,
+    /// `Nat.primorial_succ : ∀ n, Eq (primorial (succ n))
+    /// (mul (primorial n) (bool_select_nat (beq (minFac (succ n)) (succ n)) (succ n) 1))`
+    /// — `Eq.refl`, through `prodRangeIf_succ`'s own reduction.
+    pub primorial_succ: NameId,
+    /// `Nat.min_fac_eq_self_of_prime : ∀ n, prime_condition n → Eq (minFac n) n`.
+    pub min_fac_eq_self_of_prime: NameId,
+    /// `Nat.prime_of_min_fac_eq_self : ∀ n, Le 2 n → Eq (minFac n) n →
+    /// prime_condition n` — [`min_fac_prime`](Self::min_fac_prime) transported
+    /// along the equation.
+    pub prime_of_min_fac_eq_self: NameId,
+    /// `Nat.primorial_succ_of_prime : ∀ n, prime_condition (succ n) →
+    /// Eq (primorial (succ n)) (mul (primorial n) (succ n))`.
+    pub primorial_succ_of_prime: NameId,
+    /// `Nat.primorial_succ_of_not_prime : ∀ n, Not (prime_condition (succ n)) →
+    /// Eq (primorial (succ n)) (primorial n)`.
+    pub primorial_succ_of_not_prime: NameId,
+    /// `Nat.primorial_pos : ∀ n, Lt 0 (primorial n)`.
+    pub primorial_pos: NameId,
+    /// `Nat.primorial_le_succ : ∀ n, Le (primorial n) (primorial (succ n))`.
+    pub primorial_le_succ: NameId,
+    /// `Nat.primorial_mono : ∀ m n, Le m n → Le (primorial m) (primorial n)`.
+    pub primorial_mono: NameId,
+
+    // --- the odd central binomial bound (`central_binomial.rs`, ADR-1637) ---
+    /// `Nat.mul_two_eq_add_self : ∀ a, Eq (mul a 2) (add a a)` — `mul a 2`
+    /// reduces to `add (add zero a) a`, so this is `zero_add` under one
+    /// congruence.
+    pub mul_two_eq_add_self: NameId,
+    /// `Nat.le_of_add_self_le_add_self : ∀ a b, Le (add a a) (add b b) →
+    /// Le a b`. [`le_of_add_le_add_right`](Self::le_of_add_le_add_right)
+    /// cancels a COMMON summand and does not apply.
+    pub le_of_add_self_le_add_self: NameId,
+    /// `Nat.four_pow_eq_two_pow_add_self : ∀ m, Eq (pow 4 m) (pow 2 (add m m))`.
+    pub four_pow_eq_two_pow_add_self: NameId,
+    /// `Nat.choose_two_mul_succ_le_two_pow : ∀ m,
+    /// Le (choose (succ (add m m)) m) (pow 2 (add m m))` — the odd central
+    /// binomial bound. Strictly stronger than
+    /// [`choose_le_two_pow`](Self::choose_le_two_pow) at this row, which gives
+    /// only `2^(2m+1)`; the factor of two comes from the row sum carrying the
+    /// middle coefficient TWICE.
+    pub choose_two_mul_succ_le_two_pow: NameId,
+    /// `Nat.choose_two_mul_succ_le_four_pow : ∀ m,
+    /// Le (choose (succ (add m m)) m) (pow 4 m)` — the same bound in the `4^m`
+    /// form Erdős's induction consumes.
+    pub choose_two_mul_succ_le_four_pow: NameId,
 }
 
 /// Declare the natural-number prelude into `kernel`'s environment, returning the
@@ -8472,6 +8537,26 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             subsets_inclusion_exclusion: kernel.name_str(subsets, "inclusion_exclusion"),
             subsets_inclusion_exclusion_pos: kernel.name_str(subsets, "inclusion_exclusion_pos"),
             subsets_inclusion_exclusion_two: kernel.name_str(subsets, "inclusion_exclusion_two"),
+
+            // `primorial.rs` (ADR-1637).
+            primorial: kernel.name_str(nat, "primorial"),
+            primorial_zero: kernel.name_str(nat, "primorial_zero"),
+            primorial_succ: kernel.name_str(nat, "primorial_succ"),
+            min_fac_eq_self_of_prime: kernel.name_str(nat, "min_fac_eq_self_of_prime"),
+            prime_of_min_fac_eq_self: kernel.name_str(nat, "prime_of_min_fac_eq_self"),
+            primorial_succ_of_prime: kernel.name_str(nat, "primorial_succ_of_prime"),
+            primorial_succ_of_not_prime: kernel.name_str(nat, "primorial_succ_of_not_prime"),
+            primorial_pos: kernel.name_str(nat, "primorial_pos"),
+            primorial_le_succ: kernel.name_str(nat, "primorial_le_succ"),
+            primorial_mono: kernel.name_str(nat, "primorial_mono"),
+
+            // `central_binomial.rs` (ADR-1637).
+            mul_two_eq_add_self: kernel.name_str(nat, "mul_two_eq_add_self"),
+            le_of_add_self_le_add_self: kernel.name_str(nat, "le_of_add_self_le_add_self"),
+            four_pow_eq_two_pow_add_self: kernel.name_str(nat, "four_pow_eq_two_pow_add_self"),
+            choose_two_mul_succ_le_two_pow: kernel.name_str(nat, "choose_two_mul_succ_le_two_pow"),
+            choose_two_mul_succ_le_four_pow: kernel
+                .name_str(nat, "choose_two_mul_succ_le_four_pow"),
             strong_induction: kernel.name_str(nat, "strongInduction"),
             strong_induction_eq: kernel.name_str(nat, "strongInduction_eq"),
             dvd_b: kernel.name_str(nat, "dvdB"),
@@ -9974,6 +10059,22 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // `Nat.countRange`/`countRange_compl`/`countRange_eq_sumRange` and
         // `Nat.setUnion`/`setInter`/`setCompl` (`finite_set.rs`).
         declare_inclusion_exclusion_all(&mut d, &p)?;
+        // The primorial (`primorial.rs`, ADR-1637, roadmap W3-11). Needs
+        // `Nat.prodRangeIf` (`subset_product.rs`, `declare_prod_range_if_all`
+        // far above), `Nat.minFac` and the three `min_fac_*` lemmas
+        // (`min_fac.rs`/`min_fac_dvd.rs`, far above), and `Nat.beq`.
+        declare_primorial(&mut d, &p)?;
+        declare_primorial_defining_equations(&mut d, &p)?;
+        declare_min_fac_prime_bridge(&mut d, &p)?;
+        declare_primorial_order(&mut d, &p)?;
+        // The odd central binomial bound (`central_binomial.rs`, ADR-1637).
+        // Needs `Nat.sum_choose_row`/`choose_symm_of_eq_add` (`binomial.rs`),
+        // `Nat.sumRange_split` (`rectangle.rs`), `Nat.sumRange_succ` and the
+        // elementary `zero_add`/`add_comm`/`mul_comm`/`mul_assoc`/`pow_succ`/
+        // `succ_add` shelf, all far above.
+        declare_add_self_cancellation(&mut d, &p)?;
+        declare_central_binomial_bound(&mut d, &p)?;
+        declare_four_pow_bridge(&mut d, &p)?;
         Ok(p)
     })();
     match built {
@@ -10134,6 +10235,12 @@ mod multiset_prod_tests;
 
 #[cfg(test)]
 mod min_fac_dvd_tests;
+
+#[cfg(test)]
+mod primorial_tests;
+
+#[cfg(test)]
+mod central_binomial_tests;
 
 #[cfg(test)]
 mod factorization_multiset_tests;

@@ -43,6 +43,10 @@ use std::collections::BTreeMap;
 
 use axeyum_ir::Rational;
 
+use crate::geometry_beyond::{
+    conic_polar_is_tangent_problem, tetrahedron_circumcenter_problem,
+    tetrahedron_medians_concurrent_problem,
+};
 use crate::geometry_certify::{
     Condition, Constraint, DegenerateWitness, GenericWitness, GeometryProblem, Pt, centroid,
     collinear, concyclic, dist_sq, equidistant, midpoint, parallel, perpendicular,
@@ -84,6 +88,11 @@ pub fn corpus() -> Vec<GeometryProblem> {
         euler_line(),
         pappus_hexagon(),
         simson_line(),
+        // Geometry beyond the rational plane (file 13 item 6):
+        // `crate::geometry_beyond` states these, this module only lists them.
+        tetrahedron_medians_concurrent_problem(),
+        tetrahedron_circumcenter_problem(),
+        conic_polar_is_tangent_problem(),
     ]
 }
 

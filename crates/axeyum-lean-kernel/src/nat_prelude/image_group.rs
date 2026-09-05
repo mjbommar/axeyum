@@ -128,8 +128,13 @@ pub struct ImageGroupNames {
 
 impl ImageGroupNames {
     /// Every name this file owns, derived from the struct's own fields.
+    ///
+    /// Named `owned_names`, not `all`: `check-kernel-trusted-core.py` resolves
+    /// method calls loosely by name, and the trusted core calls `.all(..)` on
+    /// other receivers, so a method called `all` here put eight lines of this
+    /// content file into the trusted closure (guard D fired, 2026-09-05).
     #[must_use]
-    pub fn all(&self) -> Vec<(&'static str, NameId)> {
+    pub fn owned_names(&self) -> Vec<(&'static str, NameId)> {
         vec![
             ("AlgS.Hom.imageCarrier", self.image_carrier),
             ("AlgS.Hom.imageGroup", self.image_group),
@@ -1016,7 +1021,7 @@ mod image_group_tests {
     #[test]
     fn the_image_group_layer_is_axiom_free() {
         let (mut kernel, _p, names) = built();
-        for (label, name) in names.all() {
+        for (label, name) in names.owned_names() {
             assert!(
                 kernel.environment().get(name).is_some(),
                 "{label} must be declared"

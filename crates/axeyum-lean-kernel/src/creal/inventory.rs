@@ -72,6 +72,7 @@ mod order_extra;
 mod pi;
 mod polynomial;
 mod power;
+mod power_series;
 mod product;
 mod ratio_test;
 mod rolle;
@@ -129,6 +130,7 @@ pub(crate) fn all_entries(
     all.extend(pi::entries(p));
     all.extend(polynomial::entries(p));
     all.extend(power::entries(p));
+    all.extend(power_series::entries(p));
     all.extend(product::entries(p));
     all.extend(ratio_test::entries(p));
     all.extend(rolle::entries(p));

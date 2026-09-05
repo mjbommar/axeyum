@@ -61,6 +61,12 @@ mod creal_point;
 pub mod decide;
 mod env;
 mod expr;
+mod fo_provable;
+mod fo_semantics;
+mod fo_soundness;
+mod fo_substitution;
+mod fo_syntax;
+pub mod geo;
 mod inductive;
 mod int_prelude;
 mod intspace;
@@ -74,6 +80,7 @@ mod level;
 pub mod linarith;
 mod list_prelude;
 mod metric;
+mod metric_prod;
 mod name;
 mod nat_prelude;
 mod prelude;
@@ -114,6 +121,17 @@ pub use creal_model::{CRealModel, CRealModelLaw, build_creal_model_of_arith};
 pub use creal_point::{CPointPrelude, build_cpoint_prelude};
 pub use env::{Declaration, Environment, QuotKind, RecRule, ReducibilityHint};
 pub use expr::{BinderInfo, ExprId, ExprNode, Lit, NatLit};
+pub use fo_provable::{FoProvablePrelude, build_fo_provable_prelude};
+pub use fo_semantics::{FoSemanticsPrelude, build_fo_semantics_prelude};
+pub use fo_soundness::{FoSoundnessPrelude, build_fo_soundness_prelude};
+pub use fo_substitution::{FoSubstitutionPrelude, build_fo_substitution_prelude};
+pub use fo_syntax::{FoSyntaxPrelude, build_fo_syntax_prelude};
+pub use geo::{
+    APART as GEO_APART, FIELD_COUNT as GEO_FIELD_COUNT, GeoPrelude, JOIN_EXISTS as GEO_JOIN_EXISTS,
+    JOIN_UNIQUE as GEO_JOIN_UNIQUE, L_EQ as GEO_L_EQ, LINE as GEO_LINE, ON as GEO_ON,
+    P_EQ as GEO_P_EQ, POINT as GEO_POINT, TRIANGLE as GEO_TRIANGLE, TWO_POINTS as GEO_TWO_POINTS,
+    build_geo_prelude,
+};
 pub use inductive::InductiveFamilySpec;
 pub use int_prelude::{IntPrelude, build_int_prelude};
 pub use intspace::{
@@ -152,6 +170,7 @@ pub use metric::{
     EQUIV_SYMM as METRIC_EQUIV_SYMM, EQUIV_TRANS as METRIC_EQUIV_TRANS,
     FIELD_COUNT as METRIC_FIELD_COUNT, MetricPrelude, build_metric_prelude,
 };
+pub use metric_prod::{MetricProdNames, build_metric_prod_prelude};
 pub use name::{NameId, NameNode};
 pub use nat_prelude::image_group::{ImageGroupDeps, ImageGroupNames};
 pub use nat_prelude::{NatDev, NatOps, NatPrelude, NatState, build_nat_prelude};

@@ -1,0 +1,79 @@
+{
+  "schema_version": 1,
+  "id": "F:creal-powerseriestermradiusbound",
+  "title": "[generated] kernel theorem CReal.powerSeriesTermRadiusBound (creal prelude, axiom-free, prose not curated)",
+  "statement": "MECHANICALLY GENERATED, UNREVIEWED PROSE -- this sentence deliberately makes NO mathematical characterisation of the theorem. What is asserted, and all that is asserted, is this: the kernel declaration `CReal.powerSeriesTermRadiusBound` is a `Declaration::Theorem` admitted into the environment by `build_creal_prelude` through the trusted `Kernel::add_declaration` gate, which re-derives its type from its proof term; its type is recorded verbatim in `formal.statement`; and its axiom footprint, as computed by `Kernel::axiom_footprint`, is empty. The authoritative content of this fact is `formal.statement`. A human-readable characterisation of what CReal.powerSeriesTermRadiusBound SAYS has not been supplied, because a generator cannot supply one honestly -- see `notes`.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem CReal.powerSeriesTermRadiusBound : ((x0 : ((x0 : AxNat) -> CReal)) -> ((x1 : CReal) -> ((x2 : CReal) -> ((x3 : CReal) -> ((x4 : CReal) -> ((x5 : ((x5 : AxNat) -> CReal.le (CReal.mul (CReal.abs (x0 x5)) (CReal.pow x2 x5)) x1)) -> ((x6 : CReal.le CReal.zero x3) -> ((x7 : CReal.le (CReal.abs x4) (CReal.mul x3 x2)) -> ((x8 : AxNat) -> CReal.le (CReal.abs (CReal.powerSeriesTerm x0 x8 x4)) (CReal.mul x1 (CReal.pow x3 x8)))))))))))",
+    "fragment": "CReal",
+    "free_symbols": [
+      "x0",
+      "x1",
+      "x2",
+      "x3",
+      "x4",
+      "x5",
+      "x6",
+      "x7",
+      "x8"
+    ],
+    "kernel_theorem": "CReal.powerSeriesTermRadiusBound"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:creal-abs-mul-le-of-bounds",
+    "F:creal-abs-pow-le",
+    "F:creal-equiv-refl",
+    "F:creal-equiv-symm",
+    "F:creal-equiv-trans",
+    "F:creal-le-congr",
+    "F:creal-le-refl",
+    "F:creal-le-trans",
+    "F:creal-mul-assoc",
+    "F:creal-mul-comm",
+    "F:creal-mul-congr",
+    "F:creal-mul-le-mul-of-nonneg-left",
+    "F:creal-pow-nonneg",
+    "F:creal-powmuldistrib"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-CReal.powerSeriesTermRadiusBound",
+      "kind": "kernel-term",
+      "supports": "CReal.powerSeriesTermRadiusBound is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checkers": [
+        "producing-build (Kernel::add_declaration)",
+        "theorem_dependency_inventory re-list"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example theorem_dependency_inventory -- CReal.powerSeriesTermRadiusBound 2>/dev/null | grep -cE '^CReal\\.powerSeriesTermRadiusBound[[:space:]]'",
+      "checker_seconds": 10,
+      "kernel_declaration": "CReal.powerSeriesTermRadiusBound",
+      "notes": "Two independent failure modes, so the exit status depends on the finding rather than on the run completing: theorem_dependency_inventory exits non-zero when a NAMED filter matches nothing, and grep -c exits 1 printing 0 when the anchored line is absent. Anchored with [[:space:]], never \\t -- in a scripted (GNU) grep \\t is a literal t. grep -c rather than grep -q, which would SIGPIPE the producer under pipefail. --release is MANDATORY: this tool builds creal/complex/cpoint, which overflow the default debug thread stack."
+    },
+    {
+      "id": "footprint-CReal.powerSeriesTermRadiusBound",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the creal prelude's trusted surface is empty, which bounds CReal.powerSeriesTermRadiusBound.",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --include-constructed --require-axiom-free creal",
+      "checker_seconds": 12,
+      "notes": "--require-axiom-free exits non-zero when the named prelude's trusted surface (Axiom + Opaque + Quotient) is not empty, and errors rather than silently passing for a prelude the run never built. A declaration cannot depend on a trusted declaration the environment does not contain, so an empty creal surface bounds every declaration in it, including CReal.powerSeriesTermRadiusBound. This is a whole-prelude bound, not a per-declaration measurement; the per-declaration figure is the footprint column of kernel_declaration_projection, measured 0 for this row."
+    }
+  ],
+  "provenance": {
+    "date": "2026-09-05",
+    "curation": "generated-unreviewed",
+    "generated_by": "scripts/gen-kernel-facts.py",
+    "established_by": "axeyum-lean-kernel build_creal_prelude (crates/axeyum-lean-kernel/src/creal/)",
+    "source": "Derived mechanically from the unfiltered emit of `cargo run -q --release -p axeyum-lean-kernel --example kernel_declaration_projection`, which prints one TSV row per declaration whose fields are (prelude, kind, display name, axiom-footprint size, direct type declarations, direct declarations, direct theorems, Kernel::render_lean(declaration.ty())). formal.statement is that last field verbatim; depends_on is the direct-theorem column intersected with this ledger's registered facts; axiom_footprint is the footprint-size column, cross-checked by the whole-prelude nat_axiom_inventory run recorded in the second evidence row. No field was hand-transcribed and no prose was authored."
+  },
+  "notes": "NO CURATED COMMENTARY EXISTS FOR THIS FACT. Its absence means nobody has looked, NOT that there is nothing to say. A hand-written fact in this ledger typically records what a generator cannot invent -- that a bound is loose and does not pin a sign, that the global version of a statement is false for an arbitrary witness, that a hypothesis is domain-restricted, which of several attempted slices finally closed a gap. None of that has been assessed here. `provenance.curation` is `generated-unreviewed`; a lane that enriches this fact must flip it to `curated`, which `gen-kernel-facts.py --audit` enforces by re-deriving this prose and requiring a byte-identical match while the marker says generated. `external_status` is deliberately ABSENT rather than guessed: whether mathematics-at-large knows this statement is a judgement about the literature, and the schema reads an absent `external_status` as 'nobody has looked', which is exactly the case. Source: crates/axeyum-lean-kernel/src/creal/."
+}

@@ -7673,7 +7673,14 @@ fn map_sat_error(error: &SatError) -> SolverError {
 }
 
 fn classify_sat_unknown(detail: &str) -> UnknownKind {
-    if detail.contains("deterministic progress-check budget") {
+    // ADR-1703: the native CDCL core reports "conflict budget N exhausted"
+    // where the retired adapter reported "deterministic progress-check budget
+    // N exhausted". Both are matched -- a budget `unknown` misclassified as
+    // `Other` is silently indistinguishable from a real failure, which is
+    // exactly what `retained_solver_applies_resource_limit_to_each_sat_check`
+    // caught when only the old string was matched.
+    if detail.contains("deterministic progress-check budget") || detail.contains("conflict budget")
+    {
         UnknownKind::ResourceLimit
     } else if detail.contains("timeout") {
         UnknownKind::Timeout

@@ -4,7 +4,7 @@
   "note": "Statement identity for every settled fact (S1 of the trusted-library safety roadmap, ADR-0763). Per fact: SHA-256 of formal.statement (the canonical kernel rendering for native lean4 rows), SHA-256 of the top-level reader-facing statement, and the kernel_theorem it names. A settled fact's statement is what the ledger CLAIMS; changing any of the three silently turns 'we proved X' into 'we proved something we then labelled X'. Changes require an amendment row naming both digests and a reason; superseded digests are preserved in each pin's history. `coverage_floor` is a ratchet the gate re-derives rather than trusts: slack is itself a violation, so a loosened floor is self-reverting. Written by `scripts/check-settled-fact-statements.py --write`; do not hand-edit.",
   "coverage_floor": {
     "max_unpinned_settled": 0,
-    "min_identity_bound": 2351,
+    "min_identity_bound": 2377,
     "max_header_exempt": 0
   },
   "amendments": [
@@ -1665,6 +1665,13 @@
       "kernel_theorem": "Complex.abs_one"
     },
     {
+      "fact_id": "F:complex-abs-zero",
+      "language": "lean4",
+      "statement_sha256": "7cd377a29dc7cea417c99dd325c6c83b9c9f23bca18e48e2b07b267be579a7a3",
+      "prose_sha256": "e0228edb24ab9eb16c70a263932ac23d44d8e6257e855c76744cfc9ffc41bdfc",
+      "kernel_theorem": "Complex.abs_zero"
+    },
+    {
       "fact_id": "F:complex-add-assoc",
       "language": "lean4",
       "statement_sha256": "a768e4dad050c50ae977da0aaa6354ea6bea3431c72418d1b8ce422e4024e98a",
@@ -2027,6 +2034,76 @@
       "statement_sha256": "cc56a3c1137377ca4bdcbb79591ea90cca1731037af9cb031500f5b7be6293c2",
       "prose_sha256": "30cda60d8515a8ac62c45732bf9b61296cfafd5a25a837d1e518351379e3f39e",
       "kernel_theorem": "Complex.geom_sum_eq_zero_of_root_of_unity"
+    },
+    {
+      "fact_id": "F:complex-hasderivative-add",
+      "language": "lean4",
+      "statement_sha256": "768fc9926b7ba2f9d958371528da8f5025d4d8486fded1982c45b548b75fbdee",
+      "prose_sha256": "b220fbf80281fd9ef950c5d3c3d2c89bbf543c21f3d6f446112254b359f23cfa",
+      "kernel_theorem": "Complex.hasDerivative_add"
+    },
+    {
+      "fact_id": "F:complex-hasderivative-const",
+      "language": "lean4",
+      "statement_sha256": "3e50beebeca4257fd0156c6a68a0251c3165645a8e821d6795c0c6148419c11f",
+      "prose_sha256": "c8fca57e66b5b1b3a1fdeffff33354889bc8ca70bc8ab1a22832ae61e5542c83",
+      "kernel_theorem": "Complex.hasDerivative_const"
+    },
+    {
+      "fact_id": "F:complex-hasderivative-id",
+      "language": "lean4",
+      "statement_sha256": "dd620a3f89ca5af151f7a34b4aaead934f41fb244f041ce7b7ffb641da215de2",
+      "prose_sha256": "4ea6321cfa2a71c13adeea187ddb7fcaf606fbf3b2e872a0b540fa5c01b129b5",
+      "kernel_theorem": "Complex.hasDerivative_id"
+    },
+    {
+      "fact_id": "F:complex-hasderivative-neg",
+      "language": "lean4",
+      "statement_sha256": "539cc7db042b987a02d406a33375e364f3f9b1276664bcdbbc3df757044c6336",
+      "prose_sha256": "fc16f7a6cf70b1050c10e212e6832af10f7cd400edef18bbf8c7d0ce4cb521a7",
+      "kernel_theorem": "Complex.hasDerivative_neg"
+    },
+    {
+      "fact_id": "F:complex-hasderivativeon-spec",
+      "language": "lean4",
+      "statement_sha256": "aac9b3764e776cbb3ca7ecc376750cf2433386e45ef8a7a6cc81aa1e6427bf8e",
+      "prose_sha256": "cc89687312b98b044c3abbb37cd5e18b96c2fbda1c3dd2b087e87c662a955686",
+      "kernel_theorem": "Complex.HasDerivativeOn.spec"
+    },
+    {
+      "fact_id": "F:complex-holomorphic-add",
+      "language": "lean4",
+      "statement_sha256": "bee387f1f177f5bdf17d5574370c0f997f8ac1dc3e22a293e71498a58f191331",
+      "prose_sha256": "a62516a1d0d8b3ba887cfcda7b09220b6258d12be827c346add4699c1ec00d1f",
+      "kernel_theorem": "Complex.holomorphic_add"
+    },
+    {
+      "fact_id": "F:complex-holomorphic-const",
+      "language": "lean4",
+      "statement_sha256": "21d276bb3db34cf672ead5f06df1e791220e017ef064f5903b8635d3cc9e030b",
+      "prose_sha256": "4f0891eafe9fda53882a329a410b93f36da82fc50b1cb9e665822472d6cb897b",
+      "kernel_theorem": "Complex.holomorphic_const"
+    },
+    {
+      "fact_id": "F:complex-holomorphic-id",
+      "language": "lean4",
+      "statement_sha256": "fa38881568dcc9fe2d37c6893313cfa4669736479a9fb8f359ff3b7ee4415692",
+      "prose_sha256": "de95de2191abac1e4fddb8d9ef8d242274705fbc7bb5998384b855b1ea48e284",
+      "kernel_theorem": "Complex.holomorphic_id"
+    },
+    {
+      "fact_id": "F:complex-holomorphic-neg",
+      "language": "lean4",
+      "statement_sha256": "938466a3ebb2f20cdacf5d4befb4cbae80aeca81d1fb73e8b532ab6d7d42c354",
+      "prose_sha256": "55b1988d2ad9561d305ae3cac6eeb8b022b1445d0ca55cc177222cafad2002b9",
+      "kernel_theorem": "Complex.holomorphic_neg"
+    },
+    {
+      "fact_id": "F:complex-holomorphic-spec",
+      "language": "lean4",
+      "statement_sha256": "15988fd97bd3ad793d22971b40699c2bb0c30efcfb2b5936eaa958e12eacdffb",
+      "prose_sha256": "00e1b0537c7013f826037d91b99c6fb8593b7efb2340977c67e039ca40034361",
+      "kernel_theorem": "Complex.holomorphic_spec"
     },
     {
       "fact_id": "F:complex-hornerfromtop",
@@ -3706,6 +3783,13 @@
       "kernel_theorem": "CReal.abs_nonneg"
     },
     {
+      "fact_id": "F:creal-abs-pow-le",
+      "language": "lean4",
+      "statement_sha256": "fccf9aaa1c2dc9ad7e622052cb98ca0c4440946c0d081eed819a8f10d9c56b90",
+      "prose_sha256": "125de0d43980296709d6622cbd926ec0d787280abd058f24fa3d76eb71b23737",
+      "kernel_theorem": "CReal.abs_pow_le"
+    },
+    {
       "fact_id": "F:creal-abs-sumrange-le",
       "language": "lean4",
       "statement_sha256": "83d0efcce696a839e603b002fbc9f3c14fe1bdfb59bbf56944f529d6c68983d6",
@@ -4394,6 +4478,13 @@
       "kernel_theorem": "CReal.cosSeriesPartial"
     },
     {
+      "fact_id": "F:creal-cosseriespartialispowerseries",
+      "language": "lean4",
+      "statement_sha256": "0fa43683f98a91a3cc5c344d0c226aae75e4b3c63c291f1853ef2794a205c811",
+      "prose_sha256": "8bd2acb7c07833aa45977c9d0e8957dcc436eed4552fdc113dee3c1eee82c0ff",
+      "kernel_theorem": "CReal.cosSeriesPartialIsPowerSeries"
+    },
+    {
       "fact_id": "F:creal-costerm",
       "language": "lean4",
       "statement_sha256": "0ebfbefb5a2c458a5e1d05cb97ee9fdf961ceca085119595f30f36b678d461b0",
@@ -4715,6 +4806,13 @@
       "statement_sha256": "984c0770a3d6fbe02e3ed1666b4d7e54d1bf8a8c704abbf505904dbd6f18d5d6",
       "prose_sha256": "0e0edfcff8943124aea3e6cc8e3f834715e29fa22cb640ab0ce0f88074e8355d",
       "kernel_theorem": "CReal.expSeriesPartialConverges"
+    },
+    {
+      "fact_id": "F:creal-expseriespartialispowerseries",
+      "language": "lean4",
+      "statement_sha256": "3d79181e9de8fa4499e886c2d7cf37131ca492a21012f6bb5e800c8321b8da29",
+      "prose_sha256": "e0fa1f0d4e36ac78c9aec4acaa90b316cbf5760dc20cc798043ac40ba90d078d",
+      "kernel_theorem": "CReal.expSeriesPartialIsPowerSeries"
     },
     {
       "fact_id": "F:creal-expterm-antitone",
@@ -6175,6 +6273,13 @@
       "kernel_theorem": "CReal.one_le_pow_of_one_le"
     },
     {
+      "fact_id": "F:creal-one-pow",
+      "language": "lean4",
+      "statement_sha256": "a3527577b40383084ddffe55c79a446d0cc59a0b63f68ee1d753fff70bff33c1",
+      "prose_sha256": "eab0266396bfd368a91480678c5f2dfc97afd6ea802833b8fda55568c19595b9",
+      "kernel_theorem": "CReal.one_pow"
+    },
+    {
       "fact_id": "F:creal-order-reflect-of-pos-deriv",
       "language": "lean4",
       "statement_sha256": "b68dd7737b88bf92c3816980a79c149cf5d23eb746c7c10a6df37f0ae9fd43da",
@@ -6465,6 +6570,20 @@
       "kernel_theorem": "CReal.pow_zero"
     },
     {
+      "fact_id": "F:creal-powerseriescauchywithinradius",
+      "language": "lean4",
+      "statement_sha256": "74dc68d7336151608a01d2854269b92f26c151402285604e5b5d9c81c8a3076c",
+      "prose_sha256": "d3d751b5fa8bdecd637081c3273abad1c6b4193bcdf4be839693adc1621f20b0",
+      "kernel_theorem": "CReal.powerSeriesCauchyWithinRadius"
+    },
+    {
+      "fact_id": "F:creal-powerseriesconvergeswithinradius",
+      "language": "lean4",
+      "statement_sha256": "c5a942c09dedce0012e0443ce25b1dd82398158218652f0d0014d4094163fe4b",
+      "prose_sha256": "46e9f603dc75ff91d7b8d58e949c84d9ae3151a1146bee5eebfe53428502c02c",
+      "kernel_theorem": "CReal.powerSeriesConvergesWithinRadius"
+    },
+    {
       "fact_id": "F:creal-powerseriesterm",
       "language": "lean4",
       "statement_sha256": "f774a4e89178d284b8fb27f9c0c06fdb7b5e53881124eb5907b372170b3e5e71",
@@ -6484,6 +6603,13 @@
       "statement_sha256": "3900f0c5619363c8e5c92b9f85b7b0844890b3f0333211883c09c8aaec9b51ed",
       "prose_sha256": "5ca981b8ebcc210dc00abb4cfe775f28c9c790a58068354f3a9d773ae16df02c",
       "kernel_theorem": "CReal.powerSeriesTerm_congr"
+    },
+    {
+      "fact_id": "F:creal-powerseriestermradiusbound",
+      "language": "lean4",
+      "statement_sha256": "8cecc3527feb53ab8985bd065244f6b2dce588f15867adce65b4ca1171c93c5c",
+      "prose_sha256": "d53ce0975ed69ad2ae784cf049141f697622fd49bc3e0905fc69444082814691",
+      "kernel_theorem": "CReal.powerSeriesTermRadiusBound"
     },
     {
       "fact_id": "F:creal-powerseriesuniformconvergeson",
@@ -7698,6 +7824,27 @@
       ]
     },
     {
+      "fact_id": "F:fo-consistency",
+      "language": "lean4",
+      "statement_sha256": "3a39a30d75bbe4d1b93980b827fb2d422b13aba6e89a882915955b13b3f8b389",
+      "prose_sha256": "97dff384fe7debd6a9975ac2f3219b3dabdaeb8096e0d8f56b7639a0a4f57289",
+      "kernel_theorem": "FO.consistency"
+    },
+    {
+      "fact_id": "F:fo-soundness",
+      "language": "lean4",
+      "statement_sha256": "f56d95533ee4bb45d61cc50a3525d63e7b1369947c54bb6e1e95ac9099aacbdd",
+      "prose_sha256": "c675d7703da57f10b685b9bb43e88da7a60d94653bafe53021e5b19bf4a7ad11",
+      "kernel_theorem": "FO.soundness"
+    },
+    {
+      "fact_id": "F:fo-substitution-lemma",
+      "language": "lean4",
+      "statement_sha256": "482a095c87ab7cac0a9dd31846a7ff78bcb54fc65ffbd0d49c44b0ff6b6d3f5d",
+      "prose_sha256": "91a01971e4e4f15f0e7ec32ed3ff5bc00d1776644462b73b18db61c6a306cdbd",
+      "kernel_theorem": "FO.sat_subst"
+    },
+    {
       "fact_id": "F:fp16-add-monotone-rne",
       "language": "smtlib2",
       "statement_sha256": "cda2c5474db9d757c1a798c9012399b4c9baea6f3e88fccef025d6a7a0f65784",
@@ -7762,6 +7909,20 @@
           "statement_sha256": "0b34f9904cc66ce99f435a7c8fb5fc6d6510a019d959aea3d67d9dba9cfeefc8"
         }
       ]
+    },
+    {
+      "fact_id": "F:geo-distinct-lines-meet-once",
+      "language": "lean4",
+      "statement_sha256": "d135e96f92a7307638dd9afc7018fc649e7337b31a1d353b86244487afb34627",
+      "prose_sha256": "fd2d84cf79e065a167cddc09c5ee6365edac77aaeff4a27f9be924f185e14dc6",
+      "kernel_theorem": "Geo.Incidence.distinct_lines_meet_once"
+    },
+    {
+      "fact_id": "F:geo-incidence-model-rational-plane",
+      "language": "lean4",
+      "statement_sha256": "7af32280afad31018d1e06cc179a1e2bf6c25bea6ce3757ec819b89b829b3495",
+      "prose_sha256": "8c83586855fdbaeab91164f6c7cea410c22516bcb012b1e890abb9d5f9cde65a",
+      "kernel_theorem": "Geo.qplane"
     },
     {
       "fact_id": "F:geometry-centroid-divides-medians",
@@ -10691,6 +10852,13 @@
       "statement_sha256": "a9b162614637fb20fbfb2d12df21d980657d8e0d69de0e2c3c5a45a1bb3bc682",
       "prose_sha256": "10a7e60c2e34a41ebe0b7e923a7d90268bfac53e95f399aa7d4e2d11444a08f8",
       "kernel_theorem": "Metric.creal_evt_approx_max_via_metric"
+    },
+    {
+      "fact_id": "F:metric-product-completeness-transfer",
+      "language": "lean4",
+      "statement_sha256": "f82acb6bedaa4baeda45626c56329bd24e91d59386b35f1a9da535b18d8bb2de",
+      "prose_sha256": "eb0e16c7ff4a20f424f276d77bcd27db5a454cb9eb69901ec6834bdc603064b1",
+      "kernel_theorem": "Metric.prod_complete"
     },
     {
       "fact_id": "F:metric-space-completeness-of-the-real-line",
@@ -16772,6 +16940,13 @@
       ]
     },
     {
+      "fact_id": "F:nat-choose-two-mul-succ-le-four-pow",
+      "language": "lean4",
+      "statement_sha256": "c36f1f5b891c42629bb05f6d44cdff2789a44e887a261021156cce38b466b2c0",
+      "prose_sha256": "334120ad207b6158ddef7859b87916f31a2dc246c003b096f7502da871d0ba05",
+      "kernel_theorem": "Nat.choose_two_mul_succ_le_four_pow"
+    },
+    {
       "fact_id": "F:nat-choose-zero-right",
       "language": "lean4",
       "statement_sha256": "b54461ff65d1d4416bbdc43f3661eb28429864db11586dfcbc9290b2e0f3e74c",
@@ -18964,6 +19139,13 @@
       "kernel_theorem": "Nat.min_fac_dvd"
     },
     {
+      "fact_id": "F:nat-min-fac-eq-self-of-prime",
+      "language": "lean4",
+      "statement_sha256": "49464cc98388e98b229472661591acdd98c78bab341feebb5e0db88bf5dd4ecf",
+      "prose_sha256": "d3d6dfcb66547ac5aad7858262af932cc4ae697c655ccf6250e3c8c7d40738e5",
+      "kernel_theorem": "Nat.min_fac_eq_self_of_prime"
+    },
+    {
       "fact_id": "F:nat-min-fac-prime",
       "language": "lean4",
       "statement_sha256": "036c665400077b0390e3c96acb2e18248d4b7a85d41e3f9a3a36fae6e4252a1f",
@@ -19932,6 +20114,12 @@
       "statement_sha256": "85adf169e787d180ac87255a2d433521225fd8285cb716d70f8392d7bd52dca7",
       "prose_sha256": "9606d60d918dc656d5d0f34accc8775e79415c68769cbf491e867655e98058ee",
       "kernel_theorem": "Nat.prime_pow_dvd_of_dvd_mul_of_not_dvd"
+    },
+    {
+      "fact_id": "F:nat-primorial-construction",
+      "language": "lean4",
+      "statement_sha256": "9e9a9b2c85cc81fa9f71c8cae45b835a4dec7666521d45c4bb7d1b53a0e0ac6a",
+      "prose_sha256": "40202f7ef0c994c323b638d02ee04d1b8c8d4955d486cccdab41ad0289a83700"
     },
     {
       "fact_id": "F:nat-prod-factorization",

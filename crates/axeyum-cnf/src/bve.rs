@@ -421,7 +421,7 @@ mod tests {
     use super::*;
     use crate::{
         CnfFormula, CnfLit, CnfVar, ProofSolveOutcome, SatResult, check_drat,
-        solve_with_drat_proof, solve_with_rustsat_batsat,
+        solve_with_drat_proof, solve_with_native_core,
     };
 
     fn v(i: usize) -> CnfVar {
@@ -573,11 +573,11 @@ mod tests {
         // SAT case: a definitional x, formula satisfiable; reduced model extends.
         let sat_f = formula(3, &[&[n(0), p(1)], &[p(0), p(2)], &[p(1), p(2)]]);
         let out = eliminate_variables(&sat_f, BveOptions::default());
-        let SatResult::Sat(model) = solve_with_rustsat_batsat(&out.formula).unwrap() else {
+        let SatResult::Sat(model) = solve_with_native_core(&out.formula).unwrap() else {
             panic!("reduced formula should be sat");
         };
         assert!(matches!(
-            solve_with_rustsat_batsat(&sat_f).unwrap(),
+            solve_with_native_core(&sat_f).unwrap(),
             SatResult::Sat(_)
         ));
         let full = out.reconstruction.extend(model.values());
@@ -590,7 +590,7 @@ mod tests {
         let unsat_f = formula(2, &[&[p(0)], &[n(0), p(1)], &[n(1)]]);
         let out = eliminate_variables(&unsat_f, BveOptions::default());
         assert!(matches!(
-            solve_with_rustsat_batsat(&out.formula).unwrap(),
+            solve_with_native_core(&out.formula).unwrap(),
             SatResult::Unsat(_)
         ));
         match solve_with_drat_proof(&out.formula) {

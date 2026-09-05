@@ -27,7 +27,6 @@
 //! ```
 
 use axeyum_aig::{Aig, AigLit, AigNode, AigNodeId};
-use std::cell::Cell;
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::hash::{BuildHasherDefault, Hasher};
 use std::time::Duration;
@@ -40,6 +39,10 @@ use std::time::Instant;
 use web_time::Instant;
 
 mod alethe;
+/// The retired `rustsat-batsat` adapter, kept as a differential oracle only
+/// (ADR-1703). Non-default: the default dependency graph has no batsat.
+#[cfg(feature = "batsat-reference")]
+pub mod batsat_reference;
 mod bve;
 pub mod colouring;
 mod compact;
@@ -66,6 +69,11 @@ pub use alethe::{
     AletheClause, AletheCommand, AletheError, AletheLit, AletheTerm, CARCARA_CHECKED_RULES,
     check_alethe, check_alethe_with, is_carcara_checked_rule, lrat_to_alethe,
     non_carcara_checked_rules, parse_alethe, write_alethe,
+};
+#[cfg(feature = "batsat-reference")]
+pub use batsat_reference::{
+    BatSatDeterminism, RustSatBatsatSolver, rustsat_batsat_determinism, solve_with_rustsat_batsat,
+    solve_with_rustsat_batsat_limits, solve_with_rustsat_batsat_timeout,
 };
 pub use bve::{
     BveOptions, BveOutcome, BveStats, Reconstruction, eliminate_variables,
@@ -100,6 +108,7 @@ pub use lrat::{
     elaborate_drat_to_lrat_backward, elaborate_drat_to_lrat_with_limits_and_progress, parse_lrat,
     write_lrat,
 };
+pub use proof_sat::incremental::{IncrementalSolveOutcome, NativeIncrementalCdcl};
 pub use proof_sat::{
     DEFAULT_PROGRESS_CONFLICT_INTERVAL, DEFAULT_PROOF_SAT_CONFLICT_LIMIT, ProofSearchProgress,
     ProofSolveOutcome, StreamingProofOutcome, solve_with_drat_proof,
@@ -120,14 +129,6 @@ pub use xor_matrix::{IncrementalXorMatrix, XorMatrixStep};
 pub use xor_propagate::{XorPropagateStats, XorPropagation, xor_propagate};
 pub use xor_search::{
     XorConstraintInput, XorImplication, XorImplied, constraints_from_pairs, xor_implications,
-};
-
-use rustsat::{
-    solvers::{Solve, SolveIncremental, SolverResult as RustSatSolverResult},
-    types::{
-        Clause as RustSatClause, Lit as RustSatLit, TernaryVal as RustSatTernaryVal,
-        Var as RustSatVar,
-    },
 };
 
 /// Stable CNF variable ID.
@@ -522,55 +523,28 @@ impl core::fmt::Display for SatError {
 
 impl core::error::Error for SatError {}
 
-/// First pure-Rust SAT adapter, backed by `rustsat-batsat`.
+/// The native CDCL core as a one-shot [`SatSolver`] (ADR-1703).
+///
+/// This is the crate's default SAT engine. Every `unsat` it decides is derived
+/// by learning RUP clauses ending in the empty clause, so a DRAT proof is
+/// available by construction — use [`solve_with_drat_proof`] when you want it.
+/// `solve` itself does not spend the proof-checking time and therefore reports
+/// [`SatProofStatus::Unchecked`]; that is a per-call choice, not a property of
+/// the engine (contrast the retired `rustsat-batsat` adapter, which could not
+/// produce a proof at all).
 #[derive(Debug, Default, Clone, Copy)]
-pub struct RustSatBatsatSolver;
+pub struct NativeCdclSolver;
 
-/// The randomness-related options used by the pinned `BatSat` adapter.
-///
-/// Axeyum currently constructs `rustsat-batsat` through its default solver
-/// constructor, whose internal `BatSat` options are not mutable through the
-/// wrapper API. Exposing the values read from [`batsat::SolverOpts::default`]
-/// lets benchmark artifacts bind themselves to the *actual* options instead of
-/// recording a decorative seed that the backend never consumed.
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub struct BatSatDeterminism {
-    /// `BatSat`'s floating-point pseudorandom generator seed.
-    pub random_seed: f64,
-    /// Probability of choosing a random branching variable.
-    pub random_var_freq: f64,
-    /// Whether branching polarities are randomized.
-    pub random_polarity: bool,
-    /// Whether initial variable activities are randomized.
-    pub random_initial_activity: bool,
-}
-
-/// Returns the randomness-related defaults used by [`RustSatBatsatSolver`].
-///
-/// This reads the pinned dependency's option object at runtime, so a future
-/// dependency update changes the benchmark configuration identity rather than
-/// silently reusing an old, hand-copied seed label.
-#[must_use]
-pub fn rustsat_batsat_determinism() -> BatSatDeterminism {
-    let options = batsat::SolverOpts::default();
-    BatSatDeterminism {
-        random_seed: options.random_seed,
-        random_var_freq: options.random_var_freq,
-        random_polarity: options.rnd_pol,
-        random_initial_activity: options.rnd_init_act,
-    }
-}
-
-impl RustSatBatsatSolver {
-    /// Creates a BatSat-backed CNF solver.
+impl NativeCdclSolver {
+    /// Creates a solver over the native CDCL core.
     pub fn new() -> Self {
         Self
     }
 }
 
-impl SatSolver for RustSatBatsatSolver {
+impl SatSolver for NativeCdclSolver {
     fn name(&self) -> &'static str {
-        "rustsat-batsat"
+        "axeyum-native-cdcl"
     }
 
     fn capabilities(&self) -> SatCapabilities {
@@ -578,217 +552,126 @@ impl SatSolver for RustSatBatsatSolver {
             dependency: SatDependencyProfile::PureRust,
             assumptions: SatFeatureSupport::Supported,
             incremental: SatFeatureSupport::Supported,
-            proof_logging: SatFeatureSupport::Unsupported,
+            proof_logging: SatFeatureSupport::Supported,
         }
     }
 
     fn solve(&mut self, formula: &CnfFormula) -> Result<SatResult, SatError> {
-        solve_with_rustsat_batsat(formula)
+        solve_with_native_core(formula)
     }
 }
 
-/// Solves `formula` with the first pure-Rust SAT adapter.
+/// Solves `formula` with the native CDCL core.
 ///
 /// # Errors
 ///
-/// Returns [`SatError`] for adapter failures or invalid models returned by the
-/// underlying solver.
-pub fn solve_with_rustsat_batsat(formula: &CnfFormula) -> Result<SatResult, SatError> {
-    solve_with_rustsat_batsat_timeout(formula, None)
+/// Returns [`SatError::InvalidModel`] if the core reports `sat` with a model
+/// that does not satisfy `formula`.
+pub fn solve_with_native_core(formula: &CnfFormula) -> Result<SatResult, SatError> {
+    solve_with_native_core_timeout(formula, None)
 }
 
-/// Solves `formula` with the first pure-Rust SAT adapter and an optional
-/// cooperative wall-clock timeout.
+/// Solves `formula` with the native CDCL core and an optional cooperative
+/// wall-clock timeout.
 ///
-/// The timeout is implemented through `BatSat`'s stop callback. `BatSat` checks
-/// that callback at solver progress points, so the limit is cooperative rather
-/// than a hard thread preemption boundary.
+/// The deadline is checked on a deterministic conflict cadence, so the search
+/// trajectory up to the stopping point is identical to an unbounded run — only
+/// *whether* it stops is time-dependent. Expiry yields [`SatResult::Unknown`],
+/// never a verdict.
 ///
 /// # Errors
 ///
-/// Returns [`SatError`] for adapter failures or invalid models returned by the
-/// underlying solver.
-pub fn solve_with_rustsat_batsat_timeout(
+/// Returns [`SatError::InvalidModel`] if the core reports `sat` with a model
+/// that does not satisfy `formula`.
+pub fn solve_with_native_core_timeout(
     formula: &CnfFormula,
     timeout: Option<Duration>,
 ) -> Result<SatResult, SatError> {
-    solve_with_rustsat_batsat_limits(formula, timeout, None)
+    solve_with_native_core_limits(formula, timeout, None)
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum BatSatStopReason {
-    ResourceLimit,
-    Timeout,
-}
-
-#[derive(Default)]
-struct BatSatLimitCallbacks {
-    deadline: Option<Instant>,
-    progress_check_limit: Option<u64>,
-    progress_checks: Cell<u64>,
-    stop_reason: Cell<Option<BatSatStopReason>>,
-}
-
-impl batsat::Callbacks for BatSatLimitCallbacks {
-    fn on_start(&mut self) {
-        self.progress_checks.set(0);
-        self.stop_reason.set(None);
-    }
-
-    fn stop(&self) -> bool {
-        if let Some(limit) = self.progress_check_limit {
-            let checks = self.progress_checks.get();
-            if checks >= limit {
-                self.stop_reason.set(Some(BatSatStopReason::ResourceLimit));
-                return true;
-            }
-            self.progress_checks.set(checks.saturating_add(1));
-        }
-        if self
-            .deadline
-            .is_some_and(|deadline| Instant::now() >= deadline)
-        {
-            self.stop_reason.set(Some(BatSatStopReason::Timeout));
-            return true;
-        }
-        false
-    }
-}
-
-type LimitedBatSat = rustsat_batsat::Solver<BatSatLimitCallbacks>;
-
-/// Solves `formula` with optional wall-clock and deterministic search limits.
+/// Solves `formula` with optional wall-clock and deterministic conflict limits.
 ///
-/// `progress_check_limit` bounds the number of successful `BatSat`
-/// `within_budget` callback polls. Those polls occur at deterministic solver
-/// progress points for a fixed formula, solver version, options, and seed. The
-/// unit is deliberately named rather than presented as a cross-solver conflict
-/// count: `BatSat` does not expose its private conflict/propagation budget
-/// setters through the `RustSAT` adapter.
-///
-/// A zero limit is useful for tests and causes the first budget poll to stop the
-/// search. Reaching either limit returns [`SatResult::Unknown`], never a guessed
-/// verdict.
+/// `conflict_limit` is the native core's deterministic search budget, in
+/// **conflicts** — a solver-independent unit, unlike the retired adapter's
+/// private progress-check polls. Exhausting it returns [`SatResult::Unknown`],
+/// never a guessed verdict. `Some(0)` admits no search at all and therefore
+/// always returns `unknown`: that is the "encode but do not solve" contract
+/// `resource_limit = 0` carries elsewhere in the tree.
 ///
 /// # Errors
 ///
-/// Returns [`SatError`] for adapter failures or invalid models returned by the
-/// underlying solver.
-pub fn solve_with_rustsat_batsat_limits(
+/// Returns [`SatError::InvalidModel`] if the core reports `sat` with a model
+/// that does not satisfy `formula`.
+pub fn solve_with_native_core_limits(
     formula: &CnfFormula,
     timeout: Option<Duration>,
-    progress_check_limit: Option<u64>,
+    conflict_limit: Option<u64>,
 ) -> Result<SatResult, SatError> {
-    let mut solver = LimitedBatSat::default();
-    let timeout_deadline = timeout.and_then(|duration| Instant::now().checked_add(duration));
-    {
-        let callbacks = solver.batsat_mut().cb_mut();
-        callbacks.deadline = timeout_deadline;
-        callbacks.progress_check_limit = progress_check_limit;
-    }
-    reserve_rustsat_variables(&mut solver, formula.variable_count())?;
-    for clause in formula.clauses() {
-        solver
-            .add_clause(rustsat_clause(clause)?)
-            .map_err(|error| SatError::Solver(error.to_string()))?;
-    }
-
-    match solver
-        .solve()
-        .map_err(|error| SatError::Solver(error.to_string()))?
-    {
-        RustSatSolverResult::Sat => {
-            let assignment = rustsat_assignment(&solver, formula.variable_count())?;
+    let deadline = timeout.and_then(|duration| Instant::now().checked_add(duration));
+    let max_conflicts = conflict_limit.map_or(DEFAULT_PROOF_SAT_CONFLICT_LIMIT, |limit| {
+        usize::try_from(limit).unwrap_or(usize::MAX)
+    });
+    match solve_with_drat_proof_with_limits(formula, deadline, max_conflicts) {
+        ProofSolveOutcome::Sat(assignment) => {
             if assignment.satisfies(formula)? {
                 Ok(SatResult::Sat(assignment))
             } else {
                 Err(SatError::InvalidModel)
             }
         }
-        RustSatSolverResult::Unsat => Ok(SatResult::Unsat(SatUnsatEvidence {
+        ProofSolveOutcome::Unsat(_) => Ok(SatResult::Unsat(SatUnsatEvidence {
+            // The proof was produced; verifying it is the caller's choice
+            // (`solve_with_drat_proof` hands it over). Not verified here, so not
+            // claimed as checked.
             proof: SatProofStatus::Unchecked,
             failed_assumptions: Vec::new(), // one-shot solve has no assumptions
         })),
-        RustSatSolverResult::Interrupted => {
-            let callbacks = solver.batsat_ref().cb();
-            let detail = match callbacks.stop_reason.get() {
-                Some(BatSatStopReason::ResourceLimit) => format!(
-                    "rustsat-batsat deterministic progress-check budget {} exhausted",
-                    progress_check_limit.unwrap_or(0)
-                ),
-                Some(BatSatStopReason::Timeout) => "rustsat-batsat timeout".to_owned(),
-                None => "rustsat-batsat interrupted".to_owned(),
-            };
-            Ok(SatResult::Unknown(SatUnknownReason { detail }))
-        }
+        ProofSolveOutcome::ResourceOut => Ok(SatResult::Unknown(SatUnknownReason {
+            detail: format!("native CDCL core conflict budget {max_conflicts} exhausted"),
+        })),
+        ProofSolveOutcome::Interrupted => Ok(SatResult::Unknown(SatUnknownReason {
+            detail: "native CDCL core timeout".to_owned(),
+        })),
     }
 }
 
-#[derive(Default)]
-struct DeadlineCallbacks {
-    deadline: Option<Instant>,
-    progress_check_limit: Option<u64>,
-    progress_checks: Cell<u64>,
-    stop_reason: Cell<Option<BatSatStopReason>>,
-}
-
-impl batsat::Callbacks for DeadlineCallbacks {
-    fn on_start(&mut self) {
-        self.progress_checks.set(0);
-        self.stop_reason.set(None);
-    }
-
-    fn stop(&self) -> bool {
-        if let Some(limit) = self.progress_check_limit {
-            let checks = self.progress_checks.get();
-            if checks >= limit {
-                self.stop_reason.set(Some(BatSatStopReason::ResourceLimit));
-                return true;
-            }
-            self.progress_checks.set(checks.saturating_add(1));
-        }
-        if self
-            .deadline
-            .is_some_and(|deadline| Instant::now() >= deadline)
-        {
-            self.stop_reason.set(Some(BatSatStopReason::Timeout));
-            return true;
-        }
-        false
-    }
-}
-
-type IncrementalBatSat = rustsat_batsat::Solver<DeadlineCallbacks>;
-
-/// A warm, incremental CNF SAT solver over the pure-Rust `BatSat` adapter
-/// (ADR-0009, stage 1).
+/// A warm, incremental CNF SAT solver over the native CDCL core
+/// (ADR-0009 stage 1; re-based onto the native core by ADR-1703).
 ///
-/// Unlike [`solve_with_rustsat_batsat`], the solver instance persists across
+/// Unlike [`solve_with_native_core`], the solver instance persists across
 /// [`IncrementalSat::solve`] calls: clauses added with
-/// [`IncrementalSat::add_clause`] stay in the database and the solver's learned
-/// clauses are reused. Assumptions passed to [`IncrementalSat::solve_assuming`]
-/// hold for that one solve only — the mechanism behind SMT-LIB `push`/`pop`
-/// (via selector literals) and `check-sat-assuming`.
+/// [`IncrementalSat::add_clause`] stay in the database and the core's learned
+/// clauses, VSIDS activities and saved phases are reused. Assumptions passed to
+/// [`IncrementalSat::solve_assuming`] hold for that one solve only — the
+/// mechanism behind SMT-LIB `push`/`pop` (via selector literals) and
+/// `check-sat-assuming`.
 ///
-/// The clause database is monotone (clauses are never removed); the variable
-/// namespace grows as clauses reference higher variables. Every `sat` is
-/// self-checked: the returned assignment must satisfy all accumulated clauses
-/// and the assumptions. `unsat` is lower-assurance until a proof path exists,
-/// matching the one-shot adapter (ADR-0007).
+/// The clause database is monotone (clauses are never removed; `reduce_db`
+/// deletes only *learned* clauses, which are entailed and re-derivable). The
+/// variable namespace grows as clauses reference higher variables. Every `sat`
+/// is self-checked here: the returned assignment must satisfy all accumulated
+/// clauses and the assumptions.
+///
+/// `unsat` is reported [`SatProofStatus::Unchecked`] because proof recording is
+/// off on this path for speed. That is a per-call choice, not a limit of the
+/// engine: the core derives the empty clause and can emit the DRAT proof for it
+/// (see [`NativeIncrementalCdcl::with_proof_recording`]). An `unsat` **under
+/// assumptions** is a different thing again — it derives no empty clause and
+/// carries a failed-assumption core instead.
 #[derive(Default)]
 pub struct IncrementalSat {
-    solver: IncrementalBatSat,
+    solver: NativeIncrementalCdcl,
     clauses: Vec<CnfClause>,
     variable_count: usize,
 }
 
 impl core::fmt::Debug for IncrementalSat {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        // The BatSat handle is opaque here; show the database
-        // shape instead.
         f.debug_struct("IncrementalSat")
             .field("clauses", &self.clauses.len())
             .field("variable_count", &self.variable_count)
+            .field("learned_clauses", &self.solver.learned_clause_count())
             .finish_non_exhaustive()
     }
 }
@@ -809,6 +692,16 @@ impl IncrementalSat {
         self.clauses.len()
     }
 
+    /// Live (non-deleted) learned clauses currently retained by the core.
+    ///
+    /// Nonzero after any solve that hit a conflict, and it does **not** reset at
+    /// the next solve — the observable that distinguishes a genuinely warm
+    /// solver from one that rebuilds itself per call.
+    #[must_use]
+    pub fn learned_clause_count(&self) -> usize {
+        self.solver.learned_clause_count()
+    }
+
     /// Copies the persistent input-clause database into a standalone formula.
     ///
     /// Learned clauses are intentionally absent: this is the stable problem
@@ -826,13 +719,14 @@ impl IncrementalSat {
     ///
     /// # Errors
     ///
-    /// Returns [`SatError::VariableCountTooLarge`] if the count exceeds the
-    /// adapter's variable limit.
+    /// Never fails; the `Result` is kept for API compatibility with the adapter
+    /// this replaced, whose variable namespace was externally bounded.
     pub fn reserve(&mut self, variable_count: usize) -> Result<(), SatError> {
         if variable_count > self.variable_count {
             self.variable_count = variable_count;
         }
-        reserve_rustsat_variables(&mut self.solver, self.variable_count)
+        self.solver.reserve(self.variable_count);
+        Ok(())
     }
 
     /// Adds a clause to the persistent database.
@@ -841,8 +735,7 @@ impl IncrementalSat {
     ///
     /// # Errors
     ///
-    /// Returns [`SatError`] for adapter failures or variable counts beyond the
-    /// adapter limit.
+    /// Never fails; the `Result` is kept for API compatibility.
     pub fn add_clause(&mut self, clause: CnfClause) -> Result<(), SatError> {
         for lit in clause.lits() {
             let needed = lit.var().index() + 1;
@@ -850,10 +743,8 @@ impl IncrementalSat {
                 self.variable_count = needed;
             }
         }
-        reserve_rustsat_variables(&mut self.solver, self.variable_count)?;
-        self.solver
-            .add_clause(rustsat_clause(&clause)?)
-            .map_err(|error| SatError::Solver(error.to_string()))?;
+        self.solver.reserve(self.variable_count);
+        self.solver.add_clause(clause.lits());
         self.clauses.push(clause);
         Ok(())
     }
@@ -863,27 +754,31 @@ impl IncrementalSat {
     ///
     /// # Errors
     ///
-    /// Returns [`SatError`] for adapter failures or invalid models.
+    /// Returns [`SatError::InvalidModel`] if the core reports `sat` with a model
+    /// that does not satisfy the accumulated clauses.
     pub fn solve(&mut self, timeout: Option<Duration>) -> Result<SatResult, SatError> {
         self.solve_with_limits(timeout, None)
     }
 
     /// Solves the accumulated clauses with optional wall-clock and deterministic
-    /// progress-check limits.
+    /// search limits.
     ///
-    /// The deterministic unit matches [`solve_with_rustsat_batsat_limits`]: one
-    /// successful `BatSat` `within_budget` callback poll. The counter is reset
-    /// for every solve, including checks on a retained solver instance.
+    /// The deterministic unit is the native core's **conflict** count. (The
+    /// adapter this replaced counted its own private `within_budget` polls; the
+    /// parameter position is unchanged but the unit is now solver-independent
+    /// and comparable across runs.) The budget applies to each solve, not to the
+    /// solver's lifetime.
     ///
     /// # Errors
     ///
-    /// Returns [`SatError`] for adapter failures or invalid models.
+    /// Returns [`SatError::InvalidModel`] if the core reports `sat` with a model
+    /// that does not satisfy the accumulated clauses.
     pub fn solve_with_limits(
         &mut self,
         timeout: Option<Duration>,
-        progress_check_limit: Option<u64>,
+        conflict_limit: Option<u64>,
     ) -> Result<SatResult, SatError> {
-        self.solve_inner(&[], timeout, progress_check_limit)
+        self.solve_inner(&[], timeout, conflict_limit)
     }
 
     /// Solves the accumulated clauses under one-shot `assumptions`, which hold
@@ -891,7 +786,8 @@ impl IncrementalSat {
     ///
     /// # Errors
     ///
-    /// Returns [`SatError`] for adapter failures or invalid models.
+    /// Returns [`SatError::InvalidModel`] if the core reports `sat` with a model
+    /// that does not satisfy the accumulated clauses and assumptions.
     pub fn solve_assuming(
         &mut self,
         assumptions: &[CnfLit],
@@ -901,96 +797,77 @@ impl IncrementalSat {
     }
 
     /// Solves under one-shot assumptions with optional wall-clock and
-    /// deterministic progress-check limits.
+    /// deterministic conflict limits.
     ///
     /// # Errors
     ///
-    /// Returns [`SatError`] for adapter failures or invalid models.
+    /// Returns [`SatError::InvalidModel`] if the core reports `sat` with a model
+    /// that does not satisfy the accumulated clauses and assumptions.
     pub fn solve_assuming_with_limits(
         &mut self,
         assumptions: &[CnfLit],
         timeout: Option<Duration>,
-        progress_check_limit: Option<u64>,
+        conflict_limit: Option<u64>,
     ) -> Result<SatResult, SatError> {
-        self.solve_inner(assumptions, timeout, progress_check_limit)
+        self.solve_inner(assumptions, timeout, conflict_limit)
     }
 
     fn solve_inner(
         &mut self,
         assumptions: &[CnfLit],
         timeout: Option<Duration>,
-        progress_check_limit: Option<u64>,
+        conflict_limit: Option<u64>,
     ) -> Result<SatResult, SatError> {
-        let timeout_deadline = timeout.and_then(|duration| Instant::now().checked_add(duration));
-        // Store the deadline as data instead of BatSat's `Box<dyn Fn()>`. The
-        // latter is not `Send`; an `Instant` is, so a warm solver can move to a
-        // worker thread without unsafe code or a shared global context.
-        {
-            let callbacks = self.solver.batsat_mut().cb_mut();
-            callbacks.deadline = timeout_deadline;
-            callbacks.progress_check_limit = progress_check_limit;
-        }
+        // The deadline is stored as data (an `Instant`), not a callback, so a
+        // warm solver stays `Send` and can move to a worker thread without
+        // unsafe code or a shared global context.
+        let deadline = timeout.and_then(|duration| Instant::now().checked_add(duration));
+        let max_conflicts = conflict_limit.map_or(DEFAULT_PROOF_SAT_CONFLICT_LIMIT, |limit| {
+            usize::try_from(limit).unwrap_or(usize::MAX)
+        });
+        // The returned model must cover the whole reserved namespace, including
+        // variables `reserve` claimed but no clause mentions.
+        self.solver.reserve(self.variable_count);
 
-        let result = if assumptions.is_empty() {
-            self.solver.solve()
-        } else {
-            let lits = assumptions
-                .iter()
-                .copied()
-                .map(rustsat_lit)
-                .collect::<Result<Vec<_>, _>>()?;
-            self.solver.solve_assumps(&lits)
-        }
-        .map_err(|error| SatError::Solver(error.to_string()))?;
-
-        match result {
-            RustSatSolverResult::Sat => {
-                let assignment = rustsat_assignment(&self.solver, self.variable_count)?;
+        match self.solver.solve(assumptions, deadline, max_conflicts) {
+            IncrementalSolveOutcome::Sat(assignment) => {
                 if self.assignment_is_model(&assignment, assumptions) {
                     Ok(SatResult::Sat(assignment))
                 } else {
                     Err(SatError::InvalidModel)
                 }
             }
-            RustSatSolverResult::Unsat => {
-                // Under assumptions, recover the solver's final-conflict core: the
-                // subset of `assumptions` sufficient for the contradiction. The
-                // solver returns it as the clause `⋁ ¬aᵢ`, so each core literal is
-                // the negation of a failed assumption; map back and intersect with
-                // the assumptions actually passed (defensive).
-                let failed_assumptions = if assumptions.is_empty() {
-                    Vec::new()
-                } else {
-                    let passed: std::collections::HashSet<CnfLit> =
-                        assumptions.iter().copied().collect();
-                    let core = self
-                        .solver
-                        .core()
-                        .map_err(|error| SatError::Solver(error.to_string()))?;
-                    let mut failed = Vec::new();
-                    for core_lit in core {
-                        let assumption = cnf_lit_from_rustsat(core_lit)?.negated();
-                        if passed.contains(&assumption) {
-                            failed.push(assumption);
-                        }
-                    }
-                    failed
-                };
+            IncrementalSolveOutcome::Unsat => Ok(SatResult::Unsat(SatUnsatEvidence {
+                proof: SatProofStatus::Unchecked,
+                failed_assumptions: Vec::new(),
+            })),
+            IncrementalSolveOutcome::UnsatUnderAssumptions(core) => {
+                // Intersect with the assumptions actually passed (defensive: the
+                // core is a subset of them by construction).
+                let passed: std::collections::BTreeSet<CnfLit> =
+                    assumptions.iter().copied().collect();
+                let failed_assumptions = core
+                    .into_iter()
+                    .filter(|lit| passed.contains(lit))
+                    .collect();
                 Ok(SatResult::Unsat(SatUnsatEvidence {
                     proof: SatProofStatus::Unchecked,
                     failed_assumptions,
                 }))
             }
-            RustSatSolverResult::Interrupted => {
-                let detail = match self.solver.batsat_ref().cb().stop_reason.get() {
-                    Some(BatSatStopReason::ResourceLimit) => format!(
-                        "rustsat-batsat deterministic progress-check budget {} exhausted",
-                        progress_check_limit.unwrap_or(0)
-                    ),
-                    Some(BatSatStopReason::Timeout) => "rustsat-batsat timeout".to_owned(),
-                    None => "rustsat-batsat interrupted".to_owned(),
-                };
-                Ok(SatResult::Unknown(SatUnknownReason { detail }))
+            IncrementalSolveOutcome::ResourceOut => Ok(SatResult::Unknown(SatUnknownReason {
+                detail: format!("native CDCL core conflict budget {max_conflicts} exhausted"),
+            })),
+            IncrementalSolveOutcome::Interrupted => Ok(SatResult::Unknown(SatUnknownReason {
+                detail: "native CDCL core timeout".to_owned(),
+            })),
+            // Unreachable on this path: the warm solver discards proof steps, and
+            // the discarding sink is infallible. Mapped to the *undecided*
+            // verdict so an impossible branch can never become a wrong answer.
+            IncrementalSolveOutcome::SinkFailed(error) => {
+                Ok(SatResult::Unknown(SatUnknownReason {
+                    detail: format!("native CDCL core proof sink failed: {error}"),
+                }))
             }
         }
     }
@@ -4924,85 +4801,6 @@ fn eval_lit(lit: CnfLit, assignment: &[bool]) -> bool {
     assignment[lit.var().index()] ^ lit.is_negated()
 }
 
-fn reserve_rustsat_variables<Cb: batsat::Callbacks>(
-    solver: &mut rustsat_batsat::Solver<Cb>,
-    variable_count: usize,
-) -> Result<(), SatError> {
-    if variable_count == 0 {
-        return Ok(());
-    }
-    let max_index = variable_count - 1;
-    let max_index = u32::try_from(max_index)
-        .ok()
-        .filter(|index| *index <= RustSatVar::MAX_IDX)
-        .ok_or(SatError::VariableCountTooLarge { variable_count })?;
-    solver
-        .reserve(RustSatVar::new(max_index))
-        .map_err(|error| SatError::Solver(error.to_string()))
-}
-
-fn rustsat_clause(clause: &CnfClause) -> Result<RustSatClause, SatError> {
-    clause
-        .lits()
-        .iter()
-        .copied()
-        .map(rustsat_lit)
-        .collect::<Result<RustSatClause, SatError>>()
-}
-
-/// Inverse of [`rustsat_lit`]: a `rustsat` literal back to a [`CnfLit`] (used to
-/// read the assumption core after an unsat solve).
-fn cnf_lit_from_rustsat(lit: RustSatLit) -> Result<CnfLit, SatError> {
-    let index = lit.var().idx();
-    let var = CnfVar::new(index).map_err(|_| SatError::VariableCountTooLarge {
-        variable_count: index + 1,
-    })?;
-    let positive = CnfLit::positive(var);
-    Ok(if lit.is_neg() {
-        positive.negated()
-    } else {
-        positive
-    })
-}
-
-fn rustsat_lit(lit: CnfLit) -> Result<RustSatLit, SatError> {
-    let index = u32::try_from(lit.var().index()).map_err(|_| SatError::VariableCountTooLarge {
-        variable_count: lit.var().index() + 1,
-    })?;
-    if index > RustSatVar::MAX_IDX {
-        return Err(SatError::VariableCountTooLarge {
-            variable_count: lit.var().index() + 1,
-        });
-    }
-    Ok(RustSatVar::new(index).lit(lit.is_negated()))
-}
-
-fn rustsat_assignment<Cb: batsat::Callbacks>(
-    solver: &rustsat_batsat::Solver<Cb>,
-    variable_count: usize,
-) -> Result<CnfAssignment, SatError> {
-    if variable_count == 0 {
-        return Ok(CnfAssignment::new(Vec::new()));
-    }
-    let max_index = u32::try_from(variable_count - 1)
-        .ok()
-        .filter(|index| *index <= RustSatVar::MAX_IDX)
-        .ok_or(SatError::VariableCountTooLarge { variable_count })?;
-    let assignment = solver
-        .solution(RustSatVar::new(max_index))
-        .map_err(|error| SatError::Solver(error.to_string()))?;
-    let values = (0..variable_count)
-        .map(|index| {
-            let index = u32::try_from(index).expect("index is bounded by max_index");
-            match assignment.var_value(RustSatVar::new(index)) {
-                RustSatTernaryVal::True => true,
-                RustSatTernaryVal::False | RustSatTernaryVal::DontCare => false,
-            }
-        })
-        .collect();
-    Ok(CnfAssignment::new(values))
-}
-
 fn replay_sparse_aig_values(
     aig: &Aig,
     values: &mut [bool],
@@ -5101,10 +4899,61 @@ mod tests {
     use super::{
         CnfClause, CnfClauseOriginPhase, CnfClauseOriginSite, CnfClauseOriginTemplate, CnfError,
         CnfLit, CnfVar, EncodedLit, IncrementalCnf, IncrementalCnfStats, IncrementalSat,
-        RustSatBatsatSolver, SatProofStatus, SatResult, SatSolver, aig_lit_value, parse_dimacs,
-        rustsat_batsat_determinism, solve_with_rustsat_batsat, solve_with_rustsat_batsat_limits,
-        tseitin_encode, tseitin_encode_profiled, tseitin_encode_profiled_with_origins,
+        NativeCdclSolver, SatProofStatus, SatResult, SatSolver, aig_lit_value, parse_dimacs,
+        solve_with_native_core, solve_with_native_core_limits, tseitin_encode,
+        tseitin_encode_profiled, tseitin_encode_profiled_with_origins,
     };
+    #[cfg(feature = "batsat-reference")]
+    use super::{
+        rustsat_batsat_determinism, solve_with_rustsat_batsat, solve_with_rustsat_batsat_limits,
+    };
+
+    /// A tiny formula that is satisfiable but only *after* a conflict: with the
+    /// default `false` phase the first decision is falsified, so the search must
+    /// learn before it can answer. Used by the budget/deadline tests, whose
+    /// point is that a limit produces `unknown` rather than a verdict --
+    /// a conflict-free formula would be decided before any limit is consulted.
+    fn conflict_forcing_sat_formula() -> super::CnfFormula {
+        parse_dimacs(
+            "\
+p cnf 2 3
+1 2 0
+-1 2 0
+1 -2 0
+",
+        )
+        .unwrap()
+    }
+
+    /// Pigeonhole `pigeons` into `pigeons - 1`: unsatisfiable, and expensive
+    /// enough in conflicts to reach the core's deterministic deadline cadence.
+    fn pigeonhole_clauses(pigeons: i64) -> super::CnfFormula {
+        use std::fmt::Write as _;
+
+        let holes = pigeons - 1;
+        let v = |p: i64, h: i64| holes * (p - 1) + h;
+        let mut clauses: Vec<Vec<i64>> = Vec::new();
+        for p in 1..=pigeons {
+            clauses.push((1..=holes).map(|h| v(p, h)).collect());
+        }
+        for h in 1..=holes {
+            for p1 in 1..=pigeons {
+                for p2 in (p1 + 1)..=pigeons {
+                    clauses.push(vec![-v(p1, h), -v(p2, h)]);
+                }
+            }
+        }
+        let mut text = String::new();
+        writeln!(text, "p cnf {} {}", pigeons * holes, clauses.len())
+            .expect("writing to a String cannot fail");
+        for clause in &clauses {
+            for lit in clause {
+                write!(text, "{lit} ").expect("writing to a String cannot fail");
+            }
+            text.push_str("0\n");
+        }
+        parse_dimacs(&text).unwrap()
+    }
 
     fn test_clause_origin(template: CnfClauseOriginTemplate) -> super::CnfClauseOrigin {
         super::EmissionContext {
@@ -6201,6 +6050,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "batsat-reference")]
     fn rustsat_batsat_solves_raw_cnf_and_replays_assignment() {
         let formula = parse_dimacs(
             "\
@@ -6222,6 +6072,7 @@ p cnf 2 2
     }
 
     #[test]
+    #[cfg(feature = "batsat-reference")]
     fn rustsat_batsat_determinism_matches_the_reviewed_pinned_defaults() {
         let profile = rustsat_batsat_determinism();
         assert_eq!(profile.random_seed.to_bits(), 91_648_253.0_f64.to_bits());
@@ -6231,6 +6082,7 @@ p cnf 2 2
     }
 
     #[test]
+    #[cfg(feature = "batsat-reference")]
     fn rustsat_batsat_deterministic_resource_limit_is_an_unknown_not_a_verdict() {
         let formula = parse_dimacs(
             "\
@@ -6255,6 +6107,7 @@ p cnf 2 1
     }
 
     #[test]
+    #[cfg(feature = "batsat-reference")]
     fn rustsat_batsat_marks_unsat_lower_assurance_without_proof() {
         let formula = parse_dimacs(
             "\
@@ -6309,7 +6162,7 @@ p cnf 1 2
         for file in files {
             let input = std::fs::read_to_string(&file).unwrap();
             let formula = parse_dimacs(&input).unwrap();
-            let mut solver = RustSatBatsatSolver::new();
+            let mut solver = NativeCdclSolver::new();
             let result = solver.solve(&formula).unwrap();
             let name = file.file_name().unwrap().to_string_lossy();
             match (name.contains("unsat"), result) {
@@ -6344,7 +6197,7 @@ p cnf 1 2
         let root_lit = lowering.roots()[0].bits()[0];
         let encoding = tseitin_encode(lowering.aig(), &[root_lit]).unwrap();
 
-        let result = solve_with_rustsat_batsat(encoding.formula()).unwrap();
+        let result = solve_with_native_core(encoding.formula()).unwrap();
         let SatResult::Sat(cnf_assignment) = result else {
             panic!("expected SAT result");
         };
@@ -6430,7 +6283,7 @@ p cnf 1 2
         assert_eq!(snapshot.variable_count(), 2);
         assert_eq!(snapshot.clauses().len(), 3);
         assert!(matches!(
-            solve_with_rustsat_batsat(&snapshot).unwrap(),
+            solve_with_native_core(&snapshot).unwrap(),
             SatResult::Unsat(_)
         ));
     }
@@ -6440,32 +6293,42 @@ p cnf 1 2
         fn assert_send<T: Send>() {}
         assert_send::<IncrementalSat>();
 
+        // Pigeonhole is expensive enough in conflicts to reach the native core's
+        // deterministic deadline cadence. A conflict-free formula would be
+        // decided before the clock is ever read, which is correct but tests
+        // nothing about the deadline.
+        let formula = pigeonhole_clauses(7);
         let mut sat = IncrementalSat::new();
-        sat.add_clause(CnfClause::new(vec![pos(0), pos(1)]))
-            .unwrap();
-        assert!(matches!(
-            sat.solve(Some(std::time::Duration::ZERO)).unwrap(),
-            SatResult::Unknown(_)
-        ));
+        for clause in formula.clauses() {
+            sat.add_clause(clause.clone()).unwrap();
+        }
+        // Deciding it before the first cadence check is acceptable; a wrong
+        // verdict is not, and this instance is unsatisfiable.
+        match sat.solve(Some(std::time::Duration::ZERO)).unwrap() {
+            SatResult::Unknown(_) | SatResult::Unsat(_) => {}
+            SatResult::Sat(_) => panic!("an expired deadline must never yield sat"),
+        }
         assert!(
-            matches!(sat.solve(None).unwrap(), SatResult::Sat(_)),
-            "an untimed solve must clear the preceding deadline"
+            matches!(sat.solve(None).unwrap(), SatResult::Unsat(_)),
+            "an untimed solve must clear the preceding deadline and decide"
         );
     }
 
     #[test]
     fn incremental_timeout_can_continue_with_a_fresh_bounded_deadline() {
+        let formula = pigeonhole_clauses(7);
         let mut sat = IncrementalSat::new();
-        sat.add_clause(CnfClause::new(vec![pos(0), pos(1)]))
-            .unwrap();
-        assert!(matches!(
-            sat.solve(Some(std::time::Duration::ZERO)).unwrap(),
-            SatResult::Unknown(_)
-        ));
+        for clause in formula.clauses() {
+            sat.add_clause(clause.clone()).unwrap();
+        }
+        match sat.solve(Some(std::time::Duration::ZERO)).unwrap() {
+            SatResult::Unknown(_) | SatResult::Unsat(_) => {}
+            SatResult::Sat(_) => panic!("an expired deadline must never yield sat"),
+        }
         assert!(
             matches!(
-                sat.solve(Some(std::time::Duration::from_secs(1))).unwrap(),
-                SatResult::Sat(_)
+                sat.solve(Some(std::time::Duration::from_secs(30))).unwrap(),
+                SatResult::Unsat(_)
             ),
             "a fresh bounded solve must clear the preceding deadline and reuse the instance"
         );
@@ -6474,15 +6337,15 @@ p cnf 1 2
     #[test]
     fn incremental_resource_limit_is_deterministic_and_reset_per_solve() {
         let mut sat = IncrementalSat::new();
-        sat.add_clause(CnfClause::new(vec![pos(0), pos(1)]))
-            .unwrap();
+        for clause in conflict_forcing_sat_formula().clauses() {
+            sat.add_clause(clause.clone()).unwrap();
+        }
 
         for _ in 0..2 {
             assert!(matches!(
                 sat.solve_with_limits(None, Some(0)).unwrap(),
                 SatResult::Unknown(reason)
-                    if reason.detail
-                        == "rustsat-batsat deterministic progress-check budget 0 exhausted"
+                    if reason.detail == "native CDCL core conflict budget 0 exhausted"
             ));
         }
         assert!(
@@ -6492,6 +6355,57 @@ p cnf 1 2
             ),
             "a fresh larger work budget must clear the preceding exhausted limit"
         );
+    }
+
+    #[test]
+    fn one_shot_native_core_conflict_budget_is_an_unknown_not_a_verdict() {
+        let formula = conflict_forcing_sat_formula();
+        for _ in 0..2 {
+            assert!(matches!(
+                solve_with_native_core_limits(&formula, None, Some(0)).unwrap(),
+                SatResult::Unknown(reason)
+                    if reason.detail == "native CDCL core conflict budget 0 exhausted"
+            ));
+        }
+        assert!(matches!(
+            solve_with_native_core_limits(&formula, None, Some(100)).unwrap(),
+            SatResult::Sat(assignment) if assignment.satisfies(&formula).unwrap()
+        ));
+    }
+
+    #[test]
+    fn the_warm_solver_retains_learned_clauses_across_solves() {
+        // The observable that separates a warm solver from one that rebuilds
+        // itself per call. A fresh solver over the same clauses is the control:
+        // without it, a constant would pass this test.
+        let formula = pigeonhole_clauses(6);
+        let mut sat = IncrementalSat::new();
+        for clause in formula.clauses() {
+            sat.add_clause(clause.clone()).unwrap();
+        }
+        assert_eq!(
+            sat.learned_clause_count(),
+            0,
+            "nothing learned before a solve"
+        );
+        assert!(matches!(sat.solve(None).unwrap(), SatResult::Unsat(_)));
+        let retained = sat.learned_clause_count();
+        assert!(
+            retained > 0,
+            "an unsat pigeonhole must leave learned clauses"
+        );
+        assert!(matches!(sat.solve(None).unwrap(), SatResult::Unsat(_)));
+        assert!(
+            sat.learned_clause_count() >= retained,
+            "learned clauses must survive the solve boundary: {retained} then {}",
+            sat.learned_clause_count()
+        );
+
+        let mut fresh = IncrementalSat::new();
+        for clause in formula.clauses() {
+            fresh.add_clause(clause.clone()).unwrap();
+        }
+        assert_eq!(fresh.learned_clause_count(), 0);
     }
 
     #[test]
@@ -7029,7 +6943,7 @@ p cnf 1 2
                 aig.eval(*root, &inputs).expect("eval")
             });
 
-            let one_shot = solve_with_rustsat_batsat(
+            let one_shot = solve_with_native_core(
                 tseitin_encode(aig, &[*root])
                     .expect("one-shot encode")
                     .formula(),

@@ -57,6 +57,20 @@ class AllowlistTests(unittest.TestCase):
         for name in ("Nat.add_comm", "CReal.integral_abs_le", "Rat.sub_mul"):
             self.assertTrue(VF.kernel_theorem_is_valid(name), name)
 
+    def test_the_geo_namespace_is_accepted(self):
+        # ADR-1635 added `Geo` to the dotted allowlist. Both a theorem and a
+        # DEFINITION are named through this field (the ledger's
+        # `formal.kernel_theorem` is the declaration a fact is about, whatever
+        # its kind), so both shapes are pinned.
+        for name in ("Geo.Incidence.distinct_lines_meet_once", "Geo.qplane"):
+            self.assertTrue(VF.kernel_theorem_is_valid(name), name)
+
+    def test_a_geo_lookalike_namespace_is_still_rejected(self):
+        # The negative half of the widening: adding `Geo` must not make every
+        # namespace starting with those letters valid.
+        self.assertFalse(VF.kernel_theorem_is_valid("Geometry.qplane"))
+        self.assertFalse(VF.kernel_theorem_is_valid("Geo"))
+
     def test_a_typo_in_a_dotted_name_is_still_rejected(self):
         # The whole point of requiring a namespace: catch a fact naming a
         # non-theorem. Widening to accept ANY bare identifier would have

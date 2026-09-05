@@ -494,6 +494,14 @@ def phase_classify(args, rows: list[dict], work: pathlib.Path) -> dict:
                         "detail": "",
                         "admitted_declarations": run.get("admitted_declarations"),
                         "declaration_records": run.get("declaration_records"),
+                        # Which admission feature carried this row, straight
+                        # from the importer's own report -- so "the count went
+                        # up" never has to stand in for "the feature fired".
+                        # Absent on a run whose importer predates ADR-1667.
+                        "substituted_theorems": run.get("substituted_theorems", []),
+                        "native_quotient_package": run.get(
+                            "native_quotient_package", []
+                        ),
                     }
                 else:
                     record = {
@@ -520,6 +528,60 @@ def phase_classify(args, rows: list[dict], work: pathlib.Path) -> dict:
 
 def _counts(entries: list[dict], key) -> dict[str, int]:
     return dict(sorted(collections.Counter(key(e) for e in entries).items()))
+
+
+def _delta(baseline_path: pathlib.Path, document: dict) -> dict:
+    """Per-class and per-blocking-name movement against an earlier census.
+
+    Derived from the two ARTIFACTS, never from a literal, so a number that did
+    not move shows as 0 rather than as silence, and a class or declaration that
+    appears in only one of the two runs still gets a row (with the missing side
+    read as 0). The population is compared explicitly: a delta across two
+    different populations is not a delta, so this records both row counts and
+    the caller must reject the comparison if they differ.
+    """
+    baseline = json.loads(baseline_path.read_text(encoding="utf-8"))
+
+    def class_counts(doc: dict) -> dict[str, int]:
+        return {name: bucket["count"] for name, bucket in doc["classes"].items()}
+
+    def blocker_counts(doc: dict) -> dict[str, int]:
+        return dict(doc["first_trusted_declaration_in_closure"]["by_declaration"])
+
+    classes_before = class_counts(baseline)
+    classes_after = class_counts(document)
+    names_before = blocker_counts(baseline)
+    names_after = blocker_counts(document)
+
+    def rows(before: dict[str, int], after: dict[str, int]) -> dict[str, dict[str, int]]:
+        return {
+            key: {
+                "before": before.get(key, 0),
+                "after": after.get(key, 0),
+                "delta": after.get(key, 0) - before.get(key, 0),
+            }
+            for key in sorted(set(before) | set(after))
+        }
+
+    return {
+        "baseline": str(baseline_path.relative_to(ROOT))
+        if baseline_path.is_relative_to(ROOT)
+        else str(baseline_path),
+        "baseline_date": baseline.get("date"),
+        "baseline_axeyum_commit": baseline.get("provenance", {}).get("axeyum_commit"),
+        "population_rows": {
+            "before": baseline["population"]["rows"],
+            "after": document["population"]["rows"],
+            "comparable": baseline["population"]["rows"] == document["population"]["rows"],
+        },
+        "admitted": {
+            "before": baseline["outcome"]["admitted"],
+            "after": document["outcome"]["admitted"],
+            "delta": document["outcome"]["admitted"] - baseline["outcome"]["admitted"],
+        },
+        "by_class": rows(classes_before, classes_after),
+        "by_first_blocking_declaration": rows(names_before, names_after),
+    }
 
 
 def phase_publish(args, rows: list[dict], work: pathlib.Path) -> dict:
@@ -677,6 +739,32 @@ def phase_publish(args, rows: list[dict], work: pathlib.Path) -> dict:
             "by_declaration": dict(sorted(blocking.items(), key=lambda kv: (-kv[1], kv[0]))),
             "distinct_declarations": len(blocking),
         },
+        "admission_features": {
+            "why": (
+                "For each admitted row the importer reports which reconstructed "
+                "theorems it substituted and whether it admitted the kernel's own "
+                "quotient package (ADR-1667). Counted here so an admission is "
+                "attributable to a feature rather than inferred from a total "
+                "going up. COUNTS ONLY -- no ids, because the population is "
+                "partly held out."
+            ),
+            "rows_naming_a_substitution": sum(
+                1 for e in classified if e.get("substituted_theorems")
+            ),
+            "rows_naming_the_quotient_package": sum(
+                1 for e in classified if e.get("native_quotient_package")
+            ),
+            "by_substituted_theorem": dict(
+                sorted(
+                    collections.Counter(
+                        name
+                        for e in classified
+                        for name in e.get("substituted_theorems", [])
+                    ).items(),
+                    key=lambda kv: (-kv[1], kv[0]),
+                )
+            ),
+        },
         "screen_agreement": {
             "screen": "scripts/lean_surface_screen.py",
             "flagged_by_screen": len(screen_flagged),
@@ -691,7 +779,14 @@ def phase_publish(args, rows: list[dict], work: pathlib.Path) -> dict:
             ),
         },
     }
-    out_json = ROOT / "artifacts/measurements" / f"statement-import-blocker-census-{args.date}.json"
+    if args.baseline:
+        document["delta_against_baseline"] = _delta(args.baseline, document)
+
+    out_json = (
+        ROOT
+        / "artifacts/measurements"
+        / f"statement-import-blocker-census-{args.date}{args.out_suffix}.json"
+    )
     out_json.write_text(
         json.dumps(document, indent=2, ensure_ascii=False, sort_keys=False) + "\n",
         encoding="utf-8",
@@ -724,6 +819,54 @@ def phase_publish(args, rows: list[dict], work: pathlib.Path) -> dict:
             f"{bucket['by_fragment'].get('Nat', 0)} | {bucket['by_fragment'].get('Int', 0)} | "
             f"{bucket['held_out']} |"
         )
+    if "delta_against_baseline" in document:
+        delta = document["delta_against_baseline"]
+        lines += [
+            "",
+            "## Delta against "
+            f"`{delta['baseline']}` ({delta['baseline_date']}, axeyum "
+            f"`{(delta['baseline_axeyum_commit'] or '')[:9]}`)",
+            "",
+            f"Population {delta['population_rows']['before']} -> "
+            f"{delta['population_rows']['after']}, comparable: "
+            f"**{delta['population_rows']['comparable']}**. Admitted "
+            f"{delta['admitted']['before']} -> {delta['admitted']['after']} "
+            f"(**{delta['admitted']['delta']:+d}**).",
+            "",
+            "| class | before | after | delta |",
+            "|---|---:|---:|---:|",
+        ]
+        for name, row in delta["by_class"].items():
+            lines.append(
+                f"| `{name}` | {row['before']} | {row['after']} | {row['delta']:+d} |"
+            )
+        lines += [
+            "",
+            "The blocker distribution is over FIRST-reported blockers, so a name "
+            "falling to zero means the rows that reported it now report whatever "
+            "was behind it -- never that they were admitted. Read this table "
+            "beside the admitted delta above.",
+            "",
+            "| first blocking declaration | before | after | delta |",
+            "|---|---:|---:|---:|",
+        ]
+        for name, row in delta["by_first_blocking_declaration"].items():
+            lines.append(
+                f"| `{name}` | {row['before']} | {row['after']} | {row['delta']:+d} |"
+            )
+
+    features = document["admission_features"]
+    lines += [
+        "",
+        "## Which admission feature carried an admitted row",
+        "",
+        f"{features['rows_naming_a_substitution']} admitted rows named at least "
+        "one reconstructed substitution; "
+        f"{features['rows_naming_the_quotient_package']} named the kernel's own "
+        "quotient package. Counts only -- the population is partly held out.",
+        "",
+    ]
+
     agreement = document["screen_agreement"]
     lines += [
         "",
@@ -753,6 +896,25 @@ def main() -> int:
         choices=["all", "elaborate", "export", "import", "classify", "publish"],
     )
     parser.add_argument("--date", default="2026-09-05")
+    parser.add_argument(
+        "--out-suffix",
+        default="",
+        help=(
+            "appended to the published artifact's basename, so a re-run can sit "
+            "BESIDE the run it is compared against instead of overwriting it "
+            "(e.g. --out-suffix -after-c4). Does not change the `date` field."
+        ),
+    )
+    parser.add_argument(
+        "--baseline",
+        type=pathlib.Path,
+        default=None,
+        help=(
+            "an earlier census artifact to diff against; adds a "
+            "`delta_against_baseline` block with per-class and per-blocking-name "
+            "before/after/delta rows, derived from both artifacts."
+        ),
+    )
     parser.add_argument("--commit", default="", help="the axeyum commit this census was measured at")
     parser.add_argument(
         "--lean4export-commit", default="a3e35a584f59b390667db7269cd37fca8575e4bf"

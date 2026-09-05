@@ -2276,6 +2276,91 @@ SUITES["tactic-catalog"] = (
 #   test_a_healthy_scan_is_not_a_finding
 # They exist to stop the opposite failure: a rule so broad it rejects Mathlib's
 # deliberate pin, or every version string in the tree.
+# --------------------------------------------------------------------------
+# `complex-derivative` — the complex derivative on a disc
+# (`crates/axeyum-lean-kernel/src/complex/deriv.rs`, ADR-1642).
+#
+# Two of these mutants are the ones the lane brief named, adapted to what
+# actually landed: the brief asked for "Leibniz with one cross term dropped"
+# and "the CR equation with a sign flipped", and neither Leibniz nor
+# Cauchy–Riemann landed (ADR-1642 records both obstructions and their size).
+# The nearest live subjects are the SUM rule's error identity — which has the
+# same "the error of the combination is the combination of the errors" shape a
+# dropped cross term breaks — and `hasDerivative_neg`, which is the one landed
+# witness whose whole content is a SIGN.
+#
+# What the first two measure is worth naming, because it is not the tests.
+# `complex/ring.rs`'s `ring_law_proof` is a decision procedure that PANICS when
+# the two normal forms differ rather than handing the kernel a term to reject,
+# so a wrong error identity takes down `build_complex_prelude` and with it every
+# test in the module. That is a real guard and it is why the ℂ transcription is
+# cheap (ADR-1642, Decision 3), but the kill is a MASS kill and therefore weak
+# evidence about any individual test. The third mutant exists because of that:
+# it is the one with a predicted killed-set of a named size.
+#
+# MEASURED 2026-09-05, baseline 66 tests green:
+#
+#   dropped cross term (sum rule)  killed 63 of 66
+#   flipped sign (hasDerivative_neg)   killed 64 of 66
+#   InDisc argument order          killed EXACTLY 2, both named:
+#                                  `in_disc_unfolds_to_the_distance_from_the_centre`
+#                                  and `in_disc_argument_order_is_load_bearing`
+#
+# The two mass kills differ by one (63 vs 64) and the difference is informative
+# rather than noise: the sign mutant additionally kills
+# `the_ring_calculus_refuses_a_false_identity`, which builds its own kernel and
+# survives the sum mutant. Neither mass kill includes
+# `the_ring_calculus_proves_a_true_identity` or
+# `steps_table_matches_recorded_extraction`, which touch no prelude build.
+#
+# A FOURTH mutant was run once and is DELIBERATELY NOT LISTED, because listing
+# it would have been a category error rather than a finding. It set
+# `hasDerivative_const`'s modulus from `fun _ => 0` to `fun _ => 3` and
+# SURVIVED — 66 tests ran, none died. That is correct and no test should be
+# written to kill it: a constant's error term is `Equiv`-zero regardless of the
+# hypothesis, so EVERY modulus witnesses the spec and the literal `0` carries no
+# semantic content at all. It is an arbitrary witness choice, not a guard, and a
+# test pinning it would measure the author's typing rather than the mathematics.
+# Recorded here so nobody re-adds it as "an uncovered guard".
+# --------------------------------------------------------------------------
+
+SUITES["complex-derivative"] = (
+    "crates/axeyum-lean-kernel/src/complex/deriv.rs",
+    Cargo(
+        (
+            "--release",
+            "-j",
+            "4",
+            "-p",
+            "axeyum-lean-kernel",
+            "--lib",
+            "complex::complex_tests::",
+        ),
+        "complex-derivative",
+    ),
+    [
+        (
+            "the sum rule's error term keeps BOTH functions' values "
+            "(the brief's dropped-cross-term mutant)",
+            "            CExpr::add(fy_sym, gy_sym),",
+            "            fy_sym,",
+        ),
+        (
+            "hasDerivative_neg negates the DERIVATIVE too "
+            "(the brief's flipped-sign mutant)",
+            "            CExpr::neg(fpx_sym),",
+            "            fpx_sym,",
+        ),
+        (
+            "InDisc measures the point's distance FROM the centre, not the "
+            "centre's from the point",
+            "    let diff = zsub(d, p, z, c);",
+            "    let diff = zsub(d, p, c, z);",
+        ),
+    ],
+)
+
+
 SUITES["external-coupling"] = (
     "scripts/check-external-coupling.py",
     "scripts.tests.test_check_external_coupling",
@@ -6910,6 +6995,118 @@ SUITES["cas-trust-registry"] = (
             "G6 a new certified function not recorded in the ratchet is refused",
             "    if new_certified:",
             "    if False:",
+        ),
+    ],
+)
+
+
+# The primorial and the odd central binomial bound (ADR-1637, lane chebyshev-pi).
+#
+# Both subjects are kernel proof scripts, so most mutations here are killed the
+# same blunt way: the mutated declaration is REJECTED by
+# `Kernel::add_declaration`, `build_nat_prelude` returns `Err`, and every test
+# in the module dies at `Fixture::new()`. That is a real measurement -- the
+# harness reports the count it observed -- but it is a coarse one, so each row
+# below records what it is actually distinguishing.
+SUITES["primorial-in-kernel"] = (
+    "crates/axeyum-lean-kernel/src/nat_prelude/primorial.rs",
+    Cargo(
+        ("--release", "-p", "axeyum-lean-kernel", "--lib", "nat_prelude::primorial"),
+        "primorial-in-kernel",
+    ),
+    [
+        (
+            "the predicate compares minFac to the index itself, not to its successor",
+            "    let mf = d.const_app(p.min_fac, &[i]);\n    let body = d.beq(mf, i);",
+            "    let mf = d.const_app(p.min_fac, &[i]);\n    let bumped = d.succ(i);\n"
+            "    let body = d.beq(mf, bumped);",
+        ),
+        (
+            "the product runs up to AND INCLUDING n",
+            "    let bound = d.succ(n);\n    let body = primorial_body(d, &p, bound);",
+            "    let bound = n;\n    let body = primorial_body(d, &p, bound);",
+        ),
+        (
+            "the prime successor equation multiplies by the index, not by 1",
+            "        let concl = {\n            let rhs = d.mul(prior, sn);\n            d.eq(lhs, rhs)\n        };",
+            "        let concl = {\n            let one = d.num(1);\n            let rhs = d.mul(prior, one);\n"
+            "            d.eq(lhs, rhs)\n        };",
+        ),
+        (
+            "the composite successor equation really consumes its `2 <= succ n` premise",
+            "            let prime = d.const_app(p.prime_of_min_fac_eq_self, &[sn, h2, he]);",
+            "            let prime = d.const_app(p.prime_of_min_fac_eq_self, &[sn, he, he]);",
+        ),
+    ],
+)
+
+
+SUITES["central-binomial-in-kernel"] = (
+    "crates/axeyum-lean-kernel/src/nat_prelude/central_binomial.rs",
+    Cargo(
+        (
+            "--release",
+            "-p",
+            "axeyum-lean-kernel",
+            "--lib",
+            "nat_prelude::central_binomial",
+        ),
+        "central-binomial-in-kernel",
+    ),
+    [
+        (
+            "the bound is 4^m and not 3^m -- the brief's own mutant, on the statement that landed",
+            "            let four = d.num(4);\n            let two = d.num(2);\n"
+            "            let pow4 = d.pow(four, m);",
+            "            let four = d.num(3);\n            let two = d.num(2);\n"
+            "            let pow4 = d.pow(four, m);",
+        ),
+        (
+            "the doubling lemma really is `a * 2`, not `a * 1`",
+            "            let two = d.num(2);\n            let lhs = d.mul(a, two);\n"
+            "            let rhs = d.add(a, a);",
+            "            let two = d.num(1);\n            let lhs = d.mul(a, two);\n"
+            "            let rhs = d.add(a, a);",
+        ),
+    ],
+)
+
+
+SUITES["geo-incidence"] = (
+    "crates/axeyum-lean-kernel/src/geo.rs",
+    # Deliberately NOT `--release`. Both mutants fail at PRELUDE-BUILD time,
+    # not at test-execution time, so the run is dominated by compiling the
+    # kernel crate three times (baseline plus two mutants) and the debug
+    # profile is several times cheaper. The suite's tests all go through
+    # `on_a_deep_stack`, so the debug frame growth CLAUDE.md warns about for
+    # the `--release`-only example binaries does not apply here — measured
+    # green in debug at 7 passed / 0 failed before the mutants were run.
+    Cargo(
+        ("-p", "axeyum-lean-kernel", "--lib", "geo::"),
+        "geo-incidence",
+    ),
+    [
+        # ADR-1635. The whole design rests on `apart` being CONSUMED by
+        # exactly one axiom; drop it from that axiom's statement and the
+        # rational model's own `joinUnique` (which still carries it) no longer
+        # has the field's type, so `Geo.qplane` cannot be assembled.
+        (
+            "axiom I.1's uniqueness half keeps its distinctness hypothesis",
+            "            let body = arrow(k, oql, body);\n"
+            "            let body = arrow(k, opl, body);\n"
+            "            let body = arrow(k, a, body);",
+            "            let body = arrow(k, oql, body);\n"
+            "            let body = arrow(k, opl, body);",
+        ),
+        # The line through two points is `(y Q - y P, x P - x Q, …)`, in that
+        # order. Swap the first two and `Geo.QPlane.joinOnLeft`'s ring proof
+        # -- which is emitted at the coefficients spelled out, not at the
+        # projections -- no longer has the type its own statement claims.
+        (
+            "the join's a and b coefficients are not swapped",
+            "        let body = lmk(d, q, big_a, big_b, big_c);",
+            "        let body = lmk(d, q, big_b, big_a, big_c);",
+            "crates/axeyum-lean-kernel/src/geo/qplane.rs",
         ),
     ],
 )

@@ -206,15 +206,17 @@ pub struct SolverConfig {
     /// the repeated native-client gate accepts it.
     pub incremental_positive_and_flattening: bool,
     /// When set, the bit-blasting BV backend may fall back to the CDCL(XOR)
-    /// search core ([`axeyum_cnf::solve_with_xor_cdcl`]) after the batsat solve
-    /// returns `unknown` (timeout/budget) on an XOR-structured formula
-    /// (ADR-0035, the multiplier-equivalence wall).
+    /// search core ([`axeyum_cnf::solve_with_xor_cdcl`]) after the primary SAT
+    /// solve returns `unknown` (timeout/budget) on an XOR-structured formula
+    /// (ADR-0035, the multiplier-equivalence wall). The primary engine is the
+    /// native CDCL core (ADR-1703); the trigger is its `unknown`, exactly as it
+    /// was the retired adapter's.
     ///
     /// A fallback `unsat` is a **trusted** result (search-only Gaussian
     /// reasoning carries no DRAT proof — it is not RUP) and is recorded as the
     /// full-profile `TrustId::XorGaussian` ledger hole. A fallback `sat` carries no
     /// trust cost: its model is replayed against the original terms exactly like
-    /// the batsat path, and a replay failure falls through to `unknown` (never a
+    /// the primary path, and a replay failure falls through to `unknown` (never a
     /// wrong `sat`). Off by default so recorded baselines and existing behavior
     /// are unchanged.
     pub xor_cdcl_fallback: bool,
@@ -229,16 +231,17 @@ pub struct SolverConfig {
     /// present. Off by default so recorded baselines are unchanged.
     pub lazy_bv: bool,
 
-    /// Use the in-tree proof-producing CDCL core
-    /// ([`axeyum_cnf::solve_with_drat_proof_within`]) as the **primary** SAT
-    /// search for the bit-blasting BV backend, instead of the default
-    /// `rustsat-batsat` adapter.
+    /// **Deprecated no-op, kept for API compatibility (ADR-1703).**
     ///
-    /// The native core is deadline-bounded (it returns an undecided verdict on
-    /// timeout, never `sat`/`unsat` by timeout), every `sat` model is replayed
-    /// against the original terms exactly like the batsat path, and every `unsat`
-    /// is DRAT-backed. It is currently slower than batsat — this flag exists to
-    /// measure and close that gap. Off by default so baselines are unchanged.
+    /// The in-tree proof-producing CDCL core
+    /// ([`axeyum_cnf::solve_with_drat_proof_within`]) is now the primary SAT
+    /// search on every path, so there is nothing left for this flag to select.
+    /// It is read by nobody: [`crate::SatBvBackend`] dispatches to the native
+    /// core unconditionally. Setting it either way changes no verdict, no
+    /// timing, and no artifact except the recorded config itself.
+    ///
+    /// It survives only because `axeyum-py`, `axeyum-bench` and `axeyum-verify`
+    /// name the field; slice 2 of ADR-1703 removes it along with the adapter.
     pub native_cdcl: bool,
 
     /// Extend lazy bit-blasting (`lazy_bv`) to also abstract `ite` — the
@@ -563,8 +566,8 @@ impl SolverConfig {
         self
     }
 
-    /// Selects the in-tree proof-producing CDCL core as the primary SAT search.
-    /// See [`SolverConfig::native_cdcl`].
+    /// **Deprecated no-op (ADR-1703).** The native CDCL core is the primary SAT
+    /// search unconditionally. See [`SolverConfig::native_cdcl`].
     #[must_use]
     pub fn with_native_cdcl(mut self, native_cdcl: bool) -> Self {
         self.native_cdcl = native_cdcl;
