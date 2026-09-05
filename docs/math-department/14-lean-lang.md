@@ -52,12 +52,12 @@ Measured 2026-09-05 at `f67ce41d2`; the commands are in *How to re-measure*.
 | trusted core | 5,526 function-body lines, 9 files ([ADR-1600](../research/09-decisions/adr-1600-the-kernels-metatheoretic-status-what-is-trusted-and-what-is-not.md)) |
 | our theorems replayed in pinned Lean | `creal` carrier only: population 2,045, replayed 1,972, 48 `Type`-valued theorems Lean refuses as theorems, 25 blocked behind them ([ADR-0760](../research/09-decisions/adr-0760-independent-replay-is-graded-per-declaration-by-name.md)) |
 | credited roots exported, reimported, Lean-checked | 9 (C2) |
-| thin Lean adapter | one 8-category goal pack over one subject, `Nat.add_comm` (C3, [ADR-0935](../research/09-decisions/adr-0935-the-thin-lean-adapter-composes-c2s-two-checked-paths-and-adds-nothing-else.md)) |
+| thin Lean adapter | Rust side: one 8-category goal pack over one subject, `Nat.add_comm` (C3, [ADR-0935](../research/09-decisions/adr-0935-the-thin-lean-adapter-composes-c2s-two-checked-paths-and-adds-nothing-else.md)). **Lean side: `by axeyum` exists** — `lean/axeyum-tactic`, a Lake package on the cross-check pin, no Mathlib; 11 ℕ goals in Lean-core notation accepted and 11 mutations rejected, gated by `scripts/check-lean-tactic.sh` ([ADR-1666](../research/09-decisions/adr-1666-by-axeyum-is-a-lean-tactic-and-lean-checks-the-term.md)) |
 | Mathlib mirrors in the ledger | 756 facts: 499 proved, 257 open; fidelity gate PASS, 742 hash-verified, 14 unpinned |
 | statements in Lean surface syntax | 769 facts (`lean4-surface`); 1,971 in kernel-core rendering (`lean4`); **no native parser for either** — only real Lean can read the surface form, and it lives on one fleet host with a built Mathlib |
 | labeled imports from Lean/Mathlib | 7 facts, `proof_route: imported-kernel-lean`, footprint `[propext, Classical.choice, Quot.sound]`, never counted as ours; largest closure 3,142 declarations ([ADR-1090](../research/09-decisions/adr-1090-ivt-evt-row-4-labeled-import-lands-mathlib-topology-admits-clean.md)) |
 | Mathlib at scale | a full `lean4export Mathlib` is 680,925 declarations in ~4 min on s5; the declaration graph built so far is 446 declarations and 2,451 edges from 7 roots |
-| native producers | `linarith`, `ring`, `simp`, `decide`, tactic combinator: 18,497 lines emitting kernel terms — over *this* kernel's preludes, not Lean goals; the matrix's K3 row does not mention them |
+| native producers | `linarith`, `ring`, `simp`, `decide`, tactic combinator: 18,497 lines emitting kernel terms. **`ring` and `linarith` now reach Lean goals** through `by axeyum` for the quantifier-free ℕ fragment; the ℤ entry points cannot be reached at all because `linarith::int::prove` and `ring::int::prove` are `pub(crate)` (ADR-1666). The matrix's K3 row still does not mention any of them |
 | **red today** | `scripts/install-pinned-lean.sh` rejects the `-rc1` pin (CI's real-Lean job red since `792224e73`); `gen-lean-complete-parity.py --check` and `check-lean-official-construct-matrix.py --check` exit 1 on a clean tree; in CI both are masked by `check-parity-freshness.py`, red since at least 2026-09-01 on the Z3 ledger |
 
 ## What each chair would say
@@ -77,9 +77,9 @@ against the July documents.
 | 08 | probability | same as 03 | same as 03, plus the ℚ-valued shelf has no Mathlib counterpart at all |
 | 09 | category theory | universe levels that agree with Lean **exactly** | one divergence found by a gate this week (`PSigma` at `Sort (max u v)` vs Lean's `Sort (max 1 u v)`); the `max-to-imax` mutant is open; `imax` normalization is over-complete (requirements §4.6) |
 | 10 | logic | the kernel *is* the paper; the paper needs the public conformance corpus, both halves | 32 hand-authored differential cases against a corpus of 189 (121 accept / 62 reject / 6 either) nobody has run; no divergence ledger |
-| 11 | applied | `by axeyum` as a real tactic, and LRAT proofs Lean consumes | C3 is a Rust-side sidecar protocol with one subject; no Lean-side tactic, no Lake package, no LRAT hand-off |
+| 11 | applied | `by axeyum` as a real tactic, and LRAT proofs Lean consumes | **half answered 2026-09-05** (ADR-1666): the tactic and the Lake package exist and close 11 ℕ goals against Lean core. Still no LRAT hand-off — `Std.Tactic.BVDecide` consumes LRAT and `axeyum-cnf` emits DRAT — and no ℤ, because the ℤ producer entry points are `pub(crate)` |
 | 12 | the chair | one pin, green gates, and one sentence saying what "Lean compatible" means | two pins, three red gates, and a claim surface (PLAN.md, the K3 row, next-action A9) still describing July |
-| 13 | the CAS | its certificates reconstruct into kernel terms; Lean would see them only through 11's tactic | same as 11 |
+| 13 | the CAS | its certificates reconstruct into kernel terms; Lean would see them only through 11's tactic | 11's tactic now exists, so the route is open in principle; what is missing is a name-correspondence row per constant a reconstructed CAS certificate emits, in `Axeyum.Shim`'s shape (ADR-1666) |
 
 ## The Next Ten, in priority order
 
@@ -119,11 +119,17 @@ what makes the whole thing a claim rather than a folder.
       coercion/`variable`-block screen at extraction time. Then C4's first
       demand-gated elaboration feature is chosen by count, not by taste.
       Serves 01, 07, 04.
-- [ ] **6. `by axeyum` as a Lean tactic.** Turn the C3 sidecar protocol into
-      a Lake package exposing a tactic that ships the elaborated goal to
-      Axeyum and hands back a term Lean checks; first fragments linear
-      arithmetic and `ring` over ℕ and ℤ, then LRAT-carrying `bv_decide`-style
-      goals. Nothing is trusted on the Lean side. Serves 11, 13, 01.
+- [x] **6. `by axeyum` as a Lean tactic.** **ℕ landed 2026-09-05**
+      ([ADR-1666](../research/09-decisions/adr-1666-by-axeyum-is-a-lean-tactic-and-lean-checks-the-term.md)):
+      `lean/axeyum-tactic` is a Lake package, no Mathlib, exposing `by axeyum`;
+      11 goals stated in ordinary Lean-core notation close and 11 mutations are
+      rejected, 5 of the goals axiom-free end to end. The finding is that a
+      rename is not enough — axeyum applies every lemma with all arguments
+      explicit in its own order, so 12 lemmas route through `Axeyum.Shim`, one
+      Lean theorem each proved from core. **Still open:** ℤ (blocked by
+      `pub(crate)` on `linarith::int::prove` and `ring::int::prove`, not by
+      mathematics) and the LRAT route (`bv_decide` consumes LRAT, our core
+      emits DRAT). Serves 11, 13, 01.
 - [ ] **7. The public conformance corpus and a divergence ledger.** Run
       Lean 4's own kernel test cases, report both the accept and the reject
       half, publish a gated `divergences.md` in lean4lean's shape with the
@@ -183,6 +189,7 @@ count depend on Lean's axioms.
 
 | date | change | evidence |
 |---|---|---|
+| 2026-09-05 | **Next Ten item 6 landed for ℕ** ([ADR-1666](../research/09-decisions/adr-1666-by-axeyum-is-a-lean-tactic-and-lean-checks-the-term.md), lane `lean-tactic`). `lean/axeyum-tactic` is a Lake package with no Mathlib dependency exposing `by axeyum`: the tactic ships the already-elaborated goal to a Rust sidecar and hands the returned proof TERM to Lean's own parser, elaborator and kernel. Measured on the pinned `v4.34.0-rc1` (`3447a668`): 11 of 11 ℕ goals accepted, stated in ordinary Lean-core notation; 11 of 11 mutations rejected with 1 positive control; 13 `Axeyum.Shim` rows proved from Lean core, of which 10 depend on no axiom and 3 reach `propext` (`natLeOfAddLeAddRight`, `natMulAssoc`, `natRightDistrib` — Lean core's axiom use, inherited on restatement). The correspondence finding: a rename is not enough, because axeyum applies every lemma with all arguments explicit in its own order — of 20 emitted constants, 8 structural, 7 exact, 5 reordered, 0 derived. NOT built: ℤ (`linarith::int::prove` and `ring::int::prove` are `pub(crate)`; the ℤ carrier is interned as `Int`, so the name map must become carrier-scoped) and the LRAT route. | `scripts/check-lean-tactic.sh`: `goals-accepted=11 mutations-rejected=11 shim-rows=13 controls=1`; three negative controls, each failing differently |
 | 2026-09-05 | File created. Baseline: K0 1/1, K1 6/6, K2–K6 0; `creal` replay 1,972 of 2,045; 9 credited roots Lean-checked; 756 mirrors (499 proved / 257 open); 7 labeled imports; no native parser, no Lean-side tactic, no Lake package. Three Lean gates red on `main` since the pin moved (`792224e73`, 2026-09-03): the install script regex, `gen-lean-complete-parity --check`, `check-lean-official-construct-matrix --check`; CI's real-Lean job was green on the commit before and red on that commit; the two `--check` gates are masked in CI by the Z3 parity-freshness failure that predates them. Reported, not repaired, by the review this file came out of. | `f67ce41d2`; `gh run list --workflow ci.yml`; the commands below |
 
 ## How to re-measure

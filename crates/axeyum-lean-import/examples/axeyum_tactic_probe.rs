@@ -10,6 +10,14 @@
 //! It is a printer, not a gate. The gate is `scripts/check-lean-tactic.sh`,
 //! where real Lean either accepts the emitted term or does not.
 
+// The probe builds goals out of the same one-letter names the mathematics uses
+// (`a`, `b`, `c` for three ℕ variables, `k`/`p`/`f` for the kernel, prelude and
+// development), which is what makes the goals readable as goals. Renaming them
+// to `first`/`second`/`third` would obscure the correspondence with the lemma
+// statements this file exists to print. Same allowance the producers themselves
+// carry (`ring/nat.rs`, `linarith/nat.rs`).
+#![allow(clippy::many_single_char_names)]
+
 use std::collections::BTreeSet;
 
 use axeyum_lean_kernel::{

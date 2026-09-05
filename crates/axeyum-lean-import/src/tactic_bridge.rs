@@ -310,7 +310,7 @@ impl Translator {
         let (head, args) = e.spine();
         match head {
             LeanExpr::FVar(name) if args.is_empty() => Ok(self.local(dev, name)),
-            LeanExpr::Nat(n) if args.is_empty() => self.numeral(dev, *n),
+            LeanExpr::Nat(n) if args.is_empty() => Self::numeral(dev, *n),
             LeanExpr::Const(name) => self.const_term(dev, name, &args),
             LeanExpr::BVar(_) => Err(Decline::Unsupported(
                 "a de Bruijn variable reached the translator; the goal has a binder".to_owned(),
@@ -331,7 +331,7 @@ impl Translator {
     /// this kernel is unary. Bounded because a large numeral is a large term:
     /// the producers' own coefficient bound is 4 and the goals this fragment
     /// serves are small.
-    fn numeral(&mut self, dev: &mut Dev, n: u64) -> Result<ExprId, Decline> {
+    fn numeral(dev: &mut Dev, n: u64) -> Result<ExprId, Decline> {
         const MAX_NUMERAL: u64 = 64;
         if n > MAX_NUMERAL {
             return Err(Decline::Unsupported(format!(
@@ -354,7 +354,7 @@ impl Translator {
         match (name, args.len()) {
             // `a + b` at ℕ: `@HAdd.hAdd Nat Nat Nat inst a b`.
             ("HAdd.hAdd", 6) => {
-                self.require_nat_triple(args, "HAdd.hAdd")?;
+                Self::require_nat_triple(args, "HAdd.hAdd")?;
                 if !instance_is(args[3], NAT_ADD_INSTANCE_NAMES) {
                     return Err(Decline::Unsupported(
                         "`+` is used at ℕ with an instance that is not ℕ's own `instAddNat`"
@@ -372,7 +372,7 @@ impl Translator {
             }
             // `a * b` at ℕ.
             ("HMul.hMul", 6) => {
-                self.require_nat_triple(args, "HMul.hMul")?;
+                Self::require_nat_triple(args, "HMul.hMul")?;
                 if !instance_is(args[3], NAT_MUL_INSTANCE_NAMES) {
                     return Err(Decline::Unsupported(
                         "`*` is used at ℕ with an instance that is not ℕ's own `instMulNat`"
@@ -401,7 +401,7 @@ impl Translator {
                     ));
                 }
                 match args[1] {
-                    LeanExpr::Nat(n) => self.numeral(dev, *n),
+                    LeanExpr::Nat(n) => Self::numeral(dev, *n),
                     _ => Err(Decline::Unsupported(
                         "a numeral literal's value is not a raw `Nat` literal".to_owned(),
                     )),
@@ -414,7 +414,7 @@ impl Translator {
     }
 
     /// The first three arguments of a heterogeneous operator must all be `Nat`.
-    fn require_nat_triple(&self, args: &[&LeanExpr], what: &str) -> Result<(), Decline> {
+    fn require_nat_triple(args: &[&LeanExpr], what: &str) -> Result<(), Decline> {
         if args[0].is_const("Nat") && args[1].is_const("Nat") && args[2].is_const("Nat") {
             Ok(())
         } else {

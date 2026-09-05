@@ -73,9 +73,8 @@ fn handle(raw: &str) -> Value {
         Ok(value) => value,
         Err(error) => return declined("unsupported", &format!("request is not JSON: {error}")),
     };
-    let object = match request.as_object() {
-        Some(object) => object,
-        None => return declined("unsupported", "request is not a JSON object"),
+    let Some(object) = request.as_object() else {
+        return declined("unsupported", "request is not a JSON object");
     };
     match object.get("protocol").and_then(Value::as_str) {
         Some(tag) if tag == PROTOCOL_ID => {}
@@ -101,10 +100,9 @@ fn handle(raw: &str) -> Value {
     let mut hypotheses = Vec::new();
     if let Some(items) = object.get("hypotheses").and_then(Value::as_array) {
         for item in items {
-            let (Some(name), Some(ty_json)) = (
-                item.get("name").and_then(Value::as_str),
-                item.get("type"),
-            ) else {
+            let (Some(name), Some(ty_json)) =
+                (item.get("name").and_then(Value::as_str), item.get("type"))
+            else {
                 continue;
             };
             // A hypothesis that does not decode is skipped, not fatal: it is a
@@ -121,7 +119,10 @@ fn handle(raw: &str) -> Value {
     let mut dev = match Dev::new() {
         Ok(dev) => dev,
         Err(error) => {
-            return declined("unknown", &format!("the ℕ prelude did not build: {error:?}"));
+            return declined(
+                "unknown",
+                &format!("the ℕ prelude did not build: {error:?}"),
+            );
         }
     };
     match prove_to_lean_term(&mut dev, &hypotheses, &goal) {
