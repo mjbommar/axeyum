@@ -144,7 +144,7 @@ fn small_cover_generated_module_is_byte_stable() {
     lean_golden::assert_golden_module(
         "counterexample-cover",
         &module,
-        (14_912, 0x01ec_a1dd_2dc2_d94e),
+        (14_913, 0x8a2f_afc8_9b3a_8b24),
     );
 }
 
