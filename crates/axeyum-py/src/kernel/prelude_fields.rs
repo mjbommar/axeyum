@@ -4182,8 +4182,12 @@ pub(super) fn creal_sub(p: &CRealPrelude) -> Vec<(&'static str, Sub)> {
     vec![("rat", Sub::Rat(Box::new(p.rat)))]
 }
 
-/// The `ComplexPrelude` field table (129 names,
+/// The `ComplexPrelude` field table (150 names,
 /// 0 name lists, 1 sub-packages).
+///
+/// 21 of the names come from ADR-1512 per-module registries and
+/// carry a dotted field name (`pi.pi_le_four`); the rest are flat
+/// fields on `ComplexPrelude` itself.
 #[must_use]
 #[allow(clippy::too_many_lines)] // a generated field table; length is the point.
 pub(super) fn complex(p: &ComplexPrelude) -> Fields {
@@ -4329,6 +4333,51 @@ pub(super) fn complex(p: &ComplexPrelude) -> Fields {
             ("abs_add_le", p.abs_add_le),
             ("abs_neg", p.abs_neg),
             ("abs_le_add_abs_sub", p.abs_le_add_abs_sub),
+            ("poly.poly_eval", p.poly.poly_eval),
+            ("poly.poly_eval_zero", p.poly.poly_eval_zero),
+            ("poly.poly_eval_succ", p.poly.poly_eval_succ),
+            ("poly.poly_add", p.poly.poly_add),
+            ("poly.poly_eval_poly_add", p.poly.poly_eval_poly_add),
+            ("poly.poly_scale", p.poly.poly_scale),
+            ("poly.poly_eval_poly_scale", p.poly.poly_eval_poly_scale),
+            ("poly.poly_degree_lt", p.poly.poly_degree_lt),
+            (
+                "poly.poly_degree_lt_poly_add",
+                p.poly.poly_degree_lt_poly_add,
+            ),
+            (
+                "poly.poly_degree_lt_poly_scale",
+                p.poly.poly_degree_lt_poly_scale,
+            ),
+            ("poly.poly_mul", p.poly.poly_mul),
+            (
+                "poly.poly_degree_lt_poly_mul",
+                p.poly.poly_degree_lt_poly_mul,
+            ),
+            ("poly.poly_eval_poly_mul", p.poly.poly_eval_poly_mul),
+            ("poly.horner_from_top", p.poly.horner_from_top),
+            ("poly.horner_from_top_zero", p.poly.horner_from_top_zero),
+            (
+                "poly.horner_from_top_succ_zero",
+                p.poly.horner_from_top_succ_zero,
+            ),
+            (
+                "poly.horner_from_top_succ_succ",
+                p.poly.horner_from_top_succ_succ,
+            ),
+            ("poly.factor_quotient", p.poly.factor_quotient),
+            (
+                "poly.factor_quotient_degree_lt",
+                p.poly.factor_quotient_degree_lt,
+            ),
+            (
+                "poly.horner_from_top_diag_eq_poly_eval",
+                p.poly.horner_from_top_diag_eq_poly_eval,
+            ),
+            (
+                "poly.factor_quotient_succ_eq",
+                p.poly.factor_quotient_succ_eq,
+            ),
             ("comm_ring_s", p.comm_ring_s),
         ],
         lists: Vec::new(),

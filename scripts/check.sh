@@ -1404,6 +1404,13 @@ step creal-declare-deps python3 scripts/creal-declare-deps.py --check --strict -
 # theorem does not exist". ~0.3s, pure Python plus one `rustfmt`, no cargo. Also
 # in scripts/check-merge-hygiene.sh, which is the gate that actually runs per
 # merge.
+# The generator's own controls: path-qualified registry fields
+# (`pub poly: poly::PolyNames`) used to be silently skipped by the field
+# regex before classification ever ran -- a green `--check` over an
+# amputated mirror (ADR-1613's "unrelated live gap"). Mutation-verified: all
+# seven guards killed on a scratch copy, `scripts/tests/mutation_controls.py`
+# not used (this suite wasn't already registered there).
+step py-prelude-fields-tests python3 -m unittest scripts.tests.test_gen_py_prelude_fields
 step py-prelude-fields python3 scripts/gen-py-prelude-fields.py --check
 # The ADR-1512 migration's workspace-wide consumer scan: which files OUTSIDE
 # crates/axeyum-lean-kernel read a moving field flat. It refuses rather than

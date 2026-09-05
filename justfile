@@ -1575,6 +1575,9 @@ generated-trackers:
     # gate until 2026-09-01, which is how it reached main stale: the ADR-1512
     # registry split deleted 69 of creal's 606 names from the Python surface
     # and nothing noticed. ~0.3s, pure Python.
+    # Its own controls: path-qualified registry fields used to be silently
+    # skipped before classification ever ran (ADR-1613's live gap).
+    python3 -m unittest scripts.tests.test_gen_py_prelude_fields
     python3 scripts/gen-py-prelude-fields.py --check
     # The ADR-1512 migration's consumer scan: it refuses a move that would
     # break a file outside the kernel crate. Mutation-verified.
