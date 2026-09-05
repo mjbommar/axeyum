@@ -68,7 +68,7 @@ use axeyum_ir::{Sort, TermArena, TermId, TermNode, Value};
 
 use crate::backend::{CheckResult, SolverConfig, SolverError, UnknownKind, UnknownReason};
 use crate::cdclt::{CdclT, Lit as CdcltLit, Outcome};
-use crate::euf_egraph::{TheoryLit, TheoryProp, TheorySolver};
+use crate::euf_egraph::{FinalCheckOutcome, PropagationQueue, TheoryLit, TheoryProp, TheorySolver};
 use crate::lra_online::{Encoder, Lit, LraTheory, LraTheoryBuildStop, collect_lra_atoms, replays};
 use crate::model::Model;
 
@@ -125,7 +125,12 @@ impl CdcltLraTheory {
         deadline: Option<Instant>,
     ) -> Result<Self, LraTheoryBuildStop> {
         Ok(Self {
-            inner: LraTheory::try_new_with_deadline(arena, atom_terms, deadline)?,
+            // ADR-1701: this adapter is driven by `CdclT`, which calls
+            // `final_check` at every total Boolean assignment, so the wrapped
+            // theory may keep only the cheap bound check on `assert` and run
+            // the complete simplex decision once per candidate model.
+            inner: LraTheory::try_new_with_deadline(arena, atom_terms, deadline)?
+                .with_deferred_final_check(),
         })
     }
 
@@ -159,6 +164,19 @@ impl TheorySolver for CdcltLraTheory {
 
     fn propagate(&self) -> Vec<TheoryProp> {
         self.inner.propagate()
+    }
+
+    /// Forwards the wrapped theory's complete check (ADR-1701). The driver
+    /// backjumps to the highest level a final-check core names before analysing
+    /// it, so — unlike an `assert` conflict — this core does not need the
+    /// trigger literal folded in.
+    fn final_check(&mut self) -> FinalCheckOutcome {
+        self.inner.final_check()
+    }
+
+    /// Forwards the wrapped theory's queue-based propagation (ADR-1701).
+    fn propagate_into(&mut self, queue: &mut PropagationQueue) {
+        self.inner.propagate_into(queue);
     }
 }
 
