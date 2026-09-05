@@ -62,11 +62,11 @@
 //! No floating point, and **no `i128`** on the deciding path. Root isolation,
 //! Sturm counting, the sign of a polynomial at a rational or at a real
 //! algebraic number, and the comparison of an algebraic number with a rational
-//! are all `BigRational`, in [`big`]. The first slice of this module reused the
+//! are all `BigRational`, in the private `qe::big` engine. The first slice of this module reused the
 //! `i128` machinery in [`crate::sturm`] and [`crate::algebraic`] and therefore
 //! declined `∃x. x² − 10³⁰ = 0` — the Sturm chain evaluates near a Cauchy bound
 //! of `10³⁰ + 1` and squares it. That decline is gone; `10⁶⁰` decides too. The
-//! only remaining declines are named step budgets in [`big`], never an
+//! only remaining declines are named step budgets in the private `qe::big` engine, never an
 //! arithmetic wall.
 //!
 //! The `i128` route is retained under `cfg(test)` and run against the whole
@@ -449,7 +449,7 @@ impl SampleCertificate {
     /// one; every relation holds at the recomputed sign. Nothing the producer
     /// computed is reused — the signs are recomputed from the polynomials, by
     /// `BigRational` Horner at a rational sample and by
-    /// [`big::sign_at_algebraic`] at an algebraic one.
+    /// the private `qe::big` engine (`sign_at_algebraic`) at an algebraic one.
     ///
     /// # Errors
     ///
@@ -778,22 +778,24 @@ impl ForallDecision {
 /// Decide `∃x. ⋀ᵢ pᵢ(x) ▷ᵢ 0`.
 ///
 /// Isolates the distinct real roots of the product of the `pᵢ` in
-/// `BigRational` ([`big::isolate`]), forms the `2r + 1` sign-invariant cells,
+/// `BigRational` (the private `qe::big` engine), forms the `2r + 1` sign-invariant cells,
 /// and tests the conjunction at one sample per cell — the root itself for a
 /// point cell, a rational strictly between consecutive roots for an open cell.
 ///
 /// Returns [`Decision::Unknown`] with a human-readable reason only when a named
-/// step budget in [`big`] runs out. It never guesses, and it never declines for
+/// step budget in the private `qe::big` engine runs out. It never guesses, and it never declines for
 /// an arithmetic overflow, because there is none.
 #[must_use]
 pub fn decide_exists(formula: &ExistsFormula) -> Decision {
-    let (roots, open_samples, cut) = match decompose(&formula.atoms) {
+    let decomposition = match decompose(&formula.atoms) {
         Ok(parts) => parts,
         Err(reason) => return Decision::Unknown(reason),
     };
-    let root_samples: Vec<SamplePoint> = roots
+    let open_samples = decomposition.open_samples;
+    let root_samples: Vec<SamplePoint> = decomposition
+        .roots
         .iter()
-        .map(|root| SamplePoint::from_isolated(&cut, root))
+        .map(|root| SamplePoint::from_isolated(&decomposition.cut, root))
         .collect();
 
     let cells = 2 * root_samples.len() + 1;
@@ -903,22 +905,33 @@ pub(crate) fn cut_polynomial(atoms: &[Atom]) -> Vec<BigRational> {
     big::squarefree_part(&product).unwrap_or_default()
 }
 
-/// The full decomposition of ℝ induced by `atoms`: the isolated roots of the
-/// cut polynomial, one rational sample per open cell, and the cut polynomial
-/// itself (which is the defining polynomial of every algebraic root sample).
-pub(crate) fn decompose(
-    atoms: &[Atom],
-) -> Result<(Vec<big::IsolatedRoot>, Vec<BigRational>, Vec<BigRational>), String> {
+/// The sign-invariant decomposition of ℝ induced by a set of atoms.
+#[derive(Debug, Clone)]
+pub(crate) struct Decomposition {
+    /// The isolated distinct real roots of the cut polynomial, ascending.
+    pub(crate) roots: Vec<big::IsolatedRoot>,
+    /// One rational sample per open cell; `roots.len() + 1` of them.
+    pub(crate) open_samples: Vec<BigRational>,
+    /// The cut polynomial, which is the defining polynomial of every algebraic
+    /// root sample.
+    pub(crate) cut: Vec<BigRational>,
+}
+
+/// The full decomposition of ℝ induced by `atoms`.
+pub(crate) fn decompose(atoms: &[Atom]) -> Result<Decomposition, String> {
     let cut = cut_polynomial(atoms);
     let roots = if big::degree(&cut).is_none_or(|d| d == 0) {
         Vec::new()
     } else {
-        big::isolate(&cut).ok_or_else(|| {
-            "real-root isolation ran out of its bisection budget".to_string()
-        })?
+        big::isolate(&cut)
+            .ok_or_else(|| "real-root isolation ran out of its bisection budget".to_string())?
     };
     let open_samples = open_cell_samples(&cut, &roots)?;
-    Ok((roots, open_samples, cut))
+    Ok(Decomposition {
+        roots,
+        open_samples,
+        cut,
+    })
 }
 
 /// One rational sample strictly inside every open cell: below the first root,
@@ -937,8 +950,8 @@ fn open_cell_samples(
         // No root anywhere: ℝ is one cell and every point decides it.
         return Ok(vec![BigRational::zero()]);
     }
-    let chain = big::SturmChain::new(cut)
-        .ok_or_else(|| "the cut polynomial is zero".to_string())?;
+    let chain =
+        big::SturmChain::new(cut).ok_or_else(|| "the cut polynomial is zero".to_string())?;
     let mut samples: Vec<BigRational> = Vec::with_capacity(roots.len() + 1);
     samples.push(roots[0].lo.clone());
     for window in roots.windows(2) {
@@ -983,7 +996,7 @@ fn strictly_below_root(
 // ============================================================================
 
 /// The exact sign of `poly` at a sample point: `BigRational` Horner at a
-/// rational, and [`big::sign_at_algebraic`] at an algebraic one — a gcd root
+/// rational, and the private `qe::big` engine (`sign_at_algebraic`) at an algebraic one — a gcd root
 /// count for the zero case, then bracket refinement until `poly` has no root in
 /// the bracket at all.
 pub(crate) fn sign_at_sample(poly: &[BigRational], sample: &SamplePoint) -> Option<i8> {
@@ -1086,7 +1099,6 @@ pub(crate) mod legacy_i128 {
     use axeyum_ir::Rational;
     use core::cmp::Ordering;
     use num_rational::BigRational;
-    use num_traits::Zero;
 
     /// The refinement budget of the first slice, unchanged.
     const MAX_SEPARATION_STEPS: usize = 60;
@@ -1218,9 +1230,7 @@ pub(crate) mod legacy_i128 {
                     }
                     Some(_) => {}
                     None => {
-                        return Err(
-                            "exact comparison of two algebraic roots declined".to_string()
-                        );
+                        return Err("exact comparison of two algebraic roots declined".to_string());
                     }
                 }
             }
@@ -1849,12 +1859,12 @@ mod tests {
         for (name, formula) in corpus {
             let modern = decide_exists(&formula);
             let legacy = decide_exists_i128(&formula);
-            let modern_verdict = modern
-                .verify()
-                .unwrap_or_else(|fault| panic!("{name}: the new route's certificate was refused: {fault:?}"));
-            let legacy_verdict = legacy
-                .verify()
-                .unwrap_or_else(|fault| panic!("{name}: the legacy certificate was refused: {fault:?}"));
+            let modern_verdict = modern.verify().unwrap_or_else(|fault| {
+                panic!("{name}: the new route's certificate was refused: {fault:?}")
+            });
+            let legacy_verdict = legacy.verify().unwrap_or_else(|fault| {
+                panic!("{name}: the legacy certificate was refused: {fault:?}")
+            });
             assert!(
                 modern_verdict.is_some(),
                 "{name}: the BigRational route must not decline"

@@ -31,7 +31,6 @@
 //! universal that **is** decided is [`crate::qe::decide_forall`], over a single
 //! disjunction of atoms.
 
-use num_bigint::BigInt;
 use num_rational::BigRational;
 
 use super::{
@@ -225,13 +224,15 @@ impl DnfDecision {
 #[must_use]
 pub fn decide_exists_dnf(formula: &Dnf) -> DnfDecision {
     let all_atoms = formula.all_atoms();
-    let (roots, open_samples, cut) = match decompose(&all_atoms) {
+    let decomposition = match decompose(&all_atoms) {
         Ok(parts) => parts,
         Err(reason) => return DnfDecision::Unknown(reason),
     };
-    let root_samples: Vec<SamplePoint> = roots
+    let open_samples = decomposition.open_samples;
+    let root_samples: Vec<SamplePoint> = decomposition
+        .roots
         .iter()
-        .map(|root| SamplePoint::from_isolated(&cut, root))
+        .map(|root| SamplePoint::from_isolated(&decomposition.cut, root))
         .collect();
 
     let cells = 2 * root_samples.len() + 1;
@@ -283,16 +284,16 @@ pub fn eliminate_dnf(formula: &Dnf) -> Option<bool> {
     decide_exists_dnf(formula).verify().unwrap_or(None)
 }
 
-/// `n` as a `BigRational`.
-#[cfg(test)]
-fn int(n: i64) -> BigRational {
-    BigRational::from_integer(BigInt::from(n))
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::qe::{Relation, integer_poly};
+    use num_bigint::BigInt;
+
+    /// `n` as a `BigRational`.
+    fn int(n: i64) -> BigRational {
+        BigRational::from_integer(BigInt::from(n))
+    }
 
     fn atom(coeffs: &[i64], relation: Relation) -> Atom {
         Atom::new(integer_poly(coeffs), relation)
@@ -320,10 +321,7 @@ mod tests {
         // unsatisfiable, the second holds at +√2.
         let formula = Dnf::new(vec![
             vec![atom(&[1, 0, 1], Relation::Lt)],
-            vec![
-                atom(&[-2, 0, 1], Relation::Eq),
-                atom(&[0, 1], Relation::Gt),
-            ],
+            vec![atom(&[-2, 0, 1], Relation::Eq), atom(&[0, 1], Relation::Gt)],
         ]);
         let cert = as_true(decide_exists_dnf(&formula));
         assert_eq!(cert.disjunct, 1, "only the second disjunct is satisfiable");

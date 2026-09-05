@@ -145,21 +145,6 @@ pub(crate) fn mul(a: &[BigRational], b: &[BigRational]) -> Vec<BigRational> {
     trim(out)
 }
 
-/// `a − b`.
-#[must_use]
-pub(crate) fn sub(a: &[BigRational], b: &[BigRational]) -> Vec<BigRational> {
-    let mut out = vec![BigRational::zero(); a.len().max(b.len())];
-    for (index, slot) in out.iter_mut().enumerate() {
-        if let Some(value) = a.get(index) {
-            *slot += value;
-        }
-        if let Some(value) = b.get(index) {
-            *slot -= value;
-        }
-    }
-    trim(out)
-}
-
 /// The remainder of `a` on division by `b`, over ℚ. `None` when `b` is the zero
 /// polynomial.
 #[must_use]

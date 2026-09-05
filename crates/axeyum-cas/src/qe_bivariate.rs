@@ -40,7 +40,7 @@
 //!
 //! Collins' theorem needs the projection set to be **exhaustive**: every
 //! reductum's leading coefficient and discriminant, and every pair of reducta.
-//! (McCallum's much smaller projection replaces that with an order-invariance
+//! (`McCallum`'s much smaller projection replaces that with an order-invariance
 //! argument plus a "well-oriented" side condition that has to be *checked* and
 //! can fail; we do not use it.) The bound
 //! `total degree ≤ `[`MAX_TOTAL_DEGREE`] is what makes the exhaustive set
@@ -194,7 +194,7 @@ pub enum Fault {
         fault: super::Fault,
     },
     /// Exact arithmetic declined — an `i128` overflow in the Sylvester
-    /// determinant, or a step budget in [`big`]. Not a refusal of any claim.
+    /// determinant, or a step budget in the private `qe::big` engine. Not a refusal of any claim.
     Declined(String),
 }
 
@@ -482,10 +482,8 @@ fn derivative_y(p: &BiPoly) -> Option<BiPoly> {
     let mut out: BiPoly = Vec::new();
     for (power, coefficient) in p.iter().enumerate().skip(1) {
         let scale = Rational::integer(i128::try_from(power).ok()?);
-        let scaled: Option<Vec<Rational>> = coefficient
-            .iter()
-            .map(|c| c.checked_mul(scale))
-            .collect();
+        let scaled: Option<Vec<Rational>> =
+            coefficient.iter().map(|c| c.checked_mul(scale)).collect();
         out.push(scaled?);
     }
     Some(out)
