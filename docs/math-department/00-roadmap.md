@@ -167,10 +167,10 @@ One row per wave. Update when something lands, then append to the history log.
 | wave | items | not started | in progress | landed | **already done** ⁽ᵇ⁾ |
 |---|---|---|---|---|---|
 | W0 — decisions | 5 | 0 | 0 | **5** ✔ | 0 |
-| W1 — unblocked | 13 | 0 | 0 | **13** | **1** |
-| W2 — carriers | 21 | 7 | 0 | **13** | **2** |
-| W3 — large shelves | 13 | 8 | 0 | **4** | **1** |
-| **total** | **52** | **17** | **0** | **33** | **4** |
+| W1 — unblocked | 13 | 0 | 0 | **13** ✔ | 0 |
+| W2 — carriers | 21 | 4 | 2 | **11** | **4** |
+| W3 — large shelves | 13 | 8 | 2 | **3** | 0 |
+| **total** | **52** | **12** | **4** | **32** | **4** |
 
 ⁽ᵇ⁾ **Already done before the roadmap was written, and the review did not
 know.** The audit found 11 of 76 absence claims false. Four were roadmap
