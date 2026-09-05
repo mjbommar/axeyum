@@ -7,7 +7,7 @@
   ],
   "description": "Facts with epistemic_status=open and external_status=proved: settled in the wider literature, not yet established here (ADR-0601 SS3). Never edit by hand -- regenerate with `python3 scripts/gen-import-backlog.py`.",
   "ordering": "dependency_ready rows before blocked ones; within that, curriculum_node-mapped rows before unmapped ones, ordered by (curriculum_layer, curriculum_node); ties (and the whole unmapped population) broken by fact id ascending. See docs/autogenesis/263-import-backlog-artifact.md.",
-  "count": 249,
+  "count": 251,
   "rows": [
     {
       "id": "F:fol-validity-undecidable",
@@ -40,6 +40,21 @@
       "id": "F:godel-first-incompleteness",
       "statement": "Every consistent, effectively axiomatised formal system that interprets enough elementary arithmetic contains an arithmetical sentence that the system neither proves nor refutes.",
       "depends_on": [],
+      "dependency_ready": true,
+      "curriculum_node": null,
+      "curriculum_layer": null,
+      "curriculum_title": null
+    },
+    {
+      "id": "F:int-fermat-two-squares",
+      "statement": "Every prime p with p = 1 (mod 4) is a sum of two integer squares. NOT ESTABLISHED HERE. Three of the four ingredients are: the composition identity (F:int-brahmagupta-fibonacci), the congruence half of the descent (F:int-two-squares-descent-cross-terms) and the algebraic half of the descent (F:int-two-squares-descent-step); the fourth, the entry point, is Int.firstSupplementaryLawResidue -- for p = 2m+1 prime with m even, -1 IS a quadratic residue mod p, so p divides x^2 + 1 for some x and SOME multiple of p is a sum of two squares. What is missing is the ingredient that makes the descent terminate.",
+      "depends_on": [
+        "F:int-brahmagupta-fibonacci",
+        "F:int-firstsupplementarylawresidue",
+        "F:int-two-squares-descent-cross-terms",
+        "F:int-two-squares-descent-step",
+        "F:nat-strong-induction"
+      ],
       "dependency_ready": true,
       "curriculum_node": null,
       "curriculum_layer": null,
@@ -2138,6 +2153,19 @@
       "statement": "The proposition declared as `Nat.zero_of_testBit_eq_false` in the pinned Mathlib v4.30 source.",
       "depends_on": [],
       "dependency_ready": true,
+      "curriculum_node": null,
+      "curriculum_layer": null,
+      "curriculum_title": null
+    },
+    {
+      "id": "F:int-two-squares-composite-characterisation",
+      "statement": "A positive integer n is a sum of two integer squares if and only if every prime congruent to 3 modulo 4 occurs to an EVEN exponent in the prime factorisation of n. NOT ESTABLISHED HERE and deliberately not attempted. The forward direction needs Fermat's theorem for the primes congruent to 1 modulo 4 (F:int-fermat-two-squares, itself open) together with the multiplicativity that IS proved (F:int-sum-of-two-squares-multiplicative); the reverse direction needs the mod-4 refutation lifted from n itself to each prime power, which needs unique factorisation as a MULTISET and not merely the existence of a factorisation.",
+      "depends_on": [
+        "F:int-fermat-two-squares",
+        "F:int-sum-of-two-squares-multiplicative",
+        "F:int-two-squares-mod-four-refutation"
+      ],
+      "dependency_ready": false,
       "curriculum_node": null,
       "curriculum_layer": null,
       "curriculum_title": null
