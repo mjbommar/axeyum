@@ -91,7 +91,7 @@ now. Nothing was deleted.
   axeyum-produced terms as a tactic (ADR-1666). Cross-library statement
   identity runs through the carrier correspondence ledger (ADR-1665). Full
   detail, the per-chair breakdown, and the open items:
-  [`docs/math-department/14-lean-lang.md`](../../math-department/14-lean-lang.md).
+  [`docs/math-department/14-lean-lang.md`](docs/math-department/14-lean-lang.md).
 - The previous 64,345-file full-library candidate is not a result: it produced
   zero admissible raw shards. Resumable/process-free readiness work exists, but
   a representative current-main run has not been admitted or published.
