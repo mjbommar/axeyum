@@ -2471,3 +2471,35 @@ declaration-spec:
 proof-plan:
     python3 scripts/check-proof-plan.py
     python3 scripts/tests/test-proof-plan-check.py
+
+# Micro-benchmarks (2026-09-05 design review, §4 item 3: no crate had a
+# `benches/` directory, no timing ratchet exists, and `CdclT` had never been
+# measured against the native proof-producing CDCL core on identical input).
+# `criterion` (pure Rust, MIT/Apache-2.0, dev-dependency only) with
+# `harness = false` targets under six crates. `taskset -c 0-7` pins to the
+# performance-core range the frontier-ratchet note already established for
+# this fleet (docs/research/08-planning/frontier-ratchet-reference-frame.md);
+# on a host without that core layout or without `taskset`, drop the prefix.
+# Method, per-bench medians, host/load/commit, and the CdclT-vs-native-core
+# ratio are recorded in
+# docs/research/08-planning/microbenchmarks-2026-09-05.md — append new
+# numbers there rather than trusting a rerun's raw terminal output.
+bench-criterion-axeyum-solver:
+    taskset -c 0-7 cargo bench -p axeyum-solver --features bench-internals --bench cdclt_propagate --bench simplex_pivot
+
+bench-criterion-axeyum-cnf:
+    taskset -c 0-7 cargo bench -p axeyum-cnf --bench proof_sat_solve --bench tseitin_encode
+
+bench-criterion-axeyum-aig:
+    taskset -c 0-7 cargo bench -p axeyum-aig --bench and_unique_table
+
+bench-criterion-axeyum-egraph:
+    taskset -c 0-7 cargo bench -p axeyum-egraph --bench congruence_chain
+
+bench-criterion-axeyum-ir:
+    taskset -c 0-7 cargo bench -p axeyum-ir --bench arena_intern
+
+# Runs every micro-benchmark above, pinned. Each per-crate recipe stays
+# independently runnable (a lane touching only one crate's hot path should
+# not have to run all six).
+bench-criterion: bench-criterion-axeyum-solver bench-criterion-axeyum-cnf bench-criterion-axeyum-aig bench-criterion-axeyum-egraph bench-criterion-axeyum-ir
