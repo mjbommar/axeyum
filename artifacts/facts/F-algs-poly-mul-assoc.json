@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "id": "F:algs-poly-mul-assoc",
+  "title": "Polynomial multiplication over an abstract Setoid-flavored commutative ring is associative",
+  "statement": "For any AlgS.CommRing record R and any three coefficient functions p, q, s : Nat -> R.carrier, AlgS.Poly.equiv R (AlgS.Poly.mul R (AlgS.Poly.mul R p q) s) (AlgS.Poly.mul R p (AlgS.Poly.mul R q s)). ADR-1609 sized this as needing a two-dimensional exchange for a triple convolution and called it the hard one. It does not: the proof is Nat.rec on the coefficient index with motive fun n => forall p q s, ..., base R.mulAssoc (p 0) (q 0) (s 0), and a successor step that is four applications of the convolution's own recursion AlgS.Poly.mul_succ (which peels the leading cell p (succ n) * q 0 and leaves the convolution of p with q shifted down), plus AlgS.Poly.distribL, R's distribR, and AlgS.Poly.antidiagFrom_mul_right to pull the scalar s 0 out of the inner convolution. The two resulting lines meet under one R.mulAssoc and one R.addAssoc.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem AlgS.Poly.mulAssoc : ((x0 : AlgS.CommRing) -> ((x1 : ((x1 : AxNat) -> AlgS.CommRing.carrier x0)) -> ((x2 : ((x2 : AxNat) -> AlgS.CommRing.carrier x0)) -> ((x3 : ((x3 : AxNat) -> AlgS.CommRing.carrier x0)) -> AlgS.Poly.equiv x0 (AlgS.Poly.mul x0 (AlgS.Poly.mul x0 x1 x2) x3) (AlgS.Poly.mul x0 x1 (AlgS.Poly.mul x0 x2 x3))))))",
+    "fragment": "none",
+    "free_symbols": [],
+    "kernel_theorem": "AlgS.Poly.mulAssoc"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "external_status": "proved",
+  "depends_on": [
+    "F:algs-poly-distrib-l"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "algs-poly-mul-assoc-1",
+      "kind": "kernel-term",
+      "supports": "AlgS.Poly.mulAssoc admits through the trusted Kernel::add_declaration gate with an empty Kernel::axiom_footprint, together with the two lemmas it rests on (AlgS.Poly.mul_succ and AlgS.Poly.antidiagFrom_mul_right), and is one of the twenty-three fields Kernel::add_declaration re-checked when admitting AlgS.Poly.commRing. The suite asserts the two association orders are NOT definitionally equal at n = 1, 2 and 3 -- if they were, this theorem would be refl and carry no content -- and pins the left side at n = 1 to ((p1*q0 + p0*q1) * s0) + ((p0*q0) * s1) with a negative twin that pairs the inner sums with the other s index. The negative control reuses the admitted proof term against the conclusion with the two right-hand factors swapped (p * (s * q) for p * (q * s)) and requires a refusal, with the honest restatement admitted in the same test as the positive twin. A source mutation of the join step's R.mulAssoc instantiation was measured to make the trusted gate return TypeMismatch.",
+      "check_status": "checked",
+      "checker_command": "out=$(RUST_MIN_STACK=1073741824 cargo test -p axeyum-lean-kernel --lib --release poly_setoid_tests -- --test-threads=4 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -cE 'test result: ok\\. 17 passed; 0 failed')\" -ge 1",
+      "notes": "The pinned count is 17. A dropped or renamed test changes the count and fails the command. Five of the seventeen are rejection controls, each carrying a POSITIVE TWIN in the same test: a record-field or proof-term mutation poisons the whole prelude build (measured: mutating mulAssoc's join step made all 17 die on the fixture's expect), so a refusal is only evidence about the field once the honest reconstruction is shown to admit beside it. Each of the five controls was itself mutated to the honest statement and exactly those five died, the other twelve passing."
+    }
+  ],
+  "concept_refs": [],
+  "provenance": {
+    "date": "2026-09-04",
+    "established_by": "axeyum-lean-kernel nat_prelude::polynomial_setoid, lane poly-commring, ADR-1618 (roadmap W2-9's residue).",
+    "source": "crates/axeyum-lean-kernel/src/nat_prelude/polynomial_setoid.rs; tests nat_prelude::polynomial_setoid::poly_setoid_tests::*."
+  },
+  "notes": "The three-index route -- proving the double-walk exchange directly, which after one outer reversal reduces to invariance of a triple sum under a cyclic rotation of its arguments -- was explored first and is a real obligation, but it is unnecessary: convolution's own recursion plus distributivity gets there with no three-index machinery at all. Recorded in ADR-1618 so it is not re-derived. This theorem is about the antidiagonal WALK; it is not connected to Complex.polyEval_polyMul, which is about Rat.sumRange/Complex.sumRange with Nat.sub, and no agreement lemma between the two representations exists in the tree."
+}

@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "id": "F:algs-poly-antidiagfrom-head",
+  "title": "An antidiagonal walk whose cell family vanishes off the first column collapses to its head cell",
+  "statement": "For any AlgS.CommRing record R and any cell family g : Nat -> Nat -> R.carrier such that R.equiv (g i (Nat.succ j)) R.zero for all i and j, and any n : Nat, R.equiv (AlgS.Poly.antidiagFrom R g n Nat.zero) (g n Nat.zero). Every cell the walk visits after its first has a non-zero second index, so the whole tail is R.zero (AlgS.Poly.antidiagFrom_tail_zero, itself Nat.rec on the first index with motive fun i => forall j, ...) and one R.addZero finishes. This is the vanishing-tail collapse ADR-1609 named as the obstruction to AlgS.Poly.mulOneR, and it is consumed at the family fun i j => R.mul (p i) (AlgS.Poly.one R j), whose off-column cells are R.mul (p i) R.zero because AlgS.Poly.one R (Nat.succ j) iota-reduces to R.zero.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem AlgS.Poly.antidiagFrom_head : ((x0 : AlgS.CommRing) -> ((x1 : ((x1 : AxNat) -> ((x2 : AxNat) -> AlgS.CommRing.carrier x0))) -> ((x2 : ((x2 : AxNat) -> ((x3 : AxNat) -> AlgS.CommRing.equiv x0 (x1 x2 (AxNat.succ x3)) (AlgS.CommRing.zero x0)))) -> ((x3 : AxNat) -> AlgS.CommRing.equiv x0 (AlgS.Poly.antidiagFrom x0 x1 x3 AxNat.zero) (x1 x3 AxNat.zero)))))",
+    "fragment": "none",
+    "free_symbols": [],
+    "kernel_theorem": "AlgS.Poly.antidiagFrom_head"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "external_status": "proved",
+  "depends_on": [
+    "F:algs-poly-distrib-l",
+    "F:algs-mul-zero"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "algs-poly-antidiagfrom-head-1",
+      "kind": "kernel-term",
+      "supports": "AlgS.Poly.antidiagFrom_head and AlgS.Poly.antidiagFrom_tail_zero admit through the trusted Kernel::add_declaration gate with an empty Kernel::axiom_footprint. The suite pins the family the lemma is used at, definitionally, for n = 0, 1, 2 and 3: AlgS.Poly.mul R p (AlgS.Poly.one R) n reduces to p n * R.one followed by a tail of p i * R.zero, with a negative twin that moves R.one to the second cell and must NOT be def_eq. The negative control reuses the admitted proof term against the conclusion g Nat.zero n (the LAST cell the walk visits) in place of g n Nat.zero (the first), the two indices swapped and nothing else, and requires a refusal, with the honest restatement admitted in the same test as the positive twin.",
+      "check_status": "checked",
+      "checker_command": "out=$(RUST_MIN_STACK=1073741824 cargo test -p axeyum-lean-kernel --lib --release poly_setoid_tests -- --test-threads=4 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -cE 'test result: ok\\. 17 passed; 0 failed')\" -ge 1",
+      "notes": "The pinned count is 17. A dropped or renamed test changes the count and fails the command. Five of the seventeen are rejection controls, each carrying a POSITIVE TWIN in the same test: a record-field or proof-term mutation poisons the whole prelude build (measured: mutating mulAssoc's join step made all 17 die on the fixture's expect), so a refusal is only evidence about the field once the honest reconstruction is shown to admit beside it. Each of the five controls was itself mutated to the honest statement and exactly those five died, the other twelve passing."
+    }
+  ],
+  "concept_refs": [],
+  "provenance": {
+    "date": "2026-09-04",
+    "established_by": "axeyum-lean-kernel nat_prelude::polynomial_setoid, lane poly-commring, ADR-1618 (roadmap W2-9's residue).",
+    "source": "crates/axeyum-lean-kernel/src/nat_prelude/polynomial_setoid.rs; tests nat_prelude::polynomial_setoid::poly_setoid_tests::*."
+  },
+  "notes": "The hypothesis is discharged by AlgS.mul_zero, which is stated over AlgS.Ring and reaches an AlgS.CommRing through the prefix projection AlgS.CommRing.toRingS. That is the only new dependency ADR-1618 added: declare_poly_setoid takes a PolyDeps carrying both names, supplied by declare_structures_s_extra, which runs before it at every call site. The MIRROR collapse -- a family vanishing off the i = 0 row, whose one surviving cell is the LAST the walk visits -- is deliberately not proved: it is a genuinely different induction, and AlgS.Poly.mulOneL is instead AlgS.Poly.mulComm followed by AlgS.Poly.mulOneR."
+}

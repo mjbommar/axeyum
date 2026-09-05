@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "id": "F:algs-poly-mul-comm",
+  "title": "Polynomial multiplication over an abstract Setoid-flavored commutative ring is commutative",
+  "statement": "For any AlgS.CommRing record R and any two coefficient functions p, q : Nat -> R.carrier, AlgS.Poly.equiv R (AlgS.Poly.mul R p q) (AlgS.Poly.mul R q p). A polynomial is a coefficient function and AlgS.Poly.equiv is coefficientwise equivalence; the product is the convolution written as an antidiagonal walk. The proof is two steps and no induction of its own: AlgS.Poly.antidiagFrom_rev at the cell family fun i j => R.mul (p i) (q j) reverses the walk, and AlgS.Poly.antidiagFrom_congr with R's own mulComm at each cell turns R.mul (p j) (q i) into R.mul (q i) (p j). This is one of the four AlgS.CommRing fields ADR-1609 left open for the polynomial ring.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem AlgS.Poly.mulComm : ((x0 : AlgS.CommRing) -> ((x1 : ((x1 : AxNat) -> AlgS.CommRing.carrier x0)) -> ((x2 : ((x2 : AxNat) -> AlgS.CommRing.carrier x0)) -> AlgS.Poly.equiv x0 (AlgS.Poly.mul x0 x1 x2) (AlgS.Poly.mul x0 x2 x1))))",
+    "fragment": "none",
+    "free_symbols": [],
+    "kernel_theorem": "AlgS.Poly.mulComm"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "external_status": "proved",
+  "depends_on": [
+    "F:algs-poly-antidiagfrom-rev"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "algs-poly-mul-comm-1",
+      "kind": "kernel-term",
+      "supports": "AlgS.Poly.mulComm admits through the trusted Kernel::add_declaration gate with an empty Kernel::axiom_footprint, and is one of the twenty-three fields Kernel::add_declaration re-checked when admitting AlgS.Poly.commRing as an AlgS.CommRing VALUE. The suite pins the convolution's order definitionally at indices 0, 1 and 2 with negative twins that swap the summands, swap the factors and re-nest the sum, so a commuted or reordered walk fails; and the reversal this theorem rests on carries its own evaluation test at n = 2 and 3 plus a rejection control.",
+      "check_status": "checked",
+      "checker_command": "out=$(RUST_MIN_STACK=1073741824 cargo test -p axeyum-lean-kernel --lib --release poly_setoid_tests -- --test-threads=4 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -cE 'test result: ok\\. 17 passed; 0 failed')\" -ge 1",
+      "notes": "The pinned count is 17. A dropped or renamed test changes the count and fails the command. Five of the seventeen are rejection controls, each carrying a POSITIVE TWIN in the same test: a record-field or proof-term mutation poisons the whole prelude build (measured: mutating mulAssoc's join step made all 17 die on the fixture's expect), so a refusal is only evidence about the field once the honest reconstruction is shown to admit beside it. Each of the five controls was itself mutated to the honest statement and exactly those five died, the other twelve passing."
+    }
+  ],
+  "concept_refs": [],
+  "provenance": {
+    "date": "2026-09-04",
+    "established_by": "axeyum-lean-kernel nat_prelude::polynomial_setoid, lane poly-commring, ADR-1618 (roadmap W2-9's residue).",
+    "source": "crates/axeyum-lean-kernel/src/nat_prelude/polynomial_setoid.rs; tests nat_prelude::polynomial_setoid::poly_setoid_tests::*."
+  },
+  "notes": "The setoid presentation costs nothing here and is what makes the statement REACHABLE: AlgS.Poly.equiv R (mul p q) (mul q p) unfolds to a pointwise statement over R.equiv, whereas the Eq-flavored Alg.CommRing field would be an equality of two lambdas over a function-space carrier and would need funext, which this kernel does not have and which Quot.sound would not supply (ADR-1595, ADR-1609)."
+}
