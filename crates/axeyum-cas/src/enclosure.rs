@@ -29,7 +29,7 @@
 //! There is no `f64` anywhere below this line.
 //!
 //! [`BigInterval`] is the `BigRational` lift of
-//! [`Interval`](crate::interval_arith::Interval), with the same operation set
+//! [`Interval`], with the same operation set
 //! and the same enclosure contract (`f(X) ⊇ { f(x) : x ∈ X }`);
 //! [`BigInterval::from_interval`] converts, and the public binding API of
 //! [`enclose`] takes the `i128` `Interval` so callers keep the existing type.
@@ -119,7 +119,7 @@ const REDUCTION_CAP: i64 = 4096;
 /// A closed interval `[lo, hi]` of exact `BigRational` endpoints, `lo <= hi`.
 ///
 /// The arbitrary-precision counterpart of
-/// [`Interval`](crate::interval_arith::Interval), with the same contract: every
+/// [`Interval`], with the same contract: every
 /// operation returns an interval that **contains** the true image of the
 /// operation applied pointwise to the operands. Unlike the `i128` version there
 /// is no overflow, so no operation fails for arithmetic reasons; the only
