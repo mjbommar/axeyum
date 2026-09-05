@@ -42,13 +42,13 @@
     {
       "id": "footprint-whole-slice",
       "kind": "instance-pin",
-      "supports": "axiom_footprint: [] -- for every declaration the arithmetization package adds on top of the Nat prelude, not only the headline theorem. The row set is a SET DIFFERENCE against a kernel carrying only build_nat_prelude, recomputed on every run, so it is derived from the environment rather than from a hand-maintained list.",
+      "supports": "axiom_footprint: [] -- for all 48 declarations the arithmetization package (fo_syntax + fo_code + fo_numbering + fo_decode) adds on top of the Nat prelude, not only the headline theorem. The row set is a SET DIFFERENCE against a kernel carrying only build_nat_prelude, recomputed on every run, so it is derived from the environment rather than from a hand-maintained list.",
       "check_status": "checked",
-      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example fo_code_inventory -- --require-axiom-free --expect-count 42",
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example fo_code_inventory -- --require-axiom-free --expect-count 48",
       "checkers": [
         "Kernel::axiom_footprint"
       ],
-      "notes": "--expect-count fails on drift in EITHER direction, so a declaration silently disappearing is a failure too. The same set difference is recomputed inside the test suite by fo_numbering::tests::the_whole_chain_this_prelude_adds_is_axiom_free, with a coverage control requiring four known names to be IN the difference so the sweep cannot pass vacuously."
+      "notes": "--expect-count fails on drift in EITHER direction, so a declaration silently disappearing is a failure too. The same set difference is recomputed inside the test suite by fo_numbering::tests::the_whole_chain_this_prelude_adds_is_axiom_free (42 rows, the numbering package) and fo_decode::tests::the_whole_arithmetization_package_is_axiom_free (48 rows, the whole chain), each with a coverage control requiring known names to be IN the difference so the sweep cannot pass vacuously."
     }
   ],
   "provenance": {

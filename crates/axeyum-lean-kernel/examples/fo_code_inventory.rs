@@ -1,6 +1,6 @@
 //! Emit every declaration the arithmetization package (`fo_code.rs`,
-//! `fo_numbering.rs`, ADR-1640) adds on top of the `Nat` prelude, with its
-//! kind, axiom footprint, and canonical type.
+//! `fo_numbering.rs`, `fo_decode.rs`, ADR-1640) adds on top of the `Nat`
+//! prelude, with its kind, axiom footprint, and canonical type.
 //!
 //! This is the `checker_command` for the `F:fo-code-*` facts. It is a sibling
 //! of `fo_soundness_inventory` rather than an extension of it, because the two
@@ -23,7 +23,8 @@
 //! listed and the kind is printed in its own column.
 //!
 //! The row set is **derived**, not listed: the rows are exactly the names
-//! present after `build_fo_numbering_prelude` and absent after
+//! present after `build_fo_decode_prelude` -- the top of the chain, which
+//! builds the numbering and the pairing under it -- and absent after
 //! `build_nat_prelude` alone. A declaration nobody remembered to list still
 //! appears, and one that disappears still vanishes.
 //!
@@ -46,7 +47,7 @@
 use std::collections::BTreeSet;
 use std::process::ExitCode;
 
-use axeyum_lean_kernel::{Declaration, Kernel, build_fo_numbering_prelude, build_nat_prelude};
+use axeyum_lean_kernel::{Declaration, Kernel, build_fo_decode_prelude, build_nat_prelude};
 
 fn kind_of(declaration: &Declaration) -> &'static str {
     match declaration {
@@ -114,7 +115,7 @@ fn main() -> ExitCode {
     };
 
     let mut kernel = Kernel::new();
-    let _ = build_fo_numbering_prelude(&mut kernel).expect("FO numbering prelude must build");
+    let _ = build_fo_decode_prelude(&mut kernel).expect("FO decode prelude must build");
 
     let mut rows: Vec<(String, &'static str, usize, String)> = kernel
         .environment()
