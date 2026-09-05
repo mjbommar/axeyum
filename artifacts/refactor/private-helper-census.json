@@ -27657,7 +27657,7 @@
       "signature": "fn every_intspace_declaration_is_axiom_free()",
       "test_file_members": 2,
       "sites": [
-        "crates/axeyum-lean-kernel/src/intspace/intspace_tests.rs:266",
+        "crates/axeyum-lean-kernel/src/intspace/intspace_tests.rs:265",
         "crates/axeyum-lean-kernel/src/metric/metric_tests.rs:217"
       ]
     },
