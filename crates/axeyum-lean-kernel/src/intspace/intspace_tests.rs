@@ -186,6 +186,9 @@ fn all_declarations(p: IntSpacePrelude) -> Vec<(String, crate::name::NameId)> {
     for i in 0..p.record.field_count() {
         out.push((format!("IntSpace selector {i}"), p.record.sel(i)));
     }
+    for (label, name) in p.bundled.all() {
+        out.push((label.to_string(), name));
+    }
     out
 }
 
@@ -231,7 +234,7 @@ fn every_intspace_declaration_is_present_and_derived() {
     let named = all_declarations(p);
     assert_eq!(
         named.len(),
-        54 + FIELD_COUNT,
+        61 + FIELD_COUNT,
         "the declaration list changed; update this count deliberately"
     );
     for (label, name) in named {
@@ -815,4 +818,169 @@ fn uniformly_continuous_abs_states_what_it_claims() {
         2,
         "exactly one hypothesis and one conclusion: {rendered}"
     );
+}
+
+// ---------------------------------------------------------------------------
+// `IntSpace.Bundled` (ADR-1613) — the carrier ADR-1612 said could not be built.
+// ---------------------------------------------------------------------------
+
+/// **The deciding check for ADR-1612's blocked site.** `IntSpace.Bundled S`
+/// unfolds to the dependent pair, and — the part that was actually impossible —
+/// it lives at `Sort 1`, the universe a `Metric` carrier is fixed at. The
+/// negative control is that it is NOT `S.carrier`: a bundle is strictly more
+/// than the function it wraps.
+#[test]
+fn the_bundled_carrier_is_the_dependent_pair_at_the_metric_carrier_universe() {
+    let (mut kernel, p) = built();
+    let logic = p.creal.rat.int.logic;
+    let zero = kernel.level_zero();
+    let one = kernel.level_succ(zero);
+    let sort_one = kernel.sort(one);
+
+    let space_ty = kernel.const_(p.record.ind, vec![]);
+    let s = kernel.fvar(61_000);
+    let carrier = {
+        let sel = kernel.const_(p.record.sel(CARRIER), vec![]);
+        kernel.app(sel, s)
+    };
+    let integrable = {
+        let sel = kernel.const_(p.record.sel(INTEGRABLE), vec![]);
+        kernel.app(sel, s)
+    };
+    let bundled = {
+        let head = kernel.const_(p.bundled.bundled, vec![]);
+        kernel.app(head, s)
+    };
+    let expected = {
+        let head = kernel.const_(logic.sigma.sigma, vec![zero, zero]);
+        let head = kernel.app(head, carrier);
+        kernel.app(head, integrable)
+    };
+    assert!(
+        kernel.def_eq(bundled, expected),
+        "IntSpace.Bundled S must unfold to Sigma S.carrier S.Integrable"
+    );
+    assert!(
+        !kernel.def_eq(bundled, carrier),
+        "negative control: the bundle is not the bare carrier"
+    );
+
+    // The universe claim, which is the one ADR-1612 turns on. Read from the
+    // DECLARED type — what the trusted gate accepted — not from `infer` on an
+    // open term, and pinned against the wrong universe as the control.
+    let declared = kernel
+        .environment()
+        .get(p.bundled.bundled)
+        .expect("IntSpace.Bundled must be declared");
+    let declared_ty = match declared {
+        Declaration::Definition { ty, .. } => *ty,
+        _ => panic!("IntSpace.Bundled must be a definition"),
+    };
+    let anon = kernel.anon();
+    let expected_ty = kernel.pi(anon, space_ty, sort_one, crate::BinderInfo::Default);
+    assert!(
+        kernel.def_eq(declared_ty, expected_ty),
+        "IntSpace.Bundled must be `IntSpace -> Sort 1` — the universe a Metric carrier is fixed at"
+    );
+    let wrong_ty = {
+        let two = kernel.level_succ(one);
+        let sort_two = kernel.sort(two);
+        kernel.pi(anon, space_ty, sort_two, crate::BinderInfo::Default)
+    };
+    assert!(
+        !kernel.def_eq(declared_ty, wrong_ty),
+        "negative control: it is not `IntSpace -> Sort 2`"
+    );
+}
+
+/// **The integral is now a total function of one argument**, and bundling loses
+/// nothing: `bundledIntegral (bundle f h)` reduces to `integral f h`. The
+/// negative control is a transposed pairing that must NOT reduce to it.
+#[test]
+fn the_integral_is_total_on_the_bundled_carrier_and_the_bundle_is_faithful() {
+    let (mut kernel, p) = built();
+    let s = kernel.fvar(61_000);
+    let f = kernel.fvar(61_001);
+    let g = kernel.fvar(61_002);
+    let h = kernel.fvar(61_003);
+    let h_g = kernel.fvar(61_004);
+
+    let integral_of = |kernel: &mut Kernel, fun, witness| {
+        let sel = kernel.const_(p.record.sel(INTEGRAL), vec![]);
+        let sel = kernel.app(sel, s);
+        let sel = kernel.app(sel, fun);
+        kernel.app(sel, witness)
+    };
+    let bundle_of = |kernel: &mut Kernel, fun, witness| {
+        let head = kernel.const_(p.bundled.bundle, vec![]);
+        let head = kernel.app(head, s);
+        let head = kernel.app(head, fun);
+        kernel.app(head, witness)
+    };
+    let bundled_integral_of = |kernel: &mut Kernel, bundle| {
+        let head = kernel.const_(p.bundled.bundled_integral, vec![]);
+        let head = kernel.app(head, s);
+        kernel.app(head, bundle)
+    };
+
+    let bundle_fh = bundle_of(&mut kernel, f, h);
+    let lhs = bundled_integral_of(&mut kernel, bundle_fh);
+    let rhs = integral_of(&mut kernel, f, h);
+    assert!(
+        kernel.def_eq(lhs, rhs),
+        "bundling and then integrating must BE integrating"
+    );
+
+    let bundle_gh = bundle_of(&mut kernel, g, h_g);
+    let other = bundled_integral_of(&mut kernel, bundle_gh);
+    assert!(
+        !kernel.def_eq(lhs, other),
+        "negative control: a different bundled function does not have the same integral term"
+    );
+
+    // …and the projections recover exactly what was bundled.
+    let projected = {
+        let head = kernel.const_(p.bundled.bundled_fun, vec![]);
+        let head = kernel.app(head, s);
+        kernel.app(head, bundle_fh)
+    };
+    assert!(
+        kernel.def_eq(projected, f),
+        "IntSpace.bundledFun (bundle f h) must compute to f"
+    );
+    assert!(
+        !kernel.def_eq(projected, g),
+        "negative control: it must not compute to a different function"
+    );
+}
+
+/// The types render as claimed, and `bundledDist` really is the shape
+/// `Metric.dist` demands on the bundled carrier.
+#[test]
+fn the_bundled_types_render() {
+    let (kernel, p) = built();
+    for (label, name) in p.bundled.all() {
+        let decl = kernel.environment().get(name).expect("declared");
+        let ty = match decl {
+            Declaration::Theorem { ty, .. } | Declaration::Definition { ty, .. } => *ty,
+            _ => panic!("{label} is not a term declaration"),
+        };
+        println!("{label} : {}", kernel.render_lean(ty));
+    }
+
+    let dist = kernel
+        .environment()
+        .get(p.bundled.bundled_dist)
+        .expect("declared");
+    let ty = match dist {
+        Declaration::Definition { ty, .. } => *ty,
+        _ => panic!("IntSpace.bundledDist must be a definition"),
+    };
+    let rendered = kernel.render_lean(ty);
+    for needle in ["IntSpace.Bundled", "CReal"] {
+        assert!(
+            rendered.contains(needle),
+            "IntSpace.bundledDist's type must mention {needle}: {rendered}"
+        );
+    }
 }

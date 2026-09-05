@@ -521,6 +521,11 @@ pub struct IntSpacePrelude {
     /// selectors.
     pub record: RecordNames,
 
+    /// The bundled-carrier layer (`intspace/bundled.rs`, ADR-1613): a function
+    /// packaged with its integrability datum through `Sigma`, so the integral
+    /// becomes a total function of one argument.
+    pub bundled: bundled::BundledNames,
+
     /// `IntSpace.Triv : Sort 1` — a one-constructor `Type`, the integrability
     /// datum of a space where **every** function is integrable. `True` will
     /// not do: `Integrable` is `Sort 1`-valued and `True : Prop`.
@@ -741,6 +746,7 @@ fn intern(kernel: &mut Kernel, creal: CRealPrelude) -> IntSpacePrelude {
     IntSpacePrelude {
         creal,
         record,
+        bundled: bundled::intern(kernel, ns),
         triv,
         triv_mk: kernel.name_str(triv, "mk"),
         triv_rec: kernel.name_str(triv, "rec"),
@@ -853,6 +859,7 @@ pub fn build_intspace_prelude(kernel: &mut Kernel) -> Result<IntSpacePrelude, Ke
     convergence::declare_all(&mut d, p)?;
     instances::declare_all(&mut d, p)?;
     detachable::declare_all(&mut d, p)?;
+    bundled::declare_all(&mut d, p)?;
 
     Ok(p)
 }
@@ -861,6 +868,7 @@ pub fn build_intspace_prelude(kernel: &mut Kernel) -> Result<IntSpacePrelude, Ke
 // Shared helpers for the submodules.
 // ---------------------------------------------------------------------------
 
+pub mod bundled;
 mod convergence;
 mod detachable;
 mod generic;

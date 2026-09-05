@@ -109,6 +109,9 @@ fn all_declarations(p: MetricPrelude) -> Vec<(String, crate::name::NameId)> {
     for (label, name) in p.interval.all() {
         out.push((label.to_string(), name));
     }
+    for (label, name) in p.subspace.all() {
+        out.push((label.to_string(), name));
+    }
     out
 }
 
@@ -1446,6 +1449,159 @@ fn w2_3_interval_types_render() {
         assert!(
             rendered.contains(needle),
             "Metric.creal_compactOn_interval's type must mention {needle}: {rendered}"
+        );
+    }
+}
+
+// ---------------------------------------------------------------------------
+// `Metric.subspace` (ADR-1613) — the half of W2-10 ADR-1602 split off.
+// ---------------------------------------------------------------------------
+
+/// **The deciding check for ADR-1602's blocked site**, stated generically so it
+/// costs one δ-step and one ι-step rather than unfolding `Metric.creal`.
+///
+/// Two claims, each with a negative control that differs in one leaf:
+/// the subspace's carrier IS the subtype (and is not the ambient carrier), and
+/// its distance IS the ambient distance at the underlying points (and is not
+/// the transposed one, so the equation is not one that would hold however the
+/// twelve fields had been wired).
+#[test]
+fn the_subspace_carrier_is_the_subtype_and_its_distance_is_the_ambient_one() {
+    let (mut kernel, p) = built();
+    let creal = p.cpoint.creal;
+    let logic = creal.rat.int.logic;
+    let zero = kernel.level_zero();
+    let one = kernel.level_succ(zero);
+
+    let m = kernel.fvar(60_900);
+    let predicate = kernel.fvar(60_901);
+    let x = kernel.fvar(60_902);
+    let y = kernel.fvar(60_903);
+
+    let ambient_carrier = {
+        let s = kernel.const_(p.record.sel(CARRIER), vec![]);
+        kernel.app(s, m)
+    };
+    let space = {
+        let head = kernel.const_(p.subspace.subspace, vec![]);
+        let head = kernel.app(head, m);
+        kernel.app(head, predicate)
+    };
+    let sub_carrier = {
+        let s = kernel.const_(p.record.sel(CARRIER), vec![]);
+        kernel.app(s, space)
+    };
+    let expected_carrier = {
+        let head = kernel.const_(logic.sigma.subtype, vec![one]);
+        let head = kernel.app(head, ambient_carrier);
+        kernel.app(head, predicate)
+    };
+    assert!(
+        kernel.def_eq(sub_carrier, expected_carrier),
+        "the subspace's carrier must reduce to Subtype M.carrier P"
+    );
+    assert!(
+        !kernel.def_eq(sub_carrier, ambient_carrier),
+        "negative control: the subspace carrier is NOT the ambient carrier"
+    );
+
+    let val = |kernel: &mut Kernel, point| {
+        let head = kernel.const_(logic.sigma.subtype_val, vec![one]);
+        let head = kernel.app(head, ambient_carrier);
+        let head = kernel.app(head, predicate);
+        kernel.app(head, point)
+    };
+    let val_x = val(&mut kernel, x);
+    let val_y = val(&mut kernel, y);
+
+    let dist_at = |kernel: &mut Kernel, space, left, right| {
+        let s = kernel.const_(p.record.sel(DIST), vec![]);
+        let s = kernel.app(s, space);
+        let s = kernel.app(s, left);
+        kernel.app(s, right)
+    };
+    let sub_dist = dist_at(&mut kernel, space, x, y);
+    let ambient_dist = dist_at(&mut kernel, m, val_x, val_y);
+    let transposed = dist_at(&mut kernel, m, val_y, val_x);
+
+    assert!(
+        kernel.def_eq(sub_dist, ambient_dist),
+        "the subspace distance must reduce to the ambient one at the underlying points"
+    );
+    assert!(
+        !kernel.def_eq(sub_dist, transposed),
+        "negative control: it must NOT reduce to the transposed ambient distance"
+    );
+}
+
+/// `[a,b] ⊂ ℝ` is a `Metric` in its own right — read from the DECLARED type,
+/// which is what the trusted gate accepted, paired with the control that
+/// `Metric.Interval` (the predicate it was before) is not one.
+#[test]
+fn the_closed_interval_is_now_a_metric_space_and_not_merely_a_predicate() {
+    let (kernel, p) = built();
+
+    let space = kernel
+        .environment()
+        .get(p.subspace.creal_interval_space)
+        .expect("Metric.crealIntervalSpace must be declared");
+    let space_ty = match space {
+        Declaration::Definition { ty, .. } => *ty,
+        _ => panic!("Metric.crealIntervalSpace must be a definition"),
+    };
+    let rendered = kernel.render_lean(space_ty);
+    assert!(
+        rendered.contains("Metric") && rendered.contains("CReal"),
+        "Metric.crealIntervalSpace must land in Metric over CReal: {rendered}"
+    );
+    assert!(
+        !rendered.contains("Prop"),
+        "it must be a space, not a predicate: {rendered}"
+    );
+
+    let predicate = kernel
+        .environment()
+        .get(p.continuity.interval)
+        .expect("Metric.Interval must be declared");
+    let predicate_ty = match predicate {
+        Declaration::Definition { ty, .. } => *ty,
+        _ => panic!("Metric.Interval must be a definition"),
+    };
+    let predicate_rendered = kernel.render_lean(predicate_ty);
+    assert!(
+        predicate_rendered.contains("Prop"),
+        "control: Metric.Interval IS still a predicate, which is what the subspace lifts: \
+         {predicate_rendered}"
+    );
+}
+
+/// The two `Eq.refl` equations render as the statements they claim to be, and
+/// `Metric.subspace` itself takes a predicate on the ambient carrier.
+#[test]
+fn the_subspace_types_render() {
+    let (kernel, p) = built();
+    for (label, name) in p.subspace.all() {
+        let decl = kernel.environment().get(name).expect("declared");
+        let ty = match decl {
+            Declaration::Theorem { ty, .. } | Declaration::Definition { ty, .. } => *ty,
+            _ => panic!("{label} is not a term declaration"),
+        };
+        println!("{label} : {}", kernel.render_lean(ty));
+    }
+
+    let dist = kernel
+        .environment()
+        .get(p.subspace.subspace_dist)
+        .expect("declared");
+    let ty = match dist {
+        Declaration::Theorem { ty, .. } => *ty,
+        _ => panic!("Metric.subspace_dist must be a theorem"),
+    };
+    let rendered = kernel.render_lean(ty);
+    for needle in ["Metric.subspace", "Subtype.val", "Metric.dist"] {
+        assert!(
+            rendered.contains(needle),
+            "Metric.subspace_dist's type must mention {needle}: {rendered}"
         );
     }
 }

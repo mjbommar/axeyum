@@ -87,10 +87,12 @@ use crate::nat_prelude::structures::{
 pub mod compactness;
 pub mod continuity;
 pub mod interval;
+pub mod subspace;
 
 pub use compactness::CompactnessNames;
 pub use continuity::ContinuityNames;
 pub use interval::IntervalNames;
+pub use subspace::SubspaceNames;
 
 // ---------------------------------------------------------------------------
 // Field indices. Fixed across the record; index a field through these, never
@@ -519,6 +521,9 @@ pub struct MetricPrelude {
     pub creal_complete: NameId,
     /// The W2-2 continuity layer (`metric/continuity.rs`).
     pub continuity: ContinuityNames,
+    /// The subspace construction (`metric/subspace.rs`, ADR-1613): a predicate
+    /// on a metric space is now a metric space, carried by `Subtype`.
+    pub subspace: SubspaceNames,
     /// The W2-3 compactness layer (`metric/compactness.rs`).
     pub compactness: CompactnessNames,
     /// The W2-3 interval instance (`metric/interval.rs`).
@@ -604,6 +609,7 @@ fn intern(kernel: &mut Kernel, cpoint: CPointPrelude) -> MetricPrelude {
         cpoint_metric: kernel.name_str(metric, "cpoint"),
         cpoint_dist_reduces: kernel.name_str(metric, "cpoint_dist"),
         continuity: continuity::intern(kernel, metric),
+        subspace: subspace::intern(kernel, metric),
         compactness: compactness::intern(kernel, metric),
         interval: interval::intern(kernel, metric),
     }
@@ -694,6 +700,7 @@ pub fn build_metric_prelude(kernel: &mut Kernel) -> Result<MetricPrelude, Kernel
     declare_cpoint_dist_reduces(&mut d, cpoint, p)?;
 
     continuity::declare_all(&mut d, creal, p)?;
+    subspace::declare_all(&mut d, creal, p)?;
     compactness::declare_all(&mut d, creal, p)?;
     interval::declare_all(&mut d, creal, p)?;
 
