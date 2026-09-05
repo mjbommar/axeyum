@@ -1,0 +1,789 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-carrier-correspondence-ledger",
+  "rows": [
+    {
+      "schema_version": 1,
+      "kind": "axeyum-carrier-correspondence",
+      "id": "CC:creal-real",
+      "title": "CReal, a Bishop-style regular-sequence real, against Mathlib's Cauchy-quotient Real",
+      "axeyum": {
+        "carrier": "CReal",
+        "source_location": "crates/axeyum-lean-kernel/src/creal.rs:6326",
+        "verification": "verified-in-kernel-projection",
+        "verification_detail": "`CReal` and `CReal.Equiv` are ids in artifacts/autogenesis/kernel-dependency-projection-v1.json (616 CReal.* declarations); creal.rs:6326 is the `kernel.name_str(creal, \"Equiv\")` call site.",
+        "equality_regime": "setoid",
+        "equality_regime_note": "CReal.Equiv is a defined Prop-valued closeness relation over regular rational sequences (per-n bound 2/(n+1)), not literal Eq -- this kernel builds no Quot.sound (ADR-0780 registers that absence)."
+      },
+      "mathlib": {
+        "counterpart": "Real",
+        "module_path": "Mathlib.Data.Real.Basic",
+        "source_location": "Mathlib/Data/Real/Basic.lean:35",
+        "verification": "verified-in-pinned-checkout",
+        "verification_detail": "Read directly: `structure Real where ofCauchy :: cauchy : CauSeq.Completion.Cauchy (abs : ℚ → ℚ)` at line 35.",
+        "equality_regime": "quotient-eq",
+        "equality_regime_note": "CauSeq.Completion.Cauchy is a genuine Quot.sound quotient of Cauchy sequences by the null-sequence relation; propositional Eq on Real is the quotient's Eq."
+      },
+      "grade": "constructively-stronger",
+      "reason": "Graded on the strongest measured comparable case: CReal.ivt_approx returns, for every tolerance, a rational-indexed approximate root with an explicit witness and axiom footprint 0, where Mathlib's intermediate_value_Icc asserts pure existence under [propext, Classical.choice, Quot.sound] (ADR-1030).",
+      "witness": [
+        {
+          "axeyum_theorem": "CReal.ivt_approx",
+          "axeyum_location": "crates/axeyum-lean-kernel/src/creal.rs:6707",
+          "axeyum_verification": "verified-in-kernel-projection",
+          "mathlib_theorem": "intermediate_value_Icc",
+          "mathlib_location": "Mathlib/Topology/Order/IntermediateValue.lean:552",
+          "note": "Ours: for each rational tolerance e>0, computes a point within e of a root, footprint []. Theirs: asserts existence of an exact root over an abstract densely-ordered topological order, footprint [propext, Classical.choice, Quot.sound]. Content in docs/mathematics-2026-08/08-ivt-and-evt-measured-against-mathlib.md."
+        },
+        {
+          "axeyum_theorem": "CReal.evt_approx_max",
+          "axeyum_location": "crates/axeyum-lean-kernel/src/creal/evt_row1.rs:422",
+          "axeyum_verification": "verified-in-kernel-projection",
+          "mathlib_theorem": "IsCompact.exists_isMaxOn",
+          "mathlib_location": "Mathlib/Topology/Order/Compact.lean:246",
+          "note": "Deliberately NOT evidence for the row's grade -- recorded to prevent the row from being misread as claiming EVT dominance too. ADR-1030 section 1 CONCEDES this pair as different-object: our hypothesis (uniform continuity, Sort 1 data) is strictly stronger and our conclusion (approximate, non-convergent maximum) strictly weaker than Mathlib's pointwise-continuous exactly-attained statement, in the same direction on both axes, so the two are not comparable at all."
+        }
+      ],
+      "provenance": {
+        "date": "2026-09-05",
+        "established_by": "lane lean-carrier-ledger (2026-09-05), docs/math-department/14-lean-lang.md Next Ten item 4",
+        "sources": [
+          "docs/math-department/14-lean-lang.md",
+          "artifacts/autogenesis/kernel-dependency-projection-v1.json",
+          "scripts/provision-lean-import-toolchain.sh --verify (mathlib4 c5ea00351c28e24afc9f0f84379aa41082b1188f, Lean 4.30.0)",
+          "docs/research/09-decisions/adr-1030-evt-is-conceded-number-theory-has-a-row-two-and-row-three-is-unciteable.md",
+          "docs/mathematics-2026-08/08-ivt-and-evt-measured-against-mathlib.md",
+          "docs/research/09-decisions/adr-0780-the-kernel-differential-corpus-finds-real-defects-and-two-guards-survive-uncaught.md"
+        ]
+      },
+      "notes": "This row deliberately grades on IVT rather than averaging IVT and EVT: a single grade field cannot carry two theorems pulling in different directions, and ADR-1030 already adjudicated EVT as non-comparable in print. Reviewer 03's stake (docs/math-department/03-classical-analysis.md) is answered by this row plus its EVT witness, not by a second row."
+    },
+    {
+      "schema_version": 1,
+      "kind": "axeyum-carrier-correspondence",
+      "id": "CC:nat-finset-finset",
+      "title": "Nat.Finset, a bounded predicate-plus-bound pair, against Mathlib's nodup Multiset quotient Finset",
+      "axeyum": {
+        "carrier": "Nat.Finset",
+        "source_location": "crates/axeyum-lean-kernel/src/nat_prelude.rs:7413",
+        "verification": "verified-in-kernel-projection",
+        "verification_detail": "`Nat.Finset` and 52 further Nat.Finset.* ids confirmed in the kernel projection; nat_prelude.rs:7413 is the `kernel.name_str(nat, \"Finset\")` interning call. The type is `inductive Nat.Finset | mk : (Nat -> Bool) -> Nat -> Nat.Finset` per the module doc at finset.rs:22.",
+        "equality_regime": "eq",
+        "equality_regime_note": "Literal Eq on the (membership-predicate, bound) pair, but this is NOT set-extensional equality: two Nat.Finset values differing only above their bound are literally distinct, per finset.rs's own doc (lines 26-28, 72-76: no quotient, no extensional set equality, every set-level statement is pointwise or via `beq`)."
+      },
+      "mathlib": {
+        "counterpart": "Finset",
+        "module_path": "Mathlib.Data.Finset.Defs",
+        "source_location": "Mathlib/Data/Finset/Defs.lean:75",
+        "verification": "verified-in-pinned-checkout",
+        "verification_detail": "`structure Finset (α : Type*)` with fields `val : Multiset α` and `nodup : Nodup val`, read directly at line 75.",
+        "equality_regime": "quotient-eq",
+        "equality_regime_note": "val is a Multiset, itself a Quot.sound quotient of List by permutation, plus a nodup side-condition; Eq on Finset is therefore genuinely extensional over sets."
+      },
+      "grade": "different-object",
+      "reason": "The carriers are not the same construction even loosely: ours is a computed bounded predicate whose own Eq is not set-extensional, theirs is a nodup quotient of lists whose Eq is set-extensional by construction, so no substitution identifies the two types.",
+      "witness": [
+        {
+          "axeyum_theorem": "Nat.Finset.exists_memB_of_card_pos",
+          "axeyum_location": "crates/axeyum-lean-kernel/src/nat_prelude/finset_singleton.rs:654",
+          "axeyum_verification": "verified-in-source-only",
+          "mathlib_theorem": "Finset.card_pos",
+          "mathlib_location": "Mathlib/Data/Finset/Card.lean:78",
+          "note": "Landed 2026-09-05 (hall-singleton lane), after this repository's kernel-dependency-projection-v1.json was last regenerated -- present in source and in artifacts/facts/F-nat-finset-exists-memb-of-card-pos.json, absent from the projection id list, hence marked source-only rather than kernel-projection-verified. Ours computes a member by bounded search from a positive count (footprint []); Mathlib's card_pos is a biconditional against Finset.Nonempty (`∃ x, x ∈ s`), and extracting a witness from that existential in general goes through Classical.choice."
+        }
+      ],
+      "provenance": {
+        "date": "2026-09-05",
+        "established_by": "lane lean-carrier-ledger (2026-09-05), docs/math-department/14-lean-lang.md Next Ten item 4",
+        "sources": [
+          "docs/math-department/14-lean-lang.md",
+          "artifacts/autogenesis/kernel-dependency-projection-v1.json",
+          "scripts/provision-lean-import-toolchain.sh --verify (mathlib4 c5ea00351c28e24afc9f0f84379aa41082b1188f, Lean 4.30.0)",
+          "artifacts/facts/F-nat-finset-exists-memb-of-card-pos.json"
+        ]
+      }
+    },
+    {
+      "schema_version": 1,
+      "kind": "axeyum-carrier-correspondence",
+      "id": "CC:nat-multiset-multiset",
+      "title": "Nat.Multiset, a bounded multiplicity function, against Mathlib's permutation-quotient Multiset",
+      "axeyum": {
+        "carrier": "Nat.Multiset",
+        "source_location": "crates/axeyum-lean-kernel/src/nat_prelude.rs:7409",
+        "verification": "verified-in-kernel-projection",
+        "verification_detail": "`Nat.Multiset`, `Nat.Multiset.Mem`, `Nat.Multiset.add`, `Nat.Multiset.beq`, `Nat.Multiset.count`, `Nat.Multiset.count_add` all confirmed present (28 Nat.Multiset.* ids); nat_prelude.rs:7409 interns the root name. multiset.rs's module doc (lines 6-7) states the type exists because this kernel has no List, no Finset-shaped Multiset, and no permutation quotient.",
+        "equality_regime": "eq",
+        "equality_regime_note": "Literal Eq on a raw (Nat -> Nat multiplicity function, Nat bound) pair, with the same non-extensionality caveat as Nat.Finset: values differing only above the bound are distinct."
+      },
+      "mathlib": {
+        "counterpart": "Multiset",
+        "module_path": "Mathlib.Data.Multiset.Defs",
+        "source_location": "Mathlib/Data/Multiset/Defs.lean:70",
+        "verification": "verified-in-pinned-checkout",
+        "verification_detail": "`def Multiset.{u} (α : Type u) : Type u := Quotient (List.isSetoid α)`, read directly at lines 70-71.",
+        "equality_regime": "quotient-eq",
+        "equality_regime_note": "A genuine Quot.sound quotient of List by the permutation setoid; Eq on Multiset is List equality up to permutation."
+      },
+      "grade": "different-object",
+      "reason": "A raw bounded multiplicity function and a permutation-quotient of lists are different representations with different Eq behavior at the boundary (unbounded vs bounded support), even though one comparable law transports cleanly.",
+      "witness": [
+        {
+          "axeyum_theorem": "Nat.Multiset.count_add",
+          "axeyum_location": "crates/axeyum-lean-kernel/src/nat_prelude/multiset.rs:1161",
+          "axeyum_verification": "verified-in-kernel-projection",
+          "mathlib_theorem": "Multiset.count_add",
+          "mathlib_location": "Mathlib/Data/Multiset/AddSub.lean:124",
+          "note": "Both state count a (s + t) = count a s + count a t. This one law is carrier-transport-shaped (the same string once the carrier is erased); the row is still graded different-object because the carriers themselves, and their Eq, are not interchangeable outside this one law."
+        }
+      ],
+      "provenance": {
+        "date": "2026-09-05",
+        "established_by": "lane lean-carrier-ledger (2026-09-05), docs/math-department/14-lean-lang.md Next Ten item 4",
+        "sources": [
+          "docs/math-department/14-lean-lang.md",
+          "artifacts/autogenesis/kernel-dependency-projection-v1.json",
+          "scripts/provision-lean-import-toolchain.sh --verify (mathlib4 c5ea00351c28e24afc9f0f84379aa41082b1188f, Lean 4.30.0)"
+        ]
+      }
+    },
+    {
+      "schema_version": 1,
+      "kind": "axeyum-carrier-correspondence",
+      "id": "CC:algs-group-group",
+      "title": "AlgS.Group, the equiv-parametrized setoid group record, against Mathlib's Eq-based Group class",
+      "axeyum": {
+        "carrier": "AlgS.Group",
+        "source_location": "crates/axeyum-lean-kernel/src/nat_prelude/structures_setoid.rs:859",
+        "verification": "verified-in-kernel-projection",
+        "verification_detail": "`AlgS.Group`, `.assoc`, `.carrier`, `.e`, `.equiv`, `.invL`, `.invR`, `.invCongr`, `.opCongr` all confirmed present (20 AlgS.Group.* ids). Line 859 is the `kernel.name_str(algs, \"Group\")` interning call inside `intern_structures_s_names`; the record is assembled in `declare_structures_s_all` at line 885.",
+        "equality_regime": "setoid",
+        "equality_regime_note": "Carries an explicit `equiv` relation field plus equivRefl/equivSymm/equivTrans and a per-operation congruence field (opCongr, invCongr), built (ADR-1588) because CReal.Equiv is a defined relation that literal Eq-based Alg.Group cannot use."
+      },
+      "mathlib": {
+        "counterpart": "Group",
+        "module_path": "Mathlib.Algebra.Group.Defs",
+        "source_location": "Mathlib/Algebra/Group/Defs.lean:1192",
+        "verification": "verified-in-pinned-checkout",
+        "verification_detail": "`class Group (G : Type u) extends DivInvMonoid G where ...`, read directly at line 1192.",
+        "equality_regime": "eq",
+        "equality_regime_note": "Ordinary Eq-based typeclass; Mathlib's classical instances (Real, Complex) are already Quot.sound quotients where propositional Eq is the intended equivalence, so no second spine was ever needed there."
+      },
+      "grade": "same-statement",
+      "reason": "structures_setoid.rs's own module doc records that app2(k, equiv, lhs, rhs) beta-reduces to Eq carrier lhs rhs exactly when equiv := @Eq carrier, so every AlgS.Group law is, up to that one substitution, the identical string to the matching Alg.Group / classical Group law.",
+      "witness": [
+        {
+          "axeyum_theorem": "AlgS.add_left_cancel",
+          "axeyum_location": "crates/axeyum-lean-kernel/src/nat_prelude/structures_setoid.rs:2474",
+          "axeyum_verification": "verified-in-kernel-projection",
+          "mathlib_theorem": "mul_left_cancel",
+          "mathlib_location": "Mathlib/Algebra/Group/Defs.lean:125",
+          "note": "Proved once, generically, over an arbitrary AlgS.Group; specializes to the additive-cancellation law exactly Mathlib's mul_left_cancel states, modulo the equiv:=Eq substitution and the additive/multiplicative naming convention."
+        },
+        {
+          "axeyum_theorem": "AlgS.invInv",
+          "axeyum_location": "crates/axeyum-lean-kernel/src/nat_prelude/structures_setoid.rs:2656",
+          "axeyum_verification": "verified-in-kernel-projection",
+          "mathlib_theorem": "inv_inv",
+          "mathlib_location": "Mathlib/Algebra/Group/Defs.lean:893",
+          "note": "a^-1^-1 = a in both, again modulo the equiv-vs-Eq substitution."
+        }
+      ],
+      "provenance": {
+        "date": "2026-09-05",
+        "established_by": "lane lean-carrier-ledger (2026-09-05), docs/math-department/14-lean-lang.md Next Ten item 4",
+        "sources": [
+          "docs/math-department/14-lean-lang.md",
+          "artifacts/autogenesis/kernel-dependency-projection-v1.json",
+          "scripts/provision-lean-import-toolchain.sh --verify (mathlib4 c5ea00351c28e24afc9f0f84379aa41082b1188f, Lean 4.30.0)",
+          "docs/research/09-decisions/adr-1592-*.md (AlgS.Group deliverable, cited by structures_setoid.rs)"
+        ]
+      }
+    },
+    {
+      "schema_version": 1,
+      "kind": "axeyum-carrier-correspondence",
+      "id": "CC:algs-commring-commring",
+      "title": "AlgS.CommRing, the setoid commutative-ring record, against Mathlib's Eq-based CommRing class",
+      "axeyum": {
+        "carrier": "AlgS.CommRing",
+        "source_location": "crates/axeyum-lean-kernel/src/nat_prelude/structures_setoid.rs:863",
+        "verification": "verified-in-kernel-projection",
+        "verification_detail": "`AlgS.CommRing`, `.add`, `.addAssoc`, `.addComm`, `.addCongr`, `.mulComm`, `.distribL`, `.distribR` all confirmed present (29 AlgS.CommRing.* ids); line 863 interns the name inside `intern_structures_s_names`.",
+        "equality_regime": "setoid",
+        "equality_regime_note": "Same equiv/congruence apparatus as AlgS.Group, at the ring's two operations."
+      },
+      "mathlib": {
+        "counterpart": "CommRing",
+        "module_path": "Mathlib.Algebra.Ring.Defs",
+        "source_location": "Mathlib/Algebra/Ring/Defs.lean:413",
+        "verification": "verified-in-pinned-checkout",
+        "verification_detail": "`class CommRing (α : Type u) extends Ring α, CommMonoid α`, read directly at line 413; `Ring` itself at line 147.",
+        "equality_regime": "eq",
+        "equality_regime_note": "Ordinary Eq-based typeclass hierarchy."
+      },
+      "grade": "same-statement",
+      "reason": "The same beta-reduction argument as AlgS.Group applies pointwise to each ring law, but one asymmetry is worth recording: AlgS.mul_zero is a PROVED theorem here while Mathlib's mul_zero is an ASSUMED field of the more primitive MulZeroClass that CommRing inherits, so the two sides differ in what is proved versus what is axiomatized even though the proposition itself is identical.",
+      "witness": [
+        {
+          "axeyum_theorem": "AlgS.mul_zero",
+          "axeyum_location": "crates/axeyum-lean-kernel/src/nat_prelude/structures_setoid.rs:2197",
+          "axeyum_verification": "verified-in-kernel-projection",
+          "mathlib_theorem": "mul_zero",
+          "mathlib_location": "Mathlib/Algebra/GroupWithZero/Defs.lean:41",
+          "note": "Same proposition (a*0 = 0), different epistemic status: AlgS.mul_zero is derived from the ring axioms without using the multiplicative identity (structures_setoid.rs:2082-2085 doc); Mathlib's mul_zero is a primitive FIELD of MulZeroClass, assumed rather than derived at that layer even though it is classically derivable higher up."
+        },
+        {
+          "axeyum_theorem": "AlgS.mul_neg_one",
+          "axeyum_location": "crates/axeyum-lean-kernel/src/nat_prelude/structures_setoid.rs:2363",
+          "axeyum_verification": "verified-in-kernel-projection",
+          "mathlib_theorem": "mul_comm",
+          "mathlib_location": "Mathlib/Algebra/Group/Defs.lean:258",
+          "note": "AlgS.mul_neg_one (a * -1 = -a) is downstream of mul_zero and commutativity; cited alongside mul_comm as the second generic ring law this spine proves once rather than per-instance."
+        }
+      ],
+      "provenance": {
+        "date": "2026-09-05",
+        "established_by": "lane lean-carrier-ledger (2026-09-05), docs/math-department/14-lean-lang.md Next Ten item 4",
+        "sources": [
+          "docs/math-department/14-lean-lang.md",
+          "artifacts/autogenesis/kernel-dependency-projection-v1.json",
+          "scripts/provision-lean-import-toolchain.sh --verify (mathlib4 c5ea00351c28e24afc9f0f84379aa41082b1188f, Lean 4.30.0)"
+        ]
+      }
+    },
+    {
+      "schema_version": 1,
+      "kind": "axeyum-carrier-correspondence",
+      "id": "CC:algs-field-field",
+      "title": "Alg.Field (the Eq-based spine; AlgS.Field is not yet built) against Mathlib's Field class",
+      "axeyum": {
+        "carrier": "Alg.Field (AlgS.Field, named in ADR-1627 / roadmap W3-2 as Rat.fieldS's target type, is UNBUILT)",
+        "source_location": "crates/axeyum-lean-kernel/src/nat_prelude/structures.rs:1550",
+        "verification": "verified-in-kernel-projection",
+        "verification_detail": "Confirmed: `AlgS.Field*` has zero matches in the kernel projection, and structures_setoid.rs's own module doc (lines 3-4) lists exactly nine AlgS.* records ending at CommRing -- Field is not among them. `Rat.fieldS` (rat_prelude.rs:73, :3181 doc comments citing ADR-1627/W3-2 as future work) is likewise absent from the projection. The existing Eq-based `Alg.Field` (structures.rs:1550, declared via declare_structures_all at :1575) IS present, along with `Alg.Field.mulInv`, `Alg.Field.distribL`, `Alg.Field.distribR`, and the Rat instantiation `Rat.IsField`/`Rat.rat_isField` (rat_prelude.rs:3254-3255).",
+        "equality_regime": "eq",
+        "equality_regime_note": "Alg.Field's laws are stated over literal Eq (the older, pre-ADR-1588 spine), which matches carriers with Leibniz equality such as Rat -- the same reason no setoid twin was needed until CReal wanted a Field structure."
+      },
+      "mathlib": {
+        "counterpart": "Field",
+        "module_path": "Mathlib.Algebra.Field.Defs",
+        "source_location": "Mathlib/Algebra/Field/Defs.lean:180",
+        "verification": "verified-in-pinned-checkout",
+        "verification_detail": "`class Field (K : Type u) extends CommRing K, DivisionRing K`, read directly at line 180.",
+        "equality_regime": "eq",
+        "equality_regime_note": "Ordinary Eq-based typeclass, same regime as Alg.Field."
+      },
+      "grade": "same-statement",
+      "reason": "Alg.Field's laws are Eq-based like Mathlib's Field, so the same beta-erasure argument as AlgS.Group/CommRing applies directly with no equiv substitution needed; but the row's namesake AlgS.Field is unbuilt, which is itself the finding reviewer 04's stake (docs/math-department/14-lean-lang.md chair 04) asked this ledger to make precise rather than leave as an ADR footnote.",
+      "witness": [
+        {
+          "axeyum_theorem": "Alg.Field.mulInv",
+          "axeyum_location": "crates/axeyum-lean-kernel/src/nat_prelude/structures.rs:1389",
+          "axeyum_verification": "verified-in-kernel-projection",
+          "mathlib_theorem": "mul_inv_cancel₀",
+          "mathlib_location": "Mathlib/Algebra/GroupWithZero/Defs.lean:239",
+          "note": "Alg.Field.mulInv is conditional (structures.rs:1389, `cond_inv_field`) matching Mathlib's hypothesis-carrying mul_inv_cancel₀ (h : a ≠ 0); both are bare-inequality hypotheses, not witnessed apartness data, so this pair is same-statement rather than constructively-stronger."
+        },
+        {
+          "axeyum_theorem": "Rat.rat_isField",
+          "axeyum_location": "crates/axeyum-lean-kernel/src/rat_prelude.rs:3255",
+          "axeyum_verification": "verified-in-kernel-projection",
+          "mathlib_theorem": null,
+          "mathlib_location": null,
+          "note": "One-sided: this is the Rat instantiation of Alg.Field, included to show the concrete route from the abstract spine to a landed Field-shaped instance. No single Mathlib lemma names 'Field ℚ instantiated' since it is a type-class instance rather than a theorem there."
+        }
+      ],
+      "provenance": {
+        "date": "2026-09-05",
+        "established_by": "lane lean-carrier-ledger (2026-09-05), docs/math-department/14-lean-lang.md Next Ten item 4",
+        "sources": [
+          "docs/math-department/14-lean-lang.md",
+          "artifacts/autogenesis/kernel-dependency-projection-v1.json",
+          "scripts/provision-lean-import-toolchain.sh --verify (mathlib4 c5ea00351c28e24afc9f0f84379aa41082b1188f, Lean 4.30.0)",
+          "crates/axeyum-lean-kernel/src/rat_prelude.rs (doc comments at lines 73, 3181 naming ADR-1627/W3-2)"
+        ]
+      },
+      "notes": "The brief that commissioned this ledger named the row 'AlgS.Field ↔ Field'. AlgS.Field does not exist as a kernel declaration (confirmed absent from the projection and from structures_setoid.rs's own nine-record list). Recording this honestly, per the brief's own discipline ('mark anything you could not verify unverified rather than guessing'), rather than inventing a grade for an object that is not built."
+    },
+    {
+      "schema_version": 1,
+      "kind": "axeyum-carrier-correspondence",
+      "id": "CC:cpoint-euclideanspace",
+      "title": "CPoint, a pair of CReals with witnessed non-degeneracy, against Mathlib's EuclideanSpace ​Pi-type",
+      "axeyum": {
+        "carrier": "CPoint",
+        "source_location": "crates/axeyum-lean-kernel/src/creal_point.rs:1599",
+        "verification": "verified-in-kernel-projection",
+        "verification_detail": "`CPoint`, `CPoint.Equiv`, `CPoint.Collinear`, `CPoint.NonCollinear`, `CPoint.Isometry` and 143 further ids confirmed present (148 CPoint.* ids); line 1599 interns `CPoint.Equiv`.",
+        "equality_regime": "setoid",
+        "equality_regime_note": "CPoint.Equiv is componentwise CReal.Equiv over the pair -- a bespoke coordinatized-plane structure, not a Pi-type."
+      },
+      "mathlib": {
+        "counterpart": "EuclideanSpace ℝ (Fin 2)",
+        "module_path": "Mathlib.Analysis.InnerProductSpace.PiL2",
+        "source_location": "Mathlib/Analysis/InnerProductSpace/PiL2.lean:110",
+        "verification": "verified-in-pinned-checkout",
+        "verification_detail": "`abbrev EuclideanSpace (𝕜 : Type*) (n : Type*) : Type _ := PiLp 2 fun _ : n => 𝕜`, read directly at line 110.",
+        "equality_regime": "eq",
+        "equality_regime_note": "A PiLp-wrapped Fin 2 -> ℝ function type over classical Real; equality is ordinary function extensionality, not a dedicated point-equality relation."
+      },
+      "grade": "different-object",
+      "reason": "The same two-asymmetries pattern ADR-1030 used for EVT: our Ceva theorem assumes strictly more (a witnessed PosBound non-degeneracy rather than a bare inequality) while Mathlib's is stated far more generally (arbitrary field, arbitrary-dimension affine space, indexed beyond 3 points), so neither dominates and the statements are not comparable on one axis.",
+      "witness": [
+        {
+          "axeyum_theorem": "CPoint.ceva_concurrent_of_ratio_product",
+          "axeyum_location": "crates/axeyum-lean-kernel/src/creal_point.rs:1705",
+          "axeyum_verification": "verified-in-kernel-projection",
+          "mathlib_theorem": "prod_div_one_sub_eq_one_of_mem_line_point_lineMap",
+          "mathlib_location": "Mathlib/LinearAlgebra/AffineSpace/Ceva.lean:204",
+          "note": "Ours is division-free and its non-degeneracy hypothesis is data (PosBound (mul D D) k), not a bare inequality; theirs is over an arbitrary Field k and AffineSpace, with a bare r i ≠ 0 hypothesis and no witness carried. Stronger in one respect, far more general in another."
+        },
+        {
+          "axeyum_theorem": "CPoint.menelaus_collinear_of_ratio_product",
+          "axeyum_location": "crates/axeyum-lean-kernel/src/creal_point.rs:1128",
+          "axeyum_verification": "verified-in-kernel-projection",
+          "mathlib_theorem": null,
+          "mathlib_location": null,
+          "note": "Clean negative, confirmed by grep across the full pinned Mathlib tree for 'menelaus' and 'varignon' (case-insensitive): zero matches for either, against a 53-match positive control on 'AffineSubspace' in the same tree. Menelaus and Varignon have no Mathlib counterpart at this pin, unlike Ceva."
+        }
+      ],
+      "provenance": {
+        "date": "2026-09-05",
+        "established_by": "lane lean-carrier-ledger (2026-09-05), docs/math-department/14-lean-lang.md Next Ten item 4",
+        "sources": [
+          "docs/math-department/14-lean-lang.md",
+          "artifacts/autogenesis/kernel-dependency-projection-v1.json",
+          "scripts/provision-lean-import-toolchain.sh --verify (mathlib4 c5ea00351c28e24afc9f0f84379aa41082b1188f, Lean 4.30.0)"
+        ]
+      }
+    },
+    {
+      "schema_version": 1,
+      "kind": "axeyum-carrier-correspondence",
+      "id": "CC:nat-graph-simplegraph",
+      "title": "Nat.Graph, a computed adjacency-with-forced-symmetry pair, against Mathlib's Prop-field SimpleGraph",
+      "axeyum": {
+        "carrier": "Nat.Graph",
+        "source_location": "crates/axeyum-lean-kernel/src/nat_prelude.rs:7411",
+        "verification": "verified-in-kernel-projection",
+        "verification_detail": "`Nat.Graph`, `Nat.Graph.HasClique3`, `Nat.Graph.Arrows33`, `Nat.Graph.IsRamseyNumber33`, `Nat.Graph.adjB` and 35 further ids confirmed present (40 Nat.Graph.* ids); nat_prelude.rs:7411 interns the root name; the three Ramsey names are interned at nat_prelude.rs:8367/8369/8370.",
+        "equality_regime": "eq",
+        "equality_regime_note": "Literal Eq on `(Nat -> Nat -> Bool, Nat) `; symmetry and irreflexivity are FORCED inside `adjB`'s own computation rather than assumed as side conditions."
+      },
+      "mathlib": {
+        "counterpart": "SimpleGraph",
+        "module_path": "Mathlib.Combinatorics.SimpleGraph.Basic",
+        "source_location": "Mathlib/Combinatorics/SimpleGraph/Basic.lean:92",
+        "verification": "verified-in-pinned-checkout",
+        "verification_detail": "`structure SimpleGraph (V : Type u) where Adj : V -> V -> Prop; symm : Symmetric Adj := by aesop_graph; loopless : Std.Irrefl Adj := by aesop_graph`, read directly at lines 92-95.",
+        "equality_regime": "eq",
+        "equality_regime_note": "Symmetry/irreflexivity are Prop-valued FIELDS with default tactic proofs, assumed per instance rather than computed."
+      },
+      "grade": "different-object",
+      "reason": "Adjacency's own well-formedness is computed and forced by construction here, versus assumed as a per-instance Prop field there, and the one instance this repository names beyond that structural gap -- the 3-3 Ramsey number -- has no Mathlib formalization to compare against at all.",
+      "witness": [
+        {
+          "axeyum_theorem": "Nat.Graph.HasClique3",
+          "axeyum_location": "crates/axeyum-lean-kernel/src/nat_prelude.rs:8367",
+          "axeyum_verification": "verified-in-kernel-projection",
+          "mathlib_theorem": "SimpleGraph.Adj",
+          "mathlib_location": "Mathlib/Combinatorics/SimpleGraph/Basic.lean:93",
+          "note": "Not the same object: HasClique3 g := exists a b c, adjB g a b and adjB g b c and adjB g a c, over the computed adjB; Adj is Mathlib's raw relation field, with no forced structural symmetry."
+        },
+        {
+          "axeyum_theorem": "Nat.Graph.IsRamseyNumber33",
+          "axeyum_location": "crates/axeyum-lean-kernel/src/nat_prelude.rs:8370",
+          "axeyum_verification": "verified-in-kernel-projection",
+          "mathlib_theorem": null,
+          "mathlib_location": null,
+          "note": "Clean negative: `grep -rli ramsey Mathlib/Combinatorics/` returns only HalesJewett.lean and Hindman.lean, and in both files 'Ramsey theory' is a descriptive keyword in the module docstring only -- neither states or proves a finite Ramsey number (e.g. R(3,3)=6). No Mathlib counterpart at this pin."
+        }
+      ],
+      "provenance": {
+        "date": "2026-09-05",
+        "established_by": "lane lean-carrier-ledger (2026-09-05), docs/math-department/14-lean-lang.md Next Ten item 4",
+        "sources": [
+          "docs/math-department/14-lean-lang.md",
+          "artifacts/autogenesis/kernel-dependency-projection-v1.json",
+          "scripts/provision-lean-import-toolchain.sh --verify (mathlib4 c5ea00351c28e24afc9f0f84379aa41082b1188f, Lean 4.30.0)"
+        ]
+      }
+    },
+    {
+      "schema_version": 1,
+      "kind": "axeyum-carrier-correspondence",
+      "id": "CC:complex-complex",
+      "title": "Complex over CReal pairs with a proved order-obstruction, against Mathlib's classical Complex struct",
+      "axeyum": {
+        "carrier": "Complex",
+        "source_location": "crates/axeyum-lean-kernel/src/complex.rs:1453",
+        "verification": "verified-in-kernel-projection",
+        "verification_detail": "`Complex`, `Complex.Equiv`, `Complex.Apart`, `Complex.add_comm`, `Complex.no_compatible_order` and 145 further ids confirmed present (150 Complex.* ids); line 1453 interns `Complex.Equiv`, line 1478 interns `add_comm`, line 1514 interns `no_compatible_order`.",
+        "equality_regime": "setoid",
+        "equality_regime_note": "Complex.Equiv is a defined relation over pairs of CReal, built with explicitly NO order -- and that absence is a proved theorem (Complex.no_compatible_order), not a scoping choice."
+      },
+      "mathlib": {
+        "counterpart": "Complex",
+        "module_path": "Mathlib.Data.Complex.Basic",
+        "source_location": "Mathlib/Data/Complex/Basic.lean:34",
+        "verification": "verified-in-pinned-checkout",
+        "verification_detail": "`structure Complex where re : ℝ; im : ℝ`, at lines 34-36; `instance : CommRing ℂ` at line 378.",
+        "equality_regime": "eq",
+        "equality_regime_note": "A plain structure over two Reals (each individually quotient-eq internally); Complex's own equality is ordinary Eq via component equality, and CommRing ℂ is an instance whose laws come from the abstract hierarchy rather than being restated."
+      },
+      "grade": "constructively-stronger",
+      "reason": "Complex.no_compatible_order derives False from seven ordered-ring axioms and the witness I constructively (no classical double-negation elimination), a genuine additional result with no Mathlib analogue, which simply never registers a LinearOrder ℂ instance rather than proving one is impossible.",
+      "witness": [
+        {
+          "axeyum_theorem": "Complex.no_compatible_order",
+          "axeyum_location": "crates/axeyum-lean-kernel/src/complex.rs:1514",
+          "axeyum_verification": "verified-in-kernel-projection",
+          "mathlib_theorem": null,
+          "mathlib_location": null,
+          "note": "Grep for 'LinearOrder ℂ' and related order identifiers near Complex in the pinned checkout found no explicit non-orderability theorem -- Mathlib's absence of a LinearOrder ℂ instance is an omission, not a proof. This asymmetry (proved impossibility vs. silent omission) is the row's strongest evidence."
+        },
+        {
+          "axeyum_theorem": "Complex.add_comm",
+          "axeyum_location": "crates/axeyum-lean-kernel/src/complex.rs:1478",
+          "axeyum_verification": "verified-in-kernel-projection",
+          "mathlib_theorem": "add_comm",
+          "mathlib_location": "Mathlib/Algebra/Group/Defs.lean:258",
+          "note": "Same ring law, but ours is proved directly over Complex.Equiv here while Mathlib's CommRing ℂ instance inherits it for free from the abstract hierarchy -- comparable content, carrier-transport-shaped modulo the setoid-vs-Eq substitution used throughout this ledger."
+        }
+      ],
+      "provenance": {
+        "date": "2026-09-05",
+        "established_by": "lane lean-carrier-ledger (2026-09-05), docs/math-department/14-lean-lang.md Next Ten item 4",
+        "sources": [
+          "docs/math-department/14-lean-lang.md",
+          "artifacts/autogenesis/kernel-dependency-projection-v1.json",
+          "scripts/provision-lean-import-toolchain.sh --verify (mathlib4 c5ea00351c28e24afc9f0f84379aa41082b1188f, Lean 4.30.0)"
+        ]
+      }
+    },
+    {
+      "schema_version": 1,
+      "kind": "axeyum-carrier-correspondence",
+      "id": "CC:rat-matrix-matrix",
+      "title": "Fixed-size Rat.det2/det3 plus symbolic-dimension Rat.rank, against Mathlib's general-n Matrix",
+      "axeyum": {
+        "carrier": "Rat matrices (four explicit Rat arguments for 2x2; nine for 3x3; Nat -> Nat -> Rat at symbolic dimension for rank)",
+        "source_location": "crates/axeyum-lean-kernel/src/rat_prelude.rs:3516",
+        "verification": "verified-in-kernel-projection",
+        "verification_detail": "`Rat.det2`, `Rat.det2_mul`, `Rat.det2_swap_rows`, `Rat.det3`, `Rat.rank`, `Rat.rankCols`, `Rat.rank_nullity` all confirmed present; rat_prelude.rs:3516 interns det2, :3679 interns rank.",
+        "equality_regime": "eq",
+        "equality_regime_note": "Literal Eq on Rat (decidable, Leibniz equality), so no setoid apparatus is needed here at all."
+      },
+      "mathlib": {
+        "counterpart": "Matrix",
+        "module_path": "Mathlib.LinearAlgebra.Matrix.Defs",
+        "source_location": "Mathlib/LinearAlgebra/Matrix/Defs.lean:53",
+        "verification": "verified-in-pinned-checkout",
+        "verification_detail": "`def Matrix (m : Type u) (n : Type u') (α : Type v) : Type max u u' v := m -> n -> α`, read directly at line 53. `Matrix.det` at Mathlib/LinearAlgebra/Matrix/Determinant/Basic.lean:59 (Leibniz/alternating-multilinear-map formula, general n). `Matrix.rank` at Mathlib/LinearAlgebra/Matrix/Rank.lean:122.",
+        "equality_regime": "eq",
+        "equality_regime_note": "A plain function type m -> n -> alpha; Eq is function extensionality."
+      },
+      "grade": "different-object",
+      "reason": "det2/det3 are fixed-size (2 and 3 explicit arguments) against Mathlib's Leibniz-formula determinant at arbitrary n, which ADR-1030 already marks as not-comparable rather than a strength difference; Rat.rank is symbolic-dimension and closer to comparable, but the carrier as a whole (four/nine explicit scalars vs. a general function type) is not the same object.",
+      "witness": [
+        {
+          "axeyum_theorem": "Rat.det2_mul",
+          "axeyum_location": "crates/axeyum-lean-kernel/src/rat_prelude.rs:3521",
+          "axeyum_verification": "verified-in-kernel-projection",
+          "mathlib_theorem": "Matrix.det",
+          "mathlib_location": "Mathlib/LinearAlgebra/Matrix/Determinant/Basic.lean:59",
+          "note": "Not comparable per ADR-1030's own linear-algebra section: fixed 2x2 versus a general-n alternating multilinear form. Recorded here rather than omitted, since 'not comparable' is itself the finding for this witness."
+        },
+        {
+          "axeyum_theorem": "Rat.rank",
+          "axeyum_location": "crates/axeyum-lean-kernel/src/rat_prelude.rs:3679",
+          "axeyum_verification": "verified-in-kernel-projection",
+          "mathlib_theorem": "Matrix.rank",
+          "mathlib_location": "Mathlib/LinearAlgebra/Matrix/Rank.lean:122",
+          "note": "CORRECTION to ADR-1030 (2026-08-31), which measured Rat matrices as having no rank (0 matches). Rat.rank now exists at symbolic dimension (Nat -> Nat -> Rat) over the echelon/pivot machinery in rat_prelude/nullity.rs, and is a genuinely comparable pair to Matrix.rank -- unlike det2/det3, this specific pair is not fixed-size-vs-general-n. A future lane grading this pair alone, rather than the carrier as a whole, may find a different grade than this row's different-object."
+        }
+      ],
+      "provenance": {
+        "date": "2026-09-05",
+        "established_by": "lane lean-carrier-ledger (2026-09-05), docs/math-department/14-lean-lang.md Next Ten item 4",
+        "sources": [
+          "docs/math-department/14-lean-lang.md",
+          "artifacts/autogenesis/kernel-dependency-projection-v1.json",
+          "scripts/provision-lean-import-toolchain.sh --verify (mathlib4 c5ea00351c28e24afc9f0f84379aa41082b1188f, Lean 4.30.0)",
+          "docs/research/09-decisions/adr-1030-evt-is-conceded-number-theory-has-a-row-two-and-row-three-is-unciteable.md"
+        ]
+      }
+    },
+    {
+      "schema_version": 1,
+      "kind": "axeyum-carrier-correspondence",
+      "id": "CC:rat-probability-pmf",
+      "title": "The Rat-valued IsDistribution/sumRange shelf against Mathlib's PMF and its Binomial instance",
+      "axeyum": {
+        "carrier": "Rat.IsDistribution / Rat.sumRange (the finite-probability shelf over Rat.OrderedRing)",
+        "source_location": "crates/axeyum-lean-kernel/src/rat_prelude.rs:3468",
+        "verification": "verified-in-kernel-projection",
+        "verification_detail": "`Rat.IsDistribution` and `Rat.sumRange` confirmed present; rat_prelude.rs:3468 and :3406 intern them. The newer `Rat.binomial_expectation`/`Rat.binomial_variance`/`Rat.binomial_chebyshev` (rat_prelude/binomial_rat.rs:69-71, cited by formal.kernel_theorem in artifacts/facts/F-rat-binomial-expectation.json, F-rat-binomial-variance.json, F-rat-binomial-chebyshev.json, F-rat-fourth-moment-inequality.json) are confirmed present in SOURCE but absent from the current kernel-dependency-projection-v1.json -- they landed after that projection's last regeneration.",
+        "equality_regime": "eq",
+        "equality_regime_note": "Literal Eq on Rat throughout; no measure-theoretic sigma-algebra apparatus exists here at all."
+      },
+      "mathlib": {
+        "counterpart": "PMF",
+        "module_path": "Mathlib.Probability.ProbabilityMassFunction.Basic",
+        "source_location": "Mathlib/Probability/ProbabilityMassFunction/Basic.lean:46",
+        "verification": "verified-in-pinned-checkout",
+        "verification_detail": "`def PMF.{u} (α : Type u) : Type u := ...`, read directly at line 46. A binomial instance exists at Mathlib/Probability/ProbabilityMassFunction/Binomial.lean:29 (`def binomial (p : ℝ≥0) (h : p ≤ 1) (n : ℕ) : PMF (Fin (n+1))`) and again as a Measure at Mathlib/Probability/Distributions/Binomial.lean:46.",
+        "equality_regime": "other",
+        "equality_regime_note": "PMF is (per its definition) a subtype-style object over NNReal-valued functions constrained to sum to 1; equality is the classical measure-theoretic apparatus's own Eq, general-type rather than Rat-specific."
+      },
+      "grade": "different-object",
+      "reason": "Mathlib's PMF is measure-theoretic, general-type, and NNReal-valued with sigma-algebra machinery available; this shelf is a raw Rat-valued sum-to-one predicate with no measure apparatus, so the two are not the same kind of object even where both formalize a binomial distribution.",
+      "witness": [
+        {
+          "axeyum_theorem": "Rat.binomial_expectation",
+          "axeyum_location": "crates/axeyum-lean-kernel/src/rat_prelude/binomial_rat.rs:69",
+          "axeyum_verification": "verified-in-source-only",
+          "mathlib_theorem": "PMF.binomial",
+          "mathlib_location": "Mathlib/Probability/ProbabilityMassFunction/Binomial.lean:29",
+          "note": "Both formalize the binomial distribution's core object; ours computes exact rational moments (expectation, variance, a Chebyshev bound, a fourth-moment inequality) directly over Rat, theirs constructs the PMF itself over NNReal without, at this pin, a located moment-computation lemma to compare against directly."
+        }
+      ],
+      "provenance": {
+        "date": "2026-09-05",
+        "established_by": "lane lean-carrier-ledger (2026-09-05), docs/math-department/14-lean-lang.md Next Ten item 4",
+        "sources": [
+          "docs/math-department/14-lean-lang.md",
+          "artifacts/autogenesis/kernel-dependency-projection-v1.json",
+          "scripts/provision-lean-import-toolchain.sh --verify (mathlib4 c5ea00351c28e24afc9f0f84379aa41082b1188f, Lean 4.30.0)",
+          "artifacts/facts/F-rat-binomial-expectation.json",
+          "artifacts/facts/F-rat-binomial-variance.json",
+          "artifacts/facts/F-rat-binomial-chebyshev.json",
+          "artifacts/facts/F-rat-fourth-moment-inequality.json"
+        ]
+      }
+    },
+    {
+      "schema_version": 1,
+      "kind": "axeyum-carrier-correspondence",
+      "id": "CC:metric-metricspace",
+      "title": "The generic equiv-parametrized Metric record, against Mathlib's topology/uniformity-bundled PseudoMetricSpace",
+      "axeyum": {
+        "carrier": "Metric.* (instantiated at CReal and CPoint)",
+        "source_location": "crates/axeyum-lean-kernel/src/metric.rs:351",
+        "verification": "verified-in-kernel-projection",
+        "verification_detail": "`Metric`, `Metric.CReal.distComm`, `Metric.CPoint.distComm`, `Metric.CPoint.distTriangle`, `Metric.CPoint.distCongr` confirmed present (97 Metric.* ids); metric.rs:351 and :370 intern the distComm/distTriangle field-name suffixes; :581-586 and :604 build the CReal/CPoint instances.",
+        "equality_regime": "setoid",
+        "equality_regime_note": "A generic AlgS-shaped record (ADR-1588) parametrized by an explicit equiv, with identity-of-indiscernibles split into two separate fields (distSelf, distEquiv) plus a distCongr setoid-compatibility field absent from any Eq-based spine."
+      },
+      "mathlib": {
+        "counterpart": "PseudoMetricSpace",
+        "module_path": "Mathlib.Topology.MetricSpace.Pseudo.Defs",
+        "source_location": "Mathlib/Topology/MetricSpace/Pseudo/Defs.lean:140",
+        "verification": "verified-in-pinned-checkout",
+        "verification_detail": "`class PseudoMetricSpace (α : Type u) : Type u extends Dist α where dist_self ...; dist_comm ...; dist_triangle ...; edist ...; uniformity_dist ...; toBornology ...`, read directly at lines 140-152. `MetricSpace` itself extends this at Mathlib/Topology/MetricSpace/Defs.lean:69.",
+        "equality_regime": "eq",
+        "equality_regime_note": "Ordinary Eq-based typeclass; dist_self is one field (dist x x = 0), not split into a separate equivalence direction."
+      },
+      "grade": "different-object",
+      "reason": "Mathlib's class bundles topology, uniformity and bornology data this record does not build at all, and identity-of-indiscernibles is one field there against two plus a congruence field here, so the two records differ in field count and purpose, not merely in strength.",
+      "witness": [
+        {
+          "axeyum_theorem": "Metric.CPoint.distComm",
+          "axeyum_location": "crates/axeyum-lean-kernel/src/metric.rs:604",
+          "axeyum_verification": "verified-in-kernel-projection",
+          "mathlib_theorem": "dist_comm",
+          "mathlib_location": "Mathlib/Topology/MetricSpace/Pseudo/Defs.lean:142",
+          "note": "Same law (symmetry of distance); ours is proved for a bespoke equiv-parametrized record instantiated at CPoint, theirs is inherited from the full topology-bundled typeclass."
+        },
+        {
+          "axeyum_theorem": "Metric.CPoint.distTriangle",
+          "axeyum_location": "crates/axeyum-lean-kernel/src/metric.rs:370",
+          "axeyum_verification": "verified-in-kernel-projection",
+          "mathlib_theorem": "dist_triangle",
+          "mathlib_location": "Mathlib/Topology/MetricSpace/Pseudo/Defs.lean:143",
+          "note": "Same law (triangle inequality); recorded as a second comparable field alongside distComm, both inside the row graded different-object at the carrier level."
+        }
+      ],
+      "provenance": {
+        "date": "2026-09-05",
+        "established_by": "lane lean-carrier-ledger (2026-09-05), docs/math-department/14-lean-lang.md Next Ten item 4",
+        "sources": [
+          "docs/math-department/14-lean-lang.md",
+          "artifacts/autogenesis/kernel-dependency-projection-v1.json",
+          "scripts/provision-lean-import-toolchain.sh --verify (mathlib4 c5ea00351c28e24afc9f0f84379aa41082b1188f, Lean 4.30.0)"
+        ]
+      },
+      "notes": "COULD NOT VERIFY: whether Metric.CReal/CPoint's distSelf/distEquiv split has been checked to be logically equivalent to Mathlib's single dist_self field, versus merely analogous in shape -- flagged rather than asserted."
+    },
+    {
+      "schema_version": 1,
+      "kind": "axeyum-carrier-correspondence",
+      "id": "CC:intspace-lebesgue-integral",
+      "title": "IntSpace, a Daniell-style integral-first integration space, against Mathlib's measure-first Bochner integral",
+      "axeyum": {
+        "carrier": "IntSpace",
+        "source_location": "crates/axeyum-lean-kernel/src/intspace.rs:768",
+        "verification": "verified-in-kernel-projection",
+        "verification_detail": "`IntSpace`, `IntSpace.Bundled`, `IntSpace.CReal.integral_congr`, `IntSpace.CReal.integral_nonneg`, `IntSpace.MonotoneConvergence`, `IntSpace.Integrable` confirmed present (98 IntSpace.* ids); intspace.rs:768 interns integral_congr, :772 interns integral_nonneg.",
+        "equality_regime": "setoid",
+        "equality_regime_note": "CReal-valued throughout, so equality of integral values is CReal.Equiv, not literal Eq; per intspace.rs's module doc (ADR-1612, roadmap W3-1) the integral is PRIMITIVE and measure is derived from it -- the reverse construction order from Mathlib."
+      },
+      "mathlib": {
+        "counterpart": "the Bochner integral (MeasureTheory.integral)",
+        "module_path": "Mathlib.MeasureTheory.Integral.Bochner.Basic",
+        "source_location": "Mathlib/MeasureTheory/Integral/Bochner/Basic.lean:160",
+        "verification": "verified-in-pinned-checkout",
+        "verification_detail": "`irreducible_def integral {_ : MeasurableSpace α} (μ : Measure α) (f : α -> G) : G := ...`, read directly at line 160; `integral_congr_ae` at line 299.",
+        "equality_regime": "none",
+        "equality_regime_note": "Not a carrier with its own equality -- a definition into the codomain G, built classically ON TOP of a pre-existing Measure; junk-valued (0) for non-integrable f."
+      },
+      "grade": "different-object",
+      "reason": "The construction order is reversed on the two sides -- Mathlib defines the integral from a pre-existing measure, while IntSpace defines the integral as primitive and derives measure from it in the classical Daniell style -- so even where both eventually integrate the same kind of function, the objects being compared are built in opposite directions with no verified equivalence between them here.",
+      "witness": [
+        {
+          "axeyum_theorem": "IntSpace.CReal.integral_congr",
+          "axeyum_location": "crates/axeyum-lean-kernel/src/intspace.rs:801",
+          "axeyum_verification": "verified-in-kernel-projection",
+          "mathlib_theorem": "integral_congr_ae",
+          "mathlib_location": "Mathlib/MeasureTheory/Integral/Bochner/Basic.lean:299",
+          "note": "Mathlib's version quantifies over an almost-everywhere equivalence relative to a measure (f =ᵃᵉ[μ] g), which presupposes the sigma-algebra/measure apparatus IntSpace does not build; ours is a direct congruence over CReal.Equiv with no exceptional null set. COULD NOT FULLY VERIFY a bare (non-ae) integral_nonneg at the general Bochner level in this pinned commit -- the located integral_nonneg is interval-integral-specific (Mathlib/MeasureTheory/Integral/IntervalIntegral/Basic.lean:1349); a future lane should re-grep before citing a general-measure nonnegativity lemma name here."
+        }
+      ],
+      "provenance": {
+        "date": "2026-09-05",
+        "established_by": "lane lean-carrier-ledger (2026-09-05), docs/math-department/14-lean-lang.md Next Ten item 4",
+        "sources": [
+          "docs/math-department/14-lean-lang.md",
+          "artifacts/autogenesis/kernel-dependency-projection-v1.json",
+          "scripts/provision-lean-import-toolchain.sh --verify (mathlib4 c5ea00351c28e24afc9f0f84379aa41082b1188f, Lean 4.30.0)"
+        ]
+      }
+    },
+    {
+      "schema_version": 1,
+      "kind": "axeyum-carrier-correspondence",
+      "id": "CC:nat-rm-computability",
+      "title": "Nat.RM, a bespoke self-referential register machine, against Mathlib's general Partrec.Code halting problem",
+      "axeyum": {
+        "carrier": "Nat.RM",
+        "source_location": "crates/axeyum-lean-kernel/src/nat_prelude.rs:7416",
+        "verification": "verified-in-kernel-projection",
+        "verification_detail": "`Nat.RM.Halts`, `Nat.RM.runFuel`, `Nat.RM.diagStep`, `Nat.RM.self_halting_not_decidable` confirmed present; nat_prelude.rs:7416 interns the root, :8670/:8672/:8673 intern runFuel/Halts/self_halting_not_decidable. Per computability.rs's own doc (ADR-1611), a 'program' IS its step function, a deliberately shallow embedding -- explicitly not Nat.Partrec.Code's sibling with a fuel-bounded universal evaluator.",
+        "equality_regime": "eq",
+        "equality_regime_note": "Literal Eq on Nat throughout; no equivalence subtlety."
+      },
+      "mathlib": {
+        "counterpart": "the general halting problem over Nat.Partrec.Code",
+        "module_path": "Mathlib.Computability.Halting",
+        "source_location": "Mathlib/Computability/Halting.lean:65",
+        "verification": "verified-in-pinned-checkout",
+        "verification_detail": "`theorem halting_problem (n) : ¬ComputablePred fun c => (eval c n).Dom`, read directly at line 65, plus Rice's theorem (rice/rice₂, lines 33-43) in the same file. Mathlib/Computability/ also carries Nat.Partrec.Code (PartrecCode.lean) and Turing machines (TuringMachine.lean, PostTuringMachine.lean, TMToPartrec.lean).",
+        "equality_regime": "none",
+        "equality_regime_note": "A theorem about a predicate over a universal code type, not itself a carrier with an equality."
+      },
+      "grade": "different-object",
+      "reason": "CORRECTS the brief that commissioned this ledger, which assumed Nat.RM has no Mathlib counterpart: Mathlib's Computability library has a general halting-problem theorem and a full Partrec.Code/Turing-machine apparatus, so a counterpart exists; the grade is different-object rather than no-counterpart because Nat.RM is a bespoke, unconnected shallow embedding refuting one self-referential diagonalization instance, not a restriction of Mathlib's universal-code formalism.",
+      "witness": [
+        {
+          "axeyum_theorem": "Nat.RM.self_halting_not_decidable",
+          "axeyum_location": "crates/axeyum-lean-kernel/src/nat_prelude.rs:8673",
+          "axeyum_verification": "verified-in-kernel-projection",
+          "mathlib_theorem": "halting_problem",
+          "mathlib_location": "Mathlib/Computability/Halting.lean:65",
+          "note": "Ours refutes one bespoke H : Nat -> Bool assumed to decide self-halting for a specific register-machine diagonalization (Halts is not shown undecidable for an enumeration of machines, only this one construction); Mathlib's is the general result over its own universal Partrec.Code type, with Rice's theorem as a landed corollary. No transport is recorded between the two computational models."
+        }
+      ],
+      "provenance": {
+        "date": "2026-09-05",
+        "established_by": "lane lean-carrier-ledger (2026-09-05), docs/math-department/14-lean-lang.md Next Ten item 4",
+        "sources": [
+          "docs/math-department/14-lean-lang.md",
+          "artifacts/autogenesis/kernel-dependency-projection-v1.json",
+          "scripts/provision-lean-import-toolchain.sh --verify (mathlib4 c5ea00351c28e24afc9f0f84379aa41082b1188f, Lean 4.30.0)"
+        ]
+      },
+      "notes": "This is the one row where following the brief's own name literally would have produced a false no-counterpart claim; recorded as a correction rather than silently substituted, per the ledger's own discipline that every cited absence must be a measured negative."
+    },
+    {
+      "schema_version": 1,
+      "kind": "axeyum-carrier-correspondence",
+      "id": "CC:ipc-logic-modeltheory",
+      "title": "Provable, a natural-deduction IPC derivation system with a soundness theorem, against Mathlib's algebraic Heyting order theory",
+      "axeyum": {
+        "carrier": "Provable (ipc_provable.rs / ipc_heyting.rs / ipc_eval.rs / ipc_soundness.rs)",
+        "source_location": "crates/axeyum-lean-kernel/src/ipc_provable.rs:175",
+        "verification": "verified-in-kernel-projection",
+        "verification_detail": "`Provable` and `ipc_excluded_middle_not_provable` confirmed present in the kernel projection; ipc_provable.rs:175 interns `Provable`, ipc_soundness.rs:1804 declares the theorem. The namespace is bare `Provable.*`, not `Ipc.*` -- a name search for `Ipc.` returns zero.",
+        "equality_regime": "none",
+        "equality_regime_note": "Provable is a derivability relation (FormulaList -> Formula -> Prop) built by an eleven-rule inductive natural-deduction definition, not a carrier with an equality of its own."
+      },
+      "mathlib": {
+        "counterpart": "HeytingAlgebra (order-theoretic; no proof-theoretic natural-deduction or soundness system exists in Mathlib for IPC)",
+        "module_path": "Mathlib.Order.Heyting.Basic",
+        "source_location": "Mathlib/Order/Heyting/Basic.lean:154",
+        "verification": "verified-in-pinned-checkout",
+        "verification_detail": "`class HeytingAlgebra (α : Type*) extends GeneralizedHeytingAlgebra α, OrderBot α, Compl α where`, read directly at line 154. Mathlib.ModelTheory.* (Basic.lean, Skolem.lean, Ultraproducts.lean) is general first-order model theory, not IPC-specific. Mathlib.Tactic.ITauto is a decision procedure for intuitionistic tautologies, not a formalized soundness/completeness theorem. Case-insensitive search for 'intuitionistic' across the whole tree returns only the Heyting-algebra files and ITauto.lean -- confirmed clean negative for a natural-deduction IPC system with a proof-theoretic soundness theorem.",
+        "equality_regime": "eq",
+        "equality_regime_note": "An ordinary Eq-based algebraic typeclass, purely semantic/order-theoretic."
+      },
+      "grade": "different-object",
+      "reason": "Ours is proof-theoretic -- a derivation system plus a soundness theorem connecting it to a semantics -- and Mathlib's is purely algebraic (an order-theoretic class) plus an unrelated decision tactic, so the two formalize different KINDS of object even though both are commonly called 'intuitionistic logic'.",
+      "witness": [
+        {
+          "axeyum_theorem": "ipc_excluded_middle_not_provable",
+          "axeyum_location": "crates/axeyum-lean-kernel/src/ipc_soundness.rs:1804",
+          "axeyum_verification": "verified-in-kernel-projection",
+          "mathlib_theorem": null,
+          "mathlib_location": null,
+          "note": "Refutes Provable FormulaList.nil (or (var 0) (imp (var 0) bot)) via the soundness theorem against a 3-element Heyting-chain semantics. Mathlib's HeytingAlgebra class states the algebraic laws a Heyting algebra must satisfy but proves no comparable non-provability-of-excluded-middle result for any natural-deduction system, because it has no such system to state it about."
+        }
+      ],
+      "provenance": {
+        "date": "2026-09-05",
+        "established_by": "lane lean-carrier-ledger (2026-09-05), docs/math-department/14-lean-lang.md Next Ten item 4",
+        "sources": [
+          "docs/math-department/14-lean-lang.md",
+          "artifacts/autogenesis/kernel-dependency-projection-v1.json",
+          "scripts/provision-lean-import-toolchain.sh --verify (mathlib4 c5ea00351c28e24afc9f0f84379aa41082b1188f, Lean 4.30.0)"
+        ]
+      }
+    },
+    {
+      "schema_version": 1,
+      "kind": "axeyum-carrier-correspondence",
+      "id": "CC:nat-rado-partition-regularity",
+      "title": "Nat.Rado's partition-regularity Rado numbers have no Mathlib counterpart at the pinned commit",
+      "axeyum": {
+        "carrier": "Nat.Rado",
+        "source_location": "crates/axeyum-lean-kernel/src/nat_prelude.rs:7410",
+        "verification": "verified-in-kernel-projection",
+        "verification_detail": "`Nat.Rado.IsRadoNumber`, `Nat.Rado.IsColouring`, `Nat.Rado.Arrows`, `Nat.Rado.schur_two` confirmed present; nat_prelude.rs:7410 interns the root, :8325/:8328/:8340 intern IsColouring/IsRadoNumber/schur_two.",
+        "equality_regime": "eq",
+        "equality_regime_note": "Literal Eq on Nat-valued colouring functions and bounds, same representation style as Nat.Finset/Nat.Graph."
+      },
+      "mathlib": {
+        "counterpart": null,
+        "module_path": null,
+        "source_location": null,
+        "verification": "not-applicable",
+        "verification_detail": "grep -rli rado Mathlib/ finds exactly one non-false-positive hit: Mathlib/Combinatorics/Compactness.lean, which formalizes Rado's SELECTION lemma (an infinite-combinatorics compactness/choice-function result, Finset.rado_selection) -- a different theorem by the same mathematician, not Rado's theorem on partition regularity of linear equations that IsRadoNumber formalizes (which generalizes Schur's theorem). Every other case-insensitive 'rado' hit across Mathlib is 'Radon' (measure theory), a false positive confirmed by reading filenames. Positive control: 'schur' (case-insensitive) also returns zero hits for Schur's theorem on monochromatic solutions in Mathlib/Combinatorics/, confirming the search methodology finds real hits elsewhere (Ceva, SimpleGraph, PMF all returned in the same session) and is not silently broken.",
+        "equality_regime": "none",
+        "equality_regime_note": "No counterpart exists, so there is no equality regime on this side to compare against."
+      },
+      "grade": "no-counterpart",
+      "reason": "Rado's theorem on partition regularity of linear equations (which Nat.Rado.IsRadoNumber formalizes, generalizing Schur's theorem) is absent from the pinned Mathlib checkout; the one same-named hit (Rado's selection lemma) is a different theorem entirely, confirmed by reading its actual statement.",
+      "witness": [],
+      "provenance": {
+        "date": "2026-09-05",
+        "established_by": "lane lean-carrier-ledger (2026-09-05), docs/math-department/14-lean-lang.md Next Ten item 4",
+        "sources": [
+          "docs/math-department/14-lean-lang.md",
+          "artifacts/autogenesis/kernel-dependency-projection-v1.json",
+          "scripts/provision-lean-import-toolchain.sh --verify (mathlib4 c5ea00351c28e24afc9f0f84379aa41082b1188f, Lean 4.30.0)"
+        ]
+      },
+      "notes": "Not one of the brief's named required rows -- added because the research needed to confirm Nat.Graph's Ramsey-number gap also settled this adjacent case cleanly, and a clean no-counterpart negative is exactly the kind of row this ledger exists to make citable rather than merely asserted."
+    }
+  ]
+}
