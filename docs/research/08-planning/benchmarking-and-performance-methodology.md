@@ -77,7 +77,7 @@ as a lost lever, which is the wrong diagnosis arriving late.
 
 **What it is.** `crates/axeyum-solver/tests/progress_frontier.rs` now carries a
 `TimingBaseline` per family: a few `N` pinned deep inside that family's frontier,
-the calibrated total measured over five runs, and a ceiling. It is enforced in
+the calibrated total measured over eight sweeps, and a ceiling. It is enforced in
 the same `frontier` step that already runs the capability ratchets
 (`scripts/check.sh`, `just frontier`) and costs **no extra solving** — the pinned
 points are read out of the curve the capability sweep has already produced.
@@ -92,25 +92,36 @@ the reported time, so a loaded run and the reference machine land on one axis.
 
 **The budget.** The pinned totals per family, in reference-machine milliseconds:
 
-| family | pinned `N` | min | median | max | ceiling |
-|---|---|---:|---:|---:|---:|
-| `bv_reduction` | 12, 15, 18 | 959.9 | 1216.0 | 1509.5 | **2264.3** |
-| `lia_cuts` | 3, 19, 20 | 238.6 | 323.1 | 393.1 | **589.6** |
-| `string_bound` | 13, 25, 33 | 387.6 | 426.9 | 646.0 | **969.1** |
-| `nra_degree` | 10, 20, 30, 40 | 6.5 | 10.5 | 12.0 | **18.0** |
-| `nia_unsat` | 1, 2, 3, 4, 5 | 30.4 | 44.3 | 62.3 | **93.5** |
+| family | pinned `N` | sweeps | min | median | max | ceiling |
+|---|---|---:|---:|---:|---:|---:|
+| `bv_reduction` | 12, 15, 18 | 8 | 959.9 | 1293.1 | 1509.5 | **2264.3** |
+| `lia_cuts` | 3, 19, 20 | 8 | 238.6 | 341.9 | 393.1 | **589.6** |
+| `string_bound` | 13, 25, 33 | 8 | 387.6 | 423.5 | 646.0 | **969.1** |
+| `nra_degree` | 10, 20, 30, 40 | 8 | 6.5 | 11.2 | 15.3 | **23.0** |
+| `nia_unsat` | 1, 2, 3, 4, 5 | 7 | 30.4 | 44.3 | 77.1 | **115.6** |
 
 **The noise band was measured, not chosen.** Those min/median/max are the spread
-over 5 runs of the same binary on the dev box (`s4`, i5-12600K, `taskset -c 0-7`)
+over 8 sweeps of the same binary on the dev box (`s4`, i5-12600K, `taskset -c 0-7`)
 on 2026-09-05, at 1-minute load 18 to 38 — i.e. deliberately including heavily
 contended runs, because the residual the calibration does *not* remove is exactly
 what the band has to absorb. Measured `scale` across those runs ranged 1.10x to
-2.03x. The ceiling is `1.5x x the slowest run`, so:
+2.03x on a 16-core box, i.e. runs at 1x to 2.4x CPU oversubscription from
+other lanes. The ceiling is **1.5x the slowest of those runs**, so:
 
 - a genuine 2x slowdown on the pinned paths fires the gate,
 - a regression smaller than the band does not. That is the stated cost of a
   ratchet that must not fire on a busy shared box, and it is why the band is
   recorded in the artifact rather than only in the assert.
+
+The band is as wide as it is *because of the box it was measured on*. Nothing on
+s4 was idle during these runs; the calibrated totals still spread 1.6x to 2.4x
+between the quietest and busiest, which is the part the proxy kernel does not
+compensate. **Re-measuring the band on an idle machine would tighten every
+ceiling** and is the cheapest available improvement to this gate's resolution:
+run the sweep at least five times with `AXEYUM_PROGRESS_FRONTIER_ARTIFACT_DIR`
+pointed at a fresh directory per run, recompute `min` / `median` / `max` of
+`timing.calibrated_total_ms`, and commit the new constants and the artifacts
+together.
 
 **When it does not fire.** The check is enforced only when
 `machine.comparable` is true in `bench-results/frontier/<family>.json` — the same
@@ -122,6 +133,12 @@ the rule that exists because the same gate reported `bv_reduction = 35 / 39 / 40
 on one commit at 1-minute loads 34 / 5.4 / 1.17, and reported a REGRESSION that
 never happened (29 against a baseline of 30, four runs in five) when the sweep
 landed on the efficiency cores of a hybrid CPU.
+
+One sweep is missing from `nia_unsat`'s count: its `N=1` instance, normally
+~2 ms, once failed to return inside `budget + 1 s`. That sweep also failed the
+capability ratchet (`frontier 0` against a baseline of 40), so it is a box event
+rather than a lever, and a sweep with an undecided pin carries no usable total.
+It is excluded and counted, not rounded away.
 
 **Where it has least resolution.** `nra_degree` and `nia_unsat` have no
 mid-priced instances: every `nra_degree` point costs ~1-4 ms (the syntactic

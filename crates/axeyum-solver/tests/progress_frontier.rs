@@ -226,11 +226,21 @@ const MAX_N: u32 = 40;
 
 // ---------------------------------------------------------------------------
 // Committed TIMING baselines — see the "TIMING ratchet" section below for the
-// design and [`TimingBaseline`] for the field meanings. Measured over
-// [`TIMING_BASELINE_RUNS`] runs of this binary on `s4` (i5-12600K, `taskset -c
-// 0-7`) on 2026-09-05 at 1-minute loads 27-44, i.e. deliberately including
-// heavily contended boxes, because the residual the calibration does not remove
-// is what the band has to absorb.
+// design and [`TimingBaseline`] for the field meanings.
+//
+// Measured over EIGHT full sweeps of this binary on `s4` (i5-12600K, pinned
+// with `taskset -c 0-7`) on 2026-09-05, at 1-minute loads 17.9 to 37.8 on a
+// 16-core box — i.e. 1x to 2.4x CPU oversubscription from other lanes, and
+// `scale` from 1.10x to 2.03x. Contended runs are included ON PURPOSE: the
+// residual the calibration does NOT remove is exactly what the band has to
+// absorb, and a band measured only on a quiet box would fire every time another
+// lane started a build.
+//
+// `nia_unsat` has `runs: 7` rather than 8 because in one sweep its `N=1`
+// instance — normally ~2 ms — did not return inside `budget + 1 s` at all. That
+// sweep also failed the CAPABILITY ratchet (frontier 0 against a baseline of
+// 40), so it is a box event and not a lever, and a sweep with an undecided pin
+// carries no usable total. It is excluded and counted, not rounded away.
 // ---------------------------------------------------------------------------
 
 /// `bv_reduction`: the multiplier tower grows smoothly in `N`, so the pins sit
@@ -239,8 +249,9 @@ const MAX_N: u32 = 40;
 /// decide.
 const TIMING_BV_REDUCTION: TimingBaseline = TimingBaseline {
     pins: &[12, 15, 18],
+    runs: 8,
     min_ms: 959.9,
-    median_ms: 1216.0,
+    median_ms: 1293.1,
     max_ms: 1509.5,
     ceiling_ms: 2264.3,
 };
@@ -249,8 +260,9 @@ const TIMING_BV_REDUCTION: TimingBaseline = TimingBaseline {
 /// two stable small points plus `N=20`, the first that costs real search.
 const TIMING_LIA_CUTS: TimingBaseline = TimingBaseline {
     pins: &[3, 19, 20],
+    runs: 8,
     min_ms: 238.6,
-    median_ms: 323.1,
+    median_ms: 341.9,
     max_ms: 393.1,
     ceiling_ms: 589.6,
 };
@@ -259,8 +271,9 @@ const TIMING_LIA_CUTS: TimingBaseline = TimingBaseline {
 /// the pins straddle three bands.
 const TIMING_STRING_BOUND: TimingBaseline = TimingBaseline {
     pins: &[13, 25, 33],
+    runs: 8,
     min_ms: 387.6,
-    median_ms: 426.9,
+    median_ms: 423.5,
     max_ms: 646.0,
     ceiling_ms: 969.1,
 };
@@ -273,10 +286,11 @@ const TIMING_STRING_BOUND: TimingBaseline = TimingBaseline {
 /// two to three orders of magnitude above this ceiling.
 const TIMING_NRA_DEGREE: TimingBaseline = TimingBaseline {
     pins: &[10, 20, 30, 40],
+    runs: 8,
     min_ms: 6.5,
-    median_ms: 10.5,
-    max_ms: 12.0,
-    ceiling_ms: 18.0,
+    median_ms: 11.2,
+    max_ms: 15.3,
+    ceiling_ms: 23.0,
 };
 
 /// `nia_unsat`: the bound-aware exact int-blast is cheap only at the small end —
@@ -287,10 +301,11 @@ const TIMING_NRA_DEGREE: TimingBaseline = TimingBaseline {
 /// of the curve, not of the design.
 const TIMING_NIA_UNSAT: TimingBaseline = TimingBaseline {
     pins: &[1, 2, 3, 4, 5],
+    runs: 7,
     min_ms: 30.4,
     median_ms: 44.3,
-    max_ms: 62.3,
-    ceiling_ms: 93.5,
+    max_ms: 77.1,
+    ceiling_ms: 115.6,
 };
 
 // ---------------------------------------------------------------------------
@@ -791,7 +806,8 @@ fn classify(
 // and so their total is dominated by real solving rather than by fixed
 // overhead. The pinned total is *calibrated* (`solve_ms / scale`), i.e.
 // expressed in reference-machine milliseconds, and compared with a committed
-// ceiling. Baseline and ceiling both come from [`TIMING_BASELINE_RUNS`] runs of
+// ceiling. Baseline and ceiling both come from at least
+// [`TIMING_BASELINE_MIN_RUNS`] sweeps of
 // this very binary on this box, deliberately spanning quiet and heavily loaded
 // conditions, because the residual the calibration does NOT remove is exactly
 // what the band has to absorb. The numbers are in
@@ -807,9 +823,14 @@ fn classify(
 // at 1-minute loads 34 / 5.4 / 1.17 recorded in
 // `docs/research/08-planning/frontier-ratchet-reference-frame.md`.
 
-/// How many runs of this binary the committed timing baselines were measured
-/// over. Recorded in the artifact so a reader can weigh the band.
-const TIMING_BASELINE_RUNS: u32 = 5;
+/// The FEWEST runs a committed timing baseline may be measured over.
+///
+/// A band read off one or two sweeps is a band that describes one afternoon's
+/// contention. Each [`TimingBaseline`] records its own `runs` count and
+/// [`timing_baselines_are_internally_consistent`] refuses anything below this
+/// floor, so a re-measurement cannot quietly shrink the evidence behind a
+/// ceiling.
+const TIMING_BASELINE_MIN_RUNS: u32 = 5;
 
 /// The ceiling is this factor times the **slowest** of those runs' calibrated
 /// totals.
@@ -825,12 +846,18 @@ const TIMING_BASELINE_RUNS: u32 = 5;
 const TIMING_BAND_FACTOR: f64 = 1.5;
 
 /// One family's committed timing baseline: which `N` are pinned, what the
-/// calibrated total measured over [`TIMING_BASELINE_RUNS`] runs, and the
+/// calibrated total measured over its `runs` sweeps, and the
 /// ceiling that follows from the worst of them.
 struct TimingBaseline {
     /// `N` values pinned **deep inside** the frontier, so they decide on every
     /// run and a slowdown shows up as *time*, not as a lost instance.
     pins: &'static [u32],
+    /// How many sweeps the spread below was measured over. Per family rather
+    /// than global, because a sweep in which a pinned instance failed to decide
+    /// carries no usable total and is excluded from that family's band — which
+    /// happened once here, to `nia_unsat`, and is recorded rather than rounded
+    /// away.
+    runs: u32,
     /// Minimum / median / maximum calibrated total over the baseline runs.
     min_ms: f64,
     median_ms: f64,
@@ -951,15 +978,17 @@ fn timing_regression(
     Some(format!(
         "TIMING REGRESSION [{family}]: pinned N={:?} took {total:.1} ms calibrated, over the \
          committed ceiling of {:.1} ms (= {TIMING_BAND_FACTOR:.1}x the slowest of \
-         {TIMING_BASELINE_RUNS} baseline runs: min {:.1} / median {:.1} / max {:.1} ms).\n\
+         {} baseline runs: min {:.1} / median {:.1} / max {:.1} ms).\n\
          Per pin: {}.\n\
          Before believing this: {}. The times above are CALIBRATED — divided by the measured \
          scale, so this box has already been compensated for — and the check is not enforced \
          at all outside the comparable band. Re-run on an otherwise idle machine; if it \
          reproduces, either the solver got slower on these paths or the baseline is stale and \
-         must be re-measured over {TIMING_BASELINE_RUNS} runs and re-committed together.",
+         must be re-measured over at least {TIMING_BASELINE_MIN_RUNS} runs and re-committed \
+         together.",
         baseline.pins,
         baseline.ceiling_ms,
+        baseline.runs,
         baseline.min_ms,
         baseline.median_ms,
         baseline.max_ms,
@@ -1138,7 +1167,7 @@ fn report_and_assert(
             timing.pins,
             timing.median_ms,
             timing.ceiling_ms,
-            TIMING_BASELINE_RUNS,
+            timing.runs,
             if timing_enforced {
                 ""
             } else {
@@ -1344,8 +1373,8 @@ fn write_curve_json(
     let _ = writeln!(
         json,
         "    \"ceiling_ms\": {:.1}, \"band_factor\": {TIMING_BAND_FACTOR:.2}, \
-         \"baseline_runs\": {TIMING_BASELINE_RUNS},",
-        timing.ceiling_ms
+         \"baseline_runs\": {},",
+        timing.ceiling_ms, timing.runs
     );
     let _ = writeln!(
         json,
@@ -2312,6 +2341,13 @@ fn timing_baselines_are_internally_consistent() {
             baseline.pins
         );
         assert!(
+            baseline.runs >= TIMING_BASELINE_MIN_RUNS,
+            "[{family}] band was measured over {} sweeps, below the floor of \
+             {TIMING_BASELINE_MIN_RUNS}. A band read off one or two sweeps describes one \
+             afternoon's contention, not this solver.",
+            baseline.runs,
+        );
+        assert!(
             baseline.min_ms <= baseline.median_ms && baseline.median_ms <= baseline.max_ms,
             "[{family}] measured spread is not ordered: min {:.1} / median {:.1} / max {:.1}",
             baseline.min_ms,
@@ -2323,7 +2359,8 @@ fn timing_baselines_are_internally_consistent() {
             (baseline.ceiling_ms - expected).abs() <= 0.1 * TIMING_BAND_FACTOR,
             "[{family}] ceiling {:.1} ms is not {TIMING_BAND_FACTOR:.1}x the slowest baseline \
              run ({:.1} ms => {expected:.1} ms). The ceiling is DERIVED from the measurement; \
-             re-measure over {TIMING_BASELINE_RUNS} runs rather than widening it by hand.",
+             re-measure over at least {TIMING_BASELINE_MIN_RUNS} runs rather than widening \
+             it by hand.",
             baseline.ceiling_ms,
             baseline.max_ms,
         );
@@ -2340,6 +2377,7 @@ fn timing_baselines_are_internally_consistent() {
 fn timing_ratchet_fires_on_a_slowdown_and_not_on_a_healthy_run() {
     let baseline = TimingBaseline {
         pins: &[2, 3],
+        runs: 5,
         min_ms: 90.0,
         median_ms: 100.0,
         max_ms: 110.0,
