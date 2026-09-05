@@ -4203,7 +4203,7 @@ pub(super) fn complex_sub(p: &ComplexPrelude) -> Vec<(&'static str, Sub)> {
     vec![("creal", Sub::CReal(Box::new(p.creal)))]
 }
 
-/// The `CPointPrelude` field table (117 names,
+/// The `CPointPrelude` field table (149 names,
 /// 0 name lists, 1 sub-packages).
 #[must_use]
 #[allow(clippy::too_many_lines)] // a generated field table; length is the point.
@@ -4366,6 +4366,38 @@ pub(super) fn cpoint(p: &CPointPrelude) -> Fields {
                 p.medial_triangle_cross_quarter,
             ),
             ("collinear_of_area_zero", p.collinear_of_area_zero),
+            ("norm", p.norm),
+            ("norm_nonneg", p.norm_nonneg),
+            ("norm_sq", p.norm_sq),
+            ("norm_congr", p.norm_congr),
+            ("cross_v", p.cross_v),
+            ("cross_eq_cross_v", p.cross_eq_cross_v),
+            ("lagrange_vector", p.lagrange_vector),
+            ("law_of_cosines_dot", p.law_of_cosines_dot),
+            ("cos_angle", p.cos_angle),
+            ("sin_angle", p.sin_angle),
+            ("sin_sq_add_cos_sq", p.sin_sq_add_cos_sq),
+            ("abs_cos_angle_le_one", p.abs_cos_angle_le_one),
+            ("cos_angle_le_one", p.cos_angle_le_one),
+            ("neg_one_le_cos_angle", p.neg_one_le_cos_angle),
+            ("norm_mul_cos_angle", p.norm_mul_cos_angle),
+            ("law_of_sines", p.law_of_sines),
+            ("law_of_cosines", p.law_of_cosines),
+            ("isometry", p.isometry),
+            ("id_map", p.id_map),
+            ("comp_map", p.comp_map),
+            ("isometry_id", p.isometry_id),
+            ("isometry_comp", p.isometry_comp),
+            ("translate", p.translate),
+            ("isometry_translate", p.isometry_translate),
+            ("rotate", p.rotate),
+            ("isometry_rotate", p.isometry_rotate),
+            ("reflect", p.reflect),
+            ("isometry_reflect", p.isometry_reflect),
+            ("scale", p.scale),
+            ("scale_dist_sq", p.scale_dist_sq),
+            ("not_isometry_scale_two", p.not_isometry_scale_two),
+            ("isometry_preserves_dot", p.isometry_preserves_dot),
         ],
         lists: Vec::new(),
     }
