@@ -9,16 +9,19 @@ use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::time::Instant;
 
-use axeyum_cnf::{
-    CnfFormula, ProofSolveOutcome, SatResult, check_drat, parse_dimacs, solve_with_drat_proof,
-    solve_with_rustsat_batsat,
-};
+use axeyum_cnf::{CnfFormula, ProofSolveOutcome, check_drat, parse_dimacs, solve_with_drat_proof};
+#[cfg(feature = "batsat-reference")]
+use axeyum_cnf::{SatResult, solve_with_rustsat_batsat};
 use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
 
 #[cfg(feature = "z3")]
 use z3::{Params, SatResult as Z3SatResult, Solver, ast::Bool};
 
+/// The retired `rustsat-batsat` adapter, as a comparison point only (ADR-1703).
+/// Compiled out by default: without `--features batsat-reference` the `batsat`
+/// column is simply absent from the emitted rows rather than silently zero.
+#[cfg(feature = "batsat-reference")]
 fn outcome_batsat(formula: &CnfFormula) -> Result<&'static str, String> {
     match solve_with_rustsat_batsat(formula).map_err(|error| error.to_string())? {
         SatResult::Sat(_) => Ok("sat"),
@@ -164,6 +167,7 @@ fn main() -> Result<(), String> {
         let text = std::str::from_utf8(&bytes)
             .map_err(|error| format!("{} is not UTF-8: {error}", path.display()))?;
         let formula = parse_dimacs(text).map_err(|error| format!("{}: {error}", path.display()))?;
+        #[cfg(feature = "batsat-reference")]
         let (batsat_outcome, batsat_nanos) = timed(|| outcome_batsat(&formula), repetitions)?;
         let (proof_outcome, proof_nanos) =
             timed(|| Ok::<_, String>(outcome_proof(&formula)), repetitions)?;
@@ -180,13 +184,16 @@ fn main() -> Result<(), String> {
             "sha256": sha256_hex(&bytes),
             "variables": formula.variable_count(),
             "clauses": formula.clauses().len(),
-            "batsat": {"outcome": batsat_outcome, "nanos": batsat_nanos},
             "proof_core": {"outcome": proof_outcome, "nanos": proof_nanos},
             "proof_core_rechecked": {
                 "outcome": proof_rechecked_outcome,
                 "nanos": proof_rechecked_nanos
             },
         });
+        #[cfg(feature = "batsat-reference")]
+        {
+            row["batsat"] = json!({"outcome": batsat_outcome, "nanos": batsat_nanos});
+        }
         #[cfg(feature = "z3")]
         {
             row["z3"] = json!({"outcome": z3_outcome, "nanos": z3_nanos});

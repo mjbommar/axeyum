@@ -27,6 +27,10 @@ z3 = { workspace = true, optional = true }
 
 [features]
 default = []
+# ADR-1703: forwards to `axeyum-cnf/batsat-reference` so `cnf_core_bench` can
+# still time the retired adapter as a comparison point. Non-default; without it
+# the `batsat` column is absent from the emitted rows, not silently zero.
+batsat-reference = ["axeyum-cnf/batsat-reference"]
 z3 = ["axeyum-solver/z3", "dep:z3"]
 z3-static = ["axeyum-solver/z3-static"]
 

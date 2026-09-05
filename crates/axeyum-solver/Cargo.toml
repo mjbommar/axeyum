@@ -42,6 +42,11 @@ default = ["qfbv"]
 # full multi-theory consumers opt into `full` explicitly. The named feature
 # makes consumer intent visible even though it adds no dependencies by itself.
 qfbv = []
+# ADR-1703: forwards to `axeyum-cnf/batsat-reference` so the two MEASUREMENT
+# harnesses that time the retired adapter (`native_cdcl_baseline`,
+# `xor_cdcl_curated_measure`) can still be run. Non-default; both suites compile
+# to ZERO tests without it and exit 0.
+batsat-reference = ["axeyum-cnf/batsat-reference"]
 # Full multi-theory/product surface.
 full = [
     "dep:axeyum-cas",

@@ -12,7 +12,7 @@
 //! to a fixpoint.
 //!
 //! Its job is to **prove the integration is sound**, differential-tested against
-//! a brute-force oracle and the production [`crate::solve_with_rustsat_batsat`]
+//! a brute-force oracle and the production [`crate::solve_with_native_core`]
 //! adapter. It is deliberately *not* the production solver:
 //!
 //! * chronological backtracking only — **no** learned clauses / 1-UIP;
@@ -345,7 +345,7 @@ impl<'a> Dpll<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{CnfClause, CnfLit, CnfVar, SatResult, solve_with_rustsat_batsat_timeout};
+    use crate::{CnfClause, CnfLit, CnfVar, SatResult, solve_with_native_core_timeout};
     use std::time::Duration;
 
     // --- formula construction helpers --------------------------------------
@@ -625,7 +625,7 @@ mod tests {
         for _ in 0..runs {
             let f = random_formula(&mut rng);
             let ours = solve_with_xor(&f);
-            let theirs = solve_with_rustsat_batsat_timeout(&f, timeout)
+            let theirs = solve_with_native_core_timeout(&f, timeout)
                 .expect("batsat solve must not error on a tiny formula");
 
             // If either side did not decide, there is nothing to cross-check.

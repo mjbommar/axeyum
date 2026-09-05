@@ -27,12 +27,12 @@ use axeyum_bv::{
 use axeyum_cnf::{
     BveOptions, CnfAssignment, CnfConstructionProfile, CnfDuplicateOriginProfile, CnfEncoding,
     CnfError, CnfFormula, CompactMap, DEFAULT_PROOF_SAT_CONFLICT_LIMIT, EncodedLit,
-    ProofSolveOutcome, Reconstruction, SatError, SatProofStatus, SatResult, SatUnknownReason,
+    ProofSolveOutcome, Reconstruction, SatProofStatus, SatResult, SatUnknownReason,
     SatUnsatEvidence, VivifyOptions, XorCdclResult, XorPropagation, check_drat, compact,
     eliminate_variables_within, extract_xors, simplify_within, solve_with_drat_proof,
-    solve_with_drat_proof_with_limits, solve_with_rustsat_batsat_limits, solve_with_xor_cdcl,
-    tseitin_encode, tseitin_encode_profiled_with_origins, vivify_within, write_drat,
-    xor_gauss_drat_refutation, xor_propagate,
+    solve_with_drat_proof_with_limits, solve_with_xor_cdcl, tseitin_encode,
+    tseitin_encode_profiled_with_origins, vivify_within, write_drat, xor_gauss_drat_refutation,
+    xor_propagate,
 };
 use axeyum_ir::{
     Assignment, IrError, Op, Sort, SortId, TermArena, TermId, TermNode, TermStats, Value, eval,
@@ -260,14 +260,11 @@ impl SatBvBackend {
             }));
         }
 
-        let sat_timeout =
-            deadline.map(|deadline| deadline.saturating_duration_since(Instant::now()));
         let solve_start = Instant::now();
-        // Primary SAT search: the deadline-bounded native CDCL core when
-        // `native_cdcl` is set, else the default `rustsat-batsat` adapter. Both
-        // feed the same reconstruction + replay below (see `solve_with_native_cdcl`).
-        let mut sat_result =
-            primary_sat_search(config, solve_formula, deadline, sat_timeout, &mut stats)?;
+        // Primary SAT search: the deadline-bounded native CDCL core, on every
+        // path (ADR-1703). Its result feeds the reconstruction + replay below
+        // (see `solve_with_native_cdcl`).
+        let mut sat_result = primary_sat_search(config, solve_formula, deadline, &mut stats)?;
         stats.solve = solve_start.elapsed();
         if deadline.is_some_and(|deadline| Instant::now() >= deadline) {
             self.stats = Some(stats);
@@ -277,13 +274,13 @@ impl SatBvBackend {
             }));
         }
 
-        // CDCL(XOR) search fallback (ADR-0035): only on an `unknown` batsat
+        // CDCL(XOR) search fallback (ADR-0035): only on an `unknown` primary
         // verdict (timeout/budget), only when opted in, and only on a formula
         // carrying recognized XOR structure within the conservative clause cap.
         // Its `unsat` is the trusted `XorGaussian` ledger hole (no DRAT — XOR
         // reasoning is not RUP); its `sat` carries no trust cost (it threads the
-        // same reconstruction + AIG/model/term replay the batsat path uses and is
-        // discarded on replay failure). This never weakens an existing definite
+        // same reconstruction + AIG/model/term replay the primary path uses and
+        // is discarded on replay failure). This never weakens an existing definite
         // verdict — it can only *upgrade* an `unknown`.
         let mut xor_cdcl_unsat = false;
         if matches!(sat_result, SatResult::Unknown(_)) && config.xor_cdcl_fallback {
@@ -294,7 +291,7 @@ impl SatBvBackend {
 
         // The xor-derived `unsat` is the trusted `XorGaussian` hole and is NOT
         // RUP, so it cannot be DRAT-verified (the checker would correctly reject a
-        // synthesized proof). Skip the proof route for it; only batsat/native
+        // synthesized proof). Skip the proof route for it; only the native core's
         // `unsat` is DRAT-checked here.
         let prove = config.prove_unsat && !xor_cdcl_unsat;
         if let Some(reason) =
@@ -517,7 +514,7 @@ fn record_split_progress(stats: &mut SolveStats, branches: usize, completed: usi
 impl SolverBackend for SatBvBackend {
     fn capabilities(&self) -> Capabilities {
         Capabilities {
-            name: "axeyum-sat-bv rustsat-batsat".to_owned(),
+            name: "axeyum-sat-bv native-cdcl".to_owned(),
             produces_models: true,
             complete: true,
         }
@@ -1871,44 +1868,36 @@ fn map_cnf_error(error: &CnfError) -> SolverError {
     SolverError::Backend(error.to_string())
 }
 
-fn map_sat_error(error: &SatError) -> SolverError {
-    SolverError::Backend(error.to_string())
-}
-
-/// Dispatches the primary SAT search: the deadline-bounded native CDCL core when
-/// `config.native_cdcl` is set — or when `config.prove_unsat` is set, since the
-/// native core is the proof-producing engine and its inline proof lets a checked
-/// `unsat` fall out of a **single** solve. Otherwise the default `rustsat-batsat`
-/// adapter. Both produce a [`SatResult`] consumed identically downstream.
+/// Dispatches the primary SAT search: the deadline-bounded native CDCL core,
+/// unconditionally (ADR-1703).
 ///
-/// When the native core runs for `prove_unsat`, `check_proof` is set so any
-/// `unsat` it returns is verified inline (`SatProofStatus::Checked`) and the
-/// downstream re-derivation is skipped (see the call site in
-/// [`SatBvBackend::check_with_replay`]). batsat stays the default engine when
-/// `prove_unsat` is not requested.
+/// `config.native_cdcl` is a retired no-op — the native core is the engine
+/// whether it is set or not — and the `rustsat-batsat` adapter it used to select
+/// against is gone from the default build entirely.
+///
+/// When `config.prove_unsat` is set, `check_proof` is passed so any `unsat` is
+/// verified inline (`SatProofStatus::Checked`) and the downstream re-derivation
+/// is skipped (see the call site in [`SatBvBackend::check_with_replay`]).
+/// Without it the core still *derives* a proof — it simply is not spent on
+/// checking, which is why the result is stamped `Unchecked` rather than being
+/// proofless.
 fn primary_sat_search(
     config: &SolverConfig,
     formula: &CnfFormula,
     deadline: Option<Instant>,
-    sat_timeout: Option<Duration>,
     stats: &mut SolveStats,
 ) -> Result<SatResult, SolverError> {
-    if config.native_cdcl || config.prove_unsat {
-        let outcome =
-            solve_with_native_cdcl(formula, deadline, config.resource_limit, config.prove_unsat);
-        if let Some(duration) = outcome.proof_replay {
-            push_duration_ms(stats, "unsat_proof_replay_ms", duration);
-        }
-        Ok(outcome.result)
-    } else {
-        solve_with_rustsat_batsat_limits(formula, sat_timeout, config.resource_limit)
-            .map_err(|error| map_sat_error(&error))
+    let outcome =
+        solve_with_native_cdcl(formula, deadline, config.resource_limit, config.prove_unsat);
+    if let Some(duration) = outcome.proof_replay {
+        push_duration_ms(stats, "unsat_proof_replay_ms", duration);
     }
+    Ok(outcome.result)
 }
 
 /// Runs the in-tree proof-producing CDCL core as the primary SAT search,
-/// mapping its [`ProofSolveOutcome`] onto the [`SatResult`] the batsat path
-/// produces so the rest of the pipeline is unchanged.
+/// mapping its [`ProofSolveOutcome`] onto the [`SatResult`] the rest of the
+/// pipeline consumes.
 ///
 /// - `Sat` → [`SatResult::Sat`]; the model then flows through the standard
 ///   reconstruction + AIG/model/term replay (a wrong model is rejected there).

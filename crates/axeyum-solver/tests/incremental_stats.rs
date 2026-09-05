@@ -232,7 +232,7 @@ fn profiled_snapshot_materializes_active_scope_selectors() {
         solver.encoded_clause_count() + solver.scope_depth()
     );
     assert!(matches!(
-        axeyum_cnf::solve_with_rustsat_batsat(&snapshot).unwrap(),
+        axeyum_cnf::solve_with_native_core(&snapshot).unwrap(),
         axeyum_cnf::SatResult::Unsat(_)
     ));
 }

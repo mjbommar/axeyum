@@ -1066,7 +1066,7 @@ enum XorWatchOutcome {
 mod tests {
     use super::*;
     use crate::{
-        CnfClause, CnfLit, CnfVar, SatResult, XorDpllResult, solve_with_rustsat_batsat_timeout,
+        CnfClause, CnfLit, CnfVar, SatResult, XorDpllResult, solve_with_native_core_timeout,
         solve_with_xor,
     };
     use std::time::Duration;
@@ -1273,7 +1273,7 @@ mod tests {
         for n in [4usize, 8, 12, 16, 20] {
             let f = parity_chain_unsat(n);
             let ours = solve_with_xor_cdcl(&f);
-            let theirs = solve_with_rustsat_batsat_timeout(&f, Some(Duration::from_secs(5)))
+            let theirs = solve_with_native_core_timeout(&f, Some(Duration::from_secs(5)))
                 .expect("batsat solve");
             assert_eq!(ours, XorCdclResult::Unsat);
             assert!(matches!(theirs, SatResult::Unsat(_)));
@@ -1325,7 +1325,7 @@ mod tests {
             reductions >= 2,
             "expected several clause-DB reductions, got {reductions}"
         );
-        let theirs = solve_with_rustsat_batsat_timeout(&f, Some(Duration::from_secs(10)))
+        let theirs = solve_with_native_core_timeout(&f, Some(Duration::from_secs(10)))
             .expect("batsat solve");
         assert!(
             matches!(theirs, SatResult::Unsat(_)),
@@ -1438,7 +1438,7 @@ mod tests {
         for _ in 0..runs {
             let f = random_formula(&mut rng);
             let ours = solve_with_xor_cdcl(&f);
-            let theirs = solve_with_rustsat_batsat_timeout(&f, timeout)
+            let theirs = solve_with_native_core_timeout(&f, timeout)
                 .expect("batsat solve must not error on a tiny formula");
 
             if matches!(ours, XorCdclResult::Unknown) || matches!(theirs, SatResult::Unknown(_)) {

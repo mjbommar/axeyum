@@ -271,20 +271,40 @@ def validate_shard_set(
     return shards, parent, identity
 
 
+NATIVE_CDCL_ENGINE_ID = "axeyum-native-cdcl-v1"
+NATIVE_CDCL_RANDOMNESS = (
+    "none: no random seed, no random branching, no randomized initial activity"
+)
+
+
 def validate_determinism(config: dict[str, Any], location: str) -> None:
     profile = require_mapping(config.get("determinism"), f"{location}.determinism")
     if profile.get("profile") != "axeyum-bench-fixed-seeds-v1":
         fail(f"{location}.determinism.profile is unsupported")
     sat = require_mapping(profile.get("sat_bv"), f"{location}.determinism.sat_bv")
-    if sat.get("adapter") != "rustsat-batsat":
-        fail(f"{location}.determinism.sat_bv.adapter must be rustsat-batsat")
-    if require_number(sat.get("random_seed"), f"{location}.random_seed") != 91_648_253:
-        fail(f"{location}.determinism.sat_bv.random_seed is not pinned")
-    if require_number(sat.get("random_var_freq"), f"{location}.random_var_freq") != 0:
-        fail(f"{location}.determinism.sat_bv.random_var_freq must be zero")
-    for field in ("random_polarity", "random_initial_activity"):
-        if require_bool(sat.get(field), f"{location}.{field}"):
-            fail(f"{location}.determinism.sat_bv.{field} must be false")
+    # ADR-1703 replaced the `rustsat-batsat` adapter with the in-tree native CDCL
+    # core, whose determinism has no seeds to pin (no random branching, no
+    # randomized initial activity). Artifacts from before that commit carry the
+    # adapter's shape and remain accurate descriptions of their own run, so both
+    # are accepted -- but a block that is neither fails.
+    if "engine" in sat:
+        if sat.get("engine") != NATIVE_CDCL_ENGINE_ID:
+            fail(f"{location}.determinism.sat_bv.engine must be {NATIVE_CDCL_ENGINE_ID}")
+        if sat.get("randomness") != NATIVE_CDCL_RANDOMNESS:
+            fail(f"{location}.determinism.sat_bv.randomness is not the native profile")
+    elif sat.get("adapter") == "rustsat-batsat":
+        if require_number(sat.get("random_seed"), f"{location}.random_seed") != 91_648_253:
+            fail(f"{location}.determinism.sat_bv.random_seed is not pinned")
+        if require_number(sat.get("random_var_freq"), f"{location}.random_var_freq") != 0:
+            fail(f"{location}.determinism.sat_bv.random_var_freq must be zero")
+        for field in ("random_polarity", "random_initial_activity"):
+            if require_bool(sat.get(field), f"{location}.{field}"):
+                fail(f"{location}.determinism.sat_bv.{field} must be false")
+    else:
+        fail(
+            f"{location}.determinism.sat_bv names neither the native engine nor "
+            f"the retired adapter"
+        )
     z3 = require_mapping(profile.get("z3"), f"{location}.determinism.z3")
     if require_int(z3.get("random_seed"), f"{location}.z3.random_seed") != 0:
         fail(f"{location}.determinism.z3.random_seed must be zero")

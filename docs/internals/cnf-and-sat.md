@@ -29,26 +29,65 @@ being inferred later from solver state.
 
 ## Solving modes
 
-The first product SAT adapter is BatSat through RustSAT. The crate provides
-one-shot solving with time and resource limits, plus incremental CNF/SAT
-objects for callers that retain clauses between checks. The generic SAT trait
-reports capabilities and keeps `sat`, `unsat`, and `unknown` distinct.
+**The in-tree native CDCL core is the SAT engine, on every path**
+([ADR-1703](../research/09-decisions/adr-1703-the-native-core-is-the-sat-engine-batsat-is-demoted-to-a-differential-oracle.md)).
+It is `crates/axeyum-cnf/src/proof_sat.rs`: a flat clause arena with per-clause
+headers, blocking-literal watch lists, VSIDS with geometric decay and rescale,
+phase saving plus target rephasing, Luby restarts (EMA-glue implemented and
+selectable), LBD glue tiers and `reduce_db`.
+
+Three entry shapes:
+
+| Entry | Use |
+|---|---|
+| `solve_with_native_core{,_timeout,_limits}` | one-shot, a `SatResult` |
+| `solve_with_drat_proof*` | one-shot, and hand back the DRAT proof |
+| `NativeIncrementalCdcl` / `IncrementalSat` / `IncrementalCnf` | warm: clauses added between solves, assumptions per solve, learned clauses and heuristics retained |
+
+Deterministic budgets are in **conflicts**; wall-clock deadlines are checked on
+a fixed conflict cadence, so the search trajectory up to the stopping point is
+identical to an unbounded run and only *whether* it stops is time-dependent.
+Neither limit ever produces a verdict — both yield `unknown`.
+
+The generic SAT trait reports capabilities and keeps `sat`, `unsat`, and
+`unknown` distinct.
 
 CNF preprocessing includes bounded variable elimination, subsumption,
 vivification, and compaction. Any pass that changes variable meaning retains a
 mapping or reconstruction object. A smaller formula is useful only if a model
 or proof can still be related to its input.
 
-The crate also includes an in-tree proof-producing CDCL core. The default
-search adapter remains BatSat because changing that default is benchmark-gated;
-for SAT-backed BV solving, `native_cdcl` selects the native core explicitly and
-`prove_unsat` selects it as the primary search so an UNSAT proof can be checked
-inline. The public contract is independent of which search engine wins: SAT
-models must replay, and UNSAT assurance is stated at the level actually checked.
-In particular, a proofless BatSat UNSAT result remains lower assurance; the
-search verdict is not relabeled as a checked proof. See the
+### What that changed about UNSAT assurance
+
+Every `unsat` the native core reports is derived by learning RUP clauses ending
+in the empty clause, so a DRAT proof exists **by construction** and is checkable
+by `check_drat`, or — with hints — by the linear `check_lrat`. "Proofless
+UNSAT" is no longer a category of result this crate can produce; spending or not
+spending the checking time is a per-call choice, made by `prove_unsat`.
+
+Two limits, stated rather than smoothed over: proof recording is **off on the
+warm path** for speed, so a warm `unsat` is still stamped `Unchecked` unless
+recording is requested; and an `unsat` **under assumptions** derives no empty
+clause at all, reporting a failed-assumption core instead — that is inherent to
+assumption-based solving.
+
+The public contract is unchanged in shape: SAT models must replay, and UNSAT
+assurance is stated at the level actually checked — a search verdict is never
+relabelled as a checked proof. See the
 [`SolverConfig` reference](../reference/solver-config.md) for the exact selection
 and fail-closed behavior.
+
+### BatSat
+
+`rustsat-batsat` was the first pure-Rust adapter (ADR-0007) and is retired as an
+engine. It survives only behind the non-default `batsat-reference` cargo
+feature, as an independent referee for differential testing — the role ADR-0002
+gives Z3 — in
+`crates/axeyum-cnf/tests/native_vs_batsat_differential.rs`. **The default
+dependency graph contains no `batsat`, `rustsat`, or `rustsat-batsat`**; confirm
+with `cargo tree -e normal -p axeyum-cnf`. Every suite behind that feature
+compiles to zero tests without it and exits 0, so confirm a nonzero test count
+before believing one of them passed.
 
 ## DRAT, LRAT, Alethe, and XOR
 

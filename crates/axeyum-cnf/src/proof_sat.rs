@@ -1913,6 +1913,13 @@ pub mod incremental;
 
 #[cfg(test)]
 mod tests {
+    // ADR-1703: BatSat is no longer an engine, only a differential referee. The
+    // tests below that name it compile ONLY with `--features batsat-reference`
+    // and vanish silently without it (a suite that compiles to zero tests still
+    // exits 0) -- confirm a NONZERO count when you run them.
+    #[cfg(feature = "batsat-reference")]
+    use crate::{SatResult, solve_with_rustsat_batsat};
+
     use super::{
         Cdcl, DEFAULT_PROOF_SAT_CONFLICT_LIMIT, Instant, ProofSearchProgress, ProofSolveOutcome,
         StreamingProofOutcome, Watch, lit_code, solve_with_drat_proof,
@@ -1920,8 +1927,8 @@ mod tests {
         solve_with_drat_proof_with_limits_and_progress, solve_with_drat_proof_within,
     };
     use crate::{
-        CnfClause, CnfFormula, CnfLit, CnfVar, DratSink, ProofSinkError, SatResult, TextProofSink,
-        VecProofSink, check_drat, solve_with_rustsat_batsat, write_drat,
+        CnfClause, CnfFormula, CnfLit, CnfVar, DratSink, ProofSinkError, TextProofSink,
+        VecProofSink, check_drat, write_drat,
     };
 
     fn lit(value: i64) -> CnfLit {
@@ -2206,6 +2213,7 @@ mod tests {
     /// CDCL core must agree with the `BatSat` adapter on sat/unsat, every `sat`
     /// model must satisfy, and every `unsat` proof must pass the DRAT checker.
     #[test]
+    #[cfg(feature = "batsat-reference")]
     fn random_cnfs_agree_with_batsat_and_self_check() {
         let mut state = 0x1234_5678_9abc_def0u64;
         let mut next = || {
@@ -2452,6 +2460,7 @@ mod tests {
     /// and `BatSat` must never disagree (`DISAGREE = 0`), every native `sat` model
     /// must satisfy, every native `unsat` must DRAT-check.
     #[test]
+    #[cfg(feature = "batsat-reference")]
     fn random_3cnf_agreement_stress_disagree_zero() {
         let mut state = 0x0bad_c0de_dead_beefu64;
         let mut next = || {
@@ -2506,6 +2515,7 @@ mod tests {
     /// DRAT-checks — the same soundness net as the default Luby schedule. This keeps
     /// the (default-off) EMA path covered.
     #[test]
+    #[cfg(feature = "batsat-reference")]
     fn ema_restart_schedule_agrees_with_batsat_disagree_zero() {
         let mut state = 0xe1a5_7a27_c0ff_ee42u64;
         let mut next = || {
@@ -2561,6 +2571,7 @@ mod tests {
     /// blocker is a performance hint only; the implications and conflicts derived
     /// are identical to the plain two-watched scheme.
     #[test]
+    #[cfg(feature = "batsat-reference")]
     fn blocking_literal_bcp_preserves_verdicts_disagree_zero() {
         let mut state = 0xb10c_11ad_5a7b_eef0u64;
         let mut next = || {
@@ -2883,6 +2894,7 @@ mod tests {
     /// lines — must DRAT-check. This is the completeness+soundness gate: no UNSAT
     /// is ever reported SAT or vice-versa even as the clause DB churns.
     #[test]
+    #[cfg(feature = "batsat-reference")]
     fn reduce_db_stress_agrees_with_batsat_and_proof_checks() {
         // A spread of resolution-hard pigeonhole instances guarantees several
         // reductions; the random suite guarantees breadth.
