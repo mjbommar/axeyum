@@ -92,6 +92,7 @@ use crate::rat_prelude::ops::{den, num, radd, rat_eq_rewrite, rle, rneg, rsymm, 
 use crate::{Kernel, KernelError};
 
 pub(crate) mod algebra_instance;
+pub(crate) mod deriv;
 pub(crate) mod poly;
 mod ring;
 
@@ -1407,6 +1408,11 @@ pub struct ComplexPrelude {
     /// or `intern_names` -- see
     /// `docs/research/11-design-review/2026-08-27-prelude-build-spike.md` Part B.
     pub poly: poly::PolyNames,
+    /// The complex-differentiability sub-development
+    /// (`Complex.HasDerivativeOn` and everything derived from it in
+    /// `complex/deriv.rs`). Owns its own names for the same reason
+    /// [`Self::poly`] does.
+    pub deriv: deriv::DerivNames,
 
     /// `Complex.commRingS : AlgS.CommRing` (`complex/algebra_instance.rs`,
     /// ADR-1588/ADR-1590) — every field an *existing* `Complex` theorem,
@@ -1586,6 +1592,7 @@ fn intern_names(kernel: &mut Kernel, creal: CRealPrelude) -> ComplexPrelude {
         abs_neg: kernel.name_str(complex, "abs_neg"),
         abs_le_add_abs_sub: kernel.name_str(complex, "abs_le_add_abs_sub"),
         poly: poly::intern_names(kernel, complex),
+        deriv: deriv::intern_names(kernel, complex),
         comm_ring_s: kernel.name_str(complex, "commRingS"),
     }
 }
@@ -3768,6 +3775,28 @@ const STEPS: &[BuildStep] = &[
         ],
         provides: &[|p: ComplexPrelude| p.abs_le_add_abs_sub],
         run: declare_abs_le_add_abs_sub,
+    },
+    BuildStep {
+        label: "deriv::declare_derivative",
+        requires: &[
+            |p: ComplexPrelude| p.abs,
+            |p: ComplexPrelude| p.abs_congr,
+            |p: ComplexPrelude| p.abs_nonneg,
+            |p: ComplexPrelude| p.add,
+            |p: ComplexPrelude| p.complex,
+            |p: ComplexPrelude| p.equiv,
+            |p: ComplexPrelude| p.mul,
+            |p: ComplexPrelude| p.neg,
+            |p: ComplexPrelude| p.norm_sq,
+            |p: ComplexPrelude| p.one,
+            |p: ComplexPrelude| p.zero,
+        ],
+        // `deriv`'s names live in `deriv::DerivNames` (`p.deriv.in_disc`, not
+        // `p.in_disc`), and nothing outside `deriv.rs` requires any of them,
+        // so this step provides nothing at hub granularity -- the same
+        // arrangement `poly::declare_polynomial` uses.
+        provides: &[],
+        run: deriv::declare_derivative,
     },
 ];
 

@@ -296,6 +296,17 @@ fn every_named_complex_declaration_is_checked_and_footprint_free() {
             "Complex.factorQuotient_succ_eq",
             p.poly.factor_quotient_succ_eq,
         ),
+        ("Complex.abs_zero", p.deriv.abs_zero),
+        ("Complex.InDisc", p.deriv.in_disc),
+        ("Complex.HasDerivativeOn", p.deriv.has_derivative_on),
+        ("Complex.HasDerivativeOn.mk", p.deriv.hd_mk),
+        ("Complex.HasDerivativeOn.rec", p.deriv.hd_rec),
+        ("Complex.HasDerivativeOn.modulus", p.deriv.hd_modulus),
+        ("Complex.HasDerivativeOn.spec", p.deriv.hd_spec),
+        ("Complex.hasDerivative_const", p.deriv.has_derivative_const),
+        ("Complex.hasDerivative_id", p.deriv.has_derivative_id),
+        ("Complex.hasDerivative_neg", p.deriv.has_derivative_neg),
+        ("Complex.hasDerivative_add", p.deriv.has_derivative_add),
     ];
     // COVERAGE, checked against the ENVIRONMENT rather than against `named`
     // itself.
