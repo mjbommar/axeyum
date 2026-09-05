@@ -812,6 +812,23 @@ impl<'k> LeanTermReader<'k> {
             }
         }
 
+        // The resolved name must be a DECLARATION, not merely something that
+        // was ever interned. Interning is a shared, GLOBAL table: a prior
+        // fact's ordinary local binder (e.g. some earlier statement's own
+        // `n` or `LE`) mints `NameNode::Str(anon, "n")` into the same table
+        // this reader's constant resolution reads from, and without this
+        // check a bare word that coincidentally matches an unrelated
+        // binder's name from an EARLIER, unrelated parse would be silently
+        // accepted as a real constant here. This is invisible in an
+        // isolated single-statement test (nothing has interned "n" yet) and
+        // only surfaces once one kernel reads MANY statements in sequence,
+        // exactly what the ledger-wide round-trip suite does -- found by
+        // that suite, not invented in the abstract.
+        if !self.kernel.environment().contains(current) {
+            let dotted = full.contains('.');
+            return Err(name_resolution_error(first_pos, &full, dotted));
+        }
+
         let mut levels = Vec::new();
         if matches!(self.peek(), Some(Tok::Dot))
             && matches!(
@@ -1059,6 +1076,50 @@ mod tests {
         assert_eq!(rendered, "((a : Prop) -> a)");
         let read = k.read_lean(&rendered).expect("must read back");
         assert_eq!(k.render_lean(read), rendered);
+    }
+
+    /// Regression test for a cross-statement contamination bug the
+    /// ledger-wide round-trip suite found: interning is a table SHARED by
+    /// every `read_lean` call against one kernel, so an earlier statement's
+    /// ordinary local binder (here, an unrelated `n`) mints
+    /// `NameNode::Str(anon, "n")` into the same table constant resolution
+    /// reads from. Before this reader also required `environment().contains`
+    /// on the resolved name, a LATER statement's bare `n` (never declared,
+    /// never an active binder in ITS scope) would be silently accepted as a
+    /// constant reference -- misdirecting the parser into confusing
+    /// "expected ')', found ':'" failures deep inside an otherwise-unrelated
+    /// production, instead of the correct, precisely located
+    /// `unbound-variable "n"`.
+    #[test]
+    fn a_prior_facts_binder_name_does_not_leak_into_a_later_facts_constant_resolution() {
+        let mut k = Kernel::new();
+        build_nat_prelude(&mut k).expect("the Nat prelude must build");
+
+        // An unrelated EARLIER statement whose own binder is named `n` --
+        // interning `anon.n` as a side effect of a successful parse, the
+        // way any real fact ahead of `F:nat-le-refl` in the ledger would.
+        let unrelated = k.read_lean("((n : AxNat) -> AxNat)").expect("must read");
+        assert_eq!(k.render_lean(unrelated), "((n : AxNat) -> AxNat)");
+
+        // `Nat.le_refl`'s real ledger shape, imported-route vocabulary and
+        // all (`LE.le`, `instLENat` are Mathlib names this kernel never
+        // declares). The primary (`Pi`) interpretation correctly rejects on
+        // `LE` first, but that error is discarded on backtrack -- as with
+        // any backtracking parser, the class this test can observe is
+        // whatever the FALLBACK interpretation hits first, which is the
+        // leaked `n`. What matters, and what the fix guarantees, is the
+        // CLASS: a clean, precisely-typed rejection, never a structural
+        // "expected X found Y" produced by treating an unrelated fact's
+        // local variable name as if it denoted a real constant.
+        let err = k
+            .read_lean("((n : Nat) -> LE.le.{0} Nat instLENat n n)")
+            .expect_err("neither interpretation of this statement is well-formed here");
+        assert_eq!(
+            err.class(),
+            "unbound-variable",
+            "got {err:?} -- a leaked `n` binder must not turn this into a \
+             structural parse error"
+        );
     }
 
     /// A doubly atom-wrapped `Pi` (an application argument whose type is
