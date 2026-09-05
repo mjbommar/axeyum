@@ -240,6 +240,7 @@ impl FormalPowerSeries {
     }
 
     /// Re-truncate to a lower (or equal) order. `uncertified` (trivial).
+    #[must_use]
     pub fn truncated(&self, order: usize) -> FormalPowerSeries {
         Self::from_coefficients(&self.coeffs, order.min(self.order))
     }
@@ -247,6 +248,7 @@ impl FormalPowerSeries {
     /// Coefficient-wise sum, truncated to the lower of the two orders.
     ///
     /// `uncertified`: re-deriving a sum is the same addition.
+    #[must_use]
     pub fn add(&self, other: &FormalPowerSeries) -> FormalPowerSeries {
         let order = self.order.min(other.order);
         let coeffs = (0..=order)
@@ -256,6 +258,7 @@ impl FormalPowerSeries {
     }
 
     /// Coefficient-wise difference. `uncertified`, as [`add`](Self::add).
+    #[must_use]
     pub fn sub(&self, other: &FormalPowerSeries) -> FormalPowerSeries {
         let order = self.order.min(other.order);
         let coeffs = (0..=order)
@@ -265,6 +268,7 @@ impl FormalPowerSeries {
     }
 
     /// Negation. `uncertified`, as [`add`](Self::add).
+    #[must_use]
     pub fn neg(&self) -> FormalPowerSeries {
         FormalPowerSeries {
             coeffs: self.coeffs.iter().map(|c| -c).collect(),
@@ -273,6 +277,7 @@ impl FormalPowerSeries {
     }
 
     /// Scalar multiple. `uncertified`, as [`add`](Self::add).
+    #[must_use]
     pub fn scale(&self, factor: &BigRational) -> FormalPowerSeries {
         FormalPowerSeries {
             coeffs: self.coeffs.iter().map(|c| c * factor).collect(),
@@ -284,6 +289,7 @@ impl FormalPowerSeries {
     ///
     /// `uncertified`: the only independent check of a Cauchy product is the
     /// same Cauchy product.
+    #[must_use]
     pub fn mul(&self, other: &FormalPowerSeries) -> FormalPowerSeries {
         let order = self.order.min(other.order);
         FormalPowerSeries {
@@ -294,6 +300,7 @@ impl FormalPowerSeries {
 
     /// Multiply by `x^k`, keeping the same truncation order (so the top `k`
     /// coefficients fall off the end). `uncertified`, as [`add`](Self::add).
+    #[must_use]
     pub fn mul_by_x_pow(&self, k: usize) -> FormalPowerSeries {
         let mut coeffs = vec![zero(); self.order + 1];
         for (i, c) in self.coeffs.iter().enumerate() {
@@ -330,6 +337,7 @@ impl FormalPowerSeries {
     /// `x^n` determines its derivative only to `x^(n-1)`).
     ///
     /// `uncertified`, as [`add`](Self::add).
+    #[must_use]
     pub fn derivative(&self) -> FormalPowerSeries {
         let order = self.order.saturating_sub(1);
         let coeffs = (0..=order)
@@ -344,6 +352,7 @@ impl FormalPowerSeries {
 
     /// Formal integral with zero constant of integration; the truncation order
     /// rises by one. `uncertified`, as [`add`](Self::add).
+    #[must_use]
     pub fn integral(&self) -> FormalPowerSeries {
         let order = self.order + 1;
         let mut coeffs = vec![zero(); order + 1];
@@ -492,7 +501,7 @@ impl FormalPowerSeries {
         if recurrence.coefficients.len() != degree {
             return None;
         }
-        if initial_terms.len() < degree || order + 1 <= degree {
+        if initial_terms.len() < degree || order < degree {
             return None;
         }
         let mut terms: Vec<BigRational> = initial_terms
@@ -648,9 +657,9 @@ impl TruncationIdentity {
                 }
                 check_order(expansion, *order)?;
                 let product = truncated_mul(denominator, expansion.coefficients(), *order);
-                for degree in 0..=*order {
+                for (degree, found) in product.iter().enumerate() {
                     let expected = numerator.get(degree).cloned().unwrap_or_else(zero);
-                    if product[degree] != expected {
+                    if *found != expected {
                         return Err(CertificateError::IdentityFailed { degree });
                     }
                 }
