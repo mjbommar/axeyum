@@ -146,6 +146,7 @@ versioned artifacts (v14 and later) with `summary.par2_mean_s`, per-instance
 | 28 examples under `crates/axeyum-bench/examples/` | one-off profiles, probes, A/B tools (`preprocess_timing`, `cnf_core_bench`, `uf_pair_profile`, `xor_cdcl_probe`, …) | ad hoc |
 | `criterion` `benches/` (§4 item 3), `just bench-criterion[-<crate>]` | function-level timing for the six named hot paths (`CdclT::solve`, `solve_with_drat_proof`, `tseitin_encode`, `Aig::and`, `Incremental::check`, `EGraph::merge`/`explain`) plus `TermArena` interning (D5's before/after instrument) | added 2026-09-05, one loaded-host run each, not yet a ratchet — see [`microbenchmarks-2026-09-05.md`](../08-planning/microbenchmarks-2026-09-05.md) |
 | **timing ratchet** — `TIMING_*` baselines in `progress_frontier.rs`, `"timing"` block in `bench-results/frontier/*.json` | calibrated solve time (`solve_ms / scale`) at a few `N` pinned deep inside each frontier, against a committed ceiling = 1.5x the slowest of 8 measured sweeps | landed 2026-09-05 (recommendation 1, first slice); enforced only when `machine.comparable`, advisory otherwise |
+| [`bench-results/sat-core-gate-b-20260905/`](../../../bench-results/sat-core-gate-b-20260905/README.md), `gate_b_sweep.rs` | BatSat/native/CaDiCaL/Kissat head-to-head on identical Axeyum-generated CNF (gate (b)) | one run, 2026-09-05 (p4dfa exhaustive, Noetzli a seeded 100-file sample) |
 
 Layer attribution has already answered one methodology question. On the p4dfa
 QF_BV family (`qf-bv-p4dfa-axeyum-vs-z3-20s-authoritative.json`) the SAT
@@ -185,11 +186,20 @@ true on the hard families.
    *(2026-09-05, lane `perf-route-timing`: instrumented — `RouteTrace::elapsed`/
    `total_elapsed` and the opt-in `RouteTrace::to_json_with_timing`; the
    default `RouteTrace::to_json` is unchanged.)*
-4. **Gate (b) has never been measured.** The methodology makes the native SAT
-   core's priority contingent on (a) SAT dominance and (b) a consistent gap
-   between the best Rust adapter and CaDiCaL/Kissat on axeyum-generated CNF.
-   (a) is measured true on p4dfa and Noetzli. No artifact under `bench-results/`
-   contains a CaDiCaL or Kissat run.
+4. **Gate (b) — MEASURED 2026-09-05, mixed result.** The methodology makes
+   the native SAT core's priority contingent on (a) SAT dominance and (b) a
+   consistent gap between the best Rust adapter and CaDiCaL/Kissat on
+   axeyum-generated CNF. (a) was already measured true on p4dfa and Noetzli.
+   (b) is now measured: on p4dfa (exhaustive, 113/113 files, 20s budget)
+   Kissat/CaDiCaL decide 10-11 files vs. 4-6 for BatSat/native — a real but
+   modest gap (six files out of 113); on a 100-file seeded Noetzli sample the
+   gap nearly vanishes (86-89/100 across all four engines). The native proof
+   core is never worse than BatSat and sometimes better, so this data argues
+   against BatSat as the stronger in-tree engine if either becomes the
+   default. Zero cross-engine disagreements, zero invalid models. Full
+   writeup: [2026-09-05 gate (b)
+   note](2026-09-05-gate-b-sat-core-measured.md); artifact:
+   [`bench-results/sat-core-gate-b-20260905/`](../../../bench-results/sat-core-gate-b-20260905/README.md).
 5. **No profiling recipes.** Nothing in `scripts/`, the `justfile` or the
    contributor guide invokes `perf`, `samply`, `flamegraph`, `dhat` or
    `heaptrack`.
