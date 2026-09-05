@@ -124,13 +124,37 @@ zero polynomial is zero whatever its variables denote.
 
 ### The cost curve
 
-`--release`, best of five per cell, on the shared dev box under
-`load average 28.5`. **ADVISORY**: this box carried 42 concurrent `cargo`
-processes during the run, so absolute times are inflated; the *ratios* are
-between two measurements taken microseconds apart under the same load, which
-is what makes them usable.
+`--release`, best of five per cell, single-threaded, on the shared dev box at
+`load average 18.5`. **ADVISORY**: this box runs five concurrent build slots,
+so the absolute times are inflated; the *ratios* are between two measurements
+taken microseconds apart under the same load, which is what makes them usable.
+Every timed call is asserted to have decided, so no cell is the time of a
+decline. Ratios are **big ÷ i128**, so below 1.00 means the unbounded ring won.
 
-<!-- COST-CURVE -->
+| `(x+1)^d` squared vs `(x+1)^2d` | same-algorithm product | power (algorithms differ) | whole zero-test |
+|---|---|---|---|
+| d = 8 | 20.6 µs / 22.4 µs = **1.09×** | 54.8 / 42.7 µs = 0.78× | 143.1 / 96.6 µs = 0.67× |
+| d = 16 | 81.5 / 88.0 µs = **1.08×** | 222.2 / 130.1 µs = 0.59× | 597.4 / 285.2 µs = 0.48× |
+| d = 32 | 365.4 / 373.0 µs = **1.02×** | 1.083 / 0.480 ms = 0.44× | 2.85 / 0.92 ms = 0.32× |
+| d = 48 | 895.2 / 849.2 µs = **0.95×** | 2.66 / 1.11 ms = 0.42× | 6.17 / 2.30 ms = 0.37× |
+| d = 64 | 1.702 / 1.597 ms = **0.94×** | 4.95 / 2.11 ms = 0.43× | 13.40 / 4.21 ms = 0.31× |
+
+Reproduced: an earlier run of the same test at `load average 28.5` gave
+1.17× / 1.10× / 1.00× / 0.96× / **0.94×** for the bolded column. The absolute
+times moved with the load; the shape and the crossover did not.
+
+**The bolded column is the answer, and it says the unbounded ring is free.**
+`BigInt` coefficients cost 8–9% more than `i128` rationals on the smallest
+inputs, reach parity around degree 32, and are 6% *cheaper* by degree 64 — with
+the gap still closing. The reason is visible in the code: every
+`Rational::checked_mul` runs a Euclidean gcd to renormalize, on every
+coefficient, on every product; the integer ring pays no gcd at all because the
+denominators live in a separate polynomial.
+
+The middle column carries a second finding, incidental but free:
+`MultiPoly::pow` is repeated multiplication and `BigPoly::pow_within` is binary
+exponentiation, and that difference alone is worth roughly 2.3× at degree 64
+independent of the coefficient ring.
 
 Read the three columns separately, because the obvious comparison confounds
 two effects:
@@ -172,11 +196,18 @@ demonstrated a need for — there is one bounded ring and one unbounded ring, no
 a family.
 
 **(a) as shipped, but understood correctly.** The measurement changes what (a)
-means. The cost curve does not show a fast bounded path worth protecting with
-a slow unbounded fallback; the unbounded ring is not the expensive one. So the
-right architecture is not "bounded fast path, big fallback for the rare
-overflow" — it is **`Rational` at the API boundary, unbounded underneath it**,
-with the bounded form kept only where it is genuinely cheaper.
+means. There is no fast bounded path here worth protecting with a slow
+unbounded fallback: at the one comparison that isolates the ring, `i128`
+rationals win by 17% at degree 8, lose by 6% at degree 64, and are losing
+harder as the inputs grow. So the right architecture is not "bounded fast path,
+big fallback for the rare overflow" — it is **`Rational` at the API boundary
+and unbounded underneath it**, with the bounded form kept for small inputs
+because it is marginally cheaper there, not because it is load-bearing.
+
+That is why the recommendation is (a) *and* why (b) is not simply deferred:
+(b) as stated migrates the wrong thing. The expensive part of the public type
+is not its width, it is that `Rational` renormalizes; and the part of the API
+that genuinely blocks a decision is not `CasExpr::Const`, it is the witness.
 
 ## Consequences
 
@@ -222,6 +253,31 @@ In this order, because each step is blocked by the one before it:
    can be solved at the parser/constructor boundary rather than by rewriting
    71 signatures.
 
+## The guards, mutation-checked
+
+Five guards, each deleted in a private snapshot (`51ae78558`, never in the
+shared worktree) and the suite re-run. The baseline in that snapshot is 14
+passed / 0 failed, so no row below is a test that was already red.
+
+| mutant | tests killed | which |
+|---|---|---|
+| **M1** the overflow detection: `equal_core` never consults the fallback | 7 | the five conversions, the false-identity refutation, and the budget test's positive control |
+| **M2** the big path's zero check: every difference reads as zero | 4 | the soundness control **dies**, plus the verdict-agreement corpus, the `I` decline and the witness-fit decline — exactly the four tests that distinguish zero from nonzero |
+| **M3** the reserved-variable guard | **1** | `imaginary_unit_at_overflow_scale_declines_rather_than_refuting` |
+| **M4** the witness-fit check (a non-representable witness becomes the zero polynomial) | **1** | `refutation_whose_witness_exceeds_i128_declines` |
+| **M5** the work budget (`u64::MAX`) | **1** | `work_beyond_the_budget_declines_instead_of_expanding_without_bound` |
+
+Three of the five are killed by exactly one test, which is the standard this
+repository holds checkers to. M1 and M2 are not guards but the feature and its
+correctness condition, so a one-test kill would have been the wrong outcome
+there: M1 removing the whole capability should take every capability test with
+it, and it does.
+
+M5 is worth a second look because its evidence is not only the failure: the
+mutant run took **29.6 s** against a **3–5 s** baseline. The budget is not a
+formality that never fires; deleting it makes the suite do a fifth of a minute
+of arithmetic it otherwise declines.
+
 ## Evidence
 
 - Implementation: `crates/axeyum-cas/src/lib.rs` (`equal_core`,
@@ -232,4 +288,42 @@ In this order, because each step is blocked by the one before it:
 - Department file this closes item 1 of:
   [`docs/math-department/13-computer-algebra.md`](../../math-department/13-computer-algebra.md).
 
-<!-- GATES -->
+Gates run, with the counts rather than the word "passed":
+
+| gate | result |
+|---|---|
+| `cargo test -p axeyum-cas --lib` | 1052 passed, 0 failed, 5 ignored (base: 1038/0/5) |
+| `cargo test -p axeyum-cas --lib --release bignum_overflow_fallback` | 14 passed, 0 failed |
+| `cargo clippy -p axeyum-cas --all-targets -- -D warnings` | exit 0 |
+| `python3 scripts/check-cas-trust-registry.py` | OK, 54 certified (floor 54, all held), 37 checker, 669 uncertified |
+| `scripts/check-merge-hygiene.sh` | PASS, `markers=0 adr_index=ok generated=current` |
+| `./scripts/check-links.sh` | all links ok |
+| `python3 scripts/validate-facts.py` | exit 0 |
+| `RUSTDOCFLAGS=-D warnings cargo doc -p axeyum-cas --no-deps` | **exit 101 — pre-existing, see below** |
+
+**The `cargo doc` gate is already red on `main`, and by more than this branch
+shows.** In this branch it is two broken intra-doc links in `probability.rs`
+(lines 82 and 631: `Certificate::verify`, which does not exist, and a public
+doc linking the private `agree`) — a file byte-identical to `main` here, last
+touched by the `cas-probability` lane. Run as a control on a clean snapshot of
+`main` at `f2524a9b1`, the same gate reports **13 errors**, from at least four
+lanes' modules:
+
+| module | errors |
+|---|---|
+| `enclosure.rs` | 5 (public docs linking the private `ORDERS`, `REDUCTION_CAP`, `BISECTION_CAP`) |
+| `permgroup.rs` | 3 (`bfs_orbit`, `word_to_perm`, `signed_word_to_perm`) |
+| `probability.rs` | 2 (the two this branch sees) |
+| `homology.rs` | 1 (`crate::normalforms`) |
+| unattributed | 2 redundant explicit link targets |
+
+This branch shows only 2 of the 13 because it merged `main` before the other
+three modules landed. No rustdoc diagnostic in either run names `lib.rs` or
+`mvpoly/big.rs`, so none of it is this lane's. It is recorded rather than
+fixed because it belongs to four other lanes mid-flight, and recorded *at all*
+because a lane that runs a gate and quietly omits the red result is the
+failure mode this repository keeps re-learning.
+
+Note the control's own hazard: `main` moved from `f2524a9b1` to `81645f97c`
+between taking the snapshot and running it. The measurement is of the tree
+that was **built** (`f2524a9b1`), not of the ref name.
