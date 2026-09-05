@@ -4,7 +4,7 @@
   "note": "Statement identity for every settled fact (S1 of the trusted-library safety roadmap, ADR-0763). Per fact: SHA-256 of formal.statement (the canonical kernel rendering for native lean4 rows), SHA-256 of the top-level reader-facing statement, and the kernel_theorem it names. A settled fact's statement is what the ledger CLAIMS; changing any of the three silently turns 'we proved X' into 'we proved something we then labelled X'. Changes require an amendment row naming both digests and a reason; superseded digests are preserved in each pin's history. `coverage_floor` is a ratchet the gate re-derives rather than trusts: slack is itself a violation, so a loosened floor is self-reverting. Written by `scripts/check-settled-fact-statements.py --write`; do not hand-edit.",
   "coverage_floor": {
     "max_unpinned_settled": 0,
-    "min_identity_bound": 2325,
+    "min_identity_bound": 2328,
     "max_header_exempt": 0
   },
   "amendments": [
@@ -1460,11 +1460,25 @@
       ]
     },
     {
+      "fact_id": "F:cats-grp-product",
+      "language": "lean4",
+      "statement_sha256": "f32ce2acae50b82567314d531eed85ba9535a5836f1d36c63eba66aaaed34dab",
+      "prose_sha256": "3b92de2ebdcfd06e018b168b0854a1caf967d8a906c753be787ee4dc4125b22c",
+      "kernel_theorem": "CatS.grp_isProduct"
+    },
+    {
       "fact_id": "F:cats-initial-unique",
       "language": "lean4",
       "statement_sha256": "4024bc9de8f615d33e3d2cbb04480e96b3497bfd472493bb3fd0eb48e08781de",
       "prose_sha256": "b48c132507e6228e6065e568731ac47bccfc308d352ecfaf581af9d2aa7f66de",
       "kernel_theorem": "CatS.initial_unique"
+    },
+    {
+      "fact_id": "F:cats-is-product",
+      "language": "lean4",
+      "statement_sha256": "c455a8dc90da956aaf96e27ce4aa7874d60b0d35cf676a732872c30850910516",
+      "prose_sha256": "f03ddba43cfd76fb5b6d9022d3e55025384d0ebab9bedcfe967a7c6e9c42768a",
+      "kernel_theorem": "CatS.indiscrete_isProduct"
     },
     {
       "fact_id": "F:cats-isfunctor-comp",
@@ -1486,6 +1500,13 @@
       "statement_sha256": "282f20d7bcd9d3d0086704bc08bce4ba74619dfc059c158216897f58439a9004",
       "prose_sha256": "1bbd22c7a212aa0c20abcf29b974b22ec3c0782e9b0e3ebe7bb89b667620f605",
       "kernel_theorem": "CatS.natPtAlg_isInitial"
+    },
+    {
+      "fact_id": "F:cats-product-unique-upto-iso",
+      "language": "lean4",
+      "statement_sha256": "4da4b94dc5d161b1e312d1bdeaa891ef2424d9f3137e7eab8bbe5c7e3cdf8a7b",
+      "prose_sha256": "704aa37b819ed2494b35b2af80e7ccbd4ece85411a2d3df040c0b3f781ee3c8d",
+      "kernel_theorem": "CatS.product_unique_upto_iso"
     },
     {
       "fact_id": "F:cauchy-schwarz-over-constructed-plane",

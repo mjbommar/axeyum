@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "id": "F:cats-is-product",
+  "title": "The product's universal property in a setoid-enriched category needs three conjuncts, not one",
+  "statement": "CatS.IsProduct C a b p pr1 pr2 med says that the two projections pr1 : C.hom p a and pr2 : C.hom p b, together with a GIVEN mediating family med : forall x, C.hom x a -> C.hom x b -> C.hom x p, exhibit p as a product of a and b: the two triangles commute up to the category's own hom-equivalence (C.homEquiv x a (pr1 . med x f g) f and C.homEquiv x b (pr2 . med x f g) g), and any m : C.hom x p making both triangles commute is hom-equivalent to med x f g. Three conjuncts are necessary, not stylistic: with only the uniqueness clause the hypothesis set can be empty and med need not commute with the projections at all, and with only the two triangles every object carrying a pair of maps is a product. CatS.IsCoproduct is the same statement with every hom reversed and every composite written on the other side, and CatS.IsProductLarge is the same statement over CatS.CategoryLarge, which is where CatS.grp lives. The mediating map is a given rather than an Exists (universal-property template part 2), and uniqueness is up to the hom-equivalence, which is the strongest form available without funext (ADR-1595).",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem CatS.indiscrete_isProduct : ((x0 : Sort (1)) -> ((x1 : CatS.Category.obj (CatS.indiscrete x0)) -> ((x2 : CatS.Category.obj (CatS.indiscrete x0)) -> ((x3 : CatS.Category.obj (CatS.indiscrete x0)) -> ((x4 : CatS.Category.hom (CatS.indiscrete x0) x3 x1) -> ((x5 : CatS.Category.hom (CatS.indiscrete x0) x3 x2) -> CatS.IsProduct (CatS.indiscrete x0) x1 x2 x3 x4 x5 (fun (x6 : CatS.Category.obj (CatS.indiscrete x0)) => fun (x7 : CatS.Category.hom (CatS.indiscrete x0) x6 x1) => fun (x8 : CatS.Category.hom (CatS.indiscrete x0) x6 x2) => x7)))))))",
+    "fragment": "none",
+    "free_symbols": [],
+    "kernel_theorem": "CatS.indiscrete_isProduct"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "external_status": "proved",
+  "depends_on": [
+    "F:cats-initial-unique"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "cats-is-product-1",
+      "kind": "kernel-term",
+      "supports": "CatS.IsProduct, CatS.IsCoproduct, CatS.IsProductLarge, CatS.Iso, CatS.indiscrete_isProduct and CatS.indiscrete_isCoproduct admit through the trusted Kernel::add_declaration gate with an empty Kernel::axiom_footprint, asserted only after Environment::contains (an empty footprint is also what a missing name returns). The three-conjunct claim is read from the kernel by def_eq in BOTH directions, with three negative twins in the same test: IsProduct IS the nested And of the two triangles and uniqueness; it is NOT the conjunction of the two triangles alone; and it is NOT the same proposition with the two projections swapped. IsCoproduct IS its dual form and is NOT IsProduct at the same arguments. CatS.Iso IS both round trips and is NOT the single round trip.",
+      "check_status": "checked",
+      "checker_command": "out=$(RUST_MIN_STACK=1073741824 cargo test -p axeyum-lean-kernel --lib --release category_setoid -- --test-threads=4 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -cE 'test result: ok\\. 41 passed; 0 failed')\" -ge 1",
+      "notes": "The pinned count is 41 and is RECOUNTED from the suite's own output, not incremented (29 for the ADR-1620 + ADR-1626 layers, 12 for this one). The tests that carry this fact are products_tests::is_product_is_two_triangles_and_uniqueness, products_tests::is_coproduct_composes_on_the_other_side and products_tests::iso_is_both_round_trips."
+    }
+  ],
+  "concept_refs": [],
+  "provenance": {
+    "date": "2026-09-05",
+    "established_by": "axeyum-lean-kernel nat_prelude::category_setoid::products, lane cat-products, ADR-1632 (roadmap W3-4).",
+    "source": "crates/axeyum-lean-kernel/src/nat_prelude/category_setoid/products.rs (declare_is_product, declare_iso, declare_indiscrete_is_product); tests nat_prelude::category_setoid::products::products_tests::*."
+  },
+  "notes": "CatS.indiscrete_isProduct is landed precisely because it is EMPTY: in CatS.indiscrete A every hom-set is A and homEquiv is True, so every object with any pair of maps is a product of any two objects, and the theorem quantifies over the apex and both projections. It is the honest measure of what a universal property says when the hom-equivalence is total -- nothing -- and it is the control that stops a reader crediting the statement rather than the construction for CatS.grp_isProduct. CatS.Iso did not exist before this lane: CatS.initial_unique writes the conjunction of the two round trips out by hand. Verified ABSENT against a fresh shape_search index at declarations=3093 with the same-kind positive control CatS.isGrpHom_congr FOUND, which also establishes the index postdates the ADR-1626 merge."
+}
