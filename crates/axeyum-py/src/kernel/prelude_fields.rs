@@ -178,7 +178,7 @@ pub(super) fn list(p: &ListPrelude) -> Fields {
     }
 }
 
-/// The `NatPrelude` field table (1324 names,
+/// The `NatPrelude` field table (1341 names,
 /// 0 name lists, 1 sub-packages).
 ///
 /// 113 of the names come from ADR-1512 per-module registries and
@@ -1643,7 +1643,30 @@ pub(super) fn nat(p: &NatPrelude) -> Fields {
                 "hall_condition_of_is_matching",
                 p.hall_condition_of_is_matching,
             ),
+            ("hall_glue", p.hall_glue),
+            ("hall_is_matching_union", p.hall_is_matching_union),
+            ("hall_any_below_witness", p.hall_any_below_witness),
+            ("hall_mem_union_over_elim", p.hall_mem_union_over_elim),
+            ("hall_mem_union_over_congr", p.hall_mem_union_over_congr),
+            ("hall_card_union_over_congr", p.hall_card_union_over_congr),
+            ("hall_mem_union_over_sdiff", p.hall_mem_union_over_sdiff),
+            ("hall_card_union_over_sdiff", p.hall_card_union_over_sdiff),
+            (
+                "hall_card_le_card_union_over_sdiff_add",
+                p.hall_card_le_card_union_over_sdiff_add,
+            ),
             ("finset_card_congr_of_mem_b", p.finset_card_congr_of_mem_b),
+            ("finset_mem_b_union", p.finset_mem_b_union),
+            ("finset_mem_b_union_left", p.finset_mem_b_union_left),
+            ("finset_mem_b_union_right", p.finset_mem_b_union_right),
+            ("finset_mem_b_union_elim", p.finset_mem_b_union_elim),
+            ("finset_mem_b_sdiff", p.finset_mem_b_sdiff),
+            ("finset_mem_b_sdiff_intro", p.finset_mem_b_sdiff_intro),
+            ("finset_mem_b_sdiff_elim", p.finset_mem_b_sdiff_elim),
+            (
+                "finset_card_le_card_sdiff_add",
+                p.finset_card_le_card_sdiff_add,
+            ),
             ("finset_bit_b", p.finset_bit_b),
             ("finset_decode", p.finset_decode),
             ("finset_encode_from", p.finset_encode_from),
