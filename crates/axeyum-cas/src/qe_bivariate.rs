@@ -813,6 +813,22 @@ mod tests {
     }
 
     #[test]
+    fn a_total_degree_four_atom_with_a_vanishing_leading_coefficient_is_true_everywhere() {
+        // ∃y. x²y² − 1 < 0 ∧ y > 0.  For x ≠ 0 the condition is 0 < y < 1/|x|;
+        // at x = 0 the first atom is the constant −1 and every y works. So the
+        // answer is the whole line — but only because the projection notices
+        // that the leading `y`-coefficient x² vanishes at 0 and gives that
+        // point its own cell.
+        let certificate = decided(vec![
+            atom(&[&[-1], &[0], &[0, 0, 1]], Relation::Lt),
+            atom(&[&[0], &[1]], Relation::Gt),
+        ]);
+        assert_eq!(certificate.describe(), "x ∈ (-∞, ∞)");
+        assert_eq!(certificate.roots, vec![BigRational::zero()]);
+        assert_eq!(certificate.cells.len(), 3);
+    }
+
+    #[test]
     fn an_empty_conjunction_is_true_on_the_whole_line() {
         let certificate = decided(Vec::new());
         assert_eq!(certificate.describe(), "x ∈ (-∞, ∞)");

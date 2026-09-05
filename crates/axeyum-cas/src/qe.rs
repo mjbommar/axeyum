@@ -87,20 +87,29 @@
 //!
 //! # Cost profile — ADVISORY
 //!
-//! Measured on a prebuilt `--release` test binary; see the tests at the bottom
-//! of [`bivariate`] for the shapes. These are single runs on a shared box and
-//! are advisory only.
+//! Measured 2026-09-05 on a prebuilt `--release` lib-test binary, 20 repeats
+//! per shape with process startup subtracted, at load average 8.5 on a shared
+//! box. **Single run, advisory only** — do not ratchet on these. Each row is
+//! one named test, and the test does more than one decision, so read the row as
+//! "the whole shape", not "one call".
 //!
-//! | shape | cost |
+//! | shape (the test that is timed) | cost |
 //! |---|---|
-//! | univariate, degree 3, 3 atoms | sub-millisecond |
-//! | univariate, `x² − 10⁶⁰` | ~2 ms (≈200 bisections at 60-digit rationals) |
-//! | bivariate, total degree 2 (`x² + y² < 1`) | ~1 ms |
-//! | bivariate, total degree 4 (`x²y² − 1 < 0 ∧ y > 0`) | ~10 ms |
+//! | univariate, cubic, 3 atoms, decide + verify + front door | 0.6 ms |
+//! | DNF, 2 disjuncts, 3 atoms, refutation + verify | 0.5 ms |
+//! | bivariate, total degree 2 (`x² + y² < 1`), 5 cells + verify | 0.7 ms |
+//! | bivariate, total degree 4 (`x²y² − 1 < 0 ∧ y > 0`), 3 cells + verify | 0.7 ms |
+//! | univariate, `x² − 10³⁰` (+ the `i128` control) | 14 ms |
+//! | univariate, `x² − 10⁶⁰`, two verdicts | 85 ms |
 //!
-//! The dominant term is not the projection — it is the univariate decision run
-//! once per `x`-cell, so the bivariate cost is `(2r + 1)` times the univariate
-//! cost at the substituted degree.
+//! Two things the table says. First, **degree is cheap and magnitude is not**:
+//! the bivariate step at degree 4 costs the same as the univariate cubic, while
+//! a `10⁶⁰` coefficient costs a hundred times more — isolation bisects from a
+//! Cauchy bound of `10⁶⁰`, so it spends ~200 halvings on 60-digit rationals
+//! before the rational root is recognised. Second, the bivariate cost is
+//! dominated not by the projection but by the `2r + 1` univariate decisions in
+//! the fibres, so it scales with the number of cut points, not with the
+//! Sylvester determinants.
 
 use core::cmp::Ordering;
 
