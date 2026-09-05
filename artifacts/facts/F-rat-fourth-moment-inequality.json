@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "id": "F:rat-fourth-moment-inequality",
+  "title": "The fourth-moment tail bound is the concentration bound this carrier can state; Hoeffding is blocked on the joint law, not on the exponential",
+  "statement": "Let X be a rational-valued random variable on a finite index range [0, n) with a distribution p, and let a be a positive rational. Then a^4 times the expectation of the indicator of the event {(X - E X)^4 >= a^4} is at most E[(X - E X)^4] -- i.e. P(|X - E X| >= a) <= E[(X - E X)^4]/a^4, multiplied through so that no Rat.inv appears. It is Rat.markov_constructed at threshold a^4 against the summand ((X - E X)^2)^2, whose nonnegativity is Rat.sq_nonneg applied to (X - E X)^2 rather than to X - E X, and whose threshold positivity is Rat.mul_pos twice. No hypothesis beyond Markov's own. This is the tail bound reached INSTEAD of Hoeffding, and the two obstructions to Hoeffding are structural rather than effort. First, Hoeffding needs E[prod_j f(X_j)] = prod_j E[f(X_j)], a statement about a joint law over a product space, and a shape_search over 4,260 declarations including every constructed carrier finds no product or joint distribution of any spelling. Second, Hoeffding's lemma needs exp on the carrier the moments live on: CReal.expFn DOES exist, but the functional equation e^(x+y) = e^x * e^y -- without which the product step is not even statable -- does not, in the same index.",
+  "formal": {
+    "language": "lean4-surface",
+    "statement": "theorem Rat.fourth_moment_inequality : forall (a : Rat) (X p : Nat -> Rat) (n : Nat), Rat.IsDistribution p n -> Rat.lt Rat.zero a -> Rat.le (Rat.mul (Rat.mul (Rat.mul a a) (Rat.mul a a)) (Rat.expectation (Rat.indicator (Rat.mul (Rat.mul a a) (Rat.mul a a)) (fun k => Rat.mul (Rat.mul (Rat.sub (X k) (Rat.expectation X p n)) (Rat.sub (X k) (Rat.expectation X p n))) (Rat.mul (Rat.sub (X k) (Rat.expectation X p n)) (Rat.sub (X k) (Rat.expectation X p n))))) p n)) (Rat.expectation (fun k => Rat.mul (Rat.mul (Rat.sub (X k) (Rat.expectation X p n)) (Rat.sub (X k) (Rat.expectation X p n))) (Rat.mul (Rat.sub (X k) (Rat.expectation X p n)) (Rat.sub (X k) (Rat.expectation X p n)))) p n)",
+    "fragment": "Prop",
+    "kernel_theorem": "Rat.fourth_moment_inequality"
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:rat-chebyshev-inequality",
+    "F:rat-markov-constructed",
+    "F:rat-mul-pos",
+    "F:rat-sq-nonneg"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-axiom-free-rat",
+      "kind": "kernel-term",
+      "supports": "The declaration is admitted by the trusted kernel gate with an empty Kernel::axiom_footprint, together with every other declaration of ADR-1631's rational binomial layer. The test asserts Environment::contains FIRST, because an absent name has an empty footprint too.",
+      "check_status": "checked",
+      "checkers": [
+        "producing-build (Kernel::add_declaration)",
+        "binomial_rat_declarations_are_axiom_free"
+      ],
+      "checker_command": "cargo test --release -p axeyum-lean-kernel --lib rat_prelude::binomial_rat::binomial_rat_tests::binomial_rat_declarations_are_axiom_free -- --exact 2>&1 | grep -c '^test result: ok. 1 passed'",
+      "checker_seconds": 60,
+      "kernel_declaration": "Rat.fourth_moment_inequality",
+      "notes": "grep -c, not grep -q: -q would SIGPIPE the producer under pipefail, and -c exits 1 printing 0 when the line is absent, so a suite that compiled to zero tests and exited 0 is caught rather than counted as a pass. --release is mandatory: the rational prelude SIGABRTs on the default debug thread stack."
+    }
+  ],
+  "provenance": {
+    "date": "2026-09-05",
+    "established_by": "lane binomial-hoeffding (roadmap W3-12, ADR-1631)"
+  },
+  "notes": "What this does NOT give is Hoeffding's RATE. Turning a fourth-moment bound into a better-than-Chebyshev rate needs E[(S - E S)^4] <= 3(m sigma^2)^2, which needs 4-wise uncorrelatedness -- a hypothesis this development CAN state, because it is about covariance-like quantities rather than about a joint law -- and whose proof is a genuine expansion of a fourth power over m terms. That is the next slice and it is bounded."
+}

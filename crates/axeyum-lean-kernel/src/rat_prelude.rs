@@ -57,6 +57,8 @@ pub mod algebra_ext;
 pub mod algebra_instances;
 mod archimedean;
 mod bernoulli;
+pub mod binomial_rat;
+pub mod binomial_s;
 mod clear_below;
 mod core;
 mod decidable;
@@ -113,6 +115,8 @@ use crate::nat_prelude::NatOps;
 use algebra_ext::AlgebraExtNames;
 use algebra_instances::AlgebraNames;
 use field_setoid_instance::RatFieldSNames;
+use binomial_rat::BinomialRatNames;
+use binomial_s::BinomialSNames;
 use ordered_ring_ext::OrderedRingExtNames;
 use ordered_ring_ext_s::OrderedRingExtSNames;
 use probability_s::ProbSNames;
@@ -3180,6 +3184,20 @@ pub struct RatPrelude {
     /// `rat_prelude/vector_space_instance.rs`'s own 4 names (ADR-1627): ℚ as a
     /// vector space over itself, and the `linComb`/`sumRange` bridge.
     pub vector_space: RatVectorSpaceNames,
+
+    /// ADR-1631 (roadmap W3-12): the Bernoulli distribution as a
+    /// **constructed** two-point model over `(R : AlgS.OrderedRing)` — the
+    /// variable, the mass function, `IsDistribution` discharged rather than
+    /// assumed, `E[X] ≃ q`, `Var[X] ≃ q·(1 − q)`, and the two generic ring
+    /// lemmas (`mul_neg`, `zero_add`) that computation needs.
+    /// See [`binomial_s`].
+    pub binomial_s: BinomialSNames,
+
+    /// ADR-1631, second half: the binomial at `ℚ` — `E[Σ] = m·q`,
+    /// `Var[Σ] = m·q(1 − q)` under pairwise uncorrelatedness, and Chebyshev
+    /// with that variance substituted. At `ℚ` rather than over the record
+    /// because the variance of a sum needs `mulComm`; see [`binomial_rat`].
+    pub binomial_rat: BinomialRatNames,
 }
 
 impl RatPrelude {
@@ -3740,6 +3758,8 @@ fn intern_names(kernel: &mut Kernel, int: IntPrelude) -> RatPrelude {
         probability_s: probability_s::intern_probability_s(kernel),
         field_setoid: RatFieldSNames::intern(kernel, root),
         vector_space: RatVectorSpaceNames::intern(kernel, root),
+        binomial_s: binomial_s::intern_binomial_s(kernel),
+        binomial_rat: binomial_rat::intern_binomial_rat(kernel),
     }
 }
 
@@ -3842,6 +3862,8 @@ pub fn build_rat_prelude(kernel: &mut Kernel) -> Result<RatPrelude, KernelError>
         probability_s::declare_probability_s_all(&mut d, &prelude)?;
         field_setoid_instance::declare_rat_field_s(d.kernel(), &prelude)?;
         vector_space_instance::declare_rat_vector_space(d.kernel(), &prelude)?;
+        binomial_s::declare_binomial_s_all(&mut d, &prelude)?;
+        binomial_rat::declare_binomial_rat_all(&mut d, &prelude)?;
         Ok(())
     })();
     match built {

@@ -139,7 +139,7 @@ pub(super) fn declare_probability(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(
 
 /// `Rat.IsDistribution p n`, i.e. `d.const_app(p.is_distribution, &[pf,
 /// n])`.
-fn is_distribution(d: &mut IntDev<'_>, p: RatPrelude, pf: ExprId, n: ExprId) -> ExprId {
+pub(super) fn is_distribution(d: &mut IntDev<'_>, p: RatPrelude, pf: ExprId, n: ExprId) -> ExprId {
     d.const_app(p.is_distribution, &[pf, n])
 }
 
@@ -541,12 +541,18 @@ fn declare_prob_complement(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), Kern
 // --- expectation and its linearity -----------------------------------------
 
 /// `Rat.expectation X p n`, i.e. `d.const_app(p.expectation, &[x, pf, n])`.
-fn expectation(d: &mut IntDev<'_>, p: RatPrelude, x: ExprId, pf: ExprId, n: ExprId) -> ExprId {
+pub(super) fn expectation(
+    d: &mut IntDev<'_>,
+    p: RatPrelude,
+    x: ExprId,
+    pf: ExprId,
+    n: ExprId,
+) -> ExprId {
     d.const_app(p.expectation, &[x, pf, n])
 }
 
 /// `fun (_ : Nat) => c`.
-fn const_fn(d: &mut IntDev<'_>, c: ExprId) -> ExprId {
+pub(super) fn const_fn(d: &mut IntDev<'_>, c: ExprId) -> ExprId {
     let k_fv = d.fresh_fvar();
     let nat = d.nat_ty();
     d.lam_fv(k_fv, nat, c)
@@ -880,7 +886,7 @@ fn declare_expectation_const(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), Ke
 // --- the uniform distribution ------------------------------------------------
 
 /// `Rat.natDivSucc n 0` — `n` seen as a rational.
-fn nat_as_rat(d: &mut IntDev<'_>, p: RatPrelude, n: ExprId) -> ExprId {
+pub(super) fn nat_as_rat(d: &mut IntDev<'_>, p: RatPrelude, n: ExprId) -> ExprId {
     let zero_nat = d.num(0);
     d.const_app(p.nat_div_succ, &[n, zero_nat])
 }
@@ -926,7 +932,12 @@ fn rat_zero_mul(d: &mut IntDev<'_>, p: RatPrelude, c: ExprId) -> ExprId {
 /// Induction on `j`, `c` fixed; [`declare_uniform_is_distribution`]
 /// specialises at `j = n`, `c = inv (natDivSucc n 0)`, and closes with
 /// `mul_inv_cancel`.
-fn sum_range_const(d: &mut IntDev<'_>, p: RatPrelude, c: ExprId, j: ExprId) -> (ExprId, ExprId) {
+pub(super) fn sum_range_const(
+    d: &mut IntDev<'_>,
+    p: RatPrelude,
+    c: ExprId,
+    j: ExprId,
+) -> (ExprId, ExprId) {
     let constf = const_fn(d, c);
 
     let motive = |d: &mut IntDev<'_>, x: ExprId| -> ExprId {
@@ -1518,7 +1529,13 @@ fn declare_expectation_indicator_le_one(
 // --- variance ----------------------------------------------------------------
 
 /// `Rat.variance X p n`, i.e. `d.const_app(p.variance, &[x, pf, n])`.
-fn variance(d: &mut IntDev<'_>, p: RatPrelude, x: ExprId, pf: ExprId, n: ExprId) -> ExprId {
+pub(super) fn variance(
+    d: &mut IntDev<'_>,
+    p: RatPrelude,
+    x: ExprId,
+    pf: ExprId,
+    n: ExprId,
+) -> ExprId {
     d.const_app(p.variance, &[x, pf, n])
 }
 
@@ -1527,7 +1544,7 @@ fn variance(d: &mut IntDev<'_>, p: RatPrelude, x: ExprId, pf: ExprId, n: ExprId)
 /// [`declare_variance_eq`] can reconstruct the exact literal shape it
 /// unfolds to (mirroring [`weighted`]/[`is_distribution_parts`]'s own
 /// reason).
-fn variance_summand(d: &mut IntDev<'_>, p: RatPrelude, x: ExprId, mu: ExprId) -> ExprId {
+pub(super) fn variance_summand(d: &mut IntDev<'_>, p: RatPrelude, x: ExprId, mu: ExprId) -> ExprId {
     let k_fv = d.fresh_fvar();
     let k = d.kernel().fvar(k_fv);
     let xk = d.apply(x, &[k]);
@@ -4581,7 +4598,7 @@ fn declare_covariance_sum_vars(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), 
 
 /// `Rat.PairwiseUncorrelated X m p n`, i.e. `d.const_app(p.pairwise_uncorrelated,
 /// &[x, m, pf, n])`.
-fn pairwise_uncorrelated(
+pub(super) fn pairwise_uncorrelated(
     d: &mut IntDev<'_>,
     p: RatPrelude,
     x: ExprId,

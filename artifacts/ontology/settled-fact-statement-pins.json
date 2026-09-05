@@ -4,7 +4,7 @@
   "note": "Statement identity for every settled fact (S1 of the trusted-library safety roadmap, ADR-0763). Per fact: SHA-256 of formal.statement (the canonical kernel rendering for native lean4 rows), SHA-256 of the top-level reader-facing statement, and the kernel_theorem it names. A settled fact's statement is what the ledger CLAIMS; changing any of the three silently turns 'we proved X' into 'we proved something we then labelled X'. Changes require an amendment row naming both digests and a reason; superseded digests are preserved in each pin's history. `coverage_floor` is a ratchet the gate re-derives rather than trusts: slack is itself a violation, so a loosened floor is self-reverting. Written by `scripts/check-settled-fact-statements.py --write`; do not hand-edit.",
   "coverage_floor": {
     "max_unpinned_settled": 0,
-    "min_identity_bound": 2334,
+    "min_identity_bound": 2344,
     "max_header_exempt": 0
   },
   "amendments": [
@@ -1067,6 +1067,34 @@
       "kernel_theorem": "AlgS.OrderedRing.ofNat_le_ofNat_of_le"
     },
     {
+      "fact_id": "F:algs-orderedring-bernoulli-expectation",
+      "language": "lean4-surface",
+      "statement_sha256": "418a94fd24c4b754deee5394c0a846d891481e48512b37ad341388e1addea127",
+      "prose_sha256": "28bd836a3691042df03e2f793d04dc5f26ba35d45e5b7830bed494962b9ec18f",
+      "kernel_theorem": "AlgS.OrderedRing.bernoulli_expectation"
+    },
+    {
+      "fact_id": "F:algs-orderedring-bernoulli-is-distribution",
+      "language": "lean4-surface",
+      "statement_sha256": "e5bc4344fdac40cb2e30914414d23bdd4ad0014097573cdc2d1bf38e94d3db5a",
+      "prose_sha256": "c17a6d5f4ad31f702ab1235ae1f2a34fcebd8732246eb1d66e57f9f53cc0180f",
+      "kernel_theorem": "AlgS.OrderedRing.bernoulli_isDistribution"
+    },
+    {
+      "fact_id": "F:algs-orderedring-bernoulli-mass-nonneg",
+      "language": "lean4-surface",
+      "statement_sha256": "aedfcdd42c791a71aa7bffa07120d5d6fd17df53ad6bd5536a6a958b9cfe9352",
+      "prose_sha256": "24acd14169e2c4d617ab41ca6986ac1116a2acccfeca0912767bf7ebcf69e8d0",
+      "kernel_theorem": "AlgS.OrderedRing.bernoulliMass_nonneg"
+    },
+    {
+      "fact_id": "F:algs-orderedring-bernoulli-variance",
+      "language": "lean4-surface",
+      "statement_sha256": "f94b10203e6210d9c2118d9e0000954219cd1fea95080194ca066056836e38ef",
+      "prose_sha256": "c89631ef1b07584f1dd3ee6b6d90ffde39148517f901b033718a04f603b55621",
+      "kernel_theorem": "AlgS.OrderedRing.bernoulli_variance"
+    },
+    {
       "fact_id": "F:algs-orderedring-markov-inequality",
       "language": "lean4-surface",
       "statement_sha256": "7ec5aab027997e2e4c7ed5f4e5aea5842d1be3c4697f349e4639da91516ee70e",
@@ -1074,11 +1102,25 @@
       "kernel_theorem": "AlgS.OrderedRing.markov_inequality"
     },
     {
+      "fact_id": "F:algs-orderedring-mul-neg",
+      "language": "lean4-surface",
+      "statement_sha256": "b1e42e0357ec5db8cd624a41dd9be1b1ca69037563b91dbfea59d5910f85ea2b",
+      "prose_sha256": "506d5ab3c9e07ef2e8b5f0c88f2f02a590ed690181a986538313ef3f6069744c",
+      "kernel_theorem": "AlgS.OrderedRing.mul_neg"
+    },
+    {
       "fact_id": "F:algs-orderedring-uncorrelated-of-independent",
       "language": "lean4-surface",
       "statement_sha256": "a450fe95ef5e75986cc5dbaaebd2415f1f6d4634335b4e96b7ee8133c7e95c43",
       "prose_sha256": "e7bd79cbe630fe97fa7c5ba96b4ab428f51c24258bbebf7c0dddf12b14a30b5c",
       "kernel_theorem": "AlgS.OrderedRing.uncorrelated_of_independent"
+    },
+    {
+      "fact_id": "F:algs-orderedring-zero-add",
+      "language": "lean4-surface",
+      "statement_sha256": "bdfb0222d05967ec8022fe3bec0fc9ec7a05aca351679b5a4b1b8503d4e0bdbe",
+      "prose_sha256": "cb01abfe67c1e321d9ea0bf284d4c2e7144f8f340fea93a456c1d9496781edd9",
+      "kernel_theorem": "AlgS.OrderedRing.zero_add"
     },
     {
       "fact_id": "F:algs-poly-antidiagfrom-head",
@@ -21358,6 +21400,27 @@
       "kernel_theorem": "Rat.bernoulli_law_of_large_numbers"
     },
     {
+      "fact_id": "F:rat-binomial-chebyshev",
+      "language": "lean4-surface",
+      "statement_sha256": "5e4b652ec8130eb71c58648936666c630ac38646c67716caeb11bedd54ceeae3",
+      "prose_sha256": "edcd4ac43c95f1c14d4e6eec85cf30110401b5763de24fe4a1ae4d8b4cafc632",
+      "kernel_theorem": "Rat.binomial_chebyshev"
+    },
+    {
+      "fact_id": "F:rat-binomial-expectation",
+      "language": "lean4-surface",
+      "statement_sha256": "42b011eb9c3f91f0b84abfba0b1ab09facfc23bf844be7aefec5c9414c21ae90",
+      "prose_sha256": "fb4249fdd98f011380378c498618d70e855c54630b7b7b4626420e294963bc42",
+      "kernel_theorem": "Rat.binomial_expectation"
+    },
+    {
+      "fact_id": "F:rat-binomial-variance",
+      "language": "lean4-surface",
+      "statement_sha256": "75718b577c4d43e1e2ca2d569011c8618fe51d1cf0fc3a7ed98ddfff52bb4ec3",
+      "prose_sha256": "87e40b41e13ec8a63a0b9858c127034e272f453cc3744d028eb5ecae4f33f0e2",
+      "kernel_theorem": "Rat.binomial_variance"
+    },
+    {
       "fact_id": "F:rat-ble-eq-true-of-le",
       "language": "lean4",
       "statement_sha256": "d547df0f951647953944088a66f1ffa424d28bf789b0f03e031a434e635d4e09",
@@ -22039,6 +22102,13 @@
       "statement_sha256": "58830493c1a3e45e8b4b870f5f9934a976d937dba36dd5d4c0f4ba592801a333",
       "prose_sha256": "addb3e90484472058696498db88bd8a45778656f0ed3be0e65fd7a21fa895edf",
       "kernel_theorem": "Rat.fieldS_isTight"
+    },
+    {
+      "fact_id": "F:rat-fourth-moment-inequality",
+      "language": "lean4-surface",
+      "statement_sha256": "e927cdd8147b3da3e6173d7d9109153c8305645b83494bc97a2da1e9fbc0e289",
+      "prose_sha256": "89549f8f7c6ce1780b468b77b34f8aa867d8c176681e262a3743ce0a7065429d",
+      "kernel_theorem": "Rat.fourth_moment_inequality"
     },
     {
       "fact_id": "F:rat-gcd-one-right",
