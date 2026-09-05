@@ -222,6 +222,52 @@ class LeanOfficialConstructMatrixTests(unittest.TestCase):
                 self.data = mutated
                 self.assertTrue(any(expected_message in failure for failure in self.failures()))
 
+    def test_crosscheck_pin_is_distinct_from_the_corpus_audit_pin(self) -> None:
+        # ADR-1660: the repo's cross-check pin (`lean-toolchain`) and the
+        # corpus/audit pin this manifest's `pins` field registers are two
+        # different things and are allowed to disagree. A well-formed
+        # cross-check pin that is NOT equal to the corpus pin (exactly the
+        # live situation: 4.34.0-rc1 vs the corpus's 4.30.0) must be
+        # accepted.
+        self.assertNotEqual(
+            CHECK.EXPECTED_PINS["lean"]["toolchain"], "leanprover/lean4:v4.34.0-rc1"
+        )
+        self.assertEqual(
+            CHECK.crosscheck_pin_failures("leanprover/lean4:v4.34.0-rc1"), []
+        )
+        self.assertEqual(
+            CHECK.crosscheck_pin_failures(CHECK.EXPECTED_PINS["lean"]["toolchain"]),
+            [],
+        )
+
+    def test_crosscheck_pin_malformed_rejects(self) -> None:
+        # A genuinely wrong pin -- one that isn't a Lean toolchain pin at
+        # all -- must still fail, by name, so this guard is not vacuous.
+        for bad in (
+            "leanprover/lean4:4.34.0-rc1",  # missing the leading v
+            "leanprover/lean4:v4.34.0-rcX",  # non-numeric rc suffix
+            "not-a-toolchain-pin",
+            "",
+        ):
+            with self.subTest(bad=bad):
+                failures = CHECK.crosscheck_pin_failures(bad)
+                self.assertTrue(
+                    any("well-formed cross-check pin" in failure for failure in failures),
+                    f"expected a well-formed-pin rejection for {bad!r}, got {failures}",
+                )
+
+    def test_corpus_pin_drift_is_independent_of_the_crosscheck_pin(self) -> None:
+        # Mutating the REGISTERED corpus pin must still be caught by the
+        # existing EXPECTED_PINS comparison in validate_manifest, regardless
+        # of what the live lean-toolchain file says -- the two guards are
+        # independent. This is the "genuinely wrong registered pin" the
+        # corpus-pin guard must still catch after the crosscheck guard was
+        # loosened to well-formedness only.
+        mutated = copy.deepcopy(CHECK.load_manifest())
+        mutated["pins"]["lean"]["toolchain"] = "leanprover/lean4:v9.9.9"
+        self.data = mutated
+        self.assertTrue(any("pin drift" in failure for failure in self.failures()))
+
     def test_negative_must_remain_a_kernel_positivity_rejection(self) -> None:
         self.data["sources"]["negative"]["exit_status"] = 0
         self.data["sources"]["negative"]["official_source_outcome"] = "accepted"

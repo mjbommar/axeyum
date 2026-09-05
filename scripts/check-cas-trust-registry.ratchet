@@ -1,0 +1,113 @@
+# Per-function trust registry for `crates/axeyum-cas` (math-department file
+# 13, Next Ten item 10, first half). One row per record:
+#
+#   FN	<function path>	<return type>
+#   VOCAB	<type name>	<struct|enum>
+#
+# `FN` rows are every function this gate classified `certified` as of the
+# last --write. `VOCAB` rows are every certificate-vocabulary type the
+# source defined at that time. Regenerate with:
+#   python3 scripts/check-cas-trust-registry.py --write
+#
+# The floor: every recorded FN row must still classify `certified` today
+# (not `checker`, not `uncertified`, not gone), the total certified count
+# must not fall below the number of FN rows recorded, and every recorded
+# VOCAB row's type must still exist. A NEW certified function not recorded
+# here is refused too (run --write to accept it deliberately, so the floor
+# only rises on purpose) -- but a new UNCERTIFIED function is never refused;
+# that label is honest, not a violation. See
+# docs/math-department/13-computer-algebra.md item 10.
+COUNT	54
+FN	equal	ZeroTest
+FN	extremum::polynomial_extremum	Option<ExtremumCertificate>
+FN	fps::FormalPowerSeries::from_rational_function	Option<(FormalPowerSeries, TruncationIdentity)>
+FN	fps::FormalPowerSeries::from_recurrence	Option<(FormalPowerSeries, RecurrenceCertificate)>
+FN	fps::FormalPowerSeries::inverse	Option<(FormalPowerSeries, TruncationIdentity)>
+FN	fps::FormalPowerSeries::reversion	Option<(FormalPowerSeries, TruncationIdentity)>
+FN	fps::RecurrenceCertificate::new	RecurrenceCertificate
+FN	fps::guess_linear_recurrence	Option<RecurrenceCertificate>
+FN	fps::rational_generating_function	Option<RationalGeneratingFunction>
+FN	geometry_certify::DegenerateWitness::rational	DegenerateWitness
+FN	geometry_json::from_json	Result<GeometryCertificate, String>
+FN	gf2::certify_irreducible	Result<Option<IrreducibilityCertificate>, Gf2Error>
+FN	gf2::half_degree_parity_split_report	Result<HalfDegreeParitySplitReport, Gf2Error>
+FN	gf2::search_shaped_compositions	Result<ShapedCompositionSearchReport, Gf2Error>
+FN	gf2_extension::binary_extension_connected_adams_trace	Result<BinaryExtensionConnectedAdamsTraceReport, BinaryExtensionTraceError>
+FN	gf2_extension::binary_extension_connected_adams_trace_shard	Result<BinaryExtensionConnectedAdamsTraceShardReport, BinaryExtensionTraceError>
+FN	gf2_extension::binary_extension_long_cycle_trace	Result<BinaryExtensionLongCycleTraceReport, BinaryExtensionTraceError>
+FN	gf2_extension::binary_extension_long_cycle_trace_shard	Result<BinaryExtensionLongCycleTraceShardReport, BinaryExtensionTraceError>
+FN	gf2_extension::binary_extension_witt_shifted_trace	Result<BinaryExtensionWittShiftedTraceReport, BinaryExtensionTraceError>
+FN	gf2_extension::collapse_binary_extension_long_cycle_trace_subshards	Result<BinaryExtensionLongCycleTraceShardReport, BinaryExtensionTraceError>
+FN	gf2_extension::combine_binary_extension_connected_adams_trace_shards	Result<BinaryExtensionConnectedAdamsTraceReport, BinaryExtensionTraceError>
+FN	gf2_extension::combine_binary_extension_long_cycle_trace_shards	Result<BinaryExtensionLongCycleTraceReport, BinaryExtensionTraceError>
+FN	homology::HomologyCertificate::verify	Result<HomologyReport, String>
+FN	homology::homology	Option<HomologyCertificate>
+FN	integrate	Option<CertifiedIntegral>
+FN	inverse::polynomial_inverse	Option<InverseCertificate>
+FN	mvt::polynomial_mvt	Option<MvtCertificate>
+FN	ntheory_certify::certify_composite	Option<CompositeCertificate>
+FN	ntheory_certify::certify_crt	Option<CrtCertificate>
+FN	ntheory_certify::certify_factorization	Option<FactorizationCertificate>
+FN	ntheory_certify::certify_prime	Option<PrattCertificate>
+FN	partial_fractions::partial_fractions	Option<PartialFractionCertificate>
+FN	probability::Continuous::mean	Certificate
+FN	probability::Continuous::mgf	Certificate
+FN	probability::Continuous::total_mass	Certificate
+FN	probability::Continuous::variance	Certificate
+FN	probability::Discrete::mean	Certificate
+FN	probability::Discrete::mgf	Certificate
+FN	probability::Discrete::total_mass	Certificate
+FN	probability::Discrete::variance	Certificate
+FN	probability::chebyshev_bound	Certificate
+FN	probability::convolve_poisson	Option<Certificate>
+FN	probability::markov_bound	Certificate
+FN	prove_derivative	ZeroTest
+FN	rationality::decide_rationality	Option<RationalityCertificate>
+FN	real_algebraic::polynomial_ivt	Option<IvtCertificate>
+FN	sos::check	Result<CheckReport, String>
+FN	sos::check::check_artifact	Result<CheckReport, String>
+FN	sos::check::check_barrier	Result<CheckReport, String>
+FN	sos::check::check_lyapunov	Result<CheckReport, String>
+FN	sos::check::check_psd_not_sos	Result<CheckReport, String>
+FN	taylor::polynomial_taylor	Option<TaylorCertificate>
+FN	telescoping_check::check_closed_form	Result<ClosedFormReport, Vec<String>>
+FN	telescoping_check::check_closed_form_symbolic	Result<SymbolicClosedFormReport, Vec<String>>
+VOCAB	BarrierCertificate	struct
+VOCAB	BinaryExtensionConnectedAdamsTraceReport	struct
+VOCAB	BinaryExtensionConnectedAdamsTraceShardReport	struct
+VOCAB	BinaryExtensionLongCycleTraceReport	struct
+VOCAB	BinaryExtensionLongCycleTraceShardReport	struct
+VOCAB	BinaryExtensionWittShiftedTraceReport	struct
+VOCAB	Certificate	struct
+VOCAB	CertifiedIntegral	struct
+VOCAB	CheckReport	struct
+VOCAB	ClosedFormReport	struct
+VOCAB	CompositeCertificate	struct
+VOCAB	CrtCertificate	enum
+VOCAB	DegenerateWitness	struct
+VOCAB	ExtremumCertificate	struct
+VOCAB	FactorizationCertificate	struct
+VOCAB	GenericWitness	struct
+VOCAB	GeometryCertificate	struct
+VOCAB	GeometryReport	struct
+VOCAB	GosperEvidence	enum
+VOCAB	HalfDegreeParitySplitReport	struct
+VOCAB	HomologyCertificate	struct
+VOCAB	HomologyReport	struct
+VOCAB	InverseCertificate	struct
+VOCAB	IrreducibilityCertificate	struct
+VOCAB	IvtCertificate	struct
+VOCAB	LyapunovCertificate	struct
+VOCAB	MvtCertificate	struct
+VOCAB	PartialFractionCertificate	struct
+VOCAB	PrattCertificate	struct
+VOCAB	PsdNotSosCertificate	struct
+VOCAB	RationalGeneratingFunction	struct
+VOCAB	RationalityCertificate	struct
+VOCAB	RecurrenceCertificate	struct
+VOCAB	ShapedCompositionSearchReport	struct
+VOCAB	SymbolicClosedFormReport	struct
+VOCAB	TaylorCertificate	struct
+VOCAB	TelescopingCertificate	struct
+VOCAB	TruncationIdentity	enum
+VOCAB	ZeroTest	enum

@@ -134,6 +134,7 @@ mod sub_nat_nat;
 mod sum;
 mod sum_maps;
 mod two_sided_induction;
+mod two_squares;
 mod wilson;
 
 use ops::IntDev;
@@ -1968,6 +1969,114 @@ pub struct IntPrelude {
     /// primitive root are pairwise incongruent, i.e. they enumerate the
     /// `totient n` units without repetition.
     pub primitive_root_pow_injective: NameId,
+    // -- `two-squares` lane (W3-10, ADR-1633): `int_prelude/two_squares.rs` --
+    /// `Int.IsSumOfTwoSquares : Int -> Prop :=`
+    /// `  fun n => Exists Int (fun a => Exists Int (fun b =>`
+    /// `    Eq Int n (add (mul a a) (mul b b))))` -- the double existential
+    /// every statement in the two-squares family quantifies over, named once
+    /// so `shape_search --const` retrieves the family. See
+    /// `two_squares.rs`'s module doc.
+    pub is_sum_of_two_squares: NameId,
+    /// `Int.isSumOfTwoSquares_intro : forall n a b,`
+    /// `  Eq Int n (add (mul a a) (mul b b)) -> IsSumOfTwoSquares n` -- the
+    /// named introduction rule for [`Self::is_sum_of_two_squares`].
+    pub is_sum_of_two_squares_intro: NameId,
+    /// `Int.brahmaguptaFibonacci : forall a b c d,`
+    /// `  Eq Int (mul (add (mul a a) (mul b b)) (add (mul c c) (mul d d)))`
+    /// `    (add (mul (sub (mul a c) (mul b d)) (sub (mul a c) (mul b d)))`
+    /// `         (mul (add (mul a d) (mul b c)) (add (mul a d) (mul b c))))`
+    /// -- **the Brahmagupta-Fibonacci identity**,
+    /// `(a^2+b^2)(c^2+d^2) = (ac-bd)^2 + (ad+bc)^2`. Emitted by
+    /// `ring::int::declare` (ADR-1582), never written by hand.
+    pub brahmagupta_fibonacci: NameId,
+    /// `Int.brahmaguptaFibonacci' : forall a b c d,`
+    /// `  (a^2+b^2)(c^2+d^2) = (ac+bd)^2 + (ad-bc)^2` -- the conjugate form,
+    /// and the one Fermat's descent consumes (both cross terms are divisible
+    /// by `m` when `c = a` and `d = b` modulo `m`). Also `ring::int`.
+    pub brahmagupta_fibonacci_swap: NameId,
+    /// `Int.isSumOfTwoSquares_mul : forall m n, IsSumOfTwoSquares m ->`
+    /// `  IsSumOfTwoSquares n -> IsSumOfTwoSquares (mul m n)` -- the
+    /// composition law, i.e. [`Self::brahmagupta_fibonacci`] read as a
+    /// closure property of [`Self::is_sum_of_two_squares`].
+    pub is_sum_of_two_squares_mul: NameId,
+    /// `Int.sq_of_two_mul : forall k,`
+    /// `  Eq Int (mul (mul k 2) (mul k 2)) (mul 4 (mul k k))` -- `(2k)^2 =
+    /// 4k^2`, emitted by `ring::int`. The even leaf of
+    /// [`Self::sq_mod_eq_four_zero_or_one`].
+    pub sq_of_two_mul: NameId,
+    /// `Int.sq_of_two_mul_add_one : forall k,`
+    /// `  Eq Int (mul (add (mul k 2) 1) (add (mul k 2) 1))`
+    /// `    (add (mul 4 (add (mul k k) k)) 1)` -- `(2k+1)^2 = 4(k^2+k) + 1`,
+    /// emitted by `ring::int`. The odd leaf of
+    /// [`Self::sq_mod_eq_four_zero_or_one`].
+    pub sq_of_two_mul_add_one: NameId,
+    /// `Int.sq_modEq_four_zero_or_one : forall a,`
+    /// `  Or (ModEq 4 (mul a a) 0) (ModEq 4 (mul a a) 1)` -- **every square
+    /// is 0 or 1 modulo 4**. Split by `Nat.even_or_odd_exists` at `natAbs a`
+    /// and closed with the definable witness `a / 2` in each branch; no
+    /// existential is opened. `two_squares.rs`.
+    pub sq_mod_eq_four_zero_or_one: NameId,
+    /// `Int.not_isSumOfTwoSquares_of_modEq_four_three : forall n,`
+    /// `  ModEq 4 n 3 -> Not (IsSumOfTwoSquares n)` -- **the boundary
+    /// refutation** (ADR-0603 grade 2): `n = 3 (mod 4)` is not a sum of two
+    /// squares. Four leaves under a doubled
+    /// [`Self::sq_mod_eq_four_zero_or_one`], each closed by REDUCTION of
+    /// `emod` at closed numerals plus `Int.natAbs` injectivity.
+    pub not_is_sum_of_two_squares_of_mod_eq_four_three: NameId,
+    /// `Int.zero_add : forall a, Eq Int (add 0 a) a` -- the mirror of
+    /// [`Self::add_zero`], which was here without it. `ring::int`.
+    pub zero_add: NameId,
+    /// `Int.sub_self : forall a, Eq Int (sub a a) 0`. `ring::int`.
+    pub sub_self: NameId,
+    /// `Int.add_sub_cancel_right : forall a b, Eq Int (add (sub a b) b) a`.
+    /// `ring::int`.
+    pub add_sub_cancel_right: NameId,
+    /// `Int.mul_sub_mul_comm : forall a b,`
+    /// `  Eq Int (sub (mul a b) (mul b a)) 0` -- the commutator of a product,
+    /// which is what makes the descent's second cross term `ae - bc` vanish
+    /// modulo `m`. `ring::int`.
+    pub mul_sub_mul_comm: NameId,
+    /// `Int.eq_of_sub_eq_zero : forall a b, Eq Int (sub a b) 0 ->
+    /// Eq Int a b`.
+    pub eq_of_sub_eq_zero: NameId,
+    /// `Int.mul_ne_zero : forall a b, Not (Eq Int a 0) -> Not (Eq Int b 0) ->
+    /// Not (Eq Int (mul a b) 0)` -- [`Self::mul_eq_zero`] contrapositive,
+    /// i.e. no zero divisors, in the direction a cancellation consumes.
+    pub mul_ne_zero: NameId,
+    /// `Int.mul_left_cancel_of_ne_zero : forall m a b, Not (Eq Int m 0) ->`
+    /// `  Eq Int (mul m a) (mul m b) -> Eq Int a b` -- multiplicative
+    /// cancellation over an integral domain. Absent before the `two-squares`
+    /// lane (`shape_search --ns Int --name-contains cancel` reported only
+    /// additive and `ModEq` cancellations).
+    pub mul_left_cancel_of_ne_zero: NameId,
+    /// `Int.modEq_descent_cross_terms : forall m a b c e, 0 < m ->`
+    /// `  ModEq m c a -> ModEq m e b -> ModEq m (add (mul a a) (mul b b)) 0 ->`
+    /// `  And (ModEq m (add (mul a c) (mul b e)) 0)`
+    /// `      (ModEq m (sub (mul a e) (mul b c)) 0)`
+    /// -- **the congruence half of Fermat's descent**: with `c = a` and
+    /// `e = b` modulo `m`, BOTH cross terms of
+    /// [`Self::brahmagupta_fibonacci_swap`]'s grouping are divisible by `m`.
+    pub mod_eq_descent_cross_terms: NameId,
+    /// `Int.mul_mul_of_mul_mul : forall m p q,`
+    /// `  Eq Int (mul (mul m p) (mul m q)) (mul (mul m m) (mul q p))`.
+    /// `ring::int`.
+    pub mul_mul_of_mul_mul: NameId,
+    /// `Int.sq_add_sq_of_mul_left : forall m u w,`
+    /// `  Eq Int (add (mul (mul m u) (mul m u)) (mul (mul m w) (mul m w)))`
+    /// `    (mul (mul m m) (add (mul u u) (mul w w)))`. `ring::int`.
+    pub sq_add_sq_of_mul_left: NameId,
+    /// `Int.descentStep : forall m p q a b c e u w, Not (Eq Int m 0) ->`
+    /// `  Eq Int (mul m p) (add (mul a a) (mul b b)) ->`
+    /// `  Eq Int (mul m q) (add (mul c c) (mul e e)) ->`
+    /// `  Eq Int (mul m u) (add (mul a c) (mul b e)) ->`
+    /// `  Eq Int (mul m w) (sub (mul a e) (mul b c)) ->`
+    /// `  Eq Int (mul q p) (add (mul u u) (mul w w))`
+    /// -- **the algebraic half of Fermat's descent**: the multiplier drops
+    /// from `m` to `q` and the conclusion has the same shape as the first
+    /// hypothesis, so `Nat.strongInduction` on `natAbs` of the multiplier
+    /// applies directly. The quotients `u`, `w` are hypotheses; producing them
+    /// is what [`Self::mod_eq_descent_cross_terms`] licenses.
+    pub descent_step: NameId,
 }
 
 /// Intern every name the integer development uses. Interning is not
@@ -2388,6 +2497,31 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
         dvd_gcd_mul_gcd_iff_dvd_mul: child(kernel, "dvd_gcd_mul_gcd_iff_dvd_mul"),
         mod_eq_cancel_left_div_gcd: child(kernel, "mod_eq_cancel_left_div_gcd"),
         mod_eq_cancel_right_div_gcd: child(kernel, "mod_eq_cancel_right_div_gcd"),
+
+        // `two-squares` lane -- see the matching struct-field block above.
+        is_sum_of_two_squares: child(kernel, "IsSumOfTwoSquares"),
+        is_sum_of_two_squares_intro: child(kernel, "isSumOfTwoSquares_intro"),
+        brahmagupta_fibonacci: child(kernel, "brahmaguptaFibonacci"),
+        brahmagupta_fibonacci_swap: child(kernel, "brahmaguptaFibonacci'"),
+        is_sum_of_two_squares_mul: child(kernel, "isSumOfTwoSquares_mul"),
+        sq_of_two_mul: child(kernel, "sq_of_two_mul"),
+        sq_of_two_mul_add_one: child(kernel, "sq_of_two_mul_add_one"),
+        sq_mod_eq_four_zero_or_one: child(kernel, "sq_modEq_four_zero_or_one"),
+        not_is_sum_of_two_squares_of_mod_eq_four_three: child(
+            kernel,
+            "not_isSumOfTwoSquares_of_modEq_four_three",
+        ),
+        zero_add: child(kernel, "zero_add"),
+        sub_self: child(kernel, "sub_self"),
+        add_sub_cancel_right: child(kernel, "add_sub_cancel_right"),
+        mul_sub_mul_comm: child(kernel, "mul_sub_mul_comm"),
+        eq_of_sub_eq_zero: child(kernel, "eq_of_sub_eq_zero"),
+        mul_ne_zero: child(kernel, "mul_ne_zero"),
+        mul_left_cancel_of_ne_zero: child(kernel, "mul_left_cancel_of_ne_zero"),
+        mod_eq_descent_cross_terms: child(kernel, "modEq_descent_cross_terms"),
+        mul_mul_of_mul_mul: child(kernel, "mul_mul_of_mul_mul"),
+        sq_add_sq_of_mul_left: child(kernel, "sq_add_sq_of_mul_left"),
+        descent_step: child(kernel, "descentStep"),
     }
 }
 
@@ -2776,6 +2910,11 @@ pub(crate) fn build_int_prelude_uncached(kernel: &mut Kernel) -> Result<IntPrelu
         // (`euler_assembly.rs`) and `Nat.lnp_bounded_search`/`Nat.div_mod_exists`
         // from the Nat prelude.
         mult_order::declare_all(&mut d)?;
+        // `two-squares` lane (W3-10, ADR-1633): sums of two squares. Placed
+        // last -- it composes `ring::int` (`Int.add`/`mul`/`sub` laws),
+        // `parity.rs`'s `Int.Even`/`Int.Odd` and their `ediv` extractors, and
+        // `modeq_family.rs`'s `Int.modEq_add_mul_left`.
+        two_squares::declare_two_squares_all(&mut d)?;
         Ok(prelude)
     })();
     match built {
@@ -2811,3 +2950,6 @@ mod cas_pratt_bridge_tests;
 
 #[cfg(test)]
 mod cas_crt_bridge_tests;
+
+#[cfg(test)]
+mod two_squares_tests;
