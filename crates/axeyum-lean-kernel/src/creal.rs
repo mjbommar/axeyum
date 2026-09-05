@@ -122,6 +122,7 @@ pub use mvt::MvtNames;
 pub use omniscience::CRealOmniscienceNames;
 pub use pi::PiNames;
 pub use polynomial::PolynomialNames;
+pub use power_series::PowerSeriesNames;
 pub use ratio_test::RatioTestNames;
 
 /// The build table the prelude actually runs: `STEP_DISPATCH`'s order and
@@ -2619,6 +2620,13 @@ pub struct CRealPrelude {
     /// these names, which is what makes the move local rather than a
     /// cross-module rename (`scripts/creal-declare-deps.py`).
     pub ratio_test: RatioTestNames,
+    /// `creal/power_series.rs`'s own names, moved out of this struct by
+    /// ADR-1512 so that adding a declaration to that module touches that
+    /// module alone.
+    ///
+    /// Reached as `p.power_series.power_series_partial` and documented in
+    /// [`PowerSeriesNames`] rather than here.
+    pub power_series: PowerSeriesNames,
     /// `CReal.one_le_pow_of_one_le : ∀ x, le one x → ∀ n, le one (pow x n)` —
     /// the mirror of [`Self::pow_le_one`]: powers of a base at least `1` stay
     /// at least `1`. Induction on `n`, and simpler than `pow_le_one`'s own
@@ -6603,6 +6611,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         geom_cauchy_body_16_over_25: kernel.name_str(creal, "geomCauchyBody16Over25"),
         geom_cauchy_of_lt: kernel.name_str(creal, "geomCauchyOfLt"),
         ratio_test: ratio_test::RatioTestNames::intern(kernel, creal),
+        power_series: power_series::PowerSeriesNames::intern(kernel, creal),
         one_le_pow_of_one_le: kernel.name_str(creal, "one_le_pow_of_one_le"),
         pow_le_pow_of_one_le: kernel.name_str(creal, "pow_le_pow_of_one_le"),
         pow_pos: kernel.name_str(creal, "pow_pos"),
@@ -7957,6 +7966,18 @@ const STEP_DISPATCH: &[StepDispatch] = &[
         "field_setoid_instance::declare_field_s_all",
         field_setoid_instance::declare_field_s_all,
     ),
+    (
+        "power_series::declare_abs_pow_le",
+        power_series::declare_abs_pow_le,
+    ),
+    (
+        "power_series::declare_one_pow",
+        power_series::declare_one_pow,
+    ),
+    (
+        "power_series::declare_power_series_partial",
+        power_series::declare_power_series_partial,
+    ),
 ];
 
 /// Build the real prelude: `ℝ` as a Bishop setoid over the constructed `ℚ`,
@@ -9088,6 +9109,7 @@ mod order_extra;
 mod pi;
 mod polynomial;
 mod power;
+mod power_series;
 mod product;
 mod ratio_test;
 mod ring_helpers;
