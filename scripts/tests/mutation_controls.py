@@ -6644,6 +6644,51 @@ SUITES["cas-internal-residue"] = (
 )
 
 
+# The extraction-time surface screen (ADR-1662). Each mutation removes exactly
+# one of the screen's load-bearing decisions; the negative controls in the suite
+# are what make the over-flagging mutations killable at all, because a screen
+# that flags everything passes every positive-only test.
+SUITES["lean-surface-screen"] = (
+    "scripts/lean_surface_screen.py",
+    "scripts.tests.test_lean_surface_screen",
+    [
+        # GLYPH SET. U+22EF is the printer's elision for a proof term and is
+        # the only reason `Nat.le_induction` does not re-parse.
+        (
+            "the elision glyph is part of the glyph set",
+            'GLYPH_RE = re.compile(r"[⋯✝…]")',
+            'GLYPH_RE = re.compile(r"[✝…]")',
+        ),
+        # TYPED SIBLING. The decision that separates a screen from a coercion
+        # grep: one uncoerced operand of known type fixes the whole group.
+        (
+            "a bare operand in the group means the coercion target is determined",
+            "        if _IDENT_START.match(char):\n            return False",
+            "        if _IDENT_START.match(char):\n            return True",
+        ),
+        # COERCED PROJECTION. The signature itself.
+        (
+            "dot notation on an all-coerced group is a finding",
+            "        if _group_is_all_coerced(inner):",
+            "        if False:",
+        ),
+        # LAMBDA ASCRIPTION. Field notation on an unascribed binder.
+        (
+            "field notation on an unascribed lambda binder is a finding",
+            '            if re.search(rf"\\b{re.escape(binder)}\\.[A-Za-z_]", body):',
+            "            if False:",
+        ),
+        # EXIT STATUS. A screen whose exit status does not depend on the
+        # finding is worse than no screen.
+        (
+            "the exit status depends on the finding",
+            "    return 1 if flagged else 0",
+            "    return 0",
+        ),
+    ],
+)
+
+
 if __name__ == "__main__":
     raise SystemExit(main(sys.argv))
 
