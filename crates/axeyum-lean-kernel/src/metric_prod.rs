@@ -180,7 +180,11 @@ pub struct MetricProdNames {
 impl MetricProdNames {
     /// Every name this file owns, for the inventory tests. Derived from the
     /// struct's own fields, never a literal list somewhere else.
-    pub fn all(&self) -> Vec<(&'static str, NameId)> {
+    /// Named `owned_names`, not `all`: `check-kernel-trusted-core.py` resolves
+    /// method calls loosely by name and the trusted core calls `.all(..)` on other
+    /// receivers, so `all` here put 31 lines of this content file into the
+    /// trusted closure (guard D, 2026-09-05; same as `ImageGroupNames`).
+    pub fn owned_names(&self) -> Vec<(&'static str, NameId)> {
         vec![
             ("Metric.prod", self.prod),
             ("Metric.prod_fst", self.prod_fst),
