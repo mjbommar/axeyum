@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "id": "F:rat-lincomb-eq-sumrange",
+  "title": "The abstract linear combination over the rationals IS the concrete rational finite sum, definitionally",
+  "statement": "Rat.vectorSpaceS makes the rationals a vector space over themselves -- AlgS.VectorSpace.IsVectorSpace Rat.fieldS Rat.addCommGroupS Rat.mul, discharged by AlgS.Module.selfModule at the rationals' ring with no new proof. Over that instance the abstract basis layer's linear combination and the concrete rational finite sum are the SAME TERM: linComb Rat.commRingS Rat.addCommGroupS Rat.mul c v n equals Rat.sumRange (fun i => Rat.mul (c i) (v i)) n, and the proof is Eq.refl. Both sides are one Nat.rec: linComb has base M.e and step fun j ih => M.op ih (smul (c j) (v j)); Rat.sumRange g has base Rat.zero and step fun j ih => Rat.add ih (g j). At M := AlgS.CommRing.toCommGroupS of the rationals' ring and smul := Rat.mul every selector iota-reduces and the two minor premises are the same term. ADR-1609 estimated this bridge as 'Eq.refl-adjacent'; measured, it is Eq.refl exactly, and the convention match it guessed at -- exclusive bound, new term on the right -- is real.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Rat.linComb_eq_sumRange : ((x0 : ((x0 : AxNat) -> Rat)) -> ((x1 : ((x1 : AxNat) -> Rat)) -> ((x2 : AxNat) -> Eq.{1} Rat (AlgS.Module.linComb Rat.commRingS Rat.addCommGroupS Rat.mul x0 x1 x2) (Rat.sumRange (fun (x3 : AxNat) => Rat.mul (x0 x3) (x1 x3)) x2))))",
+    "fragment": "none",
+    "free_symbols": [],
+    "kernel_theorem": "Rat.linComb_eq_sumRange"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "external_status": "proved",
+  "depends_on": [
+    "F:algs-vectorspace-solve-smul",
+    "F:rat-field-setoid-tight"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "rat-lincomb-eq-sumrange-1",
+      "kind": "kernel-term",
+      "supports": "Rat.commRingS, Rat.addCommGroupS, Rat.vectorSpaceS and Rat.linComb_eq_sumRange admit with empty footprints. The suite does not merely re-check the declaration: it asserts the two sides are def_eq DIRECTLY, built from the kernel constants in the test, and pairs that with a negative control -- Rat.sumRange of the coefficient family alone, the vector factor dropped -- which must NOT be def_eq. Without the negative half the agreement could be reporting a def_eq that any two Nat.rec applications satisfy.",
+      "check_status": "checked",
+      "checker_command": "out=$(cargo test -p axeyum-lean-kernel --lib --release -- rat_prelude::vector_space_instance --test-threads=4 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -cE 'test result: ok\\. 3 passed; 0 failed')\" -ge 1",
+      "notes": "The pinned count is 3."
+    }
+  ],
+  "concept_refs": [],
+  "provenance": {
+    "date": "2026-09-05",
+    "established_by": "axeyum-lean-kernel rat_prelude::vector_space_instance, lane vector-spaces-field, ADR-1627 (roadmap W3-2).",
+    "source": "crates/axeyum-lean-kernel/src/rat_prelude/vector_space_instance.rs; tests rat_prelude::vector_space_instance::vector_space_instance_tests::*."
+  },
+  "notes": "This is items 1 and 2 of ADR-1609's three-item rational bridge. Item 3 -- Rat.rank and Rat.nullity restated as spans/linearIndependent -- is STILL OPEN and its measured price is in ADR-1627: ADR-1554 obligations 2, 3 and 4 (rowEchelon_isEchelon, three lanes) PLUS a fourth piece ADR-1609 did not list, namely the row space as an AlgS.CommGroup over Nat -> Rat (a function carrier, statable only over setoids), PLUS general dimension invariance. Rat.vectorSpaceS renders as: AlgS.VectorSpace.IsVectorSpace Rat.fieldS Rat.addCommGroupS Rat.mul."
+}
