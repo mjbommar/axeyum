@@ -2134,6 +2134,23 @@ pub struct IntPrelude {
     /// `Int.lt_of_add_le_of_nonneg : forall m q, lt zero m -> le zero q ->`
     /// `  le (add q q) m -> lt q m`.
     pub lt_of_add_le_of_nonneg: NameId,
+    /// `Int.lt_of_mul_lt_mul_left : forall k a b, le zero k ->`
+    /// `  lt (mul k a) (mul k b) -> lt a b`.
+    pub lt_of_mul_lt_mul_left: NameId,
+    /// `Int.nonneg_of_mul_nonneg_left : forall k a, lt zero k ->`
+    /// `  le zero (mul k a) -> le zero a`.
+    pub nonneg_of_mul_nonneg_left: NameId,
+    /// `Int.pos_of_mul_pos_left : forall k a, le zero k ->`
+    /// `  lt zero (mul k a) -> lt zero a`.
+    pub pos_of_mul_pos_left: NameId,
+    /// `Int.eq_zero_of_sq_add_sq_eq_zero : forall a b,`
+    /// `  Eq Int (add (mul a a) (mul b b)) zero ->`
+    /// `  And (Eq Int a zero) (Eq Int b zero)`.
+    pub eq_zero_of_sq_add_sq_eq_zero: NameId,
+    /// `Int.descentMultiplierBounds : forall m q c e, lt zero m ->`
+    /// `  Eq Int (mul m q) (add (mul c c) (mul e e)) -> (four bounds) ->`
+    /// `  And (le zero q) (lt q m)` -- the descent's termination certificate.
+    pub descent_multiplier_bounds: NameId,
 }
 
 /// Intern every name the integer development uses. Interning is not
@@ -2597,6 +2614,11 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
         two_mul_sq_add_sq_le_sq: child(kernel, "two_mul_sq_add_sq_le_sq"),
         sq_add_sq_lt_sq_of_bounds: child(kernel, "sq_add_sq_lt_sq_of_bounds"),
         lt_of_add_le_of_nonneg: child(kernel, "lt_of_add_le_of_nonneg"),
+        lt_of_mul_lt_mul_left: child(kernel, "lt_of_mul_lt_mul_left"),
+        nonneg_of_mul_nonneg_left: child(kernel, "nonneg_of_mul_nonneg_left"),
+        pos_of_mul_pos_left: child(kernel, "pos_of_mul_pos_left"),
+        eq_zero_of_sq_add_sq_eq_zero: child(kernel, "eq_zero_of_sq_add_sq_eq_zero"),
+        descent_multiplier_bounds: child(kernel, "descentMultiplierBounds"),
     }
 }
 

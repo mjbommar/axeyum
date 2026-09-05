@@ -1064,6 +1064,370 @@ fn declare_lt_of_add_le_of_nonneg(d: &mut IntDev<'_>) -> Result<(), KernelError>
 }
 
 // ============================================================================
+// what the descent reads off a factorisation
+// ============================================================================
+
+/// `Int.lt_of_mul_lt_mul_left : ∀ k a b, le zero k → lt (mul k a) (mul k b) →`
+/// `  lt a b` — the strict sibling of [`declare_le_of_mul_le_mul_left`], and
+/// the one that needs only `0 ≤ k` rather than `0 < k` (a strict product
+/// inequality already rules `k = 0` out).
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection.
+fn declare_lt_of_mul_lt_mul_left(d: &mut IntDev<'_>) -> Result<(), KernelError> {
+    let p = d.int();
+    d.int_theorem(p.lt_of_mul_lt_mul_left, 3, &|d, v| {
+        let (k, a, b) = (v[0], v[1], v[2]);
+        let zero = d.izero();
+        let nonneg = d.ile(zero, k);
+        let ka = d.imul(k, a);
+        let kb = d.imul(k, b);
+        let strict = d.ilt(ka, kb);
+        let concl = d.ilt(a, b);
+        let stmt = {
+            let tail = d.arrow(strict, concl);
+            d.arrow(nonneg, tail)
+        };
+
+        let proof = with_hyp(d, nonneg, &|d, hk| {
+            let strict = {
+                let ka = d.imul(k, a);
+                let kb = d.imul(k, b);
+                d.ilt(ka, kb)
+            };
+            with_hyp(d, strict, &|d, h| {
+                let concl = d.ilt(a, b);
+                by_le_total(
+                    d,
+                    a,
+                    b,
+                    concl,
+                    &|d, hab| {
+                        let eq_ty = d.ieq(a, b);
+                        let hne = with_hyp(d, eq_ty, &|d, heq| {
+                            let ka = d.imul(k, a);
+                            let heq_rev = d.isymm(a, b, heq);
+                            let bad = d.int_eq_rewrite(b, a, heq_rev, h, &|d, x| {
+                                let ka = d.imul(k, a);
+                                let kx = d.imul(k, x);
+                                d.ilt(ka, kx)
+                            });
+                            lt_irrefl_absurd(d, ka, bad)
+                        });
+                        d.const_app(p.lt_of_le_of_ne, &[a, b, hab, hne])
+                    },
+                    &|d, hba| {
+                        let ka = d.imul(k, a);
+                        let kb = d.imul(k, b);
+                        let flipped = d.const_app(p.mul_le_mul_of_nonneg_left, &[k, b, a, hk, hba]);
+                        let bad = d.const_app(p.lt_of_lt_of_le, &[ka, kb, ka, h, flipped]);
+                        let false_proof = lt_irrefl_absurd(d, ka, bad);
+                        let target = d.ilt(a, b);
+                        d.absurd(target, false_proof)
+                    },
+                )
+            })
+        });
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
+/// `Int.nonneg_of_mul_nonneg_left : ∀ k a, lt zero k → le zero (mul k a) →`
+/// `  le zero a`.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection.
+fn declare_nonneg_of_mul_nonneg_left(d: &mut IntDev<'_>) -> Result<(), KernelError> {
+    let p = d.int();
+    d.int_theorem(p.nonneg_of_mul_nonneg_left, 2, &|d, v| {
+        let (k, a) = (v[0], v[1]);
+        let zero = d.izero();
+        let pos = d.ilt(zero, k);
+        let ka = d.imul(k, a);
+        let bound = d.ile(zero, ka);
+        let concl = d.ile(zero, a);
+        let stmt = {
+            let tail = d.arrow(bound, concl);
+            d.arrow(pos, tail)
+        };
+
+        let proof = with_hyp(d, pos, &|d, hk| {
+            let bound = {
+                let zero = d.izero();
+                let ka = d.imul(k, a);
+                d.ile(zero, ka)
+            };
+            with_hyp(d, bound, &|d, h| {
+                let zero = d.izero();
+                let concl = d.ile(zero, a);
+                by_le_total(d, zero, a, concl, &|_d, hpos| hpos, &|d, hneg| {
+                    let zero = d.izero();
+                    let ka = d.imul(k, a);
+                    let k_zero = d.imul(k, zero);
+                    let hk0 = d.const_app(p.le_of_lt, &[zero, k, hk]);
+                    let shrink = d.const_app(p.mul_le_mul_of_nonneg_left, &[k, a, zero, hk0, hneg]);
+                    let collapse = d.const_app(p.mul_zero, &[k]);
+                    let upper = d.int_eq_rewrite(k_zero, zero, collapse, shrink, &|d, x| {
+                        let ka = d.imul(k, a);
+                        d.ile(ka, x)
+                    });
+                    let ka_zero = d.const_app(p.le_antisymm, &[ka, zero, upper, h]);
+                    // `k*a = 0 = k*0`, so `a = 0` by cancellation.
+                    let collapse_rev = d.isymm(k_zero, zero, collapse);
+                    let paired = d.itrans(ka, zero, k_zero, ka_zero, collapse_rev);
+                    let kne = d.const_app(p.ne_zero_of_pos, &[k, hk]);
+                    let a_zero =
+                        d.const_app(p.mul_left_cancel_of_ne_zero, &[k, a, zero, kne, paired]);
+                    let a_zero_rev = d.isymm(a, zero, a_zero);
+                    let refl = d.const_app(p.le_refl, &[zero]);
+                    d.int_eq_rewrite(zero, a, a_zero_rev, refl, &|d, x| {
+                        let zero = d.izero();
+                        d.ile(zero, x)
+                    })
+                })
+            })
+        });
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
+/// `Int.pos_of_mul_pos_left : ∀ k a, le zero k → lt zero (mul k a) → lt zero a`
+/// — [`declare_lt_of_mul_lt_mul_left`] at `a := zero`, with `k*0` collapsed.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection.
+fn declare_pos_of_mul_pos_left(d: &mut IntDev<'_>) -> Result<(), KernelError> {
+    let p = d.int();
+    d.int_theorem(p.pos_of_mul_pos_left, 2, &|d, v| {
+        let (k, a) = (v[0], v[1]);
+        let zero = d.izero();
+        let nonneg = d.ile(zero, k);
+        let ka = d.imul(k, a);
+        let pos = d.ilt(zero, ka);
+        let concl = d.ilt(zero, a);
+        let stmt = {
+            let tail = d.arrow(pos, concl);
+            d.arrow(nonneg, tail)
+        };
+
+        let proof = with_hyp(d, nonneg, &|d, hk| {
+            let pos = {
+                let zero = d.izero();
+                let ka = d.imul(k, a);
+                d.ilt(zero, ka)
+            };
+            with_hyp(d, pos, &|d, h| {
+                let zero = d.izero();
+                let k_zero = d.imul(k, zero);
+                let collapse = d.const_app(p.mul_zero, &[k]);
+                let collapse_rev = d.isymm(k_zero, zero, collapse);
+                let lifted = d.int_eq_rewrite(zero, k_zero, collapse_rev, h, &|d, x| {
+                    let ka = d.imul(k, a);
+                    d.ilt(x, ka)
+                });
+                d.const_app(p.lt_of_mul_lt_mul_left, &[k, zero, a, hk, lifted])
+            })
+        });
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
+/// `Int.eq_zero_of_sq_add_sq_eq_zero : ∀ a b,`
+/// `  Eq Int (add (mul a a) (mul b b)) zero → And (Eq Int a zero) (Eq Int b zero)`.
+///
+/// Both squares are non-negative and they sum to zero, so each is squeezed to
+/// zero by `le_antisymm`, and `Int.mul_eq_zero` (ℤ is an integral domain)
+/// turns `a*a = 0` into `a = 0`.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection.
+fn declare_eq_zero_of_sq_add_sq_eq_zero(d: &mut IntDev<'_>) -> Result<(), KernelError> {
+    let p = d.int();
+    d.int_theorem(p.eq_zero_of_sq_add_sq_eq_zero, 2, &|d, v| {
+        let (a, b) = (v[0], v[1]);
+        let zero = d.izero();
+        let aa = d.imul(a, a);
+        let bb = d.imul(b, b);
+        let sum = d.iadd(aa, bb);
+        let hyp = d.ieq(sum, zero);
+        let a_zero = d.ieq(a, zero);
+        let b_zero = d.ieq(b, zero);
+        let concl = d.and(a_zero, b_zero);
+        let stmt = d.arrow(hyp, concl);
+
+        let proof = with_hyp(d, hyp, &|d, h| {
+            let zero = d.izero();
+            let aa = d.imul(a, a);
+            let bb = d.imul(b, b);
+            let sum = d.iadd(aa, bb);
+            let ha = d.const_app(p.sq_nonneg, &[a]);
+            let hb = d.const_app(p.sq_nonneg, &[b]);
+
+            // `a*a <= (a*a) + 0 <= (a*a) + (b*b) = 0`.
+            let grow_a = d.const_app(p.add_le_add_left, &[zero, bb, aa, hb]);
+            let aa_zero = d.iadd(aa, zero);
+            let drop_a = d.const_app(p.add_zero, &[aa]);
+            let step_a = d.int_eq_rewrite(aa_zero, aa, drop_a, grow_a, &|d, x| {
+                let aa = d.imul(a, a);
+                let bb = d.imul(b, b);
+                let sum = d.iadd(aa, bb);
+                d.ile(x, sum)
+            });
+            let upper_a = d.int_eq_rewrite(sum, zero, h, step_a, &|d, x| {
+                let aa = d.imul(a, a);
+                d.ile(aa, x)
+            });
+            let aa_is_zero = d.const_app(p.le_antisymm, &[aa, zero, upper_a, ha]);
+
+            // `b*b <= 0 + (b*b) <= (a*a) + (b*b) = 0`.
+            let grow_b = d.const_app(p.add_le_add_right, &[zero, aa, bb, ha]);
+            let zero_bb = d.iadd(zero, bb);
+            let drop_b = d.const_app(p.zero_add, &[bb]);
+            let step_b = d.int_eq_rewrite(zero_bb, bb, drop_b, grow_b, &|d, x| {
+                let aa = d.imul(a, a);
+                let bb = d.imul(b, b);
+                let sum = d.iadd(aa, bb);
+                d.ile(x, sum)
+            });
+            let upper_b = d.int_eq_rewrite(sum, zero, h, step_b, &|d, x| {
+                let bb = d.imul(b, b);
+                d.ile(bb, x)
+            });
+            let bb_is_zero = d.const_app(p.le_antisymm, &[bb, zero, upper_b, hb]);
+
+            let a_zero = d.ieq(a, zero);
+            let b_zero = d.ieq(b, zero);
+            let split_a = d.const_app(p.mul_eq_zero, &[a, a, aa_is_zero]);
+            let ha0 = d.or_elim(
+                a_zero,
+                a_zero,
+                a_zero,
+                split_a,
+                &|_d, left| left,
+                &|_d, right| right,
+            );
+            let split_b = d.const_app(p.mul_eq_zero, &[b, b, bb_is_zero]);
+            let hb0 = d.or_elim(
+                b_zero,
+                b_zero,
+                b_zero,
+                split_b,
+                &|_d, left| left,
+                &|_d, right| right,
+            );
+            and_intro(d, a_zero, b_zero, ha0, hb0)
+        });
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
+/// `Int.descentMultiplierBounds : ∀ m q c e, lt zero m →`
+/// `  Eq Int (mul m q) (add (mul c c) (mul e e)) → (the four bounds) →`
+/// `  And (le zero q) (lt q m)`
+/// — **the descent's termination certificate**, read off the factorisation
+/// rather than off the measure: the new multiplier `q` is non-negative and
+/// strictly below `m`.
+///
+/// `0 ≤ q` because `m*q` is a sum of squares and `m > 0`; `q < m` because
+/// [`declare_two_mul_sq_add_sq_le_sq`] gives `(m*q)+(m*q) ≤ m*m`, which is
+/// `m*(q+q) ≤ m*m` by `left_distrib`, so `q+q ≤ m` after cancelling `m` — and
+/// then [`declare_lt_of_add_le_of_nonneg`] finishes.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection.
+fn declare_descent_multiplier_bounds(d: &mut IntDev<'_>) -> Result<(), KernelError> {
+    let p = d.int();
+    d.int_theorem(p.descent_multiplier_bounds, 4, &|d, v| {
+        let (m, q, c, e) = (v[0], v[1], v[2], v[3]);
+        let zero = d.izero();
+        let pos = d.ilt(zero, m);
+        let mq = d.imul(m, q);
+        let s = measure(d, c, e);
+        let factorisation = d.ieq(mq, s);
+        let (bounded, hyp_tys, _) = bounded_statement(d, m, c, e, &|d, m, q_free, _e| {
+            // The conclusion does not mention `c`/`e`, so the shared builder's
+            // third argument is unused here; `q` is the module-level binder.
+            let _ = q_free;
+            let zero = d.izero();
+            let nonneg = d.ile(zero, q);
+            let below = d.ilt(q, m);
+            d.and(nonneg, below)
+        });
+        let stmt = {
+            let tail = d.arrow(factorisation, bounded);
+            d.arrow(pos, tail)
+        };
+
+        let proof = with_hyp(d, pos, &|d, hm| {
+            let factorisation = {
+                let mq = d.imul(m, q);
+                let s = measure(d, c, e);
+                d.ieq(mq, s)
+            };
+            with_hyp(d, factorisation, &|d, hfact| {
+                with_hypotheses(d, &hyp_tys, &|d, h| {
+                    let zero = d.izero();
+                    let mq = d.imul(m, q);
+                    let s = measure(d, c, e);
+                    let cc = d.imul(c, c);
+                    let ee = d.imul(e, e);
+
+                    // `0 <= m*q`, hence `0 <= q`.
+                    let hcc = d.const_app(p.sq_nonneg, &[c]);
+                    let hee = d.const_app(p.sq_nonneg, &[e]);
+                    let hs0 = d.const_app(p.add_nonneg, &[cc, ee, hcc, hee]);
+                    let hfact_rev = d.isymm(mq, s, hfact);
+                    let hmq0 = d.int_eq_rewrite(s, mq, hfact_rev, hs0, &|d, x| {
+                        let zero = d.izero();
+                        d.ile(zero, x)
+                    });
+                    let hq0 = d.const_app(p.nonneg_of_mul_nonneg_left, &[m, q, hm, hmq0]);
+
+                    // `(m*q) + (m*q) <= m*m`, i.e. `m*(q+q) <= m*m`.
+                    let hss = d.const_app(
+                        p.two_mul_sq_add_sq_le_sq,
+                        &[m, c, e, h[0], h[1], h[2], h[3]],
+                    );
+                    let ss = d.iadd(s, s);
+                    let mq_mq = d.iadd(mq, mq);
+                    let lowered = d.int_eq_rewrite(s, mq, hfact_rev, hss, &|d, x| {
+                        let doubled = d.iadd(x, x);
+                        let mm = d.imul(m, m);
+                        d.ile(doubled, mm)
+                    });
+                    let qq = d.iadd(q, q);
+                    let m_qq = d.imul(m, qq);
+                    let distrib = d.const_app(p.left_distrib, &[m, q, q]);
+                    let distrib_rev = d.isymm(m_qq, mq_mq, distrib);
+                    let folded = d.int_eq_rewrite(mq_mq, m_qq, distrib_rev, lowered, &|d, x| {
+                        let mm = d.imul(m, m);
+                        d.ile(x, mm)
+                    });
+                    let _ = ss;
+                    let halved = d.const_app(p.le_of_mul_le_mul_left, &[m, qq, m, hm, folded]);
+                    let below = d.const_app(p.lt_of_add_le_of_nonneg, &[m, q, hm, hq0, halved]);
+
+                    let nonneg_ty = d.ile(zero, q);
+                    let below_ty = d.ilt(q, m);
+                    and_intro(d, nonneg_ty, below_ty, hq0, below)
+                })
+            })
+        });
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
+// ============================================================================
 // shared shapes
 // ============================================================================
 
@@ -1149,5 +1513,10 @@ pub(super) fn declare_order_squares_all(d: &mut IntDev<'_>) -> Result<(), Kernel
     declare_two_mul_sq_add_sq_le_sq(d)?;
     declare_sq_add_sq_lt_sq_of_bounds(d)?;
     declare_lt_of_add_le_of_nonneg(d)?;
+    declare_lt_of_mul_lt_mul_left(d)?;
+    declare_nonneg_of_mul_nonneg_left(d)?;
+    declare_pos_of_mul_pos_left(d)?;
+    declare_eq_zero_of_sq_add_sq_eq_zero(d)?;
+    declare_descent_multiplier_bounds(d)?;
     Ok(())
 }

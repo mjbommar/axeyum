@@ -4,7 +4,7 @@
 //! Three batteries, each asserting what must hold AND what must fail so no run
 //! can be vacuous:
 //!
-//! 1. **the statement pin** — every one of the eighteen declarations has its
+//! 1. **the statement pin** — every one of the twenty-three declarations has its
 //!    full `∀`-telescoped type rebuilt here and compared against the type the
 //!    environment actually stores. A weakening that still type-checks (a bound
 //!    relaxed from `m` to `m + m`, a `<` softened to `≤`) leaves the prelude
@@ -424,8 +424,96 @@ fn order_squares_declarations_state_the_intended_types() {
         expected,
     );
 
+    // lt_of_mul_lt_mul_left : ∀ k a b, le 0 k → lt (mul k a) (mul k b) → lt a b
+    let expected = int_forall(&mut d, 3, &|d, v| {
+        let zero = d.izero();
+        let nonneg = d.ile(zero, v[0]);
+        let ka = d.imul(v[0], v[1]);
+        let kb = d.imul(v[0], v[2]);
+        let strict = d.ilt(ka, kb);
+        let concl = d.ilt(v[1], v[2]);
+        arrows(d, &[nonneg, strict], concl)
+    });
+    check(
+        &mut d,
+        "Int.lt_of_mul_lt_mul_left",
+        p.lt_of_mul_lt_mul_left,
+        expected,
+    );
+
+    // nonneg_of_mul_nonneg_left : ∀ k a, lt 0 k → le 0 (mul k a) → le 0 a
+    let expected = int_forall(&mut d, 2, &|d, v| {
+        let zero = d.izero();
+        let pos = d.ilt(zero, v[0]);
+        let ka = d.imul(v[0], v[1]);
+        let bound = d.ile(zero, ka);
+        let concl = d.ile(zero, v[1]);
+        arrows(d, &[pos, bound], concl)
+    });
+    check(
+        &mut d,
+        "Int.nonneg_of_mul_nonneg_left",
+        p.nonneg_of_mul_nonneg_left,
+        expected,
+    );
+
+    // pos_of_mul_pos_left : ∀ k a, le 0 k → lt 0 (mul k a) → lt 0 a
+    let expected = int_forall(&mut d, 2, &|d, v| {
+        let zero = d.izero();
+        let nonneg = d.ile(zero, v[0]);
+        let ka = d.imul(v[0], v[1]);
+        let pos = d.ilt(zero, ka);
+        let concl = d.ilt(zero, v[1]);
+        arrows(d, &[nonneg, pos], concl)
+    });
+    check(
+        &mut d,
+        "Int.pos_of_mul_pos_left",
+        p.pos_of_mul_pos_left,
+        expected,
+    );
+
+    // eq_zero_of_sq_add_sq_eq_zero
+    let expected = int_forall(&mut d, 2, &|d, v| {
+        let zero = d.izero();
+        let s = measure(d, v[0], v[1]);
+        let hyp = d.ieq(s, zero);
+        let left = d.ieq(v[0], zero);
+        let right = d.ieq(v[1], zero);
+        let concl = d.and(left, right);
+        d.arrow(hyp, concl)
+    });
+    check(
+        &mut d,
+        "Int.eq_zero_of_sq_add_sq_eq_zero",
+        p.eq_zero_of_sq_add_sq_eq_zero,
+        expected,
+    );
+
+    // descentMultiplierBounds
+    let expected = int_forall(&mut d, 4, &|d, v| {
+        let (m, q, c, e) = (v[0], v[1], v[2], v[3]);
+        let zero = d.izero();
+        let pos = d.ilt(zero, m);
+        let mq = d.imul(m, q);
+        let s = measure(d, c, e);
+        let factorisation = d.ieq(mq, s);
+        let hyps = bound_hypotheses(d, m, c, e);
+        let nonneg = d.ile(zero, q);
+        let below = d.ilt(q, m);
+        let concl = d.and(nonneg, below);
+        let inner = arrows(d, &hyps, concl);
+        arrows(d, &[pos, factorisation], inner)
+    });
+    check(
+        &mut d,
+        "Int.descentMultiplierBounds",
+        p.descent_multiplier_bounds,
+        expected,
+    );
+
     assert_eq!(
-        checked, 18,
+        checked, 23,
         "every declaration in order_squares.rs must be pinned here"
     );
 }
@@ -440,7 +528,15 @@ fn every_order_squares_declaration_is_present_and_axiom_free() {
     let mut k = Kernel::new();
     let p = build_int_prelude(&mut k).expect("Int prelude must build");
 
-    let names: [(&str, NameId); 18] = [
+    let names: [(&str, NameId); 23] = [
+        ("Int.lt_of_mul_lt_mul_left", p.lt_of_mul_lt_mul_left),
+        ("Int.nonneg_of_mul_nonneg_left", p.nonneg_of_mul_nonneg_left),
+        ("Int.pos_of_mul_pos_left", p.pos_of_mul_pos_left),
+        (
+            "Int.eq_zero_of_sq_add_sq_eq_zero",
+            p.eq_zero_of_sq_add_sq_eq_zero,
+        ),
+        ("Int.descentMultiplierBounds", p.descent_multiplier_bounds),
         ("Int.ne_zero_of_pos", p.ne_zero_of_pos),
         ("Int.neg_nonpos_of_nonneg", p.neg_nonpos_of_nonneg),
         ("Int.neg_nonneg_of_nonpos", p.neg_nonneg_of_nonpos),
@@ -684,5 +780,58 @@ fn the_centered_representative_keeps_the_small_residue_and_shifts_the_large_one(
     assert!(
         !admits_centered_witness(&mut d, 7, true, 2, "seven_is_not_minus_two"),
         "7 is NOT congruent to -2 modulo 5, so the congruence half must be refused"
+    );
+}
+
+/// Admit `descentMultiplierBounds` at `m = 5`, `c = 2`, `e = 1` and a claimed
+/// quotient `q`, with the factorisation `5*q = 2*2 + 1*1` discharged by
+/// `Eq.refl` (both sides are closed numerals the kernel computes), and report
+/// the verdict.
+fn admits_multiplier_bounds(d: &mut IntDev<'_>, q: u32, label: &str) -> bool {
+    let p = d.int();
+    let m = 5_u32;
+    let mi = int_num(d, m);
+    let qi = int_num(d, q);
+    let ci = int_num(d, 2);
+    let ei = int_num(d, 1);
+    let pos = nat_le(d, 1, m);
+    let mq = d.imul(mi, qi);
+    let fact = d.irefl(mq);
+    let low_c = d.true_intro();
+    let high_c = nat_le(d, 4, m);
+    let low_e = d.true_intro();
+    let high_e = nat_le(d, 2, m);
+    let proof = d.const_app(
+        p.descent_multiplier_bounds,
+        &[mi, qi, ci, ei, pos, fact, low_c, high_c, low_e, high_e],
+    );
+    let zero = d.izero();
+    let nonneg = d.ile(zero, qi);
+    let below = d.ilt(qi, mi);
+    let ty = d.and(nonneg, below);
+    let name = probe_name(d, label);
+    d.declare_theorem(name, ty, proof).is_ok()
+}
+
+/// The descent's termination certificate at a worked instance: `5*1 = 2² + 1²`
+/// with both representatives inside the band gives `0 ≤ 1` and `1 < 5`; the
+/// same call with `q = 2` is REFUSED, because `5*2` is not `2² + 1²`.
+///
+/// The refusal row is what says the FACTORISATION hypothesis is read: the
+/// conclusion `0 ≤ 2 ∧ 2 < 5` is perfectly true, so a lemma that ignored its
+/// second hypothesis would pass both rows.
+#[test]
+fn the_multiplier_bounds_apply_at_a_worked_factorisation_and_refuse_a_wrong_quotient() {
+    let mut k = Kernel::new();
+    let p = build_int_prelude(&mut k).expect("Int prelude must build");
+    let mut d = IntDev::new(&mut k, p);
+
+    assert!(
+        admits_multiplier_bounds(&mut d, 1, "quotient_one"),
+        "5*1 = 2*2 + 1*1, so q = 1 must be certified non-negative and below 5"
+    );
+    assert!(
+        !admits_multiplier_bounds(&mut d, 2, "quotient_two"),
+        "5*2 is not 2*2 + 1*1; the kernel must refuse the instance even though          0 <= 2 and 2 < 5 both hold"
     );
 }
