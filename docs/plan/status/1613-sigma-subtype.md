@@ -76,6 +76,38 @@ statement is now written, admitted, and axiom-free.
   lattice/`|·|`-closure gap `intspace.rs` already names. `bundledDist` is
   `|∫b₁−∫b₂|`, the right SHAPE and not the L¹ metric; it is labelled as such.
 
+**Gates, with the numbers.** `cargo test -p axeyum-lean-kernel --release --lib`
+2062 passed / 0 failed; all 49 kernel integration suites named explicitly
+(`--tests` combined with the lib target hits the 24 G ceiling and dies with
+SIGTERM, which is not a test failure) 223 passed / 0 failed;
+`clippy --workspace --all-targets --all-features -- -D warnings` exit 0;
+`cargo fmt --all --check` exit 0; `validate-facts.py` exit 0;
+`check-merge-hygiene.sh` PASS; `gen-plan.py`, `gen-adr-index.py`,
+`gen-py-prelude-fields.py` regenerated. `shape_search` over a freshly built
+binary: declarations 3935 → 3970, exactly the 35 this lane declared, with every
+headline name FOUND 1.
+
+`check-absence-claims.py` exits 1 on findings that are NOT this lane's: 205 bare
+claims against a budget of 122, and two EXPIRED claims (`Rat.prodRange`,
+`Nat.factorization`) in status files this diff never touches. This lane's own
+contribution was one bare claim — the matcher read "not blocked on anything
+else" as an absence claim — measured at 206 → 205 by rephrasing that one
+sentence, so the contribution is now zero and 205 exceeds the budget without it.
+
+**Mutation-verified, one row.** Dropping the negation from
+`IntSpace.bundledDist` (so it adds instead of subtracting) is type-correct and
+the kernel admits it. Across `intspace::`, `metric::`, `sigma_prelude::` and
+`image_group_tests`: 63 passed, **exactly one failed**, and it is
+`the_bundled_distance_subtracts_and_the_body_says_so`. Reverted, 64 pass. Run
+in this lane's own isolated worktree, never in the shared checkout.
+
+Two definitions had been covered only by their declared types, which are blind
+to exactly the defect that matters (`Bundled → Bundled → CReal` is the type of
+`|∫b₁ + ∫b₂|` too), and both now have an evaluation test. The distance one reads
+the stored body rather than reducing, and says why: refuting `def_eq` between
+two open `CReal` terms does not terminate in useful time — the obvious form was
+written first and killed after 60 s.
+
 **A live gap found in passing, recorded and NOT fixed.**
 `scripts/gen-py-prelude-fields.py`'s field regex excludes `:`, so a
 path-qualified field type does not match and the line is **silently skipped** —
@@ -99,3 +131,4 @@ decision; ADR-1606 has other reasons.
 | 2026-09-04 | sigma-subtype | `Metric.subspace` + `Metric.crealIntervalSpace` (ADR-1602's site) and `IntSpace.Bundled` + `bundledIntegral` (ADR-1612's site) |
 | 2026-09-04 | sigma-subtype | `AlgS.Hom.imageGroup` and `AlgS.Hom.firstIsoClassical` — `G/ker f ≅ Im f` between two group objects (ADR-1595's site) |
 | 2026-09-04 | sigma-subtype | ADR-1613 proposed: dependent pairs are an ordinary inductive; the deciding count is 3 of 3 |
+| 2026-09-05 | sigma-subtype | evaluation tests for the two definitions covered only by their types; mutation-verified at exactly one death |

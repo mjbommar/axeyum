@@ -117,6 +117,7 @@ now. Nothing was deleted.
 
 | Date | Commit | Result |
 |---|---|---|
+| 2026-09-05 | sigma-subtype | evaluation tests for the two definitions covered only by their types; mutation-verified at exactly one death |
 | 2026-09-04 | graph-carrier | `Nat.Graph` (ADR-1608): a decidable adjacency relation plus a vertex bound, sibling of `Nat.Finset`, with symmetry and irreflexivity forced inside `adjB`; neighbourhoods as `Nat.Finset`s and degrees through `countRange_le` |
 | 2026-09-04 | graph-carrier | `R(3,3) = 6` in the kernel, both halves axiom-free: a 32-leaf case tree for the upper bound and a reflected five-vertex search certificate for the lower (`F:ramsey-r33-six`) |
 | 2026-09-04 | graph-carrier | Hall's marriage theorem, necessity direction, over `Nat.Finset` through `card_le_of_injOn`; sufficiency NOT proved and its blocker named — computing a critical subfamily needs a bounded subset search with its own reflection lemma |
@@ -6558,6 +6559,38 @@ statement is now written, admitted, and axiom-free.
   value on the carrier and an integrability witness for `|f|` — the
   lattice/`|·|`-closure gap `intspace.rs` already names. `bundledDist` is
   `|∫b₁−∫b₂|`, the right SHAPE and not the L¹ metric; it is labelled as such.
+
+**Gates, with the numbers.** `cargo test -p axeyum-lean-kernel --release --lib`
+2062 passed / 0 failed; all 49 kernel integration suites named explicitly
+(`--tests` combined with the lib target hits the 24 G ceiling and dies with
+SIGTERM, which is not a test failure) 223 passed / 0 failed;
+`clippy --workspace --all-targets --all-features -- -D warnings` exit 0;
+`cargo fmt --all --check` exit 0; `validate-facts.py` exit 0;
+`check-merge-hygiene.sh` PASS; `gen-plan.py`, `gen-adr-index.py`,
+`gen-py-prelude-fields.py` regenerated. `shape_search` over a freshly built
+binary: declarations 3935 → 3970, exactly the 35 this lane declared, with every
+headline name FOUND 1.
+
+`check-absence-claims.py` exits 1 on findings that are NOT this lane's: 205 bare
+claims against a budget of 122, and two EXPIRED claims (`Rat.prodRange`,
+`Nat.factorization`) in status files this diff never touches. This lane's own
+contribution was one bare claim — the matcher read "not blocked on anything
+else" as an absence claim — measured at 206 → 205 by rephrasing that one
+sentence, so the contribution is now zero and 205 exceeds the budget without it.
+
+**Mutation-verified, one row.** Dropping the negation from
+`IntSpace.bundledDist` (so it adds instead of subtracting) is type-correct and
+the kernel admits it. Across `intspace::`, `metric::`, `sigma_prelude::` and
+`image_group_tests`: 63 passed, **exactly one failed**, and it is
+`the_bundled_distance_subtracts_and_the_body_says_so`. Reverted, 64 pass. Run
+in this lane's own isolated worktree, never in the shared checkout.
+
+Two definitions had been covered only by their declared types, which are blind
+to exactly the defect that matters (`Bundled → Bundled → CReal` is the type of
+`|∫b₁ + ∫b₂|` too), and both now have an evaluation test. The distance one reads
+the stored body rather than reducing, and says why: refuting `def_eq` between
+two open `CReal` terms does not terminate in useful time — the obvious form was
+written first and killed after 60 s.
 
 **A live gap found in passing, recorded and NOT fixed.**
 `scripts/gen-py-prelude-fields.py`'s field regex excludes `:`, so a
