@@ -82,6 +82,8 @@ use crate::name::NameId;
 use crate::nat_prelude::NatOps;
 use crate::{CRealPrelude, Kernel, KernelError};
 
+pub use conic::ConicNames;
+
 /// Heights well above every `creal.rs` height (which top out in the 40s-50s),
 /// so nothing here contends with that module's own delta-unfolding order.
 const LEAF_HEIGHT: u16 = 900;
@@ -1417,6 +1419,11 @@ pub struct CPointPrelude {
     /// Step 1 of the classification; the remaining three steps are sized in
     /// `creal_point/isometry.rs`'s module doc.
     pub isometry_preserves_dot: NameId,
+    /// The conic family, its discriminant classification, the isometry
+    /// action on coefficients and the standard forms
+    /// (`creal_point/conic.rs`). An ADR-1512-style registry rather than
+    /// fifty more flat fields here.
+    pub conic: ConicNames,
 }
 
 /// Build the plane over the constructed reals, and Varignon's theorem
@@ -1582,6 +1589,36 @@ pub fn build_cpoint_prelude(kernel: &mut Kernel) -> Result<CPointPrelude, Kernel
     isometry::declare_scale_dist_sq(&mut d, p)?;
     isometry::declare_not_isometry_scale_two(&mut d, p)?;
     isometry::declare_isometry_preserves_dot(&mut d, p)?;
+    // --- conics (creal_point/conic.rs) ----------------------------------------
+    conic::declare_four(&mut d, p)?;
+    conic::declare_zero_lt_four(&mut d, p)?;
+    conic::declare_neg_lt_zero_of_pos(&mut d, p)?;
+    conic::declare_conic_carrier(&mut d, p)?;
+    conic::declare_conic_projections(&mut d, p)?;
+    conic::declare_eval(&mut d, p)?;
+    conic::declare_on_conic(&mut d, p)?;
+    conic::declare_discriminant(&mut d, p)?;
+    conic::declare_type_predicates(&mut d, p)?;
+    conic::declare_type_exclusions(&mut d, p)?;
+    conic::declare_type_congrs(&mut d, p)?;
+    conic::declare_circle(&mut d, p)?;
+    conic::declare_on_conic_circle_iff(&mut d, p)?;
+    conic::declare_circle_is_ellipse_type(&mut d, p)?;
+    conic::declare_linear_actions(&mut d, p)?;
+    conic::declare_linear_action_iffs(&mut d, p)?;
+    conic::declare_discriminant_actions(&mut d, p)?;
+    conic::declare_discriminant_action_units(&mut d, p)?;
+    conic::declare_conic_translate(&mut d, p)?;
+    conic::declare_on_conic_translate_iff(&mut d, p)?;
+    conic::declare_discriminant_translate(&mut d, p)?;
+    conic::declare_invariance_corollaries(&mut d, p)?;
+    conic::declare_ellipse(&mut d, p)?;
+    conic::declare_hyperbola(&mut d, p)?;
+    conic::declare_quadric_type_theorems(&mut d, p)?;
+    conic::declare_parabola(&mut d, p)?;
+    conic::declare_parabola_focal(&mut d, p)?;
+    conic::declare_parabola_type_theorems(&mut d, p)?;
+    conic::declare_parabola_focus_directrix(&mut d, p)?;
     Ok(p)
 }
 
@@ -1745,6 +1782,7 @@ fn intern_names(kernel: &mut Kernel, creal: CRealPrelude) -> CPointPrelude {
         scale_dist_sq: kernel.name_str(point, "scale_distSq"),
         not_isometry_scale_two: kernel.name_str(point, "not_isometry_scale_two"),
         isometry_preserves_dot: kernel.name_str(point, "isometry_preserves_dot"),
+        conic: conic::intern(kernel, point, scalar),
     }
 }
 
@@ -21543,6 +21581,7 @@ fn declare_collinear_of_area_zero(d: &mut IntDev<'_>, p: CPointPrelude) -> Resul
 }
 
 mod angle;
+mod conic;
 mod isometry;
 
 #[cfg(test)]

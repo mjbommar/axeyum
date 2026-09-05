@@ -243,6 +243,147 @@ fn every_theorem_here_is_axiom_free() {
         ("CPoint.scale_distSq", p.scale_dist_sq),
         ("CPoint.not_isometry_scale_two", p.not_isometry_scale_two),
         ("CPoint.isometry_preserves_dot", p.isometry_preserves_dot),
+        // --- conics (creal_point/conic.rs) ---
+        ("CPoint.Scalar.four", p.conic.four),
+        ("CPoint.Scalar.zero_lt_four", p.conic.zero_lt_four),
+        (
+            "CPoint.Scalar.neg_lt_zero_of_pos",
+            p.conic.neg_lt_zero_of_pos,
+        ),
+        ("CPoint.Conic", p.conic.conic),
+        ("CPoint.Conic.mk", p.conic.mk),
+        ("CPoint.Conic.rec", p.conic.rec),
+        ("CPoint.Conic.a", p.conic.a),
+        ("CPoint.Conic.b", p.conic.b),
+        ("CPoint.Conic.c", p.conic.c),
+        ("CPoint.Conic.d", p.conic.d),
+        ("CPoint.Conic.e", p.conic.e),
+        ("CPoint.Conic.f", p.conic.f),
+        ("CPoint.Conic.eval", p.conic.eval),
+        ("CPoint.OnConic", p.conic.on_conic),
+        ("CPoint.Conic.discriminant", p.conic.discriminant),
+        ("CPoint.IsEllipseType", p.conic.is_ellipse_type),
+        ("CPoint.IsParabolaType", p.conic.is_parabola_type),
+        ("CPoint.IsHyperbolaType", p.conic.is_hyperbola_type),
+        (
+            "CPoint.Conic.not_ellipse_and_parabola",
+            p.conic.not_ellipse_and_parabola,
+        ),
+        (
+            "CPoint.Conic.not_ellipse_and_hyperbola",
+            p.conic.not_ellipse_and_hyperbola,
+        ),
+        (
+            "CPoint.Conic.not_parabola_and_hyperbola",
+            p.conic.not_parabola_and_hyperbola,
+        ),
+        (
+            "CPoint.Conic.isEllipseType_congr",
+            p.conic.is_ellipse_type_congr,
+        ),
+        (
+            "CPoint.Conic.isParabolaType_congr",
+            p.conic.is_parabola_type_congr,
+        ),
+        (
+            "CPoint.Conic.isHyperbolaType_congr",
+            p.conic.is_hyperbola_type_congr,
+        ),
+        ("CPoint.Conic.circle", p.conic.circle),
+        ("CPoint.onConic_circle_iff", p.conic.on_conic_circle_iff),
+        (
+            "CPoint.Conic.circle_isEllipseType",
+            p.conic.circle_is_ellipse_type,
+        ),
+        ("CPoint.Conic.rotate", p.conic.rotate),
+        ("CPoint.onConic_rotate_iff", p.conic.on_conic_rotate_iff),
+        (
+            "CPoint.Conic.discriminant_rotate",
+            p.conic.discriminant_rotate,
+        ),
+        (
+            "CPoint.Conic.discriminant_rotate_unit",
+            p.conic.discriminant_rotate_unit,
+        ),
+        ("CPoint.Conic.reflect", p.conic.reflect),
+        ("CPoint.onConic_reflect_iff", p.conic.on_conic_reflect_iff),
+        (
+            "CPoint.Conic.discriminant_reflect",
+            p.conic.discriminant_reflect,
+        ),
+        (
+            "CPoint.Conic.discriminant_reflect_unit",
+            p.conic.discriminant_reflect_unit,
+        ),
+        ("CPoint.Conic.translate", p.conic.translate),
+        (
+            "CPoint.onConic_translate_iff",
+            p.conic.on_conic_translate_iff,
+        ),
+        (
+            "CPoint.Conic.discriminant_translate",
+            p.conic.discriminant_translate,
+        ),
+        (
+            "CPoint.Conic.isEllipseType_rotate",
+            p.conic.is_ellipse_type_rotate,
+        ),
+        (
+            "CPoint.Conic.isParabolaType_rotate",
+            p.conic.is_parabola_type_rotate,
+        ),
+        (
+            "CPoint.Conic.isHyperbolaType_rotate",
+            p.conic.is_hyperbola_type_rotate,
+        ),
+        (
+            "CPoint.Conic.isEllipseType_reflect",
+            p.conic.is_ellipse_type_reflect,
+        ),
+        (
+            "CPoint.Conic.isParabolaType_reflect",
+            p.conic.is_parabola_type_reflect,
+        ),
+        (
+            "CPoint.Conic.isHyperbolaType_reflect",
+            p.conic.is_hyperbola_type_reflect,
+        ),
+        (
+            "CPoint.Conic.isEllipseType_translate",
+            p.conic.is_ellipse_type_translate,
+        ),
+        (
+            "CPoint.Conic.isParabolaType_translate",
+            p.conic.is_parabola_type_translate,
+        ),
+        (
+            "CPoint.Conic.isHyperbolaType_translate",
+            p.conic.is_hyperbola_type_translate,
+        ),
+        ("CPoint.Conic.ellipse", p.conic.ellipse),
+        (
+            "CPoint.Conic.ellipse_isEllipseType",
+            p.conic.ellipse_is_ellipse_type,
+        ),
+        ("CPoint.Conic.parabola", p.conic.parabola),
+        (
+            "CPoint.Conic.parabola_isParabolaType",
+            p.conic.parabola_is_parabola_type,
+        ),
+        ("CPoint.Conic.hyperbola", p.conic.hyperbola),
+        (
+            "CPoint.Conic.hyperbola_isHyperbolaType",
+            p.conic.hyperbola_is_hyperbola_type,
+        ),
+        ("CPoint.Conic.parabolaFocal", p.conic.parabola_focal),
+        (
+            "CPoint.Conic.parabolaFocal_isParabolaType",
+            p.conic.parabola_focal_is_parabola_type,
+        ),
+        (
+            "CPoint.parabola_focus_directrix",
+            p.conic.parabola_focus_directrix,
+        ),
     ];
 
     // COVERAGE, checked against the ENVIRONMENT rather than against `named`

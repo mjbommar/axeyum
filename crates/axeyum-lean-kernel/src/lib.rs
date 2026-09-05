@@ -117,7 +117,7 @@ pub use creal::{
     build_creal_prelude,
 };
 pub use creal_model::{CRealModel, CRealModelLaw, build_creal_model_of_arith};
-pub use creal_point::{CPointPrelude, build_cpoint_prelude};
+pub use creal_point::{CPointPrelude, ConicNames, build_cpoint_prelude};
 pub use env::{Declaration, Environment, QuotKind, RecRule, ReducibilityHint};
 pub use expr::{BinderInfo, ExprId, ExprNode, Lit, NatLit};
 pub use fo_provable::{FoProvablePrelude, build_fo_provable_prelude};
