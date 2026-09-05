@@ -1786,7 +1786,10 @@ pub(super) fn declare_invariance_corollaries(
             let acted_conic = d.const_app(action_conic_name(p, action), &[c, s, k]);
             let disc_acted = d.const_app(p.conic.discriminant, &[acted_conic]);
             let disc_k = d.const_app(p.conic.discriminant, &[k]);
-            let forward = d.lemma(disc_name, &[c, s, k, h]);
+            // `discriminant_*_unit`'s telescope is `∀ c s (h : c²+s² ~ 1) K`:
+            // the HYPOTHESIS binds before the conic, so the conic is the
+            // fourth argument, not the third.
+            let forward = d.lemma(disc_name, &[c, s, h, k]);
             let back = symm(d, p, disc_acted, disc_k, forward);
             let pred_k = pred_ty(d, p, kind, k);
             let pred_acted = pred_ty(d, p, kind, acted_conic);
