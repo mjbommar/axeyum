@@ -13,7 +13,7 @@ publish = false
 
 [dependencies]
 axeyum-ir.workspace = true
-num-bigint = "0.4"
+num-bigint = "0.5"
 
 [lints]
 workspace = true
