@@ -1,0 +1,64 @@
+{
+  "schema_version": 1,
+  "id": "F:intspace-rat-expectation-integral",
+  "title": "The rational finite expectation is an integral in the finite integration space, across the embedding of the rationals in the reals",
+  "statement": "Fix m : Nat and let S be the finite integration space IntSpace.crealFinite m, whose carrier is the real-valued functions on the index range [0, m+1) and whose integral is the finite sum over that range. Let X and p be RATIONAL-valued functions on that range. Then the integral over S of the function k |-> ofRat(X k) * ofRat(p k) equals, up to CReal.Equiv, the image under CReal.ofRat of the rational expectation of X against the weights p over m+1 points. The embedding is not decoration: IntSpace is generic over the function space but hard-wired in the value type -- its integral returns a CReal and its total is a CReal -- so there is no rational-valued integration space and the rational expectation cannot be an integral in one. The transfer that discharges the mismatch is proved generically (an additive, multiplicative map between two setoid ordered rings carries a finite expectation to a finite expectation) and is instantiated here at the rationals, the reals and CReal.ofRat, whose additivity and multiplicativity were already proved. Consequently every theorem the generic integration layer proves -- integrand congruence, nonnegativity, the constant law, the derived counting measure, monotone convergence -- applies to the rational expectation through one named embedding rather than through a resemblance.",
+  "formal": {
+    "language": "lean4-surface",
+    "statement": "theorem IntSpace.ratExpectation_integral : forall (X p : Nat -> Rat) (m : Nat) (t : IntSpace.Triv), CReal.Equiv (IntSpace.integral (IntSpace.crealFinite m) (fun k => CReal.mul (CReal.ofRat (X k)) (CReal.ofRat (p k))) t) (CReal.ofRat (Rat.expectation X p (Nat.succ m)))",
+    "fragment": "Prop",
+    "kernel_theorem": "IntSpace.ratExpectation_integral"
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-rat-expectation-integral",
+      "kind": "kernel-term",
+      "supports": "IntSpace.ratExpectation_integral and IntSpace.crealFinite_expectation are admitted by the trusted kernel gate and are axiom-free. The intspace suite derives its name list from the prelude handle and separately walks the built environment for any live IntSpace declaration missing from that list, so a theorem cannot be added without being checked -- that guard fired on these two names before they were listed, which is the evidence it is not vacuous.",
+      "check_status": "checked",
+      "checkers": [
+        "producing-build (Kernel::add_declaration)",
+        "every_intspace_declaration_is_axiom_free",
+        "every_live_intspace_declaration_is_listed"
+      ],
+      "checker_command": "cargo test --release -p axeyum-lean-kernel --lib intspace::intspace_tests::every_live_intspace_declaration_is_listed -- --exact 2>&1 | grep -c '^test result: ok. 1 passed'",
+      "checker_seconds": 90,
+      "kernel_declarations": [
+        "IntSpace.crealFinite_expectation",
+        "IntSpace.ratExpectation_integral"
+      ]
+    },
+    {
+      "id": "index-bound-is-load-bearing",
+      "kind": "instance-pin",
+      "supports": "The statement's index bound is not decorative: the same proof term is re-declared under the statement with the bound raised by one Nat.succ and the kernel REFUSES it, while the same construction at the true bound is accepted in the same test. So the refusal is the statement's and not the harness's.",
+      "check_status": "checked",
+      "checkers": [
+        "the_finite_bridge_is_sensitive_to_its_index_bound"
+      ],
+      "checker_command": "cargo test --release -p axeyum-lean-kernel --lib intspace::probability_bridge::probability_bridge_tests::the_finite_bridge_is_sensitive_to_its_index_bound -- --exact 2>&1 | grep -c '^test result: ok. 1 passed'",
+      "checker_seconds": 90,
+      "kernel_declaration": "IntSpace.crealFinite_expectation"
+    },
+    {
+      "id": "two-distinct-statements",
+      "kind": "instance-pin",
+      "supports": "The real-valued bridge and the rational one are DIFFERENT theorems: their types are required to be definitionally distinct, the real-valued one must not mention CReal.ofRat, and the rational one must carry both CReal.ofRat and Rat.expectation. Without this, both names could point at the same theorem and every other check would still pass.",
+      "check_status": "checked",
+      "checkers": [
+        "the_two_bridge_statements_are_distinct"
+      ],
+      "checker_command": "cargo test --release -p axeyum-lean-kernel --lib intspace::probability_bridge::probability_bridge_tests::the_two_bridge_statements_are_distinct -- --exact 2>&1 | grep -c '^test result: ok. 1 passed'",
+      "checker_seconds": 90
+    }
+  ],
+  "provenance": {
+    "date": "2026-09-04",
+    "established_by": "lane finite-probability-generic (the step ADR-1612 named; ADR-1616)"
+  },
+  "notes": "ADR-1612 named this step as 'the rational finite-probability layer IS an IntSpace instance'. That statement cannot be made, and the reason is a property of the IntSpace record rather than a shortfall of the probability layer: the record has one carrier field, for the function space, and a hard-wired CReal value type. Recording the obstruction is half of what this fact is for; the other half is that the content survives it, at the cost of one named embedding and no new theorem about the reals."
+}

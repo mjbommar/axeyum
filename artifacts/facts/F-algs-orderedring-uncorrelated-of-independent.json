@@ -1,0 +1,64 @@
+{
+  "schema_version": 1,
+  "id": "F:algs-orderedring-uncorrelated-of-independent",
+  "title": "Independent events are uncorrelated, over an arbitrary setoid ordered ring",
+  "statement": "Let R be an AlgS.OrderedRing, p a weight function on the index range [0, n), and A and B two R-valued functions on that range -- read as the indicators of two events, so that the indicator of their intersection is the pointwise product A*B and the probability of an event is the expectation of its indicator. Say A and B are independent when E[A*B] = E[A]*E[B], the product rule. Then the covariance of A and B is zero. The conclusion is exactly the hypothesis carried by hand in Rat.variance_add_of_uncorrelated, Rat.variance_sampleMean_uncorrelated and Rat.weak_law_of_large_numbers, so this theorem is what lets a reader supply independence in its recognizable form and obtain the uncorrelatedness those results require. It needs no commutativity, and the reason is a measured asymmetry in the rational development: Rat.covariance is already the computational form E[XY] - E[X]E[Y] while Rat.variance is centred. Relating the two forms would need to pull a constant past the weight p(k) and so would need mulComm, which AlgS.OrderedRing deliberately does not carry.",
+  "formal": {
+    "language": "lean4-surface",
+    "statement": "theorem AlgS.OrderedRing.uncorrelated_of_independent : forall (R : AlgS.OrderedRing) (A B p : Nat -> R.carrier) (n : Nat), AlgS.OrderedRing.Independent R A B p n -> R.equiv (AlgS.OrderedRing.covariance R A B p n) R.zero",
+    "fragment": "Prop",
+    "kernel_theorem": "AlgS.OrderedRing.uncorrelated_of_independent"
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-algs-uncorrelated",
+      "kind": "kernel-term",
+      "supports": "AlgS.OrderedRing.Independent and AlgS.OrderedRing.uncorrelated_of_independent are admitted by the trusted kernel gate with empty axiom footprints, checked together with the rest of the generic layer by a test that asserts the size of its own name list.",
+      "check_status": "checked",
+      "checkers": [
+        "producing-build (Kernel::add_declaration)",
+        "probability_s_declarations_are_axiom_free"
+      ],
+      "checker_command": "cargo test --release -p axeyum-lean-kernel --lib rat_prelude::probability_s::probability_s_tests::probability_s_declarations_are_axiom_free -- --exact 2>&1 | grep -c '^test result: ok. 1 passed'",
+      "checker_seconds": 60,
+      "kernel_declarations": [
+        "AlgS.OrderedRing.Independent",
+        "AlgS.OrderedRing.uncorrelated_of_independent"
+      ]
+    },
+    {
+      "id": "composes-with-rat-variance-add",
+      "kind": "instance-pin",
+      "supports": "The theorem's conclusion IS the hypothesis the rational results want: the test walks Rat.variance_add_of_uncorrelated's telescope, replaces its covariance-is-zero binder by an independence binder, derives the former from the latter through this theorem, and requires the kernel to infer a type for the composite. This is the whole claim that the existing uncorrelated hypotheses are now recognizable to a reader from the field, put where the kernel can refuse it.",
+      "check_status": "checked",
+      "checkers": [
+        "independence_discharges_the_uncorrelated_hypothesis_of_the_rat_theorem"
+      ],
+      "checker_command": "cargo test --release -p axeyum-lean-kernel --lib rat_prelude::probability_s::probability_s_tests::independence_discharges_the_uncorrelated_hypothesis_of_the_rat_theorem -- --exact 2>&1 | grep -c '^test result: ok. 1 passed'",
+      "checker_seconds": 60,
+      "kernel_declaration": "Rat.variance_add_of_uncorrelated"
+    },
+    {
+      "id": "dependent-pair-refuted",
+      "kind": "exhaustive-enumeration",
+      "supports": "The definition is discriminating, decided by computation on a two-point space with uniform weights: the event {0} against ITSELF has P(A and A) = 1/2 while P(A)*P(A) = 1/4, and the kernel reports the two sides definitionally UNEQUAL, so a dependent pair fails the definition. The same test contains the positive twin -- that event against the sure event, which does satisfy it -- so the negative is not an artefact of a stuck reduction.",
+      "check_status": "checked",
+      "checkers": [
+        "a_dependent_pair_is_not_independent"
+      ],
+      "checker_command": "cargo test --release -p axeyum-lean-kernel --lib rat_prelude::probability_s::probability_s_tests::a_dependent_pair_is_not_independent -- --exact 2>&1 | grep -c '^test result: ok. 1 passed'",
+      "checker_seconds": 60,
+      "notes": "Two points, not one: on a one-point space every pair of events is independent, so a smaller instance would make the negative control vacuous."
+    }
+  ],
+  "provenance": {
+    "date": "2026-09-04",
+    "established_by": "lane finite-probability-generic (roadmap W2-15, ADR-1616)"
+  },
+  "notes": "Roadmap W2-15. The mathematical content is standard; what this fact records is that the library now HAS the definition, that the implication is proved once over the spine rather than per carrier, and that the derived hypothesis composes with the rational concentration results without an adapter."
+}

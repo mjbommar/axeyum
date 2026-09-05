@@ -2378,10 +2378,10 @@ pub(super) fn int_sub(p: &IntPrelude) -> Vec<(&'static str, Sub)> {
     ]
 }
 
-/// The `RatPrelude` field table (554 names,
+/// The `RatPrelude` field table (583 names,
 /// 0 name lists, 1 sub-packages).
 ///
-/// 47 of the names come from ADR-1512 per-module registries and
+/// 76 of the names come from ADR-1512 per-module registries and
 /// carry a dotted field name (`pi.pi_le_four`); the rest are flat
 /// fields on `RatPrelude` itself.
 #[must_use]
@@ -3083,6 +3083,83 @@ pub(super) fn rat(p: &RatPrelude) -> Fields {
             (
                 "ordered_ring_ext_s.rat_ordered_ring_s",
                 p.ordered_ring_ext_s.rat_ordered_ring_s,
+            ),
+            ("probability_s.to_ring_s", p.probability_s.to_ring_s),
+            ("probability_s.to_group_s", p.probability_s.to_group_s),
+            ("probability_s.zero_mul", p.probability_s.zero_mul),
+            ("probability_s.neg_mul", p.probability_s.neg_mul),
+            (
+                "probability_s.sub_nonneg_of_le",
+                p.probability_s.sub_nonneg_of_le,
+            ),
+            (
+                "probability_s.mul_le_mul_of_nonneg_right",
+                p.probability_s.mul_le_mul_of_nonneg_right,
+            ),
+            ("probability_s.sum_range", p.probability_s.sum_range),
+            ("probability_s.sum_range_map", p.probability_s.sum_range_map),
+            (
+                "probability_s.expectation_map",
+                p.probability_s.expectation_map,
+            ),
+            (
+                "probability_s.sum_range_zero",
+                p.probability_s.sum_range_zero,
+            ),
+            (
+                "probability_s.sum_range_succ",
+                p.probability_s.sum_range_succ,
+            ),
+            (
+                "probability_s.sum_range_congr",
+                p.probability_s.sum_range_congr,
+            ),
+            ("probability_s.sum_range_add", p.probability_s.sum_range_add),
+            ("probability_s.mul_sum_range", p.probability_s.mul_sum_range),
+            ("probability_s.sum_range_le", p.probability_s.sum_range_le),
+            (
+                "probability_s.sum_range_nonneg",
+                p.probability_s.sum_range_nonneg,
+            ),
+            (
+                "probability_s.is_distribution",
+                p.probability_s.is_distribution,
+            ),
+            ("probability_s.expectation", p.probability_s.expectation),
+            (
+                "probability_s.expectation_add",
+                p.probability_s.expectation_add,
+            ),
+            (
+                "probability_s.expectation_smul",
+                p.probability_s.expectation_smul,
+            ),
+            (
+                "probability_s.expectation_const",
+                p.probability_s.expectation_const,
+            ),
+            (
+                "probability_s.expectation_nonneg",
+                p.probability_s.expectation_nonneg,
+            ),
+            (
+                "probability_s.expectation_le",
+                p.probability_s.expectation_le,
+            ),
+            (
+                "probability_s.markov_inequality",
+                p.probability_s.markov_inequality,
+            ),
+            ("probability_s.variance", p.probability_s.variance),
+            (
+                "probability_s.variance_nonneg",
+                p.probability_s.variance_nonneg,
+            ),
+            ("probability_s.covariance", p.probability_s.covariance),
+            ("probability_s.independent", p.probability_s.independent),
+            (
+                "probability_s.uncorrelated_of_independent",
+                p.probability_s.uncorrelated_of_independent,
             ),
         ],
         lists: Vec::new(),

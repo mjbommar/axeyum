@@ -124,9 +124,13 @@ now. Nothing was deleted.
 | 2026-09-04 | angles-and-isometries | lane opened; step-0 retrieval at `declarations=3935`, `CReal.sin_sq_add_cos_sq` shown ABSENT |
 | 2026-09-04 | angles-and-isometries | W1-8 + W2-13: 32 `CPoint` declarations for angle measure and isometries, all axiom-free; ADR-1615 |
 | 2026-09-04 | angles-and-isometries | four facts: the Pythagorean identity for the plane angle, the laws of sines and cosines, and the isometry family with its doubling refutation |
+| 2026-09-04 | finite-probability-generic | W1-10: the finite probability layer stated once over `AlgS.OrderedRing` — 29 declarations, footprint 0, **9 + 2 `Rat.*` theorems measured as instances**; `mul_le_mul_of_nonneg_right` costs three new ring lemmas and two projections ADR-1592 never declared |
+| 2026-09-04 | finite-probability-generic | W2-15: `AlgS.OrderedRing.Independent` and `uncorrelated_of_independent` — the conclusion IS the hypothesis `Rat.variance_add_of_uncorrelated` carries, checked by composing the two terms; needs no `mulComm` only because `Rat.covariance` is already the computational form |
+| 2026-09-04 | finite-probability-generic | the ℚ↔ℝ step ADR-1612 named: **it cannot be stated** (`IntSpace`'s integral is `CReal`-valued, so no ℚ-valued instance exists); landed `IntSpace.crealFinite_expectation` and `IntSpace.ratExpectation_integral` across `CReal.ofRat` instead, with nothing new proved about the reals |
 | 2026-09-04 | poly-commring | `AlgS.Poly.commRing` lands: the four `AlgS.CommRing` fields ADR-1609 left open (`mulOneL`, `mulOneR`, `mulComm`, `mulAssoc`) plus the six walk reindexing lemmas, at the same build position, zero kernel rejections (ADR-1618) |
 | 2026-09-04 | poly-commring | ℚ[X], ℝ[X] and ℂ[X] admitted as `AlgS.CommRing` values with empty axiom footprints (`tests/poly_comm_ring_concrete.rs`) |
 | 2026-09-04 | poly-commring | `poly_setoid_tests` 8 → 17: three evaluation tests at `n ≤ 3` plus five rejection controls, each with a positive twin; all five mutation-verified (exactly the five mutated tests died, the other twelve passed) |
+| 2026-09-04 | cas-reconstruct | ADR-1622: CAS Pratt + CRT certificates reconstruct into kernel terms; `cas-internal` residue 46 → 45 (76.7% → 73.8%), ratchet floor 14 → 16 |
 | 2026-09-04 | coordinator | `docs/math-department/`: twelve persona reviews of the library, one per field, each with a measured baseline, a Next Five and a progress log |
 | 2026-09-04 | coordinator | `docs/math-department/00-roadmap.md`: the twelve Next Fives synthesized into 51 items, 7 convergences, 4 waves, with a status board and history log |
 | 2026-09-04 | metatheory-and-landmarks | `90940d7bb` ADR-1600: kernel trusted-core size (5,526 lines, re-derived), what it admits, four mutation-tested guards (3 clean, 1 found redundant), a fresh full `check-lean-gate.sh` run reproducing the known-red `max-to-imax` mutant, and what a relative soundness proof would require |
@@ -6647,6 +6651,100 @@ one name per invocation):
 - `CPoint.not_isometry_scale_two` → 21 edges ending at
   `CReal.not_le_zero_neg_one`.
 
+**Your lane's block (`COMPLETE`, finite-probability-generic, 2026-09-04).**
+All three pieces landed: roadmap **W1-10** (the finite probability layer
+stated once over `(R : AlgS.OrderedRing)`), **W2-15** (independence as a
+definition, with independence ⇒ uncorrelated), and the ℚ↔ℝ step
+**ADR-1612** named. Decision record:
+[ADR-1616](docs/research/09-decisions/adr-1616-finite-probability-over-algs-orderedring-independence-and-the-integral-bridge.md).
+
+**The deciding number W1-10 asked for is 9 + 2 of 11 attempted, measured by
+the kernel and not by inspection.** Nine `Rat.*` theorems are instances of a
+generic statement outright (`sumRange_congr_lt`, `sumRange_add`,
+`sumRange_le`, `sumRange_nonneg`, `expectation_add`, `expectation_smul`,
+`expectation_const`, `expectation_nonneg`, `expectation_le`); two more are
+instances with a stated adjustment — `Rat.markov_inequality` after DROPPING
+two hypotheses its own proof never uses, and `Rat.variance_nonneg` once
+`Rat.sq_nonneg` is supplied for a trichotomy consequence the record cannot
+yield. The five definitions (`sumRange`, `IsDistribution`, `expectation`,
+`variance`, `covariance`) are DEFINITIONALLY the `ℚ` constants, checked as
+`def_eq` of the closed terms rather than of their types. Two `ℚ` theorems
+are NOT instances and would need reproof, both for statement-shape reasons
+rather than proof difficulty: `Rat.sumRange_congr` states its hypothesis
+unbounded, and `Rat.mul_sumRange` is stated in the opposite direction.
+**The remaining ~19 `Rat.*` probability theorems were not attempted and are
+not claimed** — see the next-lane note below.
+
+**Expectation's linearity is a CONSEQUENCE, not an axiom.** ADR-1612's
+warning ("a record whose axioms come from what a development proves cannot
+re-derive what it took") was checked here rather than quoted, and it does
+not bite, for the reason that ADR itself names: `AlgS.OrderedRing`'s fields
+were drawn from `linarith`'s needs (ADR-1584/1585/1592), not probability's,
+so probability's theorems are derivable. Where it DOES bite is
+`mul_le_mul_of_nonneg_right` — the workhorse under every expectation bound
+and a PRIMITIVE on the `ℚ` side. The record's only multiplicative order law
+is `mul_nonneg`, so recovering it cost three new generic ring lemmas
+(`zero_mul`, `neg_mul`, `sub_nonneg_of_le`) and two forgetful projections
+ADR-1592 never declared (`AlgS.OrderedRing.toRingS`, `toGroupS`).
+`AlgS.add_add_add_comm` stays out of reach entirely — it is stated over
+`AlgS.CommRing`, and a Ring-based `AlgS.OrderedRing` has no projection to
+one — so the middle-four exchange is rebuilt inline.
+
+**W2-15 needed no commutativity, and the reason is worth carrying
+forward:** `Rat.covariance` is already the computational form
+`E[XY] − E[X]E[Y]` while `Rat.variance` is centred. That asymmetry in the
+`ℚ` development is load-bearing. Relating the two forms needs
+`E[fun k => X k * c] ≃ E[X] * c`, which pulls a constant past the weight
+`p k` and therefore needs `mulComm` — which ADR-1592 §2 could not give the
+record. Had `Rat.covariance` been centred, W2-15 would have required
+commutativity as an explicit hypothesis and a full expansion.
+
+**The bridge ADR-1612 named cannot be stated, and that is the finding.**
+`IntSpace` is generic over the FUNCTION space and hard-wired in the VALUE
+type: `carrier` is a field, but `integral : (f : carrier) → Integrable f →
+CReal` returns a `CReal` and `total : CReal` is a `CReal`. There is no
+ℚ-valued `IntSpace` and there cannot be one without a second carrier field,
+while `Rat.expectation` is ℚ-valued. Landed instead:
+`IntSpace.crealFinite_expectation` — the ℝ-valued finite expectation IS the
+`crealFinite` integral, definitionally, in one application — and
+`IntSpace.ratExpectation_integral`, the rational one across `CReal.ofRat`,
+from the new generic transfer `AlgS.OrderedRing.expectation_map` plus the
+already-proved `ofRat_add`/`ofRat_mul`. **Nothing new was needed on the
+reals.**
+
+**What the next lane should know.**
+
+- **Extending the instance count is cheap and the failures are informative.**
+  Add a row to `instance_rows` in
+  `crates/axeyum-lean-kernel/src/rat_prelude/probability_s_tests.rs` and run
+  it; both non-instances found here were direction or hypothesis-strength
+  mismatches and the kernel reported them in seconds. The untried families
+  are `variance_eq`, `variance_smul`, `variance_add_eq`, the `covariance_*`
+  bilinearity family, `sumVars`, the indicator family, Chebyshev, the
+  sample-mean bound and the weak law.
+- **Two obstructions are already known for parts of that remainder.** The
+  indicator family needs a DECIDABLE order (`Rat.ble`), which is not a
+  record field; and anything relating the centred and computational forms
+  needs `mulComm`, so it must take commutativity as an explicit hypothesis
+  (the pattern `variance_nonneg` already uses for `∀ a, le zero (a*a)`).
+- **Four names belong in the spine, not in this lane's file.**
+  `AlgS.OrderedRing.{zero_mul, neg_mul, sub_nonneg_of_le,
+  mul_le_mul_of_nonneg_right}` are general ordered-ring facts, here only
+  because this was the first lane to need them. Whoever consolidates
+  `nat_prelude/structures_setoid.rs` should move them.
+- **A `def_eq` between a `ℚ` constant and its generic twin under a symbolic
+  bound can fail to terminate usably.** One test was written and WITHDRAWN
+  for this, with the reason recorded in the file rather than deleted:
+  `Rat.expectation` has delta height 36 and the generic `expectation` has
+  height 4, which drives the unfolder the wrong way round. Route around it
+  the way `independence_discharges_the_uncorrelated_hypothesis_of_the_rat_theorem`
+  does — build the composite the consumer needs and let the kernel infer it.
+- **`IntSpace` will need a second carrier field** if a non-`CReal`-valued
+  integral is ever wanted. That is a record change, not a proof.
+
+Landed from `a1e6c17ad`; commits `d77ede9db`, `663e925c0`, `f755a5c8c`,
+`194f52c03`.
+
 **Your lane's block (`landed`, poly-commring, 2026-09-04).** ADR-1609 stopped 20
 of 23 fields into `AlgS.CommRing` for the polynomial ring over an abstract
 `AlgS.CommRing`, and recommended moving the build position past `Nat` arithmetic
@@ -6855,6 +6953,87 @@ genuinely new general helpers — `le_shift` (the linear shuffle
 to `|v − u| ≤ q` through the two-sided form, since
 `Equiv (abs (neg x)) (abs x)` is deliberately absent) — are candidates for
 promotion if a third consumer appears.
+
+**Your lane's block (`DONE`, cas-reconstruct, 2026-09-04).** ADR-1617 measured
+the residue at **60 `cas-certificate` facts, 14 kernel-reconstructed, 46
+`cas-internal` (76.7%)** and stopped there. This lane made it move:
+**61 total, 16 kernel-reconstructed, 45 `cas-internal` (73.8%)**, with
+`scripts/check-cas-internal-residue.ratchet` regenerated so both new rows are
+a floor. ADR-1622 carries the reasoning.
+
+**The enabling move, for whoever bridges the next family.** The reason number
+theory sat in the residue is not proof difficulty; it is that every `Nat`
+numeral here is unary, so stating `ModEq (ofNat n) (pow (ofNat a) (n−1)) one`
+and closing it by `Eq.refl` makes the kernel form `a^(n−1)` as a literal
+numeral. That walls **below `n = 20`**. `int_prelude/cas_pratt_bridge_tests.rs`
+instead rebuilds the CAS checker's own `pow_mod` — square-and-multiply with
+reduction at every step — out of `Int.pow_add`, `Int.pow_succ`,
+`Int.modEq_mul_general` (**unconditional in the modulus**, which is why it and
+not the positivity-scoped `Int.modEq_mul`: no `0 < n` obligation threads
+through the `O(log n)` steps) and `Int.modEq_trans`. Largest numeral formed:
+`n²`. Reuse `pow_modeq` for any future modular-arithmetic certificate.
+
+**Where it stops, measured, not assumed** (`--release`, shared box, other lanes
+active): `n = 47` 0.83 s, `n = 101` 7.8 s, `n = 251` **398 s**, `n = 509`
+killed rather than waited out (it holds the host-wide cargo lock). So `251` is
+the last prime the route certifies at all and `101` the last a gate can carry;
+the shipping set stops at 47 and the ladder at 101. The cost is superlinear in
+`n` well past the `n²` numeral size — `Nat.mod` on a unary numeral is itself
+superlinear — so the engine buys about an order of magnitude in the modulus,
+not an unbounded win.
+
+**Two facts moved, and the two counters do not tell the same story.**
+`F:cas-ntheory-crt-certificate` flipped whole: every numeral in all six of its
+systems is ≤ 105, so the kernel reaches **every instance it claims**, which is
+the only one of the four number-theory families that is true of.
+`F:cas-ntheory-pratt-primality-mersenne89` did **not** flip and must not — its
+headline is `2^89 − 1`, which no numeral budget reaches, so the reconstruction
+is a **new** fact (`F:cas-ntheory-pratt-certificate-kernel-reconstructed`) per
+ADR-0603's graded statement family. Net: `cas-internal` falls by one while two
+routes landed. Read the per-fragment table, not the total.
+
+**What neither route establishes, stated as precisely as what they do.**
+Pratt reconstructs the certificate's *arithmetic conditions* (G6/G8/G9) and
+**not** primality — the Lucas implication is absent. Both modules' doc comments
+list that plus four more disclosures apiece, and both facts carry them in
+`axiom_footprint`.
+
+**The missing Lucas half, sized.** `Int.IsOrder`, `Int.order_exists` and
+`Int.pow_modeq_one_iff_order_dvd` (ADR-1598) give `k ∣ (n−1)` and
+`k ∤ (n−1)/q`. What is missing is "`k ∣ m` and `k ∤ m/q` for every prime
+`q ∣ m` implies `k = m`" — a bounded divisor case analysis (`O(n)` cases at
+concrete `m`, which is the cost the certificate exists to avoid; general `m`
+needs divisor enumeration this prelude lacks) plus the reverse direction of
+`totient n = n − 1 ↔ n prime`, of which `int_prelude/euler_totient.rs` has one
+direction only. That is prelude work, not bridge work.
+
+**Next-cheapest families, in order** (ADR-1622 §"The next-cheapest family"):
+factorization (blocked only by its two large instances — split the fact the way
+Pratt was split), compositeness (four of five instances already reachable),
+then hypergeometric (9 facts, the largest family, needs `Nat.choose`
+identities that do not exist), then GF(2)/SOS (need carriers that do not
+exist).
+
+**Mutation table (ADR-1622).** All six emitted-obligation guards deleted in
+turn against a prebuilt `--release` binary; baseline 13 passed / 0 failed,
+every mutant killed. Pratt G6/G9/`seen` and CRT R4/R6 each kill their
+adversarial test **and** the pinned emitted-theorem floor; **Pratt G8 kills
+only its adversarial test**, because deleting it removes 14 of ~60 theorems
+and the floor is 40 — so for that one guard the fixture is the only thing
+standing. `seen` (the cross-call dedup of already-declared factor bases) is a
+correctness guard, not an optimisation: `2` is a factor base of every prime's
+`n - 1` and a kernel name may be declared once, so deleting it fails with
+`DeclarationExists`. Found by the route failing, not by review.
+
+**Gates, with counts.** `int_prelude::` 100 passed / 0 failed (13.8 s);
+`int_prelude::cas_` 13 passed / 0 failed; clippy `-p axeyum-lean-kernel
+--all-targets --all-features -D warnings` exit 0; `cargo fmt --all --check`
+exit 0; `validate-facts.py` 2808 facts / 0 errors;
+`check-fact-depends-derived.py --fix` nothing to fix;
+`check-cas-internal-residue.py --report` OK (16 reconstructed, floor 14, all
+held); `check-cas-substance.py` OK (16 blocks); `frontier-shape-census.py`
+exit 0 (regenerated, ledger 2807 -> 2808); `shape_search --name
+Int.order_exists --expect 1` FOUND 1, `declarations=2857`.
 
 **Your lane's block (`DONE for this slice`, ratint, 2026-08-27).**
 

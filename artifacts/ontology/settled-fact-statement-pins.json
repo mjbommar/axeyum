@@ -4,7 +4,7 @@
   "note": "Statement identity for every settled fact (S1 of the trusted-library safety roadmap, ADR-0763). Per fact: SHA-256 of formal.statement (the canonical kernel rendering for native lean4 rows), SHA-256 of the top-level reader-facing statement, and the kernel_theorem it names. A settled fact's statement is what the ledger CLAIMS; changing any of the three silently turns 'we proved X' into 'we proved something we then labelled X'. Changes require an amendment row naming both digests and a reason; superseded digests are preserved in each pin's history. `coverage_floor` is a ratchet the gate re-derives rather than trusts: slack is itself a violation, so a loosened floor is self-reverting. Written by `scripts/check-settled-fact-statements.py --write`; do not hand-edit.",
   "coverage_floor": {
     "max_unpinned_settled": 0,
-    "min_identity_bound": 2306,
+    "min_identity_bound": 2309,
     "max_header_exempt": 0
   },
   "amendments": [
@@ -1038,6 +1038,20 @@
       "statement_sha256": "201543265468cd2e5cbd5b02a4b7573663a28abb6e4caf473d8502e98bc314c1",
       "prose_sha256": "573ba9cc4bbd03616fbf356b42b437bdfdf050f47d84b6fc11f107fcbbb8a11a",
       "kernel_theorem": "AlgS.OrderedRing.ofNat_le_ofNat_of_le"
+    },
+    {
+      "fact_id": "F:algs-orderedring-markov-inequality",
+      "language": "lean4-surface",
+      "statement_sha256": "7ec5aab027997e2e4c7ed5f4e5aea5842d1be3c4697f349e4639da91516ee70e",
+      "prose_sha256": "d4081fc897de87420b10414e05ab55254e6019d616eb41c9558a7a1630545673",
+      "kernel_theorem": "AlgS.OrderedRing.markov_inequality"
+    },
+    {
+      "fact_id": "F:algs-orderedring-uncorrelated-of-independent",
+      "language": "lean4-surface",
+      "statement_sha256": "a450fe95ef5e75986cc5dbaaebd2415f1f6d4634335b4e96b7ee8133c7e95c43",
+      "prose_sha256": "e7bd79cbe630fe97fa7c5ba96b4ab428f51c24258bbebf7c0dddf12b14a30b5c",
+      "kernel_theorem": "AlgS.OrderedRing.uncorrelated_of_independent"
     },
     {
       "fact_id": "F:algs-poly-antidiagfrom-head",
@@ -9917,6 +9931,13 @@
       "statement_sha256": "c4fd24ced8f94285987c1186844a7e8ab1ba0c5560c298d43eaca380ba76004f",
       "prose_sha256": "9362a67d4ba499f469e046dd3564df5eb3170ac882f0d9e2cd407af0affe0903",
       "kernel_theorem": "IntSpace.monotone_convergence_of_real"
+    },
+    {
+      "fact_id": "F:intspace-rat-expectation-integral",
+      "language": "lean4-surface",
+      "statement_sha256": "92298b1bcddf5e51d5babe765d5dc79f2d6f3e868e0b2e72e1ddd01180bfa804",
+      "prose_sha256": "17ac45e04a489b3b019bbbf177bbb34216556838540917a3de79530fb30fc95f",
+      "kernel_theorem": "IntSpace.ratExpectation_integral"
     },
     {
       "fact_id": "F:ivt-mathlib-import-intermediate-value-icc",
