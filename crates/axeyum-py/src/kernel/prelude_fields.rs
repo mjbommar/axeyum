@@ -3483,10 +3483,10 @@ pub(super) fn arith_sub(p: &ArithPrelude) -> Vec<(&'static str, Sub)> {
     vec![("logic", Sub::Logic(Box::new(p.logic)))]
 }
 
-/// The `CRealPrelude` field table (620 names,
+/// The `CRealPrelude` field table (628 names,
 /// 0 name lists, 1 sub-packages).
 ///
-/// 78 of the names come from ADR-1512 per-module registries and
+/// 86 of the names come from ADR-1512 per-module registries and
 /// carry a dotted field name (`pi.pi_le_four`); the rest are flat
 /// fields on `CRealPrelude` itself.
 #[must_use]
@@ -3863,6 +3863,32 @@ pub(super) fn creal(p: &CRealPrelude) -> Fields {
             (
                 "ratio_test.sum_range_ratio_test",
                 p.ratio_test.sum_range_ratio_test,
+            ),
+            ("power_series.abs_pow_le", p.power_series.abs_pow_le),
+            ("power_series.one_pow", p.power_series.one_pow),
+            (
+                "power_series.power_series_partial",
+                p.power_series.power_series_partial,
+            ),
+            (
+                "power_series.power_series_term_radius_bound",
+                p.power_series.power_series_term_radius_bound,
+            ),
+            (
+                "power_series.power_series_cauchy_within_radius",
+                p.power_series.power_series_cauchy_within_radius,
+            ),
+            (
+                "power_series.power_series_converges_within_radius",
+                p.power_series.power_series_converges_within_radius,
+            ),
+            (
+                "power_series.exp_series_partial_is_power_series",
+                p.power_series.exp_series_partial_is_power_series,
+            ),
+            (
+                "power_series.cos_series_partial_is_power_series",
+                p.power_series.cos_series_partial_is_power_series,
             ),
             ("one_le_pow_of_one_le", p.one_le_pow_of_one_le),
             ("pow_le_pow_of_one_le", p.pow_le_pow_of_one_le),
