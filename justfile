@@ -392,6 +392,13 @@ facts:
     # vanishing) is refused, a new cas-internal fact is not.
     python3 scripts/check-cas-internal-residue.py --report
     python3 -m unittest scripts.tests.test_check_cas_internal_residue
+    # Math-department file 13, Next Ten item 10 (first half): a per-function
+    # trust registry for axeyum-cas -- distinct from cas-internal-residue
+    # above (which floors the fact ledger's classification). This floors the
+    # SOURCE's own pub fn surface: whether each function's return type
+    # carries a certificate at all.
+    python3 scripts/check-cas-trust-registry.py --report
+    python3 -m unittest scripts.tests.test_check_cas_trust_registry
     python3 -m unittest scripts.tests.test_settled_fact_statements
     python3 -m unittest scripts.tests.test_check_draw7_frozen_families
     python3 scripts/check-settled-fact-statements.py
