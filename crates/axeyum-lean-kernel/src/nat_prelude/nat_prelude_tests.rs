@@ -687,6 +687,8 @@ fn definition_names(p: &NatPrelude) -> Vec<NameId> {
         p.finset_encode,
         p.finset_any_subset,
         p.strong_induction,
+        // `hall-theorem` lane (roadmap W2-12): `hall_theorem.rs` (ADR-1644).
+        p.finset_subset_fixed,
         // `inclusion-exclusion-mobius` lane (roadmap W2-19): `subset_sums.rs`
         // (ADR-1624). `Supported` is a `Prop`-valued `Definition`, so it lands
         // in this list rather than the theorem one.
@@ -825,6 +827,11 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.hall_exists_is_matching_of_card_le_zero,
         p.hall_exists_is_matching_singleton,
         p.strong_induction_eq,
+        // `hall-theorem` lane (roadmap W2-12): `hall_theorem.rs` (ADR-1644).
+        p.finset_all_below_congr,
+        p.finset_subset_fixed_of_mem,
+        p.finset_mem_of_subset_fixed,
+        p.finset_subset_fixed_congr,
         // `inclusion-exclusion-mobius` lane (roadmap W2-19): `subset_sums.rs`
         // (ADR-1624).
         p.subsets_sum_subsets_zero,

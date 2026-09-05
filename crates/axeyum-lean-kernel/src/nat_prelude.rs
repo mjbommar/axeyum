@@ -222,6 +222,7 @@ mod group;
 pub(crate) mod half_ceil_parity;
 mod hall;
 mod hall_sufficiency;
+mod hall_theorem;
 mod helpers;
 pub mod image_group;
 mod inclusion_exclusion;
@@ -452,6 +453,7 @@ use group::declare_group_all;
 use half_ceil_parity::declare_half_ceil_parity_all;
 use hall::declare_hall_all;
 use hall_sufficiency::declare_hall_sufficiency_all;
+use hall_theorem::declare_hall_theorem_all;
 use inclusion_exclusion::declare_inclusion_exclusion_all;
 use injective_decide::declare_injective_on_or_duplicate;
 use irrational::{declare_even_of_even_sq, declare_no_rational_sqrt_two};
@@ -6875,6 +6877,42 @@ pub struct NatPrelude {
     /// injectivity is free because every index in a singleton is `a`.
     pub hall_exists_is_matching_singleton: NameId,
 
+    // --- The fixed-bound inclusion decision (`hall_theorem.rs`, ADR-1644) ---
+    /// `Nat.Finset.allBelow_congr : ∀ f g n, (∀ i, Eq Bool (f i) (g i)) →
+    /// Eq Bool (allBelow f n) (allBelow g n)` (ADR-1644) — `allBelow`'s third
+    /// law, and the only one relating two LOOPS rather than a loop to its
+    /// predicate's values. It is what
+    /// [`finset_subset_fixed_congr`](Self::finset_subset_fixed_congr) needs,
+    /// and through it what discharges
+    /// [`finset_forall_subset_of_search`](Self::finset_forall_subset_of_search)'s
+    /// congruence premise for an inclusion test.
+    pub finset_all_below_congr: NameId,
+    /// `Nat.Finset.subsetFixed s t := allBelow (fun i => if memB t i then
+    /// memB s i else true) (bound s)` (ADR-1644) — "`t ⊆ s`, decided over
+    /// `[0, bound s)`". The loop bound comes from the FIXED set `s`, where
+    /// [`finset_subset_b`](Self::finset_subset_b)'s comes from the set on the
+    /// left of the inclusion; that is the whole difference, and it is what
+    /// makes the predicate congruent in `t`.
+    pub finset_subset_fixed: NameId,
+    /// `Nat.Finset.subsetFixed_of_mem : ∀ s t,
+    /// (∀ i, Eq Bool (memB t i) true → Eq Bool (memB s i) true) →
+    /// Eq Bool (subsetFixed s t) true` (ADR-1644) — the introduction rule. No
+    /// bound hypothesis is needed in this direction.
+    pub finset_subset_fixed_of_mem: NameId,
+    /// `Nat.Finset.mem_of_subsetFixed : ∀ s t i,
+    /// Eq Bool (subsetFixed s t) true → Lt i (bound s) →
+    /// Eq Bool (memB t i) true → Eq Bool (memB s i) true` (ADR-1644) — the
+    /// elimination rule. `Lt i (bound s)` is genuine, not bookkeeping: above
+    /// `bound s` the conclusion is false for any `t` wider than `s`.
+    pub finset_mem_of_subset_fixed: NameId,
+    /// `Nat.Finset.subsetFixed_congr : ∀ s t t',
+    /// (∀ i, Eq Bool (memB t i) (memB t' i)) →
+    /// Eq Bool (subsetFixed s t) (subsetFixed s t')` (ADR-1644) — both sides
+    /// loop to the same `bound s`, so
+    /// [`finset_all_below_congr`](Self::finset_all_below_congr) applies
+    /// directly and the two sets' differing stored bounds never enter.
+    pub finset_subset_fixed_congr: NameId,
+
     /// `Nat.strongInduction.{u} : ∀ (motive : Nat → Sort u),
     /// (∀ n, (∀ m, Lt m n → motive m) → motive n) → ∀ n, motive n` —
     /// course-of-values recursion, `Nat.lt_well_founded` + `WellFounded.fix`
@@ -8496,6 +8534,12 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             hall_exists_is_matching_of_card_le_zero: kernel
                 .name_str(hall, "exists_isMatching_of_card_le_zero"),
             hall_exists_is_matching_singleton: kernel.name_str(hall, "exists_isMatching_singleton"),
+            // The fixed-bound inclusion decision (`hall_theorem.rs`, ADR-1644).
+            finset_all_below_congr: kernel.name_str(finset, "allBelow_congr"),
+            finset_subset_fixed: kernel.name_str(finset, "subsetFixed"),
+            finset_subset_fixed_of_mem: kernel.name_str(finset, "subsetFixed_of_mem"),
+            finset_mem_of_subset_fixed: kernel.name_str(finset, "mem_of_subsetFixed"),
+            finset_subset_fixed_congr: kernel.name_str(finset, "subsetFixed_congr"),
             subsets_empty: kernel.name_str(subsets, "empty"),
             subsets_insert_at: kernel.name_str(subsets, "insertAt"),
             subsets_sum_subsets: kernel.name_str(subsets, "sumSubsets"),
@@ -10030,6 +10074,12 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // `Nat.pow`. Goes after `declare_finset_all` and `declare_graph_all`
         // (it reads `Nat.Graph.notB`).
         declare_subset_search_all(&mut d, &p)?;
+        // The fixed-bound inclusion decision (`hall_theorem.rs`, ADR-1644).
+        // Needs `Nat.Finset.allBelow` and its `of_all_true`/`true_at` laws
+        // (`finset.rs`) and `Nat.Graph.bool_congr`'s host module, and it is
+        // consumed by the subset SEARCH, so it goes after
+        // `declare_subset_search_all` rather than beside `hall_sufficiency.rs`.
+        declare_hall_theorem_all(&mut d, &p)?;
         // The divisor aggregate and its `d ↦ n/d` reindexing
         // (`arith_functions.rs`, ADR-1619). Needs `Nat.sumRangeIf`
         // (`subset_sum.rs`), `Nat.sumRange_permute`/`Nat.sumRange_congr`,
@@ -10219,6 +10269,9 @@ mod hall_tests;
 
 #[cfg(test)]
 mod hall_sufficiency_tests;
+
+#[cfg(test)]
+mod hall_theorem_tests;
 
 #[cfg(test)]
 mod inclusion_exclusion_tests;
