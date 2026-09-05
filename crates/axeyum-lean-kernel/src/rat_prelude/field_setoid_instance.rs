@@ -62,23 +62,6 @@ pub struct RatFieldSNames {
     pub field_s_is_tight: NameId,
 }
 
-#[cfg(test)]
-impl RatFieldSNames {
-    #[must_use]
-    pub fn all(&self) -> [NameId; 8] {
-        [
-            self.ne_of_lt,
-            self.apart,
-            self.apart_symm,
-            self.apart_cotrans,
-            self.apart_compat,
-            self.mul_inv_ex,
-            self.field_s,
-            self.field_s_is_tight,
-        ]
-    }
-}
-
 /// The `AlgS.Field` names, re-derived from the interned `AlgS` root rather
 /// than threaded through `NatPrelude` — `name_str` is interned, so these are
 /// the same `NameId`s `nat_prelude::field_setoid` produced.
