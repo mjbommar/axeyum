@@ -1276,6 +1276,131 @@ pub struct CPointPrelude {
     /// describes, applied here to proof-term SHAPE rather than ring-normal-
     /// form size.
     pub collinear_of_area_zero: NameId,
+
+    // --- angle measure (creal_point/angle.rs) --------------------------------
+    /// `CPoint.norm : CPoint → CReal := fun V => CReal.sqrt (CPoint.dot V V)`.
+    ///
+    /// The unsquared length, expressible because `CReal.sqrt` exists — several
+    /// doc comments above still say it does not, and they are stale.
+    pub norm: NameId,
+    /// `CPoint.norm_nonneg : ∀ V, CReal.le CReal.zero (norm V)`.
+    pub norm_nonneg: NameId,
+    /// `CPoint.norm_sq : ∀ V, Equiv (mul (norm V) (norm V)) (dot V V)` —
+    /// `mul_self_sqrt` discharged by [`Self::dot_self_nonneg`].
+    pub norm_sq: NameId,
+    /// `CPoint.norm_congr : ∀ U V, CPoint.Equiv U V → Equiv (norm U) (norm V)`.
+    pub norm_congr: NameId,
+    /// `CPoint.crossV U V := add (mul (x U) (y V)) (neg (mul (y U) (x V)))` —
+    /// the two-vector determinant, the `dot`-sibling the file never had (the
+    /// existing [`Self::cross`] takes three POINTS).
+    pub cross_v: NameId,
+    /// `CPoint.cross_eq_crossV : ∀ A B C,
+    /// Equiv (cross A B C) (crossV (sub B A) (sub C B))` — `equiv_refl`. The
+    /// triangle determinant IS the vector cross product at the two edge
+    /// vectors, definitionally, so every existing `cross` theorem transports
+    /// to the angle layer for free.
+    pub cross_eq_cross_v: NameId,
+    /// `CPoint.lagrange_vector : ∀ U V,
+    /// Equiv (add (mul (dot U U) (dot V V)) (neg (mul (dot U V) (dot U V))))
+    ///       (mul (crossV U V) (crossV U V))` — `‖u‖²‖v‖² − ⟨u,v⟩² = (u×v)²`,
+    /// [`Self::lagrange_identity`] at the four coordinates and nothing else.
+    /// **This is the Pythagorean identity for the angle**, before dividing by
+    /// `‖u‖²‖v‖²`.
+    pub lagrange_vector: NameId,
+    /// `CPoint.law_of_cosines_dot : ∀ U V,
+    /// Equiv (distSq U V) (add (add (dot U U) (dot V V)) (neg (add (dot U V) (dot U V))))`
+    /// — `‖u−v‖² = ‖u‖² + ‖v‖² − 2⟨u,v⟩`, [`Self::dot_self_sub`] regrouped.
+    pub law_of_cosines_dot: NameId,
+    /// `CPoint.cosAngle : (U V : CPoint) → (k : Nat) →
+    /// PosBound (mul (norm U) (norm V)) k → CReal`
+    /// `:= mul (dot U V) (inv (mul (norm U) (norm V)) k h)`.
+    ///
+    /// The modulus is data, exactly as in [`Self::non_collinear`]: `CReal.inv`
+    /// consumes a `PosBound`, not an `Apart`.
+    pub cos_angle: NameId,
+    /// `CPoint.sinAngle : … → CReal
+    /// := mul (abs (crossV U V)) (inv (mul (norm U) (norm V)) k h)` — the
+    /// UNSIGNED sine; a signed one would need a decision on the sign of a real.
+    pub sin_angle: NameId,
+    /// `CPoint.sin_sq_add_cos_sq : ∀ U V k h,
+    /// Equiv (add (mul (sinAngle …) (sinAngle …)) (mul (cosAngle …) (cosAngle …)))
+    ///       CReal.one`.
+    ///
+    /// **The Pythagorean identity, with no trigonometry in it** —
+    /// [`Self::lagrange_vector`] divided by `‖u‖²‖v‖²`. `CReal` has no
+    /// `sin_sq_add_cos_sq` of its own (checked 2026-09-04), and this does not
+    /// need one.
+    pub sin_sq_add_cos_sq: NameId,
+    /// `CPoint.abs_cos_angle_le_one : ∀ U V k h, le (abs (cosAngle …)) one` —
+    /// unsquared Cauchy–Schwarz, read off [`Self::sin_sq_add_cos_sq`].
+    pub abs_cos_angle_le_one: NameId,
+    /// `CPoint.cos_angle_le_one : ∀ U V k h, le (cosAngle …) CReal.one`.
+    pub cos_angle_le_one: NameId,
+    /// `CPoint.neg_one_le_cos_angle : ∀ U V k h, le (neg CReal.one) (cosAngle …)`
+    /// — with [`Self::cos_angle_le_one`], the `[−1, 1]` range an `arccos`
+    /// would consume, landed without one.
+    pub neg_one_le_cos_angle: NameId,
+    /// `CPoint.norm_mul_cos_angle : ∀ U V k h,
+    /// Equiv (mul (mul (norm U) (norm V)) (cosAngle …)) (dot U V)`.
+    pub norm_mul_cos_angle: NameId,
+    /// `CPoint.law_of_sines : ∀ U V k h,
+    /// Equiv (abs (crossV U V)) (mul (mul (norm U) (norm V)) (sinAngle …))` —
+    /// `|u × v| = ‖u‖ ‖v‖ sin θ`.
+    pub law_of_sines: NameId,
+    /// `CPoint.law_of_cosines : ∀ U V k h,
+    /// Equiv (distSq U V) (‖u‖² + ‖v‖² − 2‖u‖‖v‖ cos θ)` — the classical
+    /// statement, with `2X` written `X + X`.
+    pub law_of_cosines: NameId,
+
+    // --- isometries (creal_point/isometry.rs) --------------------------------
+    /// `CPoint.Isometry f := ∀ P Q, Equiv (distSq (f P) (f Q)) (distSq P Q)`.
+    pub isometry: NameId,
+    /// `CPoint.idMap := fun P => P`.
+    pub id_map: NameId,
+    /// `CPoint.comp f g := fun P => f (g P)`.
+    pub comp_map: NameId,
+    /// `CPoint.isometry_id : Isometry idMap`.
+    pub isometry_id: NameId,
+    /// `CPoint.isometry_comp : ∀ f g, Isometry f → Isometry g →
+    /// Isometry (comp f g)`. With [`Self::isometry_id`], the monoid
+    /// structure; inverses need surjectivity, which the predicate does not
+    /// carry.
+    pub isometry_comp: NameId,
+    /// `CPoint.translate T := fun P => CPoint.add P T`.
+    pub translate: NameId,
+    /// `CPoint.isometry_translate : ∀ T, Isometry (translate T)` — no
+    /// hypothesis at all.
+    pub isometry_translate: NameId,
+    /// `CPoint.rotate c s := fun P => mk (c·Px − s·Py) (s·Px + c·Py)` —
+    /// parameterised by the PAIR, never by an angle.
+    pub rotate: NameId,
+    /// `CPoint.isometry_rotate : ∀ c s, Equiv (add (mul c c) (mul s s)) one →
+    /// Isometry (rotate c s)`.
+    pub isometry_rotate: NameId,
+    /// `CPoint.reflect c s := fun P => mk (c·Px + s·Py) (s·Px − c·Py)`.
+    pub reflect: NameId,
+    /// `CPoint.isometry_reflect : ∀ c s, Equiv (add (mul c c) (mul s s)) one →
+    /// Isometry (reflect c s)`.
+    pub isometry_reflect: NameId,
+    /// `CPoint.scale r := fun P => mk (r·Px) (r·Py)`.
+    pub scale: NameId,
+    /// `CPoint.scale_distSq : ∀ r P Q,
+    /// Equiv (distSq (scale r P) (scale r Q)) (mul (mul r r) (distSq P Q))` —
+    /// the exact scaling law, for every `r`.
+    pub scale_dist_sq: NameId,
+    /// `CPoint.not_isometry_scale_two : Isometry (scale two) → False`.
+    ///
+    /// **The negative control, as a theorem.** The doubling map takes
+    /// `distSq = 1` to `distSq = 4`; two `add_right_cancel` steps turn `4 ~ 1`
+    /// into `1 + 1 ~ −1`, and `CReal.not_le_zero_neg_one` refutes the `0 ≤ −1`
+    /// that follows. Constructive, no `Apart`, no case split.
+    pub not_isometry_scale_two: NameId,
+    /// `CPoint.isometry_preserves_dot : ∀ f, Isometry f → ∀ P Q R,
+    /// Equiv (dot (sub (f P) (f R)) (sub (f Q) (f R))) (dot (sub P R) (sub Q R))`
+    /// — polarization plus the hypothesis at three pairs, then one halving.
+    /// Step 1 of the classification; the remaining three steps are sized in
+    /// `creal_point/isometry.rs`'s module doc.
+    pub isometry_preserves_dot: NameId,
 }
 
 /// Build the plane over the constructed reals, and Varignon's theorem
@@ -1407,6 +1532,40 @@ pub fn build_cpoint_prelude(kernel: &mut Kernel) -> Result<CPointPrelude, Kernel
     declare_area_zero_of_collinear(&mut d, p)?;
     declare_medial_triangle_cross_quarter(&mut d, p)?;
     declare_collinear_of_area_zero(&mut d, p)?;
+    // --- angle measure (creal_point/angle.rs) ---------------------------------
+    angle::declare_norm(&mut d, p)?;
+    angle::declare_norm_nonneg(&mut d, p)?;
+    angle::declare_norm_sq(&mut d, p)?;
+    angle::declare_norm_congr(&mut d, p)?;
+    angle::declare_cross_v(&mut d, p)?;
+    angle::declare_cross_eq_cross_v(&mut d, p)?;
+    angle::declare_lagrange_vector(&mut d, p)?;
+    angle::declare_law_of_cosines_dot(&mut d, p)?;
+    angle::declare_cos_angle(&mut d, p)?;
+    angle::declare_sin_angle(&mut d, p)?;
+    angle::declare_sin_sq_add_cos_sq(&mut d, p)?;
+    angle::declare_abs_cos_angle_le_one(&mut d, p)?;
+    angle::declare_cos_angle_le_one(&mut d, p)?;
+    angle::declare_neg_one_le_cos_angle(&mut d, p)?;
+    angle::declare_norm_mul_cos_angle(&mut d, p)?;
+    angle::declare_law_of_sines(&mut d, p)?;
+    angle::declare_law_of_cosines(&mut d, p)?;
+    // --- isometries (creal_point/isometry.rs) ---------------------------------
+    isometry::declare_isometry(&mut d, p)?;
+    isometry::declare_id_map(&mut d, p)?;
+    isometry::declare_comp_map(&mut d, p)?;
+    isometry::declare_isometry_id(&mut d, p)?;
+    isometry::declare_isometry_comp(&mut d, p)?;
+    isometry::declare_translate(&mut d, p)?;
+    isometry::declare_isometry_translate(&mut d, p)?;
+    isometry::declare_rotate(&mut d, p)?;
+    isometry::declare_isometry_rotate(&mut d, p)?;
+    isometry::declare_reflect(&mut d, p)?;
+    isometry::declare_isometry_reflect(&mut d, p)?;
+    isometry::declare_scale(&mut d, p)?;
+    isometry::declare_scale_dist_sq(&mut d, p)?;
+    isometry::declare_not_isometry_scale_two(&mut d, p)?;
+    isometry::declare_isometry_preserves_dot(&mut d, p)?;
     Ok(p)
 }
 
@@ -1538,6 +1697,38 @@ fn intern_names(kernel: &mut Kernel, creal: CRealPrelude) -> CPointPrelude {
         area_zero_of_collinear: kernel.name_str(point, "area_zero_of_collinear"),
         medial_triangle_cross_quarter: kernel.name_str(point, "medial_triangle_cross_quarter"),
         collinear_of_area_zero: kernel.name_str(point, "collinear_of_area_zero"),
+        norm: kernel.name_str(point, "norm"),
+        norm_nonneg: kernel.name_str(point, "norm_nonneg"),
+        norm_sq: kernel.name_str(point, "norm_sq"),
+        norm_congr: kernel.name_str(point, "norm_congr"),
+        cross_v: kernel.name_str(point, "crossV"),
+        cross_eq_cross_v: kernel.name_str(point, "cross_eq_crossV"),
+        lagrange_vector: kernel.name_str(point, "lagrange_vector"),
+        law_of_cosines_dot: kernel.name_str(point, "law_of_cosines_dot"),
+        cos_angle: kernel.name_str(point, "cosAngle"),
+        sin_angle: kernel.name_str(point, "sinAngle"),
+        sin_sq_add_cos_sq: kernel.name_str(point, "sin_sq_add_cos_sq"),
+        abs_cos_angle_le_one: kernel.name_str(point, "abs_cos_angle_le_one"),
+        cos_angle_le_one: kernel.name_str(point, "cos_angle_le_one"),
+        neg_one_le_cos_angle: kernel.name_str(point, "neg_one_le_cos_angle"),
+        norm_mul_cos_angle: kernel.name_str(point, "norm_mul_cos_angle"),
+        law_of_sines: kernel.name_str(point, "law_of_sines"),
+        law_of_cosines: kernel.name_str(point, "law_of_cosines"),
+        isometry: kernel.name_str(point, "Isometry"),
+        id_map: kernel.name_str(point, "idMap"),
+        comp_map: kernel.name_str(point, "comp"),
+        isometry_id: kernel.name_str(point, "isometry_id"),
+        isometry_comp: kernel.name_str(point, "isometry_comp"),
+        translate: kernel.name_str(point, "translate"),
+        isometry_translate: kernel.name_str(point, "isometry_translate"),
+        rotate: kernel.name_str(point, "rotate"),
+        isometry_rotate: kernel.name_str(point, "isometry_rotate"),
+        reflect: kernel.name_str(point, "reflect"),
+        isometry_reflect: kernel.name_str(point, "isometry_reflect"),
+        scale: kernel.name_str(point, "scale"),
+        scale_dist_sq: kernel.name_str(point, "scale_distSq"),
+        not_isometry_scale_two: kernel.name_str(point, "not_isometry_scale_two"),
+        isometry_preserves_dot: kernel.name_str(point, "isometry_preserves_dot"),
     }
 }
 
@@ -21330,6 +21521,9 @@ fn declare_collinear_of_area_zero(d: &mut IntDev<'_>, p: CPointPrelude) -> Resul
         value,
     })
 }
+
+mod angle;
+mod isometry;
 
 #[cfg(test)]
 mod creal_point_tests;

@@ -211,6 +211,38 @@ fn every_theorem_here_is_axiom_free() {
         ("CPoint.NonCollinear", p.non_collinear),
         ("CPoint.power", p.power),
         ("CPoint.Collinear", p.collinear),
+        ("CPoint.norm", p.norm),
+        ("CPoint.norm_nonneg", p.norm_nonneg),
+        ("CPoint.norm_sq", p.norm_sq),
+        ("CPoint.norm_congr", p.norm_congr),
+        ("CPoint.crossV", p.cross_v),
+        ("CPoint.cross_eq_crossV", p.cross_eq_cross_v),
+        ("CPoint.lagrange_vector", p.lagrange_vector),
+        ("CPoint.law_of_cosines_dot", p.law_of_cosines_dot),
+        ("CPoint.cosAngle", p.cos_angle),
+        ("CPoint.sinAngle", p.sin_angle),
+        ("CPoint.sin_sq_add_cos_sq", p.sin_sq_add_cos_sq),
+        ("CPoint.abs_cos_angle_le_one", p.abs_cos_angle_le_one),
+        ("CPoint.cos_angle_le_one", p.cos_angle_le_one),
+        ("CPoint.neg_one_le_cos_angle", p.neg_one_le_cos_angle),
+        ("CPoint.norm_mul_cos_angle", p.norm_mul_cos_angle),
+        ("CPoint.law_of_sines", p.law_of_sines),
+        ("CPoint.law_of_cosines", p.law_of_cosines),
+        ("CPoint.Isometry", p.isometry),
+        ("CPoint.idMap", p.id_map),
+        ("CPoint.comp", p.comp_map),
+        ("CPoint.isometry_id", p.isometry_id),
+        ("CPoint.isometry_comp", p.isometry_comp),
+        ("CPoint.translate", p.translate),
+        ("CPoint.isometry_translate", p.isometry_translate),
+        ("CPoint.rotate", p.rotate),
+        ("CPoint.isometry_rotate", p.isometry_rotate),
+        ("CPoint.reflect", p.reflect),
+        ("CPoint.isometry_reflect", p.isometry_reflect),
+        ("CPoint.scale", p.scale),
+        ("CPoint.scale_distSq", p.scale_dist_sq),
+        ("CPoint.not_isometry_scale_two", p.not_isometry_scale_two),
+        ("CPoint.isometry_preserves_dot", p.isometry_preserves_dot),
     ];
 
     // COVERAGE, checked against the ENVIRONMENT rather than against `named`
@@ -1959,4 +1991,453 @@ fn ceva_ratio_product_of_concurrent_statement_is_exact() {
         ),
         "conclusion shape drifted: {rendered:?}"
     );
+}
+
+// ============================================================================
+// W1-8 (angle measure) and W2-13 (isometries): `creal_point/angle.rs` and
+// `creal_point/isometry.rs`.
+//
+// Three kinds of check, deliberately, because they fail on disjoint defects:
+//
+// 1. `new_angle_and_isometry_statements_are_exact` pins every rendered TYPE.
+//    A dropped hypothesis, a swapped side or a wrong operator dies here.
+// 2. `new_definitions_have_the_intended_value` pins every new `Definition`'s
+//    VALUE at a SYMBOLIC argument. The kernel cannot tell you a definition is
+//    wrong -- it type-checks either way -- and a concrete-numeral probe over
+//    `CReal` would be vacuous, because `CReal` numerals do not reduce to
+//    anything a test can compare.
+// 3. `a_theorem_here_proves_only_its_own_statement` re-offers each admitted
+//    proof VALUE at a NEIGHBOURING statement's type and requires the kernel to
+//    refuse -- with the same value at its own type as the positive control, so
+//    the check cannot pass by being unable to admit anything at all.
+// ============================================================================
+
+/// The declared type of `name`, rendered.
+fn rendered_ty(kernel: &crate::Kernel, name: crate::NameId) -> String {
+    use crate::env::Declaration;
+    let ty = match kernel.environment().get(name).expect("must be declared") {
+        Declaration::Theorem { ty, .. } | Declaration::Definition { ty, .. } => *ty,
+        other => panic!("{other:?} is not a theorem or definition"),
+    };
+    kernel.render_lean(ty)
+}
+
+/// The checked value of `name`.
+fn value_of(kernel: &crate::Kernel, name: crate::NameId) -> crate::expr::ExprId {
+    use crate::env::Declaration;
+    match kernel.environment().get(name).expect("must be declared") {
+        Declaration::Theorem { value, .. } | Declaration::Definition { value, .. } => *value,
+        other => panic!("{other:?} is not a theorem or definition"),
+    }
+}
+
+/// Every statement this lane added, verbatim. A wrong sign, a dropped
+/// `PosBound` hypothesis or a swapped `sin`/`cos` cannot hide behind an empty
+/// axiom footprint, which is all `every_theorem_here_is_axiom_free` sees.
+#[test]
+fn new_angle_and_isometry_statements_are_exact() {
+    let (kernel, p) = built();
+    let expected: [(&str, crate::NameId, &str); 32] = [
+        ("norm", p.norm, "((x0 : CPoint) -> CReal)"),
+        (
+            "norm_nonneg",
+            p.norm_nonneg,
+            "((x0 : CPoint) -> CReal.le CReal.zero (CPoint.norm x0))",
+        ),
+        (
+            "norm_sq",
+            p.norm_sq,
+            "((x0 : CPoint) -> CReal.Equiv (CReal.mul (CPoint.norm x0) (CPoint.norm x0)) \
+             (CPoint.dot x0 x0))",
+        ),
+        (
+            "norm_congr",
+            p.norm_congr,
+            "((x0 : CPoint) -> ((x1 : CPoint) -> ((x2 : CPoint.Equiv x0 x1) -> CReal.Equiv \
+             (CPoint.norm x0) (CPoint.norm x1))))",
+        ),
+        (
+            "crossV",
+            p.cross_v,
+            "((x0 : CPoint) -> ((x1 : CPoint) -> CReal))",
+        ),
+        (
+            "cross_eq_crossV",
+            p.cross_eq_cross_v,
+            "((x0 : CPoint) -> ((x1 : CPoint) -> ((x2 : CPoint) -> CReal.Equiv (CPoint.cross x0 \
+             x1 x2) (CPoint.crossV (CPoint.sub x1 x0) (CPoint.sub x2 x1)))))",
+        ),
+        (
+            "lagrange_vector",
+            p.lagrange_vector,
+            "((x0 : CPoint) -> ((x1 : CPoint) -> CReal.Equiv (CReal.add (CReal.mul (CPoint.dot x0 \
+             x0) (CPoint.dot x1 x1)) (CReal.neg (CReal.mul (CPoint.dot x0 x1) (CPoint.dot x0 \
+             x1)))) (CReal.mul (CPoint.crossV x0 x1) (CPoint.crossV x0 x1))))",
+        ),
+        (
+            "law_of_cosines_dot",
+            p.law_of_cosines_dot,
+            "((x0 : CPoint) -> ((x1 : CPoint) -> CReal.Equiv (CPoint.distSq x0 x1) (CReal.add \
+             (CReal.add (CPoint.dot x0 x0) (CPoint.dot x1 x1)) (CReal.neg (CReal.add (CPoint.dot \
+             x0 x1) (CPoint.dot x0 x1))))))",
+        ),
+        (
+            "cosAngle",
+            p.cos_angle,
+            "((x0 : CPoint) -> ((x1 : CPoint) -> ((x2 : AxNat) -> ((x3 : CReal.PosBound \
+             (CReal.mul (CPoint.norm x0) (CPoint.norm x1)) x2) -> CReal))))",
+        ),
+        (
+            "sinAngle",
+            p.sin_angle,
+            "((x0 : CPoint) -> ((x1 : CPoint) -> ((x2 : AxNat) -> ((x3 : CReal.PosBound \
+             (CReal.mul (CPoint.norm x0) (CPoint.norm x1)) x2) -> CReal))))",
+        ),
+        (
+            "sin_sq_add_cos_sq",
+            p.sin_sq_add_cos_sq,
+            "((x0 : CPoint) -> ((x1 : CPoint) -> ((x2 : AxNat) -> ((x3 : CReal.PosBound \
+             (CReal.mul (CPoint.norm x0) (CPoint.norm x1)) x2) -> CReal.Equiv (CReal.add \
+             (CReal.mul (CPoint.sinAngle x0 x1 x2 x3) (CPoint.sinAngle x0 x1 x2 x3)) (CReal.mul \
+             (CPoint.cosAngle x0 x1 x2 x3) (CPoint.cosAngle x0 x1 x2 x3))) CReal.one))))",
+        ),
+        (
+            "abs_cos_angle_le_one",
+            p.abs_cos_angle_le_one,
+            "((x0 : CPoint) -> ((x1 : CPoint) -> ((x2 : AxNat) -> ((x3 : CReal.PosBound \
+             (CReal.mul (CPoint.norm x0) (CPoint.norm x1)) x2) -> CReal.le (CReal.abs \
+             (CPoint.cosAngle x0 x1 x2 x3)) CReal.one))))",
+        ),
+        (
+            "cos_angle_le_one",
+            p.cos_angle_le_one,
+            "((x0 : CPoint) -> ((x1 : CPoint) -> ((x2 : AxNat) -> ((x3 : CReal.PosBound \
+             (CReal.mul (CPoint.norm x0) (CPoint.norm x1)) x2) -> CReal.le (CPoint.cosAngle x0 x1 \
+             x2 x3) CReal.one))))",
+        ),
+        (
+            "neg_one_le_cos_angle",
+            p.neg_one_le_cos_angle,
+            "((x0 : CPoint) -> ((x1 : CPoint) -> ((x2 : AxNat) -> ((x3 : CReal.PosBound \
+             (CReal.mul (CPoint.norm x0) (CPoint.norm x1)) x2) -> CReal.le (CReal.neg CReal.one) \
+             (CPoint.cosAngle x0 x1 x2 x3)))))",
+        ),
+        (
+            "norm_mul_cos_angle",
+            p.norm_mul_cos_angle,
+            "((x0 : CPoint) -> ((x1 : CPoint) -> ((x2 : AxNat) -> ((x3 : CReal.PosBound \
+             (CReal.mul (CPoint.norm x0) (CPoint.norm x1)) x2) -> CReal.Equiv (CReal.mul \
+             (CReal.mul (CPoint.norm x0) (CPoint.norm x1)) (CPoint.cosAngle x0 x1 x2 x3)) \
+             (CPoint.dot x0 x1)))))",
+        ),
+        (
+            "law_of_sines",
+            p.law_of_sines,
+            "((x0 : CPoint) -> ((x1 : CPoint) -> ((x2 : AxNat) -> ((x3 : CReal.PosBound \
+             (CReal.mul (CPoint.norm x0) (CPoint.norm x1)) x2) -> CReal.Equiv (CReal.abs \
+             (CPoint.crossV x0 x1)) (CReal.mul (CReal.mul (CPoint.norm x0) (CPoint.norm x1)) \
+             (CPoint.sinAngle x0 x1 x2 x3))))))",
+        ),
+        (
+            "law_of_cosines",
+            p.law_of_cosines,
+            "((x0 : CPoint) -> ((x1 : CPoint) -> ((x2 : AxNat) -> ((x3 : CReal.PosBound \
+             (CReal.mul (CPoint.norm x0) (CPoint.norm x1)) x2) -> CReal.Equiv (CPoint.distSq x0 \
+             x1) (CReal.add (CReal.add (CReal.mul (CPoint.norm x0) (CPoint.norm x0)) (CReal.mul \
+             (CPoint.norm x1) (CPoint.norm x1))) (CReal.neg (CReal.add (CReal.mul (CReal.mul \
+             (CPoint.norm x0) (CPoint.norm x1)) (CPoint.cosAngle x0 x1 x2 x3)) (CReal.mul \
+             (CReal.mul (CPoint.norm x0) (CPoint.norm x1)) (CPoint.cosAngle x0 x1 x2 \
+             x3)))))))))",
+        ),
+        (
+            "Isometry",
+            p.isometry,
+            "((x0 : ((x0 : CPoint) -> CPoint)) -> Prop)",
+        ),
+        ("idMap", p.id_map, "((x0 : CPoint) -> CPoint)"),
+        (
+            "comp",
+            p.comp_map,
+            "((x0 : ((x0 : CPoint) -> CPoint)) -> ((x1 : ((x1 : CPoint) -> CPoint)) -> ((x2 : \
+             CPoint) -> CPoint)))",
+        ),
+        ("isometry_id", p.isometry_id, "CPoint.Isometry CPoint.idMap"),
+        (
+            "isometry_comp",
+            p.isometry_comp,
+            "((x0 : ((x0 : CPoint) -> CPoint)) -> ((x1 : ((x1 : CPoint) -> CPoint)) -> ((x2 : \
+             CPoint.Isometry x0) -> ((x3 : CPoint.Isometry x1) -> CPoint.Isometry (CPoint.comp x0 \
+             x1)))))",
+        ),
+        (
+            "translate",
+            p.translate,
+            "((x0 : CPoint) -> ((x1 : CPoint) -> CPoint))",
+        ),
+        (
+            "isometry_translate",
+            p.isometry_translate,
+            "((x0 : CPoint) -> CPoint.Isometry (CPoint.translate x0))",
+        ),
+        (
+            "rotate",
+            p.rotate,
+            "((x0 : CReal) -> ((x1 : CReal) -> ((x2 : CPoint) -> CPoint)))",
+        ),
+        (
+            "isometry_rotate",
+            p.isometry_rotate,
+            "((x0 : CReal) -> ((x1 : CReal) -> ((x2 : CReal.Equiv (CReal.add (CReal.mul x0 x0) \
+             (CReal.mul x1 x1)) CReal.one) -> CPoint.Isometry (CPoint.rotate x0 x1))))",
+        ),
+        (
+            "reflect",
+            p.reflect,
+            "((x0 : CReal) -> ((x1 : CReal) -> ((x2 : CPoint) -> CPoint)))",
+        ),
+        (
+            "isometry_reflect",
+            p.isometry_reflect,
+            "((x0 : CReal) -> ((x1 : CReal) -> ((x2 : CReal.Equiv (CReal.add (CReal.mul x0 x0) \
+             (CReal.mul x1 x1)) CReal.one) -> CPoint.Isometry (CPoint.reflect x0 x1))))",
+        ),
+        (
+            "scale",
+            p.scale,
+            "((x0 : CReal) -> ((x1 : CPoint) -> CPoint))",
+        ),
+        (
+            "scale_distSq",
+            p.scale_dist_sq,
+            "((x0 : CReal) -> ((x1 : CPoint) -> ((x2 : CPoint) -> CReal.Equiv (CPoint.distSq \
+             (CPoint.scale x0 x1) (CPoint.scale x0 x2)) (CReal.mul (CReal.mul x0 x0) \
+             (CPoint.distSq x1 x2)))))",
+        ),
+        (
+            "not_isometry_scale_two",
+            p.not_isometry_scale_two,
+            "((x0 : CPoint.Isometry (CPoint.scale CPoint.Scalar.two)) -> False)",
+        ),
+        (
+            "isometry_preserves_dot",
+            p.isometry_preserves_dot,
+            "((x0 : ((x0 : CPoint) -> CPoint)) -> ((x1 : CPoint.Isometry x0) -> ((x2 : CPoint) -> \
+             ((x3 : CPoint) -> ((x4 : CPoint) -> CReal.Equiv (CPoint.dot (CPoint.sub (x0 x2) (x0 \
+             x4)) (CPoint.sub (x0 x3) (x0 x4))) (CPoint.dot (CPoint.sub x2 x4) (CPoint.sub x3 \
+             x4)))))))",
+        ),
+    ];
+    for (label, name, want) in expected {
+        assert_eq!(
+            rendered_ty(&kernel, name),
+            want,
+            "{label} statement drifted"
+        );
+    }
+}
+
+/// **The evaluation test the kernel cannot do for you.** `add_declaration`
+/// type-checks a `Definition`; a definition computing the wrong thing has the
+/// right type. So pin every new definition's VALUE at a symbolic argument --
+/// symbolic and not concrete, because `CReal` numerals do not reduce, so a
+/// concrete probe here would compare nothing.
+///
+/// These are discriminating: swapping `x`/`y` in `crossV`, dropping the sign
+/// in `rotate`, or writing `translate T P = T + P` instead of `P + T` all
+/// change the rendered value.
+#[test]
+fn new_definitions_have_the_intended_value() {
+    let (kernel, p) = built();
+    let expected: [(&str, crate::NameId, &str); 11] = [
+        (
+            "norm",
+            p.norm,
+            "fun (x0 : CPoint) => CReal.sqrt (CPoint.dot x0 x0)",
+        ),
+        (
+            "crossV",
+            p.cross_v,
+            "fun (x0 : CPoint) => fun (x1 : CPoint) => CReal.add (CReal.mul (CPoint.x x0) \
+             (CPoint.y x1)) (CReal.neg (CReal.mul (CPoint.y x0) (CPoint.x x1)))",
+        ),
+        (
+            "cosAngle",
+            p.cos_angle,
+            "fun (x0 : CPoint) => fun (x1 : CPoint) => fun (x2 : AxNat) => fun (x3 : \
+             CReal.PosBound (CReal.mul (CPoint.norm x0) (CPoint.norm x1)) x2) => CReal.mul \
+             (CPoint.dot x0 x1) (CReal.inv (CReal.mul (CPoint.norm x0) (CPoint.norm x1)) x2 x3)",
+        ),
+        (
+            "sinAngle",
+            p.sin_angle,
+            "fun (x0 : CPoint) => fun (x1 : CPoint) => fun (x2 : AxNat) => fun (x3 : \
+             CReal.PosBound (CReal.mul (CPoint.norm x0) (CPoint.norm x1)) x2) => CReal.mul \
+             (CReal.abs (CPoint.crossV x0 x1)) (CReal.inv (CReal.mul (CPoint.norm x0) \
+             (CPoint.norm x1)) x2 x3)",
+        ),
+        (
+            "Isometry",
+            p.isometry,
+            "fun (x0 : ((x0 : CPoint) -> CPoint)) => ((x1 : CPoint) -> ((x2 : CPoint) -> \
+             CReal.Equiv (CPoint.distSq (x0 x1) (x0 x2)) (CPoint.distSq x1 x2)))",
+        ),
+        ("idMap", p.id_map, "fun (x0 : CPoint) => x0"),
+        (
+            "comp",
+            p.comp_map,
+            "fun (x0 : ((x0 : CPoint) -> CPoint)) => fun (x1 : ((x1 : CPoint) -> CPoint)) => fun \
+             (x2 : CPoint) => x0 (x1 x2)",
+        ),
+        (
+            "translate",
+            p.translate,
+            "fun (x0 : CPoint) => fun (x1 : CPoint) => CPoint.add x1 x0",
+        ),
+        (
+            "rotate",
+            p.rotate,
+            "fun (x0 : CReal) => fun (x1 : CReal) => fun (x2 : CPoint) => CPoint.mk (CReal.add \
+             (CReal.mul x0 (CPoint.x x2)) (CReal.neg (CReal.mul x1 (CPoint.y x2)))) (CReal.add \
+             (CReal.mul x1 (CPoint.x x2)) (CReal.mul x0 (CPoint.y x2)))",
+        ),
+        (
+            "reflect",
+            p.reflect,
+            "fun (x0 : CReal) => fun (x1 : CReal) => fun (x2 : CPoint) => CPoint.mk (CReal.add \
+             (CReal.mul x0 (CPoint.x x2)) (CReal.mul x1 (CPoint.y x2))) (CReal.add (CReal.mul x1 \
+             (CPoint.x x2)) (CReal.neg (CReal.mul x0 (CPoint.y x2))))",
+        ),
+        (
+            "scale",
+            p.scale,
+            "fun (x0 : CReal) => fun (x1 : CPoint) => CPoint.mk (CReal.mul x0 (CPoint.x x1)) \
+             (CReal.mul x0 (CPoint.y x1))",
+        ),
+    ];
+    for (label, name, want) in expected {
+        let got = kernel.render_lean(value_of(&kernel, name));
+        assert_eq!(got, want, "{label} definition body drifted");
+    }
+
+    // Discrimination between the two orthogonal families: `rotate` and
+    // `reflect` differ only in two signs, so a copy-paste that made them the
+    // same declaration would leave every statement above true and every
+    // footprint empty.
+    assert_ne!(
+        kernel.render_lean(value_of(&kernel, p.rotate)),
+        kernel.render_lean(value_of(&kernel, p.reflect)),
+        "rotate and reflect have the same body"
+    );
+    // `crossV` is antisymmetric, so it must not be symmetric in its arguments.
+    let cv = kernel.render_lean(value_of(&kernel, p.cross_v));
+    assert!(cv.contains("CReal.neg"), "crossV lost its sign: {cv:?}");
+}
+
+/// **The negative control, at the kernel.** Each admitted proof value is
+/// re-offered at a NEIGHBOURING statement's type, and the kernel must refuse.
+/// Each pair differs in a small term:
+///
+/// - `isometry_rotate` / `isometry_reflect` differ only in two signs inside
+///   the map, under identical hypotheses -- a map that reflects must not be
+///   admitted as one that rotates.
+/// - `cos_angle_le_one` / `neg_one_le_cos_angle` differ only in which side of
+///   `CReal.le` the cosine sits.
+/// - `norm_mul_cos_angle` / `law_of_sines` differ in `dot`/`abs (crossV …)`.
+/// - `isometry_id`'s value at `Isometry (scale CPoint.Scalar.two)` is the
+///   headline case: **a map that scales by two must not be admitted as an
+///   isometry.** `CPoint.not_isometry_scale_two` proves it cannot be, from any
+///   proof; this checks the kernel refuses the obvious one.
+///
+/// Every row carries its own positive control (the same value at its own type,
+/// under a fresh name), so a harness that could admit nothing at all fails
+/// here rather than passing silently.
+#[test]
+fn a_theorem_here_proves_only_its_own_statement() {
+    use crate::env::Declaration;
+
+    let (mut kernel, p) = built();
+    let scale_two_ty = {
+        let scale = kernel.const_(p.scale, vec![]);
+        let two = kernel.const_(p.two, vec![]);
+        let scale_two = kernel.app(scale, two);
+        let isometry = kernel.const_(p.isometry, vec![]);
+        kernel.app(isometry, scale_two)
+    };
+
+    let rows: [(&str, crate::NameId, &str, crate::expr::ExprId); 4] = [
+        ("isometry_rotate", p.isometry_rotate, "isometry_reflect", {
+            let name = p.isometry_reflect;
+            match kernel.environment().get(name).expect("declared") {
+                Declaration::Theorem { ty, .. } => *ty,
+                other => panic!("{other:?}"),
+            }
+        }),
+        (
+            "cos_angle_le_one",
+            p.cos_angle_le_one,
+            "neg_one_le_cos_angle",
+            {
+                let name = p.neg_one_le_cos_angle;
+                match kernel.environment().get(name).expect("declared") {
+                    Declaration::Theorem { ty, .. } => *ty,
+                    other => panic!("{other:?}"),
+                }
+            },
+        ),
+        (
+            "norm_mul_cos_angle",
+            p.norm_mul_cos_angle,
+            "law_of_sines",
+            {
+                let name = p.law_of_sines;
+                match kernel.environment().get(name).expect("declared") {
+                    Declaration::Theorem { ty, .. } => *ty,
+                    other => panic!("{other:?}"),
+                }
+            },
+        ),
+        (
+            "isometry_id",
+            p.isometry_id,
+            "Isometry (scale two)",
+            scale_two_ty,
+        ),
+    ];
+
+    let anon = kernel.anon();
+    for (index, (source_label, source, target_label, target_ty)) in rows.into_iter().enumerate() {
+        let value = value_of(&kernel, source);
+        let own_ty = match kernel.environment().get(source).expect("declared") {
+            Declaration::Theorem { ty, .. } => *ty,
+            other => panic!("{other:?}"),
+        };
+
+        // Positive control: the same value at its OWN statement, under a fresh
+        // name. Without this the negative below would also "pass" if the
+        // harness could never admit anything.
+        let ok_name = kernel.name_str(anon, &format!("Check.reoffer_ok_{index}"));
+        let admitted = kernel.add_declaration(Declaration::Theorem {
+            name: ok_name,
+            uparams: vec![],
+            ty: own_ty,
+            value,
+        });
+        assert!(
+            admitted.is_ok(),
+            "positive control failed: the kernel refused {source_label}'s own value at its own \
+             type: {admitted:?}"
+        );
+
+        let bad_name = kernel.name_str(anon, &format!("Check.reoffer_bad_{index}"));
+        let refused = kernel.add_declaration(Declaration::Theorem {
+            name: bad_name,
+            uparams: vec![],
+            ty: target_ty,
+            value,
+        });
+        assert!(
+            refused.is_err(),
+            "the kernel ADMITTED {source_label}'s proof as a proof of {target_label}"
+        );
+    }
 }
