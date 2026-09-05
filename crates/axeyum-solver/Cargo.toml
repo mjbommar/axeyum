@@ -56,12 +56,20 @@ z3 = ["full", "dep:z3"]
 # Use a prebuilt static libz3 instead of the system library; hermetic for CI
 # and machines without libz3-dev. Implies `z3`.
 z3-static = ["z3", "z3/gh-release"]
+# Bench-only escape hatch (2026-09-05 micro-benchmarks): re-exports the
+# otherwise crate-private `CdclT`/`Lit`/`Outcome` (cdclt.rs) and
+# `Incremental`/`Status` (simplex.rs) through `bench_internals` so
+# `benches/*.rs` (a separate crate) can drive them directly. Implies `full`
+# because both modules only exist under it. Never enable this outside a
+# bench target.
+bench-internals = ["full"]
 
 [lints]
 workspace = true
 
 [dev-dependencies]
 axeyum-scenarios = { path = "../axeyum-scenarios" }
+criterion.workspace = true
 
 [[example]]
 name = "geometry_portfolio"
@@ -90,3 +98,17 @@ required-features = ["full"]
 [[example]]
 name = "reconstruct_lean_certificate"
 required-features = ["full"]
+
+# Micro-benchmarks (2026-09-05, design review §4 item 3). Both require
+# `bench-internals` (implies `full`) since they drive `CdclT`/`Incremental`
+# directly through `bench_internals`; `harness = false` hands control to
+# `criterion`'s own main.
+[[bench]]
+name = "cdclt_propagate"
+harness = false
+required-features = ["bench-internals"]
+
+[[bench]]
+name = "simplex_pivot"
+harness = false
+required-features = ["bench-internals"]
