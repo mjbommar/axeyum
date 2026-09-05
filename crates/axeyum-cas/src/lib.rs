@@ -5528,6 +5528,15 @@ pub fn definite_sum(f: &CasExpr, var: &str, lower: &CasExpr, upper: &CasExpr) ->
 /// `|ratio| < 1` (`∑_{0}^{∞} 2^{−k} = 2`, `∑_{1}^{∞} k·3^{−k} = 3/4`); a polynomial
 /// or `|ratio| ≥ 1` summand diverges (the limit declines) and this returns `None`.
 /// Built on certified primitives (the antidifference and the limit).
+///
+/// When no antidifference exists, one **recognized series** is tried last: the
+/// exponential family `∑_{k≥0} P(k)·μᵏ/k! = e^μ·∑_j (Δʲ P(0)/j!)·μʲ`. That route
+/// rests on ONE recognized identity, `∑ k^{(j)}·μᵏ/k! = μʲ·e^μ`, and BOTH steps
+/// that reach it — the shape reconstruction and the falling-factorial expansion
+/// of `P` — are decided by [`equal`] (see `exponential_series_sum`'s own docs).
+/// `λᵏ/k!` has no hypergeometric
+/// antidifference, so this is the only way `∑ λᵏ/k! = e^λ` — and with it every
+/// Poisson moment — is reachable at all.
 #[must_use]
 pub fn infinite_sum(f: &CasExpr, var: &str, lower: &CasExpr) -> Option<CasExpr> {
     // p-series `∑_{k=m}^{∞} c/kˢ = c·(ζ(s) − ∑_{j=1}^{m−1} 1/jˢ)` (`s ≥ 2`, `m ≥ 1`)
@@ -5549,11 +5558,20 @@ pub fn infinite_sum(f: &CasExpr, var: &str, lower: &CasExpr) -> Option<CasExpr> 
         let tail = zeta_value - CasExpr::Const(head);
         return Some(simplify(&(CasExpr::Const(coeff) * tail)));
     }
-    let antidifference = sum_polynomial(f, var).or_else(|| gosper_sum(f, var))?;
-    let limit_at_infinity = limit(&antidifference, var, LimitPoint::PosInfinity)?;
-    let at_lower = antidifference.substitute(var, lower);
-    let result = limit_at_infinity - at_lower;
-    Some(simplify(&result))
+    // The telescoping route first: an antidifference plus its limit at ∞. It is
+    // the strongest thing available, so the recognized-series route below is only
+    // consulted when this declines (which keeps every existing value unchanged).
+    let telescoped = sum_polynomial(f, var)
+        .or_else(|| gosper_sum(f, var))
+        .and_then(|antidifference| {
+            let limit_at_infinity = limit(&antidifference, var, LimitPoint::PosInfinity)?;
+            let at_lower = antidifference.substitute(var, lower);
+            Some(simplify(&(limit_at_infinity - at_lower)))
+        });
+    if let Some(value) = telescoped {
+        return Some(value);
+    }
+    exponential_series_sum(f, var, lower)
 }
 
 /// Match a p-series summand `c/varˢ` (a constant over a pure power of `var`),
@@ -5587,6 +5605,292 @@ fn match_p_series(f: &CasExpr, var: &str) -> Option<(Rational, i64)> {
     }
     let coeff = numerator.checked_div(*den_coeff)?;
     Some((coeff, i64::from(exp)))
+}
+
+/// The **exponential-series** value of `∑_{var=0}^{∞} f(var)` when `f` is
+/// `c·e^{u₀}·μ^var·P(var)/var!` for a polynomial `P` — the one family that has no
+/// hypergeometric antidifference at all, so neither [`sum_polynomial`] nor
+/// [`gosper_sum`] can reach it, and every Poisson moment lives in it.
+///
+/// # Why this is not a table lookup
+///
+/// The value rests on **one** recognized identity,
+///
+/// ```text
+/// ∑_{k≥0} k^{(j)}·μᵏ/k! = μʲ·e^μ            (k^{(j)} the falling factorial)
+/// ```
+///
+/// which is the reindexing `k^{(j)}/k! = 1/(k−j)!` applied to the defining Taylor
+/// series of `exp`. Everything that gets from `f` to that identity is **decided by
+/// [`equal`]**, not assumed, and a candidate is returned only if both obligations
+/// certify:
+///
+/// 1. **Shape.** The heuristic extraction below produces candidates `den`, the
+///    exponent `E(var)`, and the polynomial `P`; the route then requires
+///    `equal(f, e^{E(var)}·P(var)/(den·Γ(var+1)))` to certify. A near-miss
+///    summand (`λᵏ/(k!·(k+1))`, or the misindexed `λᵏ/(k−1)!`) fails here or
+///    earlier at the denominator test, so it is never read as `e^λ`.
+/// 2. **Newton basis.** `P` is re-expressed in the falling-factorial basis with
+///    `c_j = Δʲ P(0)/j!`, and `equal(P(var), Σⱼ c_j·var^{(j)})` must certify. This
+///    is what licenses applying the base identity term by term.
+///
+/// The result is then `e^{u₀}/den · e^μ · Σⱼ c_j·μʲ`. Convergence needs no side
+/// condition: the exponential series converges absolutely for every `μ`.
+///
+/// Declines (`None`) for a lower bound other than `0`, a non-constant residual
+/// denominator, a `var`-dependent atom other than a single affine `exp` exponent,
+/// or when either obligation fails to certify.
+fn exponential_series_sum(f: &CasExpr, var: &str, lower: &CasExpr) -> Option<CasExpr> {
+    if integer_constant(lower)? != 0 {
+        return None;
+    }
+    let shape = exponential_series_shape(f, var)?;
+    let ExponentialSeriesShape {
+        denominator,
+        constant_exponent,
+        rate_exponent,
+        coefficients,
+    } = shape;
+
+    // Obligation 2: the Newton forward-difference expansion of `P`.
+    let newton = newton_falling_factorial_coefficients(&coefficients)?;
+    let mut rebuilt = CasExpr::zero();
+    for (j, c) in newton.iter().enumerate() {
+        let order = u32::try_from(j).ok()?;
+        rebuilt = rebuilt + c.clone() * falling_factorial(&CasExpr::var(var), order);
+    }
+    let polynomial = polynomial_from_coefficients(&coefficients, var);
+    if !matches!(
+        equal(&polynomial, &rebuilt),
+        ZeroTest::Certified { equal: true, .. }
+    ) {
+        return None;
+    }
+
+    // `μ = e^{rate}`. The base identity is stated in `μ`, so this is where the
+    // rate leaves the logarithm it was carried in.
+    let mu = exponential_of_rate(&rate_exponent);
+    let mut tail = CasExpr::zero();
+    for (j, c) in newton.iter().enumerate() {
+        let power = match u32::try_from(j).ok()? {
+            0 => CasExpr::one(),
+            p => mu.clone().pow(p),
+        };
+        tail = tail + c.clone() * power;
+    }
+    let prefactor = constant_exponent.exp() / denominator;
+    Some(simplify(&(prefactor * mu.exp() * tail)))
+}
+
+/// The recognized shape of an exponential-series summand: `f(var) =
+/// e^{constant_exponent + rate_exponent·var}·P(var)/(denominator·Γ(var+1))`,
+/// with `P`'s coefficients (least significant first) as `var`-free expressions.
+struct ExponentialSeriesShape {
+    /// The residual denominator left after the factorial cancels. Must be free of
+    /// `var` — the whole route rests on the summand being `P(var)/var!` times a
+    /// `var`-free factor, and a surviving `var` in the denominator (`λᵏ/(k!·(k+1))`)
+    /// is exactly the near-miss this rejects.
+    denominator: CasExpr,
+    /// The `var`-free part `u₀` of the exponent.
+    constant_exponent: CasExpr,
+    /// The coefficient `u` of `var` in the exponent (`μ = e^u`).
+    rate_exponent: CasExpr,
+    /// `P`'s coefficients, least significant first.
+    coefficients: Vec<CasExpr>,
+}
+
+/// Extract an [`ExponentialSeriesShape`] candidate from `f`, **certifying the
+/// extraction** with [`equal`] before returning it (obligation 1 of
+/// [`exponential_series_sum`]). The search itself is heuristic — it reads the
+/// canonical atom decomposition of `f·Γ(var+1)` — but nothing heuristic escapes:
+/// the reconstruction is compared against `f` by the exact zero-test.
+fn exponential_series_shape(f: &CasExpr, var: &str) -> Option<ExponentialSeriesShape> {
+    let gamma = (CasExpr::var(var) + CasExpr::int(1)).gamma();
+    let product = CasExpr::Mul(vec![f.clone(), gamma.clone()]);
+    // Cancel the `Γ(var+1)` atom against the summand's own factorial. A summand
+    // whose factorial is misindexed (`Γ(var)`) or carries an extra `var`-dependent
+    // factor in the denominator leaves a non-constant residue and declines below.
+    let cancelled = gosper::cancel_common_monomial_expression(&product)?;
+    let rf = normalize_rational(&cancelled)?;
+    if rf.den.is_zero() {
+        return None;
+    }
+    let mut dictionary = BTreeMap::new();
+    collect_atom_dictionary(&product, &mut dictionary);
+    // The residual denominator must not mention `var` — after deatomizing, so a
+    // `var`-carrying transcendental atom cannot hide inside it.
+    let denominator = deatomize_from(&rf.den.to_expr(), &product);
+    if expr_contains_var(&denominator, var) {
+        return None;
+    }
+
+    // Partition every atom appearing in the numerator into the `var`-dependent
+    // `exp` heads (which must be shared by *every* monomial, so they factor out)
+    // and the `var`-free rest (which becomes part of `P`'s coefficients).
+    let mut exponent_atoms: Option<BTreeMap<String, u32>> = None;
+    let mut coefficients: Vec<CasExpr> = Vec::new();
+    for (monomial, coefficient) in &rf.num.terms {
+        let mut dependent: BTreeMap<String, u32> = BTreeMap::new();
+        let mut degree = 0usize;
+        let mut factor = CasExpr::Const(*coefficient);
+        for (name, power) in &monomial.powers {
+            if name == var {
+                degree = usize::try_from(*power).ok()?;
+                continue;
+            }
+            let atom = dictionary
+                .get(name)
+                .cloned()
+                .unwrap_or_else(|| CasExpr::var(name));
+            if expr_contains_var(&atom, var) {
+                // Only an `exp` head may depend on `var` here; anything else
+                // (a `ln(var)`, a nested `Γ`) is outside this fragment.
+                if !matches!(atom, CasExpr::Unary(UnaryFunc::Exp, _)) {
+                    return None;
+                }
+                dependent.insert(name.clone(), *power);
+            } else {
+                factor = factor * atom.pow(*power);
+            }
+        }
+        match &exponent_atoms {
+            None => exponent_atoms = Some(dependent),
+            Some(shared) if *shared == dependent => {}
+            Some(_) => return None, // the exponential factor is not common
+        }
+        if degree >= coefficients.len() {
+            coefficients.resize(degree + 1, CasExpr::zero());
+        }
+        coefficients[degree] = coefficients[degree].clone() + factor;
+    }
+    let exponent_atoms = exponent_atoms?;
+    if exponent_atoms.is_empty() {
+        return None; // no `μᵏ` factor: not this family
+    }
+    for coefficient in &mut coefficients {
+        *coefficient = simplify(coefficient);
+    }
+
+    // The total exponent `E(var) = Σ power·argᵢ`, split affinely in `var`.
+    let mut exponent = CasExpr::zero();
+    for (name, power) in &exponent_atoms {
+        let CasExpr::Unary(UnaryFunc::Exp, argument) = dictionary.get(name)? else {
+            return None;
+        };
+        exponent =
+            exponent + CasExpr::Const(Rational::integer(i128::from(*power))) * (**argument).clone();
+    }
+    let at_zero = simplify(&exponent.substitute(var, &CasExpr::zero()));
+    let at_one = simplify(&exponent.substitute(var, &CasExpr::one()));
+    let rate = simplify(&(at_one - at_zero.clone()));
+    if expr_contains_var(&at_zero, var) || expr_contains_var(&rate, var) {
+        return None;
+    }
+    if !matches!(
+        equal(
+            &exponent,
+            &(at_zero.clone() + CasExpr::var(var) * rate.clone())
+        ),
+        ZeroTest::Certified { equal: true, .. }
+    ) {
+        return None; // the exponent is not affine in `var`
+    }
+
+    // Obligation 1: the reconstruction must be the summand itself.
+    let polynomial = polynomial_from_coefficients(&coefficients, var);
+    let reconstruction = (exponent.exp() * polynomial) / (denominator.clone() * gamma);
+    if !matches!(
+        equal(f, &reconstruction),
+        ZeroTest::Certified { equal: true, .. }
+    ) {
+        return None;
+    }
+    Some(ExponentialSeriesShape {
+        denominator,
+        constant_exponent: at_zero,
+        rate_exponent: rate,
+        coefficients,
+    })
+}
+
+/// `Σ coefficients[i]·var^i`, least significant coefficient first.
+fn polynomial_from_coefficients(coefficients: &[CasExpr], var: &str) -> CasExpr {
+    let mut result = CasExpr::zero();
+    for (i, coefficient) in coefficients.iter().enumerate() {
+        let Ok(power) = u32::try_from(i) else {
+            continue;
+        };
+        let monomial = match power {
+            0 => CasExpr::one(),
+            p => CasExpr::var(var).pow(p),
+        };
+        result = result + coefficient.clone() * monomial;
+    }
+    result
+}
+
+/// The falling-factorial (Newton forward-difference) coefficients of the
+/// polynomial with the given dense coefficients: `c_j = Δʲ P(0)/j!`, computed
+/// exactly as `Δʲ P(0) = Σ_{i≤j} (−1)^{j−i}·C(j,i)·P(i)`. The caller certifies the
+/// resulting expansion with [`equal`], so this may be heuristic; it is not.
+fn newton_falling_factorial_coefficients(coefficients: &[CasExpr]) -> Option<Vec<CasExpr>> {
+    let degree = coefficients.len().checked_sub(1)?;
+    // `P(i)` at the integers `0..=degree`.
+    let mut values = Vec::with_capacity(degree + 1);
+    for i in 0..=degree {
+        let mut value = CasExpr::zero();
+        let mut power = Rational::integer(1);
+        for coefficient in coefficients {
+            value = value + coefficient.clone() * CasExpr::Const(power);
+            power = power.checked_mul(Rational::integer(i128::try_from(i).ok()?))?;
+        }
+        values.push(simplify(&value));
+    }
+    let mut newton = Vec::with_capacity(degree + 1);
+    for j in 0..=degree {
+        let mut difference = CasExpr::zero();
+        for (i, value) in values.iter().enumerate().take(j + 1) {
+            let sign = if (j - i) % 2 == 0 { 1 } else { -1 };
+            let weight = binomial_rat(j, i)?.checked_mul(Rational::integer(sign))?;
+            difference = difference + CasExpr::Const(weight) * value.clone();
+        }
+        let factorial = Rational::integer(ntheory::factorial(i128::try_from(j).ok()?)?);
+        difference = difference / CasExpr::Const(factorial);
+        newton.push(simplify(&difference));
+    }
+    Some(newton)
+}
+
+/// `e^u` for the rate `u` of an exponential series, folding `e^{ln z} = z` term by
+/// term. That fold is exact **on the summand's own domain**: `ln z` occurs in the
+/// summand, so `z > 0` wherever the summand is defined. Without it a symbolic rate
+/// `ln λ` would leave the value as `e^{e^{ln λ}}`, an opaque atom the zero-test
+/// could not relate to `e^λ`.
+fn exponential_of_rate(rate: &CasExpr) -> CasExpr {
+    let rate = simplify(rate);
+    let mut factors: Vec<CasExpr> = Vec::new();
+    let terms = match &rate {
+        CasExpr::Add(items) => items.clone(),
+        other => vec![other.clone()],
+    };
+    for term in terms {
+        match &term {
+            CasExpr::Unary(UnaryFunc::Ln, argument) => factors.push((**argument).clone()),
+            CasExpr::Neg(inner) => match inner.as_ref() {
+                CasExpr::Unary(UnaryFunc::Ln, argument) => {
+                    factors.push(CasExpr::one() / (**argument).clone());
+                }
+                _ => factors.push(term.exp()),
+            },
+            _ => factors.push(term.exp()),
+        }
+    }
+    let product = match factors.len() {
+        0 => CasExpr::one(),
+        1 => factors.remove(0),
+        _ => CasExpr::Mul(factors),
+    };
+    simplify(&fold_elementary_constants(&product))
 }
 
 /// The **finite product** `∏_{var=lower}^{upper} f(var)` over **concrete integer**
@@ -20537,6 +20841,88 @@ mod tests {
         assert!(infinite_sum(&(CasExpr::int(1) / k().pow(3)), "k", &at(1)).is_none());
         assert!(infinite_sum(&(CasExpr::int(1) / k()), "k", &at(1)).is_none());
     }
+
+    /// The exponential-series route: `∑_{k≥0} P(k)·μᵏ/k!`, its symbolic-rate
+    /// forms, and the near misses it must refuse. `λᵏ/k!` is genuinely not
+    /// Gosper-summable, so every value here comes from the recognized series.
+    #[test]
+    fn exponential_series_infinite_sums() {
+        let k = || v("k");
+        let factorial = || (k() + CasExpr::int(1)).gamma();
+        // `bᵏ` in the machinery's own `exp(k·ln b)` spelling.
+        let power = |base: CasExpr| (k() * base.ln()).exp();
+        let zero = CasExpr::zero();
+
+        // Gosper genuinely declines on this family: the value below is not a
+        // telescoped one.
+        assert!(gosper_sum(&(power(CasExpr::int(3)) / factorial()), "k").is_none());
+
+        // Σ_{k≥0} 3ᵏ/k! = e³.
+        assert_equal(
+            &infinite_sum(&(power(CasExpr::int(3)) / factorial()), "k", &zero).unwrap(),
+            &CasExpr::int(3).exp(),
+        );
+        // A symbolic rate: Σ_{k≥0} λᵏ·e^{−λ}/k! = 1 (the Poisson total mass).
+        let lam = || v("lambda");
+        let poisson = || power(lam()) * CasExpr::Neg(Box::new(lam())).exp() / factorial();
+        assert_equal(
+            &infinite_sum(&poisson(), "k", &zero).unwrap(),
+            &CasExpr::one(),
+        );
+        // A polynomial weight, through the falling-factorial expansion:
+        // Σ k·λᵏe^{−λ}/k! = λ and Σ k²·λᵏe^{−λ}/k! = λ + λ².
+        assert_equal(
+            &infinite_sum(&(k() * poisson()), "k", &zero).unwrap(),
+            &lam(),
+        );
+        assert_equal(
+            &infinite_sum(&(k().pow(2) * poisson()), "k", &zero).unwrap(),
+            &(lam() + lam().pow(2)),
+        );
+        // Two exponential factors combine into one rate `t + ln λ`:
+        // Σ e^{tk}·λᵏe^{−λ}/k! = e^{λ(e^t − 1)}.
+        assert_equal(
+            &infinite_sum(&((k() * v("t")).exp() * poisson()), "k", &zero).unwrap(),
+            &(lam() * (v("t").exp() - CasExpr::one())).exp(),
+        );
+
+        // NEGATIVE CONTROLS. None of these may be read as `e^λ`.
+        // A surviving `var` in the denominator: λᵏ/(k!·(k+1)).
+        assert!(
+            infinite_sum(
+                &(power(CasExpr::int(3)) / (factorial() * (k() + CasExpr::int(1)))),
+                "k",
+                &zero,
+            )
+            .is_none()
+        );
+        // Misindexed factorial: λᵏ/(k−1)! = λᵏ/Γ(k).
+        assert!(infinite_sum(&(power(CasExpr::int(3)) / k().gamma()), "k", &zero).is_none());
+        // Shifted factorial the other way: λᵏ/(k+1)!.
+        assert!(
+            infinite_sum(
+                &(power(CasExpr::int(3)) / (k() + CasExpr::int(2)).gamma()),
+                "k",
+                &zero,
+            )
+            .is_none()
+        );
+        // The route is stated at lower bound 0; any other bound declines rather
+        // than silently returning the whole sum.
+        assert!(
+            infinite_sum(
+                &(power(CasExpr::int(3)) / factorial()),
+                "k",
+                &CasExpr::int(1)
+            )
+            .is_none()
+        );
+        // A `var`-dependent non-`exp` head is outside the fragment.
+        assert!(infinite_sum(&(k().ln() / factorial()), "k", &zero).is_none());
+    }
+
+
+
 
     #[test]
     fn finite_products_over_concrete_bounds() {
