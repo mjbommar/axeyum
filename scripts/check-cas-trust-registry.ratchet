@@ -17,7 +17,12 @@
 # only rises on purpose) -- but a new UNCERTIFIED function is never refused;
 # that label is honest, not a violation. See
 # docs/math-department/13-computer-algebra.md item 10.
-COUNT	54
+COUNT	59
+FN	enclosure::enclose	Option<Enclosure>
+FN	enclosure::enclose_constant	Option<Enclosure>
+FN	enclosure::enclose_root	Option<Enclosure>
+FN	enclosure::enclose_root_with_reason	Result<Enclosure, DeclineReason>
+FN	enclosure::enclose_with_reason	Result<Enclosure, DeclineReason>
 FN	equal	ZeroTest
 FN	extremum::polynomial_extremum	Option<ExtremumCertificate>
 FN	fps::FormalPowerSeries::from_rational_function	Option<(FormalPowerSeries, TruncationIdentity)>
@@ -85,6 +90,7 @@ VOCAB	ClosedFormReport	struct
 VOCAB	CompositeCertificate	struct
 VOCAB	CrtCertificate	enum
 VOCAB	DegenerateWitness	struct
+VOCAB	Enclosure	struct
 VOCAB	ExtremumCertificate	struct
 VOCAB	FactorizationCertificate	struct
 VOCAB	GenericWitness	struct
