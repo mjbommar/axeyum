@@ -314,6 +314,36 @@ fn every_named_complex_declaration_is_checked_and_footprint_free() {
         ("Complex.holomorphic_id", p.deriv.holomorphic_id),
         ("Complex.holomorphic_neg", p.deriv.holomorphic_neg),
         ("Complex.holomorphic_add", p.deriv.holomorphic_add),
+        ("Complex.abs_sub_le", p.estimates.abs_sub_le),
+        (
+            "Complex.abs_mul_le_of_bounds",
+            p.estimates.abs_mul_le_of_bounds,
+        ),
+        ("Complex.BoundedOn", p.estimates.bounded_on),
+        ("Complex.bounded_on_unfold", p.estimates.bounded_on_unfold),
+        (
+            "Complex.UniformlyContinuousOn",
+            p.estimates.uniformly_continuous_on,
+        ),
+        ("Complex.UniformlyContinuousOn.mk", p.estimates.uc_mk),
+        ("Complex.UniformlyContinuousOn.rec", p.estimates.uc_rec),
+        (
+            "Complex.UniformlyContinuousOn.modulus",
+            p.estimates.uc_modulus,
+        ),
+        ("Complex.UniformlyContinuousOn.spec", p.estimates.uc_spec),
+        (
+            "Complex.uniformlyContinuous_const",
+            p.estimates.uniformly_continuous_const,
+        ),
+        (
+            "Complex.uniformlyContinuous_id",
+            p.estimates.uniformly_continuous_id,
+        ),
+        (
+            "Complex.uniformlyContinuous_of_hasDerivative",
+            p.estimates.uniformly_continuous_of_has_derivative,
+        ),
     ];
     // COVERAGE, checked against the ENVIRONMENT rather than against `named`
     // itself.
@@ -3026,7 +3056,7 @@ fn factor_quotient_succ_eq_matches_the_correction_term_at_a_nonzero_middle_coeff
 /// steps downstream. Recount by re-running the extraction described in
 /// `docs/research/11-design-review/2026-08-27-prelude-build-spike.md`, never
 /// by hand-editing this list to make a failure go away.
-const EXPECTED_STEP_ORDER: [&str; 93] = [
+const EXPECTED_STEP_ORDER: [&str; 94] = [
     "declare_carrier",
     "declare_projections",
     "declare_equiv",
@@ -3120,6 +3150,7 @@ const EXPECTED_STEP_ORDER: [&str; 93] = [
     "declare_abs_neg",
     "declare_abs_le_add_abs_sub",
     "deriv::declare_derivative",
+    "estimates::declare_estimates",
 ];
 
 /// `STEPS` (the data-driven build order that replaced the hand-written call

@@ -93,11 +93,15 @@ use crate::{Kernel, KernelError};
 
 pub(crate) mod algebra_instance;
 pub(crate) mod deriv;
+pub(crate) mod estimates;
 pub(crate) mod poly;
 mod ring;
 
 #[cfg(test)]
 mod complex_tests;
+
+#[cfg(test)]
+mod estimates_tests;
 
 #[cfg(test)]
 mod cas_bridge_tests;
@@ -1413,6 +1417,11 @@ pub struct ComplexPrelude {
     /// `complex/deriv.rs`). Owns its own names for the same reason
     /// [`Self::poly`] does.
     pub deriv: deriv::DerivNames,
+    /// The ℂ estimate sub-development (`Complex.BoundedOn`,
+    /// `Complex.UniformlyContinuousOn` and the two magnitude lemmas the
+    /// product rule runs on, in `complex/estimates.rs`). Owns its own names
+    /// for the same reason [`Self::poly`] does.
+    pub estimates: estimates::EstimateNames,
 
     /// `Complex.commRingS : AlgS.CommRing` (`complex/algebra_instance.rs`,
     /// ADR-1588/ADR-1590) — every field an *existing* `Complex` theorem,
@@ -1593,6 +1602,7 @@ fn intern_names(kernel: &mut Kernel, creal: CRealPrelude) -> ComplexPrelude {
         abs_le_add_abs_sub: kernel.name_str(complex, "abs_le_add_abs_sub"),
         poly: poly::intern_names(kernel, complex),
         deriv: deriv::intern_names(kernel, complex),
+        estimates: estimates::intern_names(kernel, complex),
         comm_ring_s: kernel.name_str(complex, "commRingS"),
     }
 }
@@ -3797,6 +3807,30 @@ const STEPS: &[BuildStep] = &[
         // arrangement `poly::declare_polynomial` uses.
         provides: &[],
         run: deriv::declare_derivative,
+    },
+    BuildStep {
+        label: "estimates::declare_estimates",
+        requires: &[
+            |p: ComplexPrelude| p.abs,
+            |p: ComplexPrelude| p.abs_add_le,
+            |p: ComplexPrelude| p.abs_mul,
+            |p: ComplexPrelude| p.abs_neg,
+            |p: ComplexPrelude| p.abs_nonneg,
+            |p: ComplexPrelude| p.add,
+            |p: ComplexPrelude| p.complex,
+            |p: ComplexPrelude| p.equiv,
+            |p: ComplexPrelude| p.mul,
+            |p: ComplexPrelude| p.neg,
+            |p: ComplexPrelude| p.zero,
+        ],
+        // Like `deriv` and `poly`, this step's names live in its own
+        // `EstimateNames` struct, so it provides nothing at hub granularity.
+        // Its dependence on `deriv::declare_derivative` (it consumes
+        // `Complex.InDisc`, `HasDerivativeOn.modulus` and
+        // `HasDerivativeOn.spec`) is therefore not expressible in this table
+        // and is enforced by position: this entry is LAST.
+        provides: &[],
+        run: estimates::declare_estimates,
     },
 ];
 
