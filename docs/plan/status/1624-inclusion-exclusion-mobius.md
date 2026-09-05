@@ -86,8 +86,21 @@ addition breaks the generated consumer in `axeyum-py`;
 `gen-py-prelude-fields.py` regenerated, `nat` 1234+113 → 1252+113);
 `validate-facts.py` 2820 facts / 0 errors after
 `check-fact-depends-derived.py --fix` added four edges the proof terms already
-carried. `shape_search` at `declarations=3000` with the positive control
-`Nat.sumDivisorsBy_reindex` FOUND, exit 0.
+carried; `clippy -p axeyum-lean-kernel --all-targets -D warnings` exit 0;
+`cargo fmt --all --check` exit 0; `check-links.sh` all links ok;
+`check-merge-hygiene.sh` PASS (after regenerating the production-provenance
+ledger and rebuilding `shape_search`, both of which it reported stale).
+
+**Projection, base against head.** `kernel_declaration_projection` was built at
+the lane's base commit in a `lane-snapshot.sh` copy and again at the lane head,
+and the two outputs diffed: **0 rows removed, 492 rows added, 41 DISTINCT
+declaration names added, every one of them under `Nat.Subsets.`**. The 492 is
+41 x the 12 prelude labels the projection emits a row under, and the 41 is the
+same number `shape_search` reports as the difference between
+`declarations=3000` at the base and `declarations=3041` at the head — two
+independent counts of the addition, neither taken from the diff. The positive
+control for the base measurement was `--name Nat.sumDivisorsBy_reindex
+--expect 1` FOUND, exit 0.
 
 <!-- plan-section: landed-changes -->
 
