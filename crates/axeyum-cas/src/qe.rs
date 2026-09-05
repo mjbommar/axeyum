@@ -850,10 +850,18 @@ fn open_cell_samples(roots: &[AlgebraicReal]) -> Result<Vec<Rational>, String> {
     let mut highest = roots[0].isolating_interval().1;
     for root in roots {
         let (lo, hi) = root.isolating_interval();
-        if lo.checked_cmp(&lowest).ok_or("bracket comparison overflowed")? == Ordering::Less {
+        if lo
+            .checked_cmp(&lowest)
+            .ok_or("bracket comparison overflowed")?
+            == Ordering::Less
+        {
             lowest = lo;
         }
-        if hi.checked_cmp(&highest).ok_or("bracket comparison overflowed")? == Ordering::Greater {
+        if hi
+            .checked_cmp(&highest)
+            .ok_or("bracket comparison overflowed")?
+            == Ordering::Greater
+        {
             highest = hi;
         }
     }
@@ -1058,4 +1066,386 @@ fn cauchy_root_bound(poly: &[Rational]) -> Option<Rational> {
     }
     let bound = (max_ratio + BigRational::one()).ceil().to_integer();
     i128::try_from(bound).ok().map(Rational::integer)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// An integer-coefficient polynomial, LSB-first.
+    fn ipoly(coeffs: &[i128]) -> Vec<Rational> {
+        coeffs.iter().copied().map(Rational::integer).collect()
+    }
+
+    /// `x`, LSB-first.
+    fn x_poly() -> Vec<Rational> {
+        ipoly(&[0, 1])
+    }
+
+    fn exists(atoms: Vec<Atom>) -> ExistsFormula {
+        ExistsFormula::new(atoms)
+    }
+
+    fn as_true(decision: Decision) -> SampleCertificate {
+        match decision {
+            Decision::True(cert) => *cert,
+            other => panic!("expected True, got {other:?}"),
+        }
+    }
+
+    fn as_false(decision: Decision) -> RefutationCertificate {
+        match decision {
+            Decision::False(cert) => *cert,
+            other => panic!("expected False, got {other:?}"),
+        }
+    }
+
+    // ---------------------------------------------------------------- table
+
+    #[test]
+    fn relation_negation_is_an_involution_and_flips_every_sign_verdict() {
+        for relation in [
+            Relation::Eq,
+            Relation::Ne,
+            Relation::Lt,
+            Relation::Le,
+            Relation::Gt,
+            Relation::Ge,
+        ] {
+            assert_eq!(relation.negate().negate(), relation);
+            for sign in [-1i8, 0, 1] {
+                assert_ne!(
+                    relation.holds(sign),
+                    relation.negate().holds(sign),
+                    "{relation:?} at sign {sign}"
+                );
+            }
+        }
+    }
+
+    // ------------------------------------------------------------- verdicts
+
+    #[test]
+    fn exists_x_squared_minus_two_equals_zero_is_true_at_an_algebraic_sample() {
+        let formula = exists(vec![Atom::new(ipoly(&[-2, 0, 1]), Relation::Eq)]);
+        let cert = as_true(decide_exists(&formula));
+        assert!(
+            matches!(cert.sample, SamplePoint::Algebraic { .. }),
+            "sqrt(2) is irrational, so the sample must be algebraic: {:?}",
+            cert.sample
+        );
+        assert_eq!(cert.signs, vec![0]);
+        assert_eq!(cert.verify(), Ok(()));
+        assert_eq!(eliminate(&formula), Some(true));
+    }
+
+    #[test]
+    fn exists_x_squared_plus_one_negative_is_false_with_a_single_whole_line_cell() {
+        let formula = exists(vec![Atom::new(ipoly(&[1, 0, 1]), Relation::Lt)]);
+        let cert = as_false(decide_exists(&formula));
+        // `x² + 1` has no real root, so the sign-invariant decomposition of ℝ
+        // is one cell, not two: there is nothing to cut the line at.
+        assert!(cert.roots.is_empty());
+        assert_eq!(cert.open_samples.len(), 1);
+        assert_eq!(cert.failures.len(), 1);
+        assert_eq!(cert.failures[0].conjunct, 0);
+        assert_eq!(cert.failures[0].sign, 1);
+        assert_eq!(cert.verify(), Ok(()));
+        assert_eq!(eliminate(&formula), Some(false));
+    }
+
+    #[test]
+    fn exists_x_squared_lt_two_and_x_gt_one_is_true_at_a_rational_sample() {
+        let formula = exists(vec![
+            Atom::new(ipoly(&[-2, 0, 1]), Relation::Lt),
+            Atom::new(ipoly(&[-1, 1]), Relation::Gt),
+        ]);
+        let cert = as_true(decide_exists(&formula));
+        let SamplePoint::Rational(sample) = cert.sample else {
+            panic!("the satisfying cell is open, so the sample is rational");
+        };
+        // Strictly between 1 and sqrt(2).
+        assert_eq!(sign_at_rational(&ipoly(&[-1, 1]), sample), 1);
+        assert_eq!(sign_at_rational(&ipoly(&[-2, 0, 1]), sample), -1);
+        assert_eq!(cert.signs, vec![-1, 1]);
+        assert_eq!(cert.verify(), Ok(()));
+    }
+
+    #[test]
+    fn exists_cubic_root_strictly_inside_the_unit_interval_is_false_at_the_point_cell_on_one() {
+        // ∃x. x³ − x = 0 ∧ x > 0 ∧ x < 1.  The only positive root is 1, which
+        // the strict upper bound excludes.
+        let formula = exists(vec![
+            Atom::new(ipoly(&[0, -1, 0, 1]), Relation::Eq),
+            Atom::new(x_poly(), Relation::Gt),
+            Atom::new(ipoly(&[-1, 1]), Relation::Lt),
+        ]);
+        let cert = as_false(decide_exists(&formula));
+        assert_eq!(
+            cert.roots,
+            vec![
+                SamplePoint::Rational(Rational::integer(-1)),
+                SamplePoint::Rational(Rational::zero()),
+                SamplePoint::Rational(Rational::integer(1)),
+            ]
+        );
+        assert_eq!(cert.failures.len(), 7);
+        // Cell 5 is the point cell {1}: `x − 1` has sign 0 there, so `x < 1`
+        // is the conjunct that fails.
+        assert_eq!(
+            cert.failures[5],
+            CellFailure {
+                conjunct: 2,
+                sign: 0
+            }
+        );
+        assert_eq!(cert.verify(), Ok(()));
+        assert_eq!(eliminate(&formula), Some(false));
+    }
+
+    #[test]
+    fn forall_x_squared_nonnegative_is_true() {
+        let formula = ForallFormula::new(vec![Atom::new(ipoly(&[0, 0, 1]), Relation::Ge)]);
+        let ForallDecision::True(cert) = decide_forall(&formula) else {
+            panic!("x² ≥ 0 is valid");
+        };
+        assert_eq!(cert.roots, vec![SamplePoint::Rational(Rational::zero())]);
+        assert_eq!(cert.failures.len(), 3);
+        assert_eq!(cert.verify(), Ok(()));
+        assert_eq!(eliminate_forall(&formula), Some(true));
+    }
+
+    #[test]
+    fn forall_x_squared_minus_x_nonnegative_is_false_with_a_counterexample_below_one() {
+        let formula = ForallFormula::new(vec![Atom::new(ipoly(&[0, -1, 1]), Relation::Ge)]);
+        let ForallDecision::False(cert) = decide_forall(&formula) else {
+            panic!("x² − x < 0 on (0, 1), so the universal is false");
+        };
+        let SamplePoint::Rational(sample) = cert.sample else {
+            panic!("the counterexample cell (0, 1) is open");
+        };
+        assert_eq!(sign_at_rational(&x_poly(), sample), 1, "sample > 0");
+        assert_eq!(sign_at_rational(&ipoly(&[-1, 1]), sample), -1, "sample < 1");
+        assert_eq!(cert.verify(), Ok(()));
+        assert_eq!(eliminate_forall(&formula), Some(false));
+    }
+
+    #[test]
+    fn exists_double_root_case_is_true_at_the_double_root_as_a_point_cell() {
+        // (x−1)²·(x−2) = x³ − 4x² + 5x − 2 ≥ 0 ∧ x < 3/2.  The only point where
+        // the cubic is non-negative below 3/2 is the double root x = 1.
+        let cubic = ipoly(&[-2, 5, -4, 1]);
+        let bound = vec![Rational::new(-3, 2), Rational::integer(1)];
+        let formula = exists(vec![
+            Atom::new(cubic, Relation::Ge),
+            Atom::new(bound, Relation::Lt),
+        ]);
+        let cert = as_true(decide_exists(&formula));
+        assert_eq!(cert.sample, SamplePoint::Rational(Rational::integer(1)));
+        assert_eq!(cert.signs, vec![0, -1]);
+        assert_eq!(cert.verify(), Ok(()));
+    }
+
+    // ------------------------------------------------------- forged samples
+
+    #[test]
+    fn forged_sample_certificate_with_a_missing_conjunct_sign_is_refused() {
+        let atoms = vec![Atom::new(x_poly(), Relation::Gt)];
+        let cert = SampleCertificate {
+            atoms,
+            sample: SamplePoint::Rational(Rational::integer(1)),
+            signs: Vec::new(),
+        };
+        assert_eq!(
+            cert.verify(),
+            Err(Fault::SignCountMismatch {
+                recorded: 0,
+                atoms: 1
+            })
+        );
+    }
+
+    #[test]
+    fn forged_sample_certificate_with_a_wrong_sign_is_refused() {
+        let formula = exists(vec![Atom::new(ipoly(&[-2, 0, 1]), Relation::Lt)]);
+        let mut cert = as_true(decide_exists(&formula));
+        assert_eq!(cert.verify(), Ok(()));
+        cert.signs[0] = 1;
+        assert_eq!(
+            cert.verify(),
+            Err(Fault::SignMismatch {
+                index: 0,
+                recorded: 1,
+                recomputed: -1
+            })
+        );
+    }
+
+    #[test]
+    fn forged_sample_certificate_whose_bracket_holds_two_roots_is_refused() {
+        // (−2, 2] holds both roots of x² − 2, so it isolates nothing.
+        let cert = SampleCertificate {
+            atoms: vec![Atom::new(ipoly(&[-2, 0, 1]), Relation::Eq)],
+            sample: SamplePoint::Algebraic {
+                defining_poly: ipoly(&[-2, 0, 1]),
+                lower: Rational::integer(-2),
+                upper: Rational::integer(2),
+            },
+            signs: vec![0],
+        };
+        assert_eq!(
+            cert.verify(),
+            Err(Fault::NotIsolating {
+                roots_in_bracket: 2
+            })
+        );
+    }
+
+    #[test]
+    fn forged_sample_certificate_whose_relation_does_not_hold_is_refused() {
+        // The sign is recorded correctly; the point simply does not satisfy `x > 0`.
+        let cert = SampleCertificate {
+            atoms: vec![Atom::new(x_poly(), Relation::Gt)],
+            sample: SamplePoint::Rational(Rational::integer(-1)),
+            signs: vec![-1],
+        };
+        assert_eq!(
+            cert.verify(),
+            Err(Fault::RelationFails { index: 0, sign: -1 })
+        );
+    }
+
+    // --------------------------------------------------- forged refutations
+
+    /// The valid refutation of `∃x. x³ − x = 0 ∧ x > 0 ∧ x < 1`, with roots
+    /// `−1 < 0 < 1` and seven cells — the fixture the forgeries below mutate.
+    fn cubic_refutation() -> RefutationCertificate {
+        let formula = exists(vec![
+            Atom::new(ipoly(&[0, -1, 0, 1]), Relation::Eq),
+            Atom::new(x_poly(), Relation::Gt),
+            Atom::new(ipoly(&[-1, 1]), Relation::Lt),
+        ]);
+        let cert = as_false(decide_exists(&formula));
+        assert_eq!(cert.verify(), Ok(()));
+        cert
+    }
+
+    #[test]
+    fn forged_refutation_with_a_sample_outside_its_cell_is_refused() {
+        let mut cert = cubic_refutation();
+        // open_samples[1] must lie in (−1, 0); 5 lies above every root, so the
+        // cells no longer cover ℝ in order.
+        cert.open_samples[1] = Rational::integer(5);
+        assert_eq!(cert.verify(), Err(Fault::CellOrderViolation { index: 1 }));
+    }
+
+    #[test]
+    fn forged_refutation_that_drops_a_root_is_refused_as_an_incomplete_root_list() {
+        let cert = cubic_refutation();
+        // Drop the root at 0 together with its point cell, keeping every count
+        // self-consistent and every remaining cell genuinely failing — only the
+        // Sturm completeness recount can catch this.
+        let forged = RefutationCertificate {
+            atoms: cert.atoms.clone(),
+            roots: vec![cert.roots[0].clone(), cert.roots[2].clone()],
+            open_samples: vec![
+                cert.open_samples[0],
+                cert.open_samples[1],
+                cert.open_samples[3],
+            ],
+            failures: vec![
+                cert.failures[0],
+                cert.failures[1],
+                cert.failures[2],
+                cert.failures[5],
+                cert.failures[6],
+            ],
+        };
+        assert_eq!(
+            forged.verify(),
+            Err(Fault::IncompleteRootList {
+                atom: 0,
+                sturm_count: 3,
+                recorded: 2
+            })
+        );
+    }
+
+    #[test]
+    fn forged_refutation_naming_a_conjunct_that_actually_holds_is_refused() {
+        let mut cert = cubic_refutation();
+        // In cell 0 (far left of every root) `x < 1` holds, so nominating it as
+        // the failing conjunct — with its true sign — is a forgery.
+        let sample = SamplePoint::Rational(cert.open_samples[0]);
+        let sign = sign_at_sample(&cert.atoms[2].poly, &sample).expect("exact sign");
+        cert.failures[0] = CellFailure { conjunct: 2, sign };
+        assert_eq!(
+            cert.verify(),
+            Err(Fault::ConjunctDoesNotFail {
+                cell: 0,
+                index: 2,
+                sign
+            })
+        );
+    }
+
+    #[test]
+    fn forged_refutation_with_a_wrong_cell_sign_is_refused() {
+        let mut cert = cubic_refutation();
+        cert.failures[0] = CellFailure {
+            conjunct: cert.failures[0].conjunct,
+            sign: -cert.failures[0].sign,
+        };
+        assert!(
+            matches!(cert.verify(), Err(Fault::SignMismatch { .. })),
+            "a flipped cell sign must be caught by the recount"
+        );
+    }
+
+    #[test]
+    fn forged_refutation_naming_a_conjunct_the_formula_does_not_have_is_refused() {
+        let mut cert = cubic_refutation();
+        cert.failures[0] = CellFailure {
+            conjunct: 99,
+            sign: 0,
+        };
+        assert_eq!(
+            cert.verify(),
+            Err(Fault::ConjunctIndexOutOfRange { cell: 0, index: 99 })
+        );
+    }
+
+    #[test]
+    fn forged_refutation_with_the_wrong_number_of_cells_is_refused() {
+        let mut cert = cubic_refutation();
+        cert.failures.pop();
+        assert_eq!(
+            cert.verify(),
+            Err(Fault::CellCountMismatch {
+                recorded: 6,
+                expected: 7
+            })
+        );
+    }
+
+    // ------------------------------------------------------------- declines
+
+    #[test]
+    fn coefficients_beyond_the_reused_i128_isolation_decline_to_unknown_not_a_verdict() {
+        // Positive control: the same shape at a small coefficient decides.
+        let small = exists(vec![Atom::new(ipoly(&[-2, 0, 1]), Relation::Eq)]);
+        assert!(matches!(decide_exists(&small), Decision::True(_)));
+
+        // `x² − 10³⁰` fits `i128` as a coefficient, but the reused Sturm
+        // machinery evaluates near the Cauchy bound and overflows there.
+        let huge = exists(vec![Atom::new(
+            ipoly(&[-1_000_000_000_000_000_000_000_000_000_000, 0, 1]),
+            Relation::Eq,
+        )]);
+        match decide_exists(&huge) {
+            Decision::Unknown(reason) => assert!(!reason.is_empty()),
+            other => panic!("an i128 overflow must decline, not decide: {other:?}"),
+        }
+        assert_eq!(eliminate(&huge), None);
+    }
 }
