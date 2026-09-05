@@ -8,6 +8,7 @@
 use super::*;
 use crate::build_logic_prelude;
 use crate::nat_prelude::structures as algeq;
+use crate::nat_prelude::structures::eq_of;
 use crate::nat_prelude::structures_setoid::{
     StructuresSRecordNames, declare_structures_s_all, declare_structures_s_extra,
     intern_structures_s_names,
@@ -626,10 +627,8 @@ fn the_group_products_uniqueness_conjunct_is_pointwise() {
 
     let m = k.fvar(93_003);
     let el = k.fvar(93_004);
-    let p_alpha = arrow(&mut k, xc, {
-        let pc = sel(&mut k, &rec, CARRIER, pv);
-        pc
-    });
+    let pc = sel(&mut k, &rec, CARRIER, pv);
+    let p_alpha = arrow(&mut k, xc, pc);
     let ihc = k.const_(f.cs.is_grp_hom, vec![]);
     let p_pred = app2(&mut k, ihc, xv, pv);
     let mf = sub1_val(&mut k, &f.lg, p_alpha, p_pred, m);
@@ -676,5 +675,141 @@ fn the_group_products_uniqueness_conjunct_is_pointwise() {
         !k.def_eq(got_eq, e1),
         "grpProd's equiv must NOT be the first component's alone -- dropping \
          one conjunct is exactly the mutation this pins"
+    );
+}
+
+// ---------------------------------------------------------------------------
+// The ℤ-structure object type: measured, not argued.
+// ---------------------------------------------------------------------------
+
+/// **The object type of ℤ-structures FITS.** The handoff this lane inherited
+/// recorded ℤ-initiality as blocked because the object mixes `PSigma` and
+/// `Subtype`. It does mix them, and the mix lands at exactly the level
+/// `CatS.CategoryLarge.obj` takes:
+///
+/// ```text
+/// Sigma.{1,0} (Sort 1) (fun R =>
+///   Subtype.{1} (Sigma.{0,0} R (fun _ => Sigma.{0,0} (R → R) (fun _ => R → R)))
+///               (fun d => (∀ x, down d (up d x) = x) ∧ (∀ x, up d (down d x) = x)))
+///   : Sort 2
+/// ```
+///
+/// This test BUILDS that type in the kernel and reads its own type back, in
+/// both directions. It declares nothing: the remaining blocker is build order
+/// (`Int` lives in `int_prelude`, whose builder calls `build_nat_prelude`
+/// first, so there is no `Int` at this position to state initiality about),
+/// and a type that cannot be used yet is not public surface.
+#[test]
+fn the_z_structure_object_type_fits_at_sort_2() {
+    let mut k = Kernel::new();
+    let f = build(&mut k);
+    let lg = f.lg;
+    let l0 = k.level_zero();
+    let l1 = k.level_succ(l0);
+    let l2 = k.level_succ(l1);
+    let l3 = k.level_succ(l2);
+    let sort1 = k.sort(l1);
+    let sort2 = k.sort(l2);
+    let sort3 = k.sort(l3);
+
+    let r_fv = 92_000;
+
+    // Subtype.{1} (data over R) (the two inverse laws) — the FIBRE. Built at
+    // an arbitrary carrier, so it can be checked at a CLOSED one (`Nat`) and
+    // then abstracted over a free one for the outer `Sigma`.
+    fn z_fibre(k: &mut Kernel, lg: &LogicPrelude, r: ExprId) -> ExprId {
+        let d_fv = 92_001;
+        let x_fv = 92_002;
+        let l0 = k.level_zero();
+        let l1 = k.level_succ(l0);
+        let endo = arrow(k, r, r);
+        let inner = Pair { ca: endo, cb: endo };
+        let inner_ty = inner.ty(k, lg);
+        let outer = Pair {
+            ca: r,
+            cb: inner_ty,
+        };
+        let data_ty = outer.ty(k, lg);
+
+        let d = k.fvar(d_fv);
+        let maps = outer.snd(k, lg, d);
+        let up = inner.fst(k, lg, maps);
+        let down = inner.snd(k, lg, maps);
+        let x = k.fvar(x_fv);
+        let law1 = {
+            let ux = k.app(up, x);
+            let dux = k.app(down, ux);
+            let body = eq_of(k, lg, l1, r, dux, x);
+            pi_over(k, x_fv, r, body)
+        };
+        let law2 = {
+            let dx = k.app(down, x);
+            let udx = k.app(up, dx);
+            let body = eq_of(k, lg, l1, r, udx, x);
+            pi_over(k, x_fv, r, body)
+        };
+        let and_c = k.const_(lg.and, vec![]);
+        let laws = app2(k, and_c, law1, law2);
+        let pred = lam_over(k, d_fv, data_ty, laws);
+        let sub_head = k.const_(lg.sigma.subtype, vec![l1]);
+        app2(k, sub_head, data_ty, pred)
+    }
+
+    // At the CLOSED carrier `Nat`, the fibre type-checks and lands at Sort 1
+    // — `Subtype.{1} : … → Sort (max 1 1)`.
+    let nat = k.const_(lg.nat, vec![]);
+    let fibre_nat = z_fibre(&mut k, &lg, nat);
+    let fibre_ty = k.infer(fibre_nat).expect("the fibre must type-check");
+    assert!(
+        k.def_eq(fibre_ty, sort1),
+        "Subtype.{{1}} over the data must land at Sort 1"
+    );
+    assert!(
+        !k.def_eq(fibre_ty, sort2),
+        "the fibre must NOT already be at Sort 2 -- that would be the level \
+         that blocks the outer Sigma"
+    );
+
+    // Sigma.{1,0} (Sort 1) (fun R => …) : Type (max 1 0) = Sort 2.
+    let r = k.fvar(r_fv);
+    let on_r = z_fibre(&mut k, &lg, r);
+    let family = lam_over(&mut k, r_fv, sort1, on_r);
+    let sig_head = k.const_(lg.sigma.sigma, vec![l1, l0]);
+    let z_struct = app2(&mut k, sig_head, sort1, family);
+    let z_ty = k.infer(z_struct).expect("ZStruct must type-check");
+    assert!(
+        k.def_eq(z_ty, sort2),
+        "the ℤ-structure object type must live at Sort 2 -- the level \
+         CatS.CategoryLarge.obj takes"
+    );
+    assert!(
+        !k.def_eq(z_ty, sort1),
+        "it must NOT be at Sort 1 -- CatS.Category could not hold it"
+    );
+    assert!(
+        !k.def_eq(z_ty, sort3),
+        "it must NOT be at Sort 3 -- that is where CatS.FunctorLarge lives, \
+         and it would need a fifth record"
+    );
+    println!("ZStruct : {}", k.render_lean(z_ty));
+
+    // Positive control OF THE SAME KIND, read from the kernel: `CatS.PtAlg`,
+    // which ADR-1626 landed, is at the SAME level by the same construction
+    // with the Subtype layer omitted.
+    let pt = k.const_(f.gs.pt_alg, vec![]);
+    let pt_ty = k.infer(pt).expect("PtAlg exists");
+    assert!(
+        k.def_eq(pt_ty, sort2),
+        "control: CatS.PtAlg is at Sort 2 too"
+    );
+
+    // And the blocker that DOES remain: there is no `Int` at this position.
+    // `LogicPrelude` carries `nat`, which is why ADR-1626 could re-prove ℕ
+    // initiality in place; it carries no integer type.
+    let nat_ty = k.infer(nat).expect("Nat exists");
+    assert!(
+        k.def_eq(nat_ty, sort1),
+        "Nat IS available here (this is the asymmetry: ℕ could be re-proved \
+         in place, ℤ cannot)"
     );
 }

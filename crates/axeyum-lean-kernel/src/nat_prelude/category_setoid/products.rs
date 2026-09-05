@@ -1825,3 +1825,6 @@ pub(crate) fn declare_products(
         grp_is_product,
     })
 }
+
+#[cfg(test)]
+mod products_tests;
