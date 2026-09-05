@@ -354,20 +354,20 @@ impl fmt::Display for DeclineReason {
 // ℚ[x] over BigRational, least-significant-first
 // ---------------------------------------------------------------------------
 
-fn rat_zero() -> BigRational {
+pub(crate) fn rat_zero() -> BigRational {
     BigRational::zero()
 }
 
-fn rat_one() -> BigRational {
+pub(crate) fn rat_one() -> BigRational {
     BigRational::one()
 }
 
-fn rat_int(value: i64) -> BigRational {
+pub(crate) fn rat_int(value: i64) -> BigRational {
     BigRational::from_integer(BigInt::from(value))
 }
 
 /// Drop trailing zero coefficients so the leading entry is nonzero.
-fn poly_trim(mut poly: Vec<BigRational>) -> Vec<BigRational> {
+pub(crate) fn poly_trim(mut poly: Vec<BigRational>) -> Vec<BigRational> {
     while poly.last().is_some_and(num_traits::Zero::is_zero) {
         poly.pop();
     }
@@ -375,7 +375,7 @@ fn poly_trim(mut poly: Vec<BigRational>) -> Vec<BigRational> {
 }
 
 /// Degree, or `None` for the zero polynomial.
-fn poly_degree(poly: &[BigRational]) -> Option<usize> {
+pub(crate) fn poly_degree(poly: &[BigRational]) -> Option<usize> {
     let mut index = poly.len();
     while index > 0 {
         index -= 1;
@@ -386,7 +386,7 @@ fn poly_degree(poly: &[BigRational]) -> Option<usize> {
     None
 }
 
-fn poly_add(left: &[BigRational], right: &[BigRational]) -> Vec<BigRational> {
+pub(crate) fn poly_add(left: &[BigRational], right: &[BigRational]) -> Vec<BigRational> {
     let mut out = vec![rat_zero(); left.len().max(right.len())];
     for (index, value) in left.iter().enumerate() {
         out[index] += value;
@@ -397,7 +397,7 @@ fn poly_add(left: &[BigRational], right: &[BigRational]) -> Vec<BigRational> {
     poly_trim(out)
 }
 
-fn poly_sub(left: &[BigRational], right: &[BigRational]) -> Vec<BigRational> {
+pub(crate) fn poly_sub(left: &[BigRational], right: &[BigRational]) -> Vec<BigRational> {
     let mut out = vec![rat_zero(); left.len().max(right.len())];
     for (index, value) in left.iter().enumerate() {
         out[index] += value;
@@ -408,7 +408,7 @@ fn poly_sub(left: &[BigRational], right: &[BigRational]) -> Vec<BigRational> {
     poly_trim(out)
 }
 
-fn poly_mul(left: &[BigRational], right: &[BigRational]) -> Vec<BigRational> {
+pub(crate) fn poly_mul(left: &[BigRational], right: &[BigRational]) -> Vec<BigRational> {
     if left.is_empty() || right.is_empty() {
         return Vec::new();
     }
@@ -425,13 +425,13 @@ fn poly_mul(left: &[BigRational], right: &[BigRational]) -> Vec<BigRational> {
     poly_trim(out)
 }
 
-fn poly_scale(poly: &[BigRational], factor: &BigRational) -> Vec<BigRational> {
+pub(crate) fn poly_scale(poly: &[BigRational], factor: &BigRational) -> Vec<BigRational> {
     poly_trim(poly.iter().map(|c| c * factor).collect())
 }
 
 /// Long division in `ℚ[x]`. `None` exactly when `divisor` is the zero
 /// polynomial.
-fn poly_divrem(
+pub(crate) fn poly_divrem(
     dividend: &[BigRational],
     divisor: &[BigRational],
 ) -> Option<(Vec<BigRational>, Vec<BigRational>)> {
@@ -457,7 +457,7 @@ fn poly_divrem(
 
 /// Extended Euclid in `ℚ[x]`: returns `(g, s, t)` with `s·a + t·b = g` and `g`
 /// monic (or the zero polynomial when both inputs are zero).
-fn poly_ext_gcd(
+pub(crate) fn poly_ext_gcd(
     left: &[BigRational],
     right: &[BigRational],
 ) -> (Vec<BigRational>, Vec<BigRational>, Vec<BigRational>) {
@@ -528,7 +528,7 @@ fn irreducible_factor_count(poly: &[BigRational]) -> Option<u32> {
 /// Determinant of a square `BigRational` matrix by Gaussian elimination with
 /// exact pivoting. Independent of the Faddeev–LeVerrier route the producer
 /// uses for the characteristic polynomial, which is the point.
-fn matrix_determinant(matrix: &[Vec<BigRational>]) -> BigRational {
+pub(crate) fn matrix_determinant(matrix: &[Vec<BigRational>]) -> BigRational {
     let size = matrix.len();
     let mut work: Vec<Vec<BigRational>> = matrix.to_vec();
     let mut determinant = rat_one();

@@ -106,6 +106,7 @@ pub mod ntheory_advanced;
 pub mod ntheory_certify;
 pub mod ntheory_more;
 pub mod numberfield;
+pub mod numberfield_ideals;
 pub mod orthopoly;
 pub mod partial_fractions;
 pub mod permgroup;
