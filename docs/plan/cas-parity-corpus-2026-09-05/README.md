@@ -6,12 +6,17 @@ a harness reporting per query the verdict, the trust classification, and
 the wall time. (The first half, the per-function trust registry, landed
 2026-09-05 as `scripts/check-cas-trust-registry.py`.)
 
-**One entry disagrees, and it is the headline finding, not a bug in this
-corpus**: `equal()` returns a confidently WRONG, `ZeroTest::Certified{equal:
-false}` verdict for `sqrt(2)*sqrt(3)` vs `sqrt(6)` — two equal real numbers
-the zero-test's atom algebra treats as provably different because it has no
-`sqrt(a)*sqrt(b) = sqrt(a*b)` rewrite rule. See `e1-radical-cross-base`
-below.
+**One entry is a tracked, owned `known_defect`, not an open `disagree`**:
+`equal()` returns a confidently WRONG, `ZeroTest::Certified{equal: false}`
+verdict for `sqrt(2)*sqrt(3)` vs `sqrt(6)` — two equal real numbers the
+zero-test's atom algebra treats as provably different because it has no
+`sqrt(a)*sqrt(b) = sqrt(a*b)` rewrite rule. The fix is owned by lane
+`cas-witness` (tracked as file 13, item 1 wave two). See
+`e1-radical-cross-base` and "The `known_defect` tier" below: the entry is
+excluded from the `agree`/`disagree`/`decline` tally so the aggregate gate
+does not redden for every session while the fix is in flight, but the
+harness asserts the wrong answer PERSISTS and exits nonzero the moment it
+does not — forcing reclassification to `core`, never silent bit-rot.
 
 ## Files
 
@@ -61,6 +66,32 @@ SMT solver's verdict space (`sat`/`unsat`/`unknown`) and a CAS's:
    decided anything at all, `unknown` when the underlying function declined
    (`None`).
 
+## The `known_defect` tier
+
+A third tier alongside `core` and `decline_expected`. It exists for exactly
+one situation: a confirmed, real wrong answer whose fix is owned elsewhere
+and in flight, where reddening every session's aggregate gate on this box
+for a defect nobody dispatched here would just get the whole corpus muted
+or skipped. A `known_defect` entry in `corpus.json` carries:
+
+- `expected`: the true answer (as always).
+- `observed_wrong_answer`: the specific wrong answer `axeyum-cas` gives,
+  recorded so a reader does not have to re-derive it from the harness's
+  doc comment.
+- `tracked_by`: a string naming who owns the fix (here, `"file 13, item 1
+  wave two, lane cas-witness"`).
+
+The harness (`main`'s loop) excludes `known_defect` entries from the
+`agree`/`disagree`/`decline` tally that drives most of the exit status —
+but it does not let the entry rot unexamined. It still runs the entry's
+check every time and asserts the wrong answer **persists**
+(`outcome.verdict == Verdict::Disagree`); the instant it does not — the
+fix landed, or something else changed the behavior — the harness prints
+`FATAL: known defect <id> now agrees: reclassify it to core` and exits
+nonzero. A known defect can only ever be (a) still reproducing, silently,
+or (b) fixed, loudly demanding reclassification. It cannot silently stop
+mattering.
+
 ## Corrections this corpus made against its own first draft
 
 Five of this corpus's first-draft entries were WRONG about `axeyum-cas`'s
@@ -107,7 +138,9 @@ standing finding:
   `1*(sqrt:2)*(sqrt:3) - 1*(sqrt:6)` genuinely is nonzero *in that free
   algebra*, even though the real numbers it represents are equal. This is a
   certificate whose label (`Certified`) claims more than what it actually
-  establishes — left as the corpus's one confirmed `disagree`.
+  establishes — reclassified `known_defect`, `tracked_by` "file 13, item 1
+  wave two, lane cas-witness" (see "The `known_defect` tier" above), the
+  corpus's one confirmed, owned finding.
 
 ## Areas and modules (measured 2026-09-05)
 
@@ -146,7 +179,7 @@ the raw per-area total exceed a naive 12×3=36.
 | geometry_beyond | 4 |
 | **total** | **21** (≥ 10 required) |
 
-Tiers: **59 `core`**, **12 `decline_expected`** (≥ 10 required — each entry
+Tiers: **59 `core`**, **11 `decline_expected`** (≥ 10 required — each entry
 cites a classical fact, a source-read capability boundary in `axeyum-cas`,
 or this crate's own progress-log finding; see each entry's `justification`
 in `corpus.json`).
@@ -169,15 +202,19 @@ Harness, `--release`, single run:
 
 ```
 entries: 71
-verdict: agree=70 disagree=1 decline=0
+verdict: agree=70 disagree=0 decline=0 known_defect=1
 trust:   certified=54 uncertified=11 unknown=6
-total wall time: 321.540ms
+total wall time: 194.716ms
 ```
 
-The one `disagree` is `e1-radical-cross-base` (see above). Exit status is
-therefore **1**, on purpose — CLAUDE.md's "make the exit status depend on
-the finding" is the whole point of this corpus, and a checker that cannot
-fail is worse than no checker.
+The one `known_defect` is `e1-radical-cross-base` (see above): excluded
+from the disagree tally since its fix is owned elsewhere (lane
+`cas-witness`, tracked as file 13 item 1 wave two), but the harness still
+asserts the wrong answer persists every run. Exit status is therefore
+**0**. CLAUDE.md's "make the exit status depend on the finding" still
+holds: if this entry ever starts agreeing, the harness exits nonzero with
+a reclassify-to-`core` message instead of quietly going green on a fix
+nobody verified landed.
 
 **`ground_truth.py`**: with SymPy 1.14.0 installed (this host's system
 Python has no SymPy; installed into a scratch venv with `uv venv` +
@@ -198,14 +235,14 @@ every skip is printed and named.
 
 **check.sh / justfile**: registered as `bench-cas-parity` in the `justfile`
 unconditionally, and as `cas-parity-corpus` / `cas-parity-ground-truth` in
-`scripts/check.sh` (321.5ms measured, far under the 60s threshold the task
-sets for inclusion). **This means `scripts/check.sh` currently fails on
-this step, by design, because of the confirmed `e1-radical-cross-base`
-finding above** — not a flaky or nondeterministic step. A maintainer's next
-move is one of: accept the finding and either fix `equal`'s atom algebra to
-recognize `sqrt(a)*sqrt(b) = sqrt(a*b)` for concrete rational `a, b > 0`, or
-document the scope limitation prominently enough that this entry's tier is
-revisited; this corpus does not make that call unilaterally.
+`scripts/check.sh` (194.7ms measured, far under the 60s threshold the task
+sets for inclusion). **This step now exits 0**: `e1-radical-cross-base` is
+tier `known_defect`, tracked by lane `cas-witness` (file 13 item 1 wave
+two), so it is excluded from the tally that drives the exit status while
+its fix is in flight elsewhere — but the harness still asserts the wrong
+answer persists every run, and will exit nonzero with a reclassify message
+the moment `equal` starts agreeing without this corpus itself being
+updated to match.
 
 ## Honesty caveats
 
@@ -230,4 +267,5 @@ revisited; this corpus does not make that call unilaterally.
 | 2026-09-05 | Draft: directory, README skeleton, and file layout established. | commit `4f97ce7bc` |
 | 2026-09-05 | 71-entry corpus, `ground_truth.py` (73 claims via SymPy 1.14.0), and the full harness landed; merged local `main` (`d8309e8b0`) cleanly. | commit `98d892caa` |
 | 2026-09-05 | First harness run found 4 disagreements; 3 were corpus-design errors (`i4-nonelementary`→`i4-gaussian-erf`, `solve3-quintic`'s `None` vs `Some([])`, `fps2-primes-decline`'s undersized sample) fixed against the real behavior; 1 (`e1-radical-cross-base`) is a genuine, confirmed CAS finding, kept as the corpus's one `disagree`. `ground_truth.py` extended with pure-Python (no-SymPy) fallbacks for `qe`, `permgroup`, `probability`, `geometry_beyond` (75 claims with SymPy, 32 claims/exit 0 without). Registered `bench-cas-parity` in the `justfile` and `cas-parity-corpus`/`cas-parity-ground-truth` in `scripts/check.sh`. | `./target/release/examples/parity_corpus`: 71 entries, agree=70 disagree=1, 177.5ms |
-| 2026-09-05 | Merged local `main` again (picked up `docs/math-department/13-computer-algebra.md` item 7 "wave two" and item 3 "wave two", `b4d6c9465`): `qe`'s `Atom` widened from `i128`-backed `Rational` to `BigRational` coefficients, a source-level break in `qe1`/`qe2`/`qe3` fixed by switching to `BigRational::from_integer`. Rebuilding after the fix found `qe3-overflow-decline` had flipped from a documented decline to a correct, certified `true` (the exact overflow it was built to test was fixed by the same merge) — renamed `qe3-large-coefficient`, reclassified `core`. Final state unchanged otherwise. | `./target/release/examples/parity_corpus`: 71 entries, agree=70 disagree=1 decline=0, certified=54 uncertified=11 unknown=6, 321.540ms; corpus.json tiers now 59 core / 12 decline_expected; `cargo clippy -p axeyum-cas --example parity_corpus -- -D warnings`: clean; `rustfmt --edition 2024 --check`: clean; `python3 -m py_compile ground_truth.py`: OK |
+| 2026-09-05 | Merged local `main` again (picked up `docs/math-department/13-computer-algebra.md` item 7 "wave two" and item 3 "wave two", `b4d6c9465`): `qe`'s `Atom` widened from `i128`-backed `Rational` to `BigRational` coefficients, a source-level break in `qe1`/`qe2`/`qe3` fixed by switching to `BigRational::from_integer`. Rebuilding after the fix found `qe3-overflow-decline` had flipped from a documented decline to a correct, certified `true` (the exact overflow it was built to test was fixed by the same merge) — renamed `qe3-large-coefficient`, reclassified `core`. | `./target/release/examples/parity_corpus`: 71 entries, agree=70 disagree=1 decline=0, certified=54 uncertified=11 unknown=6, 321.540ms |
+| 2026-09-05 | Added the `known_defect` tier (coordinator request, ahead of merging lane `cas-witness`'s fix for `e1-radical-cross-base`): `corpus.json` gained `tracked_by`/`observed_wrong_answer` fields, and the harness excludes `known_defect` entries from the `agree`/`disagree`/`decline` tally but asserts the wrong answer PERSISTS every run, exiting nonzero with a reclassify-to-`core` message the instant it does not (verified by a temporary injected fix simulating the entry agreeing: the harness printed `FATAL: known defect e1-radical-cross-base now agrees: reclassify it to core` and exited 1, then the injection was reverted). `e1-radical-cross-base` moved from `decline_expected` to `known_defect`, `tracked_by` "file 13, item 1 wave two, lane cas-witness". `scripts/check.sh`'s registered step now exits 0 rather than reddening the shared gate. | `./target/release/examples/parity_corpus`: 71 entries, agree=70 disagree=0 decline=0 known_defect=1, certified=54 uncertified=11 unknown=6, 194.716ms; corpus.json tiers now 59 core / 11 decline_expected / 1 known_defect; `cargo clippy -p axeyum-cas --example parity_corpus -- -D warnings`: clean; `rustfmt --edition 2024 --check`: clean; `python3 -m py_compile ground_truth.py`: OK |

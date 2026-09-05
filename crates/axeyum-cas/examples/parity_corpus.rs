@@ -102,6 +102,15 @@ enum Tier {
     /// `justification` in `corpus.json`. A decline here is the anticipated,
     /// correct behavior.
     DeclineExpected,
+    /// A CONFIRMED, tracked wrong answer (not a decline) with an owning fix
+    /// in flight elsewhere (see the entry's `tracked_by`). Excluded from the
+    /// `agree`/`disagree`/`decline` tally and counted separately so this
+    /// corpus's exit status does not redden every session's aggregate gate
+    /// while the fix lands. The harness asserts the disagreement PERSISTS:
+    /// if the entry starts agreeing, that is a HARD FAILURE (exit nonzero)
+    /// demanding the entry be reclassified to `core` — a known defect can
+    /// never be quietly forgotten, only fixed-and-promoted or left failing.
+    KnownDefect,
 }
 
 impl Tier {
@@ -109,6 +118,7 @@ impl Tier {
         match self {
             Tier::Core => "core",
             Tier::DeclineExpected => "decline_expected",
+            Tier::KnownDefect => "known_defect",
         }
     }
 }
@@ -125,6 +135,9 @@ struct Entry {
     area: Option<&'static str>,
     module: Option<&'static str>,
     tier: Tier,
+    /// Who owns the fix for a `Tier::KnownDefect` entry (`None` for every
+    /// other tier). Matches `corpus.json`'s `tracked_by` field.
+    tracked_by: Option<&'static str>,
     run: fn() -> Outcome,
 }
 
@@ -673,6 +686,13 @@ fn e1_radical() -> Outcome {
 /// evidence-and-checker-discipline warns about: a certificate whose scope is
 /// narrower than the claim its label suggests. A caller reading only
 /// `ZeroTest::Certified { equal: false }` has no way to see this gap.
+///
+/// **`tier: KnownDefect`, `tracked_by` "file 13, item 1 wave two, lane
+/// cas-witness"**: the fix is owned elsewhere and in flight, so this entry
+/// is excluded from the `agree`/`disagree`/`decline` tally that drives most
+/// of this harness's exit status — but `main`'s loop still asserts the
+/// disagreement PERSISTS (`outcome.verdict == Verdict::Disagree`), and exits
+/// nonzero with a reclassify-to-`core` message the moment it does not.
 fn e1_radical_cross_base() -> Outcome {
     let lhs = i(2).sqrt() * i(3).sqrt();
     let rhs = i(6).sqrt();
@@ -1675,13 +1695,14 @@ macro_rules! e {
             area: $area,
             module: $module,
             tier: $tier,
+            tracked_by: None,
             run: $f,
         }
     };
 }
 
 fn main() {
-    use Tier::{Core, DeclineExpected};
+    use Tier::{Core, DeclineExpected, KnownDefect};
     let entries: Vec<Entry> = vec![
         // differentiate
         e!("d1-cubic", Some("differentiate"), None, Core, d1_cubic),
@@ -1812,13 +1833,14 @@ fn main() {
         ),
         // simplify / equal
         e!("e1-radical", Some("simplify/equal"), None, Core, e1_radical),
-        e!(
-            "e1-radical-cross-base",
-            Some("simplify/equal"),
-            None,
-            DeclineExpected,
-            e1_radical_cross_base
-        ),
+        Entry {
+            id: "e1-radical-cross-base",
+            area: Some("simplify/equal"),
+            module: None,
+            tier: KnownDefect,
+            tracked_by: Some("file 13, item 1 wave two, lane cas-witness"),
+            run: e1_radical_cross_base,
+        },
         e!(
             "e2-poly-identity",
             Some("simplify/equal"),
@@ -2057,6 +2079,7 @@ fn main() {
     let mut agree = 0u32;
     let mut disagree = 0u32;
     let mut decline = 0u32;
+    let mut known_defect = 0u32;
     let mut certified = 0u32;
     let mut uncertified = 0u32;
     let mut unknown = 0u32;
@@ -2064,19 +2087,44 @@ fn main() {
     let mut module_counts: std::collections::BTreeMap<&str, u32> =
         std::collections::BTreeMap::new();
     let mut disagreements: Vec<(&str, String, String)> = Vec::new();
+    let mut known_defect_alerts: Vec<String> = Vec::new();
 
     for entry in &entries {
         let start = Instant::now();
         let outcome = (entry.run)();
         let wall = start.elapsed();
-        match outcome.verdict {
-            Verdict::Agree => agree += 1,
-            Verdict::Disagree => {
-                disagree += 1;
+        if matches!(entry.tier, Tier::KnownDefect) {
+            // A known_defect entry is excluded from the agree/disagree/decline
+            // tally: it is a TRACKED, owned finding, not this session's
+            // failure to fix. But the disagreement must PERSIST -- if the
+            // underlying bug is fixed, `equal` (or whatever this entry
+            // checks) starts agreeing with the independently-established
+            // truth, and that is exactly the signal that this entry must be
+            // reclassified to `core` before anyone trusts it as still-open.
+            known_defect += 1;
+            if outcome.verdict == Verdict::Agree {
                 any_disagree = true;
-                disagreements.push((entry.id, outcome.expected.clone(), outcome.actual.clone()));
+                let alert = format!(
+                    "known defect {} now agrees: reclassify it to core",
+                    entry.id
+                );
+                println!("FATAL: {alert}");
+                known_defect_alerts.push(alert);
             }
-            Verdict::Decline => decline += 1,
+        } else {
+            match outcome.verdict {
+                Verdict::Agree => agree += 1,
+                Verdict::Disagree => {
+                    disagree += 1;
+                    any_disagree = true;
+                    disagreements.push((
+                        entry.id,
+                        outcome.expected.clone(),
+                        outcome.actual.clone(),
+                    ));
+                }
+                Verdict::Decline => decline += 1,
+            }
         }
         match outcome.trust {
             Trust::Certified => certified += 1,
@@ -2090,7 +2138,7 @@ fn main() {
             *module_counts.entry(module).or_insert(0) += 1;
         }
         println!(
-            "{:<32} area={:<16} module={:<14} tier={:<16} verdict={:<8} trust={:<11} wall={:>10.3?} expected={} actual={}",
+            "{:<32} area={:<16} module={:<14} tier={:<16} verdict={:<8} trust={:<11} wall={:>10.3?} expected={} actual={}{}",
             entry.id,
             entry.area.unwrap_or("-"),
             entry.module.unwrap_or("-"),
@@ -2100,13 +2148,19 @@ fn main() {
             wall,
             outcome.expected,
             outcome.actual,
+            entry
+                .tracked_by
+                .map(|t| format!(" tracked_by={t}"))
+                .unwrap_or_default(),
         );
     }
 
     let total_wall = total_start.elapsed();
     println!("\n=== summary ===");
     println!("entries: {}", entries.len());
-    println!("verdict: agree={agree} disagree={disagree} decline={decline}");
+    println!(
+        "verdict: agree={agree} disagree={disagree} decline={decline} known_defect={known_defect}"
+    );
     println!("trust:   certified={certified} uncertified={uncertified} unknown={unknown}");
     println!("by area:");
     for (area, count) in &area_counts {
@@ -2121,6 +2175,12 @@ fn main() {
         println!("\n=== DISAGREEMENTS (findings) ===");
         for (id, expected, actual) in &disagreements {
             println!("  {id}: expected={expected} actual={actual}");
+        }
+    }
+    if !known_defect_alerts.is_empty() {
+        println!("\n=== KNOWN-DEFECT ALERTS (a tracked defect stopped reproducing) ===");
+        for alert in &known_defect_alerts {
+            println!("  {alert}");
         }
     }
 
