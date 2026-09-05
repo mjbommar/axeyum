@@ -99,6 +99,9 @@ use crate::algebraic::{self, AlgebraicReal};
 use crate::real_algebraic;
 use crate::sturm;
 
+#[path = "qe_big.rs"]
+pub(crate) mod big;
+
 /// How many alternating bisections we will spend separating two consecutive
 /// roots before declining. Each step halves the target width, and the brackets
 /// are `i128` rationals, so the denominators cannot survive many more than this
