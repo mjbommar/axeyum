@@ -4859,6 +4859,17 @@ SUITES["merge-hygiene"] = (
             'if [ "$part_edges_rc" -eq 0 ]; then',
             'if [ "$part_edges_rc" -ne 1 ]; then',
         ),
+        (
+            # Lane `kernel-projection-regen` (2026-09-05). The projection's
+            # own `--check` needs a debug kernel build (tens of minutes), so
+            # this guard compares two numbers already on hand instead;
+            # removing the comparison must kill exactly the stale-projection
+            # test, leaving the current-projection and not-answerable
+            # controls green (they never reach this branch either way).
+            "M17 a stale kernel dependency projection fails the gate",
+            'if [ "$kernel_projection_diff" -gt "$kernel_projection_tolerance" ]; then',
+            "if false; then",
+        ),
     ],
 )
 

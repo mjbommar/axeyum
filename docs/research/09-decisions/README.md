@@ -909,3 +909,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [1625](adr-1625-l1-is-a-metric-space-from-a-pointwise-distance-and-the-completion-functor-does-not-exist-yet.md) | L¹ is a metric space from a pointwise distance, and there is no completion functor to reuse | proposed |
 | [1626](adr-1626-the-layer-that-was-missing-was-sigma-and-three-blocked-constructions-came-back-together.md) | the layer that was missing was Σ, and the three blocked constructions came back together | proposed |
 | [1627](adr-1627-a-constructive-field-has-an-existential-inverse-because-creal-cannot-have-a-functional-one.md) | a constructive field has an existential inverse, because `CReal` cannot have a functional one | proposed |
+| [1634](adr-1634-merge-hygiene-checks-kernel-projection-staleness-against-the-live-count-it-already-has.md) | merge hygiene checks kernel-projection staleness against the live count it already has | accepted |

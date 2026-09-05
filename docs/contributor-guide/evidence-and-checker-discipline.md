@@ -156,4 +156,27 @@ lines of Python and the plan already tells you which pairs to try. And when
 writing a plan, state the check you ran as a command that can be re-executed,
 not as a sentence claiming it passed.
 
+## A generated artifact nobody compared against its source
+
+- **A generated artifact's own `--check` existing is not the same as anyone
+  running it.** `artifacts/autogenesis/kernel-dependency-projection-v1.json`
+  is a sidecar over the constructed kernel with a real freshness check
+  (`gen-autogenesis-kernel-dependency-projection.py --check`), but that check
+  needs a debug kernel build costing tens of minutes, so it lived only in
+  `scripts/check.sh` / `just check` — the aggregate gate nobody runs per
+  merge — and in no pre-push hook. It drifted for **ten days** (2026-08-26 to
+  2026-09-05) while `scripts/check-merge-hygiene.sh` printed
+  `generated=current` on every merge in between, because that gate never
+  asked: the committed projection indexed **1,644** declarations against
+  **4,260** live on 2026-09-05, missing every `Nat.Finset.*`, `Nat.Hall.*`,
+  `Nat.Subsets.*`, `CatS.*`, and `IntSpace.*` declaration. The fix (lane
+  `kernel-projection-regen`) was not to run the expensive check more often —
+  it stayed exactly as expensive — but to compare two numbers the gate
+  already had on hand for free: the committed `census.declarations` against
+  the live `declarations=N` count `shape_search` already prints for the
+  duplicate-declaration guard, reused rather than re-measured. A cheap proxy
+  comparison is not the real check, but an artifact with NO comparison at all
+  is the failure mode this whole document is about, one arrow further
+  upstream.
+
 

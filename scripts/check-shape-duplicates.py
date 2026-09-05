@@ -148,6 +148,25 @@ def parse_verdict_count(text: str) -> int | None:
     return int(m.group(1)) if m else None
 
 
+COVERAGE_RE = re.compile(r"^coverage: .*$", re.MULTILINE)
+
+
+def parse_coverage_line(text: str) -> str | None:
+    """`shape_search`'s own `coverage: groups=[...] declarations=N ...` line.
+
+    Printed FIRST, before any verdict (see the module's own comment on this in
+    `examples/shape_search.rs`: coverage before verdict, so an empty answer is
+    distinguishable from a tool never pointed at its subject). Forwarded
+    verbatim through this script's stdout so `check-merge-hygiene.sh` can read
+    the live `declarations=N` count from the SAME already-paid-for invocation
+    (ADR-1511 amendment, guard 7) instead of running `shape_search` a second
+    time -- which would cost the whole index build again (~130s measured
+    2026-09-05) and blow the ~5s budget a merge-hygiene guard gets.
+    """
+    m = COVERAGE_RE.search(text)
+    return m.group(0) if m else None
+
+
 def load_allowlist(path: Path) -> dict[frozenset[str], dict]:
     """Load and validate the allowlist. Raises `AllowlistError` on any defect."""
     try:
@@ -386,6 +405,15 @@ def main(argv: list[str] | None = None) -> int:
         except RuntimeError as exc:
             print(f"FAIL: {exc}", file=sys.stderr)
             return 2
+
+    # Forward `shape_search`'s own coverage line verbatim -- see
+    # `parse_coverage_line`'s docstring. This is on stdout unconditionally
+    # (before any pass/fail verdict below) so a caller reading this script's
+    # output for the live declaration count gets it regardless of whether the
+    # duplicates check itself passes.
+    coverage_line = parse_coverage_line(text)
+    if coverage_line is not None:
+        print(coverage_line)
 
     try:
         reported = parse_duplicates(text)

@@ -153,7 +153,46 @@
 #      re-partition repairs them. Exit 2 is "cannot answer" and is reported,
 #      not failed.
 #
-# Exit 0 only when all ten enforced checks pass. Each failure names its own
+#  10. THE KERNEL DEPENDENCY PROJECTION DRIFTED FOR TEN DAYS AND NOTHING
+#      COMPARED IT AGAINST THE KERNEL IT DESCRIBES (lane
+#      `kernel-projection-regen`, 2026-09-05).
+#      `artifacts/autogenesis/kernel-dependency-projection-v1.json` is a
+#      sidecar over the constructed kernel, and its own real `--check`
+#      (`gen-autogenesis-kernel-dependency-projection.py --check`) needs a
+#      DEBUG kernel build that runs for tens of minutes, so it cannot live in
+#      a seconds-scale gate. It had been failing on `main` since 2026-08-26:
+#      the committed projection indexed 1,644 declarations against 4,260 live
+#      on 2026-09-05, missing every `Nat.Finset.*`, `Nat.Hall.*`,
+#      `Nat.Subsets.*`, `CatS.*`, `IntSpace.*` declaration -- and this gate
+#      answered `generated=current` throughout, because nothing here ever
+#      asked.
+#
+#      What CAN run for free is a comparison of two numbers already on hand:
+#      the committed projection's `census.declarations` against the live
+#      `declarations=N` count `shape_search` already printed for guard 7,
+#      forwarded through `check-shape-duplicates.py`'s own stdout rather than
+#      re-run -- a second `shape_search` invocation would pay the whole
+#      ~130 s index build again, which is the exact expense this guard exists
+#      to avoid. The two counts are NOT expected to match exactly even on a
+#      freshly regenerated projection: `shape_search.rs` never imports
+#      `build_list_nat_bridge`/`build_list_perm`, so it never builds the
+#      `list` prelude group at all, while this projection deliberately does
+#      (a lane note in `kernel_declaration_projection.rs` records that
+#      omission is why `List.count_toMultiset`/`List.Perm` were unfindable by
+#      shape-search lookups until 2026-09-03). That is a PERMANENT scope
+#      difference, measured at exactly 31 `list`-only declarations on
+#      2026-09-05 (4,291 committed vs 4,260 live, to the declaration), not
+#      drift -- the tolerance below absorbs that structural gap (which grows
+#      slowly as `list` gains declarations) plus slack for a projection
+#      regenerated a few commits before or after the `shape_search` binary was
+#      built; a gap past it is the real thing this guard exists to catch.
+#
+#      THREE outcomes, like guards 4, 8 and 9: no live count on hand -- guard 7
+#      skipped, unavailable, or its output carried no coverage line -- reports
+#      not-answerable, never a failure. A gate that reports "stale" when it
+#      could not measure is wrong about its own subject.
+#
+# Exit 0 only when all eleven enforced checks pass. Each failure names its own
 # remedy.
 set -u
 # `AXEYUM_MERGE_HYGIENE_ROOT` points the SHIPPED script at a throwaway tree, so
@@ -440,8 +479,58 @@ else
   note "a reason and a date. Enlarging a component exemption does nothing here."
 fi
 
+# --- 10. kernel dependency projection staleness (lane kernel-projection-regen,
+#         2026-09-05) -- see header point 10 for the incident this closes.
+#
+# Cheap by construction: no cargo, no binary invocation of our own. It reads
+# the committed JSON (pure Python, no build) and reuses the `declarations=N`
+# line `check-shape-duplicates.py` already forwarded from ITS `shape_search`
+# run above (guard 7) -- so this guard costs a `grep` and a `python3 -c`, not
+# a second ~130s index build.
+kernel_projection_json="artifacts/autogenesis/kernel-dependency-projection-v1.json"
+kernel_projection_tolerance=100  # absorbs the list-scope gap (31 measured
+                                  # 2026-09-05) -- see header point 10
+kernel_projection_live=$(printf '%s\n' "${shape_dupes_out:-}" \
+  | /usr/bin/grep -oE 'declarations=[0-9]+' | head -1 | /usr/bin/grep -oE '[0-9]+')
+if [ -z "$kernel_projection_live" ] || [ ! -f "$kernel_projection_json" ]; then
+  kernel_projection="not-answerable"
+  note "kernel-dependency-projection staleness: SKIPPED (no live declaration count on hand)"
+  note "Guard 7 was skipped, unavailable, or printed no coverage line this run --"
+  note "not a finding about the projection either way."
+else
+  kernel_projection_committed=$(python3 -c "
+import json, sys
+try:
+    data = json.load(open('$kernel_projection_json'))
+    print(int(data['census']['declarations']))
+except Exception:
+    sys.exit(1)
+" 2>/dev/null)
+  if [ -z "$kernel_projection_committed" ]; then
+    fail=1
+    kernel_projection="stale"
+    echo "FAIL: kernel-dependency-projection staleness (cannot read census.declarations)"
+    note "$kernel_projection_json is missing, unreadable, or malformed."
+  else
+    kernel_projection_diff=$((kernel_projection_committed - kernel_projection_live))
+    [ "$kernel_projection_diff" -lt 0 ] && kernel_projection_diff=$((-kernel_projection_diff))
+    if [ "$kernel_projection_diff" -gt "$kernel_projection_tolerance" ]; then
+      fail=1
+      kernel_projection="stale"
+      echo "FAIL: kernel-dependency-projection staleness"
+      note "committed declarations=$kernel_projection_committed; live shape_search"
+      note "declarations=$kernel_projection_live (diff=$kernel_projection_diff >"
+      note "tolerance=$kernel_projection_tolerance). Run:"
+      note "  python3 scripts/gen-autogenesis-kernel-dependency-projection.py"
+      note "and commit $kernel_projection_json."
+    else
+      kernel_projection="ok"
+    fi
+  fi
+fi
+
 if [ "$fail" -eq 0 ]; then
-  echo "MERGE_HYGIENE|markers=0|adr_index=ok|generated=current|creal_steps_table=current|py_prelude_fields=$py_fields_state|shape_census=$census|pinned_inventories=$pins|import_backlog=ok|production_provenance=ok|theorem_ledger_consistency=ok|shape_duplicates=$shape_dupes_state|partition_edges=$part_edges|PASS"
+  echo "MERGE_HYGIENE|markers=0|adr_index=ok|generated=current|creal_steps_table=current|py_prelude_fields=$py_fields_state|shape_census=$census|pinned_inventories=$pins|import_backlog=ok|production_provenance=ok|theorem_ledger_consistency=ok|shape_duplicates=$shape_dupes_state|partition_edges=$part_edges|kernel_projection=$kernel_projection|PASS"
   exit 0
 fi
 echo "MERGE_HYGIENE|FAILED"
