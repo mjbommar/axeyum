@@ -249,6 +249,7 @@ fn build_index(include_constructed: bool, index_values: bool) -> ShapeIndex {
             "metric".to_owned(),
             "intspace".to_owned(),
             "rn".to_owned(),
+            "geo".to_owned(),
         ]);
     }
     let mut index = ShapeIndex::new(groups, index_values);
