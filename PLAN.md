@@ -119,11 +119,11 @@ now. Nothing was deleted.
   K1 6/6 (an independent checker and a versioned import route), K2 through K6
   at 0 — no native source, tactics, workflow, runtime, or ecosystem yet. Two
   pins are distinct and every claim names which: `lean-toolchain`, the
-  cross-check pin (currently 4.34.0-rc1, ADR-1594/1660), and the Mathlib
-  corpus pin (Lean 4.30.0, mathlib4 `c5ea0035`, lean4export `a3e35a58`).
-  Independent checkability is measured by replay in pinned Lean: `creal`
-  only, 1,972 of 2,045 theorems, 48 `Type`-valued theorems Lean refuses, 25
-  blocked behind them (ADR-0760). Imports are a labeled tier, never the
+  cross-check pin (4.34.0-rc1, ADR-1594/1660), and the Mathlib corpus pin
+  (Lean 4.30.0, mathlib4 `c5ea0035`, lean4export `a3e35a58`). Independent
+  checkability is measured by replay in pinned Lean: 4,478 proved
+  declarations, 4,394 accepted, 50 `Type`-valued theorems Lean refuses, 34
+  blocked behind them (ADR-1661). Imports are a labeled tier, never the
   axiom-free headline (ADR-0601, ADR-1664). `by axeyum` lets Lean check
   axeyum-produced terms as a tactic (ADR-1666). Cross-library statement
   identity runs through the carrier correspondence ledger (ADR-1665). Full
@@ -166,6 +166,7 @@ now. Nothing was deleted.
 | 2026-09-05 | hall-singleton | ADR-1630 and two facts; Hall sufficiency re-sized at one missing lemma, `Nat.Finset.allBelow_congr` |
 | 2026-09-05 | lean-carrier-ledger | the carrier correspondence ledger: schema, 16-row ledger, gate + control suite + mutation coverage, generated markdown view, ADR-1665, and progress-log rows in `14-lean-lang.md`, `03-classical-analysis.md`, `07-combinatorics.md` |
 | 2026-09-05 | lean-claim-surface | One paragraph on what "Lean compatible" means, reused verbatim in `docs/plan/global/10-status.md`, `README.md`, `docs/PROJECT-STATE.md`; A9 rewritten off the false "neither lean nor elan" premise; K3 row residual sentence added with no assurance-field change; three July Lean docs marked historical (ADR-0717 C-series); `docs/math-department/14-lean-lang.md` items 1 and 10 ticked; ADR-1668 added and indexed. |
+| 2026-09-05 | lean-claim-surface | Follow-up after merging Next Ten item 2 (ADR-1661): the paragraph's replay sentence updated in all three claim surfaces to the `everything`-carrier headline (4,478 proved, 4,394 accepted, 50 `Type`-valued, 34 blocked, ADR-1661), still byte-identical across the three and within 120 words (118); ADR-1668's quoted copy updated to match with a dated `Update` block; one progress-log row appended to `14-lean-lang.md`. |
 | 2026-09-05 | Population builder and batch statement-import census example | `87a6b8609` |
 | 2026-09-05 | The four-phase census driver, piloted end to end on 8 rows | `68c235ed5` |
 | 2026-09-05 | `scripts/lean_surface_screen.py`, its 10-test control suite, mutation suite `lean-surface-screen`, and the `--screen-only` wiring in `attest-nursery-surface.py` | `d95a30125` |
@@ -52598,15 +52599,23 @@ reading of the K3 matrix row that did not distinguish "no Lean-goal credit"
 from "no native producers exist," and three July Lean documents still
 carrying an `active` status four weeks after their own tally stopped moving.
 
-1. **One paragraph, written once (120 words), reused verbatim** in
+1. **One paragraph, written once, reused verbatim** in
    `docs/plan/global/10-status.md` (replacing the stale Lean paragraph),
    `README.md` (§2, the Lean-checker section), and `docs/PROJECT-STATE.md`
    (replacing the stale close of "Evidence and Lean"). It states the K
    profile (K0 1/1, K1 6/6, K2-K6 0), the two pins (ADR-1594/1660), the
-   `creal` replay census as the independent-checkability measure (1,972 of
-   2,045, 48 `Type`-valued refusals, 25 blocked behind them, ADR-0760), the
-   import tier (never headline, ADR-0601/1664), `by axeyum` (ADR-1666), and
-   the carrier correspondence ledger (ADR-1665).
+   replay census as the independent-checkability measure, the import tier
+   (never headline, ADR-0601/1664), `by axeyum` (ADR-1666), and the carrier
+   correspondence ledger (ADR-1665). **Follow-up, same day:** once Next Ten
+   item 2 (ADR-1661) landed on `main` and extended the replay census from
+   `creal` alone to every carrier, the replay sentence was updated in all
+   three places (still byte-identical, still within the 120-word budget —
+   now 118) to the `everything`-carrier headline: of 4,478 proved
+   declarations pinned Lean's kernel accepts 4,394, 50 are `Type`-valued
+   theorems it refuses as theorems, and 34 are blocked behind one of those
+   (ADR-1661, superseding the ADR-0760-cited `creal`-only figure this
+   paragraph originally carried). ADR-1668's own quoted copy was updated to
+   match, with a dated `Update` block recording the change.
 2. **A9 in `docs/plan/global/20-next-actions.md` rewritten**, not patched:
    both Lean 4.30.0 and 4.34.0-rc1 are installed under `~/.elan/toolchains/`
    on the fleet (`command -v lean` is empty only because `elan` does not
