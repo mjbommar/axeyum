@@ -82,6 +82,31 @@ impl Fixture {
         let name = self.p.finset_all_below;
         self.const_app(name, &[f, lit])
     }
+
+    /// `Nat.Finset.union s t`.
+    fn union(&mut self, s: ExprId, t: ExprId) -> ExprId {
+        let name = self.p.finset_union;
+        self.const_app(name, &[s, t])
+    }
+
+    /// `Nat.Finset.card s`.
+    fn card(&mut self, s: ExprId) -> ExprId {
+        let name = self.p.finset_card;
+        self.const_app(name, &[s])
+    }
+
+    /// `Nat.Hall.unionOver nb t`.
+    fn union_over(&mut self, nb: ExprId, t: ExprId) -> ExprId {
+        let name = self.p.hall_union_over;
+        self.const_app(name, &[nb, t])
+    }
+
+    /// `Nat.Finset.memB s i` at a numeral index.
+    fn memb_of(&mut self, s: ExprId, i: u32) -> ExprId {
+        let lit = self.num(i);
+        let name = self.p.finset_mem_b;
+        self.const_app(name, &[s, lit])
+    }
 }
 
 /// `subsetFixed` computes the inclusion it claims to, at four hand-checked
@@ -438,5 +463,256 @@ fn subset_fixed_congr_fixes_the_first_argument() {
         search_shown.contains("Nat.Finset.memB"),
         "the search's congruence premise must be pointwise membership too; \
          got {search_shown}"
+    );
+}
+
+// ---------------------------------------------------------------------------
+// The critical-subset split (deliverable 2).
+// ---------------------------------------------------------------------------
+
+/// The five split declarations are present, are checked `Theorem`s, and rest on
+/// zero axioms.
+///
+/// `Environment::contains` comes FIRST on every name, because
+/// `Kernel::axiom_footprint` of a name that was never declared is also empty
+/// and the footprint assertion alone would pass for a typo.
+#[test]
+fn the_critical_split_is_admitted_and_axiom_free() {
+    let mut k = Kernel::new();
+    let p = build_nat_prelude(&mut k).expect("Nat prelude must build");
+
+    let theorems: [NameId; 5] = [
+        p.finset_card_union_of_disjoint,
+        p.hall_condition_subset,
+        p.hall_mem_union_over_union_of_vanishing,
+        p.hall_condition_sdiff_of_critical,
+        p.hall_condition_sdiff_singleton_of_strict,
+    ];
+    for name in theorems {
+        let shown = k.display_name(name).to_string();
+        assert!(
+            k.environment().contains(name),
+            "{shown} must be declared before its footprint means anything"
+        );
+        let decl = k.environment().get(name).expect("just checked");
+        assert!(
+            matches!(decl, Declaration::Theorem { .. }),
+            "{shown} must be a checked Theorem"
+        );
+        println!("theorem {shown} : {}", k.render_lean(decl.ty()));
+        assert!(
+            k.axiom_footprint(name).is_empty(),
+            "{shown} must rest on zero axioms"
+        );
+    }
+}
+
+/// The disjoint-union count is a real identity at concrete sets, and it FAILS
+/// when the two sets meet — so the hypothesis of
+/// `Nat.Finset.card_union_of_disjoint` is load-bearing rather than decoration.
+///
+/// A theorem's footprint says nothing about whether its hypothesis is needed.
+/// These are the two hand-computed instances that say so:
+///
+/// ```text
+/// card (union (singleton 0) (singleton 1)) = 2 = 1 + 1   disjoint: the identity
+/// card (union (singleton 0) (singleton 0)) = 1 ≠ 1 + 1   overlapping: it fails
+/// ```
+#[test]
+fn the_disjointness_hypothesis_is_load_bearing() {
+    let mut f = Fixture::new();
+
+    let s0 = f.singleton(0);
+    let s1 = f.singleton(1);
+
+    let disjoint = {
+        let u = f.union(s0, s1);
+        f.card(u)
+    };
+    let two = f.num(2);
+    assert!(
+        f.k.def_eq(disjoint, two),
+        "card (singleton 0 ∪ singleton 1) must be 2"
+    );
+
+    let overlapping = {
+        let u = f.union(s0, s0);
+        f.card(u)
+    };
+    let one = f.num(1);
+    assert!(
+        f.k.def_eq(overlapping, one),
+        "card (singleton 0 ∪ singleton 0) must be 1"
+    );
+    assert!(
+        !f.k.def_eq(overlapping, two),
+        "negative control: without disjointness the sum is WRONG, so \
+         `card_union_of_disjoint` cannot be stated without its hypothesis"
+    );
+}
+
+/// Dropping indices from a union is NOT free in general — the vanishing
+/// hypothesis of `Nat.Hall.memB_unionOver_union_of_vanishing` is what buys it.
+///
+/// At `mb := Nat.Finset.singleton` (so `mb i` is `{i}`), `w := {0}`,
+/// `t := {1}` and `v := 1`:
+///
+/// ```text
+/// memB (unionOver mb ({0} ∪ {1})) 1 = true    -- index 1 contributes 1
+/// memB (unionOver mb {0})         1 = false   -- index 0 contributes only 0
+/// ```
+///
+/// The two sides DISAGREE, and they must: this `mb` does not vanish on `t`
+/// (`memB (mb 1) 1` is `true`, not `false`), so the lemma does not apply here.
+/// Without this instance the lemma could have been the trivial one that holds
+/// for every family.
+#[test]
+fn dropping_indices_from_a_union_needs_the_vanishing_hypothesis() {
+    let mut f = Fixture::new();
+    let tr = f.bool_true();
+    let fa = f.bool_false();
+
+    // `mb := Nat.Finset.singleton`, as a bare function `Nat → Nat.Finset`.
+    let mb = {
+        let name = f.p.finset_singleton;
+        f.k.const_(name, vec![])
+    };
+    let w = f.singleton(0);
+    let t = f.singleton(1);
+    let big = f.union(w, t);
+
+    let cover_big = f.union_over(mb, big);
+    let cover_w = f.union_over(mb, w);
+
+    let at_big = f.memb_of(cover_big, 1);
+    let at_w = f.memb_of(cover_w, 1);
+
+    assert!(
+        f.k.def_eq(at_big, tr),
+        "1 is covered by the union over {{0}} ∪ {{1}}: index 1 contributes it"
+    );
+    assert!(
+        f.k.def_eq(at_w, fa),
+        "1 is NOT covered by the union over {{0}} alone"
+    );
+    assert!(
+        !f.k.def_eq(at_big, at_w),
+        "negative control: the two unions must DISAGREE here. This family does \
+         not vanish on `t`, so `memB_unionOver_union_of_vanishing` does not \
+         apply -- which is what makes its hypothesis content rather than \
+         decoration"
+    );
+
+    // ...and the hypothesis really is false for this family at this value.
+    let mb_at_one = f.singleton(1);
+    let inside = f.memb_of(mb_at_one, 1);
+    assert!(
+        f.k.def_eq(inside, tr),
+        "`memB (mb 1) 1` is true, so the vanishing hypothesis fails here"
+    );
+}
+
+/// The two split lemmas are stated over the vocabulary the induction will
+/// compose them in, and the deleted family is spelled the way
+/// `Nat.Hall.card_le_card_unionOver_sdiff_add` spells it.
+///
+/// This is a statement-shape check and it is the one the footprint test cannot
+/// do. A version of the critical branch that deleted the WRONG set — `t` itself
+/// rather than `unionOver nb t` — would be admitted just as happily and would
+/// be useless: the values a matching on `t` consumes live in the
+/// neighbourhood, not in the index set.
+#[test]
+fn the_split_lemmas_delete_the_neighbourhood_not_the_index_set() {
+    let mut k = Kernel::new();
+    let p = build_nat_prelude(&mut k).expect("Nat prelude must build");
+
+    let critical = k
+        .environment()
+        .get(p.hall_condition_sdiff_of_critical)
+        .expect("the critical branch must be admitted")
+        .ty();
+    let shown = k.render_lean(critical);
+
+    for needle in [
+        "Nat.Hall.HallCondition",
+        "Nat.Hall.unionOver",
+        "Nat.Finset.sdiff",
+        "Nat.Finset.card",
+    ] {
+        assert!(
+            shown.contains(needle),
+            "the critical branch must mention {needle}; got {shown}"
+        );
+    }
+    // The deleted set is `unionOver nb t`, so `sdiff` and `unionOver` must
+    // both appear -- and the conclusion's family must delete a `unionOver`,
+    // not a bare index set. `Nat.Finset.singleton` must NOT appear: that is
+    // the other branch's shape.
+    assert!(
+        !shown.contains("Nat.Finset.singleton"),
+        "the critical branch deletes a whole neighbourhood, never a singleton; \
+         got {shown}"
+    );
+
+    let strict = k
+        .environment()
+        .get(p.hall_condition_sdiff_singleton_of_strict)
+        .expect("the non-critical branch must be admitted")
+        .ty();
+    let strict_shown = k.render_lean(strict);
+    assert!(
+        strict_shown.contains("Nat.Finset.singleton"),
+        "the non-critical branch deletes ONE value; got {strict_shown}"
+    );
+    assert!(
+        strict_shown.contains("Nat.lt"),
+        "the non-critical branch's hypothesis must be STRICT; got {strict_shown}"
+    );
+    // The control: the critical branch's hypothesis is NOT strict -- it is a
+    // `Le` on the neighbourhood count, which is what lets the caller decide it
+    // with a `Le` test. If both were strict, one of the two branches would be
+    // unreachable.
+    assert!(
+        shown.contains("Nat.le"),
+        "the critical branch's criticality hypothesis must be a `Le`; got {shown}"
+    );
+}
+
+/// `Nat.Hall.hallCondition_subset` really restricts, and its direction is
+/// pinned: the hypothesis says the SECOND index set is inside the first.
+///
+/// Both `HallCondition s nb → … → HallCondition t nb` and its converse have
+/// the same constants in the same order, so a rendered-name check cannot tell
+/// them apart. What can is the ARITY at which each `HallCondition` sits, which
+/// the render shows as the argument order. This test reads the rendered type
+/// and asserts the two mentions are not identical strings — a lemma whose
+/// hypothesis and conclusion were the same instance would be a tautology.
+#[test]
+fn hall_condition_subset_is_not_a_tautology() {
+    let mut k = Kernel::new();
+    let p = build_nat_prelude(&mut k).expect("Nat prelude must build");
+
+    let decl = k
+        .environment()
+        .get(p.hall_condition_subset)
+        .expect("hallCondition_subset must be admitted")
+        .ty();
+    let shown = k.render_lean(decl);
+
+    let mentions = shown.matches("Nat.Hall.HallCondition").count();
+    assert!(
+        mentions == 2,
+        "the restriction lemma must mention `HallCondition` exactly twice \
+         (hypothesis and conclusion); got {mentions} in {shown}"
+    );
+    assert!(
+        shown.contains("Nat.Finset.memB"),
+        "the inclusion premise must be POINTWISE membership; got {shown}"
+    );
+    // The control: it must not be stated over `subsetB` or `subsetFixed`,
+    // neither of which carries the reflection this proof composes.
+    assert!(
+        !shown.contains("Nat.Finset.subsetB"),
+        "the inclusion premise must not be the bounded decision; got {shown}"
     );
 }

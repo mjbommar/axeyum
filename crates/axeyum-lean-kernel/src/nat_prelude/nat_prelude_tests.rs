@@ -832,6 +832,11 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.finset_subset_fixed_of_mem,
         p.finset_mem_of_subset_fixed,
         p.finset_subset_fixed_congr,
+        p.finset_card_union_of_disjoint,
+        p.hall_condition_subset,
+        p.hall_mem_union_over_union_of_vanishing,
+        p.hall_condition_sdiff_of_critical,
+        p.hall_condition_sdiff_singleton_of_strict,
         // `inclusion-exclusion-mobius` lane (roadmap W2-19): `subset_sums.rs`
         // (ADR-1624).
         p.subsets_sum_subsets_zero,
