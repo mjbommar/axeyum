@@ -246,22 +246,40 @@ search is not runnable there. A consumer that wants the search to actually
 
 ## Mutation table
 
-The general finding of ADR-1608 holds here and is worth restating, because it
-is what makes the evaluation tests necessary rather than decorative: **almost
-every mutation of a definition in this lane is caught by the kernel at
-prelude-build time, not by a test**, since each definition is named by a
-theorem whose proof term mentions its unfolding. The tests were written for the
-residue the kernel *cannot* see — the pure value choices no theorem constrains.
+**One mutation was RUN; the rest of this table is prediction and is labelled as
+such.** The distinction matters: a mutation whose outcome was reasoned about
+rather than measured supports no coverage claim, and this repository has been
+wrong about exactly that before.
 
-| mutant | what happens | signal |
+The one that was run is also the informative one, because it establishes the
+*shape* of every other row:
+
+| mutant | outcome | measured? |
 |---|---|---|
-| `bitB` compares `testBit k i` against `0` instead of `1` | `bitB_encodeFrom`'s bottom-bit leaf runs on `beq (bool_select_nat b 1 0) 1 = b`, whose two literal branches become `beq 1 0 = true` and `beq 0 0 = false`. Neither is `refl`, so the theorem fails to type-check and the whole `Nat` prelude fails to build | caught by the KERNEL. `subset_search_tests::bit_b_reads_the_binary_digit` is the *readable* pin, not the only one — and it is the one that names the wrong answer (all four indices inverted) |
-| `encodeFrom` recurses with `ih j` instead of `ih (succ j)` | `bitB_encodeFrom`'s step needs `succ_add j i`; with the start index frozen it would need `add j i = add j i` at the wrong offset and the `Nat` prelude fails to build | caught by the kernel |
-| `decode n k` swaps its two arguments | `memB_decode_encode`'s `small` branch applies `memB_of_lt` at `bound (decode k n)`, which is `k`, not the `n` the hypothesis bounds; prelude fails to build | caught by the kernel |
-| `anySubset` drops the OUTER `notB` (so it is the universal, not the existential) | both reflection lemmas invert: `existsSubset_of_search`'s `not_b_true_elim` no longer applies. Prelude fails to build | caught by the kernel; `any_subset_is_the_existential_over_subsets` is the readable pin and fails in BOTH directions (`true` becomes `false` at card 2, `false` becomes `true` at card 3) |
-| `encode t n` uses start index `1` instead of `0` | nothing in the *statements* pins the start index: `memB_decode_encode` would then need `memB t (1 + i)`, so the kernel catches this one too — but the discriminating READABLE evidence is `encode_from_starts_at_its_index_and_walks_upward`, which pins `encodeFrom (hits 1) 2 0 = 2` against `encodeFrom (hits 1) 2 1 = 1` and names each as the other's wrong answer | caught by the kernel AND by a test that distinguishes the two codes |
-| a theorem's STATEMENT slid by one small term | not visible to the kernel at all | caught by five accept/reject pairs, each offering the SAME proof term at the slid statement and requiring REJECTION: `bitB_encodeFrom` at `f (i + j)`; `encodeFrom_lt_pow` with the width and start index exchanged; `memB_decode_encode` with `Le n (bound t)` reversed; `existsSubset_of_search` at a `false` verdict and `forallSubset_of_search` at a `true` one (each is the other's control); `strongInduction_eq` unfolding at `succ n` while recursing below `n` |
-| a new declaration added and left unwatched | not visible to any test that lists its own subject | caught by `nat_prelude_tests::every_nat_declaration_is_checked_and_axiom_free`, which derives its subject from the live environment. It **failed on its first honest run against this diff**, naming all twelve new declarations by name — a real observed failure, and the way the registration list was built |
+| `bitB` compares `testBit k i` against `0` instead of `1` | **killed 12 of 12.** Not one test at a time: the whole `Nat` prelude fails to build, `Kernel::add_declaration` returning `TypeMismatch`, and every test in the module dies at `build_nat_prelude(…).expect(…)`. `bitB_encodeFrom`'s bottom-bit leaf runs on `beq (bool_select_nat b 1 0) 1 = b`, whose two literal branches become `beq 1 0 = true` and `beq 0 0 = false`; neither is `refl` | **RUN**, `--release --test-threads=4`, restored byte-for-byte afterwards and verified |
+| `encodeFrom` recurses with `ih j` instead of `ih (succ j)` | predicted to fail the prelude build: `bitB_encodeFrom`'s step consumes `succ_add j i`, which no longer bridges | predicted, NOT RUN |
+| `decode n k` swaps its two arguments | predicted to fail the prelude build: `memB_decode_encode`'s `small` branch applies `memB_of_lt` at `bound (decode k n)`, which is `k`, not the `n` the hypothesis bounds | predicted, NOT RUN |
+| `anySubset` drops the OUTER `notB` | predicted to fail the prelude build: `existsSubset_of_search`'s `not_b_true_elim` no longer applies to the loop's own polarity | predicted, NOT RUN |
+| `encode t n` starts at index `1` instead of `0` | predicted to fail the prelude build: `memB_decode_encode` would need `memB t (1 + i)` | predicted, NOT RUN |
+| a theorem's STATEMENT slid by one small term | **caught by six accept/reject pairs that run on every green build**, not by a mutation: each offers the SAME proof term at the slid statement and requires the trusted gate to REJECT it — `bitB_encodeFrom` at `f (i + j)`; `encodeFrom_lt_pow` with the width and start index exchanged; `memB_decode_encode` with `Le n (bound t)` reversed; `existsSubset_of_search` at a `false` verdict and `forallSubset_of_search` at a `true` one (each is the other's control); `card_congr_of_memB` with agreement only below `bound u`; `strongInduction_eq` unfolding at `succ n` while recursing below `n` | RUN on every build (12 passing tests) |
+| a new declaration added and left unwatched | **caught, observed:** `nat_prelude_tests::every_nat_declaration_is_checked_and_axiom_free` derives its subject from the live environment and FAILED on its first honest run against this diff, naming all twelve new declarations. That is a real observed failure, and the way the registration list was built | RUN |
+
+**The finding the measured row supports, and the honest limit of it.** In this
+module the kernel *is* the mutation detector for every definition: each of the
+five definitions is named by at least one theorem whose proof term mentions its
+unfolding, so a wrong definition does not make one test red — it makes the
+shared prelude unbuildable and every test red at once. That is the same finding
+ADR-1608 recorded, now measured here rather than inherited.
+
+The limit is that this makes definition-mutation *undiscriminating*: killed 12
+tells you the definition is pinned but not which test pins it. The evaluation
+tests are therefore not redundant with the kernel — they are the readable pin
+and the only artefact that names the wrong answer (`decode 2 k` in binary
+order; `card (decode 2 7)` = 2 and NOT 3; `encode {0}` = 1 with 2 named as the
+reversed-bit-order answer) — but they are not *load-bearing* against these
+mutants, and this ADR does not claim they are. A mutation that the kernel does
+not catch would be the interesting one to construct; none was found, and that
+absence is stated rather than glossed.
 
 ## Verification
 
