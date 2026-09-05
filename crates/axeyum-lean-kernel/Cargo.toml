@@ -12,7 +12,7 @@ categories.workspace = true
 publish = false
 
 [dependencies]
-num-bigint = "0.4"
+num-bigint = "0.5"
 
 [dev-dependencies]
 # CAS -> kernel polynomial-identity bridge tests only (`complex/cas_bridge_tests.rs`,
