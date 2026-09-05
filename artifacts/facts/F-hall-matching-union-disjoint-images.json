@@ -1,0 +1,89 @@
+{
+  "schema_version": 1,
+  "id": "F:hall-matching-union-disjoint-images",
+  "title": "Two systems of distinct representatives whose images are disjoint glue into one on the union of their index sets, with no disjointness required of the index sets themselves",
+  "statement": "Let nb be a family of finite sets of naturals, and let f be a system of distinct representatives for nb on the index set s1 and g one on s2 -- each picks a member of nb i for every index i in its own set, injectively. If the two images never meet (f a is never equal to g b for a in s1 and b in s2), then the function that takes f's value on s1 and g's value elsewhere is a system of distinct representatives for nb on the union of s1 and s2. The index sets need NOT be disjoint: the glued function reads s1 first, so a shared index takes f's value and the definition is unambiguous with no side condition. This is a kernel term with an empty axiom footprint.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Nat.Hall.isMatching_union : ((x0 : AxNat.Finset) -> ((x1 : AxNat.Finset) -> ((x2 : ((x2 : AxNat) -> AxNat.Finset)) -> ((x3 : ((x3 : AxNat) -> AxNat)) -> ((x4 : ((x4 : AxNat) -> AxNat)) -> ((x5 : AxNat.Hall.IsMatching x0 x2 x3) -> ((x6 : AxNat.Hall.IsMatching x1 x2 x4) -> ((x7 : ((x7 : AxNat) -> ((x8 : AxNat) -> ((x9 : Eq.{1} Bool (AxNat.Finset.memB x0 x7) Bool.true) -> ((x10 : Eq.{1} Bool (AxNat.Finset.memB x1 x8) Bool.true) -> ((x11 : Eq.{1} AxNat (x3 x7) (x4 x8)) -> False)))))) -> AxNat.Hall.IsMatching (AxNat.Finset.union x0 x1) x2 (AxNat.Hall.glue x3 x4 x0)))))))))",
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.Hall.isMatching_union",
+    "kernel_statement": "Nat.Hall.glue f g s := fun i => Bool.rec (motive := fun _ => Nat) (g i) (f i) (Nat.Finset.memB s i); Nat.Hall.IsMatching s nb f := And (forall i, memB s i = true -> memB (nb i) (f i) = true) (forall i j, memB s i = true -> memB s j = true -> Eq Nat (f i) (f j) -> Eq Nat i j). The union membership law the mixed branches consume is Nat.Finset.memB_union_elim : forall s t i, Eq Bool (memB (union s t) i) true -> Or (Eq Bool (memB s i) true) (Eq Bool (memB t i) true)."
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "proof_route": "kernel-lean",
+  "axiom_footprint": [],
+  "depends_on": [
+    "F:nat-finset-card-le-of-injon",
+    "F:nat-finset-lt-bound-of-memb"
+  ],
+  "provenance": {
+    "date": "2026-09-05",
+    "established_by": "axeyum lane `hall-counting`, roadmap item W2-12 residue: `nat_prelude/hall.rs` gains `glue` and `isMatching_union`; `nat_prelude/finset.rs` gains the union's membership calculus (`memB_union`, `memB_union_left`, `memB_union_right`, `memB_union_elim`). ADR-1623.",
+    "source": "The combining step of the standard inductive proof of Hall's marriage theorem, where two matchings produced by the inductive hypothesis on two smaller families are assembled into one.",
+    "prior_art": [
+      {
+        "citation": "Mathlib, `Finset.piecewise` and the `Set.InjOn.union` family",
+        "establishes": "the same gluing of two injective partial functions, stated over `Set`/`Finset` with decidable membership from a typeclass; that route requires the domains to be disjoint (or supplies an agreement hypothesis on the overlap), where this one reads the left set first and needs neither"
+      }
+    ]
+  },
+  "evidence": [
+    {
+      "id": "kernel-Nat.Hall.isMatching_union",
+      "kind": "kernel-term",
+      "supports": "two matchings with disjoint images glue into a matching on the union of their index sets",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::add_declaration (re-derives the type from the proof term)",
+        "nat_prelude::hall_tests::is_matching_union_is_admitted_and_dropping_disjoint_images_is_not",
+        "nat_prelude::hall_tests::every_matching_union_declaration_is_present_and_axiom_free",
+        "nat_prelude_tests::every_nat_declaration_is_checked_and_axiom_free"
+      ],
+      "checker_command": "cargo test --release -p axeyum-lean-kernel --lib nat_prelude::hall_tests -- --test-threads=4",
+      "notes": "ADR-1614 expected Nat.Finset.card_le_of_injOn to be the tool. It is not: that lemma COUNTS an injection, and what is needed here is that the glued function IS one. The content is four branches, one per pair of decisions on `memB s1 i` and `memB s1 j`; the two diagonal ones are each matching's own injectivity and the two mixed ones are refuted by the disjointness hypothesis at exactly that pair, reached through memB_union_elim ('in the union but not in s1' gives 'in s2'). Requiring disjoint INDEX sets would have cost every consumer an obligation the argument never uses.",
+      "checker_paired_negative": "The same proof term offered with the disjoint-images hypothesis DROPPED must be REJECTED by the trusted gate. That statement is false -- two matchings whose images collide do not glue into an injective function -- and the control differs from the theorem by exactly one binder."
+    },
+    {
+      "id": "kernel-Nat.Finset.memB_union_elim",
+      "kind": "kernel-term",
+      "supports": "a member of a union of finite sets is a member of one of them",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::add_declaration (re-derives the type from the proof term)",
+        "nat_prelude::hall_tests::the_union_membership_laws_are_admitted_and_the_slid_statements_are_not",
+        "nat_prelude::hall_tests::every_matching_union_declaration_is_present_and_axiom_free",
+        "nat_prelude_tests::every_nat_declaration_is_checked_and_axiom_free"
+      ],
+      "checker_command": "cargo test --release -p axeyum-lean-kernel --lib nat_prelude::hall_tests -- --test-threads=4",
+      "notes": "Produces an `Or` rather than a computed index deliberately: the two sides may overlap, and `setUnion` reads the left one first, so the decision on `memB s i` IS the disjunction. Its pointwise base `memB_union` costs one step more than the difference's, because `union` stores `bound s + bound t` and putting an index above it means putting it above EACH -- le_add_right on the left, the same lemma plus one add_comm on the right. `memB_union_right` needs a decision on `memB s i` where its `_left` twin needs none, for the same left-first reason.",
+      "checker_paired_negative": "The same proof term offered with `And` in place of `Or` must be REJECTED: a member of the union need not be in both sides, so that statement is FALSE rather than merely unprovable here."
+    },
+    {
+      "id": "eval-glue-convention",
+      "kind": "instance-pin",
+      "supports": "the glue takes f on the set and g off it, and not the other way round",
+      "check_status": "checked",
+      "checkers": [
+        "nat_prelude::hall_tests::glue_takes_f_on_the_set_and_g_off_it"
+      ],
+      "checker_command": "cargo test --release -p axeyum-lean-kernel --lib nat_prelude::hall_tests -- --test-threads=4",
+      "notes": "Nat.Hall.glue is a Definition, so the trusted gate cannot tell you it is wrong -- a glue reading the selector the other way round has exactly the same type. It is reduced at concrete arguments with the wrong formula named: with f i = i + 10, g i = i + 20 and s = {1}, the glue is 11 at 1 and 22 at 2, and the swapped convention's answers 21 and 12 are named as the values it must NOT produce. A mutation exchanging the two branches WAS run: it killed all 18 tests in the module by making the shared prelude unbuildable, because the proof terms name the selector's branches positionally through select_nat_true/select_nat_false. So this test is the readable pin on the convention, not a load-bearing guard -- ADR-1623's mutation table records that this lane predicted otherwise and the measurement refuted it.",
+      "checker_paired_negative": "Every Nat assertion names the value the swapped convention would produce, and the test additionally requires the two glued values to be distinct -- the property the injectivity branch of isMatching_union needs the disjoint-images hypothesis for."
+    },
+    {
+      "id": "shape-Nat.Hall.isMatching_union",
+      "kind": "exhaustive-enumeration",
+      "supports": "the declarations exist under these exact names and are theorems",
+      "check_status": "checked",
+      "checkers": [
+        "shape_search --name Nat.Hall.card_le_card_unionOver_sdiff_add --expect 1 (freshness control postdating this lane)",
+        "nat_prelude::hall_tests::every_matching_union_declaration_is_present_and_axiom_free (Environment::contains before axiom_footprint)"
+      ],
+      "checker_command": "cargo run --release -q -p axeyum-lean-kernel --example shape_search -- --name Nat.Hall.card_le_card_unionOver_sdiff_add --expect 1",
+      "notes": "The presence check is not decoration: Kernel::axiom_footprint returns an EMPTY vector for a name that was never declared, so a footprint assertion alone passes vacuously on a typo'd or missing declaration. Environment::contains is what makes the exit status depend on the finding. The shape_search binary was rebuilt at this lane's HEAD (declarations=3017, up from 3000 at the base commit, the increment being exactly the seventeen new declarations), and the freshness control postdates every commit in the lane, so a stale index cannot pass."
+    }
+  ],
+  "notes": "epistemic_status and external_status agree on purpose: gluing two injective partial functions with disjoint images is not a new mathematical result. Two things here are worth the ledger entry. First, the statement is STRONGER than the textbook's in one place -- no disjointness of index sets -- and that strength is a consequence of computing the carrier rather than extracting it, since the glue can read a decidable membership instead of needing an agreement hypothesis on the overlap. Second, it closes the last of ADR-1614's three named obstructions on Hall's sufficiency.\n\nHall's marriage theorem in the SUFFICIENCY direction is still NOT proved, and nat_prelude::hall_tests::hall_necessity_is_admitted_and_sufficiency_is_not pins that in both directions with the same proof term. Nothing in this fact is a matching-EXISTENCE result: both matchings are given."
+}

@@ -714,15 +714,6 @@ fn declare_necessity(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelErr
 }
 
 // ---------------------------------------------------------------------------
-// Entry point.
-// ---------------------------------------------------------------------------
-
-/// Declare `Nat.Hall` and the necessity direction of the marriage theorem.
-///
-/// # Errors
-///
-/// Returns the kernel's rejection if any declaration fails to type-check.
-// ---------------------------------------------------------------------------
 // Logical plumbing (this prelude's per-file convention is a private copy).
 // ---------------------------------------------------------------------------
 
@@ -1982,6 +1973,15 @@ fn declare_is_matching_union(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), K
     d.declare_theorem(p.hall_is_matching_union, ty, value)
 }
 
+// ---------------------------------------------------------------------------
+// Entry point.
+// ---------------------------------------------------------------------------
+
+/// Declare `Nat.Hall` and the necessity direction of the marriage theorem.
+///
+/// # Errors
+///
+/// Returns the kernel's rejection if any declaration fails to type-check.
 pub(super) fn declare_hall_all(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
     declare_definitions(d, p)?;
     declare_any_below_intro(d, p)?;
