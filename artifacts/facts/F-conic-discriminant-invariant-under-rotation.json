@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "id": "F:conic-discriminant-invariant-under-rotation",
+  "title": "The conic discriminant is invariant under a rotation of the plane",
+  "statement": "A conic on the real plane is the six-coefficient datum (A,B,C,D,E,F) whose zero set is the points where A x^2 + B x y + C y^2 + D x + E y + F ~ 0. A rotation by the pair (c,s) with c^2 + s^2 ~ 1 acts on that datum by CPoint.Conic.rotate, and the discriminant B^2 - 4AC of the rotated conic is CReal.Equiv to the discriminant of the original. The unconditional form, proved first and stated separately as CPoint.Conic.discriminant_rotate, carries no hypothesis at all: the discriminant picks up exactly the factor (c^2 + s^2)^2 for EVERY (c,s), because the linear map behind the action has determinant c^2 + s^2 and the discriminant is -4 det Q for the quadratic-part matrix Q, which transforms as M^T Q M. The reflection CPoint.Conic.reflect gets the SAME factor -- its determinant is -(c^2 + s^2) and the discriminant sees only the square -- so orientation reversal is invisible to the classification, which is the correct answer since a reflection does not turn an ellipse into a hyperbola. A translation needs no hypothesis at all and its discriminant law is proved by CReal.Equiv.refl, because a translation copies A, B and C unchanged.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem CPoint.Conic.discriminant_rotate_unit : ((x0 : CReal) -> ((x1 : CReal) -> ((x2 : CReal.Equiv (CReal.add (CReal.mul x0 x0) (CReal.mul x1 x1)) CReal.one) -> ((x3 : CPoint.Conic) -> CReal.Equiv (CPoint.Conic.discriminant (CPoint.Conic.rotate x0 x1 x3)) (CPoint.Conic.discriminant x3)))))",
+    "fragment": "CPoint",
+    "free_symbols": [],
+    "kernel_theorem": "CPoint.Conic.discriminant_rotate_unit"
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": ["F:creal-equiv-refl", "F:creal-equiv-symm", "F:creal-equiv-trans", "F:creal-mul-comm", "F:creal-mul-congr", "F:creal-mul-one"],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-CPoint.Conic.discriminant_rotate_unit",
+      "kind": "kernel-term",
+      "supports": "CPoint.Conic.discriminant_rotate_unit is admitted by the trusted kernel gate with the type recorded in formal.statement, and Kernel::axiom_footprint reports 0 assumed names.",
+      "check_status": "checked",
+      "checkers": [
+        "producing-build (Kernel::add_declaration, which re-derives the type from the proof term)",
+        "cpoint_theorem_inventory (this lane's own inventory example: nat_theorem_inventory builds only Nat, prelude_theorem_inventory prints footprints rather than types, and kernel_declaration_projection's --require-declaration is a presence check, so no in-tree tool rendered a CPoint type before it)"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example cpoint_theorem_inventory -- discriminant_rotate_unit",
+      "checker_seconds": 300,
+      "kernel_declaration": "CPoint.Conic.discriminant_rotate_unit",
+      "notes": "--release is mandatory: the CReal/CPoint preludes underneath recurse deep enough that the debug kernel is measured up to 32x slower on proof terms of this size. A filter matching zero declarations exits non-zero (an absent declaration is a failure, not an empty report), the same discipline nat_theorem_inventory and metric_prod_theorem_inventory use."
+    },
+    {
+      "id": "suite-every_theorem_here_is_axiom_free",
+      "kind": "exhaustive-enumeration",
+      "supports": "Every CPoint declaration live in the prelude -- all 56 this lane adds included -- has an empty Kernel::axiom_footprint. The test's coverage half enumerates the ENVIRONMENT and fails on any CPoint-prefixed name absent from its list, so a new declaration cannot escape it by being forgotten.",
+      "check_status": "checked",
+      "checkers": [
+        "creal_point::creal_point_tests::every_theorem_here_is_axiom_free, run against a freshly built kernel environment"
+      ],
+      "checker_command": "cargo test --release -p axeyum-lean-kernel --lib -- creal_point::creal_point_tests::every_theorem_here_is_axiom_free --test-threads=1 2>&1 | grep -cE '^test result: ok\\. 1 passed'",
+      "checker_seconds": 200,
+      "notes": "`cargo test -- <filter>` runs ZERO tests and exits 0 when the filter matches nothing, so the exact `1 passed` count is load-bearing, not the exit status alone. --release avoids the debug-build stack overflow the CReal/CPoint preludes are already documented as needing."
+    }
+  ],
+  "provenance": {
+    "date": "2026-09-05",
+    "curation": "curated",
+    "established_by": "axeyum-lean-kernel build_cpoint_prelude, creal_point/conic.rs (declare_discriminant_action_units)",
+    "source": "Lane `conics`, roadmap W3-9. ADR-1641. formal.statement is Kernel::render_lean of the declaration's type, taken verbatim from this lane's cpoint_theorem_inventory example."
+  },
+  "notes": "WHAT THIS DOES NOT SAY. It does not say the three classifying predicates are EXHAUSTIVE: there is no trichotomy theorem here and there cannot be one, because deciding the sign of a general constructive real is not constructive and CReal.lt carries a rational gap as data. What is proved instead is that the three are pairwise exclusive (CPoint.Conic.not_ellipse_and_parabola and its two siblings) and that each is inhabited by a named instance. It also does not say every isometry of the plane preserves the classification -- only the three GENERATORS translate/rotate/reflect are covered, one theorem each per predicate (nine in all); the classification theorem that every isometry is a rotation-or-reflection after a translation is not in tree, and creal_point/isometry.rs sizes it at four sub-shelves."
+}
