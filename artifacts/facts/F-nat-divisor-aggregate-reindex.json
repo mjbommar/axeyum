@@ -1,0 +1,93 @@
+{
+  "schema_version": 1,
+  "id": "F:nat-divisor-aggregate-reindex",
+  "title": "A sum over the divisors of a positive n is unchanged by the substitution d -> n/d, because the map that fixes the non-divisors is a genuine involution",
+  "statement": "For every f : Nat -> Nat and every n > 0, the sum of f over the divisors of n equals the sum of d -> f (n/d) over the same divisors. The reindexing is NOT carried by the map d -> n/d itself, which is not injective on the range [0, n] that the sum walks -- at n = 6 it sends 4, 5 and 6 all to 1 -- but by the map that sends a divisor to its cofactor and FIXES every non-divisor. That map is an involution on all of Nat (a divisor's cofactor is again a divisor and returns; a non-divisor returns immediately), hence injective with no range bound at all, and it lands inside [0, n], which is exactly the pair of hypotheses the permutation law for sums consumes. Positivity is load-bearing in both halves: at n = 0 every d divides and the map collapses onto 0.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Nat.sumDivisorsBy_reindex : ((x0 : ((x0 : AxNat) -> AxNat)) -> ((x1 : AxNat) -> ((x2 : AxNat.lt AxNat.zero x1) -> Eq.{1} AxNat (AxNat.sumDivisorsBy x0 x1) (AxNat.sumDivisorsBy (fun (x3 : AxNat) => x0 (AxNat.div x1 x3)) x1))))",
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.sumDivisorsBy_reindex",
+    "kernel_statement": "Nat.sumDivisorsBy f n := Nat.sumRangeIf (fun k => Nat.dvdB k n) f (Nat.succ n); Nat.dvdB d n := Nat.beq (Nat.mod n d) 0; Nat.divisorFlip n d := bool_select_nat (Nat.dvdB d n) (Nat.div n d) d. The three supporting laws are Nat.divisorFlip_involutive : forall n, Lt 0 n -> forall k, Eq (divisorFlip n (divisorFlip n k)) k; Nat.divisorFlip_injectiveOn : forall n m, Lt 0 n -> injectiveOn (fun k => divisorFlip n k) m (an ARBITRARY range m, because an involution is injective everywhere); and Nat.divisorFlip_mapsInto : forall n, Lt 0 n -> mapsInto (fun k => divisorFlip n k) (succ n). The cofactor law underneath the involution is Nat.div_div_self_of_dvd : forall n k, Lt 0 n -> dvd k n -> Eq (div n (div n k)) k."
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "proof_route": "kernel-lean",
+  "axiom_footprint": [],
+  "depends_on": [
+    "F:nat-sumrange-permute",
+    "F:nat-div-mul-cancel-of-dvd",
+    "F:nat-sumrange-congr"
+  ],
+  "provenance": {
+    "date": "2026-09-04",
+    "established_by": "axeyum lane `arithmetic-functions`, roadmap item W2-18: `nat_prelude/arith_functions.rs` declares the polymorphic divisor aggregate `Nat.sumDivisorsBy`, the involution `Nat.divisorFlip`, and this reindexing. ADR-1619.",
+    "source": "The classical d <-> n/d pairing of divisors. Standard, and in a classical development invisible, because there the divisor set is a Finset and the pairing is a bijection between finite sets rather than a self-map of an interval.",
+    "prior_art": [
+      {
+        "citation": "Mathlib, `Nat.sum_div_divisors`",
+        "establishes": "the same reindexing over `Nat.divisors`, a Finset built by filtering `Finset.range`; that route needs the Finset quotient, while this one permutes an interval and has an empty axiom footprint"
+      }
+    ]
+  },
+  "evidence": [
+    {
+      "id": "kernel-Nat.sumDivisorsBy_reindex",
+      "kind": "kernel-term",
+      "supports": "the reindexed sum equals the original for every summand and every positive n",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::add_declaration (re-derives the type from the proof term)",
+        "nat_prelude::arith_functions_tests::the_reindexing_holds_at_a_discharged_instance",
+        "nat_prelude::arith_functions_tests::the_arith_function_declarations_state_the_intended_types",
+        "nat_prelude_tests::every_nat_declaration_is_checked_and_axiom_free"
+      ],
+      "checker_command": "cargo test --release -p axeyum-lean-kernel --lib nat_prelude::arith_functions -- --test-threads=4",
+      "notes": "The instance test discharges the hypothesis at a literal -- positivity from `Nat.zero_lt_succ`, so no local context and no assumed premise -- and then reduces each side to 12. The equation is between two computed numbers, not between two stuck terms. A second instance at the summand `fun k => k+1` reduces to 16 on the left.",
+      "checker_paired_negative": "The summand is NOT pointwise invariant: at n = 6, k = 2 the identity gives 2 where `fun k => 6/k` gives 3, and the test pins that 6/2 reduces to 3 and not to 2. So the theorem is a statement about the whole sum and cannot be confirmed by the two summands accidentally agreeing."
+    },
+    {
+      "id": "kernel-Nat.divisorFlip_involutive",
+      "kind": "kernel-term",
+      "supports": "the map that fixes the non-divisors is an involution, which is what makes it injective with no range bound",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::add_declaration (re-derives the type from the proof term)",
+        "nat_prelude::arith_functions_tests::divisor_flip_is_an_involution_at_a_discharged_instance",
+        "nat_prelude_tests::every_nat_declaration_is_checked_and_axiom_free"
+      ],
+      "checker_command": "cargo test --release -p axeyum-lean-kernel --lib nat_prelude::arith_functions -- --test-threads=4",
+      "notes": "Instantiated at EVERY point of [0,6] -- the four divisors 1, 2, 3, 6 and the three non-divisors 0, 4, 5 -- with the positivity discharged and both sides reduced. The non-divisors are the half the naive `fun n k => n / k` gets wrong, and they are the reason `divisorFlip_injectiveOn` needs no bound.",
+      "checker_paired_negative": "`divisorFlip 6 4` and `divisorFlip 6 5` are asserted NOT to reduce to 1, which is what the naive quotient would give and what would make the map non-injective."
+    },
+    {
+      "id": "eval-divisor-aggregate-small",
+      "kind": "instance-pin",
+      "supports": "the aggregate runs over ALL divisors including n itself and excluding 0, and it really applies its summand",
+      "check_status": "checked",
+      "checkers": [
+        "nat_prelude::arith_functions_tests::num_divisors_computes_on_small_numerals",
+        "nat_prelude::arith_functions_tests::sum_divisors_by_applies_its_summand",
+        "nat_prelude::arith_functions_tests::the_new_aggregate_agrees_with_the_existing_sigma",
+        "nat_prelude::arith_functions_tests::dvd_b_decides_divisibility_including_the_zero_divisor",
+        "nat_prelude::arith_functions_tests::divisor_flip_moves_divisors_and_fixes_everything_else"
+      ],
+      "checker_command": "cargo test --release -p axeyum-lean-kernel --lib nat_prelude::arith_functions -- --test-threads=4",
+      "notes": "The trusted gate cannot tell you a Definition is wrong: `Nat.sumDivisorsBy` has exactly the same type with the bound `n` in place of `succ n` (the proper-divisor reading) or with `0` counted as a divisor. Each wrong reading is named with the number it would produce -- numDivisors 6 is 4, and NOT the proper-divisor 3, and NOT the zero-counting 5. `dvdB` is exercised at both degenerate arguments: `dvdB 0 0` is true and `dvdB 0 6` is false, matching `Nat.dvd`'s own convention that 0 divides 0 alone.",
+      "checker_paired_negative": "Every numeric assertion is paired with the value a specific wrong formula would produce, and the Rust reference computing those wrong values is itself asserted first, so the def_eq controls cannot be vacuous."
+    },
+    {
+      "id": "shape-Nat.sumDivisorsBy",
+      "kind": "exhaustive-enumeration",
+      "supports": "nothing of this shape existed before, and the monomorphic Nat.sumDivisors that did exist is now provably an instance",
+      "check_status": "checked",
+      "checkers": [
+        "shape_search --name Nat.sumDivisorsBy_reindex --kind theorem --expect 1",
+        "shape_search --name Nat.divisorFlip --kind definition --expect 1"
+      ],
+      "checker_command": "cargo run --release -q -p axeyum-lean-kernel --example shape_search -- --name Nat.sumDivisorsBy_reindex --kind theorem --expect 1",
+      "notes": "Pre-state, measured at declarations=2857 with the positive control Nat.Finset.forallSubset_of_search FOUND 1 -- a declaration that landed the same day, so the index is not merely non-empty but current: --name-like returned ABSENT for dvdB, sumDivisorsBy, numDivisors, divisorFlip, moebius, mobius, dirichlet, IsMultiplicative and inclusionExclusion. Nat.sumDivisors was FOUND 1 as a definition of arity 1 -- present but monomorphic, which is the gap this closes."
+    }
+  ],
+  "notes": "epistemic_status and external_status agree on purpose: the d <-> n/d pairing is not a new result. Its value here is that it removes ONE of the two prerequisites ADR-1598 named when primitive-root existence stalled. That handoff read: 'the counting route needs the sum of phi(d) over d | n = n, hence a divisor-set aggregate and the d -> n/d reindexing of a predicate-restricted sum, neither of which exists.' The aggregate half of that claim was already half-wrong -- Nat.sumDivisors existed but only at the identity summand -- and both pieces now exist in general form. The OTHER half of that counting route, the classification of [0,n) by gcd k n, was NOT attempted here, so this fact must not be read as unblocking primitive-root existence outright."
+}

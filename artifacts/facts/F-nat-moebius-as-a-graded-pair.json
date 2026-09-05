@@ -1,0 +1,61 @@
+{
+  "schema_version": 1,
+  "id": "F:nat-moebius-as-a-graded-pair",
+  "title": "The Moebius function lands on a carrier without negatives as a pair of Nat-valued halves whose sum is its absolute value and whose product is zero",
+  "statement": "The Moebius function takes values in {-1, 0, 1} and the natural numbers have no negatives, so mu is declared as two Nat-valued functions: moebiusPos n is 1 exactly when mu(n) = +1 and moebiusNeg n is 1 exactly when mu(n) = -1, each 0 unless n is squarefree. Two theorems make the pair behave as one signed quantity: their sum is the absolute value of mu(n), and their product is 0, so at most one half is nonzero. Both are proved by the three-way case split the definitions make -- not squarefree; squarefree with an even number of prime factors; squarefree with an odd number.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Nat.moebius_pos_add_neg : ((x0 : AxNat) -> Eq.{1} AxNat (AxNat.add (AxNat.moebiusPos x0) (AxNat.moebiusNeg x0)) (AxNat.moebiusAbs x0))",
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.moebius_pos_add_neg",
+    "kernel_statement": "Nat.omegaCount n := Nat.Multiset.card (Nat.factorization n); Nat.moebiusAbs n := bool_select_nat (Squarefree n) 1 0; Nat.moebiusPos n := bool_select_nat (Squarefree n) (bool_select_nat (Nat.beq (Nat.mod (omegaCount n) 2) 0) 1 0) 0; Nat.moebiusNeg n := bool_select_nat (Squarefree n) (bool_select_nat (Nat.beq (Nat.mod (omegaCount n) 2) 0) 0 1) 0. The companion law is Nat.moebius_pos_mul_neg : forall n, Eq (mul (moebiusPos n) (moebiusNeg n)) zero. Squarefree is at the BARE root namespace, not Nat.squarefree."
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "proof_route": "kernel-lean",
+  "axiom_footprint": [],
+  "depends_on": [
+    "F:nat-exists-prime-factorization"
+  ],
+  "provenance": {
+    "date": "2026-09-04",
+    "established_by": "axeyum lane `arithmetic-functions`, roadmap item W2-18: `nat_prelude/arith_functions_family.rs`. ADR-1619, following ADR-0603's graded-statement-family shape.",
+    "source": "The Moebius function, standard since 1832. What is not standard is the encoding: a classical development gives mu a signed codomain and never faces this question.",
+    "prior_art": [
+      {
+        "citation": "Mathlib, `ArithmeticFunction.moebius`, valued in the integers",
+        "establishes": "the same function with a signed codomain; the graded-pair encoding here exists because the divisor aggregate this family is built on is Nat-valued and no Int-valued range-sum toolkit exists in the tree"
+      }
+    ]
+  },
+  "evidence": [
+    {
+      "id": "eval-moebius-classical-values",
+      "kind": "instance-pin",
+      "supports": "the pair really encodes mu, with the sign convention the right way round",
+      "check_status": "checked",
+      "checkers": [
+        "nat_prelude::arith_functions_family_tests::moebius_takes_its_classical_values"
+      ],
+      "checker_command": "cargo test --release -p axeyum-lean-kernel --lib nat_prelude::arith_functions -- --test-threads=4",
+      "notes": "mu(1) = +1, mu(2) = -1, mu(3) = -1, mu(4) = 0, mu(5) = -1, mu(6) = +1, each read off both halves and off moebiusAbs, with every value reduced by the kernel. The parity-flipped definition has exactly the same type and would swap the n = 2 and n = 6 rows, so those two instances are what separate the readings. Magnitudes stay at or below 6 because every Nat numeral in this kernel is unary and both Squarefree and Nat.factorization are fuel-bounded searches.",
+      "checker_paired_negative": "moebiusPos 2 is asserted NOT to reduce to 1 (the parity-flipped answer) and moebiusAbs 4 NOT to reduce to 1 (the answer a definition ignoring squarefreeness would give)."
+    },
+    {
+      "id": "kernel-Nat.moebius_pos_add_neg",
+      "kind": "kernel-term",
+      "supports": "the two halves carry exactly the absolute value of mu between them",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::add_declaration (re-derives the type from the proof term)",
+        "nat_prelude::arith_functions_family_tests::the_graded_pair_laws_hold_at_every_branch",
+        "nat_prelude::arith_functions_family_tests::the_family_declarations_state_the_intended_types",
+        "nat_prelude_tests::every_nat_declaration_is_checked_and_axiom_free"
+      ],
+      "checker_command": "cargo test --release -p axeyum-lean-kernel --lib nat_prelude::arith_functions -- --test-threads=4",
+      "notes": "Instantiated at n = 6 (squarefree, even omega), n = 2 (squarefree, odd omega) and n = 4 (not squarefree) -- all three branches of the proof's own case split, so no branch is confirmed only by the other two.",
+      "checker_paired_negative": "The companion law Nat.moebius_pos_mul_neg is instantiated at the same three arguments. A pair where BOTH halves were 1 would satisfy neither law, and a pair where both were always 0 would satisfy the product law but fail the sum law at n = 6."
+    }
+  ],
+  "notes": "This fact records an ENCODING decision as much as a theorem. It does NOT include Moebius inversion, or even the summatory identity that mu(d) summed over the divisors of n is [n = 1] -- see F:nat-dirichlet-convolution-commutes for why that did not land. Nat.omegaCount counts prime factors WITH multiplicity (Omega, not omega); the two agree exactly on the squarefree numbers, which is the only place these definitions read it, so the choice is invisible to mu."
+}
