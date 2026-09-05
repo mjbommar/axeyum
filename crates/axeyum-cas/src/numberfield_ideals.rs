@@ -177,8 +177,9 @@
 //! splitting is one Tonelli–Shanks; an ideal factorization is one `i128`
 //! integer factorization (which dominates it, and is the reason for the
 //! magnitude declines) plus one containment test per candidate exponent. The
-//! whole 70-test module runs in **0.33 s of wall clock, single-threaded, in a
-//! debug build**, the slowest single test being the degree-6 compositum at
+//! whole 70-test module runs in **0.16 s to 0.33 s of wall clock,
+//! single-threaded, in a debug build** across two runs on this shared host,
+//! the slowest single test being the degree-6 compositum at 0.039 s to
 //! 0.065 s — so no per-operation split was worth measuring below that.
 
 use core::fmt;
