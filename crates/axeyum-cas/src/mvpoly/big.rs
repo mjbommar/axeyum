@@ -183,6 +183,57 @@ impl BigPoly {
         BigPoly::single_term(Monomial::from_powers(&[(name, 1)]), BigInt::one())
     }
 
+    /// The single monomial `name^exp`, or the constant `1` when `exp == 0`.
+    ///
+    /// The zero-test's fold passes rebuild a term as a product of per-variable
+    /// factors; this is that factor. See [`crate::MultiPoly::single_var_pow`],
+    /// the bounded twin.
+    pub(crate) fn variable_pow(name: &str, exp: u32) -> BigPoly {
+        if exp == 0 {
+            return BigPoly::one();
+        }
+        BigPoly::single_term(Monomial::from_powers(&[(name, exp)]), BigInt::one())
+    }
+
+    /// The single term `coeff·mono`; the zero polynomial when `coeff` is zero.
+    pub(crate) fn term(mono: Monomial, coeff: BigInt) -> BigPoly {
+        BigPoly::single_term(mono, coeff)
+    }
+
+    /// This polynomial's value when it is a constant (including `0`), else
+    /// `None`.
+    pub(crate) fn as_constant(&self) -> Option<BigInt> {
+        match self.terms.len() {
+            0 => Some(BigInt::zero()),
+            1 => {
+                let (mono, coeff) = self.terms.iter().next()?;
+                mono.powers().next().is_none().then(|| coeff.clone())
+            }
+            _ => None,
+        }
+    }
+
+    /// Every coefficient divided by `divisor`, or `None` when some coefficient
+    /// is not exactly divisible (or `divisor` is zero). Signs are untouched.
+    pub(crate) fn divide_integer_exact(&self, divisor: &BigInt) -> Option<BigPoly> {
+        if divisor.is_zero() {
+            return None;
+        }
+        let mut terms = BTreeMap::new();
+        for (mono, coeff) in &self.terms {
+            if (coeff % divisor) != BigInt::zero() {
+                return None;
+            }
+            terms.insert(mono.clone(), coeff / divisor);
+        }
+        Some(BigPoly { terms })
+    }
+
+    /// The number of stored (nonzero) terms.
+    pub(crate) fn term_count(&self) -> usize {
+        self.terms.len()
+    }
+
     /// The `(monomial, coefficient)` pairs in ascending monomial order; every
     /// stored coefficient is nonzero.
     pub(crate) fn terms(&self) -> impl Iterator<Item = (&Monomial, &BigInt)> {
@@ -325,7 +376,7 @@ impl BigPoly {
     /// The width in bits of the widest coefficient magnitude; `0` when zero.
     ///
     /// The comparison point is `127`: an `i128` numerator holds no more.
-    pub(super) fn coefficient_bits(&self) -> u64 {
+    pub(crate) fn coefficient_bits(&self) -> u64 {
         self.terms
             .values()
             .map(num_bigint::BigInt::bits)
@@ -449,7 +500,7 @@ impl BigPoly {
     /// product of the leading terms of quotient and divisor, so the divisor's
     /// leading monomial and leading coefficient both divide it, and subtracting
     /// leaves `(quotient − leading)·divisor`, to which the same argument applies.
-    fn exact_div(&self, divisor: &BigPoly) -> Option<BigPoly> {
+    pub(crate) fn exact_div(&self, divisor: &BigPoly) -> Option<BigPoly> {
         let (divisor_mono, divisor_coeff) = divisor.leading_term()?;
         let mut quotient = BigPoly::zero();
         let mut dividend = self.clone();
@@ -468,7 +519,7 @@ impl BigPoly {
     // --- Normalization ------------------------------------------------------
 
     /// The GCD of every coefficient magnitude; zero for the zero polynomial.
-    fn integer_content(&self) -> BigInt {
+    pub(crate) fn integer_content(&self) -> BigInt {
         let mut content = BigInt::zero();
         for coeff in self.terms.values() {
             content = integer_gcd(&content, coeff);
@@ -684,7 +735,7 @@ impl BigPoly {
 }
 
 /// The GCD of two `BigInt` values as a non-negative `BigInt` (Euclid).
-fn integer_gcd(left: &BigInt, right: &BigInt) -> BigInt {
+pub(crate) fn integer_gcd(left: &BigInt, right: &BigInt) -> BigInt {
     let mut current = left.abs();
     let mut next = right.abs();
     while !next.is_zero() {

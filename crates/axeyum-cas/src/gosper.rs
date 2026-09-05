@@ -517,8 +517,11 @@ fn check_telescoping(sum: &CasExpr, term: &CasExpr, var: &str) -> TelescopingChe
     let shifted = sum.substitute(var, &(CasExpr::var(var) + CasExpr::int(1)));
     let delta = shifted - sum.clone();
     match equal(&delta, term) {
-        ZeroTest::Certified { equal: true, .. } => TelescopingCheck::Certified,
-        ZeroTest::Certified { equal: false, .. } => TelescopingCheck::Refuted,
+        ZeroTest::Certified { equal: true, .. } | ZeroTest::CertifiedBig { equal: true, .. } => {
+            TelescopingCheck::Certified
+        }
+        ZeroTest::Certified { equal: false, .. }
+        | ZeroTest::CertifiedBig { equal: false, .. } => TelescopingCheck::Refuted,
         ZeroTest::Unknown => TelescopingCheck::Unknown,
     }
 }
