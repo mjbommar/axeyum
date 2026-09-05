@@ -873,6 +873,22 @@
       "to_sha256": "749fd67f059fa1b41a129ddbd2a983a785565e28ecb3e9e3f7a139214978c5a8",
       "reason": "HEADER ONLY -- a pure prefix, not a content change. `formal.statement` was the kernel's rendered type for Int.primitive_root_pow_injective and is now that same string behind `theorem Int.primitive_root_pow_injective : `; verified by checking that the SHA-256 of the text after the prefix equals the superseded pin. Landed headerless by lane `primitive-roots` on 2026-09-04, the same class as the 16 `List` facts amended earlier that day.",
       "recorded_by": "coordinator"
+    },
+    {
+      "fact_id": "F:finset-subset-search-reflection",
+      "date": "2026-09-04",
+      "from_sha256": "0aa330aa3db3e876de1562a5970e3eabd293ab07be16f83092d39845e70ef26c",
+      "to_sha256": "030bbc3e3439cbc9a9262544638ca788c3d1edbbcb7b5132cdc3e5ed8a0ffca1",
+      "reason": "CONTENT change, not header-only, and the reason is that the previous text was not the kernel's rendering at all: lane hall-sufficiency wrote a Lean-surface signature with binders before the colon (`theorem Nat.Finset.forallSubset_of_search (P : ...) (n : ...) ... :`), which the structural bind cannot parse, and in one of the two the header named the DEFINITION `Nat.strongInduction` while the fact claims the theorem `Nat.Finset.forallSubset_of_search`. Replaced by `theorem Nat.Finset.forallSubset_of_search : ` followed by `nat_theorem_inventory --release`'s rendered type verbatim, so the statement is now the declaration it claims. The proposition described is unchanged.",
+      "recorded_by": "coordinator"
+    },
+    {
+      "fact_id": "F:nat-strong-induction",
+      "date": "2026-09-04",
+      "from_sha256": "d50ec05b7bf782df0f70abf6e3d13af9a41ac2327fb4499c32f012fb1e0e8e26",
+      "to_sha256": "587f308eee0ccb56ecb614f97a3b0e325eaf060115878a1615f16f570c115ece",
+      "reason": "CONTENT change, not header-only, and the reason is that the previous text was not the kernel's rendering at all: lane hall-sufficiency wrote a Lean-surface signature with binders before the colon (`theorem Nat.strongInduction_eq (P : ...) (n : ...) ... :`), which the structural bind cannot parse, and in one of the two the header named the DEFINITION `Nat.strongInduction` while the fact claims the theorem `Nat.strongInduction_eq`. Replaced by `theorem Nat.strongInduction_eq : ` followed by `nat_theorem_inventory --release`'s rendered type verbatim, so the statement is now the declaration it claims. The proposition described is unchanged.",
+      "recorded_by": "coordinator"
     }
   ],
   "pins": [
@@ -7481,9 +7497,17 @@
     {
       "fact_id": "F:finset-subset-search-reflection",
       "language": "lean4",
-      "statement_sha256": "0aa330aa3db3e876de1562a5970e3eabd293ab07be16f83092d39845e70ef26c",
+      "statement_sha256": "030bbc3e3439cbc9a9262544638ca788c3d1edbbcb7b5132cdc3e5ed8a0ffca1",
       "prose_sha256": "3d1f57aef4ff078e5cef82158ca13ce99330f67b357b41407406c8b85df3ce7c",
-      "kernel_theorem": "Nat.Finset.forallSubset_of_search"
+      "kernel_theorem": "Nat.Finset.forallSubset_of_search",
+      "history": [
+        {
+          "language": "lean4",
+          "statement_sha256": "0aa330aa3db3e876de1562a5970e3eabd293ab07be16f83092d39845e70ef26c",
+          "prose_sha256": "3d1f57aef4ff078e5cef82158ca13ce99330f67b357b41407406c8b85df3ce7c",
+          "kernel_theorem": "Nat.Finset.forallSubset_of_search"
+        }
+      ]
     },
     {
       "fact_id": "F:fp16-add-monotone-rne",
@@ -19862,9 +19886,17 @@
     {
       "fact_id": "F:nat-strong-induction",
       "language": "lean4",
-      "statement_sha256": "d50ec05b7bf782df0f70abf6e3d13af9a41ac2327fb4499c32f012fb1e0e8e26",
+      "statement_sha256": "587f308eee0ccb56ecb614f97a3b0e325eaf060115878a1615f16f570c115ece",
       "prose_sha256": "85ff1489a6465e7998989e97a25983e2ecdf503a927d04f5f2876fcc4a74c276",
-      "kernel_theorem": "Nat.strongInduction_eq"
+      "kernel_theorem": "Nat.strongInduction_eq",
+      "history": [
+        {
+          "language": "lean4",
+          "statement_sha256": "d50ec05b7bf782df0f70abf6e3d13af9a41ac2327fb4499c32f012fb1e0e8e26",
+          "prose_sha256": "85ff1489a6465e7998989e97a25983e2ecdf503a927d04f5f2876fcc4a74c276",
+          "kernel_theorem": "Nat.strongInduction_eq"
+        }
+      ]
     },
     {
       "fact_id": "F:nat-sub-add-cancel",
