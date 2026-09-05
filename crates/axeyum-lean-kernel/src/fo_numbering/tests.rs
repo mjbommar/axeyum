@@ -357,3 +357,83 @@ fn every_declaration_of_this_slice_is_axiom_free() {
         f.assert_axiom_free(name, label);
     }
 }
+
+/// The number of declarations `build_fo_numbering_prelude` adds on top of
+/// `build_nat_prelude` — the whole `fo_syntax.rs` + `fo_code.rs` +
+/// `fo_numbering.rs` chain, including the two inductives with their
+/// constructors and recursors.
+///
+/// Pinned so that drift in EITHER direction is a failure: a declaration
+/// deleted and a declaration added without a test both move this number.
+const FO_ARITHMETIZATION_DECLARATIONS: usize = 42;
+
+/// The every-declaration sweep, derived from the environment rather than from
+/// a list: the rows are exactly the names present after
+/// `build_fo_numbering_prelude` and absent after `build_nat_prelude`.
+///
+/// The list above measures the maintainer's memory; this one measures the
+/// kernel. It is also what `examples/fo_code_inventory.rs` reports, so the two
+/// cannot drift apart silently.
+///
+/// The coverage control matters as much as the axiom check: an empty set
+/// difference — from a baseline that accidentally already contains everything,
+/// or a builder that silently declared nothing — would make the axiom sweep
+/// pass vacuously. So a known-present name is required to be IN the difference
+/// before the sweep's verdict means anything.
+#[test]
+fn the_whole_chain_this_prelude_adds_is_axiom_free() {
+    use std::collections::BTreeMap;
+
+    let baseline: std::collections::BTreeSet<String> = {
+        let mut kernel = Kernel::new();
+        let _ = crate::build_nat_prelude(&mut kernel).expect("Nat prelude must build");
+        kernel
+            .environment()
+            .iter()
+            .map(|(_, declaration)| kernel.display_name(declaration.name()).to_string())
+            .collect()
+    };
+
+    let mut kernel = Kernel::new();
+    let _ = build_fo_numbering_prelude(&mut kernel).expect("FO numbering prelude must build");
+    let added: BTreeMap<String, NameId> = kernel
+        .environment()
+        .iter()
+        .map(|(_, declaration)| {
+            let id = declaration.name();
+            (kernel.display_name(id).to_string(), id)
+        })
+        .filter(|(name, _)| !baseline.contains(name))
+        .collect();
+
+    for control in [
+        "FO.Formula.code_injective",
+        "FO.Term.code_injective",
+        "FO.Code.unpair_pair",
+        "FO.Code.pair",
+    ] {
+        assert!(
+            added.contains_key(control),
+            "coverage control: {control} must be IN the set difference, or the \
+             sweep below passes vacuously; the difference has {} rows",
+            added.len()
+        );
+    }
+
+    let assuming: Vec<&String> = added
+        .iter()
+        .filter(|(_, id)| !kernel.axiom_footprint(**id).is_empty())
+        .map(|(name, _)| name)
+        .collect();
+    assert!(
+        assuming.is_empty(),
+        "these declarations rest on axioms: {assuming:?}"
+    );
+
+    assert_eq!(
+        added.len(),
+        FO_ARITHMETIZATION_DECLARATIONS,
+        "declaration count drifted; the names are {:?}",
+        added.keys().collect::<Vec<_>>()
+    );
+}
