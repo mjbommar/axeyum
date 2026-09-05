@@ -134,6 +134,7 @@ dependencies = [
  "num-integer",
  "num-rational",
  "num-traits",
+ "rustc-hash 2.1.2",
 ]
 
 [[package]]

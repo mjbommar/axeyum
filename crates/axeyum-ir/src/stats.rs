@@ -5,9 +5,8 @@
 //! exhibit representational blowup; both small with slow solving means
 //! genuine search hardness.
 
-use std::collections::{HashMap, HashSet};
-
 use crate::arena::TermArena;
+use crate::fast_map::{FastMap, FastSet};
 use crate::term::{Op, TermId, TermNode};
 
 /// Shape metrics for one or more root terms, computed in a single memoized
@@ -39,8 +38,8 @@ impl TermStats {
     /// Panics if any root does not belong to `arena`.
     pub fn compute(arena: &TermArena, roots: &[TermId]) -> Self {
         // Per-node (tree_size, depth), memoized; iterative post-order.
-        let mut memo: HashMap<TermId, (u64, u64)> = HashMap::new();
-        let mut symbols: HashSet<u32> = HashSet::new();
+        let mut memo: FastMap<TermId, (u64, u64)> = FastMap::default();
+        let mut symbols: FastSet<u32> = FastSet::default();
         let mut stats = TermStats::default();
         let mut stack: Vec<(TermId, bool)> = roots.iter().map(|&r| (r, false)).collect();
 
