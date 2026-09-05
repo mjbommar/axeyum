@@ -65,6 +65,7 @@ pub mod extremum;
 mod factor_int;
 pub mod fps;
 pub mod geometry;
+pub mod geometry_beyond;
 pub mod geometry_certify;
 pub mod geometry_check;
 pub mod geometry_corpus;
