@@ -10595,6 +10595,16 @@ Did not run: `just check` / `./scripts/check.sh` (out of scope for a
 single-crate change and multi-lane host contention; the coordinator's merge
 gate re-verifies).
 
+**Capability Pareto roadmap (`DONE` research; implementation `TODO`, 2026-09-05).**
+The [source-backed programme](docs/plan/capability-pareto-2026-09-05/README.md)
+pins September 5 main and current Z3/cvc5/Bitwuzla releases, corrects format/domain
+coverage claims, and separates capability inclusion from measured and maintained
+Pareto dominance. R0–R9 define dependencies, evidence, negative controls and exit
+criteria; no fresh performance or dominance result is claimed. First follow-up:
+reproduce optimizer cap/overflow-to-Unbounded behavior, then capability registry
+and a version-pinned pilot. This research does not reorder accepted programmes or
+resume paused CAS/full-corpus campaigns.
+
 **Your lane's block (`DONE`, nat-helper-dedup, 2026-08-28).** Promoted the
 three genuine duplicate groups the brief named, all confirmed byte-for-byte
 identical before consolidation:
