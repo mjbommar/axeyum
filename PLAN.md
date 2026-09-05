@@ -226,6 +226,11 @@ now. Nothing was deleted.
 | 2026-09-05 | `f3d8b3d95` | the census over every carrier: shared harness `tests/support/replay_census.rs`, new suite `real_lean_replay_census_all` (17 carriers, one `#[test]` each), carrier list derived from `src/lib.rs`'s re-export block, `creal` floor raised 1,900 -> 3,350, `check-lean-gate.sh` `CHECK_FLOOR` 261 -> 278 with the new suite registered |
 | 2026-09-05 | (this commit) | `artifacts/measurements/lean-replay-census-2026-09-05.md`, ADR-1661, ADR index regenerated, and the four rows in `docs/math-department/14-lean-lang.md` this run moved |
 | 2026-09-05 | coordinator | sixteen nested carriers moved behind `--ignored`, `CHECK_FLOOR` 278 -> 262; the gate keeps the `everything` census only (see ADR-1661's coordinator note) |
+| 2026-09-05 | lean-statement-reader | `crates/axeyum-lean-kernel/src/lean_read.rs` added: `Kernel::read_lean`, typed `ReadError` (7 classes), 14 unit tests; wired via `mod lean_read;` + `pub use lean_read::ReadError;` in `lib.rs`. Trusted core unchanged (5,545/5,900 lines, same 9 files, guard D 0 failures). `209bb940f` |
+| 2026-09-05 | lean-statement-reader | Ledger-wide round-trip suite `crates/axeyum-lean-kernel/tests/lean_read_round_trip.rs` added and found a real cross-fact contamination bug in constant resolution (see lane-status); fixed with one `environment().contains()` check, 15th unit test added as a regression control. See ADR-1680 for the corrected per-fragment table. `8808f0951` |
+| 2026-09-05 | lean-statement-reader | Merged local `main` (conics work, 21 files); trusted core re-measured unchanged (5,545/5,900, 9 files, guard D 0 failures) after the merge; `python3 scripts/gen-plan.py` and `check-merge-hygiene.sh` re-run clean. `cargo check --workspace --all-targets` clean post-merge. Population moved to 2,023 `lean4` facts (3 new `CPoint` conic facts); re-verification queued but did not complete under host contention (see above). |
+| 2026-09-05 | coordinator | re-measured on the merged tree: 2,023 `lean4` facts, 1,967 read, 1,961 round-trip, 1,923/1,925 def-eq; lane closed out (ADR-1680) |
+| 2026-09-05 | coordinator | debug (push-hook profile) run overflowed its stack and ran past 60 s: bodies moved onto `on_a_deep_stack`, the four ledger tests `#[ignore]`d and run by check.sh step `lean-read-round-trip` / `just lean-read-round-trip` in release (50.77 s, 4 passed); a live logic-prelude smoke test keeps the push half non-inert (1 passed) |
 | 2026-09-05 | lean-tactic | ADR-1666 + `lean/axeyum-tactic` (Lake package: `Axeyum.Shim` 13 proved rows, `Axeyum.Protocol`, `Axeyum.Tactic` = `by axeyum`; `Tests/NatLinear` 11 goals accepted, `Tests/Mutations` 11 rejections + 1 control, `Tests/ShimCorrespondence` axiom census + reverse re-derivation) + `axeyum_lean_import::tactic_bridge` (goal decode, ℕ translator, name map, Lean printer, 11 unit tests) + `examples/axeyum_sidecar.rs` + `examples/axeyum_tactic_probe.rs` + `scripts/check-lean-tactic.sh` (4 floors, 3 negative controls) registered in `scripts/check.sh` and `just lean-tactic` |
 | 2026-09-05 | `a0619473d` | scaffold Metric.prod (max metric, 12-field record + projections + continuity + completeness + cpoint relation); compiles clean, kernel acceptance not yet run |
 | 2026-09-05 | `7068500cf` | fix: move metric_prod_tests under metric_prod/; fix Metric.ContinuousAtWith's modulus (Nat -> Nat, not Nat) |
@@ -54354,6 +54359,77 @@ it aside (exit 0) and putting it back.
   (wrong proof, wrong goal, no inheritance).
 - `scripts/check-lean-gate.sh` — both suites registered; `CHECK_FLOOR`
   261 → 278.
+
+**Your lane's block (`DONE`, lean-statement-reader, 2026-09-05; closed out by the coordinator after the lane was terminated by an account spend limit).**
+[Next Ten item 9](docs/math-department/14-lean-lang.md#the-next-ten-in-priority-order),
+FIRST HALF ONLY (the census in ADR-1662 found the Mathlib-surface half gated
+at 5 elaboration-blocked rows, so its demand gate is not met — not built,
+per the brief).
+
+`Kernel::read_lean` (`crates/axeyum-lean-kernel/src/lean_read.rs`) parses the
+`Kernel::render_lean` fragment back into a kernel `ExprId`: binders,
+Pi-as-arrow, flat application spines, `Sort`, dotted constant names with
+`.{levels}`, `let`, projections, Nat/Str literals. It is untrusted (calls
+only public term constructors, never an admission gate) and lives outside
+`scripts/check-kernel-trusted-core.py`'s trusted set — measured unchanged at
+5,545 of the 5,900-line ceiling, same 9 files, guard D's pinned
+`TRUSTED_FILES` set untouched.
+
+15 unit tests in `lean_read.rs` cover the grammar directly (round trips,
+shadowing, a doubly atom-wrapped Pi, projection, literals, max/imax levels)
+plus negative controls (renamed constant, dropped universe, garbage input,
+trailing input, unknown-constant vs unbound-variable classification, and a
+regression test for the cross-fact contamination bug below).
+
+**A real bug the ledger-wide gate found, not invented in the abstract.** The
+first design resolved a constant by name-TABLE membership alone
+(`lookup_name_str`), reasoning that a name reachable there must already be
+declared. True for one statement; false once one kernel reads 2,020 in
+sequence for efficiency, because interning is a table SHARED across every
+`read_lean` call: an earlier fact's ordinary local binder (e.g. some
+statement's own `n`) mints `NameNode::Str(anon, "n")`, and a LATER,
+unrelated fact's bare `n` was silently accepted as if it denoted that same
+constant. Concretely this misdirected `F:nat-le-refl`'s read into a
+confusing `expected ')', found ':'` deep in the fallback parse, instead of a
+precisely located `unbound-variable`. Fixed with one
+`environment().contains(name)` check after the full segment walk, before
+building the `Const` node.
+
+`crates/axeyum-lean-kernel/tests/lean_read_round_trip.rs` is the ledger-wide
+gate (outcome B): every `formal.language == "lean4"` fact, derived from
+`artifacts/facts/*.json` at test time, read against ONE kernel carrying every
+prelude this crate builds (mirrors `real_lean_replay_census_all.rs`'s
+`everything` carrier), scored for byte-exact round trip and, where
+`kernel_theorem` names a resolvable declaration, `def_eq` against its
+declared type. Three more negative controls run against real ledger facts
+(swapped argument order, renamed constant, dropped universe argument), all
+passing.
+
+**Final measured totals** (post-fix, `missing == 0` asserted, against commit
+`8808f0951`): of **2,020** `lean4` facts, **1,964 read**, **1,958 round-trip
+byte-exact**, **1,920 of 1,922** resolvable `kernel_theorem`s `def_eq` their
+declared type. Every failure is classified (roundtrip-mismatch 6,
+def-eq-mismatch 2, trailing-input 19, unexpected-token 19, unbound-variable
+16, unknown-constant 2) and traced to a specific cause in ADR-1680's
+per-fragment table — almost all ledger-content findings (hand-authored
+prose mislabeled `lean4`, `imported-kernel-lean` facts in Mathlib's own
+vocabulary, two stale statements, six stale `Nat` renderings), plus one
+honest reader limitation (non-ASCII/Greek identifiers, 3 facts) and one
+test-construction coverage gap (`Geo` prelude not in the union kernel, 1
+fact).
+
+**Re-measured by the coordinator on the merged tree (main merged at `2ff20b5ac`, release, 48.55 s)** after the lane was terminated by an account spend limit: of **2,023** `lean4` facts, **1,967 read**, **1,961 round-trip byte-exact**, **1,923 of 1,925** resolvable `kernel_theorem`s `def_eq` their declared type; the three `CPoint` facts the conics merge added all pass; failure classes unchanged (def-eq-mismatch 2, roundtrip-mismatch 6, trailing-input 19, unbound-variable 16, unexpected-token 19, unknown-constant 2). The suite is auto-enumerated by `scripts/check-kernel-suites.sh` into its `push` partition.
+
+**Registration (outcome D) needed no edits.** Both places the brief named are
+auto-discovered, not literal lists:
+`scripts/check-kernel-suites.sh --list` scans `crates/axeyum-lean-kernel/tests/*.rs`
+by content (does the suite use `support/lean_probe.rs`?), so the new suite is
+automatically classified `push` (no external Lean needed) —
+verified: `lean_read_round_trip                                 push`.
+`justfile`'s `check` target already runs `test` (`scripts/check-workspace-tests.sh`,
+which is `cargo test --workspace` under the hood) and `kernel-suite-partition`
+(re-validates the same auto-discovered split); neither needed a new line. No
+Python checker was added, so `scripts/check.sh` needed no new step either.
 
 **Your lane's block (`DONE` for the ℕ fragment, `lean-tactic`, 2026-09-05).**
 `docs/math-department/14-lean-lang.md` Next Ten item 6 is landed for ℕ:
