@@ -148,6 +148,11 @@ struct RCtx {
     neg_add: ExprId,
     distrib_l: ExprId,
     distrib_r: ExprId,
+    /// ADR-1618: the multiplicative fields the four missing `AlgS.CommRing`
+    /// fields of `R[X]` are built from.
+    mul_assoc: ExprId,
+    mul_one_r: ExprId,
+    mul_comm: ExprId,
     nat: ExprId,
     /// `Nat -> R.carrier` — a polynomial, as a coefficient function.
     poly: ExprId,
@@ -158,7 +163,8 @@ struct RCtx {
 fn rctx(k: &mut Kernel, lg: &LogicPrelude, cr: &RecordNames) -> RCtx {
     use idx::comm_ring::{
         ADD, ADD_ASSOC, ADD_COMM, ADD_CONGR, ADD_ZERO, CARRIER, DISTRIB_L, DISTRIB_R, EQUIV,
-        EQUIV_REFL, EQUIV_SYMM, EQUIV_TRANS, MUL, MUL_CONGR, NEG, NEG_ADD, NEG_CONGR, ONE, ZERO,
+        EQUIV_REFL, EQUIV_SYMM, EQUIV_TRANS, MUL, MUL_ASSOC, MUL_COMM, MUL_CONGR, MUL_ONE_R, NEG,
+        NEG_ADD, NEG_CONGR, ONE, ZERO,
     };
     let ring_ty = k.const_(cr.ind, vec![]);
     let r = k.fvar(R_FV);
@@ -191,6 +197,9 @@ fn rctx(k: &mut Kernel, lg: &LogicPrelude, cr: &RecordNames) -> RCtx {
         neg_add: sel(k, cr, NEG_ADD, r),
         distrib_l: sel(k, cr, DISTRIB_L, r),
         distrib_r: sel(k, cr, DISTRIB_R, r),
+        mul_assoc: sel(k, cr, MUL_ASSOC, r),
+        mul_one_r: sel(k, cr, MUL_ONE_R, r),
+        mul_comm: sel(k, cr, MUL_COMM, r),
         nat,
         poly,
         cell,
@@ -1364,6 +1373,1639 @@ fn declare_poly_distrib_r(
 }
 
 // ---------------------------------------------------------------------------
+// ADR-1618: the reindexing lemmas for the walk, and the four `AlgS.CommRing`
+// fields ADR-1609 left open.
+//
+// Every one of these is proved by `Nat.rec` on the FIRST walk index with a
+// motive that quantifies over the cell family (`fun i => forall g, ...`) or
+// over the second index (`fun i => forall j, ...`). That generalization is
+// the whole trick: the walk's successor step calls itself at `succ j` and at
+// a SHIFTED family, so an induction hypothesis fixed at one `j` or one `g` is
+// unusable. With it, none of these lemmas needs `Nat.add`, `Nat.sub` or any
+// other arithmetic -- which is why this module stays at the `AlgS` build
+// position. ADR-1618 records the measurement.
+// ---------------------------------------------------------------------------
+
+/// The outer `Nat.rec` variable, disjoint from `I_FV`/`J_FV` so a nested
+/// walk's own indices cannot capture it.
+const M_FV: u64 = 22_013;
+/// A ring element pulled through a walk (`antidiagFrom_mul_right`).
+const EL_FV: u64 = 22_052;
+
+fn succ_of(k: &mut Kernel, lg: &LogicPrelude, e: ExprId) -> ExprId {
+    let s = k.const_(lg.nat_succ, vec![]);
+    k.app(s, e)
+}
+
+fn zero_of(k: &mut Kernel, lg: &LogicPrelude) -> ExprId {
+    k.const_(lg.nat_zero, vec![])
+}
+
+/// `AlgS.Poly.antidiagFrom R g i j`.
+fn walk(k: &mut Kernel, c: &RCtx, antidiag: NameId, g: ExprId, i: ExprId, j: ExprId) -> ExprId {
+    let a = k.const_(antidiag, vec![]);
+    t_app(k, a, &[c.r, g, i, j])
+}
+
+/// `fun a b => g a (succ b)` — the walk's second index shifted up.
+fn shift_second(k: &mut Kernel, lg: &LogicPrelude, c: &RCtx, g: ExprId) -> ExprId {
+    let i = k.fvar(I_FV);
+    let j = k.fvar(J_FV);
+    let sj = succ_of(k, lg, j);
+    let body = t_app(k, g, &[i, sj]);
+    let body = lam_over(k, J_FV, c.nat, body);
+    lam_over(k, I_FV, c.nat, body)
+}
+
+/// `fun a b => g (succ a) b` — the walk's first index shifted up.
+fn shift_first(k: &mut Kernel, lg: &LogicPrelude, c: &RCtx, g: ExprId) -> ExprId {
+    let i = k.fvar(I_FV);
+    let j = k.fvar(J_FV);
+    let si = succ_of(k, lg, i);
+    let body = t_app(k, g, &[si, j]);
+    let body = lam_over(k, J_FV, c.nat, body);
+    lam_over(k, I_FV, c.nat, body)
+}
+
+/// `fun a b => g (succ a) (succ b)` — both indices shifted up.
+fn shift_both(k: &mut Kernel, lg: &LogicPrelude, c: &RCtx, g: ExprId) -> ExprId {
+    let i = k.fvar(I_FV);
+    let j = k.fvar(J_FV);
+    let si = succ_of(k, lg, i);
+    let sj = succ_of(k, lg, j);
+    let body = t_app(k, g, &[si, sj]);
+    let body = lam_over(k, J_FV, c.nat, body);
+    lam_over(k, I_FV, c.nat, body)
+}
+
+/// `fun a b => g b a` — the cell family transposed.
+fn transpose_cells(k: &mut Kernel, c: &RCtx, g: ExprId) -> ExprId {
+    let i = k.fvar(I_FV);
+    let j = k.fvar(J_FV);
+    let body = t_app(k, g, &[j, i]);
+    let body = lam_over(k, J_FV, c.nat, body);
+    lam_over(k, I_FV, c.nat, body)
+}
+
+/// `AlgS.Poly.antidiagFrom_shift : forall R g i j,
+/// R.equiv (antidiagFrom R g i (succ j))
+///         (antidiagFrom R (fun a b => g a (succ b)) i j)`.
+///
+/// **The shift lemma.** Starting the walk one step further along the second
+/// index is the same as walking the shifted family from where you were. It is
+/// what replaces `j + n` — the index the textbook antidiagonal names and that
+/// cannot be written here, `Nat.add` not existing at this build position.
+///
+/// `Nat.rec` on `i` with motive `fun i => forall j, …`; the base is `refl`
+/// (both sides reduce to `g 0 (succ j)`) and the step is one `addCongr` whose
+/// second component is the induction hypothesis at `succ j`.
+fn declare_antidiag_shift(
+    k: &mut Kernel,
+    lg: &LogicPrelude,
+    cr: &RecordNames,
+    antidiag: NameId,
+    poly_ns: NameId,
+) -> Result<NameId, KernelError> {
+    let c = rctx(k, lg, cr);
+    let l0 = k.level_zero();
+    let g = k.fvar(G_FV);
+    let gs = shift_second(k, lg, &c, g);
+
+    let motive_body = |k: &mut Kernel, c: &RCtx, i: ExprId| {
+        let j = k.fvar(J_FV);
+        let sj = succ_of(k, lg, j);
+        let lhs = walk(k, c, antidiag, g, i, sj);
+        let rhs = walk(k, c, antidiag, gs, i, j);
+        let body = c.eq(k, lhs, rhs);
+        pi_over(k, J_FV, c.nat, body)
+    };
+    let motive = {
+        let i = k.fvar(I_FV);
+        let body = motive_body(k, &c, i);
+        lam_over(k, I_FV, c.nat, body)
+    };
+    let minor_zero = {
+        let j = k.fvar(J_FV);
+        let sj = succ_of(k, lg, j);
+        let zero_n = zero_of(k, lg);
+        let lhs = walk(k, &c, antidiag, g, zero_n, sj);
+        let body = c.refl(k, lhs);
+        lam_over(k, J_FV, c.nat, body)
+    };
+    let minor_succ = {
+        let i = k.fvar(I_FV);
+        let ih_ty = motive_body(k, &c, i);
+        let ih = k.fvar(IH_FV);
+        let j = k.fvar(J_FV);
+        let si = succ_of(k, lg, i);
+        let sj = succ_of(k, lg, j);
+        let ssj = succ_of(k, lg, sj);
+        let head = t_app(k, g, &[si, sj]);
+        let tail_l = walk(k, &c, antidiag, g, i, ssj);
+        let tail_r = walk(k, &c, antidiag, gs, i, sj);
+        let h_tail = k.app(ih, sj);
+        let refl_head = c.refl(k, head);
+        let body = t_app(
+            k,
+            c.add_congr,
+            &[head, head, tail_l, tail_r, refl_head, h_tail],
+        );
+        let body = lam_over(k, J_FV, c.nat, body);
+        let body = lam_over(k, IH_FV, ih_ty, body);
+        lam_over(k, I_FV, c.nat, body)
+    };
+
+    let rec = k.const_(lg.nat_rec, vec![l0]);
+    let i = k.fvar(I_FV);
+    let j = k.fvar(J_FV);
+    let applied = t_app(k, rec, &[motive, minor_zero, minor_succ, i, j]);
+    let value = lam_over(k, J_FV, c.nat, applied);
+    let value = lam_over(k, I_FV, c.nat, value);
+    let value = lam_over(k, G_FV, c.cell, value);
+    let value = lam_over(k, R_FV, c.ring_ty, value);
+
+    let concl = {
+        let sj = succ_of(k, lg, j);
+        let lhs = walk(k, &c, antidiag, g, i, sj);
+        let rhs = walk(k, &c, antidiag, gs, i, j);
+        c.eq(k, lhs, rhs)
+    };
+    let ty = pi_over(k, J_FV, c.nat, concl);
+    let ty = pi_over(k, I_FV, c.nat, ty);
+    let ty = pi_over(k, G_FV, c.cell, ty);
+    let ty = pi_over(k, R_FV, c.ring_ty, ty);
+
+    let name = k.name_str(poly_ns, "antidiagFrom_shift");
+    k.add_declaration(Declaration::Theorem {
+        name,
+        uparams: vec![],
+        ty,
+        value,
+    })?;
+    Ok(name)
+}
+
+/// `AlgS.Poly.antidiagFrom_succ_last : forall R g n,
+/// R.equiv (antidiagFrom R g (succ n) Nat.zero)
+///         (R.add (antidiagFrom R (fun a b => g (succ a) b) n Nat.zero)
+///                (g Nat.zero (succ n)))`.
+///
+/// **Peel the LAST cell.** The walk's own recursion peels the FIRST cell
+/// (`g (succ n) 0`); this peels the cell the walk visits last, `g 0 (succ n)`.
+/// That is the only place the "far" index appears, and it appears as
+/// `succ n` — a successor of the induction variable, not a sum — which is
+/// exactly why the walk form needs no arithmetic where the subtraction form
+/// would need `j + n`.
+///
+/// `Nat.rec` on `n` with motive `fun n => forall g, …`: the induction
+/// hypothesis is consumed at the SHIFTED family `fun a b => g a (succ b)`, so
+/// a motive with `g` fixed is unusable. Base is `refl`; the step is
+/// shift + IH + one `addAssoc`.
+#[allow(clippy::too_many_lines)]
+fn declare_antidiag_succ_last(
+    k: &mut Kernel,
+    lg: &LogicPrelude,
+    cr: &RecordNames,
+    antidiag: NameId,
+    shift: NameId,
+    poly_ns: NameId,
+) -> Result<NameId, KernelError> {
+    let c = rctx(k, lg, cr);
+    let l0 = k.level_zero();
+
+    let motive_body = |k: &mut Kernel, c: &RCtx, n: ExprId| {
+        let g = k.fvar(G_FV);
+        let g1 = shift_first(k, lg, c, g);
+        let sn = succ_of(k, lg, n);
+        let zero_n = zero_of(k, lg);
+        let lhs = walk(k, c, antidiag, g, sn, zero_n);
+        let w = walk(k, c, antidiag, g1, n, zero_n);
+        let last = t_app(k, g, &[zero_n, sn]);
+        let rhs = c.plus(k, w, last);
+        let body = c.eq(k, lhs, rhs);
+        pi_over(k, G_FV, c.cell, body)
+    };
+    let motive = {
+        let n = k.fvar(M_FV);
+        let body = motive_body(k, &c, n);
+        lam_over(k, M_FV, c.nat, body)
+    };
+    let minor_zero = {
+        let g = k.fvar(G_FV);
+        let zero_n = zero_of(k, lg);
+        let one_n = succ_of(k, lg, zero_n);
+        let lhs = walk(k, &c, antidiag, g, one_n, zero_n);
+        let body = c.refl(k, lhs);
+        lam_over(k, G_FV, c.cell, body)
+    };
+    let minor_succ = {
+        let m = k.fvar(M_FV);
+        let ih_ty = motive_body(k, &c, m);
+        let ih = k.fvar(IH_FV);
+        let g = k.fvar(G_FV);
+
+        let zero_n = zero_of(k, lg);
+        let one_n = succ_of(k, lg, zero_n);
+        let sm = succ_of(k, lg, m);
+        let ssm = succ_of(k, lg, sm);
+
+        let gs = shift_second(k, lg, &c, g);
+        let g1 = shift_first(k, lg, &c, g);
+        let gb = shift_both(k, lg, &c, g);
+
+        let head = t_app(k, g, &[ssm, zero_n]);
+        let last = t_app(k, g, &[zero_n, ssm]);
+        let w_both = walk(k, &c, antidiag, gb, m, zero_n);
+
+        // a : equiv (W g (succ m) 1) (W gs (succ m) 0)   [the shift lemma]
+        let w_g_sm_1 = walk(k, &c, antidiag, g, sm, one_n);
+        let w_gs_sm_0 = walk(k, &c, antidiag, gs, sm, zero_n);
+        let a = {
+            let s = k.const_(shift, vec![]);
+            t_app(k, s, &[c.r, g, sm, zero_n])
+        };
+        // b : ih gs -- equiv (W gs (succ m) 0)
+        //                    (add (W gb m 0) (g 0 (succ (succ m))))
+        let b = k.app(ih, gs);
+        let mid = c.plus(k, w_both, last);
+        let tail_chain = c.trans(k, w_g_sm_1, w_gs_sm_0, mid, a, b);
+
+        // left : equiv (add head (W g (succ m) 1)) (add head mid), whose LHS
+        // is `W g (succ (succ m)) 0` definitionally.
+        let refl_head = c.refl(k, head);
+        let left = t_app(
+            k,
+            c.add_congr,
+            &[head, head, w_g_sm_1, mid, refl_head, tail_chain],
+        );
+
+        // rr : equiv (W g1 (succ m) 0) (add head (W gb m 0)) -- shift again.
+        let w_g1_m_1 = walk(k, &c, antidiag, g1, m, one_n);
+        let cshift = {
+            let s = k.const_(shift, vec![]);
+            t_app(k, s, &[c.r, g1, m, zero_n])
+        };
+        let refl_head2 = c.refl(k, head);
+        let rr = t_app(
+            k,
+            c.add_congr,
+            &[head, head, w_g1_m_1, w_both, refl_head2, cshift],
+        );
+
+        let w_g1_sm_0 = walk(k, &c, antidiag, g1, sm, zero_n);
+        let add_head_wboth = c.plus(k, head, w_both);
+        let refl_last = c.refl(k, last);
+        let rrr = t_app(
+            k,
+            c.add_congr,
+            &[w_g1_sm_0, add_head_wboth, last, last, rr, refl_last],
+        );
+
+        let target_rhs = c.plus(k, w_g1_sm_0, last);
+        let add_hw_last = c.plus(k, add_head_wboth, last);
+        let add_head_mid = c.plus(k, head, mid);
+        let assoc = t_app(k, c.add_assoc, &[head, w_both, last]);
+        let sa = c.symm(k, add_hw_last, add_head_mid, assoc);
+        let srrr = c.symm(k, target_rhs, add_hw_last, rrr);
+
+        let lhs_w = walk(k, &c, antidiag, g, ssm, zero_n);
+        let step1 = c.trans(k, lhs_w, add_head_mid, add_hw_last, left, sa);
+        let body = c.trans(k, lhs_w, add_hw_last, target_rhs, step1, srrr);
+
+        let body = lam_over(k, G_FV, c.cell, body);
+        let body = lam_over(k, IH_FV, ih_ty, body);
+        lam_over(k, M_FV, c.nat, body)
+    };
+
+    let rec = k.const_(lg.nat_rec, vec![l0]);
+    let n = k.fvar(M_FV);
+    let g = k.fvar(G_FV);
+    let applied = t_app(k, rec, &[motive, minor_zero, minor_succ, n, g]);
+    let value = lam_over(k, M_FV, c.nat, applied);
+    let value = lam_over(k, G_FV, c.cell, value);
+    let value = lam_over(k, R_FV, c.ring_ty, value);
+
+    let concl = {
+        let g1 = shift_first(k, lg, &c, g);
+        let sn = succ_of(k, lg, n);
+        let zero_n = zero_of(k, lg);
+        let lhs = walk(k, &c, antidiag, g, sn, zero_n);
+        let w = walk(k, &c, antidiag, g1, n, zero_n);
+        let last = t_app(k, g, &[zero_n, sn]);
+        let rhs = c.plus(k, w, last);
+        c.eq(k, lhs, rhs)
+    };
+    let ty = pi_over(k, M_FV, c.nat, concl);
+    let ty = pi_over(k, G_FV, c.cell, ty);
+    let ty = pi_over(k, R_FV, c.ring_ty, ty);
+
+    let name = k.name_str(poly_ns, "antidiagFrom_succ_last");
+    k.add_declaration(Declaration::Theorem {
+        name,
+        uparams: vec![],
+        ty,
+        value,
+    })?;
+    Ok(name)
+}
+
+/// `AlgS.Poly.antidiagFrom_rev : forall R g n,
+/// R.equiv (antidiagFrom R g n Nat.zero)
+///         (antidiagFrom R (fun a b => g b a) n Nat.zero)`.
+///
+/// **The reversal.** Walking the antidiagonal `i + j = n` downward in `i` and
+/// walking it downward in `j` sum to the same thing. This is the lemma
+/// `mulComm` is, once the cells are transposed by `R.mulComm`.
+///
+/// `Nat.rec` on `n` with motive `fun n => forall g, …` again. The step reads:
+/// the head `g (succ m) 0` plus the shifted tail, whose IH gives the
+/// transposed walk; the peel-the-last lemma applied to `gᵀ` produces the very
+/// same transposed walk plus the same head, in the other order — so the two
+/// sides differ by exactly one `addComm`. The two families `(gᵀ)⁺` and
+/// `(g↑)ᵀ` are the same lambda, `fun a b => g b (succ a)`, which is what
+/// makes the step close.
+#[allow(clippy::too_many_lines)]
+fn declare_antidiag_rev(
+    k: &mut Kernel,
+    lg: &LogicPrelude,
+    cr: &RecordNames,
+    antidiag: NameId,
+    shift: NameId,
+    succ_last: NameId,
+    poly_ns: NameId,
+) -> Result<NameId, KernelError> {
+    let c = rctx(k, lg, cr);
+    let l0 = k.level_zero();
+
+    let motive_body = |k: &mut Kernel, c: &RCtx, n: ExprId| {
+        let g = k.fvar(G_FV);
+        let gt = transpose_cells(k, c, g);
+        let zero_n = zero_of(k, lg);
+        let lhs = walk(k, c, antidiag, g, n, zero_n);
+        let rhs = walk(k, c, antidiag, gt, n, zero_n);
+        let body = c.eq(k, lhs, rhs);
+        pi_over(k, G_FV, c.cell, body)
+    };
+    let motive = {
+        let n = k.fvar(M_FV);
+        let body = motive_body(k, &c, n);
+        lam_over(k, M_FV, c.nat, body)
+    };
+    let minor_zero = {
+        let g = k.fvar(G_FV);
+        let zero_n = zero_of(k, lg);
+        let lhs = walk(k, &c, antidiag, g, zero_n, zero_n);
+        let body = c.refl(k, lhs);
+        lam_over(k, G_FV, c.cell, body)
+    };
+    let minor_succ = {
+        let m = k.fvar(M_FV);
+        let ih_ty = motive_body(k, &c, m);
+        let ih = k.fvar(IH_FV);
+        let g = k.fvar(G_FV);
+
+        let zero_n = zero_of(k, lg);
+        let one_n = succ_of(k, lg, zero_n);
+        let sm = succ_of(k, lg, m);
+
+        let gs = shift_second(k, lg, &c, g);
+        let gt = transpose_cells(k, &c, g);
+        // `z := fun a b => g b (succ a)` -- BOTH `(g↑)ᵀ` and `(gᵀ)⁺`.
+        let z = {
+            let i = k.fvar(I_FV);
+            let j = k.fvar(J_FV);
+            let si = succ_of(k, lg, i);
+            let body = t_app(k, g, &[j, si]);
+            let body = lam_over(k, J_FV, c.nat, body);
+            lam_over(k, I_FV, c.nat, body)
+        };
+
+        let head = t_app(k, g, &[sm, zero_n]);
+        let w_g_m_1 = walk(k, &c, antidiag, g, m, one_n);
+        let w_gs_m_0 = walk(k, &c, antidiag, gs, m, zero_n);
+        let w_z_m_0 = walk(k, &c, antidiag, z, m, zero_n);
+
+        let a = {
+            let s = k.const_(shift, vec![]);
+            t_app(k, s, &[c.r, g, m, zero_n])
+        };
+        let b = k.app(ih, gs);
+        let tail_chain = c.trans(k, w_g_m_1, w_gs_m_0, w_z_m_0, a, b);
+        let refl_head = c.refl(k, head);
+        let left = t_app(
+            k,
+            c.add_congr,
+            &[head, head, w_g_m_1, w_z_m_0, refl_head, tail_chain],
+        );
+
+        let cc = {
+            let s = k.const_(succ_last, vec![]);
+            t_app(k, s, &[c.r, gt, m])
+        };
+        let w_gt_sm_0 = walk(k, &c, antidiag, gt, sm, zero_n);
+        let z_head = c.plus(k, w_z_m_0, head);
+        let head_z = c.plus(k, head, w_z_m_0);
+        let comm = t_app(k, c.add_comm, &[head, w_z_m_0]);
+
+        let lhs_w = walk(k, &c, antidiag, g, sm, zero_n);
+        let step1 = c.trans(k, lhs_w, head_z, z_head, left, comm);
+        let scc = c.symm(k, w_gt_sm_0, z_head, cc);
+        let body = c.trans(k, lhs_w, z_head, w_gt_sm_0, step1, scc);
+
+        let body = lam_over(k, G_FV, c.cell, body);
+        let body = lam_over(k, IH_FV, ih_ty, body);
+        lam_over(k, M_FV, c.nat, body)
+    };
+
+    let rec = k.const_(lg.nat_rec, vec![l0]);
+    let n = k.fvar(M_FV);
+    let g = k.fvar(G_FV);
+    let applied = t_app(k, rec, &[motive, minor_zero, minor_succ, n, g]);
+    let value = lam_over(k, M_FV, c.nat, applied);
+    let value = lam_over(k, G_FV, c.cell, value);
+    let value = lam_over(k, R_FV, c.ring_ty, value);
+
+    let concl = {
+        let gt = transpose_cells(k, &c, g);
+        let zero_n = zero_of(k, lg);
+        let lhs = walk(k, &c, antidiag, g, n, zero_n);
+        let rhs = walk(k, &c, antidiag, gt, n, zero_n);
+        c.eq(k, lhs, rhs)
+    };
+    let ty = pi_over(k, M_FV, c.nat, concl);
+    let ty = pi_over(k, G_FV, c.cell, ty);
+    let ty = pi_over(k, R_FV, c.ring_ty, ty);
+
+    let name = k.name_str(poly_ns, "antidiagFrom_rev");
+    k.add_declaration(Declaration::Theorem {
+        name,
+        uparams: vec![],
+        ty,
+        value,
+    })?;
+    Ok(name)
+}
+
+/// `AlgS.Poly.antidiagFrom_tail_zero : forall R g,
+/// (forall i j, R.equiv (g i (succ j)) R.zero) ->
+/// forall i j, R.equiv (antidiagFrom R g i (succ j)) R.zero`.
+///
+/// Every cell the walk visits from a NON-ZERO second index has a non-zero
+/// second index, so if the family vanishes off the `j = 0` column the whole
+/// tail vanishes. `Nat.rec` on `i` with motive `fun i => forall j, …`.
+fn declare_antidiag_tail_zero(
+    k: &mut Kernel,
+    lg: &LogicPrelude,
+    cr: &RecordNames,
+    antidiag: NameId,
+    poly_ns: NameId,
+) -> Result<NameId, KernelError> {
+    let c = rctx(k, lg, cr);
+    let l0 = k.level_zero();
+    let g = k.fvar(G_FV);
+
+    let hyp_ty = {
+        let i = k.fvar(I_FV);
+        let j = k.fvar(J_FV);
+        let sj = succ_of(k, lg, j);
+        let cell = t_app(k, g, &[i, sj]);
+        let body = c.eq(k, cell, c.zero);
+        let body = pi_over(k, J_FV, c.nat, body);
+        pi_over(k, I_FV, c.nat, body)
+    };
+    let h = k.fvar(H_FV);
+
+    let motive_body = |k: &mut Kernel, c: &RCtx, i: ExprId| {
+        let j = k.fvar(J_FV);
+        let sj = succ_of(k, lg, j);
+        let lhs = walk(k, c, antidiag, g, i, sj);
+        let body = c.eq(k, lhs, c.zero);
+        pi_over(k, J_FV, c.nat, body)
+    };
+    let motive = {
+        let i = k.fvar(I_FV);
+        let body = motive_body(k, &c, i);
+        lam_over(k, I_FV, c.nat, body)
+    };
+    let minor_zero = {
+        let j = k.fvar(J_FV);
+        let zero_n = zero_of(k, lg);
+        let body = t_app(k, h, &[zero_n, j]);
+        lam_over(k, J_FV, c.nat, body)
+    };
+    let minor_succ = {
+        let i = k.fvar(I_FV);
+        let ih_ty = motive_body(k, &c, i);
+        let ih = k.fvar(IH_FV);
+        let j = k.fvar(J_FV);
+        let si = succ_of(k, lg, i);
+        let sj = succ_of(k, lg, j);
+        let ssj = succ_of(k, lg, sj);
+        let head = t_app(k, g, &[si, sj]);
+        let tail = walk(k, &c, antidiag, g, i, ssj);
+        let h_head = t_app(k, h, &[si, j]);
+        let h_tail = k.app(ih, sj);
+        let congr = t_app(
+            k,
+            c.add_congr,
+            &[head, c.zero, tail, c.zero, h_head, h_tail],
+        );
+        let sum = c.plus(k, head, tail);
+        let zz = c.plus(k, c.zero, c.zero);
+        let az = k.app(c.add_zero, c.zero);
+        let body = c.trans(k, sum, zz, c.zero, congr, az);
+        let body = lam_over(k, J_FV, c.nat, body);
+        let body = lam_over(k, IH_FV, ih_ty, body);
+        lam_over(k, I_FV, c.nat, body)
+    };
+
+    let rec = k.const_(lg.nat_rec, vec![l0]);
+    let proof = t_app(k, rec, &[motive, minor_zero, minor_succ]);
+    let value = lam_over(k, H_FV, hyp_ty, proof);
+    let value = lam_over(k, G_FV, c.cell, value);
+    let value = lam_over(k, R_FV, c.ring_ty, value);
+
+    let concl = {
+        let i = k.fvar(I_FV);
+        let body = motive_body(k, &c, i);
+        pi_over(k, I_FV, c.nat, body)
+    };
+    let ty = pi_over(k, H_FV, hyp_ty, concl);
+    let ty = pi_over(k, G_FV, c.cell, ty);
+    let ty = pi_over(k, R_FV, c.ring_ty, ty);
+
+    let name = k.name_str(poly_ns, "antidiagFrom_tail_zero");
+    k.add_declaration(Declaration::Theorem {
+        name,
+        uparams: vec![],
+        ty,
+        value,
+    })?;
+    Ok(name)
+}
+
+/// `AlgS.Poly.antidiagFrom_head : forall R g,
+/// (forall i j, R.equiv (g i (succ j)) R.zero) ->
+/// forall n, R.equiv (antidiagFrom R g n Nat.zero) (g n Nat.zero)`.
+///
+/// **The vanishing-tail collapse.** With the tail gone the whole walk is its
+/// first cell. This is the lemma `mulOneR` is, at the family
+/// `fun i j => R.mul (p i) (AlgS.Poly.one R j)`, whose off-column cells are
+/// `p i * R.zero` (because `AlgS.Poly.one R (succ j)` iota-reduces to
+/// `R.zero`) and so vanish by `AlgS.mul_zero`.
+fn declare_antidiag_head(
+    k: &mut Kernel,
+    lg: &LogicPrelude,
+    cr: &RecordNames,
+    antidiag: NameId,
+    tail_zero: NameId,
+    poly_ns: NameId,
+) -> Result<NameId, KernelError> {
+    let c = rctx(k, lg, cr);
+    let l0 = k.level_zero();
+    let g = k.fvar(G_FV);
+
+    let hyp_ty = {
+        let i = k.fvar(I_FV);
+        let j = k.fvar(J_FV);
+        let sj = succ_of(k, lg, j);
+        let cell = t_app(k, g, &[i, sj]);
+        let body = c.eq(k, cell, c.zero);
+        let body = pi_over(k, J_FV, c.nat, body);
+        pi_over(k, I_FV, c.nat, body)
+    };
+    let h = k.fvar(H_FV);
+
+    let motive_body = |k: &mut Kernel, c: &RCtx, n: ExprId| {
+        let zero_n = zero_of(k, lg);
+        let lhs = walk(k, c, antidiag, g, n, zero_n);
+        let rhs = t_app(k, g, &[n, zero_n]);
+        c.eq(k, lhs, rhs)
+    };
+    let motive = {
+        let n = k.fvar(M_FV);
+        let body = motive_body(k, &c, n);
+        lam_over(k, M_FV, c.nat, body)
+    };
+    let minor_zero = {
+        let zero_n = zero_of(k, lg);
+        let cell = t_app(k, g, &[zero_n, zero_n]);
+        c.refl(k, cell)
+    };
+    let minor_succ = {
+        let m = k.fvar(M_FV);
+        let ih_ty = motive_body(k, &c, m);
+        let zero_n = zero_of(k, lg);
+        let one_n = succ_of(k, lg, zero_n);
+        let sm = succ_of(k, lg, m);
+        let head = t_app(k, g, &[sm, zero_n]);
+        let tail = walk(k, &c, antidiag, g, m, one_n);
+        let tz = {
+            let t = k.const_(tail_zero, vec![]);
+            t_app(k, t, &[c.r, g, h, m, zero_n])
+        };
+        let refl_head = c.refl(k, head);
+        let congr = t_app(k, c.add_congr, &[head, head, tail, c.zero, refl_head, tz]);
+        let sum = c.plus(k, head, tail);
+        let head_zero = c.plus(k, head, c.zero);
+        let az = k.app(c.add_zero, head);
+        let body = c.trans(k, sum, head_zero, head, congr, az);
+        let body = lam_over(k, IH_FV, ih_ty, body);
+        lam_over(k, M_FV, c.nat, body)
+    };
+
+    let rec = k.const_(lg.nat_rec, vec![l0]);
+    let proof = t_app(k, rec, &[motive, minor_zero, minor_succ]);
+    let value = lam_over(k, H_FV, hyp_ty, proof);
+    let value = lam_over(k, G_FV, c.cell, value);
+    let value = lam_over(k, R_FV, c.ring_ty, value);
+
+    let concl = {
+        let n = k.fvar(M_FV);
+        let body = motive_body(k, &c, n);
+        pi_over(k, M_FV, c.nat, body)
+    };
+    let ty = pi_over(k, H_FV, hyp_ty, concl);
+    let ty = pi_over(k, G_FV, c.cell, ty);
+    let ty = pi_over(k, R_FV, c.ring_ty, ty);
+
+    let name = k.name_str(poly_ns, "antidiagFrom_head");
+    k.add_declaration(Declaration::Theorem {
+        name,
+        uparams: vec![],
+        ty,
+        value,
+    })?;
+    Ok(name)
+}
+
+/// `AlgS.Poly.antidiagFrom_mul_right : forall R g x i j,
+/// R.equiv (R.mul (antidiagFrom R g i j) x)
+///         (antidiagFrom R (fun a b => R.mul (g a b) x) i j)`.
+///
+/// A right factor distributes into every cell of the walk — `distribR`, once
+/// per step. `mulAssoc` needs it to move `s 0` inside the inner convolution.
+fn declare_antidiag_mul_right(
+    k: &mut Kernel,
+    lg: &LogicPrelude,
+    cr: &RecordNames,
+    antidiag: NameId,
+    poly_ns: NameId,
+) -> Result<NameId, KernelError> {
+    let c = rctx(k, lg, cr);
+    let l0 = k.level_zero();
+    let g = k.fvar(G_FV);
+    let x = k.fvar(EL_FV);
+    let gx = {
+        let i = k.fvar(I_FV);
+        let j = k.fvar(J_FV);
+        let cell = t_app(k, g, &[i, j]);
+        let body = c.times(k, cell, x);
+        let body = lam_over(k, J_FV, c.nat, body);
+        lam_over(k, I_FV, c.nat, body)
+    };
+
+    let motive_body = |k: &mut Kernel, c: &RCtx, i: ExprId| {
+        let j = k.fvar(J_FV);
+        let w = walk(k, c, antidiag, g, i, j);
+        let lhs = c.times(k, w, x);
+        let rhs = walk(k, c, antidiag, gx, i, j);
+        let body = c.eq(k, lhs, rhs);
+        pi_over(k, J_FV, c.nat, body)
+    };
+    let motive = {
+        let i = k.fvar(I_FV);
+        let body = motive_body(k, &c, i);
+        lam_over(k, I_FV, c.nat, body)
+    };
+    let minor_zero = {
+        let j = k.fvar(J_FV);
+        let zero_n = zero_of(k, lg);
+        let cell = t_app(k, g, &[zero_n, j]);
+        let lhs = c.times(k, cell, x);
+        let body = c.refl(k, lhs);
+        lam_over(k, J_FV, c.nat, body)
+    };
+    let minor_succ = {
+        let i = k.fvar(I_FV);
+        let ih_ty = motive_body(k, &c, i);
+        let ih = k.fvar(IH_FV);
+        let j = k.fvar(J_FV);
+        let si = succ_of(k, lg, i);
+        let sj = succ_of(k, lg, j);
+        let head = t_app(k, g, &[si, j]);
+        let tail = walk(k, &c, antidiag, g, i, sj);
+        let sum = c.plus(k, head, tail);
+        let lhs = c.times(k, sum, x);
+        let head_x = c.times(k, head, x);
+        let tail_x = c.times(k, tail, x);
+        let split = c.plus(k, head_x, tail_x);
+        let dr = t_app(k, c.distrib_r, &[head, tail, x]);
+        let w_gx = walk(k, &c, antidiag, gx, i, sj);
+        let h_tail = k.app(ih, sj);
+        let refl_head = c.refl(k, head_x);
+        let congr = t_app(
+            k,
+            c.add_congr,
+            &[head_x, head_x, tail_x, w_gx, refl_head, h_tail],
+        );
+        let target = c.plus(k, head_x, w_gx);
+        let body = c.trans(k, lhs, split, target, dr, congr);
+        let body = lam_over(k, J_FV, c.nat, body);
+        let body = lam_over(k, IH_FV, ih_ty, body);
+        lam_over(k, I_FV, c.nat, body)
+    };
+
+    let rec = k.const_(lg.nat_rec, vec![l0]);
+    let i = k.fvar(I_FV);
+    let j = k.fvar(J_FV);
+    let applied = t_app(k, rec, &[motive, minor_zero, minor_succ, i, j]);
+    let value = lam_over(k, J_FV, c.nat, applied);
+    let value = lam_over(k, I_FV, c.nat, value);
+    let value = lam_over(k, EL_FV, c.carrier, value);
+    let value = lam_over(k, G_FV, c.cell, value);
+    let value = lam_over(k, R_FV, c.ring_ty, value);
+
+    let concl = {
+        let w = walk(k, &c, antidiag, g, i, j);
+        let lhs = c.times(k, w, x);
+        let rhs = walk(k, &c, antidiag, gx, i, j);
+        c.eq(k, lhs, rhs)
+    };
+    let ty = pi_over(k, J_FV, c.nat, concl);
+    let ty = pi_over(k, I_FV, c.nat, ty);
+    let ty = pi_over(k, EL_FV, c.carrier, ty);
+    let ty = pi_over(k, G_FV, c.cell, ty);
+    let ty = pi_over(k, R_FV, c.ring_ty, ty);
+
+    let name = k.name_str(poly_ns, "antidiagFrom_mul_right");
+    k.add_declaration(Declaration::Theorem {
+        name,
+        uparams: vec![],
+        ty,
+        value,
+    })?;
+    Ok(name)
+}
+
+/// `AlgS.Poly.mul_succ : forall R p q n,
+/// R.equiv (AlgS.Poly.mul R p q (succ n))
+///         (R.add (R.mul (p (succ n)) (q Nat.zero))
+///                (AlgS.Poly.mul R p (fun j => q (succ j)) n))`.
+///
+/// **The convolution's own recursion.** The walk's `succ` step peels the
+/// leading cell `p (succ n) * q 0` and leaves a walk starting one step along
+/// the second index; the shift lemma turns that into the convolution of `p`
+/// with `q` shifted down. `mulAssoc` runs on this recursion — twice on the
+/// left and twice on the right — and nothing else.
+fn declare_poly_mul_succ(
+    k: &mut Kernel,
+    lg: &LogicPrelude,
+    cr: &RecordNames,
+    names: &PolyOpNames,
+    antidiag: NameId,
+    shift: NameId,
+    poly_ns: NameId,
+) -> Result<NameId, KernelError> {
+    let c = rctx(k, lg, cr);
+    let mul_c = {
+        let t = k.const_(names.mul, vec![]);
+        k.app(t, c.r)
+    };
+    let p = k.fvar(P_FV);
+    let q = k.fvar(Q_FV);
+    let n = k.fvar(M_FV);
+    let zero_n = zero_of(k, lg);
+    let sn = succ_of(k, lg, n);
+
+    let shq = {
+        let j = k.fvar(J_FV);
+        let sj = succ_of(k, lg, j);
+        let body = k.app(q, sj);
+        lam_over(k, J_FV, c.nat, body)
+    };
+    let p_sn = k.app(p, sn);
+    let q0 = k.app(q, zero_n);
+    let head = c.times(k, p_sn, q0);
+    let cells = mul_cells(k, &c, p, q);
+    let one_n = succ_of(k, lg, zero_n);
+    let tail_l = walk(k, &c, antidiag, cells, n, one_n);
+    let tail_r = {
+        let m = app2(k, mul_c, p, shq);
+        k.app(m, n)
+    };
+    let sh = {
+        let t = k.const_(shift, vec![]);
+        t_app(k, t, &[c.r, cells, n, zero_n])
+    };
+    let refl_head = c.refl(k, head);
+    let value = t_app(k, c.add_congr, &[head, head, tail_l, tail_r, refl_head, sh]);
+    let value = lam_over(k, M_FV, c.nat, value);
+    let value = lam_over(k, Q_FV, c.poly, value);
+    let value = lam_over(k, P_FV, c.poly, value);
+    let value = lam_over(k, R_FV, c.ring_ty, value);
+
+    let concl = {
+        let lhs = {
+            let m = app2(k, mul_c, p, q);
+            k.app(m, sn)
+        };
+        let rhs = c.plus(k, head, tail_r);
+        c.eq(k, lhs, rhs)
+    };
+    let ty = pi_over(k, M_FV, c.nat, concl);
+    let ty = pi_over(k, Q_FV, c.poly, ty);
+    let ty = pi_over(k, P_FV, c.poly, ty);
+    let ty = pi_over(k, R_FV, c.ring_ty, ty);
+
+    let name = k.name_str(poly_ns, "mul_succ");
+    k.add_declaration(Declaration::Theorem {
+        name,
+        uparams: vec![],
+        ty,
+        value,
+    })?;
+    Ok(name)
+}
+
+/// `AlgS.Poly.mulComm : forall R p q,
+/// AlgS.Poly.equiv R (AlgS.Poly.mul R p q) (AlgS.Poly.mul R q p)` — the
+/// `mulComm` field of `R[X]`.
+///
+/// Reversal of the walk (`antidiagFrom_rev`) puts the antidiagonal in the
+/// other order; `R.mulComm` at each cell turns `p j * q i` into `q i * p j`.
+/// Two steps, no induction of its own.
+fn declare_poly_mul_comm(
+    k: &mut Kernel,
+    lg: &LogicPrelude,
+    cr: &RecordNames,
+    names: &PolyOpNames,
+    antidiag: NameId,
+    rev: NameId,
+    congr: NameId,
+    poly_ns: NameId,
+) -> Result<NameId, KernelError> {
+    let c = rctx(k, lg, cr);
+    let equiv_c = {
+        let t = k.const_(names.equiv, vec![]);
+        k.app(t, c.r)
+    };
+    let mul_c = {
+        let t = k.const_(names.mul, vec![]);
+        k.app(t, c.r)
+    };
+    let p = k.fvar(P_FV);
+    let q = k.fvar(Q_FV);
+    let n = k.fvar(M_FV);
+    let zero_n = zero_of(k, lg);
+
+    let cells = mul_cells(k, &c, p, q);
+    let cells_t = transpose_cells(k, &c, cells);
+    let cells_qp = mul_cells(k, &c, q, p);
+
+    let lhs = walk(k, &c, antidiag, cells, n, zero_n);
+    let mid = walk(k, &c, antidiag, cells_t, n, zero_n);
+    let rhs = walk(k, &c, antidiag, cells_qp, n, zero_n);
+
+    let step1 = {
+        let t = k.const_(rev, vec![]);
+        t_app(k, t, &[c.r, cells, n])
+    };
+    let cell_hyp = {
+        let i = k.fvar(I_FV);
+        let j = k.fvar(J_FV);
+        let pj = k.app(p, j);
+        let qi = k.app(q, i);
+        let body = t_app(k, c.mul_comm, &[pj, qi]);
+        let body = lam_over(k, J_FV, c.nat, body);
+        lam_over(k, I_FV, c.nat, body)
+    };
+    let step2 = {
+        let t = k.const_(congr, vec![]);
+        t_app(k, t, &[c.r, cells_t, cells_qp, cell_hyp, n, zero_n])
+    };
+    let body = c.trans(k, lhs, mid, rhs, step1, step2);
+    let value = lam_over(k, M_FV, c.nat, body);
+    let value = lam_over(k, Q_FV, c.poly, value);
+    let value = lam_over(k, P_FV, c.poly, value);
+    let value = lam_over(k, R_FV, c.ring_ty, value);
+
+    let concl = {
+        let l = app2(k, mul_c, p, q);
+        let r = app2(k, mul_c, q, p);
+        app2(k, equiv_c, l, r)
+    };
+    let ty = pi_over(k, Q_FV, c.poly, concl);
+    let ty = pi_over(k, P_FV, c.poly, ty);
+    let ty = pi_over(k, R_FV, c.ring_ty, ty);
+
+    let name = k.name_str(poly_ns, "mulComm");
+    k.add_declaration(Declaration::Theorem {
+        name,
+        uparams: vec![],
+        ty,
+        value,
+    })?;
+    Ok(name)
+}
+
+/// `AlgS.Poly.mulOneR : forall R p,
+/// AlgS.Poly.equiv R (AlgS.Poly.mul R p (AlgS.Poly.one R)) p`.
+///
+/// `AlgS.Poly.one R (succ j)` iota-reduces to `R.zero`, so every cell the
+/// walk visits after its first is `p i * R.zero`, which `AlgS.mul_zero`
+/// kills; `antidiagFrom_head` collapses the walk to `p n * R.one` and
+/// `R.mulOneR` finishes.
+fn declare_poly_mul_one_r(
+    k: &mut Kernel,
+    lg: &LogicPrelude,
+    cr: &RecordNames,
+    names: &PolyOpNames,
+    antidiag: NameId,
+    head_lemma: NameId,
+    deps: PolyDeps,
+    poly_ns: NameId,
+) -> Result<NameId, KernelError> {
+    let c = rctx(k, lg, cr);
+    let equiv_c = {
+        let t = k.const_(names.equiv, vec![]);
+        k.app(t, c.r)
+    };
+    let mul_c = {
+        let t = k.const_(names.mul, vec![]);
+        k.app(t, c.r)
+    };
+    let one_c = {
+        let t = k.const_(names.one, vec![]);
+        k.app(t, c.r)
+    };
+    let p = k.fvar(P_FV);
+    let n = k.fvar(M_FV);
+    let zero_n = zero_of(k, lg);
+
+    let cells = mul_cells(k, &c, p, one_c);
+    // The ring `R` viewed as an `AlgS.Ring`, so `AlgS.mul_zero` applies.
+    let r_ring = {
+        let t = k.const_(deps.comm_ring_to_ring_s, vec![]);
+        k.app(t, c.r)
+    };
+    let cell_hyp = {
+        let i = k.fvar(I_FV);
+        let pi = k.app(p, i);
+        let mz = k.const_(deps.mul_zero, vec![]);
+        // The cell is `p i * AlgS.Poly.one R (succ j)`, and
+        // `AlgS.Poly.one R (succ j)` iota-reduces to `R.zero` for EVERY `j` --
+        // so the witness does not mention `j` at all.
+        let body = t_app(k, mz, &[r_ring, pi]);
+        let body = lam_over(k, J_FV, c.nat, body);
+        lam_over(k, I_FV, c.nat, body)
+    };
+    let collapse = {
+        let t = k.const_(head_lemma, vec![]);
+        t_app(k, t, &[c.r, cells, cell_hyp, n])
+    };
+    let lhs = walk(k, &c, antidiag, cells, n, zero_n);
+    let pn = k.app(p, n);
+    let mid = c.times(k, pn, c.one);
+    let unit = k.app(c.mul_one_r, pn);
+    let body = c.trans(k, lhs, mid, pn, collapse, unit);
+    let value = lam_over(k, M_FV, c.nat, body);
+    let value = lam_over(k, P_FV, c.poly, value);
+    let value = lam_over(k, R_FV, c.ring_ty, value);
+
+    let concl = {
+        let l = app2(k, mul_c, p, one_c);
+        app2(k, equiv_c, l, p)
+    };
+    let ty = pi_over(k, P_FV, c.poly, concl);
+    let ty = pi_over(k, R_FV, c.ring_ty, ty);
+
+    let name = k.name_str(poly_ns, "mulOneR");
+    k.add_declaration(Declaration::Theorem {
+        name,
+        uparams: vec![],
+        ty,
+        value,
+    })?;
+    Ok(name)
+}
+
+/// `AlgS.Poly.mulOneL : forall R p,
+/// AlgS.Poly.equiv R (AlgS.Poly.mul R (AlgS.Poly.one R) p) p` — `mulComm`
+/// then `mulOneR`, one `equivTrans` at each coefficient.
+///
+/// The mirror collapse (a family vanishing off the `i = 0` ROW, whose one
+/// surviving cell is the LAST the walk visits) is deliberately not proved:
+/// commutativity is already available and reduces this side to the other.
+fn declare_poly_mul_one_l(
+    k: &mut Kernel,
+    lg: &LogicPrelude,
+    cr: &RecordNames,
+    names: &PolyOpNames,
+    mul_comm: NameId,
+    mul_one_r: NameId,
+    poly_ns: NameId,
+) -> Result<NameId, KernelError> {
+    let c = rctx(k, lg, cr);
+    let equiv_c = {
+        let t = k.const_(names.equiv, vec![]);
+        k.app(t, c.r)
+    };
+    let mul_c = {
+        let t = k.const_(names.mul, vec![]);
+        k.app(t, c.r)
+    };
+    let one_c = {
+        let t = k.const_(names.one, vec![]);
+        k.app(t, c.r)
+    };
+    let p = k.fvar(P_FV);
+    let n = k.fvar(M_FV);
+
+    let lhs = {
+        let m = app2(k, mul_c, one_c, p);
+        k.app(m, n)
+    };
+    let mid = {
+        let m = app2(k, mul_c, p, one_c);
+        k.app(m, n)
+    };
+    let pn = k.app(p, n);
+    let comm = {
+        let t = k.const_(mul_comm, vec![]);
+        let e = t_app(k, t, &[c.r, one_c, p]);
+        k.app(e, n)
+    };
+    let unit = {
+        let t = k.const_(mul_one_r, vec![]);
+        let e = t_app(k, t, &[c.r, p]);
+        k.app(e, n)
+    };
+    let body = c.trans(k, lhs, mid, pn, comm, unit);
+    let value = lam_over(k, M_FV, c.nat, body);
+    let value = lam_over(k, P_FV, c.poly, value);
+    let value = lam_over(k, R_FV, c.ring_ty, value);
+
+    let concl = {
+        let l = app2(k, mul_c, one_c, p);
+        app2(k, equiv_c, l, p)
+    };
+    let ty = pi_over(k, P_FV, c.poly, concl);
+    let ty = pi_over(k, R_FV, c.ring_ty, ty);
+
+    let name = k.name_str(poly_ns, "mulOneL");
+    k.add_declaration(Declaration::Theorem {
+        name,
+        uparams: vec![],
+        ty,
+        value,
+    })?;
+    Ok(name)
+}
+
+/// `AlgS.Poly.mulAssoc : forall R p q s,
+/// AlgS.Poly.equiv R (AlgS.Poly.mul R (AlgS.Poly.mul R p q) s)
+///                   (AlgS.Poly.mul R p (AlgS.Poly.mul R q s))`.
+///
+/// **The two-dimensional exchange ADR-1609 sized as "the hard one", done
+/// without any three-index machinery.** `Nat.rec` on the coefficient index
+/// with motive `fun n => forall p q s, …`, and the whole step is the
+/// convolution's own recursion `mul_succ` applied four times:
+///
+/// ```text
+/// ((p·q)·s)(n+1) ~ (p·q)(n+1)·s 0 + ((p·q)·s↑)(n)        [mul_succ]
+///                ~ (p(n+1)·q 0 + (p·q↑)(n))·s 0 + (p·(q·s↑))(n)   [mul_succ, IH]
+///                ~ (p(n+1)·q 0)·s 0 + (p·q↑)(n)·s 0 + (p·(q·s↑))(n)  [distribR]
+/// (p·(q·s))(n+1) ~ p(n+1)·(q·s)(0) + (p·(λj.(q·s)(j+1)))(n)      [mul_succ]
+///                ~ p(n+1)·(q 0·s 0) + (p·(λj. q(j+1)·s 0 + (q·s↑)(j)))(n)
+///                ~ p(n+1)·(q 0·s 0) + ((p·q↑)(n)·s 0 + (p·(q·s↑))(n)) [distribL]
+/// ```
+///
+/// and the two lines meet under one `R.mulAssoc` plus one `R.addAssoc`. The
+/// only walk lemma it needs beyond `mul_succ` is `antidiagFrom_mul_right`,
+/// which pulls the scalar `s 0` out of the inner convolution.
+#[allow(clippy::too_many_lines)]
+fn declare_poly_mul_assoc(
+    k: &mut Kernel,
+    lg: &LogicPrelude,
+    cr: &RecordNames,
+    names: &PolyOpNames,
+    antidiag: NameId,
+    mul_succ: NameId,
+    mul_right: NameId,
+    congr: NameId,
+    mul_congr_poly: NameId,
+    distrib_l_poly: NameId,
+    poly_ns: NameId,
+) -> Result<NameId, KernelError> {
+    let c = rctx(k, lg, cr);
+    let l0 = k.level_zero();
+    let equiv_c = {
+        let t = k.const_(names.equiv, vec![]);
+        k.app(t, c.r)
+    };
+    let mul_c = {
+        let t = k.const_(names.mul, vec![]);
+        k.app(t, c.r)
+    };
+    let add_c = {
+        let t = k.const_(names.add, vec![]);
+        k.app(t, c.r)
+    };
+
+    let motive_body = |k: &mut Kernel, c: &RCtx, n: ExprId| {
+        let p = k.fvar(P_FV);
+        let q = k.fvar(Q_FV);
+        let s = k.fvar(S_FV);
+        let pq = app2(k, mul_c, p, q);
+        let qs = app2(k, mul_c, q, s);
+        let l = app2(k, mul_c, pq, s);
+        let l = k.app(l, n);
+        let r = app2(k, mul_c, p, qs);
+        let r = k.app(r, n);
+        let body = c.eq(k, l, r);
+        let body = pi_over(k, S_FV, c.poly, body);
+        let body = pi_over(k, Q_FV, c.poly, body);
+        pi_over(k, P_FV, c.poly, body)
+    };
+    let motive = {
+        let n = k.fvar(M_FV);
+        let body = motive_body(k, &c, n);
+        lam_over(k, M_FV, c.nat, body)
+    };
+    let minor_zero = {
+        let p = k.fvar(P_FV);
+        let q = k.fvar(Q_FV);
+        let s = k.fvar(S_FV);
+        let zero_n = zero_of(k, lg);
+        let p0 = k.app(p, zero_n);
+        let q0 = k.app(q, zero_n);
+        let s0 = k.app(s, zero_n);
+        let body = t_app(k, c.mul_assoc, &[p0, q0, s0]);
+        let body = lam_over(k, S_FV, c.poly, body);
+        let body = lam_over(k, Q_FV, c.poly, body);
+        lam_over(k, P_FV, c.poly, body)
+    };
+    let minor_succ = {
+        let m = k.fvar(M_FV);
+        let ih_ty = motive_body(k, &c, m);
+        let ih = k.fvar(IH_FV);
+        let p = k.fvar(P_FV);
+        let q = k.fvar(Q_FV);
+        let s = k.fvar(S_FV);
+
+        let zero_n = zero_of(k, lg);
+        let sm = succ_of(k, lg, m);
+        let mul_succ_c = k.const_(mul_succ, vec![]);
+
+        let shq = {
+            let j = k.fvar(J_FV);
+            let sj = succ_of(k, lg, j);
+            let body = k.app(q, sj);
+            lam_over(k, J_FV, c.nat, body)
+        };
+        let shs = {
+            let j = k.fvar(J_FV);
+            let sj = succ_of(k, lg, j);
+            let body = k.app(s, sj);
+            lam_over(k, J_FV, c.nat, body)
+        };
+
+        let pq = app2(k, mul_c, p, q);
+        let qs = app2(k, mul_c, q, s);
+        let q_shs = app2(k, mul_c, q, shs);
+
+        let p_sm = k.app(p, sm);
+        let q0 = k.app(q, zero_n);
+        let s0 = k.app(s, zero_n);
+        let inner_a = c.times(k, p_sm, q0);
+        let big_a = c.times(k, inner_a, s0);
+        let q0s0 = c.times(k, q0, s0);
+        let big_a2 = c.times(k, p_sm, q0s0);
+        let p_shq_m = {
+            let e = app2(k, mul_c, p, shq);
+            k.app(e, m)
+        };
+        let big_b = c.times(k, p_shq_m, s0);
+        let big_c = {
+            let e = app2(k, mul_c, p, q_shs);
+            k.app(e, m)
+        };
+
+        // ---- the left-hand chain ----
+        let lhs_top = {
+            let e = app2(k, mul_c, pq, s);
+            k.app(e, sm)
+        };
+        let pq_sm = k.app(pq, sm);
+        let pq_sm_s0 = c.times(k, pq_sm, s0);
+        let pq_shs_m = {
+            let e = app2(k, mul_c, pq, shs);
+            k.app(e, m)
+        };
+        let sum0 = c.plus(k, pq_sm_s0, pq_shs_m);
+        let l0t = t_app(k, mul_succ_c, &[c.r, pq, s, m]);
+        let l1 = t_app(k, ih, &[p, q, shs]);
+        let l2 = t_app(k, mul_succ_c, &[c.r, p, q, m]);
+        let a_plus = c.plus(k, inner_a, p_shq_m);
+        let refl_s0 = c.refl(k, s0);
+        let l3 = t_app(k, c.mul_congr, &[pq_sm, a_plus, s0, s0, l2, refl_s0]);
+        let a_plus_s0 = c.times(k, a_plus, s0);
+        let l4 = t_app(k, c.distrib_r, &[inner_a, p_shq_m, s0]);
+        let ab = c.plus(k, big_a, big_b);
+        let l5 = c.trans(k, pq_sm_s0, a_plus_s0, ab, l3, l4);
+        let l6 = t_app(k, c.add_congr, &[pq_sm_s0, ab, pq_shs_m, big_c, l5, l1]);
+        let ab_c = c.plus(k, ab, big_c);
+        let left = c.trans(k, lhs_top, sum0, ab_c, l0t, l6);
+
+        // ---- the right-hand chain ----
+        let rhs_top = {
+            let e = app2(k, mul_c, p, qs);
+            k.app(e, sm)
+        };
+        let qs0 = k.app(qs, zero_n);
+        let p_sm_qs0 = c.times(k, p_sm, qs0);
+        let sh_qs = {
+            let j = k.fvar(J_FV);
+            let sj = succ_of(k, lg, j);
+            let body = k.app(qs, sj);
+            lam_over(k, J_FV, c.nat, body)
+        };
+        let p_shqs_m = {
+            let e = app2(k, mul_c, p, sh_qs);
+            k.app(e, m)
+        };
+        let sum_r0 = c.plus(k, p_sm_qs0, p_shqs_m);
+        let r0 = t_app(k, mul_succ_c, &[c.r, p, qs, m]);
+
+        // `u j := q (succ j) * s 0`, `v := q · s↑`; `λj. (q·s)(j+1) ~ u + v`.
+        let u = {
+            let j = k.fvar(J_FV);
+            let sj = succ_of(k, lg, j);
+            let qsj = k.app(q, sj);
+            let body = c.times(k, qsj, s0);
+            lam_over(k, J_FV, c.nat, body)
+        };
+        let v = q_shs;
+        let uv = app2(k, add_c, u, v);
+        let hyp_uv = {
+            let j = k.fvar(J_FV);
+            let body = t_app(k, mul_succ_c, &[c.r, q, s, j]);
+            lam_over(k, J_FV, c.nat, body)
+        };
+        let refl_p = {
+            let n = k.fvar(N_FV);
+            let pn = k.app(p, n);
+            let body = c.refl(k, pn);
+            lam_over(k, N_FV, c.nat, body)
+        };
+        let r1b = {
+            let t = k.const_(mul_congr_poly, vec![]);
+            let e = t_app(k, t, &[c.r, p, p, sh_qs, uv, refl_p, hyp_uv]);
+            k.app(e, m)
+        };
+        let p_uv_m = {
+            let e = app2(k, mul_c, p, uv);
+            k.app(e, m)
+        };
+        let r1c = {
+            let t = k.const_(distrib_l_poly, vec![]);
+            let e = t_app(k, t, &[c.r, p, u, v]);
+            k.app(e, m)
+        };
+        let p_u_m = {
+            let e = app2(k, mul_c, p, u);
+            k.app(e, m)
+        };
+        let p_u_c = c.plus(k, p_u_m, big_c);
+
+        // `(p·q↑)(m) · s 0 ~ (p·u)(m)`: pull `s 0` into the walk, then
+        // reassociate each cell.
+        let cells_pshq = mul_cells(k, &c, p, shq);
+        let mr = {
+            let t = k.const_(mul_right, vec![]);
+            t_app(k, t, &[c.r, cells_pshq, s0, m, zero_n])
+        };
+        let gx1 = {
+            let i = k.fvar(I_FV);
+            let j = k.fvar(J_FV);
+            let sj = succ_of(k, lg, j);
+            let pi = k.app(p, i);
+            let qsj = k.app(q, sj);
+            let inner = c.times(k, pi, qsj);
+            let body = c.times(k, inner, s0);
+            let body = lam_over(k, J_FV, c.nat, body);
+            lam_over(k, I_FV, c.nat, body)
+        };
+        let gx2 = {
+            let i = k.fvar(I_FV);
+            let j = k.fvar(J_FV);
+            let sj = succ_of(k, lg, j);
+            let pi = k.app(p, i);
+            let qsj = k.app(q, sj);
+            let inner = c.times(k, qsj, s0);
+            let body = c.times(k, pi, inner);
+            let body = lam_over(k, J_FV, c.nat, body);
+            lam_over(k, I_FV, c.nat, body)
+        };
+        let hyp_assoc = {
+            let i = k.fvar(I_FV);
+            let j = k.fvar(J_FV);
+            let sj = succ_of(k, lg, j);
+            let pi = k.app(p, i);
+            let qsj = k.app(q, sj);
+            let body = t_app(k, c.mul_assoc, &[pi, qsj, s0]);
+            let body = lam_over(k, J_FV, c.nat, body);
+            lam_over(k, I_FV, c.nat, body)
+        };
+        let w_gx1 = walk(k, &c, antidiag, gx1, m, zero_n);
+        let w_gx2 = walk(k, &c, antidiag, gx2, m, zero_n);
+        let cg = {
+            let t = k.const_(congr, vec![]);
+            t_app(k, t, &[c.r, gx1, gx2, hyp_assoc, m, zero_n])
+        };
+        let r1d_fwd = c.trans(k, big_b, w_gx1, w_gx2, mr, cg);
+        let r1d = c.symm(k, big_b, p_u_m, r1d_fwd);
+        let refl_big_c = c.refl(k, big_c);
+        let bc = c.plus(k, big_b, big_c);
+        let r1e = t_app(
+            k,
+            c.add_congr,
+            &[p_u_m, big_b, big_c, big_c, r1d, refl_big_c],
+        );
+        let t1 = c.trans(k, p_shqs_m, p_uv_m, p_u_c, r1b, r1c);
+        let r1 = c.trans(k, p_shqs_m, p_u_c, bc, t1, r1e);
+
+        let refl_a2 = c.refl(k, big_a2);
+        let r2 = t_app(
+            k,
+            c.add_congr,
+            &[p_sm_qs0, big_a2, p_shqs_m, bc, refl_a2, r1],
+        );
+        let a2_bc = c.plus(k, big_a2, bc);
+        let right = c.trans(k, rhs_top, sum_r0, a2_bc, r0, r2);
+
+        // ---- the join ----
+        let assoc = t_app(k, c.add_assoc, &[big_a, big_b, big_c]);
+        let a_bc = c.plus(k, big_a, bc);
+        let step1 = c.trans(k, lhs_top, ab_c, a_bc, left, assoc);
+        let ma = t_app(k, c.mul_assoc, &[p_sm, q0, s0]);
+        let refl_bc = c.refl(k, bc);
+        let cg2 = t_app(k, c.add_congr, &[big_a, big_a2, bc, bc, ma, refl_bc]);
+        let step2 = c.trans(k, lhs_top, a_bc, a2_bc, step1, cg2);
+        let sright = c.symm(k, rhs_top, a2_bc, right);
+        let body = c.trans(k, lhs_top, a2_bc, rhs_top, step2, sright);
+
+        let body = lam_over(k, S_FV, c.poly, body);
+        let body = lam_over(k, Q_FV, c.poly, body);
+        let body = lam_over(k, P_FV, c.poly, body);
+        let body = lam_over(k, IH_FV, ih_ty, body);
+        lam_over(k, M_FV, c.nat, body)
+    };
+
+    let rec = k.const_(lg.nat_rec, vec![l0]);
+    let p = k.fvar(P_FV);
+    let q = k.fvar(Q_FV);
+    let s = k.fvar(S_FV);
+    let n = k.fvar(M_FV);
+    let applied = t_app(k, rec, &[motive, minor_zero, minor_succ, n, p, q, s]);
+    let value = lam_over(k, M_FV, c.nat, applied);
+    let value = lam_over(k, S_FV, c.poly, value);
+    let value = lam_over(k, Q_FV, c.poly, value);
+    let value = lam_over(k, P_FV, c.poly, value);
+    let value = lam_over(k, R_FV, c.ring_ty, value);
+
+    let concl = {
+        let pq = app2(k, mul_c, p, q);
+        let qs = app2(k, mul_c, q, s);
+        let l = app2(k, mul_c, pq, s);
+        let r = app2(k, mul_c, p, qs);
+        app2(k, equiv_c, l, r)
+    };
+    let ty = pi_over(k, S_FV, c.poly, concl);
+    let ty = pi_over(k, Q_FV, c.poly, ty);
+    let ty = pi_over(k, P_FV, c.poly, ty);
+    let ty = pi_over(k, R_FV, c.ring_ty, ty);
+
+    let name = k.name_str(poly_ns, "mulAssoc");
+    k.add_declaration(Declaration::Theorem {
+        name,
+        uparams: vec![],
+        ty,
+        value,
+    })?;
+    Ok(name)
+}
+
+/// `AlgS.Poly.commRing : AlgS.CommRing -> AlgS.CommRing` — **`R[X]` as a
+/// commutative ring**, all 23 fields.
+///
+/// This is the declaration that turns "a polynomial ring structure" into "a
+/// polynomial ring": the kernel checks every law of `AlgS.CommRing` at the
+/// coefficient function carrier `Nat -> R.carrier`, with `AlgS.Poly.equiv R`
+/// as the equality. The additive twelve are `R`'s own fields applied at the
+/// index (identically to `AlgS.Poly.commGroup`); the multiplicative four are
+/// the theorems above.
+#[allow(clippy::too_many_lines)]
+fn declare_poly_comm_ring(
+    k: &mut Kernel,
+    lg: &LogicPrelude,
+    cr: &RecordNames,
+    names: &PolyOpNames,
+    ring_fields: PolyRingFieldNames,
+    poly_ns: NameId,
+) -> Result<NameId, KernelError> {
+    let c = rctx(k, lg, cr);
+
+    let at_r = |k: &mut Kernel, n: NameId| {
+        let t = k.const_(n, vec![]);
+        k.app(t, c.r)
+    };
+    let equiv_c = at_r(k, names.equiv);
+    let add_c = at_r(k, names.add);
+    let mul_c = at_r(k, names.mul);
+    let zero_c = at_r(k, names.zero);
+    let one_c = at_r(k, names.one);
+    let neg_c = at_r(k, names.neg);
+    let mul_congr_c = at_r(k, ring_fields.mul_congr);
+    let mul_assoc_c = at_r(k, ring_fields.mul_assoc);
+    let mul_one_l_c = at_r(k, ring_fields.mul_one_l);
+    let mul_one_r_c = at_r(k, ring_fields.mul_one_r);
+    let distrib_l_c = at_r(k, ring_fields.distrib_l);
+    let distrib_r_c = at_r(k, ring_fields.distrib_r);
+    let mul_comm_c = at_r(k, ring_fields.mul_comm);
+
+    let f_refl = {
+        let p = k.fvar(P_FV);
+        let n = k.fvar(N_FV);
+        let pn = k.app(p, n);
+        let body = c.refl(k, pn);
+        let body = lam_over(k, N_FV, c.nat, body);
+        lam_over(k, P_FV, c.poly, body)
+    };
+    let f_symm = {
+        let p = k.fvar(P_FV);
+        let q = k.fvar(Q_FV);
+        let hyp = app2(k, equiv_c, p, q);
+        let h = k.fvar(H_FV);
+        let n = k.fvar(N_FV);
+        let pn = k.app(p, n);
+        let qn = k.app(q, n);
+        let hn = k.app(h, n);
+        let body = c.symm(k, pn, qn, hn);
+        let body = lam_over(k, N_FV, c.nat, body);
+        let body = lam_over(k, H_FV, hyp, body);
+        let body = lam_over(k, Q_FV, c.poly, body);
+        lam_over(k, P_FV, c.poly, body)
+    };
+    let f_trans = {
+        let p = k.fvar(P_FV);
+        let q = k.fvar(Q_FV);
+        let s = k.fvar(S_FV);
+        let hyp1 = app2(k, equiv_c, p, q);
+        let hyp2 = app2(k, equiv_c, q, s);
+        let h1 = k.fvar(HP_FV);
+        let h2 = k.fvar(HQ_FV);
+        let n = k.fvar(N_FV);
+        let pn = k.app(p, n);
+        let qn = k.app(q, n);
+        let sn = k.app(s, n);
+        let h1n = k.app(h1, n);
+        let h2n = k.app(h2, n);
+        let body = c.trans(k, pn, qn, sn, h1n, h2n);
+        let body = lam_over(k, N_FV, c.nat, body);
+        let body = lam_over(k, HQ_FV, hyp2, body);
+        let body = lam_over(k, HP_FV, hyp1, body);
+        let body = lam_over(k, S_FV, c.poly, body);
+        let body = lam_over(k, Q_FV, c.poly, body);
+        lam_over(k, P_FV, c.poly, body)
+    };
+    let f_add_congr = {
+        let p = k.fvar(P_FV);
+        let pp = k.fvar(A_FV);
+        let q = k.fvar(Q_FV);
+        let qq = k.fvar(B_FV);
+        let hyp1 = app2(k, equiv_c, p, pp);
+        let hyp2 = app2(k, equiv_c, q, qq);
+        let h1 = k.fvar(HP_FV);
+        let h2 = k.fvar(HQ_FV);
+        let n = k.fvar(N_FV);
+        let pn = k.app(p, n);
+        let ppn = k.app(pp, n);
+        let qn = k.app(q, n);
+        let qqn = k.app(qq, n);
+        let h1n = k.app(h1, n);
+        let h2n = k.app(h2, n);
+        let body = t_app(k, c.add_congr, &[pn, ppn, qn, qqn, h1n, h2n]);
+        let body = lam_over(k, N_FV, c.nat, body);
+        let body = lam_over(k, HQ_FV, hyp2, body);
+        let body = lam_over(k, HP_FV, hyp1, body);
+        let body = lam_over(k, B_FV, c.poly, body);
+        let body = lam_over(k, Q_FV, c.poly, body);
+        let body = lam_over(k, A_FV, c.poly, body);
+        lam_over(k, P_FV, c.poly, body)
+    };
+    let f_add_assoc = {
+        let p = k.fvar(P_FV);
+        let q = k.fvar(Q_FV);
+        let s = k.fvar(S_FV);
+        let n = k.fvar(N_FV);
+        let pn = k.app(p, n);
+        let qn = k.app(q, n);
+        let sn = k.app(s, n);
+        let body = t_app(k, c.add_assoc, &[pn, qn, sn]);
+        let body = lam_over(k, N_FV, c.nat, body);
+        let body = lam_over(k, S_FV, c.poly, body);
+        let body = lam_over(k, Q_FV, c.poly, body);
+        lam_over(k, P_FV, c.poly, body)
+    };
+    let f_add_comm = {
+        let p = k.fvar(P_FV);
+        let q = k.fvar(Q_FV);
+        let n = k.fvar(N_FV);
+        let pn = k.app(p, n);
+        let qn = k.app(q, n);
+        let body = t_app(k, c.add_comm, &[pn, qn]);
+        let body = lam_over(k, N_FV, c.nat, body);
+        let body = lam_over(k, Q_FV, c.poly, body);
+        lam_over(k, P_FV, c.poly, body)
+    };
+    let f_add_zero = {
+        let p = k.fvar(P_FV);
+        let n = k.fvar(N_FV);
+        let pn = k.app(p, n);
+        let body = k.app(c.add_zero, pn);
+        let body = lam_over(k, N_FV, c.nat, body);
+        lam_over(k, P_FV, c.poly, body)
+    };
+    let f_neg_congr = {
+        let p = k.fvar(P_FV);
+        let pp = k.fvar(A_FV);
+        let hyp = app2(k, equiv_c, p, pp);
+        let h = k.fvar(H_FV);
+        let n = k.fvar(N_FV);
+        let pn = k.app(p, n);
+        let ppn = k.app(pp, n);
+        let hn = k.app(h, n);
+        let body = t_app(k, c.neg_congr, &[pn, ppn, hn]);
+        let body = lam_over(k, N_FV, c.nat, body);
+        let body = lam_over(k, H_FV, hyp, body);
+        let body = lam_over(k, A_FV, c.poly, body);
+        lam_over(k, P_FV, c.poly, body)
+    };
+    let f_neg_add = {
+        let p = k.fvar(P_FV);
+        let n = k.fvar(N_FV);
+        let pn = k.app(p, n);
+        let body = k.app(c.neg_add, pn);
+        let body = lam_over(k, N_FV, c.nat, body);
+        lam_over(k, P_FV, c.poly, body)
+    };
+
+    let value = mk_instance(
+        k,
+        cr,
+        &[
+            c.poly,
+            equiv_c,
+            f_refl,
+            f_symm,
+            f_trans,
+            zero_c,
+            one_c,
+            add_c,
+            mul_c,
+            f_add_congr,
+            mul_congr_c,
+            f_add_assoc,
+            f_add_comm,
+            f_add_zero,
+            mul_assoc_c,
+            mul_one_l_c,
+            mul_one_r_c,
+            distrib_l_c,
+            distrib_r_c,
+            neg_c,
+            f_neg_congr,
+            f_neg_add,
+            mul_comm_c,
+        ],
+    );
+    let value = lam_over(k, R_FV, c.ring_ty, value);
+    let ty = arrow(k, c.ring_ty, c.ring_ty);
+
+    let name = k.name_str(poly_ns, "commRing");
+    k.add_declaration(Declaration::Definition {
+        name,
+        uparams: vec![],
+        ty,
+        value,
+        hint: ReducibilityHint::Regular(3),
+    })?;
+    Ok(name)
+}
+
+// ---------------------------------------------------------------------------
 // Assembly.
 // ---------------------------------------------------------------------------
 
@@ -1380,6 +3022,34 @@ pub struct PolyOpNames {
     pub mul: NameId,
 }
 
+/// ADR-1618: the two `structures_setoid` results `AlgS.Poly.mulOneR` needs.
+///
+/// `AlgS.mul_zero` is stated over `AlgS.Ring`, so it reaches an
+/// `AlgS.CommRing` through the prefix projection `AlgS.CommRing.toRingS`.
+/// Both are declared by `declare_structures_s_extra`, which runs before this
+/// module at every call site.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct PolyDeps {
+    /// `AlgS.CommRing.toRingS`.
+    pub comm_ring_to_ring_s: NameId,
+    /// `AlgS.mul_zero : forall (R : AlgS.Ring) a, R.equiv (R.mul a R.zero) R.zero`.
+    pub mul_zero: NameId,
+}
+
+/// The eight `AlgS.Poly.*` theorems that ARE the multiplicative fields of
+/// `AlgS.Poly.commRing`, gathered so the instance builder cannot pick up a
+/// name by accident.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct PolyRingFieldNames {
+    mul_congr: NameId,
+    mul_assoc: NameId,
+    mul_one_l: NameId,
+    mul_one_r: NameId,
+    distrib_l: NameId,
+    distrib_r: NameId,
+    mul_comm: NameId,
+}
+
 /// Every `AlgS.Poly.*` name this module declares, plus `AlgS.add_add_add_comm`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct PolyNames {
@@ -1392,6 +3062,31 @@ pub struct PolyNames {
     pub mul_congr: NameId,
     pub distrib_l: NameId,
     pub distrib_r: NameId,
+    // -- ADR-1618: the reindexing lemmas and the four fields they close. --
+    /// `AlgS.Poly.antidiagFrom_shift`.
+    pub antidiag_from_shift: NameId,
+    /// `AlgS.Poly.antidiagFrom_succ_last`.
+    pub antidiag_from_succ_last: NameId,
+    /// `AlgS.Poly.antidiagFrom_rev` — the reversal.
+    pub antidiag_from_rev: NameId,
+    /// `AlgS.Poly.antidiagFrom_tail_zero`.
+    pub antidiag_from_tail_zero: NameId,
+    /// `AlgS.Poly.antidiagFrom_head` — the vanishing-tail collapse.
+    pub antidiag_from_head: NameId,
+    /// `AlgS.Poly.antidiagFrom_mul_right`.
+    pub antidiag_from_mul_right: NameId,
+    /// `AlgS.Poly.mul_succ` — the convolution's own recursion.
+    pub mul_succ: NameId,
+    /// `AlgS.Poly.mulComm`.
+    pub mul_comm: NameId,
+    /// `AlgS.Poly.mulOneR`.
+    pub mul_one_r: NameId,
+    /// `AlgS.Poly.mulOneL`.
+    pub mul_one_l: NameId,
+    /// `AlgS.Poly.mulAssoc` — the two-dimensional exchange.
+    pub mul_assoc: NameId,
+    /// **`AlgS.Poly.commRing`** — `R[X]` as a full 23-field `AlgS.CommRing`.
+    pub comm_ring: NameId,
 }
 
 /// `#[cfg(test)]` because these names are deliberately NOT threaded into
@@ -1399,11 +3094,11 @@ pub struct PolyNames {
 /// of the roster is the suite below; a plain `--lib` build would flag it dead.
 #[cfg(test)]
 impl PolyNames {
-    /// The fifteen declarations, in dependency order. Derived from the struct
-    /// so a renamed or dropped declaration breaks a test rather than the
-    /// test's idea of what exists.
+    /// The twenty-seven declarations, in dependency order. Derived from the
+    /// struct so a renamed or dropped declaration breaks a test rather than
+    /// the test's idea of what exists.
     #[must_use]
-    pub fn all(&self) -> [NameId; 15] {
+    pub fn all(&self) -> [NameId; 27] {
         [
             self.add_add_add_comm,
             self.ops.equiv,
@@ -1420,6 +3115,18 @@ impl PolyNames {
             self.mul_congr,
             self.distrib_l,
             self.distrib_r,
+            self.antidiag_from_shift,
+            self.antidiag_from_succ_last,
+            self.antidiag_from_rev,
+            self.antidiag_from_tail_zero,
+            self.antidiag_from_head,
+            self.antidiag_from_mul_right,
+            self.mul_succ,
+            self.mul_comm,
+            self.mul_one_r,
+            self.mul_one_l,
+            self.mul_assoc,
+            self.comm_ring,
         ]
     }
 }
@@ -1435,6 +3142,7 @@ pub(crate) fn declare_poly_setoid(
     lg: &LogicPrelude,
     comm_ring: &RecordNames,
     comm_group: &RecordNames,
+    deps: PolyDeps,
     algs_p: NameId,
 ) -> Result<PolyNames, KernelError> {
     let poly_ns = k.name_str(algs_p, "Poly");
@@ -1471,6 +3179,98 @@ pub(crate) fn declare_poly_setoid(
     let distrib_l = declare_poly_distrib_l(k, lg, comm_ring, &ops, antidiag_from_add, poly_ns)?;
     let distrib_r = declare_poly_distrib_r(k, lg, comm_ring, &ops, antidiag_from_add, poly_ns)?;
 
+    // -- ADR-1618: the reindexing lemmas, the four remaining ring fields, and
+    // the `AlgS.CommRing` instance they complete. --
+    let antidiag_from_shift = declare_antidiag_shift(k, lg, comm_ring, antidiag_from, poly_ns)?;
+    let antidiag_from_succ_last = declare_antidiag_succ_last(
+        k,
+        lg,
+        comm_ring,
+        antidiag_from,
+        antidiag_from_shift,
+        poly_ns,
+    )?;
+    let antidiag_from_rev = declare_antidiag_rev(
+        k,
+        lg,
+        comm_ring,
+        antidiag_from,
+        antidiag_from_shift,
+        antidiag_from_succ_last,
+        poly_ns,
+    )?;
+    let antidiag_from_tail_zero =
+        declare_antidiag_tail_zero(k, lg, comm_ring, antidiag_from, poly_ns)?;
+    let antidiag_from_head = declare_antidiag_head(
+        k,
+        lg,
+        comm_ring,
+        antidiag_from,
+        antidiag_from_tail_zero,
+        poly_ns,
+    )?;
+    let antidiag_from_mul_right =
+        declare_antidiag_mul_right(k, lg, comm_ring, antidiag_from, poly_ns)?;
+    let mul_succ = declare_poly_mul_succ(
+        k,
+        lg,
+        comm_ring,
+        &ops,
+        antidiag_from,
+        antidiag_from_shift,
+        poly_ns,
+    )?;
+    let mul_comm = declare_poly_mul_comm(
+        k,
+        lg,
+        comm_ring,
+        &ops,
+        antidiag_from,
+        antidiag_from_rev,
+        antidiag_from_congr,
+        poly_ns,
+    )?;
+    let mul_one_r = declare_poly_mul_one_r(
+        k,
+        lg,
+        comm_ring,
+        &ops,
+        antidiag_from,
+        antidiag_from_head,
+        deps,
+        poly_ns,
+    )?;
+    let mul_one_l = declare_poly_mul_one_l(k, lg, comm_ring, &ops, mul_comm, mul_one_r, poly_ns)?;
+    let mul_assoc = declare_poly_mul_assoc(
+        k,
+        lg,
+        comm_ring,
+        &ops,
+        antidiag_from,
+        mul_succ,
+        antidiag_from_mul_right,
+        antidiag_from_congr,
+        mul_congr,
+        distrib_l,
+        poly_ns,
+    )?;
+    let comm_ring_name = declare_poly_comm_ring(
+        k,
+        lg,
+        comm_ring,
+        &ops,
+        PolyRingFieldNames {
+            mul_congr,
+            mul_assoc,
+            mul_one_l,
+            mul_one_r,
+            distrib_l,
+            distrib_r,
+            mul_comm,
+        },
+        poly_ns,
+    )?;
+
     Ok(PolyNames {
         add_add_add_comm,
         ops,
@@ -1481,6 +3281,18 @@ pub(crate) fn declare_poly_setoid(
         mul_congr,
         distrib_l,
         distrib_r,
+        antidiag_from_shift,
+        antidiag_from_succ_last,
+        antidiag_from_rev,
+        antidiag_from_tail_zero,
+        antidiag_from_head,
+        antidiag_from_mul_right,
+        mul_succ,
+        mul_comm,
+        mul_one_r,
+        mul_one_l,
+        mul_assoc,
+        comm_ring: comm_ring_name,
     })
 }
 
@@ -1494,9 +3306,10 @@ pub(crate) fn declare_poly_setoid(
 mod poly_setoid_tests {
     use super::*;
     use crate::build_logic_prelude;
+    use crate::nat_prelude::structures as algeq;
     use crate::nat_prelude::structures_setoid::{
         StructuresSNames, StructuresSRecordNames, declare_structures_s_all,
-        intern_structures_s_names,
+        declare_structures_s_extra, intern_structures_s_names,
     };
 
     struct Fixture {
@@ -1506,15 +3319,32 @@ mod poly_setoid_tests {
         poly: PolyNames,
     }
 
-    /// The whole dependency set is `logic` plus the `AlgS` records -- no `Alg`
-    /// spine, no `Nat` arithmetic. That is the build position this module was
-    /// written for, and it is why this suite is cheap.
+    /// The whole dependency set is `logic`, the `Alg`/`AlgS` records and
+    /// `declare_structures_s_extra` -- still no `Nat` arithmetic, which is
+    /// the build position this module was written for and the claim ADR-1618
+    /// measures. The `Alg` spine appears only because
+    /// `declare_structures_s_extra` (which declares `AlgS.mul_zero`, needed
+    /// by `mulOneR`) also declares the nine `ofAlg` projections.
     fn build(k: &mut Kernel) -> Fixture {
         let lg = build_logic_prelude(k).expect("logic prelude must build");
+        let alg_p = algeq::intern_structures_names(k);
+        let alg_st = algeq::declare_structures_all(k, &alg_p, &lg).expect("Alg spine builds");
         let p = intern_structures_s_names(k);
         let st = declare_structures_s_all(k, &p, &lg).expect("AlgS spine builds");
-        let poly = declare_poly_setoid(k, &lg, &st.comm_ring, &st.comm_group, p.algs)
-            .expect("the polynomial ring over an abstract AlgS.CommRing must admit");
+        let extra = declare_structures_s_extra(k, &lg, &p, &st, &alg_p, &alg_st)
+            .expect("AlgS extras must admit");
+        let poly = declare_poly_setoid(
+            k,
+            &lg,
+            &st.comm_ring,
+            &st.comm_group,
+            PolyDeps {
+                comm_ring_to_ring_s: extra.comm_ring_to_ring_s,
+                mul_zero: extra.mul_zero,
+            },
+            p.algs,
+        )
+        .expect("the polynomial ring over an abstract AlgS.CommRing must admit");
         Fixture { lg, st, p, poly }
     }
 

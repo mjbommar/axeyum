@@ -1674,7 +1674,7 @@ pub(crate) fn declare_module_setoid(
 mod module_setoid_tests {
     use super::*;
     use crate::build_logic_prelude;
-    use crate::nat_prelude::polynomial_setoid::{PolyNames, declare_poly_setoid};
+    use crate::nat_prelude::polynomial_setoid::{PolyDeps, PolyNames, declare_poly_setoid};
     use crate::nat_prelude::structures as algeq;
     use crate::nat_prelude::structures_setoid::{
         StructuresSExtraNames, StructuresSNames, StructuresSRecordNames, declare_structures_s_all,
@@ -1698,8 +1698,18 @@ mod module_setoid_tests {
         let st = declare_structures_s_all(k, &p, &lg).expect("AlgS spine builds");
         let extra = declare_structures_s_extra(k, &lg, &p, &st, &alg_p, &alg_st)
             .expect("AlgS extras must admit");
-        let poly = declare_poly_setoid(k, &lg, &st.comm_ring, &st.comm_group, p.algs)
-            .expect("AlgS.Poly must admit");
+        let poly = declare_poly_setoid(
+            k,
+            &lg,
+            &st.comm_ring,
+            &st.comm_group,
+            PolyDeps {
+                comm_ring_to_ring_s: extra.comm_ring_to_ring_s,
+                mul_zero: extra.mul_zero,
+            },
+            p.algs,
+        )
+        .expect("AlgS.Poly must admit");
         let deps = ModuleDeps {
             add_left_cancel: extra.add_left_cancel,
             inv_unique: extra.inv_unique,
