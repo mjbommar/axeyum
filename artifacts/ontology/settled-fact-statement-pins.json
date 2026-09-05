@@ -899,6 +899,16 @@
       "recorded_by": "coordinator",
       "from_prose_sha256": "43d4c8a1eaf6b9153ac313173f88c7b1ee7ff59170d70ad84086cbe5599bd163",
       "to_prose_sha256": "bf8601369e34784be0cb32a41a3594bdf6983e7e5f4cecbb69d0956e6358f44d"
+    },
+    {
+      "fact_id": "F:cats-grp-bundled-hom",
+      "date": "2026-09-05",
+      "from_sha256": "4048c81e4c5b147a6caea65c033dd2bc913b485bab1e331ebec0df45f56272d0",
+      "to_sha256": "4048c81e4c5b147a6caea65c033dd2bc913b485bab1e331ebec0df45f56272d0",
+      "from_kernel_theorem": "CatS.isGrpHom_congr",
+      "to_kernel_theorem": "CatS.grp",
+      "reason": "DECLARATION ONLY -- the statement is unchanged (both digests equal). The fact is 'the category of groups exists', its statement is `def CatS.grp : CatS.CategoryLarge`, and the lane that landed it named the hom-congruence theorem `CatS.isGrpHom_congr` as the declaration, which is one field of the construction rather than the construction. Every other definition-fact in the ledger names the definition itself (e.g. F-algs-poly-comm-ring, F-complex-polyeval). Repointed at `CatS.grp` on 2026-09-05, the day after it landed at 251b198fb, so the gate's structural bind checks the statement against the declaration the fact is about.",
+      "recorded_by": "coordinator"
     }
   ],
   "pins": [
@@ -1439,7 +1449,15 @@
       "language": "lean4",
       "statement_sha256": "4048c81e4c5b147a6caea65c033dd2bc913b485bab1e331ebec0df45f56272d0",
       "prose_sha256": "48f1006cc76b49bed452c61202fbba98a0f71d6937877e3c9f77e3277df0a39f",
-      "kernel_theorem": "CatS.isGrpHom_congr"
+      "kernel_theorem": "CatS.grp",
+      "history": [
+        {
+          "language": "lean4",
+          "statement_sha256": "4048c81e4c5b147a6caea65c033dd2bc913b485bab1e331ebec0df45f56272d0",
+          "prose_sha256": "48f1006cc76b49bed452c61202fbba98a0f71d6937877e3c9f77e3277df0a39f",
+          "kernel_theorem": "CatS.isGrpHom_congr"
+        }
+      ]
     },
     {
       "fact_id": "F:cats-initial-unique",
