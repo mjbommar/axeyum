@@ -298,7 +298,18 @@ increment.
 
 ## What landed
 
-25 declarations, all with an empty `Kernel::axiom_footprint`:
+25 named declarations, all with an empty `Kernel::axiom_footprint`. The
+environment grows by **35**, measured with `shape_search --include-constructed`
+before and after (4148 -> 4183), because the `CatS.FunctorLarge` record
+contributes ten more that nobody names by hand:
+
+| kind | before | after | delta | what |
+|---|---:|---:|---:|---|
+| definition | 1018 | 1043 | +25 | 18 named definitions + 7 `FunctorLarge` selectors |
+| theorem | 2889 | 2896 | +7 | the seven named theorems |
+| inductive / constructor / recursor | 61 / 89 / 61 | 62 / 90 / 62 | +1 each | `CatS.FunctorLarge`, `.mk`, `.rec` |
+
+The named 25:
 
 | group | declarations |
 |---|---|
