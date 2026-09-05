@@ -462,9 +462,7 @@ fn declare_definitions(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelE
         let f_fv = d.fresh_fvar();
         let f = d.kernel().fvar(f_fv);
         let nat_to_nat = d.arrow(nat, nat);
-        let motive = d
-            .kernel()
-            .lam(anon, nat, nat_to_nat, BinderInfo::Default);
+        let motive = d.kernel().lam(anon, nat, nat_to_nat, BinderInfo::Default);
         let base = {
             let zero = d.zero();
             d.kernel().lam(anon, nat, zero, BinderInfo::Default)
@@ -627,9 +625,7 @@ fn bit_b_at_zero(d: &mut NatDev<'_>, p: &NatPrelude, b: ExprId, m: ExprId) -> Ex
     };
     let on_true = branch(d, tv, is_true);
     let on_false = branch(d, fal, is_false);
-    let s2 = or_elim(
-        d, &p, is_true, is_false, goal2, on_true, on_false, decided,
-    );
+    let s2 = or_elim(d, &p, is_true, is_false, goal2, on_true, on_false, decided);
 
     let lhs_mid = {
         let one_lit = d.num(1);
@@ -770,9 +766,8 @@ fn declare_bit_b_encode_from(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), K
                     d.succ(inner)
                 };
                 let h_succ_add = d.lemma(p.succ_add, &[j, i]);
-                let step_c = nat_to_bool_congr(d, lhs_arg, rhs_arg, h_succ_add, &|d, x| {
-                    d.apply(f, &[x])
-                });
+                let step_c =
+                    nat_to_bool_congr(d, lhs_arg, rhs_arg, h_succ_add, &|d, x| d.apply(f, &[x]));
 
                 let a_lhs = bit_b(d, &p, bitted, si);
                 let a_rhs = bit_b(d, &p, tail, i);

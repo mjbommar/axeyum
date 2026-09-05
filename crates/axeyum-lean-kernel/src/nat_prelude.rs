@@ -6617,6 +6617,16 @@ pub struct NatPrelude {
     /// missing pieces.
     pub hall_condition_of_is_matching: NameId,
 
+    /// `Nat.Finset.card_congr_of_memB : ∀ u v,
+    /// (∀ i, Eq Bool (memB u i) (memB v i)) → Eq Nat (card u) (card v)` — two
+    /// sets with the same members have the same cardinality even when their
+    /// stored BOUNDS differ. Both are folded over the common bound
+    /// `bound u + bound v` through
+    /// [`finset_card_eq_count_range_add`](Self::finset_card_eq_count_range_add).
+    /// The premise-discharging lemma for
+    /// [`finset_forall_subset_of_search`](Self::finset_forall_subset_of_search).
+    pub finset_card_congr_of_mem_b: NameId,
+
     // --- The subset-search primitive (`subset_search.rs`, ADR-1614) ---------
     /// `Nat.Finset.bitB k i := beq (Nat.testBit k i) 1` — the `Bool` view of
     /// the existing `Nat`-valued [`test_bit`](Self::test_bit).
@@ -7802,6 +7812,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             hall_any_below_of_witness: kernel.name_str(hall, "anyBelow_of_witness"),
             hall_mem_union_over: kernel.name_str(hall, "memB_unionOver"),
             hall_condition_of_is_matching: kernel.name_str(hall, "hallCondition_of_isMatching"),
+            finset_card_congr_of_mem_b: kernel.name_str(finset, "card_congr_of_memB"),
             finset_bit_b: kernel.name_str(finset, "bitB"),
             finset_decode: kernel.name_str(finset, "decode"),
             finset_encode_from: kernel.name_str(finset, "encodeFrom"),
@@ -9376,6 +9387,9 @@ mod ramsey_tests;
 
 #[cfg(test)]
 mod hall_tests;
+
+#[cfg(test)]
+mod subset_search_tests;
 
 #[cfg(test)]
 mod multiset_tests;

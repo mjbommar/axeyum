@@ -749,6 +749,7 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.hall_any_below_of_witness,
         p.hall_mem_union_over,
         p.hall_condition_of_is_matching,
+        p.finset_card_congr_of_mem_b,
         p.finset_bit_b_encode_from,
         p.finset_encode_from_lt_pow,
         p.finset_mem_b_decode_encode,

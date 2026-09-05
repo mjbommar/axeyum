@@ -93,7 +93,9 @@ pub(super) fn declare_strong_induction_all(
         let n_fv = d.fresh_fvar();
         let n = d.kernel().fvar(n_fv);
 
-        let fix = d.kernel().const_(p.logic.well_founded_fix, vec![one, u_lvl]);
+        let fix = d
+            .kernel()
+            .const_(p.logic.well_founded_fix, vec![one, u_lvl]);
         let body = d.apply(fix, &[nat, relation, motive, well_founded, step, n]);
 
         let ty = {
