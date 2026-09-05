@@ -4928,9 +4928,10 @@ p cnf 2 3
     /// Pigeonhole `pigeons` into `pigeons - 1`: unsatisfiable, and expensive
     /// enough in conflicts to reach the core's deterministic deadline cadence.
     fn pigeonhole_clauses(pigeons: i64) -> super::CnfFormula {
+        use std::fmt::Write as _;
+
         let holes = pigeons - 1;
         let v = |p: i64, h: i64| holes * (p - 1) + h;
-        let mut text = String::new();
         let mut clauses: Vec<Vec<i64>> = Vec::new();
         for p in 1..=pigeons {
             clauses.push((1..=holes).map(|h| v(p, h)).collect());
@@ -4942,10 +4943,12 @@ p cnf 2 3
                 }
             }
         }
-        text.push_str(&format!("p cnf {} {}\n", pigeons * holes, clauses.len()));
+        let mut text = String::new();
+        writeln!(text, "p cnf {} {}", pigeons * holes, clauses.len())
+            .expect("writing to a String cannot fail");
         for clause in &clauses {
             for lit in clause {
-                text.push_str(&format!("{lit} "));
+                write!(text, "{lit} ").expect("writing to a String cannot fail");
             }
             text.push_str("0\n");
         }
@@ -6299,12 +6302,11 @@ p cnf 1 2
         for clause in formula.clauses() {
             sat.add_clause(clause.clone()).unwrap();
         }
+        // Deciding it before the first cadence check is acceptable; a wrong
+        // verdict is not, and this instance is unsatisfiable.
         match sat.solve(Some(std::time::Duration::ZERO)).unwrap() {
-            SatResult::Unknown(_) => {}
-            // Deciding it before the first cadence check is acceptable; a wrong
-            // verdict is not, and this instance is unsatisfiable.
-            SatResult::Unsat(_) => {}
-            other => panic!("an expired deadline must never yield sat: {other:?}"),
+            SatResult::Unknown(_) | SatResult::Unsat(_) => {}
+            SatResult::Sat(_) => panic!("an expired deadline must never yield sat"),
         }
         assert!(
             matches!(sat.solve(None).unwrap(), SatResult::Unsat(_)),
@@ -6321,7 +6323,7 @@ p cnf 1 2
         }
         match sat.solve(Some(std::time::Duration::ZERO)).unwrap() {
             SatResult::Unknown(_) | SatResult::Unsat(_) => {}
-            other => panic!("an expired deadline must never yield sat: {other:?}"),
+            SatResult::Sat(_) => panic!("an expired deadline must never yield sat"),
         }
         assert!(
             matches!(

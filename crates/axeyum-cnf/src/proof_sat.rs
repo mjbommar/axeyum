@@ -1164,13 +1164,15 @@ impl<'progress, S: DratSink> Cdcl<'progress, S> {
             Ok(SearchOutcome::Sat(model)) => StreamingProofOutcome::Sat(model),
             Ok(SearchOutcome::Unsat) => StreamingProofOutcome::Unsat,
             Ok(SearchOutcome::ResourceOut) => StreamingProofOutcome::ResourceOut,
-            Ok(SearchOutcome::Interrupted) => StreamingProofOutcome::Interrupted,
-            // Unreachable with no assumptions: the only producer of this variant
-            // is the assumption-install branch, which `assumptions.is_empty()`
-            // never enters. Mapped to the *undecided* verdict rather than
-            // panicking or guessing, so an impossible branch can never become a
-            // wrong `sat`/`unsat`.
-            Ok(SearchOutcome::UnsatUnderAssumptions(_)) => StreamingProofOutcome::Interrupted,
+            // `UnsatUnderAssumptions` is unreachable with no assumptions: its
+            // only producer is the assumption-install branch, which
+            // `assumptions.is_empty()` never enters. It is folded in with
+            // `Interrupted` -- the *undecided* verdict -- rather than panicking
+            // or guessing, so an impossible branch can never become a wrong
+            // `sat`/`unsat`.
+            Ok(SearchOutcome::Interrupted | SearchOutcome::UnsatUnderAssumptions(_)) => {
+                StreamingProofOutcome::Interrupted
+            }
             Err(error) => StreamingProofOutcome::SinkFailed(error),
         }
     }
@@ -1227,6 +1229,10 @@ impl<'progress, S: DratSink> Cdcl<'progress, S> {
     /// exhausted. Split out of [`Cdcl::run`] purely to keep both under
     /// clippy's line-count lint; behaviour is exactly the tail of `run` this
     /// replaced.
+    // The loop is one decision procedure and reads as one; splitting the
+    // conflict half from the decision half to satisfy a line count would put
+    // the trail/level invariants they share across a function boundary.
+    #[allow(clippy::too_many_lines)]
     fn search_loop(
         &mut self,
         assumptions: &[CnfLit],

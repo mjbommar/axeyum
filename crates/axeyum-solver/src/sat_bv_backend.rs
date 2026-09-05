@@ -264,7 +264,7 @@ impl SatBvBackend {
         // Primary SAT search: the deadline-bounded native CDCL core, on every
         // path (ADR-1703). Its result feeds the reconstruction + replay below
         // (see `solve_with_native_cdcl`).
-        let mut sat_result = primary_sat_search(config, solve_formula, deadline, &mut stats)?;
+        let mut sat_result = primary_sat_search(config, solve_formula, deadline, &mut stats);
         stats.solve = solve_start.elapsed();
         if deadline.is_some_and(|deadline| Instant::now() >= deadline) {
             self.stats = Some(stats);
@@ -1886,13 +1886,13 @@ fn primary_sat_search(
     formula: &CnfFormula,
     deadline: Option<Instant>,
     stats: &mut SolveStats,
-) -> Result<SatResult, SolverError> {
+) -> SatResult {
     let outcome =
         solve_with_native_cdcl(formula, deadline, config.resource_limit, config.prove_unsat);
     if let Some(duration) = outcome.proof_replay {
         push_duration_ms(stats, "unsat_proof_replay_ms", duration);
     }
-    Ok(outcome.result)
+    outcome.result
 }
 
 /// Runs the in-tree proof-producing CDCL core as the primary SAT search,

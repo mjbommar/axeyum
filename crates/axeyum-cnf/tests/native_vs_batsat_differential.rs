@@ -18,9 +18,9 @@
 //!
 //! # What it checks, and why this shape
 //!
-//! ADR-1703 promotes the native core to the SAT engine on every path and keeps
-//! BatSat only as an independent referee — the role ADR-0002 gives Z3. This is
-//! that referee, exercised on:
+//! `ADR-1703` promotes the native core to the SAT engine on every path and
+//! keeps `BatSat` only as an independent referee — the role `ADR-0002` gives
+//! `Z3`. This is that referee, exercised on:
 //!
 //! 1. every committed `corpus/micro-cnf/*.cnf`, the small fixed population the
 //!    crate already ships; and
@@ -153,7 +153,9 @@ fn the_committed_micro_cnf_corpus_agrees() {
 /// Random 3-SAT at the threshold ratio: `m = round(4.26 * n)` clauses of three
 /// distinct variables with random signs.
 fn random_3sat(rng: &mut Lcg, variables: usize) -> CnfFormula {
-    let clauses = (variables as f64 * 4.26).round() as usize;
+    // m = round(4.26 n). Integer arithmetic so no cast lint applies and the
+    // count is exactly reproducible: 4.26 n = 426 n / 100, rounded half up.
+    let clauses = (variables * 426 + 50) / 100;
     let mut formula = CnfFormula::new(variables);
     for _ in 0..clauses {
         let mut vars: Vec<usize> = Vec::with_capacity(3);
