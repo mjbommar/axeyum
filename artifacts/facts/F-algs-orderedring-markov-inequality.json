@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "id": "F:algs-orderedring-markov-inequality",
+  "title": "Markov's inequality holds in every setoid ordered ring, with no strict order and no positivity hypothesis",
+  "statement": "Let R be an AlgS.OrderedRing -- a setoid ordered ring: a ring whose equality is a carried equivalence relation with congruence fields, together with a reflexive transitive antisymmetric-up-to-equivalence order that is translation-invariant and closed under products of nonnegatives. Let p be a finite distribution on the index range [0, n) (nonnegative, summing to one), let X and ind be R-valued functions on that range, and let a be an element of R. If a*ind(k) <= X(k) for every k < n, then a*E[ind] <= E[X], where E[Y] = sum over k < n of Y(k)*p(k). This is Markov's inequality with the division cleared, and it is stated with TWO FEWER hypotheses than the rational-carrier version Rat.markov_inequality: that version additionally assumes 0 < a and X >= 0 pointwise, and its proof uses neither. The generic statement is therefore strictly stronger, and Rat.markov_inequality is an instance of it obtained by discarding those two arguments. Dropping them was forced rather than chosen: AlgS.OrderedRing carries no strict order at all.",
+  "formal": {
+    "language": "lean4-surface",
+    "statement": "theorem AlgS.OrderedRing.markov_inequality : forall (R : AlgS.OrderedRing) (a : R.carrier) (X ind p : Nat -> R.carrier) (n : Nat), AlgS.OrderedRing.IsDistribution R p n -> (forall k, Nat.lt k n -> R.le (R.mul a (ind k)) (X k)) -> R.le (R.mul a (AlgS.OrderedRing.expectation R ind p n)) (AlgS.OrderedRing.expectation R X p n)",
+    "fragment": "Prop",
+    "kernel_theorem": "AlgS.OrderedRing.markov_inequality"
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-algs-markov",
+      "kind": "kernel-term",
+      "supports": "AlgS.OrderedRing.markov_inequality is admitted by the trusted kernel gate with an empty axiom footprint, together with every other declaration of the generic finite-probability layer. The test reads the footprint from Kernel::axiom_footprint and asserts the size of its own name list, so a declaration silently dropped from the layer fails it.",
+      "check_status": "checked",
+      "checkers": [
+        "producing-build (Kernel::add_declaration)",
+        "probability_s_declarations_are_axiom_free"
+      ],
+      "checker_command": "cargo test --release -p axeyum-lean-kernel --lib rat_prelude::probability_s::probability_s_tests::probability_s_declarations_are_axiom_free -- --exact 2>&1 | grep -c '^test result: ok. 1 passed'",
+      "checker_seconds": 60,
+      "kernel_declaration": "AlgS.OrderedRing.markov_inequality",
+      "notes": "grep -c, not grep -q: -q would SIGPIPE the producer under pipefail, and -c exits 1 printing 0 when the line is absent, so a suite that compiled to zero tests and exited 0 is caught rather than counted as a pass. --release is mandatory: the rational prelude SIGABRTs on the default debug thread stack."
+    },
+    {
+      "id": "instance-rat-markov",
+      "kind": "instance-pin",
+      "supports": "Rat.markov_inequality is an INSTANCE of this theorem: the test walks the rational theorem's own Pi telescope, feeds the generic theorem only the arguments it takes (skipping the two unused hypotheses), closes the term back over the full telescope, infers its type, and requires definitional equality with Rat.markov_inequality's declared type. A generic statement that had quietly weakened, or that did not in fact subsume the rational one, fails here.",
+      "check_status": "checked",
+      "checkers": [
+        "rat_markov_is_an_instance_after_dropping_two_unused_hypotheses"
+      ],
+      "checker_command": "cargo test --release -p axeyum-lean-kernel --lib rat_prelude::probability_s::probability_s_tests::rat_markov_is_an_instance_after_dropping_two_unused_hypotheses -- --exact 2>&1 | grep -c '^test result: ok. 1 passed'",
+      "checker_seconds": 60,
+      "kernel_declaration": "Rat.markov_inequality"
+    }
+  ],
+  "provenance": {
+    "date": "2026-09-04",
+    "established_by": "lane finite-probability-generic (roadmap W1-10, ADR-1616)"
+  },
+  "notes": "The interesting content of this fact is the SCOPE, not the inequality: Markov's inequality is elementary, and the rational-carrier version was already proved. What is new is that it holds over the setoid ordered-ring spine, so it lands at CReal (whose carrier equality is CReal.Equiv, never Eq) with no bridge and no reproof, and at any ordered ring anyone builds later for the price of one AlgS.OrderedRing instance."
+}

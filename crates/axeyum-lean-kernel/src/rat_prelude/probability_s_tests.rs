@@ -632,18 +632,18 @@ fn probability_s_declarations_are_axiom_free() {
 // 4. W2-15: independence.
 // ---------------------------------------------------------------------------
 
-/// **Why there is no "`Independent` unfolds to the ℚ product rule" test
-/// here.** It was written and then withdrawn, because it does not terminate
-/// in a usable time: comparing the generic `Prop` with the hand-built `Eq`
-/// makes the kernel unfold `Rat.expectation` (delta height 36) and the
-/// generic `expectation` (height 4) against each other under a symbolic
-/// bound, and the two heights drive the unfolder the wrong way round. The
-/// claim it was meant to make is covered, and covered more strongly, by
-/// [`independence_discharges_the_uncorrelated_hypothesis_of_the_rat_theorem`]
-/// below, which requires the kernel to accept the generic definition where
-/// the `ℚ` theorem demands its own — and by
-/// [`a_dependent_pair_is_not_independent`], which decides the definition at
-/// concrete arguments in both directions.
+// **Why there is no "`Independent` unfolds to the ℚ product rule" test
+// here.** It was written and then withdrawn, because it does not terminate
+// in a usable time: comparing the generic `Prop` with the hand-built `Eq`
+// makes the kernel unfold `Rat.expectation` (delta height 36) and the
+// generic `expectation` (height 4) against each other under a symbolic
+// bound, and the two heights drive the unfolder the wrong way round. The
+// claim it was meant to make is covered, and covered more strongly, by
+// [`independence_discharges_the_uncorrelated_hypothesis_of_the_rat_theorem`]
+// below, which requires the kernel to accept the generic definition where
+// the `ℚ` theorem demands its own — and by
+// [`a_dependent_pair_is_not_independent`], which decides the definition at
+// concrete arguments in both directions.
 
 /// **The negative control W2-15 needs: a DEPENDENT pair of events does not
 /// satisfy the definition.**
