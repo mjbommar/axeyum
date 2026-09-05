@@ -701,8 +701,14 @@ impl Tableau {
 }
 
 /// Status of one [`Incremental::check`].
+///
+/// `pub` (rather than `pub(crate)`) only so [`crate::bench_internals`] can
+/// re-export it for `benches/simplex_pivot.rs`; the containing `simplex`
+/// module stays crate-private and the re-export path is gated behind the
+/// `bench-internals` feature, so this is not reachable from an ordinary
+/// dependent of the crate.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub(crate) enum Status {
+pub enum Status {
     /// The currently-bounded rows are jointly feasible; [`Incremental::point`]
     /// materializes the witness.
     Feasible,
@@ -740,7 +746,13 @@ pub(crate) enum Status {
 /// support), never trusted. An arithmetic overflow poisons the cached assignment,
 /// which the next [`Incremental::check`] repairs by rebuilding from the pristine
 /// basis; while poisoned the engine answers [`Status::Unknown`].
-pub(crate) struct Incremental {
+///
+/// `pub` bench-only, for the same reason as [`Status`]: reachable outside the
+/// crate only through [`crate::bench_internals`], gated by the
+/// `bench-internals` feature. Fields stay private; a bench drives this only
+/// through [`Incremental::new`], [`Incremental::assert_bound`], and
+/// [`Incremental::check`].
+pub struct Incremental {
     tab: Tableau,
     /// Set when an overflow left [`Tableau::value`] inconsistent; the next `check`
     /// rebuilds before deciding anything.
@@ -754,7 +766,7 @@ impl Incremental {
     /// Returns `None` when the dense tableau would exceed [`MAX_TABLEAU_CELLS`] —
     /// a deterministic, purely structural decline that leaves the caller on
     /// whatever engine it had.
-    pub(crate) fn new(nvars: usize, rows_sparse: Vec<Vec<(usize, Rational)>>) -> Option<Self> {
+    pub fn new(nvars: usize, rows_sparse: Vec<Vec<(usize, Rational)>>) -> Option<Self> {
         let m = rows_sparse.len();
         let n = nvars.checked_add(m)?;
         if m.checked_mul(n)? > MAX_TABLEAU_CELLS {
@@ -767,7 +779,7 @@ impl Incremental {
     }
 
     /// Number of rows the engine was built over.
-    pub(crate) fn rows(&self) -> usize {
+    pub fn rows(&self) -> usize {
         self.tab.m
     }
 
@@ -780,7 +792,7 @@ impl Incremental {
     /// asserted false, and the two polarities are mutually exclusive. So `lower` and
     /// `upper` on one variable can never cross, and every infeasibility is found by
     /// the pivot loop (which is where the Farkas certificate comes from).
-    pub(crate) fn assert_bound(&mut self, i: usize, rel: Rel, rhs: Rational) {
+    pub fn assert_bound(&mut self, i: usize, rel: Rel, rhs: Rational) {
         self.tab.set_row_bound(i, Some((rel, rhs)));
         if self.tab.clamp_nonbasic(self.tab.nvars + i).is_err() {
             self.poisoned = true;
@@ -795,7 +807,7 @@ impl Incremental {
 
     /// Re-decides feasibility of the currently-bounded rows, warm-starting from the
     /// present basis.
-    pub(crate) fn check(&mut self, deadline: Option<Instant>) -> Status {
+    pub fn check(&mut self, deadline: Option<Instant>) -> Status {
         if self.poisoned {
             // Recover: pristine basis, bounds preserved, values recomputed.
             self.tab.reset_structure();

@@ -30,6 +30,17 @@ rustix.workspace = true
 [dev-dependencies]
 axeyum-bv.workspace = true
 axeyum-ir.workspace = true
+criterion.workspace = true
 
 [lints]
 workspace = true
+
+# Micro-benchmarks (2026-09-05, design review §4 item 3); `harness = false`
+# hands control to `criterion`'s own main.
+[[bench]]
+name = "proof_sat_solve"
+harness = false
+
+[[bench]]
+name = "tseitin_encode"
+harness = false

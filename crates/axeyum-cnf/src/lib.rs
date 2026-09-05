@@ -6298,7 +6298,14 @@ p cnf 1 2
             .filter(|path| path.extension().is_some_and(|extension| extension == "cnf"))
             .collect::<Vec<_>>();
         files.sort();
-        assert_eq!(files.len(), 2);
+        assert_eq!(
+            files.len(),
+            3,
+            "corpus/micro-cnf/ gained unsat-pigeonhole-6-7.cnf (2026-09-05 \
+             micro-benchmarks, docs/research/08-planning/microbenchmarks-2026-09-05.md); \
+             update this count (and the sat/unsat dispatch below, which reads \
+             \"unsat\" from the filename) when the corpus changes again"
+        );
 
         for file in files {
             let input = std::fs::read_to_string(&file).unwrap();
