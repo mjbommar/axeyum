@@ -79,6 +79,7 @@ re-run against the exact `checker_command`s above:
   `negOnePowDouble` via the `NameId`, not the string, so it still builds and
   is found unaffected): count **1**, exit **0**.
 - `Nat.succ_add` -> `Nat.succ_add_MUTATED` (`nat_prelude.rs:1909`, a
+<!-- was-absent: Nat.even_or_odd -->
   pre-existing dependency fact `F:nat-succ-add` this batch cites, not a new
   registration — this batch has no NEW `Nat.*` fact since `Nat.even_or_odd`
   does not exist): `theorem_dependency_inventory Nat.succ_add` count **0**,

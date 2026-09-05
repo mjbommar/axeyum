@@ -36,6 +36,7 @@ outside `gcd.rs` + one `IntPrelude` field + one build-order line. Verified:
   Building that generality is a real, separate piece of work, not a
   rearrangement of what exists.
 - `F:ml430-int-gcd-div-gcd-div-gcd-2db608dc` (`Int.gcd_div_gcd_div_gcd`) —
+<!-- was-absent: Int.gcd_div -->
   the divisor here (`↑(i.gcd j)`) is always `≥ 0`, so the negative-divisor gap
   above does NOT block it; Mathlib itself derives this fact as a one-line
   corollary of `Int.gcd_div`, which we do not have. I worked out an

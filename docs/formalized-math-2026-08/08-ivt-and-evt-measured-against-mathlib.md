@@ -382,6 +382,7 @@ facts carry `proof_route = "imported-kernel-lean"`; none is analytic.
 and `CReal.supOn_approx_lub` existed under those exact names at the time; the
 probe below searched for `CReal.supOn_upper_bound`, which never existed, and
 correctly reported IT absent. `CReal.evt_approx_max` (ADR-0895) is now the
+<!-- was-absent: CReal.evt_approx_max -->
 constructive substitute this section says is missing — the composition of
 those two theorems through `CReal.le_trans`. What follows is kept verbatim as
 an accurate record of the ledger and of a mis-aimed name search on the date

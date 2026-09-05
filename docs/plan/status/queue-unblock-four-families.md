@@ -63,6 +63,7 @@ at `46bc65cc4`**:
     candidates, fewer than the 10 the refill takes
 
 `Mathlib.Data.Nat.Find`'s 32 rows now screen as 17 blocked on `Nat.find` and
+<!-- absent: Nat.find -->
 **15 blocked by the divergence registry**, which commit `a3da5621c`
 (ADR-1415's module-doc sweep) widened. ADR-1420 recorded this same command
 exiting 0 with `entries=460` on `a6c531eab`, so it went red between those two

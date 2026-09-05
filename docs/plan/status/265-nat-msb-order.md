@@ -102,6 +102,7 @@ ones enumerated above, not the final composition.
 ## Commits (this lane)
 
 1. `wip(nat): bit_order.rs scaffold -- Nat.self_lt_two_pow/self_lt_two_pow_add/lt_of_testBit, NOT yet proved`
+<!-- was-absent: Nat.self_lt_two_pow -->
    -- new file, dispatcher wiring, three `NameId` fields, no-op body.
    Landed within the first ten tool calls per the standing rule.
 2. `feat(nat): Nat.self_lt_two_pow, Nat.self_lt_two_pow_add -- admitted, axiom-free`

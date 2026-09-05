@@ -31,6 +31,7 @@ the 2026-08-27 architecture review §3a (computed, not extracted).
 ## Context
 
 `Rat.rank` does not exist, and
+<!-- was-absent: Rat.rank -->
 [`docs/formalized-math-2026-08/09-*.md`](../../formalized-math-2026-08) §4.3
 concedes it. Rank is read off a row-echelon form and rank-nullity follows from
 the same construction, so the echelon form is the piece that has to land first.

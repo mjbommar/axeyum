@@ -321,6 +321,7 @@ has no existing `Nat` counterpart at any visibility.
 **A route that looks free and is not, checked and closed:** `int_prelude`
 depends on `nat_prelude` (`build_int_prelude` calls `build_nat_prelude` first,
 `int_prelude.rs:1179`), never the reverse. So a `Nat.prodRange_permute` proved
+<!-- absent: Nat.prodRange_permute -->
 by casting through `Int.ofNat`, reusing the *already-existing*
 `Int.prodRange_permute` (`Int.of_nat_pow`, same file, is the existence proof
 that this cast-compatibility shape is buildable), is not available from inside

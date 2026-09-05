@@ -107,8 +107,10 @@ of `B` with coefficients `A r k`, by `Rat.det_row_multilinear` once per row.
 Measured, not estimated:
 
 - `Rat.sumMaps` does not exist. `Int.sumMaps` is the template at **1,003
+<!-- was-absent: Rat.sumMaps -->
   lines** plus a **354-line** evaluation-test module.
 - `Rat.prodRange` does not exist either (`grep prodRange rat_prelude.rs`
+<!-- was-absent: Rat.prodRange -->
   returns nothing; only `Int.prodRange` exists). The coefficient of each index
   map is a PRODUCT over rows, so it is needed too.
 - The expansion itself is a cursor induction over rows whose intermediate

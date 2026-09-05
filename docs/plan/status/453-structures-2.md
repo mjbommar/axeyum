@@ -50,6 +50,7 @@ doc comment). `Rat.pow_add` matches `Alg.pow_add(Rat.commMulMonoid)` by full
 `def_eq` — stronger, because `Alg.npow` and `Rat.pow` are themselves
 `def_eq` at symbolic arguments (measured, not the ADR-1578 `detR`/`Rat.det`
 one-value case). Two named absences worth recording: `Nat.mul_left_cancel`
+<!-- absent: Nat.mul_left_cancel, Int.neg_neg -->
 doesn't exist under that name (only the CONDITIONAL `..._of_pos`, since
 `Nat`'s multiplicative monoid has no inverse — this theorem does not
 generalize it); `Int.neg_neg` is a private Rust HELPER in `gcd.rs`, never a

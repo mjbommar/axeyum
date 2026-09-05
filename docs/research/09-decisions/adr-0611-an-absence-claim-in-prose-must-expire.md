@@ -39,6 +39,7 @@ Five went stale in one day and two cost a full Opus lane each:
   `declare_strict_mono_of_pos_deriv`. It had long since been extracted as
   `CReal.strict_mono_magnitude` and `CReal.diff_le_of_strict_mono_magnitude`.
 - A deficiency note said `Rat.sumRange` had no diagonal/rectangle reindexing.
+<!-- was-absent: Rat.sumRange -->
   `rat_prelude/diagonal.rs` had it, and `complex.rs` already ran the same
   argument over ℂ.
 - `CLAUDE.md` said an inline step "blocks the Weierstrass M-test today".

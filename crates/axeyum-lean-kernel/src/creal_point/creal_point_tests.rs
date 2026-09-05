@@ -1094,12 +1094,12 @@ fn lerp_dist_sq_statement_is_exact() {
 /// **Stewart's theorem, squared/parametric form -- the headline result.**
 /// Verbatim-checked for the same reason as `pythagoras_statement_is_exact`:
 /// `|AD|^2 + t(1-t)|BC|^2 ~ (1-t)|AB|^2 + t|AC|^2` where `D := lerp B C t`.
-/// This kernel has no `CReal.sqrt` (only `natSqrt`), so this
-/// squared/parametric identity -- not the classical unsigned-length
-/// `BD*DC*BC + AD^2*BC ~ AB^2*DC + AC^2*BD` -- is the honest statement:
-/// multiplying this identity through by the unsquared `BC` at `t := BD/BC`
-/// recovers the classical form, but that multiplication is not performed
-/// here. `x0,x1,x2,x3 = A,B,C,t`.
+/// This kernel had no `CReal.sqrt` (only `natSqrt`) until it landed
+/// 2026-08-26, so this squared/parametric identity -- not the classical
+/// unsigned-length `BD*DC*BC + AD^2*BC ~ AB^2*DC + AC^2*BD` -- is the
+/// statement this test checks: multiplying this identity through by the
+/// unsquared `BC` at `t := BD/BC` recovers the classical form, but that
+/// multiplication is not performed here. `x0,x1,x2,x3 = A,B,C,t`.
 #[test]
 fn stewart_statement_is_exact() {
     use crate::env::Declaration;
@@ -1363,9 +1363,13 @@ fn lagrange_identity_statement_is_exact() {
 }
 
 /// **Cauchy-Schwarz, squared.** `x0,x1 = U,V`: `(U·V)² ≤ (U·U)(V·V)`. Stated
-/// squared, deliberately: this kernel has `CReal.natSqrt` but no
-/// `CReal.sqrt`, so the norm form `|⟨u,v⟩| ≤ ‖u‖·‖v‖` is not expressible
-/// here. Verbatim-checked for the same reason as the two tests above.
+/// squared, deliberately: at the time this test was written the kernel had
+/// `CReal.natSqrt` but no `CReal.sqrt`, so the norm form
+/// `|⟨u,v⟩| ≤ ‖u‖·‖v‖` was not expressible here. `CReal.sqrt` landed
+/// 2026-08-26, and the unsquared form is now proved as
+/// `Metric.CPoint.dotLeSqrtMul` in `metric.rs` (2026-09-04), on top of this
+/// squared statement. Verbatim-checked for the same reason as the two tests
+/// above.
 #[test]
 fn cauchy_schwarz_statement_is_exact() {
     use crate::env::Declaration;
@@ -1391,8 +1395,10 @@ fn cauchy_schwarz_statement_is_exact() {
 /// `(distSq A B + distSq B C) + (distSq A B + distSq B C)` (this
 /// development has no `Nat`-scalar multiplication of `CReal`). **Not** the
 /// classical unsquared triangle inequality — see
-/// [`CPointPrelude::dist_sq_double_sum_bound`]'s doc comment for why that
-/// form is unreachable here (no `CReal.sqrt`).
+/// [`CPointPrelude::dist_sq_double_sum_bound`]'s doc comment: that form was
+/// unreachable here before `CReal.sqrt` landed (2026-08-26), and this file
+/// still does not build it on `distSq` — see `metric.rs`'s
+/// `Metric.CPoint.distTriangle` for the unsquared route.
 #[test]
 fn dist_sq_double_sum_bound_statement_is_exact() {
     use crate::env::Declaration;
@@ -1419,7 +1425,8 @@ fn dist_sq_double_sum_bound_statement_is_exact() {
 /// written as the right-chain `ab_bc + (ab_bc + (ab_bc + ab_bc))`. See
 /// [`CPointPrelude::dist_sq_triangle_sq_bound`]'s doc comment for why this
 /// (unlike [`Self::dist_sq_double_sum_bound`]) *is* the classical triangle
-/// inequality, modulo the missing `CReal.sqrt`.
+/// inequality, modulo `CReal.sqrt` (which now exists, landed 2026-08-26,
+/// but is not applied here).
 #[test]
 fn dist_sq_triangle_sq_bound_statement_is_exact() {
     use crate::env::Declaration;

@@ -143,6 +143,7 @@ fn junk_map(d: &mut IntDev<'_>) -> ExprId {
 }
 
 /// `zero = mul zero z`, derived inline from `mul_comm` and `mul_zero` rather
+/// <!-- absent: Int.zero_mul -->
 /// than declared — `Int.zero_mul` does not exist in this prelude (checked:
 /// only `Nat.zero_mul` does), and it is needed only by the two
 /// `sumRange_mul_*` base cases in this file.

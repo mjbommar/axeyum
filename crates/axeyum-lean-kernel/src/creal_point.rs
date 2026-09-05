@@ -581,9 +581,11 @@ pub struct CPointPrelude {
     /// i.e. `|AD|² + t(1−t)|BC|² ~ (1−t)|AB|² + t|AC|²` where `D := lerp B C
     /// t`. This is the classical Stewart identity with every unsigned length
     /// (`BD, DC, BC`) replaced by its squared/parametric equivalent — this
-    /// kernel has no `CReal.sqrt`, only `natSqrt`, so the literal
-    /// length-product statement `BD·DC·BC + AD²·BC ~ AB²·DC + AC²·BD` is not
-    /// available. Multiplying this identity through by the (unsquared) `BC`
+    /// was because the kernel had no `CReal.sqrt`, only `natSqrt`, until
+    /// `CReal.sqrt` landed 2026-08-26; the unsigned lengths `BD, DC, BC` are
+    /// expressible now (`CReal.sqrt` of the corresponding `distSq`), but the
+    /// literal length-product statement `BD·DC·BC + AD²·BC ~ AB²·DC + AC²·BD`
+    /// is still not proved here. Multiplying this identity through by the (unsquared) `BC`
     /// recovers exactly that classical form when `t := BD/BC`; this theorem
     /// is the honest target, not that one. Apollonius' median theorem
     /// ([`Self::apollonius_median`]) is the `t := inv2` case (up to the
@@ -708,9 +710,14 @@ pub struct CPointPrelude {
     /// **Cauchy–Schwarz, squared.** `∀ U V,
     /// CReal.le (mul (dot U V)(dot U V)) (mul (dot U U)(dot V V))`.
     ///
-    /// Stated squared and deliberately not as `|⟨u,v⟩| ≤ ‖u‖·‖v‖`: this
-    /// kernel has `CReal.natSqrt` but no `CReal.sqrt`, so the norm form is
-    /// not expressible, let alone provable, here. The squared form is what
+    /// Stated squared and deliberately not as `|⟨u,v⟩| ≤ ‖u‖·‖v‖`: at the
+    /// time this was proved, the kernel had `CReal.natSqrt` but no
+    /// `CReal.sqrt`, so the norm form was not expressible, let alone
+    /// provable, here. `CReal.sqrt` landed 2026-08-26 and the unsquared
+    /// form is now proved as `Metric.CPoint.dotLeSqrtMul` in `metric.rs`
+    /// (2026-09-04), built on top of this squared statement plus
+    /// `CReal.sqrt_mul` — see [`Self::norm`]'s field for the `norm`
+    /// definition that makes it statable. The squared form here is what
     /// `lagrange_identity_scalar_proof` plus [`CPointPrelude::dot_self_nonneg`]
     /// (via `le_of_sub_nonneg`) actually delivers, and it is
     /// equivalent-modulo-`sqrt` to the familiar statement.
@@ -720,9 +727,12 @@ pub struct CPointPrelude {
     /// — `distSq A C ≤ 2·(distSq A B + distSq B C)`.
     ///
     /// **Not** the classical `d(A,C) ≤ d(A,B) + d(B,C)`: that statement is
-    /// about unsquared distances, and squaring it is not equivalent (this
-    /// kernel has no `CReal.sqrt` to state the unsquared form at all — see
-    /// [`Self::cauchy_schwarz`]'s doc comment). This is the honest reachable
+    /// about unsquared distances, and squaring it is not equivalent. This
+    /// file has no `CReal.sqrt`-based unsquared `distSq` bound built on top
+    /// of it — see [`Self::cauchy_schwarz`]'s doc comment for
+    /// `Metric.CPoint.dotLeSqrtMul` (`metric.rs`), and `Metric.CPoint.distTriangle`
+    /// there for the actual unsquared triangle inequality. This is
+    /// the honest reachable
     /// statement, from `(x+y)² ≤ 2(x²+y²)` (`sq_nonneg (x−y)`) applied to
     /// `dot`-vectors via [`Self::dot_self_nonneg`] and [`Self::dot_self_sub`]
     /// rather than per-coordinate — named for exactly what it is, not
@@ -735,7 +745,8 @@ pub struct CPointPrelude {
     /// `(distSq A C − distSq A B − distSq B C)² ≤ 4 · distSq A B · distSq B C`.
     ///
     /// Unlike [`Self::dist_sq_double_sum_bound`], this **is** equivalent
-    /// (modulo the missing `CReal.sqrt`) to the classical `|AC| ≤ |AB| +
+    /// (modulo `CReal.sqrt`, which now exists — landed 2026-08-26, but is
+    /// not applied here) to the classical `|AC| ≤ |AB| +
     /// |BC|`: squaring `|AC| ≤ |AB|+|BC|` and its reverse-triangle
     /// counterpart `||AB|−|BC|| ≤ |AC|` and combining both directions gives
     /// exactly `(distSq A C − distSq A B − distSq B C)² ≤ 4·distSq A B·distSq
@@ -811,9 +822,11 @@ pub struct CPointPrelude {
     ///
     /// With [`Self::dist_sq_comm`] (symmetry) and
     /// [`Self::dist_sq_double_sum_bound`] (the reachable triangle-inequality
-    /// substitute — see that field's doc for why the classical unsquared
-    /// form is not expressible here), `distSq` is as much of a metric space
-    /// as this kernel — with no `CReal.sqrt` — can state.
+    /// substitute — see that field's doc: the classical unsquared form was
+    /// not expressible until `CReal.sqrt` landed 2026-08-26, and it is not
+    /// built on `distSq` here — see `metric.rs`'s `Metric.CPoint.distTriangle`
+    /// for the unsquared route), `distSq` is as much of a metric space
+    /// as this file states directly.
     /// [`Self::dist_sq_self_zero`] already gave the `A = B` direction of
     /// this; this is the general biconditional.
     pub dist_sq_eq_zero_iff: NameId,
@@ -835,9 +848,12 @@ pub struct CPointPrelude {
     pub perp_bisector_iff_dot: NameId,
     /// `CPoint.OnCircle P O r2 := Equiv (distSq P O) r2` — the circle of
     /// (squared) radius `r2` centred at `O`, as a locus of points. `r2` is a
-    /// bare `CReal`, not asserted nonnegative — this kernel has no
-    /// `CReal.sqrt`, so `r2` is never an actual radius squared *of* anything
-    /// unless a hypothesis elsewhere supplies one.
+    /// bare `CReal`, not asserted nonnegative — at the time this was
+    /// defined the kernel had no `CReal.sqrt`, so `r2` could not be related
+    /// to an actual radius. `CReal.sqrt` landed 2026-08-26, but this
+    /// definition was never rebuilt around it, so `r2` is still never an
+    /// actual radius squared *of* anything unless a hypothesis elsewhere
+    /// supplies one.
     pub on_circle: NameId,
     /// **A circumcentre lies on all three perpendicular bisectors.** `∀ O A B
     /// C, Equiv (distSq O A) (distSq O B) → Equiv (distSq O B) (distSq O C) →
@@ -11940,10 +11956,13 @@ fn declare_apollonius_from_stewart(
 // inequality ([`declare_cauchy_schwarz`], via [`declare_lagrange_identity`]),
 // and the factor-2 triangle inequality for `distSq`
 // ([`declare_dist_sq_double_sum_bound`]). No square root is introduced
-// anywhere here (this kernel has `CReal.natSqrt` but no `CReal.sqrt`), so
-// every statement below is either squared or carries an explicit factor of 2
-// in place of a division this development cannot perform on an arbitrary
-// term.
+// anywhere below (at the time this was written the kernel had
+// `CReal.natSqrt` but no `CReal.sqrt`; `CReal.sqrt` landed 2026-08-26, but
+// this section was never rebuilt around it — see `metric.rs`'s
+// `Metric.CPoint.dotLeSqrtMul`/`distTriangle` for the unsquared route built
+// on top of these), so every statement below is either squared or carries
+// an explicit factor of 2 in place of a division this development cannot
+// perform on an arbitrary term.
 
 /// `Equiv (mul (mul x y) (mul z w)) (mul (mul x z) (mul y w))` — swap the
 /// middle two factors of a four-fold product. The multiplicative analogue of
@@ -20374,9 +20393,10 @@ fn declare_ceva_ratio_product_of_concurrent(
 
 // ============================================================================
 // Heron's formula, squared: the area of a triangle from its three squared
-// side lengths, with no `CReal.sqrt` anywhere (this kernel has none -- see
-// the module doc). See [`CPointPrelude::heron_sixteen_area_sq`] for the
-// statement and the reasoning route.
+// side lengths, with no `CReal.sqrt` anywhere below (at the time this was
+// written the kernel had none; `CReal.sqrt` landed 2026-08-26, and this
+// section was never rebuilt around it). See [`CPointPrelude::heron_sixteen_area_sq`]
+// for the statement and the reasoning route.
 //
 // The identity was checked exactly with `Fraction` arithmetic (no `sympy` in
 // this environment), 8 independent random rational triangles, zero residual

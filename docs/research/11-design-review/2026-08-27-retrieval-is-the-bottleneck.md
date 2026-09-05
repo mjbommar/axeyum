@@ -122,6 +122,7 @@ already existed. Ordinary reuse of a known lemma is **not** counted.
 | 4 | `Complex`'s `abs_nonneg` | Rebuilt by hand for `CReal.sqrt_nonneg` because `complex.rs` sits outside `creal` | `27fd19a0d` |
 | 5 | `converges_of_cauchy` / `regular_of_scaled_cauchy` | A lane's own doc asserted "no witness to an actual limit anywhere in this development" | `301a7fa58` |
 | 6 | `CReal.le_min` and the `lattice.rs` min family | "directly contradicts an earlier guess that it was missing" | `b52979366`, `335ab9671` |
+<!-- was-absent: CReal.le_min -->
 | 7 | `CReal.two_le_e` / `e_le_three` / `e_le_four` | A curriculum row said "2 <= e <= 3 open"; stale | `cbcce411d` |
 | 8 | `import_statement_ndjson` (since 2026-08-18) | ADR-0604 asserted it absent "from an uncontrolled grep"; amended | `5881bac4e` |
 | 9 | The `factorQuotient` correction equation | Sized as a fresh induction; was "one existing equation" | `fdd4d4b11` |

@@ -104,6 +104,8 @@ them in the kernel's own vocabulary is what made the screen honest: this kernel
 declares no `Nat.Prime`, `Nat.Coprime`, `Nat.ModEq` or `Ne` — primality is
 spelled as an `And`, coprimality as `Nat.gcd a b = 1`, congruence as
 `Nat.modEq`. Re-asked, every other row is absent by shape with a live positive
+<!-- absent: Nat.exists_eq_two_pow_mul_odd -->
+<!-- was-absent: Nat.ModEq -- spelling-normalizes to the kernel's lowercase `Nat.modEq`, cited two lines above as the existing spelling; not a landing event, a naming-convention mismatch -->
 control, including Euler's theorem (`Nat.ModEq.pow_totient`: absent, and the 19
 `Nat.totient` theorems are multiplicativity/parity/divisibility, none a
 congruence) and `Nat.exists_eq_two_pow_mul_odd` (absent; the nearest,

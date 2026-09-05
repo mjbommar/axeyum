@@ -72,6 +72,7 @@ tree rather than inherited:
    (countRange pred n)` (a new induction pairing `Int.pow` with
    `Nat.countRange`), the pointwise-factoring step, and the termwise `ModEq`
    transport back through the product. **Not attempted this lane** — the
+<!-- was-absent: Int.euler_totient_theorem -->
    handoff's sizing here was not re-verified beyond confirming the target
    still does not exist under any name (`Int.euler_totient_theorem` /
    `pow_totient`, checked via `theorem_dependency_inventory`).

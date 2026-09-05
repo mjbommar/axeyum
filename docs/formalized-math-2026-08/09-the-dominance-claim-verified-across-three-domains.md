@@ -395,6 +395,7 @@ det B n`, is landed and axiom-free. What remains absent in this family is
 `rank`, not the determinant.
 
 **Corrected again 2026-09-02 (ADR-1571): `rank` is not absent either, and the
+<!-- was-absent: Rat.rank -->
 sentence "`rank` still does not exist" above is now false.** Measured on a
 fresh index built in this lane's worktree (2,201 declarations),
 `shape_search --ns Rat --name-contains rank` returns **14**: `Rat.rank` and

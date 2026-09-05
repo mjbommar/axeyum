@@ -84,6 +84,7 @@ marker so the record survives under the gate rather than being deleted:
 | `docs/research/09-decisions/adr-0519-the-real-lattice-is-defined-on-the-representation-and-is-one-lipschitz.md:127` | `Rat.abs` | exists |
 
 `Rat.abs` alone was independently written as a live "still does not exist"
+<!-- was-absent: Rat.abs -->
 claim in **three separate documents** — none aware of the other two. None of
 these were caught by any existing gate; `check-absence-claims.py` did not
 exist to catch them until today, and none had a `was-absent:` marker before

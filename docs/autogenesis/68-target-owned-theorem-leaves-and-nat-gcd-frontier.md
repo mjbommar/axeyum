@@ -16,6 +16,7 @@ The real Lean 4.30 r082 retry moves the `Nat.dvd_gcd` frontier twice:
 | `Nat.dvd_mod_iff`, `Nat.mod_lt` | 57 | no | `Nat.gcd_succ` |
 
 Both declines leave the 315-declaration target caller unchanged. The second
+<!-- was-absent: Nat.div_mod_exec -->
 attempt therefore closes the prior division mismatch: it does not suppress the
 error; `Nat.div_mod_exec` is absent from the selected closure, and independent
 admission proceeds to a different mathematical boundary.

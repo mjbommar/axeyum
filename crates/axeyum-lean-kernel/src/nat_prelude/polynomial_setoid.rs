@@ -73,6 +73,7 @@
 //! discipline makes harder — they are exactly the lemmas
 //! `rat_prelude/diagonal.rs` builds concretely over `ℚ`, where the same
 //! obstruction is also still open (`Rat.polyEval_mul` does not exist).
+//! <!-- absent: Rat.polyEval_mul -->
 //! ADR-1609 sizes each one. This is a `Quot`-independent gap: `Quot.sound`
 //! would not supply a single one of them.
 

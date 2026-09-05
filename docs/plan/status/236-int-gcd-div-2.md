@@ -92,6 +92,7 @@ prior lane named:
    unnamed step anywhere covers it.
 
 2. **`Int.gcd_div` itself does not exist even for a POSITIVE divisor**,
+<!-- was-absent: Int.gcd_div -->
    which the prior lane's note did not surface (it only discussed the
    negative-divisor gap, on the implicit assumption the positive case was
    already available to build on). Grepped `int_prelude.rs` and every
