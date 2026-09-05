@@ -17,7 +17,7 @@
 # only rises on purpose) -- but a new UNCERTIFIED function is never refused;
 # that label is honest, not a violation. See
 # docs/math-department/13-computer-algebra.md item 10.
-COUNT	67
+COUNT	69
 FN	enclosure::enclose	Option<Enclosure>
 FN	enclosure::enclose_constant	Option<Enclosure>
 FN	enclosure::enclose_root	Option<Enclosure>
@@ -75,6 +75,8 @@ FN	probability::chebyshev_bound	Certificate
 FN	probability::convolve_poisson	Option<Certificate>
 FN	probability::markov_bound	Certificate
 FN	prove_derivative	ZeroTest
+FN	qe::decide_exists	Decision
+FN	qe::decide_forall	ForallDecision
 FN	rationality::decide_rationality	Option<RationalityCertificate>
 FN	real_algebraic::polynomial_ivt	Option<IvtCertificate>
 FN	sos::check	Result<CheckReport, String>
@@ -101,11 +103,13 @@ VOCAB	ClosedFormReport	struct
 VOCAB	CompositeCertificate	struct
 VOCAB	CosetCertificate	struct
 VOCAB	CrtCertificate	enum
+VOCAB	Decision	enum
 VOCAB	DegenerateWitness	struct
 VOCAB	DerivedSubgroupCertificate	struct
 VOCAB	Enclosure	struct
 VOCAB	ExtremumCertificate	struct
 VOCAB	FactorizationCertificate	struct
+VOCAB	ForallDecision	enum
 VOCAB	GenericWitness	struct
 VOCAB	GeometryCertificate	struct
 VOCAB	GeometryReport	struct
@@ -127,6 +131,8 @@ VOCAB	PsdNotSosCertificate	struct
 VOCAB	RationalGeneratingFunction	struct
 VOCAB	RationalityCertificate	struct
 VOCAB	RecurrenceCertificate	struct
+VOCAB	RefutationCertificate	struct
+VOCAB	SampleCertificate	struct
 VOCAB	ShapedCompositionSearchReport	struct
 VOCAB	SymbolicClosedFormReport	struct
 VOCAB	TaylorCertificate	struct
