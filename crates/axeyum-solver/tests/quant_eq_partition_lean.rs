@@ -95,7 +95,7 @@ fn sdlx_reconstructs_genuine_nested_quantifiers_and_routes() {
     lean_golden::assert_golden_module(
         "equality-partition",
         &source,
-        (111_821, 0x9f0e_95b5_fa74_c6ab),
+        (111_822, 0x97a7_37cf_fcf6_a3df),
     );
     assert!(source.contains("theorem axeyum_refutation : False"));
     assert!(source.contains("eq_em"));
