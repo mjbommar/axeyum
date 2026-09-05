@@ -48,13 +48,16 @@ to the `k`-th power cannot be manufactured from a bare `lt (abs x) R`. `le
 zero R` is deliberately **not** a hypothesis — the derivation consumes only
 `0 ≤ rᵏ`.
 
-**The instances are proved `Equiv`s, and the suite measures that rather than
-asserting it.** `powerSeriesPartial` carries a `pow one k` factor; `pow one 0`
-ι-reduces to `one`, but `mul (expTerm 0) one` does not reduce to `expTerm 0`,
-because `CReal.mul`'s representative resamples. So no `Eq.refl` inhabits the
-equation. `power_series_tests.rs::exp_instance_is_a_proved_equiv_because_the_sides_are_not_def_eq`
-runs `def_eq_in` at the concrete `n = 1` and requires **false** — if anyone
-ever makes the two sides definitionally equal, that test fails and says so.
+**The instances are proved `Equiv`s, and the reason is symbolic — the obvious
+concrete check says the opposite.** At a free `n` both sides are stuck
+`Nat.rec`s whose minor premises differ (`expTerm i` against `mul (expTerm i)
+(pow one i)` at a bound `i`), so no `Eq.refl` inhabits the equation. But at the
+concrete `n = 1` everything is closed and the two sides **are** definitionally
+equal. The lane found this by writing the test the obvious way — assert
+non-def-eq at `n = 1` — and having it FAIL.
+`power_series_tests.rs::exp_instance_is_a_proved_equiv_at_symbolic_n_but_def_eq_at_n_one`
+now pins both halves, the concrete one deliberately, as the trap for anyone who
+checks one small case and concludes `Eq.refl`.
 
 **Not landed, sized.** Deliverable 4 (termwise addition and scalar multiples
 inside a common radius) did not land; it is not blocked — `CReal.sumRange_add`

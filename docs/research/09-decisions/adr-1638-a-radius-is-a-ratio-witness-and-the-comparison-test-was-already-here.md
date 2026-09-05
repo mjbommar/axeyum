@@ -23,8 +23,10 @@ signed case forced one genuinely new general lemma, `CReal.abs_pow_le`, because
 a radius is a claim about `|x| < R`. The exp and cos shelves are exhibited as
 instances by `CReal.expSeriesPartialIsPowerSeries` /
 `CReal.cosSeriesPartialIsPowerSeries`, and these are **proved `Equiv`s, not
-`Eq.refl`** — measured, not asserted, by a test that shows the two sides are
-not definitionally equal at `n = 1`.
+`Eq.refl`** — measured, not asserted, and the measurement has two halves that
+point opposite ways: not definitionally equal at a **symbolic** `n` (the case
+the theorem quantifies over), but definitionally equal at the **concrete** `n =
+1`, where every subterm is closed and normalizes.
 
 Index-status: proposed
 
@@ -121,14 +123,28 @@ series *at the point 1*. So the instance statement is `Equiv (expSeriesPartial
 n) (powerSeriesPartial expTerm one n)`, and the question the brief asks is
 whether that is `Eq.refl` or a proof.
 
-It is a proof. `powerSeriesPartial` multiplies each coefficient by `pow one k`,
-and while `pow one Nat.zero` ι-reduces to `one`, `mul (expTerm 0) one` does not
-reduce to `expTerm 0` — `CReal.mul`'s representative resamples its factors, so
-`mul_one` is a proved `Equiv` and never a reduction. This is asserted nowhere:
-`power_series_tests.rs::exp_instance_is_a_proved_equiv_because_the_sides_are_not_def_eq`
-runs `def_eq_in` on the two sides at the concrete `n = 1` and requires it to
-come back **false**, then requires the theorem to land on the `Equiv`. If the
-sides were ever made definitionally equal, that test fails and says so.
+It is a proof, and the reason is **symbolic**, not arithmetic. At a free `n`
+both sides are stuck `Nat.rec` applications whose minor premises differ —
+`expTerm i` against `mul (expTerm i) (pow one i)` at a bound `i`, where neither
+`pow` nor `mul` reduces. That is the case the theorem quantifies over, so no
+`Eq.refl` inhabits it.
+
+**The obvious way to check this is wrong, and the lane got it wrong first.**
+The test originally asserted non-def-eq at the concrete `n = 1` and FAILED:
+there everything is closed, `pow one Nat.zero` ι-reduces to `one`, and the
+kernel normalizes `mul (ofRat q) one` and `ofRat q` to the same regular
+sequence — so at `n = 1` the two sides *are* definitionally equal. The
+asymmetry was found by the test failing, not by reasoning.
+
+Both halves are now pinned by
+`power_series_tests.rs::exp_instance_is_a_proved_equiv_at_symbolic_n_but_def_eq_at_n_one`:
+`def_eq_in` must come back **false** at a symbolic `n` and **true** at `n = 1`,
+and the theorem must land on the `Equiv` at the symbolic index. The concrete
+half is kept deliberately, as the trap for a future reader who checks one small
+case and concludes the instance is `Eq.refl`. The general lesson is the one
+`CLAUDE.md` already states for `Definition`s and this lane re-measured for
+`Equiv`s: **a concrete instantiation and a symbolic check catch disjoint
+defect classes**, and here they disagree outright.
 
 The `Equiv` itself is `sum_range_congr` against `CReal.one_pow : ∀ k, Equiv (pow
 one k) one` (also new, also a `Nat.rec` induction) and `mul_one`.

@@ -7990,6 +7990,14 @@ const STEP_DISPATCH: &[StepDispatch] = &[
         "power_series::declare_power_series_converges_within_radius",
         power_series::declare_power_series_converges_within_radius,
     ),
+    (
+        "power_series::declare_exp_series_partial_is_power_series",
+        power_series::declare_exp_series_partial_is_power_series,
+    ),
+    (
+        "power_series::declare_cos_series_partial_is_power_series",
+        power_series::declare_cos_series_partial_is_power_series,
+    ),
 ];
 
 /// Build the real prelude: `ℝ` as a Bishop setoid over the constructed `ℚ`,
@@ -9152,6 +9160,12 @@ mod lub_boundary_tests;
 /// same reason `lub_boundary_tests` is.
 #[cfg(test)]
 mod omniscience_tests;
+
+/// Tests for `creal/power_series.rs` (roadmap W2-5: power series with a radius
+/// of convergence). Kept out of `creal_tests.rs` for the same reason
+/// `omniscience_tests` is.
+#[cfg(test)]
+mod power_series_tests;
 
 /// Per-module declaration inventory consumed by `creal_tests`'s
 /// environment-derived coverage test. `#[cfg(test)]`: pure test scaffolding,

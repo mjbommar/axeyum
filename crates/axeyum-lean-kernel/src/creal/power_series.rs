@@ -781,6 +781,114 @@ pub(super) fn declare_power_series_converges_within_radius(
     })
 }
 
+// ---------------------------------------------------------------------------
+// `expSeriesPartial` and `cosSeriesPartial` as power-series instances.
+// ---------------------------------------------------------------------------
+
+/// The shared body of the two instance theorems.
+///
+/// `coeff` is the coefficient constant (`CReal.expTerm` / `CReal.cosTerm`) and
+/// `hand_built` the already-landed partial-sum constant
+/// (`CReal.expSeriesPartial` / `CReal.cosSeriesPartial`, each defined as
+/// `sumRange <coeff>`). Produces the type `∀ n, Equiv (hand_built n)
+/// (powerSeriesPartial coeff one n)` together with its proof.
+///
+/// The proof is [`CRealPrelude::sum_range_congr`] at `f := coeff` and `g := λ
+/// k, powerSeriesTerm coeff k one`, whose pointwise premise is `Equiv (coeff
+/// i) (mul (coeff i) (pow one i))` — [`declare_one_pow`] rewrites `pow one i`
+/// to `one` under [`CRealPrelude::mul_congr`], and [`CRealPrelude::mul_one`]
+/// removes it. Both `hand_built n` and `powerSeriesPartial coeff one n` are
+/// definitionally the two `sumRange` applications, so no transport of the
+/// conclusion is needed on either side.
+fn series_is_power_series(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    coeff: NameId,
+    hand_built: NameId,
+) -> (ExprId, ExprId) {
+    let nat = d.nat_ty();
+    let one_c = cone(d, p);
+    let coeff_c = d.kernel().const_(coeff, vec![]);
+
+    let g = term_fn(d, p, coeff_c, one_c);
+
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+
+    let hpoint = {
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let ci = d.apply(coeff_c, &[i]);
+        let pow_one_i = cpow(d, p, one_c, i);
+        let prod = cmul(d, p, ci, pow_one_i);
+        let ci_one = cmul(d, p, ci, one_c);
+
+        let hone = d.lemma(p.power_series.one_pow, &[i]); // Equiv (pow one i) one
+        let refl_ci = d.lemma(p.equiv_refl, &[ci]);
+        // Equiv (mul ci (pow one i)) (mul ci one)
+        let e1 = d.lemma(p.mul_congr, &[ci, ci, pow_one_i, one_c, refl_ci, hone]);
+        let e2 = d.lemma(p.mul_one, &[ci]); // Equiv (mul ci one) ci
+        // Equiv (mul ci (pow one i)) ci
+        let fwd = d.lemma(p.equiv_trans, &[prod, ci_one, ci, e1, e2]);
+        // the premise wants the other orientation
+        let body = d.lemma(p.equiv_symm, &[prod, ci, fwd]);
+        d.lam_fv(i_fv, nat, body)
+    };
+
+    let proof_inner = d.lemma(p.sum_range_congr, &[coeff_c, g, n, hpoint]);
+
+    let stmt_inner = {
+        let hand_c = d.kernel().const_(hand_built, vec![]);
+        let lhs = d.apply(hand_c, &[n]);
+        let rhs = d.const_app(p.power_series.power_series_partial, &[coeff_c, one_c, n]);
+        equiv(d, p, lhs, rhs)
+    };
+
+    let ty = d.pi_fv(n_fv, nat, stmt_inner);
+    let value = d.lam_fv(n_fv, nat, proof_inner);
+    (ty, value)
+}
+
+/// `CReal.expSeriesPartialIsPowerSeries : ∀ n, Equiv (expSeriesPartial n)
+/// (powerSeriesPartial expTerm one n)` — the hand-built exponential shelf
+/// exhibited as an instance of the generic power series at the point `1`.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+pub(super) fn declare_exp_series_partial_is_power_series(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let (ty, value) = series_is_power_series(d, p, p.exp_term, p.exp_series_partial);
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.power_series.exp_series_partial_is_power_series,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `CReal.cosSeriesPartialIsPowerSeries : ∀ n, Equiv (cosSeriesPartial n)
+/// (powerSeriesPartial cosTerm one n)` — the same for the cosine shelf.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection.
+pub(super) fn declare_cos_series_partial_is_power_series(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let (ty, value) = series_is_power_series(d, p, p.cos_term, p.cos_series_partial);
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.power_series.cos_series_partial_is_power_series,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
 /// The kernel names `creal/power_series.rs` declares.
 ///
 /// One of ADR-1512's per-module registries behind the [`CRealPrelude`] facade:
@@ -833,6 +941,18 @@ pub struct PowerSeriesNames {
     /// [`CRealPrelude::converges_of_cauchy`]. See
     /// `creal/power_series.rs::declare_power_series_converges_within_radius`.
     pub power_series_converges_within_radius: NameId,
+    /// `CReal.expSeriesPartialIsPowerSeries : ∀ n, Equiv (expSeriesPartial n)
+    /// (powerSeriesPartial expTerm one n)` — the hand-built exponential shelf
+    /// (`exponential.rs`) exhibited as an instance of the generic power series
+    /// at the point `1`. A proved `Equiv`, **not** `Eq.refl`: the generic form
+    /// carries a `pow one k` factor that only ι-reduces to `one` at `k = 0`.
+    /// See `creal/power_series.rs::declare_exp_series_partial_is_power_series`.
+    pub exp_series_partial_is_power_series: NameId,
+    /// `CReal.cosSeriesPartialIsPowerSeries : ∀ n, Equiv (cosSeriesPartial n)
+    /// (powerSeriesPartial cosTerm one n)` — the same for `trig.rs`'s cosine
+    /// shelf, and equally a proved `Equiv` rather than `Eq.refl`. See
+    /// `creal/power_series.rs::declare_cos_series_partial_is_power_series`.
+    pub cos_series_partial_is_power_series: NameId,
 }
 
 impl PowerSeriesNames {
@@ -847,6 +967,10 @@ impl PowerSeriesNames {
                 .name_str(creal, "powerSeriesCauchyWithinRadius"),
             power_series_converges_within_radius: kernel
                 .name_str(creal, "powerSeriesConvergesWithinRadius"),
+            exp_series_partial_is_power_series: kernel
+                .name_str(creal, "expSeriesPartialIsPowerSeries"),
+            cos_series_partial_is_power_series: kernel
+                .name_str(creal, "cosSeriesPartialIsPowerSeries"),
         }
     }
 }
