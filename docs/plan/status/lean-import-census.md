@@ -117,8 +117,6 @@ lane's gate); `cargo check -p axeyum-lean-import --all-targets` and
 
 <!-- plan-section: landed-changes -->
 
-| date | change | evidence |
-|---|---|---|
 | 2026-09-05 | Population builder and batch statement-import census example | `87a6b8609` |
 | 2026-09-05 | The four-phase census driver, piloted end to end on 8 rows | `68c235ed5` |
 | 2026-09-05 | `scripts/lean_surface_screen.py`, its 10-test control suite, mutation suite `lean-surface-screen`, and the `--screen-only` wiring in `attest-nursery-surface.py` | `d95a30125` |
