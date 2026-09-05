@@ -113,7 +113,7 @@ great deal of that left.
       self-contained, reachable with the existing `ModEq` machinery, and the
       natural companion to Fermat and Euler. Their view: the most conspicuous
       hole in an otherwise complete elementary shelf.
-- [ ] **2. Multiplicative arithmetic functions as a family.** Möbius, the
+- [~] **2. Multiplicative arithmetic functions as a family.** — *aggregate, reindexing, convolution and multiplicativity landed 2026-09-05; Möbius inversion sized.* Möbius, the
       divisor function, Dirichlet convolution, and multiplicativity proved
       once rather than per function. Unlocks inclusion-exclusion arguments and
       makes the existing totient work compose.
@@ -138,6 +138,8 @@ great deal of that left.
 |---|---|---|
 | 2026-09-04 | File created. Baseline: 1,218 proved ℕ/ℤ facts, 257 open. Wilson, quadratic reciprocity, Fermat, Euler totient, Bézout, CRT, Euclid, √2 irrational all present and axiom-free. | ledger snapshot at `1856cdb3c` |
 | 2026-09-04 | **Next Five item 1 landed** (roadmap W1-7): `int_prelude/mult_order.rs`, 11 declarations with empty footprints — multiplicative order by bounded search, order divides the totient, `a^k ≡ 1 ↔ ord ∣ k`, primitive roots, and power injectivity (ADR-1598). **Existence of a primitive root mod a prime did not land**, and the obstruction is precise: the counting route needs `∑_{d∣n} φ(d) = n`, hence a divisor-set aggregate and the `d ↦ n/d` reindexing of a predicate-restricted sum, neither of which exists. Two design findings recorded: the search predicate must be shifted (`a^(j+1) ≡ 1`, since the unshifted form is true at j=0 for every a), and `Coprime (a^i) n` falls out of the order relation via the Bézout certificate already inside it. | `a9ef9465d`; `int_prelude::` 87 passed |
+| 2026-09-05 | **Next Five item 2 partly landed** (roadmap W2-18, ADR-1619): the divisor-set aggregate `sumDivisorsBy`, its reindexing primitive, `numDivisors`, `IsMultiplicative` with the totient as an instance, and Dirichlet convolution with commutativity — 29 declarations, footprint 0. The obstruction ADR-1598 named for primitive-root existence is half closed: the aggregate and reindexing exist; the classification of `[0,n)` by `gcd k n` does not. **The reindexing map this reviewer and every brief assumed, `d ↦ n/d`, is not the one that works** — it is not injective on the range — and the involution fixing non-divisors is. Möbius inversion did not land and is sized: it needs the divisors of a squarefree number in bijection with subsets of its prime factors. | `3e650f81a`; `nat_prelude::` 562 passed |
+
 
 ## How to re-measure
 

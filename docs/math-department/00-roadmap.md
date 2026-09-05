@@ -122,8 +122,8 @@ something. W2-1 and W2-2 depend on W0-3; the rest do not.
 | W2-15 | Independence as a definition | 08.3 | **landed** `86c7a1065` | `Independent R A B p n := E[A·B] ~ E[A]·E[B]`, and `uncorrelated_of_independent` derives `covariance ~ 0`; composes into the existing `Rat.variance_add_of_uncorrelated` and the kernel accepts. Needs no commutativity only because `Rat.covariance` is already in computational form while `variance` is centred — relating the two forms needs `mulComm`, which the ordered-ring record cannot carry. **The bridge ADR-1612 named cannot be stated**: `IntSpace` is generic over the function space but hard-wired to `CReal` values, so no ℚ-valued integration space exists. Landed instead: the ℝ-valued expectation *is* the `crealFinite` integral definitionally, and the rational one is the integral across `CReal.ofRat`. |
 | W2-16 | Nonlinear producer with Positivstellensatz certificates | 11.3 | not started | — (SOS certificates exist, nothing reconstructs them) |
 | W2-17 | Unique factorization as a theorem over `Nat.Multiset` | 01.3 | **already done** | `Nat.Multiset.count_eq_of_prod_eq` with `exists_prime_factorization`. Audit row A5. |
-| W2-18 | Multiplicative arithmetic functions as a family | 01.2 | not started | **[AUDIT] partially present**: `Nat.totient_mul_of_coprime` proves totient multiplicativity in exactly the general form the review denied (row A7). Möbius and Dirichlet convolution are confirmed absent. |
-| W2-19 | General inclusion-exclusion | 07.5 | not started | — |
+| W2-18 | Multiplicative arithmetic functions as a family | 01.2 | **partly landed** `3e650f81a` | 29 declarations, footprint 0: `dvdB`, `sumDivisorsBy` (the existing `sumDivisors` was monomorphic — ADR-1598's "neither exists" was half wrong), `numDivisors`, `IsMultiplicative` with totient as an instance, Dirichlet convolution with `dirichlet_comm`, and **the divisor-set reindexing primitive** `sumDivisorsBy_reindex`. **The finding**: `d ↦ n/d` is *not* the map that reindexes — it is not injective on `[0,n]` (at n=6 it sends 4, 5, 6 all to 1), so `sumRange_permute` cannot consume it; the map that can is the involution fixing the non-divisors, injective with no range bound. **Möbius inversion did not land**: `∑_{d∣n} μ(d) = [n=1]` needs the divisors of a squarefree n in bijection with subsets of its prime factors, which the reindexing permutes rather than describes. Mutation finding worth carrying: seven of eight definition mutants were killed by the trusted gate, not by any evaluation test — only a coordinated mutant that kept every law true reached the evaluation tests, and exactly one died. [ADR-1619](../research/09-decisions/adr-1619-the-divisor-map-is-a-permutation-only-if-it-fixes-the-non-divisors.md). |
+| W2-19 | General inclusion-exclusion | 07.5 | not started | — (the arithmetic-functions lane sized it: a sum *indexed by subsets*, `sumRange (fun code => …) (2^n)` with the parity of `card (decode n code)`, over today's subset-search enumeration; independent of everything else) |
 | W2-20 | Constructive MVT and differentiability on an interval | 02.5 | **already done 2026-08-27** | `fermat_interiorExtremum`, `rolle_interiorExtremum`, `mvt_interiorExtremum`. Audit row A8. It was never a prerequisite for W1-2 either. |
 | W2-21 | A topological-space carrier, ℝ as the first instance | 03.2 | not started | **build it as a FRAME, not as open sets** (ADR-1602), and it is **off the critical path** — the metric layer serves the analysis shelf. |
 
@@ -168,9 +168,9 @@ One row per wave. Update when something lands, then append to the history log.
 |---|---|---|---|---|---|
 | W0 — decisions | 5 | 0 | 1 | **4** | 0 |
 | W1 — unblocked | 13 | 0 | 0 | **13** | **1** |
-| W2 — carriers | 21 | 8 | 0 | **12** | **2** |
+| W2 — carriers | 21 | 7 | 0 | **13** | **2** |
 | W3 — large shelves | 13 | 8 | 0 | **4** | **1** |
-| **total** | **52** | **16** | **1** | **33** | **4** |
+| **total** | **52** | **15** | **1** | **34** | **4** |
 
 ⁽ᵇ⁾ **Already done before the roadmap was written, and the review did not
 know.** The audit found 11 of 76 absence claims false. Four were roadmap
@@ -277,6 +277,7 @@ Reviewer verdicts as of the last reconciliation:
 | 2026-09-04 | `2a640c9b6` | **W0-1 decided and W2-8 landed together.** The first isomorphism theorem over `AlgS.Group`, footprint empty, at a measured cost of three lines versus having `Quot.sound`. ADR-1595 recommends setoid quotients. Suites after: `structures_setoid` 18, `first_iso` 5, `linarith` 99. |
 | 2026-09-04 | (see history) | Off-roadmap: the safety-matrix gate had been red on main since 2026-08-31; regenerated, 1,823 rows in and 1,514 out. Found by the W0-4 lane and reported rather than worked around. |
 | 2026-09-04 | `a9ef9465d` | **W1-7 landed.** 11 declarations, footprint 0; existence mod a prime stopped at a named obstruction. `int_prelude::` 87 passed. |
+| 2026-09-05 | `3e650f81a` | **W2-18 partly landed.** The divisor-reindexing primitive, Dirichlet convolution, multiplicativity; Möbius inversion sized, not landed. The reindexing map every brief assumed (`d ↦ n/d`) is the wrong one. `nat_prelude::` 562 passed. |
 | 2026-09-04 | `0e4eeba47` | **W3-3 landed.** Setoid-enriched categories, 61 declarations, zero setoid cost by construction. ADR-1609's universe claim corrected. The category of groups waits on `Sigma`. `category_setoid` 14 passed. |
 | 2026-09-04 | `024830694` | Off-roadmap: gate-hygiene landed. Against a fresh projection, 39 absence claims were retired as *present* (two of them EXPIRED) and 17 confirmed absent; nine stale doc comments claiming no `sqrt` exists corrected. `check-absence-claims.py` is **still red, 150 bare against a budget of 122**, and the lane's finding is that the remainder is dominated by three claim shapes the marker grammar cannot express, so the budget or the grammar needs a decision, not more annotation. Recommendation recorded: do not add it to the push hook. |
 | 2026-09-04 | `f0bc8a692` | **W1-13 follow-on: the residue moved.** 46 → 45 cas-internal, 14 → 16 reconstructed. `int_prelude::` 100 passed. |
