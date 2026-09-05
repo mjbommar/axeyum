@@ -14,27 +14,27 @@
     ]
   },
   "population": {
-    "files_scanned": 663,
-    "private_fns": 13497,
-    "private_fns_outside_tests": 10953,
-    "distinct_names": 10509,
-    "distinct_body_digests": 11955,
-    "duplicated_name_groups": 1118,
-    "duplicated_body_groups": 574,
-    "sites_in_duplicated_body_groups": 2116,
-    "inline_step_fns": 8883,
-    "inline_step_name_groups": 758,
+    "files_scanned": 669,
+    "private_fns": 13607,
+    "private_fns_outside_tests": 11063,
+    "distinct_names": 10587,
+    "distinct_body_digests": 12055,
+    "duplicated_name_groups": 1128,
+    "duplicated_body_groups": 579,
+    "sites_in_duplicated_body_groups": 2131,
+    "inline_step_fns": 8957,
+    "inline_step_name_groups": 760,
     "inline_step_body_groups": 376,
     "sites_in_inline_step_body_groups": 1273
   },
   "by_name": [
     {
       "key": "new",
-      "count": 103,
+      "count": 106,
       "names": [
         "new"
       ],
-      "files": 103,
+      "files": 106,
       "carriers": [],
       "body_lines": 4,
       "signature": "fn new(kernel: &'k mut Kernel, int: IntPrelude) -> Self",
@@ -44,6 +44,9 @@
         "crates/axeyum-lean-kernel/src/decide/int/tests.rs:33",
         "crates/axeyum-lean-kernel/src/decide/rat/tests.rs:38",
         "crates/axeyum-lean-kernel/src/decide/tests.rs:48",
+        "crates/axeyum-lean-kernel/src/fo_code/tests.rs:23",
+        "crates/axeyum-lean-kernel/src/fo_decode/tests.rs:29",
+        "crates/axeyum-lean-kernel/src/fo_numbering/tests.rs:26",
         "crates/axeyum-lean-kernel/src/fo_provable/tests.rs:18",
         "crates/axeyum-lean-kernel/src/fo_semantics/tests.rs:22",
         "crates/axeyum-lean-kernel/src/fo_soundness.rs:175",
@@ -929,6 +932,40 @@
       ]
     },
     {
+      "key": "num",
+      "count": 18,
+      "names": [
+        "num"
+      ],
+      "files": 18,
+      "carriers": [
+        "IntDev"
+      ],
+      "body_lines": 7,
+      "signature": "fn num(&mut self, n: u32) -> ExprId",
+      "test_file_members": 5,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/fo_code/tests.rs:31",
+        "crates/axeyum-lean-kernel/src/fo_decode/tests.rs:36",
+        "crates/axeyum-lean-kernel/src/fo_numbering/tests.rs:41",
+        "crates/axeyum-lean-kernel/src/fo_semantics.rs:966",
+        "crates/axeyum-lean-kernel/src/fo_semantics/tests.rs:37",
+        "crates/axeyum-lean-kernel/src/fo_syntax/tests.rs:32",
+        "crates/axeyum-lean-kernel/src/ipc_eval.rs:255",
+        "crates/axeyum-lean-kernel/src/ipc_heyting.rs:356",
+        "crates/axeyum-lean-kernel/src/ipc_soundness.rs:357",
+        "crates/axeyum-lean-kernel/src/ipc_soundness/tests.rs:19",
+        "crates/axeyum-lean-kernel/src/list_prelude/bridge/bridge_tests.rs:34",
+        "crates/axeyum-lean-kernel/src/list_prelude/list_prelude_tests.rs:41",
+        "crates/axeyum-lean-kernel/src/list_prelude/ops/ops_tests.rs:53",
+        "crates/axeyum-lean-kernel/src/list_prelude/perm/perm_tests.rs:110",
+        "crates/axeyum-lean-kernel/src/nat_prelude/category_setoid/products/products_tests.rs:60",
+        "crates/axeyum-lean-kernel/src/nat_prelude/ops.rs:189",
+        "crates/axeyum-lean-kernel/src/rat_prelude/ops.rs:29",
+        "crates/axeyum-lean-kernel/src/simp/list/tests.rs:100"
+      ]
+    },
+    {
       "key": "and_intro",
       "count": 17,
       "names": [
@@ -1274,37 +1311,6 @@
         "crates/axeyum-lean-kernel/src/string_prelude/substr.rs:242",
         "crates/axeyum-lean-kernel/src/string_prelude/substr_arithmetic.rs:194",
         "crates/axeyum-lean-kernel/src/string_prelude/take_drop.rs:234"
-      ]
-    },
-    {
-      "key": "num",
-      "count": 15,
-      "names": [
-        "num"
-      ],
-      "files": 15,
-      "carriers": [
-        "IntDev"
-      ],
-      "body_lines": 8,
-      "signature": "fn num(&self, kernel: &mut crate::Kernel, n: u32) -> ExprId",
-      "test_file_members": 5,
-      "sites": [
-        "crates/axeyum-lean-kernel/src/fo_semantics.rs:966",
-        "crates/axeyum-lean-kernel/src/fo_semantics/tests.rs:37",
-        "crates/axeyum-lean-kernel/src/fo_syntax/tests.rs:32",
-        "crates/axeyum-lean-kernel/src/ipc_eval.rs:255",
-        "crates/axeyum-lean-kernel/src/ipc_heyting.rs:356",
-        "crates/axeyum-lean-kernel/src/ipc_soundness.rs:357",
-        "crates/axeyum-lean-kernel/src/ipc_soundness/tests.rs:19",
-        "crates/axeyum-lean-kernel/src/list_prelude/bridge/bridge_tests.rs:34",
-        "crates/axeyum-lean-kernel/src/list_prelude/list_prelude_tests.rs:41",
-        "crates/axeyum-lean-kernel/src/list_prelude/ops/ops_tests.rs:53",
-        "crates/axeyum-lean-kernel/src/list_prelude/perm/perm_tests.rs:110",
-        "crates/axeyum-lean-kernel/src/nat_prelude/category_setoid/products/products_tests.rs:60",
-        "crates/axeyum-lean-kernel/src/nat_prelude/ops.rs:189",
-        "crates/axeyum-lean-kernel/src/rat_prelude/ops.rs:29",
-        "crates/axeyum-lean-kernel/src/simp/list/tests.rs:100"
       ]
     },
     {
@@ -2050,7 +2056,7 @@
       "sites": [
         "crates/axeyum-lean-kernel/src/expr.rs:204",
         "crates/axeyum-lean-kernel/src/lean_export.rs:184",
-        "crates/axeyum-lean-kernel/src/lib.rs:725",
+        "crates/axeyum-lean-kernel/src/lib.rs:731",
         "crates/axeyum-lean-kernel/src/linarith/nat.rs:988",
         "crates/axeyum-lean-kernel/src/ring/int.rs:1312",
         "crates/axeyum-lean-kernel/src/ring/nat.rs:849",
@@ -2424,6 +2430,30 @@
         "crates/axeyum-lean-kernel/src/nat_prelude/fermat.rs:35",
         "crates/axeyum-lean-kernel/src/nat_prelude/perfect.rs:286",
         "crates/axeyum-lean-kernel/src/nat_prelude/vandermonde.rs:113"
+      ]
+    },
+    {
+      "key": "var",
+      "count": 8,
+      "names": [
+        "var"
+      ],
+      "files": 8,
+      "carriers": [
+        "IntDev"
+      ],
+      "body_lines": 5,
+      "signature": "fn var(d: &mut IntDev<'_>, p: ComplexPrelude, z: ExprId) -> CExpr",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/complex.rs:3943",
+        "crates/axeyum-lean-kernel/src/fo_decode/tests.rs:45",
+        "crates/axeyum-lean-kernel/src/fo_numbering/tests.rs:54",
+        "crates/axeyum-lean-kernel/src/fo_semantics.rs:975",
+        "crates/axeyum-lean-kernel/src/fo_semantics/tests.rs:46",
+        "crates/axeyum-lean-kernel/src/fo_syntax/tests.rs:41",
+        "crates/axeyum-lean-kernel/src/ipc_eval.rs:265",
+        "crates/axeyum-lean-kernel/src/ipc_soundness/tests.rs:36"
       ]
     },
     {
@@ -3013,6 +3043,46 @@
       ]
     },
     {
+      "key": "assert_eq_expr",
+      "count": 6,
+      "names": [
+        "assert_eq_expr"
+      ],
+      "files": 6,
+      "carriers": [],
+      "body_lines": 8,
+      "signature": "fn assert_eq_expr(&mut self, got: ExprId, want: ExprId, what: &str)",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/fo_code/tests.rs:74",
+        "crates/axeyum-lean-kernel/src/fo_decode/tests.rs:75",
+        "crates/axeyum-lean-kernel/src/fo_numbering/tests.rs:76",
+        "crates/axeyum-lean-kernel/src/fo_provable/tests.rs:52",
+        "crates/axeyum-lean-kernel/src/fo_semantics/tests.rs:116",
+        "crates/axeyum-lean-kernel/src/fo_syntax/tests.rs:135"
+      ]
+    },
+    {
+      "key": "assert_ne_expr",
+      "count": 6,
+      "names": [
+        "assert_ne_expr"
+      ],
+      "files": 6,
+      "carriers": [],
+      "body_lines": 7,
+      "signature": "fn assert_ne_expr(&mut self, got: ExprId, want: ExprId, what: &str)",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/fo_code/tests.rs:83",
+        "crates/axeyum-lean-kernel/src/fo_decode/tests.rs:84",
+        "crates/axeyum-lean-kernel/src/fo_numbering/tests.rs:85",
+        "crates/axeyum-lean-kernel/src/fo_provable/tests.rs:61",
+        "crates/axeyum-lean-kernel/src/fo_semantics/tests.rs:125",
+        "crates/axeyum-lean-kernel/src/fo_syntax/tests.rs:144"
+      ]
+    },
+    {
       "key": "attempt",
       "count": 6,
       "names": [
@@ -3403,6 +3473,28 @@
       ]
     },
     {
+      "key": "false_elim",
+      "count": 6,
+      "names": [
+        "false_elim"
+      ],
+      "files": 6,
+      "carriers": [
+        "NatDev"
+      ],
+      "body_lines": 10,
+      "signature": "fn false_elim( kernel: &mut crate::Kernel, c: &CodeNames, goal: ExprId, h: ExprId, ) -> ExprId",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/fo_code.rs:243",
+        "crates/axeyum-lean-kernel/src/nat_prelude/finset_singleton.rs:140",
+        "crates/axeyum-lean-kernel/src/nat_prelude/hall.rs:1575",
+        "crates/axeyum-lean-kernel/src/nat_prelude/hall_sufficiency.rs:222",
+        "crates/axeyum-lean-kernel/src/nat_prelude/log_clog_mirrors.rs:142",
+        "crates/axeyum-lean-kernel/src/nat_prelude/log_clog_order.rs:68"
+      ]
+    },
+    {
       "key": "finset_ty",
       "count": 6,
       "names": [
@@ -3750,28 +3842,6 @@
       ]
     },
     {
-      "key": "var",
-      "count": 6,
-      "names": [
-        "var"
-      ],
-      "files": 6,
-      "carriers": [
-        "IntDev"
-      ],
-      "body_lines": 5,
-      "signature": "fn var(d: &mut IntDev<'_>, p: ComplexPrelude, z: ExprId) -> CExpr",
-      "test_file_members": 0,
-      "sites": [
-        "crates/axeyum-lean-kernel/src/complex.rs:3943",
-        "crates/axeyum-lean-kernel/src/fo_semantics.rs:975",
-        "crates/axeyum-lean-kernel/src/fo_semantics/tests.rs:46",
-        "crates/axeyum-lean-kernel/src/fo_syntax/tests.rs:41",
-        "crates/axeyum-lean-kernel/src/ipc_eval.rs:265",
-        "crates/axeyum-lean-kernel/src/ipc_soundness/tests.rs:36"
-      ]
-    },
-    {
       "key": "a_swapped_variable_is_rejected_by_the_kernel",
       "count": 5,
       "names": [
@@ -4070,6 +4140,27 @@
       ]
     },
     {
+      "key": "declare_projection",
+      "count": 5,
+      "names": [
+        "declare_projection"
+      ],
+      "files": 5,
+      "carriers": [
+        "IntDev"
+      ],
+      "body_lines": 22,
+      "signature": "fn declare_projection( kernel: &mut crate::Kernel, c: &CodeNames, unpair: NameId, label: &str, left: bool, ) -> Result<NameId, KernelError>",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/fo_code.rs:492",
+        "crates/axeyum-lean-kernel/src/fo_semantics.rs:410",
+        "crates/axeyum-lean-kernel/src/geo/qplane.rs:585",
+        "crates/axeyum-lean-kernel/src/nat_prelude/structures_setoid.rs:1241",
+        "crates/axeyum-lean-kernel/src/rat_prelude/algebra_ext.rs:84"
+      ]
+    },
+    {
       "key": "declare_sum_range",
       "count": 5,
       "names": [
@@ -4189,27 +4280,6 @@
         "crates/axeyum-lean-kernel/src/string_prelude/reverse.rs:199",
         "crates/axeyum-lean-kernel/src/string_prelude/substr.rs:281",
         "crates/axeyum-lean-kernel/src/string_prelude/substr_arithmetic.rs:258"
-      ]
-    },
-    {
-      "key": "false_elim",
-      "count": 5,
-      "names": [
-        "false_elim"
-      ],
-      "files": 5,
-      "carriers": [
-        "NatDev"
-      ],
-      "body_lines": 8,
-      "signature": "fn false_elim(d: &mut NatDev<'_>, p: &NatPrelude, goal: ExprId, proof: ExprId) -> ExprId",
-      "test_file_members": 0,
-      "sites": [
-        "crates/axeyum-lean-kernel/src/nat_prelude/finset_singleton.rs:140",
-        "crates/axeyum-lean-kernel/src/nat_prelude/hall.rs:1575",
-        "crates/axeyum-lean-kernel/src/nat_prelude/hall_sufficiency.rs:222",
-        "crates/axeyum-lean-kernel/src/nat_prelude/log_clog_mirrors.rs:142",
-        "crates/axeyum-lean-kernel/src/nat_prelude/log_clog_order.rs:68"
       ]
     },
     {
@@ -4417,6 +4487,27 @@
         "crates/axeyum-lean-kernel/src/string_prelude/length.rs:144",
         "crates/axeyum-lean-kernel/src/string_prelude/length_append.rs:151",
         "crates/axeyum-lean-kernel/src/string_prelude/map.rs:198"
+      ]
+    },
+    {
+      "key": "mk",
+      "count": 5,
+      "names": [
+        "mk"
+      ],
+      "files": 4,
+      "carriers": [
+        "IntDev"
+      ],
+      "body_lines": 5,
+      "signature": "fn mk(&mut self, a: u32, b: u32) -> ExprId",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/fo_code/tests.rs:56",
+        "crates/axeyum-lean-kernel/src/nat_prelude/category_setoid/groups.rs:612",
+        "crates/axeyum-lean-kernel/src/nat_prelude/category_setoid/groups.rs:1750",
+        "crates/axeyum-lean-kernel/src/nat_prelude/category_setoid/products.rs:832",
+        "crates/axeyum-lean-kernel/src/rat_prelude/ops.rs:60"
       ]
     },
     {
@@ -5209,26 +5300,6 @@
       ]
     },
     {
-      "key": "declare_projection",
-      "count": 4,
-      "names": [
-        "declare_projection"
-      ],
-      "files": 4,
-      "carriers": [
-        "IntDev"
-      ],
-      "body_lines": 44,
-      "signature": "fn declare_projection( kernel: &mut crate::Kernel, syn: &SyntaxNames, sem: &StructureNames, field: Field, one: LevelId, ) -> Result<NameId, KernelError>",
-      "test_file_members": 0,
-      "sites": [
-        "crates/axeyum-lean-kernel/src/fo_semantics.rs:410",
-        "crates/axeyum-lean-kernel/src/geo/qplane.rs:585",
-        "crates/axeyum-lean-kernel/src/nat_prelude/structures_setoid.rs:1241",
-        "crates/axeyum-lean-kernel/src/rat_prelude/algebra_ext.rs:84"
-      ]
-    },
-    {
       "key": "declare_sum_range_split",
       "count": 4,
       "names": [
@@ -5644,26 +5715,6 @@
       ]
     },
     {
-      "key": "mk",
-      "count": 4,
-      "names": [
-        "mk"
-      ],
-      "files": 3,
-      "carriers": [
-        "IntDev"
-      ],
-      "body_lines": 6,
-      "signature": "fn mk( &self, k: &mut Kernel, lg: &LogicPrelude, av: ExprId, bv: ExprId, v: ExprId, p: ExprId, ) -> ExprId",
-      "test_file_members": 0,
-      "sites": [
-        "crates/axeyum-lean-kernel/src/nat_prelude/category_setoid/groups.rs:612",
-        "crates/axeyum-lean-kernel/src/nat_prelude/category_setoid/groups.rs:1750",
-        "crates/axeyum-lean-kernel/src/nat_prelude/category_setoid/products.rs:832",
-        "crates/axeyum-lean-kernel/src/rat_prelude/ops.rs:60"
-      ]
-    },
-    {
       "key": "mul",
       "count": 4,
       "names": [
@@ -5819,6 +5870,24 @@
         "crates/axeyum-lean-kernel/src/creal/derivative.rs:436",
         "crates/axeyum-lean-kernel/src/creal/ivt.rs:265",
         "crates/axeyum-lean-kernel/src/creal/mvt.rs:457"
+      ]
+    },
+    {
+      "key": "numeral",
+      "count": 4,
+      "names": [
+        "numeral"
+      ],
+      "files": 4,
+      "carriers": [],
+      "body_lines": 7,
+      "signature": "fn numeral(kernel: &mut crate::Kernel, c: &CodeNames, n: u32) -> ExprId",
+      "test_file_members": 2,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/fo_code.rs:184",
+        "crates/axeyum-lean-kernel/src/int_prelude/int_prelude_tests.rs:1076",
+        "crates/axeyum-lean-kernel/src/int_prelude/sum_maps_tests.rs:49",
+        "crates/axeyum-lean-kernel/src/nat_prelude/polynomial_setoid.rs:3347"
       ]
     },
     {
@@ -6657,37 +6726,20 @@
       ]
     },
     {
-      "key": "assert_eq_expr",
+      "key": "assert_axiom_free",
       "count": 3,
       "names": [
-        "assert_eq_expr"
+        "assert_axiom_free"
       ],
       "files": 3,
       "carriers": [],
-      "body_lines": 8,
-      "signature": "fn assert_eq_expr(&mut self, got: ExprId, want: ExprId, what: &str)",
+      "body_lines": 11,
+      "signature": "fn assert_axiom_free(&mut self, name: NameId, what: &str)",
       "test_file_members": 0,
       "sites": [
-        "crates/axeyum-lean-kernel/src/fo_provable/tests.rs:52",
-        "crates/axeyum-lean-kernel/src/fo_semantics/tests.rs:116",
-        "crates/axeyum-lean-kernel/src/fo_syntax/tests.rs:135"
-      ]
-    },
-    {
-      "key": "assert_ne_expr",
-      "count": 3,
-      "names": [
-        "assert_ne_expr"
-      ],
-      "files": 3,
-      "carriers": [],
-      "body_lines": 7,
-      "signature": "fn assert_ne_expr(&mut self, got: ExprId, want: ExprId, what: &str)",
-      "test_file_members": 0,
-      "sites": [
-        "crates/axeyum-lean-kernel/src/fo_provable/tests.rs:61",
-        "crates/axeyum-lean-kernel/src/fo_semantics/tests.rs:125",
-        "crates/axeyum-lean-kernel/src/fo_syntax/tests.rs:144"
+        "crates/axeyum-lean-kernel/src/fo_code/tests.rs:93",
+        "crates/axeyum-lean-kernel/src/fo_decode/tests.rs:92",
+        "crates/axeyum-lean-kernel/src/fo_numbering/tests.rs:93"
       ]
     },
     {
@@ -8029,6 +8081,25 @@
       ]
     },
     {
+      "key": "every_declaration_of_this_slice_is_axiom_free",
+      "count": 3,
+      "names": [
+        "every_declaration_of_this_slice_is_axiom_free"
+      ],
+      "files": 3,
+      "carriers": [
+        "Fixture"
+      ],
+      "body_lines": 21,
+      "signature": "fn every_declaration_of_this_slice_is_axiom_free()",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/fo_code/tests.rs:209",
+        "crates/axeyum-lean-kernel/src/fo_decode/tests.rs:386",
+        "crates/axeyum-lean-kernel/src/fo_numbering/tests.rs:348"
+      ]
+    },
+    {
       "key": "exists_elim_at",
       "count": 3,
       "names": [
@@ -8098,6 +8169,23 @@
         "crates/axeyum-lean-kernel/src/creal/exponential.rs:652",
         "crates/axeyum-lean-kernel/src/creal/pi.rs:199",
         "crates/axeyum-lean-kernel/src/creal/trig.rs:603"
+      ]
+    },
+    {
+      "key": "f0",
+      "count": 3,
+      "names": [
+        "f0"
+      ],
+      "files": 3,
+      "carriers": [],
+      "body_lines": 5,
+      "signature": "fn f0(&mut self, k: u32) -> ExprId",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/fo_numbering/tests.rs:60",
+        "crates/axeyum-lean-kernel/src/fo_semantics/tests.rs:52",
+        "crates/axeyum-lean-kernel/src/fo_syntax/tests.rs:47"
       ]
     },
     {
@@ -8956,23 +9044,6 @@
       ]
     },
     {
-      "key": "numeral",
-      "count": 3,
-      "names": [
-        "numeral"
-      ],
-      "files": 3,
-      "carriers": [],
-      "body_lines": 15,
-      "signature": "fn numeral(k: &mut Kernel, p: &IntPrelude, n: i32) -> crate::ExprId",
-      "test_file_members": 2,
-      "sites": [
-        "crates/axeyum-lean-kernel/src/int_prelude/int_prelude_tests.rs:1076",
-        "crates/axeyum-lean-kernel/src/int_prelude/sum_maps_tests.rs:49",
-        "crates/axeyum-lean-kernel/src/nat_prelude/polynomial_setoid.rs:3347"
-      ]
-    },
-    {
       "key": "of_nat",
       "count": 3,
       "names": [
@@ -9104,6 +9175,25 @@
         "crates/axeyum-lean-kernel/src/complex.rs:3967",
         "crates/axeyum-lean-kernel/src/nat_prelude/category_setoid/groups.rs:1765",
         "crates/axeyum-lean-kernel/src/rat_prelude/scaling.rs:367"
+      ]
+    },
+    {
+      "key": "peq",
+      "count": 3,
+      "names": [
+        "peq"
+      ],
+      "files": 3,
+      "carriers": [
+        "IntDev"
+      ],
+      "body_lines": 5,
+      "signature": "fn peq(kernel: &mut crate::Kernel, c: &CodeNames, a: ExprId, b: ExprId) -> ExprId",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/fo_code.rs:224",
+        "crates/axeyum-lean-kernel/src/geo/qplane.rs:337",
+        "crates/axeyum-lean-kernel/src/metric.rs:1971"
       ]
     },
     {
@@ -9404,7 +9494,7 @@
       "sites": [
         "crates/axeyum-lean-kernel/src/complex.rs:1648",
         "crates/axeyum-lean-kernel/src/creal.rs:6981",
-        "crates/axeyum-lean-kernel/src/lean_pp.rs:1643"
+        "crates/axeyum-lean-kernel/src/lean_pp.rs:1647"
       ]
     },
     {
@@ -11796,6 +11886,38 @@
       ]
     },
     {
+      "key": "code_fst",
+      "count": 2,
+      "names": [
+        "code_fst"
+      ],
+      "files": 2,
+      "carriers": [],
+      "body_lines": 5,
+      "signature": "fn code_fst(&mut self, n: u32) -> ExprId",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/fo_code/tests.rs:62",
+        "crates/axeyum-lean-kernel/src/fo_decode.rs:205"
+      ]
+    },
+    {
+      "key": "code_snd",
+      "count": 2,
+      "names": [
+        "code_snd"
+      ],
+      "files": 2,
+      "carriers": [],
+      "body_lines": 5,
+      "signature": "fn code_snd(&mut self, n: u32) -> ExprId",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/fo_code/tests.rs:68",
+        "crates/axeyum-lean-kernel/src/fo_decode.rs:210"
+      ]
+    },
+    {
       "key": "column_zero_from",
       "count": 2,
       "names": [
@@ -12162,6 +12284,22 @@
       "sites": [
         "crates/axeyum-lean-kernel/src/rat_prelude/decide.rs:99",
         "crates/axeyum-lean-kernel/src/rat_prelude/lattice.rs:109"
+      ]
+    },
+    {
+      "key": "ctor",
+      "count": 2,
+      "names": [
+        "ctor"
+      ],
+      "files": 2,
+      "carriers": [],
+      "body_lines": 4,
+      "signature": "fn ctor(&mut self, name: NameId, args: &[ExprId]) -> ExprId",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/fo_decode/tests.rs:40",
+        "crates/axeyum-lean-kernel/src/fo_numbering/tests.rs:49"
       ]
     },
     {
@@ -14675,8 +14813,8 @@
       "signature": "fn default() -> Self",
       "test_file_members": 0,
       "sites": [
-        "crates/axeyum-lean-kernel/src/lib.rs:262",
-        "crates/axeyum-lean-kernel/src/lib.rs:321"
+        "crates/axeyum-lean-kernel/src/lib.rs:268",
+        "crates/axeyum-lean-kernel/src/lib.rs:327"
       ]
     },
     {
@@ -15567,22 +15705,6 @@
       ]
     },
     {
-      "key": "f0",
-      "count": 2,
-      "names": [
-        "f0"
-      ],
-      "files": 2,
-      "carriers": [],
-      "body_lines": 5,
-      "signature": "fn f0(&mut self, k: u32) -> ExprId",
-      "test_file_members": 0,
-      "sites": [
-        "crates/axeyum-lean-kernel/src/fo_semantics/tests.rs:52",
-        "crates/axeyum-lean-kernel/src/fo_syntax/tests.rs:47"
-      ]
-    },
-    {
       "key": "f1",
       "count": 2,
       "names": [
@@ -15646,6 +15768,22 @@
       "sites": [
         "crates/axeyum-lean-kernel/src/int_prelude/sum_maps.rs:92",
         "crates/axeyum-lean-kernel/src/rat_prelude/sum_maps.rs:86"
+      ]
+    },
+    {
+      "key": "fcode",
+      "count": 2,
+      "names": [
+        "fcode"
+      ],
+      "files": 2,
+      "carriers": [],
+      "body_lines": 4,
+      "signature": "fn fcode(&mut self, p: ExprId) -> ExprId",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/fo_decode/tests.rs:56",
+        "crates/axeyum-lean-kernel/src/fo_numbering/tests.rs:71"
       ]
     },
     {
@@ -15914,8 +16052,8 @@
       "signature": "fn get(&self, index: usize) -> Option<&T>",
       "test_file_members": 0,
       "sites": [
-        "crates/axeyum-lean-kernel/src/lib.rs:287",
-        "crates/axeyum-lean-kernel/src/lib.rs:341"
+        "crates/axeyum-lean-kernel/src/lib.rs:293",
+        "crates/axeyum-lean-kernel/src/lib.rs:347"
       ]
     },
     {
@@ -15948,7 +16086,7 @@
       "signature": "fn go(k: &Kernel, id: NameId, f: &mut fmt::Formatter<'_>) -> fmt::Result",
       "test_file_members": 0,
       "sites": [
-        "crates/axeyum-lean-kernel/src/lib.rs:726",
+        "crates/axeyum-lean-kernel/src/lib.rs:732",
         "crates/axeyum-lean-kernel/src/quotient.rs:653"
       ]
     },
@@ -16207,7 +16345,7 @@
       "test_file_members": 0,
       "sites": [
         "crates/axeyum-lean-kernel/src/fo_semantics.rs:326",
-        "crates/axeyum-lean-kernel/src/lib.rs:300"
+        "crates/axeyum-lean-kernel/src/lib.rs:306"
       ]
     },
     {
@@ -16453,7 +16591,7 @@
       "test_file_members": 0,
       "sites": [
         "crates/axeyum-lean-kernel/src/env.rs:464",
-        "crates/axeyum-lean-kernel/src/lib.rs:500"
+        "crates/axeyum-lean-kernel/src/lib.rs:506"
       ]
     },
     {
@@ -18075,6 +18213,22 @@
       ]
     },
     {
+      "key": "next",
+      "count": 2,
+      "names": [
+        "next"
+      ],
+      "files": 2,
+      "carriers": [],
+      "body_lines": 4,
+      "signature": "fn next(&mut self) -> u64",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/fo_decode.rs:121",
+        "crates/axeyum-lean-kernel/src/fo_numbering.rs:120"
+      ]
+    },
+    {
       "key": "nle",
       "count": 2,
       "names": [
@@ -18619,6 +18773,24 @@
       ]
     },
     {
+      "key": "pair",
+      "count": 2,
+      "names": [
+        "pair"
+      ],
+      "files": 2,
+      "carriers": [
+        "IntDev"
+      ],
+      "body_lines": 5,
+      "signature": "fn pair(&mut self, a: u32, b: u32) -> ExprId",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/fo_code/tests.rs:44",
+        "crates/axeyum-lean-kernel/src/metric/continuity.rs:337"
+      ]
+    },
+    {
       "key": "pair_rate_at",
       "count": 2,
       "names": [
@@ -18691,24 +18863,6 @@
       ]
     },
     {
-      "key": "peq",
-      "count": 2,
-      "names": [
-        "peq"
-      ],
-      "files": 2,
-      "carriers": [
-        "IntDev"
-      ],
-      "body_lines": 7,
-      "signature": "fn peq(d: &mut IntDev<'_>, q: QPlaneNames, a: ExprId, b: ExprId) -> ExprId",
-      "test_file_members": 0,
-      "sites": [
-        "crates/axeyum-lean-kernel/src/geo/qplane.rs:337",
-        "crates/axeyum-lean-kernel/src/metric.rs:1971"
-      ]
-    },
-    {
       "key": "perm",
       "count": 2,
       "names": [
@@ -18760,6 +18914,24 @@
       "sites": [
         "crates/axeyum-lean-kernel/src/characterization/int_categoricity.rs:193",
         "crates/axeyum-lean-kernel/src/characterization/nat.rs:680"
+      ]
+    },
+    {
+      "key": "pmk",
+      "count": 2,
+      "names": [
+        "pmk"
+      ],
+      "files": 2,
+      "carriers": [
+        "IntDev"
+      ],
+      "body_lines": 4,
+      "signature": "fn pmk(kernel: &mut crate::Kernel, c: &CodeNames, a: ExprId, b: ExprId) -> ExprId",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/fo_code.rs:199",
+        "crates/axeyum-lean-kernel/src/geo/qplane.rs:316"
       ]
     },
     {
@@ -20662,6 +20834,22 @@
       ]
     },
     {
+      "key": "tcode",
+      "count": 2,
+      "names": [
+        "tcode"
+      ],
+      "files": 2,
+      "carriers": [],
+      "body_lines": 4,
+      "signature": "fn tcode(&mut self, t: ExprId) -> ExprId",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/fo_decode/tests.rs:51",
+        "crates/axeyum-lean-kernel/src/fo_numbering/tests.rs:66"
+      ]
+    },
+    {
       "key": "telescope_cauchy_pad2",
       "count": 2,
       "names": [
@@ -21465,7 +21653,7 @@
       "test_file_members": 0,
       "sites": [
         "crates/axeyum-lean-kernel/src/lean_pp.rs:351",
-        "crates/axeyum-lean-kernel/src/lean_pp.rs:2963"
+        "crates/axeyum-lean-kernel/src/lean_pp.rs:3000"
       ]
     },
     {
@@ -23304,6 +23492,26 @@
       ]
     },
     {
+      "key": "479f4a5b66b1ac62",
+      "count": 6,
+      "names": [
+        "assert_eq_expr"
+      ],
+      "files": 6,
+      "carriers": [],
+      "body_lines": 8,
+      "signature": "fn assert_eq_expr(&mut self, got: ExprId, want: ExprId, what: &str)",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/fo_code/tests.rs:74",
+        "crates/axeyum-lean-kernel/src/fo_decode/tests.rs:75",
+        "crates/axeyum-lean-kernel/src/fo_numbering/tests.rs:76",
+        "crates/axeyum-lean-kernel/src/fo_provable/tests.rs:52",
+        "crates/axeyum-lean-kernel/src/fo_semantics/tests.rs:116",
+        "crates/axeyum-lean-kernel/src/fo_syntax/tests.rs:135"
+      ]
+    },
+    {
       "key": "53cb911b8ded9b9d",
       "count": 6,
       "names": [
@@ -24960,6 +25168,23 @@
       ]
     },
     {
+      "key": "0efc93e00099537c",
+      "count": 3,
+      "names": [
+        "assert_ne_expr"
+      ],
+      "files": 3,
+      "carriers": [],
+      "body_lines": 7,
+      "signature": "fn assert_ne_expr(&mut self, got: ExprId, want: ExprId, what: &str)",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/fo_code/tests.rs:83",
+        "crates/axeyum-lean-kernel/src/fo_decode/tests.rs:84",
+        "crates/axeyum-lean-kernel/src/fo_numbering/tests.rs:85"
+      ]
+    },
+    {
       "key": "0f931fe488f8784f",
       "count": 3,
       "names": [
@@ -25236,23 +25461,6 @@
       ]
     },
     {
-      "key": "479f4a5b66b1ac62",
-      "count": 3,
-      "names": [
-        "assert_eq_expr"
-      ],
-      "files": 3,
-      "carriers": [],
-      "body_lines": 8,
-      "signature": "fn assert_eq_expr(&mut self, got: ExprId, want: ExprId, what: &str)",
-      "test_file_members": 0,
-      "sites": [
-        "crates/axeyum-lean-kernel/src/fo_provable/tests.rs:52",
-        "crates/axeyum-lean-kernel/src/fo_semantics/tests.rs:116",
-        "crates/axeyum-lean-kernel/src/fo_syntax/tests.rs:135"
-      ]
-    },
-    {
       "key": "4a8debf4a239daf4",
       "count": 3,
       "names": [
@@ -25269,6 +25477,23 @@
         "crates/axeyum-lean-kernel/src/creal/integral.rs:4956",
         "crates/axeyum-lean-kernel/src/creal/ivt.rs:278",
         "crates/axeyum-lean-kernel/src/creal/monotone.rs:794"
+      ]
+    },
+    {
+      "key": "4ac69f9da9432b71",
+      "count": 3,
+      "names": [
+        "assert_axiom_free"
+      ],
+      "files": 3,
+      "carriers": [],
+      "body_lines": 11,
+      "signature": "fn assert_axiom_free(&mut self, name: NameId, what: &str)",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/fo_code/tests.rs:93",
+        "crates/axeyum-lean-kernel/src/fo_decode/tests.rs:92",
+        "crates/axeyum-lean-kernel/src/fo_numbering/tests.rs:93"
       ]
     },
     {
@@ -27546,6 +27771,38 @@
       ]
     },
     {
+      "key": "2768b7eac218213c",
+      "count": 2,
+      "names": [
+        "next"
+      ],
+      "files": 2,
+      "carriers": [],
+      "body_lines": 4,
+      "signature": "fn next(&mut self) -> u64",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/fo_decode.rs:121",
+        "crates/axeyum-lean-kernel/src/fo_numbering.rs:120"
+      ]
+    },
+    {
+      "key": "276f243ed8d9c911",
+      "count": 2,
+      "names": [
+        "num"
+      ],
+      "files": 2,
+      "carriers": [],
+      "body_lines": 7,
+      "signature": "fn num(&mut self, n: u32) -> ExprId",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/fo_code/tests.rs:31",
+        "crates/axeyum-lean-kernel/src/fo_numbering/tests.rs:41"
+      ]
+    },
+    {
       "key": "2795cca5e0a1fb6c",
       "count": 2,
       "names": [
@@ -28833,6 +29090,22 @@
       "sites": [
         "crates/axeyum-lean-kernel/src/nat_prelude/arith_functions.rs:151",
         "crates/axeyum-lean-kernel/src/nat_prelude/arith_functions_family.rs:116"
+      ]
+    },
+    {
+      "key": "614d7239126ba7f1",
+      "count": 2,
+      "names": [
+        "ctor"
+      ],
+      "files": 2,
+      "carriers": [],
+      "body_lines": 4,
+      "signature": "fn ctor(&mut self, name: NameId, args: &[ExprId]) -> ExprId",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/fo_decode/tests.rs:40",
+        "crates/axeyum-lean-kernel/src/fo_numbering/tests.rs:49"
       ]
     },
     {
@@ -34318,6 +34591,28 @@
       ]
     },
     {
+      "key": "false_elim",
+      "count": 6,
+      "names": [
+        "false_elim"
+      ],
+      "files": 6,
+      "carriers": [
+        "NatDev"
+      ],
+      "body_lines": 10,
+      "signature": "fn false_elim( kernel: &mut crate::Kernel, c: &CodeNames, goal: ExprId, h: ExprId, ) -> ExprId",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/fo_code.rs:243",
+        "crates/axeyum-lean-kernel/src/nat_prelude/finset_singleton.rs:140",
+        "crates/axeyum-lean-kernel/src/nat_prelude/hall.rs:1575",
+        "crates/axeyum-lean-kernel/src/nat_prelude/hall_sufficiency.rs:222",
+        "crates/axeyum-lean-kernel/src/nat_prelude/log_clog_mirrors.rs:142",
+        "crates/axeyum-lean-kernel/src/nat_prelude/log_clog_order.rs:68"
+      ]
+    },
+    {
       "key": "finset_ty",
       "count": 6,
       "names": [
@@ -34809,27 +35104,6 @@
         "crates/axeyum-lean-kernel/src/nat_prelude/asc_factorial_div.rs:38",
         "crates/axeyum-lean-kernel/src/nat_prelude/coprime_lemmas.rs:49",
         "crates/axeyum-lean-kernel/src/nat_prelude/lcm_gcd_lemmas.rs:203"
-      ]
-    },
-    {
-      "key": "false_elim",
-      "count": 5,
-      "names": [
-        "false_elim"
-      ],
-      "files": 5,
-      "carriers": [
-        "NatDev"
-      ],
-      "body_lines": 8,
-      "signature": "fn false_elim(d: &mut NatDev<'_>, p: &NatPrelude, goal: ExprId, proof: ExprId) -> ExprId",
-      "test_file_members": 0,
-      "sites": [
-        "crates/axeyum-lean-kernel/src/nat_prelude/finset_singleton.rs:140",
-        "crates/axeyum-lean-kernel/src/nat_prelude/hall.rs:1575",
-        "crates/axeyum-lean-kernel/src/nat_prelude/hall_sufficiency.rs:222",
-        "crates/axeyum-lean-kernel/src/nat_prelude/log_clog_mirrors.rs:142",
-        "crates/axeyum-lean-kernel/src/nat_prelude/log_clog_order.rs:68"
       ]
     },
     {
@@ -35550,6 +35824,26 @@
         "crates/axeyum-lean-kernel/src/creal/power.rs:400",
         "crates/axeyum-lean-kernel/src/int_prelude/defs.rs:483",
         "crates/axeyum-lean-kernel/src/rat_prelude/polynomial.rs:161"
+      ]
+    },
+    {
+      "key": "declare_projection",
+      "count": 4,
+      "names": [
+        "declare_projection"
+      ],
+      "files": 4,
+      "carriers": [
+        "IntDev"
+      ],
+      "body_lines": 22,
+      "signature": "fn declare_projection( kernel: &mut crate::Kernel, c: &CodeNames, unpair: NameId, label: &str, left: bool, ) -> Result<NameId, KernelError>",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/fo_code.rs:492",
+        "crates/axeyum-lean-kernel/src/fo_semantics.rs:410",
+        "crates/axeyum-lean-kernel/src/geo/qplane.rs:585",
+        "crates/axeyum-lean-kernel/src/rat_prelude/algebra_ext.rs:84"
       ]
     },
     {
@@ -37299,25 +37593,6 @@
       ]
     },
     {
-      "key": "declare_projection",
-      "count": 3,
-      "names": [
-        "declare_projection"
-      ],
-      "files": 3,
-      "carriers": [
-        "IntDev"
-      ],
-      "body_lines": 44,
-      "signature": "fn declare_projection( kernel: &mut crate::Kernel, syn: &SyntaxNames, sem: &StructureNames, field: Field, one: LevelId, ) -> Result<NameId, KernelError>",
-      "test_file_members": 0,
-      "sites": [
-        "crates/axeyum-lean-kernel/src/fo_semantics.rs:410",
-        "crates/axeyum-lean-kernel/src/geo/qplane.rs:585",
-        "crates/axeyum-lean-kernel/src/rat_prelude/algebra_ext.rs:84"
-      ]
-    },
-    {
       "key": "declare_sum_range_congr_lt",
       "count": 3,
       "names": [
@@ -37565,6 +37840,25 @@
         "crates/axeyum-lean-kernel/src/int_prelude/quadratic_reciprocity.rs:99",
         "crates/axeyum-lean-kernel/src/int_prelude/second_supplementary.rs:71",
         "crates/axeyum-lean-kernel/src/nat_prelude/parity.rs:62"
+      ]
+    },
+    {
+      "key": "every_declaration_of_this_slice_is_axiom_free",
+      "count": 3,
+      "names": [
+        "every_declaration_of_this_slice_is_axiom_free"
+      ],
+      "files": 3,
+      "carriers": [
+        "Fixture"
+      ],
+      "body_lines": 21,
+      "signature": "fn every_declaration_of_this_slice_is_axiom_free()",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/fo_code/tests.rs:209",
+        "crates/axeyum-lean-kernel/src/fo_decode/tests.rs:386",
+        "crates/axeyum-lean-kernel/src/fo_numbering/tests.rs:348"
       ]
     },
     {
@@ -38175,6 +38469,25 @@
         "crates/axeyum-lean-kernel/src/decide.rs:150",
         "crates/axeyum-lean-kernel/src/decide/int.rs:44",
         "crates/axeyum-lean-kernel/src/decide/rat.rs:54"
+      ]
+    },
+    {
+      "key": "peq",
+      "count": 3,
+      "names": [
+        "peq"
+      ],
+      "files": 3,
+      "carriers": [
+        "IntDev"
+      ],
+      "body_lines": 5,
+      "signature": "fn peq(kernel: &mut crate::Kernel, c: &CodeNames, a: ExprId, b: ExprId) -> ExprId",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/fo_code.rs:224",
+        "crates/axeyum-lean-kernel/src/geo/qplane.rs:337",
+        "crates/axeyum-lean-kernel/src/metric.rs:1971"
       ]
     },
     {
@@ -45181,24 +45494,6 @@
       ]
     },
     {
-      "key": "peq",
-      "count": 2,
-      "names": [
-        "peq"
-      ],
-      "files": 2,
-      "carriers": [
-        "IntDev"
-      ],
-      "body_lines": 7,
-      "signature": "fn peq(d: &mut IntDev<'_>, q: QPlaneNames, a: ExprId, b: ExprId) -> ExprId",
-      "test_file_members": 0,
-      "sites": [
-        "crates/axeyum-lean-kernel/src/geo/qplane.rs:337",
-        "crates/axeyum-lean-kernel/src/metric.rs:1971"
-      ]
-    },
-    {
       "key": "permute_branch_override",
       "count": 2,
       "names": [
@@ -45248,6 +45543,24 @@
       "sites": [
         "crates/axeyum-lean-kernel/src/fo_syntax.rs:457",
         "crates/axeyum-lean-kernel/src/ipc_provable.rs:270"
+      ]
+    },
+    {
+      "key": "pmk",
+      "count": 2,
+      "names": [
+        "pmk"
+      ],
+      "files": 2,
+      "carriers": [
+        "IntDev"
+      ],
+      "body_lines": 4,
+      "signature": "fn pmk(kernel: &mut crate::Kernel, c: &CodeNames, a: ExprId, b: ExprId) -> ExprId",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/fo_code.rs:199",
+        "crates/axeyum-lean-kernel/src/geo/qplane.rs:316"
       ]
     },
     {
