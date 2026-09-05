@@ -79,17 +79,21 @@ This is the load-bearing decision. Every bound in this development — the
 magnitude bound `(k+1)/1`, the accuracy `1/(e+1)`, the rescaled index
 `(k+1)·m + k`, the three-way equal split — is a `CReal` or a `Nat`. Nothing in
 that arithmetic can observe which carrier produced the quantity being bounded.
-Seven helpers in `creal/derivative.rs` were made `pub(crate)`
+Nine helpers in `creal/derivative.rs` were made `pub(crate)`
 (`mod derivative` in `creal.rs` likewise) and are called directly from
-`complex/estimates.rs` and `complex/leibniz.rs`.
+`complex/estimates.rs` and `complex/leibniz.rs`: `rescale_index`,
+`mag_bound`, `fold_index0_first`, `fold_index0_second`,
+`mul_modulus_components`, `weaken_to_addend`, `fuse_three_equal_bounds`,
+`fold_mag_bound_product` and `fold_mag_bound_sum`.
 
 The alternative considered and rejected was copying them. It is ~350 lines of
 mechanical transcription with no mathematical content, it would diverge the
 moment either side is corrected, and the architecture review's §1 names helper
 duplication as one of two measured root causes of recurring defects in this
-area. The cost of the chosen route is a seven-line visibility diff in two files
-the `creal` lanes also touch; that is a smaller and more legible conflict
-surface than a parallel copy.
+area. The cost of the chosen route is a ten-line visibility diff in two files
+the `creal` lanes also touch (nine `fn` lines plus one `mod` line, each a
+single token); that is a smaller and more legible conflict surface than a
+parallel copy.
 
 **3. `uniformlyContinuous_of_hasDerivative` takes the derivative bound as a
 hypothesis.**
@@ -139,11 +143,23 @@ not establish — the same gap `CReal.hasDerivative_cube` declined to close.
   analogue is `creal/uniform_continuity.rs`'s separate SECOND entry point and a
   slice on the order of this one, and then the induction itself, which must
   also carry `Complex.pow`'s own derivative.
-- Cauchy–Riemann in one direction is unaffected by any of this: it needs
-  `Complex.abs_ofReal`, `Complex.abs_re_le`, `Complex.abs_im_le` and a bridge
-  from `Complex.HasDerivativeOn` on a disc to `CReal.HasDerivativeOn` on the
-  interval a segment through the centre traces. That bridge is a separate,
-  independent slice.
+- Cauchy–Riemann in one direction is independent of all of the above, and its
+  three prerequisites landed with this slice: `Complex.abs_ofReal`
+  (the embedding ℝ ↪ ℂ is an isometry), `Complex.abs_re_le` and
+  `Complex.abs_im_le`, in `complex/components.rs`. All three route through
+  `CReal.sqrt_sq`, whose hypothesis is that its argument is NONNEGATIVE, so the
+  square cancelled is `|t|·|t|` and never `t·t` — which is why `abs_ofReal`'s
+  right-hand side is `CReal.abs t` and not `t`, and why the bare-`t` form is
+  pinned as a REFUSED negative control rather than left to a comment.
+
+  What is still missing is the BRIDGE, and it is a construction rather than a
+  lemma: producing `CReal.HasDerivativeOn (fun t => re (F (c + ofReal t))) …
+  a b` from `Complex.HasDerivativeOn F F' c r`. Its three parts are (1) disc
+  membership from `|t| ≤ r`, which `abs_ofReal` plus one ring step gives;
+  (2) the FOUR interval hypotheses of `CReal.HasDerivativeOn` rebuilt from TWO
+  disc memberships — ADR-1642's collapse run backwards, and where the work is;
+  and (3) the error bound transported by `abs_re_le`, cheap. Not attempted
+  here.
 - **A negative control of this lane's own was vacuous on its first run**, and
   the way it was caught is worth recording because the usual advice does not
   cover it. The halved-modulus pair was first written with `F, F', c, r, hf, k,
@@ -156,7 +172,7 @@ not establish — the same gap `CReal.hasDerivative_cube` declined to close.
   positive half failing exposed it. The rule: **a negative control is evidence
   only while its positive twin is ADMITTED**, and a pair built by one shared
   function must be asserted in both directions or not at all.
-- Anything that later corrects one of the seven shared index helpers now
+- Anything that later corrects one of the nine shared index helpers now
   corrects both carriers at once. That is the point, and it is also the risk:
   a `creal` lane changing one of them changes ℂ silently. The
   `complex_prelude_builds` test is the guard, and it is in the same suite.

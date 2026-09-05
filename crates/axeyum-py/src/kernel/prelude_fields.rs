@@ -4444,10 +4444,10 @@ pub(super) fn creal_sub(p: &CRealPrelude) -> Vec<(&'static str, Sub)> {
     vec![("rat", Sub::Rat(Box::new(p.rat)))]
 }
 
-/// The `ComplexPrelude` field table (183 names,
+/// The `ComplexPrelude` field table (186 names,
 /// 0 name lists, 1 sub-packages).
 ///
-/// 54 of the names come from ADR-1512 per-module registries and
+/// 57 of the names come from ADR-1512 per-module registries and
 /// carry a dotted field name (`pi.pi_le_four`); the rest are flat
 /// fields on `ComplexPrelude` itself.
 #[must_use]
@@ -4688,6 +4688,9 @@ pub(super) fn complex(p: &ComplexPrelude) -> Fields {
                 p.estimates.uniformly_continuous_of_has_derivative,
             ),
             ("leibniz.has_derivative_mul", p.leibniz.has_derivative_mul),
+            ("components.abs_of_real", p.components.abs_of_real),
+            ("components.abs_re_le", p.components.abs_re_le),
+            ("components.abs_im_le", p.components.abs_im_le),
             ("comm_ring_s", p.comm_ring_s),
         ],
         lists: Vec::new(),

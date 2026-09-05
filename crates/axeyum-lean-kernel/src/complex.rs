@@ -92,6 +92,7 @@ use crate::rat_prelude::ops::{den, num, radd, rat_eq_rewrite, rle, rneg, rsymm, 
 use crate::{Kernel, KernelError};
 
 pub(crate) mod algebra_instance;
+pub(crate) mod components;
 pub(crate) mod deriv;
 pub(crate) mod estimates;
 pub(crate) mod leibniz;
@@ -103,6 +104,9 @@ mod complex_tests;
 
 #[cfg(test)]
 mod estimates_tests;
+
+#[cfg(test)]
+mod components_tests;
 
 #[cfg(test)]
 mod cas_bridge_tests;
@@ -1427,6 +1431,10 @@ pub struct ComplexPrelude {
     /// (`complex/leibniz.rs`). Owns its own names for the same reason
     /// [`Self::poly`] does.
     pub leibniz: leibniz::LeibnizNames,
+    /// The modulus-versus-component facts (`complex/components.rs`): the
+    /// embedding ℝ ↪ ℂ is an isometry, and each component is bounded by the
+    /// modulus. Owns its own names for the same reason [`Self::poly`] does.
+    pub components: components::ComponentNames,
 
     /// `Complex.commRingS : AlgS.CommRing` (`complex/algebra_instance.rs`,
     /// ADR-1588/ADR-1590) — every field an *existing* `Complex` theorem,
@@ -1609,6 +1617,7 @@ fn intern_names(kernel: &mut Kernel, creal: CRealPrelude) -> ComplexPrelude {
         deriv: deriv::intern_names(kernel, complex),
         estimates: estimates::intern_names(kernel, complex),
         leibniz: leibniz::intern_names(kernel, complex),
+        components: components::intern_names(kernel, complex),
         comm_ring_s: kernel.name_str(complex, "commRingS"),
     }
 }
@@ -3856,6 +3865,21 @@ const STEPS: &[BuildStep] = &[
         // is LAST.
         provides: &[],
         run: leibniz::declare_leibniz,
+    },
+    BuildStep {
+        label: "components::declare_components",
+        requires: &[
+            |p: ComplexPrelude| p.abs,
+            |p: ComplexPrelude| p.complex,
+            |p: ComplexPrelude| p.im,
+            |p: ComplexPrelude| p.norm_sq,
+            |p: ComplexPrelude| p.of_real,
+            |p: ComplexPrelude| p.re,
+        ],
+        // Its names live in `ComponentNames`, so it provides nothing at hub
+        // granularity.
+        provides: &[],
+        run: components::declare_components,
     },
 ];
 

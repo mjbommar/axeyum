@@ -53,8 +53,9 @@
 //! about `Rat.natDivSucc` and `Nat`, with no complex number anywhere in them.
 //! They are therefore **not** re-derived here. `creal/derivative.rs`'s
 //! `rescale_index`, `mag_bound`, `fold_index0_first`, `fold_index0_second`,
-//! `mul_modulus_components`, `weaken_to_addend` and `fuse_three_equal_bounds`
-//! were made `pub(crate)` and are called directly — the whole point being that
+//! `mul_modulus_components`, `weaken_to_addend`, `fuse_three_equal_bounds`,
+//! `fold_mag_bound_product` and `fold_mag_bound_sum` were made `pub(crate)`
+//! and are called directly — the whole point being that
 //! a bound on a complex quantity is a `CReal`, so the arithmetic that fuses
 //! bounds never learns which carrier produced them. Duplicating them was the
 //! alternative and is exactly the "helper duplication lanes rediscover every
