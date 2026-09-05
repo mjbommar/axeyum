@@ -223,6 +223,7 @@ pub(crate) mod half_ceil_parity;
 mod hall;
 mod hall_sufficiency;
 mod hall_descent;
+mod hall_marriage;
 mod hall_theorem;
 mod helpers;
 pub mod image_group;
@@ -455,6 +456,7 @@ use half_ceil_parity::declare_half_ceil_parity_all;
 use hall::declare_hall_all;
 use hall_sufficiency::declare_hall_sufficiency_all;
 use hall_descent::declare_hall_descent_all;
+use hall_marriage::declare_hall_marriage_all;
 use hall_theorem::declare_hall_theorem_all;
 use inclusion_exclusion::declare_inclusion_exclusion_all;
 use injective_decide::declare_injective_on_or_duplicate;
@@ -7044,6 +7046,71 @@ pub struct NatPrelude {
     /// because the surviving summand is on the other side.
     pub finset_card_sdiff_lt_card_of_subset_fixed: NameId,
 
+    // --- Hall's marriage theorem (`hall_marriage.rs`, ADR-1645) ---
+    /// `Nat.Finset.memB_sdiff_congr : ∀ s u v,
+    /// (∀ i, Eq Bool (memB u i) (memB v i)) →
+    /// ∀ i, Eq Bool (memB (sdiff s u) i) (memB (sdiff s v) i)` (ADR-1645) —
+    /// the complement's members depend only on the subtracted set's members.
+    /// Proved through
+    /// [`finset_mem_b_sdiff_elim`](Self::finset_mem_b_sdiff_elim) /
+    /// [`finset_mem_b_sdiff_intro`](Self::finset_mem_b_sdiff_intro) rather than
+    /// by unfolding `Nat.setDiff`, so it does not depend on the exact `Bool.rec`
+    /// shape that definition reduces to.
+    pub finset_mem_b_sdiff_congr: NameId,
+    /// `Nat.Hall.isMatching_of_family_sdiff : ∀ s nb u f,
+    /// IsMatching s (fun i => sdiff (nb i) u) f → IsMatching s nb f`
+    /// (ADR-1645) — a matching into the family with `u` deleted is a matching
+    /// into the family. Both branches of the inductive step recurse against a
+    /// deleted family and then have to feed
+    /// [`hall_is_matching_union`](Self::hall_is_matching_union), which
+    /// quantifies ONE family over both halves.
+    pub hall_is_matching_of_family_sdiff: NameId,
+    /// `Nat.Hall.memB_false_of_family_sdiff : ∀ s nb u f,
+    /// IsMatching s (fun i => sdiff (nb i) u) f →
+    /// ∀ i, Eq Bool (memB s i) true → Eq Bool (memB u (f i)) false`
+    /// (ADR-1645) — the other half of
+    /// [`finset_mem_b_sdiff_elim`](Self::finset_mem_b_sdiff_elim)'s pair, and
+    /// the collision premise `isMatching_union` asks for: a matching into the
+    /// deleted family never picks a value of `u`.
+    pub hall_mem_b_false_of_family_sdiff: NameId,
+    /// `Nat.Hall.criticalB s nb t := andB (andB (subsetFixed s t)
+    /// (ble 1 (card t))) (andB (ble 1 (card (sdiff s t)))
+    /// (ble (card (unionOver nb t)) (card t)))` (ADR-1645) — the inductive
+    /// step's decision, in the `Bool`-valued form
+    /// [`finset_any_subset`](Self::finset_any_subset) consumes. The two
+    /// `ble 1 …` tests are the two nonemptiness facts the two recursive calls
+    /// need, on OPPOSITE sides of the split: without `0 < card t` the branch
+    /// could fire at `t = empty` and recurse on `sdiff s empty` at the same
+    /// count; without `0 < card (sdiff s t)` it could fire at `t = s` and
+    /// recurse on `t` at the same count.
+    pub hall_critical_b: NameId,
+    /// `Nat.Hall.criticalB_congr : ∀ s nb u v,
+    /// (∀ i, Eq Bool (memB u i) (memB v i)) →
+    /// Eq Bool (criticalB s nb u) (criticalB s nb v)` (ADR-1645) —
+    /// [`finset_forall_subset_of_search`](Self::finset_forall_subset_of_search)'s
+    /// congruence premise. Every loop bound in the predicate is independent of
+    /// the quantified set (ADR-1644's general rule), so it is composition of
+    /// [`finset_subset_fixed_congr`](Self::finset_subset_fixed_congr),
+    /// [`finset_card_congr_of_mem_b`](Self::finset_card_congr_of_mem_b),
+    /// [`hall_card_union_over_congr`](Self::hall_card_union_over_congr) and
+    /// [`finset_mem_b_sdiff_congr`](Self::finset_mem_b_sdiff_congr).
+    pub hall_critical_b_congr: NameId,
+    /// `Nat.Hall.sufficient : ∀ s nb, HallCondition s nb →
+    /// Exists (fun f => IsMatching s nb f)` (ADR-1645) — **the sufficiency
+    /// direction of Hall's marriage theorem**. Strong induction on `card s`
+    /// with the count carried as an equation in the motive; the empty case is
+    /// [`hall_exists_is_matching_of_card_le_zero`](Self::hall_exists_is_matching_of_card_le_zero),
+    /// and above it [`finset_any_subset`](Self::finset_any_subset) decides
+    /// which of ADR-1644's two branches applies.
+    pub hall_sufficient: NameId,
+    /// `Nat.Hall.marriage_iff : ∀ s nb,
+    /// Iff (HallCondition s nb) (Exists (fun f => IsMatching s nb f))`
+    /// (ADR-1645) — **Hall's marriage theorem**. Forward is
+    /// [`hall_sufficient`](Self::hall_sufficient); backward is
+    /// [`hall_condition_of_is_matching`](Self::hall_condition_of_is_matching)
+    /// (ADR-1608) under one `Exists.rec`.
+    pub hall_marriage_iff: NameId,
+
     /// `Nat.strongInduction.{u} : ∀ (motive : Nat → Sort u),
     /// (∀ n, (∀ m, Lt m n → motive m) → motive n) → ∀ n, motive n` —
     /// course-of-values recursion, `Nat.lt_well_founded` + `WellFounded.fix`
@@ -8690,6 +8757,15 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
                 .name_str(finset, "card_lt_card_of_subsetFixed"),
             finset_card_sdiff_lt_card_of_subset_fixed: kernel
                 .name_str(finset, "card_sdiff_lt_card_of_subsetFixed"),
+            finset_mem_b_sdiff_congr: kernel.name_str(finset, "memB_sdiff_congr"),
+            hall_is_matching_of_family_sdiff: kernel
+                .name_str(hall, "isMatching_of_family_sdiff"),
+            hall_mem_b_false_of_family_sdiff: kernel
+                .name_str(hall, "memB_false_of_family_sdiff"),
+            hall_critical_b: kernel.name_str(hall, "criticalB"),
+            hall_critical_b_congr: kernel.name_str(hall, "criticalB_congr"),
+            hall_sufficient: kernel.name_str(hall, "sufficient"),
+            hall_marriage_iff: kernel.name_str(hall, "marriage_iff"),
             subsets_empty: kernel.name_str(subsets, "empty"),
             subsets_insert_at: kernel.name_str(subsets, "insertAt"),
             subsets_sum_subsets: kernel.name_str(subsets, "sumSubsets"),
@@ -10234,6 +10310,10 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // `Nat.Finset.subsetFixed` and `card_union_of_disjoint` from
         // `hall_theorem.rs`, so it goes immediately after it.
         declare_hall_descent_all(&mut d, &p)?;
+        // Hall's marriage theorem (`hall_marriage.rs`, ADR-1645). Needs the
+        // subset search, `Nat.strongInduction`, both split branches and the
+        // descent measure, so it goes last of the Hall files.
+        declare_hall_marriage_all(&mut d, &p)?;
         // The divisor aggregate and its `d ↦ n/d` reindexing
         // (`arith_functions.rs`, ADR-1619). Needs `Nat.sumRangeIf`
         // (`subset_sum.rs`), `Nat.sumRange_permute`/`Nat.sumRange_congr`,
@@ -10429,6 +10509,9 @@ mod hall_theorem_tests;
 
 #[cfg(test)]
 mod hall_descent_tests;
+
+#[cfg(test)]
+mod hall_marriage_tests;
 
 #[cfg(test)]
 mod inclusion_exclusion_tests;
