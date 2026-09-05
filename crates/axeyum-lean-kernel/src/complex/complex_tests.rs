@@ -321,6 +321,8 @@ fn every_named_complex_declaration_is_checked_and_footprint_free() {
         ),
         ("Complex.BoundedOn", p.estimates.bounded_on),
         ("Complex.bounded_on_unfold", p.estimates.bounded_on_unfold),
+        ("Complex.bounded_on_add", p.estimates.bounded_on_add),
+        ("Complex.bounded_on_mul", p.estimates.bounded_on_mul),
         (
             "Complex.UniformlyContinuousOn",
             p.estimates.uniformly_continuous_on,
@@ -344,6 +346,7 @@ fn every_named_complex_declaration_is_checked_and_footprint_free() {
             "Complex.uniformlyContinuous_of_hasDerivative",
             p.estimates.uniformly_continuous_of_has_derivative,
         ),
+        ("Complex.hasDerivative_mul", p.leibniz.has_derivative_mul),
     ];
     // COVERAGE, checked against the ENVIRONMENT rather than against `named`
     // itself.
@@ -3056,7 +3059,7 @@ fn factor_quotient_succ_eq_matches_the_correction_term_at_a_nonzero_middle_coeff
 /// steps downstream. Recount by re-running the extraction described in
 /// `docs/research/11-design-review/2026-08-27-prelude-build-spike.md`, never
 /// by hand-editing this list to make a failure go away.
-const EXPECTED_STEP_ORDER: [&str; 94] = [
+const EXPECTED_STEP_ORDER: [&str; 95] = [
     "declare_carrier",
     "declare_projections",
     "declare_equiv",
@@ -3151,6 +3154,7 @@ const EXPECTED_STEP_ORDER: [&str; 94] = [
     "declare_abs_le_add_abs_sub",
     "deriv::declare_derivative",
     "estimates::declare_estimates",
+    "leibniz::declare_leibniz",
 ];
 
 /// `STEPS` (the data-driven build order that replaced the hand-written call

@@ -2361,6 +2361,62 @@ SUITES["complex-derivative"] = (
 )
 
 
+# --------------------------------------------------------------------------
+# `complex-estimates` — the ℂ estimate predicates and the product rule
+# (`crates/axeyum-lean-kernel/src/complex/estimates.rs` and
+# `crates/axeyum-lean-kernel/src/complex/leibniz.rs`, ADR-1646).
+#
+# These are the two mutants the lane brief named, and unlike the
+# `complex-derivative` suite's pair they are both LIVE subjects: Leibniz landed
+# here, so "one cross term dropped" can be applied to the product rule itself
+# rather than to the sum rule standing in for it.
+#
+# The same caveat that suite records applies and is worth repeating rather than
+# cross-referencing: `build_complex_prelude` is shared by every test in the
+# module through one `OnceLock` template, so a mutant the kernel refuses takes
+# the whole module down. That is a MASS kill and therefore weak evidence about
+# any individual test. The halving mutant is included because it has a NAMED,
+# small killed-set on top of the mass kill:
+# `uniformly_continuous_of_has_derivative_modulus_is_halved` fails on the
+# expected index and `..._without_halving_is_refused` INVERTS (it starts
+# admitting), so the pair reports the mutation directly rather than only as
+# collateral of a broken build.
+#
+# MEASURED 2026-09-05 — see the lane report for the exact counts.
+# --------------------------------------------------------------------------
+
+SUITES["complex-estimates"] = (
+    "crates/axeyum-lean-kernel/src/complex/estimates.rs",
+    Cargo(
+        (
+            "--release",
+            "-j",
+            "4",
+            "-p",
+            "axeyum-lean-kernel",
+            "--lib",
+            "complex::",
+        ),
+        "complex-estimates",
+    ),
+    [
+        (
+            "the product rule's derivative keeps BOTH cross terms "
+            "(the brief's dropped-cross-term mutant, on Leibniz itself)",
+            "        let sum = zadd(d, p, t1, t2);",
+            "        let sum = zadd(d, p, t1, t1);",
+            "crates/axeyum-lean-kernel/src/complex/leibniz.rs",
+        ),
+        (
+            "uniformlyContinuous_of_hasDerivative HALVES its accuracy target "
+            "(the brief's un-halved-modulus mutant)",
+            "        let two = d.num(2);",
+            "        let two = d.num(1);",
+        ),
+    ],
+)
+
+
 SUITES["external-coupling"] = (
     "scripts/check-external-coupling.py",
     "scripts.tests.test_check_external_coupling",

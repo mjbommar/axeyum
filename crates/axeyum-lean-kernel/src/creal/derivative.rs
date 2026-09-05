@@ -3957,7 +3957,7 @@ fn bounded_on_mul_index(
 /// folds the two index-`0` bounds into one `natDivSucc`, then the `Nat`
 /// identity's lift (via [`nat_eq_to_rat`]) folds that into `mag_bound k3`
 /// itself. Returns `(mag_bound k1, mag_bound k2, mag_bound k3, k3, proof)`.
-fn fold_mag_bound_product(
+pub(crate) fn fold_mag_bound_product(
     d: &mut IntDev<'_>,
     p: CRealPrelude,
     k1: ExprId,
@@ -4162,7 +4162,7 @@ fn bounded_on_add_index(
 /// directly, then the `Nat` identity's lift (via [`nat_eq_to_rat`]) folds
 /// that into `mag_bound k3`. Returns `(mag_bound k1, mag_bound k2, mag_bound
 /// k3, k3, proof)` — the additive mirror of [`fold_mag_bound_product`].
-fn fold_mag_bound_sum(
+pub(crate) fn fold_mag_bound_sum(
     d: &mut IntDev<'_>,
     p: CRealPrelude,
     k1: ExprId,

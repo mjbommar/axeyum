@@ -104,7 +104,8 @@ use crate::BinderInfo;
 use crate::Kernel;
 use crate::KernelError;
 use crate::creal::derivative::{
-    fold_index0_first, fold_index0_second, mag_bound, rescale_index, weaken_to_addend,
+    fold_index0_first, fold_index0_second, fold_mag_bound_product, fold_mag_bound_sum, mag_bound,
+    rescale_index, weaken_to_addend,
 };
 use crate::env::{Declaration, ReducibilityHint};
 use crate::expr::ExprId;
@@ -129,6 +130,14 @@ pub struct EstimateNames {
     pub bounded_on: NameId,
     /// `Complex.bounded_on_unfold`.
     pub bounded_on_unfold: NameId,
+    /// `Complex.bounded_on_add : ∀ F G c r k1 k2, BoundedOn F c r k1 →
+    /// BoundedOn G c r k2 → BoundedOn (fun z => add (F z) (G z)) c r
+    /// (k1 + Nat.succ k2)`.
+    pub bounded_on_add: NameId,
+    /// `Complex.bounded_on_mul : ∀ F G c r k1 k2, BoundedOn F c r k1 →
+    /// BoundedOn G c r k2 → BoundedOn (fun z => mul (F z) (G z)) c r
+    /// (k1·k2 + k1 + k2)`.
+    pub bounded_on_mul: NameId,
     /// `Complex.UniformlyContinuousOn (F : Complex → Complex) (c : Complex)
     /// (r : CReal) : Type`.
     pub uniformly_continuous_on: NameId,
@@ -157,6 +166,8 @@ pub(super) fn intern_names(kernel: &mut Kernel, complex: NameId) -> EstimateName
         abs_mul_le_of_bounds: kernel.name_str(complex, "abs_mul_le_of_bounds"),
         bounded_on: kernel.name_str(complex, "BoundedOn"),
         bounded_on_unfold: kernel.name_str(complex, "bounded_on_unfold"),
+        bounded_on_add: kernel.name_str(complex, "bounded_on_add"),
+        bounded_on_mul: kernel.name_str(complex, "bounded_on_mul"),
         uniformly_continuous_on,
         uc_mk: kernel.name_str(uniformly_continuous_on, "mk"),
         uc_rec: kernel.name_str(uniformly_continuous_on, "rec"),
@@ -190,6 +201,8 @@ pub(super) fn declare_estimates(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result
     declare_abs_mul_le_of_bounds(d, p)?;
     declare_bounded_on(d, p)?;
     declare_bounded_on_unfold(d, p)?;
+    declare_bounded_on_add(d, p)?;
+    declare_bounded_on_mul(d, p)?;
     declare_uc_carrier(d, p)?;
     declare_uc_projections(d, p)?;
     declare_uniformly_continuous_const(d, p)?;
@@ -231,7 +244,7 @@ fn rsymm_at(d: &mut IntDev<'_>, p: ComplexPrelude, a: ExprId, b: ExprId, h: Expr
 ///
 /// `creal/derivative.rs::bounded_on_ty`'s two interval hypotheses collapse to
 /// one disc membership, the same collapse `deriv_spec_body` makes.
-fn bounded_on_ty(
+pub(super) fn bounded_on_ty(
     d: &mut IntDev<'_>,
     p: ComplexPrelude,
     h: ExprId,
@@ -264,7 +277,13 @@ fn bounded_on_applied(
 }
 
 /// `Complex.UniformlyContinuousOn F c r`.
-fn uc_ty(d: &mut IntDev<'_>, p: ComplexPrelude, f: ExprId, c: ExprId, r: ExprId) -> ExprId {
+pub(super) fn uc_ty(
+    d: &mut IntDev<'_>,
+    p: ComplexPrelude,
+    f: ExprId,
+    c: ExprId,
+    r: ExprId,
+) -> ExprId {
     d.const_app(p.estimates.uniformly_continuous_on, &[f, c, r])
 }
 
@@ -1259,6 +1278,246 @@ fn declare_uniformly_continuous_of_has_derivative(
     };
     d.kernel().add_declaration(Declaration::Theorem {
         name: p.estimates.uniformly_continuous_of_has_derivative,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `Complex.bounded_on_add : ∀ F G c r k1 k2, BoundedOn F c r k1 →
+/// BoundedOn G c r k2 → BoundedOn (fun z => add (F z) (G z)) c r
+/// (k1 + Nat.succ k2)`.
+///
+/// [`ComplexPrelude::abs_add_le`] at the point, then
+/// [`crate::creal::derivative::fold_mag_bound_sum`] folds the two `mag_bound`s
+/// into `mag_bound (k1 + succ k2)`. The index arithmetic is the real shelf's
+/// and is called, not copied: it is a `Rat.natDivSucc` identity with no
+/// complex number in it.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection.
+fn declare_bounded_on_add(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), KernelError> {
+    let creal = p.creal;
+    let carrier = complex_ty(d, p);
+    let real = creal_ty(d, p);
+    let func_ty = fn_ty(d, p);
+    let nat = d.nat_ty();
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let g_fv = d.fresh_fvar();
+    let g = d.kernel().fvar(g_fv);
+    let c_fv = d.fresh_fvar();
+    let c = d.kernel().fvar(c_fv);
+    let r_fv = d.fresh_fvar();
+    let r = d.kernel().fvar(r_fv);
+    let k1_fv = d.fresh_fvar();
+    let k1 = d.kernel().fvar(k1_fv);
+    let k2_fv = d.fresh_fvar();
+    let k2 = d.kernel().fvar(k2_fv);
+
+    let hbf_ty = bounded_on_applied(d, p, f, c, r, k1);
+    let hbf_fv = d.fresh_fvar();
+    let hbf = d.kernel().fvar(hbf_fv);
+    let hbg_ty = bounded_on_applied(d, p, g, c, r, k2);
+    let hbg_fv = d.fresh_fvar();
+    let hbg = d.kernel().fvar(hbg_fv);
+
+    let sum_fn = {
+        let z_fv = d.fresh_fvar();
+        let z = d.kernel().fvar(z_fv);
+        let fz = d.apply(f, &[z]);
+        let gz = d.apply(g, &[z]);
+        let body = zadd(d, p, fz, gz);
+        d.lam_fv(z_fv, carrier, body)
+    };
+
+    let (big1, big2, mag_k3, k3, fold_proof) = fold_mag_bound_sum(d, creal, k1, k2);
+    let sum_bounds = radd_c(d, p, big1, big2);
+
+    let pointwise = {
+        let z_fv = d.fresh_fvar();
+        let z = d.kernel().fvar(z_fv);
+        let hdz_fv = d.fresh_fvar();
+        let hdz = d.kernel().fvar(hdz_fv);
+        let disc_z = in_disc_ty(d, p, c, r, z);
+
+        let fz = d.apply(f, &[z]);
+        let gz = d.apply(g, &[z]);
+        // `Complex.BoundedOn`'s defeq to its inline shape is what makes these
+        // two applications typecheck; `Complex.bounded_on_unfold` is the
+        // isolated confirmation of exactly that step.
+        let h1 = d.apply(hbf, &[z, hdz]);
+        let h2 = d.apply(hbg, &[z, hdz]);
+
+        let abs_fz = zabs(d, p, fz);
+        let abs_gz = zabs(d, p, gz);
+        let sum = zadd(d, p, fz, gz);
+        let abs_sum = zabs(d, p, sum);
+        let triangle = d.lemma(p.abs_add_le, &[fz, gz]);
+        let abs_plus_abs = radd_c(d, p, abs_fz, abs_gz);
+        let both = d.lemma(creal.add_le_add, &[abs_fz, big1, abs_gz, big2, h1, h2]);
+        let chained = d.lemma(
+            creal.le_trans,
+            &[abs_sum, abs_plus_abs, sum_bounds, triangle, both],
+        );
+        let refl_abs_sum = rrefl(d, p, abs_sum);
+        let bounded = d.lemma(
+            creal.le_congr,
+            &[
+                abs_sum,
+                abs_sum,
+                sum_bounds,
+                mag_k3,
+                refl_abs_sum,
+                fold_proof,
+                chained,
+            ],
+        );
+        let with_disc = d.lam_fv(hdz_fv, disc_z, bounded);
+        d.lam_fv(z_fv, carrier, with_disc)
+    };
+
+    let value = {
+        let with_hbg = d.lam_fv(hbg_fv, hbg_ty, pointwise);
+        let with_hbf = d.lam_fv(hbf_fv, hbf_ty, with_hbg);
+        let with_k2 = d.lam_fv(k2_fv, nat, with_hbf);
+        let with_k1 = d.lam_fv(k1_fv, nat, with_k2);
+        let with_r = d.lam_fv(r_fv, real, with_k1);
+        let with_c = d.lam_fv(c_fv, carrier, with_r);
+        let with_g = d.lam_fv(g_fv, func_ty, with_c);
+        d.lam_fv(f_fv, func_ty, with_g)
+    };
+    let ty = {
+        let concl = bounded_on_applied(d, p, sum_fn, c, r, k3);
+        let with_hbg = d.arrow(hbg_ty, concl);
+        let with_hbf = d.arrow(hbf_ty, with_hbg);
+        let with_k2 = d.pi_fv(k2_fv, nat, with_hbf);
+        let with_k1 = d.pi_fv(k1_fv, nat, with_k2);
+        let with_r = d.pi_fv(r_fv, real, with_k1);
+        let with_c = d.pi_fv(c_fv, carrier, with_r);
+        let with_g = d.pi_fv(g_fv, func_ty, with_c);
+        d.pi_fv(f_fv, func_ty, with_g)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.estimates.bounded_on_add,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `Complex.bounded_on_mul : ∀ F G c r k1 k2, BoundedOn F c r k1 →
+/// BoundedOn G c r k2 → BoundedOn (fun z => mul (F z) (G z)) c r
+/// (k1·k2 + k1 + k2)`.
+///
+/// [`declare_abs_mul_le_of_bounds`] at the point, then
+/// [`crate::creal::derivative::fold_mag_bound_product`] folds the two
+/// `mag_bound`s. This is the lemma an induction over a polynomial's degree
+/// needs at every step, and it is cheap here for exactly the reason
+/// `abs_mul_le_of_bounds` is: [`ComplexPrelude::abs_mul`] is an exact `Equiv`.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection.
+fn declare_bounded_on_mul(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), KernelError> {
+    let creal = p.creal;
+    let carrier = complex_ty(d, p);
+    let real = creal_ty(d, p);
+    let func_ty = fn_ty(d, p);
+    let nat = d.nat_ty();
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let g_fv = d.fresh_fvar();
+    let g = d.kernel().fvar(g_fv);
+    let c_fv = d.fresh_fvar();
+    let c = d.kernel().fvar(c_fv);
+    let r_fv = d.fresh_fvar();
+    let r = d.kernel().fvar(r_fv);
+    let k1_fv = d.fresh_fvar();
+    let k1 = d.kernel().fvar(k1_fv);
+    let k2_fv = d.fresh_fvar();
+    let k2 = d.kernel().fvar(k2_fv);
+
+    let hbf_ty = bounded_on_applied(d, p, f, c, r, k1);
+    let hbf_fv = d.fresh_fvar();
+    let hbf = d.kernel().fvar(hbf_fv);
+    let hbg_ty = bounded_on_applied(d, p, g, c, r, k2);
+    let hbg_fv = d.fresh_fvar();
+    let hbg = d.kernel().fvar(hbg_fv);
+
+    let mul_fn = {
+        let z_fv = d.fresh_fvar();
+        let z = d.kernel().fvar(z_fv);
+        let fz = d.apply(f, &[z]);
+        let gz = d.apply(g, &[z]);
+        let body = zmul(d, p, fz, gz);
+        d.lam_fv(z_fv, carrier, body)
+    };
+
+    let (big1, big2, mag_k3, k3, fold_proof) = fold_mag_bound_product(d, creal, k1, k2);
+    let prod_bounds = rmul(d, p, big1, big2);
+
+    let pointwise = {
+        let z_fv = d.fresh_fvar();
+        let z = d.kernel().fvar(z_fv);
+        let hdz_fv = d.fresh_fvar();
+        let hdz = d.kernel().fvar(hdz_fv);
+        let disc_z = in_disc_ty(d, p, c, r, z);
+
+        let fz = d.apply(f, &[z]);
+        let gz = d.apply(g, &[z]);
+        let h1 = d.apply(hbf, &[z, hdz]);
+        let h2 = d.apply(hbg, &[z, hdz]);
+
+        let raw = d.lemma(
+            p.estimates.abs_mul_le_of_bounds,
+            &[fz, gz, big1, big2, h1, h2],
+        );
+        let prod = zmul(d, p, fz, gz);
+        let abs_prod = zabs(d, p, prod);
+        let refl_abs_prod = rrefl(d, p, abs_prod);
+        let bounded = d.lemma(
+            creal.le_congr,
+            &[
+                abs_prod,
+                abs_prod,
+                prod_bounds,
+                mag_k3,
+                refl_abs_prod,
+                fold_proof,
+                raw,
+            ],
+        );
+        let with_disc = d.lam_fv(hdz_fv, disc_z, bounded);
+        d.lam_fv(z_fv, carrier, with_disc)
+    };
+
+    let value = {
+        let with_hbg = d.lam_fv(hbg_fv, hbg_ty, pointwise);
+        let with_hbf = d.lam_fv(hbf_fv, hbf_ty, with_hbg);
+        let with_k2 = d.lam_fv(k2_fv, nat, with_hbf);
+        let with_k1 = d.lam_fv(k1_fv, nat, with_k2);
+        let with_r = d.lam_fv(r_fv, real, with_k1);
+        let with_c = d.lam_fv(c_fv, carrier, with_r);
+        let with_g = d.lam_fv(g_fv, func_ty, with_c);
+        d.lam_fv(f_fv, func_ty, with_g)
+    };
+    let ty = {
+        let concl = bounded_on_applied(d, p, mul_fn, c, r, k3);
+        let with_hbg = d.arrow(hbg_ty, concl);
+        let with_hbf = d.arrow(hbf_ty, with_hbg);
+        let with_k2 = d.pi_fv(k2_fv, nat, with_hbf);
+        let with_k1 = d.pi_fv(k1_fv, nat, with_k2);
+        let with_r = d.pi_fv(r_fv, real, with_k1);
+        let with_c = d.pi_fv(c_fv, carrier, with_r);
+        let with_g = d.pi_fv(g_fv, func_ty, with_c);
+        d.pi_fv(f_fv, func_ty, with_g)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.estimates.bounded_on_mul,
         uparams: vec![],
         ty,
         value,

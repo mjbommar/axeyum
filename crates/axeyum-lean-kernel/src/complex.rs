@@ -94,6 +94,7 @@ use crate::{Kernel, KernelError};
 pub(crate) mod algebra_instance;
 pub(crate) mod deriv;
 pub(crate) mod estimates;
+pub(crate) mod leibniz;
 pub(crate) mod poly;
 mod ring;
 
@@ -1422,6 +1423,10 @@ pub struct ComplexPrelude {
     /// product rule runs on, in `complex/estimates.rs`). Owns its own names
     /// for the same reason [`Self::poly`] does.
     pub estimates: estimates::EstimateNames,
+    /// The product rule and everything derived from it
+    /// (`complex/leibniz.rs`). Owns its own names for the same reason
+    /// [`Self::poly`] does.
+    pub leibniz: leibniz::LeibnizNames,
 
     /// `Complex.commRingS : AlgS.CommRing` (`complex/algebra_instance.rs`,
     /// ADR-1588/ADR-1590) — every field an *existing* `Complex` theorem,
@@ -1603,6 +1608,7 @@ fn intern_names(kernel: &mut Kernel, creal: CRealPrelude) -> ComplexPrelude {
         poly: poly::intern_names(kernel, complex),
         deriv: deriv::intern_names(kernel, complex),
         estimates: estimates::intern_names(kernel, complex),
+        leibniz: leibniz::intern_names(kernel, complex),
         comm_ring_s: kernel.name_str(complex, "commRingS"),
     }
 }
@@ -3831,6 +3837,25 @@ const STEPS: &[BuildStep] = &[
         // and is enforced by position: this entry is LAST.
         provides: &[],
         run: estimates::declare_estimates,
+    },
+    BuildStep {
+        label: "leibniz::declare_leibniz",
+        requires: &[
+            |p: ComplexPrelude| p.abs,
+            |p: ComplexPrelude| p.abs_add_le,
+            |p: ComplexPrelude| p.add,
+            |p: ComplexPrelude| p.complex,
+            |p: ComplexPrelude| p.equiv,
+            |p: ComplexPrelude| p.mul,
+            |p: ComplexPrelude| p.neg,
+            |p: ComplexPrelude| p.zero,
+        ],
+        // Its names live in `LeibnizNames`, so it provides nothing at hub
+        // granularity. Its dependence on `deriv::declare_derivative` and
+        // `estimates::declare_estimates` is enforced by position: this entry
+        // is LAST.
+        provides: &[],
+        run: leibniz::declare_leibniz,
     },
 ];
 

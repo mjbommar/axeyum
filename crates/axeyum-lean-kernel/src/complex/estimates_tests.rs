@@ -173,20 +173,30 @@ fn uniformly_continuous_const_modulus_is_zero() {
     );
 }
 
-/// Build `UniformlyContinuousOn.modulus … (uniformlyContinuous_of_hasDerivative
-/// F F' c r hf k hb) n` over FREE `F, F', c, r, hf, k, n`, together with the
-/// modulus expression it is claimed to reduce to at a caller-chosen inner
-/// index `inner` (the real construction uses `inner := 2n+1`).
+/// Admit
+/// `∀ F F' c r (hf : HasDerivativeOn F F' c r) (k : Nat)
+///    (hb : BoundedOn F' c r k) (n : Nat),
+///  Eq Nat (UniformlyContinuousOn.modulus F c r
+///            (uniformlyContinuous_of_hasDerivative F F' c r hf k hb) n)
+///         (m (rescale_index 0 inner) + rescale_index k inner + 0)`
+/// by `Eq.refl`, with `inner := 2n+1` when `halved` and `inner := n`
+/// otherwise. Returns the kernel's verdict.
 ///
-/// Returning both sides from one builder is what makes the positive test and
-/// its negative control differ in exactly one subterm.
-fn of_has_derivative_modulus_sides(
-    d: &mut IntDev<'_>,
+/// **Every variable is BOUND.** An earlier draft of this pair left them free,
+/// which made `add_declaration` return `UnboundFVar` for both the positive
+/// test and its control — so the control "passed" while proving nothing, the
+/// vacuous half of the two ways a negative control fails. The positive test
+/// failing is what exposed it; had the positive been the vacuous one the pair
+/// would have looked green.
+fn of_has_derivative_modulus_admitted(
+    kernel: &mut Kernel,
     p: ComplexPrelude,
     halved: bool,
-) -> (crate::ExprId, crate::ExprId) {
+) -> bool {
     use crate::creal::derivative::rescale_index;
 
+    let anon = kernel.anon();
+    let mut d = IntDev::new(kernel, p.creal.rat.int);
     let carrier = d.kernel().const_(p.complex, vec![]);
     let real = d.kernel().const_(p.creal.creal, vec![]);
     let nat = d.nat_ty();
@@ -200,15 +210,20 @@ fn of_has_derivative_modulus_sides(
     let c = d.kernel().fvar(c_fv);
     let r_fv = d.fresh_fvar();
     let r = d.kernel().fvar(r_fv);
+
+    let hf_ty = d.const_app(p.deriv.has_derivative_on, &[f, fp, c, r]);
     let hf_fv = d.fresh_fvar();
     let hf = d.kernel().fvar(hf_fv);
     let k_fv = d.fresh_fvar();
     let k = d.kernel().fvar(k_fv);
+    // The named `Complex.BoundedOn` rather than its inline shape: the theorem
+    // takes the inline one, and the two are definitionally equal, so passing
+    // this exercises that defeq as well.
+    let hb_ty = d.const_app(p.estimates.bounded_on, &[fp, c, r, k]);
     let hb_fv = d.fresh_fvar();
     let hb = d.kernel().fvar(hb_fv);
     let n_fv = d.fresh_fvar();
     let n = d.kernel().fvar(n_fv);
-    let _ = (carrier, real, nat, func_ty);
 
     let witness = d.const_app(
         p.estimates.uniformly_continuous_of_has_derivative,
@@ -225,13 +240,50 @@ fn of_has_derivative_modulus_sides(
         n
     };
     let zero_nat = d.num(0);
-    let e_a = rescale_index(d, zero_nat, inner);
-    let e_b = rescale_index(d, k, inner);
+    let e_a = rescale_index(&mut d, zero_nat, inner);
+    let e_b = rescale_index(&mut d, k, inner);
     let m = d.const_app(p.deriv.hd_modulus, &[f, fp, c, r, hf]);
     let m_a = d.apply(m, &[e_a]);
     let head = d.add(m_a, e_b);
     let rhs = d.add(head, zero_nat);
-    (lhs, rhs)
+
+    let claim = d.eq(lhs, rhs);
+    let body = d.refl(rhs);
+    let value = {
+        let with_n = d.lam_fv(n_fv, nat, body);
+        let with_hb = d.lam_fv(hb_fv, hb_ty, with_n);
+        let with_k = d.lam_fv(k_fv, nat, with_hb);
+        let with_hf = d.lam_fv(hf_fv, hf_ty, with_k);
+        let with_r = d.lam_fv(r_fv, real, with_hf);
+        let with_c = d.lam_fv(c_fv, carrier, with_r);
+        let with_fp = d.lam_fv(fp_fv, func_ty, with_c);
+        d.lam_fv(f_fv, func_ty, with_fp)
+    };
+    let ty = {
+        let with_n = d.pi_fv(n_fv, nat, claim);
+        let with_hb = d.pi_fv(hb_fv, hb_ty, with_n);
+        let with_k = d.pi_fv(k_fv, nat, with_hb);
+        let with_hf = d.pi_fv(hf_fv, hf_ty, with_k);
+        let with_r = d.pi_fv(r_fv, real, with_hf);
+        let with_c = d.pi_fv(c_fv, carrier, with_r);
+        let with_fp = d.pi_fv(fp_fv, func_ty, with_c);
+        d.pi_fv(f_fv, func_ty, with_fp)
+    };
+
+    let label = if halved {
+        "Check.uc_of_hd_modulus_is_halved"
+    } else {
+        "Check.uc_of_hd_modulus_unhalved"
+    };
+    let name = d.kernel().name_str(anon, label);
+    d.kernel()
+        .add_declaration(Declaration::Theorem {
+            name,
+            uparams: vec![],
+            ty,
+            value,
+        })
+        .is_ok()
 }
 
 /// **The halving is in the modulus, and this reads it out of the kernel.**
@@ -239,20 +291,14 @@ fn of_has_derivative_modulus_sides(
 /// `uniformlyContinuous_of_hasDerivative`'s modulus at accuracy `n` is
 /// `m(rescale_index(0, 2n+1)) + rescale_index(k, 2n+1) + 0` — the inner index
 /// is `2n+1`, not `n`, because the estimate spends `1/(n+1)` as two equal
-/// halves (the module documentation's display). This admits that equation by
-/// `Eq.refl` over free `F, F', c, r, hf, k, n`, so it constrains the modulus
-/// as a FUNCTION and not at one sampled index.
+/// halves (the module documentation's display). The equation is admitted under
+/// binders for `F, F', c, r, hf, k, n`, so it constrains the modulus as a
+/// FUNCTION and not at one sampled index.
 #[test]
 fn uniformly_continuous_of_has_derivative_modulus_is_halved() {
     let (mut kernel, p) = built();
-    let admitted = nat_eq_by_refl(
-        &mut kernel,
-        p,
-        "Check.uc_of_hd_modulus_is_halved",
-        &|d: &mut IntDev<'_>| of_has_derivative_modulus_sides(d, p, true),
-    );
     assert!(
-        admitted,
+        of_has_derivative_modulus_admitted(&mut kernel, p, true),
         "uniformlyContinuous_of_hasDerivative's modulus must read its two \
          summands at the HALVED index 2n+1"
     );
@@ -265,20 +311,15 @@ fn uniformly_continuous_of_has_derivative_modulus_is_halved() {
 ///
 /// This is the mutation this file's construction is most exposed to — dropping
 /// the halving leaves the two summands each already at the full target
-/// `1/(n+1)`, so their sum overshoots by a factor of two — and without this
-/// control the positive test above would pass for `2n+1`, `n`, `3n+2` or any
-/// other index the kernel happens to normalise the same way.
+/// `1/(n+1)`, so their sum overshoots by a factor of two. The control is only
+/// worth anything because its positive twin is ADMITTED under the same
+/// binders: a shared construction error refuses both, which is exactly what
+/// happened on this pair's first run.
 #[test]
 fn uniformly_continuous_of_has_derivative_modulus_without_halving_is_refused() {
     let (mut kernel, p) = built();
-    let admitted = nat_eq_by_refl(
-        &mut kernel,
-        p,
-        "Check.uc_of_hd_modulus_unhalved",
-        &|d: &mut IntDev<'_>| of_has_derivative_modulus_sides(d, p, false),
-    );
     assert!(
-        !admitted,
+        !of_has_derivative_modulus_admitted(&mut kernel, p, false),
         "the UN-halved modulus (inner index n instead of 2n+1) must be REFUSED"
     );
 }
