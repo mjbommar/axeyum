@@ -435,6 +435,125 @@ fn nine_is_one_mod_four_and_not_zero() {
     );
 }
 
+/// The two Brahmagupta–Fibonacci groupings state exactly the terms claimed —
+/// checked at FREE VARIABLES, where nothing reduces.
+///
+/// This exists because the concrete battery above cannot see an operand swap.
+/// `(ac−bd)²` and `(bd−ac)²` are equal at every argument, so a mutation that
+/// transposes the subtraction is still a TRUE theorem and still passes a test
+/// run at numerals. Only a symbolic comparison of the statement separates
+/// them, and only that separates the two conjugate groupings from each other —
+/// which matters, because the descent depends on getting the `'` one.
+#[test]
+fn the_two_identities_state_the_intended_groupings() {
+    let mut k = Kernel::new();
+    let p = build_int_prelude(&mut k).expect("Int prelude must build");
+    let mut d = IntDev::new(&mut k, p);
+
+    // `(a²+b²)(c²+d²)`, shared by both statements.
+    let norms = |d: &mut IntDev<'_>, v: &[ExprId]| {
+        let (a, b, c, e) = (v[0], v[1], v[2], v[3]);
+        let aa = d.imul(a, a);
+        let bb = d.imul(b, b);
+        let left = d.iadd(aa, bb);
+        let cc = d.imul(c, c);
+        let ee = d.imul(e, e);
+        let right = d.iadd(cc, ee);
+        d.imul(left, right)
+    };
+    let square_sum = |d: &mut IntDev<'_>, u: ExprId, w: ExprId| {
+        let uu = d.imul(u, u);
+        let ww = d.imul(w, w);
+        d.iadd(uu, ww)
+    };
+
+    // The unprimed form: `(ac−bd)² + (ad+bc)²`, and its operand-swapped twin.
+    let shape_name = probe_name(&mut d, "bf_shape");
+    let intended = d.int_theorem(shape_name, 4, &|d, v| {
+        let (a, b, c, e) = (v[0], v[1], v[2], v[3]);
+        let lhs = norms(d, v);
+        let ac = d.imul(a, c);
+        let bd = d.imul(b, e);
+        let u = d.isub(ac, bd);
+        let ad = d.imul(a, e);
+        let bc = d.imul(b, c);
+        let w = d.iadd(ad, bc);
+        let rhs = square_sum(d, u, w);
+        let ty = d.ieq(lhs, rhs);
+        let proof = d.const_app(p.brahmagupta_fibonacci, &[a, b, c, e]);
+        (ty, proof)
+    });
+    assert!(
+        intended.is_ok(),
+        "Int.brahmaguptaFibonacci must state (ac-bd)^2 + (ad+bc)^2"
+    );
+
+    let swapped_name = probe_name(&mut d, "bf_shape_swapped");
+    let swapped = d.int_theorem(swapped_name, 4, &|d, v| {
+        let (a, b, c, e) = (v[0], v[1], v[2], v[3]);
+        let lhs = norms(d, v);
+        let ac = d.imul(a, c);
+        let bd = d.imul(b, e);
+        // `bd − ac` rather than `ac − bd`: a DIFFERENT term, an EQUALLY TRUE
+        // statement, and the one a concrete test cannot tell apart.
+        let u = d.isub(bd, ac);
+        let ad = d.imul(a, e);
+        let bc = d.imul(b, c);
+        let w = d.iadd(ad, bc);
+        let rhs = square_sum(d, u, w);
+        let ty = d.ieq(lhs, rhs);
+        let proof = d.const_app(p.brahmagupta_fibonacci, &[a, b, c, e]);
+        (ty, proof)
+    });
+    assert!(
+        swapped.is_err(),
+        "the operand-swapped subtraction is a different statement and must not check"
+    );
+
+    // The primed form: `(ac+bd)² + (ad−bc)²`, and the unprimed grouping as its
+    // control — this is the pair the descent actually has to keep straight.
+    let primed_name = probe_name(&mut d, "bf_prime_shape");
+    let primed = d.int_theorem(primed_name, 4, &|d, v| {
+        let (a, b, c, e) = (v[0], v[1], v[2], v[3]);
+        let lhs = norms(d, v);
+        let ac = d.imul(a, c);
+        let bd = d.imul(b, e);
+        let u = d.iadd(ac, bd);
+        let ad = d.imul(a, e);
+        let bc = d.imul(b, c);
+        let w = d.isub(ad, bc);
+        let rhs = square_sum(d, u, w);
+        let ty = d.ieq(lhs, rhs);
+        let proof = d.const_app(p.brahmagupta_fibonacci_swap, &[a, b, c, e]);
+        (ty, proof)
+    });
+    assert!(
+        primed.is_ok(),
+        "Int.brahmaguptaFibonacci' must state (ac+bd)^2 + (ad-bc)^2"
+    );
+
+    let crossed_name = probe_name(&mut d, "bf_prime_crossed");
+    let crossed = d.int_theorem(crossed_name, 4, &|d, v| {
+        let (a, b, c, e) = (v[0], v[1], v[2], v[3]);
+        let lhs = norms(d, v);
+        let ac = d.imul(a, c);
+        let bd = d.imul(b, e);
+        let u = d.isub(ac, bd);
+        let ad = d.imul(a, e);
+        let bc = d.imul(b, c);
+        let w = d.iadd(ad, bc);
+        let rhs = square_sum(d, u, w);
+        let ty = d.ieq(lhs, rhs);
+        // The UNPRIMED grouping's proof against the PRIMED statement.
+        let proof = d.const_app(p.brahmagupta_fibonacci_swap, &[a, b, c, e]);
+        (ty, proof)
+    });
+    assert!(
+        crossed.is_err(),
+        "the two groupings are different statements and must not be interchangeable"
+    );
+}
+
 /// Try to admit `Int.descentStep` at a fully concrete instance.
 ///
 /// Returns the verdict so the caller can require both outcomes. Every
@@ -539,6 +658,76 @@ fn a_wrong_quotient_is_refused_by_the_descent_step() {
     assert!(
         !admits_descent_instance(&mut d, 2, 13, 1, 5, 1, 1, 1, 3, 3, "descent_bad_w"),
         "w = 3 does not satisfy 2*w = 5*1 - 1*1 and must be refused"
+    );
+}
+
+/// The conclusion's multiplier is the NEW one (`q`), not the old one (`m`) —
+/// which is the entire content of calling this a *descent*.
+///
+/// At the worked instance `q = 1` and `m = 2`, so `q·p = 13` while
+/// `m·p = 26`; the theorem's own instance checks against the first and must
+/// not check against the second. A `descentStep` whose conclusion kept `m`
+/// would be a true statement about products and useless for induction, and
+/// nothing else in this file would notice.
+#[test]
+fn the_descent_step_concludes_at_the_new_multiplier() {
+    let mut k = Kernel::new();
+    let p = build_int_prelude(&mut k).expect("Int prelude must build");
+    let mut d = IntDev::new(&mut k, p);
+
+    let two = int_num(&mut d, 2);
+    let thirteen = int_num(&mut d, 13);
+    let one = int_num(&mut d, 1);
+    let five = int_num(&mut d, 5);
+    let three = int_num(&mut d, 3);
+
+    let hm = ofnat_ne(&mut d, 2, 0);
+    let h1 = {
+        let lhs = d.imul(two, thirteen);
+        d.irefl(lhs)
+    };
+    let h2 = {
+        let lhs = d.imul(two, one);
+        d.irefl(lhs)
+    };
+    let h3 = {
+        let lhs = d.imul(two, three);
+        d.irefl(lhs)
+    };
+    let h4 = {
+        let lhs = d.imul(two, two);
+        d.irefl(lhs)
+    };
+    let proof = d.const_app(
+        p.descent_step,
+        &[
+            two, thirteen, one, five, one, one, one, three, two, hm, h1, h2, h3, h4,
+        ],
+    );
+    let squares = {
+        let uu = d.imul(three, three);
+        let ww = d.imul(two, two);
+        d.iadd(uu, ww)
+    };
+
+    let new_multiplier = {
+        let qp = d.imul(one, thirteen);
+        d.ieq(qp, squares)
+    };
+    let name = probe_name(&mut d, "descent_new_multiplier");
+    assert!(
+        d.declare_theorem(name, new_multiplier, proof).is_ok(),
+        "the conclusion must be q*p = u^2 + w^2, i.e. 1*13 = 9 + 4"
+    );
+
+    let old_multiplier = {
+        let mp = d.imul(two, thirteen);
+        d.ieq(mp, squares)
+    };
+    let name = probe_name(&mut d, "descent_old_multiplier");
+    assert!(
+        d.declare_theorem(name, old_multiplier, proof).is_err(),
+        "the conclusion must NOT be m*p = u^2 + w^2 — 2*13 = 26, not 13"
     );
 }
 
