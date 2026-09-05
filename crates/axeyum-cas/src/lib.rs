@@ -2190,8 +2190,25 @@ fn fold_gamma_reflection(expr: &CasExpr) -> CasExpr {
 /// (the denominators are non-zero by construction, so no reduced form is
 /// required). Over the fragment this is a **complete decision procedure**; the
 /// `witness` is the cross-multiplied numerator `a·d − c·b` in canonical form,
-/// which is re-checkable independently. Overflow of exact `i128` rational
-/// arithmetic yields [`ZeroTest::Unknown`], never a wrong answer.
+/// which is re-checkable independently.
+///
+/// # Coefficient width
+///
+/// Overflow of exact `i128` rational arithmetic is not the end of the test.
+/// The same cross-multiplication is retried over unbounded integers
+/// ([ADR-1670]), which decides identities whose *intermediates* leave `i128`
+/// even though their inputs and answer do not — `(x+1)^80·(x+1)^80 = (x+1)^160`
+/// is the smallest such binomial case. The retry runs **only** when the bounded
+/// form declines, so it can never change a verdict the bounded form reached.
+///
+/// It does not decide everything. Any expression carrying a transcendental,
+/// radical, absolute-value, root or Bessel head is declined there, because the
+/// folds that relate those atoms have no unbounded counterpart; so is the
+/// reserved imaginary unit `I`; and so is a refutation whose witness cannot be
+/// carried by [`MultiPoly`]. Each of those is [`ZeroTest::Unknown`], never a
+/// wrong answer.
+///
+/// [ADR-1670]: ../../../docs/research/09-decisions/adr-1670-i128-fast-path-with-a-big-integer-overflow-fallback-for-the-cas-zero-test.md
 ///
 /// # Trigonometric soundness (Euler fallback)
 ///
