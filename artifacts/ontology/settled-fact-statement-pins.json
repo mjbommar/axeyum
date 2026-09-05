@@ -4,7 +4,7 @@
   "note": "Statement identity for every settled fact (S1 of the trusted-library safety roadmap, ADR-0763). Per fact: SHA-256 of formal.statement (the canonical kernel rendering for native lean4 rows), SHA-256 of the top-level reader-facing statement, and the kernel_theorem it names. A settled fact's statement is what the ledger CLAIMS; changing any of the three silently turns 'we proved X' into 'we proved something we then labelled X'. Changes require an amendment row naming both digests and a reason; superseded digests are preserved in each pin's history. `coverage_floor` is a ratchet the gate re-derives rather than trusts: slack is itself a violation, so a loosened floor is self-reverting. Written by `scripts/check-settled-fact-statements.py --write`; do not hand-edit.",
   "coverage_floor": {
     "max_unpinned_settled": 0,
-    "min_identity_bound": 2364,
+    "min_identity_bound": 2368,
     "max_header_exempt": 0
   },
   "amendments": [
@@ -25158,6 +25158,34 @@
       "statement_sha256": "89c13fef745dca70ff5c8daff296da495ffd24babe6c01da54fc486871b9473b",
       "prose_sha256": "52be40f70c5e331c814fcc3e91ed32deb0defe3faef6ab6a13f37ef0f36378ad",
       "kernel_theorem": "axeyum.string.2.take_zero"
+    },
+    {
+      "fact_id": "F:top-frame-converse-distributive-law-is-a-theorem",
+      "language": "lean4",
+      "statement_sha256": "c226287c9c79e3fd805f77b144f8f40a5aa63109678a505b32222cbc17e1271b",
+      "prose_sha256": "614351747f7573040528f2acdaa2d10e85c92214abd682d580736929d58c6404",
+      "kernel_theorem": "Top.Frame.le_inf_sup"
+    },
+    {
+      "fact_id": "F:top-frame-distributive-law-over-countable-joins",
+      "language": "lean4",
+      "statement_sha256": "40182e0b0ddf9ba91043d8218ff41286734e0400b6993b1bd911d34e05b85a52",
+      "prose_sha256": "db66f114777018b1d81823d1b84ae305934b6cc7c014c14a72fbfc870259deb0",
+      "kernel_theorem": "Top.Frame.frame_law"
+    },
+    {
+      "fact_id": "F:top-open-ball-frame-covers-the-real-line",
+      "language": "lean4",
+      "statement_sha256": "c1c386f38a3983cb4860216d49eab73bed2d285aa6198424da97256cd2fbda18",
+      "prose_sha256": "6cf884314d5a896fd118cadc5de459dc84099dd0abfcddc26a36c2ee600bf4b0",
+      "kernel_theorem": "Top.ball_density"
+    },
+    {
+      "fact_id": "F:top-separated-balls-share-no-real-point",
+      "language": "lean4",
+      "statement_sha256": "bdc1fc4ef8fd473eba91c27e84e530221f26a7b698b71768cbb58594ceccfe19",
+      "prose_sha256": "f1bcec37956123b4985d99494c0aaf6bae9bb267e845606b74e7f3e36b5fa80c",
+      "kernel_theorem": "Top.ball_separated"
     },
     {
       "fact_id": "F:tseitin-and-gate",

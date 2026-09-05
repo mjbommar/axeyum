@@ -1,0 +1,58 @@
+{
+  "schema_version": 1,
+  "id": "F:top-frame-distributive-law-over-countable-joins",
+  "title": "The frame distributive law, as an equivalence, for every frame",
+  "statement": "In any frame F, meeting with a fixed element distributes over a countable join: a AND (JOIN n. f n) is equivalent to JOIN n. (a AND f n). This is the law that makes a complete lattice a FRAME rather than merely a complete lattice, and it is the whole content of ADR-1602's decision to build topology pointfree -- a family of open subsets would need closure under arbitrary unions over an index Sort, pushing the record's universe up and putting undecidable membership in a union on the critical path, whereas a frame is an algebraic structure the existing declare_record machinery builds unchanged. What is recorded here is not the law itself but WHERE IT COMES FROM: only ONE direction is an axiom of the record (the field frameLe), and the converse is a theorem of every complete lattice (Top.Frame.le_inf_sup). An instance that had to supply both halves would be supplying a theorem. The equivalence is stated through Top.Frame.Equiv, which is itself DERIVED rather than a field: on a poset antisymmetry forces a ~ b := a <= b AND b <= a, unlike Metric where CReal.Equiv is genuinely independent data (ADR-0512), so this record carries neither an equiv field nor any congruence field and an instance discharges six fewer obligations.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Top.Frame.frame_law : ((x0 : Top.Frame) -> ((x1 : Top.Frame.carrier x0) -> ((x2 : ((x2 : AxNat) -> Top.Frame.carrier x0)) -> Top.Frame.Equiv x0 (Top.Frame.inf x0 x1 (Top.Frame.sup x0 x2)) (Top.Frame.sup x0 (fun (x3 : AxNat) => Top.Frame.inf x0 x1 (x2 x3))))))",
+    "fragment": "Top",
+    "free_symbols": [
+      "x0",
+      "x1",
+      "x2",
+      "x3"
+    ],
+    "kernel_theorem": "Top.Frame.frame_law"
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Top.Frame.frame_law",
+      "kind": "kernel-term",
+      "supports": "Top.Frame.frame_law is admitted by the trusted kernel gate with the type recorded in formal.statement, and Kernel::axiom_footprint reports 0 assumed names.",
+      "check_status": "checked",
+      "checkers": [
+        "producing-build (Kernel::add_declaration, which re-derives the type from the proof term)",
+        "top_frame_theorem_inventory, filtered to this declaration"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example top_frame_theorem_inventory -- Top.Frame.frame_law | grep -cE '^theorem[[:space:]]+Top\\.Frame\\.frame_law[[:space:]]+4[[:space:]]+0[[:space:]]'",
+      "checker_seconds": 70,
+      "kernel_declaration": "Top.Frame.frame_law",
+      "notes": "The exit status depends on the finding three times over. top_frame_theorem_inventory exits NON-ZERO when the filter matches nothing (asking for a declaration and finding none is a failure, not an empty report) AND when any printed row carries a nonempty axiom footprint. grep -c then exits 1 printing 0 unless the anchored row is present with the recorded binder count and a footprint column of exactly 0. Anchored with [[:space:]], never a backslash-t: in a scripted (GNU) grep that is a literal t, and 68 checkers in this ledger were wrong for exactly that reason. grep -c rather than grep -q, which would SIGPIPE the producer under pipefail. --release is MANDATORY: this binary builds creal underneath Top, which overflows the default debug thread stack. Definition rows need --defs and are off by default, so a caller who forgets that reads a false ABSENT rather than a wrong type."
+    },
+    {
+      "id": "suite-the_frame_law_slot_is_load_bearing",
+      "kind": "exhaustive-enumeration",
+      "supports": "The frameLe field this theorem consumes is checked, not decorative: rebuilding Top.ballFrame with Top.Opens.le_refl -- a real, admitted theorem of the same carrier with a different type -- in the frameLe slot is REFUSED by Kernel::add_declaration, while the untouched instance is ACCEPTED at the same call site.",
+      "check_status": "checked",
+      "checkers": [
+        "top_frame::top_frame_tests, run against a freshly built kernel environment"
+      ],
+      "checker_command": "cargo test --release -p axeyum-lean-kernel --lib -- top_frame::top_frame_tests::the_frame_law_slot_is_load_bearing --test-threads=4 2>&1 | grep -cE '^test result: ok\\. 1 passed'",
+      "checker_seconds": 75,
+      "notes": "The `1 passed` is load-bearing: `cargo test -- <filter>` runs ZERO tests and exits 0 when the filter matches nothing, so a rename would turn this checker green while checking nothing. Requiring the exact count is what makes the exit status depend on the finding. --release is mandatory (the creal prelude overflows the debug thread stack); --test-threads=4 keeps the shared build off the OOM ceiling. The positive half is what stops the control passing because mk_instance is broken. Mutation MUT-C (2026-09-05) hands the slot the CORRECT Top.Opens.frame_le instead of the wrong-typed one and kills exactly this one test of the eleven, so the control discriminates rather than merely refusing everything."
+    }
+  ],
+  "provenance": {
+    "date": "2026-09-05",
+    "curation": "curated",
+    "established_by": "axeyum-lean-kernel build_top_frame_prelude (crates/axeyum-lean-kernel/src/top_frame.rs)",
+    "source": "Lane `frame-carrier`, roadmap W2-21, executing ADR-1602's pointfree recommendation and decided in ADR-1643 (docs/research/09-decisions/adr-1643-the-frame-carrier-is-nat-indexed-and-the-ball-index-is-not-a-nat.md). formal.statement is Kernel::render_lean of the declaration's type, taken verbatim from the unfiltered emit of `top_frame_theorem_inventory --defs`; axiom_footprint is that tool's footprint column, which reads Kernel::axiom_footprint."
+  },
+  "notes": "depends_on is EMPTY and that is a statement, not an omission: the proof is the record's own frameLe field paired with Top.Frame.le_inf_sup, and it names no prior fact in this ledger. Read free_symbols to see that the generalization is real -- x0 is a bound variable of type Top.Frame, so the theorem is about every frame and not about the one instance built so far. The join index is AxNat (countable) by ADR-1612's predicativity constraint; ADR-1643 records why that is a faithful description of the real line (second countable) and not a restriction."
+}

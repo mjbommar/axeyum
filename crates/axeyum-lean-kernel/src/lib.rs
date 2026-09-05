@@ -95,8 +95,8 @@ pub mod simp;
 mod stack;
 mod string_prelude;
 pub mod tactic;
-mod top_frame;
 mod tc;
+mod top_frame;
 
 use std::collections::{BTreeMap, HashMap};
 use std::fmt;
@@ -165,15 +165,6 @@ pub use metric::{
     FIELD_COUNT as METRIC_FIELD_COUNT, MetricPrelude, build_metric_prelude,
 };
 pub use metric_prod::{MetricProdNames, build_metric_prod_prelude};
-pub use top_frame::{
-    BOT as TOP_FRAME_BOT, BOT_LE as TOP_FRAME_BOT_LE, CARRIER as TOP_FRAME_CARRIER,
-    FIELD_COUNT as TOP_FRAME_FIELD_COUNT, FRAME_LE as TOP_FRAME_FRAME_LE, INF as TOP_FRAME_INF,
-    INF_LE_LEFT as TOP_FRAME_INF_LE_LEFT, INF_LE_RIGHT as TOP_FRAME_INF_LE_RIGHT,
-    LE as TOP_FRAME_LE, LE_INF as TOP_FRAME_LE_INF, LE_REFL as TOP_FRAME_LE_REFL,
-    LE_SUP as TOP_FRAME_LE_SUP, LE_TOP as TOP_FRAME_LE_TOP, LE_TRANS as TOP_FRAME_LE_TRANS,
-    SUP as TOP_FRAME_SUP, SUP_LE as TOP_FRAME_SUP_LE, TOP as TOP_FRAME_TOP, TopFramePrelude,
-    build_top_frame_prelude,
-};
 pub use name::{NameId, NameNode};
 pub use nat_prelude::image_group::{ImageGroupDeps, ImageGroupNames};
 pub use nat_prelude::{NatDev, NatOps, NatPrelude, NatState, build_nat_prelude};
@@ -192,6 +183,15 @@ pub use string_prelude::{
     build_string_prelude, build_string_substr_arithmetic,
 };
 pub use tc::{KernelError, LocalContext, LocalDecl};
+pub use top_frame::{
+    BOT as TOP_FRAME_BOT, BOT_LE as TOP_FRAME_BOT_LE, CARRIER as TOP_FRAME_CARRIER,
+    FIELD_COUNT as TOP_FRAME_FIELD_COUNT, FRAME_LE as TOP_FRAME_FRAME_LE, INF as TOP_FRAME_INF,
+    INF_LE_LEFT as TOP_FRAME_INF_LE_LEFT, INF_LE_RIGHT as TOP_FRAME_INF_LE_RIGHT,
+    LE as TOP_FRAME_LE, LE_INF as TOP_FRAME_LE_INF, LE_REFL as TOP_FRAME_LE_REFL,
+    LE_SUP as TOP_FRAME_LE_SUP, LE_TOP as TOP_FRAME_LE_TOP, LE_TRANS as TOP_FRAME_LE_TRANS,
+    SUP as TOP_FRAME_SUP, SUP_LE as TOP_FRAME_SUP_LE, TOP as TOP_FRAME_TOP, TopFramePrelude,
+    build_top_frame_prelude,
+};
 
 use expr::ExprMeta;
 

@@ -104,6 +104,7 @@ KERNEL_THEOREM_RE = re.compile(
     r"^(?:AxReal|AxNat|Nat|Int|Real|Rat|List|Bool|Prop|Acc|WellFounded|Alg|AlgS|CatS|"
     r"And|Decidable|Eq|Iff|Or|Metric|IntSpace|"
     r"And|Decidable|Eq|Iff|Or|Metric|RN|"
+    r"Top|"
     r"CReal|Complex|CPoint|FO|axeyum\.string\.[0-9]+)"
     r"(?:\.[A-Za-z_][A-Za-z0-9_']*)+$"
 )
