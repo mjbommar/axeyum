@@ -61,6 +61,7 @@ pub mod boolean_anf;
 pub mod boolean_circuit;
 pub mod cofactor_ansatz;
 pub mod combinatorics;
+pub mod enclosure;
 pub mod extremum;
 mod factor_int;
 pub mod fps;
