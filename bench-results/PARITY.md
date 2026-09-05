@@ -1409,3 +1409,23 @@ all three.
 | load average (start / end) | 1.03 0.98 0.71 / 1.04 1.01 0.95 — 8 cores; a high load DEPRESSES this result |
 | per-file detail | `bench-results/parity-details/QF_UF.tsv` |
 
+## QF_LRA — 2026-09-05T22:18:26Z
+
+| field | value |
+|---|---|
+| axeyum solved | 91/200 |
+| reference solved | 145/200 |
+| **ratio (axeyum / reference)** | **62.8%** |
+| **disagreements** | **0** |
+| soundness | SOUND |
+| both / axeyum-only / reference-only | 91 / 0 / 54 |
+| reference | `cvc5 1.3.4 [git f3b21c4 on branch HEAD]` |
+| reference options | `<none — plain invocation, NOT a competition portfolio>` |
+| axeyum options | `<none — shipped default configuration>` |
+| resumed | 49 of 200 files reused from a prior interrupted sweep (mixed load) |
+| protocol | 24s wall, 8GiB, per-file |
+| benchmark list | `bench-results/parity-lists/QF_LRA.txt` (sha256 b636239947db, 200 files) |
+| solver commit | `9914a1c0e` |
+| load average (start / end) | 0.00 0.01 0.15 / 1.57 1.20 1.03 — 8 cores; a high load DEPRESSES this result |
+| per-file detail | `bench-results/parity-details/QF_LRA.tsv` |
+
