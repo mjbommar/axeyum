@@ -95,6 +95,7 @@ pub mod ntheory_more;
 pub mod orthopoly;
 pub mod partial_fractions;
 pub mod permutation;
+pub mod qe;
 mod ratint;
 pub mod rationality;
 pub mod real_algebraic;
