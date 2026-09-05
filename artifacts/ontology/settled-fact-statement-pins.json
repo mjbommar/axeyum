@@ -4,7 +4,7 @@
   "note": "Statement identity for every settled fact (S1 of the trusted-library safety roadmap, ADR-0763). Per fact: SHA-256 of formal.statement (the canonical kernel rendering for native lean4 rows), SHA-256 of the top-level reader-facing statement, and the kernel_theorem it names. A settled fact's statement is what the ledger CLAIMS; changing any of the three silently turns 'we proved X' into 'we proved something we then labelled X'. Changes require an amendment row naming both digests and a reason; superseded digests are preserved in each pin's history. `coverage_floor` is a ratchet the gate re-derives rather than trusts: slack is itself a violation, so a loosened floor is self-reverting. Written by `scripts/check-settled-fact-statements.py --write`; do not hand-edit.",
   "coverage_floor": {
     "max_unpinned_settled": 0,
-    "min_identity_bound": 2309,
+    "min_identity_bound": 2312,
     "max_header_exempt": 0
   },
   "amendments": [
@@ -1426,6 +1426,27 @@
           "kernel_theorem": "Int.fib_cassini"
         }
       ]
+    },
+    {
+      "fact_id": "F:cats-initial-unique",
+      "language": "lean4",
+      "statement_sha256": "4024bc9de8f615d33e3d2cbb04480e96b3497bfd472493bb3fd0eb48e08781de",
+      "prose_sha256": "b48c132507e6228e6065e568731ac47bccfc308d352ecfaf581af9d2aa7f66de",
+      "kernel_theorem": "CatS.initial_unique"
+    },
+    {
+      "fact_id": "F:cats-isfunctor-comp",
+      "language": "lean4",
+      "statement_sha256": "31e6817fcaf3e8c82a74fdb39e21240a2ee44434204660d3a0b11da2c4acc56b",
+      "prose_sha256": "a8cbc4eaaf3adc0b551f20edeb1e58a652860550a2bd689c6196af9a75fcf326",
+      "kernel_theorem": "CatS.isFunctor_comp"
+    },
+    {
+      "fact_id": "F:cats-isnat-ofmonoid",
+      "language": "lean4",
+      "statement_sha256": "162a601200931191770e62bd74c363e1f2997d58dc2255a6f9f422292a898e3a",
+      "prose_sha256": "6e3100e4238a8846cb32f3782c1239b4ff1f9a1fe9cc51992dc99af8091499f6",
+      "kernel_theorem": "CatS.isNat_ofMonoid"
     },
     {
       "fact_id": "F:cauchy-schwarz-over-constructed-plane",
