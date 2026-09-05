@@ -1,0 +1,58 @@
+{
+  "schema_version": 1,
+  "id": "F:top-frame-converse-distributive-law-is-a-theorem",
+  "title": "Only one direction of the frame law is an axiom; the converse is free",
+  "statement": "In any frame F, JOIN n. (a AND f n) <= a AND (JOIN n. f n). Unlike the distributive law itself this direction needs no frame axiom at all: it holds in every complete lattice, off the two universal properties (supLe, leSup), the two meet projections (infLeLeft, infLeRight) and transitivity. Recording it separately is the point. A textbook states the frame law as an equality and leaves the reader to notice that half of it is free; a record that took the equality as a field would silently demand a theorem from every instance. Here the record's field is the hard direction only, this is the easy one proved once generically, and Top.Frame.frame_law is the two glued together.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Top.Frame.le_inf_sup : ((x0 : Top.Frame) -> ((x1 : Top.Frame.carrier x0) -> ((x2 : ((x2 : AxNat) -> Top.Frame.carrier x0)) -> Top.Frame.le x0 (Top.Frame.sup x0 (fun (x3 : AxNat) => Top.Frame.inf x0 x1 (x2 x3))) (Top.Frame.inf x0 x1 (Top.Frame.sup x0 x2)))))",
+    "fragment": "Top",
+    "free_symbols": [
+      "x0",
+      "x1",
+      "x2",
+      "x3"
+    ],
+    "kernel_theorem": "Top.Frame.le_inf_sup"
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Top.Frame.le_inf_sup",
+      "kind": "kernel-term",
+      "supports": "Top.Frame.le_inf_sup is admitted by the trusted kernel gate with the type recorded in formal.statement, and Kernel::axiom_footprint reports 0 assumed names.",
+      "check_status": "checked",
+      "checkers": [
+        "producing-build (Kernel::add_declaration, which re-derives the type from the proof term)",
+        "top_frame_theorem_inventory, filtered to this declaration"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example top_frame_theorem_inventory -- Top.Frame.le_inf_sup | grep -cE '^theorem[[:space:]]+Top\\.Frame\\.le_inf_sup[[:space:]]+4[[:space:]]+0[[:space:]]'",
+      "checker_seconds": 70,
+      "kernel_declaration": "Top.Frame.le_inf_sup",
+      "notes": "The exit status depends on the finding three times over. top_frame_theorem_inventory exits NON-ZERO when the filter matches nothing (asking for a declaration and finding none is a failure, not an empty report) AND when any printed row carries a nonempty axiom footprint. grep -c then exits 1 printing 0 unless the anchored row is present with the recorded binder count and a footprint column of exactly 0. Anchored with [[:space:]], never a backslash-t: in a scripted (GNU) grep that is a literal t, and 68 checkers in this ledger were wrong for exactly that reason. grep -c rather than grep -q, which would SIGPIPE the producer under pipefail. --release is MANDATORY: this binary builds creal underneath Top, which overflows the default debug thread stack. Definition rows need --defs and are off by default, so a caller who forgets that reads a false ABSENT rather than a wrong type."
+    },
+    {
+      "id": "suite-the_sup_le_slot_is_load_bearing",
+      "kind": "exhaustive-enumeration",
+      "supports": "The supLe field this theorem is built from is checked, not decorative: rebuilding Top.ballFrame with Top.Opens.le_refl in the supLe slot is REFUSED by Kernel::add_declaration. supLe is the universal property of the countable join and is the only field that could make this direction provable, so a decorative supLe would make the claim vacuous.",
+      "check_status": "checked",
+      "checkers": [
+        "top_frame::top_frame_tests, run against a freshly built kernel environment"
+      ],
+      "checker_command": "cargo test --release -p axeyum-lean-kernel --lib -- top_frame::top_frame_tests::the_sup_le_slot_is_load_bearing --test-threads=4 2>&1 | grep -cE '^test result: ok\\. 1 passed'",
+      "checker_seconds": 75,
+      "notes": "The `1 passed` is load-bearing: `cargo test -- <filter>` runs ZERO tests and exits 0 when the filter matches nothing, so a rename would turn this checker green while checking nothing. Requiring the exact count is what makes the exit status depend on the finding. --release is mandatory (the creal prelude overflows the debug thread stack); --test-threads=4 keeps the shared build off the OOM ceiling. "
+    }
+  ],
+  "provenance": {
+    "date": "2026-09-05",
+    "curation": "curated",
+    "established_by": "axeyum-lean-kernel build_top_frame_prelude (crates/axeyum-lean-kernel/src/top_frame.rs)",
+    "source": "Lane `frame-carrier`, roadmap W2-21, executing ADR-1602's pointfree recommendation and decided in ADR-1643 (docs/research/09-decisions/adr-1643-the-frame-carrier-is-nat-indexed-and-the-ball-index-is-not-a-nat.md). formal.statement is Kernel::render_lean of the declaration's type, taken verbatim from the unfiltered emit of `top_frame_theorem_inventory --defs`; axiom_footprint is that tool's footprint column, which reads Kernel::axiom_footprint."
+  },
+  "notes": "The asymmetry between this fact and F:top-frame-distributive-law-over-countable-joins is the whole reason both exist. If a later carrier is tempted to state the frame law as a single biconditional field, this is the fact that says what that would cost."
+}
