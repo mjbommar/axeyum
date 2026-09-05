@@ -1,0 +1,96 @@
+{
+  "schema_version": 1,
+  "id": "F:int-brahmagupta-fibonacci",
+  "title": "The Brahmagupta-Fibonacci identity over the constructed integers",
+  "statement": "For all integers a, b, c, d the product of two sums of two squares is again a sum of two squares: (a^2+b^2)(c^2+d^2) = (ac-bd)^2 + (ad+bc)^2. The conjugate grouping (ac+bd)^2 + (ad-bc)^2 is a SEPARATE declaration (Int.brahmaguptaFibonacci'), not a corollary of this one: the two are different statements about the same product, and Fermat's descent needs specifically the conjugate, because with c = a and d = b modulo m that grouping's cross terms are ac+bd = a^2+b^2 = 0 and ad-bc = ab-ba = 0, so BOTH are divisible by m, while this grouping's are not.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Int.brahmaguptaFibonacci : ((x0 : Int) -> ((x1 : Int) -> ((x2 : Int) -> ((x3 : Int) -> Eq.{1} Int (Int.mul (Int.add (Int.mul x0 x0) (Int.mul x1 x1)) (Int.add (Int.mul x2 x2) (Int.mul x3 x3))) (Int.add (Int.mul (Int.sub (Int.mul x0 x2) (Int.mul x1 x3)) (Int.sub (Int.mul x0 x2) (Int.mul x1 x3))) (Int.mul (Int.add (Int.mul x0 x3) (Int.mul x1 x2)) (Int.add (Int.mul x0 x3) (Int.mul x1 x2))))))))",
+    "fragment": "Int",
+    "free_symbols": [
+      "x0",
+      "x1",
+      "x2",
+      "x3"
+    ],
+    "kernel_theorem": "Int.brahmaguptaFibonacci"
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:int-add-assoc",
+    "F:int-add-comm",
+    "F:int-mul-comm",
+    "F:int-mul-sub",
+    "F:int-add-neg",
+    "F:int-add-zero",
+    "F:int-left-distrib",
+    "F:int-mul-assoc",
+    "F:int-mul-neg",
+    "F:int-neg-one-mul",
+    "F:int-one-mul",
+    "F:ml430-int-add-mul-66aa025b"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Int.brahmaguptaFibonacci",
+      "kind": "kernel-term",
+      "supports": "Int.brahmaguptaFibonacci is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checkers": [
+        "producing-build (Kernel::add_declaration, inside build_int_prelude)",
+        "int_theorem_inventory re-list of the admitted declaration"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example int_theorem_inventory -- Int.brahmaguptaFibonacci 2>/dev/null | grep -cE '^theorem[[:space:]]+Int\\.brahmaguptaFibonacci[[:space:]]'",
+      "checker_seconds": 12,
+      "kernel_declaration": "Int.brahmaguptaFibonacci",
+      "notes": "Two independent failure modes, so the exit status depends on the finding rather than on the run completing: int_theorem_inventory exits non-zero when the named filter matches nothing, and grep -c exits 1 printing 0 when the anchored line is absent. Anchored with [[:space:]] and never with a backslash-t, which a scripted (GNU) grep reads as a literal t. grep -c rather than grep -q, which would SIGPIPE the producer under pipefail. --release is MANDATORY: this tool builds the constructed carriers and overflows the default debug thread stack. The anchor AFTER the name is load-bearing here, because Int.brahmaguptaFibonacci' is a different declaration whose rendered name has Int.brahmaguptaFibonacci as a prefix."
+    },
+    {
+      "id": "evaluation-Int.brahmaguptaFibonacci",
+      "kind": "instance-pin",
+      "supports": "What the declaration MEANS, settled at concrete small arguments and at free variables. The kernel gate cannot do this, and for the Definition Int.IsSumOfTwoSquares nothing else can.",
+      "check_status": "checked",
+      "checkers": [
+        "crates/axeyum-lean-kernel/src/int_prelude/two_squares_tests.rs (16 tests; every battery asserts what must hold AND what must fail)",
+        "crate::Kernel::add_declaration used as the decision procedure (a probe theorem is admitted or refused, and both outcomes are asserted)",
+        "crate::Kernel::def_eq for the statement-shape comparisons, which have to run at free variables because numerals reduce"
+      ],
+      "checker_command": "cargo test --release -p axeyum-lean-kernel --lib -- int_prelude::two_squares --test-threads=4 2>/dev/null | grep -cE '^test result: ok\\. 16 passed'",
+      "checker_seconds": 300,
+      "artifact": "crates/axeyum-lean-kernel/src/int_prelude/two_squares_tests.rs",
+      "notes": "The count 16 is pinned deliberately: a suite that silently stopped compiling some of these tests would still print ok with a smaller number, and this repository has shipped a gate that ran zero tests for 15 days while exiting 0. Relevant tests for this row: brahmagupta_fibonacci_holds_at_a_concrete_quadruple, the_two_identities_state_the_intended_groupings. MUTATION-MEASURED: transposing both the conjunction and its And.intro in Int.modEq_descent_cross_terms SURVIVED the whole suite (0 kills of 15), because at the worked instance (m,a,b,c,e) = (2,5,1,1,1) both conjuncts reduce to Eq Int 0 0 and the two orderings are definitionally equal there; the_cross_term_conjuncts_are_ordered_as_stated was added in response and kills that mutant with EXACTLY ONE failing test (15 passed, 1 failed)."
+    },
+    {
+      "id": "footprint-Int.brahmaguptaFibonacci",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the integer prelude's trusted surface is empty, which bounds Int.brahmaguptaFibonacci.",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint, asserted per declaration AFTER Environment::contains",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free integer",
+      "checker_seconds": 12,
+      "notes": "The per-declaration assertion lives in two_squares_tests::every_two_squares_declaration_is_present_and_axiom_free, which checks Environment::contains FIRST for all 20 names. An empty footprint is also what a missing name returns, so without the containment check the footprint assertion would pass for a declaration that does not exist. The name list there is written out in full rather than derived from the module, which is a known weakness: it measures this lane's memory of what it declared, not the module's actual output."
+    }
+  ],
+  "provenance": {
+    "date": "2026-09-05",
+    "curation": "curated",
+    "established_by": "the two-squares lane (W3-10, ADR-1633), crates/axeyum-lean-kernel/src/int_prelude/two_squares.rs, admitted by build_int_prelude",
+    "source": "Brahmagupta's identity (Brahmasphutasiddhanta, 628), restated in Fibonacci's Liber Quadratorum (1225); here proved over this repository's CONSTRUCTED Int, with the proof term searched for and emitted by the ring::int producer (ADR-1582) rather than written by hand",
+    "prior_art": [
+      {
+        "who": "Brahmagupta; Fibonacci; Fermat; Euler",
+        "what": "the composition identity for sums of two squares (Brahmagupta 628, restated by Fibonacci 1225), Fermat's theorem on sums of two squares (asserted 1640) and Euler's descent proof (1749)",
+        "year": 1749,
+        "where": "classical number theory; standard textbook material",
+        "attribution": "standard textbook attribution; this lane did not consult the primary sources"
+      }
+    ]
+  },
+  "notes": "The proof term was NOT authored. ring::int::declare (ADR-1582, under ADR-0601's producer discipline) parsed the goal, normalised both sides to a signed sum of monomials and emitted a term the kernel then re-checked; the module carries no mul_comm/left_distrib chain for this statement at all. MEASURED SIDE FINDING, recorded here because it cost this lane a build: the same producer DECLINES any goal whose normal form collapses to zero. add 0 a normalises to the item list [Mono[a], Num(0)] and a to [Mono[a]]; the trailing zero numeral is not dropped, the lists compare unequal, and the search reports NotAnIdentity. Int.zero_add, Int.sub_self, Int.add_sub_cancel_right and Int.mul_sub_mul_comm are hand-proved in the same module for exactly that reason. THE CONCRETE TEST CANNOT SEE AN OPERAND SWAP: (ac-bd)^2 and (bd-ac)^2 are equal at every argument, so a mutation transposing the subtraction is still a TRUE theorem; only the_two_identities_state_the_intended_groupings, which runs at free variables, separates them."
+}

@@ -380,3 +380,56 @@ definition, and say so, or use a checker that fails on absence for the kind it
 is actually checking.
 
 
+## Profiling
+
+**No profiling recipe existed anywhere in this repository before
+2026-09-05** — nothing in `scripts/`, the `justfile`, or this guide invoked
+`perf`, `samply`, `flamegraph`, `dhat`, or `heaptrack`
+([2026-09-05 performance review](../research/11-design-review/2026-09-05-sat-smt-performance-and-architecture-review.md)
+§2.2 item 5). `just profile-samply <path.smt2>` and
+`just profile-perf <path.smt2>` close that gap: both build
+`target/release/examples/smtcomp_cli` and profile one solve of the given
+SMT-LIB file, writing output under `bench-results/local/profiles/`
+(gitignored — see `/bench-results/local/` in `.gitignore`, so a profile is
+never accidentally committed).
+
+- `just profile-samply <smt2>` runs `samply record --save-only` and saves a
+  `.json.gz` you open later with `samply load <file>`.
+- `just profile-perf <smt2>` runs `perf record -g` and saves `.perf.data`
+  (inspect with `perf report -i <file>`); if `flamegraph` is also on the
+  host it renders an SVG alongside it, but a missing `flamegraph` is not
+  fatal — the recipe still saves usable `perf.data` and tells you what to
+  install.
+
+**Absence on `$PATH` is not absence — check `~/.cargo/bin` too.** The same
+trap CLAUDE.md documents for `lean` (`elan` never touches `PATH`) applies to
+`samply` and `flamegraph`, which `cargo install` puts in `~/.cargo/bin`. Both
+recipes check `command -v` **and** `~/.cargo/bin` directly, print a clear
+`install with: cargo install <tool>` (or, for `perf`,
+`apt install linux-tools-common linux-tools-$(uname -r)`) line, and **exit
+nonzero** when the tool is missing — never silent, zero-exit nothing. Measured
+on this host 2026-09-05: `perf` is present at `/usr/bin/perf`; `samply` and
+`flamegraph` are absent from both `$PATH` and `~/.cargo/bin`.
+
+**Pin to performance cores.** Both recipes run the profiled solve under
+`taskset -c 0-7`. This host's hybrid CPU is measured 1.84x slower on the
+E-cores when a benchmark run is left unpinned, and an unpinned run of the
+`progress_frontier` capability ratchet once reported a REGRESSION that was
+purely the E-cores — see
+[frontier-ratchet-reference-frame.md](../research/08-planning/frontier-ratchet-reference-frame.md).
+Adjust the core list if your host's P-core count differs; an E-core-only
+profile attributes time to the wrong lines.
+
+**`cargo-serialized.sh` takes a HOST-WIDE flock, so a slow profiling run may
+be measuring the queue, not the solve.** Both recipes build through
+`scripts/cargo-serialized.sh` rather than a bare `cargo build`, per the
+multi-agent hygiene rule in [CLAUDE.md](../../CLAUDE.md) (concurrent lane
+builds have twice taken a dev box down). That wrapper is the CORRECTNESS
+tool, not the MEASUREMENT tool: if another lane's job holds the lock, this
+recipe's own wall-clock total inflates by however long it waits, and that
+inflation has nothing to do with the profiled binary. Never read a profiling
+recipe's own elapsed time as a result — read the `.json.gz`/`.perf.data` it
+produces, which only measures the pinned `taskset` invocation after the
+build already finished.
+
+

@@ -52,18 +52,28 @@ now. Nothing was deleted.
   (baseline 30), LIA cuts **35** (baseline 26), NIA UNSAT **40** (baseline 40),
   NRA degree **40** (baseline 40), and string bound **40** (baseline 8). These
   are load-sensitive local frontier measurements; they do not raise baselines.
-- The append-only head-to-head ledger currently covers **eleven divisions**.
-  Its weak measured edges are QF_NIA **34/89 = 38.2%**, QF_UFLIA
-  **94/180 = 52.2%**, QF_IDL **68/124 = 54.8%**, QF_LRA
-  **86/146 = 58.9%**, and QF_RDL **105/155 = 67.7%**. Every credited entry has
-  zero disagreements. Read the latest entry per division in
+- The append-only head-to-head ledger currently covers **nine divisions**
+  (QF_SLIA, QF_BV, UF, QF_LIA, QF_RDL, QF_LRA, QF_UFLIA, QF_IDL, QF_NIA — the
+  [2026-08-21 gap analysis](docs/plan/gap-analysis-smt-solvers-2026-08-21.md)
+  §1.3 found the committed `QF_ABV.txt` and `QF_UF.txt` parity lists have never
+  been run). Its weak measured edges, all from the 2026-08-21 sweep at solver
+  commit `cb4a391c9`, are QF_NIA **39/83 = 47.0%**, QF_IDL
+  **66/118 = 55.9%**, QF_UFLIA **113/180 = 62.8%** (up from 94/180 after the
+  theory-core-minimisation fix, ADR-0538), QF_LRA **88/134 = 65.7%**, and
+  QF_RDL **102/148 = 68.9%**. Every credited entry has zero disagreements.
+  Read the latest entry per division, sorted by **solver commit** (not date —
+  two commits share the 2026-08-21 date) in
   [`bench-results/PARITY.md`](bench-results/PARITY.md); never copy an older
-  entry merely because it has a higher score.
-- QF_BV evidence mode decides 130 UNSAT rows: **92/130 certified**,
-  **78/130 rechecked from serialized text alone**, and **92/92 certified rows
-  independently checked against a fresh re-parse and term arena**. Neither
-  check had a failure. The remaining 38 are bare UNSAT decisions because the
-  evidence-producing route could not decide them within 60 seconds.
+  entry merely because it has a higher score. `scripts/check-parity-freshness.py`
+  exits 1 as of the 2026-09-05 performance review: all nine divisions are past
+  the 14-day budget.
+- QF_BV evidence mode decides 130 UNSAT rows: **93/130 certified (71.5%)**,
+  **79/130 rechecked from serialized text alone (60.8%)**, and **93/93
+  certified rows independently checked against a fresh re-parse and term
+  arena**. Neither check had a failure. The remaining 37 are bare UNSAT
+  decisions because the evidence-producing route could not decide them within
+  60 seconds. (`bench-results/PARITY.md`, 2026-08-17T20:21:52Z, solver commit
+  `c799be2f7`.)
 - The broader evidence audit still records **58 uncertified occurrences**,
   **eight independently checked results without Lean reconstruction**, and
   **two QF_NIA `IntPow2` proof-production errors**. Do not combine these

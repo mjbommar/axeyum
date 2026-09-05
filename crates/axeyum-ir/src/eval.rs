@@ -8,6 +8,7 @@ use std::collections::HashMap;
 
 use crate::arena::TermArena;
 use crate::error::IrError;
+use crate::fast_map::FastMap;
 use crate::rational::Rational;
 use crate::sort::{ArraySortKey, Sort, mask};
 use crate::term::{DatatypeId, FuncId, Op, SymbolId, TermId, TermNode};
@@ -17,8 +18,8 @@ use crate::value::{ArrayValue, FuncValue, GenericArrayValue, Value, canonicalize
 /// interpretations), used as evaluator input.
 #[derive(Debug, Clone, Default)]
 pub struct Assignment {
-    bindings: HashMap<SymbolId, Value>,
-    functions: HashMap<FuncId, FuncValue>,
+    bindings: FastMap<SymbolId, Value>,
+    functions: FastMap<FuncId, FuncValue>,
     /// Model-chosen interpretation of real division-by-zero, keyed by the
     /// **numerator** value. SMT-LIB leaves real `(/ x 0)` unspecified (a
     /// consistent function of `x` only); the evaluator's *total* convention is
@@ -34,7 +35,7 @@ pub struct Assignment {
         reason = "deliberate: keeps `Assignment` (embedded in downstream error \
                   types) at one extra word instead of a full inline HashMap"
     )]
-    real_div_zero: Option<Box<HashMap<Rational, Rational>>>,
+    real_div_zero: Option<Box<FastMap<Rational, Rational>>>,
 }
 
 impl Assignment {
@@ -64,9 +65,25 @@ impl Assignment {
         self.functions.get(&func)
     }
 
-    /// Iterates over bound uninterpreted-function interpretations.
+    /// Iterates over bound uninterpreted-function interpretations, ordered by
+    /// `FuncId`.
+    ///
+    /// Sorted rather than raw `HashMap` iteration order deliberately: this is
+    /// a public API and callers across the workspace fold it into model
+    /// output (e.g. `axeyum-py`'s `results.rs`) and dispatch loops
+    /// (`axeyum-solver`), so an order that depends on the hasher would
+    /// violate the "no hash-map iteration order in output" determinism
+    /// promise the moment the hasher (or its seed) changes. The backing map
+    /// is small (one entry per uninterpreted function in a model), so the
+    /// sort is not on any measured hot path.
     pub fn functions(&self) -> impl Iterator<Item = (FuncId, &FuncValue)> + '_ {
-        self.functions.iter().map(|(func, value)| (*func, value))
+        let mut entries: Vec<(FuncId, &FuncValue)> = self
+            .functions
+            .iter()
+            .map(|(func, value)| (*func, value))
+            .collect();
+        entries.sort_by_key(|(func, _)| *func);
+        entries.into_iter()
     }
 
     /// Records the model-chosen value of `(/ numerator 0)` — the interpretation
@@ -87,11 +104,20 @@ impl Assignment {
     }
 
     /// Iterates over the recorded real division-by-zero interpretations
-    /// (`numerator -> quotient`).
+    /// (`numerator -> quotient`), ordered by numerator.
+    ///
+    /// Sorted for the same reason as [`Assignment::functions`]: this crosses
+    /// into model output (`incremental.rs` checks emptiness of this
+    /// iterator, but a future caller that folds it into a printed model
+    /// should not inherit hasher-dependent order silently).
     pub fn real_div_zeros(&self) -> impl Iterator<Item = (Rational, Rational)> + '_ {
-        self.real_div_zero
+        let mut entries: Vec<(Rational, Rational)> = self
+            .real_div_zero
             .iter()
             .flat_map(|map| map.iter().map(|(&n, &q)| (n, q)))
+            .collect();
+        entries.sort();
+        entries.into_iter()
     }
 
     /// Number of bound symbols.
@@ -213,7 +239,7 @@ fn well_founded_default_rec(
 /// Panics if `term` does not belong to `arena`, or on arena corruption
 /// (internal invariant violations).
 pub fn eval(arena: &TermArena, term: TermId, assignment: &Assignment) -> Result<Value, IrError> {
-    let mut memo: HashMap<TermId, Value> = HashMap::new();
+    let mut memo: FastMap<TermId, Value> = FastMap::default();
     eval_with_memo(arena, term, assignment, &mut memo)
 }
 
@@ -235,12 +261,21 @@ pub fn eval(arena: &TermArena, term: TermId, assignment: &Assignment) -> Result<
 /// # Panics
 ///
 /// Same as [`eval`].
-#[allow(clippy::implicit_hasher, clippy::too_many_lines)] // default-hasher memo; explicit evaluator.
-pub fn eval_with_memo(
+///
+/// Generic over the memo's hasher (`S: BuildHasher`) rather than pinned to
+/// `std::collections::HashMap`'s default `RandomState`: this lets [`eval`]
+/// pass a [`crate::FastMap`]-backed memo internally (the hot, per-call-fresh
+/// path) while every existing external caller that still builds a plain
+/// `HashMap<TermId, Value>` (`axeyum-solver`, `axeyum-rewrite`) keeps
+/// compiling unchanged — `RandomState` is just one valid instantiation of
+/// `S`. No `Default` bound: this function only reads/writes an
+/// already-constructed `memo`, never constructs one.
+#[allow(clippy::too_many_lines)]
+pub fn eval_with_memo<S: std::hash::BuildHasher>(
     arena: &TermArena,
     term: TermId,
     assignment: &Assignment,
-    memo: &mut HashMap<TermId, Value>,
+    memo: &mut HashMap<TermId, Value, S>,
 ) -> Result<Value, IrError> {
     // Iterative post-order evaluation with memoization, so deep terms cannot
     // overflow the call stack and shared subterms evaluate once.

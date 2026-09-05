@@ -187,7 +187,7 @@ fn int_prelude_admits_all_declarations() {
 
 /// The integer laws this development **derives** from the axiom-free `Nat`
 /// prelude. Each must be a `Theorem` with an empty axiom footprint.
-fn derived_laws(p: &IntPrelude) -> [crate::NameId; 275] {
+fn derived_laws(p: &IntPrelude) -> [crate::NameId; 294] {
     [
         p.gcd_eq_gcd_ab_witnesses,
         p.gcd_div_gcd_div_gcd,
@@ -483,6 +483,26 @@ fn derived_laws(p: &IntPrelude) -> [crate::NameId; 275] {
         p.order_dvd_totient,
         p.order_pow_eq_of_le,
         p.primitive_root_pow_injective,
+        // `two-squares` lane (W3-10, ADR-1633): `two_squares.rs`.
+        p.is_sum_of_two_squares_intro,
+        p.brahmagupta_fibonacci,
+        p.brahmagupta_fibonacci_swap,
+        p.is_sum_of_two_squares_mul,
+        p.sq_of_two_mul,
+        p.sq_of_two_mul_add_one,
+        p.sq_mod_eq_four_zero_or_one,
+        p.not_is_sum_of_two_squares_of_mod_eq_four_three,
+        p.zero_add,
+        p.sub_self,
+        p.add_sub_cancel_right,
+        p.mul_sub_mul_comm,
+        p.eq_of_sub_eq_zero,
+        p.mul_ne_zero,
+        p.mul_left_cancel_of_ne_zero,
+        p.mod_eq_descent_cross_terms,
+        p.mul_mul_of_mul_mul,
+        p.sq_add_sq_of_mul_left,
+        p.descent_step,
     ]
 }
 
@@ -562,7 +582,7 @@ fn derived_lemmas(p: &IntPrelude) -> [crate::NameId; 48] {
 /// unlike `nat_prelude_tests.rs`, this file had no `definition_names`
 /// counterpart to `derived_laws`/`derived_lemmas` at all, so none of these
 /// twenty-two had ever had their footprint checked.
-fn definition_names(p: &IntPrelude) -> [crate::NameId; 33] {
+fn definition_names(p: &IntPrelude) -> [crate::NameId; 34] {
     [
         // `quadratic-reciprocity-2` lane (ADR-1557).
         p.legendre_sym,
@@ -599,6 +619,8 @@ fn definition_names(p: &IntPrelude) -> [crate::NameId; 33] {
         // `primitive-roots` lane (W1-7, ADR-1598): `mult_order.rs`.
         p.is_order,
         p.is_primitive_root,
+        // `two-squares` lane (W3-10, ADR-1633): `two_squares.rs`.
+        p.is_sum_of_two_squares,
     ]
 }
 
