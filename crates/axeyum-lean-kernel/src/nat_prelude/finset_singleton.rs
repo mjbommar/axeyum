@@ -578,6 +578,78 @@ fn declare_card_eq_zero_of_no_mem(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<
     d.declare_theorem(p.finset_card_eq_zero_of_no_mem_b, ty, value)
 }
 
+/// `Nat.Finset.card_pos_of_memB : ∀ s i, Eq Bool (memB s i) Bool.true →
+/// Lt zero (card s)`.
+///
+/// The converse of [`declare_exists_mem_b_of_card_pos`], and much cheaper —
+/// no search, because the witness is handed in. `lt_bound_of_memB` puts the
+/// index inside the counting range, `Nat.countRange_succ_of_true` peels it off
+/// as a `succ`, and `Nat.countRange_le_of_le` carries the resulting `≥ 1` up
+/// to the set's own bound. `Lt i (bound s)` IS `Le (succ i) (bound s)`, which
+/// is exactly what `countRange_le_of_le` wants, so no bridging step.
+///
+/// Landed with the shelf rather than with its consumer: Hall's induction needs
+/// BOTH directions — this one to refute membership in the `card s = 0` branch,
+/// the search to produce an index in every other branch.
+fn declare_card_pos_of_mem_b(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
+    let p = *p;
+    let nat = d.nat_ty();
+    let fs = finset_ty(d, &p);
+    let tru = d.bool_true();
+
+    let s_fv = d.fresh_fvar();
+    let s = d.kernel().fvar(s_fv);
+    let i_fv = d.fresh_fvar();
+    let i = d.kernel().fvar(i_fv);
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+
+    let mi = fs_mem(d, &p, s, i);
+    let hyp_ty = d.bool_eq(mi, tru);
+
+    let m = fs_mem_fn(d, &p, s);
+    let bs = fs_bound(d, &p, s);
+    let zero = d.zero();
+    let one = d.num(1);
+    let succ_i = d.succ(i);
+
+    let hlt = d.lemma(p.finset_lt_bound_of_mem_b, &[s, i, h]);
+    let peel = d.lemma(p.count_range_succ_of_true, &[m, i, h]);
+    let body_count = count_range(d, &p, m, i);
+    let head_count = count_range(d, &p, m, succ_i);
+    // `1 ≤ succ (countRange m i)`, then rewritten back along `peel`.
+    let zero_le_body = d.lemma(p.zero_le, &[body_count]);
+    let one_le_succ = d.lemma(p.le_succ_succ, &[zero, body_count, zero_le_body]);
+    let succ_body = d.succ(body_count);
+    let back = d.symm(head_count, succ_body, peel);
+    let motive = d.eq_motive(succ_body, &|d, x| {
+        let o = d.num(1);
+        d.le(o, x)
+    });
+    let one_le_head = d.transport(succ_body, motive, one_le_succ, head_count, back);
+    // `Lt i (bound s)` IS `Le (succ i) (bound s)`.
+    let mono = d.lemma(p.count_range_le_of_le, &[m, succ_i, bs, hlt]);
+    let tail_count = count_range(d, &p, m, bs);
+    let proof = d.lemma(
+        p.le_trans,
+        &[one, head_count, tail_count, one_le_head, mono],
+    );
+
+    let card = fs_card(d, &p, s);
+    let concl = d.lt(zero, card);
+    let ty = {
+        let with_h = d.arrow(hyp_ty, concl);
+        let with_i = d.pi_fv(i_fv, nat, with_h);
+        d.pi_fv(s_fv, fs, with_i)
+    };
+    let value = {
+        let with_h = d.lam_fv(h_fv, hyp_ty, proof);
+        let with_i = d.lam_fv(i_fv, nat, with_h);
+        d.lam_fv(s_fv, fs, with_i)
+    };
+    d.declare_theorem(p.finset_card_pos_of_mem_b, ty, value)
+}
+
 /// `Nat.Finset.exists_memB_of_card_pos : ∀ s, Lt zero (card s) →
 /// Exists (fun k => And (Lt k (bound s)) (Eq Bool (memB s k) Bool.true))`.
 ///
@@ -716,6 +788,7 @@ pub(super) fn declare_finset_singleton_all(
     declare_singleton_rules(d, p)?;
     declare_card_singleton(d, p)?;
     declare_card_eq_zero_of_no_mem(d, p)?;
+    declare_card_pos_of_mem_b(d, p)?;
     declare_exists_mem_b_of_card_pos(d, p)?;
     Ok(())
 }

@@ -816,6 +816,12 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.finset_card_singleton,
         p.finset_card_eq_zero_of_no_mem_b,
         p.finset_exists_mem_b_of_card_pos,
+        p.finset_card_pos_of_mem_b,
+        // `hall-singleton` lane: Hall's sufficiency shelf,
+        // `hall_sufficiency.rs` (ADR-1630).
+        p.hall_is_matching_congr,
+        p.hall_exists_is_matching_of_card_le_zero,
+        p.hall_exists_is_matching_singleton,
         p.strong_induction_eq,
         // `inclusion-exclusion-mobius` lane (roadmap W2-19): `subset_sums.rs`
         // (ADR-1624).

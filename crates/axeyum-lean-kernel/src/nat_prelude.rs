@@ -217,6 +217,7 @@ mod graph;
 mod group;
 pub(crate) mod half_ceil_parity;
 mod hall;
+mod hall_sufficiency;
 mod helpers;
 pub mod image_group;
 mod inclusion_exclusion;
@@ -439,6 +440,7 @@ use graph::declare_graph_all;
 use group::declare_group_all;
 use half_ceil_parity::declare_half_ceil_parity_all;
 use hall::declare_hall_all;
+use hall_sufficiency::declare_hall_sufficiency_all;
 use inclusion_exclusion::declare_inclusion_exclusion_all;
 use injective_decide::declare_injective_on_or_duplicate;
 use irrational::{declare_even_of_even_sq, declare_no_rational_sqrt_two};
@@ -6823,6 +6825,40 @@ pub struct NatPrelude {
     /// [`finset_all_below_false_witness`](Self::finset_all_below_false_witness),
     /// never chosen.
     pub finset_exists_mem_b_of_card_pos: NameId,
+    /// `Nat.Finset.card_pos_of_memB : ∀ s i, Eq Bool (memB s i) Bool.true →
+    /// Lt zero (card s)` (ADR-1630) — the converse of
+    /// [`finset_exists_mem_b_of_card_pos`](Self::finset_exists_mem_b_of_card_pos),
+    /// and much cheaper: the witness is handed in, so there is no search.
+    pub finset_card_pos_of_mem_b: NameId,
+
+    // --- Hall's sufficiency (`hall_sufficiency.rs`, ADR-1630) ---------------
+    /// `Nat.Hall.isMatching_congr : ∀ s s' nb f,
+    /// (∀ i, Eq Bool (memB s i) (memB s' i)) → IsMatching s nb f →
+    /// IsMatching s' nb f` — a matching depends only on the index set's
+    /// MEMBERS, never on its stored bound. The index-set twin of
+    /// [`hall_mem_union_over_congr`](Self::hall_mem_union_over_congr), and the
+    /// step that carries a matching built on `union t (sdiff s t)` back to
+    /// `s`.
+    pub hall_is_matching_congr: NameId,
+    /// `Nat.Hall.exists_isMatching_of_card_le_zero : ∀ s nb,
+    /// Le (card s) zero → Exists (fun f => IsMatching s nb f)` — Hall's
+    /// induction at the bottom. The witness is the constant `fun _ => zero`
+    /// and both `IsMatching` conjuncts are vacuous, because
+    /// [`finset_card_pos_of_mem_b`](Self::finset_card_pos_of_mem_b) refutes
+    /// every membership hypothesis.
+    pub hall_exists_is_matching_of_card_le_zero: NameId,
+    /// `Nat.Hall.exists_isMatching_singleton : ∀ a nb,
+    /// HallCondition (singleton a) nb →
+    /// Exists (fun f => IsMatching (singleton a) nb f)` — Hall's base case at
+    /// a one-element index set. `HallCondition` at `t := singleton a` gives
+    /// `1 ≤ card (unionOver nb (singleton a))`, which IS
+    /// `Lt zero (card …)`, so
+    /// [`finset_exists_mem_b_of_card_pos`](Self::finset_exists_mem_b_of_card_pos)
+    /// produces a value and
+    /// [`hall_mem_union_over_elim`](Self::hall_mem_union_over_elim) locates it
+    /// inside `nb a`. The matching is the CONSTANT function at that value;
+    /// injectivity is free because every index in a singleton is `a`.
+    pub hall_exists_is_matching_singleton: NameId,
 
     /// `Nat.strongInduction.{u} : ∀ (motive : Nat → Sort u),
     /// (∀ n, (∀ m, Lt m n → motive m) → motive n) → ∀ n, motive n` —
@@ -8356,6 +8392,12 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             finset_card_singleton: kernel.name_str(finset, "card_singleton"),
             finset_card_eq_zero_of_no_mem_b: kernel.name_str(finset, "card_eq_zero_of_no_memB"),
             finset_exists_mem_b_of_card_pos: kernel.name_str(finset, "exists_memB_of_card_pos"),
+            finset_card_pos_of_mem_b: kernel.name_str(finset, "card_pos_of_memB"),
+            // Hall's sufficiency (`hall_sufficiency.rs`, ADR-1630).
+            hall_is_matching_congr: kernel.name_str(hall, "isMatching_congr"),
+            hall_exists_is_matching_of_card_le_zero: kernel
+                .name_str(hall, "exists_isMatching_of_card_le_zero"),
+            hall_exists_is_matching_singleton: kernel.name_str(hall, "exists_isMatching_singleton"),
             subsets_empty: kernel.name_str(subsets, "empty"),
             subsets_insert_at: kernel.name_str(subsets, "insertAt"),
             subsets_sum_subsets: kernel.name_str(subsets, "sumSubsets"),
@@ -9857,6 +9899,10 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // Hall's marriage theorem, necessity direction (`hall.rs`, ADR-1608).
         // Needs `Nat.Finset.card_le_of_injOn` and `Nat.Graph.andB`.
         declare_hall_all(&mut d, &p)?;
+        // Hall's sufficiency shelf (`hall_sufficiency.rs`, ADR-1630). Needs
+        // `declare_hall_all` immediately above and the empty/singleton shelf
+        // `finset_singleton.rs`.
+        declare_hall_sufficiency_all(&mut d, &p)?;
         // `Nat.strongInduction` (`strong_induction.rs`, ADR-1614). Needs only
         // `Nat.lt_well_founded` and the generic `WellFounded.fix`/`fix_eq`.
         declare_strong_induction_all(&mut d, &p)?;
@@ -10036,6 +10082,9 @@ mod ramsey_tests;
 
 #[cfg(test)]
 mod hall_tests;
+
+#[cfg(test)]
+mod hall_sufficiency_tests;
 
 #[cfg(test)]
 mod inclusion_exclusion_tests;
