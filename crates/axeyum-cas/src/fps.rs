@@ -24,18 +24,36 @@
 //! check of a Cauchy product cheaper than recomputing the Cauchy product, so a
 //! "certificate" for them would be the producer wearing a hat.
 //!
-//! # Out of scope, deliberately
+//! # What is in scope now, and what is still out
 //!
-//! - **Coefficient asymptotics.** Singularity analysis needs complex-analytic
-//!   machinery this crate does not have.
-//! - **Radius of convergence.** Even in the rational case the honest bound is
-//!   `1/max|root|` over the **complex** roots of the denominator; the existing
-//!   Sturm / real-root machinery certifies real roots only, so no exact
-//!   certificate is available and nothing is shipped rather than shipping a
-//!   bound that is wrong on `1/(1+x²)`.
-//! - **P-recursive (holonomic) guessing.** [`guess_linear_recurrence`] fits
-//!   *constant* coefficients only; polynomial-coefficient guessing is a
-//!   different linear system and a different certificate.
+//! Wave two closed the three gaps the first slice named as deliberately open:
+//!
+//! - **Radius of convergence** and **coefficient asymptotics** for the rational
+//!   case live in [`crate::fps_analytic`]. The first slice's reason for shipping
+//!   nothing — that `1/max|root|` ranges over the *complex* roots while Sturm
+//!   certifies only real ones — is dissolved there by working with root
+//!   *moduli* instead of roots. `1/(1+x²)`, named then as the case a
+//!   real-roots-only bound gets wrong, is exact on that route.
+//! - **P-recursive (holonomic) guessing** is [`guess_p_recursive`] below, beside
+//!   the constant-coefficient [`guess_linear_recurrence`] it generalises.
+//!
+//! Still out of scope, and not by oversight:
+//!
+//! - **Multivariate series.** [`FormalPowerSeries`] is one variable. A
+//!   multivariate truncation needs a monomial order, a different notion of
+//!   truncation (total degree or per-variable), and a different certificate
+//!   shape for every identity here.
+//! - **Transcendental singularities.** [`crate::fps_analytic`] is rational-only.
+//!   A radius for `exp`, `log`, or a function with an algebraic branch point
+//!   needs the location of a singularity that is not a polynomial root, and no
+//!   machinery in this crate supplies one.
+//! - **Gruntz-style asymptotic expansion.** Past the leading `C·nᵏ·ρ⁻ⁿ`
+//!   term there is no most-rapidly-varying-subexpression comparison here, so
+//!   full asymptotic series — and the `limit` cases that need them — are
+//!   untouched.
+//! - **Certified asymptotics.** What ships is
+//!   `asymptotic-verified-at-finite-n`: sampled evidence, re-derived by its own
+//!   checker, and explicitly not a proof of a limit.
 
 use core::fmt;
 
@@ -102,6 +120,20 @@ pub enum CertificateError {
     CertificateMismatch,
     /// A denominator polynomial was empty.
     EmptyDenominator,
+    /// The declared polynomial degree disagrees with the coefficient data.
+    DegreeMismatch {
+        /// The degree the certificate declares.
+        declared: usize,
+        /// The largest degree actually carried.
+        found: usize,
+    },
+    /// A P-recursive certificate whose highest-shift polynomial is zero: the
+    /// declared order is inflated, so `equations_checked` overstates the work.
+    LeadingOperatorZero,
+    /// A P-recursive certificate whose operator vanishes at every index it
+    /// checks. Such an operator annihilates anything, so the checker cannot
+    /// fail.
+    VacuousOperator,
 }
 
 impl fmt::Display for CertificateError {
@@ -140,6 +172,15 @@ impl fmt::Display for CertificateError {
                 write!(f, "inner certificate describes a different object")
             }
             CertificateError::EmptyDenominator => write!(f, "empty denominator polynomial"),
+            CertificateError::DegreeMismatch { declared, found } => {
+                write!(f, "declared degree {declared} but carries degree {found}")
+            }
+            CertificateError::LeadingOperatorZero => {
+                write!(f, "the highest-shift polynomial is zero")
+            }
+            CertificateError::VacuousOperator => {
+                write!(f, "the operator vanishes at every index checked")
+            }
         }
     }
 }
@@ -957,11 +998,383 @@ pub fn rational_generating_function(
     Some(result)
 }
 
+// ---------------------------------------------------------------------------
+// P-recursive (holonomic) recurrences
+// ---------------------------------------------------------------------------
+
+/// A **P-recursive** (holonomic) recurrence `Σᵢ pᵢ(n)·a(n+i) = 0` with
+/// polynomial coefficients, together with the terms it is asserted to
+/// annihilate.
+///
+/// This is the polynomial-coefficient generalisation of
+/// [`RecurrenceCertificate`]: there the `cₖ` are constants, here each `pᵢ` is a
+/// polynomial in the index `n`. Factorials, Catalan and central binomial
+/// numbers satisfy one and no constant-coefficient recurrence at all.
+///
+/// [`verify`](PRecursiveCertificate::verify) re-checks the equation at **every**
+/// `n` for which all of `a(n), …, a(n+order)` were supplied, and asserts nothing
+/// about any other `n`. The fields are public because a certificate is data, not
+/// a promise: `verify` is the judge.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct PRecursiveCertificate {
+    /// `coefficients[i]` is `pᵢ` as a coefficient vector in `n`, least
+    /// significant first, with trailing zeros trimmed. An empty vector is the
+    /// zero polynomial.
+    pub coefficients: Vec<Vec<BigRational>>,
+    /// The recurrence order: `coefficients.len() − 1`, so `a(n+order)` is the
+    /// highest-shifted term.
+    pub order: usize,
+    /// The largest degree in `n` of any `pᵢ`.
+    pub degree: usize,
+    /// The number of terms the recurrence was fitted on.
+    pub terms_fitted: usize,
+    /// The terms the recurrence is asserted to annihilate.
+    pub terms: Vec<BigRational>,
+}
+
+impl PRecursiveCertificate {
+    /// Build a certificate from polynomial coefficients and the terms it claims
+    /// to annihilate. Nothing is checked here — call
+    /// [`verify`](PRecursiveCertificate::verify).
+    pub fn new(
+        coefficients: Vec<Vec<BigRational>>,
+        terms: Vec<BigRational>,
+    ) -> PRecursiveCertificate {
+        let coefficients: Vec<Vec<BigRational>> = coefficients.into_iter().map(trim_poly).collect();
+        let degree = coefficients
+            .iter()
+            .map(|poly| poly.len().saturating_sub(1))
+            .max()
+            .unwrap_or(0);
+        PRecursiveCertificate {
+            order: coefficients.len().saturating_sub(1),
+            degree,
+            terms_fitted: terms.len(),
+            coefficients,
+            terms,
+        }
+    }
+
+    /// The number of recurrence equations `verify` actually checks. Zero means
+    /// the certificate is vacuous and `verify` refuses it.
+    pub fn equations_checked(&self) -> usize {
+        self.terms.len().saturating_sub(self.order)
+    }
+
+    /// Re-check the recurrence at every index for which the certificate carries
+    /// all the terms the equation needs.
+    ///
+    /// # Errors
+    ///
+    /// Refuses a certificate whose declared order or degree disagrees with its
+    /// coefficient data, whose declared fitted-term count disagrees with the
+    /// terms it carries, whose leading polynomial `p_order` is zero (which would
+    /// inflate the order and overstate how many equations were checked), whose
+    /// operator vanishes at every index tested (a checker that cannot fail),
+    /// that carries too few terms for a single equation, or that fails the
+    /// recurrence at some index.
+    pub fn verify(&self) -> Result<(), CertificateError> {
+        if self.coefficients.len() != self.order + 1 || self.order == 0 {
+            return Err(CertificateError::OrderMismatch {
+                expected: self.order,
+                found: self.coefficients.len().saturating_sub(1),
+            });
+        }
+        let found_degree = self
+            .coefficients
+            .iter()
+            .map(|poly| trim_poly(poly.clone()).len().saturating_sub(1))
+            .max()
+            .unwrap_or(0);
+        if found_degree != self.degree {
+            return Err(CertificateError::DegreeMismatch {
+                declared: self.degree,
+                found: found_degree,
+            });
+        }
+        if self.terms.len() != self.terms_fitted {
+            return Err(CertificateError::TermCountMismatch {
+                declared: self.terms_fitted,
+                found: self.terms.len(),
+            });
+        }
+        if trim_poly(self.coefficients[self.order].clone()).is_empty() {
+            return Err(CertificateError::LeadingOperatorZero);
+        }
+        if self.terms.len() <= self.order {
+            return Err(CertificateError::VacuousRecurrence {
+                order: self.order,
+                terms: self.terms.len(),
+            });
+        }
+        let equations = self.terms.len() - self.order;
+
+        // An operator that vanishes at every index actually tested annihilates
+        // anything, so it is a checker that cannot fail. Polynomials of degree
+        // below the equation count cannot do this, but the certificate carries
+        // its own polynomials and this guard does not trust them.
+        let live = (0..equations).any(|index| {
+            self.coefficients
+                .iter()
+                .any(|poly| !eval_index_poly(poly, index).is_zero())
+        });
+        if !live {
+            return Err(CertificateError::VacuousOperator);
+        }
+
+        for index in 0..equations {
+            let mut total = zero();
+            for (shift, poly) in self.coefficients.iter().enumerate() {
+                total += eval_index_poly(poly, index) * &self.terms[index + shift];
+            }
+            if !total.is_zero() {
+                return Err(CertificateError::RecurrenceFailed {
+                    index: index + self.order,
+                });
+            }
+        }
+        Ok(())
+    }
+}
+
+/// Drop trailing zero coefficients so a polynomial's degree is unambiguous.
+fn trim_poly(mut poly: Vec<BigRational>) -> Vec<BigRational> {
+    while poly.last().is_some_and(BigRational::is_zero) {
+        poly.pop();
+    }
+    poly
+}
+
+/// Evaluate a coefficient vector in `n` at a non-negative integer index.
+fn eval_index_poly(poly: &[BigRational], index: usize) -> BigRational {
+    let at = from_usize(index);
+    let mut acc = zero();
+    for coeff in poly.iter().rev() {
+        acc = acc * &at + coeff;
+    }
+    acc
+}
+
+/// Why [`guess_p_recursive`] declined.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum PRecursiveDecline {
+    /// No terms were supplied.
+    NoTerms,
+    /// Every `(order, degree)` shape inside the caps has at least as many free
+    /// parameters as it has equations, so any fit would be an interpolation
+    /// rather than evidence. The counts are for the cheapest shape tried.
+    Underdetermined {
+        /// Free parameters `(order+1)·(degree+1)` in the cheapest shape.
+        unknowns: usize,
+        /// Equations `terms − order` available to it.
+        equations: usize,
+    },
+    /// Every over-determined shape inside the caps has only the trivial
+    /// solution: on these terms there is no such recurrence.
+    NoRecurrenceFound {
+        /// The order cap that was searched.
+        max_order: usize,
+        /// The degree cap that was searched.
+        max_degree: usize,
+        /// How many terms were supplied.
+        terms: usize,
+    },
+    /// The producer built a certificate its own checker refused. A bug report,
+    /// not an answer.
+    CertificateRefused(CertificateError),
+}
+
+impl fmt::Display for PRecursiveDecline {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            PRecursiveDecline::NoTerms => write!(f, "no terms supplied"),
+            PRecursiveDecline::Underdetermined {
+                unknowns,
+                equations,
+            } => write!(
+                f,
+                "underdetermined: {unknowns} unknowns against {equations} equations"
+            ),
+            PRecursiveDecline::NoRecurrenceFound {
+                max_order,
+                max_degree,
+                terms,
+            } => write!(
+                f,
+                "no P-recursive recurrence of order <= {max_order} and degree <= {max_degree} \
+                 annihilates these {terms} terms"
+            ),
+            PRecursiveDecline::CertificateRefused(inner) => {
+                write!(f, "the producer's own checker refused: {inner}")
+            }
+        }
+    }
+}
+
+impl core::error::Error for PRecursiveDecline {}
+
+/// Guess a P-recursive (holonomic) recurrence `Σᵢ pᵢ(n)·a(n+i) = 0` for `terms`,
+/// with `order ≤ max_order` and every `deg pᵢ ≤ max_degree`.
+///
+/// **This is a guess certified only on the supplied terms and says nothing
+/// beyond them.** Exactly as for [`guess_linear_recurrence`], a returned
+/// [`PRecursiveCertificate`] means one thing: the recurrence annihilates every
+/// window of terms that was handed in. It is not evidence that the sequence
+/// continues that way, and no amount of agreement on a finite prefix makes it
+/// so.
+///
+/// The fit is the null space of a linear system over ℚ whose row `n` is
+/// `[nᵈ·a(n+i)]` over the `(order+1)·(degree+1)` unknowns. Shapes are tried in
+/// increasing order, then increasing degree, so the answer is the smallest one
+/// that fits; the null-space vector is normalised so its first nonzero entry is
+/// `1`, which makes the result deterministic.
+///
+/// # Errors
+///
+/// Declines with [`PRecursiveDecline::Underdetermined`] — carrying the unknown
+/// and equation counts — when no shape inside the caps has more equations than
+/// unknowns, so any fit would be interpolation; with
+/// [`PRecursiveDecline::NoRecurrenceFound`] when every over-determined shape has
+/// only the trivial solution (the primes land here); and with
+/// [`PRecursiveDecline::NoTerms`] on empty input.
+pub fn guess_p_recursive(
+    terms: &[BigRational],
+    max_order: usize,
+    max_degree: usize,
+) -> Result<PRecursiveCertificate, PRecursiveDecline> {
+    if terms.is_empty() {
+        return Err(PRecursiveDecline::NoTerms);
+    }
+    let mut cheapest: Option<(usize, usize)> = None;
+    let mut attempted = false;
+
+    for order in 1..=max_order.max(1) {
+        if terms.len() <= order {
+            continue;
+        }
+        let equations = terms.len() - order;
+        for degree in 0..=max_degree {
+            let unknowns = (order + 1) * (degree + 1);
+            if cheapest.is_none_or(|(best, _)| unknowns < best) {
+                cheapest = Some((unknowns, equations));
+            }
+            // One spare equation is the least that makes a fit evidence rather
+            // than interpolation.
+            if equations < unknowns + 1 {
+                continue;
+            }
+            attempted = true;
+            let mut rows: Vec<Vec<BigRational>> = Vec::with_capacity(equations);
+            for index in 0..equations {
+                let mut row = Vec::with_capacity(unknowns);
+                for shift in 0..=order {
+                    let mut entry = terms[index + shift].clone();
+                    for _ in 0..=degree {
+                        row.push(entry.clone());
+                        entry *= from_usize(index);
+                    }
+                }
+                rows.push(row);
+            }
+            for vector in rational_null_space(&rows, unknowns) {
+                let Some(pivot) = vector.iter().find(|value| !value.is_zero()) else {
+                    continue;
+                };
+                let normalized: Vec<BigRational> =
+                    vector.iter().map(|value| value / pivot).collect();
+                let coefficients: Vec<Vec<BigRational>> = (0..=order)
+                    .map(|shift| {
+                        normalized[shift * (degree + 1)..(shift + 1) * (degree + 1)].to_vec()
+                    })
+                    .collect();
+                let certificate = PRecursiveCertificate::new(coefficients, terms.to_vec());
+                if certificate.verify().is_ok() {
+                    return Ok(certificate);
+                }
+            }
+        }
+    }
+
+    if attempted {
+        Err(PRecursiveDecline::NoRecurrenceFound {
+            max_order,
+            max_degree,
+            terms: terms.len(),
+        })
+    } else {
+        let (unknowns, equations) = cheapest.unwrap_or((0, 0));
+        Err(PRecursiveDecline::Underdetermined {
+            unknowns,
+            equations,
+        })
+    }
+}
+
+/// A basis of the right null space of an exact ℚ matrix, by Gauss–Jordan
+/// elimination with the pivot columns taken left to right — so the basis, and
+/// therefore every recurrence guessed from it, is deterministic.
+///
+/// Written here over [`BigRational`] rather than reusing the crate's `matrix`
+/// null space, which is over the machine-width `axeyum_ir::Rational`: the terms
+/// this is applied to are factorial- and Catalan-sized, which is exactly where
+/// that arithmetic overflows.
+fn rational_null_space(rows: &[Vec<BigRational>], columns: usize) -> Vec<Vec<BigRational>> {
+    let mut matrix: Vec<Vec<BigRational>> = rows.to_vec();
+    let mut pivot_of_column: Vec<Option<usize>> = vec![None; columns];
+    let mut pivot_row = 0usize;
+    for column in 0..columns {
+        if pivot_row >= matrix.len() {
+            break;
+        }
+        let Some(target) = (pivot_row..matrix.len()).find(|&row| !matrix[row][column].is_zero())
+        else {
+            continue;
+        };
+        matrix.swap(pivot_row, target);
+        let pivot = matrix[pivot_row][column].clone();
+        let scaled: Vec<BigRational> = matrix[pivot_row].iter().map(|v| v / &pivot).collect();
+        matrix[pivot_row] = scaled;
+        let reference = matrix[pivot_row].clone();
+        for row in 0..matrix.len() {
+            if row == pivot_row {
+                continue;
+            }
+            let factor = matrix[row][column].clone();
+            if factor.is_zero() {
+                continue;
+            }
+            for index in 0..columns {
+                let delta = &reference[index] * &factor;
+                matrix[row][index] -= delta;
+            }
+        }
+        pivot_of_column[column] = Some(pivot_row);
+        pivot_row += 1;
+    }
+
+    let mut basis = Vec::new();
+    for free in 0..columns {
+        if pivot_of_column[free].is_some() {
+            continue;
+        }
+        let mut vector = vec![zero(); columns];
+        vector[free] = BigRational::one();
+        for (column, pivot) in pivot_of_column.iter().enumerate() {
+            if let Some(row) = pivot {
+                vector[column] = -matrix[*row][free].clone();
+            }
+        }
+        basis.push(vector);
+    }
+    basis
+}
+
 #[cfg(test)]
 mod tests {
     use super::{
-        CertificateError, FormalPowerSeries, RecurrenceCertificate, TruncationIdentity,
-        guess_linear_recurrence, rational_generating_function,
+        CertificateError, FormalPowerSeries, PRecursiveCertificate, PRecursiveDecline,
+        RecurrenceCertificate, TruncationIdentity, eval_index_poly, guess_linear_recurrence,
+        guess_p_recursive, rational_generating_function,
     };
     use crate::CasExpr;
     use num_bigint::BigInt;
@@ -1623,6 +2036,215 @@ mod tests {
         assert_eq!(
             generating.verify(),
             Err(CertificateError::IdentityFailed { degree: 5 })
+        );
+    }
+
+    // ------------------------------------------------- P-recursive guessing
+
+    fn factorials() -> Vec<BigRational> {
+        rats(&[
+            1, 1, 2, 6, 24, 120, 720, 5040, 40320, 362880, 3628800, 39916800,
+        ])
+    }
+
+    fn catalans() -> Vec<BigRational> {
+        rats(&[1, 1, 2, 5, 14, 42, 132, 429, 1430, 4862, 16796, 58786])
+    }
+
+    fn central_binomials() -> Vec<BigRational> {
+        rats(&[
+            1, 2, 6, 20, 70, 252, 924, 3432, 12870, 48620, 184756, 705432,
+        ])
+    }
+
+    fn motzkins() -> Vec<BigRational> {
+        rats(&[
+            1, 1, 2, 4, 9, 21, 51, 127, 323, 835, 2188, 5798, 15511, 41835, 113634, 310572,
+        ])
+    }
+
+    fn primes() -> Vec<BigRational> {
+        rats(&[
+            2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83,
+            89, 97,
+        ])
+    }
+
+    /// `−p₀(n)/p₁(n)`, the ratio `a(n+1)/a(n)` an order-one recurrence asserts.
+    fn order_one_ratio(certificate: &PRecursiveCertificate, at: usize) -> BigRational {
+        let numerator = eval_index_poly(&certificate.coefficients[0], at);
+        let denominator = eval_index_poly(&certificate.coefficients[1], at);
+        -numerator / denominator
+    }
+
+    #[test]
+    fn p_recursive_guess_recovers_the_factorial_recurrence_a_n_plus_1_equals_n_plus_1_times_a_n() {
+        let certificate = guess_p_recursive(&factorials(), 3, 2).unwrap();
+        assert_eq!(certificate.order, 1);
+        assert_eq!(certificate.degree, 1);
+        assert_eq!(certificate.equations_checked(), 11);
+        // a(4)/a(3) = 4 = n+1 at n = 3.
+        assert_eq!(order_one_ratio(&certificate, 3), r(4));
+        assert_eq!(certificate.verify(), Ok(()));
+    }
+
+    #[test]
+    fn p_recursive_guess_recovers_the_catalan_recurrence_n_plus_2_a_n_plus_1_equals_4n_plus_2_a_n()
+    {
+        let certificate = guess_p_recursive(&catalans(), 3, 2).unwrap();
+        assert_eq!(certificate.order, 1);
+        assert_eq!(certificate.degree, 1);
+        // (4n+2)/(n+2) at n = 3 is 14/5.
+        assert_eq!(order_one_ratio(&certificate, 3), q(14, 5));
+        assert_eq!(certificate.verify(), Ok(()));
+    }
+
+    #[test]
+    fn p_recursive_guess_recovers_the_central_binomial_recurrence() {
+        let certificate = guess_p_recursive(&central_binomials(), 3, 2).unwrap();
+        assert_eq!(certificate.order, 1);
+        assert_eq!(certificate.degree, 1);
+        // (4n+2)/(n+1) at n = 3 is 7/2.
+        assert_eq!(order_one_ratio(&certificate, 3), q(7, 2));
+        assert_eq!(certificate.verify(), Ok(()));
+    }
+
+    #[test]
+    fn p_recursive_guess_recovers_a_second_order_motzkin_recurrence() {
+        // Motzkin numbers are not hypergeometric, so no order-one shape fits and
+        // the search has to reach order two.
+        let certificate = guess_p_recursive(&motzkins(), 3, 2).unwrap();
+        assert_eq!(certificate.order, 2);
+        assert_eq!(certificate.degree, 1);
+        assert_eq!(certificate.equations_checked(), 14);
+        assert_eq!(certificate.verify(), Ok(()));
+    }
+
+    #[test]
+    fn p_recursive_guess_declines_on_the_primes() {
+        assert_eq!(
+            guess_p_recursive(&primes(), 3, 3),
+            Err(PRecursiveDecline::NoRecurrenceFound {
+                max_order: 3,
+                max_degree: 3,
+                terms: 25,
+            })
+        );
+    }
+
+    #[test]
+    fn p_recursive_guess_declines_when_every_shape_is_underdetermined() {
+        // Three terms: the cheapest shape (order 1, degree 0) has two unknowns
+        // and two equations, which is interpolation, not evidence.
+        assert_eq!(
+            guess_p_recursive(&rats(&[1, 2, 3]), 2, 2),
+            Err(PRecursiveDecline::Underdetermined {
+                unknowns: 2,
+                equations: 2,
+            })
+        );
+    }
+
+    #[test]
+    fn p_recursive_guess_declines_on_the_empty_sequence() {
+        assert_eq!(
+            guess_p_recursive(&[], 3, 2),
+            Err(PRecursiveDecline::NoTerms)
+        );
+    }
+
+    #[test]
+    fn constant_coefficient_guessing_only_interpolates_where_p_recursive_finds_structure() {
+        // The factorials are not C-finite, so Berlekamp-Massey cannot find their
+        // structure -- but on twelve terms it does not decline either: it spends
+        // the largest order its own floor(len/2) cut-off allows and fits them by
+        // interpolation. That is exactly what "certified only on the supplied
+        // terms" means, and it is why the P-recursive route is not redundant:
+        // four free parameters against eleven equations, versus six against six.
+        let constant = guess_linear_recurrence(&factorials()).unwrap();
+        let holonomic = guess_p_recursive(&factorials(), 3, 2).unwrap();
+        assert_eq!(constant.order, 6);
+        assert_eq!(constant.equations_checked(), 6);
+        assert_eq!((holonomic.order + 1) * (holonomic.degree + 1), 4);
+        assert_eq!(holonomic.equations_checked(), 11);
+    }
+
+    #[test]
+    fn forged_p_recursive_with_a_wrong_coefficient_is_refused_at_the_first_bad_index() {
+        let mut certificate = guess_p_recursive(&factorials(), 3, 2).unwrap();
+        certificate.coefficients[0][0] += r(1);
+        assert_eq!(
+            certificate.verify(),
+            Err(CertificateError::RecurrenceFailed { index: 1 })
+        );
+    }
+
+    #[test]
+    fn forged_p_recursive_with_a_zero_leading_polynomial_is_refused() {
+        let certificate = PRecursiveCertificate::new(vec![rats(&[1, 1]), Vec::new()], factorials());
+        assert_eq!(
+            certificate.verify(),
+            Err(CertificateError::LeadingOperatorZero)
+        );
+    }
+
+    #[test]
+    fn forged_p_recursive_whose_operator_vanishes_at_every_index_checked_is_refused() {
+        // p₁(n) = n² − n is nonzero as a polynomial but zero at both indices the
+        // three terms let the checker reach, so it annihilates anything.
+        let certificate =
+            PRecursiveCertificate::new(vec![Vec::new(), rats(&[0, -1, 1])], rats(&[1, 2, 3]));
+        assert_eq!(certificate.order, 1);
+        assert_eq!(certificate.equations_checked(), 2);
+        assert_eq!(certificate.verify(), Err(CertificateError::VacuousOperator));
+    }
+
+    #[test]
+    fn forged_p_recursive_with_a_mismatched_declared_degree_is_refused() {
+        let mut certificate = guess_p_recursive(&factorials(), 3, 2).unwrap();
+        certificate.degree = 5;
+        assert_eq!(
+            certificate.verify(),
+            Err(CertificateError::DegreeMismatch {
+                declared: 5,
+                found: 1
+            })
+        );
+    }
+
+    #[test]
+    fn forged_p_recursive_with_a_mismatched_declared_order_is_refused() {
+        let mut certificate = guess_p_recursive(&factorials(), 3, 2).unwrap();
+        certificate.order = 2;
+        assert_eq!(
+            certificate.verify(),
+            Err(CertificateError::OrderMismatch {
+                expected: 2,
+                found: 1
+            })
+        );
+    }
+
+    #[test]
+    fn forged_p_recursive_with_a_mismatched_fitted_term_count_is_refused() {
+        let mut certificate = guess_p_recursive(&factorials(), 3, 2).unwrap();
+        certificate.terms_fitted = 99;
+        assert_eq!(
+            certificate.verify(),
+            Err(CertificateError::TermCountMismatch {
+                declared: 99,
+                found: 12
+            })
+        );
+    }
+
+    #[test]
+    fn p_recursive_certificate_with_no_equation_to_check_is_refused_as_vacuous() {
+        let certificate = PRecursiveCertificate::new(vec![rats(&[1]), rats(&[1])], rats(&[1]));
+        assert_eq!(certificate.equations_checked(), 0);
+        assert_eq!(
+            certificate.verify(),
+            Err(CertificateError::VacuousRecurrence { order: 1, terms: 1 })
         );
     }
 }
