@@ -2482,3 +2482,81 @@ declaration-spec:
 proof-plan:
     python3 scripts/check-proof-plan.py
     python3 scripts/tests/test-proof-plan-check.py
+
+# Profiling recipes (docs/plan/global/20-next-actions.md A12; 2026-09-05
+# performance review recommendation 8,
+# docs/research/11-design-review/2026-09-05-sat-smt-performance-and-architecture-review.md).
+# Both build target/release/examples/smtcomp_cli through
+# scripts/cargo-serialized.sh -- NOT a bare `cargo build`, because concurrent
+# lane builds have twice taken a dev box down (CLAUDE.md multi-agent hygiene).
+# That wrapper takes a HOST-WIDE flock, so if this recipe is slow, you are
+# measuring the queue behind another lane's job, not the profiled solve --
+# see the "Profiling" section of
+# docs/contributor-guide/measurement-hazards.md and never read a profiling
+# recipe's own wall-clock total as a timing result. The solve itself is
+# pinned to performance cores 0-7 with `taskset` (this host's hybrid CPU
+# is 1.84x slower on the E-cores unpinned, per
+# docs/research/08-planning/frontier-ratchet-reference-frame.md); adjust the
+# core list to your host's P-core count if it differs. Output goes under
+# bench-results/local/profiles/ (gitignored -- see `/bench-results/local/`
+# in .gitignore).
+#
+# Absence on `$PATH` is not absence: `command -v` alone missed `lean` on a
+# host that had it (elan does not touch PATH), so both recipes also check
+# `~/.cargo/bin` directly before declaring a tool missing.
+profile-samply smt2:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    SAMPLY=""
+    if command -v samply >/dev/null 2>&1; then
+        SAMPLY="$(command -v samply)"
+    elif [ -x "$HOME/.cargo/bin/samply" ]; then
+        SAMPLY="$HOME/.cargo/bin/samply"
+    fi
+    if [ -z "$SAMPLY" ]; then
+        echo "samply not found on \$PATH or in ~/.cargo/bin -- install with: cargo install samply" >&2
+        exit 1
+    fi
+    if [ ! -f "{{ smt2 }}" ]; then
+        echo "no such file: {{ smt2 }}" >&2
+        exit 2
+    fi
+    scripts/cargo-serialized.sh build --release -p axeyum-bench --example smtcomp_cli
+    mkdir -p bench-results/local/profiles
+    stamp="$(basename "{{ smt2 }}" .smt2)-samply-$(date -u +%Y%m%dT%H%M%SZ)"
+    out="bench-results/local/profiles/${stamp}.json.gz"
+    taskset -c 0-7 "$SAMPLY" record --save-only -o "$out" -- target/release/examples/smtcomp_cli "{{ smt2 }}"
+    echo "samply profile saved: $out (open with: samply load $out)"
+
+profile-perf smt2:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if ! command -v perf >/dev/null 2>&1; then
+        echo "perf not found on \$PATH -- install with: sudo apt install linux-tools-common linux-tools-\$(uname -r)" >&2
+        exit 1
+    fi
+    if [ ! -f "{{ smt2 }}" ]; then
+        echo "no such file: {{ smt2 }}" >&2
+        exit 2
+    fi
+    FLAMEGRAPH=""
+    if command -v flamegraph >/dev/null 2>&1; then
+        FLAMEGRAPH="$(command -v flamegraph)"
+    elif [ -x "$HOME/.cargo/bin/flamegraph" ]; then
+        FLAMEGRAPH="$HOME/.cargo/bin/flamegraph"
+    fi
+    scripts/cargo-serialized.sh build --release -p axeyum-bench --example smtcomp_cli
+    mkdir -p bench-results/local/profiles
+    stamp="$(basename "{{ smt2 }}" .smt2)-perf-$(date -u +%Y%m%dT%H%M%SZ)"
+    perf_data="bench-results/local/profiles/${stamp}.perf.data"
+    taskset -c 0-7 perf record -g -o "$perf_data" -- target/release/examples/smtcomp_cli "{{ smt2 }}"
+    echo "perf record saved: $perf_data (inspect with: perf report -i $perf_data)"
+    if [ -n "$FLAMEGRAPH" ]; then
+        svg="bench-results/local/profiles/${stamp}.svg"
+        taskset -c 0-7 "$FLAMEGRAPH" --perfdata "$perf_data" -o "$svg" 2>&1 || {
+            echo "flamegraph found at $FLAMEGRAPH but rendering failed -- $perf_data is still usable with 'perf report'" >&2
+        }
+        [ -f "$svg" ] && echo "flamegraph saved: $svg"
+    else
+        echo "flamegraph not found on \$PATH or in ~/.cargo/bin -- install with: cargo install flamegraph (renders an SVG from \$perf_data; perf.data alone is still usable with 'perf report')" >&2
+    fi
