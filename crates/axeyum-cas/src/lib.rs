@@ -21071,6 +21071,40 @@ mod tests {
         ));
     }
 
+    /// A `k/k` factor inside a limit at `∞` cancels through the normal form, and
+    /// a quotient that is NOT a common factor (`k/(k+1)`) survives — checked at a
+    /// point where cancelling it would give the wrong answer.
+    #[test]
+    fn limits_cancel_a_common_factor_but_not_a_shifted_one() {
+        let k = || v("k");
+        // The Gosper antidifference of `k·p·qᵏ`, wrapped in a removable `k/k`.
+        let term = CasExpr::Mul(vec![
+            k(),
+            CasExpr::rat(1, 3),
+            geometric_power(Rational::new(2, 3), "k"),
+        ]);
+        let antidifference = gosper_sum(&term, "k").expect("geometric Gosper sum");
+        let with_pole = CasExpr::Div(Box::new(k() * antidifference.clone()), Box::new(k()));
+        assert_equal(
+            &limit(&with_pole, "k", LimitPoint::PosInfinity).unwrap(),
+            &CasExpr::zero(),
+        );
+        // …and the whole sum lands: Σ_{k≥1} k·(1/3)·(2/3)ᵏ = 2.
+        assert_equal(
+            &infinite_sum(&term, "k", &CasExpr::int(1)).unwrap(),
+            &CasExpr::int(2),
+        );
+        // `k/(k+1)` is not a `k/k`: at `k → 0` it is 0, not 1.
+        let shifted = k() / (k() + CasExpr::int(1));
+        assert_equal(
+            &limit(&shifted, "k", LimitPoint::Finite(Rational::zero())).unwrap(),
+            &CasExpr::zero(),
+        );
+        assert_equal(
+            &limit(&shifted, "k", LimitPoint::PosInfinity).unwrap(),
+            &CasExpr::one(),
+        );
+    }
 
     #[test]
     fn finite_products_over_concrete_bounds() {
