@@ -97,7 +97,7 @@ is what makes any of it citable.
       root enclosures. `interval_arith.rs` exists and is not wired in. Serves
       02, 03, 11, and answers the computable-analysis seat's W1-12 complaint
       without running series inside the kernel.
-- [ ] **3. Formal power series and generating functions as an object.**
+- [~] **3. Formal power series and generating functions as an object.** *Object, composition, reversion, rational expansion and Berlekamp–Massey landed 2026-09-05 (`fps.rs`); coefficient asymptotics and radius of convergence still open.*
       Radius of convergence, composition, coefficient extraction, coefficient
       asymptotics, recurrence guessing from initial terms. The private
       `series.rs::Series` struct becomes public. Serves 07, 02, and the
@@ -160,6 +160,7 @@ discipline.**
 | date | change | evidence |
 |---|---|---|
 | 2026-09-05 | File created. Baseline: 80,851 lines, 55 modules, 691 `pub fn`, 1,006 tests, `i128` core, `f64` `evalf`; residue 61/16/45. Ten absence probes run with four positive controls; the two single-file hits (`gaussian_int`, `schreier`) were a test name and an Artin–Schreier doc comment, not capability. Capability-parity work has been paused since wave 24 (2026-07-22); all CAS commits since 2026-08-26 are trust work. | `8f6c58420`; `python3 scripts/check-cas-internal-residue.py --report` |
+| 2026-09-05 | **Item 3 landed, first slice** (lane `cas-fps`, merged `3e6dd2b46`): `fps.rs`, a truncated ℚ[[x]] over `BigRational` with inverse, composition, compositional reversion, exact rational-function expansion, recurrence unrolling, Berlekamp–Massey guessing (recovers Fibonacci, Lucas, Padovan; declines on the primes) and a certified rational generating function. Three `TruncationIdentity` certificates plus a `RecurrenceCertificate`; 18 guards, each killing exactly one test after the lane found five that rejected through each other on its first sweep. Reused `series_coefficients` (so no transcendental expansion was duplicated) and re-derived the reversion recurrence over bignums because the i128 one overflows on Catalan. Radius of convergence deliberately not shipped: the rational case needs complex roots and Sturm certifies only real ones. | `fps::` 48 passed; crate sweep 989 passed, 0 failed; clippy exit 0 |
 
 ## How to re-measure
 
