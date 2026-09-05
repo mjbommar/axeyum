@@ -300,6 +300,7 @@ pub mod subgroup_setoid;
 mod subset_product;
 mod subset_search;
 mod subset_sum;
+mod subset_sums;
 mod sum_range_permute;
 mod testbit_bitwise;
 mod totient;
@@ -535,6 +536,7 @@ use strong_induction::declare_strong_induction_all;
 use subset_product::{declare_pigeonhole_p_all, declare_prod_range_if_all};
 use subset_search::declare_subset_search_all;
 use subset_sum::declare_subset_sum_all;
+use subset_sums::declare_subset_sums_all;
 use sum_range_permute::declare_sum_range_permute_all;
 use testbit_bitwise::declare_testbit_bitwise_all;
 use totient::declare_totient_all;
@@ -6840,6 +6842,95 @@ pub struct NatPrelude {
     /// `AlgS.sub`/`sub_self`, and the two generic theorems `AlgS.neg_neg`/
     /// `AlgS.mul_zero`.
     pub structures_s_extra: StructuresSExtraNames,
+
+    // --- subset-indexed sums (`subset_sums.rs`, ADR-1624) -------------------
+    /// `Nat.Subsets.empty : Nat → Bool := fun _ => false` — the empty subset,
+    /// as a decidable membership predicate. A subset here is a predicate, NOT
+    /// a [`Nat.Finset`](Self::finset): the split law below has to be `Eq.refl`
+    /// and two `Nat.Finset`s with the same members are not `Eq`.
+    pub subsets_empty: NameId,
+    /// `Nat.Subsets.insertAt n s := fun i => if beq i n then true else s i`.
+    pub subsets_insert_at: NameId,
+    /// `Nat.Subsets.sumSubsets : Nat → ((Nat → Bool) → Nat) → Nat` — the sum
+    /// of `F` over ALL `2^n` subsets of `[0,n)`, by recursion on the width.
+    pub subsets_sum_subsets: NameId,
+    /// `Nat.Subsets.sumSel : Nat → ((Nat → Bool) → Nat) → Bool → Nat` — the
+    /// same sum restricted to subsets of a given CARDINALITY PARITY (`true`
+    /// is even, and the empty set is even). `Nat` has no negatives, so the
+    /// alternating sum lands as the graded pair
+    /// `(sumSel n F true, sumSel n F false)`, ADR-1619's Möbius shape.
+    pub subsets_sum_sel: NameId,
+    /// `Nat.Subsets.sumSelPos : Nat → ((Nat → Bool) → Nat) → Bool → Nat` —
+    /// [`subsets_sum_sel`](Self::subsets_sum_sel) over the NON-EMPTY subsets.
+    pub subsets_sum_sel_pos: NameId,
+    /// `Nat.Subsets.Supported s n := ∀ i, Le n i → Eq Bool (s i) false` — the
+    /// invariant every set the fold enumerates satisfies, and the hypothesis
+    /// [`subsets_sum_sel_congr`](Self::subsets_sum_sel_congr) is stated over.
+    pub subsets_supported: NameId,
+    /// `Nat.Subsets.sumSubsets_zero : ∀ F, sumSubsets 0 F = F empty` — refl.
+    pub subsets_sum_subsets_zero: NameId,
+    /// `Nat.Subsets.sumSubsets_succ : ∀ F n, sumSubsets (succ n) F =
+    /// sumSubsets n F + sumSubsets n (fun s => F (insertAt n s))` — THE SPLIT
+    /// LAW, and the reusable primitive of ADR-1624. `Eq.refl`.
+    pub subsets_sum_subsets_succ: NameId,
+    /// `Nat.Subsets.sumSel_zero : ∀ F b,
+    /// sumSel 0 F b = bool_select_nat b (F empty) 0` — refl.
+    pub subsets_sum_sel_zero: NameId,
+    /// `Nat.Subsets.sumSel_succ : ∀ F n b, sumSel (succ n) F b =
+    /// sumSel n F b + sumSel n (fun s => F (insertAt n s)) (notB b)` — the
+    /// GRADED split law: adding an element flips the parity. `Eq.refl`.
+    pub subsets_sum_sel_succ: NameId,
+    /// `Nat.Subsets.sumSelPos_zero : ∀ F b, sumSelPos 0 F b = 0` — refl.
+    pub subsets_sum_sel_pos_zero: NameId,
+    /// `Nat.Subsets.sumSelPos_succ : ∀ F n b, sumSelPos (succ n) F b =
+    /// sumSelPos n F b + sumSel n (fun s => F (insertAt n s)) (notB b)` —
+    /// refl. Every subset containing `n` is non-empty, so the high half is
+    /// the UNRESTRICTED `sumSel`.
+    pub subsets_sum_sel_pos_succ: NameId,
+    /// `Nat.Subsets.supported_empty : ∀ n, Supported empty n`.
+    pub subsets_supported_empty: NameId,
+    /// `Nat.Subsets.supported_succ : ∀ s n, Supported s n →
+    /// Supported s (succ n)`.
+    pub subsets_supported_succ: NameId,
+    /// `Nat.Subsets.supported_insertAt : ∀ s n, Supported s n →
+    /// Supported (insertAt n s) (succ n)`.
+    pub subsets_supported_insert_at: NameId,
+    /// `Nat.Subsets.sumSel_congr : ∀ n F G b,
+    /// (∀ s, Supported s n → F s = G s) → sumSel n F b = sumSel n G b` — two
+    /// summands agreeing on the SUPPORTED predicates give equal sums. The
+    /// lemma every width-indexed summand consumes.
+    pub subsets_sum_sel_congr: NameId,
+    /// `Nat.Subsets.sumSel_add : ∀ n F,
+    /// sumSel n F true + sumSel n F false = sumSubsets n F` — the grading is
+    /// a partition.
+    pub subsets_sum_sel_add: NameId,
+    /// `Nat.Subsets.sumSel_mul_right : ∀ n F c b,
+    /// sumSel n (fun s => F s * c) b = sumSel n F b * c` — the scaling law
+    /// inclusion–exclusion's step uses to pull the new element's indicator out
+    /// of the "with `n`" half of the split.
+    pub subsets_sum_sel_mul_right: NameId,
+    /// `Nat.Subsets.sumSel_swap : ∀ n G b m,
+    /// sumSel n (fun s => sumRange (fun v => G s v) m) b =
+    /// sumRange (fun v => sumSel n (fun s => G s v) b) m` — the subset sum
+    /// commutes with a range sum.
+    pub subsets_sum_sel_swap: NameId,
+    /// `Nat.Subsets.sumSel_false_eq_pos : ∀ n F,
+    /// sumSel n F false = sumSelPos n F false` — the empty set is even, so it
+    /// never contributes to the odd side.
+    pub subsets_sum_sel_false_pos: NameId,
+    /// `Nat.Subsets.sumSel_true_eq_empty_add_pos : ∀ n F,
+    /// sumSel n F true = F empty + sumSelPos n F true`.
+    pub subsets_sum_sel_true_split: NameId,
+    /// `Nat.Subsets.sumSubsets_card : ∀ n, sumSubsets n (fun _ => 1) = pow 2 n`
+    /// -- the fold really does visit `2^n` subsets. The split law is `refl` in
+    /// any enumeration that recurses on the width, so this is what pins the
+    /// COUNT.
+    pub subsets_sum_subsets_card: NameId,
+    /// `Nat.Subsets.sumSel_const : ∀ c n,
+    /// sumSel (succ n) (fun _ => c) true = sumSel (succ n) (fun _ => c) false`
+    /// -- THE ALTERNATING SUM OVER A NON-EMPTY GROUND SET VANISHES, in `Nat`'s
+    /// graded form. `add_comm` and nothing else, once the split law is free.
+    pub subsets_sum_sel_const: NameId,
 }
 
 /// Declare the natural-number prelude into `kernel`'s environment, returning the
@@ -7020,6 +7111,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         let graph = kernel.name_str(nat, "Graph");
         let hall = kernel.name_str(nat, "Hall");
         let finset = kernel.name_str(nat, "Finset");
+        let subsets = kernel.name_str(nat, "Subsets");
         let primrec = kernel.name_str(nat, "Primrec");
         let rm = kernel.name_str(nat, "RM");
         let cases_on_uparam_name = {
@@ -8005,6 +8097,29 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             finset_mem_b_decode_encode: kernel.name_str(finset, "memB_decode_encode"),
             finset_exists_subset_of_search: kernel.name_str(finset, "existsSubset_of_search"),
             finset_forall_subset_of_search: kernel.name_str(finset, "forallSubset_of_search"),
+            subsets_empty: kernel.name_str(subsets, "empty"),
+            subsets_insert_at: kernel.name_str(subsets, "insertAt"),
+            subsets_sum_subsets: kernel.name_str(subsets, "sumSubsets"),
+            subsets_sum_sel: kernel.name_str(subsets, "sumSel"),
+            subsets_sum_sel_pos: kernel.name_str(subsets, "sumSelPos"),
+            subsets_supported: kernel.name_str(subsets, "Supported"),
+            subsets_sum_subsets_zero: kernel.name_str(subsets, "sumSubsets_zero"),
+            subsets_sum_subsets_succ: kernel.name_str(subsets, "sumSubsets_succ"),
+            subsets_sum_sel_zero: kernel.name_str(subsets, "sumSel_zero"),
+            subsets_sum_sel_succ: kernel.name_str(subsets, "sumSel_succ"),
+            subsets_sum_sel_pos_zero: kernel.name_str(subsets, "sumSelPos_zero"),
+            subsets_sum_sel_pos_succ: kernel.name_str(subsets, "sumSelPos_succ"),
+            subsets_supported_empty: kernel.name_str(subsets, "supported_empty"),
+            subsets_supported_succ: kernel.name_str(subsets, "supported_succ"),
+            subsets_supported_insert_at: kernel.name_str(subsets, "supported_insertAt"),
+            subsets_sum_sel_congr: kernel.name_str(subsets, "sumSel_congr"),
+            subsets_sum_sel_add: kernel.name_str(subsets, "sumSel_add"),
+            subsets_sum_sel_mul_right: kernel.name_str(subsets, "sumSel_mul_right"),
+            subsets_sum_sel_swap: kernel.name_str(subsets, "sumSel_swap"),
+            subsets_sum_sel_false_pos: kernel.name_str(subsets, "sumSel_false_eq_pos"),
+            subsets_sum_sel_true_split: kernel.name_str(subsets, "sumSel_true_eq_empty_add_pos"),
+            subsets_sum_subsets_card: kernel.name_str(subsets, "sumSubsets_card"),
+            subsets_sum_sel_const: kernel.name_str(subsets, "sumSel_const"),
             strong_induction: kernel.name_str(nat, "strongInduction"),
             strong_induction_eq: kernel.name_str(nat, "strongInduction_eq"),
             dvd_b: kernel.name_str(nat, "dvdB"),
@@ -9483,6 +9598,12 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // (`squarefree.rs`) and `Nat.factorization`/`Nat.Multiset.card`
         // (`factorization_multiset.rs`, `multiset.rs`).
         declare_arith_functions_family_all(&mut d, &p)?;
+        // Subset-indexed sums and their split law (`subset_sums.rs`,
+        // ADR-1624). Needs `Nat.rec` at level 1, `Nat.beq`, `Nat.Graph.notB`
+        // (so it goes after `declare_graph_all`) and the elementary `add`
+        // lemmas `add_zero`/`add_comm`/`add_add_add_comm`. Deliberately does
+        // NOT need `Nat.Finset`: a subset here is a `Nat -> Bool` predicate.
+        declare_subset_sums_all(&mut d, &p)?;
         Ok(p)
     })();
     match built {
@@ -9624,6 +9745,8 @@ mod hall_tests;
 
 #[cfg(test)]
 mod subset_search_tests;
+#[cfg(test)]
+mod subset_sums_tests;
 
 #[cfg(test)]
 mod multiset_tests;

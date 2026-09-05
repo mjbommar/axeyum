@@ -178,7 +178,7 @@ pub(super) fn list(p: &ListPrelude) -> Fields {
     }
 }
 
-/// The `NatPrelude` field table (1324 names,
+/// The `NatPrelude` field table (1347 names,
 /// 0 name lists, 1 sub-packages).
 ///
 /// 113 of the names come from ADR-1512 per-module registries and
@@ -1912,6 +1912,29 @@ pub(super) fn nat(p: &NatPrelude) -> Fields {
                 "structures_s_extra.hom_first_iso",
                 p.structures_s_extra.hom_first_iso,
             ),
+            ("subsets_empty", p.subsets_empty),
+            ("subsets_insert_at", p.subsets_insert_at),
+            ("subsets_sum_subsets", p.subsets_sum_subsets),
+            ("subsets_sum_sel", p.subsets_sum_sel),
+            ("subsets_sum_sel_pos", p.subsets_sum_sel_pos),
+            ("subsets_supported", p.subsets_supported),
+            ("subsets_sum_subsets_zero", p.subsets_sum_subsets_zero),
+            ("subsets_sum_subsets_succ", p.subsets_sum_subsets_succ),
+            ("subsets_sum_sel_zero", p.subsets_sum_sel_zero),
+            ("subsets_sum_sel_succ", p.subsets_sum_sel_succ),
+            ("subsets_sum_sel_pos_zero", p.subsets_sum_sel_pos_zero),
+            ("subsets_sum_sel_pos_succ", p.subsets_sum_sel_pos_succ),
+            ("subsets_supported_empty", p.subsets_supported_empty),
+            ("subsets_supported_succ", p.subsets_supported_succ),
+            ("subsets_supported_insert_at", p.subsets_supported_insert_at),
+            ("subsets_sum_sel_congr", p.subsets_sum_sel_congr),
+            ("subsets_sum_sel_add", p.subsets_sum_sel_add),
+            ("subsets_sum_sel_mul_right", p.subsets_sum_sel_mul_right),
+            ("subsets_sum_sel_swap", p.subsets_sum_sel_swap),
+            ("subsets_sum_sel_false_pos", p.subsets_sum_sel_false_pos),
+            ("subsets_sum_sel_true_split", p.subsets_sum_sel_true_split),
+            ("subsets_sum_subsets_card", p.subsets_sum_subsets_card),
+            ("subsets_sum_sel_const", p.subsets_sum_sel_const),
         ],
         lists: Vec::new(),
     }

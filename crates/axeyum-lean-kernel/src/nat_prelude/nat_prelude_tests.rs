@@ -683,6 +683,15 @@ fn definition_names(p: &NatPrelude) -> Vec<NameId> {
         p.finset_encode,
         p.finset_any_subset,
         p.strong_induction,
+        // `inclusion-exclusion-mobius` lane (roadmap W2-19): `subset_sums.rs`
+        // (ADR-1624). `Supported` is a `Prop`-valued `Definition`, so it lands
+        // in this list rather than the theorem one.
+        p.subsets_empty,
+        p.subsets_insert_at,
+        p.subsets_sum_subsets,
+        p.subsets_sum_sel,
+        p.subsets_sum_sel_pos,
+        p.subsets_supported,
         // `arithmetic-functions` lane (roadmap W2-18): `arith_functions.rs`
         // and `arith_functions_family.rs` (ADR-1619).
         p.dvd_b,
@@ -768,6 +777,25 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.finset_exists_subset_of_search,
         p.finset_forall_subset_of_search,
         p.strong_induction_eq,
+        // `inclusion-exclusion-mobius` lane (roadmap W2-19): `subset_sums.rs`
+        // (ADR-1624).
+        p.subsets_sum_subsets_zero,
+        p.subsets_sum_subsets_succ,
+        p.subsets_sum_sel_zero,
+        p.subsets_sum_sel_succ,
+        p.subsets_sum_sel_pos_zero,
+        p.subsets_sum_sel_pos_succ,
+        p.subsets_supported_empty,
+        p.subsets_supported_succ,
+        p.subsets_supported_insert_at,
+        p.subsets_sum_sel_congr,
+        p.subsets_sum_sel_add,
+        p.subsets_sum_sel_mul_right,
+        p.subsets_sum_sel_swap,
+        p.subsets_sum_sel_false_pos,
+        p.subsets_sum_sel_true_split,
+        p.subsets_sum_subsets_card,
+        p.subsets_sum_sel_const,
         // `arithmetic-functions` lane (roadmap W2-18): `arith_functions.rs`
         // and `arith_functions_family.rs` (ADR-1619).
         p.dvd_of_dvd_b,
