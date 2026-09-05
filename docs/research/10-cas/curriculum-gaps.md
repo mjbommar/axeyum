@@ -1,3 +1,6 @@
+> **Historical as of 2026-09-05; the live priority list is
+> [docs/math-department/13-computer-algebra.md](../../math-department/13-computer-algebra.md).**
+
 # Curriculum coverage gaps — union of the per-branch reviews
 
 Status: roadmap synthesis (2026-07-20)
