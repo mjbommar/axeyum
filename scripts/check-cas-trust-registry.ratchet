@@ -17,7 +17,7 @@
 # only rises on purpose) -- but a new UNCERTIFIED function is never refused;
 # that label is honest, not a violation. See
 # docs/math-department/13-computer-algebra.md item 10.
-COUNT	78
+COUNT	84
 FN	enclosure::enclose	Option<Enclosure>
 FN	enclosure::enclose_constant	Option<Enclosure>
 FN	enclosure::enclose_root	Option<Enclosure>
@@ -29,9 +29,13 @@ FN	fps::FormalPowerSeries::from_rational_function	Option<(FormalPowerSeries, Tru
 FN	fps::FormalPowerSeries::from_recurrence	Option<(FormalPowerSeries, RecurrenceCertificate)>
 FN	fps::FormalPowerSeries::inverse	Option<(FormalPowerSeries, TruncationIdentity)>
 FN	fps::FormalPowerSeries::reversion	Option<(FormalPowerSeries, TruncationIdentity)>
+FN	fps::PRecursiveCertificate::new	PRecursiveCertificate
 FN	fps::RecurrenceCertificate::new	RecurrenceCertificate
 FN	fps::guess_linear_recurrence	Option<RecurrenceCertificate>
+FN	fps::guess_p_recursive	Result<PRecursiveCertificate, PRecursiveDecline>
 FN	fps::rational_generating_function	Option<RationalGeneratingFunction>
+FN	fps_analytic::coefficient_asymptotics	Result<CoefficientAsymptotics, AnalyticDecline>
+FN	fps_analytic::radius_of_convergence	Result<RadiusCertificate, AnalyticDecline>
 FN	geometry_beyond::Conic::through_five_points	Result<(Conic, ConicFiveCertificate), ConicRefusal>
 FN	geometry_beyond::certify_preserves_distance	DistancePreservingCertificate
 FN	geometry_certify::DegenerateWitness::rational	DegenerateWitness
@@ -86,6 +90,8 @@ FN	probability::markov_bound	Certificate
 FN	prove_derivative	ZeroTest
 FN	qe::decide_exists	Decision
 FN	qe::decide_forall	ForallDecision
+FN	qe_bivariate::eliminate_y	Result<ProjectionCertificate, Fault>
+FN	qe_dnf::decide_exists_dnf	DnfDecision
 FN	rationality::decide_rationality	Option<RationalityCertificate>
 FN	real_algebraic::polynomial_ivt	Option<IvtCertificate>
 FN	sos::check	Result<CheckReport, String>
@@ -104,11 +110,13 @@ VOCAB	BinaryExtensionLongCycleTraceReport	struct
 VOCAB	BinaryExtensionLongCycleTraceShardReport	struct
 VOCAB	BinaryExtensionWittShiftedTraceReport	struct
 VOCAB	CayleyTableCertificate	struct
+VOCAB	CellCertificate	struct
 VOCAB	CenterCertificate	struct
 VOCAB	Certificate	struct
 VOCAB	CertifiedIntegral	struct
 VOCAB	CheckReport	struct
 VOCAB	ClosedFormReport	struct
+VOCAB	CoefficientAsymptotics	struct
 VOCAB	CompositeCertificate	struct
 VOCAB	ConicFiveCertificate	struct
 VOCAB	CosetCertificate	struct
@@ -117,9 +125,13 @@ VOCAB	Decision	enum
 VOCAB	DegenerateWitness	struct
 VOCAB	DerivedSubgroupCertificate	struct
 VOCAB	DistancePreservingCertificate	struct
+VOCAB	DnfDecision	enum
+VOCAB	DnfRefutationCertificate	struct
+VOCAB	DnfSampleCertificate	struct
 VOCAB	ElementMinPolyCertificate	struct
 VOCAB	Enclosure	struct
 VOCAB	ExtremumCertificate	struct
+VOCAB	FactorModulusBound	struct
 VOCAB	FactorizationCertificate	struct
 VOCAB	ForallDecision	enum
 VOCAB	FundamentalUnitCertificate	struct
@@ -140,9 +152,12 @@ VOCAB	MvtCertificate	struct
 VOCAB	NormTraceCertificate	struct
 VOCAB	OrbitStabilizerCertificate	struct
 VOCAB	OrderCertificate	struct
+VOCAB	PRecursiveCertificate	struct
 VOCAB	PartialFractionCertificate	struct
 VOCAB	PrattCertificate	struct
+VOCAB	ProjectionCertificate	struct
 VOCAB	PsdNotSosCertificate	struct
+VOCAB	RadiusCertificate	struct
 VOCAB	RationalGeneratingFunction	struct
 VOCAB	RationalityCertificate	struct
 VOCAB	RecurrenceCertificate	struct
