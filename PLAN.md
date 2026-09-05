@@ -53042,6 +53042,11 @@ tests, so both rows are `killed N` measurements and not a change in
 collection. Both were restored byte-for-byte and `git status` is clean on both
 files.
 
+That baseline is **41** because the mutants were run before the clippy pass,
+which deleted `test_fvar_block_is_disjoint_from_the_definition_block` — it
+asserted a constant, so it measured nothing. A re-run today collects **40**.
+The kill counts below are the numbers actually measured, not rescaled.
+
 | mutant | edit | outcome |
 | --- | --- | --- |
 | A — delete the eigenvariable condition | `fo_provable.rs`, `rule::ALL_INTRO`: premise `Provable (Context.shift g) p` becomes `Provable g p` | **killed 6** (35 passed / 6 failed) |
