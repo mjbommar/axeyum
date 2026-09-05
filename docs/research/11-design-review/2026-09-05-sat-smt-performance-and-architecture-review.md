@@ -176,8 +176,15 @@ true on the hard families.
    (time in propagate vs. conflict analysis vs. simplex pivots vs. explanation).
    The 2026-08-21 linear-arithmetic diagnosis classified 800 files by hand from
    per-file TSVs because no instrument said where the 24 seconds went.
+   *(2026-09-05, lane `perf-route-timing`: instrumented — `TheoryLayerStats` in
+   `crates/axeyum-solver/src/layers.rs`, collected by `crate::cdclt::CdclT`
+   behind an off-by-default `TheoryLayerStatsGuard`; `simplex_pivots` stays
+   `None` until a concrete theory adapter exposes a pivot count.)*
 3. **`RouteTrace` carries no timings.** `route_trace.rs` has no elapsed or
    duration field; a declined route's cost is invisible.
+   *(2026-09-05, lane `perf-route-timing`: instrumented — `RouteTrace::elapsed`/
+   `total_elapsed` and the opt-in `RouteTrace::to_json_with_timing`; the
+   default `RouteTrace::to_json` is unchanged.)*
 4. **Gate (b) has never been measured.** The methodology makes the native SAT
    core's priority contingent on (a) SAT dominance and (b) a consistent gap
    between the best Rust adapter and CaDiCaL/Kissat on axeyum-generated CNF.
