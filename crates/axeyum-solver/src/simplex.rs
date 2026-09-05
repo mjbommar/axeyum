@@ -141,10 +141,10 @@ pub enum SimplexOutcome {
 /// as it did before ADR-1702. Deleting the marker would delete a live soundness
 /// path, so the pivot and deadline budgets and this decline route are all kept.
 ///
-/// One helper below is now infallible: `Rational::wide_cmp` cannot decline
-/// (comparison allocates no pool entry), so `cmp` always returns `Ok`. It keeps
-/// the `R<_>` shape because 18 call sites thread it, and because the shape is
-/// what would carry a future failure back.
+/// One helper below dropped out of this shape entirely: `cmp` is infallible after
+/// ADR-1702, because `Rational::wide_cmp` allocates no pool entry, so it returns
+/// a bare `Ordering`. Keeping a `Result` that can only be `Ok` is a failure path
+/// that cannot fail, which is exactly what this repository does not keep.
 struct Overflow;
 type R<T> = Result<T, Overflow>;
 
@@ -165,8 +165,11 @@ fn mul(a: Rational, b: Rational) -> R<Rational> {
 fn div(a: Rational, b: Rational) -> R<Rational> {
     a.wide_div(b).ok_or(Overflow)
 }
-fn cmp(a: Rational, b: Rational) -> R<core::cmp::Ordering> {
-    Ok(a.wide_cmp(&b))
+/// Exact comparison. **Infallible since ADR-1702** — `wide_cmp` allocates no
+/// pool entry, so there is no failure to carry — which is why this one is not
+/// wrapped in `R<_>` like its four arithmetic siblings.
+fn cmp(a: Rational, b: Rational) -> core::cmp::Ordering {
+    a.wide_cmp(&b)
 }
 
 /// The **containment boundary** for ADR-1702 promotion.
@@ -230,12 +233,12 @@ impl Delta {
         })
     }
     /// Lexicographic order on `(c, k)` — the total order of `ℚ(δ)` for infinitesimal
-    /// `δ > 0`.
-    fn cmp(self, o: Delta) -> R<core::cmp::Ordering> {
-        Ok(match cmp(self.c, o.c)? {
-            core::cmp::Ordering::Equal => cmp(self.k, o.k)?,
+    /// `δ > 0`. Infallible for the same reason the free `cmp` above is.
+    fn cmp(self, o: Delta) -> core::cmp::Ordering {
+        match cmp(self.c, o.c) {
+            core::cmp::Ordering::Equal => cmp(self.k, o.k),
             ord => ord,
-        })
+        }
     }
 }
 
@@ -436,12 +439,12 @@ impl Tableau {
             return Ok(());
         }
         if let Some(hi) = self.upper[v]
-            && self.value[v].cmp(hi)? == core::cmp::Ordering::Greater
+            && self.value[v].cmp(hi) == core::cmp::Ordering::Greater
         {
             return self.update_nonbasic(v, hi);
         }
         if let Some(lo) = self.lower[v]
-            && self.value[v].cmp(lo)? == core::cmp::Ordering::Less
+            && self.value[v].cmp(lo) == core::cmp::Ordering::Less
         {
             return self.update_nonbasic(v, lo);
         }
@@ -451,14 +454,14 @@ impl Tableau {
     /// Whether `v`'s value is below its lower bound.
     fn below_lower(&self, v: usize) -> R<bool> {
         Ok(match self.lower[v] {
-            Some(lo) => self.value[v].cmp(lo)? == core::cmp::Ordering::Less,
+            Some(lo) => self.value[v].cmp(lo) == core::cmp::Ordering::Less,
             None => false,
         })
     }
     /// Whether `v`'s value is above its upper bound.
     fn above_upper(&self, v: usize) -> R<bool> {
         Ok(match self.upper[v] {
-            Some(hi) => self.value[v].cmp(hi)? == core::cmp::Ordering::Greater,
+            Some(hi) => self.value[v].cmp(hi) == core::cmp::Ordering::Greater,
             None => false,
         })
     }
@@ -466,14 +469,14 @@ impl Tableau {
     /// Can nonbasic `v` increase (strictly below its upper bound, or unbounded)?
     fn can_increase(&self, v: usize) -> R<bool> {
         Ok(match self.upper[v] {
-            Some(hi) => self.value[v].cmp(hi)? == core::cmp::Ordering::Less,
+            Some(hi) => self.value[v].cmp(hi) == core::cmp::Ordering::Less,
             None => true,
         })
     }
     /// Can nonbasic `v` decrease (strictly above its lower bound, or unbounded)?
     fn can_decrease(&self, v: usize) -> R<bool> {
         Ok(match self.lower[v] {
-            Some(lo) => self.value[v].cmp(lo)? == core::cmp::Ordering::Greater,
+            Some(lo) => self.value[v].cmp(lo) == core::cmp::Ordering::Greater,
             None => true,
         })
     }
@@ -545,7 +548,7 @@ impl Tableau {
             if a.is_zero() {
                 continue;
             }
-            let a_pos = cmp(a, Rational::zero())? == core::cmp::Ordering::Greater;
+            let a_pos = cmp(a, Rational::zero()) == core::cmp::Ordering::Greater;
             // To INCREASE the basic var (too_low): raise a nonbasic with a>0 that can
             // increase, or lower one with a<0 that can decrease. To DECREASE: mirror.
             let usable = if too_low {
@@ -670,7 +673,7 @@ impl Tableau {
             // Toward-violation test: for an upper bound (Le/Lt) K>0 pushes up toward
             // b; for a lower bound (Ge/Gt) K<0 pushes down toward b. When margin and
             // the push have the shape that could cross, cap ε.
-            let k_pos = cmp(kk, Rational::zero())? == core::cmp::Ordering::Greater;
+            let k_pos = cmp(kk, Rational::zero()) == core::cmp::Ordering::Greater;
             let toward = match rel {
                 Rel::Le | Rel::Lt => k_pos,  // rising toward an upper bound
                 Rel::Ge | Rel::Gt => !k_pos, // falling toward a lower bound
@@ -682,13 +685,13 @@ impl Tableau {
             // Cap: ε ≤ |margin / K| / 2.  margin has the same sign as the room; take
             // the magnitude.
             let ratio = div(margin, kk)?;
-            let mag = if cmp(ratio, Rational::zero())? == core::cmp::Ordering::Less {
+            let mag = if cmp(ratio, Rational::zero()) == core::cmp::Ordering::Less {
                 sub(Rational::zero(), ratio)?
             } else {
                 ratio
             };
             let half = mul(mag, Rational::checked_new(1, 2).ok_or(Overflow)?)?;
-            if cmp(half, eps)? == core::cmp::Ordering::Less {
+            if cmp(half, eps) == core::cmp::Ordering::Less {
                 eps = half;
             }
         }
