@@ -171,6 +171,9 @@ now. Nothing was deleted.
 | 2026-09-04 | integration-space | `IntSpace` record (16 fields), generic layer, measure layer, convergence graded family, `crealInterval` + `crealFinite` instances — `63c9a000d` |
 | 2026-09-04 | integration-space | detachable subsets, counting measure, the Dirac probability space — `9d47af7e4` |
 | 2026-09-04 | integration-space | ADR-1612, three facts, `IntSpace.CReal.uniformly_continuous_abs`, `shape_search`/`kernel_declaration_projection`/`validate-facts` taught the `intspace` group |
+| 2026-09-04 | producer-measurements | lane started: W1-12/W1-13, ADR-1617 reserved |
+| 2026-09-04 | producer-measurements | W1-12 landed: `examples/creal_eval_cost.rs`, ADR-1617, `artifacts/measurements/creal-eval-cost-2026-09-04.md` — controls fast, `e`/`pi` at n=0 did not complete within budget |
+| 2026-09-04 | producer-measurements | W1-13 landed: `scripts/check-cas-internal-residue.py` + ratchet + tests, registered in `scripts/check.sh`/`justfile`/`mutation_controls.py`, `artifacts/measurements/cas-internal-residue-2026-09-04.md` — 60 total, 14 kernel-reconstructed, 46 cas-internal (76.7%), 0 unrecognized |
 | 2026-09-03 | `131756de5` | Lane status stub: three kernel suites refused by ADR-1495's universe guard, under triage. |
 | 2026-09-03 | `714e58f3a` | Moved three Lean-illegal test fixtures to the universe Lean 4.30 gives them (`Sort 1` → `Sort 2` for the `type`-sorted families; `String` follows `Char` under `CharAtUniverseOne` only), verified shape-by-shape against the pinned `lean` binary. Added the two-sided `list_level` control so the string mutation cannot degenerate. Kernel guard unchanged. |
 | 2026-09-03 | det-mul-debug-stack | `40ee238ca` — the ADR-1543 concrete-matrix evaluation test aborted the DEBUG `--workspace --lib` push step (SIGABRT) while passing `--release`. Bisected from outside the process: a BOUNDED requirement, 4 MiB against the 2 MiB a `#[test]` thread gets. Bisected WITHIN the test: the single `def_eq (det (A·B) 2) 4` is the cliff, because `A·B = [[19,22],[43,50]]` forms `19·50 = 950` as a unary `succ` tower; `det A · det B` and the 1×1 case form nothing bigger than 15 and are free. `B` shrinks to `[[0,1],[2,1]]`, determinant `−2` again, so every asserted number is unchanged and the largest magnitude formed goes 950 → 28: 181 s → 16 s, which is the prelude build alone. `det_mat_mul_expand_...` was a second casualty the first abort hid and got the same change. One control that could NOT fail is replaced — `det Aᵀ = det A`, so no transposition is visible in the determinant; the product's four entries are now read out with `A·Bᵀ` and `Aᵀ·B` asserted apart at `(0,0)`. Mutation-checked: `[2,1] → [3,1]` kills exactly these two tests. |
@@ -42562,6 +42565,51 @@ name; and the ℚ↔ℝ probability bridge (`Rat.expectation` is normalised,
 says so. Reviewer 08 is unblocked now: a finite index set is an integration
 space, a point mass is one, and a detachable subset of a finite index set is an
 integrable set.
+
+**Status: LANDED (`DONE`, producer-measurements, 2026-09-04).** Both
+deliverables measured and published, ADR-1617 accepted. No kernel
+declarations added (measurement-only lane, as scoped).
+
+**W1-12.** `examples/creal_eval_cost.rs` (new, `axeyum-lean-kernel`): builds
+`CReal.seq x n` for `x` in `{pi, e, sqrt 2, exp 1}` plus trivial
+`{zero, one, two}` controls, two ways to encode `n` (kernel-accelerated
+`Lit::Nat` literal vs. genuine unary `Nat.succ` chain, matching this
+codebase's own numeral idiom), and fully normalizes with a hand-rolled
+`deep_nf` built only from public `Kernel::whnf`/`Kernel::expr_node` calls —
+no new declaration, everything transient. Finding: the controls are
+sub-5ms at every `n` and either encoding (the caller's index encoding does
+not matter); `e` and `pi` at `n = 0` — the loosest possible request — **did
+not complete** within a 400s/480s compute budget respectively, even though
+the outer `Kernel::whnf` alone (exposing the head redex) resolves in
+30-40ms. The cost lives inside the series' own internal `Nat.rec` recursion
+(built unary regardless of the caller's `n`), which the library's own bound
+theorems (`threeLePi`, `piLeFour`, ...) never force — they stay symbolic.
+Reported as "did not complete", not extrapolated. Full method, raw
+transcripts, and load readings: `artifacts/measurements/creal-eval-cost-2026-09-04.md`.
+
+**W1-13.** `scripts/check-cas-internal-residue.py` (new): reuses
+`validate-facts.py`'s own `classify_cas_certificate_fact` over every
+`cas-certificate` fact and ratchets a floor — a fact recorded
+`kernel-reconstructed` must stay one; a new `cas-internal` fact is not
+refused. Measured: 60 total, 14 kernel-reconstructed, 46 cas-internal
+(76.7% residue), 0 unrecognized — matches `validate-facts.py`'s own summary
+line exactly. Per-`formal.fragment` breakdown shows the residue concentrated
+in number theory, hypergeometric/binomial identities, GF(2), and SOS
+families with no kernel bridge yet. Registered in `scripts/check.sh` and
+`justfile`; companion suite `scripts/tests/test_check_cas_internal_residue.py`
+(10 tests) registered under `scripts/tests/mutation_controls.py`'s
+`cas-internal-residue` entry, mutation-verified 2026-09-04 on a scratch copy
+(never the shared worktree) — all four guards each kill exactly one test.
+Full breakdown: `artifacts/measurements/cas-internal-residue-2026-09-04.md`.
+
+**Gates run and green**: `rustfmt --edition 2024` + `cargo clippy -D warnings`
+on the example; `cargo fmt --all --check`; `cargo check --release -p
+axeyum-lean-kernel --examples`; `python3 -m py_compile` on every touched
+Python file; `python3 -m unittest scripts.tests.test_check_cas_internal_residue`
+(10/10); `python3 scripts/tests/mutation_controls.py cas-internal-residue`
+(4/4 guards, each kills exactly 1); `python3 scripts/check-cas-internal-residue.py
+--report`; `python3 scripts/validate-facts.py`; `python3 scripts/gen-adr-index.py`;
+`python3 scripts/gen-plan.py`.
 
 **ADR-0512 phase R4 reaches the reconstruction route: a Farkas/SOS refutation
 now reconstructs over `CReal`, and the closed `False` rests on ZERO carrier

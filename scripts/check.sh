@@ -416,6 +416,13 @@ step spivak-cas-column python3 scripts/check-spivak-cas-column.py
 step spivak-cas-column-tests python3 -m unittest scripts.tests.test_check_spivak_cas_column
 step cas-substance python3 scripts/check-cas-substance.py
 step cas-substance-tests python3 -m unittest scripts.tests.test_check_cas_substance
+# W1-13: the ADR-0601 SS2 `cas-internal` residue itself -- distinct from
+# cas-substance above, which floors what the 14 kernel-reconstructed facts'
+# kernel obligations ESTABLISH. This floors which facts are
+# kernel-reconstructed AT ALL, so a fact regressing to cas-internal (or
+# vanishing) is refused; a new cas-internal fact is not.
+step cas-internal-residue python3 scripts/check-cas-internal-residue.py --report
+step cas-internal-residue-tests python3 -m unittest scripts.tests.test_check_cas_internal_residue
 step settled-fact-statement-tests python3 -m unittest scripts.tests.test_settled_fact_statements
 step draw7-frozen-families-tests python3 -m unittest scripts.tests.test_check_draw7_frozen_families
 step settled-fact-statements python3 scripts/check-settled-fact-statements.py

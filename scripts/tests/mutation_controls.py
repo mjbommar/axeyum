@@ -6550,6 +6550,47 @@ SUITES["nursery-components"] = (
 )
 
 
+# --------------------------------------------------------------------------
+# `cas-internal-residue` (ADR-0601 SS2, roadmap W1-13).
+#
+# Distinct from `cas-substance`/`cas-substance-derivation` above: those floor
+# WHAT the 14 kernel-reconstructed facts' kernel obligations establish (shape:
+# combination/refl/evaluation/...). This floors WHICH facts are
+# kernel-reconstructed at all -- the residue that does not reconstruct through
+# the trust anchor and is labelled `cas-internal` instead. Each guard below is
+# independent by construction (a vanished-fact fixture never triggers the
+# reclassification branch and vice versa, and the unrecognized check lives on
+# a code path no ratchet fixture touches), so each kills exactly one test.
+# --------------------------------------------------------------------------
+
+SUITES["cas-internal-residue"] = (
+    "scripts/check-cas-internal-residue.py",
+    Unittest("scripts.tests.test_check_cas_internal_residue"),
+    [
+        (
+            "G1 a cas-certificate fact classifying as `unrecognized` is refused",
+            "    if unrecognized:",
+            "    if False:",
+        ),
+        (
+            "G2 a missing ratchet file is refused",
+            "    if recorded is None:",
+            "    if False:",
+        ),
+        (
+            "G3 a fact that regressed from kernel-reconstructed to cas-internal is refused",
+            '        if now_classification != "kernel-reconstructed":',
+            "        if False:",
+        ),
+        (
+            "G4 a ratcheted kernel-reconstructed fact that vanished is refused",
+            "        if fid not in current:",
+            "        if False:",
+        ),
+    ],
+)
+
+
 if __name__ == "__main__":
     raise SystemExit(main(sys.argv))
 
