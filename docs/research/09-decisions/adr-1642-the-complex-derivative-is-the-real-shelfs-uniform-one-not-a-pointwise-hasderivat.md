@@ -228,6 +228,35 @@ deliverable 4 additionally needs a contour integral over a segment as a
 `CReal.sumRange` Riemann sum. Neither was reached; neither is blocked by
 anything this lane found.
 
+## Mutation evidence, and one mutant that was a category error
+
+`scripts/tests/mutation_controls.py complex-derivative`, baseline 66 tests
+green. Three mutants RUN, no PREDICTED rows:
+
+| mutant | result |
+| --- | --- |
+| the sum rule's error identity with one cross term dropped (the brief's "Leibniz with one cross term dropped", retargeted since Leibniz did not land) | **killed 63 of 66** |
+| `hasDerivative_neg` no longer negates the derivative (the brief's "CR equation with a sign flipped", retargeted since CR did not land) | **killed 64 of 66** |
+| `InDisc` measures the centre's distance from the point instead of the point's from the centre | **killed exactly 2**, both named: `in_disc_unfolds_to_the_distance_from_the_centre` and `in_disc_argument_order_is_load_bearing` |
+
+The first two are MASS kills and are therefore weak evidence about any
+individual test, which is why the third exists. They kill through
+`ring_law_proof`, which is a decision procedure that PANICS on a normal-form
+mismatch rather than handing the kernel a term to reject, so a wrong error
+identity takes down `build_complex_prelude` and with it every test that builds
+the prelude. Their one-test difference is informative rather than noise: the
+sign mutant additionally kills `the_ring_calculus_refuses_a_false_identity`,
+which builds its own kernel and survives the sum mutant.
+
+A fourth mutant was RUN and **SURVIVED** (66 tests ran, none died): setting
+`hasDerivative_const`'s modulus from `fun _ => 0` to `fun _ => 3`. It is not
+listed in the committed suite, and that is a judgement worth recording rather
+than a hidden result. A constant's error term is `Equiv`-zero regardless of the
+hypothesis, so EVERY modulus witnesses the spec and the literal `0` carries no
+semantic content. It is an arbitrary witness choice, not a guard; a test written
+to kill it would measure the author's typing rather than the mathematics. The
+suite's comment says so, so that nobody re-adds it as "an uncovered guard".
+
 ## Alternatives considered
 
 **A pointwise `Complex.HasDerivAt` next to the uniform real one.** Rejected
