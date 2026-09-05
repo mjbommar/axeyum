@@ -9135,6 +9135,31 @@ pub fn simplify_radicals(expr: &CasExpr) -> CasExpr {
                 };
                 return root.abs();
             }
+            // `√(c·u) = √c·√u` for a POSITIVE rational `c`. Exact wherever the
+            // left side is defined (`c·u ≥ 0` ⟺ `u ≥ 0` for `c > 0`); a negative
+            // or zero `c` is left alone, since the split would need `u ≤ 0`.
+            // This is what lets `√(2π)` meet `√2·√π` in one atom space — the
+            // cancellation a `Normal(σ²=1)` normalization needs, where the erf
+            // value carries `√π/√a` with `√a = (1/2)√2` and the pdf's constant
+            // carries `1/√(2π)`.
+            if let CasExpr::Mul(factors) = &inner {
+                let mut constant = Rational::integer(1);
+                let mut rest: Vec<CasExpr> = Vec::new();
+                for factor in factors {
+                    match factor {
+                        CasExpr::Const(c) if c.numerator() > 0 => match constant.checked_mul(*c) {
+                            Some(product) => constant = product,
+                            None => rest.push(factor.clone()),
+                        },
+                        other => rest.push(other.clone()),
+                    }
+                }
+                if constant != Rational::integer(1) && !rest.is_empty() {
+                    let root_constant = simplify_radicals(&CasExpr::Const(constant).sqrt());
+                    let root_rest = simplify_radicals(&build_product(rest).sqrt());
+                    return fold_trivial(&CasExpr::Mul(vec![root_constant, root_rest]));
+                }
+            }
             inner.sqrt()
         }
         CasExpr::Unary(func, arg) => CasExpr::Unary(*func, Box::new(simplify_radicals(arg))),
@@ -9170,6 +9195,36 @@ pub fn simplify_radicals(expr: &CasExpr) -> CasExpr {
                 } else {
                     CasExpr::Pow(inner.clone(), half)
                 };
+            }
+            // Distribute the exponent over a product that carries a surd, so the
+            // surd meets its own power and the rule above can fire on it:
+            // `(√a·(x+d))² → a·(x+d)²`. `(A·B)ⁿ = Aⁿ·Bⁿ` holds for all reals, so
+            // this is exact; it is gated on a `√` factor actually being present so
+            // ordinary powers keep their compact form. Without it a Gaussian with
+            // an irrational `√a` never certifies: the erf derivative's exponent
+            // `−(√a·(x+d))²` keys a *different* `exp` atom from the integrand's
+            // `−a·x²−…`, and the zero-test compares two opaque atoms.
+            if *exponent > 0
+                && let CasExpr::Mul(factors) = &simplified_base
+                && factors
+                    .iter()
+                    .any(|f| matches!(f, CasExpr::Unary(UnaryFunc::Sqrt, _)))
+            {
+                return fold_trivial(&CasExpr::Mul(
+                    factors
+                        .iter()
+                        .map(|factor| {
+                            simplify_radicals(&CasExpr::Pow(Box::new(factor.clone()), *exponent))
+                        })
+                        .collect(),
+                ));
+            }
+            // `(−A)^{2k} = A^{2k}` — even exponents only; an odd one would flip
+            // the sign.
+            if exponent.is_multiple_of(2)
+                && let CasExpr::Neg(inner) = &simplified_base
+            {
+                return simplify_radicals(&CasExpr::Pow(inner.clone(), *exponent));
             }
             CasExpr::Pow(Box::new(simplified_base), *exponent)
         }
@@ -14043,6 +14098,20 @@ pub fn prove_derivative(expr: &CasExpr, var: &str, claimed: &CasExpr) -> ZeroTes
     if matches!(direct, ZeroTest::Certified { equal: true, .. }) {
         return direct;
     }
+    // Surd-normalized retry. The zero-test keys a transcendental head on the
+    // *canonical* rendering of its argument, and `normalize` leaves `√a` an opaque
+    // atom, so `exp(−(√a·x)²)` and `exp(−a·x²)` take different keys. Folding the
+    // surds first (an exact, value-preserving rewrite) puts both sides in one key
+    // space; this is what lets a Gaussian with irrational `√a` certify. Consulted
+    // only after the direct test fails, so no existing certificate changes.
+    let derivative_radical = simplify_radicals(&derivative);
+    let claimed_radical = simplify_radicals(claimed);
+    if derivative_radical != derivative || claimed_radical != *claimed {
+        let radical_result = equal(&derivative_radical, &claimed_radical);
+        if matches!(radical_result, ZeroTest::Certified { equal: true, .. }) {
+            return radical_result;
+        }
+    }
     // Half-angle fallback: when the antiderivative is expressed in `x/2` trig (as
     // from the Weierstrass substitution `t = tan(x/2)`) and the integrand in full-`x`
     // trig, rewrite the full-angle trig down to the half angle on both sides so the
@@ -17537,13 +17606,23 @@ fn integrate_log_substitution(expr: &CasExpr, var: &str) -> Option<CasExpr> {
     None
 }
 
-/// Integrate a **Gaussian** `e^{c₂·x² + c₁·x + c₀}` (`c₂ < 0`, `−c₂` a perfect
-/// rational square) by completing the square to `e^{k}·(√π/(2√a))·erf(√a·(x+d))`.
+/// Integrate a **Gaussian** `e^{c₂·x² + c₁·x + c₀}` (`c₂ < 0`) by completing the
+/// square to `e^{k}·(√π/(2√a))·erf(√a·(x+d))` with `a = −c₂`.
 /// Certified downstream by differentiate-and-check (the `√π`/`√a` cancel and the
 /// exp-tower recombines the constant `e^{k}` factor). Handles `∫e^{−x²}=(√π/2)erf(x)`,
-/// `∫e^{−x²−2x}=e·(√π/2)erf(x+1)`, etc. Returns `None` outside this shape — or when
-/// the constant `e^{k}` does not cancel in the zero-test (an honest decline, since
-/// the finder's candidate is only returned once the FTC certificate passes).
+/// `∫e^{−x²−2x}=e·(√π/2)erf(x+1)`, etc.
+///
+/// `√a` may be **irrational** and is carried symbolically: `∫e^{−2x²}` returns
+/// `(√π/(2√2))·erf(√2·x)`. That works because [`prove_derivative`] retries the
+/// certificate under [`simplify_radicals`], which distributes an exponent over a
+/// product carrying a surd — without that, the erf derivative's
+/// `exp(−(√a·(x+d))²)` and the integrand's `exp(−a·x²−…)` key two different
+/// opaque `exp` atoms and the zero-test compares them as unrelated.
+///
+/// Returns `None` outside this shape — in particular for `c₂ ≥ 0` (an *upward*
+/// Gaussian is not an erf antiderivative) — or when the constant `e^{k}` does not
+/// cancel in the zero-test (an honest decline, since the finder's candidate is
+/// only returned once the FTC certificate passes).
 fn integrate_gaussian(expr: &CasExpr, var: &str) -> Option<CasExpr> {
     let CasExpr::Unary(UnaryFunc::Exp, arg) = expr else {
         return None;
@@ -17561,11 +17640,6 @@ fn integrate_gaussian(expr: &CasExpr, var: &str) -> Option<CasExpr> {
     let c1 = coeffs.get(1).copied().unwrap_or_else(Rational::zero);
     let c0 = coeffs[0];
     let a = c2.checked_neg()?; // a > 0
-    // Require √a rational (perfect-square a): a surd `√a` leaves `(√a·(x+d))²`
-    // unfolded inside the exp atom key, so the cert would not recognize it.
-    let CasExpr::Const(_) = simplify_radicals(&CasExpr::Const(a).sqrt()) else {
-        return None;
-    };
     let sqrt_a = simplify_radicals(&CasExpr::Const(a).sqrt());
     let shift = c1.checked_div(Rational::integer(2).checked_mul(c2)?)?; // d
     let constant = c0.checked_sub(
@@ -20921,7 +20995,81 @@ mod tests {
         assert!(infinite_sum(&(k().ln() / factorial()), "k", &zero).is_none());
     }
 
+    /// A Gaussian whose `√a` is irrational now certifies, and the guards that
+    /// keep the route sound still refuse what they should.
+    #[test]
+    fn gaussian_integral_with_an_irrational_square_root() {
+        let x = || v("x");
+        // ∫e^{−2x²} = (√π/(2√2))·erf(√2·x): `√a = √2` stays symbolic and the
+        // differentiate-and-check certificate still closes.
+        let result = integrate(&(CasExpr::int(-2) * x().pow(2)).exp(), "x").expect("surd Gaussian");
+        assert!(result.is_certified());
+        // The differentiate-and-check only closes UNDER `simplify_radicals`: the
+        // raw derivative keys `exp(−(√2·x)²)`, the integrand keys `exp(−2x²)`,
+        // and those are two unrelated atoms to the zero-test. This is exactly
+        // the retry `prove_derivative` performs, asserted here so removing it
+        // fails a test rather than silently narrowing the fragment.
+        assert!(matches!(
+            equal(
+                &result.antiderivative.differentiate("x"),
+                &(CasExpr::int(-2) * x().pow(2)).exp(),
+            ),
+            ZeroTest::Certified { equal: false, .. }
+        ));
+        assert_equal(
+            &simplify_radicals(&result.antiderivative.differentiate("x")),
+            &simplify_radicals(&(CasExpr::int(-2) * x().pow(2)).exp()),
+        );
+        // With a linear term too: ∫e^{−2x²−4x} completes the square to −2(x+1)²+2.
+        let shifted = integrate(
+            &(CasExpr::int(-2) * x().pow(2) - CasExpr::int(4) * x()).exp(),
+            "x",
+        )
+        .expect("shifted surd Gaussian");
+        assert!(shifted.is_certified());
+        // The definite value over the whole line: ∫_{−∞}^{∞} e^{−2x²} = √(π/2).
+        let definite = improper_integrate(
+            &(CasExpr::int(-2) * x().pow(2)).exp(),
+            "x",
+            LimitPoint::NegInfinity,
+            LimitPoint::PosInfinity,
+        )
+        .expect("definite surd Gaussian");
+        assert!(definite.is_certified());
+        assert_equal(
+            &simplify_radicals(&definite.value),
+            &(v("pi").sqrt() / CasExpr::int(2).sqrt()),
+        );
 
+        // GUARD: an upward Gaussian (`a ≤ 0`) is not an erf antiderivative.
+        assert!(integrate_gaussian(&x().pow(2).exp(), "x").is_none());
+        assert!(integrate_gaussian(&(CasExpr::int(2) * x().pow(2)).exp(), "x").is_none());
+        // GUARD: the exponent must be a genuine quadratic.
+        assert!(integrate_gaussian(&x().exp(), "x").is_none());
+    }
+
+    /// The surd distribution added to [`simplify_radicals`] is exact: it fires on
+    /// a product carrying a `√`, and an ODD exponent over a negation must keep
+    /// its sign.
+    #[test]
+    fn simplify_radicals_distributes_only_where_it_is_exact() {
+        let x = || v("x");
+        // `(√2·x)² → 2x²` — the rewrite the Gaussian certificate needs.
+        assert_equal(
+            &simplify_radicals(&(CasExpr::int(2).sqrt() * x()).pow(2)),
+            &(CasExpr::int(2) * x().pow(2)),
+        );
+        // `(−√2)²  = 2` but `(−√2)³ = −2√2`: the negation is only absorbed at an
+        // even exponent, so the odd case must NOT lose its sign.
+        let neg_root = || CasExpr::Neg(Box::new(CasExpr::int(2).sqrt()));
+        assert_equal(&simplify_radicals(&neg_root().pow(2)), &CasExpr::int(2));
+        let cube = simplify_radicals(&neg_root().pow(3));
+        assert_equal(&cube, &(CasExpr::int(-2) * CasExpr::int(2).sqrt()));
+        assert!(matches!(
+            equal(&cube, &(CasExpr::int(2) * CasExpr::int(2).sqrt())),
+            ZeroTest::Certified { equal: false, .. }
+        ));
+    }
 
 
     #[test]
@@ -29709,8 +29857,20 @@ mod tests {
             &cs.antiderivative.differentiate("x"),
             &(-x().pow(2) - CasExpr::int(2) * x()).exp(),
         );
-        // Surd a (∫e^{−2x²}) is honestly declined.
-        assert!(integrate(&(CasExpr::int(-2) * x().pow(2)).exp(), "x").is_none());
+        // A surd `√a` (∫e^{−2x²}) now certifies too: the antiderivative carries
+        // `√2` symbolically and the differentiate-and-check closes because the
+        // surd-normalized retry puts `exp(−(√2·x)²)` and `exp(−2x²)` in one atom.
+        let surd =
+            integrate(&(CasExpr::int(-2) * x().pow(2)).exp(), "x").expect("surd Gaussian integral");
+        assert!(surd.is_certified());
+        assert_equal(
+            &surd.antiderivative,
+            &(v("pi").sqrt() / (CasExpr::int(2) * CasExpr::int(2).sqrt())
+                * (CasExpr::int(2).sqrt() * x()).erf()),
+        );
+        // Upward Gaussians (`a ≤ 0`) still decline: `∫e^{+x²}` is not an erf.
+        assert!(integrate_gaussian(&x().pow(2).exp(), "x").is_none());
+        assert!(integrate_gaussian(&(CasExpr::int(3) * x().pow(2)).exp(), "x").is_none());
         // erf(0) = 0 (folded); numeric erf(1) ≈ 0.8427.
         assert_eq!(
             fold_elementary_constants(&CasExpr::int(0).erf()),
