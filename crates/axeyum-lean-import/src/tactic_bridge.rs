@@ -35,8 +35,8 @@
 //!
 //! Measured with `examples/axeyum_tactic_probe.rs` (2026-09-05): the `ring`
 //! and `linarith` ℕ producers reference twenty kernel constants across an
-//! eleven-goal battery. Eight are structural (`AxNat`, `Eq`, `Eq.rec`, …) and
-//! map to Lean core by name. Twelve are lemmas, and *the emitted term applies
+//! eleven-goal battery. Nine are structural (`AxNat`, `Eq`, `Eq.rec`, …) and
+//! map to Lean core by name. Eleven are lemmas, and *the emitted term applies
 //! every one of them with all arguments explicit, in axeyum's argument order*
 //! — where Lean core takes most of them implicitly and, in five cases, in a
 //! different order. So the lemmas map to `Axeyum.Shim.*`: one Lean theorem

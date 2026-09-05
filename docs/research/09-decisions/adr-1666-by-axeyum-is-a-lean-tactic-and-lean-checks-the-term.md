@@ -10,9 +10,9 @@ proof **term**, and Lean's own elaborator and kernel check it — nothing the
 sidecar says is believed. Eleven ℕ goals in Lean-core notation close and
 eleven mutations are rejected under `leanprover/lean4:v4.34.0-rc1`. The
 name-correspondence finding: a rename is not enough — axeyum applies every
-lemma with all arguments explicit in its own order, so twelve lemmas route
-through `Axeyum.Shim`, thirteen Lean theorems proved from core, of which ten
-are axiom-free and three inherit `propext`. The ℤ fragment did NOT build:
+lemma with all arguments explicit in its own order, so the eleven lemmas the
+battery reaches route through `Axeyum.Shim` — thirteen Lean theorems proved
+from core, of which ten are axiom-free and three inherit `propext`. The ℤ fragment did NOT build:
 `linarith::int::prove` and `ring::int::prove` are `pub(crate)`.
 
 ## Context
@@ -117,19 +117,22 @@ and the correspondence has three grades:
 
 | grade | meaning | count |
 |---|---|---|
-| **structural** | Lean core has it under the same spelling, same arity | 8 |
-| **exact** | Lean core has the statement with the same explicit argument order | 7 |
+| **structural** | Lean core has it under the same spelling, same arity | 9 |
+| **exact** | Lean core has the statement with the same explicit argument order | 6 |
 | **reordered** | Lean core has the statement, with different implicitness and/or order | 5 |
 | **derived** | Lean core has no single constant with this statement | 0 |
 
-The eight structural rows are `AxNat`→`Nat`, `AxNat.zero`, `AxNat.succ`,
+The nine structural rows are `AxNat`→`Nat`, `AxNat.zero`, `AxNat.succ`,
 `AxNat.add`, `AxNat.mul`, `AxNat.le`, and `Eq` / `Eq.refl` / `Eq.rec` (which
-are already spelled the way Lean spells them).
+are already spelled the way Lean spells them). The six **exact** rows are
+`add_comm`, `add_assoc`, `add_right_comm`, `mul_comm`, `left_distrib` and
+`le_add_right`.
 
-The twelve lemma rows go through **`Axeyum.Shim`**: thirteen Lean theorems
-(the twelve the battery reached, plus `natMulAssoc` which the documented
-emitted-term table names but this battery did not exercise), each **stated
-with axeyum's exact signature and proved from Lean core**. The shim is the
+The eleven lemma rows go through **`Axeyum.Shim`**, which carries **thirteen**
+Lean theorems: the eleven this battery reached, plus `natMulAssoc` and
+`natRightDistrib`, which `ring/nat.rs`'s own emitted-term table names but no
+goal in this battery exercised. Each is **stated with axeyum's exact signature
+and proved from Lean core**. The shim is the
 correspondence table and its own check: a wrong row makes Lean refuse the
 file, and the gate is red before any tactic runs. Negative control run
 2026-09-05 — flipping `natAddComm`'s statement makes Lean reject it.
@@ -304,7 +307,7 @@ controls=1`, checker
   the goal's own free variables, and the whole point of item 6 is that a Lean
   user's goal — not a census subject — is what gets closed.
 - **Rename axeyum's constants to Lean's and skip the shim.** This is what the
-  measurement refuted: five of the twelve lemmas have a different argument
+  measurement refuted: five of the eleven lemmas have a different argument
   order or implicitness, so a rename produces terms Lean rejects. The shim is
   the minimum honest fix, and it costs nothing in trust because Lean proves it.
 - **Emit `omega` / `simp` calls instead of terms.** Rejected: it would make

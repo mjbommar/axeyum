@@ -31,13 +31,15 @@ enough. The producers emit terms over `AxNat` in which every lemma is applied
 with **all arguments explicit, in axeyum's own order**; Lean core takes most of
 them implicitly and, in five cases, in a different order. Measured with
 `crates/axeyum-lean-import/examples/axeyum_tactic_probe.rs` over an
-eleven-goal battery: 20 constants, of which 8 are structural (map to Lean core
-by name), 7 are `exact` (same explicit order) and 5 are `reordered`
+eleven-goal battery: 20 constants, of which 9 are structural (map to Lean core
+by name), 6 are `exact` (same explicit order) and 5 are `reordered`
 (`AxNat.le.refl`, `le_trans`, `add_le_add_left`, `add_le_add_right`,
-`le_of_add_le_add_right`). Zero needed a `derived` proof. The twelve lemmas
+`le_of_add_le_add_right`). Zero needed a `derived` proof. Those 11 lemmas
 route through `Axeyum.Shim` — one Lean theorem each, stated with axeyum's
 signature and **proved from Lean core**, so the shim is the correspondence
-table *and* its own check.
+table *and* its own check. The shim carries 13 rows: the 11 the battery
+reached plus `natMulAssoc` and `natRightDistrib`, which `ring/nat.rs`'s
+emitted-term table names but no goal in this battery exercised.
 
 **Bounded, and stated as such.** ℕ only; quantifier-free; the goal must be a
 `Eq`/`≤`/`<` over `+`, `*`, `succ`, `zero` and numerals ≤ 64, with ℕ's own
