@@ -223,6 +223,17 @@ pub(crate) const SUBSTITUTABLE_NAT_ORDER_THEOREMS: &[&str] = &[
     "Nat.div_rec_lemma",
     "Nat.div_rec_fuel_lemma",
     "Nat.le_of_succ_le_succ",
+    // Measured 2026-09-05 (ADR-1662) as the fifth-largest first-reported
+    // blocker of the statement-import census, 24 of 756 rows. Mathlib v4.30
+    // states it with the ORDER TYPECLASSES on the surface
+    // (`LT.lt Nat instLTNat n (HAdd.hAdd .. m 1) -> LE.le Nat instLENat n m`)
+    // and proves it by `Nat.le_of_succ_le_succ n m` verbatim, so it shares
+    // that name's construction exactly; the instances (`instLTNat`,
+    // `instLENat`, `instHAdd`, `instAddNat`, `instOfNatNat`) are all
+    // Definitions in the same closure, so [`reconstruct`]'s `def_eq` against
+    // the stream's own `wire_ty` unfolds them and this needs no separate
+    // typeclass handling. ADR-1667.
+    "Nat.le_of_lt_add_one",
 ];
 
 /// The primitive and directly-reusable-theorem names this module's
@@ -1601,7 +1612,11 @@ fn build(b: &mut B<'_>, rendered: &str) -> Result<ExprId, SubstitutionError> {
         }
         "Nat.div_rec_lemma" => build_div_rec_lemma(b),
         "Nat.div_rec_fuel_lemma" => build_div_rec_fuel_lemma(b),
-        "Nat.le_of_succ_le_succ" => {
+        // `Nat.le_of_lt_add_one` shares this arm because Lean 4.30 proves it
+        // by `Nat.le_of_succ_le_succ n m` and nothing else; the two differ
+        // only in how their TYPE is spelled, and the type is the stream's,
+        // never ours. See `SUBSTITUTABLE_NAT_ORDER_THEOREMS`.
+        "Nat.le_of_succ_le_succ" | "Nat.le_of_lt_add_one" => {
             let n_fv = b.fresh();
             let n = b.kernel.fvar(n_fv);
             let m_fv = b.fresh();
@@ -2078,7 +2093,18 @@ mod tests {
             // hand-built `And`-carrying wire type. `Nat.div_rec_fuel_lemma`
             // is the same story, one level up — covered by
             // `div_rec_fuel_lemma_reconstructs_and_kernel_checks`.
-            if rendered == "Nat.div_rec_lemma" || rendered == "Nat.div_rec_fuel_lemma" {
+            // `Nat.le_of_lt_add_one` is Mathlib's TYPECLASS-SPELLED form
+            // (`LT.lt Nat instLTNat n (m + 1)`); this project's own
+            // `nat_prelude` never states it, and admitting our value at
+            // `Nat.le_of_succ_le_succ`'s bare type here would test nothing
+            // about the spelling that actually blocks the census rows.
+            // Covered instead by
+            // `le_of_lt_add_one_reconstructs_against_the_real_mathlib_type`,
+            // against the pinned Lean 4.30 export of the real declaration.
+            if rendered == "Nat.div_rec_lemma"
+                || rendered == "Nat.div_rec_fuel_lemma"
+                || rendered == "Nat.le_of_lt_add_one"
+            {
                 continue;
             }
             let existing = field_name(&prelude, rendered);
@@ -2453,6 +2479,7 @@ mod tests {
             "Nat.zero_le",
             "Nat.lt_of_lt_of_le",
             "Nat.le_of_succ_le_succ",
+            "Nat.le_of_lt_add_one",
         ];
         for name in needs_nothing {
             assert_eq!(
@@ -2623,6 +2650,124 @@ mod tests {
             ..full_prims
         };
         assert!(check_required_optional_prims(&all_missing, "Nat.zero_le").is_ok());
+    }
+}
+
+/// `Nat.le_of_lt_add_one` at the type Mathlib v4.30 actually exports, against
+/// the pinned `lean4export` stream of the real declaration and its whole
+/// closure (ADR-1667). Committed rather than read from a host-local archive
+/// precisely because the SPELLING is the thing under test: the census rows
+/// this unblocks are refused for a type written with the order typeclasses
+/// (`LT.lt Nat instLTNat n (HAdd.hAdd .. m 1)`), not the bare `Nat.le`
+/// shape this project's own prelude uses.
+#[cfg(test)]
+mod real_mathlib_type_tests {
+    use super::*;
+    use crate::{ImportLimits, import_ndjson};
+    use std::io::Cursor;
+
+    const LE_OF_LT_ADD_ONE_FIXTURE: &str =
+        include_str!("../../../docs/plan/fixtures/lean4export-v4.30-nat-le-of-lt-add-one.ndjson");
+
+    fn fixture_kernel() -> Kernel {
+        let completed = import_ndjson(
+            Cursor::new(LE_OF_LT_ADD_ONE_FIXTURE.as_bytes()),
+            ImportLimits::default(),
+        )
+        .expect("pinned Mathlib fixture must import");
+        completed.into_parts().0
+    }
+
+    fn wire_ty_of(kernel: &Kernel, rendered: &str) -> ExprId {
+        kernel
+            .environment()
+            .iter()
+            .find(|(name, decl)| {
+                matches!(decl, Declaration::Theorem { .. })
+                    && kernel.display_name(**name).to_string() == rendered
+            })
+            .map(|(_, decl)| decl.ty())
+            .unwrap_or_else(|| panic!("{rendered} is not a Theorem in the fixture"))
+    }
+
+    /// POSITIVE control.
+    #[test]
+    fn le_of_lt_add_one_reconstructs_against_the_real_mathlib_type() {
+        let mut kernel = fixture_kernel();
+        let wire_ty = wire_ty_of(&kernel, "Nat.le_of_lt_add_one");
+        let value = reconstruct(&mut kernel, "Nat.le_of_lt_add_one", wire_ty)
+            .expect("reconstruction must not decline")
+            .expect("Nat.le_of_lt_add_one must be recognised as substitutable");
+        let inferred = kernel.infer(value).expect("candidate must infer");
+        assert!(
+            kernel.def_eq(inferred, wire_ty),
+            "candidate's type is not def-eq to Mathlib's own declared type"
+        );
+        let fresh_name = {
+            let root = kernel.anon();
+            kernel.name_str(root, "TestRealLeOfLtAddOne")
+        };
+        kernel
+            .add_declaration(Declaration::Theorem {
+                name: fresh_name,
+                uparams: vec![],
+                ty: wire_ty,
+                value,
+            })
+            .expect("reconstructed Nat.le_of_lt_add_one must kernel-check");
+        assert_eq!(kernel.axiom_footprint(fresh_name).len(), 0);
+        assert_eq!(
+            kernel.theorem_dependencies(fresh_name).len(),
+            0,
+            "the reconstruction must cite no theorem: {:?}",
+            kernel
+                .theorem_dependencies(fresh_name)
+                .iter()
+                .map(|&n| kernel.display_name(n).to_string())
+                .collect::<Vec<_>>()
+        );
+    }
+
+    /// NEGATIVE control at the KERNEL, with this module's own `def_eq` guard
+    /// bypassed: the reconstructed value is admitted directly at
+    /// `Nat.le_succ`'s type (`forall n, n <= n + 1`, a real theorem in the
+    /// same fixture and a real Pi over `Nat`), which it does not prove. Only
+    /// the kernel can refuse this — nothing in `reconstruct` runs.
+    #[test]
+    fn the_value_at_another_fixture_theorems_type_is_refused_by_the_kernel() {
+        let mut kernel = fixture_kernel();
+        let wire_ty = wire_ty_of(&kernel, "Nat.le_of_lt_add_one");
+        let value = reconstruct(&mut kernel, "Nat.le_of_lt_add_one", wire_ty)
+            .expect("reconstruction must not decline")
+            .expect("must be substitutable");
+        let wrong_ty = wire_ty_of(&kernel, "Nat.le_succ");
+        let fresh_name = {
+            let root = kernel.anon();
+            kernel.name_str(root, "TestRealLeOfLtAddOneWrongType")
+        };
+        let outcome = kernel.add_declaration(Declaration::Theorem {
+            name: fresh_name,
+            uparams: vec![],
+            ty: wrong_ty,
+            value,
+        });
+        assert!(
+            outcome.is_err(),
+            "the kernel must refuse the value at Nat.le_succ's type, got {outcome:?}"
+        );
+    }
+
+    /// NEGATIVE control at this module's own validation guard: offering a
+    /// mismatched `wire_ty` must make [`reconstruct`] DECLINE rather than
+    /// coerce. Mutation target: the `def_eq` check inside `reconstruct`.
+    #[test]
+    fn a_mismatched_wire_ty_makes_reconstruct_decline() {
+        let mut kernel = fixture_kernel();
+        let wrong_ty = wire_ty_of(&kernel, "Nat.le_succ");
+        assert!(matches!(
+            reconstruct(&mut kernel, "Nat.le_of_lt_add_one", wrong_ty),
+            Err(SubstitutionError::UnexpectedShape(_))
+        ));
     }
 }
 

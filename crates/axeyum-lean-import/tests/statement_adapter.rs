@@ -282,3 +282,121 @@ fn wrong_or_missing_target_name_is_rejected() {
         StatementImportError::TargetCardinality { observed: 0, .. }
     ));
 }
+
+// ---------------------------------------------------------------------------
+// The native quotient package (ADR-1667 / ADR-1662)
+//
+// Measured 2026-09-05: 73 of 756 pinned Mathlib statement mirrors were refused
+// with `Quot` as the first blocker. The four quotient primitives are a type
+// former and its eliminators, and `Kernel::add_quotient_package` derives all
+// four types itself before admitting any of them, so nothing about the stream
+// is trusted. `Quot.sound` — the one quotient fact that states a proposition —
+// is absent from this kernel entirely and has no `quot.kind` spelling.
+// ---------------------------------------------------------------------------
+
+const QUOTIENT_FIXTURE: &str =
+    include_str!("../../../docs/plan/fixtures/lean4export-v4.30-quotient.ndjson");
+
+/// A kernel carrying the real, kernel-validated quotient package (imported
+/// from the pinned Lean 4.30 fixture) plus a transparent `Prop` target.
+fn quotient_statement_kernel() -> Kernel {
+    let completed = axeyum_lean_import::import_ndjson(
+        Cursor::new(QUOTIENT_FIXTURE.as_bytes()),
+        ImportLimits::default(),
+    )
+    .expect("quotient fixture must import");
+    let (mut kernel, _report) = completed.into_parts();
+    let name = target_name(&mut kernel);
+    let (prop, goal) = proposition(&mut kernel);
+    kernel
+        .add_declaration(Declaration::Definition {
+            name,
+            uparams: vec![],
+            ty: prop,
+            value: goal,
+            hint: ReducibilityHint::Regular(0),
+        })
+        .expect("goal definition must check");
+    kernel
+}
+
+/// POSITIVE control for the admission feature: a statement stream whose
+/// closure carries the complete, kernel-validated quotient package now
+/// crosses. Before ADR-1667 this returned
+/// `StatementImportError::TrustedDeclaration { name: "Quot", .. }`.
+#[test]
+fn the_native_quotient_package_does_not_block_a_statement() {
+    let kernel = quotient_statement_kernel();
+    let completed = import_statement_ndjson(
+        Cursor::new(render(&kernel)),
+        ImportLimits::default(),
+        TARGET,
+    )
+    .expect("a statement closure carrying the native quotient package must cross");
+    let report = completed.report();
+    let mut admitted = report.native_quotient_package.clone();
+    admitted.sort();
+    assert_eq!(
+        admitted,
+        vec![
+            "Quot".to_owned(),
+            "Quot.ind".to_owned(),
+            "Quot.lift".to_owned(),
+            "Quot.mk".to_owned()
+        ],
+        "exactly the four package members must be recorded as natively admitted"
+    );
+    assert!(
+        !report
+            .native_quotient_package
+            .iter()
+            .any(|n| n == "Quot.sound"),
+        "Quot.sound must never appear: this kernel does not have it"
+    );
+}
+
+/// NEGATIVE control for the same feature: the quotient exemption must not
+/// widen to anything else in the same stream. An ordinary smuggled `Theorem`
+/// alongside the very same validated quotient package is still refused, so
+/// the new `continue` cannot be the reason a proof-bearing declaration got in.
+#[test]
+fn the_quotient_exemption_does_not_admit_a_theorem_beside_it() {
+    let mut kernel = quotient_statement_kernel();
+    let root = kernel.anon();
+    let smuggled = kernel.name_str(root, "SmuggledTheorem");
+    // A genuinely provable proposition (`forall p : Prop, p -> p`), so this
+    // control fails at the ISOLATION GATE and not at the kernel — a theorem
+    // the kernel refuses would make the test pass for the wrong reason.
+    let zero = kernel.level_zero();
+    let prop = kernel.sort(zero);
+    let p_name = kernel.name_str(root, "p");
+    let h_name = kernel.name_str(root, "h");
+    let p = kernel.bvar(0);
+    let result = kernel.bvar(1);
+    let implication = kernel.pi(h_name, p, result, BinderInfo::Default);
+    let statement = kernel.pi(p_name, prop, implication, BinderInfo::Default);
+    let h = kernel.bvar(0);
+    let p = kernel.bvar(0);
+    let identity = kernel.lam(h_name, p, h, BinderInfo::Default);
+    let proof = kernel.lam(p_name, prop, identity, BinderInfo::Default);
+    kernel
+        .add_declaration(Declaration::Theorem {
+            name: smuggled,
+            uparams: vec![],
+            ty: statement,
+            value: proof,
+        })
+        .expect("control theorem must check");
+    let error = import_statement_ndjson(
+        Cursor::new(render(&kernel)),
+        ImportLimits::default(),
+        TARGET,
+    )
+    .expect_err("a theorem beside the quotient package must still poison the stream");
+    match error {
+        StatementImportError::TrustedDeclaration { name, .. } => {
+            assert_eq!(name, "SmuggledTheorem");
+        }
+        other => panic!("expected TrustedDeclaration, got {other:?}"),
+    }
+}

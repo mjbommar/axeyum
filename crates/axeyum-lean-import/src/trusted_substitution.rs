@@ -163,6 +163,9 @@ pub(crate) const SUBSTITUTABLE_THEOREMS: &[&str] = &[
     "Or.resolve_right",
     "ne_true_of_eq_false",
     "dif_neg",
+    "dif_pos",
+    "Eq.subst",
+    "And.left",
 ];
 
 /// First free-variable id this module mints. Chosen far above any id an
@@ -2233,6 +2236,331 @@ fn dif_neg_pair(kernel: &mut Kernel) -> Result<(ExprId, ExprId, Vec<NameId>), Su
     Ok((value, ty, vec![u_name]))
 }
 
+/// `dif_pos.{u} : {c : Prop} -> {h : Decidable c} -> (hc : c) ->
+/// {α : Sort u} -> {t : c -> α} -> {e : Not c -> α} ->
+/// Eq α (dite α c h t e) (t hc)`. [`dif_neg_pair`]'s exact mirror with the
+/// two `Decidable.rec` branches swapped: the `isTrue` branch is now the one
+/// that closes trivially (`dite α c (isTrue hc') t e` ι-reduces to `t hc'`,
+/// and `Eq.refl (t hc')` also proves `Eq α (t hc') (t hc)` because `hc'` and
+/// the given `hc` are both proofs of `c : Prop` and this kernel's
+/// definitional proof irrelevance identifies them), and the `isFalse` branch
+/// is the impossible one (`hnc hc : False`, discharged by `False.rec`).
+///
+/// Measured 2026-09-05 as the fourth-largest first-reported blocker of the
+/// statement-import census (34 of 756 rows, ADR-1662). Its own exported
+/// closure carries no axiom: `Not`, `Decidable`, `dite`, `Decidable.casesOn`,
+/// `rfl` and `absurd` are all Definitions/Inductives, so nothing here reads
+/// the stream's `dif_pos` value or type.
+#[allow(
+    clippy::many_single_char_names,
+    clippy::similar_names,
+    clippy::too_many_lines
+)]
+fn dif_pos_pair(kernel: &mut Kernel) -> Result<(ExprId, ExprId, Vec<NameId>), SubstitutionError> {
+    let eqp = discover_eq(kernel)?;
+    let dp = discover_decidable(kernel)?;
+    let dite_name = discover_dite(kernel)?;
+    let not_name = discover_not(kernel)?;
+    let falsep = discover_false(kernel)?;
+
+    let mut next_fvar = FVAR_BASE;
+    let anon = kernel.anon();
+    let u_name = kernel.name_str(anon, "u");
+    let u = kernel.level_param(u_name);
+    let sort_u = kernel.sort(u);
+    let zero = kernel.level_zero();
+    let prop = kernel.sort(zero);
+
+    let c_fv = fresh(&mut next_fvar);
+    let c = kernel.fvar(c_fv);
+    let h_fv = fresh(&mut next_fvar);
+    let h = kernel.fvar(h_fv);
+    let hc_fv = fresh(&mut next_fvar);
+    let hc = kernel.fvar(hc_fv);
+    let alpha_fv = fresh(&mut next_fvar);
+    let alpha = kernel.fvar(alpha_fv);
+    let t_fv = fresh(&mut next_fvar);
+    let t = kernel.fvar(t_fv);
+    let e_fv = fresh(&mut next_fvar);
+    let e = kernel.fvar(e_fv);
+
+    let decidable_c = {
+        let head = kernel.const_(dp.decidable, vec![]);
+        kernel.app(head, c)
+    };
+    let not_c = {
+        let head = kernel.const_(not_name, vec![]);
+        kernel.app(head, c)
+    };
+    let ty_t = kernel.pi(anon, c, alpha, BinderInfo::Default);
+    let ty_e = kernel.pi(anon, not_c, alpha, BinderInfo::Default);
+
+    let dite_at = |kernel: &mut Kernel, inst: ExprId| -> ExprId {
+        let head = kernel.const_(dite_name, vec![u]);
+        let w1 = kernel.app(head, alpha);
+        let w2 = kernel.app(w1, c);
+        let w3 = kernel.app(w2, inst);
+        let w4 = kernel.app(w3, t);
+        kernel.app(w4, e)
+    };
+
+    let t_hc = kernel.app(t, hc);
+
+    // motive := fun (h' : Decidable c) => Eq alpha (dite_at h') (t hc)
+    let motive = {
+        let hp_fv = fresh(&mut next_fvar);
+        let hp = kernel.fvar(hp_fv);
+        let dite_app = dite_at(kernel, hp);
+        let body = build_eq(kernel, eqp.eq, u, alpha, dite_app, t_hc);
+        lam_fv(kernel, anon, hp_fv, decidable_c, body, BinderInfo::Default)
+    };
+
+    // isFalse case: `dite alpha c (isFalse hnc) t e` iota-reduces to `e hnc`,
+    // but the branch's own `hnc : Not c` applied to the GIVEN `hc : c` gives
+    // `False`; discharge via `False.rec` at motive
+    // `fun _ => Eq alpha (e hnc) (t hc)`.
+    let minor_false = {
+        let hnc_fv = fresh(&mut next_fvar);
+        let hnc = kernel.fvar(hnc_fv);
+        let e_hnc = kernel.app(e, hnc);
+        let target_ty = build_eq(kernel, eqp.eq, u, alpha, e_hnc, t_hc);
+        let false_ty = kernel.const_(falsep.false_, vec![]);
+        let false_motive = kernel.lam(anon, false_ty, target_ty, BinderInfo::Default);
+        let contradiction = kernel.app(hnc, hc);
+        let rec = kernel.const_(falsep.false_rec, vec![zero]);
+        let w1 = kernel.app(rec, false_motive);
+        let body = kernel.app(w1, contradiction);
+        lam_fv(kernel, anon, hnc_fv, not_c, body, BinderInfo::Default)
+    };
+
+    // isTrue case: `dite alpha c (isTrue hc') t e` iota-reduces to `t hc'`;
+    // `Eq.refl (t hc')` also proves `Eq alpha (t hc') (t hc)` because `hc'`
+    // and `hc` are both proofs of `c : Prop` (definitional proof irrelevance,
+    // exactly as in `dif_neg_pair`'s isFalse branch).
+    let minor_true = {
+        let hcp_fv = fresh(&mut next_fvar);
+        let hcp = kernel.fvar(hcp_fv);
+        let t_hcp = kernel.app(t, hcp);
+        let refl = build_eq_refl(kernel, eqp.eq_refl, u, alpha, t_hcp);
+        lam_fv(kernel, anon, hcp_fv, c, refl, BinderInfo::Default)
+    };
+
+    let value_body = {
+        let rec = kernel.const_(dp.rec, vec![zero]);
+        let w1 = kernel.app(rec, c);
+        let w2 = kernel.app(w1, motive);
+        let w3 = kernel.app(w2, minor_false);
+        let w4 = kernel.app(w3, minor_true);
+        kernel.app(w4, h)
+    };
+    let type_body = {
+        let dite_h = dite_at(kernel, h);
+        build_eq(kernel, eqp.eq, u, alpha, dite_h, t_hc)
+    };
+
+    let binders = [
+        (c_fv, prop, BinderInfo::Implicit),
+        (h_fv, decidable_c, BinderInfo::InstImplicit),
+        (hc_fv, c, BinderInfo::Default),
+        (alpha_fv, sort_u, BinderInfo::Implicit),
+        (t_fv, ty_t, BinderInfo::Implicit),
+        (e_fv, ty_e, BinderInfo::Implicit),
+    ];
+    let (value, ty) = close_telescope(kernel, &binders, value_body, type_body);
+    Ok((value, ty, vec![u_name]))
+}
+
+/// `Eq.subst.{u} : {α : Sort u} -> {motive : α -> Prop} -> {a b : α} ->
+/// Eq α a b -> motive a -> motive b`, built directly from `Eq.rec` with the
+/// motive `fun (x : α) (_ : Eq α a x) => motive x` — never a hand-written
+/// `Eq.subst`, and never reading the stream's own `Eq.subst` record.
+///
+/// Lean 4.30 routes its own `Eq.subst` through the `Eq.ndrec` *Definition*;
+/// that indirection is not reproduced here, because a `Definition` in the
+/// closure is not a blocker and the shortest independent reconstruction is
+/// the `Eq.rec` application `Eq.ndrec` unfolds to anyway. Measured
+/// 2026-09-05 as the eighth first-reported blocker of the statement-import
+/// census (7 of 756 rows, ADR-1662); its exported closure carries no axiom.
+#[allow(clippy::many_single_char_names, clippy::similar_names)]
+fn eq_subst_pair(kernel: &mut Kernel) -> Result<(ExprId, ExprId, Vec<NameId>), SubstitutionError> {
+    let eqp = discover_eq(kernel)?;
+    let mut next_fvar = FVAR_BASE;
+    let anon = kernel.anon();
+    let u_name = kernel.name_str(anon, "u");
+    let u = kernel.level_param(u_name);
+    let sort_u = kernel.sort(u);
+    let zero = kernel.level_zero();
+    let prop = kernel.sort(zero);
+
+    let alpha_fv = fresh(&mut next_fvar);
+    let alpha = kernel.fvar(alpha_fv);
+    let motive_fv = fresh(&mut next_fvar);
+    let motive = kernel.fvar(motive_fv);
+    let a_fv = fresh(&mut next_fvar);
+    let a = kernel.fvar(a_fv);
+    let b_fv = fresh(&mut next_fvar);
+    let b = kernel.fvar(b_fv);
+    let h1_fv = fresh(&mut next_fvar);
+    let h1 = kernel.fvar(h1_fv);
+    let h2_fv = fresh(&mut next_fvar);
+    let h2 = kernel.fvar(h2_fv);
+
+    let ty_motive = kernel.pi(anon, alpha, prop, BinderInfo::Default);
+    let ty_h1 = build_eq(kernel, eqp.eq, u, alpha, a, b);
+    let motive_a = kernel.app(motive, a);
+    let motive_b = kernel.app(motive, b);
+
+    // rec_motive := fun (x : α) (_ : Eq α a x) => motive x
+    let rec_motive = {
+        let x_fv = fresh(&mut next_fvar);
+        let x = kernel.fvar(x_fv);
+        let motive_x = kernel.app(motive, x);
+        let hyp_ty = build_eq(kernel, eqp.eq, u, alpha, a, x);
+        let anon_hyp = kernel.anon();
+        let inner = kernel.lam(anon_hyp, hyp_ty, motive_x, BinderInfo::Default);
+        lam_fv(kernel, anon, x_fv, alpha, inner, BinderInfo::Default)
+    };
+
+    let value_body = {
+        let rec = kernel.const_(eqp.eq_rec, vec![zero, u]);
+        let w1 = kernel.app(rec, alpha);
+        let w2 = kernel.app(w1, a);
+        let w3 = kernel.app(w2, rec_motive);
+        let w4 = kernel.app(w3, h2);
+        let w5 = kernel.app(w4, b);
+        kernel.app(w5, h1)
+    };
+    let type_body = motive_b;
+
+    let binders = [
+        (alpha_fv, sort_u, BinderInfo::Implicit),
+        (motive_fv, ty_motive, BinderInfo::Implicit),
+        (a_fv, alpha, BinderInfo::Implicit),
+        (b_fv, alpha, BinderInfo::Implicit),
+        (h1_fv, ty_h1, BinderInfo::Default),
+        (h2_fv, motive_a, BinderInfo::Default),
+    ];
+    let (value, ty) = close_telescope(kernel, &binders, value_body, type_body);
+    Ok((value, ty, vec![u_name]))
+}
+
+/// The ambient `And`/`And.intro`/`And.rec` primitives, discovered by exact
+/// display name and checked rather than assumed — the same discipline
+/// [`discover_or`] uses, and for the same reason. `And` is a 2-parameter,
+/// 0-index, single-constructor `Inductive` in `Prop` whose only fields are
+/// proofs, so Lean gives it a LARGE-eliminating recursor (`And.rec` carries
+/// one universe parameter); [`and_left_pair`] instantiates that parameter at
+/// `0`, which is all it needs.
+struct AndPrimitives {
+    and_: NameId,
+    rec: NameId,
+}
+
+fn discover_and(kernel: &Kernel) -> Result<AndPrimitives, SubstitutionError> {
+    let and_ = exact_name(kernel, "And")?;
+    match kernel.environment().get(and_) {
+        Some(Declaration::Inductive {
+            num_params,
+            num_indices,
+            ctor_names,
+            ..
+        }) if *num_params == 2 && *num_indices == 0 && ctor_names.len() == 1 => {}
+        _ => {
+            return Err(SubstitutionError::UnexpectedShape(
+                "And is not a 2-param, 0-index, 1-constructor Inductive",
+            ));
+        }
+    }
+    let intro = exact_name(kernel, "And.intro")?;
+    if !matches!(
+        kernel.environment().get(intro),
+        Some(Declaration::Constructor { .. })
+    ) {
+        return Err(SubstitutionError::UnexpectedShape(
+            "And.intro is not a Constructor",
+        ));
+    }
+    let rec = exact_name(kernel, "And.rec")?;
+    let Some(Declaration::Recursor { uparams, .. }) = kernel.environment().get(rec) else {
+        return Err(SubstitutionError::UnexpectedShape(
+            "And.rec is not a Recursor declaration",
+        ));
+    };
+    if uparams.len() != 1 {
+        return Err(SubstitutionError::UnexpectedShape(
+            "And.rec does not have exactly one universe parameter",
+        ));
+    }
+    Ok(AndPrimitives { and_, rec })
+}
+
+/// `And.left : {a b : Prop} -> And a b -> a`, via `And.rec` at universe `0`
+/// with the constant motive `fun _ => a` and the minor
+/// `fun (left : a) (right : b) => left`.
+///
+/// Lean 4.30 exports its own `And.left` as a structure PROJECTION
+/// (`self.0`); this reconstruction uses the recursor instead, because the
+/// recursor is generated and checked by this kernel from the `And` inductive
+/// in the same stream, while a projection would have to agree with the
+/// stream's own structure metadata. Neither branch of that choice reads the
+/// stream's `And.left` value or type. Measured 2026-09-05 as the seventh
+/// first-reported blocker of the statement-import census (12 of 756 rows,
+/// ADR-1662).
+#[allow(clippy::many_single_char_names, clippy::similar_names)]
+fn and_left_pair(kernel: &mut Kernel) -> Result<(ExprId, ExprId, Vec<NameId>), SubstitutionError> {
+    let andp = discover_and(kernel)?;
+    let mut next_fvar = FVAR_BASE;
+    let anon = kernel.anon();
+    let zero = kernel.level_zero();
+    let prop = kernel.sort(zero);
+
+    let a_fv = fresh(&mut next_fvar);
+    let a = kernel.fvar(a_fv);
+    let b_fv = fresh(&mut next_fvar);
+    let b = kernel.fvar(b_fv);
+    let self_fv = fresh(&mut next_fvar);
+    let self_ = kernel.fvar(self_fv);
+
+    let and_ab = {
+        let head = kernel.const_(andp.and_, vec![]);
+        let w1 = kernel.app(head, a);
+        kernel.app(w1, b)
+    };
+
+    // motive := fun (_ : And a b) => a
+    let motive = {
+        let ignore_fv = fresh(&mut next_fvar);
+        lam_fv(kernel, anon, ignore_fv, and_ab, a, BinderInfo::Default)
+    };
+
+    // minor := fun (left : a) (right : b) => left
+    let minor = {
+        let left_fv = fresh(&mut next_fvar);
+        let left = kernel.fvar(left_fv);
+        let right_fv = fresh(&mut next_fvar);
+        let inner = lam_fv(kernel, anon, right_fv, b, left, BinderInfo::Default);
+        lam_fv(kernel, anon, left_fv, a, inner, BinderInfo::Default)
+    };
+
+    let value_body = {
+        let rec = kernel.const_(andp.rec, vec![zero]);
+        let w1 = kernel.app(rec, a);
+        let w2 = kernel.app(w1, b);
+        let w3 = kernel.app(w2, motive);
+        let w4 = kernel.app(w3, minor);
+        kernel.app(w4, self_)
+    };
+    let type_body = a;
+
+    let binders = [
+        (a_fv, prop, BinderInfo::Implicit),
+        (b_fv, prop, BinderInfo::Implicit),
+        (self_fv, and_ab, BinderInfo::Default),
+    ];
+    let (value, ty) = close_telescope(kernel, &binders, value_body, type_body);
+    Ok((value, ty, vec![]))
+}
+
 /// Attempt to reconstruct `rendered` as a kernel-checked declaration built
 /// entirely from this module's own primitives, never from the untrusted
 /// stream, **or** (for the twenty names in
@@ -2268,6 +2596,9 @@ pub(crate) fn reconstruct(
             "Or.resolve_right" => or_resolve_right_pair(kernel)?,
             "ne_true_of_eq_false" => ne_true_of_eq_false_pair(kernel)?,
             "dif_neg" => dif_neg_pair(kernel)?,
+            "dif_pos" => dif_pos_pair(kernel)?,
+            "Eq.subst" => eq_subst_pair(kernel)?,
+            "And.left" => and_left_pair(kernel)?,
             _ => unreachable!("checked against SUBSTITUTABLE_THEOREMS above"),
         };
         return Ok(Some(Declaration::Theorem {
@@ -2316,7 +2647,9 @@ mod tests {
     const QUOTIENT_FIXTURE: &str =
         include_str!("../../../docs/plan/fixtures/lean4export-v4.30-quotient.ndjson");
 
-    fn fixture_kernel() -> Kernel {
+    // `pub(super)` so the sibling `c4_admission_tests` module can reuse the
+    // same fixture rather than duplicating it.
+    pub(super) fn fixture_kernel() -> Kernel {
         let completed = import_ndjson(
             Cursor::new(QUOTIENT_FIXTURE.as_bytes()),
             ImportLimits::default(),
@@ -2555,7 +2888,7 @@ mod tests {
         clippy::similar_names,
         clippy::too_many_lines
     )]
-    fn decidable_test_kernel() -> Kernel {
+    pub(super) fn decidable_test_kernel() -> Kernel {
         let mut kernel = fixture_kernel();
         let anon = kernel.anon();
         let zero = kernel.level_zero();
@@ -3777,6 +4110,399 @@ mod real_stream_eq_of_heq_tests {
         assert_eq!(
             ok, present,
             "eq_of_heq_pair must succeed on every present row"
+        );
+    }
+}
+
+/// Tests for the three C4 admission substitutions added 2026-09-05
+/// (`dif_pos`, `Eq.subst`, `And.left`) — see ADR-1667 and the census artifact
+/// `artifacts/measurements/statement-import-blocker-census-2026-09-05.json`.
+///
+/// Every one carries BOTH a positive control (the reconstruction is admitted
+/// by [`Kernel::add_declaration`] at the type this module built, with an
+/// empty axiom footprint and no cited theorem) and a NEGATIVE control (the
+/// same reconstructed VALUE offered at a deliberately wrong type is REFUSED
+/// by the kernel). The negative controls call `add_declaration` directly with
+/// a hand-swapped type, so no Rust-side guard in this module participates —
+/// the kernel is the only thing that can reject them, which is the point.
+#[cfg(test)]
+mod c4_admission_tests {
+    use super::tests::{decidable_test_kernel, fixture_kernel};
+    use super::*;
+
+    /// `fixture_kernel()` plus a two-parameter, single-constructor `And` in
+    /// `Prop` whose fields are both proofs — the shape Lean 4.30 exports, and
+    /// the shape [`discover_and`] checks for.
+    fn and_test_kernel() -> Kernel {
+        let mut kernel = fixture_kernel();
+        let anon = kernel.anon();
+        let zero = kernel.level_zero();
+        let prop = kernel.sort(zero);
+
+        let and_name = kernel.name_str(anon, "And");
+        let and_intro = kernel.name_str(and_name, "intro");
+        let and_const = kernel.const_(and_name, vec![]);
+
+        let and_ty = {
+            let inner = kernel.pi(anon, prop, prop, BinderInfo::Default);
+            kernel.pi(anon, prop, inner, BinderInfo::Default)
+        };
+        // And.intro : Pi (a b : Prop) (_ : a) (_ : b), And a b.
+        let intro_ty = {
+            let a3 = kernel.bvar(3);
+            let b2 = kernel.bvar(2);
+            let and_ab = {
+                let e = kernel.app(and_const, a3);
+                kernel.app(e, b2)
+            };
+            let b1 = kernel.bvar(1);
+            let inner_hb = kernel.pi(anon, b1, and_ab, BinderInfo::Default);
+            let a1 = kernel.bvar(1);
+            let inner_ha = kernel.pi(anon, a1, inner_hb, BinderInfo::Default);
+            let inner_b = kernel.pi(anon, prop, inner_ha, BinderInfo::Default);
+            kernel.pi(anon, prop, inner_b, BinderInfo::Default)
+        };
+        kernel
+            .add_inductive(and_name, &[], 2, and_ty, &[(and_intro, intro_ty)])
+            .expect("And must admit");
+        kernel
+    }
+
+    // ---------------------------------------------------------------- dif_pos
+
+    #[test]
+    fn dif_pos_reconstructs_and_kernel_checks() {
+        let mut kernel = decidable_test_kernel();
+        let (value, ty, uparams) = dif_pos_pair(&mut kernel).expect("dif_pos reconstructs");
+        assert_eq!(uparams.len(), 1);
+        let name = {
+            let root = kernel.anon();
+            kernel.name_str(root, "TestDifPos")
+        };
+        kernel
+            .add_declaration(Declaration::Theorem {
+                name,
+                uparams,
+                ty,
+                value,
+            })
+            .expect("reconstructed dif_pos must kernel-check");
+        assert_eq!(kernel.axiom_footprint(name).len(), 0);
+        assert_eq!(kernel.theorem_dependencies(name).len(), 0);
+    }
+
+    /// NEGATIVE control: `dif_pos`'s value proves `dite c h t e = t hc`;
+    /// offering it at `dif_neg`'s type (`dite c h t e = e hnc`) is a
+    /// WRONG-DIRECTION substitution of exactly the kind a mirrored
+    /// construction produces by copy-paste. Both types are real, well-formed,
+    /// and differ only in which branch the right-hand side names, so nothing
+    /// but the kernel's own conversion check can tell them apart.
+    #[test]
+    fn dif_pos_value_at_dif_negs_type_is_refused_by_the_kernel() {
+        let mut kernel = decidable_test_kernel();
+        let (value, _pos_ty, uparams) = dif_pos_pair(&mut kernel).expect("dif_pos reconstructs");
+        let (_neg_value, neg_ty, _) = dif_neg_pair(&mut kernel).expect("dif_neg reconstructs");
+        let name = {
+            let root = kernel.anon();
+            kernel.name_str(root, "TestDifPosWrongType")
+        };
+        let outcome = kernel.add_declaration(Declaration::Theorem {
+            name,
+            uparams,
+            ty: neg_ty,
+            value,
+        });
+        assert!(
+            outcome.is_err(),
+            "the kernel must refuse dif_pos's value at dif_neg's type, got {outcome:?}"
+        );
+    }
+
+    #[test]
+    fn dif_pos_declines_when_decidable_is_missing() {
+        let mut kernel = fixture_kernel();
+        assert!(matches!(
+            dif_pos_pair(&mut kernel),
+            Err(SubstitutionError::RequiredDeclarationUnavailable(
+                "Decidable"
+            ))
+        ));
+    }
+
+    #[test]
+    fn reconstruct_dispatches_dif_pos() {
+        let mut kernel = decidable_test_kernel();
+        let name = {
+            let root = kernel.anon();
+            kernel.name_str(root, "TestDispatchDifPos")
+        };
+        let wire_ty = kernel.sort_zero();
+        let result = reconstruct(&mut kernel, name, "dif_pos", wire_ty);
+        assert!(
+            matches!(result, Ok(Some(Declaration::Theorem { .. }))),
+            "dif_pos: expected Ok(Some(Theorem)), got {result:?}"
+        );
+    }
+
+    // --------------------------------------------------------------- Eq.subst
+
+    #[test]
+    fn eq_subst_reconstructs_and_kernel_checks() {
+        let mut kernel = fixture_kernel();
+        let (value, ty, uparams) = eq_subst_pair(&mut kernel).expect("Eq.subst reconstructs");
+        assert_eq!(uparams.len(), 1);
+        let name = {
+            let root = kernel.anon();
+            kernel.name_str(root, "TestEqSubst")
+        };
+        kernel
+            .add_declaration(Declaration::Theorem {
+                name,
+                uparams,
+                ty,
+                value,
+            })
+            .expect("reconstructed Eq.subst must kernel-check");
+        assert_eq!(kernel.axiom_footprint(name).len(), 0);
+        assert_eq!(kernel.theorem_dependencies(name).len(), 0);
+    }
+
+    /// NEGATIVE control: `Eq.subst`'s value transports along `h₁ : a = b` in
+    /// the FORWARD direction (`motive a -> motive b`). Offering that same
+    /// value at the type whose two `motive` applications are exchanged
+    /// (`motive b -> motive a`, built here by hand from the same pieces) is
+    /// the backwards-transport bug. It is a real, inhabited, well-formed
+    /// proposition, so only the kernel's conversion check refuses it.
+    #[test]
+    fn eq_subst_value_at_the_reversed_type_is_refused_by_the_kernel() {
+        let mut kernel = fixture_kernel();
+        let (value, _forward_ty, uparams) = eq_subst_pair(&mut kernel).expect("Eq.subst builds");
+
+        // Rebuild `Eq.subst`'s telescope with hypothesis and conclusion
+        // exchanged: {α} {motive} {a b} -> Eq α a b -> motive b -> motive a.
+        let eqp = discover_eq(&kernel).expect("Eq primitives");
+        let mut next_fvar = FVAR_BASE + 70_000_000;
+        let anon = kernel.anon();
+        let u_name = kernel.name_str(anon, "u");
+        let u = kernel.level_param(u_name);
+        let sort_u = kernel.sort(u);
+        let zero = kernel.level_zero();
+        let prop = kernel.sort(zero);
+
+        let alpha_fv = fresh(&mut next_fvar);
+        let alpha = kernel.fvar(alpha_fv);
+        let motive_fv = fresh(&mut next_fvar);
+        let motive = kernel.fvar(motive_fv);
+        let a_fv = fresh(&mut next_fvar);
+        let a = kernel.fvar(a_fv);
+        let b_fv = fresh(&mut next_fvar);
+        let b = kernel.fvar(b_fv);
+        let h1_fv = fresh(&mut next_fvar);
+        let h2_fv = fresh(&mut next_fvar);
+
+        let ty_motive = kernel.pi(anon, alpha, prop, BinderInfo::Default);
+        let ty_h1 = build_eq(&mut kernel, eqp.eq, u, alpha, a, b);
+        let motive_a = kernel.app(motive, a);
+        let motive_b = kernel.app(motive, b);
+        let binders = [
+            (alpha_fv, sort_u, BinderInfo::Implicit),
+            (motive_fv, ty_motive, BinderInfo::Implicit),
+            (a_fv, alpha, BinderInfo::Implicit),
+            (b_fv, alpha, BinderInfo::Implicit),
+            (h1_fv, ty_h1, BinderInfo::Default),
+            // hypothesis `motive b`, conclusion `motive a` — reversed.
+            (h2_fv, motive_b, BinderInfo::Default),
+        ];
+        let (_ignored_value, reversed_ty) =
+            close_telescope(&mut kernel, &binders, motive_a, motive_a);
+
+        let name = {
+            let root = kernel.anon();
+            kernel.name_str(root, "TestEqSubstReversed")
+        };
+        let outcome = kernel.add_declaration(Declaration::Theorem {
+            name,
+            uparams,
+            ty: reversed_ty,
+            value,
+        });
+        assert!(
+            outcome.is_err(),
+            "the kernel must refuse Eq.subst's value at the reversed type, got {outcome:?}"
+        );
+    }
+
+    #[test]
+    fn eq_subst_declines_when_eq_is_missing() {
+        let mut kernel = Kernel::new();
+        assert!(matches!(
+            eq_subst_pair(&mut kernel),
+            Err(SubstitutionError::RequiredDeclarationUnavailable("Eq"))
+        ));
+    }
+
+    #[test]
+    fn reconstruct_dispatches_eq_subst() {
+        let mut kernel = fixture_kernel();
+        let name = {
+            let root = kernel.anon();
+            kernel.name_str(root, "TestDispatchEqSubst")
+        };
+        let wire_ty = kernel.sort_zero();
+        let result = reconstruct(&mut kernel, name, "Eq.subst", wire_ty);
+        assert!(
+            matches!(result, Ok(Some(Declaration::Theorem { .. }))),
+            "Eq.subst: expected Ok(Some(Theorem)), got {result:?}"
+        );
+    }
+
+    // --------------------------------------------------------------- And.left
+
+    #[test]
+    fn and_left_reconstructs_and_kernel_checks() {
+        let mut kernel = and_test_kernel();
+        let (value, ty, uparams) = and_left_pair(&mut kernel).expect("And.left reconstructs");
+        assert_eq!(uparams.len(), 0);
+        let name = {
+            let root = kernel.anon();
+            kernel.name_str(root, "TestAndLeft")
+        };
+        kernel
+            .add_declaration(Declaration::Theorem {
+                name,
+                uparams,
+                ty,
+                value,
+            })
+            .expect("reconstructed And.left must kernel-check");
+        assert_eq!(kernel.axiom_footprint(name).len(), 0);
+        assert_eq!(kernel.theorem_dependencies(name).len(), 0);
+    }
+
+    /// NEGATIVE control: `And.left`'s value returns the FIRST field, so
+    /// offering it at `And.right`'s type (`{a b : Prop} -> And a b -> b`,
+    /// built here by hand) is the projection-index bug. `a` and `b` are two
+    /// distinct bound `Prop`s, so nothing but the kernel can tell the two
+    /// types apart — a Rust-side name check would not even look.
+    #[test]
+    fn and_left_value_at_and_rights_type_is_refused_by_the_kernel() {
+        let mut kernel = and_test_kernel();
+        let (value, _left_ty, uparams) = and_left_pair(&mut kernel).expect("And.left builds");
+
+        let andp = discover_and(&kernel).expect("And primitives");
+        let mut next_fvar = FVAR_BASE + 80_000_000;
+        let zero = kernel.level_zero();
+        let prop = kernel.sort(zero);
+        let a_fv = fresh(&mut next_fvar);
+        let a = kernel.fvar(a_fv);
+        let b_fv = fresh(&mut next_fvar);
+        let b = kernel.fvar(b_fv);
+        let self_fv = fresh(&mut next_fvar);
+        let and_ab = {
+            let head = kernel.const_(andp.and_, vec![]);
+            let w1 = kernel.app(head, a);
+            kernel.app(w1, b)
+        };
+        let binders = [
+            (a_fv, prop, BinderInfo::Implicit),
+            (b_fv, prop, BinderInfo::Implicit),
+            (self_fv, and_ab, BinderInfo::Default),
+        ];
+        // conclusion `b`, not `a` — this is `And.right`'s statement.
+        let (_ignored_value, right_ty) = close_telescope(&mut kernel, &binders, b, b);
+
+        let name = {
+            let root = kernel.anon();
+            kernel.name_str(root, "TestAndLeftWrongField")
+        };
+        let outcome = kernel.add_declaration(Declaration::Theorem {
+            name,
+            uparams,
+            ty: right_ty,
+            value,
+        });
+        assert!(
+            outcome.is_err(),
+            "the kernel must refuse And.left's value at And.right's type, got {outcome:?}"
+        );
+    }
+
+    #[test]
+    fn and_left_declines_when_and_is_missing() {
+        let mut kernel = fixture_kernel();
+        assert!(matches!(
+            and_left_pair(&mut kernel),
+            Err(SubstitutionError::RequiredDeclarationUnavailable("And"))
+        ));
+    }
+
+    // ---------------------------------------------------- eq_self (NOT done)
+
+    /// `eq_self` is the LARGEST first-reported blocker of the 2026-09-05
+    /// statement-import census (97 of 756 rows) and ADR-1662 grouped it with
+    /// the six constructive names. That grouping is wrong, and this test is
+    /// the measurement that says so rather than a comment claiming it:
+    /// `eq_self : (a = a) = True` is an equality between two `Prop`s, and
+    /// Lean 4.30 proves it through `eq_true`, which is `propext` applied to
+    /// an `Iff`. `propext` is a genuine AXIOM and this kernel is
+    /// intuitionistic (`crates/axeyum-lean-kernel/src/prelude.rs`: no
+    /// `Classical.em`, no `propext`, no `funext`), so there is no
+    /// reconstruction of `eq_self` that does not first enlarge the trusted
+    /// surface by an axiom — which is exactly the decision ADR-1662 held
+    /// back, and which this lane does not take.
+    ///
+    /// Read from the pinned Lean 4.30 export of the real declaration, so it
+    /// fails if a Mathlib pin move ever makes `eq_self` axiom-free (which
+    /// would be the signal to revisit), and it fails if anyone adds `eq_self`
+    /// to [`SUBSTITUTABLE_THEOREMS`] without taking the `propext` decision.
+    #[test]
+    fn eq_self_is_propext_dependent_and_therefore_not_substituted() {
+        use crate::{ImportLimits, import_ndjson};
+        use std::io::Cursor;
+
+        const EQ_SELF_FIXTURE: &str =
+            include_str!("../../../docs/plan/fixtures/lean4export-v4.30-eq-self.ndjson");
+
+        assert!(
+            !SUBSTITUTABLE_THEOREMS.contains(&"eq_self"),
+            "eq_self must not be substituted while this kernel has no propext"
+        );
+
+        let completed = import_ndjson(
+            Cursor::new(EQ_SELF_FIXTURE.as_bytes()),
+            ImportLimits::default(),
+        )
+        .expect("pinned eq_self fixture must import");
+        let kernel = completed.into_parts().0;
+        let eq_self = kernel
+            .environment()
+            .iter()
+            .find(|(name, _)| kernel.display_name(**name).to_string() == "eq_self")
+            .map(|(name, _)| *name)
+            .expect("the fixture must carry eq_self");
+        let footprint: Vec<String> = kernel
+            .axiom_footprint(eq_self)
+            .into_iter()
+            .map(|n| kernel.display_name(n).to_string())
+            .collect();
+        assert!(
+            footprint.iter().any(|n| n == "propext"),
+            "eq_self's own Lean 4.30 closure must reach propext; measured footprint {footprint:?}"
+        );
+    }
+
+    #[test]
+    fn reconstruct_dispatches_and_left() {
+        let mut kernel = and_test_kernel();
+        let name = {
+            let root = kernel.anon();
+            kernel.name_str(root, "TestDispatchAndLeft")
+        };
+        let wire_ty = kernel.sort_zero();
+        let result = reconstruct(&mut kernel, name, "And.left", wire_ty);
+        assert!(
+            matches!(result, Ok(Some(Declaration::Theorem { .. }))),
+            "And.left: expected Ok(Some(Theorem)), got {result:?}"
         );
     }
 }
