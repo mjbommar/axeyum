@@ -1,0 +1,60 @@
+{
+  "schema_version": 1,
+  "id": "F:fo-diagonal-identity",
+  "title": "The diagonal identity: diag of a formula's code is the code of that formula applied to its own numeral",
+  "statement": "FO.Code.diagAux sends the code of a formula p to the code of p with the NUMERAL of p's own code substituted for de Bruijn index 0. This is the arithmetization half of the diagonal lemma -- the half that is a computation on Nat and needs no theory at all. The remaining half, that a theory PROVES the corresponding numeric fact and hence proves the biconditional, is not established here and is F:fo-diagonal-lemma.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem FO.Code.diagAux_code : ((x0 : FO.Formula) -> ((x1 : AxNat) -> ((x2 : AxNat) -> Eq.{1} AxNat (FO.Code.diagAux (AxNat.add x1 (FO.Formula.size x0)) (AxNat.add x2 (FO.Term.size (FO.Term.numeral (FO.Formula.code x0)))) (FO.Formula.code x0)) (FO.Formula.code (FO.Formula.subst x0 (FO.Subst.cons (FO.Term.numeral (FO.Formula.code x0)) FO.Subst.id))))))",
+    "kernel_theorem": "FO.Code.diagAux_code",
+    "fragment": "Nat",
+    "free_symbols": []
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "depends_on": [
+    "F:fo-subst-code-commutes"
+  ],
+  "proof_route": "kernel-lean",
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-FO.Code.diagAux_code",
+      "kind": "kernel-term",
+      "kernel_declaration": "FO.Code.diagAux_code",
+      "supports": "FO.Code.diagAux_code is admitted by the trusted kernel gate with the type recorded in formal.statement and rests on no axiom. It is one application of FO.Code.substCodeAux_commutes at t := FO.Term.numeral (FO.Formula.code p).",
+      "check_status": "checked",
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example fo_code_inventory -- FO.Code.diagAux_code --exact --require-axiom-free",
+      "checkers": [
+        "Kernel::add_declaration",
+        "Kernel::axiom_footprint"
+      ],
+      "notes": "Declared in crates/axeyum-lean-kernel/src/fo_roundtrip.rs by declare_diag_aux_code. The checker fails on absence."
+    },
+    {
+      "id": "rendered-statement-is-pinned",
+      "kind": "kernel-term",
+      "supports": "The theorem's declared type is rendered with Kernel::render_lean and compared against a literal in the test module, so a silently weakened statement (a dropped binder, a different decoder, the fuel on the other side of the Nat.add) fails the suite rather than passing unnoticed.",
+      "check_status": "checked",
+      "checker_command": "cargo test -p axeyum-lean-kernel --release --lib -- fo_roundtrip::tests::the_commuting_lemma_and_the_image_lemma_have_the_stated_types",
+      "checkers": [
+        "Kernel::render_lean"
+      ]
+    }
+  ],
+  "provenance": {
+    "date": "2026-09-05",
+    "established_by": "lane fo-diagonal (ADR-1648), by proof-term construction in crates/axeyum-lean-kernel/src/fo_roundtrip.rs",
+    "source": "roadmap W3-7 second slice; the theorem ADR-1640 sized and left open",
+    "prior_art": [
+      {
+        "who": "Kurt Goedel",
+        "what": "arithmetization of syntax: a numbering of formulas whose decoding and substitution are primitive-recursive, and the diagonal identity that the code of a formula with its own numeral substituted is a computable function of the formula's code",
+        "year": 1931,
+        "where": "Goedel, 'Ueber formal unentscheidbare Saetze der Principia Mathematica und verwandter Systeme I', Monatshefte fuer Mathematik und Physik 38 (1931)",
+        "attribution": "standard textbook attribution; this lane did not consult the primary source"
+      }
+    ]
+  },
+  "notes": "THE NUMERAL'S SYMBOLS ARE CHOSEN TO MATCH FO.natStructure. FO.Term.numeral is Nat.rec (FO.Term.f0 0) (fun _ ih => FO.Term.f1 1 ih); fo_semantics.rs interprets fn0 k as k and fn1 k x as Nat.add x k, so f0 0 denotes 0 and f1 1 t denotes Nat.succ of t's denotation.\n\nTHE DIAGONAL IS NOT EVALUABLE IN THIS KERNEL AT ANY GENUINE CODE, MEASURED. Every Nat numeral here is unary, and diagAux (code p) contains FO.Term.code (FO.Term.numeral (FO.Formula.code p)). At the smallest formula with a free variable -- FO.Formula.eqf (var 0) (var 0), whose code is 2 -- the numeral is a three-constructor term with code 47 and the diagonalised code is FO.Code.pair 1 (FO.Code.pair 47 47), over ten million. At FO.Formula.rel1 0 (var 0) (code 5) the first draft of the evaluation test OVERFLOWED THE STACK. FO.Code.diagAux is therefore pinned by Kernel::def_eq at three FREE variables -- pure delta/beta, no numerals -- with a negative control that its fourth argument is the code of the NUMERAL of n and not n itself. A later lane should not read the absence of a concrete evaluation test here as an oversight."
+}
