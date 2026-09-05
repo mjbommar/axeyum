@@ -201,6 +201,53 @@ fn negate_row(grid: &mut [Vec<i128>], index: usize) -> Option<()> {
     Some(())
 }
 
+/// The unimodular `2x2` transform used to reduce `other_value` against
+/// `pivot_value` (both nonzero, as guaranteed by every caller) in one
+/// gcd-reduction step. `None` on overflow.
+///
+/// When `pivot_value` already divides `other_value` exactly, this returns the
+/// pure elimination transform `(1, 0, -k, 1)` (`other -= k * pivot`), which
+/// leaves the pivot row (or column) untouched. That case is not an
+/// optimization -- it is required for termination.
+///
+/// The general Bezout-based transform (the `else` branch) is unimodular and
+/// mathematically valid in every case, but `extended_gcd` is free to return
+/// ANY valid Bezout pair, and when `pivot_value` already equals the gcd it is
+/// not guaranteed to return the identity-preserving pair `(1, 0)` -- it
+/// generally does not. The resulting transform then mixes BOTH rows (or
+/// columns) even though only elimination was needed, and that mixing can
+/// reintroduce a nonzero entry into a position the *other* pass (row-clear
+/// vs. column-clear) had just cleared. Measured: on
+/// `[[-1, -1, 0], [1, 0, -1], [0, 1, 1]]` -- the boundary matrix `d_1` of a
+/// 3-cycle (a triangle graph, or equivalently `boundary_matrix` of the
+/// `axeyum_cas::homology` circle example) -- the row-clear and column-clear
+/// passes perpetually re-dirty each other's work under the general transform
+/// alone: the matrix reaches the fixed state
+/// `[[1, 0, 0], [-1, 1, 0], [0, 0, 0]]` after two steps and then repeats it
+/// forever, so `smith_grids` always hits its iteration cap and
+/// `smith_normal_form` returns `None` for a matrix whose Smith form is simply
+/// `diag(1, 1, 0)`. Preferring the elimination transform whenever the pivot
+/// already divides the other value removes the re-dirtying entirely -- this
+/// is exactly the case that arises whenever the pivot has already reached the
+/// column/row's true gcd, which is the common case for the small-magnitude
+/// `0`/`+/-1` incidence and boundary matrices this crate's `homology` module
+/// builds.
+fn unimodular_transform_for(pivot_value: i128, other_value: i128) -> Option<Transform> {
+    if other_value.checked_rem(pivot_value) == Some(0) {
+        let quotient = other_value.checked_div(pivot_value)?;
+        return Some((1, 0, quotient.checked_neg()?, 1));
+    }
+    let (gcd_value, bezout_pivot, bezout_other) = extended_gcd(pivot_value, other_value);
+    let pivot_ratio = pivot_value.checked_div(gcd_value)?;
+    let other_ratio = other_value.checked_div(gcd_value)?;
+    Some((
+        bezout_pivot,
+        bezout_other,
+        other_ratio.checked_neg()?,
+        pivot_ratio,
+    ))
+}
+
 /// Reduce column `col` of `primary` with a unimodular row operation so that the
 /// pivot row holds `gcd(primary[pivot_row][col], primary[other_row][col])` and
 /// the other row holds `0`, applying the identical operation to `aux`.
@@ -216,15 +263,7 @@ fn reduce_rows_by_gcd(
 ) -> Option<()> {
     let pivot_value = primary[pivot_row][col];
     let other_value = primary[other_row][col];
-    let (gcd_value, bezout_pivot, bezout_other) = extended_gcd(pivot_value, other_value);
-    let pivot_ratio = pivot_value.checked_div(gcd_value)?;
-    let other_ratio = other_value.checked_div(gcd_value)?;
-    let transform = (
-        bezout_pivot,
-        bezout_other,
-        other_ratio.checked_neg()?,
-        pivot_ratio,
-    );
+    let transform = unimodular_transform_for(pivot_value, other_value)?;
     combine_rows(primary, pivot_row, other_row, transform)?;
     combine_rows(aux, pivot_row, other_row, transform)?;
     Some(())
@@ -244,15 +283,7 @@ fn reduce_columns_by_gcd(
 ) -> Option<()> {
     let pivot_value = primary[row][pivot_col];
     let other_value = primary[row][other_col];
-    let (gcd_value, bezout_pivot, bezout_other) = extended_gcd(pivot_value, other_value);
-    let pivot_ratio = pivot_value.checked_div(gcd_value)?;
-    let other_ratio = other_value.checked_div(gcd_value)?;
-    let transform = (
-        bezout_pivot,
-        bezout_other,
-        other_ratio.checked_neg()?,
-        pivot_ratio,
-    );
+    let transform = unimodular_transform_for(pivot_value, other_value)?;
     combine_columns(primary, pivot_col, other_col, transform)?;
     combine_columns(aux, pivot_col, other_col, transform)?;
     Some(())
@@ -421,7 +452,20 @@ pub(crate) fn certify_product_equals(product: &Matrix, target: &Matrix) -> bool 
 /// Certify that `matrix` is unimodular by confirming `det(matrix) = +/-1` via the
 /// certified [`Matrix::determinant`] and the zero-test.
 pub(crate) fn is_unimodular(matrix: &Matrix) -> bool {
-    let Some(determinant) = matrix.determinant() else {
+    // `bareiss_determinant` is `O(n^3)` fraction-free Gaussian elimination and
+    // exact for the all-integer-constant matrices every caller here passes
+    // (HNF/SNF transforms are always built from integer grids); it is tried
+    // first because the `O(n!)` cofactor `determinant` is infeasible past a
+    // couple dozen rows -- measured: certifying a Smith factorization of a
+    // 27-simplex boundary matrix (a genuinely small input; `homology`'s own
+    // Klein-bottle test fixture has 27 edges) needs a 27x27 unimodularity
+    // check, and `27!` cofactor terms never finish. `determinant` remains as
+    // a fallback for the (expected-empty, for this crate's own callers) case
+    // of a non-constant entry, where Bareiss declines.
+    let Some(determinant) = matrix
+        .bareiss_determinant()
+        .or_else(|| matrix.determinant())
+    else {
         return false;
     };
     let is_one = matches!(
@@ -1039,5 +1083,35 @@ mod tests {
         .expect("rectangular");
         assert!(hermite_normal_form(&a).is_none());
         assert!(smith_normal_form(&a).is_none());
+    }
+
+    /// REGRESSION. `[[-1, -1, 0], [1, 0, -1], [0, 1, 1]]` is `d_1` of a
+    /// 3-cycle (a triangle graph -- exactly the shape `axeyum_cas::homology`
+    /// builds for a circle's boundary matrix). Before the elimination-first
+    /// fix in `unimodular_transform_for`, the general Bezout transform alone
+    /// made `reduce_rows_by_gcd`/`reduce_columns_by_gcd` perpetually re-dirty
+    /// each other's clearing pass on this exact matrix (the grid reaches a
+    /// fixed point after two steps and repeats it forever), so
+    /// `smith_normal_form` always hit the iteration cap and returned `None`
+    /// for a matrix whose Smith form is simply `diag(1, 1, 0)`. This is a
+    /// POSITIVE control: it must now succeed, and with the correct diagonal.
+    #[test]
+    fn smith_normal_form_of_a_triangle_incidence_matrix_terminates() {
+        let a = matrix_of(&[&[-1, -1, 0], &[1, 0, -1], &[0, 1, 1]]);
+        let (left, diagonal, right) = smith_normal_form(&a)
+            .expect("the triangle incidence matrix has a Smith form (diag(1, 1, 0))");
+        assert_certified_equal(
+            &left
+                .mul(&a)
+                .expect("conformable")
+                .mul(&right)
+                .expect("conformable"),
+            &diagonal,
+        );
+        assert_unimodular(&left);
+        assert_unimodular(&right);
+        assert_eq!(entry_at(&diagonal, 0, 0), 1);
+        assert_eq!(entry_at(&diagonal, 1, 1), 1);
+        assert_eq!(entry_at(&diagonal, 2, 2), 0);
     }
 }

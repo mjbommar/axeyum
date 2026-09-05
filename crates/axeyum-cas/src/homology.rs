@@ -342,10 +342,8 @@ pub fn homology(complex: &SimplicialComplex) -> Option<HomologyCertificate> {
         let r_k = rank_at(k)? as i128;
         let r_k1 = rank_at(k + 1)? as i128;
         let b = n_k - r_k - r_k1;
-        if b < 0 {
-            return None;
-        }
-        betti.insert(k, b as usize);
+        let b = usize::try_from(b).ok()?;
+        betti.insert(k, b);
     }
 
     let mut torsion = BTreeMap::new();
@@ -483,12 +481,16 @@ fn smith_factorizations_hold(certificate: &HomologyCertificate) -> Result<(), St
     Ok(())
 }
 
+/// The recomputed Betti numbers and torsion coefficients from
+/// [`betti_and_torsion_match`].
+type BettiAndTorsion = (BTreeMap<usize, usize>, BTreeMap<usize, Vec<i128>>);
+
 /// Guard (c): recompute every Betti number and torsion list from the recorded
 /// `D`s alone and compare to what the certificate claims.
 fn betti_and_torsion_match(
     certificate: &HomologyCertificate,
     complex: &SimplicialComplex,
-) -> Result<(BTreeMap<usize, usize>, BTreeMap<usize, Vec<i128>>), String> {
+) -> Result<BettiAndTorsion, String> {
     let diag_rank = |k: usize| -> Result<usize, String> {
         match certificate.smith.get(&k) {
             Some(triple) => diagonal_rank(&triple.d)
@@ -503,12 +505,11 @@ fn betti_and_torsion_match(
         let r_k = diag_rank(k)? as i128;
         let r_k1 = diag_rank(k + 1)? as i128;
         let recomputed = n_k - r_k - r_k1;
-        if recomputed < 0 {
+        let Ok(recomputed) = usize::try_from(recomputed) else {
             return Err(format!(
                 "recomputed a negative Betti number at dimension {k}"
             ));
-        }
-        let recomputed = recomputed as usize;
+        };
         let Some(&claimed) = certificate.betti.get(&k) else {
             return Err(format!(
                 "certificate has no recorded Betti number at dimension {k}"
@@ -602,10 +603,11 @@ impl HomologyCertificate {
 #[cfg(test)]
 mod tests {
     use super::{
-        HomologyCertificate, SimplicialComplex, boundaries_match, boundary_matrix, homology,
-        rebuild_boundaries,
+        HomologyCertificate, SimplicialComplex, boundaries_match, boundary_matrix,
+        compositions_are_zero, euler_characteristic_matches, homology, rebuild_boundaries,
     };
     use crate::{CasExpr, Matrix};
+    use std::collections::BTreeMap;
 
     fn complex_of(maximal: &[&[usize]]) -> SimplicialComplex {
         let owned: Vec<Vec<usize>> = maximal.iter().map(|s| s.to_vec()).collect();
@@ -622,18 +624,26 @@ mod tests {
         certificate.torsion.get(&k).cloned().unwrap_or_default()
     }
 
-    /// Replace one entry of `matrix` with `value`, leaving every other entry
-    /// untouched. Test-only forging helper.
-    fn replace_entry(matrix: &Matrix, row: usize, col: usize, value: i128) -> Matrix {
+    /// Multiply every entry of row `row` of `matrix` by `factor`, leaving
+    /// every other row untouched. Test-only forging helper: this multiplies
+    /// the determinant by `factor` exactly, so it is a reliable way to break
+    /// unimodularity (unlike bumping a single entry, whose effect on the
+    /// determinant depends on that entry's cofactor and can coincidentally be
+    /// zero).
+    fn scale_row(matrix: &Matrix, row: usize, factor: i128) -> Matrix {
         let rows = matrix.rows();
         let cols = matrix.cols();
         let mut data = Vec::with_capacity(rows * cols);
         for r in 0..rows {
             for c in 0..cols {
-                if r == row && c == col {
-                    data.push(CasExpr::int(value));
+                let entry = matrix.get(r, c).expect("in bounds").clone();
+                if r == row {
+                    let CasExpr::Const(value) = entry else {
+                        panic!("expected an integer constant entry");
+                    };
+                    data.push(CasExpr::int(value.numerator() * factor));
                 } else {
-                    data.push(matrix.get(r, c).expect("in bounds").clone());
+                    data.push(entry);
                 }
             }
         }
@@ -860,6 +870,41 @@ mod tests {
         );
     }
 
+    /// ADVERSARIAL. Forge only `D`, leaving `U`, `V`, and the recorded
+    /// boundary all genuine: `U * d_1 * V` no longer equals the forged `D`,
+    /// even though the forged `D` is still a perfectly well-formed Smith
+    /// diagonal (diagonal, non-negative, a valid divisibility chain). Without
+    /// this specific check, `(U, D', V)` for any `D'` satisfying the shape
+    /// and unimodularity guards alone would be admitted -- confirmed by
+    /// mutation: disabling only the product-equality check left every other
+    /// test in this module green.
+    #[test]
+    fn verify_refuses_a_forged_diagonal_that_breaks_the_product_identity() {
+        let complex = complex_of(&[&[0, 1], &[1, 2], &[0, 2]]); // the circle
+        let genuine = homology(&complex).expect("homology of a circle");
+        assert!(
+            genuine.verify(&complex).is_ok(),
+            "genuine certificate must verify"
+        );
+
+        let mut forged = genuine.clone();
+        let triple = forged.smith.get_mut(&1).expect("d_1 triple exists");
+        // The genuine D for this d_1 is diag(1, 1, 0) (rank 2); diag(1, 1, 1)
+        // is ALSO a valid Smith diagonal (divisibility chain 1 | 1 | 1) but is
+        // not what U * d_1 * V actually equals.
+        let forged_d = Matrix::from_rows(vec![
+            vec![CasExpr::int(1), CasExpr::int(0), CasExpr::int(0)],
+            vec![CasExpr::int(0), CasExpr::int(1), CasExpr::int(0)],
+            vec![CasExpr::int(0), CasExpr::int(0), CasExpr::int(1)],
+        ])
+        .expect("3x3");
+        triple.d = forged_d;
+        let err = forged
+            .verify(&complex)
+            .expect_err("a D not equal to U * d_1 * V must be refused");
+        assert!(err.contains("!= D"), "got: {err}");
+    }
+
     #[test]
     fn verify_refuses_a_non_unimodular_transform() {
         let complex = complex_of(&[&[0, 1], &[1, 2], &[0, 2]]); // the circle
@@ -871,24 +916,104 @@ mod tests {
 
         let mut forged = genuine.clone();
         let triple = forged.smith.get_mut(&1).expect("d_1 triple exists");
-        // d_1 is 3x3 (rows = vertices, cols = edges) so U is 3x3; bump one
-        // diagonal entry so det(U) is no longer +/-1.
-        let (r, c) = (0, 0);
-        let current = triple
+        // d_1 is 3x3 (rows = vertices, cols = edges) so U is 3x3; double row 0,
+        // which multiplies det(U) by exactly 2, so it can no longer be
+        // +/-1 regardless of U's specific entries. Recompute D as the ACTUAL
+        // product `U' * d_1 * V` with the forged `U'`, so the
+        // product-equality guard is trivially satisfied and this isolates the
+        // unimodularity guard specifically (rather than tripping the
+        // product-mismatch guard first, which a bare entry bump would: the
+        // product changes along with `U`).
+        triple.u = scale_row(&triple.u, 0, 2);
+        triple.d = triple
             .u
-            .get(r, c)
-            .and_then(|entry| match entry {
-                CasExpr::Const(value) => Some(value.numerator()),
-                _ => None,
-            })
-            .expect("integer entry");
-        triple.u = replace_entry(&triple.u, r, c, current + 2);
+            .mul(&triple.boundary)
+            .and_then(|partial| partial.mul(&triple.v))
+            .expect("conformable");
         let err = forged
             .verify(&complex)
             .expect_err("non-unimodular U must be refused");
         assert!(
             err.contains("unimodular"),
             "reason should name unimodularity, got: {err}"
+        );
+    }
+
+    /// The `V` counterpart of `verify_refuses_a_non_unimodular_transform`:
+    /// `U`'s unimodularity check does not also cover `V`. Confirmed by
+    /// mutation: disabling only the `V` unimodularity check left every other
+    /// test in this module green, so without a dedicated fixture that guard
+    /// was unexercised.
+    #[test]
+    fn verify_refuses_a_non_unimodular_right_transform() {
+        let complex = complex_of(&[&[0, 1], &[1, 2], &[0, 2]]); // the circle
+        let genuine = homology(&complex).expect("homology of a circle");
+        assert!(
+            genuine.verify(&complex).is_ok(),
+            "genuine certificate must verify"
+        );
+
+        let mut forged = genuine.clone();
+        let triple = forged.smith.get_mut(&1).expect("d_1 triple exists");
+        // d_1 is 3x3 so V is 3x3 too; double column 0 of V by scaling row 0 of
+        // its TRANSPOSE-equivalent operation is awkward on this API, so scale
+        // V directly via the same row-scaling helper applied to V (V need not
+        // be square-symmetric for this: scaling any one row of a square
+        // matrix multiplies its determinant by that factor, regardless of
+        // which matrix it is).
+        triple.v = scale_row(&triple.v, 0, 2);
+        triple.d = triple
+            .u
+            .mul(&triple.boundary)
+            .and_then(|partial| partial.mul(&triple.v))
+            .expect("conformable");
+        let err = forged
+            .verify(&complex)
+            .expect_err("non-unimodular V must be refused");
+        assert!(
+            err.contains("unimodular"),
+            "reason should name unimodularity, got: {err}"
+        );
+    }
+
+    /// ADVERSARIAL. Forge `D` and `V` TOGETHER via a column permutation `P`
+    /// (`V' = V * P`, `D' = D * P`): `U * d_1 * V' = D'` still holds exactly
+    /// (a permutation is unimodular, so `V'` is genuinely unimodular too), so
+    /// every guard except the SHAPE check is satisfied by construction --
+    /// `D'` is still diagonal and non-negative, but reordering `diag(1, 1, 0)`
+    /// to `diag(1, 0, 1)` puts a nonzero invariant factor after a `0`, which
+    /// breaks the divisibility-chain convention the Smith form is stated
+    /// over. Confirmed by mutation: disabling only the shape check left every
+    /// other test in this module green (the two non-unimodular-transform
+    /// tests above are both caught by their OWN unimodularity check before
+    /// shape is even reached, so neither exercises this guard).
+    #[test]
+    fn verify_refuses_a_diagonal_with_a_broken_divisibility_chain() {
+        let complex = complex_of(&[&[0, 1], &[1, 2], &[0, 2]]); // the circle
+        let genuine = homology(&complex).expect("homology of a circle");
+        assert!(
+            genuine.verify(&complex).is_ok(),
+            "genuine certificate must verify"
+        );
+
+        let mut forged = genuine.clone();
+        let triple = forged.smith.get_mut(&1).expect("d_1 triple exists");
+        // The genuine D for this d_1 is diag(1, 1, 0); P swaps positions 1
+        // and 2 (0-indexed), a permutation matrix (unimodular).
+        let permutation = Matrix::from_rows(vec![
+            vec![CasExpr::int(1), CasExpr::int(0), CasExpr::int(0)],
+            vec![CasExpr::int(0), CasExpr::int(0), CasExpr::int(1)],
+            vec![CasExpr::int(0), CasExpr::int(1), CasExpr::int(0)],
+        ])
+        .expect("3x3");
+        triple.v = triple.v.mul(&permutation).expect("conformable");
+        triple.d = triple.d.mul(&permutation).expect("conformable");
+        let err = forged
+            .verify(&complex)
+            .expect_err("a broken divisibility chain must be refused");
+        assert!(
+            err.contains("Smith normal form"),
+            "reason should name the shape violation, got: {err}"
         );
     }
 
@@ -933,6 +1058,58 @@ mod tests {
         );
     }
 
+    /// ADVERSARIAL, and NOT subsumed by `verify_refuses_a_dropped_face`:
+    /// forge only the `simplex_counts` summary field, leaving every Smith
+    /// triple (and so every boundary matrix) exactly as the genuine
+    /// certificate recorded them for `complex`. A dropped-face certificate
+    /// is refused via a boundary-matrix shape mismatch regardless of whether
+    /// `simplex_counts_match` runs at all (confirmed: deleting that guard's
+    /// check left every existing test green, because it and
+    /// `boundaries_match` were both watching the SAME forgery). This fixture
+    /// is the one construction that isolates `simplex_counts_match`: nothing
+    /// else in the certificate is wrong, so only this guard can catch it.
+    #[test]
+    fn verify_refuses_a_forged_simplex_count_with_every_boundary_genuine() {
+        let complex = complex_of(&[&[0, 1]]); // an interval
+        let genuine = homology(&complex).expect("homology of an interval");
+        assert!(
+            genuine.verify(&complex).is_ok(),
+            "genuine certificate must verify"
+        );
+
+        let mut forged = genuine.clone();
+        forged.simplex_counts.insert(0, 3); // the interval has 2 vertices, not 3
+        let err = forged
+            .verify(&complex)
+            .expect_err("a forged simplex count must be refused");
+        assert!(
+            err.contains("simplex count"),
+            "reason should name the simplex-count mismatch, got: {err}"
+        );
+    }
+
+    /// ADVERSARIAL. Forge only the recorded `euler_characteristic` field,
+    /// leaving every Smith triple, Betti number, and torsion list genuine.
+    #[test]
+    fn verify_refuses_a_forged_euler_characteristic() {
+        let complex = complex_of(&[&[0, 1]]); // an interval, euler characteristic 1
+        let genuine = homology(&complex).expect("homology of an interval");
+        assert!(
+            genuine.verify(&complex).is_ok(),
+            "genuine certificate must verify"
+        );
+
+        let mut forged = genuine.clone();
+        forged.euler_characteristic = 7;
+        let err = forged
+            .verify(&complex)
+            .expect_err("a forged euler characteristic must be refused");
+        assert!(
+            err.contains("euler characteristic"),
+            "reason should name the euler characteristic mismatch, got: {err}"
+        );
+    }
+
     // ---- guard-level mutation-testing controls: each of these pins the
     // effect a specific guard has, so deleting that guard from `verify`
     // demonstrably kills the corresponding test above (see the module's
@@ -950,5 +1127,74 @@ mod tests {
         let err = boundaries_match(&certificate, &rebuilt)
             .expect_err("an unrelated boundary matrix must be refused");
         assert!(err.contains("does not match"), "got: {err}");
+    }
+
+    /// Direct unit test of `compositions_are_zero`, isolated from `verify`.
+    ///
+    /// This guard checks a property of the COMPLEX alone (rebuilt boundary
+    /// matrices), not of anything a certificate claims -- and every
+    /// `SimplicialComplex` reachable through the public
+    /// `from_maximal_simplices` constructor is closed under faces by
+    /// construction, which makes `d_{k-1} . d_k = 0` an unconditional
+    /// mathematical fact for it. So no certificate forgery over a genuinely
+    /// constructed complex can trip this guard (confirmed: disabling it while
+    /// `boundary_matrix`'s sign convention stays correct left every other
+    /// test in this module green). What it defends against is a bug in
+    /// `boundary_matrix` itself: a `boundaries_match` round-trip alone would
+    /// NOT catch a sign-convention bug that stayed consistent between
+    /// production and verification (both call the same, equally-buggy
+    /// `boundary_matrix`), which is exactly why `verify` also checks this
+    /// mathematical identity directly rather than only comparing against
+    /// what was recorded. This test exercises the guard function itself with
+    /// two hand-built matrices whose product is not zero, standing in for
+    /// that kind of bug.
+    #[test]
+    fn compositions_are_zero_refuses_a_genuinely_non_zero_composition() {
+        let mut rebuilt: BTreeMap<usize, Matrix> = BTreeMap::new();
+        rebuilt.insert(0, Matrix::new(1, 1, vec![CasExpr::int(1)]).expect("1x1"));
+        rebuilt.insert(1, Matrix::new(1, 1, vec![CasExpr::int(1)]).expect("1x1"));
+        let err = compositions_are_zero(&rebuilt, 0)
+            .expect_err("a nonzero d_0 . d_1 product must be refused");
+        assert!(err.contains("is not the zero matrix"), "got: {err}");
+
+        // POSITIVE CONTROL: a genuinely zero composition is admitted, so the
+        // guard is not simply refusing everything.
+        let mut zero_rebuilt: BTreeMap<usize, Matrix> = BTreeMap::new();
+        zero_rebuilt.insert(0, Matrix::new(1, 1, vec![CasExpr::int(0)]).expect("1x1"));
+        zero_rebuilt.insert(1, Matrix::new(1, 1, vec![CasExpr::int(1)]).expect("1x1"));
+        assert!(compositions_are_zero(&zero_rebuilt, 0).is_ok());
+    }
+
+    /// Direct unit test of `euler_characteristic_matches`'s SECOND check
+    /// (the alternating-sum-of-Betti-numbers comparison), isolated from
+    /// `verify`.
+    ///
+    /// Given the earlier guards already pass, the alternating sum of the
+    /// recomputed Betti numbers equaling the complex's Euler characteristic
+    /// is the Euler-Poincare formula -- a mathematical theorem, not a claim a
+    /// certificate forgery can falsify once every per-dimension Betti number
+    /// has independently been confirmed correct (confirmed by mutation:
+    /// disabling only this check left every other test in this module
+    /// green). This test instead calls the guard function directly with a
+    /// hand-built `betti` map that is simply arithmetically inconsistent with
+    /// the genuine certificate's own (correct) `euler_characteristic`, the
+    /// way a bug in the rank-nullity arithmetic upstream might produce.
+    #[test]
+    fn euler_characteristic_matches_refuses_an_inconsistent_betti_alternating_sum() {
+        let complex = complex_of(&[&[0, 1]]); // an interval, euler characteristic 1
+        let genuine = homology(&complex).expect("homology of an interval");
+
+        let mut wrong_betti = BTreeMap::new();
+        wrong_betti.insert(0, 1);
+        wrong_betti.insert(1, 1); // alternating sum 1 - 1 = 0, not 1
+        let err = euler_characteristic_matches(&genuine, &complex, &wrong_betti)
+            .expect_err("an inconsistent alternating sum must be refused");
+        assert!(err.contains("alternating sum"), "got: {err}");
+
+        // POSITIVE CONTROL: the genuine betti numbers ARE admitted.
+        let mut right_betti = BTreeMap::new();
+        right_betti.insert(0, 1);
+        right_betti.insert(1, 0);
+        assert!(euler_characteristic_matches(&genuine, &complex, &right_betti).is_ok());
     }
 }
