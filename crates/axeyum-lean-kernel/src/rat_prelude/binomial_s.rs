@@ -986,3 +986,7 @@ pub(crate) fn declare_binomial_s_all(
     )?;
     Ok(())
 }
+
+#[cfg(test)]
+#[path = "binomial_s_tests.rs"]
+mod binomial_s_tests;
