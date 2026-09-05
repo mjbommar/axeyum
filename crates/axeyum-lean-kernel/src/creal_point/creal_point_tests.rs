@@ -2415,7 +2415,7 @@ fn a_theorem_here_proves_only_its_own_statement() {
         // Positive control: the same value at its OWN statement, under a fresh
         // name. Without this the negative below would also "pass" if the
         // harness could never admit anything.
-        let ok_name = kernel.name_str(anon, &format!("Check.reoffer_ok_{index}"));
+        let ok_name = kernel.name_str(anon, format!("Check.reoffer_ok_{index}"));
         let admitted = kernel.add_declaration(Declaration::Theorem {
             name: ok_name,
             uparams: vec![],
@@ -2428,7 +2428,7 @@ fn a_theorem_here_proves_only_its_own_statement() {
              type: {admitted:?}"
         );
 
-        let bad_name = kernel.name_str(anon, &format!("Check.reoffer_bad_{index}"));
+        let bad_name = kernel.name_str(anon, format!("Check.reoffer_bad_{index}"));
         let refused = kernel.add_declaration(Declaration::Theorem {
             name: bad_name,
             uparams: vec![],
