@@ -1437,13 +1437,38 @@ impl MultiPoly {
     }
 
     /// `self` raised to a non-negative integer power, or `None` on overflow.
+    ///
+    /// **Binary exponentiation** (ADR-1670 wave two, item 3): `\u{2308}log\u{2082} exp\u{2309}`
+    /// squarings and at most that many extra products, where repeated
+    /// multiplication spent `exp - 1`. [`mvpoly::big::BigPoly::pow_within`]
+    /// already did this; the two rings now use the same algorithm, which is what
+    /// makes the ADR's cost table a measurement of the *coefficient ring* rather
+    /// than of the exponentiation schedule.
+    ///
+    /// It also moves the bounded overflow wall outward, and can never move it
+    /// inward: every polynomial this forms is `self^m` for some `1 \u{2264} m \u{2264} exp`
+    /// (the squarings are `self^(2^i)`, the accumulator is `self^(partial sum of
+    /// the set bits)`), and repeated multiplication formed *every* `self^m` for
+    /// `m \u{2264} exp`. The set of intermediates is a subset, so an input that
+    /// decided before still decides.
     #[must_use]
     fn pow(&self, exp: u32) -> Option<MultiPoly> {
         let mut acc = MultiPoly::constant(Rational::integer(1));
-        for _ in 0..exp {
-            acc = acc.mul(self)?;
+        if exp == 0 {
+            return Some(acc);
         }
-        Some(acc)
+        let mut base = self.clone();
+        let mut remaining = exp;
+        loop {
+            if remaining & 1 == 1 {
+                acc = acc.mul(&base)?;
+            }
+            remaining >>= 1;
+            if remaining == 0 {
+                return Some(acc);
+            }
+            base = base.mul(&base)?;
+        }
     }
 
     /// If this polynomial involves at most the single variable `var`, returns its
