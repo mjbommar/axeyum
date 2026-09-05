@@ -121,11 +121,11 @@ statement of Markov and Chebyshev plausible.
       `Rat.weak_law_of_large_numbers`, landed `54592604a` on 2026-08-24, ten
       days before this review claimed it was one limit away.** The reviewer's
       error, not the library's; see the audit row A2.
-- [ ] **2. Generalize the finite probability layer over `AlgS.OrderedRing`**,
+- [x] **2. Generalize the finite probability layer over `AlgS.OrderedRing`** — *done 2026-09-04, 9+2 of 11 instances.*,
       so expectation, variance, Markov and Chebyshev hold over ℚ and ℝ at
       once. Prerequisite for (1) being stated cleanly rather than bridged by
       hand.
-- [ ] **3. Independence as a definition**, with the theorem that independence
+- [x] **3. Independence as a definition** — *done 2026-09-04.*, with the theorem that independence
       implies uncorrelatedness, so the existing hypotheses are recognizable to
       a reader from the field.
 - [ ] **4. ~~Bernoulli~~ and binomial distributions** over the finite carrier,
@@ -144,6 +144,8 @@ statement of Markov and Chebyshev plausible.
 |---|---|---|
 | 2026-09-04 | File created. Baseline: ~30 proved finite-probability theorems over ℚ — expectation, indicators, variance, covariance, Markov, Chebyshev, sample-mean concentration under pairwise uncorrelatedness. No measure theory, no limit theorems. **Correction:** the first review pass under-reported this shelf as a single theorem, by searching for Mathlib names instead of shapes. | ledger snapshot at `1856cdb3c` |
 | 2026-09-04 | **Next Five item 5 opened** (roadmap W3-1): the finite probability layer now has a home. A pre-integration space with `crealFinite` over `CReal.sumRange` and a Dirac space as instances, and **every detachable subset of a finite index set proved an integrable set** — the Petrakis–Zeuner base case, which is exactly this shelf. Five theorems new on ℝ land free on finite sums. The ℚ↔ℝ bridge to `Rat.expectation` did not land and is named as the next step. | `3d5320f68` |
+| 2026-09-04 | **Next Five items 2 and 3 landed** (roadmap W1-10, W2-15; ADR-1616). The finite layer is stated once over `AlgS.OrderedRing`, 29 declarations, footprint 0, and **9 of the 11 ℚ theorems attempted are kernel-checked instances of the generic statement**, two more with a stated adjustment (the generic Markov is strictly stronger than the ℚ one, whose proof never used two of its hypotheses). Independence as `E[AB] ~ E[A]E[B]`, with independence ⇒ uncorrelated composing into the existing variance-of-a-sum theorem. The bridge to the integration space landed in the only form the carrier permits — the ℝ-valued expectation *is* the `crealFinite` integral definitionally, and the rational one is the integral across `ofRat` — because `IntSpace` is hard-wired to real values. Two known obstructions for the ~19 untried theorems: the indicator family needs a decidable order, not a record field; centred-vs-computational variance needs `mulComm` as an explicit hypothesis. | `86c7a1065`; `rat_prelude::` 287, `probability_s` 14 passed |
+
 
 ## How to re-measure
 
