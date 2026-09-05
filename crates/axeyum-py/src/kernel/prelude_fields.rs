@@ -178,7 +178,7 @@ pub(super) fn list(p: &ListPrelude) -> Fields {
     }
 }
 
-/// The `NatPrelude` field table (1424 names,
+/// The `NatPrelude` field table (1435 names,
 /// 0 name lists, 1 sub-packages).
 ///
 /// 113 of the names come from ADR-1512 per-module registries and
@@ -1740,6 +1740,32 @@ pub(super) fn nat(p: &NatPrelude) -> Fields {
                 "finset_mem_b_union_sdiff_self",
                 p.finset_mem_b_union_sdiff_self,
             ),
+            (
+                "finset_mem_b_of_subset_fixed_of_bound_le",
+                p.finset_mem_b_of_subset_fixed_of_bound_le,
+            ),
+            ("finset_card_add_card_sdiff", p.finset_card_add_card_sdiff),
+            (
+                "finset_card_lt_card_of_subset_fixed",
+                p.finset_card_lt_card_of_subset_fixed,
+            ),
+            (
+                "finset_card_sdiff_lt_card_of_subset_fixed",
+                p.finset_card_sdiff_lt_card_of_subset_fixed,
+            ),
+            ("finset_mem_b_sdiff_congr", p.finset_mem_b_sdiff_congr),
+            (
+                "hall_is_matching_of_family_sdiff",
+                p.hall_is_matching_of_family_sdiff,
+            ),
+            (
+                "hall_mem_b_false_of_family_sdiff",
+                p.hall_mem_b_false_of_family_sdiff,
+            ),
+            ("hall_critical_b", p.hall_critical_b),
+            ("hall_critical_b_congr", p.hall_critical_b_congr),
+            ("hall_sufficient", p.hall_sufficient),
+            ("hall_marriage_iff", p.hall_marriage_iff),
             ("strong_induction", p.strong_induction),
             ("strong_induction_eq", p.strong_induction_eq),
             ("dvd_b", p.dvd_b),

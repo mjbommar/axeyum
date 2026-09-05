@@ -221,9 +221,9 @@ mod graph;
 mod group;
 pub(crate) mod half_ceil_parity;
 mod hall;
-mod hall_sufficiency;
 mod hall_descent;
 mod hall_marriage;
+mod hall_sufficiency;
 mod hall_theorem;
 mod helpers;
 pub mod image_group;
@@ -454,9 +454,9 @@ use graph::declare_graph_all;
 use group::declare_group_all;
 use half_ceil_parity::declare_half_ceil_parity_all;
 use hall::declare_hall_all;
-use hall_sufficiency::declare_hall_sufficiency_all;
 use hall_descent::declare_hall_descent_all;
 use hall_marriage::declare_hall_marriage_all;
+use hall_sufficiency::declare_hall_sufficiency_all;
 use hall_theorem::declare_hall_theorem_all;
 use inclusion_exclusion::declare_inclusion_exclusion_all;
 use injective_decide::declare_injective_on_or_duplicate;
@@ -8758,10 +8758,8 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             finset_card_sdiff_lt_card_of_subset_fixed: kernel
                 .name_str(finset, "card_sdiff_lt_card_of_subsetFixed"),
             finset_mem_b_sdiff_congr: kernel.name_str(finset, "memB_sdiff_congr"),
-            hall_is_matching_of_family_sdiff: kernel
-                .name_str(hall, "isMatching_of_family_sdiff"),
-            hall_mem_b_false_of_family_sdiff: kernel
-                .name_str(hall, "memB_false_of_family_sdiff"),
+            hall_is_matching_of_family_sdiff: kernel.name_str(hall, "isMatching_of_family_sdiff"),
+            hall_mem_b_false_of_family_sdiff: kernel.name_str(hall, "memB_false_of_family_sdiff"),
             hall_critical_b: kernel.name_str(hall, "criticalB"),
             hall_critical_b_congr: kernel.name_str(hall, "criticalB_congr"),
             hall_sufficient: kernel.name_str(hall, "sufficient"),
