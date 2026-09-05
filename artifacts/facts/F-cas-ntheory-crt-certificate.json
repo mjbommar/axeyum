@@ -1,13 +1,15 @@
 {
   "schema_version": 1,
   "id": "F:cas-ntheory-crt-certificate",
-  "title": "axeyum-cas's CRT certificate (both the solution and the inconsistency direction) is independently re-checked across six systems",
-  "statement": "For each of the solvable congruence systems x=2(mod 3), x=3(mod 5), x=2(mod 7) (unique solution 23 mod 105); x=1(mod 4), x=3(mod 6) (non-coprime moduli, unique solution 9 mod 12); the empty system (trivial solution 0 mod 1); and x=5(mod 1) (trivial modulus), axeyum-cas's ntheory_certify::certify_crt produces a CrtCertificate::Solution{solution, modulus}, and ntheory_certify::check_crt_certificate independently re-derives and confirms: the solution is canonical (0 <= solution < modulus), every input congruence holds, AND modulus is the LEAST common multiple of the input moduli (not merely a common one -- recording only a common multiple would accept, e.g., 24 as a 'modulus' for the second system, which satisfies both congruences and is a common multiple of 4 and 6, but is not the least one, 12). For each of the inconsistent systems x=0(mod 2), x=1(mod 4) and x=1(mod 6), x=2(mod 9), x=3(mod 4), certify_crt instead produces a CrtCertificate::Inconsistent{left, right} naming a genuinely conflicting pair of congruences, independently re-verified by recomputing gcd(m_left, m_right) and confirming a_left != a_right modulo it.",
+  "title": "axeyum-cas's CRT certificate (both the solution and the inconsistency direction) is independently re-checked across six systems, and every one of them is re-derived inside the kernel",
+  "statement": "For each of the solvable congruence systems x=2(mod 3), x=3(mod 5), x=2(mod 7) (unique solution 23 mod 105); x=1(mod 4), x=3(mod 6) (non-coprime moduli, unique solution 9 mod 12); the empty system (trivial solution 0 mod 1); and x=5(mod 1) (trivial modulus), axeyum-cas's ntheory_certify::certify_crt produces a CrtCertificate::Solution{solution, modulus}, and ntheory_certify::check_crt_certificate independently re-derives and confirms: the solution is canonical (0 <= solution < modulus), every input congruence holds, AND modulus is the LEAST common multiple of the input moduli (not merely a common one -- recording only a common multiple would accept, e.g., 24 as a 'modulus' for the second system, which satisfies both congruences and is a common multiple of 4 and 6, but is not the least one, 12). For each of the inconsistent systems x=0(mod 2), x=1(mod 4) and x=1(mod 6), x=2(mod 9), x=3(mod 4), certify_crt instead produces a CrtCertificate::Inconsistent{left, right} naming a genuinely conflicting pair of congruences, independently re-verified by recomputing gcd(m_left, m_right) and confirming a_left != a_right modulo it. Every numeral appearing in all six systems is at most 105, so unlike the Pratt family (whose ledger headline is 2^89-1) the kernel can reach ALL of them: crates/axeyum-lean-kernel/src/int_prelude/cas_crt_bridge_tests.rs re-derives each certificate's obligations as theorems admitted through crate::Kernel::add_declaration and axiom-free -- Check.crt_congruence_<id>_<i> : Int.ModEq (ofNat m_i) (ofNat x) (ofNat a_i) (the checker's R3), Check.crt_least_modulus_<id> : Eq Nat (Nat.lcm-fold of the moduli) M (R4, LEASTNESS, the guard that rejects 24 for the second system), Check.crt_canonical_<id> : Nat.lt x M (R2), and, for each inconsistent system, Check.crt_inconsistent_<id> : forall (x : Int), Int.ModEq (ofNat m_left) x (ofNat a_left) -> Int.ModEq (ofNat m_right) x (ofNat a_right) -> False (R6). The last is universally quantified over x, so no reduction can close it: it goes through Int.modEq_of_mul_left at g = gcd(m_left, m_right), then Int.modEq_symm and Int.modEq_trans to Int.ModEq g a_left a_right, which unfolds to a false equation between two distinct numerals.",
   "formal": {
     "language": "cas-term",
-    "statement": "(assert (and\n  (crt-solution (2 3) (3 5) (2 7)) = (23 . 105)\n  (crt-solution (1 4) (3 6)) = (9 . 12)                 ; non-coprime moduli, LEAST common multiple 12\n  (crt-solution) = (0 . 1)                              ; empty system, trivial\n  (crt-solution (5 1)) = (0 . 1)                        ; trivial modulus\n  (crt-inconsistent (0 2) (1 4))                        ; 0 != 1 (mod gcd(2,4)=2)\n  (crt-inconsistent (1 6) (2 9) (3 4))                  ; a genuinely conflicting pair exists\n))\n; where crt-solution's SECOND component is REQUIRED to be the least common\n; multiple of the input moduli, independently re-derived by\n; check_crt_certificate's R4 guard -- not merely a common multiple.",
+    "statement": "(assert (and\n  (crt-solution (2 3) (3 5) (2 7)) = (23 . 105)\n  (crt-solution (1 4) (3 6)) = (9 . 12)                 ; non-coprime moduli, LEAST common multiple 12\n  (crt-solution) = (0 . 1)                              ; empty system, trivial\n  (crt-solution (5 1)) = (0 . 1)                        ; trivial modulus\n  (crt-inconsistent (0 2) (1 4))                        ; 0 != 1 (mod gcd(2,4)=2)\n  (crt-inconsistent (1 6) (2 9) (3 4))                  ; a genuinely conflicting pair exists\n))\n; where crt-solution's SECOND component is REQUIRED to be the least common\n; multiple of the input moduli, independently re-derived by\n; check_crt_certificate's R4 guard -- not merely a common multiple.\n; kernel-reconstructed (ADR-1622): each of the six systems' obligations is\n; admitted by crate::Kernel::add_declaration as\n;   Check.crt_congruence_<id>_<i> / Check.crt_least_modulus_<id> /\n;   Check.crt_canonical_<id> / Check.crt_inconsistent_<id>\n; with an empty Kernel::axiom_footprint. NOT reconstructed: Int.crt_exists\n; and Int.crt_unique are proved elsewhere in int_prelude and are not used\n; here, so uniqueness of the solution modulo M is not connected to these\n; theorems.",
     "fragment": "cas-ntheory-crt-certificate",
-    "free_symbols": ["x"],
+    "free_symbols": [
+      "x"
+    ],
     "kernel_theorem": null
   },
   "epistemic_status": "proved",
@@ -15,9 +17,11 @@
   "depends_on": [],
   "proof_route": "cas-certificate",
   "axiom_footprint": [
-    "cas.crt-certificate-not-kernel-reconstructed",
+    "kernel.axiom-free-every-emitted-theorem-checked-by-Kernel-axiom-footprint-and-asserted-empty",
     "cas.exact-i128-modular-arithmetic-independent-of-ntheory",
-    "cas.independent-gcd-lcm-checker-gcd-checker-lcm-added-2026-08-31-see-notes"
+    "cas.independent-gcd-lcm-checker-gcd-checker-lcm-added-2026-08-31-see-notes",
+    "cas.the-solution-the-modulus-and-the-conflicting-pair-come-from-the-cas-producer-the-kernel-re-checks-them-it-does-not-re-derive-them",
+    "cas.uniqueness-of-the-solution-modulo-M-is-not-among-the-reconstructed-obligations-Int-crt-unique-is-proved-in-int-prelude-crt-and-is-not-used-here"
   ],
   "evidence": [
     {
@@ -47,6 +51,36 @@
       "checker_seconds": 1,
       "artifact": "crates/axeyum-cas/src/ntheory_certify.rs",
       "notes": "cas-internal (ADR-0601 SS2). Supporting evidence for the fix described in the first evidence row's notes, added 2026-08-31 alongside this fact."
+    },
+    {
+      "id": "kernel-reconstructed-crt-all-six-systems",
+      "kind": "kernel-term",
+      "supports": "all six systems -- four solvable, two inconsistent -- have every obligation of their CAS certificate admitted as a kernel theorem by crate::Kernel::add_declaration, each checked to be a Theorem (not an Axiom or Opaque) with an empty Kernel::axiom_footprint, against pinned counts (exactly 4 solvable, exactly 2 inconsistent, at least 16 theorems) so a run that silently covered only one direction fails rather than passing quietly",
+      "check_status": "checked",
+      "checkers": [
+        "ntheory_certify::certify_crt (untrusted producer: the solution, the claimed least common multiple, or the conflicting pair -- read in-process from the CAS, never hand-copied)",
+        "int_prelude::cas_crt_bridge_tests::reconstruct (untrusted translator: emits the R2/R3/R4/R6 obligations as kernel terms; the leastness obligation is stated over the KERNEL's own Nat.lcm, not the CAS's, so the certificate's number is checked against an independent definition)",
+        "crate::Kernel::add_declaration (the sole trusted judge)",
+        "crate::Kernel::axiom_footprint (asserted empty for every emitted theorem)"
+      ],
+      "checker_command": "cargo test -p axeyum-lean-kernel --release --lib int_prelude::cas_crt_bridge_tests::tests::crt_certificates_are_kernel_reconstructed -- --exact 2>/dev/null | grep -cE '^test int_prelude::cas_crt_bridge_tests::tests::crt_certificates_are_kernel_reconstructed \\.\\.\\. ok$'",
+      "checker_seconds": 20,
+      "artifact": "crates/axeyum-lean-kernel/src/int_prelude/cas_crt_bridge_tests.rs",
+      "notes": "kernel-reconstructed (ADR-0601 SS2): the checker_command names axeyum-lean-kernel and the trust anchor is crate::Kernel::add_declaration. This fact is the one number-theory certificate family whose EVERY claimed instance the kernel can reach -- its largest numeral is 105, where the Pratt family's headline is a 27-digit Mersenne number -- which is why it flips whole rather than being split under ADR-0603. ADR-1622 records the cost comparison that chose it."
+    },
+    {
+      "id": "kernel-refuses-a-merely-common-crt-modulus",
+      "kind": "kernel-term",
+      "supports": "with EVERY guard belonging to the reconstruction route switched off (RouteGuards::none), crate::Kernel::add_declaration refuses the CAS module's own recorded near-miss -- residues [(1,4),(3,6)] with modulus 24, which satisfies both congruences, IS a common multiple, and leaves the solution canonical, so only leastness separates it from 12 -- and also refuses a fabricated Inconsistent witness naming a pair that does not conflict, while the GENUINE certificates run with the same guards off are still admitted",
+      "check_status": "checked",
+      "checkers": [
+        "int_prelude::cas_crt_bridge_tests::RouteGuards::none (disables the CAS re-check, the leastness guard and the conflict guard, leaving the kernel as the only thing that can refuse)",
+        "crate::Kernel::add_declaration (the refusing party; the assertion is on its Err)"
+      ],
+      "checker_command": "cargo test -p axeyum-lean-kernel --release --lib int_prelude::cas_crt_bridge_tests::tests::a_merely_common_modulus_is_refused_by_the_kernel -- --exact 2>/dev/null | grep -cE '^test int_prelude::cas_crt_bridge_tests::tests::a_merely_common_modulus_is_refused_by_the_kernel \\.\\.\\. ok$'",
+      "checker_seconds": 15,
+      "artifact": "crates/axeyum-lean-kernel/src/int_prelude/cas_crt_bridge_tests.rs",
+      "notes": "This is the kernel-side counterpart of the R4 leastness guard whose independence this fact's own registration once had to fix on the CAS side (see the first evidence row's notes). The reconstruction does not inherit that fix -- it restates leastness over the kernel's own Nat.lcm, so the two checks share no arithmetic at all. A companion test (a_fabricated_conflict_is_refused_by_the_kernel) covers the R6 direction over the three-congruence system, where only the pair (0,1) genuinely conflicts and the pair (1,2) does not."
     }
   ],
   "provenance": {
@@ -63,5 +97,10 @@
       }
     ]
   },
-  "notes": "Registered per ADR-1055 and ADR-0601 SS2. No Kernel::add_declaration term exists for this claim. ADR-0603 row 3. This is the one certificate route of the four where registering the fact found and fixed a real independence gap rather than only writing evidence for existing code -- see the first evidence row's notes for the finding and the fix, both landed in the same lane before this fact's status was set to proved."
+  "notes": "Registered per ADR-1055 and ADR-0601 SS2; flipped from cas-internal to kernel-reconstructed per ADR-1622. This is the one certificate route of the four where registering the fact found and fixed a real independence gap rather than only writing evidence for existing code -- see the first evidence row's notes for the finding and the fix, both landed in the same lane before this fact's status was set to proved. The kernel reconstruction (2026-09-04) covers all six systems; what it does NOT do is re-prove the Chinese Remainder Theorem -- Int.crt_exists and Int.crt_unique are proved in int_prelude/crt.rs and are neither used nor connected here. ADR-0603 row 3.",
+  "cas_substance": {
+    "shape": "evaluation",
+    "certificate": null,
+    "derivation_declined_reason": "axeyum-cas's ntheory_certify::certify_crt returns a CrtCertificate Rust value, not a certificate artifact of the shape artifacts/geometry-certificates/*.json carries, so scripts/cas_substance.py has nothing to derive a shape from and the shape recorded here is SELF-REPORTED -- the same standing as the 8 of 14 kernel-reconstructed facts ADR-0622 already records as self-reported. The bridge test reads the certificate from the CAS in-process (crates/axeyum-lean-kernel/src/int_prelude/cas_crt_bridge_tests.rs, fn certificate). `evaluation` is the honest shape for the three solution-side families, which are closed at concrete numerals with no free variable. It UNDERSTATES the inconsistency family: Check.crt_inconsistent_<id> is universally quantified over x : Int and is proved by Int.modEq_of_mul_left / modEq_symm / modEq_trans, not by reduction -- but cas_substance.SHAPES has no name for a derivation over a free variable of a non-polynomial carrier, and inventing one silently would be worse than recording the weaker available label and saying so here. None of the four families is `refl`: a_merely_common_modulus_is_refused_by_the_kernel and a_fabricated_conflict_is_refused_by_the_kernel each have the kernel refuse a forgery with every route-side guard switched off, which an X = X obligation could not do."
+  }
 }

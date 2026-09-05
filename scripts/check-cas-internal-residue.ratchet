@@ -34,8 +34,9 @@ F:cas-lib-integrate-polynomial-certified	cas-internal	cas-certified-integral-dir
 F:cas-mvt-cubic-witness-sqrt3	cas-internal	real-algebraic-mvt
 F:cas-mvt-secant-endpoints-kernel-checked	kernel-reconstructed	real-algebraic-mvt-secant-endpoints
 F:cas-ntheory-compositeness-certificate	cas-internal	cas-ntheory-composite-certificate
-F:cas-ntheory-crt-certificate	cas-internal	cas-ntheory-crt-certificate
+F:cas-ntheory-crt-certificate	kernel-reconstructed	cas-ntheory-crt-certificate
 F:cas-ntheory-factorization-certificate	cas-internal	cas-ntheory-factorization-certificate
+F:cas-ntheory-pratt-certificate-kernel-reconstructed	kernel-reconstructed	cas-ntheory-pratt-certificate-kernel-reconstructed
 F:cas-ntheory-pratt-primality-mersenne89	cas-internal	cas-ntheory-pratt-certificate
 F:cas-partial-fractions-mixed-general-case	cas-internal	exact-rational-partial-fractions
 F:cas-partial-fractions-mixed-general-case-kernel-checked	kernel-reconstructed	exact-rational-partial-fractions-coefficient-matching-identity
