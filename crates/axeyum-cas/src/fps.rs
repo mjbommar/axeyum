@@ -1335,17 +1335,16 @@ fn rational_null_space(rows: &[Vec<BigRational>], columns: usize) -> Vec<Vec<Big
         let scaled: Vec<BigRational> = matrix[pivot_row].iter().map(|v| v / &pivot).collect();
         matrix[pivot_row] = scaled;
         let reference = matrix[pivot_row].clone();
-        for row in 0..matrix.len() {
+        for (row, values) in matrix.iter_mut().enumerate() {
             if row == pivot_row {
                 continue;
             }
-            let factor = matrix[row][column].clone();
+            let factor = values[column].clone();
             if factor.is_zero() {
                 continue;
             }
-            for index in 0..columns {
-                let delta = &reference[index] * &factor;
-                matrix[row][index] -= delta;
+            for (index, value) in values.iter_mut().enumerate().take(columns) {
+                *value -= &reference[index] * &factor;
             }
         }
         pivot_of_column[column] = Some(pivot_row);
@@ -2043,7 +2042,7 @@ mod tests {
 
     fn factorials() -> Vec<BigRational> {
         rats(&[
-            1, 1, 2, 6, 24, 120, 720, 5040, 40320, 362880, 3628800, 39916800,
+            1, 1, 2, 6, 24, 120, 720, 5040, 40320, 362_880, 3_628_800, 39_916_800,
         ])
     }
 
@@ -2053,13 +2052,13 @@ mod tests {
 
     fn central_binomials() -> Vec<BigRational> {
         rats(&[
-            1, 2, 6, 20, 70, 252, 924, 3432, 12870, 48620, 184756, 705432,
+            1, 2, 6, 20, 70, 252, 924, 3432, 12870, 48620, 184_756, 705_432,
         ])
     }
 
     fn motzkins() -> Vec<BigRational> {
         rats(&[
-            1, 1, 2, 4, 9, 21, 51, 127, 323, 835, 2188, 5798, 15511, 41835, 113634, 310572,
+            1, 1, 2, 4, 9, 21, 51, 127, 323, 835, 2188, 5798, 15511, 41835, 113_634, 310_572,
         ])
     }
 

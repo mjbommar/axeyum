@@ -68,6 +68,16 @@ fn tolerance_cap() -> BigRational {
     BigRational::new(BigInt::from(1), BigInt::from(100))
 }
 
+/// The largest relative error a [`CoefficientAsymptotics`] certificate may state
+/// at its coarsest sample, and the tolerance [`coefficient_asymptotics`] holds
+/// itself to.
+///
+/// `verify` refuses a certificate stating anything looser, so widening the claim
+/// buys a forger nothing.
+pub fn asymptotic_tolerance() -> BigRational {
+    tolerance_cap()
+}
+
 // ---------------------------------------------------------------------------
 // Errors
 // ---------------------------------------------------------------------------
@@ -221,6 +231,9 @@ pub enum AnalyticError {
 }
 
 impl core::fmt::Display for AnalyticError {
+    // A flat dispatch: one arm per guard, which is the point -- a refusal names
+    // the re-derivation that disagreed.
+    #[allow(clippy::too_many_lines)]
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
             AnalyticError::EmptyDenominator => write!(f, "empty denominator"),
@@ -365,13 +378,11 @@ pub enum AnalyticDecline {
     /// The sampled relative errors did not decrease, so the sampled evidence
     /// does not support the asymptotic form.
     ErrorsDoNotShrink,
-    /// The coarsest sample's relative error is above the tolerance. Increase the
-    /// base sample index and try again.
+    /// The coarsest sample's relative error is above
+    /// [`asymptotic_tolerance`]. Increase the base sample index and try again.
     ToleranceExceeded {
         /// The relative error measured at the coarsest sample.
         error: BigRational,
-        /// The tolerance it had to meet.
-        tolerance: BigRational,
     },
     /// The base sample index is too small for three separated samples.
     SampleTooSmall,
@@ -397,8 +408,12 @@ impl core::fmt::Display for AnalyticDecline {
                 write!(f, "the coefficient at sample {index} is zero")
             }
             AnalyticDecline::ErrorsDoNotShrink => write!(f, "the sampled errors do not shrink"),
-            AnalyticDecline::ToleranceExceeded { error, tolerance } => {
-                write!(f, "relative error {error} exceeds tolerance {tolerance}")
+            AnalyticDecline::ToleranceExceeded { error } => {
+                write!(
+                    f,
+                    "relative error {error} exceeds tolerance {}",
+                    asymptotic_tolerance()
+                )
             }
             AnalyticDecline::SampleTooSmall => write!(f, "the base sample index is too small"),
             AnalyticDecline::SeriesDeclined => write!(f, "the series expansion declined"),
@@ -831,6 +846,29 @@ impl FactorModulusBound {
 // The radius
 // ---------------------------------------------------------------------------
 
+/// An irrational radius, pinned exactly.
+///
+/// The radius is the unique root of `polynomial` in the Sturm-certified bracket
+/// `(coarse_lower, coarse_upper]`, refined to `[lower, upper]` by a sign change
+/// of that polynomial's square-free part — a refinement that costs only exact
+/// rational evaluation, so the Sturm chain is never asked for a deeper bracket
+/// than the coarse one it already certified.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct AlgebraicRadius {
+    /// The global modulus polynomial `G = Π g`, whose smallest positive root is
+    /// the radius.
+    pub polynomial: Vec<BigRational>,
+    /// Sturm-certified: `G` has no root in `(0, coarse_lower]`.
+    pub coarse_lower: BigRational,
+    /// Sturm-certified: `G` has exactly one root in
+    /// `(coarse_lower, coarse_upper]`.
+    pub coarse_upper: BigRational,
+    /// Refined lower endpoint, inside the coarse bracket.
+    pub lower: BigRational,
+    /// Refined upper endpoint, inside the coarse bracket.
+    pub upper: BigRational,
+}
+
 /// What is known about the radius of convergence.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum RadiusOfConvergence {
@@ -839,23 +877,9 @@ pub enum RadiusOfConvergence {
     Infinite,
     /// The radius is exactly this rational.
     Exact(BigRational),
-    /// The radius is irrational: it is the unique root of `polynomial` in the
-    /// Sturm-certified bracket `(coarse_lower, coarse_upper]`, refined to
-    /// `[lower, upper]` by a sign change of the square-free part.
-    Algebraic {
-        /// The global modulus polynomial `G = Π g`, whose smallest positive root
-        /// is the radius.
-        polynomial: Vec<BigRational>,
-        /// Sturm-certified: `G` has no root in `(0, coarse_lower]`.
-        coarse_lower: BigRational,
-        /// Sturm-certified: `G` has exactly one root in
-        /// `(coarse_lower, coarse_upper]`.
-        coarse_upper: BigRational,
-        /// Refined lower endpoint, inside the coarse bracket.
-        lower: BigRational,
-        /// Refined upper endpoint, inside the coarse bracket.
-        upper: BigRational,
-    },
+    /// The radius is irrational; see [`AlgebraicRadius`]. Boxed because it is
+    /// several times the size of every other variant.
+    Algebraic(Box<AlgebraicRadius>),
     /// Some factor reached no exact route, so only this rational lower bound on
     /// the radius is certified. The true radius is at least this.
     LowerBound(BigRational),
@@ -870,7 +894,7 @@ impl RadiusOfConvergence {
             RadiusOfConvergence::Exact(value) | RadiusOfConvergence::LowerBound(value) => {
                 Some(value.clone())
             }
-            RadiusOfConvergence::Algebraic { lower, .. } => Some(lower.clone()),
+            RadiusOfConvergence::Algebraic(data) => Some(data.lower.clone()),
         }
     }
 
@@ -879,9 +903,7 @@ impl RadiusOfConvergence {
     pub fn bracket(&self) -> Option<(BigRational, BigRational)> {
         match self {
             RadiusOfConvergence::Exact(value) => Some((value.clone(), value.clone())),
-            RadiusOfConvergence::Algebraic { lower, upper, .. } => {
-                Some((lower.clone(), upper.clone()))
-            }
+            RadiusOfConvergence::Algebraic(data) => Some((data.lower.clone(), data.upper.clone())),
             RadiusOfConvergence::Infinite | RadiusOfConvergence::LowerBound(_) => None,
         }
     }
@@ -1030,13 +1052,14 @@ impl RadiusCertificate {
                 }
                 Ok(())
             }
-            RadiusOfConvergence::Algebraic {
-                polynomial,
-                coarse_lower,
-                coarse_upper,
-                lower,
-                upper,
-            } => {
+            RadiusOfConvergence::Algebraic(data) => {
+                let AlgebraicRadius {
+                    polynomial,
+                    coarse_lower,
+                    coarse_upper,
+                    lower,
+                    upper,
+                } = data.as_ref();
                 let global = self.global_modulus_polynomial()?;
                 if poly_trim(polynomial.clone()) != global {
                     return Err(AnalyticError::GlobalModulusMismatch);
@@ -1203,11 +1226,13 @@ pub fn radius_of_convergence(
     Ok(certificate)
 }
 
+/// A factorization over ℚ: the leading content, then the factors paired with
+/// their multiplicities.
+type FactorizationOverQ = (BigRational, Vec<(Vec<BigRational>, u32)>);
+
 /// Factor over ℚ by reusing `crate::factor_int::factor_univariate_over_q`, and
 /// recover the leading content the factorizer normalizes away.
-fn factor_with_content(
-    poly: &[BigRational],
-) -> Result<(BigRational, Vec<(Vec<BigRational>, u32)>), AnalyticDecline> {
+fn factor_with_content(poly: &[BigRational]) -> Result<FactorizationOverQ, AnalyticDecline> {
     let machine = to_machine_poly(poly).ok_or(AnalyticDecline::FactorizationDeclined)?;
     let factored = crate::factor_int::factor_univariate_over_q(&machine)
         .ok_or(AnalyticDecline::FactorizationDeclined)?;
@@ -1393,13 +1418,13 @@ fn exact_radius(bounds: &[FactorModulusBound]) -> Result<RadiusOfConvergence, An
             upper_refined = mid;
         }
     }
-    Ok(RadiusOfConvergence::Algebraic {
+    Ok(RadiusOfConvergence::Algebraic(Box::new(AlgebraicRadius {
         polynomial: global,
         coarse_lower: low,
         coarse_upper: high,
         lower,
         upper: upper_refined,
-    })
+    })))
 }
 
 // ---------------------------------------------------------------------------
@@ -1596,10 +1621,10 @@ fn dominant_exponent(certificate: &RadiusCertificate) -> Result<u32, AnalyticErr
             RadiusOfConvergence::Exact(value) => {
                 poly_eval(&bound.modulus_polynomial, value).is_zero()
             }
-            RadiusOfConvergence::Algebraic { lower, upper, .. } => {
+            RadiusOfConvergence::Algebraic(data) => {
                 let squarefree = poly_squarefree(&bound.modulus_polynomial);
-                let at_lower = poly_eval(&squarefree, lower);
-                let at_upper = poly_eval(&squarefree, upper);
+                let at_lower = poly_eval(&squarefree, &data.lower);
+                let at_upper = poly_eval(&squarefree, &data.upper);
                 (at_lower * at_upper).is_negative()
             }
             RadiusOfConvergence::Infinite | RadiusOfConvergence::LowerBound(_) => {
@@ -1683,7 +1708,6 @@ pub fn coefficient_asymptotics(
     if relative_errors[0] > tolerance {
         return Err(AnalyticDecline::ToleranceExceeded {
             error: relative_errors[0].clone(),
-            tolerance,
         });
     }
 
@@ -1708,8 +1732,8 @@ pub fn coefficient_asymptotics(
 #[cfg(test)]
 mod tests {
     use super::{
-        AnalyticDecline, AnalyticError, FactorModulusBound, ModulusRoute, RadiusCertificate,
-        RadiusOfConvergence, coefficient_asymptotics, radius_of_convergence,
+        AlgebraicRadius, AnalyticDecline, AnalyticError, FactorModulusBound, ModulusRoute,
+        RadiusCertificate, RadiusOfConvergence, coefficient_asymptotics, radius_of_convergence,
     };
     use num_bigint::BigInt;
     use num_rational::BigRational;
@@ -1775,15 +1799,15 @@ mod tests {
         // g(t) = (1 − t − t²)(1 + t − t²) = 1 − 3t² + t⁴.
         let certificate = radius_of_convergence(&rats(&[1]), &rats(&[1, -1, -1])).unwrap();
         assert_eq!(certificate.factors[0].route, ModulusRoute::AllRealRoots);
-        let RadiusOfConvergence::Algebraic {
+        let RadiusOfConvergence::Algebraic(ref data) = certificate.radius else {
+            panic!("expected an algebraic radius, got {:?}", certificate.radius);
+        };
+        let AlgebraicRadius {
             ref polynomial,
             ref lower,
             ref upper,
             ..
-        } = certificate.radius
-        else {
-            panic!("expected an algebraic radius, got {:?}", certificate.radius);
-        };
+        } = **data;
         assert_eq!(*polynomial, rats(&[1, 0, -3, 0, 1]));
         // 1/φ = 0.6180339887498948…
         assert!(*lower > q(6_180_339_887, 10_000_000_000));
@@ -1889,8 +1913,8 @@ mod tests {
         certificate.common_factor = rats(&[2]);
         assert!(matches!(
             certificate.verify(),
-            Err(AnalyticError::DenominatorSplitMismatch { .. })
-                | Err(AnalyticError::NumeratorSplitMismatch { .. })
+            Err(AnalyticError::DenominatorSplitMismatch { .. }
+                | AnalyticError::NumeratorSplitMismatch { .. })
         ));
     }
 
@@ -1965,11 +1989,8 @@ mod tests {
     #[test]
     fn forged_global_modulus_polynomial_is_refused() {
         let mut certificate = fibonacci_radius();
-        if let RadiusOfConvergence::Algebraic {
-            ref mut polynomial, ..
-        } = certificate.radius
-        {
-            *polynomial = rats(&[1, 0, -4, 0, 1]);
+        if let RadiusOfConvergence::Algebraic(ref mut data) = certificate.radius {
+            data.polynomial = rats(&[1, 0, -4, 0, 1]);
         }
         assert_eq!(
             certificate.verify(),
@@ -1980,13 +2001,8 @@ mod tests {
     #[test]
     fn forged_refined_bracket_outside_the_coarse_one_is_refused() {
         let mut certificate = fibonacci_radius();
-        if let RadiusOfConvergence::Algebraic {
-            ref coarse_upper,
-            ref mut upper,
-            ..
-        } = certificate.radius
-        {
-            *upper = coarse_upper + r(1);
+        if let RadiusOfConvergence::Algebraic(ref mut data) = certificate.radius {
+            data.upper = &data.coarse_upper + r(1);
         }
         assert_eq!(certificate.verify(), Err(AnalyticError::MalformedBracket));
     }
@@ -1994,17 +2010,11 @@ mod tests {
     #[test]
     fn forged_refined_bracket_without_a_sign_change_is_refused() {
         let mut certificate = fibonacci_radius();
-        if let RadiusOfConvergence::Algebraic {
-            ref coarse_lower,
-            ref mut lower,
-            ref mut upper,
-            ..
-        } = certificate.radius
-        {
+        if let RadiusOfConvergence::Algebraic(ref mut data) = certificate.radius {
             // A sub-interval of the coarse bracket that sits entirely left of
             // the root: well formed, but it traps nothing.
-            *lower = coarse_lower.clone();
-            *upper = coarse_lower + q(1, 1_000_000);
+            data.lower = data.coarse_lower.clone();
+            data.upper = &data.coarse_lower + q(1, 1_000_000);
         }
         assert_eq!(certificate.verify(), Err(AnalyticError::NoSignChange));
     }
@@ -2028,8 +2038,8 @@ mod tests {
         });
         assert!(matches!(
             certificate.verify(),
-            Err(AnalyticError::FactorProductMismatch { .. })
-                | Err(AnalyticError::FactorVanishesAtZero { factor: 1 })
+            Err(AnalyticError::FactorProductMismatch { .. }
+                | AnalyticError::FactorVanishesAtZero { factor: 1 })
         ));
     }
 
