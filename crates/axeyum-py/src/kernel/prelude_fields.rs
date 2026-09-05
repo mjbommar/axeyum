@@ -2509,10 +2509,10 @@ pub(super) fn int_sub(p: &IntPrelude) -> Vec<(&'static str, Sub)> {
     ]
 }
 
-/// The `RatPrelude` field table (583 names,
+/// The `RatPrelude` field table (595 names,
 /// 0 name lists, 1 sub-packages).
 ///
-/// 76 of the names come from ADR-1512 per-module registries and
+/// 88 of the names come from ADR-1512 per-module registries and
 /// carry a dotted field name (`pi.pi_le_four`); the rest are flat
 /// fields on `RatPrelude` itself.
 #[must_use]
@@ -3291,6 +3291,42 @@ pub(super) fn rat(p: &RatPrelude) -> Fields {
             (
                 "probability_s.uncorrelated_of_independent",
                 p.probability_s.uncorrelated_of_independent,
+            ),
+            ("binomial_s.mul_neg", p.binomial_s.mul_neg),
+            ("binomial_s.zero_add", p.binomial_s.zero_add),
+            ("binomial_s.bernoulli_var", p.binomial_s.bernoulli_var),
+            ("binomial_s.bernoulli_mass", p.binomial_s.bernoulli_mass),
+            (
+                "binomial_s.bernoulli_mass_nonneg",
+                p.binomial_s.bernoulli_mass_nonneg,
+            ),
+            (
+                "binomial_s.bernoulli_is_distribution",
+                p.binomial_s.bernoulli_is_distribution,
+            ),
+            (
+                "binomial_s.bernoulli_expectation",
+                p.binomial_s.bernoulli_expectation,
+            ),
+            (
+                "binomial_s.bernoulli_variance",
+                p.binomial_s.bernoulli_variance,
+            ),
+            (
+                "binomial_rat.binomial_expectation",
+                p.binomial_rat.binomial_expectation,
+            ),
+            (
+                "binomial_rat.binomial_variance",
+                p.binomial_rat.binomial_variance,
+            ),
+            (
+                "binomial_rat.binomial_chebyshev",
+                p.binomial_rat.binomial_chebyshev,
+            ),
+            (
+                "binomial_rat.fourth_moment_inequality",
+                p.binomial_rat.fourth_moment_inequality,
             ),
         ],
         lists: Vec::new(),

@@ -2421,6 +2421,48 @@ def check_anchors() -> int:
 # Every guard below is mutation-verified because the defect being fixed IS a
 # checker that cannot fail, and reproducing it here would be the worst possible
 # outcome.
+# ADR-1631: the constructed Bernoulli model and the ℚ binomial.
+#
+# Every mutation below is a KERNEL kill, and that is the finding rather than a
+# shortcoming of the suite. `AlgS.OrderedRing.bernoulli_variance`'s proof term
+# is written against the iota-reduct of `variance ... 2`, so a wrong right-hand
+# side is not a wrong theorem the tests must catch -- it is a term whose
+# inferred type no longer matches its declared one, and `build_rat_prelude`
+# returns `Err`. The whole registered suite then dies at `prelude()`, which is
+# why the kill counts are the suite size rather than one.
+#
+# `p*p` is the mutation that matters, because it is the one a reader would
+# expect the `q = 1/2` instance to catch and it does NOT: `q(1-q)` and `q*q`
+# are both `1/4` there. The `1/3` instance in `binomial_s_tests.rs` is what
+# separates them (`2/9` against `1/9`), and it would be the killer if the
+# mutation were ever made in a form the kernel accepted.
+SUITES["bernoulli-binomial-model"] = (
+    "crates/axeyum-lean-kernel/src/rat_prelude/binomial_s.rs",
+    Cargo(
+        ("--release", "-p", "axeyum-lean-kernel", "--lib", "rat_prelude::binomial"),
+        "bernoulli-binomial-model",
+    ),
+    [
+        (
+            "the Bernoulli variance is q(1-q), not q*q",
+            "let qu = rmul(d, c, q, u);",
+            "let qu = rmul(d, c, q, q);",
+        ),
+        (
+            "the binomial's trial range is `j < m`, not `j < succ m`",
+            "    let hyp = d.lt(j, m);",
+            "    let m = d.succ(m);\n    let hyp = d.lt(j, m);",
+            "crates/axeyum-lean-kernel/src/rat_prelude/binomial_rat.rs",
+        ),
+        (
+            "the Bernoulli mass weighs success q, not 1-q",
+            "let inner = d.lam_fv(ih_fv, c.carrier, q);",
+            "let inner = d.lam_fv(ih_fv, c.carrier, one_minus_q);",
+        ),
+    ],
+)
+
+
 SUITES["settled-fact-statement-identity"] = (
     "scripts/check-settled-fact-statements.py",
     "scripts.tests.test_settled_fact_statements",
