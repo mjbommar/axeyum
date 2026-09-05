@@ -57,6 +57,7 @@ pub mod algebra_ext;
 pub mod algebra_instances;
 mod archimedean;
 mod bernoulli;
+pub mod binomial_s;
 mod clear_below;
 mod core;
 mod decidable;
@@ -108,6 +109,7 @@ use algebra_ext::AlgebraExtNames;
 use algebra_instances::AlgebraNames;
 use ordered_ring_ext::OrderedRingExtNames;
 use ordered_ring_ext_s::OrderedRingExtSNames;
+use binomial_s::BinomialSNames;
 use probability_s::ProbSNames;
 
 /// The interned names produced by [`build_rat_prelude`]: the field constants,
@@ -3165,6 +3167,14 @@ pub struct RatPrelude {
     /// three auxiliary ring lemmas the record's field set makes necessary.
     /// See [`probability_s`].
     pub probability_s: ProbSNames,
+
+    /// ADR-1631 (roadmap W3-12): the Bernoulli distribution as a
+    /// **constructed** two-point model over `(R : AlgS.OrderedRing)` — the
+    /// variable, the mass function, `IsDistribution` discharged rather than
+    /// assumed, `E[X] ≃ q`, `Var[X] ≃ q·(1 − q)`, and the two generic ring
+    /// lemmas (`mul_neg`, `zero_add`) that computation needs.
+    /// See [`binomial_s`].
+    pub binomial_s: BinomialSNames,
 }
 
 impl RatPrelude {
@@ -3723,6 +3733,7 @@ fn intern_names(kernel: &mut Kernel, int: IntPrelude) -> RatPrelude {
         ordered_ring_ext: ordered_ring_ext::intern_ordered_ring_ext(kernel),
         ordered_ring_ext_s: ordered_ring_ext_s::intern_ordered_ring_ext_s(kernel),
         probability_s: probability_s::intern_probability_s(kernel),
+        binomial_s: binomial_s::intern_binomial_s(kernel),
     }
 }
 
@@ -3823,6 +3834,7 @@ pub fn build_rat_prelude(kernel: &mut Kernel) -> Result<RatPrelude, KernelError>
             &prelude.ordered_ring_ext_s,
         )?;
         probability_s::declare_probability_s_all(&mut d, &prelude)?;
+        binomial_s::declare_binomial_s_all(&mut d, &prelude)?;
         Ok(())
     })();
     match built {
