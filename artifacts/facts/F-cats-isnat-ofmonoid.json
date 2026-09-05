@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "id": "F:cats-isnat-ofmonoid",
+  "title": "Between two deloopings of a monoid map a natural transformation is exactly an intertwiner",
+  "statement": "For any Sort 1 object type A, any two AlgS.Monoid records M and N, any two functions h, h' : M.carrier -> N.carrier, and any n : N.carrier such that N.equiv (N.op n (h x)) (N.op (h' x) n) for every x, the family constantly equal to n is a natural transformation from the delooping functor induced by h to the one induced by h' (CatS.IsNat over CatS.ofMonoid A M and CatS.ofMonoid A N). CatS.ofMonoid deloops a monoid into a category whose hom-family is M.carrier, whose composition is M.op and whose hom-equivalence is M.equiv; under that reading the naturality square IS the intertwining condition, so the theorem is the hypothesis applied. The direction matters: the square reads comp (eta b) (Fm f) ~ comp (Gm f) (eta a), which under comp = op is n . h x ~ h' x . n and not its converse.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem CatS.isNat_ofMonoid : ((x0 : Sort (1)) -> ((x1 : AlgS.Monoid) -> ((x2 : AlgS.Monoid) -> ((x3 : ((x3 : AlgS.Monoid.carrier x1) -> AlgS.Monoid.carrier x2)) -> ((x4 : ((x4 : AlgS.Monoid.carrier x1) -> AlgS.Monoid.carrier x2)) -> ((x5 : AlgS.Monoid.carrier x2) -> ((x6 : ((x6 : AlgS.Monoid.carrier x1) -> AlgS.Monoid.equiv x2 (AlgS.Monoid.op x2 x5 (x3 x6)) (AlgS.Monoid.op x2 (x4 x6) x5))) -> CatS.IsNat (CatS.ofMonoid x0 x1) (CatS.ofMonoid x0 x2) (fun (x7 : x0) => x7) (fun (x7 : x0) => x7) (fun (x7 : x0) => fun (x8 : x0) => fun (x9 : AlgS.Monoid.carrier x1) => x3 x9) (fun (x7 : x0) => fun (x8 : x0) => fun (x9 : AlgS.Monoid.carrier x1) => x4 x9) (fun (x7 : x0) => x5))))))))",
+    "fragment": "none",
+    "free_symbols": [],
+    "kernel_theorem": "CatS.isNat_ofMonoid"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "external_status": "proved",
+  "depends_on": ["F:cats-initial-unique"],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "cats-isnat-ofmonoid-1",
+      "kind": "kernel-term",
+      "supports": "CatS.isNat_ofMonoid admits through Kernel::add_declaration with an empty Kernel::axiom_footprint. The evaluation test the_delooping_reduces_to_the_monoids_own_fields reads the delooping's selectors out of the kernel -- hom reduces to M.carrier, id to M.e, comp g f to M.op g f and homEquiv to M.equiv -- and refuses each SWAPPED twin (M.op f g, the swapped M.equiv), so the composition order this theorem depends on is pinned rather than asserted. m3_the_naturality_square_is_indexed refuses a square with the wrong right-hand side, with its positive twin in the same test.",
+      "check_status": "checked",
+      "checker_command": "out=$(RUST_MIN_STACK=1073741824 cargo test -p axeyum-lean-kernel --lib --release category_setoid -- --test-threads=4 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -cE 'test result: ok\\. 14 passed; 0 failed')\" -ge 1",
+      "notes": "The pinned count is 14."
+    }
+  ],
+  "concept_refs": [],
+  "provenance": {
+    "date": "2026-09-04",
+    "established_by": "axeyum-lean-kernel nat_prelude::category_setoid, lane categories-setoid, ADR-1620 (roadmap W3-3).",
+    "source": "crates/axeyum-lean-kernel/src/nat_prelude/category_setoid.rs (declare_is_nat_of_monoid, declared as CatS.isNat_ofMonoid); tests nat_prelude::category_setoid::category_setoid_tests::*."
+  },
+  "notes": "CatS.ofMonoid is the measurement of the setoid cost at this layer, and it is ZERO: every one of the twelve CatS.Category fields is filled by one of M's own fields under dummy object binders -- homEquiv/homRefl/homSymm/homTrans by M.equiv and its three laws, compCongr by M.opCongr, idL/idR/assoc by M.identL/identR/assoc. The five fields a setoid-enriched category carries that an Eq-flavored one would get free are exactly the five AlgS already carries, so the first instance costs nothing to fill; under Eq the instance would not exist at all for a monoid whose equality is a defined relation."
+}

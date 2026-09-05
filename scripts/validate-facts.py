@@ -93,7 +93,7 @@ ID_RE = re.compile(r"^F:[a-z0-9]+(-[a-z0-9]+)*$")
 # to only these logic-prelude names maintains that guard while registering real
 # declarations the kernel admits.
 KERNEL_THEOREM_RE = re.compile(
-    r"^(?:AxReal|AxNat|Nat|Int|Real|Rat|List|Bool|Prop|Acc|WellFounded|Alg|AlgS|"
+    r"^(?:AxReal|AxNat|Nat|Int|Real|Rat|List|Bool|Prop|Acc|WellFounded|Alg|AlgS|CatS|"
     r"And|Decidable|Eq|Iff|Or|Metric|IntSpace|"
     r"And|Decidable|Eq|Iff|Or|Metric|RN|"
     r"CReal|Complex|CPoint|axeyum\.string\.[0-9]+)"
