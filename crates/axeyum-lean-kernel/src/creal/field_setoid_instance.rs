@@ -511,10 +511,7 @@ fn declare_field_s(k: &mut Kernel, p: &CRealPrelude, a: &Algs) -> Result<(), Ker
 ///
 /// Returns the trusted gate's rejection — an `Err` means
 /// [`Kernel::add_declaration`] **refused** a proof term.
-pub(super) fn declare_field_s_all(
-    d: &mut IntDev<'_>,
-    p: CRealPrelude,
-) -> Result<(), KernelError> {
+pub(super) fn declare_field_s_all(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
     let p = &p;
     let k = d.kernel();
     let a = algs(k);

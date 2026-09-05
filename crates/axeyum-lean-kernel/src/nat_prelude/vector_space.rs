@@ -678,11 +678,7 @@ fn declare_basis_zero_unique(
         let tail = c.feqv(k, c.fone, c.fzero);
         let and_right2 = k.const_(lg.and_right, vec![]);
         let one_eq_zero = t_app(k, and_right2, &[head, tail, ca]);
-        let bad = t_app(
-            k,
-            c.fapart_compat,
-            &[c.fone, c.fzero, one_eq_zero],
-        );
+        let bad = t_app(k, c.fapart_compat, &[c.fone, c.fzero, one_eq_zero]);
         let one_apart_zero = sel(k, fr, ix::ONE_APART_ZERO, c.f);
         let contradiction = k.app(bad, one_apart_zero);
 
@@ -768,22 +764,11 @@ pub(crate) fn declare_vector_space(
 ) -> Result<VectorSpaceNames, KernelError> {
     let ns = k.name_str(algs, "VectorSpace");
     let fr = &fn_.field;
-    let is_vector_space =
-        declare_is_vector_space(k, fr, cg, fn_.to_comm_ring, mn.is_module, ns)?;
-    let smul_left_cancel = declare_smul_left_cancel(
-        k,
-        lg,
-        fr,
-        cg,
-        fn_.to_comm_ring,
-        is_vector_space,
-        mn,
-        ns,
-    )?;
-    let solve_smul =
-        declare_solve_smul(k, lg, fr, cg, fn_.to_comm_ring, is_vector_space, mn, ns)?;
-    let basis_zero_unique =
-        declare_basis_zero_unique(k, lg, fr, cg, fn_.to_comm_ring, mn, ns)?;
+    let is_vector_space = declare_is_vector_space(k, fr, cg, fn_.to_comm_ring, mn.is_module, ns)?;
+    let smul_left_cancel =
+        declare_smul_left_cancel(k, lg, fr, cg, fn_.to_comm_ring, is_vector_space, mn, ns)?;
+    let solve_smul = declare_solve_smul(k, lg, fr, cg, fn_.to_comm_ring, is_vector_space, mn, ns)?;
+    let basis_zero_unique = declare_basis_zero_unique(k, lg, fr, cg, fn_.to_comm_ring, mn, ns)?;
 
     Ok(VectorSpaceNames {
         is_vector_space,

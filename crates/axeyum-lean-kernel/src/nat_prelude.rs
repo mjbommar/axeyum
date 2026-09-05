@@ -200,6 +200,9 @@ mod fermat_number_mirrors;
 mod fermat_witness;
 mod fib_extra;
 mod fibonacci;
+/// ADR-1627 / roadmap W3-2: `AlgS.Field.*`, a constructive field over the
+/// setoid spine -- apartness as data, the inverse as an existential.
+pub mod field_setoid;
 mod find_greatest;
 mod finite;
 mod finite_set;
@@ -237,9 +240,6 @@ mod lor;
 mod min_fac;
 mod min_fac_dvd;
 mod minmax;
-/// ADR-1627 / roadmap W3-2: `AlgS.Field.*`, a constructive field over the
-/// setoid spine -- apartness as data, the inverse as an existential.
-pub mod field_setoid;
 mod minmax_lemmas;
 mod mod_mul_lemmas;
 mod modeq_add_cancel;
@@ -314,11 +314,11 @@ mod totient_mul_coprime;
 mod totient_multiplicative;
 mod totient_prime_pow;
 pub(crate) mod transposition;
+mod unpair;
+mod vandermonde;
 /// ADR-1627 / roadmap W3-2: `AlgS.VectorSpace.*`, modules over an
 /// `AlgS.Field`, and the first dimension statement.
 pub mod vector_space;
-mod unpair;
-mod vandermonde;
 mod xor;
 mod xor_algebra;
 mod xor_order;

@@ -70,13 +70,7 @@ fn build(k: &mut Kernel) -> Fixture {
     .expect("AlgS.Field must admit");
     let vs = declare_vector_space(k, &lg, &fld, &st.comm_group, &m, p.algs)
         .expect("AlgS.VectorSpace must admit over an abstract field");
-    Fixture {
-        lg,
-        st,
-        fld,
-        m,
-        vs,
-    }
+    Fixture { lg, st, fld, m, vs }
 }
 
 #[test]

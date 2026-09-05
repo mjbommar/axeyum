@@ -71,9 +71,6 @@ mod field;
 /// ADR-1627 / roadmap W3-2: `Rat.fieldS : AlgS.Field`, the decidable-equality
 /// instance of the constructive field record, plus `Rat.fieldS_isTight`.
 mod field_setoid_instance;
-/// ADR-1627 / roadmap W3-2: ℚ as a vector space over itself, and the
-/// `linComb` to `Rat.sumRange` bridge.
-mod vector_space_instance;
 pub(crate) mod group;
 pub(crate) mod lattice;
 mod laws;
@@ -105,6 +102,9 @@ mod sum;
 mod sum_maps;
 mod taylor;
 mod vector;
+/// ADR-1627 / roadmap W3-2: ℚ as a vector space over itself, and the
+/// `linComb` to `Rat.sumRange` bridge.
+mod vector_space_instance;
 
 pub use model::{RatModel, RatModelLaw, build_rat_model_of_arith};
 

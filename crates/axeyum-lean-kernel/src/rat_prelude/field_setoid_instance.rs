@@ -210,7 +210,11 @@ fn declare_apart(k: &mut Kernel, p: &RatPrelude) -> Result<NameId, KernelError> 
 }
 
 /// `Rat.apart_symm : forall a b, Rat.apart a b -> Rat.apart b a`.
-fn declare_apart_symm(k: &mut Kernel, p: &RatPrelude, apart: NameId) -> Result<NameId, KernelError> {
+fn declare_apart_symm(
+    k: &mut Kernel,
+    p: &RatPrelude,
+    apart: NameId,
+) -> Result<NameId, KernelError> {
     let lg = p.int.nat.logic;
     let q = qctx(k, p);
     let a = k.fvar(A_FV);
@@ -329,11 +333,7 @@ fn declare_apart_cotrans(
     let elim = k.const_(lg.or_elim, vec![]);
     let branch_rest = {
         let h = k.fvar(SCRATCH_FV + 1);
-        let inner = t_app(
-            k,
-            elim,
-            &[eq_ac, lt_ca, goal, h, branch_eq, branch_lt_ca],
-        );
+        let inner = t_app(k, elim, &[eq_ac, lt_ca, goal, h, branch_eq, branch_lt_ca]);
         lam_over(k, SCRATCH_FV + 1, inner_or, inner)
     };
     let proof = t_app(

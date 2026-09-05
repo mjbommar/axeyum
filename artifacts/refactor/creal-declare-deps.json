@@ -182,6 +182,11 @@
     "extreme_value.evt_linear": "CReal.evtLinear",
     "extreme_value.evt_linear_uniformly_continuous": "CReal.evtLinear_uniformly_continuous",
     "fermat_interior_extremum": "CReal.fermat_interiorExtremum",
+    "field_s.apart_compat": "CReal.apart_compat",
+    "field_s.field_s": "CReal.fieldS",
+    "field_s.mul_inv_ex": "CReal.mulInvEx",
+    "field_s.one_apart_zero": "CReal.one_apart_zero",
+    "field_s.pos_of_neg_lt_zero": "CReal.pos_of_neg_lt_zero",
     "fine_block_sum_close": "CReal.fineBlockSum_close",
     "fine_sample_close": "CReal.fineSample_close",
     "fine_sample_in_bounds": "CReal.fineSample_in_bounds",
@@ -639,6 +644,7 @@
       "extreme_value": 1,
       "fermat": 1,
       "field": 1,
+      "field_setoid_instance": 1,
       "geometric": 2,
       "integral": 47,
       "inverse": 1,
@@ -1168,6 +1174,11 @@
         "index": 215,
         "label": "pi::declare_pi_family",
         "module": "pi"
+      },
+      {
+        "index": 216,
+        "label": "field_setoid_instance::declare_field_s_all",
+        "module": "field_setoid_instance"
       }
     ],
     "table_gaps": []
@@ -1175,10 +1186,10 @@
   "produced_by": "scripts/creal-declare-deps.py",
   "schema": "creal-declare-deps/v1",
   "source": {
-    "creal_prelude_fields": 615,
-    "creal_rs_lines": 11532,
-    "fields_in_module_registries": 73,
-    "functions_indexed": 1955,
+    "creal_prelude_fields": 620,
+    "creal_rs_lines": 11548,
+    "fields_in_module_registries": 78,
+    "functions_indexed": 1970,
     "module_registries": {
       "completeness": "CompletenessNames",
       "cos_sign": "CosSignNames",
@@ -1187,6 +1198,7 @@
       "evt_row1": "EvtRow1Names",
       "exp_fn": "ExpFnNames",
       "extreme_value": "ExtremeValueNames",
+      "field_s": "FieldSNames",
       "inverse_fn": "InverseFnNames",
       "ivt_boundary": "IvtBoundaryNames",
       "lub_boundary": "LubBoundaryNames",
@@ -1196,8 +1208,8 @@
       "polynomial": "PolynomialNames",
       "ratio_test": "RatioTestNames"
     },
-    "modules_indexed": 51,
-    "steps": 216
+    "modules_indexed": 52,
+    "steps": 217
   },
   "steps": [
     {
@@ -15477,6 +15489,87 @@
       "module": "pi",
       "reachable_fns": 80,
       "run": "pi::declare_pi_family"
+    },
+    {
+      "declared_provides": [
+        "field_s.apart_compat",
+        "field_s.field_s",
+        "field_s.mul_inv_ex",
+        "field_s.one_apart_zero",
+        "field_s.pos_of_neg_lt_zero"
+      ],
+      "declared_requires": [
+        "add",
+        "add_comm",
+        "add_lt_add_of_le_of_lt",
+        "add_neg",
+        "add_zero",
+        "apart",
+        "apart_cotrans",
+        "apart_symm",
+        "apart_zero_one",
+        "comm_ring_s",
+        "creal",
+        "equiv",
+        "equiv_symm",
+        "equiv_trans",
+        "inv",
+        "le_refl",
+        "lt",
+        "lt_congr",
+        "mul",
+        "mul_comm",
+        "mul_inv_cancel",
+        "neg",
+        "neg_congr",
+        "not_equiv_of_apart",
+        "one",
+        "pos_bound",
+        "pos_bound_of_lt",
+        "zero"
+      ],
+      "index": 216,
+      "label": "field_setoid_instance::declare_field_s_all",
+      "measured_provides": [
+        "field_s.apart_compat",
+        "field_s.field_s",
+        "field_s.mul_inv_ex",
+        "field_s.one_apart_zero",
+        "field_s.pos_of_neg_lt_zero"
+      ],
+      "measured_requires": [
+        "add",
+        "add_comm",
+        "add_lt_add_of_le_of_lt",
+        "add_neg",
+        "add_zero",
+        "apart",
+        "apart_cotrans",
+        "apart_symm",
+        "apart_zero_one",
+        "comm_ring_s",
+        "creal",
+        "equiv",
+        "equiv_symm",
+        "equiv_trans",
+        "inv",
+        "le_refl",
+        "lt",
+        "lt_congr",
+        "mul",
+        "mul_comm",
+        "mul_inv_cancel",
+        "neg",
+        "neg_congr",
+        "not_equiv_of_apart",
+        "one",
+        "pos_bound",
+        "pos_bound_of_lt",
+        "zero"
+      ],
+      "module": "field_setoid_instance",
+      "reachable_fns": 9,
+      "run": "field_setoid_instance::declare_field_s_all"
     }
   ]
 }

@@ -104,13 +104,13 @@ use crate::rat_prelude::{RatPrelude, build_rat_prelude};
 use crate::{Kernel, KernelError, PreludeKey, PreludeValue};
 
 pub use completeness::CompletenessNames;
-pub use field_setoid_instance::FieldSNames;
 pub use cos_sign::CosSignNames;
 pub use crossing::CrossingNames;
 pub use deriv_unique::DerivUniqueNames;
 pub use evt_row1::EvtRow1Names;
 pub use exp_fn::ExpFnNames;
 pub use extreme_value::ExtremeValueNames;
+pub use field_setoid_instance::FieldSNames;
 pub use inverse_fn::InverseFnNames;
 /// Re-exported so `CRealPrelude::ivt_boundary` -- a `pub` field -- has a
 /// publicly nameable type. `mod creal` is private at the crate root, so a

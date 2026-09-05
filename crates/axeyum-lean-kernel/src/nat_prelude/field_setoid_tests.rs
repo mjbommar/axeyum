@@ -299,10 +299,7 @@ fn is_tight_unfolds_to_the_tightness_statement() {
     );
 
     let true_c = k.const_(fx.lg.true_, vec![]);
-    assert!(
-        !k.def_eq(got, true_c),
-        "IsTight must not be vacuously True"
-    );
+    assert!(!k.def_eq(got, true_c), "IsTight must not be vacuously True");
 }
 
 // ---------------------------------------------------------------------------
