@@ -37,10 +37,19 @@
 //!   exercises its failing side. A sound, documented, sized restriction, the
 //!   same spirit as `super::nat`'s original
 //!   no-intra-monomial-sorting gap.
-//! - **No [`super::int::Problem::cancel_pairs`].** None of the five ℚ
-//!   targets produce an `x + (-x)` summand pair, so it was not built —
-//!   `super::int`'s own "don't build a speculative capability with no test
-//!   exercising it honestly" rule.
+//! - **[`Problem::cancel_pairs`] was added later, not omitted, and it does
+//!   two things here.** The five original ℚ targets produced no `x + (-x)`
+//!   summand pair, so the pass was not built. The coordinate-geometry
+//!   identities of [`crate::geo::qplane`] produce nothing but such pairs —
+//!   every one asserts that a determinant expansion collapses — so the first
+//!   arm is now here, ported from [`super::int::Problem::cancel_pairs`] with
+//!   the same adjacent-pairs-only completeness bound. The **second** arm is
+//!   new to ℚ and independent of it: `scale_item` emits `Item::Num(0)` for
+//!   every `x * 0`, the additive normalizer never merges two `Num`s, and so
+//!   `a*0 + b*0 + c` normalized to three items against `c`'s one and
+//!   declined. Every `Geo.QPlane` statement at a point with a zero coordinate
+//!   is that shape, so a `Num(0)` summand is now dropped by `Rat.add_zero`
+//!   (or `zero_add_lemma` at the head) whenever it is not the only item.
 //!
 //! ## Lemma table
 //!
@@ -748,8 +757,157 @@ impl Problem {
         let flat = self.fold(d, &items);
         let (sorted, p2) = self.sort_items(d, &items);
         let sorted_term = self.fold(d, &sorted);
-        let proof = rtrans(d, e, flat, sorted_term, p1, p2);
-        Ok((sorted, proof))
+        let (cancelled, p3) = self.cancel_pairs(d, &sorted);
+        let cancelled_term = self.fold(d, &cancelled);
+        let p12 = rtrans(d, e, flat, sorted_term, p1, p2);
+        let proof = rtrans(d, e, sorted_term, cancelled_term, p12, p3);
+        Ok((cancelled, proof))
+    }
+
+    /// `Eq Rat (add zero a) a` — the LEFT-zero law, from `add_comm`/`add_zero`
+    /// (only the right-hand `Rat.add_zero` is in `RatPrelude`).
+    fn zero_add_lemma(d: &mut IntDev<'_>, p: &RatPrelude, a: ExprId) -> ExprId {
+        let zero = rzero(d, *p);
+        let za = radd(d, zero, a);
+        let az = radd(d, a, zero);
+        let comm = d.const_app(p.add_comm, &[zero, a]);
+        let az_eq_a = d.const_app(p.add_zero, &[a]);
+        rtrans(d, za, az, a, comm, az_eq_a)
+    }
+
+    /// `Eq Rat (fold_from zero tail) (fold tail)`, `tail` nonempty.
+    fn drop_leading_zero(&self, d: &mut IntDev<'_>, tail: &[Item]) -> ExprId {
+        let t0 = self.item_term(d, &tail[0]);
+        let za = Self::zero_add_lemma(d, &self.prelude, t0);
+        let zero = rzero(d, self.prelude);
+        let start = radd(d, zero, t0);
+        let rest = &tail[1..];
+        rcongr(d, start, t0, za, &|d, t| self.fold_from(d, t, rest))
+    }
+
+    /// One fixpoint pass doing two things a normalized ℚ sum needs before it
+    /// can be compared against `0`: cancelling adjacent `x` / `neg x`
+    /// summands (the ℚ twin of [`super::int::Problem::cancel_pairs`]), and
+    /// dropping a `Num(0)` summand when it is not the only item.
+    ///
+    /// Both arms exist because of [`crate::geo::qplane`]. Its identities
+    /// produce nothing but opposite pairs — each one asserts that a
+    /// determinant expansion collapses — and every statement it makes at a
+    /// point with a zero coordinate produces a `x * 0` that `scale_item`
+    /// turns into a `Num(0)` the additive normalizer never merges away. With
+    /// neither arm the producer declines `NotAnIdentity` on goals that are
+    /// ring identities.
+    ///
+    /// `Item::key` sorts by `(is_num, factors, sign)`, so a monomial and its
+    /// negation are already ADJACENT after `sort_items` and the first arm is
+    /// complete for the pairs that matter. Sound and incomplete in the same
+    /// spirit as `sort_factors`: only *adjacent*, *syntactically
+    /// opposite-signed*, *same-monomial* pairs cancel.
+    fn cancel_pairs(&mut self, d: &mut IntDev<'_>, items: &[Item]) -> (Vec<Item>, ExprId) {
+        let source = self.fold(d, items);
+        let mut current: Vec<Item> = items.to_vec();
+        let mut proof = rrefl(d, source);
+        let mut folded = source;
+        loop {
+            let mut cancelled = false;
+            let mut k = 0;
+            while k + 1 < current.len() {
+                let opposite = match (&current[k], &current[k + 1]) {
+                    (Item::Mono(va, false), Item::Mono(vb, true)) => va == vb,
+                    _ => false,
+                };
+                if !opposite {
+                    k += 1;
+                    continue;
+                }
+                let p = self.prelude;
+                let x = self.item_term(d, &current[k]);
+                let negx = self.item_term(d, &current[k + 1]);
+                let an = d.const_app(p.add_neg, &[x]);
+                let before_pair = radd(d, x, negx);
+                let zero = rzero(d, p);
+                let tail = current[k + 2..].to_vec();
+
+                let (new_items, target, step) = if k == 0 {
+                    if tail.is_empty() {
+                        (vec![Item::Num(0)], zero, an)
+                    } else {
+                        let step1 = rcongr(d, before_pair, zero, an, &|d, t| {
+                            self.fold_from(d, t, &tail)
+                        });
+                        let via_zero = self.fold_from(d, zero, &tail);
+                        let target = self.fold(d, &tail);
+                        let step2 = self.drop_leading_zero(d, &tail);
+                        let chained = rtrans(d, folded, via_zero, target, step1, step2);
+                        (tail.clone(), target, chained)
+                    }
+                } else {
+                    let prefix = current[..k].to_vec();
+                    let fp = self.fold(d, &prefix);
+                    let before_inner = radd(d, fp, x);
+                    let before = radd(d, before_inner, negx);
+                    let assoc = d.const_app(p.add_assoc, &[fp, x, negx]);
+                    let fp_pair = radd(d, fp, before_pair);
+                    let congr_an = rcongr(d, before_pair, zero, an, &|d, t| radd(d, fp, t));
+                    let fp_zero = radd(d, fp, zero);
+                    let az = d.const_app(p.add_zero, &[fp]);
+                    let (_, base) = rchain(
+                        d,
+                        before,
+                        &[(fp_pair, assoc), (fp_zero, congr_an), (fp, az)],
+                    );
+                    let mut new_items = prefix.clone();
+                    new_items.extend_from_slice(&tail);
+                    let target = self.fold_from(d, fp, &tail);
+                    let tail_step =
+                        rcongr(d, before, fp, base, &|d, t| self.fold_from(d, t, &tail));
+                    (new_items, target, tail_step)
+                };
+
+                proof = rtrans(d, source, folded, target, proof, step);
+                folded = target;
+                current = new_items;
+                cancelled = true;
+                break;
+            }
+            if cancelled {
+                continue;
+            }
+            // Second arm: drop a `0` summand when it is not the only item.
+            // `scale_item` emits `Item::Num(0)` for every `x * 0`, and the
+            // additive normalizer never merges two `Num`s — so `a*0 + b*0 + c`
+            // normalizes to three items while `c` normalizes to one, and the
+            // producer declines a goal that is a ring identity. Every
+            // `Geo.QPlane` statement at a point with a zero coordinate has
+            // this shape.
+            let zero_at = current
+                .iter()
+                .position(|it| matches!(it, Item::Num(0)))
+                .filter(|_| current.len() >= 2);
+            let Some(k) = zero_at else { break };
+            let p = self.prelude;
+            let tail = current[k + 1..].to_vec();
+            let (new_items, target, step) = if k == 0 {
+                let target = self.fold(d, &tail);
+                let step = self.drop_leading_zero(d, &tail);
+                (tail.clone(), target, step)
+            } else {
+                let prefix = current[..k].to_vec();
+                let fp = self.fold(d, &prefix);
+                let zero = rzero(d, p);
+                let before = radd(d, fp, zero);
+                let az = d.const_app(p.add_zero, &[fp]);
+                let mut new_items = prefix.clone();
+                new_items.extend_from_slice(&tail);
+                let target = self.fold_from(d, fp, &tail);
+                let step = rcongr(d, before, fp, az, &|d, t| self.fold_from(d, t, &tail));
+                (new_items, target, step)
+            };
+            proof = rtrans(d, source, folded, target, proof, step);
+            folded = target;
+            current = new_items;
+        }
+        (current, proof)
     }
 
     fn prove_eq(
