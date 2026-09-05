@@ -4,7 +4,7 @@
   "note": "Statement identity for every settled fact (S1 of the trusted-library safety roadmap, ADR-0763). Per fact: SHA-256 of formal.statement (the canonical kernel rendering for native lean4 rows), SHA-256 of the top-level reader-facing statement, and the kernel_theorem it names. A settled fact's statement is what the ledger CLAIMS; changing any of the three silently turns 'we proved X' into 'we proved something we then labelled X'. Changes require an amendment row naming both digests and a reason; superseded digests are preserved in each pin's history. `coverage_floor` is a ratchet the gate re-derives rather than trusts: slack is itself a violation, so a loosened floor is self-reverting. Written by `scripts/check-settled-fact-statements.py --write`; do not hand-edit.",
   "coverage_floor": {
     "max_unpinned_settled": 0,
-    "min_identity_bound": 2312,
+    "min_identity_bound": 2315,
     "max_header_exempt": 0
   },
   "amendments": [
@@ -16921,6 +16921,13 @@
       ]
     },
     {
+      "fact_id": "F:nat-dirichlet-convolution-commutes",
+      "language": "lean4",
+      "statement_sha256": "5bb3b3a87126cf7ec3d839c33e8dfaa543cc5cf8c8ac4e68ff1fdc0e886f6732",
+      "prose_sha256": "c1ddad0637bf264eac9c9fb5718f2da6fb733066e0b8f83adc90cb3dc25ffbaf",
+      "kernel_theorem": "Nat.dirichlet_comm"
+    },
+    {
       "fact_id": "F:nat-div-mod-add-multiple",
       "language": "lean4",
       "statement_sha256": "8765bca957da0bb26293e8512678237f7befb25eb946f7c36f72e40d306a9b89",
@@ -17053,6 +17060,13 @@
       "statement_sha256": "086b60b21d0dfb397ee449c447a37f1a94e3d49b2dd9e1b8a759db8ad9bff773",
       "prose_sha256": "948225c8985dc08ab4f462bbabcc8b1848bfd6bc531355acb8da11b473ff0afa",
       "kernel_theorem": "Nat.div_zero"
+    },
+    {
+      "fact_id": "F:nat-divisor-aggregate-reindex",
+      "language": "lean4",
+      "statement_sha256": "03f9fe824bfde0852fa641e5507fc3c7aadb6fba8bb374a78bfc439cda9cb7ad",
+      "prose_sha256": "8ccce3ca989e74df1d4dad4667f03594dcae17d4c4fb63bcb0e5001a21443e78",
+      "kernel_theorem": "Nat.sumDivisorsBy_reindex"
     },
     {
       "fact_id": "F:nat-dvd-add",
@@ -18996,6 +19010,13 @@
       "statement_sha256": "93c70fdc143f8107a94c531796ef77b0c62278fb1c29f6e23a4267b2a0c2098f",
       "prose_sha256": "dfb2993f15d44b4db9e10bea08c02de2fb5e544112ded4fa4df212f25c7dd12a",
       "kernel_theorem": "Nat.modEq_pow"
+    },
+    {
+      "fact_id": "F:nat-moebius-as-a-graded-pair",
+      "language": "lean4",
+      "statement_sha256": "e8ff6d6a0f55d737f5996ae24e0fc2e2c2fa89501a789c1d14742d6c0f5d1972",
+      "prose_sha256": "e99bdf9e3981a469d0552061e82a49bed4b305b81bb5765670046518cff7de16",
+      "kernel_theorem": "Nat.moebius_pos_add_neg"
     },
     {
       "fact_id": "F:nat-monotone-of-le-succ",

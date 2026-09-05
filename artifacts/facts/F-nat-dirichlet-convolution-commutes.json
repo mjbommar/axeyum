@@ -1,0 +1,79 @@
+{
+  "schema_version": 1,
+  "id": "F:nat-dirichlet-convolution-commutes",
+  "title": "The Dirichlet convolution of two arithmetic functions is commutative, and its proof is the divisor reindexing plus the cofactor law",
+  "statement": "Define the Dirichlet convolution of f and g at n as the sum over the divisors d of n of f(d) times g(n/d). For every n > 0 this is symmetric in f and g. The proof introduces no new argument: reindex the sum by d -> n/d, use n/(n/d) = d at every divisor to rewrite the second factor, and commute the product. The middle step needs a pointwise congruence for the divisor aggregate bounded BY DIVISIBILITY rather than by an index bound, because n/(n/d) = d is false off the divisor set, and the unconditional congruence for a range sum cannot state that hypothesis.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Nat.dirichlet_comm : ((x0 : ((x0 : AxNat) -> AxNat)) -> ((x1 : ((x1 : AxNat) -> AxNat)) -> ((x2 : AxNat) -> ((x3 : AxNat.lt AxNat.zero x2) -> Eq.{1} AxNat (AxNat.dirichlet x0 x1 x2) (AxNat.dirichlet x1 x0 x2)))))",
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.dirichlet_comm",
+    "kernel_statement": "Nat.dirichlet f g n := Nat.sumDivisorsBy (fun d => Nat.mul (f d) (g (Nat.div n d))) n. The congruence it consumes is Nat.sumDivisorsBy_congr : forall f g n, (forall d, Eq Bool (dvdB d n) true -> Eq (f d) (g d)) -> Eq (sumDivisorsBy f n) (sumDivisorsBy g n). Two identifications land beside it: Nat.numDivisors_eq_dirichlet (d = 1 * 1, closed by Eq.refl) and Nat.sumDivisors_eq_dirichlet (sigma = id * 1, NOT refl, because mul k 1 reduces to add zero k, which is stuck at a bound k since Nat.add recurses on its RIGHT argument). The family predicate is Nat.IsMultiplicative f := forall a b, Eq (gcd a b) 1 -> Eq (f (mul a b)) (mul (f a) (f b)), with Nat.isMultiplicative_totient and Nat.isMultiplicative_one as its two members."
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "proof_route": "kernel-lean",
+  "axiom_footprint": [],
+  "depends_on": [
+    "F:nat-divisor-aggregate-reindex",
+    "F:nat-totient-mul-of-coprime",
+    "F:nat-mul-comm"
+  ],
+  "provenance": {
+    "date": "2026-09-04",
+    "established_by": "axeyum lane `arithmetic-functions`, roadmap item W2-18: `nat_prelude/arith_functions_family.rs`. ADR-1619.",
+    "source": "Standard; commutativity of Dirichlet convolution is the first structural fact about the ring of arithmetic functions.",
+    "prior_art": [
+      {
+        "citation": "Mathlib, `ArithmeticFunction.mul_comm`",
+        "establishes": "the same statement inside a full commutative-ring instance on arithmetic functions valued in a commutative semiring; this route has no ring structure and states the identity directly over Nat-valued functions"
+      }
+    ]
+  },
+  "evidence": [
+    {
+      "id": "kernel-Nat.dirichlet_comm",
+      "kind": "kernel-term",
+      "supports": "the convolution is symmetric in its two arguments at every positive n",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::add_declaration (re-derives the type from the proof term)",
+        "nat_prelude::arith_functions_family_tests::dirichlet_comm_holds_at_a_discharged_instance",
+        "nat_prelude::arith_functions_family_tests::the_family_declarations_state_the_intended_types",
+        "nat_prelude_tests::every_nat_declaration_is_checked_and_axiom_free"
+      ],
+      "checker_command": "cargo test --release -p axeyum-lean-kernel --lib nat_prelude::arith_functions -- --test-threads=4",
+      "notes": "Instantiated with the positivity DISCHARGED at a literal and at a pair (id, succ) whose convolution summands differ TERM BY TERM: at n = 6, d = 2 the left side contributes 2*4 = 8 and the right 3*3 = 9. Both totals reduce to 36. So the theorem is not confirmed by an accidental symmetry of the summand.",
+      "checker_paired_negative": "The Rust reference asserts 8 != 9 before the kernel is asked anything, so the claim that the summands differ is measured rather than assumed."
+    },
+    {
+      "id": "eval-dirichlet-small",
+      "kind": "instance-pin",
+      "supports": "the definition is the convolution and not the pointwise product over divisors",
+      "check_status": "checked",
+      "checkers": [
+        "nat_prelude::arith_functions_family_tests::dirichlet_computes_the_convolution",
+        "nat_prelude::arith_functions_family_tests::the_convolution_readings_are_distinct",
+        "nat_prelude::arith_functions_family_tests::the_two_classical_functions_are_convolutions"
+      ],
+      "checker_command": "cargo test --release -p axeyum-lean-kernel --lib nat_prelude::arith_functions -- --test-threads=4",
+      "notes": "`Nat.dirichlet` has exactly the same type with `g d` in place of `g (n/d)`. At f = id, g = succ, n = 6 the convolution is 36 and the pointwise product is 62, and the test asserts both the positive and the negative.",
+      "checker_paired_negative": "`dirichlet id succ 6` is asserted NOT to reduce to 62, the value the pointwise reading gives."
+    },
+    {
+      "id": "kernel-Nat.isMultiplicative_totient",
+      "kind": "kernel-term",
+      "supports": "the multiplicativity predicate the family is stated over is inhabited by a function already proved multiplicative",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::add_declaration (re-derives the type from the proof term)",
+        "nat_prelude::arith_functions_family_tests::totient_is_a_member_of_the_family",
+        "nat_prelude_tests::every_nat_declaration_is_checked_and_axiom_free"
+      ],
+      "checker_command": "cargo test --release -p axeyum-lean-kernel --lib nat_prelude::arith_functions -- --test-threads=4",
+      "notes": "Coprimality is spelled Eq (gcd a b) 1 and not Nat.Coprime, because shape_search --name Nat.Coprime returns ABSENT at declarations=2857 and Eq (gcd a b) 1 is what the existing Nat.totient_mul_of_coprime already uses. The instance test discharges the coprimality at a literal pair by Eq.refl (Nat.gcd computes at numerals) and reduces phi(2*3) to 2.",
+      "checker_paired_negative": "Nat.isMultiplicative_one is declared alongside, so the predicate is inhabited by more than one function and cannot be passing because it holds trivially of everything. The identity is FALSE without the coprimality hypothesis at 26 of 26 non-coprime pairs with 1 <= m,n <= 9 -- the measurement recorded under Nat.totient_mul_of_coprime."
+    }
+  ],
+  "notes": "The value of this fact is the ROUTE. Commutativity of Dirichlet convolution is elementary, but here it is a three-step corollary of F:nat-divisor-aggregate-reindex, which is the return on having built the reindexing as a named primitive rather than inline. Moebius INVERSION, the theorem that makes the family worth having, did NOT land: it needs the sum of mu(d) over d | n = [n = 1], whose standard proof puts the divisors of a squarefree number in bijection with the subsets of its prime factors. That bijection does not exist in the tree and is not a corollary of anything here."
+}
