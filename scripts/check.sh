@@ -1197,6 +1197,16 @@ step autogenesis-apply-search ./scripts/check-autogenesis-apply-search.sh
 # 0 printing "running 0 tests ... ok") and cannot replay a cached test binary
 # over source it never compiled.
 step test   ./scripts/check-workspace-tests.sh
+# TWO ratchets run in this one step. `FRONTIER <family> = N` is capability at a
+# fixed budget; `TIMING <family> = <ms> calibrated` is the clock -- a committed
+# ceiling on the calibrated solve time of a few `N` pinned deep inside each
+# frontier, read out of the curve the sweep already produced (no extra solving).
+# Until 2026-09-05 nothing in any gate failed when solve time regressed: the
+# frontier gate is capability, the parity ledger is decide count, the corpus
+# sweep is soundness, and `summary.par2_mean_s` in the 72 committed baselines
+# was compared to nothing (design review 2026-09-05, section 2.2 item 1). Both
+# ratchets honour the same `comparable` verdict, so a loaded or uncomparable box
+# reports both numbers and asserts neither.
 step frontier cargo test -p axeyum-solver --test progress_frontier --features full -- --test-threads=1
 # The gate-liveness ratchet: proves the gates above still RUN something. A suite
 # emptied by a new `#![cfg(feature = ...)]` exits 0 and prints "running 0 tests
