@@ -158,25 +158,46 @@ FO.Term.code, FO.Formula.code
 FO.Term.code_injective, FO.Formula.code_injective
 ```
 
-**Not landed, and the obstruction is one thing, not four.** Representability
-of substitution (`substCode (⌜φ⌝) (⌜t⌝) = ⌜φ[t]⌝`), the diagonal lemma, and
-Gödel I all need a **decoder** `Nat -> FO.Formula`, because a syntax operation
-"as a `Nat -> Nat` function" must take a code apart, act, and rebuild. The
-numbering above gives the taking-apart (`FO.Code.fst`/`snd` compute, and the
-round trip says they are right), but a decoder recurses on `FO.Code.snd n`,
-which is not structurally smaller than `n`, so it needs
+The decoder slice (`fo_decode.rs`) landed too, so the list above continues:
 
-1. a fuel-recursive `decodeAux : Nat -> Nat -> FO.Formula` with a nine-way case
-   tree on the tag (a nested `Nat.rec`, the shape `nat_prelude`'s `logAux` /
-   `sqrtAux` / `binaryRecAux` already use) — roughly one slice per type;
-2. a fuel-agreement lemma of the `Nat.binaryRecAux_agree_of_fuel` shape; and
-3. a bound `depth φ <= code φ` so the code can be its own fuel.
+```text
+FO.Term.decodeAux, FO.Term.decode, FO.Formula.decodeAux, FO.Formula.decode
+FO.Code.substCode : Nat -> Nat -> Nat
+FO.Code.isFormulaCode : Nat -> Bool
+```
 
-(1) is ordinary construction work. (2) and (3) are each one induction. Until
-they exist, `substCode` cannot be *defined*, so its commuting lemma cannot be
-*stated*, so the diagonal lemma has nothing to diagonalize. This is recorded
-as the `open` fact `F:fo-formula-decoder` with `F:fo-formula-code-injective`
-as its `depends_on`, rather than estimated in prose.
+`FO.Code.unpair` is structural on the code; a **decoder is not**, because it
+recurses on `FO.Code.snd n`, which is smaller than `n` but not by one
+constructor. So the decoders use this prelude's standing device — a structural
+recursion on a separate fuel counter with the real argument carried through
+(`Nat.logAux`, `Nat.sqrtAux`, `Nat.clogAux`, `Nat.minFacAux`,
+`Nat.testBitAux`, `Nat.binaryRecAux`) — and the nine-way tag dispatch is a
+right-nested chain of `Nat.rec`s at a constant motive, whose LAST arm is the
+catch-all.
+
+**What is not landed is now a proof gap, not a missing construction.** The
+round trip `FO.Formula.decode (FO.Formula.code p) = p` is NOT proved, so
+neither is `substCode (⌜φ⌝) (⌜t⌝) = ⌜φ[t]⌝`, so the diagonal lemma still has
+nothing to diagonalize and Gödel I has no sentence. Building the decoder
+changed the estimate in two ways worth recording:
+
+1. The fuel-agreement lemma is **avoidable**. State the round trip additively,
+   `Π t f, decodeAux (Nat.add f (size t)) (code t) = t`, with the fuel on the
+   LEFT of the `add`: `Nat.add` recurses on its right argument here, so
+   `Nat.add f (Nat.succ x)` ι-reduces and the recursive call's fuel *is* the
+   induction hypothesis's fuel rather than merely bounded by it. The binary
+   cases then need only `Nat.add_assoc` and `Nat.add_comm` — no `Nat.le`, no
+   subtraction, no `max`.
+2. There is a cost nobody had counted: **one transport per tag**.
+   `FO.Code.fst (code (and_ p q))` is *not* definitionally `4` —
+   `FO.Code.fst` unfolds to `Nat.Pair.fst (unpair …)` and `unpair` of a
+   symbolic code is stuck — so each of the 4 + 9 minors must rewrite along
+   `FO.Code.fst_pair`/`snd_pair` before the tag tree ι-reduces. That was
+   invisible until the tag tree existed.
+
+`size p <= code p` remains, but only to justify the self-fuelled wrappers.
+Recorded as the `open` fact `F:fo-formula-decoder`, whose statement now says
+the construction is landed and the theorem is not.
 
 Separately: ADR-1636 says the Leibniz equality rule is not in `FO.Provable`,
 and the diagonal lemma's biconditional would need it. That is a *second*
