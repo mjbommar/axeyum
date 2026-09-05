@@ -1231,6 +1231,18 @@ step lean-toolchain-policy ./scripts/tests/test-lean-toolchain-policy.sh
 # download and no dependency on which toolchains happen to be installed.
 step lean-toolchain-pin-regex ./scripts/tests/test-lean-toolchain-pin-regex.sh
 step lean-gate ./scripts/check-lean-gate.sh
+# ADR-1664's measurement. Registered here because it is the EVIDENCE for a
+# decision -- that an originated theorem inherits an import's axioms
+# transitively and per proof term, so a composed tier is decidable per theorem --
+# and the numbers the ADR quotes become unverifiable the moment the suite rots.
+# `axeyum-lean-import`'s suites are named individually in this file; the crate is
+# not run wholesale anywhere, so an unregistered suite is one nothing runs.
+# 0.13 s, measured: the two REGRESSION guards run, and the two one-time
+# MEASUREMENTS are `#[ignore]`d because they cost 81 s between them (the Mathlib
+# endpoint's 3,585 declarations, which `imported_fact_evidence` already pins,
+# and a fresh `nat_prelude` build). Confirm a NONZERO count -- "2 passed".
+step lean-import-composition-footprint \
+  cargo test -p axeyum-lean-import --test imported_composition_footprint
 # ADR-0717 S5: the kernel differential (Axeyum vs. pinned Lean), 32 hand-
 # authored cases across conversion, universes, inductives, recursors,
 # projections, literals, quotient and proof irrelevance -- each side authored

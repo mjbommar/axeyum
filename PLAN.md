@@ -154,6 +154,17 @@ now. Nothing was deleted.
 | 2026-09-05 | hall-singleton | Hall's base case, empty case and `isMatching_congr`, plus `card_pos_of_memB`: 4 theorems in the new `nat_prelude/hall_sufficiency.rs` (a7d5f071d) |
 | 2026-09-05 | hall-singleton | ADR-1630 and two facts; Hall sufficiency re-sized at one missing lemma, `Nat.Finset.allBelow_congr` |
 | 2026-09-05 | lean-carrier-ledger | the carrier correspondence ledger: schema, 16-row ledger, gate + control suite + mutation coverage, generated markdown view, ADR-1665, and progress-log rows in `14-lean-lang.md`, `03-classical-analysis.md`, `07-combinatorics.md` |
+| 2026-09-05 | Population builder and batch statement-import census example | `87a6b8609` |
+| 2026-09-05 | The four-phase census driver, piloted end to end on 8 rows | `68c235ed5` |
+| 2026-09-05 | `scripts/lean_surface_screen.py`, its 10-test control suite, mutation suite `lean-surface-screen`, and the `--screen-only` wiring in `attest-nursery-surface.py` | `d95a30125` |
+| 2026-09-05 | Merge of `main` (resolved a two-lane append conflict in `scripts/tests/mutation_controls.py`; both suites kept and both re-run) | `84147ec7b` |
+| 2026-09-05 | lean-import-composition | `imported_composition_footprint.rs` — 4 measurements of whether an originated theorem inherits an import's axioms, each on an `AXEYUM-COMPOSE|` marker line |
+| 2026-09-05 | lean-import-composition | ADR-1664: composition allowed on `kernel-lean-over-import`, footprint = kernel walk + the import route's three assumptions, axiom-free headline never |
+| 2026-09-05 | lean-import-composition | `validate-facts.py` + `fact.schema.json`: the new route, its assumption-transcription rule, its `prior_art` rule, and a cross-fact traceability pass |
+| 2026-09-05 | lean-import-composition | five mutation controls, each measured to kill exactly one test; the imported-route `prior_art` guard had none before |
+| 2026-09-05 | lean-import-composition | `count-landmark-facts.py`: 7 imports were being counted as landmarks (IVT and EVT included); `landmark` 1,523 → 1,516, `imported=7` reported, baseline bumped |
+| 2026-09-05 | lean-import-composition | `14-lean-lang.md` item 8 closed and two of its numbers corrected; `03-classical-analysis.md` progress row (verdict line unchanged) |
+| 2026-09-05 | lean-import-composition | the measurement suite registered under `lean-gate` in BOTH `scripts/check.sh` and the `justfile`, so the ADR's evidence cannot rot unnoticed |
 | 2026-09-05 | `f02c8d530` | `install-pinned-lean.sh` accepts the `-rcN` pin shape via a factored `toolchain_pin_is_valid()` + `--validate-only` mode; new `scripts/tests/test-lean-toolchain-pin-regex.sh` (8 controls, no network) registered in `scripts/check.sh` |
 | 2026-09-05 | `9752b4416` | `check-lean-official-construct-matrix.py`'s `crosscheck_pin_failures()` checks well-formedness of `lean-toolchain` instead of equality to the corpus pin; 3 new unit tests; `docs/plan/generated/lean-complete-parity.json` refreshed (unrelated stale `ci.yml` hash) |
 | 2026-09-05 | `e2218738c` | ADR-1660 names the two Lean pins and which surface is keyed to which; dated correction block appended to ADR-1594; ADR index regenerated |
@@ -52493,6 +52504,283 @@ foreground `shape_search --include-constructed` queries directly against that
 binary (not cargo, so not through the serializer) each costing 3-6 minutes to
 rebuild the constructed preludes in memory. A targeted follow-up query for
 `CReal.no_total_inverse`/`CReal.mulInvEx` specifically was not run.
+
+**Lane block (`DONE -- ADR-1662 accepted; census published; screen shipped and
+mutation-verified`, lean-import-census, 2026-09-05).**
+
+Owned *Next Ten item 5* of
+[`docs/math-department/14-lean-lang.md`](docs/math-department/14-lean-lang.md):
+run every pinned Mathlib mirror through the statement-only import route, count
+the decline reasons, and ship the extraction-time screen.
+
+## Headline
+
+**The count changed the answer.** Two documents said the 257 open mirrors are
+blocked because statement-only extraction drops Mathlib's enclosing `variable`
+block. Measured over all 756 mirrors through the real route, that class is
+**5 rows**, one of them open. The blocker is somewhere else and it is one class:
+**361 statements reach a proof-bearing declaration inside their own definition
+closure**, so the proof-isolation gate refuses the stream.
+
+| class | stage | rows | open | proved | Nat | Int | held out |
+|---|---|---:|---:|---:|---:|---:|---:|
+| `admitted` | — | 390 | 132 | 258 | 245 | 145 | 110 |
+| `trusted-declaration-in-closure` | import | 361 | 123 | 238 | 301 | 60 | 93 |
+| `coercion-variable-block` | elaboration | 3 | 1 | 2 | 1 | 2 | 1 |
+| `field-notation-variable-block` | elaboration | 1 | 0 | 1 | 1 | 0 | 0 |
+| `elided-proof-glyph` | elaboration | 1 | 1 | 0 | 1 | 0 | 1 |
+
+Zero rows in every other class the census looked for: unsupported construct
+(three registered decline codes), universe/level, target cardinality,
+goal-not-Prop, stream limit, malformed stream, export timeout, resource. 751 of
+751 exports succeeded, so nothing is unaccounted for.
+
+Nine distinct declarations block the 361: `eq_self` 97, `Nat.mod_lt` 90, `Quot`
+73, `dif_pos` 34, `Nat.le_of_lt_add_one` 24, `em` 23, `And.left` 12, `Eq.subst`
+7, `propext` 1 (287 Theorem / 73 Quotient / 1 Axiom, first blocker per stream).
+So C4's first demand-gated feature is an **admission** feature -- extend the
+independently reconstructed `trusted_substitution` set over the seven
+constructive names (337 rows), with `em` and `propext` held back as a separate
+decision because substituting them would enlarge the trusted surface rather than
+reconstruct it.
+
+## What was verified before building
+
+- `scripts/provision-lean-import-toolchain.sh --verify` PASSES on the dev box,
+  but its Mathlib checkout is a partial cache: 2,006 oleans and **no**
+  `Mathlib.olean`, so `import Mathlib` fails there in 3.2 s with
+  `object file ... does not exist`. A PASS from that script means the pinned
+  checkout and the exporter are present, not that Mathlib is built. s5 has the
+  real thing (6.2 GB `.lake/build`), so the Lean half runs there and the importer
+  half runs in this checkout.
+- `python3 scripts/check-autogenesis-holdout-isolation.py` **before**:
+  `held_out=216 files_scanned=1132 references=0 verdict=PASS`.
+  **After**: identical, `PASS`. No held-out id is named in the published
+  artifact (551 ids named, 0 of them held out); held-out membership comes from
+  `check-dispatchable-frontier.py --json`, never a hand list.
+
+## Method
+
+Four phases in `scripts/run-statement-import-blocker-census.py`. Each statement
+becomes the value of a transparent `def _ : Prop` after `import Mathlib`; Lean
+4.30.0 elaborates it (5.7 s for 756); `lean4export` emits that definition's own
+declaration closure (2,256 s for 751 streams); `import_statement_ndjson` admits
+or declines (410 s). Nothing is proved and no proof value is read.
+
+Controls the run cannot pass without: a negative-control statement naming a
+constant that does not exist (the run aborts if it elaborates -- it was
+rejected); a diagnostic regex whose `error(lean.unknownIdentifier):` tag group is
+OPTIONAL, because demanding a bare `error:` matches nothing and reports every row
+as elaborated; the phase-2 olean build, which recompiles a module made only of
+rows phase 1 called clean and is therefore the parser-desync control; and the 499
+proved mirrors as the positive-control population -- 238 of them hit the SAME
+single blocker, which is what makes "this is the route, not the mathematics" a
+measurement.
+
+## The screen
+
+`scripts/lean_surface_screen.py` classifies a statement from its text alone, on
+any host, with no Lean. Over the same 756 statements it flags 5 and Lean rejects
+5 -- **the sets are equal**, 0 flagged-but-elaborated and 0 rejected-but-unflagged.
+
+The discriminating decision is that a `coerced-projection` requires EVERY
+top-level operand of the group to be `↑`-coerced. 54 statements carry a coercion
+arrow and 51 elaborate, so a `↑` grep would be wrong about 51 of them and would
+still pass a positive-only test suite.
+
+Wired into `scripts/attest-nursery-surface.py`, which runs it before Lean and
+gained `--screen-only` (no ssh, no Mathlib; exit status depends on the finding).
+A flagged row is FLAGGED, never dropped and never rewritten -- ADR-0615 forbids
+editing a preregistered `formal.statement`.
+
+Controls: `scripts/tests/test_lean_surface_screen.py`, 10 tests, every fixture a
+real pinned statement with a measured Lean verdict, including two negative
+controls a coercion grep would fail. Mutation suite `lean-surface-screen`: five
+mutations, each removing one guard, **each killing exactly one test**.
+
+## Not repaired, and not caused here
+
+- `python3 scripts/gen-autogenesis-nursery-refill.py --check` is RED on `main`
+  (`nursery-v2-extension.json does not match its own extension_sha256`); 3 of the
+  61 tests in `test_gen_autogenesis_nursery_refill` + `test_propose_nursery_refill`
+  error for that one reason. `git diff main` over that manifest and both scripts
+  is empty, so this lane did not cause it. It IS why the screen went into
+  attestation rather than into the draw.
+- `scripts.tests.test_create_autogenesis_nursery_dispatch_baseline` fails 2 of
+  its tests; the subject, its test file and `artifacts/autogenesis/` are all
+  identical to `main` here.
+- The three Lean gates `14-lean-lang.md` records as red since the pin moved are
+  untouched.
+
+## What did not run
+
+Nothing in the census was skipped. `cargo test --workspace` was not run (not this
+lane's gate); `cargo check -p axeyum-lean-import --all-targets` and
+`cargo clippy -p axeyum-lean-import --all-targets -- -D warnings` both pass.
+
+**Your lane's block (`DONE`, lean-import-composition, 2026-09-05).**
+
+`docs/math-department/14-lean-lang.md` Next Ten **item 8** — the imported-axiom
+composition ADR — is landed as
+[ADR-1664](docs/research/09-decisions/adr-1664-an-originated-theorem-may-rest-on-an-import-on-a-route-of-its-own.md),
+decided by building the composed theorem rather than weighing the options.
+
+**The decision.** An originated theorem MAY depend on an imported one. It lands
+on a distinct `proof_route: kernel-lean-over-import`, its `axiom_footprint` is
+`Kernel::axiom_footprint` of the composed theorem **plus** the import route's
+three assumptions, and it counts toward the axiom-free headline never and toward
+a separately reported composed tier always. Option (1) (forbid) and option (3)
+(allow when the composed footprint is `[]`) were both rejected on measurements,
+not preferences.
+
+## What was measured
+
+`crates/axeyum-lean-import/tests/imported_composition_footprint.rs`, four tests,
+every number on an `AXEYUM-COMPOSE|` marker line.
+
+| case | stream | admitted | measured footprint |
+|---|---|---|---|
+| Init-only import | `bool-and-comm.ndjson` | 48 | `EMPTY` |
+| …composed over (`Bool.and_comm x true`) | | | `EMPTY` |
+| classical import | `classical-em.ndjson` | 106 | `Classical.choice, Quot, Quot.lift, Quot.mk, Quot.sound, propext` |
+| …composed over (`fun p h => Classical.em p`) | | | the same six, exactly |
+| …**sibling of the same type** (`fun p h => h`) | | | `EMPTY` |
+| Mathlib import | `ivt-intermediate-value-icc.ndjson` | 3,585 | eight names |
+
+The discriminating pair is the whole decision. Two originated theorems of the
+**same type** in the **same kernel**, differing only in whether the proof term
+reaches the import: one inherits the import's whole closure, the other measures
+`[]`. So propagation is transitive **and per proof term**, not per environment —
+which is what makes the tier decidable per theorem, and what means a lane that
+loads an import does not contaminate everything it proves beside it.
+
+Cost: `add_declaration` 0.194 ms composed against 0.091 ms for the sibling. The
+import itself costs 51.7 ms (48 declarations), 122.5 ms (106), and 17.5 s /
+31.8 s on two runs of the SAME commit for the Mathlib slice's 3,585 -- a factor
+of 1.8 from box load alone, so read the absolute times as a reference frame and
+not as constants. Only the WITHIN-RUN pair (composed against sibling, back to
+back in one process) supports a comparison.
+**The trusted gate is not where composition is expensive; the import is.**
+
+**Why option (3) is wrong.** `Kernel::axiom_footprint` walks *declarations* and
+keeps the ones admitted on trust. The import route's three assumptions
+(`lean4export-3.1.0-stream-faithfulness`,
+`axeyum-lean-import-wire-translation`,
+`lean4export-3.1.0-delivered-bytes-are-the-intended-export`) are not
+declarations — they are claims about how the declarations reached the
+environment — so no walk can reach them. An Init-only composition measures
+`EMPTY` and rests on all three; option (3) would file it on `kernel-lean` with
+`[]` and put it in the axiom-free headline.
+
+## Three things this lane corrected rather than added
+
+- `14-lean-lang.md` said imports carry `[propext, Classical.choice,
+  Quot.sound]`. That is Lean's own `#print axioms` vocabulary. This kernel
+  reports **eight** names for `intermediate_value_Icc` and **EMPTY** for the
+  three Init-only streams.
+- The same row said "largest closure 3,142 declarations". 3,142 is the wire
+  **record** count; 3,585 is the declaration count. ADR-1090 has both columns.
+- `scripts/count-landmark-facts.py` read only `epistemic_status` and `title`,
+  so **all 7 `imported-kernel-lean` facts were counted as landmarks**, Mathlib's
+  IVT and EVT among them — the rows ADR-0601 calls "labeled scaffolding, never
+  headline". Fixed: `landmark` 1,523 → 1,516, `imported=7` now printed beside it
+  so the exclusion is visible rather than subtracted, baseline bumped.
+
+## What is enforced, and how each guard was verified
+
+Five mutation controls, **each measured to kill exactly one test**
+(`python3 scripts/tests/mutation_controls.py <name>`):
+
+| control | rule |
+|---|---|
+| `fact-composed-route-import-assumptions` | the three import-route assumptions must be in `axiom_footprint` (this is what makes option (3) impossible) |
+| `fact-composed-route-prior-art` | `provenance.prior_art` on the composed route |
+| `fact-import-route-prior-art` | the pre-existing imported-route rule, which had no control until its sibling was written beside it |
+| `fact-composed-route-traceability` | ≥1 `depends_on` edge to a fact on an imported route, so the tier is walkable |
+| `landmark-excludes-import-dependent-routes` | an import is not a landmark |
+
+The two prior-art rules are deliberately **separate branches** rather than one
+widened route set: a shared branch could not tell a control which of the two
+rules it had deleted.
+
+## What did NOT happen, stated plainly
+
+- **Zero composed facts exist.** ADR-1664 decides how one is recorded; the
+  first one is not built. `K = 0`, and the validator's composed-tier line prints
+  nothing, which is the honest report.
+- **One environment cannot yet hold both.** `import_ndjson` builds its own
+  staging kernel (the fail-closed contract), so import-then-prelude is the only
+  reachable order, and `build_nat_prelude` into a kernel holding the
+  48-declaration `Init` slice is **rejected at `False`** — 17 names are shared
+  (`Bool`, `Bool.false`, `Bool.rec`, `Bool.true`, `Decidable`, …, `Eq`,
+  `Eq.rec`). This is a name-space obstacle, not a trust one, and Next Ten item 4
+  (the carrier correspondence ledger) is what removes it. Until then a composed
+  proof term must live wholly in the imported vocabulary.
+- **Not registered in `scripts/check-kernel-suites.sh`, and it should not be.**
+  Checked rather than assumed: that script is `axeyum-lean-kernel`-only and
+  *discovers* its membership from the source (`#[path = "support/lean_probe.rs"]`)
+  rather than listing it, so there is nothing to append. `axeyum-lean-import`'s
+  suites are named individually in `scripts/check.sh` and the `justfile`, and
+  the crate is not run wholesale anywhere — so the new suite is registered in
+  **both**, under `lean-gate`. Registering it is not tidiness: it is the
+  evidence for ADR-1664, and the numbers the ADR quotes stop being verifiable
+  the moment it rots. Note for a future lane: `imported_fact_evidence`, which
+  re-derives all seven imported facts, is registered in **neither** gate and is
+  run only by the facts' own `checker_command`s.
+
+## One thing the merger must do
+
+**`python3 scripts/gen-plan.py` has not been run, by instruction**, so
+`gen-plan.py --check` exits 1 and `scripts/check-merge-hygiene.sh` therefore
+reports `MERGE_HYGIENE|FAILED`. **This file is the entire cause** — measured by
+moving it aside and re-running the gate, which then exits 0, and back. Nothing
+else in this lane's diff touches `PLAN.md`. Run the generator and commit
+`PLAN.md` with it.
+
+## Red found and NOT fixed
+
+- `python3 scripts/tests/mutation_controls.py --check-anchors` exits **1** with
+  `stale=1`: `MISSING SUBJECT creal-migrate-consumers: M7 a stale shape census
+  fails the gate, and exit 2 does not`. Pre-existing and unrelated — this lane
+  touched neither `scripts/creal-migrate-registry.py` nor that suite's entry.
+  The five anchors added here all resolve and were each run.
+- `scripts/check-aggregate-scope.sh` exits **1** with **17** unrecorded
+  one-sided steps between `check.sh` (498) and `just check` (563) — all
+  pre-existing, from other lanes' recipes (`check-proof-plan.py`,
+  `check-structural-index.py`, `check-module-baseline.py`, …). This lane's own
+  step was one-sided for one run and was then added to both, so the count went
+  18 → 17. Recording the other 17 with `--update` would be adopting other lanes'
+  divergences as accepted, which is not this lane's call.
+- The three Lean gates `14-lean-lang.md` already records as red on `main` since
+  `792224e73` were not re-checked and were not touched.
+
+## Red found and FIXED in passing
+
+- `scripts/landmark-facts-baseline.json` was **stale on `main`**: 7 facts landed
+  without a bump, so `count-landmark-facts.py --check` measured 2,855/2,582
+  against a pin of 2,848/2,577 and exited 1. Recounted after merging main, as
+  CLAUDE.md requires of any merge touching a pinned count — `total` 2,848 →
+  2,855, `proved` 2,577 → 2,582, `landmark` → 1,521 (1,516 plus the 5 of the 7
+  new facts that are proved and curated). Whoever merges this should recount
+  again if more facts land first; do not increment.
+- `python3 scripts/validate-facts.py` is green after the merge at 2,855 facts /
+  0 errors. Note the headline number moved while this lane ran: **2,474 →
+  2,479** axiom-free on `kernel-lean`. ADR-1664 now says to read all three of
+  its numbers from the validator rather than from the document.
+
+## How to re-measure
+
+```sh
+cargo test -p axeyum-lean-import --test imported_composition_footprint \
+  -- --nocapture --test-threads=1      # confirm "3 passed", 1 ignored
+cargo test -p axeyum-lean-import --test imported_composition_footprint \
+  -- --nocapture --ignored --test-threads=1   # the 2 MEASUREMENTS, ~65 s
+
+python3 -m unittest scripts.tests.test_validate_facts        # 44
+python3 -m unittest scripts.tests.test_count_landmark_facts  # 22
+python3 scripts/validate-facts.py            # 2,848 facts, 0 errors
+python3 scripts/count-landmark-facts.py --check
+```
 
 **Next Ten item 1 is `DONE` (lean-pin-gates, 2026-09-05).** ADR-1594
 (2026-09-03, `792224e73`) moved `lean-toolchain` to

@@ -99,6 +99,7 @@ pub mod partial_fractions;
 pub mod permgroup;
 pub mod permutation;
 pub mod probability;
+pub mod qe;
 mod ratint;
 pub mod rationality;
 pub mod real_algebraic;
