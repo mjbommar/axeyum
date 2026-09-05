@@ -290,6 +290,14 @@ gave 0 new decides and 54 memory aborts). Z3's theory interface carries final
 check, new-equality and new-disequality callbacks, lazy explanation and
 relevancy for exactly these reasons.
 
+*Landed 2026-09-05 (ADR-1701 slice 1, measured):* the interface widened as
+described above and `DlTheory`/`LraTheory` opted in; a [before/after
+measurement](2026-09-05-adr-1701-slice-1-measured.md) on the diagnosis's own
+miss populations found 2 of 33 traced QF_LRA timeouts convert and zero effect
+on the traced QF_IDL population (its bottleneck is D1, not D2, on every file
+where `TheoryLayerStats` reports data). Slice 2 (moving `CdclT`'s search onto
+the native clause arena) is unimplemented.
+
 **D3. Dispatch is a hand-ordered portfolio of one-shot routes.**
 [`auto.rs`](../../../crates/axeyum-solver/src/auto.rs) is 9,638 lines with 52
 distinct route labels (`grep -oE '"[a-z]+(-[a-z0-9]+)+"' | sort -u`). Each
