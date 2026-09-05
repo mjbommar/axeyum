@@ -1610,11 +1610,11 @@ fn named_convolution_match(
 /// un-normalized identity is exactly proving the pmf match). `None` if either
 /// `λ` is symbolic or the WZ prover declines.
 ///
-/// The result carries **no** `sums_to_one` claim: `Discrete::Poisson`'s own
-/// `total_mass` is itself uncertified through this crate's summation
-/// machinery (see the module doc), so this function does not claim a
-/// stronger result about the convolved distribution's total mass than a
-/// single Poisson's own `total_mass` achieves.
+/// The result carries **no** `sums_to_one` claim. That is now a scope choice
+/// rather than a shortfall: `Discrete::Poisson::total_mass` does certify (the
+/// recognized exponential series), but the convolved distribution's total mass
+/// is a different sum this function does not run, and claiming it here would
+/// report a result nothing computed.
 #[must_use]
 pub fn convolve_poisson(x: &Discrete, y: &Discrete) -> Option<Certificate> {
     let (Discrete::Poisson(l1), Discrete::Poisson(l2)) = (x, y) else {
