@@ -49,6 +49,7 @@ asked for the same thing, a status board, and a history log.
 | 11 | [Applied & computational](11-applied-and-computational.md) | formal methods, computable analysis | **Sees the most novel object here.** Proof-producing search into a small checker has little precedent. |
 | 12 | [The chair](12-the-chair.md) | department head / referee | **Would sign the report.** Zero assumptions across 2,487 results and a rising machine-produced share. |
 | 13 | [The CAS, as a tool](13-computer-algebra.md) | all twelve, asked about `axeyum-cas` | **Deep calculus, overflows at 128 bits.** Every chair outside calculus and elementary number theory finds nothing to reach for; the Next Ten are compute capability, not bridges. |
+| 14 | [The Lean language, as a boundary](14-lean-lang.md) | all twelve, asked what "Lean compatible" would have to mean | **Agrees with Lean's kernel on everything asked; reachable from Lean by nobody.** Two pins, three red gates since 2026-09-03; the Next Ten start with green gates and end with saying what the claim is. |
 
 ## The shared snapshot
 
