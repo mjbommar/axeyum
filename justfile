@@ -681,6 +681,10 @@ aggregate-scope:
 # build -- it runs against a throwaway one-crate workspace.
 gate-controls:
     scripts/tests/test-gate-scope-controls.sh
+    # Controls for the cargo slot semaphore (scripts/cargo-serialized.sh): a job
+    # must take any slot that frees rather than queue on slot 1. Private lock
+    # files, ~15 s.
+    scripts/tests/test-cargo-serialized-slots.sh
     # Controls for `check.sh`'s `py_native_installed` host guard: it must say
     # "absent" for a `.venv` whose site-packages is empty (the shape that
     # actually exists in a fresh lane worktree, and the one `[ -d .venv ]` gets

@@ -920,6 +920,10 @@ step facts-replay ./scripts/check-fact-evidence-replay.sh
 # `scripts/tests/test-gate-scope-controls.sh`.
 step clippy ./scripts/check-clippy-complete.sh
 step gate-controls ./scripts/tests/test-gate-scope-controls.sh
+# Controls for the cargo slot semaphore: a job must take ANY slot that frees,
+# not queue on slot 1 (measured degrading to one job at a time on 2026-09-05);
+# ~15 s, private lock files, never touches the host's real slots.
+step cargo-slot-controls ./scripts/tests/test-cargo-serialized-slots.sh
 # Controls for this file's own `py_native_installed` host guard, and for the
 # listing invariant `scripts/check-aggregate-scope.sh` depends on. Both
 # directions are pinned: a guard that always declines is the failure mode that
