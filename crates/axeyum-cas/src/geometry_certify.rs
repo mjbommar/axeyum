@@ -2384,4 +2384,69 @@ mod tests {
             }
         }
     }
+
+    // cas-certifier-scope probe
+    #[test]
+    fn scope_probe_medians_block_over_p() {
+        use crate::linear_elim::detect_linear_blocks;
+        let problem = crate::geometry_beyond::tetrahedron_medians_concurrent_problem();
+        let hypotheses: Vec<MvPoly> = problem
+            .hypotheses
+            .iter()
+            .map(|h| h.poly.clone())
+            .collect();
+        let conditions: Vec<MvPoly> = problem
+            .nondegeneracy
+            .iter()
+            .map(|c| c.poly.clone())
+            .collect();
+        println!("condition terms = {}", conditions[0].term_count());
+        let joint = MvPoly::var("px")
+            .add(&MvPoly::var("py"))
+            .unwrap()
+            .add(&MvPoly::var("pz"))
+            .unwrap();
+        let blocks = detect_linear_blocks(&hypotheses, &joint);
+        for block in &blocks {
+            println!(
+                "block unknowns={:?} rows={:?} det terms={} deg={} licensed={}",
+                block.unknowns,
+                block.rows,
+                block.determinant.term_count(),
+                block.determinant.total_degree(),
+                factors_into(&block.determinant, &conditions)
+            );
+        }
+        // Union of the three conclusions, the widening the task asks for.
+        let mut union = MvPoly::zero();
+        for conclusion in &problem.conclusions {
+            union = union.add(&conclusion.poly).unwrap();
+        }
+        println!("union vars = {:?}", union.variables());
+        let wide = detect_linear_blocks(&hypotheses, &union);
+        for block in &wide {
+            println!(
+                "WIDE unknowns={:?} rows={:?} det terms={} licensed={}",
+                block.unknowns,
+                block.rows,
+                block.determinant.term_count(),
+                factors_into(&block.determinant, &conditions)
+            );
+        }
+        // Does the {px,py,pz} block actually settle each conclusion?
+        for conclusion in &problem.conclusions {
+            let done =
+                crate::linear_elim::eliminate_blocks(&hypotheses, &conclusion.poly, blocks.clone());
+            match done {
+                Some(elimination) => println!(
+                    "{}: residue {} terms, multiplier {} terms licensed={}",
+                    conclusion.id,
+                    elimination.residue.term_count(),
+                    elimination.multiplier.term_count(),
+                    factors_into(&elimination.multiplier, &conditions)
+                ),
+                None => println!("{}: elimination returned None", conclusion.id),
+            }
+        }
+    }
 }
