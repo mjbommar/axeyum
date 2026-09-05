@@ -810,10 +810,8 @@ mod tests {
         match equal(left, right) {
             ZeroTest::Certified {
                 equal: is_equal, ..
-            } => {
-                assert!(is_equal, "expected equal");
             }
-            ZeroTest::CertifiedBig {
+            | ZeroTest::CertifiedBig {
                 equal: is_equal, ..
             } => {
                 assert!(is_equal, "expected equal");

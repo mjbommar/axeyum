@@ -520,8 +520,9 @@ fn check_telescoping(sum: &CasExpr, term: &CasExpr, var: &str) -> TelescopingChe
         ZeroTest::Certified { equal: true, .. } | ZeroTest::CertifiedBig { equal: true, .. } => {
             TelescopingCheck::Certified
         }
-        ZeroTest::Certified { equal: false, .. }
-        | ZeroTest::CertifiedBig { equal: false, .. } => TelescopingCheck::Refuted,
+        ZeroTest::Certified { equal: false, .. } | ZeroTest::CertifiedBig { equal: false, .. } => {
+            TelescopingCheck::Refuted
+        }
         ZeroTest::Unknown => TelescopingCheck::Unknown,
     }
 }

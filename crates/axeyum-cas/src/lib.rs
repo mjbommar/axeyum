@@ -2159,7 +2159,7 @@ pub enum ZeroTest {
 ///
 /// The polynomial is the cross-multiplied difference `a·d − c·b` of the two
 /// compared expressions, **up to a positive rational scale**: the unbounded path
-/// works over ℤ[vars] and clears every rational denominator it meets, and its
+/// works over `ℤ[vars]` and clears every rational denominator it meets, and its
 /// fold passes clear more. A positive scale is invisible to a zero test, so the
 /// verdict is unaffected; a re-check must compare up to that scale, which is
 /// what [`recheck_zero_test`] does.
@@ -2380,9 +2380,8 @@ pub fn equal(a: &CasExpr, b: &CasExpr) -> ZeroTest {
         // The Euler form could not decide. Never surface a relation-blind
         // inequality: downgrade a core `≠` to `Unknown`, else keep `Unknown`.
         ZeroTest::Unknown => match direct {
-            ZeroTest::Certified { equal: false, .. } | ZeroTest::CertifiedBig { equal: false, .. } => {
-                ZeroTest::Unknown
-            }
+            ZeroTest::Certified { equal: false, .. }
+            | ZeroTest::CertifiedBig { equal: false, .. } => ZeroTest::Unknown,
             other => other,
         },
     }
@@ -2692,7 +2691,6 @@ impl BigRatFunc {
     }
 }
 
-
 // --- The unbounded fold ring (ADR-1670 wave two, item 2) ---------------------
 
 /// The prefix [`atom_name`] gives every transcendental atom variable. A user
@@ -2914,7 +2912,10 @@ impl BigQPoly {
             } else {
                 coeff.clone()
             };
-            out = out.add(&BigPoly::term(mvpoly::Monomial::from_powers(&borrowed), value));
+            out = out.add(&BigPoly::term(
+                mvpoly::Monomial::from_powers(&borrowed),
+                value,
+            ));
         }
         Some(BigQPoly {
             num: out,
@@ -3057,7 +3058,8 @@ impl BigQPoly {
         budget: &mut u64,
     ) -> Option<Self> {
         let mut reduced = self.clone();
-        let mut ordered: Vec<&(String, u32, bool, CasExpr, BigQPoly)> = recurrences.iter().collect();
+        let mut ordered: Vec<&(String, u32, bool, CasExpr, BigQPoly)> =
+            recurrences.iter().collect();
         ordered.sort_by_key(|(_, order, _, _, _)| core::cmp::Reverse(*order));
         for (target, order, modified, argument, argument_poly) in ordered {
             if *order < 2 || argument_poly.is_zero() {
@@ -3224,16 +3226,16 @@ fn big_atom_folds(a: &CasExpr, b: &CasExpr, budget: &mut u64) -> BigAtomFolds {
             UnaryFunc::NthRoot(q) => {
                 folds.nth_roots.insert(key.clone(), (*q, poly));
             }
-            UnaryFunc::BesselJ(order) | UnaryFunc::BesselI(order) if *order >= 2 => {
-                if !poly.is_zero() {
-                    folds.bessel.push((
-                        key.clone(),
-                        *order,
-                        matches!(func, UnaryFunc::BesselI(_)),
-                        (**arg).clone(),
-                        poly,
-                    ));
-                }
+            UnaryFunc::BesselJ(order) | UnaryFunc::BesselI(order)
+                if *order >= 2 && !poly.is_zero() =>
+            {
+                folds.bessel.push((
+                    key.clone(),
+                    *order,
+                    matches!(func, UnaryFunc::BesselI(_)),
+                    (**arg).clone(),
+                    poly,
+                ));
             }
             _ => {}
         }
@@ -3441,7 +3443,10 @@ fn multipoly_as_big(poly: &MultiPoly) -> BigPoly {
             .collect();
         let scaled =
             BigInt::from(coeff.numerator()) * (&denominator / BigInt::from(coeff.denominator()));
-        out = out.add(&BigPoly::term(mvpoly::Monomial::from_powers(&powers), scaled));
+        out = out.add(&BigPoly::term(
+            mvpoly::Monomial::from_powers(&powers),
+            scaled,
+        ));
     }
     out
 }
@@ -3474,11 +3479,9 @@ fn positive_rational_multiple(claimed: &BigPoly, actual: &BigPoly) -> bool {
     if (*first_claimed < BigInt::from(0)) != (*first_actual < BigInt::from(0)) {
         return false;
     }
-    pairs
-        .iter()
-        .all(|(claimed_coeff, actual_coeff)| {
-            *claimed_coeff * first_actual == *actual_coeff * first_claimed
-        })
+    pairs.iter().all(|(claimed_coeff, actual_coeff)| {
+        *claimed_coeff * first_actual == *actual_coeff * first_claimed
+    })
 }
 
 /// Re-check the certificate a [`ZeroTest`] carries against the expressions it
@@ -3532,9 +3535,9 @@ pub fn recheck_zero_test(a: &CasExpr, b: &CasExpr, result: &ZeroTest) -> bool {
     let canonical_a = canonicalize_for_equality(a);
     let canonical_b = canonicalize_for_equality(b);
     for (left, right) in [(a, b), (&canonical_a, &canonical_b)] {
-        if bounded_difference(left, right)
-            .is_some_and(|difference| positive_rational_multiple(&claimed, &multipoly_as_big(&difference)))
-        {
+        if bounded_difference(left, right).is_some_and(|difference| {
+            positive_rational_multiple(&claimed, &multipoly_as_big(&difference))
+        }) {
             return true;
         }
         let mut budget = BIG_FALLBACK_WORK_BUDGET;
@@ -6860,8 +6863,9 @@ fn certifies_wz_sum(
     let symbolic = equal(&(g_shift - g), &h);
     match symbolic {
         ZeroTest::Certified { equal: true, .. } | ZeroTest::CertifiedBig { equal: true, .. } => {}
-        ZeroTest::Certified { equal: false, .. }
-        | ZeroTest::CertifiedBig { equal: false, .. } => return false,
+        ZeroTest::Certified { equal: false, .. } | ZeroTest::CertifiedBig { equal: false, .. } => {
+            return false;
+        }
         ZeroTest::Unknown => {
             // Divide the same telescoping identity by `f(n,k)` and check the
             // resulting hypergeometric quotients. As an identity of rational
@@ -30530,7 +30534,10 @@ mod tests {
         let big = CasExpr::int(1_000_000_000_000_000_000);
         let cube = CasExpr::Mul(vec![big.clone(), big.clone(), big]);
         assert!(
-            matches!(equal_core_bounded(&cube, &CasExpr::zero()), ZeroTest::Unknown),
+            matches!(
+                equal_core_bounded(&cube, &CasExpr::zero()),
+                ZeroTest::Unknown
+            ),
             "the fixture is not adversarial: the bounded i128 path already decides it"
         );
         let verdict = equal(&cube, &CasExpr::zero());
@@ -30776,8 +30783,8 @@ mod bignum_overflow_fallback {
             "the fixture is not adversarial: the bounded i128 path already decides it"
         );
         match equal(a, b) {
-            ZeroTest::Certified { equal: true, .. } | ZeroTest::CertifiedBig { equal: true, .. } => {
-            }
+            ZeroTest::Certified { equal: true, .. }
+            | ZeroTest::CertifiedBig { equal: true, .. } => {}
             other => panic!("expected the unbounded fallback to certify equality, got {other:?}"),
         }
         assert!(
@@ -30906,10 +30913,7 @@ mod bignum_overflow_fallback {
     /// `sin² + cos² = 1` — [`BigQPoly::fold_pythagorean`].
     #[test]
     fn fold_pythagorean_sin_sq_plus_cos_sq_at_overflow_scale_now_certifies() {
-        assert_fold_ported(
-            &(x().sin().pow(2) + x().cos().pow(2)),
-            &CasExpr::int(1),
-        );
+        assert_fold_ported(&(x().sin().pow(2) + x().cos().pow(2)), &CasExpr::int(1));
     }
 
     /// `(√u)² = u` — [`BigQPoly::fold_radical`].
@@ -30944,7 +30948,10 @@ mod bignum_overflow_fallback {
     #[test]
     fn fold_radical_with_a_rational_radicand_at_overflow_scale_now_certifies() {
         let radicand = x() + CasExpr::rat(1, 2);
-        assert_fold_ported(&(radicand.clone().sqrt() * radicand.clone().sqrt()), &radicand);
+        assert_fold_ported(
+            &(radicand.clone().sqrt() * radicand.clone().sqrt()),
+            &radicand,
+        );
     }
 
     #[test]
@@ -31326,7 +31333,9 @@ mod bignum_overflow_fallback {
                 ZeroTest::Certified { equal, .. } | ZeroTest::CertifiedBig { equal, .. } => {
                     assert_eq!(equal, expected, "the verdict changed for {left} vs {right}");
                 }
-                other => panic!("{left} vs {right} must still decide, got {other:?}"),
+                other @ ZeroTest::Unknown => {
+                    panic!("{left} vs {right} must still decide, got {other:?}")
+                }
             }
         }
     }
