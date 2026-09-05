@@ -529,14 +529,15 @@ fn matrix_determinant(matrix: &[Vec<BigRational>]) -> BigRational {
         }
         determinant *= &work[column][column];
         let inverse = work[column][column].clone().recip();
-        for row in (column + 1)..size {
-            if work[row][column].is_zero() {
+        let pivot_values = work[column].clone();
+        for line in work.iter_mut().skip(column + 1) {
+            if line[column].is_zero() {
                 continue;
             }
-            let factor = &work[row][column] * &inverse;
-            for index in column..size {
-                let term = &factor * &work[column][index].clone();
-                work[row][index] -= term;
+            let factor = &line[column] * &inverse;
+            for (index, pivot_value) in pivot_values.iter().enumerate().skip(column) {
+                let term = &factor * pivot_value;
+                line[index] -= term;
             }
         }
     }
@@ -822,13 +823,19 @@ impl Element {
     #[must_use]
     pub fn multiplication_matrix(&self) -> Vec<Vec<BigRational>> {
         let degree = self.field.degree();
+        // Column `j` is `self * alpha^j` reduced, so the matrix is the
+        // transpose of this list.
+        let columns: Vec<Vec<BigRational>> = (0..degree)
+            .map(|column| {
+                let mut shifted = vec![rat_zero(); column];
+                shifted.push(rat_one());
+                self.field.reduce(&poly_mul(&self.coeffs, &shifted))
+            })
+            .collect();
         let mut matrix = vec![vec![rat_zero(); degree]; degree];
-        for column in 0..degree {
-            let mut shifted = vec![rat_zero(); column];
-            shifted.push(rat_one());
-            let product = self.field.reduce(&poly_mul(&self.coeffs, &shifted));
-            for (row, value) in product.into_iter().enumerate() {
-                matrix[row][column] = value;
+        for (row, line) in matrix.iter_mut().enumerate() {
+            for (col, entry) in line.iter_mut().enumerate() {
+                entry.clone_from(&columns[col][row]);
             }
         }
         matrix
@@ -870,7 +877,7 @@ impl Element {
         let matrix = self.multiplication_matrix();
         let char_poly = char_poly_faddeev(&matrix);
         let degree = matrix.len();
-        let sign = if degree % 2 == 0 {
+        let sign = if degree.is_multiple_of(2) {
             rat_one()
         } else {
             -rat_one()
@@ -966,14 +973,15 @@ fn solve_dependency(
         for entry in &mut augmented[pivot_row] {
             *entry *= &inverse;
         }
-        for row in 0..rows {
-            if row == pivot_row || augmented[row][col].is_zero() {
+        let pivot_values = augmented[pivot_row].clone();
+        for (row, line) in augmented.iter_mut().enumerate().take(rows) {
+            if row == pivot_row || line[col].is_zero() {
                 continue;
             }
-            let factor = augmented[row][col].clone();
-            for index in col..=cols {
-                let term = &factor * &augmented[pivot_row][index].clone();
-                augmented[row][index] -= term;
+            let factor = line[col].clone();
+            for (index, pivot_value) in pivot_values.iter().enumerate().skip(col) {
+                let term = &factor * pivot_value;
+                line[index] -= term;
             }
         }
         pivot_of_col[col] = pivot_row;
@@ -1043,11 +1051,10 @@ impl InverseCertificate {
         let product = poly_mul(&self.element, &self.inverse);
         let (_, remainder) =
             poly_divrem(&product, &self.minpoly).ok_or(CertificateError::ModulusDegenerate)?;
-        let mut expected = vec![rat_zero(); degree];
-        expected[0] = rat_one();
         for index in 0..degree {
             let got = remainder.get(index).cloned().unwrap_or_else(rat_zero);
-            if got != expected[index] {
+            let want = if index == 0 { rat_one() } else { rat_zero() };
+            if got != want {
                 return Err(CertificateError::NotAnInverse { degree: index });
             }
         }
@@ -1135,7 +1142,7 @@ impl NormTraceCertificate {
             return Err(CertificateError::CayleyHamiltonFailed);
         }
         // N4: norm read off the constant term.
-        let sign = if degree % 2 == 0 {
+        let sign = if degree.is_multiple_of(2) {
             rat_one()
         } else {
             -rat_one()
