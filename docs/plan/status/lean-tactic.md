@@ -54,7 +54,7 @@ honest sidecar simply echoes, the same limit ADR-0935 recorded for C3.
   and `ring::int::prove` are `pub(crate)` in `axeyum-lean-kernel`, so no
   downstream crate can call them. Sized in ADR-1666 §"Fragment 3", including a
   name collision the ℕ side does not have — the ℤ carrier is interned as
-  `Int`, not `AxInt` (`int_prelude.rs:1978`), so the name map has to become
+  `Int`, not `AxInt` (`int_prelude.rs`, `let z = kernel.name_str(anon, "Int")`), so the name map has to become
   carrier-scoped.
 - **The LRAT route for `Bool`/BV goals via `Std.Tactic.BVDecide`.** Not
   started. Needs a DRAT→LRAT conversion (our core emits DRAT, ADR-0012;

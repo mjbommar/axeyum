@@ -225,7 +225,7 @@ Sized, so the next lane does not re-derive it:
 2. Re-run `axeyum_tactic_probe` over an ℤ battery to get the constant
    inventory. **Expect a name collision the ℕ side does not have**: the ℤ
    prelude's carrier is interned as `Int`, not `AxInt`
-   (`int_prelude.rs:1978`), so the name map cannot key on a distinguishing
+   (`int_prelude.rs`, `let z = kernel.name_str(anon, "Int")`), so the name map cannot key on a distinguishing
    prefix and must be carrier-scoped.
 3. Add an `Axeyum.Shim` ℤ section, one proved theorem per emitted constant,
    in axeyum's argument order.
