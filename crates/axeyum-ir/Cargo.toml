@@ -23,5 +23,14 @@ num-rational = { version = "0.4", default-features = false, features = ["num-big
 num-integer = { version = "0.1" }
 num-traits = { version = "0.2" }
 
+[dev-dependencies]
+criterion.workspace = true
+
 [lints]
 workspace = true
+
+# Micro-benchmark (2026-09-05, design review §4 item 3); `harness = false`
+# hands control to `criterion`'s own main.
+[[bench]]
+name = "arena_intern"
+harness = false
