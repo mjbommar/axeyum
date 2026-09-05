@@ -124,21 +124,21 @@ the project's own stated thesis.
 
 ## Next five, in their priority order
 
-- [ ] **1. Close the computed-to-proved gap on one flagship result.** Define
+- [x] **1. Close the computed-to-proved gap on one flagship result.** *Done 2026-09-04: Schur's number.* Define
       Rado numbers in-kernel and have the search discharge a kernel-checkable
       statement. Their view: this is the project's own thesis, demonstrated on
       a research-level result, and it is currently one step short.
-- [ ] **2. Extend `ring` and `decide` to ℝ**, the way `linarith` was
+- [~] **2. Extend `ring` and `decide` to ℝ** — *`ring` done 2026-09-04; `decide` cannot, measured.*, the way `linarith` was
       generalized over `AlgS.OrderedRing`. Every producer that reaches a new
       carrier retires hand proofs across the whole shelf above it.
 - [ ] **3. A nonlinear-arithmetic producer with Positivstellensatz
       certificates**, connecting the existing SOS work to a kernel-emitting
       route. The sum-of-squares results already exist as certificates; nothing
       reconstructs them.
-- [ ] **4. Measure and publish the exact-real performance envelope.** π and
+- [x] **4. Measure and publish the exact-real performance envelope.** *Done 2026-09-04; the number is bad and published.* π and
       exp to a stated precision, with the cost model. Their view: you claim
       computable analysis and have never quoted a time.
-- [ ] **5. Measure the `cas-internal` residue and drive it down.** The share
+- [~] **5. Measure the `cas-internal` residue and drive it down.** *Measured 2026-09-04: 76.7%, now a ratchet. Driving it down is unstarted.* The share
       of CAS evidence that does not reconstruct is the honest boundary of the
       trusted pipeline, and it should be a published, falling number.
 
@@ -149,6 +149,7 @@ the project's own stated thesis.
 | 2026-09-04 | File created. Baseline: proof-producing SAT with DRAT checking, full SMT stack, 79k-line CAS, five kernel-emitting producers, 67 hand proofs retired in one week. Rado numbers and SOS/Gröbner results `computed` but not connected to kernel statements. | ledger snapshot at `1856cdb3c` |
 | 2026-09-04 | **Next Five item 2 landed** (roadmap W1-5): `ring::generic` extended with the same `Backend` shape `linarith` used, reaching `Alg.CommRing` and `AlgS.CommRing`; six goal shapes proved at `CReal.commRingS`, with a corrupted-certificate battery in which the **kernel** refuses the emitted term while the producer's own check is disabled. `decide` **cannot** reach ℝ and the reason is measured, not assumed: the real relations are quantifier-headed and no apartness-witness definition exists to give a decidable fragment — that definition is now a named next step. **Zero retirements**, and the reason is the lane's most useful output: wiring the producer into `creal/ring_helpers.rs` produced a genuine `Decline::NotAnIdentity` inside the prelude build, invisible to the unit tests, and the lane reverted rather than ship it. (ADR-1599.) | `a3f4f528c`; `ring::` 74, `decide::` 47 passed |
 | 2026-09-04 | **Next Five item 1 landed** (roadmap W1-1): the computed→proved gap is closed on a real result. Schur's `R_2(x = y + z) = 5`, both halves from search, kernel-checked, footprint 0. The lower half is by *reflection* — a `Bool` triple loop the kernel's own conversion check reduces to `true` — which is the untrusted-search/trusted-checking thesis in its sharpest form. The four-colour results stay `computed`, and the obstruction is now named precisely and is combinatorial rather than a numeral cost. | `de0cd02da` |
+| 2026-09-04 | **Next Five items 4 and 5 landed** (roadmap W1-12, W1-13), and both numbers confirm this reviewer's reservations rather than answer them. **Exact-real cost**: trivial constants normalize in under 5 ms at any index, but `e` at index 0 did not fully normalize in 400 s and π not in 480 s; the series' internal recursion is unary regardless of the caller's numeral, and the library's own bound theorems never force that reduction, which is why nobody had measured it. **CAS residue**: 46 of 60 certificate facts (76.7%) are `cas-internal` and never reconstruct. Now a registered ratchet with a four-guard control suite. Both published under `artifacts/measurements/`. (ADR-1617.) | `0ba67b82e` |
 
 ## How to re-measure
 

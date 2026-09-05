@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "id": "F:algs-poly-comm-ring",
+  "title": "The polynomial ring over an abstract Setoid-flavored commutative ring is a commutative ring",
+  "statement": "For any AlgS.CommRing record R, AlgS.Poly.commRing R : AlgS.CommRing -- the polynomial ring R[X], carried as coefficient functions Nat -> R.carrier with AlgS.Poly.equiv R (coefficientwise equivalence) as its equality, AlgS.Poly.add/neg/zero pointwise, AlgS.Poly.one the constant 1, and AlgS.Poly.mul the convolution written as an antidiagonal walk. All twenty-three fields of the record are supplied and re-checked by the trusted gate: twelve additive ones are R's own field applied at the coefficient index, and the seven multiplicative ones are AlgS.Poly.mulCongr, mulAssoc, mulOneL, mulOneR, distribL, distribR and mulComm. ADR-1609 supplied twenty of the twenty-three and named the four that were missing; ADR-1618 supplies them. Instantiated concretely, this makes Q[X] (over AlgS.CommRing.ofAlg Alg.Rat.commRing), R[X] (over CReal.commRingS) and C[X] (over Complex.commRingS) machine-checked commutative rings, each admitted with an empty axiom footprint.",
+  "formal": {
+    "language": "lean4",
+    "statement": "def AlgS.Poly.commRing : ((x0 : AlgS.CommRing) -> AlgS.CommRing)",
+    "fragment": "none",
+    "free_symbols": [],
+    "kernel_theorem": "AlgS.Poly.commRing"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "external_status": "proved",
+  "depends_on": [
+    "F:algs-poly-mul-assoc",
+    "F:algs-poly-mul-comm",
+    "F:algs-poly-antidiagfrom-head"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "algs-poly-comm-ring-1",
+      "kind": "kernel-term",
+      "supports": "AlgS.Poly.commRing is a Definition producing an AlgS.CommRing VALUE, so Kernel::add_declaration re-checked all twenty-three of the record's law and data fields; its Kernel::axiom_footprint is empty. The suite reads the declaration kind from the environment (a Theorem or an axiom would not have had its fields checked), and pins six data selectors of AlgS.Poly.commRing R definitionally to the declared AlgS.Poly operations, with mul pinned NOT to be add and one pinned NOT to be zero -- the two swaps a mis-ordered field list would satisfy. The rejection control rebuilds the instance from its own selectors with slot 15 (mulOneL) supplied by slot 16 (mulOneR) and requires the kernel to refuse it, with the identical honest reconstruction admitted in the same test as the positive twin.",
+      "check_status": "checked",
+      "checker_command": "out=$(RUST_MIN_STACK=1073741824 cargo test -p axeyum-lean-kernel --release --test poly_comm_ring_concrete -- --test-threads=2 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -cE 'test result: ok\\. 3 passed; 0 failed')\" -ge 1",
+      "notes": "This command checks the CONCRETE instantiation, which is the claim a referee cares about: AlgS.Poly.commRing fed AlgS.CommRing.ofAlg Alg.Rat.commRing, CReal.commRingS and Complex.commRingS admits at all three with an empty axiom footprint, so Q[X], R[X] and C[X] are machine-checked commutative rings. The pinned count is 3. The abstract construction's own suite (17 tests) is pinned by F:algs-poly-distrib-l and the three lemma facts. The negative control in this suite feeds the Eq-flavored Alg.Rat.commRing where the setoid record is required and requires a REFUSAL, with the ofAlg-projected positive twin in the same test."
+    }
+  ],
+  "concept_refs": [],
+  "provenance": {
+    "date": "2026-09-04",
+    "established_by": "axeyum-lean-kernel nat_prelude::polynomial_setoid, lane poly-commring, ADR-1618 (roadmap W2-9's residue).",
+    "source": "crates/axeyum-lean-kernel/src/nat_prelude/polynomial_setoid.rs (declare_poly_comm_ring, declared as AlgS.Poly.commRing); tests crates/axeyum-lean-kernel/tests/poly_comm_ring_concrete.rs."
+  },
+  "notes": "The construction is REACHABLE only on the setoid spine. The carrier is a function space, so the Eq-flavored Alg.CommRing's law fields would be equalities of two lambdas, provable only from funext, which this kernel does not have and which Quot.sound would not supply (ADR-1595, ADR-1609). The setoid cost of the four fields ADR-1618 added is ZERO: every one of them, and every walk lemma underneath, would read identically over Eq. The concrete instances are admitted into a test-local kernel rather than landed as named prelude declarations; landing them is a small separate step, sized in ADR-1618."
+}

@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "id": "F:algs-poly-antidiagfrom-rev",
+  "title": "The antidiagonal walk sums to the same value when the cell family is transposed",
+  "statement": "For any AlgS.CommRing record R, any cell family g : Nat -> Nat -> R.carrier and any n : Nat, R.equiv (AlgS.Poly.antidiagFrom R g n Nat.zero) (AlgS.Poly.antidiagFrom R (fun a b => g b a) n Nat.zero). The walk visits the antidiagonal i + j = n as (n,0), (n-1,1), ..., (0,n) with the two indices moving in step (Nat.sub is not declared at this build position, so the far index cannot be computed); the transposed family walks the same cells in the opposite order. The proof is Nat.rec on n with motive fun n => forall g, ... -- generalized over the CELL FAMILY, because the successor step consumes the induction hypothesis at the shifted family fun a b => g a (succ b), not at g. That step reads: peel the head g (succ m) 0, move the tail with AlgS.Poly.antidiagFrom_shift, apply the induction hypothesis, and match it against AlgS.Poly.antidiagFrom_succ_last applied to the transposed family -- the two families that appear are the SAME lambda, fun a b => g b (succ a), so the two sides differ by exactly one addComm. This is the reindexing lemma ADR-1609 named as the obstruction to AlgS.Poly.mulComm.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem AlgS.Poly.antidiagFrom_rev : ((x0 : AlgS.CommRing) -> ((x1 : ((x1 : AxNat) -> ((x2 : AxNat) -> AlgS.CommRing.carrier x0))) -> ((x2 : AxNat) -> AlgS.CommRing.equiv x0 (AlgS.Poly.antidiagFrom x0 x1 x2 AxNat.zero) (AlgS.Poly.antidiagFrom x0 (fun (x3 : AxNat) => fun (x4 : AxNat) => x1 x4 x3) x2 AxNat.zero))))",
+    "fragment": "none",
+    "free_symbols": [],
+    "kernel_theorem": "AlgS.Poly.antidiagFrom_rev"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "external_status": "proved",
+  "depends_on": [
+    "F:algs-poly-distrib-l"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "algs-poly-antidiagfrom-rev-1",
+      "kind": "kernel-term",
+      "supports": "AlgS.Poly.antidiagFrom_rev admits through the trusted Kernel::add_declaration gate with an empty Kernel::axiom_footprint, together with the two lemmas it rests on (AlgS.Poly.antidiagFrom_shift and AlgS.Poly.antidiagFrom_succ_last). The suite pins the walk's ORDER definitionally at n = 2 and n = 3: the walk reduces to the right-nested sum over (n,0), (n-1,1), ..., (0,n) and the transposed walk to the reverse, with each opposite arrangement asserted NOT def_eq -- so a reversed or off-by-one walk fails. The same test asserts the two walks are NOT definitionally equal, which is what makes this theorem carry content rather than being refl. The negative control reuses the admitted proof term against the UNTRANSPOSED conclusion and requires a refusal, with the honest restatement admitted in the same test as the positive twin.",
+      "check_status": "checked",
+      "checker_command": "out=$(RUST_MIN_STACK=1073741824 cargo test -p axeyum-lean-kernel --lib --release poly_setoid_tests -- --test-threads=4 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -cE 'test result: ok\\. 17 passed; 0 failed')\" -ge 1",
+      "notes": "The pinned count is 17. A dropped or renamed test changes the count and fails the command. Five of the seventeen are rejection controls, each carrying a POSITIVE TWIN in the same test: a record-field or proof-term mutation poisons the whole prelude build (measured: mutating mulAssoc's join step made all 17 die on the fixture's expect), so a refusal is only evidence about the field once the honest reconstruction is shown to admit beside it. Each of the five controls was itself mutated to the honest statement and exactly those five died, the other twelve passing."
+    }
+  ],
+  "concept_refs": [],
+  "provenance": {
+    "date": "2026-09-04",
+    "established_by": "axeyum-lean-kernel nat_prelude::polynomial_setoid, lane poly-commring, ADR-1618 (roadmap W2-9's residue).",
+    "source": "crates/axeyum-lean-kernel/src/nat_prelude/polynomial_setoid.rs; tests nat_prelude::polynomial_setoid::poly_setoid_tests::*."
+  },
+  "notes": "The proof needs no Nat.add and no Nat.sub: AlgS.Poly.antidiagFrom_shift replaces the index j + n that the textbook antidiagonal names, by moving the shift into the cell family instead of computing it. ADR-1609 recommended relocating this module past Nat arithmetic and restating convolution over sumRange; ADR-1618 declines that on measurement, since every sumRange reindexing lemma in the tree is over a CONCRETE carrier folded with that carrier's own addition and none applies to an abstract AlgS.CommRing carrier."
+}

@@ -3173,6 +3173,108 @@ fn declare_exists_collision(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), Ke
 /// # Errors
 ///
 /// Returns the trusted gate's rejection.
+/// `Nat.Finset.card_congr_of_memB : ∀ u v, (∀ i, Eq Bool (memB u i) (memB v i))
+/// → Eq Nat (card u) (card v)`.
+///
+/// Two sets with the same members have the same cardinality **even when their
+/// stored bounds differ**. That is not free here: `card s` is
+/// `countRange (memB s) (bound s)`, so `u` and `v` are counted over different
+/// ranges, and `Nat.Finset` has no extensional equality to fall back on (the
+/// module note above says why). The proof is the workhorse pattern of this
+/// file — fold BOTH sets over the common bound `bound u + bound v` through
+/// [`declare_card_eq_count_range_add`], where `Nat.countRange_congr_lt` applies
+/// pointwise, then collapse each side back to its own `card`. The only extra
+/// step is `add_comm`, because the two applications name the common bound in
+/// opposite orders.
+///
+/// This is the premise-discharging lemma for `subset_search.rs`'s
+/// `Nat.Finset.forallSubset_of_search`, whose congruence hypothesis is exactly
+/// "the searched property respects membership": a property phrased through
+/// `card` could not discharge it without this, and nothing else in the file
+/// relates two sets that are not `Eq`.
+fn declare_card_congr_of_mem_b(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
+    let p = *p;
+    let nat = d.nat_ty();
+    let fs = finset_ty(d, &p);
+
+    let u_fv = d.fresh_fvar();
+    let u = d.kernel().fvar(u_fv);
+    let v_fv = d.fresh_fvar();
+    let v = d.kernel().fvar(v_fv);
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+
+    let hyp_ty = {
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let lhs = fs_mem(d, &p, u, i);
+        let rhs = fs_mem(d, &p, v, i);
+        let body = d.bool_eq(lhs, rhs);
+        d.pi_fv(i_fv, nat, body)
+    };
+
+    let bu = fs_bound(d, &p, u);
+    let bv = fs_bound(d, &p, v);
+    let common = d.add(bu, bv);
+    let swapped = d.add(bv, bu);
+    let mu = fs_mem_fn(d, &p, u);
+    let mv = fs_mem_fn(d, &p, v);
+
+    let card_u = fs_card(d, &p, u);
+    let card_v = fs_card(d, &p, v);
+    let left_fold = count_range(d, &p, mu, common);
+    let right_fold = count_range(d, &p, mv, common);
+    let right_fold_swapped = count_range(d, &p, mv, swapped);
+
+    // `countRange (memB u) (bound u + bound v) = card u`, reversed.
+    let e_left = d.lemma(p.finset_card_eq_count_range_add, &[u, bv]);
+    let back_left = d.symm(left_fold, card_u, e_left);
+
+    // Pointwise congruence over the common range; the hypothesis is unbounded,
+    // so the range premise is discarded.
+    let pointwise = {
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let hi_fv = d.fresh_fvar();
+        let hi_ty = d.lt(i, common);
+        let step = d.apply(h, &[i]);
+        let with_hi = d.lam_fv(hi_fv, hi_ty, step);
+        d.lam_fv(i_fv, nat, with_hi)
+    };
+    let e_mid = d.lemma(p.count_range_congr_lt, &[mu, mv, common, pointwise]);
+
+    // `countRange (memB v) (bound u + bound v) = countRange (memB v)
+    // (bound v + bound u)`, by `add_comm` under the fold's bound.
+    let e_comm = d.lemma(p.add_comm, &[bu, bv]);
+    let e_swap = d.congr(common, swapped, e_comm, &|d, x| count_range(d, &p, mv, x));
+
+    // `countRange (memB v) (bound v + bound u) = card v`.
+    let e_right = d.lemma(p.finset_card_eq_count_range_add, &[v, bu]);
+
+    let (_, proof) = d.chain(
+        card_u,
+        &[
+            (left_fold, back_left),
+            (right_fold, e_mid),
+            (right_fold_swapped, e_swap),
+            (card_v, e_right),
+        ],
+    );
+
+    let ty = {
+        let concl = d.eq(card_u, card_v);
+        let with_h = d.arrow(hyp_ty, concl);
+        let with_v = d.pi_fv(v_fv, fs, with_h);
+        d.pi_fv(u_fv, fs, with_v)
+    };
+    let value = {
+        let with_h = d.lam_fv(h_fv, hyp_ty, proof);
+        let with_v = d.lam_fv(v_fv, fs, with_h);
+        d.lam_fv(u_fv, fs, with_v)
+    };
+    d.declare_theorem(p.finset_card_congr_of_mem_b, ty, value)
+}
+
 pub(super) fn declare_finset_all(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
     declare_carrier(d, p)?;
     declare_operations(d, p)?;
@@ -3191,5 +3293,6 @@ pub(super) fn declare_finset_all(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(
     declare_pigeonhole(d, p)?;
     declare_all_below_false_witness(d, p)?;
     declare_exists_collision(d, p)?;
+    declare_card_congr_of_mem_b(d, p)?;
     Ok(())
 }

@@ -1,0 +1,75 @@
+# The ADR-0601 SS2 `cas-certificate` classification floor -- W1-13's
+# `cas-internal` residue. One row per fact:
+#
+#   <fact id>	<kernel-reconstructed|cas-internal|unrecognized>	<fragment>
+#
+# Regenerate with: python3 scripts/check-cas-internal-residue.py --update
+#
+# A `kernel-reconstructed` row is ground this ledger has already
+# established: an independent re-derivation through the trust anchor exists.
+# Losing that -- the row flipping to `cas-internal`, going `unrecognized`, or
+# disappearing -- is a real regression and the gate refuses it. GAINING a
+# kernel-reconstructed fact, or adding any new `cas-internal` fact, needs no
+# edit: the residue may grow in absolute count as the ledger grows, so long
+# as no fact that used to reconstruct stops doing so. See ADR-0601 and
+# docs/math-department/11-applied-and-computational.md (W1-13).
+F:alternating-binomial-row-sum-zero	cas-internal	hypergeometric-summation
+F:apery-numbers-recurrence	cas-internal	hypergeometric-summation
+F:binomial-row-sum-two-power	cas-internal	hypergeometric-summation
+F:cas-boolean-circuit-nand-only-full-adder	cas-internal	boolean-circuit-exhaustive-replay
+F:cas-difference-of-squares-free-x-kernel-checked	kernel-reconstructed	univariate-polynomial-identity
+F:cas-evt-endpoint-exclusion-cubic-kernel-checked	kernel-reconstructed	real-algebraic-evt-endpoint-exclusion
+F:cas-extremum-deriv-sign-bracket-kernel-checked	kernel-reconstructed	real-algebraic-evt-derivative-sign-bracket
+F:cas-extremum-irrational-argmax	cas-internal	real-algebraic-evt
+F:cas-gf2-degree-400-trinomial-irreducible	cas-internal	gf2-rabin-irreducibility
+F:cas-gf2-degree-8-trinomial-exhaustion-rederived	cas-internal	gf2-shard-manifest-exhaustion
+F:cas-gf2-tensor-karatsuba-degree-2-rank-three	cas-internal	gf2-tensor-rank-decomposition-replay
+F:cas-gosper-acceptance-mode-distinguishes-geometric-from-telescoping	cas-internal	gosper-acceptance-mode-certificate
+F:cas-groebner-cofactor-unit-ideal-witness	cas-internal	groebner-cofactor-unit-ideal-refutation
+F:cas-inverse-quintic-degree-five-witness	cas-internal	real-algebraic-inverse
+F:cas-ivt-cbrt2-in-1-2	cas-internal	real-algebraic-ivt
+F:cas-ivt-degree4-sign-bracket-kernel-checked-cost-curve	kernel-reconstructed	real-algebraic-ivt-sign-bracket
+F:cas-ivt-sign-bracket-cbrt2-kernel-checked	kernel-reconstructed	real-algebraic-ivt-sign-bracket
+F:cas-lib-integrate-polynomial-certified	cas-internal	cas-certified-integral-direct-branch
+F:cas-mvt-cubic-witness-sqrt3	cas-internal	real-algebraic-mvt
+F:cas-mvt-secant-endpoints-kernel-checked	kernel-reconstructed	real-algebraic-mvt-secant-endpoints
+F:cas-ntheory-compositeness-certificate	cas-internal	cas-ntheory-composite-certificate
+F:cas-ntheory-crt-certificate	cas-internal	cas-ntheory-crt-certificate
+F:cas-ntheory-factorization-certificate	cas-internal	cas-ntheory-factorization-certificate
+F:cas-ntheory-pratt-primality-mersenne89	cas-internal	cas-ntheory-pratt-certificate
+F:cas-partial-fractions-mixed-general-case	cas-internal	exact-rational-partial-fractions
+F:cas-partial-fractions-mixed-general-case-kernel-checked	kernel-reconstructed	exact-rational-partial-fractions-coefficient-matching-identity
+F:cas-quintic-real-root-is-irrational	cas-internal	real-algebraic-rationality
+F:cas-ratint-horowitz-x-over-x-minus-one-squared	cas-internal	rational-integration-horowitz
+F:cas-smith-normal-form-two-six-twelve	cas-internal	integer-matrix-smith-normal-form
+F:cas-sos-damped-rotation-lyapunov	cas-internal	sos-lyapunov
+F:cas-sos-energy-barrier-unreachability	cas-internal	sos-barrier
+F:cas-sos-motzkin-psd-not-sos	cas-internal	sos-psd-not-sos
+F:cas-taylor-quartic-lagrange-witness	cas-internal	real-algebraic-taylor-lagrange
+F:cas-taylor-remainder-lhs-kernel-checked	kernel-reconstructed	real-algebraic-taylor-remainder-lhs
+F:chu-vandermonde-convolution	cas-internal	hypergeometric-summation
+F:chu-vandermonde-convolution-recurrence	cas-internal	hypergeometric-summation
+F:cross-binomial-row-sum	cas-internal	hypergeometric-summation
+F:franel-numbers-recurrence	cas-internal	hypergeometric-summation
+F:geometry-centroid-divides-medians	cas-internal	NRA
+F:geometry-centroid-divides-medians-kernel-checked	kernel-reconstructed	exact-rational-geometry-cofactor-identity
+F:geometry-euler-line	cas-internal	NRA
+F:geometry-medians-cofactor-identity-kernel-checked	kernel-reconstructed	nra-geometry-cofactor-identity
+F:geometry-medians-concurrent	cas-internal	NRA
+F:geometry-orthocentre-altitudes-concurrent	cas-internal	NRA
+F:geometry-orthocentre-cofactor-identity-kernel-checked	kernel-reconstructed	nra-geometry-cofactor-identity
+F:geometry-pappus-hexagon	cas-internal	NRA
+F:geometry-parallelogram-diagonals-bisect	cas-internal	NRA
+F:geometry-parallelogram-diagonals-bisect-kernel-checked	kernel-reconstructed	exact-rational-geometry-cofactor-identity
+F:geometry-rhombus-cofactor-identity-kernel-checked	kernel-reconstructed	nra-geometry-cofactor-identity
+F:geometry-rhombus-diagonals-perpendicular	cas-internal	NRA
+F:geometry-simson-line	cas-internal	NRA
+F:geometry-thales-cofactor-identity-kernel-checked	kernel-reconstructed	nra-geometry-cofactor-identity
+F:geometry-thales-right-angle-in-semicircle	cas-internal	NRA
+F:geometry-varignon-midpoint-parallelogram	cas-internal	NRA
+F:gf2-composition-shape-classification	cas-internal	gf2-polynomial-identity
+F:gf2-degree-eight-octuple-two-step-chain	cas-internal	finite-gf2-enumeration
+F:gf2-general-monomial-composition-criterion	cas-internal	gf2-finite-field-order
+F:gf2-witt-shifted-degree-seven-closed-form	cas-internal	gf2-extension-polynomial-identity
+F:squared-binomial-row-sum-central	cas-internal	hypergeometric-summation
+F:weighted-binomial-row-sum	cas-internal	hypergeometric-summation

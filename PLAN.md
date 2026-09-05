@@ -120,9 +120,13 @@ now. Nothing was deleted.
 | 2026-09-04 | graph-carrier | `Nat.Graph` (ADR-1608): a decidable adjacency relation plus a vertex bound, sibling of `Nat.Finset`, with symmetry and irreflexivity forced inside `adjB`; neighbourhoods as `Nat.Finset`s and degrees through `countRange_le` |
 | 2026-09-04 | graph-carrier | `R(3,3) = 6` in the kernel, both halves axiom-free: a 32-leaf case tree for the upper bound and a reflected five-vertex search certificate for the lower (`F:ramsey-r33-six`) |
 | 2026-09-04 | graph-carrier | Hall's marriage theorem, necessity direction, over `Nat.Finset` through `card_le_of_injOn`; sufficiency NOT proved and its blocker named — computing a critical subfamily needs a bounded subset search with its own reflection lemma |
+| 2026-09-04 | hall-sufficiency | subset-search reflection primitive + `Nat.strongInduction` + `card_congr_of_memB`; Hall sufficiency still open, obstruction re-sized (ADR-1614) |
 | 2026-09-04 | angles-and-isometries | lane opened; step-0 retrieval at `declarations=3935`, `CReal.sin_sq_add_cos_sq` shown ABSENT |
 | 2026-09-04 | angles-and-isometries | W1-8 + W2-13: 32 `CPoint` declarations for angle measure and isometries, all axiom-free; ADR-1615 |
 | 2026-09-04 | angles-and-isometries | four facts: the Pythagorean identity for the plane angle, the laws of sines and cosines, and the isometry family with its doubling refutation |
+| 2026-09-04 | poly-commring | `AlgS.Poly.commRing` lands: the four `AlgS.CommRing` fields ADR-1609 left open (`mulOneL`, `mulOneR`, `mulComm`, `mulAssoc`) plus the six walk reindexing lemmas, at the same build position, zero kernel rejections (ADR-1618) |
+| 2026-09-04 | poly-commring | ℚ[X], ℝ[X] and ℂ[X] admitted as `AlgS.CommRing` values with empty axiom footprints (`tests/poly_comm_ring_concrete.rs`) |
+| 2026-09-04 | poly-commring | `poly_setoid_tests` 8 → 17: three evaluation tests at `n ≤ 3` plus five rejection controls, each with a positive twin; all five mutation-verified (exactly the five mutated tests died, the other twelve passed) |
 | 2026-09-04 | coordinator | `docs/math-department/`: twelve persona reviews of the library, one per field, each with a measured baseline, a Next Five and a progress log |
 | 2026-09-04 | coordinator | `docs/math-department/00-roadmap.md`: the twelve Next Fives synthesized into 51 items, 7 convergences, 4 waves, with a status board and history log |
 | 2026-09-04 | metatheory-and-landmarks | `90940d7bb` ADR-1600: kernel trusted-core size (5,526 lines, re-derived), what it admits, four mutation-tested guards (3 clean, 1 found redundant), a fresh full `check-lean-gate.sh` run reproducing the known-red `max-to-imax` mutant, and what a relative soundness proof would require |
@@ -173,6 +177,9 @@ now. Nothing was deleted.
 | 2026-09-04 | integration-space | `IntSpace` record (16 fields), generic layer, measure layer, convergence graded family, `crealInterval` + `crealFinite` instances — `63c9a000d` |
 | 2026-09-04 | integration-space | detachable subsets, counting measure, the Dirac probability space — `9d47af7e4` |
 | 2026-09-04 | integration-space | ADR-1612, three facts, `IntSpace.CReal.uniformly_continuous_abs`, `shape_search`/`kernel_declaration_projection`/`validate-facts` taught the `intspace` group |
+| 2026-09-04 | producer-measurements | lane started: W1-12/W1-13, ADR-1617 reserved |
+| 2026-09-04 | producer-measurements | W1-12 landed: `examples/creal_eval_cost.rs`, ADR-1617, `artifacts/measurements/creal-eval-cost-2026-09-04.md` — controls fast, `e`/`pi` at n=0 did not complete within budget |
+| 2026-09-04 | producer-measurements | W1-13 landed: `scripts/check-cas-internal-residue.py` + ratchet + tests, registered in `scripts/check.sh`/`justfile`/`mutation_controls.py`, `artifacts/measurements/cas-internal-residue-2026-09-04.md` — 60 total, 14 kernel-reconstructed, 46 cas-internal (76.7%), 0 unrecognized |
 | 2026-09-03 | `131756de5` | Lane status stub: three kernel suites refused by ADR-1495's universe guard, under triage. |
 | 2026-09-03 | `714e58f3a` | Moved three Lean-illegal test fixtures to the universe Lean 4.30 gives them (`Sort 1` → `Sort 2` for the `type`-sorted families; `String` follows `Char` under `CharAtUniverseOne` only), verified shape-by-shape against the pinned `lean` binary. Added the two-sided `list_level` control so the string mutation cannot degenerate. Kernel guard unchanged. |
 | 2026-09-03 | det-mul-debug-stack | `40ee238ca` — the ADR-1543 concrete-matrix evaluation test aborted the DEBUG `--workspace --lib` push step (SIGABRT) while passing `--release`. Bisected from outside the process: a BOUNDED requirement, 4 MiB against the 2 MiB a `#[test]` thread gets. Bisected WITHIN the test: the single `def_eq (det (A·B) 2) 4` is the cliff, because `A·B = [[19,22],[43,50]]` forms `19·50 = 950` as a unary `succ` tower; `det A · det B` and the 1×1 case form nothing bigger than 15 and are free. `B` shrinks to `[[0,1],[2,1]]`, determinant `−2` again, so every asserted number is unchanged and the largest magnitude formed goes 950 → 28: 181 s → 16 s, which is the prelude build alone. `det_mat_mul_expand_...` was a second casualty the first abort hid and got the same change. One control that could NOT fail is replaced — `det Aᵀ = det A`, so no transposition is visible in the determinant; the product's four entries are now read out with `A·Bᵀ` and `Aᵀ·B` asserted apart at `(0,0)`. Mutation-checked: `[2,1] → [3,1]` kills exactly these two tests. |
@@ -6482,6 +6489,54 @@ documented 55–111s-and-growing range for this point in the chapter).
   consumer wants one. Not built this session — no consumer asked for it yet,
   and the three pieces are individually usable as-is.
 
+**Your lane's block (`landed`, hall-sufficiency, 2026-09-04).** ADR-1608 stopped
+Hall's marriage theorem at *necessity* and named the obstruction: with no
+classical choice the critical subfamily must be **computed**, by a bounded
+search over the subsets of a `Nat.Finset` with a reflection lemma reading the
+verdict back into the kernel. That primitive now exists
+([ADR-1614](docs/research/09-decisions/adr-1614-searching-over-subsets-is-a-reflection-primitive-not-a-hall-detail.md)),
+together with `Nat.strongInduction` — ADR-1608's item 1, also measured absent.
+
+Thirteen declarations, empty axiom footprint, `nat_prelude::` green:
+
+- `Nat.Finset.bitB`/`decode`/`encodeFrom`/`encode`/`anySubset` — the
+  enumeration. `Nat.testBit` **already existed** (`--name-like testBit` returns
+  FOUND 15 while `decode`, `encode`, `subsets`, `powerset`, `enumerate` and
+  `bitAt` all return ABSENT), so searching for the STEP rather than the NAME
+  removed a bit decoder from the diff.
+- `Nat.Finset.existsSubset_of_search` / `forallSubset_of_search` — the
+  reflection lemma in both polarities, the two-dimensional twin of
+  `allBelow_false_witness` / `allBelow_true_at`. Each is the other's negative
+  control at the trusted gate.
+- `Nat.Finset.memB_decode_encode` — exhaustiveness, at EVERY index, not only
+  below the width.
+- `Nat.Finset.card_congr_of_memB` — in `finset.rs`, not beside its consumer:
+  two sets with the same members have the same `card` even when their stored
+  bounds differ. This is what discharges `forallSubset_of_search`'s congruence
+  premise for a `card`-based property.
+- `Nat.strongInduction.{u}` and `strongInduction_eq` over `lt_well_founded` +
+  `WellFounded.fix`/`fix_eq`.
+
+**Hall's sufficiency did NOT land, and the obstruction has MOVED.** ADR-1608's
+items 1 and 2 are closed; item 3 is not, and building item 2 sharpened what
+item 3 costs. The choice problem is solved; the **counting** problem is not:
+
+1. `Nat.Hall.unionOver` has no congruence lemma — its bound reads `t`'s stored
+   bound, not `t`'s members, so two membership-equal index sets give unions with
+   different bounds and nothing relates their memberships. Needs `anyBelow`'s
+   *elimination* rule, which is now a one-dimensional instance of
+   `allBelow_false_witness`. Bookkeeping.
+2. **Transporting `HallCondition` across a deleted family** —
+   `fun i => sdiff (nb i) (unionOver nb t)` — is a genuine counting argument
+   over a union whose bound changes at every step. This is the real remaining
+   work.
+3. Gluing two matchings needs their images disjoint;
+   `Nat.Finset.card_le_of_injOn` is the right tool and exists, but nothing
+   relates the two images yet.
+
+A lane taking the next slice should **not** size the search again — it should
+size `unionOver` under family modification and expect that to be the whole of it.
+
 **Your lane's block (`DONE`, angles-and-isometries, 2026-09-04).** W1-8 and
 W2-13 both landed: **32 declarations, every one admitted, every axiom footprint
 empty.** ADR-1615 records the design.
@@ -6555,6 +6610,74 @@ let alone provable, here". **That is false today.** `sqrt`, `sqrt_congr`,
 call inexpressible are stated in this lane. The comments are left in place —
 editing them in a 21k-line file shared by other lanes is a separate change —
 but disbelieve them.
+
+**Your lane's block (`landed`, poly-commring, 2026-09-04).** ADR-1609 stopped 20
+of 23 fields into `AlgS.CommRing` for the polynomial ring over an abstract
+`AlgS.CommRing`, and recommended moving the build position past `Nat` arithmetic
+and restating convolution over `sumRange` with `Nat.sub`. **That recommendation
+is declined on measurement and the walk closes instead** — twelve new
+declarations at the SAME build position, no `Nat.add`, no `Nat.sub`, **zero
+kernel rejections**.
+
+The measurement that decides it: every `sumRange` reindexing lemma in the tree
+is over a CONCRETE carrier folded with that carrier's own addition
+(`Nat.sumRange : (Nat → Nat) → Nat → Nat`), so an abstract `AlgS.CommRing`
+carrier reuses none of them — `grep sumRange` across the three `AlgS` modules
+returns ONE hit, a comment. Route (a) would have to declare `AlgS.sumRange` and
+reprove every reindexing lemma anyway, in a shape whose induction hypothesis is
+weaker, after relocating a ~1,300-line block inside
+`build_nat_prelude_uncached` (`declare_poly_setoid` at `nat_prelude.rs:6719`,
+`declare_subtraction` at 8015).
+
+What actually unblocked it is the **motive**, not the representation: `Nat.rec`
+on the first walk index with `fun i => forall g, …` or `fun i => forall j, …`,
+because the walk's successor step calls itself at `succ j` AND at a shifted
+family. Landed: `antidiagFrom_shift` (what replaces the unwritable `j + n`),
+`antidiagFrom_succ_last` (peel the LAST cell), `antidiagFrom_rev` (the
+reversal), `antidiagFrom_tail_zero` / `antidiagFrom_head` (the collapse),
+`antidiagFrom_mul_right`, `mul_succ`, `mulComm`, `mulOneR`, `mulOneL`,
+`mulAssoc`, and **`AlgS.Poly.commRing : AlgS.CommRing -> AlgS.CommRing`**, all
+23 fields.
+
+`mulAssoc` — ADR-1609's "the hard one", sized as a two-dimensional exchange —
+needs **no three-index machinery**: it is four applications of the
+convolution's own `mul_succ` recursion plus `distribL`/`distribR`, joined by one
+`R.mulAssoc` and one `R.addAssoc`. The three-index route was explored first and
+is recorded in ADR-1618 so it is not re-derived.
+
+**ℚ[X], ℝ[X] and ℂ[X] are machine-checked commutative rings**
+(`tests/poly_comm_ring_concrete.rs`), each admitted through the trusted gate
+with an empty axiom footprint, over `AlgS.CommRing.ofAlg Alg.Rat.commRing`,
+`CReal.commRingS` and `Complex.commRingS`. They are admitted into a test-local
+kernel, not landed as named prelude declarations — that is a small separate
+step, sized in ADR-1618.
+
+**Setoid cost of this lane: zero.** Every one of the twelve declarations would
+read identically over `Eq`. The one place the discipline shows is a benefit,
+unchanged from ADR-1609 and now carried through the whole ring rather than only
+its additive group: the carrier is a function space, so the `Alg` spine's law
+fields would be equalities of lambdas and would need `funext`. No evidence to
+reopen ADR-1595.
+
+**Two negatives, stated as precisely as the positives.**
+
+- **`Complex.polyEval_polyMul` ALREADY EXISTS** (read from a freshly built
+  `shape_search`, `declarations=3935`) — `complex/poly.rs` builds
+  `Complex.polyMul` over `sumRange`/`Nat.sub` with `polyDegreeLt` hypotheses.
+  ADR-1609's parenthetical that "evaluation is a ring homomorphism" is open for
+  the same reason as the abstract case is **stale for ℂ** and accurate only
+  for ℚ.
+- **`Rat.polyEval_mul` did not land, and is not small.** `Rat.polyEval`,
+  `_add`, `_smul`, `_succ`, `_zero`, `_deg1` exist; `Rat.polyMul` and
+  `Rat.polyDegreeLt` do not. It is a port of `complex/poly.rs`'s ~800-line
+  chain to the `Rat` carrier, and it is **not reachable from
+  `AlgS.Poly.mulAssoc`**: the abstract theorem is about the antidiagonal walk,
+  `Rat.polyEval_mul` would be about `Rat.sumRange` with `Nat.sub`, and no
+  agreement lemma between the two representations exists in the tree. The
+  cheaper route is that agreement lemma
+  (`AlgS.Poly.mul (ofAlg Rat.commRing) p q n ~ Rat.polyMul p q n`), itself a
+  reindexing obligation of the same family. `Complex.factorQuotient` is on the
+  same far side and was likewise not connected. Do not price either as small.
 
 **Status: LANDED — `CReal.hasDerivative_uniform_limit` is admitted,
 axiom-free, and the query that measured its absence now returns it.**
@@ -42590,6 +42713,51 @@ name; and the ℚ↔ℝ probability bridge (`Rat.expectation` is normalised,
 says so. Reviewer 08 is unblocked now: a finite index set is an integration
 space, a point mass is one, and a detachable subset of a finite index set is an
 integrable set.
+
+**Status: LANDED (`DONE`, producer-measurements, 2026-09-04).** Both
+deliverables measured and published, ADR-1617 accepted. No kernel
+declarations added (measurement-only lane, as scoped).
+
+**W1-12.** `examples/creal_eval_cost.rs` (new, `axeyum-lean-kernel`): builds
+`CReal.seq x n` for `x` in `{pi, e, sqrt 2, exp 1}` plus trivial
+`{zero, one, two}` controls, two ways to encode `n` (kernel-accelerated
+`Lit::Nat` literal vs. genuine unary `Nat.succ` chain, matching this
+codebase's own numeral idiom), and fully normalizes with a hand-rolled
+`deep_nf` built only from public `Kernel::whnf`/`Kernel::expr_node` calls —
+no new declaration, everything transient. Finding: the controls are
+sub-5ms at every `n` and either encoding (the caller's index encoding does
+not matter); `e` and `pi` at `n = 0` — the loosest possible request — **did
+not complete** within a 400s/480s compute budget respectively, even though
+the outer `Kernel::whnf` alone (exposing the head redex) resolves in
+30-40ms. The cost lives inside the series' own internal `Nat.rec` recursion
+(built unary regardless of the caller's `n`), which the library's own bound
+theorems (`threeLePi`, `piLeFour`, ...) never force — they stay symbolic.
+Reported as "did not complete", not extrapolated. Full method, raw
+transcripts, and load readings: `artifacts/measurements/creal-eval-cost-2026-09-04.md`.
+
+**W1-13.** `scripts/check-cas-internal-residue.py` (new): reuses
+`validate-facts.py`'s own `classify_cas_certificate_fact` over every
+`cas-certificate` fact and ratchets a floor — a fact recorded
+`kernel-reconstructed` must stay one; a new `cas-internal` fact is not
+refused. Measured: 60 total, 14 kernel-reconstructed, 46 cas-internal
+(76.7% residue), 0 unrecognized — matches `validate-facts.py`'s own summary
+line exactly. Per-`formal.fragment` breakdown shows the residue concentrated
+in number theory, hypergeometric/binomial identities, GF(2), and SOS
+families with no kernel bridge yet. Registered in `scripts/check.sh` and
+`justfile`; companion suite `scripts/tests/test_check_cas_internal_residue.py`
+(10 tests) registered under `scripts/tests/mutation_controls.py`'s
+`cas-internal-residue` entry, mutation-verified 2026-09-04 on a scratch copy
+(never the shared worktree) — all four guards each kill exactly one test.
+Full breakdown: `artifacts/measurements/cas-internal-residue-2026-09-04.md`.
+
+**Gates run and green**: `rustfmt --edition 2024` + `cargo clippy -D warnings`
+on the example; `cargo fmt --all --check`; `cargo check --release -p
+axeyum-lean-kernel --examples`; `python3 -m py_compile` on every touched
+Python file; `python3 -m unittest scripts.tests.test_check_cas_internal_residue`
+(10/10); `python3 scripts/tests/mutation_controls.py cas-internal-residue`
+(4/4 guards, each kills exactly 1); `python3 scripts/check-cas-internal-residue.py
+--report`; `python3 scripts/validate-facts.py`; `python3 scripts/gen-adr-index.py`;
+`python3 scripts/gen-plan.py`.
 
 **ADR-0512 phase R4 reaches the reconstruction route: a Farkas/SOS refutation
 now reconstructs over `CReal`, and the closed `False` rests on ZERO carrier
