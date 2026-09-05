@@ -541,7 +541,13 @@ fn declare_prob_complement(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), Kern
 // --- expectation and its linearity -----------------------------------------
 
 /// `Rat.expectation X p n`, i.e. `d.const_app(p.expectation, &[x, pf, n])`.
-pub(super) fn expectation(d: &mut IntDev<'_>, p: RatPrelude, x: ExprId, pf: ExprId, n: ExprId) -> ExprId {
+pub(super) fn expectation(
+    d: &mut IntDev<'_>,
+    p: RatPrelude,
+    x: ExprId,
+    pf: ExprId,
+    n: ExprId,
+) -> ExprId {
     d.const_app(p.expectation, &[x, pf, n])
 }
 
@@ -926,7 +932,12 @@ fn rat_zero_mul(d: &mut IntDev<'_>, p: RatPrelude, c: ExprId) -> ExprId {
 /// Induction on `j`, `c` fixed; [`declare_uniform_is_distribution`]
 /// specialises at `j = n`, `c = inv (natDivSucc n 0)`, and closes with
 /// `mul_inv_cancel`.
-pub(super) fn sum_range_const(d: &mut IntDev<'_>, p: RatPrelude, c: ExprId, j: ExprId) -> (ExprId, ExprId) {
+pub(super) fn sum_range_const(
+    d: &mut IntDev<'_>,
+    p: RatPrelude,
+    c: ExprId,
+    j: ExprId,
+) -> (ExprId, ExprId) {
     let constf = const_fn(d, c);
 
     let motive = |d: &mut IntDev<'_>, x: ExprId| -> ExprId {
@@ -1518,7 +1529,13 @@ fn declare_expectation_indicator_le_one(
 // --- variance ----------------------------------------------------------------
 
 /// `Rat.variance X p n`, i.e. `d.const_app(p.variance, &[x, pf, n])`.
-pub(super) fn variance(d: &mut IntDev<'_>, p: RatPrelude, x: ExprId, pf: ExprId, n: ExprId) -> ExprId {
+pub(super) fn variance(
+    d: &mut IntDev<'_>,
+    p: RatPrelude,
+    x: ExprId,
+    pf: ExprId,
+    n: ExprId,
+) -> ExprId {
     d.const_app(p.variance, &[x, pf, n])
 }
 

@@ -108,10 +108,10 @@ use crate::int_prelude::ops::IntDev;
 use crate::nat_prelude::NatOps;
 use algebra_ext::AlgebraExtNames;
 use algebra_instances::AlgebraNames;
-use ordered_ring_ext::OrderedRingExtNames;
-use ordered_ring_ext_s::OrderedRingExtSNames;
 use binomial_rat::BinomialRatNames;
 use binomial_s::BinomialSNames;
+use ordered_ring_ext::OrderedRingExtNames;
+use ordered_ring_ext_s::OrderedRingExtSNames;
 use probability_s::ProbSNames;
 
 /// The interned names produced by [`build_rat_prelude`]: the field constants,
