@@ -87,6 +87,37 @@ tree at `3328d2a80`, fixed the same day by lane `lean-pin-gates`
 The row was updated to say so. `check-parity-freshness.py`'s Z3-ledger
 failure was NOT re-measured and is not claimed either way.
 
+## What did NOT run
+
+**The suite's cost in DEBUG was not measured.** `scripts/check-lean-gate.sh`
+runs registered suites as `cargo test -q -p … --test …`, i.e. unoptimized, and
+every number in this file is from `--release`. A debug build of
+`real_lean_replay_census_all` was queued on 2026-09-05 and sat 45 minutes in
+the host-wide `cargo-serialized.sh` flock without starting (45 queued cargo
+jobs at the time); it was cancelled rather than left to orphan. So this is
+reported as **did not run**, not as "fine".
+
+What is known rather than guessed: the already-registered
+`real_lean_replay_census` runs ONE `creal` carrier in debug and was measured
+at 240 s by ADR-0760, on a carrier that then held 2,045 declarations and now
+holds 3,617. This suite has seven `creal`-superset carriers and ten cheap
+ones. So the gate's runtime is expected to grow by tens of minutes, and that
+is an **extrapolation from one debug data point**, not a measurement. Whoever
+next runs `scripts/check-lean-gate.sh` end to end should read the real number
+off it; if the cost is unacceptable, the lever is to `#[ignore]` the seven
+constructive carriers and lower `CHECK_FLOOR` by exactly seven, which trades
+gate time for exactly the carriers most worth checking.
+
+`scripts/check-lean-gate.sh` itself was **not run end to end** by this lane
+for the same reason. `CHECK_FLOOR` was raised by exactly the seventeen
+invocations this suite makes, each of which was observed
+(`AXEYUM-LEAN-CHECKED replay-census-all checked=1`, seventeen times, in one
+run).
+
+`gen-plan.py` was **not run**: this lane was told not to. `gen-plan.py
+--check` exits 1 solely because of this new status file — verified by moving
+it aside (exit 0) and putting it back.
+
 ## Where the census lives
 
 - `crates/axeyum-lean-kernel/tests/support/replay_census.rs` — the classifier,
