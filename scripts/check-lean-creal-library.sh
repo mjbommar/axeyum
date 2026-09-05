@@ -71,7 +71,7 @@ EXCLUSIONS="$PACKAGE_DIR/EXCLUSIONS.json"
 # EXCLUSION_CEILING is today's measured value. Raising it needs a reason in the
 # commit message; a declaration that stops being published is a regression.
 COMMAND_FLOOR=3397
-EXCLUSION_CEILING=103
+EXCLUSION_CEILING=107  # 2026-09-05 late: +4 power-series results whose closure reaches `CReal.abs_mul_le_of_bounds`, one of the 19 refused
 AUDIT_FLOOR=400
 CONTROL_FLOOR=1
 

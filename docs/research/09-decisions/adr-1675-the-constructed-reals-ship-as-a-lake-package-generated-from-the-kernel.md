@@ -123,6 +123,19 @@ seven headline results above axiom-free. **Not claimed:** Lean-side
 axiom-freedom of all 3,397 published declarations -- the 1,077-command audit
 has not completed a run here.
 
+
+**Re-measured after landing, 2026-09-05 (coordinator).** The kernel grew while
+this lane was in flight (W3-5 holomorphy and the power-series work landed on
+main): 3,617 -> 3,654 declarations. The drift gate fired on `main`, as
+designed, and the package was regenerated from the live kernel: **3,430
+commands published, 107 excluded** (the 19 refusals are unchanged; the four
+new exclusions -- `CReal.abs_pow_le`, `CReal.powerSeriesTermRadiusBound`,
+`CReal.powerSeriesCauchyWithinRadius`, `CReal.powerSeriesConvergesWithinRadius`
+-- reach `CReal.abs_mul_le_of_bounds`, one of the 19). `EXCLUSION_CEILING`
+103 -> 107 for that reason. The Lean build of the regenerated carrier is
+recorded in the row below when it has run; the 3,397-command carrier is the
+one Lean accepted above.
+
 ## Alternatives
 
 **Publish the NDJSON stream and a replay script.** Rejected: that is what

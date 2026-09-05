@@ -8,13 +8,13 @@ nothing here was written by hand.
 
 | | |
 |---|---|
-| kernel declarations | 3617 |
-| Lean commands emitted | 3397 |
-| `Prop`-valued theorems | 2472 |
+| kernel declarations | 3654 |
+| Lean commands emitted | 3430 |
+| `Prop`-valued theorems | 2505 |
 | `Type`-valued theorems (published as `def`) | 49 |
-| definitions | 926 |
+| definitions | 930 |
 | kernel axioms in the development | 0 |
-| results audited by `#print axioms` | 1077 |
+| results audited by `#print axioms` | 1080 |
 
 ## Using it
 
@@ -39,7 +39,7 @@ not in this version.
 * **Axeyum's kernel** admitted every term here, and reports an empty
   `Kernel::axiom_footprint` for the whole carrier.
 * **Lean's kernel** re-checks every term when you build the package.
-* **`Axeyum.Creal.Axioms`** runs `#print axioms` over the 1077
+* **`Axeyum.Creal.Axioms`** runs `#print axioms` over the 1080
   results this repository's fact ledger credits to the constructed reals. Every
   line must read `does not depend on any axioms`.
 * **`Tests/AxiomControl.lean`** is the positive control: it rests on a declared
@@ -63,7 +63,7 @@ discovered. These headline results are **not** in this package:
 * `CReal.e`
 * `CReal.pi`
 
-103 of the kernel's 3617 declarations are excluded for this reason.
+107 of the kernel's 3654 declarations are excluded for this reason.
 The replay census (ADR-1661) shows pinned Lean's KERNEL accepting them over the
 `lean4export` wire, so this is a limit of the source route, not of the
 mathematics.

@@ -150,6 +150,7 @@ import Axeyum.Creal.Carrier
 #print axioms CReal.cosFnTermDerivCoeff
 #print axioms CReal.cosFnTerm_congr
 #print axioms CReal.cosSeriesPartial
+#print axioms CReal.cosSeriesPartialIsPowerSeries
 #print axioms CReal.cosTerm
 #print axioms CReal.crossingClose
 #print axioms CReal.crossingCloseClamped
@@ -170,6 +171,7 @@ import Axeyum.Creal.Carrier
 #print axioms CReal.evt_approx_max
 #print axioms CReal.evt_attained_max_decides_sign
 #print axioms CReal.expOfModulus_le_trueExpOfModulus
+#print axioms CReal.expSeriesPartialIsPowerSeries
 #print axioms CReal.expTermSuccScale
 #print axioms CReal.expTerm_antitone
 #print axioms CReal.expTerm_le_geom
@@ -327,6 +329,7 @@ import Axeyum.Creal.Carrier
 #print axioms CReal.ofRat_pow
 #print axioms CReal.ofRat_sub
 #print axioms CReal.one_le_pow_of_one_le
+#print axioms CReal.one_pow
 #print axioms CReal.order_reflect_of_pos_deriv
 #print axioms CReal.polyAdd
 #print axioms CReal.polyDegreeLt
