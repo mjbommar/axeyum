@@ -1,0 +1,79 @@
+{
+  "schema_version": 1,
+  "id": "F:hall-descent-measure",
+  "title": "Splitting a finite set of naturals at a subset splits its count exactly, so a nonempty proper part and its complement are both strictly smaller",
+  "statement": "Let s and t be finite sets of naturals with t a subset of s. Then card s = card t + card (s \\ t) exactly. Consequently, if s \\ t is nonempty then card t < card s, and if t is nonempty then card (s \\ t) < card s. These are the two measures Hall's marriage theorem descends on: the inductive step splits the index set at a critical subset and recurses on both halves, and each half needs a strictly smaller count. The tree already carried the corresponding INEQUALITY, card s <= card (s \\ t) + card t, which holds without the subset hypothesis and bounds card s from above -- the wrong direction for a descent. The content here is that for a genuine subset the two sides are equal, and that equality is what turns Nat.add_lt_add_left at the summand zero into a strict decrease. Stated over the decidable inclusion test Nat.Finset.subsetFixed with a bound side condition, because that is what the inductive step's subset search produces. These are kernel terms with empty axiom footprints.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Nat.Finset.card_lt_card_of_subsetFixed : ((x0 : AxNat.Finset) -> ((x1 : AxNat.Finset) -> ((x2 : AxNat.le (AxNat.Finset.bound x1) (AxNat.Finset.bound x0)) -> ((x3 : Eq.{1} Bool (AxNat.Finset.subsetFixed x0 x1) Bool.true) -> ((x4 : AxNat.lt AxNat.zero (AxNat.Finset.card (AxNat.Finset.sdiff x0 x1))) -> AxNat.lt (AxNat.Finset.card x1) (AxNat.Finset.card x0))))))",
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.Finset.card_lt_card_of_subsetFixed",
+    "kernel_statement": "Nat.Finset.subsetFixed s t := allBelow (fun i => if memB t i then memB s i else true) (bound s), the decidable inclusion test whose loop bound comes from the FIXED set (ADR-1644). Landed with this one: Nat.Finset.card_add_card_sdiff (the exact split, forall s t, (forall i, memB t i = true -> memB s i = true) -> Eq Nat (card s) (add (card t) (card (sdiff s t)))); Nat.Finset.card_sdiff_lt_card_of_subsetFixed (the mirror measure, concluding Lt (card (sdiff s t)) (card s) from Lt zero (card t)); and Nat.Finset.memB_of_subsetFixed_of_bound_le, the bridge that turns the decision plus the bound side condition into a pointwise inclusion."
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "proof_route": "kernel-lean",
+  "axiom_footprint": [],
+  "depends_on": [
+    "F:nat-finset-sum-union-disjoint",
+    "F:nat-finset-all-below-congr",
+    "F:hall-critical-subset-split",
+    "F:nat-add-lt-add-left"
+  ],
+  "provenance": {
+    "date": "2026-09-05",
+    "established_by": "axeyum lane `hall-assembly`, roadmap item W2-12: `nat_prelude/hall_descent.rs`, a new module beside `hall_theorem.rs`. ADR-1645.",
+    "source": "ADR-1644 named the arithmetic of the two descent steps as the one place a surprise was still possible in Hall's assembly, and said neither should be assumed free. Measured: both are one identity plus one positivity fact.",
+    "prior_art": [
+      {
+        "citation": "Mathlib, `Finset.card_sdiff_add_card_eq_card`",
+        "establishes": "the same split over `Finset` with decidable equality and set extensionality available, so the rebuilt union IS the original set and the count identity is a rewrite; here `Nat.Finset` carries a stored bound that `union t (sdiff s t)` does not share with `s`, so the identity has to run through `card_congr_of_memB`"
+      },
+      {
+        "citation": "P. Hall, 'On Representatives of Subsets', J. London Math. Soc. 10 (1935) 26-30",
+        "establishes": "the induction these measures serve; the descent is taken as evident there, as it is in every textbook treatment"
+      }
+    ]
+  },
+  "evidence": [
+    {
+      "id": "kernel-Nat.Finset.card_lt_card_of_subsetFixed",
+      "kind": "kernel-term",
+      "supports": "a nonempty proper subset has a strictly smaller count",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::add_declaration (re-derives the type from the proof term)",
+        "nat_prelude::hall_descent_tests::the_descent_shelf_is_admitted_and_axiom_free (Environment::contains and the declaration KIND before axiom_footprint)",
+        "nat_prelude_tests::every_nat_declaration_is_checked_and_axiom_free"
+      ],
+      "checker_command": "cargo test --release -p axeyum-lean-kernel --lib -- nat_prelude::hall_descent_tests:: --test-threads=4",
+      "notes": "The proof is Nat.add_lt_add_left (card t) zero (card (sdiff s t)) applied to the positivity hypothesis, whose left side `add (card t) zero` IS `card t` by iota because Nat.add recurses on its RIGHT argument -- no add_zero rewrite appears in the term -- followed by one transport along Nat.Finset.card_add_card_sdiff. The mirror lemma costs one Nat.add_comm more, because add_lt_add_left grows the right summand and there the surviving one is on the left.",
+      "checker_paired_negative": "The declared conclusion weakened from `Lt (card t) (card s)` to `Le (card t) (card s)` was RUN as mutant 1 of SUITES[\"hall-marriage-in-kernel\"] in scripts/tests/mutation_controls.py: killed 44 of a 44-test baseline. It is caught twice over -- the trusted gate rejects the declaration, because `Nat.lt a b` unfolds to `Nat.le (succ a) b` and not to `Nat.le a b`, and the applied-type test below separates the two independently of the prelude build."
+    },
+    {
+      "id": "applied-type-is-strict-not-weak",
+      "kind": "exhaustive-enumeration",
+      "supports": "the measure is a STRICT inequality, checked on types the kernel compares rather than on a rendered statement",
+      "check_status": "checked",
+      "checkers": [
+        "nat_prelude::hall_descent_tests::the_subset_measure_conclusion_is_strict",
+        "nat_prelude::hall_descent_tests::the_complement_measure_conclusion_is_strict"
+      ],
+      "checker_command": "cargo test --release -p axeyum-lean-kernel --lib -- nat_prelude::hall_descent_tests::the_subset_measure_conclusion_is_strict nat_prelude::hall_descent_tests::the_complement_measure_conclusion_is_strict --test-threads=4",
+      "notes": "Each test APPLIES its lemma at a closed instance (s = range 3, t = singleton 1, every hypothesis discharged by reduction), infers the resulting type with the kernel's own `infer`, and requires it to be def-eq to `Lt 1 3` (respectively `Lt 2 3`). A rendered-string check could not do this: `Nat.lt a b` unfolds to `Nat.le (succ a) b`, so both relations print as themselves and neither name distinguishes them. A descent measure is the one place in an induction where a weakened relation type-checks everywhere it is BUILT and fails only where it is USED, which is why the guard is placed on the lemma rather than left to the consumer.",
+      "checker_paired_negative": "Both tests also assert the strict and weak types are NOT def-eq to each other, so a kernel in which `Lt` and `Le` had collapsed would fail the control rather than pass the assertion vacuously; and each asserts the count that makes its positivity premise unavailable at the degenerate instance (card (s \\ s) = 0, card (s \\ empty) = card s), so the premise is shown to be load-bearing rather than decoration."
+    },
+    {
+      "id": "the-bound-hypothesis-is-what-makes-the-bridge-true",
+      "kind": "instance-pin",
+      "supports": "`Le (bound t) (bound s)` on the inclusion bridge is a genuine side condition, not bookkeeping",
+      "check_status": "checked",
+      "checkers": [
+        "nat_prelude::hall_descent_tests::the_bound_hypothesis_is_what_makes_the_bridge_true"
+      ],
+      "checker_command": "cargo test --release -p axeyum-lean-kernel --lib -- nat_prelude::hall_descent_tests::the_bound_hypothesis_is_what_makes_the_bridge_true --test-threads=4",
+      "notes": "subsetFixed empty (singleton 0) reduces to `true` -- bound empty is 0, so the loop answers no index at all -- while 0 IS a member of singleton 0 and is NOT a member of empty. So Nat.Finset.memB_of_subsetFixed_of_bound_le would be FALSE without its bound hypothesis, and this instance is exactly the one that violates it: ble (bound (singleton 0)) (bound empty) is false. The test asserts all four of those reductions, so a lane that reads the hypothesis as bookkeeping gets a failing test rather than a kernel rejection it has to interpret."
+    }
+  ],
+  "notes": "epistemic_status and external_status agree: the split of a finite set at a subset is not new mathematics. What is recorded is that the axeyum kernel now has the EQUATION rather than only the inequality, and that the two are not interchangeable for an induction.\n\nThe near miss worth recording: `Nat.Finset.card_le_card_sdiff_add` already existed and reads like the same statement. It is `card s <= card (sdiff s t) + card t`, holds for arbitrary s and t, and bounds card s from ABOVE -- so it cannot produce a strict decrease. A name search for a counting lemma about complements finds it and stops. The lemma that was actually needed is a composition of `memB_union_sdiff_self` with `card_congr_of_memB` and `card_union_of_disjoint`, none of whose names mentions counting a complement, which is the same retrieval failure ADR-1644 recorded for `sum_union_disjoint`."
+}

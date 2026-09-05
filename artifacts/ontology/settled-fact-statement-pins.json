@@ -4,7 +4,7 @@
   "note": "Statement identity for every settled fact (S1 of the trusted-library safety roadmap, ADR-0763). Per fact: SHA-256 of formal.statement (the canonical kernel rendering for native lean4 rows), SHA-256 of the top-level reader-facing statement, and the kernel_theorem it names. A settled fact's statement is what the ledger CLAIMS; changing any of the three silently turns 'we proved X' into 'we proved something we then labelled X'. Changes require an amendment row naming both digests and a reason; superseded digests are preserved in each pin's history. `coverage_floor` is a ratchet the gate re-derives rather than trusts: slack is itself a violation, so a loosened floor is self-reverting. Written by `scripts/check-settled-fact-statements.py --write`; do not hand-edit.",
   "coverage_floor": {
     "max_unpinned_settled": 0,
-    "min_identity_bound": 2387,
+    "min_identity_bound": 2389,
     "max_header_exempt": 0
   },
   "amendments": [
@@ -8182,6 +8182,20 @@
       "statement_sha256": "f469aa33c069eb78171f51a1fb5647c5b82994f2c5216479817f2dbd8ba3b6f1",
       "prose_sha256": "5774cf82d6b25432ebe82b0734075470b6a89b014d4c6e35148c6a0481f3e6f6",
       "kernel_theorem": "Nat.Hall.hallCondition_sdiff_of_critical"
+    },
+    {
+      "fact_id": "F:hall-descent-measure",
+      "language": "lean4",
+      "statement_sha256": "1cb2380ee64dd28c761f2a47bf187c83f750b1627e5b0b255f564471c4b01fb7",
+      "prose_sha256": "2c770dd10380263874a124ddd8c9e0423c033e95d7fd4ab7086cafb0d1347af9",
+      "kernel_theorem": "Nat.Finset.card_lt_card_of_subsetFixed"
+    },
+    {
+      "fact_id": "F:hall-marriage-theorem",
+      "language": "lean4",
+      "statement_sha256": "a4d78103bfc54cbd6051558900c192dd302234501016234d850edef607939734",
+      "prose_sha256": "471d35bf6ed779a91f5de33805b98cb3c9a848da0282da62597e54a9a4977880",
+      "kernel_theorem": "Nat.Hall.marriage_iff"
     },
     {
       "fact_id": "F:hall-matching-union-disjoint-images",
