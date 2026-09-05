@@ -17,9 +17,16 @@
 # only rises on purpose) -- but a new UNCERTIFIED function is never refused;
 # that label is honest, not a violation. See
 # docs/math-department/13-computer-algebra.md item 10.
-COUNT	34
+COUNT	41
 FN	equal	ZeroTest
 FN	extremum::polynomial_extremum	Option<ExtremumCertificate>
+FN	fps::FormalPowerSeries::from_rational_function	Option<(FormalPowerSeries, TruncationIdentity)>
+FN	fps::FormalPowerSeries::from_recurrence	Option<(FormalPowerSeries, RecurrenceCertificate)>
+FN	fps::FormalPowerSeries::inverse	Option<(FormalPowerSeries, TruncationIdentity)>
+FN	fps::FormalPowerSeries::reversion	Option<(FormalPowerSeries, TruncationIdentity)>
+FN	fps::RecurrenceCertificate::new	RecurrenceCertificate
+FN	fps::guess_linear_recurrence	Option<RecurrenceCertificate>
+FN	fps::rational_generating_function	Option<RationalGeneratingFunction>
 FN	geometry_certify::DegenerateWitness::rational	DegenerateWitness
 FN	geometry_json::from_json	Result<GeometryCertificate, String>
 FN	gf2::certify_irreducible	Result<Option<IrreducibilityCertificate>, Gf2Error>
@@ -79,9 +86,12 @@ VOCAB	MvtCertificate	struct
 VOCAB	PartialFractionCertificate	struct
 VOCAB	PrattCertificate	struct
 VOCAB	PsdNotSosCertificate	struct
+VOCAB	RationalGeneratingFunction	struct
 VOCAB	RationalityCertificate	struct
+VOCAB	RecurrenceCertificate	struct
 VOCAB	ShapedCompositionSearchReport	struct
 VOCAB	SymbolicClosedFormReport	struct
 VOCAB	TaylorCertificate	struct
 VOCAB	TelescopingCertificate	struct
+VOCAB	TruncationIdentity	enum
 VOCAB	ZeroTest	enum
