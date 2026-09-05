@@ -7978,6 +7978,18 @@ const STEP_DISPATCH: &[StepDispatch] = &[
         "power_series::declare_power_series_partial",
         power_series::declare_power_series_partial,
     ),
+    (
+        "power_series::declare_power_series_term_radius_bound",
+        power_series::declare_power_series_term_radius_bound,
+    ),
+    (
+        "power_series::declare_power_series_cauchy_within_radius",
+        power_series::declare_power_series_cauchy_within_radius,
+    ),
+    (
+        "power_series::declare_power_series_converges_within_radius",
+        power_series::declare_power_series_converges_within_radius,
+    ),
 ];
 
 /// Build the real prelude: `ℝ` as a Bishop setoid over the constructed `ℚ`,

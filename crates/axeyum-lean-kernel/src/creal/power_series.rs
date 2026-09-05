@@ -83,8 +83,9 @@
 //! induction), and the instances are proved `Equiv`s obtained by
 //! [`CRealPrelude::sum_range_congr`].
 
+use super::convergence::exists_ty;
 use super::series::neg_zero_equiv;
-use super::{CRealPrelude, DERIVED_HEIGHT, creal_ty, equiv};
+use super::{CRealPrelude, DERIVED_HEIGHT, clt, creal_ty, equiv};
 use crate::Kernel;
 use crate::KernelError;
 use crate::env::{Declaration, ReducibilityHint};
@@ -122,6 +123,35 @@ fn cabs(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId) -> ExprId {
 
 fn cpow(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId, n: ExprId) -> ExprId {
     d.const_app(p.pow, &[x, n])
+}
+
+fn cadd(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId, y: ExprId) -> ExprId {
+    d.const_app(p.add, &[x, y])
+}
+
+fn pos_bound_of(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId, k: ExprId) -> ExprId {
+    d.const_app(p.pos_bound, &[x, k])
+}
+
+/// Chain a run of `Equiv` steps left to right, starting at `start`.
+///
+/// A verbatim reproduction of `series.rs`'s own private `echain`, which is a
+/// bare `fn` there and so not reachable from this module; `ratio_test.rs` sets
+/// the precedent for copying a sibling module's private helper rather than
+/// widening its visibility.
+fn echain(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    start: ExprId,
+    steps: &[(ExprId, ExprId)],
+) -> ExprId {
+    let mut current = start;
+    let mut proof = d.lemma(p.equiv_refl, &[start]);
+    for &(next, step) in steps {
+        proof = d.lemma(p.equiv_trans, &[start, current, next, proof, step]);
+        current = next;
+    }
+    proof
 }
 
 // ---------------------------------------------------------------------------
@@ -332,6 +362,425 @@ pub(super) fn declare_power_series_partial(
     })
 }
 
+// ---------------------------------------------------------------------------
+// `CReal.powerSeriesTermRadiusBound` -- the domination bound inside a radius.
+// ---------------------------------------------------------------------------
+
+/// `CReal.powerSeriesTermRadiusBound : ∀ a M R r x, (∀ k, le (mul (abs (a k))
+/// (pow R k)) M) → le zero r → le (abs x) (mul r R) → ∀ k, le (abs
+/// (powerSeriesTerm a k x)) (mul M (pow r k))`.
+///
+/// The four-step chain in the module documentation, in order:
+/// [`CRealPrelude::abs_mul_le_of_bounds`] at `(a k, pow x k, abs (a k), pow
+/// (mul r R) k)` — whose second premise is [`declare_abs_pow_le`] and whose
+/// first is [`CRealPrelude::le_refl`] — then one `Equiv` chain built from
+/// [`CRealPrelude::pow_mul_distrib`], [`CRealPrelude::mul_comm`] and
+/// [`CRealPrelude::mul_assoc`], transported by [`CRealPrelude::le_congr`],
+/// then the coefficient hypothesis multiplied by the nonnegative `pow r k`
+/// ([`CRealPrelude::pow_nonneg`]).
+///
+/// `le zero R` is deliberately **not** a hypothesis: nothing in this
+/// derivation needs it. The only nonnegativity the proof consumes is `0 ≤ rᵏ`,
+/// which comes from `0 ≤ r` alone.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+#[allow(clippy::too_many_lines)]
+pub(super) fn declare_power_series_term_radius_bound(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let nat = d.nat_ty();
+    let coeff_ty = d.arrow(nat, carrier);
+
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let m_fv = d.fresh_fvar();
+    let m = d.kernel().fvar(m_fv);
+    let r_big_fv = d.fresh_fvar();
+    let r_big = d.kernel().fvar(r_big_fv);
+    let r_fv = d.fresh_fvar();
+    let r = d.kernel().fvar(r_fv);
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+
+    // hcoef : ∀ k, le (mul (abs (a k)) (pow R k)) M
+    let hcoef_ty = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let ak = d.apply(a, &[k]);
+        let aak = cabs(d, p, ak);
+        let pr = cpow(d, p, r_big, k);
+        let lhs = cmul(d, p, aak, pr);
+        let body = cle(d, p, lhs, m);
+        d.pi_fv(k_fv, nat, body)
+    };
+    let hcoef_fv = d.fresh_fvar();
+    let hcoef = d.kernel().fvar(hcoef_fv);
+
+    // hr0 : le zero r
+    let hr0_ty = {
+        let zero_c = czero(d, p);
+        cle(d, p, zero_c, r)
+    };
+    let hr0_fv = d.fresh_fvar();
+    let hr0 = d.kernel().fvar(hr0_fv);
+
+    // hx : le (abs x) (mul r R)
+    let rr = cmul(d, p, r, r_big);
+    let hx_ty = {
+        let ax = cabs(d, p, x);
+        cle(d, p, ax, rr)
+    };
+    let hx_fv = d.fresh_fvar();
+    let hx = d.kernel().fvar(hx_fv);
+
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+
+    let ak = d.apply(a, &[k]);
+    let aak = cabs(d, p, ak); // A = |a k|
+    let pow_r_k = cpow(d, p, r, k); // P = rᵏ
+    let pow_bigr_k = cpow(d, p, r_big, k); // Q = Rᵏ
+    let pow_rr_k = cpow(d, p, rr, k); // (r·R)ᵏ
+    let pow_x_k = cpow(d, p, x, k);
+
+    // step 1: |a k · xᵏ| ≤ |a k| · (r·R)ᵏ
+    let refl_aak = d.lemma(p.le_refl, &[aak]);
+    let habs_pow = d.lemma(p.power_series.abs_pow_le, &[x, rr, hx, k]);
+    let step1 = d.lemma(
+        p.abs_mul_le_of_bounds,
+        &[ak, pow_x_k, aak, pow_rr_k, refl_aak, habs_pow],
+    );
+    let lhs1 = cmul(d, p, aak, pow_rr_k);
+
+    // step 2: |a k| · (r·R)ᵏ ~ (|a k| · Rᵏ) · rᵏ
+    let mid_pq = cmul(d, p, pow_r_k, pow_bigr_k); // P·Q
+    let mid_qp = cmul(d, p, pow_bigr_k, pow_r_k); // Q·P
+    let a_pq = cmul(d, p, aak, mid_pq);
+    let a_qp = cmul(d, p, aak, mid_qp);
+    let coef_prod = cmul(d, p, aak, pow_bigr_k); // A·Q = |a k|·Rᵏ
+    let target_prod = cmul(d, p, coef_prod, pow_r_k); // (A·Q)·P
+
+    let distrib = d.lemma(p.pow_mul_distrib, &[r, r_big, k]); // Equiv (P·Q) ((r·R)ᵏ)
+    let distrib_symm = d.lemma(p.equiv_symm, &[mid_pq, pow_rr_k, distrib]);
+    let refl_a1 = d.lemma(p.equiv_refl, &[aak]);
+    let e1 = d.lemma(
+        p.mul_congr,
+        &[aak, aak, pow_rr_k, mid_pq, refl_a1, distrib_symm],
+    );
+    let comm_pq = d.lemma(p.mul_comm, &[pow_r_k, pow_bigr_k]); // Equiv (P·Q) (Q·P)
+    let refl_a2 = d.lemma(p.equiv_refl, &[aak]);
+    let e2 = d.lemma(p.mul_congr, &[aak, aak, mid_pq, mid_qp, refl_a2, comm_pq]);
+    let assoc = d.lemma(p.mul_assoc, &[aak, pow_bigr_k, pow_r_k]); // Equiv ((A·Q)·P) (A·(Q·P))
+    let e3 = d.lemma(p.equiv_symm, &[target_prod, a_qp, assoc]);
+    let echain_proof = echain(d, p, lhs1, &[(a_pq, e1), (a_qp, e2), (target_prod, e3)]);
+
+    // transport step1's right-hand side across that Equiv
+    let term = d.const_app(p.power_series_term, &[a, k, x]);
+    let abs_term = cabs(d, p, term);
+    let refl_abs_term = d.lemma(p.equiv_refl, &[abs_term]);
+    let step2 = d.lemma(
+        p.le_congr,
+        &[
+            abs_term,
+            abs_term,
+            lhs1,
+            target_prod,
+            refl_abs_term,
+            echain_proof,
+            step1,
+        ],
+    );
+
+    // step 3: (|a k| · Rᵏ) · rᵏ ≤ M · rᵏ
+    let hpk = d.lemma(p.pow_nonneg, &[r, hr0, k]); // le zero (pow r k)
+    let hck = d.apply(hcoef, &[k]); // le (A·Q) M
+    let left_form = d.lemma(
+        p.mul_le_mul_of_nonneg_left,
+        &[pow_r_k, coef_prod, m, hpk, hck],
+    ); // le (P·(A·Q)) (P·M)
+    let p_coef = cmul(d, p, pow_r_k, coef_prod);
+    let p_m = cmul(d, p, pow_r_k, m);
+    let m_p = cmul(d, p, m, pow_r_k);
+    let comm_l = d.lemma(p.mul_comm, &[pow_r_k, coef_prod]); // Equiv (P·(A·Q)) ((A·Q)·P)
+    let comm_r = d.lemma(p.mul_comm, &[pow_r_k, m]); // Equiv (P·M) (M·P)
+    let step3 = d.lemma(
+        p.le_congr,
+        &[p_coef, target_prod, p_m, m_p, comm_l, comm_r, left_form],
+    );
+
+    let proof_inner = d.lemma(p.le_trans, &[abs_term, target_prod, m_p, step2, step3]);
+    let stmt_inner = cle(d, p, abs_term, m_p);
+
+    let ty = {
+        let inner = d.pi_fv(k_fv, nat, stmt_inner);
+        let with_hx = d.arrow(hx_ty, inner);
+        let with_hr0 = d.arrow(hr0_ty, with_hx);
+        let with_hcoef = d.arrow(hcoef_ty, with_hr0);
+        let with_x = d.pi_fv(x_fv, carrier, with_hcoef);
+        let with_r = d.pi_fv(r_fv, carrier, with_x);
+        let with_bigr = d.pi_fv(r_big_fv, carrier, with_r);
+        let with_m = d.pi_fv(m_fv, carrier, with_bigr);
+        d.pi_fv(a_fv, coeff_ty, with_m)
+    };
+    let value = {
+        let inner = d.lam_fv(k_fv, nat, proof_inner);
+        let with_hx = d.lam_fv(hx_fv, hx_ty, inner);
+        let with_hr0 = d.lam_fv(hr0_fv, hr0_ty, with_hx);
+        let with_hcoef = d.lam_fv(hcoef_fv, hcoef_ty, with_hr0);
+        let with_x = d.lam_fv(x_fv, carrier, with_hcoef);
+        let with_r = d.lam_fv(r_fv, carrier, with_x);
+        let with_bigr = d.lam_fv(r_big_fv, carrier, with_r);
+        let with_m = d.lam_fv(m_fv, carrier, with_bigr);
+        d.lam_fv(a_fv, coeff_ty, with_m)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.power_series.power_series_term_radius_bound,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+// ---------------------------------------------------------------------------
+// `CReal.powerSeriesCauchyWithinRadius` / `...ConvergesWithinRadius`.
+// ---------------------------------------------------------------------------
+
+/// The shared statement prefix of the two radius theorems: everything from
+/// `∀ a M R r x` down to the `PosBound` witness, with `body` as the
+/// conclusion. Kept in one place so the two declarations cannot drift into
+/// different hypothesis orders.
+struct RadiusFrame {
+    a_fv: u64,
+    m_fv: u64,
+    r_big_fv: u64,
+    r_fv: u64,
+    x_fv: u64,
+    hcoef_fv: u64,
+    hcoef_ty: ExprId,
+    hr0_fv: u64,
+    hr0_ty: ExprId,
+    hlt_fv: u64,
+    hlt_ty: ExprId,
+    hx_fv: u64,
+    hx_ty: ExprId,
+    kk_fv: u64,
+    hpb_fv: u64,
+    hpb_ty: ExprId,
+}
+
+impl RadiusFrame {
+    fn close_ty(&self, d: &mut IntDev<'_>, p: CRealPrelude, body: ExprId) -> ExprId {
+        let carrier = creal_ty(d, p);
+        let nat = d.nat_ty();
+        let coeff_ty = d.arrow(nat, carrier);
+        let with_hpb = d.pi_fv(self.hpb_fv, self.hpb_ty, body);
+        let with_kk = d.pi_fv(self.kk_fv, nat, with_hpb);
+        let with_hx = d.arrow(self.hx_ty, with_kk);
+        let with_hlt = d.arrow(self.hlt_ty, with_hx);
+        let with_hr0 = d.arrow(self.hr0_ty, with_hlt);
+        let with_hcoef = d.arrow(self.hcoef_ty, with_hr0);
+        let with_x = d.pi_fv(self.x_fv, carrier, with_hcoef);
+        let with_r = d.pi_fv(self.r_fv, carrier, with_x);
+        let with_bigr = d.pi_fv(self.r_big_fv, carrier, with_r);
+        let with_m = d.pi_fv(self.m_fv, carrier, with_bigr);
+        d.pi_fv(self.a_fv, coeff_ty, with_m)
+    }
+
+    fn close_value(&self, d: &mut IntDev<'_>, p: CRealPrelude, body: ExprId) -> ExprId {
+        let carrier = creal_ty(d, p);
+        let nat = d.nat_ty();
+        let coeff_ty = d.arrow(nat, carrier);
+        let with_hpb = d.lam_fv(self.hpb_fv, self.hpb_ty, body);
+        let with_kk = d.lam_fv(self.kk_fv, nat, with_hpb);
+        let with_hx = d.lam_fv(self.hx_fv, self.hx_ty, with_kk);
+        let with_hlt = d.lam_fv(self.hlt_fv, self.hlt_ty, with_hx);
+        let with_hr0 = d.lam_fv(self.hr0_fv, self.hr0_ty, with_hlt);
+        let with_hcoef = d.lam_fv(self.hcoef_fv, self.hcoef_ty, with_hr0);
+        let with_x = d.lam_fv(self.x_fv, carrier, with_hcoef);
+        let with_r = d.lam_fv(self.r_fv, carrier, with_x);
+        let with_bigr = d.lam_fv(self.r_big_fv, carrier, with_r);
+        let with_m = d.lam_fv(self.m_fv, carrier, with_bigr);
+        d.lam_fv(self.a_fv, coeff_ty, with_m)
+    }
+}
+
+/// Build the shared frame, and with it the `Cauchy (powerSeriesPartial a x)`
+/// proof term that both radius theorems are built from.
+///
+/// Returns `(frame, partial, cauchy_proof)` where `partial` is
+/// `powerSeriesPartial a x` as a term.
+fn radius_cauchy(d: &mut IntDev<'_>, p: CRealPrelude) -> (RadiusFrame, ExprId, ExprId) {
+    let nat = d.nat_ty();
+
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let m_fv = d.fresh_fvar();
+    let m = d.kernel().fvar(m_fv);
+    let r_big_fv = d.fresh_fvar();
+    let r_big = d.kernel().fvar(r_big_fv);
+    let r_fv = d.fresh_fvar();
+    let r = d.kernel().fvar(r_fv);
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+
+    let hcoef_ty = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let ak = d.apply(a, &[k]);
+        let aak = cabs(d, p, ak);
+        let pr = cpow(d, p, r_big, k);
+        let lhs = cmul(d, p, aak, pr);
+        let body = cle(d, p, lhs, m);
+        d.pi_fv(k_fv, nat, body)
+    };
+    let hcoef_fv = d.fresh_fvar();
+    let hcoef = d.kernel().fvar(hcoef_fv);
+
+    let hr0_ty = {
+        let zero_c = czero(d, p);
+        cle(d, p, zero_c, r)
+    };
+    let hr0_fv = d.fresh_fvar();
+    let hr0 = d.kernel().fvar(hr0_fv);
+
+    let one_c = cone(d, p);
+    let hlt_ty = clt(d, p, r, one_c);
+    let hlt_fv = d.fresh_fvar();
+    let hlt = d.kernel().fvar(hlt_fv);
+
+    let rr = cmul(d, p, r, r_big);
+    let hx_ty = {
+        let ax = cabs(d, p, x);
+        cle(d, p, ax, rr)
+    };
+    let hx_fv = d.fresh_fvar();
+    let hx = d.kernel().fvar(hx_fv);
+
+    let neg_r = cneg(d, p, r);
+    let one_minus_r = cadd(d, p, one_c, neg_r);
+    let kk_fv = d.fresh_fvar();
+    let kk = d.kernel().fvar(kk_fv);
+    let hpb_ty = pos_bound_of(d, p, one_minus_r, kk);
+    let hpb_fv = d.fresh_fvar();
+    let hpb = d.kernel().fvar(hpb_fv);
+
+    // f := λ k, powerSeriesTerm a k x ; g := λ n, mul M (pow r n)
+    let f = term_fn(d, p, a, x);
+    let g = {
+        let n_fv = d.fresh_fvar();
+        let n = d.kernel().fvar(n_fv);
+        let pr = cpow(d, p, r, n);
+        let body = cmul(d, p, m, pr);
+        d.lam_fv(n_fv, nat, body)
+    };
+
+    // hdom : ∀ k, le (abs (f k)) (g k)
+    let hdom = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let body = d.lemma(
+            p.power_series.power_series_term_radius_bound,
+            &[a, m, r_big, r, x, hcoef, hr0, hx, k],
+        );
+        d.lam_fv(k_fv, nat, body)
+    };
+
+    // hg : Cauchy (sumRange g)
+    let hg = d.lemma(
+        p.ratio_test.geom_scaled_cauchy_of_lt,
+        &[r, hr0, hlt, kk, hpb, m],
+    );
+
+    let cauchy_proof = d.lemma(p.sum_range_cauchy_of_dominated, &[f, g, hdom, hg]);
+    let partial = d.const_app(p.power_series.power_series_partial, &[a, x]);
+
+    (
+        RadiusFrame {
+            a_fv,
+            m_fv,
+            r_big_fv,
+            r_fv,
+            x_fv,
+            hcoef_fv,
+            hcoef_ty,
+            hr0_fv,
+            hr0_ty,
+            hlt_fv,
+            hlt_ty,
+            hx_fv,
+            hx_ty,
+            kk_fv,
+            hpb_fv,
+            hpb_ty,
+        },
+        partial,
+        cauchy_proof,
+    )
+}
+
+/// `CReal.powerSeriesCauchyWithinRadius`. See the module documentation: the
+/// domination bound [`declare_power_series_term_radius_bound`] against
+/// [`super::RatioTestNames::geom_scaled_cauchy_of_lt`] at `(w, x) := (M, r)`,
+/// combined by [`CRealPrelude::sum_range_cauchy_of_dominated`].
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+pub(super) fn declare_power_series_cauchy_within_radius(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let (frame, partial, cauchy_proof) = radius_cauchy(d, p);
+    let body = d.const_app(p.cauchy, &[partial]);
+    let ty = frame.close_ty(d, p, body);
+    let value = frame.close_value(d, p, cauchy_proof);
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.power_series.power_series_cauchy_within_radius,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `CReal.powerSeriesConvergesWithinRadius` — the same hypotheses, with
+/// [`CRealPrelude::converges_of_cauchy`] applied to
+/// [`declare_power_series_cauchy_within_radius`]'s conclusion.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection.
+pub(super) fn declare_power_series_converges_within_radius(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let (frame, partial, cauchy_proof) = radius_cauchy(d, p);
+    let conv = d.lemma(p.converges_of_cauchy, &[partial, cauchy_proof]);
+
+    let predicate = {
+        let l_fv = d.fresh_fvar();
+        let l = d.kernel().fvar(l_fv);
+        let inner = d.const_app(p.converges, &[partial, l]);
+        d.lam_fv(l_fv, carrier, inner)
+    };
+    let body = exists_ty(d, p, carrier, predicate);
+
+    let ty = frame.close_ty(d, p, body);
+    let value = frame.close_value(d, p, conv);
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.power_series.power_series_converges_within_radius,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
 /// The kernel names `creal/power_series.rs` declares.
 ///
 /// One of ADR-1512's per-module registries behind the [`CRealPrelude`] facade:
@@ -358,6 +807,32 @@ pub struct PowerSeriesNames {
     /// `Σ_{k<n} a k · xᵏ`. A bare `Definition`, asserting nothing. See
     /// `creal/power_series.rs::declare_power_series_partial`.
     pub power_series_partial: NameId,
+    /// `CReal.powerSeriesTermRadiusBound : ∀ a M R r x, (∀ k, le (mul (abs (a
+    /// k)) (pow R k)) M) → le zero r → le (abs x) (mul r R) → ∀ k, le (abs
+    /// (powerSeriesTerm a k x)) (mul M (pow r k))` — the domination bound
+    /// inside the radius: a coefficient sequence weighted by `Rᵏ` and bounded
+    /// by `M` dominates termwise by the geometric `M·rᵏ` at any point `x` with
+    /// `|x| ≤ r·R`. `le zero R` is deliberately not a hypothesis; the proof
+    /// consumes only `0 ≤ rᵏ`. See
+    /// `creal/power_series.rs::declare_power_series_term_radius_bound`.
+    pub power_series_term_radius_bound: NameId,
+    /// `CReal.powerSeriesCauchyWithinRadius : ∀ a M R r x, (∀ k, le (mul (abs
+    /// (a k)) (pow R k)) M) → le zero r → lt r one → le (abs x) (mul r R) → ∀
+    /// k (h : PosBound (add one (neg r)) k), Cauchy (powerSeriesPartial a x)`
+    /// — **the radius of convergence**, stated with an explicit ratio witness
+    /// rather than a supremum (see the module documentation for why a sup is
+    /// the wrong obligation here).
+    /// [`PowerSeriesNames::power_series_term_radius_bound`] against
+    /// [`super::RatioTestNames::geom_scaled_cauchy_of_lt`], combined by
+    /// [`CRealPrelude::sum_range_cauchy_of_dominated`]. See
+    /// `creal/power_series.rs::declare_power_series_cauchy_within_radius`.
+    pub power_series_cauchy_within_radius: NameId,
+    /// `CReal.powerSeriesConvergesWithinRadius` — the same hypotheses as
+    /// [`PowerSeriesNames::power_series_cauchy_within_radius`] with conclusion
+    /// `Exists (fun L => Converges (powerSeriesPartial a x) L)`, via
+    /// [`CRealPrelude::converges_of_cauchy`]. See
+    /// `creal/power_series.rs::declare_power_series_converges_within_radius`.
+    pub power_series_converges_within_radius: NameId,
 }
 
 impl PowerSeriesNames {
@@ -367,6 +842,11 @@ impl PowerSeriesNames {
             abs_pow_le: kernel.name_str(creal, "abs_pow_le"),
             one_pow: kernel.name_str(creal, "one_pow"),
             power_series_partial: kernel.name_str(creal, "powerSeriesPartial"),
+            power_series_term_radius_bound: kernel.name_str(creal, "powerSeriesTermRadiusBound"),
+            power_series_cauchy_within_radius: kernel
+                .name_str(creal, "powerSeriesCauchyWithinRadius"),
+            power_series_converges_within_radius: kernel
+                .name_str(creal, "powerSeriesConvergesWithinRadius"),
         }
     }
 }
