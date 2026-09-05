@@ -645,6 +645,9 @@ fn definition_names(p: &NatPrelude) -> Vec<NameId> {
         p.finset_filter,
         p.finset_range,
         p.finset_singleton,
+        // `hall-singleton` lane (roadmap W2-12): `finset_singleton.rs`
+        // (ADR-1630).
+        p.finset_empty,
         p.finset_all_below,
         p.finset_subset_b,
         p.finset_beq,
@@ -803,6 +806,22 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.finset_mem_b_decode_encode,
         p.finset_exists_subset_of_search,
         p.finset_forall_subset_of_search,
+        // `hall-singleton` lane (roadmap W2-12): the empty/singleton shelf,
+        // `finset_singleton.rs` (ADR-1630).
+        p.finset_mem_b_empty,
+        p.finset_card_empty,
+        p.finset_mem_b_singleton,
+        p.finset_mem_b_singleton_self,
+        p.finset_eq_of_mem_b_singleton,
+        p.finset_card_singleton,
+        p.finset_card_eq_zero_of_no_mem_b,
+        p.finset_exists_mem_b_of_card_pos,
+        p.finset_card_pos_of_mem_b,
+        // `hall-singleton` lane: Hall's sufficiency shelf,
+        // `hall_sufficiency.rs` (ADR-1630).
+        p.hall_is_matching_congr,
+        p.hall_exists_is_matching_of_card_le_zero,
+        p.hall_exists_is_matching_singleton,
         p.strong_induction_eq,
         // `inclusion-exclusion-mobius` lane (roadmap W2-19): `subset_sums.rs`
         // (ADR-1624).

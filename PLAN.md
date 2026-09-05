@@ -140,6 +140,9 @@ now. Nothing was deleted.
 | 2026-09-05 | `b8243a54a` | ADR-1631, six facts, the lane status, and the `bernoulli-binomial-model` mutation suite. `validate-facts.py` derived 18 `depends_on` edges from the proof terms that nobody would have written by hand. |
 | 2026-09-05 | `197f26e1b` | The remaining four ADR-1631 theorems registered, so all ten are in the ledger; registering `zero_add` and `mul_neg` made three EXISTING entries incomplete and the ledger noticed. |
 | 2026-09-05 | `b1c450453`, `f4cb80c35`, `9385cd877` | Generated-artifact and formatting follow-ups: production-provenance ledger, `rustfmt` on the two files the `pub(super)` widening reflowed, private-helper census (`files_scanned` 616 → 620, exactly this lane's four files). |
+| 2026-09-05 | hall-singleton | the empty/singleton shelf and the count-to-member direction: 9 declarations in the new `nat_prelude/finset_singleton.rs` (5cc0ab0ae) |
+| 2026-09-05 | hall-singleton | Hall's base case, empty case and `isMatching_congr`, plus `card_pos_of_memB`: 4 theorems in the new `nat_prelude/hall_sufficiency.rs` (a7d5f071d) |
+| 2026-09-05 | hall-singleton | ADR-1630 and two facts; Hall sufficiency re-sized at one missing lemma, `Nat.Finset.allBelow_congr` |
 | 2026-09-04 | graph-carrier | `Nat.Graph` (ADR-1608): a decidable adjacency relation plus a vertex bound, sibling of `Nat.Finset`, with symmetry and irreflexivity forced inside `adjB`; neighbourhoods as `Nat.Finset`s and degrees through `countRange_le` |
 | 2026-09-04 | graph-carrier | `R(3,3) = 6` in the kernel, both halves axiom-free: a 32-leaf case tree for the upper bound and a reflected five-vertex search certificate for the lower (`F:ramsey-r33-six`) |
 | 2026-09-04 | graph-carrier | Hall's marriage theorem, necessity direction, over `Nat.Finset` through `card_le_of_injOn`; sufficiency NOT proved and its blocker named — computing a critical subfamily needs a bounded subset search with its own reflection lemma |
@@ -49579,6 +49582,59 @@ with a positive control of the same declaration kind before being trusted.
 
 No facts were registered, no declarations were built, nothing under
 `crates/` was touched (measurement/documentation task per brief).
+
+**Your lane's block (`DONE`, hall-singleton, 2026-09-05).** **The empty set and
+the singleton are closed; Hall's sufficiency has a base case and an empty case
+and still did not land in general.** Thirteen declarations (one definition,
+twelve theorems), all axiom-free, `declarations 3,093 → 3,106`.
+`nat_prelude/finset_singleton.rs` is new and carries `Nat.Finset.empty` (which
+did not exist), the singleton's full membership equation plus its intro/elim
+rules, `card_singleton`, `card_empty`, `memB_empty`,
+`card_eq_zero_of_no_memB`, and **both directions between a count and a
+member** — `card_pos_of_memB` and the search-based
+`exists_memB_of_card_pos`, the direction ADR-1623 named as missing.
+`nat_prelude/hall_sufficiency.rs` is new and carries `isMatching_congr`,
+`exists_isMatching_of_card_le_zero` and `exists_isMatching_singleton`, all in
+necessity's vocabulary (`IsMatching`/`HallCondition`/`unionOver`) so the
+eventual `Iff` is a composition; a test asserts that against the rendered types
+read out of the kernel, and asserts the base case is not phrased over
+`Nat.Finset.range`. ADR-1630.
+
+**Where the next lane starts, measured at `declarations=3106` with a
+`shape_search` binary rebuilt at this lane's HEAD.** The obstruction has moved a
+fourth time, and for the first time it is **one named lemma** rather than a new
+primitive. The critical-subset split has to be a bounded search, and
+`Nat.Finset.forallSubset_of_search` demands its predicate be congruent under
+pointwise membership. `card` and `card (unionOver nb ·)` are congruent already
+(`card_congr_of_memB`, `card_unionOver_congr`); the conjunct spelling `t ⊆ s`
+is not, and every spelling is missing its lemma —
+`--const Nat.Finset.subsetB` is **FOUND 1** (`card_le_of_subsetB`, so no
+reflection and no congruence, and it loops over `bound t`, which is exactly what
+the congruence premise forbids), `--const Nat.Finset.inter` is **FOUND 1**
+(`card_union_add_card_inter`, so no `memB_inter`), and
+`--const Nat.Finset.allBelow` is **FOUND 3** (its three original laws, no
+congruence). **Spell inclusion over the FIXED bound `bound s` —
+`allBelow (fun i => notB (memB t i) || memB s i) (bound s)` — which is
+congruent in `t` because the loop bound does not depend on `t`, and is a genuine
+inclusion for the sets the search produces (`existsSubset_of_search` returns
+`t` with `bound t = bound s`). That needs exactly one new lemma,
+`Nat.Finset.allBelow_congr : ∀ f g n, (∀ i, f i = g i) →
+Eq Bool (allBelow f n) (allBelow g n)`, a decision on the loop with
+`allBelow_true_at`/`allBelow_of_all_true` on one side and
+`allBelow_false_witness` on the other.** After that the step is bookkeeping over
+lemmas that all exist (`card_le_card_unionOver_sdiff_add`,
+`card_le_card_sdiff_add`, `memB_sdiff_elim`, `isMatching_union`, and this
+lane's `isMatching_congr`), but it is several hundred lines of kernel term per
+branch and is NOT one lemma.
+
+**What did not run in this lane.** `just check` and `./scripts/check.sh` were
+not run — this lane's verification was the per-module release test filters, the
+crate-wide `cargo check --all-targets`, clippy on `-p axeyum-lean-kernel
+--all-targets -D warnings`, `cargo fmt --all --check`, the fact validators, and
+`scripts/check-merge-hygiene.sh`. The autogenesis kernel-dependency projection
+(`gen-autogenesis-kernel-dependency-projection.py --check`) was NOT run and is
+NOT fixed here; ADR-1623's lane recorded it as failing on main before that lane
+started, for reasons that predate both lanes, and it needs its own.
 
 Status: COMPLETE (2026-09-01). `gen-autogenesis-nursery-refill.py --check` is
 green again, adjudicated in [ADR-1445](docs/research/09-decisions/adr-1445-a-drawn-family-is-history-and-is-not-re-screened.md),

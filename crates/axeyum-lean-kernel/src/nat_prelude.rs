@@ -207,6 +207,7 @@ mod find_greatest;
 mod finite;
 mod finite_set;
 mod finset;
+mod finset_singleton;
 mod floor_count;
 mod gauss_fold_sum;
 mod gauss_lemma;
@@ -219,6 +220,7 @@ mod graph;
 mod group;
 pub(crate) mod half_ceil_parity;
 mod hall;
+mod hall_sufficiency;
 mod helpers;
 pub mod image_group;
 mod inclusion_exclusion;
@@ -431,6 +433,7 @@ use finite::{
 };
 use finite_set::declare_finite_set_all;
 use finset::declare_finset_all;
+use finset_singleton::declare_finset_singleton_all;
 use floor_count::declare_floor_count_all;
 use gauss_fold_sum::declare_gauss_fold_sum_all;
 use gauss_lemma::declare_gauss_lemma_all;
@@ -443,6 +446,7 @@ use graph::declare_graph_all;
 use group::declare_group_all;
 use half_ceil_parity::declare_half_ceil_parity_all;
 use hall::declare_hall_all;
+use hall_sufficiency::declare_hall_sufficiency_all;
 use inclusion_exclusion::declare_inclusion_exclusion_all;
 use injective_decide::declare_injective_on_or_duplicate;
 use irrational::{declare_even_of_even_sq, declare_no_rational_sqrt_two};
@@ -6789,6 +6793,79 @@ pub struct NatPrelude {
     /// representative to the caller's own set; see `subset_search.rs`.
     pub finset_forall_subset_of_search: NameId,
 
+    // --- the empty/singleton shelf (`finset_singleton.rs`, ADR-1630) --------
+    /// `Nat.Finset.empty : Nat.Finset := mk (fun _ => false) zero` — a
+    /// CONSTANT, not a function of a bound: `memB` truncates at the bound in
+    /// its own definition, so every `mk (fun _ => false) b` has the same
+    /// members.
+    pub finset_empty: NameId,
+    /// `Nat.Finset.memB_empty : ∀ i, Eq Bool (memB empty i) Bool.false`.
+    pub finset_mem_b_empty: NameId,
+    /// `Nat.Finset.card_empty : Eq Nat (card empty) zero`.
+    pub finset_card_empty: NameId,
+    /// `Nat.Finset.memB_singleton : ∀ a i,
+    /// Eq Bool (memB (singleton a) i) (beq i a)` — the singleton's full
+    /// membership equation.
+    /// [`finset_singleton`](Self::finset_singleton) had ZERO lemmas before
+    /// ADR-1630.
+    pub finset_mem_b_singleton: NameId,
+    /// `Nat.Finset.memB_singleton_self : ∀ a,
+    /// Eq Bool (memB (singleton a) a) Bool.true`.
+    pub finset_mem_b_singleton_self: NameId,
+    /// `Nat.Finset.eq_of_memB_singleton : ∀ a i,
+    /// Eq Bool (memB (singleton a) i) Bool.true → Eq Nat i a`.
+    pub finset_eq_of_mem_b_singleton: NameId,
+    /// `Nat.Finset.card_singleton : ∀ a, Eq Nat (card (singleton a)) 1`.
+    pub finset_card_singleton: NameId,
+    /// `Nat.Finset.card_eq_zero_of_no_memB : ∀ s,
+    /// (∀ i, Eq Bool (memB s i) Bool.false) → Eq Nat (card s) zero`.
+    pub finset_card_eq_zero_of_no_mem_b: NameId,
+    /// `Nat.Finset.exists_memB_of_card_pos : ∀ s, Lt zero (card s) →
+    /// Exists (fun k => And (Lt k (bound s)) (Eq Bool (memB s k) Bool.true))`
+    /// (ADR-1630) — a POSITIVE cardinality yields a member. The direction
+    /// nothing in this tree could travel: every counting law turns members
+    /// into a count, and
+    /// [`count_range_eq_zero_of_all_false`](Self::count_range_eq_zero_of_all_false)
+    /// is the wrong way round. Constructive — the witness is COMPUTED by the
+    /// bounded search
+    /// [`finset_all_below_false_witness`](Self::finset_all_below_false_witness),
+    /// never chosen.
+    pub finset_exists_mem_b_of_card_pos: NameId,
+    /// `Nat.Finset.card_pos_of_memB : ∀ s i, Eq Bool (memB s i) Bool.true →
+    /// Lt zero (card s)` (ADR-1630) — the converse of
+    /// [`finset_exists_mem_b_of_card_pos`](Self::finset_exists_mem_b_of_card_pos),
+    /// and much cheaper: the witness is handed in, so there is no search.
+    pub finset_card_pos_of_mem_b: NameId,
+
+    // --- Hall's sufficiency (`hall_sufficiency.rs`, ADR-1630) ---------------
+    /// `Nat.Hall.isMatching_congr : ∀ s s' nb f,
+    /// (∀ i, Eq Bool (memB s i) (memB s' i)) → IsMatching s nb f →
+    /// IsMatching s' nb f` — a matching depends only on the index set's
+    /// MEMBERS, never on its stored bound. The index-set twin of
+    /// [`hall_mem_union_over_congr`](Self::hall_mem_union_over_congr), and the
+    /// step that carries a matching built on `union t (sdiff s t)` back to
+    /// `s`.
+    pub hall_is_matching_congr: NameId,
+    /// `Nat.Hall.exists_isMatching_of_card_le_zero : ∀ s nb,
+    /// Le (card s) zero → Exists (fun f => IsMatching s nb f)` — Hall's
+    /// induction at the bottom. The witness is the constant `fun _ => zero`
+    /// and both `IsMatching` conjuncts are vacuous, because
+    /// [`finset_card_pos_of_mem_b`](Self::finset_card_pos_of_mem_b) refutes
+    /// every membership hypothesis.
+    pub hall_exists_is_matching_of_card_le_zero: NameId,
+    /// `Nat.Hall.exists_isMatching_singleton : ∀ a nb,
+    /// HallCondition (singleton a) nb →
+    /// Exists (fun f => IsMatching (singleton a) nb f)` — Hall's base case at
+    /// a one-element index set. `HallCondition` at `t := singleton a` gives
+    /// `1 ≤ card (unionOver nb (singleton a))`, which IS
+    /// `Lt zero (card …)`, so
+    /// [`finset_exists_mem_b_of_card_pos`](Self::finset_exists_mem_b_of_card_pos)
+    /// produces a value and
+    /// [`hall_mem_union_over_elim`](Self::hall_mem_union_over_elim) locates it
+    /// inside `nb a`. The matching is the CONSTANT function at that value;
+    /// injectivity is free because every index in a singleton is `a`.
+    pub hall_exists_is_matching_singleton: NameId,
+
     /// `Nat.strongInduction.{u} : ∀ (motive : Nat → Sort u),
     /// (∀ n, (∀ m, Lt m n → motive m) → motive n) → ∀ n, motive n` —
     /// course-of-values recursion, `Nat.lt_well_founded` + `WellFounded.fix`
@@ -8338,6 +8415,22 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             finset_mem_b_decode_encode: kernel.name_str(finset, "memB_decode_encode"),
             finset_exists_subset_of_search: kernel.name_str(finset, "existsSubset_of_search"),
             finset_forall_subset_of_search: kernel.name_str(finset, "forallSubset_of_search"),
+            // The empty/singleton shelf (`finset_singleton.rs`, ADR-1630).
+            finset_empty: kernel.name_str(finset, "empty"),
+            finset_mem_b_empty: kernel.name_str(finset, "memB_empty"),
+            finset_card_empty: kernel.name_str(finset, "card_empty"),
+            finset_mem_b_singleton: kernel.name_str(finset, "memB_singleton"),
+            finset_mem_b_singleton_self: kernel.name_str(finset, "memB_singleton_self"),
+            finset_eq_of_mem_b_singleton: kernel.name_str(finset, "eq_of_memB_singleton"),
+            finset_card_singleton: kernel.name_str(finset, "card_singleton"),
+            finset_card_eq_zero_of_no_mem_b: kernel.name_str(finset, "card_eq_zero_of_no_memB"),
+            finset_exists_mem_b_of_card_pos: kernel.name_str(finset, "exists_memB_of_card_pos"),
+            finset_card_pos_of_mem_b: kernel.name_str(finset, "card_pos_of_memB"),
+            // Hall's sufficiency (`hall_sufficiency.rs`, ADR-1630).
+            hall_is_matching_congr: kernel.name_str(hall, "isMatching_congr"),
+            hall_exists_is_matching_of_card_le_zero: kernel
+                .name_str(hall, "exists_isMatching_of_card_le_zero"),
+            hall_exists_is_matching_singleton: kernel.name_str(hall, "exists_isMatching_singleton"),
             subsets_empty: kernel.name_str(subsets, "empty"),
             subsets_insert_at: kernel.name_str(subsets, "insertAt"),
             subsets_sum_subsets: kernel.name_str(subsets, "sumSubsets"),
@@ -9828,9 +9921,21 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // `R(3,3) = 6` (`ramsey.rs`, ADR-1608). Needs `Nat.Graph` and
         // `Nat.Finset.allBelow`.
         declare_ramsey_all(&mut d, &p)?;
+        // The empty/singleton shelf (`finset_singleton.rs`, ADR-1630). Needs
+        // `Nat.Finset` and its three `allBelow` laws, `Nat.Graph.notB` (so it
+        // goes after `declare_graph_all`), and the counting/order bridges
+        // `Nat.countRange_eq_zero_of_all_false`/`countRange_succ_of_true`,
+        // `Nat.lt_or_ge`/`lt_irrefl`/`zero_le` and
+        // `Nat.beq_refl`/`beq_eq_false_of_ne`/`eq_of_beq_eq_true`. Goes BEFORE
+        // `declare_hall_all`: Hall's base case is a singleton index set.
+        declare_finset_singleton_all(&mut d, &p)?;
         // Hall's marriage theorem, necessity direction (`hall.rs`, ADR-1608).
         // Needs `Nat.Finset.card_le_of_injOn` and `Nat.Graph.andB`.
         declare_hall_all(&mut d, &p)?;
+        // Hall's sufficiency shelf (`hall_sufficiency.rs`, ADR-1630). Needs
+        // `declare_hall_all` immediately above and the empty/singleton shelf
+        // `finset_singleton.rs`.
+        declare_hall_sufficiency_all(&mut d, &p)?;
         // `Nat.strongInduction` (`strong_induction.rs`, ADR-1614). Needs only
         // `Nat.lt_well_founded` and the generic `WellFounded.fix`/`fix_eq`.
         declare_strong_induction_all(&mut d, &p)?;
@@ -9997,6 +10102,9 @@ mod finset_tests;
 mod finset_pigeonhole_tests;
 
 #[cfg(test)]
+mod finset_singleton_tests;
+
+#[cfg(test)]
 mod rado_tests;
 
 #[cfg(test)]
@@ -10007,6 +10115,9 @@ mod ramsey_tests;
 
 #[cfg(test)]
 mod hall_tests;
+
+#[cfg(test)]
+mod hall_sufficiency_tests;
 
 #[cfg(test)]
 mod inclusion_exclusion_tests;
