@@ -47,6 +47,7 @@ Three measurements decided it, all against a freshly rebuilt
 `shape_search --include-constructed` at `declarations=3935` (positive control
 `Metric.CPoint.dotLeSqrtMul`, FOUND 1).
 
+<!-- absent: CReal.sin_sq_add_cos_sq -->
 **1. `CReal.sin_sq_add_cos_sq` does not exist, under any spelling.** Neither
 does an addition theorem for `sin_fn`/`cos_fn`. The trig layer carries the
 series, `cosOneConverges`, `twoLePi`, the half-term bounds, uniform continuity

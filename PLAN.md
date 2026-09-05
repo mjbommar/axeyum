@@ -6488,6 +6488,7 @@ empty.** ADR-1615 records the design.
 
 **The decision: the angle is a cosine, not a number.** `arccos` was priced and
 rejected, and the reason is a retrieval finding, not a preference:
+<!-- absent: CReal.sin_sq_add_cos_sq -->
 **`CReal.sin_sq_add_cos_sq` does not exist under any spelling** (checked
 against a freshly rebuilt `shape_search --include-constructed`,
 `declarations=3935`, positive control `Metric.CPoint.dotLeSqrtMul` FOUND 1).
