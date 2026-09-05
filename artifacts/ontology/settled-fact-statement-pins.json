@@ -4,7 +4,7 @@
   "note": "Statement identity for every settled fact (S1 of the trusted-library safety roadmap, ADR-0763). Per fact: SHA-256 of formal.statement (the canonical kernel rendering for native lean4 rows), SHA-256 of the top-level reader-facing statement, and the kernel_theorem it names. A settled fact's statement is what the ledger CLAIMS; changing any of the three silently turns 'we proved X' into 'we proved something we then labelled X'. Changes require an amendment row naming both digests and a reason; superseded digests are preserved in each pin's history. `coverage_floor` is a ratchet the gate re-derives rather than trusts: slack is itself a violation, so a loosened floor is self-reverting. Written by `scripts/check-settled-fact-statements.py --write`; do not hand-edit.",
   "coverage_floor": {
     "max_unpinned_settled": 0,
-    "min_identity_bound": 2315,
+    "min_identity_bound": 2317,
     "max_header_exempt": 0
   },
   "amendments": [
@@ -9961,6 +9961,20 @@
       "statement_sha256": "c8f8b595329c76d6fbd8ab1e8dc8a7d5d3aea5bdf60576b3dc9b8efe05697a92",
       "prose_sha256": "49530d2a4342d0d3f1a9fa9eaa41b79fb33d0a276953893af1a8389c52b70904",
       "kernel_theorem": "IntSpace.integral_congr"
+    },
+    {
+      "fact_id": "F:intspace-l1-interval-distance-is-the-integral-of-the-absolute-difference",
+      "language": "lean4",
+      "statement_sha256": "7acae686f1735429c4d35d5767aa8a65de377ec929183e63840eb32113a7d679",
+      "prose_sha256": "3373935ebee13764115ff3d1567bfdcd47188ef7d679d3a4aa6ee0db28079c6c",
+      "kernel_theorem": "IntSpace.crealIntervalL1_dist"
+    },
+    {
+      "fact_id": "F:intspace-l1-is-a-metric-space",
+      "language": "lean4",
+      "statement_sha256": "82ac70a0399222190ed2be5cf41d672b16bb1c4930c2ef7e9aacb2aaeb5cee14",
+      "prose_sha256": "01c3b7c086fc833bfa617a9cd0f03630e10b6a7fd99cd54664f7eb25c9e463bb",
+      "kernel_theorem": "IntSpace.l1Dist_triangle"
     },
     {
       "fact_id": "F:intspace-measure-derived-from-integral",
