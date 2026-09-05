@@ -130,6 +130,7 @@ now. Nothing was deleted.
 | 2026-09-04 | poly-commring | `AlgS.Poly.commRing` lands: the four `AlgS.CommRing` fields ADR-1609 left open (`mulOneL`, `mulOneR`, `mulComm`, `mulAssoc`) plus the six walk reindexing lemmas, at the same build position, zero kernel rejections (ADR-1618) |
 | 2026-09-04 | poly-commring | ℚ[X], ℝ[X] and ℂ[X] admitted as `AlgS.CommRing` values with empty axiom footprints (`tests/poly_comm_ring_concrete.rs`) |
 | 2026-09-04 | poly-commring | `poly_setoid_tests` 8 → 17: three evaluation tests at `n ≤ 3` plus five rejection controls, each with a positive twin; all five mutation-verified (exactly the five mutated tests died, the other twelve passed) |
+| 2026-09-04 | categories-setoid | `CatS.*`: 61 axiom-free declarations — setoid-enriched categories, functors, naturality, initial objects; setoid cost zero; the category of groups blocked on `Sigma`, not universes (ADR-1620) |
 | 2026-09-04 | gate-hygiene | resolved 2 EXPIRED absence claims (`Rat.prodRange`, `Nat.factorization`, both landed) and annotated 56 more bare-named absence-claim sites (37 `was-absent:` retired-as-present, 17 `absent:` still-live, 2 carrying both), bringing `check-absence-claims.py`'s bare count from 206 to 150 against a budget of 122 — not yet green, remaining sites are dominated by 3+-segment names and build-order/foreign-stream-scoped claims the marker grammar cannot honestly express |
 | 2026-09-04 | gate-hygiene | corrected 9 stale "no `CReal.sqrt`" / "not expressible here" doc comments in `creal_point.rs` and `creal_point_tests.rs`, false since `CReal.sqrt` (`b10f4ccb1`, 2026-08-26) and `Metric.CPoint.dotLeSqrtMul`/`distTriangle` (`b34e2dbd7`, 2026-09-04) landed; doc comments only, no code or declarations touched |
 | 2026-09-04 | cas-reconstruct | ADR-1622: CAS Pratt + CRT certificates reconstruct into kernel terms; `cas-internal` residue 46 → 45 (76.7% → 73.8%), ratchet floor 14 → 16 |
@@ -6957,6 +6958,50 @@ genuinely new general helpers — `le_shift` (the linear shuffle
 to `|v − u| ≤ q` through the two-sided form, since
 `Equiv (abs (neg x)) (abs x)` is deliberately absent) — are candidates for
 promotion if a third consumer appears.
+
+**Lane block (`landed`, categories-setoid, 2026-09-04).** `CatS.*` lands
+roadmap W3-3 (ADR-1620): **61 declarations**, every one with an empty
+`Kernel::axiom_footprint`, no `funext`, no `Quot.sound`. Three records
+(`CatS.Category` at `Sort 2`, `CatS.CategoryLarge` at `Sort 3`,
+`CatS.Functor`), four category instances, two functor instances, five
+predicates, ten checked theorems.
+
+**The setoid cost is zero, by construction.** `CatS.ofMonoid` — a monoid
+delooped into a category — is filled by twelve of `M`'s own fields under dummy
+object binders (`compCongr` by `M.opCongr`, `idL`/`idR`/`assoc` by
+`M.identL`/`identR`/`assoc`), with no new proof term. The five fields the
+setoid enrichment adds are the five `AlgS` already carries, so they arrive
+pre-discharged. Over `Eq` the instance would not exist for a monoid whose
+equality is a defined relation. No evidence to reopen ADR-1595.
+
+**Two universe findings, both correcting earlier phrasing.** (1) ADR-1609's
+"no record can hold another record" is about **levels per `FieldKind`**, not
+records: `CatS.Functor` holds two `CatS.Category` fields and admits, because
+`CatS.Category : Sort 2` is exactly the level `FieldKind::CarrierSort`
+eliminates at. (2) **Universes are not what blocks the category of groups** —
+`CatS.grpIndiscrete.obj` reduces to `AlgS.Group`, read from the kernel. The
+ADR-1495 guard's rejection at `Sort 1` is
+`ConstructorFieldUniverseTooBig { field_index: 0 }`, with the same field list
+admitting at `Sort 2`.
+
+**Sized negatives.** The hom-family of the category of groups needs `Sigma`: a
+morphism is a function plus two proofs, and there is no `Sigma`/`Subtype`
+(ADR-1595, re-verified). Two escapes were checked and both fail — all
+functions makes `compCongr` false, and the respectful relation is only a
+partial equivalence, so `homRefl` cannot be a field. The honest content landed
+unbundled (`CatS.IsGrpHom`, `isGrpHom_id`, `isGrpHom_comp`). For the same
+reason — not universes — `Nat.Peano.initial` and `Int.Characterization.initial`
+are **not** recovered as `CatS.IsInitial` instances: their objects are triples
+and quadruples. The forgetful projections are still not functors, blocked on
+the same one thing. A **discrete** category did not land: `hom` must be
+`Sort 1`-valued, `Eq` is `Prop`, and there is no cumulativity, so it needs a
+new `Sort 1` identity inductive — cheap, out of scope.
+
+**Next.** W3-4 (products and coproducts) is now scoped rather than blocked: a
+product is an object plus two projections plus a mediating map given as data,
+the shape `CatS.IsInitial` already has and expressible with no `Sigma`. A
+PER-enriched record is the route to the category of groups before `Sigma`, and
+should be measured against the `Sigma` route rather than assumed cheaper.
 
 **Your lane's block (`DONE this pass`, gate-hygiene, 2026-09-04).**
 

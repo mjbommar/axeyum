@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "id": "F:cats-initial-unique",
+  "title": "Two initial objects of a setoid-enriched category are isomorphic",
+  "statement": "For any CatS.Category C, any two objects a and b of C, and any mediating families medA : forall x, C.hom a x and medB : forall x, C.hom b x that make a and b initial (CatS.IsInitial), both round trips are equivalent to the identity: C.homEquiv a a (comp (medB a) (medA b)) (id a) and C.homEquiv b b (comp (medA b) (medB a)) (id b). This is the universal-property uniqueness argument stated once, generically, in place of the per-carrier versions Nat.Peano.initial and Int.Characterization.initial each prove by hand. Two things make it expressible without funext or Quot.sound: the mediating map is GIVEN as data rather than extracted from an Exists (universal-property template, part 2), and the conclusion is stated up to the category's own hom-equivalence rather than as an equation between morphisms.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem CatS.initial_unique : ((x0 : CatS.Category) -> ((x1 : CatS.Category.obj x0) -> ((x2 : ((x2 : CatS.Category.obj x0) -> CatS.Category.hom x0 x1 x2)) -> ((x3 : CatS.Category.obj x0) -> ((x4 : ((x4 : CatS.Category.obj x0) -> CatS.Category.hom x0 x3 x4)) -> ((x5 : CatS.IsInitial x0 x1 x2) -> ((x6 : CatS.IsInitial x0 x3 x4) -> And (CatS.Category.homEquiv x0 x1 x1 (CatS.Category.comp x0 x1 x3 x1 (x4 x1) (x2 x3)) (CatS.Category.id x0 x1)) (CatS.Category.homEquiv x0 x3 x3 (CatS.Category.comp x0 x3 x1 x3 (x2 x3) (x4 x1)) (CatS.Category.id x0 x3)))))))))",
+    "fragment": "none",
+    "free_symbols": [],
+    "kernel_theorem": "CatS.initial_unique"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "external_status": "proved",
+  "depends_on": [],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "cats-initial-unique-1",
+      "kind": "kernel-term",
+      "supports": "CatS.initial_unique and the twenty other CatS.* declarations (the three records CatS.Category, CatS.CategoryLarge and CatS.Functor, the four category instances, two functor instances, five predicates and nine further theorems) admit through the trusted Kernel::add_declaration gate with an empty Kernel::axiom_footprint. Four rejection controls, each with an unmutated positive twin IN THE SAME TEST: a constant morphism map is refused as a functor, the round trip built twice from the same mediating map is refused, a naturality square whose right-hand side is `id b` rather than `f . id a` is refused, and the wrongly ordered composite of two group homomorphisms is refused.",
+      "check_status": "checked",
+      "checker_command": "out=$(RUST_MIN_STACK=1073741824 cargo test -p axeyum-lean-kernel --lib --release category_setoid -- --test-threads=4 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -cE 'test result: ok\\. 14 passed; 0 failed')\" -ge 1",
+      "notes": "The pinned count is 14. the_category_layer_is_axiom_free is what makes the axiom-freedom claim a kernel reading rather than a comment; the_category_types_render_and_pin_their_universes pins CatS.Category at Sort 2 and CatS.CategoryLarge at Sort 3, in both directions."
+    }
+  ],
+  "concept_refs": [],
+  "provenance": {
+    "date": "2026-09-04",
+    "established_by": "axeyum-lean-kernel nat_prelude::category_setoid, lane categories-setoid, ADR-1620 (roadmap W3-3).",
+    "source": "crates/axeyum-lean-kernel/src/nat_prelude/category_setoid.rs (declare_initial_unique, declared as CatS.initial_unique); tests nat_prelude::category_setoid::category_setoid_tests::*."
+  },
+  "notes": "Nat.Peano.initial and Int.Characterization.initial are NOT recovered as instances of CatS.IsInitial, and the reason is not universes: an object of pointed unary algebras is a triple (N, z, s) and an object of Z-structures a quadruple (R, e, up, down), while CatS.Category.obj is a single Sort and this kernel has no Sigma and no Subtype (ADR-1595). CatS.CategoryLarge does take AlgS.Group as its objects, so the object level of the category of groups is expressible; it is the hom-family, which must bundle a function with its congruence and homomorphism proofs, that needs the missing Sigma."
+}
