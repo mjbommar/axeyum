@@ -1,0 +1,92 @@
+{
+  "schema_version": 1,
+  "id": "F:nat-finset-exists-memb-of-card-pos",
+  "title": "A finite set of naturals with a positive cardinality has a member, and the member is computed by a bounded search rather than chosen",
+  "statement": "Let s be a Nat.Finset -- a decidable membership predicate together with a bound past which nothing is a member -- and suppose its cardinality is positive. Then there is an index k, strictly below s's own stored bound, at which membership decides true. Every other counting law in this kernel runs the other way, turning members into a count; this is the direction that turns a count back into a member, and it is what an induction that must pick an element out of a non-empty index set needs. There is no choice principle available here, so the witness is COMPUTED: the proof decides the bounded loop 'no index below the bound is a member' and reads a refuted loop through the existing search primitive. This is a kernel term with an empty axiom footprint.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Nat.Finset.exists_memB_of_card_pos : ((x0 : AxNat.Finset) -> ((x1 : AxNat.lt AxNat.zero (AxNat.Finset.card x0)) -> Exists.{1} AxNat (fun (x2 : AxNat) => And (AxNat.lt x2 (AxNat.Finset.bound x0)) (Eq.{1} Bool (AxNat.Finset.memB x0 x2) Bool.true))))",
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.Finset.exists_memB_of_card_pos",
+    "kernel_statement": "Nat.Finset.card s := Nat.countRange (Nat.Finset.memB s) (Nat.Finset.bound s); Nat.Finset.memB s i := if i < bound s then pred s i else false. The converse is landed with it: Nat.Finset.card_pos_of_memB : forall s i, Eq Bool (memB s i) true -> Lt zero (card s). The search primitive consumed is Nat.Finset.allBelow_false_witness : forall f n, Eq Bool (allBelow f n) false -> Exists (fun i => And (Lt i n) (Eq Bool (f i) false))."
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "proof_route": "kernel-lean",
+  "axiom_footprint": [],
+  "depends_on": [
+    "F:nat-finset-all-below-false-witness",
+    "F:nat-finset-all-below-true-at",
+    "F:nat-finset-lt-bound-of-memb",
+    "F:nat-countrange-eq-zero-of-all-false",
+    "F:nat-lt-irrefl"
+  ],
+  "provenance": {
+    "date": "2026-09-05",
+    "established_by": "axeyum lane `hall-singleton`, roadmap item W2-12: `nat_prelude/finset_singleton.rs`, a new module carrying `Nat.Finset.empty` and the singleton shelf alongside this lemma. ADR-1630.",
+    "source": "The bottom of the standard inductive proof of Hall's marriage theorem, where the induction must produce an index of a non-empty index set before it can delete anything.",
+    "prior_art": [
+      {
+        "citation": "Mathlib, `Finset.card_pos` (`0 < s.card ↔ s.Nonempty`) and `Finset.Nonempty`",
+        "establishes": "the same equivalence over `Finset`, where the underlying carrier is a `Multiset` with a nodup proof and nonemptiness is an existential over the list; the witness there comes out of the list structure, where this carrier has no list at all and must run a bounded decision to find one"
+      }
+    ]
+  },
+  "evidence": [
+    {
+      "id": "kernel-Nat.Finset.exists_memB_of_card_pos",
+      "kind": "kernel-term",
+      "supports": "a positive cardinality yields a member below the set's own bound",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::add_declaration (re-derives the type from the proof term)",
+        "nat_prelude::finset_singleton_tests::the_singleton_shelf_is_admitted_and_axiom_free (Environment::contains before axiom_footprint)",
+        "nat_prelude_tests::every_nat_declaration_is_checked_and_axiom_free"
+      ],
+      "checker_command": "cargo test --release -p axeyum-lean-kernel --lib -- nat_prelude::finset_singleton_tests:: --test-threads=4",
+      "notes": "The proof is a decision on the loop `allBelow (fun k => notB (memB s k)) (bound s)`. A `false` verdict is handed to `allBelow_false_witness`, whose index is re-introduced unchanged after `notB (memB s k) = false` is read back as membership. A `true` verdict says every index below the bound is a non-member, so `Nat.countRange_eq_zero_of_all_false` collapses `card s` to zero and the positivity hypothesis becomes `Lt zero zero`, refuted by `Nat.lt_irrefl`. Nothing anywhere chooses; the recursion inside `allBelow_false_witness` IS the search.",
+      "checker_paired_negative": "Kernel::add_declaration is the paired negative for the whole family: the mutation table in ADR-1630 records that swapping the `beq` arguments in the statement of `Nat.Finset.memB_singleton` -- one lemma this proof's siblings depend on -- is REJECTED with a TypeMismatch and takes all seven tests in the selected set with it, and that swapping the two `And` projections in the base case's proof is likewise rejected."
+    },
+    {
+      "id": "kernel-Nat.Finset.card_pos_of_memB",
+      "kind": "kernel-term",
+      "supports": "a member yields a positive cardinality -- the converse, and the direction that refutes membership when the count is zero",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::add_declaration (re-derives the type from the proof term)",
+        "nat_prelude::finset_singleton_tests::the_singleton_shelf_is_admitted_and_axiom_free",
+        "nat_prelude_tests::every_nat_declaration_is_checked_and_axiom_free"
+      ],
+      "checker_command": "cargo test --release -p axeyum-lean-kernel --lib -- nat_prelude::finset_singleton_tests:: --test-threads=4",
+      "notes": "Much cheaper than the search direction because the witness is handed in: `lt_bound_of_memB` puts the index inside the counting range, `Nat.countRange_succ_of_true` peels it off as a `succ`, and `Nat.countRange_le_of_le` carries the resulting bound up to the set's own. `Lt i (bound s)` IS `Le (succ i) (bound s)` by delta, which is exactly `countRange_le_of_le`'s hypothesis, so there is no bridging step."
+    },
+    {
+      "id": "eval-Nat.Finset.empty",
+      "kind": "instance-pin",
+      "supports": "the new Definition `Nat.Finset.empty` really is the empty set and its bound really is zero",
+      "check_status": "checked",
+      "checkers": [
+        "nat_prelude::finset_singleton_tests::empty_has_no_members_and_bound_zero",
+        "nat_prelude::finset_singleton_tests::card_of_a_singleton_is_one",
+        "nat_prelude::finset_singleton_tests::mem_b_singleton_agrees_with_beq_on_both_sides_of_the_bound"
+      ],
+      "checker_command": "cargo test --release -p axeyum-lean-kernel --lib -- nat_prelude::finset_singleton_tests:: --test-threads=4",
+      "notes": "The trusted gate cannot tell a Definition is wrong: `Nat.Finset.range 7` has the type `Nat.Finset` just as `empty` does. So the term is reduced with the kernel's own def_eq and compared against hand-computed values, and every positive is paired with the wrong definition it rules out -- `mk (fun _ => false) 4` by the bound check, `Nat.Finset.range 0` by an explicit non-def-eq assertion. This test is load-bearing and was measured so: mutating `empty`'s stored predicate from `fun _ => false` to `fun _ => true` is ADMITTED by the kernel with the axiom sweep still green, and kills exactly one test, this one.",
+      "checker_paired_negative": "Each membership assertion names the opposite Bool as a value the term must NOT reduce to, and the bound assertion names `4`, which is the value a bound-only mutation would produce while leaving the members unchanged."
+    },
+    {
+      "id": "shape-absent-before",
+      "kind": "exhaustive-enumeration",
+      "supports": "this direction did not exist in the tree before this lane",
+      "check_status": "checked",
+      "checkers": [
+        "shape_search --const Nat.countRange --concl Exists (ABSENT at 3,093 declarations, before the lane)",
+        "shape_search --const Nat.Finset.singleton (ABSENT before the lane; FOUND 5 after, at 3,106 declarations)",
+        "shape_search --const Nat.Finset.sdiff (FOUND 7, the same-kind positive control)"
+      ],
+      "checker_command": "cargo run --release -q -p axeyum-lean-kernel --example shape_search -- --const Nat.Finset.singleton --min 1",
+      "notes": "The binary was rebuilt at this lane's HEAD before the AFTER measurement; declarations went 3,093 -> 3,106, which is exactly the thirteen declarations the lane adds (one Definition, twelve Theorems), so the index is not stale in either direction. The positive control is of the same kind (a `Nat.Finset` operator that DOES carry lemmas), which is what makes the ABSENT reading a finding rather than a tool that was never pointed at the subject."
+    }
+  ],
+  "notes": "epistemic_status and external_status agree: that a non-empty finite set has an element is not a new mathematical result. What the ledger entry records is a capability, not a discovery -- this carrier could count members but could not name one, and every counting law in the prelude ran in the losing direction. The constructive content is real: with no classical choice the witness has to be computed by a bounded decision, which is the same 'computed, not extracted' pattern `Nat.Finset.exists_collision` needed for the strong pigeonhole.\n\nHall's marriage theorem in the SUFFICIENCY direction is still NOT proved. This lemma and the singleton shelf are its base case's ingredients; the induction step is not landed, and ADR-1630 names the three lemmas that block it."
+}

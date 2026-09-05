@@ -1,0 +1,79 @@
+{
+  "schema_version": 1,
+  "id": "F:hall-base-case-singleton",
+  "title": "Hall's condition on a one-element index set produces a system of distinct representatives, with the representative computed from the count rather than chosen",
+  "statement": "Let nb be a family of finite sets of naturals indexed by the naturals, and suppose Hall's condition holds on the one-element index set {a}: every sub-family covers at least its own size. Then a system of distinct representatives for nb on {a} exists -- explicitly, the function constant at some member of nb a. This is Hall's marriage theorem at the bottom of its induction. The content is not the combinatorics but the extraction: Hall's condition is a COUNTING statement, saying only that the union of the family over {a} has at least one element, and turning that count back into a value needs a bounded search, since this kernel has no choice principle. Injectivity is free, because every index of a singleton is a. This is a kernel term with an empty axiom footprint.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Nat.Hall.exists_isMatching_singleton : ((x0 : AxNat) -> ((x1 : ((x1 : AxNat) -> AxNat.Finset)) -> ((x2 : AxNat.Hall.HallCondition (AxNat.Finset.singleton x0) x1) -> Exists.{1} (((x3 : AxNat) -> AxNat)) (fun (x3 : ((x3 : AxNat) -> AxNat)) => AxNat.Hall.IsMatching (AxNat.Finset.singleton x0) x1 x3))))",
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.Hall.exists_isMatching_singleton",
+    "kernel_statement": "Nat.Hall.HallCondition s nb := forall t, (forall i, memB t i = true -> memB s i = true) -> Le (card t) (card (unionOver nb t)); Nat.Hall.IsMatching s nb f := And (forall i, memB s i = true -> memB (nb i) (f i) = true) (forall i j, memB s i = true -> memB s j = true -> Eq Nat (f i) (f j) -> Eq Nat i j); Nat.Finset.singleton a := mk (fun k => beq k a) (succ a). Landed with it: Nat.Hall.exists_isMatching_of_card_le_zero (the empty index set) and Nat.Hall.isMatching_congr (a matching depends only on the index set's members, not on its stored bound)."
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "proof_route": "kernel-lean",
+  "axiom_footprint": [],
+  "depends_on": [
+    "F:nat-finset-exists-memb-of-card-pos",
+    "F:hall-union-under-family-deletion",
+    "F:nat-finset-lt-bound-of-memb"
+  ],
+  "provenance": {
+    "date": "2026-09-05",
+    "established_by": "axeyum lane `hall-singleton`, roadmap item W2-12: `nat_prelude/hall_sufficiency.rs`, a new module beside the existing `hall.rs` (which proves necessity). ADR-1630.",
+    "source": "The base case of the standard inductive proof of Hall's marriage theorem.",
+    "prior_art": [
+      {
+        "citation": "P. Hall, 'On Representatives of Subsets', J. London Math. Soc. 10 (1935) 26-30",
+        "establishes": "the theorem; the one-set case is the trivial opening of the induction there, because a non-empty finite set is assumed to have an element without further argument"
+      },
+      {
+        "citation": "Mathlib, `Finset.all_card_le_biUnion_card_iff_exists_injective`",
+        "establishes": "the full theorem over `Finset` with classical choice available; the base case is discharged by `Finset.card_pos` plus `Finset.Nonempty.choose`, where this route must compute the representative"
+      }
+    ]
+  },
+  "evidence": [
+    {
+      "id": "kernel-Nat.Hall.exists_isMatching_singleton",
+      "kind": "kernel-term",
+      "supports": "Hall's condition at a singleton index set yields a matching",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::add_declaration (re-derives the type from the proof term)",
+        "nat_prelude::hall_sufficiency_tests::hall_sufficiency_shelf_is_admitted_and_axiom_free (Environment::contains before axiom_footprint)",
+        "nat_prelude_tests::every_nat_declaration_is_checked_and_axiom_free"
+      ],
+      "checker_command": "cargo test --release -p axeyum-lean-kernel --lib -- nat_prelude::hall_sufficiency_tests:: --test-threads=4",
+      "notes": "Hall's condition is instantiated at t := singleton a with the identity inclusion, giving Le (card (singleton a)) (card (unionOver nb (singleton a))). Nat.Finset.card_singleton rewrites the left side to `succ zero`, and `Nat.lt x y` is `Nat.le (succ x) y` by delta, so the count IS a positivity statement with no bridging lemma. Nat.Finset.exists_memB_of_card_pos then produces a value in the union, Nat.Hall.memB_unionOver_elim produces an index of the singleton at which the value is a member, and Nat.Finset.eq_of_memB_singleton identifies that index as a. The matching is the constant function at the value.",
+      "checker_paired_negative": "A branch swap in the proof's `And` split -- taking `memB (singleton a) i = true` from the right projection and `memB (nb i) v = true` from the left -- was RUN and is REJECTED by the trusted gate with a TypeMismatch, taking all seven tests in the selected set with it, because the prelude then fails to build. ADR-1630's mutation table records the run."
+    },
+    {
+      "id": "kernel-Nat.Hall.isMatching_congr",
+      "kind": "kernel-term",
+      "supports": "a matching depends only on the index set's members, never on its stored bound",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::add_declaration (re-derives the type from the proof term)",
+        "nat_prelude::hall_sufficiency_tests::hall_sufficiency_shelf_is_admitted_and_axiom_free",
+        "nat_prelude_tests::every_nat_declaration_is_checked_and_axiom_free"
+      ],
+      "checker_command": "cargo test --release -p axeyum-lean-kernel --lib -- nat_prelude::hall_sufficiency_tests:: --test-threads=4",
+      "notes": "The index-set twin of Nat.Hall.memB_unionOver_congr, and needed for the same reason: `Nat.Finset` carries a stored bound that extensionally equal sets need not share, so `union t (sdiff s t)` is not the same term as `s` even when it has the same members. Both IsMatching conjuncts mention the index set ONLY in hypothesis position, so unlike card_unionOver_congr this needs no counting at all -- it composes the pointwise equation with each incoming membership proof."
+    },
+    {
+      "id": "vocabulary-composes-with-necessity",
+      "kind": "exhaustive-enumeration",
+      "supports": "the base case is stated in necessity's vocabulary, so the two compose rather than merely coexisting",
+      "check_status": "checked",
+      "checkers": [
+        "nat_prelude::hall_sufficiency_tests::the_base_case_speaks_necessitys_vocabulary"
+      ],
+      "checker_command": "cargo test --release -p axeyum-lean-kernel --lib -- nat_prelude::hall_sufficiency_tests::the_base_case_speaks_necessitys_vocabulary --test-threads=4",
+      "notes": "The test reads the rendered types of Nat.Hall.hallCondition_of_isMatching and of this theorem out of the kernel environment and requires both to mention Nat.Hall.IsMatching and Nat.Hall.HallCondition, and requires this one to mention Nat.Finset.singleton. The footprint sweep cannot see a vocabulary drift: a base case phrased over `Nat.Finset.range 1` would be equally axiom-free and equally useless for an induction on an arbitrary Nat.Finset.",
+      "checker_paired_negative": "The test also asserts the base case's rendered type does NOT mention Nat.Finset.range, which is the other one-element spelling and the specific drift it exists to catch."
+    }
+  ],
+  "notes": "epistemic_status and external_status agree: Hall's theorem is from 1935 and its base case is not new. What is recorded is the position of the flywheel -- the sufficiency direction of Hall's marriage theorem is NOT proved in this kernel, and this is its base case plus the empty case, landed in necessity's vocabulary.\n\nThe induction step is not landed. ADR-1630 sizes what blocks it, measured with a shape_search binary rebuilt at this lane's HEAD (3,106 declarations): the textbook proof splits on whether a proper non-empty subset of the index set is critical, that split must be a bounded search over subsets, and `Nat.Finset.forallSubset_of_search` demands the searched predicate be congruent under pointwise membership. Spelling inclusion inside that predicate is what fails -- `Nat.Finset.subsetB` carries exactly ONE lemma in the whole tree (`card_le_of_subsetB`, so no reflection to pointwise membership and no congruence), `Nat.Finset.inter` carries exactly one (`card_union_add_card_inter`, so no `memB_inter`), and `Nat.Finset.allBelow` carries exactly its three original laws and no congruence law."
+}

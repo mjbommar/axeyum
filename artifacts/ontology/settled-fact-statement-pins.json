@@ -4,7 +4,7 @@
   "note": "Statement identity for every settled fact (S1 of the trusted-library safety roadmap, ADR-0763). Per fact: SHA-256 of formal.statement (the canonical kernel rendering for native lean4 rows), SHA-256 of the top-level reader-facing statement, and the kernel_theorem it names. A settled fact's statement is what the ledger CLAIMS; changing any of the three silently turns 'we proved X' into 'we proved something we then labelled X'. Changes require an amendment row naming both digests and a reason; superseded digests are preserved in each pin's history. `coverage_floor` is a ratchet the gate re-derives rather than trusts: slack is itself a violation, so a loosened floor is self-reverting. Written by `scripts/check-settled-fact-statements.py --write`; do not hand-edit.",
   "coverage_floor": {
     "max_unpinned_settled": 0,
-    "min_identity_bound": 2325,
+    "min_identity_bound": 2327,
     "max_header_exempt": 0
   },
   "amendments": [
@@ -7895,6 +7895,13 @@
       "language": "certificate-spec",
       "statement_sha256": "27ce5febb3bd68e08381ff4d5d96afefbeee8b83ab8f18492af1737b8b5eeb06",
       "prose_sha256": "eddc03b867681ea69fd7f1634fe5a8ba650e6eb3e09b1d80b2a2c849d9a95460"
+    },
+    {
+      "fact_id": "F:hall-base-case-singleton",
+      "language": "lean4",
+      "statement_sha256": "7d0b2d0c80c042b7fd88e136a7d234d77bae6c65be1f61e1202334c47f89da76",
+      "prose_sha256": "69297a1d67bae4591f75fc97ca6fa7daa7fb9ff40b20f63120738d87f04dada2",
+      "kernel_theorem": "Nat.Hall.exists_isMatching_singleton"
     },
     {
       "fact_id": "F:hall-matching-union-disjoint-images",
@@ -17696,6 +17703,13 @@
       "statement_sha256": "aaa982fcd9f8e09c510a6dd0ce1ec9b7319a1c14dfadf6e3ff9be359e2aed395",
       "prose_sha256": "1ac374bfd6cb9b5efb31aaccd93378fe0622914a966057b185e52b46aefb816b",
       "kernel_theorem": "Nat.Finset.exists_collision"
+    },
+    {
+      "fact_id": "F:nat-finset-exists-memb-of-card-pos",
+      "language": "lean4",
+      "statement_sha256": "9f10defe1b57902d15f495cd9c4d5e73c94bd0ede9ec9d47f74f23953e731b5a",
+      "prose_sha256": "5ec483d7c6bb32e0c4140f8d2e096d66a59975c89d5cca145dd5534fdd378262",
+      "kernel_theorem": "Nat.Finset.exists_memB_of_card_pos"
     },
     {
       "fact_id": "F:nat-finset-lt-bound-of-memb",
