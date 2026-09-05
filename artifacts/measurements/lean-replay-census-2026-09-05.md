@@ -83,9 +83,11 @@ AXEYUM_REQUIRE_LEAN=1 ./target/release/deps/real_lean_replay_census-* \
   --test-threads=1 --nocapture          # the `creal` row
 ```
 
-`--test-threads=1` is not optional: the constructive carriers each build a
-full `CReal` kernel, and several at once is exactly the concurrency the
-host-wide memory ceiling in `scripts/cargo-serialized.sh` exists to bound.
+`--test-threads=1` is belt-and-braces here: the suite holds a
+`static ONE_CARRIER_AT_A_TIME: Mutex<()>` across each carrier's build and
+census, because `scripts/check-lean-gate.sh` runs registered suites with the
+default thread count and seven of these carriers hold a full `CReal` kernel.
+A rule written only in a module header is enforced only on whoever read it.
 
 ## The result
 

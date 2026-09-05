@@ -39,13 +39,14 @@
 //!   --test real_lean_replay_census_all -- --test-threads=1 --nocapture nat
 //! ```
 //!
-//! Running the whole binary with default threads builds several full `CReal`
-//! kernels concurrently, and concurrent kernel builds are what the host-wide
-//! `scripts/cargo-serialized.sh` memory ceiling exists to bound;
-//! `--test-threads=1` is not optional.
+//! Concurrency is bounded by a lock inside the suite
+//! ([`ONE_CARRIER_AT_A_TIME`]) rather than by that flag, because
+//! `scripts/check-lean-gate.sh` runs this suite with the default thread count
+//! and a rule written only in a comment is enforced only on whoever read it.
 
 use std::collections::BTreeSet;
 use std::path::Path;
+use std::sync::{Mutex, PoisonError};
 
 use axeyum_lean_kernel::{
     Kernel, build_arith_prelude, build_characterization, build_complex_prelude,
@@ -546,6 +547,22 @@ fn the_blocked_class_is_empty_exactly_when_the_not_prop_class_is() {
 // One census per carrier.
 // ---------------------------------------------------------------------------
 
+/// Only one carrier is built and censused at a time, whatever the harness's
+/// thread count is.
+///
+/// The seven constructive carriers each hold a full `CReal` kernel, and this
+/// suite is registered in `scripts/check-lean-gate.sh`, which runs
+/// `cargo test -q -p … --test …` with the DEFAULT thread count. Documenting
+/// `--test-threads=1` in the module header would then be a rule enforced only
+/// on whoever read it; the gate would run a dozen kernel builds at once and
+/// the failure would look like the host's, not this suite's. So the constraint
+/// is a lock rather than a sentence.
+///
+/// It bounds memory, not wall time: the totals are the serial sum either way,
+/// because the Lean replays are separate processes and were never the parallel
+/// part.
+static ONE_CARRIER_AT_A_TIME: Mutex<()> = Mutex::new(());
+
 /// Resolve the carrier, resolve Lean, build, census.
 ///
 /// Lean is resolved BEFORE the build: several of these carriers cost minutes to
@@ -556,6 +573,12 @@ fn census(name: &'static str) -> Option<CarrierCensus> {
         .find(|c| c.name == name)
         .unwrap_or_else(|| panic!("no carrier named `{name}`"));
     let lean = lean_probe::lean_bin_or_skip(TAG, 1)?;
+    // `into_inner` on a poisoned lock: one carrier failing must let the rest
+    // report their OWN verdicts. A poison error here would replace fifteen real
+    // findings with one message about a mutex.
+    let _serialized = ONE_CARRIER_AT_A_TIME
+        .lock()
+        .unwrap_or_else(PoisonError::into_inner);
     let census = on_a_deep_stack(move || {
         let mut kernel = Kernel::new();
         (carrier.build)(&mut kernel);

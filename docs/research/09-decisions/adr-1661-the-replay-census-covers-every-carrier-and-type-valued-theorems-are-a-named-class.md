@@ -132,7 +132,22 @@ builds every carrier into **one** kernel, and it is the only row a headline
 may be read from. The coverage guard names it explicitly as the one carrier
 no single builder produces, rather than skipping it by a wildcard.
 
-### 5. The floors
+### 5. Concurrency is a lock, not a documented flag
+
+`scripts/check-lean-gate.sh` runs each registered suite as
+`cargo test -q -p <pkg> --test <target>` with the **default** thread count.
+Seven of these carriers hold a full `CReal` kernel, so a module-header note
+saying "`--test-threads=1` is not optional" would be a rule enforced only on
+whoever read it, and the resulting failure in the gate would look like the
+host's rather than this suite's. The constraint is therefore a
+`static ONE_CARRIER_AT_A_TIME: Mutex<()>` held across each carrier's build and
+census. A poisoned lock is taken with `PoisonError::into_inner`, so one
+carrier failing lets the other sixteen report their own verdicts instead of
+replacing sixteen findings with one message about a mutex. It bounds memory,
+not wall time: the Lean replays are separate processes and were never the
+parallel part.
+
+### 6. The floors
 
 Each carrier carries a monotone floor set below its measurement with
 headroom. `real_lean_replay_census`'s `creal` floor is **raised 1,900 →
