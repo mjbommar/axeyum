@@ -1,3 +1,6 @@
+> **Historical as of 2026-09-05; the live priority list is
+> [docs/math-department/13-computer-algebra.md](../../math-department/13-computer-algebra.md).**
+
 # Build plan — decidable-first, evidence-gated CAS
 
 Status: plan (2026-07-20)

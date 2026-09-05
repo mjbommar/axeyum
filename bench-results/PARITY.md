@@ -1331,3 +1331,23 @@ these four rows would have been recorded at their PRE-FIX values, stamped with
 today's date, and `scripts/check-parity-freshness.py` would have been green over
 all three.
 
+## QF_BV — 2026-09-05T21:14:21Z
+
+| field | value |
+|---|---|
+| axeyum solved | 188/200 |
+| reference solved | 194/200 |
+| **ratio (axeyum / reference)** | **96.9%** |
+| **disagreements** | **0** |
+| soundness | SOUND |
+| both / axeyum-only / reference-only | 188 / 0 / 6 |
+| reference | `0.9.1` |
+| reference options | `<none — plain invocation, NOT a competition portfolio>` |
+| axeyum options | `<none — shipped default configuration>` |
+| resumed | 131 of 200 files reused from a prior interrupted sweep (mixed load) |
+| protocol | 24s wall, 8GiB, per-file |
+| benchmark list | `bench-results/parity-lists/QF_BV.txt` (sha256 6f873e15b191, 200 files) |
+| solver commit | `9914a1c0e` |
+| load average (start / end) | 0.00 0.21 0.50 / 1.06 0.53 0.58 — 8 cores; a high load DEPRESSES this result |
+| per-file detail | `bench-results/parity-details/QF_BV.tsv` |
+
