@@ -1,0 +1,73 @@
+{
+  "schema_version": 1,
+  "id": "F:nat-strong-induction",
+  "title": "Course-of-values recursion on the naturals, as a named kernel principle with its unfolding equation",
+  "statement": "If a property (or a construction, at any universe) holds at n whenever it holds at every m < n, then it holds at every n -- and the resulting function satisfies the expected unfolding equation, so a proof about it can take its first step. Both are kernel terms over Nat.lt_well_founded and the generic WellFounded.fix, with an empty axiom footprint.",
+  "formal": {
+    "language": "lean4",
+    "statement": "def Nat.strongInduction.{u} (motive : Nat -> Sort u) (step : forall n, (forall m, m < n -> motive m) -> motive n) (n : Nat) : motive n",
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.strongInduction_eq",
+    "kernel_statement": "Nat.strongInduction.{u} : forall (motive : Nat -> Sort u), (forall n, (forall m, Nat.lt m n -> motive m) -> motive n) -> forall n, motive n, defined as WellFounded.fix.{1,u} Nat Nat.lt motive Nat.lt_well_founded. Nat.strongInduction_eq.{u} : forall motive step n, Eq.{u} (motive n) (Nat.strongInduction motive step n) (step n (fun m _ => Nat.strongInduction motive step m))."
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "proof_route": "kernel-lean",
+  "axiom_footprint": [],
+  "depends_on": [
+    "F:wellfounded-fix-eq"
+  ],
+  "provenance": {
+    "date": "2026-09-04",
+    "established_by": "axeyum lane `hall-sufficiency`: `nat_prelude/strong_induction.rs`. ADR-1614, closing ADR-1608's item 1.",
+    "source": "Course-of-values induction; standard, and derivable from the well-foundedness of < which this prelude already proved (Nat.lt_well_founded, order.rs).",
+    "prior_art": [
+      {
+        "citation": "Mathlib, `Nat.strongRecOn`",
+        "establishes": "the same principle; this one is stated with an explicit motive because there is no elaborator here and every application is built positionally"
+      }
+    ]
+  },
+  "evidence": [
+    {
+      "id": "kernel-Nat.strongInduction",
+      "kind": "kernel-term",
+      "supports": "the recursion principle itself, at any universe",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::add_declaration (re-derives the type from the proof term)",
+        "nat_prelude::subset_search_tests::strong_induction_computes_at_a_numeral",
+        "nat_prelude_tests::every_nat_declaration_is_checked_and_axiom_free"
+      ],
+      "checker_command": "cargo test --release -p axeyum-lean-kernel --lib nat_prelude::subset_search_tests -- --test-threads=4",
+      "notes": "The evaluation test is not decorative: a wrapper that did not reduce would type-check identically. `strongInduction (fun _ => Nat) (fun n ih => succ n) 3` must reduce to 4, which forces WellFounded.fix to reduce its accessibility proof at the numeral; 3 is named as the answer a step returning n would give.",
+      "checker_paired_negative": "The evaluation test pins the value away from 3 as well as at 4, so a step that ignored its own argument in the other direction fails."
+    },
+    {
+      "id": "kernel-Nat.strongInduction_eq",
+      "kind": "kernel-term",
+      "supports": "the unfolding equation, without which a proof about a strongly-recursive definition cannot take its first step",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::add_declaration (re-derives the type from the proof term)",
+        "nat_prelude::subset_search_tests::strong_induction_eq_is_admitted_and_a_shifted_unfolding_is_not",
+        "nat_prelude_tests::every_nat_declaration_is_checked_and_axiom_free"
+      ],
+      "checker_command": "cargo test --release -p axeyum-lean-kernel --lib nat_prelude::subset_search_tests -- --test-threads=4",
+      "notes": "`strongInduction motive step n` does not reduce at a symbolic n -- `lt_well_founded n` is stuck -- so the equation is a genuine theorem here and not an iota rule.",
+      "checker_paired_negative": "The same proof term offered at an equation that unfolds at `succ n` while its recursive argument still ranges below `n` must be REJECTED. That is a one-`succ` slide and the smallest one that separates the equation from a different statement."
+    },
+    {
+      "id": "shape-Nat.strongInduction",
+      "kind": "exhaustive-enumeration",
+      "supports": "the declaration exists under this exact name, and did not before",
+      "check_status": "checked",
+      "checkers": [
+        "shape_search --name Nat.strongInduction --kind definition --expect 1"
+      ],
+      "checker_command": "cargo run --release -q -p axeyum-lean-kernel --example shape_search -- --name Nat.strongInduction --kind definition --expect 1",
+      "notes": "The pre-state: at declarations=2832 with positive control Nat.Rado.IsRadoNumber FOUND, `--name-like strong` returned ABSENT, confirming ADR-1608's measurement. `Nat.base_induction` is a different statement. Nine modules in this prelude (base_induction, bezout, count_range_reversal, factorization, gcd, gcd_mul_right, irrational, totient_dvd_chain, totient_gcd_mul) already spelled the five-argument WellFounded.fix application by hand; none was rewritten by this lane."
+    }
+  ],
+  "notes": "epistemic_status and external_status agree: this is a standard principle and the machinery it is built from (Nat.lt_well_founded plus WellFounded.fix) was already here. What was missing was the NAME, and ADR-1608 measured that absence while sizing Hall's marriage theorem. The motive is explicit rather than implicit, and the universe is Sort u rather than Prop, so the same wrapper covers course-of-values definitions and not only proofs."
+}

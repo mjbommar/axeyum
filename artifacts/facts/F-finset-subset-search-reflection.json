@@ -1,0 +1,91 @@
+{
+  "schema_version": 1,
+  "id": "F:finset-subset-search-reflection",
+  "title": "The subsets of an initial segment are exhaustively enumerable by a natural-number code, and a bounded search over that enumeration decides a membership-congruent property for every subset",
+  "statement": "Every finite subset of {0, ..., n-1} is the set decoded from exactly one natural number below 2^n, and the decoding agrees with the original set at EVERY index -- above the width both are empty. Consequently a Bool-valued search over the 2^n codes decides any membership-congruent property of subsets in both directions: a positive verdict yields an actual subset with the property, and an exhausted search refutes the property for every subset of that width. Both directions are kernel terms with an empty axiom footprint, and the enumeration is COMPUTED -- there is no choice principle anywhere in the route.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Nat.Finset.forallSubset_of_search (P : Nat.Finset -> Bool) (n : Nat) (hc : forall u v, (forall i, Nat.Finset.memB u i = Nat.Finset.memB v i) -> P u = P v) (h : Nat.Finset.anySubset P n = false) (t : Nat.Finset) (hb : Nat.Finset.bound t <= n) : P t = false",
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.Finset.forallSubset_of_search",
+    "kernel_statement": "Nat.Finset.anySubset P n := Nat.Graph.notB (Nat.Finset.allBelow (fun k => Nat.Graph.notB (P (Nat.Finset.decode n k))) (Nat.pow 2 n)); Nat.Finset.decode n k := Nat.Finset.mk (Nat.Finset.bitB k) n; Nat.Finset.bitB k i := Nat.beq (Nat.testBit k i) 1. The companion positive direction is Nat.Finset.existsSubset_of_search : forall P n, Eq Bool (anySubset P n) true -> Exists (fun t : Nat.Finset => And (Eq Nat (bound t) n) (Eq Bool (P t) true)), and the exhaustiveness lemma the refutation direction consumes is Nat.Finset.memB_decode_encode : forall t n i, Le (bound t) n -> Eq Bool (memB (decode n (encode t n)) i) (memB t i)."
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "proof_route": "kernel-lean",
+  "axiom_footprint": [],
+  "depends_on": [
+    "F:nat-finset-all-below-true-at"
+  ],
+  "provenance": {
+    "date": "2026-09-04",
+    "established_by": "axeyum lane `hall-sufficiency`, roadmap item W2-12 residue: `nat_prelude/subset_search.rs` declares the enumeration and both reflection directions; `nat_prelude/finset.rs` gains `card_congr_of_memB`, the lemma a card-based property needs to discharge the congruence premise. ADR-1614.",
+    "source": "The finite powerset as a decidable, exhaustively enumerable family; standard, and in a classical setting invisible because choice supplies the subset directly. ADR-1608 named its absence as the blocker on Hall's marriage theorem in a choice-free kernel.",
+    "prior_art": [
+      {
+        "citation": "Mathlib, `Finset.powerset` and the decidable-exists instances over it",
+        "establishes": "the same enumerate-and-decide capability over Mathlib's `Finset`, which is a quotient of lists by permutation and so needs `Quot.sound`; this route computes the carrier instead and has an empty axiom footprint"
+      }
+    ]
+  },
+  "evidence": [
+    {
+      "id": "kernel-Nat.Finset.forallSubset_of_search",
+      "kind": "kernel-term",
+      "supports": "an exhausted search refutes the property for every subset of the searched width",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::add_declaration (re-derives the type from the proof term)",
+        "nat_prelude::subset_search_tests::the_reflection_lemma_is_admitted_in_both_polarities_and_not_when_swapped",
+        "nat_prelude_tests::every_nat_declaration_is_checked_and_axiom_free"
+      ],
+      "checker_command": "cargo test --release -p axeyum-lean-kernel --lib nat_prelude::subset_search_tests -- --test-threads=4",
+      "notes": "The congruence premise is carried EXPLICITLY rather than hidden: two Nat.Finsets with the same members are not Eq at the carrier (it stores a raw predicate and a bound), so the verdict cannot travel from the enumerated representative `decode n (encode t n)` to the caller's own `t` without it. `Nat.Finset.card_congr_of_memB`, landed in the same diff, is what discharges the premise for a property phrased through `card` -- which is exactly the shape Hall's critical-subfamily test has.",
+      "checker_paired_negative": "The two directions are each other's negative control: `forallSubset_of_search`'s proof term offered at a `true` verdict, and `existsSubset_of_search`'s at a `false` one, must both be REJECTED by the trusted gate. A single lemma written twice would pass both halves and fail this pair."
+    },
+    {
+      "id": "kernel-Nat.Finset.memB_decode_encode",
+      "kind": "kernel-term",
+      "supports": "the enumeration is EXHAUSTIVE: every set with bound at most n has the same members as the set decoded from its own code, at every index",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::add_declaration (re-derives the type from the proof term)",
+        "nat_prelude::subset_search_tests::mem_b_decode_encode_is_admitted_and_the_reversed_bound_is_not",
+        "nat_prelude::subset_search_tests::encode_inverts_decode_at_width_two",
+        "nat_prelude_tests::every_nat_declaration_is_checked_and_axiom_free"
+      ],
+      "checker_command": "cargo test --release -p axeyum-lean-kernel --lib nat_prelude::subset_search_tests -- --test-threads=4",
+      "notes": "Stated at EVERY index rather than only below the width. Below it, `bitB_encodeFrom` plus `zero_add`; at or above it both sides are false, because `memB` truncates inside its own definition (ADR-1577) and so `memB_of_bound_le` holds of every Nat.Finset with no side condition. That is what makes the congruence premise statable without an index bound. `encodeFrom_lt_pow` supplies the other half -- every code really is below `pow 2 n`, so the search range is the right one.",
+      "checker_paired_negative": "The same proof term offered with the hypothesis reversed to `Le n (bound t)` must be REJECTED: in that direction the encoding loses every member above n and the statement is false."
+    },
+    {
+      "id": "eval-decode-encode-small",
+      "kind": "instance-pin",
+      "supports": "the enumeration is the one claimed -- binary order, index i into bit i, truncated at the width",
+      "check_status": "checked",
+      "checkers": [
+        "nat_prelude::subset_search_tests::decode_enumerates_the_subsets_and_truncates_at_the_width",
+        "nat_prelude::subset_search_tests::encode_inverts_decode_at_width_two",
+        "nat_prelude::subset_search_tests::encode_from_starts_at_its_index_and_walks_upward",
+        "nat_prelude::subset_search_tests::bit_b_reads_the_binary_digit",
+        "nat_prelude::subset_search_tests::any_subset_is_the_existential_over_subsets"
+      ],
+      "checker_command": "cargo test --release -p axeyum-lean-kernel --lib nat_prelude::subset_search_tests -- --test-threads=4",
+      "notes": "The trusted gate cannot tell you a Definition is wrong -- a decoder reading the bits in the reverse order has exactly the same type. Each definition is therefore reduced at concrete small arguments with the wrong formula named: decode 2 k enumerates {}, {0}, {1}, {0,1}; card (decode 2 7) is 2 and NOT 3, which is what a decode that did not inherit memB's truncation would give; encode {0} is 1 and encode {1} is 2, each named as the other's wrong answer because a reversed bit order swaps precisely those two. Widths stay at n <= 3: every Nat numeral in this prelude is unary and the search range is pow 2 n.",
+      "checker_paired_negative": "Every Bool assertion in these tests carries its own negative half -- the term must NOT reduce to the other Bool -- and every Nat assertion names the value a specific wrong formula would produce."
+    },
+    {
+      "id": "shape-Nat.Finset.forallSubset_of_search",
+      "kind": "exhaustive-enumeration",
+      "supports": "the declarations exist under these exact names and are theorems, and nothing of this shape existed before",
+      "check_status": "checked",
+      "checkers": [
+        "shape_search --name Nat.Finset.forallSubset_of_search --kind theorem --expect 1",
+        "shape_search --name Nat.Finset.existsSubset_of_search --kind theorem --expect 1"
+      ],
+      "checker_command": "cargo run --release -q -p axeyum-lean-kernel --example shape_search -- --name Nat.Finset.forallSubset_of_search --kind theorem --expect 1",
+      "notes": "shape_search exits 1 when the count differs and 3 when the query is unanswerable, so a stale index cannot pass for a present declaration. The pre-state this row is measured against: at declarations=2832 with positive control Nat.Rado.IsRadoNumber FOUND, --name-like returned ABSENT for decode, encode, subsets, powerset, enumerate and bitAt -- and FOUND 15 for testBit, which is why this module reuses the existing Nat-valued bit decoder instead of building one."
+    }
+  ],
+  "notes": "epistemic_status and external_status agree on purpose: exhaustively enumerating the subsets of a finite initial segment is not a new mathematical result. Its value is the ROUTE and what it unblocks. ADR-1608 named the absence of exactly this primitive as the blocker on Hall's marriage theorem in a kernel with no classical choice, and called it the piece to size first.\n\nWhat it does NOT do is finish Hall. With the search in hand the CHOICE problem is solved and the COUNTING problem is not: the remaining obstruction is `Nat.Hall.unionOver` under family modification -- transporting Hall's condition across `fun i => sdiff (nb i) (unionOver nb t)` -- plus a congruence lemma for `unionOver` itself (a one-dimensional instance of `allBelow_false_witness`) and a disjointness argument for gluing two matchings. ADR-1614's closing section sizes each. A lane taking the next slice should not size the search again."
+}

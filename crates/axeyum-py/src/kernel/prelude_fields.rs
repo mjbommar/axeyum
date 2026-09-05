@@ -149,7 +149,7 @@ pub(super) fn list(p: &ListPrelude) -> Fields {
     }
 }
 
-/// The `NatPrelude` field table (1282 names,
+/// The `NatPrelude` field table (1295 names,
 /// 0 name lists, 1 sub-packages).
 ///
 /// 113 of the names come from ADR-1512 per-module registries and
@@ -1614,6 +1614,25 @@ pub(super) fn nat(p: &NatPrelude) -> Fields {
                 "hall_condition_of_is_matching",
                 p.hall_condition_of_is_matching,
             ),
+            ("finset_card_congr_of_mem_b", p.finset_card_congr_of_mem_b),
+            ("finset_bit_b", p.finset_bit_b),
+            ("finset_decode", p.finset_decode),
+            ("finset_encode_from", p.finset_encode_from),
+            ("finset_encode", p.finset_encode),
+            ("finset_any_subset", p.finset_any_subset),
+            ("finset_bit_b_encode_from", p.finset_bit_b_encode_from),
+            ("finset_encode_from_lt_pow", p.finset_encode_from_lt_pow),
+            ("finset_mem_b_decode_encode", p.finset_mem_b_decode_encode),
+            (
+                "finset_exists_subset_of_search",
+                p.finset_exists_subset_of_search,
+            ),
+            (
+                "finset_forall_subset_of_search",
+                p.finset_forall_subset_of_search,
+            ),
+            ("strong_induction", p.strong_induction),
+            ("strong_induction_eq", p.strong_induction_eq),
             ("structures.magma.ind", p.structures.magma.ind),
             ("structures.magma.mk", p.structures.magma.mk),
             ("structures.magma.rec", p.structures.magma.rec),
