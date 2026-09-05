@@ -701,6 +701,24 @@ fn unnamed_but_live_declarations(p: &RatPrelude) -> Vec<crate::NameId> {
         p.vector_space.add_comm_group_s,
         p.vector_space.vector_space_s,
         p.vector_space.lin_comb_eq_sum_range,
+        // ADR-1631: the Bernoulli model over the generic ordered ring and the
+        // binomial layer at ℚ. Same discipline: read from the per-module
+        // registries, never from a string list. These twelve were live but
+        // unlisted for one commit on main (3e0ab5105) because the lane branched
+        // before ADR-1627 rewrote this sweep -- two green branches that did not
+        // compose.
+        p.binomial_s.mul_neg,
+        p.binomial_s.zero_add,
+        p.binomial_s.bernoulli_var,
+        p.binomial_s.bernoulli_mass,
+        p.binomial_s.bernoulli_mass_nonneg,
+        p.binomial_s.bernoulli_is_distribution,
+        p.binomial_s.bernoulli_expectation,
+        p.binomial_s.bernoulli_variance,
+        p.binomial_rat.binomial_expectation,
+        p.binomial_rat.binomial_variance,
+        p.binomial_rat.binomial_chebyshev,
+        p.binomial_rat.fourth_moment_inequality,
     ]
 }
 
