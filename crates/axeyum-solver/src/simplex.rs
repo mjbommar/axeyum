@@ -15,9 +15,15 @@
 //!   row, with `Σ yᵢ·aᵢ = 0` (the combined left-hand side vanishes) and
 //!   `Σ yᵢ·bᵢ < 0` — a self-checkable refutation, the same certificate shape the
 //!   Fourier–Motzkin path's [`crate::lra`] already consumes, or
-//! - [`SimplexOutcome::Unknown`] iff the exact `i128` rational arithmetic overflows
+//! - [`SimplexOutcome::Unknown`] iff the exact rational arithmetic declines
 //!   (never a wrong verdict — the same `checked_*` discipline as the rest of the
 //!   solver).
+//!
+//! Since **ADR-1702** that last case is much narrower than it was: `i128`
+//! overflow no longer declines, it PROMOTES to arbitrary precision, so the whole
+//! class of `unknown`s this engine used to return on coefficient growth is now
+//! decided. The remaining declines are division by zero and a big-rational pool
+//! at capacity — see the `Overflow` marker below.
 //!
 //! # Scope
 //!
@@ -51,9 +57,10 @@ use std::time::Instant;
 use axeyum_ir::Rational;
 
 /// Hard ceiling on the dense tableau [`Incremental::new`] will build (rows ×
-/// columns). A `Rational` is two `i128`s, so 4M cells is ~128 MB — past that the
-/// dense general simplex is the wrong data structure and the caller keeps whatever
-/// engine it had. Purely structural (no clock), so the decline is deterministic.
+/// columns). A `Rational` is two `i128`s — still true after ADR-1702, whose
+/// promoted values live out of line in a capped pool — so 4M cells is ~128 MB;
+/// past that the dense general simplex is the wrong data structure and the caller
+/// keeps whatever engine it had. Purely structural (no clock), so the decline is deterministic.
 pub(crate) const MAX_TABLEAU_CELLS: usize = 4_000_000;
 
 /// Pivot ceiling for a single [`feasible`] / [`Incremental::check`] call. Bland's
@@ -108,11 +115,25 @@ pub enum SimplexOutcome {
     /// Unsatisfiable: Farkas multipliers `y` over the *input rows* (one per
     /// constraint) whose nonnegative-combination collapses to `0 < 0`.
     Infeasible(Vec<Rational>),
-    /// Exact arithmetic overflowed — a sound `unknown`, never a verdict.
+    /// Exact arithmetic declined — a sound `unknown`, never a verdict.
     Unknown,
 }
 
-/// Marker for an `i128`-rational overflow; mapped to [`SimplexOutcome::Unknown`].
+/// Marker for an exact-arithmetic decline; mapped to [`SimplexOutcome::Unknown`].
+///
+/// **ADR-1702 narrowed this but did not make it unreachable, so it stays.**
+/// `Rational` now promotes to arbitrary precision instead of overflowing, which
+/// removes the coefficient-growth `unknown`s this marker used to carry. What
+/// remains reachable is [`Rational::checked_div`] declining on a **zero
+/// divisor** — not an overflow at all — and the big-rational pool reaching
+/// [`Rational::big_pool_capacity`], past which every operation behaves exactly
+/// as it did before ADR-1702. Deleting the marker would delete a live soundness
+/// path, so the pivot and deadline budgets and this decline route are all kept.
+///
+/// One helper below is now infallible in practice: `checked_cmp` cannot decline
+/// after ADR-1702 (comparison allocates no pool entry), so `cmp` always returns
+/// `Ok`. It keeps the `R<_>` shape because 18 call sites thread it, and because
+/// the shape is what would carry a future failure back.
 struct Overflow;
 type R<T> = Result<T, Overflow>;
 
@@ -719,8 +740,8 @@ pub enum Status {
     /// outside its bound with no eligible entering variable), but the caller gets no
     /// minimized support and must fall back to a coarse explanation.
     Infeasible(Vec<usize>),
-    /// Exact `i128` arithmetic overflowed, or the pivot/deadline budget ran out —
-    /// a sound "don't know", never a verdict.
+    /// Exact arithmetic declined (see the `Overflow` marker), or the pivot/deadline budget
+    /// ran out — a sound "don't know", never a verdict.
     Unknown,
 }
 

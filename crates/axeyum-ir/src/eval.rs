@@ -1529,40 +1529,60 @@ mod overflow_tests {
         assert_eq!(eval(&arena, t, &Assignment::new()), Ok(Value::Int(42)));
     }
 
+    /// The exact rational `num/den`, built independently of `Rational`'s own
+    /// arithmetic so these expectations are not computed by the code under test.
+    fn exact(num: num_bigint::BigInt, den: num_bigint::BigInt) -> Value {
+        Value::Real(
+            Rational::from_big_rational(&num_rational::BigRational::new(num, den))
+                .expect("big-rational pool has room"),
+        )
+    }
+
+    // Before ADR-1702 the three tests below asserted `Err(ArithmeticOverflow)`.
+    // Overflow now PROMOTES to arbitrary precision, so what has to be checked is
+    // that the promoted value is *exact* — a wrapped or truncated result would be
+    // the real defect. The `int_*` overflow tests above are unchanged: `Value::Int`
+    // is still `i128` (that is slice 2), so the graceful-overflow route is live.
+
     #[test]
-    fn real_mul_overflow_is_graceful() {
-        // (i128::MAX / 1) * (i128::MAX / 1): numerator overflows i128.
+    fn real_mul_overflow_promotes_and_is_exact() {
+        // (i128::MAX / 1) * (i128::MAX / 1): the numerator leaves i128 range.
         let mut arena = TermArena::new();
         let a = arena.real_const(Rational::integer(i128::MAX));
         let b = arena.real_const(Rational::integer(i128::MAX));
         let t = arena.real_mul(a, b).unwrap();
+        let max = num_bigint::BigInt::from(i128::MAX);
         assert_eq!(
             eval(&arena, t, &Assignment::new()),
-            Err(overflow("real_mul"))
+            Ok(exact(&max * &max, num_bigint::BigInt::from(1)))
         );
     }
 
     #[test]
-    fn real_neg_of_min_is_graceful() {
+    fn real_neg_of_min_promotes_and_is_exact() {
         let mut arena = TermArena::new();
         let a = arena.real_const(Rational::integer(i128::MIN));
         let t = arena.real_neg(a).unwrap();
         assert_eq!(
             eval(&arena, t, &Assignment::new()),
-            Err(overflow("real_neg"))
+            Ok(exact(
+                -num_bigint::BigInt::from(i128::MIN),
+                num_bigint::BigInt::from(1)
+            ))
         );
     }
 
     #[test]
-    fn real_add_overflow_is_graceful() {
-        // 1/(i128::MAX) + 1/2 cross-multiplies a huge denominator → overflow.
+    fn real_add_overflow_promotes_and_is_exact() {
+        // 1/(i128::MAX) + 1/2 has a least common denominator of 2·i128::MAX.
         let mut arena = TermArena::new();
         let a = arena.real_const(Rational::new(1, i128::MAX));
         let b = arena.real_const(Rational::new(1, 2));
         let t = arena.real_add(a, b).unwrap();
+        let max = num_bigint::BigInt::from(i128::MAX);
         assert_eq!(
             eval(&arena, t, &Assignment::new()),
-            Err(overflow("real_add"))
+            Ok(exact(&max + 2, &max * 2))
         );
     }
 

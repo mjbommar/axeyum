@@ -298,6 +298,26 @@ holds `WideUint` for bit-vectors, so the precedent exists in both directions.
 The gap analysis rates this ADR-sized because every arithmetic route is built
 on `Value::Int(i128)`.
 
+*Landed 2026-09-05 (`rational-bignum`):*
+[ADR-1702](../09-decisions/adr-1702-rational-i128-fast-path-bignum-slow-path.md)
+and its **slice 1** — `Rational` itself. `i128` overflow now PROMOTES to
+`num_rational::BigRational` and demotes back whenever a result fits, behind an
+unchanged public API: `Rational` stays `Copy` and two `i128` fields wide (a
+promoted value is the otherwise-impossible `den == 0`, a handle into a capped
+deduplicating pool), so the ~5,500 references in 223 files and the dense simplex
+tableau's memory model are untouched. `simplex.rs`'s `Overflow` marker is
+**kept**: it is narrower but not unreachable, because `checked_div` still
+declines on a zero divisor and promotion still fails at the pool cap. The LRA
+atom cap does **not** move — that is a separate lever, measured separately —
+and the residual hazard is named in the ADR: `numerator()`/`denominator()`
+return `i128` and panic rather than truncate on a promoted value.
+
+**Slice 2 is not started**: `Value::Int(i128)` in `axeyum-ir/src/value.rs`, the
+SMT-LIB integer-literal parser, and the 416 `numerator()`/`denominator()` call
+sites. That is the slice that admits the 26 QF_UFLIA files of gap-analysis row
+4b; slice 1 admits none of them, because they are rejected at the parser before
+any `Rational` exists.
+
 **D5. Determinism is bought with ordered maps and paid for again with a slow
 hasher.** Counts of type-position occurrences in `crates/*/src`:
 
