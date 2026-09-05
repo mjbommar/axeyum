@@ -124,7 +124,7 @@ that are already proved does not need any of this.
 - [x] **4. Categories, functors, and natural transformations** — *done 2026-09-04, setoid-enriched; the category of groups landed 2026-09-05 once `Subtype` existed.* over that
       discipline, with the existing forgetful projections as the first
       functors and the `Alg`/`AlgS` spines as the first two categories.
-- [ ] **5. Products and coproducts as universal properties**, with the
+- [x] **5. Products and coproducts as universal properties** — *done 2026-09-05; the group product is the first instance where the abstraction earned its keep.*, with the
       existing concrete constructions (`CPoint` as ℝ×ℝ, list append as a free
       monoid) recovered as instances. The first point where the abstraction
       would have to earn its keep against the concrete versions already built.
@@ -139,6 +139,7 @@ that are already proved does not need any of this.
 | 2026-09-04 | **Next Five item 4 landed** (roadmap W3-3, ADR-1620), and the reviewer's own prediction about the method is tested: `CatS.Category`, `Functor`, `IsNat`, `IsInitial`/`IsTerminal` over setoid-enriched hom-sets, 61 declarations, footprint 0. **The setoid cost is zero by construction** — the five fields the enrichment adds are exactly the five `AlgS` already carries, so delooping a monoid discharges them from selectors, and the counterfactual over `Eq` does not exist for any carrier whose equality is a defined relation. The universe findings: the guard rejects `obj : Sort 1` verbatim and admits the same record at `Sort 2`; ADR-1609's claim that a record cannot hold a record is corrected to "the level is per field kind", since `Functor` holds two `Category` fields. **The category of groups is blocked on `Sigma`, not on universes**, and `Sigma` was admitted by a concurrent lane the same day — so the forgetful functors (the reviewer's item 3 complaint) and ℕ/ℤ as `IsInitial` instances are one merge away rather than one decision away. Item 5 (products/coproducts) remains. | `0e4eeba47`; `category_setoid` 14 passed |
 
 | 2026-09-05 | **The category of groups is a real category** (roadmap W3-3 second lane, ADR-1626): `CatS.grp` and `CatS.mon` with homs bundled as a `Subtype` of functions carrying their homomorphism proof, the forgetful functor Grp → Mon as a `CatS.FunctorLarge` with all three laws, and ℕ initial among pointed unary algebras. The setoid price of a bundled-hom category is one new proof; the category laws are the underlying-function laws because `Subtype.val` reduces. ℤ as an initial object is scoped, not landed (its object type mixes `PSigma` and `Subtype`). Item 5, products, is now the next thing. | `251b198fb`; `category_setoid` 29 passed |
+| 2026-09-05 | **Item 5 landed** (roadmap W3-4, ADR-1632): `IsProduct`/`IsCoproduct` with three conjuncts (the mediating map must commute with the projections; uniqueness alone is satisfiable vacuously), `product_unique_upto_iso` at sixteen hom-equivalence steps, and the product of two groups in `CatS.grp` with both triangles by `equivRefl`. The Next Five for this reviewer is complete. ℤ as an initial object is still open, now for the right reason: build order, not the object type. | `a03298818`; `category_setoid::` 41 passed |
 
 ## How to re-measure
 
