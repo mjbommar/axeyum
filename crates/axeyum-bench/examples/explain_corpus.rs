@@ -4,8 +4,8 @@
 //! while this probe shows which files moved and which route declined.
 //!
 //! ```text
-//! cargo run -p axeyum-bench --example explain_corpus -- <dir> [timeout_ms] [--json]
-//! cargo run -p axeyum-bench --example explain_corpus -- --list <file> [timeout_ms] [--json]
+//! cargo run -p axeyum-bench --example explain_corpus -- <dir> [timeout_ms] [--json] [--timed-trace]
+//! cargo run -p axeyum-bench --example explain_corpus -- --list <file> [timeout_ms] [--json] [--timed-trace]
 //! ```
 //!
 //! With `--json` the probe emits one JSON object per line (JSONL) instead of
@@ -13,6 +13,16 @@
 //! [`RouteTrace::to_json`](axeyum_solver::route_trace::RouteTrace::to_json).
 //! That is the persistable form the bridge-catalogue replay validator consumes:
 //! it needs the observed dispatch order as data, not as `Display` text.
+//!
+//! `--timed-trace` (JSON mode only; a no-op without `--json`) switches the
+//! embedded trace to
+//! [`RouteTrace::to_json_with_timing`](axeyum_solver::route_trace::RouteTrace::to_json_with_timing),
+//! which adds an `"elapsed_ns"` member to each attempt. This is what makes a
+//! declined route's cost visible instead of just its outcome — the answer to
+//! "where did the 24 s go" the 2026-08-21 linear-arithmetic diagnosis had to
+//! reconstruct by hand from per-file TSVs because this instrument did not
+//! exist yet. Off by default so every existing committed JSONL artifact
+//! (which pins `trace` to the plain `to_json` schema) stays reproducible.
 //!
 //! In directory mode `file` remains the historical basename. In exact-list
 //! mode it is the complete list entry, so a trace can be joined to a committed
@@ -384,6 +394,7 @@ fn run_isolated_file(
     timeout_ms: u64,
     json: bool,
     confirm: bool,
+    timed_trace: bool,
 ) -> Result<Vec<u8>, String> {
     let executable = std::env::current_exe()
         .map_err(|error| format!("cannot locate explain_corpus executable: {error}"))?;
@@ -398,6 +409,9 @@ fn run_isolated_file(
     }
     if confirm {
         command.arg("--confirm");
+    }
+    if timed_trace {
+        command.arg("--timed-trace");
     }
     let output = command
         .output()
@@ -425,11 +439,14 @@ fn main() {
     // makes this tool self-measuring: the divergence census in `flat_token`'s
     // comment is what it prints.
     let confirm = raw.iter().any(|arg| arg == "--confirm");
+    // Embeds `RouteTrace::to_json_with_timing` instead of the default
+    // `to_json` (see the module docs). A no-op without `--json`.
+    let timed_trace = raw.iter().any(|arg| arg == "--timed-trace");
     let args: Vec<String> = raw
         .into_iter()
-        .filter(|arg| arg != "--json" && arg != "--confirm")
+        .filter(|arg| arg != "--json" && arg != "--confirm" && arg != "--timed-trace")
         .collect();
-    let usage = "usage: explain_corpus <dir> [timeout_ms] [--json] [--confirm]\n       explain_corpus --list <file> [timeout_ms] [--json] [--confirm]";
+    let usage = "usage: explain_corpus <dir> [timeout_ms] [--json] [--confirm] [--timed-trace]\n       explain_corpus --list <file> [timeout_ms] [--json] [--confirm] [--timed-trace]";
     let exact_list = args.get(1).is_some_and(|arg| arg == "--list");
     let single_file = args.get(1).is_some_and(|arg| arg == WORKER_FILE_FLAG);
     let (input, timeout_arg) = if exact_list || single_file {
@@ -494,7 +511,7 @@ fn main() {
                     .unwrap_or("<non-utf8>")
                     .into()
             };
-            let output = run_isolated_file(path, &identity, timeout_ms, json, confirm)
+            let output = run_isolated_file(path, &identity, timeout_ms, json, confirm, timed_trace)
                 .unwrap_or_else(|error| {
                     eprintln!("explain_corpus: {error}");
                     std::process::exit(1);
@@ -703,13 +720,18 @@ fn main() {
                     refusal_member,
                 );
                 if json {
+                    let trace_json = if timed_trace {
+                        trace.to_json_with_timing()
+                    } else {
+                        trace.to_json()
+                    };
                     emit_json(
                         &identity,
                         status,
                         &format!(
                             "{verdict_member}{},\"trace\":{}",
                             confirmation(refusal.is_none().then_some(result)),
-                            trace.to_json()
+                            trace_json
                         ),
                     );
                 } else {
@@ -720,8 +742,14 @@ fn main() {
                         }
                         None => println!("{identity}: {}{note}", flat_token(result)),
                     }
-                    for attempt in trace.attempts() {
-                        println!("  {attempt}");
+                    if timed_trace {
+                        for (attempt, elapsed) in trace.attempts().iter().zip(trace.elapsed()) {
+                            println!("  {attempt} ({elapsed:?})");
+                        }
+                    } else {
+                        for attempt in trace.attempts() {
+                            println!("  {attempt}");
+                        }
                     }
                 }
             }

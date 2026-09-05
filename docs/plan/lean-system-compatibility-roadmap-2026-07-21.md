@@ -14,6 +14,18 @@ Active execution breakdown:
 Terminal definition:
 [`lean4-complete-parity-contract-2026-07-22.md`](lean4-complete-parity-contract-2026-07-22.md)
 
+> **Status update, 2026-09-05: historical.** This document's own tally (21
+> done, 5 partial, 96 to do) has not been edited since 2026-08-13. Its
+> ordering is superseded by ADR-0717's C-series
+> ([`library-artifact-compatibility-roadmap-2026-08-30.md`](library-artifact-compatibility-roadmap-2026-08-30.md))
+> and by the current authority,
+> [`docs/math-department/14-lean-lang.md`](../math-department/14-lean-lang.md).
+> The complete-parity **contract**
+> ([`lean4-complete-parity-contract-2026-07-22.md`](lean4-complete-parity-contract-2026-07-22.md))
+> and its registry ([`lean-complete-parity-v1.json`](lean-complete-parity-v1.json))
+> remain the terminal definition and are **not** superseded. See
+> [ADR-1668](../research/09-decisions/adr-1668-the-lean-claim-surface-says-one-thing.md).
+
 ## Executive conclusion
 
 Axeyum already has an independent, pure-Rust implementation of a meaningful

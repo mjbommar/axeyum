@@ -175,3 +175,20 @@ cryptographically bound to a specific kernel build, if ever needed, is a
 separate, explicitly scoped decision -- this ADR's environment check is
 sized to exactly the roadmap's stated "wrong environment" category and no
 further.
+
+## Cross-reference, 2026-09-05
+
+This ADR's alternatives section recorded that no in-Lean `#tactic`/command was
+built, as a deliberate C5-adjacent scope call. That call is now closed:
+[ADR-1666](adr-1666-by-axeyum-is-a-lean-tactic-and-lean-checks-the-term.md)
+builds `lean/axeyum-tactic`, a Lake package exposing `by axeyum`, which reuses
+this ADR's protocol shape — the `accepted`/`declined` envelope, the three
+decline reasons, and the environment-identity discipline — and replaces the
+NDJSON closure payload with a proof **term** Lean's own elaborator and kernel
+check. Two of this ADR's statements carry over unchanged and are restated
+there: the environment identity is a plain string comparison and a staleness
+check rather than a soundness mechanism, and the soundness rests entirely on
+the checking step and never on a sidecar-controlled field.
+
+Nothing in this ADR is superseded or amended. C3 remains the Rust-side
+protocol over C2's two checked paths.

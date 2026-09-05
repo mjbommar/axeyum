@@ -178,7 +178,7 @@ pub(super) fn list(p: &ListPrelude) -> Fields {
     }
 }
 
-/// The `NatPrelude` field table (1395 names,
+/// The `NatPrelude` field table (1410 names,
 /// 0 name lists, 1 sub-packages).
 ///
 /// 113 of the names come from ADR-1512 per-module registries and
@@ -2009,6 +2009,30 @@ pub(super) fn nat(p: &NatPrelude) -> Fields {
             (
                 "subsets_inclusion_exclusion_two",
                 p.subsets_inclusion_exclusion_two,
+            ),
+            ("primorial", p.primorial),
+            ("primorial_zero", p.primorial_zero),
+            ("primorial_succ", p.primorial_succ),
+            ("min_fac_eq_self_of_prime", p.min_fac_eq_self_of_prime),
+            ("prime_of_min_fac_eq_self", p.prime_of_min_fac_eq_self),
+            ("primorial_succ_of_prime", p.primorial_succ_of_prime),
+            ("primorial_succ_of_not_prime", p.primorial_succ_of_not_prime),
+            ("primorial_pos", p.primorial_pos),
+            ("primorial_le_succ", p.primorial_le_succ),
+            ("primorial_mono", p.primorial_mono),
+            ("mul_two_eq_add_self", p.mul_two_eq_add_self),
+            ("le_of_add_self_le_add_self", p.le_of_add_self_le_add_self),
+            (
+                "four_pow_eq_two_pow_add_self",
+                p.four_pow_eq_two_pow_add_self,
+            ),
+            (
+                "choose_two_mul_succ_le_two_pow",
+                p.choose_two_mul_succ_le_two_pow,
+            ),
+            (
+                "choose_two_mul_succ_le_four_pow",
+                p.choose_two_mul_succ_le_four_pow,
             ),
         ],
         lists: Vec::new(),

@@ -46,23 +46,27 @@
 //!    own family member in the same module, grades `NotReplayed`. Lean itself
 //!    attests that a sampled sibling confers nothing.
 
-use std::collections::{BTreeMap, BTreeSet};
-use std::path::{Path, PathBuf};
-use std::process::Command;
+use std::collections::BTreeSet;
 
 use axeyum_lean_kernel::{
-    Declaration, ExprId, ExprNode, Kernel, Lean4ExportMetadata, LevelNode, NameId,
-    build_creal_prelude, on_a_deep_stack,
+    Kernel, Lean4ExportMetadata, NameId, build_creal_prelude, on_a_deep_stack,
 };
 
 #[path = "support/lean_probe.rs"]
 mod lean_probe;
+#[path = "support/replay_census.rs"]
+mod replay_census;
+
+/// The grading discipline, the classifier and the Lean call all live in
+/// `support/replay_census.rs` so this suite and `real_lean_replay_census_all`
+/// (ADR-1661, every other carrier) cannot drift apart. What stays here is what
+/// is specific to the constructed reals: the flagship coverage pin, the
+/// carrier's own floor, and the three mutation controls.
+use replay_census::{
+    CENSUS_MARKER, EXPORT_LEAN_VERSION, Grade, Representability, classify, grade, name_of, replay,
+};
 
 const TAG: &str = "creal-replay-census";
-
-/// Printed with every count, so a fact pins the census by value rather than a
-/// document transcribing it.
-const CENSUS_MARKER: &str = "AXEYUM-REPLAY-CENSUS";
 
 /// The monotone floor: how many constructed-real declarations pinned Lean's
 /// kernel must independently admit **by name**.
@@ -77,7 +81,15 @@ const CENSUS_MARKER: &str = "AXEYUM-REPLAY-CENSUS";
 /// missing=0 extra=0`. Floor set at 1,900 -- 72 below the measurement, so
 /// ordinary churn does not trip it. RAISING it as the carrier grows is the
 /// ratchet working; LOWERING it needs a reason in the commit message.
-const REPLAY_FLOOR: usize = 1_900;
+///
+/// RAISED 1,900 -> 3,350 on 2026-09-05 by lane `lean-replay-census-all`
+/// (ADR-1661). Re-measured that day on pinned Lean **4.34.0-rc1** (the pin
+/// moved in ADR-1594): population 3,597, representable 3,522, `checked=3522
+/// expected=3522 missing=0 extra=0`, 49 `theorem_type_not_prop` and 26 blocked
+/// behind them. The carrier grew by 1,552 declarations in six days, so a floor
+/// of 1,900 had stopped being a ratchet -- it could have absorbed the loss of
+/// nearly half the carrier without a word. 3,350 is 172 below the measurement.
+const REPLAY_FLOOR: usize = 3_350;
 
 /// Coverage pin. These are the theorems this suite was built to grade; if the
 /// census stops carrying one, that must fail loudly rather than read as a
@@ -94,90 +106,6 @@ const FLAGSHIP: [&str; 6] = [
     "CReal.rolle_interiorExtremum",
     "CReal.mvt_interiorExtremum",
 ];
-
-/// The independent-replay grade of one declaration.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum Grade {
-    /// Pinned Lean's kernel admitted a constant of exactly this name.
-    Replayed,
-    /// It did not. Axeyum acceptance is unaffected and stays a separate grade.
-    NotReplayed,
-}
-
-/// Grade `subject` from the names **Lean's own kernel** ended holding.
-///
-/// The S4 exit clause lives in this function, so it is deliberately the
-/// dullest one in the file: an exact membership test on `subject` itself. It
-/// consults no family, no module, no prefix and no sibling, because every one
-/// of those would be a route by which an unchecked theorem inherits a grade
-/// from a checked one. `grade_family_by_sampling` does not exist and must not
-/// be added.
-fn grade(subject: &str, lean_admitted: &BTreeSet<String>) -> Grade {
-    if lean_admitted.contains(subject) {
-        Grade::Replayed
-    } else {
-        Grade::NotReplayed
-    }
-}
-
-/// A scratch root that is not `/tmp` — `/tmp` here is a 62 GB tmpfs (RAM) and a
-/// standing contributor to OOM kills on this host.
-fn scratch_directory(tag: &str) -> PathBuf {
-    let name = format!("axeyum_{tag}_{}", std::process::id());
-    let roots = [
-        std::env::var_os("AXEYUM_SCRATCH_DIR").map(PathBuf::from),
-        Some(PathBuf::from("/data0")),
-        Some(std::env::temp_dir()),
-    ];
-    for root in roots.into_iter().flatten() {
-        let directory = root.join(&name);
-        if std::fs::create_dir_all(&directory).is_ok() {
-            return directory;
-        }
-    }
-    panic!("no writable scratch root for {tag}");
-}
-
-/// Replay one stream through Lean's kernel, returning `(accepted, report,
-/// names Lean ended holding)`.
-///
-/// The name set comes out of a file Lean wrote from `env.constants`, so a name
-/// in it was admitted by Lean's kernel rather than merely transmitted by us.
-fn replay(lean: &Path, stream: &str, stem: &str) -> (bool, String, BTreeSet<String>) {
-    let script = Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("../../scripts/lean/replay-lean4export.lean")
-        .canonicalize()
-        .expect("the replay script must exist");
-    let directory = scratch_directory("replay_census");
-    let file = directory.join(format!("{stem}.ndjson"));
-    let names_file = directory.join(format!("{stem}.names"));
-    std::fs::write(&file, stream).expect("write replay stream");
-    // A stale file from an earlier stem would be read as this run's answer.
-    let _ = std::fs::remove_file(&names_file);
-    let output = Command::new(lean)
-        .arg("--run")
-        .arg(&script)
-        .arg(&file)
-        .arg("--emit-names")
-        .arg(&names_file)
-        .output()
-        .expect("run the Lean replay script");
-    let report = format!(
-        "{}{}",
-        String::from_utf8_lossy(&output.stdout),
-        String::from_utf8_lossy(&output.stderr)
-    );
-    let names = std::fs::read_to_string(&names_file)
-        .map(|text| {
-            text.lines()
-                .map(str::trim)
-                .filter(|line| !line.is_empty())
-                .map(str::to_owned)
-                .collect()
-        })
-        .unwrap_or_default();
-    (output.status.success(), report, names)
-}
 
 /// The `"in":<n>` index of the name record whose final component is
 /// `component`.
@@ -224,15 +152,6 @@ fn first_monomorphic_theorem(stream: &str) -> Option<(u64, u64)> {
     Some((field("type")?, field("value")?))
 }
 
-/// Resolve a display name to its `NameId` in the checked environment.
-fn name_of(kernel: &Kernel, display: &str) -> Option<NameId> {
-    kernel
-        .environment()
-        .iter()
-        .find(|(name, _)| kernel.display_name(**name).to_string() == display)
-        .map(|(name, _)| *name)
-}
-
 // ---------------------------------------------------------------------------
 // The inheritance guard, in the form that needs no Lean.
 // ---------------------------------------------------------------------------
@@ -267,103 +186,6 @@ fn grading_consults_only_the_subject_and_never_its_family() {
     assert_eq!(grade("CReal.ivt_step_of_le", &admitted), Grade::NotReplayed);
     // The family root itself.
     assert_eq!(grade("CReal", &admitted), Grade::NotReplayed);
-}
-
-// ---------------------------------------------------------------------------
-// Representability: the typed reasons, decided in THIS kernel, then earned
-// against Lean's.
-// ---------------------------------------------------------------------------
-
-/// Why a declaration this kernel admitted cannot be handed to Lean's kernel as
-/// what this kernel calls it.
-#[derive(Debug, Clone, PartialEq, Eq)]
-enum Representability {
-    /// The wire format carries it and Lean's kernel will accept its kind.
-    Representable,
-    /// **This kernel admits `Theorem`s whose type is not a proposition; Lean's
-    /// kernel does not.** `Lean.Environment.addDeclCore` refuses a `theorem`
-    /// whose type does not live in `Prop` — such a thing must be a `def`.
-    ///
-    /// This is not a wire-format limitation and not a bug in the export. It is
-    /// a measured disagreement between two kernels about what may be called a
-    /// theorem, and the affected declarations are deliberate: see
-    /// `creal/uniform_convergence.rs`'s module documentation, which explains
-    /// why `CReal.UniformConvergesOn` is `Type`-valued (`Exists.rec` cannot
-    /// eliminate into `Type`, so the convergence *rate* must be data).
-    TheoremTypeNotProp,
-    /// Its dependency closure contains a non-representable declaration, so it
-    /// cannot be exported either — naming the blocker rather than repeating
-    /// the reason, because the two are different findings.
-    BlockedBy(String),
-}
-
-/// Does `ty` live in `Prop`?
-///
-/// Read from the kernel by inference, never from a name or a doc comment.
-fn is_a_proposition(kernel: &mut Kernel, ty: ExprId) -> bool {
-    let Ok(sort) = kernel.infer(ty) else {
-        return false;
-    };
-    let sort = kernel.whnf(sort);
-    let level = match kernel.expr_node(sort) {
-        ExprNode::Sort(level) => *level,
-        _ => return false,
-    };
-    matches!(kernel.level_node(level), LevelNode::Zero)
-}
-
-/// Classify every declaration in the checked environment.
-///
-/// The population is `kernel.environment()`, so this is a complete census and
-/// not a sample; nothing here reads a list.
-fn classify(kernel: &mut Kernel) -> BTreeMap<String, Representability> {
-    let declarations: Vec<(NameId, String, Option<ExprId>)> = kernel
-        .environment()
-        .iter()
-        .map(|(name, decl)| {
-            let theorem_type = match decl {
-                Declaration::Theorem { ty, .. } => Some(*ty),
-                _ => None,
-            };
-            (*name, kernel.display_name(*name).to_string(), theorem_type)
-        })
-        .collect();
-
-    // Pass 1: the declarations that are themselves non-representable.
-    let mut verdicts: BTreeMap<String, Representability> = BTreeMap::new();
-    let mut bad_ids: Vec<NameId> = Vec::new();
-    for (id, display, theorem_type) in &declarations {
-        if let Some(ty) = *theorem_type
-            && !is_a_proposition(kernel, ty)
-        {
-            verdicts.insert(display.clone(), Representability::TheoremTypeNotProp);
-            bad_ids.push(*id);
-        }
-    }
-
-    // Pass 2: everything whose closure reaches one of those.
-    let bad_names: BTreeSet<String> = bad_ids
-        .iter()
-        .map(|id| kernel.display_name(*id).to_string())
-        .collect();
-    for (id, display, _) in &declarations {
-        if verdicts.contains_key(display) {
-            continue;
-        }
-        let blocker = kernel
-            .declaration_dependency_closure(*id)
-            .into_iter()
-            .map(|dep| kernel.display_name(dep).to_string())
-            .find(|dep| bad_names.contains(dep));
-        verdicts.insert(
-            display.clone(),
-            match blocker {
-                Some(name) => Representability::BlockedBy(name),
-                None => Representability::Representable,
-            },
-        );
-    }
-    verdicts
 }
 
 // ---------------------------------------------------------------------------
@@ -467,7 +289,10 @@ fn pinned_lean_independently_admits_every_representable_constructed_real_declara
         assert!(!roots.is_empty(), "zero representable roots is a failure");
 
         let stream = kernel
-            .render_lean4export_ndjson_roots(&Lean4ExportMetadata::axeyum("4.30.0"), &roots)
+            .render_lean4export_ndjson_roots(
+                &Lean4ExportMetadata::axeyum(EXPORT_LEAN_VERSION),
+                &roots,
+            )
             .expect("the representable slice must export");
 
         let Some(lean) = lean_probe::lean_bin_or_skip(TAG, 2) else {
@@ -567,7 +392,10 @@ fn lean_really_does_refuse_a_theorem_whose_type_is_not_a_proposition() {
         let root = name_of(&kernel, subject).expect("the subject must be declared");
 
         let stream = kernel
-            .render_lean4export_ndjson_roots(&Lean4ExportMetadata::axeyum("4.30.0"), &[root])
+            .render_lean4export_ndjson_roots(
+                &Lean4ExportMetadata::axeyum(EXPORT_LEAN_VERSION),
+                &[root],
+            )
             .expect("the wire format carries it -- the refusal is Lean's, not ours");
 
         let Some(lean) = lean_probe::lean_bin_or_skip(TAG, 1) else {
@@ -615,7 +443,10 @@ fn pinned_lean_rejects_a_wrong_proof_and_a_wrong_goal_for_the_flagship_theorem()
         build_creal_prelude(&mut kernel).expect("the CReal development must build");
         let root = name_of(&kernel, "CReal.ivt_approx").expect("`CReal.ivt_approx` must exist");
         let stream = kernel
-            .render_lean4export_ndjson_roots(&Lean4ExportMetadata::axeyum("4.30.0"), &[root])
+            .render_lean4export_ndjson_roots(
+                &Lean4ExportMetadata::axeyum(EXPORT_LEAN_VERSION),
+                &[root],
+            )
             .expect("the flagship closure must export");
 
         // Resolved before any Lean runs, so a stream that stopped carrying the
@@ -731,7 +562,10 @@ fn a_family_sibling_lean_never_saw_is_graded_notreplayed() {
         );
 
         let stream = kernel
-            .render_lean4export_ndjson_roots(&Lean4ExportMetadata::axeyum("4.30.0"), &[sampled])
+            .render_lean4export_ndjson_roots(
+                &Lean4ExportMetadata::axeyum(EXPORT_LEAN_VERSION),
+                &[sampled],
+            )
             .expect("the sampled root must export");
 
         let Some(lean) = lean_probe::lean_bin_or_skip(TAG, 1) else {

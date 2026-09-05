@@ -576,6 +576,16 @@ step credit-transaction-ledger-mutations bash scripts/tests/test-credit-transact
 # The check is exact, not a token screen: 362 of 374 mirrors are hash-pinned by
 # a preregistered catalog.
 step mirror-statement-fidelity python3 scripts/check-mirror-statement-fidelity.py
+# The carrier correspondence ledger (docs/math-department/14-lean-lang.md
+# Next Ten item 4): one row per (Axeyum carrier, Mathlib counterpart) pair,
+# graded same-statement/constructively-stronger/-weaker/different-object/
+# no-counterpart, each with a witness theorem pair resolved against the live
+# kernel projection. Before this gate, nothing recorded per-carrier whether a
+# shared-looking theorem (CReal vs Mathlib's Real, a Bishop setoid vs a
+# classical Cauchy quotient) is actually the same statement.
+step carrier-correspondence-tests python3 -m unittest scripts.tests.test_check_carrier_correspondence
+step carrier-correspondence python3 scripts/check-carrier-correspondence.py --check
+step carrier-correspondence-md python3 scripts/gen-carrier-correspondence-md.py --check
 step fact-dag-tests python3 -m unittest scripts.tests.test_check_fact_dag
 step fact-dag python3 scripts/check-fact-dag.py --quiet
 # ADR-0584. The kernel type checker recurses over the term with no bound, so a
@@ -1187,6 +1197,16 @@ step autogenesis-apply-search ./scripts/check-autogenesis-apply-search.sh
 # 0 printing "running 0 tests ... ok") and cannot replay a cached test binary
 # over source it never compiled.
 step test   ./scripts/check-workspace-tests.sh
+# TWO ratchets run in this one step. `FRONTIER <family> = N` is capability at a
+# fixed budget; `TIMING <family> = <ms> calibrated` is the clock -- a committed
+# ceiling on the calibrated solve time of a few `N` pinned deep inside each
+# frontier, read out of the curve the sweep already produced (no extra solving).
+# Until 2026-09-05 nothing in any gate failed when solve time regressed: the
+# frontier gate is capability, the parity ledger is decide count, the corpus
+# sweep is soundness, and `summary.par2_mean_s` in the 72 committed baselines
+# was compared to nothing (design review 2026-09-05, section 2.2 item 1). Both
+# ratchets honour the same `comparable` verdict, so a loaded or uncomparable box
+# reports both numbers and asserts neither.
 step frontier cargo test -p axeyum-solver --test progress_frontier --features full -- --test-threads=1
 # The gate-liveness ratchet: proves the gates above still RUN something. A suite
 # emptied by a new `#![cfg(feature = ...)]` exits 0 and prints "running 0 tests
@@ -1221,6 +1241,18 @@ step lean-toolchain-policy ./scripts/tests/test-lean-toolchain-policy.sh
 # download and no dependency on which toolchains happen to be installed.
 step lean-toolchain-pin-regex ./scripts/tests/test-lean-toolchain-pin-regex.sh
 step lean-gate ./scripts/check-lean-gate.sh
+# ADR-1664's measurement. Registered here because it is the EVIDENCE for a
+# decision -- that an originated theorem inherits an import's axioms
+# transitively and per proof term, so a composed tier is decidable per theorem --
+# and the numbers the ADR quotes become unverifiable the moment the suite rots.
+# `axeyum-lean-import`'s suites are named individually in this file; the crate is
+# not run wholesale anywhere, so an unregistered suite is one nothing runs.
+# 0.13 s, measured: the two REGRESSION guards run, and the two one-time
+# MEASUREMENTS are `#[ignore]`d because they cost 81 s between them (the Mathlib
+# endpoint's 3,585 declarations, which `imported_fact_evidence` already pins,
+# and a fresh `nat_prelude` build). Confirm a NONZERO count -- "2 passed".
+step lean-import-composition-footprint \
+  cargo test -p axeyum-lean-import --test imported_composition_footprint
 # ADR-0717 S5: the kernel differential (Axeyum vs. pinned Lean), 32 hand-
 # authored cases across conversion, universes, inductives, recursors,
 # projections, literals, quotient and proof irrelevance -- each side authored
@@ -1852,6 +1884,9 @@ step checked-interchange-tests     python3 scripts/tests/test-checked-interchang
 step lean-adapter                  python3 scripts/check-lean-adapter.py
 step lean-adapter-mutations        bash scripts/tests/test-lean-adapter-mutations.sh
 step lean-adapter-tests            python3 scripts/tests/test-lean-adapter.py
+# ADR-1666: `by axeyum` in real pinned Lean. Needs a Lean toolchain and one
+# cargo build; AXEYUM_ALLOW_NO_LEAN=1 makes it a loud SKIP rather than a pass.
+step lean-tactic                   bash scripts/check-lean-tactic.sh
 step declaration-spec python3 scripts/check-declaration-spec.py
 step proof-plan                    python3 scripts/check-proof-plan.py
 step proof-plan-tests              python3 scripts/tests/test-proof-plan-check.py

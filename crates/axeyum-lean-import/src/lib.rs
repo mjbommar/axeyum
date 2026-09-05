@@ -51,6 +51,7 @@ pub mod producers;
 mod semantic_contract_receipt;
 mod source_delta_trace;
 mod statement_goal_record;
+pub mod tactic_bridge;
 mod theorem_composition;
 mod theorem_specialization;
 pub mod thin_adapter;

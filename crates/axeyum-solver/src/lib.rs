@@ -232,6 +232,28 @@ macro_rules! full_modules {
 #[cfg(feature = "full")]
 full_modules!();
 
+/// Bench-only re-exports of otherwise crate-private search internals
+/// (2026-09-05 micro-benchmarks, see the design review
+/// `docs/research/11-design-review/2026-09-05-sat-smt-performance-and-architecture-review.md`
+/// §4 item 3).
+///
+/// `benches/*.rs` is a separate crate and cannot name a `pub(crate)` item or
+/// a private (`mod cdclt;`/`mod simplex;`) module path, so [`crate::cdclt`]'s
+/// `CdclT`/`Lit`/`Outcome` and [`crate::simplex`]'s `Incremental`/`Status`
+/// were promoted from `pub(crate)` to `pub` (their containing modules stay
+/// crate-private) and are re-exported here. This module — and therefore the
+/// only reachable path to any of them from outside the crate — exists solely
+/// under the `bench-internals` feature, which is not part of the default or
+/// `full` feature sets and implies `full` itself. Not part of the public API:
+/// do not depend on this from production code, only from a `[[bench]]`
+/// target.
+#[cfg(feature = "bench-internals")]
+#[doc(hidden)]
+pub mod bench_internals {
+    pub use crate::cdclt::{CdclT, Lit, Outcome};
+    pub use crate::simplex::{Incremental, Rel, Status};
+}
+
 /// Boolean, cardinality, and pseudo-Boolean constraint builders.
 ///
 /// This full-profile facade groups existing query-construction helpers without
@@ -685,6 +707,17 @@ pub mod theories {
         pub use crate::ufbv_online::{check_qf_aufbv_online_cdclt, check_qf_ufbv_online_cdclt};
         pub use crate::uflia_online::check_qf_uflia_online;
         pub use crate::uflra_online::check_qf_uflra_online;
+    }
+
+    /// Stage/counter attribution for the generic CDCL(T) driver
+    /// (`crate::cdclt::CdclT`), shared by every arithmetic/EUF/string/combined
+    /// theory route above — the counterpart to
+    /// [`crate::layers::BvLayerStats`] for the pure bit-blast pipeline. Off by
+    /// default (each `CdclT::new` reads no clock beyond the deadline check
+    /// unless a [`TheoryLayerStatsGuard`] is active): see [`TheoryLayerStatsGuard::enable`].
+    pub mod cdclt_diagnostics {
+        pub use crate::cdclt::{TheoryLayerStatsGuard, last_theory_layer_stats};
+        pub use crate::layers::TheoryLayerStats;
     }
 }
 

@@ -26,5 +26,14 @@ num-traits = { version = "0.2" }
 # (D5 in the 2026-09-05 performance review); see src/fast_map.rs.
 rustc-hash = { workspace = true }
 
+[dev-dependencies]
+criterion.workspace = true
+
 [lints]
 workspace = true
+
+# Micro-benchmark (2026-09-05, design review §4 item 3); `harness = false`
+# hands control to `criterion`'s own main.
+[[bench]]
+name = "arena_intern"
+harness = false
