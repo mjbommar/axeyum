@@ -77,6 +77,35 @@ recorded attempt now carries wall-clock elapsed time since the previous one
 (the 2026-08-21 linear-arithmetic diagnosis's workaround for not having
 either instrument).
 
+## Theory interface
+
+`pub trait TheorySolver` (`crate::euf_egraph`) is the boundary every
+arithmetic/EUF/string/combined-theory adapter implements for `CdclT`.
+[ADR-1701](../research/09-decisions/adr-1701-the-theory-interface-gains-final-check-a-driver-owned-queue-lazy-explanation-and-dynamic-atoms.md)
+widened it with four defaulted hooks, so all ten existing implementors compile
+and behave unchanged unless they opt in: `final_check` (a complete check at a
+total Boolean assignment, separate from the cheap check `assert` used to run
+on every call — the default just returns `Sat`, so a theory that already
+decides everything on `assert` needs no second opinion), `propagate_into` (a
+driver-owned `PropagationQueue` in place of a freshly allocated `Vec` per
+propagation round), `explain` (resolves a deferred `ExplanationId` — lazy
+explanation, so a propagation reason materializes only if conflict analysis
+actually reaches it), and `take_new_atoms` (dynamic theory-atom registration
+through the trait instead of a driver-side table). `DlTheory` (`dl_online.rs`)
+and `LraTheory` (`lra_online.rs`) are the two opt-ins: LRA moves `assert` to
+cheap bound bookkeeping with the complete feasibility decision deferred to
+`final_check` (the Dutertre–de Moura split its simplex engine was built for),
+and DL keeps its incremental negative-cycle check on `assert` but opts into
+the queue and lazy explanation. A [2026-09-05 before/after
+measurement](../research/11-design-review/2026-09-05-adr-1701-slice-1-measured.md)
+on the 2026-08-21 diagnosis's own miss populations found the two opt-ins
+convert some QF_LRA timeouts to a decided verdict (2 of 33 traced, one
+already-decided file 13x faster) with zero regressions, and no effect on the
+traced QF_IDL population — `TheoryLayerStats` attribution on that population
+shows its bottleneck is the CDCL(T) driver's own Boolean search, not the
+theory's `assert`/`propagate` cost, so widening the theory interface had
+nothing to speed up there.
+
 ## Result discipline
 
 - `sat` requires a source-level model accepted by the appropriate checker.
