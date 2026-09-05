@@ -123,6 +123,14 @@ fn all_declarations(p: IntSpacePrelude) -> Vec<(String, crate::name::NameId)> {
             p.creal_finite_integral,
         ),
         (
+            "IntSpace.crealFinite_expectation".into(),
+            p.creal_finite_expectation,
+        ),
+        (
+            "IntSpace.ratExpectation_integral".into(),
+            p.rat_expectation_integral,
+        ),
+        (
             "IntSpace.CReal.integral_witness_independent".into(),
             p.creal_witness_independent,
         ),
@@ -231,7 +239,7 @@ fn every_intspace_declaration_is_present_and_derived() {
     let named = all_declarations(p);
     assert_eq!(
         named.len(),
-        54 + FIELD_COUNT,
+        56 + FIELD_COUNT,
         "the declaration list changed; update this count deliberately"
     );
     for (label, name) in named {

@@ -628,6 +628,16 @@ pub struct IntSpacePrelude {
     /// probe.
     pub creal_finite_integral: NameId,
 
+    /// ADR-1616: `IntSpace.crealFinite_expectation` — the ℝ-valued finite
+    /// expectation IS the `crealFinite` integral.
+    pub creal_finite_expectation: NameId,
+    /// ADR-1616: `IntSpace.ratExpectation_integral` — the RATIONAL
+    /// expectation is that integral, carried across `CReal.ofRat`. The join
+    /// ADR-1612 named as its next step; see
+    /// [`probability_bridge`](self::probability_bridge) for why the
+    /// `ℚ`-valued form cannot be stated at all.
+    pub rat_expectation_integral: NameId,
+
     /// `IntSpace.CReal.integral_witness_independent` — `CReal`'s own theorem,
     /// re-derived as the generic one at `crealInterval`.
     pub creal_witness_independent: NameId,
@@ -774,6 +784,8 @@ fn intern(kernel: &mut Kernel, creal: CRealPrelude) -> IntSpacePrelude {
         creal_interval_total: kernel.name_str(ns, "crealInterval_total"),
         creal_finite: kernel.name_str(ns, "crealFinite"),
         creal_finite_integral: kernel.name_str(ns, "crealFinite_integral"),
+        creal_finite_expectation: kernel.name_str(ns, "crealFinite_expectation"),
+        rat_expectation_integral: kernel.name_str(ns, "ratExpectation_integral"),
         creal_witness_independent: kernel.name_str(creal_ns, "integral_witness_independent"),
         creal_integral_congr: kernel.name_str(creal_ns, "integral_congr"),
         creal_integral_nonneg: kernel.name_str(creal_ns, "integral_nonneg"),
@@ -853,6 +865,7 @@ pub fn build_intspace_prelude(kernel: &mut Kernel) -> Result<IntSpacePrelude, Ke
     convergence::declare_all(&mut d, p)?;
     instances::declare_all(&mut d, p)?;
     detachable::declare_all(&mut d, p)?;
+    probability_bridge::declare_all(&mut d, p)?;
 
     Ok(p)
 }
@@ -866,6 +879,7 @@ mod detachable;
 mod generic;
 mod instances;
 mod measure;
+mod probability_bridge;
 
 #[cfg(test)]
 mod intspace_tests;
