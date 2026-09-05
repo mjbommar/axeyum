@@ -57,6 +57,7 @@ pub mod algebra_ext;
 pub mod algebra_instances;
 mod archimedean;
 mod bernoulli;
+pub mod binomial_rat;
 pub mod binomial_s;
 mod clear_below;
 mod core;
@@ -109,6 +110,7 @@ use algebra_ext::AlgebraExtNames;
 use algebra_instances::AlgebraNames;
 use ordered_ring_ext::OrderedRingExtNames;
 use ordered_ring_ext_s::OrderedRingExtSNames;
+use binomial_rat::BinomialRatNames;
 use binomial_s::BinomialSNames;
 use probability_s::ProbSNames;
 
@@ -3175,6 +3177,12 @@ pub struct RatPrelude {
     /// lemmas (`mul_neg`, `zero_add`) that computation needs.
     /// See [`binomial_s`].
     pub binomial_s: BinomialSNames,
+
+    /// ADR-1631, second half: the binomial at `ℚ` — `E[Σ] = m·q`,
+    /// `Var[Σ] = m·q(1 − q)` under pairwise uncorrelatedness, and Chebyshev
+    /// with that variance substituted. At `ℚ` rather than over the record
+    /// because the variance of a sum needs `mulComm`; see [`binomial_rat`].
+    pub binomial_rat: BinomialRatNames,
 }
 
 impl RatPrelude {
@@ -3734,6 +3742,7 @@ fn intern_names(kernel: &mut Kernel, int: IntPrelude) -> RatPrelude {
         ordered_ring_ext_s: ordered_ring_ext_s::intern_ordered_ring_ext_s(kernel),
         probability_s: probability_s::intern_probability_s(kernel),
         binomial_s: binomial_s::intern_binomial_s(kernel),
+        binomial_rat: binomial_rat::intern_binomial_rat(kernel),
     }
 }
 
@@ -3835,6 +3844,7 @@ pub fn build_rat_prelude(kernel: &mut Kernel) -> Result<RatPrelude, KernelError>
         )?;
         probability_s::declare_probability_s_all(&mut d, &prelude)?;
         binomial_s::declare_binomial_s_all(&mut d, &prelude)?;
+        binomial_rat::declare_binomial_rat_all(&mut d, &prelude)?;
         Ok(())
     })();
     match built {
