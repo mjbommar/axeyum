@@ -468,7 +468,7 @@ impl RefutationCertificate {
     /// The sample point of cell `index`, in the interleaved order documented on
     /// the struct.
     fn cell_sample(&self, index: usize) -> Option<SamplePoint> {
-        if index % 2 == 0 {
+        if index.is_multiple_of(2) {
             self.open_samples
                 .get(index / 2)
                 .copied()
@@ -974,15 +974,19 @@ fn integer_coefficients(poly: &[Rational]) -> Vec<BigInt> {
 
 /// Euclid's algorithm on [`BigInt`]s, returning `1` for `gcd(0, 0)` so the lcm
 /// fold above never divides by zero.
-fn big_gcd(a: &BigInt, b: &BigInt) -> BigInt {
-    let mut x = a.abs();
-    let mut y = b.abs();
-    while !y.is_zero() {
-        let r = &x % &y;
-        x = y;
-        y = r;
+fn big_gcd(left: &BigInt, right: &BigInt) -> BigInt {
+    let mut larger = left.abs();
+    let mut smaller = right.abs();
+    while !smaller.is_zero() {
+        let remainder = &larger % &smaller;
+        larger = smaller;
+        smaller = remainder;
     }
-    if x.is_zero() { BigInt::one() } else { x }
+    if larger.is_zero() {
+        BigInt::one()
+    } else {
+        larger
+    }
 }
 
 /// The exact sign of `poly` at the rational `x`, by Horner over `BigRational`.
