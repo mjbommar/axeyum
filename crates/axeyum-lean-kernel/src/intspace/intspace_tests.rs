@@ -197,6 +197,9 @@ fn all_declarations(p: IntSpacePrelude) -> Vec<(String, crate::name::NameId)> {
     for (label, name) in p.bundled.all() {
         out.push((label.to_string(), name));
     }
+    for (label, name) in p.l1.all() {
+        out.push((label.to_string(), name));
+    }
     out
 }
 
@@ -242,7 +245,7 @@ fn every_intspace_declaration_is_present_and_derived() {
     let named = all_declarations(p);
     assert_eq!(
         named.len(),
-        63 + FIELD_COUNT,
+        82 + FIELD_COUNT,
         "the declaration list changed; update this count deliberately"
     );
     for (label, name) in named {
