@@ -2613,16 +2613,6 @@ fn normalize_rational_big_within(expr: &CasExpr, budget: &mut u64) -> Option<Big
     }
 }
 
-/// [`normalize_rational_big_within`] with a fresh [`BIG_FALLBACK_WORK_BUDGET`].
-///
-/// Used where one expression is normalized on its own; [`equal_core_unbounded`]
-/// shares a single budget across both sides and the cross-multiplication
-/// instead, because that is the unit of work a caller actually asked for.
-fn normalize_rational_big(expr: &CasExpr) -> Option<BigRatFunc> {
-    let mut budget = BIG_FALLBACK_WORK_BUDGET;
-    normalize_rational_big_within(expr, &mut budget)
-}
-
 /// A [`BigPoly`] as a [`MultiPoly`], or `None` when a coefficient does not fit
 /// `i128`.
 ///
@@ -2678,7 +2668,7 @@ fn multipoly_from_big(poly: &BigPoly) -> Option<MultiPoly> {
 /// - any name beginning with `\0`, the prefix [`atom_name`] gives transcendental
 ///   atoms, which the Pythagorean/radical/abs/root folds relate.
 ///
-/// [`normalize_rational_big`] declines every `Unary` head, so a `\0` name can
+/// [`normalize_rational_big_within`] declines every `Unary` head, so a `\0` name can
 /// only arrive from a caller that spelled one as a plain variable; `I` arrives
 /// from ordinary complex work. Both are declined rather than reasoned about.
 /// Neither guard applies to the equality branch, where zero is zero.
@@ -29830,7 +29820,7 @@ mod exact_positivity_tests {
 ///   [`MultiPoly::fold_abs`], [`MultiPoly::fold_nth_root`] and
 ///   [`MultiPoly::fold_bessel_recurrences`]. Those folds have no unbounded
 ///   counterpart, and without them a nonzero normal form in atom variables does
-///   not prove `≠` — so [`normalize_rational_big`] declines the whole head
+///   not prove `≠` — so [`normalize_rational_big_within`] declines the whole head
 ///   rather than half-deciding it.
 ///   (`sqrt_atom_identity_at_overflow_scale_still_declines`)
 /// - **The reserved imaginary unit `I`**, for the same reason one level down:
@@ -30276,10 +30266,14 @@ mod bignum_overflow_fallback {
                 x() + CasExpr::int(1);
                 usize::try_from(degree).unwrap_or(0)
             ]);
+            let big = |expr: &CasExpr| {
+                let mut budget = BIG_FALLBACK_WORK_BUDGET;
+                normalize_rational_big_within(expr, &mut budget).is_some()
+            };
             let product_bounded = best_of(|| normalize_rational(&product).is_some());
-            let product_unbounded = best_of(|| normalize_rational_big(&product).is_some());
+            let product_unbounded = best_of(|| big(&product));
             let normalize_bounded = best_of(|| normalize_rational(&left).is_some());
-            let normalize_unbounded = best_of(|| normalize_rational_big(&left).is_some());
+            let normalize_unbounded = best_of(|| big(&left));
             let zero_test_bounded = best_of(|| {
                 matches!(
                     equal_core_bounded(&left, &right),
