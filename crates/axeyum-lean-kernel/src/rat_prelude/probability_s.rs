@@ -57,6 +57,8 @@ pub struct ProbSNames {
     pub sub_nonneg_of_le: NameId,
     pub mul_le_mul_of_nonneg_right: NameId,
     pub sum_range: NameId,
+    pub sum_range_map: NameId,
+    pub expectation_map: NameId,
     pub sum_range_zero: NameId,
     pub sum_range_succ: NameId,
     pub sum_range_congr: NameId,
@@ -75,8 +77,6 @@ pub struct ProbSNames {
     pub variance: NameId,
     pub variance_nonneg: NameId,
     pub covariance: NameId,
-    pub covariance_comm: NameId,
-    pub covariance_eq: NameId,
     pub independent: NameId,
     pub uncorrelated_of_independent: NameId,
 }
@@ -94,6 +94,8 @@ pub(crate) fn intern_probability_s(k: &mut Kernel) -> ProbSNames {
         sub_nonneg_of_le: k.name_str(root, "sub_nonneg_of_le"),
         mul_le_mul_of_nonneg_right: k.name_str(root, "mul_le_mul_of_nonneg_right"),
         sum_range: k.name_str(root, "sumRange"),
+        sum_range_map: k.name_str(root, "sumRange_map"),
+        expectation_map: k.name_str(root, "expectation_map"),
         sum_range_zero: k.name_str(root, "sumRange_zero"),
         sum_range_succ: k.name_str(root, "sumRange_succ"),
         sum_range_congr: k.name_str(root, "sumRange_congr"),
@@ -112,8 +114,6 @@ pub(crate) fn intern_probability_s(k: &mut Kernel) -> ProbSNames {
         variance: k.name_str(root, "variance"),
         variance_nonneg: k.name_str(root, "variance_nonneg"),
         covariance: k.name_str(root, "covariance"),
-        covariance_comm: k.name_str(root, "covariance_comm"),
-        covariance_eq: k.name_str(root, "covariance_eq"),
         independent: k.name_str(root, "Independent"),
         uncorrelated_of_independent: k.name_str(root, "uncorrelated_of_independent"),
     }
@@ -154,7 +154,6 @@ struct Rec {
     le: ExprId,
     le_congr: ExprId,
     le_refl: ExprId,
-    le_trans: ExprId,
     add_le_add_left: ExprId,
     mul_nonneg: ExprId,
 }
@@ -189,7 +188,6 @@ fn proj(d: &mut IntDev<'_>, rn: &RecordNames, r: ExprId) -> Rec {
         le: proj_one(d, rn, oidx::LE, r),
         le_congr: proj_one(d, rn, oidx::LE_CONGR, r),
         le_refl: proj_one(d, rn, oidx::LE_REFL, r),
-        le_trans: proj_one(d, rn, oidx::LE_TRANS, r),
         add_le_add_left: proj_one(d, rn, oidx::ADD_LE_ADD_LEFT, r),
         mul_nonneg: proj_one(d, rn, oidx::MUL_NONNEG, r),
     }
@@ -1156,6 +1154,260 @@ fn declare_sum_range_nonneg(
 }
 
 // ---------------------------------------------------------------------------
+// The transfer: one ordered ring's finite sums into another's.
+// ---------------------------------------------------------------------------
+
+/// `AlgS.OrderedRing.sumRange_map : ∀ (R S : OrderedRing) (φ : R.carrier →
+/// S.carrier), S.equiv (φ R.zero) S.zero → (∀ a b, S.equiv (φ (R.add a b))
+/// (S.add (φ a) (φ b))) → ∀ f n, S.equiv (φ (sumRange R f n)) (sumRange S
+/// (fun k => φ (f k)) n)`.
+///
+/// **The ℚ↔ℝ transfer, before it is specialised to ℚ and ℝ.** A finite sum
+/// commutes with any additive map between two ordered rings; `CReal.ofRat`
+/// with `CReal.ofRat_add` is one such map, and `AlgS.OrderedRing` is what
+/// lets the statement be made once instead of per carrier pair. Nothing here
+/// mentions `ℚ`, `CReal`, or an integral.
+fn declare_sum_range_map(
+    d: &mut IntDev<'_>,
+    rn: &RecordNames,
+    names: &ProbSNames,
+) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let ord_ty = rec_ty(d, rn);
+    let r_fv = d.fresh_fvar();
+    let r = d.kernel().fvar(r_fv);
+    let s_fv = d.fresh_fvar();
+    let sv = d.kernel().fvar(s_fv);
+    let cr = proj(d, rn, r);
+    let cs = proj(d, rn, sv);
+    let phi_ty = d.arrow(cr.carrier, cs.carrier);
+    let phi_fv = d.fresh_fvar();
+    let phi = d.kernel().fvar(phi_fv);
+
+    let hzero_ty = {
+        let lhs = d.apply(phi, &[cr.zero]);
+        eqv(d, cs, lhs, cs.zero)
+    };
+    let hzero_fv = d.fresh_fvar();
+    let hzero = d.kernel().fvar(hzero_fv);
+
+    let hadd_ty = {
+        let a_fv = d.fresh_fvar();
+        let a = d.kernel().fvar(a_fv);
+        let b_fv = d.fresh_fvar();
+        let b = d.kernel().fvar(b_fv);
+        let ab = radd(d, cr, a, b);
+        let lhs = d.apply(phi, &[ab]);
+        let pa = d.apply(phi, &[a]);
+        let pb = d.apply(phi, &[b]);
+        let rhs = radd(d, cs, pa, pb);
+        let body = eqv(d, cs, lhs, rhs);
+        let over_b = d.pi_fv(b_fv, cr.carrier, body);
+        d.pi_fv(a_fv, cr.carrier, over_b)
+    };
+    let hadd_fv = d.fresh_fvar();
+    let hadd = d.kernel().fvar(hadd_fv);
+
+    let fn_ty = d.arrow(nat, cr.carrier);
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+    let phi_f = {
+        let k_fv = d.fresh_fvar();
+        let kv = d.kernel().fvar(k_fv);
+        let fk = d.apply(f, &[kv]);
+        let body = d.apply(phi, &[fk]);
+        d.lam_fv(k_fv, nat, body)
+    };
+
+    let motive = |d: &mut IntDev<'_>, x: ExprId| -> ExprId {
+        let inner = sum_range_of(d, names, r, f, x);
+        let lhs = d.apply(phi, &[inner]);
+        let rhs = sum_range_of(d, names, sv, phi_f, x);
+        eqv(d, cs, lhs, rhs)
+    };
+    let stmt = motive(d, n);
+
+    let proof = d.induct(
+        &motive,
+        &|_d| hzero,
+        &|d, j, ih| {
+            let a = sum_range_of(d, names, r, f, j);
+            let b = d.apply(f, &[j]);
+            let ab = radd(d, cr, a, b);
+            let phi_ab = d.apply(phi, &[ab]);
+            let pa = d.apply(phi, &[a]);
+            let pb = d.apply(phi, &[b]);
+            let sum_pa_pb = radd(d, cs, pa, pb);
+            let step1 = d.apply(hadd, &[a, b]);
+            let s_prior = sum_range_of(d, names, sv, phi_f, j);
+            let refl_pb = refl(d, cs, pb);
+            let step2 = acongr(d, cs, pa, s_prior, pb, pb, ih, refl_pb);
+            let rhs = radd(d, cs, s_prior, pb);
+            trans(d, cs, phi_ab, sum_pa_pb, rhs, step1, step2)
+        },
+        n,
+    );
+
+    let ty = {
+        let over_n = d.pi_fv(n_fv, nat, stmt);
+        let over_f = d.pi_fv(f_fv, fn_ty, over_n);
+        let t = d.arrow(hadd_ty, over_f);
+        let t = d.arrow(hzero_ty, t);
+        let over_phi = d.pi_fv(phi_fv, phi_ty, t);
+        let over_s = d.pi_fv(s_fv, ord_ty, over_phi);
+        d.pi_fv(r_fv, ord_ty, over_s)
+    };
+    let value = {
+        let over_n = d.lam_fv(n_fv, nat, proof);
+        let over_f = d.lam_fv(f_fv, fn_ty, over_n);
+        let t = d.lam_fv(hadd_fv, hadd_ty, over_f);
+        let t = d.lam_fv(hzero_fv, hzero_ty, t);
+        let over_phi = d.lam_fv(phi_fv, phi_ty, t);
+        let over_s = d.lam_fv(s_fv, ord_ty, over_phi);
+        d.lam_fv(r_fv, ord_ty, over_s)
+    };
+    d.declare_theorem(names.sum_range_map, ty, value)
+}
+
+/// `AlgS.OrderedRing.expectation_map : ∀ (R S) (φ) (hzero) (hadd) (hmul) X p
+/// n, S.equiv (φ (expectation R X p n)) (expectation S (φ ∘ X) (φ ∘ p) n)`.
+///
+/// **This is the ℚ↔ℝ probability bridge, stated where it belongs — over the
+/// spine, not over either carrier.** A ring map carries a finite expectation
+/// to a finite expectation. Instantiated at `AlgS.Rat.orderedRingS`,
+/// `CReal.orderedRingS` and `CReal.ofRat` (whose `ofRat_add`/`ofRat_mul` are
+/// already proved) it says the rational expectation and the real one are the
+/// same number, and that is what joins the finite probability shelf to the
+/// integration space (`IntSpace.crealFinite`, ADR-1612), whose integral is
+/// `CReal`-valued and can therefore never take a `ℚ` argument directly.
+fn declare_expectation_map(
+    d: &mut IntDev<'_>,
+    rn: &RecordNames,
+    names: &ProbSNames,
+) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let ord_ty = rec_ty(d, rn);
+    let r_fv = d.fresh_fvar();
+    let r = d.kernel().fvar(r_fv);
+    let s_fv = d.fresh_fvar();
+    let sv = d.kernel().fvar(s_fv);
+    let cr = proj(d, rn, r);
+    let cs = proj(d, rn, sv);
+    let phi_ty = d.arrow(cr.carrier, cs.carrier);
+    let phi_fv = d.fresh_fvar();
+    let phi = d.kernel().fvar(phi_fv);
+
+    let hzero_ty = {
+        let lhs = d.apply(phi, &[cr.zero]);
+        eqv(d, cs, lhs, cs.zero)
+    };
+    let hzero_fv = d.fresh_fvar();
+    let hzero = d.kernel().fvar(hzero_fv);
+    let hadd_ty = {
+        let a_fv = d.fresh_fvar();
+        let a = d.kernel().fvar(a_fv);
+        let b_fv = d.fresh_fvar();
+        let b = d.kernel().fvar(b_fv);
+        let ab = radd(d, cr, a, b);
+        let lhs = d.apply(phi, &[ab]);
+        let pa = d.apply(phi, &[a]);
+        let pb = d.apply(phi, &[b]);
+        let rhs = radd(d, cs, pa, pb);
+        let body = eqv(d, cs, lhs, rhs);
+        let over_b = d.pi_fv(b_fv, cr.carrier, body);
+        d.pi_fv(a_fv, cr.carrier, over_b)
+    };
+    let hadd_fv = d.fresh_fvar();
+    let hadd = d.kernel().fvar(hadd_fv);
+    let hmul_ty = {
+        let a_fv = d.fresh_fvar();
+        let a = d.kernel().fvar(a_fv);
+        let b_fv = d.fresh_fvar();
+        let b = d.kernel().fvar(b_fv);
+        let ab = rmul(d, cr, a, b);
+        let lhs = d.apply(phi, &[ab]);
+        let pa = d.apply(phi, &[a]);
+        let pb = d.apply(phi, &[b]);
+        let rhs = rmul(d, cs, pa, pb);
+        let body = eqv(d, cs, lhs, rhs);
+        let over_b = d.pi_fv(b_fv, cr.carrier, body);
+        d.pi_fv(a_fv, cr.carrier, over_b)
+    };
+    let hmul_fv = d.fresh_fvar();
+    let hmul = d.kernel().fvar(hmul_fv);
+
+    let fn_ty = d.arrow(nat, cr.carrier);
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let pf_fv = d.fresh_fvar();
+    let pf = d.kernel().fvar(pf_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+
+    let compose = |d: &mut IntDev<'_>, g: ExprId| -> ExprId {
+        let k_fv = d.fresh_fvar();
+        let kv = d.kernel().fvar(k_fv);
+        let gk = d.apply(g, &[kv]);
+        let body = d.apply(phi, &[gk]);
+        d.lam_fv(k_fv, nat, body)
+    };
+    let phi_x = compose(d, x);
+    let phi_p = compose(d, pf);
+    let w_r = weighted(d, cr, x, pf);
+    let phi_w = compose(d, w_r);
+    let w_s = weighted(d, cs, phi_x, phi_p);
+
+    // step1 : φ (sumRange R w_r n) ≃ sumRange S (φ ∘ w_r) n
+    let step1 = d.const_app(names.sum_range_map, &[r, sv, phi, hzero, hadd, w_r, n]);
+    // step2 : sumRange S (φ ∘ w_r) n ≃ sumRange S w_s n, pointwise by hmul
+    let pointwise = {
+        let k_fv = d.fresh_fvar();
+        let kv = d.kernel().fvar(k_fv);
+        let hk_ty = d.lt(kv, n);
+        let hk_fv = d.fresh_fvar();
+        let xk = d.apply(x, &[kv]);
+        let pk = d.apply(pf, &[kv]);
+        let body = d.apply(hmul, &[xk, pk]);
+        let with_hk = d.lam_fv(hk_fv, hk_ty, body);
+        d.lam_fv(k_fv, nat, with_hk)
+    };
+    let step2 = d.const_app(names.sum_range_congr, &[sv, phi_w, w_s, n, pointwise]);
+
+    let e_r = expectation_of(d, names, r, x, pf, n);
+    let lhs = d.apply(phi, &[e_r]);
+    let mid = sum_range_of(d, names, sv, phi_w, n);
+    let rhs = expectation_of(d, names, sv, phi_x, phi_p, n);
+    let core = trans(d, cs, lhs, mid, rhs, step1, step2);
+    let stmt = eqv(d, cs, lhs, rhs);
+
+    let ty = {
+        let over_n = d.pi_fv(n_fv, nat, stmt);
+        let over_pf = d.pi_fv(pf_fv, fn_ty, over_n);
+        let over_x = d.pi_fv(x_fv, fn_ty, over_pf);
+        let t = d.arrow(hmul_ty, over_x);
+        let t = d.arrow(hadd_ty, t);
+        let t = d.arrow(hzero_ty, t);
+        let over_phi = d.pi_fv(phi_fv, phi_ty, t);
+        let over_s = d.pi_fv(s_fv, ord_ty, over_phi);
+        d.pi_fv(r_fv, ord_ty, over_s)
+    };
+    let value = {
+        let over_n = d.lam_fv(n_fv, nat, core);
+        let over_pf = d.lam_fv(pf_fv, fn_ty, over_n);
+        let over_x = d.lam_fv(x_fv, fn_ty, over_pf);
+        let t = d.lam_fv(hmul_fv, hmul_ty, over_x);
+        let t = d.lam_fv(hadd_fv, hadd_ty, t);
+        let t = d.lam_fv(hzero_fv, hzero_ty, t);
+        let over_phi = d.lam_fv(phi_fv, phi_ty, t);
+        let over_s = d.lam_fv(s_fv, ord_ty, over_phi);
+        d.lam_fv(r_fv, ord_ty, over_s)
+    };
+    d.declare_theorem(names.expectation_map, ty, value)
+}
+
+// ---------------------------------------------------------------------------
 // The price of `mul_le_mul_of_nonneg_right`.
 // ---------------------------------------------------------------------------
 
@@ -2035,8 +2287,19 @@ fn declare_variance(
     })
 }
 
-/// `AlgS.OrderedRing.covariance R X Y p n := expectation R (fun k => (X k −
-/// E[X]) * (Y k − E[Y])) p n`.
+/// `AlgS.OrderedRing.covariance R X Y p n := sub (expectation R (fun k => X
+/// k * Y k) p n) (mul (expectation R X p n) (expectation R Y p n))`.
+///
+/// **The computational form, not the centred one — because that is what
+/// `Rat.covariance` already is.** `Rat.variance` is centred (`E[(X−μ)²]`)
+/// and `Rat.covariance` is not (`E[XY] − E[X]E[Y]`); this file follows both
+/// verbatim so each is definitionally the `ℚ` constant. The asymmetry is
+/// load-bearing here: over `AlgS.OrderedRing` the two forms are NOT
+/// interchangeable, since relating them needs `E[fun k => X k * c] ≃ E[X] *
+/// c`, which pulls a constant past the weight `p k` and therefore needs
+/// `mulComm` — a field ADR-1592 §2 could not give the record. Had
+/// `Rat.covariance` been the centred form, W2-15 would have needed
+/// commutativity as an explicit hypothesis.
 fn declare_covariance(
     d: &mut IntDev<'_>,
     rn: &RecordNames,
@@ -2057,10 +2320,12 @@ fn declare_covariance(
     let n_fv = d.fresh_fvar();
     let n = d.kernel().fvar(n_fv);
 
-    let mux = expectation_of(d, names, r, x, pf, n);
-    let muy = expectation_of(d, names, r, y, pf, n);
-    let summand = centred_product(d, c, x, y, mux, muy);
-    let body = expectation_of(d, names, r, summand, pf, n);
+    let xy = pointwise_mul(d, c, x, y);
+    let e_xy = expectation_of(d, names, r, xy, pf, n);
+    let ex = expectation_of(d, names, r, x, pf, n);
+    let ey = expectation_of(d, names, r, y, pf, n);
+    let exey = rmul(d, c, ex, ey);
+    let body = rsub(d, c, e_xy, exey);
     let value = {
         let with_n = d.lam_fv(n_fv, nat, body);
         let with_pf = d.lam_fv(pf_fv, fn_ty, with_n);
@@ -2167,6 +2432,152 @@ fn declare_variance_nonneg(
 }
 
 // ---------------------------------------------------------------------------
+// W2-15: independence.
+// ---------------------------------------------------------------------------
+
+/// `AlgS.OrderedRing.Independent R A B p n := equiv (expectation R (fun k =>
+/// A k * B k) p n) (mul (expectation R A p n) (expectation R B p n))`.
+///
+/// **The product rule, for two events.** An event on a finite index range is
+/// its indicator, a function `Nat → carrier` taking the values `zero` and
+/// `one`; the indicator of an intersection is the pointwise product, and the
+/// probability of an event is the expectation of its indicator. So `P(A ∩ B)
+/// = P(A)·P(B)` is exactly this equation, spelled in the vocabulary the rest
+/// of this file already has.
+///
+/// It is stated for arbitrary `A`, `B` rather than only for indicators — at
+/// indicator arguments it is independence of events, and at general
+/// arguments it is the uncorrelatedness of two random variables written as a
+/// product rule. The theorem below holds in both readings.
+fn declare_independent(
+    d: &mut IntDev<'_>,
+    rn: &RecordNames,
+    names: &ProbSNames,
+) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let prop = d.kernel().sort_zero();
+    let anon = d.anon_name();
+
+    let r_fv = d.fresh_fvar();
+    let r = d.kernel().fvar(r_fv);
+    let c = proj(d, rn, r);
+    let fn_ty = d.arrow(nat, c.carrier);
+
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+    let pf_fv = d.fresh_fvar();
+    let pf = d.kernel().fvar(pf_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+
+    let ab = pointwise_mul(d, c, a, b);
+    let e_ab = expectation_of(d, names, r, ab, pf, n);
+    let ea = expectation_of(d, names, r, a, pf, n);
+    let eb = expectation_of(d, names, r, b, pf, n);
+    let eaeb = rmul(d, c, ea, eb);
+    let body = eqv(d, c, e_ab, eaeb);
+
+    let value = {
+        let with_n = d.lam_fv(n_fv, nat, body);
+        let with_pf = d.lam_fv(pf_fv, fn_ty, with_n);
+        let with_b = d.lam_fv(b_fv, fn_ty, with_pf);
+        let with_a = d.lam_fv(a_fv, fn_ty, with_b);
+        let ord_ty = rec_ty(d, rn);
+        d.lam_fv(r_fv, ord_ty, with_a)
+    };
+    let ty = {
+        let inner = d.kernel().pi(anon, nat, prop, crate::BinderInfo::Default);
+        let over_pf = d.arrow(fn_ty, inner);
+        let over_b = d.arrow(fn_ty, over_pf);
+        let over_a = d.arrow(fn_ty, over_b);
+        let ord_ty = rec_ty(d, rn);
+        d.pi_fv(r_fv, ord_ty, over_a)
+    };
+    d.kernel().add_declaration(Declaration::Definition {
+        name: names.independent,
+        uparams: vec![],
+        ty,
+        value,
+        hint: ReducibilityHint::Regular(6),
+    })
+}
+
+/// `AlgS.OrderedRing.uncorrelated_of_independent : ∀ R A B p n, Independent
+/// R A B p n → equiv (covariance R A B p n) zero`.
+///
+/// **What W2-15 is for.** The `ℚ` development's concentration results —
+/// `Rat.variance_add_of_uncorrelated`, `Rat.variance_sampleMean_uncorrelated`,
+/// `Rat.weak_law_of_large_numbers` — all carry the hypothesis `covariance X
+/// Y p n = zero`, which is correct and sharp but is not how a probabilist
+/// says it. This theorem is the bridge: supply independence in its
+/// recognizable product form and get the hypothesis those theorems want.
+///
+/// The proof is three steps, because `covariance` is already the
+/// computational form: rewrite `E[AB]` to `E[A]·E[B]` under the subtraction
+/// with `addCongr`, then `negAdd` collapses `t + (−t)` to `zero`.
+fn declare_uncorrelated_of_independent(
+    d: &mut IntDev<'_>,
+    rn: &RecordNames,
+    names: &ProbSNames,
+) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let r_fv = d.fresh_fvar();
+    let r = d.kernel().fvar(r_fv);
+    let c = proj(d, rn, r);
+    let fn_ty = d.arrow(nat, c.carrier);
+
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+    let pf_fv = d.fresh_fvar();
+    let pf = d.kernel().fvar(pf_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+
+    let hyp_ty = d.const_app(names.independent, &[r, a, b, pf, n]);
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+
+    let ab = pointwise_mul(d, c, a, b);
+    let e_ab = expectation_of(d, names, r, ab, pf, n);
+    let ea = expectation_of(d, names, r, a, pf, n);
+    let eb = expectation_of(d, names, r, b, pf, n);
+    let t = rmul(d, c, ea, eb);
+    let nt = rneg(d, c, t);
+    let lhs = radd(d, c, e_ab, nt);
+    let t_nt = radd(d, c, t, nt);
+
+    let refl_nt = refl(d, c, nt);
+    let step1 = acongr(d, c, e_ab, t, nt, nt, h, refl_nt);
+    let step2 = d.apply(c.neg_add, &[t]);
+    let core = trans(d, c, lhs, t_nt, c.zero, step1, step2);
+
+    let cov = covariance_of(d, names, r, a, b, pf, n);
+    let stmt = eqv(d, c, cov, c.zero);
+    let ord_ty = rec_ty(d, rn);
+    let ty = {
+        let tt = d.arrow(hyp_ty, stmt);
+        let over_n = d.pi_fv(n_fv, nat, tt);
+        let over_pf = d.pi_fv(pf_fv, fn_ty, over_n);
+        let over_b = d.pi_fv(b_fv, fn_ty, over_pf);
+        let over_a = d.pi_fv(a_fv, fn_ty, over_b);
+        d.pi_fv(r_fv, ord_ty, over_a)
+    };
+    let value = {
+        let tt = d.lam_fv(h_fv, hyp_ty, core);
+        let over_n = d.lam_fv(n_fv, nat, tt);
+        let over_pf = d.lam_fv(pf_fv, fn_ty, over_n);
+        let over_b = d.lam_fv(b_fv, fn_ty, over_pf);
+        let over_a = d.lam_fv(a_fv, fn_ty, over_b);
+        d.lam_fv(r_fv, ord_ty, over_a)
+    };
+    d.declare_theorem(names.uncorrelated_of_independent, ty, value)
+}
+
+// ---------------------------------------------------------------------------
 // Assembly.
 // ---------------------------------------------------------------------------
 
@@ -2212,5 +2623,13 @@ pub(crate) fn declare_probability_s_all(
     declare_variance(d, &rn, &names)?;
     declare_covariance(d, &rn, &names)?;
     declare_variance_nonneg(d, &rn, &names)?;
+    declare_independent(d, &rn, &names)?;
+    declare_uncorrelated_of_independent(d, &rn, &names)?;
+    declare_sum_range_map(d, &rn, &names)?;
+    declare_expectation_map(d, &rn, &names)?;
     Ok(())
 }
+
+#[cfg(test)]
+#[path = "probability_s_tests.rs"]
+mod probability_s_tests;
