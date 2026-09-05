@@ -4,7 +4,7 @@
   "note": "Statement identity for every settled fact (S1 of the trusted-library safety roadmap, ADR-0763). Per fact: SHA-256 of formal.statement (the canonical kernel rendering for native lean4 rows), SHA-256 of the top-level reader-facing statement, and the kernel_theorem it names. A settled fact's statement is what the ledger CLAIMS; changing any of the three silently turns 'we proved X' into 'we proved something we then labelled X'. Changes require an amendment row naming both digests and a reason; superseded digests are preserved in each pin's history. `coverage_floor` is a ratchet the gate re-derives rather than trusts: slack is itself a violation, so a loosened floor is self-reverting. Written by `scripts/check-settled-fact-statements.py --write`; do not hand-edit.",
   "coverage_floor": {
     "max_unpinned_settled": 0,
-    "min_identity_bound": 2387,
+    "min_identity_bound": 2390,
     "max_header_exempt": 0
   },
   "amendments": [
@@ -22383,6 +22383,13 @@
       "kernel_theorem": "Rat.fieldS_isTight"
     },
     {
+      "fact_id": "F:rat-four-mul-le-sq-add",
+      "language": "lean4",
+      "statement_sha256": "230dd29a5059368a4b234545ae28edfbbeffe988e02a8341225c126b2ebc9da6",
+      "prose_sha256": "a2616e67f9e884edaf5b516802b34735c7e267d65a795bcc8cc31686cc102ee5",
+      "kernel_theorem": "Rat.four_mul_le_sq_add"
+    },
+    {
       "fact_id": "F:rat-fourth-moment-inequality",
       "language": "lean4-surface",
       "statement_sha256": "e927cdd8147b3da3e6173d7d9109153c8305645b83494bc97a2da1e9fbc0e289",
@@ -23105,6 +23112,13 @@
       "statement_sha256": "6f34f4b853a155b28f129a44355f8130136a4b777a0bbe41046a5ee5766fd93e",
       "prose_sha256": "d41705f3ba5b5bdfe1860687ac94873b81f2602050595007e85a8443eff5b584",
       "kernel_theorem": "Rat.mk_congr"
+    },
+    {
+      "fact_id": "F:rat-mul-add-le-sq-add-sq-three",
+      "language": "lean4",
+      "statement_sha256": "2d2756e3a74a0c1aaee9d6788803292b662cf913a23d9ed0ed81498f81dbf776",
+      "prose_sha256": "34f5f0cc03752dd1dc2b64cd4d7533fd04bde6d434bd939a9f70340f6625fb37",
+      "kernel_theorem": "Rat.mul_add_le_sq_add_sq_three"
     },
     {
       "fact_id": "F:rat-mul-adj2-bottom-left",
@@ -24470,6 +24484,13 @@
       "statement_sha256": "e96fb05047d1b974a4b8125921fed2f0efe0ee53540d36ce3f744ee0a4a067f2",
       "prose_sha256": "05cdb5a3e3217c2ec2e4cec3b6074c25e1f708b6667cfd6c6572fb4ac8ccfe8c",
       "kernel_theorem": "Rat.taylor_deg1"
+    },
+    {
+      "fact_id": "F:rat-two-mul-le-sq-add-sq",
+      "language": "lean4",
+      "statement_sha256": "4be054b622cfc1713fab5f52764eb422c8c66f5df0b9622ceecbd96c595294e2",
+      "prose_sha256": "5cdc9efb48e71ac6e67c43560ee7f276817c600537f3a6ac62d25e4ee7150cfa",
+      "kernel_theorem": "Rat.two_mul_le_sq_add_sq"
     },
     {
       "fact_id": "F:rat-uniform-is-distribution",
