@@ -58,7 +58,7 @@ use axeyum_ir::Rational;
 /// stored, so structural equality is value equality and [`BigPoly::is_zero`] is
 /// exact.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
-pub(super) struct BigPoly {
+pub(crate) struct BigPoly {
     terms: BTreeMap<Monomial, BigInt>,
 }
 
@@ -150,15 +150,31 @@ impl BigPoly {
     // --- Construction -------------------------------------------------------
 
     /// The zero polynomial.
-    fn zero() -> BigPoly {
+    pub(crate) fn zero() -> BigPoly {
         BigPoly {
             terms: BTreeMap::new(),
         }
     }
 
     /// The constant polynomial `1`.
-    fn one() -> BigPoly {
+    pub(crate) fn one() -> BigPoly {
         BigPoly::single_term(Monomial::one(), BigInt::one())
+    }
+
+    /// The constant polynomial `value` (the zero polynomial when `value` is `0`).
+    pub(crate) fn constant(value: BigInt) -> BigPoly {
+        BigPoly::single_term(Monomial::one(), value)
+    }
+
+    /// The degree-1 polynomial in a single variable.
+    pub(crate) fn variable(name: &str) -> BigPoly {
+        BigPoly::single_term(Monomial::from_powers(&[(name, 1)]), BigInt::one())
+    }
+
+    /// The `(monomial, coefficient)` pairs in ascending monomial order; every
+    /// stored coefficient is nonzero.
+    pub(crate) fn terms(&self) -> impl Iterator<Item = (&Monomial, &BigInt)> {
+        self.terms.iter()
     }
 
     /// A single-term polynomial; the zero polynomial when `coeff` is zero.
@@ -235,7 +251,7 @@ impl BigPoly {
     // --- Accessors ----------------------------------------------------------
 
     /// Returns `true` if this is the zero polynomial.
-    fn is_zero(&self) -> bool {
+    pub(crate) fn is_zero(&self) -> bool {
         self.terms.is_empty()
     }
 
@@ -251,7 +267,7 @@ impl BigPoly {
     }
 
     /// The set of variables occurring in this polynomial.
-    fn variables(&self) -> BTreeSet<String> {
+    pub(crate) fn variables(&self) -> BTreeSet<String> {
         let mut vars = BTreeSet::new();
         for mono in self.terms.keys() {
             for (name, _) in mono.powers() {
@@ -308,8 +324,17 @@ impl BigPoly {
 
     // --- Ring operations ----------------------------------------------------
 
+    /// Exact polynomial addition.
+    pub(crate) fn add(&self, other: &BigPoly) -> BigPoly {
+        let mut out = self.clone();
+        for (mono, coeff) in &other.terms {
+            out.accumulate(mono, coeff);
+        }
+        out
+    }
+
     /// Exact polynomial subtraction.
-    fn sub(&self, other: &BigPoly) -> BigPoly {
+    pub(crate) fn sub(&self, other: &BigPoly) -> BigPoly {
         let mut out = self.clone();
         for (mono, coeff) in &other.terms {
             out.accumulate(mono, &-coeff.clone());
@@ -317,11 +342,38 @@ impl BigPoly {
         out
     }
 
+    /// Exact negation.
+    pub(crate) fn neg(&self) -> BigPoly {
+        BigPoly::zero().sub(self)
+    }
+
+    /// `self` raised to a non-negative integer power, or `None` on `u32`
+    /// exponent overflow inside a monomial product. `self^0` is `1`.
+    ///
+    /// Binary exponentiation: `⌈log₂ exp⌉` squarings rather than `exp`
+    /// multiplications, which matters because these are the coefficients that
+    /// outgrew `i128` in the first place.
+    pub(crate) fn pow(&self, exp: u32) -> Option<BigPoly> {
+        let mut result = BigPoly::one();
+        let mut base = self.clone();
+        let mut remaining = exp;
+        while remaining > 0 {
+            if remaining & 1 == 1 {
+                result = result.mul(&base)?;
+            }
+            remaining >>= 1;
+            if remaining > 0 {
+                base = base.mul(&base)?;
+            }
+        }
+        Some(result)
+    }
+
     /// Exact polynomial multiplication, or `None` on `u32` exponent overflow.
     ///
     /// The coefficients cannot overflow; only the exponent sum can, and only for
     /// monomials no realistic input produces.
-    fn mul(&self, other: &BigPoly) -> Option<BigPoly> {
+    pub(crate) fn mul(&self, other: &BigPoly) -> Option<BigPoly> {
         let mut out = BigPoly::zero();
         for (left_mono, left_coeff) in &self.terms {
             for (right_mono, right_coeff) in &other.terms {

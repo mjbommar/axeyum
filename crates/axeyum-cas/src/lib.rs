@@ -111,6 +111,8 @@ pub mod telescoping;
 pub mod telescoping_check;
 pub mod telescoping_json;
 
+use crate::mvpoly::big::BigPoly;
+
 pub use algebraic::AlgebraicReal;
 pub use approx::{lagrange_interpolation, newton_divided_differences, pade, pade_fraction};
 pub use assumptions::{Assumptions, Sign};
@@ -2056,11 +2058,28 @@ pub enum ZeroTest {
     Certified {
         /// Whether the two expressions are equal (the difference is zero).
         equal: bool,
-        /// The difference `a − b` in canonical form (the certificate).
+        /// The difference `a − b` in canonical form (the certificate): the
+        /// cross-multiplied numerator, which is the zero polynomial exactly
+        /// when `equal` is `true`.
+        ///
+        /// From the unbounded fallback ([ADR-1670]) the polynomial is that
+        /// numerator scaled by a **positive rational** — the least common
+        /// denominator the fallback clears to work over ℤ — which is invisible
+        /// to the zero test and to any re-check of it. A zero witness is the
+        /// zero polynomial either way.
+        ///
+        /// [ADR-1670]: ../../../docs/research/09-decisions/adr-1670-i128-fast-path-with-a-big-integer-overflow-fallback-for-the-cas-zero-test.md
         witness: MultiPoly,
     },
-    /// Could not decide within exact `i128` rational arithmetic (overflow).
-    /// Honest unknown — never a wrong answer.
+    /// Could not decide. Honest unknown — never a wrong answer.
+    ///
+    /// Two causes, after [ADR-1670]: the expression is outside the fragment the
+    /// zero-test decides at all, or exact arithmetic overflowed `i128` **and**
+    /// the unbounded fallback also declined (a transcendental atom it does not
+    /// carry folds for, the reserved `I`, or a refutation whose witness does not
+    /// fit back into `i128`).
+    ///
+    /// [ADR-1670]: ../../../docs/research/09-decisions/adr-1670-i128-fast-path-with-a-big-integer-overflow-fallback-for-the-cas-zero-test.md
     Unknown,
 }
 
@@ -2330,7 +2349,21 @@ const MAX_WEIGHTED_BESSEL_ORDER: u32 = 32;
 /// The core cross-multiplication zero-test (no Euler canonicalization). Treats
 /// transcendental heads as independent atoms; see [`equal`] for why the public
 /// entry point re-checks a non-equal result on the [`rewrite_exp`] form.
+///
+/// Two normal forms, tried in order: the bounded `i128` one
+/// ([`equal_core_bounded`]) and, **only when that one declines**, the unbounded
+/// integer one ([`equal_core_unbounded`], ADR-1670). The fallback never runs on
+/// an input the bounded form decided, so it cannot change an existing verdict —
+/// it can only turn an overflow `Unknown` into a decision.
 fn equal_core(a: &CasExpr, b: &CasExpr) -> ZeroTest {
+    match equal_core_bounded(a, b) {
+        ZeroTest::Unknown => equal_core_unbounded(a, b),
+        decided => decided,
+    }
+}
+
+/// The bounded (`i128`) cross-multiplication zero-test.
+fn equal_core_bounded(a: &CasExpr, b: &CasExpr) -> ZeroTest {
     let (Some(ra), Some(rb)) = (normalize_rational(a), normalize_rational(b)) else {
         return ZeroTest::Unknown;
     };
@@ -2408,6 +2441,214 @@ fn equal_core(a: &CasExpr, b: &CasExpr) -> ZeroTest {
     {
         Some(witness) => ZeroTest::Certified {
             equal: witness.is_zero(),
+            witness,
+        },
+        None => ZeroTest::Unknown,
+    }
+}
+
+// --- The arbitrary-precision overflow fallback (ADR-1670) --------------------
+
+/// A rational function `num / den` over **ℤ[vars]** with unbounded integer
+/// coefficients — the normal form the zero-test retries in when the bounded
+/// `i128` form overflows.
+///
+/// Rational *coefficients* are not needed: a constant `p/q` is the pair
+/// `(constant p, constant q)`, and a quotient of integer polynomials already
+/// denotes every rational function the fragment can spell. That is what lets
+/// this reuse [`mvpoly::big::BigPoly`] — the ring the multivariate GCD already
+/// computes in — instead of introducing a third polynomial type.
+///
+/// The price of clearing denominators is that `num` is the bounded path's
+/// numerator scaled by a **positive rational**; see [`equal_core_unbounded`] for
+/// why that is invisible to the zero-test and what it means for the witness.
+#[derive(Debug, Clone)]
+struct BigRatFunc {
+    num: BigPoly,
+    den: BigPoly,
+}
+
+impl BigRatFunc {
+    /// The polynomial `p` as `p / 1`.
+    fn from_poly(num: BigPoly) -> Self {
+        BigRatFunc {
+            num,
+            den: BigPoly::one(),
+        }
+    }
+
+    /// `self + other = (a·d + c·b) / (b·d)`; `None` only on `u32` exponent
+    /// overflow (coefficients cannot overflow here).
+    fn add(&self, other: &BigRatFunc) -> Option<BigRatFunc> {
+        Some(BigRatFunc {
+            num: self.num.mul(&other.den)?.add(&other.num.mul(&self.den)?),
+            den: self.den.mul(&other.den)?,
+        })
+    }
+
+    /// `self · other = (a·c) / (b·d)`.
+    fn mul(&self, other: &BigRatFunc) -> Option<BigRatFunc> {
+        Some(BigRatFunc {
+            num: self.num.mul(&other.num)?,
+            den: self.den.mul(&other.den)?,
+        })
+    }
+
+    /// `−self = (−a) / b`.
+    fn neg(&self) -> BigRatFunc {
+        BigRatFunc {
+            num: self.num.neg(),
+            den: self.den.clone(),
+        }
+    }
+
+    /// `self^exp`.
+    fn pow(&self, exp: u32) -> Option<BigRatFunc> {
+        Some(BigRatFunc {
+            num: self.num.pow(exp)?,
+            den: self.den.pow(exp)?,
+        })
+    }
+
+    /// `self / other = (a·d) / (b·c)`; `None` on a division by the identically
+    /// zero function, exactly as [`RatFunc::div`] declines.
+    fn div(&self, other: &BigRatFunc) -> Option<BigRatFunc> {
+        if other.num.is_zero() {
+            return None;
+        }
+        Some(BigRatFunc {
+            num: self.num.mul(&other.den)?,
+            den: self.den.mul(&other.num)?,
+        })
+    }
+}
+
+/// Expand a [`CasExpr`] to a [`BigRatFunc`], mirroring [`normalize_rational`]
+/// over unbounded integers.
+///
+/// **Deliberately narrower than [`normalize_rational`]:** every `Unary` head is
+/// declined rather than atomized. The bounded path turns `sin x`, `√u`, `|u|`,
+/// `root_q(u)`, `Jₙ(x)` and `exp` into opaque atom variables and then applies
+/// [`MultiPoly::fold_pythagorean`], [`MultiPoly::fold_radical`],
+/// [`MultiPoly::fold_abs`], [`MultiPoly::fold_nth_root`] and
+/// [`MultiPoly::fold_bessel_recurrences`] to relate them; those folds have no
+/// unbounded counterpart yet, and without them a *nonzero* normal form in atom
+/// variables does not prove `≠`. Declining is the honest slice: the fragment
+/// covered here — variables, rational constants, `+`, `−`, `×`, `÷`, integer
+/// powers — is exactly the one where no fold can apply.
+fn normalize_rational_big(expr: &CasExpr) -> Option<BigRatFunc> {
+    match expr {
+        CasExpr::Const(r) => Some(BigRatFunc {
+            num: BigPoly::constant(BigInt::from(r.numerator())),
+            // `Rational` keeps the denominator positive, so the clearing factor
+            // this introduces is positive.
+            den: BigPoly::constant(BigInt::from(r.denominator())),
+        }),
+        CasExpr::Var(v) => Some(BigRatFunc::from_poly(BigPoly::variable(v))),
+        CasExpr::Add(terms) => {
+            let mut acc = BigRatFunc::from_poly(BigPoly::zero());
+            for t in terms {
+                acc = acc.add(&normalize_rational_big(t)?)?;
+            }
+            Some(acc)
+        }
+        CasExpr::Mul(factors) => {
+            let mut acc = BigRatFunc::from_poly(BigPoly::one());
+            for f in factors {
+                acc = acc.mul(&normalize_rational_big(f)?)?;
+            }
+            Some(acc)
+        }
+        CasExpr::Neg(inner) => Some(normalize_rational_big(inner)?.neg()),
+        CasExpr::Div(u, w) => normalize_rational_big(u)?.div(&normalize_rational_big(w)?),
+        CasExpr::Pow(base, exp) => normalize_rational_big(base)?.pow(*exp),
+        CasExpr::Unary(..) => None,
+    }
+}
+
+/// A [`BigPoly`] as a [`MultiPoly`], or `None` when a coefficient does not fit
+/// `i128`.
+///
+/// Both sides are canonical maps from a monomial to a **nonzero** coefficient,
+/// and `BigPoly` never stores a zero term, so the result is canonical too and
+/// [`MultiPoly::is_zero`] stays exact on it.
+fn multipoly_from_big(poly: &BigPoly) -> Option<MultiPoly> {
+    let mut terms = BTreeMap::new();
+    for (mono, coeff) in poly.terms() {
+        let value = i128::try_from(coeff).ok()?;
+        let mut powers = BTreeMap::new();
+        for (name, exp) in mono.powers() {
+            powers.insert(name.to_owned(), exp);
+        }
+        terms.insert(Monomial { powers }, Rational::integer(value));
+    }
+    Some(MultiPoly { terms })
+}
+
+/// The unbounded-integer zero-test: the fallback [`equal_core`] takes when the
+/// `i128` normal form overflows (ADR-1670).
+///
+/// # What it decides, and why each branch is sound
+///
+/// The test is the same cross-multiplication: `a/b = c/d` iff `a·d − c·b ≡ 0`.
+/// Over ℤ[vars] the difference is a **positive-rational multiple** of the
+/// bounded path's cross-multiplied numerator (every rational constant had its
+/// denominator cleared, and `Rational` keeps denominators positive). A positive
+/// multiple is zero exactly when the original is, so the *decision* is
+/// unaffected; only the witness's scale is.
+///
+/// - **Zero difference ⇒ `Certified { equal: true }`.** The certificate is
+///   [`MultiPoly::zero()`], which is not an approximation: the difference in
+///   canonical form *is* the zero polynomial, and `MultiPoly` holds it exactly.
+///   A polynomial identity in the variables holds at every value of them, so
+///   this is sound whatever the variables denote — including the reserved `I`.
+/// - **Nonzero difference ⇒ `Certified { equal: false }`, but only when the
+///   witness survives the conversion back to `i128`.** Emitting a certificate
+///   that is not the difference would weaken what [`ZeroTest::Certified`]
+///   means, so a difference whose coefficients exceed `i128` is reported
+///   [`ZeroTest::Unknown`] instead. This asymmetry — equalities always decide,
+///   inequalities decide only when the certificate fits — is the price of not
+///   changing the public witness type, and is what wave two of ADR-1670
+///   removes.
+///
+/// # Two guards on the inequality branch
+///
+/// A nonzero normal form only proves `≠` when no bounded-path fold could have
+/// collapsed it. Two variable classes could:
+///
+/// - `I`, the reserved imaginary unit, which [`MultiPoly::fold_imaginary`]
+///   rewrites by `I² = −1` (so `I² + 1` is nonzero here but zero there);
+/// - any name beginning with `\0`, the prefix [`atom_name`] gives transcendental
+///   atoms, which the Pythagorean/radical/abs/root folds relate.
+///
+/// [`normalize_rational_big`] declines every `Unary` head, so a `\0` name can
+/// only arrive from a caller that spelled one as a plain variable; `I` arrives
+/// from ordinary complex work. Both are declined rather than reasoned about.
+/// Neither guard applies to the equality branch, where zero is zero.
+fn equal_core_unbounded(a: &CasExpr, b: &CasExpr) -> ZeroTest {
+    let (Some(ra), Some(rb)) = (normalize_rational_big(a), normalize_rational_big(b)) else {
+        return ZeroTest::Unknown;
+    };
+    let (Some(ad), Some(cb)) = (ra.num.mul(&rb.den), rb.num.mul(&ra.den)) else {
+        return ZeroTest::Unknown;
+    };
+    let difference = ad.sub(&cb);
+    if difference.is_zero() {
+        return ZeroTest::Certified {
+            equal: true,
+            witness: MultiPoly::zero(),
+        };
+    }
+    if difference
+        .variables()
+        .iter()
+        .any(|name| name == "I" || name.starts_with('\0'))
+    {
+        return ZeroTest::Unknown;
+    }
+    match multipoly_from_big(&difference) {
+        Some(witness) => ZeroTest::Certified {
+            equal: false,
             witness,
         },
         None => ZeroTest::Unknown,
@@ -29504,5 +29745,127 @@ mod exact_positivity_tests {
             matches!(expanded, CasExpr::Add(_)),
             "the positive case must still distribute, got {expanded}"
         );
+    }
+}
+
+#[cfg(test)]
+mod bignum_wall_probe {
+    use super::*;
+
+    fn x() -> CasExpr {
+        CasExpr::var("x")
+    }
+
+    fn binom(n: u32) -> CasExpr {
+        (x() + CasExpr::int(1)).pow(n)
+    }
+
+    fn status(e: &CasExpr) -> &'static str {
+        if normalize(e).is_some() { "ok" } else { "OVERFLOW" }
+    }
+
+    fn eq_status(a: &CasExpr, b: &CasExpr) -> &'static str {
+        match equal(a, b) {
+            ZeroTest::Certified { equal: true, .. } => "certified-equal",
+            ZeroTest::Certified { equal: false, .. } => "refuted",
+            ZeroTest::Unknown => "UNKNOWN",
+        }
+    }
+
+    #[test]
+    fn probe_the_wall() {
+        for n in [40u32, 80, 100, 120, 124, 126, 128, 130, 132, 140, 160, 200] {
+            println!("(x+1)^{n} normalize = {}", status(&binom(n)));
+        }
+        for n in [10u32, 15, 20, 25, 30, 40, 45, 50, 55, 60, 70] {
+            let e = (x() + CasExpr::var("y") + CasExpr::int(1)).pow(n);
+            println!("(x+y+1)^{n} normalize = {}", status(&e));
+        }
+        for n in [12u32, 20, 25, 30, 35] {
+            let base = x() + CasExpr::var("y") + CasExpr::int(1);
+            let lhs = CasExpr::Mul(vec![base.clone().pow(n), base.clone().pow(n)]);
+            let rhs = base.pow(2 * n);
+            println!("(x+y+1)^{n} squared == (x+y+1)^{} : {}", 2 * n, eq_status(&lhs, &rhs));
+        }
+        for k in [30u32, 41, 45, 60] {
+            let base = x() + CasExpr::rat(1, 3);
+            let lhs = CasExpr::Mul(vec![base.clone().pow(k), base.clone().pow(k)]);
+            let rhs = base.pow(2 * k);
+            println!("(x+1/3)^{k} squared == (x+1/3)^{} : {}", 2 * k, eq_status(&lhs, &rhs));
+        }
+        for k in [20u32, 40, 60, 70, 78, 80, 82, 90] {
+            let e = (x() + CasExpr::rat(1, 3)).pow(k);
+            println!("(x+1/3)^{k} normalize = {}", status(&e));
+        }
+        let mut cat: Vec<i128> = vec![1];
+        for n in 1..70usize {
+            let mut c: i128 = 0;
+            let mut overflowed = false;
+            for i in 0..n {
+                match cat[i]
+                    .checked_mul(cat[n - 1 - i])
+                    .and_then(|p| c.checked_add(p))
+                {
+                    Some(v) => c = v,
+                    None => {
+                        overflowed = true;
+                        break;
+                    }
+                }
+            }
+            if overflowed {
+                println!("Catalan({n}) exceeds i128 -- cannot be spelled as a literal");
+                break;
+            }
+            cat.push(c);
+        }
+        for deg in [20usize, 40, 50, 60, cat.len() - 1] {
+            if deg >= cat.len() {
+                continue;
+            }
+            let terms: Vec<CasExpr> = (0..=deg)
+                .map(|k| CasExpr::int(cat[k]) * x().pow(u32::try_from(k).unwrap()))
+                .collect();
+            let p = CasExpr::Add(terms);
+            println!("catalan-series deg {deg}: normalize = {}", status(&p));
+            println!(
+                "catalan-series deg {deg} squared: normalize = {}",
+                status(&CasExpr::Mul(vec![p.clone(), p]))
+            );
+        }
+        for (a, b) in [
+            (20u32, 20u32),
+            (40, 40),
+            (60, 60),
+            (64, 64),
+            (80, 80),
+            (100, 100),
+        ] {
+            let lhs = CasExpr::Mul(vec![binom(a), binom(b)]);
+            let rhs = binom(a + b);
+            println!(
+                "(x+1)^{a}*(x+1)^{b} == (x+1)^{} : {}",
+                a + b,
+                eq_status(&lhs, &rhs)
+            );
+        }
+        for n in [30u32, 60, 64, 70, 80] {
+            let lhs = binom(n) / (x() + CasExpr::int(2));
+            let rhs = binom(n) / (x() + CasExpr::int(2));
+            println!("(x+1)^{n}/(x+2) == itself : {}", eq_status(&lhs, &rhs));
+        }
+        let lhs = CasExpr::Mul(vec![binom(80), binom(80)]);
+        let rhs = binom(160) + x().pow(3);
+        println!("false identity at 160: {}", eq_status(&lhs, &rhs));
+        let base = x() + CasExpr::var("y") + CasExpr::int(1);
+        let lhs = CasExpr::Mul(vec![base.clone().pow(35), base.clone().pow(35)]);
+        let rhs = base.pow(70) + CasExpr::var("y");
+        println!("false multivariate identity at 70: {}", eq_status(&lhs, &rhs));
+        let lhs = binom(80) / (x() + CasExpr::int(2));
+        let rhs = CasExpr::Mul(vec![binom(40), binom(40)]) / (x() + CasExpr::int(2));
+        println!("rational-function split at 80: {}", eq_status(&lhs, &rhs));
+        let lhs = CasExpr::Mul(vec![binom(90), binom(90)]) / (x() + CasExpr::int(2));
+        let rhs = binom(180) / (x() + CasExpr::int(2));
+        println!("rational-function split at 180: {}", eq_status(&lhs, &rhs));
     }
 }
