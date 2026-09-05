@@ -75,4 +75,63 @@ if [ -d drat-trim ] && [ ! -x drat-trim/drat-trim ]; then
     || echo "FAILED: building drat-trim"
 fi
 
+# --- The public Lean kernel conformance corpus (ADR-1663) -------------------
+#
+# `leanprover/lean-kernel-arena` is the corpus `docs/plan/lean-kernel-requirements-2026-08-13.md`
+# §4.4 / R8.5 means by "a conformance corpus ... a `parse-only` checker scores
+# ... on rejects". It is pinned at an EXACT commit here, not floated, because
+# `scripts/check-kernel-conformance.py` scores against it and a floating corpus
+# turns a score change into an unattributable one.
+#
+# Two artefacts, and both are needed:
+#
+#   * the repository       -- the test YAML (each case's expected outcome, the
+#                             description, and the `parse-only` control's own
+#                             definition) and the tutorial Lean sources.
+#   * the published tarball -- the already-EXPORTED NDJSON for every case under
+#                             10 MB, as `good/` (Lean accepts) and `bad/` (Lean
+#                             rejects). Building these from source needs a Lean
+#                             4.29.1 toolchain, `lake`, and network access to
+#                             fetch `lean4export`; the tarball is what makes the
+#                             corpus runnable on a host with none of that.
+#
+# The tarball is a release artefact, not a git object, so it is pinned by
+# SHA-256 rather than by revision. A digest mismatch is reported and the old
+# copy is kept: it means upstream regenerated the corpus, and the scored numbers
+# in `artifacts/kernel-conformance/` were measured on the old bytes.
+ARENA_REV=abc55357aee17c59dfdbf39c8a2e19739e23dd10
+ARENA_TESTS_URL=https://arena.lean-lang.org/lean-arena-tests.tar.gz
+ARENA_TESTS_SHA256=7e396d5de90e8871c9b1d7e2931f3efaba303056cdfd93e65f9ae1de628bf326
+
+if [ ! -d lean-kernel-arena ]; then
+  echo "clone lean-kernel-arena"
+  git clone --quiet https://github.com/leanprover/lean-kernel-arena lean-kernel-arena \
+    || echo "FAILED: lean-kernel-arena"
+fi
+if [ -d lean-kernel-arena ]; then
+  echo "pin lean-kernel-arena at ${ARENA_REV}"
+  git -C lean-kernel-arena fetch --quiet origin "$ARENA_REV" 2>/dev/null || true
+  git -C lean-kernel-arena checkout --quiet "$ARENA_REV" \
+    || echo "FAILED: pinning lean-kernel-arena at ${ARENA_REV}"
+fi
+
+mkdir -p lean-arena-tests
+if [ ! -f lean-arena-tests/lean-arena-tests.tar.gz ]; then
+  echo "fetch lean-arena-tests.tar.gz"
+  curl -sSLo lean-arena-tests/lean-arena-tests.tar.gz.part "$ARENA_TESTS_URL" \
+    && mv lean-arena-tests/lean-arena-tests.tar.gz.part lean-arena-tests/lean-arena-tests.tar.gz \
+    || echo "FAILED: $ARENA_TESTS_URL"
+fi
+if [ -f lean-arena-tests/lean-arena-tests.tar.gz ]; then
+  observed="$(sha256sum lean-arena-tests/lean-arena-tests.tar.gz | cut -d' ' -f1)"
+  if [ "$observed" = "$ARENA_TESTS_SHA256" ]; then
+    echo "unpack lean-arena-tests (sha256 ok)"
+    tar xzf lean-arena-tests/lean-arena-tests.tar.gz -C lean-arena-tests
+  else
+    echo "FAILED: lean-arena-tests.tar.gz sha256 ${observed} != ${ARENA_TESTS_SHA256}"
+    echo "        upstream regenerated the corpus; artifacts/kernel-conformance/ was"
+    echo "        measured on the pinned bytes -- rescore before bumping the digest."
+  fi
+fi
+
 echo "done"
