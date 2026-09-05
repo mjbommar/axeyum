@@ -1609,9 +1609,13 @@ fn declare_prod_complete(
                                     let add_comm_name = d.prelude().add_comm;
                                     let comm = d.lemma(add_comm_name, &[k2, k1]); // Eq Nat (k2+k1) (k1+k2)
                                     let motive = {
+                                        // NOTE: this is a `Rat.le` motive (both
+                                        // sides are `Rat.natDivSucc` values, not
+                                        // yet lifted through `CReal.ofRat`) --
+                                        // `c.rat.le`, not `c.le` (`CReal.le`).
                                         let motive_body = |dd: &mut IntDev<'_>, zz: ExprId| {
                                             let nkz = dd.const_app(c.rat.nat_div_succ, &[zz, nv]);
-                                            rle(dd, c, nk2, nkz)
+                                            dd.const_app(c.rat.le, &[nk2, nkz])
                                         };
                                         d.eq_motive(k21, &motive_body)
                                     };
