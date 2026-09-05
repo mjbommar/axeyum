@@ -88,6 +88,31 @@ pub struct RatVectorSpaceNames {
     pub lin_comb_eq_sum_range: NameId,
 }
 
+impl RatVectorSpaceNames {
+    /// Intern this module's four names under the `Rat` root, so
+    /// `rat_prelude_tests::every_rat_declaration_is_checked_and_axiom_free`
+    /// can reach them through `RatPrelude` rather than through a string list.
+    pub(crate) fn intern(kernel: &mut Kernel, rat: NameId) -> Self {
+        Self {
+            comm_ring_s: kernel.name_str(rat, "commRingS"),
+            add_comm_group_s: kernel.name_str(rat, "addCommGroupS"),
+            vector_space_s: kernel.name_str(rat, "vectorSpaceS"),
+            lin_comb_eq_sum_range: kernel.name_str(rat, "linComb_eq_sumRange"),
+        }
+    }
+
+    /// Every name this module declares.
+    #[must_use]
+    pub fn all(&self) -> [NameId; 4] {
+        [
+            self.comm_ring_s,
+            self.add_comm_group_s,
+            self.vector_space_s,
+            self.lin_comb_eq_sum_range,
+        ]
+    }
+}
+
 /// The `AlgS` names this module reaches, re-derived from the interned root.
 struct Algs {
     comm_ring_ind: NameId,
@@ -134,14 +159,11 @@ pub(crate) fn declare_rat_vector_space(
     let l1 = k.level_succ(l0);
     let rat = k.const_(p.int.rat, vec![]);
     let nat = k.const_(lg.nat, vec![]);
-    let field_s = {
-        let n = k.name_str(p.int.rat, "fieldS");
-        k.const_(n, vec![])
-    };
+    let field_s = k.const_(p.field_setoid.field_s, vec![]);
 
     // --- 1. `Rat.commRingS := AlgS.Field.toCommRing Rat.fieldS` ------------
     let comm_ring_s = {
-        let name = k.name_str(p.int.rat, "commRingS");
+        let name = p.vector_space.comm_ring_s;
         let to_cr = k.const_(a.field_to_comm_ring, vec![]);
         let value = k.app(to_cr, field_s);
         let ty = k.const_(a.comm_ring_ind, vec![]);
@@ -157,7 +179,7 @@ pub(crate) fn declare_rat_vector_space(
 
     // --- 2. `Rat.addCommGroupS := AlgS.CommRing.toCommGroupS Rat.commRingS`
     let add_comm_group_s = {
-        let name = k.name_str(p.int.rat, "addCommGroupS");
+        let name = p.vector_space.add_comm_group_s;
         let to_cg = k.const_(a.comm_ring_to_comm_group, vec![]);
         let ring = k.const_(comm_ring_s, vec![]);
         let value = k.app(to_cg, ring);
@@ -175,7 +197,7 @@ pub(crate) fn declare_rat_vector_space(
     // --- 3. ℚ is a vector space over itself -------------------------------
     let mul = k.const_(p.int.rat_mul, vec![]);
     let vector_space_s = {
-        let name = k.name_str(p.int.rat, "vectorSpaceS");
+        let name = p.vector_space.vector_space_s;
         let ring = k.const_(comm_ring_s, vec![]);
         let group = k.const_(add_comm_group_s, vec![]);
         let value = {
@@ -197,7 +219,7 @@ pub(crate) fn declare_rat_vector_space(
 
     // --- 4. `linComb` at ℚ IS `Rat.sumRange`, by `Eq.refl` ----------------
     let lin_comb_eq_sum_range = {
-        let name = k.name_str(p.int.rat, "linComb_eq_sumRange");
+        let name = p.vector_space.lin_comb_eq_sum_range;
         let fn_ty = arrow(k, nat, rat);
         let c = k.fvar(C_FV);
         let v = k.fvar(V_FV);

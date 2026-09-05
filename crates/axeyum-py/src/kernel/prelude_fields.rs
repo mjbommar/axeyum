@@ -2439,10 +2439,10 @@ pub(super) fn int_sub(p: &IntPrelude) -> Vec<(&'static str, Sub)> {
     ]
 }
 
-/// The `RatPrelude` field table (583 names,
+/// The `RatPrelude` field table (595 names,
 /// 0 name lists, 1 sub-packages).
 ///
-/// 76 of the names come from ADR-1512 per-module registries and
+/// 88 of the names come from ADR-1512 per-module registries and
 /// carry a dotted field name (`pi.pi_le_four`); the rest are flat
 /// fields on `RatPrelude` itself.
 #[must_use]
@@ -3221,6 +3221,27 @@ pub(super) fn rat(p: &RatPrelude) -> Fields {
             (
                 "probability_s.uncorrelated_of_independent",
                 p.probability_s.uncorrelated_of_independent,
+            ),
+            ("field_setoid.ne_of_lt", p.field_setoid.ne_of_lt),
+            ("field_setoid.apart", p.field_setoid.apart),
+            ("field_setoid.apart_symm", p.field_setoid.apart_symm),
+            ("field_setoid.apart_cotrans", p.field_setoid.apart_cotrans),
+            ("field_setoid.apart_compat", p.field_setoid.apart_compat),
+            ("field_setoid.mul_inv_ex", p.field_setoid.mul_inv_ex),
+            ("field_setoid.field_s", p.field_setoid.field_s),
+            (
+                "field_setoid.field_s_is_tight",
+                p.field_setoid.field_s_is_tight,
+            ),
+            ("vector_space.comm_ring_s", p.vector_space.comm_ring_s),
+            (
+                "vector_space.add_comm_group_s",
+                p.vector_space.add_comm_group_s,
+            ),
+            ("vector_space.vector_space_s", p.vector_space.vector_space_s),
+            (
+                "vector_space.lin_comb_eq_sum_range",
+                p.vector_space.lin_comb_eq_sum_range,
             ),
         ],
         lists: Vec::new(),

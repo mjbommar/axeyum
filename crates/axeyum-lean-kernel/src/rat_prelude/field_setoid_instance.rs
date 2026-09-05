@@ -62,6 +62,39 @@ pub struct RatFieldSNames {
     pub field_s_is_tight: NameId,
 }
 
+impl RatFieldSNames {
+    /// Intern this module's eight names under the `Rat` root, so
+    /// `rat_prelude_tests::every_rat_declaration_is_checked_and_axiom_free`
+    /// can reach them through `RatPrelude` rather than through a string list.
+    pub(crate) fn intern(kernel: &mut Kernel, rat: NameId) -> Self {
+        Self {
+            ne_of_lt: kernel.name_str(rat, "ne_of_lt"),
+            apart: kernel.name_str(rat, "apart"),
+            apart_symm: kernel.name_str(rat, "apart_symm"),
+            apart_cotrans: kernel.name_str(rat, "apart_cotrans"),
+            apart_compat: kernel.name_str(rat, "apart_compat"),
+            mul_inv_ex: kernel.name_str(rat, "mulInvEx"),
+            field_s: kernel.name_str(rat, "fieldS"),
+            field_s_is_tight: kernel.name_str(rat, "fieldS_isTight"),
+        }
+    }
+
+    /// Every name this module declares.
+    #[must_use]
+    pub fn all(&self) -> [NameId; 8] {
+        [
+            self.ne_of_lt,
+            self.apart,
+            self.apart_symm,
+            self.apart_cotrans,
+            self.apart_compat,
+            self.mul_inv_ex,
+            self.field_s,
+            self.field_s_is_tight,
+        ]
+    }
+}
+
 /// The `AlgS.Field` names, re-derived from the interned `AlgS` root rather
 /// than threaded through `NatPrelude` — `name_str` is interned, so these are
 /// the same `NameId`s `nat_prelude::field_setoid` produced.
@@ -174,7 +207,7 @@ fn declare_ne_of_lt(k: &mut Kernel, p: &RatPrelude) -> Result<NameId, KernelErro
     let ty = pi_over(k, B_FV, q.rat, ty);
     let ty = pi_over(k, A_FV, q.rat, ty);
 
-    let name = k.name_str(p.int.rat, "ne_of_lt");
+    let name = p.field_setoid.ne_of_lt;
     k.add_declaration(Declaration::Theorem {
         name,
         uparams: vec![],
@@ -198,7 +231,7 @@ fn declare_apart(k: &mut Kernel, p: &RatPrelude) -> Result<NameId, KernelError> 
         let inner = arrow(k, q.rat, prop);
         arrow(k, q.rat, inner)
     };
-    let name = k.name_str(p.int.rat, "apart");
+    let name = p.field_setoid.apart;
     k.add_declaration(Declaration::Definition {
         name,
         uparams: vec![],
@@ -238,7 +271,7 @@ fn declare_apart_symm(
     let ty = pi_over(k, B_FV, q.rat, ty);
     let ty = pi_over(k, A_FV, q.rat, ty);
 
-    let name = k.name_str(p.int.rat, "apart_symm");
+    let name = p.field_setoid.apart_symm;
     k.add_declaration(Declaration::Theorem {
         name,
         uparams: vec![],
@@ -352,7 +385,7 @@ fn declare_apart_cotrans(
     let ty = pi_over(k, B_FV, q.rat, ty);
     let ty = pi_over(k, A_FV, q.rat, ty);
 
-    let name = k.name_str(p.int.rat, "apart_cotrans");
+    let name = p.field_setoid.apart_cotrans;
     k.add_declaration(Declaration::Theorem {
         name,
         uparams: vec![],
@@ -388,7 +421,7 @@ fn declare_apart_compat(
     let ty = pi_over(k, B_FV, q.rat, ty);
     let ty = pi_over(k, A_FV, q.rat, ty);
 
-    let name = k.name_str(p.int.rat, "apart_compat");
+    let name = p.field_setoid.apart_compat;
     k.add_declaration(Declaration::Theorem {
         name,
         uparams: vec![],
@@ -438,7 +471,7 @@ fn declare_mul_inv_ex(
     let ty = arrow(k, h_ty, concl);
     let ty = pi_over(k, A_FV, q.rat, ty);
 
-    let name = k.name_str(p.int.rat, "mulInvEx");
+    let name = p.field_setoid.mul_inv_ex;
     k.add_declaration(Declaration::Theorem {
         name,
         uparams: vec![],
@@ -473,7 +506,7 @@ fn declare_field_s(
     value = k.app(value, one_ne_zero);
 
     let ty = k.const_(af.ind, vec![]);
-    let name = k.name_str(p.int.rat, "fieldS");
+    let name = p.field_setoid.field_s;
     k.add_declaration(Declaration::Definition {
         name,
         uparams: vec![],
@@ -574,7 +607,7 @@ fn declare_field_s_is_tight(
         k.app(t, f)
     };
 
-    let name = k.name_str(p.int.rat, "fieldS_isTight");
+    let name = p.field_setoid.field_s_is_tight;
     k.add_declaration(Declaration::Theorem {
         name,
         uparams: vec![],

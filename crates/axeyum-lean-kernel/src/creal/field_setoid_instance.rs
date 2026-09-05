@@ -719,3 +719,75 @@ mod field_setoid_instance_tests {
         );
     }
 }
+
+#[cfg(test)]
+mod field_setoid_inventory_tests {
+    use crate::Kernel;
+    use crate::creal::build_creal_prelude;
+    use crate::env::Declaration;
+
+    /// **The inventory for ADR-1627's fact ledger entries.** Prints every
+    /// declaration this ADR records, as `FIELD-INVENTORY|<name>|<rendered
+    /// type>`, read from `Kernel::environment` — so a fact's
+    /// `formal.statement` is transcribed from the KERNEL and never from
+    /// source text or from memory.
+    ///
+    /// The assertion is that every name resolves and renders non-empty, so the
+    /// test cannot pass by printing nothing; run with `--nocapture` to read it.
+    #[test]
+    fn adr_1627_declaration_inventory() {
+        let mut k = Kernel::new();
+        build_creal_prelude(&mut k).expect("creal prelude must build");
+        let anon = k.anon();
+        let names: &[&str] = &[
+            "AlgS.Field.toCommRing",
+            "AlgS.Field.ofCommRing",
+            "AlgS.Field.IsTight",
+            "AlgS.Field.apart_irrefl",
+            "AlgS.Field.apart_left_congr",
+            "AlgS.Field.apart_right_congr",
+            "AlgS.Field.inv_unique",
+            "AlgS.Field.mul_left_cancel",
+            "AlgS.mul_neg_right",
+            "AlgS.VectorSpace.IsVectorSpace",
+            "AlgS.VectorSpace.smul_left_cancel",
+            "AlgS.VectorSpace.solve_smul",
+            "AlgS.VectorSpace.basis_zero_unique",
+            "Rat.apart",
+            "Rat.apart_cotrans",
+            "Rat.mulInvEx",
+            "Rat.fieldS",
+            "Rat.fieldS_isTight",
+            "Rat.vectorSpaceS",
+            "Rat.linComb_eq_sumRange",
+            "CReal.apart_compat",
+            "CReal.one_apart_zero",
+            "CReal.pos_of_neg_lt_zero",
+            "CReal.mulInvEx",
+            "CReal.fieldS",
+        ];
+        let mut printed = 0usize;
+        for dotted in names {
+            let mut n = anon;
+            for part in dotted.split('.') {
+                n = k.name_str(n, part);
+            }
+            let decl = k
+                .environment()
+                .get(n)
+                .unwrap_or_else(|| panic!("{dotted} missing from the environment"))
+                .clone();
+            let ty = match &decl {
+                Declaration::Definition { ty, .. } | Declaration::Theorem { ty, .. } => *ty,
+                _ => panic!("{dotted}: unexpected declaration kind"),
+            };
+            let rendered = k.render_lean(ty);
+            assert!(!rendered.trim().is_empty(), "{dotted} rendered empty");
+            let fp = k.axiom_footprint(n);
+            assert!(fp.is_empty(), "{dotted} footprint must be empty");
+            println!("FIELD-INVENTORY|{dotted}|{rendered}");
+            printed += 1;
+        }
+        assert_eq!(printed, names.len(), "every name must have printed");
+    }
+}

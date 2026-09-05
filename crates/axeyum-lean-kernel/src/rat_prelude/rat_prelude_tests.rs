@@ -685,6 +685,22 @@ fn unnamed_but_live_declarations(p: &RatPrelude) -> Vec<crate::NameId> {
         p.variance_scaled_add_nonneg,
         p.covariance_sq_le_variance_mul_of_pos,
         p.covariance_sq_le_variance_mul_of_zero_zero,
+        // ADR-1627: the `AlgS.Field` instance for ℚ and the vector-space
+        // layer over it. Read from their per-module registries on
+        // `RatPrelude`, not from a string list, so a rename cannot silently
+        // drop one out of this coverage check.
+        p.field_setoid.ne_of_lt,
+        p.field_setoid.apart,
+        p.field_setoid.apart_symm,
+        p.field_setoid.apart_cotrans,
+        p.field_setoid.apart_compat,
+        p.field_setoid.mul_inv_ex,
+        p.field_setoid.field_s,
+        p.field_setoid.field_s_is_tight,
+        p.vector_space.comm_ring_s,
+        p.vector_space.add_comm_group_s,
+        p.vector_space.vector_space_s,
+        p.vector_space.lin_comb_eq_sum_range,
     ]
 }
 

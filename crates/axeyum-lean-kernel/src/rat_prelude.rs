@@ -112,9 +112,11 @@ use crate::int_prelude::ops::IntDev;
 use crate::nat_prelude::NatOps;
 use algebra_ext::AlgebraExtNames;
 use algebra_instances::AlgebraNames;
+use field_setoid_instance::RatFieldSNames;
 use ordered_ring_ext::OrderedRingExtNames;
 use ordered_ring_ext_s::OrderedRingExtSNames;
 use probability_s::ProbSNames;
+use vector_space_instance::RatVectorSpaceNames;
 
 /// The interned names produced by [`build_rat_prelude`]: the field constants,
 /// the order, the inverse, the structural characterisation of the normalised
@@ -3171,6 +3173,13 @@ pub struct RatPrelude {
     /// three auxiliary ring lemmas the record's field set makes necessary.
     /// See [`probability_s`].
     pub probability_s: ProbSNames,
+    /// `rat_prelude/field_setoid_instance.rs`'s own 8 names (an ADR-1512-style
+    /// per-module registry, ADR-1627): `Rat.fieldS : AlgS.Field` and the
+    /// apartness supports it is built from.
+    pub field_setoid: RatFieldSNames,
+    /// `rat_prelude/vector_space_instance.rs`'s own 4 names (ADR-1627): ℚ as a
+    /// vector space over itself, and the `linComb`/`sumRange` bridge.
+    pub vector_space: RatVectorSpaceNames,
 }
 
 impl RatPrelude {
@@ -3729,6 +3738,8 @@ fn intern_names(kernel: &mut Kernel, int: IntPrelude) -> RatPrelude {
         ordered_ring_ext: ordered_ring_ext::intern_ordered_ring_ext(kernel),
         ordered_ring_ext_s: ordered_ring_ext_s::intern_ordered_ring_ext_s(kernel),
         probability_s: probability_s::intern_probability_s(kernel),
+        field_setoid: RatFieldSNames::intern(kernel, root),
+        vector_space: RatVectorSpaceNames::intern(kernel, root),
     }
 }
 

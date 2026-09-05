@@ -128,4 +128,18 @@ fn lin_comb_at_rat_is_definitionally_sum_range() {
          bridge is measuring nothing"
     );
     let _ = rat;
+
+    // Print the declared bridge's rendered type, and assert it really names
+    // both sides so the print cannot be of an empty render.
+    let name = k.name_str(rat_root, "linComb_eq_sumRange");
+    let decl = k.environment().get(name).expect("must exist").clone();
+    let Declaration::Theorem { ty, .. } = decl else {
+        panic!("Rat.linComb_eq_sumRange must be a Theorem")
+    };
+    let rendered = k.render_lean(ty);
+    println!("Rat.linComb_eq_sumRange : {rendered}");
+    assert!(
+        rendered.contains("AlgS.Module.linComb") && rendered.contains("Rat.sumRange"),
+        "the bridge must name both sides, got: {rendered}"
+    );
 }
