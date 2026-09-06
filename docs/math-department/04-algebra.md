@@ -298,10 +298,13 @@ The case against:
   the axiomatized-reals development that nothing on this shelf touches; the
   `Alg`, `AlgS` and `CatS` namespaces contain none. Adding a *used* axiom means
   every downstream footprint names it, and "axiom-free" becomes "axiom-free
-  except one" — a real loss of a claim no competitor can currently match. (The
-  per-fact footprints are recorded in the evidence prose, not as a structured
-  field, so "empty across all 2,687 proved facts" is a claim this re-measure
-  could not check mechanically.)
+  except one" — a real loss of a claim no competitor can currently match. (Correction,
+  2026-09-06 evening: the per-fact footprint IS a structured top-level field,
+  `axiom_footprint`, on every one of the 2,687 proved facts, and
+  `validate-facts.py` gates on it; the chair's re-reading scanned it and found
+  **2,584 of 2,687 empty**, all on the kernel route, the rest CAS-internal
+  residue labels. So "empty across all proved facts" is false as worded and
+  checkable in one pass; the earlier sentence here said the opposite.)
 - The setoid route demonstrably works. ℝ, ℂ, and the `AlgS` spine are proof
   that a large development can be carried without quotients, and that is
   itself a research result.
