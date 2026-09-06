@@ -472,6 +472,17 @@ pub struct TheoryLayerStats {
     /// Search decisions taken (`CdclT::pick_unassigned` choices, not implied
     /// assignments).
     pub decisions: u64,
+    /// Asserting clauses 1-UIP conflict analysis produced. The denominator of
+    /// the mean learned-clause length.
+    pub learned_clauses: u64,
+    /// Literals summed over those clauses **after** recursive minimization.
+    /// `learned_literals / learned_clauses` is the mean learned length — the
+    /// figure a clause minimizer is scored on.
+    pub learned_literals: u64,
+    /// The same sum taken **before** minimization, so a single run reports what
+    /// minimization removed (`before - after`) instead of requiring two runs to
+    /// be compared. Equal to `learned_literals` when nothing was removed.
+    pub learned_literals_before_minimization: u64,
     /// Completed Luby restarts.
     pub restarts: u64,
     /// Simplex pivots performed by the driving theory, when it exposes a

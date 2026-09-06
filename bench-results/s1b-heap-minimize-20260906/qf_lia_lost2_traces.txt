@@ -1,0 +1,30 @@
+### rep=1 arm=before rc=0 ms=8115 file=/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LIA/bofill-scheduling/SMT_real_LIA/ex3000_2400_100.smt2
+; theory-layer boolean_propagate_ms=8026 theory_assert_ms=8000 theory_propagate_ms=0 theory_push_pop_ms=0 conflict_analysis_ms=0 theory_final_check_ms=0 theory_explain_ms=0 theory_conflicts=1 theory_propagations=0 final_checks=0 decisions=0 restarts=0
+unsat
+### rep=1 arm=after rc=0 ms=109 file=/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LIA/bofill-scheduling/SMT_real_LIA/ex3000_2400_100.smt2
+unknown
+### rep=1 arm=before rc=0 ms=8216 file=/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LIA/bofill-scheduling/SMT_real_LIA/ex4320_2400_100.smt2
+; theory-layer boolean_propagate_ms=8078 theory_assert_ms=8053 theory_propagate_ms=0 theory_push_pop_ms=0 conflict_analysis_ms=0 theory_final_check_ms=0 theory_explain_ms=0 theory_conflicts=1 theory_propagations=0 final_checks=0 decisions=0 restarts=0
+unsat
+### rep=1 arm=after rc=0 ms=109 file=/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LIA/bofill-scheduling/SMT_real_LIA/ex4320_2400_100.smt2
+unknown
+### rep=2 arm=before rc=0 ms=8116 file=/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LIA/bofill-scheduling/SMT_real_LIA/ex3000_2400_100.smt2
+; theory-layer boolean_propagate_ms=8057 theory_assert_ms=8031 theory_propagate_ms=0 theory_push_pop_ms=0 conflict_analysis_ms=0 theory_final_check_ms=0 theory_explain_ms=0 theory_conflicts=1 theory_propagations=0 final_checks=0 decisions=0 restarts=0
+unsat
+### rep=2 arm=after rc=0 ms=108 file=/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LIA/bofill-scheduling/SMT_real_LIA/ex3000_2400_100.smt2
+unknown
+### rep=2 arm=before rc=0 ms=8216 file=/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LIA/bofill-scheduling/SMT_real_LIA/ex4320_2400_100.smt2
+; theory-layer boolean_propagate_ms=8117 theory_assert_ms=8091 theory_propagate_ms=0 theory_push_pop_ms=0 conflict_analysis_ms=0 theory_final_check_ms=0 theory_explain_ms=0 theory_conflicts=1 theory_propagations=0 final_checks=0 decisions=0 restarts=0
+unsat
+### rep=2 arm=after rc=0 ms=108 file=/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LIA/bofill-scheduling/SMT_real_LIA/ex4320_2400_100.smt2
+unknown
+### rep=3 arm=before rc=0 ms=8115 file=/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LIA/bofill-scheduling/SMT_real_LIA/ex3000_2400_100.smt2
+; theory-layer boolean_propagate_ms=8052 theory_assert_ms=8026 theory_propagate_ms=0 theory_push_pop_ms=0 conflict_analysis_ms=0 theory_final_check_ms=0 theory_explain_ms=0 theory_conflicts=1 theory_propagations=0 final_checks=0 decisions=0 restarts=0
+unsat
+### rep=3 arm=after rc=0 ms=107 file=/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LIA/bofill-scheduling/SMT_real_LIA/ex3000_2400_100.smt2
+unknown
+### rep=3 arm=before rc=0 ms=8115 file=/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LIA/bofill-scheduling/SMT_real_LIA/ex4320_2400_100.smt2
+; theory-layer boolean_propagate_ms=8032 theory_assert_ms=8006 theory_propagate_ms=0 theory_push_pop_ms=0 conflict_analysis_ms=0 theory_final_check_ms=0 theory_explain_ms=0 theory_conflicts=1 theory_propagations=0 final_checks=0 decisions=0 restarts=0
+unsat
+### rep=3 arm=after rc=0 ms=109 file=/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LIA/bofill-scheduling/SMT_real_LIA/ex4320_2400_100.smt2
+unknown

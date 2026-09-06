@@ -156,6 +156,31 @@ boundary (`CdclT::add_permanent_clause`) get their watches chosen against the
 *current* assignment and one full evaluation from a pending queue, so a clause
 that arrives already unit implies and one that arrives already falsified
 conflicts. [Measurement](../research/11-design-review/2026-09-05-s1-watched-literals-measured.md).
+
+Two more pieces of that engine followed, for the same reason and from the same
+file. **Decisions come off a VSIDS order heap** rather than an O(var\_count)
+linear scan: `heap` / `heap_pos` with lazy deletion, a comparator that keeps the
+scan's own tie-break (highest activity, lowest index), and a Floyd re-heapify
+after an activity rescale, which can collapse two distinct tiny activities into
+a tie the previous layout never had to order. The one predicate a plain SAT core
+does not need is *inactive* variables — those reserved for theory atoms no
+final-check lemma has named — which are discarded at the root exactly like
+assigned ones and re-inserted by `activate_variables`. Because the comparator is
+the scan's, this is a cost change and not a heuristic one, and it is measured
+that way: on `RVpredict_13` the search takes an **identical** 2,364,618
+decisions and 3,415 conflicts to the same `sat` verdict, in 1.8 s instead of
+15.5 s. **Learned clauses are then recursively minimized** (MiniSat
+`ccmin_mode = 2`), skipped for a pure theory lemma so the driver's
+`is_theory_lemma` classification can never overstate what was derived, and never
+forcing a deferred `ExplanationId` — resolution needs a reason to make progress,
+minimization does not, so a literal whose reason exists only as a handle is
+simply kept. `TheoryLayerStats` gained `learned_clauses` / `learned_literals` /
+`learned_literals_before_minimization`, which makes the mean learned length and
+the minimizer's effect readable from **one** run rather than from a comparison
+of two — necessary, because a run without minimization takes a different search
+path and its clause-length mean is not a mean over the same clauses.
+[Measurement](../research/11-design-review/2026-09-06-s1b-heap-minimize-measured.md).
+
 A fifth defaulted hook, `engine_counters`, was added by S4 of the [parity
 plan](../plan/smt-parity-plan-2026-09-05.md) and is diagnostic only: it carries
 a theory's own `simplex_pivots` / `simplex_checks` / `simplex_cold_restarts` /

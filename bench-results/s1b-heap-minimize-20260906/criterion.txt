@@ -1,0 +1,24 @@
+# cdclt_solve_php_6_7, before/after, S1b.
+#
+# Host s5, idle, taskset -c 0-7, nice -n 5.
+#   cargo bench -p axeyum-solver --features bench-internals --bench cdclt_propagate \
+#     -- --warm-up-time 1 --measurement-time 3
+#
+# BEFORE tree ~/s1b-before (merge base ca31c1507), AFTER tree ~/s1b-after (this lane).
+# Bench binaries confirmed different:
+#   81dc36da5543cd51...  s1b-before/target/release/deps/cdclt_propagate-b3c4ba7b01f6d5fc
+#   5e8d60010645a7a2...  s1b-after/target/release/deps/cdclt_propagate-b3c4ba7b01f6d5fc
+# (the file-name hash is cargo's unit metadata, not a content hash, so it matches
+#  across the two trees; the sha256 is what says they are different binaries.)
+
+BEFORE  cdclt_solve_php_6_7   time: [2.8528 ms 2.8555 ms 2.8580 ms]   10 low-mild outliers of 100
+AFTER   cdclt_solve_php_6_7   time: [2.3295 ms 2.3304 ms 2.3314 ms]    3 outliers of 100
+
+# 1.23x, intervals disjoint. Modest ON PURPOSE and worth reading carefully: the
+# committed pigeonhole instance is 42 variables / 133 clauses, where an
+# O(var_count) scan per decision is 42 comparisons and a heap is ~6. The heap's
+# win is asymptotic in the variable count, and this micro-benchmark is the one
+# place in this lane's evidence where that count is small. The 330,000-variable
+# QF_IDL skeletons are where it is measured properly -- 8.8x wall on
+# RVpredict_13 at an IDENTICAL decision count, and 28.8x more decisions per
+# second on edge-matching. See idl_traces.txt and mutation_table.tsv.

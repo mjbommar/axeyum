@@ -256,6 +256,16 @@ const VSIDS_RESCALE: f64 = 1e-100;
 /// Activity ceiling that triggers a common rescale.
 const VSIDS_RESCALE_LIMIT: f64 = 1e100;
 
+/// Sentinel in [`CdclT::heap_pos`] marking a variable that is not currently in
+/// the VSIDS order heap (it has been popped by [`CdclT::pick_unassigned`] and
+/// not yet re-inserted by a backjump or an activation).
+///
+/// Copied from `axeyum-cnf`'s `proof_sat.rs`, together with the whole heap
+/// below, for the reason slice S1 copied the watch scheme: slice **S7** moves
+/// CDCL(T) onto the native core, and that move is a *deletion* only if the two
+/// engines carry the same decision structure rather than two spellings of it.
+const HEAP_ABSENT: usize = usize::MAX;
+
 /// Conflict interval unit multiplied by the current Luby value. The production
 /// schedule matches the arithmetic-local and proof-producing CDCL engines.
 const LUBY_UNIT: usize = 100;
@@ -402,6 +412,22 @@ pub struct CdclT {
     /// Current VSIDS bump increment. It grows once per conflict so old activity
     /// decays relative to newly implicated variables.
     var_inc: f64,
+    /// VSIDS order heap: a binary max-heap of variable indices keyed by
+    /// [`Self::activity`] (highest activity at the root), tie-broken by lowest
+    /// index. `heap` holds the variables; [`Self::heap_pos`] is the inverse
+    /// index. Lazy deletion, as in `proof_sat.rs`: a variable that gets assigned
+    /// while sitting in the heap is *not* removed, it is discarded when it
+    /// surfaces at the root, and re-inserted only once it has actually been
+    /// popped out (`heap_pos[v] == HEAP_ABSENT`).
+    ///
+    /// The comparator [`Self::heap_before`] reproduces the previous `O(var_count)`
+    /// linear scan's choice exactly — highest activity, lowest index on ties —
+    /// so this is a data-structure change and not a heuristic one, and the
+    /// search trajectory is unchanged.
+    heap: Vec<usize>,
+    /// `heap_pos[v]` is `v`'s index in [`Self::heap`], or [`HEAP_ABSENT`] when
+    /// `v` is not currently in the heap.
+    heap_pos: Vec<usize>,
     /// Last assigned polarity per variable. Initialized to the previous
     /// true-first behavior and retained across backtracking.
     saved_phase: Vec<bool>,
@@ -459,6 +485,18 @@ pub struct CdclT {
     /// Search decisions taken (`Self::pick_unassigned` choices). Counted
     /// unconditionally.
     decisions: usize,
+    /// Asserting clauses 1-UIP analysis produced (the denominator of the mean
+    /// learned-clause length). Counted unconditionally — a plain increment.
+    learned_clauses: usize,
+    /// Literals summed over those clauses **after** [`Self::minimize`]. Divided
+    /// by [`Self::learned_clauses`] this is the mean learned length, which is
+    /// what a minimizer is scored on.
+    learned_literals: usize,
+    /// The same sum taken **before** minimization. Reported alongside the other
+    /// so the effect of minimization is a subtraction rather than a comparison
+    /// between two runs: on one run, `before - after` is exactly the literals
+    /// this clause minimizer removed.
+    learned_literals_before_minimization: usize,
     /// Completed [`TheorySolver::final_check`] calls (ADR-1701). Counted
     /// unconditionally; stays `0` for every theory keeping the trait default,
     /// because the driver still calls it — the *default body* is what does
@@ -547,7 +585,7 @@ impl CdclT {
                 blocker: l0,
             });
         }
-        Self {
+        let mut this = Self {
             var_count,
             theory_atom_for_var,
             theory_var_for_atom: (0..theory_atom_count).collect(),
@@ -571,6 +609,12 @@ impl CdclT {
             theory_propagations: 0,
             activity: vec![0.0; var_count],
             var_inc: 1.0,
+            // Seeded below, after the value is built: every activity is `0.0` at
+            // construction and the comparator's tie-break is the lower index, so
+            // pushing variables in ascending index order builds a valid heap
+            // with no percolation. Same construction as `proof_sat.rs`.
+            heap: Vec::new(),
+            heap_pos: vec![HEAP_ABSENT; var_count],
             saved_phase: vec![true; var_count],
             conflicts_since_restart: 0,
             restart_index: 1,
@@ -595,11 +639,26 @@ impl CdclT {
             time_theory_explain: Duration::ZERO,
             theory_conflicts: 0,
             decisions: 0,
+            learned_clauses: 0,
+            learned_literals: 0,
+            learned_literals_before_minimization: 0,
             final_checks: 0,
             deferred_reason: vec![None; var_count],
             prop_queue: PropagationQueue::new(),
             explanation_unresolved: false,
+        };
+        // Seed the order heap with every variable. All activities are `0.0` and
+        // the tie-break is the lower index, so ascending insertion percolates
+        // nothing and the result is a valid heap — the same seeding
+        // `proof_sat.rs`'s `Cdcl::new` does. `with_inactive_variables` may mark
+        // some of these inactive *after* this point; those are discarded when
+        // they surface at the root (see `pick_unassigned`) and re-inserted by
+        // `activate_variables` if they are ever activated.
+        this.heap.reserve(var_count);
+        for var in 0..var_count {
+            this.heap_insert(var);
         }
+        this
     }
 
     /// Marks `variables` inactive until [`Self::add_permanent_clause`] activates
@@ -638,6 +697,10 @@ impl CdclT {
         self.reason_clause.push(None);
         self.deferred_reason.push(None);
         self.activity.push(0.0);
+        // Out of the order heap: the variable is appended *dormant*
+        // (`active = false`), and `activate_variables` inserts it if and when a
+        // final-check lemma names it.
+        self.heap_pos.push(HEAP_ABSENT);
         self.saved_phase.push(true);
         (variable, atom)
     }
@@ -655,6 +718,14 @@ impl CdclT {
                 "activated variable is out of range"
             );
             self.active[variable] = true;
+            // A newly branchable variable must enter the order heap, or it could
+            // never be decided and `pick_unassigned` would report a total
+            // assignment that is not one. An already-assigned variable is left
+            // out and re-inserted by `backjump_to` when it unassigns, which is
+            // the same rule every other insertion point follows.
+            if self.value[variable].is_none() {
+                self.heap_insert(variable);
+            }
         }
     }
 
@@ -1227,7 +1298,10 @@ impl CdclT {
         let fresh = theory.take_new_atoms();
         for _ in 0..fresh {
             let (variable, _atom) = self.add_theory_variable();
-            self.active[variable] = true;
+            // Through `activate_variables` rather than by setting the flag
+            // directly, so the order-heap insertion this driver now needs
+            // happens on *every* activation path and not just the lemma one.
+            self.activate_variables(&[variable]);
         }
     }
 
@@ -1421,6 +1495,24 @@ impl CdclT {
                 let mut learned = Vec::with_capacity(lower.len() + 1);
                 learned.push(self.true_literal(var).negate());
                 learned.extend(lower);
+                self.learned_clauses += 1;
+                self.learned_literals_before_minimization += learned.len();
+                // Recursive (self-subsuming) minimization, `MiniSat`'s
+                // `ccmin_mode = 2`. `seen[v]` is now true exactly for the
+                // non-asserting literals' variables and false for the asserting
+                // one, which is `Self::minimize`'s precondition.
+                //
+                // Skipped for a pure theory lemma (`all_theory`): resolving such
+                // a clause against a clause-database reason would make it a
+                // resolvent of lemma and CNF, and the `is_theory_lemma` flag
+                // this function returns would then overstate what was derived.
+                // A theory lemma is short by construction, so the cost of that
+                // conservatism is small and it is visible in the
+                // `learned_literals*` counters rather than argued.
+                if !all_theory {
+                    self.minimize(&mut learned, &mut seen);
+                }
+                self.learned_literals += learned.len();
                 // Put the highest-level non-asserting literal at index 1, the
                 // convention `proof_sat.rs`'s `analyze` follows, so the learned
                 // clause's second watch is the last one a backjump undoes. The
@@ -1458,6 +1550,148 @@ impl CdclT {
         }
     }
 
+    /// An abstraction of a variable's decision level as a single-bit mask
+    /// (`MiniSat`'s `abstractLevel`). The union of these masks over a clause's
+    /// literals lets [`Self::lit_redundant`] short-circuit: a reason literal
+    /// whose level-bit is absent from the clause's mask comes from a decision
+    /// level unrelated to the clause and therefore cannot be resolved away.
+    #[inline]
+    fn abstract_level(&self, var: usize) -> u32 {
+        1u32 << (self.level[var] & 31)
+    }
+
+    /// The reason literals of `var` as a borrowed slice, **without** forcing a
+    /// deferred theory explanation.
+    ///
+    /// [`Self::reason_for`] is the full version: it materialises a lazy
+    /// explanation handle (ADR-1701) by calling back into the theory. That is
+    /// the right thing on the resolution path, where the reason is needed to
+    /// make progress, and the wrong thing during minimization, which is a pure
+    /// optimisation: forcing an explanation the search would never otherwise
+    /// have asked for costs theory time and can fail
+    /// (`explanation_unresolved`). So a literal whose reason exists only as a
+    /// handle reads as `None` here and is simply kept in the clause — sound,
+    /// deterministic, and the only deviation from `proof_sat.rs`'s version
+    /// besides the propagated-literal skip in [`Self::lit_redundant`].
+    fn minimization_reason(&self, var: usize) -> Option<&[Lit]> {
+        if let Some(reason) = &self.reason[var] {
+            return Some(reason.as_slice());
+        }
+        if let Some(cid) = self.reason_clause[var] {
+            return Some(self.lits(cid));
+        }
+        None
+    }
+
+    /// Recursive (self-subsuming) minimization of a learned clause — `MiniSat`
+    /// `ccmin_mode = 2`, ported from `axeyum-cnf`'s `proof_sat.rs::minimize`.
+    ///
+    /// A non-asserting literal `l` is dropped when its negation is already
+    /// entailed by the remaining clause literals through `l`'s reason chain:
+    /// every literal in `reason(l)` must be in the clause (`seen`), fixed at
+    /// level 0, or itself recursively redundant. Resolving the clause against
+    /// those reason chains keeps it entailed by the same premises, so the
+    /// minimized clause is still RUP with respect to the clause database plus
+    /// the theory lemmas already enumerated, and every proof contract over it
+    /// still holds.
+    ///
+    /// Precondition: `seen[v]` is true exactly for the non-asserting
+    /// learned-clause variables and false for the asserting literal's variable.
+    /// `seen` is a per-conflict local of [`Self::analyze_conflict`], so nothing
+    /// leaks across conflicts and the result depends only on this conflict's
+    /// `seen`, the reason graph and the input clause order — hence deterministic.
+    fn minimize(&self, learned: &mut Vec<Lit>, seen: &mut [bool]) {
+        if learned.len() <= 1 {
+            return;
+        }
+        // Mask of the decision levels present among the non-asserting literals.
+        let mut abstract_levels = 0u32;
+        for l in &learned[1..] {
+            abstract_levels |= self.abstract_level(l.var);
+        }
+        // Scratch reused across the `lit_redundant` calls in this minimization.
+        // Marks set during a *successful* probe are kept (those literals are now
+        // known to be implied by the clause, which is sound for later probes); a
+        // *failed* probe rolls back its own marks. Removed literals stay marked,
+        // which is correct and matches the reference — `seen` is never read
+        // again after this conflict.
+        let mut stack: Vec<Lit> = Vec::new();
+        let mut to_clear: Vec<usize> = Vec::new();
+        let mut write = 1usize;
+        for read in 1..learned.len() {
+            let lit = learned[read];
+            // Keep `lit` if it is a decision (no reason), if its reason exists
+            // only as an unresolved handle, or if it is not redundant.
+            if self.minimization_reason(lit.var).is_none()
+                || !self.lit_redundant(lit, abstract_levels, seen, &mut stack, &mut to_clear)
+            {
+                learned[write] = lit;
+                write += 1;
+            }
+        }
+        learned.truncate(write);
+    }
+
+    /// Can literal `p` be removed from the learned clause? Iterative
+    /// self-subsumption check (an explicit `stack` rather than recursion, so a
+    /// deep reason chain cannot overflow), ported from `proof_sat.rs`.
+    ///
+    /// `p` is redundant iff, walking its reason chain, every encountered literal
+    /// is fixed at level 0, already in the clause (`seen`), or has a reason and a
+    /// level present in `abstract_levels` (so it can in turn be resolved away).
+    /// The first literal that has no usable reason, or whose level is outside
+    /// `abstract_levels`, makes `p` irredundant — and every `seen` mark this call
+    /// set (recorded in `to_clear`) is rolled back before returning `false`, so a
+    /// failed probe leaves no state behind.
+    ///
+    /// One deviation from the plain-SAT reference: it skips the propagated
+    /// literal **by variable** rather than by taking `reason[1..]`. In a plain
+    /// SAT core the implied literal is slot 0 of its reason clause by
+    /// construction; here a reason may be a theory clause materialised by
+    /// [`Self::theory_reason_clause`], whose literal order is the theory's, so
+    /// position is not a safe proxy for identity.
+    fn lit_redundant(
+        &self,
+        p: Lit,
+        abstract_levels: u32,
+        seen: &mut [bool],
+        stack: &mut Vec<Lit>,
+        to_clear: &mut Vec<usize>,
+    ) -> bool {
+        stack.clear();
+        stack.push(p);
+        let top = to_clear.len();
+        while let Some(q) = stack.pop() {
+            let qv = q.var;
+            let reason = self
+                .minimization_reason(qv)
+                .expect("lit_redundant only walks literals with a usable reason");
+            for &l in reason {
+                let lv = l.var;
+                if lv == qv || self.level[lv] == 0 || seen[lv] {
+                    continue;
+                }
+                if self.minimization_reason(lv).is_some()
+                    && (self.abstract_level(lv) & abstract_levels) != 0
+                {
+                    // `l` may itself be redundant: mark it and recurse.
+                    seen[lv] = true;
+                    stack.push(l);
+                    to_clear.push(lv);
+                } else {
+                    // `l` has no usable reason, or comes from an unrelated
+                    // decision level: `p` cannot be removed. Roll back the probe.
+                    for &v in &to_clear[top..] {
+                        seen[v] = false;
+                    }
+                    to_clear.truncate(top);
+                    return false;
+                }
+            }
+        }
+        true
+    }
+
     /// The backjump level: the second-highest decision level among the clause's
     /// literals (the asserting literal at index 0 sits at the highest level), or `0`
     /// for a unit asserting clause.
@@ -1480,6 +1714,15 @@ impl CdclT {
             }
             let (var, _, cause) = self.trail.pop().expect("non-empty trail");
             self.value[var] = None;
+            // The variable is branchable again, so it must be back in the order
+            // heap. This is the lazy-deletion scheme's re-insertion point: a
+            // variable assigned by propagation was never removed (`heap_insert`
+            // is then a no-op), while one popped by `pick_unassigned` is put
+            // back here, at whatever activity conflict analysis has since given
+            // it. Inactive variables are never branchable and stay out.
+            if self.active[var] {
+                self.heap_insert(var);
+            }
             self.reason[var] = None;
             self.reason_theory[var] = false;
             self.reason_clause[var] = None;
@@ -1505,9 +1748,153 @@ impl CdclT {
         self.qhead = self.qhead.min(self.trail.len());
     }
 
-    /// The highest-activity unassigned variable, with deterministic lowest-index
-    /// ties, or `None` when the assignment is total.
-    fn pick_unassigned(&self) -> Option<usize> {
+    /// Order-heap comparator: `true` when variable `a` should sit closer to the
+    /// root than `b`, i.e. `a` is the *preferred* branching variable. Highest
+    /// activity wins; ties break to the lower index.
+    ///
+    /// This mirrors the linear scan this heap replaced exactly — that scan
+    /// replaced its best only on a **strictly greater** activity, so it kept the
+    /// lower index on a bitwise-equal activity. Exact `f64` equality is
+    /// therefore intentional and load-bearing: an epsilon would change the
+    /// tie-break, and with it the search trajectory. The two activities compared
+    /// here are produced by identical arithmetic, so bitwise equality is the
+    /// correct predicate. Copied from `proof_sat.rs`'s `heap_before`.
+    fn heap_before(&self, a: usize, b: usize) -> bool {
+        let (aa, ab) = (self.activity[a], self.activity[b]);
+        #[allow(clippy::float_cmp)]
+        let tie = aa == ab;
+        aa > ab || (tie && a < b)
+    }
+
+    /// Restores the heap property by moving the element at `i` toward the root
+    /// while it precedes its parent. O(log n).
+    fn heap_percolate_up(&mut self, mut i: usize) {
+        let x = self.heap[i];
+        while i != 0 {
+            let parent = (i - 1) / 2;
+            let p = self.heap[parent];
+            if !self.heap_before(x, p) {
+                break;
+            }
+            self.heap[i] = p;
+            self.heap_pos[p] = i;
+            i = parent;
+        }
+        self.heap[i] = x;
+        self.heap_pos[x] = i;
+    }
+
+    /// Restores the heap property by moving the element at `i` toward the leaves
+    /// while a child precedes it. O(log n).
+    fn heap_percolate_down(&mut self, mut i: usize) {
+        let x = self.heap[i];
+        let len = self.heap.len();
+        loop {
+            let left = 2 * i + 1;
+            if left >= len {
+                break;
+            }
+            let right = left + 1;
+            let child = if right < len && self.heap_before(self.heap[right], self.heap[left]) {
+                right
+            } else {
+                left
+            };
+            let c = self.heap[child];
+            if !self.heap_before(c, x) {
+                break;
+            }
+            self.heap[i] = c;
+            self.heap_pos[c] = i;
+            i = child;
+        }
+        self.heap[i] = x;
+        self.heap_pos[x] = i;
+    }
+
+    /// True when `var` currently lives in the order heap.
+    fn heap_contains(&self, var: usize) -> bool {
+        self.heap_pos[var] != HEAP_ABSENT
+    }
+
+    /// Inserts `var` into the order heap (no-op if already present). O(log n).
+    fn heap_insert(&mut self, var: usize) {
+        if self.heap_contains(var) {
+            return;
+        }
+        let i = self.heap.len();
+        self.heap.push(var);
+        self.heap_pos[var] = i;
+        self.heap_percolate_up(i);
+    }
+
+    /// Removes and returns the root (preferred) variable. O(log n). The caller
+    /// must ensure the heap is non-empty.
+    fn heap_remove_max(&mut self) -> usize {
+        let root = self.heap[0];
+        let last = *self.heap.last().expect("heap not empty");
+        self.heap_pos[root] = HEAP_ABSENT;
+        if self.heap.len() == 1 {
+            self.heap.pop();
+            return root;
+        }
+        self.heap[0] = last;
+        self.heap_pos[last] = 0;
+        self.heap.pop();
+        self.heap_percolate_down(0);
+        root
+    }
+
+    /// Rebuilds the order heap in place over its current membership under the
+    /// current [`Self::activity`] values (and the index tie-break). Floyd's
+    /// bottom-up heapify, O(n) over the heap's size. Used after a VSIDS rescale.
+    fn heap_rebuild(&mut self) {
+        let len = self.heap.len();
+        if len <= 1 {
+            return;
+        }
+        let mut i = len / 2;
+        loop {
+            i -= 1;
+            self.heap_percolate_down(i);
+            if i == 0 {
+                break;
+            }
+        }
+    }
+
+    /// The highest-activity **active, unassigned** variable, with deterministic
+    /// lowest-index ties, or `None` when the assignment is total.
+    ///
+    /// Pops roots until an eligible variable surfaces — the canonical `MiniSat`
+    /// lazy-deletion order heap, copied from `proof_sat.rs`'s `pick_branch` and
+    /// extended by one predicate this driver needs and a plain SAT core does
+    /// not: a variable may be **inactive** (reserved for a theory atom no
+    /// final-check lemma has named yet), and an inactive variable is never a
+    /// legal decision. Such a root is discarded exactly like an assigned one;
+    /// [`Self::activate_variables`] re-inserts it if it is ever activated.
+    ///
+    /// This returns exactly the variable the prior `O(var_count)` linear scan
+    /// would have chosen, so the search trajectory is unchanged. What changes is
+    /// the cost: O(log n) amortized per decision instead of `O(var_count)`, on
+    /// skeletons where slice S1 measured 45,000+ decisions over 330,000
+    /// variables.
+    fn pick_unassigned(&mut self) -> Option<usize> {
+        while !self.heap.is_empty() {
+            let var = self.heap_remove_max();
+            if self.active[var] && self.value[var].is_none() {
+                return Some(var);
+            }
+        }
+        None
+    }
+
+    /// The decision the `O(var_count)` linear scan this heap replaced would make.
+    /// Kept as the differential reference for
+    /// `order_heap_matches_linear_scan_under_stress`; a heap that ever disagrees
+    /// with it has changed the search trajectory, not just its cost.
+    #[cfg(test)]
+    fn pick_unassigned_linear(&self) -> Option<usize> {
         let mut best = None;
         for var in 0..self.var_count {
             if !self.active[var] || self.value[var].is_some() {
@@ -1524,15 +1911,59 @@ impl CdclT {
         best
     }
 
+    /// Asserts the order-heap invariants: `heap_pos` inverts `heap`, the heap
+    /// property holds at every node, and every **active, unassigned** variable
+    /// is present (missing one would make it undecidable and could turn a
+    /// partial assignment into a spurious `Sat`).
+    #[cfg(test)]
+    fn assert_heap_invariants(&self) {
+        for (i, &var) in self.heap.iter().enumerate() {
+            assert_eq!(self.heap_pos[var], i, "heap_pos must invert heap");
+            if i > 0 {
+                let parent = self.heap[(i - 1) / 2];
+                assert!(
+                    !self.heap_before(var, parent),
+                    "heap property violated at {i}: {var} before parent {parent}"
+                );
+            }
+        }
+        for var in 0..self.var_count {
+            if self.active[var] && self.value[var].is_none() {
+                assert!(
+                    self.heap_contains(var),
+                    "every active unassigned variable must be in the heap: {var}"
+                );
+            }
+        }
+    }
+
     /// Bumps one variable's VSIDS activity, rescaling all activities by the same
     /// positive factor before they can overflow. Rescaling preserves ordering.
     fn bump_var(&mut self, var: usize) {
         self.activity[var] += self.var_inc;
         if self.activity[var] > VSIDS_RESCALE_LIMIT {
+            // Rescaling by one positive factor preserves the *strict* order of
+            // distinct activities, but it can collapse two distinct tiny
+            // activities into an equal value (rounding / underflow to 0.0). The
+            // comparator's secondary key is the variable index, so a
+            // newly-formed tie imposes an ordering the existing heap layout
+            // never enforced. Re-heapify so the heap matches the post-rescale
+            // total order exactly. A rescale needs an activity above 1e100, so
+            // this O(n) rebuild does not affect the amortized per-decision cost.
             for activity in &mut self.activity {
                 *activity *= VSIDS_RESCALE;
             }
             self.var_inc *= VSIDS_RESCALE;
+            self.heap_rebuild();
+            return;
+        }
+        // Activity only ever *increases* here, so the variable can only move
+        // toward the root: one sift-up restores the heap. A variable not in the
+        // heap (assigned-and-popped) needs no update — it is re-inserted at its
+        // now-higher activity when it unassigns.
+        if self.heap_contains(var) {
+            let i = self.heap_pos[var];
+            self.heap_percolate_up(i);
         }
     }
 
@@ -1776,6 +2207,12 @@ impl CdclT {
             theory_propagations: self.theory_propagations as u64,
             #[allow(clippy::cast_possible_truncation)]
             decisions: self.decisions as u64,
+            #[allow(clippy::cast_possible_truncation)]
+            learned_clauses: self.learned_clauses as u64,
+            #[allow(clippy::cast_possible_truncation)]
+            learned_literals: self.learned_literals as u64,
+            #[allow(clippy::cast_possible_truncation)]
+            learned_literals_before_minimization: self.learned_literals_before_minimization as u64,
             restarts: self.restarts(),
             // S4 wired `TheorySolver::engine_counters`; a theory that keeps no
             // feasibility engine still reports `None` here rather than zero.
@@ -2383,12 +2820,199 @@ mod termination_tests {
         let mut picker = CdclT::new(4, 0, Vec::new(), None);
         picker.bump_var(2);
         assert_eq!(picker.pick_unassigned(), Some(2));
-        let plain = CdclT::new(4, 0, Vec::new(), None);
+        // `pick_unassigned` pops the order-heap root, so it needs `&mut`; the
+        // choice it makes is the one the previous linear scan made.
+        let mut plain = CdclT::new(4, 0, Vec::new(), None);
         assert_eq!(plain.pick_unassigned(), Some(0));
 
         let (activity_again, learned_again) = run();
         assert_eq!(activity, activity_again);
         assert_eq!(learned, learned_again);
+    }
+
+    /// The order heap returns exactly the variable the `O(var_count)` linear scan
+    /// would, under randomized bump / decay / decide / backjump stress, and its
+    /// structural invariants hold throughout.
+    ///
+    /// This is the trajectory-identity guarantee at the decision level, and it
+    /// is the whole justification for calling the heap a data-structure change:
+    /// if the heap ever picked a different variable than the scan, every
+    /// downstream conflict, learned clause and restart would differ, and the
+    /// before/after measurement would be comparing two solvers rather than two
+    /// implementations of one.
+    ///
+    /// The stress deliberately includes **inactive** variables, which the plain
+    /// SAT core's version of this test has no analogue for: this driver reserves
+    /// variables for theory atoms no lemma has named yet, they must never be
+    /// decided, and they must become decidable the moment they are activated.
+    #[test]
+    fn order_heap_matches_linear_scan_under_stress() {
+        struct NoTheory;
+        impl TheorySolver for NoTheory {
+            fn assert(&mut self, _atom: usize, _value: bool) -> Result<(), Vec<TheoryLit>> {
+                Ok(())
+            }
+
+            fn push(&mut self) {}
+
+            fn pop(&mut self) {}
+
+            fn propagate(&self) -> Vec<TheoryProp> {
+                Vec::new()
+            }
+        }
+
+        let mut state = 0x51ce_d00d_face_0042_u64;
+        let mut next = move || {
+            state ^= state << 13;
+            state ^= state >> 7;
+            state ^= state << 17;
+            state
+        };
+
+        let n = 64usize;
+        let n_bound = u64::try_from(n).expect("64 fits u64");
+        // A quarter of the variables start inactive, the way a theory-atom
+        // reservation does, and get activated part-way through the stress.
+        let inactive: Vec<usize> = (0..n).filter(|v| v % 4 == 3).collect();
+        let mut solver = CdclT::new(n, 0, Vec::new(), None).with_inactive_variables(&inactive);
+        solver.assert_heap_invariants();
+
+        let mut theory = NoTheory;
+        let mut activated = false;
+        for step in 0..20_000u32 {
+            if step == 10_000 {
+                solver.activate_variables(&inactive);
+                activated = true;
+                solver.assert_heap_invariants();
+            }
+            match next() % 3 {
+                // Bump a random variable (raises its activity ⇒ sift-up).
+                0 => {
+                    let var = usize::try_from(next() % n_bound).expect("in range");
+                    solver.bump_var(var);
+                    solver.decay_activity();
+                }
+                // Decide: the heap's choice must be the linear scan's choice.
+                1 => {
+                    let expected = solver.pick_unassigned_linear();
+                    let got = solver.pick_unassigned();
+                    assert_eq!(got, expected, "heap pick must match the linear scan");
+                    if let Some(var) = got {
+                        solver.decision_level += 1;
+                        solver
+                            .assign(&mut theory, var, true, Cause::Decision, None, false)
+                            .expect("NoTheory never rejects an assignment");
+                    }
+                }
+                // Backjump to a random earlier level (unassign ⇒ re-insert).
+                _ => {
+                    let level = solver.decision_level;
+                    if level > 0 {
+                        let target = usize::try_from(next() % u64::try_from(level).expect("fits"))
+                            .expect("in range");
+                        solver.backjump_to(&mut theory, target);
+                    }
+                }
+            }
+            solver.assert_heap_invariants();
+        }
+        assert!(activated, "the activation branch must have run");
+        // Every reserved variable is decidable once activated: none of them can
+        // still be missing from the heap while unassigned, which is what
+        // `assert_heap_invariants` has been checking since step 10,000.
+        solver.backjump_to(&mut theory, 0);
+        solver.assert_heap_invariants();
+        for &var in &inactive {
+            assert!(
+                solver.heap_contains(var),
+                "activated variable {var} must be branchable at level 0"
+            );
+        }
+    }
+
+    /// Recursive minimization removes a literal whose reason chain is already
+    /// covered by the rest of the clause, and — the paired negative control —
+    /// keeps the same literal when it is not.
+    ///
+    /// The two cases differ in one bit of state (`seen[3]`, i.e. whether `¬x3`
+    /// is in the learned clause), so this cannot pass by minimizing nothing and
+    /// cannot pass by minimizing everything.
+    #[test]
+    fn recursive_minimization_drops_a_covered_literal_and_keeps_an_uncovered_one() {
+        let neg = |var: usize| Lit {
+            var,
+            positive: false,
+        };
+        let pos = |var: usize| Lit {
+            var,
+            positive: true,
+        };
+
+        // Clause 0 is `x1 ∨ ¬x3`; with `x3` true it propagated `x1`, so it is
+        // `x1`'s reason. `x3` is a decision (no reason at all).
+        let build = || {
+            let mut solver = CdclT::new(6, 0, vec![vec![pos(1), neg(3)]], None);
+            solver.level[1] = 1;
+            solver.level[3] = 1;
+            solver.value[1] = Some(true);
+            solver.value[3] = Some(true);
+            solver.reason_clause[1] = Some(0);
+            solver
+        };
+
+        // Covered: the learned clause already contains `¬x3`, the only other
+        // literal of `x1`'s reason, so resolving `¬x1` away leaves the clause
+        // entailed and `¬x1` is dropped.
+        let solver = build();
+        let mut learned = vec![neg(0), neg(1), neg(3)];
+        let mut seen = vec![false; 6];
+        seen[1] = true;
+        seen[3] = true;
+        solver.minimize(&mut learned, &mut seen);
+        assert_eq!(
+            learned,
+            vec![neg(0), neg(3)],
+            "a literal whose reason is covered by the clause must be removed"
+        );
+
+        // Uncovered: the same reason chain, but `¬x3` is NOT in the clause.
+        // Removing `¬x1` would drop a premise, so it must be kept.
+        let solver = build();
+        let mut learned = vec![neg(0), neg(1)];
+        let mut seen = vec![false; 6];
+        seen[1] = true;
+        solver.minimize(&mut learned, &mut seen);
+        assert_eq!(
+            learned,
+            vec![neg(0), neg(1)],
+            "a literal whose reason reaches outside the clause must be kept"
+        );
+    }
+
+    /// A decision literal has no reason and is therefore never redundant, and
+    /// the asserting literal at index 0 is never even considered. Both are
+    /// preconditions of soundness rather than of clause size: dropping either
+    /// would produce a clause the premises do not entail.
+    #[test]
+    fn minimization_never_drops_a_decision_or_the_asserting_literal() {
+        let neg = |var: usize| Lit {
+            var,
+            positive: false,
+        };
+        // Every variable is a decision here: no reason clause is installed.
+        let mut solver = CdclT::new(4, 0, Vec::new(), None);
+        for var in 0..4 {
+            solver.level[var] = 1;
+            solver.value[var] = Some(true);
+        }
+        let mut learned = vec![neg(0), neg(1), neg(2)];
+        let mut seen = vec![false; 4];
+        seen[1] = true;
+        seen[2] = true;
+        let before = learned.clone();
+        solver.minimize(&mut learned, &mut seen);
+        assert_eq!(learned, before, "decision literals are never redundant");
     }
 
     #[test]

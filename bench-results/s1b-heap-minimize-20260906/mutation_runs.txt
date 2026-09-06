@@ -1,0 +1,120 @@
+### jobshop20-2-10-10-4-4-16.smt2 [nomin intact rep=1] wall_ms=21130
+; theory-layer boolean_propagate_ms=31 theory_assert_ms=18 theory_propagate_ms=20859 theory_push_pop_ms=12 conflict_analysis_ms=1 theory_final_check_ms=0 theory_explain_ms=0 theory_conflicts=861 theory_propagations=220056 final_checks=0 decisions=80291 restarts=6 learned_clauses=1042 learned_literals=7164 learned_literals_premin=7169 simplex_pivots=n/a simplex_checks=n/a simplex_cold_restarts=n/a bound_retractions=n/a bound_assertions=n/a propagations_offered=n/a simplex_rows=n/a simplex_columns=n/a
+unknown
+### jobshop20-2-10-10-4-4-16.smt2 [nomin mutant rep=1] wall_ms=21133
+; theory-layer boolean_propagate_ms=31 theory_assert_ms=18 theory_propagate_ms=20858 theory_push_pop_ms=12 conflict_analysis_ms=1 theory_final_check_ms=0 theory_explain_ms=0 theory_conflicts=876 theory_propagations=221733 final_checks=0 decisions=81699 restarts=6 learned_clauses=1058 learned_literals=7260 learned_literals_premin=7260 simplex_pivots=n/a simplex_checks=n/a simplex_cold_restarts=n/a bound_retractions=n/a bound_assertions=n/a propagations_offered=n/a simplex_rows=n/a simplex_columns=n/a
+unknown
+### jobshop26-2-13-13-4-4-16.smt2 [nomin intact rep=1] wall_ms=21130
+; theory-layer boolean_propagate_ms=22 theory_assert_ms=15 theory_propagate_ms=20857 theory_push_pop_ms=11 conflict_analysis_ms=1 theory_final_check_ms=0 theory_explain_ms=0 theory_conflicts=477 theory_propagations=293353 final_checks=0 decisions=31359 restarts=5 learned_clauses=636 learned_literals=4765 learned_literals_premin=4766 simplex_pivots=n/a simplex_checks=n/a simplex_cold_restarts=n/a bound_retractions=n/a bound_assertions=n/a propagations_offered=n/a simplex_rows=n/a simplex_columns=n/a
+unknown
+### jobshop26-2-13-13-4-4-16.smt2 [nomin mutant rep=1] wall_ms=21132
+; theory-layer boolean_propagate_ms=23 theory_assert_ms=15 theory_propagate_ms=20856 theory_push_pop_ms=11 conflict_analysis_ms=1 theory_final_check_ms=0 theory_explain_ms=0 theory_conflicts=479 theory_propagations=294139 final_checks=0 decisions=31457 restarts=5 learned_clauses=638 learned_literals=4774 learned_literals_premin=4774 simplex_pivots=n/a simplex_checks=n/a simplex_cold_restarts=n/a bound_retractions=n/a bound_assertions=n/a propagations_offered=n/a simplex_rows=n/a simplex_columns=n/a
+unknown
+### RVpredict_13.smt2 [nomin intact rep=1] wall_ms=1813
+; theory-layer boolean_propagate_ms=470 theory_assert_ms=347 theory_propagate_ms=42 theory_push_pop_ms=93 conflict_analysis_ms=1 theory_final_check_ms=0 theory_explain_ms=0 theory_conflicts=3415 theory_propagations=0 final_checks=1 decisions=2364618 restarts=17 learned_clauses=3415 learned_literals=21485 learned_literals_premin=21486 simplex_pivots=n/a simplex_checks=n/a simplex_cold_restarts=n/a bound_retractions=n/a bound_assertions=n/a propagations_offered=n/a simplex_rows=n/a simplex_columns=n/a
+sat
+### RVpredict_13.smt2 [nomin mutant rep=1] wall_ms=1814
+; theory-layer boolean_propagate_ms=476 theory_assert_ms=342 theory_propagate_ms=42 theory_push_pop_ms=92 conflict_analysis_ms=1 theory_final_check_ms=0 theory_explain_ms=0 theory_conflicts=3415 theory_propagations=0 final_checks=1 decisions=2364618 restarts=17 learned_clauses=3415 learned_literals=21486 learned_literals_premin=21486 simplex_pivots=n/a simplex_checks=n/a simplex_cold_restarts=n/a bound_retractions=n/a bound_assertions=n/a propagations_offered=n/a simplex_rows=n/a simplex_columns=n/a
+sat
+### edge-matching-width=7-height=7-colours=11.smt2 [nomin intact rep=1] wall_ms=22533
+; theory-layer boolean_propagate_ms=15562 theory_assert_ms=3839 theory_propagate_ms=47 theory_push_pop_ms=172 conflict_analysis_ms=69 theory_final_check_ms=0 theory_explain_ms=0 theory_conflicts=18055 theory_propagations=0 final_checks=0 decisions=2598360 restarts=62 learned_clauses=18187 learned_literals=224284 learned_literals_premin=227339 simplex_pivots=n/a simplex_checks=n/a simplex_cold_restarts=n/a bound_retractions=n/a bound_assertions=n/a propagations_offered=n/a simplex_rows=n/a simplex_columns=n/a
+unknown
+### edge-matching-width=7-height=7-colours=11.smt2 [nomin mutant rep=1] wall_ms=22534
+; theory-layer boolean_propagate_ms=15492 theory_assert_ms=4707 theory_propagate_ms=54 theory_push_pop_ms=180 conflict_analysis_ms=86 theory_final_check_ms=0 theory_explain_ms=0 theory_conflicts=21899 theory_propagations=0 final_checks=0 decisions=2965530 restarts=89 learned_clauses=24230 learned_literals=342009 learned_literals_premin=342009 simplex_pivots=n/a simplex_checks=n/a simplex_cold_restarts=n/a bound_retractions=n/a bound_assertions=n/a propagations_offered=n/a simplex_rows=n/a simplex_columns=n/a
+unknown
+### a7.3.0.tweaked.3.asp.smt2 [nomin intact rep=1] wall_ms=22232
+; theory-layer boolean_propagate_ms=16616 theory_assert_ms=372 theory_propagate_ms=4 theory_push_pop_ms=17 conflict_analysis_ms=139 theory_final_check_ms=0 theory_explain_ms=0 theory_conflicts=1476 theory_propagations=0 final_checks=0 decisions=230093 restarts=9 learned_clauses=1529 learned_literals=193106 learned_literals_premin=250470 simplex_pivots=n/a simplex_checks=n/a simplex_cold_restarts=n/a bound_retractions=n/a bound_assertions=n/a propagations_offered=n/a simplex_rows=n/a simplex_columns=n/a
+unknown
+### a7.3.0.tweaked.3.asp.smt2 [nomin mutant rep=1] wall_ms=22232
+; theory-layer boolean_propagate_ms=16313 theory_assert_ms=187 theory_propagate_ms=6 theory_push_pop_ms=20 conflict_analysis_ms=14 theory_final_check_ms=0 theory_explain_ms=0 theory_conflicts=1065 theory_propagations=0 final_checks=0 decisions=330803 restarts=6 learned_clauses=1139 learned_literals=63396 learned_literals_premin=63396 simplex_pivots=n/a simplex_checks=n/a simplex_cold_restarts=n/a bound_retractions=n/a bound_assertions=n/a propagations_offered=n/a simplex_rows=n/a simplex_columns=n/a
+unknown
+### jobshop20-2-10-10-4-4-16.smt2 [noheap intact rep=1] wall_ms=21132
+; theory-layer boolean_propagate_ms=30 theory_assert_ms=17 theory_propagate_ms=20860 theory_push_pop_ms=12 conflict_analysis_ms=1 theory_final_check_ms=0 theory_explain_ms=0 theory_conflicts=857 theory_propagations=219476 final_checks=0 decisions=79650 restarts=6 learned_clauses=1038 learned_literals=7150 learned_literals_premin=7155 simplex_pivots=n/a simplex_checks=n/a simplex_cold_restarts=n/a bound_retractions=n/a bound_assertions=n/a propagations_offered=n/a simplex_rows=n/a simplex_columns=n/a
+unknown
+### jobshop20-2-10-10-4-4-16.smt2 [noheap mutant rep=1] wall_ms=21133
+; theory-layer boolean_propagate_ms=28 theory_assert_ms=17 theory_propagate_ms=20465 theory_push_pop_ms=12 conflict_analysis_ms=1 theory_final_check_ms=0 theory_explain_ms=0 theory_conflicts=814 theory_propagations=206225 final_checks=0 decisions=72919 restarts=6 learned_clauses=987 learned_literals=6854 learned_literals_premin=6859 simplex_pivots=n/a simplex_checks=n/a simplex_cold_restarts=n/a bound_retractions=n/a bound_assertions=n/a propagations_offered=n/a simplex_rows=n/a simplex_columns=n/a
+unknown
+### jobshop26-2-13-13-4-4-16.smt2 [noheap intact rep=1] wall_ms=21130
+; theory-layer boolean_propagate_ms=23 theory_assert_ms=15 theory_propagate_ms=20856 theory_push_pop_ms=12 conflict_analysis_ms=1 theory_final_check_ms=0 theory_explain_ms=0 theory_conflicts=475 theory_propagations=293063 final_checks=0 decisions=31282 restarts=5 learned_clauses=634 learned_literals=4739 learned_literals_premin=4740 simplex_pivots=n/a simplex_checks=n/a simplex_cold_restarts=n/a bound_retractions=n/a bound_assertions=n/a propagations_offered=n/a simplex_rows=n/a simplex_columns=n/a
+unknown
+### jobshop26-2-13-13-4-4-16.smt2 [noheap mutant rep=1] wall_ms=21130
+; theory-layer boolean_propagate_ms=22 theory_assert_ms=15 theory_propagate_ms=20600 theory_push_pop_ms=11 conflict_analysis_ms=1 theory_final_check_ms=0 theory_explain_ms=0 theory_conflicts=458 theory_propagations=279034 final_checks=0 decisions=28714 restarts=5 learned_clauses=613 learned_literals=4590 learned_literals_premin=4591 simplex_pivots=n/a simplex_checks=n/a simplex_cold_restarts=n/a bound_retractions=n/a bound_assertions=n/a propagations_offered=n/a simplex_rows=n/a simplex_columns=n/a
+unknown
+### RVpredict_13.smt2 [noheap intact rep=1] wall_ms=1812
+; theory-layer boolean_propagate_ms=469 theory_assert_ms=348 theory_propagate_ms=42 theory_push_pop_ms=92 conflict_analysis_ms=1 theory_final_check_ms=0 theory_explain_ms=0 theory_conflicts=3415 theory_propagations=0 final_checks=1 decisions=2364618 restarts=17 learned_clauses=3415 learned_literals=21485 learned_literals_premin=21486 simplex_pivots=n/a simplex_checks=n/a simplex_cold_restarts=n/a bound_retractions=n/a bound_assertions=n/a propagations_offered=n/a simplex_rows=n/a simplex_columns=n/a
+sat
+### RVpredict_13.smt2 [noheap mutant rep=1] wall_ms=15928
+; theory-layer boolean_propagate_ms=491 theory_assert_ms=373 theory_propagate_ms=42 theory_push_pop_ms=96 conflict_analysis_ms=2 theory_final_check_ms=0 theory_explain_ms=0 theory_conflicts=3415 theory_propagations=0 final_checks=1 decisions=2364618 restarts=17 learned_clauses=3415 learned_literals=21485 learned_literals_premin=21486 simplex_pivots=n/a simplex_checks=n/a simplex_cold_restarts=n/a bound_retractions=n/a bound_assertions=n/a propagations_offered=n/a simplex_rows=n/a simplex_columns=n/a
+sat
+### edge-matching-width=7-height=7-colours=11.smt2 [noheap intact rep=1] wall_ms=22534
+; theory-layer boolean_propagate_ms=15543 theory_assert_ms=3835 theory_propagate_ms=47 theory_push_pop_ms=171 conflict_analysis_ms=70 theory_final_check_ms=0 theory_explain_ms=0 theory_conflicts=18053 theory_propagations=0 final_checks=0 decisions=2591471 restarts=62 learned_clauses=18185 learned_literals=224280 learned_literals_premin=227335 simplex_pivots=n/a simplex_checks=n/a simplex_cold_restarts=n/a bound_retractions=n/a bound_assertions=n/a propagations_offered=n/a simplex_rows=n/a simplex_columns=n/a
+unknown
+### edge-matching-width=7-height=7-colours=11.smt2 [noheap mutant rep=1] wall_ms=22534
+; theory-layer boolean_propagate_ms=1050 theory_assert_ms=206 theory_propagate_ms=1 theory_push_pop_ms=4 conflict_analysis_ms=20 theory_final_check_ms=0 theory_explain_ms=0 theory_conflicts=5195 theory_propagations=0 final_checks=0 decisions=89881 restarts=28 learned_clauses=5262 learned_literals=72055 learned_literals_premin=73152 simplex_pivots=n/a simplex_checks=n/a simplex_cold_restarts=n/a bound_retractions=n/a bound_assertions=n/a propagations_offered=n/a simplex_rows=n/a simplex_columns=n/a
+unknown
+### a7.3.0.tweaked.3.asp.smt2 [noheap intact rep=1] wall_ms=22233
+; theory-layer boolean_propagate_ms=16599 theory_assert_ms=384 theory_propagate_ms=4 theory_push_pop_ms=17 conflict_analysis_ms=138 theory_final_check_ms=0 theory_explain_ms=0 theory_conflicts=1483 theory_propagations=0 final_checks=0 decisions=230910 restarts=9 learned_clauses=1536 learned_literals=193120 learned_literals_premin=250484 simplex_pivots=n/a simplex_checks=n/a simplex_cold_restarts=n/a bound_retractions=n/a bound_assertions=n/a propagations_offered=n/a simplex_rows=n/a simplex_columns=n/a
+unknown
+### a7.3.0.tweaked.3.asp.smt2 [noheap mutant rep=1] wall_ms=22231
+; theory-layer boolean_propagate_ms=909 theory_assert_ms=32 theory_propagate_ms=1 theory_push_pop_ms=4 conflict_analysis_ms=19 theory_final_check_ms=0 theory_explain_ms=0 theory_conflicts=329 theory_propagations=0 final_checks=0 decisions=77087 restarts=2 learned_clauses=334 learned_literals=23809 learned_literals_premin=26655 simplex_pivots=n/a simplex_checks=n/a simplex_cold_restarts=n/a bound_retractions=n/a bound_assertions=n/a propagations_offered=n/a simplex_rows=n/a simplex_columns=n/a
+unknown
+### jobshop20-2-10-10-4-4-16.smt2 [nomin intact rep=2] wall_ms=21132
+; theory-layer boolean_propagate_ms=30 theory_assert_ms=17 theory_propagate_ms=20859 theory_push_pop_ms=12 conflict_analysis_ms=1 theory_final_check_ms=0 theory_explain_ms=0 theory_conflicts=864 theory_propagations=221194 final_checks=0 decisions=80323 restarts=6 learned_clauses=1046 learned_literals=7204 learned_literals_premin=7209 simplex_pivots=n/a simplex_checks=n/a simplex_cold_restarts=n/a bound_retractions=n/a bound_assertions=n/a propagations_offered=n/a simplex_rows=n/a simplex_columns=n/a
+unknown
+### jobshop20-2-10-10-4-4-16.smt2 [nomin mutant rep=2] wall_ms=21132
+; theory-layer boolean_propagate_ms=30 theory_assert_ms=17 theory_propagate_ms=20859 theory_push_pop_ms=12 conflict_analysis_ms=1 theory_final_check_ms=0 theory_explain_ms=0 theory_conflicts=876 theory_propagations=221753 final_checks=0 decisions=81744 restarts=6 learned_clauses=1058 learned_literals=7260 learned_literals_premin=7260 simplex_pivots=n/a simplex_checks=n/a simplex_cold_restarts=n/a bound_retractions=n/a bound_assertions=n/a propagations_offered=n/a simplex_rows=n/a simplex_columns=n/a
+unknown
+### jobshop26-2-13-13-4-4-16.smt2 [nomin intact rep=2] wall_ms=21131
+; theory-layer boolean_propagate_ms=23 theory_assert_ms=16 theory_propagate_ms=20855 theory_push_pop_ms=12 conflict_analysis_ms=1 theory_final_check_ms=0 theory_explain_ms=0 theory_conflicts=475 theory_propagations=293136 final_checks=0 decisions=31315 restarts=5 learned_clauses=634 learned_literals=4739 learned_literals_premin=4740 simplex_pivots=n/a simplex_checks=n/a simplex_cold_restarts=n/a bound_retractions=n/a bound_assertions=n/a propagations_offered=n/a simplex_rows=n/a simplex_columns=n/a
+unknown
+### jobshop26-2-13-13-4-4-16.smt2 [nomin mutant rep=2] wall_ms=21130
+; theory-layer boolean_propagate_ms=24 theory_assert_ms=15 theory_propagate_ms=20854 theory_push_pop_ms=12 conflict_analysis_ms=1 theory_final_check_ms=0 theory_explain_ms=0 theory_conflicts=483 theory_propagations=294809 final_checks=0 decisions=31652 restarts=5 learned_clauses=643 learned_literals=4803 learned_literals_premin=4803 simplex_pivots=n/a simplex_checks=n/a simplex_cold_restarts=n/a bound_retractions=n/a bound_assertions=n/a propagations_offered=n/a simplex_rows=n/a simplex_columns=n/a
+unknown
+### RVpredict_13.smt2 [nomin intact rep=2] wall_ms=1811
+; theory-layer boolean_propagate_ms=470 theory_assert_ms=346 theory_propagate_ms=42 theory_push_pop_ms=92 conflict_analysis_ms=1 theory_final_check_ms=0 theory_explain_ms=0 theory_conflicts=3415 theory_propagations=0 final_checks=1 decisions=2364618 restarts=17 learned_clauses=3415 learned_literals=21485 learned_literals_premin=21486 simplex_pivots=n/a simplex_checks=n/a simplex_cold_restarts=n/a bound_retractions=n/a bound_assertions=n/a propagations_offered=n/a simplex_rows=n/a simplex_columns=n/a
+sat
+### RVpredict_13.smt2 [nomin mutant rep=2] wall_ms=1813
+; theory-layer boolean_propagate_ms=477 theory_assert_ms=345 theory_propagate_ms=42 theory_push_pop_ms=92 conflict_analysis_ms=1 theory_final_check_ms=0 theory_explain_ms=0 theory_conflicts=3415 theory_propagations=0 final_checks=1 decisions=2364618 restarts=17 learned_clauses=3415 learned_literals=21486 learned_literals_premin=21486 simplex_pivots=n/a simplex_checks=n/a simplex_cold_restarts=n/a bound_retractions=n/a bound_assertions=n/a propagations_offered=n/a simplex_rows=n/a simplex_columns=n/a
+sat
+### edge-matching-width=7-height=7-colours=11.smt2 [nomin intact rep=2] wall_ms=22533
+; theory-layer boolean_propagate_ms=15546 theory_assert_ms=3849 theory_propagate_ms=47 theory_push_pop_ms=171 conflict_analysis_ms=70 theory_final_check_ms=0 theory_explain_ms=0 theory_conflicts=18052 theory_propagations=0 final_checks=0 decisions=2586249 restarts=62 learned_clauses=18184 learned_literals=224278 learned_literals_premin=227333 simplex_pivots=n/a simplex_checks=n/a simplex_cold_restarts=n/a bound_retractions=n/a bound_assertions=n/a propagations_offered=n/a simplex_rows=n/a simplex_columns=n/a
+unknown
+### edge-matching-width=7-height=7-colours=11.smt2 [nomin mutant rep=2] wall_ms=22533
+; theory-layer boolean_propagate_ms=15516 theory_assert_ms=4666 theory_propagate_ms=52 theory_push_pop_ms=175 conflict_analysis_ms=86 theory_final_check_ms=0 theory_explain_ms=0 theory_conflicts=21576 theory_propagations=0 final_checks=0 decisions=2879086 restarts=87 learned_clauses=23907 learned_literals=340000 learned_literals_premin=340000 simplex_pivots=n/a simplex_checks=n/a simplex_cold_restarts=n/a bound_retractions=n/a bound_assertions=n/a propagations_offered=n/a simplex_rows=n/a simplex_columns=n/a
+unknown
+### a7.3.0.tweaked.3.asp.smt2 [nomin intact rep=2] wall_ms=22232
+; theory-layer boolean_propagate_ms=16610 theory_assert_ms=375 theory_propagate_ms=4 theory_push_pop_ms=17 conflict_analysis_ms=136 theory_final_check_ms=0 theory_explain_ms=0 theory_conflicts=1484 theory_propagations=0 final_checks=0 decisions=230976 restarts=9 learned_clauses=1537 learned_literals=193122 learned_literals_premin=250486 simplex_pivots=n/a simplex_checks=n/a simplex_cold_restarts=n/a bound_retractions=n/a bound_assertions=n/a propagations_offered=n/a simplex_rows=n/a simplex_columns=n/a
+unknown
+### a7.3.0.tweaked.3.asp.smt2 [nomin mutant rep=2] wall_ms=22232
+; theory-layer boolean_propagate_ms=16294 theory_assert_ms=186 theory_propagate_ms=6 theory_push_pop_ms=20 conflict_analysis_ms=14 theory_final_check_ms=0 theory_explain_ms=0 theory_conflicts=1066 theory_propagations=0 final_checks=0 decisions=331408 restarts=6 learned_clauses=1140 learned_literals=63398 learned_literals_premin=63398 simplex_pivots=n/a simplex_checks=n/a simplex_cold_restarts=n/a bound_retractions=n/a bound_assertions=n/a propagations_offered=n/a simplex_rows=n/a simplex_columns=n/a
+unknown
+### jobshop20-2-10-10-4-4-16.smt2 [noheap intact rep=2] wall_ms=21129
+; theory-layer boolean_propagate_ms=30 theory_assert_ms=17 theory_propagate_ms=20859 theory_push_pop_ms=12 conflict_analysis_ms=1 theory_final_check_ms=0 theory_explain_ms=0 theory_conflicts=861 theory_propagations=220011 final_checks=0 decisions=80291 restarts=6 learned_clauses=1042 learned_literals=7164 learned_literals_premin=7169 simplex_pivots=n/a simplex_checks=n/a simplex_cold_restarts=n/a bound_retractions=n/a bound_assertions=n/a propagations_offered=n/a simplex_rows=n/a simplex_columns=n/a
+unknown
+### jobshop20-2-10-10-4-4-16.smt2 [noheap mutant rep=2] wall_ms=21131
+; theory-layer boolean_propagate_ms=27 theory_assert_ms=16 theory_propagate_ms=20481 theory_push_pop_ms=12 conflict_analysis_ms=1 theory_final_check_ms=0 theory_explain_ms=0 theory_conflicts=800 theory_propagations=204300 final_checks=0 decisions=71714 restarts=6 learned_clauses=972 learned_literals=6776 learned_literals_premin=6781 simplex_pivots=n/a simplex_checks=n/a simplex_cold_restarts=n/a bound_retractions=n/a bound_assertions=n/a propagations_offered=n/a simplex_rows=n/a simplex_columns=n/a
+unknown
+### jobshop26-2-13-13-4-4-16.smt2 [noheap intact rep=2] wall_ms=21130
+; theory-layer boolean_propagate_ms=22 theory_assert_ms=15 theory_propagate_ms=20855 theory_push_pop_ms=11 conflict_analysis_ms=1 theory_final_check_ms=0 theory_explain_ms=0 theory_conflicts=478 theory_propagations=293487 final_checks=0 decisions=31386 restarts=5 learned_clauses=637 learned_literals=4768 learned_literals_premin=4769 simplex_pivots=n/a simplex_checks=n/a simplex_cold_restarts=n/a bound_retractions=n/a bound_assertions=n/a propagations_offered=n/a simplex_rows=n/a simplex_columns=n/a
+unknown
+### jobshop26-2-13-13-4-4-16.smt2 [noheap mutant rep=2] wall_ms=21130
+; theory-layer boolean_propagate_ms=21 theory_assert_ms=15 theory_propagate_ms=20597 theory_push_pop_ms=11 conflict_analysis_ms=1 theory_final_check_ms=0 theory_explain_ms=0 theory_conflicts=458 theory_propagations=279431 final_checks=0 decisions=28762 restarts=5 learned_clauses=613 learned_literals=4590 learned_literals_premin=4591 simplex_pivots=n/a simplex_checks=n/a simplex_cold_restarts=n/a bound_retractions=n/a bound_assertions=n/a propagations_offered=n/a simplex_rows=n/a simplex_columns=n/a
+unknown
+### RVpredict_13.smt2 [noheap intact rep=2] wall_ms=1813
+; theory-layer boolean_propagate_ms=474 theory_assert_ms=353 theory_propagate_ms=42 theory_push_pop_ms=93 conflict_analysis_ms=1 theory_final_check_ms=0 theory_explain_ms=0 theory_conflicts=3415 theory_propagations=0 final_checks=1 decisions=2364618 restarts=17 learned_clauses=3415 learned_literals=21485 learned_literals_premin=21486 simplex_pivots=n/a simplex_checks=n/a simplex_cold_restarts=n/a bound_retractions=n/a bound_assertions=n/a propagations_offered=n/a simplex_rows=n/a simplex_columns=n/a
+sat
+### RVpredict_13.smt2 [noheap mutant rep=2] wall_ms=15526
+; theory-layer boolean_propagate_ms=489 theory_assert_ms=370 theory_propagate_ms=42 theory_push_pop_ms=98 conflict_analysis_ms=2 theory_final_check_ms=0 theory_explain_ms=0 theory_conflicts=3415 theory_propagations=0 final_checks=1 decisions=2364618 restarts=17 learned_clauses=3415 learned_literals=21485 learned_literals_premin=21486 simplex_pivots=n/a simplex_checks=n/a simplex_cold_restarts=n/a bound_retractions=n/a bound_assertions=n/a propagations_offered=n/a simplex_rows=n/a simplex_columns=n/a
+sat
+### edge-matching-width=7-height=7-colours=11.smt2 [noheap intact rep=2] wall_ms=22533
+; theory-layer boolean_propagate_ms=15522 theory_assert_ms=3834 theory_propagate_ms=48 theory_push_pop_ms=176 conflict_analysis_ms=70 theory_final_check_ms=0 theory_explain_ms=0 theory_conflicts=18057 theory_propagations=0 final_checks=0 decisions=2603524 restarts=62 learned_clauses=18189 learned_literals=224288 learned_literals_premin=227343 simplex_pivots=n/a simplex_checks=n/a simplex_cold_restarts=n/a bound_retractions=n/a bound_assertions=n/a propagations_offered=n/a simplex_rows=n/a simplex_columns=n/a
+unknown
+### edge-matching-width=7-height=7-colours=11.smt2 [noheap mutant rep=2] wall_ms=22530
+; theory-layer boolean_propagate_ms=1063 theory_assert_ms=210 theory_propagate_ms=1 theory_push_pop_ms=4 conflict_analysis_ms=20 theory_final_check_ms=0 theory_explain_ms=0 theory_conflicts=5195 theory_propagations=0 final_checks=0 decisions=90590 restarts=28 learned_clauses=5262 learned_literals=72055 learned_literals_premin=73152 simplex_pivots=n/a simplex_checks=n/a simplex_cold_restarts=n/a bound_retractions=n/a bound_assertions=n/a propagations_offered=n/a simplex_rows=n/a simplex_columns=n/a
+unknown
+### a7.3.0.tweaked.3.asp.smt2 [noheap intact rep=2] wall_ms=22233
+; theory-layer boolean_propagate_ms=16655 theory_assert_ms=375 theory_propagate_ms=4 theory_push_pop_ms=16 conflict_analysis_ms=136 theory_final_check_ms=0 theory_explain_ms=0 theory_conflicts=1477 theory_propagations=0 final_checks=0 decisions=230279 restarts=9 learned_clauses=1530 learned_literals=193108 learned_literals_premin=250472 simplex_pivots=n/a simplex_checks=n/a simplex_cold_restarts=n/a bound_retractions=n/a bound_assertions=n/a propagations_offered=n/a simplex_rows=n/a simplex_columns=n/a
+unknown
+### a7.3.0.tweaked.3.asp.smt2 [noheap mutant rep=2] wall_ms=22231
+; theory-layer boolean_propagate_ms=908 theory_assert_ms=31 theory_propagate_ms=1 theory_push_pop_ms=4 conflict_analysis_ms=19 theory_final_check_ms=0 theory_explain_ms=0 theory_conflicts=329 theory_propagations=0 final_checks=0 decisions=77169 restarts=2 learned_clauses=334 learned_literals=23809 learned_literals_premin=26655 simplex_pivots=n/a simplex_checks=n/a simplex_cold_restarts=n/a bound_retractions=n/a bound_assertions=n/a propagations_offered=n/a simplex_rows=n/a simplex_columns=n/a
+unknown
