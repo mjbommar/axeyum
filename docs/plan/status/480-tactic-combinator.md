@@ -39,6 +39,17 @@ combinator's cost is the sum of what it dispatches to"). `check-fact-
 depends-derived.py --fix`: 11 facts gained the emitter's dependency edges;
 `validate-facts.py`: 2742 facts, 0 errors.
 
+> **Retired as a rate, 2026-09-06 (ADR-1679).** The total above is correct for
+> this lane on its own date and is kept as written. It must NOT be quoted
+> forward as a production rate. It counts hand proofs *deleted*, and since
+> 2026-09-04 the work has been in producers that EMIT theorems which never had
+> a hand proof, so the number reads flat while production continues. The
+> channel metric is `scripts/measure-producer-channel.py`. The two count
+> different things and are not comparable: one is a count of removals from the
+> prelude sources, the other a count of producer-emitted declarations and the
+> proved facts that join to them.
+
+
 Did not run: the full unbounded `cargo test --lib` sweep (killed by the
 box's own resource limit partway through the `complex`/`creal` suites,
 unrelated to this lane's changes — no failures observed before the kill;

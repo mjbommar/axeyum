@@ -30,6 +30,17 @@ Data structures: `Nat.Multiset`, `Nat.Finset` (now with
 `exists_collision` witness pair), `List.{u}` with `Perm`; consumer
 `Rat.rankCols_le_rank` unconditional.
 
+> **Retired as a rate, 2026-09-06 (ADR-1679).** The total above is correct for
+> this lane on its own date and is kept as written. It must NOT be quoted
+> forward as a production rate. It counts hand proofs *deleted*, and since
+> 2026-09-04 the work has been in producers that EMIT theorems which never had
+> a hand proof, so the number reads flat while production continues. The
+> channel metric is `scripts/measure-producer-channel.py`. The two count
+> different things and are not comparable: one is a count of removals from the
+> prelude sources, the other a count of producer-emitted declarations and the
+> proved facts that join to them.
+
+
 **Three defects on `main` found and fixed by the coordinator during landing,
 none of them the mathematics.** (1) The eleven `creal_linarith_*` tests built
 the creal prelude on the bare test thread and aborted in `--release`; wrapped

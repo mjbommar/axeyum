@@ -74,11 +74,22 @@ Running retirement total: ADR-1589's 62 + this lane's 5 = **67** (plus
 whatever `tactic-list-int` landed separately, not re-counted here — see
 that lane's own status file for its own total).
 
+> **Retired as a rate, 2026-09-06 (ADR-1679).** The total above is correct for
+> this lane on its own date and is kept as written. It must NOT be quoted
+> forward as a production rate. It counts hand proofs *deleted*, and since
+> 2026-09-04 the work has been in producers that EMIT theorems which never had
+> a hand proof, so the number reads flat while production continues. The
+> channel metric is `scripts/measure-producer-channel.py`. The two count
+> different things and are not comparable: one is a count of removals from the
+> prelude sources, the other a count of producer-emitted declarations and the
+> proved facts that join to them.
+
 SHAs: `186eb83f1` (status stub), `638a15909` (deliverable 2: `AlgS.Group`
 theorems + `Alg.neg_neg` derivation), `3dba85b46` (deliverable 3+4:
 `AlgS.OrderedRing` + `linarith::generic` setoid backend), plus this
 close-out commit (`CReal.addGroupS`, the 5 retirements, facts, this
 status file, `PLAN.md`, the ADR index).
+
 
 **Did not run / not attempted**: `just check`/`./scripts/check.sh` (the
 full aggregate gate — out of scope for a single-lane close-out per
