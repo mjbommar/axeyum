@@ -192,6 +192,7 @@ now. Nothing was deleted.
 | 2026-09-05 | `5aa098f1b` | `int_prelude/order_squares.rs`: the ℤ order shelf as 18 laws — sign/negation plumbing, halving, left cancellation, the two-sided square bound, the centered representative, the strict decrease. Bounds spelled `add c c`, not `mul (ofNat 2) c`. Held-out rows (`integer-natcast`'s `mul_le_mul_of_*`, `descent-and-well-ordering`'s `lt_of_sum_four_squares_eq_mul`) named in the module doc and NOT declared. |
 | 2026-09-05 | `81e9fff1f` | `order_squares_tests.rs`: the statement pin rebuilds all 23 `∀`-telescoped types and compares against the ENVIRONMENT-stored type (an axiom-footprint sweep cannot see a weakened bound); `contains` before `axiom_footprint`; both signs of the square bound admitted and both out-of-band arguments refused; both branches of the centered representative pinned at `m = 5` with `c = 3` refused. `derived_laws` 294 → 312, recounted. |
 | 2026-09-05 | `ee00002dc` | `Int.descentMultiplierBounds` and four supporting laws (`lt_of_mul_lt_mul_left`, `nonneg_of_mul_nonneg_left`, `pos_of_mul_pos_left`, `eq_zero_of_sq_add_sq_eq_zero`). All five admitted on the first attempt. `derived_laws` 312 → 317. Worked instance `5*1 = 2² + 1²` certifies `0 ≤ 1 ∧ 1 < 5`; `q = 2` REFUSED even though `0 ≤ 2 ∧ 2 < 5` is true. |
+| 2026-09-05 | `f6bea17df` | `Int.exists_small_multiple_of_sq_add_one` — the descent's ENTRY POINT, over `Int` alone and WITHOUT primality: from `0 < p`, `1+1 ≤ p` and `x·x ≡ −1 (mod p)`, a `k` and `c` with `k·p = c² + 1²` and `0 < k < p`. Centering `x` first is what makes the bound available. `two_squares.rs`'s module doc claims this landed already under `declare_exists_mul_isSumOfTwoSquares_of_residue`; that name occurs once, inside the doc comment, and does not exist. `derived_laws` 317 → 319. |
 | 2026-09-05 | lean-c4-admission | ADR-1662's recommended trusted-substitution extension, built and re-measured. `dif_pos`, `Eq.subst`, `And.left` reconstructed in `trusted_substitution`; `Nat.le_of_lt_add_one` in `nat_order_substitution`; the kernel's own quotient package exempted from the statement-isolation gate (overturning doc 294's hard rule). Each substitution carries a positive control and a negative control in which the reconstructed value is offered at a deliberately wrong type with every Rust-side guard bypassed. **Census re-run over the same 756 rows: 390 admitted before, 390 after** — the five names fall to zero as first blockers and the same 150 rows reappear behind the next declaration, exactly −150/+150. What is behind the 361 now: 217 rows behind axioms this kernel excludes, 114 behind Lean's well-founded-recursion machinery, 30 behind ordinary constructive names. `eq_self` (97, the largest blocker) is NOT constructive — its own Lean 4.30 closure reaches `propext`, re-confirming docs 240 and 295. Commits `88609630f`, `a43c7dc2d`, `afc01dbd4`; evidence `artifacts/measurements/statement-import-blocker-census-2026-09-05-after-c4.json` (carries `delta_against_baseline`) and ADR-1667. |
 | 2026-09-05 | lean-carrier-ledger | the carrier correspondence ledger: schema, 16-row ledger, gate + control suite + mutation coverage, generated markdown view, ADR-1665, and progress-log rows in `14-lean-lang.md`, `03-classical-analysis.md`, `07-combinatorics.md` |
 | 2026-09-05 | lean-claim-surface | One paragraph on what "Lean compatible" means, reused verbatim in `docs/plan/global/10-status.md`, `README.md`, `docs/PROJECT-STATE.md`; A9 rewritten off the false "neither lean nor elan" premise; K3 row residual sentence added with no assurance-field change; three July Lean docs marked historical (ADR-0717 C-series); `docs/math-department/14-lean-lang.md` items 1 and 10 ticked; ADR-1668 added and indexed. |
@@ -50787,29 +50788,39 @@ the `integer-absolute-value` held-out family was drawn and scored, and
 genuinely absent, and the real gap was not a name at all — it was the **shape**
 of the bound.
 
-`int_prelude/order_squares.rs` lands 23 axiom-free laws (ADR-1647): the
+`int_prelude/order_squares.rs` lands 25 axiom-free laws (ADR-1647): the
 sign/negation plumbing, halving (`le_of_add_le_add_self`) and left cancellation
 (`le_of_mul_le_mul_left`, `lt_of_mul_lt_mul_left`), the two-sided square bound
 `sq_le_sq_of_neg_le_of_le`, the bounded representative
 `exists_centered_representative`, the strict decrease
 `sq_add_sq_lt_sq_of_bounds`, and the descent's termination certificate
 `descentMultiplierBounds`, which takes the FACTORISATION `m*q = c² + e²` rather
-than the measure and returns `0 ≤ q ∧ q < m`.
+than the measure and returns `0 ≤ q ∧ q < m` — and, on the last pass, the
+descent's **entry point** `exists_small_multiple_of_sq_add_one`, which turns
+`x·x ≡ −1 (mod p)` into a `k` and `c` with `k·p = c² + 1²` and `0 < k < p`.
 
 Every bound is spelled `Int.add c c`, never `Int.mul (ofNat 2) c`. The two are
 equal; the `add` form is the one the existing shelf can move (doubling an
 inequality is `Int.add_le_add h h`), and it removes every numeral from the
 halving step, which is the only division in the whole argument.
 
-**`Int.fermatTwoSquares` did NOT land.** Four pieces remain, all sized in the
-notes of `F:int-fermat-two-squares` and none blocked on a missing capability:
-the entry step from `Int.firstSupplementaryLawResidue`; the divisibility
-`m ∣ c² + e²` that produces the new multiplier; the `q ≠ 0` argument (the only
-step that consumes primality); and the `Nat.strongInduction` assembly. One
-correction recorded there and in ADR-1647: `two_squares.rs`'s module doc says
-the entry point `declare_exists_mul_isSumOfTwoSquares_of_residue` already
-landed — **it does not exist**, the name occurs once in that doc comment and is
-not in `declare_two_squares_all`.
+**`Int.fermatTwoSquares` did NOT land.** Three pieces plus one bridge remain,
+all sized in the notes of `F:int-fermat-two-squares` and none blocked on a
+missing capability: the `Nat` bridge from a prime `p = 2m+1` with `Nat.Even m`
+to the entry point's two `Int` hypotheses; the divisibility `m ∣ c² + e²` that
+produces the NEXT multiplier; the `q ≠ 0` argument (the only step that consumes
+primality); and the `Nat.strongInduction` assembly. One correction recorded
+there and in ADR-1647: `two_squares.rs`'s module doc says the entry point
+`declare_exists_mul_isSumOfTwoSquares_of_residue` already landed — **it does
+not exist**, the name occurs once in that doc comment and is not in
+`declare_two_squares_all`. This lane built it for the first time, under a
+different name and without primality as a hypothesis.
+
+The statement pin is mutation-measured: changing its own expected conclusion
+for `sq_add_sq_lt_sq_of_bounds` from `lt S (m*m)` to `lt S m`, leaving the
+declaration alone so the prelude still builds, kills **exactly one** test
+(121 passed, 1 failed). The two mutants the brief named both hit the kernel
+instead and kill 119 of 122.
 
 Three real defects the kernel found and this lane fixed:
 `Int.add_le_add_iff_left` binds `(b, c, a)`, so the shared term is its LAST
