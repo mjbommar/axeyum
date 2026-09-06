@@ -143,7 +143,9 @@ use crate::enclosure::{
     BigInterval, DeclineReason, bi, bi_u64, br, enclose_fixed_order, enclose_with_reason,
     from_rational, ln_point, pi_enclosure, pow2, rmax,
 };
-use crate::enclosure_special::{bernoulli_table, coarsen, dyadic_ceil, dyadic_floor, grid_bits};
+use crate::enclosure_special::{
+    bernoulli_table, coarsen, dyadic_ceil, dyadic_floor, grid_bits, ln_large, nth_root_point,
+};
 use crate::interval_arith::Interval;
 use crate::{CasExpr, UnaryFunc};
 use axeyum_ir::Rational;
@@ -178,9 +180,49 @@ const EULER_ANCHOR_CAP: u32 = 256;
 /// declining, so a pathological integrand stops rather than grinds.
 const MAX_REFINEMENTS: u32 = 12;
 
+/// The truncation order [`enclose_symbolic_power`] probes the base at.
+///
+/// Only the sign of the base's enclosure is read, so the order need only be
+/// high enough that a genuinely positive base does not enclose down to zero.
+const BASE_PROBE_ORDER: u32 = 16;
+
 /// The search cap for a monotonicity or ratio index, matching the parent
 /// modules' `SHIFT_CAP`.
 const INDEX_CAP: u32 = 4096;
+
+/// The truncation order used for the **fourth-derivative bound** of a Simpson
+/// panel, independent of the order used for the integrand itself.
+///
+/// The derivative enclosure is only ever consumed as a magnitude — it enters
+/// the error term as `sup abs(f⁗)` — so evaluating it to the integrand's own
+/// accuracy is pure waste, and it is the dominant cost of a panel: measured
+/// 2026-09-05 in a debug build, `∫₀¹e^(−x²)` at precision 24 spent most of its
+/// 6.8 s inside the fourth derivative of `exp(−x²)`, whose folded tree carries
+/// several `exp` nodes. A fixed low order is deterministic, so the verifier
+/// reproduces it exactly, and a looser bound costs at most one more refinement
+/// level.
+const DERIVATIVE_ORDER: u32 = 8;
+
+/// Round an accumulating series interval **outward** onto the dyadic grid for
+/// `order`.
+///
+/// The single most important line in this module for cost. Every loop below
+/// multiplies an interval by another interval `order` times, and an exact
+/// rational endpoint grows by the *sum* of the factors' bit lengths at every
+/// step: the Fresnel coefficient is `(π/2)^(2k)`, and a certified `π` at order
+/// 16 already has 360-bit endpoints, so the coefficient at `k = 32` carries
+/// twenty-three thousand bits and `num-rational`'s per-operation `gcd`
+/// dominates everything. Measured 2026-09-05 in a debug build, `FresnelC(1)` at
+/// precision 50 took **6.06 s** before this rounding and milliseconds after.
+///
+/// It is sound for the same reason [`crate::enclosure_special`]'s `coarsen` is:
+/// the result **contains** the argument, so substituting it anywhere an
+/// enclosure is wanted loses accuracy and never validity. The grid
+/// (`2·order + 96` bits) is far finer than any truncation tail at that order,
+/// so it is never what limits the answer.
+fn round_series(x: &BigInterval, order: u32) -> BigInterval {
+    coarsen(x, grid_bits(order))
+}
 
 // ---------------------------------------------------------------------------
 // Euler's constant.
@@ -241,18 +283,14 @@ fn euler_gamma_uncached(order: u32) -> Option<BigInterval> {
     let bernoulli = bernoulli_table(2 * terms);
     let mut total = BigInterval::point(harmonic)
         .sub(&logarithm)
-        .add(&BigInterval::point(
-            BigRational::one() / (bi(2) * &anchor),
-        ));
+        .add(&BigInterval::point(BigRational::one() / (bi(2) * &anchor)));
     for j in 1..=terms {
         let index = 2 * usize::try_from(j).ok()?;
         let term = &bernoulli[index] / (bi_u64(index as u64) * ratpow_big(&anchor, 2 * j));
         total = total.add(&BigInterval::point(term));
     }
     let last = 2 * usize::try_from(terms).ok()?;
-    let error = (&bernoulli[last]
-        / (bi_u64(last as u64) * ratpow_big(&anchor, 2 * terms)))
-    .abs();
+    let error = (&bernoulli[last] / (bi_u64(last as u64) * ratpow_big(&anchor, 2 * terms))).abs();
     BigInterval::new(total.lo() - &error, total.hi() + &error)
 }
 
@@ -276,9 +314,25 @@ fn ratpow_big(x: &BigRational, n: u32) -> BigRational {
 // Si and Shi.
 // ---------------------------------------------------------------------------
 
-/// The largest absolute value the interval reaches.
+/// The dyadic grid a **tail-bound magnitude** is rounded up onto.
+///
+/// Every tail bound and every monotonicity index below is monotone increasing
+/// in the argument's magnitude, so replacing that magnitude by anything at or
+/// above it keeps the bound valid and the index conservative. Rounding it onto
+/// a coarse grid is what stops `a^(2n+3)` from being a half-million-bit
+/// rational: a magnitude taken from a certified `π` at order 128 has
+/// two-thousand-bit endpoints, and the Fresnel tail raises `π/2` to the 258th
+/// power. Measured 2026-09-05 in a debug build, the two Fresnel heads at
+/// precision 130 took **48.5 s** before this rounding.
+const MAGNITUDE_BITS: u32 = 32;
+
+/// The largest absolute value the interval reaches, rounded **up** onto the
+/// [`MAGNITUDE_BITS`] grid.
+///
+/// Never below the true magnitude, which is the only property every consumer
+/// below needs.
 fn magnitude(x: &BigInterval) -> BigRational {
-    rmax(x.lo().abs(), x.hi().abs())
+    dyadic_ceil(&rmax(x.lo().abs(), x.hi().abs()), MAGNITUDE_BITS)
 }
 
 /// Reject an argument past [`SERIES_MAGNITUDE_LIMIT`].
@@ -326,25 +380,24 @@ fn odd_partial_sum(
     order: u32,
     alternating: bool,
 ) -> (BigInterval, BigRational) {
-    let square = x.pow(2);
-    let mut power = x.clone();
+    let square = round_series(&x.pow(2), order);
+    let mut power = round_series(x, order);
     let mut factorial = BigRational::one();
     let mut sum = x.clone();
     let mut sign = if alternating { -1i64 } else { 1i64 };
     for k in 1..=order {
         let k64 = u64::from(k);
-        power = power.mul(&square);
+        power = round_series(&power.mul(&square), order);
         factorial *= bi_u64(2 * k64) * bi_u64(2 * k64 + 1);
         let coefficient = bi(sign) / (bi_u64(2 * k64 + 1) * &factorial);
-        sum = sum.add(&power.scale(&coefficient));
+        sum = round_series(&sum.add(&power.scale(&coefficient)), order);
         if alternating {
             sign = -sign;
         }
     }
     let next = u64::from(order) + 1;
     let next_factorial = &factorial * bi_u64(2 * next) * bi_u64(2 * next + 1);
-    let omitted =
-        ratpow_big(a, 2 * order + 3) / (bi_u64(2 * next + 1) * next_factorial);
+    let omitted = ratpow_big(a, 2 * order + 3) / (bi_u64(2 * next + 1) * next_factorial);
     (sum, omitted)
 }
 
@@ -391,8 +444,7 @@ pub(crate) fn shi_interval(x: &BigInterval, order: u32) -> Result<BigInterval, D
     }
     let (sum, omitted) = odd_partial_sum(x, &a, order, false);
     let tail = omitted / (BigRational::one() - ratio);
-    BigInterval::new(sum.lo() - &tail, sum.hi() + &tail)
-        .ok_or(DeclineReason::PrecisionUnreachable)
+    BigInterval::new(sum.lo() - &tail, sum.hi() + &tail).ok_or(DeclineReason::PrecisionUnreachable)
 }
 
 // ---------------------------------------------------------------------------
@@ -418,8 +470,7 @@ fn even_series_index(a: &BigRational) -> Option<u32> {
 /// terms at index `k`, decreasing in `k`.
 fn even_series_ratio(a: &BigRational, k: u32) -> BigRational {
     let k64 = u64::from(k);
-    (a * a) * bi_u64(2 * k64)
-        / (bi_u64(2 * k64 + 1) * bi_u64(2 * k64 + 2) * bi_u64(2 * k64 + 2))
+    (a * a) * bi_u64(2 * k64) / (bi_u64(2 * k64 + 1) * bi_u64(2 * k64 + 2) * bi_u64(2 * k64 + 2))
 }
 
 /// The partial sum `Σ_(k=1)^order sign^k x^(2k)/(2k·(2k)!)` over an interval,
@@ -430,20 +481,20 @@ fn even_partial_sum(
     order: u32,
     alternating: bool,
 ) -> (BigInterval, BigRational) {
-    let square = x.pow(2);
+    let square = round_series(&x.pow(2), order);
     let mut power = BigInterval::point(BigRational::one());
     let mut factorial = BigRational::one();
     let mut sum = BigInterval::point(BigRational::zero());
     let mut sign = 1i64;
     for k in 1..=order.max(1) {
         let k64 = u64::from(k);
-        power = power.mul(&square);
+        power = round_series(&power.mul(&square), order);
         factorial *= bi_u64(2 * k64 - 1) * bi_u64(2 * k64);
         if alternating {
             sign = -sign;
         }
         let coefficient = bi(sign) / (bi_u64(2 * k64) * &factorial);
-        sum = sum.add(&power.scale(&coefficient));
+        sum = round_series(&sum.add(&power.scale(&coefficient)), order);
     }
     let count = order.max(1);
     let next = u64::from(count) + 1;
@@ -452,11 +503,19 @@ fn even_partial_sum(
     (sum, omitted)
 }
 
-/// `γ + ln x` over a strictly positive interval — the non-series half of `Ci`
-/// and `Chi`.
+/// `γ + ln x` over a strictly positive interval — the non-series half of `Ci`,
+/// `Chi` and `Ei`.
+///
+/// The logarithm goes through [`ln_large`], **not** the parent module's
+/// `ln_point`, because the argument here is a *computed* interval: `li x` is
+/// `Ei(ln x)`, so `Ei` receives an endpoint that already carries a certified
+/// logarithm's denominator, and `ln_point` forms `z^(2·order+1)` of it.
+/// Measured 2026-09-05 in a debug build, `li(2)` at precision 130 took
+/// **104.7 s** through `ln_point` — a 58,000-bit intermediate — and about a
+/// second through `ln_large`, which anchors on a 16-bit dyadic instead.
 fn log_and_gamma(x: &BigInterval, order: u32) -> Result<BigInterval, DeclineReason> {
-    let low = ln_point(x.lo(), order).ok_or(DeclineReason::ResourceLimit)?;
-    let high = ln_point(x.hi(), order).ok_or(DeclineReason::ResourceLimit)?;
+    let low = ln_large(x.lo(), order).ok_or(DeclineReason::ResourceLimit)?;
+    let high = ln_large(x.hi(), order).ok_or(DeclineReason::ResourceLimit)?;
     let logarithm = BigInterval::new(low.lo().clone(), high.hi().clone())
         .ok_or(DeclineReason::PrecisionUnreachable)?;
     let gamma = euler_gamma(order).ok_or(DeclineReason::ResourceLimit)?;
@@ -541,21 +600,22 @@ pub(crate) fn ei_interval(x: &BigInterval, order: u32) -> Result<BigInterval, De
     }
     let a = magnitude(x);
     within_series_range(&a)?;
-    let ratio = &a / bi_u64(u64::from(order) + 2);
+    let count = order.max(1);
+    let ratio = &a / bi_u64(u64::from(count) + 2);
     if ratio >= br(1, 2) {
         return Err(DeclineReason::PrecisionUnreachable);
     }
+    let rounded = round_series(x, order);
     let mut power = BigInterval::point(BigRational::one());
     let mut factorial = BigRational::one();
     let mut sum = BigInterval::point(BigRational::zero());
-    for k in 1..=order.max(1) {
+    for k in 1..=count {
         let k64 = u64::from(k);
-        power = power.mul(x);
+        power = round_series(&power.mul(&rounded), order);
         factorial *= bi_u64(k64);
         let coefficient = BigRational::one() / (bi_u64(k64) * &factorial);
-        sum = sum.add(&power.scale(&coefficient));
+        sum = round_series(&sum.add(&power.scale(&coefficient)), order);
     }
-    let count = order.max(1);
     let next = u64::from(count) + 1;
     let next_factorial = &factorial * bi_u64(next);
     let omitted = ratpow_big(&a, count + 1) / (bi_u64(next) * next_factorial);
@@ -595,8 +655,8 @@ pub(crate) fn li_interval(x: &BigInterval, order: u32) -> Result<BigInterval, De
             "li of an interval containing 1".to_string(),
         ));
     }
-    let low = ln_point(x.lo(), order).ok_or(DeclineReason::ResourceLimit)?;
-    let high = ln_point(x.hi(), order).ok_or(DeclineReason::ResourceLimit)?;
+    let low = ln_large(x.lo(), order).ok_or(DeclineReason::ResourceLimit)?;
+    let high = ln_large(x.hi(), order).ok_or(DeclineReason::ResourceLimit)?;
     let logarithm = BigInterval::new(low.lo().clone(), high.hi().clone())
         .ok_or(DeclineReason::PrecisionUnreachable)?;
     // The `ln` enclosure is wider than a point, so it can straddle 0 even when
@@ -613,7 +673,10 @@ pub(crate) fn li_interval(x: &BigInterval, order: u32) -> Result<BigInterval, De
 fn half_pi(order: u32) -> Result<(BigInterval, BigRational), DeclineReason> {
     let pi = pi_enclosure(order).ok_or(DeclineReason::ResourceLimit)?;
     let half = pi.scale(&br(1, 2));
-    let bound = half.hi().clone();
+    // Rounded UP onto the coarse grid for the same reason `magnitude` is: this
+    // value is raised to the `2n+2`-th power in the tail bound, and only its
+    // being an upper bound on `π/2` matters there.
+    let bound = dyadic_ceil(half.hi(), MAGNITUDE_BITS);
     Ok((half, bound))
 }
 
@@ -667,20 +730,20 @@ pub(crate) fn fresnel_c_interval(
     if order < start {
         return Err(DeclineReason::PrecisionUnreachable);
     }
-    let half_square = half.pow(2);
-    let fourth = x.pow(4);
+    let half_square = round_series(&half.pow(2), order);
+    let fourth = round_series(&x.pow(4), order);
     let mut coefficient = BigInterval::point(BigRational::one());
-    let mut power = x.clone();
+    let mut power = round_series(x, order);
     let mut factorial = BigRational::one();
     let mut sum = x.clone();
     let mut sign = -1i64;
     for k in 1..=order {
         let k64 = u64::from(k);
-        coefficient = coefficient.mul(&half_square);
-        power = power.mul(&fourth);
+        coefficient = round_series(&coefficient.mul(&half_square), order);
+        power = round_series(&power.mul(&fourth), order);
         factorial *= bi_u64(2 * k64 - 1) * bi_u64(2 * k64);
         let scale = bi(sign) / (&factorial * bi_u64(4 * k64 + 1));
-        sum = sum.add(&coefficient.mul(&power).scale(&scale));
+        sum = round_series(&sum.add(&coefficient.mul(&power).scale(&scale)), order);
         sign = -sign;
     }
     let next = u64::from(order) + 1;
@@ -708,21 +771,20 @@ pub(crate) fn fresnel_s_interval(
     if order < start {
         return Err(DeclineReason::PrecisionUnreachable);
     }
-    let half_square = half.pow(2);
-    let fourth = x.pow(4);
-    let cube = x.pow(3);
-    let mut coefficient = half.clone();
-    let mut power = cube;
+    let half_square = round_series(&half.pow(2), order);
+    let fourth = round_series(&x.pow(4), order);
+    let mut coefficient = round_series(&half, order);
+    let mut power = round_series(&x.pow(3), order);
     let mut factorial = BigRational::one();
     let mut sum = coefficient.mul(&power).scale(&br(1, 3));
     let mut sign = -1i64;
     for k in 1..=order {
         let k64 = u64::from(k);
-        coefficient = coefficient.mul(&half_square);
-        power = power.mul(&fourth);
+        coefficient = round_series(&coefficient.mul(&half_square), order);
+        power = round_series(&power.mul(&fourth), order);
         factorial *= bi_u64(2 * k64) * bi_u64(2 * k64 + 1);
         let scale = bi(sign) / (&factorial * bi_u64(4 * k64 + 3));
-        sum = sum.add(&coefficient.mul(&power).scale(&scale));
+        sum = round_series(&sum.add(&coefficient.mul(&power).scale(&scale)), order);
         sign = -sign;
     }
     let next = u64::from(order) + 1;
@@ -786,7 +848,7 @@ fn asin_point(p: &BigRational, order: u32) -> Option<BigInterval> {
         asin_series(&a, order)?
     } else {
         let inner = (&one - &a) / bi(2);
-        let root = crate::enclosure_special::nth_root_point(&inner, 2, order)?;
+        let root = round_series(&nth_root_point(&inner, 2, order)?, order);
         let low = asin_series(root.lo(), order)?;
         let high = asin_series(root.hi(), order)?;
         let reduced = BigInterval::new(low.lo().clone(), high.hi().clone())?;
@@ -815,8 +877,7 @@ pub(crate) fn asin_interval(x: &BigInterval, order: u32) -> Result<BigInterval, 
     }
     let low = asin_point(x.lo(), order).ok_or(DeclineReason::PrecisionUnreachable)?;
     let high = asin_point(x.hi(), order).ok_or(DeclineReason::PrecisionUnreachable)?;
-    BigInterval::new(low.lo().clone(), high.hi().clone())
-        .ok_or(DeclineReason::PrecisionUnreachable)
+    BigInterval::new(low.lo().clone(), high.hi().clone()).ok_or(DeclineReason::PrecisionUnreachable)
 }
 
 /// **Arccosine** over an interval inside `[−1, 1]`, as `π/2 − asin x`.
@@ -841,10 +902,13 @@ pub(crate) fn acos_interval(x: &BigInterval, order: u32) -> Result<BigInterval, 
 fn asinh_point(p: &BigRational, order: u32) -> Option<BigInterval> {
     let a = p.abs();
     let radicand = &a * &a + BigRational::one();
-    let root = crate::enclosure_special::nth_root_point(&radicand, 2, order)?;
-    let argument = root.add(&BigInterval::point(a));
-    let low = crate::enclosure_special::ln_large(argument.lo(), order)?;
-    let high = crate::enclosure_special::ln_large(argument.hi(), order)?;
+    let root = nth_root_point(&radicand, 2, order)?;
+    // Rounded outward before it reaches `ln`: the Newton bracket's lower
+    // endpoint is `p/x^(q−1)`, which carries twice the iterate's denominator,
+    // and everything downstream only needs an enclosure.
+    let argument = round_series(&root.add(&BigInterval::point(a)), order);
+    let low = ln_large(argument.lo(), order)?;
+    let high = ln_large(argument.hi(), order)?;
     let positive = BigInterval::new(low.lo().clone(), high.hi().clone())?;
     Some(if p.is_negative() {
         positive.negate()
@@ -862,8 +926,7 @@ fn asinh_point(p: &BigRational, order: u32) -> Option<BigInterval> {
 pub(crate) fn asinh_interval(x: &BigInterval, order: u32) -> Result<BigInterval, DeclineReason> {
     let low = asinh_point(x.lo(), order).ok_or(DeclineReason::PrecisionUnreachable)?;
     let high = asinh_point(x.hi(), order).ok_or(DeclineReason::PrecisionUnreachable)?;
-    BigInterval::new(low.lo().clone(), high.hi().clone())
-        .ok_or(DeclineReason::PrecisionUnreachable)
+    BigInterval::new(low.lo().clone(), high.hi().clone()).ok_or(DeclineReason::PrecisionUnreachable)
 }
 
 /// `acosh(p) = ln(p + √(p²−1))` for a rational `p >= 1`.
@@ -872,10 +935,10 @@ fn acosh_point(p: &BigRational, order: u32) -> Option<BigInterval> {
         return None;
     }
     let radicand = p * p - BigRational::one();
-    let root = crate::enclosure_special::nth_root_point(&radicand, 2, order)?;
-    let argument = root.add(&BigInterval::point(p.clone()));
-    let low = crate::enclosure_special::ln_large(argument.lo(), order)?;
-    let high = crate::enclosure_special::ln_large(argument.hi(), order)?;
+    let root = nth_root_point(&radicand, 2, order)?;
+    let argument = round_series(&root.add(&BigInterval::point(p.clone())), order);
+    let low = ln_large(argument.lo(), order)?;
+    let high = ln_large(argument.hi(), order)?;
     BigInterval::new(low.lo().clone(), high.hi().clone())
 }
 
@@ -893,8 +956,7 @@ pub(crate) fn acosh_interval(x: &BigInterval, order: u32) -> Result<BigInterval,
     }
     let low = acosh_point(x.lo(), order).ok_or(DeclineReason::PrecisionUnreachable)?;
     let high = acosh_point(x.hi(), order).ok_or(DeclineReason::PrecisionUnreachable)?;
-    BigInterval::new(low.lo().clone(), high.hi().clone())
-        .ok_or(DeclineReason::PrecisionUnreachable)
+    BigInterval::new(low.lo().clone(), high.hi().clone()).ok_or(DeclineReason::PrecisionUnreachable)
 }
 
 // ---------------------------------------------------------------------------
@@ -977,8 +1039,16 @@ pub fn enclose_symbolic_power(
     bindings: &[(&str, Interval)],
     precision: u32,
 ) -> Result<crate::enclosure::Enclosure, DeclineReason> {
-    let probe = enclose_with_reason(base, bindings, precision.min(16))?;
-    if !probe.interval.lo().is_positive() {
+    let mut map = BTreeMap::new();
+    for (name, interval) in bindings {
+        map.insert((*name).to_string(), BigInterval::from_interval(interval));
+    }
+    // `enclose_fixed_order`, not `enclose`: the probe asks only whether the base
+    // is positive, and a base bound to a WIDE box (`x` in `[-1, 1]`) can never
+    // meet a width guard, so going through `enclose` would report
+    // `PrecisionUnreachable` for what is really a domain question.
+    let probe = enclose_fixed_order(base, &map, BASE_PROBE_ORDER)?;
+    if !probe.lo().is_positive() {
         return Err(DeclineReason::DomainError(
             "pow: the base interval reaches 0 or below, so x^y has no real branch".to_string(),
         ));
@@ -1067,7 +1137,8 @@ pub struct IntegralEnclosure {
 /// later change to this ladder cannot invalidate an existing certificate.
 fn quadrature_order(precision: u32) -> u32 {
     match precision {
-        0..=40 => 32,
+        0..=20 => 16,
+        21..=40 => 32,
         41..=100 => 64,
         _ => 128,
     }
@@ -1075,7 +1146,7 @@ fn quadrature_order(precision: u32) -> u32 {
 
 /// The dyadic grid the partition and the edge boxes are placed on.
 fn quadrature_bits(precision: u32) -> u32 {
-    precision.saturating_add(64)
+    precision.saturating_add(32)
 }
 
 /// The magnitude bound `max(abs(lo), abs(hi))` of an interval.
@@ -1094,11 +1165,7 @@ fn integrand_over(
     let mut bindings = BTreeMap::new();
     bindings.insert(var.to_string(), box_.clone());
     enclose_fixed_order(f, &bindings, order).map_err(|reason| {
-        DeclineReason::IntegrandNotEnclosable(format!(
-            "on [{}, {}]: {reason}",
-            box_.decimal(12),
-            box_.decimal(12)
-        ))
+        DeclineReason::IntegrandNotEnclosable(format!("on {}: {reason}", box_.decimal(12)))
     })
 }
 
@@ -1119,7 +1186,7 @@ fn panel_from(
     match rule {
         QuadratureRule::Box => {
             let over = integrand_over(f, var, &span, order)?;
-            let value = over.scale(&width);
+            let value = round_series(&over.scale(&width), order);
             Ok(IntegralPanel {
                 lo: lo.clone(),
                 hi: hi.clone(),
@@ -1135,14 +1202,17 @@ fn panel_from(
             let at_lo = integrand_over(f, var, &BigInterval::point(lo.clone()), order)?;
             let at_mid = integrand_over(f, var, &BigInterval::point(middle), order)?;
             let at_hi = integrand_over(f, var, &BigInterval::point(hi.clone()), order)?;
-            let fourth = integrand_over(fourth_derivative, var, &span, order)?;
+            let fourth = integrand_over(fourth_derivative, var, &span, DERIVATIVE_ORDER)?;
             let simpson = at_lo
                 .add(&at_mid.scale(&bi(4)))
                 .add(&at_hi)
                 .scale(&(&width / bi(6)));
             let error = ratpow_big(&width, 5) * sup_abs(&fourth) / bi(2880);
-            let value = BigInterval::new(simpson.lo() - &error, simpson.hi() + &error)
-                .ok_or(DeclineReason::PrecisionUnreachable)?;
+            let value = round_series(
+                &BigInterval::new(simpson.lo() - &error, simpson.hi() + &error)
+                    .ok_or(DeclineReason::PrecisionUnreachable)?,
+                order,
+            );
             Ok(IntegralPanel {
                 lo: lo.clone(),
                 hi: hi.clone(),
@@ -1169,7 +1239,9 @@ fn edge_from(
     }
     let over = integrand_over(f, var, box_, order)?;
     let bound = box_.width() * sup_abs(&over);
-    BigInterval::new(-bound.clone(), bound).ok_or(DeclineReason::PrecisionUnreachable)
+    let symmetric =
+        BigInterval::new(-bound.clone(), bound).ok_or(DeclineReason::PrecisionUnreachable)?;
+    Ok(round_series(&symmetric, order))
 }
 
 /// The dyadic core `[A, B]` of `[a.hi, b.lo]` and the two sliver boxes, or a
@@ -1294,7 +1366,7 @@ pub fn enclose_integral_with_reason(
     let whole = BigInterval::new(core_lo.clone(), core_hi.clone())
         .ok_or(DeclineReason::PrecisionUnreachable)?;
     integrand_over(f, var, &whole, order)?;
-    let rule = if integrand_over(&fourth_derivative, var, &whole, order).is_ok() {
+    let rule = if integrand_over(&fourth_derivative, var, &whole, DERIVATIVE_ORDER).is_ok() {
         QuadratureRule::Simpson
     } else {
         QuadratureRule::Box
@@ -1462,5 +1534,767 @@ impl IntegralEnclosure {
             ));
         }
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::enclosure::{Enclosure, StepHead, enclose, enclose_constant, enclose_with_reason};
+
+    /// A decimal literal as an exact rational — used only to state a cited
+    /// digit string, never to compute.
+    fn decimal_to_rational(text: &str) -> BigRational {
+        let (negative, body) = match text.strip_prefix('-') {
+            Some(rest) => (true, rest),
+            None => (false, text),
+        };
+        let (whole, fraction) = body.split_once('.').unwrap_or((body, ""));
+        let digits = format!("{whole}{fraction}");
+        let numerator: BigInt = digits.parse().expect("decimal digits");
+        let denominator = BigInt::from(10u32).pow(u32::try_from(fraction.len()).unwrap());
+        let value = BigRational::new(numerator, denominator);
+        if negative { -value } else { value }
+    }
+
+    /// The band `[d, d + 10^-30]` a value truncated to 30 decimals must lie in.
+    fn digit_band(truncated: &str) -> BigInterval {
+        let lo = decimal_to_rational(truncated);
+        let step = BigRational::new(BigInt::one(), BigInt::from(10u32).pow(30));
+        BigInterval::new(lo.clone(), lo + step).expect("band")
+    }
+
+    // -- The cited digits -------------------------------------------------
+    //
+    // Every string below is the value **truncated** (not rounded) to 30
+    // decimals, so the true value lies in `[d, d + 10^-30]`. Provenance, in two
+    // independent layers:
+    //
+    //  * `GAMMA_30` is OEIS A001620; `PI_SIXTH_30` and `PI_THIRD_30` are OEIS
+    //    A000796 over 6 and over 3; `ASINH1_30`, `ACOSH2_30` and
+    //    `ATANH_HALF_30` are `ln(1+√2)`, `ln(2+√3)` and `ln(3)/2`.
+    //  * the rest were recomputed independently in Python's `decimal` at 70
+    //    digits from the defining series — a different language, a different
+    //    arithmetic, and code that shares nothing with the producer under test
+    //    — and each agrees with its published value where one is tabulated:
+    //    `Si(1)` A099281, `Ci(1)` A099284, `Ei(1)` A091725, `li(2)` A069284,
+    //    and `∫₀¹e^(−x²) = √π·erf(1)/2`.
+    //
+    // A mismatch against these means the **enclosure** is wrong; the digit
+    // strings are the cited authority, not the output.
+    const GAMMA_30: &str = "0.577215664901532860606512090082";
+    const SI_ONE_30: &str = "0.946083070367183014941353313823";
+    const CI_ONE_30: &str = "0.337403922900968134662646203889";
+    const EI_ONE_30: &str = "1.895117816355936755466520934331";
+    const LI_TWO_30: &str = "1.045163780117492784844588889194";
+    const SHI_ONE_30: &str = "1.057250875375728514571842354895";
+    const CHI_ONE_30: &str = "0.837866940980208240894678579435";
+    const FRESNEL_C_ONE_30: &str = "0.779893400376822829474206413652";
+    const FRESNEL_S_ONE_30: &str = "0.438259147390354766076756696625";
+    const PI_SIXTH_30: &str = "0.523598775598298873077107230546";
+    const PI_THIRD_30: &str = "1.047197551196597746154214461093";
+    const ASINH1_30: &str = "0.881373587019543025232609324979";
+    const ACOSH2_30: &str = "1.316957896924816708625046347307";
+    const ATANH_HALF_30: &str = "0.549306144334054845697622618461";
+    const GAUSS_30: &str = "0.746824132812427025399467436131";
+
+    /// The precision every 30-digit test asks for. `2^-110` is about `7.7e-34`,
+    /// three orders of magnitude inside a `1e-30` band, and it keeps the heads
+    /// on the order-64 rung of the ladder rather than the order-128 one — which
+    /// is the difference between a two-second test and a seven-second one in a
+    /// debug build.
+    const DIGIT_PRECISION: u32 = 105;
+
+    fn unary(func: UnaryFunc, argument: CasExpr) -> CasExpr {
+        CasExpr::Unary(func, Box::new(argument))
+    }
+
+    /// Enclose `expr`, check it verifies, and check it sits inside the cited
+    /// 30-digit band.
+    fn check_digits(expr: &CasExpr, cited: &str) -> Enclosure {
+        let enclosure =
+            enclose(expr, &[], DIGIT_PRECISION).unwrap_or_else(|| panic!("no enclosure: {expr:?}"));
+        enclosure
+            .verify(expr, &[])
+            .unwrap_or_else(|e| panic!("{expr:?} does not verify: {e}"));
+        assert!(
+            digit_band(cited).contains_interval(&enclosure.interval),
+            "{expr:?} encloses to {} which is outside the cited digits {cited}",
+            enclosure.interval.decimal(32)
+        );
+        enclosure
+    }
+
+    // -- Euler's constant --------------------------------------------------
+
+    #[test]
+    fn euler_gamma_meets_the_cited_digits_and_verifies() {
+        let expr = CasExpr::var(crate::enclosure::EULER_GAMMA_NAME);
+        check_digits(&expr, GAMMA_30);
+        let constant = enclose_constant("euler_gamma", DIGIT_PRECISION).expect("gamma");
+        assert!(digit_band(GAMMA_30).contains_interval(&constant.interval));
+        let alias = enclose_constant("gamma", DIGIT_PRECISION).expect("gamma alias");
+        assert_eq!(alias.interval, constant.interval);
+    }
+
+    #[test]
+    fn euler_gamma_is_a_pure_function_of_its_order() {
+        // The memo table must change the cost and not the value: the second
+        // call comes from the cache, the third from a fresh computation.
+        let first = euler_gamma(32).expect("gamma at 32");
+        let second = euler_gamma(32).expect("gamma at 32 again");
+        assert_eq!(first, second);
+        assert_eq!(first, euler_gamma_uncached(32).expect("uncached"));
+    }
+
+    #[test]
+    fn euler_gamma_narrows_as_the_order_climbs() {
+        let coarse = euler_gamma(4).expect("gamma at 4");
+        let fine = euler_gamma(64).expect("gamma at 64");
+        assert!(
+            fine.width() < coarse.width(),
+            "gamma at order 64 ({}) is not narrower than at order 4 ({})",
+            fine.width(),
+            coarse.width()
+        );
+        assert!(coarse.contains(fine.lo()), "the two orders disagree");
+    }
+
+    // -- The integral-defined heads ---------------------------------------
+
+    #[test]
+    fn si_meets_the_cited_digits() {
+        check_digits(&unary(UnaryFunc::Si, CasExpr::int(1)), SI_ONE_30);
+    }
+
+    #[test]
+    fn ci_meets_the_cited_digits() {
+        check_digits(&unary(UnaryFunc::Ci, CasExpr::int(1)), CI_ONE_30);
+    }
+
+    #[test]
+    fn ei_meets_the_cited_digits() {
+        check_digits(&unary(UnaryFunc::Ei, CasExpr::int(1)), EI_ONE_30);
+    }
+
+    #[test]
+    fn li_meets_the_cited_digits() {
+        check_digits(&unary(UnaryFunc::Li, CasExpr::int(2)), LI_TWO_30);
+    }
+
+    #[test]
+    fn shi_meets_the_cited_digits() {
+        check_digits(&unary(UnaryFunc::Shi, CasExpr::int(1)), SHI_ONE_30);
+    }
+
+    #[test]
+    fn chi_meets_the_cited_digits() {
+        check_digits(&unary(UnaryFunc::Chi, CasExpr::int(1)), CHI_ONE_30);
+    }
+
+    #[test]
+    fn the_fresnel_cosine_integral_meets_the_cited_digits() {
+        check_digits(
+            &unary(UnaryFunc::FresnelC, CasExpr::int(1)),
+            FRESNEL_C_ONE_30,
+        );
+    }
+
+    #[test]
+    fn the_fresnel_sine_integral_meets_the_cited_digits() {
+        check_digits(
+            &unary(UnaryFunc::FresnelS, CasExpr::int(1)),
+            FRESNEL_S_ONE_30,
+        );
+    }
+
+    #[test]
+    fn asin_meets_the_cited_digits() {
+        check_digits(&unary(UnaryFunc::Asin, CasExpr::rat(1, 2)), PI_SIXTH_30);
+    }
+
+    #[test]
+    fn acos_meets_the_cited_digits() {
+        check_digits(&unary(UnaryFunc::Acos, CasExpr::rat(1, 2)), PI_THIRD_30);
+    }
+
+    #[test]
+    fn asin_reduces_near_one_instead_of_grinding() {
+        // asin(1) = pi/2 exactly, through the half-angle reduction whose inner
+        // argument is 0; asin(9/10) exercises the reduction proper.
+        let half_pi = enclose_constant("pi", 60)
+            .expect("pi")
+            .interval
+            .scale(&br(1, 2));
+        let at_one = enclose(&unary(UnaryFunc::Asin, CasExpr::int(1)), &[], 60).expect("asin 1");
+        assert!(
+            at_one.interval.hi() >= half_pi.lo() && at_one.interval.lo() <= half_pi.hi(),
+            "asin(1) = {} does not meet pi/2 = {}",
+            at_one.interval.decimal(20),
+            half_pi.decimal(20)
+        );
+        let near =
+            enclose(&unary(UnaryFunc::Asin, CasExpr::rat(9, 10)), &[], 60).expect("asin 9/10");
+        // asin(0.9) = 1.1197695149986341866866770558...
+        assert!(
+            near.interval.decimal(12).starts_with("[1.119769514998"),
+            "asin(9/10) = {}",
+            near.interval.decimal(16)
+        );
+    }
+
+    #[test]
+    fn asinh_meets_the_cited_digits() {
+        check_digits(&unary(UnaryFunc::Asinh, CasExpr::int(1)), ASINH1_30);
+    }
+
+    #[test]
+    fn acosh_meets_the_cited_digits() {
+        check_digits(&unary(UnaryFunc::Acosh, CasExpr::int(2)), ACOSH2_30);
+    }
+
+    #[test]
+    fn asinh_is_odd_and_acosh_is_zero_at_one() {
+        let positive =
+            enclose(&unary(UnaryFunc::Asinh, CasExpr::int(3)), &[], 60).expect("asinh 3");
+        let negative =
+            enclose(&unary(UnaryFunc::Asinh, CasExpr::int(-3)), &[], 60).expect("asinh -3");
+        let mirrored = positive.interval.negate();
+        assert!(
+            mirrored.hi() >= negative.interval.lo() && mirrored.lo() <= negative.interval.hi(),
+            "asinh is not odd: {} vs {}",
+            mirrored.decimal(20),
+            negative.interval.decimal(20)
+        );
+        let at_one = enclose(&unary(UnaryFunc::Acosh, CasExpr::int(1)), &[], 60).expect("acosh 1");
+        assert!(at_one.interval.contains(&BigRational::zero()));
+    }
+
+    #[test]
+    fn atanh_is_built_from_the_certified_logarithm() {
+        let expr = atanh_expr(CasExpr::rat(1, 2));
+        check_digits(&expr, ATANH_HALF_30);
+        // It is a constructor, not a head: the certificate goes through `ln`.
+        let enclosure = enclose(&expr, &[], 40).expect("atanh");
+        assert!(
+            enclosure
+                .evidence
+                .iter()
+                .any(|step| step.head == StepHead::Ln),
+            "the atanh certificate does not go through `ln`"
+        );
+    }
+
+    // -- Declines ----------------------------------------------------------
+
+    #[test]
+    fn the_integral_heads_decline_outside_their_domains() {
+        let cases: Vec<(CasExpr, &str)> = vec![
+            (unary(UnaryFunc::Ci, CasExpr::int(-1)), "Ci"),
+            (unary(UnaryFunc::Chi, CasExpr::int(0)), "Chi"),
+            (unary(UnaryFunc::Ei, CasExpr::int(0)), "Ei"),
+            (unary(UnaryFunc::Li, CasExpr::int(1)), "li"),
+            (unary(UnaryFunc::Li, CasExpr::int(-2)), "li"),
+            (unary(UnaryFunc::Asin, CasExpr::int(2)), "asin"),
+            (unary(UnaryFunc::Acos, CasExpr::int(-3)), "asin"),
+            (unary(UnaryFunc::Acosh, CasExpr::rat(1, 2)), "acosh"),
+        ];
+        for (expr, label) in cases {
+            match enclose_with_reason(&expr, &[], 30) {
+                Err(DeclineReason::DomainError(message)) => {
+                    assert!(
+                        message.contains(label),
+                        "the decline `{message}` does not name `{label}`"
+                    );
+                }
+                other => panic!("{label} did not decline with a domain error: {other:?}"),
+            }
+        }
+    }
+
+    #[test]
+    fn the_series_heads_decline_past_their_magnitude_limit() {
+        let beyond = CasExpr::int(i128::from(SERIES_MAGNITUDE_LIMIT) + 1);
+        for func in [UnaryFunc::Si, UnaryFunc::Shi, UnaryFunc::FresnelC] {
+            assert!(
+                matches!(
+                    enclose_with_reason(&unary(func, beyond.clone()), &[], 20),
+                    Err(DeclineReason::ResourceLimit)
+                ),
+                "{func:?} did not decline past the magnitude limit"
+            );
+        }
+        // ...and answers at the limit itself, so the decline is about the
+        // magnitude and not about the head.
+        assert!(
+            enclose(
+                &unary(
+                    UnaryFunc::Si,
+                    CasExpr::int(i128::from(SERIES_MAGNITUDE_LIMIT))
+                ),
+                &[],
+                20
+            )
+            .is_some(),
+            "Si declines at the magnitude limit itself"
+        );
+    }
+
+    #[test]
+    fn the_alternating_bound_is_refused_below_its_monotonicity_index() {
+        // The hypothesis is not assumed: at magnitude 10 the Si terms are still
+        // growing at index 3, so the kernel declines that order outright and
+        // only the ladder's higher orders answer.
+        let argument = BigInterval::point(bi(10));
+        assert!(odd_series_index(&bi(10)).expect("index") > 3);
+        assert!(matches!(
+            si_interval(&argument, 3),
+            Err(DeclineReason::PrecisionUnreachable)
+        ));
+        assert!(si_interval(&argument, 32).is_ok());
+    }
+
+    #[test]
+    fn the_geometric_majorant_is_refused_while_its_ratio_is_large() {
+        // Shi has positive terms, so its bound needs the ratio at the first
+        // omitted index to be below 1/2; at magnitude 10 and order 2 it is not.
+        let argument = BigInterval::point(bi(10));
+        assert!(odd_series_ratio(&bi(10), 3) >= br(1, 2));
+        assert!(matches!(
+            shi_interval(&argument, 2),
+            Err(DeclineReason::PrecisionUnreachable)
+        ));
+        assert!(shi_interval(&argument, 32).is_ok());
+    }
+
+    #[test]
+    fn a_forged_euler_gamma_step_is_refused() {
+        let expr = CasExpr::var(crate::enclosure::EULER_GAMMA_NAME);
+        let honest = enclose(&expr, &[], 40).expect("gamma");
+        // Halving the recorded remainder understates the method's own error.
+        let mut forged = honest.clone();
+        forged.evidence[0].remainder = &forged.evidence[0].remainder / bi(2);
+        assert!(forged.verify(&expr, &[]).is_err());
+        // Narrowing the output to a point inside the honest interval breaks
+        // containment of the recomputed enclosure.
+        let mut narrowed = honest.clone();
+        narrowed.evidence[0].output = BigInterval::point(honest.interval.midpoint());
+        narrowed.interval = narrowed.evidence[0].output.clone();
+        assert!(narrowed.verify(&expr, &[]).is_err());
+        // And a step claiming to be `pi` instead is caught by the head guard.
+        let mut relabelled = honest;
+        relabelled.evidence[0].head = StepHead::Pi;
+        assert!(relabelled.verify(&expr, &[]).is_err());
+    }
+
+    // -- Symbolic exponents ------------------------------------------------
+
+    #[test]
+    fn a_symbolic_exponent_agrees_with_the_root_route() {
+        let through_exp = symbolic_power(CasExpr::int(2), CasExpr::rat(1, 3));
+        let through_root = crate::enclosure::rational_power(CasExpr::int(2), 1, 3).expect("root");
+        let a = enclose(&through_exp, &[], 80).expect("exp route");
+        let b = enclose(&through_root, &[], 80).expect("root route");
+        a.verify(&through_exp, &[]).expect("exp route verifies");
+        b.verify(&through_root, &[]).expect("root route verifies");
+        assert!(
+            a.interval.hi() >= b.interval.lo() && a.interval.lo() <= b.interval.hi(),
+            "the two routes to 2^(1/3) do not overlap: {} vs {}",
+            a.interval.decimal(30),
+            b.interval.decimal(30)
+        );
+    }
+
+    #[test]
+    fn a_symbolic_exponent_may_be_an_interval_variable() {
+        // The exponent is a bound variable over a box, not a literal: 2^y for y
+        // in [1, 1 + 2^-20] must contain 2, and its width must respect the
+        // requested precision — which is what forces the box to be narrow, since
+        // `enclose` guarantees the width of the ANSWER.
+        let expr = symbolic_power(CasExpr::int(2), CasExpr::var("y"));
+        let step = Rational::checked_new(1, 1 << 20).expect("step");
+        let binding = Interval::new(
+            Rational::integer(1),
+            Rational::integer(1).checked_add(step).expect("upper"),
+        )
+        .expect("interval");
+        let enclosure = enclose(&expr, &[("y", binding)], 8).expect("2^y");
+        enclosure
+            .verify(&expr, &[("y", binding)])
+            .expect("verifies");
+        assert!(
+            enclosure.interval.contains(&bi(2)),
+            "2^y over [1, 1+2^-20] = {} does not contain 2",
+            enclosure.interval.decimal(12)
+        );
+        // The box really propagated: the answer is an interval, not a point,
+        // and it does not reach the value at the far end of a wide box.
+        assert!(
+            !enclosure.interval.width().is_zero(),
+            "the binding box did not propagate through the exponent"
+        );
+        assert!(!enclosure.interval.contains(&bi(4)));
+    }
+
+    #[test]
+    fn a_non_positive_base_declines_with_a_reason_naming_pow() {
+        for base in [CasExpr::int(-2), CasExpr::int(0)] {
+            match enclose_symbolic_power(&base, &CasExpr::rat(1, 2), &[], 30) {
+                Err(DeclineReason::DomainError(message)) => {
+                    assert!(
+                        message.contains("pow"),
+                        "the decline `{message}` does not name pow"
+                    );
+                }
+                other => panic!("a non-positive base did not decline: {other:?}"),
+            }
+        }
+        // A straddling base declines too, and a positive one does not.
+        let straddling = Interval::new(Rational::integer(-1), Rational::integer(1)).expect("iv");
+        assert!(matches!(
+            enclose_symbolic_power(
+                &CasExpr::var("x"),
+                &CasExpr::int(2),
+                &[("x", straddling)],
+                8
+            ),
+            Err(DeclineReason::DomainError(_))
+        ));
+        assert!(enclose_symbolic_power(&CasExpr::int(3), &CasExpr::rat(1, 2), &[], 30).is_ok());
+    }
+
+    // -- Definite integrals -------------------------------------------------
+
+    fn at(value: i64) -> BigInterval {
+        BigInterval::point(bi(value))
+    }
+
+    #[test]
+    fn the_integral_of_x_squared_over_the_unit_interval_is_one_third() {
+        let f = CasExpr::var("x").pow(2);
+        let e = enclose_integral(&f, "x", &at(0), &at(1), 30).expect("integral");
+        e.verify(&f, "x").expect("verifies");
+        assert_eq!(e.rule, QuadratureRule::Simpson);
+        assert!(
+            e.interval.contains(&br(1, 3)),
+            "the enclosure {} does not contain 1/3",
+            e.interval.decimal(40)
+        );
+    }
+
+    #[test]
+    fn the_gaussian_integral_meets_its_cited_digits() {
+        let f = CasExpr::Unary(
+            UnaryFunc::Exp,
+            Box::new(CasExpr::Neg(Box::new(CasExpr::var("x").pow(2)))),
+        );
+        let e = enclose_integral(&f, "x", &at(0), &at(1), 20).expect("integral");
+        e.verify(&f, "x").expect("verifies");
+        let cited = decimal_to_rational(GAUSS_30);
+        assert!(
+            e.interval.contains(&cited),
+            "the enclosure {} does not contain the cited {GAUSS_30}",
+            e.interval.decimal(34)
+        );
+    }
+
+    #[test]
+    fn the_integral_of_sine_over_a_half_period_is_two() {
+        let f = CasExpr::var("x").sin();
+        let pi = enclose_constant("pi", 60).expect("pi").interval;
+        let e = enclose_integral(&f, "x", &at(0), &pi, 16).expect("integral");
+        e.verify(&f, "x").expect("verifies");
+        assert!(
+            e.interval.contains(&bi(2)),
+            "the enclosure {} does not contain 2",
+            e.interval.decimal(30)
+        );
+    }
+
+    #[test]
+    fn an_integrand_with_an_interior_pole_declines_with_its_own_reason() {
+        // 1/(x−1) on [0, 2].
+        let f = CasExpr::Div(
+            Box::new(CasExpr::int(1)),
+            Box::new(CasExpr::Add(vec![CasExpr::var("x"), CasExpr::int(-1)])),
+        );
+        match enclose_integral_with_reason(&f, "x", &at(0), &at(2), 10) {
+            Err(DeclineReason::IntegrandNotEnclosable(message)) => {
+                assert!(
+                    message.contains("divisor"),
+                    "the decline `{message}` does not name the obstacle"
+                );
+            }
+            other => panic!("the pole did not decline distinctly: {other:?}"),
+        }
+        // The same integrand away from the pole is fine, so the decline is
+        // about the pole and not about the shape of the expression.
+        assert!(enclose_integral(&f, "x", &at(2), &at(3), 10).is_some());
+    }
+
+    #[test]
+    fn the_box_rule_takes_over_when_the_fourth_derivative_is_not_enclosable() {
+        // sqrt(x) on [0, 1]: `f` encloses, `f''''` divides by an interval
+        // reaching 0, so Simpson is unavailable and the always-sound box rule
+        // answers. The exact value is 2/3.
+        // `NthRoot(2)` rather than `Sqrt`: the same function, but its kernel
+        // rounds each Newton iterate onto the dyadic grid, where `sqrt_point`
+        // still lets the iterate double in size to a 2048-bit floor. Over the
+        // 511 panel evaluations this refinement needs, that is the difference
+        // between a second and several minutes.
+        let f = CasExpr::Unary(UnaryFunc::NthRoot(2), Box::new(CasExpr::var("x")));
+        // Precision 6, not 30: the box rule converges LINEARLY, so the panel
+        // count is `2^precision` and the cost of this test is exponential in it.
+        // That is the rule's stated weakness, not an accident of the fixture.
+        let e = enclose_integral(&f, "x", &at(0), &at(1), 6).expect("integral");
+        e.verify(&f, "x").expect("verifies");
+        assert_eq!(e.rule, QuadratureRule::Box);
+        assert!(
+            e.interval.contains(&br(2, 3)),
+            "the enclosure {} does not contain 2/3",
+            e.interval.decimal(12)
+        );
+    }
+
+    #[test]
+    fn a_point_limit_charges_no_sliver_and_an_interval_limit_does() {
+        let f = CasExpr::int(1);
+        let exact = enclose_integral(&f, "x", &at(0), &at(1), 30).expect("integral");
+        assert!(exact.low_edge.width().is_zero());
+        assert!(exact.high_edge.width().is_zero());
+        let fuzzy_upper = BigInterval::new(bi(1), bi(1) + pow2(-40)).expect("fuzzy");
+        let fuzzy = enclose_integral(&f, "x", &at(0), &fuzzy_upper, 30).expect("integral");
+        fuzzy.verify(&f, "x").expect("verifies");
+        assert!(!fuzzy.high_edge.width().is_zero());
+        assert!(fuzzy.interval.contains(&BigRational::one()));
+    }
+
+    // -- The quadrature verifier's guards ----------------------------------
+
+    /// A small honest certificate to forge against.
+    fn honest_integral() -> (CasExpr, IntegralEnclosure) {
+        let f = CasExpr::var("x").pow(2);
+        let e = enclose_integral(&f, "x", &at(0), &at(1), 30).expect("integral");
+        (f, e)
+    }
+
+    /// The same certificate cut into two contiguous panels, so a gap between
+    /// them is expressible.
+    fn honest_two_panels() -> (CasExpr, IntegralEnclosure) {
+        let (f, mut e) = honest_integral();
+        while e.panels.len() < 2 {
+            let derivative = f.differentiate_n("x", 4);
+            let mut split = Vec::new();
+            for panel in &e.panels {
+                let middle = (&panel.lo + &panel.hi) / bi(2);
+                split.push(
+                    panel_from(&f, &derivative, "x", &panel.lo, &middle, e.rule, e.order)
+                        .expect("left panel"),
+                );
+                split.push(
+                    panel_from(&f, &derivative, "x", &middle, &panel.hi, e.rule, e.order)
+                        .expect("right panel"),
+                );
+            }
+            let mut total = e.low_edge.add(&e.high_edge);
+            for panel in &split {
+                total = total.add(&panel.value);
+            }
+            e.interval = total;
+            e.panels = split;
+        }
+        e.verify(&f, "x").expect("the two-panel form is honest");
+        (f, e)
+    }
+
+    #[test]
+    fn guard_one_refuses_an_empty_partition() {
+        let (f, mut e) = honest_integral();
+        e.panels.clear();
+        let message = e
+            .verify(&f, "x")
+            .expect_err("an empty partition must be refused");
+        assert!(message.contains("no panels"), "{message}");
+    }
+
+    #[test]
+    fn guard_two_refuses_a_partition_gap() {
+        let (f, mut e) = honest_two_panels();
+        e.panels[1].lo = &e.panels[1].lo + pow2(-8);
+        let message = e.verify(&f, "x").expect_err("a gap must be refused");
+        assert!(message.contains("does not start where"), "{message}");
+    }
+
+    #[test]
+    fn guard_two_refuses_an_inverted_panel() {
+        let (f, mut e) = honest_integral();
+        let panel = &mut e.panels[0];
+        std::mem::swap(&mut panel.lo, &mut panel.hi);
+        assert!(
+            e.panels[0].lo > e.panels[0].hi,
+            "the swap did not invert the panel, so this control is vacuous"
+        );
+        let message = e.verify(&f, "x").expect_err("inversion must be refused");
+        assert!(message.contains("inverted"), "{message}");
+    }
+
+    #[test]
+    fn guard_three_refuses_a_partition_outside_the_limits() {
+        let (f, mut e) = honest_integral();
+        e.lower = BigInterval::new(bi(0), br(1, 2)).expect("wide lower");
+        let message = e
+            .verify(&f, "x")
+            .expect_err("a partition starting below the lower limit must be refused");
+        assert!(message.contains("not inside the limits"), "{message}");
+    }
+
+    #[test]
+    fn guard_three_refuses_a_sliver_box_that_covers_nothing() {
+        let (f, mut e) = honest_integral();
+        e.low_edge_box = BigInterval::point(br(1, 4));
+        let message = e
+            .verify(&f, "x")
+            .expect_err("a sliver box that covers nothing must be refused");
+        assert!(message.contains("do not cover the gap"), "{message}");
+    }
+
+    #[test]
+    fn guard_four_refuses_a_narrowed_evaluation() {
+        let (f, mut e) = honest_integral();
+        // The honest `fourth` for x² is the point 0; a claim of [1, 2] does not
+        // contain it.
+        e.panels[0].fourth = BigInterval::new(bi(1), bi(2)).expect("forged");
+        let message = e
+            .verify(&f, "x")
+            .expect_err("a narrowed evaluation must be refused");
+        assert!(message.contains("evaluation"), "{message}");
+    }
+
+    #[test]
+    fn guard_five_refuses_a_narrowed_panel_contribution() {
+        let (f, mut e) = honest_integral();
+        e.panels[0].value = BigInterval::point(bi(0));
+        let message = e
+            .verify(&f, "x")
+            .expect_err("a narrowed panel must be refused");
+        assert!(message.contains("contribution"), "{message}");
+    }
+
+    #[test]
+    fn guard_six_refuses_a_narrowed_sliver() {
+        let f = CasExpr::int(1);
+        let fuzzy_upper = BigInterval::new(bi(1), bi(1) + pow2(-40)).expect("fuzzy");
+        let mut e = enclose_integral(&f, "x", &at(0), &fuzzy_upper, 30).expect("integral");
+        e.verify(&f, "x").expect("honest");
+        e.high_edge = BigInterval::point(BigRational::zero());
+        let message = e
+            .verify(&f, "x")
+            .expect_err("a narrowed sliver must be refused");
+        assert!(message.contains("sliver"), "{message}");
+    }
+
+    #[test]
+    fn guard_seven_refuses_a_total_that_does_not_contain_the_panels() {
+        let (f, mut e) = honest_integral();
+        e.interval = BigInterval::new(bi(0), br(1, 100)).expect("forged total");
+        let message = e
+            .verify(&f, "x")
+            .expect_err("a total missing its panels must be refused");
+        assert!(message.contains("recomputed total"), "{message}");
+    }
+
+    #[test]
+    fn guard_eight_refuses_an_over_wide_answer() {
+        let (f, mut e) = honest_integral();
+        e.interval = BigInterval::new(bi(0), bi(1)).expect("wide");
+        let message = e
+            .verify(&f, "x")
+            .expect_err("an over-wide answer must be refused");
+        assert!(message.contains("final width"), "{message}");
+    }
+
+    #[test]
+    fn the_quadrature_verifier_recomputes_rather_than_reads() {
+        // Verification must fail against a *different* integrand even though
+        // every recorded number is internally consistent.
+        let (_, e) = honest_integral();
+        let other = CasExpr::var("x").pow(3);
+        assert!(e.verify(&other, "x").is_err());
+    }
+
+    // -- Cost --------------------------------------------------------------
+
+    /// ADVISORY ONLY — a single unpinned run per row on a shared host. Run with
+    /// `--release --nocapture` to regenerate the table in [`crate::enclosure`].
+    #[test]
+    fn cost_table_wave_three() {
+        use std::time::Instant;
+        if let Ok(loadavg) = std::fs::read_to_string("/proc/loadavg") {
+            println!("host load average: {}", loadavg.trim());
+        }
+        println!("head | precision | produce | verify");
+        let cases: Vec<(&str, CasExpr)> = vec![
+            (
+                "euler_gamma",
+                CasExpr::var(crate::enclosure::EULER_GAMMA_NAME),
+            ),
+            ("Si(1)", unary(UnaryFunc::Si, CasExpr::int(1))),
+            ("Ci(1)", unary(UnaryFunc::Ci, CasExpr::int(1))),
+            ("Ei(1)", unary(UnaryFunc::Ei, CasExpr::int(1))),
+            ("FresnelC(1)", unary(UnaryFunc::FresnelC, CasExpr::int(1))),
+            ("asin(1/2)", unary(UnaryFunc::Asin, CasExpr::rat(1, 2))),
+            ("asinh(1)", unary(UnaryFunc::Asinh, CasExpr::int(1))),
+            (
+                "2^(1/2) via exp ln",
+                symbolic_power(CasExpr::int(2), CasExpr::rat(1, 2)),
+            ),
+        ];
+        let precisions: &[u32] = if cfg!(debug_assertions) {
+            &[10, 50]
+        } else {
+            &[10, 50, 100]
+        };
+        for (name, expr) in &cases {
+            for precision in precisions {
+                let start = Instant::now();
+                let Some(enclosure) = enclose(expr, &[], *precision) else {
+                    println!("{name} | {precision} | declined |");
+                    continue;
+                };
+                let produce = start.elapsed();
+                let start = Instant::now();
+                enclosure.verify(expr, &[]).expect("verifies");
+                println!(
+                    "{name} | {precision} | {:?} | {:?}",
+                    produce,
+                    start.elapsed()
+                );
+            }
+        }
+        let f = CasExpr::Unary(
+            UnaryFunc::Exp,
+            Box::new(CasExpr::Neg(Box::new(CasExpr::var("x").pow(2)))),
+        );
+        let integral_precisions: &[u32] = if cfg!(debug_assertions) {
+            &[10, 16]
+        } else {
+            &[10, 20, 30]
+        };
+        for precision in integral_precisions.iter().copied() {
+            let start = Instant::now();
+            let Some(e) = enclose_integral(&f, "x", &at(0), &at(1), precision) else {
+                println!("int exp(-x^2) | {precision} | declined |");
+                continue;
+            };
+            let produce = start.elapsed();
+            let start = Instant::now();
+            e.verify(&f, "x").expect("verifies");
+            println!(
+                "int exp(-x^2) | {precision} | {:?} | {:?} | {} panels",
+                produce,
+                start.elapsed(),
+                e.panels.len()
+            );
+        }
     }
 }

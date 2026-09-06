@@ -50,6 +50,10 @@
 //! | `erf` | alternating Maclaurin below magnitude 8; the complementary tail bound beyond | see [`crate::enclosure_special`] |
 //! | `Gamma` | exact at integers and half-integers; the shift identity in logarithms plus Stirling elsewhere | see [`crate::enclosure_special`] |
 //! | `J_n` | the power series, evaluated over the interval | see [`crate::enclosure_special`] |
+//! | `euler_gamma` | Euler–Maclaurin on `1/t` | see [`crate::enclosure_integral`] |
+//! | `Si`, `Ci`, `Ei`, `li`, `Shi`, `Chi`, Fresnel `S`/`C` | the Maclaurin series of the integral, with `γ + ln x` where the definition carries one | alternating or geometric, each with its index computed exactly; see [`crate::enclosure_integral`] |
+//! | `asin`, `acos` | the binomial series below `1/2`, the exact half-angle identity above | geometric `t_(n+1)/(1 − z²)`; see [`crate::enclosure_integral`] |
+//! | `asinh`, `acosh` | the exact identities `ln(abs(x) + √(x²±1))` — no new series | the `ln` and `√` bounds |
 //!
 //! The four wave-two heads live in [`crate::enclosure_special`], which states
 //! each bound **with its hypothesis** — an alternating-series bound is only
@@ -58,6 +62,13 @@
 //! powers `x^(p/q)` have two independent routes, [`rational_power`] through
 //! `root_q` and [`rational_power_via_exp_ln`] through `exp`/`ln`; multivariate
 //! root enclosures are [`crate::enclosure_special::enclose_system`].
+//!
+//! The wave-three heads live in [`crate::enclosure_integral`], together with a
+//! symbolic exponent `x^y` through `exp(y·ln x)`
+//! ([`crate::enclosure_integral::symbolic_power`]) and certified **definite
+//! integrals** ([`crate::enclosure_integral::enclose_integral`]) by a Simpson
+//! or box quadrature whose certificate records the partition and whose verifier
+//! re-encloses every panel.
 //!
 //! The remainder a step records is defined uniformly as the **half-width of the
 //! head re-evaluated at each endpoint of its input as a degenerate interval**,
@@ -115,10 +126,22 @@
 //! Deliberately **not** handled here, and not silently approximated either —
 //! each declines with a reason:
 //!
-//! - **`Si`, `Ci`, `Ei`, `li`, the Fresnel integrals, the Airy functions,
-//!   `LambertW`, the modified Bessel `I_n`** and the rest of the
-//!   special-function heads — they have no remainder bound here and
-//!   [`enclose`] declines with [`DeclineReason::UnsupportedHead`];
+//! - **the Airy functions, `LambertW`, the modified Bessel `I_n`, `tan`, the
+//!   polygamma tower** and the rest of the special-function heads — they have
+//!   no remainder bound here and [`enclose`] declines with
+//!   [`DeclineReason::UnsupportedHead`];
+//! - **`Si`, `Ci`, `Ei`, `Shi`, `Chi` and the Fresnel integrals past
+//!   magnitude 20**, where the series order and the numerator size both grow
+//!   like `a²` — an honest [`DeclineReason::ResourceLimit`], not an asymptotic
+//!   bound, because the asymptotic expansions of `Si` and `Ci` are divergent
+//!   and their error terms need a justification wave three did not attempt;
+//! - **`atanh` as a head**: [`UnaryFunc`] has no `Atanh` variant, so
+//!   [`crate::enclosure_integral::atanh_expr`] builds the exact identity
+//!   `(1/2)·ln((1+x)/(1−x))` from the certified `ln` instead;
+//! - **improper and multivariate integrals**, and any integrand
+//!   [`crate::enclosure_integral::enclose_integral`] cannot enclose on the
+//!   closed interval — it declines with
+//!   [`DeclineReason::IntegrandNotEnclosable`] naming the panel;
 //! - **`Gamma` at a non-positive argument**, and **`J_n` of negative order**;
 //! - **a non-square or non-polynomial system**, and a system at a **multiple**
 //!   root, where the Krawczyk inclusion cannot succeed because the Jacobian is
@@ -128,6 +151,8 @@
 //!
 //! Wave two removed three entries that used to be on this list: non-integer
 //! rational powers, `erf`/`Gamma`/`J_n`, and multivariate root enclosures.
+//! Wave three removed three more: the integral-defined heads, the inverse
+//! trigonometric and inverse hyperbolic heads, and a symbolic exponent.
 
 use crate::interval_arith::Interval;
 use crate::{CasExpr, UnaryFunc};
@@ -137,6 +162,7 @@ use num_bigint::BigInt;
 use num_rational::BigRational;
 use num_traits::{One, Signed, Zero};
 use std::collections::BTreeMap;
+use std::sync::{Mutex, OnceLock};
 
 /// The ladder of truncation orders tried, in order, when a head needs a series.
 ///
@@ -795,13 +821,41 @@ fn atan_small(z: &BigRational, order: u32) -> Option<BigInterval> {
     Some(BigInterval::center_radius(&sum, &remainder))
 }
 
+/// The memo table for [`pi_enclosure`], keyed by truncation order.
+fn pi_cache() -> &'static Mutex<BTreeMap<u32, BigInterval>> {
+    static CACHE: OnceLock<Mutex<BTreeMap<u32, BigInterval>>> = OnceLock::new();
+    CACHE.get_or_init(|| Mutex::new(BTreeMap::new()))
+}
+
 /// A certified enclosure of `pi` by Machin's formula,
 /// `pi = 16·atan(1/5) − 4·atan(1/239)`, both `atan`s at `order`.
 ///
 /// Machin's identity is exact; the only error is the two series tails, each of
 /// which carries its own alternating bound. `1/5` and `1/239` are both below
 /// `1/2`, so neither `atan` needs `pi` itself — the recursion is well founded.
+///
+/// **Memoised per order.** [`machin`] is a pure function of `order`, so the
+/// table changes what this costs and never what it returns; the memo is not an
+/// optimisation of taste but of an inner loop. `sin` and `cos` need a certified
+/// `2·pi` for their argument reduction, so a quadrature over a trigonometric
+/// integrand asks for the same `pi` once per panel evaluation: measured
+/// 2026-09-05 in a debug build, `∫₀^π sin` at precision 20 spent most of its
+/// 40.8 s recomputing Machin's formula about eight hundred times.
 pub(crate) fn pi_enclosure(order: u32) -> Option<BigInterval> {
+    if let Ok(table) = pi_cache().lock()
+        && let Some(cached) = table.get(&order)
+    {
+        return Some(cached.clone());
+    }
+    let value = machin(order)?;
+    if let Ok(mut table) = pi_cache().lock() {
+        table.insert(order, value.clone());
+    }
+    Some(value)
+}
+
+/// Machin's formula itself, without the memo table.
+fn machin(order: u32) -> Option<BigInterval> {
     let a = atan_small(&br(1, 5), order)?;
     let b = atan_small(&br(1, 239), order)?;
     Some(a.scale(&bi(16)).sub(&b.scale(&bi(4))))
@@ -1001,6 +1055,16 @@ fn atan_point(p: &BigRational, order: u32) -> Option<BigInterval> {
 /// The multiple is chosen from the midpoint, so a point argument lands in
 /// roughly `[−pi, pi]`; the returned interval carries the `pi` uncertainty
 /// scaled by the multiple, which is why a large argument needs a higher order.
+///
+/// The reduced interval is rounded **outward** onto the dyadic grid before it
+/// is returned. Subtracting a certified `2·pi` puts that enclosure's
+/// denominator into the argument, and [`sin_point`] then forms `t^(2k+2)` of
+/// it: at order 32 a reduced argument carries about seven hundred bits and the
+/// intermediate reaches forty-six thousand, which is the cost blow-up
+/// [`crate::enclosure_special`] documents for exact-rational series kernels.
+/// Rounding outward only ever widens the interval, so every enclosure computed
+/// from it still contains the true image — and an argument that needed no
+/// reduction is already on the grid and is returned unchanged.
 fn reduce_mod_two_pi(x: &BigInterval, order: u32) -> Option<(BigInterval, BigInterval)> {
     let pi = pi_enclosure(order)?;
     let two_pi = pi.scale(&bi(2));
@@ -1009,7 +1073,11 @@ fn reduce_mod_two_pi(x: &BigInterval, order: u32) -> Option<(BigInterval, BigInt
         return None;
     }
     let shift = two_pi.scale(&BigRational::from(multiple));
-    Some((x.sub(&shift), pi))
+    let reduced = crate::enclosure_special::coarsen(
+        &x.sub(&shift),
+        crate::enclosure_special::grid_bits(order),
+    );
+    Some((reduced, pi))
 }
 
 /// `sin` over an interval, by reduction plus endpoint evaluation with explicit
@@ -1231,18 +1299,35 @@ fn eval_head(
 /// that never meets the budget declines with
 /// [`DeclineReason::PrecisionUnreachable`] rather than returning a bound it
 /// cannot defend.
+///
+/// A head **may decline a particular order** and still answer at a higher one:
+/// every alternating and geometric tail bound in this crate has a hypothesis
+/// (the terms must actually be falling, the ratio must actually be below a
+/// half) that a low order does not satisfy, and the kernels report that as
+/// [`DeclineReason::PrecisionUnreachable`] rather than quietly using a bound
+/// they cannot defend. So the ladder **continues** past that one decline and
+/// stops only on an order-independent obstacle — a domain error, an unbound
+/// variable, a zero divisor, a resource cap. Aborting the ladder on the first
+/// `PrecisionUnreachable` (which is what this did before wave three) makes
+/// exactly the arguments that need a high order unreachable at every order.
 fn adaptive(
     head: &StepHead,
     inputs: &[BigInterval],
     tolerance: &BigRational,
 ) -> Result<(BigInterval, BigRational, u32), DeclineReason> {
+    let mut last = DeclineReason::PrecisionUnreachable;
     for order in ORDERS {
-        let (output, remainder) = eval_head(head, inputs, order)?;
-        if remainder <= *tolerance {
-            return Ok((output, remainder, order));
+        match eval_head(head, inputs, order) {
+            Ok((output, remainder)) => {
+                if remainder <= *tolerance {
+                    return Ok((output, remainder, order));
+                }
+            }
+            Err(reason @ DeclineReason::PrecisionUnreachable) => last = reason,
+            Err(reason) => return Err(reason),
         }
     }
-    Err(DeclineReason::PrecisionUnreachable)
+    Err(last)
 }
 
 // ---------------------------------------------------------------------------
@@ -2292,12 +2377,43 @@ mod tests {
 
     #[test]
     fn an_uncertified_head_declines_rather_than_approximating() {
-        // This test named `Erf` until wave two certified it. The head it names
-        // has to be one the module genuinely has no bound for, or it stops
-        // measuring anything: `Si` has no remainder bound here.
-        let expr = CasExpr::Unary(UnaryFunc::Si, Box::new(CasExpr::int(1)));
-        let reason = enclose_with_reason(&expr, &[], 10).unwrap_err();
-        assert!(matches!(reason, DeclineReason::UnsupportedHead(_)));
+        // This test named `Erf` until wave two certified it, and `Si` until
+        // wave three did. A head named here has to be one the module genuinely
+        // has no bound for or the test stops measuring anything, so the list is
+        // not trusted: each entry is checked against `step_head_for` itself,
+        // and the next wave that certifies one of them fails here by name
+        // rather than quietly turning this into a tautology.
+        for func in [
+            UnaryFunc::Tan,
+            UnaryFunc::LambertW,
+            UnaryFunc::Ai,
+            UnaryFunc::BesselI(0),
+            UnaryFunc::PolyGamma(0),
+        ] {
+            assert!(
+                step_head_for(func).is_err(),
+                "{func:?} now has a certified route; move it out of this list"
+            );
+            let expr = CasExpr::Unary(func, Box::new(CasExpr::int(1)));
+            let reason = enclose_with_reason(&expr, &[], 10).unwrap_err();
+            assert!(
+                matches!(reason, DeclineReason::UnsupportedHead(_)),
+                "{func:?} declined with {reason:?}, not an unsupported head"
+            );
+        }
+    }
+
+    #[test]
+    fn the_pi_memo_returns_the_value_the_formula_computes() {
+        // The table must change what `pi_enclosure` costs and never what it
+        // returns, so a cached order and a fresh evaluation of Machin's formula
+        // have to agree exactly.
+        for order in [4u32, 16, 64] {
+            let first = pi_enclosure(order).expect("pi");
+            let second = pi_enclosure(order).expect("pi from the table");
+            assert_eq!(first, second);
+            assert_eq!(first, machin(order).expect("pi from the formula"));
+        }
     }
 
     #[test]
