@@ -133,14 +133,18 @@ use crate::nat_prelude::structures::{
 use crate::prelude::LogicPrelude;
 
 pub mod affine;
+pub mod qaffine;
 pub mod qplane;
+pub mod raffine;
 pub mod rplane;
 
 #[cfg(test)]
 mod geo_tests;
 
 pub use affine::AffineNames;
+pub use qaffine::QAffineNames;
 pub use qplane::QPlaneNames;
+pub use raffine::RAffineNames;
 pub use rplane::RPlaneNames;
 
 // ---------------------------------------------------------------------------
@@ -717,6 +721,15 @@ pub struct GeoPrelude {
     /// Playfair's parallel axiom, stated over a POSITIVE parallelism. See
     /// [`affine`].
     pub affine: AffineNames,
+
+    /// The ℚ plane's affine layer — `Geo.qaffine`, the first model of
+    /// [`Geo.Affine`](Self::affine). See [`qaffine`].
+    pub qaffine: QAffineNames,
+
+    /// The ℝ plane's affine layer — `Geo.raffine`, the second model of
+    /// [`Geo.Affine`](Self::affine), and the one ADR-1652 § 5 sized. See
+    /// [`raffine`].
+    pub raffine: RAffineNames,
 }
 
 /// Pre-compute every name this module declares.
@@ -752,6 +765,8 @@ pub(crate) fn intern(kernel: &mut Kernel, cpoint: CPointPrelude) -> GeoPrelude {
         qplane: qplane::intern(kernel, geo),
         rplane: rplane::intern(kernel, geo),
         affine: affine::intern(kernel, geo),
+        qaffine: qaffine::intern(kernel, geo),
+        raffine: raffine::intern(kernel, geo),
     }
 }
 
@@ -809,6 +824,8 @@ pub fn build_geo_prelude(kernel: &mut Kernel) -> Result<GeoPrelude, KernelError>
     qplane::declare_all(kernel, p)?;
     rplane::declare_all(kernel, p)?;
     affine::declare_affine_record(kernel, &logic, p)?;
+    qaffine::declare_all(kernel, p)?;
+    raffine::declare_all(kernel, p)?;
 
     Ok(p)
 }
