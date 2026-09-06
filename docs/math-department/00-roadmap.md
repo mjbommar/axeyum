@@ -254,17 +254,17 @@ Reviewer verdicts as of the last reconciliation:
 
 | reviewer | verdict | changes when |
 |---|---|---|
-| 01 number theory | impressed, with a ceiling | W1-7, W2-17, W2-18 land |
-| 02 constructive analysis | excited | W1-2 lands |
-| 03 classical analysis | unmoved | W0-2, W0-3, W3-1 land |
-| 04 algebra | **upgraded 2026-09-04** — the blocker is decided and the first isomorphism theorem is proved | W2-9, W3-2 land |
-| 05 geometry | charmed, then bored | W1-8, W2-4 land |
-| 06 topology | nothing to review | W0-3 is decided and W2-1 lands |
-| 07 combinatorics | week three, good foundations | W1-1, W1-6 land |
-| 08 probability | better than first reported | W2-7 lands |
-| 09 category theory | absent, opposed; morphism-equality question answered by W0-1 | W1-3 lands (cheap), W3-3 (real) |
-| 10 logic & foundations | most interested; W0-4 landed | W1-9 lands |
-| 11 applied & computational | most novel object here | W1-1, W1-5 land |
+| 01 number theory | impressed; the shelf grew, the ceiling did not move (re-measured 2026-09-06; was: impressed, with a ceiling) | W1-7, W2-17, W2-18 land |
+| 02 constructive analysis | excited, for a different reason: the subject moved off the line (re-measured 2026-09-06; was: excited) | W1-2 lands |
+| 03 classical analysis | moved; one complete function space short of interested (re-measured 2026-09-06; was: unmoved) | W0-2, W0-3, W3-1 land |
+| 04 algebra | the spine grew a shelf; still not one ideal (re-measured 2026-09-06; was: **upgraded 2026-09-04** — the blocker is decided and the first isomorphism theorem is proved) | W2-9, W3-2 land |
+| 05 geometry | upgraded; one seat of three satisfied (re-measured 2026-09-06; was: charmed, then bored) | W1-8, W2-4 land |
+| 06 topology | the shelf exists; no Hausdorff, no connectedness (re-measured 2026-09-06; was: nothing to review) | W0-3 is decided and W2-1 lands |
+| 07 combinatorics | a real first course, the two shelves joined (re-measured 2026-09-06; was: week three, good foundations) | W1-1, W1-6 land |
+| 08 probability | builds its own distributions; needs a product space, not a measure (re-measured 2026-09-06; was: better than first reported) | W2-7 lands |
+| 09 category theory | the subject exists; 107 declarations, footprint 0 (re-measured 2026-09-06; was: absent, opposed; morphism-equality question answered by W0-1) | W1-3 lands (cheap), W3-3 (real) |
+| 10 logic & foundations | most interested, and the shelf that moved the most (re-measured 2026-09-06; was: most interested; W0-4 landed) | W1-9 lands |
+| 11 applied & computational | most novel object; the ledger under-records the CAS (re-measured 2026-09-06; was: most novel object here) | W1-1, W1-5 land |
 | 12 the chair | would sign the report; W0-1 written, W1-4 landed | W0-2 is written |
 
 ## History
