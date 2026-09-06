@@ -1,5 +1,7 @@
 # Lane `chebyshev-pi-bounds` — the prime-counting shelf (roadmap W3-11, second slice)
 
+<!-- plan-section: lane-status -->
+
 **Status:** shelf opened, keystone landed; Chebyshev's bounds NOT landed and
 re-sized from measurement. ADR-1655.
 
