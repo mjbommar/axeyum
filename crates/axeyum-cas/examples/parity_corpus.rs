@@ -37,11 +37,9 @@ use std::time::Instant;
 
 use axeyum_cas::enclosure::{BigInterval, EULER_GAMMA_NAME, enclose, enclose_constant};
 use axeyum_cas::enclosure_special::{MultiPoly, PolySystem, enclose_system};
+use axeyum_cas::fps_amplitude::{Amplitude, DominantPole, dominant_pole_amplitude};
 use axeyum_cas::fps_analytic::{
     RadiusOfConvergence, coefficient_asymptotics, radius_of_convergence,
-};
-use axeyum_cas::fps_amplitude::{
-    Amplitude, DominantPole, dominant_pole_amplitude,
 };
 use axeyum_cas::geometry::Point;
 use axeyum_cas::geometry_beyond::{self, Conic, Isometry};
@@ -2371,8 +2369,7 @@ fn fam2_amplitude_fibonacci_one_over_sqrt_five() -> Outcome {
                     // (a + b z)^2 with z^2 = 1 - z is (a^2 + b^2) + (2ab - b^2) z.
                     let (a, b) = (&coefficients[0], &coefficients[1]);
                     let constant = a * a + b * b;
-                    let linear =
-                        BigRational::from_integer(BigInt::from(2)) * a * b - b * b;
+                    let linear = BigRational::from_integer(BigInt::from(2)) * a * b - b * b;
                     (
                         *coefficients == expected_coords,
                         constant == fifth && linear == BigRational::from_integer(BigInt::from(0)),
@@ -2400,9 +2397,7 @@ fn fam2_amplitude_fibonacci_one_over_sqrt_five() -> Outcome {
                 ),
             }
         }
-        Err(reason) => declined(&format!(
-            "dominant_pole_amplitude(x/(1-x-x^2)): {reason:?}"
-        )),
+        Err(reason) => declined(&format!("dominant_pole_amplitude(x/(1-x-x^2)): {reason:?}")),
     }
 }
 
