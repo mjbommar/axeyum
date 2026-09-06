@@ -1124,6 +1124,18 @@ fn certify_linear_core(
         .map(|conclusion| conclusion.poly.clone())
         .collect();
 
+    // The combination route's block search and its probe are functions of the
+    // hypotheses, the conclusions and the theorem's *whole* condition list —
+    // never of which subset is being tried — so both are done once here rather
+    // than once per subset. That is not a micro-optimisation: `pascal-hexagon`
+    // has three conditions and therefore up to eight subsets, and paying for a
+    // block search in each is what made the debug suite spend 190 s declining it.
+    let alternatives = if combine {
+        combination_alternatives(problem, &hypotheses, &targets)
+    } else {
+        Vec::new()
+    };
+
     let mut last_failure = ProofOutcome::Declined(GeometryDecline::UndividableMultiplier);
 
     for subset in &subsets {
@@ -1145,7 +1157,14 @@ fn certify_linear_core(
         // subsystems and accepts none, that is a threefold saving and it changes
         // no result, because the search it hoists is a pure function of what was
         // already hoisted.
-        let decomposition = plan_decomposition(&hypotheses, &targets, &conditions, scope, combine);
+        let decomposition = plan_decomposition(
+            &hypotheses,
+            &targets,
+            &conditions,
+            scope,
+            combine,
+            &alternatives,
+        );
         for conclusion in &problem.conclusions {
             match linear_cofactors(
                 &hypotheses,
@@ -1288,6 +1307,54 @@ enum Decomposition {
     },
 }
 
+/// The decompositions the combination route will work from, searched once for a
+/// whole theorem.
+///
+/// Returns an empty list — which makes the route decline for every subset — when
+/// the search finds nothing, or when eliminating the first decomposition leaves a
+/// residue. That second case is the route's contract talking: it certifies
+/// conclusions linear algebra settles outright, and one elimination decides
+/// whether this theorem is one of them.
+fn combination_alternatives(
+    problem: &GeometryProblem,
+    hypotheses: &[MvPoly],
+    targets: &[MvPoly],
+) -> Vec<Vec<LinearBlock>> {
+    let conditions: Vec<MvPoly> = problem
+        .nondegeneracy
+        .iter()
+        .map(|condition| condition.poly.clone())
+        .collect();
+    let search = BlockSearch {
+        choices: JOINT_CHOICES,
+        examined: COMBINATION_EXAMINED,
+        accept: &|_| true,
+    };
+    let unknowns = combination_scope(targets, &conditions);
+    if unknowns.len() > COMBINATION_SCOPE_UNKNOWNS {
+        return Vec::new();
+    }
+    let per_component =
+        detect_block_alternatives_over(hypotheses, &unknowns, &search, COMBINATION_ALTERNATIVES);
+    let decompositions = combination_decompositions(&per_component, COMBINATION_ALTERNATIVES);
+    // Before anything is eliminated or divided: are these determinants the size
+    // this route works on? See [`COMBINATION_MULTIPLIER_TERMS`].
+    if decompositions
+        .iter()
+        .flatten()
+        .any(|block| block.determinant.term_count() > COMBINATION_MULTIPLIER_TERMS)
+    {
+        return Vec::new();
+    }
+    let settled = targets.first().is_some_and(|target| {
+        decompositions.first().is_some_and(|blocks| {
+            eliminate_blocks(hypotheses, target, blocks.clone())
+                .is_some_and(|elimination| elimination.residue.is_zero())
+        })
+    });
+    if settled { decompositions } else { Vec::new() }
+}
+
 /// Plan one condition subset's decomposition.
 fn plan_decomposition(
     hypotheses: &[MvPoly],
@@ -1295,27 +1362,17 @@ fn plan_decomposition(
     conditions: &[MvPoly],
     scope: BlockScope,
     combine: bool,
+    alternatives: &[Vec<LinearBlock>],
 ) -> Decomposition {
     match scope {
         BlockScope::PerConclusion => Decomposition::PerConclusion,
+        // An empty `alternatives` under `combine` is a decline, not a reason to
+        // fall through to the licensed search: that search is the expensive one
+        // this route exists to get in front of.
         BlockScope::Joint if combine => {
-            let search = BlockSearch {
-                choices: JOINT_CHOICES,
-                examined: COMBINATION_EXAMINED,
-                accept: &|_| true,
-            };
-            let unknowns = combination_scope(targets, conditions);
-            let per_component = detect_block_alternatives_over(
-                hypotheses,
-                &unknowns,
-                &search,
-                COMBINATION_ALTERNATIVES,
-            );
-            let decompositions =
-                combination_decompositions(&per_component, COMBINATION_ALTERNATIVES);
-            let shared = shared_combination(targets, &decompositions, conditions).map(Box::new);
+            let shared = shared_combination(targets, alternatives, conditions).map(Box::new);
             Decomposition::Combine {
-                decompositions,
+                decompositions: alternatives.to_vec(),
                 shared,
             }
         }
@@ -1943,12 +2000,43 @@ const COMBINATION_ANSATZ_COLUMNS: usize = 256;
 /// How many alternative blocks per component the combination route enumerates.
 const COMBINATION_ALTERNATIVES: usize = 64;
 
+/// The widest candidate scope the combination route will search over.
+///
+/// The route is for a *point* pinned by a small square subsystem, and the search
+/// it runs prices its own enumeration in Laplace determinants of polynomial
+/// matrices — `O(n!)` in the block size, over whatever polynomials the
+/// hypotheses carry. `tetrahedron-medians-concurrent`'s scope is the three
+/// coordinates of `P`. `pascal-hexagon`'s conclusions and conditions leave a much
+/// wider one, and searching it means `6×6` determinants of the entries of a
+/// `6×6` conic determinant; that cost the debug suite 150 s to reach a decline.
+/// Six unknowns is two points' worth, and above it this route says so at once.
+const COMBINATION_SCOPE_UNKNOWNS: usize = 6;
+
+/// The largest multiplier, in terms, this route will do exact GCD and division
+/// arithmetic on.
+///
+/// A statement about what the route is *for*, enforced rather than hoped for.
+/// Its primitives are exact multivariate GCD and exact division, whose cost grows
+/// superlinearly in the operands, and the shape it exists for — a point pinned by
+/// a small square subsystem — produces small determinants:
+/// `tetrahedron-medians-concurrent`'s multipliers are 32 to 40 terms.
+/// `pascal-hexagon` and `desargues-perspective-triangles` come off a `6×6` conic
+/// determinant instead, and grouping *those* cost the debug suite 145 s before
+/// declining anyway. Above this line the route says the question is the wrong
+/// size for it, immediately, instead of finding that out expensively.
+const COMBINATION_MULTIPLIER_TERMS: usize = 256;
+
 /// The subsystem ceiling the combination route's own block search runs under.
 ///
-/// Far below [`JOINT_EXAMINED`] because this search accepts every determinant and
-/// therefore stops as soon as it has its alternatives; the ceiling is only there
-/// so a component with no usable subsystem at all cannot enumerate forever.
-const COMBINATION_EXAMINED: usize = 20_000;
+/// Two orders of magnitude below [`JOINT_EXAMINED`], and that is the point: this
+/// search is a bounded **probe**, not an enumeration. `tetrahedron-medians-concurrent`
+/// needs 83 subsystems, because [`combination_scope`] has already cut its
+/// candidates to the three coordinates of `P`. A theorem whose scope stays wide
+/// burns the ceiling instead and the route declines — measured on
+/// `pascal-hexagon` and `desargues-perspective-triangles`, where the descent
+/// through the larger block sizes finds nothing and a 20,000 ceiling cost the
+/// debug suite 190 s apiece.
+const COMBINATION_EXAMINED: usize = 200;
 
 /// One item the combination is working with: a multiplier, and the combination of
 /// the caller's original multipliers that produces it.
@@ -2038,6 +2126,12 @@ pub fn combine_block_multipliers(
     conditions: &[MvPoly],
 ) -> Option<CombinationTrace> {
     if conditions.is_empty() || multipliers.is_empty() {
+        return None;
+    }
+    if multipliers
+        .iter()
+        .any(|multiplier| multiplier.term_count() > COMBINATION_MULTIPLIER_TERMS)
+    {
         return None;
     }
     let one = MvPoly::constant(Rational::integer(1));
@@ -2133,7 +2227,7 @@ fn grow_factor_basis(basis: &mut Vec<MvPoly>, items: &[Virtual]) {
                     continue;
                 }
                 for side in [left, right] {
-                    if let Some(rest) = items[side].multiplier.exact_div(&shared) {
+                    if let Some(rest) = exact_quotient(&items[side].multiplier, &shared) {
                         remember_factor(basis, rest);
                     }
                 }
@@ -2147,10 +2241,7 @@ fn grow_factor_basis(basis: &mut Vec<MvPoly>, items: &[Virtual]) {
         let before = basis.len();
         for item in items {
             for divisor in &divisors {
-                if divisor.total_degree() > item.multiplier.total_degree() {
-                    continue;
-                }
-                if let Some(rest) = item.multiplier.exact_div(divisor) {
+                if let Some(rest) = exact_quotient(&item.multiplier, divisor) {
                     remember_factor(basis, rest);
                 }
             }
@@ -2159,6 +2250,31 @@ fn grow_factor_basis(basis: &mut Vec<MvPoly>, items: &[Virtual]) {
             break;
         }
     }
+}
+
+/// `dividend / divisor`, with the cheap necessary condition checked first.
+///
+/// [`MvPoly::exact_div`] runs the whole division before it can answer, and the
+/// grouping asks far more often than the answer is yes — every basis factor
+/// against every multiplier, every round. Divisibility forces
+/// `deg_v(divisor) ≤ deg_v(dividend)` for every variable, and on the medians that
+/// test rejects most candidates outright: a multiplier `u_y·w_x` carries no `x`
+/// coordinate at all, so no `u_x` can divide it, and comparing two exponents is
+/// what finding that out costs instead of a polynomial division.
+///
+/// The condition is *necessary*, never sufficient, so nothing here decides
+/// divisibility on its own — a candidate that passes still goes to
+/// [`MvPoly::exact_div`].
+fn exact_quotient(dividend: &MvPoly, divisor: &MvPoly) -> Option<MvPoly> {
+    if divisor.total_degree() > dividend.total_degree() {
+        return None;
+    }
+    for variable in divisor.variables() {
+        if divisor.degree_in(&variable) > dividend.degree_in(&variable) {
+            return None;
+        }
+    }
+    dividend.exact_div(divisor)
 }
 
 /// Add a factor to the basis unless it is a constant or an associate of one
@@ -2193,7 +2309,7 @@ fn remember_factor(basis: &mut Vec<MvPoly>, factor: MvPoly) {
 /// division by a factor subtracts its degree.
 fn group_by(items: &[Virtual], shared: &MvPoly) -> Option<Group> {
     let members: Vec<usize> = (0..items.len())
-        .filter(|&index| items[index].multiplier.exact_div(shared).is_some())
+        .filter(|&index| exact_quotient(&items[index].multiplier, shared).is_some())
         .collect();
     if members.len() < 2 {
         return None;
@@ -2220,7 +2336,7 @@ fn group_by(items: &[Virtual], shared: &MvPoly) -> Option<Group> {
 fn group_artifacts(items: &[Virtual], group: &Group) -> Option<Vec<MvPoly>> {
     let mut artifacts: Vec<MvPoly> = Vec::with_capacity(group.members.len());
     for &index in &group.members {
-        artifacts.push(items[index].multiplier.exact_div(&group.shared)?);
+        artifacts.push(exact_quotient(&items[index].multiplier, &group.shared)?);
     }
     Some(artifacts)
 }
@@ -2276,7 +2392,7 @@ fn combine_one_round(
             if groups.iter().any(|group| group.shared == shared) {
                 continue;
             }
-            if basis.iter().any(|seen| *seen == shared) {
+            if basis.contains(&shared) {
                 continue;
             }
             if let Some(group) = group_by(items, &shared) {

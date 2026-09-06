@@ -199,18 +199,28 @@
 //!   | factor basis instead of per-round GCDs | 10.70 s | — |
 //!   | basis grown only from new multipliers, artifacts divided lazily | 5.12 s | 7.42 s |
 //!
+//!   and the committed test — which also runs its negative control and the
+//!   independent checker — reports **8.76 s** under
+//!   `cargo test -p axeyum-cas --lib geometry -- --report-time`, against 75
+//!   passing tests whose next-slowest is a pre-existing 10.7 s enumeration and
+//!   whose median is under 10 ms.
+//!
 //!   Every figure is one wall-clock reading on a shared box; the *ratios* are
 //!   the content, and what they say is that the grouping was the route and the
 //!   algebra was never the problem. The 98 multivariate GCDs over twelve
 //!   variables the first version ran are one GCD now.
 //!
-//!   It is still over the 5 s a debug unit test would like, and the remaining
-//!   cost is **not** concentrated anywhere: memoising the round solve — six of
-//!   the seven rounds ask the identical question — was tried and measured at
-//!   7.46 s against 7.42 s without it, which is load noise, so it was removed
-//!   rather than kept as an unfalsifiable improvement. What is left is spread
-//!   across the exact divisions the grouping runs, the seed GCD, and the last
-//!   round's reduction of `Δ` against six linear forms.
+//!   It is **over** the 5 s a debug unit test would like, and two things are
+//!   worth saying about what is left rather than leaving it as a number.
+//!   Memoising the round solve — six of the seven rounds ask what looks like the
+//!   identical question — was tried and measured at 7.46 s against 7.42 s, which
+//!   is load noise; the memo never hit, because a minor's sign makes the sixth
+//!   round's artifacts `−w_j` where the first round's are `+w_j`, so it was
+//!   removed rather than kept as an unfalsifiable improvement. Skipping a
+//!   polynomial division whose per-variable degrees already rule it out moved
+//!   the test from 9.65 s to 8.76 s. What remains was not localised: the honest
+//!   statement is that the route is two to three times the budget a unit test
+//!   wants and a hundred times cheaper than the 769 s it replaced.
 //!
 //!   A shrunk `Limits` (`reduction_steps` 4,000 vs. the default 50,000) was
 //!   tried on the *old* route and declined outright rather than certifying
