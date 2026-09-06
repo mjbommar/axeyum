@@ -24,7 +24,7 @@ described below is kept ready for the next one, not deleted.
 | file | what it is |
 |---|---|
 | [`ground_truth.py`](ground_truth.py) | independent verification of every checkable expected value in `corpus.json`: via SymPy 1.14.0 where installed, else pure-Python hand/cited proofs (129 claims with SymPy, 75 without — see "SymPy availability" below) |
-| [`corpus.json`](corpus.json) | the corpus: 119 entries, one per query, each with its area, module tag (if any), tier, expected value, and the method that established it |
+| [`corpus.json`](corpus.json) | the corpus: 125 entries, one per query, each with its area, module tag (if any), tier, expected value, and the method that established it |
 | [`../../../crates/axeyum-cas/examples/parity_corpus.rs`](../../../crates/axeyum-cas/examples/parity_corpus.rs) | the harness: an `axeyum-cas` example (a workspace-member crate, unlike the SMT corpus's standalone `harness/`) that re-derives each `corpus.json` entry's query directly against `axeyum-cas`, compares to the expected value, and reports verdict / trust / wall time per entry |
 
 ## Design, and how it differs from the SMT capability corpus
@@ -45,7 +45,8 @@ SMT solver's verdict space (`sat`/`unsat`/`unknown`) and a CAS's:
    same query against `axeyum-cas` and looks up the matching id by
    construction (the two are kept in sync by hand: a script cross-check run
    during development confirmed the two id sets are identical — 119 in
-   each, re-verified after item 10 wave two's 48-entry growth).
+   each, re-verified after item 10 wave two's 48-entry growth; 125 in each
+   as of the item 1 wave three row below).
 2. **Trust classification is derived per entry, not from a single verdict
    type.** Some `axeyum-cas` functions return a certificate object directly
    (`CertifiedIntegral`, `Enclosure`, `HomologyCertificate`,
@@ -193,7 +194,7 @@ declares no public items), `qe_dnf` 4, `qe_bivariate` 4, plus 4 more tagged
 `probability` for the symbolic-lambda Poisson claims (item 9 wave two: total
 mass, mean, and variance all now certify with a SYMBOLIC rate).
 
-Tiers: **109 `core`**, **10 `decline_expected`** (≥ 10 `decline_expected`
+Tiers: **113 `core`**, **12 `decline_expected`** (≥ 10 `decline_expected`
 required — each entry cites a classical fact, a source-read capability
 boundary in `axeyum-cas`, or this crate's own progress-log finding; see
 each entry's `justification` in `corpus.json`). `known_defect` is empty:
@@ -203,7 +204,11 @@ a plain `core` agree (the fix landed under lane `cas-witness` and the
 harness was updated, but `corpus.json`'s copy never was) — corrected here
 so the two ledgers agree again.
 
-Total entries: **119** (was 71 before wave two).
+Total entries: **125** (was 71 before wave two, 119 after it, 123 after the
+item 9 wave three probability entries, 125 after the item 1 wave three pair
+below). The counts in the two paragraphs above this line were measured at
+119 and had already drifted by 4 before this lane re-measured them; they are
+corrected here rather than left as the snapshot they claimed to be.
 
 ## Running it
 
@@ -229,6 +234,25 @@ verdict: agree=119 disagree=0 decline=0 known_defect=0
 trust:   certified=99 uncertified=14 unknown=6
 total wall time: 330.833ms
 ```
+
+## Measured results (2026-09-06, this host, item 1 wave three)
+
+After the two `e4-gaussian-exponent-spelling` entries:
+
+```
+entries: 125
+verdict: agree=123 disagree=0 decline=2 known_defect=0
+trust:   certified=103 uncertified=16 unknown=6
+total wall time: 273.885ms
+```
+
+Exit status is **0**. The two `decline`s are `prob6-normal-negative-variance`
+and `prob7-geometric-symbolic-p`, and they are **not** this lane's: the same
+harness built from `8f63d07a7` (this lane's base, before any of its commits)
+reports `entries: 123, agree=121, disagree=0, decline=2` with the same two ids,
+so the atom-key repair moved nothing except adding its own two agrees
+(`certified` 101 → 103). **No entry flipped from expected-decline to agree**,
+so nothing needed reclassifying to `core`.
 
 `known_defect=0` because `e1-radical-cross-base` (see above) was fixed by
 lane `cas-witness` and reclassified to `core` before this pass; the tier
@@ -295,3 +319,4 @@ updated to match.
 | 2026-09-05 | Merged local `main` again (picked up `docs/math-department/13-computer-algebra.md` item 7 "wave two" and item 3 "wave two", `b4d6c9465`): `qe`'s `Atom` widened from `i128`-backed `Rational` to `BigRational` coefficients, a source-level break in `qe1`/`qe2`/`qe3` fixed by switching to `BigRational::from_integer`. Rebuilding after the fix found `qe3-overflow-decline` had flipped from a documented decline to a correct, certified `true` (the exact overflow it was built to test was fixed by the same merge) — renamed `qe3-large-coefficient`, reclassified `core`. | `./target/release/examples/parity_corpus`: 71 entries, agree=70 disagree=1 decline=0, certified=54 uncertified=11 unknown=6, 321.540ms |
 | 2026-09-05 | Added the `known_defect` tier (coordinator request, ahead of merging lane `cas-witness`'s fix for `e1-radical-cross-base`): `corpus.json` gained `tracked_by`/`observed_wrong_answer` fields, and the harness excludes `known_defect` entries from the `agree`/`disagree`/`decline` tally but asserts the wrong answer PERSISTS every run, exiting nonzero with a reclassify-to-`core` message the instant it does not (verified by a temporary injected fix simulating the entry agreeing: the harness printed `FATAL: known defect e1-radical-cross-base now agrees: reclassify it to core` and exited 1, then the injection was reverted). `e1-radical-cross-base` moved from `decline_expected` to `known_defect`, `tracked_by` "file 13, item 1 wave two, lane cas-witness". `scripts/check.sh`'s registered step now exits 0 rather than reddening the shared gate. | `./target/release/examples/parity_corpus`: 71 entries, agree=70 disagree=0 decline=0 known_defect=1, certified=54 uncertified=11 unknown=6, 194.716ms; corpus.json tiers now 59 core / 11 decline_expected / 1 known_defect; `cargo clippy -p axeyum-cas --example parity_corpus -- -D warnings`: clean; `rustfmt --edition 2024 --check`: clean; `python3 -m py_compile ground_truth.py`: OK |
 | 2026-09-05 | **Item 10 wave two, part (b)** (lane `cas-trust-2`): 48 new entries covering every second/third-pass module the brief named that this corpus predates -- `enclosure_special` (5), `fps_analytic` (4), `numberfield_ideals` (4), `permgroup_sylow` (4), `homology_coefficients` (4), `homology_cohomology` (4), `homology_induced` (3), `homology_persistent` (4), `qe_big` (4, indirect through `qe::eliminate`/`eliminate_forall` since `qe_big` itself has no public items), `qe_dnf` (4), `qe_bivariate` (4), and 4 more tagged `probability` for the symbolic-lambda Poisson claims (item 9 wave two). Every entry's expected value is independent of this repository (SymPy 1.14.0 in a scratch venv, or a cited/hand proof), and every identity carries a near-miss control. **Found and fixed a pre-existing drift**: `corpus.json`'s `e1-radical-cross-base` was still tiered `known_defect` with `tracked_by`/`observed_wrong_answer` fields, even though the Rust harness had already been fixed and reclassified it to a plain `core` agree when lane `cas-witness` landed the underlying fix -- the two ledgers had silently diverged. Corrected `corpus.json` to match. No `disagree` among the 119 entries. | `./target/release/examples/parity_corpus`: 119 entries, agree=119 disagree=0 decline=0 known_defect=0, certified=99 uncertified=14 unknown=6, 330.833ms; corpus.json tiers now 109 core / 10 decline_expected / 0 known_defect; id sets match exactly (119/119); `python3 ground_truth.py`: 129 claims (SymPy)/75 claims (no SymPy), 0 failed both; `cargo clippy -p axeyum-cas --example parity_corpus -- -D warnings`: clean; `rustfmt --edition 2024 --check`: clean; `python3 -m py_compile ground_truth.py`: OK |
+| 2026-09-06 | **Item 1, wave three** (lane `cas-witness-3`): two entries for the wrong refutation of `exp(-((1/2)/s)*u^2) = exp(-u^2/(2*s))`, `e4-gaussian-exponent-spelling` (tier `core`, equal) and its near-miss control `-ctrl` (`2*s` against `2*s^2`, unequal). `equal()` returned `Certified{equal: false}` for one function under two spellings because `atom_name` keyed the transcendental atom on the rendering of an UNREDUCED `RatFunc`; fixed by `RatFunc::canonical_key_form`. **Nothing was reclassified**: the same harness built from this lane's base `8f63d07a7` already reported `decline=2` on the same two ids (`prob6-normal-negative-variance`, `prob7-geometric-symbolic-p`), so no entry flipped from expected-decline to agree. The README's own entry/tier counts were found stale at 119/109/10 against a `corpus.json` holding 123, and are corrected. | `./target/release/examples/parity_corpus`: 125 entries, agree=123 disagree=0 decline=2 known_defect=0, certified=103 uncertified=16 unknown=6, 273.885ms, exit 0; baseline at `8f63d07a7`: 123 entries, agree=121 decline=2; `python3 ground_truth.py`: 0 failed; `python3 -m py_compile ground_truth.py`: OK; corpus.json parses, tiers 113 core / 12 decline_expected / 0 known_defect |

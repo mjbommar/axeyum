@@ -239,6 +239,17 @@ def check_factor() -> None:
 # ---------------------------------------------------------------- simplify/equal
 def check_equal() -> None:
     section("simplify/equal")
+    # e4 by hand FIRST, so the pair is checked on a host without SymPy too.
+    # `exp` is injective on the reals, so exp(A) = exp(B) iff A = B, and the two
+    # exponents are compared as exact `Fraction`s at sample points.
+    for s_val, u_val in ((Fraction(2), Fraction(1)), (Fraction(-3), Fraction(5)), (Fraction(1, 7), Fraction(-2))):
+        left = -(Fraction(1, 2) / s_val) * u_val**2
+        right = -(u_val**2) / (2 * s_val)
+        ok(left == right, f"e4 (hand) exponents agree at s={s_val}, u={u_val}: {left}")
+    ok(
+        -(Fraction(1) ** 2) / (2 * Fraction(2)) != -(Fraction(1) ** 2) / (2 * Fraction(2) ** 2),
+        "e4-ctrl (hand) at s=2, u=1 the exponents are -1/4 and -1/8, so the two exps differ",
+    )
     if need_sympy("e1/e2/e3"):
         return
     x = sp.symbols("x")
@@ -246,6 +257,24 @@ def check_equal() -> None:
     ok(sp.simplify(sp.sqrt(2) * sp.sqrt(3) - sp.sqrt(6)) == 0, "e1-ctrl sqrt(2)*sqrt(3) = sqrt(6) (true)")
     ok(sp.expand((x + 1) ** 2 - (x**2 + 2 * x + 1)) == 0, "e2 (x+1)^2 = x^2+2x+1")
     ok(sp.simplify(sp.sin(x) ** 2 + sp.cos(x) ** 2 - 1) == 0, "e3 sin^2(x)+cos^2(x) = 1 (Pythagorean identity, true)")
+    s, u = sp.symbols("s u")
+    ok(
+        sp.simplify(sp.exp(-(sp.Rational(1, 2) / s) * u**2) - sp.exp(-(u**2) / (2 * s))) == 0,
+        "e4 exp(-((1/2)/s)*u^2) = exp(-u^2/(2*s)) (one function, two spellings)",
+    )
+    # The control is a genuine inequality, so a symbolic `simplify` to 0 must
+    # FAIL *and* a concrete point must separate the two. Both are asserted: a
+    # symbolic non-simplification on its own is also what a too-weak simplifier
+    # prints for a true identity.
+    ok(
+        sp.simplify(sp.exp(-(u**2) / (2 * s)) - sp.exp(-(u**2) / (2 * s**2))) != 0,
+        "e4-ctrl exp(-u^2/(2*s)) - exp(-u^2/(2*s^2)) does not simplify to 0",
+    )
+    ok(
+        sp.exp(-(u**2) / (2 * s)).subs({s: 2, u: 1})
+        != sp.exp(-(u**2) / (2 * s**2)).subs({s: 2, u: 1}),
+        "e4-ctrl at s=2, u=1: exp(-1/4) != exp(-1/8)",
+    )
 
 
 # ---------------------------------------------------------------- linear algebra

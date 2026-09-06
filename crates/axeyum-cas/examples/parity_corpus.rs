@@ -721,6 +721,28 @@ fn e2_poly_identity_ctrl() -> Outcome {
     let rhs = x().pow(2) + i(2) * x() + i(2);
     eq_check(&lhs, &rhs, false, &format!("lhs={lhs}"))
 }
+/// One function under two spellings. `equal` returned a confidently wrong
+/// `Certified { equal: false }` here: `atom_name` keyed the transcendental atom
+/// on the rendering of an **unreduced** `RatFunc`, so `(-1/2*u^2)/s` and
+/// `(-u^2)/(2*s)` became two independent atom variables. Reported by the
+/// probability lane proving the Gaussian antiderivative with a symbolic
+/// variance; fixed by `RatFunc::canonical_key_form` (file 13, item 1 wave
+/// three, lane `cas-witness-3`).
+fn e4_gaussian_exponent_spelling() -> Outcome {
+    let s = CasExpr::var("s");
+    let u = CasExpr::var("u");
+    let lhs = (-((r(1, 2) / s.clone()) * u.clone().pow(2))).exp();
+    let rhs = (-(u.pow(2) / (i(2) * s))).exp();
+    eq_check(&lhs, &rhs, true, &format!("lhs={lhs}"))
+}
+/// The control: two different variances must stay apart.
+fn e4_gaussian_exponent_spelling_ctrl() -> Outcome {
+    let s = CasExpr::var("s");
+    let u = CasExpr::var("u");
+    let lhs = (-(u.clone().pow(2) / (i(2) * s.clone()))).exp();
+    let rhs = (-(u.pow(2) / (i(2) * s.pow(2)))).exp();
+    eq_check(&lhs, &rhs, false, &format!("lhs={lhs}"))
+}
 /// The Pythagorean identity is transcendentally true but is not a polynomial
 /// identity over the atoms `sin(x)`, `cos(x)` unless the zero-test's atom
 /// algebra specifically knows `sin^2 + cos^2 = 1`. Recorded as
@@ -3509,6 +3531,20 @@ fn main() {
             None,
             DeclineExpected,
             e3_trig_pythagorean
+        ),
+        e!(
+            "e4-gaussian-exponent-spelling",
+            Some("simplify/equal"),
+            None,
+            Core,
+            e4_gaussian_exponent_spelling
+        ),
+        e!(
+            "e4-gaussian-exponent-spelling-ctrl",
+            Some("simplify/equal"),
+            None,
+            Core,
+            e4_gaussian_exponent_spelling_ctrl
         ),
         // linear algebra
         e!("la1-det", Some("linear algebra"), None, Core, la1_det),
