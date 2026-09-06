@@ -211,14 +211,7 @@ pub(crate) mod fixtures {
     /// A 6-vertex circle wrapping the standard 3-vertex `circle()` twice
     /// (edges `{i, i+1 mod 6}`).
     pub(crate) fn hexagon_circle() -> SimplicialComplex {
-        complex_of(&[
-            &[0, 1],
-            &[1, 2],
-            &[2, 3],
-            &[3, 4],
-            &[4, 5],
-            &[5, 0],
-        ])
+        complex_of(&[&[0, 1], &[1, 2], &[2, 3], &[3, 4], &[4, 5], &[5, 0]])
     }
 
     /// The filled triangle `[0, 1, 2]`: contractible, `b = (1, 0)`.

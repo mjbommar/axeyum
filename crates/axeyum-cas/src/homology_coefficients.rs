@@ -49,7 +49,9 @@ use std::collections::BTreeMap;
 use crate::normalforms::int_entry;
 use crate::{CasExpr, Matrix};
 
-use super::{HomologyCertificate, SimplicialComplex, boundary_matrix, homology, rebuild_boundaries};
+use super::{
+    HomologyCertificate, SimplicialComplex, boundary_matrix, homology, rebuild_boundaries,
+};
 
 /// The rank of an integer-entry matrix over `F_2`, by Gaussian elimination on
 /// a plain bit grid (`0`/`1` per entry, mod 2). Returns `None` if any entry is
@@ -62,7 +64,7 @@ fn rank_mod2(matrix: &Matrix) -> Option<usize> {
         let mut bits = Vec::with_capacity(cols);
         for col in 0..cols {
             let value = int_entry(matrix, row, col)?;
-            bits.push((value.rem_euclid(2)) as u8);
+            bits.push(u8::from(value.rem_euclid(2) != 0));
         }
         grid.push(bits);
     }
@@ -76,10 +78,11 @@ fn rank_mod2(matrix: &Matrix) -> Option<usize> {
             continue;
         };
         grid.swap(pivot_row, selected);
-        for row in 0..rows {
-            if row != pivot_row && grid[row][col] == 1 {
-                for col2 in 0..cols {
-                    grid[row][col2] ^= grid[pivot_row][col2];
+        let pivot_snapshot = grid[pivot_row].clone();
+        for (row, bits) in grid.iter_mut().enumerate() {
+            if row != pivot_row && bits[col] == 1 {
+                for (entry, pivot_entry) in bits.iter_mut().zip(pivot_snapshot.iter()) {
+                    *entry ^= pivot_entry;
                 }
             }
         }
@@ -206,7 +209,9 @@ fn ranks_match(
         let recomputed_f2 =
             rank_mod2(boundary).ok_or_else(|| format!("rank_mod2 declined at dimension {k}"))?;
         let Some(&claimed_f2) = certificate.rank_f2.get(k) else {
-            return Err(format!("certificate has no recorded rank_f2 at dimension {k}"));
+            return Err(format!(
+                "certificate has no recorded rank_f2 at dimension {k}"
+            ));
         };
         if recomputed_f2 != claimed_f2 {
             return Err(format!(
@@ -217,7 +222,9 @@ fn ranks_match(
         let recomputed_q = rank_over_q(boundary)
             .ok_or_else(|| format!("rank_over_q declined at dimension {k}"))?;
         let Some(&claimed_q) = certificate.rank_q.get(k) else {
-            return Err(format!("certificate has no recorded rank_q at dimension {k}"));
+            return Err(format!(
+                "certificate has no recorded rank_q at dimension {k}"
+            ));
         };
         if recomputed_q != claimed_q {
             return Err(format!(
@@ -228,22 +235,33 @@ fn ranks_match(
     Ok(())
 }
 
+/// The recomputed `(betti_f2, betti_q)` maps from [`betti_match`].
+type BettiF2AndQ = (BTreeMap<usize, usize>, BTreeMap<usize, usize>);
+
 /// Guard: every recorded `betti_f2`/`betti_q` matches one recomputed from the
 /// (already re-derived) ranks via rank-nullity.
 fn betti_match(
     certificate: &CoefficientHomologyCertificate,
     simplex_counts: &BTreeMap<usize, usize>,
-) -> Result<(BTreeMap<usize, usize>, BTreeMap<usize, usize>), String> {
-    let recomputed_f2 = betti_from_ranks(simplex_counts, &certificate.rank_f2, certificate.max_dimension)
-        .ok_or_else(|| "betti_f2 rank-nullity arithmetic failed".to_string())?;
+) -> Result<BettiF2AndQ, String> {
+    let recomputed_f2 = betti_from_ranks(
+        simplex_counts,
+        &certificate.rank_f2,
+        certificate.max_dimension,
+    )
+    .ok_or_else(|| "betti_f2 rank-nullity arithmetic failed".to_string())?;
     if recomputed_f2 != certificate.betti_f2 {
         return Err(format!(
             "betti_f2 mismatch: recomputed {recomputed_f2:?}, certificate claims {:?}",
             certificate.betti_f2
         ));
     }
-    let recomputed_q = betti_from_ranks(simplex_counts, &certificate.rank_q, certificate.max_dimension)
-        .ok_or_else(|| "betti_q rank-nullity arithmetic failed".to_string())?;
+    let recomputed_q = betti_from_ranks(
+        simplex_counts,
+        &certificate.rank_q,
+        certificate.max_dimension,
+    )
+    .ok_or_else(|| "betti_q rank-nullity arithmetic failed".to_string())?;
     if recomputed_q != certificate.betti_q {
         return Err(format!(
             "betti_q mismatch: recomputed {recomputed_q:?}, certificate claims {:?}",
@@ -262,22 +280,23 @@ fn uct_holds(
     integer_torsion: &BTreeMap<usize, Vec<i128>>,
 ) -> Result<(), String> {
     let even_torsion_count = |k: usize| -> i128 {
-        integer_torsion
-            .get(&k)
-            .map(|factors| factors.iter().filter(|&&f| f % 2 == 0).count() as i128)
-            .unwrap_or(0)
+        integer_torsion.get(&k).map_or(0, |factors| {
+            factors.iter().filter(|&&f| f % 2 == 0).count() as i128
+        })
     };
     for k in 0..=certificate.max_dimension {
         let b_z = *integer_betti
             .get(&k)
-            .ok_or_else(|| format!("no integer betti number at dimension {k}"))? as i128;
+            .ok_or_else(|| format!("no integer betti number at dimension {k}"))?
+            as i128;
         let t_k = even_torsion_count(k);
         let t_k_minus_1 = if k == 0 { 0 } else { even_torsion_count(k - 1) };
         let expected_f2 = b_z + t_k + t_k_minus_1;
         let actual_f2 = *certificate
             .betti_f2
             .get(&k)
-            .ok_or_else(|| format!("no betti_f2 at dimension {k}"))? as i128;
+            .ok_or_else(|| format!("no betti_f2 at dimension {k}"))?
+            as i128;
         if actual_f2 != expected_f2 {
             return Err(format!(
                 "UCT (F_2) fails at dimension {k}: b_{k}(F_2) = {actual_f2}, but b_{k}(Z) + t_{k} + t_{{{k}-1}} = {expected_f2}"
@@ -377,14 +396,20 @@ mod tests {
     fn verify_refuses_a_forged_betti_f2_with_every_rank_genuine() {
         let complex = rp2_6v();
         let genuine = homology_with_coefficients(&complex).expect("coefficient homology");
-        assert!(genuine.verify(&complex).is_ok(), "genuine certificate must verify");
+        assert!(
+            genuine.verify(&complex).is_ok(),
+            "genuine certificate must verify"
+        );
 
         let mut forged = genuine.clone();
         forged.betti_f2.insert(1, 0); // RP^2 has b_1(F_2) = 1, not 0
         let err = forged
             .verify(&complex)
             .expect_err("a forged betti_f2 must be refused");
-        assert!(err.contains("betti_f2"), "reason should name betti_f2, got: {err}");
+        assert!(
+            err.contains("betti_f2"),
+            "reason should name betti_f2, got: {err}"
+        );
     }
 
     /// Direct unit test of `uct_holds`, isolated from `verify` (and so from
@@ -431,8 +456,7 @@ mod tests {
     #[test]
     fn contractible_complexes_are_unchanged_across_all_three_rings() {
         for complex in [filled_triangle(), sphere()] {
-            let certificate =
-                homology_with_coefficients(&complex).expect("coefficient homology");
+            let certificate = homology_with_coefficients(&complex).expect("coefficient homology");
             assert_eq!(certificate.integer.betti, certificate.betti_f2);
             assert_eq!(certificate.integer.betti, certificate.betti_q);
             certificate.verify(&complex).expect("certificate verifies");

@@ -163,7 +163,9 @@ fn coboundary_smith_holds(
             .ok_or_else(|| format!("could not rebuild d_{k} to transpose"))?;
         let transposed = d_k.transpose();
         let Some(data) = certificate.coboundary_smith.get(&k) else {
-            return Err(format!("certificate has no coboundary Smith data at dimension {k}"));
+            return Err(format!(
+                "certificate has no coboundary Smith data at dimension {k}"
+            ));
         };
         if !certify_product_equals(&transposed, &data.boundary) {
             return Err(format!(
@@ -179,10 +181,14 @@ fn coboundary_smith_holds(
             return Err(format!("U * d_{k}^T * V != D at dimension {k}"));
         }
         if !is_unimodular(&data.u) {
-            return Err(format!("U at dimension {k} is not unimodular (det != +/-1)"));
+            return Err(format!(
+                "U at dimension {k} is not unimodular (det != +/-1)"
+            ));
         }
         if !is_unimodular(&data.v) {
-            return Err(format!("V at dimension {k} is not unimodular (det != +/-1)"));
+            return Err(format!(
+                "V at dimension {k} is not unimodular (det != +/-1)"
+            ));
         }
         if !certifies_smith_shape(&data.d) {
             return Err(format!(
@@ -222,7 +228,9 @@ fn free_rank_and_torsion_match(
             return Err(format!("recomputed a negative free rank at dimension {n}"));
         };
         let Some(&claimed) = certificate.free_rank.get(&n) else {
-            return Err(format!("certificate has no recorded free rank at dimension {n}"));
+            return Err(format!(
+                "certificate has no recorded free rank at dimension {n}"
+            ));
         };
         if recomputed != claimed {
             return Err(format!(
@@ -301,8 +309,7 @@ impl CohomologyCertificate {
     pub fn verify(&self, complex: &SimplicialComplex) -> Result<CohomologyReport, String> {
         let integer_report = self.integer.verify(complex)?;
         coboundary_smith_holds(self, complex)?;
-        let (free_rank, torsion) =
-            free_rank_and_torsion_match(self, &self.integer.simplex_counts)?;
+        let (free_rank, torsion) = free_rank_and_torsion_match(self, &self.integer.simplex_counts)?;
         uct_cohomology_holds(self, &integer_report.betti, &integer_report.torsion)?;
         Ok(CohomologyReport { free_rank, torsion })
     }
@@ -368,14 +375,20 @@ mod tests {
     fn verify_refuses_a_forged_torsion_with_every_smith_triple_genuine() {
         let complex = rp2_6v();
         let genuine = cohomology(&complex).expect("cohomology of RP^2");
-        assert!(genuine.verify(&complex).is_ok(), "genuine certificate must verify");
+        assert!(
+            genuine.verify(&complex).is_ok(),
+            "genuine certificate must verify"
+        );
 
         let mut forged = genuine.clone();
         forged.torsion.insert(2, vec![3]); // H^2(RP^2) is Z/2, not Z/3
         let err = forged
             .verify(&complex)
             .expect_err("a forged torsion claim must be refused");
-        assert!(err.contains("torsion"), "reason should name torsion, got: {err}");
+        assert!(
+            err.contains("torsion"),
+            "reason should name torsion, got: {err}"
+        );
     }
 
     /// Direct unit test of `uct_cohomology_holds`, isolated from `verify`

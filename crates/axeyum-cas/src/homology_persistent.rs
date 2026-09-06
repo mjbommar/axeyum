@@ -52,6 +52,11 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use super::SimplicialComplex;
 
+/// Finite bars, as `(dimension, birth, death)`.
+type PersistencePairs = Vec<(usize, usize, usize)>;
+/// Essential (infinite) bars, as `(dimension, birth)`.
+type EssentialBars = Vec<(usize, usize)>;
+
 /// Build, for every simplex in filtration order, its boundary column: the
 /// set of indices (into `filtration`) of its codimension-1 faces. Returns
 /// `None` if the filtration is invalid: a face missing from the list
@@ -97,10 +102,9 @@ fn reduce_persistence(
 ) -> (Vec<BTreeSet<usize>>, BTreeMap<usize, usize>) {
     let mut low_to_col: BTreeMap<usize, usize> = BTreeMap::new();
     for j in 0..columns.len() {
-        loop {
-            let Some(&low) = columns[j].iter().next_back() else {
-                break; // column emptied out: a birth (possibly essential)
-            };
+        // The loop exits either when the column empties out (a birth,
+        // possibly essential) or when its low is new (a finite pair).
+        while let Some(&low) = columns[j].iter().next_back() {
             let Some(&pivot_col) = low_to_col.get(&low) else {
                 low_to_col.insert(low, j);
                 break; // a new low: (low, j) is a finite pair
@@ -121,7 +125,7 @@ fn derive_pairs(
     filtration: &[Vec<usize>],
     reduced: &[BTreeSet<usize>],
     low_to_col: &BTreeMap<usize, usize>,
-) -> (Vec<(usize, usize, usize)>, Vec<(usize, usize)>) {
+) -> (PersistencePairs, EssentialBars) {
     let mut pairs: Vec<(usize, usize, usize)> = low_to_col
         .iter()
         .map(|(&birth, &death)| (filtration[birth].len() - 1, birth, death))
@@ -211,8 +215,9 @@ fn reduction_matches(certificate: &PersistenceCertificate) -> Result<Vec<BTreeSe
 fn pairs_match(
     certificate: &PersistenceCertificate,
     reduced: &[BTreeSet<usize>],
-) -> Result<(Vec<(usize, usize, usize)>, Vec<(usize, usize)>), String> {
-    let (pairs, essential) = derive_pairs(&certificate.filtration, reduced, &certificate.low_to_col);
+) -> Result<(PersistencePairs, EssentialBars), String> {
+    let (pairs, essential) =
+        derive_pairs(&certificate.filtration, reduced, &certificate.low_to_col);
     if pairs != certificate.pairs {
         return Err(format!(
             "pairs mismatch: recomputed {pairs:?}, certificate claims {:?}",
@@ -317,7 +322,7 @@ mod tests {
             vec![2],
             vec![0, 1],
             vec![1, 2],
-            vec![0, 2], // the closing edge, index 5
+            vec![0, 2],    // the closing edge, index 5
             vec![0, 1, 2], // the triangle, index 6
         ]
     }
@@ -334,7 +339,11 @@ mod tests {
             .filter(|&&(dim, _, _)| dim == 1)
             .collect();
         assert_eq!(h1_bars.len(), 1, "expected exactly one H_1 bar");
-        assert_eq!(*h1_bars[0], (1, 5, 6), "born at the closing edge, dying at the triangle");
+        assert_eq!(
+            *h1_bars[0],
+            (1, 5, 6),
+            "born at the closing edge, dying at the triangle"
+        );
 
         // H_0: one essential bar (the whole complex's single surviving
         // component), and two finite bars (the merges as edges are added).
@@ -426,7 +435,14 @@ mod tests {
     #[test]
     fn a_filtration_with_a_missing_face_is_refused() {
         // The triangle's edge {1, 2} never appears at all.
-        let filtration = vec![vec![0], vec![1], vec![2], vec![0, 1], vec![0, 2], vec![0, 1, 2]];
+        let filtration = vec![
+            vec![0],
+            vec![1],
+            vec![2],
+            vec![0, 1],
+            vec![0, 2],
+            vec![0, 1, 2],
+        ];
         assert!(persistent_homology(&filtration).is_none());
     }
 
@@ -439,7 +455,10 @@ mod tests {
     fn verify_refuses_a_forged_low_to_col_with_matching_forged_pairs() {
         let filtration = circle_then_fill();
         let mut certificate = persistent_homology(&filtration).expect("valid filtration");
-        assert!(certificate.verify().is_ok(), "genuine certificate must verify");
+        assert!(
+            certificate.verify().is_ok(),
+            "genuine certificate must verify"
+        );
 
         // Forge low_to_col to swap the death of the (5, 6) pair to a bogus
         // (5, 4): 4 is not >= 5, so this claims edge 4 (already present)
@@ -448,7 +467,13 @@ mod tests {
         certificate.low_to_col.insert(5, 4);
         certificate.pairs = vec![(1, 5, 4)]
             .into_iter()
-            .chain(certificate.pairs.iter().copied().filter(|&(_, b, _)| b != 5))
+            .chain(
+                certificate
+                    .pairs
+                    .iter()
+                    .copied()
+                    .filter(|&(_, b, _)| b != 5),
+            )
             .collect();
         certificate.pairs.sort_unstable();
         let err = certificate
@@ -466,7 +491,10 @@ mod tests {
     fn verify_refuses_a_forged_essential_bar() {
         let filtration = circle_then_fill();
         let mut certificate = persistent_homology(&filtration).expect("valid filtration");
-        assert!(certificate.verify().is_ok(), "genuine certificate must verify");
+        assert!(
+            certificate.verify().is_ok(),
+            "genuine certificate must verify"
+        );
 
         certificate.essential.push((1, 6)); // a fabricated infinite H_1 bar
         certificate.essential.sort_unstable();

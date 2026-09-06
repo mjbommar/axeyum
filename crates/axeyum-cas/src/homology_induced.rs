@@ -111,7 +111,7 @@ fn permutation_sign(values: &[usize]) -> i128 {
             }
         }
     }
-    if inversions % 2 == 0 { 1 } else { -1 }
+    if inversions.is_multiple_of(2) { 1 } else { -1 }
 }
 
 /// Build the chain map `f_#(k) : C_k(domain) -> C_k(codomain)` from a
@@ -439,8 +439,8 @@ fn chain_map_commutes(
     codomain: &SimplicialComplex,
 ) -> Result<(), String> {
     for k in 1..=certificate.max_dimension {
-        let d_domain_k = boundary_matrix(domain, k)
-            .ok_or_else(|| format!("could not rebuild domain d_{k}"))?;
+        let d_domain_k =
+            boundary_matrix(domain, k).ok_or_else(|| format!("could not rebuild domain d_{k}"))?;
         let d_codomain_k = boundary_matrix(codomain, k)
             .ok_or_else(|| format!("could not rebuild codomain d_{k}"))?;
         let f_k = certificate
@@ -461,7 +461,9 @@ fn chain_map_commutes(
             .sub(&right)
             .ok_or_else(|| format!("shape mismatch comparing commutation at degree {k}"))?;
         if !is_zero_matrix(&difference) {
-            return Err(format!("f does not commute with the boundary at degree {k}"));
+            return Err(format!(
+                "f does not commute with the boundary at degree {k}"
+            ));
         }
     }
     Ok(())
@@ -482,7 +484,9 @@ fn basis_vectors_are_cycles(
                 .mul(z)
                 .ok_or_else(|| format!("d_{k} . z failed to multiply (domain, degree {k})"))?;
             if !is_zero_matrix(&image) {
-                return Err(format!("a recorded domain basis vector at degree {k} is not a cycle"));
+                return Err(format!(
+                    "a recorded domain basis vector at degree {k} is not a cycle"
+                ));
             }
         }
         let d_codomain_k = boundary_matrix(codomain, k)
@@ -512,30 +516,33 @@ fn basis_is_a_genuine_extension(
     codomain: &SimplicialComplex,
 ) -> Result<(), String> {
     let check_one = |label: &str,
-                      complex: &SimplicialComplex,
-                      recorded_basis: &[Matrix],
-                      k: usize|
+                     complex: &SimplicialComplex,
+                     recorded_basis: &[Matrix],
+                     k: usize|
      -> Result<(), String> {
         let d_k = boundary_matrix(complex, k)
             .ok_or_else(|| format!("could not rebuild {label} d_{k}"))?;
         let d_next = boundary_matrix(complex, k + 1)
             .ok_or_else(|| format!("could not rebuild {label} d_{}", k + 1))?;
         let rows = d_k.cols();
-        let boundary_basis = choose_boundary_basis(&d_next)
-            .ok_or_else(|| format!("could not choose a boundary basis for {label} at degree {k}"))?;
-        let boundary_rank = rank_of_columns(&boundary_basis, rows)
-            .ok_or_else(|| format!("rank_over_q declined for {label} boundary basis at degree {k}"))?;
+        let boundary_basis = choose_boundary_basis(&d_next).ok_or_else(|| {
+            format!("could not choose a boundary basis for {label} at degree {k}")
+        })?;
+        let boundary_rank = rank_of_columns(&boundary_basis, rows).ok_or_else(|| {
+            format!("rank_over_q declined for {label} boundary basis at degree {k}")
+        })?;
         let mut combined = boundary_basis;
         combined.extend(recorded_basis.iter().cloned());
-        let combined_rank = rank_of_columns(&combined, rows)
-            .ok_or_else(|| format!("rank_over_q declined for {label} combined basis at degree {k}"))?;
+        let combined_rank = rank_of_columns(&combined, rows).ok_or_else(|| {
+            format!("rank_over_q declined for {label} combined basis at degree {k}")
+        })?;
         if combined_rank != boundary_rank + recorded_basis.len() {
             return Err(format!(
                 "{label} homology basis at degree {k} is not independent of the boundary space"
             ));
         }
-        let rank_d_k = rank_over_q(&d_k)
-            .ok_or_else(|| format!("rank_over_q declined for {label} d_{k}"))?;
+        let rank_d_k =
+            rank_over_q(&d_k).ok_or_else(|| format!("rank_over_q declined for {label} d_{k}"))?;
         let dim_z_k = rows
             .checked_sub(rank_d_k)
             .ok_or_else(|| format!("rank(d_{k}) exceeds n_{k} for {label}"))?;
@@ -548,7 +555,11 @@ fn basis_is_a_genuine_extension(
     };
 
     for k in 0..=certificate.max_dimension {
-        let domain_basis = certificate.basis_domain.get(&k).cloned().unwrap_or_default();
+        let domain_basis = certificate
+            .basis_domain
+            .get(&k)
+            .cloned()
+            .unwrap_or_default();
         check_one("domain", domain, &domain_basis, k)?;
         let codomain_basis = certificate
             .basis_codomain
@@ -574,7 +585,11 @@ fn induced_matches(
             .ok_or_else(|| format!("could not rebuild codomain d_{}", k + 1))?;
         let (b_basis_y, _) = choose_homology_basis(&d_codomain_k, &d_codomain_next)
             .ok_or_else(|| format!("could not choose the codomain boundary basis at degree {k}"))?;
-        let h_basis_x = certificate.basis_domain.get(&k).cloned().unwrap_or_default();
+        let h_basis_x = certificate
+            .basis_domain
+            .get(&k)
+            .cloned()
+            .unwrap_or_default();
         let h_basis_y = certificate
             .basis_codomain
             .get(&k)
@@ -594,13 +609,15 @@ fn induced_matches(
             .ok_or_else(|| format!("no chain map at degree {k}"))?;
         let b_k_x = h_basis_x.len();
         let b_k_y = h_basis_y.len();
-        let mut data = vec![CasExpr::zero(); b_k_y.checked_mul(b_k_x).ok_or("induced shape overflow")?];
+        let mut data =
+            vec![CasExpr::zero(); b_k_y.checked_mul(b_k_x).ok_or("induced shape overflow")?];
         for (i, z) in h_basis_x.iter().enumerate() {
             let image = chain_map_k
                 .mul(z)
                 .ok_or_else(|| format!("f_#({k}) . z failed to multiply"))?;
-            let coefficients = solve_via_rref(&q_y, &image)
-                .ok_or_else(|| format!("could not express f_#(z_{i}) in the codomain basis at degree {k}"))?;
+            let coefficients = solve_via_rref(&q_y, &image).ok_or_else(|| {
+                format!("could not express f_#(z_{i}) in the codomain basis at degree {k}")
+            })?;
             for j in 0..b_k_y {
                 data[j * b_k_x + i] = CasExpr::Const(coefficients[b_basis_y.len() + j]);
             }
@@ -696,7 +713,9 @@ mod tests {
         let vertex_map = identity_map(&complex);
         let certificate =
             induced_homology(&vertex_map, &complex, &complex).expect("identity is simplicial");
-        certificate.verify(&complex, &complex).expect("certificate verifies");
+        certificate
+            .verify(&complex, &complex)
+            .expect("certificate verifies");
         assert_eq!(certificate.induced_rank[&0], 1);
         assert_eq!(certificate.induced_rank[&1], 1);
         // The induced map on H_1 is a 1x1 matrix; the identity induces +/-1
@@ -719,7 +738,9 @@ mod tests {
         assert!(is_simplicial(&vertex_map, &domain, &codomain));
         let certificate =
             induced_homology(&vertex_map, &domain, &codomain).expect("collapse is simplicial");
-        certificate.verify(&domain, &codomain).expect("certificate verifies");
+        certificate
+            .verify(&domain, &codomain)
+            .expect("certificate verifies");
         // H_1(point) = 0, so the induced map has 0 rows: trivially the zero
         // map into the trivial group.
         assert_eq!(certificate.basis_codomain[&1].len(), 0);
@@ -735,14 +756,20 @@ mod tests {
         assert!(is_simplicial(&vertex_map, &domain, &codomain));
         let certificate =
             induced_homology(&vertex_map, &domain, &codomain).expect("degree-2 wrap is simplicial");
-        certificate.verify(&domain, &codomain).expect("certificate verifies");
+        certificate
+            .verify(&domain, &codomain)
+            .expect("certificate verifies");
         assert_eq!(certificate.induced_rank[&0], 1);
         assert_eq!(certificate.induced_rank[&1], 1);
         let entry = certificate.induced[&1].get(0, 0).expect("1x1 matrix");
         let crate::CasExpr::Const(value) = entry else {
             panic!("expected a constant entry")
         };
-        assert_eq!(value.numerator().unsigned_abs(), 2, "expected |entry| = 2, got {value:?}");
+        assert_eq!(
+            value.numerator().unsigned_abs(),
+            2,
+            "expected |entry| = 2, got {value:?}"
+        );
         assert_eq!(value.denominator(), 1);
     }
 
@@ -837,7 +864,10 @@ mod tests {
             induced_homology(&vertex_map, &complex, &complex).expect("identity is simplicial");
         assert!(certificate.verify(&complex, &complex).is_ok());
 
-        let basis = certificate.basis_domain.get_mut(&1).expect("degree 1 exists");
+        let basis = certificate
+            .basis_domain
+            .get_mut(&1)
+            .expect("degree 1 exists");
         assert_eq!(basis.len(), 1, "circle has b_1 = 1");
         // Replace the genuine cycle (edges summing with zero boundary) with
         // the standard basis vector e_0 (a single edge alone), whose
