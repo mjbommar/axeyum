@@ -4,7 +4,7 @@
   "note": "Statement identity for every settled fact (S1 of the trusted-library safety roadmap, ADR-0763). Per fact: SHA-256 of formal.statement (the canonical kernel rendering for native lean4 rows), SHA-256 of the top-level reader-facing statement, and the kernel_theorem it names. A settled fact's statement is what the ledger CLAIMS; changing any of the three silently turns 'we proved X' into 'we proved something we then labelled X'. Changes require an amendment row naming both digests and a reason; superseded digests are preserved in each pin's history. `coverage_floor` is a ratchet the gate re-derives rather than trusts: slack is itself a violation, so a loosened floor is self-reverting. Written by `scripts/check-settled-fact-statements.py --write`; do not hand-edit.",
   "coverage_floor": {
     "max_unpinned_settled": 0,
-    "min_identity_bound": 2387,
+    "min_identity_bound": 2400,
     "max_header_exempt": 0
   },
   "amendments": [
@@ -1630,6 +1630,13 @@
       "kernel_theorem": "Complex.abs_congr"
     },
     {
+      "fact_id": "F:complex-abs-im-le",
+      "language": "lean4",
+      "statement_sha256": "9f205670d6a98620449c19cad7a58ddb03b12f7347c7b7eb12834d87e3e1d5b3",
+      "prose_sha256": "eea280f1c0aa2bf096cc50aac74889c5efc1ca7de0384846ab012b0b0627ff65",
+      "kernel_theorem": "Complex.abs_im_le"
+    },
+    {
       "fact_id": "F:complex-abs-le-add-abs-sub",
       "language": "lean4",
       "statement_sha256": "01ae251aaa476398ac6ba878baee8acc51ad58a86a5ca7f9c94338c2bd0b65e6",
@@ -1642,6 +1649,13 @@
       "statement_sha256": "0949381713a5077e37eca5a29ace68d8e55f2d3c680a41c2eddb49136d07c533",
       "prose_sha256": "4e82ef8029bf10c0f89102c9533d8923f44245972a35cadc7c6bf865210c4158",
       "kernel_theorem": "Complex.abs_mul"
+    },
+    {
+      "fact_id": "F:complex-abs-mul-le-of-bounds",
+      "language": "lean4",
+      "statement_sha256": "a078aed12e71dc2b2269a74a8e578f4f131f3617438b584efeec6ed6d7dd76c5",
+      "prose_sha256": "3affa4f0080338e0b044069fcae43f1a4c080fa61d9eceef8dbc92713d9200bf",
+      "kernel_theorem": "Complex.abs_mul_le_of_bounds"
     },
     {
       "fact_id": "F:complex-abs-neg",
@@ -1658,11 +1672,32 @@
       "kernel_theorem": "Complex.abs_nonneg"
     },
     {
+      "fact_id": "F:complex-abs-ofreal",
+      "language": "lean4",
+      "statement_sha256": "4419a772b15e0fd68568f97228931dd009841bbba8427e02ec71caea2dcee473",
+      "prose_sha256": "f69aa7d250bc1abdef69a527f33bf2ec67b93b198f656a032be24dd89cb7fa19",
+      "kernel_theorem": "Complex.abs_ofReal"
+    },
+    {
       "fact_id": "F:complex-abs-one",
       "language": "lean4",
       "statement_sha256": "09f55e98e9de59db662632fa5c30eccc9d69f364f0656fc8e391415cdefa78e7",
       "prose_sha256": "5e3393893390bb75596b5ab7a4b1c71a6e73ab6f923d1e4783f622f7f13d97b1",
       "kernel_theorem": "Complex.abs_one"
+    },
+    {
+      "fact_id": "F:complex-abs-re-le",
+      "language": "lean4",
+      "statement_sha256": "6463535411ddb2bc48ce9340aad670b77c212e0d7912da854818252322af0ca2",
+      "prose_sha256": "38b368ee83bca89f90a49b2718a01576772bbe15a08c0505982e9125a5a9bc0a",
+      "kernel_theorem": "Complex.abs_re_le"
+    },
+    {
+      "fact_id": "F:complex-abs-sub-le",
+      "language": "lean4",
+      "statement_sha256": "f87a1d9099fd57d3607e915a5c532ba3d3c2726bfed84b867c750b4c8ed383a4",
+      "prose_sha256": "68361fcd1463e14ae9258761bc7bb0da256b41c70617549c8d0878bff6cc8d95",
+      "kernel_theorem": "Complex.abs_sub_le"
     },
     {
       "fact_id": "F:complex-abs-zero",
@@ -1787,6 +1822,27 @@
       "statement_sha256": "857af158da1a57e655a599640ebd0135d95709e98d26ff1bf8b9641275a3ae4e",
       "prose_sha256": "7b9e6a24acfbde4341fabd60dd172e371f4718122a0c6f7168443028478ba2e4",
       "kernel_theorem": "Complex.apart_symm"
+    },
+    {
+      "fact_id": "F:complex-bounded-on-add",
+      "language": "lean4",
+      "statement_sha256": "e8d92135c9448eab674ca22a23d328132b4cffed34ca642c082584f7002dcb41",
+      "prose_sha256": "4407ab6462f357312c88dee0433418641628ac8a8d43df3601fa0c3a6b386ca6",
+      "kernel_theorem": "Complex.bounded_on_add"
+    },
+    {
+      "fact_id": "F:complex-bounded-on-mul",
+      "language": "lean4",
+      "statement_sha256": "5455808e21fbb339516ac07f87ed78d41aaa07afdac261a070b7cf33bb59a698",
+      "prose_sha256": "a03f198d797d6be0c710106db812aa04214a29631c4df76274897de2684048cd",
+      "kernel_theorem": "Complex.bounded_on_mul"
+    },
+    {
+      "fact_id": "F:complex-bounded-on-unfold",
+      "language": "lean4",
+      "statement_sha256": "efe861eaffb5bca3a5ef597ae0b103ab64a83697a4b7e5f66490ff5115957736",
+      "prose_sha256": "22d06bb62d709a0bbe4b2463e3956163db5ce073cbbad864c10e8422022e2502",
+      "kernel_theorem": "Complex.bounded_on_unfold"
     },
     {
       "fact_id": "F:complex-conj-add",
@@ -2055,6 +2111,13 @@
       "statement_sha256": "dd620a3f89ca5af151f7a34b4aaead934f41fb244f041ce7b7ffb641da215de2",
       "prose_sha256": "4ea6321cfa2a71c13adeea187ddb7fcaf606fbf3b2e872a0b540fa5c01b129b5",
       "kernel_theorem": "Complex.hasDerivative_id"
+    },
+    {
+      "fact_id": "F:complex-hasderivative-mul",
+      "language": "lean4",
+      "statement_sha256": "bae35fc995ae97a73d10124f373b002096eb6f612f4cc358919a658fd0601e49",
+      "prose_sha256": "f1e8121b61cc9e16d568eef13f6acbbd50a4eb4d4f05437dbef864aa8b100263",
+      "kernel_theorem": "Complex.hasDerivative_mul"
     },
     {
       "fact_id": "F:complex-hasderivative-neg",
@@ -2800,6 +2863,34 @@
       "statement_sha256": "24a57580a46e4916f93d52a2df7f0f2d63c418113c3a628267eb9911e931c0e2",
       "prose_sha256": "6e40fce9e97cbd713663292ecde92f9099af54ed5605d6b53ea66ef379937a75",
       "kernel_theorem": "Complex.sumRange_zero"
+    },
+    {
+      "fact_id": "F:complex-uniformlycontinuous-const",
+      "language": "lean4",
+      "statement_sha256": "a2d1330653fc78b57cdee845576a07f9244cd021e5564e09039259aa2ade4b98",
+      "prose_sha256": "7ed552c74b996e58833cfc7a96b1cb93de06a54404254b477ceb5750605db2e3",
+      "kernel_theorem": "Complex.uniformlyContinuous_const"
+    },
+    {
+      "fact_id": "F:complex-uniformlycontinuous-id",
+      "language": "lean4",
+      "statement_sha256": "e698c3e63c333c2dbb6231718305d9357e8495c12288fa499a80673034060ef1",
+      "prose_sha256": "4b39a997ac719a97972e2ac0880b02733dc02e18279b0988c02a20aaf7e51afc",
+      "kernel_theorem": "Complex.uniformlyContinuous_id"
+    },
+    {
+      "fact_id": "F:complex-uniformlycontinuous-of-hasderivative",
+      "language": "lean4",
+      "statement_sha256": "7f5ef07c9c22b878becc44f3013c7081841c13c21902044e1345431e8531d015",
+      "prose_sha256": "7b6dbe46fd7eb190c9f1b6bb29dee3aba1c43c01f3c8bf70ca9b0ffdb22df108",
+      "kernel_theorem": "Complex.uniformlyContinuous_of_hasDerivative"
+    },
+    {
+      "fact_id": "F:complex-uniformlycontinuouson-spec",
+      "language": "lean4",
+      "statement_sha256": "24c8e0d702c92eb3ed2f89db174161dda7d6df26272b7f8ffc359bfd2f2683a1",
+      "prose_sha256": "250ef640a7474d894759e0e3c2955247448788bd03e6716b65eefd750c78cc12",
+      "kernel_theorem": "Complex.UniformlyContinuousOn.spec"
     },
     {
       "fact_id": "F:congrfun",
