@@ -3265,12 +3265,12 @@ mod tests {
                 for order in [4u32, 8, 32] {
                     let root = sqrt_point(&p, order).expect("sqrt");
                     assert!(
-                        &(root.lo() * root.lo()) <= &p,
+                        root.lo() * root.lo() <= p,
                         "sqrt({p}) lower endpoint {} squares above the radicand",
                         root.lo()
                     );
                     assert!(
-                        &(root.hi() * root.hi()) >= &p,
+                        root.hi() * root.hi() >= p,
                         "sqrt({p}) upper endpoint {} squares below the radicand",
                         root.hi()
                     );
@@ -3293,8 +3293,8 @@ mod tests {
             "the lower endpoint collapsed to {} for an argument below the grid step",
             root.lo()
         );
-        assert!(&(root.lo() * root.lo()) <= &tiny);
-        assert!(&(root.hi() * root.hi()) >= &tiny);
+        assert!(root.lo() * root.lo() <= tiny);
+        assert!(root.hi() * root.hi() >= tiny);
     }
 
     #[test]
