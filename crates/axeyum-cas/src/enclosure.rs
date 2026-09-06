@@ -46,6 +46,18 @@
 //! | `atan` | `abs(z) <= 1/2` alternating series; `pi/4 + atan((p−1)/(p+1))` for `abs(p) <= 1`; `±pi/2 − atan(1/p)` beyond | `abs(z)^(2n+3)/(2n+3)` (alternating) |
 //! | `sin`, `cos` | reduce by an integer multiple of a certified `2·pi`, then Taylor about `0` | Lagrange `abs(t)^(k+2)/(k+2)!` |
 //! | `pi` | Machin: `pi = 16·atan(1/5) − 4·atan(1/239)` | the two `atan` tails |
+//! | `root_q` | Newton `x <- ((q−1)·x + p/x^(q−1))/q` from above; the same AM–GM bracket as `sqrt`, generalised | `(x − p/x^(q−1))/2` |
+//! | `erf` | alternating Maclaurin below magnitude 8; the complementary tail bound beyond | see [`crate::enclosure_special`] |
+//! | `Gamma` | exact at integers and half-integers; the shift identity in logarithms plus Stirling elsewhere | see [`crate::enclosure_special`] |
+//! | `J_n` | the power series, evaluated over the interval | see [`crate::enclosure_special`] |
+//!
+//! The four wave-two heads live in [`crate::enclosure_special`], which states
+//! each bound **with its hypothesis** — an alternating-series bound is only
+//! valid from the index where the terms actually start falling, and that index
+//! is computed in exact rational arithmetic rather than assumed. Rational
+//! powers `x^(p/q)` have two independent routes, [`rational_power`] through
+//! `root_q` and [`rational_power_via_exp_ln`] through `exp`/`ln`; multivariate
+//! root enclosures are [`crate::enclosure_special::enclose_system`].
 //!
 //! The remainder a step records is defined uniformly as the **half-width of the
 //! head re-evaluated at each endpoint of its input as a degenerate interval**,
@@ -78,19 +90,44 @@
 //! the verifier does one evaluation per step at the recorded order while the
 //! producer searches the `ORDERS` ladder for it.
 //!
+//! The wave-two heads, same conditions (`cost_table_wave_two`, host load
+//! average 25, single unpinned run, produce / verify). **ADVISORY ONLY.**
+//! `krawczyk` is the circle/line system of
+//! [`crate::enclosure_special::enclose_system`], and its row carries a step
+//! count rather than an order.
+//!
+//! | head | 10 | 50 | 100 | 200 |
+//! |---|---|---|---|---|
+//! | `2^(1/3)` | 1.1 / 1.0 ms | 4.0 / 2.8 ms | 3.7 / 2.9 ms | 15.3 / 5.5 ms |
+//! | `erf(1)` | 8.1 / 5.9 ms | 16.6 / 8.8 ms | 32.5 / 15.9 ms | 72.2 / 40.6 ms |
+//! | `Gamma(1/3)` | 38.1 / 25.1 ms | 347 / 269 ms | 1.49 / 1.12 s | 1.46 / 1.10 s |
+//! | `J_0(1)` | 0.25 / 0.22 ms | 0.55 / 0.32 ms | 1.3 / 0.88 ms | 3.8 / 2.8 ms |
+//! | `krawczyk` | 0.23 / 0.16 ms (1 step) | 1.4 / 1.1 ms (4) | 2.6 / 2.0 ms (5) | 5.4 / 4.1 ms (6) |
+//!
+//! `Gamma` is two to three orders of magnitude dearer than the others and is
+//! the only head whose cost is worth planning around. Precisions 100 and 200
+//! cost the same because both land on order 64. The Krawczyk rows are the
+//! cheapest thing in the table because the operator converges quadratically:
+//! six steps take a box of width `10^-2` to `2^-200`.
+//!
 //! # Out of scope
 //!
 //! Deliberately **not** handled here, and not silently approximated either —
 //! each declines with a reason:
 //!
-//! - **multivariate root enclosures** ([`enclose_root`] is univariate only);
-//! - **`pow` with a non-integer exponent** (`CasExpr::Pow` carries a `u32`, and
-//!   `x^q` for rational `q` is not routed through `exp`/`ln` here);
-//! - **`gamma`, the Bessel functions, `erf`** and the rest of the
-//!   special-function heads — they have no remainder bound in this module and
+//! - **`Si`, `Ci`, `Ei`, `li`, the Fresnel integrals, the Airy functions,
+//!   `LambertW`, the modified Bessel `I_n`** and the rest of the
+//!   special-function heads — they have no remainder bound here and
 //!   [`enclose`] declines with [`DeclineReason::UnsupportedHead`];
+//! - **`Gamma` at a non-positive argument**, and **`J_n` of negative order**;
+//! - **a non-square or non-polynomial system**, and a system at a **multiple**
+//!   root, where the Krawczyk inclusion cannot succeed because the Jacobian is
+//!   singular there — a decline, never a wrong answer;
 //! - **the `f64` [`evalf`](crate::evalf) itself**, which is unchanged. This
 //!   module adds a route; it does not replace one.
+//!
+//! Wave two removed three entries that used to be on this list: non-integer
+//! rational powers, `erf`/`Gamma`/`J_n`, and multivariate root enclosures.
 
 use crate::interval_arith::Interval;
 use crate::{CasExpr, UnaryFunc};

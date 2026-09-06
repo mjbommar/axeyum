@@ -69,8 +69,12 @@
 //! Wall clock, measured 2026-09-05 under `--release` from the prebuilt test
 //! binary, one run each (`cost_table_wave_two`, run with `--nocapture` to
 //! re-measure). **ADVISORY ONLY, NOT A BASELINE** — a shared, loaded host and a
-//! single unpinned run per row. The current numbers are in the crate-level
-//! table in [`crate::enclosure`]; this test is what regenerates them.
+//! single unpinned run per row. The numbers are in the cost table on
+//! [`crate::enclosure`]; this test is what regenerates them, and it prints the
+//! host's load average first so a later run can be compared against the one
+//! recorded there. In a **debug** build it measures only precisions 10 and 50:
+//! the `Gamma` rows at 100 and 200 both land on order 64 and cost about a
+//! minute between them, and the crate test sweep is a debug build.
 
 use crate::enclosure::{
     BigInterval, DeclineReason, REDUCTION_CAP, bi, bi_u64, br, exp_point, from_rational, ln_point,
