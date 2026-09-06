@@ -87,12 +87,12 @@
 //! [`ISOMORPHISM_BOUND`], which returns [`IsomorphismDecision::Unknown`]
 //! naming the bound rather than guessing.
 
+use super::{ConjugacyClassCertificate, DistinguishCertificate, distinguish};
 use super::{
-    ENUMERATION_BOUND, OrderCertificate, PermutationGroup, Permutation, SiftOutcome, SignedWord,
+    ENUMERATION_BOUND, OrderCertificate, Permutation, PermutationGroup, SiftOutcome, SignedWord,
     decode, encode, enumerate_group, fixes_prefix, image_key, invert_signed_word, is_identity,
     sift_with_trace, signed_word_to_perm, word_to_perm,
 };
-use super::{ConjugacyClassCertificate, DistinguishCertificate, distinguish};
 use std::collections::{BTreeSet, VecDeque};
 
 /// The largest `max(|G|, |H|)` [`isomorphism`] will attempt: matches
@@ -229,7 +229,7 @@ pub enum IsoFailure {
         /// The offending index into `left.strong_generators`.
         index: usize,
     },
-    /// Some relator [`schreier_relators`] derives from `left` does not
+    /// Some relator `schreier_relators` derives from `left` does not
     /// evaluate to the identity over `generator_images` -- the assignment
     /// does not extend to a homomorphism.
     RelationNotPreserved {
@@ -351,7 +351,7 @@ pub enum SearchExhaustionFailure {
 
 impl SearchExhaustionCertificate {
     /// Independently re-derives this certificate's claim by re-running
-    /// [`search_isomorphism`] from scratch on freshly-rebuilt groups.
+    /// `search_isomorphism` from scratch on freshly-rebuilt groups.
     ///
     /// # Errors
     ///
@@ -403,19 +403,19 @@ pub enum IsomorphismUnknownReason {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum NonIsomorphismReason {
     /// [`crate::permgroup::distinguish`] found a differing invariant.
-    Invariants(DistinguishCertificate),
+    Invariants(Box<DistinguishCertificate>),
     /// A bounded, fully-constrained backtracking search exhausted every
     /// candidate without finding an isomorphism.
-    ExhaustedSearch(SearchExhaustionCertificate),
+    ExhaustedSearch(Box<SearchExhaustionCertificate>),
 }
 
 /// The outcome of [`isomorphism`].
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum IsomorphismDecision {
     /// The groups are isomorphic.
-    Isomorphic(IsoCertificate),
+    Isomorphic(Box<IsoCertificate>),
     /// The groups are not isomorphic.
-    NotIsomorphic(NonIsomorphismReason),
+    NotIsomorphic(Box<NonIsomorphismReason>),
     /// Neither established, for the named reason.
     Unknown(IsomorphismUnknownReason),
 }
@@ -423,7 +423,11 @@ pub enum IsomorphismDecision {
 /// The order and conjugacy-class size of one element, used to prune
 /// candidate images: both are necessary conditions for `g` to be the image
 /// of some fixed element under an isomorphism (see this module's doc).
-fn element_key(classes: &ConjugacyClassCertificate, e: &Permutation, degree: usize) -> (u128, u128) {
+fn element_key(
+    classes: &ConjugacyClassCertificate,
+    e: &Permutation,
+    degree: usize,
+) -> (u128, u128) {
     let order = e.order().expect("finite permutation has a finite order");
     let key = image_key(e, degree);
     let class_size = classes
@@ -492,15 +496,12 @@ fn backtrack(
 ) -> Option<Vec<Permutation>> {
     if index == candidates.len() {
         for relator in relators {
-            let Some(product) = signed_word_to_perm(assignment, relator, right.degree) else {
-                return None;
-            };
+            let product = signed_word_to_perm(assignment, relator, right.degree)?;
             if !is_identity(&product, right.degree) {
                 return None;
             }
         }
-        let image_group =
-            PermutationGroup::from_generators(assignment.clone(), right.degree)?;
+        let image_group = PermutationGroup::from_generators(assignment.clone(), right.degree)?;
         if image_group.order() != right.claimed_order {
             return None;
         }
@@ -532,30 +533,29 @@ pub fn isomorphism(g: &PermutationGroup, h: &PermutationGroup) -> IsomorphismDec
             right_order,
         });
     }
-    let cert = match distinguish(g, h) {
-        Ok(cert) => cert,
-        Err(_) => {
-            // Cannot happen: both orders are already within
-            // ISOMORPHISM_BOUND, which equals distinguish's own bound.
-            // Kept as a distinct, checkable decline rather than a panic in
-            // case that equality is ever broken by a future edit.
-            return IsomorphismDecision::Unknown(IsomorphismUnknownReason::TooLarge {
-                bound: ISOMORPHISM_BOUND,
-                left_order,
-                right_order,
-            });
-        }
+    let Ok(cert) = distinguish(g, h) else {
+        // Cannot happen: both orders are already within
+        // ISOMORPHISM_BOUND, which equals distinguish's own bound. Kept as
+        // a distinct, checkable decline rather than a panic in case that
+        // equality is ever broken by a future edit.
+        return IsomorphismDecision::Unknown(IsomorphismUnknownReason::TooLarge {
+            bound: ISOMORPHISM_BOUND,
+            left_order,
+            right_order,
+        });
     };
     if cert.difference.is_some() {
-        return IsomorphismDecision::NotIsomorphic(NonIsomorphismReason::Invariants(cert));
+        return IsomorphismDecision::NotIsomorphic(Box::new(NonIsomorphismReason::Invariants(
+            Box::new(cert),
+        )));
     }
     match search_isomorphism(g, h) {
-        Some(iso) => IsomorphismDecision::Isomorphic(iso),
-        None => IsomorphismDecision::NotIsomorphic(NonIsomorphismReason::ExhaustedSearch(
-            SearchExhaustionCertificate {
+        Some(iso) => IsomorphismDecision::Isomorphic(Box::new(iso)),
+        None => IsomorphismDecision::NotIsomorphic(Box::new(
+            NonIsomorphismReason::ExhaustedSearch(Box::new(SearchExhaustionCertificate {
                 left: g.order_certificate().clone(),
                 right: h.order_certificate().clone(),
-            },
+            })),
         )),
     }
 }
@@ -676,18 +676,15 @@ fn process_coincidences(
                 continue;
             };
             let x = find(redirect, x);
-            match table[keep][col] {
-                Some(y) => {
-                    let y = find(redirect, y);
-                    if x != y {
-                        pending.push_back((x, y));
-                    }
+            if let Some(y) = table[keep][col] {
+                let y = find(redirect, y);
+                if x != y {
+                    pending.push_back((x, y));
                 }
-                None => {
-                    table[keep][col] = Some(x);
-                    let inv = col ^ 1;
-                    table[x][inv] = Some(keep);
-                }
+            } else {
+                table[keep][col] = Some(x);
+                let inv = col ^ 1;
+                table[x][inv] = Some(keep);
             }
         }
     }
@@ -722,8 +719,15 @@ fn enumerate_cosets(
         while c < table.len() {
             if alive[c] && find(&mut redirect, c) == c {
                 for cols in &relator_columns {
-                    match scan_and_close(&mut table, &mut redirect, &mut alive, num_cols, c, cols, bound)
-                    {
+                    match scan_and_close(
+                        &mut table,
+                        &mut redirect,
+                        &mut alive,
+                        num_cols,
+                        c,
+                        cols,
+                        bound,
+                    ) {
                         Err(()) => return None,
                         Ok(ScanEvent::Closed) => {}
                         Ok(ScanEvent::Coincidence(a, b)) => {
@@ -827,8 +831,8 @@ pub struct CosetTableCertificate {
     pub num_generators: usize,
     /// The relators the table was enumerated over.
     pub relators: Vec<Relator>,
-    /// `table[c][2*i]` is coset `c` acted on by generator `i`; `table[c][2*i
-    /// + 1]` by its inverse.
+    /// `table[c][2*i]` is coset `c` acted on by generator `i`; `table[c][2*i+1]`
+    /// by its inverse.
     pub table: Vec<Vec<usize>>,
     /// The claimed order: `table.len()`.
     pub order: u128,
@@ -854,7 +858,7 @@ pub enum CosetTableFailure {
         /// The coset the scan started (and failed to return to).
         coset: usize,
     },
-    /// Re-running [`enumerate_cosets`] on `num_generators`/`relators` with a
+    /// Re-running `enumerate_cosets` on `num_generators`/`relators` with a
     /// bound of `table.len()` produces a *different* table (or fails to
     /// close at all) -- see this module's doc for what this guard is (and
     /// is not) independent of.
@@ -864,7 +868,7 @@ pub enum CosetTableFailure {
 impl CosetTableCertificate {
     /// Checks the table's structural closure properties directly (shape,
     /// mutual-inverse columns, relator closure by table lookup alone), then
-    /// re-runs [`enumerate_cosets`] on the same inputs and requires the
+    /// re-runs `enumerate_cosets` on the same inputs and requires the
     /// result to match exactly.
     ///
     /// # Errors
@@ -918,8 +922,9 @@ impl CosetTableCertificate {
         // merged-away row is marked dead, never removed from the backing
         // `Vec`), so bounding the replay at exactly `n` can make a
         // perfectly genuine table fail to reproduce.
-        let recomputed = enumerate_cosets(self.num_generators, &self.relators, COSET_ENUMERATION_BOUND)
-            .ok_or(F::DoesNotReplay)?;
+        let recomputed =
+            enumerate_cosets(self.num_generators, &self.relators, COSET_ENUMERATION_BOUND)
+                .ok_or(F::DoesNotReplay)?;
         if recomputed != self.table {
             return Err(F::DoesNotReplay);
         }
@@ -1039,7 +1044,7 @@ impl PresentationCertificate {
 
 impl PermutationGroup {
     /// A presentation of `G`: a relator set derived from its BSGS
-    /// ([`schreier_relators`]), plus a bounded Todd–Coxeter coset
+    /// (`schreier_relators`), plus a bounded Todd–Coxeter coset
     /// enumeration proving the presented group's order equals `|G|`
     /// whenever it closes within [`COSET_ENUMERATION_BOUND`] cosets.
     ///
@@ -1159,7 +1164,9 @@ mod tests {
     fn d6_is_isomorphic_to_s3_times_z2() {
         // D6 (order 12): symmetries of a hexagon, acting on its 6 corners.
         let r = cycle(6, &[0, 1, 2, 3, 4, 5]);
-        let s = transposition(6, 1, 5).compose(&transposition(6, 2, 4)).unwrap();
+        let s = transposition(6, 1, 5)
+            .compose(&transposition(6, 2, 4))
+            .unwrap();
         let d6 = PermutationGroup::from_generators(vec![r, s], 6).unwrap();
         assert_eq!(d6.order(), 12);
 
@@ -1184,10 +1191,15 @@ mod tests {
         let d4 = dihedral_group_of_order_8();
         let q8 = quaternion_group();
         match isomorphism(&d4, &q8) {
-            IsomorphismDecision::NotIsomorphic(NonIsomorphismReason::Invariants(cert)) => {
-                assert!(cert.verify().is_ok());
-                assert!(cert.difference.is_some());
-            }
+            IsomorphismDecision::NotIsomorphic(reason) => match *reason {
+                NonIsomorphismReason::Invariants(cert) => {
+                    assert!(cert.verify().is_ok());
+                    assert!(cert.difference.is_some());
+                }
+                other @ NonIsomorphismReason::ExhaustedSearch(_) => {
+                    panic!("expected Invariants, got {other:?}")
+                }
+            },
             other => panic!("expected NotIsomorphic via invariants, got {other:?}"),
         }
     }
@@ -1196,14 +1208,19 @@ mod tests {
     fn a4_is_not_isomorphic_to_d6_same_order_different_invariants() {
         let a4 = alternating_group(4);
         let r = cycle(6, &[0, 1, 2, 3, 4, 5]);
-        let s = transposition(6, 1, 5).compose(&transposition(6, 2, 4)).unwrap();
+        let s = transposition(6, 1, 5)
+            .compose(&transposition(6, 2, 4))
+            .unwrap();
         let d6 = PermutationGroup::from_generators(vec![r, s], 6).unwrap();
         assert_eq!(a4.order(), 12);
         assert_eq!(d6.order(), 12);
         match isomorphism(&a4, &d6) {
-            IsomorphismDecision::NotIsomorphic(NonIsomorphismReason::Invariants(cert)) => {
-                assert!(cert.verify().is_ok());
-            }
+            IsomorphismDecision::NotIsomorphic(reason) => match *reason {
+                NonIsomorphismReason::Invariants(cert) => assert!(cert.verify().is_ok()),
+                other @ NonIsomorphismReason::ExhaustedSearch(_) => {
+                    panic!("expected Invariants, got {other:?}")
+                }
+            },
             other => panic!("expected NotIsomorphic via invariants, got {other:?}"),
         }
     }
@@ -1221,11 +1238,18 @@ mod tests {
         let z2_cubed = PermutationGroup::from_generators(vec![a, b, c], 8).unwrap();
         assert_eq!(z2_cubed.order(), 8);
 
-        for (left, right) in [(&z8, &z4_times_z2), (&z8, &z2_cubed), (&z4_times_z2, &z2_cubed)] {
+        for (left, right) in [
+            (&z8, &z4_times_z2),
+            (&z8, &z2_cubed),
+            (&z4_times_z2, &z2_cubed),
+        ] {
             match isomorphism(left, right) {
-                IsomorphismDecision::NotIsomorphic(NonIsomorphismReason::Invariants(cert)) => {
-                    assert!(cert.verify().is_ok());
-                }
+                IsomorphismDecision::NotIsomorphic(reason) => match *reason {
+                    NonIsomorphismReason::Invariants(cert) => assert!(cert.verify().is_ok()),
+                    other @ NonIsomorphismReason::ExhaustedSearch(_) => {
+                        panic!("expected Invariants, got {other:?}")
+                    }
+                },
                 other => panic!("expected NotIsomorphic via invariants, got {other:?}"),
             }
         }
@@ -1292,7 +1316,8 @@ mod tests {
                 if relation_holds {
                     continue;
                 }
-                let Some(image_group) = PermutationGroup::from_generators(forged_images.clone(), degree)
+                let Some(image_group) =
+                    PermutationGroup::from_generators(forged_images.clone(), degree)
                 else {
                     continue;
                 };
@@ -1314,7 +1339,9 @@ mod tests {
                 return;
             }
         }
-        panic!("expected to find a relation-breaking, order/class-matching, full-order candidate for S_4");
+        panic!(
+            "expected to find a relation-breaking, order/class-matching, full-order candidate for S_4"
+        );
     }
 
     #[test]
@@ -1379,7 +1406,9 @@ mod tests {
         assert!(cert.verify().is_ok());
         match &cert.coset_enumeration {
             CosetEnumerationOutcome::Completed(ct) => assert_eq!(ct.order, 6),
-            other => panic!("expected Completed, got {other:?}"),
+            declined @ CosetEnumerationOutcome::Declined { .. } => {
+                panic!("expected Completed, got {declined:?}")
+            }
         }
     }
 
@@ -1390,7 +1419,9 @@ mod tests {
         assert!(cert.verify().is_ok());
         match &cert.coset_enumeration {
             CosetEnumerationOutcome::Completed(ct) => assert_eq!(ct.order, 6),
-            other => panic!("expected Completed, got {other:?}"),
+            declined @ CosetEnumerationOutcome::Declined { .. } => {
+                panic!("expected Completed, got {declined:?}")
+            }
         }
     }
 
@@ -1401,7 +1432,9 @@ mod tests {
         assert!(cert.verify().is_ok());
         match &cert.coset_enumeration {
             CosetEnumerationOutcome::Completed(ct) => assert_eq!(ct.order, 8),
-            other => panic!("expected Completed, got {other:?}"),
+            declined @ CosetEnumerationOutcome::Declined { .. } => {
+                panic!("expected Completed, got {declined:?}")
+            }
         }
     }
 
@@ -1412,7 +1445,9 @@ mod tests {
         assert!(cert.verify().is_ok());
         match &cert.coset_enumeration {
             CosetEnumerationOutcome::Completed(ct) => assert_eq!(ct.order, 8),
-            other => panic!("expected Completed, got {other:?}"),
+            declined @ CosetEnumerationOutcome::Declined { .. } => {
+                panic!("expected Completed, got {declined:?}")
+            }
         }
     }
 
@@ -1423,7 +1458,9 @@ mod tests {
         assert!(cert.verify().is_ok());
         match &cert.coset_enumeration {
             CosetEnumerationOutcome::Completed(ct) => assert_eq!(ct.order, 24),
-            other => panic!("expected Completed, got {other:?}"),
+            declined @ CosetEnumerationOutcome::Declined { .. } => {
+                panic!("expected Completed, got {declined:?}")
+            }
         }
     }
 
@@ -1486,7 +1523,10 @@ mod tests {
     fn coset_table_declines_above_the_bound() {
         // S_4 (order 24) with a tiny bound forces a decline.
         let relators = schreier_relators(symmetric_group(4).order_certificate());
-        let num_generators = symmetric_group(4).order_certificate().strong_generators.len();
+        let num_generators = symmetric_group(4)
+            .order_certificate()
+            .strong_generators
+            .len();
         assert!(enumerate_cosets(num_generators, &relators, 3).is_none());
     }
 
@@ -1511,7 +1551,11 @@ mod tests {
         if let CosetEnumerationOutcome::Completed(ct) = &mut forged.coset_enumeration {
             // Corrupt one table entry directly, breaking both the
             // mutual-inverse property and relator closure.
-            let alt = if ct.table[0][0] == 0 { 1 % ct.table.len().max(1) } else { 0 };
+            let alt = if ct.table[0][0] == 0 {
+                1 % ct.table.len().max(1)
+            } else {
+                0
+            };
             ct.table[0][0] = alt;
         } else {
             panic!("expected Completed");
