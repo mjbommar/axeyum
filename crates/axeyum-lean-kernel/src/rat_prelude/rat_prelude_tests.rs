@@ -404,6 +404,30 @@ fn named(p: &RatPrelude) -> Vec<(&'static str, crate::NameId)> {
             "leadingIndex_eq_cols_of_zero_row",
             p.leading_index_eq_cols_of_zero_row,
         ),
+        // ADR-1677, the k-fold product probability space. Appended at the END
+        // of this list, which is the shared append point every lane touches.
+        ("prodRange_one", p.product_space.prod_range_one),
+        ("prodRange_mul", p.product_space.prod_range_mul),
+        (
+            "prodRange_sumRange_expand",
+            p.product_space.prod_range_sum_range_expand,
+        ),
+        ("prodWeight", p.product_space.prod_weight),
+        ("prodWeight_nonneg", p.product_space.prod_weight_nonneg),
+        (
+            "prodWeight_sumMaps_one",
+            p.product_space.prod_weight_sum_maps_one,
+        ),
+        ("expectationMaps", p.product_space.expectation_maps),
+        ("KIndependent", p.product_space.k_independent),
+        (
+            "kIndependent_prodWeight",
+            p.product_space.k_independent_prod_weight,
+        ),
+        (
+            "sumMaps_one_of_kIndependent",
+            p.product_space.sum_maps_one_of_k_independent,
+        ),
     ]
 }
 
