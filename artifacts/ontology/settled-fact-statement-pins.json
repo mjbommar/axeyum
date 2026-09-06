@@ -4,7 +4,7 @@
   "note": "Statement identity for every settled fact (S1 of the trusted-library safety roadmap, ADR-0763). Per fact: SHA-256 of formal.statement (the canonical kernel rendering for native lean4 rows), SHA-256 of the top-level reader-facing statement, and the kernel_theorem it names. A settled fact's statement is what the ledger CLAIMS; changing any of the three silently turns 'we proved X' into 'we proved something we then labelled X'. Changes require an amendment row naming both digests and a reason; superseded digests are preserved in each pin's history. `coverage_floor` is a ratchet the gate re-derives rather than trusts: slack is itself a violation, so a loosened floor is self-reverting. Written by `scripts/check-settled-fact-statements.py --write`; do not hand-edit.",
   "coverage_floor": {
     "max_unpinned_settled": 0,
-    "min_identity_bound": 2453,
+    "min_identity_bound": 2455,
     "max_header_exempt": 0
   },
   "amendments": [
@@ -8074,6 +8074,20 @@
       "statement_sha256": "30f5c3983276f4496151708ceec53b43d1d9f5e83e146aeb5777b56a867ec051",
       "prose_sha256": "fa91bbaef1c323e87cfe88c243423614bfa4f80526731dccc3816a6acb96999c",
       "kernel_theorem": "FO.Q.natModels"
+    },
+    {
+      "fact_id": "F:fo-qle-consistency",
+      "language": "lean4",
+      "statement_sha256": "bde7d47015af45068814e509cf0e32aa4ae0f1cadd5a27b1a4a3926d7b77c9b1",
+      "prose_sha256": "b6fb17faf5d4d30aabdfffb4cd8eefb54fbae48d4cdc5a773d933a11fd61fe88",
+      "kernel_theorem": "FO.Qle.consistency"
+    },
+    {
+      "fact_id": "F:fo-qle-order-context",
+      "language": "lean4",
+      "statement_sha256": "9ed5e7f032deafc5aec84916088fa355ad2b91e3b74aa3dab3d409007c2f68ae",
+      "prose_sha256": "93cdbed4124bd279b2393acc72d51d3894d26eb12ab1cdeb1d11efb812c45c9e",
+      "kernel_theorem": "FO.Qle.natModels"
     },
     {
       "fact_id": "F:fo-soundness",

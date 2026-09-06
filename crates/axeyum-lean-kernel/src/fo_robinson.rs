@@ -265,46 +265,46 @@ pub struct FoRobinsonPrelude {
 }
 
 /// The shared names every builder below threads.
-struct Rob {
-    syn: SyntaxNames,
-    calc: CalcNames,
-    logic: LogicPrelude,
-    nat: NatPrelude,
+pub(crate) struct Rob {
+    pub(crate) syn: SyntaxNames,
+    pub(crate) calc: CalcNames,
+    pub(crate) logic: LogicPrelude,
+    pub(crate) nat: NatPrelude,
     /// The `FO.Q` namespace (which is also the context's own name).
-    q_ns: NameId,
-    nat_ty: ExprId,
-    term_ty: ExprId,
-    formula_ty: ExprId,
+    pub(crate) q_ns: NameId,
+    pub(crate) nat_ty: ExprId,
+    pub(crate) term_ty: ExprId,
+    pub(crate) formula_ty: ExprId,
     /// `Nat -> Nat`, the type of a valuation into the ℕ structure.
-    val_ty: ExprId,
+    pub(crate) val_ty: ExprId,
     /// `Nat -> FO.Term`, the type of a parallel substitution.
-    subst_ty: ExprId,
-    zero_lvl: LevelId,
-    one: LevelId,
+    pub(crate) subst_ty: ExprId,
+    pub(crate) zero_lvl: LevelId,
+    pub(crate) one: LevelId,
     /// `FO.Term.numeral`, from the arithmetization chain.
-    numeral: NameId,
+    pub(crate) numeral: NameId,
     /// `FO.Term.subst`, from `fo_syntax.rs`.
-    term_subst: NameId,
+    pub(crate) term_subst: NameId,
     /// `FO.Structure`, `FO.sat` and `FO.ctxSat`.
-    structure: NameId,
-    sat: NameId,
-    ctx_sat: NameId,
+    pub(crate) structure: NameId,
+    pub(crate) sat: NameId,
+    pub(crate) ctx_sat: NameId,
     /// `FO.Provable`'s seventeen constructors, re-interned in rule order.
-    rules: [NameId; 17],
+    pub(crate) rules: [NameId; 17],
     /// `FO.Subst.lift` and `FO.Subst.shift`, from `fo_syntax.rs`.
-    subst_lift: NameId,
-    subst_shift: NameId,
+    pub(crate) subst_lift: NameId,
+    pub(crate) subst_shift: NameId,
     /// The `FO.Code` namespace and the pairing it owns (`fo_code.rs`).
-    code_ns: NameId,
-    code_tri: NameId,
-    code_pair: NameId,
+    pub(crate) code_ns: NameId,
+    pub(crate) code_tri: NameId,
+    pub(crate) code_pair: NameId,
 }
 
 impl Rob {
     /// Re-gather every name this slice's builders share. Interning a name does
     /// not declare it, so this also runs BEFORE this slice's declarations
     /// exist, and `fo_robinson/tests.rs` calls it to rebuild the same view.
-    fn new(
+    pub(crate) fn new(
         kernel: &mut crate::Kernel,
         roundtrip: FoRoundTripPrelude,
         semantics: FoSemanticsPrelude,
@@ -381,10 +381,10 @@ impl Rob {
 
 /// A monotone supply of free-variable ids, disjoint from every other `fo_*`
 /// block (ADR-1651 owns the `1_651_xxx` range).
-struct Fv(u64);
+pub(crate) struct Fv(pub(crate) u64);
 
 impl Fv {
-    fn next(&mut self) -> u64 {
+    pub(crate) fn next(&mut self) -> u64 {
         self.0 += 1;
         self.0
     }
@@ -397,7 +397,7 @@ impl Fv {
 impl Rob {
     /// The unary `Nat` literal `Nat.succ^n Nat.zero`. Only ever called at `0`
     /// and `1` — the two symbol indices this signature uses.
-    fn nat_lit(&self, kernel: &mut crate::Kernel, n: u32) -> ExprId {
+    pub(crate) fn nat_lit(&self, kernel: &mut crate::Kernel, n: u32) -> ExprId {
         let mut e = kernel.const_(self.nat.zero, vec![]);
         let succ = kernel.const_(self.nat.succ, vec![]);
         for _ in 0..n {
@@ -407,151 +407,163 @@ impl Rob {
     }
 
     /// `FO.Term.var i` at a literal de Bruijn index.
-    fn tvar(&self, kernel: &mut crate::Kernel, i: u32) -> ExprId {
+    pub(crate) fn tvar(&self, kernel: &mut crate::Kernel, i: u32) -> ExprId {
         let idx = self.nat_lit(kernel, i);
         let head = kernel.const_(self.syn.var, vec![]);
         kernel.app(head, idx)
     }
 
     /// `0`, i.e. `FO.Term.f0 0`.
-    fn tzero(&self, kernel: &mut crate::Kernel) -> ExprId {
+    pub(crate) fn tzero(&self, kernel: &mut crate::Kernel) -> ExprId {
         let idx = self.nat_lit(kernel, 0);
         let head = kernel.const_(self.syn.f0, vec![]);
         kernel.app(head, idx)
     }
 
     /// `S t`, i.e. `FO.Term.f1 1 t`.
-    fn tsucc(&self, kernel: &mut crate::Kernel, t: ExprId) -> ExprId {
+    pub(crate) fn tsucc(&self, kernel: &mut crate::Kernel, t: ExprId) -> ExprId {
         let idx = self.nat_lit(kernel, 1);
         let head = kernel.const_(self.syn.f1, vec![]);
         apply_all(kernel, head, &[idx, t])
     }
 
     /// `a + b`, i.e. `FO.Term.f2 0 a b`.
-    fn tadd(&self, kernel: &mut crate::Kernel, a: ExprId, b: ExprId) -> ExprId {
+    pub(crate) fn tadd(&self, kernel: &mut crate::Kernel, a: ExprId, b: ExprId) -> ExprId {
         let idx = self.nat_lit(kernel, 0);
         let head = kernel.const_(self.syn.f2, vec![]);
         apply_all(kernel, head, &[idx, a, b])
     }
 
     /// `a · b`, i.e. `FO.Term.f2 1 a b`.
-    fn tmul(&self, kernel: &mut crate::Kernel, a: ExprId, b: ExprId) -> ExprId {
+    pub(crate) fn tmul(&self, kernel: &mut crate::Kernel, a: ExprId, b: ExprId) -> ExprId {
         let idx = self.nat_lit(kernel, 1);
         let head = kernel.const_(self.syn.f2, vec![]);
         apply_all(kernel, head, &[idx, a, b])
     }
 
     /// `FO.Term.numeral n` at a `Nat`-valued expression `n`.
-    fn tnum(&self, kernel: &mut crate::Kernel, n: ExprId) -> ExprId {
+    pub(crate) fn tnum(&self, kernel: &mut crate::Kernel, n: ExprId) -> ExprId {
         let head = kernel.const_(self.numeral, vec![]);
         kernel.app(head, n)
     }
 
-    fn f_eqf(&self, kernel: &mut crate::Kernel, a: ExprId, b: ExprId) -> ExprId {
+    pub(crate) fn f_eqf(&self, kernel: &mut crate::Kernel, a: ExprId, b: ExprId) -> ExprId {
         let head = kernel.const_(self.syn.eqf, vec![]);
         apply_all(kernel, head, &[a, b])
     }
 
-    fn f_imp(&self, kernel: &mut crate::Kernel, a: ExprId, b: ExprId) -> ExprId {
+    pub(crate) fn f_imp(&self, kernel: &mut crate::Kernel, a: ExprId, b: ExprId) -> ExprId {
         let head = kernel.const_(self.syn.imp, vec![]);
         apply_all(kernel, head, &[a, b])
     }
 
-    fn f_or(&self, kernel: &mut crate::Kernel, a: ExprId, b: ExprId) -> ExprId {
+    pub(crate) fn f_or(&self, kernel: &mut crate::Kernel, a: ExprId, b: ExprId) -> ExprId {
         let head = kernel.const_(self.syn.or_, vec![]);
         apply_all(kernel, head, &[a, b])
     }
 
-    fn f_bot(&self, kernel: &mut crate::Kernel) -> ExprId {
+    pub(crate) fn f_bot(&self, kernel: &mut crate::Kernel) -> ExprId {
         kernel.const_(self.syn.bot, vec![])
     }
 
-    fn f_all(&self, kernel: &mut crate::Kernel, body: ExprId) -> ExprId {
+    pub(crate) fn f_all(&self, kernel: &mut crate::Kernel, body: ExprId) -> ExprId {
         let head = kernel.const_(self.syn.all, vec![]);
         kernel.app(head, body)
     }
 
-    fn f_ex(&self, kernel: &mut crate::Kernel, body: ExprId) -> ExprId {
+    pub(crate) fn f_ex(&self, kernel: &mut crate::Kernel, body: ExprId) -> ExprId {
         let head = kernel.const_(self.syn.ex, vec![]);
         kernel.app(head, body)
     }
 
     /// `Nat.add a b`.
-    fn nadd(&self, kernel: &mut crate::Kernel, a: ExprId, b: ExprId) -> ExprId {
+    pub(crate) fn nadd(&self, kernel: &mut crate::Kernel, a: ExprId, b: ExprId) -> ExprId {
         let head = kernel.const_(self.nat.add, vec![]);
         apply_all(kernel, head, &[a, b])
     }
 
     /// `Nat.mul a b`.
-    fn nmul(&self, kernel: &mut crate::Kernel, a: ExprId, b: ExprId) -> ExprId {
+    pub(crate) fn nmul(&self, kernel: &mut crate::Kernel, a: ExprId, b: ExprId) -> ExprId {
         let head = kernel.const_(self.nat.mul, vec![]);
         apply_all(kernel, head, &[a, b])
     }
 
     /// `Nat.succ n`.
-    fn nsucc(&self, kernel: &mut crate::Kernel, n: ExprId) -> ExprId {
+    pub(crate) fn nsucc(&self, kernel: &mut crate::Kernel, n: ExprId) -> ExprId {
         let head = kernel.const_(self.nat.succ, vec![]);
         kernel.app(head, n)
     }
 
     /// `Eq Nat a b`.
-    fn neq(&self, kernel: &mut crate::Kernel, a: ExprId, b: ExprId) -> ExprId {
+    pub(crate) fn neq(&self, kernel: &mut crate::Kernel, a: ExprId, b: ExprId) -> ExprId {
         let ty = self.nat_ty;
         geq(kernel, self.logic, ty, a, b)
     }
 
     /// `Eq FO.Term a b`.
-    fn teq(&self, kernel: &mut crate::Kernel, a: ExprId, b: ExprId) -> ExprId {
+    pub(crate) fn teq(&self, kernel: &mut crate::Kernel, a: ExprId, b: ExprId) -> ExprId {
         let ty = self.term_ty;
         geq(kernel, self.logic, ty, a, b)
     }
 
     /// `FO.Term.subst t s`.
-    fn tsubst(&self, kernel: &mut crate::Kernel, t: ExprId, s: ExprId) -> ExprId {
+    pub(crate) fn tsubst(&self, kernel: &mut crate::Kernel, t: ExprId, s: ExprId) -> ExprId {
         let head = kernel.const_(self.term_subst, vec![]);
         apply_all(kernel, head, &[t, s])
     }
 
     /// `FO.sat Nat S p v`.
-    fn sat_of(&self, kernel: &mut crate::Kernel, s: ExprId, p: ExprId, v: ExprId) -> ExprId {
+    pub(crate) fn sat_of(
+        &self,
+        kernel: &mut crate::Kernel,
+        s: ExprId,
+        p: ExprId,
+        v: ExprId,
+    ) -> ExprId {
         let head = kernel.const_(self.sat, vec![]);
         let nat_ty = self.nat_ty;
         apply_all(kernel, head, &[nat_ty, s, p, v])
     }
 
     /// `FO.ctxSat Nat S g v`.
-    fn ctx_sat_of(&self, kernel: &mut crate::Kernel, s: ExprId, g: ExprId, v: ExprId) -> ExprId {
+    pub(crate) fn ctx_sat_of(
+        &self,
+        kernel: &mut crate::Kernel,
+        s: ExprId,
+        g: ExprId,
+        v: ExprId,
+    ) -> ExprId {
         let head = kernel.const_(self.ctx_sat, vec![]);
         let nat_ty = self.nat_ty;
         apply_all(kernel, head, &[nat_ty, s, g, v])
     }
 
     /// `FO.Subst.cons t FO.Subst.id`, the de Bruijn spelling of `[t/x]`.
-    fn inst_subst(&self, kernel: &mut crate::Kernel, t: ExprId) -> ExprId {
+    pub(crate) fn inst_subst(&self, kernel: &mut crate::Kernel, t: ExprId) -> ExprId {
         let id = kernel.const_(self.calc.subst_id, vec![]);
         let cons = kernel.const_(self.calc.subst_cons, vec![]);
         apply_all(kernel, cons, &[t, id])
     }
 
     /// `FO.Subst.shift`.
-    fn shift_subst(&self, kernel: &mut crate::Kernel) -> ExprId {
+    pub(crate) fn shift_subst(&self, kernel: &mut crate::Kernel) -> ExprId {
         kernel.const_(self.subst_shift, vec![])
     }
 
     /// `FO.Subst.lift sigma`.
-    fn lift_subst(&self, kernel: &mut crate::Kernel, sigma: ExprId) -> ExprId {
+    pub(crate) fn lift_subst(&self, kernel: &mut crate::Kernel, sigma: ExprId) -> ExprId {
         let head = kernel.const_(self.subst_lift, vec![]);
         kernel.app(head, sigma)
     }
 
     /// `FO.Formula.subst p sigma`.
-    fn f_subst(&self, kernel: &mut crate::Kernel, p: ExprId, sigma: ExprId) -> ExprId {
+    pub(crate) fn f_subst(&self, kernel: &mut crate::Kernel, p: ExprId, sigma: ExprId) -> ExprId {
         let head = kernel.const_(self.calc.formula_subst, vec![]);
         apply_all(kernel, head, &[p, sigma])
     }
 
     /// `FO.Provable FO.Q p`.
-    fn prov_q(&self, kernel: &mut crate::Kernel, p: ExprId) -> ExprId {
+    pub(crate) fn prov_q(&self, kernel: &mut crate::Kernel, p: ExprId) -> ExprId {
         let q = kernel.const_(self.q_ns, vec![]);
         provable_app(kernel, &self.calc, q, p)
     }
@@ -559,7 +571,7 @@ impl Rob {
     /// `FO.Term.subst_numeral sigma n`. An associated function rather than a
     /// method: it reads nothing off `Rob`, and `unused_self` is right about
     /// that.
-    fn subst_numeral_at(
+    pub(crate) fn subst_numeral_at(
         kernel: &mut crate::Kernel,
         subst_numeral: NameId,
         sigma: ExprId,
@@ -1376,7 +1388,7 @@ fn cast_derivation(
 /// `Eq FO.Formula (shape froms) (shape tos)`, one `gcongr` per hole, chained by
 /// `gtrans`. A hole may occur several times in `shape`; all of its occurrences
 /// move together, which is exactly what `Formula.subst` does to them.
-fn congr_chain(
+pub(crate) fn congr_chain(
     kernel: &mut crate::Kernel,
     r: &Rob,
     froms: &[ExprId],
@@ -1448,7 +1460,7 @@ struct Leibniz<'a> {
 /// occurrence of one slot moves together, which is exactly what
 /// `FO.Formula.subst` does to the numerals it cannot reduce past.
 #[derive(Clone)]
-enum Tm {
+pub(crate) enum Tm {
     /// `FO.Term.var 0` — the position `FO.Provable.eqf_subst` rewrites.
     Hole,
     /// `FO.Term.numeral n` for the slot's `Nat` argument.
@@ -1459,7 +1471,13 @@ enum Tm {
 }
 
 impl Tm {
-    fn build(&self, kernel: &mut crate::Kernel, r: &Rob, slots: &[ExprId], hole: ExprId) -> ExprId {
+    pub(crate) fn build(
+        &self,
+        kernel: &mut crate::Kernel,
+        r: &Rob,
+        slots: &[ExprId],
+        hole: ExprId,
+    ) -> ExprId {
         match self {
             Self::Hole => hole,
             Self::Num(index) => slots[*index],
@@ -1482,13 +1500,19 @@ impl Tm {
 }
 
 /// The formula `eqf lhs rhs`, as data.
-struct EqShape {
-    lhs: Tm,
-    rhs: Tm,
+pub(crate) struct EqShape {
+    pub(crate) lhs: Tm,
+    pub(crate) rhs: Tm,
 }
 
 impl EqShape {
-    fn build(&self, kernel: &mut crate::Kernel, r: &Rob, slots: &[ExprId], hole: ExprId) -> ExprId {
+    pub(crate) fn build(
+        &self,
+        kernel: &mut crate::Kernel,
+        r: &Rob,
+        slots: &[ExprId],
+        hole: ExprId,
+    ) -> ExprId {
         let a = self.lhs.build(kernel, r, slots, hole);
         let b = self.rhs.build(kernel, r, slots, hole);
         r.f_eqf(kernel, a, b)
@@ -1496,19 +1520,19 @@ impl EqShape {
 }
 
 /// `Tm::Num(index)`, spelled without the boxing noise at the call sites.
-fn num(index: usize) -> Tm {
+pub(crate) fn num(index: usize) -> Tm {
     Tm::Num(index)
 }
 
-fn suc(inner: Tm) -> Tm {
+pub(crate) fn suc(inner: Tm) -> Tm {
     Tm::Suc(Box::new(inner))
 }
 
-fn add(left: Tm, right: Tm) -> Tm {
+pub(crate) fn add(left: Tm, right: Tm) -> Tm {
     Tm::Add(Box::new(left), Box::new(right))
 }
 
-fn mul(left: Tm, right: Tm) -> Tm {
+pub(crate) fn mul(left: Tm, right: Tm) -> Tm {
     Tm::Mul(Box::new(left), Box::new(right))
 }
 

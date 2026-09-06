@@ -1,0 +1,81 @@
+{
+  "schema_version": 1,
+  "id": "F:fo-qle-order-context",
+  "title": "Robinson's Q extended by six order axioms has ℕ as a model",
+  "statement": "FO.Qle is Robinson's Q together with six axioms constraining the order symbol `<` (FO.Formula.rel2 0): nothing is below zero; the discreteness biconditional x < S y ↔ (x < y ∨ x = y), written as the three implications O2, O3, O4 because FO.Formula has no `iff` constructor; and the standard order axiom x ≤ y ↔ ∃z (x + z = y), written as the two implications O5 and O6 under the spelling x ≤ y := x < S y. ℕ with the FO.natStructureQ interpretation satisfies all thirteen axioms at every valuation. There is one formula per row, not one per numeral, and there is no induction axiom and no induction schema, so FO.Qle remains a finitely axiomatised theory strictly weaker than PA.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem FO.Qle.natModels : ((x0 : ((x0 : AxNat) -> AxNat)) -> FO.ctxSat AxNat FO.natStructureQ FO.Qle x0)",
+    "kernel_theorem": "FO.Qle.natModels",
+    "fragment": "Nat",
+    "free_symbols": []
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "depends_on": [
+    "F:fo-q-robinson-context"
+  ],
+  "evidence": [
+    {
+      "id": "kernel-FO.Qle.natModels",
+      "kind": "kernel-term",
+      "kernel_declaration": "FO.Qle.natModels",
+      "supports": "FO.Qle.natModels is admitted by the trusted kernel gate with the type recorded in formal.statement, and rests on no axiom. The proof is six And.intro applications over FO.Q.natModels v: FO.Qle conses the six order axioms in FRONT of FO.Q, so the context tail after the sixth cons is definitionally FO.Q and the seven Robinson obligations are not re-proved. Each order obligation is one application of an existing Nat order lemma -- Nat.not_succ_le_zero, Nat.lt_or_eq_of_le after Nat.le_of_lt_succ, Nat.le.step, Nat.lt_succ_self, Nat.lt_succ_of_le after Nat.le_add_right, and Nat.le_dest after Nat.le_of_lt_succ -- with no rewriting, because FO.sat (rel2 0 a b) iota-reduces to Nat.lt (Nat.add (eval a) 0) (eval b) and Nat.add x 0 iota-reduces to x.",
+      "check_status": "checked",
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example fo_order_inventory -- FO.Qle.natModels --exact --require-axiom-free",
+      "checkers": [
+        "Kernel::add_declaration",
+        "Kernel::axiom_footprint"
+      ],
+      "notes": "Admission is the whole content of the ℕ-model claim: a false axiom cannot be modelled, so the trusted gate rejects the theorem rather than a test asserting anything. Measured on 2026-09-06 by mutating FO.Qle.axLtZero from `x < 0` to `x ≤ 0` (i.e. `x < S 0`), which is false in ℕ at x = 0: the prelude build failed with KernelError::TypeMismatch and all nine tests in the module died."
+    },
+    {
+      "id": "the-axiom-bodies-are-the-stated-formulas",
+      "kind": "kernel-term",
+      "kernel_declaration": "FO.Qle",
+      "supports": "Each order axiom is rebuilt from the FO.Term/FO.Formula combinators inside the test and compared to the declared body by Kernel::def_eq, with negative controls that a reversed `<` and a flipped sum are DIFFERENT formulas; the thirteen axioms are checked pairwise distinct; and the context is compared against the rebuilt thirteen-cons chain with a negative control that swapping two axioms gives a different context and that the tail after FIVE conses is not FO.Q.",
+      "check_status": "checked",
+      "checker_command": "cargo test -p axeyum-lean-kernel --release --lib -- fo_order::tests --test-threads=4",
+      "checkers": [
+        "Kernel::def_eq",
+        "Kernel::infer"
+      ],
+      "notes": "This guard is NOT subsumed by admission, and that was measured rather than assumed. Mutating FO.Qle.axLtAddRight from `x < S (x + y)` to `x < S (y + x)` alone kills every test, because the supplied witness no longer inhabits the goal (Nat.add is not commutative definitionally). Repairing the witness in the same mutant -- transporting Nat.le_add_right along Nat.add_comm -- makes the whole prelude admit again, and then EXACTLY ONE test dies: fo_order::tests::the_order_axioms_are_the_stated_formulas. So a self-consistent wrong axiom-plus-proof pair is caught here and nowhere else."
+    },
+    {
+      "id": "footprint-whole-slice",
+      "kind": "instance-pin",
+      "supports": "axiom_footprint: [] -- for all 9 declarations build_fo_order_prelude adds on top of build_fo_robinson_prelude, not only the headline theorem. The row set is a SET DIFFERENCE against a kernel carrying the Robinson package, recomputed on every run, so it is derived from the environment rather than from a hand-maintained list.",
+      "check_status": "checked",
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example fo_order_inventory -- --require-axiom-free --expect-count 9",
+      "checkers": [
+        "Kernel::axiom_footprint"
+      ],
+      "notes": "--expect-count fails on drift in EITHER direction, so a declaration silently disappearing is a failure too. The same set difference is recomputed inside the test suite by fo_order::tests::every_declaration_this_slice_adds_is_axiom_free, with coverage controls and an assertion that FO.Q is NOT in the difference -- which is what says the two builders compose rather than duplicate."
+    }
+  ],
+  "provenance": {
+    "date": "2026-09-06",
+    "established_by": "axeyum-lean-kernel build_fo_order_prelude, lane fo-diagonal-lemma (W3-7, ADR-1669)",
+    "source": "authored from the roadmap item; the axiom list is the standard order extension of Q, the encoding, the binder order and every proof term are written here",
+    "prior_art": [
+      {
+        "who": "Raphael M. Robinson",
+        "what": "the finitely axiomatised essentially undecidable arithmetic Q",
+        "year": 1950,
+        "where": "R. M. Robinson, 'An essentially undecidable axiom system', Proc. ICM 1950, vol. 1, 729-730",
+        "attribution": "standard textbook attribution; this lane did not consult the primary source"
+      },
+      {
+        "who": "Petr Hájek and Pavel Pudlák",
+        "what": "Q with the order axioms, and the bounded numeral case split it supports",
+        "year": 1993,
+        "where": "Metamathematics of First-Order Arithmetic, Springer, chapter on fragments of arithmetic",
+        "attribution": "standard textbook attribution; this lane did not consult the primary source"
+      }
+    ]
+  },
+  "notes": "The choice of axioms is constrained by the signature fo_robinson.rs already fixed. `≤` is NOT a second symbol and could not be one without a second ℕ structure: FO.natStructureQ's binary relation family is rel2 k x y := Nat.lt (Nat.add x k) y, so rel2 0 is `<` and rel2 1 is `x + 1 < y` -- no index of that family is Nat.le. So x ≤ y is spelled x < S y throughout. Separately, every binary axiom binds `y` OUTER and `x` inner, and that is forced rather than cosmetic: all_elim on all (all φ) puts the outer instance under FO.Subst.lift, i.e. under FO.Term.subst t FO.Subst.shift, which iota-reduces for a var or a closed literal term and is repairable by FO.Term.subst_numeral for a stuck symbolic numeral, but is unrepairable for a Pi-bound FO.Term. Numeral outer and arbitrary term inner is the only order in which this family can be instantiated at (numeral n, arbitrary term), which is what the bounded case split of the next slice needs.",
+  "proof_route": "kernel-lean",
+  "axiom_footprint": []
+}
