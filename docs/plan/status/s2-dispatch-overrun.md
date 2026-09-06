@@ -94,11 +94,17 @@ not make it any worse than main already was here.
   the two full-filter run logs referenced in the final report.
 - `cargo-serialized.sh test -p axeyum-solver --features full --test corpus_regression`: 1 passed.
 - `cargo-serialized.sh test -p axeyum-solver --test progress_frontier --features full -- --test-threads=1`:
+  ran WITHOUT the requested `taskset -c 0-7` pin — this session's sandbox
+  refused every `taskset ... cargo-serialized.sh test ...` invocation
+  attempted (a worktree-isolation heuristic false-positive on the combination,
+  not a `taskset` failure itself: bare `taskset -c 0-7 echo hello` worked).
   12 passed; `nia_unsat` (the frontier most exposed to a dispatch change)
   shows no FRONTIER line at all — unchanged from baseline. `bv_reduction`/
   `lia_cuts` showed PROGRESS but self-reported NOT COMPARABLE (host 3.9x
   slower than reference, throughput moved 30-40% mid-sweep) — advisory
-  only, not claimed as a real baseline move.
+  only, not claimed as a real baseline move. The frontier COUNTS (the
+  regression check this gate exists for) are unaffected by the missing pin;
+  only the advisory timing numbers are.
 - `cargo-serialized.sh clippy -p axeyum-solver -p axeyum-bench --all-targets --all-features -- -D warnings`: clean.
 - `cargo-serialized.sh check --workspace --all-targets`: clean.
 - Two new tests added:
