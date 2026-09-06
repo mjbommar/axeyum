@@ -546,7 +546,11 @@ impl FractionFree for ZPoly {
         // assumed — exactness here is a theorem, not a local invariant, and the
         // check is free because the remainder is already in hand.
         let mut delta = f.degree().unwrap_or(0) - g.degree().unwrap_or(0);
-        let mut beta = if delta % 2 == 0 { -int_one() } else { int_one() };
+        let mut beta = if delta % 2 == 0 {
+            -int_one()
+        } else {
+            int_one()
+        };
         let mut psi = -int_one();
         loop {
             let Some(remainder) = f.pseudo_remainder(&g) else {
@@ -1726,7 +1730,10 @@ mod tests {
         };
         let combination = &certificate.cofactor_a * &certificate.input_a
             + &certificate.cofactor_b * &certificate.input_b;
-        assert_eq!(combination, certificate.gcd, "the identity really does hold");
+        assert_eq!(
+            combination, certificate.gcd,
+            "the identity really does hold"
+        );
         assert!(!certificate.verify());
     }
 
@@ -1841,7 +1848,10 @@ mod tests {
             isolate_real_roots(&qi(&[7]), DEFAULT_ISOLATION_STEPS),
             Some(Vec::new())
         );
-        assert_eq!(isolate_real_roots(&QPoly::zero(), DEFAULT_ISOLATION_STEPS), None);
+        assert_eq!(
+            isolate_real_roots(&QPoly::zero(), DEFAULT_ISOLATION_STEPS),
+            None
+        );
     }
 
     #[test]
