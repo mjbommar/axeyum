@@ -295,6 +295,32 @@ A pre-existing leak fell out of the same work: `expand(√8)` rendered
 `2*\0sqrt:2`, because `collect_atom_dictionary` registered the key the *head*
 spells and not the one intake canonicalizes to.
 
+### The wave-three guards, mutation-checked
+
+Each mutant applied alone to `lib.rs` in this lane's own worktree and the
+radical suite re-run; baseline 18 passed / 0 failed.
+
+| mutant | tests killed | which |
+|---|---|---|
+| **M1** the `uncanonicalized_constant_radical` guard deleted | **1** | `a_radicand_past_the_factorizer_declines_at_every_index` |
+| **M2** the `MAX_COMBINED_ROOT_INDEX` cap removed | **1** | `a_common_index_past_the_cap_declines_rather_than_merging` |
+| **M3** a declined merge drops the radicals instead of leaving them | **1** | `a_common_index_past_the_cap_declines_rather_than_merging` |
+| **M4** the index reduction by the exponent gcd removed | **1** | `a_root_index_reduces_by_the_exponent_gcd` |
+| **M5** the even-root-of-a-negative decline removed | **1** | `an_even_root_of_a_negative_is_never_given_a_value` |
+| **M6** the k-free split degraded back to a squarefree one | 7 | every cross-index identity, plus the split's own arithmetic test |
+
+M6 is not a guard but the arithmetic the whole repair rests on, so a one-test
+kill would have been the wrong outcome there — the same reading wave one's M1
+and M2 rows get.
+
+**Two of these five killed nothing on the first pass, and both were real gaps
+rather than test-naming problems.** The cap (M2) was covered only by an input
+whose common index was `lcm(5,7,11,13) = 5005`, where the *overflow* check
+declines first and the cap never fires; it needed `lcm(5,13) = 65`, one past the
+cap, where the merge would otherwise fit `i128` comfortably. The parity check
+(M5) was covered by nothing at all: without it `√(−4)` normalizes to `−2` and
+`equal(√(−4), −2)` certifies **true**, which no test in the crate objected to.
+
 ### `exp` in the unbounded ring: implemented, measured, and not shipped
 
 The unbounded twin of `normalize_exp` was written and it works. At overflow

@@ -32616,11 +32616,9 @@ mod radical_atom_products {
             None,
             "a square factor past the trial bound must abandon the split"
         );
-        // And the zero-test declines rather than refuting over such a radical.
-        assert_declines(
-            &CasExpr::int(big_prime * big_prime).sqrt(),
-            &CasExpr::int(big_prime),
-        );
+        // What the zero-test then does about it is
+        // `a_radicand_past_the_factorizer_declines_at_every_index`, which is the
+        // guard's own test; this one is about the arithmetic.
     }
 
     // --- The cross-family case (ADR-1670 wave three, item 1) ----------------
@@ -32748,19 +32746,56 @@ mod radical_atom_products {
             &CasExpr::int(squared).nth_root(4),
             &CasExpr::int(big_prime).sqrt(),
         );
+        // Index 2 is the case wave two found (`√(p²)` was reported not equal to
+        // `p`); it is this guard's job now too, at the same width.
+        assert_declines(&CasExpr::int(squared).sqrt(), &CasExpr::int(big_prime));
+    }
+
+    /// An **even** root of a negative is not a real number, so no canonical
+    /// form exists for it and none may be invented: `√(−4)` is not `−2`, and
+    /// `−2` is what dropping the parity check would make it.
+    ///
+    /// The odd-index control is in
+    /// `an_odd_root_of_a_negative_is_real_and_an_even_one_is_left_alone`,
+    /// where `∛(−8) = −2` really does hold.
+    #[test]
+    fn an_even_root_of_a_negative_is_never_given_a_value() {
+        for (left, right) in [
+            (CasExpr::int(-4).sqrt(), CasExpr::int(-2)),
+            (CasExpr::int(-4).sqrt(), CasExpr::int(2)),
+            (CasExpr::int(-16).nth_root(4), CasExpr::int(-2)),
+        ] {
+            assert!(
+                !matches!(
+                    equal(&left, &right),
+                    ZeroTest::Certified { equal: true, .. }
+                        | ZeroTest::CertifiedBig { equal: true, .. }
+                ),
+                "{left} is not a real number; it must never be certified equal to {right}"
+            );
+        }
     }
 
     /// A common index past [`MAX_COMBINED_ROOT_INDEX`] is declined, not merged
     /// wrongly — and declining means `Unknown`, never a refutation.
     #[test]
     fn a_common_index_past_the_cap_declines_rather_than_merging() {
-        // lcm(5, 7, 11, 13) = 5005, far past the cap.
-        let product = CasExpr::int(2).nth_root(5)
-            * CasExpr::int(2).nth_root(7)
-            * CasExpr::int(2).nth_root(11)
-            * CasExpr::int(2).nth_root(13);
-        assert_declines(&product, &CasExpr::int(2));
-        // Just under the cap it still merges: lcm(2, 3) = 6.
+        // lcm(5, 13) = 65, one past the cap — and the merge that the cap
+        // refuses would otherwise fit `i128` comfortably
+        // (`root_65(2^13 · 2^5) = root_65(2^18)`), so this input isolates the
+        // cap rather than the overflow check behind it.
+        assert_declines(
+            &(CasExpr::int(2).nth_root(5) * CasExpr::int(2).nth_root(13)),
+            &CasExpr::int(262_144).nth_root(65),
+        );
+        // The positive control, one index lower: lcm(5, 12) = 60, inside the
+        // cap, and the same shape decides.
+        assert_certified(
+            &(CasExpr::int(2).nth_root(5) * CasExpr::int(2).nth_root(12)),
+            &CasExpr::int(131_072).nth_root(60),
+            true,
+        );
+        // And lcm(2, 3) = 6 still merges, which is the case the wave is about.
         assert_certified(
             &(root(2) * cube_root(2)),
             &CasExpr::int(32).nth_root(6),
