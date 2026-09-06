@@ -37,7 +37,7 @@
 use core::cmp::Ordering;
 
 use axeyum_ir::{IrError, Rational, Sort, TermArena, TermId, TermNode};
-use num_bigint::{BigInt, BigUint, Sign};
+use axeyum_arith::big::{BigInt, BigUint, Sign};
 
 /// An IEEE 754 binary format: `exp_bits` exponent bits and `sig_bits`
 /// significand bits (the latter *including* the hidden bit). The bit width of a
