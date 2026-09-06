@@ -872,7 +872,7 @@ fn declare_prod_sel_laws(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), Kerne
 
             // q ^ (if s q then count m q else 0) = q ^ count (restrict m s) q
             let hcr = d.lemma(p.multiset_count_restrict, &[m, s, q]);
-            let back = d.symm(sel_count, cr, hcr);
+            let back = d.symm(cr, sel_count, hcr);
             let end = d.pow(q, cr);
             let step2 = d.congr(sel_count, cr, back, &|d, y| d.pow(q, y));
 
