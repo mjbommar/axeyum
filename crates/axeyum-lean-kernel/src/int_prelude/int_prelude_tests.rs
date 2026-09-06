@@ -187,7 +187,7 @@ fn int_prelude_admits_all_declarations() {
 
 /// The integer laws this development **derives** from the axiom-free `Nat`
 /// prelude. Each must be a `Theorem` with an empty axiom footprint.
-fn derived_laws(p: &IntPrelude) -> [crate::NameId; 319] {
+fn derived_laws(p: &IntPrelude) -> [crate::NameId; 331] {
     [
         p.gcd_eq_gcd_ab_witnesses,
         p.gcd_div_gcd_div_gcd,
@@ -530,6 +530,20 @@ fn derived_laws(p: &IntPrelude) -> [crate::NameId; 319] {
         p.descent_multiplier_bounds,
         p.sub_neg_one_eq_add_sq_one,
         p.exists_small_multiple_of_sq_add_one,
+        // `fermat-two-squares` lane (W3-10 third slice, ADR-1650):
+        // `int_prelude/fermat_two_squares.rs`.
+        p.dvd_zero,
+        p.dvd_of_mod_eq_zero,
+        p.mul_mod_eq_zero,
+        p.sq_add_sq_mod_eq_of_mod_eq,
+        p.exists_next_multiplier,
+        p.sq_mul_add_sq_mul,
+        p.dvd_of_degenerate_descent,
+        p.lt_of_nat_of_lt,
+        p.le_two_of_nat_le_two,
+        p.not_dvd_of_nat_of_prime_of_lt,
+        p.exists_sum_of_two_squares_of_multiple,
+        p.fermat_two_squares,
     ]
 }
 

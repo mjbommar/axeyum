@@ -1,50 +1,57 @@
 {
   "schema_version": 1,
-  "id": "F:int-fermat-two-squares",
-  "title": "Fermat's theorem on sums of two squares",
-  "statement": "Every prime p with p = 1 (mod 4) is a sum of two integer squares. Stated here as: for every natural m, if p = 2m+1 is prime (2 <= p, and every divisor of p is 1 or p) and m is EVEN, then Int.IsSumOfTwoSquares (ofNat p) -- there are integers a and b with p = a*a + b*b. ESTABLISHED HERE, axiom-free, by Euler's descent. The hypotheses are spelled exactly as Int.firstSupplementaryLawResidue spells them, because the residue half is the only route this development has into the descent.",
+  "id": "F:int-two-squares-descent",
+  "title": "Euler's descent: a small multiple of a prime that is a sum of two squares descends to the prime",
+  "statement": "Let p be prime (2 <= p, and every divisor of p is 1 or p). If for some natural n with 0 < n < p the multiple n*p is a sum of two integer squares, then p ITSELF is a sum of two integer squares. This is Euler's infinite descent, by strong induction on the multiplier n.",
   "formal": {
     "language": "lean4",
-    "statement": "theorem Int.fermatTwoSquares : ((x0 : AxNat) -> ((x1 : And (AxNat.le (AxNat.succ (AxNat.succ AxNat.zero)) (AxNat.succ (AxNat.mul (AxNat.succ (AxNat.succ AxNat.zero)) x0))) (((x1 : AxNat) -> ((x2 : AxNat.dvd x1 (AxNat.succ (AxNat.mul (AxNat.succ (AxNat.succ AxNat.zero)) x0))) -> Or (Eq.{1} AxNat x1 (AxNat.succ AxNat.zero)) (Eq.{1} AxNat x1 (AxNat.succ (AxNat.mul (AxNat.succ (AxNat.succ AxNat.zero)) x0))))))) -> ((x2 : AxNat.Even x0) -> Int.IsSumOfTwoSquares (Int.ofNat (AxNat.succ (AxNat.mul (AxNat.succ (AxNat.succ AxNat.zero)) x0))))))",
+    "statement": "theorem Int.exists_sum_of_two_squares_of_multiple : ((x0 : AxNat) -> ((x1 : And (AxNat.le (AxNat.succ (AxNat.succ AxNat.zero)) x0) (((x1 : AxNat) -> ((x2 : AxNat.dvd x1 x0) -> Or (Eq.{1} AxNat x1 (AxNat.succ AxNat.zero)) (Eq.{1} AxNat x1 x0))))) -> ((x2 : AxNat) -> ((x3 : AxNat.lt AxNat.zero x2) -> ((x4 : AxNat.lt x2 x0) -> ((x5 : Exists.{1} Int (fun (x5 : Int) => Exists.{1} Int (fun (x6 : Int) => Eq.{1} Int (Int.mul (Int.ofNat x2) (Int.ofNat x0)) (Int.add (Int.mul x5 x5) (Int.mul x6 x6))))) -> Int.IsSumOfTwoSquares (Int.ofNat x0)))))))",
     "fragment": "Int",
     "free_symbols": [
       "x0",
       "x1",
-      "x2"
+      "x2",
+      "x3",
+      "x4",
+      "x5",
+      "x6"
     ],
-    "kernel_theorem": "Int.fermatTwoSquares"
+    "kernel_theorem": "Int.exists_sum_of_two_squares_of_multiple"
   },
   "epistemic_status": "proved",
   "external_status": "proved",
+  "proof_route": "kernel-lean",
   "depends_on": [
-    "F:int-brahmagupta-fibonacci",
-    "F:int-two-squares-descent-cross-terms",
     "F:int-two-squares-descent-step",
-    "F:int-firstsupplementarylawresidue",
-    "F:int-two-squares-descent-entry",
+    "F:int-two-squares-descent-cross-terms",
     "F:int-two-squares-next-multiplier",
     "F:int-two-squares-degenerate-divides",
-    "F:int-two-squares-descent",
+    "F:int-exists-centered-representative",
+    "F:int-descent-multiplier-bounds",
     "F:nat-strong-induction",
-    "F:int-le-of-lt",
+    "F:int-lt-of-le-of-ne",
+    "F:int-mul-zero",
     "F:int-of-nat-nat-abs-of-nonneg",
+    "F:int-one-mul",
     "F:ml430-int-lt-of-ofnat-lt-ofnat-968e5a43",
-    "F:nat-le-succ-succ",
-    "F:nat-zero-le"
+    "F:nat-le-trans",
+    "F:nat-lt-of-lt-of-le",
+    "F:nat-lt-or-eq-of-le"
   ],
+  "axiom_footprint": [],
   "evidence": [
     {
-      "id": "kernel-Int.fermatTwoSquares",
+      "id": "kernel-Int.exists_sum_of_two_squares_of_multiple",
       "kind": "kernel-term",
-      "supports": "Int.fermatTwoSquares is admitted by the trusted kernel gate with EXACTLY the type recorded in formal.statement, which is a verbatim quotation of the kernel's own renderer.",
+      "supports": "Int.exists_sum_of_two_squares_of_multiple is admitted by the trusted kernel gate with EXACTLY the type recorded in formal.statement, which is a verbatim quotation of the kernel's own renderer.",
       "check_status": "checked",
       "checkers": [
         "producing-build (Kernel::add_declaration, inside build_int_prelude)",
         "int_theorem_inventory re-list of the admitted declaration"
       ],
-      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example int_theorem_inventory -- Int.fermatTwoSquares 2>/dev/null | grep -cE '^theorem[[:space:]]+Int\\\\.fermatTwoSquares[[:space:]]'",
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example int_theorem_inventory -- Int.exists_sum_of_two_squares_of_multiple 2>/dev/null | grep -cE '^theorem[[:space:]]+Int\\\\.exists_sum_of_two_squares_of_multiple[[:space:]]'",
       "checker_seconds": 12,
-      "kernel_declaration": "Int.fermatTwoSquares",
+      "kernel_declaration": "Int.exists_sum_of_two_squares_of_multiple",
       "notes": "Two independent failure modes, so the exit status depends on the FINDING and not on the run completing: int_theorem_inventory exits non-zero when the named filter matches nothing, and grep -c exits 1 printing 0 when the anchored line is absent. Anchored with [[:space:]] and never with a backslash-t, which a scripted (GNU) grep reads as a literal t. --release is MANDATORY: this tool builds the constructed carriers and overflows the default debug thread stack."
     },
     {
@@ -81,7 +88,7 @@
     "date": "2026-09-06",
     "curation": "curated",
     "established_by": "lane fermat-two-squares (W3-10 third slice, ADR-1650), crates/axeyum-lean-kernel/src/int_prelude/fermat_two_squares.rs, admitted by build_int_prelude",
-    "source": "Fermat's theorem on sums of two squares (asserted 1640, proved by Euler in 1749 by infinite descent)",
+    "source": "a step of Euler's descent proof (1749) of Fermat's theorem on sums of two squares",
     "prior_art": [
       {
         "who": "Fermat; Euler",
@@ -92,7 +99,5 @@
       }
     ]
   },
-  "notes": "CLOSED 2026-09-06. This row was open with a SIZED obstruction from 2026-09-05 (ADR-1633, then ADR-1647), and every piece those sizings named was built without any of them turning out to be stale -- a departure from ADR-1647's own finding that two thirds of ADR-1633's obstruction had already been false when written. WORTH RECORDING: the formal.statement this row carried while it was OPEN is byte-identical to the type the kernel now renders for the admitted theorem. The prediction was exact, and it was CHECKED rather than assumed -- the flip asserted equality between the recorded string and a fresh int_theorem_inventory render before writing anything, and would have exited non-zero otherwise. THE FOUR PIECES, all admitted on the first attempt: (1) the next multiplier, F:int-two-squares-next-multiplier; (2) the q != 0 argument in two halves, the primality-free F:int-two-squares-degenerate-divides and the single primality-consuming step that refutes it; (3) the descent by Nat.strongInduction, F:int-two-squares-descent; (4) this. THE DESIGN CALL that carries the assembly: the descent quantifies its multiplier as Int.ofNat n over a Nat index rather than as an Int carrying a natAbs m = n bridge hypothesis, so 0 < m, m < p and 1 < m are all the Nat hypotheses themselves under the order_coercion.rs defeq, and the whole proof contains exactly ONE transport across of_nat_nat_abs_of_nonneg -- at the recursive call, where q genuinely arrives as an Int. WHAT THIS DOES NOT DO: F:int-two-squares-composite-characterisation stays open on a different obstruction, recorded there, which this lane did not touch -- its statement EVALUATES over a factor multiset rather than inducting past a factorisation.",
-  "proof_route": "kernel-lean",
-  "axiom_footprint": []
+  "notes": "The third of ADR-1647's four pieces, and the one that fixes the shape of the whole proof. THE MULTIPLIER IS QUANTIFIED AS Int.ofNat n OVER A Nat INDEX, not as an Int m carrying a natAbs m = n bridge hypothesis. Int.le/Int.lt at two ofNat's is DEFINITIONALLY the corresponding Nat relation (order_coercion.rs proves both its lemmas by fun h => h), so in this spelling 0 < m, m < p and 1 < m are the Nat hypotheses themselves, and the whole proof contains exactly ONE transport across of_nat_nat_abs_of_nonneg -- at the recursive call, where the new multiplier q genuinely arrives as an Int with 0 <= q < m. The bridge spelling would have needed three transports at every level of the recursion AND would have had to re-establish the bridge at the recursive call anyway. A second consequence: no refl-generalisation of the motive is needed. Nat.Hall.hall_sufficient, the other Prop-motive user of Nat.strongInduction here, must state its motive as (forall s nb, card s = n -> ...) and apply it at card s with Eq.refl, because its measure is a FUNCTION OF its subject; here the measure IS the index. Base case n = 1: the multiple is the prime itself. Inductive case 1 < n: centre both squares modulo m, produce the next multiplier, bound it, rule out q = 0, and hand Int.descentStep's output to the induction hypothesis at natAbs q."
 }

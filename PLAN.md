@@ -137,6 +137,8 @@ now. Nothing was deleted.
 
 | Date | Commit | Result |
 |---|---|---|
+| 2026-09-06 | `5789bb773` | `Int.exists_sum_of_two_squares_of_multiple` (Euler's descent by `Nat.strongInduction` at a `Prop` motive, multiplier quantified as `Int.ofNat n`) and `Int.fermatTwoSquares`. All twelve declarations admitted first try, axiom-free. `derived_laws` 319 → 331, recounted. ADR-1650 and this status file. |
+| 2026-09-06 | `f5a7c4392` | `fermat_two_squares_tests.rs`: the instantiation battery wanted `Even m`, not `Even 2m`. Diagnosed by handing the same argument pair to the untouched `Int.firstSupplementaryLawResidue` and watching it fail identically. 5 passed, 0 failed. |
 | 2026-09-06 | `7376295cf` | `CdclT::unit_propagate` becomes two-watched-literal BCP with blocking literals: `lit_code`, `Watch { clause, blocker }`, `ClauseHeader { offset, len }` over a flat literal arena, the `i`/`j` watch-list compaction, and the highest-level-literal-to-index-1 convention in `analyze_conflict` — all copied from `axeyum-cnf`'s `proof_sat.rs` so slice S7 is a deletion. Reasons become clause ids read from the arena on the conflict path instead of a `Vec<Lit>` cloned at every implication. `add_permanent_clause` installs assignment-aware watches plus one pending evaluation, so a clause inserted at the final-check boundary still implies when unit and conflicts when falsified. Solver `--lib --features full`: 1449 passed, 0 failed. |
 | 2026-09-06 | `889b9e558` | `clippy -p axeyum-solver --all-targets --all-features -- -D warnings`: both clause arguments are consumed into the arena rather than copied out of a borrow (no signature moves, so the ten call sites stand), the deadline-check constant moves to module scope, and the BCP loop carries a reasoned `too_many_lines` allow — splitting it would create the second watch scheme the memo warns against. |
 | 2026-09-06 | `703dc05ef` | Before/after on the committed 50-file QF_IDL and 33-file QF_LRA timeout populations, arms interleaved per file on a loaded shared host, binaries confirmed different by `sha256sum`. QF_IDL 0/50 → 6/50 decided, PAR-2 −8.6%; QF_LRA 4/33 → 5/33, PAR-2 −3.1%; zero verdicts contradicting `declared`, nothing lost. |
@@ -191,6 +193,7 @@ now. Nothing was deleted.
 | 2026-09-05 | `950d0adfb` | chore(plan): regenerate PLAN.md with the conics lane block |
 | 2026-09-05 | `d8ac6a1b5` | chore(ledger): regenerate the production provenance ledger; merge hygiene PASS |
 | 2026-09-05 | `8341545f5` | merge main (picks up `cc8cb0861`, the MetricProdNames::all rename); five generated files reconciled by regeneration; post-merge suite 82 passed, hygiene PASS |
+| 2026-09-05 | `a065f045c` | `int_prelude/fermat_two_squares.rs`: the descent's next multiplier (`exists_next_multiplier`), its degenerate branch (`dvd_of_degenerate_descent`), the single primality-consuming step (`not_dvd_ofNat_of_prime_of_lt`), and the plumbing each needed — `dvd_zero`, `dvd_of_modEq_zero`, `mul_modEq_zero`, `sq_add_sq_modEq_of_modEq`, `sq_mul_add_sq_mul` (ring::int), and the coercion bridges `lt_ofNat_of_lt` / `le_two_of_nat_le_two`. All ten admitted first try, axiom-free. |
 | 2026-09-05 | `24a055abf` | The arithmetization half of the diagonal lemma: `FO.Term.numeral`, `FO.Code.diagAux`, `FO.Code.diagAux_code` (`diag ⌜p⌝ = ⌜p(⌜p⌝)⌝`). Records the measured fact that the diagonal is NOT evaluable at any genuine code — unary numerals put `eqf (var 0) (var 0)`'s diagonalised code over ten million and `rel1 0 (var 0)`'s past the stack — so `diagAux` is pinned symbolically. |
 | 2026-09-05 | `b6d2de455` | The commuting lemma at explicit fuel (`FO.Code.substCodeAux_commutes`), the image lemma (`FO.Code.isFormulaCodeAux_code`), and `FO.Provable`'s seventeenth constructor `eqf_subst` — the Leibniz rule — with its soundness minor. ADR-1636's "needs a fifth induction over `FO.Formula`" was wrong: `FO.sat_inst` puts the term in as a VALUE, so the case is one `Eq.rec`. |
 | 2026-09-05 | `752e3c483` | `fo_roundtrip.rs`: `FO.Term.size`, `FO.Formula.size` and the fuel-additive decoder round trip for both carriers, with the fuel on the LEFT of the `Nat.add`. Also the measurement that `Nat.le (size x) (code x)` is FALSE at `FO.Term.var 0` and `FO.Formula.bot`, which is why nothing downstream is stated at the self-fuelled wrappers. |
@@ -49058,6 +49061,103 @@ compact set in an arbitrary topological space, has nothing computable to
 extract, and did not need eighteen months of a bespoke real-number
 construction to state.
 
+**`Int.fermatTwoSquares` is admitted and axiom-free** (`DONE`,
+fermat-two-squares, 2026-09-05). Every prime `p = 2m+1` with `m` even — that
+is, every prime `p ≡ 1 (mod 4)` — is a sum of two integer squares, established
+in this kernel with no assumption behind it. W3-10 closes.
+
+Twelve declarations in a new `int_prelude/fermat_two_squares.rs` (ADR-1650)
+complete the four pieces ADR-1647 sized, and **every one was admitted on the
+first attempt**. Nothing in ADR-1647's sizing turned out to be stale — a
+departure from that ADR's own finding about its predecessor.
+
+The four pieces:
+
+1. `Int.exists_next_multiplier` — from `m·p = a²+b²` and centered `c ≡ a`,
+   `e ≡ b (mod m)`, the norm `c²+e²` is again a multiple of `m`. Stated as
+   `m·q = c²+e²` so it matches `Int.descentMultiplierBounds` and
+   `Int.descentStep` verbatim; the `symm` happens once here rather than at
+   both call sites. Positivity of `m` is NOT a hypothesis — every congruence
+   on this leg is unconditional in the modulus.
+2. `Int.dvd_of_degenerate_descent` plus `Int.not_dvd_ofNat_of_prime_of_lt` —
+   the `q ≠ 0` argument, split at the point primality enters. The first is a
+   true statement about **any** nonzero `m` with no primality, no bounds and
+   no `Nat` in it; the second is the refutation and is the **only** declaration
+   in the module that reads a primality condition.
+3. `Int.exists_sum_of_two_squares_of_multiple` — Euler's descent, by
+   `Nat.strongInduction` at a `Prop` motive.
+4. `Int.fermatTwoSquares` — the theorem, in three named steps:
+   `Int.firstSupplementaryLawResidue` → `Int.exists_small_multiple_of_sq_add_one`
+   → the descent. The only glue is the `Nat` bridge ADR-1647 sized, and it is
+   two one-line declarations.
+
+**The design call that carries the assembly**: the descent quantifies its
+multiplier as `Int.ofNat n` over a `Nat` index, not as an `Int m` with a
+`natAbs m = n` bridge hypothesis. `Int.le`/`Int.lt` at two `ofNat`s is
+*definitionally* the corresponding `Nat` relation, so `0 < m`, `m < p` and
+`1 < m` are all the `Nat` hypotheses themselves (`Int.lt_ofNat_of_lt` is
+`fun h => h`), and the whole proof contains **one** transport across
+`of_nat_nat_abs_of_nonneg` — at the recursive call, where `q` genuinely
+arrives as an `Int`. The bridge spelling would have needed three at every
+level and would have had to re-establish the bridge at the recursive call
+anyway. It also means no `refl`-generalisation of the motive: unlike
+`Nat.Hall.hall_sufficient`, the measure here IS the index.
+
+Three plumbing lemmas that were simply absent also land and are reusable
+outside this proof: `Int.dvd_zero` (`shape_search --ns Int --concl Int.dvd
+--arity 1` found only `Int.dvd_refl`), `Int.dvd_of_modEq_zero`, and
+`Int.mul_modEq_zero`. `dvd_of_modEq_zero` goes through the **unconditional**
+`Int.ModEq.dvd_iff` rather than the `0 < n`-scoped `Int.modEq_iff_dvd`: the
+latter produces `n ∣ (b − a)` and would have needed a `sub_zero` this prelude
+does not have and which `ring::int` declines, ADR-1633's zero-collapse finding
+hit from the other side.
+
+`order_squares.rs`'s private `centered_body` and `small_multiple_body` are
+**re-derived** here rather than widened to `pub(super)` — that file belongs to
+a sibling lane's history and this module adds no edit to it. The *predicates*
+(`centered_predicate`, `small_multiple_outer`) are re-used, and they are what
+the `Exists.rec`s eliminate, so a drifted body would stop type-checking rather
+than pass quietly.
+
+**The mutation table**, all three rows RUN and restored byte-for-byte:
+feeding the descent's induction hypothesis `n` instead of `natAbs q`, and
+refuting the `n = 1` branch from `n < p` instead of `1 < n` (i.e. allowing
+`m = 1` in the `m ∣ p` step), each make the prelude un-buildable and kill
+**125 of 128** `int_prelude::` tests — identical numbers for two mutants at
+opposite ends of the proof, and neither error message names the defect (both
+are a bare `TypeMismatch` over two `ExprId`s). The informative row is the
+third: dropping the `Nat.lt n p` hypothesis from the statement PIN's own
+expected type, leaving the declaration alone so the prelude still builds, kills
+**exactly one** test (4 passed, 1 failed).
+
+**One thing worth recording about the ledger.** The `formal.statement` this
+fact carried while it was OPEN — written on 2026-09-05 from ADR-1633's sizing,
+before any of this existed — is **byte-identical** to the type the kernel now
+renders for the admitted theorem. The flip asserted that equality against a
+fresh `int_theorem_inventory` render rather than assuming it, and would have
+exited non-zero otherwise.
+
+**One defect, and it was in the test, not the theorem.** The first
+instantiation battery built `Nat.Even (2m)` where the theorem wants
+`Nat.Even m`, and the kernel refused with a bare
+`TypeMismatch { expected: ExprId(1136250), got: ExprId(2814689) }`, which says
+nothing. It was located by handing the SAME argument pair to
+`Int.firstSupplementaryLawResidue` — an existing declaration this lane did not
+touch, whose first two hypotheses are the same two — and watching it fail
+identically. That put the defect in the test before a single proof term was
+re-read. `even_witness` now takes the number whose evenness is claimed and
+asserts it is even.
+
+**Partition check**: `descent-and-well-ordering` and
+`power-and-square-decompositions` are both held-out families, and their rows
+(`Nat.sum_four_squares`, `Nat.Prime.sum_four_squares`,
+`Int.lt_of_sum_four_squares_eq_mul`, `Int.exists_least_of_bdd`,
+`Int.exists_greatest_of_bdd`, `Nat.sq_add_sq_mul`, `Int.sq_ne_two_mod_four`)
+are named in the module doc and NOT declared. Mathlib's `Nat.Prime.sq_add_sq`,
+which IS this theorem, is in neither family;
+`check-autogenesis-holdout-isolation.py` was run after the proof landed and
+verdict=PASS (held_out=206, references=0).
+
 Status: **half landed** (2026-08-31). The non-residue direction is proved,
 axiom-free. The residue direction is NOT, and the blocker is named precisely.
 
@@ -58113,6 +58213,164 @@ The 26 QF_UFLIA files carrying `2^256` EVM literals are rejected at the
 *parser*, on `Value::Int(i128)`, before any `Rational` exists. Slice 2 is
 `Value::Int`, the SMT-LIB integer-literal parser, and opting further routes in
 one at a time. The LRA 1,024-atom cap does not move here either.
+
+Date: 2026-09-06 (dispatched 2026-09-05)
+Base: local `main` at `fd9cce8e7` (contains `992de4c54`)
+ADR: [ADR-1652](docs/research/09-decisions/adr-1652-the-real-plane-is-a-model-and-it-needs-no-case-split.md)
+Roadmap: W3-8, second slice
+
+## Status
+
+`Geo.rplane : Geo.Incidence` **landed** — the ℝ² model ADR-1635 shaped the
+record's `apart` field for and did not build. `Geo.Incidence` now has two
+models with structurally different point equalities (`Eq` over ℚ,
+`CPoint.Equiv` over ℝ) and different apartness notions, and its five derived
+theorems instantiate at both.
+
+Playfair (`Geo.Affine`) **did not land**. Existence is easy in both models;
+uniqueness needs a route to `Parallel l m → Equiv (a*B − b*A) 0`, and over ℝ
+the only route this lane found passes through a negation, whose removal is
+tightness (`Not (Apart x y) → Equiv x y`) — which `creal.rs` documents as
+absent by design. Over ℚ it is reachable (the explicit intersection point plus
+`Geo.Rat.eqOrNe` on the denominator) but needs a new file, because this lane
+must not edit `qplane.rs`. ADR-1652 § 5 sizes both.
+
+## What landed
+
+New file `crates/axeyum-lean-kernel/src/geo/rplane.rs`, registered from
+`geo.rs`; 41 declarations, every one axiom-free.
+
+| group | declarations |
+| --- | --- |
+| carriers | `Geo.RLine0` + `mk`/`rec`/`a`/`b`/`c`, `Geo.RLine0.Nondeg`, `Geo.RLine` |
+| incidence | `Geo.RPlane.onRaw`, `.on`, `.Apart` |
+| line equality | `Geo.RLine.Equiv` + `equiv_refl`/`equiv_symm`/`equiv_trans` |
+| `PosBound` | `Geo.RPlane.posBoundCongr`, `.notZeroOfPosBound`, `.cancelPosBound` |
+| point setoid | `Geo.RPlane.pointRefl`, `.pointSymm`, `.pointTrans` |
+| congruences | `Geo.RPlane.onPoint`, `.onLine`, `.apartNe`, `.apartSymm`, `.apartCongr` |
+| the join | `Geo.RPlane.join`, `.joinOnLeft`, `.joinOnRight`, `.joinNondeg`, `.joinExists` |
+| the algebra | `Geo.RPlane.pivotAB`, `.defectAC`, `.defectBC`, `.defectSwap`, `.onOfDefects` |
+| uniqueness | `Geo.RPlane.joinUnique` |
+| existence | `Geo.RPlane.twoPointsRaw`, `.twoPoints`, `.triangle` |
+| the model | `Geo.rplane` |
+
+## The finding worth exporting
+
+**The ℝ model needs no case split, and is therefore cheaper than the ℚ one.**
+`Geo.qplane` uses ℚ's decidable equality twice, both times to decide *which* of
+a line's two leading coefficients is nonzero. The ℝ model divides only by
+`distSq P Q` (from `Apart`) and `a*a + b*b` (from `Nondeg`) — sums of two
+squares the hypothesis already witnesses as positive — so the pivot never has
+to know which summand is large, and a line's first point is one formula rather
+than a branch. Where a ℚ development reaches for `eqOrNe`, ask first whether
+the quantity actually divided by is the *sum*.
+
+The second measured detail: `CPoint.distSq P Q` is **definitionally**
+`(x P − x Q)² + (y P − y Q)²`, so `pivotAB`'s conclusion and `Apart`'s witness
+are the same term after δ/ι and `cancelPosBound` consumes the witness with no
+transport at all. That defeq is pinned on its own
+(`dist_sq_unfolds_to_the_coordinate_difference_squares`) because the whole of
+`joinUnique` rests on it.
+
+## The measurement hazard this lane hit
+
+**A negative control over `CReal` must not be a `def_eq` refutation between two
+arithmetic terms.** The first `distSq` and `onRaw` shape pins asserted
+`!def_eq(correct, wrong)` over `CReal` expressions; both ran past **ten
+minutes** in `--release` on an otherwise-green run and were killed, while the
+identical ℚ pins in the same file finish in seconds. Failing `def_eq` over
+`CReal` is a search: congruence fails, and the kernel then unfolds both sides
+into `CReal.mk` with their regularity proofs and compares sequences under a
+binder. Refuting at `CReal.Equiv` is worse again — `Equiv` itself unfolds to a
+`∀ n` over `Rat` arithmetic.
+
+The rule the rewritten pins follow: over `CReal`, assert `def_eq` only where it
+**succeeds**, and do the discriminating half by comparing the stored
+`Definition` value as an interned `ExprId` — exact, `O(1)`, and strictly
+stronger than `def_eq` for a shape claim. CLAUDE.md already says a pathological
+negative control is worth deleting; what this adds is that over the constructive
+reals the pathology is the default, not the exception.
+
+## Gates
+
+| gate | result |
+| --- | --- |
+| `cargo test -p axeyum-lean-kernel --release --lib -- geo:: --test-threads=2` | **20 passed, 0 failed**, 117.22 s |
+| `cargo test -p axeyum-lean-kernel --lib -- geo::geo_tests::geo_prelude_builds --test-threads=1` (debug) | 1 passed, 0 failed, 435.72 s |
+| `cargo clippy -p axeyum-lean-kernel --all-targets -- -D warnings` | exit 0 |
+| `shape_search --include-constructed --ns Geo` | FOUND **119**, and the pinned count is `FIELD_COUNT + 11 + 46 + 41 = 21 + 11 + 46 + 41 = 119` |
+| `cargo check -p axeyum-lean-kernel --all-targets` | exit 0, 1 m 12 s |
+| `cargo fmt --all --check` | exit 0 |
+| `python3 scripts/validate-facts.py` | exit 0, 2927 facts, 0 errors |
+| `python3 scripts/check-settled-fact-statements.py` | PASS (after `--write`), settled=2652 pinned=2652 drifted=0 |
+| `python3 scripts/check-kernel-trusted-core.py` | exit 0, 5 guards, 0 failures |
+| `python3 scripts/check-autogenesis-holdout-isolation.py` | PASS, held_out=206, references=0 |
+| `scripts/check-merge-hygiene.sh` | PASS (guard 6, `check-shape-duplicates.py --prebuilt`, SKIPPED: no `shape_search` binary on this host) |
+| `./scripts/check-links.sh` | exit 0 |
+
+## A second hazard, and a measurement that names it
+
+`Geo.RPlane.pointRefl`/`pointSymm`/`pointTrans` are the **third** copies of
+those three propositions: `metric.rs` already has
+`Metric.CPoint.equivRefl`/`equivSymm`/`equivTrans`. They are kept deliberately
+(the geo prelude builds `cpoint`, not `metric`), but the search that missed them
+is worth naming, because the tool answered confidently:
+
+```text
+shape_search --name-like equivRefl                       → ABSENT
+    groups=[logic,nat,axreal,integer,ipc,rat,characterization,string]
+    declarations=3275   (positive control: any-kind=3275)
+shape_search --include-constructed --name-like equivRefl → FOUND 20,
+    including Metric.CPoint.equivRefl : ∀ P, CPoint.Equiv P P
+```
+
+**Without `--include-constructed` the index covers none of `creal`, `cpoint`,
+`metric`, `geo`, `complex`, `intspace`, `rn`, `top`** — yet its `declarations=`
+count (3275) clears the 3,050 floor a brief asks a lane to check. An ABSENT
+verdict from the default index is not a statement about any of those
+namespaces.
+
+## Mutation table — all four RUN, all four killed
+
+`python3 scripts/tests/mutation_controls.py geo-incidence`, exit **0**. The
+harness copies the tree to a scratch root, so no mutant was ever on disk in a
+worktree another build could see; the baseline is green at 1 test and each
+mutation must kill at least one.
+
+```text
+geo-incidence: baseline green, 1 tests
+  axiom I.1's uniqueness half keeps its distinctness hypothesis  killed 1
+  the join's a and b coefficients are not swapped                killed 1
+  the real line's non-degeneracy is a PosBound witness, not a negation  killed 1
+  joinUnique's backward direction flips the defects              killed 1
+```
+
+| mutant | status | predicted | observed |
+| --- | --- | --- | --- |
+| `Geo.RLine0.Nondeg` as `(Equiv (a*a + b*b) 0) → False` instead of the `PosBound` existential | **RUN**, killed 1 | the division in `joinUnique` fails to typecheck | killed — but the kernel refuses **earlier** than predicted: declarations are checked in order, so `Geo.RPlane.joinNondeg`'s `Exists.intro` is rejected against a `→ False` type before `joinUnique` is reached. A stronger result than the brief asked for: the negated form cannot even be *produced*, let alone consumed. |
+| `Geo.RPlane.joinUnique`'s backward direction fed the unflipped defects (the two lines' order swapped in the conclusion) | **RUN**, killed 1 | `onOfDefects` applied at arguments whose types name the wrong line | killed, as predicted |
+| (pre-existing) axiom I.1's uniqueness half drops its distinctness hypothesis | **RUN**, killed 1 | — | killed |
+| (pre-existing) `Geo.QPlane.join`'s `a`/`b` coefficients swapped | **RUN**, killed 1 | — | killed |
+
+The brief's second mutant was "Playfair's uniqueness with the two parallels'
+order swapped in the conclusion". Playfair did not land, so that mutant has no
+subject; the `joinUnique` backward-direction flip is its nearest live analogue
+(the same order swap, in the same kind of conclusion) and is what ran. This is
+a substitution, not the briefed mutant.
+
+## Landed changes
+
+| commit | what |
+| --- | --- |
+| `d69e35d83` | scaffold: carriers, `Nondeg` as an apartness witness, incidence, line equality, the `PosBound` lemmas, the congruences, the algebraic core |
+| `7122b520f` | `join`, `joinUnique`, `twoPoints`, `triangle`, `Geo.rplane`, `CPoint.Equiv`'s setoid laws; the sweep's 41 new names |
+| `5014f32bb` | the evaluation pins, ADR-1652, this file |
+| `39df0535b` | regenerated PLAN, the ADR index, the census and the statement pins |
+| `6ec73cfdd` | `Geo.Incidence.Parallel`, `parallel_symm`, `parallel_irrefl`, and the finding that the negative form is the wrong primitive for Playfair |
+| `a82b4eabf` | the shape pins rewritten as stored-term comparisons after the `def_eq`-over-`CReal` measurement above |
+| `2e5e6759d` | the `def_eq`-over-`CReal` hazard recorded in the ADR and here |
+| `1904e43fc` | the point setoid laws are a THIRD copy (`metric.rs` has them); corrected in the open |
+| `d924eec4d` | both real-model mutants registered in the `geo-incidence` mutation suite |
 
 **ℝ has a route and it is free (`DONE`, agent-reals-design, 2026-08-17).**
 [ADR-0512](docs/research/09-decisions/adr-0512-real-is-constructed-as-a-setoid-over-the-rationals.md)

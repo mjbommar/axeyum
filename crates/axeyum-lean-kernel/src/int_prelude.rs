@@ -96,6 +96,7 @@ mod euler_totient;
 mod euler_unit_preserve;
 mod euler_unit_range;
 mod exists_gcd_one;
+mod fermat_two_squares;
 mod fibonacci;
 mod first_supplementary;
 mod first_supplementary_residue;
@@ -2163,6 +2164,64 @@ pub struct IntPrelude {
     /// of two squares, with the multiplier already strictly between `0` and
     /// `p`. Primality is deliberately not a hypothesis.
     pub exists_small_multiple_of_sq_add_one: NameId,
+    // -- `fermat-two-squares` lane (W3-10 third slice, ADR-1650):
+    // `int_prelude/fermat_two_squares.rs` --
+    /// `Int.dvd_zero : forall a, dvd a zero`.
+    pub dvd_zero: NameId,
+    /// `Int.dvd_of_modEq_zero : forall n a, ModEq n a zero -> dvd n a`.
+    pub dvd_of_mod_eq_zero: NameId,
+    /// `Int.mul_modEq_zero : forall m x, ModEq m (mul m x) zero`.
+    pub mul_mod_eq_zero: NameId,
+    /// `Int.sq_add_sq_modEq_of_modEq : forall m a b c e, ModEq m c a ->`
+    /// `  ModEq m e b -> ModEq m (add (mul c c) (mul e e))`
+    /// `                       (add (mul a a) (mul b b))`.
+    pub sq_add_sq_mod_eq_of_mod_eq: NameId,
+    /// `Int.exists_next_multiplier : forall m p a b c e,`
+    /// `  Eq Int (mul m p) (add (mul a a) (mul b b)) -> ModEq m c a ->`
+    /// `  ModEq m e b -> Exists Int (fun q =>`
+    /// `    Eq Int (mul m q) (add (mul c c) (mul e e)))`
+    /// -- **the descent's next multiplier**: the centered representatives'
+    /// norm is again a multiple of `m`.
+    pub exists_next_multiplier: NameId,
+    /// `Int.sq_mul_add_sq_mul : forall m u v,`
+    /// `  Eq Int (add (mul (mul m u) (mul m u)) (mul (mul m v) (mul m v)))`
+    /// `         (mul m (mul m (add (mul u u) (mul v v))))`. `ring::int`.
+    pub sq_mul_add_sq_mul: NameId,
+    /// `Int.dvd_of_degenerate_descent : forall m p a b c e,`
+    /// `  Not (Eq Int m zero) -> Eq Int (mul m p) (add (mul a a) (mul b b)) ->`
+    /// `  ModEq m c a -> ModEq m e b ->`
+    /// `  Eq Int (add (mul c c) (mul e e)) zero -> dvd m p`
+    /// -- the degenerate branch of the descent: a vanishing new multiplier
+    /// forces `m` to divide `p`, which primality then refutes.
+    pub dvd_of_degenerate_descent: NameId,
+    /// `Int.lt_ofNat_of_lt : forall (a b : Nat), Nat.lt a b ->`
+    /// `  lt (ofNat a) (ofNat b)` -- the Nat-to-Int direction of
+    /// [`Self::lt_of_ofnat_lt_ofnat`], the hypothesis itself under the defeq.
+    pub lt_of_nat_of_lt: NameId,
+    /// `Int.le_two_of_nat_le_two : forall (k : Nat), Nat.le 2 k ->`
+    /// `  le (add one one) (ofNat k)` -- the `1 + 1 <= p` hypothesis of
+    /// [`Self::exists_small_multiple_of_sq_add_one`] read off a primality
+    /// condition's first conjunct.
+    pub le_two_of_nat_le_two: NameId,
+    /// `Int.not_dvd_ofNat_of_prime_of_lt : forall (p n : Nat),`
+    /// `  (2 <= p and every divisor of p is 1 or p) -> Nat.lt 1 n ->`
+    /// `  Nat.lt n p -> Not (dvd (ofNat n) (ofNat p))`
+    /// -- the only step of Fermat's descent that consumes primality.
+    pub not_dvd_of_nat_of_prime_of_lt: NameId,
+    /// `Int.exists_sum_of_two_squares_of_multiple : forall (p : Nat),`
+    /// `  (2 <= p and every divisor of p is 1 or p) -> forall (n : Nat),`
+    /// `  Nat.lt 0 n -> Nat.lt n p ->`
+    /// `  (Exists Int (fun a => Exists Int (fun b =>`
+    /// `     Eq Int (mul (ofNat n) (ofNat p)) (add (mul a a) (mul b b))))) ->`
+    /// `  IsSumOfTwoSquares (ofNat p)`
+    /// -- **Euler's descent**, by `Nat.strongInduction` on the multiplier.
+    pub exists_sum_of_two_squares_of_multiple: NameId,
+    /// `Int.fermatTwoSquares : forall (m : Nat),`
+    /// `  (2 <= succ (mul 2 m) and every divisor of it is 1 or itself) ->`
+    /// `  Nat.Even m -> IsSumOfTwoSquares (ofNat (succ (mul 2 m)))`
+    /// -- **Fermat's theorem on sums of two squares**: every prime
+    /// `p = 1 (mod 4)` is a sum of two integer squares.
+    pub fermat_two_squares: NameId,
 }
 
 /// Intern every name the integer development uses. Interning is not
@@ -2633,6 +2692,22 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
         descent_multiplier_bounds: child(kernel, "descentMultiplierBounds"),
         sub_neg_one_eq_add_sq_one: child(kernel, "sub_neg_one_eq_add_sq_one"),
         exists_small_multiple_of_sq_add_one: child(kernel, "exists_small_multiple_of_sq_add_one"),
+        // `fermat-two-squares` lane (W3-10 third slice, ADR-1650).
+        dvd_zero: child(kernel, "dvd_zero"),
+        dvd_of_mod_eq_zero: child(kernel, "dvd_of_modEq_zero"),
+        mul_mod_eq_zero: child(kernel, "mul_modEq_zero"),
+        sq_add_sq_mod_eq_of_mod_eq: child(kernel, "sq_add_sq_modEq_of_modEq"),
+        exists_next_multiplier: child(kernel, "exists_next_multiplier"),
+        sq_mul_add_sq_mul: child(kernel, "sq_mul_add_sq_mul"),
+        dvd_of_degenerate_descent: child(kernel, "dvd_of_degenerate_descent"),
+        lt_of_nat_of_lt: child(kernel, "lt_ofNat_of_lt"),
+        le_two_of_nat_le_two: child(kernel, "le_two_of_nat_le_two"),
+        not_dvd_of_nat_of_prime_of_lt: child(kernel, "not_dvd_ofNat_of_prime_of_lt"),
+        exists_sum_of_two_squares_of_multiple: child(
+            kernel,
+            "exists_sum_of_two_squares_of_multiple",
+        ),
+        fermat_two_squares: child(kernel, "fermatTwoSquares"),
     }
 }
 
@@ -3031,6 +3106,12 @@ pub(crate) fn build_int_prelude_uncached(kernel: &mut Kernel) -> Result<IntPrelu
         // `Int.exists_centered_representative` reuses that module's `imodeq`
         // and `int_exists` shapes.
         order_squares::declare_order_squares_all(&mut d)?;
+        // `fermat-two-squares` lane (W3-10 third slice, ADR-1650): the
+        // assembly. Placed last -- it consumes `order_squares.rs`'s entry
+        // point and termination certificate, `two_squares.rs`'s
+        // `descentStep`, `first_supplementary_residue.rs`'s residue witness
+        // and `Nat.strongInduction`.
+        fermat_two_squares::declare_fermat_two_squares_all(&mut d)?;
         Ok(prelude)
     })();
     match built {
@@ -3072,3 +3153,6 @@ mod two_squares_tests;
 
 #[cfg(test)]
 mod order_squares_tests;
+
+#[cfg(test)]
+mod fermat_two_squares_tests;

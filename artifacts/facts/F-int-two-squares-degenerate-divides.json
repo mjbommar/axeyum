@@ -1,50 +1,49 @@
 {
   "schema_version": 1,
-  "id": "F:int-fermat-two-squares",
-  "title": "Fermat's theorem on sums of two squares",
-  "statement": "Every prime p with p = 1 (mod 4) is a sum of two integer squares. Stated here as: for every natural m, if p = 2m+1 is prime (2 <= p, and every divisor of p is 1 or p) and m is EVEN, then Int.IsSumOfTwoSquares (ofNat p) -- there are integers a and b with p = a*a + b*b. ESTABLISHED HERE, axiom-free, by Euler's descent. The hypotheses are spelled exactly as Int.firstSupplementaryLawResidue spells them, because the residue half is the only route this development has into the descent.",
+  "id": "F:int-two-squares-degenerate-divides",
+  "title": "A vanishing descent multiplier forces m to divide p",
+  "statement": "Let m be nonzero with m*p = a*a + b*b, and let c and e be congruent to a and b modulo m. If c*c + e*e = 0 then m divides p. This is the degenerate branch of Euler's descent, stated WITHOUT any primality hypothesis: it is a true statement about every nonzero m, and it is the contradiction's premise, not the contradiction.",
   "formal": {
     "language": "lean4",
-    "statement": "theorem Int.fermatTwoSquares : ((x0 : AxNat) -> ((x1 : And (AxNat.le (AxNat.succ (AxNat.succ AxNat.zero)) (AxNat.succ (AxNat.mul (AxNat.succ (AxNat.succ AxNat.zero)) x0))) (((x1 : AxNat) -> ((x2 : AxNat.dvd x1 (AxNat.succ (AxNat.mul (AxNat.succ (AxNat.succ AxNat.zero)) x0))) -> Or (Eq.{1} AxNat x1 (AxNat.succ AxNat.zero)) (Eq.{1} AxNat x1 (AxNat.succ (AxNat.mul (AxNat.succ (AxNat.succ AxNat.zero)) x0))))))) -> ((x2 : AxNat.Even x0) -> Int.IsSumOfTwoSquares (Int.ofNat (AxNat.succ (AxNat.mul (AxNat.succ (AxNat.succ AxNat.zero)) x0))))))",
+    "statement": "theorem Int.dvd_of_degenerate_descent : ((x0 : Int) -> ((x1 : Int) -> ((x2 : Int) -> ((x3 : Int) -> ((x4 : Int) -> ((x5 : Int) -> ((x6 : Not (Eq.{1} Int x0 Int.zero)) -> ((x7 : Eq.{1} Int (Int.mul x0 x1) (Int.add (Int.mul x2 x2) (Int.mul x3 x3))) -> ((x8 : Int.ModEq x0 x4 x2) -> ((x9 : Int.ModEq x0 x5 x3) -> ((x10 : Eq.{1} Int (Int.add (Int.mul x4 x4) (Int.mul x5 x5)) Int.zero) -> Int.dvd x0 x1)))))))))))",
     "fragment": "Int",
     "free_symbols": [
       "x0",
       "x1",
-      "x2"
+      "x2",
+      "x3",
+      "x4",
+      "x5",
+      "x6",
+      "x7",
+      "x8",
+      "x9",
+      "x10"
     ],
-    "kernel_theorem": "Int.fermatTwoSquares"
+    "kernel_theorem": "Int.dvd_of_degenerate_descent"
   },
   "epistemic_status": "proved",
   "external_status": "proved",
+  "proof_route": "kernel-lean",
   "depends_on": [
-    "F:int-brahmagupta-fibonacci",
-    "F:int-two-squares-descent-cross-terms",
     "F:int-two-squares-descent-step",
-    "F:int-firstsupplementarylawresidue",
-    "F:int-two-squares-descent-entry",
-    "F:int-two-squares-next-multiplier",
-    "F:int-two-squares-degenerate-divides",
-    "F:int-two-squares-descent",
-    "F:nat-strong-induction",
-    "F:int-le-of-lt",
-    "F:int-of-nat-nat-abs-of-nonneg",
-    "F:ml430-int-lt-of-ofnat-lt-ofnat-968e5a43",
-    "F:nat-le-succ-succ",
-    "F:nat-zero-le"
+    "F:int-sq-add-sq-lt-sq-of-bounds",
+    "F:int-modeq-symm"
   ],
+  "axiom_footprint": [],
   "evidence": [
     {
-      "id": "kernel-Int.fermatTwoSquares",
+      "id": "kernel-Int.dvd_of_degenerate_descent",
       "kind": "kernel-term",
-      "supports": "Int.fermatTwoSquares is admitted by the trusted kernel gate with EXACTLY the type recorded in formal.statement, which is a verbatim quotation of the kernel's own renderer.",
+      "supports": "Int.dvd_of_degenerate_descent is admitted by the trusted kernel gate with EXACTLY the type recorded in formal.statement, which is a verbatim quotation of the kernel's own renderer.",
       "check_status": "checked",
       "checkers": [
         "producing-build (Kernel::add_declaration, inside build_int_prelude)",
         "int_theorem_inventory re-list of the admitted declaration"
       ],
-      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example int_theorem_inventory -- Int.fermatTwoSquares 2>/dev/null | grep -cE '^theorem[[:space:]]+Int\\\\.fermatTwoSquares[[:space:]]'",
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example int_theorem_inventory -- Int.dvd_of_degenerate_descent 2>/dev/null | grep -cE '^theorem[[:space:]]+Int\\\\.dvd_of_degenerate_descent[[:space:]]'",
       "checker_seconds": 12,
-      "kernel_declaration": "Int.fermatTwoSquares",
+      "kernel_declaration": "Int.dvd_of_degenerate_descent",
       "notes": "Two independent failure modes, so the exit status depends on the FINDING and not on the run completing: int_theorem_inventory exits non-zero when the named filter matches nothing, and grep -c exits 1 printing 0 when the anchored line is absent. Anchored with [[:space:]] and never with a backslash-t, which a scripted (GNU) grep reads as a literal t. --release is MANDATORY: this tool builds the constructed carriers and overflows the default debug thread stack."
     },
     {
@@ -81,7 +80,7 @@
     "date": "2026-09-06",
     "curation": "curated",
     "established_by": "lane fermat-two-squares (W3-10 third slice, ADR-1650), crates/axeyum-lean-kernel/src/int_prelude/fermat_two_squares.rs, admitted by build_int_prelude",
-    "source": "Fermat's theorem on sums of two squares (asserted 1640, proved by Euler in 1749 by infinite descent)",
+    "source": "a step of Euler's descent proof (1749) of Fermat's theorem on sums of two squares",
     "prior_art": [
       {
         "who": "Fermat; Euler",
@@ -92,7 +91,5 @@
       }
     ]
   },
-  "notes": "CLOSED 2026-09-06. This row was open with a SIZED obstruction from 2026-09-05 (ADR-1633, then ADR-1647), and every piece those sizings named was built without any of them turning out to be stale -- a departure from ADR-1647's own finding that two thirds of ADR-1633's obstruction had already been false when written. WORTH RECORDING: the formal.statement this row carried while it was OPEN is byte-identical to the type the kernel now renders for the admitted theorem. The prediction was exact, and it was CHECKED rather than assumed -- the flip asserted equality between the recorded string and a fresh int_theorem_inventory render before writing anything, and would have exited non-zero otherwise. THE FOUR PIECES, all admitted on the first attempt: (1) the next multiplier, F:int-two-squares-next-multiplier; (2) the q != 0 argument in two halves, the primality-free F:int-two-squares-degenerate-divides and the single primality-consuming step that refutes it; (3) the descent by Nat.strongInduction, F:int-two-squares-descent; (4) this. THE DESIGN CALL that carries the assembly: the descent quantifies its multiplier as Int.ofNat n over a Nat index rather than as an Int carrying a natAbs m = n bridge hypothesis, so 0 < m, m < p and 1 < m are all the Nat hypotheses themselves under the order_coercion.rs defeq, and the whole proof contains exactly ONE transport across of_nat_nat_abs_of_nonneg -- at the recursive call, where q genuinely arrives as an Int. WHAT THIS DOES NOT DO: F:int-two-squares-composite-characterisation stays open on a different obstruction, recorded there, which this lane did not touch -- its statement EVALUATES over a factor multiset rather than inducting past a factorisation.",
-  "proof_route": "kernel-lean",
-  "axiom_footprint": []
+  "notes": "One half of the second of ADR-1647's four pieces. Both squares vanish (Int.eq_zero_of_sq_add_sq_eq_zero), so a representative congruent to a that is itself 0 says m | a, and likewise m | b; then m*p = m*(m*(u*u+v*v)) and ONE application of Int.mul_left_cancel_of_ne_zero gives p = m*(u*u+v*v), which is m | p. The scaling identity Int.sq_mul_add_sq_mul is emitted by ring::int and spells the factor as mul m (mul m ...) rather than mul (mul m m) ... precisely so that the cancellation needs m != 0 and not m*m != 0. SEPARATING THIS FROM THE REFUTATION IS THE POINT: the primality-consuming step is a different declaration (Int.not_dvd_ofNat_of_prime_of_lt), so the answer to 'where does this proof use that p is prime?' is a single grep, and this half is reusable by any descent with the same shape."
 }

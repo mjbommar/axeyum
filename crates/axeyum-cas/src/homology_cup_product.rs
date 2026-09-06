@@ -1078,6 +1078,98 @@ mod tests {
         );
     }
 
+    /// Direct unit test of `check_table_entry`'s graded-commutativity check,
+    /// isolated from the table-mismatch check above (guard 10): as
+    /// `verify_refuses_a_table_that_breaks_graded_commutativity` shows, any
+    /// CERTIFICATE-level forgery that reaches this check must first survive
+    /// the table-mismatch guard, and graded commutativity at the
+    /// cohomology-class level is a genuine theorem for any two actual cocycle
+    /// representatives -- so once `alpha`/`beta` are genuine cocycles (which
+    /// `bases_are_cocycles_and_genuine_extensions` already guarantees) and
+    /// the recorded entry matches the fresh recomputation (which the
+    /// table-mismatch guard already guarantees), this check can never
+    /// actually fire from a forged certificate field. Mutation-tested:
+    /// neutralizing it killed zero tests for exactly that reason. What it
+    /// DOES guard against is a bug in the swap/sign computation itself, which
+    /// this test exercises directly by calling `check_table_entry` with a
+    /// deliberately wrong `sign_odd` (not itself a certificate field, an
+    /// argument the caller computes from `p`/`q`) against the genuine,
+    /// self-consistent recorded entry.
+    #[test]
+    fn check_table_entry_refuses_a_wrong_sign_odd_parameter() {
+        use super::check_table_entry;
+        let torus = crate::homology::fixtures::torus_7v();
+        let genuine = cup_product_q(&torus, 1, 1).expect("torus cup product H^1 x H^1 -> H^2");
+        assert!(
+            genuine.verify(&torus).is_ok(),
+            "genuine certificate must verify"
+        );
+        assert!(
+            nonzero(&genuine.table[0][1]),
+            "need a nonzero off-diagonal entry to distinguish a sign flip"
+        );
+
+        let delta_pq = super::boundary_matrix(&torus, 3)
+            .expect("delta^(p+q) builds")
+            .transpose();
+        let combined_gamma: Vec<crate::Matrix> = genuine
+            .basis_gamma
+            .0
+            .iter()
+            .cloned()
+            .chain(genuine.basis_gamma.1.iter().cloned())
+            .collect();
+        let rows_gamma = torus.count(2);
+        let boundary_gamma_len = genuine.basis_gamma.0.len();
+        let alpha = &genuine.basis_alpha.1[0];
+        let beta = &genuine.basis_beta.1[1];
+        let recorded = &genuine.table[0][1];
+
+        // POSITIVE CONTROL: the correct sign_odd (true, since p * q = 1 is
+        // odd) is admitted.
+        assert!(
+            check_table_entry(
+                &torus,
+                1,
+                1,
+                0,
+                1,
+                alpha,
+                beta,
+                &delta_pq,
+                &combined_gamma,
+                rows_gamma,
+                boundary_gamma_len,
+                None,
+                true,
+                recorded,
+            )
+            .is_ok()
+        );
+
+        // ADVERSARIAL: the wrong sign_odd (false) must be refused, since the
+        // genuine off-diagonal entry is nonzero so the negated and
+        // unnegated values differ.
+        let err = check_table_entry(
+            &torus,
+            1,
+            1,
+            0,
+            1,
+            alpha,
+            beta,
+            &delta_pq,
+            &combined_gamma,
+            rows_gamma,
+            boundary_gamma_len,
+            None,
+            false,
+            recorded,
+        )
+        .expect_err("a wrong sign_odd must be refused by the graded commutativity check");
+        assert!(err.contains("commutativity"), "got: {err}");
+    }
+
     // Silence an unused-import warning if `CupProductCertificate` is only
     // ever named via `cup_product_f2`/`cup_product_q`'s return type in some
     // configurations.

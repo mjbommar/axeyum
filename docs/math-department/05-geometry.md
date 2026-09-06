@@ -114,7 +114,7 @@ Different per seat, and none of them is `Quot.sound` in the first instance:
 - [~] **3. Isometries of the plane** — *monoid and instances done 2026-09-04; classification sized, not started.*, as maps preserving `distSq`, with
       composition and the classification into translations, rotations and
       reflections. Reachable now, and the first real use of transformations.
-- [~] **4. A synthetic incidence development with the coordinate plane as a*** — *record and the rational plane model landed 2026-09-05; the real plane and Playfair are open.* **
+- [~] **4. A synthetic incidence development with the coordinate plane as a*** — *record, the rational plane and the real plane all landed by 2026-09-06; Playfair is three identities away.* **
       model.** Tarski's axioms are finitely many first-order sentences; proving
       the constructed plane satisfies them is a genuine result and exactly the
       kind of thing this kernel is good at.
@@ -132,6 +132,7 @@ Different per seat, and none of them is `Quot.sound` in the first instance:
 
 | 2026-09-05 | **Item 4, first slice** (roadmap W3-8, ADR-1635): `Geo.Incidence` as a setoid record with Hilbert's incidence axioms, five derived theorems, and the rational coordinate plane as a full model — 75 axiom-free declarations. Distinctness is a field because only the uniqueness axiom consumes it. The real plane did not land: its uniqueness axiom needs the cancellation route through `PosBound` and `CReal.inv`. Along the way the rational ring producer gained the cancellation pass it lacked. | `992de4c54` |
 | 2026-09-05 | **Item 5 landed** (roadmap W3-9, ADR-1641): conics as a six-coefficient family with the discriminant classification (exclusions and inhabitants), circles as an instance, unconditional invariance under the existing isometries with every ring identity discharged by the producer, the standard forms with their signs, and the focus–directrix property of the parabola; 56 axiom-free declarations. Left open: a line meets a conic in at most two points (needs a square root), the reflective property (needs tangents), the circle converse (needs `inv`). The Next Five for this reviewer is now four of five done, with the real-plane incidence model the remaining half of item 4. | `31cda11c7`; `creal_point::` 82 passed in the lane |
+| 2026-09-06 | **Item 4, second slice** (roadmap W3-8, ADR-1652): the real plane as a full model of the incidence axioms, with distinctness and nondegeneracy as apartness witnesses and the uniqueness axiom through one pivot identity whose leading factor is the squared distance itself; 44 axiom-free declarations, shorter than the rational model. Playfair's axiom did not land, and the reason is the shape of 'parallel': the negative form needs tightness, which this kernel refuses by design; the positive form is three ring identities already verified numerically. | `ef30df0e4`; `geo::` 20 passed in the lane |
 
 ## How to re-measure
 
