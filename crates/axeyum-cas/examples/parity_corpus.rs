@@ -1722,8 +1722,7 @@ fn prob8_geometric_symbolic_mgf() -> Outcome {
     let cert = d.mgf("t");
     let conditions = cert.hypotheses_display();
     let e = CasExpr::var("t").exp();
-    let expected_claim =
-        (p.clone() * e.clone()) / (CasExpr::one() - (CasExpr::one() - p) * e);
+    let expected_claim = (p.clone() * e.clone()) / (CasExpr::one() - (CasExpr::one() - p) * e);
     let matches_claim = matches!(
         equal(&cert.claim, &expected_claim),
         ZeroTest::Certified { equal: true, .. }
@@ -1802,8 +1801,9 @@ fn prob9_normal_symbolic_variance() -> Outcome {
         } else {
             Trust::Uncertified
         },
-        expected: "mass 1, mean mu, variance s, mgf exp(mu*t + s*t^2/2), each under exactly `s > 0`"
-            .to_string(),
+        expected:
+            "mass 1, mean mu, variance s, mgf exp(mu*t + s*t^2/2), each under exactly `s > 0`"
+                .to_string(),
         actual: report.join(" ; "),
     }
 }
