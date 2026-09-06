@@ -4,7 +4,7 @@
   "note": "Statement identity for every settled fact (S1 of the trusted-library safety roadmap, ADR-0763). Per fact: SHA-256 of formal.statement (the canonical kernel rendering for native lean4 rows), SHA-256 of the top-level reader-facing statement, and the kernel_theorem it names. A settled fact's statement is what the ledger CLAIMS; changing any of the three silently turns 'we proved X' into 'we proved something we then labelled X'. Changes require an amendment row naming both digests and a reason; superseded digests are preserved in each pin's history. `coverage_floor` is a ratchet the gate re-derives rather than trusts: slack is itself a violation, so a loosened floor is self-reverting. Written by `scripts/check-settled-fact-statements.py --write`; do not hand-edit.",
   "coverage_floor": {
     "max_unpinned_settled": 0,
-    "min_identity_bound": 2425,
+    "min_identity_bound": 2429,
     "max_header_exempt": 0
   },
   "amendments": [
@@ -7962,6 +7962,34 @@
       "statement_sha256": "1aa9ee4ae472157bbd00a7ee219bb408bee54bc22542518cf0898214221c5a26",
       "prose_sha256": "986b7490b4c412011b308fc2739b6a57c86d5b06d273ce6b8c907114b1ca5065",
       "kernel_theorem": "FO.Formula.decode_code"
+    },
+    {
+      "fact_id": "F:fo-q-consistency",
+      "language": "lean4",
+      "statement_sha256": "c6610e515dd1c6b1dc08228897088eba4939a4ea83c188b1872e5900e6929b3b",
+      "prose_sha256": "82a45aebec95a39cfef48b32382ede5b93bbea3a564b24fab9c9ff0553f82d8a",
+      "kernel_theorem": "FO.Q.consistency"
+    },
+    {
+      "fact_id": "F:fo-q-numeral-arithmetic",
+      "language": "lean4",
+      "statement_sha256": "30b72cd27a32ba059fc78a0646a7af4e24f75edd687f8f6e90537d335fd066fb",
+      "prose_sha256": "5aa409b58c0f0e2612b3214f77bc0e906cc3ef889b6206ecedf2d252a92e48f1",
+      "kernel_theorem": "FO.Q.add_numeral"
+    },
+    {
+      "fact_id": "F:fo-q-pair-representable",
+      "language": "lean4",
+      "statement_sha256": "0afa7cb2c78b45c5575c38b4f3f120c64d10a85a859e224fbb50466906af9895",
+      "prose_sha256": "763f55ed75a94badd363fb0463cd9512a89510260306f67c8941cbaa16523372",
+      "kernel_theorem": "FO.Q.pair_represented"
+    },
+    {
+      "fact_id": "F:fo-q-robinson-context",
+      "language": "lean4",
+      "statement_sha256": "30f5c3983276f4496151708ceec53b43d1d9f5e83e146aeb5777b56a867ec051",
+      "prose_sha256": "fa91bbaef1c323e87cfe88c243423614bfa4f80526731dccc3816a6acb96999c",
+      "kernel_theorem": "FO.Q.natModels"
     },
     {
       "fact_id": "F:fo-soundness",

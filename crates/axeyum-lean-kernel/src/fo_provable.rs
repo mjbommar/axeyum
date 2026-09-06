@@ -278,6 +278,21 @@ pub fn build_fo_provable_prelude(
     kernel: &mut crate::Kernel,
 ) -> Result<FoProvablePrelude, KernelError> {
     let semantics = build_fo_semantics_prelude(kernel)?;
+    declare_fo_provable_over(kernel, semantics)
+}
+
+/// Build the calculus over a semantics prelude the caller ALREADY built.
+/// See `fo_semantics.rs`'s `declare_fo_semantics_over` for why the entry
+/// point exists.
+///
+/// # Errors
+///
+/// Returns the [`KernelError`] from any of the underlying trusted gates if a
+/// declaration fails to admit.
+pub fn declare_fo_provable_over(
+    kernel: &mut crate::Kernel,
+    semantics: FoSemanticsPrelude,
+) -> Result<FoProvablePrelude, KernelError> {
     let syntax = semantics.syntax;
     let syn = syntax.names(kernel);
     let zero_lvl = kernel.level_zero();

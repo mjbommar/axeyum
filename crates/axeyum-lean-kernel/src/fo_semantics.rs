@@ -224,6 +224,28 @@ pub fn build_fo_semantics_prelude(
     kernel: &mut crate::Kernel,
 ) -> Result<FoSemanticsPrelude, KernelError> {
     let syntax = build_fo_syntax_prelude(kernel)?;
+    declare_fo_semantics_over(kernel, syntax)
+}
+
+/// Build the semantics package over a syntax prelude the caller ALREADY built.
+///
+/// The `fo_*` group is two chains over one `fo_syntax.rs`
+/// (`syntax -> semantics -> provable -> soundness` and
+/// `syntax -> code -> numbering -> decode -> roundtrip`), and
+/// [`crate::Kernel::add_declaration`] refuses a second `FO.Term` with
+/// `DeclarationExists`. So a kernel that wants BOTH -- which is what relating
+/// `FO.Provable` to the arithmetization needs -- has to enter this chain here
+/// rather than at [`build_fo_semantics_prelude`]. Same reason, same shape, as
+/// `fo_substitution.rs`'s `declare_fo_substitution_over`.
+///
+/// # Errors
+///
+/// Returns the [`KernelError`] from any of the underlying trusted gates if a
+/// declaration fails to admit.
+pub fn declare_fo_semantics_over(
+    kernel: &mut crate::Kernel,
+    syntax: FoSyntaxPrelude,
+) -> Result<FoSemanticsPrelude, KernelError> {
     let syn = syntax.names(kernel);
     let zero_lvl = kernel.level_zero();
     let one = kernel.level_succ(zero_lvl);
