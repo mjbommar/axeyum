@@ -1313,7 +1313,7 @@ mod tests {
         // resolves well past the first reduction trigger, firing several
         // clause-DB reductions. The reducer must (a) actually fire (counter > 0)
         // and (b) leave the verdict correct (a watch/locked-clause bug would flip
-        // it or crash) — cross-checked against the production batsat adapter.
+        // it or crash) — cross-checked against the `batsat-reference` yardstick adapter (ADR-1703).
         let f = pigeonhole_unsat(7);
         let (result, reductions) = solve_with_xor_cdcl_reductions(&f);
         assert_eq!(

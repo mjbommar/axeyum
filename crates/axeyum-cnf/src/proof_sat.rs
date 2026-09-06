@@ -8,9 +8,10 @@
 //! (untrusted) search — the project's "untrusted fast search, trusted small
 //! checking" identity, realized for `unsat`.
 //!
-//! A conflict budget bounds the search so it can never hang. This is a
-//! proof/correctness reference; the fast default solving path remains the
-//! `rustsat-batsat` adapter until the benchmarking gate says otherwise.
+//! A conflict budget bounds the search so it can never hang. Since ADR-1703
+//! this core is THE SAT engine under every shipping path; the former
+//! `rustsat-batsat` adapter survives only behind the `batsat-reference`
+//! feature as a measurement yardstick, never as a route.
 
 // Monotonic clock: on wasm32 the browser has no `std` clock, so use `web-time`'s
 // drop-in `Instant` (ADR-0017). Native targets use the std clock.
