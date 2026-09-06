@@ -57829,7 +57829,7 @@ Every row below was run by this lane. "post-merge" means after
 | the same sweep, pre-merge | 27 passed, 0 failed, 101.90 s | 0 |
 | `cargo test -p axeyum-lean-kernel --release --lib -- geo::geo_tests::geo_prelude_builds --test-threads=2` | 1 passed, 0 failed, 44.94 s | 0 |
 | `python3 scripts/tests/mutation_controls.py geo-affine` | baseline green at 1 test; **2 of 2 killed** | 0 |
-| `python3 scripts/tests/mutation_controls.py --check-anchors` | `MUTATION_ANCHORS\|suites=88\|anchors=836\|stale=1`; `geo-affine`'s 2 anchors resolve uniquely | 1 (4 pre-existing complaints in `cas-summation-and-gaussian` and `creal-migrate-consumers`; **none this lane's**) |
+| `python3 scripts/tests/mutation_controls.py --check-anchors` (post-merge) | `MUTATION_ANCHORS\|suites=99\|anchors=917\|stale=1`; `geo-affine`'s 2 anchors resolve uniquely | 1 (the same 4 pre-existing complaints in `cas-summation-and-gaussian` and `creal-migrate-consumers`, **none this lane's**; three of them are fixed by `c28d7b7c6`, which is in the 25 commits main has moved since this merge) |
 | `cargo clippy -p axeyum-lean-kernel --all-targets -- -D warnings` (post-merge) | — | 0 |
 | `cargo check --workspace --all-targets` (post-merge) | — | 0 |
 | `cargo fmt --all --check` (post-merge) | 0 lines of output | 0 |
@@ -57837,7 +57837,8 @@ Every row below was run by this lane. "post-merge" means after
 | `python3 scripts/check-settled-fact-statements.py` (post-merge) | settled=2682 pinned=2682 unpinned=0 drifted=0, PASS | 0 |
 | `python3 scripts/check-kernel-trusted-core.py` (post-merge) | 5 guards, 0 failures | 0 |
 | `python3 scripts/check-autogenesis-holdout-isolation.py` (post-merge) | held_out=206, files_scanned=1133, references=0, PASS | 0 |
-| `scripts/check-merge-hygiene.sh` (post-merge) | PASS; guard 6 `check-shape-duplicates.py --prebuilt` SKIPPED at first run for want of a `shape_search` binary, then built and rerun | 0 |
+| `scripts/check-merge-hygiene.sh` (post-merge) | PASS, `shape_duplicates=ok`, `kernel_projection=ok` — both had SKIPPED on the first run for want of a `shape_search` binary; it was built and the gate rerun so both ANSWER | 0 |
+| `target/release/examples/shape_search --include-constructed --ns Geo` (freshly built) | **`verdict: FOUND 164`**, `declarations=4810`, coverage includes the `geo` group | 0 |
 | `./scripts/check-links.sh` (post-merge) | "all links ok" | 0 |
 | `python3 scripts/gen-plan.py` | lanes=630, lane_blocks=630, landed_rows=1213 | 0 |
 | `python3 scripts/gen-adr-index.py` | rows=880 (`duplicate_numbers=0166,0167` is pre-existing) | 0 |
@@ -57851,15 +57852,24 @@ Every row below was run by this lane. "post-merge" means after
   scope is the `geo::` sweep plus the workspace `check`.
 - **`just check` / `./scripts/check.sh`** — not run. The lane ran the named
   gates individually rather than the aggregate.
-- **`shape_search` as an absence oracle** — deliberately not used. It indexes no
-  `Geo.*` name without `--include-constructed`, so an ABSENT verdict from it is
-  not a statement about this shelf (the common brief's rule 21). Absence was
-  established instead by grepping every `name_str(` call under
-  `crates/axeyum-lean-kernel/src/geo/`: the 45 new suffixes collide with nothing,
-  and each apparent duplicate in that grep is one `Geo.QPlane.*` against one
-  `Geo.RPlane.*`. The environment-derived sweep test is the stronger check and
-  it is green — a colliding name would have been a duplicate `add_declaration`,
-  and a forgotten one a set-equality failure.
+- **`shape_search` as an absence oracle** — deliberately not used that way. It
+  indexes no `Geo.*` name without `--include-constructed`, so an ABSENT verdict
+  from it is not a statement about this shelf (the common brief's rule 21).
+  Absence was established instead by grepping every `name_str(` call under
+  `crates/axeyum-lean-kernel/src/geo/`: the 45 new suffixes collide with
+  nothing, and each apparent duplicate in that grep is one `Geo.QPlane.*`
+  against one `Geo.RPlane.*`. The environment-derived sweep test is the stronger
+  check and it is green — a colliding name would have been a duplicate
+  `add_declaration`, and a forgotten one a set-equality failure. What
+  `shape_search` WAS used for, with `--include-constructed` and a freshly built
+  binary, is confirming the pinned count moved: `FOUND 164`, exactly
+  `21 + 11 + 46 + 41 + 7 + 6 + 17 + 15`, up from 119 before this slice.
+- **A second merge of `main`** — not run. `main` moved another 25 commits during
+  this wrap-up (it is at `c28d7b7c6` as this is written, against the merged
+  `53d5d86f1`). Those 25 change **nothing** under
+  `crates/axeyum-lean-kernel/src/geo/`, verified by diffing the merge base
+  against `main` restricted to that path, so the lane's work is unaffected;
+  chasing a moving `main` was judged a treadmill rather than a gate.
 
 ## Partition check
 
@@ -57903,6 +57913,7 @@ debug), and that is measured rather than preferred — the prelude-build test is
 | `5261627c0` | `Geo.Affine` (7 fields, `Geo.Incidence` as field 0) and its three derived theorems |
 | `4b7c7536d` | `Geo.qaffine` and `Geo.raffine`, five evaluation pins, the two mutants |
 | `00335770a` | ADR-1659, the two facts, this file, and the generated views |
+| `b3b6d5cfb` | merge of `main` (121 commits; three conflicts, all generated files, resolved by regenerating), the `clippy::comparison_chain` rewrite in `nested_sum`, and this file's measured gate and mutation tables |
 
 **Your lane's block (`DONE`, power-series, 2026-09-05).** W2-5 lands eight
 declarations in a NEW file
