@@ -1902,6 +1902,10 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.four_pow_eq_two_pow_add_self,
         p.choose_two_mul_succ_le_two_pow,
         p.choose_two_mul_succ_le_four_pow,
+        // `chebyshev-pi-bounds` lane (roadmap W3-11, ADR-1655):
+        // `prime_counting_bounds.rs`.
+        p.prime_counting_prime_mono,
+        p.prime_counting_mono,
     ]
 }
 

@@ -280,6 +280,7 @@ mod pow_add_prime;
 mod powsq;
 mod prime_char;
 mod prime_counting;
+mod prime_counting_bounds;
 mod prime_dvd_factorial_lcm;
 mod prime_dvd_mirrors;
 mod primes;
@@ -513,6 +514,7 @@ use prime_char::{
     declare_prime_not_prime_pow_all,
 };
 use prime_counting::declare_prime_counting;
+use prime_counting_bounds::declare_prime_counting_order;
 use prime_dvd_factorial_lcm::declare_prime_dvd_factorial_lcm_all;
 use prime_dvd_mirrors::declare_prime_dvd_mirrors_all;
 use primes::{
@@ -7476,6 +7478,14 @@ pub struct NatPrelude {
     /// `Nat.primorial_mono : ∀ m n, Le m n → Le (primorial m) (primorial n)`.
     pub primorial_mono: NameId,
 
+    // --- the prime-counting shelf (`prime_counting_bounds.rs`, ADR-1655) ---
+    /// `Nat.primeCounting'_mono : ∀ m n, Le m n →
+    /// Le (primeCounting' m) (primeCounting' n)`.
+    pub prime_counting_prime_mono: NameId,
+    /// `Nat.primeCounting_mono : ∀ m n, Le m n →
+    /// Le (primeCounting m) (primeCounting n)`.
+    pub prime_counting_mono: NameId,
+
     // --- the odd central binomial bound (`central_binomial.rs`, ADR-1637) ---
     /// `Nat.mul_two_eq_add_self : ∀ a, Eq (mul a 2) (add a a)` — `mul a 2`
     /// reduces to `add (add zero a) a`, so this is `zero_add` under one
@@ -8817,6 +8827,10 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             primorial_pos: kernel.name_str(nat, "primorial_pos"),
             primorial_le_succ: kernel.name_str(nat, "primorial_le_succ"),
             primorial_mono: kernel.name_str(nat, "primorial_mono"),
+
+            // `prime_counting_bounds.rs` (ADR-1655).
+            prime_counting_prime_mono: kernel.name_str(nat, "primeCounting'_mono"),
+            prime_counting_mono: kernel.name_str(nat, "primeCounting_mono"),
 
             // `central_binomial.rs` (ADR-1637).
             mul_two_eq_add_self: kernel.name_str(nat, "mul_two_eq_add_self"),
@@ -10349,6 +10363,11 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         declare_primorial_defining_equations(&mut d, &p)?;
         declare_min_fac_prime_bridge(&mut d, &p)?;
         declare_primorial_order(&mut d, &p)?;
+        // The prime-counting shelf (`prime_counting_bounds.rs`, ADR-1655,
+        // roadmap W3-11). Needs `Nat.primeCounting'`/`primeCounting`
+        // (`prime_counting.rs`) and `Nat.countRange_le_of_le`
+        // (`totient_lemmas.rs`), both far above.
+        declare_prime_counting_order(&mut d, &p)?;
         // The odd central binomial bound (`central_binomial.rs`, ADR-1637).
         // Needs `Nat.sum_choose_row`/`choose_symm_of_eq_add` (`binomial.rs`),
         // `Nat.sumRange_split` (`rectangle.rs`), `Nat.sumRange_succ` and the
@@ -10529,6 +10548,9 @@ mod min_fac_dvd_tests;
 
 #[cfg(test)]
 mod primorial_tests;
+
+#[cfg(test)]
+mod prime_counting_bounds_tests;
 
 #[cfg(test)]
 mod central_binomial_tests;
