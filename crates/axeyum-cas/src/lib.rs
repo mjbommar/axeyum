@@ -75,6 +75,7 @@ pub mod enclosure;
 pub mod extremum;
 mod factor_int;
 pub mod fps;
+pub mod fps_analytic;
 pub mod geometry;
 pub mod geometry_beyond;
 pub mod geometry_certify;
@@ -106,6 +107,7 @@ pub mod ntheory_advanced;
 pub mod ntheory_certify;
 pub mod ntheory_more;
 pub mod numberfield;
+pub mod numberfield_ideals;
 pub mod orthopoly;
 pub mod partial_fractions;
 pub mod permgroup;
@@ -5528,6 +5530,15 @@ pub fn definite_sum(f: &CasExpr, var: &str, lower: &CasExpr, upper: &CasExpr) ->
 /// `|ratio| < 1` (`∑_{0}^{∞} 2^{−k} = 2`, `∑_{1}^{∞} k·3^{−k} = 3/4`); a polynomial
 /// or `|ratio| ≥ 1` summand diverges (the limit declines) and this returns `None`.
 /// Built on certified primitives (the antidifference and the limit).
+///
+/// When no antidifference exists, one **recognized series** is tried last: the
+/// exponential family `∑_{k≥0} P(k)·μᵏ/k! = e^μ·∑_j (Δʲ P(0)/j!)·μʲ`. That route
+/// rests on ONE recognized identity, `∑ k^{(j)}·μᵏ/k! = μʲ·e^μ`, and BOTH steps
+/// that reach it — the shape reconstruction and the falling-factorial expansion
+/// of `P` — are decided by [`equal`] (see `exponential_series_sum`'s own docs).
+/// `λᵏ/k!` has no hypergeometric
+/// antidifference, so this is the only way `∑ λᵏ/k! = e^λ` — and with it every
+/// Poisson moment — is reachable at all.
 #[must_use]
 pub fn infinite_sum(f: &CasExpr, var: &str, lower: &CasExpr) -> Option<CasExpr> {
     // p-series `∑_{k=m}^{∞} c/kˢ = c·(ζ(s) − ∑_{j=1}^{m−1} 1/jˢ)` (`s ≥ 2`, `m ≥ 1`)
@@ -5549,11 +5560,20 @@ pub fn infinite_sum(f: &CasExpr, var: &str, lower: &CasExpr) -> Option<CasExpr> 
         let tail = zeta_value - CasExpr::Const(head);
         return Some(simplify(&(CasExpr::Const(coeff) * tail)));
     }
-    let antidifference = sum_polynomial(f, var).or_else(|| gosper_sum(f, var))?;
-    let limit_at_infinity = limit(&antidifference, var, LimitPoint::PosInfinity)?;
-    let at_lower = antidifference.substitute(var, lower);
-    let result = limit_at_infinity - at_lower;
-    Some(simplify(&result))
+    // The telescoping route first: an antidifference plus its limit at ∞. It is
+    // the strongest thing available, so the recognized-series route below is only
+    // consulted when this declines (which keeps every existing value unchanged).
+    let telescoped = sum_polynomial(f, var)
+        .or_else(|| gosper_sum(f, var))
+        .and_then(|antidifference| {
+            let limit_at_infinity = limit(&antidifference, var, LimitPoint::PosInfinity)?;
+            let at_lower = antidifference.substitute(var, lower);
+            Some(simplify(&(limit_at_infinity - at_lower)))
+        });
+    if let Some(value) = telescoped {
+        return Some(value);
+    }
+    exponential_series_sum(f, var, lower)
 }
 
 /// Match a p-series summand `c/varˢ` (a constant over a pure power of `var`),
@@ -5587,6 +5607,292 @@ fn match_p_series(f: &CasExpr, var: &str) -> Option<(Rational, i64)> {
     }
     let coeff = numerator.checked_div(*den_coeff)?;
     Some((coeff, i64::from(exp)))
+}
+
+/// The **exponential-series** value of `∑_{var=0}^{∞} f(var)` when `f` is
+/// `c·e^{u₀}·μ^var·P(var)/var!` for a polynomial `P` — the one family that has no
+/// hypergeometric antidifference at all, so neither [`sum_polynomial`] nor
+/// [`gosper_sum`] can reach it, and every Poisson moment lives in it.
+///
+/// # Why this is not a table lookup
+///
+/// The value rests on **one** recognized identity,
+///
+/// ```text
+/// ∑_{k≥0} k^{(j)}·μᵏ/k! = μʲ·e^μ            (k^{(j)} the falling factorial)
+/// ```
+///
+/// which is the reindexing `k^{(j)}/k! = 1/(k−j)!` applied to the defining Taylor
+/// series of `exp`. Everything that gets from `f` to that identity is **decided by
+/// [`equal`]**, not assumed, and a candidate is returned only if both obligations
+/// certify:
+///
+/// 1. **Shape.** The heuristic extraction below produces candidates `den`, the
+///    exponent `E(var)`, and the polynomial `P`; the route then requires
+///    `equal(f, e^{E(var)}·P(var)/(den·Γ(var+1)))` to certify. A near-miss
+///    summand (`λᵏ/(k!·(k+1))`, or the misindexed `λᵏ/(k−1)!`) fails here or
+///    earlier at the denominator test, so it is never read as `e^λ`.
+/// 2. **Newton basis.** `P` is re-expressed in the falling-factorial basis with
+///    `c_j = Δʲ P(0)/j!`, and `equal(P(var), Σⱼ c_j·var^{(j)})` must certify. This
+///    is what licenses applying the base identity term by term.
+///
+/// The result is then `e^{u₀}/den · e^μ · Σⱼ c_j·μʲ`. Convergence needs no side
+/// condition: the exponential series converges absolutely for every `μ`.
+///
+/// Declines (`None`) for a lower bound other than `0`, a non-constant residual
+/// denominator, a `var`-dependent atom other than a single affine `exp` exponent,
+/// or when either obligation fails to certify.
+fn exponential_series_sum(f: &CasExpr, var: &str, lower: &CasExpr) -> Option<CasExpr> {
+    if integer_constant(lower)? != 0 {
+        return None;
+    }
+    let shape = exponential_series_shape(f, var)?;
+    let ExponentialSeriesShape {
+        denominator,
+        constant_exponent,
+        rate_exponent,
+        coefficients,
+    } = shape;
+
+    // Obligation 2: the Newton forward-difference expansion of `P`.
+    let newton = newton_falling_factorial_coefficients(&coefficients)?;
+    let mut rebuilt = CasExpr::zero();
+    for (j, c) in newton.iter().enumerate() {
+        let order = u32::try_from(j).ok()?;
+        rebuilt = rebuilt + c.clone() * falling_factorial(&CasExpr::var(var), order);
+    }
+    let polynomial = polynomial_from_coefficients(&coefficients, var);
+    if !matches!(
+        equal(&polynomial, &rebuilt),
+        ZeroTest::Certified { equal: true, .. }
+    ) {
+        return None;
+    }
+
+    // `μ = e^{rate}`. The base identity is stated in `μ`, so this is where the
+    // rate leaves the logarithm it was carried in.
+    let mu = exponential_of_rate(&rate_exponent);
+    let mut tail = CasExpr::zero();
+    for (j, c) in newton.iter().enumerate() {
+        let power = match u32::try_from(j).ok()? {
+            0 => CasExpr::one(),
+            p => mu.clone().pow(p),
+        };
+        tail = tail + c.clone() * power;
+    }
+    let prefactor = constant_exponent.exp() / denominator;
+    Some(simplify(&(prefactor * mu.exp() * tail)))
+}
+
+/// The recognized shape of an exponential-series summand: `f(var) =
+/// e^{constant_exponent + rate_exponent·var}·P(var)/(denominator·Γ(var+1))`,
+/// with `P`'s coefficients (least significant first) as `var`-free expressions.
+struct ExponentialSeriesShape {
+    /// The residual denominator left after the factorial cancels. Must be free of
+    /// `var` — the whole route rests on the summand being `P(var)/var!` times a
+    /// `var`-free factor, and a surviving `var` in the denominator (`λᵏ/(k!·(k+1))`)
+    /// is exactly the near-miss this rejects.
+    denominator: CasExpr,
+    /// The `var`-free part `u₀` of the exponent.
+    constant_exponent: CasExpr,
+    /// The coefficient `u` of `var` in the exponent (`μ = e^u`).
+    rate_exponent: CasExpr,
+    /// `P`'s coefficients, least significant first.
+    coefficients: Vec<CasExpr>,
+}
+
+/// Extract an [`ExponentialSeriesShape`] candidate from `f`, **certifying the
+/// extraction** with [`equal`] before returning it (obligation 1 of
+/// [`exponential_series_sum`]). The search itself is heuristic — it reads the
+/// canonical atom decomposition of `f·Γ(var+1)` — but nothing heuristic escapes:
+/// the reconstruction is compared against `f` by the exact zero-test.
+fn exponential_series_shape(f: &CasExpr, var: &str) -> Option<ExponentialSeriesShape> {
+    let gamma = (CasExpr::var(var) + CasExpr::int(1)).gamma();
+    let product = CasExpr::Mul(vec![f.clone(), gamma.clone()]);
+    // Cancel the `Γ(var+1)` atom against the summand's own factorial. A summand
+    // whose factorial is misindexed (`Γ(var)`) or carries an extra `var`-dependent
+    // factor in the denominator leaves a non-constant residue and declines below.
+    let cancelled = gosper::cancel_common_monomial_expression(&product)?;
+    let rf = normalize_rational(&cancelled)?;
+    if rf.den.is_zero() {
+        return None;
+    }
+    let mut dictionary = BTreeMap::new();
+    collect_atom_dictionary(&product, &mut dictionary);
+    // The residual denominator must not mention `var` — after deatomizing, so a
+    // `var`-carrying transcendental atom cannot hide inside it.
+    let denominator = deatomize_from(&rf.den.to_expr(), &product);
+    if expr_contains_var(&denominator, var) {
+        return None;
+    }
+
+    // Partition every atom appearing in the numerator into the `var`-dependent
+    // `exp` heads (which must be shared by *every* monomial, so they factor out)
+    // and the `var`-free rest (which becomes part of `P`'s coefficients).
+    let mut exponent_atoms: Option<BTreeMap<String, u32>> = None;
+    let mut coefficients: Vec<CasExpr> = Vec::new();
+    for (monomial, coefficient) in &rf.num.terms {
+        let mut dependent: BTreeMap<String, u32> = BTreeMap::new();
+        let mut degree = 0usize;
+        let mut factor = CasExpr::Const(*coefficient);
+        for (name, power) in &monomial.powers {
+            if name == var {
+                degree = usize::try_from(*power).ok()?;
+                continue;
+            }
+            let atom = dictionary
+                .get(name)
+                .cloned()
+                .unwrap_or_else(|| CasExpr::var(name));
+            if expr_contains_var(&atom, var) {
+                // Only an `exp` head may depend on `var` here; anything else
+                // (a `ln(var)`, a nested `Γ`) is outside this fragment.
+                if !matches!(atom, CasExpr::Unary(UnaryFunc::Exp, _)) {
+                    return None;
+                }
+                dependent.insert(name.clone(), *power);
+            } else {
+                factor = factor * atom.pow(*power);
+            }
+        }
+        match &exponent_atoms {
+            None => exponent_atoms = Some(dependent),
+            Some(shared) if *shared == dependent => {}
+            Some(_) => return None, // the exponential factor is not common
+        }
+        if degree >= coefficients.len() {
+            coefficients.resize(degree + 1, CasExpr::zero());
+        }
+        coefficients[degree] = coefficients[degree].clone() + factor;
+    }
+    let exponent_atoms = exponent_atoms?;
+    if exponent_atoms.is_empty() {
+        return None; // no `μᵏ` factor: not this family
+    }
+    for coefficient in &mut coefficients {
+        *coefficient = simplify(coefficient);
+    }
+
+    // The total exponent `E(var) = Σ power·argᵢ`, split affinely in `var`.
+    let mut exponent = CasExpr::zero();
+    for (name, power) in &exponent_atoms {
+        let CasExpr::Unary(UnaryFunc::Exp, argument) = dictionary.get(name)? else {
+            return None;
+        };
+        exponent =
+            exponent + CasExpr::Const(Rational::integer(i128::from(*power))) * (**argument).clone();
+    }
+    let at_zero = simplify(&exponent.substitute(var, &CasExpr::zero()));
+    let at_one = simplify(&exponent.substitute(var, &CasExpr::one()));
+    let rate = simplify(&(at_one - at_zero.clone()));
+    if expr_contains_var(&at_zero, var) || expr_contains_var(&rate, var) {
+        return None;
+    }
+    if !matches!(
+        equal(
+            &exponent,
+            &(at_zero.clone() + CasExpr::var(var) * rate.clone())
+        ),
+        ZeroTest::Certified { equal: true, .. }
+    ) {
+        return None; // the exponent is not affine in `var`
+    }
+
+    // Obligation 1: the reconstruction must be the summand itself.
+    let polynomial = polynomial_from_coefficients(&coefficients, var);
+    let reconstruction = (exponent.exp() * polynomial) / (denominator.clone() * gamma);
+    if !matches!(
+        equal(f, &reconstruction),
+        ZeroTest::Certified { equal: true, .. }
+    ) {
+        return None;
+    }
+    Some(ExponentialSeriesShape {
+        denominator,
+        constant_exponent: at_zero,
+        rate_exponent: rate,
+        coefficients,
+    })
+}
+
+/// `Σ coefficients[i]·var^i`, least significant coefficient first.
+fn polynomial_from_coefficients(coefficients: &[CasExpr], var: &str) -> CasExpr {
+    let mut result = CasExpr::zero();
+    for (i, coefficient) in coefficients.iter().enumerate() {
+        let Ok(power) = u32::try_from(i) else {
+            continue;
+        };
+        let monomial = match power {
+            0 => CasExpr::one(),
+            p => CasExpr::var(var).pow(p),
+        };
+        result = result + coefficient.clone() * monomial;
+    }
+    result
+}
+
+/// The falling-factorial (Newton forward-difference) coefficients of the
+/// polynomial with the given dense coefficients: `c_j = Δʲ P(0)/j!`, computed
+/// exactly as `Δʲ P(0) = Σ_{i≤j} (−1)^{j−i}·C(j,i)·P(i)`. The caller certifies the
+/// resulting expansion with [`equal`], so this may be heuristic; it is not.
+fn newton_falling_factorial_coefficients(coefficients: &[CasExpr]) -> Option<Vec<CasExpr>> {
+    let degree = coefficients.len().checked_sub(1)?;
+    // `P(i)` at the integers `0..=degree`.
+    let mut values = Vec::with_capacity(degree + 1);
+    for i in 0..=degree {
+        let mut value = CasExpr::zero();
+        let mut power = Rational::integer(1);
+        for coefficient in coefficients {
+            value = value + coefficient.clone() * CasExpr::Const(power);
+            power = power.checked_mul(Rational::integer(i128::try_from(i).ok()?))?;
+        }
+        values.push(simplify(&value));
+    }
+    let mut newton = Vec::with_capacity(degree + 1);
+    for j in 0..=degree {
+        let mut difference = CasExpr::zero();
+        for (i, value) in values.iter().enumerate().take(j + 1) {
+            let sign = if (j - i) % 2 == 0 { 1 } else { -1 };
+            let weight = binomial_rat(j, i)?.checked_mul(Rational::integer(sign))?;
+            difference = difference + CasExpr::Const(weight) * value.clone();
+        }
+        let factorial = Rational::integer(ntheory::factorial(i128::try_from(j).ok()?)?);
+        difference = difference / CasExpr::Const(factorial);
+        newton.push(simplify(&difference));
+    }
+    Some(newton)
+}
+
+/// `e^u` for the rate `u` of an exponential series, folding `e^{ln z} = z` term by
+/// term. That fold is exact **on the summand's own domain**: `ln z` occurs in the
+/// summand, so `z > 0` wherever the summand is defined. Without it a symbolic rate
+/// `ln λ` would leave the value as `e^{e^{ln λ}}`, an opaque atom the zero-test
+/// could not relate to `e^λ`.
+fn exponential_of_rate(rate: &CasExpr) -> CasExpr {
+    let rate = simplify(rate);
+    let mut factors: Vec<CasExpr> = Vec::new();
+    let terms = match &rate {
+        CasExpr::Add(items) => items.clone(),
+        other => vec![other.clone()],
+    };
+    for term in terms {
+        match &term {
+            CasExpr::Unary(UnaryFunc::Ln, argument) => factors.push((**argument).clone()),
+            CasExpr::Neg(inner) => match inner.as_ref() {
+                CasExpr::Unary(UnaryFunc::Ln, argument) => {
+                    factors.push(CasExpr::one() / (**argument).clone());
+                }
+                _ => factors.push(term.exp()),
+            },
+            _ => factors.push(term.exp()),
+        }
+    }
+    let product = match factors.len() {
+        0 => CasExpr::one(),
+        1 => factors.remove(0),
+        _ => CasExpr::Mul(factors),
+    };
+    simplify(&fold_elementary_constants(&product))
 }
 
 /// The **finite product** `∏_{var=lower}^{upper} f(var)` over **concrete integer**
@@ -8831,6 +9137,31 @@ pub fn simplify_radicals(expr: &CasExpr) -> CasExpr {
                 };
                 return root.abs();
             }
+            // `√(c·u) = √c·√u` for a POSITIVE rational `c`. Exact wherever the
+            // left side is defined (`c·u ≥ 0` ⟺ `u ≥ 0` for `c > 0`); a negative
+            // or zero `c` is left alone, since the split would need `u ≤ 0`.
+            // This is what lets `√(2π)` meet `√2·√π` in one atom space — the
+            // cancellation a `Normal(σ²=1)` normalization needs, where the erf
+            // value carries `√π/√a` with `√a = (1/2)√2` and the pdf's constant
+            // carries `1/√(2π)`.
+            if let CasExpr::Mul(factors) = &inner {
+                let mut constant = Rational::integer(1);
+                let mut rest: Vec<CasExpr> = Vec::new();
+                for factor in factors {
+                    match factor {
+                        CasExpr::Const(c) if c.numerator() > 0 => match constant.checked_mul(*c) {
+                            Some(product) => constant = product,
+                            None => rest.push(factor.clone()),
+                        },
+                        other => rest.push(other.clone()),
+                    }
+                }
+                if constant != Rational::integer(1) && !rest.is_empty() {
+                    let root_constant = simplify_radicals(&CasExpr::Const(constant).sqrt());
+                    let root_rest = simplify_radicals(&build_product(rest).sqrt());
+                    return fold_trivial(&CasExpr::Mul(vec![root_constant, root_rest]));
+                }
+            }
             inner.sqrt()
         }
         CasExpr::Unary(func, arg) => CasExpr::Unary(*func, Box::new(simplify_radicals(arg))),
@@ -8866,6 +9197,36 @@ pub fn simplify_radicals(expr: &CasExpr) -> CasExpr {
                 } else {
                     CasExpr::Pow(inner.clone(), half)
                 };
+            }
+            // Distribute the exponent over a product that carries a surd, so the
+            // surd meets its own power and the rule above can fire on it:
+            // `(√a·(x+d))² → a·(x+d)²`. `(A·B)ⁿ = Aⁿ·Bⁿ` holds for all reals, so
+            // this is exact; it is gated on a `√` factor actually being present so
+            // ordinary powers keep their compact form. Without it a Gaussian with
+            // an irrational `√a` never certifies: the erf derivative's exponent
+            // `−(√a·(x+d))²` keys a *different* `exp` atom from the integrand's
+            // `−a·x²−…`, and the zero-test compares two opaque atoms.
+            if *exponent > 0
+                && let CasExpr::Mul(factors) = &simplified_base
+                && factors
+                    .iter()
+                    .any(|f| matches!(f, CasExpr::Unary(UnaryFunc::Sqrt, _)))
+            {
+                return fold_trivial(&CasExpr::Mul(
+                    factors
+                        .iter()
+                        .map(|factor| {
+                            simplify_radicals(&CasExpr::Pow(Box::new(factor.clone()), *exponent))
+                        })
+                        .collect(),
+                ));
+            }
+            // `(−A)^{2k} = A^{2k}` — even exponents only; an odd one would flip
+            // the sign.
+            if exponent.is_multiple_of(2)
+                && let CasExpr::Neg(inner) = &simplified_base
+            {
+                return simplify_radicals(&CasExpr::Pow(inner.clone(), *exponent));
             }
             CasExpr::Pow(Box::new(simplified_base), *exponent)
         }
@@ -13739,6 +14100,20 @@ pub fn prove_derivative(expr: &CasExpr, var: &str, claimed: &CasExpr) -> ZeroTes
     if matches!(direct, ZeroTest::Certified { equal: true, .. }) {
         return direct;
     }
+    // Surd-normalized retry. The zero-test keys a transcendental head on the
+    // *canonical* rendering of its argument, and `normalize` leaves `√a` an opaque
+    // atom, so `exp(−(√a·x)²)` and `exp(−a·x²)` take different keys. Folding the
+    // surds first (an exact, value-preserving rewrite) puts both sides in one key
+    // space; this is what lets a Gaussian with irrational `√a` certify. Consulted
+    // only after the direct test fails, so no existing certificate changes.
+    let derivative_radical = simplify_radicals(&derivative);
+    let claimed_radical = simplify_radicals(claimed);
+    if derivative_radical != derivative || claimed_radical != *claimed {
+        let radical_result = equal(&derivative_radical, &claimed_radical);
+        if matches!(radical_result, ZeroTest::Certified { equal: true, .. }) {
+            return radical_result;
+        }
+    }
     // Half-angle fallback: when the antiderivative is expressed in `x/2` trig (as
     // from the Weierstrass substitution `t = tan(x/2)`) and the integrand in full-`x`
     // trig, rewrite the full-angle trig down to the half angle on both sides so the
@@ -17233,13 +17608,23 @@ fn integrate_log_substitution(expr: &CasExpr, var: &str) -> Option<CasExpr> {
     None
 }
 
-/// Integrate a **Gaussian** `e^{c₂·x² + c₁·x + c₀}` (`c₂ < 0`, `−c₂` a perfect
-/// rational square) by completing the square to `e^{k}·(√π/(2√a))·erf(√a·(x+d))`.
+/// Integrate a **Gaussian** `e^{c₂·x² + c₁·x + c₀}` (`c₂ < 0`) by completing the
+/// square to `e^{k}·(√π/(2√a))·erf(√a·(x+d))` with `a = −c₂`.
 /// Certified downstream by differentiate-and-check (the `√π`/`√a` cancel and the
 /// exp-tower recombines the constant `e^{k}` factor). Handles `∫e^{−x²}=(√π/2)erf(x)`,
-/// `∫e^{−x²−2x}=e·(√π/2)erf(x+1)`, etc. Returns `None` outside this shape — or when
-/// the constant `e^{k}` does not cancel in the zero-test (an honest decline, since
-/// the finder's candidate is only returned once the FTC certificate passes).
+/// `∫e^{−x²−2x}=e·(√π/2)erf(x+1)`, etc.
+///
+/// `√a` may be **irrational** and is carried symbolically: `∫e^{−2x²}` returns
+/// `(√π/(2√2))·erf(√2·x)`. That works because [`prove_derivative`] retries the
+/// certificate under [`simplify_radicals`], which distributes an exponent over a
+/// product carrying a surd — without that, the erf derivative's
+/// `exp(−(√a·(x+d))²)` and the integrand's `exp(−a·x²−…)` key two different
+/// opaque `exp` atoms and the zero-test compares them as unrelated.
+///
+/// Returns `None` outside this shape — in particular for `c₂ ≥ 0` (an *upward*
+/// Gaussian is not an erf antiderivative) — or when the constant `e^{k}` does not
+/// cancel in the zero-test (an honest decline, since the finder's candidate is
+/// only returned once the FTC certificate passes).
 fn integrate_gaussian(expr: &CasExpr, var: &str) -> Option<CasExpr> {
     let CasExpr::Unary(UnaryFunc::Exp, arg) = expr else {
         return None;
@@ -17257,11 +17642,6 @@ fn integrate_gaussian(expr: &CasExpr, var: &str) -> Option<CasExpr> {
     let c1 = coeffs.get(1).copied().unwrap_or_else(Rational::zero);
     let c0 = coeffs[0];
     let a = c2.checked_neg()?; // a > 0
-    // Require √a rational (perfect-square a): a surd `√a` leaves `(√a·(x+d))²`
-    // unfolded inside the exp atom key, so the cert would not recognize it.
-    let CasExpr::Const(_) = simplify_radicals(&CasExpr::Const(a).sqrt()) else {
-        return None;
-    };
     let sqrt_a = simplify_radicals(&CasExpr::Const(a).sqrt());
     let shift = c1.checked_div(Rational::integer(2).checked_mul(c2)?)?; // d
     let constant = c0.checked_sub(
@@ -20536,6 +20916,205 @@ mod tests {
         // Odd ζ (no elementary form) and harmonic (s=1 diverges) still decline.
         assert!(infinite_sum(&(CasExpr::int(1) / k().pow(3)), "k", &at(1)).is_none());
         assert!(infinite_sum(&(CasExpr::int(1) / k()), "k", &at(1)).is_none());
+    }
+
+    /// The exponential-series route: `∑_{k≥0} P(k)·μᵏ/k!`, its symbolic-rate
+    /// forms, and the near misses it must refuse. `λᵏ/k!` is genuinely not
+    /// Gosper-summable, so every value here comes from the recognized series.
+    #[test]
+    fn exponential_series_infinite_sums() {
+        let k = || v("k");
+        let factorial = || (k() + CasExpr::int(1)).gamma();
+        // `bᵏ` in the machinery's own `exp(k·ln b)` spelling.
+        let power = |base: CasExpr| (k() * base.ln()).exp();
+        let zero = CasExpr::zero();
+
+        // Gosper genuinely declines on this family: the value below is not a
+        // telescoped one.
+        assert!(gosper_sum(&(power(CasExpr::int(3)) / factorial()), "k").is_none());
+
+        // Σ_{k≥0} 3ᵏ/k! = e³.
+        assert_equal(
+            &infinite_sum(&(power(CasExpr::int(3)) / factorial()), "k", &zero).unwrap(),
+            &CasExpr::int(3).exp(),
+        );
+        // A symbolic rate: Σ_{k≥0} λᵏ·e^{−λ}/k! = 1 (the Poisson total mass).
+        let lam = || v("lambda");
+        let poisson = || power(lam()) * CasExpr::Neg(Box::new(lam())).exp() / factorial();
+        assert_equal(
+            &infinite_sum(&poisson(), "k", &zero).unwrap(),
+            &CasExpr::one(),
+        );
+        // A polynomial weight, through the falling-factorial expansion:
+        // Σ k·λᵏe^{−λ}/k! = λ and Σ k²·λᵏe^{−λ}/k! = λ + λ².
+        assert_equal(
+            &infinite_sum(&(k() * poisson()), "k", &zero).unwrap(),
+            &lam(),
+        );
+        assert_equal(
+            &infinite_sum(&(k().pow(2) * poisson()), "k", &zero).unwrap(),
+            &(lam() + lam().pow(2)),
+        );
+        // Two exponential factors combine into one rate `t + ln λ`:
+        // Σ e^{tk}·λᵏe^{−λ}/k! = e^{λ(e^t − 1)}.
+        assert_equal(
+            &infinite_sum(&((k() * v("t")).exp() * poisson()), "k", &zero).unwrap(),
+            &(lam() * (v("t").exp() - CasExpr::one())).exp(),
+        );
+
+        // NEGATIVE CONTROLS. None of these may be read as `e^λ`.
+        // A surviving `var` in the denominator: λᵏ/(k!·(k+1)).
+        assert!(
+            infinite_sum(
+                &(power(CasExpr::int(3)) / (factorial() * (k() + CasExpr::int(1)))),
+                "k",
+                &zero,
+            )
+            .is_none()
+        );
+        // Misindexed factorial: λᵏ/(k−1)! = λᵏ/Γ(k).
+        assert!(infinite_sum(&(power(CasExpr::int(3)) / k().gamma()), "k", &zero).is_none());
+        // Shifted factorial the other way: λᵏ/(k+1)!.
+        assert!(
+            infinite_sum(
+                &(power(CasExpr::int(3)) / (k() + CasExpr::int(2)).gamma()),
+                "k",
+                &zero,
+            )
+            .is_none()
+        );
+        // The route is stated at lower bound 0; any other bound declines rather
+        // than silently returning the whole sum.
+        assert!(
+            infinite_sum(
+                &(power(CasExpr::int(3)) / factorial()),
+                "k",
+                &CasExpr::int(1)
+            )
+            .is_none()
+        );
+        // A `var`-dependent non-`exp` head is outside the fragment.
+        assert!(infinite_sum(&(k().ln() / factorial()), "k", &zero).is_none());
+    }
+
+    /// A Gaussian whose `√a` is irrational now certifies, and the guards that
+    /// keep the route sound still refuse what they should.
+    #[test]
+    fn gaussian_integral_with_an_irrational_square_root() {
+        let x = || v("x");
+        // ∫e^{−2x²} = (√π/(2√2))·erf(√2·x): `√a = √2` stays symbolic and the
+        // differentiate-and-check certificate still closes.
+        let result = integrate(&(CasExpr::int(-2) * x().pow(2)).exp(), "x").expect("surd Gaussian");
+        assert!(result.is_certified());
+        // The differentiate-and-check only closes UNDER `simplify_radicals`: the
+        // raw derivative keys `exp(−(√2·x)²)`, the integrand keys `exp(−2x²)`,
+        // and those are two unrelated atoms to the zero-test. This is exactly
+        // the retry `prove_derivative` performs, asserted here so removing it
+        // fails a test rather than silently narrowing the fragment.
+        assert!(matches!(
+            equal(
+                &result.antiderivative.differentiate("x"),
+                &(CasExpr::int(-2) * x().pow(2)).exp(),
+            ),
+            ZeroTest::Certified { equal: false, .. }
+        ));
+        assert_equal(
+            &simplify_radicals(&result.antiderivative.differentiate("x")),
+            &simplify_radicals(&(CasExpr::int(-2) * x().pow(2)).exp()),
+        );
+        // With a linear term too: ∫e^{−2x²−4x} completes the square to −2(x+1)²+2.
+        let shifted = integrate(
+            &(CasExpr::int(-2) * x().pow(2) - CasExpr::int(4) * x()).exp(),
+            "x",
+        )
+        .expect("shifted surd Gaussian");
+        assert!(shifted.is_certified());
+        // The definite value over the whole line: ∫_{−∞}^{∞} e^{−2x²} = √(π/2).
+        let definite = improper_integrate(
+            &(CasExpr::int(-2) * x().pow(2)).exp(),
+            "x",
+            LimitPoint::NegInfinity,
+            LimitPoint::PosInfinity,
+        )
+        .expect("definite surd Gaussian");
+        assert!(definite.is_certified());
+        assert_equal(
+            &simplify_radicals(&definite.value),
+            &(v("pi").sqrt() / CasExpr::int(2).sqrt()),
+        );
+
+        // GUARD: an upward Gaussian (`a ≤ 0`) is not an erf antiderivative.
+        assert!(integrate_gaussian(&x().pow(2).exp(), "x").is_none());
+        assert!(integrate_gaussian(&(CasExpr::int(2) * x().pow(2)).exp(), "x").is_none());
+        // GUARD: the exponent must be a genuine quadratic.
+        assert!(integrate_gaussian(&x().exp(), "x").is_none());
+    }
+
+    /// The surd distribution added to [`simplify_radicals`] is exact: it fires on
+    /// a product carrying a `√`, and an ODD exponent over a negation must keep
+    /// its sign.
+    #[test]
+    fn simplify_radicals_distributes_only_where_it_is_exact() {
+        let x = || v("x");
+        // `(√2·x)² → 2x²` — the rewrite the Gaussian certificate needs.
+        assert_equal(
+            &simplify_radicals(&(CasExpr::int(2).sqrt() * x()).pow(2)),
+            &(CasExpr::int(2) * x().pow(2)),
+        );
+        // `(−√2)²  = 2` but `(−√2)³ = −2√2`: the negation is only absorbed at an
+        // even exponent, so the odd case must NOT lose its sign.
+        let neg_root = || CasExpr::Neg(Box::new(CasExpr::int(2).sqrt()));
+        assert_equal(&simplify_radicals(&neg_root().pow(2)), &CasExpr::int(2));
+        let cube = simplify_radicals(&neg_root().pow(3));
+        assert_equal(&cube, &(CasExpr::int(-2) * CasExpr::int(2).sqrt()));
+        assert!(matches!(
+            equal(&cube, &(CasExpr::int(2) * CasExpr::int(2).sqrt())),
+            ZeroTest::Certified { equal: false, .. }
+        ));
+        // `√(c·u) = √c·√u` splits only for a POSITIVE rational `c`: `√(2π)`
+        // becomes `√2·√π`…
+        assert_eq!(
+            simplify_radicals(&(CasExpr::int(2) * v("pi")).sqrt()),
+            fold_trivial(&CasExpr::Mul(vec![CasExpr::int(2).sqrt(), v("pi").sqrt()])),
+        );
+        // …and `√(−2·π)` must NOT, since the split would need `u ≤ 0`.
+        let negative = (CasExpr::int(-2) * v("pi")).sqrt();
+        assert_eq!(simplify_radicals(&negative), negative);
+    }
+
+    /// A `k/k` factor inside a limit at `∞` cancels through the normal form, and
+    /// a quotient that is NOT a common factor (`k/(k+1)`) survives — checked at a
+    /// point where cancelling it would give the wrong answer.
+    #[test]
+    fn limits_cancel_a_common_factor_but_not_a_shifted_one() {
+        let k = || v("k");
+        // The Gosper antidifference of `k·p·qᵏ`, wrapped in a removable `k/k`.
+        let term = CasExpr::Mul(vec![
+            k(),
+            CasExpr::rat(1, 3),
+            geometric_power(Rational::new(2, 3), "k"),
+        ]);
+        let antidifference = gosper_sum(&term, "k").expect("geometric Gosper sum");
+        let with_pole = CasExpr::Div(Box::new(k() * antidifference.clone()), Box::new(k()));
+        assert_equal(
+            &limit(&with_pole, "k", LimitPoint::PosInfinity).unwrap(),
+            &CasExpr::zero(),
+        );
+        // …and the whole sum lands: Σ_{k≥1} k·(1/3)·(2/3)ᵏ = 2.
+        assert_equal(
+            &infinite_sum(&term, "k", &CasExpr::int(1)).unwrap(),
+            &CasExpr::int(2),
+        );
+        // `k/(k+1)` is not a `k/k`: at `k → 0` it is 0, not 1.
+        let shifted = k() / (k() + CasExpr::int(1));
+        assert_equal(
+            &limit(&shifted, "k", LimitPoint::Finite(Rational::zero())).unwrap(),
+            &CasExpr::zero(),
+        );
+        assert_equal(
+            &limit(&shifted, "k", LimitPoint::PosInfinity).unwrap(),
+            &CasExpr::one(),
+        );
     }
 
     #[test]
@@ -29323,8 +29902,20 @@ mod tests {
             &cs.antiderivative.differentiate("x"),
             &(-x().pow(2) - CasExpr::int(2) * x()).exp(),
         );
-        // Surd a (∫e^{−2x²}) is honestly declined.
-        assert!(integrate(&(CasExpr::int(-2) * x().pow(2)).exp(), "x").is_none());
+        // A surd `√a` (∫e^{−2x²}) now certifies too: the antiderivative carries
+        // `√2` symbolically and the differentiate-and-check closes because the
+        // surd-normalized retry puts `exp(−(√2·x)²)` and `exp(−2x²)` in one atom.
+        let surd =
+            integrate(&(CasExpr::int(-2) * x().pow(2)).exp(), "x").expect("surd Gaussian integral");
+        assert!(surd.is_certified());
+        assert_equal(
+            &surd.antiderivative,
+            &(v("pi").sqrt() / (CasExpr::int(2) * CasExpr::int(2).sqrt())
+                * (CasExpr::int(2).sqrt() * x()).erf()),
+        );
+        // Upward Gaussians (`a ≤ 0`) still decline: `∫e^{+x²}` is not an erf.
+        assert!(integrate_gaussian(&x().pow(2).exp(), "x").is_none());
+        assert!(integrate_gaussian(&(CasExpr::int(3) * x().pow(2)).exp(), "x").is_none());
         // erf(0) = 0 (folded); numeric erf(1) ≈ 0.8427.
         assert_eq!(
             fold_elementary_constants(&CasExpr::int(0).erf()),

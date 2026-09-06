@@ -370,3 +370,76 @@ fn ex_elim_shifts_both_the_context_and_the_conclusion() {
     let no_goal_shift = build(&mut f, true, false);
     f.assert_ne_expr(got, no_goal_shift, "ex_elim must shift its minor's goal");
 }
+
+/// The structural guard on `eqf_subst`, the Leibniz rule: it must CONSUME the
+/// equality premise, and its second premise must be at `s` while its
+/// conclusion is at `t`.
+///
+/// The unsound mutation is dropping the equality — `Π g p s t, Provable g
+/// (p[s]) -> Provable g (p[t])` substitutes any term for any other. The
+/// vacuous mutation states both premise and conclusion at `s`, which makes the
+/// rule derivable from its own second premise and so proves nothing. Both are
+/// built here and required to DIFFER from the admitted type.
+#[test]
+fn eqf_subst_consumes_the_equality_and_moves_the_instance() {
+    let mut f = Fixture::new();
+    let c = f.calc();
+
+    let eqf_subst = f.kernel.const_(f.p.rules[rule::EQF_SUBST], vec![]);
+    let got = f.kernel.infer(eqf_subst).expect("must infer");
+
+    let g_id = 1_637_930_u64;
+    let p_id = 1_637_931_u64;
+    let s_id = 1_637_932_u64;
+    let t_id = 1_637_933_u64;
+    let g = f.kernel.fvar(g_id);
+    let p = f.kernel.fvar(p_id);
+    let s = f.kernel.fvar(s_id);
+    let t = f.kernel.fvar(t_id);
+
+    let build = |f: &mut Fixture, keep_equality: bool, move_instance: bool| -> ExprId {
+        let target = if move_instance { t } else { s };
+        let at_s = instantiate(&mut f.kernel, &c, p, s);
+        let at_target = instantiate(&mut f.kernel, &c, p, target);
+        let h2 = provable_app(&mut f.kernel, &c, g, at_s);
+        let concl = provable_app(&mut f.kernel, &c, g, at_target);
+        let inner = arrow(&mut f.kernel, h2, concl);
+        let body = if keep_equality {
+            let atom = {
+                let head = f.kernel.const_(c.eqf, vec![]);
+                apply_all(&mut f.kernel, head, &[s, t])
+            };
+            let h1 = provable_app(&mut f.kernel, &c, g, atom);
+            arrow(&mut f.kernel, h1, inner)
+        } else {
+            inner
+        };
+        pis(
+            &mut f.kernel,
+            &[
+                (g_id, c.context_ty),
+                (p_id, c.formula_ty),
+                (s_id, c.term_ty),
+                (t_id, c.term_ty),
+            ],
+            body,
+        )
+    };
+
+    let want = build(&mut f, true, true);
+    f.assert_eq_expr(got, want, "eqf_subst's type");
+
+    let no_equality = build(&mut f, false, true);
+    f.assert_ne_expr(
+        got,
+        no_equality,
+        "eqf_subst must consume the equality premise",
+    );
+
+    let stuck_at_s = build(&mut f, true, false);
+    f.assert_ne_expr(
+        got,
+        stuck_at_s,
+        "eqf_subst's conclusion must be at t, not at s",
+    );
+}

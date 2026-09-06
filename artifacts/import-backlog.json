@@ -52,11 +52,13 @@
     },
     {
       "id": "F:fo-formula-decoder",
-      "statement": "FO.Formula.decode : Nat -> FO.Formula inverts the Goedel numbering: decode (code p) = p for every formula p. THE FUNCTION IS BUILT AND COMPUTES; THE THEOREM IS NOT PROVED. fo_decode.rs declares FO.Term.decodeAux, FO.Term.decode, FO.Formula.decodeAux and FO.Formula.decode (fuel-recursive, with a nine-way tag tree), and eleven module tests check the round trip AT CONCRETE CODES -- every FO.Term constructor and every FO.Formula constructor, by Kernel::def_eq. Those are instances, not a statement about all formulas. What is missing is the universally quantified theorem, and after building the decoder its cost is no longer an estimate: (1) size functions plus a fuel-additive round trip stated as 'forall t f, decodeAux (Nat.add f (size t)) (code t) = t' -- fuel on the LEFT of the add, so Nat.add f (Nat.succ x) iota-reduces and the recursive call lands on exactly the induction hypothesis's fuel, leaving only Nat.add_assoc and Nat.add_comm for the binary cases, with no Nat.le, no subtraction and no max; (2) one transport per tag, because FO.Code.fst (code (and_ p q)) is NOT definitionally 4 -- FO.Code.fst unfolds to Nat.Pair.fst (unpair ...) and unpair of a symbolic code is stuck, so each of the nine minors must rewrite along FO.Code.fst_pair and snd_pair before the tag tree iota-reduces; (3) size p <= code p, needed only to justify the self-fuelled wrapper decode n := decodeAux n n. Item (2) was invisible before the decoder existed.",
+      "statement": "FO.Formula.decode : Nat -> FO.Formula, which is decodeAux n n -- the code is its own fuel -- inverts the Goedel numbering: decode (code p) = p for every formula p. STILL NOT PROVED, and the reason changed. The FUEL-ADDITIVE round trip IS now proved (F:fo-formula-decode-code, F:fo-term-decode-code): decodeAux (Nat.add f (size p)) (code p) = p for every f. What that does NOT give is the self-fuelled wrapper, which would need Nat.le (size p) (code p) -- and that statement is FALSE, measured: FO.Formula.code FO.Formula.bot and FO.Term.code (FO.Term.var 0) are both Nat.zero while both sizes are 1, pinned by Kernel::def_eq in fo_roundtrip/tests.rs::size_is_not_bounded_by_the_code. So ADR-1640's item (3) is not an unproved lemma but a refuted one, and the remaining route is different work: a strong induction on the code using Nat.lt (FO.Code.snd n) n -- true, because FO.Code.pair a b is strictly larger than b -- which needs monotonicity of FO.Code.tri, a Nat.lt development on top of it, and a well-founded Nat recursion. That is a slice, not a step, and it buys only the removal of one Nat argument from four statements, which is why this lane routed every downstream theorem through fuel-explicit siblings (FO.Code.substCodeAux, FO.Code.isFormulaCodeAux, FO.Code.diagAux) instead.",
       "depends_on": [
         "F:fo-code-pairing-round-trip",
         "F:fo-formula-code-injective",
-        "F:fo-term-code-injective"
+        "F:fo-formula-decode-code",
+        "F:fo-term-code-injective",
+        "F:fo-term-decode-code"
       ],
       "dependency_ready": true,
       "curriculum_node": null,
@@ -2186,11 +2188,14 @@
     },
     {
       "id": "F:fo-diagonal-lemma",
-      "statement": "For every formula psi with one free variable there is a sentence delta such that the theory proves delta if and only if it proves psi applied to the numeral of delta's own Goedel number. NOT ESTABLISHED HERE. The Goedel numbering delta |-> code delta and its injectivity ARE established (F:fo-formula-code-injective); what is missing is everything that turns a numbering into a self-reference. Two prerequisites, in order of how binding they are. First and binding: the diagonalization function d, sending the code of psi to the code of psi applied to the numeral of its own code, must be a function Nat -> Nat, and defining it means decoding -- which is the open fact F:fo-formula-decoder. Second, and only reachable after that: the biconditional is a claim about FO.Provable, and the calculus as landed by ADR-1636 has eqf_refl as its ONLY equality rule, no Leibniz rule, so a proof that substitutes one numeral for another under a formula is not expressible in it.",
+      "statement": "For every formula psi with one free variable there is a sentence delta such that the theory proves delta if and only if it proves psi applied to the numeral of delta's own Goedel number. STILL NOT ESTABLISHED HERE, but both prerequisites this row recorded are now discharged and the remaining obstruction is a different one. (i) The diagonalization function is built and its identity is PROVED: FO.Code.diagAux sends the code of p to the code of p with the numeral of its own code substituted, and FO.Code.diagAux_code says so (F:fo-diagonal-identity), on top of the decoder round trip and the commuting lemma. (ii) The calculus HAS a Leibniz rule as of ADR-1648: FO.Provable.eqf_subst, the seventeenth constructor, with its soundness case, so a proof that substitutes one numeral for another under a formula IS expressible. What remains is neither of those: the biconditional needs Gamma_Q to PROVE the numeric fact diag m-bar = code delta, i.e. the diagonal function must be REPRESENTABLE in Q, which for a Nat.rec-defined function is Sigma-1 completeness. Nothing in fo_*.rs relates FO.Provable to a computation on Nat in either direction; FO.Formula has no Iff connective (it would be and_ (imp a b) (imp b a)); and representing diag means representing FO.Code.pair, FO.Code.tri, FO.Code.unpair and the fuel recursion. That is a strand, not a step.",
       "depends_on": [
+        "F:fo-diagonal-identity",
         "F:fo-formula-code-injective",
+        "F:fo-formula-decode-code",
         "F:fo-formula-decoder",
-        "F:fo-soundness"
+        "F:fo-soundness",
+        "F:fo-subst-code-commutes"
       ],
       "dependency_ready": false,
       "curriculum_node": null,
