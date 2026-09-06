@@ -191,8 +191,8 @@ const MAX_ENCODED_DECLARED_SORT_CEGAR_PAIRS: usize = 64;
 /// budget is otherwise discarded.
 ///
 /// The default's `64` is a 1.6x margin over a then-measured deciding frontier of
-/// 40 pairs. Measured 2026-09-06 (S11a) on the three QF_UF parity losses that
-/// this route declines, the deciding frontier for the terminal rung is **8 425**
+/// 40 pairs. Measured 2026-09-06 (S11a) on the three `QF_UF` parity losses that
+/// this route declines, the deciding frontier for the terminal rung is `8425`
 /// pairs (0.4 s / 8.4 s / 8.7 s of a 24 s budget at 68 / 1 009 / 8 425 pairs,
 /// all three `sat` and replay-confirmed). `16384` is the same margin style
 /// (1.94x) over that frontier, and stays well below the 44 537 – 1 549 516 pair
@@ -2241,11 +2241,24 @@ mod tests {
         // (the public default contract is unchanged) and must be ADMITTED — i.e.
         // reach the refinement loop and produce a different message or a verdict
         // — through `check_qf_ufbv_lazy_with_pair_bound` at the terminal-rung
-        // bound. Restoring the dispatcher to the default value kills this test.
-        assert!(
-            DECLARED_SORT_CEGAR_PAIRS_TERMINAL_RUNG > MAX_ENCODED_DECLARED_SORT_CEGAR_PAIRS,
-            "the terminal-rung bound must be strictly above the default"
-        );
+        // bound.
+        //
+        // SCOPE, stated so nobody mistakes this for more than it is: this pins
+        // the PARAMETER, not the dispatcher's choice of it. Rewiring
+        // `dispatch_declared_sort_ufbv_lazy` back to the default does NOT kill
+        // this test, and no unit fixture can gate that wiring, because any
+        // synthetic declared-sort query small enough to build here is decided by
+        // `euf-online` several rungs earlier and never reaches this route. The
+        // wiring's gate is the corpus mutation recorded in
+        // `docs/research/11-design-review/2026-09-06-s11a-uf-ackermann-measured.md`:
+        // restore the default and the three QF_UF parity files decline again
+        // with the bound message.
+        const {
+            assert!(
+                DECLARED_SORT_CEGAR_PAIRS_TERMINAL_RUNG > MAX_ENCODED_DECLARED_SORT_CEGAR_PAIRS,
+                "the terminal-rung bound must be strictly above the default"
+            );
+        }
         let mut arena = TermArena::new();
         let sort = Sort::Uninterpreted(arena.declare_uninterpreted_sort("S"));
         let f = arena.declare_fun("f", &[sort], sort).unwrap();
