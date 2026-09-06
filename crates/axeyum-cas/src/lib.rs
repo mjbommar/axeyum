@@ -17912,6 +17912,12 @@ fn match_poly_times_exp(expr: &CasExpr, var: &str) -> Option<(CasExpr, Vec<CasEx
     };
     // The exponent must be affine in `var` with a genuinely present linear term:
     // `coeffs_in` returns a dense vector, so length 2 is exactly `q + r·var`.
+    //
+    // This is a **precondition**, not the soundness guard. Relaxing it to `< 2`
+    // kills no test, because a mis-modelled exponent then produces an
+    // antiderivative whose derivative is not the integrand, and
+    // [`prove_exp_antiderivative`] refuses it. Keep it as the cheap early exit
+    // and test it here, at the matcher, rather than through the public route.
     let exponent_coeffs = normalize(&exponent)?.coeffs_in(var);
     if exponent_coeffs.len() != 2 {
         return None;
@@ -18001,6 +18007,27 @@ fn exp_polynomial_antiderivative(
     ))
 }
 
+/// The soundness gate of the symbolic-rate route: `candidate` is returned with
+/// its certificate **only if** `d(candidate)/dvar` decides equal to `integrand`.
+///
+/// Split out from [`improper_integrate_conditional`] so it can be addressed
+/// directly. Through the public entry point it is currently unreachable-by-
+/// failure — [`normalize`] refuses every transcendental factor before the
+/// matcher builds anything, and for the shapes that do get through, the
+/// integration-by-parts closed form is exact — so a test that went through the
+/// public route could not tell a working gate from a deleted one. That
+/// impossibility is why the gate is a separate function with its own test: it is
+/// defense in depth against a future matcher that accepts a shape this closed
+/// form does not model, and it has to stay falsifiable to be worth having.
+fn prove_exp_antiderivative(
+    candidate: &CasExpr,
+    integrand: &CasExpr,
+    var: &str,
+) -> Option<ZeroTest> {
+    let certificate = prove_derivative(candidate, var, integrand);
+    matches!(certificate, ZeroTest::Certified { equal: true, .. }).then_some(certificate)
+}
+
 /// `∫ₗᵘ C·P(x)·e^{r·x} dx` with a **symbolic** rate `r` and symbolic polynomial
 /// coefficients, returning the value together with the [`SignCondition`]s its
 /// boundary evaluation assumed.
@@ -18061,10 +18088,7 @@ pub fn improper_integrate_conditional(
         return None; // `∫ P(x)·e^0` is a polynomial integral; not this route's job
     }
     let antiderivative = exp_polynomial_antiderivative(&constant, &coefficients, &rate, var)?;
-    let certificate = prove_derivative(&antiderivative, var, expr);
-    if !matches!(certificate, ZeroTest::Certified { equal: true, .. }) {
-        return None;
-    }
+    let certificate = prove_exp_antiderivative(&antiderivative, expr, var)?;
     let mut hypotheses: Vec<SignCondition> = Vec::new();
     let mut boundary = |point: LimitPoint| -> Option<CasExpr> {
         match point {
@@ -33369,11 +33393,62 @@ mod symbolic_rate_exponential {
     }
 
     /// **Negative control (shape).** A quadratic exponent is a Gaussian, not this
-    /// route's `e^{r·x}`. Pins the `exponent_coeffs.len() != 2` guard: deleting it
-    /// would index past the end or silently read a wrong rate.
+    /// route's `e^{r·x}`, and the public route declines it.
+    ///
+    /// Measured: this assertion alone does NOT pin the affine precondition —
+    /// `e^{−x²}` has rate `0`, so the zero-rate early return rejects it first,
+    /// and relaxing `exponent_coeffs.len() != 2` to `< 2` leaves this green. The
+    /// precondition is pinned at the matcher instead, by the test below.
     #[test]
     fn a_nonaffine_exponent_declines() {
         assert!(on_half_line(&(CasExpr::Neg(Box::new(x().pow(2)))).exp()).is_none());
+    }
+
+    /// Pins the affine precondition **at the matcher**, with an exponent whose
+    /// linear term is nonzero (`−x² + t·x`) so the zero-rate guard cannot be what
+    /// rejects it. Relaxing `exponent_coeffs.len() != 2` to `< 2` makes
+    /// `match_poly_times_exp` return `Some((1, [1], t))` and this test dies.
+    #[test]
+    fn the_matcher_refuses_an_exponent_that_is_not_affine() {
+        let quadratic = (CasExpr::Neg(Box::new(x().pow(2))) + t() * x()).exp();
+        assert!(
+            match_poly_times_exp(&quadratic, "x").is_none(),
+            "a quadratic exponent is outside `P(x)·e^{{r·x}}`"
+        );
+        // Positive control at the same call site, so the negative above is not an
+        // empty result from a matcher that refuses everything.
+        let affine = (t() * x()).exp();
+        let (_, coefficients, rate) =
+            match_poly_times_exp(&affine, "x").expect("an affine exponent is exactly the shape");
+        assert_eq!(coefficients.len(), 1);
+        assert!(decides_equal(&rate, &t()));
+    }
+
+    /// Pins the differentiate-and-check gate, by handing it a candidate that is
+    /// **not** an antiderivative of the integrand. `e^{t·x}` differentiates to
+    /// `t·e^{t·x}`, so it is an antiderivative of that, not of `e^{t·x}` itself.
+    ///
+    /// This has to be tested here rather than through
+    /// `improper_integrate_conditional`: measured, deleting the gate kills no
+    /// test that goes through the public route, because `normalize` refuses every
+    /// transcendental factor before the matcher builds a candidate and the
+    /// integration-by-parts closed form is exact for everything that gets past
+    /// it. A gate that cannot fail is worse than no gate, so it is addressed
+    /// directly.
+    #[test]
+    fn a_candidate_that_is_not_an_antiderivative_is_refused() {
+        let integrand = (t() * x()).exp();
+        assert!(
+            prove_exp_antiderivative(&integrand, &integrand, "x").is_none(),
+            "e^{{t·x}} is not its own antiderivative"
+        );
+        let genuine = integrand.clone() / t();
+        let certificate = prove_exp_antiderivative(&genuine, &integrand, "x")
+            .expect("e^{t·x}/t differentiates back to e^{t·x}");
+        assert!(matches!(
+            certificate,
+            ZeroTest::Certified { equal: true, .. }
+        ));
     }
 
     /// **Negative control (shape).** `var` in a non-exponential denominator is
