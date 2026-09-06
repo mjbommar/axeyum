@@ -169,11 +169,20 @@ suite (34 of 35; the one failure, an ambiguous anchor in
 identically on `main` before S9 and in the S9 worktree, is in the CAS area,
 and was reported to that coordinator rather than touched).
 
-**Gate state of the merged `main` at the time of writing:** merge hygiene
-PASS, gen-plan clean, workspace check and workspace clippy `-D warnings`
-green after the fix; the IR/SMT-LIB/solver unit sweeps, the corpus sweep,
-the three z3 differential fuzzes, the wasm build and the fmt check were
-running and will be recorded in the next entry.
+**Gate state of the merged `main` (from `b40a0f309`), all green:** merge
+hygiene PASS, gen-plan clean, workspace check, workspace clippy
+`-D warnings`, every IR suite, smtlib lib (90), solver lib `--features full`
+(1,460 passed), corpus sweep, the three z3 differential fuzzes (5 + 1 + 1),
+the wasm build, `cargo fmt --all --check`. One non-gating observation: the
+wasm build on default features prints three dead-code warnings
+(`TheoryLayerStats`, its `total`, and `memory_budget::parse_vm_rss_kb`),
+because those diagnostics are only constructed behind `full`; a `cfg` on
+the module is a cheap follow-up for whichever lane next touches `layers.rs`.
+
+**Re-measurement launched** at `c28d7b7c6` (solver code identical to
+`b40a0f309`; the later commits are docs and a harness anchor fix) on idle
+s5 (QF_IDL, QF_RDL), s6 (QF_UF, UF), s7 (QF_LIA, QF_UFLIA), fresh
+`~/axeyum-parity-m1` checkouts from a bundle, fresh sidecars, no resume.
 
 **Next:** step 2 of the list below, re-measuring QF_IDL, QF_RDL, QF_UF, UF,
 QF_LIA and QF_UFLIA on idle hosts at `b40a0f309` with fresh sidecars, then
