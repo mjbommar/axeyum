@@ -31,13 +31,13 @@
 //! and induced-matrix machinery verbatim rather than re-deriving it):
 //!
 //! - `i_* : H_k(L; Q) -> H_k(K; Q)`, induced by the chain-level inclusion
-//!   `C_k(L) -> C_k(K)` ([`inclusion_chain_map`]) -- the identity map on the
+//!   `C_k(L) -> C_k(K)` (`inclusion_chain_map`) -- the identity map on the
 //!   shared simplices, so it trivially commutes with the boundary;
 //! - `j_* : H_k(K; Q) -> H_k(K,L; Q)`, induced by the chain-level quotient
-//!   projection `C_k(K) -> C_k(K)/C_k(L)` ([`quotient_chain_map`]), which
+//!   projection `C_k(K) -> C_k(K)/C_k(L)` (`quotient_chain_map`), which
 //!   commutes with the boundary because `d^{rel}` is *defined* as the
 //!   quotient of `d^K`;
-//! - `delta : H_k(K,L; Q) -> H_{k-1}(L; Q)` ([`connecting_map`]), the
+//! - `delta : H_k(K,L; Q) -> H_{k-1}(L; Q)` (`connecting_map`), the
 //!   connecting homomorphism: lift a relative cycle representative to an
 //!   actual chain of `K` (zero on `L`'s simplices), take `K`'s own boundary,
 //!   and -- after checking directly that the result is supported entirely on
@@ -47,7 +47,7 @@
 //!   chain as an `L`-cycle and express its class in `H_{k-1}(L; Q)`.
 //!
 //! `Q` is a field, so **exactness at each node is a rank identity**
-//! ([`les_exactness_holds`]): for consecutive maps `f : A -> B` and
+//! (`les_exactness_holds`): for consecutive maps `f : A -> B` and
 //! `g : B -> C` with `g . f = 0`, exactness at `B` (`im(f) = ker(g)`) holds
 //! iff `rank(f) + rank(g) = dim(B)` (rank-nullity: `dim ker(g) = dim(B) -
 //! rank(g)`, and exactness demands that kernel be exactly `im(f)`, of
@@ -63,7 +63,7 @@
 //! number disagrees with the actual rank of the freshly-built `Q` maps is
 //! refused here specifically, which is what
 //! `verify_refuses_a_relative_betti_number_the_exactness_identity_rejects`
-//! (below) exercises directly against [`les_exactness_holds`], isolated from
+//! (below) exercises directly against `les_exactness_holds`, isolated from
 //! every other guard.
 //!
 //! # What is certified
@@ -76,12 +76,12 @@
 //! - every recorded relative boundary matrix matches one freshly rebuilt
 //!   (the same submatrix-of-`K` construction);
 //! - `d_{k-1}^{rel} . d_k^{rel} = 0` for every consecutive pair, on the
-//!   freshly rebuilt matrices (reusing [`super::compositions_are_zero`]
+//!   freshly rebuilt matrices (reusing `super::compositions_are_zero`
 //!   verbatim -- it is already generic over any `BTreeMap<usize, Matrix>` of
 //!   boundary-shaped matrices, not specific to the absolute case);
 //! - every recorded relative Smith triple is a genuine factorization (`U .
 //!   d_k^{rel} . V = D`, `U`/`V` unimodular, `D` in Smith form -- the same
-//!   guard [`super::smith_factorizations_hold`] runs for the absolute case,
+//!   guard `super::smith_factorizations_hold` runs for the absolute case,
 //!   reused here on the relative Smith map);
 //! - every recorded relative Betti number and torsion coefficient list is
 //!   recomputed from the Smith diagonals alone and compared;
@@ -90,7 +90,7 @@
 //! - the two WRAPPED absolute certificates (`K`'s own homology, `L`'s own
 //!   homology) verify via [`super::HomologyCertificate::verify`] wholesale;
 //! - the long exact sequence's rank identity holds at every node
-//!   ([`les_exactness_holds`]), checked against the certificate's own
+//!   (`les_exactness_holds`), checked against the certificate's own
 //!   recorded Betti numbers at every one of the three complexes.
 //!
 //! # Fixtures and what the LES catches that a lone Betti number cannot
@@ -276,7 +276,7 @@ fn quotient_chain_map(k: &SimplicialComplex, l: &SimplicialComplex, dim: usize) 
 }
 
 /// `i_*(dim) : H_dim(L; Q) -> H_dim(K; Q)`, the induced map of
-/// [`inclusion_chain_map`], reusing [`induced_map_from_chain_map`] verbatim.
+/// `inclusion_chain_map`, reusing [`induced_map_from_chain_map`] verbatim.
 fn inclusion_induced(k: &SimplicialComplex, l: &SimplicialComplex, dim: usize) -> Option<Matrix> {
     let chain_map = inclusion_chain_map(k, l, dim)?;
     let (_, h_l) = absolute_q_basis(l, dim)?;
@@ -286,7 +286,7 @@ fn inclusion_induced(k: &SimplicialComplex, l: &SimplicialComplex, dim: usize) -
 }
 
 /// `j_*(dim) : H_dim(K; Q) -> H_dim(K,L; Q)`, the induced map of
-/// [`quotient_chain_map`], reusing [`induced_map_from_chain_map`] verbatim.
+/// `quotient_chain_map`, reusing [`induced_map_from_chain_map`] verbatim.
 fn quotient_induced(k: &SimplicialComplex, l: &SimplicialComplex, dim: usize) -> Option<Matrix> {
     let chain_map = quotient_chain_map(k, l, dim)?;
     let (_, h_k) = absolute_q_basis(k, dim)?;

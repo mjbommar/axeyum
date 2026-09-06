@@ -11,15 +11,15 @@
 //! `H^p(complex; R)` -- a genuine extension of a basis of the coboundary
 //! image `B^p = im(delta^{p-1})` to a basis of the cocycle kernel `Z^p =
 //! ker(delta^p)` -- is chosen the SAME way [`super::induced`] chooses a
-//! homology basis ([`super::induced::choose_homology_basis`], reused
-//! verbatim for `R = Q`; [`choose_cohomology_basis_mod2`] mirrors it entry
+//! homology basis (`super::induced::choose_homology_basis`, reused
+//! verbatim for `R = Q`; `choose_cohomology_basis_mod2` mirrors it entry
 //! for entry for `R = F_2`, since no general matrix null-space/rref over
 //! `F_2` exists elsewhere in this crate -- `gf2.rs`/`gfp.rs` are univariate
 //! polynomial arithmetic, not matrix linear algebra).
 //!
 //! The **cup product** of cocycle representatives `alpha` (degree `p`) and
 //! `beta` (degree `q`) is the Alexander-Whitney diagonal
-//! ([`alexander_whitney_cup`]): for every `(p+q)`-simplex `sigma = [v_0 < v_1
+//! (`alexander_whitney_cup`): for every `(p+q)`-simplex `sigma = [v_0 < v_1
 //! < ... < v_{p+q}]` (the complex's own sorted vertex order, the total order
 //! AW is stated over), `(alpha ∪ beta)(sigma) = alpha(front_p(sigma)) *
 //! beta(back_q(sigma))`, where `front_p` is the first `p + 1` vertices and
@@ -60,7 +60,7 @@
 //! # The finding the item names: a ring distinguishes what a group cannot
 //!
 //! The torus (`fixtures::torus_7v`) and the wedge `S^1 v S^1 v S^2`
-//! ([`wedge_two_circles_and_a_sphere`]) have IDENTICAL Betti numbers `(1, 2,
+//! (`wedge_two_circles_and_a_sphere`) have IDENTICAL Betti numbers `(1, 2,
 //! 1)` -- so no group-valued invariant (homology, at any coefficient ring)
 //! can tell them apart. Their cup product rings differ: the torus's two
 //! `H^1` generators cup to a nonzero class in `H^2` (the standard fact that
@@ -76,9 +76,9 @@
 //!
 //! # Cost profile
 //!
-//! The `F_2` linear algebra here ([`rref_mod2_inplace`], [`null_space_mod2`])
+//! The `F_2` linear algebra here (`rref_mod2_inplace`, `null_space_mod2`)
 //! is a plain bit-grid Gauss-Jordan, `O(rows * cols^2)` like
-//! [`super::coefficients::rank_mod2`]; the `Q` path reuses [`super::induced`]'s
+//! `super::coefficients::rank_mod2`; the `Q` path reuses [`super::induced`]'s
 //! existing `O(n^2)`-rank-call greedy basis selection. No fixture exercised
 //! here approaches the parent module's own unimodularity-ceiling scale (the
 //! largest is the 7-vertex/21-edge/14-triangle torus).
@@ -263,7 +263,7 @@ fn choose_boundary_basis_mod2(image_source: &Matrix) -> Option<Vec<Matrix>> {
 
 /// Choose a genuine basis of `B^p` and a genuine extension of it to a basis
 /// of `Z^p = ker(delta^p)`, over `F_2` -- the `F_2` analog of
-/// [`super::induced::choose_homology_basis`], mirrored entry for entry
+/// `super::induced::choose_homology_basis`, mirrored entry for entry
 /// (`kernel_source` plays the role `boundary_k` does there: its columns are
 /// the space the cocycle kernel lives in; `image_source` plays the role
 /// `boundary_next` does: its column span is the coboundary image).
