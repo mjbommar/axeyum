@@ -280,6 +280,108 @@ impl Dyadic {
         Self::new(BigInt::from_biguint(sign, magnitude), exponent)
     }
 
+    /// This dyadic rounded onto the **absolute** grid of multiples of
+    /// `2^exponent`, in the direction `mode`.
+    ///
+    /// [`Dyadic::round`] bounds the *significant* bits — a relative precision.
+    /// This bounds the *place value* of the last bit — an absolute one. The two
+    /// are different jobs and an interval wants both: relative precision keeps
+    /// a mantissa from growing, absolute precision is what a "round onto the
+    /// `2^(−b)` grid" step in a validated-numerics kernel means, and it is the
+    /// one that bounds the size of a *denominator* rather than of a mantissa.
+    ///
+    /// Returns `self` unchanged when it is already on the grid (its own
+    /// exponent is at or above `exponent`), and `None` only when `exponent` is
+    /// outside `±`[`MAX_EXPONENT`] or the shift would not fit.
+    pub fn round_at_exponent(&self, exponent: i64, mode: Round) -> Option<Self> {
+        if !(-MAX_EXPONENT..=MAX_EXPONENT).contains(&exponent) {
+            return None;
+        }
+        if self.is_zero() || self.exponent >= exponent {
+            return Some(self.clone());
+        }
+        let dropped = u64::try_from(i128::from(exponent) - i128::from(self.exponent)).ok()?;
+        let sign = self.mantissa.sign();
+        let original = self.mantissa.magnitude();
+        let quotient = original >> dropped;
+        let remainder = original - (&quotient << dropped);
+        let magnitude = if wants_increment(&remainder, dropped, sign, &quotient, mode) {
+            quotient + BigUint::from(1u8)
+        } else {
+            quotient
+        };
+        Self::new(BigInt::from_biguint(sign, magnitude), exponent)
+    }
+
+    /// The rational `value` rounded onto the grid of multiples of `2^exponent`,
+    /// in the direction `mode`.
+    ///
+    /// One rounding, at the place the result needs — the same single-rounding
+    /// contract as [`Dyadic::from_rational`], and the reason a caller should
+    /// not spell this as "convert, then round".
+    ///
+    /// Returns `None` only when `exponent` is outside `±`[`MAX_EXPONENT`].
+    pub fn from_rational_at_exponent(
+        value: &BigRational,
+        exponent: i64,
+        mode: Round,
+    ) -> Option<Self> {
+        if !(-MAX_EXPONENT..=MAX_EXPONENT).contains(&exponent) {
+            return None;
+        }
+        let sign = value.numer().sign();
+        if sign == Sign::NoSign {
+            return Some(Self::zero());
+        }
+        let numerator = value.numer().magnitude().clone();
+        let denominator = value.denom().magnitude().clone();
+        let (quotient, remainder, divisor) = divide_at_scale(&numerator, &denominator, exponent)?;
+        let magnitude = if wants_increment_ratio(&remainder, &divisor, sign, &quotient, mode) {
+            quotient + BigUint::from(1u8)
+        } else {
+            quotient
+        };
+        Self::new(BigInt::from_biguint(sign, magnitude), exponent)
+    }
+
+    /// A rational interval `[lower, upper]` rounded **outward** onto the grid
+    /// of multiples of `2^exponent`, as one call.
+    ///
+    /// The result contains the input: the lower endpoint moves toward `−∞` and
+    /// the upper toward `+∞`. Having it as a single entry point is the whole
+    /// safety argument — the caller never names a rounding direction, so it
+    /// cannot name the wrong one for an endpoint, which is the defect class
+    /// the CAS's enclosure modules guard by hand today.
+    ///
+    /// Returns `None` when `lower > upper` (there is no such interval) or when
+    /// `exponent` is outside `±`[`MAX_EXPONENT`].
+    pub fn rationals_outward_at_exponent(
+        lower: &BigRational,
+        upper: &BigRational,
+        exponent: i64,
+    ) -> Option<(Self, Self)> {
+        if lower > upper {
+            return None;
+        }
+        let low = Self::from_rational_at_exponent(lower, exponent, Round::Down)?;
+        let high = Self::from_rational_at_exponent(upper, exponent, Round::Up)?;
+        Some((low, high))
+    }
+
+    /// A dyadic interval `[lower, upper]` rounded **outward** onto the grid of
+    /// multiples of `2^exponent`, as one call.
+    ///
+    /// The dyadic-input twin of [`Dyadic::rationals_outward_at_exponent`], with
+    /// the same contract.
+    pub fn outward_at_exponent(lower: &Self, upper: &Self, exponent: i64) -> Option<(Self, Self)> {
+        if lower > upper {
+            return None;
+        }
+        let low = lower.round_at_exponent(exponent, Round::Down)?;
+        let high = upper.round_at_exponent(exponent, Round::Up)?;
+        Some((low, high))
+    }
+
     /// Round an interval `[lower, upper]` outward to `precision_bits`.
     ///
     /// The returned pair contains the input interval: the lower endpoint moves
@@ -1550,5 +1652,171 @@ mod tests {
             ..honest.clone()
         };
         assert!(!forged.verify(), "a tampered final residue must be caught");
+    }
+
+    // -----------------------------------------------------------------------
+    // Absolute-grid (fixed-exponent) rounding — ADR-1710 migration slice 1.
+    // -----------------------------------------------------------------------
+
+    /// `n/d` as a `BigRational`, for the grid tests below.
+    fn q(n: i64, d: i64) -> BigRational {
+        BigRational::new(BigInt::from(n), BigInt::from(d))
+    }
+
+    #[test]
+    fn grid_rounding_brackets_the_exact_rational_in_both_directions() {
+        // 1/3 = 0.0101…₂. On the 2^(−4) grid that is 5/16 < 1/3 < 6/16.
+        let value = q(1, 3);
+        let down = Dyadic::from_rational_at_exponent(&value, -4, Round::Down).expect("down");
+        let up = Dyadic::from_rational_at_exponent(&value, -4, Round::Up).expect("up");
+        assert_eq!(down.to_rational(), q(5, 16));
+        assert_eq!(up.to_rational(), q(6, 16));
+        assert!(down.to_rational() < value && value < up.to_rational());
+
+        // The negative twin: Down is toward −∞, not toward zero.
+        let value = q(-1, 3);
+        let down = Dyadic::from_rational_at_exponent(&value, -4, Round::Down).expect("down");
+        let up = Dyadic::from_rational_at_exponent(&value, -4, Round::Up).expect("up");
+        assert_eq!(down.to_rational(), q(-6, 16));
+        assert_eq!(up.to_rational(), q(-5, 16));
+        assert!(down.to_rational() < value && value < up.to_rational());
+    }
+
+    #[test]
+    fn a_value_already_on_the_grid_is_returned_unchanged_by_every_mode() {
+        let value = q(5, 16);
+        for mode in [
+            Round::Down,
+            Round::Up,
+            Round::TowardZero,
+            Round::AwayFromZero,
+            Round::NearestTiesToEven,
+        ] {
+            let rounded = Dyadic::from_rational_at_exponent(&value, -4, mode).expect("round");
+            assert_eq!(
+                rounded.to_rational(),
+                value,
+                "mode {mode:?} moved an exact grid point"
+            );
+        }
+        // And the dyadic-input route agrees, including at a *coarser* stored
+        // exponent than the grid asks for (5/16 is 5·2^(−4); asking for the
+        // 2^(−8) grid must not change it).
+        let point = Dyadic::from_rational_at_exponent(&value, -4, Round::Down).expect("point");
+        assert_eq!(
+            point.round_at_exponent(-8, Round::Up).expect("finer"),
+            point
+        );
+    }
+
+    #[test]
+    fn the_five_modes_are_pairwise_distinguished_at_one_argument() {
+        // −11/8 sits between −12/8 and −10/8 with the fractional part exactly
+        // 1/2 at the 2^(−2) grid, so ties-to-even is the third answer.
+        let value = q(-11, 8);
+        let at = |mode| {
+            Dyadic::from_rational_at_exponent(&value, -2, mode)
+                .expect("round")
+                .to_rational()
+        };
+        assert_eq!(at(Round::Down), q(-6, 4));
+        assert_eq!(at(Round::Up), q(-5, 4));
+        assert_eq!(at(Round::TowardZero), q(-5, 4));
+        assert_eq!(at(Round::AwayFromZero), q(-6, 4));
+        // −11/8 = −2.75·2^(−2); the two neighbours are −2 and −3 and the tie
+        // rule picks the even one.
+        assert_eq!(at(Round::NearestTiesToEven), q(-6, 4));
+    }
+
+    #[test]
+    fn round_at_exponent_agrees_with_from_rational_at_exponent() {
+        // A dyadic that is NOT on the target grid, rounded by both routes.
+        let exact = Dyadic::new(BigInt::from(1_234_567i64), -20).expect("dyadic");
+        let value = exact.to_rational();
+        for exponent in [-19i64, -12, -5, 0, 3] {
+            for mode in [
+                Round::Down,
+                Round::Up,
+                Round::TowardZero,
+                Round::AwayFromZero,
+                Round::NearestTiesToEven,
+            ] {
+                assert_eq!(
+                    exact
+                        .round_at_exponent(exponent, mode)
+                        .expect("dyadic route"),
+                    Dyadic::from_rational_at_exponent(&value, exponent, mode)
+                        .expect("rational route"),
+                    "routes disagree at 2^{exponent} under {mode:?}"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn outward_grid_rounding_contains_its_input_over_a_deterministic_sweep() {
+        // A deterministic corpus: no RNG, no clock, and every case asserts the
+        // containment the enclosure modules depend on.
+        let mut checked = 0usize;
+        for numerator in -37i64..=37 {
+            for denominator in [1i64, 3, 7, 11, 64, 1_000] {
+                let low = BigRational::new(BigInt::from(numerator), BigInt::from(denominator));
+                let high = &low + q(1, 5);
+                for exponent in [-9i64, -3, 0, 2] {
+                    let (lo, hi) =
+                        Dyadic::rationals_outward_at_exponent(&low, &high, exponent).expect("pair");
+                    assert!(lo.to_rational() <= low, "lower endpoint moved inward");
+                    assert!(hi.to_rational() >= high, "upper endpoint moved inward");
+                    assert!(lo <= hi, "outward rounding inverted the interval");
+                    checked += 1;
+                }
+            }
+        }
+        assert_eq!(checked, 75 * 6 * 4);
+    }
+
+    #[test]
+    fn outward_grid_rounding_refuses_an_inverted_interval() {
+        // The guard that makes `rationals_outward_at_exponent` a *single* entry
+        // point rather than two calls: it can see both endpoints, so it can
+        // refuse a pair that is not an interval at all.
+        assert!(Dyadic::rationals_outward_at_exponent(&q(1, 2), &q(1, 3), -8).is_none());
+        let low = Dyadic::from_i64(3);
+        let high = Dyadic::from_i64(2);
+        assert!(Dyadic::outward_at_exponent(&low, &high, -8).is_none());
+        // …and accepts the degenerate one.
+        assert!(Dyadic::outward_at_exponent(&low, &low, -8).is_some());
+    }
+
+    #[test]
+    fn grid_rounding_declines_an_exponent_outside_the_contract() {
+        let value = q(1, 3);
+        assert!(Dyadic::from_rational_at_exponent(&value, MAX_EXPONENT + 1, Round::Down).is_none());
+        assert!(Dyadic::from_rational_at_exponent(&value, -MAX_EXPONENT - 1, Round::Up).is_none());
+        let exact = Dyadic::from_i64(5);
+        assert!(
+            exact
+                .round_at_exponent(MAX_EXPONENT + 1, Round::Down)
+                .is_none()
+        );
+        assert!(Dyadic::rationals_outward_at_exponent(&value, &value, MAX_EXPONENT + 1).is_none());
+    }
+
+    #[test]
+    fn grid_rounding_of_zero_is_zero() {
+        let zero = BigRational::new(BigInt::from(0), BigInt::from(1));
+        for exponent in [-64i64, 0, 64] {
+            assert!(
+                Dyadic::from_rational_at_exponent(&zero, exponent, Round::Down)
+                    .expect("zero")
+                    .is_zero()
+            );
+        }
+        assert!(
+            Dyadic::zero()
+                .round_at_exponent(-64, Round::Up)
+                .expect("zero")
+                .is_zero()
+        );
     }
 }
