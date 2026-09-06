@@ -9,8 +9,10 @@ reader, from a theorem that does not exist. Measured at 1,553 of 2,493 proved
 facts, and it produced eleven false absence claims across the twelve persona
 reviews. Characterisation becomes a derived, three-way, ratcheted measurement
 with its own registered checker rather than a stored schema field; the larger
-axis -- 430 kernel theorems and 762 definitions with no ledger fact at all --
-is sized and left proposed.
+axis -- kernel theorems and 762 definitions with no ledger fact at all -- is
+sized and left proposed. (The theorem half of that size, 430, was never
+reproducible by its own method; ADR-1674 replaces it with a measured 721 of
+3,079 and a ratchet.)
 Index-status: Proposed
 
 ## Context
@@ -82,14 +84,25 @@ everything. Against the fresh kernel index (`declarations=3575`):
 
 | | count |
 |---|---|
-| kernel **theorems** with no ledger fact at all | **430** |
+| kernel **theorems** with no ledger fact at all | **430** -- NOT REPRODUCIBLE, superseded, see below |
 | kernel **definitions** with no ledger fact at all | **762 of 789** |
 
+The **430 does not reproduce.** Neither this ADR nor `AUDIT-2026-09-04.md`
+recorded the query that produced it, and re-running the obvious candidates
+gives three different answers on the same tree. ADR-1674 fixes one method in a
+script instead: the denominator is every distinct `Declaration::Theorem` from
+`prelude_theorem_inventory --include-constructed`, the numerator is the names
+facts actually register, and both are printed by one command. Measured
+2026-09-06: **721 of 3,079 kernel theorems are named by no fact**, and
+`artifacts/ledger-coverage.json` lists every one of them. Do not quote 430.
+
+The example this ADR chose survives the correction unchanged.
 `AlgS.Hom.firstIso` — the first isomorphism theorem, the headline result of
-`04-algebra.md`, landed the same day the review was written — is one of the
-430. A reviewer reading the ledger for the state of algebra sees no row for it
-at all. That is worse than an uncurated row: an uncurated row at least says
-something exists.
+`04-algebra.md`, landed the same day the review was written — is still
+unregistered today, along with 101 of the 151 theorems in its
+`characterization` prelude. A reviewer reading the ledger for the state of
+algebra sees no row for it at all. That is worse than an uncurated row: an
+uncurated row at least says something exists.
 
 ### Why the existing instruments do not close it
 
@@ -182,8 +195,9 @@ nothing else needs to encode.
 
 ### 4. Axis two is proposed and sized, not implemented here
 
-The kernel-vs-ledger coverage gate — 430 theorems and 762 definitions with no
-fact — is the larger finding and is **not** implemented, for a stated reason:
+The kernel-vs-ledger coverage gate — the theorems and 762 definitions with no
+fact — was the larger finding and was **not** implemented here, for a stated
+reason (the theorem half is now implemented and ratcheted by ADR-1674):
 it needs the kernel declaration index, which is a `--release` build measured
 here at 2m 26s cold plus ~70 s of environment construction per query. That
 cannot be a per-commit gate.

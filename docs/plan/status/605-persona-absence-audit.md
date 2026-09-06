@@ -34,8 +34,12 @@ nothing here". 1,054 of 2,764 facts carry the generator's `[generated]` title
 titled "Mathlib v4.30 source proposition `<Name>`", which the landmark rule
 scores as characterised and where the Stirling false absence hid. Together
 **1,553 of 2,493 proved facts (62.3%) carry no characterisation of their own.**
-A second, larger axis nobody had measured: **430 kernel theorems and 762 of 789
-definitions have no ledger fact at all**, including `AlgS.Hom.firstIso`.
+A second, larger axis nobody had measured: **kernel theorems and 762 of 789
+definitions have no ledger fact at all**, including `AlgS.Hom.firstIso`. The
+theorem count given here was 430; it was never reproducible by its own method
+and is superseded by ADR-1674's measured **721 of 3,079**, printed by
+`python3 scripts/gen-ledger-coverage.py` and ratcheted. `AlgS.Hom.firstIso` is
+still unregistered, so the example stands; the number did not.
 
 Implemented rather than left proposed: `scripts/check-fact-characterisation.py`
 (three-way split, two hard guards, and a per-fragment RATCHET on the curated

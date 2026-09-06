@@ -279,8 +279,15 @@ frontier moved **86×**.
 ### C5 — Keep `#print axioms` as the gate
 
 Per module, published per release. Throughput without it is just volume; with it,
-every theorem added is a theorem on a zero-axiom base — which is the property
-that makes this library *ours* rather than a re-derivation of somebody else's.
+every theorem the gate admits is a theorem on a zero-axiom base — which is the
+property that makes this library *ours* rather than a re-derivation of somebody
+else's.
+
+Note the scope. This is a claim about kernel theorems under a gate, not about
+the fact ledger: 2,584 of the ledger's 2,687 proved facts carry an empty
+`axiom_footprint`, all of them on the `kernel-lean` route, and the other five
+routes cannot report one at all (ADR-1674). Do not restate this section as a
+ledger-wide headline.
 
 ## Where import fits
 
