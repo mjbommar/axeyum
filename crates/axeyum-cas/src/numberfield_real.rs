@@ -185,8 +185,8 @@ use crate::numberfield::{
 };
 
 use super::{
-    BinaryQuadraticForm, Ideal, IdealCertificateError, QuadraticOrder, big_isqrt,
-    big_mod_positive, big_one, to_i128,
+    BinaryQuadraticForm, Ideal, IdealCertificateError, QuadraticOrder, big_isqrt, big_mod_positive,
+    big_one, to_i128,
 };
 
 /// Largest discriminant [`reduced_indefinite_forms`] will enumerate.
@@ -299,11 +299,6 @@ pub enum RealCertificateError {
         /// What the criterion gives.
         derived: usize,
     },
-    /// `h⁺` is odd but the criterion says `h = h⁺/2`, which is impossible.
-    NarrowClassNumberNotEven {
-        /// The narrow class number.
-        narrow: usize,
-    },
     /// The fundamental unit's norm disagrees with the cycle criterion: norm
     /// `−1` must hold exactly when the principal form and its negative share a
     /// cycle.
@@ -413,10 +408,6 @@ impl fmt::Display for RealCertificateError {
             RealCertificateError::OrdinaryClassNumberMismatch { claimed, derived } => write!(
                 f,
                 "ordinary class number claimed {claimed} but the criterion gives {derived}"
-            ),
-            RealCertificateError::NarrowClassNumberNotEven { narrow } => write!(
-                f,
-                "narrow class number {narrow} is odd but h = h+/2 was claimed"
             ),
             RealCertificateError::UnitNormDisagreesWithCycles { norm, shares_cycle } => write!(
                 f,
@@ -1035,7 +1026,6 @@ impl RealClassNumberCertificate {
     /// [`RealCertificateError::UnitCertificate`],
     /// [`RealCertificateError::UnitRadicandMismatch`],
     /// [`RealCertificateError::PrincipalCycleMismatch`],
-    /// [`RealCertificateError::NarrowClassNumberNotEven`],
     /// [`RealCertificateError::OrdinaryClassNumberMismatch`],
     /// [`RealCertificateError::UnitNormDisagreesWithCycles`],
     /// [`RealCertificateError::IdealNotAdmissible`],
@@ -1090,16 +1080,17 @@ impl RealClassNumberCertificate {
                 cycles: self.cycles.cycles.len(),
             });
         }
-        // N6: h follows from the criterion.
+        // N6: h follows from the criterion. `h⁺ = h·|⟨g⟩|` with `|⟨g⟩| ∈ {1, 2}`,
+        // so `h⁺` is even whenever the two forms lie in different cycles — and a
+        // guard on that parity would be unreachable, because N1's recount plus
+        // N4's recomputation pin BOTH the cycle partition and which cycles the
+        // two forms land in to functions of `D` alone. No forged field can make
+        // the branch disagree with the arithmetic, so no guard is written for
+        // it; the integer division is exact on every input that gets here.
         let shares_cycle = found_principal == found_negative;
         let derived = if shares_cycle {
             self.narrow_class_number
         } else {
-            if self.narrow_class_number % 2 != 0 {
-                return Err(RealCertificateError::NarrowClassNumberNotEven {
-                    narrow: self.narrow_class_number,
-                });
-            }
             self.narrow_class_number / 2
         };
         if derived != self.class_number {
@@ -1118,9 +1109,11 @@ impl RealClassNumberCertificate {
         // N8: cross-check two — the ideal side, recomputed from the cycles.
         let (ordered, expected_map) = ideal_sides(&order, &self.cycles.cycles)
             .map_err(|_| RealCertificateError::IdealClassesMismatch)?;
-        // N9: every ideal really is one, with the norm its form says.
-        for (class, set) in ordered.iter().enumerate() {
-            for ideal in set {
+        // N9: every ideal the certificate LISTS really is an ideal of the order,
+        // with the norm its leading coefficient says. Run against the listed
+        // triples, not the recomputed ones, so a forged triple is reachable.
+        for (class, listed) in self.ideal_classes.iter().enumerate() {
+            for ideal in listed {
                 ideal
                     .admissible_in(&order)
                     .map_err(|reason| RealCertificateError::IdealNotAdmissible { class, reason })?;
@@ -1129,7 +1122,17 @@ impl RealClassNumberCertificate {
                 }
             }
         }
-        // N10: the recorded classes are those sets.
+        // N10: THE CROSS-CHECK. The ideal side counts the ordinary classes by a
+        // route that uses neither the unit nor the principal-cycle criterion,
+        // and that count must be the criterion's `h`.
+        if self.ideal_classes.len() != derived {
+            return Err(RealCertificateError::IdealClassCountMismatch {
+                ideal_side: self.ideal_classes.len(),
+                cycle_side: derived,
+            });
+        }
+        // N11: and the listed classes are exactly the recomputed sets, so N10
+        // counted the right things.
         let recorded: Vec<BTreeSet<Ideal>> = self
             .ideal_classes
             .iter()
@@ -1138,16 +1141,9 @@ impl RealClassNumberCertificate {
         if recorded != ordered {
             return Err(RealCertificateError::IdealClassesMismatch);
         }
-        // N11: and the recorded map is the one the ideals give.
+        // N12: and the recorded map is the one the ideals give.
         if expected_map != self.cycle_ideal_class {
             return Err(RealCertificateError::IdealClassMapMismatch);
-        }
-        // N12: the ideal-side count of ordinary classes is the cycle side's.
-        if ordered.len() != self.class_number {
-            return Err(RealCertificateError::IdealClassCountMismatch {
-                ideal_side: ordered.len(),
-                cycle_side: self.class_number,
-            });
         }
         Ok(())
     }
@@ -1162,7 +1158,9 @@ impl RealClassNumberCertificate {
 /// [`RealDecline::DiscriminantNotPositive`] when the order is imaginary and
 /// [`RealDecline::FormNotReduced`] if the principal form is somehow not among
 /// the reduced ones.
-pub fn real_class_number(order: &QuadraticOrder) -> Result<RealClassNumberCertificate, RealDecline> {
+pub fn real_class_number(
+    order: &QuadraticOrder,
+) -> Result<RealClassNumberCertificate, RealDecline> {
     let discriminant = order.discriminant().clone();
     let root = admissible_discriminant(&discriminant)?;
     let cycles = form_cycles(&discriminant)?;
@@ -1374,4 +1372,698 @@ pub fn pell_regulator(
 ) -> Result<RegulatorCertificate, RealDecline> {
     let unit = field.pell_unit()?;
     regulator_of_unit(&unit, precision)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use num_rational::BigRational;
+
+    fn big(value: i64) -> BigInt {
+        BigInt::from(value)
+    }
+
+    fn order(radicand: i64) -> QuadraticOrder {
+        QuadraticOrder::new(&big(radicand)).expect("order")
+    }
+
+    fn field(radicand: i64) -> QuadraticField {
+        QuadraticField::new(&big(radicand)).expect("field")
+    }
+
+    fn shape(a: i64, b: i64, c: i64) -> BinaryQuadraticForm {
+        BinaryQuadraticForm::from_i64(a, b, c)
+    }
+
+    fn ten_pow(exponent: usize) -> BigInt {
+        let mut value = big(1);
+        for _ in 0..exponent {
+            value *= 10u32;
+        }
+        value
+    }
+
+    /// A decimal literal as the exact rational it denotes.
+    fn decimal(text: &str) -> BigRational {
+        let (whole, fraction) = text.split_once('.').unwrap_or((text, ""));
+        let digits = format!("{whole}{fraction}");
+        let numerator = BigInt::parse_bytes(digits.as_bytes(), 10).expect("digits");
+        BigRational::new(numerator, ten_pow(fraction.len()))
+    }
+
+    // -----------------------------------------------------------------------
+    // Reducedness and the reduction step
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn reducedness_positive_and_negative_controls() {
+        // (1, 2, -2) is reduced for D = 12: 0 < 2 < sqrt(12) ~ 3.46 and
+        // |sqrt(12) - 2| ~ 1.46 < 2.
+        assert!(is_reduced_indefinite(&big(12), &shape(1, 2, -2)));
+        // (1, 2, -9) has discriminant 40 but sqrt(40) ~ 6.32 > 2*1 + 2, so it
+        // fails the lower half of the window.
+        assert!(!is_reduced_indefinite(&big(40), &shape(1, 2, -9)));
+        // b must be positive.
+        assert!(!is_reduced_indefinite(&big(12), &shape(1, -2, -2)));
+        // b < sqrt(D) fails.
+        assert!(!is_reduced_indefinite(&big(12), &shape(1, 4, -2)));
+    }
+
+    #[test]
+    fn rho_declines_on_an_unreduced_form() {
+        assert_eq!(
+            rho(&big(40), &shape(1, 2, -9)),
+            Err(RealDecline::FormNotReduced)
+        );
+    }
+
+    #[test]
+    fn rho_walks_the_two_cycle_of_discriminant_five() {
+        let first = shape(1, 1, -1);
+        let second = rho(&big(5), &first).expect("rho");
+        assert_eq!(second, shape(-1, 1, 1));
+        assert_eq!(rho(&big(5), &second).expect("rho"), first);
+    }
+
+    #[test]
+    fn producers_decline_outside_the_hypothesis() {
+        assert_eq!(
+            form_cycles(&big(-20)),
+            Err(RealDecline::DiscriminantNotPositive)
+        );
+        // A CORRECTION to the brief this module was written from: 79 is not a
+        // discriminant at all (79 = 3 mod 4). The field Q(sqrt 79) has
+        // discriminant 4*79 = 316, which is what the class-number test uses.
+        assert_eq!(
+            form_cycles(&big(79)),
+            Err(RealDecline::DiscriminantNotAdmissible)
+        );
+        assert_eq!(form_cycles(&big(9)), Err(RealDecline::DiscriminantIsSquare));
+        assert_eq!(
+            form_cycles(&big(200_001)),
+            Err(RealDecline::DiscriminantTooLarge {
+                bound: REAL_DISCRIMINANT_BOUND
+            })
+        );
+    }
+
+    // -----------------------------------------------------------------------
+    // Cycles and class numbers against the standard tables
+    // -----------------------------------------------------------------------
+
+    /// `(d, D, reduced forms, h+(D), h(D), unit norm)`.
+    ///
+    /// The class numbers are the classical ones for real quadratic fields --
+    /// `h = 1` for `d = 2, 3, 5`, `h = 2` for `d = 10`, and the two smallest
+    /// `h = 3` fields `d = 79` and `d = 229` (Cohen, *A Course in Computational
+    /// Algebraic Number Theory*, the real quadratic tables in Appendix B; the
+    /// same values are LMFDB's 2.2.8.1, 2.2.12.1, 2.2.5.1, 2.2.40.1, 2.2.316.1
+    /// and 2.2.229.1). The narrow class numbers and the unit norms were derived
+    /// independently from the continued fraction of `sqrt d`.
+    const TABLE: &[(i64, i64, usize, usize, usize, i64)] = &[
+        (5, 5, 2, 1, 1, -1),
+        (2, 8, 2, 1, 1, -1),
+        (3, 12, 4, 2, 1, 1),
+        (10, 40, 8, 2, 2, -1),
+        (79, 316, 32, 6, 3, 1),
+        (229, 229, 14, 3, 3, -1),
+    ];
+
+    #[test]
+    fn class_numbers_match_the_standard_tables() {
+        for &(d, discriminant, forms, narrow, ordinary, norm) in TABLE {
+            let subject = order(d);
+            assert_eq!(subject.discriminant(), &big(discriminant), "D for d = {d}");
+            let certificate = subject.real_class_number().expect("class number");
+            certificate.verify().unwrap_or_else(|error| {
+                panic!("d = {d}: {error}");
+            });
+            assert_eq!(certificate.cycles.form_count(), forms, "forms for d = {d}");
+            assert_eq!(certificate.narrow_class_number(), narrow, "h+ for d = {d}");
+            assert_eq!(certificate.class_number(), ordinary, "h for d = {d}");
+            assert_eq!(certificate.unit.norm, big(norm), "unit norm for d = {d}");
+            // The ideal side counted the same thing by its own route.
+            assert_eq!(certificate.ideal_classes.len(), ordinary, "ideals d = {d}");
+            // And the two criteria agree on which relation holds.
+            assert_eq!(
+                certificate.unit_norm_is_negative(),
+                narrow == ordinary,
+                "criteria for d = {d}"
+            );
+        }
+    }
+
+    #[test]
+    fn the_ideal_route_genuinely_merges_narrow_classes() {
+        // d = 3 is the case that separates the two counts: two cycles, but both
+        // map onto the SAME set of primitive ideals, so the ideal route says
+        // h = 1 while the cycle route says h+ = 2. If the ideal map were a
+        // relabelling of the cycles this could not happen.
+        let certificate = order(3).real_class_number().expect("class number");
+        assert_eq!(certificate.narrow_class_number(), 2);
+        assert_eq!(certificate.ideal_classes.len(), 1);
+        assert_eq!(certificate.cycle_ideal_class, vec![0, 0]);
+        // d = 10 is the control: two cycles and two ideal sets.
+        let control = order(10).real_class_number().expect("class number");
+        assert_eq!(control.narrow_class_number(), 2);
+        assert_eq!(control.ideal_classes.len(), 2);
+        assert_ne!(control.cycle_ideal_class[0], control.cycle_ideal_class[1]);
+    }
+
+    #[test]
+    fn cycles_are_deterministic_and_partition_the_reduced_forms() {
+        let certificate = form_cycles(&big(316)).expect("cycles");
+        certificate.verify().expect("verify");
+        assert_eq!(certificate, form_cycles(&big(316)).expect("cycles"));
+        let listed: BTreeSet<BinaryQuadraticForm> = certificate
+            .cycles
+            .iter()
+            .flat_map(|cycle| cycle.iter().cloned())
+            .collect();
+        let enumerated: BTreeSet<BinaryQuadraticForm> = reduced_indefinite_forms(&big(316))
+            .expect("forms")
+            .into_iter()
+            .collect();
+        assert_eq!(listed, enumerated);
+        assert_eq!(listed.len(), certificate.form_count());
+    }
+
+    // -----------------------------------------------------------------------
+    // Forgeries against FormCycleCertificate
+    // -----------------------------------------------------------------------
+
+    fn cycles_of(discriminant: i64) -> FormCycleCertificate {
+        let certificate = form_cycles(&big(discriminant)).expect("cycles");
+        certificate.verify().expect("honest certificate verifies");
+        certificate
+    }
+
+    #[test]
+    fn a_cycle_that_is_not_closed_is_refused() {
+        let mut forged = cycles_of(40);
+        let longest = forged
+            .cycles
+            .iter()
+            .position(|cycle| cycle.len() > 2)
+            .expect("a cycle of length > 2");
+        forged.cycles[longest].swap(1, 2);
+        assert!(matches!(
+            forged.verify(),
+            Err(RealCertificateError::CycleNotClosed { .. })
+        ));
+    }
+
+    #[test]
+    fn a_form_listed_twice_is_refused() {
+        let mut forged = cycles_of(40);
+        let repeat = forged.cycles[0][0].clone();
+        forged.cycles[0].push(repeat);
+        assert!(matches!(
+            forged.verify(),
+            Err(RealCertificateError::FormListedTwice { .. })
+        ));
+    }
+
+    #[test]
+    fn a_dropped_cycle_fails_the_recount() {
+        let mut forged = cycles_of(40);
+        forged.cycles.pop();
+        forged.narrow_class_number = forged.cycles.len();
+        assert!(matches!(
+            forged.verify(),
+            Err(RealCertificateError::CycleRecountMismatch { .. })
+        ));
+    }
+
+    #[test]
+    fn a_forged_narrow_class_number_is_refused() {
+        let mut forged = cycles_of(40);
+        forged.narrow_class_number += 1;
+        assert_eq!(
+            forged.verify(),
+            Err(RealCertificateError::NarrowClassNumberMismatch {
+                claimed: 3,
+                cycles: 2
+            })
+        );
+    }
+
+    #[test]
+    fn an_empty_cycle_is_refused() {
+        let mut forged = cycles_of(40);
+        forged.cycles.push(Vec::new());
+        forged.narrow_class_number = forged.cycles.len();
+        assert_eq!(
+            forged.verify(),
+            Err(RealCertificateError::CycleEmpty { cycle: 2 })
+        );
+    }
+
+    #[test]
+    fn a_form_of_the_wrong_discriminant_is_refused() {
+        let mut forged = cycles_of(40);
+        forged.cycles[0].push(shape(1, 2, -1));
+        assert!(matches!(
+            forged.verify(),
+            Err(RealCertificateError::FormDiscriminantMismatch { .. })
+        ));
+    }
+
+    #[test]
+    fn an_unreduced_form_is_refused() {
+        let mut forged = cycles_of(40);
+        forged.cycles[0].push(shape(1, 2, -9));
+        assert!(matches!(
+            forged.verify(),
+            Err(RealCertificateError::FormNotReduced { .. })
+        ));
+    }
+
+    #[test]
+    fn an_imprimitive_form_is_refused() {
+        // D = 20 is the order of conductor 2 in Q(sqrt 5); (2, 2, -2) is
+        // reduced for it and has gcd 2, so it is a form of discriminant 5
+        // scaled up and does not count towards h+(20).
+        let mut forged = cycles_of(20);
+        let intruder = shape(2, 2, -2);
+        assert_eq!(intruder.discriminant(), big(20));
+        assert!(is_reduced_indefinite(&big(20), &intruder));
+        forged.cycles[0].push(intruder);
+        assert!(matches!(
+            forged.verify(),
+            Err(RealCertificateError::FormNotPrimitive { .. })
+        ));
+    }
+
+    #[test]
+    fn discriminant_hypotheses_are_checked_by_the_verifier() {
+        let honest = cycles_of(40);
+        for (discriminant, expected) in [
+            (-20i64, RealCertificateError::DiscriminantNotPositive),
+            (79, RealCertificateError::DiscriminantNotAdmissible),
+            (9, RealCertificateError::DiscriminantIsSquare),
+        ] {
+            let mut forged = honest.clone();
+            forged.discriminant = big(discriminant);
+            assert_eq!(forged.verify(), Err(expected), "D = {discriminant}");
+        }
+    }
+
+    // -----------------------------------------------------------------------
+    // Forgeries against RealClassNumberCertificate
+    // -----------------------------------------------------------------------
+
+    fn class_number_of(radicand: i64) -> RealClassNumberCertificate {
+        let certificate = order(radicand).real_class_number().expect("class number");
+        certificate.verify().expect("honest certificate verifies");
+        certificate
+    }
+
+    #[test]
+    fn a_unit_of_the_wrong_norm_is_caught_by_the_cycle_criterion() {
+        // d = 10 has fundamental unit 3 + sqrt(10) of norm -1 and Pell unit
+        // 19 + 6 sqrt(10) of norm +1. The Pell unit VERIFIES on its own -- it
+        // is a genuine unit -- so only the cross-check against the cycles
+        // refuses it.
+        let mut forged = class_number_of(10);
+        forged.unit = field(10).pell_unit().expect("pell unit");
+        forged
+            .unit
+            .verify()
+            .expect("the Pell unit is a genuine unit");
+        assert!(matches!(
+            forged.verify(),
+            Err(RealCertificateError::UnitNormDisagreesWithCycles { .. })
+        ));
+    }
+
+    #[test]
+    fn a_unit_from_another_field_is_refused() {
+        let mut forged = class_number_of(10);
+        forged.unit = field(2).fundamental_unit().expect("unit");
+        assert_eq!(
+            forged.verify(),
+            Err(RealCertificateError::UnitRadicandMismatch)
+        );
+    }
+
+    #[test]
+    fn a_corrupted_unit_is_refused() {
+        let mut forged = class_number_of(10);
+        forged.unit.a += 1u32;
+        assert!(matches!(
+            forged.verify(),
+            Err(RealCertificateError::UnitCertificate(_))
+        ));
+    }
+
+    #[test]
+    fn a_forged_principal_cycle_index_is_refused() {
+        let mut forged = class_number_of(3);
+        forged.principal_cycle = 1 - forged.principal_cycle;
+        assert_eq!(
+            forged.verify(),
+            Err(RealCertificateError::PrincipalCycleMismatch)
+        );
+    }
+
+    #[test]
+    fn a_forged_ordinary_class_number_is_refused() {
+        let mut forged = class_number_of(10);
+        forged.class_number += 1;
+        assert_eq!(
+            forged.verify(),
+            Err(RealCertificateError::OrdinaryClassNumberMismatch {
+                claimed: 3,
+                derived: 2
+            })
+        );
+    }
+
+    #[test]
+    fn a_forged_outer_narrow_class_number_is_refused() {
+        let mut forged = class_number_of(10);
+        forged.narrow_class_number += 1;
+        assert_eq!(
+            forged.verify(),
+            Err(RealCertificateError::NarrowClassNumberMismatch {
+                claimed: 3,
+                cycles: 2
+            })
+        );
+    }
+
+    #[test]
+    fn a_forged_discriminant_is_refused() {
+        let mut forged = class_number_of(10);
+        forged.discriminant = big(8);
+        assert_eq!(
+            forged.verify(),
+            Err(RealCertificateError::DiscriminantMismatch)
+        );
+    }
+
+    #[test]
+    fn a_forged_radicand_is_refused() {
+        let mut forged = class_number_of(10);
+        // 8 is not squarefree, so no order has it as a radicand.
+        forged.radicand = big(8);
+        assert_eq!(
+            forged.verify(),
+            Err(RealCertificateError::OrderParametersMismatch)
+        );
+    }
+
+    #[test]
+    fn a_non_ideal_in_the_ideal_classes_is_refused() {
+        let mut forged = class_number_of(10);
+        // b >= a breaks the Hermite convention, so this triple is not an ideal.
+        forged.ideal_classes[0][0] = Ideal::from_i64(3, 5, 1);
+        assert!(matches!(
+            forged.verify(),
+            Err(RealCertificateError::IdealNotAdmissible { .. })
+        ));
+    }
+
+    #[test]
+    fn an_ideal_of_the_wrong_norm_is_refused() {
+        let mut forged = class_number_of(10);
+        // (2, 0, 2) IS an ideal of Z[sqrt 10] -- it is 2*O_K -- but its norm is
+        // 4, not the 2 its leading coefficient claims for a primitive ideal.
+        let intruder = Ideal::from_i64(2, 0, 2);
+        intruder
+            .admissible_in(&order(10))
+            .expect("a genuine ideal, so only the norm guard can refuse it");
+        forged.ideal_classes[0][0] = intruder;
+        assert!(matches!(
+            forged.verify(),
+            Err(RealCertificateError::IdealNormMismatch { .. })
+        ));
+    }
+
+    #[test]
+    fn a_dropped_ideal_class_is_refused_by_the_cross_check() {
+        let mut forged = class_number_of(10);
+        forged.ideal_classes.pop();
+        assert_eq!(
+            forged.verify(),
+            Err(RealCertificateError::IdealClassCountMismatch {
+                ideal_side: 1,
+                cycle_side: 2
+            })
+        );
+    }
+
+    #[test]
+    fn a_permuted_ideal_class_is_refused() {
+        let mut forged = class_number_of(10);
+        forged.ideal_classes.swap(0, 1);
+        assert_eq!(
+            forged.verify(),
+            Err(RealCertificateError::IdealClassesMismatch)
+        );
+    }
+
+    #[test]
+    fn a_forged_cycle_to_ideal_class_map_is_refused() {
+        let mut forged = class_number_of(10);
+        forged.cycle_ideal_class.swap(0, 1);
+        assert_eq!(
+            forged.verify(),
+            Err(RealCertificateError::IdealClassMapMismatch)
+        );
+    }
+
+    // -----------------------------------------------------------------------
+    // The regulator
+    //
+    // COST, and why the precisions differ between the tests below. Measured in
+    // DEBUG on a shared host at load average ~10, produce + verify, with the
+    // grid printed by a temporary probe:
+    //
+    //   d = 2   p=28 0.061 s   p=32 0.178 s   p=40 7.3 s    p=100 31.3 s
+    //   d = 5   p=24 0.686 s   p=32 2.48 s    p=40 2.46 s   p=100 10.9 s
+    //   d = 61  p=8  1.13 s    p=24 4.02 s    p=40 17.5 s   p=100 > 180 s
+    //
+    // The steps are `enclosure::enclose`'s slack ladder [0, 8, 24, 56, 120]:
+    // cost is flat inside a tier and jumps when a tier fails. So the 30-digit
+    // (precision 100) checks the brief asks for do not fit a five-second debug
+    // budget for ANY of the three, and they are marked
+    // `cfg_attr(debug_assertions, ignore)` — they run under
+    // `cargo test --release`, which is where the lane measured them. The debug
+    // suite checks the SAME reference values at the highest precision that
+    // fits.
+    // -----------------------------------------------------------------------
+
+    /// Assert `certificate`'s interval sits inside
+    /// `[reference - delta, reference + delta]`, which checks the enclosure
+    /// both ways: it is not too wide and it is centred on the right number.
+    fn assert_encloses(certificate: &RegulatorCertificate, reference: &str, tolerance: usize) {
+        let target = decimal(reference);
+        let slack = BigRational::new(big(1), ten_pow(tolerance));
+        let low = &target - &slack;
+        let high = &target + &slack;
+        let interval = certificate.interval();
+        assert!(
+            interval.lo() >= &low && interval.hi() <= &high,
+            "enclosure [{}, {}] is not inside {reference} +- 1e-{tolerance}",
+            interval.lo(),
+            interval.hi()
+        );
+    }
+
+    // R = ln(eps) for Z[sqrt d], to 30 decimal places. Computed independently
+    // with Python's `decimal` module at 60-digit working precision from the
+    // same (a, b) the continued fraction gives; the d = 2 value
+    // ln(1 + sqrt 2) = arcsinh(1) = 0.88137358701954302523260932497979230902...
+    // is the standard tabulated one (OEIS A091648, and Abramowitz & Stegun's
+    // arcsinh tables). Every test below checks against these same strings, so a
+    // low-precision test and the 30-digit test cannot drift apart.
+    const REGULATOR_2: &str = "0.881373587019543025232609324979";
+    const REGULATOR_5: &str = "1.443635475178810342493276740273";
+    const REGULATOR_61: &str = "10.992655382659312577777539465392";
+
+    #[test]
+    fn regulator_of_two() {
+        let certificate = regulator(&field(2), 32).expect("regulator");
+        certificate.verify().expect("verify");
+        assert_eq!(certificate.unit.a, big(1));
+        assert_eq!(certificate.unit.b, big(1));
+        assert!(certificate.fundamental_certified);
+        assert_encloses(&certificate, REGULATOR_2, 8);
+    }
+
+    #[test]
+    fn regulator_of_five() {
+        // Z[sqrt 5]'s unit is 2 + sqrt 5 = ((1+sqrt 5)/2)^3, so this is 3*R_K.
+        // The module documentation says so; nothing here silently claims R_K.
+        let certificate = regulator(&field(5), 24).expect("regulator");
+        certificate.verify().expect("verify");
+        assert_eq!(certificate.unit.a, big(2));
+        assert_eq!(certificate.unit.b, big(1));
+        assert_encloses(&certificate, REGULATOR_5, 6);
+    }
+
+    #[test]
+    fn regulator_of_sixty_one() {
+        // d = 61 is the classical big-unit case: 29718 + 3805 sqrt(61), norm -1.
+        let certificate = regulator(&field(61), 24).expect("regulator");
+        certificate.verify().expect("verify");
+        assert_eq!(certificate.unit.a, big(29_718));
+        assert_eq!(certificate.unit.b, big(3_805));
+        assert!(certificate.fundamental_certified);
+        assert_encloses(&certificate, REGULATOR_61, 6);
+    }
+
+    #[test]
+    #[cfg_attr(debug_assertions, ignore = "31 s in debug; runs under --release")]
+    fn regulator_of_two_to_thirty_digits() {
+        let certificate = regulator(&field(2), 100).expect("regulator");
+        certificate.verify().expect("verify");
+        assert_encloses(&certificate, REGULATOR_2, 28);
+    }
+
+    #[test]
+    #[cfg_attr(debug_assertions, ignore = "11 s in debug; runs under --release")]
+    fn regulator_of_five_to_thirty_digits() {
+        let certificate = regulator(&field(5), 100).expect("regulator");
+        certificate.verify().expect("verify");
+        assert_encloses(&certificate, REGULATOR_5, 28);
+    }
+
+    #[test]
+    #[cfg_attr(debug_assertions, ignore = "over 3 min in debug; runs under --release")]
+    fn regulator_of_sixty_one_to_thirty_digits() {
+        let certificate = regulator(&field(61), 100).expect("regulator");
+        certificate.verify().expect("verify");
+        assert_encloses(&certificate, REGULATOR_61, 28);
+    }
+
+    #[test]
+    fn the_pell_regulator_of_sixty_one_is_twice_the_fundamental_one() {
+        // The Pell unit is 1766319049 + 226153980 sqrt(61), the square of the
+        // fundamental one, so its logarithm is 2R. The two intervals must
+        // intersect after doubling -- an exact assertion, no fudge factor.
+        let fundamental = regulator(&field(61), 8).expect("regulator");
+        let pell = pell_regulator(&field(61), 8).expect("pell regulator");
+        fundamental.verify().expect("verify");
+        pell.verify().expect("verify");
+        assert_eq!(pell.unit.a, big(1_766_319_049));
+        assert_eq!(pell.unit.b, big(226_153_980));
+        assert!(!pell.fundamental_certified);
+        let two = BigRational::from(big(2));
+        assert!(pell.interval().lo() <= &(&two * fundamental.interval().hi()));
+        assert!(&(&two * fundamental.interval().lo()) <= pell.interval().hi());
+    }
+
+    #[test]
+    fn a_regulator_enclosure_of_another_field_is_refused() {
+        let mut forged = regulator(&field(2), 16).expect("regulator");
+        let other = regulator(&field(5), 16).expect("regulator");
+        forged.enclosure = other.enclosure;
+        assert!(matches!(
+            forged.verify(),
+            Err(RealCertificateError::RegulatorEnclosureRejected(_))
+        ));
+    }
+
+    #[test]
+    fn a_forged_regulator_precision_is_refused() {
+        let mut forged = regulator(&field(2), 16).expect("regulator");
+        forged.precision = 17;
+        assert_eq!(
+            forged.verify(),
+            Err(RealCertificateError::RegulatorPrecisionMismatch {
+                claimed: 17,
+                enclosure: 16
+            })
+        );
+    }
+
+    #[test]
+    fn a_forged_fundamental_label_is_refused() {
+        let mut forged = regulator(&field(2), 16).expect("regulator");
+        assert!(forged.fundamental_certified);
+        forged.fundamental_certified = false;
+        assert_eq!(
+            forged.verify(),
+            Err(RealCertificateError::RegulatorMinimalityLabelMismatch {
+                claimed: false,
+                supported: true
+            })
+        );
+    }
+
+    #[test]
+    fn a_regulator_for_another_fields_unit_is_refused() {
+        let mut forged = regulator(&field(2), 16).expect("regulator");
+        forged.radicand = big(5);
+        assert_eq!(
+            forged.verify(),
+            Err(RealCertificateError::UnitRadicandMismatch)
+        );
+    }
+
+    #[test]
+    fn a_corrupted_unit_in_a_regulator_is_refused() {
+        let mut forged = regulator(&field(2), 16).expect("regulator");
+        forged.unit.a += 1u32;
+        assert!(matches!(
+            forged.verify(),
+            Err(RealCertificateError::UnitCertificate(_))
+        ));
+    }
+
+    #[test]
+    fn a_unit_past_i128_declines_and_is_refused() {
+        // (1 + sqrt 2)^201 by the exact recurrence (a, b) -> (a + 2b, a + b),
+        // which stays a unit at every step. It is far past i128, so
+        // `CasExpr::int` cannot hold it: the producer declines and the checker
+        // refuses.
+        let (mut a, mut b) = (big(1), big(1));
+        for _ in 0..200 {
+            let next_a = &a + 2u32 * &b;
+            let next_b = &a + &b;
+            a = next_a;
+            b = next_b;
+        }
+        assert!(to_i128(&a).is_none());
+        let huge = FundamentalUnitCertificate {
+            norm: &a * &a - 2u32 * &b * &b,
+            radicand: big(2),
+            a,
+            b,
+            minimality: Minimality::Uncertified {
+                reason: "constructed in a test".to_string(),
+            },
+        };
+        huge.verify().expect("it is a genuine unit");
+        assert_eq!(
+            regulator_of_unit(&huge, 16),
+            Err(RealDecline::MagnitudeOutOfRange)
+        );
+        let honest = regulator(&field(2), 16).expect("regulator");
+        let forged = RegulatorCertificate {
+            radicand: big(2),
+            unit: huge,
+            precision: 16,
+            enclosure: honest.enclosure,
+            fundamental_certified: false,
+        };
+        assert_eq!(
+            forged.verify(),
+            Err(RealCertificateError::RegulatorMagnitudeOutOfRange)
+        );
+    }
+
+    #[test]
+    fn the_regulator_declines_past_the_precision_bound() {
+        assert_eq!(
+            regulator(&field(2), REGULATOR_PRECISION_BOUND + 1),
+            Err(RealDecline::PrecisionTooLarge {
+                bound: REGULATOR_PRECISION_BOUND
+            })
+        );
+    }
 }
