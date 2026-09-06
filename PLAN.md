@@ -49531,6 +49531,10 @@ Suite `fourth-moment-concentration`, baseline green at 6 tests.
 | the coefficient test's negative control becomes a second copy of its positive case | **killed 1** — exactly `fourth_moment_bound_carries_three_square_terms_and_not_six` |
 | the threshold test's negative control becomes a second copy of its positive case | **killed 1** — exactly `fourth_moment_tail_threshold_is_a_to_the_fourth_and_not_a_squared` |
 
+Run twice, independently, with identical outcomes; the second run's exit status
+was captured and is **0**, which the harness gives only when every mutation is
+`killed N`.
+
 The first two are kernel kills and that is the finding, not a shortcoming: a
 wrong constant here is not a wrong theorem the tests have to notice, it is a
 term whose inferred type stops matching its declared one, so
