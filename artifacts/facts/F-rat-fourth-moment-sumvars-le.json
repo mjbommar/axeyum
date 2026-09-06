@@ -1,0 +1,81 @@
+{
+  "schema_version": 1,
+  "id": "F:rat-fourth-moment-sumvars-le",
+  "title": "The fourth central moment of a sum of four-wise uncorrelated centred variables",
+  "statement": "Let Y be a family of rational-valued random variables on a finite index range [0, n) with a distribution p, four-wise uncorrelated below m in the sense of Rat.FourwiseUncorrelated. If every one of the first m has fourth moment at most M4 and second moment at most s2, and s2 is non-negative, then the fourth moment of their pointwise sum is at most the sum of m copies of M4 plus three times the square of the sum of m copies of s2 -- that is, m*M4 + 3*(m*s2)^2 once Rat.sum_range_const collapses the two constant sums. The bound is stated with sumRange rather than with m as a rational because sumRange f (succ b) reduces definitionally to sumRange f b + f b in this prelude, while the corresponding rational-numeral fact about natDivSucc does not exist here. The three is the multinomial coefficient of the surviving pair term in the expansion of a fourth power; the four third-power cross terms and the four first-power ones vanish because each carries an unpaired index.",
+  "formal": {
+    "language": "lean4-surface",
+    "statement": "theorem Rat.fourth_moment_sumVars_le : ((x0 : ((x0 : AxNat) -> ((x1 : AxNat) -> Rat))) -> ((x1 : ((x1 : AxNat) -> Rat)) -> ((x2 : AxNat) -> ((x3 : Rat) -> ((x4 : Rat) -> ((x5 : Rat.IsDistribution x1 x2) -> ((x6 : Rat.le Rat.zero x4) -> ((x7 : AxNat) -> ((x8 : Rat.FourwiseUncorrelated x0 x7 x1 x2) -> ((x9 : ((x9 : AxNat) -> ((x10 : AxNat.lt x9 x7) -> Rat.le (Rat.expectation (fun (x11 : AxNat) => Rat.mul (Rat.mul (x0 x9 x11) (x0 x9 x11)) (Rat.mul (x0 x9 x11) (x0 x9 x11))) x1 x2) x3))) -> ((x10 : ((x10 : AxNat) -> ((x11 : AxNat.lt x10 x7) -> Rat.le (Rat.expectation (fun (x12 : AxNat) => Rat.mul (x0 x10 x12) (x0 x10 x12)) x1 x2) x4))) -> Rat.le (Rat.expectation (fun (x11 : AxNat) => Rat.mul (Rat.mul (Rat.sumVars x0 x7 x11) (Rat.sumVars x0 x7 x11)) (Rat.mul (Rat.sumVars x0 x7 x11) (Rat.sumVars x0 x7 x11))) x1 x2) (Rat.add (Rat.sumRange (fun (x11 : AxNat) => x3) x7) (Rat.add (Rat.add (Rat.mul (Rat.sumRange (fun (x11 : AxNat) => x4) x7) (Rat.sumRange (fun (x11 : AxNat) => x4) x7)) (Rat.mul (Rat.sumRange (fun (x11 : AxNat) => x4) x7) (Rat.sumRange (fun (x11 : AxNat) => x4) x7))) (Rat.mul (Rat.sumRange (fun (x11 : AxNat) => x4) x7) (Rat.sumRange (fun (x11 : AxNat) => x4) x7)))))))))))))))",
+    "fragment": "Prop",
+    "kernel_theorem": "Rat.fourth_moment_sumVars_le"
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:rat-expectation-sq-sumvars-mul-sq",
+    "F:rat-expectation-add",
+    "F:rat-sq-nonneg",
+    "F:nat-lt-irrefl",
+    "F:nat-lt-of-lt-of-le",
+    "F:nat-lt-succ-self",
+    "F:rat-add-assoc",
+    "F:rat-add-comm",
+    "F:rat-add-le-add",
+    "F:rat-add-nonneg",
+    "F:rat-add-zero",
+    "F:rat-expectation-nonneg",
+    "F:rat-le-refl",
+    "F:rat-le-trans",
+    "F:rat-left-distrib",
+    "F:rat-mul-assoc",
+    "F:rat-mul-comm",
+    "F:rat-mul-le-mul-of-nonneg-left",
+    "F:rat-mul-le-mul-of-nonneg-right",
+    "F:rat-mul-zero",
+    "F:rat-right-distrib",
+    "F:rat-sumrange-congr",
+    "F:rat-sumrange-congr-lt",
+    "F:rat-sumrange-eq-zero-of-lt",
+    "F:rat-sumrange-le",
+    "F:rat-sumrange-nonneg",
+    "F:rat-sumrange-succ",
+    "F:rat-sumrange-zero"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-axiom-free",
+      "kind": "kernel-term",
+      "supports": "The declaration is admitted by the trusted kernel gate with an empty Kernel::axiom_footprint, together with every other ADR-1653 declaration. The test asserts Environment::contains FIRST, because an absent name has an empty footprint too. ",
+      "check_status": "checked",
+      "checkers": [
+        "producing-build (Kernel::add_declaration)",
+        "fourth_moment_declarations_are_axiom_free",
+        "every_rat_declaration_is_checked_and_axiom_free"
+      ],
+      "checker_command": "cargo test --release -p axeyum-lean-kernel --lib rat_prelude::fourth_moment::fourth_moment_tests::fourth_moment_declarations_are_axiom_free -- --exact 2>&1 | grep -c '^test result: ok. 1 passed'",
+      "checker_seconds": 120,
+      "kernel_declaration": "Rat.fourth_moment_sumVars_le",
+      "notes": "grep -c, not grep -q: -q would SIGPIPE the producer under pipefail, and -c exits 1 printing 0 when the line is absent, so a suite that compiled to zero tests and exited 0 is caught rather than counted as a pass. --release is mandatory: the rational prelude SIGABRTs on the default debug thread stack."
+    },
+    {
+      "id": "coefficient-is-three-not-six",
+      "kind": "kernel-term",
+      "supports": "The declared type is compared against the statement rebuilt with THREE copies of the square term and against the same statement with SIX. The first must be definitionally equal and the second must not. Six is the other multinomial coefficient in a fourth power, so a control blind to that difference would not be a control on the coefficient; without this row, 'the bound is m*M4 + 3(m*s2)^2' would be a claim about the source rather than about the admitted declaration.",
+      "check_status": "checked",
+      "checkers": [
+        "fourth_moment_bound_carries_three_square_terms_and_not_six"
+      ],
+      "checker_command": "cargo test --release -p axeyum-lean-kernel --lib rat_prelude::fourth_moment::fourth_moment_tests::fourth_moment_bound_carries_three_square_terms_and_not_six -- --exact 2>&1 | grep -c '^test result: ok. 1 passed'",
+      "checker_seconds": 120,
+      "kernel_declaration": "Rat.fourth_moment_sumVars_le",
+      "notes": "grep -c, not grep -q: -q would SIGPIPE the producer under pipefail, and -c exits 1 printing 0 when the line is absent, so a suite that compiled to zero tests and exited 0 is caught rather than counted as a pass. --release is mandatory: the rational prelude SIGABRTs on the default debug thread stack."
+    }
+  ],
+  "provenance": {
+    "date": "2026-09-06",
+    "established_by": "lane fourth-moment (roadmap W3-12, ADR-1653)"
+  },
+  "notes": "The induction closes with 3*s2^2 of SLACK rather than on the nose, so the last step is Rat.add_le_add against Rat.sq_nonneg and one ring rebalancing. The exact identity -- sum of E[Y_i^4] plus three times the off-diagonal double sum of E[Y_i^2]E[Y_j^2] -- is a different and larger object, needing an off-diagonal double sum this shelf has no comfortable way to state, and it is not needed for the rate."
+}
