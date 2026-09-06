@@ -22,6 +22,9 @@
 //! greater than one). The individual functions document their edge behaviour on
 //! `0`, `1` and negative inputs.
 
+use axeyum_arith::{ModularRing, PlainModRing};
+use num_bigint::BigUint;
+
 // ---------------------------------------------------------------------------
 // Internal `u128` arithmetic core
 // ---------------------------------------------------------------------------
@@ -55,9 +58,31 @@ fn mul_mod(left: u128, right: u128, modulus: u128) -> u128 {
 
 /// Modular exponentiation `(base ^ exponent) mod modulus` on `u128`.
 ///
-/// Uses [`mul_mod`], so it is overflow-safe for any positive `modulus` below
-/// `2^127`.
+/// Delegates to `axeyum_arith::PlainModRing` (ADR-1710 migration slice 2):
+/// this function and [`mod_pow`] were, until this migration, two independent
+/// square-and-multiply implementations (this one over `u128` with [`mul_mod`],
+/// `mod_pow` calling this one after sign reduction). Both now share the one
+/// implementation in `axeyum-arith`; what remains here is the `u128`/`BigUint`
+/// boundary conversion. A `legacy_pow_mod` keeps the old body, under
+/// `#[cfg(test)]`, as the differential-test oracle.
+///
+/// # Panics
+///
+/// Panics if `modulus` is zero (the same precondition [`mul_mod`] documents);
+/// every caller (this file's [`miller_rabin_round`] and [`mod_pow`]) already
+/// guards against that before calling in.
 fn pow_mod(base: u128, exponent: u128, modulus: u128) -> u128 {
+    let ring = PlainModRing::new(BigUint::from(modulus));
+    let certificate = ring.pow_mod(&BigUint::from(base), &BigUint::from(exponent));
+    u128::try_from(certificate.residue)
+        .expect("a residue reduced modulo a u128 modulus fits in u128")
+}
+
+/// The pre-migration `pow_mod` body, kept only as the oracle for
+/// [`pow_mod_matches_legacy_over_deterministic_corpus`] (ADR-1710 migration
+/// slice 2's differential test).
+#[cfg(test)]
+fn legacy_pow_mod(base: u128, exponent: u128, modulus: u128) -> u128 {
     if modulus == 1 {
         return 0;
     }
@@ -362,6 +387,11 @@ pub fn extended_gcd(a: i128, b: i128) -> (i128, i128, i128) {
 /// `base` may be negative (it is reduced into `0..modulus`). Returns `None` when
 /// `modulus <= 0`; the result otherwise lies in `0..modulus`. Overflow-safe for
 /// every positive `i128` modulus.
+///
+/// This is the `i128`-facing entry point over `pow_mod`, which (ADR-1710
+/// migration slice 2) delegates to `axeyum_arith::PlainModRing` rather than
+/// running its own square-and-multiply loop; this function's own job is only
+/// sign reduction and the `i128`/`u128` boundary.
 ///
 /// # Examples
 ///
@@ -774,6 +804,141 @@ mod tests {
                 mod_pow(base, u128::try_from(prime - 1).unwrap(), prime),
                 Some(1),
                 "Fermat for base {base}"
+            );
+        }
+    }
+
+    // -- ADR-1710 migration slice 2: pow_mod / mod_pow differential tests --
+
+    /// A deterministic corpus of at least 200 `(base, exponent, modulus)`
+    /// triples for [`pow_mod`] (the `u128` engine), covering the required
+    /// edge classes explicitly and filling the rest with a fixed-seed
+    /// pseudo-random generator (a plain multiplicative congruential
+    /// generator; no RNG dependency, and the same corpus every run).
+    ///
+    /// **Domain note.** `pow_mod` and [`mul_mod`]'s own doc comments say
+    /// they are correct for "any modulus below `2^127`, i.e. every positive
+    /// `i128` modulus" — that is [`legacy_pow_mod`]'s actual contract, not
+    /// the full `u128` range. An earlier draft of this corpus pushed moduli
+    /// past `2^127` (`u128::MAX` and neighbours) and [`legacy_pow_mod`]
+    /// overflowed on its own `mul_mod` fallback, confirming the documented
+    /// ceiling is real. So this corpus stays at or below `i128::MAX`
+    /// (`2^127 - 1`) — the widened range `axeyum_arith::PlainModRing` can
+    /// reach past that ceiling is exercised instead by
+    /// `axeyum-arith`'s own `plain_mod_ring_matches_a_naive_reference_including_moduli_past_u128`,
+    /// which has no such legacy engine to stay compatible with.
+    fn pow_mod_corpus() -> Vec<(u128, u128, u128)> {
+        let modulus_ceiling = i128::MAX as u128; // 2^127 - 1, legacy_pow_mod's own documented ceiling
+        let mut corpus: Vec<(u128, u128, u128)> = vec![
+            (0, 0, 1),                         // modulus == 1
+            (5, 0, 7),                         // exponent == 0
+            (7, 3, 1),                         // modulus == 1, exponent != 0
+            (0, 5, 11),                        // base == 0
+            (2, 10, 2),                        // even modulus
+            (2, 10, 3),                        // odd modulus
+            (1, 1_000_000, 97),                // base == 1
+            (2, 127, modulus_ceiling),         // modulus == i128::MAX exactly (the ceiling)
+            (3, 128, modulus_ceiling - 1),     // just below the ceiling, even
+            (5, 200, modulus_ceiling / 2),     // large, near the ceiling's midpoint
+            (7, 201, modulus_ceiling / 2 + 1), // large, odd, near the ceiling's midpoint
+            (u128::MAX, 1, modulus_ceiling),   // base past the modulus, at the ceiling
+        ];
+        let mut state: u128 = 0x9E37_79B9_7F4A_7C15;
+        let mut next = move || {
+            state = state
+                .wrapping_mul(6_364_136_223_846_793_005)
+                .wrapping_add(1_442_695_040_888_963_407);
+            state
+        };
+        while corpus.len() < 220 {
+            let base = next();
+            let exponent = next() % 5_000;
+            let modulus = (next() % modulus_ceiling).max(1);
+            corpus.push((base, exponent, modulus));
+        }
+        corpus
+    }
+
+    #[test]
+    fn pow_mod_corpus_has_at_least_two_hundred_triples() {
+        assert!(pow_mod_corpus().len() >= 200);
+    }
+
+    #[test]
+    fn pow_mod_matches_legacy_over_deterministic_corpus() {
+        for (base, exponent, modulus) in pow_mod_corpus() {
+            assert_eq!(
+                pow_mod(base, exponent, modulus),
+                legacy_pow_mod(base, exponent, modulus),
+                "mismatch for base={base} exponent={exponent} modulus={modulus}"
+            );
+        }
+    }
+
+    /// The pre-migration `mod_pow` sign-reduction wrapped around
+    /// [`legacy_pow_mod`], kept only as the oracle for
+    /// `mod_pow_matches_legacy_over_deterministic_corpus`.
+    fn legacy_mod_pow(base: i128, exponent: u128, modulus: i128) -> Option<i128> {
+        if modulus <= 0 {
+            return None;
+        }
+        let modulus_u = u128::try_from(modulus).ok()?;
+        let base_reduced = u128::try_from(base.rem_euclid(modulus)).ok()?;
+        let result = legacy_pow_mod(base_reduced, exponent, modulus_u);
+        i128::try_from(result).ok()
+    }
+
+    /// A deterministic corpus of at least 200 `(base, exponent, modulus)`
+    /// triples for [`mod_pow`] (the `i128`-facing public wrapper). Moduli
+    /// stay within `mod_pow`'s own domain (`i128`), same as
+    /// `pow_mod_corpus` above and for the same reason (see its domain
+    /// note) — "moduli past `i128`" is exercised by `axeyum-arith`'s own
+    /// `PlainModRing` test instead, which has no legacy `u128` engine to
+    /// stay compatible with.
+    fn mod_pow_corpus() -> Vec<(i128, u128, i128)> {
+        let mut corpus: Vec<(i128, u128, i128)> = vec![
+            (2, 10, 1_000),
+            (-3, 3, 7),
+            (2, 5, 0),  // modulus <= 0 -> None
+            (2, 5, -7), // negative modulus -> None
+            (0, 0, 1),  // modulus == 1
+            (5, 0, 7),  // exponent == 0
+            (4, 13, 497),
+            (2, 10, 2), // even modulus
+            (2, 10, 3), // odd modulus
+            (-1, 1_000_000, 1_000_003),
+            (i128::MAX, 1, i128::MAX),
+            (3, 128, i128::MAX),
+            (i128::MIN, 2, 1_000_003),
+        ];
+        let mut state: u128 = 0xD1B5_4A32_D192_ED03;
+        let mut next = move || {
+            state = state
+                .wrapping_mul(2_862_933_555_777_941_757)
+                .wrapping_add(3_037_000_493);
+            state
+        };
+        while corpus.len() < 220 {
+            let base = next().cast_signed();
+            let exponent = next() % 5_000;
+            let modulus_candidate = (next() % (i128::MAX as u128)).cast_signed();
+            corpus.push((base, exponent, modulus_candidate.max(1)));
+        }
+        corpus
+    }
+
+    #[test]
+    fn mod_pow_corpus_has_at_least_two_hundred_triples() {
+        assert!(mod_pow_corpus().len() >= 200);
+    }
+
+    #[test]
+    fn mod_pow_matches_legacy_over_deterministic_corpus() {
+        for (base, exponent, modulus) in mod_pow_corpus() {
+            assert_eq!(
+                mod_pow(base, exponent, modulus),
+                legacy_mod_pow(base, exponent, modulus),
+                "mismatch for base={base} exponent={exponent} modulus={modulus}"
             );
         }
     }

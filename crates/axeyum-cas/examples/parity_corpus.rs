@@ -35,7 +35,7 @@
 use std::collections::BTreeMap;
 use std::time::Instant;
 
-use axeyum_cas::enclosure::{BigInterval, enclose, enclose_constant};
+use axeyum_cas::enclosure::{BigInterval, EULER_GAMMA_NAME, enclose, enclose_constant};
 use axeyum_cas::enclosure_special::{MultiPoly, PolySystem, enclose_system};
 use axeyum_cas::fps_analytic::{
     RadiusOfConvergence, coefficient_asymptotics, radius_of_convergence,
@@ -1122,25 +1122,43 @@ fn enc1_pi() -> Outcome {
         None => declined("enclose_constant(\"pi\", 64)"),
     }
 }
-/// `enclose_constant`'s own match recognizes only `"pi"`, `"e"`, `"ln2"`
-/// (`"ln 2"`), and `"sqrt2"` (`"sqrt 2"`) — everything else, including the
-/// Euler-Mascheroni constant, falls to its `_ => None` arm. Chair 02's
-/// complaint ("gamma, Bessel, erf ... still decline", 2026-09-05 progress
-/// log) is still current for gamma specifically.
-fn enc2_gamma_decline() -> Outcome {
+/// Euler's constant. Reclassified from `decline_expected` on 2026-09-06: the
+/// enclosure lane's third wave (item 2) added `euler_gamma` with `"gamma"` as
+/// an alias, so `enclose_constant("gamma", 40)` now decides. The corpus follows
+/// the machinery: the entry asserts the enclosure verifies and contains the
+/// thirty cited digits of gamma (OEIS A001620).
+fn enc2_gamma_euler() -> Outcome {
+    let expected = "certified enclosure containing 0.577215664901532860606512090082".to_string();
     match enclose_constant("gamma", 40) {
         None => Outcome {
-            verdict: Verdict::Agree,
+            verdict: Verdict::Disagree,
             trust: Trust::Unknown,
-            expected: "None (only pi, e, ln2, sqrt2 are recognized names)".to_string(),
+            expected,
             actual: "declined".to_string(),
         },
-        Some(_) => Outcome {
-            verdict: Verdict::Disagree,
-            trust: Trust::Uncertified,
-            expected: "None (only pi, e, ln2, sqrt2 are recognized names)".to_string(),
-            actual: "decided".to_string(),
-        },
+        Some(enc) => {
+            // Thirty cited digits as an exact rational; the enclosure's width
+            // is about 2^-40, so a sound enclosure of gamma contains this point.
+            let digits: BigInt = "577215664901532860606512090082".parse().expect("digits");
+            let scale: BigInt = "1000000000000000000000000000000".parse().expect("scale");
+            let gamma = BigRational::new(digits, scale);
+            let contains = enc.interval.contains(&gamma);
+            let verified = enc.verify(&CasExpr::var(EULER_GAMMA_NAME), &[]).is_ok();
+            Outcome {
+                verdict: if contains && verified {
+                    Verdict::Agree
+                } else {
+                    Verdict::Disagree
+                },
+                trust: if verified {
+                    Trust::Certified
+                } else {
+                    Trust::Uncertified
+                },
+                expected,
+                actual: format!("contains_digits={contains}, verified={verified}"),
+            }
+        }
     }
 }
 
@@ -3743,11 +3761,11 @@ fn main() {
         // first-pass modules: enclosure
         e!("enc1-pi", None, Some("enclosure"), Core, enc1_pi),
         e!(
-            "enc2-gamma-decline",
+            "enc2-gamma-euler",
             None,
             Some("enclosure"),
-            DeclineExpected,
-            enc2_gamma_decline
+            Core,
+            enc2_gamma_euler
         ),
         // first-pass modules: qe
         e!("qe1-exists-sqrt2", None, Some("qe"), Core, qe1_exists_sqrt2),
