@@ -103,8 +103,8 @@ fn fourwise_uncorrelated_applies_to_four_indices_and_yields_the_lone_index_momen
     let mut lt_ty = Vec::new();
     let mut lt_fv = Vec::new();
     let mut lt_arg = Vec::new();
-    for slot in 0..4 {
-        lt_ty.push(d.lt(idx[slot], m));
+    for &index in &idx {
+        lt_ty.push(d.lt(index, m));
         let fv = d.fresh_fvar();
         lt_fv.push(fv);
         lt_arg.push(d.kernel().fvar(fv));

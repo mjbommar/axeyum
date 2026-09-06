@@ -1643,8 +1643,8 @@ fn declare_fourth_moment_sum_vars_le(
                 let mut lt_ty = Vec::new();
                 let mut lt_fv = Vec::new();
                 let mut lt_arg = Vec::new();
-                for slot in 0..4 {
-                    lt_ty.push(d.lt(idx[slot], b));
+                for &index in &idx {
+                    lt_ty.push(d.lt(index, b));
                     let fv = d.fresh_fvar();
                     lt_fv.push(fv);
                     lt_arg.push(d.kernel().fvar(fv));
