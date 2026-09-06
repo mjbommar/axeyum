@@ -32536,6 +32536,41 @@ mod atom_argument_canonical_key {
         CasExpr::Unary(head, Box::new(arg))
     }
 
+    fn x() -> CasExpr {
+        CasExpr::var("x")
+    }
+
+    fn y() -> CasExpr {
+        CasExpr::var("y")
+    }
+
+    /// A pair that must **not** be certified equal. A refutation is fine and its
+    /// certificate must re-check; a decline is fine; certifying a false equality
+    /// is the failure.
+    ///
+    /// A decline passing means this assertion could go vacuous, so: measured on
+    /// the live crate, all four callers below reach `Certified { equal: false }`,
+    /// not `Unknown`. And the assertion is falsifiable — a key that drops the
+    /// denominator makes `the_denominator_is_part_of_the_key` certify a false
+    /// equality here.
+    #[track_caller]
+    fn assert_never_equal(left: &CasExpr, right: &CasExpr, context: &str) {
+        let verdict = equal(left, right);
+        match &verdict {
+            ZeroTest::Certified { equal, .. } | ZeroTest::CertifiedBig { equal, .. } => {
+                assert!(
+                    !*equal,
+                    "{context}: {left} = {right} was CERTIFIED but the two differ"
+                );
+                assert!(
+                    recheck_zero_test(left, right, &verdict),
+                    "{context}: the certificate for {left} = {right} must re-check"
+                );
+            }
+            ZeroTest::Unknown => {}
+        }
+    }
+
     #[track_caller]
     fn assert_equal_and_rechecks(left: &CasExpr, right: &CasExpr, context: &str) {
         let verdict = equal(left, right);
@@ -32588,6 +32623,182 @@ mod atom_argument_canonical_key {
                 "{name}: the two spellings of one argument must key alike"
             );
         }
+    }
+
+    // --- Equal pairs: one distinction per test, so a deleted guard names itself.
+
+    /// The **content cancellation**. `2/3` and `4/6` are one scale, and it does
+    /// not matter which side of the bar the common factor was written on.
+    #[test]
+    fn a_constant_scale_moved_between_numerator_and_denominator() {
+        assert_equal_and_rechecks(
+            &((CasExpr::int(2) * x()) / (CasExpr::int(3) * y())).ln(),
+            &((CasExpr::int(4) * x()) / (CasExpr::int(6) * y())).ln(),
+            "content",
+        );
+    }
+
+    /// The **sign normalization**. A minus sign in the denominator is the same
+    /// function as a minus sign in the numerator.
+    #[test]
+    fn a_sign_moved_into_the_denominator() {
+        assert_equal_and_rechecks(
+            &(-(u().pow(2)) / (CasExpr::int(2) * s())).ln(),
+            &(u().pow(2) / (CasExpr::int(-2) * s())).ln(),
+            "sign",
+        );
+    }
+
+    /// A constant denominator is absorbed into the numerator, so the quotient
+    /// spelling and the coefficient spelling of one argument meet. This was a
+    /// second wrong refutation on the same line: the polynomial route rendered
+    /// `1/2·x` while the fraction route rendered `x/2`.
+    #[test]
+    fn a_constant_denominator_collapses_into_the_numerator() {
+        assert_equal_and_rechecks(
+            &(x() / CasExpr::int(2)).ln(),
+            &(CasExpr::rat(1, 2) * x()).ln(),
+            "constant denominator",
+        );
+    }
+
+    /// `a/(b·c)` and `(a/b)/c` build the same `num`/`den` pair, and reordering
+    /// the terms of a numerator was already handled by [`MultiPoly`]'s canonical
+    /// form. Both are controls: the repair must not be what makes them work, and
+    /// it must not break them either.
+    #[test]
+    fn associativity_and_term_order_still_meet() {
+        let z = CasExpr::var("z");
+        assert_equal_and_rechecks(
+            &(x() / (y() * z.clone())).ln(),
+            &((x() / y()) / z.clone()).ln(),
+            "associativity",
+        );
+        assert_equal_and_rechecks(
+            &((x() + y()) / (CasExpr::int(2) * z.clone())).ln(),
+            &((y() + x()) / (CasExpr::int(2) * z)).ln(),
+            "term order",
+        );
+    }
+
+    /// The nested-atom case the crate already documented as working. Keeping it
+    /// green is the point: the argument here is not a polynomial, so it takes the
+    /// [`RatFunc`] route that this lane rewrote.
+    #[test]
+    fn nested_atoms_still_meet() {
+        assert_equal_and_rechecks(
+            &(CasExpr::int(1) + x().ln()).ln(),
+            &(x().ln() + CasExpr::int(1)).ln(),
+            "nested",
+        );
+    }
+
+    /// The **GCD cancellation**, on both of [`RatFunc::reduced`]'s branches and
+    /// through [`normalize_exp`], which is the route that would otherwise
+    /// disagree with [`atom_name`]: `exp((x²−1)/(x−1))` took the opaque-atom
+    /// route while `exp(x+1)` decomposed into per-term factors.
+    #[test]
+    fn a_common_polynomial_factor_is_cancelled() {
+        // Univariate (`poly::rat_gcd`).
+        assert_equal_and_rechecks(
+            &((x().pow(2) - CasExpr::int(1)) / (x() - CasExpr::int(1))).ln(),
+            &(x() + CasExpr::int(1)).ln(),
+            "univariate gcd",
+        );
+        // Multivariate (`mvpoly::MvPoly::gcd`).
+        assert_equal_and_rechecks(
+            &((x().pow(2) - y().pow(2)) / (x() - y())).ln(),
+            &(x() + y()).ln(),
+            "multivariate gcd",
+        );
+        // And the same two through `normalize_exp`.
+        assert_equal_and_rechecks(
+            &((x().pow(2) - CasExpr::int(1)) / (x() - CasExpr::int(1))).exp(),
+            &(x() + CasExpr::int(1)).exp(),
+            "exp univariate gcd",
+        );
+        assert_equal_and_rechecks(
+            &((x().pow(2) - y().pow(2)) / (x() - y())).exp(),
+            &(x() + y()).exp(),
+            "exp multivariate gcd",
+        );
+    }
+
+    // --- Unequal pairs: the repair must not equate what differs.
+
+    /// The denominator is part of the key: `2·s` and `2·s²` are different
+    /// variances.
+    #[test]
+    fn the_denominator_is_part_of_the_key() {
+        assert_never_equal(
+            &(u().pow(2) / (CasExpr::int(2) * s())).exp(),
+            &(u().pow(2) / (CasExpr::int(2) * s().pow(2))).exp(),
+            "s vs s^2",
+        );
+    }
+
+    /// The sign is part of the key: a Gaussian and its reciprocal are not the
+    /// same function.
+    #[test]
+    fn the_sign_is_part_of_the_key() {
+        assert_never_equal(
+            &(-(u().pow(2)) / (CasExpr::int(2) * s())).exp(),
+            &(u().pow(2) / (CasExpr::int(2) * s())).exp(),
+            "sign",
+        );
+    }
+
+    /// The scale is part of the key: variance 1 and variance 3/2 differ.
+    #[test]
+    fn the_scale_is_part_of_the_key() {
+        assert_never_equal(
+            &(u().pow(2) / (CasExpr::int(2) * s())).exp(),
+            &(u().pow(2) / (CasExpr::int(3) * s())).exp(),
+            "scale",
+        );
+    }
+
+    /// Absorbing a constant denominator into an *argument* must not absorb one
+    /// that is outside the head: `ln(x/2)` is not `ln(x)/2`.
+    #[test]
+    fn a_quotient_inside_ln_is_not_a_quotient_of_ln() {
+        assert_never_equal(
+            &(x() / CasExpr::int(2)).ln(),
+            &(x().ln() / CasExpr::int(2)),
+            "ln(x/2) vs ln(x)/2",
+        );
+    }
+
+    // --- The residual class.
+
+    /// **The limit, recorded as a decline rather than a wrong verdict.**
+    ///
+    /// The canonical pair is `(num/c) / (den/c)` for the denominator's content
+    /// `c`, and here `c = 1/(3·i128::MAX)`, so dividing by it leaves the ring and
+    /// [`RatFunc::canonical_key_form`] returns `None`. The two spellings below
+    /// are the same function and still take two keys.
+    ///
+    /// Before the [`ATOM_UNCANONICAL`] mark this pair measured
+    /// `Certified { equal: false }` — a refutation of a true equality, the very
+    /// defect this module exists for, surviving at a scale the key cannot reach.
+    /// It now declines.
+    #[test]
+    fn a_content_beyond_i128_declines_instead_of_refuting() {
+        let huge = CasExpr::Const(Rational::new(1, i128::MAX));
+        let twice = CasExpr::Const(Rational::new(2, i128::MAX));
+        let left = (x() / (huge * s() + CasExpr::rat(1, 3) * u())).ln();
+        let right = ((CasExpr::int(2) * x()) / (twice * s() + CasExpr::rat(2, 3) * u())).ln();
+        // The two keys really are distinct — otherwise this test would pass for
+        // the wrong reason and the guard below would never be exercised.
+        assert_ne!(
+            atom_name("ln", &left),
+            atom_name("ln", &right),
+            "the residual class must still produce two keys, or this is not it"
+        );
+        assert!(
+            matches!(equal(&left, &right), ZeroTest::Unknown),
+            "an argument the key cannot canonicalize must decline, never refute"
+        );
     }
 }
 
