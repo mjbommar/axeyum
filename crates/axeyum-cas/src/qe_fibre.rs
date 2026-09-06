@@ -227,9 +227,7 @@ fn declined(reason: &str) -> Inner {
 fn as_fault(inner: Inner) -> Fault {
     match inner {
         Inner::Fault(fault) => fault,
-        Inner::Split(_) => {
-            Fault::Declined("the recorded modulus is reducible at α".to_string())
-        }
+        Inner::Split(_) => Fault::Declined("the recorded modulus is reducible at α".to_string()),
     }
 }
 
@@ -354,7 +352,11 @@ fn kneg_poly(p: &FieldPoly) -> FieldPoly {
 /// The `y`-degree of a `K`-polynomial that has already been trimmed by
 /// [`RealField::ktrim`]. `None` is the zero polynomial.
 fn kdegree(p: &FieldPoly) -> Option<usize> {
-    if p.is_empty() { None } else { Some(p.len() - 1) }
+    if p.is_empty() {
+        None
+    } else {
+        Some(p.len() - 1)
+    }
 }
 
 // ============================================================================
@@ -427,6 +429,14 @@ impl RealField {
 
     /// The exact sign of `e(α)`.
     ///
+    /// A rational **interval evaluation** over `α`'s bracket is tried first: it
+    /// costs `deg e` multiplications and, because the bracket arrives from an
+    /// isolation that already narrowed it, decides the overwhelming majority of
+    /// signs. Only when the enclosure straddles zero — which includes every
+    /// genuine `e(α) = 0` — does the exact route run. The fast path can never
+    /// return a wrong sign: an interval evaluation is an *enclosure* of `e(α)`,
+    /// so a strictly positive enclosure means a strictly positive value.
+    ///
     /// # Errors
     ///
     /// [`Fault::Declined`] if the refinement budget in `qe::big` runs out.
@@ -434,14 +444,59 @@ impl RealField {
         if big::degree(e).is_none() {
             return Ok(0);
         }
+        if let Some(sign) = self.interval_sign(e) {
+            return Ok(sign);
+        }
         big::sign_at_algebraic(e, &self.modulus, &self.lower, &self.upper)
             .ok_or_else(|| Fault::Declined("the sign of an element at α declined".to_string()))
     }
 
+    /// The sign of `e(α)` when a rational interval evaluation over
+    /// `[lower, upper] ∋ α` already settles it, and `None` when the enclosure
+    /// straddles zero.
+    fn interval_sign(&self, e: &[BigRational]) -> Option<i8> {
+        let mut low = BigRational::zero();
+        let mut high = BigRational::zero();
+        for coeff in e.iter().rev() {
+            let products = [
+                &low * &self.lower,
+                &low * &self.upper,
+                &high * &self.lower,
+                &high * &self.upper,
+            ];
+            let mut next_low = products[0].clone();
+            let mut next_high = products[0].clone();
+            for product in &products[1..] {
+                if *product < next_low {
+                    next_low.clone_from(product);
+                }
+                if *product > next_high {
+                    next_high.clone_from(product);
+                }
+            }
+            low = next_low + coeff;
+            high = next_high + coeff;
+        }
+        if low.is_positive() {
+            Some(1)
+        } else if high.is_negative() {
+            Some(-1)
+        } else {
+            None
+        }
+    }
+
     /// A rational upper bound on `|e(α)|`: `Σⱼ |eⱼ| · Mʲ` for
-    /// `M = max(|lower|, |upper|) ≥ |α|`. Exact, and never a `f64`.
+    /// `M = ⌈max(|lower|, |upper|)⌉ ≥ |α|`. Exact, and never a `f64`.
+    ///
+    /// `M` is rounded **up to an integer** deliberately. The bracket endpoints
+    /// arrive from a bisection and can carry forty-digit denominators; every
+    /// subsequent bisection would then inherit them, and the isolation loop
+    /// would spend its time on arithmetic rather than on halving. A coarser
+    /// bound costs at most one extra halving.
     fn abs_bound(&self, e: &Element) -> BigRational {
-        let magnitude = self.lower.abs().max(self.upper.abs());
+        let magnitude =
+            BigRational::from_integer(self.lower.abs().max(self.upper.abs()).ceil().to_integer());
         let mut power = BigRational::one();
         let mut total = BigRational::zero();
         for coeff in e {
@@ -793,11 +848,7 @@ impl RealField {
     }
 
     /// One rational sample strictly inside every open `y`-cell.
-    fn open_cell_samples(
-        &self,
-        cut: &FieldPoly,
-        roots: &[KIsolated],
-    ) -> Kr<Vec<BigRational>> {
+    fn open_cell_samples(&self, cut: &FieldPoly, roots: &[KIsolated]) -> Kr<Vec<BigRational>> {
         let Some(first) = roots.first() else {
             return Ok(vec![BigRational::zero()]);
         };
@@ -933,15 +984,13 @@ impl RealField {
                 lo = mid;
             }
         }
-        Err(declined("the sign at a K-algebraic sample ran out of budget"))
+        Err(declined(
+            "the sign at a K-algebraic sample ran out of budget",
+        ))
     }
 
     /// Where a fibre sample sits relative to a rational.
-    fn kcompare_to_rational(
-        &self,
-        sample: &FieldSample,
-        x: &BigRational,
-    ) -> Kr<Ordering> {
+    fn kcompare_to_rational(&self, sample: &FieldSample, x: &BigRational) -> Kr<Ordering> {
         let (defining, lower, upper) = match sample {
             FieldSample::Rational(value) => return Ok(value.cmp(x)),
             FieldSample::Algebraic {
@@ -1007,11 +1056,7 @@ pub fn substitute(field: &RealField, atoms: &[SubstitutionAtom]) -> Vec<FieldAto
     atoms
         .iter()
         .map(|atom| {
-            let mut poly: FieldPoly = atom
-                .coefficients
-                .iter()
-                .map(|c| field.reduce(c))
-                .collect();
+            let mut poly: FieldPoly = atom.coefficients.iter().map(|c| field.reduce(c)).collect();
             while poly.last().is_some_and(|c| big::degree(c).is_none()) {
                 poly.pop();
             }
@@ -1101,22 +1146,16 @@ impl FibreCertificate {
             FibreDecision::True(witness) => check_witness(&field, &self.atoms, witness)
                 .map(|()| true)
                 .map_err(as_fault),
-            FibreDecision::False(refutation) => {
-                check_refutation(&field, &self.atoms, refutation)
-                    .map(|()| false)
-                    .map_err(as_fault)
-            }
+            FibreDecision::False(refutation) => check_refutation(&field, &self.atoms, refutation)
+                .map(|()| false)
+                .map_err(as_fault),
         }
     }
 }
 
 /// Every conjunct has a recomputed sign at the witness, and every relation
 /// holds there.
-fn check_witness(
-    field: &RealField,
-    atoms: &[FieldAtom],
-    witness: &FibreWitness,
-) -> Kr<()> {
+fn check_witness(field: &RealField, atoms: &[FieldAtom], witness: &FibreWitness) -> Kr<()> {
     if witness.signs.len() != atoms.len() {
         return Err(Fault::SignCountMismatch {
             recorded: witness.signs.len(),
@@ -1227,8 +1266,7 @@ fn check_root_list_complete(
             continue; // vanishes everywhere, or nowhere
         }
         let bound = field.root_bound(&trimmed)?;
-        let sturm_count =
-            KSturm::new(field, &trimmed)?.count_in(field, &-bound.clone(), &bound)?;
+        let sturm_count = KSturm::new(field, &trimmed)?.count_in(field, &-bound.clone(), &bound)?;
         let mut recorded = 0usize;
         for root in &refutation.roots {
             if field.ksign_at_sample(&atom.poly, root)? == 0 {
@@ -1382,7 +1420,10 @@ fn decide_over_field(field: &RealField, atoms: &[FieldAtom]) -> Kr<FibreDecision
         }
         match first_failure(atoms, &signs) {
             None => {
-                return Ok(FibreDecision::True(Box::new(FibreWitness { sample, signs })));
+                return Ok(FibreDecision::True(Box::new(FibreWitness {
+                    sample,
+                    signs,
+                })));
             }
             Some(failure) => failures.push(failure),
         }
@@ -1455,6 +1496,37 @@ mod tests {
         assert_eq!(field.sign(&qp(&[0, 1])).unwrap(), 1, "α = √2 > 0");
         assert_eq!(field.sign(&qp(&[-3, 2])).unwrap(), -1, "2√2 − 3 < 0");
         assert_eq!(field.sign(&qp(&[-1, 1])).unwrap(), 1, "√2 − 1 > 0");
+    }
+
+    #[test]
+    fn the_interval_fast_path_never_disagrees_with_the_exact_sign_route() {
+        // The bracket here is the wide (1, 2], so both paths get exercised.
+        let field = sqrt2();
+        let mut decided = 0usize;
+        let mut deferred = 0usize;
+        for element in [
+            qp(&[0, 1]),     // α
+            qp(&[-3, 2]),    // 2α − 3, negative but only just
+            qp(&[-1, 1]),    // α − 1
+            qp(&[5]),        // a constant
+            qp(&[-2, 0, 1]), // x² − 2: the *zero* element at α
+        ] {
+            let exact = big::sign_at_algebraic(&element, field.modulus(), &q(1), &q(2))
+                .expect("the exact route decides");
+            match field.interval_sign(&element) {
+                Some(fast) => {
+                    assert_eq!(fast, exact, "the fast path disagreed on {element:?}");
+                    decided += 1;
+                }
+                None => deferred += 1,
+            }
+            assert_eq!(field.sign(&element).unwrap(), exact);
+        }
+        assert!(decided > 0, "the fast path must decide something");
+        assert!(
+            deferred > 0,
+            "the fast path must defer a zero element, which it can never prove"
+        );
     }
 
     #[test]

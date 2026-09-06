@@ -676,7 +676,11 @@ impl FormulaCertificate {
                 Some(point) => {
                     let k = root_index(roots, point)
                         .ok_or(Fault::IntervalEndpointNotARoot { interval: index })?;
-                    if interval.lower_closed { 2 * k + 1 } else { 2 * k + 2 }
+                    if interval.lower_closed {
+                        2 * k + 1
+                    } else {
+                        2 * k + 2
+                    }
                 }
             };
             let end = match &interval.upper {
@@ -684,7 +688,11 @@ impl FormulaCertificate {
                 Some(point) => {
                     let k = root_index(roots, point)
                         .ok_or(Fault::IntervalEndpointNotARoot { interval: index })?;
-                    if interval.upper_closed { 2 * k + 1 } else { 2 * k }
+                    if interval.upper_closed {
+                        2 * k + 1
+                    } else {
+                        2 * k
+                    }
                 }
             };
             if start > end || end >= self.projection.cells.len() {
@@ -1028,10 +1036,7 @@ fn projection_set(atoms: &[BiAtom]) -> Result<Vec<Vec<Rational>>, Fault> {
 }
 
 /// Insert a candidate cut polynomial, monic, dropping constants.
-fn insert_projection(
-    set: &mut BTreeMap<Vec<(i128, i128)>, Vec<Rational>>,
-    candidate: &[Rational],
-) {
+fn insert_projection(set: &mut BTreeMap<Vec<(i128, i128)>, Vec<Rational>>, candidate: &[Rational]) {
     if let Some(monic) = canonical(candidate) {
         set.insert(projection_key(&monic), monic);
     }
@@ -1609,8 +1614,7 @@ mod tests {
         );
         assert_eq!(refutation.failures.len(), 3);
         assert_eq!(
-            refutation.failures[1].sign,
-            0,
+            refutation.failures[1].sign, 0,
             "at y = 0 the sign of `y` computed in K is zero, which is why `y > 0` fails"
         );
         assert!(!fibre_certificate.verify().expect("the fibre verifies"));
@@ -1634,20 +1638,23 @@ mod tests {
     }
 
     #[test]
-    fn the_fibre_over_root_two_of_y_squared_equals_x_has_an_algebraic_y() {
-        // ∃y. y² = x ∧ x² = 2 — true exactly at x = √2, where y = ±2^{1/4} is
-        // algebraic *over* K, not an element of K.
+    fn the_fibre_over_the_cube_root_of_two_has_a_y_algebraic_over_the_field() {
+        // ∃y. y² = x ∧ x³ = 2 — true exactly at x = ∛2, where y = ±2^{1/6} is
+        // algebraic **over** K = ℚ(∛2), not an element of it. The fibre's
+        // sample therefore has to be carried as a polynomial over K plus a
+        // bracket; there is no element of K to name it with.
         let certificate = decided(vec![
             atom(&[&[0, -1], &[0], &[1]], Relation::Eq),
-            atom(&[&[-2, 0, 1]], Relation::Eq),
+            atom(&[&[-2, 0, 0, 1]], Relation::Eq),
         ]);
-        assert_eq!(certificate.describe(), "x ∈ {α3}");
-        assert_eq!(certificate.roots.len(), 3, "the cut points are −√2, 0, √2");
-        let CellFibre::Algebraic(fibre_certificate) = &certificate.cells[5].fibre else {
-            panic!("cell 5 is the point cell at √2");
+        assert_eq!(certificate.describe(), "x ∈ {α2}");
+        assert_eq!(certificate.roots.len(), 2, "the cut points are 0 and ∛2");
+        let CellFibre::Algebraic(fibre_certificate) = &certificate.cells[3].fibre else {
+            panic!("cell 3 is the point cell at ∛2");
         };
+        assert_eq!(fibre_certificate.modulus, vec![q(-2), q(0), q(0), q(1)]);
         let fibre::FibreDecision::True(witness) = &fibre_certificate.decision else {
-            panic!("y² = √2 is solvable");
+            panic!("y² = ∛2 is solvable");
         };
         assert!(
             matches!(witness.sample, fibre::FieldSample::Algebraic { .. }),
@@ -1716,7 +1723,10 @@ mod tests {
         ]);
         assert_eq!(certificate.intervals.len(), 1);
         let interval = &certificate.intervals[0];
-        assert_eq!(interval.lower.as_ref(), certificate.projection.roots.first());
+        assert_eq!(
+            interval.lower.as_ref(),
+            certificate.projection.roots.first()
+        );
         assert_eq!(interval.upper.as_ref(), certificate.projection.roots.get(1));
         assert!(!interval.lower_closed && !interval.upper_closed);
         assert_eq!(certificate.describe(), "x ∈ (α1, α2)");
@@ -1782,7 +1792,10 @@ mod tests {
     fn a_certificate_with_a_tampered_cut_polynomial_is_refused() {
         let mut certificate = decided(vec![atom(&[&[-1, 0, 1], &[0], &[1]], Relation::Lt)]);
         certificate.cut.push(q(1));
-        assert!(matches!(certificate.verify(), Err(Fault::CutMismatch { .. })));
+        assert!(matches!(
+            certificate.verify(),
+            Err(Fault::CutMismatch { .. })
+        ));
     }
 
     #[test]
