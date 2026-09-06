@@ -11,6 +11,34 @@
 //!
 //! The polynomial is reduced to its square-free part first, so each real root is
 //! isolated once regardless of multiplicity.
+//!
+//! # Deliberately NOT migrated onto `axeyum-arith` (ADR-1710 slice 4)
+//!
+//! This is the sixth Sturm chain in the design note's inventory and the only one
+//! that stayed. The other five moved; this one is the `i128` route, and it is
+//! load-bearing **as an independent second implementation**, not merely as a
+//! fast path:
+//!
+//! - `fps_analytic.rs`'s `bignum_and_machine_sturm_counts_agree` compares
+//!   [`count_real_roots_in`] against the bignum chain over 54 (polynomial,
+//!   interval) pairs. That bignum chain is now
+//!   `axeyum_arith::SturmChain`. Migrating this module too would make that test
+//!   compare the shared chain **against itself** — it would keep passing while
+//!   checking nothing, which is worse than deleting it.
+//! - `axeyum-solver`'s `nra_real_root` cross-check has the same shape.
+//!
+//! So the duplication here is a differential oracle rather than waste, and
+//! [`shared_and_machine_routes_agree_where_both_answer`] in this module's tests
+//! is the same comparison run from this side: the `i128` route against
+//! `axeyum_arith::count_real_roots_in`, over the polynomials and intervals both
+//! widths can take. The design note's §8 says to *extend* that oracle, not
+//! dissolve it.
+//!
+//! The second reason is a behavioural one worth stating plainly: every `None`
+//! here is an overflow decline, and a caller can and does branch on it
+//! (`RootCounter::Machine` falls through to the bignum chain on `None`).
+//! Migrating would make those declines disappear, which is a capability gain
+//! nobody asked this slice for and a silent change to when the fallback fires.
 
 use axeyum_ir::{Rational, poly};
 
@@ -283,6 +311,87 @@ mod tests {
         assert_eq!(approximate_real_roots(&zero, Rational::new(1, 8)), None);
     }
     use super::*;
+
+    /// The `i128` route and the shared bignum route agree wherever both answer.
+    ///
+    /// This module is the one Sturm chain ADR-1710 slice 4 deliberately left in
+    /// place (see the module header), so this is the cross-width oracle run from
+    /// the `i128` side: `crate::sturm` against `axeyum_arith::count_real_roots_in`
+    /// and `axeyum_arith::isolate_real_roots`. It is the extension the design
+    /// note's §8 asks for, and it is only meaningful because the two
+    /// implementations really are independent — the shared chain normalizes each
+    /// member to a primitive integer polynomial and this one does not.
+    ///
+    /// A `None` here is an overflow decline, and it is counted rather than
+    /// skipped silently: `answered` must be the full grid, so a future change
+    /// that makes this route decline everywhere fails the test instead of
+    /// passing it vacuously.
+    #[test]
+    fn shared_and_machine_routes_agree_where_both_answer() {
+        use num_bigint::BigInt;
+        use num_rational::BigRational;
+
+        let polynomials: [Vec<i128>; 10] = [
+            vec![-1, 1],
+            vec![1, 0, 1],
+            vec![-1, -1, 1],
+            vec![-2, 0, 1],
+            vec![1, -2, 1],
+            vec![-6, 11, -6, 1],
+            vec![-30, 31, -10, 1],
+            vec![0, -1, 0, 1],
+            vec![-1, 0, 0, 0, 1],
+            vec![1, 1, 1, 1, 1],
+        ];
+        let endpoints: [i128; 8] = [-10, -3, -1, 0, 1, 2, 3, 10];
+
+        let mut answered = 0usize;
+        let mut isolations = 0usize;
+        for coefficients in &polynomials {
+            let machine: Vec<Rational> =
+                coefficients.iter().map(|&c| Rational::integer(c)).collect();
+            let shared = axeyum_arith::QPoly::from_coefficients(
+                coefficients
+                    .iter()
+                    .map(|&c| BigRational::from(BigInt::from(c)))
+                    .collect(),
+            );
+
+            for window in endpoints.windows(2) {
+                let (low, high) = (window[0], window[1]);
+                let mine =
+                    count_real_roots_in(&machine, Rational::integer(low), Rational::integer(high))
+                        .expect("the i128 route answers on this grid");
+                let theirs = axeyum_arith::count_real_roots_in(
+                    &shared,
+                    &BigRational::from(BigInt::from(low)),
+                    &BigRational::from(BigInt::from(high)),
+                )
+                .expect("the shared route answers on this grid");
+                assert_eq!(
+                    mine, theirs,
+                    "count on ({low}, {high}] for {coefficients:?}"
+                );
+                answered += 1;
+            }
+
+            // The isolation routes must find the same NUMBER of distinct real
+            // roots. The brackets themselves are not required to match: the two
+            // bisect from Cauchy bounds computed in different normalizations.
+            let mine = isolate_real_roots(&machine).expect("i128 isolation");
+            let theirs =
+                axeyum_arith::isolate_real_roots(&shared, axeyum_arith::DEFAULT_ISOLATION_STEPS)
+                    .expect("shared isolation");
+            assert_eq!(
+                mine.len(),
+                theirs.len(),
+                "distinct real root count for {coefficients:?}"
+            );
+            isolations += 1;
+        }
+        assert_eq!(answered, 70, "10 polynomials x 7 adjacent intervals");
+        assert_eq!(isolations, 10, "every polynomial was isolated both ways");
+    }
 
     fn poly_from(coeffs: &[i128]) -> Vec<Rational> {
         coeffs.iter().map(|&c| Rational::integer(c)).collect()
