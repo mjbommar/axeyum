@@ -444,6 +444,15 @@ step cas-trust-registry-tests python3 -m unittest scripts.tests.test_check_cas_t
 # ARE equal -- see the corpus README before treating this as a flake.
 step cas-parity-corpus cargo run --release -q -p axeyum-cas --example parity_corpus
 step cas-parity-ground-truth python3 docs/plan/cas-parity-corpus-2026-09-05/ground_truth.py
+# Cross-consistency gate over the three copies of the parity corpus's truth
+# (corpus.json, this harness's e!() macro table, and the README's counts).
+# The README's counts drifted from corpus.json twice in one week (119 vs
+# 123 entries, then 125 vs 126) with nothing failing -- this makes that
+# drift, an id/tier mismatch between corpus.json and the harness, a
+# malformed/duplicate-id corpus.json, and a core entry with no
+# ground_truth.py claim all fail the aggregate gate. ~0.02s, pure Python.
+step cas-parity-corpus-counts python3 scripts/check-cas-parity-corpus.py
+step cas-parity-corpus-counts-tests python3 -m unittest scripts.tests.test_check_cas_parity_corpus
 step settled-fact-statement-tests python3 -m unittest scripts.tests.test_settled_fact_statements
 step draw7-frozen-families-tests python3 -m unittest scripts.tests.test_check_draw7_frozen_families
 step settled-fact-statements python3 scripts/check-settled-fact-statements.py
