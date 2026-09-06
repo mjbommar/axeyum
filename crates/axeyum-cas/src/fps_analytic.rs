@@ -2602,8 +2602,16 @@ mod tests {
         let honest = pairwise_product_resultant(&factor).unwrap();
         assert_eq!(honest.len() - 1, 16);
         assert!(accept_pairwise_resultant(&factor, &honest).is_some());
-        let truncated = poly_trim(honest[..16].to_vec());
-        assert_eq!(accept_pairwise_resultant(&factor, &truncated), None);
+        // The witness is monic of degree 15 with the RIGHT constant term, so the
+        // degree identity is the only guard that can reject it. Truncating the
+        // honest resultant does not work: the constant-term identity rejects
+        // that too, and on the first run of this control it did — leaving the
+        // degree guard killed by nothing.
+        let mut wrong_degree = vec![r(0); 16];
+        wrong_degree[0] = r(1);
+        wrong_degree[15] = r(1);
+        assert_eq!(poly_trim(wrong_degree.clone()).len() - 1, 15);
+        assert_eq!(accept_pairwise_resultant(&factor, &wrong_degree), None);
     }
 
     #[test]
