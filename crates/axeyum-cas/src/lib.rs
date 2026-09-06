@@ -31015,43 +31015,7 @@ mod exact_positivity_tests {
     }
 }
 
-/// The arbitrary-precision overflow fallback (ADR-1670).
-///
-/// Every test here names the input it was written for, because the finding this
-/// module exists to record is a *table of inputs*: which realistic computations
-/// the `i128` normal form declines, and which of those the unbounded fallback
-/// converts into a decision. The measured table is in the ADR.
-///
-/// # What still declines, and why
-///
-/// - **Any expression carrying a `Unary` head** — `√u`, `|u|`, `root_q(u)`,
-///   `sin`/`cos`, `ln`, `exp`, `Jₙ`. The bounded path atomizes these into
-///   variables and then relates the variables with
-///   [`MultiPoly::fold_pythagorean`], [`MultiPoly::fold_radical`],
-///   [`MultiPoly::fold_abs`], [`MultiPoly::fold_nth_root`] and
-///   [`MultiPoly::fold_bessel_recurrences`]. Those folds have no unbounded
-///   counterpart, and without them a nonzero normal form in atom variables does
-///   not prove `≠`. **Wave two removed this**: all six folds have unbounded twins
-///   ([`BigQPoly::fold_radical`] and friends), so `√u`, `|u|`, `root_q(u)`,
-///   Pythagorean, Bessel and `I` identities now decide at overflow scale — one
-///   test per fold, each named for the identity it decides.
-/// - **An `exp` head**, which the bounded path *decomposes* rather than
-///   atomizes ([`normalize_exp`]); that decomposition has no unbounded twin, so
-///   the whole head is still declined.
-///   (`exp_head_at_overflow_scale_still_declines`)
-/// - **A surviving `\0` atom on the inequality branch.** An equality over atoms
-///   decides (a zero polynomial is zero whatever the atoms denote); a
-///   *refutation* over them would need the Euler re-check [`equal`] uses to
-///   protect the bounded path, and that cannot run here while `exp` is declined.
-///   (`atom_bearing_inequality_at_overflow_scale_declines`)
-/// - A refutation whose witness does not fit `i128` was declined in wave one and
-///   is now carried by [`ZeroTest::CertifiedBig`].
-///   (`refutation_whose_witness_exceeds_i128_carries_an_unbounded_certificate`)
-/// - **Anything past [`BIG_FALLBACK_WORK_BUDGET`].** Removing the coefficient
-///   bound also removes the implicit resource bound it was providing, so the
-///   fallback carries an explicit one.
-///   (`work_beyond_the_budget_declines_instead_of_expanding_without_bound`)
-/// **The wrong-refuted class the SymPy parity corpus found, and its fix.**
+/// The wrong-refuted radical class the `SymPy` parity corpus found, and its fix.
 ///
 /// `equal(√2·√3, √6)` returned `Certified { equal: false }`: three independent
 /// atoms, a nonzero polynomial, and a label asserting a refutation the normal
@@ -31241,6 +31205,42 @@ mod radical_atom_products {
     }
 }
 
+/// The arbitrary-precision overflow fallback (ADR-1670).
+///
+/// Every test here names the input it was written for, because the finding this
+/// module exists to record is a *table of inputs*: which realistic computations
+/// the `i128` normal form declines, and which of those the unbounded fallback
+/// converts into a decision. The measured table is in the ADR.
+///
+/// # What still declines, and why
+///
+/// - **Any expression carrying a `Unary` head** — `√u`, `|u|`, `root_q(u)`,
+///   `sin`/`cos`, `ln`, `exp`, `Jₙ`. The bounded path atomizes these into
+///   variables and then relates the variables with
+///   [`MultiPoly::fold_pythagorean`], [`MultiPoly::fold_radical`],
+///   [`MultiPoly::fold_abs`], [`MultiPoly::fold_nth_root`] and
+///   [`MultiPoly::fold_bessel_recurrences`]. Those folds have no unbounded
+///   counterpart, and without them a nonzero normal form in atom variables does
+///   not prove `≠`. **Wave two removed this**: all six folds have unbounded twins
+///   ([`BigQPoly::fold_radical`] and friends), so `√u`, `|u|`, `root_q(u)`,
+///   Pythagorean, Bessel and `I` identities now decide at overflow scale — one
+///   test per fold, each named for the identity it decides.
+/// - **An `exp` head**, which the bounded path *decomposes* rather than
+///   atomizes ([`normalize_exp`]); that decomposition has no unbounded twin, so
+///   the whole head is still declined.
+///   (`exp_head_at_overflow_scale_still_declines`)
+/// - **A surviving `\0` atom on the inequality branch.** An equality over atoms
+///   decides (a zero polynomial is zero whatever the atoms denote); a
+///   *refutation* over them would need the Euler re-check [`equal`] uses to
+///   protect the bounded path, and that cannot run here while `exp` is declined.
+///   (`atom_bearing_inequality_at_overflow_scale_declines`)
+/// - A refutation whose witness does not fit `i128` was declined in wave one and
+///   is now carried by [`ZeroTest::CertifiedBig`].
+///   (`refutation_whose_witness_exceeds_i128_carries_an_unbounded_certificate`)
+/// - **Anything past [`BIG_FALLBACK_WORK_BUDGET`].** Removing the coefficient
+///   bound also removes the implicit resource bound it was providing, so the
+///   fallback carries an explicit one.
+///   (`work_beyond_the_budget_declines_instead_of_expanding_without_bound`)
 #[cfg(test)]
 mod bignum_overflow_fallback {
     use super::*;
