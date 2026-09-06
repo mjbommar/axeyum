@@ -227,6 +227,9 @@ mod hall_marriage;
 mod hall_sufficiency;
 mod hall_theorem;
 mod helpers;
+/// ADR-1676: `AlgS.Ideal.*` — ideals of an abstract `AlgS.CommRing`, and the
+/// quotient ring `R/I` as a setoid coarsening (no `Quot`).
+pub mod ideal_setoid;
 pub mod image_group;
 mod inclusion_exclusion;
 mod injective_decide;
@@ -7903,6 +7906,30 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             },
             structures_s_names.algs,
         )?;
+
+        // ADR-1676 / topic 4 of the algebra shelf: `AlgS.Ideal.*` — ideals of
+        // an abstract `AlgS.CommRing` and the quotient ring `R/I`, built as a
+        // setoid coarsening on the SAME carrier (no `Quot`, ADR-1595). Needs
+        // the `AlgS.CommRing` record plus four `AlgS.*` ring lemmas, so it
+        // lands beside the other subobject layers. Names are deliberately not
+        // threaded into `NatPrelude`, for the reason `AlgS.Poly.*`'s are not.
+        let _ideal_s = {
+            let l0 = kernel.level_zero();
+            let l1 = kernel.level_succ(l0);
+            ideal_setoid::declare_ideal_setoid(
+                kernel,
+                &logic,
+                l1,
+                &structures_s.comm_ring,
+                ideal_setoid::IdealDeps {
+                    comm_ring_to_ring_s: structures_s_extra.comm_ring_to_ring_s,
+                    mul_zero: structures_s_extra.mul_zero,
+                    mul_neg_one: structures_s_extra.mul_neg_one,
+                    neg_neg: structures_s_extra.neg_neg,
+                },
+                structures_s_names.algs,
+            )?
+        };
 
         // Intern every name up front so the `NatPrelude` (which the proof scripts
         // below consult for lemma handles) exists before anything is declared.
