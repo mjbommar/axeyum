@@ -63,9 +63,10 @@
 //! # Reuse
 //!
 //! - [`crate::permgroup::PermutationGroup::from_generators`] and every
-//!   certificate it and [`crate::permgroup_iso`]/[`crate::permgroup_sylow`]
-//!   export are reused unchanged once the permutation images are built; no
-//!   `permgroup*.rs` file is modified.
+//!   certificate [`crate::permgroup`] exports (its own, and the
+//!   `permgroup_iso`/`permgroup_sylow` siblings it re-exports) are reused
+//!   unchanged once the permutation images are built; no `permgroup*.rs`
+//!   file is modified.
 //! - [`crate::ntheory::is_prime`], [`crate::ntheory::mod_inverse`] and
 //!   [`crate::ntheory::factorize`] are reused for primality, modular
 //!   inversion (needed for both Gaussian-elimination determinants and
@@ -88,7 +89,7 @@
 //! [`PermutationGroup`] exists, every bound documented on
 //! [`crate::permgroup`] (the enumeration bound for conjugacy classes,
 //! Sylow subgroups, cosets, the centre; the tighter bound for the derived
-//! subgroup and invariants; [`crate::permgroup_iso::ISOMORPHISM_BOUND`] for
+//! subgroup and invariants; [`crate::permgroup::ISOMORPHISM_BOUND`] for
 //! isomorphism testing) applies unchanged — `order()` itself is *not*
 //! enumeration-bounded (Schreier–Sims never enumerates the group), so a
 //! matrix group's order is always available even when, say, `invariants()`
