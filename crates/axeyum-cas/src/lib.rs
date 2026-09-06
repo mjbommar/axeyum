@@ -36342,12 +36342,16 @@ mod fallback_entry_gate {
     // --- RelationBlind: the arithmetic completed, and the fallback STILL
     // --- helps, because the two rings do not share a fold dictionary --------
 
-    /// `√2·∛2 = root6(32)` is TRUE and the bounded path withholds the
-    /// refutation because the monomial multiplies two radical atoms.
+    /// `√(ln x)·√(ln x) = ln x` is TRUE and the bounded path withholds the
+    /// refutation because the monomial squares a radical atom whose radicand
+    /// [`normalize`] rejects. (This fixture was `√2·∛2 = root6(32)` when the
+    /// lane was written; item 1 wave three's constant-radical canonicalization
+    /// merges those over their common index, so the bounded path now DECIDES
+    /// that pair — asserted below — and it no longer reaches the guard.)
     #[test]
     fn a_multiplicative_atom_relation_is_relation_blind_and_still_enters() {
-        let left = CasExpr::int(2).sqrt() * CasExpr::int(2).nth_root(3);
-        let right = CasExpr::int(32).nth_root(6);
+        let left = x().ln().sqrt() * x().ln().sqrt();
+        let right = x().ln();
         assert_eq!(
             reason(&left, &right),
             ZeroTestDecline::RelationBlind(RelationLimit::MultiplicativeAtomRelation)
@@ -36357,6 +36361,11 @@ mod fallback_entry_gate {
             "the unbounded fold dictionary is built with `normalize_rational_big_within`, \
              which resolves radicands `normalize` rejects, so this class must still enter"
         );
+        // The constant-radical pair is decided by the bounded path, not withheld.
+        let const_left = CasExpr::int(2).sqrt() * CasExpr::int(2).nth_root(3);
+        let const_right = CasExpr::int(32).nth_root(6);
+        assert!(equal_core_bounded_classified(&const_left, &const_right).is_ok());
+        assert!(certifies_equal(&const_left, &const_right));
     }
 
     /// The satisfiable side of that class, and the reason it is not
