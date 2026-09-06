@@ -636,10 +636,6 @@ fn poly_mul(left: &[BigRational], right: &[BigRational]) -> Vec<BigRational> {
         .into_coefficients()
 }
 
-fn poly_scale(poly: &[BigRational], factor: &BigRational) -> Vec<BigRational> {
-    QPoly::from_slice(poly).scale(factor).into_coefficients()
-}
-
 fn poly_eval(poly: &[BigRational], at: &BigRational) -> BigRational {
     axeyum_arith::evaluate_slice(poly, at)
 }
@@ -679,28 +675,16 @@ fn poly_substitute_square(poly: &[BigRational]) -> Vec<BigRational> {
     poly_trim(out)
 }
 
-/// Scale `poly` by a **positive** rational so that its coefficients are coprime
-/// integers.
-///
-/// Sign variations are what a Sturm chain counts, and a positive scale changes
-/// none of them — so normalizing every chain member this way is free of
-/// semantic content and keeps the bignum coefficients from doubling in size at
-/// each Euclidean step, which is the whole cost of a degree-`n²` chain.
-///
-/// **Migrated onto `axeyum_arith::QPoly::to_integer_poly` (ADR-1710 slice 4).**
-/// This convention is the one the shared [`axeyum_arith::SturmChain`] adopted,
-/// precisely because it is the one with a coefficient-growth bound.
-fn poly_primitive(poly: &[BigRational]) -> Vec<BigRational> {
-    QPoly::from_integer_poly(&QPoly::from_slice(poly).to_integer_poly()).into_coefficients()
-}
-
-// `gcd_big`, the Euclid on magnitudes that `poly_primitive` used to call, moved
-// with it into `axeyum_arith` (ADR-1710 slice 4). The pre-migration pair is kept
-// in this module's test block as the differential oracle.
-
-fn poly_derivative(poly: &[BigRational]) -> Vec<BigRational> {
-    axeyum_arith::UnivariatePoly::derivative(&QPoly::from_slice(poly)).into_coefficients()
-}
+// `poly_scale`, `poly_primitive`, `poly_derivative` and `gcd_big` are gone.
+// After ADR-1710 slice 4 nothing in this module called them: the routines that
+// did — `poly_divrem`, `poly_monic`, `poly_gcd`, `poly_ext_gcd`,
+// `poly_squarefree` and `sturm_chain_big` — now delegate whole, and the
+// positive-rational-scale-to-primitive-integers normalization that
+// `poly_primitive` existed for is `axeyum_arith::QPoly::to_integer_poly`, which
+// the shared Sturm chain adopted precisely because it is the convention with a
+// coefficient-growth bound. Their pre-migration bodies survive in this module's
+// test block as the differential oracle, compared against the shared
+// implementations that replaced them.
 
 /// Long division; `None` when the divisor is the zero polynomial.
 fn poly_divrem(
@@ -2146,10 +2130,11 @@ mod tests {
         AlgebraicRadius, AnalyticDecline, AnalyticError, FactorModulusBound, ModulusRoute,
         RadiusCertificate, RadiusOfConvergence, accept_pairwise_resultant, cauchy_upper_bound,
         coefficient_asymptotics, count_roots_in, one, pairwise_product_resultant, poly_add,
-        poly_degree, poly_derivative, poly_divrem, poly_eval, poly_ext_gcd, poly_gcd, poly_monic,
-        poly_mul, poly_primitive, poly_scale, poly_squarefree, poly_trim, radius_of_convergence,
-        resultant_modulus_polynomial, sign_variations_big, sturm_chain_big, zero,
+        poly_degree, poly_divrem, poly_eval, poly_ext_gcd, poly_gcd, poly_monic, poly_mul,
+        poly_squarefree, poly_trim, radius_of_convergence, resultant_modulus_polynomial,
+        sign_variations_big, sturm_chain_big, zero,
     };
+    use axeyum_arith::QPoly;
     use axeyum_ir::Rational;
     use num_bigint::BigInt;
     use num_rational::BigRational;
@@ -2160,6 +2145,22 @@ mod tests {
     // verbatim as the differential oracle. `#[cfg(test)]` and `legacy_`-named,
     // so nothing shipped calls them.
     // -----------------------------------------------------------------------
+
+    /// `poly_scale`, `poly_primitive` and `poly_derivative` no longer exist in
+    /// this module — the migration removed their last internal caller — so the
+    /// differential test compares the SHARED implementations, which is what
+    /// actually replaced the deleted bodies.
+    fn shared_scale(poly: &[BigRational], factor: &BigRational) -> Vec<BigRational> {
+        QPoly::from_slice(poly).scale(factor).into_coefficients()
+    }
+
+    fn shared_primitive(poly: &[BigRational]) -> Vec<BigRational> {
+        QPoly::from_integer_poly(&QPoly::from_slice(poly).to_integer_poly()).into_coefficients()
+    }
+
+    fn shared_derivative(poly: &[BigRational]) -> Vec<BigRational> {
+        axeyum_arith::UnivariatePoly::derivative(&QPoly::from_slice(poly)).into_coefficients()
+    }
 
     fn legacy_poly_trim(mut poly: Vec<BigRational>) -> Vec<BigRational> {
         while poly.last().is_some_and(BigRational::is_zero) {
@@ -2219,7 +2220,10 @@ mod tests {
         acc
     }
 
-    fn legacy_gcd_big(left: &num_bigint::BigUint, right: &num_bigint::BigUint) -> num_bigint::BigUint {
+    fn legacy_gcd_big(
+        left: &num_bigint::BigUint,
+        right: &num_bigint::BigUint,
+    ) -> num_bigint::BigUint {
         let mut a = left.clone();
         let mut b = right.clone();
         while !b.is_zero() {
@@ -2267,7 +2271,10 @@ mod tests {
                 .enumerate()
                 .skip(1)
                 .map(|(index, coeff)| {
-                    coeff * BigRational::from_integer(BigInt::from(i64::try_from(index).unwrap_or(i64::MAX)))
+                    coeff
+                        * BigRational::from_integer(BigInt::from(
+                            i64::try_from(index).unwrap_or(i64::MAX),
+                        ))
                 })
                 .collect(),
         )
@@ -2404,7 +2411,10 @@ mod tests {
             if legacy_poly_degree(&remainder).is_none() {
                 break;
             }
-            chain.push(legacy_poly_primitive(&legacy_poly_scale(&remainder, &-one())));
+            chain.push(legacy_poly_primitive(&legacy_poly_scale(
+                &remainder,
+                &-one(),
+            )));
         }
         Some(chain)
     }
@@ -2437,11 +2447,11 @@ mod tests {
             vec![r(3)],
             vec![r(0), r(1)],
             vec![r(-1), r(1)],
-            vec![r(-1), r(0), r(1)],           // t^2 - 1
-            vec![r(1), r(0), r(1)],            // t^2 + 1, no real roots
-            vec![r(1), r(-2), r(1)],           // (t-1)^2
-            vec![r(-6), r(11), r(-6), r(1)],   // (t-1)(t-2)(t-3)
-            vec![r(-1), r(-1), r(1)],          // the Fibonacci denominator's reverse
+            vec![r(-1), r(0), r(1)],         // t^2 - 1
+            vec![r(1), r(0), r(1)],          // t^2 + 1, no real roots
+            vec![r(1), r(-2), r(1)],         // (t-1)^2
+            vec![r(-6), r(11), r(-6), r(1)], // (t-1)(t-2)(t-3)
+            vec![r(-1), r(-1), r(1)],        // the Fibonacci denominator's reverse
             vec![r(2), r(-3), r(1)],
             vec![q(1, 2), q(-3, 4), q(5, 6)],
             vec![q(-7, 3), r(0), q(2, 9), r(1)],
@@ -2461,8 +2471,12 @@ mod tests {
         for a in &corpus {
             assert_eq!(poly_trim(a.clone()), legacy_poly_trim(a.clone()), "trim");
             assert_eq!(poly_degree(a), legacy_poly_degree(a), "degree");
-            assert_eq!(poly_derivative(a), legacy_poly_derivative(a), "derivative");
-            assert_eq!(poly_primitive(a), legacy_poly_primitive(a), "primitive");
+            assert_eq!(
+                shared_derivative(a),
+                legacy_poly_derivative(a),
+                "derivative"
+            );
+            assert_eq!(shared_primitive(a), legacy_poly_primitive(a), "primitive");
             assert_eq!(poly_monic(a), legacy_poly_monic(a), "monic");
             assert_eq!(poly_squarefree(a), legacy_poly_squarefree(a), "squarefree");
             assert_eq!(
@@ -2475,7 +2489,7 @@ mod tests {
             }
             for factor in &scales {
                 assert_eq!(
-                    poly_scale(a, factor),
+                    shared_scale(a, factor),
                     legacy_poly_scale(a, factor),
                     "scale"
                 );
@@ -2534,7 +2548,6 @@ mod tests {
 
     fn r(value: i64) -> BigRational {
         BigRational::from_integer(BigInt::from(value))
-    }
     }
 
     fn q(numerator: i64, denominator: i64) -> BigRational {
