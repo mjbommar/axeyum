@@ -220,9 +220,9 @@ pub enum Trust {
     /// smaller statement, and the conditions are part of it. `λ/(λ−t)` is not
     /// "approximately" the mgf of `Exponential(λ)` at `t ≥ λ` — there is no mgf
     /// there at all, the defining integral diverges. So a caller that drops the
-    /// conditions is asserting something false, and [`agree`] refuses a
-    /// certificate whose conditions differ from a fresh re-derivation's,
-    /// including one that has none.
+    /// conditions is asserting something false, and the `verify_*` methods
+    /// refuse a certificate whose conditions differ from a fresh
+    /// re-derivation's, including one that has none.
     CertifiedUnder(Vec<SignCondition>),
     /// The route declined; the claim is the standard closed form, presented
     /// for reference only. Never promoted to `Certified`.
