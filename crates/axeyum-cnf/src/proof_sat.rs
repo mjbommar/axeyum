@@ -838,10 +838,12 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
         // needs a theory-side reset the trait does not have yet, and slice 2
         // proper has to decide whether that is a new trait method or a
         // fresh theory instance per solve (see the design memo).
-        for _ in 0..self.trail_lim.len() {
-            self.theory.pop();
+        if T::HAS_THEORY {
+            for _ in 0..self.trail_lim.len() {
+                self.theory.pop();
+            }
+            self.theory_qhead = 0;
         }
-        self.theory_qhead = 0;
         self.trail.clear();
         self.trail_lim.clear();
         self.qhead = 0;
@@ -1445,7 +1447,11 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
                     // final-check split. `NullTheory::final_check` is
                     // `FinalCheckOutcome::Sat`, so `sat` is reported exactly
                     // where it was before.
-                    match self.theory.final_check() {
+                    match if T::HAS_THEORY {
+                        self.theory.final_check()
+                    } else {
+                        FinalCheckOutcome::Sat
+                    } {
                         FinalCheckOutcome::Sat => {}
                         // A theory conflict here needs a lemma clause the DRAT
                         // proof cannot justify, and `Unknown` is undecided by
@@ -1969,8 +1975,10 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
             // Pop the theory in lockstep, one `pop` per level actually removed,
             // BEFORE the trail is truncated — a theory that walks the driver's
             // trail during `pop` must still see the assignments it is undoing.
-            for _ in level..self.trail_lim.len() {
-                self.theory.pop();
+            if T::HAS_THEORY {
+                for _ in level..self.trail_lim.len() {
+                    self.theory.pop();
+                }
             }
             let bound = self.trail_lim[level];
             while self.trail.len() > bound {
@@ -1991,7 +1999,9 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
         // The theory's cursor can never point past the trail; clamping it here
         // (rather than only inside the `if`) also covers `backtrack_to(level)`
         // at `level == trail_lim.len()`, which is a no-op for the trail.
-        self.theory_qhead = self.theory_qhead.min(self.trail.len());
+        if T::HAS_THEORY {
+            self.theory_qhead = self.theory_qhead.min(self.trail.len());
+        }
     }
 
     /// Opens a new decision level: one `trail_lim` entry and one theory
@@ -2004,7 +2014,9 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
     #[inline]
     fn push_level(&mut self) {
         self.trail_lim.push(self.trail.len());
-        self.theory.push();
+        if T::HAS_THEORY {
+            self.theory.push();
+        }
     }
 
     /// One theory round, run when Boolean propagation has reached a fixpoint
@@ -2024,6 +2036,14 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
     /// [`NullTheory`] can produce none of the three, so this returns `None`
     /// on every shipping path.
     fn theory_round(&mut self) -> Option<SearchOutcome> {
+        // Design B of the spike measurement: `HAS_THEORY` is an associated
+        // CONST, so for `T = NullTheory` the compiler drops this whole function
+        // body — including the trail walk, which is the part design A could not
+        // make free. Design A (calling the empty hooks unconditionally) measured
+        // +5.8% on `proof_sat_solve_php_6_7`; see the design memo.
+        if !T::HAS_THEORY {
+            return None;
+        }
         while self.theory_qhead < self.trail.len() {
             let var = self.trail[self.theory_qhead];
             self.theory_qhead += 1;
