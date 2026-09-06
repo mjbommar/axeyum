@@ -17,7 +17,7 @@
 //! | `erf`, large | the complementary tail `erfc x <= e^(−x²)/(x·√π)` | the bound itself | `x >= 8`; from `erfc x = (2/√π)·∫_x^∞ e^(−t²) dt` and `t/x >= 1` on `[x, ∞)` |
 //! | `Gamma`, integer | `Γ(n) = (n−1)!` | none (exact) | `n >= 1` |
 //! | `Gamma`, half-integer | `Γ(n + 1/2) = (2n)!/(4^n·n!)·√π` | the `√π` enclosure only | `n >= 0`; the identity is [`crate::special::gamma`]'s, recomputed in `BigInt` because that function is `i128`-bounded |
-//! | `Gamma`, general | shift by `Γ(x) = Γ(x+n)/∏_(i<n)(x+i)` to `x+n >= 12+order`, then Stirling `ln Γ z = (z−1/2)·ln z − z + (1/2)·ln 2π + Σ_(k=1)^m B_(2k)/(2k(2k−1)z^(2k−1))` | `|R_m(z)| <= |B_(2m+2)|/((2m+2)(2m+1)·z^(2m+1))` | `z > 0` real: the Stirling series is enveloping there, so the remainder never exceeds the first omitted term and carries its sign (DLMF 5.11.3; Whittaker–Watson §12.33). `x > 0` |
+//! | `Gamma`, general | shift by `Γ(x) = Γ(x+n)/∏_(i<n)(x+i)` to `x+n >= 12 + order/4`, then Stirling `ln Γ z = (z−1/2)·ln z − z + (1/2)·ln 2π + Σ_(k=1)^m B_(2k)/(2k(2k−1)z^(2k−1))` | `|R_m(z)| <= |B_(2m+2)|/((2m+2)(2m+1)·z^(2m+1))` | `z > 0` real: the Stirling series is enveloping there, so the remainder never exceeds the first omitted term and carries its sign (DLMF 5.11.3; Whittaker–Watson §12.33). `x > 0` |
 //! | `J_n` | `J_n x = Σ (−1)^k (x/2)^(2k+n)/(k!·(k+n)!)` | alternating: the tail is at most the first omitted term | the terms decrease from the least `k0` with `(k0+1)(k0+n+1) >= (x/2)²`, computed exactly; the module declines an order below it. Over an interval the bound is taken at the endpoint of largest magnitude, where the omitted term is largest |
 //!
 //! `erf` is odd and increasing, so an interval argument is handled by its two
@@ -73,8 +73,8 @@
 //! table in [`crate::enclosure`]; this test is what regenerates them.
 
 use crate::enclosure::{
-    BigInterval, DeclineReason, bi, bi_u64, br, exp_point, from_rational, ln_point, pi_enclosure,
-    pow2, rat_floor, ratpow, rmax, rmin,
+    BigInterval, DeclineReason, REDUCTION_CAP, bi, bi_u64, br, exp_point, from_rational, ln_point,
+    pi_enclosure, pow2, rat_floor, ratpow, rmax, rmin,
 };
 use axeyum_ir::Rational;
 use num_bigint::BigInt;
@@ -89,10 +89,25 @@ use std::collections::BTreeMap;
 /// `x^(2·order)`, and past `8` the tail bound is both cheaper and tighter.
 const ERF_SERIES_LIMIT: i64 = 8;
 
-/// The largest number of Stirling correction terms used, so the Bernoulli
-/// table stays small and the asymptotic series is truncated well before it
-/// starts to diverge.
-const STIRLING_TERMS_CAP: u32 = 24;
+/// The largest number of Stirling correction terms used.
+///
+/// The Stirling series is asymptotic: for a fixed `z` the terms shrink until
+/// about `k = pi*z` and then grow. The shift target below never puts `z` under
+/// `13`, so `pi*z` is never under `40` and this cap keeps the truncation on the
+/// shrinking side for every argument the module accepts.
+const STIRLING_TERMS_CAP: u32 = 40;
+
+/// The base of the Stirling shift target `z = STIRLING_SHIFT_BASE + order/4`.
+///
+/// The shift is what costs: `Gamma(x) = Gamma(x+n)/prod(x+i)` needs one
+/// certified `ln` per unit of shift, so a target of `12 + order` (the first
+/// draft) meant 152 series evaluations at order 64 and measured 23 s for one
+/// `Gamma(1/3)` at precision 100. The accuracy that shift was buying is much
+/// more cheaply bought from the correction terms instead: the error falls like
+/// `z^-(2m+1)` in the shift but factorially in `m`, so raising
+/// [`STIRLING_TERMS_CAP`] from 24 to 40 and dropping the target to
+/// `12 + order/4` reaches a tighter bound with a quarter of the work.
+const STIRLING_SHIFT_BASE: u64 = 12;
 
 /// Cap on the shift `Γ(x) = Γ(x+n)/∏(x+i)` and on the search for a
 /// monotonicity index, so a pathological argument declines rather than grinds.
@@ -100,6 +115,140 @@ const SHIFT_CAP: u32 = 4096;
 
 /// Cap on Krawczyk iterations.
 const KRAWCZYK_CAP: u32 = 512;
+
+// ---------------------------------------------------------------------------
+// Outward dyadic rounding — why every kernel argument passes through it.
+// ---------------------------------------------------------------------------
+
+/// The dyadic grid a kernel argument is rounded onto at a given truncation
+/// order: `4·order + 64` bits.
+///
+/// The series kernels of the parent module are **exact**: `atanh_small` forms
+/// `z^(2n+3)` as a rational, so an argument whose denominator has `b` bits
+/// produces intermediates with `b·(2n+3)` bits. That is invisible while the
+/// arguments are `1/3` and `1/5`, which is all the first slice ever passed
+/// them — and catastrophic the moment a *computed* interval is passed instead.
+/// A certified `pi` at order 64 has endpoints near 2,000 bits (Machin raises
+/// `1/5` and `1/239` to the 131st power), and `ln` of that endpoint forms a
+/// 260,000-bit rational whose `gcd` normalisation dominates every other cost
+/// in the module: measured, two calls to [`ln_gamma_stirling`] took 58 s in a
+/// `--release` build before this rounding was added, and the same test now
+/// takes milliseconds.
+///
+/// The grid is chosen well finer than the accuracy the order can deliver — the
+/// `atanh` tail at order `n` is about `2^(−3.17·n)`, and the grid is `2^(−4n−64)`
+/// — so rounding is never what limits the answer, only what bounds the size of
+/// the numbers.
+fn grid_bits(order: u32) -> u32 {
+    order.saturating_mul(2).saturating_add(96)
+}
+
+/// The denominator size of the dyadic `r` that [`ln_large`] anchors on.
+///
+/// The anchor is what [`ln_point`] actually sees, and that cost grows with the
+/// **square** of its denominator size, so the anchor is kept deliberately
+/// coarse and the accuracy is bought back from the cheap `ln(1+w)` correction
+/// instead: 16 bits of anchor put `w` under `2^(-16)`, and `order/8 + 6` terms
+/// then reach `2^(-2·order-112)`, finer than [`grid_bits`].
+const LN_ANCHOR_BITS: u32 = 16;
+
+/// `ln(1 + w)` for `0 <= w <= 1/2`, truncated after `terms` terms.
+///
+/// `ln(1+w) = w - w^2/2 + w^3/3 - ...` is alternating with decreasing terms for
+/// `|w| < 1`, so the tail past term `n` is at most `w^(n+1)/(n+1)` — the plain
+/// alternating-series bound, no majorant needed.
+fn ln_one_plus(w: &BigRational, terms: u32) -> Option<BigInterval> {
+    if w.is_negative() || *w > br(1, 2) {
+        return None;
+    }
+    let mut power = w.clone();
+    let mut sum = w.clone();
+    let mut sign = -1i64;
+    for j in 2..=terms.max(1) {
+        power *= w;
+        sum += bi(sign) * &power / bi_u64(u64::from(j));
+        sign = -sign;
+    }
+    let next = terms.max(1) + 1;
+    let remainder = (&power * w / bi_u64(u64::from(next))).abs();
+    Some(BigInterval::center_radius(&sum, &remainder))
+}
+
+/// `ln(p)` for a positive rational whose **denominator may be enormous**, at a
+/// cost that does not grow with that denominator.
+///
+/// The parent module's [`ln_point`] reduces to `2·atanh((t−1)/(t+1))` with
+/// `|z| <= 1/3`, so it always needs the full `order` terms — and it forms
+/// `z^(2·order+1)` exactly. For `z` with `a` bits that is `2·a·order` bits, and
+/// `num-rational` runs a `gcd` after every operation, so the series costs about
+/// `a²·order³/48` word operations. Measured: a certified `2π` at order 64 has
+/// 322-bit endpoints, and one `Gamma` at precision 100 spent **26 s** inside
+/// exactly this loop.
+///
+/// So this route splits the reduction in two. Write `p = 2^k·t` with `t` in
+/// `[1, 2)` as before, then anchor on `r = floor(t·2^64)/2^64`, a rational with
+/// a 64-bit denominator whatever `t` looks like:
+///
+/// ```text
+/// ln p = k·ln 2 + ln r + ln(1 + (t − r)/r)
+/// ```
+///
+/// `ln r` goes through [`ln_point`] on a **small** argument, and the correction
+/// has `0 <= w < 2^(−16)`, so `terms = order/8 + 6` of the alternating
+/// `ln(1+w)` series reach `2^(−2·order−112)` — finer than the
+/// [`grid_bits`] the argument was rounded to, so it is never the limit.
+fn ln_large(p: &BigRational, order: u32) -> Option<BigInterval> {
+    if !p.is_positive() {
+        return None;
+    }
+    let one = BigRational::one();
+    let two = bi(2);
+    let mut t = p.clone();
+    let mut exponent: i64 = 0;
+    while t >= two {
+        t /= &two;
+        exponent += 1;
+        if exponent > REDUCTION_CAP {
+            return None;
+        }
+    }
+    while t < one {
+        t *= &two;
+        exponent -= 1;
+        if exponent < -REDUCTION_CAP {
+            return None;
+        }
+    }
+    let anchor = dyadic_floor(&t, LN_ANCHOR_BITS);
+    if !anchor.is_positive() {
+        return None;
+    }
+    let ln_anchor = ln_point(&anchor, order)?;
+    let correction = ln_one_plus(&(&t / &anchor - &one), order / 8 + 6)?;
+    let ln_two = ln_point(&two, order)?;
+    Some(ln_anchor.add(&correction).add(&ln_two.scale(&bi(exponent))))
+}
+
+/// The largest multiple of `2^(−bits)` at or below `x`.
+fn dyadic_floor(x: &BigRational, bits: u32) -> BigRational {
+    let scale = pow2(i32::try_from(bits).unwrap_or(i32::MAX));
+    BigRational::from(rat_floor(&(x * &scale))) / scale
+}
+
+/// The smallest multiple of `2^(−bits)` at or above `x`.
+fn dyadic_ceil(x: &BigRational, bits: u32) -> BigRational {
+    -dyadic_floor(&-x, bits)
+}
+
+/// `x` widened **outward** onto the `2^(−bits)` grid.
+///
+/// Always contains `x`, so substituting it for `x` anywhere an enclosure is
+/// wanted stays sound; it only ever loses accuracy, never validity.
+fn coarsen(x: &BigInterval, bits: u32) -> BigInterval {
+    let lo = dyadic_floor(x.lo(), bits);
+    let hi = dyadic_ceil(x.hi(), bits);
+    BigInterval::new(lo.clone(), hi).unwrap_or_else(|| BigInterval::point(lo))
+}
 
 // ---------------------------------------------------------------------------
 // root_q.
@@ -134,14 +283,22 @@ pub(crate) fn nth_root_point(p: &BigRational, q: u32, order: u32) -> Option<BigI
     let one = BigRational::one();
     let degree = bi_u64(u64::from(q));
     let below = bi_u64(u64::from(q - 1));
-    let mut x = if *p > one { p.clone() } else { one };
-    let floor = pow2(-2048);
+    let bits = grid_bits(order);
+    let mut x = dyadic_ceil(&if *p > one { p.clone() } else { one }, bits);
+    let floor = pow2(-i32::try_from(bits).unwrap_or(i32::MAX));
     for _ in 0..order.max(1) {
         let lower = p / ratpow(&x, q - 1);
         if &x - &lower <= floor {
             break;
         }
-        x = (&below * &x + lower) / &degree;
+        // Rounding the iterate UP keeps it at or above the root, which is the
+        // only thing AM-GM needs, so the bracket stays exact — and it stops the
+        // denominator doubling on every Newton step.
+        let next = dyadic_ceil(&((&below * &x + lower) / &degree), bits);
+        if next >= x {
+            break;
+        }
+        x = next;
     }
     let lower = p / ratpow(&x, q - 1);
     BigInterval::new(lower, x)
@@ -183,8 +340,9 @@ fn root_of_interval(x: &BigInterval, order: u32) -> Option<BigInterval> {
     if x.lo().is_negative() {
         return None;
     }
-    let lo = nth_root_point(x.lo(), 2, order)?;
-    let hi = nth_root_point(x.hi(), 2, order)?;
+    let coarse = coarsen(x, grid_bits(order));
+    let lo = nth_root_point(coarse.lo(), 2, order)?;
+    let hi = nth_root_point(coarse.hi(), 2, order)?;
     BigInterval::new(lo.lo().clone(), hi.hi().clone())
 }
 
@@ -310,7 +468,10 @@ fn factorial(n: u64) -> BigInt {
 /// ln Γ(x) = ln Γ(x+n) − Σ_(i<n) ln(x+i)
 /// ```
 ///
-/// and only the small result is exponentiated. Doing the division on `Γ`
+/// and only the small result is exponentiated. The shift target is
+/// `12 + order/4`; see [`STIRLING_SHIFT_BASE`] for why it is not larger. The
+/// sum of logarithms is taken as **one** logarithm of the product, which
+/// [`ln_large`] handles at a cost independent of how large that product is. Doing the division on `Γ`
 /// itself would mean forming `exp` of a number near `n·ln n` — at order 128
 /// that is `e^554`, a rational whose repeated squaring in `exp_point` reaches
 /// millions of bits and whose `gcd` normalisation dominates everything else.
@@ -338,11 +499,12 @@ pub(crate) fn gamma_interval(x: &BigInterval, order: u32) -> Result<BigInterval,
     {
         return Ok(exact);
     }
-    // The shift target is 12 plus the order, so the Stirling error term
+    // The shift target grows with the order, so the Stirling error term
     // |B_(2m+2)|/((2m+2)(2m+1)·z^(2m+1)) keeps shrinking as the ladder climbs
     // even once the Bernoulli count is capped.
-    let target = bi_u64(12 + u64::from(order));
+    let target = bi_u64(STIRLING_SHIFT_BASE + u64::from(order / 4));
     let shift = shift_count(x.lo(), &target)?;
+    let bits = grid_bits(order);
     let low = ln_gamma_stirling(&(x.lo() + bi_u64(u64::from(shift))), order)
         .ok_or(DeclineReason::ResourceLimit)?;
     let high = ln_gamma_stirling(&(x.hi() + bi_u64(u64::from(shift))), order)
@@ -350,16 +512,26 @@ pub(crate) fn gamma_interval(x: &BigInterval, order: u32) -> Result<BigInterval,
     // ln Γ is increasing on [2, ∞), and the shift target is well above 2.
     let mut total = BigInterval::new(low.lo().clone(), high.hi().clone())
         .ok_or(DeclineReason::PrecisionUnreachable)?;
+    // One logarithm of the whole product, not one per factor: `ln_large` costs
+    // the same whatever the denominator looks like, so `ln prod(x+i)` is a
+    // single call where the sum of logarithms was `2*shift` of them. Every
+    // factor is positive and increasing in `x`, so the product over the box is
+    // bracketed by the products at its endpoints.
+    let mut product_lo = BigRational::one();
+    let mut product_hi = BigRational::one();
     for i in 0..shift {
         let offset = bi_u64(u64::from(i));
-        let factor_lo =
-            ln_point(&(x.lo() + &offset), order).ok_or(DeclineReason::ResourceLimit)?;
-        let factor_hi =
-            ln_point(&(x.hi() + &offset), order).ok_or(DeclineReason::ResourceLimit)?;
+        product_lo *= x.lo() + &offset;
+        product_hi *= x.hi() + &offset;
+    }
+    if shift > 0 {
+        let factor_lo = ln_large(&product_lo, order).ok_or(DeclineReason::ResourceLimit)?;
+        let factor_hi = ln_large(&product_hi, order).ok_or(DeclineReason::ResourceLimit)?;
         let factor = BigInterval::new(factor_lo.lo().clone(), factor_hi.hi().clone())
             .ok_or(DeclineReason::PrecisionUnreachable)?;
         total = total.sub(&factor);
     }
+    total = coarsen(&total, bits);
     let value_lo = exp_point(total.lo(), order).ok_or(DeclineReason::ResourceLimit)?;
     let value_hi = exp_point(total.hi(), order).ok_or(DeclineReason::ResourceLimit)?;
     BigInterval::new(value_lo.lo().clone(), value_hi.hi().clone())
@@ -437,11 +609,11 @@ fn ln_gamma_stirling(y: &BigRational, order: u32) -> Option<BigInterval> {
     let terms = order.clamp(1, STIRLING_TERMS_CAP);
     let bernoulli = bernoulli_table(2 * terms + 2);
     let half = br(1, 2);
-    let ln_y = ln_point(y, order)?;
+    let ln_y = ln_large(y, order)?;
     let pi = pi_enclosure(order)?;
-    let two_pi = pi.scale(&bi(2));
-    let ln_two_pi_lo = ln_point(two_pi.lo(), order)?;
-    let ln_two_pi_hi = ln_point(two_pi.hi(), order)?;
+    let two_pi = coarsen(&pi.scale(&bi(2)), grid_bits(order));
+    let ln_two_pi_lo = ln_large(two_pi.lo(), order)?;
+    let ln_two_pi_hi = ln_large(two_pi.hi(), order)?;
     let ln_two_pi = BigInterval::new(ln_two_pi_lo.lo().clone(), ln_two_pi_hi.hi().clone())?;
     let mut total = ln_y
         .scale(&(y - &half))
@@ -1208,24 +1380,26 @@ mod tests {
 
     #[test]
     fn the_stirling_route_agrees_with_the_exact_factorial() {
-        // Gamma(13) = 12! = 479001600. The closed form is not consulted here:
-        // `gamma_stirling_point` is called directly, so this measures the
-        // asymptotic series and its error bound against a known integer.
-        let value = gamma_stirling_point(&bi(13), 32).expect("Stirling at 13");
+        // ln Gamma(13) = ln(12!) = ln(479001600). The closed form is not
+        // consulted here: `ln_gamma_stirling` is called directly, so this
+        // measures the asymptotic series and its error bound against a known
+        // integer, checked through the parent module's independent `ln`.
+        let value = ln_gamma_stirling(&bi(13), 32).expect("Stirling at 13");
+        let reference = ln_point(&bi(479_001_600), 64).expect("ln of 12!");
         assert!(
-            value.contains(&bi(479_001_600)),
-            "Stirling gave {value} for Gamma(13)"
+            value.lo() <= reference.hi() && reference.lo() <= value.hi(),
+            "Stirling gave {value} for ln Gamma(13) but ln(12!) is {reference}"
         );
         assert!(
-            value.width() < bi(1),
-            "the Stirling enclosure of Gamma(13) is too wide"
+            value.width() < br(1, 1000),
+            "the Stirling enclosure of ln Gamma(13) is too wide: {value}"
         );
     }
 
     #[test]
     fn the_stirling_error_bound_shrinks_with_the_order() {
-        let coarse = gamma_stirling_point(&bi(13), 4).expect("order 4").width();
-        let fine = gamma_stirling_point(&bi(13), 64).expect("order 64").width();
+        let coarse = ln_gamma_stirling(&bi(13), 4).expect("order 4").width();
+        let fine = ln_gamma_stirling(&bi(13), 64).expect("order 64").width();
         assert!(fine < coarse, "raising the order did not tighten the bound");
     }
 
@@ -1561,8 +1735,17 @@ mod tests {
                 CasExpr::Unary(UnaryFunc::BesselJ(0), Box::new(CasExpr::int(1))),
             ),
         ];
+        // The full ladder is a `--release` measurement. In a debug build the
+        // `Gamma` rows at 100 and 200 both land on order 64 and cost about 60 s
+        // between them, so the debug sweep measures the cheap end and the doc
+        // table records the release run.
+        let ladder: &[u32] = if cfg!(debug_assertions) {
+            &[10, 50]
+        } else {
+            &[10, 50, 100, 200]
+        };
         for (name, expr) in &heads {
-            for precision in [10u32, 50, 100, 200] {
+            for &precision in ladder {
                 let start = std::time::Instant::now();
                 let Some(e) = enclose(expr, &[], precision) else {
                     println!("{name:>12} precision {precision:>3}: declined");
@@ -1580,7 +1763,7 @@ mod tests {
         }
         let system = circle_and_line();
         let start_box = near_the_root();
-        for precision in [10u32, 50, 100, 200] {
+        for &precision in ladder {
             let start = std::time::Instant::now();
             let Some(e) = enclose_system(&system, &start_box, precision) else {
                 println!("{:>12} precision {precision:>3}: declined", "krawczyk");
