@@ -1941,6 +1941,7 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.subsets_sum_sel_on_add,
         p.subsets_sum_subsets_on_card,
         p.subsets_sum_sel_on_const,
+        p.multiset_count_le_of_dvd_prod,
     ]
 }
 

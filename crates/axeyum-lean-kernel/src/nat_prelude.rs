@@ -181,6 +181,7 @@ mod div_mod_lemmas;
 mod divisibility;
 mod division;
 mod divisor_sum_scale;
+mod divisor_valuation;
 mod draw11_mirrors;
 mod dvd_add_iff_left;
 mod dvd_mul_split;
@@ -417,6 +418,7 @@ use divisibility::declare_factorial_order;
 use divisibility::{declare_div_dvd_div_left, declare_divisibility};
 use division::declare_euclidean_division;
 use divisor_sum_scale::declare_divisor_sum_scale_all;
+use divisor_valuation::declare_divisor_valuation_all;
 use draw11_mirrors::declare_draw11_mirrors_all;
 use dvd_add_iff_left::declare_dvd_add_iff_left;
 use dvd_mul_split::declare_dvd_mul_split;
@@ -7512,6 +7514,13 @@ pub struct NatPrelude {
     /// This is the statement the mask exists for, and the one a step that
     /// ignores the mask fails while still satisfying every other law here.
     pub subsets_sum_subsets_on_card: NameId,
+    /// `Nat.Multiset.count_le_of_dvd_prod : ∀ m d q,
+    /// (∀ x, Lt 0 (count m x) → prime x) → Lt 0 d → dvd d (prod m) →
+    /// Le (count (factorization d) q) (count m q)` — a divisor cannot carry
+    /// more copies of a prime than the multiset does. ADR-1658's missing
+    /// piece A, the surjectivity half of the divisors ↔ selections bijection
+    /// (`divisor_valuation.rs`).
+    pub multiset_count_le_of_dvd_prod: NameId,
     /// `Nat.Subsets.sumSelOn_const_of_mem : ∀ c P n i, Lt i n →
     /// Eq Bool (P i) true →
     /// sumSelOn P n (fun _ => c) true = sumSelOn P n (fun _ => c) false` — THE
@@ -8983,6 +8992,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             subsets_sum_sel_on_add: kernel.name_str(subsets, "sumSelOn_add"),
             subsets_sum_subsets_on_card: kernel.name_str(subsets, "sumSubsetsOn_card"),
             subsets_sum_sel_on_const: kernel.name_str(subsets, "sumSelOn_const_of_mem"),
+            multiset_count_le_of_dvd_prod: kernel.name_str(multiset, "count_le_of_dvd_prod"),
             subsets_any_of: kernel.name_str(subsets, "anyOf"),
             subsets_none_of: kernel.name_str(subsets, "noneOf"),
             subsets_prod_par: kernel.name_str(subsets, "prodPar"),
@@ -10557,6 +10567,13 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // (`subset_sums.rs`), `Nat.dvd_refl`/`Nat.not_lt_zero`/
         // `Nat.pow_zero`/`Nat.one_mul`/`Nat.mul_assoc`/`Nat.mul_comm`.
         declare_multiset_select_all(&mut d, &p)?;
+        // The divisor-valuation bound (`divisor_valuation.rs`, ADR-1671,
+        // roadmap W2-18): ADR-1658's missing piece A. Needs
+        // `declare_multiset_all` (`Nat.Multiset.pow_count_dvd_prod`,
+        // `not_pow_succ_count_dvd_prod`) and `declare_factorization_multiset_all`
+        // (`Nat.prod_factorization`, `Nat.factorization_prime`), plus
+        // `Nat.lt_or_ge`/`Nat.lt_of_le_of_lt`/`Nat.dvd_trans`.
+        declare_divisor_valuation_all(&mut d, &p)?;
         // The primorial (`primorial.rs`, ADR-1637, roadmap W3-11). Needs
         // `Nat.prodRangeIf` (`subset_product.rs`, `declare_prod_range_if_all`
         // far above), `Nat.minFac` and the three `min_fac_*` lemmas
@@ -10734,6 +10751,8 @@ mod hall_descent_tests;
 #[cfg(test)]
 mod hall_marriage_tests;
 
+#[cfg(test)]
+mod divisor_valuation_tests;
 #[cfg(test)]
 mod inclusion_exclusion_tests;
 #[cfg(test)]
