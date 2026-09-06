@@ -939,9 +939,9 @@ fn gcd(mut a: u128, mut b: u128) -> u128 {
 #[cfg(test)]
 mod tests {
     use super::Rational;
-    use core::hash::{Hash, Hasher};
     use axeyum_arith::big::BigInt;
     use axeyum_arith::big::BigRational;
+    use core::hash::{Hash, Hasher};
 
     /// `10^exp` built independently of anything under test.
     fn ten_pow(exp: u32) -> BigInt {

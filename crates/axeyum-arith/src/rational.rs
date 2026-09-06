@@ -283,7 +283,7 @@ impl Eq for RawRational {}
 
 impl PartialOrd for RawRational {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.compare(other))
+        Some(self.cmp(other))
     }
 }
 
@@ -313,8 +313,8 @@ impl Normalize for RawRational {
             denominator = -denominator;
         }
 
-        self.numerator = numerator.clone();
-        self.denominator = denominator.clone();
+        self.numerator.clone_from(&numerator);
+        self.denominator.clone_from(&denominator);
 
         NormalizationReceipt {
             common_factor,

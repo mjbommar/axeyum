@@ -24,8 +24,8 @@
 use core::cmp::Ordering;
 
 use axeyum_arith::big::BigInt;
-use axeyum_arith::big::Integer;
 use axeyum_arith::big::BigRational;
+use axeyum_arith::big::Integer;
 use axeyum_arith::big::{One, Zero};
 
 use crate::real_algebraic::Sign;

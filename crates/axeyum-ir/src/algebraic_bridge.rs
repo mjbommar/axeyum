@@ -88,10 +88,10 @@ fn root_sign(poly: &[BigInt], lo: &BigRational, hi: &BigRational) -> Ordering {
     // A well-formed isolating interval has p(lo) != 0; fall back to the upper
     // endpoint rather than guessing.
     let at_hi = rational_sign(&evaluate(poly, hi));
-    if at_hi != at_zero {
-        Ordering::Greater
-    } else {
+    if at_hi == at_zero {
         Ordering::Less
+    } else {
+        Ordering::Greater
     }
 }
 
