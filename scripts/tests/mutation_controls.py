@@ -2371,18 +2371,44 @@ SUITES["complex-derivative"] = (
 # here, so "one cross term dropped" can be applied to the product rule itself
 # rather than to the sum rule standing in for it.
 #
-# The same caveat that suite records applies and is worth repeating rather than
-# cross-referencing: `build_complex_prelude` is shared by every test in the
-# module through one `OnceLock` template, so a mutant the kernel refuses takes
-# the whole module down. That is a MASS kill and therefore weak evidence about
-# any individual test. The halving mutant is included because it has a NAMED,
-# small killed-set on top of the mass kill:
-# `uniformly_continuous_of_has_derivative_modulus_is_halved` fails on the
-# expected index and `..._without_halving_is_refused` INVERTS (it starts
-# admitting), so the pair reports the mutation directly rather than only as
-# collateral of a broken build.
+# MEASURED 2026-09-05, baseline green at 86 tests:
 #
-# MEASURED 2026-09-05 — see the lane report for the exact counts.
+#   dropped cross term (Leibniz)   killed 83 of 86
+#   un-halved UC modulus           killed 83 of 86
+#
+# **The two kill sets are IDENTICAL** -- symmetric difference empty, checked
+# rather than eyeballed -- and the three survivors are the three tests in the
+# module that build no prelude: `steps_table_matches_recorded_extraction`
+# (reads the STEPS table only) and the two `the_ring_calculus_*` tests (which
+# build their own kernel).
+#
+# That result CONTRADICTS what this comment predicted before the run, and the
+# prediction is left here deleted rather than quietly replaced: the halving
+# mutant was expected to carry a NAMED, small killed-set on top of the mass
+# kill, because `uniformly_continuous_of_has_derivative_modulus_is_halved`
+# pins the index directly and `..._without_halving_is_refused` should INVERT.
+# Neither happens. `build_complex_prelude` is shared by every test through one
+# `OnceLock` template, so either mutant takes the whole module down BEFORE any
+# test reaches its own subject, and the two are indistinguishable by kill set.
+# The modulus pair is real evidence about the modulus -- it caught a vacuous
+# control during development -- but it is NOT evidence that discriminates
+# these two mutants, and a table that reported it as such would be wrong.
+#
+# A mutation suite over a shared-prelude module can therefore only report
+# "the kernel refused something"; to attribute a kill to a subject you need a
+# test that builds its OWN kernel, which is what the two surviving
+# `the_ring_calculus_*` tests do and what a future targeted control here
+# should copy.
+#
+# COST, also measured and also not what was expected: the dropped-cross-term
+# mutant's TEST phase ran ~90 minutes against a 212-second baseline (~25x).
+# A wrong ring identity is not a cheap rejection on this carrier -- the kernel
+# grinds through the definitional-equality check on a large term for every one
+# of the 83 tests that re-runs the poisoned `OnceLock` initialiser. Budget
+# hours, not minutes, for this suite, and pin the thread count: the first
+# attempt was OOM-killed by `cargo-serialized.sh`'s 24 G ceiling at the default
+# thread count, so run it with `RUST_TEST_THREADS=4` in the environment (the
+# harness merges os.environ into the cargo child).
 # --------------------------------------------------------------------------
 
 SUITES["complex-estimates"] = (
