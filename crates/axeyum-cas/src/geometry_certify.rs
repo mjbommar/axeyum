@@ -60,7 +60,10 @@ use axeyum_ir::Rational;
 use crate::cofactor_ansatz::{AnsatzLimits, AnsatzOutcome, cofactors_by_ansatz};
 use crate::groebner::MonomialOrder;
 use crate::groebner_cert::{CofactorOutcome, DeclineReason, Limits, reduce_many_with_cofactors};
-use crate::linear_elim::{LinearBlock, LinearElimination, detect_linear_blocks, eliminate_blocks};
+use crate::linear_elim::{
+    BlockSearch, LinearBlock, LinearElimination, detect_linear_blocks, detect_linear_blocks_where,
+    eliminate_blocks,
+};
 use crate::mvpoly::MvPoly;
 
 /// A point of the plane at symbolic coordinates.
@@ -856,6 +859,36 @@ pub fn certify(problem: &GeometryProblem, limits: Limits) -> ProofOutcome {
 /// any non-constant condition. This stops a constant one from spinning.
 const MAX_INVERSE_POWER: u32 = 32;
 
+/// Which unknowns [`certify_by_linear_elimination_scoped`] lets the linear route
+/// look for.
+///
+/// # The measured reason this is a choice rather than a constant
+///
+/// A theorem's conclusions are stated one component at a time, and the detector
+/// was scoped to **one** of them: for `tetrahedron-medians-concurrent` the
+/// conclusion `4P.x = A.x+B.x+C.x+D.x` mentions `px` and neither `py` nor `pz`,
+/// so no subsystem over the point `P` was ever offered, and the block the search
+/// did return was over `{ax, bx, cx}` — alphabetical order, not geometry. That
+/// scoping is what `docs/math-department/13-computer-algebra.md` records as the
+/// reason the medians cost 769 s on the general route.
+///
+/// [`BlockScope::Joint`] removes that limitation. It buys two theorems and it
+/// does **not** buy the medians, which is the finding this type exists to make
+/// checkable rather than assumed. See [`certify_by_linear_elimination_scoped`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum BlockScope {
+    /// Candidate unknowns come from the conclusion being settled, and the search
+    /// stops at the first nonsingular subsystem, licensed or not. The scoping
+    /// every certificate in `artifacts/geometry-certificates/` was first produced
+    /// under, and what [`certify_by_linear_elimination`] still does.
+    PerConclusion,
+    /// Candidate unknowns come from **all** of the theorem's conclusions at once,
+    /// and an unlicensed determinant advances the search instead of ending it.
+    /// What [`certify_any_route`] uses; it reaches two theorems the narrow
+    /// scoping misses and produces the identical certificate on both.
+    Joint,
+}
+
 /// Certify a geometry theorem by **linear elimination** instead of by Gröbner
 /// search, keeping the certificate in the original generators.
 ///
@@ -942,6 +975,71 @@ pub fn certify_by_linear_elimination(
     problem: &GeometryProblem,
     handover: Option<Limits>,
 ) -> ProofOutcome {
+    certify_by_linear_elimination_scoped(problem, handover, BlockScope::PerConclusion)
+}
+
+/// [`certify_by_linear_elimination`] against an explicit [`BlockScope`].
+///
+/// # When the widened search still declines
+///
+/// [`BlockScope::Joint`] was built for `tetrahedron-medians-concurrent`, and it
+/// does not reach it. The enumeration, measured 2026-09-05 in release and pinned
+/// by `the_widened_scope_reaches_blocks_the_narrow_one_cannot_see`:
+///
+/// - Every one of the eighteen nonsingular `3×3` subsystems over `{px, py, pz}`
+///   settles all three conclusions with a **zero residue**. Linear algebra
+///   answers this theorem outright, in milliseconds.
+/// - Not one of those eighteen determinants is licensed by the stated condition
+///   `abcd-not-coplanar`, and not one is even divisible by it.
+/// - Widening further does not help: the exhaustive licensing-aware search over
+///   *every* subset of the fifteen candidate unknowns and every row selection —
+///   400,000 subsystems, 0.76 s — returns **no** licensed block at all.
+///
+/// The reason is structural rather than a limit of the search. Writing the two
+/// median directions as `u` and `v`, the hypotheses are `u × (P − A) = 0` and
+/// `v × (P − B) = 0`, so the coefficient matrix of `P` is the two skew matrices
+/// `[u]ₓ` and `[v]ₓ` stacked. Each has rank two, and every `3×3` minor of the
+/// stack is therefore a **product** — one coordinate of `u` or `v` times one
+/// component of `u × v`. The second factor is geometry (the medians are not
+/// parallel, which for these medians is exactly non-coplanarity); the first is a
+/// coordinate artifact of the skew encoding, vanishing on a plane that has
+/// nothing to do with the theorem. A determinant carrying that spurious factor is
+/// not a product of the stated conditions, and inventing a condition to divide it
+/// out would certify a **weaker** theorem — which is precisely what
+/// [`GeometryDecline::UndividableMultiplier`] refuses to do.
+///
+/// So the per-conclusion scoping named in
+/// `docs/math-department/13-computer-algebra.md` is a real limitation of the
+/// detector, and it is **not** what keeps this theorem on the slow route.
+/// Removing it changes the medians' outcome not at all.
+///
+/// # What the widening *does* reach, and why adopting it was safe
+///
+/// The joint search finds a licensed block on two theorems the narrow one misses:
+/// `centroid-divides-medians` (over `{px, py}`) and
+/// `parallelogram-diagonals-bisect` (over `{cx, cy}`). Both were on the Gröbner
+/// route before, both have committed certificates that the fact ledger cites, and
+/// both now come off the linear route in about a millisecond.
+///
+/// The question that decided whether [`certify_any_route`] could adopt this was
+/// not "is the new identity valid" — the independent checker answers that — but
+/// "is it the **same** identity", because a different-but-valid cofactor set
+/// would rewrite two artifacts. It is the same one, and that was measured rather
+/// than hoped for: `the_widened_scope_reproduces_the_groebner_certificate_where_it_newly_reaches`
+/// asserts full [`ProofOutcome`] equality against [`certify`] on both, and
+/// re-running `emit_geometry_certificates` over the twelve corpus theorems that
+/// finish quickly reports **0 written, 12 unchanged**. Cramer's rule and
+/// Buchberger's algorithm arrive at the same cofactors here.
+///
+/// [`certify_by_linear_elimination`] itself keeps [`BlockScope::PerConclusion`]:
+/// it is public API with committed behaviour, and the widening belongs to the
+/// route *selector*, whose whole job is to reach a theorem by whatever means.
+#[must_use]
+pub fn certify_by_linear_elimination_scoped(
+    problem: &GeometryProblem,
+    handover: Option<Limits>,
+    scope: BlockScope,
+) -> ProofOutcome {
     let count = problem.nondegeneracy.len();
     if count > 16 {
         return ProofOutcome::Declined(GeometryDecline::TooManyConditions);
@@ -961,6 +1059,14 @@ pub fn certify_by_linear_elimination(
         .map(|hypothesis| hypothesis.poly.clone())
         .collect();
 
+    // The theorem's conclusions, which `BlockScope::Joint` scopes its candidate
+    // unknowns to. Built once: they do not vary with the condition subset.
+    let targets: Vec<MvPoly> = problem
+        .conclusions
+        .iter()
+        .map(|conclusion| conclusion.poly.clone())
+        .collect();
+
     let mut last_failure = ProofOutcome::Declined(GeometryDecline::UndividableMultiplier);
 
     for subset in &subsets {
@@ -975,6 +1081,10 @@ pub fn certify_by_linear_elimination(
             .iter()
             .map(|&index| problem.nondegeneracy[index].poly.clone())
             .collect();
+        let plan = BlockPlan {
+            scope,
+            targets: &targets,
+        };
         for conclusion in &problem.conclusions {
             match linear_cofactors(
                 &hypotheses,
@@ -983,6 +1093,7 @@ pub fn certify_by_linear_elimination(
                 &conditions,
                 conclusion,
                 handover,
+                &plan,
             ) {
                 Ok(cofactors) => cofactor_sets.push(cofactors),
                 Err(outcome) => {
@@ -1061,12 +1172,43 @@ pub fn certify_by_linear_elimination(
 /// and friends — on the identity already committed for them, rather than on a
 /// second one this route happened to find. `emit_geometry_certificates` reports
 /// **8 unchanged** across the switch.
+///
+/// # Why the block scope here is [`BlockScope::Joint`]
+///
+/// Added 2026-09-05. The linear pass looks for its unknowns across **all** of a
+/// theorem's conclusions rather than one at a time, and keeps searching past a
+/// determinant it cannot divide out instead of stopping at the first nonsingular
+/// subsystem. That reaches `centroid-divides-medians` and
+/// `parallelogram-diagonals-bisect`, which were on the Gröbner route, and moves
+/// them to about a millisecond.
+///
+/// It disturbs nothing, by the same measurement the paragraphs above use rather
+/// than by a different argument: the certificate the widened route finds on both
+/// is **identical** to the one Buchberger's algorithm finds — asserted as full
+/// [`ProofOutcome`] equality by
+/// `the_widened_scope_reproduces_the_groebner_certificate_where_it_newly_reaches`
+/// and confirmed by `emit_geometry_certificates` reporting *0 written, 12
+/// unchanged* over the corpus theorems that finish quickly. What it does not
+/// reach is `tetrahedron-medians-concurrent`; that is a fact about the theorem
+/// rather than about the scope, and it is measured in
+/// [`certify_by_linear_elimination_scoped`]'s docs.
 #[must_use]
 pub fn certify_any_route(problem: &GeometryProblem, limits: Limits) -> ProofOutcome {
-    match certify_by_linear_elimination(problem, Some(limits)) {
+    match certify_by_linear_elimination_scoped(problem, Some(limits), BlockScope::Joint) {
         certified @ ProofOutcome::Certified(_) => certified,
         _ => certify(problem, limits),
     }
+}
+
+/// Which blocks `linear_cofactors` is allowed to look for: the scope, and the
+/// conclusions [`BlockScope::Joint`] scopes the candidate unknowns to.
+///
+/// One struct rather than two arguments because the two are meaningless apart —
+/// `targets` is read only under [`BlockScope::Joint`] — and because the caller
+/// builds it once for a whole theorem.
+struct BlockPlan<'a> {
+    scope: BlockScope,
+    targets: &'a [MvPoly],
 }
 
 /// The cofactor vector for one conclusion under one condition subset, or the
@@ -1078,12 +1220,27 @@ fn linear_cofactors(
     conditions: &[MvPoly],
     conclusion: &Constraint,
     handover: Option<Limits>,
+    plan: &BlockPlan<'_>,
 ) -> Result<Vec<MvPoly>, ProofOutcome> {
+    let (scope, targets) = (plan.scope, plan.targets);
     let overflow = || ProofOutcome::Declined(GeometryDecline::Reduction(DeclineReason::Overflow));
-    let blocks = licensed_blocks(
-        detect_linear_blocks(hypotheses, &conclusion.poly),
-        conditions,
-    );
+    let blocks = match scope {
+        BlockScope::PerConclusion => licensed_blocks(
+            detect_linear_blocks(hypotheses, &conclusion.poly),
+            conditions,
+        ),
+        // The filter is inside the search here, so everything it returns is
+        // already licensed and `licensed_blocks` would be a no-op.
+        BlockScope::Joint => {
+            let accept = |determinant: &MvPoly| factors_into(determinant, conditions);
+            let search = BlockSearch {
+                choices: JOINT_CHOICES,
+                examined: JOINT_EXAMINED,
+                accept: &accept,
+            };
+            detect_linear_blocks_where(hypotheses, targets, &search)
+        }
+    };
     let Some(elimination) = eliminate_blocks(hypotheses, &conclusion.poly, blocks) else {
         return Err(overflow());
     };
@@ -1143,6 +1300,20 @@ fn linear_cofactors(
         )),
     }
 }
+
+/// The subset ceiling [`BlockScope::Joint`]'s search runs under.
+///
+/// The two ceilings are what keep an exhaustive search bounded rather than
+/// merely slow: the number of square subsystems is binomial in the candidate
+/// count, and `tetrahedron-medians-concurrent` — fifteen candidates over six
+/// rows, the widest instance in the corpus — examines about 54,000 of them in
+/// 0.76 s in release. The budget is set well above that and well below anything
+/// that would stall a suite, and it is a **budget**, so a search that hits it
+/// returns fewer blocks rather than wrong ones.
+const JOINT_CHOICES: usize = 20_000;
+
+/// See [`JOINT_CHOICES`].
+const JOINT_EXAMINED: usize = 400_000;
 
 /// Hand whatever linear algebra could not remove to a general ideal-membership
 /// route, and fold the cofactors it returns into `cofactors`.
@@ -1558,11 +1729,13 @@ fn verify_witnesses(
 #[cfg(test)]
 mod tests {
     use super::{
-        Condition, Constraint, DegenerateWitness, GenericWitness, GeometryCertificate,
-        GeometryDecline, GeometryProblem, ProofOutcome, Pt, certify, certify_any_route,
-        certify_by_linear_elimination, collinear, detect_linear_blocks, factors_into,
-        geometry_limits, licensed_blocks, midpoint, parallel, perpendicular, same_point,
+        BlockScope, Condition, Constraint, DegenerateWitness, GenericWitness, GeometryCertificate,
+        GeometryDecline, GeometryProblem, JOINT_CHOICES, JOINT_EXAMINED, ProofOutcome, Pt, certify,
+        certify_any_route, certify_by_linear_elimination, certify_by_linear_elimination_scoped,
+        collinear, detect_linear_blocks, factors_into, geometry_limits, licensed_blocks, midpoint,
+        parallel, perpendicular, same_point,
     };
+    use crate::groebner_cert::Limits;
     use crate::mvpoly::MvPoly;
     use axeyum_ir::Rational;
     use std::collections::BTreeMap;
@@ -2248,53 +2421,87 @@ mod tests {
         );
     }
 
+    /// The per-entry wall-clock budget the corpus walk below allows.
+    ///
+    /// Generous on purpose. It is not a performance assertion — it is the line
+    /// between "a unit test" and "a hang", and the entries it excludes are
+    /// excluded by their *declared* [`crate::geometry_corpus::SearchCost`], not
+    /// by this number. Its only job at run time is to catch an entry whose
+    /// declaration has gone stale, and for that an order of magnitude of slack
+    /// beats a tight bound that flakes when four lanes share the box.
+    const CORPUS_WALK_BUDGET_MILLIS: u64 = 15_000;
+
+    /// Run both routes on `problem`, or give up after `budget`.
+    ///
+    /// The work happens on a spawned thread so the deadline **fires** rather than
+    /// merely being noticed afterwards: an entry whose declared cost is wrong by
+    /// two orders of magnitude fails this suite in seconds with its own id, which
+    /// is the whole point of the exercise (`docs/math-department/13-computer-algebra.md`,
+    /// the 2026-09-05 hang row).
+    ///
+    /// Two things about the abandoned thread, because "a timeout on a detached
+    /// thread does not bound resources" is a real hazard in this repository and
+    /// deserves an answer rather than a shrug. First, the work it is doing is
+    /// bounded on every axis by [`geometry_limits`] — reduction steps, S-pair
+    /// iterations, basis size and polynomial width are all ceilings, so it
+    /// terminates and its memory is bounded by those ceilings, not by the clock.
+    /// Second, the test harness exits the process when the last test finishes,
+    /// which reaps it. What it does cost is one core until it finishes, which is
+    /// why this route is taken only when a declaration is *already* wrong.
+    fn both_routes_within(
+        problem: &GeometryProblem,
+        budget: std::time::Duration,
+    ) -> Option<(ProofOutcome, ProofOutcome)> {
+        let (sender, receiver) = std::sync::mpsc::channel();
+        let owned = problem.clone();
+        std::thread::spawn(move || {
+            let combined = certify_any_route(&owned, geometry_limits());
+            let direct = certify(&owned, geometry_limits());
+            // The receiver is gone on a timeout; that is expected, not an error.
+            let _ = sender.send((combined, direct));
+        });
+        receiver.recv_timeout(budget).ok()
+    }
+
     /// `certify_any_route` must not disturb what the Gröbner route already
     /// proves. This is the assertion behind "7 unchanged, 1 written".
+    ///
+    /// # The skip list is derived, not written
+    ///
+    /// Which entries this walk can afford comes from
+    /// [`crate::geometry_corpus::corpus_entries`], where each theorem carries its
+    /// own measured [`crate::geometry_corpus::SearchCost`]. The previous form of
+    /// this test carried a literal `[&str; 5]` of ids instead, and its own
+    /// comment predicted the failure mode that then happened twice: an expensive
+    /// theorem added to the corpus and not added to the list makes this test
+    /// **hang**, and a hang reads like a slow machine rather than a defect.
+    ///
+    /// Inverting the default is what actually fixes that. An entry that declares
+    /// nothing is [`crate::geometry_corpus::SearchCost::Unmeasured`], is walked,
+    /// and is caught by [`both_routes_within`]'s deadline *with its id in the
+    /// message*. Skipping now requires a declared measurement a reader can check.
     #[test]
     fn the_route_selector_reproduces_the_groebner_certificate_exactly() {
-        // Theorems the Gröbner route cannot be *run* on here. `euler-line` and
-        // `pappus-hexagon` do not return on it inside any budget anyone waits for
-        // — that is why they exist on the linear route at all — and the rhombus
-        // returns but takes 21 s in release, which is not a unit test.
-        //
-        // The hazard this list carries is worth naming: a new divergent theorem
-        // added to the corpus and *not* added here makes this test hang rather
-        // than fail, and a hang reads like a slow machine. The count assertion
-        // below is derived from the corpus so the list cannot silently shrink,
-        // but nothing can make "does not return" cheap to probe.
-        const UNREACHED_BY_BUCHBERGER: [&str; 5] = [
-            "euler-line",
-            "rhombus-diagonals-perpendicular",
-            "pappus-hexagon",
-            // `simson-line` joined the corpus on 2026-08-15 and walked straight
-            // into the hazard the paragraph above names. Fourteen coordinates and
-            // three Rabinowitsch generators: the reduction is bounded by
-            // `geometry_limits` so it does terminate, but it had not returned
-            // after 90 s in release when the run was killed, which is not a unit
-            // test. Leaving it off this list did not FAIL the test, it stalled
-            // it — and a stall reads like a slow machine rather than a defect,
-            // which is exactly what the warning above predicted and exactly how
-            // it presented.
-            "simson-line",
-            // `tetrahedron-medians-concurrent` joined the corpus on 2026-09-05
-            // from `geometry_beyond` and did exactly what the paragraph above
-            // predicts: the debug crate sweep sat in this test for an hour with
-            // one core spinning and no failure. Its search costs 769 s in
-            // release on the certifier's route (the linear-block detector is
-            // scoped per conclusion and each per-axis conclusion sees one of
-            // the three coordinates); the theorem is re-checked from its
-            // committed artifact by `geometry_certificate_artifacts` instead.
-            "tetrahedron-medians-concurrent",
-        ];
-        let corpus = crate::geometry_corpus::corpus();
-        let expected = corpus.len() - UNREACHED_BY_BUCHBERGER.len();
+        let budget = std::time::Duration::from_millis(CORPUS_WALK_BUDGET_MILLIS);
+        let entries = crate::geometry_corpus::corpus_entries();
+        let expected = entries
+            .iter()
+            .filter(|entry| entry.search_cost.within(CORPUS_WALK_BUDGET_MILLIS))
+            .count();
         let mut compared = 0usize;
-        for problem in corpus {
-            if UNREACHED_BY_BUCHBERGER.contains(&problem.id.as_str()) {
+        for entry in entries {
+            if !entry.search_cost.within(CORPUS_WALK_BUDGET_MILLIS) {
                 continue;
             }
-            let combined = certify_any_route(&problem, geometry_limits());
-            let direct = certify(&problem, geometry_limits());
+            let problem = entry.problem;
+            let Some((combined, direct)) = both_routes_within(&problem, budget) else {
+                panic!(
+                    "{}: declared {:?} but did not finish both routes within {} ms. Either the \
+                     entry's `SearchCost` in `geometry_corpus::corpus_entries` is wrong, or a \
+                     change made this theorem much more expensive.",
+                    problem.id, entry.search_cost, CORPUS_WALK_BUDGET_MILLIS
+                );
+            };
             assert_eq!(
                 combined, direct,
                 "{}: the route selector changed an existing certificate",
@@ -2307,5 +2514,302 @@ mod tests {
             "every corpus theorem the Gröbner route reaches must be compared"
         );
         assert!(compared >= 5, "compared only {compared} theorems");
+    }
+
+    /// An entry is skipped only on a **declared** measurement.
+    ///
+    /// The guard that keeps the inversion above honest. If
+    /// [`crate::geometry_corpus::SearchCost::Unmeasured`] ever started answering
+    /// "skip me", every future corpus addition would silently leave the walk and
+    /// this suite would go back to measuring the maintainer's memory. It also
+    /// pins that the walk really does exclude somebody: a filter that excludes
+    /// nothing is a filter nobody would notice breaking.
+    #[test]
+    fn only_a_declared_cost_excuses_an_entry_from_the_corpus_walk() {
+        use crate::geometry_corpus::SearchCost;
+
+        assert!(
+            SearchCost::Unmeasured.within(0),
+            "an undeclared entry must be walked, whatever the budget"
+        );
+        assert!(SearchCost::default().within(0), "the default is Unmeasured");
+        assert!(!SearchCost::Unreturned.within(u64::MAX));
+        assert!(SearchCost::Measured(10).within(10));
+        assert!(!SearchCost::Measured(11).within(10));
+
+        let entries = crate::geometry_corpus::corpus_entries();
+        let skipped: Vec<&str> = entries
+            .iter()
+            .filter(|entry| !entry.search_cost.within(CORPUS_WALK_BUDGET_MILLIS))
+            .map(|entry| entry.problem.id.as_str())
+            .collect();
+        assert!(
+            !skipped.is_empty(),
+            "no entry is excluded, so the exclusion path is untested"
+        );
+        for entry in &entries {
+            if entry.search_cost == SearchCost::Unmeasured {
+                assert!(
+                    entry.search_cost.within(CORPUS_WALK_BUDGET_MILLIS),
+                    "{}: an unmeasured entry was excluded",
+                    entry.problem.id
+                );
+            }
+        }
+    }
+
+    /// The theorems whose route [`BlockScope::Joint`] changes, and the ones it
+    /// does not.
+    ///
+    /// Widening the detector's scope is only interesting if it *reaches*
+    /// something, and only safe if [`certify_any_route`] keeps away from it.
+    /// Both halves are asserted here, on named theorems, so that removing the
+    /// widening kills this test and quietly enabling it kills the next one.
+    ///
+    /// Measured 2026-09-05, release, on a host at load 18 (ADVISORY): the joint
+    /// search costs 1.2–1.8 ms on these two, against 0.1 ms for the narrow one
+    /// that declines.
+    #[test]
+    fn the_widened_scope_reaches_blocks_the_narrow_one_cannot_see() {
+        for id in ["centroid-divides-medians", "parallelogram-diagonals-bisect"] {
+            let problem = crate::geometry_corpus::corpus()
+                .into_iter()
+                .find(|problem| problem.id == id)
+                .expect("a corpus theorem");
+            let narrow = certify_by_linear_elimination(&problem, Some(geometry_limits()));
+            assert!(
+                !matches!(narrow, ProofOutcome::Certified(_)),
+                "{id}: the per-conclusion scope was expected to decline, got {narrow:?}"
+            );
+            let joint = certify_by_linear_elimination_scoped(
+                &problem,
+                Some(geometry_limits()),
+                BlockScope::Joint,
+            );
+            let ProofOutcome::Certified(certificate) = joint else {
+                panic!("{id}: the joint scope did not certify: {joint:?}");
+            };
+            // Reach is worth nothing unless the independent checker agrees, and
+            // this route produces a *different* identity from the committed one,
+            // so the check is the only thing that makes the claim.
+            identity_recombines(&certificate);
+            assert!(
+                crate::geometry_check::check_certificate(
+                    &certificate,
+                    &crate::geometry_check::CheckOptions::default(),
+                )
+                .is_verified(),
+                "{id}: the joint route's certificate did not check"
+            );
+        }
+    }
+
+    /// The widened route produces the **same** certificate the Gröbner route
+    /// does, on the two theorems it newly reaches.
+    ///
+    /// This is the assertion that let [`certify_any_route`] adopt
+    /// [`BlockScope::Joint`] at all. `centroid-divides-medians` and
+    /// `parallelogram-diagonals-bisect` have committed artifacts that the fact
+    /// ledger cites; a different-but-valid cofactor set would have rewritten
+    /// both. Full [`ProofOutcome`] equality — every cofactor, every generator,
+    /// every witness — is the only thing that makes "no committed evidence
+    /// changed" a fact rather than a hope, and `emit_geometry_certificates`
+    /// agreed independently with *0 written, 12 unchanged*.
+    ///
+    /// If a future change to either route breaks the agreement, this fails here
+    /// rather than silently rewriting an artifact the next time somebody
+    /// regenerates.
+    #[test]
+    fn the_widened_scope_reproduces_the_groebner_certificate_where_it_newly_reaches() {
+        for id in ["centroid-divides-medians", "parallelogram-diagonals-bisect"] {
+            let problem = crate::geometry_corpus::corpus()
+                .into_iter()
+                .find(|problem| problem.id == id)
+                .expect("a corpus theorem");
+            let joint = certify_by_linear_elimination_scoped(
+                &problem,
+                Some(geometry_limits()),
+                BlockScope::Joint,
+            );
+            assert!(
+                matches!(joint, ProofOutcome::Certified(_)),
+                "{id}: the joint scope stopped reaching this theorem"
+            );
+            assert_eq!(
+                joint,
+                certify(&problem, geometry_limits()),
+                "{id}: the widened route now emits a different identity than the Gröbner route, \
+                 so the committed artifact would be rewritten"
+            );
+            assert_eq!(
+                certify_any_route(&problem, geometry_limits()),
+                certify(&problem, geometry_limits()),
+                "{id}: the shipped route left the committed certificate"
+            );
+        }
+    }
+
+    /// The shipped route reaches the two newly-reached theorems **without**
+    /// Buchberger's algorithm.
+    ///
+    /// Written because the obvious assertion cannot fail. The widened route and
+    /// the Gröbner route return the identical certificate on these two, so
+    /// comparing them says nothing about which one ran — and a check that cannot
+    /// fail is worse than no check at all.
+    ///
+    /// Starving the general route is the discriminator that has no clock in it.
+    /// Under a budget of one reduction step [`certify`] cannot settle either
+    /// theorem, so a [`certify_any_route`] that still certifies did the work by
+    /// linear algebra. Put the route selector back on
+    /// [`BlockScope::PerConclusion`] and this dies: the linear pass declines,
+    /// the fall-through hits the starved Gröbner route, and nothing is certified.
+    #[test]
+    fn the_shipped_route_certifies_the_newly_reached_theorems_without_buchberger() {
+        let starved = Limits {
+            reduction_steps: 1,
+            ..geometry_limits()
+        };
+        for id in ["centroid-divides-medians", "parallelogram-diagonals-bisect"] {
+            let problem = crate::geometry_corpus::corpus()
+                .into_iter()
+                .find(|problem| problem.id == id)
+                .expect("a corpus theorem");
+            assert!(
+                !matches!(certify(&problem, starved), ProofOutcome::Certified(_)),
+                "{id}: the negative control is vacuous -- one reduction step settled the theorem"
+            );
+            assert!(
+                matches!(
+                    certify_any_route(&problem, starved),
+                    ProofOutcome::Certified(_)
+                ),
+                "{id}: the route selector needed Buchberger, so it is not on the widened scope"
+            );
+        }
+    }
+
+    /// Why widening the scope does **not** rescue the tetrahedron medians.
+    ///
+    /// `docs/math-department/13-computer-algebra.md` records the 769 s general
+    /// search as caused by the detector being scoped per conclusion. That is a
+    /// true statement about the detector and a false diagnosis of this theorem,
+    /// and the difference is worth a test rather than a paragraph.
+    ///
+    /// What is asserted, in the order the argument runs:
+    ///
+    /// 1. Linear algebra settles the theorem outright. Every nonsingular `3×3`
+    ///    subsystem over `{px, py, pz}` eliminates the point with a **zero**
+    ///    residue, in microseconds.
+    /// 2. Not one of those determinants is licensed by the stated condition
+    ///    `abcd-not-coplanar`, so not one of them can be divided back out.
+    /// 3. Nor does anything else in the problem help: the exhaustive
+    ///    licensing-aware search over every subset of the candidate unknowns
+    ///    returns **no** block at all.
+    ///
+    /// The structural reason is in
+    /// [`certify_by_linear_elimination_scoped`]'s docs: the coefficient matrix
+    /// of `P` is two rank-two skew matrices stacked, so every `3×3` minor
+    /// carries a spurious coordinate factor alongside the geometric one.
+    #[test]
+    fn the_widened_scope_still_cannot_license_a_block_for_the_tetrahedron_medians() {
+        use crate::linear_elim::{
+            BlockSearch, LinearBlock, detect_linear_blocks, eliminate_blocks,
+        };
+
+        let problem = crate::geometry_beyond::tetrahedron_medians_concurrent_problem();
+        let hypotheses: Vec<MvPoly> = problem
+            .hypotheses
+            .iter()
+            .map(|hypothesis| hypothesis.poly.clone())
+            .collect();
+        let conditions: Vec<MvPoly> = problem
+            .nondegeneracy
+            .iter()
+            .map(|condition| condition.poly.clone())
+            .collect();
+        assert_eq!(conditions.len(), 1, "the theorem states one condition");
+        let point = MvPoly::var("px")
+            .add(&MvPoly::var("py"))
+            .expect("sum")
+            .add(&MvPoly::var("pz"))
+            .expect("sum");
+
+        let mut nonsingular = 0usize;
+        for first in 0..hypotheses.len() {
+            for second in (first + 1)..hypotheses.len() {
+                for third in (second + 1)..hypotheses.len() {
+                    let rows = vec![first, second, third];
+                    let subsystem: Vec<MvPoly> =
+                        rows.iter().map(|&row| hypotheses[row].clone()).collect();
+                    // Restricting the generator list is how the determinant of
+                    // *these three rows* is obtained without reaching into the
+                    // detector's private helpers.
+                    let found = detect_linear_blocks(&subsystem, &point);
+                    let Some(block) = found.iter().find(|block| block.unknowns.len() == 3) else {
+                        continue;
+                    };
+                    nonsingular += 1;
+                    let block = LinearBlock {
+                        unknowns: block.unknowns.clone(),
+                        rows,
+                        determinant: block.determinant.clone(),
+                    };
+                    for conclusion in &problem.conclusions {
+                        let elimination =
+                            eliminate_blocks(&hypotheses, &conclusion.poly, vec![block.clone()])
+                                .expect("the elimination is exact");
+                        assert!(
+                            elimination.residue.is_zero(),
+                            "{}: linear algebra was expected to settle this outright",
+                            conclusion.id
+                        );
+                    }
+                    assert!(
+                        !factors_into(&block.determinant, &conditions),
+                        "a licensed 3x3 determinant exists after all: rows {:?}. The medians can \
+                         take the linear route, and `certify_any_route` should be told so.",
+                        block.rows
+                    );
+                }
+            }
+        }
+        assert_eq!(
+            nonsingular, 18,
+            "two of the twenty row triples are the components of one cross product and are \
+             singular; the other eighteen are not"
+        );
+
+        let targets: Vec<MvPoly> = problem
+            .conclusions
+            .iter()
+            .map(|conclusion| conclusion.poly.clone())
+            .collect();
+        let accept = |determinant: &MvPoly| factors_into(determinant, &conditions);
+        let exhaustive = crate::linear_elim::detect_linear_blocks_where(
+            &hypotheses,
+            &targets,
+            &BlockSearch {
+                choices: JOINT_CHOICES,
+                examined: JOINT_EXAMINED,
+                accept: &accept,
+            },
+        );
+        assert!(
+            exhaustive.is_empty(),
+            "the exhaustive licensing-aware search found {} block(s); the medians are reachable \
+             after all",
+            exhaustive.len()
+        );
+        assert!(
+            !matches!(
+                certify_by_linear_elimination_scoped(
+                    &problem,
+                    Some(geometry_limits()),
+                    BlockScope::Joint,
+                ),
+                ProofOutcome::Certified(_)
+            ),
+            "the joint scope certified the medians; the cost row and this test both need redoing"
+        );
     }
 }
