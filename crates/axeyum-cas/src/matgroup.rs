@@ -330,7 +330,11 @@ pub fn determinant_mod_p(matrix: &[Vec<i128>], p: i128) -> Option<i128> {
     let mut m: Vec<Vec<i128>> = matrix.to_vec();
     let mut det: i128 = 1;
     for col in 0..n {
-        let pivot_row = (col..n).find(|&r| m[r][col] != 0)?;
+        let Some(pivot_row) = (col..n).find(|&r| m[r][col] != 0) else {
+            // No nonzero entry left in this column: the matrix is singular,
+            // which is a valid answer (det = 0), not an invalid input.
+            return Some(0);
+        };
         if pivot_row != col {
             m.swap(pivot_row, col);
             det = reduce(-det, p);
@@ -388,7 +392,7 @@ fn enumerate_points(p: i128, n: usize, action: ActionKind) -> Option<Vec<Vec<i12
 /// Normalizes `v` (assumed nonzero) to the canonical representative of its
 /// line: scale so the first nonzero entry becomes `1`.
 fn normalize_projective(v: &[i128], p: i128) -> Option<Vec<i128>> {
-    let (idx, &entry) = v.iter().enumerate().find(|(_, &x)| x != 0)?;
+    let (idx, &entry) = v.iter().enumerate().find(|&(_, &x)| x != 0)?;
     let inv = mod_inverse(entry, p)?;
     let mut out: Vec<i128> = v.iter().map(|&x| reduce(x * inv, p)).collect();
     out[idx] = 1; // exact, avoids a rounding artifact from the modular multiply
@@ -1014,8 +1018,7 @@ pub fn order_of_element(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::permgroup_iso::{IsomorphismDecision, NonIsomorphismReason, isomorphism};
-    use crate::permgroup_sylow::distinguish;
+    use crate::permgroup::{IsomorphismDecision, NonIsomorphismReason, distinguish, isomorphism};
     use std::time::{Duration, Instant};
 
     fn assert_under_5s(start: Instant, label: &str) {
