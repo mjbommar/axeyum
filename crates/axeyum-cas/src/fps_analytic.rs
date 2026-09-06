@@ -112,11 +112,11 @@
 //!
 //! ## When the lower-bound label still appears
 //!
-//! Only above `MAX_RESULTANT_FACTOR_DEGREE`. The modulus polynomial has degree
-//! `2n²` in the factor's degree, and the Sturm chain that isolates its smallest
-//! positive root costs superlinearly in that; the cap is a **cost** policy, not
-//! a mathematical boundary. So `Φ₅` (degree 4) is now exactly 1 and `Φ₇`
-//! (degree 6) keeps the bound `1/2`, and the reason recorded is the degree.
+//! Only above `MAX_RESULTANT_FACTOR_DEGREE`, which is 6 and is a **cost**
+//! policy, not a mathematical boundary — see that constant for the measured
+//! table the number comes from. So `Φ₅` and `Φ₇` are now exactly 1 where wave
+//! two gave `1/2`, `Φ₁₁` keeps the bound `1/2`, and the reason recorded is the
+//! degree.
 //!
 //! The route also declines — never answers wrongly — when the determinant fails
 //! either self-check above, or when the reused factorizer cannot take the
@@ -192,14 +192,35 @@ const REFINEMENT_BITS: u32 = 96;
 
 /// The largest factor degree [`ModulusRoute::PairwiseResultant`] will attempt.
 ///
-/// The route's modulus polynomial has degree `2n²` in the factor's degree `n`,
-/// and the Sturm chain that isolates its smallest positive root costs
-/// superlinearly in that. At `n = 4` the polynomial has degree 32 before the
-/// square-free reduction and the whole radius lands well inside a second; at
-/// `n = 6` it is degree 72 and the chain dominates the crate's test sweep.
+/// A **cost** policy, not a mathematical boundary: the theorem holds at every
+/// degree. The modulus polynomial has degree at most `2n²` in the factor's
+/// degree `n` — at most `n(n+1)` after the square-free reduction, since
+/// `rᵢrⱼ = rⱼrᵢ` — and the Sturm chain that isolates its smallest positive root
+/// costs superlinearly in that.
+///
+/// Measured 2026-09-05 on this box under `--release` at load 16–21 (so
+/// **advisory**, and an upper bound if anything), producing *and* verifying
+/// `1/f` for one irreducible factor `f`:
+///
+/// | `deg f` | example | modulus poly degree | produce | verify |
+/// |---|---|---|---|---|
+/// | 3 | `1 − x − x³` | 12 | 14 ms | 2.4 ms |
+/// | 4 | `Φ₅` | 10 | 9.5 ms | 4.7 ms |
+/// | 5 | `x⁵ − x − 1` | 30 | 68 ms | 14 ms |
+/// | 6 | `Φ₇` | 14 | 74 ms | 38 ms |
+/// | 6 | `1 − x − x⁶` | 42 | 359 ms | 63 ms |
+/// | 7 | `x⁷ + x³ − 1` | 56 | 680 ms | 140 ms |
+///
+/// A debug build runs 12–15× slower on the same inputs, which is what decides
+/// the cap: at `n = 6` the worst case above is about 5 s in debug and at `n = 7`
+/// about 13 s. Six is therefore the last degree at which a single call stays
+/// inside a test budget. Cyclotomic factors are far cheaper than the generic
+/// case at the same degree because their pairwise products collapse — `Φ₇`'s
+/// 36 products leave a degree-7 square-free part.
+///
 /// Above the cap the factor keeps the [`ModulusRoute::ReciprocalCauchy`]
-/// lower-bound label, with that as the stated reason.
-const MAX_RESULTANT_FACTOR_DEGREE: usize = 4;
+/// lower-bound label, with the degree as the stated reason.
+const MAX_RESULTANT_FACTOR_DEGREE: usize = 6;
 
 /// The largest relative error [`CoefficientAsymptotics::verify`] will accept at
 /// the coarsest sample. A certificate stating a looser tolerance is refused, so
@@ -2479,14 +2500,32 @@ mod tests {
     }
 
     #[test]
-    fn radius_of_the_seventh_cyclotomic_denominator_stays_a_lower_bound_above_the_degree_cap() {
-        // Φ₇ = 1 + x + … + x⁶ is irreducible of degree 6, and 6 is above
-        // MAX_RESULTANT_FACTOR_DEGREE, so the new route declines by policy and
-        // the reciprocal Cauchy bound 1/2 remains — with the degree, not the
-        // mathematics, as the stated reason. This is now the ONLY way a factor
-        // reaches the lower-bound label.
+    fn radius_of_the_seventh_cyclotomic_denominator_is_exactly_one_at_degree_six() {
+        // Φ₇ = 1 + x + … + x⁶ is irreducible of degree 6 with all six roots on
+        // the unit circle — the largest degree the cost cap admits, and the case
+        // that shows the route is not a quartic trick. Its 36 pairwise products
+        // collapse to seven, so the modulus polynomial is t¹⁴ − 1.
         let certificate =
             radius_of_convergence(&rats(&[1]), &rats(&[1, 1, 1, 1, 1, 1, 1])).unwrap();
+        assert_eq!(certificate.factors.len(), 1);
+        assert_eq!(
+            certificate.factors[0].route,
+            ModulusRoute::PairwiseResultant
+        );
+        assert_eq!(certificate.factors[0].modulus_polynomial.len() - 1, 14);
+        assert_eq!(certificate.radius, RadiusOfConvergence::Exact(r(1)));
+        assert_eq!(certificate.verify(), Ok(()));
+    }
+
+    #[test]
+    fn radius_of_the_eleventh_cyclotomic_denominator_stays_a_lower_bound_above_the_degree_cap() {
+        // Φ₁₁ = 1 + x + … + x¹⁰ is irreducible of degree 10, above
+        // MAX_RESULTANT_FACTOR_DEGREE, so the new route declines by COST policy
+        // and the reciprocal Cauchy bound 1/2 remains. The truth is again 1, and
+        // the certificate says only "at least 1/2" — the degree is the whole
+        // reason, and this is now the ONLY way a factor reaches this label.
+        let certificate =
+            radius_of_convergence(&rats(&[1]), &rats(&[1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1])).unwrap();
         assert_eq!(certificate.factors.len(), 1);
         assert_eq!(certificate.factors[0].route, ModulusRoute::ReciprocalCauchy);
         assert_eq!(certificate.radius, RadiusOfConvergence::LowerBound(q(1, 2)));
@@ -2575,8 +2614,9 @@ mod tests {
 
     #[test]
     fn forged_pairwise_route_above_the_degree_cap_is_refused() {
+        // Φ₁₁ has degree 10; the route is refused on the cap, not on the shape.
         let mut certificate =
-            radius_of_convergence(&rats(&[1]), &rats(&[1, 1, 1, 1, 1, 1, 1])).unwrap();
+            radius_of_convergence(&rats(&[1]), &rats(&[1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1])).unwrap();
         certificate.factors[0].route = ModulusRoute::PairwiseResultant;
         assert_eq!(
             certificate.verify(),
@@ -2827,7 +2867,7 @@ mod tests {
     #[test]
     fn forged_global_lower_bound_above_a_factor_bound_is_refused() {
         let mut certificate =
-            radius_of_convergence(&rats(&[1]), &rats(&[1, 1, 1, 1, 1, 1, 1])).unwrap();
+            radius_of_convergence(&rats(&[1]), &rats(&[1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1])).unwrap();
         certificate.radius = RadiusOfConvergence::LowerBound(r(3));
         assert_eq!(
             certificate.verify(),
@@ -2838,7 +2878,7 @@ mod tests {
     #[test]
     fn forged_exact_radius_over_a_bound_only_factor_is_refused() {
         let mut certificate =
-            radius_of_convergence(&rats(&[1]), &rats(&[1, 1, 1, 1, 1, 1, 1])).unwrap();
+            radius_of_convergence(&rats(&[1]), &rats(&[1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1])).unwrap();
         certificate.radius = RadiusOfConvergence::Exact(r(1));
         assert_eq!(
             certificate.verify(),
@@ -2957,11 +2997,12 @@ mod tests {
 
     #[test]
     fn asymptotics_decline_when_the_radius_is_only_bounded() {
-        // Φ₇ is above the resultant route's degree cap, so its radius is still
-        // a bound and the asymptotics stop before they sample anything. Φ₅ used
-        // to land here; it now reaches an exact radius and stops one guard later.
+        // Φ₁₁ is above the resultant route's degree cap, so its radius is
+        // still a bound and the asymptotics stop before they sample anything.
+        // Φ₅ used to land here; it now reaches an exact radius and stops one
+        // guard later.
         assert_eq!(
-            coefficient_asymptotics(&rats(&[1]), &rats(&[1, 1, 1, 1, 1, 1, 1]), 8),
+            coefficient_asymptotics(&rats(&[1]), &rats(&[1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]), 8),
             Err(AnalyticDecline::RadiusNotExact)
         );
     }
