@@ -193,7 +193,7 @@ declares no public items), `qe_dnf` 4, `qe_bivariate` 4, plus 4 more tagged
 `probability` for the symbolic-lambda Poisson claims (item 9 wave two: total
 mass, mean, and variance all now certify with a SYMBOLIC rate).
 
-Tiers: **109 `core`**, **10 `decline_expected`** (≥ 10 `decline_expected`
+Tiers: **112 `core`**, **11 `decline_expected`** (≥ 10 `decline_expected`
 required — each entry cites a classical fact, a source-read capability
 boundary in `axeyum-cas`, or this crate's own progress-log finding; see
 each entry's `justification` in `corpus.json`). `known_defect` is empty:

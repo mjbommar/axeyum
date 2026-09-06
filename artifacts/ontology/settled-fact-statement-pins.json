@@ -4,7 +4,7 @@
   "note": "Statement identity for every settled fact (S1 of the trusted-library safety roadmap, ADR-0763). Per fact: SHA-256 of formal.statement (the canonical kernel rendering for native lean4 rows), SHA-256 of the top-level reader-facing statement, and the kernel_theorem it names. A settled fact's statement is what the ledger CLAIMS; changing any of the three silently turns 'we proved X' into 'we proved something we then labelled X'. Changes require an amendment row naming both digests and a reason; superseded digests are preserved in each pin's history. `coverage_floor` is a ratchet the gate re-derives rather than trusts: slack is itself a violation, so a loosened floor is self-reverting. Written by `scripts/check-settled-fact-statements.py --write`; do not hand-edit.",
   "coverage_floor": {
     "max_unpinned_settled": 0,
-    "min_identity_bound": 2417,
+    "min_identity_bound": 2420,
     "max_header_exempt": 0
   },
   "amendments": [
@@ -22551,6 +22551,13 @@
       "kernel_theorem": "Rat.expectation_smul"
     },
     {
+      "fact_id": "F:rat-expectation-sq-sumvars-mul-sq",
+      "language": "lean4-surface",
+      "statement_sha256": "3dc3018b39e08274d76378f7b12a12cf0cff7692f0c6115baaba6264ff96ebb2",
+      "prose_sha256": "10fba05a368805640d2304a8ff9db827001387cc8eb49808bf2052cd7795b697",
+      "kernel_theorem": "Rat.expectation_sq_sumVars_mul_sq"
+    },
+    {
       "fact_id": "F:rat-expectation-sumvars",
       "language": "lean4",
       "statement_sha256": "9636ecee11f979ecb38de4f432fd87b6677898d701b7bcd09cdc43de46c3f1c7",
@@ -22584,6 +22591,20 @@
       "statement_sha256": "e927cdd8147b3da3e6173d7d9109153c8305645b83494bc97a2da1e9fbc0e289",
       "prose_sha256": "89549f8f7c6ce1780b468b77b34f8aa867d8c176681e262a3743ce0a7065429d",
       "kernel_theorem": "Rat.fourth_moment_inequality"
+    },
+    {
+      "fact_id": "F:rat-fourth-moment-sumvars-le",
+      "language": "lean4-surface",
+      "statement_sha256": "6b81b57f92433c2e76f0a3119a6890593199014e510b3af1b1a48cf689f13ded",
+      "prose_sha256": "03217a4ab90d74e609f4bebbc09730ba1eb2800bb76ef2728ce201ed7e5c7b2c",
+      "kernel_theorem": "Rat.fourth_moment_sumVars_le"
+    },
+    {
+      "fact_id": "F:rat-fourth-moment-tail-sumvars",
+      "language": "lean4-surface",
+      "statement_sha256": "5feff26fae833655dad39060d6835e5da9ce419a89deab43131f3450f4be2b20",
+      "prose_sha256": "f09e5e63a28478812c16c2044c1ed373383850b1e1c5baa8e42b989971435438",
+      "kernel_theorem": "Rat.fourth_moment_tailSumVars"
     },
     {
       "fact_id": "F:rat-gcd-one-right",
