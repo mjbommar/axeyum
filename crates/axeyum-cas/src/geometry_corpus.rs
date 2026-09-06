@@ -188,6 +188,16 @@ impl CorpusEntry {
 ///   third was killed at 90 s in release on 2026-08-15.
 ///
 /// Everything else is [`SearchCost::Unmeasured`] and gets walked.
+///
+/// # This measures the *general* route, and only that
+///
+/// [`crate::geometry_certify::certify_any_route`] reaches
+/// `tetrahedron-medians-concurrent` in seconds since 2026-09-05, through the
+/// combination route ([`crate::geometry_certify::certify_by_combined_elimination`]).
+/// The 769 s figure below is unchanged because it is what
+/// [`crate::geometry_certify::certify`] costs, and that is the number the walk
+/// needs: the walk runs **both** routes and compares them, so its budget is set
+/// by the slower one.
 #[must_use]
 pub fn corpus_entries() -> Vec<CorpusEntry> {
     vec![

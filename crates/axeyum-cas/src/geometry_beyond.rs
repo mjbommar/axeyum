@@ -137,47 +137,103 @@
 //!   `2t` for the conic case) — no Gröbner search runs at all.
 //! - [`tetrahedron_medians_concurrent_problem`] (15 coordinate variables, 6
 //!   hypotheses, 3 conclusions, 1 non-degeneracy condition): **769.0 s**,
-//!   release — by far the most expensive reduction in this module, and the
-//!   reason its own `#[test]` carries `#[ignore]`.
+//!   release, on the general (Gröbner) route — by far the most expensive
+//!   reduction in this module, and the reason its own `#[test]` carried
+//!   `#[ignore]` until 2026-09-05. It no longer takes that route.
 //!
-//!   The diagnosis first recorded here — that
-//!   [`crate::geometry_certify::certify_any_route`]'s linear-block detector is
-//!   scoped per *conclusion*, so it cannot see `px`, `py` and `pz` together —
-//!   describes a real limitation of the detector and is **not** why this
-//!   theorem is slow. The scoping was removed on 2026-09-05
-//!   ([`crate::geometry_certify::BlockScope::Joint`]) and the medians did not
-//!   move. What actually blocks the linear route, measured and pinned by
-//!   `the_widened_scope_still_cannot_license_a_block_for_the_tetrahedron_medians`:
-//!   all eighteen nonsingular `3×3` subsystems over `{px, py, pz}` settle
-//!   every conclusion with a **zero residue** in microseconds, and not one of
-//!   their determinants is a product of the stated condition
-//!   `abcd-not-coplanar` — nor even divisible by it — so there is nothing to
-//!   divide the multiplier back out with. Writing the two median directions as
-//!   `u` and `v`, the hypotheses are `u × (P − A) = 0` and `v × (P − B) = 0`,
-//!   so the coefficient matrix of `P` is the rank-two skew matrices `[u]ₓ` and
-//!   `[v]ₓ` stacked, and every `3×3` minor of that stack is one coordinate of
-//!   `u` or `v` times one component of `u × v`. The second factor is the
-//!   geometry; the first is an artifact of the cross-product encoding, and a
-//!   certificate that inverted it would be proving a weaker theorem. An
-//!   exhaustive licensing-aware search over every subset of the fifteen
-//!   candidate unknowns (400,000 subsystems, 1.2 s release) finds no usable
-//!   block at all. A
-//!   shrunk `Limits` (`reduction_steps` 4,000 vs. the default 50,000) was
-//!   tried and *declined outright* rather than certifying faster, confirming
-//!   the instance could not be cheaply shrunk without changing the certifier
-//!   itself. The committed artifact is the source of truth thereafter — the
-//!   `geometry_certificate_artifacts` integration suite re-derives it from the
-//!   file in milliseconds, no search involved. An earlier, ultimately
-//!   abandoned *incidence-form* statement of this theorem was measured at
-//!   500+ s of sustained CPU under a **debug** `cargo test` before being
-//!   killed; the debug/release gap on this route is roughly consistent with
-//!   this crate's documented gap elsewhere
-//!   (`docs/contributor-guide/prelude-build-cost.md`'s "up to 32×" note is
-//!   about the Lean kernel specifically, but the same order of magnitude
-//!   showed up here: the location-form fix measured 922.68 s for the full
-//!   `--lib` suite in release vs. an earlier ~4,522 s debug run of the same
-//!   32 tests). Use `--release` for anything beyond a quick correctness check
-//!   on a Gröbner-search-backed theorem.
+//!   ## What blocked the linear route, and what unblocked it
+//!
+//!   All eighteen nonsingular `3×3` subsystems over `{px, py, pz}` settle every
+//!   conclusion with a **zero residue** in microseconds, and not one of their
+//!   determinants is a product of the stated condition `abcd-not-coplanar` —
+//!   nor even divisible by it — so there was nothing to divide the multiplier
+//!   back out with. Writing the two median directions as `u` and `v`, the
+//!   hypotheses are `u × (P − A) = 0` and `v × (P − B) = 0`, so the coefficient
+//!   matrix of `P` is the rank-two skew matrices `[u]ₓ` and `[v]ₓ` stacked, and
+//!   every `3×3` minor of that stack is one coordinate of `u` or `v` times one
+//!   component of `w = u × v`. The second factor is the geometry; the first is
+//!   an artifact of the cross-product encoding, and a certificate that inverted
+//!   it would be proving a weaker theorem. An exhaustive licensing-aware search
+//!   over every subset of the fifteen candidate unknowns (400,000 subsystems,
+//!   1.2 s release) finds no usable block at all — pinned by
+//!   `the_widened_scope_still_cannot_license_a_block_for_the_tetrahedron_medians`.
+//!
+//!   None of that is a limitation of the *search*, so no search fixes it. What
+//!   fixes it is that the eighteen identities can be **added**: a polynomial
+//!   combination of them is another identity, whose multiplier is any element
+//!   of the ideal the eighteen determinants generate.
+//!   [`crate::geometry_certify::combine_block_multipliers`] finds a licensed
+//!   element of that ideal in seven rounds, and the two lines of the argument
+//!   that make it work are vector algebra rather than search: writing
+//!   `b = B − A`, `s = (C−A) + (D−A)`, `d = D − A` and `Δ` for the
+//!   non-coplanarity determinant,
+//!
+//!   ```text
+//!   Δ = det[b, c, s]   linear in b, hence in the coordinates of u and v
+//!   Δ = d · w          linear in the components of w = u × v
+//!   ```
+//!
+//!   so `Δ` lies in the ideal of the artifact factors *twice over*, and
+//!   `Δ² = Δ·Δ` lies in the product ideal — which is exactly the ideal the
+//!   eighteen minors generate, because a minor is one coordinate times one
+//!   component. Six rounds pull one direction coordinate out at a time
+//!   (`αᵢ·w_x, αᵢ·w_y, αᵢ·w_z ⟶ αᵢ·Δ`, coefficients `d/…` from the second
+//!   identity) and the seventh combines those six into `Δ²` using the first.
+//!   `invert_multiplier` then divides `Δ²` back out through the Rabinowitsch
+//!   generator exactly as it already did for `euler-line`'s square, and what
+//!   comes out is an ordinary cofactor certificate:
+//!   [`crate::geometry_check::check_certificate`] re-derives it knowing nothing
+//!   about any of this, and does so in 1.7 s.
+//!
+//!   ## Cost, ADVISORY
+//!
+//!   Measured on this host, 2026-09-05, in the **debug** profile with several
+//!   other lanes building and testing concurrently — see
+//!   `docs/research/08-planning/frontier-ratchet-reference-frame.md` for why a
+//!   number taken under load is a reference frame and not a benchmark.
+//!   `certify_by_combined_elimination` on this theorem:
+//!
+//!   | build | grouping | whole route |
+//!   |---|---|---|
+//!   | first working version | 22.47 s | 24.35 s |
+//!   | factor basis instead of per-round GCDs | 10.70 s | — |
+//!   | basis grown only from new multipliers, artifacts divided lazily | 5.12 s | 7.42 s |
+//!
+//!   and the committed test — which also runs its negative control and the
+//!   independent checker — reports **8.76 s** under
+//!   `cargo test -p axeyum-cas --lib geometry -- --report-time`, against 75
+//!   passing tests whose next-slowest is a pre-existing 10.7 s enumeration and
+//!   whose median is under 10 ms.
+//!
+//!   Every figure is one wall-clock reading on a shared box; the *ratios* are
+//!   the content, and what they say is that the grouping was the route and the
+//!   algebra was never the problem. The 98 multivariate GCDs over twelve
+//!   variables the first version ran are one GCD now.
+//!
+//!   It is **over** the 5 s a debug unit test would like, and two things are
+//!   worth saying about what is left rather than leaving it as a number.
+//!   Memoising the round solve — six of the seven rounds ask what looks like the
+//!   identical question — was tried and measured at 7.46 s against 7.42 s, which
+//!   is load noise; the memo never hit, because a minor's sign makes the sixth
+//!   round's artifacts `−w_j` where the first round's are `+w_j`, so it was
+//!   removed rather than kept as an unfalsifiable improvement. Skipping a
+//!   polynomial division whose per-variable degrees already rule it out moved
+//!   the test from 9.65 s to 8.76 s. What remains was not localised: the honest
+//!   statement is that the route is two to three times the budget a unit test
+//!   wants and a hundred times cheaper than the 769 s it replaced.
+//!
+//!   A shrunk `Limits` (`reduction_steps` 4,000 vs. the default 50,000) was
+//!   tried on the *old* route and declined outright rather than certifying
+//!   faster; the new route certifies with `reduction_steps` set to **one**,
+//!   which is what its test asserts.
+//!
+//!   An earlier, ultimately abandoned *incidence-form* statement of this
+//!   theorem was measured at 500+ s of sustained CPU under a **debug**
+//!   `cargo test` before being killed; the debug/release gap on the Gröbner
+//!   route is large (the location-form fix measured 922.68 s for the full
+//!   `--lib` suite in release vs. an earlier ~4,522 s debug run of the same 32
+//!   tests). Use `--release` for anything beyond a quick correctness check on a
+//!   Gröbner-search-backed theorem.
 //!
 //! Only [`tetrahedron_medians_concurrent_problem`] approached
 //! [`crate::geometry_certify::geometry_limits`]'s ceilings on the route that
@@ -2670,34 +2726,57 @@ mod tests {
         );
     }
 
+    /// The tetrahedron medians, on the **linear** route.
+    ///
+    /// This test carried `#[ignore]` and a paragraph of measurement until the
+    /// combination route landed. The theorem fell to the general Gröbner search
+    /// — 769 s release, re-measured at 922.68 s under load — because no single
+    /// block determinant is licensed by `abcd-not-coplanar`, for the structural
+    /// reason
+    /// `the_widened_scope_still_cannot_license_a_block_for_the_tetrahedron_medians`
+    /// pins. [`crate::geometry_certify::certify_by_combined_elimination`] inverts
+    /// `Δ²` instead, by combining eighteen single-block identities; the
+    /// factorisation table is in
+    /// [`crate::geometry_certify::combine_block_multipliers`]'s docs.
+    ///
+    /// # Why the budget is starved
+    ///
+    /// Certifying under [`crate::geometry_certify::geometry_limits`] would pass
+    /// on the old route too and say nothing about which one ran. Under **one**
+    /// reduction step the general route cannot settle this theorem at all — the
+    /// first assertion is that negative control — so a `certify_any_route` that
+    /// still certifies did not get there through the problem's general
+    /// ideal-membership route. (The combination's own last round does reduce `Δ`
+    /// against six *linear* forms, under the route's own budget rather than the
+    /// caller's; that is an echelon form, not a search over the hypotheses.)
     #[test]
-    #[ignore = "measured 922.68s in release (--test-threads=1, this host, 2026-09-05): the \
-                theorem falls to the general (slow) Groebner route. The linear route CAN \
-                eliminate P outright -- every one of the eighteen nonsingular 3x3 subsystems \
-                over {px,py,pz} leaves a zero residue in microseconds -- but none of their \
-                determinants is licensed by the stated condition abcd-not-coplanar, so the \
-                multiplier cannot be divided back out and the route declines with \
-                UndividableMultiplier. This was first recorded as a per-CONCLUSION scoping \
-                limit of the block detector; that scoping is real, was removed on 2026-09-05 \
-                (geometry_certify::BlockScope::Joint), and moved this theorem not at all. See \
-                the module doc's Cost profile and \
-                the_widened_scope_still_cannot_license_a_block_for_the_tetrahedron_medians. \
-                A shrunk Limits was tried first \
-                (reduction_steps 4_000 vs the default 50_000) and DECLINED outright \
-                (Reduction(ReductionSteps)) rather than certifying faster, so the instance \
-                could not be cheaply shrunk without changing the certifier itself, which is out \
-                of this module's scope. The theorem IS certified: the committed artifact at \
-                artifacts/geometry-certificates/tetrahedron-medians-concurrent.json was produced \
-                by this same call under the full budget and is re-checked (cheaply, no search) \
-                by the `geometry_certificate_artifacts` integration suite on every run. Run this \
-                test explicitly with `--ignored` to re-derive it from scratch."]
     fn tetrahedron_medians_concurrent_certifies_and_checks() {
         let problem = tetrahedron_medians_concurrent_problem();
-        let outcome = certify_any_route(&problem, geometry_limits());
+        let starved = Limits {
+            reduction_steps: 1,
+            ..geometry_limits()
+        };
+        assert!(
+            !matches!(
+                crate::geometry_certify::certify(&problem, starved),
+                crate::geometry_certify::ProofOutcome::Certified(_)
+            ),
+            "the negative control is vacuous: one reduction step settled the theorem"
+        );
+        let outcome = certify_any_route(&problem, starved);
         let certificate = match outcome {
             crate::geometry_certify::ProofOutcome::Certified(certificate) => certificate,
             other => panic!("expected a certificate, got {other:?}"),
         };
+        assert_eq!(
+            certificate
+                .saturations
+                .iter()
+                .map(|saturation| saturation.condition_id.as_str())
+                .collect::<Vec<&str>>(),
+            vec!["abcd-not-coplanar"],
+            "the theorem is certified under exactly the condition it states"
+        );
         assert!(check_certificate(&certificate, &CheckOptions::default()).is_verified());
     }
 
@@ -2938,6 +3017,34 @@ mod tests {
                     conclusion.id
                 );
             }
+        }
+    }
+
+    /// Pascal and Desargues on the **combination** route: still out of reach,
+    /// and now with the reason that route gives rather than the reason the plain
+    /// one gave.
+    ///
+    /// The combination reaches theorems whose blocks all leave *zero* residue and
+    /// whose multipliers share cancellable artifact factors. Neither of these
+    /// clears that first bar — the elimination leaves a residue on the
+    /// collinearity conclusion, which is the same wall the widened block scope
+    /// hit — so the route declines before any grouping happens. That is a
+    /// statement about these two theorems and this route, not a claim that they
+    /// are unreachable.
+    #[test]
+    fn the_combination_route_does_not_reach_pascal_or_desargues() {
+        for problem in beyond_frontier() {
+            let outcome = crate::geometry_certify::certify_by_combined_elimination(
+                &problem,
+                Some(geometry_limits()),
+            );
+            assert!(
+                !matches!(outcome, crate::geometry_certify::ProofOutcome::Certified(_)),
+                "{}: the combination route certified a frontier theorem -- promote it to \
+                 `crate::geometry_corpus::corpus` with a committed artifact instead of \
+                 leaving it here. Outcome: {outcome:?}",
+                problem.id
+            );
         }
     }
 

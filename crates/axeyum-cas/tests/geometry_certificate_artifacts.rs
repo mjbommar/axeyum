@@ -190,6 +190,36 @@ fn a_cofactor_edited_by_one_is_rejected() {
     let _ = rejected(&certificate);
 }
 
+/// A **forged combination**, on the certificate a combination actually produced.
+///
+/// `tetrahedron-medians-concurrent` is the first artifact here whose cofactors
+/// are a weighted sum of eighteen elimination identities
+/// (`geometry_certify::combine_block_multipliers`). The failure mode that route
+/// can have and no other can is a wrong weight `cᵢ`: the result is still a
+/// perfectly good *combination*, of the wrong multiple of the theorem. Scaling
+/// one conclusion's whole cofactor vector is exactly that, and the checker must
+/// reject it for the identity, not for the shape.
+///
+/// The producer's own guards cannot stand in for this. They re-expand what the
+/// producer built; this re-expands what was written to disk, in a binary that
+/// shares no code with the producer.
+#[test]
+fn a_rescaled_combination_is_rejected() {
+    let (_, _, mut certificate) = documents()
+        .into_iter()
+        .find(|(_, _, certificate)| certificate.id == "tetrahedron-medians-concurrent")
+        .expect("the medians certificate is committed");
+    let two = MvPoly::constant(Rational::integer(2));
+    for cofactor in &mut certificate.conclusions[0].cofactors {
+        *cofactor = cofactor.mul(&two).expect("rescaling");
+    }
+    let reason = rejected(&certificate);
+    assert!(
+        reason.contains("does not reproduce conclusion"),
+        "a rescaled combination was rejected for the wrong reason: {reason}"
+    );
+}
+
 #[test]
 fn a_conclusion_edited_by_one_is_rejected() {
     let mut certificate = first();

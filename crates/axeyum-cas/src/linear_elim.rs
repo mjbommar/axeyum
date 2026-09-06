@@ -532,10 +532,97 @@ pub fn detect_linear_blocks_where(
     targets: &[MvPoly],
     search: &BlockSearch<'_>,
 ) -> Vec<LinearBlock> {
+    let mut blocks = Vec::new();
+    for (unknowns, rows) in incidence_components(generators, targets) {
+        blocks.extend(component_blocks(generators, &unknowns, &rows, search, 1));
+    }
+    blocks
+}
+
+/// [`detect_linear_blocks_where`], but keeping up to `alternatives` accepted
+/// blocks **per component** instead of the first one.
+///
+/// # Why the alternatives are worth enumerating
+///
+/// [`detect_linear_blocks_where`] answers "which subsystem do I eliminate?" and
+/// one answer is all a single identity needs. `crate::geometry_certify`'s
+/// combination route asks a different question: it needs *several* identities for
+/// the same conclusion, whose multipliers differ, so that a rational combination
+/// of them can cancel the parts of those multipliers that no non-degeneracy
+/// condition licenses. One block per component cannot supply that — every
+/// identity would carry the same multiplier and the combination would be a
+/// rescaling.
+///
+/// The return is one vector per component, in the same component order
+/// [`detect_linear_blocks_where`] uses, with empty components dropped. Each inner
+/// vector holds blocks at the **same** size — the largest size that component
+/// admits — because mixing sizes would mix multiplier degrees for no gain.
+///
+/// `alternatives == 1` reproduces [`detect_linear_blocks_where`] exactly, which
+/// is asserted by `alternatives_of_one_reproduce_the_single_block_search`.
+#[must_use]
+pub fn detect_block_alternatives(
+    generators: &[MvPoly],
+    targets: &[MvPoly],
+    search: &BlockSearch<'_>,
+    alternatives: usize,
+) -> Vec<Vec<LinearBlock>> {
+    incidence_components(generators, targets)
+        .into_iter()
+        .map(|(unknowns, rows)| {
+            component_blocks(generators, &unknowns, &rows, search, alternatives)
+        })
+        .filter(|blocks| !blocks.is_empty())
+        .collect()
+}
+
+/// [`detect_block_alternatives`] against an explicit unknown scope.
+///
+/// `detect_block_alternatives` derives the scope from the targets' variables,
+/// which is right when the targets are the theorem's conclusions and wrong when
+/// the caller has a better reason to narrow it. `crate::geometry_certify`'s
+/// combination route has one: a coordinate a **non-degeneracy condition**
+/// mentions is configuration *data*, not an unknown the hypotheses determine, and
+/// eliminating data is exactly what manufactures a determinant mixing the
+/// geometry with an artifact of the encoding.
+#[must_use]
+pub fn detect_block_alternatives_over(
+    generators: &[MvPoly],
+    scope: &BTreeSet<String>,
+    search: &BlockSearch<'_>,
+    alternatives: usize,
+) -> Vec<Vec<LinearBlock>> {
+    scoped_components(generators, scope)
+        .into_iter()
+        .map(|(unknowns, rows)| {
+            component_blocks(generators, &unknowns, &rows, search, alternatives)
+        })
+        .filter(|blocks| !blocks.is_empty())
+        .collect()
+}
+
+/// The connected components of the candidate-unknown/generator incidence graph:
+/// `(unknowns, rows)` per component, in ascending disjoint-set-root order.
+///
+/// Split out of [`detect_linear_blocks_where`] so that
+/// [`detect_block_alternatives`] enumerates the *same* components rather than a
+/// second opinion about them.
+fn incidence_components(
+    generators: &[MvPoly],
+    targets: &[MvPoly],
+) -> Vec<(Vec<String>, Vec<usize>)> {
     let mut wanted: BTreeSet<String> = BTreeSet::new();
     for target in targets {
         wanted.extend(target.variables());
     }
+    scoped_components(generators, &wanted)
+}
+
+/// [`incidence_components`] against an explicit unknown scope.
+fn scoped_components(
+    generators: &[MvPoly],
+    wanted: &BTreeSet<String>,
+) -> Vec<(Vec<String>, Vec<usize>)> {
     let candidates: Vec<String> = candidate_unknowns(generators)
         .into_iter()
         .filter(|variable| wanted.contains(variable))
@@ -568,61 +655,79 @@ pub fn detect_linear_blocks_where(
             grouped_rows.entry(root).or_default().push(index);
         }
     }
+    grouped_unknowns
+        .into_iter()
+        .map(|(root, unknowns)| {
+            let rows = grouped_rows.get(&root).cloned().unwrap_or_default();
+            (unknowns, rows)
+        })
+        .collect()
+}
 
-    let mut blocks = Vec::new();
-    for (root, unknowns) in grouped_unknowns {
-        let rows = grouped_rows.get(&root).cloned().unwrap_or_default();
-        let cap = unknowns.len().min(rows.len()).min(MAX_BLOCK);
-        // Largest first, then smaller: a component that is underdetermined, or
-        // whose rows are not jointly affine in all of its unknowns, still yields
-        // whatever square subsystem it does contain. The rest stays in the residue
-        // for whatever route the caller hands it to next. `x·y − 1` is the case
-        // that forces this: it admits no 2×2 block over `{x, y}` and a perfectly
-        // good 1×1 one over `{x}`.
-        let positions: Vec<usize> = (0..unknowns.len()).collect();
-        let mut found = false;
-        let mut examined = 0usize;
-        for size in (1..=cap).rev() {
-            for chosen in choices_capped(&positions, size, search.choices) {
-                let picked: Vec<String> = chosen
-                    .iter()
-                    .map(|&index| unknowns[index].clone())
-                    .collect();
-                for candidate_rows in choices_capped(&rows, size, search.choices) {
-                    if examined >= search.examined {
-                        break;
-                    }
-                    examined += 1;
-                    let Some((_, det)) = coefficient_matrix(generators, &candidate_rows, &picked)
-                    else {
-                        continue;
-                    };
-                    if det.is_zero() {
-                        continue;
-                    }
-                    // An unusable determinant advances the search rather than
-                    // ending it. See `BlockSearch::accept`.
-                    if !(search.accept)(&det) {
-                        continue;
-                    }
-                    blocks.push(LinearBlock {
-                        unknowns: picked.clone(),
-                        rows: candidate_rows,
-                        determinant: det,
-                    });
-                    found = true;
+/// Up to `alternatives` accepted blocks inside one component, all at the largest
+/// size that admits any.
+fn component_blocks(
+    generators: &[MvPoly],
+    unknowns: &[String],
+    rows: &[usize],
+    search: &BlockSearch<'_>,
+    alternatives: usize,
+) -> Vec<LinearBlock> {
+    let cap = unknowns.len().min(rows.len()).min(MAX_BLOCK);
+    // Largest first, then smaller: a component that is underdetermined, or
+    // whose rows are not jointly affine in all of its unknowns, still yields
+    // whatever square subsystem it does contain. The rest stays in the residue
+    // for whatever route the caller hands it to next. `x·y − 1` is the case
+    // that forces this: it admits no 2×2 block over `{x, y}` and a perfectly
+    // good 1×1 one over `{x}`.
+    let positions: Vec<usize> = (0..unknowns.len()).collect();
+    let mut found: Vec<LinearBlock> = Vec::new();
+    let mut examined = 0usize;
+    for size in (1..=cap).rev() {
+        for chosen in choices_capped(&positions, size, search.choices) {
+            let picked: Vec<String> = chosen
+                .iter()
+                .map(|&index| unknowns[index].clone())
+                .collect();
+            for candidate_rows in choices_capped(rows, size, search.choices) {
+                if examined >= search.examined {
                     break;
                 }
-                if found {
+                examined += 1;
+                let Some((_, det)) = coefficient_matrix(generators, &candidate_rows, &picked)
+                else {
+                    continue;
+                };
+                if det.is_zero() {
+                    continue;
+                }
+                // An unusable determinant advances the search rather than
+                // ending it. See `BlockSearch::accept`.
+                if !(search.accept)(&det) {
+                    continue;
+                }
+                found.push(LinearBlock {
+                    unknowns: picked.clone(),
+                    rows: candidate_rows,
+                    determinant: det,
+                });
+                if found.len() >= alternatives {
                     break;
                 }
             }
-            if found {
+            if found.len() >= alternatives {
                 break;
             }
         }
+        // One size class per component, always: the alternatives a combination
+        // adds together must have comparable multipliers, and blocks of different
+        // sizes do not. At `alternatives == 1` this is the original
+        // "largest first, stop at the first block" behaviour exactly.
+        if !found.is_empty() {
+            break;
+        }
     }
-    blocks
+    found
 }
 
 /// The coefficient matrix of `rows` in `unknowns`, with its determinant.
