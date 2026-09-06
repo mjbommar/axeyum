@@ -2511,33 +2511,31 @@ fn perspective_image(origin: &Pt, vertex: &Pt, scalar: &str) -> Option<Pt> {
     })
 }
 
-/// The incidence "`point` lies on the line `L(t, u)` of the parabola `y = x²`",
-/// homogeneously: `Y − (t+u)·X + t·u·W = 0`.
+/// The line `L(t, u)` of the parabola `y = x²` as its homogeneous coefficient
+/// triple `(−(t+u), 1, t·u)`, so that `L·(X, Y, W) = Y − (t+u)·X + t·u·W`.
 ///
 /// `L(t, u)` is the **chord** through `(t, t²)` and `(u, u²)` whenever `t ≠ u`
 /// — substituting either point gives `t² − (t+u)·t + t·u = 0` — and the
-/// **tangent** at `(t, t²)` when `t = u`. So this states exactly the classical
-/// hypothesis "`X` is on side `P(t)P(u)` of the hexagon" on the configurations
-/// the theorem is about, and extends it to the tangent in the coincident case
-/// rather than going vacuous there.
+/// **tangent** at `(t, t²)` when `t = u`. So it is exactly "side `P(t)P(u)` of
+/// the hexagon" on the configurations the theorem is about, and extends to the
+/// tangent in the coincident case rather than going vacuous there.
 ///
-/// # Why not `collinear(P(t), P(u), X)`
+/// # Why the line rather than `collinear(P(t), P(u), X)`
 ///
-/// Because `collinear(P(t), P(u), X) = (u − t)·L(t, u)(X)` identically: the
+/// Because `collinear(P(t), P(u), X) = (u − t)·L(t, u)·X` identically: the
 /// three-point determinant carries a spurious factor `u − t` that says nothing
-/// about `X`. Stating the side that way is equally faithful but drags six
-/// "the two vertices are distinct" conditions into the certificate — the block
+/// about `X`. Stating a side that way is equally faithful but drags six "the
+/// two vertices are distinct" conditions into the certificate — the block
 /// determinants pick the factor up — and every one of them would then have to
 /// be divided back out. `L` is the same line with the artifact removed.
-fn parabola_chord_incidence(first: &str, second: &str, point: &HPt) -> Option<MvPoly> {
+fn parabola_chord_line(first: &str, second: &str) -> Option<(MvPoly, MvPoly, MvPoly)> {
     let one = MvPoly::var(first);
     let other = MvPoly::var(second);
-    let slope = one.add(&other)?;
-    let intercept = one.mul(&other)?;
-    point
-        .y
-        .sub(&slope.mul(&point.x)?)?
-        .add(&intercept.mul(&point.w)?)
+    Some((
+        one.add(&other)?.neg()?,
+        MvPoly::constant(Rational::integer(1)),
+        one.mul(&other)?,
+    ))
 }
 
 /// Pascal's theorem for a hexagon inscribed in the parabola `y = x²`, stated
@@ -2546,54 +2544,116 @@ fn parabola_chord_incidence(first: &str, second: &str, point: &HPt) -> Option<Mv
 /// The six vertices are `A = (a, a²) … F = (f, f²)`, so "the six points lie on
 /// a common conic" is true **by construction** and costs no hypothesis at all:
 /// the `6 × 6` monomial determinant that [`beyond_frontier`]'s general
-/// statement carries — the thing that put Pascal out of reach — disappears, and
-/// what is left is six line incidences that are linear in the three diagonal
-/// points.
+/// statement carries — the thing that put Pascal out of reach — disappears.
 ///
-/// # Why the diagonal points are homogeneous, and why that is the whole trick
+/// The three diagonal points are **constructed**, as `X = L(a,b) × L(d,e)` and
+/// its two cyclic images: the same "carry the construction out in the
+/// coefficient field instead of asserting it" idiom
+/// [`crate::geometry_certify::midpoint`] and
+/// [`crate::geometry_certify::centroid`] use. It needs no non-degeneracy
+/// condition of any kind.
 ///
-/// In the affine chart (`X`, `Y`, `Z` at two coordinates each) this theorem
-/// **cannot** be certified by this crate's rules, and the obstruction is worth
-/// recording because it is not a budget:
+/// That the construction really *is* the meet is not left to the reader
+/// either, and it is established more strongly than a certificate could: the
+/// module test `the_constructed_diagonal_points_lie_on_both_of_their_sides`
+/// asserts that `L·(L × M)` and `M·(L × M)` are the **zero polynomial** for
+/// each of the six sides, an identity rather than an ideal membership.
 ///
-/// - The conclusion is *not* in the plain hypothesis ideal there. Reducing by
-///   the three `Y`-coordinate hypotheses leaves a residue whose `Y.x·Z.x`
-///   coefficient is `d − b`, a *linear* form in the parameters, while the
-///   surviving generators are `Dᵢ·(coordinate) + Pᵢ` whose ideal — modulo the
-///   linear relations among the `Dᵢ` — is generated in degree two. A degree-one
-///   element cannot lie in it, so saturation is genuinely required.
-/// - But every saturating condition would be **unfalsifiable**. A line meets a
+/// Those six incidences were conclusions of this certificate at first, and
+/// they cost more than they were worth. [`crate::geometry_certify::BlockScope::Joint`]
+/// computes **one** block decomposition and shares it across every conclusion
+/// — deliberately, so the expensive search is not repeated — and no single
+/// decomposition settles the collinearity and the incidences together, even
+/// though each of the seven certifies on its own in milliseconds. Measured
+/// 2026-09-06, debug, ADVISORY: `xyz-collinear` alone 14.6 ms, `x-on-ab` alone
+/// 6.5 ms, the two `X` incidences together a 23-term residue, all seven a
+/// 31-term residue — after which `certify_any_route` falls through to the
+/// Gröbner search and does not return inside ten minutes.
+///
+/// # Why the diagonal points are not free points pinned by incidence
+///
+/// That is the statement one would write first, and this crate's rules refuse
+/// it — for a reason worth recording, because it is not a budget.
+///
+/// - In the **affine** chart the conclusion is not in the plain hypothesis
+///   ideal. Reducing by the three `Y`-coordinate hypotheses leaves a residue
+///   whose `Y.x·Z.x` coefficient is `d − b`, a *linear* form in the parameters,
+///   while the surviving generators are `Dᵢ·(coordinate) + Pᵢ` whose ideal —
+///   modulo the linear relation `D₁ − D₂ + D₃ = 0` — is generated in degree
+///   two. A degree-one element cannot lie in it, so saturation is genuinely
+///   required.
+/// - But every saturating condition there is **unfalsifiable**. A line meets a
 ///   conic in at most two points, so two opposite sides can coincide only by
-///   repeating a vertex pair — and in each of the two ways that can happen the
-///   other two diagonal points land on that very line (or coincide with each
-///   other), so the conclusion survives. [`crate::geometry_check`] refuses a
-///   certificate whose condition carries no counterexample, and it is right to.
+///   repeating a vertex pair; and in each of the two ways that can happen
+///   (`{d,e} = {a,b}` or `{d,e} = {b,a}`) the other two diagonal points land on
+///   that very line, or coincide with each other, so the conclusion survives.
+///   [`crate::geometry_check`] rejects a certificate whose condition carries no
+///   counterexample, and it is right to.
+/// - With **homogeneous** free points and the six incidences as hypotheses the
+///   unfalsifiability goes away — a pair of parallel opposite sides now meets
+///   at an ordinary point at infinity rather than degenerating — but a
+///   projective point cannot be pinned by incidences, so the elimination cannot
+///   clear it. Measured 2026-09-06, debug, ADVISORY: the joint-scope linear
+///   route eliminates the three `Y` coordinates against unit determinants in
+///   1.9 ms and leaves a **14-term** residue in the remaining six unknowns, and
+///   the handover under `DegRevLex` does not settle it —
+///   `certify_any_route(geometry_limits())` spends 365.6 s and declines on
+///   `ReductionSteps`. The obstruction is the monomial order: every hypothesis
+///   is inhomogeneous in total degree, `xy` is its degree-1 term and
+///   `t·u·xw` its degree-3 one, so a degree-first order leads on the parameters
+///   and Buchberger never gets to use the unit coefficients the linear route
+///   found immediately.
 ///
-/// Homogeneous diagonal points remove both halves at once. `X` is now free up
-/// to scale rather than pinned, the parallel case is not a degeneracy but the
-/// ordinary point at infinity (the second generic witness below is exactly
-/// that), and the conclusion lands in the plain hypothesis ideal — so the
-/// certificate needs **no** non-degeneracy condition, which is a strictly
-/// stronger statement than one that needs three.
+/// Constructing the meets removes all three obstacles at once, and the
+/// incidences it might have looked like it was assuming are proved instead.
 ///
 /// # What this proves, and what it does not
 ///
 /// It proves Pascal's theorem for every hexagon inscribed in one fixed conic,
-/// with all six vertices free and the diagonal points allowed at infinity. It
-/// does **not** prove the statement for an arbitrary conic. Every non-degenerate
-/// conic over an algebraically closed field is projectively equivalent to this
-/// one and collinearity is a projective invariant, so the general theorem
-/// follows — but that reduction is mathematics stated here in prose and is
-/// *not* part of the certificate. [`beyond_frontier`] keeps the general
-/// statement, uncertified, for exactly that reason.
+/// with all six vertices free and the diagonal points allowed at infinity or at
+/// the zero vector. It does **not** prove the statement for an arbitrary conic.
+/// Every non-degenerate conic over an algebraically closed field is projectively
+/// equivalent to this one and collinearity is a projective invariant, so the
+/// general theorem follows — but that reduction is mathematics stated here in
+/// prose and is *not* part of the certificate. [`beyond_frontier`] keeps the
+/// general statement, uncertified, for exactly that reason.
 #[must_use]
 pub fn pascal_parabola_problem() -> GeometryProblem {
     let point_x = HPt::free("x");
     let point_y = HPt::free("y");
     let point_z = HPt::free("z");
-    let side = |first: &str, second: &str, point: &HPt| {
-        parabola_chord_incidence(first, second, point).expect("chord incidence")
-    };
+    let line = |first: &str, second: &str| parabola_chord_line(first, second).expect("chord line");
+    // The three pairs of opposite sides of the hexagon ABCDEF, and the diagonal
+    // point each pair meets in.
+    let pairs = [
+        ("x", &point_x, ("ta", "tb"), ("td", "te"), "ab", "de"),
+        ("y", &point_y, ("tb", "tc"), ("te", "tf"), "bc", "ef"),
+        ("z", &point_z, ("tc", "td"), ("tf", "ta"), "cd", "fa"),
+    ];
+    let mut hypotheses = Vec::new();
+    for (name, point, first, second, first_label, second_label) in pairs {
+        let one = line(first.0, first.1);
+        let other = line(second.0, second.1);
+        let meet = hmeet(&one, &other).expect("hmeet");
+        let upper = name.to_uppercase();
+        for (suffix, coordinate, value) in [
+            ("x", &point.x, meet.x),
+            ("y", &point.y, meet.y),
+            ("w", &point.w, meet.w),
+        ] {
+            hypotheses.push(Constraint::new(
+                &format!("{name}-is-{first_label}-meet-{second_label}-{suffix}"),
+                &format!(
+                    "{upper}.{} is the {}-coordinate of the cross product of the lines {} and {}",
+                    suffix.to_uppercase(),
+                    suffix.to_uppercase(),
+                    first_label.to_uppercase(),
+                    second_label.to_uppercase()
+                ),
+                coordinate.sub(&value).expect("coordinate difference"),
+            ));
+        }
+    }
     GeometryProblem {
         id: "pascal-parabola-hexagon".into(),
         title: "Pascal's theorem on a parabola: the three diagonal points of an inscribed \
@@ -2601,18 +2661,21 @@ pub fn pascal_parabola_problem() -> GeometryProblem {
             .into(),
         statement: "Let A=(a,a^2), B=(b,b^2), C=(c,c^2), D=(d,d^2), E=(e,e^2), F=(f,f^2) be six \
                     points of the parabola y = x^2, given by their parameters, and let the line \
-                    through the parabola points at parameters t and u be y = (t+u)x - tu (the \
-                    chord when t and u differ, the tangent when they coincide). Let X, Y and Z \
-                    be homogeneous points of the projective plane with X on the lines AB and DE, \
-                    Y on BC and EF, and Z on CD and FA. Then X, Y and Z are collinear -- with NO \
-                    non-degeneracy condition: the conclusion lies in the plain hypothesis ideal, \
-                    a diagonal point of a pair of parallel opposite sides is the ordinary point \
-                    at infinity of their common direction rather than a degeneracy, and the \
-                    all-zero representative satisfies the hypotheses and the conclusion alike. \
-                    The conic hypothesis is discharged by the parametrisation rather than \
-                    assumed: every configuration of six points on THIS conic is covered, and the \
-                    statement for an arbitrary conic follows by projective equivalence, which is \
-                    NOT part of this certificate."
+                    through the parabola points at parameters t and u be the homogeneous triple \
+                    L(t,u) = (-(t+u), 1, tu), whose incidence relation Y - (t+u)X + tuW = 0 is \
+                    the chord when t and u differ and the tangent when they coincide. Let X, Y \
+                    and Z be the homogeneous points L(a,b) x L(d,e), L(b,c) x L(e,f) and \
+                    L(c,d) x L(f,a) -- the standard projective meet, which lies on both of its \
+                    lines because L.(L x M) and M.(L x M) are identically zero. Then X, Y and Z \
+                    are collinear. NO non-degeneracy condition is used or needed: the conclusion \
+                    lies in the plain hypothesis ideal, a pair of parallel opposite sides meets \
+                    at the ordinary point at infinity of their common direction, and a diagonal \
+                    point degenerating to the zero vector satisfies the conclusion. \
+                    Collinearity is scale-invariant, so the statement transfers to any other \
+                    representatives of the same projective points. The conic hypothesis is \
+                    discharged by the parametrisation rather than assumed: every configuration of \
+                    six points on THIS conic is covered, and the statement for an arbitrary conic \
+                    follows by projective equivalence, which is NOT part of this certificate."
             .into(),
         coordinate_gloss: vec![
             ("ta".into(), "A = (ta, ta^2)".into()),
@@ -2631,14 +2694,7 @@ pub fn pascal_parabola_problem() -> GeometryProblem {
             ("zy".into(), "Z.Y (CD meet FA)".into()),
             ("zw".into(), "Z.W (CD meet FA)".into()),
         ],
-        hypotheses: vec![
-            Constraint::new("x-on-ab", "X lies on the line AB", side("ta", "tb", &point_x)),
-            Constraint::new("x-on-de", "X lies on the line DE", side("td", "te", &point_x)),
-            Constraint::new("y-on-bc", "Y lies on the line BC", side("tb", "tc", &point_y)),
-            Constraint::new("y-on-ef", "Y lies on the line EF", side("te", "tf", &point_y)),
-            Constraint::new("z-on-cd", "Z lies on the line CD", side("tc", "td", &point_z)),
-            Constraint::new("z-on-fa", "Z lies on the line FA", side("tf", "ta", &point_z)),
-        ],
+        hypotheses,
         nondegeneracy: Vec::new(),
         conclusions: vec![Constraint::new(
             "xyz-collinear",
@@ -2648,22 +2704,22 @@ pub fn pascal_parabola_problem() -> GeometryProblem {
         degenerate_witnesses: Vec::new(),
         generic_witnesses: vec![
             GenericWitness {
-                description: "parameters a=0, b=1, c=2, d=3, e=4, f=6, with the three diagonal \
-                              points finite: X=(2,2,1), Y=(22,52,7), Z=(-6,-36,1)"
+                description: "parameters a=0, b=1, c=2, d=3, e=4, f=6, with all three diagonal \
+                              points finite: X=(12,12,6), Y=(22,52,7), Z=(-6,-36,1)"
                     .into(),
                 assignment: pascal_parabola_witness(
                     [0, 1, 2, 3, 4, 6],
-                    [[2, 2, 1], [22, 52, 7], [-6, -36, 1]],
+                    [[12, 12, 6], [22, 52, 7], [-6, -36, 1]],
                 ),
             },
             GenericWitness {
                 description: "parameters a=0, b=5, c=2, d=1, e=4, f=7, where AB and DE are \
-                              PARALLEL (both of slope 5) and X is their point at infinity \
-                              (1,5,0); Y=(9,43,2) and Z=(-1,-7,2) are finite"
+                              PARALLEL (both of slope 5) and X=(4,20,0) is their point at \
+                              infinity; Y=(18,86,4) and Z=(-2,-14,4) are finite"
                     .into(),
                 assignment: pascal_parabola_witness(
                     [0, 5, 2, 1, 4, 7],
-                    [[1, 5, 0], [9, 43, 2], [-1, -7, 2]],
+                    [[4, 20, 0], [18, 86, 4], [-2, -14, 4]],
                 ),
             },
         ],
@@ -2673,10 +2729,11 @@ pub fn pascal_parabola_problem() -> GeometryProblem {
 /// One configuration of [`pascal_parabola_problem`]: six parameters and the
 /// three diagonal points as explicit homogeneous integer triples.
 ///
-/// The triples are written out rather than computed so that a reader can check
-/// them against the chord-line formula by hand, and so that the *projective*
-/// witness — where one diagonal point has `W = 0` and no affine formula applies
-/// — is stated the same way as the finite one.
+/// The triples are written out rather than recomputed from the constructor, so
+/// that they are an independent read on the polynomials rather than a
+/// restatement of them, and so that the *projective* configuration — where one
+/// diagonal point has `W = 0` and no affine formula applies — is stated the
+/// same way as the finite one.
 fn pascal_parabola_witness(
     parameters: [i128; 6],
     diagonals: [[i128; 3]; 3],
@@ -2765,19 +2822,31 @@ pub fn desargues_affine_problem() -> GeometryProblem {
             ("zy".into(), "Z.y (AB meet A'B')".into()),
         ],
         hypotheses: vec![
-            Constraint::new("x-on-bc", "X lies on BC", on(&vertex_b, &vertex_c, &point_x)),
+            Constraint::new(
+                "x-on-bc",
+                "X lies on BC",
+                on(&vertex_b, &vertex_c, &point_x),
+            ),
             Constraint::new(
                 "x-on-b2c2",
                 "X lies on B'C'",
                 on(&image_b, &image_c, &point_x),
             ),
-            Constraint::new("y-on-ca", "Y lies on CA", on(&vertex_c, &vertex_a, &point_y)),
+            Constraint::new(
+                "y-on-ca",
+                "Y lies on CA",
+                on(&vertex_c, &vertex_a, &point_y),
+            ),
             Constraint::new(
                 "y-on-c2a2",
                 "Y lies on C'A'",
                 on(&image_c, &image_a, &point_y),
             ),
-            Constraint::new("z-on-ab", "Z lies on AB", on(&vertex_a, &vertex_b, &point_z)),
+            Constraint::new(
+                "z-on-ab",
+                "Z lies on AB",
+                on(&vertex_a, &vertex_b, &point_z),
+            ),
             Constraint::new(
                 "z-on-a2b2",
                 "Z lies on A'B'",
@@ -2910,43 +2979,277 @@ fn desargues_affine_generic_witness() -> BTreeMap<String, Rational> {
 mod tests {
     use super::*;
 
-    /// TEMPORARY diagnostic for wave four; removed before the lane closes.
+    /// The construction [`pascal_parabola_problem`] uses for its diagonal points
+    /// really is the meet of the two sides — as a **polynomial identity**, not
+    /// as an ideal membership.
+    ///
+    /// This is the guard that makes "constructed" as trustworthy as "asserted".
+    /// The certificate's hypotheses read `X.X = <polynomial>`; what makes that
+    /// polynomial the classical hypothesis "X lies on AB and on DE" is exactly
+    /// that `L·(L × M)` and `M·(L × M)` vanish identically, and this asserts it
+    /// for all six sides of the hexagon at once. Delete either `assert!` and the
+    /// theorem's statement stops being checked anywhere.
     #[test]
-    #[ignore = "diagnostic"]
-    fn wave_four_probe() {
+    fn the_constructed_diagonal_points_lie_on_both_of_their_sides() {
+        let mut checked = 0usize;
+        for (first, second) in [
+            (("ta", "tb"), ("td", "te")),
+            (("tb", "tc"), ("te", "tf")),
+            (("tc", "td"), ("tf", "ta")),
+        ] {
+            let one = parabola_chord_line(first.0, first.1).expect("chord line");
+            let other = parabola_chord_line(second.0, second.1).expect("chord line");
+            let meet = hmeet(&one, &other).expect("hmeet");
+            assert!(
+                hincidence(&one, &meet).expect("incidence").is_zero(),
+                "the constructed meet of L({}, {}) and L({}, {}) is not on the first line",
+                first.0,
+                first.1,
+                second.0,
+                second.1
+            );
+            assert!(
+                hincidence(&other, &meet).expect("incidence").is_zero(),
+                "the constructed meet of L({}, {}) and L({}, {}) is not on the second line",
+                first.0,
+                first.1,
+                second.0,
+                second.1
+            );
+            checked += 1;
+        }
+        assert_eq!(checked, 3, "all three diagonal points must be examined");
+    }
+
+    /// The parabola's chord line passes through both of its parabola points, as
+    /// a polynomial identity in the parameters.
+    ///
+    /// Without this, `parabola_chord_line` could return any line at all and the
+    /// theorem would be about something else entirely; the negative half pins
+    /// that it is not vacuously the zero line.
+    #[test]
+    fn the_parabola_chord_line_meets_the_parabola_at_both_parameters() {
+        let line = parabola_chord_line("ta", "tb").expect("chord line");
+        for name in ["ta", "tb"] {
+            let parameter = MvPoly::var(name);
+            let point = HPt {
+                x: parameter.clone(),
+                y: parameter.mul(&parameter).expect("t^2"),
+                w: MvPoly::constant(Rational::integer(1)),
+            };
+            assert!(
+                hincidence(&line, &point).expect("incidence").is_zero(),
+                "L(ta, tb) does not pass through the parabola point at {name}"
+            );
+        }
+        // Not the zero line: the middle coefficient is 1, so the identity above
+        // is a real incidence rather than `0 = 0`.
+        assert_eq!(line.1, MvPoly::constant(Rational::integer(1)));
+    }
+
+    /// `A'` in [`desargues_affine_problem`] is on the line `OA`, as a polynomial
+    /// identity — which is what lets the perspectivity be a construction rather
+    /// than a hypothesis.
+    ///
+    /// The negative half matters as much: `A'` must not be *pinned* to `A` or to
+    /// `O`, or the theorem would be about a collapsed configuration.
+    #[test]
+    fn the_desargues_image_is_on_the_ray_from_the_centre() {
+        let origin = Pt::free("o");
+        let vertex = Pt::free("a");
+        let image = perspective_image(&origin, &vertex, "la").expect("image");
+        assert!(
+            collinear(&origin, &vertex, &image)
+                .expect("collinear")
+                .is_zero(),
+            "O, A and A' are not collinear as an identity"
+        );
+        assert_ne!(image.x, vertex.x, "A' must not be pinned to A");
+        assert_ne!(image.x, origin.x, "A' must not be pinned to O");
+    }
+
+    /// Pascal on the parabola, through whichever route reaches it, re-checked by
+    /// the independent checker.
+    ///
+    /// # Cost, ADVISORY
+    ///
+    /// Measured 2026-09-06 on a loaded shared host, debug: the joint-scope
+    /// linear route settles it with a **zero** residue, so no handover and no
+    /// Gröbner search runs, in about 15 ms.
+    #[test]
+    fn pascal_on_the_parabola_certifies_with_no_side_condition() {
+        let problem = pascal_parabola_problem();
+        let certificate = match certify_any_route(&problem, geometry_limits()) {
+            crate::geometry_certify::ProofOutcome::Certified(certificate) => certificate,
+            other => panic!("pascal-parabola-hexagon did not certify: {other:?}"),
+        };
+        assert!(
+            certificate.saturations.is_empty(),
+            "Pascal needs no non-degeneracy condition here, but the certificate used {:?}",
+            certificate
+                .saturations
+                .iter()
+                .map(|saturation| saturation.condition_id.clone())
+                .collect::<Vec<_>>()
+        );
+        assert_eq!(certificate.hypotheses.len(), 9);
+        match check_certificate(&certificate, &CheckOptions::default()) {
+            GeometryVerdict::Verified(report) => {
+                assert_eq!(report.conclusions_checked, 1);
+                assert!(report.numeric_points_checked > 0);
+                assert_eq!(report.generic_witnesses_checked, 2);
+            }
+            GeometryVerdict::Rejected(reason) => panic!("the checker rejected Pascal: {reason}"),
+        }
+    }
+
+    /// Desargues in the affine chart, through whichever route reaches it,
+    /// re-checked by the independent checker.
+    ///
+    /// All three stated conditions are used, and each carries a counterexample —
+    /// which is what the affine reading buys over the projective one.
+    ///
+    /// # Cost, ADVISORY
+    ///
+    /// Measured 2026-09-06 on a loaded shared host, debug: 4.8 s, all of it the
+    /// joint-scope block search and the three eliminations.
+    #[test]
+    fn desargues_in_the_affine_chart_certifies_on_three_conditions() {
+        let problem = desargues_affine_problem();
+        let certificate = match certify_any_route(&problem, geometry_limits()) {
+            crate::geometry_certify::ProofOutcome::Certified(certificate) => certificate,
+            other => panic!("desargues-affine-perspective did not certify: {other:?}"),
+        };
+        let used: Vec<String> = certificate
+            .saturations
+            .iter()
+            .map(|saturation| saturation.condition_id.clone())
+            .collect();
+        assert_eq!(
+            used,
+            vec![
+                "bc-meets-b2c2".to_string(),
+                "ca-meets-c2a2".to_string(),
+                "ab-meets-a2b2".to_string()
+            ],
+            "Desargues needs all three sides to meet their images"
+        );
+        match check_certificate(&certificate, &CheckOptions::default()) {
+            GeometryVerdict::Verified(report) => {
+                assert_eq!(report.conclusions_checked, 1);
+                assert_eq!(report.conditions_used.len(), 3);
+                assert_eq!(report.degenerate_witnesses_checked, 3);
+                assert!(report.numeric_points_checked > 0);
+            }
+            GeometryVerdict::Rejected(reason) => panic!("the checker rejected Desargues: {reason}"),
+        }
+    }
+
+    /// Every configuration the two wave-four theorems commit is replayed against
+    /// their own polynomials, independent of the certifier: a generic witness
+    /// satisfies every hypothesis, keeps every condition nonzero and satisfies
+    /// every conclusion; a degenerate one satisfies every hypothesis,
+    /// annihilates the condition it names, and **falsifies** a conclusion.
+    ///
+    /// The degenerate half is the one that would go quiet if a counterexample
+    /// stopped being one — the failure mode `crate::geometry_check` exists to
+    /// refuse, checked here at the source rather than only through an artifact.
+    #[test]
+    fn every_wave_four_witness_is_consistent() {
+        let mut generic = 0usize;
+        let mut degenerate = 0usize;
         for problem in [pascal_parabola_problem(), desargues_affine_problem()] {
-            let started = std::time::Instant::now();
-            let outcome = certify_any_route(&problem, geometry_limits());
-            let elapsed = started.elapsed();
-            match outcome {
-                crate::geometry_certify::ProofOutcome::Certified(certificate) => {
-                    println!(
-                        "{}: CERTIFIED in {elapsed:.1?}, saturations={:?}",
+            witnesses_are_consistent(&problem);
+            for witness in &problem.generic_witnesses {
+                for condition in &problem.nondegeneracy {
+                    assert!(
+                        !condition
+                            .poly
+                            .evaluate(&witness.assignment)
+                            .expect("assigned")
+                            .is_zero(),
+                        "{}: generic witness annihilates `{}`",
                         problem.id,
-                        certificate
-                            .saturations
-                            .iter()
-                            .map(|s| s.condition_id.clone())
-                            .collect::<Vec<_>>()
-                    );
-                    println!(
-                        "  verdict {:?}",
-                        check_certificate(&certificate, &CheckOptions::default())
+                        condition.id
                     );
                 }
-                crate::geometry_certify::ProofOutcome::NotInSaturatedIdeal {
-                    conclusion_id,
-                    remainder,
-                } => println!(
-                    "{}: NOT IN IDEAL ({elapsed:.1?}) `{conclusion_id}` remainder {} terms",
+                generic += 1;
+            }
+            for witness in &problem.degenerate_witnesses {
+                let condition = problem
+                    .nondegeneracy
+                    .iter()
+                    .find(|condition| condition.id == witness.condition_id)
+                    .unwrap_or_else(|| {
+                        panic!("{}: witness names an unknown condition", problem.id)
+                    });
+                for hypothesis in &problem.hypotheses {
+                    assert!(
+                        hypothesis
+                            .poly
+                            .evaluate(&witness.assignment)
+                            .expect("assigned")
+                            .is_zero(),
+                        "{}: degenerate witness for `{}` violates hypothesis `{}`",
+                        problem.id,
+                        witness.condition_id,
+                        hypothesis.id
+                    );
+                }
+                assert!(
+                    condition
+                        .poly
+                        .evaluate(&witness.assignment)
+                        .expect("assigned")
+                        .is_zero(),
+                    "{}: degenerate witness for `{}` does not annihilate it",
                     problem.id,
-                    remainder.term_count()
-                ),
-                crate::geometry_certify::ProofOutcome::Declined(reason) => {
-                    println!("{}: DECLINED {reason:?} ({elapsed:.1?})", problem.id);
-                }
+                    witness.condition_id
+                );
+                assert!(
+                    problem.conclusions.iter().any(|conclusion| !conclusion
+                        .poly
+                        .evaluate(&witness.assignment)
+                        .expect("assigned")
+                        .is_zero()),
+                    "{}: degenerate witness for `{}` breaks no conclusion, so the condition is \
+                     not shown to be needed",
+                    problem.id,
+                    witness.condition_id
+                );
+                degenerate += 1;
             }
         }
+        assert_eq!(generic, 3, "both theorems' generic configurations");
+        assert_eq!(degenerate, 3, "Desargues' three counterexamples");
+    }
+
+    /// One of the wave-four generic configurations puts a diagonal point on the
+    /// line at infinity, and the theorem still holds there.
+    ///
+    /// Without a `W = 0` configuration the projective statement of Pascal would
+    /// be untested exactly where it is stronger than the affine one, which is
+    /// the whole reason the diagonal points are homogeneous.
+    #[test]
+    fn pascal_is_exercised_at_a_point_at_infinity() {
+        let problem = pascal_parabola_problem();
+        let at_infinity = problem
+            .generic_witnesses
+            .iter()
+            .filter(|witness| {
+                ["xw", "yw", "zw"].iter().any(|name| {
+                    witness
+                        .assignment
+                        .get(*name)
+                        .copied()
+                        .is_some_and(Rational::is_zero)
+                })
+            })
+            .count();
+        assert_eq!(
+            at_infinity, 1,
+            "exactly one committed configuration must have a diagonal point at infinity"
+        );
     }
 
     use crate::geometry::Point as GPoint;
