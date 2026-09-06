@@ -125,7 +125,7 @@ fn cyclotomic_polynomial_coefficients(m: u64) -> Vec<BigInt> {
     numerator[last] = BigInt::from(1);
     let mut divisor = vec![BigInt::from(1)];
     for d in 1..m {
-        if m % d == 0 {
+        if m.is_multiple_of(d) {
             divisor = poly_mul(&divisor, &cyclotomic_polynomial_coefficients(d));
         }
     }
@@ -358,6 +358,7 @@ impl Cyclotomic {
     }
 
     /// Multiplication by an integer.
+    #[must_use]
     pub fn scale(&self, factor: &BigInt) -> Cyclotomic {
         let f = BigRational::new(factor.clone(), BigInt::from(1));
         Cyclotomic {
@@ -394,6 +395,7 @@ impl Cyclotomic {
     /// # Panics
     ///
     /// Never panics: `m − 1` is always coprime to `m`.
+    #[must_use]
     pub fn conjugate(&self) -> Cyclotomic {
         if self.conductor == 1 {
             return self.clone();
@@ -895,16 +897,13 @@ fn extend_to_character(
             let next = elements[current].compose(g)?;
             let target = *index_of.get(&image_key(&next))?;
             let candidate = here.mul(&Cyclotomic::root_of_unity(exponent, assignment[gi])?)?;
-            match &values[target] {
-                Some(existing) => {
-                    if *existing != candidate {
-                        return None; // not well defined: not a homomorphism
-                    }
+            if let Some(existing) = &values[target] {
+                if *existing != candidate {
+                    return None; // not well defined: not a homomorphism
                 }
-                None => {
-                    values[target] = Some(candidate);
-                    frontier.push(target);
-                }
+            } else {
+                values[target] = Some(candidate);
+                frontier.push(target);
             }
         }
     }
@@ -1334,7 +1333,7 @@ mod tests {
         let row = cert
             .table
             .iter()
-            .position(|r| r.iter().any(|e| *e == phi))
+            .position(|r| r.contains(&phi))
             .expect("a row with the golden ratio");
         cert.table[row][involutions] = phi;
         assert!(cert.verify().is_err(), "a wrong entry must be refused");
