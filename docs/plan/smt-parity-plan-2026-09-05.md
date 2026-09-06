@@ -233,6 +233,16 @@ design is copied verbatim. The recommended contract is two streams: RUP-only
 DRAT for the Boolean part plus an enumerated list of theory lemmas as
 assumptions, so the assumption count is a visible metric.
 
+**Decided, 2026-09-06 (S5): [ADR-1704](../research/09-decisions/adr-1704-cdclt-unsat-is-two-streams-a-boolean-refutation-over-cnf-plus-enumerated-theory-lemmas.md)**
+adopts the two-stream contract — the Boolean DRAT/LRAT stream is checked over
+the CNF **extended by the enumerated theory lemmas as input clauses**, the
+lemma count is read off the artifact and printed as `theory_lemmas_unchecked`,
+and a refutation modulo N ≥ 1 lemmas is graded at a new
+`TrustId::SatRefutationModuloTheory` rather than at `SatRefutation`. The
+checkers are unchanged. The boundary is pinned by
+`crates/axeyum-cnf/tests/theory_lemma_proof_contract.rs`. S7 is no longer
+blocked on the contract.
+
 ## 4. The slices, in order, with scoring files and exit criteria
 
 Scoring populations are committed:
