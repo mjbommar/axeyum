@@ -17,7 +17,7 @@
 # only rises on purpose) -- but a new UNCERTIFIED function is never refused;
 # that label is honest, not a violation. See
 # docs/math-department/13-computer-algebra.md item 10.
-COUNT	99
+COUNT	107
 FN	enclosure::enclose	Option<Enclosure>
 FN	enclosure::enclose_constant	Option<Enclosure>
 FN	enclosure::enclose_root	Option<Enclosure>
@@ -53,6 +53,14 @@ FN	gf2_extension::combine_binary_extension_connected_adams_trace_shards	Result<B
 FN	gf2_extension::combine_binary_extension_long_cycle_trace_shards	Result<BinaryExtensionLongCycleTraceReport, BinaryExtensionTraceError>
 FN	homology::HomologyCertificate::verify	Result<HomologyReport, String>
 FN	homology::homology	Option<HomologyCertificate>
+FN	homology_coefficients::CoefficientHomologyCertificate::verify	Result<CoefficientHomologyReport, String>
+FN	homology_coefficients::homology_with_coefficients	Option<CoefficientHomologyCertificate>
+FN	homology_cohomology::CohomologyCertificate::verify	Result<CohomologyReport, String>
+FN	homology_cohomology::cohomology	Option<CohomologyCertificate>
+FN	homology_induced::SimplicialMapCertificate::verify	Result<InducedReport, String>
+FN	homology_induced::induced_homology	Option<SimplicialMapCertificate>
+FN	homology_persistent::PersistenceCertificate::verify	Result<PersistenceReport, String>
+FN	homology_persistent::persistent_homology	Option<PersistenceCertificate>
 FN	integrate	Option<CertifiedIntegral>
 FN	inverse::polynomial_inverse	Option<InverseCertificate>
 FN	mvt::polynomial_mvt	Option<MvtCertificate>
@@ -119,6 +127,7 @@ FN	telescoping_check::check_closed_form	Result<ClosedFormReport, Vec<String>>
 FN	telescoping_check::check_closed_form_symbolic	Result<SymbolicClosedFormReport, Vec<String>>
 VOCAB	AbelianCertificate	enum
 VOCAB	BarrierCertificate	struct
+VOCAB	BigWitness	struct
 VOCAB	BinaryExtensionConnectedAdamsTraceReport	struct
 VOCAB	BinaryExtensionConnectedAdamsTraceShardReport	struct
 VOCAB	BinaryExtensionLongCycleTraceReport	struct
@@ -133,6 +142,10 @@ VOCAB	CheckReport	struct
 VOCAB	ClassNumberCertificate	struct
 VOCAB	ClosedFormReport	struct
 VOCAB	CoefficientAsymptotics	struct
+VOCAB	CoefficientHomologyCertificate	struct
+VOCAB	CoefficientHomologyReport	struct
+VOCAB	CohomologyCertificate	struct
+VOCAB	CohomologyReport	struct
 VOCAB	CompositeCertificate	struct
 VOCAB	ConicFiveCertificate	struct
 VOCAB	ConjugacyClassCertificate	struct
@@ -163,6 +176,7 @@ VOCAB	HomologyCertificate	struct
 VOCAB	HomologyReport	struct
 VOCAB	IdealFactorizationCertificate	struct
 VOCAB	IdealProductCertificate	struct
+VOCAB	InducedReport	struct
 VOCAB	InvariantsCertificate	struct
 VOCAB	InverseCertificate	struct
 VOCAB	IrreducibilityCertificate	struct
@@ -177,6 +191,8 @@ VOCAB	OrbitStabilizerCertificate	struct
 VOCAB	OrderCertificate	struct
 VOCAB	PRecursiveCertificate	struct
 VOCAB	PartialFractionCertificate	struct
+VOCAB	PersistenceCertificate	struct
+VOCAB	PersistenceReport	struct
 VOCAB	PrattCertificate	struct
 VOCAB	PrimeSplittingCertificate	struct
 VOCAB	PrimitiveElementCertificate	struct
@@ -190,6 +206,7 @@ VOCAB	RecurrenceCertificate	struct
 VOCAB	RefutationCertificate	struct
 VOCAB	SampleCertificate	struct
 VOCAB	ShapedCompositionSearchReport	struct
+VOCAB	SimplicialMapCertificate	struct
 VOCAB	SylowCertificate	struct
 VOCAB	SylowCountCertificate	struct
 VOCAB	SymbolicClosedFormReport	struct

@@ -1,0 +1,102 @@
+{
+  "schema_version": 1,
+  "id": "F:hall-marriage-theorem",
+  "title": "Hall's marriage theorem: a finite family of finite sets has a system of distinct representatives if and only if every sub-family covers at least its own size",
+  "statement": "Let nb be a family of finite sets of naturals indexed by the naturals, and let s be a finite index set. Then Hall's condition holds on s -- every subset t of s satisfies card t <= card (union over t of nb) -- if and only if there is a function f that sends each index of s to a member of its own set and is injective on s. That is Hall's marriage theorem, in both directions, as a single biconditional. The sufficiency direction is proved by strong induction on card s: an explicit bounded search decides whether some nonempty proper subset of s is critical, the critical branch matches that subset and its complement separately against a family with the critical neighbourhood deleted and glues the two, and the non-critical branch commits one index to a neighbour and recurses on the rest against a family with that one value deleted. There is no choice principle in this kernel, so every witness is computed. This is a kernel term with an empty axiom footprint.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Nat.Hall.marriage_iff : ((x0 : AxNat.Finset) -> ((x1 : ((x1 : AxNat) -> AxNat.Finset)) -> Iff (AxNat.Hall.HallCondition x0 x1) (Exists.{1} (((x2 : AxNat) -> AxNat)) (fun (x2 : ((x2 : AxNat) -> AxNat)) => AxNat.Hall.IsMatching x0 x1 x2))))",
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.Hall.marriage_iff",
+    "kernel_statement": "Nat.Hall.HallCondition s nb := forall t, (forall i, memB t i = true -> memB s i = true) -> Le (card t) (card (unionOver nb t)); Nat.Hall.IsMatching s nb f := And (forall i, memB s i = true -> memB (nb i) (f i) = true) (forall i j, memB s i = true -> memB s j = true -> Eq Nat (f i) (f j) -> Eq Nat i j). The sufficiency direction alone is Nat.Hall.sufficient : forall s nb, HallCondition s nb -> Exists (fun f => IsMatching s nb f); the necessity direction is Nat.Hall.hallCondition_of_isMatching, proved in ADR-1608. Landed with the assembly: Nat.Hall.criticalB (the Bool-valued decision the subset search consumes), Nat.Hall.criticalB_congr, Nat.Hall.isMatching_of_family_sdiff, Nat.Hall.memB_false_of_family_sdiff, and Nat.Finset.memB_sdiff_congr."
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "proof_route": "kernel-lean",
+  "axiom_footprint": [],
+  "depends_on": [
+    "F:hall-descent-measure",
+    "F:hall-critical-subset-split",
+    "F:hall-noncritical-single-value-deletion",
+    "F:hall-matching-union-disjoint-images",
+    "F:hall-union-under-family-deletion",
+    "F:hall-base-case-singleton",
+    "F:nat-strong-induction",
+    "F:finset-subset-search-reflection",
+    "F:nat-finset-exists-memb-of-card-pos",
+    "F:nat-finset-lt-bound-of-memb"
+  ],
+  "provenance": {
+    "date": "2026-09-05",
+    "established_by": "axeyum lane `hall-assembly`, roadmap item W2-12, sixth and final slice: `nat_prelude/hall_marriage.rs`. ADR-1645, completing ADR-1608, ADR-1614, ADR-1623, ADR-1630 and ADR-1644.",
+    "source": "The standard inductive proof, split on whether a nonempty proper subset of the index set is critical.",
+    "prior_art": [
+      {
+        "citation": "P. Hall, 'On Representatives of Subsets', J. London Math. Soc. 10 (1935) 26-30",
+        "establishes": "the theorem"
+      },
+      {
+        "citation": "Mathlib, `Finset.all_card_le_biUnion_card_iff_exists_injective`",
+        "establishes": "the theorem over `Finset` in Lean 4, with classical choice and set extensionality available; that proof selects a critical subset with `Classical.choice` over a decidable-but-unenumerated existential and identifies extensionally equal finsets, where this route must run an explicit bounded search over subsets and carry a stored bound that extensionally equal sets need not share"
+      },
+      {
+        "citation": "M. Hall Jr., 'Distinct representatives of subsets', Bull. Amer. Math. Soc. 54 (1948) 922-926",
+        "establishes": "the infinite-index version; not in scope here -- the statement proved is the finite one, with the index set a `Nat.Finset`"
+      }
+    ]
+  },
+  "evidence": [
+    {
+      "id": "kernel-Nat.Hall.marriage_iff",
+      "kind": "kernel-term",
+      "supports": "Hall's condition and the existence of a system of distinct representatives are equivalent",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::add_declaration (re-derives the type from the proof term)",
+        "nat_prelude::hall_marriage_tests::halls_marriage_theorem_is_admitted_and_axiom_free (Environment::contains and the declaration KIND before axiom_footprint)",
+        "nat_prelude_tests::every_nat_declaration_is_checked_and_axiom_free"
+      ],
+      "checker_command": "cargo test --release -p axeyum-lean-kernel --lib -- nat_prelude::hall_marriage_tests:: --test-threads=4",
+      "notes": "The forward direction is Nat.Hall.sufficient; the backward direction is Nat.Hall.hallCondition_of_isMatching (ADR-1608) under one Exists.rec to name the matching. Both halves and all five supporting declarations are covered by the same footprint sweep, and each footprint assertion is preceded by Environment::contains, because an empty axiom footprint is also what a missing name returns.",
+      "checker_paired_negative": "Exchanging the critical and non-critical branches of the inductive step -- passing the `anySubset = false` case function where the `= true` case is demanded and vice versa, which is type-correct Rust -- was RUN as mutant 2 of SUITES[\"hall-marriage-in-kernel\"]: killed 44 of a 44-test baseline, by kernel rejection at declaration."
+    },
+    {
+      "id": "the-statement-is-a-biconditional-not-something-weaker",
+      "kind": "exhaustive-enumeration",
+      "supports": "the admitted statement relates Hall's condition to an EXISTENTIAL over choice functions, in the right direction",
+      "check_status": "checked",
+      "checkers": [
+        "nat_prelude::hall_marriage_tests::the_theorem_relates_halls_condition_to_a_matching"
+      ],
+      "checker_command": "cargo test --release -p axeyum-lean-kernel --lib -- nat_prelude::hall_marriage_tests::the_theorem_relates_halls_condition_to_a_matching --test-threads=4",
+      "notes": "The footprint sweep cannot see a statement drift: an Iff whose two sides were the same proposition, or whose right side quantified a FIXED choice function rather than existentially, would be admitted and axiom-free just as happily. The test reads the rendered type out of the kernel environment and requires Iff, Nat.Hall.HallCondition, Nat.Hall.IsMatching and Exists all to appear; it then reads Nat.Hall.sufficient's type and requires HallCondition to occur BEFORE Exists, so the implication is not the converse.",
+      "checker_paired_negative": "The ordering assertion is the paired negative: a statement with the existential as hypothesis and Hall's condition as conclusion -- which is necessity, already proved and therefore trivially admissible under this name -- fails it."
+    },
+    {
+      "id": "critical-b-decides-the-four-conjuncts-separately",
+      "kind": "exhaustive-enumeration",
+      "supports": "the search predicate computes the decision it claims to, with each conjunct load-bearing at a different instance",
+      "check_status": "checked",
+      "checkers": [
+        "nat_prelude::hall_marriage_tests::critical_b_decides_the_four_conjuncts_separately",
+        "nat_prelude::hall_marriage_tests::neither_positivity_conjunct_subsumes_the_other"
+      ],
+      "checker_command": "cargo test --release -p axeyum-lean-kernel --lib -- nat_prelude::hall_marriage_tests:: --test-threads=4",
+      "notes": "The kernel cannot tell a Definition is wrong: Nat.Hall.criticalB type-checks at Finset -> (Nat -> Finset) -> Finset -> Bool and so does `fun _ _ _ => true`. So it is reduced at closed arguments against hand-computed verdicts, one row per conjunct. The two `ble 1 ...` conjuncts are the two nonemptiness facts the two recursive calls need and they sit on OPPOSITE sides of the split: without `0 < card t` the branch fires at t = empty and recurses on sdiff s empty at the same count; without `0 < card (sdiff s t)` it fires at t = s and recurses on t at the same count. The second test asserts the four counts that make each accepted by the other's test, so the pair is shown not to be one condition written twice.",
+      "checker_paired_negative": "Collapsing the two positivity conjuncts into one -- replacing `ble 1 (card (sdiff s t))` with a second copy of `ble 1 (card t)` -- was RUN as mutant 3 of SUITES[\"hall-marriage-in-kernel\"]: killed 44 of a 44-test baseline."
+    },
+    {
+      "id": "the-predicate-alone-does-not-imply-inclusion",
+      "kind": "instance-pin",
+      "supports": "the decision procedure's verdict is strictly weaker than the proposition it is named for, and the search's bound equation is what closes the gap",
+      "check_status": "checked",
+      "checkers": [
+        "nat_prelude::hall_marriage_tests::the_predicate_alone_does_not_imply_inclusion_and_the_search_bound_is_why"
+      ],
+      "checker_command": "cargo test --release -p axeyum-lean-kernel --lib -- nat_prelude::hall_marriage_tests::the_predicate_alone_does_not_imply_inclusion_and_the_search_bound_is_why --test-threads=4",
+      "notes": "Nat.Hall.criticalB (range 3) nb (singleton 5) reduces to `true`, and 5 is not a member of range 3: Nat.Finset.subsetFixed loops to bound s and answers nothing about indices at or above it (ADR-1644's truncation asymmetry). So the verdict alone does not give the critical branch the inclusion it needs. The proof does not assume it -- Nat.Finset.existsSubset_of_search returns Eq Nat (bound t) (bound s) alongside the verdict, and it is that equation, fed to Nat.Finset.memB_of_subsetFixed_of_bound_le, that upgrades the decision to a pointwise inclusion. The test pins both halves rather than choosing an instance where the predicate happened to answer `false`, which would have hidden the hazard behind a green assertion.",
+      "checker_paired_negative": "The same test asserts bound (singleton 5) = 6 and bound (range 3) = 3 and that the two are not def-eq, which is why the search cannot return this set and the inductive step never sees it. Without that half the first assertion would read as a defect rather than as a documented boundary."
+    }
+  ],
+  "notes": "epistemic_status and external_status agree: Hall's marriage theorem is from 1935. What is recorded is the position of the flywheel -- the theorem is now a kernel term in this repository with an empty axiom footprint, closing a six-slice sequence that began with necessity in ADR-1608.\n\nThree things the assembly needed that no prior slice's sizing had named, all recorded in ADR-1645: the descent needs an EQUATION and the tree's existing inequality is in the useless direction (F:hall-descent-measure); the search predicate's verdict does not imply inclusion and the search's bound equation is what makes the branch sound; and the exhaustion rule's `false` cannot be reflected into a strict inequality here, because this tree carries `ble_eq_false_of_lt` and not its converse, so the branch decides with lt_or_ge and clashes a rebuilt `true` against the search's `false` instead.\n\nOne prior deliverable turned out unusable by the induction it was landed for. Nat.Hall.exists_isMatching_singleton (ADR-1630) is stated at a LITERAL Nat.Finset.singleton a, and an arbitrary s with card s = 1 is not definitionally one; there is no route from the count to the spelling without set extensionality. It is not needed -- the non-critical branch commits one index and recurses on sdiff s (singleton x), which the empty case answers -- so the only base case the induction consumes is exists_isMatching_of_card_le_zero. The singleton lemma remains a correct standalone statement and is recorded as measured-unusable-here rather than dropped."
+}

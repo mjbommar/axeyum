@@ -7200,6 +7200,61 @@ SUITES["cas-summation-and-gaussian"] = (
 )
 
 
+# `hall-marriage-in-kernel` -- Hall's marriage theorem (ADR-1645).
+#
+# Three guards, one per thing the assembly could get wrong while still
+# compiling as Rust. All three are caught by the KERNEL rather than by an
+# assertion: the trusted gate is what rejects a weakened measure, a swapped
+# branch and a collapsed pair of conjuncts, so the tests that die are every
+# test in the filter that builds the prelude.
+#
+# The second and third are the two the lane's brief named. The first is the
+# one `hall_descent_tests::the_subset_measure_conclusion_is_strict` exists to
+# catch independently of the induction, by inferring the applied lemma's type
+# and comparing it against the weak relation.
+# --------------------------------------------------------------------------
+
+SUITES["hall-marriage-in-kernel"] = (
+    "crates/axeyum-lean-kernel/src/nat_prelude/hall_marriage.rs",
+    Cargo(
+        ("--release", "-p", "axeyum-lean-kernel", "--lib", "nat_prelude::hall_"),
+        "hall-marriage-in-kernel",
+    ),
+    [
+        (
+            # The descent measure must be STRICT. `Nat.lt a b` unfolds to
+            # `Nat.le (succ a) b`, which is not `Nat.le a b`, so the weakened
+            # statement no longer has the proof's type.
+            "the subset descent measure is a strict inequality",
+            "        let concl = d.lt(card_t, card_s);",
+            "        let concl = d.le(card_t, card_s);",
+            "crates/axeyum-lean-kernel/src/nat_prelude/hall_descent.rs",
+        ),
+        (
+            # The critical branch consumes `anySubset ... = true` and the
+            # non-critical one `= false`. Exchanging them is type-correct in
+            # Rust and rejected by the kernel.
+            "the critical and non-critical branches are not exchanged",
+            "            goal,\n            on_search_true,\n            right_case,",
+            "            goal,\n            right_case,\n            on_search_true,",
+        ),
+        (
+            # `0 < card t` and `0 < card (sdiff s t)` are the two nonemptiness
+            # facts the two recursive calls need, on opposite sides of the
+            # split. Collapsing them leaves the critical branch offering
+            # `Le 1 (card t)` where `Le 1 (card (sdiff s t))` is demanded.
+            "the two positivity conjuncts are not the same test twice",
+            "    let included = d.const_app(p.finset_subset_fixed, &[s, t]);\n"
+            "    let nonempty = d.ble(one, card_t);\n"
+            "    let proper = d.ble(one, card_diff);",
+            "    let included = d.const_app(p.finset_subset_fixed, &[s, t]);\n"
+            "    let nonempty = d.ble(one, card_t);\n"
+            "    let proper = d.ble(one, card_t);",
+        ),
+    ],
+)
+
+
 if __name__ == "__main__":
     raise SystemExit(main(sys.argv))
 

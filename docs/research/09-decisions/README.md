@@ -924,6 +924,7 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [1642](adr-1642-the-complex-derivative-is-the-real-shelfs-uniform-one-not-a-pointwise-hasderivat.md) | the complex derivative is the real shelf's UNIFORM one, and the ring calculus pays for exactly half of it | proposed |
 | [1643](adr-1643-the-frame-carrier-is-nat-indexed-and-the-ball-index-is-not-a-nat.md) | the topological carrier is a frame with `Nat`-indexed joins, and the ball index is a pair, not a `Nat` | proposed |
 | [1644](adr-1644-the-loop-bound-decides-the-inclusion-test-and-halls-split-lands-without-the-induction.md) | the loop bound decides the inclusion test, and Hall's split lands without the induction | accepted |
+| [1645](adr-1645-halls-marriage-theorem-lands-and-the-search-predicate-carries-two-positivity-tests.md) | Hall's marriage theorem lands, and the search predicate carries two positivity tests | accepted |
 | [1648](adr-1648-the-round-trip-carries-its-fuel-and-leibniz-needed-no-induction.md) | the decoder round trip carries its fuel explicitly, and the Leibniz rule needed no induction | accepted |
 | [1660](adr-1660-there-are-two-lean-pins-and-every-claim-names-which-one-it-means.md) | there are two Lean pins, and every claim names which one it means | accepted |
 | [1661](adr-1661-the-replay-census-covers-every-carrier-and-type-valued-theorems-are-a-named-class.md) | the replay census covers every carrier, and `Type`-valued theorems are a named class | accepted |

@@ -205,14 +205,16 @@ fn expand_equal_route(terms: Vec<CasExpr>, target: &CasExpr) -> Certificate {
     let expanded = expand(&acc).unwrap_or_else(|| acc.clone());
     let simplified = simplify(&expanded);
     match equal(&simplified, target) {
-        ZeroTest::Certified { equal: true, .. } => {
+        ZeroTest::Certified { equal: true, .. } | ZeroTest::CertifiedBig { equal: true, .. } => {
             Certificate::certified(target.clone(), Route::ExpandEqual)
         }
-        ZeroTest::Certified { equal: false, .. } => Certificate::uncertified(
-            simplified,
-            Route::ExpandEqual,
-            "expand+equal decided the enumerated sum does NOT equal the target",
-        ),
+        ZeroTest::Certified { equal: false, .. } | ZeroTest::CertifiedBig { equal: false, .. } => {
+            Certificate::uncertified(
+                simplified,
+                Route::ExpandEqual,
+                "expand+equal decided the enumerated sum does NOT equal the target",
+            )
+        }
         ZeroTest::Unknown => Certificate::uncertified(
             simplified,
             Route::ExpandEqual,

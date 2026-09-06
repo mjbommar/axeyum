@@ -775,8 +775,8 @@ mod tests {
     /// Assert two `CasExpr` polynomials are equal via the certified zero-test.
     fn assert_matches(actual: &CasExpr, expected: &CasExpr) {
         match equal(actual, expected) {
-            ZeroTest::Certified { equal, witness } => {
-                assert!(equal, "series mismatch; difference witness = {witness:?}");
+            ZeroTest::Certified { equal, .. } | ZeroTest::CertifiedBig { equal, .. } => {
+                assert!(equal, "series mismatch");
             }
             ZeroTest::Unknown => panic!("expected a decidable (Certified) comparison"),
         }

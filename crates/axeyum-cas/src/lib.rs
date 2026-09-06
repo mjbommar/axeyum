@@ -1057,7 +1057,7 @@ impl MultiPoly {
     /// giving an equivalent polynomial with `I`-degree ≤ 1. Applied by the
     /// zero-test so complex identities decide correctly. `None` on overflow.
     fn fold_imaginary(&self) -> Option<MultiPoly> {
-        const IMAG: &str = "I";
+        const IMAG: &str = IMAGINARY_UNIT;
         // Fast path: no imaginary unit present.
         if !self.terms.keys().any(|m| m.powers.contains_key(IMAG)) {
             return Some(self.clone());
@@ -1102,7 +1102,7 @@ impl MultiPoly {
         let has_cos_sq = self.terms.keys().any(|m| {
             m.powers
                 .iter()
-                .any(|(var, &e)| e >= 2 && var.starts_with("\0cos:"))
+                .any(|(var, &e)| e >= 2 && var.starts_with(ATOM_COS))
         });
         if !has_cos_sq {
             return Some(self.clone());
@@ -1113,8 +1113,8 @@ impl MultiPoly {
             // cos(u)^e with cos(u)^(e mod 2)·(1 − sin(u)²)^(e/2).
             let mut term = MultiPoly::constant(*coeff);
             for (var, &exp) in &mono.powers {
-                let factor = if let Some(arg) = var.strip_prefix("\0cos:") {
-                    let sin_var = format!("\0sin:{arg}");
+                let factor = if let Some(arg) = var.strip_prefix(ATOM_COS) {
+                    let sin_var = format!("{ATOM_SIN}{arg}");
                     let cos_pow = MultiPoly::single_var_pow(var, exp % 2);
                     let mut one_minus_sin_sq = MultiPoly::constant(Rational::integer(1));
                     let mut sin_sq = MultiPoly::zero();
@@ -1141,7 +1141,7 @@ impl MultiPoly {
         let has_sin_sq = self.terms.keys().any(|m| {
             m.powers
                 .iter()
-                .any(|(var, &e)| e >= 2 && var.starts_with("\0sin:"))
+                .any(|(var, &e)| e >= 2 && var.starts_with(ATOM_SIN))
         });
         if !has_sin_sq {
             return Some(self.clone());
@@ -1150,8 +1150,8 @@ impl MultiPoly {
         for (mono, coeff) in &self.terms {
             let mut term = MultiPoly::constant(*coeff);
             for (var, &exp) in &mono.powers {
-                let factor = if let Some(arg) = var.strip_prefix("\0sin:") {
-                    let cos_var = format!("\0cos:{arg}");
+                let factor = if let Some(arg) = var.strip_prefix(ATOM_SIN) {
+                    let cos_var = format!("{ATOM_COS}{arg}");
                     let sin_pow = MultiPoly::single_var_pow(var, exp % 2);
                     let mut one_minus_cos_sq = MultiPoly::constant(Rational::integer(1));
                     let mut cos_sq = MultiPoly::zero();
@@ -1180,7 +1180,7 @@ impl MultiPoly {
     /// neither resolution (e.g. `sqrt(−3)`, an unknown symbolic radicand) are left
     /// untouched — conservative, never a false reduction. `None` on overflow.
     fn fold_radical(&self, radicands: &BTreeMap<String, MultiPoly>) -> Option<MultiPoly> {
-        const SQRT: &str = "\0sqrt:";
+        const SQRT: &str = ATOM_SQRT;
         let has_sqrt_sq = self.terms.keys().any(|m| {
             m.powers
                 .iter()
@@ -1224,7 +1224,7 @@ impl MultiPoly {
     /// system's domain), mirroring [`fold_radical`]'s `(√u)² = u`. A lone `abs(u)`
     /// (exp 1) is left as the atom — `|u| ≠ u` in general.
     fn fold_abs(&self, abs_args: &BTreeMap<String, MultiPoly>) -> Option<MultiPoly> {
-        const ABS: &str = "\0abs:";
+        const ABS: &str = ATOM_ABS;
         let has_abs_sq = self.terms.keys().any(|m| {
             m.powers
                 .iter()
@@ -1377,6 +1377,123 @@ impl MultiPoly {
         Some(reduced)
     }
 
+    /// Multiply the **constant** square-root atoms inside each monomial together:
+    /// `√a·√b → √(ab)`, then re-extract the square part. Sound for `a, b ≥ 0`
+    /// (the only radicands this crate atomizes), where both sides are the
+    /// principal real root of the same non-negative number.
+    ///
+    /// Without it every constant radical is its own independent variable and
+    /// `√2·√3 − √6` is a nonzero polynomial — which the zero-test reported as a
+    /// **refutation of a true identity**. That was the measured defect; this
+    /// fold and [`canonical_constant_sqrt_poly`] are the two halves of the fix,
+    /// and [`MultiPoly::relates_multiplicative_atoms`] declines the cases
+    /// neither can reach.
+    ///
+    /// Also finishes the even-power extraction for constants
+    /// (`√2^3 → 2·√2`), which [`MultiPoly::fold_radical`] starts, so a monomial
+    /// leaves this fold with at most one constant radical at exponent 1.
+    /// `None` on `i128` overflow.
+    fn fold_radical_products(&self) -> Option<MultiPoly> {
+        let reducible = self.terms.keys().any(|mono| {
+            let mut radicals = 0usize;
+            let mut squared = false;
+            for (var, &exp) in &mono.powers {
+                if constant_sqrt_radicand(var).is_some() {
+                    radicals += 1;
+                    squared |= exp >= 2;
+                }
+            }
+            radicals >= 2 || squared
+        });
+        if !reducible {
+            return Some(self.clone());
+        }
+        let mut out = MultiPoly::zero();
+        for (mono, coeff) in &self.terms {
+            let mut factor = *coeff;
+            let mut product: i128 = 1;
+            let mut powers = BTreeMap::new();
+            for (var, &exp) in &mono.powers {
+                match constant_sqrt_radicand(var) {
+                    // √m^exp = m^(exp/2) · √m^(exp mod 2), and the surviving
+                    // half joins the product of this monomial's radicands.
+                    Some(radicand) => {
+                        for _ in 0..(exp / 2) {
+                            factor = factor.checked_mul(Rational::integer(radicand))?;
+                        }
+                        if exp % 2 == 1 {
+                            product = product.checked_mul(radicand)?;
+                        }
+                    }
+                    None => {
+                        powers.insert(var.clone(), exp);
+                    }
+                }
+            }
+            if product > 1 {
+                let (square, free) = square_part(product)?;
+                factor = factor.checked_mul(Rational::integer(square))?;
+                if free > 1 {
+                    powers.insert(sqrt_atom_key(free), 1);
+                }
+            } else if product == 0 {
+                continue;
+            }
+            if factor.is_zero() {
+                continue;
+            }
+            let mono = Monomial { powers };
+            let combined = match out.terms.get(&mono).copied() {
+                Some(existing) => existing.checked_add(factor)?,
+                None => factor,
+            };
+            if combined.is_zero() {
+                out.terms.remove(&mono);
+            } else {
+                out.terms.insert(mono, combined);
+            }
+        }
+        Some(out)
+    }
+
+    /// Whether any single monomial multiplies two **multiplicative** atoms, or
+    /// raises one above the power its fold can discharge.
+    ///
+    /// `√a·√b = √(ab)`, `|a|·|b| = |ab|` and `root_q(a)·root_q(b) = root_q(ab)`
+    /// all hold on this crate's domain, but the normal form carries the three
+    /// atoms as independent variables — so a *nonzero* difference over such a
+    /// product establishes nothing, and reporting one as a refutation is a wrong
+    /// answer. Measured before this guard: `√x·√y = √(xy)`, `|x|·|y| = |xy|` and
+    /// `root₃(2)·root₃(4) = 2` were all reported **refuted**.
+    ///
+    /// Constant radicals never reach here — [`MultiPoly::fold_radical_products`]
+    /// has already merged them — so what this declines is a symbolic or
+    /// unreduced product, which is a completeness cost and not a soundness one.
+    /// The equality branch is unaffected: a zero difference is zero whatever the
+    /// atoms denote.
+    fn relates_multiplicative_atoms(&self) -> bool {
+        self.terms.keys().any(|mono| {
+            let mut multiplicative = 0usize;
+            for (var, &exp) in &mono.powers {
+                // An `i128` radicand whose square part is out of
+                // `square_part`'s reach was left uncanonicalized at intake, so
+                // `√(p²)` and `p` are two names the normal form cannot see are
+                // the same number. Measured before this line: `√(1000003²)` was
+                // reported **not equal** to `1000003`.
+                if constant_sqrt_radicand(var).is_some_and(|n| square_part(n).is_none()) {
+                    return true;
+                }
+                if is_multiplicative_atom(var) {
+                    if exp >= 2 {
+                        return true;
+                    }
+                    multiplicative += 1;
+                }
+            }
+            multiplicative >= 2
+        })
+    }
+
     /// The monomial `var^exp` as a one-term polynomial (or the constant `1` when
     /// `exp == 0`).
     fn single_var_pow(var: &str, exp: u32) -> MultiPoly {
@@ -1439,13 +1556,38 @@ impl MultiPoly {
     }
 
     /// `self` raised to a non-negative integer power, or `None` on overflow.
+    ///
+    /// **Binary exponentiation** (ADR-1670 wave two, item 3): `\u{2308}log\u{2082} exp\u{2309}`
+    /// squarings and at most that many extra products, where repeated
+    /// multiplication spent `exp - 1`. [`mvpoly::big::BigPoly::pow_within`]
+    /// already did this; the two rings now use the same algorithm, which is what
+    /// makes the ADR's cost table a measurement of the *coefficient ring* rather
+    /// than of the exponentiation schedule.
+    ///
+    /// It also moves the bounded overflow wall outward, and can never move it
+    /// inward: every polynomial this forms is `self^m` for some `1 \u{2264} m \u{2264} exp`
+    /// (the squarings are `self^(2^i)`, the accumulator is `self^(partial sum of
+    /// the set bits)`), and repeated multiplication formed *every* `self^m` for
+    /// `m \u{2264} exp`. The set of intermediates is a subset, so an input that
+    /// decided before still decides.
     #[must_use]
     fn pow(&self, exp: u32) -> Option<MultiPoly> {
         let mut acc = MultiPoly::constant(Rational::integer(1));
-        for _ in 0..exp {
-            acc = acc.mul(self)?;
+        if exp == 0 {
+            return Some(acc);
         }
-        Some(acc)
+        let mut base = self.clone();
+        let mut remaining = exp;
+        loop {
+            if remaining & 1 == 1 {
+                acc = acc.mul(&base)?;
+            }
+            remaining >>= 1;
+            if remaining == 0 {
+                return Some(acc);
+            }
+            base = base.mul(&base)?;
+        }
     }
 
     /// If this polynomial involves at most the single variable `var`, returns its
@@ -1792,6 +1934,13 @@ fn normalize_rational(expr: &CasExpr) -> Option<RatFunc> {
         // certification). It is exactly what lets `d/dx (c·ln v) = c'·ln v + c·v'/v`
         // certify — the spurious `c'·ln v` term drops when `c` is constant.
         CasExpr::Unary(UnaryFunc::Exp, arg) => normalize_exp(arg),
+        // `√` of a non-negative rational constant is canonicalized rather than
+        // atomized, so `√4`, `√8` and `√(1/2)` reduce and every spelling of one
+        // number takes one atom key. See `canonical_constant_sqrt_poly`.
+        CasExpr::Unary(UnaryFunc::Sqrt, arg) => Some(RatFunc::from_poly(
+            canonical_constant_sqrt_poly(arg)
+                .unwrap_or_else(|| MultiPoly::single_var(&atom_name("sqrt", arg))),
+        )),
         CasExpr::Unary(func, arg) => Some(RatFunc::from_poly(MultiPoly::single_var(&atom_name(
             &func.name(),
             arg,
@@ -2051,6 +2200,122 @@ fn parse_rational_render(text: &str) -> Option<Rational> {
     }
 }
 
+/// The largest trial divisor [`square_part`] will try before giving up.
+///
+/// A radicand up to `10^10` is fully factored inside this; above it the split is
+/// abandoned rather than left half-done, because a partly-extracted square is a
+/// radical two spellings can disagree on, and a disagreement the zero-test
+/// cannot see is a wrong refutation waiting to happen.
+const SQUARE_PART_TRIAL_LIMIT: i128 = 100_000;
+
+/// Split `n ≥ 1` as `k²·m` with `m` **squarefree**, returning `(k, m)`.
+///
+/// `None` when trial division cannot finish inside
+/// [`SQUARE_PART_TRIAL_LIMIT`], or on `i128` overflow. A `None` is not a
+/// reduction the caller may quietly skip — see [`canonical_constant_sqrt`].
+///
+/// When the loop ends, `remaining` has no divisor `d` with `d² ≤ remaining`, so
+/// it is `1` or prime, and therefore squarefree.
+fn square_part(n: i128) -> Option<(i128, i128)> {
+    if n < 1 {
+        return None;
+    }
+    let mut remaining = n;
+    let mut square = 1i128;
+    let mut free = 1i128;
+    let mut divisor = 2i128;
+    while divisor.checked_mul(divisor)? <= remaining {
+        if divisor > SQUARE_PART_TRIAL_LIMIT {
+            return None;
+        }
+        if remaining % divisor == 0 {
+            let mut exponent = 0u32;
+            while remaining % divisor == 0 {
+                remaining /= divisor;
+                exponent += 1;
+            }
+            for _ in 0..(exponent / 2) {
+                square = square.checked_mul(divisor)?;
+            }
+            if exponent % 2 == 1 {
+                free = free.checked_mul(divisor)?;
+            }
+        }
+        divisor += 1;
+    }
+    Some((square, free.checked_mul(remaining)?))
+}
+
+/// `√c` for a non-negative rational constant `c`, split as `(k, m)` with
+/// `√c = k·√m`, `k` a non-negative rational and `m` a squarefree non-negative
+/// integer (`m == 1` means the radical vanishes).
+///
+/// `√(p/q) = √(p·q)/q`, so one integer split does both halves.
+///
+/// `None` for a negative radicand (not real) and whenever [`square_part`]
+/// declines. The caller must then leave the atom as it stands **and** must not
+/// refute over it: an unreduced constant radical is exactly the case where
+/// `√8` and `2·√2` take different atom keys, and a difference of two spellings
+/// of the same number is nonzero in the free algebra and zero in ℝ.
+fn canonical_constant_sqrt(value: Rational) -> Option<(Rational, i128)> {
+    if value.numerator() < 0 {
+        return None;
+    }
+    if value.is_zero() {
+        return Some((Rational::zero(), 1));
+    }
+    let radicand = value.numerator().checked_mul(value.denominator())?;
+    let (square, free) = square_part(radicand)?;
+    Some((Rational::checked_new(square, value.denominator())?, free))
+}
+
+/// The atom key a squarefree integer radicand takes, identical to what
+/// [`atom_name`] gives `√m` — so a canonicalized radical and a literally
+/// spelled one meet in one normal form.
+fn sqrt_atom_key(radicand: i128) -> String {
+    atom_name(&UnaryFunc::Sqrt.name(), &CasExpr::int(radicand))
+}
+
+/// The radicand of a `√` atom whose key names a **non-negative integer**, or
+/// `None` for a symbolic, rational-keyed or non-radical variable.
+fn constant_sqrt_radicand(var: &str) -> Option<i128> {
+    let radicand: i128 = var.strip_prefix(ATOM_SQRT)?.parse().ok()?;
+    (radicand >= 0).then_some(radicand)
+}
+
+/// Whether `var` is an atom for a head that is **multiplicative** — `√`, `|·|`,
+/// `root_q` — so that a product of two of them denotes the head applied to the
+/// product, and treating them as independent variables is not sound for
+/// refutation.
+fn is_multiplicative_atom(var: &str) -> bool {
+    var.starts_with(ATOM_SQRT) || var.starts_with(ATOM_ABS) || var.starts_with("\0root")
+}
+
+/// `√c` for a constant argument, already canonicalized, or `None` when `arg` is
+/// not a non-negative rational constant (or its square part is out of reach).
+///
+/// This is what makes `√4 = 2`, `√8 = 2√2` and `√(1/2) = √2/2` decide: without
+/// it each spelling is its own opaque atom and the *difference of two names for
+/// one number* is a nonzero polynomial, which the zero-test would report as a
+/// refutation. Measured before the fix: `√4 = 2` came back **refuted**.
+fn canonical_constant_sqrt_poly(arg: &CasExpr) -> Option<MultiPoly> {
+    let value = rational_constant_value(arg)?;
+    let (factor, radicand) = canonical_constant_sqrt(value)?;
+    if radicand == 1 {
+        return Some(MultiPoly::constant(factor));
+    }
+    MultiPoly::constant(factor).mul(&MultiPoly::single_var(&sqrt_atom_key(radicand)))
+}
+
+/// The exact rational value of `expr` when it is a constant, else `None`.
+/// Recurses only into strictly smaller expressions.
+fn rational_constant_value(expr: &CasExpr) -> Option<Rational> {
+    let ratio = normalize_rational(expr)?;
+    let numerator = multipoly_as_constant(&ratio.num)?;
+    let denominator = multipoly_as_constant(&ratio.den)?;
+    numerator.checked_div(denominator)
+}
+
 /// The trust tag attached to a CAS answer
 /// ([decidability-map.md](../../../docs/research/10-cas/decidability-map.md)).
 ///
@@ -2088,16 +2353,119 @@ pub enum ZeroTest {
         /// [ADR-1670]: ../../../docs/research/09-decisions/adr-1670-i128-fast-path-with-a-big-integer-overflow-fallback-for-the-cas-zero-test.md
         witness: MultiPoly,
     },
+    /// Decided exactly, with a certificate whose coefficients do **not** fit
+    /// `i128` — the same strength as [`ZeroTest::Certified`], carried in a wider
+    /// type (ADR-1670 wave two, item 1).
+    ///
+    /// This variant exists because a decision the engine can make and a
+    /// certificate the type can carry are not the same thing. Wave one of
+    /// ADR-1670 could *decide* `2·(x+1)^160 ≠ (x+1)^160` and had nowhere to put
+    /// the difference, so it declined; emitting a polynomial that is not the
+    /// difference would have weakened what `Certified` means. Here the witness
+    /// is the difference, at whatever width it needs.
+    ///
+    /// It appears **only** where [`ZeroTest::Certified`] could not: the
+    /// unbounded path still downgrades to `Certified` whenever the witness fits
+    /// `i128`, so no verdict that used to be `Certified` becomes this. A
+    /// consumer that only handles `Certified` therefore sees this variant
+    /// exactly on inputs that used to be [`ZeroTest::Unknown`].
+    ///
+    /// [ADR-1670]: ../../../docs/research/09-decisions/adr-1670-i128-fast-path-with-a-big-integer-overflow-fallback-for-the-cas-zero-test.md
+    CertifiedBig {
+        /// Whether the two expressions are equal (the difference is zero).
+        equal: bool,
+        /// The difference `a − b` in canonical form, up to a positive rational
+        /// scale; see [`BigWitness`].
+        witness: BigWitness,
+    },
     /// Could not decide. Honest unknown — never a wrong answer.
     ///
     /// Two causes, after [ADR-1670]: the expression is outside the fragment the
     /// zero-test decides at all, or exact arithmetic overflowed `i128` **and**
-    /// the unbounded fallback also declined (a transcendental atom it does not
-    /// carry folds for, the reserved `I`, or a refutation whose witness does not
-    /// fit back into `i128`).
+    /// the unbounded fallback also declined (an `exp` head, which it does not
+    /// carry the decomposition for, or a surviving transcendental atom on the
+    /// inequality branch).
     ///
     /// [ADR-1670]: ../../../docs/research/09-decisions/adr-1670-i128-fast-path-with-a-big-integer-overflow-fallback-for-the-cas-zero-test.md
     Unknown,
+}
+
+/// The difference certificate of a [`ZeroTest::CertifiedBig`]: a canonical
+/// multivariate polynomial with **unbounded integer** coefficients.
+///
+/// Canonical in the same sense as [`MultiPoly`] — a map from monomial to a
+/// nonzero coefficient — so [`BigWitness::is_zero`] is exact and structural
+/// equality is value equality.
+///
+/// # What it certifies, and up to what
+///
+/// The polynomial is the cross-multiplied difference `a·d − c·b` of the two
+/// compared expressions, **up to a positive rational scale**: the unbounded path
+/// works over `ℤ[vars]` and clears every rational denominator it meets, and its
+/// fold passes clear more. A positive scale is invisible to a zero test, so the
+/// verdict is unaffected; a re-check must compare up to that scale, which is
+/// what [`recheck_zero_test`] does.
+///
+/// The coefficients are `num_bigint::BigInt`, the type the rest of this crate's
+/// unbounded work already uses.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct BigWitness {
+    poly: BigPoly,
+}
+
+impl BigWitness {
+    /// Whether this is the zero polynomial — exactly the certified verdict's
+    /// `equal` flag.
+    #[must_use]
+    pub fn is_zero(&self) -> bool {
+        self.poly.is_zero()
+    }
+
+    /// The number of nonzero terms.
+    #[must_use]
+    pub fn term_count(&self) -> usize {
+        self.poly.term_count()
+    }
+
+    /// The widest coefficient magnitude, in bits. An `i128` numerator holds 127,
+    /// so a value above that is a certificate [`MultiPoly`] could not have
+    /// carried — which is the whole reason this type exists.
+    #[must_use]
+    pub fn coefficient_bits(&self) -> u64 {
+        self.poly.coefficient_bits()
+    }
+
+    /// The variables appearing in the witness, in sorted order.
+    #[must_use]
+    pub fn variables(&self) -> BTreeSet<String> {
+        self.poly.variables()
+    }
+
+    /// The bounded view of this witness, or `None` when a coefficient does not
+    /// fit `i128`. `Some` here means the same certificate could have been
+    /// carried by [`ZeroTest::Certified`].
+    #[must_use]
+    pub fn to_multipoly(&self) -> Option<MultiPoly> {
+        multipoly_from_big(&self.poly)
+    }
+
+    /// The `(monomial, coefficient)` pairs in ascending monomial order, each
+    /// monomial as a map from variable to a nonzero exponent. Deterministic:
+    /// both maps are `BTreeMap`s.
+    #[must_use]
+    pub fn terms(&self) -> Vec<(BTreeMap<String, u32>, BigInt)> {
+        self.poly
+            .terms()
+            .map(|(mono, coeff)| {
+                (
+                    mono.powers()
+                        .map(|(name, exp)| (name.to_owned(), exp))
+                        .collect(),
+                    coeff.clone(),
+                )
+            })
+            .collect()
+    }
 }
 
 impl ZeroTest {
@@ -2105,7 +2473,7 @@ impl ZeroTest {
     #[must_use]
     pub fn certainty(&self) -> Certainty {
         match self {
-            ZeroTest::Certified { .. } => Certainty::Certified,
+            ZeroTest::Certified { .. } | ZeroTest::CertifiedBig { .. } => Certainty::Certified,
             // An overflow-limited zero-test is not heuristic in nature; it is a
             // resource limit. We surface it as `Heuristic` here only to mean
             // "no certificate produced"; callers should branch on the variant.
@@ -2238,7 +2606,10 @@ fn fold_gamma_reflection(expr: &CasExpr) -> CasExpr {
 pub fn equal(a: &CasExpr, b: &CasExpr) -> ZeroTest {
     let direct = equal_core(a, b);
     // A certified equality is already sound (zero witness ⇒ identity holds).
-    if matches!(direct, ZeroTest::Certified { equal: true, .. }) {
+    if matches!(
+        direct,
+        ZeroTest::Certified { equal: true, .. } | ZeroTest::CertifiedBig { equal: true, .. }
+    ) {
         return direct;
     }
     // Otherwise re-check on the Euler canonical form (also collapsing `ln(exp u)=u`
@@ -2247,11 +2618,12 @@ pub fn equal(a: &CasExpr, b: &CasExpr) -> ZeroTest {
     let ca = canonicalize_for_equality(a);
     let cb = canonicalize_for_equality(b);
     match equal_core(&ca, &cb) {
-        certified @ ZeroTest::Certified { .. } => certified,
+        certified @ (ZeroTest::Certified { .. } | ZeroTest::CertifiedBig { .. }) => certified,
         // The Euler form could not decide. Never surface a relation-blind
         // inequality: downgrade a core `≠` to `Unknown`, else keep `Unknown`.
         ZeroTest::Unknown => match direct {
-            ZeroTest::Certified { equal: false, .. } => ZeroTest::Unknown,
+            ZeroTest::Certified { equal: false, .. }
+            | ZeroTest::CertifiedBig { equal: false, .. } => ZeroTest::Unknown,
             other => other,
         },
     }
@@ -2392,22 +2764,48 @@ const MAX_WEIGHTED_BESSEL_ORDER: u32 = 32;
 fn equal_core(a: &CasExpr, b: &CasExpr) -> ZeroTest {
     match equal_core_bounded(a, b) {
         ZeroTest::Unknown => equal_core_unbounded(a, b),
-        decided @ ZeroTest::Certified { .. } => decided,
+        decided @ (ZeroTest::Certified { .. } | ZeroTest::CertifiedBig { .. }) => decided,
     }
 }
 
 /// The bounded (`i128`) cross-multiplication zero-test.
+///
+/// A *nonzero* difference is a refutation only when no relation the normal form
+/// is blind to could still collapse it. One class of relation is not covered by
+/// any fold and must be declined instead:
+/// [`MultiPoly::relates_multiplicative_atoms`] — a monomial multiplying two
+/// radical or absolute-value atoms, where `√a·√b = √(ab)` makes a nonzero
+/// polynomial in three independent variables prove nothing. The equality branch
+/// needs no such guard: a zero difference is zero whatever the atoms denote.
 fn equal_core_bounded(a: &CasExpr, b: &CasExpr) -> ZeroTest {
+    match bounded_difference(a, b) {
+        Some(witness) if witness.is_zero() => ZeroTest::Certified {
+            equal: true,
+            witness,
+        },
+        Some(witness) if witness.relates_multiplicative_atoms() => ZeroTest::Unknown,
+        Some(witness) => ZeroTest::Certified {
+            equal: false,
+            witness,
+        },
+        None => ZeroTest::Unknown,
+    }
+}
+
+/// The bounded path's folded difference `a·d − c·b`, or `None` on `i128`
+/// overflow anywhere in the expansion or the fold passes.
+///
+/// Split out of [`equal_core_bounded`] so [`recheck_zero_test`] can recompute
+/// the same difference without going through a [`ZeroTest`].
+fn bounded_difference(a: &CasExpr, b: &CasExpr) -> Option<MultiPoly> {
     let (Some(ra), Some(rb)) = (normalize_rational(a), normalize_rational(b)) else {
-        return ZeroTest::Unknown;
+        return None;
     };
     // a·d − c·b
     let (Some(ad), Some(cb)) = (ra.num.mul(&rb.den), rb.num.mul(&ra.den)) else {
-        return ZeroTest::Unknown;
+        return None;
     };
-    let Some(neg_cb) = cb.neg() else {
-        return ZeroTest::Unknown;
-    };
+    let neg_cb = cb.neg()?;
     // Resolve each `sqrt` atom's symbolic radicand so `fold_radical` can apply
     // `(√u)² = u` (not just the constant `(√c)² = c`). Keys match the atom names
     // `normalize_rational` emits.
@@ -2464,21 +2862,14 @@ fn equal_core_bounded(a: &CasExpr, b: &CasExpr) -> ZeroTest {
             _ => {}
         }
     }
-    match ad
-        .add(&neg_cb)
+    ad.add(&neg_cb)
         .and_then(|w| w.fold_imaginary())
         .and_then(|w| w.fold_pythagorean())
         .and_then(|w| w.fold_radical(&radicands))
+        .and_then(|w| w.fold_radical_products())
         .and_then(|w| w.fold_abs(&abs_args))
         .and_then(|w| w.fold_nth_root(&nth_roots))
         .and_then(|w| w.fold_bessel_recurrences(&bessel_recurrences))
-    {
-        Some(witness) => ZeroTest::Certified {
-            equal: witness.is_zero(),
-            witness,
-        },
-        None => ZeroTest::Unknown,
-    }
 }
 
 // --- The arbitrary-precision overflow fallback (ADR-1670) --------------------
@@ -2556,6 +2947,625 @@ impl BigRatFunc {
     }
 }
 
+// --- The unbounded fold ring (ADR-1670 wave two, item 2) ---------------------
+
+/// The prefix [`atom_name`] gives every transcendental atom variable. A user
+/// variable name cannot contain it, so a name carrying it is always an atom.
+const ATOM_PREFIX: char = '\0';
+/// The atom-key prefix for a `sqrt` head; see [`atom_name`].
+const ATOM_SQRT: &str = "\0sqrt:";
+/// The atom-key prefix for an `abs` head.
+const ATOM_ABS: &str = "\0abs:";
+/// The atom-key prefix for a `sin` head.
+const ATOM_SIN: &str = "\0sin:";
+/// The atom-key prefix for a `cos` head.
+const ATOM_COS: &str = "\0cos:";
+/// The reserved variable standing for the imaginary unit.
+const IMAGINARY_UNIT: &str = "I";
+
+/// Spend `cost` units of the unbounded path's work budget, or decline.
+/// See [`BIG_FALLBACK_WORK_BUDGET`].
+fn charge(budget: &mut u64, cost: u64) -> Option<()> {
+    if cost > *budget {
+        return None;
+    }
+    *budget -= cost;
+    Some(())
+}
+
+/// `base^exp` for an unbounded integer, by binary exponentiation.
+fn bigint_pow(base: &BigInt, exp: u32) -> BigInt {
+    let mut result = BigInt::from(1);
+    let mut square = base.clone();
+    let mut remaining = exp;
+    while remaining > 0 {
+        if remaining & 1 == 1 {
+            result *= &square;
+        }
+        remaining >>= 1;
+        if remaining > 0 {
+            square = &square * &square;
+        }
+    }
+    result
+}
+
+/// A polynomial with unbounded **rational** coefficients, carried as `num / den`
+/// with `den` a strictly positive unbounded integer.
+///
+/// This is the ring the unbounded fold passes run in. The zero-test's difference
+/// is an integer polynomial, but the folds substitute *radicands* into it —
+/// `(√u)² → u`, `|u|² → u²`, `root_q(u)^q → u` — and a radicand can carry
+/// rational coefficients (`√(x/2)`), which ℤ[vars] cannot spell. Rather than
+/// introduce a big-rational coefficient type (option (b) of ADR-1670 through the
+/// back door), the denominator is kept as one shared positive integer: clearing
+/// it scales the whole polynomial by a **positive rational**, which is exactly
+/// the scale [`ZeroTest::Certified`]'s witness already tolerates and is invisible
+/// to the zero test.
+#[derive(Debug, Clone)]
+struct BigQPoly {
+    /// The numerator over ℤ[vars].
+    num: BigPoly,
+    /// The shared denominator. Every constructor maintains `den > 0`.
+    den: BigInt,
+}
+
+impl BigQPoly {
+    /// The integer polynomial `p` as `p / 1`.
+    fn from_poly(num: BigPoly) -> Self {
+        BigQPoly {
+            num,
+            den: BigInt::from(1),
+        }
+    }
+
+    /// The zero polynomial.
+    fn zero() -> Self {
+        BigQPoly::from_poly(BigPoly::zero())
+    }
+
+    /// The single monomial `name^exp` (the constant `1` when `exp == 0`).
+    fn variable_pow(name: &str, exp: u32) -> Self {
+        BigQPoly::from_poly(BigPoly::variable_pow(name, exp))
+    }
+
+    /// Whether this is the zero polynomial. Exact: `den > 0`, so the value is
+    /// zero exactly when the numerator is.
+    fn is_zero(&self) -> bool {
+        self.num.is_zero()
+    }
+
+    /// Divide the shared denominator and the numerator's integer content by
+    /// their GCD. A growth control only — the value is unchanged.
+    fn reduced(&self) -> Self {
+        if self.num.is_zero() {
+            return BigQPoly::zero();
+        }
+        if self.den == BigInt::from(1) {
+            return self.clone();
+        }
+        let common = mvpoly::big::integer_gcd(&self.num.integer_content(), &self.den);
+        if common <= BigInt::from(1) {
+            return self.clone();
+        }
+        match self.num.divide_integer_exact(&common) {
+            Some(num) if (&self.den % &common).is_zero() => BigQPoly {
+                num,
+                den: &self.den / &common,
+            },
+            _ => self.clone(),
+        }
+    }
+
+    /// `self · c` for an unbounded integer `c`, charging one product per term.
+    fn scale_integer(&self, factor: &BigInt, budget: &mut u64) -> Option<Self> {
+        if *factor == BigInt::from(1) {
+            return Some(self.clone());
+        }
+        Some(BigQPoly {
+            num: self
+                .num
+                .mul_within(&BigPoly::constant(factor.clone()), budget)?,
+            den: self.den.clone(),
+        })
+    }
+
+    /// `self + other`, over a common denominator.
+    fn add(&self, other: &BigQPoly, budget: &mut u64) -> Option<Self> {
+        if self.den == other.den {
+            return Some(BigQPoly {
+                num: self.num.add_within(&other.num, budget)?,
+                den: self.den.clone(),
+            });
+        }
+        let left = self.scale_integer(&other.den, budget)?;
+        let right = other.scale_integer(&self.den, budget)?;
+        Some(
+            BigQPoly {
+                num: left.num.add_within(&right.num, budget)?,
+                den: &self.den * &other.den,
+            }
+            .reduced(),
+        )
+    }
+
+    /// `self · other`.
+    fn mul(&self, other: &BigQPoly, budget: &mut u64) -> Option<Self> {
+        Some(
+            BigQPoly {
+                num: self.num.mul_within(&other.num, budget)?,
+                den: &self.den * &other.den,
+            }
+            .reduced(),
+        )
+    }
+
+    /// `−self`.
+    fn neg(&self) -> Self {
+        BigQPoly {
+            num: self.num.neg(),
+            den: self.den.clone(),
+        }
+    }
+
+    /// `self^exp`.
+    fn pow(&self, exp: u32, budget: &mut u64) -> Option<Self> {
+        Some(
+            BigQPoly {
+                num: self.num.pow_within(exp, budget)?,
+                den: bigint_pow(&self.den, exp),
+            }
+            .reduced(),
+        )
+    }
+
+    /// The exact quotient `self / divisor`, or `None` when the numerators do not
+    /// divide exactly in ℤ[vars].
+    ///
+    /// Conservative in the same way [`MvPoly::exact_div`] is: a `None` makes the
+    /// caller leave the term unreduced, which costs completeness and never
+    /// soundness.
+    fn exact_div(&self, divisor: &BigQPoly) -> Option<Self> {
+        let quotient = self.num.exact_div(&divisor.num)?;
+        Some(
+            BigQPoly {
+                num: quotient.mul(&BigPoly::constant(divisor.den.clone()))?,
+                den: self.den.clone(),
+            }
+            .reduced(),
+        )
+    }
+}
+
+impl BigQPoly {
+    /// Reduce powers of the reserved imaginary unit `I` using `I² = −1`, leaving
+    /// an equivalent polynomial of `I`-degree ≤ 1. The unbounded twin of
+    /// [`MultiPoly::fold_imaginary`].
+    fn fold_imaginary(&self, budget: &mut u64) -> Option<Self> {
+        if !self
+            .num
+            .terms()
+            .any(|(mono, _)| mono.exponent_of(IMAGINARY_UNIT) > 0)
+        {
+            return Some(self.clone());
+        }
+        let mut out = BigPoly::zero();
+        for (mono, coeff) in self.num.terms() {
+            charge(budget, 1)?;
+            let exp = mono.exponent_of(IMAGINARY_UNIT);
+            // I^exp = (−1)^(exp/2) · I^(exp mod 2).
+            let mut powers: Vec<(String, u32)> = mono
+                .powers()
+                .filter(|(name, _)| *name != IMAGINARY_UNIT)
+                .map(|(name, e)| (name.to_owned(), e))
+                .collect();
+            if exp % 2 == 1 {
+                powers.push((IMAGINARY_UNIT.to_owned(), 1));
+            }
+            let borrowed: Vec<(&str, u32)> = powers.iter().map(|(n, e)| (n.as_str(), *e)).collect();
+            let value = if (exp / 2) % 2 == 1 {
+                -coeff.clone()
+            } else {
+                coeff.clone()
+            };
+            out = out.add(&BigPoly::term(
+                mvpoly::Monomial::from_powers(&borrowed),
+                value,
+            ));
+        }
+        Some(BigQPoly {
+            num: out,
+            den: self.den.clone(),
+        })
+    }
+
+    /// Rebuild every term as a product of per-variable factors, mapping each
+    /// `(variable, exponent)` through `factor`. The shared engine behind the
+    /// substituting folds below; the bounded folds each spell this loop out.
+    fn rebuild_terms(
+        &self,
+        budget: &mut u64,
+        mut factor: impl FnMut(&str, u32, &mut u64) -> Option<BigQPoly>,
+    ) -> Option<Self> {
+        let mut out = BigQPoly::zero();
+        for (mono, coeff) in self.num.terms() {
+            charge(budget, 1)?;
+            let mut term = BigQPoly::from_poly(BigPoly::constant(coeff.clone()));
+            for (var, exp) in mono.powers() {
+                let piece = factor(var, exp, budget)?;
+                term = term.mul(&piece, budget)?;
+            }
+            out = out.add(&term, budget)?;
+        }
+        Some(
+            BigQPoly {
+                num: out.num,
+                den: &out.den * &self.den,
+            }
+            .reduced(),
+        )
+    }
+
+    /// Reduce `cos²(u) → 1 − sin²(u)`, so the zero-test knows the Pythagorean
+    /// identity. The unbounded twin of [`MultiPoly::fold_pythagorean`].
+    fn fold_pythagorean(&self, budget: &mut u64) -> Option<Self> {
+        let reducible = self.num.terms().any(|(mono, _)| {
+            mono.powers()
+                .any(|(var, exp)| exp >= 2 && var.starts_with(ATOM_COS))
+        });
+        if !reducible {
+            return Some(self.clone());
+        }
+        self.rebuild_terms(budget, |var, exp, budget| {
+            let Some(arg) = var.strip_prefix(ATOM_COS) else {
+                return Some(BigQPoly::variable_pow(var, exp));
+            };
+            let sin_var = format!("{ATOM_SIN}{arg}");
+            let one_minus_sin_sq =
+                BigQPoly::from_poly(BigPoly::one().sub(&BigPoly::variable_pow(&sin_var, 2)));
+            BigQPoly::variable_pow(var, exp % 2)
+                .mul(&one_minus_sin_sq.pow(exp / 2, budget)?, budget)
+        })
+    }
+
+    /// Reduce `sqrt(u)² → u` for every square-root atom whose radicand the
+    /// caller resolved. The unbounded twin of [`MultiPoly::fold_radical`].
+    ///
+    /// Unlike the bounded fold this has **one** resolution route rather than
+    /// two: `radicands` is built in this ring by [`big_atom_folds`] and already
+    /// covers a constant radicand, including one too wide for the bounded path's
+    /// `parse_rational_render`. An atom absent from `radicands` is left
+    /// untouched — conservative, never a false reduction.
+    fn fold_radical(
+        &self,
+        radicands: &BTreeMap<String, BigQPoly>,
+        budget: &mut u64,
+    ) -> Option<Self> {
+        let reducible = self.num.terms().any(|(mono, _)| {
+            mono.powers()
+                .any(|(var, exp)| exp >= 2 && radicands.contains_key(var))
+        });
+        if !reducible {
+            return Some(self.clone());
+        }
+        self.rebuild_terms(budget, |var, exp, budget| {
+            match radicands.get(var) {
+                // sqrt(u)^exp = u^(exp/2) · sqrt(u)^(exp mod 2).
+                Some(radicand) if exp >= 2 => radicand
+                    .pow(exp / 2, budget)?
+                    .mul(&BigQPoly::variable_pow(var, exp % 2), budget),
+                _ => Some(BigQPoly::variable_pow(var, exp)),
+            }
+        })
+    }
+
+    /// Multiply the **constant** square-root atoms inside each monomial
+    /// together and re-extract the square part. The unbounded twin of
+    /// [`MultiPoly::fold_radical_products`], and the reason `√2·√3 = √6` decides
+    /// at overflow scale too rather than only below the wall.
+    ///
+    /// The radicands themselves stay `i128`: they come from
+    /// [`canonical_constant_sqrt`], which works on the bounded `Rational` an
+    /// atom key spells. Only the polynomial around them is unbounded.
+    fn fold_radical_products(&self, budget: &mut u64) -> Option<Self> {
+        let reducible = self.num.terms().any(|(mono, _)| {
+            let mut radicals = 0usize;
+            let mut squared = false;
+            for (var, exp) in mono.powers() {
+                if constant_sqrt_radicand(var).is_some() {
+                    radicals += 1;
+                    squared |= exp >= 2;
+                }
+            }
+            radicals >= 2 || squared
+        });
+        if !reducible {
+            return Some(self.clone());
+        }
+        let mut out = BigQPoly::zero();
+        for (mono, coeff) in self.num.terms() {
+            charge(budget, 1)?;
+            let mut factor = BigInt::from(1);
+            let mut product: i128 = 1;
+            let mut powers: Vec<(String, u32)> = Vec::new();
+            for (var, exp) in mono.powers() {
+                match constant_sqrt_radicand(var) {
+                    Some(radicand) => {
+                        factor *= bigint_pow(&BigInt::from(radicand), exp / 2);
+                        if exp % 2 == 1 {
+                            product = product.checked_mul(radicand)?;
+                        }
+                    }
+                    None => powers.push((var.to_owned(), exp)),
+                }
+            }
+            if product > 1 {
+                let (square, free) = square_part(product)?;
+                factor *= BigInt::from(square);
+                if free > 1 {
+                    powers.push((sqrt_atom_key(free), 1));
+                }
+            } else if product == 0 {
+                continue;
+            }
+            let borrowed: Vec<(&str, u32)> = powers.iter().map(|(n, e)| (n.as_str(), *e)).collect();
+            out = out.add(
+                &BigQPoly::from_poly(BigPoly::term(
+                    mvpoly::Monomial::from_powers(&borrowed),
+                    coeff * factor,
+                )),
+                budget,
+            )?;
+        }
+        Some(
+            BigQPoly {
+                num: out.num,
+                den: &out.den * &self.den,
+            }
+            .reduced(),
+        )
+    }
+
+    /// Reduce even powers of an `abs` atom using `|u|² = u²`. The unbounded twin
+    /// of [`MultiPoly::fold_abs`].
+    fn fold_abs(&self, abs_args: &BTreeMap<String, BigQPoly>, budget: &mut u64) -> Option<Self> {
+        let reducible = self.num.terms().any(|(mono, _)| {
+            mono.powers()
+                .any(|(var, exp)| exp >= 2 && abs_args.contains_key(var))
+        });
+        if !reducible {
+            return Some(self.clone());
+        }
+        self.rebuild_terms(budget, |var, exp, budget| match abs_args.get(var) {
+            // |u|^exp = u^(even part) · |u|^(parity).
+            Some(arg) if exp >= 2 => arg
+                .pow(exp - exp % 2, budget)?
+                .mul(&BigQPoly::variable_pow(var, exp % 2), budget),
+            _ => Some(BigQPoly::variable_pow(var, exp)),
+        })
+    }
+
+    /// Reduce powers of an `n`-th-root atom using `root_q(u)^q = u`. The
+    /// unbounded twin of [`MultiPoly::fold_nth_root`].
+    fn fold_nth_root(
+        &self,
+        roots: &BTreeMap<String, (u32, BigQPoly)>,
+        budget: &mut u64,
+    ) -> Option<Self> {
+        let reducible = self.num.terms().any(|(mono, _)| {
+            mono.powers()
+                .any(|(var, exp)| roots.get(var).is_some_and(|(q, _)| exp >= *q))
+        });
+        if !reducible {
+            return Some(self.clone());
+        }
+        self.rebuild_terms(budget, |var, exp, budget| match roots.get(var) {
+            Some((q, radicand)) if exp >= *q => radicand
+                .pow(exp / q, budget)?
+                .mul(&BigQPoly::variable_pow(var, exp % q), budget),
+            _ => Some(BigQPoly::variable_pow(var, exp)),
+        })
+    }
+
+    /// Reduce the polynomial Bessel recurrences. The unbounded twin of
+    /// [`MultiPoly::fold_bessel_recurrences`]; the descriptors carry the same
+    /// `(atom key, order, modified?, argument expression, argument polynomial)`,
+    /// with the polynomial in this ring.
+    ///
+    /// The division that decides whether a term can be rewritten is
+    /// [`BigQPoly::exact_div`], which declines exactly as the bounded fold's
+    /// [`MvPoly::exact_div`] does; a declined term is left untouched.
+    fn fold_bessel_recurrences(
+        &self,
+        recurrences: &[(String, u32, bool, CasExpr, BigQPoly)],
+        budget: &mut u64,
+    ) -> Option<Self> {
+        let mut reduced = self.clone();
+        let mut ordered: Vec<&(String, u32, bool, CasExpr, BigQPoly)> =
+            recurrences.iter().collect();
+        ordered.sort_by_key(|(_, order, _, _, _)| core::cmp::Reverse(*order));
+        for (target, order, modified, argument, argument_poly) in ordered {
+            if *order < 2 || argument_poly.is_zero() {
+                continue;
+            }
+            let max_exponent = reduced
+                .num
+                .terms()
+                .map(|(mono, _)| mono.exponent_of(target))
+                .max()
+                .unwrap_or(0);
+            if max_exponent == 0 {
+                continue;
+            }
+            let family = if *modified {
+                UnaryFunc::BesselI
+            } else {
+                UnaryFunc::BesselJ
+            };
+            let lower = BigQPoly::from_poly(BigPoly::variable(&atom_name(
+                &family(order - 2).name(),
+                argument,
+            )));
+            let previous = BigQPoly::from_poly(BigPoly::variable(&atom_name(
+                &family(order - 1).name(),
+                argument,
+            )));
+            let scale = BigInt::from(2) * BigInt::from(order.checked_sub(1)?);
+            let scaled_previous = previous.scale_integer(&scale, budget)?;
+            let argument_lower = argument_poly.mul(&lower, budget)?;
+            let replacement = if *modified {
+                // u·Iₙ = u·Iₙ₋₂ − 2(n−1)·Iₙ₋₁.
+                argument_lower.add(&scaled_previous.neg(), budget)?
+            } else {
+                // u·Jₙ = 2(n−1)·Jₙ₋₁ − u·Jₙ₋₂.
+                scaled_previous.add(&argument_lower.neg(), budget)?
+            };
+
+            let mut next = BigQPoly::zero();
+            for exponent in 0..=max_exponent {
+                let mut coefficient = BigPoly::zero();
+                for (mono, coeff) in reduced.num.terms() {
+                    if mono.exponent_of(target) != exponent {
+                        continue;
+                    }
+                    charge(budget, 1)?;
+                    let powers: Vec<(String, u32)> = mono
+                        .powers()
+                        .filter(|(name, _)| *name != target.as_str())
+                        .map(|(name, e)| (name.to_owned(), e))
+                        .collect();
+                    let borrowed: Vec<(&str, u32)> =
+                        powers.iter().map(|(n, e)| (n.as_str(), *e)).collect();
+                    coefficient = coefficient.add(&BigPoly::term(
+                        mvpoly::Monomial::from_powers(&borrowed),
+                        coeff.clone(),
+                    ));
+                }
+                if coefficient.is_zero() {
+                    continue;
+                }
+                let coefficient = BigQPoly {
+                    num: coefficient,
+                    den: reduced.den.clone(),
+                };
+                let term = if exponent == 0 {
+                    coefficient
+                } else {
+                    match coefficient.exact_div(argument_poly) {
+                        Some(quotient) => quotient
+                            .mul(&replacement, budget)?
+                            .mul(&BigQPoly::variable_pow(target, exponent - 1), budget)?,
+                        None => {
+                            coefficient.mul(&BigQPoly::variable_pow(target, exponent), budget)?
+                        }
+                    }
+                };
+                next = next.add(&term, budget)?;
+            }
+            reduced = next;
+        }
+        Some(reduced)
+    }
+
+    /// Whether any variable is a transcendental atom (an [`atom_name`] key).
+    /// The inequality branch declines on these; see [`equal_core_unbounded`].
+    fn mentions_atom(&self) -> bool {
+        self.num
+            .variables()
+            .iter()
+            .any(|name| name.starts_with(ATOM_PREFIX))
+    }
+}
+
+/// The atom dictionaries the unbounded fold passes need, in this ring.
+///
+/// The bounded twin is the `radicands` / `abs_args` / `nth_roots` /
+/// `bessel_recurrences` block inside [`equal_core_bounded`]. The difference is
+/// where the polynomials come from: there they are [`normalize`]d, here they are
+/// expanded by [`normalize_rational_big_within`], so a radicand whose own
+/// expansion leaves `i128` still resolves.
+#[derive(Debug, Default)]
+struct BigAtomFolds {
+    /// `sqrt` atom key → radicand `u`, for `(√u)² = u`.
+    radicands: BTreeMap<String, BigQPoly>,
+    /// `abs` atom key → argument `u`, for `|u|² = u²`.
+    abs_args: BTreeMap<String, BigQPoly>,
+    /// `root_q` atom key → `(q, radicand)`, for `root_q(u)^q = u`.
+    nth_roots: BTreeMap<String, (u32, BigQPoly)>,
+    /// `(atom key, order, modified?, argument expression, argument polynomial)`.
+    bessel: Vec<(String, u32, bool, CasExpr, BigQPoly)>,
+}
+
+/// Build [`BigAtomFolds`] from the two compared expressions.
+///
+/// An atom whose argument does not expand to a polynomial over a **constant**
+/// denominator is simply not registered: the fold then leaves it alone, which
+/// costs completeness on the equality branch and nothing at all on the
+/// inequality branch, where [`equal_core_unbounded`] declines on any surviving
+/// atom regardless.
+fn big_atom_folds(a: &CasExpr, b: &CasExpr, budget: &mut u64) -> BigAtomFolds {
+    let mut atoms = BTreeMap::new();
+    collect_atom_dictionary(a, &mut atoms);
+    collect_atom_dictionary(b, &mut atoms);
+    let mut folds = BigAtomFolds::default();
+    for (key, atom) in &atoms {
+        let CasExpr::Unary(func, arg) = atom else {
+            continue;
+        };
+        if !matches!(
+            func,
+            UnaryFunc::Sqrt
+                | UnaryFunc::Abs
+                | UnaryFunc::NthRoot(_)
+                | UnaryFunc::BesselJ(_)
+                | UnaryFunc::BesselI(_)
+        ) {
+            continue;
+        }
+        // A polynomial argument over a constant denominator is still a
+        // polynomial once that denominator is absorbed into `den`.
+        let Some(expanded) = normalize_rational_big_within(arg, budget) else {
+            continue;
+        };
+        let Some(denominator) = expanded.den.as_constant() else {
+            continue;
+        };
+        if denominator.is_zero() {
+            continue;
+        }
+        let (num, den) = if denominator < BigInt::from(0) {
+            (expanded.num.neg(), -denominator)
+        } else {
+            (expanded.num.clone(), denominator)
+        };
+        let poly = BigQPoly { num, den }.reduced();
+        match func {
+            UnaryFunc::Sqrt => {
+                folds.radicands.insert(key.clone(), poly);
+            }
+            UnaryFunc::Abs => {
+                folds.abs_args.insert(key.clone(), poly);
+            }
+            UnaryFunc::NthRoot(q) => {
+                folds.nth_roots.insert(key.clone(), (*q, poly));
+            }
+            UnaryFunc::BesselJ(order) | UnaryFunc::BesselI(order)
+                if *order >= 2 && !poly.is_zero() =>
+            {
+                folds.bessel.push((
+                    key.clone(),
+                    *order,
+                    matches!(func, UnaryFunc::BesselI(_)),
+                    (**arg).clone(),
+                    poly,
+                ));
+            }
+            _ => {}
+        }
+    }
+    folds
+}
+
 /// The unbounded fallback's **explicit work budget**, in monomial-pair products,
 /// for one whole zero-test (both sides plus the cross-multiplication).
 ///
@@ -2576,16 +3586,16 @@ const BIG_FALLBACK_WORK_BUDGET: u64 = 1_000_000;
 /// Expand a [`CasExpr`] to a [`BigRatFunc`], mirroring [`normalize_rational`]
 /// over unbounded integers.
 ///
-/// **Deliberately narrower than [`normalize_rational`]:** every `Unary` head is
-/// declined rather than atomized. The bounded path turns `sin x`, `√u`, `|u|`,
-/// `root_q(u)`, `Jₙ(x)` and `exp` into opaque atom variables and then applies
-/// [`MultiPoly::fold_pythagorean`], [`MultiPoly::fold_radical`],
-/// [`MultiPoly::fold_abs`], [`MultiPoly::fold_nth_root`] and
-/// [`MultiPoly::fold_bessel_recurrences`] to relate them; those folds have no
-/// unbounded counterpart yet, and without them a *nonzero* normal form in atom
-/// variables does not prove `≠`. Declining is the honest slice: the fragment
-/// covered here — variables, rational constants, `+`, `−`, `×`, `÷`, integer
-/// powers — is exactly the one where no fold can apply.
+/// **One head is still declined: `exp`.** Every other `Unary` head becomes an
+/// opaque atom variable keyed by [`atom_name`], exactly as [`normalize_rational`]
+/// does, and the ported fold passes ([`BigQPoly::fold_pythagorean`] and friends,
+/// ADR-1670 wave two item 2) relate those atoms in this ring. `exp` is different
+/// because the bounded path does not atomize it either: [`normalize_exp`]
+/// *decomposes* `exp(Σ termᵢ)` into a product of per-term factors, which is what
+/// makes `exp(x)·exp(y) = exp(x+y)` decide. Atomizing `exp` opaquely instead
+/// would make that true identity a nonzero normal form, and the inequality
+/// branch would refute it. Declining is the honest slice until that
+/// decomposition is ported too.
 ///
 /// Every product is charged against `budget`; see [`BIG_FALLBACK_WORK_BUDGET`]
 /// for why an unbounded ring needs an explicit one.
@@ -2616,7 +3626,35 @@ fn normalize_rational_big_within(expr: &CasExpr, budget: &mut u64) -> Option<Big
         CasExpr::Div(u, w) => normalize_rational_big_within(u, budget)?
             .div(&normalize_rational_big_within(w, budget)?, budget),
         CasExpr::Pow(base, exp) => normalize_rational_big_within(base, budget)?.pow(*exp, budget),
-        CasExpr::Unary(..) => None,
+        // See the doc comment: `exp` is decomposed by the bounded path, not
+        // atomized, and that decomposition has no unbounded counterpart yet.
+        CasExpr::Unary(UnaryFunc::Exp, _) => None,
+        // The unbounded twin of the bounded normalizer's `√`-of-a-constant
+        // canonicalization, so the two rings agree on what `√8` *is*.
+        CasExpr::Unary(UnaryFunc::Sqrt, arg)
+            if rational_constant_value(arg)
+                .and_then(canonical_constant_sqrt)
+                .is_some() =>
+        {
+            let (factor, radicand) = rational_constant_value(arg)
+                .and_then(canonical_constant_sqrt)
+                .expect("the guard just evaluated this");
+            let constant = BigRatFunc {
+                num: BigPoly::constant(BigInt::from(factor.numerator())),
+                den: BigPoly::constant(BigInt::from(factor.denominator())),
+            };
+            if radicand == 1 {
+                return Some(constant);
+            }
+            constant.mul(
+                &BigRatFunc::from_poly(BigPoly::variable(&sqrt_atom_key(radicand))),
+                budget,
+            )
+        }
+        CasExpr::Unary(func, arg) => Some(BigRatFunc::from_poly(BigPoly::variable(&atom_name(
+            &func.name(),
+            arg,
+        )))),
     }
 }
 
@@ -2639,6 +3677,29 @@ fn multipoly_from_big(poly: &BigPoly) -> Option<MultiPoly> {
     Some(MultiPoly { terms })
 }
 
+/// The unbounded-integer difference `a·d − c·b` after the same six fold passes
+/// the bounded path runs, or `None` when the expansion leaves the fragment or
+/// exhausts `budget`.
+///
+/// Split out of [`equal_core_unbounded`] so [`recheck_zero_test`] can recompute
+/// it. The folds run in the bounded path's order, and each is that fold's
+/// unbounded twin.
+fn unbounded_difference(a: &CasExpr, b: &CasExpr, budget: &mut u64) -> Option<BigQPoly> {
+    let ra = normalize_rational_big_within(a, budget)?;
+    let rb = normalize_rational_big_within(b, budget)?;
+    let ad = ra.num.mul_within(&rb.den, budget)?;
+    let cb = rb.num.mul_within(&ra.den, budget)?;
+    let folds = big_atom_folds(a, b, budget);
+    BigQPoly::from_poly(ad.sub(&cb))
+        .fold_imaginary(budget)
+        .and_then(|w| w.fold_pythagorean(budget))
+        .and_then(|w| w.fold_radical(&folds.radicands, budget))
+        .and_then(|w| w.fold_radical_products(budget))
+        .and_then(|w| w.fold_abs(&folds.abs_args, budget))
+        .and_then(|w| w.fold_nth_root(&folds.nth_roots, budget))
+        .and_then(|w| w.fold_bessel_recurrences(&folds.bessel, budget))
+}
+
 /// The unbounded-integer zero-test: the fallback [`equal_core`] takes when the
 /// `i128` normal form overflows (ADR-1670).
 ///
@@ -2647,75 +3708,192 @@ fn multipoly_from_big(poly: &BigPoly) -> Option<MultiPoly> {
 /// The test is the same cross-multiplication: `a/b = c/d` iff `a·d − c·b ≡ 0`.
 /// Over ℤ[vars] the difference is a **positive-rational multiple** of the
 /// bounded path's cross-multiplied numerator (every rational constant had its
-/// denominator cleared, and `Rational` keeps denominators positive). A positive
-/// multiple is zero exactly when the original is, so the *decision* is
+/// denominator cleared, and `Rational` keeps denominators positive; the fold
+/// passes clear more, through [`BigQPoly`]'s shared positive denominator). A
+/// positive multiple is zero exactly when the original is, so the *decision* is
 /// unaffected; only the witness's scale is.
 ///
 /// - **Zero difference ⇒ `Certified { equal: true }`.** The certificate is
 ///   [`MultiPoly::zero()`], which is not an approximation: the difference in
-///   canonical form *is* the zero polynomial, and `MultiPoly` holds it exactly.
-///   A polynomial identity in the variables holds at every value of them, so
-///   this is sound whatever the variables denote — including the reserved `I`.
-/// - **Nonzero difference ⇒ `Certified { equal: false }`, but only when the
-///   witness survives the conversion back to `i128`.** Emitting a certificate
-///   that is not the difference would weaken what [`ZeroTest::Certified`]
-///   means, so a difference whose coefficients exceed `i128` is reported
-///   [`ZeroTest::Unknown`] instead. This asymmetry — equalities always decide,
-///   inequalities decide only when the certificate fits — is the price of not
-///   changing the public witness type, and is what wave two of ADR-1670
-///   removes.
+///   canonical form *is* the zero polynomial. A polynomial identity in the
+///   variables holds at every value of them, so this is sound whatever the
+///   variables denote.
+/// - **Nonzero difference ⇒ a refutation.** The certificate is
+///   [`ZeroTest::Certified`] when it fits `i128` and [`ZeroTest::CertifiedBig`]
+///   when it does not (ADR-1670 wave two, item 1). Wave one declined the second
+///   case, because emitting a polynomial that is not the difference would
+///   weaken what `Certified` means and no other type could carry it; the
+///   asymmetry — equalities always decide, inequalities only when the
+///   certificate fits — is gone.
 ///
-/// # Two guards on the inequality branch
+/// # The one guard on the inequality branch
 ///
-/// A nonzero normal form only proves `≠` when no bounded-path fold could have
-/// collapsed it. Two variable classes could:
+/// A nonzero normal form only proves `≠` when no fold could still collapse it.
+/// Two variable classes could, and they are treated differently:
 ///
-/// - `I`, the reserved imaginary unit, which [`MultiPoly::fold_imaginary`]
-///   rewrites by `I² = −1` (so `I² + 1` is nonzero here but zero there);
-/// - any name beginning with `\0`, the prefix [`atom_name`] gives transcendental
-///   atoms, which the Pythagorean/radical/abs/root folds relate.
-///
-/// [`normalize_rational_big_within`] declines every `Unary` head, so a `\0` name can
-/// only arrive from a caller that spelled one as a plain variable; `I` arrives
-/// from ordinary complex work. Both are declined rather than reasoned about.
-/// Neither guard applies to the equality branch, where zero is zero.
+/// - `I`, the reserved imaginary unit, is **no longer declined**:
+///   [`BigQPoly::fold_imaginary`] applies `I² = −1` here exactly as
+///   [`MultiPoly::fold_imaginary`] does in the bounded path, so a surviving
+///   nonzero form is nonzero in ℝ[vars][I]/(I²+1).
+/// - Any name beginning with `\0`, the prefix [`atom_name`] gives transcendental
+///   atoms, **is** declined. The ported folds relate the algebraic atoms
+///   (`√`, `|·|`, `root_q`, `sin`/`cos`, Bessel), which is what lets an
+///   *equality* over those heads decide at overflow scale; but `exp` is not
+///   decomposed here (see [`normalize_rational_big_within`]), and the Euler
+///   re-check [`equal`] uses to protect the bounded path's inequality branch
+///   therefore cannot run in this ring. Declining is the honest slice.
 fn equal_core_unbounded(a: &CasExpr, b: &CasExpr) -> ZeroTest {
-    // One budget for the whole test: both normal forms and the
-    // cross-multiplication. See `BIG_FALLBACK_WORK_BUDGET`.
+    // One budget for the whole test: both normal forms, the cross-multiplication
+    // and the fold passes. See `BIG_FALLBACK_WORK_BUDGET`.
     let mut budget = BIG_FALLBACK_WORK_BUDGET;
-    let Some(ra) = normalize_rational_big_within(a, &mut budget) else {
+    let Some(difference) = unbounded_difference(a, b, &mut budget) else {
         return ZeroTest::Unknown;
     };
-    let Some(rb) = normalize_rational_big_within(b, &mut budget) else {
-        return ZeroTest::Unknown;
-    };
-    let Some(ad) = ra.num.mul_within(&rb.den, &mut budget) else {
-        return ZeroTest::Unknown;
-    };
-    let Some(cb) = rb.num.mul_within(&ra.den, &mut budget) else {
-        return ZeroTest::Unknown;
-    };
-    let difference = ad.sub(&cb);
     if difference.is_zero() {
         return ZeroTest::Certified {
             equal: true,
             witness: MultiPoly::zero(),
         };
     }
-    if difference
-        .variables()
-        .iter()
-        .any(|name| name == "I" || name.starts_with('\0'))
-    {
+    if difference.mentions_atom() {
         return ZeroTest::Unknown;
     }
-    match multipoly_from_big(&difference) {
+    match multipoly_from_big(&difference.num) {
         Some(witness) => ZeroTest::Certified {
             equal: false,
             witness,
         },
-        None => ZeroTest::Unknown,
+        None => ZeroTest::CertifiedBig {
+            equal: false,
+            witness: BigWitness {
+                poly: difference.num,
+            },
+        },
     }
+}
+
+/// A [`MultiPoly`] as an integer polynomial, scaled by the **positive** product
+/// of its coefficient denominators. Used only where a positive rational scale is
+/// immaterial, which is every comparison [`recheck_zero_test`] makes.
+fn multipoly_as_big(poly: &MultiPoly) -> BigPoly {
+    let mut denominator = BigInt::from(1);
+    for coeff in poly.terms.values() {
+        denominator *= BigInt::from(coeff.denominator());
+    }
+    let mut out = BigPoly::zero();
+    for (mono, coeff) in &poly.terms {
+        let powers: Vec<(&str, u32)> = mono
+            .powers
+            .iter()
+            .map(|(name, exp)| (name.as_str(), *exp))
+            .collect();
+        let scaled =
+            BigInt::from(coeff.numerator()) * (&denominator / BigInt::from(coeff.denominator()));
+        out = out.add(&BigPoly::term(
+            mvpoly::Monomial::from_powers(&powers),
+            scaled,
+        ));
+    }
+    out
+}
+
+/// Whether `claimed` is `actual` times a **positive** rational.
+///
+/// Both are canonical, so this is: identical monomial support, and one common
+/// cross-ratio. Checking the ratio rather than equality is what makes the
+/// re-check usable at all — the unbounded path's certificate is only determined
+/// up to a positive rational scale (see [`BigWitness`]) — and checking that the
+/// ratio is *positive* is what keeps it from accepting `−(a − b)`, which is the
+/// difference of the same pair in the other order.
+fn positive_rational_multiple(claimed: &BigPoly, actual: &BigPoly) -> bool {
+    if claimed.is_zero() || actual.is_zero() {
+        return claimed.is_zero() && actual.is_zero();
+    }
+    if claimed.term_count() != actual.term_count() {
+        return false;
+    }
+    let mut pairs: Vec<(&BigInt, &BigInt)> = Vec::with_capacity(claimed.term_count());
+    for ((claimed_mono, claimed_coeff), (actual_mono, actual_coeff)) in
+        claimed.terms().zip(actual.terms())
+    {
+        if claimed_mono != actual_mono {
+            return false;
+        }
+        pairs.push((claimed_coeff, actual_coeff));
+    }
+    let (first_claimed, first_actual) = pairs[0];
+    if (*first_claimed < BigInt::from(0)) != (*first_actual < BigInt::from(0)) {
+        return false;
+    }
+    pairs.iter().all(|(claimed_coeff, actual_coeff)| {
+        *claimed_coeff * first_actual == *actual_coeff * first_claimed
+    })
+}
+
+/// Re-check the certificate a [`ZeroTest`] carries against the expressions it
+/// claims to be about.
+///
+/// This is what makes `Certified` and [`ZeroTest::CertifiedBig`] *certificates*
+/// rather than assertions: the witness is recomputed from `a` and `b` and the
+/// carried polynomial must be that difference, **up to a positive rational
+/// scale** (see [`BigWitness`] for why the scale is there and why it is
+/// immaterial). A witness that is not the difference — a forged one, or one
+/// lifted from a different pair — is rejected.
+///
+/// Returns `true` for [`ZeroTest::Unknown`], which carries no certificate and so
+/// claims nothing to re-check.
+///
+/// # What it does *not* prove
+///
+/// It re-derives the difference through the same normal forms that produced it,
+/// so it is a check of the *certificate*, not an independent second
+/// implementation of the zero-test. It does catch every disagreement between the
+/// carried polynomial and the difference, which is the property a certificate
+/// has to have.
+///
+/// ```
+/// use axeyum_cas::{CasExpr, ZeroTest, equal, recheck_zero_test};
+///
+/// let x = CasExpr::var("x");
+/// let left = (x.clone() + CasExpr::int(1)).pow(2);
+/// let right = x.clone() * x.clone() + CasExpr::int(2) * x.clone() + CasExpr::int(1);
+/// let verdict = equal(&left, &right);
+/// assert!(matches!(verdict, ZeroTest::Certified { equal: true, .. }));
+/// assert!(recheck_zero_test(&left, &right, &verdict));
+/// // The same certificate does not re-check against a different pair.
+/// assert!(!recheck_zero_test(&left, &x, &verdict));
+/// ```
+#[must_use]
+pub fn recheck_zero_test(a: &CasExpr, b: &CasExpr, result: &ZeroTest) -> bool {
+    let (equal, claimed) = match result {
+        ZeroTest::Unknown => return true,
+        ZeroTest::Certified { equal, witness } => (*equal, multipoly_as_big(witness)),
+        ZeroTest::CertifiedBig { equal, witness } => (*equal, witness.poly.clone()),
+    };
+    // The flag and the certificate must agree before the certificate is even
+    // worth recomputing.
+    if claimed.is_zero() != equal {
+        return false;
+    }
+    // `equal` may have decided on the Euler canonical form rather than on the
+    // spelling it was handed, and either normal form may have produced the
+    // witness, so all four routes are admissible.
+    let canonical_a = canonicalize_for_equality(a);
+    let canonical_b = canonicalize_for_equality(b);
+    for (left, right) in [(a, b), (&canonical_a, &canonical_b)] {
+        if bounded_difference(left, right).is_some_and(|difference| {
+            positive_rational_multiple(&claimed, &multipoly_as_big(&difference))
+        }) {
+            return true;
+        }
+        let mut budget = BIG_FALLBACK_WORK_BUDGET;
+        if unbounded_difference(left, right, &mut budget)
+            .is_some_and(|difference| positive_rational_multiple(&claimed, &difference.num))
+        {
+            return true;
+        }
+    }
+    false
 }
 
 /// The degree of a univariate polynomial in `var`, or `None` if `expr` is not a
@@ -6334,8 +7512,10 @@ fn certifies_wz_sum(
     let h = f.substitute(n, &(CasExpr::var(n) + CasExpr::int(1))) - f;
     let symbolic = equal(&(g_shift - g), &h);
     match symbolic {
-        ZeroTest::Certified { equal: true, .. } => {}
-        ZeroTest::Certified { equal: false, .. } => return false,
+        ZeroTest::Certified { equal: true, .. } | ZeroTest::CertifiedBig { equal: true, .. } => {}
+        ZeroTest::Certified { equal: false, .. } | ZeroTest::CertifiedBig { equal: false, .. } => {
+            return false;
+        }
         ZeroTest::Unknown => {
             // Divide the same telescoping identity by `f(n,k)` and check the
             // resulting hypergeometric quotients. As an identity of rational
@@ -6377,7 +7557,7 @@ fn certifies_wz_sum(
         None => rhs_base,
     };
     match equal(&total, &rhs_base) {
-        ZeroTest::Certified { equal, .. } => equal,
+        ZeroTest::Certified { equal, .. } | ZeroTest::CertifiedBig { equal, .. } => equal,
         ZeroTest::Unknown => certifies_wz_base_case_big(summand, rhs, n, k, base, k_lo, k_hi),
     }
 }
@@ -19574,8 +20754,8 @@ mod tests {
 
     fn assert_equal(a: &CasExpr, b: &CasExpr) {
         match equal(a, b) {
-            ZeroTest::Certified { equal, witness } => {
-                assert!(equal, "expected equal; difference witness = {witness:?}");
+            ZeroTest::Certified { equal, .. } | ZeroTest::CertifiedBig { equal, .. } => {
+                assert!(equal, "expected equal");
             }
             ZeroTest::Unknown => panic!("expected a decidable (Certified) result"),
         }
@@ -19583,7 +20763,9 @@ mod tests {
 
     fn assert_not_equal(a: &CasExpr, b: &CasExpr) {
         match equal(a, b) {
-            ZeroTest::Certified { equal, .. } => assert!(!equal, "expected not-equal"),
+            ZeroTest::Certified { equal, .. } | ZeroTest::CertifiedBig { equal, .. } => {
+                assert!(!equal, "expected not-equal");
+            }
             ZeroTest::Unknown => panic!("expected a decidable (Certified) result"),
         }
     }
@@ -19601,6 +20783,10 @@ mod tests {
         assert_eq!(result.certainty(), Certainty::Certified);
         match result {
             ZeroTest::Certified { equal, witness } => {
+                assert!(equal);
+                assert!(witness.is_zero());
+            }
+            ZeroTest::CertifiedBig { equal, witness } => {
                 assert!(equal);
                 assert!(witness.is_zero());
             }
@@ -30274,16 +31460,36 @@ mod tests {
         );
     }
 
+    /// `10¹⁸ · 10¹⁸ · 10¹⁸ = 10⁵⁴` overflows `i128` (~1.7·10³⁸), and `10⁵⁴ ≠ 0`
+    /// is one of the rows ADR-1670 wave one could decide and not certify. Wave
+    /// two carries the witness, so this is now a refutation rather than a
+    /// decline — and the *decision* was never allowed to be wrong either way.
     #[test]
-    fn overflow_is_reported_as_unknown_not_wrong() {
-        // 10¹⁸ · 10¹⁸ · 10¹⁸ = 10⁵⁴ overflows i128 (~1.7·10³⁸): the zero-test
-        // must decline to Unknown, never return a wrong decision.
+    fn overflow_is_refuted_with_an_unbounded_witness_not_wrong() {
         let big = CasExpr::int(1_000_000_000_000_000_000);
         let cube = CasExpr::Mul(vec![big.clone(), big.clone(), big]);
-        match equal(&cube, &CasExpr::zero()) {
-            ZeroTest::Unknown => {}
-            ZeroTest::Certified { .. } => panic!("expected Unknown on overflow"),
+        assert!(
+            matches!(
+                equal_core_bounded(&cube, &CasExpr::zero()),
+                ZeroTest::Unknown
+            ),
+            "the fixture is not adversarial: the bounded i128 path already decides it"
+        );
+        let verdict = equal(&cube, &CasExpr::zero());
+        match verdict {
+            ZeroTest::CertifiedBig {
+                equal: false,
+                ref witness,
+            } => {
+                assert!(witness.variables().is_empty(), "10⁵⁴ is a constant");
+                assert!(
+                    witness.coefficient_bits() > 127,
+                    "10⁵⁴ does not fit an i128 numerator"
+                );
+            }
+            other => panic!("expected an unbounded refutation, got {other:?}"),
         }
+        assert!(recheck_zero_test(&cube, &CasExpr::zero(), &verdict));
     }
 }
 
@@ -30400,6 +31606,196 @@ mod exact_positivity_tests {
     }
 }
 
+/// The wrong-refuted radical class the `SymPy` parity corpus found, and its fix.
+///
+/// `equal(√2·√3, √6)` returned `Certified { equal: false }`: three independent
+/// atoms, a nonzero polynomial, and a label asserting a refutation the normal
+/// form had not established. Measured on the same build, so did `√4 = 2`,
+/// `√8 = 2√2`, `√12·√3 = 6`, `√(1/2)·√2 = 1`, `√x·√y = √(xy)`,
+/// `|x|·|y| = |xy|` and `root₃(2)·root₃(4) = 2` — every one of them a **true**
+/// identity reported as refuted.
+///
+/// Three parts to the repair, and this module is one test per part plus the
+/// controls that keep the repair from being vacuous:
+///
+/// 1. [`canonical_constant_sqrt_poly`] canonicalizes `√c` for a non-negative
+///    rational constant by its squarefree part, so `√8` *is* `2·√2` in the
+///    normal form rather than a different name for it.
+/// 2. [`MultiPoly::fold_radical_products`] multiplies the constant radicals
+///    inside one monomial together and re-extracts the square, so `√2·√3` and
+///    `√6` meet.
+/// 3. [`MultiPoly::relates_multiplicative_atoms`] declines a refutation whose
+///    difference still multiplies two radical / absolute-value atoms — the
+///    symbolic cases neither (1) nor (2) can reach. Declining is the honest
+///    answer there; refuting was the wrong one.
+#[cfg(test)]
+mod radical_atom_products {
+    use super::*;
+
+    fn x() -> CasExpr {
+        CasExpr::var("x")
+    }
+
+    fn y() -> CasExpr {
+        CasExpr::var("y")
+    }
+
+    fn root(n: i128) -> CasExpr {
+        CasExpr::int(n).sqrt()
+    }
+
+    #[track_caller]
+    fn assert_certified(left: &CasExpr, right: &CasExpr, expected: bool) {
+        match equal(left, right) {
+            ZeroTest::Certified { equal, .. } | ZeroTest::CertifiedBig { equal, .. } => {
+                assert_eq!(equal, expected, "wrong verdict for {left} = {right}");
+            }
+            ZeroTest::Unknown => panic!("{left} = {right} must decide"),
+        }
+        assert!(
+            recheck_zero_test(left, right, &equal(left, right)),
+            "the certificate for {left} = {right} must re-check"
+        );
+    }
+
+    #[track_caller]
+    fn assert_declines(left: &CasExpr, right: &CasExpr) {
+        assert!(
+            matches!(equal(left, right), ZeroTest::Unknown),
+            "{left} = {right} must decline, never refute: the normal form carries \
+             the radical atoms as independent variables"
+        );
+    }
+
+    /// The reported input.
+    #[test]
+    fn sqrt2_times_sqrt3_is_sqrt6() {
+        assert_certified(&(root(2) * root(3)), &root(6), true);
+    }
+
+    /// The negative control for it: the fix must not make every radical product
+    /// equal to every other.
+    #[test]
+    fn sqrt2_times_sqrt3_is_not_sqrt5() {
+        assert_certified(&(root(2) * root(3)), &root(5), false);
+    }
+
+    /// Square extraction at intake — `√8` and `√4` are not opaque names.
+    #[test]
+    fn constant_radicands_reduce_by_their_square_part() {
+        assert_certified(&root(4), &CasExpr::int(2), true);
+        assert_certified(&root(8), &(CasExpr::int(2) * root(2)), true);
+        assert_certified(&root(0), &CasExpr::zero(), true);
+        assert_certified(
+            &CasExpr::rat(1, 2).sqrt(),
+            &(root(2) / CasExpr::int(2)),
+            true,
+        );
+        // …and the reduction is not a licence to equate distinct surds.
+        assert_certified(&root(8), &(CasExpr::int(3) * root(2)), false);
+    }
+
+    /// The product fold, including the case where the product is a perfect
+    /// square and the radical disappears entirely.
+    #[test]
+    fn constant_radical_products_merge_and_re_extract() {
+        assert_certified(&(root(12) * root(3)), &CasExpr::int(6), true);
+        assert_certified(
+            &(CasExpr::rat(1, 2).sqrt() * root(2)),
+            &CasExpr::int(1),
+            true,
+        );
+        assert_certified(&(root(2) * root(2)), &CasExpr::int(2), true);
+        assert_certified(&(root(2) * root(3) * root(6)), &CasExpr::int(6), true);
+        assert_certified(&(root(12) * root(3)), &CasExpr::int(7), false);
+    }
+
+    /// **The guard.** A symbolic radical product is out of the fold's reach, so
+    /// the answer is `Unknown` — the choice this lane made and pinned, per the
+    /// rule that out-of-fragment declines rather than answering wrongly.
+    #[test]
+    fn symbolic_radical_products_decline_rather_than_refute() {
+        assert_declines(&(x().sqrt() * y().sqrt()), &(x() * y()).sqrt());
+        assert_declines(&(x().abs() * y().abs()), &(x() * y()).abs());
+        assert_declines(
+            &(CasExpr::int(2).nth_root(3) * CasExpr::int(4).nth_root(3)),
+            &CasExpr::int(2),
+        );
+    }
+
+    /// `√(ln x)² = ln x` is the case the two rings answer differently, and the
+    /// stronger answer wins.
+    ///
+    /// The bounded fold cannot resolve the radicand — its dictionary is built
+    /// with [`normalize`], which rejects a transcendental head — so the guard
+    /// above declines it there. The unbounded twin builds its dictionary with
+    /// [`normalize_rational_big_within`], which *atomizes* `ln x`, so
+    /// [`BigQPoly::fold_radical`] resolves it and the identity certifies. The
+    /// decline is a fallback, not a ceiling.
+    #[test]
+    fn a_transcendental_radicand_is_resolved_by_the_unbounded_fold() {
+        assert!(
+            matches!(
+                equal_core_bounded(&(x().ln().sqrt() * x().ln().sqrt()), &x().ln()),
+                ZeroTest::Unknown
+            ),
+            "the bounded fold cannot resolve a transcendental radicand"
+        );
+        assert_certified(&(x().ln().sqrt() * x().ln().sqrt()), &x().ln(), true);
+    }
+
+    /// The guard must not swallow the identities the folds *do* reach, or it
+    /// would be buying soundness with everything.
+    #[test]
+    fn the_guard_leaves_the_resolvable_radical_identities_alone() {
+        assert_certified(&(x().sqrt() * x().sqrt()), &x(), true);
+        assert_certified(&x().abs().pow(2), &x().pow(2), true);
+        assert_certified(&x().nth_root(3).pow(3), &x(), true);
+        // One radical atom per monomial is still refutable: distinct squarefree
+        // radicands are ℚ-linearly independent, and `√x` and `√y` are distinct
+        // functions of independent variables.
+        assert_certified(&root(2), &CasExpr::int(1), false);
+        assert_certified(&(root(2) + root(3)), &root(5), false);
+        assert_certified(&x().sqrt(), &y().sqrt(), false);
+    }
+
+    /// `square_part` is the arithmetic the whole repair rests on, so it is
+    /// checked directly rather than only through the zero-test — including the
+    /// bound, whose whole job is to refuse a half-done split.
+    #[test]
+    fn square_part_splits_and_refuses_rather_than_half_splitting() {
+        for (input, expected) in [
+            (1i128, (1i128, 1i128)),
+            (2, (1, 2)),
+            (4, (2, 1)),
+            (8, (2, 2)),
+            (12, (2, 3)),
+            (36, (6, 1)),
+            (72, (6, 2)),
+            (1_000_000, (1000, 1)),
+            (999_983, (1, 999_983)),
+        ] {
+            assert_eq!(square_part(input), Some(expected), "square_part({input})");
+        }
+        assert_eq!(square_part(0), None, "0 is not a positive radicand");
+        assert_eq!(square_part(-4), None, "a negative radicand is not real");
+        // Past the trial-division bound the split is abandoned, not guessed:
+        // `p²` for a prime above the limit cannot be found, and reporting the
+        // radicand as squarefree would be a false canonical form.
+        let big_prime = 1_000_003i128;
+        assert_eq!(
+            square_part(big_prime * big_prime),
+            None,
+            "a square factor past the trial bound must abandon the split"
+        );
+        // And the zero-test declines rather than refuting over such a radical.
+        assert_declines(
+            &CasExpr::int(big_prime * big_prime).sqrt(),
+            &CasExpr::int(big_prime),
+        );
+    }
+}
+
 /// The arbitrary-precision overflow fallback (ADR-1670).
 ///
 /// Every test here names the input it was written for, because the finding this
@@ -30416,17 +31812,22 @@ mod exact_positivity_tests {
 ///   [`MultiPoly::fold_abs`], [`MultiPoly::fold_nth_root`] and
 ///   [`MultiPoly::fold_bessel_recurrences`]. Those folds have no unbounded
 ///   counterpart, and without them a nonzero normal form in atom variables does
-///   not prove `≠` — so [`normalize_rational_big_within`] declines the whole head
-///   rather than half-deciding it.
-///   (`sqrt_atom_identity_at_overflow_scale_still_declines`)
-/// - **The reserved imaginary unit `I`**, for the same reason one level down:
-///   [`MultiPoly::fold_imaginary`] rewrites `I² = −1`, so `I² + 1` is a nonzero
-///   polynomial here and the zero polynomial there.
-///   (`imaginary_unit_at_overflow_scale_declines_rather_than_refuting`)
-/// - **A refutation whose witness does not fit back into `i128`.** The decision
-///   is available; the *certificate* is not, and `ZeroTest::Certified` promises
-///   a certificate. Reported `Unknown`.
-///   (`refutation_whose_witness_exceeds_i128_declines`)
+///   not prove `≠`. **Wave two removed this**: all six folds have unbounded twins
+///   ([`BigQPoly::fold_radical`] and friends), so `√u`, `|u|`, `root_q(u)`,
+///   Pythagorean, Bessel and `I` identities now decide at overflow scale — one
+///   test per fold, each named for the identity it decides.
+/// - **An `exp` head**, which the bounded path *decomposes* rather than
+///   atomizes ([`normalize_exp`]); that decomposition has no unbounded twin, so
+///   the whole head is still declined.
+///   (`exp_head_at_overflow_scale_still_declines`)
+/// - **A surviving `\0` atom on the inequality branch.** An equality over atoms
+///   decides (a zero polynomial is zero whatever the atoms denote); a
+///   *refutation* over them would need the Euler re-check [`equal`] uses to
+///   protect the bounded path, and that cannot run here while `exp` is declined.
+///   (`atom_bearing_inequality_at_overflow_scale_declines`)
+/// - A refutation whose witness does not fit `i128` was declined in wave one and
+///   is now carried by [`ZeroTest::CertifiedBig`].
+///   (`refutation_whose_witness_exceeds_i128_carries_an_unbounded_certificate`)
 /// - **Anything past [`BIG_FALLBACK_WORK_BUDGET`].** Removing the coefficient
 ///   bound also removes the implicit resource bound it was providing, so the
 ///   fallback carries an explicit one.
@@ -30507,9 +31908,37 @@ mod bignum_overflow_fallback {
             "the fixture is not adversarial: the bounded i128 path already decides it"
         );
         match equal(a, b) {
-            ZeroTest::Certified { equal: true, .. } => {}
+            ZeroTest::Certified { equal: true, .. }
+            | ZeroTest::CertifiedBig { equal: true, .. } => {}
             other => panic!("expected the unbounded fallback to certify equality, got {other:?}"),
         }
+        assert!(
+            recheck_zero_test(a, b, &equal(a, b)),
+            "the certificate must re-check against the pair it is about"
+        );
+    }
+
+    /// The wave-two conversions all have the same shape: an atom identity added
+    /// to a binomial-square identity whose intermediates leave `i128`. The
+    /// binomial half is what makes the bounded path decline; the atom half is
+    /// what needs the ported fold.
+    ///
+    /// `atom_left` and `atom_right` are the two sides of the atom identity.
+    fn assert_fold_ported(atom_left: &CasExpr, atom_right: &CasExpr) {
+        let left = CasExpr::Mul(vec![binom(80), binom(80)]) + atom_left.clone();
+        let right = binom(160) + atom_right.clone();
+        // Positive control below the wall: the bounded fold really does decide
+        // this identity, so a decline above would be about width, not the head.
+        let small_left = CasExpr::Mul(vec![binom(4), binom(4)]) + atom_left.clone();
+        let small_right = binom(8) + atom_right.clone();
+        assert!(
+            matches!(
+                equal(&small_left, &small_right),
+                ZeroTest::Certified { equal: true, .. }
+            ),
+            "positive control: {atom_left} = {atom_right} must certify below the wall"
+        );
+        assert_converted_to_equal(&left, &right);
     }
 
     // --- Overflow `Unknown`s the fallback converts into a decision -----------
@@ -30591,55 +32020,73 @@ mod bignum_overflow_fallback {
 
     // --- The declines that remain, each with its reason ---------------------
 
+    // --- The six folds, ported (ADR-1670 wave two, item 2) ------------------
+    //
+    // One test per fold. Each is an identity the bounded path decides and the
+    // wave-one fallback declined, at a width the bounded path cannot reach.
+
+    /// `I² = −1` — [`BigQPoly::fold_imaginary`].
     #[test]
-    fn sqrt_atom_identity_at_overflow_scale_still_declines() {
-        // `√x·√x = x` is a fold the unbounded path does not carry, so the whole
-        // head is declined rather than half-decided.
-        let left = CasExpr::Mul(vec![binom(80), binom(80)]) + x().sqrt() * x().sqrt();
-        let right = binom(160) + x();
-        assert!(
-            matches!(equal(&left, &right), ZeroTest::Unknown),
-            "the sqrt fold has no unbounded counterpart; this must decline"
-        );
-        // Positive control of the same shape below the wall: the fold itself
-        // works, so the decline above is about width, not about `√`.
-        let small_left = CasExpr::Mul(vec![binom(4), binom(4)]) + x().sqrt() * x().sqrt();
-        let small_right = binom(8) + x();
-        assert!(
-            matches!(
-                equal(&small_left, &small_right),
-                ZeroTest::Certified { equal: true, .. }
-            ),
-            "positive control: the same identity must certify below the wall"
+    fn fold_imaginary_i_squared_plus_one_at_overflow_scale_now_certifies() {
+        let imaginary = CasExpr::var("I");
+        assert_fold_ported(
+            &(imaginary.clone() * imaginary + CasExpr::int(1)),
+            &CasExpr::zero(),
         );
     }
 
+    /// `sin² + cos² = 1` — [`BigQPoly::fold_pythagorean`].
     #[test]
-    fn imaginary_unit_at_overflow_scale_declines_rather_than_refuting() {
-        // `I² + 1 = 0`, so these two ARE equal. The unbounded path has no
-        // `fold_imaginary`, so without its guard it would compute the nonzero
-        // polynomial `I² + 1` and REFUTE a true identity.
-        let imaginary = CasExpr::var("I");
-        let left = CasExpr::Mul(vec![binom(80), binom(80)])
-            + imaginary.clone() * imaginary
-            + CasExpr::int(1);
-        let right = binom(160);
-        assert!(
-            matches!(equal(&left, &right), ZeroTest::Unknown),
-            "an `I`-bearing difference must be declined, never refuted"
+    fn fold_pythagorean_sin_sq_plus_cos_sq_at_overflow_scale_now_certifies() {
+        assert_fold_ported(&(x().sin().pow(2) + x().cos().pow(2)), &CasExpr::int(1));
+    }
+
+    /// `(√u)² = u` — [`BigQPoly::fold_radical`].
+    #[test]
+    fn fold_radical_sqrt_x_squared_at_overflow_scale_now_certifies() {
+        assert_fold_ported(&(x().sqrt() * x().sqrt()), &x());
+    }
+
+    /// `|u|² = u²` — [`BigQPoly::fold_abs`].
+    #[test]
+    fn fold_abs_abs_x_squared_at_overflow_scale_now_certifies() {
+        assert_fold_ported(&x().abs().pow(2), &x().pow(2));
+    }
+
+    /// `root_q(u)^q = u` — [`BigQPoly::fold_nth_root`].
+    #[test]
+    fn fold_nth_root_cube_root_cubed_at_overflow_scale_now_certifies() {
+        assert_fold_ported(&x().nth_root(3).pow(3), &x());
+    }
+
+    /// `u·J₂(u) = 2·J₁(u) − u·J₀(u)` — [`BigQPoly::fold_bessel_recurrences`].
+    #[test]
+    fn fold_bessel_j2_recurrence_at_overflow_scale_now_certifies() {
+        assert_fold_ported(
+            &(x() * x().bessel_j(2)),
+            &(CasExpr::int(2) * x().bessel_j(1) - x() * x().bessel_j(0)),
         );
-        // Positive control below the wall: the bounded path folds `I² = −1` and
-        // certifies, so the fixture really is a true identity.
-        let small_imaginary = CasExpr::var("I");
-        let small_left = CasExpr::Mul(vec![binom(4), binom(4)])
-            + small_imaginary.clone() * small_imaginary
-            + CasExpr::int(1);
-        assert!(
-            matches!(
-                equal(&small_left, &binom(8)),
-                ZeroTest::Certified { equal: true, .. }
-            ),
-            "positive control: the identity holds and certifies below the wall"
+    }
+
+    /// `√2·√3 = √6` at overflow scale — [`BigQPoly::fold_radical_products`],
+    /// the unbounded twin of the fold that repairs the wrong-refuted radical
+    /// class (see the `radical_atom_products` module).
+    #[test]
+    fn fold_radical_products_constant_surds_at_overflow_scale_now_certify() {
+        assert_fold_ported(
+            &(CasExpr::int(2).sqrt() * CasExpr::int(3).sqrt()),
+            &CasExpr::int(6).sqrt(),
+        );
+    }
+
+    /// A radicand with **rational** coefficients, which ℤ[vars] cannot spell:
+    /// this is the case [`BigQPoly`]'s shared denominator exists for.
+    #[test]
+    fn fold_radical_with_a_rational_radicand_at_overflow_scale_now_certifies() {
+        let radicand = x() + CasExpr::rat(1, 2);
+        assert_fold_ported(
+            &(radicand.clone().sqrt() * radicand.clone().sqrt()),
+            &radicand,
         );
     }
 
@@ -30666,16 +32113,257 @@ mod bignum_overflow_fallback {
         );
     }
 
-    #[test]
-    fn refutation_whose_witness_exceeds_i128_declines() {
+    /// The pair whose refutation wave one could decide and could not certify.
+    fn witness_exceeding_i128() -> (CasExpr, CasExpr) {
         // `2·(x+1)^160` differs from `(x+1)^160` by `(x+1)^160`, whose middle
-        // binomial coefficient is far outside `i128`. The DECISION is available;
-        // the CERTIFICATE is not, and `Certified` promises a certificate.
-        let left = binom(160) + binom(160);
-        let right = binom(160);
+        // binomial coefficient is far outside `i128`.
+        (binom(160) + binom(160), binom(160))
+    }
+
+    /// ADR-1670 wave two, item 1: the decision *and* the certificate.
+    #[test]
+    fn refutation_whose_witness_exceeds_i128_carries_an_unbounded_certificate() {
+        let (left, right) = witness_exceeding_i128();
+        assert!(
+            matches!(equal_core_bounded(&left, &right), ZeroTest::Unknown),
+            "the fixture is not adversarial: the bounded i128 path already decides it"
+        );
+        let verdict = equal(&left, &right);
+        let ZeroTest::CertifiedBig {
+            equal: false,
+            ref witness,
+        } = verdict
+        else {
+            panic!("expected an unbounded refutation certificate, got {verdict:?}");
+        };
+        assert!(!witness.is_zero(), "a refutation's witness must be nonzero");
+        assert!(
+            witness.coefficient_bits() > 127,
+            "this variant is only warranted when the witness does not fit i128; \
+             widest coefficient was {} bits",
+            witness.coefficient_bits()
+        );
+        assert!(
+            witness.to_multipoly().is_none(),
+            "a witness that fits i128 must have been reported as `Certified`"
+        );
+        assert_eq!(
+            witness.variables(),
+            BTreeSet::from(["x".to_owned()]),
+            "the witness is a polynomial in the compared expressions' variables"
+        );
+        assert_eq!(
+            witness.term_count(),
+            161,
+            "the difference is (x+1)^160, which has 161 terms"
+        );
+        assert!(
+            recheck_zero_test(&left, &right, &verdict),
+            "the genuine certificate must re-check"
+        );
+    }
+
+    /// **The checker's negative control.** A witness that is not the difference
+    /// must be refused, three ways: a dropped term, a perturbed coefficient, and
+    /// a negated (i.e. wrong-order) difference.
+    #[test]
+    fn a_forged_unbounded_witness_is_refused_by_the_recheck() {
+        let (left, right) = witness_exceeding_i128();
+        let verdict = equal(&left, &right);
+        let ZeroTest::CertifiedBig {
+            equal: false,
+            ref witness,
+        } = verdict
+        else {
+            panic!("expected an unbounded refutation certificate, got {verdict:?}");
+        };
+        let genuine = witness.poly.clone();
+
+        // A positive rational rescaling of the genuine witness still re-checks:
+        // that scale is exactly what the unbounded ring's cleared denominators
+        // introduce, so refusing it would refuse honest certificates.
+        let rescaled = genuine
+            .mul(&BigPoly::constant(BigInt::from(3)))
+            .expect("scaling a witness by 3 cannot overflow an unbounded ring");
+        assert!(
+            recheck_zero_test(
+                &left,
+                &right,
+                &ZeroTest::CertifiedBig {
+                    equal: false,
+                    witness: BigWitness { poly: rescaled },
+                },
+            ),
+            "a positive rational multiple of the difference is the same certificate"
+        );
+
+        // Forgery 1: drop a term, so the support differs.
+        let (dropped_mono, dropped_coeff) = genuine
+            .terms()
+            .next()
+            .map(|(mono, coeff)| (mono.clone(), coeff.clone()))
+            .expect("the witness is nonzero");
+        let missing_term = genuine.sub(&BigPoly::term(dropped_mono, dropped_coeff));
+        // Forgery 2: perturb one coefficient, so the support matches and the
+        // cross-ratio does not.
+        let perturbed = genuine.add(&BigPoly::term(
+            mvpoly::Monomial::from_powers(&[("x", 3)]),
+            BigInt::from(1),
+        ));
+        // Forgery 3: the difference of the same pair in the other order.
+        let negated = genuine.neg();
+
+        for (name, forged) in [
+            ("a dropped term", missing_term),
+            ("a perturbed coefficient", perturbed),
+            ("a negated difference", negated),
+        ] {
+            assert!(
+                !recheck_zero_test(
+                    &left,
+                    &right,
+                    &ZeroTest::CertifiedBig {
+                        equal: false,
+                        witness: BigWitness { poly: forged },
+                    },
+                ),
+                "the re-check accepted a witness forged by {name}"
+            );
+        }
+
+        // Forgery 4: the zero polynomial claimed as a refutation.
+        assert!(
+            !recheck_zero_test(
+                &left,
+                &right,
+                &ZeroTest::CertifiedBig {
+                    equal: false,
+                    witness: BigWitness {
+                        poly: BigPoly::zero()
+                    },
+                },
+            ),
+            "a zero witness cannot certify a refutation"
+        );
+    }
+
+    /// **The flag check's own control.** The `equal` flag has to be re-checked
+    /// against the witness *before* the witness is compared to the difference,
+    /// and only one shape shows it: a pair whose difference really is zero,
+    /// carrying a zero witness, labelled `equal: false`.
+    ///
+    /// On any other pair the scale comparison already rejects a mislabelled
+    /// certificate — a zero witness fails to match a nonzero difference — which
+    /// is exactly why deleting the flag check killed no test until this one
+    /// existed. A guard nothing can kill is not a guard.
+    #[test]
+    fn a_zero_witness_labelled_not_equal_is_refused_even_when_the_pair_is_equal() {
+        let left = (x() + CasExpr::int(1)).pow(2);
+        let right = x().pow(2) + CasExpr::int(2) * x() + CasExpr::int(1);
+        assert!(
+            matches!(
+                equal(&left, &right),
+                ZeroTest::Certified { equal: true, .. }
+            ),
+            "the fixture must be a TRUE identity, or the forgery is not one"
+        );
+        assert!(
+            !recheck_zero_test(
+                &left,
+                &right,
+                &ZeroTest::Certified {
+                    equal: false,
+                    witness: MultiPoly::zero(),
+                },
+            ),
+            "a zero witness cannot certify `not equal`, even about an equal pair"
+        );
+        assert!(
+            !recheck_zero_test(
+                &left,
+                &right,
+                &ZeroTest::CertifiedBig {
+                    equal: false,
+                    witness: BigWitness {
+                        poly: BigPoly::zero()
+                    },
+                },
+            ),
+            "and the same for the unbounded certificate"
+        );
+    }
+
+    /// The bounded witness is re-checked by the same route, so the checker is
+    /// not a big-path-only formality.
+    #[test]
+    fn a_forged_bounded_witness_is_refused_by_the_recheck() {
+        let left = (x() + CasExpr::int(1)).pow(2);
+        let right = x().pow(2) + CasExpr::int(2) * x() + CasExpr::int(1);
+        let verdict = equal(&left, &right);
+        assert!(matches!(verdict, ZeroTest::Certified { equal: true, .. }));
+        assert!(recheck_zero_test(&left, &right, &verdict));
+        // A nonzero witness cannot certify an equality.
+        assert!(
+            !recheck_zero_test(
+                &left,
+                &right,
+                &ZeroTest::Certified {
+                    equal: true,
+                    witness: normalize(&x()).expect("x normalizes"),
+                },
+            ),
+            "a nonzero witness cannot certify an equality"
+        );
+        // And a genuine-looking witness that belongs to a different pair is
+        // refused.
+        let other = equal(&x(), &CasExpr::zero());
+        assert!(!recheck_zero_test(&left, &right, &other));
+    }
+
+    // --- The declines that remain -------------------------------------------
+
+    /// `exp` is decomposed, not atomized, by the bounded path, and that
+    /// decomposition has no unbounded twin — so the head is declined whole.
+    #[test]
+    fn exp_head_at_overflow_scale_still_declines() {
+        let left = CasExpr::Mul(vec![binom(80), binom(80)]) + x().exp() * y().exp();
+        let right = binom(160) + (x() + y()).exp();
         assert!(
             matches!(equal(&left, &right), ZeroTest::Unknown),
-            "a refutation with no representable witness must decline"
+            "the exp decomposition has no unbounded counterpart; this must decline"
+        );
+        // Positive control below the wall: the identity is true and decides.
+        let small_left = CasExpr::Mul(vec![binom(4), binom(4)]) + x().exp() * y().exp();
+        let small_right = binom(8) + (x() + y()).exp();
+        assert!(
+            matches!(
+                equal(&small_left, &small_right),
+                ZeroTest::Certified { equal: true, .. }
+            ),
+            "positive control: the same identity must certify below the wall"
+        );
+    }
+
+    /// The `\0`-atom guard on the inequality branch. A *refutation* over
+    /// transcendental atoms needs the Euler re-check that protects the bounded
+    /// path, and that cannot run in this ring while `exp` is declined.
+    ///
+    /// `ln 4 − 2·ln 2 = 0` is the witness for why: as independent atoms the
+    /// difference is nonzero, and only `expand_log_over_primes` — a
+    /// [`canonicalize_for_equality`] step, i.e. the re-check — knows better.
+    #[test]
+    fn atom_bearing_inequality_at_overflow_scale_declines() {
+        let overflowing = CasExpr::Mul(vec![binom(80), binom(80)]) - binom(160);
+        let left = CasExpr::int(4).ln() + overflowing.clone();
+        let right = CasExpr::int(2) * CasExpr::int(2).ln() + overflowing;
+        assert!(
+            matches!(equal_core_bounded(&left, &right), ZeroTest::Unknown),
+            "the fixture is not adversarial: the bounded i128 path already decides it"
+        );
+        assert!(
+            matches!(equal_core_unbounded(&left, &right), ZeroTest::Unknown),
+            "an atom-bearing difference must be declined on the inequality branch, \
+             never refuted -- these two ARE equal"
         );
     }
 
@@ -30723,7 +32411,114 @@ mod bignum_overflow_fallback {
             (x().pow(2), x().pow(2) + CasExpr::int(1), false),
             (x() / y(), (x() + CasExpr::int(1)) / y(), false),
             (CasExpr::int(7), CasExpr::int(8), false),
+            // Wave two additions: the same corpus has to keep pinning the
+            // bounded path now that `MultiPoly::pow` is binary rather than
+            // repeated multiplication.
+            (binom(40) * binom(40), binom(80), true),
+            (
+                (CasExpr::int(2) * x() + CasExpr::int(3)).pow(5)
+                    * (CasExpr::int(2) * x() + CasExpr::int(3)).pow(5),
+                (CasExpr::int(2) * x() + CasExpr::int(3)).pow(10),
+                true,
+            ),
+            (
+                (x() * y() + CasExpr::int(1)).pow(10) * (x() * y() + CasExpr::int(1)).pow(10),
+                (x() * y() + CasExpr::int(1)).pow(20),
+                true,
+            ),
+            (
+                (x() - CasExpr::rat(1, 2)).pow(20) * (x() - CasExpr::rat(1, 2)).pow(20),
+                (x() - CasExpr::rat(1, 2)).pow(40),
+                true,
+            ),
+            (
+                x() / (y() + CasExpr::int(1)) + CasExpr::int(1) / (y() + CasExpr::int(1)),
+                (x() + CasExpr::int(1)) / (y() + CasExpr::int(1)),
+                true,
+            ),
+            ((x() + y()).pow(2), x().pow(2) + y().pow(2), false),
+            (
+                binom(25) / (x() + CasExpr::int(3)),
+                binom(25) / (x() + CasExpr::int(4)),
+                false,
+            ),
+            (x() * y(), y() * x() + CasExpr::int(1), false),
         ]
+    }
+
+    /// Atom-bearing pairs the **bounded** path settles, with the verdict pinned.
+    ///
+    /// The fourth field says whether [`equal_core_bounded`] settles it on its
+    /// own; `ln 4 = 2·ln 2` and `exp(x)exp(y) = exp(x+y)` need
+    /// [`canonicalize_for_equality`], so only [`equal`] decides those.
+    ///
+    /// This is the control for wave two's two behaviour changes that could reach
+    /// the bounded path: `MultiPoly::pow` becoming binary, and the fold passes
+    /// gaining unbounded twins that must not be consulted when the bounded form
+    /// already decided.
+    fn atom_corpus() -> Vec<(CasExpr, CasExpr, bool, bool)> {
+        let imaginary = CasExpr::var("I");
+        vec![
+            (x().sqrt() * x().sqrt(), x(), true, true),
+            (
+                x().sin().pow(2) + x().cos().pow(2),
+                CasExpr::int(1),
+                true,
+                true,
+            ),
+            (x().abs().pow(2), x().pow(2), true, true),
+            (x().nth_root(3).pow(3), x(), true, true),
+            (
+                x() * x().bessel_j(2),
+                CasExpr::int(2) * x().bessel_j(1) - x() * x().bessel_j(0),
+                true,
+                true,
+            ),
+            (
+                imaginary.clone() * imaginary + CasExpr::int(1),
+                CasExpr::zero(),
+                true,
+                true,
+            ),
+            (
+                CasExpr::int(4).ln(),
+                CasExpr::int(2) * CasExpr::int(2).ln(),
+                true,
+                false,
+            ),
+            (x().exp() * y().exp(), (x() + y()).exp(), true, false),
+            (x().sin(), x().cos(), false, true),
+            (x().sqrt(), y().sqrt(), false, true),
+        ]
+    }
+
+    /// Every atom verdict the bounded path reached, it must still reach — and
+    /// [`equal`] must agree.
+    #[test]
+    fn bounded_atom_verdicts_are_unchanged() {
+        let corpus = atom_corpus();
+        assert!(corpus.len() >= 10, "the corpus must not shrink silently");
+        for (left, right, expected, bounded_decides) in corpus {
+            if bounded_decides {
+                match equal_core_bounded(&left, &right) {
+                    ZeroTest::Certified { equal, .. } => assert_eq!(
+                        equal, expected,
+                        "the bounded verdict changed for {left} vs {right}"
+                    ),
+                    other => panic!(
+                        "{left} vs {right} must still decide in the bounded path, got {other:?}"
+                    ),
+                }
+            }
+            match equal(&left, &right) {
+                ZeroTest::Certified { equal, .. } | ZeroTest::CertifiedBig { equal, .. } => {
+                    assert_eq!(equal, expected, "the verdict changed for {left} vs {right}");
+                }
+                other @ ZeroTest::Unknown => {
+                    panic!("{left} vs {right} must still decide, got {other:?}")
+                }
+            }
+        }
     }
 
     /// The two normal forms must agree on every verdict the bounded one reaches.
@@ -30734,7 +32529,7 @@ mod bignum_overflow_fallback {
     #[test]
     fn both_paths_reach_the_same_verdict_on_the_deciding_corpus() {
         let corpus = already_deciding_corpus();
-        assert!(corpus.len() >= 12, "the corpus must not shrink silently");
+        assert!(corpus.len() >= 20, "the corpus must not shrink silently");
         for (left, right, expected) in corpus {
             let bounded = equal_core_bounded(&left, &right);
             let unbounded = equal_core_unbounded(&left, &right);
@@ -30794,14 +32589,101 @@ mod bignum_overflow_fallback {
         ];
         for (left, right, expected) in cases {
             match equal(&left, &right) {
-                ZeroTest::Certified { equal, .. } => assert_eq!(
-                    equal, expected,
-                    "transcendental verdict changed for {left} vs {right}"
-                ),
+                ZeroTest::Certified { equal, .. } | ZeroTest::CertifiedBig { equal, .. } => {
+                    assert_eq!(
+                        equal, expected,
+                        "transcendental verdict changed for {left} vs {right}"
+                    );
+                }
                 other @ ZeroTest::Unknown => {
                     panic!("{left} vs {right} must still decide, got {other:?}")
                 }
             }
+        }
+    }
+
+    // --- `MultiPoly::pow` is binary (ADR-1670 wave two, item 3) --------------
+
+    /// The exponentiation schedule wave two replaced: `exp − 1` products where
+    /// `⌈log₂ exp⌉` squarings suffice. Kept as the reference implementation so
+    /// the swap can be checked and priced against it in the same process, under
+    /// the same load, rather than across two builds.
+    fn pow_repeated(base: &MultiPoly, exp: u32) -> Option<MultiPoly> {
+        let mut acc = MultiPoly::constant(Rational::integer(1));
+        for _ in 0..exp {
+            acc = acc.mul(base)?;
+        }
+        Some(acc)
+    }
+
+    /// **The correctness control for item 3.** Binary and repeated
+    /// exponentiation must agree on every exponent, including `0` and `1`, and
+    /// on bases with mixed signs, several variables and rational coefficients —
+    /// the shapes where an associativity slip would show.
+    #[test]
+    fn binary_and_repeated_exponentiation_agree() {
+        let bases = [
+            normalize(&(x() + CasExpr::int(1))).expect("polynomial"),
+            normalize(&(x() - CasExpr::int(3))).expect("polynomial"),
+            normalize(&(x() + y() + CasExpr::int(1))).expect("polynomial"),
+            normalize(&(x() * y() - CasExpr::rat(2, 3))).expect("polynomial"),
+            normalize(&CasExpr::zero()).expect("polynomial"),
+            normalize(&CasExpr::int(1)).expect("polynomial"),
+        ];
+        for base in &bases {
+            for exp in 0..=17u32 {
+                assert_eq!(
+                    base.pow(exp),
+                    pow_repeated(base, exp),
+                    "binary exponentiation disagreed at exponent {exp}"
+                );
+            }
+        }
+    }
+
+    /// **The wall control for item 3.** The binary schedule forms only `self^m`
+    /// for `m ≤ exp`, all of which repeated multiplication formed too, so an
+    /// input that decided before still decides — and some that did not now do.
+    /// `(x+1)^d` overflows `i128` from `d = 132`; both schedules must decline
+    /// there, and neither may decline below it.
+    #[test]
+    fn binary_exponentiation_does_not_move_the_wall_inward() {
+        let base = normalize(&(x() + CasExpr::int(1))).expect("polynomial");
+        let last_decided = |mut schedule: Box<dyn FnMut(u32) -> bool>| {
+            (0..400u32).take_while(|exp| schedule(*exp)).last()
+        };
+        let binary = last_decided(Box::new(|exp| base.pow(exp).is_some()));
+        let repeated = last_decided(Box::new(|exp| pow_repeated(&base, exp).is_some()));
+        println!("(x+1)^d: last degree decided -- binary {binary:?}, repeated {repeated:?}");
+        assert!(
+            binary >= repeated,
+            "binary exponentiation moved the bounded wall INWARD: it decides up to \
+             {binary:?} where repeated multiplication reached {repeated:?}"
+        );
+        assert_eq!(
+            repeated,
+            Some(130),
+            "the fixture is stale: ADR-1670 measured (x+1)^130 as the last binomial \
+             power the old schedule expanded"
+        );
+    }
+
+    /// Price item 3 at the ADR's degrees. Both schedules run in this process,
+    /// microseconds apart, so the ratio is between two measurements under the
+    /// same load — the absolute times are ADVISORY on a shared box, the ratio is
+    /// not. Prints rather than asserts a budget, for the reason
+    /// [`cost_curve_bounded_versus_unbounded_below_the_wall`] gives.
+    #[test]
+    fn cost_of_binary_versus_repeated_exponentiation() {
+        let base = normalize(&(x() + CasExpr::int(1))).expect("polynomial");
+        for degree in [8u32, 16, 32, 64] {
+            let binary = best_of(|| base.pow(degree).is_some());
+            let repeated = best_of(|| pow_repeated(&base, degree).is_some());
+            println!(
+                "MultiPoly::pow degree {degree}: repeated {repeated:?} / binary {binary:?} \
+                 = {:.2}x",
+                repeated.as_secs_f64() / binary.as_secs_f64().max(1e-9)
+            );
         }
     }
 
