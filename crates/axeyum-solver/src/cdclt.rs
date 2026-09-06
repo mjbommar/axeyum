@@ -420,7 +420,7 @@ pub struct CdclT {
     /// surfaces at the root, and re-inserted only once it has actually been
     /// popped out (`heap_pos[v] == HEAP_ABSENT`).
     ///
-    /// The comparator [`Self::heap_before`] reproduces the previous O(var_count)
+    /// The comparator [`Self::heap_before`] reproduces the previous `O(var_count)`
     /// linear scan's choice exactly — highest activity, lowest index on ties —
     /// so this is a data-structure change and not a heuristic one, and the
     /// search trajectory is unchanged.
@@ -1866,7 +1866,7 @@ impl CdclT {
     /// The highest-activity **active, unassigned** variable, with deterministic
     /// lowest-index ties, or `None` when the assignment is total.
     ///
-    /// Pops roots until an eligible variable surfaces — the canonical MiniSat
+    /// Pops roots until an eligible variable surfaces — the canonical `MiniSat`
     /// lazy-deletion order heap, copied from `proof_sat.rs`'s `pick_branch` and
     /// extended by one predicate this driver needs and a plain SAT core does
     /// not: a variable may be **inactive** (reserved for a theory atom no
@@ -1874,9 +1874,9 @@ impl CdclT {
     /// legal decision. Such a root is discarded exactly like an assigned one;
     /// [`Self::activate_variables`] re-inserts it if it is ever activated.
     ///
-    /// This returns exactly the variable the prior O(var_count) linear scan
+    /// This returns exactly the variable the prior `O(var_count)` linear scan
     /// would have chosen, so the search trajectory is unchanged. What changes is
-    /// the cost: O(log n) amortized per decision instead of O(var_count), on
+    /// the cost: O(log n) amortized per decision instead of `O(var_count)`, on
     /// skeletons where slice S1 measured 45,000+ decisions over 330,000
     /// variables.
     fn pick_unassigned(&mut self) -> Option<usize> {
@@ -1889,7 +1889,7 @@ impl CdclT {
         None
     }
 
-    /// The decision the O(var_count) linear scan this heap replaced would make.
+    /// The decision the `O(var_count)` linear scan this heap replaced would make.
     /// Kept as the differential reference for
     /// `order_heap_matches_linear_scan_under_stress`; a heap that ever disagrees
     /// with it has changed the search trajectory, not just its cost.
@@ -2830,7 +2830,7 @@ mod termination_tests {
         assert_eq!(learned, learned_again);
     }
 
-    /// The order heap returns exactly the variable the O(var_count) linear scan
+    /// The order heap returns exactly the variable the `O(var_count)` linear scan
     /// would, under randomized bump / decay / decide / backjump stress, and its
     /// structural invariants hold throughout.
     ///
