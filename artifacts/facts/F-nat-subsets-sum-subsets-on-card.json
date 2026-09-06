@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "id": "F:nat-subsets-sum-subsets-on-card",
+  "title": "The mask-restricted subset fold visits two-to-the-masked-count subsets",
+  "statement": "For any Bool-valued mask P and any width n, the mask-restricted subset sum of the constant summand 1 equals 2 raised to the number of indices below n that the mask holds. Nat.Subsets.sumSubsets_card pins the UNRESTRICTED fold at 2^n; this pins the masked one at two-to-the-masked-count, which is the number of divisors a squarefree number has. It is the only law about the masked fold that a fold ignoring its mask fails -- the split law, the grading law and the vanishing law all hold for that fold, because none of them compares the masked fold against anything that counts.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Nat.Subsets.sumSubsetsOn_card : ((x0 : ((x0 : AxNat) -> Bool)) -> ((x1 : AxNat) -> Eq.{1} AxNat (AxNat.Subsets.sumSubsetsOn x0 x1 (fun (x2 : ((x2 : AxNat) -> Bool)) => AxNat.succ AxNat.zero)) (AxNat.pow (AxNat.succ (AxNat.succ AxNat.zero)) (AxNat.countRange x0 x1))))",
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.Subsets.sumSubsetsOn_card"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:nat-countrange-zero",
+    "F:nat-countrange-succ",
+    "F:nat-pow-zero",
+    "F:nat-pow-succ",
+    "F:nat-add-zero",
+    "F:nat-zero-add"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-nat-subsets-sum-subsets-on-card",
+      "kind": "kernel-term",
+      "kernel_declaration": "Nat.Subsets.sumSubsetsOn_card",
+      "supports": "Nat.Subsets.sumSubsetsOn_card is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q --release -p axeyum-lean-kernel --example nat_theorem_inventory -- Nat.Subsets.sumSubsetsOn_card 2>/dev/null | grep -Fc '(AxNat.pow (AxNat.succ (AxNat.succ AxNat.zero)) (AxNat.countRange x0 x1))')\" -ge 1",
+      "notes": "The pattern is the right-hand side as rendered by Kernel::render_lean, so a statement whose exponent drifted back to the bare width x1 -- which is exactly what a fold ignoring its mask satisfies -- fails this check. The induction's mask-on branch runs the same x + x = (0 + x) + x = x * 2 = pow 2 (succ c) chain Nat.Subsets.sumSubsets_card runs, with c the masked count instead of the width."
+    },
+    {
+      "id": "footprint-nat-subsets-sum-subsets-on-card",
+      "kind": "instance-pin",
+      "supports": "axiom_footprint: [] -- read from Kernel::axiom_footprint for this declaration, not from a maintained list",
+      "check_status": "checked",
+      "checker_command": "cargo test -q --release -p axeyum-lean-kernel --lib -- nat_prelude::subset_sums_masked_tests::every_masked_subset_sum_declaration_is_present_and_axiom_free --test-threads=1",
+      "notes": "That test asserts Environment::contains FIRST for each of the eleven names this module declares and only then that Kernel::axiom_footprint is empty -- an absent name has an EMPTY footprint, so the order is load-bearing."
+    },
+    {
+      "id": "evaluation-nat-subsets-sum-subsets-on-card",
+      "kind": "instance-pin",
+      "supports": "At a concrete mask the two sides reduce to the same numeral, and to a DIFFERENT one than the unmasked count, with the wrong value named.",
+      "check_status": "checked",
+      "checker_command": "cargo test -q --release -p axeyum-lean-kernel --lib -- nat_prelude::subset_sums_masked_tests:: --test-threads=4",
+      "notes": "the_card_law_agrees_with_the_fold_at_a_concrete_mask evaluates both sides at the mask (. = 1) and width 3 and adds the control that the result must NOT be pow 2 3. the_masked_fold_visits_only_the_masked_indices names the same 8 as the value a fold ignoring the mask gives. Magnitudes stay tiny: this prelude's numerals are unary succ towers."
+    }
+  ],
+  "provenance": {
+    "date": "2026-09-06",
+    "established_by": "axeyum-lean-kernel build_nat_prelude (nat_prelude/subset_sums_masked.rs)",
+    "source": "theorem name and canonical type read directly via nat_theorem_inventory, which prints render_lean of the admitted type; lane mobius-transfer, ADR-1671."
+  },
+  "notes": "Landed by lane mobius-transfer (ADR-1671). ADR-1658 left open whether to restrict the enumeration or to enumerate the support into [0,k); this fact is the restricted enumeration's correctness statement. It does not yet transfer to divisors -- the range-to-subset sum transfer (ADR-1658's missing piece B) is unchanged -- but it does establish that the two sides now have the same CARDINALITY, which before was false by a factor of 2^(bound m - omega(n)).",
+  "external_status": "proved"
+}

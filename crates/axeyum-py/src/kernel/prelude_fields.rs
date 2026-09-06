@@ -178,7 +178,7 @@ pub(super) fn list(p: &ListPrelude) -> Fields {
     }
 }
 
-/// The `NatPrelude` field table (1453 names,
+/// The `NatPrelude` field table (1465 names,
 /// 0 name lists, 1 sub-packages).
 ///
 /// 113 of the names come from ADR-1512 per-module registries and
@@ -2058,6 +2058,21 @@ pub(super) fn nat(p: &NatPrelude) -> Fields {
             ("subsets_sum_sel_true_split", p.subsets_sum_sel_true_split),
             ("subsets_sum_subsets_card", p.subsets_sum_subsets_card),
             ("subsets_sum_sel_const", p.subsets_sum_sel_const),
+            ("subsets_sum_subsets_on", p.subsets_sum_subsets_on),
+            ("subsets_sum_sel_on", p.subsets_sum_sel_on),
+            ("subsets_sum_subsets_on_zero", p.subsets_sum_subsets_on_zero),
+            ("subsets_sum_subsets_on_succ", p.subsets_sum_subsets_on_succ),
+            ("subsets_sum_sel_on_zero", p.subsets_sum_sel_on_zero),
+            ("subsets_sum_sel_on_succ", p.subsets_sum_sel_on_succ),
+            ("subsets_sum_subsets_on_all", p.subsets_sum_subsets_on_all),
+            ("subsets_sum_sel_on_all", p.subsets_sum_sel_on_all),
+            ("subsets_sum_sel_on_add", p.subsets_sum_sel_on_add),
+            ("subsets_sum_subsets_on_card", p.subsets_sum_subsets_on_card),
+            (
+                "multiset_count_le_of_dvd_prod",
+                p.multiset_count_le_of_dvd_prod,
+            ),
+            ("subsets_sum_sel_on_const", p.subsets_sum_sel_on_const),
             ("subsets_any_of", p.subsets_any_of),
             ("subsets_none_of", p.subsets_none_of),
             ("subsets_prod_par", p.subsets_prod_par),

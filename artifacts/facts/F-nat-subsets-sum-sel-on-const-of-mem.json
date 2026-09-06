@@ -1,0 +1,58 @@
+{
+  "schema_version": 1,
+  "id": "F:nat-subsets-sum-sel-on-const-of-mem",
+  "title": "The alternating sum of a constant over a non-empty masked ground set vanishes",
+  "statement": "For any constant c, any Bool-valued mask P, any width n and any index i below n at which the mask holds, the even and odd halves of the mask-restricted graded subset sum of the constant summand are EQUAL. In Nat's graded form -- no negatives, so a signed sum lands as a pair (even, odd) and identities are stated as equalities rather than as vanishing differences -- this is the identity Moebius inversion turns on: it is the shape of sum over d dividing n of mu(d) = 0 for n > 1, once the divisor-to-selection transfer exists. Nat.Subsets.sumSel_const is the special case at the full mask, where the witness is free because the top index always qualifies.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Nat.Subsets.sumSelOn_const_of_mem : ((x0 : AxNat) -> ((x1 : ((x1 : AxNat) -> Bool)) -> ((x2 : AxNat) -> ((x3 : AxNat) -> ((x4 : AxNat.lt x3 x2) -> ((x5 : Eq.{1} Bool (x1 x3) Bool.true) -> Eq.{1} AxNat (AxNat.Subsets.sumSelOn x1 x2 (fun (x6 : ((x6 : AxNat) -> Bool)) => x0) Bool.true) (AxNat.Subsets.sumSelOn x1 x2 (fun (x6 : ((x6 : AxNat) -> Bool)) => x0) Bool.false)))))))",
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.Subsets.sumSelOn_const_of_mem"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:nat-add-comm",
+    "F:nat-add-zero",
+    "F:nat-lt-or-ge",
+    "F:ml430-nat-add-comm-56a2d614",
+    "F:ml430-nat-le-of-lt-succ-120bd6db",
+    "F:nat-lt-or-eq-of-le",
+    "F:nat-not-lt-zero"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-nat-subsets-sum-sel-on-const-of-mem",
+      "kind": "kernel-term",
+      "kernel_declaration": "Nat.Subsets.sumSelOn_const_of_mem",
+      "supports": "Nat.Subsets.sumSelOn_const_of_mem is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q --release -p axeyum-lean-kernel --example nat_theorem_inventory -- Nat.Subsets.sumSelOn_const_of_mem 2>/dev/null | grep -Fc '((x4 : AxNat.lt x3 x2) -> ((x5 : Eq.{1} Bool (x1 x3) Bool.true) ->')\" -ge 1",
+      "notes": "The pattern is BOTH hypotheses as rendered by Kernel::render_lean, so a statement that dropped either fails this check -- and both are load-bearing, since the conclusion is FALSE without a masked index below the width. The two branches of the induction step are asymmetric: with the top index masked, add_comm closes it and the induction hypothesis is never used; without it, the witness must move below the top index, which needs i /= j, and that comes from the mask itself. So the case split is over the EQUATION P j = false, not Bool.rec on P j -- a Bool.rec branch does not hand you the equation it split on and the contradiction is unreachable inside it."
+    },
+    {
+      "id": "footprint-nat-subsets-sum-sel-on-const-of-mem",
+      "kind": "instance-pin",
+      "supports": "axiom_footprint: [] -- read from Kernel::axiom_footprint for this declaration, not from a maintained list",
+      "check_status": "checked",
+      "checker_command": "cargo test -q --release -p axeyum-lean-kernel --lib -- nat_prelude::subset_sums_masked_tests::every_masked_subset_sum_declaration_is_present_and_axiom_free --test-threads=1",
+      "notes": "That test asserts Environment::contains FIRST for each of the eleven names this module declares and only then that Kernel::axiom_footprint is empty -- an absent name has an EMPTY footprint, so the order is load-bearing."
+    },
+    {
+      "id": "necessity-nat-subsets-sum-sel-on-const-of-mem",
+      "kind": "instance-pin",
+      "supports": "NECESSITY of the hypotheses: at the empty mask the conclusion is FALSE, and at a mask whose only index is at or above the width it is also false.",
+      "check_status": "checked",
+      "checker_command": "cargo test -q --release -p axeyum-lean-kernel --lib -- nat_prelude::subset_sums_masked_tests::the_constant_vanishing_law_is_false_without_a_masked_index --test-threads=1",
+      "notes": "At the empty mask the fold visits only the empty set, which is EVEN, so the even half is 4 and the odd half is 0. Dropping the hypothesis makes the theorem false, not merely weaker -- the same shape as sum over d dividing n of mu(d) = 0 failing at n = 1, where the only divisor is 1 and it sits entirely on the even side. The second half of that test pins Lt i n separately, with the masked index moved to 5 and the width left at 3."
+    }
+  ],
+  "provenance": {
+    "date": "2026-09-06",
+    "established_by": "axeyum-lean-kernel build_nat_prelude (nat_prelude/subset_sums_masked.rs)",
+    "source": "theorem name and canonical type read directly via nat_theorem_inventory, which prints render_lean of the admitted type; lane mobius-transfer, ADR-1671."
+  },
+  "notes": "Landed by lane mobius-transfer (ADR-1671). This is the engine under sum over d dividing n of mu(d) = 0 for squarefree n, but the identity itself does NOT follow yet: it needs the range-to-subset sum transfer (ADR-1658's missing piece B), which relates two folds over different index SHAPES and has no analogue anywhere in this prelude.",
+  "external_status": "proved"
+}
