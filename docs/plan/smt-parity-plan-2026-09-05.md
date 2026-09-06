@@ -42,7 +42,7 @@ hosts, zero disagreements everywhere
 |---|---|---:|---:|---:|---|---:|
 | QF_SLIA | `9914a1c0e` | 193 | 194 | 99.5% | 187 / 6 / 7 | 1 |
 | QF_BV | `9914a1c0e` | 188 | 194 | 96.9% | 188 / 0 / 6 | 6 |
-| QF_UF | `b32377dc5` | 190 | 200 | 95.0% | 190 / 0 / 10 | 10 |
+| QF_UF | `c28d7b7c6` | 196 | 200 | 98.0% | 196 / 0 / 4 | 4 |
 | UF | `b32377dc5` | 85 | 93 | 91.4% | 61 / 24 / 32 | 8 |
 | QF_ABV | `9914a1c0e` | 179 | 197 | 90.9% | 178 / 1 / 19 | 18 |
 | QF_RDL | `b32377dc5` | 128 | 154 | 83.1% | 127 / 1 / 27 | 26 |
@@ -52,8 +52,10 @@ hosts, zero disagreements everywhere
 | QF_LRA | `5c9b3a7c2` | 93 | 145 | 64.1% | 93 / 0 / 52 | 52 |
 | QF_NIA | `9914a1c0e` | 39 | 87 | 44.8% | 26 / 13 / 61 | 48 |
 
-Total gap to parity: **290 files, down from 356** at the start of the plan
-(ours 1,416 of 1,706 reference decisions). S1 and S2 together moved 65 files
+Total gap to parity: **284 files, down from 356** at the start of the plan
+(ours 1,422 of 1,706 reference decisions; QF_UF re-measured at `c28d7b7c6`
+after the S1b + S11a merges, 190 -> 196, zero disagreements; the other five
+re-measured divisions are pending below). S1 and S2 together moved 65 files
 (QF_IDL +16, QF_RDL +21, QF_UF +28; the measuring commit `b32377dc5` contains
 both, so the split between them is not measured); S4 moved 3 (QF_LRA +2,
 QF_UFLIA +1). The two
@@ -179,7 +181,8 @@ wasm build on default features prints three dead-code warnings
 because those diagnostics are only constructed behind `full`; a `cfg` on
 the module is a cheap follow-up for whichever lane next touches `layers.rs`.
 
-**Re-measurement launched** at `c28d7b7c6` (solver code identical to
+**Re-measurement launched** at `c28d7b7c6` (first result: QF_UF 196/200,
+98.0%, 0 disagreements, 4 reference-only left) (solver code identical to
 `b40a0f309`; the later commits are docs and a harness anchor fix) on idle
 s5 (QF_IDL, QF_RDL), s6 (QF_UF, UF), s7 (QF_LIA, QF_UFLIA), fresh
 `~/axeyum-parity-m1` checkouts from a bundle, fresh sidecars, no resume.
