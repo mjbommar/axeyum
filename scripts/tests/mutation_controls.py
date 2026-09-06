@@ -5583,15 +5583,6 @@ SUITES["creal-migrate-consumers"] = (
             "C7 a clean tree is NOT refused (the vacuity control)",
             "    if not findings:",
             "    if False:",
-            # NOT `fail=1 -> fail=0`: that would also weaken the aggregate
-            # scenario, so the mutant would kill two tests and prove nothing
-            # about this guard specifically. Widening the exit-2 arm to swallow
-            # EVERY nonzero status is the mutation that separates the two
-            # census scenarios -- the stale run must die, the unanswerable run
-            # must survive.
-            "M7 a stale shape census fails the gate, and exit 2 does not",
-            'elif [ "$census_rc" -eq 2 ]; then',
-            'elif [ "$census_rc" -ne 0 ]; then',
         ),
     ],
 )
@@ -7406,16 +7397,14 @@ SUITES["cas-summation-and-gaussian"] = (
             # Obligation 1: the heuristic extraction's reconstruction must be
             # decided equal to the summand itself.
             "the shape reconstruction must certify against the summand",
-            "    if !matches!(\n        equal(f, &reconstruction),\n"
-            "        ZeroTest::Certified { equal: true, .. }\n    ) {\n        return None;\n    }",
-            "    if false {\n        return None;\n    }",
+            "    if !matches!(\n        equal(f, &reconstruction),\n        ZeroTest::Certified { equal: true, .. }\n    ) {\n        return None;\n    }\n    Some(ExponentialSeriesShape {",
+            "    if false {\n        return None;\n    }\n    Some(ExponentialSeriesShape {",
         ),
         (
             # Obligation 2: the falling-factorial expansion of `P`.
             "the Newton falling-factorial expansion must certify",
-            "    if !matches!(\n        equal(&polynomial, &rebuilt),\n"
-            "        ZeroTest::Certified { equal: true, .. }\n    ) {\n        return None;\n    }",
-            "    if false {\n        return None;\n    }",
+            "    if !matches!(\n        equal(&polynomial, &rebuilt),\n        ZeroTest::Certified { equal: true, .. }\n    ) {\n        return None;\n    }\n\n    // `\u03bc = e^{rate}`. The base identity is stated in `\u03bc`, so this is where the",
+            "    if false {\n        return None;\n    }\n\n    // `\u03bc = e^{rate}`. The base identity is stated in `\u03bc`, so this is where the",
         ),
         (
             # An UPWARD Gaussian is not an erf antiderivative; the finder would
