@@ -3491,11 +3491,19 @@ impl std::fmt::Display for FragmentLimit {
 /// // A decided pair has nothing to explain.
 /// assert!(explain_decline(&x, &x).is_none());
 ///
-/// // `sqrt(2)*cbrt(2) = root6(32)` is TRUE, and the zero-test declines rather
-/// // than refuting it — because the difference multiplies two radical atoms.
-/// // The fallback IS entered for this class; it declined too.
+/// // `sqrt(2)*cbrt(2) = root6(32)` is decided (constant radicals are merged over
+/// // their common index), so it has nothing to explain either.
 /// let left = CasExpr::int(2).sqrt() * CasExpr::int(2).nth_root(3);
 /// let right = CasExpr::int(32).nth_root(6);
+/// assert!(explain_decline(&left, &right).is_none());
+///
+/// // `sqrt(x) * sqrt(y) = sqrt(x*y)` is TRUE, and the zero-test declines rather
+/// // than refuting it — the bounded path withholds the refutation because the
+/// // monomial multiplies two radical atoms. The fallback IS entered for this
+/// // class; it declined too.
+/// let y = CasExpr::var("y");
+/// let left = x.clone().sqrt() * y.clone().sqrt();
+/// let right = (x.clone() * y).sqrt();
 /// assert_eq!(
 ///     explain_decline(&left, &right),
 ///     Some(ZeroTestDecline::RelationBlind(
