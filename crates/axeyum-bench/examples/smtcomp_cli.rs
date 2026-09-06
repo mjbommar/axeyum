@@ -132,8 +132,22 @@
 //! ```text
 //! ; theory-layer boolean_propagate_ms=812 theory_assert_ms=241 theory_propagate_ms=96 \
 //!   theory_push_pop_ms=4 conflict_analysis_ms=118 theory_conflicts=3110 \
-//!   theory_propagations=8842 decisions=4201 restarts=6
+//!   theory_propagations=8842 decisions=4201 restarts=6 \
+//!   learned_clauses=3110 learned_literals=51230 learned_literals_premin=68812 \
+//!   simplex_pivots=41233 simplex_checks=1157 simplex_cold_restarts=0 \
+//!   bound_retractions=88104 bound_assertions=89261 propagations_offered=1200
 //! ```
+//!
+//! `learned_literals / learned_clauses` is the mean learned-clause length;
+//! `learned_literals_premin - learned_literals` is exactly the number of
+//! literals recursive minimization removed on this run, so the minimizer's
+//! effect is readable from one run rather than from a comparison of two.
+//!
+//! The last six are the theory's own engine counters (S4,
+//! `TheorySolver::engine_counters`); they read `n/a` for a theory that keeps
+//! no feasibility engine, which is every theory but the LRA one today. `n/a`
+//! and `0` are deliberately different: one is "not measured", the other is a
+//! measurement.
 //!
 //! No line is printed when no CDCL(T) route decided the query (e.g. a `QF_BV`
 //! `sat-bv` decide, or an `unknown`) — collection has nothing to report.
@@ -200,13 +214,22 @@ fn progress_report_line(snapshot: &axeyum_cnf::ProofSearchProgress) -> String {
 /// never match `^(sat|unsat)$` / `^unknown$` — same convention as
 /// [`progress_report_line`] / [`evidence_report_line`].
 fn theory_layer_report_line(
-    stats: axeyum_solver::theories::cdclt_diagnostics::TheoryLayerStats,
+    &stats: &axeyum_solver::theories::cdclt_diagnostics::TheoryLayerStats,
 ) -> String {
+    /// `n/a` for a counter the driving theory does not keep, so an absent
+    /// counter never reads as a measured zero.
+    fn optional(value: Option<u64>) -> String {
+        value.map_or_else(|| "n/a".to_string(), |v| v.to_string())
+    }
     format!(
         "; theory-layer boolean_propagate_ms={} theory_assert_ms={} theory_propagate_ms={} \
          theory_push_pop_ms={} conflict_analysis_ms={} theory_final_check_ms={} \
          theory_explain_ms={} theory_conflicts={} theory_propagations={} \
-         final_checks={} decisions={} restarts={}",
+         final_checks={} decisions={} restarts={} \
+         learned_clauses={} learned_literals={} learned_literals_premin={} \
+         simplex_pivots={} simplex_checks={} simplex_cold_restarts={} \
+         bound_retractions={} bound_assertions={} propagations_offered={} \
+         simplex_rows={} simplex_columns={}",
         stats.boolean_propagate.as_millis(),
         stats.theory_assert.as_millis(),
         stats.theory_propagate.as_millis(),
@@ -219,6 +242,17 @@ fn theory_layer_report_line(
         stats.final_checks,
         stats.decisions,
         stats.restarts,
+        stats.learned_clauses,
+        stats.learned_literals,
+        stats.learned_literals_before_minimization,
+        optional(stats.simplex_pivots),
+        optional(stats.simplex_checks),
+        optional(stats.simplex_cold_restarts),
+        optional(stats.bound_retractions),
+        optional(stats.bound_assertions),
+        optional(stats.theory_propagations_offered),
+        optional(stats.simplex_rows),
+        optional(stats.simplex_columns),
     )
 }
 
@@ -664,6 +698,7 @@ fn main() -> ExitCode {
         let trace_line = trace_mode
             .then(last_theory_layer_stats)
             .flatten()
+            .as_ref()
             .map(theory_layer_report_line);
         (verdict, None, trace_line)
     };

@@ -506,13 +506,17 @@ fn even_partial_sum(
 /// `γ + ln x` over a strictly positive interval — the non-series half of `Ci`,
 /// `Chi` and `Ei`.
 ///
-/// The logarithm goes through [`ln_large`], **not** the parent module's
-/// `ln_point`, because the argument here is a *computed* interval: `li x` is
-/// `Ei(ln x)`, so `Ei` receives an endpoint that already carries a certified
-/// logarithm's denominator, and `ln_point` forms `z^(2·order+1)` of it.
-/// Measured 2026-09-05 in a debug build, `li(2)` at precision 130 took
-/// **104.7 s** through `ln_point` — a 58,000-bit intermediate — and about a
-/// second through `ln_large`, which anchors on a 16-bit dyadic instead.
+/// The logarithm goes through [`ln_large`] directly, because the argument here
+/// is a *computed* interval: `li x` is `Ei(ln x)`, so `Ei` receives an endpoint
+/// that already carries a certified logarithm's denominator. Measured
+/// 2026-09-05 in a debug build, `li(2)` at precision 130 took **104.7 s**
+/// through the then-unanchored `ln_point` — a 58,000-bit intermediate — and
+/// about a second through `ln_large`, which anchors on a 16-bit dyadic instead.
+///
+/// Since ADR-1710 slice 1 the parent module's `ln_point` rounds its argument
+/// outward onto the dyadic grid and delegates here too, so the two routes no
+/// longer differ in cost; this one is kept because it is one call per endpoint
+/// rather than two, and the endpoints are already what this function wants.
 fn log_and_gamma(x: &BigInterval, order: u32) -> Result<BigInterval, DeclineReason> {
     let low = ln_large(x.lo(), order).ok_or(DeclineReason::ResourceLimit)?;
     let high = ln_large(x.hi(), order).ok_or(DeclineReason::ResourceLimit)?;
@@ -2066,11 +2070,14 @@ mod tests {
         // sqrt(x) on [0, 1]: `f` encloses, `f''''` divides by an interval
         // reaching 0, so Simpson is unavailable and the always-sound box rule
         // answers. The exact value is 2/3.
-        // `NthRoot(2)` rather than `Sqrt`: the same function, but its kernel
-        // rounds each Newton iterate onto the dyadic grid, where `sqrt_point`
-        // still lets the iterate double in size to a 2048-bit floor. Over the
-        // 511 panel evaluations this refinement needs, that is the difference
-        // between a second and several minutes.
+        // `NthRoot(2)` rather than `Sqrt`: the same function, and since
+        // ADR-1710 slice 1 the same treatment — `sqrt_point` now rounds each
+        // Newton iterate onto the dyadic grid as this kernel always did.
+        // Before that slice `sqrt_point` let the iterate double in size to a
+        // 2048-bit floor, and over the 511 panel evaluations this refinement
+        // needs that was the difference between a second and several minutes.
+        // The fixture is left on `NthRoot(2)` so the comparison it records
+        // stays reproducible.
         let f = CasExpr::Unary(UnaryFunc::NthRoot(2), Box::new(CasExpr::var("x")));
         // Precision 6, not 30: the box rule converges LINEARLY, so the panel
         // count is `2^precision` and the cost of this test is exponential in it.

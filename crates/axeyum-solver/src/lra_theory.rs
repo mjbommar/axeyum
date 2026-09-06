@@ -68,7 +68,9 @@ use axeyum_ir::{Sort, TermArena, TermId, TermNode, Value};
 
 use crate::backend::{CheckResult, SolverConfig, SolverError, UnknownKind, UnknownReason};
 use crate::cdclt::{CdclT, Lit as CdcltLit, Outcome};
-use crate::euf_egraph::{FinalCheckOutcome, PropagationQueue, TheoryLit, TheoryProp, TheorySolver};
+use crate::euf_egraph::{
+    FinalCheckOutcome, PropagationQueue, TheoryEngineCounters, TheoryLit, TheoryProp, TheorySolver,
+};
 use crate::lra_online::{Encoder, Lit, LraTheory, LraTheoryBuildStop, collect_lra_atoms, replays};
 use crate::model::Model;
 
@@ -177,6 +179,11 @@ impl TheorySolver for CdcltLraTheory {
     /// Forwards the wrapped theory's queue-based propagation (ADR-1701).
     fn propagate_into(&mut self, queue: &mut PropagationQueue) {
         self.inner.propagate_into(queue);
+    }
+
+    /// Forwards the wrapped theory's engine counters (S4, diagnostic only).
+    fn engine_counters(&self) -> Option<TheoryEngineCounters> {
+        self.inner.engine_counters()
     }
 }
 

@@ -15,18 +15,38 @@
 //!
 //! # What is implemented here today
 //!
-//! [`Dyadic`]; the radix types ([`Radix`], [`RadixCertificate`], [`MixedRadix`],
-//! [`MixedRadixCertificate`]); and, since migration slice 2,
-//! [`ModularRing`]/[`PlainModRing`] and [`PowModCertificate`]. Everything else
-//! in this file is a **signature sketch**: traits with no bodies, and
-//! certificate structs whose `verify` is `todo!()`. That is deliberate — the
-//! sketch is what makes the design compile-checked without pre-empting the
-//! migration lanes that will implement it against the copies they replace.
+//! **Everything the crate declares.** There is no signature sketch left: every
+//! trait in this file has at least one implementation, every certificate has a
+//! `verify` that re-derives its claim, and there is no `todo!()`.
+//!
+//! - [`Dyadic`] — exact `mantissa · 2^exponent`, five rounding directions,
+//!   relative rounding ([`Dyadic::round`]) and absolute-grid rounding
+//!   ([`Dyadic::round_at_exponent`], migration slice 1), with `round_outward` as
+//!   the only interval-facing entry.
+//! - [`Radix`]/[`RadixCertificate`] and [`MixedRadix`]/[`MixedRadixCertificate`]
+//!   — certified positional notation in any base `b ≥ 2`.
+//! - [`ModularRing`]/[`PlainModRing`] and [`PowModCertificate`] (slice 2) —
+//!   modular arithmetic whose exponentiation hands back the square-and-multiply
+//!   chain instead of the power.
+//! - [`upoly`] — [`ZPoly`] and [`QPoly`], which implement [`UnivariatePoly`]
+//!   (and, for ℤ, [`FractionFree`]); [`PolyBezoutCertificate`],
+//!   [`PolyGcdCertificate`], [`BezoutCertificate`], [`SturmChain`] and
+//!   [`SturmCertificate`]; real-root isolation.
+//! - [`rational`] — [`RawRational`], the unreduced carrier that runs no gcd,
+//!   with [`Normalize`] and a [`NormalizationReceipt`] whose `verify`
+//!   re-derives the reduction.
+//! - [`hensel`] — [`HenselRoot`]/[`HenselLift`] and [`lift_root`], quadratic
+//!   `p`-adic lifting of a simple root with a chain certificate.
+//! - [`AlgebraicNumber`], implemented by `axeyum_ir::RealAlgebraic` and
+//!   `axeyum_ir::poly_big::BigAlgebraic`; the trait lives here and the two
+//!   carriers stay where they are, which is the design note's §5 answer to its
+//!   own second open question.
 //!
 //! # Two standing rules
 //!
-//! - **No C or C++ dependency, and the crate builds for `wasm32`.** The only
-//!   dependencies are `num-bigint` and `num-rational`, both pure Rust.
+//! - **No C or C++ dependency, and the crate builds for `wasm32`.** Every
+//!   dependency is pure Rust, and this crate is the workspace's single naming
+//!   point for them (see [`big`]).
 //! - **An operation that a caller could re-derive returns a certificate that
 //!   the caller can re-derive.** [`RadixCertificate::verify`] is the worked
 //!   example: it evaluates the digits in the base and compares, using nothing
@@ -37,8 +57,13 @@ use core::cmp::Ordering;
 use num_bigint::{BigInt, BigUint, Sign};
 use num_rational::BigRational;
 
+pub mod big;
+pub mod hensel;
+pub mod rational;
 pub mod upoly;
 
+pub use hensel::{HenselCertificate, HenselRoot, MAX_LIFT_STEPS, lift_root};
+pub use rational::{NormalizationReceipt, RawRational};
 pub use upoly::{
     DEFAULT_ISOLATION_STEPS, PolyBezoutCertificate, PolyGcdCertificate, QPoly, SturmChain, ZPoly,
     count_real_roots, count_real_roots_in, evaluate_slice, extended_gcd, isolate_real_roots,
@@ -278,6 +303,108 @@ impl Dyadic {
         };
         let exponent = self.exponent.checked_add(bits_as_i64(dropped)?)?;
         Self::new(BigInt::from_biguint(sign, magnitude), exponent)
+    }
+
+    /// This dyadic rounded onto the **absolute** grid of multiples of
+    /// `2^exponent`, in the direction `mode`.
+    ///
+    /// [`Dyadic::round`] bounds the *significant* bits — a relative precision.
+    /// This bounds the *place value* of the last bit — an absolute one. The two
+    /// are different jobs and an interval wants both: relative precision keeps
+    /// a mantissa from growing, absolute precision is what a "round onto the
+    /// `2^(−b)` grid" step in a validated-numerics kernel means, and it is the
+    /// one that bounds the size of a *denominator* rather than of a mantissa.
+    ///
+    /// Returns `self` unchanged when it is already on the grid (its own
+    /// exponent is at or above `exponent`), and `None` only when `exponent` is
+    /// outside `±`[`MAX_EXPONENT`] or the shift would not fit.
+    pub fn round_at_exponent(&self, exponent: i64, mode: Round) -> Option<Self> {
+        if !(-MAX_EXPONENT..=MAX_EXPONENT).contains(&exponent) {
+            return None;
+        }
+        if self.is_zero() || self.exponent >= exponent {
+            return Some(self.clone());
+        }
+        let dropped = u64::try_from(i128::from(exponent) - i128::from(self.exponent)).ok()?;
+        let sign = self.mantissa.sign();
+        let original = self.mantissa.magnitude();
+        let quotient = original >> dropped;
+        let remainder = original - (&quotient << dropped);
+        let magnitude = if wants_increment(&remainder, dropped, sign, &quotient, mode) {
+            quotient + BigUint::from(1u8)
+        } else {
+            quotient
+        };
+        Self::new(BigInt::from_biguint(sign, magnitude), exponent)
+    }
+
+    /// The rational `value` rounded onto the grid of multiples of `2^exponent`,
+    /// in the direction `mode`.
+    ///
+    /// One rounding, at the place the result needs — the same single-rounding
+    /// contract as [`Dyadic::from_rational`], and the reason a caller should
+    /// not spell this as "convert, then round".
+    ///
+    /// Returns `None` only when `exponent` is outside `±`[`MAX_EXPONENT`].
+    pub fn from_rational_at_exponent(
+        value: &BigRational,
+        exponent: i64,
+        mode: Round,
+    ) -> Option<Self> {
+        if !(-MAX_EXPONENT..=MAX_EXPONENT).contains(&exponent) {
+            return None;
+        }
+        let sign = value.numer().sign();
+        if sign == Sign::NoSign {
+            return Some(Self::zero());
+        }
+        let numerator = value.numer().magnitude().clone();
+        let denominator = value.denom().magnitude().clone();
+        let (quotient, remainder, divisor) = divide_at_scale(&numerator, &denominator, exponent)?;
+        let magnitude = if wants_increment_ratio(&remainder, &divisor, sign, &quotient, mode) {
+            quotient + BigUint::from(1u8)
+        } else {
+            quotient
+        };
+        Self::new(BigInt::from_biguint(sign, magnitude), exponent)
+    }
+
+    /// A rational interval `[lower, upper]` rounded **outward** onto the grid
+    /// of multiples of `2^exponent`, as one call.
+    ///
+    /// The result contains the input: the lower endpoint moves toward `−∞` and
+    /// the upper toward `+∞`. Having it as a single entry point is the whole
+    /// safety argument — the caller never names a rounding direction, so it
+    /// cannot name the wrong one for an endpoint, which is the defect class
+    /// the CAS's enclosure modules guard by hand today.
+    ///
+    /// Returns `None` when `lower > upper` (there is no such interval) or when
+    /// `exponent` is outside `±`[`MAX_EXPONENT`].
+    pub fn rationals_outward_at_exponent(
+        lower: &BigRational,
+        upper: &BigRational,
+        exponent: i64,
+    ) -> Option<(Self, Self)> {
+        if lower > upper {
+            return None;
+        }
+        let low = Self::from_rational_at_exponent(lower, exponent, Round::Down)?;
+        let high = Self::from_rational_at_exponent(upper, exponent, Round::Up)?;
+        Some((low, high))
+    }
+
+    /// A dyadic interval `[lower, upper]` rounded **outward** onto the grid of
+    /// multiples of `2^exponent`, as one call.
+    ///
+    /// The dyadic-input twin of [`Dyadic::rationals_outward_at_exponent`], with
+    /// the same contract.
+    pub fn outward_at_exponent(lower: &Self, upper: &Self, exponent: i64) -> Option<(Self, Self)> {
+        if lower > upper {
+            return None;
+        }
+        let low = lower.round_at_exponent(exponent, Round::Down)?;
+        let high = upper.round_at_exponent(exponent, Round::Up)?;
+        Some((low, high))
     }
 
     /// Round an interval `[lower, upper]` outward to `precision_bits`.
@@ -708,7 +835,10 @@ impl MixedRadixCertificate {
 }
 
 // ---------------------------------------------------------------------------
-// Signature sketch: everything below has no implementation in this crate yet
+// The interface traits. Every one of them has an implementation: `Normalize`
+// in `rational.rs`, `UnivariatePoly`/`FractionFree` in `upoly.rs`,
+// `ModularRing` below, `HenselLift` in `hensel.rs`, and `AlgebraicNumber` in
+// `axeyum-ir` (`real_algebraic.rs` and `poly_big.rs`).
 // ---------------------------------------------------------------------------
 
 /// The normalization policy for a value that can be kept unreduced.
@@ -723,6 +853,10 @@ impl MixedRadixCertificate {
 ///
 /// [`Normalize::normalize`] returns a receipt so that "was this normalized?"
 /// is a measurement rather than an assumption.
+///
+/// [`RawRational`] is the implementation, and
+/// [`NormalizationReceipt::verify`] is what makes the receipt a checker rather
+/// than a log line.
 pub trait Normalize {
     /// What [`Normalize::normalize`] reports about the work it did.
     type Receipt;
@@ -732,21 +866,6 @@ pub trait Normalize {
 
     /// Whether the value is already in normal form.
     fn is_normalized(&self) -> bool;
-}
-
-/// What a [`Normalize::normalize`] call on a rational did.
-///
-/// Recorded rather than discarded because the whole argument for on-demand
-/// normalization is that the gcds are rare; a receipt is how a benchmark
-/// finds out whether they are.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct NormalizationReceipt {
-    /// The gcd that was divided out (one when the value was already reduced).
-    pub common_factor: BigUint,
-    /// Bits in the numerator before the reduction.
-    pub numerator_bits_before: u64,
-    /// Bits in the numerator after the reduction.
-    pub numerator_bits_after: u64,
 }
 
 /// A univariate polynomial over an exact commutative ring.
@@ -1066,6 +1185,9 @@ impl PowModCertificate {
 }
 
 /// Hensel lifting: a root modulo `p^k` refined to a root modulo `p^(2k)`.
+///
+/// [`HenselRoot`] is the implementation, and [`lift_root`] drives it all the
+/// way from a seed root modulo `p` to a certificate a checker can re-derive.
 pub trait HenselLift: Sized {
     /// Lift `self`, a solution modulo `prime^precision`, to modulo
     /// `prime^(2·precision)`.
@@ -1074,18 +1196,33 @@ pub trait HenselLift: Sized {
 
 /// A real algebraic number: a defining polynomial plus an isolating interval.
 ///
-/// `axeyum-ir`'s `RealAlgebraic` and `axeyum-cas`'s `real_algebraic` are the
-/// two existing carriers. Whether this type lives here or stays in the CAS is
-/// the first of the three questions the design note leaves open.
+/// `axeyum-ir`'s `RealAlgebraic` and `poly_big::BigAlgebraic` are the two
+/// existing carriers and both implement this trait; whether the *struct* moves
+/// here is the second of the three questions the design note leaves open, and
+/// this trait is the answer that does not require a public IR change.
+///
+/// **Two deviations from the design note's sketch, both forced by the
+/// carriers.** `refine` returns a `bool` rather than nothing: a carrier whose
+/// endpoints are machine-width (`axeyum_ir::Rational` is `i128`-backed) can
+/// run out of room, and a silent failure to refine would make `enclosure`'s
+/// width a claim nobody checks. `enclosure` returns an `Option`: converting an
+/// endpoint to a [`Dyadic`] declines past [`MAX_EXPONENT`], and the crate's
+/// standing rule is that an operation which cannot answer says so rather than
+/// rounding.
 pub trait AlgebraicNumber {
-    /// The sign of the number: negative, zero or positive.
+    /// The sign of the number: [`Ordering::Less`] for negative,
+    /// [`Ordering::Equal`] for zero, [`Ordering::Greater`] for positive.
     fn sign(&self) -> Ordering;
 
-    /// Refine the isolating interval until it is narrower than `2^-bits`.
-    fn refine(&mut self, bits: u64);
+    /// Refine the isolating interval until it is narrower than `2^-bits`,
+    /// returning whether that width was actually reached.
+    fn refine(&mut self, bits: u64) -> bool;
 
-    /// A dyadic enclosure of the number at the current refinement.
-    fn enclosure(&self) -> (Dyadic, Dyadic);
+    /// A dyadic enclosure of the number at the current refinement, or `None`
+    /// when an endpoint is not representable as a [`Dyadic`].
+    ///
+    /// The enclosure is **outward**: the returned pair contains the number.
+    fn enclosure(&self) -> Option<(Dyadic, Dyadic)>;
 }
 
 #[cfg(test)]
@@ -1550,5 +1687,171 @@ mod tests {
             ..honest.clone()
         };
         assert!(!forged.verify(), "a tampered final residue must be caught");
+    }
+
+    // -----------------------------------------------------------------------
+    // Absolute-grid (fixed-exponent) rounding — ADR-1710 migration slice 1.
+    // -----------------------------------------------------------------------
+
+    /// `n/d` as a `BigRational`, for the grid tests below.
+    fn q(n: i64, d: i64) -> BigRational {
+        BigRational::new(BigInt::from(n), BigInt::from(d))
+    }
+
+    #[test]
+    fn grid_rounding_brackets_the_exact_rational_in_both_directions() {
+        // 1/3 = 0.0101…₂. On the 2^(−4) grid that is 5/16 < 1/3 < 6/16.
+        let value = q(1, 3);
+        let down = Dyadic::from_rational_at_exponent(&value, -4, Round::Down).expect("down");
+        let up = Dyadic::from_rational_at_exponent(&value, -4, Round::Up).expect("up");
+        assert_eq!(down.to_rational(), q(5, 16));
+        assert_eq!(up.to_rational(), q(6, 16));
+        assert!(down.to_rational() < value && value < up.to_rational());
+
+        // The negative twin: Down is toward −∞, not toward zero.
+        let value = q(-1, 3);
+        let down = Dyadic::from_rational_at_exponent(&value, -4, Round::Down).expect("down");
+        let up = Dyadic::from_rational_at_exponent(&value, -4, Round::Up).expect("up");
+        assert_eq!(down.to_rational(), q(-6, 16));
+        assert_eq!(up.to_rational(), q(-5, 16));
+        assert!(down.to_rational() < value && value < up.to_rational());
+    }
+
+    #[test]
+    fn a_value_already_on_the_grid_is_returned_unchanged_by_every_mode() {
+        let value = q(5, 16);
+        for mode in [
+            Round::Down,
+            Round::Up,
+            Round::TowardZero,
+            Round::AwayFromZero,
+            Round::NearestTiesToEven,
+        ] {
+            let rounded = Dyadic::from_rational_at_exponent(&value, -4, mode).expect("round");
+            assert_eq!(
+                rounded.to_rational(),
+                value,
+                "mode {mode:?} moved an exact grid point"
+            );
+        }
+        // And the dyadic-input route agrees, including at a *coarser* stored
+        // exponent than the grid asks for (5/16 is 5·2^(−4); asking for the
+        // 2^(−8) grid must not change it).
+        let point = Dyadic::from_rational_at_exponent(&value, -4, Round::Down).expect("point");
+        assert_eq!(
+            point.round_at_exponent(-8, Round::Up).expect("finer"),
+            point
+        );
+    }
+
+    #[test]
+    fn the_five_modes_are_pairwise_distinguished_at_one_argument() {
+        // −11/8 sits between −12/8 and −10/8 with the fractional part exactly
+        // 1/2 at the 2^(−2) grid, so ties-to-even is the third answer.
+        let value = q(-11, 8);
+        let at = |mode| {
+            Dyadic::from_rational_at_exponent(&value, -2, mode)
+                .expect("round")
+                .to_rational()
+        };
+        assert_eq!(at(Round::Down), q(-6, 4));
+        assert_eq!(at(Round::Up), q(-5, 4));
+        assert_eq!(at(Round::TowardZero), q(-5, 4));
+        assert_eq!(at(Round::AwayFromZero), q(-6, 4));
+        // −11/8 = −2.75·2^(−2); the two neighbours are −2 and −3 and the tie
+        // rule picks the even one.
+        assert_eq!(at(Round::NearestTiesToEven), q(-6, 4));
+    }
+
+    #[test]
+    fn round_at_exponent_agrees_with_from_rational_at_exponent() {
+        // A dyadic that is NOT on the target grid, rounded by both routes.
+        let exact = Dyadic::new(BigInt::from(1_234_567i64), -20).expect("dyadic");
+        let value = exact.to_rational();
+        for exponent in [-19i64, -12, -5, 0, 3] {
+            for mode in [
+                Round::Down,
+                Round::Up,
+                Round::TowardZero,
+                Round::AwayFromZero,
+                Round::NearestTiesToEven,
+            ] {
+                assert_eq!(
+                    exact
+                        .round_at_exponent(exponent, mode)
+                        .expect("dyadic route"),
+                    Dyadic::from_rational_at_exponent(&value, exponent, mode)
+                        .expect("rational route"),
+                    "routes disagree at 2^{exponent} under {mode:?}"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn outward_grid_rounding_contains_its_input_over_a_deterministic_sweep() {
+        // A deterministic corpus: no RNG, no clock, and every case asserts the
+        // containment the enclosure modules depend on.
+        let mut checked = 0usize;
+        for numerator in -37i64..=37 {
+            for denominator in [1i64, 3, 7, 11, 64, 1_000] {
+                let low = BigRational::new(BigInt::from(numerator), BigInt::from(denominator));
+                let high = &low + q(1, 5);
+                for exponent in [-9i64, -3, 0, 2] {
+                    let (lo, hi) =
+                        Dyadic::rationals_outward_at_exponent(&low, &high, exponent).expect("pair");
+                    assert!(lo.to_rational() <= low, "lower endpoint moved inward");
+                    assert!(hi.to_rational() >= high, "upper endpoint moved inward");
+                    assert!(lo <= hi, "outward rounding inverted the interval");
+                    checked += 1;
+                }
+            }
+        }
+        assert_eq!(checked, 75 * 6 * 4);
+    }
+
+    #[test]
+    fn outward_grid_rounding_refuses_an_inverted_interval() {
+        // The guard that makes `rationals_outward_at_exponent` a *single* entry
+        // point rather than two calls: it can see both endpoints, so it can
+        // refuse a pair that is not an interval at all.
+        assert!(Dyadic::rationals_outward_at_exponent(&q(1, 2), &q(1, 3), -8).is_none());
+        let low = Dyadic::from_i64(3);
+        let high = Dyadic::from_i64(2);
+        assert!(Dyadic::outward_at_exponent(&low, &high, -8).is_none());
+        // …and accepts the degenerate one.
+        assert!(Dyadic::outward_at_exponent(&low, &low, -8).is_some());
+    }
+
+    #[test]
+    fn grid_rounding_declines_an_exponent_outside_the_contract() {
+        let value = q(1, 3);
+        assert!(Dyadic::from_rational_at_exponent(&value, MAX_EXPONENT + 1, Round::Down).is_none());
+        assert!(Dyadic::from_rational_at_exponent(&value, -MAX_EXPONENT - 1, Round::Up).is_none());
+        let exact = Dyadic::from_i64(5);
+        assert!(
+            exact
+                .round_at_exponent(MAX_EXPONENT + 1, Round::Down)
+                .is_none()
+        );
+        assert!(Dyadic::rationals_outward_at_exponent(&value, &value, MAX_EXPONENT + 1).is_none());
+    }
+
+    #[test]
+    fn grid_rounding_of_zero_is_zero() {
+        let zero = BigRational::new(BigInt::from(0), BigInt::from(1));
+        for exponent in [-64i64, 0, 64] {
+            assert!(
+                Dyadic::from_rational_at_exponent(&zero, exponent, Round::Down)
+                    .expect("zero")
+                    .is_zero()
+            );
+        }
+        assert!(
+            Dyadic::zero()
+                .round_at_exponent(-64, Round::Up)
+                .expect("zero")
+                .is_zero()
+        );
     }
 }

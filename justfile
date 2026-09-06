@@ -395,6 +395,12 @@ facts:
     # failure, a decline is not, and a known_defect entry must keep disagreeing.
     cargo run --release -q -p axeyum-cas --example parity_corpus
     python3 docs/plan/cas-parity-corpus-2026-09-05/ground_truth.py
+    # Cross-consistency gate over the three copies of the parity corpus's
+    # truth (corpus.json, the harness's e!() macro table, and the README's
+    # counts) -- the README drifted from corpus.json twice in one week
+    # (119 vs 123 entries, then 125 vs 126) with nothing failing.
+    python3 scripts/check-cas-parity-corpus.py
+    python3 -m unittest scripts.tests.test_check_cas_parity_corpus
     python3 -m unittest scripts.tests.test_check_cas_internal_residue
     # Math-department file 13, Next Ten item 10 (first half): a per-function
     # trust registry for axeyum-cas -- distinct from cas-internal-residue
@@ -403,6 +409,11 @@ facts:
     # carries a certificate at all.
     python3 scripts/check-cas-trust-registry.py --report
     python3 -m unittest scripts.tests.test_check_cas_trust_registry
+    # ADR-1710: `axeyum-arith` is the workspace's single naming point for
+    # num-bigint / num-rational / num-integer / num-traits. The allowlist
+    # fails when it goes stale, so an exception cannot outlive its reason.
+    scripts/check-arith-boundary.sh
+    python3 -m unittest scripts.tests.test_check_arith_boundary
     python3 -m unittest scripts.tests.test_settled_fact_statements
     python3 -m unittest scripts.tests.test_check_draw7_frozen_families
     python3 scripts/check-settled-fact-statements.py

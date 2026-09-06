@@ -12,7 +12,7 @@ categories.workspace = true
 publish = false
 
 [dependencies]
-# The only two dependencies, both pure Rust and MIT OR Apache-2.0, so this
+# The only dependencies, all pure Rust and MIT OR Apache-2.0, so this
 # crate builds for `wasm32-unknown-unknown` and `wasm32-wasip1` and adds no
 # C/C++ surface (the ADR-0002 hard rule). Resolved through
 # `[workspace.dependencies]` (ADR-1710 slice 0) so this crate, `axeyum-ir`,
@@ -20,6 +20,8 @@ publish = false
 # No default features beyond `std`.
 num-bigint.workspace = true
 num-rational.workspace = true
+num-integer.workspace = true
+num-traits.workspace = true
 
 [lints]
 workspace = true

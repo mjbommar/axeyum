@@ -157,6 +157,52 @@ boundary (`CdclT::add_permanent_clause`) get their watches chosen against the
 that arrives already unit implies and one that arrives already falsified
 conflicts. [Measurement](../research/11-design-review/2026-09-05-s1-watched-literals-measured.md).
 
+Two more pieces of that engine followed, for the same reason and from the same
+file. **Decisions come off a VSIDS order heap** rather than an O(var\_count)
+linear scan: `heap` / `heap_pos` with lazy deletion, a comparator that keeps the
+scan's own tie-break (highest activity, lowest index), and a Floyd re-heapify
+after an activity rescale, which can collapse two distinct tiny activities into
+a tie the previous layout never had to order. The one predicate a plain SAT core
+does not need is *inactive* variables — those reserved for theory atoms no
+final-check lemma has named — which are discarded at the root exactly like
+assigned ones and re-inserted by `activate_variables`. Because the comparator is
+the scan's, this is a cost change and not a heuristic one, and it is measured
+that way: on `RVpredict_13` the search takes an **identical** 2,364,618
+decisions and 3,415 conflicts to the same `sat` verdict, in 1.8 s instead of
+15.5 s. **Learned clauses are then recursively minimized** (MiniSat
+`ccmin_mode = 2`), skipped for a pure theory lemma so the driver's
+`is_theory_lemma` classification can never overstate what was derived, and never
+forcing a deferred `ExplanationId` — resolution needs a reason to make progress,
+minimization does not, so a literal whose reason exists only as a handle is
+simply kept. `TheoryLayerStats` gained `learned_clauses` / `learned_literals` /
+`learned_literals_before_minimization`, which makes the mean learned length and
+the minimizer's effect readable from **one** run rather than from a comparison
+of two — necessary, because a run without minimization takes a different search
+path and its clause-length mean is not a mean over the same clauses.
+[Measurement](../research/11-design-review/2026-09-06-s1b-heap-minimize-measured.md).
+
+A fifth defaulted hook, `engine_counters`, was added by S4 of the [parity
+plan](../plan/smt-parity-plan-2026-09-05.md) and is diagnostic only: it carries
+a theory's own `simplex_pivots` / `simplex_checks` / `simplex_cold_restarts` /
+bound-reconciliation / propagation counts and its tableau's dimensions out
+through `TheoryLayerStats` to `smtcomp_cli --trace`, where an absent counter
+prints `n/a` rather than a measured `0`. It exists because the plan's stated
+QF_LRA lever — "warm-start each final check instead of re-deciding feasibility"
+— was **wrong about the mechanism**, and only a counter could say so:
+`simplex_cold_restarts` reads `0` on the traced timeouts, i.e. the basis was
+already persisting across final checks, at 2.3–5.5 pivots per check. The cost
+was one pivot (1.4–3.4 ms over a 350×425 tableau), because
+`Tableau::pivot_and_update` recomputed every basic variable's value from its row
+— a second `O(rows × columns)` pass in `ℚ(δ)` — where Dutertre–de Moura's
+`pivotAndUpdate` derives them in `O(rows)`. S4 replaced that pass and generalized
+`LraTheory`'s implied-bound tables from a single variable to the whole **linear
+form** a constraint bounds (`assign_forms`), so an asserted `f ≤ u` now settles
+every unassigned atom saying `f ≤ b` with `u ≤ b` by one rational comparison
+instead of no propagation at all; the per-call emission cap is
+`MAX_BOUND_PROPAGATIONS_PER_CALL`, which bounds a call's latency without bounding
+what the driver's propagation fixpoint derives. Measurements are in the
+[S4 note](../research/11-design-review/2026-09-05-s4-simplex-warm-start-measured.md).
+
 ## Result discipline
 
 - `sat` requires a source-level model accepted by the appropriate checker.
