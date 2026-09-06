@@ -2647,6 +2647,14 @@ fn parabola_chord_line(first: &str, second: &str) -> Option<(MvPoly, MvPoly, MvP
 /// general theorem follows — but that reduction is mathematics stated here in
 /// prose and is *not* part of the certificate. [`beyond_frontier`] keeps the
 /// general statement, uncertified, for exactly that reason.
+///
+/// # Panics
+///
+/// If building one of the polynomials overflows `i128`, which for this
+/// theorem's degrees it does not — the coefficients here are the products of
+/// six parameters at total degree at most four. The unit tests below construct
+/// the problem, so an overflow would be a test failure rather than a surprise
+/// in a caller.
 #[must_use]
 pub fn pascal_parabola_problem() -> GeometryProblem {
     let point_x = HPt::free("x");
@@ -2689,41 +2697,8 @@ pub fn pascal_parabola_problem() -> GeometryProblem {
         title: "Pascal's theorem on a parabola: the three diagonal points of an inscribed \
                 hexagon are collinear"
             .into(),
-        statement: "Let A=(a,a^2), B=(b,b^2), C=(c,c^2), D=(d,d^2), E=(e,e^2), F=(f,f^2) be six \
-                    points of the parabola y = x^2, given by their parameters, and let the line \
-                    through the parabola points at parameters t and u be the homogeneous triple \
-                    L(t,u) = (-(t+u), 1, tu), whose incidence relation Y - (t+u)X + tuW = 0 is \
-                    the chord when t and u differ and the tangent when they coincide. Let X, Y \
-                    and Z be the homogeneous points L(a,b) x L(d,e), L(b,c) x L(e,f) and \
-                    L(c,d) x L(f,a) -- the standard projective meet, which lies on both of its \
-                    lines because L.(L x M) and M.(L x M) are identically zero. Then X, Y and Z \
-                    are collinear. NO non-degeneracy condition is used or needed: the conclusion \
-                    lies in the plain hypothesis ideal, a pair of parallel opposite sides meets \
-                    at the ordinary point at infinity of their common direction, and a diagonal \
-                    point degenerating to the zero vector satisfies the conclusion. \
-                    Collinearity is scale-invariant, so the statement transfers to any other \
-                    representatives of the same projective points. The conic hypothesis is \
-                    discharged by the parametrisation rather than assumed: every configuration of \
-                    six points on THIS conic is covered, and the statement for an arbitrary conic \
-                    follows by projective equivalence, which is NOT part of this certificate."
-            .into(),
-        coordinate_gloss: vec![
-            ("ta".into(), "A = (ta, ta^2)".into()),
-            ("tb".into(), "B = (tb, tb^2)".into()),
-            ("tc".into(), "C = (tc, tc^2)".into()),
-            ("td".into(), "D = (td, td^2)".into()),
-            ("te".into(), "E = (te, te^2)".into()),
-            ("tf".into(), "F = (tf, tf^2)".into()),
-            ("xx".into(), "X.X (AB meet DE)".into()),
-            ("xy".into(), "X.Y (AB meet DE)".into()),
-            ("xw".into(), "X.W (AB meet DE)".into()),
-            ("yx".into(), "Y.X (BC meet EF)".into()),
-            ("yy".into(), "Y.Y (BC meet EF)".into()),
-            ("yw".into(), "Y.W (BC meet EF)".into()),
-            ("zx".into(), "Z.X (CD meet FA)".into()),
-            ("zy".into(), "Z.Y (CD meet FA)".into()),
-            ("zw".into(), "Z.W (CD meet FA)".into()),
-        ],
+        statement: pascal_parabola_statement(),
+        coordinate_gloss: pascal_parabola_gloss(),
         hypotheses,
         nondegeneracy: Vec::new(),
         conclusions: vec![Constraint::new(
@@ -2754,6 +2729,50 @@ pub fn pascal_parabola_problem() -> GeometryProblem {
             },
         ],
     }
+}
+
+/// The prose statement of [`pascal_parabola_problem`], lifted out of the
+/// constructor so that function stays under the line ceiling.
+fn pascal_parabola_statement() -> String {
+    "Let A=(a,a^2), B=(b,b^2), C=(c,c^2), D=(d,d^2), E=(e,e^2), F=(f,f^2) be six \
+                    points of the parabola y = x^2, given by their parameters, and let the line \
+                    through the parabola points at parameters t and u be the homogeneous triple \
+                    L(t,u) = (-(t+u), 1, tu), whose incidence relation Y - (t+u)X + tuW = 0 is \
+                    the chord when t and u differ and the tangent when they coincide. Let X, Y \
+                    and Z be the homogeneous points L(a,b) x L(d,e), L(b,c) x L(e,f) and \
+                    L(c,d) x L(f,a) -- the standard projective meet, which lies on both of its \
+                    lines because L.(L x M) and M.(L x M) are identically zero. Then X, Y and Z \
+                    are collinear. NO non-degeneracy condition is used or needed: the conclusion \
+                    lies in the plain hypothesis ideal, a pair of parallel opposite sides meets \
+                    at the ordinary point at infinity of their common direction, and a diagonal \
+                    point degenerating to the zero vector satisfies the conclusion. \
+                    Collinearity is scale-invariant, so the statement transfers to any other \
+                    representatives of the same projective points. The conic hypothesis is \
+                    discharged by the parametrisation rather than assumed: every configuration of \
+                    six points on THIS conic is covered, and the statement for an arbitrary conic \
+                    follows by projective equivalence, which is NOT part of this certificate."
+        .into()
+}
+
+/// What each coordinate variable of [`pascal_parabola_problem`] denotes.
+fn pascal_parabola_gloss() -> Vec<(String, String)> {
+    vec![
+        ("ta".into(), "A = (ta, ta^2)".into()),
+        ("tb".into(), "B = (tb, tb^2)".into()),
+        ("tc".into(), "C = (tc, tc^2)".into()),
+        ("td".into(), "D = (td, td^2)".into()),
+        ("te".into(), "E = (te, te^2)".into()),
+        ("tf".into(), "F = (tf, tf^2)".into()),
+        ("xx".into(), "X.X (AB meet DE)".into()),
+        ("xy".into(), "X.Y (AB meet DE)".into()),
+        ("xw".into(), "X.W (AB meet DE)".into()),
+        ("yx".into(), "Y.X (BC meet EF)".into()),
+        ("yy".into(), "Y.Y (BC meet EF)".into()),
+        ("yw".into(), "Y.W (BC meet EF)".into()),
+        ("zx".into(), "Z.X (CD meet FA)".into()),
+        ("zy".into(), "Z.Y (CD meet FA)".into()),
+        ("zw".into(), "Z.W (CD meet FA)".into()),
+    ]
 }
 
 /// One configuration of [`pascal_parabola_problem`]: six parameters and the
@@ -2800,6 +2819,12 @@ fn pascal_parabola_witness(
 /// intersection points — the affine reading of the theorem. It does not prove
 /// the projective statement in [`beyond_frontier`], where any of those may lie
 /// on the line at infinity.
+///
+/// # Panics
+///
+/// If building one of the polynomials overflows `i128`, which for this
+/// theorem's degrees it does not. The unit tests below construct the problem,
+/// so an overflow would be a test failure rather than a surprise in a caller.
 #[must_use]
 pub fn desargues_affine_problem() -> GeometryProblem {
     let origin = Pt::free("o");
@@ -2822,35 +2847,8 @@ pub fn desargues_affine_problem() -> GeometryProblem {
         title: "Desargues' theorem in the affine plane: perspective from a point implies \
                 perspective from a line"
             .into(),
-        statement: "Let O, A, B, C be points of the affine plane and let A' = O + la*(A-O), \
-                    B' = O + lb*(B-O), C' = O + lc*(C-O), so that the triangles ABC and A'B'C' \
-                    are in perspective from O by construction (A' ranges over every finite point \
-                    of the line OA). Let X lie on BC and on B'C', Y on CA and on C'A', and Z on \
-                    AB and on A'B'. If BC is not parallel to B'C', CA is not parallel to C'A' \
-                    and AB is not parallel to A'B', then X, Y and Z are collinear. This is the \
-                    AFFINE reading: the centre, the six vertices and the three intersection \
-                    points are all finite. The projective statement, where any of them may lie \
-                    on the line at infinity, is stated separately and is not certified."
-            .into(),
-        coordinate_gloss: vec![
-            ("ox".into(), "O.x".into()),
-            ("oy".into(), "O.y".into()),
-            ("ax".into(), "A.x".into()),
-            ("ay".into(), "A.y".into()),
-            ("bx".into(), "B.x".into()),
-            ("by".into(), "B.y".into()),
-            ("cx".into(), "C.x".into()),
-            ("cy".into(), "C.y".into()),
-            ("la".into(), "the ratio OA'/OA".into()),
-            ("lb".into(), "the ratio OB'/OB".into()),
-            ("lc".into(), "the ratio OC'/OC".into()),
-            ("xx".into(), "X.x (BC meet B'C')".into()),
-            ("xy".into(), "X.y (BC meet B'C')".into()),
-            ("yx".into(), "Y.x (CA meet C'A')".into()),
-            ("yy".into(), "Y.y (CA meet C'A')".into()),
-            ("zx".into(), "Z.x (AB meet A'B')".into()),
-            ("zy".into(), "Z.y (AB meet A'B')".into()),
-        ],
+        statement: desargues_affine_statement(),
+        coordinate_gloss: desargues_affine_gloss(),
         hypotheses: vec![
             Constraint::new(
                 "x-on-bc",
@@ -2917,6 +2915,44 @@ pub fn desargues_affine_problem() -> GeometryProblem {
             assignment: desargues_affine_generic_witness(),
         }],
     }
+}
+
+/// The prose statement of [`desargues_affine_problem`], lifted out of the
+/// constructor so that function stays under the line ceiling.
+fn desargues_affine_statement() -> String {
+    "Let O, A, B, C be points of the affine plane and let A' = O + la*(A-O), \
+                    B' = O + lb*(B-O), C' = O + lc*(C-O), so that the triangles ABC and A'B'C' \
+                    are in perspective from O by construction (A' ranges over every finite point \
+                    of the line OA). Let X lie on BC and on B'C', Y on CA and on C'A', and Z on \
+                    AB and on A'B'. If BC is not parallel to B'C', CA is not parallel to C'A' \
+                    and AB is not parallel to A'B', then X, Y and Z are collinear. This is the \
+                    AFFINE reading: the centre, the six vertices and the three intersection \
+                    points are all finite. The projective statement, where any of them may lie \
+                    on the line at infinity, is stated separately and is not certified."
+        .into()
+}
+
+/// What each coordinate variable of [`desargues_affine_problem`] denotes.
+fn desargues_affine_gloss() -> Vec<(String, String)> {
+    vec![
+        ("ox".into(), "O.x".into()),
+        ("oy".into(), "O.y".into()),
+        ("ax".into(), "A.x".into()),
+        ("ay".into(), "A.y".into()),
+        ("bx".into(), "B.x".into()),
+        ("by".into(), "B.y".into()),
+        ("cx".into(), "C.x".into()),
+        ("cy".into(), "C.y".into()),
+        ("la".into(), "the ratio OA'/OA".into()),
+        ("lb".into(), "the ratio OB'/OB".into()),
+        ("lc".into(), "the ratio OC'/OC".into()),
+        ("xx".into(), "X.x (BC meet B'C')".into()),
+        ("xy".into(), "X.y (BC meet B'C')".into()),
+        ("yx".into(), "Y.x (CA meet C'A')".into()),
+        ("yy".into(), "Y.y (CA meet C'A')".into()),
+        ("zx".into(), "Z.x (AB meet A'B')".into()),
+        ("zy".into(), "Z.y (AB meet A'B')".into()),
+    ]
 }
 
 /// The counterexample for one Desargues condition: the centre put **on** the
