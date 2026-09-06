@@ -1,0 +1,54 @@
+{
+  "schema_version": 1,
+  "id": "F:nat-multiset-prod-sel-injective",
+  "title": "Two selections of a prime-supported multiset with equal selected products agree on the support",
+  "statement": "Let m be a Nat.Multiset every element of which is prime, and let s and t be predicates Nat -> Bool. If the product of m restricted to s equals the product of m restricted to t (Nat.Multiset.prodSel), then s and t agree at every value the multiset actually contains, i.e. at every q with 0 < count m q. This is the INJECTIVITY half of the divisors-of-a-squarefree-number to subsets-of-its-primes bijection that ADR-1624 named as the blocker under Moebius inversion. Restricting the conclusion to the support is not slack: at a q with count m q = 0 the factor is q^0 = 1 whichever way s and t decide it, so the two selections genuinely need not agree there.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Nat.Multiset.prodSel_injective : ((x0 : AxNat.Multiset) -> ((x1 : ((x1 : AxNat) -> Bool)) -> ((x2 : ((x2 : AxNat) -> Bool)) -> ((x3 : ((x3 : AxNat) -> ((x4 : AxNat.lt AxNat.zero (AxNat.Multiset.count x0 x3)) -> And (AxNat.le (AxNat.succ (AxNat.succ AxNat.zero)) x3) (((x5 : AxNat) -> ((x6 : AxNat.dvd x5 x3) -> Or (Eq.{1} AxNat x5 (AxNat.succ AxNat.zero)) (Eq.{1} AxNat x5 x3))))))) -> ((x4 : Eq.{1} AxNat (AxNat.Multiset.prodSel x0 x1) (AxNat.Multiset.prodSel x0 x2)) -> ((x5 : AxNat) -> ((x6 : AxNat.lt AxNat.zero (AxNat.Multiset.count x0 x5)) -> Eq.{1} Bool (x1 x5) (x2 x5))))))))",
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.Multiset.prodSel_injective"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:nat-multiset-prime-factorization-unique",
+    "F:nat-multiset-prod-add",
+    "F:nat-mul-comm"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-nat-multiset-prod-sel-injective",
+      "kind": "kernel-term",
+      "kernel_declaration": "Nat.Multiset.prodSel_injective",
+      "supports": "Nat.Multiset.prodSel_injective is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q --release -p axeyum-lean-kernel --example nat_theorem_inventory -- Nat.Multiset.prodSel_injective 2>/dev/null | grep -Fc '((x0 : AxNat.Multiset) -> ((x1 : ((x1 : AxNat) -> Bool)) -> ((x2 : ((x2 : AxNat) -> Bool)) -> ((x3 : ((x3 : AxNat) -> ((x4 : AxNat.lt AxNat.zero (AxNat.Multiset.count x0 x3)) -> And (AxNat.le (AxNat.succ (AxNat.succ AxNat.zero)) x3) (((x5 : AxNat) -> ((x6 : AxNat.dvd x5 x3) -> Or (Eq.{1} AxNat x5 (AxNat.succ AxNat.zero)) (Eq.{1} AxNat x5 x3))))))) -> ((x4 : Eq.{1} AxNat (AxNat.Multiset.prodSel x0 x1) (AxNat.Multiset.prodSel x0 x2)) -> ((x5 : AxNat) -> ((x6 : AxNat.lt AxNat.zero (AxNat.Multiset.count x0 x5)) -> Eq.{1} Bool (x1 x5) (x2 x5))))))))')\" -ge 1",
+      "notes": "The pattern is the FULL admitted type as rendered by Kernel::render_lean, not the theorem's name, so a drifted statement fails this check. No new arithmetic: Nat.Multiset.prodSel_eq_prod_restrict says the selection fold IS a multiset product, so Nat.Multiset.count_eq_of_prod_eq (uniqueness of prime factorization, F:nat-multiset-prime-factorization-unique) applies directly, and Nat.bool_select_nat_inj_of_pos reads the Bool back out of the resulting count equation. The positivity hypothesis is what that last step consumes."
+    },
+    {
+      "id": "footprint-nat-multiset-prod-sel-injective",
+      "kind": "instance-pin",
+      "supports": "axiom_footprint: [] -- read from Kernel::axiom_footprint for this declaration, not from a maintained list",
+      "check_status": "checked",
+      "checker_command": "cargo test -q --release -p axeyum-lean-kernel --lib -- nat_prelude::multiset_select_tests::every_multiset_select_declaration_is_present_and_axiom_free --test-threads=1",
+      "notes": "That test asserts Environment::contains FIRST for each of the fourteen names this module declares and only then that Kernel::axiom_footprint is empty -- an absent name has an EMPTY footprint, so the order is load-bearing."
+    },
+    {
+      "id": "evaluation-nat-multiset-prod-sel-injective",
+      "kind": "instance-pin",
+      "supports": "The general theorem, instantiated at concrete small arguments, infers to a statement about independently computed values, with negative controls.",
+      "check_status": "checked",
+      "checker_command": "cargo test -q --release -p axeyum-lean-kernel --lib -- nat_prelude::multiset_select_tests:: --test-threads=4",
+      "notes": "prod_sel_injectivity_cannot_reach_outside_the_support is a NECESSITY control, not a wrong-value control: {3} (bound 4) with the selections (. = 3) and insertAt 2 (. = 3) have the SAME prodSel (3) and disagree at 2, which is inside the bound. Dropping the 0 < count m q hypothesis would make the theorem false, so no stronger form is available at this carrier."
+    }
+  ],
+  "provenance": {
+    "date": "2026-09-06",
+    "established_by": "axeyum-lean-kernel build_nat_prelude (nat_prelude/multiset_select.rs)",
+    "source": "theorem name and canonical type read directly via nat_theorem_inventory, which prints render_lean of the admitted type; lane mobius-inversion, ADR-1658."
+  },
+  "notes": "Landed by lane mobius-inversion (ADR-1658) as the second slice of roadmap W2-18. ADR-1624 described the wanted object as a product over selected LIST POSITIONS; Nat.Multiset has no list (it is a multiplicity function plus a bound, ADR-1520), so the selection here is by VALUE, which is the same index space Nat.Subsets already folds over. What did NOT land, and is sized in ADR-1658: surjectivity (every divisor of a squarefree n IS a prodSel) and the range-to-subset sum transfer.",
+  "external_status": "proved"
+}
