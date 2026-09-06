@@ -1937,23 +1937,20 @@ mod tests {
             let chain = KSturm::new(&field, &lift_ky(&coeffs)).expect("the chain never splits");
             for (lower, upper) in &brackets {
                 let ours = chain.count_in(&field, lower, upper).expect("K count");
-                match axeyum_arith::count_real_roots_in(&polynomial, lower, upper) {
-                    Some(shared) => {
-                        assert_eq!(
-                            ours, shared,
-                            "root count of {coeffs:?} in ({lower}, {upper}]"
-                        );
-                        if shared > 0 {
-                            nonzero_counts += 1;
-                        }
+                if let Some(shared) = axeyum_arith::count_real_roots_in(&polynomial, lower, upper) {
+                    assert_eq!(
+                        ours, shared,
+                        "root count of {coeffs:?} in ({lower}, {upper}]"
+                    );
+                    if shared > 0 {
+                        nonzero_counts += 1;
                     }
-                    None => {
-                        assert!(
-                            polynomial.is_zero(),
-                            "the shared chain declined on a nonzero polynomial {coeffs:?}"
-                        );
-                        assert_eq!(ours, 0, "the K chain answers 0 for the zero polynomial");
-                    }
+                } else {
+                    assert!(
+                        polynomial.is_zero(),
+                        "the shared chain declined on a nonzero polynomial {coeffs:?}"
+                    );
+                    assert_eq!(ours, 0, "the K chain answers 0 for the zero polynomial");
                 }
                 checked += 1;
             }
