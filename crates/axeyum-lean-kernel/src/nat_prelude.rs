@@ -514,7 +514,9 @@ use prime_char::{
     declare_prime_not_prime_pow_all,
 };
 use prime_counting::declare_prime_counting;
-use prime_counting_bounds::declare_prime_counting_order;
+use prime_counting_bounds::{
+    declare_is_prime_bridge, declare_prime_counting_order, declare_prime_counting_unbounded,
+};
 use prime_dvd_factorial_lcm::declare_prime_dvd_factorial_lcm_all;
 use prime_dvd_mirrors::declare_prime_dvd_mirrors_all;
 use primes::{
@@ -7485,6 +7487,15 @@ pub struct NatPrelude {
     /// `Nat.primeCounting_mono : ∀ m n, Le m n →
     /// Le (primeCounting m) (primeCounting n)`.
     pub prime_counting_mono: NameId,
+    /// `Nat.isPrime_eq_true_of_prime : ∀ n, prime_condition n →
+    /// Eq Bool (isPrime n) true` — the bridge from this prelude's
+    /// propositional primality to the `Bool` predicate `Nat.primeCounting'`
+    /// counts. `prime_counting.rs` declares `Nat.isPrime` with no theorem
+    /// about it (ADR-0653), so nothing connected the two before this.
+    pub is_prime_eq_true_of_prime: NameId,
+    /// `Nat.primeCounting'_unbounded : ∀ k, Exists (fun n =>
+    /// Le k (primeCounting' n))` — Euclid's theorem in counting form.
+    pub prime_counting_prime_unbounded: NameId,
 
     // --- the odd central binomial bound (`central_binomial.rs`, ADR-1637) ---
     /// `Nat.mul_two_eq_add_self : ∀ a, Eq (mul a 2) (add a a)` — `mul a 2`
@@ -8831,6 +8842,8 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             // `prime_counting_bounds.rs` (ADR-1655).
             prime_counting_prime_mono: kernel.name_str(nat, "primeCounting'_mono"),
             prime_counting_mono: kernel.name_str(nat, "primeCounting_mono"),
+            is_prime_eq_true_of_prime: kernel.name_str(nat, "isPrime_eq_true_of_prime"),
+            prime_counting_prime_unbounded: kernel.name_str(nat, "primeCounting'_unbounded"),
 
             // `central_binomial.rs` (ADR-1637).
             mul_two_eq_add_self: kernel.name_str(nat, "mul_two_eq_add_self"),
@@ -10368,6 +10381,8 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // (`prime_counting.rs`) and `Nat.countRange_le_of_le`
         // (`totient_lemmas.rs`), both far above.
         declare_prime_counting_order(&mut d, &p)?;
+        declare_is_prime_bridge(&mut d, &p)?;
+        declare_prime_counting_unbounded(&mut d, &p)?;
         // The odd central binomial bound (`central_binomial.rs`, ADR-1637).
         // Needs `Nat.sum_choose_row`/`choose_symm_of_eq_add` (`binomial.rs`),
         // `Nat.sumRange_split` (`rectangle.rs`), `Nat.sumRange_succ` and the

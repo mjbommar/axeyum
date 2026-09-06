@@ -143,7 +143,12 @@ fn the_prime_counting_shelf_is_admitted_and_axiom_free() {
     let f = Fixture::new();
     let p = f.p;
 
-    let theorems = [p.prime_counting_prime_mono, p.prime_counting_mono];
+    let theorems = [
+        p.prime_counting_prime_mono,
+        p.prime_counting_mono,
+        p.is_prime_eq_true_of_prime,
+        p.prime_counting_prime_unbounded,
+    ];
 
     for name in theorems {
         let shown = f.k.display_name(name).to_string();
@@ -168,6 +173,55 @@ fn the_prime_counting_shelf_is_admitted_and_axiom_free() {
                 .iter()
                 .map(|n| f.k.display_name(*n).to_string())
                 .collect::<Vec<_>>()
+        );
+    }
+}
+
+/// `Nat.isPrime` is `true` at every prime below `12` and `false` at every
+/// composite and at `0` and `1`.
+///
+/// `Nat.isPrime_eq_true_of_prime` proves the FORWARD direction symbolically,
+/// and a symbolic proof cannot notice that the predicate it is about computes
+/// something else at a concrete argument — `prime_condition` appears on both
+/// sides of the bridge, so a wrong `isPrime` would simply make the theorem
+/// unusable rather than false. These rows are what pin the predicate.
+///
+/// `isPrime 1 = false` is the discriminating row: `1` has exactly one divisor
+/// in `[1,1]`, not two, and it is the value `Nat.primorial`'s own predicate
+/// (`beq (minFac i) i`) answers `true` at.
+#[test]
+fn is_prime_evaluates_to_primality() {
+    let mut f = Fixture::new();
+    let p = f.p;
+    for (n, expected) in [
+        (0u32, false),
+        (1, false),
+        (2, true),
+        (3, true),
+        (4, false),
+        (5, true),
+        (6, false),
+        (7, true),
+        (9, false),
+        (11, true),
+    ] {
+        let arg = f.num(n);
+        let lhs = f.const_app(p.is_prime, &[arg]);
+        let rhs = if expected {
+            f.bool_true()
+        } else {
+            f.bool_false()
+        };
+        assert!(f.k.def_eq(lhs, rhs), "isPrime {n} must be {expected}");
+        let wrong = if expected {
+            f.bool_false()
+        } else {
+            f.bool_true()
+        };
+        assert!(
+            !f.k.def_eq(lhs, wrong),
+            "isPrime {n} must not be {}",
+            !expected
         );
     }
 }

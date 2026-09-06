@@ -1906,6 +1906,8 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         // `prime_counting_bounds.rs`.
         p.prime_counting_prime_mono,
         p.prime_counting_mono,
+        p.is_prime_eq_true_of_prime,
+        p.prime_counting_prime_unbounded,
     ]
 }
 
