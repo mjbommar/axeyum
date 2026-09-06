@@ -106,11 +106,44 @@
 //! release-only rather than joining this module's ordinary (debug-mode,
 //! sub-5s) test sweep.
 //!
-//! What comes next for this module: a cohomology RING structure (cup
-//! product) rather than just graded groups, relative homology `H_*(X, A)`,
-//! and simplicial homotopy (fundamental group / higher homotopy invariants,
-//! which homology alone cannot distinguish -- e.g. it cannot tell the
-//! dunce hat, contractible but not collapsible, apart from a point).
+//! # Item 8, wave four
+//!
+//! Three things landed this wave, in their own sibling modules:
+//!
+//! - [`relative`]: relative homology `H_*(K, L)` of a subcomplex pair, with
+//!   the **long exact sequence** of the pair certified as an exactness guard
+//!   (a rank identity at every node, over `Q`) -- not merely computed and
+//!   trusted. `H_2(D^2, S^1) = Z`, `H_1(D^2, S^1) = 0` is the smallest
+//!   fixture with a non-trivial connecting map; `(K, empty)` recovers
+//!   absolute homology exactly; a non-subcomplex is refused by name.
+//! - [`cup_product`]: the cup product on `H^*(-; F_2)` and `H^*(-; Q)` via
+//!   the Alexander-Whitney diagonal on cocycle representatives, with the
+//!   product cochain re-checked as a cocycle, its class re-solved in the
+//!   target basis, and graded commutativity checked on every pair. **The
+//!   finding the item names**: the torus and the wedge `S^1 v S^1 v S^2`
+//!   have IDENTICAL Betti numbers `(1, 2, 1)`, but the torus's two `H^1`
+//!   generators cup to a nonzero class in `H^2` while the wedge's cup to
+//!   zero -- a group-valued invariant cannot see this at all; the ring
+//!   structure can. `RP^2`'s `H^1(-; F_2)` generator squares to nonzero.
+//! - The Smith reduction's own cost (`smith_grids` in `normalforms.rs`,
+//!   flagged as the remaining ceiling by wave three) was measured directly
+//!   (not just as part of the combined `homology()` + `verify()` figure) and
+//!   its pivot selection changed from "first nonzero entry" to "smallest
+//!   nonzero entry in absolute value" (the standard Kannan-Bachem-style
+//!   bound on entry growth) -- a pure pivot-choice change, so `D`'s
+//!   uniqueness keeps every existing Smith-form test and the pinned
+//!   `integer-matrix-smith-normal-form` fact's diagonal claim unaffected;
+//!   see `normalforms.rs`'s `find_nonzero` doc comment and
+//!   `smith_normal_form_alone_on_a_196_vertex_grid_torus_d1`'s doc comment
+//!   for the measured before/after numbers.
+//!
+//! **What remains**: Steenrod squares (the cup product alone does not see
+//! them -- they are a strictly finer invariant on `F_2` cohomology); the
+//! relative/cup-product machinery does not yet handle a simplicial MAP
+//! between pairs (only a single pair's own homology and ring); and homotopy
+//! invariants proper (fundamental group, higher homotopy) remain entirely
+//! out of scope -- homology and its ring structure still cannot tell the
+//! dunce hat (contractible but not collapsible) apart from a point.
 
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -123,12 +156,20 @@ use crate::{CasExpr, Matrix, ZeroTest, equal};
 // sibling file declared here so `lib.rs` stays untouched. Each is a child
 // module of `homology`, so it can reach this module's private helpers
 // (`rebuild_boundaries`, `is_zero_matrix`, `diagonal_rank`, `torsion_factors`,
-// `SmithData`) via `super::`. Wave two (item 8, wave two) added coefficients,
-// cohomology, induced maps over Q, and persistence over F_2; wave three
-// (item 8, wave three) added induced maps over Z (including torsion,
-// `induced::induced_homology_z`) and persistence over Q/F_p
+// `SmithData`, and -- since wave four generalized their signatures away from
+// `HomologyCertificate` specifically -- `compositions_are_zero` and
+// `smith_factorizations_hold`) via `super::`. Wave two (item 8, wave two)
+// added coefficients, cohomology, induced maps over Q, and persistence over
+// F_2; wave three (item 8, wave three) added induced maps over Z (including
+// torsion, `induced::induced_homology_z`) and persistence over Q/F_p
 // (`persistent::persistent_homology_over_q`/`persistent_homology_mod_p`) to
-// the SAME files, plus the unimodularity-ceiling fix described above.
+// the SAME files, plus the unimodularity-ceiling fix described above. Wave
+// four (item 8, wave four) added `relative` and `cup_product`, and promoted
+// several of `induced`'s private basis/solve helpers to `pub(crate)` so
+// `relative` and `cup_product` could reuse them (`choose_homology_basis`,
+// `choose_boundary_basis`, `solve_via_rref`, `columns_to_matrix`,
+// `rank_of_columns`, `column_vector`, and the new
+// `induced_map_from_chain_map`).
 #[path = "homology_coefficients.rs"]
 pub mod coefficients;
 #[path = "homology_cohomology.rs"]
@@ -137,6 +178,10 @@ pub mod cohomology;
 pub mod induced;
 #[path = "homology_persistent.rs"]
 pub mod persistent;
+#[path = "homology_relative.rs"]
+pub mod relative;
+#[path = "homology_cup_product.rs"]
+pub mod cup_product;
 
 /// An abstract simplicial complex over vertex ids `0..`, closed under taking
 /// faces, built from a list of maximal simplices.
@@ -667,8 +712,13 @@ fn compositions_are_zero(
 /// full divisibility chain, not merely diagonal). Reuses
 /// [`crate::normalforms`]'s own certified guards rather than re-implementing
 /// them.
-fn smith_factorizations_hold(certificate: &HomologyCertificate) -> Result<(), String> {
-    for (k, triple) in &certificate.smith {
+///
+/// Generic over any `BTreeMap<usize, SmithData>`, not specific to
+/// [`HomologyCertificate`], so [`crate::homology::relative`] (item 8, wave
+/// four) can reuse this verbatim on a relative-pair's Smith map rather than
+/// re-deriving the same three-part factorization check.
+fn smith_factorizations_hold(smith: &BTreeMap<usize, SmithData>) -> Result<(), String> {
+    for (k, triple) in smith {
         let product = triple
             .u
             .mul_fast_or_symbolic(&triple.boundary)
@@ -803,7 +853,7 @@ impl HomologyCertificate {
         let rebuilt = rebuild_boundaries(complex, self.max_dimension)?;
         boundaries_match(self, &rebuilt)?;
         compositions_are_zero(&rebuilt, self.max_dimension)?;
-        smith_factorizations_hold(self)?;
+        smith_factorizations_hold(&self.smith)?;
         let (betti, torsion) = betti_and_torsion_match(self, complex)?;
         let euler_characteristic = euler_characteristic_matches(self, complex, &betti)?;
         Ok(HomologyReport {
