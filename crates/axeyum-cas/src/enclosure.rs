@@ -198,6 +198,7 @@
 
 use crate::interval_arith::Interval;
 use crate::{CasExpr, UnaryFunc};
+use axeyum_arith::Dyadic;
 use axeyum_ir::Rational;
 use core::fmt;
 use num_bigint::BigInt;
@@ -448,6 +449,37 @@ impl BigInterval {
             }
         } else {
             BigInterval { lo, hi }
+        }
+    }
+
+    /// This interval widened **outward** onto the grid of multiples of
+    /// `2^(-bits)`, through [`axeyum_arith::Dyadic`].
+    ///
+    /// **ADR-1710 migration slice 1.** The endpoint pair goes through one call
+    /// to [`Dyadic::rationals_outward_at_exponent`], so the rounding direction
+    /// of each endpoint is chosen inside `axeyum-arith` and no caller here can
+    /// choose it - the defect class the enclosure modules used to guard by
+    /// writing `dyadic_floor` on one line and `dyadic_ceil` on the next.
+    ///
+    /// The result always contains `self`, so substituting it stays sound: it
+    /// only ever loses accuracy. What it buys is a *bounded denominator* -
+    /// every endpoint afterwards is `m * 2^(-bits)` - which is what keeps a
+    /// series kernel from forming a 260,000-bit rational out of a computed
+    /// argument.
+    ///
+    /// The `None` arm of the dyadic route cannot arise (`bits` is a `u32`, so
+    /// `-bits` is inside [`axeyum_arith::MAX_EXPONENT`], and `lo <= hi` holds
+    /// by the type's invariant); the fallback is the identity, which is the
+    /// widest-sound answer rather than a narrower one.
+    #[must_use]
+    pub fn coarsen_to_bits(&self, bits: u32) -> BigInterval {
+        let exponent = -i64::from(bits);
+        match Dyadic::rationals_outward_at_exponent(&self.lo, &self.hi, exponent) {
+            Some((lo, hi)) => BigInterval {
+                lo: lo.to_rational(),
+                hi: hi.to_rational(),
+            },
+            None => self.clone(),
         }
     }
 
@@ -947,13 +979,23 @@ pub(crate) fn exp_point(p: &BigRational, order: u32) -> Option<BigInterval> {
     Some(enclosure)
 }
 
-/// `ln(p)` for a rational `p > 0`.
+/// `ln(p)` for a rational `p > 0` - the **series** route, with no rounding of
+/// its argument.
 ///
 /// Writes `p = 2^k·t` with `t` in `[1, 2)`, then
 /// `ln p = k·ln 2 + 2·atanh((t−1)/(t+1))` with `ln 2 = 2·atanh(1/3)`. Both
 /// `atanh` arguments are at most `1/3`, so the series converges at a fixed rate
 /// independent of `p`.
-pub(crate) fn ln_point(p: &BigRational, order: u32) -> Option<BigInterval> {
+///
+/// **Its cost is not independent of `p`.** [`atanh_small`] forms
+/// `z^(2·order+1)` exactly, so an argument whose denominator has `a` bits costs
+/// about `a²·order³/48` word operations - and `num-rational` runs a gcd after
+/// every one of them. That is why this is not the entry point: [`ln_point`]
+/// anchors first, and only a *small* argument reaches here. The two callers
+/// allowed to pass it an arbitrary argument are [`ln_point`] and
+/// [`crate::enclosure_special::ln_large`], and both pass a 16-bit anchor or the
+/// literal `2`.
+pub(crate) fn ln_series_point(p: &BigRational, order: u32) -> Option<BigInterval> {
     if !p.is_positive() {
         return None;
     }
@@ -981,14 +1023,85 @@ pub(crate) fn ln_point(p: &BigRational, order: u32) -> Option<BigInterval> {
     Some(ln_t.add(&ln_two.scale(&bi(exponent))))
 }
 
-/// `sqrt(p)` for a rational `p >= 0` by Newton iteration from above.
+/// `ln(p)` for a rational `p > 0`, with its argument rounded **outward** onto
+/// the dyadic grid first.
+///
+/// This is the entry point every certified `ln` step goes through, and the
+/// rounding is the point of it. `ln` is increasing, so `ln p` lies in
+/// `[ln(floor_grid p), ln(ceil_grid p)]` - widening the argument outward and
+/// taking the hull of the two logarithms is sound for exactly the reason
+/// [`crate::enclosure_special::coarsen`] is, and it replaces an argument of
+/// unbounded denominator by one of `grid_bits(order)` bits.
+///
+/// Each endpoint then goes through [`crate::enclosure_special::ln_large`],
+/// which anchors on a 16-bit dyadic and buys the accuracy back from a cheap
+/// `ln(1 + w)` correction, so [`ln_series_point`] never sees a wide argument at
+/// all. This is the treatment `Gamma` has had since wave two, and the reason it
+/// is here is measured: [`crate::enclosure_integral`] records `li(2)` at
+/// precision 130 costing **104.7 s** through the unanchored route and about a
+/// second through the anchored one, and `numberfield_real`'s regulator of the
+/// real quadratic field of discriminant 61 did not finish in nine minutes at
+/// precision 100.
+///
+/// The grid is finer than the accuracy the order can deliver
+/// (`2^(-2·order-96)` against an `atanh` tail near `2^(-3.17·order)`), so the
+/// rounding bounds the size of the numbers and never the accuracy of the
+/// answer. Returns `None` for `p <= 0` or when a kernel runs out of reduction
+/// budget.
+pub(crate) fn ln_point(p: &BigRational, order: u32) -> Option<BigInterval> {
+    if !p.is_positive() {
+        return None;
+    }
+    let bits = crate::enclosure_special::grid_bits(order);
+    // Rounding DOWN can reach 0 for a `p` below the grid step, and `ln 0` is
+    // not a number. Falling back to the exact `p` there is sound (it is the
+    // identity rounding) and costs only the speed-up, never the answer.
+    let low_argument = {
+        let floor = crate::enclosure_special::dyadic_floor(p, bits);
+        if floor.is_positive() {
+            floor
+        } else {
+            p.clone()
+        }
+    };
+    let high_argument = crate::enclosure_special::dyadic_ceil(p, bits);
+    let low = crate::enclosure_special::ln_large(&low_argument, order)?;
+    if low_argument == high_argument {
+        return Some(low);
+    }
+    let high = crate::enclosure_special::ln_large(&high_argument, order)?;
+    BigInterval::new(low.lo.clone(), high.hi)
+}
+
+/// `sqrt(p)` for a rational `p >= 0` by Newton iteration from above, on the
+/// dyadic grid.
 ///
 /// From any `x0 >= sqrt(p) > 0` the iteration `x <- (x + p/x)/2` stays at or
 /// above `sqrt(p)` (AM–GM), so `p/x <= sqrt(p) <= x` brackets the root exactly
 /// at every step — no error analysis is needed, the bracket *is* the
-/// certificate. `order` is the iteration cap; the loop also stops once the
-/// bracket is narrower than `2^(−2048)`, which keeps the denominators finite
-/// and is deterministic in the value, not in the schedule.
+/// certificate.
+///
+/// **Two roundings, both outward, both load-bearing** (ADR-1710 slice 1; the
+/// same treatment `Gamma` and [`crate::enclosure_special::nth_root_point`]
+/// already have):
+///
+/// - The **argument** is widened onto the `2^(-grid_bits(order))` grid: the
+///   iteration runs on `ceil_grid p >= p`, so every iterate stays at or above
+///   `sqrt p`, and the lower endpoint is formed from `floor_grid p <= p`, which
+///   only lowers it. An argument that arrives carrying a certified square
+///   root's denominator - which is exactly what the next step of
+///   `ln(a + b*sqrt d)` is handed - no longer propagates it into the iteration.
+/// - Each **iterate** is rounded UP onto the same grid. AM–GM only needs
+///   `x >= sqrt p`, and rounding up preserves that, so the bracket stays exact
+///   while the denominator stops doubling every step. Unrounded, `x` doubles in
+///   size on each of the ~11 steps to the old `2^(-2048)` floor;
+///   [`crate::enclosure_integral`] measured the same difference between
+///   `NthRoot(2)` (rounded) and this kernel (unrounded) as "a second and
+///   several minutes" over 511 panel evaluations.
+///
+/// `order` is the iteration cap; the loop also stops once the bracket is
+/// narrower than the grid step, which is deterministic in the value rather than
+/// in the schedule.
 pub(crate) fn sqrt_point(p: &BigRational, order: u32) -> Option<BigInterval> {
     if p.is_negative() {
         return None;
@@ -996,18 +1109,42 @@ pub(crate) fn sqrt_point(p: &BigRational, order: u32) -> Option<BigInterval> {
     if p.is_zero() {
         return Some(BigInterval::point(BigRational::zero()));
     }
+    let bits = crate::enclosure_special::grid_bits(order);
     let one = BigRational::one();
     let two = bi(2);
-    let mut x = if *p > one { p.clone() } else { one.clone() };
-    let floor = pow2(-2048);
+    let high_argument = crate::enclosure_special::dyadic_ceil(p, bits);
+    // Rounding DOWN can reach 0 for a `p` below the grid step; the exact `p` is
+    // the sound fallback there, as in `ln_point`.
+    let low_argument = {
+        let floor = crate::enclosure_special::dyadic_floor(p, bits);
+        if floor.is_positive() {
+            floor
+        } else {
+            p.clone()
+        }
+    };
+    let start = if high_argument > one {
+        high_argument.clone()
+    } else {
+        one.clone()
+    };
+    let mut x = crate::enclosure_special::dyadic_ceil(&start, bits);
+    let step = pow2(-i32::try_from(bits).unwrap_or(i32::MAX));
     for _ in 0..order.max(1) {
-        let lower = p / &x;
-        if &x - &lower <= floor {
+        let lower = &high_argument / &x;
+        if &x - &lower <= step {
             break;
         }
-        x = (&x + &lower) / &two;
+        let next = crate::enclosure_special::dyadic_ceil(&((&x + &lower) / &two), bits);
+        // Rounding up can stall the iteration at the grid; stopping there is
+        // what makes the loop terminate in the VALUE rather than at the cap.
+        if next >= x {
+            break;
+        }
+        x = next;
     }
-    let lower = p / &x;
+    // `low_argument <= p` and `x >= sqrt p > 0`, so `low_argument/x <= sqrt p`.
+    let lower = &low_argument / &x;
     BigInterval::new(lower, x)
 }
 
@@ -3109,6 +3246,136 @@ mod tests {
                 "pi precision {precision:>3}: order {:>4}  produce {produced:?}  verify {verified:?}",
                 e.evidence[0].order
             );
+        }
+    }
+
+    // -----------------------------------------------------------------------
+    // ADR-1710 slice 1: the outward dyadic rounding of the `sqrt` and `ln`
+    // kernels' arguments.
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn sqrt_point_brackets_the_root_over_a_deterministic_corpus() {
+        // The defining property, checked directly rather than against another
+        // enclosure: lo² <= p <= hi². Nothing here trusts the iteration.
+        let mut checked = 0usize;
+        for numerator in 1i64..=40 {
+            for denominator in [1i64, 3, 7, 1024, 1_000_003] {
+                let p = BigRational::new(BigInt::from(numerator), BigInt::from(denominator));
+                for order in [4u32, 8, 32] {
+                    let root = sqrt_point(&p, order).expect("sqrt");
+                    assert!(
+                        &(root.lo() * root.lo()) <= &p,
+                        "sqrt({p}) lower endpoint {} squares above the radicand",
+                        root.lo()
+                    );
+                    assert!(
+                        &(root.hi() * root.hi()) >= &p,
+                        "sqrt({p}) upper endpoint {} squares below the radicand",
+                        root.hi()
+                    );
+                    checked += 1;
+                }
+            }
+        }
+        assert_eq!(checked, 40 * 5 * 3);
+    }
+
+    #[test]
+    fn sqrt_point_keeps_a_positive_lower_endpoint_below_the_grid_step() {
+        // The `floor.is_positive()` fallback in `sqrt_point`. Delete it and the
+        // rounded-down argument is 0 for any `p` under the grid step, so the
+        // lower endpoint collapses to 0: still sound, and useless.
+        let tiny = pow2(-400);
+        let root = sqrt_point(&tiny, 4).expect("sqrt");
+        assert!(
+            root.lo().is_positive(),
+            "the lower endpoint collapsed to {} for an argument below the grid step",
+            root.lo()
+        );
+        assert!(&(root.lo() * root.lo()) <= &tiny);
+        assert!(&(root.hi() * root.hi()) >= &tiny);
+    }
+
+    #[test]
+    fn sqrt_point_bounds_its_endpoint_denominators_by_the_grid() {
+        // Before the slice this iterate doubled in size on every Newton step to
+        // a 2^(-2048) floor. The upper endpoint is now on the grid, so its
+        // denominator divides 2^grid_bits(order).
+        let root = sqrt_point(&bi(2), 32).expect("sqrt 2");
+        let bits = crate::enclosure_special::grid_bits(32);
+        assert!(
+            root.hi().denom().bits() <= u64::from(bits) + 1,
+            "the upper endpoint's denominator has {} bits, past the {bits}-bit grid",
+            root.hi().denom().bits()
+        );
+    }
+
+    #[test]
+    fn ln_point_encloses_the_unanchored_series_route() {
+        // A differential check against the route `ln_point` no longer takes.
+        // `ln_series_point` at order 160 is an independent and much tighter
+        // enclosure of the same number (its `atanh` tail is near 2^-507, four
+        // orders past anything asked of `ln_point` here), so the
+        // anchored-and-rounded answer must contain it. The reference is
+        // computed once per argument, not once per order: it is the expensive
+        // half and it does not depend on the order under test.
+        let mut checked = 0usize;
+        for numerator in 1i64..=12 {
+            for denominator in [1i64, 3, 1024] {
+                let p = BigRational::new(BigInt::from(numerator), BigInt::from(denominator));
+                let reference = ln_series_point(&p, 160).expect("reference ln");
+                for order in [4u32, 16, 64] {
+                    let anchored = ln_point(&p, order).expect("ln");
+                    assert!(
+                        anchored.contains_interval(&reference),
+                        "ln({p}) at order {order} is {} which misses the reference {}",
+                        anchored.decimal(20),
+                        reference.decimal(20)
+                    );
+                    checked += 1;
+                }
+            }
+        }
+        assert_eq!(checked, 12 * 3 * 3);
+    }
+
+    #[test]
+    fn ln_point_answers_below_the_grid_step_instead_of_declining() {
+        // The `floor.is_positive()` fallback in `ln_point`. Delete it and the
+        // rounded-down argument is 0, `ln_large` refuses it, and the whole
+        // head declines with a resource limit for a perfectly ordinary
+        // argument.
+        let tiny = pow2(-400);
+        let value = ln_point(&tiny, 4).expect("ln of a value below the grid step");
+        let reference = ln_series_point(&tiny, 64).expect("reference");
+        assert!(value.contains_interval(&reference));
+        assert!(ln_point(&BigRational::zero(), 8).is_none());
+        assert!(ln_point(&-BigRational::one(), 8).is_none());
+    }
+
+    #[test]
+    fn coarsen_to_bits_contains_its_input_and_lands_on_the_grid() {
+        // `BigInterval`'s own dyadic entry point, exercised directly: the ONE
+        // call that fixes both rounding directions.
+        for (n, d) in [(1i64, 3i64), (-1, 3), (22, 7), (-355, 113), (1, 1)] {
+            let low = BigRational::new(BigInt::from(n), BigInt::from(d));
+            let high = &low + br(1, 5);
+            let interval = BigInterval::new(low, high).expect("interval");
+            for bits in [1u32, 8, 96] {
+                let coarse = interval.coarsen_to_bits(bits);
+                assert!(
+                    coarse.contains_interval(&interval),
+                    "coarsen_to_bits({bits}) lost its input"
+                );
+                let scale = pow2(i32::try_from(bits).unwrap());
+                for endpoint in [coarse.lo(), coarse.hi()] {
+                    assert!(
+                        (endpoint * &scale).is_integer(),
+                        "{endpoint} is not a multiple of 2^-{bits}"
+                    );
+                }
+            }
         }
     }
 }
