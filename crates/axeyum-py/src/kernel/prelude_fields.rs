@@ -4549,10 +4549,10 @@ pub(super) fn creal_sub(p: &CRealPrelude) -> Vec<(&'static str, Sub)> {
     vec![("rat", Sub::Rat(Box::new(p.rat)))]
 }
 
-/// The `ComplexPrelude` field table (195 names,
+/// The `ComplexPrelude` field table (196 names,
 /// 0 name lists, 1 sub-packages).
 ///
-/// 66 of the names come from ADR-1512 per-module registries and
+/// 67 of the names come from ADR-1512 per-module registries and
 /// carry a dotted field name (`pi.pi_le_four`); the rest are flat
 /// fields on `ComplexPrelude` itself.
 #[must_use]
@@ -4809,6 +4809,7 @@ pub(super) fn complex(p: &ComplexPrelude) -> Fields {
                 "polyderiv.has_derivative_pow",
                 p.polyderiv.has_derivative_pow,
             ),
+            ("polyderiv.holomorphic_pow", p.polyderiv.holomorphic_pow),
             ("cauchy_riemann.abs_i", p.cauchy_riemann.abs_i),
             (
                 "cauchy_riemann.in_disc_of_real_offset",
