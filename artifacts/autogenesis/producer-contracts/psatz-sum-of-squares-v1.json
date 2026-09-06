@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "id": "producer-contract-psatz-sum-of-squares-v1",
+  "title": "Polynomial inequality goals over Rat, discharged by a sum-of-squares certificate, kernel-lane",
+  "route": "kernel-lane",
+  "recipe": {
+    "description": "Hand the goal to `crate::psatz::rat::prove` (or to `tactic::rat`'s `Tactic::Psatz`, which is the same producer behind the combinator). The goal must be `Rat.le lhs rhs`; the producer parses both sides into a polynomial over an atom table shared with any `Rat.le Rat.zero h` hypotheses, and searches for a certificate of `rhs - lhs >= 0`. For total degree <= 2 the search is COMPLETE: the Gram matrix over the affine basis `(1, x_0, ..., x_n)` is unique, the difference is a sum of squares of rational affine forms iff that matrix is positive semidefinite, and a rational LDL^T decides PSD-ness exactly. It then clears denominators to one integer scale `M` with integer-coefficient forms (`ring::rat` recognizes only the literals -1/0/1, so a rational weight would be an opaque atom and the identity would not close), emits `sq_nonneg`/`mul_nonneg` folded by `add_nonneg`, proves the identity `M*(rhs-lhs) = sum(...)` with `ring::rat::prove_eq` -- proved, never asserted -- and divides `M` back out through `le_or_lt` plus a strict fold so the scale never reaches the statement. Beyond pure SOS it lands ONE Positivstellensatz shape: `p = h_i * h_j + (a sum of squares)` for two supplied nonnegativity hypotheses. The emitted term is UNCHECKED; the caller pushes it through `Kernel::add_declaration`, which is the only trusted gate involved. Refusals are typed and two of them are FINDINGS rather than refusals: `NotPsd` says the goal is FALSE (the difference is negative somewhere, and at degree <= 2 there is no other Gram matrix the search could have tried), and `PsdNotSos` says a supplied dual moment functional was VERIFIED -- its moment matrix is PSD and it is strictly negative on the difference -- so the difference is not a sum of squares. Not covered, and declined rather than guessed at: total degree > 2 with no witness (`DegreeUnsupported`; the Gram matrix is not unique there and finding one is a semidefinite program this producer does not implement), more than one hypothesis product, `Rat.sub`/`Rat.inv`/`Rat.div`/`Rat.pow` in the goal (`NonPolynomial` -- they are definitions the ring normalizer does not unfold either), a scale above 64 or a form coefficient above 8, and any i128 overflow in the exact arithmetic.",
+    "reference": "crates/axeyum-lean-kernel/src/psatz.rs"
+  },
+  "shape": {
+    "formal_language": [
+      "lean4"
+    ],
+    "fragments": [
+      "Rat"
+    ],
+    "statement_contains": "Rat.le"
+  },
+  "non_examples": [
+    {
+      "fact_id": "F:rat-add-comm",
+      "reason": "A `Rat`-fragment `lean4` fact in the same namespace, so it fails on the ONE axis that matters here rather than on the carrier: its statement is `Eq.{1} Rat (Rat.add x0 x1) (Rat.add x1 x0)` and contains no `Rat.le` at all. This producer's whole fragment is the ORDER goal `Rat.le lhs rhs`; a ring equation is `ring::rat`'s business, and `psatz::rat::prove` returns `Decline::GoalNotLe` on it before any search runs. Checked by executing the predicate, which returns False."
+    },
+    {
+      "fact_id": "F:ml430-int-le-sub-one-of-not-le-fc32b89d",
+      "reason": "The complementary near-miss: an OPEN, dependency-ready order goal (`¬b ≤ a → a ≤ b - 1`), which is the exact goal SHAPE this producer takes -- and it is excluded on the carrier, being `Int`/`lean4-surface` rather than `Rat`/`lean4`. Kept as the second non-example because it shows the exclusion is not simply 'anything that is not an inequality': it is an inequality, it is open, and it is still outside. It is also LINEAR and hypothesis-driven, which is `linarith`'s fragment, not this one's -- the two producers are complements."
+    }
+  ],
+  "notes": "THE LIVE POPULATION IS ZERO, and the shape is not what makes it zero. Measured 2026-09-05 at ledger digest ff28d776..., 2,896 facts, 268 open: the shape matches 91 facts and every one of them is already `proved`. The ledger holds 330 `Rat`-fragment facts and NOT ONE is open. The whole open population is 178 `lean4-surface`/`Nat`, 80 `lean4-surface`/`Int`, 4 `smtlib2`, 4 `lean4`/`Nat`, 1 `lean4`/`Int` and 1 kernel-declaration-stream row -- i.e. Mathlib mirrors over the two carriers this producer does not serve. That is the same story `ring-identity-v1` and `linear-arithmetic-v1` told beside it, and for the same structural reason: `Rat`'s order algebra was among the parts of this development finished FIRST, by hand, so a producer for it arrives to an empty dispatch queue. What the shape predicate cannot see, because the schema has no field for it, is that the producer discharged four inequalities on the day it landed that NOTHING in this kernel could previously produce -- `2xy <= x^2+y^2`, `ab+bc+ca <= a^2+b^2+c^2`, `4ab <= (a+b)^2`, and `0<=x -> 0<=y -> 0<=x*y` -- each declared through `Kernel::add_declaration` and each measured axiom-free. Those are new facts in the ledger (`F:rat-psatz-*`), not retirements of hand-written proofs, which is what makes this contract different from the two retired ones beside it even though all three size to zero. A ledger import bringing in ordered-field inequality statements over `Rat` -- Cauchy-Schwarz, AM-GM at higher arity, Schur -- would revive it, and should arrive as a `-v2` rather than by editing this file. ADR-1649 records the design and the deliverable-0 measurement that motivated it.",
+  "sizing": {
+    "date": "2026-09-05",
+    "ledger_sha256": "ff28d77689f8363ffee207d8cea71c89e0267113863cbc786f9dea6eaa81342b",
+    "matched_open_ready_count": 0,
+    "matched_open_ready_fact_ids": [],
+    "frontier_query": "python3 -c \"import importlib.util;s=importlib.util.spec_from_file_location('v','scripts/validate-producer-contracts.py');m=importlib.util.module_from_spec(s);s.loader.exec_module(m);f=m.load_facts();print(m.ledger_digest(f));[print(c['id'],m.live_population(c['shape'],f)) for _p,c in m.load_contracts()]\"",
+    "note": "Zero. The shape matches 91 ledger facts and all 91 are `proved`; the `Rat` fragment has 330 facts and zero open ones. Held-out overlap re-derived live against all 216 nursery ids: EMPTY, so no `held_out_overlap_salt` block is required or present."
+  },
+  "retirement": {
+    "date": "2026-09-05",
+    "reason": "Born with an empty live population, per ADR-1510 rule 1: there is no open, dependency-ready, non-held-out fact in the ledger whose statement is a `Rat` order goal. Measured by executing the predicate against the whole 2,896-fact ledger, not by reading titles -- 91 matches, 91 of them proved.",
+    "note": "Not a statement that `psatz` is exhausted or unwanted. The producer is live, registered as `tactic::rat`'s `Tactic::Psatz`, and carries 34 tests (27 of its own plus the two combinator-registry tests and the mutation suite's fixtures). What is empty is the DISPATCH queue, because the ledger's open work is `Nat`/`Int` Mathlib mirrors and this producer's carrier is `Rat`. The nearest thing that would revive it is either a `Rat` inequality import or a `-v2` shape over `CReal` once the setoid ring normalizer this producer's ℚ-only choice turns on exists as a producer (see `psatz::rat`'s module docs for why ℚ and not `CReal`)."
+  }
+}

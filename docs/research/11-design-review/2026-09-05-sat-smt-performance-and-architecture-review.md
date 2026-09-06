@@ -299,6 +299,14 @@ on the traced QF_IDL population (its bottleneck is D1, not D2, on every file
 where `TheoryLayerStats` reports data). Slice 2 (moving `CdclT`'s search onto
 the native clause arena) is unimplemented.
 
+*Measured 2026-09-05 (`perf` unavailable, `--trace`/`explain_corpus` fallback):*
+[which functions inside the driver](2026-09-05-arith-timeout-profiles.md) —
+`CdclT::unit_propagate`'s full clause rescan is ~87% of wall clock on the
+QF_IDL rows that produced counters (decisions never leave zero), confirming
+D1 as the slice 2 target there; QF_LRA's bottleneck is a different function,
+`LraTheory::final_check`/`feasibility` (~84% of wall clock), not Boolean
+propagation, so slice 2 is two separate fixes, not one.
+
 **D3. Dispatch is a hand-ordered portfolio of one-shot routes.**
 [`auto.rs`](../../../crates/axeyum-solver/src/auto.rs) is 9,638 lines with 52
 distinct route labels (`grep -oE '"[a-z]+(-[a-z0-9]+)+"' | sort -u`). Each
@@ -423,7 +431,18 @@ apart from dispatch.
    (SAT share 0.97 and 0.95) and run BatSat, the native core, CaDiCaL and
    Kissat on identical DIMACS. About a day of work; it decides whether the
    native core becomes the default and whether D1's third engine should be
-   replaced rather than tuned.
+   replaced rather than tuned. *Measured 2026-09-05* (gate (b):
+   [`2026-09-05-gate-b-sat-core-measured.md`](2026-09-05-gate-b-sat-core-measured.md);
+   the follow-up profiling that measurement's own "what this does not
+   establish" section named as missing:
+   [`2026-09-05-native-core-vs-kissat-search-stats.md`](2026-09-05-native-core-vs-kissat-search-stats.md)
+   — on the files Kissat decides that the native core does not, Kissat's own
+   profiler attributes the majority of its wall time to core CDCL search
+   (51-100%, mean 58.7%), not to inprocessing (mean 25.7%), so the gap is
+   mixed rather than an inprocessing story: partly raw search throughput
+   (Kissat ~1.57x median conflicts/second on non-outlier shared-verdict
+   files) and partly a smaller conflict-count difference, not a dominant
+   inprocessing effect).
 3. **Add micro-benchmarks for six hot paths**, bound to the same calibration
    scheme so they can gate: `CdclT::propagate`, `proof_sat` propagate,
    `tseitin_encode`, `AndUniqueTable` insert, simplex pivot, e-graph merge

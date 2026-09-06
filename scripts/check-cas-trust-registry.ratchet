@@ -17,7 +17,7 @@
 # only rises on purpose) -- but a new UNCERTIFIED function is never refused;
 # that label is honest, not a violation. See
 # docs/math-department/13-computer-algebra.md item 10.
-COUNT	109
+COUNT	126
 FN	enclosure::enclose	Option<Enclosure>
 FN	enclosure::enclose_constant	Option<Enclosure>
 FN	enclosure::enclose_root	Option<Enclosure>
@@ -53,16 +53,23 @@ FN	gf2_extension::binary_extension_witt_shifted_trace	Result<BinaryExtensionWitt
 FN	gf2_extension::collapse_binary_extension_long_cycle_trace_subshards	Result<BinaryExtensionLongCycleTraceShardReport, BinaryExtensionTraceError>
 FN	gf2_extension::combine_binary_extension_connected_adams_trace_shards	Result<BinaryExtensionConnectedAdamsTraceReport, BinaryExtensionTraceError>
 FN	gf2_extension::combine_binary_extension_long_cycle_trace_shards	Result<BinaryExtensionLongCycleTraceReport, BinaryExtensionTraceError>
+FN	gosper::gosper_sum_certified	Option<CertifiedGosperSum>
 FN	homology::HomologyCertificate::verify	Result<HomologyReport, String>
 FN	homology::homology	Option<HomologyCertificate>
 FN	homology_coefficients::CoefficientHomologyCertificate::verify	Result<CoefficientHomologyReport, String>
 FN	homology_coefficients::homology_with_coefficients	Option<CoefficientHomologyCertificate>
 FN	homology_cohomology::CohomologyCertificate::verify	Result<CohomologyReport, String>
 FN	homology_cohomology::cohomology	Option<CohomologyCertificate>
+FN	homology_induced::IntegerInducedCertificate::verify	Result<IntegerInducedReport, String>
 FN	homology_induced::SimplicialMapCertificate::verify	Result<InducedReport, String>
 FN	homology_induced::induced_homology	Option<SimplicialMapCertificate>
+FN	homology_induced::induced_homology_z	Option<IntegerInducedCertificate>
+FN	homology_persistent::FieldPersistenceCertificate::verify	Result<FieldPersistenceReport, String>
 FN	homology_persistent::PersistenceCertificate::verify	Result<PersistenceReport, String>
 FN	homology_persistent::persistent_homology	Option<PersistenceCertificate>
+FN	homology_persistent::persistent_homology_mod_p	Option<FieldPersistenceCertificate>
+FN	homology_persistent::persistent_homology_over_q	Option<FieldPersistenceCertificate>
+FN	improper_integrate_conditional	Option<ConditionalIntegral>
 FN	integrate	Option<CertifiedIntegral>
 FN	inverse::polynomial_inverse	Option<InverseCertificate>
 FN	mvt::polynomial_mvt	Option<MvtCertificate>
@@ -77,6 +84,12 @@ FN	numberfield::GaussianInt::factor	Result<GaussianFactorizationCertificate, Dec
 FN	numberfield::QuadraticField::fundamental_unit	Result<FundamentalUnitCertificate, DeclineReason>
 FN	numberfield::QuadraticField::pell_unit	Result<FundamentalUnitCertificate, DeclineReason>
 FN	numberfield::two_squares	Option<TwoSquaresCertificate>
+FN	numberfield_classgroup::QuadraticOrder::class_group	Result<ClassGroupCertificate, ClassGroupDecline>
+FN	numberfield_classgroup::class_group	Result<ClassGroupCertificate, ClassGroupDecline>
+FN	numberfield_classgroup::class_of_ideal	Result<(BinaryQuadraticForm, FormIdealCertificate), ClassGroupDecline>
+FN	numberfield_classgroup::compose	Result<(BinaryQuadraticForm, CompositionCertificate), ClassGroupDecline>
+FN	numberfield_classgroup::is_principal	Result<(bool, PrincipalityCertificate), ClassGroupDecline>
+FN	numberfield_classgroup::reduce_form	Result<(BinaryQuadraticForm, FormReductionCertificate), ClassGroupDecline>
 FN	numberfield_ideals::QuadraticOrder::class_number	Result<(usize, ClassNumberCertificate), IdealDecline>
 FN	numberfield_ideals::QuadraticOrder::factor_ideal	Result<IdealFactorizationCertificate, IdealDecline>
 FN	numberfield_ideals::QuadraticOrder::factor_principal_ideal	Result<(Ideal, IdealFactorizationCertificate), IdealDecline>
@@ -113,10 +126,14 @@ FN	probability::chebyshev_bound	Certificate
 FN	probability::convolve_poisson	Option<Certificate>
 FN	probability::markov_bound	Certificate
 FN	prove_derivative	ZeroTest
+FN	prove_squared_binomial_falling_moment	Option<CertifiedSquaredBinomialFallingMoment>
+FN	prove_squared_binomial_moment	Option<CertifiedSquaredBinomialMoment>
 FN	qe::decide_exists	Decision
 FN	qe::decide_forall	ForallDecision
 FN	qe_bivariate::eliminate_y	Result<ProjectionCertificate, Fault>
+FN	qe_bivariate::eliminate_y_to_formula	Result<FormulaCertificate, Fault>
 FN	qe_dnf::decide_exists_dnf	DnfDecision
+FN	qe_fibre::decide_fibre	Result<FibreCertificate, Fault>
 FN	rationality::decide_rationality	Option<RationalityCertificate>
 FN	real_algebraic::polynomial_ivt	Option<IvtCertificate>
 FN	sos::check	Result<CheckReport, String>
@@ -139,8 +156,13 @@ VOCAB	CayleyTableCertificate	struct
 VOCAB	CellCertificate	struct
 VOCAB	CenterCertificate	struct
 VOCAB	Certificate	struct
+VOCAB	CertifiedConclusion	struct
+VOCAB	CertifiedGosperSum	struct
 VOCAB	CertifiedIntegral	struct
+VOCAB	CertifiedSquaredBinomialFallingMoment	struct
+VOCAB	CertifiedSquaredBinomialMoment	struct
 VOCAB	CheckReport	struct
+VOCAB	ClassGroupCertificate	struct
 VOCAB	ClassNumberCertificate	struct
 VOCAB	ClosedFormReport	struct
 VOCAB	CoefficientAsymptotics	struct
@@ -149,6 +171,8 @@ VOCAB	CoefficientHomologyReport	struct
 VOCAB	CohomologyCertificate	struct
 VOCAB	CohomologyReport	struct
 VOCAB	CompositeCertificate	struct
+VOCAB	CompositionCertificate	struct
+VOCAB	ConditionalIntegral	struct
 VOCAB	ConicFiveCertificate	struct
 VOCAB	ConjugacyClassCertificate	struct
 VOCAB	CosetCertificate	struct
@@ -166,7 +190,14 @@ VOCAB	Enclosure	struct
 VOCAB	ExtremumCertificate	struct
 VOCAB	FactorModulusBound	struct
 VOCAB	FactorizationCertificate	struct
+VOCAB	FibreCertificate	struct
+VOCAB	FibreWitness	struct
+VOCAB	FieldPersistenceCertificate	struct
+VOCAB	FieldPersistenceReport	struct
 VOCAB	ForallDecision	enum
+VOCAB	FormIdealCertificate	struct
+VOCAB	FormReductionCertificate	struct
+VOCAB	FormulaCertificate	struct
 VOCAB	FundamentalUnitCertificate	struct
 VOCAB	GaussianFactorizationCertificate	struct
 VOCAB	GenericWitness	struct
@@ -179,6 +210,8 @@ VOCAB	HomologyReport	struct
 VOCAB	IdealFactorizationCertificate	struct
 VOCAB	IdealProductCertificate	struct
 VOCAB	InducedReport	struct
+VOCAB	IntegerInducedCertificate	struct
+VOCAB	IntegerInducedReport	struct
 VOCAB	InvariantsCertificate	struct
 VOCAB	InverseCertificate	struct
 VOCAB	IrreducibilityCertificate	struct
@@ -198,6 +231,7 @@ VOCAB	PersistenceReport	struct
 VOCAB	PrattCertificate	struct
 VOCAB	PrimeSplittingCertificate	struct
 VOCAB	PrimitiveElementCertificate	struct
+VOCAB	PrincipalityCertificate	struct
 VOCAB	ProjectionCertificate	struct
 VOCAB	PsdNotSosCertificate	struct
 VOCAB	QuotientOrderCertificate	struct

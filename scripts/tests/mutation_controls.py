@@ -2361,6 +2361,88 @@ SUITES["complex-derivative"] = (
 )
 
 
+# --------------------------------------------------------------------------
+# `complex-estimates` — the ℂ estimate predicates and the product rule
+# (`crates/axeyum-lean-kernel/src/complex/estimates.rs` and
+# `crates/axeyum-lean-kernel/src/complex/leibniz.rs`, ADR-1646).
+#
+# These are the two mutants the lane brief named, and unlike the
+# `complex-derivative` suite's pair they are both LIVE subjects: Leibniz landed
+# here, so "one cross term dropped" can be applied to the product rule itself
+# rather than to the sum rule standing in for it.
+#
+# MEASURED 2026-09-05, baseline green at 86 tests:
+#
+#   dropped cross term (Leibniz)   killed 83 of 86
+#   un-halved UC modulus           killed 83 of 86
+#
+# **The two kill sets are IDENTICAL** -- symmetric difference empty, checked
+# rather than eyeballed -- and the three survivors are the three tests in the
+# module that build no prelude: `steps_table_matches_recorded_extraction`
+# (reads the STEPS table only) and the two `the_ring_calculus_*` tests (which
+# build their own kernel).
+#
+# That result CONTRADICTS what this comment predicted before the run, and the
+# prediction is left here deleted rather than quietly replaced: the halving
+# mutant was expected to carry a NAMED, small killed-set on top of the mass
+# kill, because `uniformly_continuous_of_has_derivative_modulus_is_halved`
+# pins the index directly and `..._without_halving_is_refused` should INVERT.
+# Neither happens. `build_complex_prelude` is shared by every test through one
+# `OnceLock` template, so either mutant takes the whole module down BEFORE any
+# test reaches its own subject, and the two are indistinguishable by kill set.
+# The modulus pair is real evidence about the modulus -- it caught a vacuous
+# control during development -- but it is NOT evidence that discriminates
+# these two mutants, and a table that reported it as such would be wrong.
+#
+# A mutation suite over a shared-prelude module can therefore only report
+# "the kernel refused something"; to attribute a kill to a subject you need a
+# test that builds its OWN kernel, which is what the two surviving
+# `the_ring_calculus_*` tests do and what a future targeted control here
+# should copy.
+#
+# COST, also measured and also not what was expected: the dropped-cross-term
+# mutant's TEST phase ran ~90 minutes against a 212-second baseline (~25x).
+# A wrong ring identity is not a cheap rejection on this carrier -- the kernel
+# grinds through the definitional-equality check on a large term for every one
+# of the 83 tests that re-runs the poisoned `OnceLock` initialiser. Budget
+# hours, not minutes, for this suite, and pin the thread count: the first
+# attempt was OOM-killed by `cargo-serialized.sh`'s 24 G ceiling at the default
+# thread count, so run it with `RUST_TEST_THREADS=4` in the environment (the
+# harness merges os.environ into the cargo child).
+# --------------------------------------------------------------------------
+
+SUITES["complex-estimates"] = (
+    "crates/axeyum-lean-kernel/src/complex/estimates.rs",
+    Cargo(
+        (
+            "--release",
+            "-j",
+            "4",
+            "-p",
+            "axeyum-lean-kernel",
+            "--lib",
+            "complex::",
+        ),
+        "complex-estimates",
+    ),
+    [
+        (
+            "the product rule's derivative keeps BOTH cross terms "
+            "(the brief's dropped-cross-term mutant, on Leibniz itself)",
+            "        let sum = zadd(d, p, t1, t2);",
+            "        let sum = zadd(d, p, t1, t1);",
+            "crates/axeyum-lean-kernel/src/complex/leibniz.rs",
+        ),
+        (
+            "uniformlyContinuous_of_hasDerivative HALVES its accuracy target "
+            "(the brief's un-halved-modulus mutant)",
+            "        let two = d.num(2);",
+            "        let two = d.num(1);",
+        ),
+    ],
+)
+
+
 SUITES["external-coupling"] = (
     "scripts/check-external-coupling.py",
     "scripts.tests.test_check_external_coupling",
@@ -5105,6 +5187,20 @@ SUITES["merge-hygiene"] = (
             'if [ "$kernel_projection_diff" -gt "$kernel_projection_tolerance" ]; then',
             "if false; then",
         ),
+        (
+            # Lane `hygiene-verdict` (2026-09-05): the finding in
+            # evidence-and-checker-discipline.md, "A green summary line with
+            # a guard that has no subject". `no-binary`/`stale-binary` stay
+            # skip-compatible (host facts); only `tool-failed` -- a present,
+            # fresh binary that still produced nothing -- is new. Mutating
+            # this one condition away restores the old behaviour exactly, so
+            # it must kill exactly the tool-failed test and leave the
+            # no-binary/stale-binary/healthy-binary/opt-out controls green.
+            "M18 a tool-failed shape-duplicates binary fails the gate "
+            "(a guard with no subject, not a host fact)",
+            'if [ "$shape_dupes_token" = "tool-failed" ]; then',
+            "if false; then",
+        ),
     ],
 )
 
@@ -6996,6 +7092,33 @@ SUITES["cas-trust-registry"] = (
             "    if new_certified:",
             "    if False:",
         ),
+        # G7-G10 added 2026-09-05, math-department file 13 item 10 wave two:
+        # the vocabulary derivation now also admits a `Certified*`-prefixed
+        # type name (found missing: `CertifiedGosperSum`) and tightens the
+        # existing verify/check-method rule to require a `self` receiver and
+        # a `Result`/`bool` return, so an associated function or a
+        # non-verdict return type cannot admit a type on the strength of a
+        # method name alone.
+        (
+            "G7 the Certified* prefix rule admitting a type to the vocabulary",
+            "    return any(name.startswith(p) and name != p for p in VOCAB_PREFIXES)",
+            "    return False",
+        ),
+        (
+            "G8 the bare word 'Certified' (no suffix) is excluded from the prefix rule",
+            "    return any(name.startswith(p) and name != p for p in VOCAB_PREFIXES)",
+            "    return any(name.startswith(p) for p in VOCAB_PREFIXES)",
+        ),
+        (
+            "G9 a verify/check method needs a self receiver to admit its type",
+            "        if not fn.has_self:",
+            "        if False:",
+        ),
+        (
+            "G10 a verify/check method needs a Result/bool return to admit its type",
+            "        if not _VERIFY_CHECK_RETURN_RE.match(fn.return_type.strip()):",
+            "        if False:",
+        ),
     ],
 )
 
@@ -7250,6 +7373,82 @@ SUITES["hall-marriage-in-kernel"] = (
             "    let included = d.const_app(p.finset_subset_fixed, &[s, t]);\n"
             "    let nonempty = d.ble(one, card_t);\n"
             "    let proper = d.ble(one, card_t);",
+        ),
+    ],
+)
+
+
+# `psatz` -- the Positivstellensatz producer (ADR-1649).
+#
+# Two things this suite measures, and they are not the same thing.
+#
+# The SEARCH mutants (the LDL^T pivot guards) ask whether the PSD decision is
+# load-bearing: a search that says "PSD" of an indefinite matrix would hand the
+# emitter a certificate for a polynomial that is negative somewhere.  That is
+# caught downstream -- `ring::rat` will not confirm the identity -- so these
+# measure the search's own honesty, not soundness.
+#
+# The REFUSAL mutants (`PsdNotSos`, the dual-witness check) ask whether the
+# producer's two FINDING declines mean what they say.  `PsdNotSos` is the one
+# refusal here that is a claim about mathematics rather than about the
+# producer, and a claim nobody can falsify is the defect CLAUDE.md names.
+# --------------------------------------------------------------------------
+
+SUITES["psatz"] = (
+    "crates/axeyum-lean-kernel/src/psatz.rs",
+    Cargo(
+        ("-p", "axeyum-lean-kernel", "--release", "--lib", "psatz"),
+        "psatz",
+    ),
+    [
+        (
+            # THE BRIEF'S FIRST MUTANT as a source mutation: a form
+            # coefficient's SIGN is dropped, so `(x - y)^2` is emitted as
+            # `(x + y)^2` -- a certificate for the wrong difference.
+            "a cleared form's coefficient sign reaches the emitted term",
+            "        let signed = if c < 0 { rneg(d, base) } else { base };",
+            "        let signed = base;",
+            "crates/axeyum-lean-kernel/src/psatz/rat.rs",
+        ),
+        (
+            # THE BRIEF'S SECOND MUTANT: the Motzkin refusal reason.
+            "the verified-witness refusal is PsdNotSos and not something else",
+            "                Err(Decline::PsdNotSos)",
+            "                Err(Decline::DualWitnessInvalid)",
+            "crates/axeyum-lean-kernel/src/psatz/rat.rs",
+        ),
+        (
+            # `PsdNotSos` must mean the witness was CHECKED, not offered.
+            "a supplied dual witness is verified rather than believed",
+            "            return if witness.verifies(&difference, vars)? {",
+            "            return if true {",
+            "crates/axeyum-lean-kernel/src/psatz/rat.rs",
+        ),
+        (
+            "a negative LDL pivot is a NotPsd finding",
+            "            if pivot.is_negative() {\n"
+            "                return Err(Decline::NotPsd { pivot: i });\n"
+            "            }",
+            "            if false {\n"
+            "                return Err(Decline::NotPsd { pivot: i });\n"
+            "            }",
+        ),
+        (
+            "a zero pivot beside a nonzero entry is a NotPsd finding",
+            "                if work[i][(i + 1)..n].iter().any(|entry| !entry.is_zero()) {\n"
+            "                    return Err(Decline::NotPsd { pivot: i });\n"
+            "                }",
+            "                if false {\n"
+            "                    return Err(Decline::NotPsd { pivot: i });\n"
+            "                }",
+        ),
+        (
+            # Without the division the emitted term proves `0 <= 4p`, not
+            # `0 <= p`, so the KERNEL is what refuses it.
+            "the denominator-clearing scale is divided back out",
+            "    if scale <= 1 {\n        return h_total;\n    }",
+            "    if true {\n        return h_total;\n    }",
+            "crates/axeyum-lean-kernel/src/psatz/rat.rs",
         ),
     ],
 )

@@ -2,6 +2,7 @@
 resolver = "3"
 members = [
     "crates/axeyum-aig",
+    "crates/axeyum-arith",
     "crates/axeyum-bench",
     "crates/axeyum-bv",
     "crates/axeyum-cas",

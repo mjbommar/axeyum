@@ -96,6 +96,7 @@ mod pow_bridge;
 mod probability;
 pub mod probability_s;
 mod product;
+mod psatz_inequalities;
 mod rank;
 mod rank_bridge;
 mod scaling;
@@ -469,6 +470,30 @@ pub struct RatPrelude {
     pub mul_nonneg: NameId,
     /// `Rat.sq_nonneg : ∀ a, le 0 (a*a)`.
     pub sq_nonneg: NameId,
+
+    // --- proved by the `psatz` PRODUCER, not by a hand-written term ----------
+    //
+    // The three below are the only declarations in this prelude whose proof
+    // nobody wrote: `crate::psatz::rat::prove` searches for a sum-of-squares
+    // certificate and emits the term, and the trusted gate admits it
+    // (ADR-1649). There is no hand-written fallback, so a producer that stops
+    // finding these breaks the build rather than quietly reverting to one.
+    // See `rat_prelude::psatz_inequalities` for the certificates and the
+    // build-order constraint.
+    /// `Rat.two_mul_le_sq_add_sq : ∀ x y, le (add (mul x y) (mul x y)) (add (mul x x) (mul y y))`
+    /// — the two-variable AM–GM, certificate `(x−y)²`, no scale.
+    pub two_mul_le_sq_add_sq: NameId,
+    /// `Rat.mul_add_le_sq_add_sq_three : ∀ a b c, le ((a·b + b·c) + c·a) ((a·a + b·b) + c·c)`
+    /// — the three-variable form. Its certificate is `4p = (2a−b−c)² + 3(b−c)²`
+    /// and the scale 4 is FORCED: the Gram matrix has half-integer
+    /// off-diagonals, so no unit-weight integer-form decomposition exists.
+    pub mul_add_le_sq_add_sq_three: NameId,
+    /// `Rat.four_mul_le_sq_add : ∀ a b, le ((a·b + a·b) + (a·b + a·b)) ((a+b)·(a+b))`
+    /// — the squared-means spelling of the two-variable AM–GM. Same
+    /// mathematics as [`Self::two_mul_le_sq_add_sq`], a different goal SHAPE:
+    /// the right side is a product of sums, so the producer's parse has to
+    /// distribute before a Gram matrix exists.
+    pub four_mul_le_sq_add: NameId,
 
     // --- beyond the ring interface -------------------------------------------
     /// `Rat.le_total : ∀ a b, Or (le a b) (le b a)`.
@@ -3319,6 +3344,9 @@ fn intern_names(kernel: &mut Kernel, int: IntPrelude) -> RatPrelude {
         left_distrib: child(kernel, "left_distrib"),
         mul_nonneg: child(kernel, "mul_nonneg"),
         sq_nonneg: child(kernel, "sq_nonneg"),
+        two_mul_le_sq_add_sq: child(kernel, "two_mul_le_sq_add_sq"),
+        mul_add_le_sq_add_sq_three: child(kernel, "mul_add_le_sq_add_sq_three"),
+        four_mul_le_sq_add: child(kernel, "four_mul_le_sq_add"),
         le_total: child(kernel, "le_total"),
         lt_of_not_le: child(kernel, "lt_of_not_le"),
         le_antisymm: child(kernel, "le_antisymm"),
@@ -3864,6 +3892,12 @@ pub fn build_rat_prelude(kernel: &mut Kernel) -> Result<RatPrelude, KernelError>
         vector_space_instance::declare_rat_vector_space(d.kernel(), &prelude)?;
         binomial_s::declare_binomial_s_all(&mut d, &prelude)?;
         binomial_rat::declare_binomial_rat_all(&mut d, &prelude)?;
+        // LAST, and not by preference: `psatz::rat` reads twelve `RatPrelude`
+        // order/ring theorems and calls `ring::rat::prove_eq`, which reads nine
+        // more. Every one of them must already be DECLARED, not merely
+        // interned, or the emitted term names a constant the environment does
+        // not have. See `psatz_inequalities`' module docs.
+        psatz_inequalities::declare_psatz_inequalities(&mut d, prelude)?;
         Ok(())
     })();
     match built {

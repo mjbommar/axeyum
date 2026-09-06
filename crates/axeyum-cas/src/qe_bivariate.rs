@@ -1,6 +1,7 @@
 //! One **bivariate projection step**: eliminate `y` from
 //! `∃y. ⋀ᵢ pᵢ(x, y) ▷ᵢ 0` and return a quantifier-free description of the
-//! `x`-line, cell by cell, with a certificate.
+//! `x`-line — as cells, and as a **union of intervals with algebraic
+//! endpoints** — with a certificate.
 //!
 //! # The method, and why one sample per cell suffices
 //!
@@ -13,8 +14,7 @@
 //!   `res_y(r, ∂r/∂y)`, which is the true discriminant times `lc_y(r)`. That
 //!   extra factor is already in the set, so using the undivided resultant only
 //!   *refines* the decomposition, never coarsens it;
-//! - the **resultant** `res_y(r, s)` of every pair of reducta coming from two
-//!   different atoms;
+//! - the **resultant** `res_y(r, s)` of every pair of distinct reducta;
 //! - the `y`-free part of every atom, which is a condition on `x` alone.
 //!
 //! Let `C` be a cell of the `x`-line on which every one of those polynomials
@@ -36,6 +36,21 @@
 //! Point cells need no delineability argument at all: a point cell *is* a
 //! single `x₀`, and we decide the fibre there exactly.
 //!
+//! ## A reductum with a repeated `y`-factor
+//!
+//! `res_y(r, ∂r/∂y)` vanishes **identically** exactly when `r` has a repeated
+//! factor in `y` — `(y − x)²` is the smallest example. Such an `r` is not
+//! degenerate; its *branches* are perfectly well behaved, there are simply
+//! fewer of them than `deg_y r` suggests. So when the discriminant vanishes
+//! identically the square-free part of `r` in `y` is formed (by a
+//! pseudo-remainder gcd over `ℚ[x]`, exact and in `BigRational`, see
+//! `y_squarefree_part`) and *its* discriminant is used instead: distinct
+//! branches of `r` collide exactly where that one vanishes. A square-free part
+//! of `y`-degree at most one describes a single branch, which cannot collide
+//! with itself, and contributes nothing. The pseudo-division leaves the result
+//! multiplied by some `c(x) ∈ ℚ[x]`; that only adds `c`'s roots as extra cut
+//! points, which **refines** the decomposition and is therefore sound.
+//!
 //! # Which hypothesis the degree bound guarantees
 //!
 //! Collins' theorem needs the projection set to be **exhaustive**: every
@@ -50,20 +65,80 @@
 //! larger degree is refused by name rather than attempted — see
 //! [`Fault::DegreeBoundExceeded`].
 //!
-//! # What this step cannot do
+//! # Irrational cell boundaries
 //!
-//! - **An irrational cell boundary.** A point cell sits at a root of a
-//!   projection polynomial; deciding the fibre there means substituting that
-//!   root for `x`, which turns the coefficients into elements of `ℚ(α)`. This
-//!   slice has no `ℚ(α)` arithmetic, so an irrational projection root is a
-//!   decline ([`Fault::IrrationalCellBoundary`]), not a guess. Every open cell
-//!   is unaffected: its sample is rational by construction.
-//! - **A degenerate projection.** If a resultant vanishes identically, two
-//!   atoms share a factor of positive `y`-degree and the delineability argument
-//!   above does not apply. That is refused
+//! A projection root that is not rational is **no longer a decline**. Its point
+//! cell is decided by substituting `x = α` into the atoms, which turns their
+//! `y`-coefficients into elements of `K = ℚ(α)`, and deciding the resulting
+//! univariate problem *over `K`* — Sturm chains, real-root isolation and sign
+//! determination all carried out with exact `ℚ(α)` arithmetic in
+//! [`crate::qe::fibre`]. The certificate for such a cell records `α` (a
+//! square-free divisor of the projection's cut polynomial, plus the isolating
+//! bracket), the substituted `K`-polynomials, and the fibre's own witness; its
+//! checker re-substitutes, re-derives every sign at `α` by its own bracket
+//! refinement, and re-checks every relation.
+//!
+//! # The quantifier-free formula
+//!
+//! [`eliminate_y_to_formula`] turns the cell list into what a caller actually
+//! wants: a disjunction of `x`-conditions with algebraic endpoints
+//! ([`XInterval`]), adjacent true cells merged into one interval. Its
+//! certificate re-derives the cell list and then checks the merge four ways —
+//! every endpoint is a projection root, the intervals ascend and are disjoint,
+//! the cells they cover are **exactly** the true cells, and no two of them
+//! could have been merged further.
+//!
+//! # What is decided now, and what is not
+//!
+//! **Decided.** One projection step of `∃y. ⋀ᵢ pᵢ(x, y) ▷ᵢ 0` at total degree
+//! at most [`MAX_TOTAL_DEGREE`], over **any** cell of the resulting `x`-line:
+//! open cells at rational samples through the ℚ engine, point cells at rational
+//! cut points likewise, and point cells at **irrational** cut points through
+//! `ℚ(α)`. Both are certificate-carrying, and the output is either the cell
+//! list ([`eliminate_y`]) or a quantifier-free union of intervals
+//! ([`eliminate_y_to_formula`]) whose endpoints may be algebraic. An atom with
+//! a repeated factor in `y` is handled rather than refused.
+//!
+//! **Not decided.** More than two variables — there is no lifting phase, so a
+//! cell of this line cannot be lifted into a cell of the plane and projected
+//! again. Any quantifier alternation: `∃x∀y` and `∀x∃y` have no representation
+//! here, and the merged interval list is a description of one free variable's
+//! truth set, not an input the module can quantify over again. Two atoms
+//! sharing a factor of positive `y`-degree, which is still
+//! [`Fault::DegenerateProjection`]. And nothing transcendental.
+//!
+//! # What this step still cannot do
+//!
+//! - **A degenerate projection.** If a pairwise resultant vanishes identically,
+//!   two atoms share a factor of positive `y`-degree and the delineability
+//!   argument above does not apply. That is refused
 //!   ([`Fault::DegenerateProjection`]), not worked around.
-//! - **Three variables, or a second quantifier.** There is no lifting phase and
-//!   no cell adjacency structure, so this is a projection step, not a CAD.
+//! - **Three variables, or a second quantifier.** There is a cell adjacency
+//!   structure now, but only along one line; there is no lifting phase, so this
+//!   is still a projection step and not a CAD.
+//!
+//! # Cost profile — ADVISORY
+//!
+//! Measured 2026-09-05, 3 repeats of a prebuilt `--release` lib-test binary at
+//! load average 14–17 on a shared box; spread under 10% across repeats.
+//! **Advisory only** — do not ratchet on these. Each row is one named test, and
+//! every test runs the producer *and* a full independent `verify`.
+//!
+//! | shape | cost |
+//! |---|---|
+//! | degree 2, rational boundaries (`x² + y² < 1`) | under 1 ms |
+//! | degree 4, rational boundaries (`x²y² − 1 < 0 ∧ y > 0`) | under 1 ms |
+//! | degree 2, **irrational** boundaries (`x² + y² = 2 ∧ y > 0`), two point cells over `ℚ(√2)` | 42 ms |
+//! | degree 4 total, one point cell over `ℚ(∛2)` (`(y − x)² ≤ 0 ∧ x³ = 2`) | 57 ms |
+//! | degree 3 field, `y` algebraic **over** `K` (`y² = x ∧ x³ = 2`) | 90 ms |
+//!
+//! An irrational boundary costs roughly **60× a rational one at the same
+//! degree**. The multiplier is not the cell count and not the field degree in
+//! itself: it is that every coefficient comparison inside a Sturm chain over
+//! `K` is a sign at `α` rather than a sign of a rational, and every
+//! `K`-remainder needs an inverse modulo the modulus. The `ℚ(√2)` row carries
+//! *two* algebraic cells and still costs less than the two `ℚ(∛2)` rows, whose
+//! fibre roots are not elements of `K`.
 
 use std::collections::BTreeMap;
 
@@ -72,15 +147,28 @@ use num_bigint::BigInt;
 use num_rational::BigRational;
 use num_traits::{One, Zero};
 
-use super::{Atom, Decision, ExistsFormula, Relation, big, big_poly, decide_exists};
+use super::{
+    Atom, Decision, ExistsFormula, Relation, SamplePoint, big, big_poly,
+    compare_sample_to_rational, decide_exists, fibre, open_cell_samples, rational_of_big,
+};
 
 /// The largest total degree this step accepts in any atom. See the module
 /// documentation for what the bound buys.
 pub const MAX_TOTAL_DEGREE: usize = 4;
 
+/// How many pseudo-remainder steps [`y_squarefree_part`] will take before
+/// declining. The `y`-degree drops at every step, so [`MAX_TOTAL_DEGREE`]
+/// already bounds it; this is the constant that makes the loop obviously
+/// finite.
+const MAX_PSEUDO_STEPS: usize = 64;
+
 /// A bivariate polynomial in `x` and `y`: `poly[j]` is the coefficient of `yʲ`,
 /// itself an LSB-first polynomial in `x` over ℚ.
 pub type BiPoly = Vec<Vec<Rational>>;
+
+/// The same shape over [`num_rational::BigRational`], used where the exact
+/// pseudo-division would otherwise overflow `i128`.
+type BigBiPoly = Vec<Vec<BigRational>>;
 
 /// One bivariate atom `poly(x, y) ▷ 0`.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -139,6 +227,15 @@ pub enum Fault {
         /// Polynomials re-derived from the atoms.
         recomputed: usize,
     },
+    /// The recomputed cut polynomial — the square-free part of the projection
+    /// set's product, which defines every algebraic cut point — is not the
+    /// recorded one.
+    CutMismatch {
+        /// The degree recorded.
+        recorded: usize,
+        /// The degree re-derived.
+        recomputed: usize,
+    },
     /// The recorded cut points are not the real roots of the projection set.
     RootsMismatch {
         /// Roots the certificate records.
@@ -148,12 +245,6 @@ pub enum Fault {
     },
     /// A recorded cut point is not the re-derived one at that position.
     RootValueMismatch {
-        /// Which cut point.
-        index: usize,
-    },
-    /// A projection root is irrational, so its point cell cannot be decided
-    /// without arithmetic in `ℚ(α)`.
-    IrrationalCellBoundary {
         /// Which cut point.
         index: usize,
     },
@@ -170,13 +261,31 @@ pub enum Fault {
         /// The offending cell.
         cell: usize,
     },
-    /// A cell's univariate certificate is not about the substituted atoms, so
-    /// it decides some other formula.
+    /// A cell's fibre certificate is of the wrong kind for its sample: a
+    /// rational sample needs the ℚ route and an algebraic one the `ℚ(α)` route.
+    FibreKindMismatch {
+        /// The offending cell.
+        cell: usize,
+    },
+    /// An algebraic cell's fibre certificate names a different bracket than the
+    /// cut point it is supposed to be about, so it speaks about another `α`.
+    FibreBracketMismatch {
+        /// The offending cell.
+        cell: usize,
+    },
+    /// An algebraic cell's fibre modulus does not divide the cut polynomial, so
+    /// the `α` it presents need not be a projection root at all.
+    ModulusNotADivisor {
+        /// The offending cell.
+        cell: usize,
+    },
+    /// A cell's fibre certificate is not about the substituted atoms, so it
+    /// decides some other formula.
     SubstitutionMismatch {
         /// The offending cell.
         cell: usize,
     },
-    /// A cell's recorded verdict is not the one its univariate certificate
+    /// A cell's recorded verdict is not the one its fibre certificate
     /// establishes.
     CellVerdictMismatch {
         /// The offending cell.
@@ -186,28 +295,91 @@ pub enum Fault {
         /// The verdict the certificate establishes.
         recomputed: bool,
     },
-    /// A cell's univariate certificate was refused.
+    /// A cell's univariate (rational-`x`) certificate was refused.
     Univariate {
         /// The offending cell.
         cell: usize,
         /// The univariate guard that rejected.
         fault: super::Fault,
     },
+    /// A cell's `ℚ(α)` fibre certificate was refused.
+    Fibre {
+        /// The offending cell.
+        cell: usize,
+        /// The fibre guard that rejected.
+        fault: fibre::Fault,
+    },
+    /// An interval endpoint is not one of the projection's cut points, so the
+    /// formula speaks about a boundary the decomposition never produced.
+    IntervalEndpointNotARoot {
+        /// The offending interval.
+        interval: usize,
+    },
+    /// The intervals are not strictly ascending and disjoint.
+    IntervalOrderViolation {
+        /// The offending interval.
+        interval: usize,
+    },
+    /// A cell is covered by the intervals but false there, or true there and
+    /// not covered — the guard that stops a merged interval from swallowing a
+    /// false cell.
+    IntervalCoverageMismatch {
+        /// The offending cell.
+        cell: usize,
+        /// Whether the intervals cover it.
+        covered: bool,
+        /// The cell's verdict.
+        verdict: bool,
+    },
+    /// Two consecutive intervals are contiguous and should have been one, so
+    /// the recorded intervals are not maximal.
+    IntervalsNotMerged {
+        /// The interval that should have been merged with its predecessor.
+        interval: usize,
+    },
     /// Exact arithmetic declined — an `i128` overflow in the Sylvester
-    /// determinant, or a step budget in the private `qe::big` engine. Not a refusal of any claim.
+    /// determinant, or a step budget in the private `qe::big` engine. Not a
+    /// refusal of any claim.
     Declined(String),
 }
 
+/// How one cell's fibre was decided.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum CellFibre {
+    /// The `x`-sample is rational, so the fibre is an ordinary univariate
+    /// problem over ℚ.
+    Rational(Decision),
+    /// The `x`-sample is a real algebraic `α`, so the fibre was decided in
+    /// `ℚ(α)`.
+    Algebraic(Box<fibre::FibreCertificate>),
+}
+
 /// The decision for one `x`-cell: where it was sampled, what the answer is
-/// there, and the univariate certificate that establishes it.
+/// there, and the fibre certificate that establishes it.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CellCertificate {
-    /// The rational `x` at which the fibre was decided.
-    pub sample: BigRational,
+    /// The `x` at which the fibre was decided — rational for an open cell, the
+    /// cut point itself for a point cell.
+    pub sample: SamplePoint,
     /// Whether `∃y. ⋀ᵢ pᵢ(sample, y) ▷ᵢ 0` holds.
     pub verdict: bool,
-    /// The univariate decision in `y` at `sample`, certificate and all.
-    pub decision: Decision,
+    /// The fibre decision in `y` at `sample`, certificate and all.
+    pub fibre: CellFibre,
+}
+
+/// One maximal `x`-interval on which the eliminated formula holds. An endpoint
+/// is `None` for an infinity and otherwise a **cut point**, which may be
+/// algebraic.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct XInterval {
+    /// The left endpoint, or `None` for `−∞`.
+    pub lower: Option<SamplePoint>,
+    /// Whether the left endpoint is included.
+    pub lower_closed: bool,
+    /// The right endpoint, or `None` for `+∞`.
+    pub upper: Option<SamplePoint>,
+    /// Whether the right endpoint is included.
+    pub upper_closed: bool,
 }
 
 /// The result of eliminating `y`: a description of the `x`-line as `2r + 1`
@@ -218,9 +390,13 @@ pub struct ProjectionCertificate {
     pub atoms: Vec<BiAtom>,
     /// The projection set, monic and deduplicated, in a deterministic order.
     pub projection: Vec<Vec<Rational>>,
-    /// The cut points: the distinct real roots of the projection set,
-    /// ascending. All rational — an irrational one is a decline.
-    pub roots: Vec<BigRational>,
+    /// The **cut polynomial**: the square-free part of the projection set's
+    /// product. It is the defining polynomial of every algebraic cut point.
+    pub cut: Vec<BigRational>,
+    /// The cut points: the distinct real roots of the cut polynomial,
+    /// ascending. A rational one is exact; an irrational one is carried as an
+    /// isolating bracket.
+    pub roots: Vec<SamplePoint>,
     /// One entry per cell, interleaved `(−∞, α₀)`, `{α₀}`, `(α₀, α₁)`, …
     pub cells: Vec<CellCertificate>,
 }
@@ -229,16 +405,16 @@ impl ProjectionCertificate {
     /// Re-derive the whole elimination from `atoms` alone.
     ///
     /// Guards, in order: the degree bound still holds; the projection set
-    /// recomputed from the atoms is exactly the recorded one; the cut points
-    /// recomputed by isolating the projection set's roots are exactly the
-    /// recorded ones, and all rational; the cell count matches; every cell's
-    /// recorded `x`-sample really lies in that cell, in order; every cell's
-    /// univariate certificate is about the atoms obtained by substituting that
-    /// sample; and every one of those certificates verifies and establishes the
-    /// recorded verdict.
+    /// recomputed from the atoms is exactly the recorded one; so is the cut
+    /// polynomial; the cut points recomputed by isolating its roots are exactly
+    /// the recorded ones; the cell count matches; every cell's recorded
+    /// `x`-sample really lies in that cell, in order; every cell's fibre
+    /// certificate is of the right kind, is about the atoms obtained by
+    /// substituting that sample, and establishes the recorded verdict.
     ///
     /// Nothing the producer computed is reused — not the projection, not the
-    /// roots, not a single sign.
+    /// roots, not a single sign, and for an algebraic cell not the substituted
+    /// `ℚ(α)` coefficients either.
     ///
     /// # Errors
     ///
@@ -252,7 +428,14 @@ impl ProjectionCertificate {
                 recomputed: recomputed.len(),
             });
         }
-        let roots = projection_roots(&recomputed)?;
+        let cut = projection_cut(&recomputed);
+        if cut != self.cut {
+            return Err(Fault::CutMismatch {
+                recorded: big::degree(&self.cut).unwrap_or(0),
+                recomputed: big::degree(&cut).unwrap_or(0),
+            });
+        }
+        let roots = cut_points(&cut)?;
         if roots.len() != self.roots.len() {
             return Err(Fault::RootsMismatch {
                 recorded: self.roots.len(),
@@ -273,17 +456,7 @@ impl ProjectionCertificate {
         }
         for (cell, entry) in self.cells.iter().enumerate() {
             check_sample_in_cell(&roots, cell, &entry.sample)?;
-            let substituted = substitute_atoms(&self.atoms, &entry.sample);
-            if certificate_atoms(&entry.decision) != Some(substituted) {
-                return Err(Fault::SubstitutionMismatch { cell });
-            }
-            let verdict = entry
-                .decision
-                .verify()
-                .map_err(|fault| Fault::Univariate { cell, fault })?
-                .ok_or_else(|| {
-                    Fault::Declined(format!("cell {cell} carries no univariate claim"))
-                })?;
+            let verdict = self.check_fibre(cell, entry)?;
             if verdict != entry.verdict {
                 return Err(Fault::CellVerdictMismatch {
                     cell,
@@ -295,11 +468,71 @@ impl ProjectionCertificate {
         Ok(())
     }
 
+    /// One cell's fibre certificate: right kind, right formula, own verdict.
+    fn check_fibre(&self, cell: usize, entry: &CellCertificate) -> Result<bool, Fault> {
+        match (&entry.sample, &entry.fibre) {
+            (SamplePoint::Rational(x), CellFibre::Rational(decision)) => {
+                let substituted = substitute_atoms(&self.atoms, x);
+                if certificate_atoms(decision) != Some(substituted) {
+                    return Err(Fault::SubstitutionMismatch { cell });
+                }
+                decision
+                    .verify()
+                    .map_err(|fault| Fault::Univariate { cell, fault })?
+                    .ok_or_else(|| {
+                        Fault::Declined(format!("cell {cell} carries no univariate claim"))
+                    })
+            }
+            (
+                SamplePoint::Algebraic {
+                    lower,
+                    upper,
+                    defining_poly,
+                },
+                CellFibre::Algebraic(certificate),
+            ) => self.check_algebraic_fibre(cell, defining_poly, lower, upper, certificate),
+            _ => Err(Fault::FibreKindMismatch { cell }),
+        }
+    }
+
+    /// The `ℚ(α)` route's extra obligations: the recorded modulus really
+    /// presents *this* cut point, and the substituted atoms are the ones the
+    /// checker itself derives.
+    fn check_algebraic_fibre(
+        &self,
+        cell: usize,
+        defining_poly: &[BigRational],
+        lower: &BigRational,
+        upper: &BigRational,
+        certificate: &fibre::FibreCertificate,
+    ) -> Result<bool, Fault> {
+        if certificate.lower != *lower || certificate.upper != *upper {
+            return Err(Fault::FibreBracketMismatch { cell });
+        }
+        // `modulus | cut` plus "exactly one root of `modulus` in the bracket"
+        // (checked inside `RealField::new`) forces that root to be this very
+        // cut point, because the bracket isolates one root of `cut`.
+        if !divides(&certificate.modulus, defining_poly) {
+            return Err(Fault::ModulusNotADivisor { cell });
+        }
+        let field = fibre::RealField::new(&certificate.modulus, lower, upper)
+            .map_err(|fault| Fault::Fibre { cell, fault })?;
+        let substituted = fibre::substitute(&field, &substitution_atoms(&self.atoms));
+        if certificate.atoms != substituted {
+            return Err(Fault::SubstitutionMismatch { cell });
+        }
+        certificate
+            .verify()
+            .map_err(|fault| Fault::Fibre { cell, fault })
+    }
+
     /// The quantifier-free description, as a union of `x`-intervals and points.
     ///
-    /// Adjacent true cells are merged, so `{0} ∪ (0, ∞)` prints as `[0, ∞)`.
-    /// The empty set prints as `∅`. Call [`ProjectionCertificate::verify`]
-    /// first: this reads the recorded verdicts.
+    /// Adjacent true cells are merged, so `{0} ∪ (0, ∞)` prints as `[0, ∞)`. An
+    /// irrational cut point prints as `α1`, `α2`, … in ascending order; see
+    /// [`ProjectionCertificate::legend`] for what those name. The empty set
+    /// prints as `∅`. Call [`ProjectionCertificate::verify`] first: this reads
+    /// the recorded verdicts.
     #[must_use]
     pub fn describe(&self) -> String {
         let runs = self.true_runs();
@@ -311,6 +544,40 @@ impl ProjectionCertificate {
             .map(|(start, end)| self.format_run(*start, *end))
             .collect();
         format!("x ∈ {}", pieces.join(" ∪ "))
+    }
+
+    /// What each `αk` in [`ProjectionCertificate::describe`] names: its
+    /// defining polynomial and its isolating bracket. Rational cut points do
+    /// not appear, because they print as themselves.
+    #[must_use]
+    pub fn legend(&self) -> Vec<String> {
+        let mut out = Vec::new();
+        for (index, root) in self.roots.iter().enumerate() {
+            if let SamplePoint::Algebraic {
+                defining_poly,
+                lower,
+                upper,
+            } = root
+            {
+                out.push(format!(
+                    "α{} = the root of {} in ({}, {}]",
+                    index + 1,
+                    format_poly(defining_poly),
+                    format_rational(lower),
+                    format_rational(upper)
+                ));
+            }
+        }
+        out
+    }
+
+    /// The merged intervals: one per maximal run of true cells.
+    #[must_use]
+    pub fn intervals(&self) -> Vec<XInterval> {
+        self.true_runs()
+            .into_iter()
+            .map(|(start, end)| self.interval_of_run(start, end))
+            .collect()
     }
 
     /// Maximal runs of consecutive cells whose verdict is `true`.
@@ -333,6 +600,30 @@ impl ProjectionCertificate {
         runs
     }
 
+    /// The interval a run of cells `start..=end` denotes.
+    fn interval_of_run(&self, start: usize, end: usize) -> XInterval {
+        let (lower, lower_closed) = if start == 0 {
+            (None, false)
+        } else if start.is_multiple_of(2) {
+            (Some(self.roots[start / 2 - 1].clone()), false)
+        } else {
+            (Some(self.roots[start / 2].clone()), true)
+        };
+        let (upper, upper_closed) = if end == 2 * self.roots.len() {
+            (None, false)
+        } else if end.is_multiple_of(2) {
+            (Some(self.roots[end / 2].clone()), false)
+        } else {
+            (Some(self.roots[end / 2].clone()), true)
+        };
+        XInterval {
+            lower,
+            lower_closed,
+            upper,
+            upper_closed,
+        }
+    }
+
     /// One run of true cells as an interval or a point.
     fn format_run(&self, start: usize, end: usize) -> String {
         let last = self.roots.len();
@@ -341,20 +632,20 @@ impl ProjectionCertificate {
             if k == 0 {
                 (true, "-∞".to_string())
             } else {
-                (true, format_rational(&self.roots[k - 1]))
+                (true, self.root_name(k - 1))
             }
         } else {
-            (false, format_rational(&self.roots[start / 2]))
+            (false, self.root_name(start / 2))
         };
         let (open_right, right) = if end.is_multiple_of(2) {
             let k = end / 2;
             if k == last {
                 (true, "∞".to_string())
             } else {
-                (true, format_rational(&self.roots[k]))
+                (true, self.root_name(k))
             }
         } else {
-            (false, format_rational(&self.roots[end / 2]))
+            (false, self.root_name(end / 2))
         };
         if !open_left && !open_right && left == right {
             return format!("{{{left}}}");
@@ -363,6 +654,151 @@ impl ProjectionCertificate {
         let rb = if open_right { ')' } else { ']' };
         format!("{lb}{left}, {right}{rb}")
     }
+
+    /// A cut point's printed name: the number itself when rational, `αk`
+    /// otherwise.
+    fn root_name(&self, index: usize) -> String {
+        match &self.roots[index] {
+            SamplePoint::Rational(value) => format_rational(value),
+            SamplePoint::Algebraic { .. } => format!("α{}", index + 1),
+        }
+    }
+}
+
+/// The quantifier-free formula the elimination produces, with the projection it
+/// came from.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct FormulaCertificate {
+    /// The cell decomposition and its certificate.
+    pub projection: ProjectionCertificate,
+    /// The merged intervals, ascending and pairwise separated.
+    pub intervals: Vec<XInterval>,
+}
+
+impl FormulaCertificate {
+    /// Re-derive the cell list, then check the merge.
+    ///
+    /// After [`ProjectionCertificate::verify`] has re-derived every cell and
+    /// every verdict, four independent guards check the intervals:
+    ///
+    /// 1. every finite endpoint is one of the recomputed cut points
+    ///    ([`Fault::IntervalEndpointNotARoot`]);
+    /// 2. the intervals ascend and do not overlap
+    ///    ([`Fault::IntervalOrderViolation`]);
+    /// 3. the cells they cover are **exactly** the true cells
+    ///    ([`Fault::IntervalCoverageMismatch`]) — this is the guard a merged
+    ///    interval that swallows a false cell runs into;
+    /// 4. no two consecutive intervals are contiguous, so the merge is maximal
+    ///    ([`Fault::IntervalsNotMerged`]).
+    ///
+    /// # Errors
+    ///
+    /// The [`Fault`] naming the guard that rejected.
+    pub fn verify(&self) -> Result<(), Fault> {
+        self.projection.verify()?;
+        let ranges = self.cell_ranges()?;
+        check_ranges_ascend(&ranges)?;
+        check_coverage(&ranges, &self.projection)?;
+        check_merged(&ranges)
+    }
+
+    /// The interval list as cell-index ranges, matching every endpoint to a
+    /// recomputed cut point.
+    fn cell_ranges(&self) -> Result<Vec<(usize, usize)>, Fault> {
+        let roots = &self.projection.roots;
+        let mut ranges = Vec::with_capacity(self.intervals.len());
+        for (index, interval) in self.intervals.iter().enumerate() {
+            let start = match &interval.lower {
+                None => 0,
+                Some(point) => {
+                    let k = root_index(roots, point)
+                        .ok_or(Fault::IntervalEndpointNotARoot { interval: index })?;
+                    if interval.lower_closed {
+                        2 * k + 1
+                    } else {
+                        2 * k + 2
+                    }
+                }
+            };
+            let end = match &interval.upper {
+                None => 2 * roots.len(),
+                Some(point) => {
+                    let k = root_index(roots, point)
+                        .ok_or(Fault::IntervalEndpointNotARoot { interval: index })?;
+                    if interval.upper_closed {
+                        2 * k + 1
+                    } else {
+                        2 * k
+                    }
+                }
+            };
+            if start > end || end >= self.projection.cells.len() {
+                return Err(Fault::IntervalOrderViolation { interval: index });
+            }
+            ranges.push((start, end));
+        }
+        Ok(ranges)
+    }
+
+    /// The description string; see [`ProjectionCertificate::describe`].
+    #[must_use]
+    pub fn describe(&self) -> String {
+        self.projection.describe()
+    }
+
+    /// The legend; see [`ProjectionCertificate::legend`].
+    #[must_use]
+    pub fn legend(&self) -> Vec<String> {
+        self.projection.legend()
+    }
+}
+
+/// The ranges are strictly ascending and pairwise disjoint.
+fn check_ranges_ascend(ranges: &[(usize, usize)]) -> Result<(), Fault> {
+    for index in 1..ranges.len() {
+        if ranges[index].0 <= ranges[index - 1].1 {
+            return Err(Fault::IntervalOrderViolation { interval: index });
+        }
+    }
+    Ok(())
+}
+
+/// The covered cells are exactly the true ones.
+fn check_coverage(
+    ranges: &[(usize, usize)],
+    projection: &ProjectionCertificate,
+) -> Result<(), Fault> {
+    let mut covered = vec![false; projection.cells.len()];
+    for (start, end) in ranges {
+        for flag in &mut covered[*start..=*end] {
+            *flag = true;
+        }
+    }
+    for (cell, entry) in projection.cells.iter().enumerate() {
+        if covered[cell] != entry.verdict {
+            return Err(Fault::IntervalCoverageMismatch {
+                cell,
+                covered: covered[cell],
+                verdict: entry.verdict,
+            });
+        }
+    }
+    Ok(())
+}
+
+/// No two consecutive intervals are contiguous, so the merge was maximal.
+fn check_merged(ranges: &[(usize, usize)]) -> Result<(), Fault> {
+    for index in 1..ranges.len() {
+        if ranges[index].0 == ranges[index - 1].1 + 1 {
+            return Err(Fault::IntervalsNotMerged { interval: index });
+        }
+    }
+    Ok(())
+}
+
+/// The position of `point` in the cut-point list, by exact structural equality.
+fn root_index(roots: &[SamplePoint], point: &SamplePoint) -> Option<usize> {
+    roots.iter().position(|root| root == point)
 }
 
 /// Eliminate `y` from `∃y. ⋀ᵢ pᵢ(x, y) ▷ᵢ 0`.
@@ -393,31 +829,86 @@ impl ProjectionCertificate {
 pub fn eliminate_y(formula: &ExistsYFormula) -> Result<ProjectionCertificate, Fault> {
     check_degree_bound(&formula.atoms)?;
     let projection = projection_set(&formula.atoms)?;
-    let roots = projection_roots(&projection)?;
-    let samples = cell_samples(&roots);
+    let cut = projection_cut(&projection);
+    let isolated = isolate_cut(&cut)?;
+    let roots: Vec<SamplePoint> = isolated
+        .iter()
+        .map(|root| SamplePoint::from_isolated(&cut, root))
+        .collect();
+    let open_samples = open_cell_samples(&cut, &isolated).map_err(Fault::Declined)?;
 
-    let mut cells: Vec<CellCertificate> = Vec::with_capacity(samples.len());
-    for (cell, sample) in samples.into_iter().enumerate() {
-        let atoms = substitute_atoms(&formula.atoms, &sample);
-        let decision = decide_exists(&ExistsFormula::new(atoms));
-        let verdict = decision
-            .verify()
-            .map_err(|fault| Fault::Univariate { cell, fault })?
-            .ok_or_else(|| {
-                Fault::Declined(format!("the fibre over cell {cell} could not be decided"))
-            })?;
-        cells.push(CellCertificate {
-            sample,
-            verdict,
-            decision,
-        });
+    let cells = 2 * roots.len() + 1;
+    let mut entries: Vec<CellCertificate> = Vec::with_capacity(cells);
+    for cell in 0..cells {
+        let sample = if cell.is_multiple_of(2) {
+            SamplePoint::Rational(open_samples[cell / 2].clone())
+        } else {
+            roots[cell / 2].clone()
+        };
+        entries.push(decide_cell(&formula.atoms, cell, sample)?);
     }
     Ok(ProjectionCertificate {
         atoms: formula.atoms.clone(),
         projection,
+        cut,
         roots,
-        cells,
+        cells: entries,
     })
+}
+
+/// Eliminate `y` and merge the true cells into a quantifier-free formula.
+///
+/// # Errors
+///
+/// The [`Fault`] that stopped [`eliminate_y`].
+pub fn eliminate_y_to_formula(formula: &ExistsYFormula) -> Result<FormulaCertificate, Fault> {
+    let projection = eliminate_y(formula)?;
+    let intervals = projection.intervals();
+    Ok(FormulaCertificate {
+        projection,
+        intervals,
+    })
+}
+
+/// Decide one cell's fibre, by the ℚ route at a rational sample and the `ℚ(α)`
+/// route at an algebraic one.
+fn decide_cell(
+    atoms: &[BiAtom],
+    cell: usize,
+    sample: SamplePoint,
+) -> Result<CellCertificate, Fault> {
+    match &sample {
+        SamplePoint::Rational(x) => {
+            let substituted = substitute_atoms(atoms, x);
+            let decision = decide_exists(&ExistsFormula::new(substituted));
+            let verdict = decision
+                .verify()
+                .map_err(|fault| Fault::Univariate { cell, fault })?
+                .ok_or_else(|| {
+                    Fault::Declined(format!("the fibre over cell {cell} could not be decided"))
+                })?;
+            Ok(CellCertificate {
+                sample,
+                verdict,
+                fibre: CellFibre::Rational(decision),
+            })
+        }
+        SamplePoint::Algebraic {
+            defining_poly,
+            lower,
+            upper,
+        } => {
+            let certificate =
+                fibre::decide_fibre(defining_poly, lower, upper, &substitution_atoms(atoms))
+                    .map_err(|fault| Fault::Fibre { cell, fault })?;
+            let verdict = certificate.verdict();
+            Ok(CellCertificate {
+                sample,
+                verdict,
+                fibre: CellFibre::Algebraic(Box::new(certificate)),
+            })
+        }
+    }
 }
 
 // ============================================================================
@@ -561,45 +1052,82 @@ fn projection_key(p: &[Rational]) -> Vec<(i128, i128)> {
 /// determinant.
 fn projection_set(atoms: &[BiAtom]) -> Result<Vec<Vec<Rational>>, Fault> {
     let mut set: BTreeMap<Vec<(i128, i128)>, Vec<Rational>> = BTreeMap::new();
-    let mut insert = |candidate: &[Rational]| {
-        if let Some(monic) = canonical(candidate) {
-            set.insert(projection_key(&monic), monic);
-        }
-    };
-
     let mut positive_degree: Vec<BiPoly> = Vec::new();
     for atom in atoms {
         for reductum in reducta(&atom.poly) {
             match degree_y(&reductum) {
                 None => {}
-                Some(0) => insert(&reductum[0]),
+                Some(0) => insert_projection(&mut set, &reductum[0]),
                 Some(k) => {
-                    insert(&reductum[k]);
+                    insert_projection(&mut set, &reductum[k]);
                     if k >= 2 {
-                        let derivative = derivative_y(&reductum).ok_or_else(|| {
-                            Fault::Declined("the y-derivative overflowed i128".to_string())
-                        })?;
-                        let discriminant =
-                            resultant_y(&reductum, &derivative).ok_or_else(|| {
-                                Fault::Declined(
-                                    "a discriminant resultant overflowed i128".to_string(),
-                                )
-                            })?;
-                        if poly::rat_degree(&discriminant).is_none() {
-                            return Err(Fault::DegenerateProjection {
-                                what: "the discriminant of an atom vanishes identically",
-                            });
-                        }
-                        insert(&discriminant);
+                        add_discriminant(&mut set, &reductum)?;
                     }
                     positive_degree.push(reductum);
                 }
             }
         }
     }
+    add_pairwise_resultants(&mut set, positive_degree)?;
+    Ok(set.into_values().collect())
+}
 
-    // Pairwise resultants across reducta of *different* atoms. Duplicates are
-    // dropped first: `res_y(p, p)` is identically zero and carries nothing.
+/// Insert a candidate cut polynomial, monic, dropping constants.
+fn insert_projection(set: &mut BTreeMap<Vec<(i128, i128)>, Vec<Rational>>, candidate: &[Rational]) {
+    if let Some(monic) = canonical(candidate) {
+        set.insert(projection_key(&monic), monic);
+    }
+}
+
+/// The discriminant of one reductum, falling back to its `y`-square-free part
+/// when the plain discriminant vanishes identically.
+fn add_discriminant(
+    set: &mut BTreeMap<Vec<(i128, i128)>, Vec<Rational>>,
+    reductum: &BiPoly,
+) -> Result<(), Fault> {
+    let derivative = derivative_y(reductum)
+        .ok_or_else(|| Fault::Declined("the y-derivative overflowed i128".to_string()))?;
+    let discriminant = resultant_y(reductum, &derivative)
+        .ok_or_else(|| Fault::Declined("a discriminant resultant overflowed i128".to_string()))?;
+    if poly::rat_degree(&discriminant).is_some() {
+        insert_projection(set, &discriminant);
+        return Ok(());
+    }
+    // The reductum has a repeated `y`-factor. Its distinct branches collide
+    // exactly where the discriminant of its square-free part vanishes.
+    let squarefree = y_squarefree_part(reductum).ok_or_else(|| {
+        Fault::Declined("the y-square-free part could not be formed exactly".to_string())
+    })?;
+    match degree_y(&squarefree) {
+        None => Err(Fault::DegenerateProjection {
+            what: "an atom's y-square-free part is the zero polynomial",
+        }),
+        // One branch cannot collide with itself, so nothing is needed.
+        Some(0 | 1) => Ok(()),
+        Some(_) => {
+            let derivative = derivative_y(&squarefree).ok_or_else(|| {
+                Fault::Declined("the square-free y-derivative overflowed i128".to_string())
+            })?;
+            let discriminant = resultant_y(&squarefree, &derivative).ok_or_else(|| {
+                Fault::Declined("a square-free discriminant overflowed i128".to_string())
+            })?;
+            if poly::rat_degree(&discriminant).is_none() {
+                return Err(Fault::DegenerateProjection {
+                    what: "the discriminant of an atom's square-free part still vanishes",
+                });
+            }
+            insert_projection(set, &discriminant);
+            Ok(())
+        }
+    }
+}
+
+/// Pairwise resultants across distinct reducta. Duplicates are dropped first:
+/// `res_y(p, p)` is identically zero and carries nothing.
+fn add_pairwise_resultants(
+    set: &mut BTreeMap<Vec<(i128, i128)>, Vec<Rational>>,
+    positive_degree: Vec<BiPoly>,
+) -> Result<(), Fault> {
     let mut seen: BTreeMap<Vec<Vec<(i128, i128)>>, usize> = BTreeMap::new();
     let mut unique: Vec<BiPoly> = Vec::new();
     for reductum in positive_degree {
@@ -618,76 +1146,217 @@ fn projection_set(atoms: &[BiAtom]) -> Result<Vec<Vec<Rational>>, Fault> {
                     what: "a pairwise resultant vanishes identically",
                 });
             }
-            insert(&resultant);
+            insert_projection(set, &resultant);
         }
     }
-    Ok(set.into_values().collect())
+    Ok(())
+}
+
+// ============================================================================
+// The `y`-square-free part, by pseudo-division over ℚ[x].
+// ============================================================================
+
+/// The `BigRational` view of a bivariate polynomial.
+fn big_bipoly(p: &BiPoly) -> BigBiPoly {
+    p.iter().map(|c| big_poly(c)).collect()
+}
+
+/// Back to the `i128` surface, or `None` if a coefficient does not fit.
+fn bipoly_of_big(p: &BigBiPoly) -> Option<BiPoly> {
+    p.iter()
+        .map(|c| c.iter().map(rational_of_big).collect::<Option<Vec<_>>>())
+        .collect()
+}
+
+/// The `y`-degree of a `BigBiPoly`.
+fn bi_degree_y(p: &BigBiPoly) -> Option<usize> {
+    p.iter().rposition(|c| big::degree(c).is_some())
+}
+
+/// `a + b` in `ℚ[x]`.
+fn add_x(a: &[BigRational], b: &[BigRational]) -> Vec<BigRational> {
+    let mut out = vec![BigRational::zero(); a.len().max(b.len())];
+    for (index, coeff) in a.iter().enumerate() {
+        out[index] += coeff;
+    }
+    for (index, coeff) in b.iter().enumerate() {
+        out[index] += coeff;
+    }
+    big::trim(out)
+}
+
+/// `−a` in `ℚ[x]`.
+fn neg_x(a: &[BigRational]) -> Vec<BigRational> {
+    a.iter().map(core::ops::Neg::neg).collect()
+}
+
+/// `a + b`, coefficient by coefficient in `ℚ[x]`.
+fn bi_add(a: &BigBiPoly, b: &BigBiPoly) -> BigBiPoly {
+    let mut out = vec![Vec::new(); a.len().max(b.len())];
+    for (index, coeff) in a.iter().enumerate() {
+        out[index] = add_x(&out[index], coeff);
+    }
+    for (index, coeff) in b.iter().enumerate() {
+        out[index] = add_x(&out[index], coeff);
+    }
+    out
+}
+
+/// `a − b`.
+fn bi_sub(a: &BigBiPoly, b: &BigBiPoly) -> BigBiPoly {
+    bi_add(a, &b.iter().map(|c| neg_x(c)).collect::<BigBiPoly>())
+}
+
+/// `a · c` for a `c ∈ ℚ[x]`.
+fn bi_scale(a: &BigBiPoly, c: &[BigRational]) -> BigBiPoly {
+    a.iter().map(|coeff| big::mul(coeff, c)).collect()
+}
+
+/// `a · yᵏ`.
+fn bi_shift(a: &BigBiPoly, k: usize) -> BigBiPoly {
+    let mut out = vec![Vec::new(); k];
+    out.extend(a.iter().cloned());
+    out
+}
+
+/// `∂a/∂y`.
+fn bi_derivative_y(a: &BigBiPoly) -> BigBiPoly {
+    a.iter()
+        .enumerate()
+        .skip(1)
+        .map(|(k, c)| {
+            let scale = BigRational::from_integer(BigInt::from(k));
+            c.iter().map(|coeff| coeff * &scale).collect()
+        })
+        .collect()
+}
+
+/// Pseudo-division: `lc(b)ᵏ · a = q · b + r` with `deg_y r < deg_y b`, for some
+/// `k`. Only ring operations in `ℚ[x]` are used, so no coefficient inverse is
+/// ever needed and nothing overflows.
+fn bi_pdivmod(a: &BigBiPoly, b: &BigBiPoly) -> Option<(BigBiPoly, BigBiPoly)> {
+    let b_degree = bi_degree_y(b)?;
+    let leading = b[b_degree].clone();
+    let mut remainder = a.clone();
+    let mut quotient: BigBiPoly = Vec::new();
+    let mut steps = 0usize;
+    while let Some(r_degree) = bi_degree_y(&remainder) {
+        if r_degree < b_degree {
+            break;
+        }
+        steps += 1;
+        if steps > MAX_PSEUDO_STEPS {
+            return None;
+        }
+        let factor = remainder[r_degree].clone();
+        let shift = r_degree - b_degree;
+        quotient = bi_add(
+            &bi_scale(&quotient, &leading),
+            &bi_shift(&vec![factor.clone()], shift),
+        );
+        remainder = bi_sub(
+            &bi_scale(&remainder, &leading),
+            &bi_shift(&bi_scale(b, &factor), shift),
+        );
+    }
+    Some((quotient, remainder))
+}
+
+/// `gcd_y(a, b)` over `ℚ(x)`, up to a factor in `ℚ[x]`, by a pseudo-remainder
+/// sequence.
+fn bi_pgcd(a: &BigBiPoly, b: &BigBiPoly) -> Option<BigBiPoly> {
+    let mut left = a.clone();
+    let mut right = b.clone();
+    let mut steps = 0usize;
+    while bi_degree_y(&right).is_some() {
+        steps += 1;
+        if steps > MAX_PSEUDO_STEPS {
+            return None;
+        }
+        let (_, remainder) = bi_pdivmod(&left, &right)?;
+        left = right;
+        right = remainder;
+    }
+    Some(left)
+}
+
+/// The `y`-square-free part of `p`, up to a nonzero factor in `ℚ[x]`.
+///
+/// `p / gcd_y(p, ∂p/∂y)`, computed by pseudo-division so that no coefficient
+/// inverse in `ℚ(x)` is needed. `None` when the division is not exact or when a
+/// coefficient of the result does not fit `i128`, in which case the caller
+/// declines rather than guessing.
+fn y_squarefree_part(p: &BiPoly) -> Option<BiPoly> {
+    let lifted = big_bipoly(p);
+    let degree = bi_degree_y(&lifted)?;
+    if degree <= 1 {
+        return Some(p.clone());
+    }
+    let derivative = bi_derivative_y(&lifted);
+    let common = bi_pgcd(&lifted, &derivative)?;
+    if bi_degree_y(&common)? == 0 {
+        return Some(p.clone());
+    }
+    let (quotient, remainder) = bi_pdivmod(&lifted, &common)?;
+    if bi_degree_y(&remainder).is_some() {
+        return None;
+    }
+    bipoly_of_big(&quotient)
 }
 
 // ============================================================================
 // Cut points and cell samples.
 // ============================================================================
 
-/// The distinct real roots of the whole projection set, ascending. All of them
-/// must be rational; an irrational one is a decline, because its point cell
-/// would need `ℚ(α)` arithmetic.
-///
-/// # Errors
-///
-/// [`Fault::IrrationalCellBoundary`] or [`Fault::Declined`].
-fn projection_roots(projection: &[Vec<Rational>]) -> Result<Vec<BigRational>, Fault> {
+/// The **cut polynomial**: the square-free part of the projection set's
+/// product. Empty when the projection set cuts nothing.
+fn projection_cut(projection: &[Vec<Rational>]) -> Vec<BigRational> {
     let mut product = vec![BigRational::one()];
     for candidate in projection {
         product = big::mul(&product, &big_poly(candidate));
     }
     if big::degree(&product).is_none_or(|d| d == 0) {
-        return Ok(Vec::new());
+        return Vec::new();
     }
-    let cut = big::squarefree_part(&product)
-        .ok_or_else(|| Fault::Declined("the projection product is zero".to_string()))?;
-    let isolated = big::isolate(&cut).ok_or_else(|| {
-        Fault::Declined("root isolation ran out of its bisection budget".to_string())
-    })?;
-    let mut roots = Vec::with_capacity(isolated.len());
-    for (index, root) in isolated.iter().enumerate() {
-        if !root.exact {
-            return Err(Fault::IrrationalCellBoundary { index });
-        }
-        roots.push(root.hi.clone());
-    }
-    Ok(roots)
+    big::squarefree_part(&product).unwrap_or_default()
 }
 
-/// One rational `x` per cell, interleaved: below the first cut point, the cut
-/// point itself, the midpoint of each gap, …, above the last.
-fn cell_samples(roots: &[BigRational]) -> Vec<BigRational> {
-    if roots.is_empty() {
-        return vec![BigRational::zero()];
+/// The isolated distinct real roots of the cut polynomial, ascending.
+///
+/// # Errors
+///
+/// [`Fault::Declined`] when the bisection budget runs out.
+fn isolate_cut(cut: &[BigRational]) -> Result<Vec<big::IsolatedRoot>, Fault> {
+    if big::degree(cut).is_none_or(|d| d == 0) {
+        return Ok(Vec::new());
     }
-    let two = BigRational::from_integer(BigInt::from(2));
-    let mut samples = Vec::with_capacity(2 * roots.len() + 1);
-    samples.push(&roots[0] - BigRational::one());
-    for (index, root) in roots.iter().enumerate() {
-        samples.push(root.clone());
-        let next = match roots.get(index + 1) {
-            Some(next) => (root + next) / &two,
-            None => root + BigRational::one(),
-        };
-        samples.push(next);
-    }
-    samples
+    big::isolate(cut).ok_or_else(|| {
+        Fault::Declined("root isolation ran out of its bisection budget".to_string())
+    })
+}
+
+/// The cut points as sample points: rational when recognised, an isolating
+/// bracket otherwise.
+fn cut_points(cut: &[BigRational]) -> Result<Vec<SamplePoint>, Fault> {
+    Ok(isolate_cut(cut)?
+        .iter()
+        .map(|root| SamplePoint::from_isolated(cut, root))
+        .collect())
 }
 
 /// The recorded sample of cell `cell` really lies in that cell.
 fn check_sample_in_cell(
-    roots: &[BigRational],
+    roots: &[SamplePoint],
     cell: usize,
-    sample: &BigRational,
+    sample: &SamplePoint,
 ) -> Result<(), Fault> {
     if cell.is_multiple_of(2) {
+        let SamplePoint::Rational(value) = sample else {
+            return Err(Fault::CellSampleOutOfOrder { cell });
+        };
         let k = cell / 2;
-        let above_previous = k == 0 || *sample > roots[k - 1];
-        let below_next = k == roots.len() || *sample < roots[k];
+        let above_previous = k == 0 || root_is_below(&roots[k - 1], value)?;
+        let below_next = k == roots.len() || root_is_above(&roots[k], value)?;
         if above_previous && below_next {
             return Ok(());
         }
@@ -697,12 +1366,33 @@ fn check_sample_in_cell(
     Err(Fault::CellSampleOutOfOrder { cell })
 }
 
+/// The cut point is strictly below the rational.
+fn root_is_below(root: &SamplePoint, value: &BigRational) -> Result<bool, Fault> {
+    let ordering = compare_sample_to_rational(root, value)
+        .ok_or_else(|| Fault::Declined("a cut-point comparison declined".to_string()))?;
+    Ok(ordering == core::cmp::Ordering::Less)
+}
+
+/// The cut point is strictly above the rational.
+fn root_is_above(root: &SamplePoint, value: &BigRational) -> Result<bool, Fault> {
+    let ordering = compare_sample_to_rational(root, value)
+        .ok_or_else(|| Fault::Declined("a cut-point comparison declined".to_string()))?;
+    Ok(ordering == core::cmp::Ordering::Greater)
+}
+
+/// `divisor` divides `dividend` exactly over ℚ, and is not a constant.
+fn divides(divisor: &[BigRational], dividend: &[BigRational]) -> bool {
+    if big::degree(divisor).is_none_or(|d| d == 0) {
+        return false;
+    }
+    big::rem(dividend, divisor).is_some_and(|r| big::degree(&r).is_none())
+}
+
 // ============================================================================
 // Substitution.
 // ============================================================================
 
-/// `pᵢ(x₀, y)` for every atom: each `y`-coefficient, a polynomial in `x`, is
-/// evaluated at the rational `x₀` in `BigRational`.
+/// `pᵢ(x₀, y)` for every atom at a **rational** `x₀`.
 fn substitute_atoms(atoms: &[BiAtom], x: &BigRational) -> Vec<Atom> {
     atoms
         .iter()
@@ -713,6 +1403,17 @@ fn substitute_atoms(atoms: &[BiAtom], x: &BigRational) -> Vec<Atom> {
                 .map(|coefficient| big::eval(&big_poly(coefficient), x))
                 .collect();
             Atom::new(big::trim(coefficients), atom.relation)
+        })
+        .collect()
+}
+
+/// The atoms as the `ℚ(α)` fibre engine wants them.
+fn substitution_atoms(atoms: &[BiAtom]) -> Vec<fibre::SubstitutionAtom> {
+    atoms
+        .iter()
+        .map(|atom| fibre::SubstitutionAtom {
+            coefficients: atom.poly.iter().map(|c| big_poly(c)).collect(),
+            relation: atom.relation,
         })
         .collect()
 }
@@ -736,12 +1437,36 @@ fn format_rational(value: &BigRational) -> String {
     }
 }
 
+/// A polynomial as `c0 + c1*x + …`, terms with zero coefficients omitted.
+fn format_poly(p: &[BigRational]) -> String {
+    let mut terms: Vec<String> = Vec::new();
+    for (power, coefficient) in p.iter().enumerate() {
+        if coefficient.is_zero() {
+            continue;
+        }
+        let value = format_rational(coefficient);
+        terms.push(match power {
+            0 => value,
+            1 => format!("{value}*x"),
+            _ => format!("{value}*x^{power}"),
+        });
+    }
+    if terms.is_empty() {
+        return "0".to_string();
+    }
+    terms.join(" + ")
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     fn r(n: i128) -> Rational {
         Rational::integer(n)
+    }
+
+    fn q(n: i64) -> BigRational {
+        BigRational::from_integer(BigInt::from(n))
     }
 
     /// A bivariate polynomial from `y`-coefficients given as integer `x`-polys.
@@ -763,6 +1488,17 @@ mod tests {
         certificate
     }
 
+    fn formula(atoms: Vec<BiAtom>) -> FormulaCertificate {
+        let certificate = eliminate_y_to_formula(&ExistsYFormula::new(atoms))
+            .expect("the projection must succeed");
+        certificate.verify().expect("the certificate must verify");
+        certificate
+    }
+
+    fn verdicts(certificate: &ProjectionCertificate) -> Vec<bool> {
+        certificate.cells.iter().map(|c| c.verdict).collect()
+    }
+
     // ------------------------------------------------------------- verdicts
 
     #[test]
@@ -773,11 +1509,7 @@ mod tests {
         assert_eq!(certificate.roots.len(), 2, "the cut points are ±1");
         assert_eq!(certificate.cells.len(), 5);
         assert_eq!(
-            certificate
-                .cells
-                .iter()
-                .map(|c| c.verdict)
-                .collect::<Vec<_>>(),
+            verdicts(&certificate),
             vec![false, false, true, false, false]
         );
     }
@@ -809,7 +1541,10 @@ mod tests {
             atom(&[&[0], &[1]], Relation::Gt),
         ]);
         assert_eq!(certificate.describe(), "x ∈ (0, ∞)");
-        assert_eq!(certificate.roots, vec![BigRational::zero()]);
+        assert_eq!(
+            certificate.roots,
+            vec![SamplePoint::Rational(BigRational::zero())]
+        );
     }
 
     #[test]
@@ -824,7 +1559,10 @@ mod tests {
             atom(&[&[0], &[1]], Relation::Gt),
         ]);
         assert_eq!(certificate.describe(), "x ∈ (-∞, ∞)");
-        assert_eq!(certificate.roots, vec![BigRational::zero()]);
+        assert_eq!(
+            certificate.roots,
+            vec![SamplePoint::Rational(BigRational::zero())]
+        );
         assert_eq!(certificate.cells.len(), 3);
     }
 
@@ -851,6 +1589,192 @@ mod tests {
             atom(&[&[1, 1]], Relation::Gt),
         ]);
         assert_eq!(certificate.describe(), "x ∈ {1}");
+    }
+
+    // ------------------------------------------------ irrational boundaries
+
+    #[test]
+    fn the_circle_of_radius_root_two_with_y_positive_has_two_algebraic_endpoints() {
+        // ∃y. x² + y² − 2 = 0 ∧ y > 0  →  −√2 < x < √2.
+        let certificate = decided(vec![
+            atom(&[&[-2, 0, 1], &[0], &[1]], Relation::Eq),
+            atom(&[&[0], &[1]], Relation::Gt),
+        ]);
+        assert_eq!(certificate.describe(), "x ∈ (α1, α2)");
+        assert_eq!(certificate.roots.len(), 2);
+        assert!(
+            certificate
+                .roots
+                .iter()
+                .all(|root| matches!(root, SamplePoint::Algebraic { .. })),
+            "both cut points are ±√2, neither rational"
+        );
+        assert_eq!(
+            verdicts(&certificate),
+            vec![false, false, true, false, false],
+            "the point cells at ±√2 are false: there y = 0 and `y > 0` fails"
+        );
+        let legend = certificate.legend();
+        assert_eq!(legend.len(), 2);
+        assert!(
+            legend[0].contains("-2 + 1*x^2"),
+            "α1's defining polynomial is x² − 2, got {legend:?}"
+        );
+    }
+
+    #[test]
+    fn the_point_cell_at_root_two_is_decided_in_q_root_two_with_a_repeated_fibre_root() {
+        // At x = √2 the fibre is y² + (α² − 2) = y², whose only root is the
+        // *double* root y = 0. The K-decomposition must still produce exactly
+        // one cut point there, and the sign of `y` at it must be computed in K.
+        let certificate = decided(vec![
+            atom(&[&[-2, 0, 1], &[0], &[1]], Relation::Eq),
+            atom(&[&[0], &[1]], Relation::Gt),
+        ]);
+        let CellFibre::Algebraic(fibre_certificate) = &certificate.cells[3].fibre else {
+            panic!("cell 3 is the point cell at √2 and must use the ℚ(α) route");
+        };
+        assert_eq!(
+            fibre_certificate.modulus,
+            vec![q(-2), q(0), q(1)],
+            "the modulus split down to x² − 2"
+        );
+        // x² − 2 substituted at α is the *zero element* of K.
+        assert_eq!(fibre_certificate.atoms[0].poly[0], fibre::Element::new());
+        let fibre::FibreDecision::False(refutation) = &fibre_certificate.decision else {
+            panic!("y > 0 fails in the fibre over √2");
+        };
+        assert_eq!(
+            refutation.roots,
+            vec![fibre::FieldSample::Rational(BigRational::zero())],
+            "y² has the single distinct root 0"
+        );
+        assert_eq!(refutation.failures.len(), 3);
+        assert_eq!(
+            refutation.failures[1].sign, 0,
+            "at y = 0 the sign of `y` computed in K is zero, which is why `y > 0` fails"
+        );
+        assert!(!fibre_certificate.verify().expect("the fibre verifies"));
+    }
+
+    #[test]
+    fn the_parabola_meeting_the_hyperbola_is_the_single_rational_point_one() {
+        // ∃y. y² = x ∧ x·y = 1.  Both cut points come out rational (0 and 1),
+        // so this exercises the ℚ route with the same front door.
+        let certificate = decided(vec![
+            atom(&[&[0, -1], &[0], &[1]], Relation::Eq),
+            atom(&[&[-1], &[0, 1]], Relation::Eq),
+        ]);
+        assert_eq!(certificate.describe(), "x ∈ {1}");
+        assert!(
+            certificate
+                .roots
+                .iter()
+                .all(|root| matches!(root, SamplePoint::Rational(_)))
+        );
+    }
+
+    #[test]
+    fn the_fibre_over_the_cube_root_of_two_has_a_y_algebraic_over_the_field() {
+        // ∃y. y² = x ∧ x³ = 2 — true exactly at x = ∛2, where y = ±2^{1/6} is
+        // algebraic **over** K = ℚ(∛2), not an element of it. The fibre's
+        // sample therefore has to be carried as a polynomial over K plus a
+        // bracket; there is no element of K to name it with.
+        let certificate = decided(vec![
+            atom(&[&[0, -1], &[0], &[1]], Relation::Eq),
+            atom(&[&[-2, 0, 0, 1]], Relation::Eq),
+        ]);
+        assert_eq!(certificate.describe(), "x ∈ {α2}");
+        assert_eq!(certificate.roots.len(), 2, "the cut points are 0 and ∛2");
+        let CellFibre::Algebraic(fibre_certificate) = &certificate.cells[3].fibre else {
+            panic!("cell 3 is the point cell at ∛2");
+        };
+        assert_eq!(fibre_certificate.modulus, vec![q(-2), q(0), q(0), q(1)]);
+        let fibre::FibreDecision::True(witness) = &fibre_certificate.decision else {
+            panic!("y² = ∛2 is solvable");
+        };
+        assert!(
+            matches!(witness.sample, fibre::FieldSample::Algebraic { .. }),
+            "the witnessing y is algebraic over K, not a rational"
+        );
+    }
+
+    #[test]
+    fn a_squared_atom_with_a_cube_root_boundary_is_true_exactly_at_the_cube_root() {
+        // ∃y. (y − x)² ≤ 0 ∧ x³ − 2 = 0 — true exactly at x = ∛2, a point cell
+        // over ℚ(∛2). The first atom's own discriminant vanishes identically,
+        // so this also exercises the square-free fallback in the projection.
+        let certificate = decided(vec![
+            atom(&[&[0, 0, 1], &[0, -2], &[1]], Relation::Le),
+            atom(&[&[-2, 0, 0, 1]], Relation::Eq),
+        ]);
+        assert_eq!(certificate.describe(), "x ∈ {α2}");
+        assert_eq!(certificate.roots.len(), 2, "the cut points are 0 and ∛2");
+        let CellFibre::Algebraic(fibre_certificate) = &certificate.cells[3].fibre else {
+            panic!("cell 3 is the point cell at ∛2");
+        };
+        assert_eq!(
+            fibre_certificate.modulus,
+            vec![q(-2), q(0), q(0), q(1)],
+            "the modulus split down to x³ − 2"
+        );
+        assert!(fibre_certificate.verify().expect("the fibre verifies"));
+    }
+
+    #[test]
+    fn the_y_square_free_part_of_a_perfect_square_drops_to_degree_one() {
+        // (y − x)² has y-degree 2 but describes one branch.
+        let squared = bipoly(&[&[0, 0, 1], &[0, -2], &[1]]);
+        let squarefree = y_squarefree_part(&squared).expect("the square-free part exists");
+        assert_eq!(degree_y(&squarefree), Some(1));
+        // The positive control: a genuinely square-free atom is returned as is.
+        let distinct = bipoly(&[&[0, -1], &[0], &[1]]);
+        assert_eq!(y_squarefree_part(&distinct), Some(distinct));
+    }
+
+    // -------------------------------------------------------- the formula
+
+    #[test]
+    fn the_formula_merges_the_point_cell_into_the_half_line() {
+        // ∃y. y² − x = 0: cells {0} and (0, ∞) are both true and merge into
+        // one interval [0, ∞).
+        let certificate = formula(vec![atom(&[&[0, -1], &[0], &[1]], Relation::Eq)]);
+        assert_eq!(certificate.intervals.len(), 1);
+        assert_eq!(
+            certificate.intervals[0],
+            XInterval {
+                lower: Some(SamplePoint::Rational(BigRational::zero())),
+                lower_closed: true,
+                upper: None,
+                upper_closed: false,
+            }
+        );
+        assert_eq!(certificate.describe(), "x ∈ [0, ∞)");
+    }
+
+    #[test]
+    fn the_formula_endpoints_of_the_root_two_circle_are_the_algebraic_cut_points() {
+        let certificate = formula(vec![
+            atom(&[&[-2, 0, 1], &[0], &[1]], Relation::Eq),
+            atom(&[&[0], &[1]], Relation::Gt),
+        ]);
+        assert_eq!(certificate.intervals.len(), 1);
+        let interval = &certificate.intervals[0];
+        assert_eq!(
+            interval.lower.as_ref(),
+            certificate.projection.roots.first()
+        );
+        assert_eq!(interval.upper.as_ref(), certificate.projection.roots.get(1));
+        assert!(!interval.lower_closed && !interval.upper_closed);
+        assert_eq!(certificate.describe(), "x ∈ (α1, α2)");
+    }
+
+    #[test]
+    fn a_formula_with_no_true_cell_has_no_intervals() {
+        // ∃y. y² + 1 = 0 — never.
+        let certificate = formula(vec![atom(&[&[1], &[0], &[1]], Relation::Eq)]);
+        assert!(certificate.intervals.is_empty());
+        assert_eq!(certificate.describe(), "∅");
     }
 
     // ---------------------------------------------------------- the bound
@@ -902,6 +1826,16 @@ mod tests {
     }
 
     #[test]
+    fn a_certificate_with_a_tampered_cut_polynomial_is_refused() {
+        let mut certificate = decided(vec![atom(&[&[-1, 0, 1], &[0], &[1]], Relation::Lt)]);
+        certificate.cut.push(q(1));
+        assert!(matches!(
+            certificate.verify(),
+            Err(Fault::CutMismatch { .. })
+        ));
+    }
+
+    #[test]
     fn a_certificate_that_drops_a_cut_point_is_refused() {
         let mut certificate = decided(vec![atom(&[&[-1, 0, 1], &[0], &[1]], Relation::Lt)]);
         certificate.roots.pop();
@@ -919,7 +1853,7 @@ mod tests {
     fn a_certificate_whose_sample_leaves_its_cell_is_refused() {
         let mut certificate = decided(vec![atom(&[&[-1, 0, 1], &[0], &[1]], Relation::Lt)]);
         // Cell 0 is (−∞, −1); 5 is not in it.
-        certificate.cells[0].sample = BigRational::from_integer(BigInt::from(5));
+        certificate.cells[0].sample = SamplePoint::Rational(q(5));
         assert_eq!(
             certificate.verify(),
             Err(Fault::CellSampleOutOfOrder { cell: 0 })
@@ -945,8 +1879,8 @@ mod tests {
         let mut certificate = decided(vec![atom(&[&[-1, 0, 1], &[0], &[1]], Relation::Lt)]);
         // Swap in the fibre from the satisfying cell, keeping the sample: the
         // certificate now verifies on its own but is about the wrong formula.
-        let borrowed = certificate.cells[2].decision.clone();
-        certificate.cells[0].decision = borrowed;
+        let borrowed = certificate.cells[2].fibre.clone();
+        certificate.cells[0].fibre = borrowed;
         certificate.cells[0].verdict = true;
         assert_eq!(
             certificate.verify(),
@@ -970,7 +1904,7 @@ mod tests {
     #[test]
     fn a_certificate_with_a_forged_fibre_certificate_is_refused_by_the_univariate_checker() {
         let mut certificate = decided(vec![atom(&[&[-1, 0, 1], &[0], &[1]], Relation::Lt)]);
-        let Decision::True(cert) = &mut certificate.cells[2].decision else {
+        let CellFibre::Rational(Decision::True(cert)) = &mut certificate.cells[2].fibre else {
             panic!("cell 2 is the satisfying one");
         };
         cert.signs[0] = -cert.signs[0];
@@ -978,6 +1912,245 @@ mod tests {
             certificate.verify(),
             Err(Fault::Univariate { cell: 2, .. })
         ));
+    }
+
+    #[test]
+    fn a_sign_at_alpha_claimed_wrong_is_refused_by_the_fibre_checker() {
+        let mut certificate = decided(vec![
+            atom(&[&[0, 0, 1], &[0, -2], &[1]], Relation::Le),
+            atom(&[&[-2, 0, 0, 1]], Relation::Eq),
+        ]);
+        let CellFibre::Algebraic(fibre_certificate) = &mut certificate.cells[3].fibre else {
+            panic!("cell 3 is the point cell at ∛2");
+        };
+        let fibre::FibreDecision::True(witness) = &mut fibre_certificate.decision else {
+            panic!("the fibre over ∛2 is satisfiable");
+        };
+        witness.signs[0] = 1; // it is really 0: (y − α)² vanishes at y = α
+        assert!(matches!(
+            certificate.verify(),
+            Err(Fault::Fibre {
+                cell: 3,
+                fault: fibre::Fault::SignMismatch { index: 0, .. }
+            })
+        ));
+    }
+
+    #[test]
+    fn a_fibre_modulus_that_does_not_divide_the_cut_polynomial_is_refused() {
+        let mut certificate = decided(vec![
+            atom(&[&[-2, 0, 1], &[0], &[1]], Relation::Eq),
+            atom(&[&[0], &[1]], Relation::Gt),
+        ]);
+        let CellFibre::Algebraic(fibre_certificate) = &mut certificate.cells[3].fibre else {
+            panic!("cell 3 is the point cell at √2");
+        };
+        // x² − 3 has a root in (1, 2] too, but does not divide the cut.
+        fibre_certificate.modulus = vec![q(-3), q(0), q(1)];
+        assert_eq!(
+            certificate.verify(),
+            Err(Fault::ModulusNotADivisor { cell: 3 })
+        );
+    }
+
+    #[test]
+    fn a_fibre_certificate_about_a_different_bracket_is_refused() {
+        let mut certificate = decided(vec![
+            atom(&[&[-2, 0, 1], &[0], &[1]], Relation::Eq),
+            atom(&[&[0], &[1]], Relation::Gt),
+        ]);
+        let CellFibre::Algebraic(fibre_certificate) = &mut certificate.cells[3].fibre else {
+            panic!("cell 3 is the point cell at √2");
+        };
+        fibre_certificate.lower = q(-100);
+        assert_eq!(
+            certificate.verify(),
+            Err(Fault::FibreBracketMismatch { cell: 3 })
+        );
+    }
+
+    #[test]
+    fn an_algebraic_cell_whose_substituted_atoms_were_tampered_with_is_refused() {
+        let mut certificate = decided(vec![
+            atom(&[&[-2, 0, 1], &[0], &[1]], Relation::Eq),
+            atom(&[&[0], &[1]], Relation::Gt),
+        ]);
+        let CellFibre::Algebraic(fibre_certificate) = &mut certificate.cells[3].fibre else {
+            panic!("cell 3 is the point cell at √2");
+        };
+        // Claim the fibre is `y² + 1 = 0` where the substitution gives `y² = 0`.
+        fibre_certificate.atoms[0].poly[0] = vec![q(1)];
+        assert_eq!(
+            certificate.verify(),
+            Err(Fault::SubstitutionMismatch { cell: 3 })
+        );
+    }
+
+    #[test]
+    fn a_fibre_refutation_that_drops_a_y_root_is_refused_as_an_incomplete_root_list() {
+        let mut certificate = decided(vec![
+            atom(&[&[-2, 0, 1], &[0], &[1]], Relation::Eq),
+            atom(&[&[0], &[1]], Relation::Gt),
+        ]);
+        let CellFibre::Algebraic(fibre_certificate) = &mut certificate.cells[3].fibre else {
+            panic!("cell 3 is the point cell at √2");
+        };
+        let fibre::FibreDecision::False(refutation) = &mut fibre_certificate.decision else {
+            panic!("the fibre over √2 is unsatisfiable");
+        };
+        assert_eq!(refutation.roots.len(), 1, "the only y-root is 0");
+        // Drop it, keeping every count self-consistent so the counting guards
+        // do not fire first: one cell, one open sample, no roots.
+        refutation.roots.clear();
+        refutation.open_samples.truncate(1);
+        refutation.failures.truncate(1);
+        assert!(matches!(
+            certificate.verify(),
+            Err(Fault::Fibre {
+                cell: 3,
+                fault: fibre::Fault::IncompleteRootList { .. }
+            })
+        ));
+    }
+
+    #[test]
+    fn a_fibre_cell_nominating_a_conjunct_that_holds_is_refused() {
+        let mut certificate = decided(vec![
+            atom(&[&[-2, 0, 1], &[0], &[1]], Relation::Eq),
+            atom(&[&[0], &[1]], Relation::Gt),
+        ]);
+        let CellFibre::Algebraic(fibre_certificate) = &mut certificate.cells[3].fibre else {
+            panic!("cell 3 is the point cell at √2");
+        };
+        let fibre::FibreDecision::False(refutation) = &mut fibre_certificate.decision else {
+            panic!("the fibre over √2 is unsatisfiable");
+        };
+        // In the y-cell {0} it is `y > 0` that fails, not `y² = 0`.
+        refutation.failures[1] = fibre::FibreCellFailure {
+            conjunct: 0,
+            sign: 0,
+        };
+        assert!(matches!(
+            certificate.verify(),
+            Err(Fault::Fibre {
+                cell: 3,
+                fault: fibre::Fault::ConjunctDoesNotFail {
+                    cell: 1,
+                    index: 0,
+                    sign: 0
+                }
+            })
+        ));
+    }
+
+    #[test]
+    fn a_fibre_witness_whose_bracket_holds_two_roots_is_refused() {
+        // The fibre over ∛2 is `y² = ∛2`, whose two real roots are ±2^{1/6};
+        // widening the witness bracket to hold both makes it name nothing.
+        let mut certificate = decided(vec![
+            atom(&[&[0, -1], &[0], &[1]], Relation::Eq),
+            atom(&[&[-2, 0, 0, 1]], Relation::Eq),
+        ]);
+        let CellFibre::Algebraic(fibre_certificate) = &mut certificate.cells[3].fibre else {
+            panic!("cell 3 is the point cell at ∛2");
+        };
+        let fibre::FibreDecision::True(witness) = &mut fibre_certificate.decision else {
+            panic!("y² = ∛2 is solvable");
+        };
+        let fibre::FieldSample::Algebraic { upper, .. } = &mut witness.sample else {
+            panic!("the witnessing y is algebraic over K");
+        };
+        *upper = q(10);
+        assert!(matches!(
+            certificate.verify(),
+            Err(Fault::Fibre {
+                cell: 3,
+                fault: fibre::Fault::SampleNotIsolating {
+                    roots_in_bracket: 2
+                }
+            })
+        ));
+    }
+
+    #[test]
+    fn a_rational_cell_carrying_an_algebraic_fibre_is_refused_as_a_kind_mismatch() {
+        let mut certificate = decided(vec![
+            atom(&[&[-2, 0, 1], &[0], &[1]], Relation::Eq),
+            atom(&[&[0], &[1]], Relation::Gt),
+        ]);
+        let borrowed = certificate.cells[3].fibre.clone();
+        certificate.cells[2].fibre = borrowed;
+        assert_eq!(
+            certificate.verify(),
+            Err(Fault::FibreKindMismatch { cell: 2 })
+        );
+    }
+
+    // -------------------------------------------------- forged formulas
+
+    #[test]
+    fn a_merged_interval_that_swallows_a_false_cell_is_refused() {
+        let mut certificate = formula(vec![
+            atom(&[&[-2, 0, 1], &[0], &[1]], Relation::Eq),
+            atom(&[&[0], &[1]], Relation::Gt),
+        ]);
+        // Widen (α1, α2) to (−∞, α2): cells 0 and 1 are false but now covered.
+        certificate.intervals[0].lower = None;
+        assert_eq!(
+            certificate.verify(),
+            Err(Fault::IntervalCoverageMismatch {
+                cell: 0,
+                covered: true,
+                verdict: false
+            })
+        );
+    }
+
+    #[test]
+    fn an_interval_endpoint_that_is_not_a_cut_point_is_refused() {
+        let mut certificate = formula(vec![atom(&[&[-1, 0, 1], &[0], &[1]], Relation::Lt)]);
+        certificate.intervals[0].lower = Some(SamplePoint::Rational(q(7)));
+        assert_eq!(
+            certificate.verify(),
+            Err(Fault::IntervalEndpointNotARoot { interval: 0 })
+        );
+    }
+
+    #[test]
+    fn two_intervals_that_should_have_been_merged_are_refused() {
+        // ∃y. y² − x = 0 is true on {0} ∪ (0, ∞); splitting that back into two
+        // adjacent intervals is not the merged form.
+        let mut certificate = formula(vec![atom(&[&[0, -1], &[0], &[1]], Relation::Eq)]);
+        let zero = SamplePoint::Rational(BigRational::zero());
+        certificate.intervals = vec![
+            XInterval {
+                lower: Some(zero.clone()),
+                lower_closed: true,
+                upper: Some(zero),
+                upper_closed: true,
+            },
+            XInterval {
+                lower: certificate.projection.roots.first().cloned(),
+                lower_closed: false,
+                upper: None,
+                upper_closed: false,
+            },
+        ];
+        assert_eq!(
+            certificate.verify(),
+            Err(Fault::IntervalsNotMerged { interval: 1 })
+        );
+    }
+
+    #[test]
+    fn two_overlapping_intervals_are_refused() {
+        let mut certificate = formula(vec![atom(&[&[0, -1], &[0], &[1]], Relation::Eq)]);
+        let interval = certificate.intervals[0].clone();
+        certificate.intervals.push(interval);
+        assert_eq!(
+            certificate.verify(),
+            Err(Fault::IntervalOrderViolation { interval: 1 })
+        );
     }
 
     // ------------------------------------------------------------ degeneracy

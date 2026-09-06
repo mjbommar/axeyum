@@ -438,7 +438,21 @@ targets and preserves branches and live work.
 **Stop.** Never recursively delete a worktree root, infer safety from age alone,
 or remove dirty/unmerged state to meet a free-space target.
 
-### A12 — Solver performance instruments (`TODO`, P1)
+### A12 — Solver performance instruments (`WIP`, P1)
+
+**Plan of record.** The
+[SMT/SAT parity plan](docs/plan/smt-parity-plan-2026-09-05.md) (2026-09-05) names a
+measured or to-be-censused root cause for every one of the eleven divisions,
+twelve ordered slices with scoring files and exit criteria, and the parity
+count each division must reach; its slice table is the queue below this
+paragraph from here on. Items 1 to 3 and 6 to 8 of the original list landed
+on 2026-09-05 (timing ratchet, gate (b) measured, criterion benches, route
+timing and theory stage attribution, rustc-hash in `axeyum-ir`, profiling
+recipes); item 4 landed as ADR-1701 slice 1 and its slice 2 is scoped in
+[the design memo](docs/plan/adr-1701-slice-2-design-2026-09-05.md); item 5 landed as
+ADR-1702 slice 1. The measured root cause of the difference-logic deficit is
+`CdclT::unit_propagate`'s full clause rescan (no watched literals), not the
+engine count; see the plan §2.1.
 
 **Why now.** The
 [2026-09-05 performance review](docs/research/11-design-review/2026-09-05-sat-smt-performance-and-architecture-review.md)

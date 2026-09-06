@@ -72,25 +72,39 @@ termination evidence, the two no-answer rows **cannot be retroactively classifie
 This reproduction path is therefore not claimed to be **fully competition-faithful**.
 
 The append-only [`parity ledger`](../bench-results/PARITY.md) contains
-head-to-head entries for nine divisions against division-appropriate reference
-binaries on identical committed 200-file lists and a 24-second/8-GiB protocol.
-The latest credited weak arithmetic and combination edges are:
+head-to-head entries for eleven divisions against division-appropriate
+reference binaries (Bitwuzla 0.9.1 for QF_BV and QF_ABV, plain cvc5 1.3.4 for
+the rest) on identical committed 200-file lists and a 24-second/8-GiB
+protocol. On 2026-09-05 every division was re-measured at one solver commit
+(`9914a1c0e`, the native CDCL core as the default SAT engine under ADR-1703)
+on otherwise idle fleet hosts, so the rows are comparable with one another
+([write-up](research/11-design-review/2026-09-05-parity-remeasured.md)):
 
 | Division | Axeyum | Reference | Ratio | Disagreements |
 |---|---:|---:|---:|---:|
-| QF_NIA | 39/200 | 83/200 | 47.0% | 0 |
-| QF_UFLIA | 113/200 | 180/200 | 62.8% | 0 |
-| QF_IDL | 66/200 | 118/200 | 55.9% | 0 |
-| QF_LRA | 88/200 | 134/200 | 65.7% | 0 |
-| QF_RDL | 102/200 | 148/200 | 68.9% | 0 |
+| QF_SLIA | 193/200 | 194/200 | 99.5% | 0 |
+| QF_BV | 188/200 | 194/200 | 96.9% | 0 |
+| UF | 85/200 | 93/200 | 91.4% | 0 |
+| QF_ABV | 179/200 | 197/200 | 90.9% | 0 |
+| QF_LIA | 114/200 | 139/200 | 82.0% | 0 |
+| QF_UF | 162/200 | 200/200 | 81.0% | 0 |
+| QF_RDL | 107/200 | 154/200 | 69.5% | 0 |
+| QF_UFLIA | 122/200 | 180/200 | 67.8% | 0 |
+| QF_LRA | 91/200 | 145/200 | 62.8% | 0 |
+| QF_IDL | 70/200 | 123/200 | 56.9% | 0 |
+| QF_NIA | 39/200 | 87/200 | 44.8% | 0 |
 
-The stronger selected cells include QF_SLIA, QF_BV, UF, and QF_LIA.
-`bench-results/parity-lists/` also carries committed QF_ABV and QF_UF lists that
-have never been run, so neither is a parity cell; a benchmark list is not a
-result, and this sentence named QF_ABV as one until 2026-08-21.
-Read the latest entry per division for exact solver revisions, reference
-configurations, load observations, and overlap; an older entry can have a higher
-score without being the current credited result.
+The stronger selected cells include QF_SLIA, QF_BV, UF, QF_ABV, QF_LIA, and
+QF_UF. Against the 2026-08-21 sweep (a loaded box), Axeyum's own count rose in
+six of the nine re-measured divisions and held in three; the reference count
+rose in five, which is why QF_LRA, QF_NIA and QF_SLIA read a lower ratio at an
+equal or higher Axeyum count. Read the `axeyum solved` count when the
+reference count moves. QF_ABV and QF_UF received their first entries on
+2026-09-05; until then their committed lists had never been run. Read the
+latest entry per division for exact solver revisions, reference
+configurations, load observations, and overlap; an older entry can have a
+higher score without being the current credited result.
+`scripts/check-parity-freshness.py` exits 0 on this board.
 
 ## Evidence and Lean
 

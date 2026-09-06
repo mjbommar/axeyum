@@ -227,17 +227,17 @@ pub(super) fn declare_derivative(d: &mut IntDev<'_>, p: ComplexPrelude) -> Resul
 // ---------------------------------------------------------------------------
 
 /// `Complex.add a b`.
-fn zadd(d: &mut IntDev<'_>, p: ComplexPrelude, a: ExprId, b: ExprId) -> ExprId {
+pub(super) fn zadd(d: &mut IntDev<'_>, p: ComplexPrelude, a: ExprId, b: ExprId) -> ExprId {
     d.const_app(p.add, &[a, b])
 }
 
 /// `Complex.neg a`.
-fn zneg(d: &mut IntDev<'_>, p: ComplexPrelude, a: ExprId) -> ExprId {
+pub(super) fn zneg(d: &mut IntDev<'_>, p: ComplexPrelude, a: ExprId) -> ExprId {
     d.const_app(p.neg, &[a])
 }
 
 /// `Complex.mul a b`.
-fn zmul(d: &mut IntDev<'_>, p: ComplexPrelude, a: ExprId, b: ExprId) -> ExprId {
+pub(super) fn zmul(d: &mut IntDev<'_>, p: ComplexPrelude, a: ExprId, b: ExprId) -> ExprId {
     d.const_app(p.mul, &[a, b])
 }
 
@@ -245,29 +245,29 @@ fn zmul(d: &mut IntDev<'_>, p: ComplexPrelude, a: ExprId, b: ExprId) -> ExprId {
 /// this development (see [`ComplexPrelude::sub_div`]'s field comment); this is
 /// the convention `creal/derivative.rs`'s own `cdiff` follows one carrier
 /// down.
-fn zsub(d: &mut IntDev<'_>, p: ComplexPrelude, a: ExprId, b: ExprId) -> ExprId {
+pub(super) fn zsub(d: &mut IntDev<'_>, p: ComplexPrelude, a: ExprId, b: ExprId) -> ExprId {
     let nb = zneg(d, p, b);
     zadd(d, p, a, nb)
 }
 
 /// `Complex.zero`.
-fn zzero(d: &mut IntDev<'_>, p: ComplexPrelude) -> ExprId {
+pub(super) fn zzero(d: &mut IntDev<'_>, p: ComplexPrelude) -> ExprId {
     d.kernel().const_(p.zero, vec![])
 }
 
 /// `Complex.abs a` — a `CReal`.
-fn zabs(d: &mut IntDev<'_>, p: ComplexPrelude, a: ExprId) -> ExprId {
+pub(super) fn zabs(d: &mut IntDev<'_>, p: ComplexPrelude, a: ExprId) -> ExprId {
     d.const_app(p.abs, &[a])
 }
 
 /// `Complex → Complex`.
-fn fn_ty(d: &mut IntDev<'_>, p: ComplexPrelude) -> ExprId {
+pub(super) fn fn_ty(d: &mut IntDev<'_>, p: ComplexPrelude) -> ExprId {
     let carrier = complex_ty(d, p);
     d.arrow(carrier, carrier)
 }
 
 /// `Nat → Nat`.
-fn nat_fn_ty(d: &mut IntDev<'_>) -> ExprId {
+pub(super) fn nat_fn_ty(d: &mut IntDev<'_>) -> ExprId {
     let nat = d.nat_ty();
     d.arrow(nat, nat)
 }
@@ -275,7 +275,7 @@ fn nat_fn_ty(d: &mut IntDev<'_>) -> ExprId {
 /// `CReal.ofRat (Rat.natDivSucc k j)` — `k/(j+1)` as a real, with a literal
 /// numerator. `creal/derivative.rs`'s `div_succ` composed with its `of_rat`
 /// application.
-fn of_div_succ(d: &mut IntDev<'_>, p: ComplexPrelude, k: u32, j: ExprId) -> ExprId {
+pub(super) fn of_div_succ(d: &mut IntDev<'_>, p: ComplexPrelude, k: u32, j: ExprId) -> ExprId {
     let creal = p.creal;
     let numerator = d.num(k);
     let q = d.const_app(creal.rat.nat_div_succ, &[numerator, j]);
@@ -284,7 +284,7 @@ fn of_div_succ(d: &mut IntDev<'_>, p: ComplexPrelude, k: u32, j: ExprId) -> Expr
 
 /// `(term, proof)` = `(ofRat (natDivSucc k idx), CReal.le zero term)`, the
 /// mirror of `creal/derivative.rs`'s own `nonneg_rat_bound`.
-fn nonneg_rat_bound(
+pub(super) fn nonneg_rat_bound(
     d: &mut IntDev<'_>,
     p: ComplexPrelude,
     k: u32,
@@ -324,7 +324,7 @@ fn error_bound(
 
 /// `CReal.Equiv.trans` chained through `(next, step)` pairs — the `echain`
 /// idiom (`creal/derivative.rs` has its own copy), at `CReal.Equiv`.
-fn rchain(
+pub(super) fn rchain(
     d: &mut IntDev<'_>,
     p: CRealPrelude,
     start: ExprId,
@@ -348,7 +348,7 @@ fn rchain(
 /// nonnegative, so there is no two-sided `abs_le` split —
 /// [`ComplexPrelude::abs_congr`] carries the `Equiv` into the modulus,
 /// [`declare_abs_zero`] evaluates it, and `le_of_equiv`/`le_trans` finish.
-fn close_zero_error(
+pub(super) fn close_zero_error(
     d: &mut IntDev<'_>,
     p: ComplexPrelude,
     err: ExprId,
@@ -375,12 +375,18 @@ fn close_zero_error(
 }
 
 /// `Complex.InDisc c r z`.
-fn in_disc_ty(d: &mut IntDev<'_>, p: ComplexPrelude, c: ExprId, r: ExprId, z: ExprId) -> ExprId {
+pub(super) fn in_disc_ty(
+    d: &mut IntDev<'_>,
+    p: ComplexPrelude,
+    c: ExprId,
+    r: ExprId,
+    z: ExprId,
+) -> ExprId {
     d.const_app(p.deriv.in_disc, &[c, r, z])
 }
 
 /// `Complex.HasDerivativeOn F F' c r`.
-fn hd_ty(
+pub(super) fn hd_ty(
     d: &mut IntDev<'_>,
     p: ComplexPrelude,
     f: ExprId,
@@ -398,7 +404,7 @@ fn hd_ty(
 /// Position for position `creal/derivative.rs`'s `deriv_spec_body`, with the
 /// four interval hypotheses replaced by two disc memberships and `CReal.abs`
 /// by [`ComplexPrelude::abs`].
-fn deriv_spec_body(
+pub(super) fn deriv_spec_body(
     d: &mut IntDev<'_>,
     p: ComplexPrelude,
     f: ExprId,
@@ -923,7 +929,7 @@ fn declare_has_derivative_id(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<()
 /// `creal/derivative.rs`'s own `abs_le_of_equiv`, with
 /// [`ComplexPrelude::abs_congr`] doing the transport `CReal.abs_congr` does
 /// there.
-fn abs_le_of_equiv(
+pub(super) fn abs_le_of_equiv(
     d: &mut IntDev<'_>,
     p: ComplexPrelude,
     a: ExprId,
@@ -947,7 +953,7 @@ fn abs_le_of_equiv(
 /// The symbolic error term `(F y − F x) − F' x · (y − x)` as a [`CExpr`] over
 /// the five atoms, built once because every witness below states its own error
 /// term against it.
-fn error_sym(fy: CExpr, fx: CExpr, fpx: CExpr, diff: CExpr) -> CExpr {
+pub(super) fn error_sym(fy: CExpr, fx: CExpr, fpx: CExpr, diff: CExpr) -> CExpr {
     CExpr::add(
         CExpr::add(fy, CExpr::neg(fx)),
         CExpr::neg(CExpr::mul(fpx, diff)),

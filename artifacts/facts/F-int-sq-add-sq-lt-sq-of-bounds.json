@@ -1,0 +1,100 @@
+{
+  "schema_version": 1,
+  "id": "F:int-sq-add-sq-lt-sq-of-bounds",
+  "title": "The strict decrease of the two-squares descent measure",
+  "statement": "If m > 0 and both c and e lie in the symmetric band -m <= x + x <= m, then c*c + e*e < m*m. Only m > 0 is needed; 1 < m is NOT required, because the strictness comes from the halving and not from a gap between m and 1. The multiplied-through form 2*(c*c + e*e) <= m*m is Int.two_mul_sq_add_sq_le_sq, recorded in the same module.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Int.sq_add_sq_lt_sq_of_bounds : ((x0 : Int) -> ((x1 : Int) -> ((x2 : Int) -> ((x3 : Int.lt Int.zero x0) -> ((x4 : Int.le (Int.neg x0) (Int.add x1 x1)) -> ((x5 : Int.le (Int.add x1 x1) x0) -> ((x6 : Int.le (Int.neg x0) (Int.add x2 x2)) -> ((x7 : Int.le (Int.add x2 x2) x0) -> Int.lt (Int.add (Int.mul x1 x1) (Int.mul x2 x2)) (Int.mul x0 x0)))))))))",
+    "fragment": "Int",
+    "free_symbols": [
+      "x0",
+      "x1",
+      "x2",
+      "x3",
+      "x4",
+      "x5",
+      "x6",
+      "x7"
+    ],
+    "kernel_theorem": "Int.sq_add_sq_lt_sq_of_bounds"
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:int-sq-le-sq-of-neg-le-of-le",
+    "F:int-add-le-add",
+    "F:int-sq-nonneg",
+    "F:int-le-antisymm",
+    "F:int-lt-of-le-of-ne",
+    "F:int-mul-pos",
+    "F:int-lt-irrefl",
+    "F:int-add-zero",
+    "F:int-le-trans",
+    "F:ml430-int-add-le-add-iff-left-83bf44fa",
+    "F:ml430-int-add-le-add-left-4a766697"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Int.sq_add_sq_lt_sq_of_bounds",
+      "kind": "kernel-term",
+      "supports": "Int.sq_add_sq_lt_sq_of_bounds is admitted by the trusted kernel gate with EXACTLY the type recorded in formal.statement, which is a verbatim quotation of the kernel's own renderer.",
+      "check_status": "checked",
+      "checkers": [
+        "producing-build (Kernel::add_declaration, inside build_int_prelude)",
+        "int_theorem_inventory re-list of the admitted declaration"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example int_theorem_inventory -- Int.sq_add_sq_lt_sq_of_bounds 2>/dev/null | grep -cE '^theorem[[:space:]]+Int\\\\.sq_add_sq_lt_sq_of_bounds[[:space:]]'",
+      "checker_seconds": 12,
+      "kernel_declaration": "Int.sq_add_sq_lt_sq_of_bounds",
+      "notes": "Two independent failure modes, so the exit status depends on the FINDING and not on the run completing: int_theorem_inventory exits non-zero when the named filter matches nothing, and grep -c exits 1 printing 0 when the anchored line is absent. Anchored with [[:space:]] and never with a backslash-t, which a scripted (GNU) grep reads as a literal t. grep -c rather than grep -q, which would SIGPIPE the producer under pipefail. --release is MANDATORY: this tool builds the constructed carriers and overflows the default debug thread stack."
+    },
+    {
+      "id": "evaluation-Int.sq_add_sq_lt_sq_of_bounds",
+      "kind": "instance-pin",
+      "supports": "What the declaration MEANS: its full forall-telescoped type is rebuilt independently and compared against the type the ENVIRONMENT stores, and it is applied at concrete small arguments where the kernel must ACCEPT the in-band instance and REFUSE the out-of-band one.",
+      "check_status": "checked",
+      "checkers": [
+        "crates/axeyum-lean-kernel/src/int_prelude/order_squares_tests.rs (6 tests; every battery asserts what must hold AND what must fail)",
+        "crate::Kernel::add_declaration used as the decision procedure (a probe theorem is admitted or refused, and both outcomes are asserted)",
+        "crate::Kernel::def_eq against Environment-stored types, at free variables, for the statement pin"
+      ],
+      "checker_command": "cargo test --release -p axeyum-lean-kernel --lib -- int_prelude::order_squares_tests --test-threads=4 2>/dev/null | grep -cE '^test result: ok\\. 6 passed'",
+      "checker_seconds": 300,
+      "artifact": "crates/axeyum-lean-kernel/src/int_prelude/order_squares_tests.rs",
+      "notes": "Relevant test: the_strict_decrease_applies_inside_the_band_and_is_refused_outside_it. At m = 5 it admits 2*2 + 1*1 < 5*5 and REFUSES c = 3 -- whose conclusion 9 + 1 < 25 is still TRUE, so the refusal pins that the BOUND is load-bearing in the statement rather than that the arithmetic happens to work out. MUTATION-MEASURED: replacing m*m by m in the conclusion is REJECTED BY THE KERNEL, killing 119 of the 122 int_prelude tests (3 survive because they do not build the Int prelude)."
+    },
+    {
+      "id": "footprint-Int.sq_add_sq_lt_sq_of_bounds",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the integer prelude's trusted surface is empty (no Axiom, no Opaque, no Quotient), which bounds every declaration in it, including this one.",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint, asserted per declaration AFTER Environment::contains",
+        "nat_axiom_inventory --require-axiom-free (environment-wide trusted-surface enumeration, independent of the per-theorem footprint route)",
+        "int_prelude_tests::every_int_declaration_is_checked_and_axiom_free (coverage derived from kernel.environment(), so an unlisted declaration FAILS rather than going unchecked)"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free integer",
+      "checker_seconds": 12,
+      "notes": "The per-declaration assertion lives in order_squares_tests::every_order_squares_declaration_is_present_and_axiom_free, which checks Environment::contains FIRST for all 23 names -- an empty footprint is also what a MISSING name returns. Coverage is additionally forced by int_prelude_tests::every_int_declaration_is_checked_and_axiom_free, which derives its subject from the environment rather than from a list, so all 23 names had to be added to derived_laws (294 -> 317) before it would pass."
+    }
+  ],
+  "provenance": {
+    "date": "2026-09-05",
+    "curation": "curated",
+    "established_by": "lane int-order-two-squares (W3-10 second slice, ADR-1647), crates/axeyum-lean-kernel/src/int_prelude/order_squares.rs, admitted by build_int_prelude",
+    "source": "the ordering half of Euler's descent proof (1749) of Fermat's two-square theorem, isolated so the algebraic half (F:int-two-squares-descent-step) can consume it",
+    "prior_art": [
+      {
+        "who": "Fermat; Euler",
+        "what": "Fermat's theorem on sums of two squares (asserted 1640) and Euler's descent proof (1749), whose ordering half these laws supply",
+        "year": 1749,
+        "where": "classical number theory; standard textbook material",
+        "attribution": "standard textbook attribution; this lane did not consult the primary sources"
+      }
+    ]
+  },
+  "notes": "The route: the band gives (c+c)^2 <= m^2 and (e+e)^2 <= m^2, their sum is 4(c^2+e^2) <= 2m^2, which is ((S+S)+(S+S)) <= (m*m)+(m*m) for S = c^2+e^2 by one ring::int-emitted identity, and Int.le_of_add_le_add_self halves it to S+S <= m*m. That halving is the ONLY division in the whole argument and it is done by le_total, not by cancelling a numeral 2. Strictness then follows because S = m*m would force 2m^2 <= m^2, contradicting 0 < m*m. Every bound here is spelled Int.add c c and NOT Int.mul (ofNat 2) c. The two are equal and the mul form reads closer to the textbook, but the add form is the one the existing shelf can MOVE: doubling an inequality is then literally Int.add_le_add h h, with no 0 <= 2 side condition and no numeral for ring::int to normalise. This is not a weakening -- 2*|c| <= m and -m <= c+c <= m are the same statement about c."
+}

@@ -136,6 +136,19 @@
 #      broken allowlist through silently, which is the checker-that-cannot-fail
 #      defect arriving through the door marked "be lenient about toolchains".
 #
+#      NOR IS EVERY `UNAVAILABLE` TOKEN SKIPPABLE (2026-09-05, lane
+#      `incidence-geometry`, `hygiene-verdict`). `no-binary`/`stale-binary`
+#      are host facts -- not built here yet, or built before a kernel source
+#      changed -- and stay PASS-compatible. `tool-failed` is different: the
+#      binary IS present and fresh and still produced nothing, which last
+#      happened because `shape_search --include-constructed` was panicking on
+#      a real coverage defect. `check-merge-hygiene.sh` read that as
+#      `shape_duplicates=skipped(tool-failed)` and printed `PASS`, exit 0 -- a
+#      guard with no subject inheriting a green verdict. `tool-failed` now
+#      fails the aggregate; see
+#      docs/contributor-guide/evidence-and-checker-discipline.md, "A green
+#      summary line with a guard that has no subject".
+#
 #  10. A MERGE FUSED TWO EVALUATION PARTITIONS AND NO GATE RAN (ADR-1546,
 #      ADR-1550). A `depends_on` edge between a train fact and a development
 #      fact -- or a held-out one -- destroys what the split measures, and it is
@@ -337,7 +350,17 @@ fi
 # shape returns (`nat_prelude_tests.rs` is the likely site), gate it with
 # `recount-pinned-inventory.py --check`, treat exit 2 as "no subject" rather
 # than as a failure, and mask comments before grepping for the shape.
-pins="n/a (no live pin sites; see the note above)"
+#
+# `n/a-empty` is deliberately NOT spelled `not-answerable`. The two look
+# alike but mean opposite things: `not-answerable` (guards 4, 7's
+# `tool-failed`, 9, 10 below) is "the guard could not tell", which this
+# script now treats as a failure -- a guard with no subject must not sit
+# inside a `PASS`. `n/a-empty` is "the guard DID tell you, and the answer is
+# a KNOWN, PROVEN-ZERO population" -- there being no live pinned-inventory
+# array is itself the (correct, checked-by-hand) finding, not a gap in the
+# checking. Keeping it PASS-compatible under a name that cannot be confused
+# with `not-answerable` is the point.
+pins="n/a-empty (no live pin sites; see the note above)"
 
 # --- 5. import backlog and production-provenance ledgers -------------------
 # Both derive from `artifacts/facts/*.json` alone -- no cargo, no kernel
@@ -427,11 +450,37 @@ else
   if [ "$shape_dupes_rc" -eq 2 ] && [ -n "$shape_dupes_marker" ]; then
     shape_dupes_token=${shape_dupes_marker##* }
     shape_dupes_state="skipped($shape_dupes_token)"
-    note "check-shape-duplicates.py --prebuilt: SKIPPED ($shape_dupes_token)"
-    note "A stale index answers about an OLD environment: a duplicate that landed"
-    note "after the build reads as ABSENT. Rebuild to make this gate answer:"
-    note "  scripts/cargo-serialized.sh build --release -p axeyum-lean-kernel \\"
-    note "    --example shape_search"
+    # `tool-failed` is NOT a host fact like `no-binary`/`stale-binary` --
+    # those mean "not built here yet", a legitimate, expected state on a
+    # fresh checkout. `tool-failed` means a PRESENT, FRESH binary ran and
+    # produced nothing usable (crashed, timed out, or exited nonzero for a
+    # reason other than staleness). Measured 2026-09-05 (lane
+    # `incidence-geometry`): `shape_search --include-constructed` was
+    # panicking on a real coverage defect (a prelude group indexed but not
+    # declared) and this guard read that as skippable, so the aggregate
+    # printed `shape_duplicates=skipped(tool-failed)|...|PASS` with exit 0 --
+    # a guard with NO SUBJECT inherited into a green verdict. See
+    # docs/contributor-guide/evidence-and-checker-discipline.md, "A green
+    # summary line with a guard that has no subject".
+    if [ "$shape_dupes_token" = "tool-failed" ]; then
+      fail=1
+      echo "FAIL: check-shape-duplicates.py --prebuilt (tool-failed: no subject)"
+      printf '%s\n' "$shape_dupes_out" | sed 's/^/    /'
+      note "The prebuilt shape_search binary is present and not stale, but"
+      note "crashed or exited nonzero for a reason other than staleness --"
+      note "that is a DEFECT, not an absent build, and this guard must not"
+      note "read it as skippable. Rebuild and re-run it directly to see the"
+      note "real failure:"
+      note "  scripts/cargo-serialized.sh build --release -p axeyum-lean-kernel \\"
+      note "    --example shape_search"
+      note "  target/release/examples/shape_search --include-constructed --duplicates"
+    else
+      note "check-shape-duplicates.py --prebuilt: SKIPPED ($shape_dupes_token)"
+      note "A stale index answers about an OLD environment: a duplicate that landed"
+      note "after the build reads as ABSENT. Rebuild to make this gate answer:"
+      note "  scripts/cargo-serialized.sh build --release -p axeyum-lean-kernel \\"
+      note "    --example shape_search"
+    fi
   elif [ "$shape_dupes_rc" -ne 0 ]; then
     fail=1
     echo "FAIL: check-shape-duplicates.py --prebuilt (exit $shape_dupes_rc)"

@@ -215,7 +215,24 @@ not as a sentence claiming it passed.
   their silence. The lane caught it by reading the summary fields, not the
   exit status.
 - **Rule:** a guard whose subject did not load must set the aggregate verdict
-  to FAILED, not to a field value the aggregate ignores. Until the script is
-  changed, read every `=` field of the summary line before believing `PASS`;
-  the coordinator's post-merge pass now greps for `skipped|not-answerable` and
-  treats either as red.
+  to FAILED, not to a field value the aggregate ignores.
+- **Fixed 2026-09-05 (lane `hygiene-verdict`, ADR-1654, `b594ee3ba`):**
+  `check-merge-hygiene.sh` now distinguishes `tool-failed` (the binary is
+  present and not stale and still crashed or exited nonzero -- a guard with
+  no subject) from `no-binary`/`stale-binary` (a host fact about an unbuilt
+  or outdated `target/`, which stays PASS-compatible, same as before).
+  `tool-failed` sets the aggregate to `FAILED`. The other three-outcome
+  guards in that script (frontier shape census, partition-crossing edges,
+  kernel-dependency-projection staleness, the Python prelude-field table's
+  missing-`rustfmt` case) were deliberately left unchanged -- each has its
+  own, separately-argued reason a genuinely absent subject must not fail the
+  gate, and ADR-1654 records why widening the rule to all of them was
+  rejected. The pinned-inventory `n/a` field is now `n/a-empty`, so a
+  KNOWN, proven-zero population reads distinctly from `not-answerable`
+  ("the guard could not tell"). Mutation control (`mutation_controls.py`,
+  suite `merge-hygiene`, M18, `3f0feccc9`): removing the new branch kills
+  exactly one test. **Still true for every OTHER guard in this or any other
+  script carrying a three-outcome design**: read every `=` field of a
+  summary line before believing `PASS`, because a field spelled
+  `not-answerable` or `skipped(...)` for a reason other than `tool-failed`
+  here still does not fail the aggregate.
