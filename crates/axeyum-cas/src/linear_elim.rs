@@ -576,6 +576,31 @@ pub fn detect_block_alternatives(
         .collect()
 }
 
+/// [`detect_block_alternatives`] against an explicit unknown scope.
+///
+/// `detect_block_alternatives` derives the scope from the targets' variables,
+/// which is right when the targets are the theorem's conclusions and wrong when
+/// the caller has a better reason to narrow it. `crate::geometry_certify`'s
+/// combination route has one: a coordinate a **non-degeneracy condition**
+/// mentions is configuration *data*, not an unknown the hypotheses determine, and
+/// eliminating data is exactly what manufactures a determinant mixing the
+/// geometry with an artifact of the encoding.
+#[must_use]
+pub fn detect_block_alternatives_over(
+    generators: &[MvPoly],
+    scope: &BTreeSet<String>,
+    search: &BlockSearch<'_>,
+    alternatives: usize,
+) -> Vec<Vec<LinearBlock>> {
+    scoped_components(generators, scope)
+        .into_iter()
+        .map(|(unknowns, rows)| {
+            component_blocks(generators, &unknowns, &rows, search, alternatives)
+        })
+        .filter(|blocks| !blocks.is_empty())
+        .collect()
+}
+
 /// The connected components of the candidate-unknown/generator incidence graph:
 /// `(unknowns, rows)` per component, in ascending disjoint-set-root order.
 ///
@@ -590,6 +615,14 @@ fn incidence_components(
     for target in targets {
         wanted.extend(target.variables());
     }
+    scoped_components(generators, &wanted)
+}
+
+/// [`incidence_components`] against an explicit unknown scope.
+fn scoped_components(
+    generators: &[MvPoly],
+    wanted: &BTreeSet<String>,
+) -> Vec<(Vec<String>, Vec<usize>)> {
     let candidates: Vec<String> = candidate_unknowns(generators)
         .into_iter()
         .filter(|variable| wanted.contains(variable))
@@ -686,6 +719,10 @@ fn component_blocks(
                 break;
             }
         }
+        // One size class per component, always: the alternatives a combination
+        // adds together must have comparable multipliers, and blocks of different
+        // sizes do not. At `alternatives == 1` this is the original
+        // "largest first, stop at the first block" behaviour exactly.
         if !found.is_empty() {
             break;
         }

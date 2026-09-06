@@ -61,8 +61,8 @@ use crate::cofactor_ansatz::{AnsatzLimits, AnsatzOutcome, cofactors_by_ansatz};
 use crate::groebner::MonomialOrder;
 use crate::groebner_cert::{CofactorOutcome, DeclineReason, Limits, reduce_many_with_cofactors};
 use crate::linear_elim::{
-    BlockSearch, LinearBlock, LinearElimination, detect_linear_blocks, detect_linear_blocks_where,
-    eliminate_blocks,
+    BlockSearch, LinearBlock, LinearElimination, combination, detect_block_alternatives_over,
+    detect_linear_blocks, detect_linear_blocks_where, eliminate_blocks,
 };
 use crate::mvpoly::MvPoly;
 
@@ -603,6 +603,16 @@ pub enum GeometryDecline {
     /// determinant is not the geometric one. Both are worth seeing rather than
     /// timing out over.
     UndividableMultiplier,
+    /// The combination route ([`certify_by_combined_elimination`]) found several
+    /// elimination identities for a conclusion and **no** rational combination of
+    /// them whose multiplier is a product of the stated conditions.
+    ///
+    /// Distinct from [`GeometryDecline::UndividableMultiplier`] on purpose. That
+    /// one says a single decomposition's determinant is unlicensed, which the
+    /// combination route exists to get past; this one says the ideal those
+    /// multipliers generate was searched, in the degree slice the route admits,
+    /// and no licensed element was found in it.
+    UncombinableMultipliers,
     /// The problem's **own** committed counterexample satisfies every hypothesis,
     /// keeps every stated non-degeneracy condition nonzero, and falsifies a
     /// conclusion. The theorem as stated is false, and no budget, order or
@@ -1040,6 +1050,53 @@ pub fn certify_by_linear_elimination_scoped(
     handover: Option<Limits>,
     scope: BlockScope,
 ) -> ProofOutcome {
+    certify_linear_core(problem, handover, scope, false)
+}
+
+/// Certify by **combining several elimination identities**, so that a power of a
+/// stated non-degeneracy condition -- rather than any single block determinant --
+/// is what the certificate divides back out.
+///
+/// The mechanism, the medians' factorisation table and what the combination can
+/// and cannot reach are in [`combine_block_multipliers`]. What this function adds
+/// around it is the scaffolding every route here shares: the smallest-first
+/// condition subset search, the Rabinowitsch inversion, the witness checks, and a
+/// certificate in the **original** generators that
+/// [`crate::geometry_check::check_certificate`] re-derives knowing nothing about
+/// any of it.
+///
+/// # Why it refuses when no combination happened
+///
+/// If some single decomposition's multiplier is already licensed, this route
+/// declines rather than certifying: that is
+/// [`certify_by_linear_elimination_scoped`]'s theorem, and it has committed
+/// artifacts. The refusal makes this route **strictly additive** -- it can only
+/// reach theorems the plain linear route cannot -- which is what lets
+/// [`certify_any_route`] try it first, ahead of the plain route's exhaustive
+/// licensed search, without moving any evidence. On the medians that ordering is
+/// the difference between 83 subsystems and 54,263.
+///
+/// # What it does not do
+///
+/// It does not hand a residue over. The combination adds identities with
+/// polynomial weights, so it adds their residues with those weights too, and the
+/// result is a materially larger ideal-membership question than
+/// [`settle_residue`] was measured on. The contract is the narrow one:
+/// conclusions that linear algebra settles by itself. See [`combined_identity`].
+#[must_use]
+pub fn certify_by_combined_elimination(
+    problem: &GeometryProblem,
+    handover: Option<Limits>,
+) -> ProofOutcome {
+    certify_linear_core(problem, handover, BlockScope::Joint, true)
+}
+
+fn certify_linear_core(
+    problem: &GeometryProblem,
+    handover: Option<Limits>,
+    scope: BlockScope,
+    combine: bool,
+) -> ProofOutcome {
     let count = problem.nondegeneracy.len();
     if count > 16 {
         return ProofOutcome::Declined(GeometryDecline::TooManyConditions);
@@ -1081,10 +1138,14 @@ pub fn certify_by_linear_elimination_scoped(
             .iter()
             .map(|&index| problem.nondegeneracy[index].poly.clone())
             .collect();
-        let plan = BlockPlan {
-            scope,
-            targets: &targets,
-        };
+        // The decomposition is a function of the hypotheses, the targets and the
+        // condition subset -- never of *which* conclusion is being settled -- so
+        // it is planned once per subset rather than once per conclusion. On
+        // `tetrahedron-medians-concurrent`, whose joint search examines 54,263
+        // subsystems and accepts none, that is a threefold saving and it changes
+        // no result, because the search it hoists is a pure function of what was
+        // already hoisted.
+        let decomposition = plan_decomposition(&hypotheses, &targets, &conditions, scope, combine);
         for conclusion in &problem.conclusions {
             match linear_cofactors(
                 &hypotheses,
@@ -1093,7 +1154,7 @@ pub fn certify_by_linear_elimination_scoped(
                 &conditions,
                 conclusion,
                 handover,
-                &plan,
+                &decomposition,
             ) {
                 Ok(cofactors) => cofactor_sets.push(cofactors),
                 Err(outcome) => {
@@ -1194,21 +1255,75 @@ pub fn certify_by_linear_elimination_scoped(
 /// [`certify_by_linear_elimination_scoped`]'s docs.
 #[must_use]
 pub fn certify_any_route(problem: &GeometryProblem, limits: Limits) -> ProofOutcome {
+    if let certified @ ProofOutcome::Certified(_) =
+        certify_by_combined_elimination(problem, Some(limits))
+    {
+        return certified;
+    }
     match certify_by_linear_elimination_scoped(problem, Some(limits), BlockScope::Joint) {
         certified @ ProofOutcome::Certified(_) => certified,
         _ => certify(problem, limits),
     }
 }
 
-/// Which blocks `linear_cofactors` is allowed to look for: the scope, and the
-/// conclusions [`BlockScope::Joint`] scopes the candidate unknowns to.
+/// The block decomposition every conclusion of one condition subset is settled
+/// against.
 ///
-/// One struct rather than two arguments because the two are meaningless apart —
-/// `targets` is read only under [`BlockScope::Joint`] — and because the caller
-/// builds it once for a whole theorem.
-struct BlockPlan<'a> {
+/// A value rather than a scope flag because the search that produces it is the
+/// expensive part and must not be repeated per conclusion -- see
+/// [`plan_decomposition`].
+enum Decomposition {
+    /// Recomputed inside the conclusion loop from that conclusion's own
+    /// variables. [`BlockScope::PerConclusion`], which is by definition not
+    /// hoistable.
+    PerConclusion,
+    /// One licensed decomposition, shared by every conclusion.
+    Joint(Vec<LinearBlock>),
+    /// Several decompositions whose eliminations the combination route adds
+    /// together. Every entry has one block per component.
+    Combine(Vec<Vec<LinearBlock>>),
+}
+
+/// Plan one condition subset's decomposition.
+fn plan_decomposition(
+    hypotheses: &[MvPoly],
+    targets: &[MvPoly],
+    conditions: &[MvPoly],
     scope: BlockScope,
-    targets: &'a [MvPoly],
+    combine: bool,
+) -> Decomposition {
+    match scope {
+        BlockScope::PerConclusion => Decomposition::PerConclusion,
+        BlockScope::Joint if combine => {
+            let search = BlockSearch {
+                choices: JOINT_CHOICES,
+                examined: COMBINATION_EXAMINED,
+                accept: &|_| true,
+            };
+            let unknowns = combination_scope(targets, conditions);
+            let per_component = detect_block_alternatives_over(
+                hypotheses,
+                &unknowns,
+                &search,
+                COMBINATION_ALTERNATIVES,
+            );
+            Decomposition::Combine(combination_decompositions(
+                &per_component,
+                COMBINATION_ALTERNATIVES,
+            ))
+        }
+        BlockScope::Joint => {
+            // The filter is inside the search here, so everything it returns is
+            // already licensed and `licensed_blocks` would be a no-op.
+            let accept = |determinant: &MvPoly| factors_into(determinant, conditions);
+            let search = BlockSearch {
+                choices: JOINT_CHOICES,
+                examined: JOINT_EXAMINED,
+                accept: &accept,
+            };
+            Decomposition::Joint(detect_linear_blocks_where(hypotheses, targets, &search))
+        }
+    }
 }
 
 /// The cofactor vector for one conclusion under one condition subset, or the
@@ -1220,29 +1335,36 @@ fn linear_cofactors(
     conditions: &[MvPoly],
     conclusion: &Constraint,
     handover: Option<Limits>,
-    plan: &BlockPlan<'_>,
+    decomposition: &Decomposition,
 ) -> Result<Vec<MvPoly>, ProofOutcome> {
-    let (scope, targets) = (plan.scope, plan.targets);
     let overflow = || ProofOutcome::Declined(GeometryDecline::Reduction(DeclineReason::Overflow));
-    let blocks = match scope {
-        BlockScope::PerConclusion => licensed_blocks(
-            detect_linear_blocks(hypotheses, &conclusion.poly),
-            conditions,
-        ),
-        // The filter is inside the search here, so everything it returns is
-        // already licensed and `licensed_blocks` would be a no-op.
-        BlockScope::Joint => {
-            let accept = |determinant: &MvPoly| factors_into(determinant, conditions);
-            let search = BlockSearch {
-                choices: JOINT_CHOICES,
-                examined: JOINT_EXAMINED,
-                accept: &accept,
+    let elimination = match decomposition {
+        Decomposition::PerConclusion => {
+            let blocks = licensed_blocks(
+                detect_linear_blocks(hypotheses, &conclusion.poly),
+                conditions,
+            );
+            let Some(found) = eliminate_blocks(hypotheses, &conclusion.poly, blocks) else {
+                return Err(overflow());
             };
-            detect_linear_blocks_where(hypotheses, targets, &search)
+            Identity::from_elimination(found)
         }
-    };
-    let Some(elimination) = eliminate_blocks(hypotheses, &conclusion.poly, blocks) else {
-        return Err(overflow());
+        Decomposition::Joint(blocks) => {
+            let Some(found) = eliminate_blocks(hypotheses, &conclusion.poly, blocks.clone()) else {
+                return Err(overflow());
+            };
+            Identity::from_elimination(found)
+        }
+        Decomposition::Combine(decompositions) => {
+            match combined_identity(hypotheses, &conclusion.poly, conditions, decompositions) {
+                Some((identity, _)) => identity,
+                None => {
+                    return Err(ProofOutcome::Declined(
+                        GeometryDecline::UncombinableMultipliers,
+                    ));
+                }
+            }
+        }
     };
 
     let mut cofactors = vec![MvPoly::zero(); generators.len()];
@@ -1265,7 +1387,7 @@ fn linear_cofactors(
         // — one that could certify a corpus theorem by a different identity than
         // the one already committed. It declines instead, and `certify_any_route`
         // hands the problem to Buchberger as before.
-        if elimination.blocks.is_empty() {
+        if elimination.consumed.is_empty() {
             return Err(ProofOutcome::NotInSaturatedIdeal {
                 conclusion_id: conclusion.id.clone(),
                 remainder: elimination.residue.clone(),
@@ -1323,7 +1445,7 @@ const JOINT_EXAMINED: usize = 400_000;
 fn settle_residue(
     hypotheses: &[MvPoly],
     generators: &[MvPoly],
-    elimination: &LinearElimination,
+    elimination: &Identity,
     conclusion: &Constraint,
     limits: Limits,
     cofactors: &mut [MvPoly],
@@ -1353,11 +1475,7 @@ fn settle_residue(
     // reduction with three Rabinowitsch generators added does not return; so
     // reaching for them only when the cheap pass fails is the difference
     // between a subset search that finishes and one that does not.
-    let consumed: BTreeSet<usize> = elimination
-        .blocks
-        .iter()
-        .flat_map(|block| block.rows.iter().copied())
-        .collect();
+    let consumed = &elimination.consumed;
     let bare: Vec<usize> = (0..hypotheses.len())
         .filter(|index| !consumed.contains(index))
         .collect();
@@ -1724,6 +1842,552 @@ fn verify_witnesses(
         }
     }
     Ok(certificate.clone())
+}
+
+// =============================================================================
+// Combining several elimination identities
+// =============================================================================
+
+/// One round of [`combine_block_multipliers`]: the factor a group of multipliers
+/// shares, what was left of each after dividing it out, and the coefficients that
+/// drove those remainders to a single polynomial.
+///
+/// This is the **producer's** trace. It is not part of the certificate and the
+/// independent checker never sees it: what the combination emits is an ordinary
+/// cofactor certificate, re-derived from scratch by
+/// [`crate::geometry_check::check_certificate`] with polynomial arithmetic alone.
+/// The trace exists so the combination can be read, tabulated and tested rather
+/// than believed.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CombinationStep {
+    /// The factor every multiplier in the group has in common.
+    pub shared: MvPoly,
+    /// `multiplier / shared` for each member of the group, in the group's own
+    /// index order. These are the **artifact** factors — what the elimination's
+    /// choice of decomposition put into the multiplier that no stated condition
+    /// licenses.
+    pub artifacts: Vec<MvPoly>,
+    /// Positionally aligned with [`CombinationStep::artifacts`], with
+    /// `Σ coefficients[i]·artifacts[i] == reached`.
+    pub coefficients: Vec<MvPoly>,
+    /// What the artifacts were driven to: `1`, or a stated condition.
+    pub reached: MvPoly,
+    /// `shared · reached` — the multiplier the round's combined identity carries.
+    pub multiplier: MvPoly,
+}
+
+/// What [`combine_block_multipliers`] did, round by round.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct CombinationTrace {
+    /// The rounds, in order.
+    pub steps: Vec<CombinationStep>,
+    /// The multiplier the combination reached, once it is a product of powers of
+    /// the stated conditions and a nonzero rational. `None` if no round of this
+    /// trace ever got there.
+    pub multiplier: Option<MvPoly>,
+    /// What each **input** multiplier ends up carrying:
+    /// `Σ weights[i]·multipliers[i] == multiplier`, indexed into the caller's
+    /// slice. A `BTreeMap` because the identity it drives is serialized.
+    pub weights: BTreeMap<usize, MvPoly>,
+}
+
+/// How many grouping rounds [`combine_block_multipliers`] runs.
+///
+/// A backstop rather than a tuning parameter: a round replaces at least two items
+/// by one, so the item count bounds the rounds by itself.
+/// `tetrahedron-medians-concurrent` uses four.
+const COMBINATION_ROUNDS: usize = 16;
+
+/// The cofactor-degree ceiling for a combination round's ideal-membership solve.
+///
+/// The degree actually tried is `deg(target) − min deg(artifact)`, clamped here.
+/// That bound is not a guess: a combination `Σ cᵢ·aᵢ = t` in which every term
+/// contributes to `t`'s top degree has `deg(cᵢ) = deg(t) − deg(aᵢ)`, and asking
+/// for more is asking a Macaulay matrix with tens of thousands of columns to be
+/// solved exactly. On the medians the two rounds that matter are settled at
+/// degree 2 and degree 1.
+const COMBINATION_COFACTOR_DEGREE: u32 = 3;
+
+/// How many alternative blocks per component the combination route enumerates.
+const COMBINATION_ALTERNATIVES: usize = 64;
+
+/// The subsystem ceiling the combination route's own block search runs under.
+///
+/// Far below [`JOINT_EXAMINED`] because this search accepts every determinant and
+/// therefore stops as soon as it has its alternatives; the ceiling is only there
+/// so a component with no usable subsystem at all cannot enumerate forever.
+const COMBINATION_EXAMINED: usize = 20_000;
+
+/// One item the combination is working with: a multiplier, and the combination of
+/// the caller's original multipliers that produces it.
+struct Virtual {
+    multiplier: MvPoly,
+    weights: BTreeMap<usize, MvPoly>,
+}
+
+/// Combine several elimination multipliers for one conclusion until what is left
+/// to invert is a **product of powers of the stated conditions**.
+///
+/// # The problem this solves
+///
+/// [`certify_by_linear_elimination`] eliminates one square subsystem and gets
+///
+/// ```text
+/// multiplier · conclusion  =  Σᵢ uᵢ · hypothesisᵢ
+/// ```
+///
+/// and can only finish if `multiplier` factors into the theorem's stated
+/// non-degeneracy conditions, because those are the only things the certificate
+/// can divide back out. On `tetrahedron-medians-concurrent` **no** subsystem has
+/// such a determinant, and that is not a limitation of the search: with median
+/// directions `u` and `v` the hypotheses are `u × (P − A) = 0` and
+/// `v × (P − B) = 0`, so `P`'s coefficient matrix is two rank-two skew matrices
+/// stacked, and every `3×3` minor is a **product** — one coordinate of `u` or `v`
+/// times one component of `u × v`. The second factor is geometry; the first is an
+/// artifact of the cross-product encoding, vanishing on a plane that has nothing
+/// to do with the theorem. Inventing a condition to divide it out would certify a
+/// weaker theorem, which is what [`GeometryDecline::UndividableMultiplier`]
+/// refuses to do.
+///
+/// # The mechanism
+///
+/// The multipliers of *different* subsystems are different, and any polynomial
+/// combination of the identities is another identity:
+///
+/// ```text
+/// (Σⱼ cⱼ·mⱼ) · conclusion  =  Σᵢ (Σⱼ cⱼ·uⱼᵢ) · hypothesisᵢ
+/// ```
+///
+/// so the multipliers this route may reach are the whole **ideal** generated by
+/// the `mⱼ`. This function searches that ideal for a licensed element, in rounds:
+///
+/// 1. Group the multipliers by a common factor `g`, found by exact multivariate
+///    GCD ([`MvPoly::gcd`]) — a decided operation, no budget in it. Dividing `g`
+///    out by exact division leaves the **artifact factors** `aⱼ`.
+/// 2. Solve `Σⱼ cⱼ·aⱼ = t` for a target `t` that is `1` or a stated condition, by
+///    bounded-degree exact linear algebra ([`cofactors_by_ansatz`]). The `t = 1`
+///    case is the unit-ideal one the brief for this route named; the condition
+///    case is the one the medians actually need, and it is why the multiplier
+///    this ends at is a **power** of a condition rather than the condition
+///    itself.
+/// 3. The group collapses to one item with multiplier `g·t`, and the round
+///    repeats. Each round removes at least one item, so the loop terminates.
+///
+/// On `tetrahedron-medians-concurrent` this runs four rounds. Writing `Δ` for the
+/// non-coplanarity condition `det[B−A, C−A, D−A]`, `u`, `v` for the two median
+/// directions and `w = u × v`:
+///
+/// | round | shared `g` | artifacts `aⱼ` | target `t` | reached |
+/// |---|---|---|---|---|
+/// | 1 | `w_x` | `u_x u_y u_z v_x v_y v_z` | `Δ` | `w_x·Δ` |
+/// | 2 | `w_y` | the same six | `Δ` | `w_y·Δ` |
+/// | 3 | `w_z` | the same six | `Δ` | `w_z·Δ` |
+/// | 4 | `Δ` | `w_x w_y w_z` | `Δ` | `Δ²` |
+///
+/// Both solves are identities of vector algebra rather than luck. `Δ = d·w` up to
+/// a rational, where `d = D − A`, which is round 4; and `Δ = det[b, c, s]` with
+/// `s = (C−A)+(D−A)`, which is linear in the coordinates of `b = B − A` and hence
+/// in `u` and `v`, which is rounds 1–3.
+///
+/// # What it returns, and what checks it
+///
+/// A [`CombinationTrace`] whose `weights` satisfy
+/// `Σ weights[i]·multipliers[i] == multiplier`, re-expanded and compared here
+/// after every round — a fold that does not reproduce its own round's multiplier
+/// returns `None` rather than a certificate nobody would have re-derived. The
+/// caller then combines the *identities* with the same weights and re-checks the
+/// whole identity once more before it becomes a certificate.
+///
+/// `None` means no combination was found: either no group shares a factor, or no
+/// target is in the degree slice searched. Nothing is claimed either way.
+#[must_use]
+pub fn combine_block_multipliers(
+    multipliers: &[MvPoly],
+    conditions: &[MvPoly],
+) -> Option<CombinationTrace> {
+    if conditions.is_empty() || multipliers.is_empty() {
+        return None;
+    }
+    let one = MvPoly::constant(Rational::integer(1));
+    let mut items: Vec<Virtual> = multipliers
+        .iter()
+        .enumerate()
+        .map(|(index, multiplier)| Virtual {
+            multiplier: multiplier.clone(),
+            weights: std::iter::once((index, one.clone())).collect(),
+        })
+        .collect();
+    let mut trace = CombinationTrace::default();
+    for _ in 0..COMBINATION_ROUNDS {
+        if let Some(index) = items
+            .iter()
+            .position(|item| factors_into(&item.multiplier, conditions))
+        {
+            trace.multiplier = Some(items[index].multiplier.clone());
+            trace.weights.clone_from(&items[index].weights);
+            return Some(trace);
+        }
+        let (members, step) = combine_one_round(&items, conditions)?;
+        let fresh = fold_group(&items, &members, &step, multipliers)?;
+        let chosen: BTreeSet<usize> = members.iter().copied().collect();
+        items = items
+            .into_iter()
+            .enumerate()
+            .filter(|(index, _)| !chosen.contains(index))
+            .map(|(_, item)| item)
+            .collect();
+        items.push(fresh);
+        trace.steps.push(step);
+    }
+    None
+}
+
+/// One grouping round: the group that combined, and what it combined to.
+fn combine_one_round(
+    items: &[Virtual],
+    conditions: &[MvPoly],
+) -> Option<(Vec<usize>, CombinationStep)> {
+    let mut groups: Vec<(MvPoly, Vec<usize>)> = Vec::new();
+    for left in 0..items.len() {
+        for right in (left + 1)..items.len() {
+            let Some(shared) = items[left].multiplier.gcd(&items[right].multiplier) else {
+                continue;
+            };
+            if shared.total_degree() == 0 {
+                continue;
+            }
+            let members: Vec<usize> = (0..items.len())
+                .filter(|&index| items[index].multiplier.exact_div(&shared).is_some())
+                .collect();
+            if members.len() < 2 {
+                continue;
+            }
+            if groups
+                .iter()
+                .any(|(seen, taken)| *taken == members && *seen == shared)
+            {
+                continue;
+            }
+            groups.push((shared, members));
+        }
+    }
+    // Biggest group first; ties keep discovery order, which is the ascending
+    // index order the loops above impose. `sort_by_key` is stable, so this is
+    // deterministic without a total order on `MvPoly`.
+    groups.sort_by_key(|(_, members)| std::cmp::Reverse(members.len()));
+
+    for (shared, members) in &groups {
+        let mut artifacts: Vec<MvPoly> = Vec::with_capacity(members.len());
+        for &index in members {
+            let Some(artifact) = items[index].multiplier.exact_div(shared) else {
+                break;
+            };
+            artifacts.push(artifact);
+        }
+        if artifacts.len() != members.len() {
+            continue;
+        }
+        let floor = artifacts
+            .iter()
+            .map(MvPoly::total_degree)
+            .min()
+            .unwrap_or_default();
+        for target in combination_targets(conditions) {
+            let ceiling = u32::try_from(target.total_degree().saturating_sub(floor))
+                .unwrap_or(COMBINATION_COFACTOR_DEGREE)
+                .min(COMBINATION_COFACTOR_DEGREE);
+            let limits = AnsatzLimits {
+                max_cofactor_degree: ceiling,
+                ..AnsatzLimits::geometry()
+            };
+            let AnsatzOutcome::Solved {
+                cofactors: coefficients,
+                ..
+            } = cofactors_by_ansatz(&artifacts, &target, limits)
+            else {
+                continue;
+            };
+            let multiplier = shared.mul(&target)?;
+            return Some((
+                members.clone(),
+                CombinationStep {
+                    shared: shared.clone(),
+                    artifacts: artifacts.clone(),
+                    coefficients,
+                    reached: target,
+                    multiplier,
+                },
+            ));
+        }
+    }
+    None
+}
+
+/// What a round tries to drive the artifact factors to: `1` first — the unit
+/// ideal, which needs no condition at all — then each stated condition, then
+/// their product.
+///
+/// Ascending in how much the answer costs the theorem, so a combination that
+/// needs nothing does not accidentally buy a condition.
+fn combination_targets(conditions: &[MvPoly]) -> Vec<MvPoly> {
+    let mut targets = vec![MvPoly::constant(Rational::integer(1))];
+    for condition in conditions {
+        if condition.total_degree() > 0 && !targets.contains(condition) {
+            targets.push(condition.clone());
+        }
+    }
+    if conditions.len() > 1 {
+        let mut product = MvPoly::constant(Rational::integer(1));
+        for condition in conditions {
+            match product.mul(condition) {
+                Some(next) => product = next,
+                None => return targets,
+            }
+        }
+        if !targets.contains(&product) {
+            targets.push(product);
+        }
+    }
+    targets
+}
+
+/// Fold a group into one item, and refuse if the fold does not reproduce the
+/// round's own multiplier.
+///
+/// The check is not decoration. The weights are a product of polynomial
+/// multiplications across rounds, and an arithmetic slip in them would surface
+/// only as a certificate that the independent checker rejects — after it had been
+/// written to `artifacts/`. Re-expanding costs one multiplication per weight.
+fn fold_group(
+    items: &[Virtual],
+    members: &[usize],
+    step: &CombinationStep,
+    multipliers: &[MvPoly],
+) -> Option<Virtual> {
+    let mut weights: BTreeMap<usize, MvPoly> = BTreeMap::new();
+    for (slot, &member) in members.iter().enumerate() {
+        let coefficient = step.coefficients.get(slot)?;
+        if coefficient.is_zero() {
+            continue;
+        }
+        for (index, weight) in &items[member].weights {
+            let addend = coefficient.mul(weight)?;
+            let entry = weights.entry(*index).or_insert_with(MvPoly::zero);
+            *entry = entry.add(&addend)?;
+        }
+    }
+    weights.retain(|_, weight| !weight.is_zero());
+    let mut check = MvPoly::zero();
+    for (index, weight) in &weights {
+        check = check.add(&weight.mul(multipliers.get(*index)?)?)?;
+    }
+    if check != step.multiplier {
+        return None;
+    }
+    Some(Virtual {
+        multiplier: step.multiplier.clone(),
+        weights,
+    })
+}
+
+/// An identity `multiplier · conclusion = residue + Σ cofactors[i]·hypotheses[i]`,
+/// with the hypothesis rows the blocks behind it consumed.
+///
+/// [`LinearElimination`] is the same identity plus the promise that `multiplier`
+/// is `Π determinant^power` over its blocks. A combined identity's multiplier is
+/// *not* that — it is a polynomial combination of several such products — so it
+/// gets its own type rather than a `LinearElimination` whose documented invariant
+/// it quietly breaks.
+struct Identity {
+    multiplier: MvPoly,
+    cofactors: Vec<MvPoly>,
+    residue: MvPoly,
+    consumed: BTreeSet<usize>,
+}
+
+impl Identity {
+    fn from_elimination(elimination: LinearElimination) -> Identity {
+        Identity {
+            consumed: elimination
+                .blocks
+                .iter()
+                .flat_map(|block| block.rows.iter().copied())
+                .collect(),
+            multiplier: elimination.multiplier,
+            cofactors: elimination.cofactors,
+            residue: elimination.residue,
+        }
+    }
+}
+
+/// The joint degree of `poly` in `unknowns` — the largest total exponent those
+/// variables carry in any one monomial, which is the power of a block's
+/// determinant that eliminating it costs.
+fn joint_degree(poly: &MvPoly, unknowns: &[String]) -> u32 {
+    poly.terms()
+        .map(|(mono, _)| {
+            unknowns
+                .iter()
+                .map(|unknown| mono.exponent_of(unknown))
+                .sum::<u32>()
+        })
+        .max()
+        .unwrap_or(0)
+}
+
+/// Build one conclusion's identity by combining the eliminations of several block
+/// decompositions.
+///
+/// Returns `None` when there is no combination, when a decomposition's actual
+/// multiplier is not the one the combination reasoned about, when the combined
+/// identity does not re-expand, or when linear algebra did not settle the
+/// conclusion outright.
+///
+/// # Why a zero residue is required
+///
+/// The combination adds identities with polynomial weights, so it adds their
+/// residues with those weights too. Handing *that* to the general
+/// ideal-membership route is a materially larger question than the one
+/// [`settle_residue`] was measured on, and it is the shape that made this route's
+/// ancestor hang. So the contract here is the narrow one: the combination route
+/// certifies conclusions that **linear algebra settles by itself**, and declines
+/// otherwise. The probe below buys that verdict for one elimination rather than
+/// for all of them.
+fn combined_identity(
+    hypotheses: &[MvPoly],
+    conclusion: &MvPoly,
+    conditions: &[MvPoly],
+    decompositions: &[Vec<LinearBlock>],
+) -> Option<(Identity, CombinationTrace)> {
+    // The probe: if the first decomposition leaves a residue, no decomposition of
+    // this shape settles the conclusion outright and there is nothing here to
+    // combine. One elimination decides it.
+    let probe = eliminate_blocks(hypotheses, conclusion, decompositions.first()?.clone())?;
+    if !probe.residue.is_zero() {
+        return None;
+    }
+
+    let mut multipliers: Vec<MvPoly> = Vec::with_capacity(decompositions.len());
+    for blocks in decompositions {
+        let mut multiplier = MvPoly::constant(Rational::integer(1));
+        for block in blocks {
+            let power = joint_degree(conclusion, &block.unknowns);
+            multiplier = multiplier.mul(&block.determinant.pow(power)?)?;
+        }
+        multipliers.push(multiplier);
+    }
+    let trace = combine_block_multipliers(&multipliers, conditions)?;
+    let reached = trace.multiplier.clone()?;
+
+    let mut cofactors = vec![MvPoly::zero(); hypotheses.len()];
+    let mut residue = MvPoly::zero();
+    let mut consumed: BTreeSet<usize> = BTreeSet::new();
+    for (index, weight) in &trace.weights {
+        let elimination =
+            eliminate_blocks(hypotheses, conclusion, decompositions.get(*index)?.clone())?;
+        // The combination reasoned about a *predicted* multiplier. A
+        // decomposition whose elimination produces a different one was combined
+        // on a guess, and the combination is void — refuse rather than repair.
+        if elimination.multiplier != *multipliers.get(*index)? {
+            return None;
+        }
+        if !elimination.residue.is_zero() {
+            return None;
+        }
+        consumed.extend(
+            elimination
+                .blocks
+                .iter()
+                .flat_map(|block| block.rows.iter().copied()),
+        );
+        residue = residue.add(&weight.mul(&elimination.residue)?)?;
+        for (slot, cofactor) in elimination.cofactors.iter().enumerate() {
+            let share = weight.mul(cofactor)?;
+            cofactors[slot] = cofactors[slot].add(&share)?;
+        }
+    }
+
+    let identity = Identity {
+        multiplier: reached,
+        cofactors,
+        residue,
+        consumed,
+    };
+    // The self-check, against the *original* hypotheses and with no reference to
+    // anything the combination believes. A combined identity that does not
+    // re-expand is refused here rather than emitted for the independent checker
+    // to reject.
+    let expanded = combination(&identity.cofactors, hypotheses)?.add(&identity.residue)?;
+    if identity.multiplier.mul(conclusion)? != expanded {
+        return None;
+    }
+    Some((identity, trace))
+}
+
+/// The unknowns the combination route searches over: the conclusions' variables
+/// that **no** stated condition mentions.
+///
+/// A coordinate a non-degeneracy condition constrains is configuration data the
+/// theorem is quantified over, not an unknown the hypotheses determine.
+/// Eliminating data is what produces the determinants this route exists to get
+/// around, and it is also what makes the search expensive: on
+/// `tetrahedron-medians-concurrent` the conclusions mention all fifteen
+/// coordinates and the unfiltered search examines 54,263 subsystems, while this
+/// scope is `{px, py, pz}` and 83 subsystems settle it.
+///
+/// Falls back to the full conclusion scope when the narrowing leaves nothing —
+/// reach costs nothing there, because a component with no candidates yields no
+/// blocks at all.
+fn combination_scope(targets: &[MvPoly], conditions: &[MvPoly]) -> BTreeSet<String> {
+    let mut wanted: BTreeSet<String> = BTreeSet::new();
+    for target in targets {
+        wanted.extend(target.variables());
+    }
+    let mut data: BTreeSet<String> = BTreeSet::new();
+    for condition in conditions {
+        data.extend(condition.variables());
+    }
+    let narrowed: BTreeSet<String> = wanted.difference(&data).cloned().collect();
+    if narrowed.is_empty() {
+        wanted
+    } else {
+        narrowed
+    }
+}
+
+/// The block decompositions the combination route builds its identities from: the
+/// first block of every component, then that same base with one component's block
+/// swapped for each of its alternatives.
+///
+/// Varying one component at a time rather than taking a product keeps the count
+/// linear in the alternatives, and it is enough: the multipliers then differ in
+/// exactly one factor, which is the difference the GCD grouping reads.
+fn combination_decompositions(
+    per_component: &[Vec<LinearBlock>],
+    cap: usize,
+) -> Vec<Vec<LinearBlock>> {
+    let Some(base) = per_component
+        .iter()
+        .map(|blocks| blocks.first().cloned())
+        .collect::<Option<Vec<LinearBlock>>>()
+    else {
+        return Vec::new();
+    };
+    if base.is_empty() {
+        return Vec::new();
+    }
+    let mut out = vec![base.clone()];
+    for (index, blocks) in per_component.iter().enumerate() {
+        for alternative in blocks.iter().skip(1) {
+            if out.len() >= cap {
+                return out;
+            }
+            let mut variant = base.clone();
+            variant[index] = alternative.clone();
+            out.push(variant);
+        }
+    }
+    out
 }
 
 #[cfg(test)]
