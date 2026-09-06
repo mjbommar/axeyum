@@ -1379,33 +1379,41 @@ impl MultiPoly {
         Some(reduced)
     }
 
-    /// Multiply the **constant** square-root atoms inside each monomial together:
-    /// `√a·√b → √(ab)`, then re-extract the square part. Sound for `a, b ≥ 0`
-    /// (the only radicands this crate atomizes), where both sides are the
-    /// principal real root of the same non-negative number.
+    /// Multiply the **constant** radical atoms inside each monomial together and
+    /// re-extract, over their **common root index**:
+    /// `√a·√b → √(ab)`, and across families `√2·∛2 → root_6(32)`. Sound for
+    /// positive radicands (the only ones [`constant_radical_atom`] admits),
+    /// where every atom is the principal real root of a positive integer and
+    /// `c^{1/k} = c^{(L/k)/L}` is an identity rather than a branch choice; see
+    /// [`combine_constant_radicals`].
     ///
     /// Without it every constant radical is its own independent variable and
     /// `√2·√3 − √6` is a nonzero polynomial — which the zero-test reported as a
     /// **refutation of a true identity**. That was the measured defect; this
-    /// fold and [`canonical_constant_sqrt_poly`] are the two halves of the fix,
-    /// and [`MultiPoly::relates_multiplicative_atoms`] declines the cases
+    /// fold and [`canonical_constant_radical_poly`] are the two halves of the
+    /// fix, and [`MultiPoly::relates_multiplicative_atoms`] declines the cases
     /// neither can reach.
     ///
-    /// Also finishes the even-power extraction for constants
-    /// (`√2^3 → 2·√2`), which [`MultiPoly::fold_radical`] starts, so a monomial
+    /// Also finishes the power extraction for constants (`√2^3 → 2·√2`,
+    /// `∛2^4 → 2·∛2`), which [`MultiPoly::fold_radical`] starts, so a monomial
     /// leaves this fold with at most one constant radical at exponent 1.
+    /// A monomial the merge declines (see [`combine_constant_radicals`]) leaves
+    /// with its radicals untouched, never half-merged.
     /// `None` on `i128` overflow.
     fn fold_radical_products(&self) -> Option<MultiPoly> {
         let reducible = self.terms.keys().any(|mono| {
             let mut radicals = 0usize;
-            let mut squared = false;
+            let mut reducible = false;
             for (var, &exp) in &mono.powers {
-                if constant_sqrt_radicand(var).is_some() {
+                if constant_radical_atom(var).is_some() {
                     radicals += 1;
-                    squared |= exp >= 2;
+                    // `exp >= 2`, not `exp >= index`: `∛2²` reduces to `∛4`
+                    // even though nothing comes out whole, and leaving it at
+                    // exponent 2 is a second spelling of one number.
+                    reducible |= exp >= 2;
                 }
             }
-            radicals >= 2 || squared
+            radicals >= 2 || reducible
         });
         if !reducible {
             return Some(self.clone());
@@ -1413,33 +1421,38 @@ impl MultiPoly {
         let mut out = MultiPoly::zero();
         for (mono, coeff) in &self.terms {
             let mut factor = *coeff;
-            let mut product: i128 = 1;
             let mut powers = BTreeMap::new();
+            // Every constant radical in this monomial, as `(index, radicand,
+            // exponent)` alongside the key it came from.
+            let mut radicals: Vec<(&String, u32, i128, u32)> = Vec::new();
             for (var, &exp) in &mono.powers {
-                match constant_sqrt_radicand(var) {
-                    // √m^exp = m^(exp/2) · √m^(exp mod 2), and the surviving
-                    // half joins the product of this monomial's radicands.
-                    Some(radicand) => {
-                        for _ in 0..(exp / 2) {
-                            factor = factor.checked_mul(Rational::integer(radicand))?;
-                        }
-                        if exp % 2 == 1 {
-                            product = product.checked_mul(radicand)?;
-                        }
-                    }
+                match constant_radical_atom(var) {
+                    Some((index, radicand)) => radicals.push((var, index, radicand, exp)),
                     None => {
                         powers.insert(var.clone(), exp);
                     }
                 }
             }
-            if product > 1 {
-                let (square, free) = square_part(product)?;
-                factor = factor.checked_mul(Rational::integer(square))?;
-                if free > 1 {
-                    powers.insert(sqrt_atom_key(free), 1);
+            let combinable: Vec<(u32, i128, u32)> = radicals
+                .iter()
+                .map(|(_, index, radicand, exp)| (*index, *radicand, *exp))
+                .collect();
+            match combine_constant_radicals(&combinable) {
+                Some((scale, index, radicand)) => {
+                    factor = factor.checked_mul(Rational::integer(scale))?;
+                    if radicand > 1 {
+                        powers.insert(radical_atom_key(index, radicand), 1);
+                    }
                 }
-            } else if product == 0 {
-                continue;
+                // Not combinable — an index past `MAX_COMBINED_ROOT_INDEX`, a
+                // radicand past the factorizer, or an `i128` overflow. Leave
+                // every radical exactly where it was rather than half-merging;
+                // `relates_multiplicative_atoms` then refuses to refute over it.
+                None => {
+                    for (var, _, _, exp) in &radicals {
+                        powers.insert((*var).clone(), *exp);
+                    }
+                }
             }
             if factor.is_zero() {
                 continue;
@@ -1468,21 +1481,24 @@ impl MultiPoly {
     /// answer. Measured before this guard: `√x·√y = √(xy)`, `|x|·|y| = |xy|` and
     /// `root₃(2)·root₃(4) = 2` were all reported **refuted**.
     ///
-    /// Constant radicals never reach here — [`MultiPoly::fold_radical_products`]
-    /// has already merged them — so what this declines is a symbolic or
-    /// unreduced product, which is a completeness cost and not a soundness one.
-    /// The equality branch is unaffected: a zero difference is zero whatever the
-    /// atoms denote.
+    /// A constant radical reaches here only when
+    /// [`MultiPoly::fold_radical_products`] declined to merge it (a radicand
+    /// past the factorizer, or a common index past
+    /// [`MAX_COMBINED_ROOT_INDEX`]); merged ones are already one atom at
+    /// exponent 1. So what this declines is a symbolic or unreduced product,
+    /// which is a completeness cost and not a soundness one. The equality branch
+    /// is unaffected: a zero difference is zero whatever the atoms denote.
     fn relates_multiplicative_atoms(&self) -> bool {
         self.terms.keys().any(|mono| {
             let mut multiplicative = 0usize;
             for (var, &exp) in &mono.powers {
-                // An `i128` radicand whose square part is out of
-                // `square_part`'s reach was left uncanonicalized at intake, so
-                // `√(p²)` and `p` are two names the normal form cannot see are
-                // the same number. Measured before this line: `√(1000003²)` was
-                // reported **not equal** to `1000003`.
-                if constant_sqrt_radicand(var).is_some_and(|n| square_part(n).is_none()) {
+                // A constant radical the canonicalization could not reduce —
+                // a radicand out of the factorizer's reach, at any root index —
+                // was left as intake found it, so `√(p²)` and `p`, or
+                // `root_6(N²)` and `∛N`, are two names the normal form cannot
+                // see are the same number. Measured before this line:
+                // `√(1000003²)` was reported **not equal** to `1000003`.
+                if uncanonicalized_constant_radical(var) {
                     return true;
                 }
                 if is_multiplicative_atom(var) {
@@ -1977,6 +1993,16 @@ fn normalize_rational(expr: &CasExpr) -> Option<RatFunc> {
             canonical_constant_sqrt_poly(arg)
                 .unwrap_or_else(|| MultiPoly::single_var(&atom_name("sqrt", arg))),
         )),
+        // `root_q` of a rational constant is canonicalized the same way, onto
+        // the **smallest** index its exponents allow — which is what makes
+        // `root_6(4)` and `∛2` one atom rather than two, and what puts a `√`
+        // and a `∛` in a form `fold_radical_products` can meet over their common
+        // index. See `canonical_constant_radical`.
+        CasExpr::Unary(UnaryFunc::NthRoot(q), arg) => Some(RatFunc::from_poly(
+            canonical_constant_radical_poly(arg, *q).unwrap_or_else(|| {
+                MultiPoly::single_var(&atom_name(&UnaryFunc::NthRoot(*q).name(), arg))
+            }),
+        )),
         CasExpr::Unary(func, arg) => Some(RatFunc::from_poly(MultiPoly::single_var(&atom_name(
             &func.name(),
             arg,
@@ -2152,6 +2178,27 @@ fn collect_atom_dictionary(source: &CasExpr, dict: &mut BTreeMap<String, CasExpr
             // A Pythagorean reduction (see `trigsimp`) rewrites `cos²u` in terms
             // of `sin u` and vice versa, introducing the *conjugate* trig head on
             // the same argument. Register it so those forms decode cleanly.
+            // A radical over a rational constant is canonicalized at intake
+            // (`√8 → 2·√2`, `root_6(4) → ∛2`), so the key the normal form
+            // carries is not the one this head spells. Register the canonical
+            // key as well, or `deatomize` leaks a raw `\0sqrt:2` into
+            // `expand`'s user-facing output — which it did for every `√c` whose
+            // square part was non-trivial.
+            if let Some(index) = root_index(*func)
+                && let Some((_, reduced, radicand)) =
+                    rational_constant_value(arg).and_then(|c| canonical_constant_radical(c, index))
+                && radicand > 1
+            {
+                let head = if reduced == 2 {
+                    UnaryFunc::Sqrt
+                } else {
+                    UnaryFunc::NthRoot(reduced)
+                };
+                dict.insert(
+                    radical_atom_key(reduced, radicand),
+                    CasExpr::Unary(head, Box::new(CasExpr::int(radicand))),
+                );
+            }
             if let Some(conjugate) = match func {
                 UnaryFunc::Sin => Some(UnaryFunc::Cos),
                 UnaryFunc::Cos => Some(UnaryFunc::Sin),
@@ -2236,7 +2283,8 @@ fn parse_rational_render(text: &str) -> Option<Rational> {
     }
 }
 
-/// The largest trial divisor [`square_part`] will try before giving up.
+/// The largest trial divisor [`bounded_prime_factorization`] will try before
+/// giving up.
 ///
 /// A radicand up to `10^10` is fully factored inside this; above it the split is
 /// abandoned rather than left half-done, because a partly-extracted square is a
@@ -2244,21 +2292,23 @@ fn parse_rational_render(text: &str) -> Option<Rational> {
 /// cannot see is a wrong refutation waiting to happen.
 const SQUARE_PART_TRIAL_LIMIT: i128 = 100_000;
 
-/// Split `n ≥ 1` as `k²·m` with `m` **squarefree**, returning `(k, m)`.
+/// The prime factorization of `n ≥ 1` by trial division, as `(prime, exponent)`
+/// pairs in ascending prime order (`1` factors as the empty list).
 ///
-/// `None` when trial division cannot finish inside
-/// [`SQUARE_PART_TRIAL_LIMIT`], or on `i128` overflow. A `None` is not a
-/// reduction the caller may quietly skip — see [`canonical_constant_sqrt`].
+/// `None` when the division cannot finish inside [`SQUARE_PART_TRIAL_LIMIT`],
+/// which is the refusal the squarefree split has always made and for the same
+/// reason: a *partial* factorization is a radical two spellings can disagree on,
+/// and a disagreement the zero-test cannot see is a wrong refutation waiting to
+/// happen.
 ///
 /// When the loop ends, `remaining` has no divisor `d` with `d² ≤ remaining`, so
-/// it is `1` or prime, and therefore squarefree.
-fn square_part(n: i128) -> Option<(i128, i128)> {
+/// it is `1` or prime.
+fn bounded_prime_factorization(n: i128) -> Option<Vec<(i128, u32)>> {
     if n < 1 {
         return None;
     }
     let mut remaining = n;
-    let mut square = 1i128;
-    let mut free = 1i128;
+    let mut factors: Vec<(i128, u32)> = Vec::new();
     let mut divisor = 2i128;
     while divisor.checked_mul(divisor)? <= remaining {
         if divisor > SQUARE_PART_TRIAL_LIMIT {
@@ -2270,39 +2320,297 @@ fn square_part(n: i128) -> Option<(i128, i128)> {
                 remaining /= divisor;
                 exponent += 1;
             }
-            for _ in 0..(exponent / 2) {
-                square = square.checked_mul(divisor)?;
-            }
-            if exponent % 2 == 1 {
-                free = free.checked_mul(divisor)?;
-            }
+            factors.push((divisor, exponent));
         }
         divisor += 1;
     }
-    Some((square, free.checked_mul(remaining)?))
+    if remaining > 1 {
+        factors.push((remaining, 1));
+    }
+    Some(factors)
 }
 
-/// `√c` for a non-negative rational constant `c`, split as `(k, m)` with
-/// `√c = k·√m`, `k` a non-negative rational and `m` a squarefree non-negative
-/// integer (`m == 1` means the radical vanishes).
+/// Split `n ≥ 1` as `s^index · m` with `m` **`index`-free** (no prime divides it
+/// to the power `index`), returning `(s, m)`. `index ≥ 2`.
 ///
-/// `√(p/q) = √(p·q)/q`, so one integer split does both halves.
+/// The generalization of squarefree-part extraction that the cross-family
+/// radical fold needs: `√2·∛2` meets over the common index `6`, and deciding it
+/// means splitting a `6`-free part rather than a squarefree one.
 ///
-/// `None` for a negative radicand (not real) and whenever [`square_part`]
-/// declines. The caller must then leave the atom as it stands **and** must not
-/// refute over it: an unreduced constant radical is exactly the case where
-/// `√8` and `2·√2` take different atom keys, and a difference of two spellings
-/// of the same number is nonzero in the free algebra and zero in ℝ.
-fn canonical_constant_sqrt(value: Rational) -> Option<(Rational, i128)> {
-    if value.numerator() < 0 {
+/// `None` when [`bounded_prime_factorization`] declines, when `index < 2`, or on
+/// `i128` overflow. A `None` is not a reduction the caller may quietly skip —
+/// see [`canonical_constant_radical`].
+fn power_free_part(n: i128, index: u32) -> Option<(i128, i128)> {
+    if index < 2 {
+        return None;
+    }
+    let mut power = 1i128;
+    let mut free = 1i128;
+    for (prime, exponent) in bounded_prime_factorization(n)? {
+        for _ in 0..(exponent / index) {
+            power = power.checked_mul(prime)?;
+        }
+        for _ in 0..(exponent % index) {
+            free = free.checked_mul(prime)?;
+        }
+    }
+    Some((power, free))
+}
+
+/// The greatest common divisor of two non-negative `u32`s (`gcd(0, n) = n`).
+fn gcd_u32(a: u32, b: u32) -> u32 {
+    let (mut a, mut b) = (a, b);
+    while b != 0 {
+        let r = a % b;
+        a = b;
+        b = r;
+    }
+    a
+}
+
+/// The greatest common divisor of two non-negative `i128`s (`gcd(0, n) = n`).
+fn gcd_i128(a: i128, b: i128) -> i128 {
+    let (mut a, mut b) = (a.abs(), b.abs());
+    while b != 0 {
+        let r = a % b;
+        a = b;
+        b = r;
+    }
+    a
+}
+
+/// The least common multiple of two positive `u32`s, or `None` on overflow.
+fn lcm_u32(a: u32, b: u32) -> Option<u32> {
+    if a == 0 || b == 0 {
+        return None;
+    }
+    (a / gcd_u32(a, b)).checked_mul(b)
+}
+
+/// The largest common root index [`combine_constant_radicals`] will meet two
+/// radicals over.
+///
+/// Not a soundness bound — the merge is an identity at every index — but a cost
+/// one: the combined radicand is a product of primes raised to exponents that
+/// grow with the index, so a large index leaves `i128` before it says anything.
+/// Declining leaves the radicals where they were, which
+/// [`MultiPoly::relates_multiplicative_atoms`] then refuses to refute over.
+const MAX_COMBINED_ROOT_INDEX: u32 = 64;
+
+/// `root_index(c)` for a rational constant `c`, in **canonical form**: the
+/// triple `(factor, index', m)` with
+/// `root_index(c) = factor · root_index'(m)`, `m` a positive integer that is
+/// `index'`-free, and `index'` as small as the exponents allow.
+///
+/// Three reductions, and each one repairs a measured wrong refutation:
+///
+/// - **Clearing the denominator.** `c^{1/k} = (p·q^{k−1})^{1/k} / q`, so one
+///   integer split does both halves (`√(1/2) = √2/2`).
+/// - **Extracting the `index`-free part** ([`power_free_part`]), so `√8` and
+///   `2·√2` are one atom rather than two (`√4 = 2` was refuted before this).
+/// - **Reducing the index by the exponent gcd**, so `root_6(4) = ∛2`,
+///   `root_4(4) = √2` and `root_6(8) = √2`. All three came back
+///   **`Certified { equal: false }`** before this reduction existed — three
+///   wrong refutations of exactly the family the previous wave found eight of.
+///
+/// Sound at a negative `c` too: an odd index has a real principal root
+/// (`∛(−8) = −2`), carried in the sign of `factor`; an even index has none, and
+/// is declined.
+///
+/// `None` for an even root of a negative, for `index < 2`, whenever
+/// [`bounded_prime_factorization`] declines, and on `i128` overflow. The caller
+/// must then leave the atom as it stands **and** must not refute over it — see
+/// [`uncanonicalized_constant_radical`], which is the guard that enforces it.
+fn canonical_constant_radical(value: Rational, index: u32) -> Option<(Rational, u32, i128)> {
+    if index < 2 {
         return None;
     }
     if value.is_zero() {
-        return Some((Rational::zero(), 1));
+        return Some((Rational::zero(), 2, 1));
     }
-    let radicand = value.numerator().checked_mul(value.denominator())?;
-    let (square, free) = square_part(radicand)?;
-    Some((Rational::checked_new(square, value.denominator())?, free))
+    if value.numerator() < 0 {
+        if index.is_multiple_of(2) {
+            return None; // no real even root of a negative
+        }
+        let (factor, reduced, radicand) = canonical_constant_radical(value.checked_neg()?, index)?;
+        return Some((factor.checked_neg()?, reduced, radicand));
+    }
+    let denominator = value.denominator();
+    // `c = p/q = p·q^{index−1} / q^index`, so one integer radicand does both
+    // halves. `q = 1` skips the loop outright, which also keeps a very large
+    // `index` from spinning: at `q ≥ 2` the product leaves `i128` within ~127
+    // steps and `checked_mul` stops it.
+    let mut radicand = value.numerator();
+    if denominator != 1 {
+        for _ in 1..index {
+            radicand = radicand.checked_mul(denominator)?;
+        }
+    }
+    let factors = bounded_prime_factorization(radicand)?;
+    // `root_k(∏ pᵢ^{eᵢ}) = root_{k/g}(∏ pᵢ^{eᵢ/g})` for `g = gcd(k, gcd eᵢ)`.
+    let mut common = 0u32;
+    for (_, exponent) in &factors {
+        common = gcd_u32(common, *exponent);
+    }
+    let divisor = gcd_u32(common, index).max(1);
+    let reduced = (index / divisor).max(1);
+    let mut whole = 1i128;
+    let mut free = 1i128;
+    for (prime, exponent) in factors {
+        let exponent = exponent / divisor;
+        for _ in 0..(exponent / reduced) {
+            whole = whole.checked_mul(prime)?;
+        }
+        for _ in 0..(exponent % reduced) {
+            free = free.checked_mul(prime)?;
+        }
+    }
+    Some((
+        Rational::checked_new(whole, denominator)?,
+        reduced.max(2),
+        free,
+    ))
+}
+
+/// The root index of a radical head — `2` for `√`, `q` for `root_q` — or `None`
+/// for every other head.
+fn root_index(func: UnaryFunc) -> Option<u32> {
+    match func {
+        UnaryFunc::Sqrt => Some(2),
+        UnaryFunc::NthRoot(q) => Some(q),
+        _ => None,
+    }
+}
+
+/// The atom key a canonical constant radical takes: `√m` keeps
+/// [`sqrt_atom_key`] so a `√` and a `root_2` meet in one normal form, and every
+/// higher index takes the `root_q` key [`atom_name`] would give it.
+fn radical_atom_key(index: u32, radicand: i128) -> String {
+    if index == 2 {
+        sqrt_atom_key(radicand)
+    } else {
+        atom_name(&UnaryFunc::NthRoot(index).name(), &CasExpr::int(radicand))
+    }
+}
+
+/// `(index, radicand)` of a **constant** radical atom whose radicand is a
+/// positive integer — `\0sqrt:m` (index `2`) or `\0root{k}:m` — or `None` for a
+/// symbolic, rational-keyed, zero or non-radical variable.
+///
+/// The generalization across root indices of the `√`-only radicand reader this
+/// replaced, and
+/// what lets the fold below meet `√2` and `∛2` over index `6`.
+fn constant_radical_atom(var: &str) -> Option<(u32, i128)> {
+    if let Some(text) = var.strip_prefix(ATOM_SQRT) {
+        let radicand: i128 = text.parse().ok()?;
+        return (radicand >= 1).then_some((2, radicand));
+    }
+    let (index, radicand) = var.strip_prefix(ATOM_NTH_ROOT)?.split_once(':')?;
+    let index: u32 = index.parse().ok()?;
+    let radicand: i128 = radicand.parse().ok()?;
+    (index >= 2 && radicand >= 1).then_some((index, radicand))
+}
+
+/// `(index, value)` of a radical atom over a rational **constant** — the wider
+/// reading of a key than [`constant_radical_atom`], admitting a rational or a
+/// negative radicand, because those are exactly the keys canonicalization may
+/// have failed to reduce.
+fn constant_radical_atom_value(var: &str) -> Option<(u32, Rational)> {
+    if let Some(text) = var.strip_prefix(ATOM_SQRT) {
+        return Some((2, parse_rational_render(text)?));
+    }
+    let (index, radicand) = var.strip_prefix(ATOM_NTH_ROOT)?.split_once(':')?;
+    let index: u32 = index.parse().ok()?;
+    (index >= 2).then_some((index, parse_rational_render(radicand)?))
+}
+
+/// Whether `var` names a **constant** radical the normal form could not put in
+/// canonical form — so two spellings of one number can still be two atoms, and
+/// a nonzero difference over them proves nothing.
+///
+/// This is the guard that pays for [`canonical_constant_radical`]'s `None`
+/// branch. Without it `root_6(N)` and `∛(N^{1/2})` for an `N` past the
+/// factorizer's reach are independent variables and their difference is a wrong
+/// refutation — the same defect `√(1000003²) ≠ 1000003` was, one index up.
+///
+/// An **even** root of a negative is not a real number and is deliberately not
+/// this predicate's business: intake leaves it opaque, exactly as it always did.
+fn uncanonicalized_constant_radical(var: &str) -> bool {
+    let Some((index, value)) = constant_radical_atom_value(var) else {
+        return false;
+    };
+    if value.numerator() < 0 && index.is_multiple_of(2) {
+        return false;
+    }
+    match canonical_constant_radical(value, index) {
+        // The factorizer declined, so nothing knows what this radical is.
+        None => true,
+        // It did not decline, so a canonical atom is exactly the one key
+        // `radical_atom_key` names with no rational factor in front of it.
+        Some((factor, reduced, radicand)) => {
+            radicand <= 1
+                || factor != Rational::integer(1)
+                || radical_atom_key(reduced, radicand) != var
+        }
+    }
+}
+
+/// Meet a monomial's constant radical atoms over their **common root index** and
+/// re-extract, returning `(scale, index, radicand)` with
+/// `∏ root_{kᵢ}(cᵢ)^{eᵢ} = scale · root_index(radicand)`.
+///
+/// This is the cross-family case: `√2·∛2` meets over `lcm(2,3) = 6` as
+/// `root_6(2³)·root_6(2²) = root_6(2⁵) = root_6(32)`. Sound because every atom
+/// here is a **positive** real principal root of a positive integer, where
+/// `c^{1/k} = c^{(L/k)/L}` is an identity, not a branch choice.
+///
+/// Works on prime exponents rather than on the product, so `√2^101` never forms
+/// `2^101` on the way to `2^50·√2`.
+///
+/// `None` — meaning *leave every radical exactly where it was* — when the common
+/// index exceeds [`MAX_COMBINED_ROOT_INDEX`], when a radicand is past
+/// [`bounded_prime_factorization`]'s reach, or on `i128` overflow.
+fn combine_constant_radicals(radicals: &[(u32, i128, u32)]) -> Option<(i128, u32, i128)> {
+    if radicals.is_empty() {
+        return None;
+    }
+    let mut common = 1u32;
+    for (index, _, _) in radicals {
+        common = lcm_u32(common, *index)?;
+        if common > MAX_COMBINED_ROOT_INDEX {
+            return None;
+        }
+    }
+    // The exponent of each prime in `∏ radicandᵢ^{expᵢ·(common/indexᵢ)}`.
+    let mut exponents: BTreeMap<i128, i128> = BTreeMap::new();
+    for (index, radicand, exponent) in radicals {
+        let scale = i128::from(common / index).checked_mul(i128::from(*exponent))?;
+        for (prime, power) in bounded_prime_factorization(*radicand)? {
+            let contribution = i128::from(power).checked_mul(scale)?;
+            let slot = exponents.entry(prime).or_insert(0);
+            *slot = slot.checked_add(contribution)?;
+        }
+    }
+    // Reduce the common index by the exponent gcd, then split off the whole
+    // `reduced`-th powers.
+    let mut divisor = 0i128;
+    for power in exponents.values() {
+        divisor = gcd_i128(divisor, *power);
+    }
+    let divisor = gcd_i128(divisor, i128::from(common)).max(1);
+    let reduced = (common / u32::try_from(divisor).ok()?).max(1);
+    let mut scale = 1i128;
+    let mut free = 1i128;
+    for (prime, power) in &exponents {
+        let power = power / divisor;
+        for _ in 0..(power / i128::from(reduced)) {
+            scale = scale.checked_mul(*prime)?;
+        }
+        for _ in 0..(power % i128::from(reduced)) {
+            free = free.checked_mul(*prime)?;
+        }
+    }
+    Some((scale, reduced.max(2), free))
 }
 
 /// The atom key a squarefree integer radicand takes, identical to what
@@ -2312,19 +2620,12 @@ fn sqrt_atom_key(radicand: i128) -> String {
     atom_name(&UnaryFunc::Sqrt.name(), &CasExpr::int(radicand))
 }
 
-/// The radicand of a `√` atom whose key names a **non-negative integer**, or
-/// `None` for a symbolic, rational-keyed or non-radical variable.
-fn constant_sqrt_radicand(var: &str) -> Option<i128> {
-    let radicand: i128 = var.strip_prefix(ATOM_SQRT)?.parse().ok()?;
-    (radicand >= 0).then_some(radicand)
-}
-
 /// Whether `var` is an atom for a head that is **multiplicative** — `√`, `|·|`,
 /// `root_q` — so that a product of two of them denotes the head applied to the
 /// product, and treating them as independent variables is not sound for
 /// refutation.
 fn is_multiplicative_atom(var: &str) -> bool {
-    var.starts_with(ATOM_SQRT) || var.starts_with(ATOM_ABS) || var.starts_with("\0root")
+    var.starts_with(ATOM_SQRT) || var.starts_with(ATOM_ABS) || var.starts_with(ATOM_NTH_ROOT)
 }
 
 /// `√c` for a constant argument, already canonicalized, or `None` when `arg` is
@@ -2335,12 +2636,26 @@ fn is_multiplicative_atom(var: &str) -> bool {
 /// one number* is a nonzero polynomial, which the zero-test would report as a
 /// refutation. Measured before the fix: `√4 = 2` came back **refuted**.
 fn canonical_constant_sqrt_poly(arg: &CasExpr) -> Option<MultiPoly> {
+    canonical_constant_radical_poly(arg, 2)
+}
+
+/// `root_index(c)` for a constant argument, already canonicalized, or `None`
+/// when `arg` is not a rational constant this canonicalization is defined at
+/// (see [`canonical_constant_radical`]).
+///
+/// The `index = 2` case is what makes `√4 = 2`, `√8 = 2√2` and `√(1/2) = √2/2`
+/// decide; the general case is what makes `root_6(4) = ∛2` decide, and what puts
+/// `√2` and `∛2` in a form the fold can meet. Without it each spelling is its
+/// own opaque atom and the *difference of two names for one number* is a nonzero
+/// polynomial the zero-test reports as a refutation. Measured before the fix:
+/// `√4 = 2`, and later `root_6(4) = ∛2`, both came back **refuted**.
+fn canonical_constant_radical_poly(arg: &CasExpr, index: u32) -> Option<MultiPoly> {
     let value = rational_constant_value(arg)?;
-    let (factor, radicand) = canonical_constant_sqrt(value)?;
-    if radicand == 1 {
+    let (factor, reduced, radicand) = canonical_constant_radical(value, index)?;
+    if radicand <= 1 {
         return Some(MultiPoly::constant(factor));
     }
-    MultiPoly::constant(factor).mul(&MultiPoly::single_var(&sqrt_atom_key(radicand)))
+    MultiPoly::constant(factor).mul(&MultiPoly::single_var(&radical_atom_key(reduced, radicand)))
 }
 
 /// The exact rational value of `expr` when it is a constant, else `None`.
@@ -2992,6 +3307,10 @@ const ATOM_PREFIX: char = '\0';
 const ATOM_SQRT: &str = "\0sqrt:";
 /// The atom-key prefix for an `abs` head.
 const ATOM_ABS: &str = "\0abs:";
+/// The atom-key prefix shared by every `root_q` head. Unlike the others this
+/// stops **before** the index, because the index is part of the key
+/// (`\0root3:2`); [`constant_radical_atom`] splits it back off.
+const ATOM_NTH_ROOT: &str = "\0root";
 /// The atom-key prefix for a `sin` head.
 const ATOM_SIN: &str = "\0sin:";
 /// The atom-key prefix for a `cos` head.
@@ -3295,25 +3614,29 @@ impl BigQPoly {
         })
     }
 
-    /// Multiply the **constant** square-root atoms inside each monomial
-    /// together and re-extract the square part. The unbounded twin of
-    /// [`MultiPoly::fold_radical_products`], and the reason `√2·√3 = √6` decides
-    /// at overflow scale too rather than only below the wall.
+    /// Multiply the **constant** radical atoms inside each monomial together
+    /// over their common root index and re-extract. The unbounded twin of
+    /// [`MultiPoly::fold_radical_products`], and the reason `√2·√3 = √6` and
+    /// `√2·∛2 = root_6(32)` decide at overflow scale too rather than only below
+    /// the wall.
     ///
     /// The radicands themselves stay `i128`: they come from
-    /// [`canonical_constant_sqrt`], which works on the bounded `Rational` an
+    /// [`combine_constant_radicals`], which works on the bounded `Rational` an
     /// atom key spells. Only the polynomial around them is unbounded.
     fn fold_radical_products(&self, budget: &mut u64) -> Option<Self> {
         let reducible = self.num.terms().any(|(mono, _)| {
             let mut radicals = 0usize;
-            let mut squared = false;
+            let mut reducible = false;
             for (var, exp) in mono.powers() {
-                if constant_sqrt_radicand(var).is_some() {
+                if constant_radical_atom(var).is_some() {
                     radicals += 1;
-                    squared |= exp >= 2;
+                    // `exp >= 2`, not `exp >= index`: `∛2²` reduces to `∛4`
+                    // even though nothing comes out whole, and leaving it at
+                    // exponent 2 is a second spelling of one number.
+                    reducible |= exp >= 2;
                 }
             }
-            radicals >= 2 || squared
+            radicals >= 2 || reducible
         });
         if !reducible {
             return Some(self.clone());
@@ -3322,27 +3645,33 @@ impl BigQPoly {
         for (mono, coeff) in self.num.terms() {
             charge(budget, 1)?;
             let mut factor = BigInt::from(1);
-            let mut product: i128 = 1;
             let mut powers: Vec<(String, u32)> = Vec::new();
+            let mut radicals: Vec<(&str, u32, i128, u32)> = Vec::new();
             for (var, exp) in mono.powers() {
-                match constant_sqrt_radicand(var) {
-                    Some(radicand) => {
-                        factor *= bigint_pow(&BigInt::from(radicand), exp / 2);
-                        if exp % 2 == 1 {
-                            product = product.checked_mul(radicand)?;
-                        }
-                    }
+                match constant_radical_atom(var) {
+                    Some((index, radicand)) => radicals.push((var, index, radicand, exp)),
                     None => powers.push((var.to_owned(), exp)),
                 }
             }
-            if product > 1 {
-                let (square, free) = square_part(product)?;
-                factor *= BigInt::from(square);
-                if free > 1 {
-                    powers.push((sqrt_atom_key(free), 1));
+            let combinable: Vec<(u32, i128, u32)> = radicals
+                .iter()
+                .map(|(_, index, radicand, exp)| (*index, *radicand, *exp))
+                .collect();
+            match combine_constant_radicals(&combinable) {
+                Some((scale, index, radicand)) => {
+                    factor *= BigInt::from(scale);
+                    if radicand > 1 {
+                        powers.push((radical_atom_key(index, radicand), 1));
+                    }
                 }
-            } else if product == 0 {
-                continue;
+                // See the bounded twin: leave every radical where it was rather
+                // than half-merging. The unbounded inequality branch declines on
+                // any surviving atom regardless.
+                None => {
+                    for (var, _, _, exp) in &radicals {
+                        powers.push(((*var).to_owned(), *exp));
+                    }
+                }
             }
             let borrowed: Vec<(&str, u32)> = powers.iter().map(|(n, e)| (n.as_str(), *e)).collect();
             out = out.add(
@@ -3665,25 +3994,29 @@ fn normalize_rational_big_within(expr: &CasExpr, budget: &mut u64) -> Option<Big
         // See the doc comment: `exp` is decomposed by the bounded path, not
         // atomized, and that decomposition has no unbounded counterpart yet.
         CasExpr::Unary(UnaryFunc::Exp, _) => None,
-        // The unbounded twin of the bounded normalizer's `√`-of-a-constant
-        // canonicalization, so the two rings agree on what `√8` *is*.
-        CasExpr::Unary(UnaryFunc::Sqrt, arg)
-            if rational_constant_value(arg)
-                .and_then(canonical_constant_sqrt)
+        // The unbounded twin of the bounded normalizer's radical-of-a-constant
+        // canonicalization, so the two rings agree on what `√8` and `root_6(4)`
+        // *are* — including the index reduction that puts `root_6(4)` and `∛2`
+        // on one atom key.
+        CasExpr::Unary(func @ (UnaryFunc::Sqrt | UnaryFunc::NthRoot(_)), arg)
+            if root_index(*func)
+                .and_then(|q| Some((rational_constant_value(arg)?, q)))
+                .and_then(|(value, q)| canonical_constant_radical(value, q))
                 .is_some() =>
         {
-            let (factor, radicand) = rational_constant_value(arg)
-                .and_then(canonical_constant_sqrt)
+            let (factor, index, radicand) = root_index(*func)
+                .and_then(|q| Some((rational_constant_value(arg)?, q)))
+                .and_then(|(value, q)| canonical_constant_radical(value, q))
                 .expect("the guard just evaluated this");
             let constant = BigRatFunc {
                 num: BigPoly::constant(BigInt::from(factor.numerator())),
                 den: BigPoly::constant(BigInt::from(factor.denominator())),
             };
-            if radicand == 1 {
+            if radicand <= 1 {
                 return Some(constant);
             }
             constant.mul(
-                &BigRatFunc::from_poly(BigPoly::variable(&sqrt_atom_key(radicand))),
+                &BigRatFunc::from_poly(BigPoly::variable(&radical_atom_key(index, radicand))),
                 budget,
             )
         }
@@ -32152,13 +32485,19 @@ mod radical_atom_products {
     /// **The guard.** A symbolic radical product is out of the fold's reach, so
     /// the answer is `Unknown` — the choice this lane made and pinned, per the
     /// rule that out-of-fragment declines rather than answering wrongly.
+    ///
+    /// The **constant** `root_q` product this used to list
+    /// (`root₃(2)·root₃(4) = 2`) is no longer here: wave three's
+    /// [`combine_constant_radicals`] merges it, so it decides. It is asserted
+    /// in `cross_family_powers_extract_their_whole_part` instead. What stays is
+    /// what no fold can reach — a **symbolic** radicand.
     #[test]
     fn symbolic_radical_products_decline_rather_than_refute() {
         assert_declines(&(x().sqrt() * y().sqrt()), &(x() * y()).sqrt());
         assert_declines(&(x().abs() * y().abs()), &(x() * y()).abs());
         assert_declines(
-            &(CasExpr::int(2).nth_root(3) * CasExpr::int(4).nth_root(3)),
-            &CasExpr::int(2),
+            &(x().nth_root(3) * y().nth_root(3)),
+            &(x() * y()).nth_root(3),
         );
     }
 
@@ -32198,9 +32537,10 @@ mod radical_atom_products {
         assert_certified(&x().sqrt(), &y().sqrt(), false);
     }
 
-    /// `square_part` is the arithmetic the whole repair rests on, so it is
+    /// `power_free_part` is the arithmetic the whole repair rests on, so it is
     /// checked directly rather than only through the zero-test — including the
-    /// bound, whose whole job is to refuse a half-done split.
+    /// bound, whose whole job is to refuse a half-done split. The `index = 2`
+    /// rows are the squarefree split this generalized (ADR-1670 wave three).
     #[test]
     fn square_part_splits_and_refuses_rather_than_half_splitting() {
         for (input, expected) in [
@@ -32214,16 +32554,45 @@ mod radical_atom_products {
             (1_000_000, (1000, 1)),
             (999_983, (1, 999_983)),
         ] {
-            assert_eq!(square_part(input), Some(expected), "square_part({input})");
+            assert_eq!(
+                power_free_part(input, 2),
+                Some(expected),
+                "power_free_part({input}, 2)"
+            );
         }
-        assert_eq!(square_part(0), None, "0 is not a positive radicand");
-        assert_eq!(square_part(-4), None, "a negative radicand is not real");
+        // The k-free generalization: `n = s^index · m` with `m` index-free.
+        for (input, index, expected) in [
+            (8i128, 3u32, (2i128, 1i128)),
+            (16, 3, (2, 2)),
+            (32, 3, (2, 4)),
+            (32, 6, (1, 32)),
+            (64, 6, (2, 1)),
+            (72, 3, (2, 9)),
+            (1, 5, (1, 1)),
+        ] {
+            assert_eq!(
+                power_free_part(input, index),
+                Some(expected),
+                "power_free_part({input}, {index})"
+            );
+        }
+        assert_eq!(power_free_part(0, 2), None, "0 is not a positive radicand");
+        assert_eq!(
+            power_free_part(-4, 2),
+            None,
+            "a negative radicand is not real"
+        );
+        assert_eq!(
+            power_free_part(8, 1),
+            None,
+            "an index below 2 is not a root"
+        );
         // Past the trial-division bound the split is abandoned, not guessed:
         // `p²` for a prime above the limit cannot be found, and reporting the
         // radicand as squarefree would be a false canonical form.
         let big_prime = 1_000_003i128;
         assert_eq!(
-            square_part(big_prime * big_prime),
+            power_free_part(big_prime * big_prime, 2),
             None,
             "a square factor past the trial bound must abandon the split"
         );
@@ -32232,6 +32601,171 @@ mod radical_atom_products {
             &CasExpr::int(big_prime * big_prime).sqrt(),
             &CasExpr::int(big_prime),
         );
+    }
+
+    // --- The cross-family case (ADR-1670 wave three, item 1) ----------------
+    //
+    // Wave two flagged `√2·∛2` as the same shape as the eight wrong-refuted
+    // identities and did not fix it. Running the shape found the defect was not
+    // only the product: three *single-atom* cross-index spellings came back
+    // `Certified { equal: false }` — a refutation of a true identity — because
+    // `root_6(4)` and `∛2` were independent variables.
+
+    fn cube_root(n: i128) -> CasExpr {
+        CasExpr::int(n).nth_root(3)
+    }
+
+    /// The three wrong refutations measured on `main` before this wave:
+    /// `root_6(4) = ∛2`, `root_4(4) = √2` and `root_6(8) = √2` were each
+    /// **`Certified { equal: false }`**.
+    #[test]
+    fn a_root_index_reduces_by_the_exponent_gcd() {
+        assert_certified(&CasExpr::int(4).nth_root(6), &cube_root(2), true);
+        assert_certified(&CasExpr::int(4).nth_root(4), &root(2), true);
+        assert_certified(&CasExpr::int(8).nth_root(6), &root(2), true);
+        assert_certified(&CasExpr::int(16).nth_root(8), &root(2), true);
+        // A rational radicand reduces the same way: `root_6(4/9) = ∛(18)/3`.
+        assert_certified(
+            &CasExpr::rat(4, 9).nth_root(6),
+            &(cube_root(18) / CasExpr::int(3)),
+            true,
+        );
+    }
+
+    /// The negative control for the reduction: it must not equate distinct
+    /// roots. Each pair differs in exactly one of index, radicand and factor.
+    #[test]
+    fn the_index_reduction_does_not_equate_distinct_roots() {
+        assert_certified(&CasExpr::int(4).nth_root(6), &root(2), false);
+        assert_certified(&cube_root(2), &cube_root(3), false);
+        assert_certified(&cube_root(2), &root(2), false);
+        assert_certified(&CasExpr::int(4).nth_root(6), &cube_root(4), false);
+    }
+
+    /// The reported input: `√2·∛2 = 2^{5/6}`, spelled `root_6(32)`. The two
+    /// atoms meet over `lcm(2, 3) = 6` as `root_6(2³)·root_6(2²)`.
+    #[test]
+    fn sqrt2_times_cbrt2_is_the_sixth_root_of_32() {
+        assert_certified(
+            &(root(2) * cube_root(2)),
+            &CasExpr::int(32).nth_root(6),
+            true,
+        );
+        // …and the merge is exact, not a name: `(√2·∛2)² = 2^{5/3} = 2·∛4`,
+        // with the whole power split out.
+        assert_certified(
+            &(root(2) * cube_root(2) * root(2) * cube_root(2)),
+            &(CasExpr::int(2) * cube_root(4)),
+            true,
+        );
+    }
+
+    /// The negative control for the cross-family merge. `√2·∛2` is `2^{5/6}`,
+    /// and none of these are.
+    #[test]
+    fn the_cross_family_merge_does_not_equate_distinct_surds() {
+        assert_certified(
+            &(root(2) * cube_root(2)),
+            &CasExpr::int(32).nth_root(5),
+            false,
+        );
+        assert_certified(&(root(2) * cube_root(2)), &CasExpr::int(2), false);
+        assert_certified(
+            &(root(2) * cube_root(3)),
+            &CasExpr::int(72).nth_root(6),
+            true,
+        );
+        assert_certified(
+            &(root(2) * cube_root(3)),
+            &CasExpr::int(73).nth_root(6),
+            false,
+        );
+    }
+
+    /// Powers of a cross-family product collapse to the whole part, exactly as
+    /// `√2^3 = 2√2` does one index down.
+    #[test]
+    fn cross_family_powers_extract_their_whole_part() {
+        // `(√2·∛2)^6 = 2^5 = 32`.
+        let product = root(2) * cube_root(2);
+        assert_certified(&product.clone().pow(6), &CasExpr::int(32), true);
+        // `∛2^4 = 2·∛2`.
+        assert_certified(
+            &cube_root(2).pow(4),
+            &(CasExpr::int(2) * cube_root(2)),
+            true,
+        );
+        // `∛2·∛4 = 2`, which wave two's guard could only decline.
+        assert_certified(&(cube_root(2) * cube_root(4)), &CasExpr::int(2), true);
+    }
+
+    /// A negative radicand at an **odd** index is a real principal root and
+    /// canonicalizes with the sign in the factor; an **even** index has no real
+    /// root and stays opaque, which is what it always did.
+    #[test]
+    fn an_odd_root_of_a_negative_is_real_and_an_even_one_is_left_alone() {
+        assert_certified(&cube_root(-8), &CasExpr::int(-2), true);
+        assert_certified(&cube_root(-16), &(CasExpr::int(-2) * cube_root(2)), true);
+        assert_certified(&cube_root(-8), &CasExpr::int(2), false);
+    }
+
+    /// The guard that pays for the canonicalization's `None` branch: a radicand
+    /// past the factorizer's reach is left as it stands at **every** index, and
+    /// a difference over it must decline rather than refute.
+    ///
+    /// `root_6(p⁴)` is `∛(p²)` — a true identity the normal form cannot see,
+    /// because it cannot factor `p⁴` for a `p` above the trial bound.
+    #[test]
+    fn a_radicand_past_the_factorizer_declines_at_every_index() {
+        let big_prime = 1_000_003i128;
+        let squared = big_prime.checked_mul(big_prime).expect("fits i128");
+        let fourth = squared.checked_mul(squared).expect("fits i128");
+        assert_declines(
+            &CasExpr::int(fourth).nth_root(6),
+            &CasExpr::int(squared).nth_root(3),
+        );
+        assert_declines(
+            &CasExpr::int(squared).nth_root(4),
+            &CasExpr::int(big_prime).sqrt(),
+        );
+    }
+
+    /// A common index past [`MAX_COMBINED_ROOT_INDEX`] is declined, not merged
+    /// wrongly — and declining means `Unknown`, never a refutation.
+    #[test]
+    fn a_common_index_past_the_cap_declines_rather_than_merging() {
+        // lcm(5, 7, 11, 13) = 5005, far past the cap.
+        let product = CasExpr::int(2).nth_root(5)
+            * CasExpr::int(2).nth_root(7)
+            * CasExpr::int(2).nth_root(11)
+            * CasExpr::int(2).nth_root(13);
+        assert_declines(&product, &CasExpr::int(2));
+        // Just under the cap it still merges: lcm(2, 3) = 6.
+        assert_certified(
+            &(root(2) * cube_root(2)),
+            &CasExpr::int(32).nth_root(6),
+            true,
+        );
+    }
+
+    /// `expand` must not leak a raw `\0`-prefixed atom key when intake
+    /// canonicalizes a radical into a different spelling. Measured before this
+    /// wave: `expand(√8)` rendered `2*\0sqrt:2`.
+    #[test]
+    fn canonicalized_radicals_do_not_leak_their_atom_key() {
+        for input in [
+            root(8),
+            root(12),
+            CasExpr::int(4).nth_root(6),
+            CasExpr::int(16).nth_root(3),
+        ] {
+            let expanded = expand(&input).expect("a constant radical expands");
+            let rendered = expanded.render(0);
+            assert!(
+                !rendered.contains('\0'),
+                "expand({input}) leaked an atom key: {rendered:?}"
+            );
+        }
     }
 }
 
@@ -33583,7 +34117,10 @@ mod cas_witness_2_probe {
         );
         println!(
             "PROBE expand(root6(4)): {}",
-            format!("{:?}", expand(&CasExpr::int(4).nth_root(6)).map(|e| e.render(0)))
+            format!(
+                "{:?}",
+                expand(&CasExpr::int(4).nth_root(6)).map(|e| e.render(0))
+            )
         );
     }
 
