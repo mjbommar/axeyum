@@ -102,6 +102,7 @@ pub mod interval_arith;
 pub mod inverse;
 pub mod linear_elim;
 pub mod matgroup;
+pub mod matgroup_q;
 mod matrix;
 pub mod mvpoly;
 pub mod mvt;
