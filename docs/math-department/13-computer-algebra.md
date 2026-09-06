@@ -5,7 +5,8 @@ Reviewer: the twelve chairs, each asked one question — *would you use
 Verdict, 2026-09-05: **a deep single-variable calculus and elementary
 number theory tool that overflows at 128 bits; every other chair finds
 nothing to reach for**
-Last measured: 2026-09-05 at `bb999de1f` (baseline `8f6c58420` in the table below; the close-out row in the log carries the re-measurement)
+Verdict, 2026-09-06: **the 128-bit ceiling is gone from the zero-test, the trusted surface is 151 certified functions behind a ratchet and a 138-entry parity corpus, and every one of the ten items below has moved at least three waves; what stops the chairs now is breadth inside each item, not a missing item**
+Last measured: 2026-09-06 at `cc36f4461` (baseline `8f6c58420` in the table below)
 
 > "You built the one CAS whose answers can carry a proof, and then you
 > built the parts of Mathematica a first-year calculus course uses. Where is
@@ -25,18 +26,20 @@ axis: what the tool can compute at all.**
 
 ## What the CAS has today
 
-Measured 2026-09-05 at `8f6c58420`; the commands are in *How to re-measure*.
+Measured 2026-09-06 at `cc36f4461` (2026-09-05 baseline `8f6c58420` in parentheses); the commands are in *How to re-measure*.
 
 | metric | value |
 |---|---|
-| source lines, `crates/axeyum-cas/src` | 80,851 |
-| modules | 55 files plus 4 subdirectories |
-| `pub fn` declarations | 691 (385 at column 0) |
-| `#[test]` functions | 1,006 |
-| `lib.rs` alone | 29,505 lines |
-| `cas-certificate` ledger facts | 61: 16 kernel-reconstructed, 45 `cas-internal` (73.8%) |
-| core coefficient arithmetic | `i128` rationals; overflow reported as `ZeroTest::Unknown` (`lib.rs:46`) |
-| numeric evaluation | `evalf(expr, bindings: &[(&str, f64)]) -> Option<f64>` (`lib.rs:9903`) |
+| source lines, `crates/axeyum-cas/src` | 155,284 (80,851) |
+| modules | 87 files plus 4 subdirectories (55 + 4) |
+| `pub fn` declarations | 1,273 (691) |
+| `#[test]` functions | 2,212 (1,006) |
+| `lib.rs` alone | 36,712 lines (29,505) |
+| certified `pub fn` (trust registry, `scripts/check-cas-trust-registry.py`) | 151 certified, 110 checker, 1,019 uncertified; ratchet floor 151 (registry did not exist on 09-05) |
+| parity corpus (`scripts/check-cas-parity-corpus.py`) | 138 entries: 126 `core`, 12 `decline_expected`, 0 `known_defect`; 0 disagreements (did not exist on 09-05) |
+| `cas-certificate` ledger facts | 61: 16 kernel-reconstructed, 45 `cas-internal` (73.8%), unchanged |
+| core coefficient arithmetic | `i128` rationals with an unbounded fallback (ADR-1670) entered only on a genuine overflow (`lib.rs:50`); the shared exact layer is `crates/axeyum-arith`, 5,079 lines (did not exist on 09-05) |
+| numeric evaluation | `evalf(expr, bindings: &[(&str, f64)]) -> Option<f64>` (`lib.rs:13031`), beside the validated `Enclosure` layer of item 2 |
 
 The surface, by area, is in the
 [capability table](../research/10-cas/README.md#implemented): differentiation,
