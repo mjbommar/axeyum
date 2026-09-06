@@ -901,6 +901,13 @@ impl CosetTableCertificate {
                 }
             }
         }
+        // MEASURED REDUNDANT, KEPT AS DEFENCE IN DEPTH. Deleting this loop
+        // kills no test: the `DoesNotReplay` guard below independently
+        // recomputes the whole table from `self.relators` and compares, so
+        // any corruption that breaks relator closure also makes the
+        // recomputed table differ and is caught there instead. Kept
+        // because it names the specific defect (which relator, which
+        // coset) instead of the generic "does not match a fresh run".
         for (relator_index, relator) in self.relators.iter().enumerate() {
             let columns: Vec<usize> = relator.iter().map(|&code| column_of(code)).collect();
             for coset in 0..n {
@@ -1541,6 +1548,69 @@ mod tests {
             panic!("expected Completed");
         }
         assert!(forged.verify().is_err());
+    }
+
+    #[test]
+    fn forged_presentation_with_a_self_consistent_but_wrong_order_table_is_refused() {
+        // Directly corrupting `ct.order` (the test above) is caught by
+        // `ct.verify()`'s own internal `n == order` check before this
+        // certificate's cross-check against `group_order` is ever reached
+        // -- so that test alone does not prove the cross-check does
+        // anything. Isolate it here with a table that is *itself*
+        // perfectly self-consistent (a genuine `enumerate_cosets` output,
+        // replay-identical, correctly closed) but for an *under*-determined
+        // relator set: `G`'s own true, complete relator set is highly
+        // redundant (measured: for S_4 every single- and double-relator
+        // drop still closes at the true order 24), so search up to
+        // triple-drops on the smaller D_4, where a genuine gap was found --
+        // dropping 3 of its 10 relators closes at order 16, not 8.
+        let g = dihedral_group_of_order_8();
+        let cert = g.presentation();
+        let num_generators = cert.group_order.strong_generators.len();
+        let n = cert.relators.len();
+        let mut drops: Vec<Vec<usize>> = (0..n).map(|i| vec![i]).collect();
+        for i in 0..n {
+            for j in (i + 1)..n {
+                drops.push(vec![i, j]);
+                for k in (j + 1)..n {
+                    drops.push(vec![i, j, k]);
+                }
+            }
+        }
+        for drop in &drops {
+            let trimmed: Vec<Relator> = (0..n)
+                .filter(|i| !drop.contains(i))
+                .map(|i| cert.relators[i].clone())
+                .collect();
+            let Some(table) = enumerate_cosets(num_generators, &trimmed, 2000) else {
+                continue;
+            };
+            if table.len() as u128 == cert.group_order.claimed_order {
+                continue;
+            }
+            let order = table.len() as u128;
+            let forged = PresentationCertificate {
+                group_order: cert.group_order.clone(),
+                relators: trimmed.clone(),
+                coset_enumeration: CosetEnumerationOutcome::Completed(CosetTableCertificate {
+                    num_generators,
+                    relators: trimmed,
+                    table,
+                    order,
+                }),
+            };
+            assert_eq!(
+                forged.verify(),
+                Err(PresentationFailure::OrderDoesNotMatchGroup {
+                    computed: order,
+                    claimed: cert.group_order.claimed_order,
+                })
+            );
+            return;
+        }
+        panic!(
+            "expected to find a droppable relator subset whose enumeration still closes at a different order for D_4"
+        );
     }
 
     #[test]
