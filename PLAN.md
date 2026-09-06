@@ -57566,6 +57566,161 @@ SIGTERMed at the harness timeout — **exit 143, killed, not a failure**. The
 bounded `prelude_builds` and `inductive` filters above are what ran to
 completion; the full sweep is for the coordinator's pre-merge gate.
 
+Date: 2026-09-06 (dispatched 2026-09-05)
+Base: local `main` at `d10d4b360` (contains `ef30df0e4`)
+ADR: [ADR-1659](docs/research/09-decisions/adr-1659-parallelism-is-positive-and-both-planes-are-affine.md)
+Roadmap: W3-8, third slice
+
+## Status
+
+**All three deliverables landed.** `Geo.Affine` exists — `Geo.Incidence` plus
+Playfair's parallel axiom — and **both** coordinate planes are models of it:
+`Geo.qaffine` over ℚ² and `Geo.raffine` over ℝ². Three theorems are derived
+once over an arbitrary affine plane, among them Playfair's classical corollary
+that parallelism is transitive.
+
+ADR-1652 § 5 sized this and predicted the shape. The prediction holds without
+amendment: the four ℝ helpers it named (`defectAC`, `defectBC`, `defectSwap`,
+`onOfDefects`) plus `cancelPosBound` are reused **unchanged**, and
+`geo/rplane.rs` and `geo/qplane.rs` are not edited at all.
+
+## What landed
+
+Three new files under `crates/axeyum-lean-kernel/src/geo/`, registered from
+`geo.rs`: `affine.rs` (13 declarations), `qaffine.rs` (17), `raffine.rs` (15).
+Every one axiom-free.
+
+| group | declarations |
+| --- | --- |
+| the record | `Geo.Affine` + `mk`/`rec` and the 7 selectors `inc`, `parPos`, `off`, `offNotOn`, `parPosDisjoint`, `playfairExists`, `playfairUnique` |
+| derived, over an arbitrary `A : Geo.Affine` | `Geo.Affine.parallelPos_parallel`, `.parallelPos_irrefl`, `.parallel_trans` |
+| ℚ predicates | `Geo.QPlane.offRaw`, `.off`, `.parPosRaw`, `.parPos` |
+| ℚ algebra | `Geo.QPlane.defectAC`, `.defectBC`, `.dirPivot`, `.propSwap`, `.parNondegPair` |
+| ℚ construction | `Geo.QPlane.parLine`, `.parLineOn`, `.parLineDir` |
+| ℚ obligations | `Geo.QPlane.offNotOn`, `.parPosDisjoint`, `.playfairExists`, `.playfairUnique`, `Geo.qaffine` |
+| ℝ predicates | `Geo.RPlane.offRaw`, `.off`, `.parPosRaw`, `.parPos` |
+| ℝ algebra | `Geo.RPlane.posBoundMul`, `.parLineNorm`, `.dirPivot` |
+| ℝ construction | `Geo.RPlane.parLine`, `.parLineOn`, `.parLineDir` |
+| ℝ obligations | `Geo.RPlane.offNotOn`, `.parPosDisjoint`, `.playfairExists`, `.playfairUnique`, `Geo.raffine` |
+
+## The decision
+
+`Geo.Affine` carries **`parPos`** as a primitive field, stated positively —
+same direction plus a distinctness each model witnesses — and NOT
+`Geo.Incidence.Parallel`, the classical "no common point". ADR-1652 § 5
+measured why: the negative form makes Playfair's uniqueness half end at
+`Not (Apart (a*B − b*A) 0)`, and closing that is tightness, which `creal.rs`
+documents as neither proved nor assumed. Positively, every obligation is a
+polynomial identity the two planes already discharge.
+
+`off` (a point apart from a line) is the second primitive, for the same reason
+one dimension down: Playfair's existence half is "through a point not on `l`",
+and over ℝ the negation constructs no modulus.
+
+The two models differ on distinctness — a negation over ℚ, a `PosBound` witness
+over ℝ — and one record serves both, which is the same measurement `apart`
+already made for points (ADR-1635, ADR-1652).
+
+## The finding worth exporting
+
+**Over ℝ the existence half needs no division at all, and over ℚ it needs two
+case analyses.** The parallel to `l` through `P` is `(a, b, −(a·x P + b·y P))`
+in both models — the same leading coefficients, so its non-degeneracy is `l`'s
+own with nothing to prove. What remains is the distinctness witness:
+
+- ℝ: `dAC² + dBC² = (a² + b²)·e_P²` (`Geo.RPlane.parLineNorm`, one ring
+  identity), so the witness is the **product** of `Nondeg l`'s modulus and
+  `off P l`'s. `Geo.RPlane.posBoundMul` assembles it from
+  `CReal.pos_of_pos_bound`, `CReal.mul_pos` and `CReal.pos_bound_of_lt`.
+- ℚ: `a*C − c*a = −a·e_P` and its `b` mirror, so `Rat.mul_eq_zero` and
+  `off P l` force `a = 0`, then separately `b = 0`, and `Nondeg l` refutes the
+  pair.
+
+The general lesson, and it is the affine-layer form of ADR-1652 § 2's:
+**positivity is closed under multiplication constructively, and a decidable
+disequality is not.** Where a ℚ development reaches for `mul_eq_zero` twice,
+ask whether the ℝ statement is a product of two things the hypotheses already
+witness as positive.
+
+Uniqueness is the only place either model divides, and each divides once, on
+the same six-variable identity:
+
+```text
+(a² + b²)·(A*B' − B*A') = (a*A + b*B)·(a*B' − b*A') − (a*A' + b*B')·(a*B − b*A)
+```
+
+`Geo.RPlane.dirPivot` cancels through `cancelPosBound`; `Geo.QPlane.dirPivot`
+splits on `nondeg_or` and cancels through `Rat.mul_eq_zero`.
+
+## The defect this lane found in a shared producer
+
+**`ring::rat::scale_item`'s `count == -1` branch is wrong on an already-negated
+monomial.** It returns `vec![item.negated()]` as the resulting monomial list but
+builds its proof at `target = rneg(d, it)`; when `it` is already negated those
+disagree by a double negation, and the caller reads a proof of `… = X` where
+the term proves `… = − − X`. The kernel found it, refusing this lane's first
+`Geo.QPlane.parNondegPair`:
+
+```text
+expected : Eq Rat (Rat.mul (Rat.neg ((a*a)*x)) (Rat.neg Rat.one)) ((a*a)*x)
+got      : Eq Rat (Rat.mul (Rat.neg ((a*a)*x)) (Rat.neg Rat.one))
+                  (Rat.neg (Rat.neg ((a*a)*x)))
+```
+
+Every existing caller scales an un-negated monomial, so the branch has never
+been exercised on the failing shape. **It is recorded, not fixed** — `ring::rat`
+is a shared producer with hundreds of mutation anchors, and a geometry lane
+should not land a change to the ring normaliser without its own controls. The
+route around it is in ADR-1659 § 5 and at the call site: apply a bare `−1` as
+`Rat.neg` of the whole difference, never as a coefficient `(−1) * …`.
+Distributing `neg` goes through `Rat.neg_add`/`Rat.neg_neg`/`Rat.mul_neg` and
+never reaches `scale_item`.
+
+## Gates
+
+| gate | result |
+| --- | --- |
+| `cargo test -p axeyum-lean-kernel --release --lib -- geo:: --test-threads=4` | **27 passed, 0 failed**, exit 0, 101.90 s |
+| `cargo test -p axeyum-lean-kernel --release --lib -- geo::geo_tests::geo_prelude_builds --test-threads=2` | 1 passed, 0 failed, exit 0, 44.94 s |
+| `python3 scripts/tests/mutation_controls.py geo-affine` | see the mutation table below |
+| `python3 scripts/tests/mutation_controls.py --check-anchors` | `geo-affine` clean (2 anchors); 4 pre-existing complaints in `cas-summation-and-gaussian` and `creal-migrate-consumers`, none this lane's |
+| `cargo clippy -p axeyum-lean-kernel --all-targets -- -D warnings` | see below |
+| `cargo check -p axeyum-lean-kernel --all-targets` | see below |
+| `cargo fmt --all --check` | see below |
+| `python3 scripts/validate-facts.py` | see below |
+| `python3 scripts/check-settled-fact-statements.py` | see below |
+| `python3 scripts/check-kernel-trusted-core.py` | see below |
+| `python3 scripts/check-autogenesis-holdout-isolation.py` | see below |
+| `scripts/check-merge-hygiene.sh` | see below |
+| `./scripts/check-links.sh` | exit 0, "all links ok" |
+
+## Partition check
+
+`grep -ril 'Geo\.|Affine|Playfair|Incidence'` over
+`artifacts/structural-index/held-out-exclusion-manifest.json`,
+`artifacts/autogenesis/nursery-v2-extension.json` and
+`corpus/glaurung-proof-populations/` returns **no** file. The `Geo` shelf is
+not in any held-out family, and no `F:ml430-*` id is cited anywhere in this
+change.
+
+## Mutation table
+
+`python3 scripts/tests/mutation_controls.py geo-affine`. The harness copies the
+tree to a scratch root, so no mutant was ever on disk where another lane's build
+could see it.
+
+| mutant | status | predicted | observed |
+| --- | --- | --- | --- |
+| Playfair's uniqueness conclusion swapped to `lEq n m` | RUN | both models' `playfairUnique` lose the field's type: extensional line equality is `And A B` against `And B A`, symmetric propositionally and not definitionally | (filled below) |
+| `Geo.RPlane.parPosRaw` loses its distinctness conjunct | RUN | `parPosDisjoint` has no witness to contradict, so the ℝ model cannot be assembled; the degenerate witness is computed in `dropping_the_distinctness_conjunct_would_make_a_line_parallel_to_itself` | (filled below) |
+
+## Landed changes
+
+| commit | what |
+| --- | --- |
+| `5261627c0` | `Geo.Affine` (7 fields, `Geo.Incidence` as field 0) and its three derived theorems |
+| `4b7c7536d` | `Geo.qaffine` and `Geo.raffine`, five evaluation pins, the two mutants |
+
 **Your lane's block (`DONE`, power-series, 2026-09-05).** W2-5 lands eight
 declarations in a NEW file
 (`crates/axeyum-lean-kernel/src/creal/power_series.rs`), registered at the END

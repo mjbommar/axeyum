@@ -4,7 +4,7 @@
   "note": "Statement identity for every settled fact (S1 of the trusted-library safety roadmap, ADR-0763). Per fact: SHA-256 of formal.statement (the canonical kernel rendering for native lean4 rows), SHA-256 of the top-level reader-facing statement, and the kernel_theorem it names. A settled fact's statement is what the ledger CLAIMS; changing any of the three silently turns 'we proved X' into 'we proved something we then labelled X'. Changes require an amendment row naming both digests and a reason; superseded digests are preserved in each pin's history. `coverage_floor` is a ratchet the gate re-derives rather than trusts: slack is itself a violation, so a loosened floor is self-reverting. Written by `scripts/check-settled-fact-statements.py --write`; do not hand-edit.",
   "coverage_floor": {
     "max_unpinned_settled": 0,
-    "min_identity_bound": 2436,
+    "min_identity_bound": 2438,
     "max_header_exempt": 0
   },
   "amendments": [
@@ -8091,6 +8091,20 @@
           "statement_sha256": "0b34f9904cc66ce99f435a7c8fb5fc6d6510a019d959aea3d67d9dba9cfeefc8"
         }
       ]
+    },
+    {
+      "fact_id": "F:geo-affine-model-rational-plane",
+      "language": "lean4",
+      "statement_sha256": "25fc2b8050b1ec1c279f6abc392cdaed39b01b9dd17604d8d8a4694f566fcfd3",
+      "prose_sha256": "358bd5b52878a80c3c12df30da0fed21a764d95807129e449b9471c27d09d000",
+      "kernel_theorem": "Geo.qaffine"
+    },
+    {
+      "fact_id": "F:geo-affine-model-real-plane",
+      "language": "lean4",
+      "statement_sha256": "0a3d9bdd40a919afd221c281951128d629581e9155ec2ef563328fc8fddaf3a0",
+      "prose_sha256": "e494d7f9b74fa0c78cec5ea8bdbe0e71432783f4c95eeb57f4c665492d7b107f",
+      "kernel_theorem": "Geo.raffine"
     },
     {
       "fact_id": "F:geo-distinct-lines-meet-once",

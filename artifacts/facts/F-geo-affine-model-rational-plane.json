@@ -1,0 +1,58 @@
+{
+  "schema_version": 1,
+  "id": "F:geo-affine-model-rational-plane",
+  "title": "The rational coordinate plane satisfies Playfair's parallel axiom",
+  "statement": "Geo.qaffine is a constructive witness that the RATIONAL plane is an affine plane: it supplies every field of the record Geo.Affine, which is Geo.Incidence plus Playfair's parallel axiom split into its existence and uniqueness halves. Parallelism over the rationals is parPosRaw l m := (a l * b m = b l * a m) together with the refutation of ((a l * c m = c l * a m) and (b l * c m = c l * b m)) -- same direction, and NOT proportional overall. Those are exactly the three proportionalities Geo.QPlane.onOfProp already consumes, which is why the pivot written for joinUnique discharges Playfair's uniqueness half with no new division. Over the rationals the distinctness half may be a NEGATION, because the order is decidable (Geo.Rat.eqOrNe) and Rat.mul_eq_zero turns a vanishing product into a vanishing factor; the real model cannot do that and states the same conjunct as a PosBound witness, and that one record serves both is the same measurement the abstract apart field made one layer down. Existence is the explicit parallel (a, b, -(a*x P + b*y P)), whose non-degeneracy IS the original line's because the leading coefficients are the original's; its two remaining defects are -a*e_P and -b*e_P, so Rat.mul_eq_zero and the off-the-line hypothesis force a = 0 and then b = 0, which Nondeg l refutes. Uniqueness is Geo.QPlane.dirPivot -- a*(A*B' - B*A') = A*(a*B' - b*A') - A'*(a*B - b*A) and its b mirror -- through Geo.QLine0.nondeg_or, then defectAC and defectBC at the shared point, then onOfProp in both directions.",
+  "formal": {
+    "language": "lean4",
+    "statement": "def Geo.qaffine : Geo.Affine",
+    "fragment": "Prop",
+    "free_symbols": [],
+    "kernel_theorem": "Geo.qaffine"
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:geo-incidence-model-rational-plane"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Geo.qaffine",
+      "kind": "kernel-term",
+      "supports": "Geo.qaffine is a Definition admitted by the trusted kernel gate at the type Geo.Affine, which re-derives the type from the term -- so all seven of the record's fields, including the two Playfair axioms, were supplied and checked over the rationals.",
+      "check_status": "checked",
+      "checkers": [
+        "producing-build (Kernel::add_declaration, inside build_geo_prelude)",
+        "kernel_declaration_projection --require-declaration with --require-kind definition"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example kernel_declaration_projection -- --require-declaration Geo.qaffine --require-kind definition",
+      "checker_seconds": 400,
+      "kernel_declaration": "Geo.qaffine",
+      "notes": "The exit status depends on the finding: --require-declaration exits 1 and prints to stderr when no constructed prelude's environment holds a declaration with that exact rendered name, and --require-kind exits 1 when the match is of a different kind. This is the only in-tree inventory tool that can assert a Definition exists -- theorem_dependency_inventory, nat_theorem_inventory and prelude_theorem_inventory all filter to Declaration::Theorem. --release is MANDATORY: the binary builds creal/complex/cpoint/metric/rn/geo, which recurse deep enough to overflow the default debug thread stack."
+    },
+    {
+      "id": "evaluation-geo-qaffine",
+      "kind": "instance-pin",
+      "supports": "What the rational affine model MEANS, at the level the kernel gate cannot reach. Each new definition is evaluated at concrete or free-variable arguments and each pin carries its discriminating half -- including the parallel construction, whose leading coefficients must be the original line's and whose constant must be the NEGATED evaluation, since the unnegated one would put the point off its own parallel.",
+      "check_status": "checked",
+      "checkers": [
+        "crates/axeyum-lean-kernel/src/geo/geo_tests.rs (27 tests)",
+        "crate::Kernel::def_eq at concrete Rat literals and at free variables",
+        "crate::Kernel::axiom_footprint over a population derived from Environment::iter, not from a list",
+        "scripts/tests/mutation_controls.py geo-affine (2 registered mutants)"
+      ],
+      "checker_command": "cargo test -p axeyum-lean-kernel --release --lib -- geo:: --test-threads=4",
+      "checker_seconds": 110,
+      "notes": "Confirm a NONZERO test count: measured 27 passed, 0 failed in 101.90s (--release, --test-threads=4). The degenerate witness that the distinctness conjunct exists to exclude is COMPUTED, not argued: at the concrete line (1, 0, 0) all three proportionalities of that line against ITSELF reduce to Rat.zero = Rat.zero, so the direction identity alone would make a line parallel to itself, and Geo.QPlane.parPosRaw is separately asserted NOT to be that identity alone."
+    }
+  ],
+  "provenance": {
+    "date": "2026-09-06",
+    "curation": "curated",
+    "established_by": "axeyum-lean-kernel build_geo_prelude (crates/axeyum-lean-kernel/src/geo/affine.rs, crates/axeyum-lean-kernel/src/geo/qaffine.rs)",
+    "source": "ADR-1659 (docs/research/09-decisions/adr-1659-parallelism-is-positive-and-both-planes-are-affine.md); roadmap W3-8, third slice. formal.statement is the rendered type of the admitted declaration."
+  },
+  "notes": "What this fact does NOT say. It does not say the rational plane is a Euclidean plane -- incidence plus Playfair is affine geometry, and Hilbert's congruence, order and continuity groups are all still absent, the last of which the rationals do not satisfy at all. It does not say the negated distinctness conjunct used here is the right shape in general: the real model states the same conjunct as a PosBound witness precisely because the negation constructs nothing over CReal, and the abstract record carries parPos as a field so the two models may disagree. And it does not say the rational proof is the cheaper one: measured here, the real existence half needs no division at all while this one needs two Rat.mul_eq_zero case analyses, which inverts the usual expectation for the second time in this shelf."
+}

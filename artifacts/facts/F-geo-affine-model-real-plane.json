@@ -1,0 +1,71 @@
+{
+  "schema_version": 1,
+  "id": "F:geo-affine-model-real-plane",
+  "title": "The real coordinate plane satisfies Playfair's parallel axiom, with parallelism stated positively",
+  "statement": "Geo.raffine is a constructive witness that the REAL plane is an affine plane: it supplies every field of the record Geo.Affine, which is Geo.Incidence plus Playfair's parallel axiom split into its existence and uniqueness halves. Parallelism is NOT the classical negative predicate 'the two lines share no point'. It is stated positively as parPos l m := CReal.Equiv (a l * b m - b l * a m) 0 together with a witness exists k, CReal.PosBound ((a l * c m - c l * a m)^2 + (b l * c m - c l * b m)^2) k -- same direction, and a distinctness that is WITNESSED rather than negated. The same move is made for the point-off-a-line relation: off P l is exists k, CReal.PosBound (e_P * e_P) k where e_P is the incidence expression, because over the reals the negation 'P is not on l' constructs no modulus and the existence half needs one. ADR-1652 section 5 measured that the negative form makes uniqueness end at Not (Apart (a*B - b*A) 0), whose closure is tightness -- a principle creal.rs documents as neither proved nor assumed -- so this is the fix that avoids acquiring a classical principle rather than the one that acquires it. Existence needs NO division: the parallel through P is (a, b, -(a*x P + b*y P)), whose leading coefficients are the original line's so its non-degeneracy is the original's outright, and whose distinctness witness is the PRODUCT of two PosBound moduli, since dAC^2 + dBC^2 = (a^2 + b^2) * e_P^2. Uniqueness divides once, by a^2 + b^2, through the same cancelPosBound that Geo.RPlane.joinUnique uses.",
+  "formal": {
+    "language": "lean4",
+    "statement": "def Geo.raffine : Geo.Affine",
+    "fragment": "Prop",
+    "free_symbols": [],
+    "kernel_theorem": "Geo.raffine"
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:geo-incidence-model-real-plane",
+    "F:geo-affine-model-rational-plane"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Geo.raffine",
+      "kind": "kernel-term",
+      "supports": "Geo.raffine is a Definition admitted by the trusted kernel gate at the type Geo.Affine, which re-derives the type from the term -- so all seven of the record's fields, including the two Playfair axioms, were supplied and checked over the reals.",
+      "check_status": "checked",
+      "checkers": [
+        "producing-build (Kernel::add_declaration, inside build_geo_prelude)",
+        "kernel_declaration_projection --require-declaration with --require-kind definition"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example kernel_declaration_projection -- --require-declaration Geo.raffine --require-kind definition",
+      "checker_seconds": 400,
+      "kernel_declaration": "Geo.raffine",
+      "notes": "The exit status depends on the finding: --require-declaration exits 1 and prints to stderr when no constructed prelude's environment holds a declaration with that exact rendered name, and --require-kind exits 1 when the match is of a different kind. This is the only in-tree inventory tool that can assert a Definition exists -- theorem_dependency_inventory, nat_theorem_inventory and prelude_theorem_inventory all filter to Declaration::Theorem. --release is MANDATORY: the binary builds creal/complex/cpoint/metric/rn/geo, which recurse deep enough to overflow the default debug thread stack."
+    },
+    {
+      "id": "evaluation-geo-raffine",
+      "kind": "instance-pin",
+      "supports": "What the real affine model MEANS, at the level the kernel gate cannot reach. The positive parallel predicate is pinned as a STORED-VALUE comparison: its second conjunct is an Exists over CReal.PosBound and NOT the negation (Equiv (dAC^2 + dBC^2) 0 -> False), and the wrong shape is asserted to be a different interned ExprId so the comparison could have failed.",
+      "check_status": "checked",
+      "checkers": [
+        "crates/axeyum-lean-kernel/src/geo/geo_tests.rs (27 tests)",
+        "crate::Kernel::def_eq where it SUCCEEDS, plus interned-ExprId comparison against the stored Definition value for the discriminating half",
+        "crate::Kernel::axiom_footprint over a population derived from Environment::iter, not from a list",
+        "scripts/tests/mutation_controls.py geo-affine (2 registered mutants)"
+      ],
+      "checker_command": "cargo test -p axeyum-lean-kernel --release --lib -- geo:: --test-threads=4",
+      "checker_seconds": 110,
+      "notes": "Confirm a NONZERO test count: measured 27 passed, 0 failed in 101.90s (--release, --test-threads=4). Five new pins, each with a discriminating half: the two affine planes are two models and not one (Geo.qaffine's inc is Geo.qplane and NOT Geo.rplane); positive parallelism is witnessed over the reals and negated over the rationals; dropping the distinctness conjunct would make a line parallel to itself (COMPUTED at the line (1,0,0), where all three proportionalities against ITSELF reduce to Rat.zero = Rat.zero); the parallel through a point keeps the leading coefficients and negates the constant; and the three derived affine theorems instantiate at BOTH models. The real-side pins are stored-value comparisons and not def_eq refutations, because over CReal a failing def_eq between two arithmetic terms is a search that does not finish -- see ADR-1652's Consequences."
+    },
+    {
+      "id": "mutation-geo-affine",
+      "kind": "exhaustive-enumeration",
+      "supports": "The two design decisions are load-bearing rather than conventional: swapping Playfair's uniqueness conclusion to the other order, and dropping the distinctness conjunct from the positive parallel predicate, each stop the real model from being assembled at all.",
+      "check_status": "checked",
+      "checkers": [
+        "scripts/tests/mutation_controls.py geo-affine"
+      ],
+      "checker_command": "python3 scripts/tests/mutation_controls.py geo-affine",
+      "checker_seconds": 1200,
+      "notes": "Baseline green at 1 test; both mutants killed. Both fail at PRELUDE-BUILD time, which is the finding rather than an inconvenience -- neither predicate can be weakened and left provable. Extensional line equality is And A B against And B A under the swap, symmetric propositionally and NOT definitionally, so neither model's playfairUnique keeps the field's type; and without the distinctness witness Geo.RPlane.parPosDisjoint has nothing to contradict, with the degenerate consequence computed rather than argued in dropping_the_distinctness_conjunct_would_make_a_line_parallel_to_itself."
+    }
+  ],
+  "provenance": {
+    "date": "2026-09-06",
+    "curation": "curated",
+    "established_by": "axeyum-lean-kernel build_geo_prelude (crates/axeyum-lean-kernel/src/geo/affine.rs, crates/axeyum-lean-kernel/src/geo/raffine.rs)",
+    "source": "ADR-1659 (docs/research/09-decisions/adr-1659-parallelism-is-positive-and-both-planes-are-affine.md); roadmap W3-8, third slice. formal.statement is the rendered type of the admitted declaration."
+  },
+  "notes": "What this fact does NOT say. It does not say the real plane is a Euclidean plane: incidence plus Playfair is affine geometry, and Hilbert's congruence, order and continuity groups are all still absent. It does not say parallelism is an equivalence relation -- Geo.Affine.parallel_trans concludes only for two lines that are DISTINCT, and the distinctness hypothesis is the theorem rather than a weakness of the proof, because l and n may perfectly well be the same line and deciding which needs lEq to be decidable, which it is not over the reals. It does not say the positive predicate implies the classical one is unusable: Geo.Affine.parallelPos_parallel proves that positive parallelism implies the classical 'no common point', so the classical notion is derived, not discarded. And it does not claim any change to geo/rplane.rs: ADR-1652 section 5 predicted that the affine layer would reuse defectAC, defectBC, cancelPosBound and onOfDefects unchanged, and it does, plus defectSwap, with that file not edited."
+}
