@@ -869,7 +869,18 @@ pub enum ElementOrderFailure {
     /// `matrix^claimed_order == I`.
     RepeatedMultiplicationMismatch,
     /// `matrix^(claimed_order / q) == I` for some prime `q | claimed_order`,
-    /// so `claimed_order` is not minimal.
+    /// so `claimed_order` is not minimal. **Not exercised by any forgery
+    /// test**: since the vector action is faithful, `claimed_order` already
+    /// equals [`Permutation::order`]'s own (independently recomputed)
+    /// value by the time this check runs (the `PermutationOrderMismatch`
+    /// guard above it verifies exactly that), and a correct
+    /// `Permutation::order` never reports a
+    /// non-minimal order — so forging a certificate that reaches this guard
+    /// without already failing the permutation-order guard first was not
+    /// found. Kept as a distinct, independent recomputation rather than
+    /// removed, in the same spirit as
+    /// [`crate::permgroup::PermgroupError::SylowConstructionFailed`]'s
+    /// "never observed" guard.
     NotMinimal {
         /// The prime factor for which the smaller power was already the
         /// identity.
@@ -1377,5 +1388,19 @@ mod tests {
             other => panic!("expected TooManyPoints, got {other:?}"),
         }
         assert_under_5s(start, "too_many_points_refused_without_hanging");
+    }
+
+    #[test]
+    fn forged_element_order_certificate_with_inflated_order_rejected() {
+        // E12(1) over F5 has true order 5. Claim 25 instead (still a
+        // multiple, so `matrix^25 == I` holds, but 25 = 5*5 is not minimal:
+        // `matrix^(25/5) = matrix^5` is already `I`).
+        let mut cert = order_of_element(5, 2, vec![vec![1, 1], vec![0, 1]]).unwrap();
+        assert_eq!(cert.claimed_order, 5);
+        cert.claimed_order = 25;
+        match cert.verify() {
+            Err(ElementOrderFailure::PermutationOrderMismatch { expected: 5 }) => {}
+            other => panic!("expected PermutationOrderMismatch, got {other:?}"),
+        }
     }
 }
