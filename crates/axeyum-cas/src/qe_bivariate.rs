@@ -88,6 +88,25 @@
 //! the cells they cover are **exactly** the true cells, and no two of them
 //! could have been merged further.
 //!
+//! # What is decided now, and what is not
+//!
+//! **Decided.** One projection step of `∃y. ⋀ᵢ pᵢ(x, y) ▷ᵢ 0` at total degree
+//! at most [`MAX_TOTAL_DEGREE`], over **any** cell of the resulting `x`-line:
+//! open cells at rational samples through the ℚ engine, point cells at rational
+//! cut points likewise, and point cells at **irrational** cut points through
+//! `ℚ(α)`. Both are certificate-carrying, and the output is either the cell
+//! list ([`eliminate_y`]) or a quantifier-free union of intervals
+//! ([`eliminate_y_to_formula`]) whose endpoints may be algebraic. An atom with
+//! a repeated factor in `y` is handled rather than refused.
+//!
+//! **Not decided.** More than two variables — there is no lifting phase, so a
+//! cell of this line cannot be lifted into a cell of the plane and projected
+//! again. Any quantifier alternation: `∃x∀y` and `∀x∃y` have no representation
+//! here, and the merged interval list is a description of one free variable's
+//! truth set, not an input the module can quantify over again. Two atoms
+//! sharing a factor of positive `y`-degree, which is still
+//! [`Fault::DegenerateProjection`]. And nothing transcendental.
+//!
 //! # What this step still cannot do
 //!
 //! - **A degenerate projection.** If a pairwise resultant vanishes identically,
@@ -100,8 +119,26 @@
 //!
 //! # Cost profile — ADVISORY
 //!
-//! See the table in [`crate::qe`]; the rows for an irrational boundary are
-//! measured there.
+//! Measured 2026-09-05, 3 repeats of a prebuilt `--release` lib-test binary at
+//! load average 14–17 on a shared box; spread under 10% across repeats.
+//! **Advisory only** — do not ratchet on these. Each row is one named test, and
+//! every test runs the producer *and* a full independent `verify`.
+//!
+//! | shape | cost |
+//! |---|---|
+//! | degree 2, rational boundaries (`x² + y² < 1`) | under 1 ms |
+//! | degree 4, rational boundaries (`x²y² − 1 < 0 ∧ y > 0`) | under 1 ms |
+//! | degree 2, **irrational** boundaries (`x² + y² = 2 ∧ y > 0`), two point cells over `ℚ(√2)` | 42 ms |
+//! | degree 4 total, one point cell over `ℚ(∛2)` (`(y − x)² ≤ 0 ∧ x³ = 2`) | 57 ms |
+//! | degree 3 field, `y` algebraic **over** `K` (`y² = x ∧ x³ = 2`) | 90 ms |
+//!
+//! An irrational boundary costs roughly **60× a rational one at the same
+//! degree**. The multiplier is not the cell count and not the field degree in
+//! itself: it is that every coefficient comparison inside a Sturm chain over
+//! `K` is a sign at `α` rather than a sign of a rational, and every
+//! `K`-remainder needs an inverse modulo the modulus. The `ℚ(√2)` row carries
+//! *two* algebraic cells and still costs less than the two `ℚ(∛2)` rows, whose
+//! fibre roots are not elements of `K`.
 
 use std::collections::BTreeMap;
 

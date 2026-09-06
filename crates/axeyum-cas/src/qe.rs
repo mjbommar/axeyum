@@ -104,14 +104,32 @@
 //! | univariate, `x² − 10³⁰` (+ the `i128` control) | 14 ms |
 //! | univariate, `x² − 10⁶⁰`, two verdicts | 85 ms |
 //!
-//! Two things the table says. First, **degree is cheap and magnitude is not**:
+//! The **irrational-boundary** rows were added 2026-09-05 by the same method,
+//! 3 repeats of a prebuilt `--release` lib-test binary at load average 14–17 on
+//! the same shared box, spread under 10% across repeats. Also advisory.
+//!
+//! | shape (the test that is timed) | cost |
+//! |---|---|
+//! | degree 2, irrational boundary (`x² + y² = 2 ∧ y > 0`), two point cells over `ℚ(√2)`, + verify | 42 ms |
+//! | degree 4 total (`(y − x)² ≤ 0 ∧ x³ = 2`), one point cell over `ℚ(∛2)`, + verify | 57 ms |
+//! | degree 3 field, `y` algebraic **over** `K` (`y² = x ∧ x³ = 2`), + verify | 90 ms |
+//!
+//! Three things the table says. First, **degree is cheap and magnitude is not**:
 //! the bivariate step at degree 4 costs the same as the univariate cubic, while
 //! a `10⁶⁰` coefficient costs a hundred times more — isolation bisects from a
 //! Cauchy bound of `10⁶⁰`, so it spends ~200 halvings on 60-digit rationals
 //! before the rational root is recognised. Second, the bivariate cost is
-//! dominated not by the projection but by the `2r + 1` univariate decisions in
-//! the fibres, so it scales with the number of cut points, not with the
-//! Sylvester determinants.
+//! dominated not by the projection but by the `2r + 1` fibre decisions, so it
+//! scales with the number of cut points, not with the Sylvester determinants.
+//! Third, **an irrational boundary costs about 60× a rational one at the same
+//! degree**, and each row above is a producer run *plus* a full independent
+//! re-derivation. The multiplier is the `ℚ(α)` layer: every coefficient
+//! comparison in a Sturm chain over `K` is a sign at `α` rather than a sign of
+//! a rational, and each `K`-remainder needs an inverse modulo the modulus. It
+//! is not the number of cells and not the field degree in itself — the `ℚ(∛2)`
+//! rows cost 1.4× and 2× the `ℚ(√2)` row while carrying *fewer* algebraic
+//! cells, because their fibre polynomials are the ones whose roots are not in
+//! `K`.
 
 use core::cmp::Ordering;
 

@@ -69,6 +69,19 @@
 //!   resultant would be a second, redundant representation carrying its own
 //!   irreducibility obligation, so it is deliberately not done.
 //! - It does not handle a second quantifier, or a third variable.
+//!
+//! # Cost profile — ADVISORY
+//!
+//! One fibre over a degree-2 `α` costs about 20 ms and over a degree-3 `α`
+//! about 30–45 ms in `--release`, roughly sixty times the ℚ fibre at the same
+//! `y`-degree; the measured rows and the reason are in
+//! [`crate::qe::bivariate`], whose tests are what was timed. The dominant term
+//! is that a Sturm variation count over `K` needs one sign **at `α`** per chain
+//! member per endpoint, and each `K`-remainder needs an inverse modulo the
+//! modulus. [`RealField::sign`] therefore tries an interval enclosure over
+//! `α`'s bracket before the exact route; that fast path decides every nonzero
+//! element whose bracket is narrower than its distance from zero, which after
+//! isolation is nearly all of them.
 
 use core::cmp::Ordering;
 
