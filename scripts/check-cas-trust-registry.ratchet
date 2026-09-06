@@ -17,12 +17,14 @@
 # only rises on purpose) -- but a new UNCERTIFIED function is never refused;
 # that label is honest, not a violation. See
 # docs/math-department/13-computer-algebra.md item 10.
-COUNT	107
+COUNT	109
 FN	enclosure::enclose	Option<Enclosure>
 FN	enclosure::enclose_constant	Option<Enclosure>
 FN	enclosure::enclose_root	Option<Enclosure>
 FN	enclosure::enclose_root_with_reason	Result<Enclosure, DeclineReason>
 FN	enclosure::enclose_with_reason	Result<Enclosure, DeclineReason>
+FN	enclosure_special::enclose_system	Option<SystemEnclosure>
+FN	enclosure_special::enclose_system_with_reason	Result<SystemEnclosure, DeclineReason>
 FN	equal	ZeroTest
 FN	extremum::polynomial_extremum	Option<ExtremumCertificate>
 FN	fps::FormalPowerSeries::from_rational_function	Option<(FormalPowerSeries, TruncationIdentity)>
@@ -210,6 +212,7 @@ VOCAB	SimplicialMapCertificate	struct
 VOCAB	SylowCertificate	struct
 VOCAB	SylowCountCertificate	struct
 VOCAB	SymbolicClosedFormReport	struct
+VOCAB	SystemEnclosure	struct
 VOCAB	TaylorCertificate	struct
 VOCAB	TelescopingCertificate	struct
 VOCAB	TruncationIdentity	enum
