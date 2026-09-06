@@ -91,32 +91,42 @@
 //!
 //! # Cost — ADVISORY
 //!
-//! Measured 2026-09-05 on this box, `--release`, three repeats of a prebuilt
-//! lib-test binary, load stated in the table. **Advisory only**; do not ratchet
-//! on these. Every row is producer **plus** a full independent `verify`.
+//! Measured 2026-09-05, three repeats of a prebuilt `--release` lib-test
+//! binary at load average 14 on a shared box; spread under 8% across repeats.
+//! **Advisory only**; do not ratchet on these. Every row is one named test, and
+//! every test runs the producer **and** a full independent `verify`.
 //!
-//! | shape | cells | cost |
+//! | shape (degree 2 throughout) | cells | cost |
 //! |---|---|---|
-//! | degree 2, `∃z. x² + y² + z² < 1` (the open disc) | 5 `x`-cells, 17 plane cells | see the item-7 log row |
-//! | degree 2, `∃z. z² = x ∧ z² = y` | 3 `x`-cells, 13 plane cells | see the item-7 log row |
-//! | degree 2, `∃z. x·z = 1 ∧ y·z = 1` | 3 `x`-cells, 13 plane cells | see the item-7 log row |
+//! | `∃z. x² + y² + z² < 1` — the open disc | 5 `x`-cells, 13 plane cells | 1 ms |
+//! | `∃z. x·z = 1 ∧ y·z = 1` — the punctured diagonal | 3 `x`-cells, 13 plane cells | 1 ms |
+//! | `∃z. z² = x ∧ z² = y` — the ray `x = y ≥ 0` | 3 `x`-cells, 13 plane cells | 55 ms |
+//! | `∃z. 2y² + z² < x` — two plane cells over `ℚ(β)` | 3 `x`-cells, 9 plane cells | 42 ms |
+//! | `∃z. x² + z² = 2` — two `x`-cells declined as towers | 5 `x`-cells, 3 plane cells | 38 ms |
 //!
-//! The dominant term is the same one the bivariate step measured: a plane cell
-//! whose `y`-sample is algebraic costs roughly sixty times a rational one,
-//! because every sign in its Sturm chain is a sign at `β` rather than a sign of
-//! a rational.
+//! Two things the table says, and the second one was a surprise. First, an
+//! algebraic plane cell costs what the bivariate step measured for an
+//! algebraic boundary — roughly sixty times a rational one — because every
+//! sign in its Sturm chain is a sign at `β` rather than a sign of a rational.
+//! Second, **the projection can cost more than every fibre put together**:
+//! `z² = x ∧ z² = y` has thirteen plane cells and not one algebraic sample,
+//! and is still the most expensive row, because its two atoms have four
+//! positive-degree reducta between them and the level-two set therefore
+//! carries the pairwise resultants `x²` and `x⁴` through
+//! `qe_bivariate`'s pseudo-division square-free fallback. Cost here scales
+//! with the *shape* of the projection set, not with the number of cells.
 //!
 //! # What this module reuses
 //!
 //! - `bivariate::projection_set_of_polys`, `projection_cut`, `isolate_cut`,
 //!   `cut_points`, `check_sample_in_cell`, `divides`, `bipoly_of_big` — the
 //!   whole level-2 projection and the `x`-line decomposition;
-//! - [`crate::qe::decompose`] — the `y`-line decomposition over ℚ;
+//! - `qe::decompose` — the `y`-line decomposition over ℚ;
 //! - [`crate::qe::decide_exists`] — the `z`-fibre at a rational `(x₀, y₀)`;
 //! - [`crate::qe::fibre::decide_fibre`] — the `z`-fibre over an algebraic `β`,
 //!   with `β` playing the role that `α` plays for the bivariate step.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 use num_bigint::BigInt;
 use num_rational::BigRational;
@@ -124,7 +134,7 @@ use num_traits::{One, Zero};
 
 use super::bivariate::{self, BigBiPoly};
 use super::{
-    Atom, Decision, ExistsFormula, Relation, SamplePoint, big, decompose, decide_exists, fibre,
+    Atom, Decision, ExistsFormula, Relation, SamplePoint, big, decide_exists, decompose, fibre,
     open_cell_samples,
 };
 
@@ -560,8 +570,8 @@ impl LiftCertificate {
             return Err(Fault::TowerDepthMisapplied { cell });
         };
         let fibre_atoms = y_line_atoms(&self.projection_z, x);
-        let decomposition =
-            decompose(&fibre_atoms).map_err(|reason| Fault::Declined(format!("cell {cell}: {reason}")))?;
+        let decomposition = decompose(&fibre_atoms)
+            .map_err(|reason| Fault::Declined(format!("cell {cell}: {reason}")))?;
         let recomputed: Vec<SamplePoint> = decomposition
             .roots
             .iter()
@@ -617,8 +627,9 @@ impl LiftCertificate {
                         Fault::Declined(format!("plane cell {cell}/{y_cell} carries no claim"))
                     })
             }
-            (SamplePoint::Algebraic { lower, upper, .. }, ZFibre::Algebraic(certificate)) => self
-                .check_algebraic_fibre(cell, y_cell, x, y_cut, lower, upper, certificate),
+            (SamplePoint::Algebraic { lower, upper, .. }, ZFibre::Algebraic(certificate)) => {
+                self.check_algebraic_fibre(cell, y_cell, x, y_cut, lower, upper, certificate)
+            }
             _ => Err(Fault::FibreKindMismatch { cell, y_cell }),
         }
     }
@@ -754,7 +765,11 @@ fn sample_name(sample: &SamplePoint) -> String {
     match sample {
         SamplePoint::Rational(value) => format_rational(value),
         SamplePoint::Algebraic { lower, upper, .. } => {
-            format!("in ({}, {}]", format_rational(lower), format_rational(upper))
+            format!(
+                "in ({}, {}]",
+                format_rational(lower),
+                format_rational(upper)
+            )
         }
     }
 }
@@ -875,8 +890,8 @@ fn lift_cylinder(
     x: &BigRational,
 ) -> Result<YLine, Fault> {
     let fibre_atoms = y_line_atoms(level_one, x);
-    let decomposition =
-        decompose(&fibre_atoms).map_err(|reason| Fault::Declined(format!("cell {cell}: {reason}")))?;
+    let decomposition = decompose(&fibre_atoms)
+        .map_err(|reason| Fault::Declined(format!("cell {cell}: {reason}")))?;
     let roots: Vec<SamplePoint> = decomposition
         .roots
         .iter()
@@ -995,7 +1010,10 @@ fn bi_mul(a: &BigBiPoly, b: &BigBiPoly) -> BigBiPoly {
         if big::degree(coefficient).is_none() {
             continue;
         }
-        out = bivariate::bi_add(&out, &bivariate::bi_shift(&bivariate::bi_scale(a, coefficient), power));
+        out = bivariate::bi_add(
+            &out,
+            &bivariate::bi_shift(&bivariate::bi_scale(a, coefficient), power),
+        );
     }
     bi_trim(out)
 }
@@ -1032,7 +1050,7 @@ fn leading_rational(p: &BigBiPoly) -> Option<BigRational> {
 /// The polynomial scaled to leading coefficient one, or `None` when it is zero
 /// or a constant — a constant has no roots, so it cuts nothing.
 fn canonical_bi(p: &BigBiPoly) -> Option<BigBiPoly> {
-    let trimmed = bi_trim(p.to_vec());
+    let trimmed = bi_trim(p.clone());
     let leading = leading_rational(&trimmed)?;
     if trimmed.len() == 1 && big::degree(&trimmed[0]) == Some(0) {
         return None;
@@ -1101,12 +1119,12 @@ fn resultant_z(p: &TriPoly, q: &TriPoly) -> Option<BigBiPoly> {
     let mut matrix: Vec<Vec<BigBiPoly>> = vec![vec![Vec::new(); size]; size];
     for row in 0..q_degree {
         for (offset, coefficient) in p[..=p_degree].iter().rev().enumerate() {
-            matrix[row][row + offset] = coefficient.clone();
+            matrix[row][row + offset].clone_from(coefficient);
         }
     }
     for row in 0..p_degree {
         for (offset, coefficient) in q[..=q_degree].iter().rev().enumerate() {
-            matrix[q_degree + row][row + offset] = coefficient.clone();
+            matrix[q_degree + row][row + offset].clone_from(coefficient);
         }
     }
     Some(ring_determinant(&matrix))
@@ -1166,11 +1184,12 @@ fn minor(
 }
 
 /// The level-1 projection set `PROJ_z(atoms)`: canonical, deduplicated, and
-/// ordered deterministically by a [`std::collections::BTreeMap`] keyed on the
-/// canonical polynomial itself.
+/// ordered deterministically by a [`std::collections::BTreeSet`] of the
+/// canonical polynomials themselves — no hashing, so the order is a function
+/// of the mathematics alone.
 fn projection_z(atoms: &[TriAtom]) -> Result<Vec<BigBiPoly>, Fault> {
-    let mut set: BTreeMap<BigBiPoly, ()> = BTreeMap::new();
-    let mut positive: BTreeMap<TriPoly, ()> = BTreeMap::new();
+    let mut set: BTreeSet<BigBiPoly> = BTreeSet::new();
+    let mut positive: BTreeSet<TriPoly> = BTreeSet::new();
     for atom in atoms {
         for reductum in reducta_z(&atom.poly) {
             match degree_z(&reductum) {
@@ -1182,13 +1201,13 @@ fn projection_z(atoms: &[TriAtom]) -> Result<Vec<BigBiPoly>, Fault> {
                         add_discriminant(&mut set, &reductum)?;
                     }
                     if let Some(key) = canonical_tri(&reductum) {
-                        positive.insert(key, ());
+                        positive.insert(key);
                     }
                 }
             }
         }
     }
-    let unique: Vec<TriPoly> = positive.into_keys().collect();
+    let unique: Vec<TriPoly> = positive.into_iter().collect();
     for i in 0..unique.len() {
         for j in (i + 1)..unique.len() {
             let resultant = resultant_z(&unique[i], &unique[j]).ok_or(Fault::Declined(
@@ -1202,11 +1221,11 @@ fn projection_z(atoms: &[TriAtom]) -> Result<Vec<BigBiPoly>, Fault> {
             insert_projection(&mut set, &resultant);
         }
     }
-    Ok(set.into_keys().collect())
+    Ok(set.into_iter().collect())
 }
 
 /// The discriminant of one reductum of `z`-degree at least two.
-fn add_discriminant(set: &mut BTreeMap<BigBiPoly, ()>, reductum: &TriPoly) -> Result<(), Fault> {
+fn add_discriminant(set: &mut BTreeSet<BigBiPoly>, reductum: &TriPoly) -> Result<(), Fault> {
     let derivative = derivative_z(reductum);
     let discriminant = resultant_z(reductum, &derivative).ok_or(Fault::Declined(
         "the z-discriminant of a reductum was not defined".to_string(),
@@ -1221,9 +1240,9 @@ fn add_discriminant(set: &mut BTreeMap<BigBiPoly, ()>, reductum: &TriPoly) -> Re
 }
 
 /// Insert a candidate cut polynomial, canonical, dropping constants.
-fn insert_projection(set: &mut BTreeMap<BigBiPoly, ()>, candidate: &BigBiPoly) {
+fn insert_projection(set: &mut BTreeSet<BigBiPoly>, candidate: &BigBiPoly) {
     if let Some(canonical) = canonical_bi(candidate) {
-        set.insert(canonical, ());
+        set.insert(canonical);
     }
 }
 
@@ -1288,7 +1307,7 @@ fn eval_x(p: &BigBiPoly, x: &BigRational) -> Vec<BigRational> {
 }
 
 /// The level-1 set at `x = x₀`, as atoms whose roots cut the `y`-line. The
-/// relation is immaterial: [`crate::qe::decompose`] reads only the polynomials.
+/// relation is immaterial: `qe::decompose` reads only the polynomials.
 fn y_line_atoms(level_one: &[BigBiPoly], x: &BigRational) -> Vec<Atom> {
     level_one
         .iter()

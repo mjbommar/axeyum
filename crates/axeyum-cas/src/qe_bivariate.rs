@@ -99,13 +99,14 @@
 //! ([`eliminate_y_to_formula`]) whose endpoints may be algebraic. An atom with
 //! a repeated factor in `y` is handled rather than refused.
 //!
-//! **Not decided.** More than two variables — there is no lifting phase, so a
-//! cell of this line cannot be lifted into a cell of the plane and projected
-//! again. Any quantifier alternation: `∃x∀y` and `∀x∃y` have no representation
-//! here, and the merged interval list is a description of one free variable's
-//! truth set, not an input the module can quantify over again. Two atoms
-//! sharing a factor of positive `y`-degree, which is still
-//! [`Fault::DegenerateProjection`]. And nothing transcendental.
+//! **Not decided here.** Two atoms sharing a factor of positive `y`-degree,
+//! which is still [`Fault::DegenerateProjection`], and nothing transcendental.
+//! The two limitations this module used to name are now elsewhere rather than
+//! absent: the **lifting phase** that carries a cell of this line into a cell
+//! of the plane is [`crate::qe::lift`], and the **quantifier alternations**
+//! `∀x ∃y` and `∃x ∀y` over this module's output are [`crate::qe::alt`], which
+//! also eliminates `y` from a bivariate DNF. Both are built on the projection
+//! operator below rather than on a copy of it.
 //!
 //! # What this step still cannot do
 //!
@@ -113,9 +114,13 @@
 //!   two atoms share a factor of positive `y`-degree and the delineability
 //!   argument above does not apply. That is refused
 //!   ([`Fault::DegenerateProjection`]), not worked around.
-//! - **Three variables, or a second quantifier.** There is a cell adjacency
-//!   structure now, but only along one line; there is no lifting phase, so this
-//!   is still a projection step and not a CAD.
+//! - **Three variables, or a second quantifier, *in this module*.** The cell
+//!   adjacency structure here is along one line only. The lifting phase and the
+//!   alternations live in [`crate::qe::lift`] and [`crate::qe::alt`], which
+//!   reuse `projection_set`, `projection_cut`, `isolate_cut`, `cut_points`,
+//!   `check_sample_in_cell`, `substitute_atoms`, `substitution_atoms` and the
+//!   `ℚ[x][y]` coefficient arithmetic from here; those are `pub(super)` for
+//!   exactly that reason.
 //!
 //! # Cost profile — ADVISORY
 //!

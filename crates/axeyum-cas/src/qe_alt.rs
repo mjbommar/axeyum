@@ -65,11 +65,24 @@
 //!
 //! # Cost — ADVISORY
 //!
-//! An alternation costs exactly one inner elimination plus a constant: every
-//! guard here reads the cell list the inner certificate already carries. The
-//! rows in [`crate::qe::bivariate`] are therefore the cost of an alternation
-//! too, and the `60×` penalty for an irrational boundary carries over
-//! unchanged. Measured 2026-09-05, `--release`; advisory only.
+//! An alternation costs one inner elimination plus a constant: every guard here
+//! reads the cell list the inner certificate already carries, so the rows in
+//! [`crate::qe::bivariate`] are the cost of an alternation too, and the `60×`
+//! penalty for an irrational boundary carries over unchanged.
+//!
+//! Measured 2026-09-05, three repeats of a prebuilt `--release` lib-test binary
+//! at load average 14 on a shared box; spread under 8%. **Advisory only.** Each
+//! row is one named test: producer **plus** a full independent `verify`.
+//!
+//! | shape | cost |
+//! |---|---|
+//! | `∀x ∃y. y² = x²`, `∀x ∃y. y² = x`, `∀x ∃y. x·y = 1` | under 1 ms each |
+//! | `∃x ∀y. y² ≥ x`, `∃x ∀y. y² < x` | under 1 ms each |
+//! | `∃y` over a one-disjunct DNF with irrational boundaries (two `ℚ(α)` cells) | 42 ms |
+//! | `∃y` over a two-disjunct DNF, rational boundaries | 40 ms |
+//!
+//! The alternation itself is free at this scale; what is paid for is the inner
+//! elimination, and within it the `ℚ(α)` cells.
 
 use num_rational::BigRational;
 
@@ -436,15 +449,18 @@ impl DnfProjectionCertificate {
             if !bivariate::divides(&certificate.modulus, defining_poly) {
                 return Err(Fault::ModulusNotADivisor { cell, disjunct });
             }
-            let field = fibre::RealField::new(&certificate.modulus, lower, upper).map_err(
-                |fault| Fault::Fibre {
-                    cell,
-                    disjunct,
-                    fault,
-                },
-            )?;
-            let substituted =
-                fibre::substitute(&field, &bivariate::substitution_atoms(&self.disjuncts[disjunct]));
+            let field =
+                fibre::RealField::new(&certificate.modulus, lower, upper).map_err(|fault| {
+                    Fault::Fibre {
+                        cell,
+                        disjunct,
+                        fault,
+                    }
+                })?;
+            let substituted = fibre::substitute(
+                &field,
+                &bivariate::substitution_atoms(&self.disjuncts[disjunct]),
+            );
             if certificate.atoms != substituted {
                 return Err(Fault::SubstitutionMismatch { cell, disjunct });
             }
@@ -873,8 +889,8 @@ fn interval_of_cell(roots: &[SamplePoint], cell: usize) -> XInterval {
 pub fn decide_forall_exists(
     formula: &ForallExistsFormula,
 ) -> Result<ForallExistsCertificate, Fault> {
-    let inner = eliminate_y_to_formula(&ExistsYFormula::new(formula.atoms.clone()))
-        .map_err(lift_fault)?;
+    let inner =
+        eliminate_y_to_formula(&ExistsYFormula::new(formula.atoms.clone())).map_err(lift_fault)?;
     let false_cell = inner.projection.cells.iter().position(|cell| !cell.verdict);
     let (holds, witness) = match false_cell {
         None => (true, None),
@@ -962,7 +978,6 @@ mod tests {
     use crate::qe::Relation;
     use crate::qe::dnf::DnfDecision;
     use axeyum_ir::Rational;
-    use num_traits::Zero;
 
     // ------------------------------------------------------------------
     // Shapes.
@@ -1063,7 +1078,10 @@ mod tests {
         assert_eq!(certificate.describe(), "x ∈ (-∞, ∞)");
         assert_eq!(certificate.inner.intervals.len(), 1);
         assert!(covers_the_line(&certificate.inner.intervals));
-        assert_eq!(eliminate_forall_exists(&ForallExistsFormula::new(vec![squares()])), Ok(true));
+        assert_eq!(
+            eliminate_forall_exists(&ForallExistsFormula::new(vec![squares()])),
+            Ok(true)
+        );
     }
 
     #[test]
@@ -1434,7 +1452,10 @@ mod tests {
         if let Some(witness) = certificate.witness.as_mut() {
             witness.cell = 2; // x > 0, where ∃y really does hold
         }
-        assert_eq!(certificate.verify(), Err(Fault::WitnessNotFalse { cell: 2 }));
+        assert_eq!(
+            certificate.verify(),
+            Err(Fault::WitnessNotFalse { cell: 2 })
+        );
     }
 
     #[test]
@@ -1491,7 +1512,10 @@ mod tests {
         if let Some(witness) = certificate.witness.as_mut() {
             witness.cell = 2; // where ∃y. y² < x holds, so ∀y does not
         }
-        assert_eq!(certificate.verify(), Err(Fault::WitnessNotFalse { cell: 2 }));
+        assert_eq!(
+            certificate.verify(),
+            Err(Fault::WitnessNotFalse { cell: 2 })
+        );
     }
 
     #[test]
@@ -1526,10 +1550,7 @@ mod tests {
         }
         assert_eq!(
             certificate.verify(),
-            Err(Fault::WitnessOutOfRange {
-                cell: 11,
-                cells: 3
-            })
+            Err(Fault::WitnessOutOfRange { cell: 11, cells: 3 })
         );
     }
 
