@@ -23,8 +23,8 @@ described below is kept ready for the next one, not deleted.
 
 | file | what it is |
 |---|---|
-| [`ground_truth.py`](ground_truth.py) | independent verification of every checkable expected value in `corpus.json`: via SymPy 1.14.0 where installed, else pure-Python hand/cited proofs (129 claims with SymPy, 75 without — see "SymPy availability" below) |
-| [`corpus.json`](corpus.json) | the corpus: 126 entries, one per query, each with its area, module tag (if any), tier, expected value, and the method that established it |
+| [`ground_truth.py`](ground_truth.py) | independent verification of every checkable expected value in `corpus.json`: via SymPy 1.14.0 where installed, else pure-Python hand/cited proofs (94 claims without SymPy, measured 2026-09-06; the with-SymPy figure was 129 at 126 entries and has NOT been re-measured since — SymPy is not installed on this host — see "SymPy availability" below) |
+| [`corpus.json`](corpus.json) | the corpus: 132 entries, one per query, each with its area, module tag (if any), tier, expected value, and the method that established it |
 | [`../../../crates/axeyum-cas/examples/parity_corpus.rs`](../../../crates/axeyum-cas/examples/parity_corpus.rs) | the harness: an `axeyum-cas` example (a workspace-member crate, unlike the SMT corpus's standalone `harness/`) that re-derives each `corpus.json` entry's query directly against `axeyum-cas`, compares to the expected value, and reports verdict / trust / wall time per entry |
 
 ## Design, and how it differs from the SMT capability corpus
@@ -44,9 +44,10 @@ SMT solver's verdict space (`sat`/`unsat`/`unknown`) and a CAS's:
    justification; the harness's per-entry Rust function reconstructs the
    same query against `axeyum-cas` and looks up the matching id by
    construction (the two are kept in sync by hand: a script cross-check run
-   during development confirmed the two id sets are identical — 126 in
-   each, re-verified after item 10 wave two's 48-entry growth and again
-   after the item 9 wave three and wave four probability entries).
+   during development confirmed the two id sets are identical — 132 in
+   each, re-verified after item 10 wave two's 48-entry growth, after the
+   item 9 wave three and wave four probability entries, and again after
+   item 5 wave five's six `matgroup_q`/`chartable` entries).
 2. **Trust classification is derived per entry, not from a single verdict
    type.** Some `axeyum-cas` functions return a certificate object directly
    (`CertifiedIntegral`, `Enclosure`, `HomologyCertificate`,
@@ -204,9 +205,14 @@ a plain `core` agree (the fix landed under lane `cas-witness` and the
 harness was updated, but `corpus.json`'s copy never was) — corrected here
 so the two ledgers agree again.
 
-Total entries: **126** (was 71 before item 10 wave two, 119 after it,
-123 after item 9 wave three). The README's own count sat at 119 through
-wave three, which added four entries without updating it — corrected here.
+Total entries: **132** (was 71 before item 10 wave two, 119 after it,
+123 after item 9 wave three, 126 after item 9 wave four). The README's own
+count sat at 119 through wave three, which added four entries without
+updating it — corrected then. Item 5 wave five (lane `cas-matgroup-2`,
+2026-09-06) added six: three for `matgroup_q` (finiteness and order over
+ℚ, and the Minkowski bound) and three for `chartable` (A₅'s classical
+character table, a near-miss control that transposes the golden ratio into
+the wrong row, and C₆'s produced table).
 
 ## Running it
 
@@ -243,9 +249,12 @@ instant it does not.
 
 **`ground_truth.py`**: with SymPy 1.14.0 installed (this host's system
 Python has no SymPy; installed into a scratch venv with `uv venv` +
-`uv pip install sympy` to run it), **129 claims, 0 failed** (was 75 before
-wave two). Without SymPy (plain `python3`, confirmed by re-running with the
-system interpreter), **75 claims, 0 failed, exit 0** (was 32) — every `qe`,
+`uv pip install sympy` to run it), **129 claims, 0 failed** — measured at
+126 entries and NOT re-measured since, because SymPy is still not installed
+here; the item 5 wave five entries add four SymPy-gated claims that nothing
+in this session ran. Without SymPy (plain `python3`, the system
+interpreter), **94 claims, 0 failed, exit 0** (was 75 at 126 entries, 32
+before wave two) — every `qe`,
 `numberfield`, `permgroup`, `homology`, `probability`, `geometry_beyond`,
 `fps`, `enclosure`, `enclosure_special`, `fps_analytic`,
 `numberfield_ideals`, `permgroup_sylow`, `homology_coefficients`,

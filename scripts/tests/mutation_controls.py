@@ -7651,6 +7651,238 @@ SUITES["arith-upoly-certificates"] = (
 )
 
 
+
+
+# Item 5 wave five (`docs/math-department/13-computer-algebra.md`): matrix
+# groups over ℚ. Every mutation below deletes or weakens ONE guard in
+# `FiniteRationalGroupCertificate::verify`,
+# `InfiniteRationalGroupCertificate::verify`, or the producer's two cheap
+# infiniteness tests.
+#
+# Two guards are deliberately absent from this list, and the reason is the
+# finding rather than an omission:
+#
+# - a CONNECTIVITY check (every listed element reachable from the identity)
+#   was written first and then removed, because it cannot fail: a finite set
+#   containing the identity and closed under right multiplication by the
+#   generators already contains the group they generate, so with the count
+#   guard in place the two sets are equal. `verify`'s doc carries the argument.
+# - the ORDER-DIVIDES-`M(n)` guard is a cross-check, not an independent
+#   constraint on a valid certificate -- a real finite subgroup's order divides
+#   the Minkowski bound by the theorem. It is mutated below anyway because its
+#   POSITION in the check order is load-bearing: it runs before the element
+#   list is examined, which is what makes a bogus order-5 "finite" certificate
+#   report the mathematically informative failure instead of a count mismatch.
+SUITES["cas-matgroup-q"] = (
+    "crates/axeyum-cas/src/matgroup_q.rs",
+    Cargo(("-p", "axeyum-cas", "--lib", "matgroup_q"), "cas-matgroup-2"),
+    [
+        (
+            "the reduction modulus must be ODD (Minkowski is false at 2)",
+            "    if prime <= 2 || !is_prime(prime) {",
+            "    if !is_prime(prime) {",
+        ),
+        (
+            "the carried Minkowski bound is recomputed, not trusted",
+            """        if self.minkowski_bound != minkowski_bound(self.n) {
+            return Err(RationalGroupFailure::MinkowskiBoundWrong);
+        }
+""",
+            "",
+        ),
+        (
+            "a finite group's order divides M(n)",
+            """        if (&self.minkowski_bound % BigInt::from(self.reduced_order)) != BigInt::from(0) {
+            return Err(RationalGroupFailure::OrderDoesNotDivideMinkowskiBound);
+        }
+""",
+            "",
+        ),
+        (
+            "the element list is sorted and distinct",
+            """        if !self.elements.windows(2).all(|w| w[0] < w[1]) {
+            return Err(RationalGroupFailure::ElementsNotDistinct);
+        }
+""",
+            "",
+        ),
+        (
+            "the element count is the reduced order",
+            """        if u128::try_from(self.elements.len()).unwrap_or(u128::MAX) != self.reduced_order {
+            return Err(RationalGroupFailure::ElementCountWrong {
+                claimed: self.reduced_order,
+                listed: self.elements.len(),
+            });
+        }
+""",
+            "",
+        ),
+        (
+            "the identity is in the element list",
+            """        if !set.contains(&id) {
+            return Err(RationalGroupFailure::IdentityMissing);
+        }
+""",
+            "",
+        ),
+        (
+            "every generator is in the element list",
+            """        for (gi, g) in self.generators.iter().enumerate() {
+            if !set.contains(g) {
+                return Err(RationalGroupFailure::GeneratorMissing {
+                    generator_index: gi,
+                });
+            }
+        }
+""",
+            "",
+        ),
+        (
+            "the element list is closed under the generators",
+            """        for (ei, e) in self.elements.iter().enumerate() {
+            for (gi, g) in self.generators.iter().enumerate() {
+                if !set.contains(&mat_mul(e, g)) {
+                    return Err(RationalGroupFailure::NotClosed {
+                        element_index: ei,
+                        generator_index: gi,
+                    });
+                }
+            }
+        }
+""",
+            "",
+        ),
+        (
+            "the producer's trace bound is |tr| > n, not |tr| > n + 1",
+            """                let tr = trace_q(&product);
+                if tr.abs() > n_as_rational {""",
+            """                let tr = trace_q(&product);
+                if tr.abs() > &n_as_rational + &one() {""",
+        ),
+        (
+            "the producer tests each generator's determinant for being a unit",
+            """        let det = det_q(g);
+        if det.abs() != one() {
+            return Some(InfiniteRoute::DeterminantNotUnit {
+                word: vec![gi],
+                determinant: det,
+            });
+        }
+""",
+            "",
+        ),
+        (
+            "the overflow route's witnesses are pairwise distinct",
+            """                    if !values.insert(value) {
+                        return Err(RationalGroupFailure::WitnessesNotDistinct);
+                    }""",
+            "                    values.insert(value);",
+        ),
+        (
+            "the overflow route needs MORE witnesses than the reduced order",
+            "                if u128::try_from(distinct).unwrap_or(u128::MAX) <= *reduced_order {",
+            "                if u128::try_from(distinct).unwrap_or(u128::MAX) < *reduced_order {",
+        ),
+    ],
+)
+
+
+# Item 5 wave five: character tables. Each mutation removes one check from
+# `CharacterTableCertificate::verify` or one bound from the abelian producer.
+#
+# COLUMN orthogonality is deliberately NOT mutated here, and that is a
+# measurement rather than an oversight: for a SQUARE table the two
+# orthogonality relations are the two halves of `U U* = I` and `U* U = I` for
+# the same unitary matrix, so column orthogonality cannot fail once row
+# orthogonality holds. It is kept as a cross-check on the row computation and
+# documented as such, not claimed as an independent constraint.
+SUITES["cas-chartable"] = (
+    "crates/axeyum-cas/src/chartable.rs",
+    Cargo(("-p", "axeyum-cas", "--lib", "chartable"), "cas-matgroup-2"),
+    [
+        (
+            "the carried conjugacy classes are verified before anything else",
+            """        if self.classes.verify().is_err() {
+            return Err(CharacterTableFailure::ClassesInvalid);
+        }
+""",
+            "",
+        ),
+        (
+            "the table is square on the classes",
+            """        if self.table.len() != count {
+            return Err(CharacterTableFailure::NotSquare {
+                classes: count,
+                rows: self.table.len(),
+            });
+        }
+""",
+            "",
+        ),
+        (
+            "every row is as wide as the class list",
+            """            if row.len() != count {
+                return Err(CharacterTableFailure::RowWidthWrong {
+                    row: i,
+                    width: row.len(),
+                });
+            }
+""",
+            "",
+        ),
+        (
+            "the conductor is the RECOMPUTED exponent, not a padded field",
+            """        if self.conductor != data.exponent {
+            return Err(CharacterTableFailure::ConductorIsNotTheExponent {
+                claimed: self.conductor,
+                exponent: data.exponent,
+            });
+        }
+""",
+            "",
+        ),
+        (
+            "every entry lives in the field the conductor names",
+            """                if entry.conductor != self.conductor || entry.coefficients.len() != width {
+                    return Err(CharacterTableFailure::EntryOutsideTheField { row: i, column: k });
+                }
+""",
+            "",
+        ),
+        (
+            "row orthogonality",
+            "        self.check_row_orthogonality(&data)?;\n",
+            "",
+        ),
+        (
+            "the degrees are positive integers dividing |G|, one trivial row",
+            "        self.check_degrees_and_trivial_row(&data)?;\n",
+            "",
+        ),
+        (
+            "the Galois relation sigma_t(chi(g)) = chi(g^t)",
+            "        self.check_galois(&data)",
+            "        let _ = self.check_galois(&data);\n        Ok(())",
+        ),
+        (
+            "the abelian producer refuses a nonabelian group",
+            """        if class.len() != 1 {
+            return Err(CharacterTableError::NotAbelian {
+                class: index,
+                size: class.len(),
+            });
+        }
+""",
+            "",
+        ),
+        (
+            "the abelian producer's search bound",
+            "    if tuples > ABELIAN_SEARCH_BOUND {",
+            "    if tuples > ABELIAN_SEARCH_BOUND * 1_000 {",
+        ),
+    ],
+)
+
 if __name__ == "__main__":
     raise SystemExit(main(sys.argv))
 
