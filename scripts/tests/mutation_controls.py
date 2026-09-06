@@ -7560,6 +7560,97 @@ SUITES["psatz"] = (
 )
 
 
+SUITES["arith-upoly-certificates"] = (
+    "crates/axeyum-arith/src/upoly.rs",
+    Cargo(("-p", "axeyum-arith", "--lib", "upoly::"), "arith-upoly-certificates"),
+    [
+        # -- BezoutCertificate::verify, one mutation per guard ----------------
+        (
+            # Bezout certifies a gcd only up to sign (design note 3.2), so the
+            # normalization is pinned rather than assumed.
+            "the integer gcd's sign is pinned non-negative",
+            "    if certificate.gcd.sign() != Sign::Plus {\n        return false;\n    }",
+            "    if false {\n        return false;\n    }",
+        ),
+        (
+            "the Bezout identity is re-multiplied",
+            "    if combination != certificate.gcd {\n        return false;\n    }",
+            "    let _ = &combination;\n    if false {\n        return false;\n    }",
+        ),
+        (
+            # `u*a + v*b` is a multiple of the true gcd for ANY cofactors, so
+            # the identity alone admits `6*1 + 4*1 = 10`, which divides neither.
+            "the claimed integer gcd must divide both inputs",
+            "        if !int_is_zero(&(input % &certificate.gcd)) {\n            return false;\n        }",
+            "        let _ = input;\n        if false {\n            return false;\n        }",
+        ),
+        # -- SturmCertificate::verify ----------------------------------------
+        (
+            # A member rescaled by a positive constant changes NO sign
+            # variation, so the count guard is blind to it and only the
+            # rebuild can catch it.
+            "the chain is rebuilt from its own recorded first member",
+            "    if rebuilt.members() != recorded.as_slice() {\n        return false;\n    }",
+            "    let _ = rebuilt.members();\n    if false {\n        return false;\n    }",
+        ),
+        (
+            "the claimed root count is recounted from the recorded chain",
+            "    at_lower.saturating_sub(at_upper) == certificate.root_count",
+            "    let _ = (at_lower, at_upper);\n    true",
+        ),
+        (
+            # `saturating_sub` reads 0 on an inverted interval, so a
+            # zero-root certificate would otherwise be accepted backwards.
+            "the interval must not be inverted",
+            "    if certificate.lower > certificate.upper {\n        return false;\n    }",
+            "    if false {\n        return false;\n    }",
+        ),
+        # -- PolyBezoutCertificate::verify (Q[x]) -----------------------------
+        (
+            "the Q[x] gcd is monic",
+            "        if self.gcd.leading() != rat_one() {\n            return false;\n        }",
+            "        if false {\n            return false;\n        }",
+        ),
+        (
+            "the Q[x] Bezout identity is re-multiplied",
+            "        if combination != self.gcd {\n            return false;\n        }",
+            "        let _ = &combination;\n        if false {\n            return false;\n        }",
+        ),
+        (
+            # `x*(x-1) - x*(x-2) = x` hits the identity and divides neither.
+            "the claimed Q[x] gcd must divide both inputs",
+            "            if !remainder.is_zero() {\n                return false;\n            }",
+            "            let _ = &remainder;\n            if false {\n                return false;\n            }",
+        ),
+        # -- PolyGcdCertificate::verify (Z[x], not a Bezout domain) -----------
+        (
+            "the Z[x] gcd's leading coefficient is positive",
+            "        if self.gcd.leading().sign() != Sign::Plus {\n            return false;\n        }",
+            "        if false {\n            return false;\n        }",
+        ),
+        (
+            "the first divisibility quotient is re-multiplied",
+            "        if self.gcd.mul(&self.quotient_a) != self.input_a {\n            return false;\n        }",
+            "        if false {\n            return false;\n        }",
+        ),
+        (
+            # The producer computes the content SEPARATELY from the primitive
+            # part, so the receipt records it separately (design note 6).
+            "the recorded content is the gcd of the two contents",
+            "        if self.gcd.content() != self.content {\n            return false;\n        }",
+            "        if false {\n            return false;\n        }",
+        ),
+        (
+            # Z[x] is not a Bezout domain, so `g divides both` does not make g
+            # GREATEST; the Q[x] witness on the primitive parts is what does.
+            "the Q[x] maximality witness is checked",
+            "        if !self.maximality.verify() {\n            return false;\n        }",
+            "        if false {\n            return false;\n        }",
+        ),
+    ],
+)
+
+
 if __name__ == "__main__":
     raise SystemExit(main(sys.argv))
 

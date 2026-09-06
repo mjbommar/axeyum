@@ -37,6 +37,14 @@ use core::cmp::Ordering;
 use num_bigint::{BigInt, BigUint, Sign};
 use num_rational::BigRational;
 
+pub mod upoly;
+
+pub use upoly::{
+    DEFAULT_ISOLATION_STEPS, PolyBezoutCertificate, PolyGcdCertificate, QPoly, SturmChain, ZPoly,
+    count_real_roots, count_real_roots_in, evaluate_slice, extended_gcd, isolate_real_roots,
+    sign_at_slice, sign_of_rational, sign_variations_rational, slice_degree, trim_coefficients,
+};
+
 // ---------------------------------------------------------------------------
 // Shared helpers
 // ---------------------------------------------------------------------------
@@ -809,12 +817,22 @@ pub struct BezoutCertificate {
 impl BezoutCertificate {
     /// Re-derive the Bézout identity and the two divisibility conditions.
     ///
-    /// # Panics
+    /// Three independently-failable guards, each with its own forgery test in
+    /// [`upoly`]:
     ///
-    /// Always: this is a signature sketch (ADR-1710). The body lands with the
-    /// `ZPoly`/`BigRat` migration slice.
+    /// 1. **the sign** — Bézout certifies a gcd only up to sign (design note
+    ///    §3.2), so `gcd ≥ 0` is pinned here rather than assumed;
+    /// 2. **the identity** `cofactor_a·input_a + cofactor_b·input_b = gcd`;
+    /// 3. **divisibility** — `gcd` divides both inputs.
+    ///
+    /// Guard 2 alone is not a checker: `u·a + v·b` is a multiple of the true
+    /// gcd for *any* cofactors, so `6·1 + 4·1 = 10` satisfies it while dividing
+    /// neither input. Guard 3 alone is not a checker either: every common
+    /// divisor passes it. The pair is what pins the value.
+    ///
+    /// A zero `gcd` is accepted only when both inputs are zero.
     pub fn verify(&self) -> bool {
-        todo!("ADR-1710 migration slice 2")
+        upoly::verify_bezout_certificate(self)
     }
 }
 
@@ -840,12 +858,28 @@ pub struct SturmCertificate {
 impl SturmCertificate {
     /// Recompute the chain and the sign variations and compare.
     ///
-    /// # Panics
+    /// Two *separate* re-derivations, which is the point:
     ///
-    /// Always: this is a signature sketch (ADR-1710). The body lands with the
-    /// `QPoly` migration slice.
+    /// 1. **the chain** is rebuilt from its own recorded first member by
+    ///    [`SturmChain::from_integer_polynomial`] and compared member by
+    ///    member. A tampered member is caught here even when it changes no sign
+    ///    variation — a positive rescale of one member, say, which guard 2
+    ///    cannot see.
+    /// 2. **the count** is recomputed as the sign-variation difference of the
+    ///    **recorded** chain. A tampered count is caught here even when the
+    ///    chain is perfect.
+    ///
+    /// Plus the three structural conditions: a non-empty chain, a non-zero
+    /// first member, and `lower ≤ upper`.
+    ///
+    /// The chain members are expected in this crate's convention — primitive
+    /// integer polynomials reached by a **positive** rational scale, the
+    /// convention `fps_analytic.rs` uses. A chain recorded in another
+    /// normalization is rejected by guard 1 even if its counts are right, which
+    /// is deliberate: the certificate names one chain, not an equivalence class
+    /// of them.
     pub fn verify(&self) -> bool {
-        todo!("ADR-1710 migration slice 3")
+        upoly::verify_sturm_certificate(self)
     }
 }
 
