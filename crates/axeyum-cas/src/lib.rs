@@ -1743,6 +1743,55 @@ impl MultiPoly {
         Some(MultiPoly { terms })
     }
 
+    /// The term this polynomial **leads** with: the one [`MultiPoly::to_expr`]
+    /// renders first — greatest total degree, with the monomial order breaking
+    /// ties. `None` for the zero polynomial.
+    ///
+    /// "Leading" has to mean *something* fixed for [`MultiPoly::signed_content`]
+    /// to normalize a sign, and this is the crate's own rendering order, so the
+    /// normalized sign is the sign of the first term a reader sees.
+    #[must_use]
+    fn leading_term(&self) -> Option<(&Monomial, &Rational)> {
+        self.terms.iter().max_by(|a, b| {
+            a.0.total_degree()
+                .cmp(&b.0.total_degree())
+                .then_with(|| b.0.cmp(a.0))
+        })
+    }
+
+    /// The signed rational `c` for which `self / c` has **coprime integer**
+    /// coefficients and a **positive leading coefficient**: the polynomial's
+    /// content, carrying the sign of its [leading term](MultiPoly::leading_term).
+    ///
+    /// For coefficients `nᵢ/dᵢ` in lowest terms the content is
+    /// `gcd(nᵢ) / lcm(dᵢ)`, so dividing by it clears the denominators and strips
+    /// the common integer factor in one step. Dividing a `num`/`den` pair by the
+    /// **denominator's** signed content is what makes an atom key unique — see
+    /// [`RatFunc::canonical_key_form`].
+    ///
+    /// `None` for the zero polynomial (which has no content) or on `i128`
+    /// overflow.
+    #[must_use]
+    fn signed_content(&self) -> Option<Rational> {
+        let mut numerator_gcd: i128 = 0;
+        let mut denominator_lcm: i128 = 1;
+        for coeff in self.terms.values() {
+            numerator_gcd = ntheory::gcd(numerator_gcd, coeff.checked_numerator()?);
+            denominator_lcm = ntheory::lcm(denominator_lcm, coeff.checked_denominator()?)?;
+        }
+        if numerator_gcd == 0 {
+            return None; // the zero polynomial
+        }
+        let magnitude = Rational::checked_new(numerator_gcd, denominator_lcm)?;
+        // The sign normalization. Without it `(-u^2)/(2*s)` and `(u^2)/(-2*s)`
+        // stay two keys for one function.
+        if self.leading_term()?.1.checked_numerator()? < 0 {
+            magnitude.checked_neg()
+        } else {
+            Some(magnitude)
+        }
+    }
+
     /// Exact evaluation at a rational point (trusted checker for tests). `None`
     /// on a missing assignment or `i128` overflow.
     #[must_use]
@@ -1913,6 +1962,61 @@ impl RatFunc {
         }
     }
 
+    /// The representation this fraction is **keyed** on when it is the argument
+    /// of a transcendental head ([`atom_name`]), and the *only* place a `RatFunc`
+    /// needs a unique form.
+    ///
+    /// `RatFunc` arithmetic only cross-multiplies, so one function has many
+    /// `num`/`den` pairs: `exp(−((1/2)/s)·u²)` builds `(−1/2·u²)/s` and
+    /// `exp(−u²/(2·s))` builds `(−u²)/(2·s)`. Those render to different strings,
+    /// so they became two independent atom variables and the zero test **refuted
+    /// a true equality**.
+    ///
+    /// The canonical pair is `(num/c) / (den/c)` where `c` is the denominator's
+    /// [signed content](MultiPoly::signed_content), preceded by a GCD reduction
+    /// when there is a non-constant denominator to cancel against. Afterwards the
+    /// denominator is a primitive integer polynomial with a positive leading
+    /// coefficient, and the whole rational scale and sign sit on the numerator.
+    /// Two representations of one function differ by a rational scalar `λ` once
+    /// their common polynomial factor is gone — `num' = λ·num`, `den' = λ·den` —
+    /// and `c` scales with `λ`, so both divide out to the same pair. A constant
+    /// denominator collapses to `1`, so `ln(x/2)` and `ln((1/2)·x)` also key
+    /// alike, which the raw form got wrong too.
+    ///
+    /// # The residual class, stated plainly
+    ///
+    /// Uniqueness is only **up to a common polynomial factor**, and that factor is
+    /// cancelled only when [`RatFunc::reduced`] finds it. The multivariate GCD
+    /// ([`mvpoly::MvPoly::gcd`]) *declines* rather than failing, and `reduced`
+    /// then keeps the unreduced fraction. On such an input two keys for one
+    /// function survive, and the zero test can still refute a true equality —
+    /// the same defect class this method fixes, narrowed rather than closed. It
+    /// is not a decline: nothing downstream knows the key was approximate. See
+    /// `a_declined_gcd_is_the_residual_class`.
+    ///
+    /// `None` on `i128` overflow, and then [`atom_name`] keeps the raw form: a
+    /// missed equality, not a new wrong one.
+    #[must_use]
+    fn canonical_key_form(&self) -> Option<RatFunc> {
+        if self.num.is_zero() {
+            return Some(RatFunc::from_poly(MultiPoly::zero()));
+        }
+        // A constant denominator is absorbed by the scaling below, so the GCD is
+        // only run where there is a polynomial factor to cancel. This path is on
+        // every atom key in the crate; `reduced` is a multivariate GCD.
+        let base = if multipoly_as_constant(&self.den).is_some() {
+            self.clone()
+        } else {
+            self.reduced().unwrap_or_else(|| self.clone())
+        };
+        let content = base.den.signed_content()?;
+        let inverse = MultiPoly::constant(Rational::integer(1).checked_div(content)?);
+        Some(RatFunc {
+            num: base.num.mul(&inverse)?,
+            den: base.den.mul(&inverse)?,
+        })
+    }
+
     /// Reduce a multivariate rational function to lowest terms via the
     /// multivariate GCD ([`mvpoly::MvPoly`]). `None` if any conversion or exact
     /// division declines (the caller then keeps the unreduced form).
@@ -2041,6 +2145,10 @@ fn normalize_exp(arg: &CasExpr) -> Option<RatFunc> {
     let Some(ratio) = normalize_rational(arg) else {
         return opaque();
     };
+    // Canonicalize before asking whether the denominator is constant, so the two
+    // routes out of this function agree: without it `exp((x²−1)/(x−1))` takes the
+    // opaque-atom route while `exp(x+1)` decomposes, and the two never meet.
+    let ratio = ratio.canonical_key_form().unwrap_or(ratio);
     let Some(den_const) = multipoly_as_constant(&ratio.den) else {
         return opaque(); // non-constant denominator — a genuine fraction argument
     };
@@ -2110,6 +2218,11 @@ fn atom_name(head: &str, arg: &CasExpr) -> String {
         .map(|poly| poly.to_expr())
         .or_else(|| {
             normalize_rational(arg).map(|rf| {
+                // A `RatFunc` is not reduced or scale-normalized by its own
+                // arithmetic, so the raw pair is one representation among many and
+                // rendering it keyed two spellings of one argument as two
+                // independent atoms. `canonical_key_form` picks the representative.
+                let rf = rf.canonical_key_form().unwrap_or(rf);
                 let num = rf.num.to_expr();
                 if rf.den == MultiPoly::constant(Rational::integer(1)) {
                     num
