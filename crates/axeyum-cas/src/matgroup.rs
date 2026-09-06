@@ -1271,6 +1271,14 @@ mod tests {
     }
 
     #[test]
+    fn determinant_mod_p_rejects_non_prime_modulus() {
+        // Every MatrixGroup/ElementOrderCertificate caller already checks
+        // is_prime before reaching determinant_mod_p, so this exercises its
+        // own internal guard directly rather than through one of them.
+        assert_eq!(determinant_mod_p(&identity_matrix(2), 4), None);
+    }
+
+    #[test]
     fn order_of_element_matches_matrix_power() {
         let start = Instant::now();
         // E12(1) = [[1,1],[0,1]] over F5 has order 5 (it's a transvection;
@@ -1280,6 +1288,18 @@ mod tests {
         assert_eq!(cert.claimed_order, 5);
         cert.verify().unwrap();
         assert_under_5s(start, "order_of_element_matches_matrix_power");
+    }
+
+    #[test]
+    fn order_of_element_refuses_singular_matrix() {
+        let m = vec![vec![1, 1], vec![1, 1]]; // determinant 0 mod 5
+        match order_of_element(5, 2, m) {
+            Err(MatrixGroupError::SingularGenerator {
+                generator_index: 0,
+                determinant: 0,
+            }) => {}
+            other => panic!("expected SingularGenerator, got {other:?}"),
+        }
     }
 
     #[test]
@@ -1297,10 +1317,26 @@ mod tests {
 
     #[test]
     fn non_square_generator_refused() {
-        let m = vec![vec![1, 0, 0], vec![0, 1, 0]]; // 2x3, not square
+        let m = vec![vec![1, 0, 0], vec![0, 1, 0]]; // 2x3: right row count, wrong column count
         match MatrixGroup::from_generators(5, 2, vec![m]) {
             Err(MatrixGroupError::DimensionMismatch {
                 generator_index: 0, ..
+            }) => {}
+            other => panic!("expected DimensionMismatch, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn wrong_row_count_generator_refused() {
+        // 3x2: wrong ROW count, but every row already has the right column
+        // count (2) -- isolates the row-count guard from the per-row
+        // column-count guard `non_square_generator_refused` above exercises.
+        let m = vec![vec![1, 0], vec![0, 1], vec![0, 0]];
+        match MatrixGroup::from_generators(5, 2, vec![m]) {
+            Err(MatrixGroupError::DimensionMismatch {
+                generator_index: 0,
+                rows: 3,
+                ..
             }) => {}
             other => panic!("expected DimensionMismatch, got {other:?}"),
         }
@@ -1321,6 +1357,19 @@ mod tests {
     fn non_prime_modulus_refused() {
         let m = vec![vec![1, 1], vec![0, 1]];
         match MatrixGroup::from_generators(4, 2, vec![m]) {
+            Err(MatrixGroupError::InvalidPrime) => {}
+            other => panic!("expected InvalidPrime, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn non_prime_modulus_with_no_generators_refused() {
+        // With zero generators, `determinant_mod_p` (which re-checks
+        // primality on every generator) never runs -- this is the one case
+        // where `MatrixGroup::from_generators`'s own primality check is the
+        // *only* guard, rather than one made redundant by the per-generator
+        // determinant check above.
+        match MatrixGroup::from_generators(4, 2, vec![]) {
             Err(MatrixGroupError::InvalidPrime) => {}
             other => panic!("expected InvalidPrime, got {other:?}"),
         }
@@ -1401,6 +1450,20 @@ mod tests {
         match cert.verify() {
             Err(ElementOrderFailure::PermutationOrderMismatch { expected: 5 }) => {}
             other => panic!("expected PermutationOrderMismatch, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn forged_element_order_certificate_with_singular_matrix_rejected() {
+        // `order_of_element` itself refuses a singular matrix (there is no
+        // public route to an ElementOrderCertificate wrapping one), so
+        // forge one by hand: take a genuine certificate and swap in a
+        // singular matrix, leaving the other fields as they were.
+        let mut cert = order_of_element(5, 2, vec![vec![1, 1], vec![0, 1]]).unwrap();
+        cert.matrix = vec![vec![1, 1], vec![1, 1]]; // determinant 0 mod 5
+        match cert.verify() {
+            Err(ElementOrderFailure::Singular) => {}
+            other => panic!("expected Singular, got {other:?}"),
         }
     }
 }
