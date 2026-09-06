@@ -19,7 +19,7 @@
 //! directly rather than assumed.
 //!
 //! The **induced map** on `H_k(-; Q)` ([`induced_homology`]) needs a basis of
-//! each `H_k`, chosen deterministically: [`choose_homology_basis`] takes the
+//! each `H_k`, chosen deterministically: `choose_homology_basis` takes the
 //! kernel of `d_k` ([`Matrix::null_space`], itself deterministic: free
 //! variables in ascending column order) and greedily keeps the vectors that
 //! increase the rank of the accumulated set, seeded by a basis of the
@@ -27,7 +27,7 @@
 //! `d_{k+1}`. This yields, for each of `X` and `Y`, a genuine basis of `Z_k`
 //! split into a `B_k`-part and an extension (the `H_k` representatives). For
 //! each domain basis cycle `z_i`, `f_#(z_i)` is a cycle of `Y` (guaranteed by
-//! the commutation identity); [`solve_via_rref`] expresses it uniquely in the
+//! the commutation identity); `solve_via_rref` expresses it uniquely in the
 //! combined `[B_k(Y) basis | H_k(Y) basis]` basis of `Z_k(Y)` via one
 //! augmented [`Matrix::rref`], and the `H_k(Y)`-tail of that coefficient
 //! vector is the `i`-th column of the induced matrix. **The rank of that
@@ -42,7 +42,7 @@
 //! - the map is re-checked simplicial (`is_simplicial`);
 //! - every recorded chain map is rebuilt fresh and compared entrywise
 //!   (`chain_maps_match`, the same rebuild-and-compare pattern
-//!   [`super::boundaries_match`] uses for boundary matrices);
+//!   `super::boundaries_match` uses for boundary matrices);
 //! - `d'_k . f_#(k) = f_#(k-1) . d_k` holds at every degree
 //!   (`chain_map_commutes`), an algebraic identity independent of how the
 //!   chain map was built;

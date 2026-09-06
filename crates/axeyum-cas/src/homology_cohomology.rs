@@ -30,7 +30,7 @@
 //! - every recorded coboundary Smith triple is rebuilt from a freshly
 //!   transposed boundary matrix and re-checked as a genuine factorization
 //!   (`U . d_k^T . V = D`, `U`/`V` unimodular, `D` in Smith form -- reusing
-//!   [`crate::normalforms`]'s own certified guards, exactly as the parent
+//!   `crate::normalforms`'s own certified guards, exactly as the parent
 //!   module's `smith_factorizations_hold` does);
 //! - every recorded free rank / torsion list is recomputed from those
 //!   diagonals and compared;

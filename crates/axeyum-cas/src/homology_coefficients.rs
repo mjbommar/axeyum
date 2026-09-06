@@ -6,10 +6,10 @@
 //!
 //! [`homology_with_coefficients`] runs [`super::homology`] first (the `Z`
 //! answer), then computes the rank of every boundary matrix `d_k` two more
-//! ways: mod 2 by a small local Gaussian elimination ([`rank_mod2`], since no
+//! ways: mod 2 by a small local Gaussian elimination (`rank_mod2`, since no
 //! public general-matrix rank over `F_2` exists elsewhere in this crate --
 //! `gf2.rs` and `gfp.rs` are univariate polynomial arithmetic, not matrix
-//! rank), and over `Q` by the existing [`Matrix::rref`] ([`rank_over_q`]).
+//! rank), and over `Q` by the existing [`Matrix::rref`] (`rank_over_q`).
 //! Betti numbers at each coefficient ring follow the same rank-nullity formula
 //! the parent module uses for `Z`: `b_k = n_k - rank(d_k) - rank(d_{k+1})`.
 //!

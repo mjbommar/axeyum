@@ -7,7 +7,7 @@
 //! such that every face of a simplex appears strictly before it -- the
 //! standard requirement that lets each prefix of the list be read as an
 //! actual sub-complex. [`persistent_homology`] validates this
-//! ([`build_boundary_columns`] returns `None` on a violation) and then runs
+//! (`build_boundary_columns` returns `None` on a violation) and then runs
 //! the **standard column-reduction algorithm** (Zomorodian-Carlsson) over
 //! `F_2`: each simplex's boundary, as a set of earlier-simplex indices, is a
 //! column; columns are reduced left to right by adding (symmetric
@@ -26,7 +26,7 @@
 //! [`PersistenceCertificate::verify`] re-derives every claim:
 //!
 //! - re-runs the reduction from `self.filtration` alone (an independent
-//!   re-derivation, not a copy: [`reduce_persistence`] is deterministic, so a
+//!   re-derivation, not a copy: `reduce_persistence` is deterministic, so a
 //!   forged `low_to_col` disagrees with what a fresh run produces) and
 //!   compares to the recorded `low_to_col` map (`reduction_matches`);
 //! - recomputes the finite and essential bars from that (verified)
