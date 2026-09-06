@@ -28,7 +28,7 @@
 //! - `axeyum-solver`'s `nra_real_root` cross-check has the same shape.
 //!
 //! So the duplication here is a differential oracle rather than waste, and
-//! [`shared_and_machine_routes_agree_where_both_answer`] in this module's tests
+//! `shared_and_machine_routes_agree_where_both_answer` in this module's tests
 //! is the same comparison run from this side: the `i128` route against
 //! `axeyum_arith::count_real_roots_in`, over the polynomials and intervals both
 //! widths can take. The design note's §8 says to *extend* that oracle, not

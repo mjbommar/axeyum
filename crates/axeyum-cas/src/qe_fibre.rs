@@ -1,5 +1,5 @@
 //! Deciding the fibre `∃y. ⋀ᵢ qᵢ(y) ▷ᵢ 0` over a **real algebraic** `x = α`,
-//! with every operation carried out in `K = ℚ(α) = ℚ[x]/(m)`.
+//! with every operation carried out in `K = ℚ(α) = ℚ\[x\]/(m)`.
 //!
 //! This is the engine that makes an irrational cell boundary decidable in
 //! [`crate::qe::bivariate`]. A point cell of the projected `x`-line sits at a
@@ -40,7 +40,7 @@
 //!
 //! # Why the modulus need not be irreducible, and what happens when it is not
 //!
-//! `K = ℚ[x]/(m)` is a field only when `m` is irreducible, and the modulus this
+//! `K = ℚ\[x\]/(m)` is a field only when `m` is irreducible, and the modulus this
 //! module is handed is the projection's cut polynomial, which is square-free but
 //! usually **not** irreducible. Rather than depend on a factorization over ℚ,
 //! this module *splits on demand* (the classical D5 / dynamic-evaluation trick):
@@ -253,7 +253,7 @@ fn as_fault(inner: Inner) -> Fault {
 /// the zero polynomial.
 ///
 /// **Migrated onto `axeyum_arith::QPoly` (ADR-1710 migration slice 5)**, as are
-/// [`sub_poly`] and [`xgcd`]. Only the ℚ[x] layer moved: the K[y] layer below —
+/// [`sub_poly`] and [`xgcd`]. Only the ℚ\[x\] layer moved: the K\[y\] layer below —
 /// the polynomials in `y` whose coefficients are field elements — keeps its own
 /// arithmetic, because its coefficient ring is `K`, not ℚ, and the design note
 /// counts it as a separate implementation for exactly that reason.
@@ -343,7 +343,7 @@ fn kdegree(p: &FieldPoly) -> Option<usize> {
 // The field.
 // ============================================================================
 
-/// `K = ℚ[x]/(m)` presented by a **real** root `α` of `m`: the unique one in
+/// `K = ℚ\[x\]/(m)` presented by a **real** root `α` of `m`: the unique one in
 /// the half-open bracket `(lower, upper]`.
 ///
 /// `m` need not be irreducible; the module documentation explains how a
@@ -1008,7 +1008,7 @@ impl RealField {
 // Atoms, certificates, and their checkers.
 // ============================================================================
 
-/// One fibre conjunct `q(y) ▷ 0` with `q ∈ K[y]`.
+/// One fibre conjunct `q(y) ▷ 0` with `q ∈ K\[y\]`.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct FieldAtom {
     /// The polynomial in `y` over `K`.
@@ -1532,7 +1532,7 @@ mod tests {
         ]
     }
 
-    /// The migrated ℚ[x] layer agrees with the bodies it replaced, over every
+    /// The migrated ℚ\[x\] layer agrees with the bodies it replaced, over every
     /// ordered pair — including the split-signalling case where `xgcd` returns
     /// a **non-unit** gcd, which is the contract the design note flags as the
     /// one that had to survive this slice.

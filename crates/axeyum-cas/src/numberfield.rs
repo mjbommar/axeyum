@@ -7,7 +7,7 @@
 //!
 //! # What this module computes
 //!
-//! - [`NumberField`] — a simple extension `ℚ(α) = ℚ[x]/(f)` for a **monic**
+//! - [`NumberField`] — a simple extension `ℚ(α) = ℚ\[x\]/(f)` for a **monic**
 //!   `f` that is **irreducible over ℚ**. Irreducibility is decided, not
 //!   assumed: [`NumberField::new`] runs the crate's own
 //!   [`factor_univariate_over_q`] and refuses a reducible modulus with
@@ -57,7 +57,7 @@
 //! What is **not** reused: there is no public arbitrary-precision polynomial
 //! arithmetic in the workspace (`axeyum-ir`'s `poly_big` is private and its
 //! two public entry points take a private type alias), so the `BigRational`
-//! `ℚ[x]` helpers at the top of this file are new. The public `axeyum_ir::poly`
+//! `ℚ\[x\]` helpers at the top of this file are new. The public `axeyum_ir::poly`
 //! API is `i128` and would overflow on the `x⁴ − 10x² + 1` char-poly work.
 //!
 //! # What is certified, and what is `uncertified`
@@ -185,11 +185,11 @@ pub enum CertificateError {
     /// The modulus is the zero polynomial, a constant, or has a zero leading
     /// coefficient after trimming.
     ModulusDegenerate,
-    /// The modulus is not monic. `ℚ[x]/(f)` is unchanged by scaling `f`, but
+    /// The modulus is not monic. `ℚ\[x\]/(f)` is unchanged by scaling `f`, but
     /// this module requires the caller to have normalized so that a
     /// certificate's `minpoly` field is canonical.
     ModulusNotMonic,
-    /// The modulus factors over ℚ, so `ℚ[x]/(f)` is not a field. Carries how
+    /// The modulus factors over ℚ, so `ℚ\[x\]/(f)` is not a field. Carries how
     /// many irreducible factors (with multiplicity) were found.
     ReducibleModulus {
         /// Number of non-constant irreducible factors counted with
@@ -409,7 +409,7 @@ pub(crate) fn poly_scale(poly: &[BigRational], factor: &BigRational) -> Vec<BigR
     QPoly::from_slice(poly).scale(factor).into_coefficients()
 }
 
-/// Long division in `ℚ[x]`. `None` exactly when `divisor` is the zero
+/// Long division in `ℚ\[x\]`. `None` exactly when `divisor` is the zero
 /// polynomial.
 pub(crate) fn poly_divrem(
     dividend: &[BigRational],
@@ -420,7 +420,7 @@ pub(crate) fn poly_divrem(
         .map(|(quotient, remainder)| (quotient.into_coefficients(), remainder.into_coefficients()))
 }
 
-/// Extended Euclid in `ℚ[x]`: returns `(g, s, t)` with `s·a + t·b = g` and `g`
+/// Extended Euclid in `ℚ\[x\]`: returns `(g, s, t)` with `s·a + t·b = g` and `g`
 /// monic (or the zero polynomial when both inputs are zero).
 ///
 /// **Migrated onto `axeyum_arith::QPoly::ext_gcd`**, which returns the same
@@ -598,17 +598,17 @@ fn matrix_poly_is_zero(poly: &[BigRational], matrix: &[Vec<BigRational>]) -> boo
 // NumberField
 // ---------------------------------------------------------------------------
 
-/// A simple algebraic extension `ℚ(α) = ℚ[x]/(f)`.
+/// A simple algebraic extension `ℚ(α) = ℚ\[x\]/(f)`.
 ///
 /// `f` is monic and irreducible over ℚ; both are checked at construction, so a
-/// `NumberField` value is evidence that `ℚ[x]/(f)` really is a field.
+/// `NumberField` value is evidence that `ℚ\[x\]/(f)` really is a field.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct NumberField {
     minpoly: Vec<BigRational>,
 }
 
 impl NumberField {
-    /// Build `ℚ[x]/(f)` from a monic, least-significant-first `f`.
+    /// Build `ℚ\[x\]/(f)` from a monic, least-significant-first `f`.
     ///
     /// # Errors
     ///
@@ -816,7 +816,7 @@ impl Element {
     /// The multiplicative inverse together with a certificate, or `None` for
     /// the zero element.
     ///
-    /// The inverse is computed by extended Euclid in `ℚ[x]`; the certificate's
+    /// The inverse is computed by extended Euclid in `ℚ\[x\]`; the certificate's
     /// [`verify`](InverseCertificate::verify) re-multiplies and reduces
     /// instead, so it never consults the Euclid run.
     #[must_use]
@@ -1713,7 +1713,7 @@ pub fn two_squares_outcome(n: &BigInt) -> TwoSquaresOutcome {
 // Quadratic fields
 // ---------------------------------------------------------------------------
 
-/// `ℚ(√d)` for a squarefree `d ∉ {0, 1}`, presented as `ℚ[x]/(x² − d)`.
+/// `ℚ(√d)` for a squarefree `d ∉ {0, 1}`, presented as `ℚ\[x\]/(x² − d)`.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct QuadraticField {
     radicand: BigInt,
@@ -1759,7 +1759,7 @@ impl QuadraticField {
         &self.radicand
     }
 
-    /// The underlying [`NumberField`] `ℚ[x]/(x² − d)`.
+    /// The underlying [`NumberField`] `ℚ\[x\]/(x² − d)`.
     #[must_use]
     pub fn as_number_field(&self) -> &NumberField {
         &self.field

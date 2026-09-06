@@ -30,7 +30,7 @@
 //!
 //! # Certificates
 //!
-//! [`crate::BezoutCertificate`] (integers) and [`PolyBezoutCertificate`] (ℚ[x])
+//! [`crate::BezoutCertificate`] (integers) and [`PolyBezoutCertificate`] (ℚ\[x\])
 //! re-multiply `u·a + v·b = g`; [`PolyGcdCertificate`] additionally carries the
 //! divisibility quotients and the content, so every distinction the producer
 //! makes is recorded; [`SturmCertificate`] recomputes the chain from its own
@@ -189,6 +189,7 @@ impl ZPoly {
     }
 
     /// `self + other`.
+    #[must_use]
     pub fn add(&self, other: &Self) -> Self {
         let mut out = vec![int_zero(); self.coeffs.len().max(other.coeffs.len())];
         for (index, value) in self.coeffs.iter().enumerate() {
@@ -201,6 +202,7 @@ impl ZPoly {
     }
 
     /// `self - other`.
+    #[must_use]
     pub fn sub(&self, other: &Self) -> Self {
         let mut out = vec![int_zero(); self.coeffs.len().max(other.coeffs.len())];
         for (index, value) in self.coeffs.iter().enumerate() {
@@ -213,6 +215,7 @@ impl ZPoly {
     }
 
     /// `-self`.
+    #[must_use]
     pub fn negated(&self) -> Self {
         Self {
             coeffs: self.coeffs.iter().map(core::ops::Neg::neg).collect(),
@@ -220,6 +223,7 @@ impl ZPoly {
     }
 
     /// `self · other`.
+    #[must_use]
     pub fn mul(&self, other: &Self) -> Self {
         if self.is_zero() || other.is_zero() {
             return Self::zero();
@@ -237,6 +241,7 @@ impl ZPoly {
     }
 
     /// `self · factor` for an integer scalar.
+    #[must_use]
     pub fn scale(&self, factor: &BigInt) -> Self {
         if int_is_zero(factor) {
             return Self::zero();
@@ -247,6 +252,7 @@ impl ZPoly {
     }
 
     /// `self · x^by`.
+    #[must_use]
     pub fn shifted(&self, by: usize) -> Self {
         if self.is_zero() {
             return Self::zero();
@@ -272,6 +278,7 @@ impl ZPoly {
     /// content is non-negative. That is the property the Sturm chain depends
     /// on — a positive scale changes no sign variation — and it is why this is
     /// not [`ZPoly::with_positive_leading`].
+    #[must_use]
     pub fn primitive_part(&self) -> Self {
         let content = self.content();
         if content == BigUint::from(0u32) || content == BigUint::from(1u32) {
@@ -284,6 +291,7 @@ impl ZPoly {
     }
 
     /// `self`, negated if needed so the leading coefficient is positive.
+    #[must_use]
     pub fn with_positive_leading(&self) -> Self {
         if self.leading().sign() == Sign::Minus {
             self.negated()
@@ -311,7 +319,7 @@ impl ZPoly {
     }
 
     /// The polynomial exact quotient `self / divisor`, or `None` when the
-    /// division is not exact in ℤ[x] (which includes a zero divisor).
+    /// division is not exact in ℤ\[x\] (which includes a zero divisor).
     ///
     /// Bareiss's §V warning applies here in miniature: exact division is a
     /// **precondition**, not an invariant, and the cheap mitigation is free —
@@ -331,7 +339,7 @@ impl ZPoly {
             }
             let factor = top / &lead;
             let shift = remainder_degree - divisor_degree;
-            quotient[shift] = factor.clone();
+            quotient[shift].clone_from(&factor);
             remainder = remainder.sub(&divisor.scale(&factor).shifted(shift));
         }
         if remainder.is_zero() {
@@ -371,11 +379,12 @@ impl ZPoly {
         Some(quotient.primitive_part().with_positive_leading())
     }
 
-    /// The primitive gcd over ℤ[x], with a positive leading coefficient.
+    /// The primitive gcd over ℤ\[x\], with a positive leading coefficient.
     ///
     /// `gcd(0, 0)` is the zero polynomial. The content is handled separately
     /// from the primitive parts, which is what makes the subresultant PRS
     /// applicable: it computes a gcd of *primitive* polynomials.
+    #[must_use]
     pub fn gcd(&self, other: &Self) -> Self {
         if self.is_zero() {
             return other.primitive_part().with_positive_leading();
@@ -415,12 +424,12 @@ impl ZPoly {
         let mut matrix = vec![vec![int_zero(); dimension]; dimension];
         for row in 0..n {
             for (index, coeff) in self.coeffs.iter().enumerate() {
-                matrix[row][row + m - index] = coeff.clone();
+                matrix[row][row + m - index].clone_from(coeff);
             }
         }
         for row in 0..m {
             for (index, coeff) in other.coeffs.iter().enumerate() {
-                matrix[n + row][row + n - index] = coeff.clone();
+                matrix[n + row][row + n - index].clone_from(coeff);
             }
         }
         bareiss_determinant(matrix)
@@ -486,7 +495,7 @@ fn bareiss_determinant(mut matrix: Vec<Vec<BigInt>>) -> Option<BigInt> {
                 matrix[i][j] = numerator / &previous;
             }
         }
-        previous = matrix[k][k].clone();
+        previous.clone_from(&matrix[k][k]);
     }
     let value = matrix[dimension - 1][dimension - 1].clone();
     Some(if sign < 0 { -value } else { value })
@@ -552,10 +561,7 @@ impl FractionFree for ZPoly {
             int_one()
         };
         let mut psi = -int_one();
-        loop {
-            let Some(remainder) = f.pseudo_remainder(&g) else {
-                break;
-            };
+        while let Some(remainder) = f.pseudo_remainder(&g) {
             if remainder.is_zero() {
                 break;
             }
@@ -661,6 +667,7 @@ impl QPoly {
     }
 
     /// `self + other`.
+    #[must_use]
     pub fn add(&self, other: &Self) -> Self {
         let mut out = vec![rat_zero(); self.coeffs.len().max(other.coeffs.len())];
         for (index, value) in self.coeffs.iter().enumerate() {
@@ -673,6 +680,7 @@ impl QPoly {
     }
 
     /// `self - other`.
+    #[must_use]
     pub fn sub(&self, other: &Self) -> Self {
         let mut out = vec![rat_zero(); self.coeffs.len().max(other.coeffs.len())];
         for (index, value) in self.coeffs.iter().enumerate() {
@@ -685,6 +693,7 @@ impl QPoly {
     }
 
     /// `-self`.
+    #[must_use]
     pub fn negated(&self) -> Self {
         Self {
             coeffs: self.coeffs.iter().map(core::ops::Neg::neg).collect(),
@@ -692,6 +701,7 @@ impl QPoly {
     }
 
     /// `self · other`.
+    #[must_use]
     pub fn mul(&self, other: &Self) -> Self {
         if self.is_zero() || other.is_zero() {
             return Self::zero();
@@ -709,6 +719,7 @@ impl QPoly {
     }
 
     /// `self · factor` for a rational scalar.
+    #[must_use]
     pub fn scale(&self, factor: &BigRational) -> Self {
         if rat_is_zero(factor) {
             return Self::zero();
@@ -719,6 +730,7 @@ impl QPoly {
     }
 
     /// `self · x^by`.
+    #[must_use]
     pub fn shifted(&self, by: usize) -> Self {
         if self.is_zero() {
             return Self::zero();
@@ -733,7 +745,7 @@ impl QPoly {
         rat_sign(&UnivariatePoly::evaluate(self, at))
     }
 
-    /// `(quotient, remainder)` of long division in ℚ[x]. `None` exactly when
+    /// `(quotient, remainder)` of long division in ℚ\[x\]. `None` exactly when
     /// `divisor` is the zero polynomial.
     pub fn div_rem(&self, divisor: &Self) -> Option<(Self, Self)> {
         let divisor_degree = divisor.degree()?;
@@ -746,7 +758,7 @@ impl QPoly {
             }
             let factor = &remainder.coeffs[remainder_degree] / &lead;
             let shift = remainder_degree - divisor_degree;
-            quotient[shift] = factor.clone();
+            quotient[shift].clone_from(&factor);
             remainder = remainder.sub(&divisor.scale(&factor).shifted(shift));
         }
         Some((Self::from_coefficients(quotient), remainder))
@@ -760,6 +772,7 @@ impl QPoly {
 
     /// The polynomial scaled so its leading coefficient is `1`. The zero
     /// polynomial is returned unchanged.
+    #[must_use]
     pub fn monic(&self) -> Self {
         if self.is_zero() {
             return Self::zero();
@@ -770,12 +783,13 @@ impl QPoly {
 
     /// `gcd(self, other)`, monic. `gcd(0, 0)` is the zero polynomial.
     ///
-    /// The Euclidean loop runs over ℚ[x] but each remainder is scaled to a
+    /// The Euclidean loop runs over ℚ\[x\] but each remainder is scaled to a
     /// primitive integer polynomial before the next step, which is what stops
     /// the coefficients doubling in size at every step. The answer is made
     /// monic, so the scaling changes nothing observable — this is the
     /// normalization `fps_analytic.rs` applies and `numberfield.rs` does not,
     /// and the two agree on every input because of that final `monic`.
+    #[must_use]
     pub fn gcd(&self, other: &Self) -> Self {
         let mut a = self.clone();
         let mut b = other.clone();
@@ -868,7 +882,7 @@ impl QPoly {
         )
     }
 
-    /// Extended Euclid in ℚ[x]: `(g, u, v)` with `u·self + v·other = g` and `g`
+    /// Extended Euclid in ℚ\[x\]: `(g, u, v)` with `u·self + v·other = g` and `g`
     /// monic, packaged as a certificate the caller can re-derive.
     ///
     /// `g` is the zero polynomial exactly when both inputs are zero.
@@ -975,9 +989,9 @@ impl UnivariatePoly for QPoly {
 // Certificates
 // ---------------------------------------------------------------------------
 
-/// Bézout data over ℚ[x]: `gcd = cofactor_a·input_a + cofactor_b·input_b`.
+/// Bézout data over ℚ\[x\]: `gcd = cofactor_a·input_a + cofactor_b·input_b`.
 ///
-/// ℚ[x] is a Euclidean domain, so unlike ℤ[x] the gcd genuinely is a ℚ[x]
+/// ℚ\[x\] is a Euclidean domain, so unlike ℤ\[x\] the gcd genuinely is a ℚ\[x\]
 /// combination of the inputs, and re-deriving it is two multiplications and an
 /// addition. That is the whole checker; nothing of the producer's Euclidean
 /// bookkeeping is reused.
@@ -1040,15 +1054,15 @@ impl PolyBezoutCertificate {
     }
 }
 
-/// The receipt a fraction-free ℤ[x] gcd carries.
+/// The receipt a fraction-free ℤ\[x\] gcd carries.
 ///
-/// ℤ[x] is **not** a Bézout domain, so `u·a + v·b = g` is not available over ℤ.
+/// ℤ\[x\] is **not** a Bézout domain, so `u·a + v·b = g` is not available over ℤ.
 /// The certificate therefore records the two halves separately, which is also
 /// what makes each half independently checkable:
 ///
 /// - *`g` is a common divisor* — the exact quotients, re-multiplied;
-/// - *`g` is a greatest one* — a ℚ[x] Bézout identity on the primitive parts,
-///   which forces every common divisor to divide `g` in ℚ[x], plus the content
+/// - *`g` is a greatest one* — a ℚ\[x\] Bézout identity on the primitive parts,
+///   which forces every common divisor to divide `g` in ℚ\[x\], plus the content
 ///   condition, which does the same in ℤ.
 ///
 /// That split is the design note §6 rule "the certificate must carry every
@@ -1068,7 +1082,7 @@ pub struct PolyGcdCertificate {
     pub input_b: ZPoly,
     /// The gcd of the two contents.
     pub content: BigUint,
-    /// The maximality witness over ℚ[x], on the **primitive parts**.
+    /// The maximality witness over ℚ\[x\], on the **primitive parts**.
     pub maximality: PolyBezoutCertificate,
 }
 
@@ -1095,7 +1109,7 @@ impl PolyGcdCertificate {
     /// Re-derive every recorded condition.
     ///
     /// Five independently-failable guards: the two divisibility identities, the
-    /// content, the leading sign, and the ℚ[x] maximality witness (which is
+    /// content, the leading sign, and the ℚ\[x\] maximality witness (which is
     /// itself four more, in [`PolyBezoutCertificate::verify`]).
     pub fn verify(&self) -> bool {
         if self.gcd.is_zero() {
@@ -1136,7 +1150,7 @@ const CHAIN_LENGTH_SLACK: usize = 2;
 /// A Sturm chain: `s₀ = primitive(squarefree(p))`, `s₁ = primitive(s₀′)`,
 /// `s_{k+1} = primitive(−rem(s_{k−1}, s_k))`.
 ///
-/// Every member is a primitive integer polynomial, reached from the ℚ[x]
+/// Every member is a primitive integer polynomial, reached from the ℚ\[x\]
 /// remainder by a **positive** rational scale. Sign variations — the only thing
 /// the chain is read for — are invariant under a positive scale, so this chain
 /// gives the same count on every interval as an unnormalized one; it is the

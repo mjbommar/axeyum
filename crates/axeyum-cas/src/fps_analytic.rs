@@ -711,7 +711,7 @@ fn poly_gcd(left: &[BigRational], right: &[BigRational]) -> Vec<BigRational> {
         .into_coefficients()
 }
 
-/// Extended Euclid over ℚ[x]: returns `(gcd, u, v)` with `u·left + v·right = gcd`
+/// Extended Euclid over ℚ\[x\]: returns `(gcd, u, v)` with `u·left + v·right = gcd`
 /// and `gcd` monic. `None` when both inputs are zero.
 fn poly_ext_gcd(
     left: &[BigRational],
