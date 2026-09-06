@@ -742,7 +742,8 @@ pub struct GeometryDecline {
 #[pymethods]
 impl GeometryDecline {
     /// The variant name: one of `Reduction`, `TooManyConditions`,
-    /// `UnverifiedWitness`, `UndividableMultiplier`, `RefutedByOwnWitness`.
+    /// `UnverifiedWitness`, `UndividableMultiplier`, `UncombinableMultipliers`,
+    /// `RefutedByOwnWitness`.
     #[getter]
     fn name(&self) -> &'static str {
         match self.inner {
@@ -750,6 +751,7 @@ impl GeometryDecline {
             CasGeometryDecline::TooManyConditions => "TooManyConditions",
             CasGeometryDecline::UnverifiedWitness => "UnverifiedWitness",
             CasGeometryDecline::UndividableMultiplier => "UndividableMultiplier",
+            CasGeometryDecline::UncombinableMultipliers => "UncombinableMultipliers",
             CasGeometryDecline::RefutedByOwnWitness => "RefutedByOwnWitness",
         }
     }

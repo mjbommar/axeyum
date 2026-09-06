@@ -73,6 +73,7 @@
 //!   permitted verdict — never a wrong sat/unsat.
 
 use std::cell::Cell;
+use std::collections::VecDeque;
 use std::time::{Duration, Instant};
 
 use crate::euf_egraph::{
@@ -194,6 +195,48 @@ struct Conflict {
     is_theory: bool,
 }
 
+/// The watch-list index of a literal: `2 * var + (0 for positive, 1 for
+/// negative)`. Ported verbatim from [`axeyum_cnf`]'s proof-producing core
+/// (`proof_sat.rs`'s `lit_code`) so the later engine unification (ADR-1701
+/// slice 4 / plan slice S7) is a deletion rather than a reconciliation of two
+/// watch schemes.
+#[inline]
+fn lit_code(lit: Lit) -> usize {
+    2 * lit.var + usize::from(!lit.positive)
+}
+
+/// One entry in a literal's watch list (the `MiniSat`/`BatSat` blocking-literal
+/// scheme, ported verbatim from `proof_sat.rs`). `clause` is the watched
+/// clause's id; `blocker` is a *cached* literal of that clause OTHER than the
+/// watched one. In [`CdclT::unit_propagate`], if `blocker` is already true under
+/// the current assignment the clause is satisfied and is skipped *without
+/// dereferencing the clause arena* — the cache hit that makes BCP fast. The
+/// blocker is purely a performance hint: it never changes which propagations or
+/// conflicts are derived.
+#[derive(Clone, Copy)]
+struct Watch {
+    clause: usize,
+    blocker: Lit,
+}
+
+/// Per-clause index into the packed literal arena ([`CdclT::arena`]). Mirrors
+/// `proof_sat.rs`'s `ClauseHeader` (in turn `BatSat`'s
+/// `ClauseAllocator`/`ClauseHeader`): all clause literals live contiguously in
+/// one cache-local arena, and each clause is described by its `(offset, len)`
+/// here rather than by a separately heap-allocated `Vec`. The two watched
+/// literals are kept in arena slots `offset+0` and `offset+1` (the slot-0/1
+/// convention), which is what makes [`CdclT::rebuild_watches`] a faithful
+/// re-derivation of the current watch state rather than a reset of it.
+///
+/// Clause ids never move: `headers` only grows (learned and permanent clauses
+/// are appended) and deletion is by tombstone, so an id recorded in a watch or
+/// in [`CdclT::reason_clause`] stays valid for the whole search.
+#[derive(Clone, Copy)]
+struct ClauseHeader {
+    offset: usize,
+    len: usize,
+}
+
 /// Defense-in-depth ceiling on [`CdclT::solve`] main-loop iterations when no
 /// deadline is configured. The driver is terminating for a well-behaved theory;
 /// this bound only bites on a pathological non-monotone theory that would
@@ -223,6 +266,12 @@ const REDUCE_FIRST: usize = 2_000;
 const REDUCE_INCREMENT: usize = 300;
 /// Clauses at or below this literal-block distance are permanent glue clauses.
 const GLUE_LBD: usize = 2;
+
+/// Trail literals [`CdclT::unit_propagate`] processes between two deadline
+/// reads. Small enough that the deadline-blind window stays negligible next to
+/// a seconds-scale budget, large enough that the clock is not read once per
+/// propagated literal.
+const DEADLINE_CHECK_LITERALS: usize = 256;
 
 /// The 1-indexed Luby sequence `1,1,2,1,1,2,4,...` in reluctant-doubling form.
 fn luby(mut index: u64) -> u64 {
@@ -287,21 +336,48 @@ pub struct CdclT {
     /// Variables currently owned by the search. Reserved theory atoms may remain
     /// inactive until a final-check lemma names them.
     active: Vec<bool>,
-    clauses: Vec<Vec<Lit>>,
+    /// Flat, cache-local arena of every clause's literals (input clauses first,
+    /// permanent and learned clauses appended). Clause `cid` occupies the
+    /// contiguous slice `arena[h.offset .. h.offset + h.len]` for its
+    /// [`ClauseHeader`] `h`. The arena only grows, so an already-registered
+    /// clause's slice never relocates. Slots `offset+0` and `offset+1` hold the
+    /// clause's two currently watched literals.
+    arena: Vec<Lit>,
+    /// Per-clause `(offset, len)` headers into [`Self::arena`], indexed by
+    /// clause id. `headers.len()` is the clause count.
+    headers: Vec<ClauseHeader>,
+    /// Per-literal watch lists, indexed by [`lit_code`]; `2 * var_count` long.
+    /// Each entry carries a blocking literal (see [`Watch`]).
+    watches: Vec<Vec<Watch>>,
+    /// Index into [`Self::trail`] of the next assignment whose watch list has
+    /// not been scanned yet. Clamped on backjump so an unpropagated literal is
+    /// never skipped.
+    qhead: usize,
+    /// Clauses registered after construction (or shorter than two literals) that
+    /// still need one assignment-aware evaluation before the watch machinery can
+    /// carry them. Drained at the head of [`Self::unit_propagate`]; see
+    /// [`Self::add_permanent_clause`].
+    pending_clauses: VecDeque<usize>,
     /// Current value per variable (`None` if unassigned).
     value: Vec<Option<bool>>,
     /// Trail of `(var, value, cause)` in assignment order.
     trail: Vec<(usize, bool, Cause)>,
     /// Per variable: the decision level it was assigned at (valid while assigned).
     level: Vec<usize>,
-    /// Per variable: the reason clause that forced it (`None` for a decision).
+    /// Per variable: a **materialised** reason clause that forced it. `None` for
+    /// a decision, and also `None` for a Boolean implication, whose reason is the
+    /// clause-database entry recorded in [`Self::reason_clause`] — that clause is
+    /// read straight out of [`Self::arena`] by [`Self::reason_for`] instead of
+    /// being cloned at every implication. Only theory-derived reasons (which have
+    /// no clause-database entry) are stored here.
     reason: Vec<Option<Vec<Lit>>>,
     /// Per variable: whether its reason clause is a theory clause. A 1-UIP clause
     /// resolved only through theory clauses is itself a theory lemma.
     reason_theory: Vec<bool>,
     /// Stored clause currently serving as each assigned variable's reason, when
-    /// that reason came from the clause database. Used to protect locked learned
-    /// clauses during reduction.
+    /// that reason came from the clause database. It is both the reason itself
+    /// (materialised on demand by [`Self::reason_for`]) and the lock that
+    /// protects a learned clause from reduction.
     reason_clause: Vec<Option<usize>>,
     /// Current decision level.
     decision_level: usize,
@@ -435,12 +511,52 @@ impl CdclT {
         {
             *slot = Some(atom);
         }
+        // Pack every clause's literals contiguously into one arena, recording a
+        // `(offset, len)` header per clause. This mirrors the prior
+        // `Vec<Vec<Lit>>` content exactly (same clauses, same order, same
+        // intra-clause literal order); only the storage layout differs.
+        let mut arena: Vec<Lit> = Vec::with_capacity(clauses.iter().map(Vec::len).sum());
+        let mut headers: Vec<ClauseHeader> = Vec::with_capacity(clauses.len());
+        for clause in clauses {
+            headers.push(ClauseHeader {
+                offset: arena.len(),
+                len: clause.len(),
+            });
+            arena.extend(clause);
+        }
+        // Nothing is assigned at construction, so watching the first two
+        // literals is correct without any assignment-aware slot selection --
+        // exactly what `proof_sat.rs`'s `Cdcl::new` does. Clauses shorter than
+        // two literals carry no watch and are handed to the pending queue, which
+        // evaluates them against the assignment at the head of the first
+        // propagation.
+        let mut watches: Vec<Vec<Watch>> = vec![Vec::new(); 2 * var_count];
+        let mut pending_clauses: VecDeque<usize> = VecDeque::new();
+        for (cid, header) in headers.iter().enumerate() {
+            if header.len < 2 {
+                pending_clauses.push_back(cid);
+                continue;
+            }
+            let (l0, l1) = (arena[header.offset], arena[header.offset + 1]);
+            watches[lit_code(l0)].push(Watch {
+                clause: cid,
+                blocker: l1,
+            });
+            watches[lit_code(l1)].push(Watch {
+                clause: cid,
+                blocker: l0,
+            });
+        }
         Self {
             var_count,
             theory_atom_for_var,
             theory_var_for_atom: (0..theory_atom_count).collect(),
             active: vec![true; var_count],
-            clauses,
+            arena,
+            headers,
+            watches,
+            qhead: 0,
+            pending_clauses,
             value: vec![None; var_count],
             trail: Vec::new(),
             level: vec![0; var_count],
@@ -497,12 +613,7 @@ impl CdclT {
             );
             self.active[variable] = false;
         }
-        debug_assert!(
-            self.clauses
-                .iter()
-                .flatten()
-                .all(|lit| self.active[lit.var])
-        );
+        debug_assert!(self.arena.iter().all(|lit| self.active[lit.var]));
         self
     }
 
@@ -516,6 +627,10 @@ impl CdclT {
         self.theory_atom_for_var.push(Some(atom));
         self.theory_var_for_atom.push(variable);
         self.active.push(false);
+        // Two watch lists per variable (positive and negative literal), keeping
+        // `watches` indexable by `lit_code` for every variable that exists.
+        self.watches.push(Vec::new());
+        self.watches.push(Vec::new());
         self.value.push(None);
         self.level.push(0);
         self.reason.push(None);
@@ -546,15 +661,133 @@ impl CdclT {
     /// Adds a permanent clause and activates every variable it names. This is the
     /// final-check insertion boundary: the current trail and learned database are
     /// retained, and a subsequent [`Self::solve`] resumes from that state.
+    ///
+    /// Unlike [`Self::new`]'s clauses, this one is registered **under a partial
+    /// or total assignment** (the caller has just seen an `Outcome::Sat` it means
+    /// to exclude), so its watches cannot simply be the first two literals: they
+    /// are chosen assignment-aware by [`Self::attach_clause`], and the clause is
+    /// queued for one full evaluation in [`Self::unit_propagate`] so that a
+    /// clause which is already unit implies, and one which is already falsified
+    /// conflicts, before the watch machinery takes over.
     pub(crate) fn add_permanent_clause(&mut self, clause: Vec<Lit>) {
         let variables = clause.iter().map(|lit| lit.var).collect::<Vec<_>>();
         self.activate_variables(&variables);
-        self.clauses.push(clause);
+        // Consumes `clause` into the arena; the same append `Self::alloc_clause`
+        // performs for a borrowed slice.
+        let offset = self.arena.len();
+        let len = clause.len();
+        self.arena.extend(clause);
+        let cid = self.headers.len();
+        self.headers.push(ClauseHeader { offset, len });
         // LBD zero keeps a post-construction clause out of learned-clause
         // reduction even though it sits beyond `num_original`.
         self.lbd.push(0);
         self.clause_activity.push(0.0);
         self.deleted.push(false);
+        self.attach_clause(cid);
+        self.pending_clauses.push_back(cid);
+    }
+
+    /// The literals of clause `cid`, as a cache-local slice into the arena.
+    #[inline]
+    fn lits(&self, cid: usize) -> &[Lit] {
+        let h = self.headers[cid];
+        &self.arena[h.offset..h.offset + h.len]
+    }
+
+    /// Appends a clause's literals to the arena and pushes its header, returning
+    /// the new clause's stable id. The arena only grows here, so no existing
+    /// clause slice moves.
+    fn alloc_clause(&mut self, lits: &[Lit]) -> usize {
+        let offset = self.arena.len();
+        self.arena.extend_from_slice(lits);
+        let cid = self.headers.len();
+        self.headers.push(ClauseHeader {
+            offset,
+            len: lits.len(),
+        });
+        cid
+    }
+
+    /// Installs the two watches of clause `cid` **under the current
+    /// assignment**, ordering the arena so that slots 0 and 1 hold them.
+    ///
+    /// The selection rule is the standard one: a literal that is not currently
+    /// false is preferred, and among false literals the one assigned at the
+    /// highest decision level wins (it is the last to be undone by a backjump).
+    /// With that order, if slot 1 is false then every literal outside the two
+    /// watches is false as well, so the clause is unit on slot 0 (or falsified
+    /// when slot 0 is false too) -- which is exactly what the pending-clause
+    /// evaluation in [`Self::unit_propagate`] then acts on. A clause shorter than
+    /// two literals carries no watch; the pending queue is what propagates it.
+    fn attach_clause(&mut self, cid: usize) {
+        let h = self.headers[cid];
+        if h.len < 2 {
+            return;
+        }
+        for slot in 0..2 {
+            let mut best = slot;
+            for k in slot + 1..h.len {
+                if self.watch_rank(self.arena[h.offset + k])
+                    > self.watch_rank(self.arena[h.offset + best])
+                {
+                    best = k;
+                }
+            }
+            self.arena.swap(h.offset + slot, h.offset + best);
+        }
+        let (l0, l1) = (self.arena[h.offset], self.arena[h.offset + 1]);
+        self.watches[lit_code(l0)].push(Watch {
+            clause: cid,
+            blocker: l1,
+        });
+        self.watches[lit_code(l1)].push(Watch {
+            clause: cid,
+            blocker: l0,
+        });
+    }
+
+    /// How good a watch `lit` is under the current assignment: a non-false
+    /// literal outranks every false one, and a false literal assigned deeper
+    /// outranks a shallower one. Used only by [`Self::attach_clause`].
+    fn watch_rank(&self, lit: Lit) -> (bool, usize) {
+        match self.lit_sat(lit) {
+            Some(false) => (false, self.level[lit.var]),
+            _ => (true, 0),
+        }
+    }
+
+    /// Rebuilds every watch list from scratch over the live (non-tombstoned)
+    /// clauses, watching arena slots 0 and 1 of each -- the same clauses the
+    /// lists already held, minus the tombstoned ones. This is a faithful
+    /// re-derivation rather than a reset because slots 0 and 1 always hold the
+    /// clause's *current* watched literals: [`Self::unit_propagate`] swaps a
+    /// replacement literal into slot 1 whenever it moves a watch, and
+    /// [`Self::attach_clause`] establishes the convention for a clause
+    /// registered mid-search. Called after [`Self::reduce_db`] so that no watch
+    /// list names a tombstoned clause.
+    fn rebuild_watches(&mut self) {
+        for list in &mut self.watches {
+            list.clear();
+        }
+        for cid in 0..self.headers.len() {
+            if self.deleted[cid] {
+                continue;
+            }
+            let h = self.headers[cid];
+            if h.len < 2 {
+                continue;
+            }
+            let (l0, l1) = (self.arena[h.offset], self.arena[h.offset + 1]);
+            self.watches[lit_code(l0)].push(Watch {
+                clause: cid,
+                blocker: l1,
+            });
+            self.watches[lit_code(l1)].push(Watch {
+                clause: cid,
+                blocker: l0,
+            });
+        }
     }
 
     /// Backtracks every decision while retaining level-zero assignments, input and
@@ -571,7 +804,7 @@ impl CdclT {
 
     /// Current permanent, input, and learned clause-slot count.
     pub(crate) fn clause_count(&self) -> usize {
-        self.clauses.len()
+        self.headers.len()
     }
 
     /// Overrides the defense-in-depth step budget (see [`DEFAULT_STEP_BUDGET`]).
@@ -696,80 +929,239 @@ impl CdclT {
         Ok(())
     }
 
-    /// Boolean unit propagation to fixpoint. Returns a falsified conflict clause on a
-    /// Boolean conflict, or a learned theory-conflict clause on a forced theory
-    /// inconsistency (tagged accordingly).
-    fn unit_propagate<T: TheorySolver>(&mut self, theory: &mut T) -> Result<(), Conflict> {
-        let mut changed = true;
-        while changed {
-            // Deadline check per pass: this propagation is a whole-database
-            // scan per fixpoint iteration, so on a very large skeleton (e.g.
-            // the EUF predicate-atom encoding of thousands of conjuncts) a
-            // single call is otherwise the search's largest deadline-blind
-            // unit. Returning early is sound: the caller's loop re-checks the
-            // deadline immediately and degrades to `Unknown`.
-            if self.timed_out() {
-                return Ok(());
+    /// Evaluates every clause queued by [`Self::add_permanent_clause`] (and every
+    /// input clause shorter than two literals) against the current assignment,
+    /// which the watch machinery on its own cannot do: a clause registered
+    /// mid-search may already be unit or falsified with no further assignment
+    /// coming to trigger its watches, and a clause of fewer than two literals has
+    /// no watches at all.
+    ///
+    /// Returns a falsified clause as a Boolean conflict, exactly as the previous
+    /// whole-database rescan did. The queue is drained from the front, so a
+    /// conflict leaves the not-yet-examined clauses queued for the next call; a
+    /// clause is examined here at most once, and after that its watches carry it.
+    fn drain_pending_clauses<T: TheorySolver>(&mut self, theory: &mut T) -> Result<(), Conflict> {
+        while let Some(cid) = self.pending_clauses.pop_front() {
+            if self.deleted[cid] {
+                continue;
             }
-            changed = false;
-            for ci in 0..self.clauses.len() {
-                // Intra-pass deadline check: each unit assignment pays the
-                // theory's per-assert cost (EUF scans its asserted
-                // disequalities), so one pass over a very large database can
-                // otherwise run deadline-blind for tens of seconds.
-                if ci % 1024 == 0 && self.timed_out() {
-                    return Ok(());
-                }
-                if self.deleted[ci] {
-                    continue;
-                }
-                let mut unassigned: Option<Lit> = None;
-                let mut satisfied = false;
-                let mut count = 0;
-                for &lit in &self.clauses[ci] {
-                    match self.lit_sat(lit) {
-                        Some(true) => {
-                            satisfied = true;
-                            break;
-                        }
-                        Some(false) => {}
-                        None => {
-                            unassigned = Some(lit);
-                            count += 1;
-                        }
+            let mut unassigned: Option<Lit> = None;
+            let mut satisfied = false;
+            let mut count = 0_usize;
+            for &lit in self.lits(cid) {
+                match self.lit_sat(lit) {
+                    Some(true) => {
+                        satisfied = true;
+                        break;
+                    }
+                    Some(false) => {}
+                    None => {
+                        unassigned = Some(lit);
+                        count += 1;
                     }
                 }
-                if satisfied {
-                    continue;
-                }
-                if count == 0 {
+            }
+            if satisfied {
+                continue;
+            }
+            if count == 0 {
+                return Err(Conflict {
+                    clause: self.lits(cid).to_vec(),
+                    is_theory: false,
+                });
+            }
+            if count == 1 {
+                let lit = unassigned.expect("count == 1 has the unit literal");
+                let asserted =
+                    self.assign(theory, lit.var, lit.positive, Cause::Implied, None, false);
+                // Recorded whether or not the theory accepted the assertion: a
+                // rejected assertion still leaves the literal on the trail, and
+                // 1-UIP analysis of the resulting theory conflict may have to
+                // resolve on it, which needs its reason.
+                self.reason_clause[lit.var] = Some(cid);
+                if let Err(core) = asserted {
                     return Err(Conflict {
-                        clause: self.clauses[ci].clone(),
-                        is_theory: false,
+                        clause: self.theory_conflict_clause(&core),
+                        is_theory: true,
                     });
                 }
-                if count == 1 {
-                    let lit = unassigned.expect("count == 1 has the unit literal");
-                    let reason = self.clauses[ci].clone();
-                    match self.assign(
-                        theory,
-                        lit.var,
-                        lit.positive,
-                        Cause::Implied,
-                        Some(reason),
-                        false,
-                    ) {
-                        Ok(()) => self.reason_clause[lit.var] = Some(ci),
-                        Err(core) => {
-                            return Err(Conflict {
-                                clause: self.theory_conflict_clause(&core),
-                                is_theory: true,
-                            });
-                        }
-                    }
-                    changed = true;
+            }
+        }
+        Ok(())
+    }
+
+    /// Boolean unit propagation to fixpoint by **two-watched literals with
+    /// blocking literals** -- the `MiniSat`/`BatSat` BCP, ported verbatim from
+    /// `axeyum-cnf`'s proof-producing core (`proof_sat.rs`'s `propagate`) so that
+    /// moving this driver onto that core later is a deletion rather than a
+    /// reconciliation of two watch schemes. Returns a falsified conflict clause
+    /// on a Boolean conflict, or a learned theory-conflict clause on a forced
+    /// theory inconsistency (tagged accordingly).
+    ///
+    /// Only the newly assigned literals are examined (`qhead .. trail.len()`),
+    /// and for each one only the clauses watching its negation, instead of the
+    /// whole clause database once per fixpoint pass. The watch list of the
+    /// now-false literal is scanned with an in-place `i` (read) / `j` (write)
+    /// compaction:
+    ///
+    /// 1. If a watch's cached `blocker` is already true, the clause is satisfied;
+    ///    keep the watch and skip *without touching the clause arena* -- the fast
+    ///    path that most watches take.
+    /// 2. Otherwise dereference the clause, put the false literal at slot 1, and:
+    ///    - if the other watched literal (slot 0) is true, keep the watch
+    ///      (refreshing its blocker to that literal) and continue;
+    ///    - else look for a non-false replacement literal to watch -- if found,
+    ///      move the watch to that literal's list (blocker = the slot-0 literal);
+    ///    - else the clause is unit/conflicting: keep the watch (blocker = the
+    ///      slot-0 literal). If slot 0 is false it is a conflict; otherwise
+    ///      assign slot 0 as a unit implication with this clause as its reason.
+    ///
+    /// Blocking literals only reduce the *work* of finding propagations and
+    /// conflicts; the derived implications and conflicts are identical to the
+    /// plain scheme.
+    ///
+    /// The scanned watch list is moved out of `self` for the duration of the scan
+    /// (so the arena, the assignment and the *other* watch lists stay borrowable)
+    /// and is put back on **every** exit path, including the theory-conflict one:
+    /// a list left behind would silently lose the propagations its clauses owe.
+    #[allow(
+        clippy::too_many_lines,
+        reason = "one BCP loop, kept line-for-line with proof_sat.rs's `propagate` so slice S7 is a deletion"
+    )]
+    fn unit_propagate<T: TheorySolver>(&mut self, theory: &mut T) -> Result<(), Conflict> {
+        self.drain_pending_clauses(theory)?;
+        // Deadline check on entry, and then once per `DEADLINE_CHECK_LITERALS`
+        // dequeued trail literals: a propagation fixpoint on a very large
+        // skeleton is otherwise the search's largest deadline-blind unit.
+        // Returning early is sound: the caller's loop re-checks the deadline
+        // immediately and degrades to `Unknown`.
+        if self.timed_out() {
+            return Ok(());
+        }
+        let mut since_deadline_check = 0_usize;
+        while self.qhead < self.trail.len() {
+            since_deadline_check += 1;
+            if since_deadline_check >= DEADLINE_CHECK_LITERALS {
+                since_deadline_check = 0;
+                if self.timed_out() {
+                    return Ok(());
                 }
             }
+            let (var, value, _) = self.trail[self.qhead];
+            self.qhead += 1;
+            let false_lit = Lit {
+                var,
+                positive: !value,
+            };
+            let code = lit_code(false_lit);
+
+            let mut watchers = std::mem::take(&mut self.watches[code]);
+            let end = watchers.len();
+            let mut i = 0_usize;
+            let mut j = 0_usize;
+            let mut outcome: Result<(), Conflict> = Ok(());
+            'clauses: while i < end {
+                // (1) Fast path: a true blocker means the clause is satisfied;
+                // keep the watch and move on without inspecting the clause.
+                let blocker = watchers[i].blocker;
+                if self.lit_sat(blocker) == Some(true) {
+                    watchers[j] = watchers[i];
+                    j += 1;
+                    i += 1;
+                    continue;
+                }
+
+                let cid = watchers[i].clause;
+                // Keep the falsified literal at slot 1 (arena slot offset+1).
+                let off = self.headers[cid].offset;
+                if self.arena[off] == false_lit {
+                    self.arena.swap(off, off + 1);
+                }
+                i += 1;
+
+                // (2) If the other watched literal is true, the clause is
+                // satisfied; keep this watch with its blocker refreshed to it.
+                let first = self.arena[off];
+                if first != blocker && self.lit_sat(first) == Some(true) {
+                    watchers[j] = Watch {
+                        clause: cid,
+                        blocker: first,
+                    };
+                    j += 1;
+                    continue;
+                }
+
+                // Look for a non-false literal to watch instead of `false_lit`.
+                let len = self.headers[cid].len;
+                for k in 2..len {
+                    if self.lit_sat(self.arena[off + k]) != Some(false) {
+                        self.arena.swap(off + 1, off + k);
+                        // Move the watch to the new literal's list; its blocker
+                        // is the surviving (slot-0) watched literal. This watch
+                        // is dropped from the current list (not copied to `j`).
+                        // The replacement is not false and `false_lit` is, so the
+                        // destination list is never the one being scanned.
+                        let new_code = lit_code(self.arena[off + 1]);
+                        self.watches[new_code].push(Watch {
+                            clause: cid,
+                            blocker: first,
+                        });
+                        continue 'clauses;
+                    }
+                }
+
+                // No replacement: the clause is unit or conflicting under the
+                // current assignment. Keep this watch (blocker = slot-0 literal).
+                watchers[j] = Watch {
+                    clause: cid,
+                    blocker: first,
+                };
+                j += 1;
+                if self.lit_sat(first) == Some(false) {
+                    // Conflict: stop scanning, but preserve the remaining (not
+                    // yet visited) watches by copying them down to `j`.
+                    outcome = Err(Conflict {
+                        clause: self.lits(cid).to_vec(),
+                        is_theory: false,
+                    });
+                    while i < end {
+                        watchers[j] = watchers[i];
+                        j += 1;
+                        i += 1;
+                    }
+                    break;
+                }
+                let asserted = self.assign(
+                    theory,
+                    first.var,
+                    first.positive,
+                    Cause::Implied,
+                    None,
+                    false,
+                );
+                // Recorded whether or not the theory accepted the assertion: a
+                // rejected assertion still leaves the literal on the trail, and
+                // 1-UIP analysis of the resulting theory conflict may have to
+                // resolve on it, which needs its reason.
+                self.reason_clause[first.var] = Some(cid);
+                if let Err(core) = asserted {
+                    // The theory rejected the implication. Same treatment as a
+                    // Boolean conflict: keep the unvisited watches.
+                    outcome = Err(Conflict {
+                        clause: self.theory_conflict_clause(&core),
+                        is_theory: true,
+                    });
+                    while i < end {
+                        watchers[j] = watchers[i];
+                        j += 1;
+                        i += 1;
+                    }
+                    break;
+                }
+            }
+            watchers.truncate(j);
+            self.watches[code] = watchers;
+            outcome?;
         }
         Ok(())
     }
@@ -809,6 +1201,13 @@ impl CdclT {
     fn reason_for<T: TheorySolver>(&mut self, theory: &mut T, var: usize) -> Option<Vec<Lit>> {
         if let Some(reason) = &self.reason[var] {
             return Some(reason.clone());
+        }
+        // A Boolean implication's reason is the clause-database entry that forced
+        // it. Reading it here -- on the conflict-analysis path, which visits a
+        // small fraction of the trail -- replaces the clone that the previous
+        // whole-database rescan paid at *every* implication.
+        if let Some(cid) = self.reason_clause[var] {
+            return Some(self.lits(cid).to_vec());
         }
         let handle = self.deferred_reason[var]?;
         let atom = self.theory_atom_for_var[var]
@@ -1022,6 +1421,20 @@ impl CdclT {
                 let mut learned = Vec::with_capacity(lower.len() + 1);
                 learned.push(self.true_literal(var).negate());
                 learned.extend(lower);
+                // Put the highest-level non-asserting literal at index 1, the
+                // convention `proof_sat.rs`'s `analyze` follows, so the learned
+                // clause's second watch is the last one a backjump undoes. The
+                // returned backjump level is unchanged by the swap: it is the
+                // maximum level over `learned[1..]` either way.
+                if learned.len() >= 2 {
+                    let mut best = 1;
+                    for k in 2..learned.len() {
+                        if self.level[learned[k].var] > self.level[learned[best].var] {
+                            best = k;
+                        }
+                    }
+                    learned.swap(1, best);
+                }
                 let backjump = Self::backjump_level(&self.level, &learned);
                 return Some((learned, backjump, all_theory));
             }
@@ -1031,7 +1444,9 @@ impl CdclT {
             // needed, which is why a theory may hand the driver a handle instead
             // of the literals (ADR-1701).
             assert!(
-                self.reason[var].is_some() || self.deferred_reason[var].is_some(),
+                self.reason[var].is_some()
+                    || self.reason_clause[var].is_some()
+                    || self.deferred_reason[var].is_some(),
                 "a current-level implied literal has a reason clause"
             );
             let Some(reason) = self.reason_for(theory, var) else {
@@ -1083,6 +1498,11 @@ impl CdclT {
             }
         }
         self.decision_level = target_level;
+        // The two-watched-literal invariant survives a backjump untouched (a
+        // watched literal only ever becomes *less* false), but the propagation
+        // cursor must not point past the shortened trail, or the literals that
+        // remain unpropagated below it would be skipped for good.
+        self.qhead = self.qhead.min(self.trail.len());
     }
 
     /// The highest-activity unassigned variable, with deterministic lowest-index
@@ -1188,16 +1608,22 @@ impl CdclT {
         }
         self.backjump_to(theory, backjump);
         let uip = learned[0];
-        let reason = if learned.len() == 1 {
-            None
-        } else {
-            Some(learned.clone())
-        };
+        // A multi-literal learned clause is its UIP's reason *by id*: it lives in
+        // the clause database, so `Self::reason_for` reads it out of the arena on
+        // the rare conflict-analysis path instead of cloning it here. A learned
+        // unit is asserted at level zero and needs no reason at all.
+        let reason: Option<Vec<Lit>> = None;
         let lbd = self.compute_lbd(&learned);
-        let clause_id = self.clauses.len();
-        let locked = reason.is_some();
-        self.clauses.push(learned);
+        let locked = learned.len() >= 2;
+        let clause_id = self.alloc_clause(&learned);
         self.register_learned(lbd);
+        // The backjump has already run, so `learned[0]` (the UIP) is unassigned
+        // and every other literal is false at a level at or below the backjump
+        // level. Watching slots 0 and 1 is therefore the correct assignment-aware
+        // choice, and `learned[1]` is the deepest of the false literals by the
+        // swap in `analyze_conflict` -- the same two-watch install
+        // `proof_sat.rs` performs after its own backjump.
+        self.attach_clause(clause_id);
         // Enqueue the UIP literal. Its theory assertion is consistent at the backjump
         // level (the asserting clause is an entailed resolvent), but a theory conflict
         // can still surface — re-analyse it. The learned clause is the UIP's reason,
@@ -1255,26 +1681,38 @@ impl CdclT {
         first.saturating_add(REDUCE_INCREMENT.saturating_mul(self.reductions))
     }
 
-    /// Whether `clause` is currently the reason for any assigned literal.
+    /// Which clauses are currently the reason for some assigned literal, indexed
+    /// by clause id. Such a clause is **locked**: deleting it would corrupt the
+    /// implication graph.
     ///
-    /// This driver scans whole clauses without moving the implied literal into a
-    /// distinguished watch slot, so a clause can later imply a literal other than
-    /// its original UIP. Consult the recorded reason ids instead of assuming the
-    /// first literal remains the locked one.
-    fn is_locked(&self, clause: usize) -> bool {
-        self.reason_clause
-            .iter()
-            .enumerate()
-            .any(|(var, reason)| self.value[var].is_some() && *reason == Some(clause))
+    /// Answered for every clause in one walk of `reason_clause` rather than by a
+    /// per-clause scan, which would be quadratic in the search's size once
+    /// propagation is fast enough to reach reduction on a large skeleton. The set
+    /// of protected clauses is exactly the previous per-clause predicate's.
+    ///
+    /// The recorded reason ids are consulted rather than the clause's first
+    /// literal: a clause can imply a literal other than its original UIP, so
+    /// clause order is not evidence of what is locked.
+    fn locked_clauses(&self) -> Vec<bool> {
+        let mut locked = vec![false; self.headers.len()];
+        for (var, reason) in self.reason_clause.iter().enumerate() {
+            if self.value[var].is_some()
+                && let Some(clause) = *reason
+            {
+                locked[clause] = true;
+            }
+        }
+        locked
     }
 
     /// Tombstones the worst half of deletion-eligible learned clauses. Originals,
     /// glue clauses, and active reasons are retained. Ordering is total and
     /// deterministic: descending LBD, oldest activity, then newest slot.
     fn reduce_db(&mut self) {
-        let mut candidates: Vec<usize> = (self.num_original..self.clauses.len())
+        let locked = self.locked_clauses();
+        let mut candidates: Vec<usize> = (self.num_original..self.headers.len())
             .filter(|&clause| {
-                !self.deleted[clause] && self.lbd[clause] > GLUE_LBD && !self.is_locked(clause)
+                !self.deleted[clause] && self.lbd[clause] > GLUE_LBD && !locked[clause]
             })
             .collect();
         candidates.sort_by(|&left, &right| {
@@ -1287,6 +1725,10 @@ impl CdclT {
         for clause in candidates.into_iter().take(remove) {
             self.deleted[clause] = true;
             self.learned_live -= 1;
+        }
+        if remove > 0 {
+            // No watch list may name a tombstoned clause.
+            self.rebuild_watches();
         }
     }
 
@@ -2127,23 +2569,31 @@ mod termination_tests {
     fn reduction_protects_glue_and_locked_clauses() {
         let mut solver = CdclT::new(4, 0, Vec::new(), None);
         for (var, distance) in [(0, 2), (1, 5), (2, 4), (3, 3)] {
-            solver.clauses.push(vec![Lit {
-                var,
-                positive: true,
-            }]);
+            // Clause 1's locked literal is deliberately not its first literal in
+            // this fixture: lock protection follows the implication graph, not
+            // clause order.
+            let literals = if var == 1 {
+                vec![
+                    Lit {
+                        var: 0,
+                        positive: false,
+                    },
+                    Lit {
+                        var,
+                        positive: true,
+                    },
+                ]
+            } else {
+                vec![Lit {
+                    var,
+                    positive: true,
+                }]
+            };
+            solver.alloc_clause(&literals);
             solver.register_learned(distance);
         }
         solver.value[1] = Some(true);
         solver.reason_clause[1] = Some(1);
-        // Clause 1's locked literal is deliberately not its first literal in this
-        // fixture: lock protection follows the implication graph, not clause order.
-        solver.clauses[1].insert(
-            0,
-            Lit {
-                var: 0,
-                positive: false,
-            },
-        );
 
         solver.reduce_db();
 

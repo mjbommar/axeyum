@@ -143,7 +143,7 @@ const KRAWCZYK_CAP: u32 = 512;
 /// `atanh` tail at order `n` is about `2^(−3.17·n)`, and the grid is `2^(−4n−64)`
 /// — so rounding is never what limits the answer, only what bounds the size of
 /// the numbers.
-fn grid_bits(order: u32) -> u32 {
+pub(crate) fn grid_bits(order: u32) -> u32 {
     order.saturating_mul(2).saturating_add(96)
 }
 
@@ -201,7 +201,7 @@ fn ln_one_plus(w: &BigRational, terms: u32) -> Option<BigInterval> {
 /// has `0 <= w < 2^(−16)`, so `terms = order/8 + 6` of the alternating
 /// `ln(1+w)` series reach `2^(−2·order−112)` — finer than the
 /// [`grid_bits`] the argument was rounded to, so it is never the limit.
-fn ln_large(p: &BigRational, order: u32) -> Option<BigInterval> {
+pub(crate) fn ln_large(p: &BigRational, order: u32) -> Option<BigInterval> {
     if !p.is_positive() {
         return None;
     }
@@ -234,13 +234,13 @@ fn ln_large(p: &BigRational, order: u32) -> Option<BigInterval> {
 }
 
 /// The largest multiple of `2^(−bits)` at or below `x`.
-fn dyadic_floor(x: &BigRational, bits: u32) -> BigRational {
+pub(crate) fn dyadic_floor(x: &BigRational, bits: u32) -> BigRational {
     let scale = pow2(i32::try_from(bits).unwrap_or(i32::MAX));
     BigRational::from(rat_floor(&(x * &scale))) / scale
 }
 
 /// The smallest multiple of `2^(−bits)` at or above `x`.
-fn dyadic_ceil(x: &BigRational, bits: u32) -> BigRational {
+pub(crate) fn dyadic_ceil(x: &BigRational, bits: u32) -> BigRational {
     -dyadic_floor(&-x, bits)
 }
 
@@ -248,7 +248,7 @@ fn dyadic_ceil(x: &BigRational, bits: u32) -> BigRational {
 ///
 /// Always contains `x`, so substituting it for `x` anywhere an enclosure is
 /// wanted stays sound; it only ever loses accuracy, never validity.
-fn coarsen(x: &BigInterval, bits: u32) -> BigInterval {
+pub(crate) fn coarsen(x: &BigInterval, bits: u32) -> BigInterval {
     let lo = dyadic_floor(x.lo(), bits);
     let hi = dyadic_ceil(x.hi(), bits);
     BigInterval::new(lo.clone(), hi).unwrap_or_else(|| BigInterval::point(lo))
@@ -429,7 +429,7 @@ fn erf_tail_bound(a: &BigRational, order: u32) -> Option<BigInterval> {
 /// is the cross-check in `bernoulli_table_matches_the_i128_reference`, not the
 /// producer — the same relationship `BigInterval` has to the crate's `i128`
 /// interval.
-fn bernoulli_table(n: u32) -> Vec<BigRational> {
+pub(crate) fn bernoulli_table(n: u32) -> Vec<BigRational> {
     let target = n as usize;
     let mut values: Vec<BigRational> = Vec::with_capacity(target + 1);
     for m in 0..=target {

@@ -15,12 +15,13 @@
 //!
 //! # What is implemented here today
 //!
-//! Only [`Dyadic`] and the radix types ([`Radix`], [`RadixCertificate`],
-//! [`MixedRadix`], [`MixedRadixCertificate`]). Everything else in this file is
-//! a **signature sketch**: traits with no bodies, and certificate structs whose
-//! `verify` is `todo!()`. That is deliberate — the sketch is what makes the
-//! design compile-checked without pre-empting the migration lanes that will
-//! implement it against the copies they replace.
+//! [`Dyadic`]; the radix types ([`Radix`], [`RadixCertificate`], [`MixedRadix`],
+//! [`MixedRadixCertificate`]); and, since migration slice 2,
+//! [`ModularRing`]/[`PlainModRing`] and [`PowModCertificate`]. Everything else
+//! in this file is a **signature sketch**: traits with no bodies, and
+//! certificate structs whose `verify` is `todo!()`. That is deliberate — the
+//! sketch is what makes the design compile-checked without pre-empting the
+//! migration lanes that will implement it against the copies they replace.
 //!
 //! # Two standing rules
 //!
@@ -850,9 +851,20 @@ impl SturmCertificate {
 
 /// Arithmetic modulo a fixed modulus.
 ///
-/// The implementation picks Montgomery form when the modulus is odd and
-/// Barrett reduction otherwise; which one ran is recorded on the certificate
-/// so that a differential test against the naive route can be written.
+/// The design note (§5) describes this trait's intended production
+/// implementation as Montgomery form for an odd modulus and Barrett
+/// reduction otherwise. [`PlainModRing`], the implementation landed with
+/// migration slice 2, does neither: it reduces with `num-bigint`'s native
+/// `%` (Knuth Algorithm D underneath, per the design note §3.2's read of
+/// `division.rs`). That is a **performance** deviation from the design note,
+/// not a correctness one — the trait's public shape, [`PowModCertificate`]'s
+/// shape, and the "chain of intermediate residues" semantics are exactly
+/// what the design promises, so a later lane can drop in Barrett/Montgomery
+/// under the same API without another public-surface change. This slice's
+/// migration sites (`ntheory.rs`'s two integer `pow_mod`s) never see a
+/// modulus past 128 bits in production, so the plain route was chosen over
+/// spending this slice's budget on a second reduction algorithm and a second
+/// differential oracle for it.
 pub trait ModularRing {
     /// The element type.
     type Element;
@@ -876,6 +888,82 @@ pub trait ModularRing {
     fn pow_mod(&self, base: &Self::Element, exponent: &BigUint) -> PowModCertificate;
 }
 
+/// The ring `ℤ / modulus·ℤ`, reduced with plain (schoolbook) division.
+///
+/// See [`ModularRing`]'s doc comment for why this is "plain" rather than
+/// Barrett/Montgomery, and why that is a scoped, documented deviation from
+/// the design note rather than a silent one.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PlainModRing {
+    modulus: BigUint,
+}
+
+impl PlainModRing {
+    /// The ring `ℤ / modulus·ℤ`.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `modulus` is zero: there is no such ring, and every caller
+    /// in this crate's migration sites already guards against a
+    /// non-positive modulus before constructing one (`ntheory.rs`'s
+    /// `mod_pow` returns `None` for `modulus <= 0` without ever reaching
+    /// here).
+    #[must_use]
+    pub fn new(modulus: BigUint) -> Self {
+        assert!(modulus.bits() != 0, "PlainModRing requires modulus >= 1");
+        Self { modulus }
+    }
+}
+
+impl ModularRing for PlainModRing {
+    type Element = BigUint;
+
+    fn modulus(&self) -> &BigUint {
+        &self.modulus
+    }
+
+    fn reduce(&self, value: &BigInt) -> BigUint {
+        let modulus_signed = BigInt::from(self.modulus.clone());
+        let mut remainder = value % &modulus_signed;
+        if remainder.sign() == Sign::Minus {
+            remainder += &modulus_signed;
+        }
+        remainder
+            .to_biguint()
+            .expect("a value reduced modulo a positive modulus is non-negative")
+    }
+
+    fn mul(&self, lhs: &BigUint, rhs: &BigUint) -> BigUint {
+        (lhs * rhs) % &self.modulus
+    }
+
+    fn pow_mod(&self, base: &BigUint, exponent: &BigUint) -> PowModCertificate {
+        let base_reduced = base % &self.modulus;
+        let bit_len = exponent.bits();
+        let one = if self.modulus == BigUint::from(1u8) {
+            BigUint::from(0u8)
+        } else {
+            BigUint::from(1u8)
+        };
+        let mut chain = Vec::with_capacity(usize::try_from(bit_len).unwrap_or(usize::MAX));
+        let mut accumulator = one;
+        for bit_index in (0..bit_len).rev() {
+            accumulator = (&accumulator * &accumulator) % &self.modulus;
+            if exponent.bit(bit_index) {
+                accumulator = (&accumulator * &base_reduced) % &self.modulus;
+            }
+            chain.push(accumulator.clone());
+        }
+        PowModCertificate {
+            modulus: self.modulus.clone(),
+            base: base_reduced,
+            exponent: exponent.clone(),
+            residue: accumulator,
+            chain,
+        }
+    }
+}
+
 /// The square-and-multiply chain behind one modular exponentiation.
 ///
 /// Each step is a congruence the checker can discharge on its own with one
@@ -897,14 +985,49 @@ pub struct PowModCertificate {
 }
 
 impl PowModCertificate {
-    /// Re-derive the chain step by step.
+    /// Re-derive the chain step by step, most-significant bit first, and
+    /// compare every intermediate residue and the final one.
     ///
-    /// # Panics
+    /// Never trusts anything the producer computed: `base` is reduced fresh
+    /// from the recorded field, and every squaring/multiply-and-reduce step
+    /// is redone from `exponent`'s own bits. Four independently-failable
+    /// conditions, in the same spirit as [`RadixCertificate::verify`]:
     ///
-    /// Always: this is a signature sketch (ADR-1710). The body lands with the
-    /// `ModRing` migration slice.
+    /// 1. the modulus is at least one (there is no ring modulo zero, and
+    ///    without this check the reduction below would divide by it);
+    /// 2. the chain has exactly one entry per bit of the exponent — a
+    ///    chain padded with extra, otherwise-consistent entries is caught
+    ///    here rather than by re-deriving a value that happens to still
+    ///    match (the case a length-blind check would pass);
+    /// 3. recomputing the square-and-multiply chain reproduces every
+    ///    recorded intermediate residue, not only the last one; and
+    /// 4. the final recomputed residue matches the claimed one.
+    #[must_use]
     pub fn verify(&self) -> bool {
-        todo!("ADR-1710 migration slice 4")
+        if self.modulus.bits() == 0 {
+            return false;
+        }
+        let bit_len = self.exponent.bits();
+        if self.chain.len() as u64 != bit_len {
+            return false;
+        }
+        let base_reduced = &self.base % &self.modulus;
+        let one = if self.modulus == BigUint::from(1u8) {
+            BigUint::from(0u8)
+        } else {
+            BigUint::from(1u8)
+        };
+        let mut accumulator = one;
+        for (position, bit_index) in (0..bit_len).rev().enumerate() {
+            accumulator = (&accumulator * &accumulator) % &self.modulus;
+            if self.exponent.bit(bit_index) {
+                accumulator = (&accumulator * &base_reduced) % &self.modulus;
+            }
+            if self.chain[position] != accumulator {
+                return false;
+            }
+        }
+        accumulator == self.residue
     }
 }
 
@@ -1260,5 +1383,138 @@ mod tests {
         let forged =
             MixedRadixCertificate::from_parts(vec![nat(3), nat(5), nat(7)], vec![nat(1)], nat(1));
         assert!(!forged.verify(), "a length mismatch must be caught");
+    }
+
+    // -- ModularRing / PowModCertificate ------------------------------------
+
+    /// A wholly independent reference `pow_mod`: ordinary left-to-right
+    /// square-and-multiply written directly against `BigUint`'s own `%` and
+    /// `*`, sharing no code path with [`PlainModRing::pow_mod`]. This is the
+    /// oracle the differential test below checks the ring against.
+    fn naive_pow_mod(base: &BigUint, exponent: &BigUint, modulus: &BigUint) -> BigUint {
+        if *modulus == BigUint::from(1u8) {
+            return BigUint::from(0u8);
+        }
+        let mut result = BigUint::from(1u8);
+        let mut factor = base % modulus;
+        let mut remaining = exponent.clone();
+        let two = BigUint::from(2u8);
+        while remaining.bits() != 0 {
+            if remaining.bit(0) {
+                result = (&result * &factor) % modulus;
+            }
+            factor = (&factor * &factor) % modulus;
+            remaining /= &two;
+        }
+        result
+    }
+
+    #[test]
+    fn plain_mod_ring_matches_a_naive_reference_including_moduli_past_u128() {
+        let cases: Vec<(BigUint, BigUint, BigUint)> = vec![
+            // Small, hand-checkable.
+            (nat(2), nat(10), nat(1_000)),
+            (nat(3), nat(0), nat(5)),
+            (nat(0), nat(0), nat(1)),
+            (nat(7), nat(1), nat(1)),
+            (nat(4), nat(13), nat(497)),
+            // Even and odd moduli.
+            (nat(5), nat(117), nat(190)),
+            (nat(5), nat(117), nat(191)),
+            // A modulus past `u128::MAX`, exercised only because this crate's
+            // whole reason to exist is the arithmetic `u128` cannot do.
+            (
+                BigUint::from(2u8).pow(200) + BigUint::from(7u8),
+                BigUint::from(2u8).pow(129) - BigUint::from(1u8),
+                BigUint::from(2u8).pow(256) - BigUint::from(189u16),
+            ),
+            (
+                BigUint::from(3u8),
+                BigUint::from(2u8).pow(300),
+                BigUint::from(2u8).pow(257) + BigUint::from(1u8),
+            ),
+        ];
+        for (base, exponent, modulus) in cases {
+            let ring = PlainModRing::new(modulus.clone());
+            let certificate = ring.pow_mod(&base, &exponent);
+            assert!(
+                certificate.verify(),
+                "certificate for base={base} exponent={exponent} modulus={modulus} must verify"
+            );
+            let expected = naive_pow_mod(&base, &exponent, &modulus);
+            assert_eq!(
+                certificate.residue, expected,
+                "base={base} exponent={exponent} modulus={modulus}"
+            );
+        }
+    }
+
+    #[test]
+    fn pow_mod_certificate_chain_has_one_entry_per_exponent_bit() {
+        let ring = PlainModRing::new(nat(1_000_003));
+        let certificate = ring.pow_mod(&nat(2), &nat(999_999));
+        assert_eq!(certificate.chain.len() as u64, nat(999_999).bits());
+        assert_eq!(certificate.chain.last(), Some(&certificate.residue));
+
+        // Exponent zero: an empty chain, residue `1 mod modulus`.
+        let zero_exp = ring.pow_mod(&nat(5), &nat(0));
+        assert!(zero_exp.chain.is_empty());
+        assert_eq!(zero_exp.residue, nat(1));
+        assert!(zero_exp.verify());
+    }
+
+    #[test]
+    #[should_panic(expected = "PlainModRing requires modulus >= 1")]
+    fn plain_mod_ring_rejects_a_zero_modulus() {
+        let _ = PlainModRing::new(nat(0));
+    }
+
+    #[test]
+    fn forged_pow_mod_certificates_all_fail_verification() {
+        let ring = PlainModRing::new(nat(1_000_003));
+        let honest = ring.pow_mod(&nat(2), &nat(999_999));
+        assert!(honest.verify());
+
+        // 1. A zero modulus: there is no such ring, and without this guard
+        //    the reduction below would divide by it.
+        let forged = PowModCertificate {
+            modulus: nat(0),
+            base: nat(0),
+            exponent: nat(0),
+            residue: nat(0),
+            chain: Vec::new(),
+        };
+        assert!(!forged.verify(), "a zero modulus must be caught");
+
+        // 2. A chain padded with one extra, otherwise-consistent entry --
+        //    the case a length-blind check would pass.
+        let mut chain = honest.chain.clone();
+        chain.push(honest.residue.clone());
+        let forged = PowModCertificate {
+            chain,
+            ..honest.clone()
+        };
+        assert!(!forged.verify(), "a padded chain must be caught");
+
+        // 3. A tampered intermediate residue, with the final `residue` field
+        //    left at the true (correct) value.
+        let mut chain = honest.chain.clone();
+        let mid = chain.len() / 2;
+        chain[mid] = chain[mid].clone() + BigUint::from(1u8);
+        let forged = PowModCertificate {
+            chain,
+            ..honest.clone()
+        };
+        assert!(
+            !forged.verify(),
+            "a tampered intermediate residue must be caught"
+        );
+
+        // 4. A tampered final residue, with every chain entry left correct.
+        let forged = PowModCertificate {
+            residue: honest.residue.clone() + BigUint::from(1u8),
+            ..honest.clone()
+        };
+        assert!(!forged.verify(), "a tampered final residue must be caught");
     }
 }

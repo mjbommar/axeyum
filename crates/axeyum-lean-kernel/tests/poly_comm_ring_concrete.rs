@@ -26,7 +26,7 @@
 
 use axeyum_lean_kernel::{
     BinderInfo, Declaration, ExprId, Kernel, NameId, ReducibilityHint, build_complex_prelude,
-    build_nat_prelude,
+    build_nat_prelude, on_a_deep_stack,
 };
 
 /// Intern `AlgS.<seg1>.<seg2>…` and assert the name is ALREADY in the
@@ -106,33 +106,35 @@ fn poly_ring_over(k: &mut Kernel, f: &Fixture, r: ExprId) -> ExprId {
 /// (`mulOneL`, `mulOneR`, `mulComm`, `mulAssoc`).
 #[test]
 fn the_abstract_polynomial_ring_instantiates_at_q_r_and_c() {
-    let mut k = Kernel::new();
-    let f = build(&mut k);
-    for (label, r) in f.concrete.clone() {
-        let value = poly_ring_over(&mut k, &f, r);
-        let name = {
-            let root = k.anon();
-            let ns = k.name_str(root, "PolyCommRingConcreteTest");
-            k.name_str(ns, label)
-        };
-        let admitted = k.add_declaration(Declaration::Definition {
-            name,
-            uparams: vec![],
-            ty: f.comm_ring_ty,
-            value,
-            hint: ReducibilityHint::Regular(1),
-        });
-        assert!(
-            admitted.is_ok(),
-            "{label} must admit as an AlgS.CommRing value: {admitted:?}"
-        );
-        let footprint = k.axiom_footprint(name);
-        assert!(
-            footprint.is_empty(),
-            "{label}'s axiom footprint must be empty, got {} entries",
-            footprint.len()
-        );
-    }
+    on_a_deep_stack(|| {
+        let mut k = Kernel::new();
+        let f = build(&mut k);
+        for (label, r) in f.concrete.clone() {
+            let value = poly_ring_over(&mut k, &f, r);
+            let name = {
+                let root = k.anon();
+                let ns = k.name_str(root, "PolyCommRingConcreteTest");
+                k.name_str(ns, label)
+            };
+            let admitted = k.add_declaration(Declaration::Definition {
+                name,
+                uparams: vec![],
+                ty: f.comm_ring_ty,
+                value,
+                hint: ReducibilityHint::Regular(1),
+            });
+            assert!(
+                admitted.is_ok(),
+                "{label} must admit as an AlgS.CommRing value: {admitted:?}"
+            );
+            let footprint = k.axiom_footprint(name);
+            assert!(
+                footprint.is_empty(),
+                "{label}'s axiom footprint must be empty, got {} entries",
+                footprint.len()
+            );
+        }
+    });
 }
 
 /// **Evaluation test: ℚ[X] really is the polynomial ring over ℚ.** Its
@@ -142,60 +144,62 @@ fn the_abstract_polynomial_ring_instantiates_at_q_r_and_c() {
 /// satisfy.
 #[test]
 fn the_rational_polynomial_ring_carries_coefficient_functions_and_convolution() {
-    let mut k = Kernel::new();
-    let f = build(&mut k);
-    let (_, rat_s) = f.concrete[0];
-    let ring = poly_ring_over(&mut k, &f, rat_s);
+    on_a_deep_stack(|| {
+        let mut k = Kernel::new();
+        let f = build(&mut k);
+        let (_, rat_s) = f.concrete[0];
+        let ring = poly_ring_over(&mut k, &f, rat_s);
 
-    let rat_ty = {
-        let n = resolve(&mut k, &["Rat"]);
-        k.const_(n, vec![])
-    };
-    let nat_ty = {
-        // The `Nat` type's name comes from the prelude, not from a path: its
-        // rendered root (`AxNat`) is not the name it is interned under.
-        let natp = build_nat_prelude(&mut k).expect("Nat prelude is already built");
-        k.const_(natp.nat, vec![])
-    };
-    let coeff_fn = {
-        let anon = k.anon();
-        let binder = k.name_str(anon, "n");
-        // Non-dependent, so the body needs no `bvar`.
-        k.pi(binder, nat_ty, rat_ty, BinderInfo::Default)
-    };
+        let rat_ty = {
+            let n = resolve(&mut k, &["Rat"]);
+            k.const_(n, vec![])
+        };
+        let nat_ty = {
+            // The `Nat` type's name comes from the prelude, not from a path: its
+            // rendered root (`AxNat`) is not the name it is interned under.
+            let natp = build_nat_prelude(&mut k).expect("Nat prelude is already built");
+            k.const_(natp.nat, vec![])
+        };
+        let coeff_fn = {
+            let anon = k.anon();
+            let binder = k.name_str(anon, "n");
+            // Non-dependent, so the body needs no `bvar`.
+            k.pi(binder, nat_ty, rat_ty, BinderInfo::Default)
+        };
 
-    // The record's own field projections, reached by name.
-    let field = |k: &mut Kernel, label: &str, inst: ExprId| -> ExprId {
-        let n = resolve(k, &["AlgS", "CommRing", label]);
-        let c = k.const_(n, vec![]);
-        k.app(c, inst)
-    };
+        // The record's own field projections, reached by name.
+        let field = |k: &mut Kernel, label: &str, inst: ExprId| -> ExprId {
+            let n = resolve(k, &["AlgS", "CommRing", label]);
+            let c = k.const_(n, vec![]);
+            k.app(c, inst)
+        };
 
-    let carrier = field(&mut k, "carrier", ring);
-    assert!(
-        k.def_eq(carrier, coeff_fn),
-        "Q[X]'s carrier must reduce to `Nat -> Rat`"
-    );
+        let carrier = field(&mut k, "carrier", ring);
+        assert!(
+            k.def_eq(carrier, coeff_fn),
+            "Q[X]'s carrier must reduce to `Nat -> Rat`"
+        );
 
-    let poly_mul = resolve(&mut k, &["AlgS", "Poly", "mul"]);
-    let poly_add = resolve(&mut k, &["AlgS", "Poly", "add"]);
-    let want_mul = {
-        let c = k.const_(poly_mul, vec![]);
-        k.app(c, rat_s)
-    };
-    let want_add = {
-        let c = k.const_(poly_add, vec![]);
-        k.app(c, rat_s)
-    };
-    let got_mul = field(&mut k, "mul", ring);
-    assert!(
-        k.def_eq(got_mul, want_mul),
-        "Q[X]'s `mul` field must reduce to AlgS.Poly.mul at the same ring"
-    );
-    assert!(
-        !k.def_eq(got_mul, want_add),
-        "Q[X]'s `mul` field must NOT be AlgS.Poly.add"
-    );
+        let poly_mul = resolve(&mut k, &["AlgS", "Poly", "mul"]);
+        let poly_add = resolve(&mut k, &["AlgS", "Poly", "add"]);
+        let want_mul = {
+            let c = k.const_(poly_mul, vec![]);
+            k.app(c, rat_s)
+        };
+        let want_add = {
+            let c = k.const_(poly_add, vec![]);
+            k.app(c, rat_s)
+        };
+        let got_mul = field(&mut k, "mul", ring);
+        assert!(
+            k.def_eq(got_mul, want_mul),
+            "Q[X]'s `mul` field must reduce to AlgS.Poly.mul at the same ring"
+        );
+        assert!(
+            !k.def_eq(got_mul, want_add),
+            "Q[X]'s `mul` field must NOT be AlgS.Poly.add"
+        );
+    });
 }
 
 /// **Negative control.** `AlgS.Poly.commRing` takes an `AlgS.CommRing`, whose
@@ -206,44 +210,46 @@ fn the_rational_polynomial_ring_carries_coefficient_functions_and_convolution() 
 /// declaration machinery.
 #[test]
 fn the_eq_flavored_rational_ring_is_refused_where_the_setoid_one_is_required() {
-    let mut k = Kernel::new();
-    let f = build(&mut k);
+    on_a_deep_stack(|| {
+        let mut k = Kernel::new();
+        let f = build(&mut k);
 
-    // Positive twin: the `ofAlg`-projected value admits.
-    let (_, rat_s) = f.concrete[0];
-    let good = poly_ring_over(&mut k, &f, rat_s);
-    let good_name = {
-        let root = k.anon();
-        k.name_str(root, "polyCommRingOverProjectedRat")
-    };
-    assert!(
-        k.add_declaration(Declaration::Definition {
-            name: good_name,
-            uparams: vec![],
-            ty: f.comm_ring_ty,
-            value: good,
-            hint: ReducibilityHint::Regular(1),
-        })
-        .is_ok(),
-        "the projected `AlgS.CommRing.ofAlg Alg.Rat.commRing` must admit"
-    );
+        // Positive twin: the `ofAlg`-projected value admits.
+        let (_, rat_s) = f.concrete[0];
+        let good = poly_ring_over(&mut k, &f, rat_s);
+        let good_name = {
+            let root = k.anon();
+            k.name_str(root, "polyCommRingOverProjectedRat")
+        };
+        assert!(
+            k.add_declaration(Declaration::Definition {
+                name: good_name,
+                uparams: vec![],
+                ty: f.comm_ring_ty,
+                value: good,
+                hint: ReducibilityHint::Regular(1),
+            })
+            .is_ok(),
+            "the projected `AlgS.CommRing.ofAlg Alg.Rat.commRing` must admit"
+        );
 
-    // The mutant: the unprojected `Alg.CommRing` value.
-    let bad = poly_ring_over(&mut k, &f, f.alg_rat_comm_ring);
-    let bad_name = {
-        let root = k.anon();
-        k.name_str(root, "polyCommRingOverUnprojectedRat")
-    };
-    assert!(
-        k.add_declaration(Declaration::Definition {
-            name: bad_name,
-            uparams: vec![],
-            ty: f.comm_ring_ty,
-            value: bad,
-            hint: ReducibilityHint::Regular(1),
-        })
-        .is_err(),
-        "`Alg.CommRing` and `AlgS.CommRing` are different records -- feeding \
+        // The mutant: the unprojected `Alg.CommRing` value.
+        let bad = poly_ring_over(&mut k, &f, f.alg_rat_comm_ring);
+        let bad_name = {
+            let root = k.anon();
+            k.name_str(root, "polyCommRingOverUnprojectedRat")
+        };
+        assert!(
+            k.add_declaration(Declaration::Definition {
+                name: bad_name,
+                uparams: vec![],
+                ty: f.comm_ring_ty,
+                value: bad,
+                hint: ReducibilityHint::Regular(1),
+            })
+            .is_err(),
+            "`Alg.CommRing` and `AlgS.CommRing` are different records -- feeding \
          the Eq-flavored one to AlgS.Poly.commRing must be REFUSED"
-    );
+        );
+    });
 }

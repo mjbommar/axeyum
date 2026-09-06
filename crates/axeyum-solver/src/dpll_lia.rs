@@ -458,6 +458,13 @@ pub fn check_with_arith_dpll(
     if crate::nia_linearize::has_nonlinear_int_product(arena, assertions) {
         return Ok(run_arith_dpll(arena, assertions, config)?.result);
     }
+    // S2 dispatch-overrun fix: evaluate the pre-SAT skeleton size admission
+    // BEFORE the online probe below spends its share of the caller's
+    // reserve. See [`arith_dpll_admission_preflight`] for the measured
+    // defect this closes.
+    if let Some(reason) = arith_dpll_admission_preflight(arena, assertions, config)? {
+        return Ok(CheckResult::Unknown(reason));
+    }
     // Prefer the shared CDCL(T) spine for pure-integer arithmetic
     // searches: it has 1-UIP learning, non-chronological backjumping, restarts,
     // and theory propagation, whereas the legacy path below repeatedly launches
@@ -942,21 +949,13 @@ impl IncrementalArithDpll {
         let enable_affine_bound_cores = self.solve_calls > 1;
 
         if exceeds_pre_sat_skeleton_boundary(self.ctx.atoms.len(), self.prop_solver.next_var) {
-            return Ok(CheckResult::Unknown(UnknownReason {
-                kind: UnknownKind::ResourceLimit,
-                detail: format!(
-                    "lazy linear arithmetic pre-SAT skeleton exceeds the joint resource boundary \
-                     (atoms={}, cnf_vars={}, base_trigger=>{MAX_PRE_SAT_ARITH_ATOMS}/\
-                     >{MAX_PRE_SAT_CNF_VARS}, moderate_envelope<=\
-                     {MAX_MODERATE_PRE_SAT_ARITH_ATOMS}/<=\
-                     {MAX_MODERATE_PRE_SAT_CNF_VARS}, initial_clauses={}, blocking_lemmas={}); \
-                     declining before the first SAT round",
-                    self.ctx.atoms.len(),
-                    self.prop_solver.next_var,
-                    self.initial_clauses.len(),
-                    self.blocking.len(),
-                ),
-            }));
+            return Ok(CheckResult::Unknown(pre_sat_skeleton_boundary_reason(
+                self.ctx.atoms.len(),
+                self.prop_solver.next_var,
+                self.initial_clauses.len(),
+                self.blocking.len(),
+                "declining before the first SAT round",
+            )));
         }
 
         for round in 0..MAX_DPLL_ROUNDS {
@@ -1205,6 +1204,87 @@ fn exceeds_pre_sat_skeleton_boundary(atoms: usize, cnf_vars: usize) -> bool {
     let outside_moderate_envelope =
         atoms > MAX_MODERATE_PRE_SAT_ARITH_ATOMS || cnf_vars > MAX_MODERATE_PRE_SAT_CNF_VARS;
     crosses_base_trigger && outside_moderate_envelope
+}
+
+/// Builds the `ResourceLimit` decline for [`exceeds_pre_sat_skeleton_boundary`],
+/// shared by [`arith_dpll_admission_preflight`] (checked before the online
+/// probe spends its share of the caller's reserve) and
+/// [`IncrementalArithDpll::solve`]'s own internal check (reached only when the
+/// preflight already passed but the skeleton grew past the boundary during a
+/// later incremental `assert`). `stage` names which of the two call sites
+/// declined, so a trace line still says which admission gate fired.
+fn pre_sat_skeleton_boundary_reason(
+    atoms: usize,
+    cnf_vars: usize,
+    initial_clauses: usize,
+    blocking_lemmas: usize,
+    stage: &str,
+) -> UnknownReason {
+    UnknownReason {
+        kind: UnknownKind::ResourceLimit,
+        detail: format!(
+            "lazy linear arithmetic pre-SAT skeleton exceeds the joint resource boundary \
+             (atoms={atoms}, cnf_vars={cnf_vars}, base_trigger=>{MAX_PRE_SAT_ARITH_ATOMS}/\
+             >{MAX_PRE_SAT_CNF_VARS}, moderate_envelope<={MAX_MODERATE_PRE_SAT_ARITH_ATOMS}/\
+             <={MAX_MODERATE_PRE_SAT_CNF_VARS}, initial_clauses={initial_clauses}, \
+             blocking_lemmas={blocking_lemmas}); {stage}"
+        ),
+    }
+}
+
+/// S2 dispatch-overrun fix (2026-09-05,
+/// `docs/plan/smt-parity-plan-2026-09-05.md` row S2): evaluates the pre-SAT
+/// skeleton size admission constant BEFORE [`check_with_arith_dpll`] spends
+/// [`online_lia_probe_config`]'s share of the caller's reserve on the online
+/// CDCL(T) probe.
+///
+/// **Why this was wrong before.** The admission check already existed inside
+/// [`IncrementalArithDpll::solve`] ("declining before the first SAT round"),
+/// but that function is only reached *after* the online probe has already run
+/// for up to a third of the configured timeout (a fixed ~8 s on the standard
+/// 24 s budget, measured
+/// `docs/research/11-design-review/2026-09-05-arith-timeout-profiles.md`).
+/// [`crate::lia_theory::check_qf_lia_online_cdclt`] has no size gate of its
+/// own, so a query already known (from its Boolean-abstraction size alone) to
+/// be inadmissible still paid the online probe's full reserve before falling
+/// through to the instant decline. Three of five traced `QF_IDL` timeouts
+/// summed `dl-online`'s ~18-21 s reserve plus this ~8 s past the caller's 24 s
+/// budget, so `smtcomp_cli`'s watchdog killed the process before any
+/// statistics — including the eventual decline — could be printed.
+///
+/// **The fix.** Building the Boolean abstraction (`IncrementalArithDpll::new`)
+/// is the only way to learn the exact atom/CNF-variable counts the admission
+/// constant compares against, and building it is the "t=0" moment the
+/// existing "declining before the first SAT round" message already assumes —
+/// it is cheap relative to the online probe's multi-second search, not free.
+/// So this builds the abstraction once, decides admission from its counts,
+/// and returns the caller's reserve untouched (`Ok(None)`) whenever the
+/// query is within bounds, letting [`check_with_arith_dpll`] proceed exactly
+/// as before. `Ok(None)` also covers a preflight build that itself exhausts
+/// the deadline (`ctx.timed_out`): that path is deliberately left to the
+/// existing call sites, which already report a timeout with full context,
+/// rather than duplicating that message here on an incomplete abstraction.
+fn arith_dpll_admission_preflight(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    config: &SolverConfig,
+) -> Result<Option<UnknownReason>, SolverError> {
+    let deadline = config.timeout.and_then(|t| Instant::now().checked_add(t));
+    let solver = IncrementalArithDpll::new_with_deadline(arena, assertions, deadline)?;
+    if solver.ctx.timed_out {
+        return Ok(None);
+    }
+    if exceeds_pre_sat_skeleton_boundary(solver.ctx.atoms.len(), solver.prop_solver.next_var) {
+        return Ok(Some(pre_sat_skeleton_boundary_reason(
+            solver.ctx.atoms.len(),
+            solver.prop_solver.next_var,
+            solver.initial_clauses.len(),
+            solver.blocking.len(),
+            "declining before the online CDCL(T) probe (dispatch-overrun fix: admission \
+             evaluated before the reserve was spent)",
+        )));
+    }
+    Ok(None)
 }
 
 fn run_arith_dpll(

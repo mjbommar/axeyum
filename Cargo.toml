@@ -42,6 +42,7 @@ categories = ["science", "mathematics"]
 
 [workspace.dependencies]
 axeyum-aig = { path = "crates/axeyum-aig", version = "0.1.0" }
+axeyum-arith = { path = "crates/axeyum-arith", version = "0.1.0" }
 axeyum-bv = { path = "crates/axeyum-bv", version = "0.1.0" }
 axeyum-cas = { path = "crates/axeyum-cas", version = "0.1.0" }
 axeyum-cnf = { path = "crates/axeyum-cnf", version = "0.1.0" }
@@ -55,6 +56,16 @@ axeyum-query = { path = "crates/axeyum-query", version = "0.1.0" }
 axeyum-scenarios = { path = "crates/axeyum-scenarios", version = "0.1.0" }
 axeyum-strings = { path = "crates/axeyum-strings", version = "0.1.0" }
 batsat = { version = "0.6.0" }
+# Exact arbitrary-precision arithmetic (ADR-1710 slice 0). Hoisted here so
+# axeyum-arith, axeyum-ir, axeyum-cas, axeyum-fp and axeyum-lean-kernel all
+# resolve one version instead of four crates independently pinning the same
+# literal range. Versions match what Cargo.lock already resolved before this
+# change (num-bigint 0.4.6, num-rational 0.4.2, num-integer 0.1.46,
+# num-traits 0.2.19); this slice does not upgrade anything.
+num-bigint = { version = "0.4" }
+num-rational = { version = "0.4", default-features = false, features = ["num-bigint"] }
+num-integer = { version = "0.1" }
+num-traits = { version = "0.2" }
 rustsat = { version = "0.7.5", default-features = false }
 rustsat-batsat = { version = "0.7.5" }
 proptest = { version = "1", default-features = false, features = ["std"] }

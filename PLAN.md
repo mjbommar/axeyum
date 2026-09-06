@@ -137,6 +137,12 @@ now. Nothing was deleted.
 
 | Date | Commit | Result |
 |---|---|---|
+| 2026-09-06 | `7376295cf` | `CdclT::unit_propagate` becomes two-watched-literal BCP with blocking literals: `lit_code`, `Watch { clause, blocker }`, `ClauseHeader { offset, len }` over a flat literal arena, the `i`/`j` watch-list compaction, and the highest-level-literal-to-index-1 convention in `analyze_conflict` — all copied from `axeyum-cnf`'s `proof_sat.rs` so slice S7 is a deletion. Reasons become clause ids read from the arena on the conflict path instead of a `Vec<Lit>` cloned at every implication. `add_permanent_clause` installs assignment-aware watches plus one pending evaluation, so a clause inserted at the final-check boundary still implies when unit and conflicts when falsified. Solver `--lib --features full`: 1449 passed, 0 failed. |
+| 2026-09-06 | `889b9e558` | `clippy -p axeyum-solver --all-targets --all-features -- -D warnings`: both clause arguments are consumed into the arena rather than copied out of a borrow (no signature moves, so the ten call sites stand), the deadline-check constant moves to module scope, and the BCP loop carries a reasoned `too_many_lines` allow — splitting it would create the second watch scheme the memo warns against. |
+| 2026-09-06 | `703dc05ef` | Before/after on the committed 50-file QF_IDL and 33-file QF_LRA timeout populations, arms interleaved per file on a loaded shared host, binaries confirmed different by `sha256sum`. QF_IDL 0/50 → 6/50 decided, PAR-2 −8.6%; QF_LRA 4/33 → 5/33, PAR-2 −3.1%; zero verdicts contradicting `declared`, nothing lost. |
+| 2026-09-06 | `71d24d86e` | `--trace` stage tables on the five profiled QF_IDL files, both arms, with `a7.3.0` repeated three times per arm; plus the blocking-literal mutation, which costs a 13x–97x propagation-stage regression and one decided file while changing no verdict into a wrong one. Three of the five files still emit no trace line in either arm — Finding 0, slice S2's subject. |
+| 2026-09-06 | 23202a7d9 | S2 admission-preflight fix (WIP snapshot: compiles, tests/gates not yet run) |
+| 2026-09-06 | 3dcf8693e | Calibrate the S2 regression test to a load-robust reference frame; add the solver-dispatch.md paragraph |
 | 2026-09-05 | sigma-subtype | evaluation tests for the two definitions covered only by their types; mutation-verified at exactly one death |
 | 2026-09-05 | hall-counting | `unionOver`'s congruence and the family-modification transports: 11 theorems, `nat_prelude::` 580 → 591 (46a61c2ac) |
 | 2026-09-05 | hall-counting | the matching union on disjoint images, plus the union's membership calculus: 5 theorems + 1 definition, `nat_prelude::` 595 (b4cda2323) |
@@ -49441,6 +49447,131 @@ the shape guards (`eqf_subst_consumes_the_equality_and_moves_the_instance`,
 `size_is_not_bounded_by_the_code`) each carry their own negative control built
 from a specific wrong variant.
 
+**Four-wise uncorrelatedness, the fourth central moment of a sum, and the `1/m²`
+tail that follows, all at ℚ and all axiom-free** (`DONE`, fourth-moment,
+2026-09-06, ADR-1653).
+
+## What this slice is
+
+ADR-1631 closed the binomial slice with a sized obstruction rather than a gap in
+effort: Hoeffding needs `E[∏_j f(X_j)] = ∏_j E[f(X_j)]`, which is about a JOINT
+law over a product space, and this development has one weight function over one
+index range; and Hoeffding's lemma needs `expFn_add`, which exists on no carrier
+here. It named the next rate that IS statable, and this lane is that rate.
+
+The shelf now carries, at ℚ:
+
+* Chebyshev on a sample mean — tail `1/m`;
+* **the fourth-moment tail — `1/m²`.**
+
+That gap is the whole return on paying for the fourth moment, and it is the
+first Hoeffding-class rate this carrier reaches.
+
+## Partition check
+
+Run before proving anything. `artifacts/structural-index/held-out-exclusion-
+manifest.json` holds 136 held-out fact ids, every one of them `F:ml430-int-*`;
+`artifacts/autogenesis/nursery-v2-extension.json` names 54 families, all
+integer/natural arithmetic and none rational, probabilistic, or
+moment-shaped. Coverage confirmed positively (`partition` occurs 579 times in
+the nursery file; the family list was read out in full), so the empty result is
+a real negative and not a grep that never pointed at its subject. **No target
+of this lane is in a blind evaluation population.**
+
+## What landed
+
+Six declarations in one new file, `crates/axeyum-lean-kernel/src/rat_prelude/fourth_moment.rs`:
+
+| name | what it says |
+| --- | --- |
+| `Rat.expectation_sumVars_mul` | `E[(Σ_{i<m} Y_i)·W] = Σ_{i<m} E[Y_i·W]`, for ARBITRARY `W` and with no hypothesis at all |
+| `Rat.expectation_sumVars_mul_eq_zero` | the same with every per-index term known to vanish |
+| `Rat.FourwiseUncorrelated` | the `Definition`: lone-index mixed moments vanish, and squares are uncorrelated |
+| `Rat.expectation_sq_sumVars_mul_sq` | `E[(Σ_{i<m} Y_i)²·z²] = Σ_{i<m} E[Y_i²·z²]` — the one cross term the fourth power does not kill |
+| `Rat.fourth_moment_sumVars_le` | `E[(Σ_{i<m} Y_i)⁴] ≤ Σ_{i<m} M₄ + 3(Σ_{i<m} σ²)²` |
+| `Rat.fourth_moment_tailSumVars` | `a⁴·E[𝟙[(Σ − EΣ)⁴ ≥ a⁴]] ≤ Σ_{i<m} M₄ + 3(Σ_{i<m} σ²)²` |
+
+## The four calls worth reading (ADR-1653)
+
+1. **The lone-index condition is ONE universal, not three.** "Some index occurs
+   exactly once" is, after a commutative reordering, "the last slot differs from
+   the other three", and that single condition covers all three unpaired
+   multinomial shapes.
+2. **One hypothesis-free peeling lemma carries the whole proof.** `W` being
+   arbitrary is load-bearing: in every use it MENTIONS the sum being peeled.
+3. **`Rat.sumRange_delta` is unusable here** — its hypothesis is unrestricted
+   (`∀ t, t ≠ i → …`) and four-wise uncorrelatedness supplies zeros only below
+   the bound. A bounded `sumRange_delta_lt` would be a real addition to
+   `rat_prelude/sum.rs`; it was not needed once the diagonal lemma had its own
+   induction.
+4. **The bound is `sumRange`-shaped and the induction closes with `3σ⁴` of
+   slack**, not on the nose. `sumRange f (succ b) ≡ sumRange f b + f b` is
+   `Eq.refl` here; `natDivSucc (succ b) 0 = natDivSucc b 0 + 1` is not a fact
+   this prelude has.
+
+## Gates, with counts and exit status
+
+| gate | result |
+| --- | --- |
+| `cargo check -p axeyum-lean-kernel --all-targets` | exit 0, no errors, no warnings |
+| `cargo clippy -p axeyum-lean-kernel --all-targets -- -D warnings` | exit 0 after one fix (two `needless_range_loop` errors); zero errors, zero warnings |
+| `cargo fmt --all --check` | exit 0 |
+| `cargo test --release -p axeyum-lean-kernel --lib -- rat_prelude::` | **313 passed, 0 failed**, 2220 filtered out, 1286.86 s. Includes `every_rat_declaration_is_checked_and_axiom_free` (the every-declaration sweep), `every_named_declaration_exists`, and `rat_prelude_is_axiom_free` — all `ok` |
+| `cargo test --release … -- rat_prelude::fourth_moment` | 6 passed, 0 failed, 25.86 s |
+| `rat_theorem_inventory` on each new name | 5 theorems derived, **5 with an EMPTY axiom footprint**, 0 asserted |
+| `validate-facts.py` | exit 0, 2929 facts, 0 errors, `missing_edges=0` |
+| `check-settled-fact-statements.py` | `PASS`, `drifted=0`, `header_exempt=0` |
+| `check-kernel-trusted-core.py` | exit 0, 5 guards, 0 failures |
+| `check-autogenesis-holdout-isolation.py` | `PASS`, `held_out=206`, `settled=0`, `references=0` |
+| `check-merge-hygiene.sh` | `PASS` (after regenerating the shape census and provenance ledger) |
+| `mutation_controls.py --check-anchors` | no `NOT APPLIED` / `AMBIGUOUS ANCHOR` for this suite |
+
+## Mutation table — every row RUN, none predicted
+
+Suite `fourth-moment-concentration`, baseline green at 6 tests.
+
+| mutation | outcome |
+| --- | --- |
+| the multinomial coefficient 3 becomes 6 | **killed 6** (the whole suite) |
+| the tail threshold `a⁴` becomes `a²` | **killed 6** (the whole suite) |
+| the coefficient test's negative control becomes a second copy of its positive case | **killed 1** — exactly `fourth_moment_bound_carries_three_square_terms_and_not_six` |
+| the threshold test's negative control becomes a second copy of its positive case | **killed 1** — exactly `fourth_moment_tail_threshold_is_a_to_the_fourth_and_not_a_squared` |
+
+Run twice, independently, with identical outcomes; the second run's exit status
+was captured and is **0**, which the harness gives only when every mutation is
+`killed N`.
+
+The first two are kernel kills and that is the finding, not a shortcoming: a
+wrong constant here is not a wrong theorem the tests have to notice, it is a
+term whose inferred type stops matching its declared one, so
+`build_rat_prelude` returns `Err` and every registered test dies at
+`prelude()`. The last two exist because a negative control fails two ways —
+vacuous is as bad as absent — and each kills exactly the one test that owns it,
+which is what says the controls are load-bearing rather than decorative.
+
+## The cost, measured and flagged NOT COMPARABLE
+
+The rat prelude got slower. Building it once in `--release` now takes **13.95 s**
+on this host under other lanes' load, and the 313-test `rat_prelude::` sweep
+took **1286.86 s** at `--test-threads=4` (every one of those tests builds the
+prelude). The comparable earlier number from this lane is the `fourth_moment`
+filter at **8.68 s** for 4 tests when only the three stage-1 declarations
+existed, against **25.86 s** for 6 tests now.
+
+Those two numbers are **not comparable** — different test counts, different
+thread rounds, different machine load — and a clean before/after with the
+module's `declare_fourth_moment_all` short-circuited **did not run**. What can
+be said is that the sixteen-monomial ring expansion and the three nested
+peeling applications are the largest proof terms in this prelude and the build
+cost is visible. Sizing that properly, and reducing it, is the obvious
+follow-up.
+
+## Hoeffding is still blocked, and for the same two reasons
+
+Re-checked, not inherited: no product space (so no joint law to state
+`E[∏ f(X_j)] = ∏ E[f(X_j)]` over), and no `expFn_add` on any carrier here.
+Nothing in this slice moves either.
+
 Status: complete (2026-09-05). Roadmap W2-21 — a topological carrier built as a
 frame, with the open-ball frame of ℝ as the first instance. ADR-1643.
 
@@ -58719,6 +58850,227 @@ cost of a Mathlib dependency closure versus the ~50-1,100 record `Init`
 facts. Expect a similar closure size (low thousands of records) for the next
 target, and reuse `scripts/check-imported-fact-lean-axioms.sh`'s
 `MATHLIB_ROWS` mechanism rather than rebuilding it.
+
+**`CdclT::unit_propagate` is now two-watched-literal BCP with blocking
+literals, ported verbatim from `proof_sat.rs`; the QF_IDL timeout population
+goes 0/50 → 6/50 decided with zero verdict changes** (`DONE`,
+s1-cdclt-watched-literals, 2026-09-06, plan slice S1).
+
+The measurement, with its method, its tables and what it does not claim, is
+[`docs/research/11-design-review/2026-09-05-s1-watched-literals-measured.md`](docs/research/11-design-review/2026-09-05-s1-watched-literals-measured.md).
+
+## The headline numbers
+
+| | before | after |
+|---|---:|---:|
+| QF_IDL population (50 files) decided | **0** | **6** |
+| QF_IDL PAR-2 | 2,400,000 ms | 2,193,999 ms (−8.6%) |
+| QF_LRA population (33 files) decided | 4 | 5 |
+| QF_LRA PAR-2 | 1,429,562 ms | 1,385,164 ms (−3.1%) |
+| `boolean_propagate_ms` on `edge-matching-w=7-h=7-c=11` | 17,520 | 1,895 |
+| `boolean_propagate_ms` on `a7.3.0.tweaked.3.asp` | 16,881 | 1,144 |
+| `decisions` on both of those files | **0** | 45,516 / 48,307 |
+| `cdclt_solve_php_6_7` (criterion median) | 48.725 ms | 3.4547 ms |
+
+Zero verdicts contradict `declared` in either population, in either arm, and no
+file decided before and went `unknown` after.
+
+The `decisions` row is the finding. Before this change, the search on those two
+files never left its **first propagation fixpoint**, so every other stage read
+exactly zero — not because the theory was cheap but because it was never
+reached.
+
+## What is deliberately unchanged
+
+The `TheorySolver` trait, the ten `CdclT::new` call sites, the theory
+integration, `TheoryLayerStats`, every proof contract. `boolean_propagate`
+therefore times the same stage on both sides and is its own scoreboard. The
+watch code is copied from `axeyum-cnf`'s `proof_sat.rs` rather than invented,
+which is the design memo's stated precondition for slice **S7** (moving CDCL(T)
+onto the native core) being a deletion instead of a reconciliation of two watch
+schemes.
+
+## Two things a watch scheme needs that a rescan did not
+
+- **A clause inserted mid-search cannot be seen by watches alone.**
+  `add_permanent_clause` is called *after* an `Outcome::Sat`, under a total
+  assignment the new clause usually falsifies, and no further assignment will
+  ever trigger it. So its watches are chosen against the current assignment
+  (non-false first, then deepest false) and it gets one full evaluation from a
+  pending queue — unit implies, falsified conflicts. Input clauses of fewer
+  than two literals go through the same queue.
+- **`reduce_db` must rebuild the watch lists** so none names a tombstoned
+  clause. Its locked-clause test also moved from a per-candidate full scan of
+  `reason_clause` to one walk; that was quadratic, and it only became reachable
+  once propagation was fast enough to get there.
+
+## Sized, and not done — what the next lane needs
+
+- **The plan's actual exit criterion is not met yet.** Parity is a count on the
+  pinned 200-file list under `scripts/parity-run.sh` on an **idle** host. This
+  lane scored the 50/33-file timeout populations on a loaded s4, which answers
+  "did the named function stop being the bottleneck" and not "is QF_IDL at
+  parity". `parity-run.sh QF_IDL` and `QF_RDL` on an idle host remain to run.
+- **Three of the five profiled QF_IDL files still print no `--trace` line at
+  all, in either arm.** That is Finding 0 of the profiles note reproducing
+  unchanged — the dispatcher's per-route budgets sum past `smtcomp_cli`'s outer
+  watchdog and the process dies inside routing. Slice **S2** (a shared,
+  shrinking deadline) is the precondition for measuring those files at all, and
+  one AFTER attempt on `a7.3.0` fell into the same hole before three clean
+  repeats, so the boundary is not stable.
+- **QF_LRA barely moved, as predicted.** The profiles note puts that division
+  at 84% `theory_final_check` and 10% Boolean propagation; it is slice **S4**'s
+  target. The 4/33 before-arm reading here is not interchangeable with the
+  slice-1 note's 5/33 — that ran on an idle s5, this on a loaded s4, and the
+  file in question is `unknown` in both arms of this pair.
+- **The next contained wins in this file are `pick_unassigned` and clause
+  minimization.** `pick_unassigned` is still an O(var_count) linear scan per
+  decision, where `proof_sat.rs` has an order heap with the same comparator
+  (highest activity, lowest index on ties — so it is trajectory-identical, not
+  a heuristic change); on a 330k-variable skeleton now taking 45k+ decisions
+  that is the next thing to measure. `proof_sat.rs`'s recursive learned-clause
+  minimization (`minimize`) is likewise not ported. Both were left out of scope
+  here to keep this slice one function.
+
+## The guard is load-bearing, and that was checked rather than asserted
+
+The blocking-literal fast path was mutated out
+(`if false && self.lit_sat(blocker) == Some(true)`) in a throwaway
+`lane-snapshot.sh` tree — never in a worktree another lane builds. Propagation
+stage time rose 1,392 → 17,908 ms on `a7.3.0` and 216 → 20,927 ms on
+`plan-30.cvc`, and `plan-30` went from `unsat` (its declared status) to
+`unknown`. No verdict became a wrong one. On these instances (330k CNF
+variables, 800k clauses) most watch visits are of satisfied clauses, so without
+the cached blocker every visit dereferences the arena: the blocker is most of
+the win here, not a garnish.
+
+**Done (`s2-dispatch-overrun`, 2026-09-06).**
+
+Root cause confirmed by instrumented diagnosis before any fix: in
+`check_with_arith_dpll` (`crates/axeyum-solver/src/dpll_lia.rs`), the
+online LIA CDCL(T) probe (`online_lia_probe_config`, a flat third of
+`config.timeout` — 8s on the standard 24s budget) always ran BEFORE
+`exceeds_pre_sat_skeleton_boundary`'s size-admission check, which lives
+inside `IncrementalArithDpll::solve` and is only reached afterward, via
+`run_arith_dpll`. So an already-oversized query (thousands of atoms/CNF
+vars) paid the online probe's fixed ~8s reserve every time before
+declining on a constant it could evaluate at t≈0. Combined with
+`dl-online`'s own ~18-21s reserve ahead of it in
+`dispatch_difference_logic`, the sum exceeded `smtcomp_cli`'s 24s+1s
+watchdog on 3 of 5 traced `QF_IDL` timeouts
+(`docs/research/11-design-review/2026-09-05-arith-timeout-profiles.md`
+Finding 0), and the watchdog's hardcoded `("unknown", None, None)` meant
+those three printed NOTHING — no `; theory-layer …` line, not even a
+partial one — because the line is only built after the worker thread's
+`solve()` call returns and that thread was killed mid-flight.
+
+Two fixes landed:
+
+1. `arith_dpll_admission_preflight` (`dpll_lia.rs`) builds the Boolean
+   abstraction and checks `exceeds_pre_sat_skeleton_boundary` BEFORE
+   `check_with_arith_dpll` runs the online probe. An oversized query now
+   declines immediately (the online probe's reserve is never touched).
+   The `MAX_MODERATE_PRE_SAT_ARITH_ATOMS`/`MAX_PRE_SAT_CNF_VARS` reserve
+   protecting `QF_IDL/sal/lpsat/lpsat-goal-18` is untouched — this only
+   moves WHEN the existing constant is evaluated, not what it is.
+2. `smtcomp_cli`'s watchdog-timeout branch (`crates/axeyum-bench/examples/
+   smtcomp_cli.rs`) no longer hardcodes `(..., None)` for the trace line;
+   it now prints an explicit `; theory-layer unavailable: <reason>` line
+   under `--trace`, so a trace is never silently empty even when the
+   worker never got far enough to report real stats. Deliberately did
+   NOT add cross-thread shared state to read a live in-progress snapshot
+   (`TheoryLayerStats` collection is thread-local by design,
+   `crate::theories::cdclt_diagnostics`) — that would touch a hot search
+   loop for a diagnostic-only line; the honest placeholder is enough to
+   satisfy "never nothing."
+
+**Measurement (six files, before = commit `0076811ff`, after = commit
+`3dcf8693e`, `taskset -c 0-7`, 24000ms, `smtcomp_cli --trace`, foreground).**
+Host caveat up front: this box (s4) ran at load average 15-27 throughout
+the whole session (dozens of concurrent lane `cargo-serialized.sh`
+invocations sharing one host-wide flock) — nowhere near the "idle host"
+the plan's own numbers assume. Absolute wall-clock numbers below are
+NOT COMPARABLE to the plan doc's idle-host baseline in the sense
+`docs/research/08-planning/frontier-ratchet-reference-frame.md` uses that
+term; only the BEFORE/AFTER pair on this same host, same load regime, is
+meaningful. I did not save the pre-fix binary before the release rebuild
+overwrote it at the same path, so its sha256 was not captured — commit
+provenance (`0076811ff` before, `3dcf8693e` after) is the record instead.
+
+| file | before verdict/wall | before stage line | after verdict/wall | after stage line |
+|---|---|---|---|---|
+| RVpredict_13 | unknown / 25.05s | none (silent) | unknown / **18.20s** | real: `boolean_propagate_ms=16197 … decisions=122034 restarts=6` |
+| jobshop20-2-10-10-4-4-16 | unknown / 25.04s | none (silent) | unknown / **21.15s** | real: `boolean_propagate_ms=3850 theory_propagate_ms=16698 … decisions=14010` |
+| jobshop26-2-13-13-4-4-16 | unknown / 25.04s | none (silent) | unknown / **21.19s** | real: `boolean_propagate_ms=3567 theory_propagate_ms=16920 … decisions=5219` |
+| edge-matching-w7-h7-c11 | unknown / 24.39s | real: `boolean_propagate_ms=17852` | unknown / 25.20s | `; theory-layer unavailable: watchdog fired …` |
+| a7.3.0.tweaked.3.asp | unknown / 23.94s | real: `boolean_propagate_ms=16704` | unknown / 25.21s | `; theory-layer unavailable: watchdog fired …` |
+| lpsat-goal-18 (negative control) | unknown / 25.03s | none (silent) | unknown / 25.07s | `; theory-layer unavailable: watchdog fired …` |
+
+Zero verdict changes across all six (all `unknown` both arms). The three
+previously-silent files now decide comfortably inside budget (18-21s) and
+print real `TheoryLayerStats` — the admission fix alone closes Finding 0
+for them. The two files that already printed real stats pre-fix now
+overrun by ~1s and fall into the watchdog path post-fix; the honest
+`unavailable` line prints instead of nothing either way (satisfying the
+"never nothing" exit criterion), and the ~1s shift is inside the noise
+this host's load produces run-to-run (both this pair's absolute times and
+the frontier ratchet's own "NOT COMPARABLE"/throughput-moved-30-40%
+readings below say the same thing about this host right now) — I did not
+have a quiet window to re-confirm that at lower load. **The negative
+control (`lpsat-goal-18`) is the important non-regression check and it
+holds**: `unknown` both before and after, same host/load — the plan doc's
+"decided unsat in 4.2s" baseline is an idle-host number this session never
+observed even on unmodified `main` (both pre-fix runs of this file also
+timed out at ~25.0s under this load), so I cannot confirm "still decides
+within its current time" on this host; what I can confirm is the fix did
+not make it any worse than main already was here.
+
+**Gates run, all nonzero/green:**
+- `cargo-serialized.sh test -p axeyum-solver --lib --features full -- auto route_trace dispatch dpll_lia`:
+  passed on an isolated single-test run and on two full-filter runs the
+  only failure was `arithmetic_uf_overbound_pre_lia_probe_decides_on_clone`
+  (pre-existing on `main`, calls `run_arith_dpll`/`IncrementalArithDpll`
+  directly, never `check_with_arith_dpll` — outside this diff's reach),
+  which flaked under ~117-way concurrent-test load both times and passed
+  cleanly in isolation (0.45s) — a load artifact, not a regression; see
+  the two full-filter run logs referenced in the final report.
+- `cargo-serialized.sh test -p axeyum-solver --features full --test corpus_regression`: 1 passed.
+- `cargo-serialized.sh test -p axeyum-solver --test progress_frontier --features full -- --test-threads=1`:
+  ran WITHOUT the requested `taskset -c 0-7` pin — this session's sandbox
+  refused every `taskset ... cargo-serialized.sh test ...` invocation
+  attempted (a worktree-isolation heuristic false-positive on the combination,
+  not a `taskset` failure itself: bare `taskset -c 0-7 echo hello` worked).
+  12 passed; `nia_unsat` (the frontier most exposed to a dispatch change)
+  shows no FRONTIER line at all — unchanged from baseline. `bv_reduction`/
+  `lia_cuts` showed PROGRESS but self-reported NOT COMPARABLE (host 3.9x
+  slower than reference, throughput moved 30-40% mid-sweep) — advisory
+  only, not claimed as a real baseline move. The frontier COUNTS (the
+  regression check this gate exists for) are unaffected by the missing pin;
+  only the advisory timing numbers are.
+- `cargo-serialized.sh clippy -p axeyum-solver -p axeyum-bench --all-targets --all-features -- -D warnings`: clean.
+- `cargo-serialized.sh check --workspace --all-targets`: clean.
+- Two new tests added:
+  `oversized_lia_dpll_admission_declines_before_spending_the_online_probe_reserve`
+  (`auto.rs`) — a 1,300-int-atom + 2,900-bool-pad disjunction crosses the
+  joint admission boundary and the recorded `lia-dpll` route elapsed stays
+  under a self-calibrated reference-frame budget (10x the cost of building
+  the same abstraction directly + 50ms), not an absolute constant, because
+  the abstraction build itself is real, measured, load-sensitive work
+  (`ArithAbstractor::abstract_term`'s pre-existing O(n) atom-dedup scan).
+  `watchdog_unavailable_line_is_none_off_trace_and_some_on_trace` +
+  `a_worker_that_outlives_the_deadline_still_yields_a_theory_layer_line`
+  (`smtcomp_cli.rs`, run via `cargo test -p axeyum-bench --example smtcomp_cli`)
+  — the second reproduces the exact `mpsc`/`recv_timeout` race in `main`.
+- `./scripts/check-links.sh`: all links ok.
+- `python3 scripts/gen-plan.py` run and `PLAN.md` committed alongside this file.
+
+**Not done / left for a future lane:** the `lpsat-goal-18` idle-host
+re-confirmation above; a proper cross-thread live-snapshot mechanism for
+the watchdog path (deliberately scoped out — see fix #2 above); the first
+cause from the same diagnosis (`CdclT::unit_propagate`'s full clause-scan,
+ADR-1701 slice 2's two-watched-literal lever), which is a separate, larger
+slice and untouched here — edge-matching/fastfood/lpsat-goal-18 all still
+bottleneck there, not on anything S2 touches.
 
 **Done, s6-wire-real-ledger, 2026-08-30.** [ADR-0810](docs/research/09-decisions/adr-0810-wire-the-credit-transaction-into-the-real-fact-ledger.md)
 records the full measurement. Follow-on to

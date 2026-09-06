@@ -1,0 +1,56 @@
+{
+  "schema_version": 1,
+  "id": "F:rat-expectation-sq-sumvars-mul-sq",
+  "title": "The one cross term the fourth power of a sum does not kill",
+  "statement": "Let Y be a family of rational-valued random variables on a finite index range [0, n) with weights p, and let z be any further rational-valued variable on the same range. If for every pair of distinct indices i, i' below m the mixed expectation E[Y_i Y_i' z^2] vanishes, then the expectation of the square of the pointwise sum of the first m, times z^2, is the sum over i < m of E[Y_i^2 z^2]. The off-diagonal pairs die and the diagonal survives; that surviving diagonal is the only term the multinomial expansion of a fourth power does not kill under four-wise uncorrelatedness. The pairing hypothesis is spelled out rather than packaged as Rat.FourwiseUncorrelated because the induction runs over m while z is a variable OUTSIDE that range -- in the intended use it is Y_m itself -- so the hypothesis must be uniform in m, and this one is.",
+  "formal": {
+    "language": "lean4-surface",
+    "statement": "theorem Rat.expectation_sq_sumVars_mul_sq : ((x0 : ((x0 : AxNat) -> ((x1 : AxNat) -> Rat))) -> ((x1 : ((x1 : AxNat) -> Rat)) -> ((x2 : ((x2 : AxNat) -> Rat)) -> ((x3 : AxNat) -> ((x4 : AxNat) -> ((x5 : ((x5 : AxNat) -> ((x6 : AxNat) -> ((x7 : AxNat.lt x5 x4) -> ((x8 : AxNat.lt x6 x4) -> ((x9 : Not (Eq.{1} AxNat x5 x6)) -> Eq.{1} Rat (Rat.expectation (fun (x10 : AxNat) => Rat.mul (x0 x5 x10) (Rat.mul (x0 x6 x10) (Rat.mul (x1 x10) (x1 x10)))) x2 x3) Rat.zero)))))) -> Eq.{1} Rat (Rat.expectation (fun (x6 : AxNat) => Rat.mul (Rat.mul (Rat.sumVars x0 x4 x6) (Rat.sumVars x0 x4 x6)) (Rat.mul (x1 x6) (x1 x6))) x2 x3) (Rat.sumRange (fun (x6 : AxNat) => Rat.expectation (fun (x7 : AxNat) => Rat.mul (Rat.mul (x0 x6 x7) (x0 x6 x7)) (Rat.mul (x1 x7) (x1 x7))) x2 x3) x4)))))))",
+    "fragment": "Prop",
+    "kernel_theorem": "Rat.expectation_sq_sumVars_mul_sq"
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:rat-expectation-add",
+    "F:rat-expectation-sumvars",
+    "F:nat-lt-irrefl",
+    "F:nat-lt-of-lt-of-le",
+    "F:nat-lt-succ-self",
+    "F:rat-add-assoc",
+    "F:rat-left-distrib",
+    "F:rat-mul-assoc",
+    "F:rat-mul-comm",
+    "F:rat-mul-zero",
+    "F:rat-right-distrib",
+    "F:rat-sumrange-congr",
+    "F:rat-sumrange-eq-zero-of-lt",
+    "F:rat-sumrange-succ",
+    "F:rat-sumrange-zero",
+    "F:rat-zero-add"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-axiom-free",
+      "kind": "kernel-term",
+      "supports": "The declaration is admitted by the trusted kernel gate with an empty Kernel::axiom_footprint, together with every other ADR-1653 declaration. The test asserts Environment::contains FIRST, because an absent name has an empty footprint too. ",
+      "check_status": "checked",
+      "checkers": [
+        "producing-build (Kernel::add_declaration)",
+        "fourth_moment_declarations_are_axiom_free",
+        "every_rat_declaration_is_checked_and_axiom_free"
+      ],
+      "checker_command": "cargo test --release -p axeyum-lean-kernel --lib rat_prelude::fourth_moment::fourth_moment_tests::fourth_moment_declarations_are_axiom_free -- --exact 2>&1 | grep -c '^test result: ok. 1 passed'",
+      "checker_seconds": 120,
+      "kernel_declaration": "Rat.expectation_sq_sumVars_mul_sq",
+      "notes": "grep -c, not grep -q: -q would SIGPIPE the producer under pipefail, and -c exits 1 printing 0 when the line is absent, so a suite that compiled to zero tests and exited 0 is caught rather than counted as a pass. --release is mandatory: the rational prelude SIGABRTs on the default debug thread stack."
+    }
+  ],
+  "provenance": {
+    "date": "2026-09-06",
+    "established_by": "lane fourth-moment (roadmap W3-12, ADR-1653)"
+  },
+  "notes": "Proved by its own induction rather than by two applications of the sumVars-peeling lemma plus a delta collapse. Rat.sumRange_delta is unusable here: its hypothesis is UNRESTRICTED (for all t, t != i implies f t = 0) while four-wise uncorrelatedness supplies zeros only below the bound. The successor step instead splits the square by a ring identity and kills the middle term with Rat.expectation_sumVars_mul_eq_zero, so the diagonal is never separated from a rectangle at all. A bounded sumRange_delta_lt would be a genuine addition to rat_prelude/sum.rs; it was not needed once this induction existed, and that is a note rather than a claim."
+}

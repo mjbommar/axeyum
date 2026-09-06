@@ -8955,6 +8955,146 @@ mod tests {
         );
     }
 
+    /// S2 dispatch-overrun fix regression
+    /// (`docs/plan/smt-parity-plan-2026-09-05.md` row S2,
+    /// `crate::dpll_lia::arith_dpll_admission_preflight`). Before the fix,
+    /// `lia-dpll` always spent `online_lia_probe_config`'s share of the
+    /// caller's reserve (a fixed fraction of the timeout, ~8 s on the
+    /// standard 24 s budget) on the online CDCL(T) probe BEFORE checking
+    /// whether the query's own Boolean-arithmetic skeleton already exceeds
+    /// the joint size admission boundary
+    /// (`dpll_lia::exceeds_pre_sat_skeleton_boundary`) — a constant the
+    /// abstraction's own atom/CNF-variable counts already answer. This builds
+    /// a disjunction that crosses BOTH dimensions of that boundary at once
+    /// (1,300 distinct integer atoms past the 1,280-atom moderate envelope,
+    /// padded with 2,900 plain Boolean disjuncts so the combined ~4,200-term
+    /// skeleton is also past the 4,096-CNF-var base trigger — see the
+    /// construction comment below for why the two counts come from
+    /// different term kinds) combined disjunctively so `lia-simplex` above
+    /// it declines as `Unsupported` rather than deciding the conjunctive
+    /// system directly, and asserts the decline stays far below the reserve
+    /// it used to spend unconditionally.
+    #[test]
+    fn oversized_lia_dpll_admission_declines_before_spending_the_online_probe_reserve() {
+        // Two SEPARATE dimensions, deliberately kept SMALL on the expensive one:
+        // `ArithAbstractor::abstract_term` dedups each new theory atom against
+        // every prior one with a linear scan (`dpll_lia.rs`'s
+        // `self.atoms.iter().any(...)`, pre-existing, not part of this fix), so
+        // N distinct arithmetic atoms cost O(N²) to build. `INT_ATOMS` alone
+        // already exceeds `MAX_MODERATE_PRE_SAT_ARITH_ATOMS` (1,280), so the
+        // O(N²) dedup only ever runs over ~1,300 atoms (~1.7M comparisons, not
+        // 9,000² = 81M). `BOOL_PAD` inflates the CNF-variable count past
+        // `MAX_MODERATE_PRE_SAT_CNF_VARS` (8,192) via plain Boolean skeleton
+        // variables instead, which carry none of that dedup cost (see the
+        // 20,000-variable `abstractor_scales_linearly_on_a_wide_boolean_disjunction`
+        // test above).
+        const INT_ATOMS: usize = 1_300;
+        const BOOL_PAD: usize = 2_900;
+        let mut arena = TermArena::new();
+        let zero = arena.int_const(0);
+        let mut atoms = Vec::with_capacity(INT_ATOMS + BOOL_PAD);
+        for index in 0..INT_ATOMS {
+            let var = arena
+                .int_var(&format!("wide_int_{index}"))
+                .expect("fresh int var");
+            atoms.push(arena.int_le(var, zero).expect("atom"));
+        }
+        for index in 0..BOOL_PAD {
+            let symbol = arena
+                .declare(&format!("wide_bool_{index}"), Sort::Bool)
+                .expect("fresh Boolean symbol");
+            atoms.push(arena.var(symbol));
+        }
+        let mut disjunction = atoms[0];
+        for &atom in &atoms[1..] {
+            disjunction = arena.or(disjunction, atom).expect("disjunction");
+        }
+        let assertions = [disjunction];
+
+        let features = Features::scan_within(&arena, &assertions, None).expect("scan");
+
+        // Reference-frame calibration (this codebase's own convention for a
+        // wall-clock assertion that must survive a loaded, shared host — see
+        // `docs/research/08-planning/frontier-ratchet-reference-frame.md`):
+        // time the SAME abstraction build the preflight (and, on the
+        // admissible path, `run_arith_dpll`) does directly, on a scratch
+        // clone, right before the timed call below. Both measurements pay
+        // whatever the host's current contention costs, so their RATIO stays
+        // meaningful even when the absolute numbers are inflated by a busy
+        // box or a debug build's unoptimized `O(n)`-per-atom dedup scan
+        // (`ArithAbstractor::abstract_term`, pre-existing, not part of this
+        // fix).
+        let calibration_started = Instant::now();
+        let mut calibration_arena = arena.clone();
+        let _calibration =
+            crate::dpll_lia::IncrementalArithDpll::new(&mut calibration_arena, &assertions)
+                .expect("calibration build");
+        let calibration_elapsed = calibration_started.elapsed();
+
+        let mut trace = RouteTrace::new();
+        let mut rec = Some(&mut trace);
+        let config = SolverConfig {
+            timeout: Some(Duration::from_secs(24)),
+            ..SolverConfig::default()
+        };
+        let result =
+            dispatch_int_linear_refuters(&mut arena, &assertions, &config, &features, &mut rec)
+                .expect("dispatch")
+                .expect(
+                    "lia-dpll decides Unknown (an admission decline is still a decision \
+                         `dispatch_int_linear_refuters` returns as `Some`, not a fallthrough \
+                         `None` — only an `Unsupported` error falls through)",
+                );
+        let CheckResult::Unknown(reason) = result else {
+            panic!("expected an Unknown admission decline, got {result:?}");
+        };
+        assert_eq!(reason.kind, UnknownKind::ResourceLimit);
+        assert!(
+            reason
+                .detail
+                .contains("pre-SAT skeleton exceeds the joint resource boundary"),
+            "got: {}",
+            reason.detail
+        );
+        let trace_text = trace.to_string();
+        assert!(
+            trace_text.contains("lia-dpll: declined"),
+            "expected a recorded lia-dpll decline, got:\n{trace_text}"
+        );
+        assert!(
+            trace_text.contains("pre-SAT skeleton exceeds the joint resource boundary"),
+            "expected the size-admission message (not a budget/timeout message), got:\n{trace_text}"
+        );
+
+        let attempts = trace.attempts();
+        let idx = attempts
+            .iter()
+            .position(|a| a.route == "lia-dpll")
+            .expect("lia-dpll attempt recorded");
+        let elapsed = trace.elapsed()[idx];
+        // Bound the RATIO to the calibration, not an absolute constant: the
+        // whole dispatch (bv2nat-range probe, Diophantine, `lia-simplex`'s
+        // decline, and lia-dpll's preflight) should cost a small multiple of
+        // ONE abstraction build, because that preflight build is the only
+        // expensive step this path takes — it must NOT also pay for a real
+        // online CDCL(T) probe (`check_qf_lia_online_cdclt`), which is what
+        // the pre-fix code always did first (a FIXED ~8s on the standard
+        // 24s budget, `online_lia_probe_config`, measured on the real corpus
+        // files:
+        // `docs/research/11-design-review/2026-09-05-arith-timeout-profiles.md`).
+        // A flat +50ms floor keeps this from being flaky when both
+        // measurements round to sub-millisecond on a fast, idle host.
+        let budget = calibration_elapsed
+            .saturating_mul(10)
+            .saturating_add(Duration::from_millis(50));
+        assert!(
+            elapsed < budget,
+            "lia-dpll's size-admission decline must cost close to ONE abstraction build \
+             ({calibration_elapsed:?}), not also spend the online probe's reserve on an \
+             already-inadmissible query; got {elapsed:?} against a budget of {budget:?}"
+        );
+    }
+
     #[test]
     fn arithmetic_uf_overbound_pre_lia_probe_decides_on_clone() {
         let mut arena = TermArena::new();
