@@ -208,7 +208,7 @@ fn progress_report_line(snapshot: &axeyum_cnf::ProofSearchProgress) -> String {
 /// never match `^(sat|unsat)$` / `^unknown$` — same convention as
 /// [`progress_report_line`] / [`evidence_report_line`].
 fn theory_layer_report_line(
-    stats: axeyum_solver::theories::cdclt_diagnostics::TheoryLayerStats,
+    &stats: &axeyum_solver::theories::cdclt_diagnostics::TheoryLayerStats,
 ) -> String {
     /// `n/a` for a counter the driving theory does not keep, so an absent
     /// counter never reads as a measured zero.
@@ -688,6 +688,7 @@ fn main() -> ExitCode {
         let trace_line = trace_mode
             .then(last_theory_layer_stats)
             .flatten()
+            .as_ref()
             .map(theory_layer_report_line);
         (verdict, None, trace_line)
     };
