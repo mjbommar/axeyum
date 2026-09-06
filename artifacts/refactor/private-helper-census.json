@@ -14,18 +14,18 @@
     ]
   },
   "population": {
-    "files_scanned": 693,
-    "private_fns": 14188,
-    "private_fns_outside_tests": 11516,
-    "distinct_names": 10994,
-    "distinct_body_digests": 12528,
-    "duplicated_name_groups": 1170,
-    "duplicated_body_groups": 605,
-    "sites_in_duplicated_body_groups": 2265,
-    "inline_step_fns": 9347,
-    "inline_step_name_groups": 796,
-    "inline_step_body_groups": 395,
-    "sites_in_inline_step_body_groups": 1352
+    "files_scanned": 694,
+    "private_fns": 14251,
+    "private_fns_outside_tests": 11570,
+    "distinct_names": 11017,
+    "distinct_body_digests": 12586,
+    "duplicated_name_groups": 1195,
+    "duplicated_body_groups": 609,
+    "sites_in_duplicated_body_groups": 2274,
+    "inline_step_fns": 9401,
+    "inline_step_name_groups": 822,
+    "inline_step_body_groups": 399,
+    "sites_in_inline_step_body_groups": 1361
   },
   "by_name": [
     {
@@ -376,6 +376,54 @@
       ]
     },
     {
+      "key": "intern",
+      "count": 34,
+      "names": [
+        "intern"
+      ],
+      "files": 34,
+      "carriers": [],
+      "body_lines": 9,
+      "signature": "fn intern(kernel: &mut Kernel, creal: NameId) -> Self",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/creal/completeness.rs:568",
+        "crates/axeyum-lean-kernel/src/creal/cos_sign.rs:1995",
+        "crates/axeyum-lean-kernel/src/creal/crossing.rs:2305",
+        "crates/axeyum-lean-kernel/src/creal/deriv_unique.rs:2051",
+        "crates/axeyum-lean-kernel/src/creal/evt_row1.rs:420",
+        "crates/axeyum-lean-kernel/src/creal/exp_fn.rs:902",
+        "crates/axeyum-lean-kernel/src/creal/extreme_value.rs:771",
+        "crates/axeyum-lean-kernel/src/creal/inverse_fn.rs:655",
+        "crates/axeyum-lean-kernel/src/creal/ivt_boundary.rs:331",
+        "crates/axeyum-lean-kernel/src/creal/lub_boundary.rs:562",
+        "crates/axeyum-lean-kernel/src/creal/mvt.rs:964",
+        "crates/axeyum-lean-kernel/src/creal/omniscience.rs:146",
+        "crates/axeyum-lean-kernel/src/creal/pi.rs:1474",
+        "crates/axeyum-lean-kernel/src/creal/polynomial.rs:863",
+        "crates/axeyum-lean-kernel/src/creal/power_series.rs:960",
+        "crates/axeyum-lean-kernel/src/creal/ratio_test.rs:428",
+        "crates/axeyum-lean-kernel/src/creal_point/conic.rs:255",
+        "crates/axeyum-lean-kernel/src/geo.rs:716",
+        "crates/axeyum-lean-kernel/src/geo/qplane.rs:227",
+        "crates/axeyum-lean-kernel/src/geo/rplane.rs:284",
+        "crates/axeyum-lean-kernel/src/intspace.rs:740",
+        "crates/axeyum-lean-kernel/src/intspace/bundled.rs:128",
+        "crates/axeyum-lean-kernel/src/intspace/l1.rs:221",
+        "crates/axeyum-lean-kernel/src/metric.rs:554",
+        "crates/axeyum-lean-kernel/src/metric/compactness.rs:273",
+        "crates/axeyum-lean-kernel/src/metric/continuity.rs:193",
+        "crates/axeyum-lean-kernel/src/metric/interval.rs:180",
+        "crates/axeyum-lean-kernel/src/metric/subspace.rs:114",
+        "crates/axeyum-lean-kernel/src/metric_prod.rs:220",
+        "crates/axeyum-lean-kernel/src/nat_prelude/omniscience.rs:178",
+        "crates/axeyum-lean-kernel/src/rat_prelude/field_setoid_instance.rs:69",
+        "crates/axeyum-lean-kernel/src/rat_prelude/vector_space_instance.rs:95",
+        "crates/axeyum-lean-kernel/src/rn.rs:321",
+        "crates/axeyum-lean-kernel/src/top_frame.rs:655"
+      ]
+    },
+    {
       "key": "built",
       "count": 33,
       "names": [
@@ -420,53 +468,6 @@
         "crates/axeyum-lean-kernel/src/rn/rn_tests.rs:29",
         "crates/axeyum-lean-kernel/src/sigma_prelude/sigma_prelude_tests.rs:26",
         "crates/axeyum-lean-kernel/src/top_frame/top_frame_tests.rs:25"
-      ]
-    },
-    {
-      "key": "intern",
-      "count": 33,
-      "names": [
-        "intern"
-      ],
-      "files": 33,
-      "carriers": [],
-      "body_lines": 9,
-      "signature": "fn intern(kernel: &mut Kernel, creal: NameId) -> Self",
-      "test_file_members": 0,
-      "sites": [
-        "crates/axeyum-lean-kernel/src/creal/completeness.rs:568",
-        "crates/axeyum-lean-kernel/src/creal/cos_sign.rs:1995",
-        "crates/axeyum-lean-kernel/src/creal/crossing.rs:2305",
-        "crates/axeyum-lean-kernel/src/creal/deriv_unique.rs:2051",
-        "crates/axeyum-lean-kernel/src/creal/evt_row1.rs:420",
-        "crates/axeyum-lean-kernel/src/creal/exp_fn.rs:902",
-        "crates/axeyum-lean-kernel/src/creal/extreme_value.rs:771",
-        "crates/axeyum-lean-kernel/src/creal/inverse_fn.rs:655",
-        "crates/axeyum-lean-kernel/src/creal/ivt_boundary.rs:331",
-        "crates/axeyum-lean-kernel/src/creal/lub_boundary.rs:562",
-        "crates/axeyum-lean-kernel/src/creal/mvt.rs:964",
-        "crates/axeyum-lean-kernel/src/creal/omniscience.rs:146",
-        "crates/axeyum-lean-kernel/src/creal/pi.rs:1474",
-        "crates/axeyum-lean-kernel/src/creal/polynomial.rs:863",
-        "crates/axeyum-lean-kernel/src/creal/power_series.rs:960",
-        "crates/axeyum-lean-kernel/src/creal/ratio_test.rs:428",
-        "crates/axeyum-lean-kernel/src/creal_point/conic.rs:255",
-        "crates/axeyum-lean-kernel/src/geo.rs:681",
-        "crates/axeyum-lean-kernel/src/geo/qplane.rs:227",
-        "crates/axeyum-lean-kernel/src/intspace.rs:740",
-        "crates/axeyum-lean-kernel/src/intspace/bundled.rs:128",
-        "crates/axeyum-lean-kernel/src/intspace/l1.rs:221",
-        "crates/axeyum-lean-kernel/src/metric.rs:554",
-        "crates/axeyum-lean-kernel/src/metric/compactness.rs:273",
-        "crates/axeyum-lean-kernel/src/metric/continuity.rs:193",
-        "crates/axeyum-lean-kernel/src/metric/interval.rs:180",
-        "crates/axeyum-lean-kernel/src/metric/subspace.rs:114",
-        "crates/axeyum-lean-kernel/src/metric_prod.rs:220",
-        "crates/axeyum-lean-kernel/src/nat_prelude/omniscience.rs:178",
-        "crates/axeyum-lean-kernel/src/rat_prelude/field_setoid_instance.rs:69",
-        "crates/axeyum-lean-kernel/src/rat_prelude/vector_space_instance.rs:95",
-        "crates/axeyum-lean-kernel/src/rn.rs:321",
-        "crates/axeyum-lean-kernel/src/top_frame.rs:655"
       ]
     },
     {
@@ -852,6 +853,42 @@
       ]
     },
     {
+      "key": "and_intro",
+      "count": 19,
+      "names": [
+        "and_intro"
+      ],
+      "files": 19,
+      "carriers": [
+        "IntDev",
+        "NatDev"
+      ],
+      "body_lines": 4,
+      "signature": "fn and_intro( &mut self, p: ExprId, q: ExprId, proof_p: ExprId, proof_q: ExprId, ) -> ExprId",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/characterization/ops.rs:222",
+        "crates/axeyum-lean-kernel/src/complex.rs:3985",
+        "crates/axeyum-lean-kernel/src/creal.rs:8243",
+        "crates/axeyum-lean-kernel/src/creal/alternating.rs:109",
+        "crates/axeyum-lean-kernel/src/creal_point.rs:1869",
+        "crates/axeyum-lean-kernel/src/fo_soundness.rs:247",
+        "crates/axeyum-lean-kernel/src/geo/qplane.rs:363",
+        "crates/axeyum-lean-kernel/src/geo/rplane.rs:442",
+        "crates/axeyum-lean-kernel/src/int_prelude/mult_order.rs:141",
+        "crates/axeyum-lean-kernel/src/int_prelude/order_squares.rs:70",
+        "crates/axeyum-lean-kernel/src/int_prelude/sign_product.rs:49",
+        "crates/axeyum-lean-kernel/src/metric/continuity.rs:310",
+        "crates/axeyum-lean-kernel/src/nat_prelude/count_range_bij.rs:173",
+        "crates/axeyum-lean-kernel/src/nat_prelude/land_low_bit.rs:56",
+        "crates/axeyum-lean-kernel/src/rat_prelude/probability.rs:895",
+        "crates/axeyum-lean-kernel/src/rat_prelude/rank_bridge.rs:471",
+        "crates/axeyum-lean-kernel/src/string_prelude/all.rs:267",
+        "crates/axeyum-lean-kernel/src/string_prelude/all_bool.rs:226",
+        "crates/axeyum-lean-kernel/src/top_frame.rs:871"
+      ]
+    },
+    {
       "key": "fresh",
       "count": 19,
       "names": [
@@ -955,38 +992,37 @@
       ]
     },
     {
-      "key": "and_intro",
+      "key": "declare_all",
       "count": 18,
       "names": [
-        "and_intro"
+        "declare_all"
       ],
       "files": 18,
       "carriers": [
-        "IntDev",
-        "NatDev"
+        "IntDev"
       ],
-      "body_lines": 4,
-      "signature": "fn and_intro( &mut self, p: ExprId, q: ExprId, proof_p: ExprId, proof_q: ExprId, ) -> ExprId",
+      "body_lines": 22,
+      "signature": "fn declare_all(kernel: &mut Kernel, p: GeoPrelude) -> Result<(), KernelError>",
       "test_file_members": 0,
       "sites": [
-        "crates/axeyum-lean-kernel/src/characterization/ops.rs:222",
-        "crates/axeyum-lean-kernel/src/complex.rs:3985",
-        "crates/axeyum-lean-kernel/src/creal.rs:8243",
-        "crates/axeyum-lean-kernel/src/creal/alternating.rs:109",
-        "crates/axeyum-lean-kernel/src/creal_point.rs:1869",
-        "crates/axeyum-lean-kernel/src/fo_soundness.rs:247",
-        "crates/axeyum-lean-kernel/src/geo/qplane.rs:363",
-        "crates/axeyum-lean-kernel/src/int_prelude/mult_order.rs:141",
-        "crates/axeyum-lean-kernel/src/int_prelude/order_squares.rs:70",
-        "crates/axeyum-lean-kernel/src/int_prelude/sign_product.rs:49",
-        "crates/axeyum-lean-kernel/src/metric/continuity.rs:310",
-        "crates/axeyum-lean-kernel/src/nat_prelude/count_range_bij.rs:173",
-        "crates/axeyum-lean-kernel/src/nat_prelude/land_low_bit.rs:56",
-        "crates/axeyum-lean-kernel/src/rat_prelude/probability.rs:895",
-        "crates/axeyum-lean-kernel/src/rat_prelude/rank_bridge.rs:471",
-        "crates/axeyum-lean-kernel/src/string_prelude/all.rs:267",
-        "crates/axeyum-lean-kernel/src/string_prelude/all_bool.rs:226",
-        "crates/axeyum-lean-kernel/src/top_frame.rs:871"
+        "crates/axeyum-lean-kernel/src/geo/qplane.rs:523",
+        "crates/axeyum-lean-kernel/src/geo/rplane.rs:595",
+        "crates/axeyum-lean-kernel/src/int_prelude/dvd_gcd_mirrors.rs:874",
+        "crates/axeyum-lean-kernel/src/int_prelude/gcd_scaled_mirrors.rs:272",
+        "crates/axeyum-lean-kernel/src/int_prelude/modeq_cancel_div_gcd.rs:359",
+        "crates/axeyum-lean-kernel/src/int_prelude/mult_order.rs:1677",
+        "crates/axeyum-lean-kernel/src/intspace/bundled.rs:391",
+        "crates/axeyum-lean-kernel/src/intspace/convergence.rs:53",
+        "crates/axeyum-lean-kernel/src/intspace/detachable.rs:59",
+        "crates/axeyum-lean-kernel/src/intspace/generic.rs:33",
+        "crates/axeyum-lean-kernel/src/intspace/instances.rs:38",
+        "crates/axeyum-lean-kernel/src/intspace/l1.rs:1917",
+        "crates/axeyum-lean-kernel/src/intspace/measure.rs:47",
+        "crates/axeyum-lean-kernel/src/intspace/probability_bridge.rs:44",
+        "crates/axeyum-lean-kernel/src/metric/compactness.rs:303",
+        "crates/axeyum-lean-kernel/src/metric/continuity.rs:220",
+        "crates/axeyum-lean-kernel/src/metric/interval.rs:202",
+        "crates/axeyum-lean-kernel/src/metric/subspace.rs:488"
       ]
     },
     {
@@ -1053,39 +1089,6 @@
         "crates/axeyum-lean-kernel/src/tactic/int/tests.rs:58",
         "crates/axeyum-lean-kernel/src/tactic/rat/tests.rs:84",
         "crates/axeyum-lean-kernel/src/tactic/tests.rs:63"
-      ]
-    },
-    {
-      "key": "declare_all",
-      "count": 17,
-      "names": [
-        "declare_all"
-      ],
-      "files": 17,
-      "carriers": [
-        "IntDev"
-      ],
-      "body_lines": 22,
-      "signature": "fn declare_all(kernel: &mut Kernel, p: GeoPrelude) -> Result<(), KernelError>",
-      "test_file_members": 0,
-      "sites": [
-        "crates/axeyum-lean-kernel/src/geo/qplane.rs:523",
-        "crates/axeyum-lean-kernel/src/int_prelude/dvd_gcd_mirrors.rs:874",
-        "crates/axeyum-lean-kernel/src/int_prelude/gcd_scaled_mirrors.rs:272",
-        "crates/axeyum-lean-kernel/src/int_prelude/modeq_cancel_div_gcd.rs:359",
-        "crates/axeyum-lean-kernel/src/int_prelude/mult_order.rs:1677",
-        "crates/axeyum-lean-kernel/src/intspace/bundled.rs:391",
-        "crates/axeyum-lean-kernel/src/intspace/convergence.rs:53",
-        "crates/axeyum-lean-kernel/src/intspace/detachable.rs:59",
-        "crates/axeyum-lean-kernel/src/intspace/generic.rs:33",
-        "crates/axeyum-lean-kernel/src/intspace/instances.rs:38",
-        "crates/axeyum-lean-kernel/src/intspace/l1.rs:1917",
-        "crates/axeyum-lean-kernel/src/intspace/measure.rs:47",
-        "crates/axeyum-lean-kernel/src/intspace/probability_bridge.rs:44",
-        "crates/axeyum-lean-kernel/src/metric/compactness.rs:303",
-        "crates/axeyum-lean-kernel/src/metric/continuity.rs:220",
-        "crates/axeyum-lean-kernel/src/metric/interval.rs:202",
-        "crates/axeyum-lean-kernel/src/metric/subspace.rs:488"
       ]
     },
     {
@@ -2764,7 +2767,7 @@
       "sites": [
         "crates/axeyum-lean-kernel/src/characterization/ops.rs:234",
         "crates/axeyum-lean-kernel/src/fo_soundness.rs:260",
-        "crates/axeyum-lean-kernel/src/geo.rs:274",
+        "crates/axeyum-lean-kernel/src/geo.rs:276",
         "crates/axeyum-lean-kernel/src/int_prelude/ops.rs:391",
         "crates/axeyum-lean-kernel/src/nat_prelude/helpers.rs:93",
         "crates/axeyum-lean-kernel/src/string_prelude/all.rs:273",
@@ -2787,11 +2790,34 @@
       "sites": [
         "crates/axeyum-lean-kernel/src/characterization/ops.rs:254",
         "crates/axeyum-lean-kernel/src/fo_soundness.rs:266",
-        "crates/axeyum-lean-kernel/src/geo.rs:278",
+        "crates/axeyum-lean-kernel/src/geo.rs:280",
         "crates/axeyum-lean-kernel/src/int_prelude/ops.rs:411",
         "crates/axeyum-lean-kernel/src/nat_prelude/helpers.rs:112",
         "crates/axeyum-lean-kernel/src/string_prelude/all.rs:279",
         "crates/axeyum-lean-kernel/src/string_prelude/all_bool.rs:238"
+      ]
+    },
+    {
+      "key": "and_ty",
+      "count": 7,
+      "names": [
+        "and_ty"
+      ],
+      "files": 7,
+      "carriers": [
+        "IntDev"
+      ],
+      "body_lines": 3,
+      "signature": "fn and_ty(d: &mut IntDev<'_>, left: ExprId, right: ExprId) -> ExprId",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/creal/alternating.rs:105",
+        "crates/axeyum-lean-kernel/src/creal/integral.rs:22545",
+        "crates/axeyum-lean-kernel/src/creal/sqrt.rs:240",
+        "crates/axeyum-lean-kernel/src/geo/qplane.rs:358",
+        "crates/axeyum-lean-kernel/src/geo/rplane.rs:437",
+        "crates/axeyum-lean-kernel/src/string_prelude/all.rs:530",
+        "crates/axeyum-lean-kernel/src/string_prelude/all_bool.rs:220"
       ]
     },
     {
@@ -2929,6 +2955,29 @@
       ]
     },
     {
+      "key": "exists_intro",
+      "count": 7,
+      "names": [
+        "exists_intro"
+      ],
+      "files": 7,
+      "carriers": [
+        "IntDev"
+      ],
+      "body_lines": 6,
+      "signature": "fn exists_intro( d: &mut IntDev<'_>, p: CRealPrelude, elem_ty: ExprId, predicate: ExprId, witness: ExprId, proof: ExprId, ) -> ExprId",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/creal/convergence.rs:318",
+        "crates/axeyum-lean-kernel/src/geo/qplane.rs:384",
+        "crates/axeyum-lean-kernel/src/geo/rplane.rs:466",
+        "crates/axeyum-lean-kernel/src/metric.rs:1518",
+        "crates/axeyum-lean-kernel/src/metric/continuity.rs:274",
+        "crates/axeyum-lean-kernel/src/metric_prod.rs:331",
+        "crates/axeyum-lean-kernel/src/nat_prelude/image_group.rs:423"
+      ]
+    },
+    {
       "key": "exists_intro_nat",
       "count": 7,
       "names": [
@@ -2950,6 +2999,30 @@
         "crates/axeyum-lean-kernel/src/nat_prelude/rado.rs:249",
         "crates/axeyum-lean-kernel/src/nat_prelude/rado_tests.rs:107",
         "crates/axeyum-lean-kernel/src/nat_prelude/ramsey.rs:190"
+      ]
+    },
+    {
+      "key": "exists_ty",
+      "count": 7,
+      "names": [
+        "exists_ty"
+      ],
+      "files": 7,
+      "carriers": [
+        "IntDev",
+        "NatDev"
+      ],
+      "body_lines": 6,
+      "signature": "fn exists_ty( d: &mut IntDev<'_>, p: CRealPrelude, elem_ty: ExprId, predicate: ExprId, ) -> ExprId",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/creal/convergence.rs:299",
+        "crates/axeyum-lean-kernel/src/geo/rplane.rs:458",
+        "crates/axeyum-lean-kernel/src/intspace/convergence.rs:64",
+        "crates/axeyum-lean-kernel/src/metric.rs:1510",
+        "crates/axeyum-lean-kernel/src/metric/continuity.rs:261",
+        "crates/axeyum-lean-kernel/src/metric_prod.rs:324",
+        "crates/axeyum-lean-kernel/src/nat_prelude/injective_decide.rs:78"
       ]
     },
     {
@@ -2990,7 +3063,7 @@
       "test_file_members": 0,
       "sites": [
         "crates/axeyum-lean-kernel/src/fo_substitution.rs:285",
-        "crates/axeyum-lean-kernel/src/geo.rs:774",
+        "crates/axeyum-lean-kernel/src/geo.rs:817",
         "crates/axeyum-lean-kernel/src/intspace.rs:932",
         "crates/axeyum-lean-kernel/src/metric.rs:1386",
         "crates/axeyum-lean-kernel/src/metric/subspace.rs:179",
@@ -3298,6 +3371,29 @@
       ]
     },
     {
+      "key": "rsub",
+      "count": 7,
+      "names": [
+        "rsub"
+      ],
+      "files": 7,
+      "carriers": [
+        "IntDev"
+      ],
+      "body_lines": 3,
+      "signature": "fn rsub(a: RnExpr, b: RnExpr) -> RnExpr",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/creal_point/conic.rs:406",
+        "crates/axeyum-lean-kernel/src/creal_point/isometry.rs:109",
+        "crates/axeyum-lean-kernel/src/geo/rplane.rs:520",
+        "crates/axeyum-lean-kernel/src/metric/interval.rs:259",
+        "crates/axeyum-lean-kernel/src/rat_prelude/group.rs:43",
+        "crates/axeyum-lean-kernel/src/rat_prelude/probability_s.rs:210",
+        "crates/axeyum-lean-kernel/src/rat_prelude/taylor.rs:88"
+      ]
+    },
+    {
       "key": "union",
       "count": 7,
       "names": [
@@ -3362,28 +3458,6 @@
         "crates/axeyum-lean-kernel/src/nat_prelude/fibonacci.rs:559",
         "crates/axeyum-lean-kernel/src/nat_prelude/finite_set.rs:326",
         "crates/axeyum-lean-kernel/src/nat_prelude/subset_sum.rs:115"
-      ]
-    },
-    {
-      "key": "and_ty",
-      "count": 6,
-      "names": [
-        "and_ty"
-      ],
-      "files": 6,
-      "carriers": [
-        "IntDev"
-      ],
-      "body_lines": 3,
-      "signature": "fn and_ty(d: &mut IntDev<'_>, left: ExprId, right: ExprId) -> ExprId",
-      "test_file_members": 0,
-      "sites": [
-        "crates/axeyum-lean-kernel/src/creal/alternating.rs:105",
-        "crates/axeyum-lean-kernel/src/creal/integral.rs:22545",
-        "crates/axeyum-lean-kernel/src/creal/sqrt.rs:240",
-        "crates/axeyum-lean-kernel/src/geo/qplane.rs:358",
-        "crates/axeyum-lean-kernel/src/string_prelude/all.rs:530",
-        "crates/axeyum-lean-kernel/src/string_prelude/all_bool.rs:220"
       ]
     },
     {
@@ -3581,6 +3655,28 @@
       ]
     },
     {
+      "key": "declare_projection",
+      "count": 6,
+      "names": [
+        "declare_projection"
+      ],
+      "files": 6,
+      "carriers": [
+        "IntDev"
+      ],
+      "body_lines": 22,
+      "signature": "fn declare_projection( kernel: &mut crate::Kernel, c: &CodeNames, unpair: NameId, label: &str, left: bool, ) -> Result<NameId, KernelError>",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/fo_code.rs:492",
+        "crates/axeyum-lean-kernel/src/fo_semantics.rs:410",
+        "crates/axeyum-lean-kernel/src/geo/qplane.rs:585",
+        "crates/axeyum-lean-kernel/src/geo/rplane.rs:644",
+        "crates/axeyum-lean-kernel/src/nat_prelude/structures_setoid.rs:1241",
+        "crates/axeyum-lean-kernel/src/rat_prelude/algebra_ext.rs:84"
+      ]
+    },
+    {
       "key": "declare_sum_range_add",
       "count": 6,
       "names": [
@@ -3710,51 +3806,6 @@
       ]
     },
     {
-      "key": "exists_intro",
-      "count": 6,
-      "names": [
-        "exists_intro"
-      ],
-      "files": 6,
-      "carriers": [
-        "IntDev"
-      ],
-      "body_lines": 6,
-      "signature": "fn exists_intro( d: &mut IntDev<'_>, p: CRealPrelude, elem_ty: ExprId, predicate: ExprId, witness: ExprId, proof: ExprId, ) -> ExprId",
-      "test_file_members": 0,
-      "sites": [
-        "crates/axeyum-lean-kernel/src/creal/convergence.rs:318",
-        "crates/axeyum-lean-kernel/src/geo/qplane.rs:384",
-        "crates/axeyum-lean-kernel/src/metric.rs:1518",
-        "crates/axeyum-lean-kernel/src/metric/continuity.rs:274",
-        "crates/axeyum-lean-kernel/src/metric_prod.rs:331",
-        "crates/axeyum-lean-kernel/src/nat_prelude/image_group.rs:423"
-      ]
-    },
-    {
-      "key": "exists_ty",
-      "count": 6,
-      "names": [
-        "exists_ty"
-      ],
-      "files": 6,
-      "carriers": [
-        "IntDev",
-        "NatDev"
-      ],
-      "body_lines": 6,
-      "signature": "fn exists_ty( d: &mut IntDev<'_>, p: CRealPrelude, elem_ty: ExprId, predicate: ExprId, ) -> ExprId",
-      "test_file_members": 0,
-      "sites": [
-        "crates/axeyum-lean-kernel/src/creal/convergence.rs:299",
-        "crates/axeyum-lean-kernel/src/intspace/convergence.rs:64",
-        "crates/axeyum-lean-kernel/src/metric.rs:1510",
-        "crates/axeyum-lean-kernel/src/metric/continuity.rs:261",
-        "crates/axeyum-lean-kernel/src/metric_prod.rs:324",
-        "crates/axeyum-lean-kernel/src/nat_prelude/injective_decide.rs:78"
-      ]
-    },
-    {
       "key": "family_ty",
       "count": 6,
       "names": [
@@ -3881,28 +3932,6 @@
         "crates/axeyum-lean-kernel/src/nat_prelude/rado.rs:170",
         "crates/axeyum-lean-kernel/src/nat_prelude/ramsey.rs:177",
         "crates/axeyum-lean-kernel/src/prelude.rs:443"
-      ]
-    },
-    {
-      "key": "rsub",
-      "count": 6,
-      "names": [
-        "rsub"
-      ],
-      "files": 6,
-      "carriers": [
-        "IntDev"
-      ],
-      "body_lines": 3,
-      "signature": "fn rsub(a: RnExpr, b: RnExpr) -> RnExpr",
-      "test_file_members": 0,
-      "sites": [
-        "crates/axeyum-lean-kernel/src/creal_point/conic.rs:406",
-        "crates/axeyum-lean-kernel/src/creal_point/isometry.rs:109",
-        "crates/axeyum-lean-kernel/src/metric/interval.rs:259",
-        "crates/axeyum-lean-kernel/src/rat_prelude/group.rs:43",
-        "crates/axeyum-lean-kernel/src/rat_prelude/probability_s.rs:210",
-        "crates/axeyum-lean-kernel/src/rat_prelude/taylor.rs:88"
       ]
     },
     {
@@ -4153,7 +4182,7 @@
       ],
       "files": 5,
       "carriers": [],
-      "body_lines": 64,
+      "body_lines": 112,
       "signature": "fn all_declarations(p: GeoPrelude) -> Vec<crate::name::NameId>",
       "test_file_members": 5,
       "sites": [
@@ -4294,7 +4323,7 @@
       "signature": "fn carrier_field(suffix: &'static str) -> FieldSpec",
       "test_file_members": 0,
       "sites": [
-        "crates/axeyum-lean-kernel/src/geo.rs:316",
+        "crates/axeyum-lean-kernel/src/geo.rs:318",
         "crates/axeyum-lean-kernel/src/intspace.rs:185",
         "crates/axeyum-lean-kernel/src/metric.rs:162",
         "crates/axeyum-lean-kernel/src/nat_prelude/structures.rs:657",
@@ -4422,27 +4451,6 @@
         "crates/axeyum-lean-kernel/src/nat_prelude/finset.rs:357",
         "crates/axeyum-lean-kernel/src/nat_prelude/graph.rs:630",
         "crates/axeyum-lean-kernel/src/rat_prelude/lattice.rs:265"
-      ]
-    },
-    {
-      "key": "declare_projection",
-      "count": 5,
-      "names": [
-        "declare_projection"
-      ],
-      "files": 5,
-      "carriers": [
-        "IntDev"
-      ],
-      "body_lines": 22,
-      "signature": "fn declare_projection( kernel: &mut crate::Kernel, c: &CodeNames, unpair: NameId, label: &str, left: bool, ) -> Result<NameId, KernelError>",
-      "test_file_members": 0,
-      "sites": [
-        "crates/axeyum-lean-kernel/src/fo_code.rs:492",
-        "crates/axeyum-lean-kernel/src/fo_semantics.rs:410",
-        "crates/axeyum-lean-kernel/src/geo/qplane.rs:585",
-        "crates/axeyum-lean-kernel/src/nat_prelude/structures_setoid.rs:1241",
-        "crates/axeyum-lean-kernel/src/rat_prelude/algebra_ext.rs:84"
       ]
     },
     {
@@ -5027,6 +5035,27 @@
       ]
     },
     {
+      "key": "pos_bound",
+      "count": 5,
+      "names": [
+        "pos_bound"
+      ],
+      "files": 5,
+      "carriers": [
+        "IntDev"
+      ],
+      "body_lines": 3,
+      "signature": "fn pos_bound(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId, k: ExprId) -> ExprId",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/creal/deriv_unique.rs:129",
+        "crates/axeyum-lean-kernel/src/creal/fermat.rs:107",
+        "crates/axeyum-lean-kernel/src/creal/field.rs:149",
+        "crates/axeyum-lean-kernel/src/creal/inverse.rs:206",
+        "crates/axeyum-lean-kernel/src/geo/rplane.rs:411"
+      ]
+    },
+    {
       "key": "prelude",
       "count": 5,
       "names": [
@@ -5343,7 +5372,7 @@
       "signature": "fn app_all(k: &mut Kernel, head: ExprId, args: &[ExprId]) -> ExprId",
       "test_file_members": 0,
       "sites": [
-        "crates/axeyum-lean-kernel/src/geo.rs:245",
+        "crates/axeyum-lean-kernel/src/geo.rs:247",
         "crates/axeyum-lean-kernel/src/intspace.rs:173",
         "crates/axeyum-lean-kernel/src/metric.rs:150",
         "crates/axeyum-lean-kernel/src/top_frame.rs:207"
@@ -5435,7 +5464,7 @@
       "signature": "fn capp(k: &mut Kernel, name: NameId, args: &[ExprId]) -> ExprId",
       "test_file_members": 0,
       "sites": [
-        "crates/axeyum-lean-kernel/src/geo.rs:253",
+        "crates/axeyum-lean-kernel/src/geo.rs:255",
         "crates/axeyum-lean-kernel/src/intspace.rs:165",
         "crates/axeyum-lean-kernel/src/ipc_soundness.rs:297",
         "crates/axeyum-lean-kernel/src/metric.rs:142"
@@ -5578,6 +5607,26 @@
         "crates/axeyum-lean-kernel/src/creal.rs:8200",
         "crates/axeyum-lean-kernel/src/creal_point.rs:1791",
         "crates/axeyum-lean-kernel/src/top_frame.rs:1349"
+      ]
+    },
+    {
+      "key": "declare_congruences",
+      "count": 4,
+      "names": [
+        "declare_congruences"
+      ],
+      "files": 4,
+      "carriers": [
+        "IntDev"
+      ],
+      "body_lines": 176,
+      "signature": "fn declare_congruences(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), KernelError>",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/complex.rs:4514",
+        "crates/axeyum-lean-kernel/src/creal/lattice.rs:591",
+        "crates/axeyum-lean-kernel/src/geo/qplane.rs:1281",
+        "crates/axeyum-lean-kernel/src/geo/rplane.rs:1213"
       ]
     },
     {
@@ -5856,6 +5905,26 @@
         "crates/axeyum-lean-kernel/src/string_prelude/bool_predicates.rs:503",
         "crates/axeyum-lean-kernel/src/string_prelude/char_beq.rs:226",
         "crates/axeyum-lean-kernel/src/string_prelude/str_beq.rs:351"
+      ]
+    },
+    {
+      "key": "false_ty",
+      "count": 4,
+      "names": [
+        "false_ty"
+      ],
+      "files": 4,
+      "carriers": [
+        "IntDev"
+      ],
+      "body_lines": 4,
+      "signature": "fn false_ty(&mut self) -> ExprId",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/characterization/ops.rs:204",
+        "crates/axeyum-lean-kernel/src/geo/qplane.rs:353",
+        "crates/axeyum-lean-kernel/src/geo/rplane.rs:432",
+        "crates/axeyum-lean-kernel/src/int_prelude/ops.rs:344"
       ]
     },
     {
@@ -6363,26 +6432,6 @@
         "crates/axeyum-lean-kernel/src/prelude.rs:474",
         "crates/axeyum-lean-kernel/src/prelude/prelude_tests.rs:41",
         "crates/axeyum-lean-kernel/src/sigma_prelude.rs:212"
-      ]
-    },
-    {
-      "key": "pos_bound",
-      "count": 4,
-      "names": [
-        "pos_bound"
-      ],
-      "files": 4,
-      "carriers": [
-        "IntDev"
-      ],
-      "body_lines": 3,
-      "signature": "fn pos_bound(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId, k: ExprId) -> ExprId",
-      "test_file_members": 0,
-      "sites": [
-        "crates/axeyum-lean-kernel/src/creal/deriv_unique.rs:129",
-        "crates/axeyum-lean-kernel/src/creal/fermat.rs:107",
-        "crates/axeyum-lean-kernel/src/creal/field.rs:149",
-        "crates/axeyum-lean-kernel/src/creal/inverse.rs:206"
       ]
     },
     {
@@ -7121,7 +7170,7 @@
       "test_file_members": 1,
       "sites": [
         "crates/axeyum-lean-kernel/src/characterization/ops.rs:216",
-        "crates/axeyum-lean-kernel/src/geo.rs:270",
+        "crates/axeyum-lean-kernel/src/geo.rs:272",
         "crates/axeyum-lean-kernel/src/nat_prelude/finset_pigeonhole_tests.rs:172"
       ]
     },
@@ -7867,25 +7916,6 @@
       ]
     },
     {
-      "key": "declare_congruences",
-      "count": 3,
-      "names": [
-        "declare_congruences"
-      ],
-      "files": 3,
-      "carriers": [
-        "IntDev"
-      ],
-      "body_lines": 176,
-      "signature": "fn declare_congruences(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), KernelError>",
-      "test_file_members": 0,
-      "sites": [
-        "crates/axeyum-lean-kernel/src/complex.rs:4514",
-        "crates/axeyum-lean-kernel/src/creal/lattice.rs:591",
-        "crates/axeyum-lean-kernel/src/geo/qplane.rs:1281"
-      ]
-    },
-    {
       "key": "declare_constants",
       "count": 3,
       "names": [
@@ -7960,6 +7990,25 @@
         "crates/axeyum-lean-kernel/src/int_prelude/gauss_assembly.rs:81",
         "crates/axeyum-lean-kernel/src/int_prelude/gcd.rs:1765",
         "crates/axeyum-lean-kernel/src/nat_prelude/lcm.rs:338"
+      ]
+    },
+    {
+      "key": "declare_instance",
+      "count": 3,
+      "names": [
+        "declare_instance"
+      ],
+      "files": 3,
+      "carriers": [
+        "IntDev"
+      ],
+      "body_lines": 73,
+      "signature": "fn declare_instance(d: &mut IntDev<'_>, p: GeoPrelude, q: QPlaneNames) -> Result<(), KernelError>",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/geo/qplane.rs:2846",
+        "crates/axeyum-lean-kernel/src/geo/rplane.rs:3058",
+        "crates/axeyum-lean-kernel/src/rat_prelude/algebra_instances.rs:50"
       ]
     },
     {
@@ -8625,25 +8674,6 @@
         "crates/axeyum-lean-kernel/src/fo_numbering/tests.rs:60",
         "crates/axeyum-lean-kernel/src/fo_semantics/tests.rs:52",
         "crates/axeyum-lean-kernel/src/fo_syntax/tests.rs:47"
-      ]
-    },
-    {
-      "key": "false_ty",
-      "count": 3,
-      "names": [
-        "false_ty"
-      ],
-      "files": 3,
-      "carriers": [
-        "IntDev"
-      ],
-      "body_lines": 4,
-      "signature": "fn false_ty(&mut self) -> ExprId",
-      "test_file_members": 0,
-      "sites": [
-        "crates/axeyum-lean-kernel/src/characterization/ops.rs:204",
-        "crates/axeyum-lean-kernel/src/geo/qplane.rs:353",
-        "crates/axeyum-lean-kernel/src/int_prelude/ops.rs:344"
       ]
     },
     {
@@ -9883,6 +9913,44 @@
       ]
     },
     {
+      "key": "pmk",
+      "count": 3,
+      "names": [
+        "pmk"
+      ],
+      "files": 3,
+      "carriers": [
+        "IntDev"
+      ],
+      "body_lines": 4,
+      "signature": "fn pmk(kernel: &mut crate::Kernel, c: &CodeNames, a: ExprId, b: ExprId) -> ExprId",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/fo_code.rs:199",
+        "crates/axeyum-lean-kernel/src/geo/qplane.rs:316",
+        "crates/axeyum-lean-kernel/src/geo/rplane.rs:380"
+      ]
+    },
+    {
+      "key": "point_ty",
+      "count": 3,
+      "names": [
+        "point_ty"
+      ],
+      "files": 3,
+      "carriers": [
+        "IntDev"
+      ],
+      "body_lines": 3,
+      "signature": "fn point_ty(d: &mut IntDev<'_>, p: CPointPrelude) -> ExprId",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/creal_point.rs:1795",
+        "crates/axeyum-lean-kernel/src/geo/qplane.rs:296",
+        "crates/axeyum-lean-kernel/src/geo/rplane.rs:355"
+      ]
+    },
+    {
       "key": "poly_summand",
       "count": 3,
       "names": [
@@ -9953,9 +10021,29 @@
       "signature": "fn prop_sort(k: &mut Kernel) -> ExprId",
       "test_file_members": 0,
       "sites": [
-        "crates/axeyum-lean-kernel/src/geo.rs:258",
+        "crates/axeyum-lean-kernel/src/geo.rs:260",
         "crates/axeyum-lean-kernel/src/nat_prelude/least_number.rs:172",
         "crates/axeyum-lean-kernel/src/top_frame.rs:215"
+      ]
+    },
+    {
+      "key": "prop_ty",
+      "count": 3,
+      "names": [
+        "prop_ty"
+      ],
+      "files": 3,
+      "carriers": [
+        "IntDev",
+        "NatDev"
+      ],
+      "body_lines": 3,
+      "signature": "fn prop_ty(&mut self) -> ExprId",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/characterization/ops.rs:59",
+        "crates/axeyum-lean-kernel/src/geo/rplane.rs:367",
+        "crates/axeyum-lean-kernel/src/nat_prelude/subset_search.rs:96"
       ]
     },
     {
@@ -10101,7 +10189,7 @@
       "signature": "fn rel_ty(k: &mut Kernel, a: ExprId, b: ExprId) -> ExprId",
       "test_file_members": 0,
       "sites": [
-        "crates/axeyum-lean-kernel/src/geo.rs:264",
+        "crates/axeyum-lean-kernel/src/geo.rs:266",
         "crates/axeyum-lean-kernel/src/nat_prelude/graph.rs:99",
         "crates/axeyum-lean-kernel/src/nat_prelude/relation.rs:65"
       ]
@@ -11555,6 +11643,42 @@
       ]
     },
     {
+      "key": "and_l",
+      "count": 2,
+      "names": [
+        "and_l"
+      ],
+      "files": 2,
+      "carriers": [
+        "IntDev"
+      ],
+      "body_lines": 4,
+      "signature": "fn and_l(d: &mut IntDev<'_>, p: ExprId, r: ExprId, h: ExprId) -> ExprId",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/geo/qplane.rs:368",
+        "crates/axeyum-lean-kernel/src/geo/rplane.rs:447"
+      ]
+    },
+    {
+      "key": "and_r",
+      "count": 2,
+      "names": [
+        "and_r"
+      ],
+      "files": 2,
+      "carriers": [
+        "IntDev"
+      ],
+      "body_lines": 4,
+      "signature": "fn and_r(d: &mut IntDev<'_>, p: ExprId, r: ExprId, h: ExprId) -> ExprId",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/geo/qplane.rs:373",
+        "crates/axeyum-lean-kernel/src/geo/rplane.rs:452"
+      ]
+    },
+    {
       "key": "any_below",
       "count": 2,
       "names": [
@@ -11720,6 +11844,22 @@
       "sites": [
         "crates/axeyum-lean-kernel/src/nat_prelude/category_setoid.rs:544",
         "crates/axeyum-lean-kernel/src/nat_prelude/structures.rs:700"
+      ]
+    },
+    {
+      "key": "at",
+      "count": 2,
+      "names": [
+        "at"
+      ],
+      "files": 2,
+      "carriers": [],
+      "body_lines": 3,
+      "signature": "fn at(e: ExprId) -> RnExpr",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/geo/rplane.rs:515",
+        "crates/axeyum-lean-kernel/src/lean_pp.rs:137"
       ]
     },
     {
@@ -12392,6 +12532,24 @@
       "sites": [
         "crates/axeyum-lean-kernel/src/creal_point/creal_point_tests.rs:1515",
         "crates/axeyum-lean-kernel/src/rn/rn_tests.rs:243"
+      ]
+    },
+    {
+      "key": "ceq",
+      "count": 2,
+      "names": [
+        "ceq"
+      ],
+      "files": 2,
+      "carriers": [
+        "IntDev"
+      ],
+      "body_lines": 3,
+      "signature": "fn ceq(d: &mut IntDev<'_>, p: CRealPrelude, a: ExprId, b: ExprId) -> ExprId",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/complex/ring.rs:91",
+        "crates/axeyum-lean-kernel/src/geo/rplane.rs:401"
       ]
     },
     {
@@ -13310,6 +13468,24 @@
       ]
     },
     {
+      "key": "declare_carriers",
+      "count": 2,
+      "names": [
+        "declare_carriers"
+      ],
+      "files": 2,
+      "carriers": [
+        "IntDev"
+      ],
+      "body_lines": 34,
+      "signature": "fn declare_carriers(d: &mut IntDev<'_>, q: QPlaneNames) -> Result<(), KernelError>",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/geo/qplane.rs:547",
+        "crates/axeyum-lean-kernel/src/geo/rplane.rs:618"
+      ]
+    },
+    {
       "key": "declare_cauchy",
       "count": 2,
       "names": [
@@ -13360,7 +13536,7 @@
       "test_file_members": 0,
       "sites": [
         "crates/axeyum-lean-kernel/src/creal_point.rs:20906",
-        "crates/axeyum-lean-kernel/src/geo.rs:811"
+        "crates/axeyum-lean-kernel/src/geo.rs:854"
       ]
     },
     {
@@ -14312,6 +14488,24 @@
       ]
     },
     {
+      "key": "declare_incidence",
+      "count": 2,
+      "names": [
+        "declare_incidence"
+      ],
+      "files": 2,
+      "carriers": [
+        "IntDev"
+      ],
+      "body_lines": 92,
+      "signature": "fn declare_incidence( d: &mut IntDev<'_>, rat: RatPrelude, q: QPlaneNames, ) -> Result<(), KernelError>",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/geo/qplane.rs:1004",
+        "crates/axeyum-lean-kernel/src/geo/rplane.rs:732"
+      ]
+    },
+    {
       "key": "declare_indicator",
       "count": 2,
       "names": [
@@ -14327,24 +14521,6 @@
       "sites": [
         "crates/axeyum-lean-kernel/src/intspace/measure.rs:96",
         "crates/axeyum-lean-kernel/src/rat_prelude/probability.rs:2284"
-      ]
-    },
-    {
-      "key": "declare_instance",
-      "count": 2,
-      "names": [
-        "declare_instance"
-      ],
-      "files": 2,
-      "carriers": [
-        "IntDev"
-      ],
-      "body_lines": 73,
-      "signature": "fn declare_instance(d: &mut IntDev<'_>, p: GeoPrelude, q: QPlaneNames) -> Result<(), KernelError>",
-      "test_file_members": 0,
-      "sites": [
-        "crates/axeyum-lean-kernel/src/geo/qplane.rs:2846",
-        "crates/axeyum-lean-kernel/src/rat_prelude/algebra_instances.rs:50"
       ]
     },
     {
@@ -14418,6 +14594,42 @@
       ]
     },
     {
+      "key": "declare_join",
+      "count": 2,
+      "names": [
+        "declare_join"
+      ],
+      "files": 2,
+      "carriers": [
+        "IntDev"
+      ],
+      "body_lines": 184,
+      "signature": "fn declare_join(d: &mut IntDev<'_>, rat: RatPrelude, q: QPlaneNames) -> Result<(), KernelError>",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/geo/qplane.rs:1504",
+        "crates/axeyum-lean-kernel/src/geo/rplane.rs:2083"
+      ]
+    },
+    {
+      "key": "declare_join_unique",
+      "count": 2,
+      "names": [
+        "declare_join_unique"
+      ],
+      "files": 2,
+      "carriers": [
+        "IntDev"
+      ],
+      "body_lines": 160,
+      "signature": "fn declare_join_unique( d: &mut IntDev<'_>, rat: RatPrelude, q: QPlaneNames, ) -> Result<(), KernelError>",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/geo/qplane.rs:2062",
+        "crates/axeyum-lean-kernel/src/geo/rplane.rs:2298"
+      ]
+    },
+    {
       "key": "declare_lattice",
       "count": 2,
       "names": [
@@ -14467,6 +14679,24 @@
       "sites": [
         "crates/axeyum-lean-kernel/src/list_prelude/ops.rs:393",
         "crates/axeyum-lean-kernel/src/string_prelude/length.rs:52"
+      ]
+    },
+    {
+      "key": "declare_line_equiv",
+      "count": 2,
+      "names": [
+        "declare_line_equiv"
+      ],
+      "files": 2,
+      "carriers": [
+        "IntDev"
+      ],
+      "body_lines": 177,
+      "signature": "fn declare_line_equiv(d: &mut IntDev<'_>, q: QPlaneNames) -> Result<(), KernelError>",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/geo/qplane.rs:1102",
+        "crates/axeyum-lean-kernel/src/geo/rplane.rs:833"
       ]
     },
     {
@@ -14663,6 +14893,24 @@
       "sites": [
         "crates/axeyum-lean-kernel/src/creal.rs:9280",
         "crates/axeyum-lean-kernel/src/rat_prelude/group.rs:95"
+      ]
+    },
+    {
+      "key": "declare_nondeg",
+      "count": 2,
+      "names": [
+        "declare_nondeg"
+      ],
+      "files": 2,
+      "carriers": [
+        "IntDev"
+      ],
+      "body_lines": 45,
+      "signature": "fn declare_nondeg(d: &mut IntDev<'_>, rat: RatPrelude, q: QPlaneNames) -> Result<(), KernelError>",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/geo/qplane.rs:798",
+        "crates/axeyum-lean-kernel/src/geo/rplane.rs:683"
       ]
     },
     {
@@ -15502,6 +15750,24 @@
       ]
     },
     {
+      "key": "declare_triangle",
+      "count": 2,
+      "names": [
+        "declare_triangle"
+      ],
+      "files": 2,
+      "carriers": [
+        "IntDev"
+      ],
+      "body_lines": 221,
+      "signature": "fn declare_triangle( d: &mut IntDev<'_>, rat: RatPrelude, q: QPlaneNames, ) -> Result<(), KernelError>",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/geo/qplane.rs:2619",
+        "crates/axeyum-lean-kernel/src/geo/rplane.rs:2785"
+      ]
+    },
+    {
       "key": "declare_trichotomy",
       "count": 2,
       "names": [
@@ -15517,6 +15783,24 @@
       "sites": [
         "crates/axeyum-lean-kernel/src/creal/omniscience.rs:281",
         "crates/axeyum-lean-kernel/src/rat_prelude/laws.rs:680"
+      ]
+    },
+    {
+      "key": "declare_two_points",
+      "count": 2,
+      "names": [
+        "declare_two_points"
+      ],
+      "files": 2,
+      "carriers": [
+        "IntDev"
+      ],
+      "body_lines": 364,
+      "signature": "fn declare_two_points( d: &mut IntDev<'_>, rat: RatPrelude, q: QPlaneNames, ) -> Result<(), KernelError>",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/geo/qplane.rs:2249",
+        "crates/axeyum-lean-kernel/src/geo/rplane.rs:2546"
       ]
     },
     {
@@ -17492,6 +17776,24 @@
       ]
     },
     {
+      "key": "join_coeffs",
+      "count": 2,
+      "names": [
+        "join_coeffs"
+      ],
+      "files": 2,
+      "carriers": [
+        "IntDev"
+      ],
+      "body_lines": 21,
+      "signature": "fn join_coeffs(d: &mut IntDev<'_>, q: QPlaneNames, p: ExprId, r: ExprId) -> [ExprId; 3]",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/geo/qplane.rs:487",
+        "crates/axeyum-lean-kernel/src/geo/rplane.rs:2054"
+      ]
+    },
+    {
       "key": "junk_map",
       "count": 2,
       "names": [
@@ -17546,6 +17848,24 @@
       ]
     },
     {
+      "key": "la",
+      "count": 2,
+      "names": [
+        "la"
+      ],
+      "files": 2,
+      "carriers": [
+        "IntDev"
+      ],
+      "body_lines": 3,
+      "signature": "fn la(d: &mut IntDev<'_>, q: QPlaneNames, l: ExprId) -> ExprId",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/geo/qplane.rs:320",
+        "crates/axeyum-lean-kernel/src/geo/rplane.rs:384"
+      ]
+    },
+    {
       "key": "lam_over",
       "count": 2,
       "names": [
@@ -17557,8 +17877,44 @@
       "signature": "fn lam_over(k: &mut Kernel, fv: u64, ty: ExprId, body: ExprId) -> ExprId",
       "test_file_members": 0,
       "sites": [
-        "crates/axeyum-lean-kernel/src/geo.rs:293",
+        "crates/axeyum-lean-kernel/src/geo.rs:295",
         "crates/axeyum-lean-kernel/src/nat_prelude/structures.rs:88"
+      ]
+    },
+    {
+      "key": "lb",
+      "count": 2,
+      "names": [
+        "lb"
+      ],
+      "files": 2,
+      "carriers": [
+        "IntDev"
+      ],
+      "body_lines": 3,
+      "signature": "fn lb(d: &mut IntDev<'_>, q: QPlaneNames, l: ExprId) -> ExprId",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/geo/qplane.rs:324",
+        "crates/axeyum-lean-kernel/src/geo/rplane.rs:388"
+      ]
+    },
+    {
+      "key": "lc",
+      "count": 2,
+      "names": [
+        "lc"
+      ],
+      "files": 2,
+      "carriers": [
+        "IntDev"
+      ],
+      "body_lines": 3,
+      "signature": "fn lc(d: &mut IntDev<'_>, q: QPlaneNames, l: ExprId) -> ExprId",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/geo/qplane.rs:328",
+        "crates/axeyum-lean-kernel/src/geo/rplane.rs:392"
       ]
     },
     {
@@ -17748,6 +18104,60 @@
       ]
     },
     {
+      "key": "line0_ty",
+      "count": 2,
+      "names": [
+        "line0_ty"
+      ],
+      "files": 2,
+      "carriers": [
+        "IntDev"
+      ],
+      "body_lines": 3,
+      "signature": "fn line0_ty(d: &mut IntDev<'_>, q: QPlaneNames) -> ExprId",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/geo/qplane.rs:300",
+        "crates/axeyum-lean-kernel/src/geo/rplane.rs:359"
+      ]
+    },
+    {
+      "key": "line_ty",
+      "count": 2,
+      "names": [
+        "line_ty"
+      ],
+      "files": 2,
+      "carriers": [
+        "IntDev"
+      ],
+      "body_lines": 3,
+      "signature": "fn line_ty(d: &mut IntDev<'_>, q: QPlaneNames) -> ExprId",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/geo/qplane.rs:304",
+        "crates/axeyum-lean-kernel/src/geo/rplane.rs:363"
+      ]
+    },
+    {
+      "key": "lmk",
+      "count": 2,
+      "names": [
+        "lmk"
+      ],
+      "files": 2,
+      "carriers": [
+        "IntDev"
+      ],
+      "body_lines": 3,
+      "signature": "fn lmk(d: &mut IntDev<'_>, q: QPlaneNames, a: ExprId, b: ExprId, c: ExprId) -> ExprId",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/geo/qplane.rs:332",
+        "crates/axeyum-lean-kernel/src/geo/rplane.rs:396"
+      ]
+    },
+    {
       "key": "logic",
       "count": 2,
       "names": [
@@ -17795,6 +18205,42 @@
       "sites": [
         "crates/axeyum-lean-kernel/src/nat_prelude/rec_agreement.rs:3824",
         "crates/axeyum-lean-kernel/src/nat_prelude/testbit_bitwise.rs:551"
+      ]
+    },
+    {
+      "key": "lprop",
+      "count": 2,
+      "names": [
+        "lprop"
+      ],
+      "files": 2,
+      "carriers": [
+        "IntDev"
+      ],
+      "body_lines": 8,
+      "signature": "fn lprop(d: &mut IntDev<'_>, q: QPlaneNames, l: ExprId) -> ExprId",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/geo/qplane.rs:476",
+        "crates/axeyum-lean-kernel/src/geo/rplane.rs:494"
+      ]
+    },
+    {
+      "key": "lsub",
+      "count": 2,
+      "names": [
+        "lsub"
+      ],
+      "files": 2,
+      "carriers": [
+        "IntDev"
+      ],
+      "body_lines": 8,
+      "signature": "fn lsub(d: &mut IntDev<'_>, q: QPlaneNames, l: ExprId, proof: ExprId) -> ExprId",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/geo/qplane.rs:466",
+        "crates/axeyum-lean-kernel/src/geo/rplane.rs:484"
       ]
     },
     {
@@ -17901,6 +18347,24 @@
       "sites": [
         "crates/axeyum-lean-kernel/src/int_prelude/statements.rs:38",
         "crates/axeyum-lean-kernel/src/rat_prelude/statements.rs:32"
+      ]
+    },
+    {
+      "key": "lval",
+      "count": 2,
+      "names": [
+        "lval"
+      ],
+      "files": 2,
+      "carriers": [
+        "IntDev"
+      ],
+      "body_lines": 8,
+      "signature": "fn lval(d: &mut IntDev<'_>, q: QPlaneNames, l: ExprId) -> ExprId",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/geo/qplane.rs:456",
+        "crates/axeyum-lean-kernel/src/geo/rplane.rs:474"
       ]
     },
     {
@@ -19748,24 +20212,6 @@
       ]
     },
     {
-      "key": "pmk",
-      "count": 2,
-      "names": [
-        "pmk"
-      ],
-      "files": 2,
-      "carriers": [
-        "IntDev"
-      ],
-      "body_lines": 4,
-      "signature": "fn pmk(kernel: &mut crate::Kernel, c: &CodeNames, a: ExprId, b: ExprId) -> ExprId",
-      "test_file_members": 0,
-      "sites": [
-        "crates/axeyum-lean-kernel/src/fo_code.rs:199",
-        "crates/axeyum-lean-kernel/src/geo/qplane.rs:316"
-      ]
-    },
-    {
       "key": "po_inner",
       "count": 2,
       "names": [
@@ -19785,6 +20231,24 @@
       ]
     },
     {
+      "key": "point_equiv_refl",
+      "count": 2,
+      "names": [
+        "point_equiv_refl"
+      ],
+      "files": 2,
+      "carriers": [
+        "IntDev"
+      ],
+      "body_lines": 9,
+      "signature": "fn point_equiv_refl(d: &mut IntDev<'_>, p: CPointPrelude, pt: ExprId) -> ExprId",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/creal_point.rs:1885",
+        "crates/axeyum-lean-kernel/src/geo/rplane.rs:1202"
+      ]
+    },
+    {
       "key": "point_override",
       "count": 2,
       "names": [
@@ -19801,24 +20265,6 @@
       "sites": [
         "crates/axeyum-lean-kernel/src/int_prelude/prod.rs:2692",
         "crates/axeyum-lean-kernel/src/nat_prelude/finite.rs:1406"
-      ]
-    },
-    {
-      "key": "point_ty",
-      "count": 2,
-      "names": [
-        "point_ty"
-      ],
-      "files": 2,
-      "carriers": [
-        "IntDev"
-      ],
-      "body_lines": 3,
-      "signature": "fn point_ty(d: &mut IntDev<'_>, p: CPointPrelude) -> ExprId",
-      "test_file_members": 0,
-      "sites": [
-        "crates/axeyum-lean-kernel/src/creal_point.rs:1795",
-        "crates/axeyum-lean-kernel/src/geo/qplane.rs:296"
       ]
     },
     {
@@ -20181,24 +20627,6 @@
       ]
     },
     {
-      "key": "prop_ty",
-      "count": 2,
-      "names": [
-        "prop_ty"
-      ],
-      "files": 2,
-      "carriers": [
-        "NatDev"
-      ],
-      "body_lines": 3,
-      "signature": "fn prop_ty(&mut self) -> ExprId",
-      "test_file_members": 0,
-      "sites": [
-        "crates/axeyum-lean-kernel/src/characterization/ops.rs:59",
-        "crates/axeyum-lean-kernel/src/nat_prelude/subset_search.rs:96"
-      ]
-    },
-    {
       "key": "provable_app",
       "count": 2,
       "names": [
@@ -20248,6 +20676,42 @@
       "sites": [
         "crates/axeyum-lean-kernel/src/creal_point.rs:1824",
         "crates/axeyum-lean-kernel/src/metric.rs:1959"
+      ]
+    },
+    {
+      "key": "px",
+      "count": 2,
+      "names": [
+        "px"
+      ],
+      "files": 2,
+      "carriers": [
+        "IntDev"
+      ],
+      "body_lines": 3,
+      "signature": "fn px(d: &mut IntDev<'_>, q: QPlaneNames, p: ExprId) -> ExprId",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/geo/qplane.rs:308",
+        "crates/axeyum-lean-kernel/src/geo/rplane.rs:372"
+      ]
+    },
+    {
+      "key": "py",
+      "count": 2,
+      "names": [
+        "py"
+      ],
+      "files": 2,
+      "carriers": [
+        "IntDev"
+      ],
+      "body_lines": 3,
+      "signature": "fn py(d: &mut IntDev<'_>, q: QPlaneNames, p: ExprId) -> ExprId",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/geo/qplane.rs:312",
+        "crates/axeyum-lean-kernel/src/geo/rplane.rs:376"
       ]
     },
     {
@@ -24736,7 +25200,7 @@
       "signature": "fn app_all(k: &mut Kernel, head: ExprId, args: &[ExprId]) -> ExprId",
       "test_file_members": 0,
       "sites": [
-        "crates/axeyum-lean-kernel/src/geo.rs:245",
+        "crates/axeyum-lean-kernel/src/geo.rs:247",
         "crates/axeyum-lean-kernel/src/intspace.rs:173",
         "crates/axeyum-lean-kernel/src/linarith/generic.rs:622",
         "crates/axeyum-lean-kernel/src/metric.rs:150",
@@ -27106,6 +27570,23 @@
       ]
     },
     {
+      "key": "7785b0e1aa45769d",
+      "count": 3,
+      "names": [
+        "rsub"
+      ],
+      "files": 3,
+      "carriers": [],
+      "body_lines": 3,
+      "signature": "fn rsub(a: RnExpr, b: RnExpr) -> RnExpr",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/creal_point/conic.rs:406",
+        "crates/axeyum-lean-kernel/src/creal_point/isometry.rs:109",
+        "crates/axeyum-lean-kernel/src/geo/rplane.rs:520"
+      ]
+    },
+    {
       "key": "77c2cb528a29229b",
       "count": 3,
       "names": [
@@ -27193,7 +27674,7 @@
       "signature": "fn prop_sort(k: &mut Kernel) -> ExprId",
       "test_file_members": 0,
       "sites": [
-        "crates/axeyum-lean-kernel/src/geo.rs:258",
+        "crates/axeyum-lean-kernel/src/geo.rs:260",
         "crates/axeyum-lean-kernel/src/nat_prelude/category_setoid.rs:2856",
         "crates/axeyum-lean-kernel/src/top_frame.rs:215"
       ]
@@ -30288,6 +30769,23 @@
       ]
     },
     {
+      "key": "561642c0c5aee2d0",
+      "count": 2,
+      "names": [
+        "at",
+        "ratom"
+      ],
+      "files": 2,
+      "carriers": [],
+      "body_lines": 3,
+      "signature": "fn ratom(e: ExprId) -> RnExpr",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/creal_point/conic.rs:392",
+        "crates/axeyum-lean-kernel/src/geo/rplane.rs:515"
+      ]
+    },
+    {
       "key": "561ee12066118d45",
       "count": 2,
       "names": [
@@ -30513,6 +31011,25 @@
       "sites": [
         "crates/axeyum-lean-kernel/src/nat_prelude/arith_functions.rs:151",
         "crates/axeyum-lean-kernel/src/nat_prelude/arith_functions_family.rs:116"
+      ]
+    },
+    {
+      "key": "61598b6428e694ed",
+      "count": 2,
+      "names": [
+        "point_ty",
+        "pty"
+      ],
+      "files": 2,
+      "carriers": [
+        "IntDev"
+      ],
+      "body_lines": 3,
+      "signature": "fn point_ty(d: &mut IntDev<'_>, cp: CPointPrelude) -> ExprId",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/geo/rplane.rs:355",
+        "crates/axeyum-lean-kernel/src/metric.rs:1956"
       ]
     },
     {
@@ -30954,22 +31471,6 @@
       "sites": [
         "crates/axeyum-lean-kernel/src/creal/cancellation.rs:398",
         "crates/axeyum-lean-kernel/src/creal/geometric.rs:293"
-      ]
-    },
-    {
-      "key": "7785b0e1aa45769d",
-      "count": 2,
-      "names": [
-        "rsub"
-      ],
-      "files": 2,
-      "carriers": [],
-      "body_lines": 3,
-      "signature": "fn rsub(a: RnExpr, b: RnExpr) -> RnExpr",
-      "test_file_members": 0,
-      "sites": [
-        "crates/axeyum-lean-kernel/src/creal_point/conic.rs:406",
-        "crates/axeyum-lean-kernel/src/creal_point/isometry.rs:109"
       ]
     },
     {
@@ -33259,6 +33760,24 @@
       ]
     },
     {
+      "key": "cd5b9b1708f4ada8",
+      "count": 2,
+      "names": [
+        "false_ty"
+      ],
+      "files": 2,
+      "carriers": [
+        "IntDev"
+      ],
+      "body_lines": 4,
+      "signature": "fn false_ty(d: &mut IntDev<'_>) -> ExprId",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/geo/qplane.rs:353",
+        "crates/axeyum-lean-kernel/src/geo/rplane.rs:432"
+      ]
+    },
+    {
       "key": "cd81b150b37a9ec7",
       "count": 2,
       "names": [
@@ -33326,6 +33845,24 @@
       "sites": [
         "crates/axeyum-lean-kernel/src/creal/deriv_unique.rs:377",
         "crates/axeyum-lean-kernel/src/creal/derivative.rs:1125"
+      ]
+    },
+    {
+      "key": "d2199e08a35240d3",
+      "count": 2,
+      "names": [
+        "and_intro"
+      ],
+      "files": 2,
+      "carriers": [
+        "IntDev"
+      ],
+      "body_lines": 4,
+      "signature": "fn and_intro(d: &mut IntDev<'_>, p: ExprId, q: ExprId, hp: ExprId, hq: ExprId) -> ExprId",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/geo/rplane.rs:442",
+        "crates/axeyum-lean-kernel/src/int_prelude/mult_order.rs:141"
       ]
     },
     {
@@ -34655,11 +35192,11 @@
     },
     {
       "key": "declare_all",
-      "count": 17,
+      "count": 18,
       "names": [
         "declare_all"
       ],
-      "files": 17,
+      "files": 18,
       "carriers": [
         "IntDev"
       ],
@@ -34668,6 +35205,7 @@
       "test_file_members": 0,
       "sites": [
         "crates/axeyum-lean-kernel/src/geo/qplane.rs:523",
+        "crates/axeyum-lean-kernel/src/geo/rplane.rs:595",
         "crates/axeyum-lean-kernel/src/int_prelude/dvd_gcd_mirrors.rs:874",
         "crates/axeyum-lean-kernel/src/int_prelude/gcd_scaled_mirrors.rs:272",
         "crates/axeyum-lean-kernel/src/int_prelude/modeq_cancel_div_gcd.rs:359",
@@ -34684,6 +35222,39 @@
         "crates/axeyum-lean-kernel/src/metric/continuity.rs:220",
         "crates/axeyum-lean-kernel/src/metric/interval.rs:202",
         "crates/axeyum-lean-kernel/src/metric/subspace.rs:488"
+      ]
+    },
+    {
+      "key": "and_intro",
+      "count": 16,
+      "names": [
+        "and_intro"
+      ],
+      "files": 16,
+      "carriers": [
+        "IntDev",
+        "NatDev"
+      ],
+      "body_lines": 4,
+      "signature": "fn and_intro( d: &mut IntDev<'_>, p: ComplexPrelude, left: ExprId, right: ExprId, lp: ExprId, rp: ExprId, ) -> ExprId",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/complex.rs:3985",
+        "crates/axeyum-lean-kernel/src/creal.rs:8243",
+        "crates/axeyum-lean-kernel/src/creal/alternating.rs:109",
+        "crates/axeyum-lean-kernel/src/creal_point.rs:1869",
+        "crates/axeyum-lean-kernel/src/fo_soundness.rs:247",
+        "crates/axeyum-lean-kernel/src/geo/qplane.rs:363",
+        "crates/axeyum-lean-kernel/src/geo/rplane.rs:442",
+        "crates/axeyum-lean-kernel/src/int_prelude/mult_order.rs:141",
+        "crates/axeyum-lean-kernel/src/int_prelude/order_squares.rs:70",
+        "crates/axeyum-lean-kernel/src/int_prelude/sign_product.rs:49",
+        "crates/axeyum-lean-kernel/src/metric/continuity.rs:310",
+        "crates/axeyum-lean-kernel/src/nat_prelude/count_range_bij.rs:173",
+        "crates/axeyum-lean-kernel/src/nat_prelude/land_low_bit.rs:56",
+        "crates/axeyum-lean-kernel/src/rat_prelude/probability.rs:895",
+        "crates/axeyum-lean-kernel/src/rat_prelude/rank_bridge.rs:471",
+        "crates/axeyum-lean-kernel/src/top_frame.rs:871"
       ]
     },
     {
@@ -34716,38 +35287,6 @@
         "crates/axeyum-lean-kernel/src/creal/trig.rs:251",
         "crates/axeyum-lean-kernel/src/creal/uniform_continuity.rs:2587",
         "crates/axeyum-lean-kernel/src/creal_point.rs:1803"
-      ]
-    },
-    {
-      "key": "and_intro",
-      "count": 15,
-      "names": [
-        "and_intro"
-      ],
-      "files": 15,
-      "carriers": [
-        "IntDev",
-        "NatDev"
-      ],
-      "body_lines": 4,
-      "signature": "fn and_intro( d: &mut IntDev<'_>, p: ComplexPrelude, left: ExprId, right: ExprId, lp: ExprId, rp: ExprId, ) -> ExprId",
-      "test_file_members": 0,
-      "sites": [
-        "crates/axeyum-lean-kernel/src/complex.rs:3985",
-        "crates/axeyum-lean-kernel/src/creal.rs:8243",
-        "crates/axeyum-lean-kernel/src/creal/alternating.rs:109",
-        "crates/axeyum-lean-kernel/src/creal_point.rs:1869",
-        "crates/axeyum-lean-kernel/src/fo_soundness.rs:247",
-        "crates/axeyum-lean-kernel/src/geo/qplane.rs:363",
-        "crates/axeyum-lean-kernel/src/int_prelude/mult_order.rs:141",
-        "crates/axeyum-lean-kernel/src/int_prelude/order_squares.rs:70",
-        "crates/axeyum-lean-kernel/src/int_prelude/sign_product.rs:49",
-        "crates/axeyum-lean-kernel/src/metric/continuity.rs:310",
-        "crates/axeyum-lean-kernel/src/nat_prelude/count_range_bij.rs:173",
-        "crates/axeyum-lean-kernel/src/nat_prelude/land_low_bit.rs:56",
-        "crates/axeyum-lean-kernel/src/rat_prelude/probability.rs:895",
-        "crates/axeyum-lean-kernel/src/rat_prelude/rank_bridge.rs:471",
-        "crates/axeyum-lean-kernel/src/top_frame.rs:871"
       ]
     },
     {
@@ -34815,19 +35354,20 @@
     },
     {
       "key": "intern",
-      "count": 14,
+      "count": 15,
       "names": [
         "intern"
       ],
-      "files": 14,
+      "files": 15,
       "carriers": [],
       "body_lines": 61,
       "signature": "fn intern(kernel: &mut Kernel, point: NameId, scalar: NameId) -> ConicNames",
       "test_file_members": 0,
       "sites": [
         "crates/axeyum-lean-kernel/src/creal_point/conic.rs:255",
-        "crates/axeyum-lean-kernel/src/geo.rs:681",
+        "crates/axeyum-lean-kernel/src/geo.rs:716",
         "crates/axeyum-lean-kernel/src/geo/qplane.rs:227",
+        "crates/axeyum-lean-kernel/src/geo/rplane.rs:284",
         "crates/axeyum-lean-kernel/src/intspace.rs:740",
         "crates/axeyum-lean-kernel/src/intspace/bundled.rs:128",
         "crates/axeyum-lean-kernel/src/intspace/l1.rs:221",
@@ -35838,6 +36378,53 @@
       ]
     },
     {
+      "key": "exists_intro",
+      "count": 7,
+      "names": [
+        "exists_intro"
+      ],
+      "files": 7,
+      "carriers": [
+        "IntDev"
+      ],
+      "body_lines": 6,
+      "signature": "fn exists_intro( d: &mut IntDev<'_>, p: CRealPrelude, elem_ty: ExprId, predicate: ExprId, witness: ExprId, proof: ExprId, ) -> ExprId",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/creal/convergence.rs:318",
+        "crates/axeyum-lean-kernel/src/geo/qplane.rs:384",
+        "crates/axeyum-lean-kernel/src/geo/rplane.rs:466",
+        "crates/axeyum-lean-kernel/src/metric.rs:1518",
+        "crates/axeyum-lean-kernel/src/metric/continuity.rs:274",
+        "crates/axeyum-lean-kernel/src/metric_prod.rs:331",
+        "crates/axeyum-lean-kernel/src/nat_prelude/image_group.rs:423"
+      ]
+    },
+    {
+      "key": "exists_ty",
+      "count": 7,
+      "names": [
+        "exists_ty"
+      ],
+      "files": 7,
+      "carriers": [
+        "IntDev",
+        "NatDev"
+      ],
+      "body_lines": 6,
+      "signature": "fn exists_ty( d: &mut IntDev<'_>, p: CRealPrelude, elem_ty: ExprId, predicate: ExprId, ) -> ExprId",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/creal/convergence.rs:299",
+        "crates/axeyum-lean-kernel/src/geo/rplane.rs:458",
+        "crates/axeyum-lean-kernel/src/intspace/convergence.rs:64",
+        "crates/axeyum-lean-kernel/src/metric.rs:1510",
+        "crates/axeyum-lean-kernel/src/metric/continuity.rs:261",
+        "crates/axeyum-lean-kernel/src/metric_prod.rs:324",
+        "crates/axeyum-lean-kernel/src/nat_prelude/injective_decide.rs:78"
+      ]
+    },
+    {
       "key": "false_elim",
       "count": 7,
       "names": [
@@ -35875,7 +36462,7 @@
       "test_file_members": 0,
       "sites": [
         "crates/axeyum-lean-kernel/src/fo_substitution.rs:285",
-        "crates/axeyum-lean-kernel/src/geo.rs:774",
+        "crates/axeyum-lean-kernel/src/geo.rs:817",
         "crates/axeyum-lean-kernel/src/intspace.rs:932",
         "crates/axeyum-lean-kernel/src/metric.rs:1386",
         "crates/axeyum-lean-kernel/src/metric/subspace.rs:179",
@@ -35997,6 +36584,29 @@
         "crates/axeyum-lean-kernel/src/metric_prod.rs:303",
         "crates/axeyum-lean-kernel/src/rat_prelude/ops.rs:170",
         "crates/axeyum-lean-kernel/src/rn.rs:530"
+      ]
+    },
+    {
+      "key": "rsub",
+      "count": 7,
+      "names": [
+        "rsub"
+      ],
+      "files": 7,
+      "carriers": [
+        "IntDev"
+      ],
+      "body_lines": 3,
+      "signature": "fn rsub(a: RnExpr, b: RnExpr) -> RnExpr",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/creal_point/conic.rs:406",
+        "crates/axeyum-lean-kernel/src/creal_point/isometry.rs:109",
+        "crates/axeyum-lean-kernel/src/geo/rplane.rs:520",
+        "crates/axeyum-lean-kernel/src/metric/interval.rs:259",
+        "crates/axeyum-lean-kernel/src/rat_prelude/group.rs:43",
+        "crates/axeyum-lean-kernel/src/rat_prelude/probability_s.rs:210",
+        "crates/axeyum-lean-kernel/src/rat_prelude/taylor.rs:88"
       ]
     },
     {
@@ -36178,28 +36788,6 @@
       ]
     },
     {
-      "key": "exists_intro",
-      "count": 6,
-      "names": [
-        "exists_intro"
-      ],
-      "files": 6,
-      "carriers": [
-        "IntDev"
-      ],
-      "body_lines": 6,
-      "signature": "fn exists_intro( d: &mut IntDev<'_>, p: CRealPrelude, elem_ty: ExprId, predicate: ExprId, witness: ExprId, proof: ExprId, ) -> ExprId",
-      "test_file_members": 0,
-      "sites": [
-        "crates/axeyum-lean-kernel/src/creal/convergence.rs:318",
-        "crates/axeyum-lean-kernel/src/geo/qplane.rs:384",
-        "crates/axeyum-lean-kernel/src/metric.rs:1518",
-        "crates/axeyum-lean-kernel/src/metric/continuity.rs:274",
-        "crates/axeyum-lean-kernel/src/metric_prod.rs:331",
-        "crates/axeyum-lean-kernel/src/nat_prelude/image_group.rs:423"
-      ]
-    },
-    {
       "key": "exists_intro_nat",
       "count": 6,
       "names": [
@@ -36220,29 +36808,6 @@
         "crates/axeyum-lean-kernel/src/nat_prelude/hall.rs:751",
         "crates/axeyum-lean-kernel/src/nat_prelude/rado.rs:249",
         "crates/axeyum-lean-kernel/src/nat_prelude/ramsey.rs:190"
-      ]
-    },
-    {
-      "key": "exists_ty",
-      "count": 6,
-      "names": [
-        "exists_ty"
-      ],
-      "files": 6,
-      "carriers": [
-        "IntDev",
-        "NatDev"
-      ],
-      "body_lines": 6,
-      "signature": "fn exists_ty( d: &mut IntDev<'_>, p: CRealPrelude, elem_ty: ExprId, predicate: ExprId, ) -> ExprId",
-      "test_file_members": 0,
-      "sites": [
-        "crates/axeyum-lean-kernel/src/creal/convergence.rs:299",
-        "crates/axeyum-lean-kernel/src/intspace/convergence.rs:64",
-        "crates/axeyum-lean-kernel/src/metric.rs:1510",
-        "crates/axeyum-lean-kernel/src/metric/continuity.rs:261",
-        "crates/axeyum-lean-kernel/src/metric_prod.rs:324",
-        "crates/axeyum-lean-kernel/src/nat_prelude/injective_decide.rs:78"
       ]
     },
     {
@@ -36288,28 +36853,6 @@
         "crates/axeyum-lean-kernel/src/nat_prelude/gauss_lemma.rs:1317",
         "crates/axeyum-lean-kernel/src/rat_prelude/echelon_section.rs:84",
         "crates/axeyum-lean-kernel/src/rat_prelude/statements.rs:59"
-      ]
-    },
-    {
-      "key": "rsub",
-      "count": 6,
-      "names": [
-        "rsub"
-      ],
-      "files": 6,
-      "carriers": [
-        "IntDev"
-      ],
-      "body_lines": 3,
-      "signature": "fn rsub(a: RnExpr, b: RnExpr) -> RnExpr",
-      "test_file_members": 0,
-      "sites": [
-        "crates/axeyum-lean-kernel/src/creal_point/conic.rs:406",
-        "crates/axeyum-lean-kernel/src/creal_point/isometry.rs:109",
-        "crates/axeyum-lean-kernel/src/metric/interval.rs:259",
-        "crates/axeyum-lean-kernel/src/rat_prelude/group.rs:43",
-        "crates/axeyum-lean-kernel/src/rat_prelude/probability_s.rs:210",
-        "crates/axeyum-lean-kernel/src/rat_prelude/taylor.rs:88"
       ]
     },
     {
@@ -36492,6 +37035,27 @@
       ]
     },
     {
+      "key": "and_ty",
+      "count": 5,
+      "names": [
+        "and_ty"
+      ],
+      "files": 5,
+      "carriers": [
+        "IntDev"
+      ],
+      "body_lines": 3,
+      "signature": "fn and_ty(d: &mut IntDev<'_>, left: ExprId, right: ExprId) -> ExprId",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/creal/alternating.rs:105",
+        "crates/axeyum-lean-kernel/src/creal/integral.rs:22545",
+        "crates/axeyum-lean-kernel/src/creal/sqrt.rs:240",
+        "crates/axeyum-lean-kernel/src/geo/qplane.rs:358",
+        "crates/axeyum-lean-kernel/src/geo/rplane.rs:437"
+      ]
+    },
+    {
       "key": "arrow",
       "count": 5,
       "names": [
@@ -36544,7 +37108,7 @@
       "signature": "fn carrier_field(suffix: &'static str) -> FieldSpec",
       "test_file_members": 0,
       "sites": [
-        "crates/axeyum-lean-kernel/src/geo.rs:316",
+        "crates/axeyum-lean-kernel/src/geo.rs:318",
         "crates/axeyum-lean-kernel/src/intspace.rs:185",
         "crates/axeyum-lean-kernel/src/metric.rs:162",
         "crates/axeyum-lean-kernel/src/nat_prelude/structures.rs:657",
@@ -36634,6 +37198,27 @@
         "crates/axeyum-lean-kernel/src/nat_prelude/finset.rs:357",
         "crates/axeyum-lean-kernel/src/nat_prelude/graph.rs:630",
         "crates/axeyum-lean-kernel/src/rat_prelude/lattice.rs:265"
+      ]
+    },
+    {
+      "key": "declare_projection",
+      "count": 5,
+      "names": [
+        "declare_projection"
+      ],
+      "files": 5,
+      "carriers": [
+        "IntDev"
+      ],
+      "body_lines": 22,
+      "signature": "fn declare_projection( kernel: &mut crate::Kernel, c: &CodeNames, unpair: NameId, label: &str, left: bool, ) -> Result<NameId, KernelError>",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/fo_code.rs:492",
+        "crates/axeyum-lean-kernel/src/fo_semantics.rs:410",
+        "crates/axeyum-lean-kernel/src/geo/qplane.rs:585",
+        "crates/axeyum-lean-kernel/src/geo/rplane.rs:644",
+        "crates/axeyum-lean-kernel/src/rat_prelude/algebra_ext.rs:84"
       ]
     },
     {
@@ -36996,6 +37581,27 @@
       ]
     },
     {
+      "key": "pos_bound",
+      "count": 5,
+      "names": [
+        "pos_bound"
+      ],
+      "files": 5,
+      "carriers": [
+        "IntDev"
+      ],
+      "body_lines": 3,
+      "signature": "fn pos_bound(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId, k: ExprId) -> ExprId",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/creal/deriv_unique.rs:129",
+        "crates/axeyum-lean-kernel/src/creal/fermat.rs:107",
+        "crates/axeyum-lean-kernel/src/creal/field.rs:149",
+        "crates/axeyum-lean-kernel/src/creal/inverse.rs:206",
+        "crates/axeyum-lean-kernel/src/geo/rplane.rs:411"
+      ]
+    },
+    {
       "key": "prime_pos",
       "count": 5,
       "names": [
@@ -37202,26 +37808,6 @@
       ]
     },
     {
-      "key": "and_ty",
-      "count": 4,
-      "names": [
-        "and_ty"
-      ],
-      "files": 4,
-      "carriers": [
-        "IntDev"
-      ],
-      "body_lines": 3,
-      "signature": "fn and_ty(d: &mut IntDev<'_>, left: ExprId, right: ExprId) -> ExprId",
-      "test_file_members": 0,
-      "sites": [
-        "crates/axeyum-lean-kernel/src/creal/alternating.rs:105",
-        "crates/axeyum-lean-kernel/src/creal/integral.rs:22545",
-        "crates/axeyum-lean-kernel/src/creal/sqrt.rs:240",
-        "crates/axeyum-lean-kernel/src/geo/qplane.rs:358"
-      ]
-    },
-    {
       "key": "app_all",
       "count": 4,
       "names": [
@@ -37233,7 +37819,7 @@
       "signature": "fn app_all(k: &mut Kernel, head: ExprId, args: &[ExprId]) -> ExprId",
       "test_file_members": 0,
       "sites": [
-        "crates/axeyum-lean-kernel/src/geo.rs:245",
+        "crates/axeyum-lean-kernel/src/geo.rs:247",
         "crates/axeyum-lean-kernel/src/intspace.rs:173",
         "crates/axeyum-lean-kernel/src/metric.rs:150",
         "crates/axeyum-lean-kernel/src/top_frame.rs:207"
@@ -37361,6 +37947,26 @@
       ]
     },
     {
+      "key": "declare_congruences",
+      "count": 4,
+      "names": [
+        "declare_congruences"
+      ],
+      "files": 4,
+      "carriers": [
+        "IntDev"
+      ],
+      "body_lines": 176,
+      "signature": "fn declare_congruences(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), KernelError>",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/complex.rs:4514",
+        "crates/axeyum-lean-kernel/src/creal/lattice.rs:591",
+        "crates/axeyum-lean-kernel/src/geo/qplane.rs:1281",
+        "crates/axeyum-lean-kernel/src/geo/rplane.rs:1213"
+      ]
+    },
+    {
       "key": "declare_forall",
       "count": 4,
       "names": [
@@ -37458,26 +38064,6 @@
         "crates/axeyum-lean-kernel/src/creal/power.rs:400",
         "crates/axeyum-lean-kernel/src/int_prelude/defs.rs:483",
         "crates/axeyum-lean-kernel/src/rat_prelude/polynomial.rs:161"
-      ]
-    },
-    {
-      "key": "declare_projection",
-      "count": 4,
-      "names": [
-        "declare_projection"
-      ],
-      "files": 4,
-      "carriers": [
-        "IntDev"
-      ],
-      "body_lines": 22,
-      "signature": "fn declare_projection( kernel: &mut crate::Kernel, c: &CodeNames, unpair: NameId, label: &str, left: bool, ) -> Result<NameId, KernelError>",
-      "test_file_members": 0,
-      "sites": [
-        "crates/axeyum-lean-kernel/src/fo_code.rs:492",
-        "crates/axeyum-lean-kernel/src/fo_semantics.rs:410",
-        "crates/axeyum-lean-kernel/src/geo/qplane.rs:585",
-        "crates/axeyum-lean-kernel/src/rat_prelude/algebra_ext.rs:84"
       ]
     },
     {
@@ -37920,26 +38506,6 @@
         "crates/axeyum-lean-kernel/src/creal/integral.rs:4982",
         "crates/axeyum-lean-kernel/src/creal/ivt.rs:295",
         "crates/axeyum-lean-kernel/src/creal/monotone.rs:812"
-      ]
-    },
-    {
-      "key": "pos_bound",
-      "count": 4,
-      "names": [
-        "pos_bound"
-      ],
-      "files": 4,
-      "carriers": [
-        "IntDev"
-      ],
-      "body_lines": 3,
-      "signature": "fn pos_bound(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId, k: ExprId) -> ExprId",
-      "test_file_members": 0,
-      "sites": [
-        "crates/axeyum-lean-kernel/src/creal/deriv_unique.rs:129",
-        "crates/axeyum-lean-kernel/src/creal/fermat.rs:107",
-        "crates/axeyum-lean-kernel/src/creal/field.rs:149",
-        "crates/axeyum-lean-kernel/src/creal/inverse.rs:206"
       ]
     },
     {
@@ -38417,7 +38983,7 @@
       "test_file_members": 0,
       "sites": [
         "crates/axeyum-lean-kernel/src/fo_soundness.rs:260",
-        "crates/axeyum-lean-kernel/src/geo.rs:274",
+        "crates/axeyum-lean-kernel/src/geo.rs:276",
         "crates/axeyum-lean-kernel/src/nat_prelude/helpers.rs:93"
       ]
     },
@@ -38436,7 +39002,7 @@
       "test_file_members": 0,
       "sites": [
         "crates/axeyum-lean-kernel/src/fo_soundness.rs:266",
-        "crates/axeyum-lean-kernel/src/geo.rs:278",
+        "crates/axeyum-lean-kernel/src/geo.rs:280",
         "crates/axeyum-lean-kernel/src/nat_prelude/helpers.rs:112"
       ]
     },
@@ -38662,7 +39228,7 @@
       "signature": "fn capp(k: &mut Kernel, name: NameId, args: &[ExprId]) -> ExprId",
       "test_file_members": 0,
       "sites": [
-        "crates/axeyum-lean-kernel/src/geo.rs:253",
+        "crates/axeyum-lean-kernel/src/geo.rs:255",
         "crates/axeyum-lean-kernel/src/intspace.rs:165",
         "crates/axeyum-lean-kernel/src/metric.rs:142"
       ]
@@ -38937,25 +39503,6 @@
       ]
     },
     {
-      "key": "declare_congruences",
-      "count": 3,
-      "names": [
-        "declare_congruences"
-      ],
-      "files": 3,
-      "carriers": [
-        "IntDev"
-      ],
-      "body_lines": 176,
-      "signature": "fn declare_congruences(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), KernelError>",
-      "test_file_members": 0,
-      "sites": [
-        "crates/axeyum-lean-kernel/src/complex.rs:4514",
-        "crates/axeyum-lean-kernel/src/creal/lattice.rs:591",
-        "crates/axeyum-lean-kernel/src/geo/qplane.rs:1281"
-      ]
-    },
-    {
       "key": "declare_constants",
       "count": 3,
       "names": [
@@ -39030,6 +39577,25 @@
         "crates/axeyum-lean-kernel/src/int_prelude/gauss_assembly.rs:81",
         "crates/axeyum-lean-kernel/src/int_prelude/gcd.rs:1765",
         "crates/axeyum-lean-kernel/src/nat_prelude/lcm.rs:338"
+      ]
+    },
+    {
+      "key": "declare_instance",
+      "count": 3,
+      "names": [
+        "declare_instance"
+      ],
+      "files": 3,
+      "carriers": [
+        "IntDev"
+      ],
+      "body_lines": 73,
+      "signature": "fn declare_instance(d: &mut IntDev<'_>, p: GeoPrelude, q: QPlaneNames) -> Result<(), KernelError>",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/geo/qplane.rs:2846",
+        "crates/axeyum-lean-kernel/src/geo/rplane.rs:3058",
+        "crates/axeyum-lean-kernel/src/rat_prelude/algebra_instances.rs:50"
       ]
     },
     {
@@ -40373,6 +40939,44 @@
       ]
     },
     {
+      "key": "pmk",
+      "count": 3,
+      "names": [
+        "pmk"
+      ],
+      "files": 3,
+      "carriers": [
+        "IntDev"
+      ],
+      "body_lines": 4,
+      "signature": "fn pmk(kernel: &mut crate::Kernel, c: &CodeNames, a: ExprId, b: ExprId) -> ExprId",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/fo_code.rs:199",
+        "crates/axeyum-lean-kernel/src/geo/qplane.rs:316",
+        "crates/axeyum-lean-kernel/src/geo/rplane.rs:380"
+      ]
+    },
+    {
+      "key": "point_ty",
+      "count": 3,
+      "names": [
+        "point_ty"
+      ],
+      "files": 3,
+      "carriers": [
+        "IntDev"
+      ],
+      "body_lines": 3,
+      "signature": "fn point_ty(d: &mut IntDev<'_>, p: CPointPrelude) -> ExprId",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/creal_point.rs:1795",
+        "crates/axeyum-lean-kernel/src/geo/qplane.rs:296",
+        "crates/axeyum-lean-kernel/src/geo/rplane.rs:355"
+      ]
+    },
+    {
       "key": "poly_summand",
       "count": 3,
       "names": [
@@ -40462,7 +41066,7 @@
       "signature": "fn prop_sort(k: &mut Kernel) -> ExprId",
       "test_file_members": 0,
       "sites": [
-        "crates/axeyum-lean-kernel/src/geo.rs:258",
+        "crates/axeyum-lean-kernel/src/geo.rs:260",
         "crates/axeyum-lean-kernel/src/nat_prelude/least_number.rs:172",
         "crates/axeyum-lean-kernel/src/top_frame.rs:215"
       ]
@@ -40538,7 +41142,7 @@
       "signature": "fn rel_ty(k: &mut Kernel, a: ExprId, b: ExprId) -> ExprId",
       "test_file_members": 0,
       "sites": [
-        "crates/axeyum-lean-kernel/src/geo.rs:264",
+        "crates/axeyum-lean-kernel/src/geo.rs:266",
         "crates/axeyum-lean-kernel/src/nat_prelude/graph.rs:99",
         "crates/axeyum-lean-kernel/src/nat_prelude/relation.rs:65"
       ]
@@ -41505,6 +42109,42 @@
       ]
     },
     {
+      "key": "and_l",
+      "count": 2,
+      "names": [
+        "and_l"
+      ],
+      "files": 2,
+      "carriers": [
+        "IntDev"
+      ],
+      "body_lines": 4,
+      "signature": "fn and_l(d: &mut IntDev<'_>, p: ExprId, r: ExprId, h: ExprId) -> ExprId",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/geo/qplane.rs:368",
+        "crates/axeyum-lean-kernel/src/geo/rplane.rs:447"
+      ]
+    },
+    {
+      "key": "and_r",
+      "count": 2,
+      "names": [
+        "and_r"
+      ],
+      "files": 2,
+      "carriers": [
+        "IntDev"
+      ],
+      "body_lines": 4,
+      "signature": "fn and_r(d: &mut IntDev<'_>, p: ExprId, r: ExprId, h: ExprId) -> ExprId",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/geo/qplane.rs:373",
+        "crates/axeyum-lean-kernel/src/geo/rplane.rs:452"
+      ]
+    },
+    {
       "key": "apply_mono_signs",
       "count": 2,
       "names": [
@@ -41990,6 +42630,24 @@
       "sites": [
         "crates/axeyum-lean-kernel/src/creal/exponential.rs:3173",
         "crates/axeyum-lean-kernel/src/creal/trig.rs:1186"
+      ]
+    },
+    {
+      "key": "ceq",
+      "count": 2,
+      "names": [
+        "ceq"
+      ],
+      "files": 2,
+      "carriers": [
+        "IntDev"
+      ],
+      "body_lines": 3,
+      "signature": "fn ceq(d: &mut IntDev<'_>, p: CRealPrelude, a: ExprId, b: ExprId) -> ExprId",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/complex/ring.rs:91",
+        "crates/axeyum-lean-kernel/src/geo/rplane.rs:401"
       ]
     },
     {
@@ -42709,6 +43367,24 @@
       ]
     },
     {
+      "key": "declare_carriers",
+      "count": 2,
+      "names": [
+        "declare_carriers"
+      ],
+      "files": 2,
+      "carriers": [
+        "IntDev"
+      ],
+      "body_lines": 34,
+      "signature": "fn declare_carriers(d: &mut IntDev<'_>, q: QPlaneNames) -> Result<(), KernelError>",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/geo/qplane.rs:547",
+        "crates/axeyum-lean-kernel/src/geo/rplane.rs:618"
+      ]
+    },
+    {
       "key": "declare_cauchy",
       "count": 2,
       "names": [
@@ -42759,7 +43435,7 @@
       "test_file_members": 0,
       "sites": [
         "crates/axeyum-lean-kernel/src/creal_point.rs:20906",
-        "crates/axeyum-lean-kernel/src/geo.rs:811"
+        "crates/axeyum-lean-kernel/src/geo.rs:854"
       ]
     },
     {
@@ -43693,6 +44369,24 @@
       ]
     },
     {
+      "key": "declare_incidence",
+      "count": 2,
+      "names": [
+        "declare_incidence"
+      ],
+      "files": 2,
+      "carriers": [
+        "IntDev"
+      ],
+      "body_lines": 92,
+      "signature": "fn declare_incidence( d: &mut IntDev<'_>, rat: RatPrelude, q: QPlaneNames, ) -> Result<(), KernelError>",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/geo/qplane.rs:1004",
+        "crates/axeyum-lean-kernel/src/geo/rplane.rs:732"
+      ]
+    },
+    {
       "key": "declare_indicator",
       "count": 2,
       "names": [
@@ -43708,24 +44402,6 @@
       "sites": [
         "crates/axeyum-lean-kernel/src/intspace/measure.rs:96",
         "crates/axeyum-lean-kernel/src/rat_prelude/probability.rs:2284"
-      ]
-    },
-    {
-      "key": "declare_instance",
-      "count": 2,
-      "names": [
-        "declare_instance"
-      ],
-      "files": 2,
-      "carriers": [
-        "IntDev"
-      ],
-      "body_lines": 73,
-      "signature": "fn declare_instance(d: &mut IntDev<'_>, p: GeoPrelude, q: QPlaneNames) -> Result<(), KernelError>",
-      "test_file_members": 0,
-      "sites": [
-        "crates/axeyum-lean-kernel/src/geo/qplane.rs:2846",
-        "crates/axeyum-lean-kernel/src/rat_prelude/algebra_instances.rs:50"
       ]
     },
     {
@@ -43799,6 +44475,42 @@
       ]
     },
     {
+      "key": "declare_join",
+      "count": 2,
+      "names": [
+        "declare_join"
+      ],
+      "files": 2,
+      "carriers": [
+        "IntDev"
+      ],
+      "body_lines": 184,
+      "signature": "fn declare_join(d: &mut IntDev<'_>, rat: RatPrelude, q: QPlaneNames) -> Result<(), KernelError>",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/geo/qplane.rs:1504",
+        "crates/axeyum-lean-kernel/src/geo/rplane.rs:2083"
+      ]
+    },
+    {
+      "key": "declare_join_unique",
+      "count": 2,
+      "names": [
+        "declare_join_unique"
+      ],
+      "files": 2,
+      "carriers": [
+        "IntDev"
+      ],
+      "body_lines": 160,
+      "signature": "fn declare_join_unique( d: &mut IntDev<'_>, rat: RatPrelude, q: QPlaneNames, ) -> Result<(), KernelError>",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/geo/qplane.rs:2062",
+        "crates/axeyum-lean-kernel/src/geo/rplane.rs:2298"
+      ]
+    },
+    {
       "key": "declare_lattice",
       "count": 2,
       "names": [
@@ -43848,6 +44560,24 @@
       "sites": [
         "crates/axeyum-lean-kernel/src/list_prelude/ops.rs:393",
         "crates/axeyum-lean-kernel/src/string_prelude/length.rs:52"
+      ]
+    },
+    {
+      "key": "declare_line_equiv",
+      "count": 2,
+      "names": [
+        "declare_line_equiv"
+      ],
+      "files": 2,
+      "carriers": [
+        "IntDev"
+      ],
+      "body_lines": 177,
+      "signature": "fn declare_line_equiv(d: &mut IntDev<'_>, q: QPlaneNames) -> Result<(), KernelError>",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/geo/qplane.rs:1102",
+        "crates/axeyum-lean-kernel/src/geo/rplane.rs:833"
       ]
     },
     {
@@ -44026,6 +44756,24 @@
       "sites": [
         "crates/axeyum-lean-kernel/src/creal.rs:9280",
         "crates/axeyum-lean-kernel/src/rat_prelude/group.rs:95"
+      ]
+    },
+    {
+      "key": "declare_nondeg",
+      "count": 2,
+      "names": [
+        "declare_nondeg"
+      ],
+      "files": 2,
+      "carriers": [
+        "IntDev"
+      ],
+      "body_lines": 45,
+      "signature": "fn declare_nondeg(d: &mut IntDev<'_>, rat: RatPrelude, q: QPlaneNames) -> Result<(), KernelError>",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/geo/qplane.rs:798",
+        "crates/axeyum-lean-kernel/src/geo/rplane.rs:683"
       ]
     },
     {
@@ -44865,6 +45613,24 @@
       ]
     },
     {
+      "key": "declare_triangle",
+      "count": 2,
+      "names": [
+        "declare_triangle"
+      ],
+      "files": 2,
+      "carriers": [
+        "IntDev"
+      ],
+      "body_lines": 221,
+      "signature": "fn declare_triangle( d: &mut IntDev<'_>, rat: RatPrelude, q: QPlaneNames, ) -> Result<(), KernelError>",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/geo/qplane.rs:2619",
+        "crates/axeyum-lean-kernel/src/geo/rplane.rs:2785"
+      ]
+    },
+    {
       "key": "declare_trichotomy",
       "count": 2,
       "names": [
@@ -44880,6 +45646,24 @@
       "sites": [
         "crates/axeyum-lean-kernel/src/creal/omniscience.rs:281",
         "crates/axeyum-lean-kernel/src/rat_prelude/laws.rs:680"
+      ]
+    },
+    {
+      "key": "declare_two_points",
+      "count": 2,
+      "names": [
+        "declare_two_points"
+      ],
+      "files": 2,
+      "carriers": [
+        "IntDev"
+      ],
+      "body_lines": 364,
+      "signature": "fn declare_two_points( d: &mut IntDev<'_>, rat: RatPrelude, q: QPlaneNames, ) -> Result<(), KernelError>",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/geo/qplane.rs:2249",
+        "crates/axeyum-lean-kernel/src/geo/rplane.rs:2546"
       ]
     },
     {
@@ -45564,6 +46348,24 @@
       ]
     },
     {
+      "key": "false_ty",
+      "count": 2,
+      "names": [
+        "false_ty"
+      ],
+      "files": 2,
+      "carriers": [
+        "IntDev"
+      ],
+      "body_lines": 4,
+      "signature": "fn false_ty(d: &mut IntDev<'_>) -> ExprId",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/geo/qplane.rs:353",
+        "crates/axeyum-lean-kernel/src/geo/rplane.rs:432"
+      ]
+    },
+    {
       "key": "fam_ty",
       "count": 2,
       "names": [
@@ -46044,6 +46846,24 @@
       ]
     },
     {
+      "key": "join_coeffs",
+      "count": 2,
+      "names": [
+        "join_coeffs"
+      ],
+      "files": 2,
+      "carriers": [
+        "IntDev"
+      ],
+      "body_lines": 21,
+      "signature": "fn join_coeffs(d: &mut IntDev<'_>, q: QPlaneNames, p: ExprId, r: ExprId) -> [ExprId; 3]",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/geo/qplane.rs:487",
+        "crates/axeyum-lean-kernel/src/geo/rplane.rs:2054"
+      ]
+    },
+    {
       "key": "junk_map",
       "count": 2,
       "names": [
@@ -46098,6 +46918,24 @@
       ]
     },
     {
+      "key": "la",
+      "count": 2,
+      "names": [
+        "la"
+      ],
+      "files": 2,
+      "carriers": [
+        "IntDev"
+      ],
+      "body_lines": 3,
+      "signature": "fn la(d: &mut IntDev<'_>, q: QPlaneNames, l: ExprId) -> ExprId",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/geo/qplane.rs:320",
+        "crates/axeyum-lean-kernel/src/geo/rplane.rs:384"
+      ]
+    },
+    {
       "key": "lam_fv",
       "count": 2,
       "names": [
@@ -46125,8 +46963,44 @@
       "signature": "fn lam_over(k: &mut Kernel, fv: u64, ty: ExprId, body: ExprId) -> ExprId",
       "test_file_members": 0,
       "sites": [
-        "crates/axeyum-lean-kernel/src/geo.rs:293",
+        "crates/axeyum-lean-kernel/src/geo.rs:295",
         "crates/axeyum-lean-kernel/src/nat_prelude/structures.rs:88"
+      ]
+    },
+    {
+      "key": "lb",
+      "count": 2,
+      "names": [
+        "lb"
+      ],
+      "files": 2,
+      "carriers": [
+        "IntDev"
+      ],
+      "body_lines": 3,
+      "signature": "fn lb(d: &mut IntDev<'_>, q: QPlaneNames, l: ExprId) -> ExprId",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/geo/qplane.rs:324",
+        "crates/axeyum-lean-kernel/src/geo/rplane.rs:388"
+      ]
+    },
+    {
+      "key": "lc",
+      "count": 2,
+      "names": [
+        "lc"
+      ],
+      "files": 2,
+      "carriers": [
+        "IntDev"
+      ],
+      "body_lines": 3,
+      "signature": "fn lc(d: &mut IntDev<'_>, q: QPlaneNames, l: ExprId) -> ExprId",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/geo/qplane.rs:328",
+        "crates/axeyum-lean-kernel/src/geo/rplane.rs:392"
       ]
     },
     {
@@ -46306,6 +47180,60 @@
       ]
     },
     {
+      "key": "line0_ty",
+      "count": 2,
+      "names": [
+        "line0_ty"
+      ],
+      "files": 2,
+      "carriers": [
+        "IntDev"
+      ],
+      "body_lines": 3,
+      "signature": "fn line0_ty(d: &mut IntDev<'_>, q: QPlaneNames) -> ExprId",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/geo/qplane.rs:300",
+        "crates/axeyum-lean-kernel/src/geo/rplane.rs:359"
+      ]
+    },
+    {
+      "key": "line_ty",
+      "count": 2,
+      "names": [
+        "line_ty"
+      ],
+      "files": 2,
+      "carriers": [
+        "IntDev"
+      ],
+      "body_lines": 3,
+      "signature": "fn line_ty(d: &mut IntDev<'_>, q: QPlaneNames) -> ExprId",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/geo/qplane.rs:304",
+        "crates/axeyum-lean-kernel/src/geo/rplane.rs:363"
+      ]
+    },
+    {
+      "key": "lmk",
+      "count": 2,
+      "names": [
+        "lmk"
+      ],
+      "files": 2,
+      "carriers": [
+        "IntDev"
+      ],
+      "body_lines": 3,
+      "signature": "fn lmk(d: &mut IntDev<'_>, q: QPlaneNames, a: ExprId, b: ExprId, c: ExprId) -> ExprId",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/geo/qplane.rs:332",
+        "crates/axeyum-lean-kernel/src/geo/rplane.rs:396"
+      ]
+    },
+    {
       "key": "lor_bit_lt_two",
       "count": 2,
       "names": [
@@ -46321,6 +47249,42 @@
       "sites": [
         "crates/axeyum-lean-kernel/src/nat_prelude/rec_agreement.rs:3824",
         "crates/axeyum-lean-kernel/src/nat_prelude/testbit_bitwise.rs:551"
+      ]
+    },
+    {
+      "key": "lprop",
+      "count": 2,
+      "names": [
+        "lprop"
+      ],
+      "files": 2,
+      "carriers": [
+        "IntDev"
+      ],
+      "body_lines": 8,
+      "signature": "fn lprop(d: &mut IntDev<'_>, q: QPlaneNames, l: ExprId) -> ExprId",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/geo/qplane.rs:476",
+        "crates/axeyum-lean-kernel/src/geo/rplane.rs:494"
+      ]
+    },
+    {
+      "key": "lsub",
+      "count": 2,
+      "names": [
+        "lsub"
+      ],
+      "files": 2,
+      "carriers": [
+        "IntDev"
+      ],
+      "body_lines": 8,
+      "signature": "fn lsub(d: &mut IntDev<'_>, q: QPlaneNames, l: ExprId, proof: ExprId) -> ExprId",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/geo/qplane.rs:466",
+        "crates/axeyum-lean-kernel/src/geo/rplane.rs:484"
       ]
     },
     {
@@ -46411,6 +47375,24 @@
       "sites": [
         "crates/axeyum-lean-kernel/src/int_prelude/statements.rs:38",
         "crates/axeyum-lean-kernel/src/rat_prelude/statements.rs:32"
+      ]
+    },
+    {
+      "key": "lval",
+      "count": 2,
+      "names": [
+        "lval"
+      ],
+      "files": 2,
+      "carriers": [
+        "IntDev"
+      ],
+      "body_lines": 8,
+      "signature": "fn lval(d: &mut IntDev<'_>, q: QPlaneNames, l: ExprId) -> ExprId",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/geo/qplane.rs:456",
+        "crates/axeyum-lean-kernel/src/geo/rplane.rs:474"
       ]
     },
     {
@@ -47697,24 +48679,6 @@
       ]
     },
     {
-      "key": "pmk",
-      "count": 2,
-      "names": [
-        "pmk"
-      ],
-      "files": 2,
-      "carriers": [
-        "IntDev"
-      ],
-      "body_lines": 4,
-      "signature": "fn pmk(kernel: &mut crate::Kernel, c: &CodeNames, a: ExprId, b: ExprId) -> ExprId",
-      "test_file_members": 0,
-      "sites": [
-        "crates/axeyum-lean-kernel/src/fo_code.rs:199",
-        "crates/axeyum-lean-kernel/src/geo/qplane.rs:316"
-      ]
-    },
-    {
       "key": "po_inner",
       "count": 2,
       "names": [
@@ -47734,6 +48698,24 @@
       ]
     },
     {
+      "key": "point_equiv_refl",
+      "count": 2,
+      "names": [
+        "point_equiv_refl"
+      ],
+      "files": 2,
+      "carriers": [
+        "IntDev"
+      ],
+      "body_lines": 9,
+      "signature": "fn point_equiv_refl(d: &mut IntDev<'_>, p: CPointPrelude, pt: ExprId) -> ExprId",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/creal_point.rs:1885",
+        "crates/axeyum-lean-kernel/src/geo/rplane.rs:1202"
+      ]
+    },
+    {
       "key": "point_override",
       "count": 2,
       "names": [
@@ -47750,24 +48732,6 @@
       "sites": [
         "crates/axeyum-lean-kernel/src/int_prelude/prod.rs:2692",
         "crates/axeyum-lean-kernel/src/nat_prelude/finite.rs:1406"
-      ]
-    },
-    {
-      "key": "point_ty",
-      "count": 2,
-      "names": [
-        "point_ty"
-      ],
-      "files": 2,
-      "carriers": [
-        "IntDev"
-      ],
-      "body_lines": 3,
-      "signature": "fn point_ty(d: &mut IntDev<'_>, p: CPointPrelude) -> ExprId",
-      "test_file_members": 0,
-      "sites": [
-        "crates/axeyum-lean-kernel/src/creal_point.rs:1795",
-        "crates/axeyum-lean-kernel/src/geo/qplane.rs:296"
       ]
     },
     {
@@ -47971,6 +48935,25 @@
       ]
     },
     {
+      "key": "prop_ty",
+      "count": 2,
+      "names": [
+        "prop_ty"
+      ],
+      "files": 2,
+      "carriers": [
+        "IntDev",
+        "NatDev"
+      ],
+      "body_lines": 4,
+      "signature": "fn prop_ty(d: &mut IntDev<'_>) -> ExprId",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/geo/rplane.rs:367",
+        "crates/axeyum-lean-kernel/src/nat_prelude/subset_search.rs:96"
+      ]
+    },
+    {
       "key": "provable_app",
       "count": 2,
       "names": [
@@ -48020,6 +49003,42 @@
       "sites": [
         "crates/axeyum-lean-kernel/src/creal_point.rs:1824",
         "crates/axeyum-lean-kernel/src/metric.rs:1959"
+      ]
+    },
+    {
+      "key": "px",
+      "count": 2,
+      "names": [
+        "px"
+      ],
+      "files": 2,
+      "carriers": [
+        "IntDev"
+      ],
+      "body_lines": 3,
+      "signature": "fn px(d: &mut IntDev<'_>, q: QPlaneNames, p: ExprId) -> ExprId",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/geo/qplane.rs:308",
+        "crates/axeyum-lean-kernel/src/geo/rplane.rs:372"
+      ]
+    },
+    {
+      "key": "py",
+      "count": 2,
+      "names": [
+        "py"
+      ],
+      "files": 2,
+      "carriers": [
+        "IntDev"
+      ],
+      "body_lines": 3,
+      "signature": "fn py(d: &mut IntDev<'_>, q: QPlaneNames, p: ExprId) -> ExprId",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/geo/qplane.rs:312",
+        "crates/axeyum-lean-kernel/src/geo/rplane.rs:376"
       ]
     },
     {
@@ -51737,7 +52756,7 @@
       "signature": "fn app_all(k: &mut Kernel, head: ExprId, args: &[ExprId]) -> ExprId",
       "test_file_members": 0,
       "sites": [
-        "crates/axeyum-lean-kernel/src/geo.rs:245",
+        "crates/axeyum-lean-kernel/src/geo.rs:247",
         "crates/axeyum-lean-kernel/src/intspace.rs:173",
         "crates/axeyum-lean-kernel/src/metric.rs:150",
         "crates/axeyum-lean-kernel/src/top_frame.rs:207"
@@ -52487,6 +53506,23 @@
         "crates/axeyum-lean-kernel/src/creal/crossing.rs:690",
         "crates/axeyum-lean-kernel/src/creal/integral.rs:4486",
         "crates/axeyum-lean-kernel/src/creal/monotone.rs:1400"
+      ]
+    },
+    {
+      "key": "7785b0e1aa45769d",
+      "count": 3,
+      "names": [
+        "rsub"
+      ],
+      "files": 3,
+      "carriers": [],
+      "body_lines": 3,
+      "signature": "fn rsub(a: RnExpr, b: RnExpr) -> RnExpr",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/creal_point/conic.rs:406",
+        "crates/axeyum-lean-kernel/src/creal_point/isometry.rs:109",
+        "crates/axeyum-lean-kernel/src/geo/rplane.rs:520"
       ]
     },
     {
@@ -54589,6 +55625,23 @@
       ]
     },
     {
+      "key": "561642c0c5aee2d0",
+      "count": 2,
+      "names": [
+        "at",
+        "ratom"
+      ],
+      "files": 2,
+      "carriers": [],
+      "body_lines": 3,
+      "signature": "fn ratom(e: ExprId) -> RnExpr",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/creal_point/conic.rs:392",
+        "crates/axeyum-lean-kernel/src/geo/rplane.rs:515"
+      ]
+    },
+    {
       "key": "57812ab7b48df2df",
       "count": 2,
       "names": [
@@ -54713,6 +55766,25 @@
       "sites": [
         "crates/axeyum-lean-kernel/src/nat_prelude/arith_functions.rs:151",
         "crates/axeyum-lean-kernel/src/nat_prelude/arith_functions_family.rs:116"
+      ]
+    },
+    {
+      "key": "61598b6428e694ed",
+      "count": 2,
+      "names": [
+        "point_ty",
+        "pty"
+      ],
+      "files": 2,
+      "carriers": [
+        "IntDev"
+      ],
+      "body_lines": 3,
+      "signature": "fn point_ty(d: &mut IntDev<'_>, cp: CPointPrelude) -> ExprId",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/geo/rplane.rs:355",
+        "crates/axeyum-lean-kernel/src/metric.rs:1956"
       ]
     },
     {
@@ -55007,22 +56079,6 @@
       ]
     },
     {
-      "key": "7785b0e1aa45769d",
-      "count": 2,
-      "names": [
-        "rsub"
-      ],
-      "files": 2,
-      "carriers": [],
-      "body_lines": 3,
-      "signature": "fn rsub(a: RnExpr, b: RnExpr) -> RnExpr",
-      "test_file_members": 0,
-      "sites": [
-        "crates/axeyum-lean-kernel/src/creal_point/conic.rs:406",
-        "crates/axeyum-lean-kernel/src/creal_point/isometry.rs:109"
-      ]
-    },
-    {
       "key": "782bea4d20ad5d36",
       "count": 2,
       "names": [
@@ -55106,7 +56162,7 @@
       "signature": "fn prop_sort(k: &mut Kernel) -> ExprId",
       "test_file_members": 0,
       "sites": [
-        "crates/axeyum-lean-kernel/src/geo.rs:258",
+        "crates/axeyum-lean-kernel/src/geo.rs:260",
         "crates/axeyum-lean-kernel/src/top_frame.rs:215"
       ]
     },
@@ -56700,6 +57756,24 @@
       ]
     },
     {
+      "key": "cd5b9b1708f4ada8",
+      "count": 2,
+      "names": [
+        "false_ty"
+      ],
+      "files": 2,
+      "carriers": [
+        "IntDev"
+      ],
+      "body_lines": 4,
+      "signature": "fn false_ty(d: &mut IntDev<'_>) -> ExprId",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/geo/qplane.rs:353",
+        "crates/axeyum-lean-kernel/src/geo/rplane.rs:432"
+      ]
+    },
+    {
       "key": "cd81b150b37a9ec7",
       "count": 2,
       "names": [
@@ -56767,6 +57841,24 @@
       "sites": [
         "crates/axeyum-lean-kernel/src/creal/deriv_unique.rs:377",
         "crates/axeyum-lean-kernel/src/creal/derivative.rs:1125"
+      ]
+    },
+    {
+      "key": "d2199e08a35240d3",
+      "count": 2,
+      "names": [
+        "and_intro"
+      ],
+      "files": 2,
+      "carriers": [
+        "IntDev"
+      ],
+      "body_lines": 4,
+      "signature": "fn and_intro(d: &mut IntDev<'_>, p: ExprId, q: ExprId, hp: ExprId, hq: ExprId) -> ExprId",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/geo/rplane.rs:442",
+        "crates/axeyum-lean-kernel/src/int_prelude/mult_order.rs:141"
       ]
     },
     {

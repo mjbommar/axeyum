@@ -7262,15 +7262,26 @@ SUITES["central-binomial-in-kernel"] = (
 
 SUITES["geo-incidence"] = (
     "crates/axeyum-lean-kernel/src/geo.rs",
-    # Deliberately NOT `--release`. Both mutants fail at PRELUDE-BUILD time,
-    # not at test-execution time, so the run is dominated by compiling the
-    # kernel crate three times (baseline plus two mutants) and the debug
-    # profile is several times cheaper. The suite's tests all go through
-    # `on_a_deep_stack`, so the debug frame growth CLAUDE.md warns about for
-    # the `--release`-only example binaries does not apply here — measured
-    # green in debug at 7 passed / 0 failed before the mutants were run.
+    # Deliberately NOT `--release`. All FOUR mutants fail at PRELUDE-BUILD
+    # time, not at test-execution time, so the run is dominated by compiling
+    # the kernel crate once per mutant and the debug profile is several times
+    # cheaper. The suite's tests all go through `on_a_deep_stack`, so the debug
+    # frame growth CLAUDE.md warns about for the `--release`-only example
+    # binaries does not apply here.
+    #
+    # The filter is the SINGLE prelude-build test, not the whole `geo::`
+    # module, and that is a measurement rather than a preference. Once the ℝ
+    # model landed (ADR-1652) the module grew to 20 tests, each of which
+    # CLONES the built kernel; run in debug at cargo's default thread count
+    # the baseline produced `running 20 tests` and then no `test result:` line
+    # at all — the harness's own INCONSISTENT verdict, and the signature of the
+    # 24 G memory ceiling firing on several concurrent kernel clones. The one
+    # test kept is the one every mutation here actually kills, and it is
+    # measured at 435.72 s in debug, 1 passed / 0 failed. Run the whole module
+    # in `--release` instead (20 passed in 117 s); it is not what a mutation
+    # sweep needs.
     Cargo(
-        ("-p", "axeyum-lean-kernel", "--lib", "geo::"),
+        ("-p", "axeyum-lean-kernel", "--lib", "geo::geo_tests::geo_prelude_builds"),
         "geo-incidence",
     ),
     [
@@ -7295,6 +7306,36 @@ SUITES["geo-incidence"] = (
             "        let body = lmk(d, q, big_a, big_b, big_c);",
             "        let body = lmk(d, q, big_b, big_a, big_c);",
             "crates/axeyum-lean-kernel/src/geo/qplane.rs",
+        ),
+        # ADR-1652, the REAL model's load-bearing design decision. Line
+        # non-degeneracy is a witnessed `CReal.PosBound`, not a negation.
+        # The negated form type-checks perfectly well AS A PREDICATE -- which
+        # is exactly why it is worth a mutant -- and constructs no modulus, so
+        # nothing downstream that has to divide can consume it.
+        (
+            "the real line's non-degeneracy is a PosBound witness, not a negation",
+            "        let nat = d.nat_ty();\n"
+            "        let k_fv = d.fresh_fvar();\n"
+            "        let k = d.kernel().fvar(k_fv);\n"
+            "        let pb = pos_bound(d, cr, n, k);\n"
+            "        let pred = d.lam_fv(k_fv, nat, pb);\n"
+            "        let body = exists_ty(d, nat, pred);",
+            "        let zero = rn_czero(d, cr);\n"
+            "        let eqz = ceq(d, cr, n, zero);\n"
+            "        let f = false_ty(d);\n"
+            "        let body = d.arrow(eqz, f);",
+            "crates/axeyum-lean-kernel/src/geo/rplane.rs",
+        ),
+        # `Geo.RPlane.joinUnique` proves extensional line equality in BOTH
+        # directions from one lemma, by flipping the three defects with
+        # `defectSwap`. Feed the backward direction the UNFLIPPED defects --
+        # the l/m order swapped in the conclusion -- and `onOfDefects` is
+        # applied at arguments whose types name the wrong line.
+        (
+            "joinUnique's backward direction flips the defects",
+            "                    aa, bb, cc, a, b, c, xx, xy, km, hkm, hdab2, hdac2, hdbc2, hx,",
+            "                    aa, bb, cc, a, b, c, xx, xy, km, hkm, hdab, hdac, hdbc, hx,",
+            "crates/axeyum-lean-kernel/src/geo/rplane.rs",
         ),
     ],
 )
