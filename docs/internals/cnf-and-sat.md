@@ -89,6 +89,25 @@ never at `SatRefutation`. See
 the boundary is pinned by
 `crates/axeyum-cnf/tests/theory_lemma_proof_contract.rs`.
 
+**How a theory lemma actually enters the clause database.** A variable's
+antecedent in the native core is a one-word `Reason`: a decision, an arena
+clause, or a **theory explanation the theory has not materialised** (S6 of the
+SMT parity plan; the slice-2 design memo section 4.4 (ii)). Conflict analysis,
+recursive minimization and the failed-assumption walk each resolve that third
+case by asking the theory for its clause, installing it in the arena as an
+**input** clause and rewriting the reason in place, so a handle is resolved at
+most once per assignment and the search never pays for an explanation it does
+not resolve against. The installed clause is registered with
+`learned[cid] = false`, which is ADR-1704's classification and also makes it
+structurally impossible for `reduce_db` -- which only ever considers learned
+clauses -- to delete the justification of an assigned literal. Nothing is
+emitted to the DRAT sink for such a clause: a lemma is an input clause, not a
+derived step, and emitting it would be the unlabelled learned clause ADR-1704
+section 5 forbids. Every shipping entry point attaches `NullTheory`, which never
+propagates, so on those paths no theory reason is ever created and the lemma
+list is empty. Measured, no verdict and no proof byte changed: see the
+[S6 measurement note](../research/11-design-review/2026-09-06-s6-reason-repr-measured.md).
+
 The public contract is unchanged in shape: SAT models must replay, and UNSAT
 assurance is stated at the level actually checked — a search verdict is never
 relabelled as a checked proof. See the
