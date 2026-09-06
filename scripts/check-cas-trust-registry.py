@@ -25,10 +25,18 @@ regression of a function that WAS certified is).
 
 The certificate vocabulary is derived from the source, not typed by hand:
 every `pub struct`/`pub enum` under `crates/axeyum-cas/src` whose name ends
-in `Certificate`, `Evidence`, `Report`, or `Witness`, or is exactly
-`ZeroTest` or `CertifiedIntegral`, or has an inherent method named exactly
-`verify` or `check`. A hand-typed list goes stale the day a new certificate
-type ships under a different name; this recomputes it every run.
+in `Certificate`, `Evidence`, `Report`, or `Witness`, is exactly `ZeroTest`
+or `CertifiedIntegral`, starts with `Certified` (and is not the bare word
+`Certified` on its own), or has an inherent method named exactly `verify` or
+`check` that takes `self` and returns `Result<...>` or `bool`. A hand-typed
+list goes stale the day a new certificate type ships under a different
+name; this recomputes it every run. The `Certified*` prefix rule was added
+2026-09-05 after `CertifiedGosperSum` (gosper.rs) was found to carry a real,
+re-derivable certificate under a name the suffix rule does not match; the
+`self`/return-type tightening on the verify/check-method rule was added the
+same day so an associated function with no receiver, or a same-named method
+that returns something other than a verdict, cannot admit a type on the
+strength of the name alone.
 
 The scanner
 -----------
@@ -68,6 +76,12 @@ DEFAULT_RATCHET = REPO_ROOT / "scripts" / "check-cas-trust-registry.ratchet"
 
 VOCAB_SUFFIXES = ("Certificate", "Evidence", "Report", "Witness")
 VOCAB_EXACT_NAMES = ("ZeroTest", "CertifiedIntegral")
+# A name that STARTS WITH "Certified" (and is not literally "Certified" on
+# its own -- that bare name carries no further information and must not be
+# admitted by this rule) also joins the vocabulary. Found 2026-09-05:
+# `CertifiedGosperSum` (gosper.rs) names its certificate this way instead of
+# with one of the suffixes above.
+VOCAB_PREFIXES = ("Certified",)
 CHECKER_PREFIXES = ("verify", "check", "replay", "certify")
 
 RATCHET_HEADER = """\
@@ -248,6 +262,61 @@ def _strip_generics_and_params(core: str, name_end: int) -> str:
     return core[j:]
 
 
+_SELF_PARAM_RE = re.compile(r"^&?\s*(?:'[A-Za-z_]\w*\s+)?(?:mut\s+)?self\b")
+
+
+def _fn_params_text(core: str, name_end: int) -> str:
+    """From just after `fn NAME`, skip `<...>` generics, then return the raw
+    text strictly between the parameter list's `(` and its matching `)` --
+    empty string if there is no parameter list at all (there always is one
+    for a real `fn`, but a malformed header should not raise).
+
+    Mirrors `_strip_generics_and_params`'s walk exactly (same generics skip,
+    same paren-depth walk) but captures the params instead of discarding
+    them, so a self-receiver check has real text to look at.
+    """
+    j = name_end
+    n = len(core)
+    while j < n and core[j] in " \t\n":
+        j += 1
+    if j < n and core[j] == "<":
+        depth = 0
+        while j < n:
+            if core[j] == "<":
+                depth += 1
+            elif core[j] == ">":
+                depth -= 1
+                if depth == 0:
+                    j += 1
+                    break
+            j += 1
+    while j < n and core[j] in " \t\n":
+        j += 1
+    if j < n and core[j] == "(":
+        open_idx = j
+        depth = 0
+        while j < n:
+            if core[j] == "(":
+                depth += 1
+            elif core[j] == ")":
+                depth -= 1
+                if depth == 0:
+                    return core[open_idx + 1 : j]
+            j += 1
+    return ""
+
+
+def fn_has_self_param(core: str, fn_match: "re.Match[str]") -> bool:
+    """Whether this function signature's first parameter is some form of
+    `self` -- required for it to be an INSTANCE method rather than an
+    associated function that merely happens to be named `verify`/`check`.
+    A negative fixture in the test suite pins this: `impl Foo { pub fn
+    verify() -> bool { true } }` (no receiver) must not admit `Foo` into the
+    certificate vocabulary."""
+    params = _fn_params_text(core, fn_match.end(2)).strip()
+    return bool(_SELF_PARAM_RE.match(params))
+
+
 def extract_return_type(core: str, fn_match: "re.Match[str]") -> str:
     name_end = fn_match.end(2)
     tail = _strip_generics_and_params(core, name_end).strip()
@@ -308,6 +377,15 @@ class PubFn:
     line: int
     return_type: str
     impl_type: str | None
+    # Whether the first parameter is some form of `self` (`self`, `&self`,
+    # `&mut self`, or a lifetime-qualified `&'a (mut )self`). Only a method
+    # that actually consumes an INSTANCE can be the thing a caller checks --
+    # an associated function named `verify`/`check` with no receiver proves
+    # nothing about any particular value. Defaults to False so any older
+    # caller that does not pass it (there are none left after this change,
+    # but a fixture built before this field existed would otherwise KeyError)
+    # degrades to "not a self method" rather than raising.
+    has_self: bool = False
 
 
 @dataclass
@@ -405,6 +483,7 @@ def scan_file(
                 pub_group, fname = fn_m.group(1), fn_m.group(2)
                 if pub_group is not None and pub_group.strip() == "pub" and not top.skip:
                     ret = extract_return_type(core, fn_m)
+                    has_self = fn_has_self_param(core, fn_m)
                     impl_type = top.module_path[-1] if top.kind == "impl" else None
                     path = "::".join(top.module_path + [fname])
                     pub_fns.append(
@@ -414,6 +493,7 @@ def scan_file(
                             line=_line_of(masked, header_start),
                             return_type=ret,
                             impl_type=impl_type,
+                            has_self=has_self,
                         )
                     )
                 stack.append(Scope(kind="fn", skip=True, module_path=top.module_path))
@@ -500,15 +580,45 @@ def scan_crate(src_root: Path) -> tuple[list[PubType], list[PubFn]]:
     return all_types, all_fns
 
 
+_VERIFY_CHECK_RETURN_RE = re.compile(r"^(bool|Result\s*<.*>)$")
+
+
 def find_verify_or_check_methods(
     src_root: Path, all_fns: list[PubFn]
 ) -> set[str]:
-    """Type names with an inherent method literally named `verify` or `check`."""
+    """Type names with an inherent method literally named `verify` or
+    `check` that (a) takes `self` in some form and (b) returns `Result<...>`
+    or `bool`.
+
+    Both conditions are load-bearing, not decoration:
+
+    - Without the `self` check, an ASSOCIATED function `Foo::verify() ->
+      bool` (no receiver -- nothing it could be checking an instance of)
+      would admit `Foo`, and nothing distinguishes that from a real checker.
+    - Without the return-type check, a method named `verify` that returns,
+      say, a `String` describing itself (no accept/refuse verdict at all)
+      would admit its type too. Every inherent `verify`/`check` method in
+      `crates/axeyum-cas/src` as of 2026-09-05 already satisfies both (all
+      take `&self` and return `Result<...>`), so tightening this does not
+      remove anything from the current vocabulary -- it only stops a future
+      false positive.
+    """
     result: set[str] = set()
     for fn in all_fns:
-        if fn.impl_type and fn.path.rsplit("::", 1)[-1] in ("verify", "check"):
-            result.add(fn.impl_type)
+        if not fn.impl_type:
+            continue
+        if fn.path.rsplit("::", 1)[-1] not in ("verify", "check"):
+            continue
+        if not fn.has_self:
+            continue
+        if not _VERIFY_CHECK_RETURN_RE.match(fn.return_type.strip()):
+            continue
+        result.add(fn.impl_type)
     return result
+
+
+def _has_certified_prefix(name: str) -> bool:
+    return any(name.startswith(p) and name != p for p in VOCAB_PREFIXES)
 
 
 def derive_vocabulary(
@@ -516,7 +626,11 @@ def derive_vocabulary(
 ) -> dict[str, PubType]:
     vocab: dict[str, PubType] = {}
     for t in all_types:
-        if t.name.endswith(VOCAB_SUFFIXES) or t.name in VOCAB_EXACT_NAMES:
+        if (
+            t.name.endswith(VOCAB_SUFFIXES)
+            or t.name in VOCAB_EXACT_NAMES
+            or _has_certified_prefix(t.name)
+        ):
             vocab[t.name] = t
     for name in find_verify_or_check_methods(Path("."), all_fns):
         # find its PubType record (any file) to attach a kind

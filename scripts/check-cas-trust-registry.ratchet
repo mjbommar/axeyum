@@ -17,7 +17,7 @@
 # only rises on purpose) -- but a new UNCERTIFIED function is never refused;
 # that label is honest, not a violation. See
 # docs/math-department/13-computer-algebra.md item 10.
-COUNT	117
+COUNT	120
 FN	enclosure::enclose	Option<Enclosure>
 FN	enclosure::enclose_constant	Option<Enclosure>
 FN	enclosure::enclose_root	Option<Enclosure>
@@ -53,6 +53,7 @@ FN	gf2_extension::binary_extension_witt_shifted_trace	Result<BinaryExtensionWitt
 FN	gf2_extension::collapse_binary_extension_long_cycle_trace_subshards	Result<BinaryExtensionLongCycleTraceShardReport, BinaryExtensionTraceError>
 FN	gf2_extension::combine_binary_extension_connected_adams_trace_shards	Result<BinaryExtensionConnectedAdamsTraceReport, BinaryExtensionTraceError>
 FN	gf2_extension::combine_binary_extension_long_cycle_trace_shards	Result<BinaryExtensionLongCycleTraceReport, BinaryExtensionTraceError>
+FN	gosper::gosper_sum_certified	Option<CertifiedGosperSum>
 FN	homology::HomologyCertificate::verify	Result<HomologyReport, String>
 FN	homology::homology	Option<HomologyCertificate>
 FN	homology_coefficients::CoefficientHomologyCertificate::verify	Result<CoefficientHomologyReport, String>
@@ -119,6 +120,8 @@ FN	probability::chebyshev_bound	Certificate
 FN	probability::convolve_poisson	Option<Certificate>
 FN	probability::markov_bound	Certificate
 FN	prove_derivative	ZeroTest
+FN	prove_squared_binomial_falling_moment	Option<CertifiedSquaredBinomialFallingMoment>
+FN	prove_squared_binomial_moment	Option<CertifiedSquaredBinomialMoment>
 FN	qe::decide_exists	Decision
 FN	qe::decide_forall	ForallDecision
 FN	qe_bivariate::eliminate_y	Result<ProjectionCertificate, Fault>
@@ -147,7 +150,11 @@ VOCAB	CayleyTableCertificate	struct
 VOCAB	CellCertificate	struct
 VOCAB	CenterCertificate	struct
 VOCAB	Certificate	struct
+VOCAB	CertifiedConclusion	struct
+VOCAB	CertifiedGosperSum	struct
 VOCAB	CertifiedIntegral	struct
+VOCAB	CertifiedSquaredBinomialFallingMoment	struct
+VOCAB	CertifiedSquaredBinomialMoment	struct
 VOCAB	CheckReport	struct
 VOCAB	ClassGroupCertificate	struct
 VOCAB	ClassNumberCertificate	struct
