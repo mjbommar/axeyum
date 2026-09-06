@@ -1,0 +1,20 @@
+c986c9c8ce9b72b4d6249aa6cd75305800169f7dac8bb4bfd6f83675adf5448f  /data0/axeyum/scratch/snap-s1-mut-703dc05ef/target/release/examples/smtcomp_cli
+c9301a0d641d5336a0d8aadcc72813869ca88eceb3ad3c15ce7192e42be43aaa  /home/mjbommar/projects/personal/axeyum/.claude/worktrees/agent-a1e33efdeda1cdda1/target/release/examples/smtcomp_cli
+### a7.3.0 [intact repeat 1]
+; theory-layer boolean_propagate_ms=1392 theory_assert_ms=57 theory_propagate_ms=1 theory_push_pop_ms=4 conflict_analysis_ms=13 theory_final_check_ms=0 theory_explain_ms=0 theory_conflicts=349 theory_propagations=0 final_checks=0 decisions=41887 restarts=2
+unknown
+### a7.3.0 [mutant repeat 1]
+; theory-layer boolean_propagate_ms=17908 theory_assert_ms=0 theory_propagate_ms=0 theory_push_pop_ms=0 conflict_analysis_ms=0 theory_final_check_ms=0 theory_explain_ms=0 theory_conflicts=0 theory_propagations=0 final_checks=0 decisions=0 restarts=0
+unknown
+### a7.3.0 [intact repeat 2]
+; theory-layer boolean_propagate_ms=1443 theory_assert_ms=59 theory_propagate_ms=1 theory_push_pop_ms=4 conflict_analysis_ms=18 theory_final_check_ms=0 theory_explain_ms=0 theory_conflicts=353 theory_propagations=0 final_checks=0 decisions=48200 restarts=3
+unknown
+### a7.3.0 [mutant repeat 2]
+; theory-layer boolean_propagate_ms=18675 theory_assert_ms=0 theory_propagate_ms=0 theory_push_pop_ms=0 conflict_analysis_ms=0 theory_final_check_ms=0 theory_explain_ms=0 theory_conflicts=0 theory_propagations=0 final_checks=0 decisions=0 restarts=0
+unknown
+### plan-30 [intact] (declared unsat)
+; theory-layer boolean_propagate_ms=216 theory_assert_ms=49 theory_propagate_ms=2 theory_push_pop_ms=7 conflict_analysis_ms=8 theory_final_check_ms=0 theory_explain_ms=0 theory_conflicts=2314 theory_propagations=0 final_checks=0 decisions=205034 restarts=22
+unsat
+### plan-30 [mutant] (declared unsat)
+; theory-layer boolean_propagate_ms=20927 theory_assert_ms=6 theory_propagate_ms=0 theory_push_pop_ms=0 conflict_analysis_ms=0 theory_final_check_ms=0 theory_explain_ms=0 theory_conflicts=0 theory_propagations=0 final_checks=0 decisions=0 restarts=0
+unknown
