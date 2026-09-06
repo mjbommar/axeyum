@@ -51,6 +51,7 @@
 
 use super::euler::int_exists_intro;
 use super::ops::IntDev;
+use crate::BinderInfo;
 use crate::KernelError;
 use crate::expr::ExprId;
 use crate::nat_prelude::NatOps;
@@ -1428,6 +1429,323 @@ fn declare_descent_multiplier_bounds(d: &mut IntDev<'_>) -> Result<(), KernelErr
 }
 
 // ============================================================================
+// the descent's entry point
+// ============================================================================
+
+/// `Int.sub_neg_one_eq_add_sq_one : ∀ a, Eq Int (sub a (neg one)) (add a (mul one one))`.
+/// `ring::int`.
+///
+/// The shape that turns `Int.ModEq.dvd`'s output `p ∣ (c·c) − (−1)` into the
+/// sum-of-two-squares shape `p ∣ c·c + 1·1`, with the second square written as
+/// `1·1` rather than `1` so it matches `Int.IsSumOfTwoSquares`'s body without
+/// a further rewrite.
+///
+/// # Errors
+///
+/// As [`declare_neg_mul_neg`].
+fn declare_sub_neg_one_eq_add_sq_one(d: &mut IntDev<'_>) -> Result<(), KernelError> {
+    let p = d.int();
+    crate::ring::int::declare(d, &p, p.sub_neg_one_eq_add_sq_one, 1, &|d, v| {
+        let a = v[0];
+        let one = d.ione();
+        let neg_one = d.ineg(one);
+        let lhs = d.isub(a, neg_one);
+        let one_one = d.imul(one, one);
+        let rhs = d.iadd(a, one_one);
+        d.ieq(lhs, rhs)
+    })
+}
+
+/// `fun (c : Int) => And (Eq Int (mul k p) (add (mul c c) (mul one one)))`
+/// `                     (And (lt zero k) (lt k p))` — the inner body of
+/// [`declare_exists_small_multiple_of_sq_add_one`]'s double existential, with
+/// the multiplier `k` already fixed.
+fn small_multiple_inner(d: &mut IntDev<'_>, modulus: ExprId, k: ExprId) -> ExprId {
+    let int_ty = d.int_ty();
+    let c_fv = d.fresh_fvar();
+    let c = d.kernel().fvar(c_fv);
+    let body = small_multiple_body(d, modulus, k, c);
+    d.lam_fv(c_fv, int_ty, body)
+}
+
+/// `And (Eq Int (mul k p) (add (mul c c) (mul one one))) (And (lt 0 k) (lt k p))`.
+fn small_multiple_body(d: &mut IntDev<'_>, modulus: ExprId, k: ExprId, c: ExprId) -> ExprId {
+    let zero = d.izero();
+    let kp = d.imul(k, modulus);
+    let sum = sq_add_one(d, c);
+    let equation = d.ieq(kp, sum);
+    let positive = d.ilt(zero, k);
+    let below = d.ilt(k, modulus);
+    let bounds = d.and(positive, below);
+    d.and(equation, bounds)
+}
+
+/// `fun (k : Int) => Exists.{1} Int (small_multiple_inner p k)`.
+pub(super) fn small_multiple_outer(d: &mut IntDev<'_>, modulus: ExprId) -> ExprId {
+    let int_ty = d.int_ty();
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+    let inner = small_multiple_inner(d, modulus, k);
+    let body = super::two_squares::int_exists(d, inner);
+    d.lam_fv(k_fv, int_ty, body)
+}
+
+/// `add (mul c c) (mul one one)` — `c² + 1²`.
+fn sq_add_one(d: &mut IntDev<'_>, c: ExprId) -> ExprId {
+    let cc = d.imul(c, c);
+    let one = d.ione();
+    let one_one = d.imul(one, one);
+    d.iadd(cc, one_one)
+}
+
+/// `Int.exists_small_multiple_of_sq_add_one : ∀ p x, lt zero p →`
+/// `  le (add one one) p → ModEq p (mul x x) (neg one) →`
+/// `  ∃ k, ∃ c, (mul k p = add (mul c c) (mul one one)) ∧ (lt zero k ∧ lt k p)`
+/// — **the entry point of Fermat's descent**, over `Int` alone.
+///
+/// `Int.firstSupplementaryLawResidue` supplies the hypothesis `x·x ≡ −1 (mod p)`
+/// for a prime `p ≡ 1 (mod 4)`; this lemma turns it into a multiple of `p` that
+/// is a sum of two squares, with the multiplier already **strictly between `0`
+/// and `p`** — which is the invariant the descent's induction needs and the
+/// reason the representative has to be centered first.
+///
+/// Primality is deliberately NOT a hypothesis. Everything here needs only
+/// `0 < p` and `1 + 1 ≤ p`; the caller derives the latter from `p = 2m+1` with
+/// `m` even and `p` prime, and that derivation is `Nat` work that does not
+/// belong in an `Int` order module.
+///
+/// The route, in one line each: center `x` modulo `p`
+/// ([`declare_exists_centered_representative`]); square the congruence
+/// (`Int.ModEq.mul`), so `c·c ≡ −1`; read off `p ∣ c·c − (−1) = c·c + 1·1`
+/// (`Int.ModEq.dvd`), giving `k` with `c·c + 1·1 = p·k`; `0 < k` because
+/// `c·c + 1·1` is positive ([`declare_pos_of_mul_pos_left`]); and `k < p`
+/// because [`declare_sq_add_sq_lt_sq_of_bounds`] at `e := 1` puts
+/// `c·c + 1·1` strictly under `p·p` ([`declare_lt_of_mul_lt_mul_left`]).
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection.
+fn declare_exists_small_multiple_of_sq_add_one(d: &mut IntDev<'_>) -> Result<(), KernelError> {
+    let p = d.int();
+    d.int_theorem(p.exists_small_multiple_of_sq_add_one, 2, &|d, v| {
+        let (modulus, x) = (v[0], v[1]);
+        let zero = d.izero();
+        let one = d.ione();
+        let neg_one = d.ineg(one);
+        let two = d.iadd(one, one);
+        let xx = d.imul(x, x);
+
+        let pos = d.ilt(zero, modulus);
+        let wide = d.ile(two, modulus);
+        let residue = super::two_squares::imodeq(d, modulus, xx, neg_one);
+        let outer = small_multiple_outer(d, modulus);
+        let concl = super::two_squares::int_exists(d, outer);
+        let stmt = {
+            let t3 = d.arrow(residue, concl);
+            let t2 = d.arrow(wide, t3);
+            d.arrow(pos, t2)
+        };
+
+        let proof = with_hyp(d, pos, &|d, hp| {
+            let one = d.ione();
+            let two = d.iadd(one, one);
+            let wide = d.ile(two, modulus);
+            with_hyp(d, wide, &|d, h2| {
+                let one = d.ione();
+                let neg_one = d.ineg(one);
+                let xx = d.imul(x, x);
+                let residue = super::two_squares::imodeq(d, modulus, xx, neg_one);
+                with_hyp(d, residue, &|d, hres| {
+                    let zero = d.izero();
+                    let hp0 = d.const_app(p.le_of_lt, &[zero, modulus, hp]);
+                    let outer = small_multiple_outer(d, modulus);
+                    let target = super::two_squares::int_exists(d, outer);
+
+                    // `∃ c, ModEq p c x ∧ (−p ≤ c+c ∧ c+c ≤ p)`.
+                    let rep = d.const_app(p.exists_centered_representative, &[x, modulus, hp]);
+                    let rep_pred = centered_predicate(d, x, modulus);
+                    let int_ty = d.int_ty();
+                    let minor = {
+                        let c_fv = d.fresh_fvar();
+                        let c = d.kernel().fvar(c_fv);
+                        let hc_ty = centered_body(d, x, modulus, c);
+                        let body = with_hyp(d, hc_ty, &|d, hc| {
+                            entry_from_representative(d, p, modulus, x, c, hp, hp0, h2, hres, hc)
+                        });
+                        d.lam_fv(c_fv, int_ty, body)
+                    };
+                    super::euler::int_exists_elim(d, rep_pred, target, rep, minor)
+                })
+            })
+        });
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
+/// The body of [`declare_exists_small_multiple_of_sq_add_one`] once a centered
+/// representative `c` and its certificate `hc` are in hand.
+///
+/// Split out because it is three nested eliminations deep and the closure
+/// nesting was becoming the hard part of reading it, not the mathematics.
+#[allow(clippy::too_many_arguments)]
+fn entry_from_representative(
+    d: &mut IntDev<'_>,
+    p: super::IntPrelude,
+    modulus: ExprId,
+    x: ExprId,
+    c: ExprId,
+    hp: ExprId,
+    hp0: ExprId,
+    h2: ExprId,
+    hres: ExprId,
+    hc: ExprId,
+) -> ExprId {
+    let zero = d.izero();
+    let one = d.ione();
+    let neg_one = d.ineg(one);
+    let two = d.iadd(one, one);
+    let cc = d.imul(c, c);
+    let xx = d.imul(x, x);
+    let sum = sq_add_one(d, c);
+
+    // Unpack the certificate.
+    let congruent = super::two_squares::imodeq(d, modulus, c, x);
+    let neg_m = d.ineg(modulus);
+    let doubled = d.iadd(c, c);
+    let low_ty = d.ile(neg_m, doubled);
+    let high_ty = d.ile(doubled, modulus);
+    let bounds_ty = d.and(low_ty, high_ty);
+    let hmod = d.and_left(congruent, bounds_ty, hc);
+    let hband = d.and_right(congruent, bounds_ty, hc);
+    let hlow = d.and_left(low_ty, high_ty, hband);
+    let hhigh = d.and_right(low_ty, high_ty, hband);
+
+    // `c*c ≡ x*x ≡ −1 (mod p)`, hence `p ∣ (c*c) − (−1)`.
+    let hsq = d.const_app(p.mod_eq_mul_general, &[modulus, c, x, c, x, hmod, hmod]);
+    let hcc = d.const_app(p.mod_eq_trans, &[modulus, cc, xx, neg_one, hsq, hres]);
+    let hsym = d.const_app(p.mod_eq_symm, &[modulus, cc, neg_one, hcc]);
+    let hdvd_raw = super::modeq::modeq_to_dvd(d, modulus, neg_one, cc, hsym);
+    let diff = d.isub(cc, neg_one);
+    let shape = d.const_app(p.sub_neg_one_eq_add_sq_one, &[cc]);
+    let hdvd = d.int_eq_rewrite(diff, sum, shape, hdvd_raw, &|d, z| {
+        super::dvd::idvd(d, modulus, z)
+    });
+
+    // `−p ≤ 1 + 1`, the lower band for the constant second square.
+    let one_pos = d.kernel().const_(p.zero_lt_one, vec![]);
+    let h01 = d.const_app(p.le_of_lt, &[zero, one, one_pos]);
+    let neg_nonpos = d.const_app(p.neg_nonpos_of_nonneg, &[modulus, hp0]);
+    let two_nonneg = d.const_app(p.add_nonneg, &[one, one, h01, h01]);
+    let band_low_one = le_trans(d, neg_m, zero, two, neg_nonpos, two_nonneg);
+
+    // `c*c + 1*1 < p*p`.
+    let strict = d.const_app(
+        p.sq_add_sq_lt_sq_of_bounds,
+        &[modulus, c, one, hp, hlow, hhigh, band_low_one, h2],
+    );
+
+    // Eliminate the divisibility witness.
+    let pred = super::dvd::dvd_predicate(d, modulus, sum);
+    let outer = small_multiple_outer(d, modulus);
+    let target = super::two_squares::int_exists(d, outer);
+    let dvd_ty = super::dvd::idvd(d, modulus, sum);
+    let anon = d.anon_name();
+    let motive = d.kernel().lam(anon, dvd_ty, target, BinderInfo::Default);
+    let int_ty = d.int_ty();
+    let minor = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let pk = d.imul(modulus, k);
+        let heq_ty = d.ieq(sum, pk);
+        let body = with_hyp(d, heq_ty, &|d, heq| {
+            entry_package(d, p, modulus, c, k, hp, hp0, heq, strict)
+        });
+        d.lam_fv(k_fv, int_ty, body)
+    };
+    let one_level = d.level_one();
+    let rec_name = d.int().logic.exists_rec;
+    let rec = d.kernel().const_(rec_name, vec![one_level]);
+    d.apply(rec, &[int_ty, pred, motive, minor, hdvd])
+}
+
+/// The final packaging: from `c*c + 1*1 = p*k` and `c*c + 1*1 < p*p`, build the
+/// double existential.
+#[allow(clippy::too_many_arguments)]
+fn entry_package(
+    d: &mut IntDev<'_>,
+    p: super::IntPrelude,
+    modulus: ExprId,
+    c: ExprId,
+    k: ExprId,
+    hp: ExprId,
+    hp0: ExprId,
+    heq: ExprId,
+    strict: ExprId,
+) -> ExprId {
+    let zero = d.izero();
+    let one = d.ione();
+    let cc = d.imul(c, c);
+    let one_one = d.imul(one, one);
+    let sum = sq_add_one(d, c);
+    let pk = d.imul(modulus, k);
+    let kp = d.imul(k, modulus);
+
+    // `k*p = c*c + 1*1`.
+    let comm = d.const_app(p.mul_comm, &[k, modulus]);
+    let heq_rev = d.isymm(sum, pk, heq);
+    let equation = d.itrans(kp, pk, sum, comm, heq_rev);
+
+    // `0 < c*c + 1*1`: `0 < 1*1 ≤ c*c + 1*1`.
+    let hcc0 = d.const_app(p.sq_nonneg, &[c]);
+    let grow = d.const_app(p.add_le_add_right, &[zero, cc, one_one, hcc0]);
+    let zero_one_one = d.iadd(zero, one_one);
+    let zadd = d.const_app(p.zero_add, &[one_one]);
+    let one_one_le = d.int_eq_rewrite(zero_one_one, one_one, zadd, grow, &|d, z| {
+        let sum = sq_add_one(d, c);
+        d.ile(z, sum)
+    });
+    let one_pos = d.kernel().const_(p.zero_lt_one, vec![]);
+    let collapse = d.const_app(p.mul_one, &[one]);
+    let collapse_rev = d.isymm(one_one, one, collapse);
+    let one_one_pos = d.int_eq_rewrite(one, one_one, collapse_rev, one_pos, &|d, z| {
+        let zero = d.izero();
+        d.ilt(zero, z)
+    });
+    let sum_pos = d.const_app(
+        p.lt_of_lt_of_le,
+        &[zero, one_one, sum, one_one_pos, one_one_le],
+    );
+    let pk_pos = d.int_eq_rewrite(sum, pk, heq, sum_pos, &|d, z| {
+        let zero = d.izero();
+        d.ilt(zero, z)
+    });
+    let k_pos = d.const_app(p.pos_of_mul_pos_left, &[modulus, k, hp0, pk_pos]);
+    let _ = hp;
+
+    // `k < p`.
+    let mm = d.imul(modulus, modulus);
+    let lifted = d.int_eq_rewrite(sum, pk, heq, strict, &|d, z| {
+        let mm = d.imul(modulus, modulus);
+        d.ilt(z, mm)
+    });
+    let _ = mm;
+    let k_below = d.const_app(p.lt_of_mul_lt_mul_left, &[modulus, k, modulus, hp0, lifted]);
+
+    // Package the double existential.
+    let equation_ty = d.ieq(kp, sum);
+    let pos_ty = d.ilt(zero, k);
+    let below_ty = d.ilt(k, modulus);
+    let bounds_ty = d.and(pos_ty, below_ty);
+    let bounds = and_intro(d, pos_ty, below_ty, k_pos, k_below);
+    let payload = and_intro(d, equation_ty, bounds_ty, equation, bounds);
+    let inner = small_multiple_inner(d, modulus, k);
+    let step = int_exists_intro(d, inner, c, payload);
+    let outer = small_multiple_outer(d, modulus);
+    int_exists_intro(d, outer, k, step)
+}
+
+// ============================================================================
 // shared shapes
 // ============================================================================
 
@@ -1518,5 +1836,7 @@ pub(super) fn declare_order_squares_all(d: &mut IntDev<'_>) -> Result<(), Kernel
     declare_pos_of_mul_pos_left(d)?;
     declare_eq_zero_of_sq_add_sq_eq_zero(d)?;
     declare_descent_multiplier_bounds(d)?;
+    declare_sub_neg_one_eq_add_sq_one(d)?;
+    declare_exists_small_multiple_of_sq_add_one(d)?;
     Ok(())
 }

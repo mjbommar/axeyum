@@ -15,29 +15,39 @@ the `integer-absolute-value` held-out family was drawn and scored, and
 genuinely absent, and the real gap was not a name at all — it was the **shape**
 of the bound.
 
-`int_prelude/order_squares.rs` lands 23 axiom-free laws (ADR-1647): the
+`int_prelude/order_squares.rs` lands 25 axiom-free laws (ADR-1647): the
 sign/negation plumbing, halving (`le_of_add_le_add_self`) and left cancellation
 (`le_of_mul_le_mul_left`, `lt_of_mul_lt_mul_left`), the two-sided square bound
 `sq_le_sq_of_neg_le_of_le`, the bounded representative
 `exists_centered_representative`, the strict decrease
 `sq_add_sq_lt_sq_of_bounds`, and the descent's termination certificate
 `descentMultiplierBounds`, which takes the FACTORISATION `m*q = c² + e²` rather
-than the measure and returns `0 ≤ q ∧ q < m`.
+than the measure and returns `0 ≤ q ∧ q < m` — and, on the last pass, the
+descent's **entry point** `exists_small_multiple_of_sq_add_one`, which turns
+`x·x ≡ −1 (mod p)` into a `k` and `c` with `k·p = c² + 1²` and `0 < k < p`.
 
 Every bound is spelled `Int.add c c`, never `Int.mul (ofNat 2) c`. The two are
 equal; the `add` form is the one the existing shelf can move (doubling an
 inequality is `Int.add_le_add h h`), and it removes every numeral from the
 halving step, which is the only division in the whole argument.
 
-**`Int.fermatTwoSquares` did NOT land.** Four pieces remain, all sized in the
-notes of `F:int-fermat-two-squares` and none blocked on a missing capability:
-the entry step from `Int.firstSupplementaryLawResidue`; the divisibility
-`m ∣ c² + e²` that produces the new multiplier; the `q ≠ 0` argument (the only
-step that consumes primality); and the `Nat.strongInduction` assembly. One
-correction recorded there and in ADR-1647: `two_squares.rs`'s module doc says
-the entry point `declare_exists_mul_isSumOfTwoSquares_of_residue` already
-landed — **it does not exist**, the name occurs once in that doc comment and is
-not in `declare_two_squares_all`.
+**`Int.fermatTwoSquares` did NOT land.** Three pieces plus one bridge remain,
+all sized in the notes of `F:int-fermat-two-squares` and none blocked on a
+missing capability: the `Nat` bridge from a prime `p = 2m+1` with `Nat.Even m`
+to the entry point's two `Int` hypotheses; the divisibility `m ∣ c² + e²` that
+produces the NEXT multiplier; the `q ≠ 0` argument (the only step that consumes
+primality); and the `Nat.strongInduction` assembly. One correction recorded
+there and in ADR-1647: `two_squares.rs`'s module doc says the entry point
+`declare_exists_mul_isSumOfTwoSquares_of_residue` already landed — **it does
+not exist**, the name occurs once in that doc comment and is not in
+`declare_two_squares_all`. This lane built it for the first time, under a
+different name and without primality as a hypothesis.
+
+The statement pin is mutation-measured: changing its own expected conclusion
+for `sq_add_sq_lt_sq_of_bounds` from `lt S (m*m)` to `lt S m`, leaving the
+declaration alone so the prelude still builds, kills **exactly one** test
+(121 passed, 1 failed). The two mutants the brief named both hit the kernel
+instead and kill 119 of 122.
 
 Three real defects the kernel found and this lane fixed:
 `Int.add_le_add_iff_left` binds `(b, c, a)`, so the shared term is its LAST

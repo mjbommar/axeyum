@@ -2,7 +2,7 @@
 
 Status: accepted
 Date: 2026-09-05
-Index-summary: The Z order shelf Fermat's two-squares descent was blocked on lands as 23 axiom-free laws in `int_prelude/order_squares.rs`. Two design calls: every bound is spelled `Int.add c c` and never `Int.mul (ofNat 2) c`, which removes every numeral from the halving step (the only division in the argument); and the termination lemma `Int.descentMultiplierBounds` takes the FACTORISATION `m*q = c^2 + e^2` rather than the measure, so it composes with `Int.descentStep` without either half constructing a quotient. Two thirds of the obstruction ADR-1633 recorded was already stale: `Int.nat_abs_le_iff_mul_self_le` and `Int.mul_le_mul_of_nonneg_left` both existed. Fermat's theorem still did NOT land; the four remaining pieces are sized in `F:int-fermat-two-squares`, and `two_squares.rs`'s claim that the entry point already landed is false -- that declaration does not exist.
+Index-summary: The Z order shelf Fermat's two-squares descent was blocked on lands as 25 axiom-free laws in `int_prelude/order_squares.rs`. Two design calls: every bound is spelled `Int.add c c` and never `Int.mul (ofNat 2) c`, which removes every numeral from the halving step (the only division in the argument); and the termination lemma `Int.descentMultiplierBounds` takes the FACTORISATION `m*q = c^2 + e^2` rather than the measure, so it composes with `Int.descentStep` without either half constructing a quotient. Two thirds of the obstruction ADR-1633 recorded was already stale: `Int.nat_abs_le_iff_mul_self_le` and `Int.mul_le_mul_of_nonneg_left` both existed. The descent's ENTRY POINT also lands (`Int.exists_small_multiple_of_sq_add_one`), which `two_squares.rs`'s module doc wrongly claims already existed -- that declaration does not exist. Fermat's theorem itself still did NOT land; the three remaining pieces plus one Nat bridge are sized in `F:int-fermat-two-squares`.
 Index-status: accepted
 
 - **Lane**: `int-order-two-squares` (W3-10, second slice)
@@ -116,17 +116,24 @@ re-proved.
 
 ## Consequences
 
-Twenty-three laws land in `crates/axeyum-lean-kernel/src/int_prelude/order_squares.rs`,
+Twenty-five laws land in `crates/axeyum-lean-kernel/src/int_prelude/order_squares.rs`,
 all axiom-free, all registered in `int_prelude_tests::derived_laws`
-(294 → 317) so the environment-derived every-declaration sweep covers them.
+(294 → 319) so the environment-derived every-declaration sweep covers them.
 
-The ordering half of Fermat's two-square theorem is **done**. What remains for
-`Int.fermatTwoSquares` is four unbuilt pieces, none of them blocked on a
-missing capability, all four sized in the notes of `F:int-fermat-two-squares`:
-the entry step from `Int.firstSupplementaryLawResidue` to `k*p = x² + 1²` with
-`0 < k < p`; the divisibility `m ∣ c² + e²` that produces the new multiplier;
-the `q ≠ 0` argument (the only step that consumes primality); and the
-`Nat.strongInduction` assembly.
+The ordering half of Fermat's two-square theorem is **done**, and so is the
+descent's **entry point**: `Int.exists_small_multiple_of_sq_add_one` turns
+`x·x ≡ −1 (mod p)` into a `k` and `c` with `k·p = c² + 1²` and `0 < k < p`.
+Centering `x` first is what makes that available — the uncentered `x` has no
+bound at all, which is precisely why the previous slice could not close it.
+Primality is deliberately not a hypothesis of it: everything on that leg needs
+only `0 < p` and `1 + 1 ≤ p`.
+
+What remains for `Int.fermatTwoSquares` is three unbuilt pieces plus one
+bridge, none blocked on a missing capability, all sized in the notes of
+`F:int-fermat-two-squares`: the `Nat` bridge from a prime `p = 2m+1` with
+`Nat.Even m` to `0 < p` and `1 + 1 ≤ p`; the divisibility `m ∣ c² + e²` that
+produces the NEXT multiplier; the `q ≠ 0` argument (the only step that
+consumes primality); and the `Nat.strongInduction` assembly.
 
 **One correction this ADR records for the record**: `two_squares.rs`'s module
 doc states that `declare_exists_mul_isSumOfTwoSquares_of_residue` — the entry
@@ -150,6 +157,11 @@ A kill count of 119/122 is a real observation but a coarse one, and it says
 nothing about the case that actually worries us: a mutation that changes the
 statement AND the proof consistently, leaving the build green. That is what
 `order_squares_tests::order_squares_declarations_state_the_intended_types` is
-for — it rebuilds all 23 `∀`-telescoped types independently and compares each
-against the type the **environment** stores, and asserts `checked == 23` so a
+for — it rebuilds all 25 `∀`-telescoped types independently and compares each
+against the type the **environment** stores, and asserts `checked == 25` so a
 deleted row fails rather than passing quietly.
+
+**That guard was mutation-measured, and it is the informative row.** Changing
+the pin's own expected conclusion for `sq_add_sq_lt_sq_of_bounds` from
+`lt S (m*m)` to `lt S m` — leaving the declaration alone, so the prelude still
+builds — kills **exactly one** test, that one: 121 passed, 1 failed.

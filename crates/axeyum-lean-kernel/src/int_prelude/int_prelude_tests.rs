@@ -187,7 +187,7 @@ fn int_prelude_admits_all_declarations() {
 
 /// The integer laws this development **derives** from the axiom-free `Nat`
 /// prelude. Each must be a `Theorem` with an empty axiom footprint.
-fn derived_laws(p: &IntPrelude) -> [crate::NameId; 317] {
+fn derived_laws(p: &IntPrelude) -> [crate::NameId; 319] {
     [
         p.gcd_eq_gcd_ab_witnesses,
         p.gcd_div_gcd_div_gcd,
@@ -528,6 +528,8 @@ fn derived_laws(p: &IntPrelude) -> [crate::NameId; 317] {
         p.pos_of_mul_pos_left,
         p.eq_zero_of_sq_add_sq_eq_zero,
         p.descent_multiplier_bounds,
+        p.sub_neg_one_eq_add_sq_one,
+        p.exists_small_multiple_of_sq_add_one,
     ]
 }
 

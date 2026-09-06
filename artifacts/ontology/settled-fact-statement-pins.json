@@ -4,7 +4,7 @@
   "note": "Statement identity for every settled fact (S1 of the trusted-library safety roadmap, ADR-0763). Per fact: SHA-256 of formal.statement (the canonical kernel rendering for native lean4 rows), SHA-256 of the top-level reader-facing statement, and the kernel_theorem it names. A settled fact's statement is what the ledger CLAIMS; changing any of the three silently turns 'we proved X' into 'we proved something we then labelled X'. Changes require an amendment row naming both digests and a reason; superseded digests are preserved in each pin's history. `coverage_floor` is a ratchet the gate re-derives rather than trusts: slack is itself a violation, so a loosened floor is self-reverting. Written by `scripts/check-settled-fact-statements.py --write`; do not hand-edit.",
   "coverage_floor": {
     "max_unpinned_settled": 0,
-    "min_identity_bound": 2391,
+    "min_identity_bound": 2392,
     "max_header_exempt": 0
   },
   "amendments": [
@@ -10308,6 +10308,13 @@
       "statement_sha256": "2167da70a81d53465a79b29ecab56caa4b3539753beaace407c4968690cb890f",
       "prose_sha256": "6f527f6723ab8850a71692a2713d5b250d89c8677edcff28efcbfb6f8496ac22",
       "kernel_theorem": "Int.modEq_descent_cross_terms"
+    },
+    {
+      "fact_id": "F:int-two-squares-descent-entry",
+      "language": "lean4",
+      "statement_sha256": "74bdf2e9c2066c8111af0328dcf98e520065bf4e28b686eb7e652f9aea7d712c",
+      "prose_sha256": "8166e387b2a13d0ef01c11a73f539dce473114fa4331234a9d1a8acfa7fc8e16",
+      "kernel_theorem": "Int.exists_small_multiple_of_sq_add_one"
     },
     {
       "fact_id": "F:int-two-squares-descent-step",

@@ -2151,6 +2151,18 @@ pub struct IntPrelude {
     /// `  Eq Int (mul m q) (add (mul c c) (mul e e)) -> (four bounds) ->`
     /// `  And (le zero q) (lt q m)` -- the descent's termination certificate.
     pub descent_multiplier_bounds: NameId,
+    /// `Int.sub_neg_one_eq_add_sq_one : forall a,`
+    /// `  Eq Int (sub a (neg one)) (add a (mul one one))`. `ring::int`.
+    pub sub_neg_one_eq_add_sq_one: NameId,
+    /// `Int.exists_small_multiple_of_sq_add_one : forall p x, lt zero p ->`
+    /// `  le (add one one) p -> ModEq p (mul x x) (neg one) ->`
+    /// `  Exists Int (fun k => Exists Int (fun c =>`
+    /// `    And (Eq Int (mul k p) (add (mul c c) (mul one one)))`
+    /// `        (And (lt zero k) (lt k p))))`
+    /// -- the ENTRY POINT of Fermat's descent: a multiple of `p` that is a sum
+    /// of two squares, with the multiplier already strictly between `0` and
+    /// `p`. Primality is deliberately not a hypothesis.
+    pub exists_small_multiple_of_sq_add_one: NameId,
 }
 
 /// Intern every name the integer development uses. Interning is not
@@ -2619,6 +2631,8 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
         pos_of_mul_pos_left: child(kernel, "pos_of_mul_pos_left"),
         eq_zero_of_sq_add_sq_eq_zero: child(kernel, "eq_zero_of_sq_add_sq_eq_zero"),
         descent_multiplier_bounds: child(kernel, "descentMultiplierBounds"),
+        sub_neg_one_eq_add_sq_one: child(kernel, "sub_neg_one_eq_add_sq_one"),
+        exists_small_multiple_of_sq_add_one: child(kernel, "exists_small_multiple_of_sq_add_one"),
     }
 }
 

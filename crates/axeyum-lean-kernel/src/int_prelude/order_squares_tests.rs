@@ -4,7 +4,7 @@
 //! Three batteries, each asserting what must hold AND what must fail so no run
 //! can be vacuous:
 //!
-//! 1. **the statement pin** — every one of the twenty-three declarations has its
+//! 1. **the statement pin** — every one of the twenty-five declarations has its
 //!    full `∀`-telescoped type rebuilt here and compared against the type the
 //!    environment actually stores. A weakening that still type-checks (a bound
 //!    relaxed from `m` to `m + m`, a `<` softened to `≤`) leaves the prelude
@@ -512,8 +512,46 @@ fn order_squares_declarations_state_the_intended_types() {
         expected,
     );
 
+    // sub_neg_one_eq_add_sq_one : ∀ a, Eq (sub a (neg one)) (add a (mul one one))
+    let expected = int_forall(&mut d, 1, &|d, v| {
+        let one = d.ione();
+        let neg_one = d.ineg(one);
+        let lhs = d.isub(v[0], neg_one);
+        let one_one = d.imul(one, one);
+        let rhs = d.iadd(v[0], one_one);
+        d.ieq(lhs, rhs)
+    });
+    check(
+        &mut d,
+        "Int.sub_neg_one_eq_add_sq_one",
+        p.sub_neg_one_eq_add_sq_one,
+        expected,
+    );
+
+    // exists_small_multiple_of_sq_add_one
+    let expected = int_forall(&mut d, 2, &|d, v| {
+        let (modulus, x) = (v[0], v[1]);
+        let zero = d.izero();
+        let one = d.ione();
+        let neg_one = d.ineg(one);
+        let two = d.iadd(one, one);
+        let xx = d.imul(x, x);
+        let pos = d.ilt(zero, modulus);
+        let wide = d.ile(two, modulus);
+        let residue = super::two_squares::imodeq(d, modulus, xx, neg_one);
+        let outer = super::order_squares::small_multiple_outer(d, modulus);
+        let concl = super::two_squares::int_exists(d, outer);
+        arrows(d, &[pos, wide, residue], concl)
+    });
+    check(
+        &mut d,
+        "Int.exists_small_multiple_of_sq_add_one",
+        p.exists_small_multiple_of_sq_add_one,
+        expected,
+    );
+
     assert_eq!(
-        checked, 23,
+        checked, 25,
         "every declaration in order_squares.rs must be pinned here"
     );
 }
@@ -528,7 +566,12 @@ fn every_order_squares_declaration_is_present_and_axiom_free() {
     let mut k = Kernel::new();
     let p = build_int_prelude(&mut k).expect("Int prelude must build");
 
-    let names: [(&str, NameId); 23] = [
+    let names: [(&str, NameId); 25] = [
+        ("Int.sub_neg_one_eq_add_sq_one", p.sub_neg_one_eq_add_sq_one),
+        (
+            "Int.exists_small_multiple_of_sq_add_one",
+            p.exists_small_multiple_of_sq_add_one,
+        ),
         ("Int.lt_of_mul_lt_mul_left", p.lt_of_mul_lt_mul_left),
         ("Int.nonneg_of_mul_nonneg_left", p.nonneg_of_mul_nonneg_left),
         ("Int.pos_of_mul_pos_left", p.pos_of_mul_pos_left),
@@ -833,5 +876,54 @@ fn the_multiplier_bounds_apply_at_a_worked_factorisation_and_refuse_a_wrong_quot
     assert!(
         !admits_multiplier_bounds(&mut d, 2, "quotient_two"),
         "5*2 is not 2*2 + 1*1; the kernel must refuse the instance even though          0 <= 2 and 2 < 5 both hold"
+    );
+}
+
+/// Admit `exists_small_multiple_of_sq_add_one` at `p = 5` and a claimed square
+/// root `x` of `-1`, with `0 < 5`, `1 + 1 <= 5` and the congruence
+/// `x*x = -1 (mod 5)` all discharged by reduction, and report the verdict.
+///
+/// The congruence is `Eq.refl`: `Int.ModEq` unfolds to an equation between two
+/// `Int.emod` applications at closed numerals, which the kernel computes.
+fn admits_descent_entry(d: &mut IntDev<'_>, x: u32, label: &str) -> bool {
+    let p = d.int();
+    let modulus = int_num(d, 5);
+    let xi = int_num(d, x);
+    let pos = nat_le(d, 1, 5);
+    let wide = nat_le(d, 2, 5);
+    let xx = d.imul(xi, xi);
+    let residue_lhs = d.iemod(xx, modulus);
+    let congruent = d.irefl(residue_lhs);
+    let proof = d.const_app(
+        p.exists_small_multiple_of_sq_add_one,
+        &[modulus, xi, pos, wide, congruent],
+    );
+    let outer = super::order_squares::small_multiple_outer(d, modulus);
+    let ty = super::two_squares::int_exists(d, outer);
+    let name = probe_name(d, label);
+    d.declare_theorem(name, ty, proof).is_ok()
+}
+
+/// The descent's entry point applies at `p = 5, x = 2` — `2*2 = 4 = -1 (mod 5)`,
+/// and the lemma returns a multiplier strictly between `0` and `5` — and is
+/// REFUSED at `x = 1`, which is not a square root of `-1` there.
+///
+/// The refusal row is the one that says the congruence hypothesis is read: the
+/// CONCLUSION at `x = 1` is still true (`1*5 = 2*2 + 1*1` witnesses it with
+/// `k = 1, c = 2`), so a lemma that ignored its third hypothesis would pass
+/// both rows.
+#[test]
+fn the_descent_entry_point_applies_at_a_square_root_of_minus_one_and_is_refused_off_it() {
+    let mut k = Kernel::new();
+    let p = build_int_prelude(&mut k).expect("Int prelude must build");
+    let mut d = IntDev::new(&mut k, p);
+
+    assert!(
+        admits_descent_entry(&mut d, 2, "five_root_two"),
+        "2*2 = 4 = -1 (mod 5), so the entry point must apply"
+    );
+    assert!(
+        !admits_descent_entry(&mut d, 1, "five_not_root_one"),
+        "1*1 = 1 is NOT -1 (mod 5); the kernel must refuse the instance"
     );
 }
