@@ -620,15 +620,15 @@ fn ln_gamma_stirling(y: &BigRational, order: u32) -> Option<BigInterval> {
         .sub(&BigInterval::point(y.clone()))
         .add(&ln_two_pi.scale(&half));
     for k in 1..=terms {
-        let index = 2 * u64::from(k);
-        let coefficient =
-            &bernoulli[index as usize] / (bi_u64(index) * bi_u64(index - 1) * ratpow(y, 2 * k - 1));
+        let index = 2 * usize::try_from(k).ok()?;
+        let coefficient = &bernoulli[index]
+            / (bi_u64(index as u64) * bi_u64(index as u64 - 1) * ratpow(y, 2 * k - 1));
         total = total.add(&BigInterval::point(coefficient));
     }
-    let next = 2 * u64::from(terms) + 2;
-    let error = (&bernoulli[next as usize]
-        / (bi_u64(next) * bi_u64(next - 1) * ratpow(y, 2 * terms + 1)))
-        .abs();
+    let next = 2 * usize::try_from(terms).ok()? + 2;
+    let error = (&bernoulli[next]
+        / (bi_u64(next as u64) * bi_u64(next as u64 - 1) * ratpow(y, 2 * terms + 1)))
+    .abs();
     BigInterval::new(total.lo() - &error, total.hi() + &error)
 }
 
@@ -887,9 +887,15 @@ fn invert(matrix: &[Vec<BigRational>]) -> Option<Vec<Vec<BigRational>>> {
             if factor.is_zero() {
                 continue;
             }
-            for index in 0..2 * n {
-                let subtrahend = &work[column][index] * &factor;
-                work[row][index] -= subtrahend;
+            let (pivot_row, target_row) = if row < column {
+                let (head, tail) = work.split_at_mut(column);
+                (&tail[0], &mut head[row])
+            } else {
+                let (head, tail) = work.split_at_mut(row);
+                (&head[column], &mut tail[0])
+            };
+            for (entry, above) in target_row.iter_mut().zip(pivot_row) {
+                *entry -= above * &factor;
             }
         }
     }
@@ -1496,19 +1502,31 @@ mod tests {
         );
     }
 
+    /// Row `row` of the `n` by `n` identity.
+    fn identity(n: usize, row: usize) -> Vec<BigRational> {
+        (0..n)
+            .map(|column| {
+                if column == row {
+                    BigRational::one()
+                } else {
+                    BigRational::zero()
+                }
+            })
+            .collect()
+    }
+
     #[test]
     fn the_exact_inverse_is_an_inverse() {
         let matrix = vec![vec![q(3, 2), bi(2)], vec![bi(-1), q(4, 5)]];
         let inverse = invert(&matrix).expect("invertible");
-        for row in 0..2 {
-            for column in 0..2 {
-                let entry: BigRational = (0..2).map(|k| &matrix[row][k] * &inverse[k][column]).sum();
-                let expected = if row == column {
-                    BigRational::one()
-                } else {
-                    BigRational::zero()
-                };
-                assert_eq!(entry, expected);
+        for (row, entries) in matrix.iter().enumerate() {
+            for (column, expected) in identity(entries.len(), row).iter().enumerate() {
+                let entry: BigRational = entries
+                    .iter()
+                    .zip(&inverse)
+                    .map(|(left, right)| left * &right[column])
+                    .sum();
+                assert_eq!(entry, *expected, "row {row}, column {column}");
             }
         }
         assert!(invert(&[vec![bi(1), bi(2)], vec![bi(2), bi(4)]]).is_none());

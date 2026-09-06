@@ -1085,10 +1085,8 @@ fn eval_head_raw(
             BigInterval::new(lo.lo, hi.hi).ok_or(DeclineReason::PrecisionUnreachable)
         }
         StepHead::Gamma => crate::enclosure_special::gamma_interval(unary(0)?, order),
-        StepHead::BesselJ(n) => {
-            crate::enclosure_special::bessel_j_interval(*n, unary(0)?, order)
-                .ok_or(DeclineReason::PrecisionUnreachable)
-        }
+        StepHead::BesselJ(n) => crate::enclosure_special::bessel_j_interval(*n, unary(0)?, order)
+            .ok_or(DeclineReason::PrecisionUnreachable),
         StepHead::Sin => sin_interval(unary(0)?, order).ok_or(DeclineReason::ResourceLimit),
         StepHead::Cos => cos_interval(unary(0)?, order).ok_or(DeclineReason::ResourceLimit),
     }
@@ -2666,7 +2664,9 @@ mod tests {
     fn a_forged_gamma_output_is_refused() {
         let expr = CasExpr::Unary(UnaryFunc::Gamma, Box::new(CasExpr::rat(1, 3)));
         let mut e = enclose(&expr, &[], 20).expect("Gamma(1/3)");
-        let shifted = e.evidence[1].output.add(&BigInterval::point(BigRational::one()));
+        let shifted = e.evidence[1]
+            .output
+            .add(&BigInterval::point(BigRational::one()));
         e.evidence[1].output = shifted.clone();
         e.interval = shifted;
         let message = e.verify(&expr, &[]).unwrap_err();
@@ -2677,7 +2677,6 @@ mod tests {
     }
 
     // -- Cost ---------------------------------------------------------------
-
 
     #[test]
     fn cost_table_pi() {
