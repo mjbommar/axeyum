@@ -61839,6 +61839,13 @@ or remove dirty/unmerged state to meet a free-space target.
 
 ### A12 — Solver performance instruments (`WIP`, P1)
 
+**Progress, 2026-09-06.** Slices S1, S2, S3, S4, S5 and S6 of the plan are on
+`main` and verified; the gap to parity fell from 356 files to 290 (S1 alone
++65: QF_IDL 70 -> 86, QF_RDL 107 -> 128, QF_UF 162 -> 190). S1b, S9 and S11a
+are in flight in worktrees with status files. The plan's "Progress log"
+section carries the current board and the ordered next steps (merge the
+three lanes, re-measure six divisions, then S7 engine unification).
+
 **Plan of record.** The
 [SMT/SAT parity plan](docs/plan/smt-parity-plan-2026-09-05.md) (2026-09-05) names a
 measured or to-be-censused root cause for every one of the eleven divisions,

@@ -19,6 +19,91 @@ Companion documents, all landed today:
 - [native core vs Kissat search statistics](../research/11-design-review/2026-09-05-native-core-vs-kissat-search-stats.md)
 - [gate (b) measurement](../research/11-design-review/2026-09-05-gate-b-sat-core-measured.md)
 
+## Progress log
+
+### 2026-09-06, end of the first execution day
+
+**Landed on `main`, each verified after merge (workspace check, full solver
+sweep, corpus sweep, z3 differential fuzzes for arithmetic changes, clippy,
+wasm, merge hygiene):** S1 watched-literal propagation in `CdclT`
+(`eff6a464b`), S2 admission preflight and the watchdog stage line
+(`b4d042ae4`), S4 the O(rows) simplex pivot update and whole-form implied
+bounds (`69742894a`), S5 ADR-1704 the two-stream proof contract
+(`5c9b3a7c2`), S3 the loss census of all 403 reference-only files
+(`4339eb793`), S6 the one-word tagged `Reason` in the native core
+(`3b6d42f6c`), plus one composition fix (`287ca85c0`: two clean branches
+produced a clippy failure on merge).
+
+**The board after those slices**, latest ledger entry per division, idle
+hosts, zero disagreements everywhere
+([`bench-results/PARITY.md`](../../bench-results/PARITY.md)):
+
+| Division | Solver commit | Ours | Theirs | Ratio | both / ours / theirs | Gap |
+|---|---|---:|---:|---:|---|---:|
+| QF_SLIA | `9914a1c0e` | 193 | 194 | 99.5% | 187 / 6 / 7 | 1 |
+| QF_BV | `9914a1c0e` | 188 | 194 | 96.9% | 188 / 0 / 6 | 6 |
+| QF_UF | `b32377dc5` | 190 | 200 | 95.0% | 190 / 0 / 10 | 10 |
+| UF | `b32377dc5` | 85 | 93 | 91.4% | 61 / 24 / 32 | 8 |
+| QF_ABV | `9914a1c0e` | 179 | 197 | 90.9% | 178 / 1 / 19 | 18 |
+| QF_RDL | `b32377dc5` | 128 | 154 | 83.1% | 127 / 1 / 27 | 26 |
+| QF_LIA | `b32377dc5` | 112 | 139 | 80.6% | 110 / 2 / 29 | 27 |
+| QF_IDL | `b32377dc5` | 86 | 123 | 69.9% | 84 / 2 / 39 | 37 |
+| QF_UFLIA | `5c9b3a7c2` | 123 | 180 | 68.3% | 123 / 0 / 57 | 57 |
+| QF_LRA | `5c9b3a7c2` | 93 | 145 | 64.1% | 93 / 0 / 52 | 52 |
+| QF_NIA | `9914a1c0e` | 39 | 87 | 44.8% | 26 / 13 / 61 | 48 |
+
+Total gap to parity: **290 files, down from 356** at the start of the plan
+(ours 1,416 of 1,706 reference decisions). S1 alone moved 65 files (QF_IDL
++16, QF_RDL +21, QF_UF +28); S4 moved 3 (QF_LRA +2, QF_UFLIA +1). The two
+QF_LIA files that appeared lost under S1 were traced by S1b to S2's admission
+preflight, not to the watched literals (see the S1b status file). QF_SLIA,
+QF_BV, QF_ABV and QF_NIA have not been re-measured since `9914a1c0e` because
+no landed slice targets them yet.
+
+**What the census changed** ([note](../research/11-design-review/2026-09-05-parity-loss-census.md)):
+of 403 losses, 217 are admission declines on constants, 137 search timeouts,
+41 other, 6 unsupported shapes, 2 parser rejects. QF_IDL's 46 of 54 were the
+S1/S2 signature and have largely converted. UF and QF_UF's 70 were one
+admission cap on eager Ackermann expansion with no timeouts; S11a is on it.
+QF_SLIA and QF_NIA both hit the 32-bit int-blast width ladder, a shared
+S11/S12 target not previously named. One QF_LIA file overflows `i128` inside
+the simplex, not the parser, so S9's parser fix alone will not close it.
+
+**In flight at the pause, in isolated worktrees, not merged:** S1b (VSIDS
+order heap and recursive clause minimization in `CdclT`; measurement
+committed), S9 (ADR-1702 slice 2: wide integer literals through the parser,
+term node, route declines, differential fuzz; six commits), S11a (routing the
+UF/QF_UF cap losses; the census's Ackermann attribution does not survive the
+front door and the lane relocated the declared-sort CEGAR bound to the rung
+that owns the budget). Their status files under `docs/plan/status/` record
+exactly which gates ran.
+
+**Next steps, in order:**
+1. Review and merge S1b, S9, S11a from their branches; run each's full gate
+   list on `main` after merge, clippy included (the composition failure of
+   2026-09-06 was a clippy size lint, not a compile error).
+2. Re-measure QF_IDL, QF_RDL, QF_UF, UF, QF_LIA and QF_UFLIA on idle hosts at
+   the merged commit; append entries; fresh sidecars, no resume across
+   binaries.
+3. S7, move CDCL(T) onto the native core behind the measured hooks, now that
+   S5 (contract) and S6 (reason word) are landed; scoring target the QF_IDL
+   and QF_LRA populations; every verdict unchanged across the corpus suite.
+4. S8 native-core throughput against Kissat's conflicts-per-second on the
+   p4dfa CNFs, after S7 so the gain reaches every division.
+5. S11 remainder by census class: the 32-bit int-blast width ladder shared by
+   QF_SLIA and QF_NIA; QF_ABV's three array shapes; the QF_LIA simplex
+   overflow (S9's wide path applied inside `simplex.rs`).
+6. S10 the 1,024-atom LRA cap as a measured memory budget once S7 lands.
+7. S12 the NIA coefficient-width rung, last, scored on the 32 one-live-rung
+   files and on files outside the `VeryMax/ITS` family.
+
+Standing rules learned this day, now in the contributor notes: a `.lock` file
+under `/data0/axeyum/prepush/` is a permanent flock target, never a held-lock
+signal; a hold notice from any coordinator session blocks landing until that
+session says "clean"; two green branches can fail `clippy -D warnings` on
+merge through a size-threshold lint, so the post-merge gate is check plus
+clippy on every crate either branch touched.
+
 ## 0. The rule this plan runs under
 
 **Parity is a count on a pinned list, measured by `scripts/parity-run.sh` on an
