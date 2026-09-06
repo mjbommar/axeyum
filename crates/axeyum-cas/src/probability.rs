@@ -1153,19 +1153,59 @@ fn geometric_conditional_certificate(
             ),
         );
     }
-    let mut hypotheses: Vec<SignCondition> = Vec::new();
+    let mut restated: Vec<SignCondition> = Vec::new();
     for condition in &sum.hypotheses {
-        for restated in restate_geometric(condition, p, mgf_variable) {
-            if !hypotheses.contains(&restated) {
-                hypotheses.push(restated);
+        for one in restate_geometric(condition, p, mgf_variable) {
+            if !restated.contains(&one) {
+                restated.push(one);
             }
         }
     }
+    let Some(hypotheses) = settle_decidable_conditions(&restated) else {
+        return Certificate::uncertified(
+            target,
+            Route::InfiniteSum,
+            format!(
+                "a {subject} condition is concretely FALSE, so there is no statement here to \
+                 certify"
+            ),
+        );
+    };
     if hypotheses.is_empty() {
         Certificate::certified(target, Route::InfiniteSum)
     } else {
         Certificate::certified_under(target, Route::InfiniteSum, hypotheses)
     }
+}
+
+/// Drop every condition this crate can **decide**, and refuse the whole
+/// certificate if one of them is decidably **false**.
+///
+/// The restatements above are stated in the distribution's parameters, and some
+/// of those may be concrete: `Geometric(1/3)`'s mgf genuinely needs
+/// `t < −ln(2/3)` (its `t` is symbolic), but `1/3 > 0` and `1 − 1/3 > 0` are
+/// arithmetic, and recording them would make a conditional certificate out of
+/// two facts the crate settles on the spot — the same wrong shape the
+/// integration and summation routes already avoid by deciding a concrete rate
+/// rather than recording it. Measured before this existed: `Geometric(1/3)`'s
+/// mgf came back under `1/3 > 0 and 1 - (1/3) > 0 and -ln(2/3) - t > 0`.
+///
+/// `None` means one of them is concretely false, and the certificate has to go
+/// with it.
+fn settle_decidable_conditions(conditions: &[SignCondition]) -> Option<Vec<SignCondition>> {
+    let mut kept = Vec::new();
+    for condition in conditions {
+        let SignCondition::Positive(expr) = condition else {
+            kept.push(condition.clone());
+            continue;
+        };
+        match concrete_value(expr) {
+            Some(value) if value.numerator() > 0 => {} // decided true: not a hypothesis
+            Some(_) => return None,                    // decided false: nothing to certify
+            None => kept.push(condition.clone()),
+        }
+    }
+    Some(kept)
 }
 
 /// Restate the geometric route's own convergence condition `1 − |q| > 0` in the
@@ -3381,6 +3421,44 @@ mod tests {
             assert!(cert.is_certified(), "{cert:?}");
             assert!(cert.hypotheses().is_empty());
         }
+        // The mgf's `t` is symbolic, so ONE condition survives -- and only one:
+        // `1/3 > 0` and `1 - 1/3 > 0` are arithmetic this crate settles, and a
+        // certificate that recorded them would be conditional on nothing.
+        let mgf = d.mgf("t");
+        assert!(mgf.is_decided(), "{mgf:?}");
+        assert_eq!(conditions_of(&mgf), "-ln(2/3) - t > 0");
+    }
+
+    /// **Guard**, pinning `settle_decidable_conditions`' *false* branch: a
+    /// concrete parameter outside the distribution's domain must be refused, not
+    /// certified under a condition that is concretely false.
+    ///
+    /// The reachable path is the **mgf**, and only the mgf: for a moment the
+    /// route's ratio `1−p` is concrete exactly when `p` is, so it decides
+    /// convergence itself and records nothing for the restatement to settle --
+    /// `Geometric(3/2)`'s mass genuinely sums to `1` and certifies, which is a
+    /// true statement about the series and is how every other family here treats
+    /// an out-of-domain parameter. The mgf's ratio `(1−p)eᵗ` is never a rational,
+    /// so its condition IS recorded, the restatement produces `1 − 3/2 > 0`, and
+    /// that is what has to be caught.
+    #[test]
+    fn a_concrete_p_outside_the_domain_is_refused_by_the_mgf() {
+        let d = Discrete::Geometric(p(3, 2));
+        // The precondition: the SERIES is fine (|1−p| = 1/2), so the guard is
+        // what refuses, not a decline upstream of it.
+        assert!(d.total_mass().is_certified(), "{:?}", d.total_mass());
+        let mgf = d.mgf("t");
+        assert!(!mgf.is_decided(), "{mgf:?}");
+        let Trust::Uncertified(reason) = &mgf.trust else {
+            panic!("expected Uncertified");
+        };
+        assert!(reason.contains("concretely FALSE"), "{reason}");
+        // Positive control: an in-domain concrete `p` keeps exactly the one
+        // condition that is genuinely undecided.
+        assert_eq!(
+            conditions_of(&Discrete::Geometric(p(1, 3)).mgf("t")),
+            "-ln(2/3) - t > 0"
+        );
     }
 
     /// **Forgery control.** A `Geometric` certificate with the hypotheses
