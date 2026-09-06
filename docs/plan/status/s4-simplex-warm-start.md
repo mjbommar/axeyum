@@ -2,74 +2,133 @@
 
 <!-- plan-section: lane-status -->
 
-**S4 of the [SMT/SAT parity plan](../smt-parity-plan-2026-09-05.md) (§2.2, §4
-row S4). IN PROGRESS, s4-simplex-warm-start, 2026-09-05.**
+**S4 of the [SMT/SAT parity plan](../smt-parity-plan-2026-09-05.md) landed:
+the pivot's redundant `O(rows × columns)` value pass is gone (4.5x on the
+committed simplex bench, 20x on a traced file whose search is byte-identical
+between arms) and implied bounds are now computed over the whole linear form
+rather than one variable** (`DONE`, s4-simplex-warm-start, 2026-09-05).
 
-## Deliverable 0 — the counters, and what they say about the brief's premise
+Commits `21b5f29f1`, `e9117040a`, `1266c3abd`, and this one. Full measurement:
+[the S4 note](../../research/11-design-review/2026-09-05-s4-simplex-warm-start-measured.md).
 
-The brief and [the parity plan §2.2](../smt-parity-plan-2026-09-05.md) frame the
-QF_LRA lever as "warm-start each final check from the previous tableau instead of
-re-deciding feasibility", on the reading that "each final check appears to
-re-decide feasibility from the current bounds rather than resuming the previous
-tableau". **That premise is measurably false**, and the same counters name the
-real cost.
+## Deliverable 0 — the brief's premise was measurably false
 
-Six counters were wired to `TheorySolver::engine_counters` (defaulted, so every
-other implementor is unchanged) and out through `TheoryLayerStats` to
-`smtcomp_cli --trace`: `simplex_pivots`, `simplex_checks`,
-`simplex_cold_restarts`, `bound_retractions`, `bound_assertions`,
-`propagations_offered`, plus the tableau's `simplex_rows` × `simplex_columns`.
-An absent counter prints `n/a`, never `0`.
+The plan §2.2 and the lane brief both located the QF_LRA cost in a missing warm
+start: "each final check appears to re-decide feasibility from the current
+bounds rather than resuming the previous tableau". Six counters were wired
+through a new defaulted `TheorySolver::engine_counters` before anything was
+changed. On `QF_LRA/2019-ezsmt/blending/1.smt2` at the merge-base:
+`simplex_checks = 6,571`, `simplex_pivots = 15,375` (**2.3 per check**),
+`simplex_cold_restarts = **0**`, tableau 350 × 425,
+`theory_final_check_ms = 21,686` of 24,000.
 
-Measured on the traced files, `taskset -c 0-7`, `--timeout-ms 24000`, load 20–31
-on a 16-thread shared host:
+Not one of those 6,571 checks discarded the basis, and `bound_assertions`
+tracked the search's own total live pushes, i.e. each asserted constraint
+entered the tableau exactly once. **The warm start already existed.** What the
+counters price is one pivot: 1.41 ms on that file, 3.39 ms on
+`_count_by_k.i_3_3_2.bpl_7`.
 
-| file | final_check_ms | simplex_checks | simplex_pivots | pivots/check | ms/pivot | cold_restarts | rows × cols | propagations_offered |
-|---|---:|---:|---:|---:|---:|---:|---|---:|
-| `2017-Heizmann/_count_by_k.i_3_3_2.bpl_7` | 17,002 | 917 | 5,009 | 5.5 | 3.39 | **0** | — | 963 |
-| `2019-ezsmt/blending/1` | 21,686 | 6,571 | 15,375 | 2.3 | 1.41 | **0** | 350 × 425 | 79 |
+Propagation was separately near-inert: 79 literals offered across those 6,571
+checks, because `unit_bound` returned `None` for any constraint naming more
+than one variable — which is most LRA atoms.
 
-Three findings, each a number rather than a reading:
+## What landed
 
-1. **The basis already persists.** `simplex_cold_restarts = 0` on both files:
-   not one of the 7,488 checks discarded the basis. `SimplexEngine::sync`
-   reconciles a shared prefix and `Incremental::check` resumes
-   `Tableau::run` from whatever basis it holds — the warm start the module
-   header claims is real. `bound_assertions` (80,389 on `blending/1`) tracks the
-   search's own `decisions` (15,220) and total live pushes, i.e. each asserted
-   constraint enters the tableau **once**, which is the minimum an incremental
-   engine can do.
-2. **The pivot count is already small; the pivot COST is not.** 2.3–5.5 pivots
-   per check, at **1.4–3.4 ms each**. With a 350 × 425 dense tableau one pivot
-   is `O(rows × columns)` exact-rational work, and until this lane
-   `pivot_and_update` paid it **twice**: once to rewrite the rows, and again to
-   recompute every basic variable's value from its row — in `ℚ(δ)`, two
-   rationals per cell, so the more expensive of the two halves. Dutertre–de
-   Moura's `pivotAndUpdate` derives those values in `O(rows)`.
-3. **Propagation is nearly inert.** 79 literals offered across 6,571 final
-   checks on `blending/1`. `propagate_bounds` only fires for an atom whose
-   constraint is a **one-variable** bound (`LraTheory::unit_bound`), and most
-   LRA atoms are multi-variable, so it returns nothing for them.
+1. **`Tableau::pivot_and_update` does Dutertre–de Moura's `pivotAndUpdate`.**
+   The entering column is read once before the elimination zeroes it, θ comes
+   from the old values, and every other basic variable moves by
+   `a_{i,enter}·θ` in `O(rows)` — replacing a second `O(rows × columns)` pass
+   that recomputed each basic value from its row in `ℚ(δ)` (two rationals per
+   cell, so the more expensive half), re-deriving numbers the update already
+   determines. Zero cells are skipped in both the pivot-row rewrite and the
+   elimination.
+2. **Implied bounds over the linear form.** `assign_forms` gives every
+   constraint template its canonical functional (divide through by the
+   lowest-indexed variable's coefficient; direction kept for a positive leading
+   coefficient, flipped for a negative one). `bound_lower`/`bound_upper` are
+   indexed by form, not by variable, so `x + y ≤ 3` now settles `2x + 2y ≤ 8`
+   by one rational comparison, and two crossing bounds on a multi-variable form
+   are refuted by `assert` with a two-literal core and no simplex run. A single
+   variable is the form with one coefficient, so nothing that propagated before
+   stops. `MAX_BOUND_PROPAGATIONS_PER_CALL = 256` bounds a call and costs no
+   completeness — the driver runs propagation to a fixpoint, so a capped call
+   resumes on the next iteration rather than discarding.
+3. **The counters**, out to `smtcomp_cli --trace`, where an absent counter
+   prints `n/a` and never a measured `0`.
+4. **`scripts/gen-plan.py` now rebases links in global sections too.**
+   `check-links.sh` was red on main: `rebase_links` was applied to lane bodies
+   only, so the first `../`-relative link in a `docs/plan/global/` section
+   (`20-next-actions.md`, landed with the parity plan) escaped the repository
+   once inlined into `PLAN.md`. Not this lane's link, but its gate.
 
-So the exit criterion's two halves have two different levers: per-call
-final-check time is the per-pivot cost (finding 2), and the call count is
-propagation (finding 3). Rebuilding a warm start that already exists would have
-moved neither.
+## Measured
 
-## Landed so far
+| measurement | before | after |
+|---|---|---|
+| criterion `simplex_pivot` (12 vars, 18 rows) | 207.30 µs | **46.25 µs** (4.5x, non-overlapping CIs) |
+| `p-driverlogNumeric_s7` final-check, identical search both arms | 968 ms / 75 checks | **48 ms / 75 checks** (20x) |
+| `blending/1` ms per final check | 3.18 | **0.80** |
+| `blending/5` ms per final check | 4.00 | **0.65** |
+| 33-file QF_LRA population, same-protocol arms | 4 / 33 decided | **5 / 33** |
 
-- `simplex.rs`: `pivot_and_update` now performs the Dutertre–de Moura `O(rows)`
-  value update instead of an `O(rows × columns)` recompute, reads the entering
-  column once before the elimination zeroes it, and skips zero cells in both the
-  pivot-row rewrite and the elimination. New test
-  `tableau_invariant_holds_after_every_pivot` steps the pivot loop one pivot at
-  a time (`budget = 1`) over 300 random systems and asserts
-  `β(basic[i]) = Σ row[i][v]·β(v)` between every pair of pivots, with a
-  non-vacuity floor on the pivots exercised. **Mutation control:** deleting the
-  value-update loop fails it at `seed 0 … after pivot 0`; restored.
-- The counters above, and their `--trace` line.
+The conversion is `2019-ezsmt/blending/5.smt2`, unknown 24,156 ms → **unsat
+21,343 ms**. **No P0**: not one verdict in either arm contradicts the
+population's `declared` column across 66 runs.
 
-## Next
+## The exit criterion is not met as written, and the reason is structural
 
-Implied-bound propagation over the whole linear form rather than a single
-variable, then the before/after measurement on the 33-file LRA population.
+The criterion was *per-call final-check time and call count both fall on the
+five*. Per-call time falls on 4 of 5 (up to 20x) and rises 1.45x on
+`_count_by_k`. The call count falls on **1** of 5, is flat on one, and rises on
+three — sharply on the two blending files (6,798 → 17,016 and 5,125 → 18,410).
+
+That conjunction is self-defeating on a fixed budget. `final_checks` is not a
+fixed amount of work; it is how many total Boolean assignments the search
+reached in 24 seconds. Make each check 4x cheaper and the search reaches more
+of them — on `blending/5`, 2.8x more decisions and 3.6x more final checks in
+the same budget, which is exactly what converted the file to `unsat`. A falling
+call count at a fixed budget would mean the search got *slower* per assignment.
+
+The count falls the way the criterion intends only where propagation prunes
+faster than the cheaper check adds. That happened on `_count_by_k`
+(propagations 926 → 7,315, final checks 880 → 611) and **did not pay**: more
+live constraints per check drove 73 pivots per check against 5.5, per-call time
+rose, and `theory_final_check_ms` came out flat. **The propagation half is not
+uniformly a win**, and that file is the recorded counter-example.
+
+## Mutation controls
+
+| mutation | effect | verdict |
+|---|---|---|
+| warm start disabled (`check` rebuilds the pristine basis every call) on `p-driverlogNumeric_s7` | pivots per final check **5.25 → 127.0** (24.2x); final-check 48 → 528 ms; `simplex_cold_restarts` 0 → 75; decisions/final_checks/conflicts identical (1904/75/180) | `sat`, **unchanged** |
+| the `O(rows)` value-update loop deleted | `tableau_invariant_holds_after_every_pivot` fails at `seed 0 … after pivot 0` | — |
+
+Both restored; the suites re-run green after restore.
+
+## Gates
+
+`--lib --features full` 1450 passed · `--test cdclt_lra_online` 9 · `--test
+corpus_regression` 1 (159 s) · z3 fuzzes `qf_lra_differential_fuzz` 5,
+`simplex_lra_fallback_differential` 1, `qf_uflra_differential_fuzz` 1 (the
+documented 5+1+1) · `progress_frontier --features full --test-threads=1`
+**12 passed** on the second attempt; the first reported `REGRESSION
+[bv_reduction] 27 < 30`, and the control says it was contention, not this
+change: run alone, `frontier_bv_reduction` **passes in both arms** · `check
+--workspace --all-targets` · `clippy -p axeyum-solver --all-targets
+--all-features -D warnings` · wasm32 build · `check-links.sh` all links ok.
+
+## Not done
+
+- `scripts/parity-run.sh QF_LRA` / `QF_UFLIA` on an idle host — the plan §6
+  protocol for a division count. This lane measured the 33-file population, not
+  the 200-file parity list.
+- QF_UFLIA was **not** scored: `bench-results/parity-losses-20260905/QF_UFLIA.txt`
+  did not exist on local main at measurement time.
+- The tableau-**row** implied-bound scan the brief named literally. In this
+  encoding bounds live only on slack variables while every problem variable is
+  unbounded, so at the pristine basis no row implies a finite bound on
+  anything; the form-indexed check is the derivation that pays here, and the
+  reasoning is recorded in the note rather than left as an omission.
+- The first three commits of this lane carry `Agent: retire-generic-1`: the
+  session's `AXEYUM_AGENT` was stale from an earlier lane and was not
+  overridden until `1266c3abd`. Recorded, not rewritten.

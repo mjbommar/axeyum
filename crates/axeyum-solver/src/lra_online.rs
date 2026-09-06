@@ -99,7 +99,7 @@ const DEFAULT_STEP_BUDGET: usize = 16_000_000;
 /// The value is not a completeness limit: the driver runs propagation to a
 /// fixpoint and every literal this call emits is assigned before the next
 /// iteration, so a capped call resumes on the remaining atoms rather than losing
-/// them. It is set well above the per-call yield measured on the QF_LRA timeout
+/// them. It is set well above the per-call yield measured on the `QF_LRA` timeout
 /// population, so it bounds a pathological call rather than a normal one.
 const MAX_BOUND_PROPAGATIONS_PER_CALL: usize = 256;
 
