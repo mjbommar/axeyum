@@ -7231,6 +7231,36 @@ SUITES["geo-incidence"] = (
             "        let body = lmk(d, q, big_b, big_a, big_c);",
             "crates/axeyum-lean-kernel/src/geo/qplane.rs",
         ),
+        # ADR-1652, the REAL model's load-bearing design decision. Line
+        # non-degeneracy is a witnessed `CReal.PosBound`, not a negation.
+        # The negated form type-checks perfectly well AS A PREDICATE -- which
+        # is exactly why it is worth a mutant -- and constructs no modulus, so
+        # nothing downstream that has to divide can consume it.
+        (
+            "the real line's non-degeneracy is a PosBound witness, not a negation",
+            "        let nat = d.nat_ty();\n"
+            "        let k_fv = d.fresh_fvar();\n"
+            "        let k = d.kernel().fvar(k_fv);\n"
+            "        let pb = pos_bound(d, cr, n, k);\n"
+            "        let pred = d.lam_fv(k_fv, nat, pb);\n"
+            "        let body = exists_ty(d, nat, pred);",
+            "        let zero = rn_czero(d, cr);\n"
+            "        let eqz = ceq(d, cr, n, zero);\n"
+            "        let f = false_ty(d);\n"
+            "        let body = d.arrow(eqz, f);",
+            "crates/axeyum-lean-kernel/src/geo/rplane.rs",
+        ),
+        # `Geo.RPlane.joinUnique` proves extensional line equality in BOTH
+        # directions from one lemma, by flipping the three defects with
+        # `defectSwap`. Feed the backward direction the UNFLIPPED defects --
+        # the l/m order swapped in the conclusion -- and `onOfDefects` is
+        # applied at arguments whose types name the wrong line.
+        (
+            "joinUnique's backward direction flips the defects",
+            "                    aa, bb, cc, a, b, c, xx, xy, km, hkm, hdab2, hdac2, hdbc2, hx,",
+            "                    aa, bb, cc, a, b, c, xx, xy, km, hkm, hdab, hdac, hdbc, hx,",
+            "crates/axeyum-lean-kernel/src/geo/rplane.rs",
+        ),
     ],
 )
 
