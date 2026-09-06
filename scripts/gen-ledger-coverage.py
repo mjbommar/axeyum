@@ -513,6 +513,17 @@ def load_baseline() -> set[str]:
     return set(names)
 
 
+def ratchet_lost(baseline_names: set[str], registered_now: set[str]) -> list[str]:
+    """Baselined theorem names no longer registered by any fact.
+
+    Deliberately ONE-SIDED. Coverage going UP is not a finding and must not
+    fail a gate -- otherwise every lane that registers a fact has to also
+    raise the baseline in the same commit, and the pressure is then to lower
+    the baseline rather than to keep the fact. Only names LOST are reported.
+    """
+    return sorted(baseline_names - registered_now)
+
+
 def render_baseline(names: list[str]) -> str:
     document = {
         "schema_version": BASELINE_SCHEMA_VERSION,
@@ -609,7 +620,7 @@ def main() -> int:
         return 0
 
     if baseline_names is not None:
-        lost = sorted(baseline_names - registered_now)
+        lost = ratchet_lost(baseline_names, registered_now)
         print(
             "LEDGER-RATCHET|"
             f"baseline={len(baseline_names)}|"
