@@ -260,6 +260,7 @@ mod mul_order_lemmas;
 mod multichoose;
 mod multiset;
 mod multiset_prod;
+mod multiset_select;
 mod no_confusion;
 mod nth;
 mod nth_root;
@@ -493,6 +494,7 @@ use mul_order_lemmas::{
 use multichoose::declare_multichoose_all;
 use multiset::declare_multiset_all;
 use multiset_prod::declare_multiset_prod_all;
+use multiset_select::declare_multiset_select_all;
 use no_confusion::declare_no_confusion;
 use nth::declare_nth_all;
 use nth_root::declare_nth_root_all;
@@ -6121,6 +6123,98 @@ pub struct NatPrelude {
     /// (`multiset_prod.rs`).
     pub multiset_prod_add: NameId,
 
+    // --- selection by a `Nat -> Bool` predicate (`multiset_select.rs`,
+    //     ADR-1658, roadmap W2-18) -----------------------------------------
+    /// `Nat.mul_dvd_mul : ∀ a b c e, dvd a b → dvd c e →
+    /// dvd (mul a c) (mul b e)` — the prelude had
+    /// [`dvd_mul`](Self::dvd_mul), [`dvd_mul_right_of_dvd`](Self::dvd_mul_right_of_dvd)
+    /// and [`dvd_trans`](Self::dvd_trans) but nothing MULTIPLYING two
+    /// divisibilities, so a pointwise divisibility could not be pushed under a
+    /// product fold. Two `dvd_elim`s and the four-factor rearrangement
+    /// `(a·u)·(c·v) = (a·c)·(u·v)` (`multiset_select.rs`).
+    pub mul_dvd_mul: NameId,
+    /// `Nat.prodRange_dvd_prodRange : ∀ f g n, (∀ i, dvd (f i) (g i)) →
+    /// dvd (prodRange f n) (prodRange g n)` — induction on `n`, base
+    /// `dvd_refl 1`, step [`mul_dvd_mul`](Self::mul_dvd_mul)
+    /// (`multiset_select.rs`).
+    pub prod_range_dvd_prod_range: NameId,
+    /// `Nat.bool_select_nat_inj_of_pos : ∀ c, Lt zero c → ∀ (b1 b2 : Bool),
+    /// Eq Nat (if b1 then c else 0) (if b2 then c else 0) → Eq Bool b1 b2` —
+    /// a `{c, 0}` select is injective in its CONDITION when `c > 0`. The step
+    /// that reads a `Bool` back out of an arithmetic identity; the positivity
+    /// is load-bearing, since at `c = 0` both selects are `0` and the
+    /// conclusion is false (`multiset_select.rs`).
+    pub bool_select_nat_inj_of_pos: NameId,
+    /// `Nat.Multiset.restrict : Multiset → (Nat → Bool) → Multiset :=
+    /// fun m s => mk (fun q => if s q then raw m q else 0) (bound m)` — the
+    /// sub-multiset selected by a predicate, at the SAME bound. Defined
+    /// through [`multiset_raw`](Self::multiset_raw) rather than
+    /// [`multiset_count`](Self::multiset_count) so that
+    /// [`multiset_count_restrict`](Self::multiset_count_restrict) needs no
+    /// `q < bound` case split (`multiset_select.rs`).
+    pub multiset_restrict: NameId,
+    /// `Nat.Multiset.prodSel : Multiset → (Nat → Bool) → Nat :=
+    /// fun m s => prodRange (fun q => if s q then pow q (count m q) else 1)
+    /// (bound m)` — the product over the SELECTED values. ADR-1624 asked for
+    /// a product over selected list POSITIONS; this carrier has no list (it is
+    /// a multiplicity function plus a bound), so the selection is by value,
+    /// which is the same index space `Nat.Subsets` already uses. ADR-1658
+    /// (`multiset_select.rs`).
+    pub multiset_prod_sel: NameId,
+    /// `Nat.Multiset.bound_restrict : ∀ m s,
+    /// Eq (bound (restrict m s)) (bound m)` — `Eq.refl`.
+    pub multiset_bound_restrict: NameId,
+    /// `Nat.Multiset.count_restrict : ∀ m s q, Eq (count (restrict m s) q)
+    /// (if s q then count m q else 0)` — UNCONDITIONAL, with no `q < bound m`
+    /// side condition, because `restrict` keeps the bound and `count`
+    /// truncates in its own definition. One `Bool.rec` on `s q`, whose `false`
+    /// branch is [`bool_select_nat_same`] and whose `true` branch is
+    /// `Eq.refl` (`multiset_select.rs`).
+    pub multiset_count_restrict: NameId,
+    /// `Nat.Multiset.count_restrict_pos : ∀ m s q,
+    /// Lt zero (count (restrict m s) q) → Lt zero (count m q)` — the support
+    /// of a restriction is inside the support, which is what carries a
+    /// prime-support hypothesis across `restrict`.
+    pub multiset_count_restrict_pos: NameId,
+    /// `Nat.Multiset.prodSel_eq_prod_restrict : ∀ m s,
+    /// Eq (prodSel m s) (prod (restrict m s))` — the selection fold IS a
+    /// multiset product. This is the theorem that makes
+    /// [`multiset_prod_sel_injective`](Self::multiset_prod_sel_injective) a
+    /// corollary of uniqueness of prime factorization rather than a new
+    /// argument (`multiset_select.rs`).
+    pub multiset_prod_sel_eq_prod_restrict: NameId,
+    /// `Nat.Multiset.prodSel_all : ∀ m, Eq (prodSel m (fun _ => true))
+    /// (prod m)` — `Eq.refl`.
+    pub multiset_prod_sel_all: NameId,
+    /// `Nat.Multiset.prodSel_empty : ∀ m,
+    /// Eq (prodSel m Nat.Subsets.empty) (succ zero)`.
+    pub multiset_prod_sel_empty: NameId,
+    /// `Nat.Multiset.prodSel_congr : ∀ m s t, (∀ q, Eq Bool (s q) (t q)) →
+    /// Eq (prodSel m s) (prodSel m t)` — this kernel has no `funext`, so a
+    /// pointwise identity between two SELECTIONS cannot otherwise be pushed
+    /// under the fold.
+    pub multiset_prod_sel_congr: NameId,
+    /// `Nat.Multiset.prodSel_dvd_prod : ∀ m s, dvd (prodSel m s) (prod m)` —
+    /// every selection is a divisor of the whole product, with no hypotheses
+    /// at all. The easy direction of ADR-1624's divisors ↔ subsets bijection.
+    pub multiset_prod_sel_dvd_prod: NameId,
+    /// `Nat.Multiset.prodSel_injective : ∀ m s t,
+    /// (∀ q, Lt zero (count m q) → prime_condition q) →
+    /// Eq (prodSel m s) (prodSel m t) →
+    /// ∀ q, Lt zero (count m q) → Eq Bool (s q) (t q)` — two selections of a
+    /// prime-supported multiset with the same product agree at every value the
+    /// multiset actually contains. The INJECTIVITY half of ADR-1624's
+    /// bijection, and no new arithmetic: it is
+    /// [`multiset_count_eq_of_prod_eq`](Self::multiset_count_eq_of_prod_eq)
+    /// read through
+    /// [`multiset_prod_sel_eq_prod_restrict`](Self::multiset_prod_sel_eq_prod_restrict)
+    /// and
+    /// [`bool_select_nat_inj_of_pos`](Self::bool_select_nat_inj_of_pos).
+    /// Restricting to the support is not slack: at a `q` with `count m q = 0`
+    /// the two selections genuinely need not agree, since `q ^ 0 = 1` either
+    /// way (`multiset_select.rs`).
+    pub multiset_prod_sel_injective: NameId,
+
     // --- `Nat.minFac` divides, is `>= 2`, and is prime (`min_fac_dvd.rs`) ----
     /// `Nat.minFacAuxTwoLe : ∀ fuel n cp, Le 2 (succ cp) →
     /// Le 2 (minFacAux fuel n (succ cp))`. The candidate is stated as a
@@ -8568,6 +8662,21 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             prod_range_mul: kernel.name_str(nat, "prodRange_mul"),
             prod_range_add_of_one_above: kernel.name_str(nat, "prodRange_add_of_one_above"),
             multiset_prod_add: kernel.name_str(multiset, "prod_add"),
+            mul_dvd_mul: kernel.name_str(nat, "mul_dvd_mul"),
+            prod_range_dvd_prod_range: kernel.name_str(nat, "prodRange_dvd_prodRange"),
+            bool_select_nat_inj_of_pos: kernel.name_str(nat, "bool_select_nat_inj_of_pos"),
+            multiset_restrict: kernel.name_str(multiset, "restrict"),
+            multiset_prod_sel: kernel.name_str(multiset, "prodSel"),
+            multiset_bound_restrict: kernel.name_str(multiset, "bound_restrict"),
+            multiset_count_restrict: kernel.name_str(multiset, "count_restrict"),
+            multiset_count_restrict_pos: kernel.name_str(multiset, "count_restrict_pos"),
+            multiset_prod_sel_eq_prod_restrict: kernel
+                .name_str(multiset, "prodSel_eq_prod_restrict"),
+            multiset_prod_sel_all: kernel.name_str(multiset, "prodSel_all"),
+            multiset_prod_sel_empty: kernel.name_str(multiset, "prodSel_empty"),
+            multiset_prod_sel_congr: kernel.name_str(multiset, "prodSel_congr"),
+            multiset_prod_sel_dvd_prod: kernel.name_str(multiset, "prodSel_dvd_prod"),
+            multiset_prod_sel_injective: kernel.name_str(multiset, "prodSel_injective"),
             min_fac_aux_two_le: kernel.name_str(nat, "minFacAuxTwoLe"),
             min_fac_aux_dvd: kernel.name_str(nat, "minFacAuxDvd"),
             min_fac_two_le: kernel.name_str(nat, "min_fac_two_le"),
@@ -10341,6 +10450,15 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // `Nat.countRange`/`countRange_compl`/`countRange_eq_sumRange` and
         // `Nat.setUnion`/`setInter`/`setCompl` (`finite_set.rs`).
         declare_inclusion_exclusion_all(&mut d, &p)?;
+        // Selection of a multiset by a `Nat -> Bool` predicate
+        // (`multiset_select.rs`, ADR-1658, roadmap W2-18). Needs
+        // `declare_multiset_all` (`Nat.Multiset.count_eq_of_prod_eq`),
+        // `declare_multiset_prod_all` (`Nat.prodRange_congr`) and
+        // `declare_inclusion_exclusion_all` immediately above
+        // (`Nat.Subsets.prodRange_one`), plus `Nat.Subsets.empty`
+        // (`subset_sums.rs`), `Nat.dvd_refl`/`Nat.not_lt_zero`/
+        // `Nat.pow_zero`/`Nat.one_mul`/`Nat.mul_assoc`/`Nat.mul_comm`.
+        declare_multiset_select_all(&mut d, &p)?;
         // The primorial (`primorial.rs`, ADR-1637, roadmap W3-11). Needs
         // `Nat.prodRangeIf` (`subset_product.rs`, `declare_prod_range_if_all`
         // far above), `Nat.minFac` and the three `min_fac_*` lemmas
