@@ -89,8 +89,8 @@
 
 use super::{
     ENUMERATION_BOUND, OrderCertificate, PermutationGroup, Permutation, SiftOutcome, SignedWord,
-    Word, decode, encode, enumerate_group, fixes_prefix, image_key, invert_signed_word,
-    is_identity, sift_with_trace, signed_word_to_perm, word_to_perm,
+    decode, encode, enumerate_group, fixes_prefix, image_key, invert_signed_word, is_identity,
+    sift_with_trace, signed_word_to_perm, word_to_perm,
 };
 use super::{ConjugacyClassCertificate, DistinguishCertificate, distinguish};
 use std::collections::{BTreeSet, VecDeque};
@@ -717,19 +717,38 @@ fn enumerate_cosets(
         .collect();
 
     loop {
-        let mut made_progress = false;
-        let mut coincidences: Vec<(usize, usize)> = Vec::new();
+        let cosets_before_pass = table.len();
         let mut c = 0;
         while c < table.len() {
             if alive[c] && find(&mut redirect, c) == c {
                 for cols in &relator_columns {
-                    match scan_and_close(&mut table, &mut redirect, &mut alive, num_cols, c, cols, bound) {
+                    match scan_and_close(&mut table, &mut redirect, &mut alive, num_cols, c, cols, bound)
+                    {
                         Err(()) => return None,
                         Ok(ScanEvent::Closed) => {}
                         Ok(ScanEvent::Coincidence(a, b)) => {
-                            coincidences.push((a, b));
-                            made_progress = true;
+                            // Apply the coincidence immediately rather than
+                            // batching it to the end of the pass: a batched
+                            // merge lets every remaining relator scan in
+                            // this same pass rediscover the SAME
+                            // not-yet-applied coincidence from scratch
+                            // (each one defining its own throwaway bridging
+                            // coset before finding the very same conflict),
+                            // which was measured to blow the table up by
+                            // orders of magnitude on S_3 before it ever
+                            // closes. Merging eagerly means later scans in
+                            // this pass see the already-reduced table.
+                            process_coincidences(
+                                &mut table,
+                                &mut redirect,
+                                &mut alive,
+                                num_cols,
+                                [(a, b)].into_iter().collect(),
+                            );
                         }
+                    }
+                    if table.len() > bound {
+                        return None;
                     }
                 }
             }
@@ -738,44 +757,39 @@ fn enumerate_cosets(
         if table.len() > bound {
             return None;
         }
-        if !coincidences.is_empty() {
-            process_coincidences(
-                &mut table,
-                &mut redirect,
-                &mut alive,
-                num_cols,
-                coincidences.into_iter().collect(),
-            );
-            made_progress = true;
+        if table.len() != cosets_before_pass {
+            // Scanning defined new cosets (or a coincidence changed which
+            // cosets are live) this pass -- more relator scanning can
+            // still help, so do not fall through to the arbitrary
+            // "closing" step below yet.
+            continue;
         }
-        if !made_progress {
-            let mut defined = false;
-            'outer: for coset in 0..table.len() {
-                if !alive[coset] || find(&mut redirect, coset) != coset {
-                    continue;
-                }
-                for col in 0..num_cols {
-                    if resolve(&table, &mut redirect, coset, col).is_none() {
-                        if table.len() >= bound {
-                            return None;
-                        }
-                        let new_id = table.len();
-                        table.push(vec![None; num_cols]);
-                        redirect.push(new_id);
-                        alive.push(true);
-                        table[coset][col] = Some(new_id);
-                        table[new_id][col ^ 1] = Some(coset);
-                        defined = true;
-                        break 'outer;
+        // No relator scan made any progress: close the table by defining
+        // the lowest-numbered still-undefined (coset, column) transition
+        // (the standard HLT "closing" step), or stop if none remain.
+        let mut defined = false;
+        'outer: for coset in 0..table.len() {
+            if !alive[coset] || find(&mut redirect, coset) != coset {
+                continue;
+            }
+            for col in 0..num_cols {
+                if resolve(&table, &mut redirect, coset, col).is_none() {
+                    if table.len() >= bound {
+                        return None;
                     }
+                    let new_id = table.len();
+                    table.push(vec![None; num_cols]);
+                    redirect.push(new_id);
+                    alive.push(true);
+                    table[coset][col] = Some(new_id);
+                    table[new_id][col ^ 1] = Some(coset);
+                    defined = true;
+                    break 'outer;
                 }
             }
-            if !defined {
-                break;
-            }
         }
-        if table.len() > bound {
-            return None;
+        if !defined {
+            break;
         }
     }
 
@@ -898,8 +912,14 @@ impl CosetTableCertificate {
                 }
             }
         }
-        let recomputed =
-            enumerate_cosets(self.num_generators, &self.relators, n).ok_or(F::DoesNotReplay)?;
+        // Replay with the module's production bound, not `n`: construction
+        // can transiently allocate more table rows than the final live
+        // coset count before coincidence processing consolidates them (a
+        // merged-away row is marked dead, never removed from the backing
+        // `Vec`), so bounding the replay at exactly `n` can make a
+        // perfectly genuine table fail to reproduce.
+        let recomputed = enumerate_cosets(self.num_generators, &self.relators, COSET_ENUMERATION_BOUND)
+            .ok_or(F::DoesNotReplay)?;
         if recomputed != self.table {
             return Err(F::DoesNotReplay);
         }
@@ -1236,41 +1256,65 @@ mod tests {
 
     #[test]
     fn forged_iso_bijection_that_is_not_a_homomorphism_is_refused() {
-        let left = symmetric_group(3);
-        let right = symmetric_group(3);
+        // S_4: Aut(S_4) = Inn(S_4) has order 24, far smaller than the
+        // number of elements sharing a non-central generator's (order,
+        // class size) pair, so some same-order/same-class swap of one
+        // generator's image is guaranteed not to extend to an
+        // automorphism. Found by direct search rather than assumed, so
+        // this test cannot silently pass on a candidate that happens to
+        // still be a genuine isomorphism.
+        let left = symmetric_group(4);
+        let right = symmetric_group(4);
         let cert = match isomorphism(&left, &right) {
             IsomorphismDecision::Isomorphic(cert) => cert,
             other => panic!("expected Isomorphic, got {other:?}"),
         };
-        // Swap two of the generator images: still a bijective assignment
-        // by element order/class-size (same pool), but for S_3's two
-        // distinct-order-2 generators (0 1) and (1 2), swapping them
-        // changes which relation must hold and is not guaranteed to still
-        // satisfy every relator.
-        let mut forged = cert.clone();
-        assert!(
-            forged.generator_images.len() >= 2,
-            "S_3's BSGS has at least two strong generators"
-        );
-        forged.generator_images.swap(0, 1);
-        // Rebuild the image_order certificate to match the swap (a forger
-        // would do this too -- the defect under test is the relation, not
-        // a stale image_order).
-        forged.image_order = PermutationGroup::from_generators(
-            forged.generator_images.clone(),
-            forged.right.degree,
-        )
-        .unwrap()
-        .order_certificate()
-        .clone();
-        // Either the relation guard fires, or (if the swap happens to be a
-        // genuine automorphism of S_3's own generating relations) the
-        // certificate still verifies -- assert it is not silently accepted
-        // as testing nothing: for S_3's two adjacent transpositions this
-        // swap is NOT an automorphism extension (it does not preserve the
-        // braid relation `(ab)^3 = e` sifted the same way), so we require
-        // a refusal.
-        assert!(forged.verify().is_err());
+        let degree = right.degree();
+        let h_classes = right.conjugacy_classes().unwrap();
+        let h_elems = enumerate_group(right.generators(), degree, ENUMERATION_BOUND).unwrap();
+        let relators = schreier_relators(&cert.left);
+
+        for slot in 0..cert.generator_images.len() {
+            let target_key = element_key(&h_classes, &cert.generator_images[slot], degree);
+            for candidate in &h_elems {
+                if *candidate == cert.generator_images[slot] {
+                    continue;
+                }
+                if element_key(&h_classes, candidate, degree) != target_key {
+                    continue;
+                }
+                let mut forged_images = cert.generator_images.clone();
+                forged_images[slot] = candidate.clone();
+                let relation_holds = relators.iter().all(|r| {
+                    signed_word_to_perm(&forged_images, r, degree)
+                        .is_some_and(|p| is_identity(&p, degree))
+                });
+                if relation_holds {
+                    continue;
+                }
+                let Some(image_group) = PermutationGroup::from_generators(forged_images.clone(), degree)
+                else {
+                    continue;
+                };
+                if image_group.order() != right.order() {
+                    // Isolate the relation guard specifically, not a
+                    // (separately tested) not-full-order guard.
+                    continue;
+                }
+                let forged = IsoCertificate {
+                    left: cert.left.clone(),
+                    right: cert.right.clone(),
+                    generator_images: forged_images,
+                    image_order: image_group.order_certificate().clone(),
+                };
+                assert!(matches!(
+                    forged.verify(),
+                    Err(IsoFailure::RelationNotPreserved { .. })
+                ));
+                return;
+            }
+        }
+        panic!("expected to find a relation-breaking, order/class-matching, full-order candidate for S_4");
     }
 
     #[test]
@@ -1290,18 +1334,26 @@ mod tests {
 
     #[test]
     fn forged_iso_image_not_in_group_is_refused() {
-        let left = symmetric_group(3);
-        let right = symmetric_group(4); // different degree, so no generator of `left` sifts into `right`'s degree
-        let mut cert = match isomorphism(&symmetric_group(3), &symmetric_group(3)) {
+        // Two distinct order-3 subgroups of degree-4 permutations: `left`
+        // is <(0 1 2)>, `right` is <(1 2 3)> (both fix a different point,
+        // so they share no non-identity element). A genuine isomorphism
+        // maps (0 1 2) to (1 2 3) or its inverse; forging the image as
+        // (0 1 2) itself is a degree-4 permutation of the correct order,
+        // generating a same-order (3) subgroup, but that subgroup is not
+        // `right` at all.
+        let left = PermutationGroup::from_generators(vec![cycle(4, &[0, 1, 2])], 4).unwrap();
+        let right = PermutationGroup::from_generators(vec![cycle(4, &[1, 2, 3])], 4).unwrap();
+        let mut cert = match isomorphism(&left, &right) {
             IsomorphismDecision::Isomorphic(cert) => cert,
             other => panic!("expected Isomorphic, got {other:?}"),
         };
-        let _ = left;
-        cert.right = right.order_certificate().clone();
-        assert!(matches!(
-            cert.verify(),
-            Err(IsoFailure::ImageDegreeMismatch | IsoFailure::ImageCertificateMismatch)
-        ));
+        let forged_images = vec![cycle(4, &[0, 1, 2])];
+        cert.image_order = PermutationGroup::from_generators(forged_images.clone(), 4)
+            .unwrap()
+            .order_certificate()
+            .clone();
+        cert.generator_images = forged_images;
+        assert_eq!(cert.verify(), Err(IsoFailure::ImageNotInGroup));
     }
 
     #[test]
@@ -1393,11 +1445,27 @@ mod tests {
     #[test]
     fn incomplete_presentation_missing_a_relator_does_not_close_to_the_right_order() {
         let g = symmetric_group(3);
-        let mut cert = g.presentation();
-        assert!(cert.relators.len() > 1, "S_3's BSGS yields more than one relator");
-        cert.relators.pop();
+        let cert = g.presentation();
+        // Drop specifically the two relators that assert each generator's
+        // own order (`a^2 = e`, `b^2 = e` -- the signed words `[0, 0]` and
+        // `[1, 1]`): without a bound on generator order, the presented
+        // group need not be finite at the true order 6 at all.
         let num_generators = cert.group_order.strong_generators.len();
-        let recomputed = enumerate_cosets(num_generators, &cert.relators, COSET_ENUMERATION_BOUND);
+        // Drop the single longest relator: found (not assumed) to be
+        // load-bearing for S_3's presentation -- dropping any of the
+        // shorter ones individually still leaves the remaining set
+        // complete (redundancy is expected: `schreier_relators` derives
+        // one candidate per (level, orbit point, level generator) triple,
+        // and does not attempt to minimize the set).
+        let (drop_index, _) = cert
+            .relators
+            .iter()
+            .enumerate()
+            .max_by_key(|(_, r)| r.len())
+            .expect("presentation() always yields at least one relator for a nontrivial group");
+        let mut trimmed = cert.relators.clone();
+        trimmed.remove(drop_index);
+        let recomputed = enumerate_cosets(num_generators, &trimmed, COSET_ENUMERATION_BOUND);
         match recomputed {
             None => {
                 // Declined to close within the bound: an honest decline is
@@ -1406,8 +1474,9 @@ mod tests {
             }
             Some(table) => {
                 // Otherwise it must NOT have closed at the true order 6 --
-                // it should be strictly larger (a weaker, larger quotient
-                // dropping the relator lets more cosets survive).
+                // dropping a relator only ever admits MORE cosets, never
+                // fewer, so a genuine defect shows up as a strictly larger
+                // order.
                 assert_ne!(table.len() as u128, 6);
             }
         }
