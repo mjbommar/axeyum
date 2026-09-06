@@ -4,7 +4,7 @@
   "note": "Statement identity for every settled fact (S1 of the trusted-library safety roadmap, ADR-0763). Per fact: SHA-256 of formal.statement (the canonical kernel rendering for native lean4 rows), SHA-256 of the top-level reader-facing statement, and the kernel_theorem it names. A settled fact's statement is what the ledger CLAIMS; changing any of the three silently turns 'we proved X' into 'we proved something we then labelled X'. Changes require an amendment row naming both digests and a reason; superseded digests are preserved in each pin's history. `coverage_floor` is a ratchet the gate re-derives rather than trusts: slack is itself a violation, so a loosened floor is self-reverting. Written by `scripts/check-settled-fact-statements.py --write`; do not hand-edit.",
   "coverage_floor": {
     "max_unpinned_settled": 0,
-    "min_identity_bound": 2429,
+    "min_identity_bound": 2432,
     "max_header_exempt": 0
   },
   "amendments": [
@@ -19752,6 +19752,13 @@
       ]
     },
     {
+      "fact_id": "F:nat-mul-dvd-mul",
+      "language": "lean4",
+      "statement_sha256": "cffd4e3861355f79ff92e4e2794c03c434d2083bef7465c0da87412d2ea058e0",
+      "prose_sha256": "3ef098991ee62c2721ed6c1dbad6ed3bcad4e7a821e3e3fb1b45f428a2c739df",
+      "kernel_theorem": "Nat.mul_dvd_mul"
+    },
+    {
       "fact_id": "F:nat-mul-eq-zero",
       "language": "lean4",
       "statement_sha256": "959b363eb66ba6c14411a4773fda2c0a2e1ded584b80bb6290de6b04147363dd",
@@ -19943,6 +19950,20 @@
       "statement_sha256": "ba14cf59ff430db4849ad79d3dcfb8fce76928209b54366a894348373f555f22",
       "prose_sha256": "92b370624c9c372a6e6a70a372f6203ab3dce52731affc6911012a0515c9ab4e",
       "kernel_theorem": "Nat.Multiset.prod_add"
+    },
+    {
+      "fact_id": "F:nat-multiset-prod-sel-dvd-prod",
+      "language": "lean4",
+      "statement_sha256": "f7f192469441ef1593871e02657237be7c486e09d0cc52a7225bb49ee65c579a",
+      "prose_sha256": "6fca993e492baf417eba4e3cfc9cc5ae4f69aaa56d7c881ff4c5e9850f229505",
+      "kernel_theorem": "Nat.Multiset.prodSel_dvd_prod"
+    },
+    {
+      "fact_id": "F:nat-multiset-prod-sel-injective",
+      "language": "lean4",
+      "statement_sha256": "83fa3748c2f00a57be27b4a6faa8f0295900d2cd0bd07648297c9d809804ddb7",
+      "prose_sha256": "5e6cc7dc506cbf8ef865892461f573585ec87c95bf91be67b37f4c84326e8997",
+      "kernel_theorem": "Nat.Multiset.prodSel_injective"
     },
     {
       "fact_id": "F:nat-multiset-prod-singleton",

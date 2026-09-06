@@ -178,7 +178,7 @@ pub(super) fn list(p: &ListPrelude) -> Fields {
     }
 }
 
-/// The `NatPrelude` field table (1435 names,
+/// The `NatPrelude` field table (1449 names,
 /// 0 name lists, 1 sub-packages).
 ///
 /// 113 of the names come from ADR-1512 per-module registries and
@@ -1489,6 +1489,23 @@ pub(super) fn nat(p: &NatPrelude) -> Fields {
             ("prod_range_mul", p.prod_range_mul),
             ("prod_range_add_of_one_above", p.prod_range_add_of_one_above),
             ("multiset_prod_add", p.multiset_prod_add),
+            ("mul_dvd_mul", p.mul_dvd_mul),
+            ("prod_range_dvd_prod_range", p.prod_range_dvd_prod_range),
+            ("bool_select_nat_inj_of_pos", p.bool_select_nat_inj_of_pos),
+            ("multiset_restrict", p.multiset_restrict),
+            ("multiset_prod_sel", p.multiset_prod_sel),
+            ("multiset_bound_restrict", p.multiset_bound_restrict),
+            ("multiset_count_restrict", p.multiset_count_restrict),
+            ("multiset_count_restrict_pos", p.multiset_count_restrict_pos),
+            (
+                "multiset_prod_sel_eq_prod_restrict",
+                p.multiset_prod_sel_eq_prod_restrict,
+            ),
+            ("multiset_prod_sel_all", p.multiset_prod_sel_all),
+            ("multiset_prod_sel_empty", p.multiset_prod_sel_empty),
+            ("multiset_prod_sel_congr", p.multiset_prod_sel_congr),
+            ("multiset_prod_sel_dvd_prod", p.multiset_prod_sel_dvd_prod),
+            ("multiset_prod_sel_injective", p.multiset_prod_sel_injective),
             ("min_fac_aux_two_le", p.min_fac_aux_two_le),
             ("min_fac_aux_dvd", p.min_fac_aux_dvd),
             ("min_fac_two_le", p.min_fac_two_le),

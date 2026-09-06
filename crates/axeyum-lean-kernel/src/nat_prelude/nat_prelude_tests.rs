@@ -726,6 +726,10 @@ fn definition_names(p: &NatPrelude) -> Vec<NameId> {
         p.rm_halts,
         // `chebyshev-pi` lane (roadmap W3-11, ADR-1637): `primorial.rs`.
         p.primorial,
+        // `mobius-inversion` lane (roadmap W2-18, ADR-1658):
+        // `multiset_select.rs`.
+        p.multiset_restrict,
+        p.multiset_prod_sel,
     ]
 }
 
@@ -1902,6 +1906,20 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.four_pow_eq_two_pow_add_self,
         p.choose_two_mul_succ_le_two_pow,
         p.choose_two_mul_succ_le_four_pow,
+        // `mobius-inversion` lane (roadmap W2-18, ADR-1658):
+        // `multiset_select.rs`.
+        p.mul_dvd_mul,
+        p.prod_range_dvd_prod_range,
+        p.bool_select_nat_inj_of_pos,
+        p.multiset_bound_restrict,
+        p.multiset_count_restrict,
+        p.multiset_count_restrict_pos,
+        p.multiset_prod_sel_eq_prod_restrict,
+        p.multiset_prod_sel_all,
+        p.multiset_prod_sel_empty,
+        p.multiset_prod_sel_congr,
+        p.multiset_prod_sel_dvd_prod,
+        p.multiset_prod_sel_injective,
     ]
 }
 
