@@ -6,8 +6,8 @@ Index-summary: The next bounded concentration rate after Chebyshev lands at ℚ.
 Index-status: accepted
 
 - **Lane**: `fourth-moment` (roadmap W3-12, second slice)
-- **Follows**: [ADR-1616](adr-1616-independence-is-not-expressible-so-the-hypothesis-is-uncorrelatedness.md)
-  and [ADR-1631](adr-1631-the-binomial-is-a-sum-of-bernoullis-and-hoeffding-needs-a-joint-law.md),
+- **Follows**: [ADR-1616](adr-1616-finite-probability-over-algs-orderedring-independence-and-the-integral-bridge.md)
+  and [ADR-1631](adr-1631-the-bernoulli-model-is-constructed-and-hoeffding-is-blocked-on-the-joint-law-not-on-exp.md),
   which named this as the next statable rate.
 
 ## Context
