@@ -140,6 +140,7 @@ versioned artifacts (v14 and later) with `summary.par2_mean_s`, per-instance
 | 72 baselines, `bench-results/baselines/` | decide rate, PAR-2 vs Z3 4.13.3 per division | last refreshed 2026-08-25 |
 | [`SCOREBOARD.md`](../../../bench-results/SCOREBOARD.md) | generated per-division decide%, DISAGREE, PAR-2 | 35 rows, 24 logics, 0 disagreements |
 | [`PARITY.md`](../../../bench-results/PARITY.md) + `parity-details/*.tsv` | decided vs cvc5/Bitwuzla on pinned lists; per-file `axeyum_ms`, `z3_ms`, `unknown_kind`, `detail` | all 9 divisions stale, gate red |
+| [2026-09-05 parity re-measurement](2026-09-05-parity-remeasured.md) | all 11 committed lists at one commit (`9914a1c0e`) on idle hosts s5/s6/s7; QF_ABV and QF_UF measured for the first time | freshness gate green: 11 of 11 fresh, 0 disagreements; our count +25 over the nine re-measured divisions |
 | [`smtcomp-repro-20260721/`](../../../bench-results/smtcomp-repro-20260721/README.md) | full SMT-COMP scoring replica; QF_BV PAR-2 head-to-head vs cvc5 and Bitwuzla (same 19/24, ~3% slower) | one run, 2026-07-21 |
 | `bench-results/frontier/*.json`, `progress_frontier.rs` | largest `N` decided in 4 s on five parametric families; machine calibration with `comparable` / `ratchetable` flags | five baselines, pinned 2026-08-25 |
 | `axeyum-scenarios` + `scenario_scaling` / `scenario_pipeline_report` | oracle-free workloads reporting typed `BvLayerStats` | example binaries, not gated |
