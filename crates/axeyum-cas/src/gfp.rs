@@ -333,6 +333,22 @@ fn mul_mod_poly(a: &[i128], b: &[i128], modulus: &[i128], p: i128) -> Option<Vec
 /// Used to apply the Frobenius map when testing irreducibility and factoring.
 /// Returns `None` when `modulus` is the zero polynomial.
 ///
+/// **Not migrated onto `axeyum_arith::ModularRing`/`PowModCertificate`**
+/// (ADR-1710 migration slice 2), despite being counted as one of the design
+/// note's "five `pow_mod`s". This one squares and reduces a *polynomial*
+/// (`&[i128]`) modulo another *polynomial* (`modulus`) in `𝔽ₚ[x]`, not an
+/// integer modulo an integer modulus — a different algebraic structure from
+/// the one `ModularRing` models. `ModularRing::modulus()` returns `&BigUint`
+/// and `PowModCertificate`'s fields are all `BigUint`, both hard-typed to
+/// `ℤ/mℤ`; representing a polynomial modulus and a polynomial chain would
+/// need a materially different, generic certificate (one whose `verify`
+/// needs the ring's own multiply/reduce, unlike `PowModCertificate::verify`,
+/// which is self-contained). That is a bigger design change than this slice
+/// scopes, and it would not, on its own, remove the duplication the design
+/// note actually flags for this pair (`gfp.rs` and `factor_int.rs` each
+/// re-deriving an independent `𝔽ₚ[x]` ring). `factor_int.rs`'s private
+/// `fp_pow_mod` is the second copy, left unmigrated for the same reason.
+///
 /// # Examples
 ///
 /// ```

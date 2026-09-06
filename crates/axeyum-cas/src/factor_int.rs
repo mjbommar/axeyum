@@ -459,6 +459,16 @@ fn fp_gcd(left: &[i128], right: &[i128], p: i128) -> Option<Vec<i128>> {
 }
 
 /// `base^exp mod modulus` over 𝔽ₚ, by square-and-multiply. `None` on overflow.
+///
+/// **Not migrated onto `axeyum_arith::ModularRing`/`PowModCertificate`**
+/// (ADR-1710 migration slice 2). Like `gfp.rs::pow_mod` (its doc comment
+/// carries the full argument), this squares and reduces a *polynomial*
+/// (`&[i128]`) modulo another polynomial in this module's local `𝔽ₚ[x]`
+/// ring, not an integer modulo an integer modulus — `ModularRing` and
+/// `PowModCertificate` are hard-typed to `ℤ/mℤ` (`BigUint` modulus, `BigUint`
+/// certificate fields) and cannot represent that without a materially
+/// different, generic certificate design, which is out of this slice's
+/// scope.
 fn fp_pow_mod(base: &[i128], exp: u128, modulus: &[i128], p: i128) -> Option<Vec<i128>> {
     let mut result = vec![1i128];
     let mut factor = fp_rem(base, modulus, p)?;
