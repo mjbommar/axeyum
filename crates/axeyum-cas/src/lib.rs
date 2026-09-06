@@ -7109,6 +7109,293 @@ fn exponential_of_rate(rate: &CasExpr) -> CasExpr {
     simplify(&fold_elementary_constants(&product))
 }
 
+/// A convergent infinite sum together with the [`SignCondition`]s its
+/// **convergence** rests on. `hypotheses` empty means the value is
+/// unconditional — exactly what [`infinite_sum`] returns.
+///
+/// The discrete counterpart of [`ConditionalIntegral`]: an infinite geometric
+/// family `Σ P(k)·qᵏ` has a closed form only where `|q| < 1`, and nothing in
+/// this crate decides `|q| < 1` for a symbolic `q`. Returning the value alone
+/// would be a false claim (`Σ 2ᵏ` is not `−1`); returning it with the condition
+/// attached is the true one.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ConditionalSum {
+    /// The value of the sum, true under [`Self::hypotheses`].
+    pub value: CasExpr,
+    /// The sign conditions the convergence argument assumed, in a deterministic
+    /// order. Empty means unconditional.
+    pub hypotheses: Vec<SignCondition>,
+}
+
+/// `∑_{var=lower}^{∞} f(var)` together with the [`SignCondition`]s its
+/// convergence rests on — the conditional counterpart of [`infinite_sum`], and
+/// the discrete counterpart of [`improper_integrate_conditional`].
+///
+/// [`infinite_sum`] is tried first and its value is returned **unconditionally**
+/// (`hypotheses` empty), so every value that route already produced is
+/// unchanged. Only when it declines does the geometric route run, and that route
+/// is the one place a symbolic ratio can produce a value at all:
+/// [`crate::gosper_sum`] needs a concrete ratio to build an antidifference and
+/// [`limit`] needs one to decide that antidifference's limit at `∞`, so
+/// `∑_{j≥0} p·(1−p)ʲ` at a symbolic `p` declines twice over inside
+/// [`infinite_sum`].
+///
+/// A **concrete** ratio is decided here rather than recorded: `|q| < 1` yields
+/// an unconditional result and `|q| ≥ 1` — a genuinely divergent series —
+/// declines with `None`.
+///
+/// ```
+/// use axeyum_cas::{CasExpr, SignCondition, UnaryFunc, ZeroTest, equal, infinite_sum_conditional};
+/// // Σ_{j≥0} p·(1−p)ʲ = 1, under |1−p| < 1.
+/// let p = CasExpr::var("p");
+/// let q = CasExpr::one() - p.clone();
+/// let ln_q = CasExpr::Unary(UnaryFunc::Ln, Box::new(q));
+/// let summand = p * (CasExpr::var("j") * ln_q).exp();
+/// let sum = infinite_sum_conditional(&summand, "j", &CasExpr::zero()).unwrap();
+/// assert!(matches!(
+///     equal(&sum.value, &CasExpr::one()),
+///     ZeroTest::Certified { equal: true, .. }
+/// ));
+/// assert_eq!(sum.hypotheses.len(), 1);
+/// assert!(matches!(sum.hypotheses[0], SignCondition::Positive(_)));
+/// ```
+#[must_use]
+pub fn infinite_sum_conditional(
+    f: &CasExpr,
+    var: &str,
+    lower: &CasExpr,
+) -> Option<ConditionalSum> {
+    if let Some(value) = infinite_sum(f, var, lower) {
+        return Some(ConditionalSum {
+            value,
+            hypotheses: Vec::new(),
+        });
+    }
+    geometric_series_sum(f, var, lower)
+}
+
+/// The shape `f = e^{E(var)}·P(var)/denominator` with `E` affine in `var`, and
+/// the denominator and every coefficient of `P` free of `var` but otherwise
+/// symbolic. The geometric counterpart of `ExponentialSeriesShape` — the same
+/// split, without the `Γ(var+1)` cancellation.
+struct GeometricSeriesShape {
+    /// The `var`-free residual denominator.
+    denominator: CasExpr,
+    /// `E(0)`, the `var`-free part of the exponent.
+    constant_exponent: CasExpr,
+    /// The coefficient of `var` in `E`, i.e. `ln q`.
+    rate_exponent: CasExpr,
+    /// Dense coefficients of `P` in `var`, least significant first.
+    coefficients: Vec<CasExpr>,
+}
+
+/// Split `f` into `e^{E(var)}·P(var)/denominator`, exactly as
+/// `exponential_series_shape` does but **without** the `Γ(var+1)` cancellation:
+/// a geometric summand has no factorial, and one that does must not be read here
+/// (`qʲ/j!` belongs to the exponential route, `qʲ/j` to neither).
+///
+/// Declines when the residual denominator mentions `var` (which is what refuses
+/// the near-miss `qʲ/j`), when a `var`-dependent atom is anything other than an
+/// `exp` head (which refuses `qʲ/Γ(j+1)`, whose factorial is not an `exp`), when
+/// the exponential factor is not common to every monomial, or when the exponent
+/// is not affine in `var`. The affine split and the final reconstruction are
+/// both **decided** by [`equal`], never assumed.
+fn geometric_series_shape(f: &CasExpr, var: &str) -> Option<GeometricSeriesShape> {
+    let rf = normalize_rational(f)?;
+    if rf.den.is_zero() {
+        return None;
+    }
+    let mut dictionary = BTreeMap::new();
+    collect_atom_dictionary(f, &mut dictionary);
+    let denominator = deatomize_from(&rf.den.to_expr(), f);
+    if expr_contains_var(&denominator, var) {
+        return None;
+    }
+
+    let mut exponent_atoms: Option<BTreeMap<String, u32>> = None;
+    let mut coefficients: Vec<CasExpr> = Vec::new();
+    for (monomial, coefficient) in &rf.num.terms {
+        let mut dependent: BTreeMap<String, u32> = BTreeMap::new();
+        let mut degree = 0usize;
+        let mut factor = CasExpr::Const(*coefficient);
+        for (name, power) in &monomial.powers {
+            if name == var {
+                degree = usize::try_from(*power).ok()?;
+                continue;
+            }
+            let atom = dictionary
+                .get(name)
+                .cloned()
+                .unwrap_or_else(|| CasExpr::var(name));
+            if expr_contains_var(&atom, var) {
+                // Only an `exp` head may depend on `var` here: a `Γ(var+1)`, a
+                // `ln(var)` or anything else is outside this fragment.
+                if !matches!(atom, CasExpr::Unary(UnaryFunc::Exp, _)) {
+                    return None;
+                }
+                dependent.insert(name.clone(), *power);
+            } else {
+                factor = factor * atom.pow(*power);
+            }
+        }
+        match &exponent_atoms {
+            None => exponent_atoms = Some(dependent),
+            Some(shared) if *shared == dependent => {}
+            Some(_) => return None, // the geometric factor is not common
+        }
+        if degree >= coefficients.len() {
+            coefficients.resize(degree + 1, CasExpr::zero());
+        }
+        coefficients[degree] = coefficients[degree].clone() + factor;
+    }
+    let exponent_atoms = exponent_atoms?;
+    if exponent_atoms.is_empty() {
+        return None; // no `qᵏ` factor: not this family
+    }
+    for coefficient in &mut coefficients {
+        *coefficient = simplify(coefficient);
+    }
+
+    let mut exponent = CasExpr::zero();
+    for (name, power) in &exponent_atoms {
+        let CasExpr::Unary(UnaryFunc::Exp, argument) = dictionary.get(name)? else {
+            return None;
+        };
+        exponent =
+            exponent + CasExpr::Const(Rational::integer(i128::from(*power))) * (**argument).clone();
+    }
+    let at_zero = simplify(&exponent.substitute(var, &CasExpr::zero()));
+    let at_one = simplify(&exponent.substitute(var, &CasExpr::one()));
+    let rate = simplify(&(at_one - at_zero.clone()));
+    if expr_contains_var(&at_zero, var) || expr_contains_var(&rate, var) {
+        return None;
+    }
+    if !matches!(
+        equal(
+            &exponent,
+            &(at_zero.clone() + CasExpr::var(var) * rate.clone())
+        ),
+        ZeroTest::Certified { equal: true, .. }
+    ) {
+        return None; // the exponent is not affine in `var`
+    }
+
+    // Obligation 1: the reconstruction must be the summand itself.
+    let polynomial = polynomial_from_coefficients(&coefficients, var);
+    let reconstruction = (exponent.exp() * polynomial) / denominator.clone();
+    if !matches!(
+        equal(f, &reconstruction),
+        ZeroTest::Certified { equal: true, .. }
+    ) {
+        return None;
+    }
+    Some(GeometricSeriesShape {
+        denominator,
+        constant_exponent: at_zero,
+        rate_exponent: rate,
+        coefficients,
+    })
+}
+
+/// The **geometric-series** value of `∑_{var=0}^{∞} f(var)` when `f` is
+/// `c·e^{u₀}·P(var)·q^var` for a polynomial `P` and a possibly **symbolic** ratio
+/// `q` — the family [`crate::gosper_sum`] reaches only with a concrete ratio,
+/// because its antidifference and that antidifference's limit at `∞` both need
+/// one.
+///
+/// # Why this is not a table lookup
+///
+/// The value rests on **one** recognized identity,
+///
+/// ```text
+/// ∑_{j≥0} j^{(m)}·qʲ = m!·qᵐ/(1−q)^{m+1}          (|q| < 1)
+/// ```
+///
+/// — the `m`-th derivative of `∑ qʲ = 1/(1−q)`, in the falling-factorial form
+/// `j^{(m)} = m!·C(j,m)`. Everything that gets from `f` to that identity is
+/// **decided by [`equal`]**, and a value is returned only if both obligations
+/// certify:
+///
+/// 1. **Shape.** `geometric_series_shape` produces candidates for the
+///    denominator, the exponent and `P`, and requires
+///    `equal(f, e^{E(var)}·P(var)/denominator)` to certify. The near-miss `qʲ/j`
+///    (a `var`-carrying denominator) and `qʲ/j!` (a `Γ` atom that is not an
+///    `exp`) are refused there, not read as geometric.
+/// 2. **Newton basis.** `P` is re-expressed in the falling-factorial basis with
+///    `c_m = Δᵐ P(0)/m!`, and `equal(P(var), Σₘ c_m·var^{(m)})` must certify.
+///    That is what licenses applying the base identity term by term.
+///
+/// The condition `|q| < 1` is **recorded, never assumed**: a concrete ratio is
+/// decided on the spot (`|q| ≥ 1` declines, a divergent series), and a symbolic
+/// one produces `1 − |q| > 0` on the returned [`ConditionalSum`].
+///
+/// Declines for a lower bound other than `0`, for `q = 1` (the closed form's
+/// denominator vanishes), and wherever either obligation fails to certify.
+fn geometric_series_sum(f: &CasExpr, var: &str, lower: &CasExpr) -> Option<ConditionalSum> {
+    if integer_constant(lower)? != 0 {
+        return None;
+    }
+    let shape = geometric_series_shape(f, var)?;
+
+    // Obligation 2: the Newton forward-difference expansion of `P`.
+    let newton = newton_falling_factorial_coefficients(&shape.coefficients)?;
+    let mut rebuilt = CasExpr::zero();
+    for (m, c) in newton.iter().enumerate() {
+        let order = u32::try_from(m).ok()?;
+        rebuilt = rebuilt + c.clone() * falling_factorial(&CasExpr::var(var), order);
+    }
+    let polynomial = polynomial_from_coefficients(&shape.coefficients, var);
+    if !matches!(
+        equal(&polynomial, &rebuilt),
+        ZeroTest::Certified { equal: true, .. }
+    ) {
+        return None;
+    }
+
+    // `q = e^{rate}`. The base identity is stated in `q`, so this is where the
+    // ratio leaves the logarithm it was carried in.
+    let q = exponential_of_rate(&shape.rate_exponent);
+    let hypotheses = match exact_rational(&q) {
+        // A concrete ratio is DECIDED here, not recorded.
+        Some(c) if ratio_is_inside_unit_disc(c) => Vec::new(),
+        Some(_) => return None, // `|q| ≥ 1`: the series diverges
+        None => vec![SignCondition::Positive(CasExpr::one() - q.clone().abs())],
+    };
+    let one_minus_q = simplify(&(CasExpr::one() - q.clone()));
+    if is_exact_zero(&one_minus_q) {
+        return None;
+    }
+
+    let mut tail = CasExpr::zero();
+    for (m, c) in newton.iter().enumerate() {
+        let order = u32::try_from(m).ok()?;
+        let factorial = Rational::integer(ntheory::factorial(i128::from(order))?);
+        let numerator = CasExpr::Const(factorial) * c.clone() * pow_from_one(&q, order);
+        tail = tail + numerator / pow_from_one(&one_minus_q, order.checked_add(1)?);
+    }
+    let prefactor = shape.constant_exponent.exp() / shape.denominator;
+    Some(ConditionalSum {
+        value: simplify(&fold_elementary_constants(&(prefactor * tail))),
+        hypotheses,
+    })
+}
+
+/// `|c| < 1` for an exact rational ratio — the convergence test the symbolic
+/// route has to record instead of deciding.
+fn ratio_is_inside_unit_disc(c: Rational) -> bool {
+    c.numerator().unsigned_abs() < c.denominator().unsigned_abs()
+}
+
+/// `base^order`, with `order = 0` giving `1` rather than an un-simplified
+/// `Pow(base, 0)` (which the atom machinery would carry around).
+fn pow_from_one(base: &CasExpr, order: u32) -> CasExpr {
+    if order == 0 {
+        CasExpr::one()
+    } else {
+        base.clone().pow(order)
+    }
+}
+
 /// The **finite product** `∏_{var=lower}^{upper} f(var)` over **concrete integer**
 /// bounds — the multiplicative analogue of [`definite_sum`]. Each factor `f(k)` is
 /// obtained by substitution and the exact product is simplified. An empty range
@@ -18076,8 +18363,30 @@ fn prove_exp_antiderivative(
 ///     axeyum_cas::ZeroTest::Certified { equal: true, .. }
 /// ));
 /// ```
+///
+/// A second shape is tried when the affine-rate one declines: a **Gaussian**
+/// `C·P(x)·e^{−a·x²+c₀}` over the whole line with a symbolic `a`, under `a > 0`
+/// (see `conditional_gaussian_integral`). The two are disjoint — a Gaussian has
+/// a nonzero `x²` coefficient, which the affine matcher refuses, and an affine
+/// exponent gives `a = 0`, which the Gaussian one refuses.
 #[must_use]
 pub fn improper_integrate_conditional(
+    expr: &CasExpr,
+    var: &str,
+    lower: LimitPoint,
+    upper: LimitPoint,
+) -> Option<ConditionalIntegral> {
+    if let Some(exponential) = conditional_exponential_integral(expr, var, lower, upper) {
+        return Some(exponential);
+    }
+    conditional_gaussian_integral(expr, var, lower, upper)
+}
+
+/// The affine-rate half of [`improper_integrate_conditional`]:
+/// `∫ₗᵘ C·P(x)·e^{r·x} dx` with a symbolic rate `r`. Split out so the Gaussian
+/// half can be tried when this one declines, and so each half's decline is
+/// attributable.
+fn conditional_exponential_integral(
     expr: &CasExpr,
     var: &str,
     lower: LimitPoint,
@@ -18127,6 +18436,261 @@ pub fn improper_integrate_conditional(
         hypotheses.push(SignCondition::NonZero(rate));
     }
     let value = simplify(&fold_elementary_constants(&(at_upper - at_lower)));
+    Some(ConditionalIntegral {
+        value,
+        antiderivative,
+        certificate,
+        hypotheses,
+    })
+}
+
+/// The maximum polynomial degree the symbolic-`a` Gaussian antiderivative is
+/// built for. The reduction below is linear in the degree; the bound is a
+/// resource limit, not a soundness one (the certificate is checked either way).
+const MAX_SYMBOLIC_GAUSSIAN_DEGREE: usize = 12;
+
+/// `√a` for a `var`-free `a` the caller has **recorded as positive**.
+///
+/// [`simplify_radicals`] alone leaves `√(c/d)` as one opaque atom, which is
+/// exactly the wrong form here: the Gaussian route's `a` is `1/(2σ²)`, and the
+/// normalization it has to cancel against carries `√σ²`, so an unsplit
+/// `√(1/(2σ²))` never meets it. The split `√(c/d) = √c/√d` is used only when the
+/// numerator `c` is a **positive rational**, in which case the caller's recorded
+/// `a = c/d > 0` forces `d > 0` and the identity is exact. Every other shape
+/// falls through to the ordinary [`simplify_radicals`] form.
+fn positive_sqrt(a: &CasExpr) -> CasExpr {
+    let simplified = simplify(a);
+    if let CasExpr::Div(numerator, denominator) = &simplified
+        && matches!(exact_rational(numerator), Some(c) if c.numerator() > 0)
+    {
+        let root_numerator = simplify_radicals(&(**numerator).clone().sqrt());
+        let root_denominator = simplify_radicals(&(**denominator).clone().sqrt());
+        return fold_trivial(&(root_numerator / root_denominator));
+    }
+    simplify_radicals(&simplified.sqrt())
+}
+
+/// Split the `var`-free coefficients `[c₀, c₁, c₂]` out of an exponent that is
+/// **quadratic in `var`**, `E = c₀ + c₁·var + c₂·var²`.
+///
+/// The coefficients are read off by three substitutions (`var = 0, 1, −1`)
+/// rather than by [`normalize`], because [`normalize`] declines on a `Div` and a
+/// Gaussian exponent's coefficient is `1/(2σ²)` — a quotient by a symbol. The
+/// extraction is a *candidate*; `equal` then **decides** that the candidate
+/// reconstructs `E`, so a non-quadratic exponent (a cubic, a `ln(var)`) is
+/// refused here rather than mis-read.
+fn quadratic_var_free_coefficients(exponent: &CasExpr, var: &str) -> Option<[CasExpr; 3]> {
+    let x = CasExpr::var(var);
+    let at_zero = simplify(&exponent.substitute(var, &CasExpr::zero()));
+    let at_one = simplify(&exponent.substitute(var, &CasExpr::one()));
+    let at_minus_one = simplify(
+        &exponent.substitute(var, &CasExpr::Const(Rational::integer(-1))),
+    );
+    let quadratic = simplify(
+        &((at_one.clone() + at_minus_one.clone() - CasExpr::int(2) * at_zero.clone())
+            / CasExpr::int(2)),
+    );
+    let linear = simplify(&((at_one - at_minus_one) / CasExpr::int(2)));
+    if expr_contains_var(&at_zero, var)
+        || expr_contains_var(&linear, var)
+        || expr_contains_var(&quadratic, var)
+    {
+        return None;
+    }
+    let rebuilt =
+        at_zero.clone() + linear.clone() * x.clone() + quadratic.clone() * x.pow(2);
+    if !matches!(
+        equal(exponent, &rebuilt),
+        ZeroTest::Certified { equal: true, .. }
+    ) {
+        return None;
+    }
+    Some([at_zero, linear, quadratic])
+}
+
+/// Split `expr` into `(var-free constant factor incl. e^{c₀}, polynomial
+/// coefficients in `var`, a)` for the Gaussian shape `C·P(var)·e^{−a·var²+c₀}`,
+/// where `C`, every coefficient of `P` and `a` are free of `var` but otherwise
+/// **symbolic**.
+///
+/// The linear term of the exponent must be **decidably zero**: completing the
+/// square would move it into the polynomial factor as well as the erf argument,
+/// and this route does not do that. A caller that needs a shifted Gaussian
+/// shifts the integration variable itself (which is what
+/// `probability::Continuous::Normal` does — its moments are taken on the
+/// centered variable).
+fn match_poly_times_gaussian(
+    expr: &CasExpr,
+    var: &str,
+) -> Option<(CasExpr, Vec<CasExpr>, CasExpr)> {
+    let simplified = simplify(expr);
+    let mut atoms: Vec<(CasExpr, bool)> = Vec::new();
+    collect_multiplicative_atoms(&simplified, false, &mut atoms);
+    let mut exp_args: Vec<CasExpr> = Vec::new();
+    let mut polynomial: Vec<CasExpr> = Vec::new();
+    let mut free_numerator: Vec<CasExpr> = Vec::new();
+    let mut free_denominator: Vec<CasExpr> = Vec::new();
+    for (atom, inverted) in atoms {
+        if let Some(exponent) = exp_exponent_of(&atom, var) {
+            exp_args.push(if inverted {
+                CasExpr::Neg(Box::new(exponent))
+            } else {
+                exponent
+            });
+        } else if expr_contains_var(&atom, var) {
+            if inverted {
+                return None; // `var` in a non-exponential denominator: not this shape
+            }
+            polynomial.push(atom);
+        } else if inverted {
+            free_denominator.push(atom);
+        } else {
+            free_numerator.push(atom);
+        }
+    }
+    if exp_args.is_empty() {
+        return None;
+    }
+    let exponent = if exp_args.len() == 1 {
+        exp_args.into_iter().next()?
+    } else {
+        CasExpr::Add(exp_args)
+    };
+    let [intercept, linear, quadratic] = quadratic_var_free_coefficients(&exponent, var)?;
+    if !is_exact_zero(&simplify(&linear)) {
+        return None; // a linear term needs completing the square; not this route
+    }
+    let rate = simplify(&CasExpr::Neg(Box::new(quadratic)));
+    let coefficients: Vec<CasExpr> = normalize(&build_product(polynomial))?
+        .coeffs_in(var)
+        .iter()
+        .map(MultiPoly::to_expr)
+        .collect();
+    if coefficients.is_empty() {
+        return None; // the polynomial factor is identically zero
+    }
+    let mut constant = build_product(free_numerator);
+    if !free_denominator.is_empty() {
+        constant = constant / build_product(free_denominator);
+    }
+    if !is_exact_zero(&intercept) {
+        constant = constant * intercept.exp();
+    }
+    Some((constant, coefficients, rate))
+}
+
+/// `∫ C·P(x)·e^{−a·x²} dx = C·(D(x)·e^{−a·x²} + E·erf(√a·x))`, built from the
+/// standard reduction
+///
+/// ```text
+/// ∫ xⁿ·e^{−a x²} dx = −xⁿ⁻¹/(2a)·e^{−a x²} + (n−1)/(2a)·∫ xⁿ⁻²·e^{−a x²} dx
+/// ```
+///
+/// with bases `∫ e^{−a x²} = (√π/(2√a))·erf(√a·x)` and
+/// `∫ x·e^{−a x²} = −1/(2a)·e^{−a x²}`, all with `a` and the coefficients of `P`
+/// **symbolic**. Correctness is not assumed from the recursion: the caller runs
+/// the ordinary [`prove_derivative`] check against the original integrand.
+///
+/// Returns `(antiderivative, C·E)`. The second component is what the boundary
+/// evaluation needs on its own: the `D(x)·e^{−a x²}` part vanishes at both
+/// infinities under `a > 0`, so `∫_{−∞}^{∞} = 2·C·E`.
+fn gaussian_polynomial_antiderivative(
+    constant: &CasExpr,
+    coefficients: &[CasExpr],
+    rate: &CasExpr,
+    var: &str,
+) -> Option<(CasExpr, CasExpr)> {
+    if coefficients.len() > MAX_SYMBOLIC_GAUSSIAN_DEGREE + 1 {
+        return None;
+    }
+    let x = CasExpr::var(var);
+    let sqrt_rate = positive_sqrt(rate);
+    let two_rate = CasExpr::int(2) * rate.clone();
+    let mut decaying: Vec<CasExpr> = Vec::with_capacity(coefficients.len());
+    let mut erf_weight: Vec<CasExpr> = Vec::with_capacity(coefficients.len());
+    for n in 0..coefficients.len() {
+        match n {
+            0 => {
+                decaying.push(CasExpr::zero());
+                erf_weight.push(
+                    CasExpr::var("pi").sqrt() / (CasExpr::int(2) * sqrt_rate.clone()),
+                );
+            }
+            1 => {
+                decaying.push(CasExpr::Neg(Box::new(CasExpr::one() / two_rate.clone())));
+                erf_weight.push(CasExpr::zero());
+            }
+            _ => {
+                let power = u32::try_from(n - 1).ok()?;
+                let weight = CasExpr::Const(Rational::integer(i128::try_from(n - 1).ok()?))
+                    / two_rate.clone();
+                decaying.push(
+                    CasExpr::Neg(Box::new(x.clone().pow(power) / two_rate.clone()))
+                        + weight.clone() * decaying[n - 2].clone(),
+                );
+                erf_weight.push(weight * erf_weight[n - 2].clone());
+            }
+        }
+    }
+    let mut decaying_part = CasExpr::zero();
+    let mut erf_part = CasExpr::zero();
+    for (n, coefficient) in coefficients.iter().enumerate() {
+        if is_exact_zero(coefficient) {
+            continue;
+        }
+        decaying_part = decaying_part + coefficient.clone() * decaying[n].clone();
+        erf_part = erf_part + coefficient.clone() * erf_weight[n].clone();
+    }
+    let gaussian = CasExpr::Neg(Box::new(rate.clone() * x.clone().pow(2))).exp();
+    let erf_term = (sqrt_rate * x).erf();
+    let antiderivative = simplify(
+        &(constant.clone() * (decaying_part * gaussian + erf_part.clone() * erf_term)),
+    );
+    Some((antiderivative, simplify(&(constant.clone() * erf_part))))
+}
+
+/// `∫_{−∞}^{∞} C·P(x)·e^{−a·x²+c₀} dx` with a **symbolic** `a`, under `a > 0` —
+/// the Gaussian half of [`improper_integrate_conditional`].
+///
+/// This is the route [`improper_integrate`] structurally cannot take:
+/// `integrate_gaussian` reaches [`to_univariate`](MultiPoly::to_univariate),
+/// which needs a concrete [`Rational`] coefficient of `x²`, so a variance carried
+/// as a symbol stops it before any `√a` is built.
+///
+/// What is decided and what is assumed:
+///
+/// - The antiderivative is **proved** by [`prove_derivative`] against the
+///   original integrand, unconditionally. A failed check declines.
+/// - Both bounds are infinite: `D(x)·e^{−a x²} → 0` and `erf(√a·x) → ±1`. Both
+///   need `a > 0` and nothing else, so that is the single recorded condition.
+/// - A **concrete** `a` is decided rather than recorded: `a > 0` comes back
+///   unconditional, and `a ≤ 0` — an upward or flat Gaussian, whose integral
+///   diverges and whose `√a` is not real — declines with `None`.
+///
+/// Finite bounds decline: `erf` at a finite point is not an elementary value and
+/// this route has nothing to say about it.
+fn conditional_gaussian_integral(
+    expr: &CasExpr,
+    var: &str,
+    lower: LimitPoint,
+    upper: LimitPoint,
+) -> Option<ConditionalIntegral> {
+    if lower != LimitPoint::NegInfinity || upper != LimitPoint::PosInfinity {
+        return None;
+    }
+    let (constant, coefficients, rate) = match_poly_times_gaussian(expr, var)?;
+    let hypotheses = match exact_rational(&rate) {
+        Some(c) if c.numerator() > 0 => Vec::new(),
+        // A non-positive concrete `a`: not a convergent Gaussian, and not an erf.
+        Some(_) => return None,
+        None => vec![SignCondition::Positive(rate.clone())],
+    };
+    let (antiderivative, erf_coefficient) =
+        gaussian_polynomial_antiderivative(&constant, &coefficients, &rate, var)?;
+    let certificate = prove_exp_antiderivative(&antiderivative, expr, var)?;
+    let value = simplify(&fold_elementary_constants(
+        &(CasExpr::int(2) * erf_coefficient),
+    ));
     Some(ConditionalIntegral {
         value,
         antiderivative,
