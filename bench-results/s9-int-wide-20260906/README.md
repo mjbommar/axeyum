@@ -40,3 +40,14 @@ longer exists, so it was re-measured before any code was written.
 | file | what it is |
 |---|---|
 | `run-files.sh` | one measurement arm: `taskset -c 0-7`, per-file wall clock, `sat`/`unsat`/`unknown` only; exits non-zero if any file produced no verdict |
+| `run-before-after.sh` | the A/B: the two binaries alternate **per file**, so a load change part-way through the session hits both arms equally instead of landing entirely on whichever ran second |
+| `qf_uflia_reference_only_58.txt` | the sidecar population — the 58 reference-only QF_UFLIA files from `bench-results/parity-losses-20260905/QF_UFLIA.txt` (the S3 loss census), used to show nothing outside the 26 moved. Only **6** of the 58 are the wide-integer class; the other 20 of the 26 are absent because cvc5 does not decide them either |
+| `qf_uflia_26_before_after.tsv`, `qf_uflia_reference_only_58_before_after.tsv` | the two A/B runs at 24 s |
+
+## PAR-2 convention used in the report
+
+Following `crates/axeyum-bench/src/main.rs`: a decided file contributes its own
+wall-clock seconds; an undecided one contributes `2 x timeout`. At the 24 s
+budget used here an `unknown` therefore scores 48 s regardless of how quickly it
+was reached, so **PAR-2 cannot distinguish a fast named decline from a slow
+one** — that difference is reported separately as mean wall clock.
