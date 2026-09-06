@@ -9102,7 +9102,7 @@ mod cotransitivity;
 mod crossing;
 mod density;
 mod deriv_unique;
-mod derivative;
+pub(crate) mod derivative;
 mod evt_row1;
 mod exp_fn;
 mod exponential;

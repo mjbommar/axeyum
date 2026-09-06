@@ -122,7 +122,7 @@ great deal of that left.
       `exists_prime_factorization` (audit row A5). Original framing: This
       is the bridge between the number theory shelf and the new combinatorics
       carriers.
-- [~] **4. Sums of two squares, with the descent argument reusable.** — *descent step, the identity, and the mod-4 refutation landed 2026-09-05; Fermat's theorem itself waits on an ℤ order shelf.* A named
+- [~] **4. Sums of two squares, with the descent argument reusable.** — *descent step, identity and mod-4 refutation 2026-09-05; the ℤ order shelf and the descent's entry point the same evening; Fermat's theorem is the strong-induction assembly plus three small bridges.* A named
       classical result that exercises Gaussian-integer reasoning without
       needing the ring structure, and whose descent method is worth having as
       a producer-visible pattern.
@@ -142,6 +142,7 @@ great deal of that left.
 
 | 2026-09-05 | **Item 4, first slice** (roadmap W3-10, ADR-1633): `Int.IsSumOfTwoSquares`, the Brahmagupta–Fibonacci identity emitted by the ring producer rather than proved by hand, closure under multiplication, the mod-4 refutation, and a reusable descent step shaped for `Nat.strongInduction`; 20 declarations, footprint 0. **Fermat's theorem is open on order, not algebra**: ℤ has no `natAbs_le_iff`, `mul_le_mul`, or `sq_le_sq`, so the strict decrease of the descent measure cannot yet be stated. The reviewer's blocker was wrong in one place: −1 as a residue mod `p ≡ 1 (mod 4)` was already proved (ADR-1235). | `e5c1d09cd` |
 | 2026-09-05 | **Item 5, first slice** (roadmap W3-11, ADR-1637): `Nat.primorial` with its equations and monotonicity, and `choose (2m+1) m ≤ 4^m`, sharper than the existing power-of-two bound; 15 declarations, footprint 0. Erdős's `primorial n ≤ 4^n` is open on a divisibility law for predicate-restricted products. **The π(x) bounds were not attempted and should not be briefed**: five rows of the held-out family `discrete-step-and-counting-bounds` are that shelf and the family has never been scored; two of its rows are one lemma application away, which is a fact about the evaluation, not a task. | `88ee63a0e` |
+| 2026-09-05 | **Item 4, second slice** (roadmap W3-10, ADR-1647): the ℤ order shelf (18 laws), centered remainders with the strict decrease of the descent measure, the multiplier bounds, and the entry point from a square root of −1 mod p; 25 axiom-free declarations. **This file's blocker was two-thirds stale**: two of the three named missing lemmas already existed under other names, a reminder that a recorded obstacle accumulates staleness by construction. Fermat's theorem is now four sized, unblocked pieces away. | `75222395b`; `int_prelude::` 123 passed in the lane |
 
 ## How to re-measure
 
