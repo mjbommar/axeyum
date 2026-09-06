@@ -2942,9 +2942,30 @@ const MAX_WEIGHTED_BESSEL_ORDER: u32 = 32;
 /// it can only turn an overflow `Unknown` into a decision.
 fn equal_core(a: &CasExpr, b: &CasExpr) -> ZeroTest {
     match equal_core_bounded(a, b) {
-        ZeroTest::Unknown => equal_core_unbounded(a, b),
+        ZeroTest::Unknown => {
+            note_fallback_entry();
+            equal_core_unbounded(a, b)
+        }
         decided @ (ZeroTest::Certified { .. } | ZeroTest::CertifiedBig { .. }) => decided,
     }
+}
+
+/// Test-only instrumentation: how many times [`equal_core`] has handed an input
+/// to the unbounded fallback in this process.
+///
+/// The entry *count* is the thing a change to the entry condition moves, and it
+/// is not visible in a verdict — a composite caller like `dsolve_inhomogeneous`
+/// makes hundreds of `equal` calls and reports one answer. Reading it is only
+/// meaningful under `--test-threads=1`; see `fallback_entry_cost`.
+#[cfg(test)]
+static FALLBACK_ENTRIES: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+
+/// Count one entry into the unbounded fallback. Compiles to nothing outside
+/// tests.
+#[inline]
+fn note_fallback_entry() {
+    #[cfg(test)]
+    FALLBACK_ENTRIES.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
 }
 
 /// The bounded (`i128`) cross-multiplication zero-test.
@@ -34052,5 +34073,302 @@ mod symbolic_rate_exponential {
         // The *conditional* API does reach it — so the decline above is the
         // hypothesis guard, not an absent route.
         assert!(on_half_line(&exponential_pdf()).is_some());
+    }
+}
+
+/// The cost of *entering* the unbounded fallback, measured per input class.
+///
+/// The fallback (ADR-1670) runs whenever [`equal_core_bounded`] returns
+/// [`ZeroTest::Unknown`], and that one word covers two very different
+/// situations: exact arithmetic overflowed `i128` (the unbounded ring can
+/// finish the job) and the expression left the fragment the normal form decides
+/// at all (it cannot). This module measures which inputs take which route and
+/// what each costs, so a change to the entry condition has a before column.
+///
+/// Run it deliberately — it is `#[ignore]`d because it is a measurement, not a
+/// guard:
+///
+/// ```text
+/// cargo test -p axeyum-cas --lib --release fallback_entry_cost -- --ignored --nocapture
+/// ```
+#[cfg(test)]
+mod fallback_entry_cost {
+    use super::*;
+    use std::time::Duration;
+    use std::time::Instant;
+
+    /// How many times each input is timed; the reported number is the **min**,
+    /// which is the least contaminated by the other lanes sharing this box.
+    const RUNS: u32 = 15;
+
+    fn x() -> CasExpr {
+        CasExpr::var("x")
+    }
+
+    fn y() -> CasExpr {
+        CasExpr::var("y")
+    }
+
+    /// `(x + 1)^n`, unexpanded. `n = 80` squared overflows `i128`; `n = 4` does
+    /// not, which is what makes the small rows controls rather than duplicates.
+    fn binom(n: u32) -> CasExpr {
+        (x() + CasExpr::int(1)).pow(n)
+    }
+
+    /// An overflowing but **identically zero** polynomial prefix, so a row can
+    /// be pushed past the `i128` wall without changing what it asserts.
+    fn overflowing_zero() -> CasExpr {
+        CasExpr::Mul(vec![binom(80), binom(80)]) - binom(160)
+    }
+
+    /// The residual/forcing pairs the ODE route actually asks `equal` about —
+    /// the shapes wave three measured at 20x. Built by running the solver, so
+    /// they are the real inputs and not a guess at their shape.
+    fn variation_of_parameters_pairs() -> Vec<(String, CasExpr, CasExpr)> {
+        let ig = Rational::integer;
+        let mut out = Vec::new();
+        for (label, coeffs) in [
+            ("y''-y=e^x", vec![ig(-1), ig(0), ig(1)]),
+            ("y''-3y'+2y=e^x", vec![ig(2), ig(-3), ig(1)]),
+            ("y''-2y'+y=e^x", vec![ig(1), ig(-2), ig(1)]),
+        ] {
+            let forcing = x().exp();
+            let Some(sol) = dsolve_inhomogeneous(&coeffs, &forcing, "x") else {
+                continue;
+            };
+            let residual = coeffs
+                .iter()
+                .enumerate()
+                .fold(CasExpr::zero(), |acc, (k, &c)| {
+                    acc + CasExpr::Const(c) * sol.differentiate_n("x", k)
+                });
+            out.push((
+                format!("vop residual {label}"),
+                simplify_radicals(&simplify(&residual)),
+                forcing,
+            ));
+        }
+        for (label, coeffs, freq) in [
+            ("y''+y=sin x", vec![ig(1), ig(0), ig(1)], 1),
+            ("y''+4y=sin 3x", vec![ig(4), ig(0), ig(1)], 3),
+        ] {
+            let forcing = (CasExpr::int(freq) * x()).sin();
+            let Some(sol) = dsolve_inhomogeneous(&coeffs, &forcing, "x") else {
+                continue;
+            };
+            let residual = coeffs
+                .iter()
+                .enumerate()
+                .fold(CasExpr::zero(), |acc, (k, &c)| {
+                    acc + CasExpr::Const(c) * sol.differentiate_n("x", k)
+                });
+            out.push((
+                format!("vop residual {label}"),
+                simplify_radicals(&simplify(&residual)),
+                forcing,
+            ));
+        }
+        out
+    }
+
+    /// The timing corpus: variation-of-parameters shapes, pure-overflow shapes
+    /// with no transcendental head at all, and mixtures of the two.
+    fn corpus() -> Vec<(String, CasExpr, CasExpr)> {
+        let mut rows = variation_of_parameters_pairs();
+        let big = || CasExpr::Mul(vec![binom(80), binom(80)]);
+        let small = || CasExpr::Mul(vec![binom(4), binom(4)]);
+        let owned = |name: &str, a: CasExpr, b: CasExpr| (name.to_owned(), a, b);
+        rows.extend([
+            // --- pure overflow, no transcendental head -----------------------
+            owned("overflow (x+1)^80^2 = (x+1)^160 [TRUE]", big(), binom(160)),
+            owned(
+                "overflow (x+1/3)^41^2 = (x+1/3)^82 [TRUE]",
+                CasExpr::Mul(vec![
+                    (x() + CasExpr::rat(1, 3)).pow(41),
+                    (x() + CasExpr::rat(1, 3)).pow(41),
+                ]),
+                (x() + CasExpr::rat(1, 3)).pow(82),
+            ),
+            owned(
+                "overflow (x+1)^80^2 = (x+1)^160 + x^3 [FALSE]",
+                big(),
+                binom(160) + x().pow(3),
+            ),
+            owned(
+                "overflow 2*(x+1)^160 = (x+1)^160 [FALSE]",
+                CasExpr::int(2) * binom(160),
+                binom(160),
+            ),
+            owned(
+                "overflow (x+1)^90^2/(x+2) = (x+1)^180/(x+2) [TRUE]",
+                CasExpr::Mul(vec![binom(90), binom(90)]) / (x() + CasExpr::int(2)),
+                binom(180) / (x() + CasExpr::int(2)),
+            ),
+            // --- no overflow, transcendental heads ---------------------------
+            owned(
+                "in-fragment exp(x)exp(y) = exp(x+y) [TRUE]",
+                x().exp() * y().exp(),
+                (x() + y()).exp(),
+            ),
+            owned(
+                "in-fragment sin^2+cos^2 = 1 [TRUE]",
+                x().sin().pow(2) + x().cos().pow(2),
+                CasExpr::int(1),
+            ),
+            owned(
+                "in-fragment exp(x) + (x+1)^4^2 = exp(x) + (x+1)^8 [TRUE]",
+                x().exp() + small(),
+                x().exp() + binom(8),
+            ),
+            owned("in-fragment exp(x) = exp(y) [FALSE]", x().exp(), y().exp()),
+            owned(
+                "in-fragment sqrt(2)*cbrt(2) = root6(32) [TRUE]",
+                CasExpr::int(2).sqrt() * CasExpr::int(2).nth_root(3),
+                CasExpr::int(32).nth_root(6),
+            ),
+            // --- mixed: an overflowing polynomial plus a transcendental head --
+            owned(
+                "mixed exp(x)exp(y) = exp(x+y) at overflow scale [TRUE]",
+                big() + x().exp() * y().exp(),
+                binom(160) + (x() + y()).exp(),
+            ),
+            owned(
+                "mixed exp(2x) = exp(x)^2 at overflow scale [TRUE]",
+                big() + (CasExpr::int(2) * x()).exp(),
+                binom(160) + x().exp().pow(2),
+            ),
+            owned(
+                "mixed exp(3 ln 2) = 8 at overflow scale [TRUE]",
+                big() + (CasExpr::int(3) * CasExpr::int(2).ln()).exp(),
+                binom(160) + CasExpr::int(8),
+            ),
+            owned(
+                "mixed exp(x)exp(y) = exp(x+y+1) at overflow scale [FALSE]",
+                big() + x().exp() * y().exp(),
+                binom(160) + (x() + y() + CasExpr::int(1)).exp(),
+            ),
+            owned(
+                "mixed sqrt(x)^2 = x at overflow scale [TRUE]",
+                x().sqrt() * x().sqrt() + big(),
+                x() + binom(160),
+            ),
+            owned(
+                "mixed sin^2+cos^2 = 1 at overflow scale [TRUE]",
+                x().sin().pow(2) + x().cos().pow(2) + overflowing_zero(),
+                CasExpr::int(1),
+            ),
+            owned(
+                "mixed exp(x) = exp(y) at overflow scale [FALSE]",
+                x().exp() + overflowing_zero(),
+                y().exp() + overflowing_zero(),
+            ),
+        ]);
+        rows
+    }
+
+    fn verdict(result: &ZeroTest) -> &'static str {
+        match result {
+            ZeroTest::Certified { equal: true, .. } => "certified(=)",
+            ZeroTest::Certified { equal: false, .. } => "certified(!=)",
+            ZeroTest::CertifiedBig { equal: true, .. } => "certifiedBig(=)",
+            ZeroTest::CertifiedBig { equal: false, .. } => "certifiedBig(!=)",
+            ZeroTest::Unknown => "unknown",
+        }
+    }
+
+    /// Why the bounded path declined, read off the same three exits
+    /// [`equal_core_bounded`] uses. This is the "before" column's route: today
+    /// every one of them enters the fallback.
+    fn bounded_route(a: &CasExpr, b: &CasExpr) -> String {
+        match equal_core_bounded(a, b) {
+            decided @ (ZeroTest::Certified { .. } | ZeroTest::CertifiedBig { .. }) => {
+                format!("decided {}", verdict(&decided))
+            }
+            ZeroTest::Unknown => match bounded_difference(a, b) {
+                None => "declined: difference is None (overflow or out-of-fragment)".to_owned(),
+                Some(w) if w.relates_multiplicative_atoms() => {
+                    "declined: multiplicative atom relation".to_owned()
+                }
+                Some(w) if w.mentions_uncanonical_atom() => {
+                    "declined: uncanonical atom key".to_owned()
+                }
+                Some(_) => "declined: unclassified".to_owned(),
+            },
+        }
+    }
+
+    fn time_min<T>(mut f: impl FnMut() -> T) -> Duration {
+        let mut best = Duration::MAX;
+        for _ in 0..RUNS {
+            let start = Instant::now();
+            let value = f();
+            let elapsed = start.elapsed();
+            std::hint::black_box(value);
+            best = best.min(elapsed);
+        }
+        best
+    }
+
+    /// The cost table. Prints one row per input: the bounded route, the
+    /// fallback's own verdict and cost, and the whole `equal` cost.
+    #[test]
+    #[ignore = "a measurement, not a guard; run with --release --ignored --nocapture"]
+    fn cost_table() {
+        println!(
+            "\n{:<52} | {:<60} | {:<16} | {:>11} | {:>11} | {:>11}",
+            "input", "bounded route", "equal verdict", "bounded", "unbounded", "equal"
+        );
+        for (name, a, b) in corpus() {
+            let route = bounded_route(&a, &b);
+            let final_verdict = verdict(&equal(&a, &b));
+            let bounded = time_min(|| equal_core_bounded(&a, &b));
+            let unbounded = time_min(|| equal_core_unbounded(&a, &b));
+            let whole = time_min(|| equal(&a, &b));
+            println!(
+                "{name:<52} | {route:<60} | {final_verdict:<16} | {bounded:>11.3?} | {unbounded:>11.3?} | {whole:>11.3?}"
+            );
+        }
+    }
+
+    /// The composite row the 20x actually lives in.
+    ///
+    /// A residual/forcing pair is decided by the bounded path in microseconds
+    /// (see `cost_table`); the cost wave three measured is *inside*
+    /// `dsolve_inhomogeneous`, which makes hundreds of `equal` calls against
+    /// intermediate `exp`-bearing forms. So the number to move is the entry
+    /// *count* — how many of those calls reach the fallback — and the solver's
+    /// wall time, not the final check's.
+    ///
+    /// Read under `--test-threads=1`: [`FALLBACK_ENTRIES`] is process-wide.
+    #[test]
+    #[ignore = "a measurement, not a guard; run with --release --ignored --nocapture"]
+    fn solver_fallback_entries() {
+        use std::sync::atomic::Ordering;
+        let ig = Rational::integer;
+        println!(
+            "\n{:<24} | {:>16} | {:>13} | {:>11}",
+            "solver call", "fallback entries", "solved", "wall"
+        );
+        let mut total_entries = 0u64;
+        for (label, coeffs, forcing) in [
+            ("y''-y=e^x", vec![ig(-1), ig(0), ig(1)], x().exp()),
+            ("y''-3y'+2y=e^x", vec![ig(2), ig(-3), ig(1)], x().exp()),
+            ("y''-2y'+y=e^x", vec![ig(1), ig(-2), ig(1)], x().exp()),
+            ("y''+y=sin x", vec![ig(1), ig(0), ig(1)], x().sin()),
+            (
+                "y''+4y=sin 3x",
+                vec![ig(4), ig(0), ig(1)],
+                (CasExpr::int(3) * x()).sin(),
+            ),
+        ] {
+            let before = FALLBACK_ENTRIES.load(Ordering::Relaxed);
+            let start = Instant::now();
+            let solved = dsolve_inhomogeneous(&coeffs, &forcing, "x").is_some();
+            let wall = start.elapsed();
+            let entries = FALLBACK_ENTRIES.load(Ordering::Relaxed) - before;
+            total_entries += entries;
+            println!("{label:<24} | {entries:>16} | {solved:>13} | {wall:>11.3?}");
+        }
+        println!("{:<24} | {total_entries:>16} |", "TOTAL");
     }
 }
