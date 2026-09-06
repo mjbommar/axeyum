@@ -270,6 +270,28 @@ parallel to itself precisely because `twoPoints` puts a point on it.
   negative control*; what this adds is that over the constructive reals the
   pathology is the default rather than the exception.
 
+## The mutations, run
+
+`python3 scripts/tests/mutation_controls.py geo-incidence`, exit 0, baseline
+green at 1 test, **four of four killed** — the two ℚ mutants that were already
+registered plus the two this change adds:
+
+```text
+  axiom I.1's uniqueness half keeps its distinctness hypothesis        killed 1
+  the join's a and b coefficients are not swapped                      killed 1
+  the real line's non-degeneracy is a PosBound witness, not a negation killed 1
+  joinUnique's backward direction flips the defects                    killed 1
+```
+
+The first ℝ mutant's kill is **earlier than predicted**, and the difference is
+worth stating because it is a stronger claim than the one being tested.
+Replacing `Nondeg`'s `PosBound` existential with `(Equiv (a*a + b*b) 0) → False`
+was expected to break `joinUnique`'s division. It does not get that far:
+declarations are checked in order, and `Geo.RPlane.joinNondeg` offers an
+`Exists.intro` against a `→ False` type first. So the negated form cannot be
+**produced** from the apartness witness, never mind consumed by a division —
+the two directions of the design decision fail independently.
+
 ## Alternatives considered
 
 - **Route `joinUnique` through `CPoint.collinear_of_area_zero`**, as the brief

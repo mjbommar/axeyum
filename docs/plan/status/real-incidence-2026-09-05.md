@@ -118,6 +118,34 @@ count (3275) clears the 3,050 floor a brief asks a lane to check. An ABSENT
 verdict from the default index is not a statement about any of those
 namespaces.
 
+## Mutation table — all four RUN, all four killed
+
+`python3 scripts/tests/mutation_controls.py geo-incidence`, exit **0**. The
+harness copies the tree to a scratch root, so no mutant was ever on disk in a
+worktree another build could see; the baseline is green at 1 test and each
+mutation must kill at least one.
+
+```text
+geo-incidence: baseline green, 1 tests
+  axiom I.1's uniqueness half keeps its distinctness hypothesis  killed 1
+  the join's a and b coefficients are not swapped                killed 1
+  the real line's non-degeneracy is a PosBound witness, not a negation  killed 1
+  joinUnique's backward direction flips the defects              killed 1
+```
+
+| mutant | status | predicted | observed |
+| --- | --- | --- | --- |
+| `Geo.RLine0.Nondeg` as `(Equiv (a*a + b*b) 0) → False` instead of the `PosBound` existential | **RUN**, killed 1 | the division in `joinUnique` fails to typecheck | killed — but the kernel refuses **earlier** than predicted: declarations are checked in order, so `Geo.RPlane.joinNondeg`'s `Exists.intro` is rejected against a `→ False` type before `joinUnique` is reached. A stronger result than the brief asked for: the negated form cannot even be *produced*, let alone consumed. |
+| `Geo.RPlane.joinUnique`'s backward direction fed the unflipped defects (the two lines' order swapped in the conclusion) | **RUN**, killed 1 | `onOfDefects` applied at arguments whose types name the wrong line | killed, as predicted |
+| (pre-existing) axiom I.1's uniqueness half drops its distinctness hypothesis | **RUN**, killed 1 | — | killed |
+| (pre-existing) `Geo.QPlane.join`'s `a`/`b` coefficients swapped | **RUN**, killed 1 | — | killed |
+
+The brief's second mutant was "Playfair's uniqueness with the two parallels'
+order swapped in the conclusion". Playfair did not land, so that mutant has no
+subject; the `joinUnique` backward-direction flip is its nearest live analogue
+(the same order swap, in the same kind of conclusion) and is what ran. This is
+a substitution, not the briefed mutant.
+
 ## Landed changes
 
 | commit | what |
