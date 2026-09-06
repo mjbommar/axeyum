@@ -1503,7 +1503,7 @@ fn declare_has_derivative_add(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(
 // later Cauchy-integral argument needs and what an `Exists` could not supply.
 
 /// `Complex.HolomorphicOn F c r`.
-fn holomorphic_ty(
+pub(super) fn holomorphic_ty(
     d: &mut IntDev<'_>,
     p: ComplexPrelude,
     f: ExprId,
@@ -1665,7 +1665,7 @@ fn declare_holomorphic_spec(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(),
 /// `Sigma.mk (Complex → Complex) (fun F' => HasDerivativeOn F F' c r) fp
 /// witness : HolomorphicOn F c r` — every constructor below is this, with a
 /// different `(fp, witness)` pair.
-fn holomorphic_mk(
+pub(super) fn holomorphic_mk(
     d: &mut IntDev<'_>,
     p: ComplexPrelude,
     f: ExprId,

@@ -347,6 +347,34 @@ fn every_named_complex_declaration_is_checked_and_footprint_free() {
             p.estimates.uniformly_continuous_of_has_derivative,
         ),
         ("Complex.hasDerivative_mul", p.leibniz.has_derivative_mul),
+        (
+            "Complex.uniformlyContinuous_add",
+            p.uc_closure.uniformly_continuous_add,
+        ),
+        (
+            "Complex.uniformlyContinuous_mul",
+            p.uc_closure.uniformly_continuous_mul,
+        ),
+        (
+            "Complex.hasDerivative_congr",
+            p.polyderiv.has_derivative_congr,
+        ),
+        ("Complex.hasDerivative_pow", p.polyderiv.has_derivative_pow),
+        ("Complex.holomorphic_pow", p.polyderiv.holomorphic_pow),
+        ("Complex.abs_I", p.cauchy_riemann.abs_i),
+        (
+            "Complex.inDisc_ofReal_offset",
+            p.cauchy_riemann.in_disc_of_real_offset,
+        ),
+        ("Complex.inDisc_I_offset", p.cauchy_riemann.in_disc_i_offset),
+        (
+            "Complex.inDisc_of_two_sided",
+            p.cauchy_riemann.in_disc_of_two_sided,
+        ),
+        (
+            "Complex.inDisc_I_of_two_sided",
+            p.cauchy_riemann.in_disc_i_of_two_sided,
+        ),
         ("Complex.abs_ofReal", p.components.abs_of_real),
         ("Complex.abs_re_le", p.components.abs_re_le),
         ("Complex.abs_im_le", p.components.abs_im_le),
@@ -3062,7 +3090,7 @@ fn factor_quotient_succ_eq_matches_the_correction_term_at_a_nonzero_middle_coeff
 /// steps downstream. Recount by re-running the extraction described in
 /// `docs/research/11-design-review/2026-08-27-prelude-build-spike.md`, never
 /// by hand-editing this list to make a failure go away.
-const EXPECTED_STEP_ORDER: [&str; 96] = [
+const EXPECTED_STEP_ORDER: [&str; 99] = [
     "declare_carrier",
     "declare_projections",
     "declare_equiv",
@@ -3158,7 +3186,10 @@ const EXPECTED_STEP_ORDER: [&str; 96] = [
     "deriv::declare_derivative",
     "estimates::declare_estimates",
     "leibniz::declare_leibniz",
+    "uc_closure::declare_uc_closure",
+    "polyderiv::declare_polyderiv",
     "components::declare_components",
+    "cauchy_riemann::declare_cauchy_riemann",
 ];
 
 /// `STEPS` (the data-driven build order that replaced the hand-written call
