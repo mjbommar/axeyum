@@ -2217,6 +2217,27 @@ fn build_primitive_element(
     })
 }
 
+// ---------------------------------------------------------------------------
+// The class group as a group (wave three)
+// ---------------------------------------------------------------------------
+
+// Declared here with `#[path]` rather than in `lib.rs` so that the class-group
+// law is reachable at `numberfield_ideals::` -- the same path as the class
+// number it is a law on -- and so that `lib.rs`, which every lane touches, does
+// not become one more shared append point. The child module is what lets the
+// composition guards read this module's private `big_gcd`, `big_ext_gcd` and
+// `big_mod_positive` without widening them to the crate.
+#[path = "numberfield_classgroup.rs"]
+mod numberfield_classgroup;
+
+pub use numberfield_classgroup::{
+    BezoutData, CLASS_GROUP_ORDER_BOUND, ClassGroupCertificate, ClassGroupCertificateError,
+    ClassGroupDecline, CompositionCertificate, FormIdealCertificate, FormReductionCertificate,
+    PrincipalityCertificate, REDUCTION_STEP_BOUND, ReductionStep, class_group, class_of_ideal,
+    compose, form_of_ideal, ideal_of_form, is_principal, opposite_form, principal_form,
+    reduce_form,
+};
+
 #[cfg(test)]
 mod tests {
     use super::*;
