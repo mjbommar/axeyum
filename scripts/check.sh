@@ -432,6 +432,13 @@ step cas-internal-residue-tests python3 -m unittest scripts.tests.test_check_cas
 # its recorded floor is refused; a new uncertified function is not).
 step cas-trust-registry python3 scripts/check-cas-trust-registry.py --report
 step cas-trust-registry-tests python3 -m unittest scripts.tests.test_check_cas_trust_registry
+# ADR-1710: `axeyum-arith` is the workspace's single naming point for
+# num-bigint / num-rational / num-integer / num-traits. Eight modules grew
+# their own bignum path because each could name the upstream crate for
+# itself; this is that boundary as a command whose exit status depends on the
+# finding, with an allowlist that fails when it goes stale.
+step arith-boundary ./scripts/check-arith-boundary.sh
+step arith-boundary-tests python3 -m unittest scripts.tests.test_check_arith_boundary
 # Math-department file 13, Next Ten item 10 (second half): the SymPy parity
 # corpus. Ground truth is independent of this repository
 # (docs/plan/cas-parity-corpus-2026-09-05/ground_truth.py); the harness
