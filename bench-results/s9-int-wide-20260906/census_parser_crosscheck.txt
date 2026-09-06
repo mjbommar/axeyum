@@ -1,0 +1,13 @@
+cross-check of census-wide-int-literals.py against the SMT-LIB front door
+population: bench-results/parity-lists/QF_UFLIA.txt, all 200 files
+front door: target/release/examples/explain_corpus --list <all 200> 2000 --json
+            (release build of HEAD at census time), kind == wide-integer-literal
+
+front-door wide-integer-literal rejects : 26
+census hits                             : 26
+census - front door (false positives)   : 0
+front door - census (false negatives)   : 0
+
+The negative direction is the one that needs the whole population: running
+the front door only over the census's own 26 files would have confirmed no
+false positives and measured nothing about false negatives.
