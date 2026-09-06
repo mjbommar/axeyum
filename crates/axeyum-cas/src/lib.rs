@@ -101,6 +101,7 @@ pub mod hyperbolic;
 pub mod interval_arith;
 pub mod inverse;
 pub mod linear_elim;
+pub mod matgroup;
 mod matrix;
 pub mod mvpoly;
 pub mod mvt;
