@@ -71,6 +71,24 @@ recording is requested; and an `unsat` **under assumptions** derives no empty
 clause at all, reporting a failed-assumption core instead — that is inherent to
 assumption-based solving.
 
+**A theory changes the claim, so it changes the artifact.** "Every learned clause
+is RUP" holds for the Boolean core alone; a **theory lemma is not RUP against the
+CNF**, so learning one into the stream would turn the emitted refutation into a
+refutation-*modulo-theory* with nothing in the artifact saying so. ADR-1704
+settles that: a CDCL(T) `unsat` is **two streams** — the Boolean DRAT/LRAT proof,
+checked over the CNF **extended by the enumerated theory lemmas as additional
+input clauses**, plus the lemma list itself, each entry carrying its theory and
+its theory-level explanation (a Farkas combination, a negative cycle, a
+congruence chain) for the per-theory checkers to discharge. `check_drat` and
+`check_lrat` are unchanged — the contract is about which formula they are handed,
+not about what they accept. The lemma count is read off the artifact rather than
+asserted, prints beside `certified`/`checked` as `theory_lemmas_unchecked`, and a
+refutation modulo N ≥ 1 lemmas is graded at `TrustId::SatRefutationModuloTheory`,
+never at `SatRefutation`. See
+[ADR-1704](../research/09-decisions/adr-1704-cdclt-unsat-is-two-streams-a-boolean-refutation-over-cnf-plus-enumerated-theory-lemmas.md);
+the boundary is pinned by
+`crates/axeyum-cnf/tests/theory_lemma_proof_contract.rs`.
+
 The public contract is unchanged in shape: SAT models must replay, and UNSAT
 assurance is stated at the level actually checked — a search verdict is never
 relabelled as a checked proof. See the
