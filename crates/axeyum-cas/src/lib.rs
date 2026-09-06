@@ -1616,6 +1616,40 @@ impl MultiPoly {
         Some(coeffs)
     }
 
+    /// The dense coefficient vector of this polynomial **in `var` alone**
+    /// (LSB-first: index `i` is the coefficient of `var^i`), each coefficient
+    /// itself a polynomial in the *other* variables.
+    ///
+    /// This is the symbolic-coefficient generalization of
+    /// [`Self::to_univariate`], which returns `None` the moment any other
+    /// variable appears. It never fails: every monomial splits uniquely into a
+    /// power of `var` times a `var`-free monomial. Deterministic — the source
+    /// terms are iterated in `BTreeMap` order and each lands in exactly one
+    /// coefficient bucket, so no key collides and no ordering choice is made.
+    ///
+    /// The integration routes use it to accept `e^{c·x}` with a **symbolic**
+    /// rate `c`, which `to_univariate` structurally cannot express.
+    #[must_use]
+    pub fn coeffs_in(&self, var: &str) -> Vec<MultiPoly> {
+        let mut coeffs: Vec<MultiPoly> = Vec::new();
+        for (mono, coeff) in &self.terms {
+            let mut rest = mono.clone();
+            let exp = rest.powers.remove(var).unwrap_or(0) as usize;
+            if exp >= coeffs.len() {
+                coeffs.resize(
+                    exp + 1,
+                    MultiPoly {
+                        terms: BTreeMap::new(),
+                    },
+                );
+            }
+            // `rest` is the unique `var`-free part of a distinct source monomial,
+            // so this key cannot already be present in this bucket.
+            coeffs[exp].terms.insert(rest, *coeff);
+        }
+        coeffs
+    }
+
     /// Reconstruct a canonical [`CasExpr`] (expanded sum-of-monomials form) that
     /// denotes this polynomial. The result is value-equal to any expression that
     /// normalizes to `self` — verified by [`equal`] round-tripping to zero.
