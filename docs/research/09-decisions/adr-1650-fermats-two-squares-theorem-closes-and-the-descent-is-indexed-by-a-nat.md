@@ -151,22 +151,29 @@ have and which `ring::int` declines — ADR-1633's zero-collapse finding), and
 The mutation table is the informative part, and it says the same thing
 ADR-1647's does, one level up.
 
+All three rows below were RUN, in this lane's own worktree, each restored
+byte-for-byte afterwards with `git status` verified empty.
+
 | mutant | outcome | kills |
 | --- | --- | --- |
-| the descent applies its IH at `n` instead of `natAbs q` | prelude REJECTED | see the lane report |
-| the `q ≠ 0` step drops `Nat.lt 1 n` from the refutation | prelude REJECTED | see the lane report |
-| the STATEMENT PIN's expected type for `exists_sum_of_two_squares_of_multiple` drops the `Nat.lt n p` hypothesis | exactly one test dies | see the lane report |
+| `descent_apply_ih` feeds the IH `x.n` instead of `magnitude` (`natAbs q`) | prelude REJECTED, `TypeMismatch` | **125 of 128** `int_prelude::` tests |
+| `prime_contradiction`'s `n = 1` branch refutes from `n < p` instead of `1 < n` -- i.e. `m = 1` is allowed in the `m | p` step | prelude REJECTED, `TypeMismatch` | **125 of 128** |
+| the statement PIN's expected type for `exists_sum_of_two_squares_of_multiple` drops the `Nat.lt n p` hypothesis (the DECLARATION is untouched, so the prelude still builds) | exactly ONE test dies | **1 of 5** in `fermat_two_squares_tests` |
 
 The first two are the mutants the brief named, and both behave the way every
 statement mutation of a *proved* kernel declaration behaves in this codebase:
 the proof term is built to match the statement exactly, so the kernel rejects
 and the whole suite dies with it. That is a total signal and a coarse one — it
-says nothing about which guard caught it.
+says nothing about which guard caught it, and the identical 125/128 for two
+mutants at opposite ends of the proof makes that concrete. Neither error
+message names the defect either: both are a bare
+`TypeMismatch { expected: ExprId(..), got: ExprId(..) }`.
 
 **The third row is the one that measures a guard.** It changes the *test's*
 expectation and leaves the declaration alone, so the prelude still builds, and
 it kills exactly one test:
-`fermat_two_squares_declarations_state_the_intended_types`. That is the guard
+`fermat_two_squares_declarations_state_the_intended_types` (4 passed,
+1 failed). That is the guard
 that would see a weakening which still type-checks, and it is why every one of
 the twelve declarations has its full `∀`-telescoped type rebuilt independently
 and compared against the type the **environment** stores, with `checked == 12`

@@ -60,6 +60,35 @@ a sibling lane's history and this module adds no edit to it. The *predicates*
 the `Exists.rec`s eliminate, so a drifted body would stop type-checking rather
 than pass quietly.
 
+**The mutation table**, all three rows RUN and restored byte-for-byte:
+feeding the descent's induction hypothesis `n` instead of `natAbs q`, and
+refuting the `n = 1` branch from `n < p` instead of `1 < n` (i.e. allowing
+`m = 1` in the `m ∣ p` step), each make the prelude un-buildable and kill
+**125 of 128** `int_prelude::` tests — identical numbers for two mutants at
+opposite ends of the proof, and neither error message names the defect (both
+are a bare `TypeMismatch` over two `ExprId`s). The informative row is the
+third: dropping the `Nat.lt n p` hypothesis from the statement PIN's own
+expected type, leaving the declaration alone so the prelude still builds, kills
+**exactly one** test (4 passed, 1 failed).
+
+**One thing worth recording about the ledger.** The `formal.statement` this
+fact carried while it was OPEN — written on 2026-09-05 from ADR-1633's sizing,
+before any of this existed — is **byte-identical** to the type the kernel now
+renders for the admitted theorem. The flip asserted that equality against a
+fresh `int_theorem_inventory` render rather than assuming it, and would have
+exited non-zero otherwise.
+
+**One defect, and it was in the test, not the theorem.** The first
+instantiation battery built `Nat.Even (2m)` where the theorem wants
+`Nat.Even m`, and the kernel refused with a bare
+`TypeMismatch { expected: ExprId(1136250), got: ExprId(2814689) }`, which says
+nothing. It was located by handing the SAME argument pair to
+`Int.firstSupplementaryLawResidue` — an existing declaration this lane did not
+touch, whose first two hypotheses are the same two — and watching it fail
+identically. That put the defect in the test before a single proof term was
+re-read. `even_witness` now takes the number whose evenness is claimed and
+asserts it is even.
+
 **Partition check**: `descent-and-well-ordering` and
 `power-and-square-decompositions` are both held-out families, and their rows
 (`Nat.sum_four_squares`, `Nat.Prime.sum_four_squares`,
@@ -73,3 +102,5 @@ verdict=PASS (held_out=206, references=0).
 <!-- plan-section: landed-changes -->
 
 | 2026-09-05 | `a065f045c` | `int_prelude/fermat_two_squares.rs`: the descent's next multiplier (`exists_next_multiplier`), its degenerate branch (`dvd_of_degenerate_descent`), the single primality-consuming step (`not_dvd_ofNat_of_prime_of_lt`), and the plumbing each needed — `dvd_zero`, `dvd_of_modEq_zero`, `mul_modEq_zero`, `sq_add_sq_modEq_of_modEq`, `sq_mul_add_sq_mul` (ring::int), and the coercion bridges `lt_ofNat_of_lt` / `le_two_of_nat_le_two`. All ten admitted first try, axiom-free. |
+| 2026-09-06 | `5789bb773` | `Int.exists_sum_of_two_squares_of_multiple` (Euler's descent by `Nat.strongInduction` at a `Prop` motive, multiplier quantified as `Int.ofNat n`) and `Int.fermatTwoSquares`. All twelve declarations admitted first try, axiom-free. `derived_laws` 319 → 331, recounted. ADR-1650 and this status file. |
+| 2026-09-06 | `f5a7c4392` | `fermat_two_squares_tests.rs`: the instantiation battery wanted `Even m`, not `Even 2m`. Diagnosed by handing the same argument pair to the untouched `Int.firstSupplementaryLawResidue` and watching it fail identically. 5 passed, 0 failed. |

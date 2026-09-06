@@ -4,7 +4,7 @@
   "note": "Statement identity for every settled fact (S1 of the trusted-library safety roadmap, ADR-0763). Per fact: SHA-256 of formal.statement (the canonical kernel rendering for native lean4 rows), SHA-256 of the top-level reader-facing statement, and the kernel_theorem it names. A settled fact's statement is what the ledger CLAIMS; changing any of the three silently turns 'we proved X' into 'we proved something we then labelled X'. Changes require an amendment row naming both digests and a reason; superseded digests are preserved in each pin's history. `coverage_floor` is a ratchet the gate re-derives rather than trusts: slack is itself a violation, so a loosened floor is self-reverting. Written by `scripts/check-settled-fact-statements.py --write`; do not hand-edit.",
   "coverage_floor": {
     "max_unpinned_settled": 0,
-    "min_identity_bound": 2404,
+    "min_identity_bound": 2408,
     "max_header_exempt": 0
   },
   "amendments": [
@@ -8948,6 +8948,13 @@
       "kernel_theorem": "Int.factorialEqOfNatFactorial"
     },
     {
+      "fact_id": "F:int-fermat-two-squares",
+      "language": "lean4",
+      "statement_sha256": "573a5c00170df0273e64c15fde249732bde77ed62de9965b84b04df5581013d2",
+      "prose_sha256": "1721dd7442f45985713ea7d4ddfb845a2fbb8c2b3ce5a07f792336ed585e8852",
+      "kernel_theorem": "Int.fermatTwoSquares"
+    },
+    {
       "fact_id": "F:int-fib-rec",
       "language": "lean4",
       "statement_sha256": "a93aa3a898ba5a1655fe61d01e5a60ad98e7fa273e89c538931baf33470ba4ef",
@@ -10359,6 +10366,20 @@
       "kernel_theorem": "Int.induction_on"
     },
     {
+      "fact_id": "F:int-two-squares-degenerate-divides",
+      "language": "lean4",
+      "statement_sha256": "1488fc66197f8a239f7e5c6d8e54b5a0aaeb4b23b1756c5fa179ea43b7e2b16d",
+      "prose_sha256": "6c0433b3628c1ff3a0cbcaed66ac694093e0a44989121151bdd0d5f0a2ad3bae",
+      "kernel_theorem": "Int.dvd_of_degenerate_descent"
+    },
+    {
+      "fact_id": "F:int-two-squares-descent",
+      "language": "lean4",
+      "statement_sha256": "fba55c78a4e996f945b2c3fc73a0dfc9d0212e1a1963bd6b76ac1176910cd1f7",
+      "prose_sha256": "67b7d6ed98bbb286ac0b9d24e2e84c73918d4dcfce99cfde7bbc090b431644e4",
+      "kernel_theorem": "Int.exists_sum_of_two_squares_of_multiple"
+    },
+    {
       "fact_id": "F:int-two-squares-descent-cross-terms",
       "language": "lean4",
       "statement_sha256": "2167da70a81d53465a79b29ecab56caa4b3539753beaace407c4968690cb890f",
@@ -10385,6 +10406,13 @@
       "statement_sha256": "3f3d7b06a13e53d565a9dbdb35d426b93074134ff4a3c7e70591009ff9128b66",
       "prose_sha256": "34b769db51c1dbf6cf235e94887cd40557c36c47165c5e3a56524219d5ae5a9a",
       "kernel_theorem": "Int.not_isSumOfTwoSquares_of_modEq_four_three"
+    },
+    {
+      "fact_id": "F:int-two-squares-next-multiplier",
+      "language": "lean4",
+      "statement_sha256": "192447e84b6d14276fc310d5afb656bdd93c33046a583cf67d5cf3d94f2c6f53",
+      "prose_sha256": "fd87a8f4d81a6027a7d6e514bb00a46ee965f516b2c040253da58aab2ff82fd9",
+      "kernel_theorem": "Int.exists_next_multiplier"
     },
     {
       "fact_id": "F:int-wilson",
