@@ -1,6 +1,6 @@
 # ADR-1670: The CAS zero-test keeps its bounded normal form and gains an unbounded fallback; the coefficient type stays `Rational` at the API and stops being `i128` underneath it
 
-Index-summary: CAS arbitrary precision — measured the `i128` wall, shipped an unbounded zero-test fallback with no public-type change, and priced the three migration options (71 public signatures, 33 public types, 18 cross-crate sites)
+Index-summary: CAS arbitrary precision — measured the `i128` wall (degree 131, corrected), shipped an unbounded zero-test fallback with no public-type change, priced the three migration options (71 public signatures, 33 public types, 18 cross-crate sites), and measured why `exp` in the unbounded ring is blocked on entering the fallback only for overflow
 Index-status: proposed
 Status: proposed
 Date: 2026-09-05
@@ -251,6 +251,97 @@ that genuinely blocks a decision is not `CasExpr::Const`, it is the witness.
 - The `cas-certificate` trust registry is unaffected: no public function was
   added, `ZeroTest` was already in the certificate vocabulary, and the gate
   reports the same floor (54 certified, held).
+
+## Wave three, 2026-09-06: the cross-family radical, and why `exp` did not land
+
+### The cross-family radical was three wrong refutations, not one decline
+
+Wave two flagged `√2·∛2` as "the same shape as the eight wrong-refuted
+identities" and did not fix it. Running the shape on merged main
+(`224ae20d7`) found the product was the *smaller* half:
+
+| input | before | after |
+|---|---|---|
+| `root_6(4) = ∛2` (TRUE) | **`Certified { equal: false }`** | certified |
+| `root_4(4) = √2` (TRUE) | **`Certified { equal: false }`** | certified |
+| `root_6(8) = √2` (TRUE) | **`Certified { equal: false }`** | certified |
+| `√2·∛2 = root_6(32)` (TRUE) | UNKNOWN | certified |
+| `∛2·∛4 = 2` (TRUE) | UNKNOWN | certified |
+| `root_6(4) = √2` (FALSE) | refuted | refuted |
+| `root_6(N⁴) = ∛(N²)`, `N` past the factorizer | refuted | **UNKNOWN** |
+
+The first three are true identities reported as refuted. The cause is that
+wave two canonicalized `√c` for a rational `c` and never `root_q(c)`, so
+`root_6(4)` and `∛2` were independent atom variables.
+
+The fix is the one the brief named: canonicalize onto a common root index, with
+squarefree-part extraction generalized to **k-free parts**
+(`power_free_part(n, index)`), plus an index reduction by the exponent gcd
+(`root_6(2²) = root_3(2)`) that is what makes the single-atom cases meet. The
+fold `combine_constant_radicals` then merges a monomial's radicals over the lcm
+of their indices, working on prime exponents rather than on the product so
+`√2^101` never forms `2^101`. Sound because every atom is the principal real
+root of a *positive* integer, where `c^{1/k} = c^{(L/k)/L}` is an identity;
+negative radicands at odd indices carry their sign in the rational factor, and
+at even indices are not real and stay opaque exactly as before.
+
+The last row is the guard that pays for the canonicalization's `None` branch:
+a radicand past `SQUARE_PART_TRIAL_LIMIT` is left as intake found it at **every**
+index, and `uncanonicalized_constant_radical` refuses to refute over it. The
+`√`-only version of that guard (`square_part(n).is_none()`) is gone, replaced
+rather than kept beside it, so deleting the general one kills exactly one test.
+
+A pre-existing leak fell out of the same work: `expand(√8)` rendered
+`2*\0sqrt:2`, because `collect_atom_dictionary` registered the key the *head*
+spells and not the one intake canonicalizes to.
+
+### `exp` in the unbounded ring: implemented, measured, and not shipped
+
+The unbounded twin of `normalize_exp` was written and it works. At overflow
+scale, all four tower laws converted from `Unknown` to
+`Certified { equal: true }` — `exp(A+B) = exp(A)exp(B)`, `exp(2x) = exp(x)²`,
+`exp(k·ln v) = vᵏ`, `exp(P)exp(−P) = 1` — with the negative controls
+(`exp(x)exp(y)` vs `exp(x+y+1)`, `exp(2x)` vs `exp(x)`) staying `Unknown`,
+never certified equal.
+
+It is **not wired in**, and the reason is measured cost, not soundness. Behind a
+temporary switch, one test, three settings (debug, shared dev box, load average
+28.7 — ADVISORY for the times, exact for the verdicts):
+
+| `normalize_rational_big_within` on an `exp` head | `dsolve_inhomogeneous_variation_of_parameters` |
+|---|---|
+| `None` (wave two, and what ships) | ok, **7.06 s** |
+| one opaque atom per head | ok, **145.56 s** |
+| the ported decomposition | **FAILED**, **379.81 s** |
+
+The whole-crate sweep went 290 s → 536 s with it wired in, and a second test
+(`tests::sinusoid_product_integrals`) went red too.
+
+The mechanism is the one the "opaque" row isolates, and it is not about `exp`
+at all: **the `None` at the head is what lets the fallback abandon an
+`exp`-bearing expression before spending any of `BIG_FALLBACK_WORK_BUDGET`.**
+Every `equal` call the ODE and integration routes make against a
+[`rewrite_exp`] Euler form is such an expression, and there are many. Replacing
+the `None` with *any* value — even a single opaque atom, which decides strictly
+nothing new — costs 20×.
+
+The failure on top of the cost is a verdict the fallback newly decides changing
+a branch inside `dsolve_inhomogeneous`, which then returns `None`. No wrong
+verdict from `equal` was observed; both failures are downstream routes taking a
+different branch because a question they ask now has an answer.
+
+So the thing that is missing is not the decomposition. It is **a way to enter
+the fallback only on an arithmetic overflow**: `bounded_difference` returns
+`None` for "overflowed `i128`" and for "left the fragment" alike, and the
+fallback cannot tell them apart. Distinguishing them is the prerequisite for
+`exp`, and it would also cut the fallback's cost on every other head. That is
+wave four's first job, and it is a change to the bounded path's return type, not
+to the unbounded ring.
+
+### The off-by-one on the wall
+
+Corrected in the measured table above, with the method and the three families.
+The original probe stepped the degree by two.
 
 ## What wave two must do first
 

@@ -2734,8 +2734,9 @@ pub enum ZeroTest {
     ///
     /// Two causes, after [ADR-1670]: the expression is outside the fragment the
     /// zero-test decides at all, or exact arithmetic overflowed `i128` **and**
-    /// the unbounded fallback also declined (a surviving transcendental atom on
-    /// the inequality branch, or a fold the ring could not reach).
+    /// the unbounded fallback also declined (an `exp` head, which it does not
+    /// carry the decomposition for, or a surviving transcendental atom on the
+    /// inequality branch).
     ///
     /// [ADR-1670]: ../../../docs/research/09-decisions/adr-1670-i128-fast-path-with-a-big-integer-overflow-fallback-for-the-cas-zero-test.md
     Unknown,
@@ -3951,16 +3952,33 @@ const BIG_FALLBACK_WORK_BUDGET: u64 = 1_000_000;
 /// Expand a [`CasExpr`] to a [`BigRatFunc`], mirroring [`normalize_rational`]
 /// over unbounded integers.
 ///
-/// **Every `Unary` head is handled here** (ADR-1670 wave three, item 1a).
-/// All but one become an opaque atom variable keyed by [`atom_name`], exactly as
-/// [`normalize_rational`] does, and the ported fold passes
-/// ([`BigQPoly::fold_pythagorean`] and friends, ADR-1670 wave two item 2) relate
-/// those atoms in this ring. `exp` is the exception in both rings: it is
-/// *decomposed* rather than atomized, by [`normalize_exp_big`], which is the
-/// unbounded twin of [`normalize_exp`] and is what makes
-/// `exp(x)·exp(y) = exp(x+y)` decide past the `i128` wall. Wave two declined
-/// `exp` outright, because atomizing it opaquely would make that true identity a
-/// nonzero normal form.
+/// **One head is still declined: `exp`.** Every other `Unary` head becomes an
+/// opaque atom variable keyed by [`atom_name`], exactly as [`normalize_rational`]
+/// does, and the ported fold passes ([`BigQPoly::fold_pythagorean`] and friends,
+/// ADR-1670 wave two item 2) relate those atoms in this ring. `exp` is different
+/// because the bounded path does not atomize it either: [`normalize_exp`]
+/// *decomposes* `exp(Σ termᵢ)` into a product of per-term factors, which is what
+/// makes `exp(x)·exp(y) = exp(x+y)` decide. Atomizing `exp` opaquely instead
+/// would make that true identity a nonzero normal form, so a decomposition is
+/// the only honest option — and wave three measured that decomposition and
+/// **rejected wiring it in here on cost**:
+///
+/// | `normalize_rational_big_within` on an `exp` head | `dsolve_inhomogeneous_variation_of_parameters` |
+/// |---|---|
+/// | `None`, as here | ok, 7.06 s |
+/// | one opaque atom | ok, 145.56 s |
+/// | the ported decomposition | **FAILED**, 379.81 s |
+///
+/// The whole crate sweep went 290 s → 536 s with it wired in. The mechanism is
+/// that this `None` is what lets the fallback abandon an `exp`-bearing
+/// expression *at the head*, before it spends any of
+/// [`BIG_FALLBACK_WORK_BUDGET`]; every `equal` call the ODE and integration
+/// routes make against a Euler form is such an expression. The failure on top
+/// of the cost is a verdict the fallback newly decides changing a branch inside
+/// `dsolve_inhomogeneous`, which is not this function's to fix. See ADR-1670.
+///
+/// The decomposition is therefore **not** what is missing; a way to enter the
+/// fallback only on an arithmetic overflow is.
 ///
 /// Every product is charged against `budget`; see [`BIG_FALLBACK_WORK_BUDGET`]
 /// for why an unbounded ring needs an explicit one.
@@ -3991,8 +4009,10 @@ fn normalize_rational_big_within(expr: &CasExpr, budget: &mut u64) -> Option<Big
         CasExpr::Div(u, w) => normalize_rational_big_within(u, budget)?
             .div(&normalize_rational_big_within(w, budget)?, budget),
         CasExpr::Pow(base, exp) => normalize_rational_big_within(base, budget)?.pow(*exp, budget),
-        // `exp` is DECOMPOSED, not atomized — see `normalize_exp_big`.
-        CasExpr::Unary(UnaryFunc::Exp, arg) => normalize_exp_big(arg, budget),
+        // See the doc comment: `exp` is decomposed by the bounded path, not
+        // atomized, and wave three measured that wiring the decomposition in
+        // here costs more than it buys.
+        CasExpr::Unary(UnaryFunc::Exp, _) => None,
         // The unbounded twin of the bounded normalizer's radical-of-a-constant
         // canonicalization, so the two rings agree on what `√8` and `root_6(4)`
         // *are* — including the index reduction that puts `root_6(4)` and `∛2`
@@ -4024,145 +4044,6 @@ fn normalize_rational_big_within(expr: &CasExpr, budget: &mut u64) -> Option<Big
             arg,
         )))),
     }
-}
-
-/// Normalize `exp(arg)` over unbounded integers — the twin of
-/// [`normalize_exp`], and what lets the exp tower decide past the `i128` wall
-/// (ADR-1670 wave three, item 1a).
-///
-/// # Why `exp` cannot simply be atomized here
-///
-/// Every other `Unary` head becomes one opaque variable and the fold passes
-/// relate those variables. `exp` is a **homomorphism of `+` into `×`**, so
-/// `exp(x)·exp(y)` and `exp(x+y)` are the same number with different spellings.
-/// One opaque atom per spelling makes their difference a nonzero polynomial, and
-/// the refutation branch would then report a true identity as `≠`. The bounded
-/// path avoids that by *decomposing* rather than atomizing; so does this.
-///
-/// # The decomposition, and why each step is an identity
-///
-/// The argument is expanded to a polynomial `Σ cᵢ·mᵢ` (a **constant**
-/// denominator is absorbed into the coefficients, so `exp(x/2)` decomposes and
-/// `exp(x/2)·exp(x/2) = exp(x)` decides; a variable denominator does not, and
-/// stays opaque). Then, per term:
-///
-/// - `exp(k·ln v) = vᵏ` for a positive rational `v` and integer `k`
-///   ([`exp_ln_inverse`]) — the exp/ln inverse, exact on `v > 0`.
-/// - an **integer** coefficient `c` keys on the primitive `exp(mᵢ)` and raises
-///   it to `|c|`, so `exp(2x) = exp(x)²` and `exp(x)·exp(2x) = exp(3x)` decide.
-/// - any other coefficient keys on the whole `|cᵢ|·mᵢ` at power 1.
-/// - a **negative** coefficient contributes `1/exp(−term)`, so `exp(−P)·exp(P)`
-///   cancels to `1`.
-///
-/// `exp(0) = 1`.
-///
-/// # What it declines, and to what
-///
-/// A fallback here is `opaque` — **one** atom for the whole `exp(arg)` — never
-/// `None`. That is sound in this ring for the same reason every other head is:
-/// a *zero* difference is zero whatever the atoms denote, and
-/// [`equal_core_unbounded`]'s refutation branch declines on any surviving
-/// [`atom_name`] key, `exp` included. So an undecomposable `exp` costs
-/// completeness (two spellings will not meet) and never soundness.
-///
-/// It falls back when the argument leaves the polynomial fragment, when the
-/// denominator is not constant, and — the case peculiar to this ring — when a
-/// term's coefficient does not fit `i128`. Atom keys are built by
-/// [`atom_name`], which spells a coefficient as a bounded [`Rational`]; a
-/// coefficient past that width has no key, so the whole `exp` takes one instead.
-/// Both rings then agree on *something*, which is what matters: they never
-/// disagree about a decomposition, only about whether one happened.
-fn normalize_exp_big(arg: &CasExpr, budget: &mut u64) -> Option<BigRatFunc> {
-    // BISECT-SWITCH (temporary)
-    let mode = std::env::var("CAS_EXP_BIG").unwrap_or_default();
-    let opaque = || {
-        Some(BigRatFunc::from_poly(BigPoly::variable(&atom_name(
-            "exp", arg,
-        ))))
-    };
-    let one = || BigRatFunc::from_poly(BigPoly::one());
-    if mode == "none" {
-        return None;
-    }
-    if mode == "opaque" {
-        return opaque();
-    }
-    let Some(ratio) = normalize_rational_big_within(arg, budget) else {
-        return opaque();
-    };
-    let Some(denominator) = ratio.den.as_constant() else {
-        return opaque(); // a genuine fraction argument, e.g. `exp(1/x)`
-    };
-    if denominator.is_zero() {
-        return opaque();
-    }
-    // The coefficients are `numerator / denominator`; both halves must be
-    // spellable as a bounded `Rational` for `atom_name` to key them.
-    let Ok(denominator) = i128::try_from(&denominator) else {
-        return opaque();
-    };
-    let Some(inverse) = Rational::checked_new(1, denominator) else {
-        return opaque();
-    };
-    if ratio.num.is_zero() {
-        return Some(one()); // exp(0) = 1
-    }
-    let mut result = one();
-    for (mono, coeff) in ratio.num.terms() {
-        charge(budget, 1)?;
-        let Ok(coefficient) = i128::try_from(coeff) else {
-            return opaque();
-        };
-        let Some(coefficient) = Rational::integer(coefficient).checked_mul(inverse) else {
-            return opaque();
-        };
-        // The bounded monomial this term is over, which is what `atom_name`
-        // renders. Exponents are `u32` in both rings, so this never widens.
-        let powers: BTreeMap<String, u32> = mono
-            .powers()
-            .map(|(name, exp)| (name.to_owned(), exp))
-            .collect();
-        let monomial = Monomial { powers };
-        // exp/ln inverse: `exp(k·ln v) = vᵏ` for a positive rational `v`.
-        if let Some(value) = exp_ln_inverse(&monomial, coefficient) {
-            let constant = BigRatFunc {
-                num: BigPoly::constant(BigInt::from(value.numerator())),
-                den: BigPoly::constant(BigInt::from(value.denominator())),
-            };
-            result = result.mul(&constant, budget)?;
-            continue;
-        }
-        let negative = coefficient.numerator() < 0;
-        let (primitive, power) = if coefficient.denominator() == 1 {
-            let Ok(power) = u32::try_from(coefficient.numerator().unsigned_abs()) else {
-                return opaque();
-            };
-            (Rational::integer(1), power)
-        } else {
-            let magnitude = if negative {
-                let Some(magnitude) = coefficient.checked_neg() else {
-                    return opaque();
-                };
-                magnitude
-            } else {
-                coefficient
-            };
-            (magnitude, 1)
-        };
-        let term = MultiPoly {
-            terms: [(monomial, primitive)].into_iter().collect(),
-        }
-        .to_expr();
-        let atom = BigRatFunc::from_poly(BigPoly::variable(&atom_name("exp", &term)));
-        // `exp(negative term) = 1 / exp(positive term)`.
-        let base = if negative {
-            one().div(&atom, budget)?
-        } else {
-            atom
-        };
-        result = result.mul(&base.pow(power, budget)?, budget)?;
-    }
-    Some(result)
 }
 
 /// A [`BigPoly`] as a [`MultiPoly`], or `None` when a coefficient does not fit
@@ -4244,13 +4125,11 @@ fn unbounded_difference(a: &CasExpr, b: &CasExpr, budget: &mut u64) -> Option<Bi
 ///   nonzero form is nonzero in ℝ[vars][I]/(I²+1).
 /// - Any name beginning with `\0`, the prefix [`atom_name`] gives transcendental
 ///   atoms, **is** declined. The ported folds relate the algebraic atoms
-///   (`√`, `|·|`, `root_q`, `sin`/`cos`, Bessel) and [`normalize_exp_big`]
-///   decomposes `exp`, which is what lets an *equality* over those heads decide
-///   at overflow scale. The inequality branch still declines on every one of
-///   them, because a nonzero polynomial in atom variables is not a nonzero
-///   number: `sin` and `cos` satisfy relations no fold here applies, an `exp`
-///   atom is positive rather than free, and the Euler re-check [`equal`] uses
-///   to protect the bounded path's inequality branch cannot run in this ring.
+///   (`√`, `|·|`, `root_q`, `sin`/`cos`, Bessel), which is what lets an
+///   *equality* over those heads decide at overflow scale; but `exp` is not
+///   decomposed here (see [`normalize_rational_big_within`] for the measurement
+///   that decided it), and the Euler re-check [`equal`] uses to protect the
+///   bounded path's inequality branch therefore cannot run in this ring.
 ///   Declining is the honest slice.
 fn equal_core_unbounded(a: &CasExpr, b: &CasExpr) -> ZeroTest {
     // One budget for the whole test: both normal forms, the cross-multiplication
@@ -33132,178 +33011,6 @@ mod bignum_overflow_fallback {
         }
     }
 
-    // --- `exp`, decomposed in the unbounded ring (wave three, item 1a) -------
-    //
-    // Wave two declined every `exp` head outright: `normalize_rational_big_within`
-    // returned `None` for it, so an identity mixing `exp` with a coefficient
-    // past `i128` was `Unknown` however trivial its `exp` half. Each of the four
-    // tower laws below was measured `Unknown` at overflow scale on merged main
-    // and is `Certified { equal: true }` now.
-    //
-    // `assert_fold_ported` carries the positive control: the same identity must
-    // decide *below* the wall, so a decline above would have been about width
-    // rather than about the head.
-
-    /// `exp(A+B) = exp(A)·exp(B)` — the law the decomposition exists for.
-    #[test]
-    fn exp_addition_law_at_overflow_scale_now_certifies() {
-        assert_fold_ported(&(x().exp() * y().exp()), &(x() + y()).exp());
-    }
-
-    /// `exp(2x) = exp(x)²` — the integer-scaling law, which keys a term on its
-    /// coefficient-1 monomial and raises the atom to the coefficient.
-    #[test]
-    fn exp_scaling_law_at_overflow_scale_now_certifies() {
-        assert_fold_ported(&(CasExpr::int(2) * x()).exp(), &x().exp().pow(2));
-    }
-
-    /// `exp(k·ln v) = vᵏ` for a positive rational `v` — the exp/ln inverse,
-    /// which makes the atom disappear into a constant.
-    #[test]
-    fn exp_of_a_log_at_overflow_scale_now_certifies() {
-        assert_fold_ported(
-            &(CasExpr::int(3) * CasExpr::int(2).ln()).exp(),
-            &CasExpr::int(8),
-        );
-        assert_fold_ported(
-            &(CasExpr::int(-2) * CasExpr::int(3).ln()).exp(),
-            &CasExpr::rat(1, 9),
-        );
-    }
-
-    /// A **negative** coefficient contributes `1/exp(−term)`, so `exp(−P)` and
-    /// `exp(P)` cancel. This is also the fractional-coefficient path: `x/2` has
-    /// a constant denominator, which is absorbed into the coefficient rather
-    /// than making the argument opaque.
-    #[test]
-    fn exp_cancellation_at_overflow_scale_now_certifies() {
-        assert_fold_ported(
-            &(x().exp() * (CasExpr::zero() - x()).exp()),
-            &CasExpr::int(1),
-        );
-        let half = x() / CasExpr::int(2);
-        assert_fold_ported(
-            &(half.clone().exp() * (CasExpr::zero() - half.clone()).exp()),
-            &CasExpr::int(1),
-        );
-    }
-
-    /// `ln(exp u) = u` reaches the unbounded ring through
-    /// [`canonicalize_for_equality`], which [`equal`] applies before either
-    /// normal form — so the rewrite is ring-independent and only the arithmetic
-    /// behind it had to be widened.
-    #[test]
-    fn log_of_exp_at_overflow_scale_now_certifies() {
-        assert_fold_ported(&x().exp().ln(), &x());
-        assert_fold_ported(&(x() + y()).exp().ln(), &(x() + y()));
-    }
-
-    /// **The negative controls.** A false exp identity must not be certified at
-    /// overflow scale, and the pairs are chosen so the difference is a *nonzero*
-    /// polynomial in the exp atoms — exactly where a careless refutation branch
-    /// would report `≠` for a relation it cannot see. `Unknown` is the required
-    /// answer: [`equal_core_unbounded`] declines on any surviving atom, and the
-    /// bounded path's Euler re-check cannot run in this ring.
-    #[test]
-    fn false_exp_identities_at_overflow_scale_are_never_certified() {
-        for (left, right) in [
-            // `exp(x)exp(y) = exp(x+y+1)` is false by a factor of `e`.
-            (x().exp() * y().exp(), (x() + y() + CasExpr::int(1)).exp()),
-            // `exp(2x) = exp(x)` is false except at `x = 0`.
-            ((CasExpr::int(2) * x()).exp(), x().exp()),
-            // `exp(3·ln 2) = 9`, not 8.
-            (
-                (CasExpr::int(3) * CasExpr::int(2).ln()).exp(),
-                CasExpr::int(9),
-            ),
-        ] {
-            let big_left = CasExpr::Mul(vec![binom(80), binom(80)]) + left.clone();
-            let big_right = binom(160) + right.clone();
-            assert!(
-                matches!(equal_core_bounded(&big_left, &big_right), ZeroTest::Unknown),
-                "the fixture is not adversarial: the bounded i128 path already decides it"
-            );
-            match equal(&big_left, &big_right) {
-                ZeroTest::Certified { equal: true, .. }
-                | ZeroTest::CertifiedBig { equal: true, .. } => {
-                    panic!("{left} = {right} is FALSE and must never be certified equal")
-                }
-                // `Unknown` where an exp atom survives the difference, a
-                // refutation where the decomposition removed every atom (the
-                // exp/ln row reduces to the constant `8`, so `8 − 9 = −1` is a
-                // genuine certificate). Both are sound; neither is `true`.
-                ZeroTest::Unknown => {}
-                refuted => assert!(
-                    recheck_zero_test(&big_left, &big_right, &refuted),
-                    "a refutation of {left} = {right} must re-check"
-                ),
-            }
-            // And the same falsehood below the wall is not certified either, so
-            // the decline above is not what is protecting soundness here.
-            let small_left = CasExpr::Mul(vec![binom(4), binom(4)]) + left.clone();
-            let small_right = binom(8) + right.clone();
-            assert!(
-                !matches!(
-                    equal(&small_left, &small_right),
-                    ZeroTest::Certified { equal: true, .. }
-                        | ZeroTest::CertifiedBig { equal: true, .. }
-                ),
-                "{left} = {right} is FALSE and must not certify below the wall either"
-            );
-        }
-    }
-
-    /// The decomposition's fallback is an **opaque atom**, never a `None`, and
-    /// that is sound because the refutation branch declines on any atom. Here
-    /// the exp argument is `1/x`, which has a variable denominator and so cannot
-    /// be decomposed: the identity still certifies because both sides reach the
-    /// same opaque key.
-    #[test]
-    fn an_undecomposable_exp_takes_one_atom_and_still_certifies() {
-        let inverse = CasExpr::int(1) / x();
-        assert_fold_ported(&(inverse.clone().exp() * CasExpr::int(2)), &{
-            let doubled = inverse.exp();
-            doubled.clone() + doubled
-        });
-    }
-
-    /// An exp coefficient past `i128` has no [`atom_name`] key, so the whole
-    /// head takes **one opaque atom** rather than a decomposition — and that
-    /// fallback is a decline in completeness, never in soundness, because the
-    /// refutation branch declines on any surviving atom.
-    ///
-    /// Checked at the normal form rather than through `equal`, because a pair
-    /// whose exp arguments are that large is decided by its polynomial half
-    /// before the exp half matters.
-    #[test]
-    fn an_exp_coefficient_past_i128_falls_back_to_one_opaque_atom() {
-        let huge = CasExpr::Mul(vec![binom(80), binom(80)]) * x();
-        let mut budget = BIG_FALLBACK_WORK_BUDGET;
-        let normal = normalize_rational_big_within(&huge.exp(), &mut budget)
-            .expect("an undecomposable exp falls back to an atom, it does not decline");
-        let variables = normal.num.variables();
-        assert_eq!(
-            variables.len(),
-            1,
-            "the whole head must take exactly one atom, got {variables:?}"
-        );
-        assert!(
-            variables.iter().all(|name| name.starts_with("\0exp:")),
-            "and that atom must be the exp key, got {variables:?}"
-        );
-        // The control: a coefficient that *does* fit decomposes into per-term
-        // atoms instead, so the fallback above is about the width and not about
-        // the head.
-        let mut budget = BIG_FALLBACK_WORK_BUDGET;
-        let decomposed = normalize_rational_big_within(&(x() + y()).exp(), &mut budget)
-            .expect("a small exp argument decomposes");
-        assert_eq!(
-            decomposed.num.variables().len(),
-            2,
-            "exp(x+y) must decompose into exp(x)·exp(y)"
-        );
-    }
-
     // --- The declines that remain, each with its reason ---------------------
 
     // --- The six folds, ported (ADR-1670 wave two, item 2) ------------------
@@ -33608,33 +33315,37 @@ mod bignum_overflow_fallback {
 
     // --- The declines that remain -------------------------------------------
 
-    /// What the `exp` port did **not** buy: a *refutation* over a surviving exp
-    /// atom. `exp(x) ≠ exp(y)` is true for generic `x` and `y`, and the
-    /// difference is a nonzero polynomial in two atom variables — but a nonzero
-    /// polynomial in atom variables is not a nonzero number, so the inequality
-    /// branch declines. This is the same guard `ln` and `sin` are under, and it
-    /// is why the decomposition could be added without weakening `Certified`.
-    ///
-    /// The positive control is the addition law one line above it in the
-    /// suite: the same head, at the same width, on the *equality* branch.
+    /// `exp` is decomposed, not atomized, by the bounded path, and the
+    /// unbounded twin of that decomposition is **measured to cost more than it
+    /// buys** (ADR-1670 wave three): wiring it in takes
+    /// `dsolve_inhomogeneous_variation_of_parameters` from 7 s to 380 s *and*
+    /// red, because this decline is what lets the fallback abandon an
+    /// `exp`-bearing expression at the head instead of spending the whole
+    /// budget on it. So the head is declined whole, on cost rather than on
+    /// capability.
     #[test]
-    fn an_exp_bearing_inequality_at_overflow_scale_still_declines() {
-        let overflowing = CasExpr::Mul(vec![binom(80), binom(80)]) - binom(160);
-        let left = x().exp() + overflowing.clone();
-        let right = y().exp() + overflowing;
+    fn exp_head_at_overflow_scale_still_declines() {
+        let left = CasExpr::Mul(vec![binom(80), binom(80)]) + x().exp() * y().exp();
+        let right = binom(160) + (x() + y()).exp();
         assert!(
-            matches!(equal_core_bounded(&left, &right), ZeroTest::Unknown),
-            "the fixture is not adversarial: the bounded i128 path already decides it"
+            matches!(equal(&left, &right), ZeroTest::Unknown),
+            "the exp decomposition has no unbounded counterpart; this must decline"
         );
+        // Positive control below the wall: the identity is true and decides.
+        let small_left = CasExpr::Mul(vec![binom(4), binom(4)]) + x().exp() * y().exp();
+        let small_right = binom(8) + (x() + y()).exp();
         assert!(
-            matches!(equal_core_unbounded(&left, &right), ZeroTest::Unknown),
-            "an exp-bearing difference must be declined on the inequality branch"
+            matches!(
+                equal(&small_left, &small_right),
+                ZeroTest::Certified { equal: true, .. }
+            ),
+            "positive control: the same identity must certify below the wall"
         );
     }
 
     /// The `\0`-atom guard on the inequality branch. A *refutation* over
     /// transcendental atoms needs the Euler re-check that protects the bounded
-    /// path, and that cannot run in this ring.
+    /// path, and that cannot run in this ring while `exp` is declined.
     ///
     /// `ln 4 − 2·ln 2 = 0` is the witness for why: as independent atoms the
     /// difference is nonzero, and only `expand_log_over_primes` — a
