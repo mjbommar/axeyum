@@ -4,7 +4,7 @@
   "note": "Statement identity for every settled fact (S1 of the trusted-library safety roadmap, ADR-0763). Per fact: SHA-256 of formal.statement (the canonical kernel rendering for native lean4 rows), SHA-256 of the top-level reader-facing statement, and the kernel_theorem it names. A settled fact's statement is what the ledger CLAIMS; changing any of the three silently turns 'we proved X' into 'we proved something we then labelled X'. Changes require an amendment row naming both digests and a reason; superseded digests are preserved in each pin's history. `coverage_floor` is a ratchet the gate re-derives rather than trusts: slack is itself a violation, so a loosened floor is self-reverting. Written by `scripts/check-settled-fact-statements.py --write`; do not hand-edit.",
   "coverage_floor": {
     "max_unpinned_settled": 0,
-    "min_identity_bound": 2417,
+    "min_identity_bound": 2421,
     "max_header_exempt": 0
   },
   "amendments": [
@@ -18525,6 +18525,13 @@
       "kernel_theorem": "Nat.inverseIndex_maps_into"
     },
     {
+      "fact_id": "F:nat-is-prime-eq-true-of-prime",
+      "language": "lean4",
+      "statement_sha256": "303392e2289c0dfa76b39cbadbf9585d9b5c1a3eab515ad7f69cb1501c5876e9",
+      "prose_sha256": "826a997d16b5a0f6c09262d5303550162621cc9eb0195dca18c28dd792c271c6",
+      "kernel_theorem": "Nat.isPrime_eq_true_of_prime"
+    },
+    {
       "fact_id": "F:nat-land-assoc",
       "language": "lean4",
       "statement_sha256": "dbb1f4ea2ee841b341024efa35d759952a3da6e715bed83365c52316028ac631",
@@ -20317,6 +20324,27 @@
       "statement_sha256": "99630fe9e7c4640335ef53e2062167d16927d7aef6703f13a28da19766d552db",
       "prose_sha256": "15b4dfeb0f0f169bfdd6a8614dc53a9be8e59860b250969975f05b028ecac462",
       "kernel_theorem": "Nat.pred_zero"
+    },
+    {
+      "fact_id": "F:nat-prime-counting-mono",
+      "language": "lean4",
+      "statement_sha256": "947197a6e9739eb0c97c1a9784bdf7444deec8c70fd87748b88ae3e0edbe9d8e",
+      "prose_sha256": "cef0901bfe5109f40017b0247a9ba7821fc491dbca8b8348f603c610bcba6b05",
+      "kernel_theorem": "Nat.primeCounting_mono"
+    },
+    {
+      "fact_id": "F:nat-prime-counting-prime-mono",
+      "language": "lean4",
+      "statement_sha256": "4edb39c9e5f6a9f71b604e5d544b78becc281f26ac4f97acdf7d2cf54290f003",
+      "prose_sha256": "150821dbbedec28045b4a309ad5cedc87f9566d35c689814a258951561bf4e37",
+      "kernel_theorem": "Nat.primeCounting'_mono"
+    },
+    {
+      "fact_id": "F:nat-prime-counting-prime-unbounded",
+      "language": "lean4",
+      "statement_sha256": "91a7e9c5cde95029504975a85abf0620bc6b74f40246d0af394ad4737216f620",
+      "prose_sha256": "e085d0777acc7a6411fbfff36aeb4c8d0365f81ba3ab97021d4b6aa81fa57399",
+      "kernel_theorem": "Nat.primeCounting'_unbounded"
     },
     {
       "fact_id": "F:nat-prime-dvd-choose",

@@ -178,7 +178,7 @@ pub(super) fn list(p: &ListPrelude) -> Fields {
     }
 }
 
-/// The `NatPrelude` field table (1435 names,
+/// The `NatPrelude` field table (1439 names,
 /// 0 name lists, 1 sub-packages).
 ///
 /// 113 of the names come from ADR-1512 per-module registries and
@@ -2075,6 +2075,13 @@ pub(super) fn nat(p: &NatPrelude) -> Fields {
             ("primorial_pos", p.primorial_pos),
             ("primorial_le_succ", p.primorial_le_succ),
             ("primorial_mono", p.primorial_mono),
+            ("prime_counting_prime_mono", p.prime_counting_prime_mono),
+            ("prime_counting_mono", p.prime_counting_mono),
+            ("is_prime_eq_true_of_prime", p.is_prime_eq_true_of_prime),
+            (
+                "prime_counting_prime_unbounded",
+                p.prime_counting_prime_unbounded,
+            ),
             ("mul_two_eq_add_self", p.mul_two_eq_add_self),
             ("le_of_add_self_le_add_self", p.le_of_add_self_le_add_self),
             (
