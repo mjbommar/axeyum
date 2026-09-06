@@ -1761,6 +1761,70 @@ impl MultiPoly {
         Some(MultiPoly { terms })
     }
 
+    /// Does any variable in this polynomial name an atom whose argument
+    /// [`atom_name`] could not canonicalize ([`ATOM_UNCANONICAL`])?
+    ///
+    /// A nonzero difference over such an atom is not a refutation: the same
+    /// value may sit under two keys, exactly as it did before
+    /// [`RatFunc::canonical_key_form`] existed. [`equal_core_bounded`] declines
+    /// instead. The equality branch needs no such guard — a zero difference is
+    /// zero whatever the atoms denote.
+    #[must_use]
+    fn mentions_uncanonical_atom(&self) -> bool {
+        self.terms
+            .keys()
+            .any(|mono| mono.powers.keys().any(|v| v.contains(ATOM_UNCANONICAL)))
+    }
+
+    /// The term this polynomial **leads** with: the one [`MultiPoly::to_expr`]
+    /// renders first — greatest total degree, with the monomial order breaking
+    /// ties. `None` for the zero polynomial.
+    ///
+    /// "Leading" has to mean *something* fixed for [`MultiPoly::signed_content`]
+    /// to normalize a sign, and this is the crate's own rendering order, so the
+    /// normalized sign is the sign of the first term a reader sees.
+    #[must_use]
+    fn leading_term(&self) -> Option<(&Monomial, &Rational)> {
+        self.terms.iter().max_by(|a, b| {
+            a.0.total_degree()
+                .cmp(&b.0.total_degree())
+                .then_with(|| b.0.cmp(a.0))
+        })
+    }
+
+    /// The signed rational `c` for which `self / c` has **coprime integer**
+    /// coefficients and a **positive leading coefficient**: the polynomial's
+    /// content, carrying the sign of its [leading term](MultiPoly::leading_term).
+    ///
+    /// For coefficients `nᵢ/dᵢ` in lowest terms the content is
+    /// `gcd(nᵢ) / lcm(dᵢ)`, so dividing by it clears the denominators and strips
+    /// the common integer factor in one step. Dividing a `num`/`den` pair by the
+    /// **denominator's** signed content is what makes an atom key unique — see
+    /// [`RatFunc::canonical_key_form`].
+    ///
+    /// `None` for the zero polynomial (which has no content) or on `i128`
+    /// overflow.
+    #[must_use]
+    fn signed_content(&self) -> Option<Rational> {
+        let mut numerator_gcd: i128 = 0;
+        let mut denominator_lcm: i128 = 1;
+        for coeff in self.terms.values() {
+            numerator_gcd = ntheory::gcd(numerator_gcd, coeff.checked_numerator()?);
+            denominator_lcm = ntheory::lcm(denominator_lcm, coeff.checked_denominator()?)?;
+        }
+        if numerator_gcd == 0 {
+            return None; // the zero polynomial
+        }
+        let magnitude = Rational::checked_new(numerator_gcd, denominator_lcm)?;
+        // The sign normalization. Without it `(-u^2)/(2*s)` and `(u^2)/(-2*s)`
+        // stay two keys for one function.
+        if self.leading_term()?.1.checked_numerator()? < 0 {
+            magnitude.checked_neg()
+        } else {
+            Some(magnitude)
+        }
+    }
+
     /// Exact evaluation at a rational point (trusted checker for tests). `None`
     /// on a missing assignment or `i128` overflow.
     #[must_use]
@@ -1931,6 +1995,64 @@ impl RatFunc {
         }
     }
 
+    /// The representation this fraction is **keyed** on when it is the argument
+    /// of a transcendental head ([`atom_name`]), and the *only* place a `RatFunc`
+    /// needs a unique form.
+    ///
+    /// `RatFunc` arithmetic only cross-multiplies, so one function has many
+    /// `num`/`den` pairs: `exp(−((1/2)/s)·u²)` builds `(−1/2·u²)/s` and
+    /// `exp(−u²/(2·s))` builds `(−u²)/(2·s)`. Those render to different strings,
+    /// so they became two independent atom variables and the zero test **refuted
+    /// a true equality**.
+    ///
+    /// The canonical pair is `(num/c) / (den/c)` where `c` is the denominator's
+    /// [signed content](MultiPoly::signed_content), preceded by a GCD reduction
+    /// when there is a non-constant denominator to cancel against. Afterwards the
+    /// denominator is a primitive integer polynomial with a positive leading
+    /// coefficient, and the whole rational scale and sign sit on the numerator.
+    /// Two representations of one function differ by a rational scalar `λ` once
+    /// their common polynomial factor is gone — `num' = λ·num`, `den' = λ·den` —
+    /// and `c` scales with `λ`, so both divide out to the same pair. A constant
+    /// denominator collapses to `1`, so `ln(x/2)` and `ln((1/2)·x)` also key
+    /// alike, which the raw form got wrong too.
+    ///
+    /// # The residual class, and why it is a decline
+    ///
+    /// Two limits survive. Uniqueness is only **up to a common polynomial
+    /// factor**, and that factor is cancelled only where [`RatFunc::reduced`]
+    /// finds it — the multivariate GCD ([`mvpoly::MvPoly::gcd`]) declines rather
+    /// than failing, and `reduced` then keeps the unreduced fraction. And the
+    /// canonical pair may simply not fit `i128`: for `x / ((1/i128::MAX)·s +
+    /// (1/3)·u)` the denominator's content is `1/(3·i128::MAX)` and dividing by
+    /// it leaves the ring, so this returns `None`.
+    ///
+    /// On either, two keys for one value survive — which is the defect this
+    /// method exists to fix, narrowed rather than closed. So the `None` is not
+    /// swallowed: [`atom_name`] marks the key with [`ATOM_UNCANONICAL`] and
+    /// [`equal_core_bounded`] declines a refutation that mentions such an atom.
+    /// The residual is `ZeroTest::Unknown`, never a wrong verdict. See
+    /// `a_content_beyond_i128_declines_instead_of_refuting`.
+    #[must_use]
+    fn canonical_key_form(&self) -> Option<RatFunc> {
+        if self.num.is_zero() {
+            return Some(RatFunc::from_poly(MultiPoly::zero()));
+        }
+        // A constant denominator is absorbed by the scaling below, so the GCD is
+        // only run where there is a polynomial factor to cancel. This path is on
+        // every atom key in the crate; `reduced` is a multivariate GCD.
+        let base = if multipoly_as_constant(&self.den).is_some() {
+            self.clone()
+        } else {
+            self.reduced().unwrap_or_else(|| self.clone())
+        };
+        let content = base.den.signed_content()?;
+        let inverse = MultiPoly::constant(Rational::integer(1).checked_div(content)?);
+        Some(RatFunc {
+            num: base.num.mul(&inverse)?,
+            den: base.den.mul(&inverse)?,
+        })
+    }
+
     /// Reduce a multivariate rational function to lowest terms via the
     /// multivariate GCD ([`mvpoly::MvPoly`]). `None` if any conversion or exact
     /// division declines (the caller then keeps the unreduced form).
@@ -2069,6 +2191,10 @@ fn normalize_exp(arg: &CasExpr) -> Option<RatFunc> {
     let Some(ratio) = normalize_rational(arg) else {
         return opaque();
     };
+    // Canonicalize before asking whether the denominator is constant, so the two
+    // routes out of this function agree: without it `exp((x²−1)/(x−1))` takes the
+    // opaque-atom route while `exp(x+1)` decomposes, and the two never meet.
+    let ratio = ratio.canonical_key_form().unwrap_or(ratio);
     let Some(den_const) = multipoly_as_constant(&ratio.den) else {
         return opaque(); // non-constant denominator — a genuine fraction argument
     };
@@ -2134,20 +2260,37 @@ fn atom_name(head: &str, arg: &CasExpr) -> String {
     // transcendental atom, e.g. `ln(x)+1`), fall back to `normalize_rational`, which
     // atomizes that sub-head — otherwise `ln(ln(x)+1)` and `ln(1+ln(x))` would take
     // different (source-order) keys and the zero-test would miss the equality.
-    let canonical = normalize(arg)
-        .map(|poly| poly.to_expr())
-        .or_else(|| {
-            normalize_rational(arg).map(|rf| {
-                let num = rf.num.to_expr();
-                if rf.den == MultiPoly::constant(Rational::integer(1)) {
-                    num
-                } else {
-                    CasExpr::Div(Box::new(num), Box::new(rf.den.to_expr()))
-                }
-            })
-        })
-        .unwrap_or_else(|| arg.clone());
-    format!("\0{head}:{}", canonical.render(0))
+    // Set to [`ATOM_UNCANONICAL`] on the routes that cannot produce a key unique
+    // to the argument's *value*, so a refutation over the atom is declined
+    // instead of asserted. See `equal_core_bounded`.
+    let mut mark = "";
+    let canonical = if let Some(poly) = normalize(arg) {
+        poly.to_expr()
+    } else if let Some(raw) = normalize_rational(arg) {
+        // A `RatFunc` is not reduced or scale-normalized by its own arithmetic, so
+        // the raw pair is one representation among many and rendering it keyed two
+        // spellings of one argument as two independent atoms.
+        // `canonical_key_form` picks the representative.
+        let rf = if let Some(canonical) = raw.canonical_key_form() {
+            canonical
+        } else {
+            mark = ATOM_UNCANONICAL;
+            raw
+        };
+        let num = rf.num.to_expr();
+        if rf.den == MultiPoly::constant(Rational::integer(1)) {
+            num
+        } else {
+            CasExpr::Div(Box::new(num), Box::new(rf.den.to_expr()))
+        }
+    } else {
+        // Outside the fragment altogether (overflow, or a division by the zero
+        // function): the source spelling is the key and two spellings of one
+        // argument will not meet.
+        mark = ATOM_UNCANONICAL;
+        arg.clone()
+    };
+    format!("\0{head}:{mark}{}", canonical.render(0))
 }
 
 /// Collect a decoding dictionary `atom_name → Unary(head, arg)` from every
@@ -3128,8 +3271,11 @@ fn equal_core(a: &CasExpr, b: &CasExpr) -> ZeroTest {
 /// any fold and must be declined instead:
 /// [`MultiPoly::relates_multiplicative_atoms`] — a monomial multiplying two
 /// radical or absolute-value atoms, where `√a·√b = √(ab)` makes a nonzero
-/// polynomial in three independent variables prove nothing. The equality branch
-/// needs no such guard: a zero difference is zero whatever the atoms denote.
+/// polynomial in three independent variables prove nothing. A second is
+/// [`MultiPoly::mentions_uncanonical_atom`] — an atom whose argument
+/// [`atom_name`] could not bring to a canonical form, so one value may sit under
+/// two keys. The equality branch needs no such guard: a zero difference is zero
+/// whatever the atoms denote.
 fn equal_core_bounded(a: &CasExpr, b: &CasExpr) -> ZeroTest {
     match bounded_difference(a, b) {
         Some(witness) if witness.is_zero() => ZeroTest::Certified {
@@ -3137,6 +3283,9 @@ fn equal_core_bounded(a: &CasExpr, b: &CasExpr) -> ZeroTest {
             witness,
         },
         Some(witness) if witness.relates_multiplicative_atoms() => ZeroTest::Unknown,
+        // An atom whose argument could not be canonicalized may sit under two
+        // keys for one value, so a nonzero difference over it proves nothing.
+        Some(witness) if witness.mentions_uncanonical_atom() => ZeroTest::Unknown,
         Some(witness) => ZeroTest::Certified {
             equal: false,
             witness,
@@ -3305,6 +3454,18 @@ impl BigRatFunc {
 /// The prefix [`atom_name`] gives every transcendental atom variable. A user
 /// variable name cannot contain it, so a name carrying it is always an atom.
 const ATOM_PREFIX: char = '\0';
+/// The mark [`atom_name`] puts in front of an argument it could **not** bring
+/// to a canonical form (an `i128` overflow in the content computation, or an
+/// argument outside the rational-function fragment altogether).
+///
+/// Such a key is still deterministic — the same spelling always produces it —
+/// but it is no longer *unique to the value*, so two spellings of one argument
+/// can take two keys and a nonzero difference over them proves nothing.
+/// [`MultiPoly::mentions_uncanonical_atom`] finds the mark and
+/// [`equal_core_bounded`] declines the refutation. Like `\0` it cannot occur in
+/// a user variable name, and it sits *after* the `\0head:` prefix so the
+/// per-head prefixes below still match.
+const ATOM_UNCANONICAL: &str = "\u{1}";
 /// The atom-key prefix for a `sqrt` head; see [`atom_name`].
 const ATOM_SQRT: &str = "\0sqrt:";
 /// The atom-key prefix for an `abs` head.
@@ -33396,6 +33557,411 @@ mod radical_atom_products {
                 "expand({input}) leaked an atom key: {rendered:?}"
             );
         }
+    }
+}
+
+/// **One argument, two spellings, two atom keys.**
+///
+/// `exp(−((1/2)/s)·u²)` and `exp(−u²/(2·s))` are the same function of `s` and
+/// `u`. [`equal`] returned `ZeroTest::Certified { equal: false }` for the pair —
+/// a *refutation of a true equality*, the worst verdict this crate can produce.
+/// The probability lane (item 9) hit it proving the Gaussian antiderivative with
+/// a symbolic variance and worked around it by choosing one spelling.
+///
+/// The cause is in [`atom_name`]. A transcendental head whose argument is not a
+/// polynomial is keyed on `render(0)` of a [`RatFunc`], and a `RatFunc` is
+/// **never reduced or scale-normalized** — [`RatFunc::add`], [`RatFunc::mul`]
+/// and [`RatFunc::div`] only cross-multiply. So the two spellings reach
+/// `(−1/2·u²)/s` and `(−u²)/(2·s)`, two distinct strings, two independent atom
+/// variables, and a nonzero difference that the zero-test reports as `≠`.
+///
+/// Every head is affected, not just `exp`: `normalize_rational`'s catch-all arm
+/// sends every [`UnaryFunc`] through [`atom_name`], `Sqrt` joins it whenever the
+/// radicand is not a rational constant, and [`normalize_exp`] falls back to it
+/// whenever the argument has a non-constant denominator — which is exactly this
+/// shape. So `every_head_keys_the_two_spellings_alike` is the real statement and
+/// the `exp` test is the reported instance of it.
+#[cfg(test)]
+mod atom_argument_canonical_key {
+    use super::*;
+
+    fn s() -> CasExpr {
+        CasExpr::var("s")
+    }
+
+    fn u() -> CasExpr {
+        CasExpr::var("u")
+    }
+
+    /// `−((1/2)/s)·u²` — the spelling the Gaussian antiderivative builds, with
+    /// the constant factored out of the quotient.
+    fn scaled_spelling() -> CasExpr {
+        -((CasExpr::rat(1, 2) / s()) * u().pow(2))
+    }
+
+    /// `−u²/(2·s)` — the spelling a person writes. The same function.
+    fn fraction_spelling() -> CasExpr {
+        -(u().pow(2) / (CasExpr::int(2) * s()))
+    }
+
+    /// One representative of **every** [`UnaryFunc`] variant.
+    ///
+    /// The `match` below has no wildcard arm, so adding a variant to the enum is
+    /// a compile error here until it is listed — the coverage is ratcheted to the
+    /// type rather than to a maintainer's memory. The `assert` catches the other
+    /// direction, a variant listed twice under one name.
+    fn every_head() -> Vec<UnaryFunc> {
+        let heads = vec![
+            UnaryFunc::Ln,
+            UnaryFunc::Exp,
+            UnaryFunc::Sin,
+            UnaryFunc::Cos,
+            UnaryFunc::Tan,
+            UnaryFunc::Atan,
+            UnaryFunc::Sqrt,
+            UnaryFunc::Abs,
+            UnaryFunc::Sign,
+            UnaryFunc::Floor,
+            UnaryFunc::Ceiling,
+            UnaryFunc::Erf,
+            UnaryFunc::Si,
+            UnaryFunc::Ci,
+            UnaryFunc::Ei,
+            UnaryFunc::Li,
+            UnaryFunc::Shi,
+            UnaryFunc::Chi,
+            UnaryFunc::FresnelS,
+            UnaryFunc::FresnelC,
+            UnaryFunc::BesselJ(1),
+            UnaryFunc::BesselI(2),
+            UnaryFunc::Asin,
+            UnaryFunc::Acos,
+            UnaryFunc::Asinh,
+            UnaryFunc::Acosh,
+            UnaryFunc::Gamma,
+            UnaryFunc::NthRoot(3),
+            UnaryFunc::PolyGamma(1),
+            UnaryFunc::Ai,
+            UnaryFunc::AiPrime,
+            UnaryFunc::Bi,
+            UnaryFunc::BiPrime,
+            UnaryFunc::LambertW,
+        ];
+        for head in &heads {
+            // Exhaustiveness ratchet — no wildcard arm.
+            match head {
+                UnaryFunc::Ln
+                | UnaryFunc::Exp
+                | UnaryFunc::Sin
+                | UnaryFunc::Cos
+                | UnaryFunc::Tan
+                | UnaryFunc::Atan
+                | UnaryFunc::Sqrt
+                | UnaryFunc::Abs
+                | UnaryFunc::Sign
+                | UnaryFunc::Floor
+                | UnaryFunc::Ceiling
+                | UnaryFunc::Erf
+                | UnaryFunc::Si
+                | UnaryFunc::Ci
+                | UnaryFunc::Ei
+                | UnaryFunc::Li
+                | UnaryFunc::Shi
+                | UnaryFunc::Chi
+                | UnaryFunc::FresnelS
+                | UnaryFunc::FresnelC
+                | UnaryFunc::BesselJ(_)
+                | UnaryFunc::BesselI(_)
+                | UnaryFunc::Asin
+                | UnaryFunc::Acos
+                | UnaryFunc::Asinh
+                | UnaryFunc::Acosh
+                | UnaryFunc::Gamma
+                | UnaryFunc::NthRoot(_)
+                | UnaryFunc::PolyGamma(_)
+                | UnaryFunc::Ai
+                | UnaryFunc::AiPrime
+                | UnaryFunc::Bi
+                | UnaryFunc::BiPrime
+                | UnaryFunc::LambertW => {}
+            }
+        }
+        let names: BTreeSet<String> = heads.iter().map(|h| h.name()).collect();
+        assert_eq!(
+            names.len(),
+            heads.len(),
+            "each head must appear once: two entries share a name"
+        );
+        heads
+    }
+
+    fn apply(head: UnaryFunc, arg: CasExpr) -> CasExpr {
+        CasExpr::Unary(head, Box::new(arg))
+    }
+
+    fn x() -> CasExpr {
+        CasExpr::var("x")
+    }
+
+    fn y() -> CasExpr {
+        CasExpr::var("y")
+    }
+
+    /// A pair that must **not** be certified equal. A refutation is fine and its
+    /// certificate must re-check; a decline is fine; certifying a false equality
+    /// is the failure.
+    ///
+    /// A decline passing means this assertion could go vacuous, so: measured on
+    /// the live crate, all four callers below reach `Certified { equal: false }`,
+    /// not `Unknown`. And the assertion is falsifiable — a key that drops the
+    /// denominator makes `the_denominator_is_part_of_the_key` certify a false
+    /// equality here.
+    #[track_caller]
+    fn assert_never_equal(left: &CasExpr, right: &CasExpr, context: &str) {
+        let verdict = equal(left, right);
+        match &verdict {
+            ZeroTest::Certified { equal, .. } | ZeroTest::CertifiedBig { equal, .. } => {
+                assert!(
+                    !*equal,
+                    "{context}: {left} = {right} was CERTIFIED but the two differ"
+                );
+                assert!(
+                    recheck_zero_test(left, right, &verdict),
+                    "{context}: the certificate for {left} = {right} must re-check"
+                );
+            }
+            ZeroTest::Unknown => {}
+        }
+    }
+
+    #[track_caller]
+    fn assert_equal_and_rechecks(left: &CasExpr, right: &CasExpr, context: &str) {
+        let verdict = equal(left, right);
+        match &verdict {
+            ZeroTest::Certified { equal, .. } | ZeroTest::CertifiedBig { equal, .. } => {
+                assert!(
+                    *equal,
+                    "{context}: {left} = {right} was REFUTED but is true"
+                );
+            }
+            ZeroTest::Unknown => panic!("{context}: {left} = {right} must decide"),
+        }
+        assert!(
+            recheck_zero_test(left, right, &verdict),
+            "{context}: the certificate for {left} = {right} must re-check"
+        );
+    }
+
+    /// **The reported input.** `exp(−((1/2)/s)·u²) = exp(−u²/(2·s))`.
+    #[test]
+    fn the_reported_gaussian_exponent_certifies_equal() {
+        assert_equal_and_rechecks(&scaled_spelling().exp(), &fraction_spelling().exp(), "exp");
+    }
+
+    /// The same pair under every transcendental head the crate keys through
+    /// [`atom_name`], because the defect is in the keying, not in `exp`.
+    #[test]
+    fn every_head_keys_the_two_spellings_alike() {
+        for head in every_head() {
+            let name = head.name();
+            assert_equal_and_rechecks(
+                &apply(head, scaled_spelling()),
+                &apply(head, fraction_spelling()),
+                &name,
+            );
+        }
+    }
+
+    /// The keying seam itself, below [`equal`]: the two spellings must produce
+    /// one atom key. Stated separately so a future change that makes the pair
+    /// decide by some *other* route (a fold, a rewrite) does not hide a
+    /// regression in the key.
+    #[test]
+    fn the_two_spellings_produce_one_atom_key() {
+        for head in every_head() {
+            let name = head.name();
+            assert_eq!(
+                atom_name(&name, &scaled_spelling()),
+                atom_name(&name, &fraction_spelling()),
+                "{name}: the two spellings of one argument must key alike"
+            );
+        }
+    }
+
+    // --- Equal pairs: one distinction per test, so a deleted guard names itself.
+
+    /// The **content cancellation**. `2/3` and `4/6` are one scale, and it does
+    /// not matter which side of the bar the common factor was written on.
+    #[test]
+    fn a_constant_scale_moved_between_numerator_and_denominator() {
+        assert_equal_and_rechecks(
+            &((CasExpr::int(2) * x()) / (CasExpr::int(3) * y())).ln(),
+            &((CasExpr::int(4) * x()) / (CasExpr::int(6) * y())).ln(),
+            "content",
+        );
+    }
+
+    /// The **sign normalization**. A minus sign in the denominator is the same
+    /// function as a minus sign in the numerator.
+    #[test]
+    fn a_sign_moved_into_the_denominator() {
+        assert_equal_and_rechecks(
+            &(-(u().pow(2)) / (CasExpr::int(2) * s())).ln(),
+            &(u().pow(2) / (CasExpr::int(-2) * s())).ln(),
+            "sign",
+        );
+    }
+
+    /// A constant denominator is absorbed into the numerator, so the quotient
+    /// spelling and the coefficient spelling of one argument meet. This was a
+    /// second wrong refutation on the same line: the polynomial route rendered
+    /// `1/2·x` while the fraction route rendered `x/2`.
+    #[test]
+    fn a_constant_denominator_collapses_into_the_numerator() {
+        assert_equal_and_rechecks(
+            &(x() / CasExpr::int(2)).ln(),
+            &(CasExpr::rat(1, 2) * x()).ln(),
+            "constant denominator",
+        );
+    }
+
+    /// `a/(b·c)` and `(a/b)/c` build the same `num`/`den` pair, and reordering
+    /// the terms of a numerator was already handled by [`MultiPoly`]'s canonical
+    /// form. Both are controls: the repair must not be what makes them work, and
+    /// it must not break them either.
+    #[test]
+    fn associativity_and_term_order_still_meet() {
+        let z = CasExpr::var("z");
+        assert_equal_and_rechecks(
+            &(x() / (y() * z.clone())).ln(),
+            &((x() / y()) / z.clone()).ln(),
+            "associativity",
+        );
+        assert_equal_and_rechecks(
+            &((x() + y()) / (CasExpr::int(2) * z.clone())).ln(),
+            &((y() + x()) / (CasExpr::int(2) * z)).ln(),
+            "term order",
+        );
+    }
+
+    /// The nested-atom case the crate already documented as working. Keeping it
+    /// green is the point: the argument here is not a polynomial, so it takes the
+    /// [`RatFunc`] route that this lane rewrote.
+    #[test]
+    fn nested_atoms_still_meet() {
+        assert_equal_and_rechecks(
+            &(CasExpr::int(1) + x().ln()).ln(),
+            &(x().ln() + CasExpr::int(1)).ln(),
+            "nested",
+        );
+    }
+
+    /// The **GCD cancellation**, on both of [`RatFunc::reduced`]'s branches and
+    /// through [`normalize_exp`], which is the route that would otherwise
+    /// disagree with [`atom_name`]: `exp((x²−1)/(x−1))` took the opaque-atom
+    /// route while `exp(x+1)` decomposed into per-term factors.
+    #[test]
+    fn a_common_polynomial_factor_is_cancelled() {
+        // Univariate (`poly::rat_gcd`).
+        assert_equal_and_rechecks(
+            &((x().pow(2) - CasExpr::int(1)) / (x() - CasExpr::int(1))).ln(),
+            &(x() + CasExpr::int(1)).ln(),
+            "univariate gcd",
+        );
+        // Multivariate (`mvpoly::MvPoly::gcd`).
+        assert_equal_and_rechecks(
+            &((x().pow(2) - y().pow(2)) / (x() - y())).ln(),
+            &(x() + y()).ln(),
+            "multivariate gcd",
+        );
+        // And the same two through `normalize_exp`.
+        assert_equal_and_rechecks(
+            &((x().pow(2) - CasExpr::int(1)) / (x() - CasExpr::int(1))).exp(),
+            &(x() + CasExpr::int(1)).exp(),
+            "exp univariate gcd",
+        );
+        assert_equal_and_rechecks(
+            &((x().pow(2) - y().pow(2)) / (x() - y())).exp(),
+            &(x() + y()).exp(),
+            "exp multivariate gcd",
+        );
+    }
+
+    // --- Unequal pairs: the repair must not equate what differs.
+
+    /// The denominator is part of the key: `2·s` and `2·s²` are different
+    /// variances.
+    #[test]
+    fn the_denominator_is_part_of_the_key() {
+        assert_never_equal(
+            &(u().pow(2) / (CasExpr::int(2) * s())).exp(),
+            &(u().pow(2) / (CasExpr::int(2) * s().pow(2))).exp(),
+            "s vs s^2",
+        );
+    }
+
+    /// The sign is part of the key: a Gaussian and its reciprocal are not the
+    /// same function.
+    #[test]
+    fn the_sign_is_part_of_the_key() {
+        assert_never_equal(
+            &(-(u().pow(2)) / (CasExpr::int(2) * s())).exp(),
+            &(u().pow(2) / (CasExpr::int(2) * s())).exp(),
+            "sign",
+        );
+    }
+
+    /// The scale is part of the key: variance 1 and variance 3/2 differ.
+    #[test]
+    fn the_scale_is_part_of_the_key() {
+        assert_never_equal(
+            &(u().pow(2) / (CasExpr::int(2) * s())).exp(),
+            &(u().pow(2) / (CasExpr::int(3) * s())).exp(),
+            "scale",
+        );
+    }
+
+    /// Absorbing a constant denominator into an *argument* must not absorb one
+    /// that is outside the head: `ln(x/2)` is not `ln(x)/2`.
+    #[test]
+    fn a_quotient_inside_ln_is_not_a_quotient_of_ln() {
+        assert_never_equal(
+            &(x() / CasExpr::int(2)).ln(),
+            &(x().ln() / CasExpr::int(2)),
+            "ln(x/2) vs ln(x)/2",
+        );
+    }
+
+    // --- The residual class.
+
+    /// **The limit, recorded as a decline rather than a wrong verdict.**
+    ///
+    /// The canonical pair is `(num/c) / (den/c)` for the denominator's content
+    /// `c`, and here `c = 1/(3·i128::MAX)`, so dividing by it leaves the ring and
+    /// [`RatFunc::canonical_key_form`] returns `None`. The two spellings below
+    /// are the same function and still take two keys.
+    ///
+    /// Before the [`ATOM_UNCANONICAL`] mark this pair measured
+    /// `Certified { equal: false }` — a refutation of a true equality, the very
+    /// defect this module exists for, surviving at a scale the key cannot reach.
+    /// It now declines.
+    #[test]
+    fn a_content_beyond_i128_declines_instead_of_refuting() {
+        let huge = CasExpr::Const(Rational::new(1, i128::MAX));
+        let twice = CasExpr::Const(Rational::new(2, i128::MAX));
+        let left = (x() / (huge * s() + CasExpr::rat(1, 3) * u())).ln();
+        let right = ((CasExpr::int(2) * x()) / (twice * s() + CasExpr::rat(2, 3) * u())).ln();
+        // The two keys really are distinct — otherwise this test would pass for
+        // the wrong reason and the guard below would never be exercised.
+        assert_ne!(
+            atom_name("ln", &left),
+            atom_name("ln", &right),
+            "the residual class must still produce two keys, or this is not it"
+        );
+        assert!(
+            matches!(equal(&left, &right), ZeroTest::Unknown),
+            "an argument the key cannot canonicalize must decline, never refute"
+        );
     }
 }
 

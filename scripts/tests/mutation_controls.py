@@ -7651,6 +7651,99 @@ SUITES["arith-upoly-certificates"] = (
 )
 
 
+# --------------------------------------------------------------------------
+# `cas-atom-key` -- the canonical form a transcendental atom is keyed on
+# (`crates/axeyum-cas/src/lib.rs`, `atom_argument_canonical_key`).
+#
+# `equal` refuted `exp(-((1/2)/s)*u^2) = exp(-u^2/(2*s))`, one function under
+# two spellings, because `atom_name` keyed the atom on the rendering of an
+# unreduced `RatFunc`.  `RatFunc::canonical_key_form` picks a representative:
+# divide the `num`/`den` pair by the denominator's signed content, after a GCD
+# reduction where there is a polynomial factor to cancel.  These five mutants
+# take out one part of that each, plus the guard that turns what the key still
+# cannot reach into a decline.
+#
+# A guard here is falsifiable only against a SATISFIABLE query -- an equal pair
+# for the parts that make two spellings meet, an unequal pair for the part that
+# keeps two functions apart -- which is why the suite's tests come in both
+# directions.
+#
+# MEASURED 2026-09-06, baseline green at 14 tests:
+#
+#   content cancellation gone   killed 4
+#   sign normalization gone     killed 1  a_sign_moved_into_the_denominator
+#   key ignores the denominator killed 1  the_denominator_is_part_of_the_key
+#   GCD reduction gone          killed 1  a_common_polynomial_factor_is_cancelled
+#   uncanonical guard gone      killed 1  a_content_beyond_i128_declines_...
+#
+# Four of five isolate exactly one test. The content mutant kills four because
+# the reported input IS a moved constant scale, and the module states it three
+# ways on purpose -- through `equal`, through every head, and at the key itself
+# -- plus its own fixture. That is one distinction with four views, not four
+# guards, and the number is left here rather than tuned down to one.
+# --------------------------------------------------------------------------
+
+SUITES["cas-atom-key"] = (
+    "crates/axeyum-cas/src/lib.rs",
+    Cargo(
+        (
+            "-j",
+            "4",
+            "-p",
+            "axeyum-cas",
+            "--lib",
+            "atom_argument_canonical_key::",
+        ),
+        "cas-atom-key",
+    ),
+    [
+        (
+            "the content cancellation is gone: the key keeps whatever integer "
+            "scale the source spelling happened to write",
+            "        let magnitude = Rational::checked_new(numerator_gcd, denominator_lcm)?;",
+            "        let magnitude = Rational::integer(1);",
+        ),
+        (
+            "the sign normalization is gone: a minus sign in the denominator "
+            "keys differently from the same sign in the numerator",
+            "        if self.leading_term()?.1.checked_numerator()? < 0 {\n"
+            "            magnitude.checked_neg()\n"
+            "        } else {\n"
+            "            Some(magnitude)\n"
+            "        }",
+            "        Some(magnitude)",
+        ),
+        (
+            "the key ignores the denominator entirely, so two functions that "
+            "differ only there collide",
+            "        let num = rf.num.to_expr();\n"
+            "        if rf.den == MultiPoly::constant(Rational::integer(1)) {\n"
+            "            num\n"
+            "        } else {\n"
+            "            CasExpr::Div(Box::new(num), Box::new(rf.den.to_expr()))\n"
+            "        }",
+            "        rf.num.to_expr()",
+        ),
+        (
+            "the GCD reduction is gone: a common polynomial factor survives in "
+            "the key",
+            "        let base = if multipoly_as_constant(&self.den).is_some() {\n"
+            "            self.clone()\n"
+            "        } else {\n"
+            "            self.reduced().unwrap_or_else(|| self.clone())\n"
+            "        };",
+            "        let base = self.clone();",
+        ),
+        (
+            "the uncanonical-atom guard is gone: an argument the key could not "
+            "canonicalize is refuted instead of declined",
+            "        Some(witness) if witness.mentions_uncanonical_atom() => ZeroTest::Unknown,",
+            "",
+        ),
+    ],
+)
+
+
 if __name__ == "__main__":
     raise SystemExit(main(sys.argv))
 
