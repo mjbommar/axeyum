@@ -1743,6 +1743,21 @@ impl MultiPoly {
         Some(MultiPoly { terms })
     }
 
+    /// Does any variable in this polynomial name an atom whose argument
+    /// [`atom_name`] could not canonicalize ([`ATOM_UNCANONICAL`])?
+    ///
+    /// A nonzero difference over such an atom is not a refutation: the same
+    /// value may sit under two keys, exactly as it did before
+    /// [`RatFunc::canonical_key_form`] existed. [`equal_core_bounded`] declines
+    /// instead. The equality branch needs no such guard — a zero difference is
+    /// zero whatever the atoms denote.
+    #[must_use]
+    fn mentions_uncanonical_atom(&self) -> bool {
+        self.terms
+            .keys()
+            .any(|mono| mono.powers.keys().any(|v| v.contains(ATOM_UNCANONICAL)))
+    }
+
     /// The term this polynomial **leads** with: the one [`MultiPoly::to_expr`]
     /// renders first — greatest total degree, with the monomial order breaking
     /// ties. `None` for the zero polynomial.
@@ -1983,19 +1998,22 @@ impl RatFunc {
     /// denominator collapses to `1`, so `ln(x/2)` and `ln((1/2)·x)` also key
     /// alike, which the raw form got wrong too.
     ///
-    /// # The residual class, stated plainly
+    /// # The residual class, and why it is a decline
     ///
-    /// Uniqueness is only **up to a common polynomial factor**, and that factor is
-    /// cancelled only when [`RatFunc::reduced`] finds it. The multivariate GCD
-    /// ([`mvpoly::MvPoly::gcd`]) *declines* rather than failing, and `reduced`
-    /// then keeps the unreduced fraction. On such an input two keys for one
-    /// function survive, and the zero test can still refute a true equality —
-    /// the same defect class this method fixes, narrowed rather than closed. It
-    /// is not a decline: nothing downstream knows the key was approximate. See
-    /// `a_declined_gcd_is_the_residual_class`.
+    /// Two limits survive. Uniqueness is only **up to a common polynomial
+    /// factor**, and that factor is cancelled only where [`RatFunc::reduced`]
+    /// finds it — the multivariate GCD ([`mvpoly::MvPoly::gcd`]) declines rather
+    /// than failing, and `reduced` then keeps the unreduced fraction. And the
+    /// canonical pair may simply not fit `i128`: for `x / ((1/i128::MAX)·s +
+    /// (1/3)·u)` the denominator's content is `1/(3·i128::MAX)` and dividing by
+    /// it leaves the ring, so this returns `None`.
     ///
-    /// `None` on `i128` overflow, and then [`atom_name`] keeps the raw form: a
-    /// missed equality, not a new wrong one.
+    /// On either, two keys for one value survive — which is the defect this
+    /// method exists to fix, narrowed rather than closed. So the `None` is not
+    /// swallowed: [`atom_name`] marks the key with [`ATOM_UNCANONICAL`] and
+    /// [`equal_core_bounded`] declines a refutation that mentions such an atom.
+    /// The residual is `ZeroTest::Unknown`, never a wrong verdict. See
+    /// `a_content_beyond_i128_declines_instead_of_refuting`.
     #[must_use]
     fn canonical_key_form(&self) -> Option<RatFunc> {
         if self.num.is_zero() {
@@ -2214,25 +2232,38 @@ fn atom_name(head: &str, arg: &CasExpr) -> String {
     // transcendental atom, e.g. `ln(x)+1`), fall back to `normalize_rational`, which
     // atomizes that sub-head — otherwise `ln(ln(x)+1)` and `ln(1+ln(x))` would take
     // different (source-order) keys and the zero-test would miss the equality.
-    let canonical = normalize(arg)
-        .map(|poly| poly.to_expr())
-        .or_else(|| {
-            normalize_rational(arg).map(|rf| {
-                // A `RatFunc` is not reduced or scale-normalized by its own
-                // arithmetic, so the raw pair is one representation among many and
-                // rendering it keyed two spellings of one argument as two
-                // independent atoms. `canonical_key_form` picks the representative.
-                let rf = rf.canonical_key_form().unwrap_or(rf);
-                let num = rf.num.to_expr();
-                if rf.den == MultiPoly::constant(Rational::integer(1)) {
-                    num
-                } else {
-                    CasExpr::Div(Box::new(num), Box::new(rf.den.to_expr()))
-                }
-            })
-        })
-        .unwrap_or_else(|| arg.clone());
-    format!("\0{head}:{}", canonical.render(0))
+    // Set to [`ATOM_UNCANONICAL`] on the routes that cannot produce a key unique
+    // to the argument's *value*, so a refutation over the atom is declined
+    // instead of asserted. See `equal_core_bounded`.
+    let mut mark = "";
+    let canonical = if let Some(poly) = normalize(arg) {
+        poly.to_expr()
+    } else if let Some(raw) = normalize_rational(arg) {
+        // A `RatFunc` is not reduced or scale-normalized by its own arithmetic, so
+        // the raw pair is one representation among many and rendering it keyed two
+        // spellings of one argument as two independent atoms.
+        // `canonical_key_form` picks the representative.
+        let rf = match raw.canonical_key_form() {
+            Some(canonical) => canonical,
+            None => {
+                mark = ATOM_UNCANONICAL;
+                raw
+            }
+        };
+        let num = rf.num.to_expr();
+        if rf.den == MultiPoly::constant(Rational::integer(1)) {
+            num
+        } else {
+            CasExpr::Div(Box::new(num), Box::new(rf.den.to_expr()))
+        }
+    } else {
+        // Outside the fragment altogether (overflow, or a division by the zero
+        // function): the source spelling is the key and two spellings of one
+        // argument will not meet.
+        mark = ATOM_UNCANONICAL;
+        arg.clone()
+    };
+    format!("\0{head}:{mark}{}", canonical.render(0))
 }
 
 /// Collect a decoding dictionary `atom_name → Unary(head, arg)` from every
@@ -2924,8 +2955,11 @@ fn equal_core(a: &CasExpr, b: &CasExpr) -> ZeroTest {
 /// any fold and must be declined instead:
 /// [`MultiPoly::relates_multiplicative_atoms`] — a monomial multiplying two
 /// radical or absolute-value atoms, where `√a·√b = √(ab)` makes a nonzero
-/// polynomial in three independent variables prove nothing. The equality branch
-/// needs no such guard: a zero difference is zero whatever the atoms denote.
+/// polynomial in three independent variables prove nothing. A second is
+/// [`MultiPoly::mentions_uncanonical_atom`] — an atom whose argument
+/// [`atom_name`] could not bring to a canonical form, so one value may sit under
+/// two keys. The equality branch needs no such guard: a zero difference is zero
+/// whatever the atoms denote.
 fn equal_core_bounded(a: &CasExpr, b: &CasExpr) -> ZeroTest {
     match bounded_difference(a, b) {
         Some(witness) if witness.is_zero() => ZeroTest::Certified {
@@ -2933,6 +2967,9 @@ fn equal_core_bounded(a: &CasExpr, b: &CasExpr) -> ZeroTest {
             witness,
         },
         Some(witness) if witness.relates_multiplicative_atoms() => ZeroTest::Unknown,
+        // An atom whose argument could not be canonicalized may sit under two
+        // keys for one value, so a nonzero difference over it proves nothing.
+        Some(witness) if witness.mentions_uncanonical_atom() => ZeroTest::Unknown,
         Some(witness) => ZeroTest::Certified {
             equal: false,
             witness,
@@ -3101,6 +3138,18 @@ impl BigRatFunc {
 /// The prefix [`atom_name`] gives every transcendental atom variable. A user
 /// variable name cannot contain it, so a name carrying it is always an atom.
 const ATOM_PREFIX: char = '\0';
+/// The mark [`atom_name`] puts in front of an argument it could **not** bring
+/// to a canonical form (an `i128` overflow in the content computation, or an
+/// argument outside the rational-function fragment altogether).
+///
+/// Such a key is still deterministic — the same spelling always produces it —
+/// but it is no longer *unique to the value*, so two spellings of one argument
+/// can take two keys and a nonzero difference over them proves nothing.
+/// [`MultiPoly::mentions_uncanonical_atom`] finds the mark and
+/// [`equal_core_bounded`] declines the refutation. Like `\0` it cannot occur in
+/// a user variable name, and it sits *after* the `\0head:` prefix so the
+/// per-head prefixes below still match.
+const ATOM_UNCANONICAL: &str = "\u{1}";
 /// The atom-key prefix for a `sqrt` head; see [`atom_name`].
 const ATOM_SQRT: &str = "\0sqrt:";
 /// The atom-key prefix for an `abs` head.
