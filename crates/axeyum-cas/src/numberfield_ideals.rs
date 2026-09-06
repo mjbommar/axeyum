@@ -3228,3 +3228,6 @@ mod tests {
         }
     }
 }
+
+#[path = "numberfield_real.rs"]
+pub mod numberfield_real;
