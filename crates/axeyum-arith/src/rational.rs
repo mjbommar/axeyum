@@ -60,34 +60,38 @@ pub struct NormalizationReceipt {
 impl NormalizationReceipt {
     /// Re-derive the reduction and check that the result is in normal form.
     ///
-    /// Six conditions, each independently failable, and none of them trusting
+    /// Five conditions, each independently failable, and none of them trusting
     /// a number the producer computed:
     ///
     /// 1. the pre-reduction denominator is nonzero (there was a rational to
-    ///    reduce at all);
+    ///    reduce at all). This is also what makes a **zero** `common_factor`
+    ///    impossible: with a nonzero `denominator_before`, condition 3's
+    ///    `±0 · denominator_after = denominator_before` cannot hold;
     /// 2. the post-reduction denominator is **strictly positive** — this is
     ///    the sign half of the policy, and a `-3/-4` that reduced to `3/-4`
     ///    fails here while satisfying every other condition;
-    /// 3. `common_factor` is nonzero;
-    /// 4. the two claimed multiplications hold up to the sign the reduction is
+    /// 3. the two claimed multiplications hold up to the sign the reduction is
     ///    allowed to move: `±common_factor · numerator_after = numerator_before`
     ///    and `±common_factor · denominator_after = denominator_before`, with
     ///    the **same** sign in both — a certificate that flipped the sign of
     ///    only one of the pair denotes a different rational and fails here;
-    /// 5. the reduced pair is coprime — `common_factor` was the *whole* gcd,
-    ///    not merely a common divisor. Condition 4 alone passes for any common
+    /// 4. the reduced pair is coprime — `common_factor` was the *whole* gcd,
+    ///    not merely a common divisor. Condition 3 alone passes for any common
     ///    divisor, so this is the guard that pins the value;
-    /// 6. the two recorded bit counts are the bit counts of the two recorded
+    /// 5. the two recorded bit counts are the bit counts of the two recorded
     ///    numerators, so a benchmark reading them is reading a measurement.
+    ///
+    /// There was a sixth guard — an explicit `common_factor != 0` — and it is
+    /// gone because the mutation control could not kill it: guard 1 and the
+    /// product guard already reject every certificate it would have. A guard
+    /// no test can distinguish is decoration, and decoration in a checker is
+    /// worse than nothing because it inflates the apparent guard count.
     #[must_use]
     pub fn verify(&self) -> bool {
         if self.denominator_before.sign() == Sign::NoSign {
             return false;
         }
         if self.denominator_after.sign() != Sign::Plus {
-            return false;
-        }
-        if self.common_factor.bits() == 0 {
             return false;
         }
         let factor = BigInt::from(self.common_factor.clone());
@@ -559,12 +563,24 @@ mod tests {
         };
         assert!(!forged.verify(), "a tampered bit count must be caught");
 
-        // 6. A zero common factor.
+        // 6. A receipt for a value that was never a rational: `0/0` reduced
+        //    by a zero factor to `1/1`. EVERY other guard passes — both
+        //    products are `0 · x = 0`, the reduced pair is coprime, the
+        //    denominator is positive, and both bit counts are right — so this
+        //    is the forgery only the nonzero-denominator guard rejects.
         let forged = NormalizationReceipt {
             common_factor: BigUint::from(0u8),
-            ..honest.clone()
+            numerator_bits_before: 0,
+            numerator_bits_after: 1,
+            numerator_before: big(0),
+            denominator_before: big(0),
+            numerator_after: big(1),
+            denominator_after: big(1),
         };
-        assert!(!forged.verify(), "a zero common factor must be caught");
+        assert!(
+            !forged.verify(),
+            "a receipt whose pre-reduction denominator is zero must be caught"
+        );
     }
 
     #[test]

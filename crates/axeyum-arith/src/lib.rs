@@ -21,7 +21,7 @@
 //!
 //! - [`Dyadic`] — exact `mantissa · 2^exponent`, five rounding directions,
 //!   relative rounding ([`Dyadic::round`]) and absolute-grid rounding
-//!   ([`Dyadic::round_to_grid`], migration slice 1), with `round_outward` as
+//!   ([`Dyadic::round_at_exponent`], migration slice 1), with `round_outward` as
 //!   the only interval-facing entry.
 //! - [`Radix`]/[`RadixCertificate`] and [`MixedRadix`]/[`MixedRadixCertificate`]
 //!   — certified positional notation in any base `b ≥ 2`.

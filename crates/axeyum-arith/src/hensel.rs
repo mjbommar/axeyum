@@ -451,10 +451,18 @@ mod tests {
         let honest = lift_root(&poly, &nat(7), &nat(3), 4).expect("lift");
         assert!(honest.verify());
 
-        // 1. A prime below two.
+        // 1. A "prime" of one. Modulo one EVERYTHING is zero, so every other
+        //    guard passes vacuously: the single rung is below the modulus, it
+        //    evaluates to zero, the derivative is trivially invertible, and
+        //    the root matches. Only the prime guard rejects it, and without it
+        //    this certificate would certify a root of a polynomial that has
+        //    none.
         let forged = HenselCertificate {
+            polynomial: poly.clone(),
             prime: nat(1),
-            ..honest.clone()
+            precision: 1,
+            root: nat(0),
+            chain: vec![nat(0)],
         };
         assert!(!forged.verify(), "a prime below two must be caught");
 
@@ -504,7 +512,31 @@ mod tests {
         };
         assert!(!forged.verify(), "a tampered root must be caught");
 
-        // 6. A multiple-root seed: the certificate is otherwise consistent but
+        // 6. The last rung moved by `p^2`, which PRESERVES its congruence to
+        //    the previous rung modulo `p^2` and so satisfies the lift guard,
+        //    but is no longer a root modulo `p^4`. Only the rootness guard
+        //    rejects this one.
+        let shifted = (&honest.root + nat(7).pow(2)) % nat(7).pow(4);
+        let shifted_value = reduce(&poly.evaluate(&BigInt::from(shifted.clone())), &modulus);
+        assert_ne!(
+            shifted_value.bits(),
+            0,
+            "the decoy must NOT be a root, or this forgery tests nothing"
+        );
+        let mut chain = honest.chain.clone();
+        let last = chain.len() - 1;
+        chain[last] = shifted.clone();
+        let forged = HenselCertificate {
+            chain,
+            root: shifted,
+            ..honest.clone()
+        };
+        assert!(
+            !forged.verify(),
+            "a congruent non-root must be caught by the rootness guard"
+        );
+
+        // 7. A multiple-root seed: the certificate is otherwise consistent but
         //    the simple-root hypothesis fails, so the uniqueness the lift
         //    claims does not hold.
         let square = ZPoly::from_i64(&[0, 0, 1]);
