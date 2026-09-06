@@ -7843,6 +7843,68 @@ SUITES["arith-enclosure-rounding-iterate"] = (
     ],
 )
 
+# `arith-ky-differential` -- the K[y] layer's differential corpus against
+# `axeyum_arith::QPoly` (ADR-1710 slice 4, `crates/axeyum-cas/src/qe_fibre.rs`).
+#
+# Slice 4 declined to migrate this layer -- `K = Q[x]/(m)` with `m` deliberately
+# reducible is a ring with zero divisors, not a field -- and found that it had
+# NO differential oracle of any kind.  The corpus it added compares K[y] against
+# `QPoly` under a DEGREE-1 modulus, the one case where `K` really is Q.
+#
+# This family exists because that corpus is a new checker, and a checker nobody
+# can make fail is decoration.  Each mutation below is a defect the corpus is
+# claimed to catch, in a routine the end-to-end fibre tests exercise only
+# transitively -- and those tests cannot catch any of them, because their oracle
+# (`FibreCertificate::verify`) is the same K[y] code.
+#
+# A FOURTH mutation was tried and withdrawn, and it is worth recording rather
+# than quietly dropping.  Halving `kdivrem`'s quotient shift
+# (`r_degree - b_degree`) does not produce a wrong quotient -- it produces a
+# HANG.  That loop's termination argument is that the leading term cancels
+# EXACTLY at `deg r` on every pass; with the wrong shift the subtraction lands
+# elsewhere, `remainder[r_degree]` never changes, and the degree never drops.
+# A mutation that runs forever is neither `killed` nor `SURVIVED`, so it is not
+# a result and does not belong in a coverage claim.  (It is separately a fact
+# about `kdivrem` worth knowing: its termination rests on exact cancellation,
+# not on a step counter.)
+# --------------------------------------------------------------------------
+
+SUITES["arith-ky-differential"] = (
+    "crates/axeyum-cas/src/qe_fibre.rs",
+    Cargo(
+        ("-p", "axeyum-cas", "--lib", "qe::fibre::tests::the_ky_"),
+        "arith-ky-differential",
+    ),
+    [
+        (
+            # The formal derivative's factor is the exponent.  Off by one and
+            # every coefficient is wrong while the DEGREE is unchanged, so
+            # nothing structural notices.
+            "the K[y] derivative scales by the exponent",
+            "            .map(|(k, c)| scale_element(c, &BigRational::from_integer(BigInt::from(k))))",
+            "            .map(|(k, c)| scale_element(c, &BigRational::from_integer(BigInt::from(k + 1))))",
+        ),
+        (
+            # `kgcd` is specified monic, and `ksquarefree` and `KSturm` both
+            # rely on it.  A non-monic gcd still divides both inputs, so a
+            # divisibility check would not see this.
+            "the K[y] gcd is normalized monic",
+            "        self.kmonic(&left)" "\n" "    }",
+            "        Ok(left)" "\n" "    }",
+        ),
+        (
+            # Horner needs the point.  Dropping the scale makes `keval` return
+            # the SUM of the coefficients whatever `q` is -- and `KSturm`'s
+            # sign counting is `keval` at each endpoint, so the chain then
+            # counts the same thing at both ends.
+            "the K[y] evaluation multiplies by the point at each Horner step",
+            "            acc = add_elements(&scale_element(&acc, q), coeff);",
+            "            acc = add_elements(&acc, coeff);",
+        ),
+    ],
+)
+
+
 if __name__ == "__main__":
     raise SystemExit(main(sys.argv))
 

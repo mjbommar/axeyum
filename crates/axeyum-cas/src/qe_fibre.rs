@@ -1749,4 +1749,223 @@ mod tests {
             })
         );
     }
+    // -----------------------------------------------------------------------
+    // ADR-1710 slice 4: the K[y] layer's first differential corpus.
+    //
+    // Slice 4 declined to migrate this layer (see `FieldPoly`'s note) and found
+    // that it had NO differential oracle of any kind: the end-to-end tests
+    // above check `decide_fibre` against `FibreCertificate::verify`, which is
+    // the same K[y] code, so a systematic K[y] bug is invisible to them. The
+    // corpus below is the oracle that was missing, and it is the one a future
+    // migration would have to pass.
+    //
+    // The construction is the degenerate case of K that happens to be a field
+    // the shared crate already carries. With `m = x - 2` the bracket `(1, 2]`
+    // isolates `α = 2`, so `K = ℚ[x]/(x - 2) ≅ ℚ`, and a K[y] polynomial whose
+    // coefficients are CONSTANT elements is exactly a ℚ[y] polynomial. Every
+    // K[y] routine must then agree with `axeyum_arith::QPoly` term for term.
+    // Nothing about the corpus depends on `α` being 2 rather than 0; what it
+    // depends on is `deg m = 1`, which is the only case where the two rings
+    // coincide.
+    // -----------------------------------------------------------------------
+
+    // `QPoly::{degree, evaluate, derivative}` live on the trait, not on the
+    // inherent impl.
+    use axeyum_arith::UnivariatePoly;
+
+    /// `K = ℚ[x]/(x - 2)` with `α = 2` isolated in `(1, 2]`, i.e. `K ≅ ℚ`.
+    fn rational_field() -> RealField {
+        RealField::new(&[q(-2), q(1)], &q(1), &q(2)).expect("x - 2 isolates 2 in (1, 2]")
+    }
+
+    /// A ℚ\[y\] coefficient vector as a K\[y\] polynomial of constant elements.
+    fn lift_ky(coeffs: &[BigRational]) -> FieldPoly {
+        coeffs.iter().map(|c| big::trim(vec![c.clone()])).collect()
+    }
+
+    /// The inverse of [`lift_ky`], with the constant-coefficient precondition
+    /// asserted rather than assumed: a coefficient of degree `> 0` in `α` would
+    /// mean the routine under test left `K ≅ ℚ`, which is itself a finding.
+    fn lower_ky(p: &FieldPoly) -> QPoly {
+        QPoly::from_coefficients(
+            p.iter()
+                .map(|element| {
+                    assert!(
+                        element.len() <= 1,
+                        "a K-coefficient escaped ℚ under a degree-1 modulus: {element:?}"
+                    );
+                    element.first().cloned().unwrap_or_else(BigRational::zero)
+                })
+                .collect(),
+        )
+    }
+
+    /// The ℚ\[y\] corpus. Deliberately includes the zero polynomial, a nonzero
+    /// constant, a repeated root, a polynomial with no real root, one with
+    /// three distinct real roots, and non-integer coefficients.
+    fn ky_differential_corpus() -> Vec<Vec<BigRational>> {
+        vec![
+            vec![],
+            vec![q(3)],
+            vec![q(0), q(1)],                // y
+            vec![q(-2), q(1)],               // y - 2
+            vec![q(-2), q(0), q(1)],         // y^2 - 2
+            vec![q(1), q(-2), q(1)],         // (y - 1)^2
+            vec![q(1), q(0), q(1)],          // y^2 + 1, no real root
+            vec![q(-6), q(11), q(-6), q(1)], // (y-1)(y-2)(y-3)
+            vec![q(-2), q(0), q(0), q(1)],   // y^3 - 2
+            vec![
+                BigRational::new(BigInt::from(1), BigInt::from(2)),
+                q(0),
+                BigRational::new(BigInt::from(-3), BigInt::from(5)),
+            ],
+        ]
+    }
+
+    /// Under a degree-1 modulus the K\[y\] layer and `axeyum_arith::QPoly` are
+    /// two implementations of ℚ\[y\], and this compares them over every ordered
+    /// pair: division with remainder, gcd, product, derivative, and evaluation.
+    ///
+    /// The `None`/decline conditions are compared too, not just the values:
+    /// `kdivrem` must fault exactly where `QPoly::div_rem` returns `None`, and
+    /// the test asserts a nonzero count of each outcome so it cannot pass by
+    /// declining everywhere.
+    #[test]
+    fn the_ky_layer_agrees_with_qpoly_under_a_degree_one_modulus() {
+        let field = rational_field();
+        let corpus = ky_differential_corpus();
+        assert_eq!(corpus.len(), 10, "the corpus size this test's name claims");
+
+        let mut pairs = 0usize;
+        let mut divided = 0usize;
+        let mut declined = 0usize;
+        let mut nontrivial_gcds = 0usize;
+        for a in &corpus {
+            for b in &corpus {
+                pairs += 1;
+                let (ka, kb) = (lift_ky(a), lift_ky(b));
+                let (qa, qb) = (QPoly::from_slice(a), QPoly::from_slice(b));
+
+                match (field.kdivrem(&ka, &kb), qa.div_rem(&qb)) {
+                    (Ok((quotient, remainder)), Some((expected_q, expected_r))) => {
+                        divided += 1;
+                        assert_eq!(lower_ky(&quotient), expected_q, "quotient of {a:?} / {b:?}");
+                        assert_eq!(
+                            lower_ky(&remainder),
+                            expected_r,
+                            "remainder of {a:?} / {b:?}"
+                        );
+                    }
+                    (Err(Inner::Fault(_)), None) => declined += 1,
+                    (left, right) => panic!(
+                        "kdivrem and QPoly::div_rem disagree on whether {a:?} / {b:?} is defined: \
+                         {} vs {}",
+                        if left.is_ok() { "answered" } else { "declined" },
+                        if right.is_some() {
+                            "answered"
+                        } else {
+                            "declined"
+                        },
+                    ),
+                }
+
+                let gcd = field.kgcd(&ka, &kb).expect("gcd over a field never splits");
+                let expected = qa.gcd(&qb);
+                assert_eq!(lower_ky(&gcd), expected, "gcd of {a:?} and {b:?}");
+                if expected.degree().is_some_and(|degree| degree > 0) {
+                    nontrivial_gcds += 1;
+                }
+
+                assert_eq!(lower_ky(&field.kmul(&ka, &kb)), qa.mul(&qb), "product");
+            }
+
+            let ka = lift_ky(a);
+            let qa = QPoly::from_slice(a);
+            assert_eq!(
+                lower_ky(&field.kderivative(&ka)),
+                qa.derivative(),
+                "derivative of {a:?}"
+            );
+            for at in [
+                q(0),
+                q(1),
+                q(-3),
+                BigRational::new(BigInt::from(2), BigInt::from(7)),
+            ] {
+                let evaluated: FieldPoly = vec![field.keval(&ka, &at)];
+                assert_eq!(
+                    lower_ky(&evaluated),
+                    QPoly::constant(qa.evaluate(&at)),
+                    "evaluation of {a:?} at {at}"
+                );
+            }
+        }
+
+        assert_eq!(pairs, 100, "every ordered pair was compared");
+        assert!(
+            divided > 0 && declined > 0,
+            "both outcomes occur: {divided} answered, {declined} declined"
+        );
+        assert!(
+            nontrivial_gcds > 0,
+            "the corpus exercises a non-unit gcd: {nontrivial_gcds}"
+        );
+    }
+
+    /// The sixth Sturm chain in ADR-1710's inventory, counted against the
+    /// shared one. `KSturm` counts distinct real roots in `(lo, hi]` with each
+    /// sign taken at `α`; under a degree-1 modulus that is
+    /// `axeyum_arith::count_real_roots_in` on the same polynomial.
+    ///
+    /// The zero polynomial is the one place the two contracts differ, and it is
+    /// asserted rather than skipped: `count_real_roots_in` declines and
+    /// `KSturm` answers 0.
+    #[test]
+    fn the_ky_sturm_chain_counts_what_the_shared_chain_counts() {
+        let field = rational_field();
+        let brackets = [
+            (q(-10), q(10)),
+            (q(0), q(10)),
+            (q(-10), q(0)),
+            (q(1), q(3)),
+            (q(2), q(2)),
+        ];
+        let mut checked = 0usize;
+        let mut nonzero_counts = 0usize;
+        for coeffs in ky_differential_corpus() {
+            let polynomial = QPoly::from_slice(&coeffs);
+            let chain = KSturm::new(&field, &lift_ky(&coeffs)).expect("the chain never splits");
+            for (lower, upper) in &brackets {
+                let ours = chain.count_in(&field, lower, upper).expect("K count");
+                match axeyum_arith::count_real_roots_in(&polynomial, lower, upper) {
+                    Some(shared) => {
+                        assert_eq!(
+                            ours, shared,
+                            "root count of {coeffs:?} in ({lower}, {upper}]"
+                        );
+                        if shared > 0 {
+                            nonzero_counts += 1;
+                        }
+                    }
+                    None => {
+                        assert!(
+                            polynomial.is_zero(),
+                            "the shared chain declined on a nonzero polynomial {coeffs:?}"
+                        );
+                        assert_eq!(ours, 0, "the K chain answers 0 for the zero polynomial");
+                    }
+                }
+                checked += 1;
+            }
+        }
+        assert_eq!(
+            checked,
+            10 * 5,
+            "every (polynomial, bracket) pair was counted"
+        );
+        assert!(
+            nonzero_counts > 0,
+            "the corpus really does find roots: {nonzero_counts}"
+        );
+    }
 }
