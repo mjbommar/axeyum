@@ -2639,7 +2639,7 @@ pub(super) fn int_sub(p: &IntPrelude) -> Vec<(&'static str, Sub)> {
     ]
 }
 
-/// The `RatPrelude` field table (607 names,
+/// The `RatPrelude` field table (610 names,
 /// 0 name lists, 1 sub-packages).
 ///
 /// 100 of the names come from ADR-1512 per-module registries and
@@ -2728,6 +2728,9 @@ pub(super) fn rat(p: &RatPrelude) -> Fields {
             ("left_distrib", p.left_distrib),
             ("mul_nonneg", p.mul_nonneg),
             ("sq_nonneg", p.sq_nonneg),
+            ("two_mul_le_sq_add_sq", p.two_mul_le_sq_add_sq),
+            ("mul_add_le_sq_add_sq_three", p.mul_add_le_sq_add_sq_three),
+            ("four_mul_le_sq_add", p.four_mul_le_sq_add),
             ("le_total", p.le_total),
             ("lt_of_not_le", p.lt_of_not_le),
             ("le_antisymm", p.le_antisymm),

@@ -1,0 +1,79 @@
+{
+  "schema_version": 1,
+  "id": "F:rat-two-mul-le-sq-add-sq",
+  "title": "Two-variable AM-GM over the constructed rationals, proved by a producer-found sum-of-squares certificate",
+  "statement": "For rationals x, y: x*y + x*y <= x*x + y*y. Equivalently 2xy <= x^2 + y^2, the two-variable AM-GM inequality, whose difference is the perfect square (x - y)^2.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Rat.two_mul_le_sq_add_sq : ((x0 : Rat) -> ((x1 : Rat) -> Rat.le (Rat.add (Rat.mul x0 x1) (Rat.mul x0 x1)) (Rat.add (Rat.mul x0 x0) (Rat.mul x1 x1))))",
+    "fragment": "Rat",
+    "kernel_theorem": "Rat.two_mul_le_sq_add_sq"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:rat-add-assoc",
+    "F:rat-add-comm",
+    "F:rat-add-le-add",
+    "F:rat-add-neg",
+    "F:rat-add-zero",
+    "F:rat-le-refl",
+    "F:rat-left-distrib",
+    "F:rat-mul-comm",
+    "F:rat-mul-neg",
+    "F:rat-neg-add",
+    "F:rat-neg-mul",
+    "F:rat-neg-neg",
+    "F:rat-right-distrib",
+    "F:rat-sq-nonneg"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Rat.two_mul_le_sq_add_sq",
+      "kind": "kernel-term",
+      "supports": "Rat.two_mul_le_sq_add_sq is admitted by the trusted kernel gate with the type recorded in formal.statement, from a proof term the psatz PRODUCER searched for.",
+      "check_status": "checked",
+      "checkers": [
+        "producing-build (Kernel::add_declaration)",
+        "crate::psatz::rat::prove (the producer that emitted the term)",
+        "rat_theorem_inventory re-list"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example rat_theorem_inventory -- two_mul_le_sq_add_sq 2>/dev/null | grep -cE '^theorem[[:space:]]Rat\\.two_mul_le_sq_add_sq[[:space:]]'",
+      "checker_seconds": 20,
+      "notes": "The proof term was NOT written by a person. `crate::psatz::rat::prove` parsed the goal into a polynomial, factored the difference's Gram matrix over the affine basis with an exact rational LDL^T, cleared denominators to one integer scale, emitted the `sq_nonneg`/`add_nonneg` fold, proved the certificate's identity with `ring::rat::prove_eq`, and handed the assembled term to `Kernel::add_declaration`. `rat_prelude/psatz_inequalities.rs` has NO hand-written fallback: if the producer declines, `build_rat_prelude` fails, so the presence of this theorem in the environment is itself the evidence that the search ran and succeeded. `Kernel::add_declaration` re-checks the emitted term against the stated type, so a line in this tool's output for the exact name is a machine-checked proof having been admitted. `--release` is used for speed, not necessity: this binary builds logic/nat/int/rat and no constructed prelude. `grep -c` (never `-q`) both avoids a SIGPIPE-under-pipefail false negative and independently asserts the whitespace-anchored `theorem` row is present, so a theorem demoted to an axiom would fail this check rather than pass it. A named filter matching nothing exits 1 in the tool itself, verified 2026-09-05 (`no_such_rat_theorem_xyz` -> exit 1), so a deleted theorem cannot read as a re-derived one. The separators are `[[:space:]]`, not `\\t`: POSIX ERE does not interpret `\\t` as a tab, so a tab-anchored pattern matches NOTHING under the GNU grep a script gets, while an interactive shell's ugrep wrapper masks it."
+    },
+    {
+      "id": "footprint-Rat.two_mul_le_sq_add_sq",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- read from the kernel, not from the diff",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "rat_prelude_tests::every_rat_declaration_is_checked_and_axiom_free"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example rat_theorem_inventory -- two_mul_le_sq_add_sq 2>/dev/null | cut -f3 | grep -cx ''",
+      "checker_seconds": 20,
+      "notes": "`rat_theorem_inventory`'s third column is `Kernel::axiom_footprint` joined by commas, so an EMPTY third column is an empty footprint; `grep -cx ''` (never `grep -q`, which lies under `pipefail`) counts the blank field and exits 1 when there is none, so a theorem that grew a footprint fails rather than reporting a smaller number. Independently, `rat_prelude_tests::every_rat_declaration_is_checked_and_axiom_free` derives its population from `Environment::iter`, not from a literal list, and asserts an empty footprint for every `Rat.`-prefixed theorem or definition; measured 2026-09-05 the whole prelude is 454 derived, 454 with an empty footprint, 0 asserted."
+    },
+    {
+      "id": "mutation-Rat.two_mul_le_sq_add_sq",
+      "kind": "instance-pin",
+      "supports": "The producer that emitted this proof has a mutation control suite in which every registered mutant is killed, so the guards behind the certificate are load-bearing.",
+      "check_status": "checked",
+      "checkers": [
+        "scripts/tests/mutation_controls.py psatz"
+      ],
+      "checker_command": "python3 scripts/tests/mutation_controls.py psatz",
+      "checker_seconds": 2400,
+      "notes": "Six mutants, RUN twice -- before and after these theorems joined the prelude -- all six killed both times, exit 0 both times, baseline 29 tests. The two the brief named: flipping a cleared form's coefficient sign killed 5 then 12, and changing the verified-witness refusal reason killed exactly 1 both times. The two counts that MOVED are the mutants that now also break `build_rat_prelude`, which is what the no-fallback design predicts. This row pins the PRODUCER's guards, not the statement: it says the search cannot silently degrade, and says nothing about the statement being true, which the kernel-term row above is what settles."
+    }
+  ],
+  "provenance": {
+    "date": "2026-09-05",
+    "established_by": "crate::psatz::rat::prove, admitted by axeyum-lean-kernel build_rat_prelude",
+    "source": "Statement written in `rat_prelude/psatz_inequalities.rs`; PROOF TERM searched for by the psatz producer (ADR-1649) and never written by hand. Canonical type copied verbatim from `target/release/examples/rat_theorem_inventory two_mul_le_sq_add_sq`, one name per invocation, release build. depends_on is the direct-edge set from `target/release/examples/theorem_dependency_inventory Rat.two_mul_le_sq_add_sq`, one name per invocation, restricted to edges that are themselves registered ledger facts -- every edge was, so nothing was dropped."
+  },
+  "notes": "Certificate: a single square `(x - y)^2` at scale 1, so no division step is emitted -- visible in the measured dependency edges, which include neither `Rat.le_or_lt` nor `Rat.lt_irrefl` (the `divide_by_scale` lemma set) nor `Rat.add_nonneg` (the fold never joins two summands, because there is only one square). depends_on is the direct-edge set from `theorem_dependency_inventory Rat.two_mul_le_sq_add_sq`, every entry of which is itself a registered ledger fact, so nothing was dropped in the mapping.",
+  "external_status": "proved"
+}

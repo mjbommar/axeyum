@@ -134,6 +134,8 @@ fn then_ring_linarith_order_goal_needs_the_fallback() {
             prelude: p,
             assumptions: &assumptions,
             zero_le_one: None,
+            psatz_assumptions: &[],
+            psatz_dual: None,
         };
         let tactic = Tactic::Then(Box::new(Tactic::Ring), Box::new(Tactic::Linarith));
         let proof = rat::run(&mut d, &ctx, &tactic, goal)
@@ -175,6 +177,8 @@ fn then_decide_linarith_symbolic_hypothesis_needed() {
             prelude: p,
             assumptions: &[],
             zero_le_one: None,
+            psatz_assumptions: &[],
+            psatz_dual: None,
         };
         assert!(
             matches!(
@@ -189,6 +193,8 @@ fn then_decide_linarith_symbolic_hypothesis_needed() {
             prelude: p,
             assumptions: &assumptions,
             zero_le_one: None,
+            psatz_assumptions: &[],
+            psatz_dual: None,
         };
         let tactic = Tactic::Then(Box::new(Tactic::Decide), Box::new(Tactic::Linarith));
         let proof = rat::run(&mut d, &ctx, &tactic, goal)
@@ -221,6 +227,8 @@ fn then_decide_ring_symbolic_identity_needs_the_fallback() {
             prelude: p,
             assumptions: &[],
             zero_le_one: None,
+            psatz_assumptions: &[],
+            psatz_dual: None,
         };
         assert!(
             matches!(
@@ -234,6 +242,8 @@ fn then_decide_ring_symbolic_identity_needs_the_fallback() {
             prelude: p,
             assumptions: &[],
             zero_le_one: None,
+            psatz_assumptions: &[],
+            psatz_dual: None,
         };
         let tactic = Tactic::Then(Box::new(Tactic::Decide), Box::new(Tactic::Ring));
         let proof = rat::run(&mut d, &ctx, &tactic, goal)
@@ -268,6 +278,8 @@ fn first_aggregates_declines_when_none_apply() {
             prelude: p,
             assumptions: &[],
             zero_le_one: None,
+            psatz_assumptions: &[],
+            psatz_dual: None,
         };
         let list = Tactic::First(vec![Tactic::Decide, Tactic::Ring, Tactic::Linarith]);
         let result = rat::run(&mut d, &ctx, &list, goal);
@@ -310,6 +322,123 @@ fn a_mismatched_ring_output_is_rejected_by_the_kernel() {
         assert!(
             result.is_err(),
             "a proof of `1*x = x` must be rejected against the stated goal `1*x = y`"
+        );
+    });
+}
+
+// ---------------------------------------------------------------------------
+// 4. the nonlinear arm is registered and reachable through the combinator
+// ---------------------------------------------------------------------------
+
+/// `First([Decide, Ring, Linarith, Psatz])` on the nonlinear goal
+/// `2xy ≤ x² + y²`, where the first THREE are disqualified by the goal's own
+/// shape and only `psatz` closes it.
+///
+/// Each decline is asserted individually first, so a passing test cannot mean
+/// "some earlier producer happened to close it": `decide` cannot run on a goal
+/// with free variables, `ring` declines any non-`Eq` goal outright, and
+/// `linarith::generic` parses `Alg.OrderedRing` selector applications — a
+/// `Rat.le` goal is not one, and even at the selector spelling a `Rat.mul` term
+/// is outside its linear fragment.
+#[test]
+fn first_reaches_psatz_on_a_nonlinear_goal_no_other_producer_can_close() {
+    on_a_deep_stack(|| {
+        let mut f = Fixture::new();
+        let p = f.p;
+        let mut d = f.dev();
+        let rat_ty = crate::rat_prelude::ops::rat_ty(&mut d);
+        let x_fv = d.fresh_fvar();
+        let y_fv = d.fresh_fvar();
+        let x = d.kernel().fvar(x_fv);
+        let y = d.kernel().fvar(y_fv);
+
+        let xy = crate::rat_prelude::ops::rmul(&mut d, x, y);
+        let lhs = crate::rat_prelude::ops::radd(&mut d, xy, xy);
+        let xx = crate::rat_prelude::ops::rmul(&mut d, x, x);
+        let yy = crate::rat_prelude::ops::rmul(&mut d, y, y);
+        let rhs = crate::rat_prelude::ops::radd(&mut d, xx, yy);
+        let goal = crate::rat_prelude::ops::rle(&mut d, p, lhs, rhs);
+
+        assert!(
+            crate::decide::rat::run(&mut d, &p, goal).is_err(),
+            "decide cannot run on a goal with free variables"
+        );
+        assert!(
+            ring::rat::prove(&mut d, &p, goal).is_err(),
+            "ring declines any non-Eq goal outright"
+        );
+
+        let ctx = Ctx {
+            prelude: p,
+            assumptions: &[],
+            zero_le_one: None,
+            psatz_assumptions: &[],
+            psatz_dual: None,
+        };
+        assert!(
+            matches!(
+                rat::run(&mut d, &ctx, &Tactic::Linarith, goal),
+                Err(Decline::Linarith(_))
+            ),
+            "linarith::generic does not parse a `Rat.le` goal, let alone a \
+             `Rat.mul` term inside one"
+        );
+
+        let list = Tactic::First(vec![
+            Tactic::Decide,
+            Tactic::Ring,
+            Tactic::Linarith,
+            Tactic::Psatz,
+        ]);
+        let proof = rat::run(&mut d, &ctx, &list, goal)
+            .unwrap_or_else(|e| panic!("First(...) did not reach psatz: {e:?}"));
+        declare(
+            &mut d,
+            "tactic_first_psatz_two_var_am_gm",
+            &[(x_fv, rat_ty), (y_fv, rat_ty)],
+            goal,
+            proof,
+        );
+    });
+}
+
+/// The combinator forwards `psatz`'s FINDING declines unchanged, rather than
+/// flattening every refusal into "nothing worked". The Motzkin form is the
+/// case that matters: `First` must not turn `PsdNotSos` into an anonymous
+/// aggregate.
+#[test]
+fn the_combinator_forwards_a_psatz_finding_unchanged() {
+    on_a_deep_stack(|| {
+        let mut f = Fixture::new();
+        let p = f.p;
+        let mut d = f.dev();
+        let x_fv = d.fresh_fvar();
+        let y_fv = d.fresh_fvar();
+        let x = d.kernel().fvar(x_fv);
+        let y = d.kernel().fvar(y_fv);
+
+        // `x² − y²` is indefinite: the goal `0 ≤ x² − y²` is FALSE.
+        let zero = crate::rat_prelude::ops::rzero(&mut d, p);
+        let xx = crate::rat_prelude::ops::rmul(&mut d, x, x);
+        let yy = crate::rat_prelude::ops::rmul(&mut d, y, y);
+        let neg_yy = crate::rat_prelude::ops::rneg(&mut d, yy);
+        let difference = crate::rat_prelude::ops::radd(&mut d, xx, neg_yy);
+        let goal = crate::rat_prelude::ops::rle(&mut d, p, zero, difference);
+
+        let ctx = Ctx {
+            prelude: p,
+            assumptions: &[],
+            zero_le_one: None,
+            psatz_assumptions: &[],
+            psatz_dual: None,
+        };
+        let result = rat::run(&mut d, &ctx, &Tactic::Psatz, goal);
+        assert!(
+            matches!(
+                result,
+                Err(Decline::Psatz(crate::psatz::Decline::NotPsd { .. }))
+            ),
+            "the wrapper must carry the finding through, got {result:?}"
         );
     });
 }
