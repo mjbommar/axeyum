@@ -968,17 +968,82 @@ mod tests {
             forged.verify(&rp2).is_ok(),
             "genuine certificate must verify"
         );
-        // Zero out the one H^1 basis vector: still shape-compatible, no
-        // longer the recorded (nonzero) cocycle representative.
+        // Zero out the one H^1 basis vector: caught by `bases_match`
+        // (the freshly rebuilt basis no longer agrees entrywise) -- NOT by
+        // `is_cocycle` (the zero cochain is trivially a cocycle), which is
+        // exactly why `bases_are_cocycles_and_genuine_extensions_*` below
+        // are direct unit tests of that guard function instead: any
+        // certificate-level basis forgery hits `bases_match` first.
         let width = forged.basis_alpha.1[0].rows();
         forged.basis_alpha.1[0] = crate::Matrix::zeros(width, 1);
         let err = forged
             .verify(&rp2)
             .expect_err("a forged basis vector must be refused");
+        assert!(err.contains("basis vector"), "got: {err}");
+    }
+
+    /// Direct unit test of `bases_are_cocycles_and_genuine_extensions`,
+    /// isolated from `verify` (and so from `bases_match`, which -- as the
+    /// test above notes -- would pre-empt any certificate-level forgery
+    /// before this guard is ever reached). A claimed `H^p` basis vector that
+    /// is not actually a cocycle (`delta * v != 0`) must be refused by name.
+    #[test]
+    fn bases_are_cocycles_and_genuine_extensions_refuses_a_non_cocycle_vector() {
+        use super::bases_are_cocycles_and_genuine_extensions;
+        use crate::{CasExpr, Matrix};
+        // delta: C^1 (dim 2) -> C^2 (dim 1), matrix [[1, 1]]. ker(delta) is
+        // the 1-dimensional span of (1, -1).
+        let delta = Matrix::new(1, 2, vec![CasExpr::int(1), CasExpr::int(1)]).expect("1x2");
+        // A claimed homology-basis vector (1, 0): NOT a cocycle, since
+        // delta . (1, 0) = [1] != 0.
+        let not_a_cocycle = Matrix::new(2, 1, vec![CasExpr::int(1), CasExpr::int(0)]).expect("2x1");
+        let bad_basis: (Vec<Matrix>, Vec<Matrix>) = (Vec::new(), vec![not_a_cocycle]);
+        let err = bases_are_cocycles_and_genuine_extensions(
+            &delta, &delta, &delta, &bad_basis, &bad_basis, &bad_basis, None,
+        )
+        .expect_err("a non-cocycle basis vector must be refused");
+        assert!(err.contains("cocycle"), "got: {err}");
+
+        // POSITIVE CONTROL: the genuine generator (1, -1) IS admitted.
+        let genuine_cocycle =
+            Matrix::new(2, 1, vec![CasExpr::int(1), CasExpr::int(-1)]).expect("2x1");
+        let good_basis: (Vec<Matrix>, Vec<Matrix>) = (Vec::new(), vec![genuine_cocycle]);
         assert!(
-            err.contains("basis vector") || err.contains("cocycle"),
-            "got: {err}"
+            bases_are_cocycles_and_genuine_extensions(
+                &delta,
+                &delta,
+                &delta,
+                &good_basis,
+                &good_basis,
+                &good_basis,
+                None,
+            )
+            .is_ok()
         );
+    }
+
+    /// Direct unit test of `bases_are_cocycles_and_genuine_extensions`'s
+    /// genuine-extension check, isolated the same way: an EMPTY claimed
+    /// basis for a cocycle space that is genuinely 1-dimensional must be
+    /// refused (it satisfies `is_cocycle` vacuously -- there is nothing to
+    /// check -- so only the extension-rank guard can catch this).
+    #[test]
+    fn bases_are_cocycles_and_genuine_extensions_refuses_an_incomplete_basis() {
+        use super::bases_are_cocycles_and_genuine_extensions;
+        use crate::{CasExpr, Matrix};
+        let delta = Matrix::new(1, 2, vec![CasExpr::int(1), CasExpr::int(1)]).expect("1x2");
+        let empty_basis: (Vec<Matrix>, Vec<Matrix>) = (Vec::new(), Vec::new());
+        let err = bases_are_cocycles_and_genuine_extensions(
+            &delta,
+            &delta,
+            &delta,
+            &empty_basis,
+            &empty_basis,
+            &empty_basis,
+            None,
+        )
+        .expect_err("an empty basis must be refused when the cocycle space is nontrivial");
+        assert!(err.contains("genuine extension"), "got: {err}");
     }
 
     /// ADVERSARIAL, isolated to graded commutativity: forge the table so

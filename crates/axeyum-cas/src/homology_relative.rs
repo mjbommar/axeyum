@@ -942,6 +942,29 @@ mod tests {
         );
     }
 
+    /// Isolates `verify`'s OWN `is_subcomplex` re-check, distinct from
+    /// `relative_homology`'s producer-side refusal (`a_non_subcomplex_is_refused`,
+    /// above) and from `verify_refuses_a_certificate_checked_against_an_unrelated_pair`
+    /// (which passes a genuine subcomplex pair, just an unrelated one -- it
+    /// never reaches this branch at all). A genuine certificate checked
+    /// against the SAME `K` but a non-subcomplex `L` must be refused by name,
+    /// before any other guard runs.
+    #[test]
+    fn verify_refuses_when_checked_against_a_non_subcomplex_l() {
+        let disc = complex_of(&[&[0, 1, 2]]);
+        let boundary_circle = complex_of(&[&[0, 1], &[1, 2], &[0, 2]]);
+        let genuine =
+            relative_homology(&disc, &boundary_circle).expect("relative homology of (D^2, S^1)");
+        assert!(genuine.verify(&disc, &boundary_circle).is_ok());
+
+        // Vertex 3 is not in the disc at all.
+        let not_a_subcomplex = complex_of(&[&[1, 2, 3]]);
+        let err = genuine.verify(&disc, &not_a_subcomplex).expect_err(
+            "a non-subcomplex L must be refused directly by verify's own is_subcomplex check",
+        );
+        assert!(err.contains("subcomplex"), "got: {err}");
+    }
+
     /// ADVERSARIAL: forge only the recorded relative Euler characteristic.
     #[test]
     fn verify_refuses_a_forged_relative_euler_characteristic() {
@@ -968,5 +991,46 @@ mod tests {
             .verify(&disc, &boundary_circle)
             .expect_err("a forged relative torsion coefficient must be refused");
         assert!(err.contains("torsion"), "got: {err}");
+    }
+
+    /// ADVERSARIAL: forge only the recorded relative Betti number, leaving
+    /// every Smith triple genuine. Caught by `relative_betti_and_torsion_match`
+    /// (recomputed straight from the recorded Smith diagonal), BEFORE the LES
+    /// exactness guard even runs -- distinct from
+    /// `verify_refuses_a_relative_betti_number_the_exactness_identity_rejects`,
+    /// which isolates `les_exactness_holds` directly and bypasses this guard
+    /// entirely.
+    #[test]
+    fn verify_refuses_a_forged_relative_betti_number() {
+        let disc = complex_of(&[&[0, 1, 2]]);
+        let boundary_circle = complex_of(&[&[0, 1], &[1, 2], &[0, 2]]);
+        let mut forged =
+            relative_homology(&disc, &boundary_circle).expect("relative homology of (D^2, S^1)");
+        forged.betti.insert(2, 0); // H_2(D^2, S^1) = Z, dimension 1, not 0
+        let err = forged
+            .verify(&disc, &boundary_circle)
+            .expect_err("a forged relative betti number must be refused");
+        assert!(err.contains("betti"), "got: {err}");
+    }
+
+    /// ADVERSARIAL, isolated to `relative_counts_match`: forge only the
+    /// summary `relative_counts` field, leaving every Smith triple (and so
+    /// every boundary matrix) exactly as recorded for the genuine pair --
+    /// mirrors `super::tests::verify_refuses_a_forged_simplex_count_with_every_boundary_genuine`
+    /// in the parent module.
+    #[test]
+    fn verify_refuses_a_forged_relative_count_with_every_boundary_genuine() {
+        let disc = complex_of(&[&[0, 1, 2]]);
+        let boundary_circle = complex_of(&[&[0, 1], &[1, 2], &[0, 2]]);
+        let mut forged =
+            relative_homology(&disc, &boundary_circle).expect("relative homology of (D^2, S^1)");
+        forged.relative_counts.insert(1, 99); // K \ L has 0 edges, not 99
+        let err = forged
+            .verify(&disc, &boundary_circle)
+            .expect_err("a forged relative count must be refused");
+        assert!(
+            err.contains("relative simplex count") || err.contains("relative count"),
+            "got: {err}"
+        );
     }
 }
