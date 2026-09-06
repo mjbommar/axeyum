@@ -331,6 +331,9 @@ pub mod vector_space;
 /// ADR-1657 / roadmap W3-2: `AlgS.Index.*`, the index calculus the Steinitz
 /// exchange needs at a build position where `Nat.le`/`Nat.lt` do not exist.
 pub mod vector_space_exchange;
+/// ADR-1657 / roadmap W3-2: `AlgS.Exchange.*`, the linear-combination
+/// splitting lemma the index calculus buys.
+pub mod vector_space_steinitz;
 mod xor;
 mod xor_algebra;
 mod xor_order;
@@ -7676,9 +7679,18 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // only `logic` plus the interned `AlgS` root, so it lands beside the
         // vector-space layer that consumes it. Names are DELIBERATELY not
         // threaded into `NatPrelude`, for the reason `AlgS.Poly.*`'s are not.
-        let _index_s = vector_space_exchange::declare_index_surgery(
+        let index_s = vector_space_exchange::declare_index_surgery(
             kernel,
             &logic,
+            structures_s_names.algs,
+        )?;
+        let _exchange_s = vector_space_steinitz::declare_exchange(
+            kernel,
+            &logic,
+            &structures_s.comm_ring,
+            &structures_s.comm_group,
+            &module_s,
+            &index_s,
             structures_s_names.algs,
         )?;
 

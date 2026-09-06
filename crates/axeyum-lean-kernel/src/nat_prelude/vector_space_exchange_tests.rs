@@ -234,35 +234,43 @@ fn remove_undoes_insert_at_small_indices() {
     }
 }
 
-/// The eight lemmas are `Theorem`s — the kernel checked their proof terms —
-/// and the three surgeries are `Definition`s.
+/// Every name this module owns is a checked declaration, and the split is
+/// derived from `owned_names` — the AUTHORITY — not from a literal list:
+/// exactly the three surgeries are `Definition`s and everything else is a
+/// `Theorem` whose proof term the kernel checked. Adding a declaration
+/// without registering it in `owned_names` makes this test fail on the
+/// count, and adding one to `owned_names` without declaring it makes it fail
+/// on the lookup.
 #[test]
 fn the_index_lemmas_are_checked_theorems() {
     let mut k = Kernel::new();
     let f = build(&mut k);
-    for name in [
-        f.ix.le_zero_eq,
-        f.ix.le_refl,
-        f.ix.le_dichotomy,
-        f.ix.le_succ_cases,
-        f.ix.insert_at_at,
-        f.ix.insert_at_below,
-        f.ix.insert_at_above,
-        f.ix.remove_at_insert_at,
-    ] {
+    let definitions = [f.ix.le, f.ix.remove_at, f.ix.insert_at];
+    let mut defs = 0usize;
+    let mut thms = 0usize;
+    for name in f.ix.owned_names() {
         let decl = k.environment().get(name).expect("must exist").clone();
-        assert!(
-            matches!(decl, Declaration::Theorem { .. }),
-            "{name:?} must be a Theorem"
-        );
+        if definitions.contains(&name) {
+            assert!(
+                matches!(decl, Declaration::Definition { .. }),
+                "{name:?} must be a Definition"
+            );
+            defs += 1;
+        } else {
+            assert!(
+                matches!(decl, Declaration::Theorem { .. }),
+                "{name:?} must be a Theorem"
+            );
+            thms += 1;
+        }
     }
-    for name in [f.ix.le, f.ix.remove_at, f.ix.insert_at] {
-        let decl = k.environment().get(name).expect("must exist").clone();
-        assert!(
-            matches!(decl, Declaration::Definition { .. }),
-            "{name:?} must be a Definition"
-        );
-    }
+    assert_eq!(defs, definitions.len(), "all three surgeries must be found");
+    assert!(thms > 0, "the module must own at least one theorem");
+    assert_eq!(
+        defs + thms,
+        f.ix.owned_names().len(),
+        "every owned name must be classified"
+    );
 }
 
 /// **The inventory for ADR-1657's fact ledger entries.** Prints every
