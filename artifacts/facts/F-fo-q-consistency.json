@@ -1,0 +1,75 @@
+{
+  "schema_version": 1,
+  "id": "F:fo-q-consistency",
+  "title": "Robinson's Q is consistent, by exhibiting a model",
+  "statement": "There is no derivation of falsity from the seven Robinson axioms in the first-order natural-deduction calculus: Not (FO.Provable FO.Q FO.Formula.bot). The proof is soundness applied at the ℕ structure with the constant-zero valuation -- a derivation of bot from Q would give FO.sat Nat FO.natStructureQ FO.Formula.bot v, which iota-reduces to False.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem FO.Q.consistency : Not (FO.Provable FO.Q FO.Formula.bot)",
+    "kernel_theorem": "FO.Q.consistency",
+    "fragment": "Nat",
+    "free_symbols": []
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "depends_on": [
+    "F:fo-soundness",
+    "F:fo-q-robinson-context"
+  ],
+  "evidence": [
+    {
+      "id": "kernel-FO.Q.consistency",
+      "kind": "kernel-term",
+      "kernel_declaration": "FO.Q.consistency",
+      "supports": "FO.Q.consistency is admitted by the trusted kernel gate with the type recorded in formal.statement, and rests on no axiom. The proof term is one line: fun d => FO.soundness Nat FO.natStructureQ FO.Q FO.Formula.bot d (fun _ => Nat.zero) (FO.Q.natModels (fun _ => Nat.zero)).",
+      "check_status": "checked",
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example fo_robinson_inventory -- FO.Q.consistency --exact --require-axiom-free",
+      "checkers": [
+        "Kernel::add_declaration",
+        "Kernel::axiom_footprint"
+      ],
+      "notes": "The ℕ structure is doing real work: an arbitrary FO.Structure M would not do, because M could be empty and the argument still needs a valuation Nat -> M to exist. Using a structure whose carrier is inhabited is what makes the corollary constructive."
+    },
+    {
+      "id": "it-is-about-Q-and-not-about-nil",
+      "kind": "kernel-term",
+      "kernel_declaration": "FO.Q.consistency",
+      "supports": "The type is rebuilt from FO.Provable, FO.Q and FO.Formula.bot inside the test and compared by Kernel::def_eq rather than by rendering, with a negative control that the SAME statement over FO.Context.nil -- which is fo_soundness.rs's older FO.consistency -- is a DIFFERENT type. So a fact that had silently degraded to the empty-context statement, which is strictly weaker and already landed, is a failure here.",
+      "check_status": "checked",
+      "checker_command": "cargo test -p axeyum-lean-kernel --release --lib -- fo_robinson::tests --test-threads=4",
+      "checkers": [
+        "Kernel::def_eq",
+        "Kernel::infer"
+      ],
+      "notes": "fo_robinson::tests::q_consistency_states_the_underivability_of_bot_from_q and ::q_consistency_is_not_the_empty_context_consistency."
+    },
+    {
+      "id": "footprint-whole-package",
+      "kind": "instance-pin",
+      "supports": "axiom_footprint: [] -- for all 132 declarations build_fo_robinson_prelude adds on top of the Nat prelude, not only the headline theorem. The row set is a SET DIFFERENCE against a kernel carrying only build_nat_prelude, recomputed on every run, so it is derived from the environment rather than from a hand-maintained list. This package is the first that holds BOTH fo_* chains -- the arithmetization (FO.Code.diagAux_code) and the calculus (FO.soundness) -- in one kernel, so the sweep covers both.",
+      "check_status": "checked",
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example fo_robinson_inventory -- --require-axiom-free --expect-count 132",
+      "checkers": [
+        "Kernel::axiom_footprint"
+      ],
+      "notes": "--expect-count fails on drift in EITHER direction, so a declaration silently disappearing is a failure too. The same set difference is recomputed inside the test suite by fo_robinson::tests::the_whole_robinson_package_is_axiom_free, with coverage controls drawn from BOTH chains (FO.Code.diagAux_code and FO.soundness) so it cannot pass vacuously and cannot pass if the two chains stopped composing."
+    }
+  ],
+  "provenance": {
+    "date": "2026-09-06",
+    "established_by": "axeyum-lean-kernel build_fo_robinson_prelude, lane fo-representability (W3-7, ADR-1651)",
+    "source": "authored from the roadmap item; the axiom list is Robinson's, the encoding, the structure and every proof term are written here",
+    "prior_art": [
+      {
+        "who": "Raphael M. Robinson",
+        "what": "the finitely axiomatised essentially undecidable arithmetic Q",
+        "year": 1950,
+        "where": "R. M. Robinson, 'An essentially undecidable axiom system', Proc. ICM 1950, vol. 1, 729-730",
+        "attribution": "standard textbook attribution; this lane did not consult the primary source"
+      }
+    ]
+  },
+  "notes": "This is the first consistency statement in this repository about a THEORY rather than about the empty context. fo_soundness.rs's FO.consistency says the calculus proves no contradiction from nothing; this says the calculus proves no contradiction from the seven Robinson axioms, which is the statement Goedel's second incompleteness theorem is about. Nothing here approaches that theorem: the proof is model-theoretic and lives in the metatheory, so it is exactly the kind of consistency proof Q cannot carry out about itself.",
+  "proof_route": "kernel-lean",
+  "axiom_footprint": []
+}

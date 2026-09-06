@@ -1,0 +1,87 @@
+{
+  "schema_version": 1,
+  "id": "F:fo-q-numeral-arithmetic",
+  "title": "Q proves every true numeral addition and every true numeral multiplication",
+  "statement": "For all naturals a and b, the seven Robinson axioms prove the object-level equation between the sum of the numerals for a and b and the numeral for a + b, and likewise for the product and a * b. The numerals are FO.Term.numeral -- the same function the Goedel numbering of fo_roundtrip.rs codes -- and both statements quantify over a and b symbolically rather than over literals.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem FO.Q.add_numeral : ((x0 : AxNat) -> ((x1 : AxNat) -> FO.Provable FO.Q (FO.Formula.eqf (FO.Term.f2 AxNat.zero (FO.Term.numeral x0) (FO.Term.numeral x1)) (FO.Term.numeral (AxNat.add x0 x1)))))",
+    "kernel_theorem": "FO.Q.add_numeral",
+    "fragment": "Nat",
+    "free_symbols": []
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "depends_on": [
+    "F:fo-q-robinson-context"
+  ],
+  "evidence": [
+    {
+      "id": "kernel-FO.Q.add_numeral",
+      "kind": "kernel-term",
+      "kernel_declaration": "FO.Q.add_numeral",
+      "supports": "FO.Q.add_numeral is admitted by the trusted kernel gate with the type recorded in formal.statement, and rests on no axiom. Nat.rec on the SECOND argument, mirroring the recursion in Nat.add and in the axiom axAddSucc, so the successor step is ONE application of the Leibniz rule FO.Provable.eqf_subst against the induction hypothesis, with no separate object-level congruence or transitivity lemma.",
+      "check_status": "checked",
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example fo_robinson_inventory -- FO.Q.add_numeral --exact --require-axiom-free",
+      "checkers": [
+        "Kernel::add_declaration",
+        "Kernel::axiom_footprint"
+      ],
+      "notes": "Declared in crates/axeyum-lean-kernel/src/fo_robinson.rs by declare_add_numeral."
+    },
+    {
+      "id": "kernel-FO.Q.mul_numeral",
+      "kind": "kernel-term",
+      "kernel_declaration": "FO.Q.mul_numeral",
+      "supports": "theorem FO.Q.mul_numeral : ((x0 : AxNat) -> ((x1 : AxNat) -> FO.Provable FO.Q (FO.Formula.eqf (FO.Term.f2 (AxNat.succ AxNat.zero) (FO.Term.numeral x0) (FO.Term.numeral x1)) (FO.Term.numeral (AxNat.mul x0 x1))))) -- admitted by the trusted gate, axiom-free. It DEPENDS on add_numeral, and the test reads that edge out of the kernel's own proof term rather than from the source: axMulSucc gives a * S k = a * k + a, and rewriting a * k to its numeral leaves an object-level SUM rather than a numeral, so add_numeral is what closes it. The control is that the edge does not go the other way.",
+      "check_status": "checked",
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example fo_robinson_inventory -- FO.Q.mul_numeral --exact --require-axiom-free",
+      "checkers": [
+        "Kernel::add_declaration",
+        "Kernel::axiom_footprint"
+      ],
+      "notes": "fo_robinson::tests::mul_numeral_depends_on_add_numeral."
+    },
+    {
+      "id": "the-statements-and-the-instances",
+      "kind": "kernel-term",
+      "kernel_declaration": "FO.Q.add_numeral",
+      "supports": "Both types are pinned against REBUILT expected types rather than against renderings, with a negative control that swapping the two arguments on the right of the equation is a DIFFERENT statement -- Nat.add a b and Nat.add b a are propositionally but not definitionally equal here, because Nat.add recurses on its right argument. Both theorems are then INSTANTIATED at (0,0), (2,3) and (3,1), where the conclusion is checked by def_eq against the arithmetic fact at literal numerals, each row carrying a wrong-numeral negative control.",
+      "check_status": "checked",
+      "checker_command": "cargo test -p axeyum-lean-kernel --release --lib -- fo_robinson::tests --test-threads=4",
+      "checkers": [
+        "Kernel::def_eq",
+        "Kernel::infer"
+      ],
+      "notes": "A theorem that could not be applied to a literal would still admit; the instantiation rows are the check that it can be."
+    },
+    {
+      "id": "footprint-whole-package",
+      "kind": "instance-pin",
+      "supports": "axiom_footprint: [] -- for all 132 declarations build_fo_robinson_prelude adds on top of the Nat prelude, not only the headline theorem. The row set is a SET DIFFERENCE against a kernel carrying only build_nat_prelude, recomputed on every run, so it is derived from the environment rather than from a hand-maintained list. This package is the first that holds BOTH fo_* chains -- the arithmetization (FO.Code.diagAux_code) and the calculus (FO.soundness) -- in one kernel, so the sweep covers both.",
+      "check_status": "checked",
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example fo_robinson_inventory -- --require-axiom-free --expect-count 132",
+      "checkers": [
+        "Kernel::axiom_footprint"
+      ],
+      "notes": "--expect-count fails on drift in EITHER direction, so a declaration silently disappearing is a failure too. The same set difference is recomputed inside the test suite by fo_robinson::tests::the_whole_robinson_package_is_axiom_free, with coverage controls drawn from BOTH chains (FO.Code.diagAux_code and FO.soundness) so it cannot pass vacuously and cannot pass if the two chains stopped composing."
+    }
+  ],
+  "provenance": {
+    "date": "2026-09-06",
+    "established_by": "axeyum-lean-kernel build_fo_robinson_prelude, lane fo-representability (W3-7, ADR-1651)",
+    "source": "authored from the roadmap item; the axiom list is Robinson's, the encoding, the structure and every proof term are written here",
+    "prior_art": [
+      {
+        "who": "Raphael M. Robinson",
+        "what": "the finitely axiomatised essentially undecidable arithmetic Q",
+        "year": 1950,
+        "where": "R. M. Robinson, 'An essentially undecidable axiom system', Proc. ICM 1950, vol. 1, 729-730",
+        "attribution": "standard textbook attribution; this lane did not consult the primary source"
+      }
+    ]
+  },
+  "notes": "WHY A SUBSTITUTION LEMMA WAS NEEDED AT ALL. FO.Provable.all_elim's conclusion is an unreduced FO.Formula.subst p (FO.Subst.cons t FO.Subst.id). For a single-variable axiom that reduces away completely, because the axiom bodies contain no numerals and Term.subst (var 0) sigma IS the instance term definitionally -- so the base cases here need no repair at all. For a TWO-variable axiom it does not: the outer instantiation leaves the outer numeral under FO.Subst.lift, i.e. as Term.subst (Term.subst (numeral a) Subst.shift) sigma, which is stuck because FO.Term.numeral is a Nat.rec on a symbolic argument. FO.Term.subst_numeral (Pi s n, Term.subst (numeral n) s = numeral n, a two-case Nat.rec) is the lemma that unsticks it, and it is applied twice per two-variable instantiation.\n\nWHAT THIS IS FOR. These two theorems are the bridge ADR-1648 named as missing item (b) for the provability-level diagonal lemma: they are what lets a numeric fact about codes be turned into something Q proves.",
+  "proof_route": "kernel-lean",
+  "axiom_footprint": []
+}

@@ -556,9 +556,10 @@ impl Rob {
         provable_app(kernel, &self.calc, q, p)
     }
 
-    /// `FO.Term.subst_numeral sigma n`.
+    /// `FO.Term.subst_numeral sigma n`. An associated function rather than a
+    /// method: it reads nothing off `Rob`, and `unused_self` is right about
+    /// that.
     fn subst_numeral_at(
-        &self,
         kernel: &mut crate::Kernel,
         subst_numeral: NameId,
         sigma: ExprId,
@@ -1534,7 +1535,7 @@ fn leibniz(
     let proofs_s: Vec<ExprId> = step
         .numerals
         .iter()
-        .map(|&n| r.subst_numeral_at(kernel, subst_numeral, sigma_s, n))
+        .map(|&n| Rob::subst_numeral_at(kernel, subst_numeral, sigma_s, n))
         .collect();
     let repaired = {
         let shape_s = |kernel: &mut crate::Kernel, holes: &[ExprId]| {
@@ -1566,7 +1567,7 @@ fn leibniz(
     let proofs_t: Vec<ExprId> = step
         .numerals
         .iter()
-        .map(|&n| r.subst_numeral_at(kernel, subst_numeral, sigma_t, n))
+        .map(|&n| Rob::subst_numeral_at(kernel, subst_numeral, sigma_t, n))
         .collect();
     let shape_t =
         |kernel: &mut crate::Kernel, holes: &[ExprId]| step.shape.build(kernel, r, holes, step.t);
@@ -1614,7 +1615,7 @@ fn instantiate_binary_axiom(
     let shifted = r.tsubst(kernel, outer, shift);
     let stuck = r.tsubst(kernel, shifted, sigma_inner);
     let repair = {
-        let first = r.subst_numeral_at(kernel, subst_numeral, shift, outer_nat);
+        let first = Rob::subst_numeral_at(kernel, subst_numeral, shift, outer_nat);
         let cong_fv = fv.next();
         let lifted_first = gcongr(
             kernel,
@@ -1628,7 +1629,7 @@ fn instantiate_binary_axiom(
             cong_fv,
         );
         let middle = r.tsubst(kernel, outer, sigma_inner);
-        let second = r.subst_numeral_at(kernel, subst_numeral, sigma_inner, outer_nat);
+        let second = Rob::subst_numeral_at(kernel, subst_numeral, sigma_inner, outer_nat);
         let trans_fv = fv.next();
         gtrans(
             kernel,

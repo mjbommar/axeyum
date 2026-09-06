@@ -1,0 +1,89 @@
+{
+  "schema_version": 1,
+  "id": "F:fo-q-pair-representable",
+  "title": "The pairing function has a defining formula in Q, and Q proves its graph at every numeral triple",
+  "statement": "FO.Code.pair -- the anti-diagonal pairing the Goedel numbering is built on -- is defined in the language of Robinson arithmetic by a single polynomial equation: pair a b = c if and only if c + c = ((a+b)*(a+b) + (a+b)) + (a+a). Q proves that equation at every numeral triple: for all a and b, FO.Provable FO.Q (FO.Q.pairGraph (numeral a) (numeral b) (numeral (FO.Code.pair a b))). This is the POSITIVE half of representability. The uniqueness half is open and is recorded as such.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem FO.Q.pair_represented : ((x0 : AxNat) -> ((x1 : AxNat) -> FO.Provable FO.Q (FO.Q.pairGraph (FO.Term.numeral x0) (FO.Term.numeral x1) (FO.Term.numeral (FO.Code.pair x0 x1)))))",
+    "kernel_theorem": "FO.Q.pair_represented",
+    "fragment": "Nat",
+    "free_symbols": []
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "depends_on": [
+    "F:fo-q-numeral-arithmetic",
+    "F:fo-q-robinson-context",
+    "F:fo-code-pairing-round-trip"
+  ],
+  "evidence": [
+    {
+      "id": "kernel-FO.Q.pair_represented",
+      "kind": "kernel-term",
+      "kernel_declaration": "FO.Q.pair_represented",
+      "supports": "FO.Q.pair_represented is admitted by the trusted kernel gate with the type recorded in formal.statement, and rests on no axiom. Six applications of the Leibniz rule: five evaluate the polynomial side down to a single numeral, starting from FO.Provable.eqf_refl at the polynomial itself and rewriting one subterm at a time with FO.Q.add_numeral / FO.Q.mul_numeral, and a sixth transfers the result onto numeral (pair a b) + numeral (pair a b), whose own evaluation is add_numeral at the code transported along FO.Code.pair_two.",
+      "check_status": "checked",
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example fo_robinson_inventory -- FO.Q.pair_represented --exact --require-axiom-free",
+      "checkers": [
+        "Kernel::add_declaration",
+        "Kernel::axiom_footprint"
+      ],
+      "notes": "Declared in crates/axeyum-lean-kernel/src/fo_robinson.rs by declare_pair_represented."
+    },
+    {
+      "id": "kernel-FO.Code.tri_two",
+      "kind": "kernel-term",
+      "kernel_declaration": "FO.Code.tri_two",
+      "supports": "theorem FO.Code.tri_two : ((x0 : AxNat) -> Eq.{1} AxNat (AxNat.add (FO.Code.tri x0) (FO.Code.tri x0)) (AxNat.add (AxNat.mul x0 x0) x0)) -- the arithmetic identity that removes the recursion. FO.Code.tri is a Nat.rec, so the pairing is NOT first-order definable by unfolding it; the doubling identity is what turns the graph into a polynomial equation. One Nat.rec, four rewrites (add_add_add_comm, the induction hypothesis, add_assoc backwards, succ_mul backwards). FO.Code.pair_two carries it to the pairing in two further steps.",
+      "check_status": "checked",
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example fo_robinson_inventory -- FO.Code.tri_two --exact --require-axiom-free",
+      "checkers": [
+        "Kernel::add_declaration",
+        "Kernel::axiom_footprint"
+      ],
+      "notes": "Both identities are also computed by Kernel::def_eq at five concrete arguments each, with an off-by-one negative control on every row, so a doubling identity that had drifted is a failure at a literal and not only at the symbolic statement."
+    },
+    {
+      "id": "the-graph-and-its-instances",
+      "kind": "kernel-term",
+      "kernel_declaration": "FO.Q.pairFormula",
+      "supports": "FO.Q.pairGraph and FO.Q.pairFormula are Definitions, so admission says nothing about them. FO.Q.pairFormula is rebuilt from the FO.Term constructors inside the test and compared by def_eq, with a negative control that the same equation WITHOUT the + (x + x) summand -- which is the graph of tri (x+y), not of pair -- is a different formula. FO.Q.pair_represented is then instantiated at (0,0), (0,1), (1,0), (1,1) and (2,1), where the conclusion is checked against the graph at the three literal numerals, each row carrying a wrong-code negative control.",
+      "check_status": "checked",
+      "checker_command": "cargo test -p axeyum-lean-kernel --release --lib -- fo_robinson::tests --test-threads=4",
+      "checkers": [
+        "Kernel::def_eq",
+        "Kernel::infer"
+      ],
+      "notes": "The (2,1) row is the one that catches a transposed pairing: pair 2 1 = tri 3 + 2 = 8, while pair 1 2 = tri 3 + 1 = 7."
+    },
+    {
+      "id": "footprint-whole-package",
+      "kind": "instance-pin",
+      "supports": "axiom_footprint: [] -- for all 132 declarations build_fo_robinson_prelude adds on top of the Nat prelude, not only the headline theorem. The row set is a SET DIFFERENCE against a kernel carrying only build_nat_prelude, recomputed on every run, so it is derived from the environment rather than from a hand-maintained list. This package is the first that holds BOTH fo_* chains -- the arithmetization (FO.Code.diagAux_code) and the calculus (FO.soundness) -- in one kernel, so the sweep covers both.",
+      "check_status": "checked",
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example fo_robinson_inventory -- --require-axiom-free --expect-count 132",
+      "checkers": [
+        "Kernel::axiom_footprint"
+      ],
+      "notes": "--expect-count fails on drift in EITHER direction, so a declaration silently disappearing is a failure too. The same set difference is recomputed inside the test suite by fo_robinson::tests::the_whole_robinson_package_is_axiom_free, with coverage controls drawn from BOTH chains (FO.Code.diagAux_code and FO.soundness) so it cannot pass vacuously and cannot pass if the two chains stopped composing."
+    }
+  ],
+  "provenance": {
+    "date": "2026-09-06",
+    "established_by": "axeyum-lean-kernel build_fo_robinson_prelude, lane fo-representability (W3-7, ADR-1651)",
+    "source": "authored from the roadmap item; the axiom list is Robinson's, the encoding, the structure and every proof term are written here",
+    "prior_art": [
+      {
+        "who": "Raphael M. Robinson",
+        "what": "the finitely axiomatised essentially undecidable arithmetic Q",
+        "year": 1950,
+        "where": "R. M. Robinson, 'An essentially undecidable axiom system', Proc. ICM 1950, vol. 1, 729-730",
+        "attribution": "standard textbook attribution; this lane did not consult the primary source"
+      }
+    ]
+  },
+  "notes": "WHAT IS NOT CLAIMED, AND WHY IT IS NOT A MATTER OF EFFORT. Representability of a function in Q is normally two halves: Q proves the graph at the true value (landed here) AND Q proves uniqueness, Q |- forall z (phi(a,b,z) implies z = pair(a,b)). The second is NOT landed. Q has no induction, and none of its seven axioms says anything about a variable in a forall position -- from Q4-Q7 one can compute with numerals and nothing else -- so Q |- forall z (z + z = m implies z = k) is not derivable at this strength. The textbook route adds the ORDER axioms (Q with < constrained, i.e. Q+) and the numeral case-split forall x (x < n implies x = 0 or ... or x = n-1), then Sigma-1 completeness on top; that is a strictly larger theory than the seven axioms this slice was asked to write down, and it belongs in its own slice with its own ADR.\n\nThe absence is a TEST, not prose: fo_robinson::tests::the_uniqueness_half_of_representability_is_not_claimed asserts that no FO.Q.pair_unique or FO.Q.pair_functional exists in the environment, with a coverage control requiring the positive half to be present. If a later slice lands one, that test is what says so.\n\nTHE NEARER TARGET is numeralwise uniqueness -- for each numeral c with c not equal to pair(a,b), Q |- not phi(a,b,c) -- which needs one further ingredient this slice does not have: the negative twin, a != b implies Q |- not (numeral a = numeral b). Its derivation lives under an imp_intro, i.e. in the context cons phi FO.Q rather than in FO.Q, and every object-level helper in fo_robinson.rs is written at the fixed context FO.Q. Generalising them over the context is five signatures.",
+  "proof_route": "kernel-lean",
+  "axiom_footprint": []
+}
