@@ -2993,15 +2993,14 @@ const MAX_WEIGHTED_BESSEL_ORDER: u32 = 32;
 fn equal_core(a: &CasExpr, b: &CasExpr) -> ZeroTest {
     match equal_core_bounded_classified(a, b) {
         Ok(decided) => decided,
-        // The reason is recorded but not yet acted on: every decline still
-        // enters the fallback, exactly as before, so this slice is
-        // behaviour-preserving by construction and the classification can be
-        // checked against the shipped verdicts before anything routes on it.
-        // The next commit gates the entry on `Overflowed`.
-        Err(_) => {
+        Err(reason) if reason.fallback_can_help() => {
             note_fallback_entry();
             equal_core_unbounded(a, b)
         }
+        // The unbounded ring reaches the same wall, so entering it would spend
+        // the work budget on a search that cannot succeed. Decline at once,
+        // with the reason available from `explain_decline`.
+        Err(_) => ZeroTest::Unknown,
     }
 }
 
@@ -3016,53 +3015,88 @@ fn equal_core(a: &CasExpr, b: &CasExpr) -> ZeroTest {
 /// second is a place the unbounded ring stops too, because it runs **the same
 /// normal form** over a wider coefficient type.
 ///
-/// Read one with [`explain_decline`].
+/// Read one with [`explain_decline`], and route on
+/// [`ZeroTestDecline::fallback_can_help`].
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ZeroTestDecline {
     /// Exact `i128` arithmetic overflowed somewhere in the expansion, the
     /// cross-multiplication or the fold passes, so the bounded path produced no
-    /// difference at all.
+    /// difference at all. **The fallback is entered**: this is the class it
+    /// exists for.
     ///
-    /// This is the class the fallback is entered for. When it appears in an
-    /// [`explain_decline`] result it therefore also means the fallback ran and
-    /// declined in its turn — on its work budget, or on a surviving atom on the
-    /// refutation branch.
+    /// When it appears in an [`explain_decline`] result it therefore also means
+    /// the fallback ran and declined in its turn — on its work budget, or on a
+    /// surviving atom on the refutation branch.
     Overflowed,
-    /// The input carries a construct **no coefficient width decides**, named by
-    /// the payload. The fallback is not entered.
+    /// The bounded arithmetic **completed** and produced a *nonzero* difference,
+    /// and the bounded path withheld the refutation because a relation its fold
+    /// set cannot see could still collapse it. **The fallback is entered.**
+    ///
+    /// This arm exists because the obvious reading — "the arithmetic completed,
+    /// so a wider integer type has nothing to add" — is measurably false. The
+    /// two rings do not have the same fold set: the bounded dictionary is built
+    /// with [`normalize`], which *rejects* a transcendental head, while the
+    /// unbounded one is built with [`normalize_rational_big_within`], which
+    /// *atomizes* it. So `√(ln x)·√(ln x) = ln x` is declined by the bounded
+    /// fold and certified by the unbounded one, with no overflow anywhere in
+    /// it (`a_transcendental_radicand_is_resolved_by_the_unbounded_fold`).
+    RelationBlind(RelationLimit),
+    /// The input carries a construct the unbounded ring stops at **too**, named
+    /// by the payload. The fallback is **not** entered: it would spend its work
+    /// budget reaching the same wall.
     OutOfFragment(FragmentLimit),
 }
 
-/// The construct that put an input outside the fragment — the payload of
-/// [`ZeroTestDecline::OutOfFragment`], and what makes a decline readable rather
-/// than a bare `Unknown`.
+impl ZeroTestDecline {
+    /// Whether handing this input to the unbounded fallback can turn the
+    /// decline into a decision — the one question [`equal_core`] routes on.
+    ///
+    /// Each `false` is a claim that the unbounded ring reaches the same wall,
+    /// and each has a reason in [`FragmentLimit`] that names the construct.
+    #[must_use]
+    pub fn fallback_can_help(&self) -> bool {
+        match self {
+            ZeroTestDecline::Overflowed | ZeroTestDecline::RelationBlind(_) => true,
+            ZeroTestDecline::OutOfFragment(_) => false,
+        }
+    }
+}
+
+/// The relation the bounded fold set could not see — the payload of
+/// [`ZeroTestDecline::RelationBlind`].
+///
+/// Both of these are *withheld refutations*: the difference was computed and
+/// found nonzero, and calling that `≠` would have been unsound.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum RelationLimit {
+    /// A monomial multiplies two radical or absolute-value atoms, so
+    /// `√a·√b = √(ab)` could still collapse a nonzero polynomial in three
+    /// independent variables ([`MultiPoly::relates_multiplicative_atoms`]).
+    MultiplicativeAtomRelation,
+    /// The difference mentions an atom whose argument [`atom_name`] could not
+    /// bring to a canonical form, so one value may sit under two keys
+    /// ([`MultiPoly::mentions_uncanonical_atom`]).
+    UncanonicalAtomKey,
+}
+
+/// The construct that puts an input outside the fragment **both** rings
+/// decide — the payload of [`ZeroTestDecline::OutOfFragment`], and what makes a
+/// decline readable rather than a bare `Unknown`.
+///
+/// Every variant here is a claim that the unbounded ring reaches the same wall,
+/// and the claim is what licenses not entering the fallback.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum FragmentLimit {
     /// A `Unary` head [`normalize_rational_big_within`] declines outright
     /// (today: `exp`, which the bounded path *decomposes* rather than atomizes
     /// and which has no unbounded twin yet). The `String` is the head's own
-    /// name. Detected by [`unbounded_ring_declined_head`] *before* any budget
-    /// is spent.
+    /// name. Found by [`unbounded_ring_declined_head`], a syntactic walk, so it
+    /// is known *before* any of [`BIG_FALLBACK_WORK_BUDGET`] is spent.
     UnboundedRingDeclinesHead(String),
     /// A division whose divisor normalizes to the identically zero function.
-    /// Not a width limit: the unbounded ring's `div` declines on exactly the
-    /// same condition.
+    /// Not a width limit: [`BigRatFunc::div`] declines on exactly the same
+    /// condition, written the same way.
     DivisionByZeroFunction,
-    /// The bounded path computed a difference, found it **nonzero**, and
-    /// declined to call that a refutation because a monomial multiplies two
-    /// radical or absolute-value atoms and `√a·√b = √(ab)` could still collapse
-    /// it ([`MultiPoly::relates_multiplicative_atoms`]).
-    ///
-    /// The arithmetic completed, so there is nothing for a wider integer type
-    /// to do — and the unbounded refutation branch is *stricter* still, since it
-    /// declines on any surviving atom.
-    MultiplicativeAtomRelation,
-    /// The bounded path computed a nonzero difference over an atom whose
-    /// argument [`atom_name`] could not bring to a canonical form, so one value
-    /// may sit under two keys ([`MultiPoly::mentions_uncanonical_atom`]). The
-    /// arithmetic completed here too, and the unbounded ring builds its atom
-    /// keys with the same [`atom_name`].
-    UncanonicalAtomKey,
     /// An `exp` argument term whose integer coefficient does not fit the `u32`
     /// exponent [`normalize_exp`] raises the primitive atom to. Exponents are
     /// `u32` in **both** rings, so no coefficient width reaches this one.
@@ -3076,9 +3110,30 @@ impl std::fmt::Display for ZeroTestDecline {
                 f,
                 "exact i128 arithmetic overflowed and the unbounded fallback also declined"
             ),
+            ZeroTestDecline::RelationBlind(limit) => write!(
+                f,
+                "the difference is nonzero but a refutation was withheld: {limit}"
+            ),
             ZeroTestDecline::OutOfFragment(limit) => {
-                write!(f, "outside the decided fragment: {limit}")
+                write!(f, "outside the fragment both rings decide: {limit}")
             }
+        }
+    }
+}
+
+impl std::fmt::Display for RelationLimit {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            RelationLimit::MultiplicativeAtomRelation => write!(
+                f,
+                "a monomial multiplying two radical or absolute-value atoms, \
+                 which `sqrt(a)*sqrt(b) = sqrt(ab)` could still collapse"
+            ),
+            RelationLimit::UncanonicalAtomKey => write!(
+                f,
+                "an atom whose argument could not be canonicalized, so one value \
+                 may sit under two keys"
+            ),
         }
     }
 }
@@ -3093,16 +3148,6 @@ impl std::fmt::Display for FragmentLimit {
             FragmentLimit::DivisionByZeroFunction => {
                 write!(f, "a division by the identically zero function")
             }
-            FragmentLimit::MultiplicativeAtomRelation => write!(
-                f,
-                "a monomial multiplying two radical or absolute-value atoms, \
-                 which `sqrt(a)*sqrt(b) = sqrt(ab)` could still collapse"
-            ),
-            FragmentLimit::UncanonicalAtomKey => write!(
-                f,
-                "an atom whose argument could not be canonicalized, so one value \
-                 may sit under two keys"
-            ),
             FragmentLimit::ExpCoefficientOutOfRange => write!(
                 f,
                 "an `exp` argument coefficient outside the u32 exponent range \
@@ -3120,7 +3165,7 @@ impl std::fmt::Display for FragmentLimit {
 /// decline that happened.
 ///
 /// ```
-/// use axeyum_cas::{CasExpr, ZeroTestDecline, FragmentLimit, equal, explain_decline};
+/// use axeyum_cas::{CasExpr, RelationLimit, ZeroTestDecline, equal, explain_decline};
 ///
 /// let x = CasExpr::var("x");
 /// // A decided pair has nothing to explain.
@@ -3128,13 +3173,28 @@ impl std::fmt::Display for FragmentLimit {
 ///
 /// // `sqrt(2)*cbrt(2) = root6(32)` is TRUE, and the zero-test declines rather
 /// // than refuting it — because the difference multiplies two radical atoms.
+/// // The fallback IS entered for this class; it declined too.
 /// let left = CasExpr::int(2).sqrt() * CasExpr::int(2).nth_root(3);
 /// let right = CasExpr::int(32).nth_root(6);
 /// assert_eq!(
 ///     explain_decline(&left, &right),
-///     Some(ZeroTestDecline::OutOfFragment(
-///         FragmentLimit::MultiplicativeAtomRelation
+///     Some(ZeroTestDecline::RelationBlind(
+///         RelationLimit::MultiplicativeAtomRelation
 ///     ))
+/// );
+///
+/// // An `exp` head at overflow scale is the class the fallback is NOT entered
+/// // for, and the reason names the head.
+/// let big = |n: u32| (x.clone() + CasExpr::int(1)).pow(n);
+/// let left = CasExpr::Mul(vec![big(80), big(80)]) + x.clone().exp();
+/// let right = big(160) + CasExpr::var("y").exp();
+/// assert_eq!(
+///     explain_decline(&left, &right).map(|reason| reason.to_string()),
+///     Some(
+///         "outside the fragment both rings decide: the `exp` head, \
+///          which the unbounded ring does not normalize"
+///             .to_owned()
+///     )
 /// );
 /// ```
 #[must_use]
@@ -3169,6 +3229,38 @@ static FALLBACK_ENTRIES: std::sync::atomic::AtomicU64 = std::sync::atomic::Atomi
 fn note_fallback_entry() {
     #[cfg(test)]
     FALLBACK_ENTRIES.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+}
+
+/// Test-only instrumentation: the declines the head gate
+/// ([`escalate_to_declined_head`]) turned away, split by the reason they would
+/// otherwise have carried — `[0]` an overflow, `[1]` a withheld refutation.
+///
+/// This is the number that says what porting a head into the unbounded ring
+/// would cost: every one of these becomes a fallback entry again the moment
+/// [`big_ring_declines_head`] stops naming that head.
+#[cfg(test)]
+static HEAD_GATED_DECLINES: [std::sync::atomic::AtomicU64; 2] = [
+    std::sync::atomic::AtomicU64::new(0),
+    std::sync::atomic::AtomicU64::new(0),
+];
+
+/// Count one decline the head gate turned away. Compiles to nothing outside
+/// tests.
+#[inline]
+fn note_head_gated_decline(reason: &ZeroTestDecline) {
+    #[cfg(test)]
+    {
+        let slot = match reason {
+            ZeroTestDecline::Overflowed => 0,
+            ZeroTestDecline::RelationBlind(_) => 1,
+            // Already out of fragment for another reason; the head gate did not
+            // change the routing, so it turned nothing away.
+            ZeroTestDecline::OutOfFragment(_) => return,
+        };
+        HEAD_GATED_DECLINES[slot].fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+    }
+    #[cfg(not(test))]
+    let _ = reason;
 }
 
 /// The bounded (`i128`) cross-multiplication zero-test.
@@ -3209,24 +3301,48 @@ fn equal_core_bounded(a: &CasExpr, b: &CasExpr) -> ZeroTest {
 /// the arithmetic itself failing, which [`bounded_difference_classified`]
 /// splits into an overflow and the fragment limits that are not about width.
 fn equal_core_bounded_classified(a: &CasExpr, b: &CasExpr) -> Result<ZeroTest, ZeroTestDecline> {
-    match bounded_difference_classified(a, b) {
+    let outcome = match bounded_difference_classified(a, b) {
         Ok(witness) if witness.is_zero() => Ok(ZeroTest::Certified {
             equal: true,
             witness,
         }),
         Ok(witness) if witness.relates_multiplicative_atoms() => Err(
-            ZeroTestDecline::OutOfFragment(FragmentLimit::MultiplicativeAtomRelation),
+            ZeroTestDecline::RelationBlind(RelationLimit::MultiplicativeAtomRelation),
         ),
         // An atom whose argument could not be canonicalized may sit under two
         // keys for one value, so a nonzero difference over it proves nothing.
-        Ok(witness) if witness.mentions_uncanonical_atom() => Err(ZeroTestDecline::OutOfFragment(
-            FragmentLimit::UncanonicalAtomKey,
+        Ok(witness) if witness.mentions_uncanonical_atom() => Err(ZeroTestDecline::RelationBlind(
+            RelationLimit::UncanonicalAtomKey,
         )),
         Ok(witness) => Ok(ZeroTest::Certified {
             equal: false,
             witness,
         }),
         Err(reason) => Err(reason),
+    };
+    match outcome {
+        Ok(decided) => Ok(decided),
+        Err(reason) => Err(escalate_to_declined_head(a, b, reason)),
+    }
+}
+
+/// A `Unary` head the unbounded ring declines outright makes the whole input
+/// out-of-fragment **however** the bounded path came to decline it.
+///
+/// Applied at the one place every decline exit passes through, because the
+/// precedence is what makes the gate worth having. A mixed input — an
+/// overflowing polynomial plus one `exp` — really did overflow, and saying so
+/// is a true statement about its arithmetic and a useless routing decision: the
+/// fallback would expand the polynomial half against the whole work budget and
+/// then stop at the `exp` regardless. Measured at 2.35 ms per call, on every
+/// `equal` the ODE and integration routes make against a Euler form.
+fn escalate_to_declined_head(a: &CasExpr, b: &CasExpr, reason: ZeroTestDecline) -> ZeroTestDecline {
+    match unbounded_ring_declined_head(a).or_else(|| unbounded_ring_declined_head(b)) {
+        Some(head) => {
+            note_head_gated_decline(&reason);
+            ZeroTestDecline::OutOfFragment(FragmentLimit::UnboundedRingDeclinesHead(head))
+        }
+        None => reason,
     }
 }
 
@@ -3245,28 +3361,10 @@ fn bounded_difference(a: &CasExpr, b: &CasExpr) -> Option<MultiPoly> {
 /// [`ZeroTestDecline::Overflowed`] when a wider coefficient type would have got
 /// past it, and [`ZeroTestDecline::OutOfFragment`] when it would not.
 ///
-/// One case dominates the rest and is checked first. A `Unary` head the
-/// unbounded ring declines outright makes the whole input out-of-fragment
-/// *however* the bounded arithmetic failed — because the fallback would expand
-/// everything up to that head, on the full work budget, and then stop at it.
-/// Without this precedence a mixed input (an overflowing polynomial plus one
-/// `exp`) classifies as an overflow, which is true of its arithmetic and
-/// useless as a routing decision.
+/// This classifies only what the `i128` arithmetic itself can produce; the
+/// precedence a declined `Unary` head takes over all of it is applied once, in
+/// [`escalate_to_declined_head`].
 fn bounded_difference_classified(a: &CasExpr, b: &CasExpr) -> Result<MultiPoly, ZeroTestDecline> {
-    if let Some(head) = unbounded_ring_declined_head(a).or_else(|| unbounded_ring_declined_head(b))
-        && bounded_difference_arithmetic(a, b).is_err()
-    {
-        return Err(ZeroTestDecline::OutOfFragment(
-            FragmentLimit::UnboundedRingDeclinesHead(head),
-        ));
-    }
-    bounded_difference_arithmetic(a, b)
-}
-
-/// The bounded difference proper: the classification of every `None` the
-/// `i128` arithmetic itself can produce, with no reference to what the
-/// unbounded ring would make of the input.
-fn bounded_difference_arithmetic(a: &CasExpr, b: &CasExpr) -> Result<MultiPoly, ZeroTestDecline> {
     let (ra, rb) = (
         normalize_rational_classified(a)?,
         normalize_rational_classified(b)?,
@@ -34589,24 +34687,25 @@ mod fallback_entry_cost {
         }
     }
 
-    /// Why the bounded path declined, read off the same three exits
-    /// [`equal_core_bounded`] uses. This is the "before" column's route: today
-    /// every one of them enters the fallback.
+    /// The bounded path's own answer, read off [`equal_core_bounded_classified`]
+    /// — the classifier the zero-test itself routes on, not a re-derivation
+    /// that could disagree with it.
     fn bounded_route(a: &CasExpr, b: &CasExpr) -> String {
-        match equal_core_bounded(a, b) {
-            decided @ (ZeroTest::Certified { .. } | ZeroTest::CertifiedBig { .. }) => {
-                format!("decided {}", verdict(&decided))
+        match equal_core_bounded_classified(a, b) {
+            Ok(decided) => format!("decided {}", verdict(&decided)),
+            Err(reason) => {
+                let entered = if reason.fallback_can_help() {
+                    "ENTERS"
+                } else {
+                    "declines"
+                };
+                let label = match &reason {
+                    ZeroTestDecline::Overflowed => "overflowed".to_owned(),
+                    ZeroTestDecline::RelationBlind(limit) => format!("relation-blind {limit:?}"),
+                    ZeroTestDecline::OutOfFragment(limit) => format!("out-of-fragment {limit:?}"),
+                };
+                format!("{entered}: {label}")
             }
-            ZeroTest::Unknown => match bounded_difference(a, b) {
-                None => "declined: difference is None (overflow or out-of-fragment)".to_owned(),
-                Some(w) if w.relates_multiplicative_atoms() => {
-                    "declined: multiplicative atom relation".to_owned()
-                }
-                Some(w) if w.mentions_uncanonical_atom() => {
-                    "declined: uncanonical atom key".to_owned()
-                }
-                Some(_) => "declined: unclassified".to_owned(),
-            },
         }
     }
 
@@ -34659,10 +34758,11 @@ mod fallback_entry_cost {
         use std::sync::atomic::Ordering;
         let ig = Rational::integer;
         println!(
-            "\n{:<24} | {:>16} | {:>13} | {:>11}",
-            "solver call", "fallback entries", "solved", "wall"
+            "\n{:<24} | {:>16} | {:>24} | {:>7} | {:>11}",
+            "solver call", "fallback entries", "head gate turned away", "solved", "wall"
         );
         let mut total_entries = 0u64;
+        let mut total_gated = (0u64, 0u64);
         for (label, coeffs, forcing) in [
             ("y''-y=e^x", vec![ig(-1), ig(0), ig(1)], x().exp()),
             ("y''-3y'+2y=e^x", vec![ig(2), ig(-3), ig(1)], x().exp()),
@@ -34675,13 +34775,27 @@ mod fallback_entry_cost {
             ),
         ] {
             let before = FALLBACK_ENTRIES.load(Ordering::Relaxed);
+            let gated_before = (
+                HEAD_GATED_DECLINES[0].load(Ordering::Relaxed),
+                HEAD_GATED_DECLINES[1].load(Ordering::Relaxed),
+            );
             let start = Instant::now();
             let solved = dsolve_inhomogeneous(&coeffs, &forcing, "x").is_some();
             let wall = start.elapsed();
             let entries = FALLBACK_ENTRIES.load(Ordering::Relaxed) - before;
+            let gated = (
+                HEAD_GATED_DECLINES[0].load(Ordering::Relaxed) - gated_before.0,
+                HEAD_GATED_DECLINES[1].load(Ordering::Relaxed) - gated_before.1,
+            );
             total_entries += entries;
-            println!("{label:<24} | {entries:>16} | {solved:>13} | {wall:>11.3?}");
+            total_gated = (total_gated.0 + gated.0, total_gated.1 + gated.1);
+            let gated = format!("{} overflow / {} relation", gated.0, gated.1);
+            println!("{label:<24} | {entries:>16} | {gated:>24} | {solved:>7} | {wall:>11.3?}");
         }
-        println!("{:<24} | {total_entries:>16} |", "TOTAL");
+        println!(
+            "{:<24} | {total_entries:>16} | {:>24} |",
+            "TOTAL",
+            format!("{} overflow / {} relation", total_gated.0, total_gated.1)
+        );
     }
 }
