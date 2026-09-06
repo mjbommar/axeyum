@@ -301,16 +301,35 @@ fn reduce_columns_by_gcd(
 /// quotients that folding produces scales with the pivot's own magnitude --
 /// any nonzero entry is equally valid as a pivot for CORRECTNESS (`find_nonzero`
 /// only needs to hand `smith_grids` something nonzero to swap into position),
-/// but a pivot's magnitude is what determines how large the entries the rest
-/// of the elimination has to chase get. Picking the smallest available
-/// nonzero entry, the standard Kannan-Bachem-style bound on entry growth, is
-/// a pure pivot-SELECTION change -- it does not touch the elimination steps
-/// themselves, so [`certifies_smith_shape`]/[`certify_product_equals`] still
-/// certify whatever this produces independently of how the pivot was chosen,
-/// and the Smith diagonal `D` is unique regardless (only the transforms `U`,
-/// `V` can differ from a different pivot path, and no committed artifact or
-/// test in this crate pins their exact entries -- see the doc note below on
-/// what was measured and what stayed the same).
+/// so picking the smallest available one (the standard Kannan-Bachem-style
+/// bound on entry growth) is a pure pivot-SELECTION change -- it does not
+/// touch the elimination steps themselves, so [`certifies_smith_shape`]/
+/// [`certify_product_equals`] still certify whatever this produces
+/// independently of how the pivot was chosen, and the Smith diagonal `D` is
+/// unique regardless (only the transforms `U`, `V` can differ from a
+/// different pivot path, and no committed artifact or test in this crate
+/// pins their exact entries).
+///
+/// **Measured, honestly**: A/B'd on the 196-vertex grid-torus `d_1` fixture
+/// (`smith_normal_form_alone_on_a_196_vertex_grid_torus_d1`, `--release`),
+/// this pivot-selection change alone measured 7.02s before vs. 6.91s after --
+/// a ~1.5% difference, i.e. NOT a measurable win on this fixture (within
+/// run-to-run noise). The premise that entry-magnitude-driven gcd blowup was
+/// the dominant cost on THIS shape does not hold up: `d_1`'s entries are
+/// already `+/-1` (the standard alternating-face-removal boundary
+/// convention), so there is no large starting magnitude for a smarter pivot
+/// to avoid amplifying in the first place -- the cost here is dominated by
+/// the sheer NUMBER of elimination positions and divisibility fix-up
+/// iterations `smith_grids` runs through at this shape (196 x 588), not by
+/// how large any one entry along the way gets. The change is kept anyway
+/// (it is sound, standard practice, and strictly a pivot-choice
+/// refinement -- never a regression on any fixture measured), but it is
+/// reported here as a negative finding rather than the cost reduction the
+/// premise predicted; a genuine reduction on THIS shape would need to cut
+/// the iteration/fix-up COUNT itself (a materially different, more invasive
+/// change to `smith_grids`'s search strategy) or a modular determinant-divisor
+/// route, both out of this wave's scope given the risk of a soundness-critical
+/// rewrite for an unconfirmed payoff.
 fn find_nonzero(
     grid: &[Vec<i128>],
     start: usize,
@@ -1205,12 +1224,14 @@ mod tests {
         assert!(certifies_smith_shape(&d));
         assert!(is_unimodular(&u) && is_unimodular(&v));
         eprintln!("smith_normal_form(d_1) alone: {elapsed:?}");
-        // ADVISORY bound (see `docs/research/08-planning/frontier-ratchet-reference-frame.md`):
-        // measured on this host, `--release`, single-threaded, BEFORE the
-        // min-abs-value pivot change above: ~5.7-6.4s (matching wave three's
-        // "~6s of the ~13s total" figure for this same shape). AFTER the
-        // pivot change: see this module's doc comment for the measured
-        // number. 30s is a generous ceiling, not a tight one.
+        // ADVISORY (see `docs/research/08-planning/frontier-ratchet-reference-frame.md`):
+        // measured on this host, `--release`, single-threaded, A/B'd by
+        // temporarily reverting `find_nonzero` to the original first-nonzero
+        // search and back: BEFORE the min-abs-value pivot change, 7.02s;
+        // AFTER, 6.91s -- a ~1.5% difference, i.e. NOT a measurable win on
+        // THIS fixture (within run-to-run noise). See this module's doc
+        // comment on `find_nonzero` for what that means about where the cost
+        // actually lives. 30s is a generous ceiling, not a tight one.
         assert!(
             elapsed.as_secs() < 30,
             "smith_normal_form(d_1) regressed past 30s: {elapsed:?}"

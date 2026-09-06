@@ -127,15 +127,20 @@
 //!   structure can. `RP^2`'s `H^1(-; F_2)` generator squares to nonzero.
 //! - The Smith reduction's own cost (`smith_grids` in `normalforms.rs`,
 //!   flagged as the remaining ceiling by wave three) was measured directly
-//!   (not just as part of the combined `homology()` + `verify()` figure) and
+//!   (not just as part of the combined `homology()` + `verify()` figure), and
 //!   its pivot selection changed from "first nonzero entry" to "smallest
-//!   nonzero entry in absolute value" (the standard Kannan-Bachem-style
-//!   bound on entry growth) -- a pure pivot-choice change, so `D`'s
-//!   uniqueness keeps every existing Smith-form test and the pinned
-//!   `integer-matrix-smith-normal-form` fact's diagonal claim unaffected;
-//!   see `normalforms.rs`'s `find_nonzero` doc comment and
-//!   `smith_normal_form_alone_on_a_196_vertex_grid_torus_d1`'s doc comment
-//!   for the measured before/after numbers.
+//!   nonzero entry in absolute value" (the standard Kannan-Bachem-style bound
+//!   on entry growth) -- a pure pivot-choice change, so `D`'s uniqueness
+//!   keeps every existing Smith-form test and the pinned
+//!   `integer-matrix-smith-normal-form` fact's diagonal claim unaffected.
+//!   **Honest negative finding**: A/B'd on the 196-vertex grid-torus `d_1`
+//!   fixture, this change measured 7.02s before vs. 6.91s after -- not a
+//!   measurable win (the boundary matrix's entries are already `+/-1`, so
+//!   there is no large starting magnitude for pivot choice to help avoid;
+//!   the cost here is the sheer iteration/fix-up COUNT, not entry growth).
+//!   See `normalforms.rs`'s `find_nonzero` doc comment for the full
+//!   explanation and `smith_normal_form_alone_on_a_196_vertex_grid_torus_d1`
+//!   for the measurement itself.
 //!
 //! **What remains**: Steenrod squares (the cup product alone does not see
 //! them -- they are a strictly finer invariant on `F_2` cohomology); the
