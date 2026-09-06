@@ -1,0 +1,61 @@
+{
+  "schema_version": 1,
+  "id": "F:cas-character-tables-verified-over-cyclotomic-fields",
+  "title": "character tables over exact cyclotomic fields, checked by orthogonality, degrees and Galois consistency",
+  "statement": "For a finite group G of exponent e, a candidate character table over Q(zeta_e) is accepted only if all six conditions hold, each re-derived from the certificate alone: (1) the conjugacy classes are the classes of the group described by the carried permutation-group order certificate; (2) the table is square on those classes and every entry lies in Q(zeta_e) for the RECOMPUTED exponent e, not a conductor the certificate may pad; (3) row orthogonality, (1/|G|) sum_k |C_k| chi_i(g_k) conj(chi_j(g_k)) = delta_ij; (4) column orthogonality, sum_i chi_i(g_k) conj(chi_i(g_l)) = delta_kl |G| / |C_k|; (5) every degree chi_i(1) is a positive rational integer dividing |G|, and the trivial character occurs exactly once; and (6) Galois consistency, that for every t coprime to e the substitution zeta -> zeta^t sends chi_i(g) to chi_i(g^t). Arithmetic is exact in the power basis modulo the cyclotomic polynomial; no complex floating-point number occurs anywhere. Verified for S_3, S_4, A_4, A_5 (including its golden-ratio entries) and Q_8; produced AND verified for C_4, the Klein four-group, C_6 and a product of two cyclic groups.",
+  "formal": {
+    "language": "certificate-spec",
+    "statement": "{\"arithmetic\":\"exact in Q(zeta_e), power basis modulo the e-th cyclotomic polynomial; no complex floating point\",\"checked_groups\":[\"S3\",\"S4\",\"A4\",\"A5\",\"Q8\"],\"conjugation\":\"the Galois substitution zeta -> zeta^(e-1)\",\"does_not_establish\":\"that each row is the character of an actual representation\",\"format\":\"axeyum-cas-character-table-certificate\",\"produced_and_checked_groups\":[\"C4\",\"V4\",\"C6\",\"C_m x C_n\"],\"verify_conditions\":[\"classes-are-the-groups-classes\",\"square-and-in-the-recomputed-field\",\"row-orthogonality\",\"column-orthogonality\",\"integral-degrees-dividing-order-and-one-trivial-character\",\"galois-consistency\"],\"version\":1}",
+    "fragment": "finite-group-representation-computation",
+    "free_symbols": [
+      "G",
+      "e"
+    ],
+    "kernel_theorem": null
+  },
+  "epistemic_status": "computed",
+  "external_status": "proved",
+  "depends_on": [],
+  "proof_route": "cas-certificate",
+  "axiom_footprint": [
+    "cas.exact-cyclotomic-field-arithmetic",
+    "cas.conjugacy-class-certificate-from-permgroup: condition (1) is delegated to ConjugacyClassCertificate::verify and is not re-derived here",
+    "chartable.orthogonality-and-galois-consistency-do-not-imply-representability: this is the module's own stated limit. A table that passes all six conditions is CONSISTENT WITH being the character table of G; it is not proved to be one, because none of the six conditions exhibits a representation. Do not read an accepted table as `the character table of G has been proved correct`.",
+    "cas.verifier-shares-the-crate-with-the-producer: the certificate checker re-derives every step from the recorded (head, inputs, order) and trusts no recorded number, but it lives in the same crate as the search that produced the certificate, so under ADR-0601 SS1 this is `cas-internal` evidence and NOT reconstruction through the one trust anchor (Kernel::add_declaration). That is why this fact is `computed` and not `proved`."
+  ],
+  "evidence": [
+    {
+      "id": "cas-chartable-verification-and-discrimination",
+      "kind": "witness-replay",
+      "supports": "that the six conditions are each load-bearing -- every one rejects a table forged on exactly its axis -- and in particular that condition (6) catches a defect the orthogonality relations provably cannot",
+      "check_status": "checked",
+      "checkers": [
+        "a_column_permutation_that_is_not_a_group_automorphism_is_caught_only_by_galois -- the test that justifies condition (6) existing at all, since orthogonality alone accepts the forgery",
+        "a_table_whose_two_omega_columns_are_swapped_in_one_row_is_refused; a_table_with_the_golden_ratio_moved_to_the_involution_column_is_refused",
+        "a_table_with_one_wrong_integer_entry_is_refused; a_padded_conductor_is_refused; a_table_whose_entries_live_in_the_wrong_field_is_refused",
+        "a_table_with_a_missing_row_is_refused; a_table_with_a_short_row_is_refused; a_table_with_a_negated_row_is_refused_by_the_degree_check_alone; a_table_with_two_trivial_rows_is_refused",
+        "a_table_whose_classes_are_not_the_groups_classes_is_refused",
+        "the_produced_table_of_an_abelian_group_survives_a_single_entry_change (a mutation control on the PRODUCER, not only the checker)",
+        "ground truth: the_cyclotomic_polynomials_match_their_classical_values; the_golden_ratio_lives_in_the_fifth_cyclotomic_field"
+      ],
+      "checker_command": "cargo test -p axeyum-cas --lib chartable::tests",
+      "artifact": "crates/axeyum-cas/src/chartable.rs",
+      "checker_seconds": 1,
+      "notes": "28 tests, 11 of them discrimination controls. The A_5 test asserts exactly four irrational entries, so the golden-ratio arithmetic is checked positively and not merely 'did not crash'."
+    }
+  ],
+  "provenance": {
+    "date": "2026-09-06",
+    "established_by": "lane ledger-coverage (ADR-1674): registered from the existing axeyum-cas implementation and its own certificate verifiers; no new mathematics was produced by this lane",
+    "source": "crates/axeyum-cas/src/chartable.rs (1,615 lines), over permgroup.rs",
+    "prior_art": [
+      {
+        "who": "F. G. Frobenius; I. Schur; W. Burnside; J. D. Dixon",
+        "what": "the orthogonality relations for irreducible characters; the Burnside-Dixon algorithm for computing character tables",
+        "where": "Frobenius (1896); Dixon, Numerische Mathematik 11 (1968)",
+        "attribution": "standard textbook attribution; this lane did not consult the primary sources"
+      }
+    ]
+  },
+  "notes": "Registered by ADR-1674. `computed`, not `proved`, for TWO independent reasons, and the second is the more interesting one. First, the checker is `cargo test -p axeyum-cas`, so the evidence is `cas-internal` under ADR-0601 SS1. Second -- and this would remain true even after a kernel bridge -- the six conditions do not imply that the rows ARE characters of representations. The Burnside-Dixon nonabelian PRODUCER is deliberately absent from the module; only the abelian producer builds its rows as homomorphisms into roots of unity, which is the one case where they are characters by construction. A future lane must not upgrade this row to `proved` on the strength of a kernel bridge alone."
+}

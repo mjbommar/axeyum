@@ -1,0 +1,83 @@
+{
+  "schema_version": 1,
+  "id": "F:cas-matrix-groups-orders-and-isomorphisms",
+  "title": "finite matrix groups over F_p and over Q: orders, isomorphism types, and a decided finiteness question",
+  "statement": "Over a prime field F_p, a matrix group given by generators acts faithfully on the nonzero vectors of F_p^n (so the permutation group's order IS the matrix group's order) or projectively on the points of P^(n-1)(F_p) (whose kernel is exactly the scalars, so SL generators yield PSL without constructing a quotient). Computed and independently re-verified: |GL(2,F_3)| = 48, |SL(2,F_3)| = 24, |GL(2,F_5)| = 480, |SL(2,F_5)| = 120, |GL(3,F_2)| = 168, |PSL(2,F_5)| = 60, |PSL(2,F_7)| = 168; and as isomorphism types PSL(2,F_5) = A_5 and PSL(2,F_7) = GL(3,F_2), while SL(2,F_3) is NOT isomorphic to the dihedral group of order 24 (a negative control between two groups of the same order). Over Q, finiteness of a matrix group is DECIDED, with a certificate for either verdict: by Minkowski's lemma the reduction mod an odd prime of good reduction is injective on torsion, so the mod-p order N bounds the rational closure -- closing at exactly N gives the order, and producing an (N+1)-st distinct element is a proof of infiniteness. Two cheaper infiniteness routes need no prime at all: |trace| > n and |det| != 1 each force infinite order.",
+  "formal": {
+    "language": "certificate-spec",
+    "statement": "{\"actions\":[\"vector on nonzero vectors of F_p^n (faithful)\",\"projective on points of P^(n-1)(F_p) (kernel = scalars)\"],\"finite_field_orders\":{\"GL(2,3)\":48,\"GL(2,5)\":480,\"GL(3,2)\":168,\"PSL(2,5)\":60,\"PSL(2,7)\":168,\"SL(2,3)\":24,\"SL(2,5)\":120},\"format\":\"axeyum-cas-matrix-group-certificate\",\"infinite_routes\":[\"MinkowskiOverflow\",\"TraceExceedsDimension\",\"DeterminantNotUnit\"],\"isomorphisms\":[\"PSL(2,5) = A5\",\"PSL(2,7) = GL(3,2)\"],\"minkowski_bound\":[1,2,24,48,5760,11520,2903040],\"non_isomorphism\":\"SL(2,3) != D12 (both of order 24)\",\"rational_route\":\"Minkowski reduction mod an odd prime of good reduction\",\"version\":1}",
+    "fragment": "finite-group-computation",
+    "free_symbols": [
+      "p",
+      "n",
+      "generators"
+    ],
+    "kernel_theorem": null
+  },
+  "epistemic_status": "computed",
+  "external_status": "proved",
+  "depends_on": [],
+  "proof_route": "cas-certificate",
+  "axiom_footprint": [
+    "cas.exact-modular-and-rational-matrix-arithmetic",
+    "cas.schreier-sims-permutation-group-order: the group order is delegated to axeyum_cas::permgroup, whose own correctness is CAS-internal and is not re-derived by the matrix-group certificate",
+    "minkowski-lemma-for-odd-primes-as-implemented: the p >= 3 torsion-freeness argument is stated and used by this module; -I breaks it at p = 2, which the module handles by excluding p = 2 rather than by proving the exclusion sound elsewhere",
+    "cas.verifier-shares-the-crate-with-the-producer: the certificate checker re-derives every step from the recorded (head, inputs, order) and trusts no recorded number, but it lives in the same crate as the search that produced the certificate, so under ADR-0601 SS1 this is `cas-internal` evidence and NOT reconstruction through the one trust anchor (Kernel::add_declaration). That is why this fact is `computed` and not `proved`."
+  ],
+  "evidence": [
+    {
+      "id": "cas-matgroup-finite-field-orders-and-isomorphisms",
+      "kind": "witness-replay",
+      "supports": "the seven computed orders, the two isomorphisms, and the one non-isomorphism, each re-derived by a certificate verifier that re-enumerates the action from (p, n, action) alone",
+      "check_status": "checked",
+      "checkers": [
+        "ActionCertificate::verify re-enumerates the points from (p, n, action) alone, re-checks each generator is square, in range and invertible mod p, and recomputes each generator's permutation image by matrix-vector multiplication -- it trusts no recorded permutation",
+        "ElementOrderCertificate::verify cross-checks an element's order TWO ways: the permutation's own order, and direct repeated modular matrix multiplication (M^k = I, M^(k/q) != I for each prime q dividing k)",
+        "gl2_f3_order_is_48, sl2_f3_order_is_24, gl2_f5_order_is_480, sl2_f5_order_is_120, gl3_f2_order_is_168, psl2_f5_order_is_60, psl2_f7_order_is_168",
+        "psl2_f5_isomorphic_to_a5, psl2_f7_isomorphic_to_gl3_f2, and the negative control sl2_f3_not_isomorphic_to_d12",
+        "forged_action_certificate_with_wrong_image_rejected, forged_action_certificate_smuggling_singular_generator_rejected, forged_element_order_certificate_with_inflated_order_rejected, forged_element_order_certificate_with_singular_matrix_rejected"
+      ],
+      "checker_command": "cargo test -p axeyum-cas --lib matgroup::tests",
+      "artifact": "crates/axeyum-cas/src/matgroup.rs",
+      "checker_seconds": 2,
+      "notes": "26 tests. The negative control matters: two groups of order 24 that are not isomorphic is the case an order-only check cannot distinguish."
+    },
+    {
+      "id": "cas-matgroup-rational-finiteness-decision",
+      "kind": "witness-replay",
+      "supports": "that finiteness over Q is decided with a certificate for BOTH verdicts, and that the infiniteness verdicts are proofs rather than timeouts",
+      "check_status": "checked",
+      "checkers": [
+        "minkowski_bound_matches_the_classical_values (M(0..6) = 1, 2, 24, 48, 5760, 11520, 2903040, against Minkowski's own table)",
+        "every_finite_group_this_module_finds_has_order_dividing_the_bound",
+        "finite verdicts: the quarter-turn (order 4), signed permutations of the plane (order 8), permutation matrices of S_3 (order 6), a NON-INTEGRAL conjugate of the quarter-turn (still order 4), the trivial group, the empty generator list",
+        "infinite verdicts: the shear [[1,1],[0,1]] by Minkowski overflow, scaling by 2 by determinant-not-a-unit, two elementary matrices by trace-exceeds-dimension, a denominator-3 shear by the bound alone",
+        "18 of the 35 tests are verify_rejects_* forgery controls (even modulus, tampered reduced order, tampered Minkowski bound, order not dividing the bound, unsorted / short / identity-missing / generator-missing / non-closed element lists, an infiniteness claim whose determinant IS a unit, an overflow claim with a repeated or too-few witnesses, a witness word naming a nonexistent generator)"
+      ],
+      "checker_command": "cargo test -p axeyum-cas --lib matgroup_q::tests",
+      "artifact": "crates/axeyum-cas/src/matgroup_q.rs",
+      "checker_seconds": 2,
+      "notes": "35 tests. Halting below the mod-p order N is reported as MinkowskiContradiction -- a declared bug -- never as a smaller order. That is the design choice that keeps a wrong answer from being expressible."
+    }
+  ],
+  "provenance": {
+    "date": "2026-09-06",
+    "established_by": "lane ledger-coverage (ADR-1674): registered from the existing axeyum-cas implementation and its own certificate verifiers; no new mathematics was produced by this lane",
+    "source": "crates/axeyum-cas/src/matgroup.rs (1,469 lines) and matgroup_q.rs (1,692 lines), over permgroup.rs",
+    "prior_art": [
+      {
+        "who": "H. Minkowski; C. Sims",
+        "what": "Minkowski's lemma bounding the order of a finite subgroup of GL(n,Q); the Schreier-Sims algorithm for permutation-group order",
+        "where": "Minkowski (1887); Sims, in Computational Problems in Abstract Algebra (1970)",
+        "attribution": "standard textbook attribution; this lane did not consult the primary sources"
+      },
+      {
+        "who": "classical",
+        "what": "the exceptional isomorphisms PSL(2,5) = A_5 and PSL(2,7) = GL(3,2)",
+        "where": "standard; see e.g. Dummit and Foote, Abstract Algebra",
+        "attribution": "standard textbook attribution; this lane did not consult the primary source"
+      }
+    ]
+  },
+  "notes": "Registered by ADR-1674. `computed`, not `proved`: the checker is `cargo test -p axeyum-cas`, so the evidence classifies `cas-internal` under ADR-0601 SS1 and no kernel declaration stands behind any of these orders. The design worth preserving is that this module never reimplements group theory -- it builds a faithful permutation representation and hands it to permgroup, so PSL comes out of the projective action for free rather than from a hand-built quotient. The honest consequence is recorded in the footprint: the order itself is permgroup's answer, and the matrix-group certificate re-derives the ACTION, not the Schreier-Sims computation."
+}
