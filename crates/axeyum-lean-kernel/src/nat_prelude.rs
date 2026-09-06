@@ -181,6 +181,7 @@ mod div_mod_lemmas;
 mod divisibility;
 mod division;
 mod divisor_sum_scale;
+mod divisor_valuation;
 mod draw11_mirrors;
 mod dvd_add_iff_left;
 mod dvd_mul_split;
@@ -314,6 +315,7 @@ mod subset_product;
 mod subset_search;
 mod subset_sum;
 mod subset_sums;
+mod subset_sums_masked;
 mod sum_range_permute;
 mod testbit_bitwise;
 mod totient;
@@ -416,6 +418,7 @@ use divisibility::declare_factorial_order;
 use divisibility::{declare_div_dvd_div_left, declare_divisibility};
 use division::declare_euclidean_division;
 use divisor_sum_scale::declare_divisor_sum_scale_all;
+use divisor_valuation::declare_divisor_valuation_all;
 use draw11_mirrors::declare_draw11_mirrors_all;
 use dvd_add_iff_left::declare_dvd_add_iff_left;
 use dvd_mul_split::declare_dvd_mul_split;
@@ -570,6 +573,7 @@ use subset_product::{declare_pigeonhole_p_all, declare_prod_range_if_all};
 use subset_search::declare_subset_search_all;
 use subset_sum::declare_subset_sum_all;
 use subset_sums::declare_subset_sums_all;
+use subset_sums_masked::declare_subset_sums_masked_all;
 use sum_range_permute::declare_sum_range_permute_all;
 use testbit_bitwise::declare_testbit_bitwise_all;
 use totient::declare_totient_all;
@@ -7465,6 +7469,66 @@ pub struct NatPrelude {
     /// graded form. `add_comm` and nothing else, once the split law is free.
     pub subsets_sum_sel_const: NameId,
 
+    // --- MASKED subset sums (`subset_sums_masked.rs`, ADR-1671,
+    // roadmap W2-18). The mask restricts the ENUMERATION, not the summand:
+    // `sumSubsetsOn P n F` visits exactly the subsets of `{i < n : P i}`,
+    // which is what makes a transfer from the divisors of a squarefree `n`
+    // count each divisor once rather than `2^(bound - omega(n))` times.
+    /// `Nat.Subsets.sumSubsetsOn P n F` — the sum over every subset of
+    /// `{i < n : P i = true}`, by recursion on the width. An index outside
+    /// the mask contributes only the "without it" half of the split.
+    pub subsets_sum_subsets_on: NameId,
+    /// `Nat.Subsets.sumSelOn P n F b` — the same fold graded by PARITY, with
+    /// `b = true` meaning even. The `Nat`-valued half of a signed sum.
+    pub subsets_sum_sel_on: NameId,
+    /// `Nat.Subsets.sumSubsetsOn_zero : ∀ P F, sumSubsetsOn P 0 F = F empty`
+    /// — `Eq.refl`.
+    pub subsets_sum_subsets_on_zero: NameId,
+    /// `Nat.Subsets.sumSubsetsOn_succ : ∀ P n F, sumSubsetsOn P (succ n) F =
+    /// sumSubsetsOn P n F +
+    /// (if P n then sumSubsetsOn P n (fun s => F (insertAt n s)) else 0)` —
+    /// THE MASKED SPLIT LAW, `Eq.refl`.
+    pub subsets_sum_subsets_on_succ: NameId,
+    /// `Nat.Subsets.sumSelOn_zero : ∀ P F b,
+    /// sumSelOn P 0 F b = bool_select_nat b (F empty) 0` — `Eq.refl`.
+    pub subsets_sum_sel_on_zero: NameId,
+    /// `Nat.Subsets.sumSelOn_succ : ∀ P n F b, sumSelOn P (succ n) F b =
+    /// sumSelOn P n F b +
+    /// (if P n then sumSelOn P n (fun s => F (insertAt n s)) (notB b) else 0)`
+    /// — the graded masked split law, `Eq.refl`.
+    pub subsets_sum_sel_on_succ: NameId,
+    /// `Nat.Subsets.sumSubsetsOn_all : ∀ n F,
+    /// sumSubsetsOn (fun _ => true) n F = sumSubsets n F` — the full mask
+    /// recovers the unrestricted fold, `Eq.refl`.
+    pub subsets_sum_subsets_on_all: NameId,
+    /// `Nat.Subsets.sumSelOn_all : ∀ n F b,
+    /// sumSelOn (fun _ => true) n F b = sumSel n F b` — `Eq.refl`.
+    pub subsets_sum_sel_on_all: NameId,
+    /// `Nat.Subsets.sumSelOn_add : ∀ P n F,
+    /// sumSelOn P n F true + sumSelOn P n F false = sumSubsetsOn P n F` — the
+    /// masked grading is a partition of the masked fold.
+    pub subsets_sum_sel_on_add: NameId,
+    /// `Nat.Subsets.sumSubsetsOn_card : ∀ P n,
+    /// sumSubsetsOn P n (fun _ => 1) = pow 2 (countRange P n)` — the masked
+    /// fold visits two-to-the-number-of-MASKED-indices subsets, not `2^n`.
+    /// This is the statement the mask exists for, and the one a step that
+    /// ignores the mask fails while still satisfying every other law here.
+    pub subsets_sum_subsets_on_card: NameId,
+    /// `Nat.Multiset.count_le_of_dvd_prod : ∀ m d q,
+    /// (∀ x, Lt 0 (count m x) → prime x) → Lt 0 d → dvd d (prod m) →
+    /// Le (count (factorization d) q) (count m q)` — a divisor cannot carry
+    /// more copies of a prime than the multiset does. ADR-1658's missing
+    /// piece A, the surjectivity half of the divisors ↔ selections bijection
+    /// (`divisor_valuation.rs`).
+    pub multiset_count_le_of_dvd_prod: NameId,
+    /// `Nat.Subsets.sumSelOn_const_of_mem : ∀ c P n i, Lt i n →
+    /// Eq Bool (P i) true →
+    /// sumSelOn P n (fun _ => c) true = sumSelOn P n (fun _ => c) false` — THE
+    /// ALTERNATING SUM OVER A NON-EMPTY MASK VANISHES, in `Nat`'s graded form.
+    /// [`subsets_sum_sel_const`](Self::subsets_sum_sel_const) is the special
+    /// case at the full mask, where the witness comes for free.
+    pub subsets_sum_sel_on_const: NameId,
+
     // --- general inclusion-exclusion (`inclusion_exclusion.rs`, ADR-1624) ---
     /// `Nat.Subsets.anyOf c n : Bool` -- `exists i < n, c i`, by recursion on
     /// the width. Defined here rather than reused from
@@ -8917,6 +8981,18 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             subsets_sum_sel_true_split: kernel.name_str(subsets, "sumSel_true_eq_empty_add_pos"),
             subsets_sum_subsets_card: kernel.name_str(subsets, "sumSubsets_card"),
             subsets_sum_sel_const: kernel.name_str(subsets, "sumSel_const"),
+            subsets_sum_subsets_on: kernel.name_str(subsets, "sumSubsetsOn"),
+            subsets_sum_sel_on: kernel.name_str(subsets, "sumSelOn"),
+            subsets_sum_subsets_on_zero: kernel.name_str(subsets, "sumSubsetsOn_zero"),
+            subsets_sum_subsets_on_succ: kernel.name_str(subsets, "sumSubsetsOn_succ"),
+            subsets_sum_sel_on_zero: kernel.name_str(subsets, "sumSelOn_zero"),
+            subsets_sum_sel_on_succ: kernel.name_str(subsets, "sumSelOn_succ"),
+            subsets_sum_subsets_on_all: kernel.name_str(subsets, "sumSubsetsOn_all"),
+            subsets_sum_sel_on_all: kernel.name_str(subsets, "sumSelOn_all"),
+            subsets_sum_sel_on_add: kernel.name_str(subsets, "sumSelOn_add"),
+            subsets_sum_subsets_on_card: kernel.name_str(subsets, "sumSubsetsOn_card"),
+            subsets_sum_sel_on_const: kernel.name_str(subsets, "sumSelOn_const_of_mem"),
+            multiset_count_le_of_dvd_prod: kernel.name_str(multiset, "count_le_of_dvd_prod"),
             subsets_any_of: kernel.name_str(subsets, "anyOf"),
             subsets_none_of: kernel.name_str(subsets, "noneOf"),
             subsets_prod_par: kernel.name_str(subsets, "prodPar"),
@@ -10471,6 +10547,11 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // lemmas `add_zero`/`add_comm`/`add_add_add_comm`. Deliberately does
         // NOT need `Nat.Finset`: a subset here is a `Nat -> Bool` predicate.
         declare_subset_sums_all(&mut d, &p)?;
+        // Subset sums restricted to a MASK (`subset_sums_masked.rs`,
+        // ADR-1671, roadmap W2-18). Needs `declare_subset_sums_all`
+        // immediately above (`Nat.Subsets.empty`/`insertAt`/`sumSubsets`/
+        // `sumSel`) and `Nat.Graph.notB`.
+        declare_subset_sums_masked_all(&mut d, &p)?;
         // General inclusion-exclusion (`inclusion_exclusion.rs`, ADR-1624,
         // roadmap W2-19). Needs `declare_subset_sums_all` immediately above
         // plus `Nat.prodRange`/`prodRangeIf` (`subset_sum.rs`, `binomial.rs`),
@@ -10486,6 +10567,13 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // (`subset_sums.rs`), `Nat.dvd_refl`/`Nat.not_lt_zero`/
         // `Nat.pow_zero`/`Nat.one_mul`/`Nat.mul_assoc`/`Nat.mul_comm`.
         declare_multiset_select_all(&mut d, &p)?;
+        // The divisor-valuation bound (`divisor_valuation.rs`, ADR-1671,
+        // roadmap W2-18): ADR-1658's missing piece A. Needs
+        // `declare_multiset_all` (`Nat.Multiset.pow_count_dvd_prod`,
+        // `not_pow_succ_count_dvd_prod`) and `declare_factorization_multiset_all`
+        // (`Nat.prod_factorization`, `Nat.factorization_prime`), plus
+        // `Nat.lt_or_ge`/`Nat.lt_of_le_of_lt`/`Nat.dvd_trans`.
+        declare_divisor_valuation_all(&mut d, &p)?;
         // The primorial (`primorial.rs`, ADR-1637, roadmap W3-11). Needs
         // `Nat.prodRangeIf` (`subset_product.rs`, `declare_prod_range_if_all`
         // far above), `Nat.minFac` and the three `min_fac_*` lemmas
@@ -10664,9 +10752,13 @@ mod hall_descent_tests;
 mod hall_marriage_tests;
 
 #[cfg(test)]
+mod divisor_valuation_tests;
+#[cfg(test)]
 mod inclusion_exclusion_tests;
 #[cfg(test)]
 mod subset_search_tests;
+#[cfg(test)]
+mod subset_sums_masked_tests;
 #[cfg(test)]
 mod subset_sums_tests;
 

@@ -1,0 +1,60 @@
+{
+  "schema_version": 1,
+  "id": "F:nat-multiset-count-le-of-dvd-prod",
+  "title": "A divisor cannot carry more copies of a prime than the multiset does",
+  "statement": "Let m be a Nat.Multiset all of whose elements are prime, and let d be a positive divisor of the product of m. Then at every value q, the multiplicity of q in the computed factorization of d is at most its multiplicity in m. This is the valuation-comparison half of the divisors-to-selections correspondence: ADR-1658 named it as the missing prerequisite for surjectivity (every divisor of a squarefree n IS a selection of its prime multiset), where prodSel_dvd_prod already gives the converse.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Nat.Multiset.count_le_of_dvd_prod : ((x0 : AxNat.Multiset) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : ((x3 : AxNat) -> ((x4 : AxNat.lt AxNat.zero (AxNat.Multiset.count x0 x3)) -> And (AxNat.le (AxNat.succ (AxNat.succ AxNat.zero)) x3) (((x5 : AxNat) -> ((x6 : AxNat.dvd x5 x3) -> Or (Eq.{1} AxNat x5 (AxNat.succ AxNat.zero)) (Eq.{1} AxNat x5 x3))))))) -> ((x4 : AxNat.lt AxNat.zero x1) -> ((x5 : AxNat.dvd x1 (AxNat.Multiset.prod x0)) -> AxNat.le (AxNat.Multiset.count (AxNat.factorization x1) x2) (AxNat.Multiset.count x0 x2)))))))",
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.Multiset.count_le_of_dvd_prod"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:nat-multiset-pow-count-dvd-prod",
+    "F:nat-multiset-not-pow-succ-count-dvd-prod",
+    "F:nat-pow-dvd-pow-of-le",
+    "F:nat-prod-factorization",
+    "F:nat-factorization-prime",
+    "F:nat-dvd-trans",
+    "F:nat-lt-or-ge",
+    "F:nat-lt-of-le-of-lt",
+    "F:nat-zero-le"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-nat-multiset-count-le-of-dvd-prod",
+      "kind": "kernel-term",
+      "kernel_declaration": "Nat.Multiset.count_le_of_dvd_prod",
+      "supports": "Nat.Multiset.count_le_of_dvd_prod is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q --release -p axeyum-lean-kernel --example nat_theorem_inventory -- Nat.Multiset.count_le_of_dvd_prod 2>/dev/null | grep -Fc 'AxNat.le (AxNat.Multiset.count (AxNat.factorization x1) x2) (AxNat.Multiset.count x0 x2)')\" -ge 1",
+      "notes": "The pattern is the CONCLUSION as rendered by Kernel::render_lean, in its admitted direction, so a transposed statement fails this check. ADR-1658 sized this as a bounded induction in multiset.rs's idiom; it is neither. Both valuation halves already existed, so the argument is one Nat.lt_or_ge at the two counts -- whose right half IS the goal -- plus three dvd_trans steps in the left half, contradicting not_pow_succ_count_dvd_prod. Nat.lt n m IS Nat.le (succ n) m definitionally here, so no succ_le_of_lt is needed and none exists."
+    },
+    {
+      "id": "footprint-nat-multiset-count-le-of-dvd-prod",
+      "kind": "instance-pin",
+      "supports": "axiom_footprint: [] -- read from Kernel::axiom_footprint for this declaration, not from a maintained list",
+      "check_status": "checked",
+      "checker_command": "cargo test -q --release -p axeyum-lean-kernel --lib -- nat_prelude::divisor_valuation_tests::the_divisor_valuation_bound_is_present_and_axiom_free --test-threads=1",
+      "notes": "That test asserts Environment::contains FIRST and only then that Kernel::axiom_footprint is empty -- an absent name has an EMPTY footprint, so the order is load-bearing."
+    },
+    {
+      "id": "type-pin-nat-multiset-count-le-of-dvd-prod",
+      "kind": "instance-pin",
+      "supports": "The declared type is pinned character for character, which is the only check that can see a transposed conclusion or a dropped positivity hypothesis.",
+      "check_status": "checked",
+      "checker_command": "cargo test -q --release -p axeyum-lean-kernel --lib -- nat_prelude::divisor_valuation_tests:: --test-threads=4",
+      "notes": "the_divisor_valuation_bound_states_the_intended_type compares Kernel::render_lean of the admitted type against a literal. the_factorization_counts_discriminate_at_twelve is the non-vacuity control: 12 = 2^2 * 3 gives counts 2, 1, 0 at 2, 3, 5, each paired with the wrong value it rules out, so the inequality is not a statement about a constantly-zero function."
+    }
+  ],
+  "provenance": {
+    "date": "2026-09-06",
+    "established_by": "axeyum-lean-kernel build_nat_prelude (nat_prelude/divisor_valuation.rs)",
+    "source": "theorem name and canonical type read directly via nat_theorem_inventory, which prints render_lean of the admitted type; lane mobius-transfer, ADR-1671."
+  },
+  "notes": "Landed by lane mobius-transfer (ADR-1671), closing ADR-1658's missing piece A. Surjectivity itself does NOT follow yet: with s q := ble 1 (count (factorization d) q) and a squarefree m this gives count (restrict m s) q = count (factorization d) q at every q, but concluding prodSel m s = d needs count-agreement to imply prod-agreement, and the two multisets have DIFFERENT BOUNDS. The missing lemma is a prodRange range-stability law, not a valuation bound -- so the blocker moved rather than disappearing.",
+  "external_status": "proved"
+}

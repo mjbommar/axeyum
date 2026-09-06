@@ -4,7 +4,7 @@
   "note": "Statement identity for every settled fact (S1 of the trusted-library safety roadmap, ADR-0763). Per fact: SHA-256 of formal.statement (the canonical kernel rendering for native lean4 rows), SHA-256 of the top-level reader-facing statement, and the kernel_theorem it names. A settled fact's statement is what the ledger CLAIMS; changing any of the three silently turns 'we proved X' into 'we proved something we then labelled X'. Changes require an amendment row naming both digests and a reason; superseded digests are preserved in each pin's history. `coverage_floor` is a ratchet the gate re-derives rather than trusts: slack is itself a violation, so a loosened floor is self-reverting. Written by `scripts/check-settled-fact-statements.py --write`; do not hand-edit.",
   "coverage_floor": {
     "max_unpinned_settled": 0,
-    "min_identity_bound": 2446,
+    "min_identity_bound": 2449,
     "max_header_exempt": 0
   },
   "amendments": [
@@ -20001,6 +20001,13 @@
       ]
     },
     {
+      "fact_id": "F:nat-multiset-count-le-of-dvd-prod",
+      "language": "lean4",
+      "statement_sha256": "8e05e47be722742cddd7b57c4e3e9a4600125a83df17a01a00e05b79cd9c01a3",
+      "prose_sha256": "a33eb796c2358e06ef13d63f31f9611efd437bdcd16bebda7e6d8bc7ef8963f1",
+      "kernel_theorem": "Nat.Multiset.count_le_of_dvd_prod"
+    },
+    {
       "fact_id": "F:nat-multiset-not-pow-succ-count-dvd-prod",
       "language": "lean4",
       "statement_sha256": "8e6d8f99123f6d2444fc71e1896c479d507f04213d6fe9ddb4a6f3443b3ddd2d",
@@ -20931,6 +20938,20 @@
       "statement_sha256": "c130d33dd04cd41947879f1a6433c83c66d32862c2fdaa245aa112587f0391ad",
       "prose_sha256": "fab30256cf7266534987705b54f8d143452748f91214f6618f867dd88b8a21ca",
       "kernel_theorem": "Nat.subset_union_left"
+    },
+    {
+      "fact_id": "F:nat-subsets-sum-sel-on-const-of-mem",
+      "language": "lean4",
+      "statement_sha256": "ff48b812da928abaf091459fb15b7708fa5dcbea3cce1878de388010b1f788bd",
+      "prose_sha256": "2bd74aca08470b7e80073fc1679c9d0f73a016029d03f0480dd888a7f1c70f3c",
+      "kernel_theorem": "Nat.Subsets.sumSelOn_const_of_mem"
+    },
+    {
+      "fact_id": "F:nat-subsets-sum-subsets-on-card",
+      "language": "lean4",
+      "statement_sha256": "877a848e48104b4a6610b680e7f0204332cb3920cef61158b8ef194d3ac5b3ce",
+      "prose_sha256": "63144338888baa18e40cd5cd04e3715d3a09a02978e44840f529300bfbd26972",
+      "kernel_theorem": "Nat.Subsets.sumSubsetsOn_card"
     },
     {
       "fact_id": "F:nat-succ-add",
