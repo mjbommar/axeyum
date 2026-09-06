@@ -1017,7 +1017,24 @@ fn pairwise_product_resultant(factor: &[BigRational]) -> Option<Vec<BigRational>
         })
         .collect();
     let matrix = sylvester_matrix_big(&p_coeffs, &q_coeffs)?;
-    let determinant = poly_trim(axeyum_ir::poly_big::big_determinant(&matrix));
+    let determinant = axeyum_ir::poly_big::big_determinant(&matrix);
+    accept_pairwise_resultant(&factor, &determinant)
+}
+
+/// The two identities of [`pairwise_product_resultant`], applied to a candidate
+/// determinant: `deg g = n²`, and the monic `g` has
+/// `g(0) = (−1)ⁿ (a₀/aₙ)^{2n}`. `Some(monic g)` when both hold, `None` otherwise.
+///
+/// Split out from the producer so a test can hand it a **corrupted**
+/// determinant: a guard whose only input is a value no test can perturb is a
+/// guard no test can kill.
+fn accept_pairwise_resultant(
+    factor: &[BigRational],
+    determinant: &[BigRational],
+) -> Option<Vec<BigRational>> {
+    let factor = poly_trim(factor.to_vec());
+    let degree = poly_degree(&factor)?;
+    let determinant = poly_trim(determinant.to_vec());
     if poly_degree(&determinant)? != degree * degree {
         return None;
     }
@@ -2140,10 +2157,14 @@ pub fn coefficient_asymptotics(
 mod tests {
     use super::{
         AlgebraicRadius, AnalyticDecline, AnalyticError, FactorModulusBound, ModulusRoute,
-        RadiusCertificate, RadiusOfConvergence, coefficient_asymptotics, radius_of_convergence,
+        RadiusCertificate, RadiusOfConvergence, accept_pairwise_resultant,
+        coefficient_asymptotics, count_roots_in, pairwise_product_resultant, poly_trim,
+        radius_of_convergence, resultant_modulus_polynomial,
     };
+    use axeyum_ir::Rational;
     use num_bigint::BigInt;
     use num_rational::BigRational;
+    use num_traits::Zero;
 
     fn r(value: i64) -> BigRational {
         BigRational::from_integer(BigInt::from(value))
@@ -2158,7 +2179,6 @@ mod tests {
     }
 
     // -- radius, exact rational -------------------------------------------
-
     #[test]
     fn radius_of_one_over_one_minus_x_is_exactly_one() {
         let certificate = radius_of_convergence(&rats(&[1]), &rats(&[1, -1])).unwrap();
@@ -2222,19 +2242,311 @@ mod tests {
         assert_eq!(certificate.verify(), Ok(()));
     }
 
+    // -- radius, the pairwise-product resultant route ----------------------
+
     #[test]
-    fn radius_of_the_fifth_cyclotomic_denominator_is_only_a_certified_lower_bound() {
-        // 1 + x + x² + x³ + x⁴ is irreducible with all four roots on the unit
-        // circle, so neither exact route reaches it and the honest answer is the
-        // reciprocal Cauchy bound 1/2.
+    fn radius_of_the_fifth_cyclotomic_denominator_is_exactly_one_via_the_pairwise_resultant() {
+        // `1 + x + x² + x³ + x⁴` is irreducible with all four roots on the unit
+        // circle. Neither wave-two route reaches it — no real root at all, and
+        // degree 4 is past the conjugate-pair shape — so wave two answered with
+        // the reciprocal Cauchy bound 1/2 where the truth is 1. The
+        // pairwise-product resultant gives the 1 exactly.
         let certificate = radius_of_convergence(&rats(&[1]), &rats(&[1, 1, 1, 1, 1])).unwrap();
         assert_eq!(certificate.factors.len(), 1);
-        assert_eq!(certificate.factors[0].route, ModulusRoute::ReciprocalCauchy);
-        assert_eq!(certificate.radius, RadiusOfConvergence::LowerBound(q(1, 2)));
+        assert_eq!(
+            certificate.factors[0].route,
+            ModulusRoute::PairwiseResultant
+        );
+        assert_eq!(certificate.radius, RadiusOfConvergence::Exact(r(1)));
+        // g(t) = (t−1)⁴·Φ₅(t)³ has square-free part t⁵ − 1, so the modulus
+        // polynomial is t¹⁰ − 1 and not the degree-32 substitution of g itself.
+        let mut expected = vec![r(0); 11];
+        expected[0] = r(-1);
+        expected[10] = r(1);
+        assert_eq!(certificate.factors[0].modulus_polynomial, expected);
         assert_eq!(certificate.verify(), Ok(()));
-        // The true radius is 1, so the bound is sound but not tight; the label
-        // says exactly that.
+        assert_eq!(certificate.radius.bracket(), Some((r(1), r(1))));
+    }
+
+    #[test]
+    fn radius_of_one_over_one_plus_x_cubed_is_exactly_one() {
+        // `1 + x³` has one real root (−1) and a conjugate pair of modulus 1, and
+        // it splits over ℚ into `(1 + x)(1 − x + x²)`, so the two wave-two routes
+        // between them still reach it.
+        let certificate = radius_of_convergence(&rats(&[1]), &rats(&[1, 0, 0, 1])).unwrap();
+        assert_eq!(
+            certificate
+                .factors
+                .iter()
+                .map(|bound| bound.route)
+                .collect::<Vec<_>>(),
+            vec![ModulusRoute::AllRealRoots, ModulusRoute::ConjugatePair]
+        );
+        assert_eq!(certificate.radius, RadiusOfConvergence::Exact(r(1)));
+        assert_eq!(certificate.verify(), Ok(()));
+
+        // The new route reaches the *unfactored* cubic on its own, and agrees.
+        // Its modulus polynomial has 1 as its smallest positive root.
+        let modulus = resultant_modulus_polynomial(&rats(&[1, 0, 0, 1])).unwrap();
+        assert_eq!(count_roots_in(&modulus, &r(0), &r(1)), Some(1));
+        assert!(super::poly_eval(&modulus, &r(1)).is_zero());
+    }
+
+    #[test]
+    fn radius_of_one_over_one_minus_x_minus_x_cubed_is_the_real_root_of_x_cubed_plus_x_minus_one() {
+        // `1 − x − x³` is irreducible over ℚ (neither ±1 is a root, and a cubic
+        // with no rational root is irreducible) with ONE real root and one
+        // conjugate pair. `1 − x − x³ = 0` ⇔ `x³ + x − 1 = 0`, so the real
+        // singularity is ρ = 0.6823278038…, the real root of `x³ + x − 1`. The
+        // three roots multiply to 1, so the pair has |w|² = 1/ρ and
+        // |w| ≈ 1.2106: **the real root is the dominant singularity** and the
+        // complex pair is strictly farther out. Wave two could say only that the
+        // radius was at least 1/2.
+        let certificate = radius_of_convergence(&rats(&[1]), &rats(&[1, -1, 0, -1])).unwrap();
+        assert_eq!(certificate.factors.len(), 1);
+        assert_eq!(
+            certificate.factors[0].route,
+            ModulusRoute::PairwiseResultant
+        );
+        let RadiusOfConvergence::Algebraic(ref data) = certificate.radius else {
+            panic!("expected an algebraic radius, got {:?}", certificate.radius);
+        };
+        // Nine pairwise products collapse to six distinct ones, so g's
+        // square-free part has degree 6 and the modulus polynomial degree 12.
+        assert_eq!(data.polynomial.len() - 1, 12);
+        // ρ = 0.68232780382801932…
+        assert!(data.lower > q(68_232_780_382_801, 100_000_000_000_000));
+        assert!(data.upper < q(68_232_780_382_802, 100_000_000_000_000));
+        assert_eq!(certificate.verify(), Ok(()));
+
+        // Exactly one modulus at or below 1 (the real root) and exactly one
+        // above it (the conjugate pair): the dominance claim, as a root count.
+        let modulus = &certificate.factors[0].modulus_polynomial;
+        assert_eq!(count_roots_in(modulus, &r(0), &r(1)), Some(1));
+        assert_eq!(count_roots_in(modulus, &r(1), &r(2)), Some(1));
+        assert_eq!(count_roots_in(modulus, &q(6, 5), &q(61, 50)), Some(1));
+    }
+
+    #[test]
+    fn radius_of_two_minus_x_squared_times_the_third_cyclotomic_is_exactly_one() {
+        // (2 − x²)(1 + x + x²): moduli √2 (real pair) and 1 (conjugate pair).
+        // The minimum is 1, so the composed answer is exactly 1 and the √2
+        // factor is not the dominant singularity.
+        let certificate = radius_of_convergence(&rats(&[1]), &rats(&[2, 2, 1, -1, -1])).unwrap();
+        assert_eq!(
+            certificate
+                .factors
+                .iter()
+                .map(|bound| bound.route)
+                .collect::<Vec<_>>(),
+            vec![ModulusRoute::AllRealRoots, ModulusRoute::ConjugatePair]
+        );
+        assert_eq!(certificate.radius, RadiusOfConvergence::Exact(r(1)));
+        assert_eq!(certificate.verify(), Ok(()));
+    }
+
+    #[test]
+    fn radius_of_a_resultant_factor_composed_with_a_linear_one_takes_the_smaller_modulus() {
+        // (1 − x − x³)(1 − 3x) = 1 − 4x + 3x² − x³ + 3x⁴. The linear factor's
+        // pole at 1/3 is nearer than the cubic's 0.6823…, so the composed
+        // radius is exactly 1/3 — a rational answer reached with one factor on
+        // the new route and one on a wave-two route.
+        let certificate = radius_of_convergence(&rats(&[1]), &rats(&[1, -4, 3, -1, 3])).unwrap();
+        assert_eq!(
+            certificate
+                .factors
+                .iter()
+                .map(|bound| bound.route)
+                .collect::<Vec<_>>(),
+            vec![ModulusRoute::AllRealRoots, ModulusRoute::PairwiseResultant]
+        );
+        assert_eq!(certificate.radius, RadiusOfConvergence::Exact(q(1, 3)));
+        assert_eq!(certificate.verify(), Ok(()));
+    }
+
+    #[test]
+    fn radius_of_the_seventh_cyclotomic_denominator_stays_a_lower_bound_above_the_degree_cap() {
+        // Φ₇ = 1 + x + … + x⁶ is irreducible of degree 6, and 6 is above
+        // MAX_RESULTANT_FACTOR_DEGREE, so the new route declines by policy and
+        // the reciprocal Cauchy bound 1/2 remains — with the degree, not the
+        // mathematics, as the stated reason. This is now the ONLY way a factor
+        // reaches the lower-bound label.
+        let certificate =
+            radius_of_convergence(&rats(&[1]), &rats(&[1, 1, 1, 1, 1, 1, 1])).unwrap();
+        assert_eq!(certificate.factors.len(), 1);
+        assert_eq!(
+            certificate.factors[0].route,
+            ModulusRoute::ReciprocalCauchy
+        );
+        assert_eq!(certificate.radius, RadiusOfConvergence::LowerBound(q(1, 2)));
         assert!(certificate.radius.bracket().is_none());
+        assert_eq!(certificate.verify(), Ok(()));
+    }
+
+    #[test]
+    fn the_pairwise_resultant_of_a_linear_factor_is_the_square_of_its_root() {
+        // f = 1 − 3x has the single root 1/3, so g(t) = t − 1/9 and the modulus
+        // polynomial is t² − 1/9. The smallest hand-checkable case of the
+        // construction, computed by the same code path as the quartic.
+        let resultant = pairwise_product_resultant(&rats(&[1, -3])).unwrap();
+        assert_eq!(resultant, vec![q(-1, 9), r(1)]);
+        let modulus = resultant_modulus_polynomial(&rats(&[1, -3])).unwrap();
+        assert_eq!(modulus, vec![q(-1, 9), r(0), r(1)]);
+    }
+
+    #[test]
+    fn a_spurious_pairwise_product_is_never_the_smallest_positive_root() {
+        // f = 4 − 5x + x² has roots 1 and 4. The pairwise products are
+        // 1, 4, 4, 16, so g has the positive root 4 — which is NOT |rᵢ|² for
+        // any i — and the modulus polynomial g(t²) has the positive root 2,
+        // a spurious modulus. The theorem says every product has modulus at
+        // least (min|r|)², so the spurious root can only sit ABOVE the answer:
+        // the smallest positive root is still 1.
+        let modulus = resultant_modulus_polynomial(&rats(&[4, -5, 1])).unwrap();
+        assert_eq!(count_roots_in(&modulus, &r(0), &r(1)), Some(1));
+        assert_eq!(count_roots_in(&modulus, &r(0), &r(2)), Some(2));
+        assert_eq!(count_roots_in(&modulus, &r(0), &r(4)), Some(3));
+    }
+
+    /// The certificate for `1/(4 − 5x + x²)` re-expressed with the quadratic
+    /// kept whole and put on the pairwise-product route, so the spurious-root
+    /// forgeries below have a certificate to attack. The producer splits it into
+    /// two linear factors and takes the cheaper all-real-roots route; nothing in
+    /// the certificate's contract requires the factors to be irreducible, and
+    /// `verify` re-multiplies whatever factorization it is handed.
+    fn spurious_product_certificate() -> RadiusCertificate {
+        let denominator = rats(&[4, -5, 1]);
+        let mut certificate = radius_of_convergence(&rats(&[1]), &denominator).unwrap();
+        certificate.content = r(1);
+        certificate.factors = vec![FactorModulusBound {
+            factor: denominator.clone(),
+            multiplicity: 1,
+            route: ModulusRoute::PairwiseResultant,
+            modulus_polynomial: resultant_modulus_polynomial(&denominator).unwrap(),
+            lower: q(4, 9),
+        }];
+        certificate
+    }
+
+    #[test]
+    fn the_pairwise_route_agrees_with_the_all_real_roots_route_on_a_shared_factor() {
+        let certificate = spurious_product_certificate();
+        assert_eq!(certificate.radius, RadiusOfConvergence::Exact(r(1)));
+        assert_eq!(certificate.verify(), Ok(()));
+    }
+
+    #[test]
+    fn forged_spurious_pairwise_product_claimed_as_the_radius_is_refused() {
+        // 2 = √(1·4) is a positive root of the modulus polynomial but not a
+        // modulus. Claiming it is caught by the root count, not by taste.
+        let mut certificate = spurious_product_certificate();
+        certificate.radius = RadiusOfConvergence::Exact(r(2));
+        assert_eq!(
+            certificate.verify(),
+            Err(AnalyticError::RootCountMismatch {
+                expected: 1,
+                found: 2
+            })
+        );
+    }
+
+    #[test]
+    fn forged_pairwise_resultant_modulus_polynomial_is_refused() {
+        let mut certificate = radius_of_convergence(&rats(&[1]), &rats(&[1, 1, 1, 1, 1])).unwrap();
+        // t¹⁰ − 1 replaced by t¹⁰ − 2: still degree 10, still monic, but not the
+        // polynomial the route defines.
+        certificate.factors[0].modulus_polynomial[0] = r(-2);
+        assert_eq!(
+            certificate.verify(),
+            Err(AnalyticError::ModulusPolynomialMismatch { factor: 0 })
+        );
+    }
+
+    #[test]
+    fn forged_pairwise_route_above_the_degree_cap_is_refused() {
+        let mut certificate =
+            radius_of_convergence(&rats(&[1]), &rats(&[1, 1, 1, 1, 1, 1, 1])).unwrap();
+        certificate.factors[0].route = ModulusRoute::PairwiseResultant;
+        assert_eq!(
+            certificate.verify(),
+            Err(AnalyticError::RouteNotApplicable { factor: 0 })
+        );
+    }
+
+    #[test]
+    fn forged_pairwise_resultant_lower_bound_above_the_smallest_modulus_is_refused() {
+        let mut certificate = radius_of_convergence(&rats(&[1]), &rats(&[1, 1, 1, 1, 1])).unwrap();
+        certificate.factors[0].lower = r(2);
+        assert_eq!(
+            certificate.verify(),
+            Err(AnalyticError::LowerBoundNotCertified { factor: 0 })
+        );
+    }
+
+    #[test]
+    fn a_resultant_of_the_wrong_degree_is_refused_by_the_self_check() {
+        // The determinant must have degree n² = 16 for Φ₅. A degree-15 one is
+        // not the resultant, whatever else is true of it.
+        let factor = rats(&[1, 1, 1, 1, 1]);
+        let honest = pairwise_product_resultant(&factor).unwrap();
+        assert_eq!(honest.len() - 1, 16);
+        assert!(accept_pairwise_resultant(&factor, &honest).is_some());
+        let truncated = poly_trim(honest[..16].to_vec());
+        assert_eq!(accept_pairwise_resultant(&factor, &truncated), None);
+    }
+
+    #[test]
+    fn a_resultant_with_the_wrong_constant_term_is_refused_by_the_self_check() {
+        // g(0) = (−1)ⁿ (a₀/aₙ)^{2n} is an exact consequence of the product form
+        // and is NOT how the determinant is computed, so it is an independent
+        // check on the primitive. Φ₅ is monic with a₀ = 1 and n = 4, so
+        // g(0) = 1; anything else is a corrupted determinant.
+        let factor = rats(&[1, 1, 1, 1, 1]);
+        let honest = pairwise_product_resultant(&factor).unwrap();
+        assert_eq!(honest[0], r(1));
+        let mut corrupted = honest.clone();
+        corrupted[0] = r(2);
+        assert_eq!(accept_pairwise_resultant(&factor, &corrupted), None);
+    }
+
+    #[test]
+    fn bignum_and_machine_sturm_counts_agree() {
+        // The bignum chain is a fallback for degrees the `i128` reuse cannot
+        // hold. Where both widths answer, they must answer the same — otherwise
+        // the fallback is an unchecked second opinion.
+        let polynomials = [
+            rats(&[1, -1]),
+            rats(&[1, 0, 1]),
+            rats(&[1, -1, -1]),
+            rats(&[1, 0, -3, 0, 1]),
+            rats(&[-1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]),
+            rats(&[4, -5, 1]),
+            rats(&[2, -3, 1]),
+            rats(&[-6, 11, -6, 1]),
+            rats(&[1, 1, 1, 1, 1]),
+        ];
+        let points = [q(0, 1), q(1, 4), q(1, 3), q(1, 2), q(1, 1), q(3, 2), q(5, 1)];
+        let mut compared = 0usize;
+        for polynomial in &polynomials {
+            let machine: Vec<Rational> = polynomial
+                .iter()
+                .map(|c| Rational::from_big_rational(c).unwrap())
+                .collect();
+            let chain = super::sturm_chain_big(polynomial).unwrap();
+            for window in points.windows(2) {
+                let (low, high) = (&window[0], &window[1]);
+                let expected = crate::sturm::count_real_roots_in(
+                    &machine,
+                    Rational::from_big_rational(low).unwrap(),
+                    Rational::from_big_rational(high).unwrap(),
+                )
+                .unwrap();
+                let found = super::RootCounter::count_big(&chain, low, high).unwrap();
+                assert_eq!(found, expected, "{polynomial:?} on ({low}, {high}]");
+                compared += 1;
+            }
+        }
+        assert_eq!(compared, 54);
     }
 
     #[test]
@@ -2387,7 +2699,8 @@ mod tests {
 
     #[test]
     fn forged_global_lower_bound_above_a_factor_bound_is_refused() {
-        let mut certificate = radius_of_convergence(&rats(&[1]), &rats(&[1, 1, 1, 1, 1])).unwrap();
+        let mut certificate =
+            radius_of_convergence(&rats(&[1]), &rats(&[1, 1, 1, 1, 1, 1, 1])).unwrap();
         certificate.radius = RadiusOfConvergence::LowerBound(r(3));
         assert_eq!(
             certificate.verify(),
@@ -2397,7 +2710,8 @@ mod tests {
 
     #[test]
     fn forged_exact_radius_over_a_bound_only_factor_is_refused() {
-        let mut certificate = radius_of_convergence(&rats(&[1]), &rats(&[1, 1, 1, 1, 1])).unwrap();
+        let mut certificate =
+            radius_of_convergence(&rats(&[1]), &rats(&[1, 1, 1, 1, 1, 1, 1])).unwrap();
         certificate.radius = RadiusOfConvergence::Exact(r(1));
         assert_eq!(
             certificate.verify(),
@@ -2516,10 +2830,43 @@ mod tests {
 
     #[test]
     fn asymptotics_decline_when_the_radius_is_only_bounded() {
+        // Φ₇ is above the resultant route's degree cap, so its radius is still
+        // a bound and the asymptotics stop before they sample anything. Φ₅ used
+        // to land here; it now reaches an exact radius and stops one guard later.
         assert_eq!(
-            coefficient_asymptotics(&rats(&[1]), &rats(&[1, 1, 1, 1, 1]), 8),
+            coefficient_asymptotics(&rats(&[1]), &rats(&[1, 1, 1, 1, 1, 1, 1]), 8),
             Err(AnalyticDecline::RadiusNotExact)
         );
+    }
+
+    #[test]
+    fn asymptotics_on_the_fifth_cyclotomic_now_pass_the_radius_and_stop_at_a_zero_coefficient() {
+        // 1/Φ₅ = (1 − x)/(1 − x⁵) has coefficients 1, −1, 0, 0, 0, 1, −1, …, so
+        // there is no C·nᵏ·ρ⁻ⁿ form to sample. What changed in wave three is
+        // WHICH guard stops it: the radius is now exactly 1 and the route gets
+        // as far as the coefficients before declining.
+        assert_eq!(
+            coefficient_asymptotics(&rats(&[1]), &rats(&[1, 1, 1, 1, 1]), 8),
+            Err(AnalyticDecline::ZeroCoefficient { index: 0 })
+        );
+    }
+
+    #[test]
+    fn growth_rate_of_one_over_one_minus_x_minus_x_cubed_uses_the_exact_resultant_radius() {
+        // a(n) = a(n−1) + a(n−3) grows like C·ρ⁻ⁿ with ρ the real root of
+        // x³ + x − 1. Wave two could not run this at all: the radius was only
+        // bounded, and `coefficient_asymptotics` refuses a bounded radius.
+        let certificate =
+            coefficient_asymptotics(&rats(&[1]), &rats(&[1, -1, 0, -1]), 20).unwrap();
+        assert_eq!(certificate.exponent, 0);
+        assert_eq!(
+            certificate.radius.factors[0].route,
+            ModulusRoute::PairwiseResultant
+        );
+        assert!(certificate.rho > q(68_232_780_382_801, 100_000_000_000_000));
+        assert!(certificate.rho < q(68_232_780_382_803, 100_000_000_000_000));
+        assert!(certificate.relative_errors[0] > certificate.relative_errors[1]);
+        assert_eq!(certificate.verify(), Ok(()));
     }
 
     #[test]
