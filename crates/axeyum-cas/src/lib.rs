@@ -32235,6 +32235,200 @@ mod radical_atom_products {
     }
 }
 
+/// **One argument, two spellings, two atom keys.**
+///
+/// `exp(−((1/2)/s)·u²)` and `exp(−u²/(2·s))` are the same function of `s` and
+/// `u`. [`equal`] returned `ZeroTest::Certified { equal: false }` for the pair —
+/// a *refutation of a true equality*, the worst verdict this crate can produce.
+/// The probability lane (item 9) hit it proving the Gaussian antiderivative with
+/// a symbolic variance and worked around it by choosing one spelling.
+///
+/// The cause is in [`atom_name`]. A transcendental head whose argument is not a
+/// polynomial is keyed on `render(0)` of a [`RatFunc`], and a `RatFunc` is
+/// **never reduced or scale-normalized** — [`RatFunc::add`], [`RatFunc::mul`]
+/// and [`RatFunc::div`] only cross-multiply. So the two spellings reach
+/// `(−1/2·u²)/s` and `(−u²)/(2·s)`, two distinct strings, two independent atom
+/// variables, and a nonzero difference that the zero-test reports as `≠`.
+///
+/// Every head is affected, not just `exp`: `normalize_rational`'s catch-all arm
+/// sends every [`UnaryFunc`] through [`atom_name`], `Sqrt` joins it whenever the
+/// radicand is not a rational constant, and [`normalize_exp`] falls back to it
+/// whenever the argument has a non-constant denominator — which is exactly this
+/// shape. So `every_head_keys_the_two_spellings_alike` is the real statement and
+/// the `exp` test is the reported instance of it.
+#[cfg(test)]
+mod atom_argument_canonical_key {
+    use super::*;
+
+    fn s() -> CasExpr {
+        CasExpr::var("s")
+    }
+
+    fn u() -> CasExpr {
+        CasExpr::var("u")
+    }
+
+    /// `−((1/2)/s)·u²` — the spelling the Gaussian antiderivative builds, with
+    /// the constant factored out of the quotient.
+    fn scaled_spelling() -> CasExpr {
+        -((CasExpr::rat(1, 2) / s()) * u().pow(2))
+    }
+
+    /// `−u²/(2·s)` — the spelling a person writes. The same function.
+    fn fraction_spelling() -> CasExpr {
+        -(u().pow(2) / (CasExpr::int(2) * s()))
+    }
+
+    /// One representative of **every** [`UnaryFunc`] variant.
+    ///
+    /// The `match` below has no wildcard arm, so adding a variant to the enum is
+    /// a compile error here until it is listed — the coverage is ratcheted to the
+    /// type rather than to a maintainer's memory. The `assert` catches the other
+    /// direction, a variant listed twice under one name.
+    fn every_head() -> Vec<UnaryFunc> {
+        let heads = vec![
+            UnaryFunc::Ln,
+            UnaryFunc::Exp,
+            UnaryFunc::Sin,
+            UnaryFunc::Cos,
+            UnaryFunc::Tan,
+            UnaryFunc::Atan,
+            UnaryFunc::Sqrt,
+            UnaryFunc::Abs,
+            UnaryFunc::Sign,
+            UnaryFunc::Floor,
+            UnaryFunc::Ceiling,
+            UnaryFunc::Erf,
+            UnaryFunc::Si,
+            UnaryFunc::Ci,
+            UnaryFunc::Ei,
+            UnaryFunc::Li,
+            UnaryFunc::Shi,
+            UnaryFunc::Chi,
+            UnaryFunc::FresnelS,
+            UnaryFunc::FresnelC,
+            UnaryFunc::BesselJ(1),
+            UnaryFunc::BesselI(2),
+            UnaryFunc::Asin,
+            UnaryFunc::Acos,
+            UnaryFunc::Asinh,
+            UnaryFunc::Acosh,
+            UnaryFunc::Gamma,
+            UnaryFunc::NthRoot(3),
+            UnaryFunc::PolyGamma(1),
+            UnaryFunc::Ai,
+            UnaryFunc::AiPrime,
+            UnaryFunc::Bi,
+            UnaryFunc::BiPrime,
+            UnaryFunc::LambertW,
+        ];
+        for head in &heads {
+            // Exhaustiveness ratchet — no wildcard arm.
+            match head {
+                UnaryFunc::Ln
+                | UnaryFunc::Exp
+                | UnaryFunc::Sin
+                | UnaryFunc::Cos
+                | UnaryFunc::Tan
+                | UnaryFunc::Atan
+                | UnaryFunc::Sqrt
+                | UnaryFunc::Abs
+                | UnaryFunc::Sign
+                | UnaryFunc::Floor
+                | UnaryFunc::Ceiling
+                | UnaryFunc::Erf
+                | UnaryFunc::Si
+                | UnaryFunc::Ci
+                | UnaryFunc::Ei
+                | UnaryFunc::Li
+                | UnaryFunc::Shi
+                | UnaryFunc::Chi
+                | UnaryFunc::FresnelS
+                | UnaryFunc::FresnelC
+                | UnaryFunc::BesselJ(_)
+                | UnaryFunc::BesselI(_)
+                | UnaryFunc::Asin
+                | UnaryFunc::Acos
+                | UnaryFunc::Asinh
+                | UnaryFunc::Acosh
+                | UnaryFunc::Gamma
+                | UnaryFunc::NthRoot(_)
+                | UnaryFunc::PolyGamma(_)
+                | UnaryFunc::Ai
+                | UnaryFunc::AiPrime
+                | UnaryFunc::Bi
+                | UnaryFunc::BiPrime
+                | UnaryFunc::LambertW => {}
+            }
+        }
+        let names: BTreeSet<String> = heads.iter().map(|h| h.name()).collect();
+        assert_eq!(
+            names.len(),
+            heads.len(),
+            "each head must appear once: two entries share a name"
+        );
+        heads
+    }
+
+    fn apply(head: UnaryFunc, arg: CasExpr) -> CasExpr {
+        CasExpr::Unary(head, Box::new(arg))
+    }
+
+    #[track_caller]
+    fn assert_equal_and_rechecks(left: &CasExpr, right: &CasExpr, context: &str) {
+        let verdict = equal(left, right);
+        match &verdict {
+            ZeroTest::Certified { equal, .. } | ZeroTest::CertifiedBig { equal, .. } => {
+                assert!(
+                    *equal,
+                    "{context}: {left} = {right} was REFUTED but is true"
+                );
+            }
+            ZeroTest::Unknown => panic!("{context}: {left} = {right} must decide"),
+        }
+        assert!(
+            recheck_zero_test(left, right, &verdict),
+            "{context}: the certificate for {left} = {right} must re-check"
+        );
+    }
+
+    /// **The reported input.** `exp(−((1/2)/s)·u²) = exp(−u²/(2·s))`.
+    #[test]
+    fn the_reported_gaussian_exponent_certifies_equal() {
+        assert_equal_and_rechecks(&scaled_spelling().exp(), &fraction_spelling().exp(), "exp");
+    }
+
+    /// The same pair under every transcendental head the crate keys through
+    /// [`atom_name`], because the defect is in the keying, not in `exp`.
+    #[test]
+    fn every_head_keys_the_two_spellings_alike() {
+        for head in every_head() {
+            let name = head.name();
+            assert_equal_and_rechecks(
+                &apply(head, scaled_spelling()),
+                &apply(head, fraction_spelling()),
+                &name,
+            );
+        }
+    }
+
+    /// The keying seam itself, below [`equal`]: the two spellings must produce
+    /// one atom key. Stated separately so a future change that makes the pair
+    /// decide by some *other* route (a fold, a rewrite) does not hide a
+    /// regression in the key.
+    #[test]
+    fn the_two_spellings_produce_one_atom_key() {
+        for head in every_head() {
+            let name = head.name();
+            assert_eq!(
+                atom_name(&name, &scaled_spelling()),
+                atom_name(&name, &fraction_spelling()),
+                "{name}: the two spellings of one argument must key alike"
+            );
+        }
+    }
+}
+
 /// The arbitrary-precision overflow fallback (ADR-1670).
 ///
 /// Every test here names the input it was written for, because the finding this
