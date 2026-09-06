@@ -28,42 +28,9 @@ impl Fixture {
     fn new() -> Self {
         let mut kernel = Kernel::new();
         let p = build_fo_robinson_prelude(&mut kernel).expect("FO Robinson prelude must build");
-        let syntax = p.roundtrip.decode.numbering.code.syntax;
         let semantics = p.soundness.calculus.semantics;
         let calculus = p.soundness.calculus;
-        let syn = syntax.names(&mut kernel);
-        let calc = calculus.calc(&mut kernel);
-        let nat = syntax.nat;
-        let logic = nat.logic;
-        let zero_lvl = kernel.level_zero();
-        let one = kernel.level_succ(zero_lvl);
-        let nat_ty = kernel.const_(nat.nat, vec![]);
-        let term_ty = kernel.const_(syntax.term, vec![]);
-        let formula_ty = kernel.const_(syntax.formula, vec![]);
-        let val_ty = arrow(&mut kernel, nat_ty, nat_ty);
-        let subst_ty = arrow(&mut kernel, nat_ty, term_ty);
-        let anon = kernel.anon();
-        let fo = kernel.name_str(anon, "FO");
-        let q_ns = kernel.name_str(fo, "Q");
-        let r = Rob {
-            syn,
-            calc,
-            logic,
-            nat,
-            q_ns,
-            nat_ty,
-            term_ty,
-            formula_ty,
-            val_ty,
-            subst_ty,
-            zero_lvl,
-            one,
-            numeral: p.roundtrip.term_numeral,
-            term_subst: syntax.term_subst,
-            structure: semantics.structure,
-            sat: semantics.sat,
-            ctx_sat: calculus.ctx_sat,
-        };
+        let r = Rob::new(&mut kernel, p.roundtrip, semantics, calculus);
         Self { kernel, p, r }
     }
 
@@ -452,6 +419,166 @@ fn q_consistency_is_not_the_empty_context_consistency() {
 }
 
 // ============================================================================
+// Numeral arithmetic in Q.
+// ============================================================================
+
+/// `FO.Q.add_numeral` and `FO.Q.mul_numeral` state what they are supposed to,
+/// rebuilt rather than rendered, with a negative control that a swapped
+/// conclusion is a different statement.
+///
+/// The mutation the brief names is exactly this control: `add_numeral` with
+/// `a` and `b` exchanged in the conclusion. `Nat.add a b` and `Nat.add b a`
+/// are propositionally but NOT definitionally equal (`Nat.add` recurses on its
+/// right argument), so the swapped statement is a genuinely different type,
+/// and the assertion below is what dies when the builder swaps them.
+#[test]
+fn numeral_arithmetic_states_the_defining_equations() {
+    let mut f = Fixture::new();
+    let a_id = 1_651_910_u64;
+    let b_id = 1_651_911_u64;
+
+    for (name, multiplicative) in [(f.p.add_numeral, false), (f.p.mul_numeral, true)] {
+        let a = f.kernel.fvar(a_id);
+        let b = f.kernel.fvar(b_id);
+        let na = f.r.tnum(&mut f.kernel, a);
+        let nb = f.r.tnum(&mut f.kernel, b);
+        let lhs = if multiplicative {
+            f.r.tmul(&mut f.kernel, na, nb)
+        } else {
+            f.r.tadd(&mut f.kernel, na, nb)
+        };
+        let value = if multiplicative {
+            f.r.nmul(&mut f.kernel, a, b)
+        } else {
+            f.r.nadd(&mut f.kernel, a, b)
+        };
+        let rhs = f.r.tnum(&mut f.kernel, value);
+        let formula = f.r.f_eqf(&mut f.kernel, lhs, rhs);
+        let concl = f.r.prov_q(&mut f.kernel, formula);
+        let nat_ty = f.r.nat_ty;
+        let inner = pi_fv(&mut f.kernel, b_id, nat_ty, concl);
+        let want = pi_fv(&mut f.kernel, a_id, nat_ty, inner);
+
+        let c = f.kernel.const_(name, vec![]);
+        let got = f.kernel.infer(c).expect("must infer");
+        let label = f.kernel.display_name(name).to_string();
+        f.assert_eq_expr(got, want, &format!("{label}'s type"));
+
+        // Negative control: the SAME statement with the two arguments swapped
+        // on the right of the equation.
+        let a2 = f.kernel.fvar(a_id);
+        let b2 = f.kernel.fvar(b_id);
+        let na2 = f.r.tnum(&mut f.kernel, a2);
+        let nb2 = f.r.tnum(&mut f.kernel, b2);
+        let lhs2 = if multiplicative {
+            f.r.tmul(&mut f.kernel, na2, nb2)
+        } else {
+            f.r.tadd(&mut f.kernel, na2, nb2)
+        };
+        let swapped_value = if multiplicative {
+            f.r.nmul(&mut f.kernel, b2, a2)
+        } else {
+            f.r.nadd(&mut f.kernel, b2, a2)
+        };
+        let rhs2 = f.r.tnum(&mut f.kernel, swapped_value);
+        let formula2 = f.r.f_eqf(&mut f.kernel, lhs2, rhs2);
+        let concl2 = f.r.prov_q(&mut f.kernel, formula2);
+        let inner2 = pi_fv(&mut f.kernel, b_id, nat_ty, concl2);
+        let swapped = pi_fv(&mut f.kernel, a_id, nat_ty, inner2);
+        f.assert_ne_expr(got, swapped, &format!("{label} with the arguments swapped"));
+    }
+}
+
+/// The theorems INSTANTIATE, and at concrete numerals the conclusion really is
+/// the arithmetic fact: `2 + 3 = 5` and `2 · 3 = 6` as `FO.Provable FO.Q`
+/// statements about `FO.Term.numeral`.
+///
+/// A theorem that could not be applied to a literal would still admit; this is
+/// the check that it can be, and the `assert_ne_expr` rows are what catch a
+/// conclusion that computed the wrong numeral.
+#[test]
+fn numeral_arithmetic_instantiates_at_literals() {
+    let mut f = Fixture::new();
+    for (a, b) in [(0_u32, 0_u32), (2, 3), (3, 1)] {
+        let ae = f.nat_lit(a);
+        let be = f.nat_lit(b);
+
+        for multiplicative in [false, true] {
+            let name = if multiplicative {
+                f.p.mul_numeral
+            } else {
+                f.p.add_numeral
+            };
+            let head = f.kernel.const_(name, vec![]);
+            let applied = apply_all(&mut f.kernel, head, &[ae, be]);
+            let got = f.kernel.infer(applied).expect("must infer");
+
+            let na = f.r.tnum(&mut f.kernel, ae);
+            let nb = f.r.tnum(&mut f.kernel, be);
+            let lhs = if multiplicative {
+                f.r.tmul(&mut f.kernel, na, nb)
+            } else {
+                f.r.tadd(&mut f.kernel, na, nb)
+            };
+            let expected = if multiplicative { a * b } else { a + b };
+            let lit = f.nat_lit(expected);
+            let rhs = f.r.tnum(&mut f.kernel, lit);
+            let formula = f.r.f_eqf(&mut f.kernel, lhs, rhs);
+            let want = f.r.prov_q(&mut f.kernel, formula);
+            let op = if multiplicative { "*" } else { "+" };
+            f.assert_eq_expr(got, want, &format!("Q proves {a} {op} {b} = {expected}"));
+
+            // Negative control: the neighbouring numeral is a different claim.
+            let off = f.nat_lit(expected + 1);
+            let rhs_off = f.r.tnum(&mut f.kernel, off);
+            let formula_off = f.r.f_eqf(&mut f.kernel, lhs, rhs_off);
+            let wrong = f.r.prov_q(&mut f.kernel, formula_off);
+            f.assert_ne_expr(
+                got,
+                wrong,
+                &format!("Q must not be proving {a} {op} {b} = {}", expected + 1),
+            );
+        }
+    }
+}
+
+/// `FO.Q.mul_numeral` really does rest on `FO.Q.add_numeral` — the dependency
+/// the module doc claims, read from the kernel's own dependency graph rather
+/// than from the source.
+#[test]
+fn mul_numeral_depends_on_add_numeral() {
+    let f = Fixture::new();
+    let declaration = f
+        .kernel
+        .environment()
+        .get(f.p.mul_numeral)
+        .expect("FO.Q.mul_numeral must exist");
+    let value = declaration.value().expect("a Theorem carries its proof");
+    let rendered = f.kernel.render_lean(value);
+    assert!(
+        rendered.contains("FO.Q.add_numeral"),
+        "FO.Q.mul_numeral's proof term must use FO.Q.add_numeral"
+    );
+    assert!(
+        rendered.contains("FO.Q.axMulSucc"),
+        "FO.Q.mul_numeral's proof term must use FO.Q.axMulSucc"
+    );
+    // Control: `add_numeral` does NOT depend on `mul_numeral`, so the check
+    // above is measuring a real edge and not the presence of any name at all.
+    let add = f
+        .kernel
+        .environment()
+        .get(f.p.add_numeral)
+        .expect("FO.Q.add_numeral must exist");
+    let add_value = add.value().expect("a Theorem carries its proof");
+    let add_rendered = f.kernel.render_lean(add_value);
+    assert!(
+        !add_rendered.contains("FO.Q.mul_numeral"),
+        "FO.Q.add_numeral must not depend on FO.Q.mul_numeral"
+    );
+}
+
+// ============================================================================
 // The every-declaration sweep.
 // ============================================================================
 
@@ -472,6 +599,8 @@ fn every_declaration_of_this_slice_is_axiom_free() {
         (p.nat_models, "FO.Q.natModels"),
         (p.consistency, "FO.Q.consistency"),
         (p.subst_numeral, "FO.Term.subst_numeral"),
+        (p.add_numeral, "FO.Q.add_numeral"),
+        (p.mul_numeral, "FO.Q.mul_numeral"),
     ] {
         f.assert_axiom_free(name, label);
     }
@@ -481,7 +610,7 @@ fn every_declaration_of_this_slice_is_axiom_free() {
 /// `build_nat_prelude`: the whole `fo_roundtrip` chain (61, pinned in
 /// `fo_roundtrip/tests.rs`) plus the `semantics`/`provable`/`soundness` chain
 /// plus this slice's twelve. Pinned so drift in EITHER direction is a failure.
-const FO_ROBINSON_DECLARATIONS: usize = 125;
+const FO_ROBINSON_DECLARATIONS: usize = 127;
 
 /// The every-declaration sweep for the whole package, derived from the
 /// environment rather than from a list, with coverage controls drawn from BOTH
@@ -521,6 +650,8 @@ fn the_whole_robinson_package_is_axiom_free() {
         "FO.Q.natModels",
         "FO.Q.consistency",
         "FO.Term.subst_numeral",
+        "FO.Q.add_numeral",
+        "FO.Q.mul_numeral",
         // the arithmetization chain
         "FO.Term.numeral",
         "FO.Code.diagAux_code",

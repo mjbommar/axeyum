@@ -139,14 +139,16 @@
 
 use crate::build_fo_roundtrip_prelude;
 use crate::fo_provable::declare_fo_provable_over;
-use crate::fo_provable::{CalcNames, cons_app, provable_app};
+use crate::fo_provable::{CalcNames, cons_app, provable_app, rule};
 use crate::fo_semantics::declare_fo_semantics_over;
 use crate::fo_soundness::declare_fo_soundness_over;
 use crate::fo_syntax::SyntaxNames;
-use crate::fo_syntax::{apply_all, arrow, gcongr, geq, grefl, lam_fv, lams, pi_fv};
+use crate::fo_syntax::{
+    apply_all, arrow, gcongr, geq, grefl, gsymm, gtrans, gtransport, lam_fv, lams, pi_fv, pis,
+};
 use crate::{
-    BinderInfo, Declaration, ExprId, FoRoundTripPrelude, FoSoundnessPrelude, KernelError, LevelId,
-    LogicPrelude, NameId, NatPrelude, ReducibilityHint,
+    BinderInfo, Declaration, ExprId, FoProvablePrelude, FoRoundTripPrelude, FoSemanticsPrelude,
+    FoSoundnessPrelude, KernelError, LevelId, LogicPrelude, NameId, NatPrelude, ReducibilityHint,
 };
 
 /// Names produced by [`build_fo_robinson_prelude`].
@@ -189,6 +191,10 @@ pub struct FoRobinsonPrelude {
     // --- the substitution lemma numerals need --------------------------------
     /// `FO.Term.subst_numeral` — a numeral is closed, so substitution fixes it.
     pub subst_numeral: NameId,
+    /// `FO.Q.add_numeral : Π a b, Provable Q (numeral a + numeral b = numeral (a+b))`.
+    pub add_numeral: NameId,
+    /// `FO.Q.mul_numeral : Π a b, Provable Q (numeral a · numeral b = numeral (a·b))`.
+    pub mul_numeral: NameId,
 }
 
 /// The shared names every builder below threads.
@@ -216,6 +222,86 @@ struct Rob {
     structure: NameId,
     sat: NameId,
     ctx_sat: NameId,
+    /// `FO.Provable`'s seventeen constructors, re-interned in rule order.
+    rules: [NameId; 17],
+    /// `FO.Subst.lift` and `FO.Subst.shift`, from `fo_syntax.rs`.
+    subst_lift: NameId,
+    subst_shift: NameId,
+}
+
+impl Rob {
+    /// Re-gather every name this slice's builders share. Interning a name does
+    /// not declare it, so this also runs BEFORE this slice's declarations
+    /// exist, and `fo_robinson/tests.rs` calls it to rebuild the same view.
+    fn new(
+        kernel: &mut crate::Kernel,
+        roundtrip: FoRoundTripPrelude,
+        semantics: FoSemanticsPrelude,
+        calculus: FoProvablePrelude,
+    ) -> Self {
+        let syntax = roundtrip.decode.numbering.code.syntax;
+        let syn = syntax.names(kernel);
+        let calc = calculus.calc(kernel);
+        let nat = syntax.nat;
+        let logic = nat.logic;
+        let zero_lvl = kernel.level_zero();
+        let one = kernel.level_succ(zero_lvl);
+        let nat_ty = kernel.const_(nat.nat, vec![]);
+        let term_ty = kernel.const_(syntax.term, vec![]);
+        let formula_ty = kernel.const_(syntax.formula, vec![]);
+        let val_ty = arrow(kernel, nat_ty, nat_ty);
+        let subst_ty = arrow(kernel, nat_ty, term_ty);
+        let q_ns = kernel.name_str(syn.fo, "Q");
+
+        // The rule order is `fo_provable.rs`'s, and the `rule::*` index
+        // constants used below index INTO this array, so the two must agree.
+        let rule_names: [&str; 17] = [
+            "ax_head",
+            "weaken",
+            "and_intro",
+            "and_elim1",
+            "and_elim2",
+            "or_intro1",
+            "or_intro2",
+            "or_elim",
+            "imp_intro",
+            "imp_elim",
+            "bot_elim",
+            "all_intro",
+            "all_elim",
+            "ex_intro",
+            "ex_elim",
+            "eqf_refl",
+            "eqf_subst",
+        ];
+        let mut rules = [calculus.provable; 17];
+        for (slot, label) in rules.iter_mut().zip(rule_names) {
+            *slot = kernel.name_str(calculus.provable, label);
+        }
+
+        Self {
+            syn,
+            calc,
+            logic,
+            nat,
+            q_ns,
+            nat_ty,
+            term_ty,
+            formula_ty,
+            val_ty,
+            subst_ty,
+            zero_lvl,
+            one,
+            numeral: roundtrip.term_numeral,
+            term_subst: syntax.term_subst,
+            structure: semantics.structure,
+            sat: semantics.sat,
+            ctx_sat: calculus.ctx_sat,
+            rules,
+            subst_lift: syntax.subst_lift,
+            subst_shift: syntax.subst_shift,
+        }
+    }
 }
 
 /// A monotone supply of free-variable ids, disjoint from every other `fo_*`
@@ -364,6 +450,48 @@ impl Rob {
         let nat_ty = self.nat_ty;
         apply_all(kernel, head, &[nat_ty, s, g, v])
     }
+
+    /// `FO.Subst.cons t FO.Subst.id`, the de Bruijn spelling of `[t/x]`.
+    fn inst_subst(&self, kernel: &mut crate::Kernel, t: ExprId) -> ExprId {
+        let id = kernel.const_(self.calc.subst_id, vec![]);
+        let cons = kernel.const_(self.calc.subst_cons, vec![]);
+        apply_all(kernel, cons, &[t, id])
+    }
+
+    /// `FO.Subst.shift`.
+    fn shift_subst(&self, kernel: &mut crate::Kernel) -> ExprId {
+        kernel.const_(self.subst_shift, vec![])
+    }
+
+    /// `FO.Subst.lift sigma`.
+    fn lift_subst(&self, kernel: &mut crate::Kernel, sigma: ExprId) -> ExprId {
+        let head = kernel.const_(self.subst_lift, vec![]);
+        kernel.app(head, sigma)
+    }
+
+    /// `FO.Formula.subst p sigma`.
+    fn f_subst(&self, kernel: &mut crate::Kernel, p: ExprId, sigma: ExprId) -> ExprId {
+        let head = kernel.const_(self.calc.formula_subst, vec![]);
+        apply_all(kernel, head, &[p, sigma])
+    }
+
+    /// `FO.Provable FO.Q p`.
+    fn prov_q(&self, kernel: &mut crate::Kernel, p: ExprId) -> ExprId {
+        let q = kernel.const_(self.q_ns, vec![]);
+        provable_app(kernel, &self.calc, q, p)
+    }
+
+    /// `FO.Term.subst_numeral sigma n`.
+    fn subst_numeral_at(
+        &self,
+        kernel: &mut crate::Kernel,
+        subst_numeral: NameId,
+        sigma: ExprId,
+        n: ExprId,
+    ) -> ExprId {
+        let head = kernel.const_(subst_numeral, vec![]);
+        apply_all(kernel, head, &[sigma, n])
+    }
 }
 
 // ============================================================================
@@ -391,40 +519,7 @@ pub fn build_fo_robinson_prelude(
     let calculus = declare_fo_provable_over(kernel, semantics)?;
     let soundness = declare_fo_soundness_over(kernel, calculus)?;
 
-    let syn = syntax.names(kernel);
-    let calc = calculus.calc(kernel);
-    let nat = syntax.nat;
-    let logic = nat.logic;
-    let zero_lvl = kernel.level_zero();
-    let one = kernel.level_succ(zero_lvl);
-
-    let nat_ty = kernel.const_(nat.nat, vec![]);
-    let term_ty = kernel.const_(syntax.term, vec![]);
-    let formula_ty = kernel.const_(syntax.formula, vec![]);
-    let val_ty = arrow(kernel, nat_ty, nat_ty);
-    let subst_ty = arrow(kernel, nat_ty, term_ty);
-    let q_ns = kernel.name_str(syn.fo, "Q");
-
-    let r = Rob {
-        syn,
-        calc,
-        logic,
-        nat,
-        q_ns,
-        nat_ty,
-        term_ty,
-        formula_ty,
-        val_ty,
-        subst_ty,
-        zero_lvl,
-        one,
-        numeral: roundtrip.term_numeral,
-        term_subst: syntax.term_subst,
-        structure: semantics.structure,
-        sat: semantics.sat,
-        ctx_sat: calculus.ctx_sat,
-    };
-
+    let r = Rob::new(kernel, roundtrip, semantics, calculus);
     let mut fv = Fv(1_651_000);
 
     let nat_structure_q = declare_nat_structure_q(kernel, &r, semantics.structure_mk, &mut fv)?;
@@ -441,6 +536,9 @@ pub fn build_fo_robinson_prelude(
         &mut fv,
     )?;
     let subst_numeral = declare_subst_numeral(kernel, &r, &mut fv)?;
+    let add_numeral = declare_add_numeral(kernel, &r, &axioms, subst_numeral, &mut fv)?;
+    let mul_numeral =
+        declare_mul_numeral(kernel, &r, &axioms, subst_numeral, add_numeral, &mut fv)?;
 
     Ok(FoRobinsonPrelude {
         roundtrip,
@@ -457,6 +555,8 @@ pub fn build_fo_robinson_prelude(
         nat_models,
         consistency,
         subst_numeral,
+        add_numeral,
+        mul_numeral,
     })
 }
 
@@ -1105,6 +1205,586 @@ fn declare_subst_numeral(
     };
 
     let name = kernel.name_str(r.syn.term, "subst_numeral");
+    kernel.add_declaration(Declaration::Theorem {
+        name,
+        uparams: vec![],
+        ty,
+        value,
+    })?;
+    Ok(name)
+}
+
+// ============================================================================
+// Object-level plumbing: axiom access, instantiation, and the numeral repair.
+// ============================================================================
+
+/// `FO.Provable FO.Q A_i` for the `i`th Robinson axiom: `ax_head` at the `i`th
+/// tail, then `weaken` back out through the `i` axioms in front of it.
+fn q_axiom_derivation(
+    kernel: &mut crate::Kernel,
+    r: &Rob,
+    axioms: &Axioms,
+    index: usize,
+) -> ExprId {
+    let ordered = axioms.ordered();
+    let target = kernel.const_(ordered[index], vec![]);
+    let tail = axiom_tail(kernel, r, axioms, index + 1);
+    let ax_head = kernel.const_(r.rules[rule::AX_HEAD], vec![]);
+    let mut derivation = apply_all(kernel, ax_head, &[tail, target]);
+    let mut context = cons_app(kernel, &r.calc, target, tail);
+    for step in (0..index).rev() {
+        let front = kernel.const_(ordered[step], vec![]);
+        let weaken = kernel.const_(r.rules[rule::WEAKEN], vec![]);
+        derivation = apply_all(kernel, weaken, &[context, target, front, derivation]);
+        context = cons_app(kernel, &r.calc, front, context);
+    }
+    derivation
+}
+
+/// `FO.Provable.all_elim FO.Q p t d` — the instance `p[t]` of a universal.
+fn all_elim_at(
+    kernel: &mut crate::Kernel,
+    r: &Rob,
+    p: ExprId,
+    t: ExprId,
+    derivation: ExprId,
+) -> ExprId {
+    let q = kernel.const_(r.q_ns, vec![]);
+    let head = kernel.const_(r.rules[rule::ALL_ELIM], vec![]);
+    apply_all(kernel, head, &[q, p, t, derivation])
+}
+
+/// Transport a derivation along an equality of formulas: from `h : Eq Formula
+/// from to` and `d : Provable Q from`, produce `Provable Q to`.
+fn cast_derivation(
+    kernel: &mut crate::Kernel,
+    r: &Rob,
+    from: ExprId,
+    to: ExprId,
+    h: ExprId,
+    d: ExprId,
+    fv: &mut Fv,
+) -> ExprId {
+    let formula_ty = r.formula_ty;
+    let x_id = fv.next();
+    let motive = {
+        let x = kernel.fvar(x_id);
+        let concl = r.prov_q(kernel, x);
+        let hyp = geq(kernel, r.logic, formula_ty, from, x);
+        let anon = kernel.anon();
+        let inner = kernel.lam(anon, hyp, concl, BinderInfo::Default);
+        lam_fv(kernel, x_id, formula_ty, inner)
+    };
+    gtransport(kernel, r.logic, formula_ty, from, motive, d, to, h)
+}
+
+/// `Eq FO.Formula (shape froms) (shape tos)`, one `gcongr` per hole, chained by
+/// `gtrans`. A hole may occur several times in `shape`; all of its occurrences
+/// move together, which is exactly what `Formula.subst` does to them.
+fn congr_chain(
+    kernel: &mut crate::Kernel,
+    r: &Rob,
+    froms: &[ExprId],
+    tos: &[ExprId],
+    proofs: &[ExprId],
+    shape: &dyn Fn(&mut crate::Kernel, &[ExprId]) -> ExprId,
+    fv: &mut Fv,
+) -> ExprId {
+    let term_ty = r.term_ty;
+    let formula_ty = r.formula_ty;
+    let mut current: Vec<ExprId> = froms.to_vec();
+    let start = shape(kernel, &current);
+    let mut acc = grefl(kernel, r.logic, formula_ty, start);
+    let mut acc_end = start;
+    for index in 0..froms.len() {
+        let fixed = current.clone();
+        let step = {
+            let hole = |kernel: &mut crate::Kernel, t: ExprId| -> ExprId {
+                let mut slots = fixed.clone();
+                slots[index] = t;
+                shape(kernel, &slots)
+            };
+            let cong_fv = fv.next();
+            gcongr(
+                kernel,
+                r.logic,
+                term_ty,
+                formula_ty,
+                froms[index],
+                tos[index],
+                proofs[index],
+                &hole,
+                cong_fv,
+            )
+        };
+        current[index] = tos[index];
+        let next_end = shape(kernel, &current);
+        let trans_fv = fv.next();
+        acc = gtrans(
+            kernel, r.logic, formula_ty, start, acc_end, next_end, acc, step, trans_fv,
+        );
+        acc_end = next_end;
+    }
+    acc
+}
+
+/// One application of `FO.Provable.eqf_subst` (the Leibniz rule) with the
+/// numeral repair on both sides.
+///
+/// `shape(holes, x)` is the formula `p` with its `i`th literal numeral replaced
+/// by `holes[i]` and its single `FO.Term.var 0` replaced by `x`. `p` itself is
+/// `shape(numerals, var 0)`; the premise proves `p[s]` and the conclusion is
+/// `p[t]`, and each of those is `shape(_, s)` / `shape(_, t)` with every hole
+/// wrapped in a stuck `FO.Term.subst`, which is what the two `congr_chain`s
+/// below undo.
+struct Leibniz<'a> {
+    /// The `Nat` arguments of the numerals occurring literally in `p`.
+    numerals: &'a [ExprId],
+    /// Rebuild `p` at given hole values and a given value for `var 0`.
+    shape: &'a dyn Fn(&mut crate::Kernel, &[ExprId], ExprId) -> ExprId,
+    /// The two sides of the equation being used.
+    s: ExprId,
+    t: ExprId,
+}
+
+fn leibniz(
+    kernel: &mut crate::Kernel,
+    r: &Rob,
+    subst_numeral: NameId,
+    step: &Leibniz<'_>,
+    equation: ExprId,
+    from_proof: ExprId,
+    fv: &mut Fv,
+) -> ExprId {
+    let formula_ty = r.formula_ty;
+    let numeral_terms: Vec<ExprId> = step.numerals.iter().map(|&n| r.tnum(kernel, n)).collect();
+    let var0 = r.tvar(kernel, 0);
+    let p = (step.shape)(kernel, &numeral_terms, var0);
+
+    // --- the `s` side: repair `p[s]` back to the numeral-free form.
+    let sigma_s = r.inst_subst(kernel, step.s);
+    let froms_s: Vec<ExprId> = numeral_terms
+        .iter()
+        .map(|&nt| r.tsubst(kernel, nt, sigma_s))
+        .collect();
+    let proofs_s: Vec<ExprId> = step
+        .numerals
+        .iter()
+        .map(|&n| r.subst_numeral_at(kernel, subst_numeral, sigma_s, n))
+        .collect();
+    let repaired = {
+        let shape_s =
+            |kernel: &mut crate::Kernel, holes: &[ExprId]| (step.shape)(kernel, holes, step.s);
+        let chain = congr_chain(kernel, r, &froms_s, &numeral_terms, &proofs_s, &shape_s, fv);
+        let start = shape_s(kernel, &froms_s);
+        let end = shape_s(kernel, &numeral_terms);
+        let symm_fv = fv.next();
+        let back = gsymm(kernel, r.logic, formula_ty, start, end, chain, symm_fv);
+        cast_derivation(kernel, r, end, start, back, from_proof, fv)
+    };
+
+    // --- the Leibniz rule itself.
+    let q = kernel.const_(r.q_ns, vec![]);
+    let eqf_subst = kernel.const_(r.rules[rule::EQF_SUBST], vec![]);
+    let derived = apply_all(
+        kernel,
+        eqf_subst,
+        &[q, p, step.s, step.t, equation, repaired],
+    );
+
+    // --- the `t` side: repair `p[t]` forward to the numeral-free form.
+    let sigma_t = r.inst_subst(kernel, step.t);
+    let froms_t: Vec<ExprId> = numeral_terms
+        .iter()
+        .map(|&nt| r.tsubst(kernel, nt, sigma_t))
+        .collect();
+    let proofs_t: Vec<ExprId> = step
+        .numerals
+        .iter()
+        .map(|&n| r.subst_numeral_at(kernel, subst_numeral, sigma_t, n))
+        .collect();
+    let shape_t =
+        |kernel: &mut crate::Kernel, holes: &[ExprId]| (step.shape)(kernel, holes, step.t);
+    let chain = congr_chain(kernel, r, &froms_t, &numeral_terms, &proofs_t, &shape_t, fv);
+    let start = shape_t(kernel, &froms_t);
+    let end = shape_t(kernel, &numeral_terms);
+    cast_derivation(kernel, r, start, end, chain, derived, fv)
+}
+
+/// The two-variable axiom instance `A[numeral a][numeral b]`, with the outer
+/// variable's numeral repaired.
+///
+/// The outer instantiation leaves `numeral a` under `FO.Subst.lift`, i.e. under
+/// `Term.subst (numeral a) Subst.shift`, and the inner one wraps that again —
+/// so the occurrence the goal wants as a bare `numeral a` arrives as a
+/// two-deep stuck substitution. That is the one place `FO.Term.subst_numeral`
+/// is needed twice.
+fn instantiate_binary_axiom(
+    kernel: &mut crate::Kernel,
+    r: &Rob,
+    axioms: &Axioms,
+    subst_numeral: NameId,
+    axiom_index: usize,
+    inner_body: ExprId,
+    outer: ExprId,
+    outer_nat: ExprId,
+    inner: ExprId,
+    shape: &dyn Fn(&mut crate::Kernel, ExprId) -> ExprId,
+    fv: &mut Fv,
+) -> ExprId {
+    let term_ty = r.term_ty;
+    let formula_ty = r.formula_ty;
+
+    let universal = q_axiom_derivation(kernel, r, axioms, axiom_index);
+    let one_binder = r.f_all(kernel, inner_body);
+    let outer_instance = all_elim_at(kernel, r, one_binder, outer, universal);
+    let sigma_outer = r.inst_subst(kernel, outer);
+    let lifted = r.lift_subst(kernel, sigma_outer);
+    let under_binder = r.f_subst(kernel, inner_body, lifted);
+    let raw = all_elim_at(kernel, r, under_binder, inner, outer_instance);
+
+    // The stuck occurrence of the outer numeral, and its repair.
+    let shift = r.shift_subst(kernel);
+    let sigma_inner = r.inst_subst(kernel, inner);
+    let shifted = r.tsubst(kernel, outer, shift);
+    let stuck = r.tsubst(kernel, shifted, sigma_inner);
+    let repair = {
+        let first = r.subst_numeral_at(kernel, subst_numeral, shift, outer_nat);
+        let cong_fv = fv.next();
+        let lifted_first = gcongr(
+            kernel,
+            r.logic,
+            term_ty,
+            term_ty,
+            shifted,
+            outer,
+            first,
+            &|kernel, t| r.tsubst(kernel, t, sigma_inner),
+            cong_fv,
+        );
+        let middle = r.tsubst(kernel, outer, sigma_inner);
+        let second = r.subst_numeral_at(kernel, subst_numeral, sigma_inner, outer_nat);
+        let trans_fv = fv.next();
+        gtrans(
+            kernel,
+            r.logic,
+            term_ty,
+            stuck,
+            middle,
+            outer,
+            lifted_first,
+            second,
+            trans_fv,
+        )
+    };
+    let cong_fv = fv.next();
+    let formula_eq = gcongr(
+        kernel, r.logic, term_ty, formula_ty, stuck, outer, repair, shape, cong_fv,
+    );
+    let from = shape(kernel, stuck);
+    let to = shape(kernel, outer);
+    cast_derivation(kernel, r, from, to, formula_eq, raw, fv)
+}
+
+// ============================================================================
+// Numeral addition and multiplication in Q.
+// ============================================================================
+
+/// `FO.Q.add_numeral : Π (a b : Nat), FO.Provable FO.Q
+///   (eqf (numeral a + numeral b) (numeral (Nat.add a b)))`.
+///
+/// `Nat.rec` on `b`, mirroring the recursion in `Nat.add` and in `axAddSucc`.
+/// The base case is `axAddZero` at `numeral a` and needs no repair at all
+/// (the axiom body contains no numerals, so `Formula.subst` reduces through
+/// it); the successor case is `axAddSucc` at `(numeral a, numeral b)` followed
+/// by one Leibniz step against the induction hypothesis.
+fn declare_add_numeral(
+    kernel: &mut crate::Kernel,
+    r: &Rob,
+    axioms: &Axioms,
+    subst_numeral: NameId,
+    fv: &mut Fv,
+) -> Result<NameId, KernelError> {
+    let nat_ty = r.nat_ty;
+    let a_id = fv.next();
+    let a = kernel.fvar(a_id);
+
+    let claim = |kernel: &mut crate::Kernel, b: ExprId| -> ExprId {
+        let na = r.tnum(kernel, a);
+        let nb = r.tnum(kernel, b);
+        let lhs = r.tadd(kernel, na, nb);
+        let sum = r.nadd(kernel, a, b);
+        let rhs = r.tnum(kernel, sum);
+        let formula = r.f_eqf(kernel, lhs, rhs);
+        r.prov_q(kernel, formula)
+    };
+
+    let motive = {
+        let b_id = fv.next();
+        let b = kernel.fvar(b_id);
+        let body = claim(kernel, b);
+        lam_fv(kernel, b_id, nat_ty, body)
+    };
+
+    let base = {
+        let body = {
+            let x = r.tvar(kernel, 0);
+            let zero = r.tzero(kernel);
+            let lhs = r.tadd(kernel, x, zero);
+            let rhs = r.tvar(kernel, 0);
+            r.f_eqf(kernel, lhs, rhs)
+        };
+        let universal = q_axiom_derivation(kernel, r, axioms, 3);
+        let na = r.tnum(kernel, a);
+        all_elim_at(kernel, r, body, na, universal)
+    };
+
+    let step = {
+        let k_id = fv.next();
+        let ih_id = fv.next();
+        let k = kernel.fvar(k_id);
+        let ih = kernel.fvar(ih_id);
+        let na = r.tnum(kernel, a);
+        let nk = r.tnum(kernel, k);
+
+        let inner_body = {
+            let x = r.tvar(kernel, 1);
+            let y = r.tvar(kernel, 0);
+            let sy = r.tsucc(kernel, y);
+            let lhs = r.tadd(kernel, x, sy);
+            let x2 = r.tvar(kernel, 1);
+            let y2 = r.tvar(kernel, 0);
+            let sum = r.tadd(kernel, x2, y2);
+            let rhs = r.tsucc(kernel, sum);
+            r.f_eqf(kernel, lhs, rhs)
+        };
+        // shape(u) := eqf (u + S nk) (S (u + nk))
+        let instance_shape = |kernel: &mut crate::Kernel, u: ExprId| -> ExprId {
+            let snk = r.tsucc(kernel, nk);
+            let lhs = r.tadd(kernel, u, snk);
+            let sum = r.tadd(kernel, u, nk);
+            let rhs = r.tsucc(kernel, sum);
+            r.f_eqf(kernel, lhs, rhs)
+        };
+        let major = instantiate_binary_axiom(
+            kernel,
+            r,
+            axioms,
+            subst_numeral,
+            4,
+            inner_body,
+            na,
+            a,
+            nk,
+            &instance_shape,
+            fv,
+        );
+
+        let s = r.tadd(kernel, na, nk);
+        let t = {
+            let sum = r.nadd(kernel, a, k);
+            r.tnum(kernel, sum)
+        };
+        let shape = |kernel: &mut crate::Kernel, holes: &[ExprId], x: ExprId| -> ExprId {
+            let snk = r.tsucc(kernel, holes[1]);
+            let lhs = r.tadd(kernel, holes[0], snk);
+            let rhs = r.tsucc(kernel, x);
+            r.f_eqf(kernel, lhs, rhs)
+        };
+        let numerals = [a, k];
+        let plan = Leibniz {
+            numerals: &numerals,
+            shape: &shape,
+            s,
+            t,
+        };
+        let body = leibniz(kernel, r, subst_numeral, &plan, ih, major, fv);
+        let ih_ty = claim(kernel, k);
+        lams(kernel, &[(k_id, nat_ty), (ih_id, ih_ty)], body)
+    };
+
+    let b_id = fv.next();
+    let b = kernel.fvar(b_id);
+    let rec = kernel.const_(r.nat.rec, vec![r.zero_lvl]);
+    let applied = apply_all(kernel, rec, &[motive, base, step, b]);
+    let value = lams(kernel, &[(a_id, nat_ty), (b_id, nat_ty)], applied);
+    let ty = {
+        let b2_id = fv.next();
+        let b2 = kernel.fvar(b2_id);
+        let body = claim(kernel, b2);
+        pis(kernel, &[(a_id, nat_ty), (b2_id, nat_ty)], body)
+    };
+
+    let name = kernel.name_str(r.q_ns, "add_numeral");
+    kernel.add_declaration(Declaration::Theorem {
+        name,
+        uparams: vec![],
+        ty,
+        value,
+    })?;
+    Ok(name)
+}
+
+/// `FO.Q.mul_numeral : Π (a b : Nat), FO.Provable FO.Q
+///   (eqf (numeral a · numeral b) (numeral (Nat.mul a b)))`.
+///
+/// `Nat.rec` on `b` again. The successor case needs TWO Leibniz steps, because
+/// `axMulSucc` leaves `a · S k = a · k + a`, and rewriting `a · k` to its
+/// numeral gives `numeral (a·k) + numeral a` — an object-level SUM, not yet a
+/// numeral. `FO.Q.add_numeral` at `(Nat.mul a k, a)` is what closes it, which
+/// is why the multiplicative theorem depends on the additive one.
+fn declare_mul_numeral(
+    kernel: &mut crate::Kernel,
+    r: &Rob,
+    axioms: &Axioms,
+    subst_numeral: NameId,
+    add_numeral: NameId,
+    fv: &mut Fv,
+) -> Result<NameId, KernelError> {
+    let nat_ty = r.nat_ty;
+    let a_id = fv.next();
+    let a = kernel.fvar(a_id);
+
+    let claim = |kernel: &mut crate::Kernel, b: ExprId| -> ExprId {
+        let na = r.tnum(kernel, a);
+        let nb = r.tnum(kernel, b);
+        let lhs = r.tmul(kernel, na, nb);
+        let product = r.nmul(kernel, a, b);
+        let rhs = r.tnum(kernel, product);
+        let formula = r.f_eqf(kernel, lhs, rhs);
+        r.prov_q(kernel, formula)
+    };
+
+    let motive = {
+        let b_id = fv.next();
+        let b = kernel.fvar(b_id);
+        let body = claim(kernel, b);
+        lam_fv(kernel, b_id, nat_ty, body)
+    };
+
+    let base = {
+        let body = {
+            let x = r.tvar(kernel, 0);
+            let zero = r.tzero(kernel);
+            let lhs = r.tmul(kernel, x, zero);
+            let rhs = r.tzero(kernel);
+            r.f_eqf(kernel, lhs, rhs)
+        };
+        let universal = q_axiom_derivation(kernel, r, axioms, 5);
+        let na = r.tnum(kernel, a);
+        all_elim_at(kernel, r, body, na, universal)
+    };
+
+    let step = {
+        let k_id = fv.next();
+        let ih_id = fv.next();
+        let k = kernel.fvar(k_id);
+        let ih = kernel.fvar(ih_id);
+        let na = r.tnum(kernel, a);
+        let nk = r.tnum(kernel, k);
+
+        let inner_body = {
+            let x = r.tvar(kernel, 1);
+            let y = r.tvar(kernel, 0);
+            let sy = r.tsucc(kernel, y);
+            let lhs = r.tmul(kernel, x, sy);
+            let x2 = r.tvar(kernel, 1);
+            let y2 = r.tvar(kernel, 0);
+            let product = r.tmul(kernel, x2, y2);
+            let x3 = r.tvar(kernel, 1);
+            let rhs = r.tadd(kernel, product, x3);
+            r.f_eqf(kernel, lhs, rhs)
+        };
+        // shape(u) := eqf (u · S nk) (u · nk + u)
+        let instance_shape = |kernel: &mut crate::Kernel, u: ExprId| -> ExprId {
+            let snk = r.tsucc(kernel, nk);
+            let lhs = r.tmul(kernel, u, snk);
+            let product = r.tmul(kernel, u, nk);
+            let rhs = r.tadd(kernel, product, u);
+            r.f_eqf(kernel, lhs, rhs)
+        };
+        let major = instantiate_binary_axiom(
+            kernel,
+            r,
+            axioms,
+            subst_numeral,
+            6,
+            inner_body,
+            na,
+            a,
+            nk,
+            &instance_shape,
+            fv,
+        );
+
+        let numerals = [a, k];
+
+        // Step one: rewrite `numeral a · numeral k` to `numeral (a · k)`.
+        let partial = {
+            let s = r.tmul(kernel, na, nk);
+            let t = {
+                let product = r.nmul(kernel, a, k);
+                r.tnum(kernel, product)
+            };
+            let shape = |kernel: &mut crate::Kernel, holes: &[ExprId], x: ExprId| -> ExprId {
+                let snk = r.tsucc(kernel, holes[1]);
+                let lhs = r.tmul(kernel, holes[0], snk);
+                let rhs = r.tadd(kernel, x, holes[0]);
+                r.f_eqf(kernel, lhs, rhs)
+            };
+            let plan = Leibniz {
+                numerals: &numerals,
+                shape: &shape,
+                s,
+                t,
+            };
+            leibniz(kernel, r, subst_numeral, &plan, ih, major, fv)
+        };
+
+        // Step two: collapse the object-level sum `numeral (a·k) + numeral a`.
+        let body = {
+            let product = r.nmul(kernel, a, k);
+            let np = r.tnum(kernel, product);
+            let s = r.tadd(kernel, np, na);
+            let t = {
+                let total = r.nadd(kernel, product, a);
+                r.tnum(kernel, total)
+            };
+            let equation = {
+                let head = kernel.const_(add_numeral, vec![]);
+                apply_all(kernel, head, &[product, a])
+            };
+            let shape = |kernel: &mut crate::Kernel, holes: &[ExprId], x: ExprId| -> ExprId {
+                let snk = r.tsucc(kernel, holes[1]);
+                let lhs = r.tmul(kernel, holes[0], snk);
+                r.f_eqf(kernel, lhs, x)
+            };
+            let plan = Leibniz {
+                numerals: &numerals,
+                shape: &shape,
+                s,
+                t,
+            };
+            leibniz(kernel, r, subst_numeral, &plan, equation, partial, fv)
+        };
+
+        let ih_ty = claim(kernel, k);
+        lams(kernel, &[(k_id, nat_ty), (ih_id, ih_ty)], body)
+    };
+
+    let b_id = fv.next();
+    let b = kernel.fvar(b_id);
+    let rec = kernel.const_(r.nat.rec, vec![r.zero_lvl]);
+    let applied = apply_all(kernel, rec, &[motive, base, step, b]);
+    let value = lams(kernel, &[(a_id, nat_ty), (b_id, nat_ty)], applied);
+    let ty = {
+        let b2_id = fv.next();
+        let b2 = kernel.fvar(b2_id);
+        let body = claim(kernel, b2);
+        pis(kernel, &[(a_id, nat_ty), (b2_id, nat_ty)], body)
+    };
+
+    let name = kernel.name_str(r.q_ns, "mul_numeral");
     kernel.add_declaration(Declaration::Theorem {
         name,
         uparams: vec![],
