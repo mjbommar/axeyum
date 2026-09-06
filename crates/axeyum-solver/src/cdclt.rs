@@ -267,6 +267,12 @@ const REDUCE_INCREMENT: usize = 300;
 /// Clauses at or below this literal-block distance are permanent glue clauses.
 const GLUE_LBD: usize = 2;
 
+/// Trail literals [`CdclT::unit_propagate`] processes between two deadline
+/// reads. Small enough that the deadline-blind window stays negligible next to
+/// a seconds-scale budget, large enough that the clock is not read once per
+/// propagated literal.
+const DEADLINE_CHECK_LITERALS: usize = 256;
+
 /// The 1-indexed Luby sequence `1,1,2,1,1,2,4,...` in reluctant-doubling form.
 fn luby(mut index: u64) -> u64 {
     let mut exponent = 1_u64;
@@ -511,12 +517,12 @@ impl CdclT {
         // intra-clause literal order); only the storage layout differs.
         let mut arena: Vec<Lit> = Vec::with_capacity(clauses.iter().map(Vec::len).sum());
         let mut headers: Vec<ClauseHeader> = Vec::with_capacity(clauses.len());
-        for clause in &clauses {
+        for clause in clauses {
             headers.push(ClauseHeader {
                 offset: arena.len(),
                 len: clause.len(),
             });
-            arena.extend_from_slice(clause);
+            arena.extend(clause);
         }
         // Nothing is assigned at construction, so watching the first two
         // literals is correct without any assignment-aware slot selection --
@@ -666,7 +672,13 @@ impl CdclT {
     pub(crate) fn add_permanent_clause(&mut self, clause: Vec<Lit>) {
         let variables = clause.iter().map(|lit| lit.var).collect::<Vec<_>>();
         self.activate_variables(&variables);
-        let cid = self.alloc_clause(&clause);
+        // Consumes `clause` into the arena; the same append `Self::alloc_clause`
+        // performs for a borrowed slice.
+        let offset = self.arena.len();
+        let len = clause.len();
+        self.arena.extend(clause);
+        let cid = self.headers.len();
+        self.headers.push(ClauseHeader { offset, len });
         // LBD zero keeps a post-construction clause out of learned-clause
         // reduction even though it sits beyond `num_original`.
         self.lbd.push(0);
@@ -1012,6 +1024,10 @@ impl CdclT {
     /// (so the arena, the assignment and the *other* watch lists stay borrowable)
     /// and is put back on **every** exit path, including the theory-conflict one:
     /// a list left behind would silently lose the propagations its clauses owe.
+    #[allow(
+        clippy::too_many_lines,
+        reason = "one BCP loop, kept line-for-line with proof_sat.rs's `propagate` so slice S7 is a deletion"
+    )]
     fn unit_propagate<T: TheorySolver>(&mut self, theory: &mut T) -> Result<(), Conflict> {
         self.drain_pending_clauses(theory)?;
         // Deadline check on entry, and then once per `DEADLINE_CHECK_LITERALS`
@@ -1022,10 +1038,6 @@ impl CdclT {
         if self.timed_out() {
             return Ok(());
         }
-        /// Trail literals processed between two deadline reads. Small enough that
-        /// the blind window stays negligible next to a seconds-scale budget,
-        /// large enough that the clock is not read once per propagated literal.
-        const DEADLINE_CHECK_LITERALS: usize = 256;
         let mut since_deadline_check = 0_usize;
         while self.qhead < self.trail.len() {
             since_deadline_check += 1;
