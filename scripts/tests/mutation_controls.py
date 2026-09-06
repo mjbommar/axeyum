@@ -1492,8 +1492,22 @@ class Cargo:
         return {"CARGO_TARGET_DIR": f"{root}/{self.slug}"}
 
     def _cargo(self, work: Path, extra: list[str]) -> tuple[int, str]:
+        # `--no-run` is a CARGO flag, so it has to land BEFORE the `--` that
+        # hands the remaining words to libtest.  Appending it blindly puts it
+        # after the separator, libtest answers `error: Unrecognized option:
+        # 'no-run'`, and the classifier reads that as BASELINE DID NOT BUILD --
+        # a whole suite unmeasurable for a reason that has nothing to do with
+        # any mutation.  Measured 2026-09-06 on `arith-enclosure-rounding`,
+        # which is the first suite to need a `--` (libtest ORs several test
+        # filters, and a single substring cannot name tests in two modules).
+        args = list(self.args)
+        if "--" in args:
+            cut = args.index("--")
+            args = args[:cut] + list(extra) + args[cut:]
+        else:
+            args.extend(extra)
         return _capture(
-            [str(ROOT / "scripts" / "cargo-serialized.sh"), "test", *self.args, *extra],
+            [str(ROOT / "scripts" / "cargo-serialized.sh"), "test", *args],
             work,
             self._env(),
         )
@@ -8010,6 +8024,147 @@ SUITES["cas-fallback-gate"] = (
     ],
 )
 
+# `arith-enclosure-rounding` -- the outward dyadic rounding of the `sqrt` and
+# `ln` enclosure kernels (ADR-1710 migration slice 2,
+# `crates/axeyum-arith/src/lib.rs` + `crates/axeyum-cas/src/enclosure*.rs`).
+#
+# Slice 2 moved three roundings onto `Dyadic` and added two ARGUMENT roundings
+# that were not there before.  Every one of them is a soundness claim, and the
+# family below is one mutation per claim.  Two things about it are worth
+# reading rather than counting.
+#
+# **The two fallbacks are textually identical and live in the same file.**
+# `sqrt_point` and `ln_point` both spell the below-the-grid-step guard as
+# `let low_argument = { let floor = dyadic_floor(p, bits); if
+# floor.is_positive() { floor } else { p.clone() } };`, so the bare body is an
+# AMBIGUOUS ANCHOR -- two matches, nobody can say which copy was mutated.  M1
+# and M2 therefore anchor on the body PLUS the comment above it, which is the
+# only text that differs between them.
+#
+# **The filter is narrow on purpose, and M3 is not in this family at all.**
+# M3 removes the per-iterate grid rounding, which does not make Newton *wrong*
+# -- it makes it EXACT, and an exact rational Newton iterate squares its
+# denominator on every step.  So the mutant does not fail fast; it computes, in
+# debug `BigRational`, for as long as you let it.  The slice-2 lane reported
+# about nine CPU-minutes for the precision-200 `sqrt 2` digit test, which is
+# why the filter here stops at order 128 and never reaches that test.  That was
+# not enough: measured 2026-09-06, M3 inside this seven-test filter was still
+# running after **47 CPU-minutes** and had to be killed, while the same seven
+# tests unmutated finish in **7.2 s**.  The expensive test is
+# `sqrt_point_brackets_the_root_over_a_deterministic_corpus` -- 600
+# `sqrt_point` calls -- not the digit test the earlier warning named.
+#
+# So M3 lives in `arith-enclosure-rounding-iterate` below, against the ONE
+# bounded test written to catch it.  Splitting it is not bookkeeping: a
+# mutation that runs forever is reported as neither `killed` nor `SURVIVED`,
+# and an unmeasurable mutation sitting in a family is exactly the "the harness
+# could not tell" outcome this file exists to keep separate from a finding.
+#
+# M6 (the direction of `dyadic_ceil`) kills **five** of the seven, measured
+# 2026-09-06, and that is the correct outcome rather than a defect in the
+# family: `dyadic_ceil` is the single entry both kernels' upper endpoint goes
+# through, so reversing it breaks the `sqrt` bracket, the `ln` hull and the
+# legacy differential at once.  A guard that only one test could remove would
+# be the surprising result here.  The two survivors are the two that never
+# touch the upper endpoint: `coarsen_to_bits_...`, which calls
+# `Dyadic::rationals_outward_at_exponent` directly rather than through
+# `dyadic_ceil`, and `sqrt_point_keeps_a_positive_lower_endpoint_...`, which is
+# about the FLOOR.  M4 kills two for the mirror-image reason: `coarsen` in
+# `enclosure_special.rs` is one call to `coarsen_to_bits`, so the legacy
+# differential dies with it.
+# --------------------------------------------------------------------------
+
+SUITES["arith-enclosure-rounding"] = (
+    "crates/axeyum-cas/src/enclosure.rs",
+    Cargo(
+        (
+            "-p",
+            "axeyum-cas",
+            "--lib",
+            "--",
+            "enclosure::tests::sqrt_point",
+            "enclosure::tests::ln_point",
+            "enclosure::tests::coarsen_to_bits",
+            "enclosure_special::tests::the_dyadic_route",
+        ),
+        "arith-enclosure-rounding",
+    ),
+    [
+        (
+            # M1. Below the grid step `floor` is 0, so `low_argument/x` is 0 and
+            # the lower endpoint collapses: still sound, and useless.
+            "sqrt_point falls back to the exact argument below the grid step",
+            "    // Rounding DOWN can reach 0 for a `p` below the grid step; the exact `p` is\n"
+            "    // the sound fallback there, as in `ln_point`.\n"
+            "    let low_argument = {\n"
+            "        let floor = crate::enclosure_special::dyadic_floor(p, bits);\n"
+            "        if floor.is_positive() {\n"
+            "            floor\n"
+            "        } else {\n"
+            "            p.clone()\n"
+            "        }\n"
+            "    };",
+            "    let low_argument = crate::enclosure_special::dyadic_floor(p, bits);",
+        ),
+        (
+            # M2. The same guard in `ln_point`, where the failure is louder:
+            # `ln 0` is not a number, so the head DECLINES for an ordinary
+            # argument rather than returning a wide answer.
+            "ln_point falls back to the exact argument below the grid step",
+            "    // Rounding DOWN can reach 0 for a `p` below the grid step, and `ln 0` is\n"
+            "    // not a number. Falling back to the exact `p` there is sound (it is the\n"
+            "    // identity rounding) and costs only the speed-up, never the answer.\n"
+            "    let low_argument = {\n"
+            "        let floor = crate::enclosure_special::dyadic_floor(p, bits);\n"
+            "        if floor.is_positive() {\n"
+            "            floor\n"
+            "        } else {\n"
+            "            p.clone()\n"
+            "        }\n"
+            "    };",
+            "    let low_argument = crate::enclosure_special::dyadic_floor(p, bits);",
+        ),
+        (
+            # M4. `coarsen_to_bits` is the module's ONE dyadic entry point.
+            # Returning the input unchanged is sound (it contains itself) and
+            # loses the bounded denominator that is the whole point.
+            "coarsen_to_bits actually rounds onto the grid",
+            "            Some((lo, hi)) => BigInterval {\n"
+            "                lo: lo.to_rational(),\n"
+            "                hi: hi.to_rational(),\n"
+            "            },\n"
+            "            None => self.clone(),",
+            "            Some((lo, hi)) => {\n"
+            "                let _ = (lo, hi);\n"
+            "                self.clone()\n"
+            "            }\n"
+            "            None => self.clone(),",
+        ),
+        (
+            # M5. `ln` is increasing, so `[ln(floor p), ln(ceil p)]` contains
+            # `ln p` and either endpoint alone does not.  Keeping only the
+            # lower one returns an interval that is strictly BELOW the value --
+            # a wrong answer, not a wide one.
+            "ln_point hulls both rounded endpoints",
+            "    let high = crate::enclosure_special::ln_large(&high_argument, order)?;\n"
+            "    BigInterval::new(low.lo.clone(), high.hi)",
+            "    let high = crate::enclosure_special::ln_large(&high_argument, order)?;\n"
+            "    let _ = high;\n"
+            "    BigInterval::new(low.lo.clone(), low.hi.clone())",
+        ),
+        (
+            # M6. The direction itself.  `dyadic_ceil` rounds directly rather
+            # than as `-floor(-x)` precisely so that one `Round::` names the
+            # answer; this mutation is the defect that spelling exists to make
+            # visible.  Kills more than one; see the note above.
+            "dyadic_ceil rounds UP",
+            "    Dyadic::from_rational_at_exponent(x, grid_exponent(bits), Round::Up)",
+            "    Dyadic::from_rational_at_exponent(x, grid_exponent(bits), Round::Down)",
+            "crates/axeyum-cas/src/enclosure_special.rs",
+        ),
+    ],
+)
+
 
 # Item 5 wave five: character tables. Each mutation removes one check from
 # `CharacterTableCertificate::verify` or one bound from the abelian producer.
@@ -8338,6 +8493,42 @@ SUITES["cas-fps-amplitude"] = (
     ],
 )
 
+# `arith-enclosure-rounding-iterate` -- M3 of the family above, on its own,
+# against the ONE test written to catch it.  See that family's note for why it
+# cannot share a filter: unmutated the seven tests take 7.2 s, and this single
+# mutation inside them was still running at 47 CPU-minutes.
+#
+# The test it must kill is worth reading, because the OBVIOUS assertion does
+# not work.  Removing the per-iterate rounding leaves the bracket correct --
+# AM-GM only needs `x >= sqrt p`, which an exact iterate satisfies -- so no
+# soundness property can see it.  Nor can a denominator BOUND: the slice-2 lane
+# measured that unrounded Newton from `x0 = 2` passes the order-32 grid step in
+# six iterations with a denominator of 77 bits, comfortably under the 161-bit
+# bound, and a bound-only assertion SURVIVED this mutation.  What kills it is
+# grid MEMBERSHIP -- that `hi * 2^bits` is an integer -- because 470832 is not
+# a power of two.
+# --------------------------------------------------------------------------
+
+SUITES["arith-enclosure-rounding-iterate"] = (
+    "crates/axeyum-cas/src/enclosure.rs",
+    Cargo(
+        (
+            "-p",
+            "axeyum-cas",
+            "--lib",
+            "enclosure::tests::sqrt_point_bounds_its_endpoint_denominators_by_the_grid",
+        ),
+        "arith-enclosure-rounding-iterate",
+    ),
+    [
+        (
+            "each Newton iterate is rounded back onto the grid",
+            "        let next = crate::enclosure_special::dyadic_ceil(&((&x + &lower) / &two), bits);",
+            "        let next = (&x + &lower) / &two;",
+        ),
+    ],
+)
+
 # ---------------------------------------------------------------------------
 # ADR-1710 lane `arith-finish`: the three families this lane added.
 #
@@ -8456,6 +8647,67 @@ SUITES["arith-boundary-gate"] = (
             "an unallowed violation actually sets the exit status",
             "if [[ $violations -gt 0 ]]; then",
             "if false && [[ $violations -gt 0 ]]; then",
+        ),
+    ],
+)
+
+# `arith-ky-differential` -- the K[y] layer's differential corpus against
+# `axeyum_arith::QPoly` (ADR-1710 slice 4, `crates/axeyum-cas/src/qe_fibre.rs`).
+#
+# Slice 4 declined to migrate this layer -- `K = Q[x]/(m)` with `m` deliberately
+# reducible is a ring with zero divisors, not a field -- and found that it had
+# NO differential oracle of any kind.  The corpus it added compares K[y] against
+# `QPoly` under a DEGREE-1 modulus, the one case where `K` really is Q.
+#
+# This family exists because that corpus is a new checker, and a checker nobody
+# can make fail is decoration.  Each mutation below is a defect the corpus is
+# claimed to catch, in a routine the end-to-end fibre tests exercise only
+# transitively -- and those tests cannot catch any of them, because their oracle
+# (`FibreCertificate::verify`) is the same K[y] code.
+#
+# A FOURTH mutation was tried and withdrawn, and it is worth recording rather
+# than quietly dropping.  Halving `kdivrem`'s quotient shift
+# (`r_degree - b_degree`) does not produce a wrong quotient -- it produces a
+# HANG.  That loop's termination argument is that the leading term cancels
+# EXACTLY at `deg r` on every pass; with the wrong shift the subtraction lands
+# elsewhere, `remainder[r_degree]` never changes, and the degree never drops.
+# A mutation that runs forever is neither `killed` nor `SURVIVED`, so it is not
+# a result and does not belong in a coverage claim.  (It is separately a fact
+# about `kdivrem` worth knowing: its termination rests on exact cancellation,
+# not on a step counter.)
+# --------------------------------------------------------------------------
+
+SUITES["arith-ky-differential"] = (
+    "crates/axeyum-cas/src/qe_fibre.rs",
+    Cargo(
+        ("-p", "axeyum-cas", "--lib", "qe::fibre::tests::the_ky_"),
+        "arith-ky-differential",
+    ),
+    [
+        (
+            # The formal derivative's factor is the exponent.  Off by one and
+            # every coefficient is wrong while the DEGREE is unchanged, so
+            # nothing structural notices.
+            "the K[y] derivative scales by the exponent",
+            "            .map(|(k, c)| scale_element(c, &BigRational::from_integer(BigInt::from(k))))",
+            "            .map(|(k, c)| scale_element(c, &BigRational::from_integer(BigInt::from(k + 1))))",
+        ),
+        (
+            # `kgcd` is specified monic, and `ksquarefree` and `KSturm` both
+            # rely on it.  A non-monic gcd still divides both inputs, so a
+            # divisibility check would not see this.
+            "the K[y] gcd is normalized monic",
+            "        self.kmonic(&left)" "\n" "    }",
+            "        Ok(left)" "\n" "    }",
+        ),
+        (
+            # Horner needs the point.  Dropping the scale makes `keval` return
+            # the SUM of the coefficients whatever `q` is -- and `KSturm`'s
+            # sign counting is `keval` at each endpoint, so the chain then
+            # counts the same thing at both ends.
+            "the K[y] evaluation multiplies by the point at each Horner step",
+            "            acc = add_elements(&scale_element(&acc, q), coeff);",
+            "            acc = add_elements(&acc, coeff);",
         ),
     ],
 )

@@ -215,3 +215,120 @@ Toom-3 ceiling or Stein gcd dominating a real workload — then option (d).
 not using Bareiss over `CasExpr`. (iii) A prelude lane lands `Nat.ofDigits`
 and the `norm_digits`-shaped step lemma, at which point ADR-1622's modulus
 ceiling stops being about the size of `101`.
+
+### `ir/poly_big.rs` is a public IR change, not a migration slice (added by slice 4)
+
+Migration slice 4 was asked to take `ratint.rs`, `qe_fibre.rs`'s K[y] layer and
+`ir/poly.rs`, and to stop before `ir/poly_big.rs`. It stopped, and this is the
+paragraph the coordinator decides from. It is deliberately **not** a new ADR
+number: nothing here is decided yet.
+
+**What the move would change for `axeyum_ir::Value`.** `poly_big::BigAlgebraic`
+(`poly_big.rs:71`) and `real_algebraic::Repr` (`real_algebraic.rs:96`) are the
+same three fields — `Vec<BigInt>` plus two `BigRational` endpoints — and
+`RealAlgebraic::combine` destructures one straight into the other
+(`real_algebraic.rs:384`). `RealAlgebraic` is a variant of `axeyum_ir::Value`
+(`value.rs:45`), so the storage type is reachable from the IR's public value
+enum. Moving `poly_big` to `axeyum-arith` therefore does one of two things:
+either `axeyum-arith` gains the carrier and `axeyum-ir` re-exports it — which
+puts a second crate's type inside `Value` — or the carrier stays and only the
+*algorithms* move, which is the cheaper half and the one worth pricing.
+
+The move also has a **dependency-graph consequence that is larger than the
+diff**. `axeyum-arith` depends on `num-bigint` and `num-rational` and on nothing
+else (`crates/axeyum-arith/Cargo.toml`), so there is no cycle: `axeyum-ir` may
+depend on `axeyum-arith`. But `axeyum-arith` is today a dependency of exactly one
+crate, `axeyum-cas`. Adding the `axeyum-ir → axeyum-arith` edge puts
+`axeyum-arith` beneath **every** crate in the workspace, because everything
+depends on `axeyum-ir`. That is a placement decision, not a refactor.
+
+**Who consumes it, grepped rather than remembered.** `BigAlgebraic`, `Combine`
+and `combine_retry` have exactly one consumer in the tree:
+`crates/axeyum-ir/src/real_algebraic.rs`. Nothing outside `axeyum-ir` names them.
+`RealAlgebraic` itself — the type that would inherit any carrier change — is
+named in 21 files outside `axeyum-ir`, across `axeyum-cas` (`extremum`,
+`inverse`, `mvt`, `taylor`, `real_algebraic`), `axeyum-solver` (`nra_real_root`,
+`smtlib`, `auto`, `support_matrix`, `capabilities`, and five test files),
+`axeyum-rewrite`, `axeyum-property`, and `axeyum-py`'s `convert.rs`
+`RealAlgebraicValue` binding. One further consumer the earlier inventory missed:
+`big_determinant` is `#[doc(hidden)] pub` and is called **in production from
+another crate**, at `crates/axeyum-cas/src/fps_analytic.rs:994`. So
+`poly_big`'s cross-crate surface is not one test; it is one test plus one CAS
+hot path.
+
+**Two bounds would have to be replaced, not dropped.** `poly_big` terminates on
+`BIG_MAX_SYLVESTER_DIM = 24`, `BIG_MAX_DEGREE_GUARD` and
+`BIG_COMBINE_REFINE_ROUNDS = 200` (`poly_big.rs:51`–`:56`). `axeyum-arith`'s only
+comparable knob is `DEFAULT_ISOLATION_STEPS`, which bounds root isolation and
+nothing else. This is the standing rule above: a slice that removes a bound must
+add one.
+
+**One differential test must not lose both arms.**
+`crates/axeyum-ir/tests/sylvester_determinant_diff_bignum.rs` compares
+`big_determinant` against `big_determinant_leibniz`. Both live in `poly_big.rs`.
+Replacing them with a single shared routine makes that test compare the shared
+code against itself — the same defect slice 3 avoided by leaving `sturm.rs` in
+place.
+
+**The two options.**
+
+- **(A) Move the algorithms, keep the carrier.** `poly_big`'s Sturm chain,
+  Euclidean gcd, squarefree part, Bareiss determinant and Newton interpolation
+  are already over `BigRational` and are type-compatible with
+  `axeyum_arith::{QPoly, SturmChain}`. `BigAlgebraic`, `Combine` and
+  `combine_retry` stay in `axeyum-ir`, so `Value` does not change and no crate
+  outside `axeyum-ir` recompiles differently. Costs: the new
+  `axeyum-ir → axeyum-arith` edge; explicit replacements for the three caps;
+  keeping one determinant arm private to `poly_big` so the differential test
+  survives. Buys: two of the six inventoried Sturm chains and one of the
+  duplicate Bareiss routines, with no public surface change.
+- **(B) Move the carrier too.** `BigAlgebraic` becomes
+  `axeyum_arith::AlgebraicNumber`'s concrete carrier and `axeyum_ir::Value`
+  stores it. Costs: a public IR type change across 21 files including the
+  Python binding, which is precisely the churn ADR-1702 declined for
+  `Rational`, plus everything in (A). Buys: one algebraic-number representation
+  in the workspace instead of two, which is what the `AlgebraicNumber` trait was
+  a placeholder for.
+
+Slice 4's own recommendation is **(A)**, and only after the three copies below
+are settled — but the choice is the coordinator's, not a lane's.
+
+### What slice 4 measured about the other three copies
+
+All three were opened rather than grepped, and all three **stopped**. Recording
+why, so the next lane does not re-derive it (the standing cost in CLAUDE.md):
+
+- **`ratint.rs` has no ℚ[x] layer of its own to migrate.** Its module doc says
+  so — *"Everything here operates on `poly.rs`'s public exact primitives"* — and
+  the file confirms it: `divrem` (`:37`) is three calls into `axeyum_ir::poly`,
+  and `is_zero`/`monomial` are one-liners. What it privately owns is the
+  **Gauss–Jordan pair** `solve_linear_i128`/`solve_linear_big` (`:53`, `:99`),
+  which is the *linear-algebra* row of the inventory above, not the ℚ[x] row —
+  and `axeyum-arith` has no linear algebra at all today. So this copy is not
+  slice-4 work; it is the `PA = LD⁻¹U` slice, and it needs a home built first.
+- **`qe_fibre.rs`'s K[y] layer is not univariate over a field.** `K = ℚ[x]/(m)`
+  with `m` deliberately allowed to be **reducible** (`RealField`, `:346`), so
+  `invert` (`:500`) has three outcomes and one of them, `Inner::Split`, means
+  *"abandon this computation, the ambient ring was wrong"*. `ktrim` (`:538`) is
+  partial for the same reason: deciding whether a leading coefficient is zero is
+  deciding a sign at α. A generic `UPoly<F>` cannot host this — it would need a
+  *ring-object* trait whose `inv` **and** `is_zero` are both fallible and whose
+  error can demand a different ring. That is the control flow this ADR already
+  placed outside the arithmetic layer. The cheaper shared piece, if one is
+  wanted later, is a `SturmChain` generic over a **sign oracle** rather than over
+  a coefficient field: that would absorb `KSturm` (`:667`) and `qe_big`'s chain
+  together.
+- **`ir/poly.rs` is the i128 differential oracle, and migrating it dissolves
+  three test families.** `crates/axeyum-cas/src/sturm.rs:16`–`:41` already
+  records this decision for the Sturm chain, and `sturm.rs` is built entirely on
+  `poly::{rat_trim, rat_degree, rat_derivative, rat_rem, squarefree_part,
+  eval_rat_poly}` — so migrating `poly.rs` migrates `sturm.rs` transitively and
+  makes `fps_analytic`'s `bignum_and_machine_sturm_counts_agree`,
+  `sturm.rs`'s own `shared_and_machine_routes_agree_where_both_answer`, and
+  `nra_real_root`'s `real_algebra_parity` compare the shared chain against
+  itself. Second and independent: every `None` in `poly.rs` is an **overflow
+  decline** that callers branch on (`RootCounter::Machine` falls through to the
+  bignum chain on `None`), and `axeyum_arith`'s carriers cannot produce one.
+  Migrating is therefore the global widening ADR-1702 measured and rejected —
+  25 failing tests and about seven non-terminating ones — arriving by a
+  different door.
