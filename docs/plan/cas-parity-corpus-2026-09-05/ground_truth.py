@@ -861,6 +861,217 @@ def check_probability_wave_four() -> None:
     )
 
 
+
+def check_matgroup_q() -> None:
+    """mgq1-mgq3: matrix groups over Q, and the Minkowski bound.
+
+    Nothing here imports axeyum. The quarter turn's order is found by
+    multiplying 2x2 integer matrices with Python's own arithmetic; the shear's
+    infiniteness by exhibiting distinct powers; the Minkowski bound by the
+    explicit product formula, cross-checked against Minkowski's own table.
+    """
+
+    def matmul(a, b):
+        return [
+            [sum(a[i][k] * b[k][j] for k in range(len(b))) for j in range(len(b[0]))]
+            for i in range(len(a))
+        ]
+
+    identity2 = [[1, 0], [0, 1]]
+
+    # mgq1: the quarter turn has order exactly 4.
+    r = [[0, -1], [1, 0]]
+    power = [row[:] for row in identity2]
+    order = None
+    for k in range(1, 50):
+        power = matmul(power, r)
+        if power == identity2:
+            order = k
+            break
+    ok(order == 4, f"mgq1 (hand) [[0,-1],[1,0]] has order {order}, expected 4")
+    if sp is not None:
+        m = sp.Matrix([[0, -1], [1, 0]])
+        ok(
+            (m**4) == sp.eye(2) and (m**2) != sp.eye(2),
+            "mgq1 (sympy) Matrix([[0,-1],[1,0]])**4 == eye(2) and **2 != eye(2)",
+        )
+
+    # mgq2: the shear's powers are pairwise distinct, so the group is infinite.
+    u = [[1, 1], [0, 1]]
+    power = [row[:] for row in identity2]
+    seen = set()
+    for _ in range(200):
+        power = matmul(power, u)
+        seen.add((power[0][0], power[0][1], power[1][0], power[1][1]))
+    ok(
+        len(seen) == 200,
+        f"mgq2 (hand) 200 powers of [[1,1],[0,1]] are pairwise distinct ({len(seen)} found), so the group is infinite",
+    )
+    # ...and both cheap root-of-unity tests pass on it, which is why the entry
+    # exercises the Minkowski route rather than a determinant or trace bound.
+    ok(
+        u[0][0] * u[1][1] - u[0][1] * u[1][0] == 1 and abs(u[0][0] + u[1][1]) == 2,
+        "mgq2 (hand) the shear has determinant 1 and trace 2 = n, inside both root-of-unity bounds",
+    )
+
+    # mgq3: Minkowski's bound, from the product formula.
+    def is_prime(n: int) -> bool:
+        if n < 2:
+            return False
+        d = 2
+        while d * d <= n:
+            if n % d == 0:
+                return False
+            d += 1
+        return True
+
+    def minkowski(n: int) -> int:
+        bound = 1
+        for ell in range(2, n + 2):
+            if not is_prime(ell):
+                continue
+            exponent = 0
+            denom = ell - 1
+            while n // denom:
+                exponent += n // denom
+                denom *= ell
+            bound *= ell**exponent
+        return bound
+
+    table = [minkowski(n) for n in range(1, 7)]
+    ok(
+        table == [2, 24, 48, 5760, 11520, 2903040],
+        f"mgq3 (cited) Minkowski's bound M(1..6) = {table}, expected [2, 24, 48, 5760, 11520, 2903040]",
+    )
+    ok(minkowski(4) == 5760, f"mgq3 (hand) M(4) = {minkowski(4)}, expected 5760")
+
+
+def check_chartable() -> None:
+    """ct1-ct3: the character table of A5, its near-miss, and C6's table.
+
+    A5's entries live in Q(sqrt 5), so this file carries a two-line exact
+    arithmetic for a + b*sqrt(5) with Fraction coefficients rather than
+    depending on SymPy. Nothing here imports axeyum.
+    """
+
+    class Q5:
+        """a + b*sqrt(5), exactly."""
+
+        __slots__ = ("a", "b")
+
+        def __init__(self, a, b=0):
+            self.a = Fraction(a)
+            self.b = Fraction(b)
+
+        def __add__(self, other):
+            return Q5(self.a + other.a, self.b + other.b)
+
+        def __mul__(self, other):
+            return Q5(
+                self.a * other.a + 5 * self.b * other.b,
+                self.a * other.b + self.b * other.a,
+            )
+
+        def scaled(self, k):
+            return Q5(self.a * k, self.b * k)
+
+        def __eq__(self, other):
+            return self.a == other.a and self.b == other.b
+
+        def __repr__(self):
+            return f"{self.a}+{self.b}*sqrt5"
+
+    def q(x):
+        return Q5(x, 0)
+
+    phi = Q5(Fraction(1, 2), Fraction(1, 2))  # (1 + sqrt 5)/2
+    phibar = Q5(Fraction(1, 2), Fraction(-1, 2))  # (1 - sqrt 5)/2
+    ok(phi * phibar == q(-1), "ct1 (hand) phi * phibar = -1")
+    ok(phi + phibar == q(1), "ct1 (hand) phi + phibar = 1")
+    ok(phi * phi == phi + q(1), "ct1 (hand) phi^2 = phi + 1")
+
+    # Class sizes of A5 at (e, (12)(34), (123), (12345), (13524)).
+    sizes = [1, 15, 20, 12, 12]
+    ok(sum(sizes) == 60, f"ct1 (hand) A5's class equation sums to {sum(sizes)}, expected 60")
+    table = [
+        [q(1), q(1), q(1), q(1), q(1)],
+        [q(4), q(0), q(1), q(-1), q(-1)],
+        [q(5), q(1), q(-1), q(0), q(0)],
+        [q(3), q(-1), q(0), phi, phibar],
+        [q(3), q(-1), q(0), phibar, phi],
+    ]
+    # Every entry is real, so complex conjugation is the identity here and the
+    # inner product is the plain weighted sum.
+    def inner(i, j):
+        acc = q(0)
+        for k, size in enumerate(sizes):
+            acc = acc + (table[i][k] * table[j][k]).scaled(size)
+        return acc
+
+    failures = []
+    for i in range(5):
+        for j in range(5):
+            want = q(60) if i == j else q(0)
+            if inner(i, j) != want:
+                failures.append((i, j, inner(i, j)))
+    ok(
+        not failures,
+        f"ct1 (cited) A5's classical table satisfies row orthogonality; offending pairs {failures}",
+    )
+    degrees = [row[0].a for row in table]
+    ok(
+        sorted(degrees) == [1, 3, 3, 4, 5] and sum(d * d for d in degrees) == 60,
+        f"ct1 (cited) A5's degrees {sorted(degrees)} square-sum to {sum(d * d for d in degrees)}, expected 60",
+    )
+
+    # ct2: transposing phi and phibar in ONE three-dimensional row makes it a
+    # copy of the other, so its inner product with that row becomes 60, not 0.
+    altered = [row[:] for row in table]
+    altered[3][3], altered[3][4] = altered[3][4], altered[3][3]
+
+    def inner_altered(i, j):
+        acc = q(0)
+        for k, size in enumerate(sizes):
+            acc = acc + (altered[i][k] * altered[j][k]).scaled(size)
+        return acc
+
+    ok(
+        inner_altered(3, 4) == q(60),
+        f"ct2 (hand) the altered A5 table has <chi3, chi3'> = {inner_altered(3, 4)}, not 0, so it is not a character table",
+    )
+    ok(
+        altered[3] == altered[4],
+        "ct2 (hand) the altered row is literally the other three-dimensional row",
+    )
+
+    # ct3: a finite abelian group has |G| irreducible characters, all linear.
+    # For C6 they are chi_j(g^k) = zeta_6^(jk); orthogonality is the discrete
+    # Fourier relation, checked here on the exponents.
+    import cmath
+
+    n = 6
+    zeta = [cmath.exp(2j * cmath.pi * k / n) for k in range(n)]
+    worst = 0.0
+    for i in range(n):
+        for j in range(n):
+            s = sum(zeta[(i * k) % n] * zeta[(-j * k) % n] for k in range(n))
+            want = complex(n if i == j else 0)
+            worst = max(worst, abs(s - want))
+    ok(
+        worst < 1e-9,
+        f"ct3 (hand) C6's {n} linear characters are orthogonal (worst deviation {worst:.2e})",
+    )
+    if sp is not None:
+        from sympy.combinatorics import Permutation as SpPermutation
+        from sympy.combinatorics import PermutationGroup as SpPermutationGroup
+
+        g = SpPermutationGroup([SpPermutation(0, 1, 2, 3, 4, 5)])
+        ok(
+            g.order() == 6 and g.is_abelian,
+            "ct3 (sympy) PermutationGroup([Permutation(0,1,2,3,4,5)]) is abelian of order 6",
+        )
+
+
 def main() -> int:
     print(f"SymPy available: {sp is not None} (version {SYMPY_VERSION})")
 
@@ -896,6 +1107,8 @@ def main() -> int:
     check_qe_bivariate()
     check_probability_symbolic_poisson()
     check_probability_wave_four()
+    check_matgroup_q()
+    check_chartable()
 
     print(f"\n{CHECKED} claims, {len(FAILURES)} failed")
     if FAILURES:

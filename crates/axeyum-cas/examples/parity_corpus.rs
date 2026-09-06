@@ -35,6 +35,9 @@
 use std::collections::BTreeMap;
 use std::time::Instant;
 
+use axeyum_cas::chartable::{
+    CharacterTableCertificate, Cyclotomic, character_table_of_abelian_group,
+};
 use axeyum_cas::enclosure::{BigInterval, EULER_GAMMA_NAME, enclose, enclose_constant};
 use axeyum_cas::enclosure_special::{MultiPoly, PolySystem, enclose_system};
 use axeyum_cas::fps_analytic::{
@@ -44,6 +47,9 @@ use axeyum_cas::geometry::Point;
 use axeyum_cas::geometry_beyond::{self, Conic, Isometry};
 use axeyum_cas::homology::{
     self, SimplicialComplex, coefficients, cohomology, induced, persistent,
+};
+use axeyum_cas::matgroup_q::{
+    RationalGroupVerdict, classify_rational_matrix_group, minkowski_bound, rational_matrix,
 };
 use axeyum_cas::numberfield::{self, QuadraticField, TwoSquaresCertificate};
 use axeyum_cas::numberfield_ideals::{
@@ -3513,6 +3519,232 @@ fn prob6_poisson_symbolic_variance_ctrl() -> Outcome {
     }
 }
 
+// ============================================================================
+// Entries: third-pass modules — matgroup_q (matrix groups over Q)
+// ============================================================================
+
+/// The quarter turn generates a cyclic group of order 4 inside `GL(2, Q)`.
+fn mgq1_quarter_turn_order() -> Outcome {
+    let Some(r) = rational_matrix(&[&[(0, 1), (-1, 1)], &[(1, 1), (0, 1)]]) else {
+        return declined("rational_matrix(quarter turn)");
+    };
+    match classify_rational_matrix_group(2, vec![r]) {
+        Ok(RationalGroupVerdict::Declined(reason)) => {
+            declined(&format!("classify_rational_matrix_group: {reason:?}"))
+        }
+        Ok(verdict) => {
+            let order = verdict.order();
+            let verified = verdict.verify().is_ok();
+            Outcome {
+                verdict: if order == Some(4) {
+                    Verdict::Agree
+                } else {
+                    Verdict::Disagree
+                },
+                trust: if verified {
+                    Trust::Certified
+                } else {
+                    Trust::Unknown
+                },
+                expected: "finite of order 4".to_string(),
+                actual: format!("order={order:?}, verify_ok={verified}"),
+            }
+        }
+        Err(err) => declined(&format!("classify_rational_matrix_group: {err:?}")),
+    }
+}
+
+/// The unipotent shear generates an infinite group, certified by the
+/// Minkowski overflow route rather than declined.
+fn mgq2_shear_is_infinite() -> Outcome {
+    let Some(u) = rational_matrix(&[&[(1, 1), (1, 1)], &[(0, 1), (1, 1)]]) else {
+        return declined("rational_matrix(shear)");
+    };
+    match classify_rational_matrix_group(2, vec![u]) {
+        Ok(RationalGroupVerdict::Declined(reason)) => {
+            declined(&format!("classify_rational_matrix_group: {reason:?}"))
+        }
+        Ok(verdict) => {
+            let infinite = verdict.is_infinite();
+            let verified = verdict.verify().is_ok();
+            Outcome {
+                verdict: if infinite {
+                    Verdict::Agree
+                } else {
+                    Verdict::Disagree
+                },
+                trust: if verified {
+                    Trust::Certified
+                } else {
+                    Trust::Unknown
+                },
+                expected: "infinite".to_string(),
+                actual: format!("is_infinite={infinite}, verify_ok={verified}"),
+            }
+        }
+        Err(err) => declined(&format!("classify_rational_matrix_group: {err:?}")),
+    }
+}
+
+/// The Minkowski bound in dimension 4 is 5760.
+fn mgq3_minkowski_bound_dimension_four() -> Outcome {
+    let got = minkowski_bound(4);
+    Outcome {
+        verdict: if got == BigInt::from(5760) {
+            Verdict::Agree
+        } else {
+            Verdict::Disagree
+        },
+        trust: Trust::Uncertified,
+        expected: "M(4) = 5760".to_string(),
+        actual: format!("{got}"),
+    }
+}
+
+// ============================================================================
+// Entries: third-pass modules — chartable (character tables)
+// ============================================================================
+
+/// `A5`'s classical character table, entries in `Q(zeta_30)`.
+fn a5_character_table() -> Option<CharacterTableCertificate> {
+    let five_cycle = Permutation::from_cycles(&[vec![0, 1, 2, 3, 4]], 5)?;
+    let three_cycle = Permutation::from_cycles(&[vec![0, 1, 2]], 5)?;
+    let group = PermutationGroup::from_generators(vec![five_cycle, three_cycle], 5)?;
+    let classes = group.conjugacy_classes().ok()?;
+    let representatives = [
+        Permutation::identity(5),
+        Permutation::from_cycles(&[vec![0, 1], vec![2, 3]], 5)?,
+        Permutation::from_cycles(&[vec![0, 1, 2]], 5)?,
+        Permutation::from_cycles(&[vec![0, 1, 2, 3, 4]], 5)?,
+        Permutation::from_cycles(&[vec![0, 2, 4, 1, 3]], 5)?,
+    ];
+    let columns: Vec<usize> = representatives
+        .iter()
+        .map(|r| classes.classes.iter().position(|c| c.contains(r)))
+        .collect::<Option<Vec<usize>>>()?;
+    // (1 + sqrt 5)/2 = 1 + zeta_5 + zeta_5^4 and (1 - sqrt 5)/2 =
+    // 1 + zeta_5^2 + zeta_5^3, written in Q(zeta_30) since zeta_5 = zeta_30^6.
+    let phi = Cyclotomic::sum_of_roots(30, &[0, 6, 24])?;
+    let phi_bar = Cyclotomic::sum_of_roots(30, &[0, 12, 18])?;
+    let cyc = |v: i64| Cyclotomic::integer(30, v);
+    let rows: Vec<Vec<Cyclotomic>> = vec![
+        vec![cyc(1)?, cyc(1)?, cyc(1)?, cyc(1)?, cyc(1)?],
+        vec![cyc(4)?, cyc(0)?, cyc(1)?, cyc(-1)?, cyc(-1)?],
+        vec![cyc(5)?, cyc(1)?, cyc(-1)?, cyc(0)?, cyc(0)?],
+        vec![cyc(3)?, cyc(-1)?, cyc(0)?, phi.clone(), phi_bar.clone()],
+        vec![cyc(3)?, cyc(-1)?, cyc(0)?, phi_bar, phi],
+    ];
+    let table = rows
+        .iter()
+        .map(|row| {
+            let mut out = row.clone();
+            for (i, &c) in columns.iter().enumerate() {
+                out[c] = row[i].clone();
+            }
+            out
+        })
+        .collect();
+    Some(CharacterTableCertificate {
+        classes,
+        conductor: 30,
+        table,
+    })
+}
+
+/// The classical `A5` table must verify: both orthogonality relations, the
+/// degrees, and the Galois relation, all exactly over `Q(zeta_30)`.
+fn ct1_a5_character_table() -> Outcome {
+    let Some(cert) = a5_character_table() else {
+        return declined("building A5's character table");
+    };
+    let verified = cert.verify();
+    Outcome {
+        verdict: if verified.is_ok() {
+            Verdict::Agree
+        } else {
+            Verdict::Disagree
+        },
+        trust: if verified.is_ok() {
+            Trust::Certified
+        } else {
+            Trust::Unknown
+        },
+        expected: "the classical A5 table verifies (5 rows, degrees 1,3,3,4,5)".to_string(),
+        actual: format!("verify={verified:?}"),
+    }
+}
+
+/// Near-miss control: swap the golden ratio and its conjugate in ONE of the
+/// two three-dimensional rows. The closed form is perfectly spellable —
+/// `(1 - sqrt 5)/2` is a real algebraic integer that really does appear in
+/// this table — and it is simply in the wrong row, which makes that row a
+/// copy of the other one. The checker must refuse it.
+fn ct2_a5_swapped_golden_ratio_ctrl() -> Outcome {
+    let Some(mut cert) = a5_character_table() else {
+        return declined("building A5's character table");
+    };
+    let Some(phi) = Cyclotomic::sum_of_roots(30, &[0, 6, 24]) else {
+        return declined("building the golden ratio");
+    };
+    let Some(row) = cert.table.iter().position(|r| r.contains(&phi)) else {
+        return declined("locating a golden-ratio row");
+    };
+    let columns: Vec<usize> = (0..cert.table[row].len())
+        .filter(|&k| cert.table[row][k].as_rational().is_none())
+        .collect();
+    if columns.len() != 2 {
+        return declined("locating the two irrational columns");
+    }
+    cert.table[row].swap(columns[0], columns[1]);
+    let refused = cert.verify().is_err();
+    Outcome {
+        verdict: if refused {
+            Verdict::Agree
+        } else {
+            Verdict::Disagree
+        },
+        trust: Trust::Certified,
+        expected: "the altered A5 table is REFUSED".to_string(),
+        actual: format!("refused={refused}, verify={:?}", cert.verify()),
+    }
+}
+
+/// A produced table: the cyclic group of order 6 has exactly six irreducible
+/// characters, all of degree 1, and the produced table passes the same
+/// independent checker.
+fn ct3_c6_abelian_table() -> Outcome {
+    let Some(g) = Permutation::from_cycles(&[vec![0, 1, 2, 3, 4, 5]], 6) else {
+        return declined("Permutation::from_cycles(6-cycle)");
+    };
+    let Some(group) = PermutationGroup::from_generators(vec![g], 6) else {
+        return declined("PermutationGroup::from_generators(C6)");
+    };
+    match character_table_of_abelian_group(&group) {
+        Ok(cert) => {
+            let rows = cert.table.len();
+            let verified = cert.verify().is_ok();
+            let all_linear = cert
+                .degrees()
+                .is_some_and(|d| d.iter().all(num_traits::One::is_one));
+            Outcome {
+                verdict: if rows == 6 && all_linear {
+                    Verdict::Agree
+                } else {
+                    Verdict::Disagree
+                },
+                trust: if verified {
+                    Trust::Certified
+                } else {
+                    Trust::Unknown
+                },
+                expected: "6 characters, every degree 1".to_string(),
+                actual: format!("rows={rows}, all_linear={all_linear}, verify_ok={verified}"),
+            }
+        }
+        Err(err) => declined(&format!("character_table_of_abelian_group: {err:?}")),
+    }
+}
+
 macro_rules! e {
     ($id:literal, $area:expr, $module:expr, $tier:expr, $f:expr) => {
         Entry {
@@ -4306,6 +4538,50 @@ fn main() {
             Some("probability"),
             Core,
             prob6_poisson_symbolic_variance_ctrl
+        ),
+        // third-pass modules: matgroup_q
+        e!(
+            "mgq1-quarter-turn-order",
+            None,
+            Some("matgroup_q"),
+            Core,
+            mgq1_quarter_turn_order
+        ),
+        e!(
+            "mgq2-shear-is-infinite",
+            None,
+            Some("matgroup_q"),
+            Core,
+            mgq2_shear_is_infinite
+        ),
+        e!(
+            "mgq3-minkowski-bound-dimension-four",
+            None,
+            Some("matgroup_q"),
+            Core,
+            mgq3_minkowski_bound_dimension_four
+        ),
+        // third-pass modules: chartable
+        e!(
+            "ct1-a5-character-table",
+            None,
+            Some("chartable"),
+            Core,
+            ct1_a5_character_table
+        ),
+        e!(
+            "ct2-a5-swapped-golden-ratio-ctrl",
+            None,
+            Some("chartable"),
+            Core,
+            ct2_a5_swapped_golden_ratio_ctrl
+        ),
+        e!(
+            "ct3-c6-abelian-table",
+            None,
+            Some("chartable"),
+            Core,
+            ct3_c6_abelian_table
         ),
     ];
 

@@ -275,3 +275,18 @@ that a pathological test is worth deleting rather than debugging: here the
 pathology was in the *control*, not the subject.
 
 
+
+## A hub `BuildStep` cannot name a dependency another module owns
+
+- **The `requires` table of a hub's `STEPS` entry can only cite names in that
+  hub's own `*Names` struct.** A step that consumes a name owned by a sibling
+  module (measured 2026-09-06: `complex/cauchy_riemann.rs` consuming
+  `abs_ofReal` from `complex/components.rs`) has no way to say so, so the
+  ORDER of the two steps is enforced by position alone. Put the consumer
+  before the producer and the whole prelude fails with
+  `UnknownConst { NameId(n) }` — an id, no name — and every test that builds
+  the prelude goes red (83 of 86 in that lane) with nothing pointing at the
+  step. Rule: when adding a step that reads a sibling module's declarations,
+  place it AFTER that module's step and say so in the `STEPS` comment;
+  when a fresh prelude build dies with a bare `UnknownConst` after adding a
+  step, check step order before reading any proof term.

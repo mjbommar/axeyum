@@ -4573,10 +4573,10 @@ pub(super) fn creal_sub(p: &CRealPrelude) -> Vec<(&'static str, Sub)> {
     vec![("rat", Sub::Rat(Box::new(p.rat)))]
 }
 
-/// The `ComplexPrelude` field table (186 names,
+/// The `ComplexPrelude` field table (196 names,
 /// 0 name lists, 1 sub-packages).
 ///
-/// 57 of the names come from ADR-1512 per-module registries and
+/// 67 of the names come from ADR-1512 per-module registries and
 /// carry a dotted field name (`pi.pi_le_four`); the rest are flat
 /// fields on `ComplexPrelude` itself.
 #[must_use]
@@ -4817,6 +4817,40 @@ pub(super) fn complex(p: &ComplexPrelude) -> Fields {
                 p.estimates.uniformly_continuous_of_has_derivative,
             ),
             ("leibniz.has_derivative_mul", p.leibniz.has_derivative_mul),
+            (
+                "uc_closure.uniformly_continuous_add",
+                p.uc_closure.uniformly_continuous_add,
+            ),
+            (
+                "uc_closure.uniformly_continuous_mul",
+                p.uc_closure.uniformly_continuous_mul,
+            ),
+            (
+                "polyderiv.has_derivative_congr",
+                p.polyderiv.has_derivative_congr,
+            ),
+            (
+                "polyderiv.has_derivative_pow",
+                p.polyderiv.has_derivative_pow,
+            ),
+            ("polyderiv.holomorphic_pow", p.polyderiv.holomorphic_pow),
+            ("cauchy_riemann.abs_i", p.cauchy_riemann.abs_i),
+            (
+                "cauchy_riemann.in_disc_of_real_offset",
+                p.cauchy_riemann.in_disc_of_real_offset,
+            ),
+            (
+                "cauchy_riemann.in_disc_i_offset",
+                p.cauchy_riemann.in_disc_i_offset,
+            ),
+            (
+                "cauchy_riemann.in_disc_of_two_sided",
+                p.cauchy_riemann.in_disc_of_two_sided,
+            ),
+            (
+                "cauchy_riemann.in_disc_i_of_two_sided",
+                p.cauchy_riemann.in_disc_i_of_two_sided,
+            ),
             ("components.abs_of_real", p.components.abs_of_real),
             ("components.abs_re_le", p.components.abs_re_le),
             ("components.abs_im_le", p.components.abs_im_le),

@@ -94,6 +94,14 @@ the later engine unification is a deletion rather than a reconciliation
 ([memo §6](adr-1701-slice-2-design-2026-09-05.md)). Separately, make
 `lia-dpll` evaluate its size admission before consuming its reserve.
 
+**Census (S3, 2026-09-05/06).** QF_IDL 54/54 losses classified: 46
+admission-decline (all `lia-dpll`'s pre-SAT resource boundary, but
+`dominant_stage` is `dl-online` at 18-21 s in every one -- this dispatch-
+overrun signature, not five files but 46), 6 search-timeout, 2 other.
+QF_RDL 47/47: 24 admission-decline (23 the 1,024-atom LRA cap, 1
+Fourier-Motzkin), 22 search-timeout, 1 other. Full detail and the S1/S2
+argument this drives: [parity loss census](../research/11-design-review/2026-09-05-parity-loss-census.md).
+
 ### 2.2 Linear real arithmetic: QF_LRA, 54 files, and the LRA half of QF_UFLIA (measured)
 
 **Cause.** `LraTheory::final_check` → `feasibility` → `simplex::Incremental`
@@ -113,6 +121,11 @@ bound rather than an overflow guard (ADR-1702 landed the opt-in wide
 rationals in the simplex), revisit the 29 refusals with a measured memory
 budget instead of a constant.
 
+**Census (S3, 2026-09-05/06).** QF_LRA 54/54 losses classified: 31
+search-timeout (route `nra`), 23 admission-decline (all the 1,024-atom
+online CDCL(T) LRA cap) -- no `other`, no route-decline, a clean two-way
+split. Full detail: [parity loss census](../research/11-design-review/2026-09-05-parity-loss-census.md).
+
 ### 2.3 Combination: QF_UFLIA, 58 files (partly measured)
 
 **Cause.** The 2026-08-21 diagnosis traced 82 of 82 misses to the lazy
@@ -126,6 +139,14 @@ remaining 58 have not been re-censused since.
 wide path the simplex has (+6 measured against cvc5); (c) the LRA levers
 above apply to the arithmetic half; (d) the CEGAR loop's refinement policy
 gets the route-timing instrument before any change.
+
+**Census (S3, 2026-09-05/06, re-censused as (a) called for).** QF_UFLIA
+58/58 losses classified: 31 search-timeout (`uf-arith-lazy-overbound`, the
+lazy CEGAR loop, S1), 21 admission-decline (the same CEGAR loop declining
+`inconclusive` on an application/function-group count), 6
+route-decline(unsupported:ingest:wide-integer-literal) (the ADR-1702 slice
+2 target, S9). All three named levers present, in that order by size. Full
+detail: [parity loss census](../research/11-design-review/2026-09-05-parity-loss-census.md).
 
 ### 2.4 Nonlinear integers: QF_NIA, 48 files to parity, 13 ours-only (measured 2026-08-21)
 
@@ -146,6 +167,12 @@ lazy refinement loop that fails. Scored on the 32 one-live-rung files. This
 division is last by design; "parity" here is against a reference whose count
 moves by 13 files run to run, so the honest target is the axeyum count.
 
+**Census (S3, 2026-09-05/06).** QF_NIA 61/61 losses classified: 30
+search-timeout (`int-blast-ladder`), 18 admission-decline (17 the ladder's
+CNF-clause size cap at 64,000,000, 1 an ingest `distinct`-arity cap), 13
+other (11 bounded-width-32 model incompleteness, 2 divergence). Full
+detail: [parity loss census](../research/11-design-review/2026-09-05-parity-loss-census.md).
+
 ### 2.5 Uninterpreted functions: UF, 32 theirs / 24 ours; QF_UF, 38 theirs / 0 ours (census needed)
 
 **What is known.** UF's remaining losses are finite-model-finding benchmarks
@@ -161,6 +188,15 @@ lands them for free; if they are size admissions in the e-graph or Ackermann
 paths, that is a separate slice. For UF, a bounded finite-model-finding
 extension of the existing MBQI loop, scored on the 32.
 
+**Census (S3, 2026-09-05/06).** UF 32/32 losses classified: all 32
+admission-decline, all one shape (`declared-sort lazy CEGAR refuses N
+congruence pairs, bound 64`, route `ufbv-declared-sort-lazy`) -- a single
+uniform S11 target, not a mix. QF_UF 38/38 losses classified: all 38
+admission-decline, split 35 eager-Ackermann-elimination congruence-count
+(route `qf-bv`) / 3 the same bound-64 CEGAR shape as UF. Neither division
+has a single search-timeout file; 2.1's fix lands nothing here. Full
+detail: [parity loss census](../research/11-design-review/2026-09-05-parity-loss-census.md).
+
 ### 2.6 Linear integers: QF_LIA, 27 theirs / 2 ours (census needed)
 
 **What is known.** QF_LIA runs the LIA DPLL(T) driver (`dpll_lia.rs`), the
@@ -172,6 +208,15 @@ cores.
 **Lever.** Census. Expect a split between search timeouts (2.1's fix) and
 cut-generation limits (a slice on the Gomory/branching budget, scored on the
 27).
+
+**Census (S3, 2026-09-05/06).** QF_LIA 27/27 losses classified: 15
+admission-decline (`lia-dpll`'s pre-SAT resource boundary, the same family
+as QF_IDL's dominant class), 4 search-timeout, 4 other
+(explain-corpus-crash on large files; `smtcomp_cli` itself timed out
+normally on all four), 3 other (branch-and-bound node-cap incompleteness),
+1 other (i128 overflow in the exact-rational simplex -- a second S9 data
+point beyond QF_UFLIA's parser case). Admission-decline outweighs
+search-timeout more than 3:1. Full detail: [parity loss census](../research/11-design-review/2026-09-05-parity-loss-census.md).
 
 ### 2.7 Arrays over bit-vectors: QF_ABV, 19 theirs / 1 ours (census needed)
 
@@ -186,6 +231,14 @@ timeouts.
 unsupported half is a capability slice (nested arrays or the array-valued
 shapes the ADR-0084/0085 boundary still declines); the timeout half rides
 2.1 and 2.8.
+
+**Census (S3, 2026-09-05/06).** QF_ABV 19/19 losses classified: 8
+search-timeout (`array-fast-path`), 4 other (flat-view/front-door
+divergence, not a capability finding), 4 other (explain-corpus worker
+hangs on array-heavy inputs, externally killed; `smtcomp_cli` completed
+normally on all four), 3 other (a genuine array-shape gap in the lazy
+ROW/extensionality path -- the ADR-0084/0085 boundary confirmed on 3
+files, smaller than hypothesized). Full detail: [parity loss census](../research/11-design-review/2026-09-05-parity-loss-census.md).
 
 ### 2.8 Bit-vectors: QF_BV, 6 theirs / 0 ours (measured at the SAT level)
 
@@ -205,6 +258,12 @@ policy. Bitwuzla's word-level rewriting is the other half; the six files'
 route trace says which. Every gain here lifts every division once the engine
 is unified.
 
+**Census (S3, 2026-09-05/06).** QF_BV 6/6 losses classified: 5
+search-timeout (route `qf-bv`), 1 other (explain-corpus worker crash;
+`smtcomp_cli`'s own ~25 s wall time is consistent with the same
+search-timeout pattern). Confirms 2.8's framing: this is a throughput
+problem, not an admission cap or capability gap. Full detail: [parity loss census](../research/11-design-review/2026-09-05-parity-loss-census.md).
+
 ### 2.9 Strings: QF_SLIA, 7 theirs / 6 ours (partly measured)
 
 **Cause.** The gap analysis §4.4: `sat` is strong, `unsat` is weak;
@@ -214,6 +273,14 @@ is far below what the encoder suggests.
 **Lever.** Census the 7. If they are unsat refusals, the slice is a
 length-abstraction refutation route the gate can certify; if timeouts, 2.1.
 One file from parity; this is the cheapest division to close.
+
+**Census (S3, 2026-09-05/06).** QF_SLIA 7/7 losses classified: 1
+`other(string-gate-unconfirmed)` (exactly the 2.9 hypothesis), 4 other
+(the `int-blast-ladder`'s bounded integer width 32 -- a shape not
+previously named here, shared with QF_NIA), 2 parser-reject (`str.replace_all`
+over a non-constant operand, an S9-adjacent parser gap). The
+certification hypothesis explains 1 of 7, not the majority. Full detail:
+[parity loss census](../research/11-design-review/2026-09-05-parity-loss-census.md).
 
 ## 3. The engine question, decided
 

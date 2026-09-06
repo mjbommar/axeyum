@@ -44,8 +44,8 @@ use std::collections::BTreeMap;
 use axeyum_ir::Rational;
 
 use crate::geometry_beyond::{
-    conic_polar_is_tangent_problem, tetrahedron_circumcenter_problem,
-    tetrahedron_medians_concurrent_problem,
+    conic_polar_is_tangent_problem, desargues_affine_problem, pascal_parabola_problem,
+    tetrahedron_circumcenter_problem, tetrahedron_medians_concurrent_problem,
 };
 use crate::geometry_certify::{
     Condition, Constraint, DegenerateWitness, GenericWitness, GeometryProblem, Pt, centroid,
@@ -186,6 +186,16 @@ impl CorpusEntry {
 /// - `euler-line`, `pappus-hexagon`, `simson-line` — [`SearchCost::Unreturned`].
 ///   The first two are the theorems the linear-elimination route exists for; the
 ///   third was killed at 90 s in release on 2026-08-15.
+/// - `pascal-parabola-hexagon`, `desargues-affine-perspective` —
+///   [`SearchCost::Unreturned`], and the label means exactly what it says:
+///   nobody has waited. Both come off
+///   [`crate::geometry_certify::certify_any_route`] promptly (2.8 ms and
+///   570.5 ms release, from `emit_geometry_certificates` on 2026-09-06,
+///   ADVISORY), and neither has ever been handed to
+///   [`crate::geometry_certify::certify`] on its own, which is the cost this
+///   column records. They are covered instead by their own unit tests in
+///   [`crate::geometry_beyond`], which assert the shipped route reaches them
+///   and on which conditions.
 ///
 /// Everything else is [`SearchCost::Unmeasured`] and gets walked.
 ///
@@ -222,6 +232,12 @@ pub fn corpus_entries() -> Vec<CorpusEntry> {
         ),
         CorpusEntry::new(tetrahedron_circumcenter_problem()),
         CorpusEntry::new(conic_polar_is_tangent_problem()),
+        // File 13 item 6, wave four: the two theorems every previous wave
+        // reported as declining on a residue, recoordinatised until they
+        // certify. `crate::geometry_beyond` states them and records what moved
+        // each one.
+        CorpusEntry::costing(pascal_parabola_problem(), SearchCost::Unreturned),
+        CorpusEntry::costing(desargues_affine_problem(), SearchCost::Unreturned),
     ]
 }
 
