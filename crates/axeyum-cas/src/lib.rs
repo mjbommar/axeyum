@@ -48,7 +48,7 @@
 //! # Coefficient width
 //!
 //! [`normalize`] and [`expand`] compute in exact `i128` rationals and report an
-//! overflow as `None`; `(x+1)^132` is the first binomial power they decline.
+//! overflow as `None`; `(x+1)^131` is the first binomial power they decline.
 //! [`equal`] does **not** stop there: when the bounded normal form overflows it
 //! retries the same cross-multiplication over unbounded integers
 //! ([ADR-1670](../../../docs/research/09-decisions/adr-1670-i128-fast-path-with-a-big-integer-overflow-fallback-for-the-cas-zero-test.md)),
@@ -32533,7 +32533,7 @@ mod bignum_overflow_fallback {
     fn work_beyond_the_budget_declines_instead_of_expanding_without_bound() {
         // `(x+1)^4096` is not a hard question -- it is a large answer. The
         // bounded path never has to say so, because it stops at the first
-        // coefficient outside `i128` (degree 132) and declines after a hundred
+        // coefficient outside `i128` (degree 131) and declines after a hundred
         // or so cheap multiplications. The unbounded ring has no such accident
         // to save it, so the budget is what makes the decline explicit.
         let huge = binom(4096);
@@ -33083,7 +33083,7 @@ mod bignum_overflow_fallback {
     /// **The wall control for item 3.** The binary schedule forms only `self^m`
     /// for `m ≤ exp`, all of which repeated multiplication formed too, so an
     /// input that decided before still decides — and some that did not now do.
-    /// `(x+1)^d` overflows `i128` from `d = 132`; both schedules must decline
+    /// `(x+1)^d` overflows `i128` from `d = 131`; both schedules must decline
     /// there, and neither may decline below it.
     #[test]
     fn binary_exponentiation_does_not_move_the_wall_inward() {
@@ -33486,5 +33486,163 @@ mod symbolic_rate_exponential {
         // The *conditional* API does reach it — so the decline above is the
         // hypothesis guard, not an absent route.
         assert!(on_half_line(&exponential_pdf()).is_some());
+    }
+}
+
+#[cfg(test)]
+mod cas_witness_2_probe {
+    use super::*;
+
+    fn verdict(a: &CasExpr, b: &CasExpr) -> String {
+        match equal(a, b) {
+            ZeroTest::Certified { equal, .. } => format!("Certified({equal})"),
+            ZeroTest::CertifiedBig { equal, .. } => format!("CertifiedBig({equal})"),
+            ZeroTest::Unknown => "Unknown".to_string(),
+        }
+    }
+
+    #[test]
+    fn probe_binomial_wall() {
+        let x = CasExpr::var("x");
+        let mut last_ok = 0u32;
+        let mut first_fail = 0u32;
+        for d in 1..400u32 {
+            if normalize(&(x.clone() + CasExpr::int(1)).pow(d)).is_some() {
+                last_ok = d;
+            } else {
+                first_fail = d;
+                break;
+            }
+        }
+        println!("PROBE binomial normalize: last_ok={last_ok} first_fail={first_fail}");
+        let mut r_last = 0u32;
+        let mut r_first = 0u32;
+        for d in 1..400u32 {
+            if normalize(&(x.clone() + CasExpr::rat(1, 3)).pow(d)).is_some() {
+                r_last = d;
+            } else {
+                r_first = d;
+                break;
+            }
+        }
+        println!("PROBE (x+1/3) normalize: last_ok={r_last} first_fail={r_first}");
+        let mut m_last = 0u32;
+        let mut m_first = 0u32;
+        let z = CasExpr::var("y");
+        for d in 1..200u32 {
+            if normalize(&(x.clone() + z.clone() + CasExpr::int(1)).pow(d)).is_some() {
+                m_last = d;
+            } else {
+                m_first = d;
+                break;
+            }
+        }
+        println!("PROBE (x+y+1) normalize: last_ok={m_last} first_fail={m_first}");
+    }
+
+    #[test]
+    fn probe_cross_family_radicals() {
+        let two = CasExpr::int(2);
+        println!(
+            "PROBE sqrt2*cbrt2 vs root6(32): {}",
+            verdict(
+                &(two.clone().sqrt() * two.clone().nth_root(3)),
+                &CasExpr::int(32).nth_root(6)
+            )
+        );
+        println!(
+            "PROBE root6(4) vs cbrt2: {}",
+            verdict(&CasExpr::int(4).nth_root(6), &two.clone().nth_root(3))
+        );
+        println!(
+            "PROBE root4(4) vs sqrt2: {}",
+            verdict(&CasExpr::int(4).nth_root(4), &two.clone().sqrt())
+        );
+        println!(
+            "PROBE root3(-8) vs -2: {}",
+            verdict(&CasExpr::int(-8).nth_root(3), &CasExpr::int(-2))
+        );
+        println!(
+            "PROBE cbrt2*cbrt4 vs 2: {}",
+            verdict(
+                &(two.clone().nth_root(3) * CasExpr::int(4).nth_root(3)),
+                &two.clone()
+            )
+        );
+        println!(
+            "PROBE root3(8) vs 2: {}",
+            verdict(&CasExpr::int(8).nth_root(3), &two.clone())
+        );
+        println!(
+            "PROBE root6(8) vs sqrt2: {}",
+            verdict(&CasExpr::int(8).nth_root(6), &two.clone().sqrt())
+        );
+        println!(
+            "PROBE expand(sqrt(8)): {}",
+            format!("{:?}", expand(&CasExpr::int(8).sqrt()).map(|e| e.render(0)))
+        );
+        println!(
+            "PROBE expand(root6(4)): {}",
+            format!("{:?}", expand(&CasExpr::int(4).nth_root(6)).map(|e| e.render(0)))
+        );
+    }
+
+    #[test]
+    fn probe_exp_at_overflow_scale() {
+        let x = CasExpr::var("x");
+        let y = CasExpr::var("y");
+        let binom = |n: u32| (x.clone() + CasExpr::int(1)).pow(n);
+        let big_l = CasExpr::Mul(vec![binom(80), binom(80)]);
+        let big_r = binom(160);
+        println!(
+            "PROBE exp(x)exp(y)=exp(x+y) @ scale: {}",
+            verdict(
+                &(big_l.clone() + x.clone().exp() * y.clone().exp()),
+                &(big_r.clone() + (x.clone() + y.clone()).exp())
+            )
+        );
+        println!(
+            "PROBE exp(2x)=exp(x)^2 @ scale: {}",
+            verdict(
+                &(big_l.clone() + (CasExpr::int(2) * x.clone()).exp()),
+                &(big_r.clone() + x.clone().exp().pow(2))
+            )
+        );
+        println!(
+            "PROBE exp(3 ln 2)=8 @ scale: {}",
+            verdict(
+                &(big_l.clone() + (CasExpr::int(3) * CasExpr::int(2).ln()).exp()),
+                &(big_r.clone() + CasExpr::int(8))
+            )
+        );
+        println!(
+            "PROBE ln(exp(x))=x @ scale: {}",
+            verdict(
+                &(big_l.clone() + x.clone().exp().ln()),
+                &(big_r.clone() + x.clone())
+            )
+        );
+        println!(
+            "PROBE exp(x)exp(y) vs exp(x+y+1) @ scale (FALSE): {}",
+            verdict(
+                &(big_l.clone() + x.clone().exp() * y.clone().exp()),
+                &(big_r.clone() + (x.clone() + y.clone() + CasExpr::int(1)).exp())
+            )
+        );
+        println!(
+            "PROBE exp(2x) vs exp(x) @ scale (FALSE): {}",
+            verdict(
+                &(big_l.clone() + (CasExpr::int(2) * x.clone()).exp()),
+                &(big_r.clone() + x.clone().exp())
+            )
+        );
+        println!(
+            "PROBE exp(x/2)exp(x/2)=exp(x) @ scale: {}",
+            verdict(
+                &(big_l.clone()
+                    + (x.clone() / CasExpr::int(2)).exp() * (x.clone() / CasExpr::int(2)).exp()),
+                &(big_r.clone() + x.clone().exp())
+            )
+        );
     }
 }

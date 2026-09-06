@@ -44,12 +44,12 @@ not move with load).
 | input | `normalize` before | `equal` before | `equal` after |
 |---|---|---|---|
 | `(x+1)^130` | ok | — | — |
-| `(x+1)^132` | **OVERFLOW** | — | — |
+| `(x+1)^131` | **OVERFLOW** | — | — |
 | `(x+1)^64 · (x+1)^64 = (x+1)^128` | ok | certified | certified |
 | `(x+1)^80 · (x+1)^80 = (x+1)^160` | OVERFLOW | **UNKNOWN** | **certified** |
 | `(x+1)^100 · (x+1)^100 = (x+1)^200` | OVERFLOW | **UNKNOWN** | **certified** |
 | `(x+⅓)^80` | ok | — | — |
-| `(x+⅓)^82` | **OVERFLOW** | — | — |
+| `(x+⅓)^81` | **OVERFLOW** | — | — |
 | `(x+⅓)^41 squared = (x+⅓)^82` | OVERFLOW | **UNKNOWN** | **certified** |
 | `(x+⅓)^60 squared = (x+⅓)^120` | OVERFLOW | **UNKNOWN** | **certified** |
 | Catalan series `Σ Cₖxᵏ`, deg 68 | ok | — | — |
@@ -76,7 +76,30 @@ Three facts the table settles that prose had not:
    compute with it. No fallback inside the zero-test helps with that; only a
    coefficient-type change does.
 3. **The bounded wall for a univariate binomial power is degree 131.** It is
-   not a round number and it was not documented anywhere.
+   not a round number and it was not documented anywhere. Read it as: `d = 130`
+   is the largest degree `normalize` expands, and `d = 131` is the first it
+   declines.
+
+   **Correction, 2026-09-06 (wave three, lane `cas-witness-2`).** The two
+   `OVERFLOW` rows above were originally written as `(x+1)^132` and `(x+⅓)^82`,
+   which are not the walls — the original probe stepped the degree by two and
+   recorded the first *even* failure, so both rows named a degree one past the
+   boundary and left the boundary itself untested. Re-measured by scanning every
+   degree from 1 upward until `normalize` returns `None`
+   (`cargo test --release -p axeyum-cas --lib`, shared dev box, load average
+   28.7; ADVISORY for timing, exact for the verdicts, which do not move with
+   load):
+
+   | family | largest degree `normalize` expands | first degree it declines |
+   |---|---|---|
+   | `(x+1)^d` | 130 | **131** |
+   | `(x+⅓)^d` | 80 | **81** |
+   | `(x+y+1)^d` | 84 | **85** |
+
+   Only the two `OVERFLOW` rows moved; the prose figure 131 was already right,
+   and the third family is new (the table's `(x+y+1)^70` row is below its wall
+   and stays correct). The same off-by-one had been copied into three doc
+   comments and one test comment in `lib.rs`, all corrected in the same commit.
 
 ## Decision
 
@@ -223,7 +246,7 @@ that genuinely blocks a decision is not `CasExpr::Const`, it is the witness.
   the bounded path decided.
 - `normalize` and `expand` are **unchanged** — they still return `None` on
   overflow, because their return types are the bounded ones. A caller who
-  wants `(x+1)^132` expanded still cannot have it. This slice moved the
+  wants `(x+1)^131` expanded still cannot have it. This slice moved the
   zero-test, not the normal form.
 - The `cas-certificate` trust registry is unaffected: no public function was
   added, `ZeroTest` was already in the certificate vocabulary, and the gate
