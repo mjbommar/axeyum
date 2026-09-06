@@ -322,6 +322,191 @@ class VocabularyTests(unittest.TestCase):
         for fn in all_fns:
             self.assertEqual(self.gate.classify_fn(fn, vocab_names), "checker")
 
+    # -- 2026-09-05 follow-up: `CertifiedGosperSum` and the tightened
+    # verify/check-method rule (math-department file 13, item 10 wave two) --
+
+    def test_certified_prefix_admits_type_to_vocabulary(self):
+        """The exact fixture the follow-up names: `CertifiedGosperSum` has
+        no `Certificate`/`Evidence`/`Report`/`Witness` suffix and no inherent
+        `verify`/`check` method, so only the new `Certified*` prefix rule
+        can admit it."""
+        src_root = Path(tempfile.mkdtemp())
+        write_file(
+            src_root,
+            "widget.rs",
+            """
+            pub struct CertifiedGosperSum {
+                x: i64,
+            }
+
+            pub fn make() -> Option<CertifiedGosperSum> {
+                None
+            }
+            """,
+        )
+        all_types, all_fns = self.gate.scan_crate(src_root)
+        vocab = self.gate.derive_vocabulary(all_types, all_fns)
+        self.assertIn("CertifiedGosperSum", vocab)
+        vocab_names = set(vocab)
+        by_name = {fn.path.rsplit("::", 1)[-1]: fn for fn in all_fns}
+        self.assertEqual(
+            self.gate.classify_fn(by_name["make"], vocab_names), "certified"
+        )
+
+    def test_bare_certified_name_is_not_admitted(self):
+        """Negative control for the prefix rule: a type named exactly
+        `Certified`, with nothing following the prefix, carries no more
+        information than any other name and must not be admitted."""
+        src_root = Path(tempfile.mkdtemp())
+        write_file(
+            src_root,
+            "widget.rs",
+            """
+            pub struct Certified {
+                x: i64,
+            }
+
+            pub fn make() -> Option<Certified> {
+                None
+            }
+            """,
+        )
+        all_types, all_fns = self.gate.scan_crate(src_root)
+        vocab = self.gate.derive_vocabulary(all_types, all_fns)
+        self.assertNotIn("Certified", vocab)
+        vocab_names = set(vocab)
+        by_name = {fn.path.rsplit("::", 1)[-1]: fn for fn in all_fns}
+        self.assertEqual(
+            self.gate.classify_fn(by_name["make"], vocab_names), "uncertified"
+        )
+
+    def test_inherent_verify_method_with_self_admits_type(self):
+        """A type with no matching suffix/prefix, but an inherent `verify`
+        method that takes `&self` and returns `Result<...>`, is admitted --
+        this is the rule that already existed for e.g. `enclosure::
+        Enclosure` and `qe::Decision`; this fixture pins it independently of
+        the real crate."""
+        src_root = Path(tempfile.mkdtemp())
+        write_file(
+            src_root,
+            "widget.rs",
+            """
+            pub struct Widget {
+                x: i64,
+            }
+
+            impl Widget {
+                pub fn verify(&self) -> Result<(), String> {
+                    Ok(())
+                }
+            }
+
+            pub fn make() -> Option<Widget> {
+                None
+            }
+            """,
+        )
+        all_types, all_fns = self.gate.scan_crate(src_root)
+        vocab = self.gate.derive_vocabulary(all_types, all_fns)
+        self.assertIn("Widget", vocab)
+        vocab_names = set(vocab)
+        by_name = {fn.path.rsplit("::", 1)[-1]: fn for fn in all_fns}
+        self.assertEqual(
+            self.gate.classify_fn(by_name["make"], vocab_names), "certified"
+        )
+
+    def test_inherent_check_method_with_self_and_bool_admits_type(self):
+        """Same rule, the `check` name and a `bool` return instead of
+        `Result`."""
+        src_root = Path(tempfile.mkdtemp())
+        write_file(
+            src_root,
+            "widget.rs",
+            """
+            pub struct Gadget {
+                x: i64,
+            }
+
+            impl Gadget {
+                pub fn check(&self) -> bool {
+                    self.x > 0
+                }
+            }
+
+            pub fn make() -> Option<Gadget> {
+                None
+            }
+            """,
+        )
+        all_types, all_fns = self.gate.scan_crate(src_root)
+        vocab = self.gate.derive_vocabulary(all_types, all_fns)
+        self.assertIn("Gadget", vocab)
+
+    def test_verify_method_without_self_is_not_admitted(self):
+        """Negative control: `CofactorOutcome` was named in the same
+        follow-up as a type the suffix rule misses, but it has no inherent
+        `verify`/`check` method at all in the real crate -- this fixture
+        pins the closest case that MUST still be refused: an associated
+        function named `verify` with no `self` receiver proves nothing
+        about any particular instance and must not admit its type."""
+        src_root = Path(tempfile.mkdtemp())
+        write_file(
+            src_root,
+            "widget.rs",
+            """
+            pub struct Sprocket {
+                x: i64,
+            }
+
+            impl Sprocket {
+                pub fn verify() -> bool {
+                    true
+                }
+            }
+
+            pub fn make() -> Option<Sprocket> {
+                None
+            }
+            """,
+        )
+        all_types, all_fns = self.gate.scan_crate(src_root)
+        vocab = self.gate.derive_vocabulary(all_types, all_fns)
+        self.assertNotIn("Sprocket", vocab)
+        vocab_names = set(vocab)
+        by_name = {fn.path.rsplit("::", 1)[-1]: fn for fn in all_fns}
+        self.assertEqual(
+            self.gate.classify_fn(by_name["make"], vocab_names), "uncertified"
+        )
+
+    def test_verify_method_with_non_result_bool_return_is_not_admitted(self):
+        """Negative control on the OTHER half of the tightened rule: a
+        `verify` method that takes `&self` but returns neither `Result<...>`
+        nor `bool` (here, a `String` description) is not a checkable
+        verdict and must not admit its type."""
+        src_root = Path(tempfile.mkdtemp())
+        write_file(
+            src_root,
+            "widget.rs",
+            """
+            pub struct Cog {
+                x: i64,
+            }
+
+            impl Cog {
+                pub fn verify(&self) -> String {
+                    format!("{}", self.x)
+                }
+            }
+
+            pub fn make() -> Option<Cog> {
+                None
+            }
+            """,
+        )
+        all_types, all_fns = self.gate.scan_crate(src_root)
+        vocab = self.gate.derive_vocabulary(all_types, all_fns)
+        self.assertNotIn("Cog", vocab)
+
 
 class RatchetGateTests(unittest.TestCase):
     """The ratchet's refusal conditions -- run through `main`, mirroring

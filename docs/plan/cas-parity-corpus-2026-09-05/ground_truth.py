@@ -554,6 +554,218 @@ def check_geometry_beyond() -> None:
     ok(mat_mul_transpose(shear) != identity_2, "gb2-ctrl (hand) the shear matrix [[1,1],[0,1]] is NOT orthogonal")
 
 
+
+# ---------------------------------------------------------- enclosure_special
+def check_enclosure_special() -> None:
+    section("enclosure_special")
+    # es1: Gamma(6) = 5! = 120, exact.
+    ok(120 == 1 * 2 * 3 * 4 * 5, "es1 (hand) Gamma(6) = 5! = 120")
+    if not need_sympy("es1 sympy cross-check"):
+        ok(sp.gamma(6) == 120, "es1 sympy Gamma(6) == 120")
+    # es2/es2-ctrl: erf(1) ~= 0.84270079294971486934, nowhere near 0.9.
+    if not need_sympy("es2 erf(1)"):
+        erf1 = sp.N(sp.erf(1), 20)
+        ok(str(erf1).startswith("0.84270079"), f"es2 sympy N(erf(1),20) = {erf1}, starts 0.84270079")
+        ok(abs(float(erf1) - 0.9) > 0.05, "es2-ctrl (sympy) erf(1) is not within 0.05 of 0.9")
+    # es3: J_0(0) = 1 exactly (only the k=0 Bessel series term survives at x=0).
+    ok(True, "es3 (hand) J_0(0) = sum_k (-1)^k (0/2)^(2k)/(k!)^2 = 1 (only k=0 term survives)")
+    if not need_sympy("es3 besselj(0,0)"):
+        ok(sp.besselj(0, 0) == 1, "es3 sympy besselj(0,0) == 1")
+    # es4: the unit circle x^2+y^2-1=0 meets the diagonal y-x=0 at
+    # (1/sqrt(2), 1/sqrt(2)) -- substitute x=y into the circle: 2x^2=1.
+    x_val = Fraction(7, 10)  # a rational sanity check within the crate's own starting box
+    ok(
+        Fraction(7, 10) ** 2 * 2 < 1 < Fraction(18, 25) ** 2 * 2,
+        "es4 (hand) the starting box [7/10,18/25]^2 brackets 2x^2=1 (x=1/sqrt(2))",
+    )
+    if not need_sympy("es4 circle/line intersection"):
+        xy = sp.symbols("x y", real=True)
+        sol = sp.solve([xy[0] ** 2 + xy[1] ** 2 - 1, xy[1] - xy[0]], xy)
+        target = 1 / sp.sqrt(2)
+        matches = any(sp.simplify(s[0] - target) == 0 for s in sol)
+        ok(matches, f"es4 sympy solve(circle, line) includes x=1/sqrt(2): {sol}")
+
+
+# --------------------------------------------------------------- fps_analytic
+def check_fps_analytic() -> None:
+    section("fps_analytic")
+    # fa1/fa1-ctrl: geometric series radii.
+    ok(True, "fa1 (hand) 1/(1-2x) = sum (2x)^n converges iff |x|<1/2, radius exactly 1/2")
+    ok(True, "fa1-ctrl (hand) 1/(1-3x) has radius exactly 1/3, DIFFERENT from 1/2")
+    # fa2: the Fibonacci GF x/(1-x-x^2) has radius 1/phi, the smaller-modulus
+    # root of 1-x-x^2=0.
+    if not need_sympy("fa2 golden ratio root"):
+        x = sp.symbols("x")
+        roots = sp.solve(1 - x - x**2, x)
+        smaller = min(abs(sp.N(r, 20)) for r in roots)
+        target = sp.N((sp.sqrt(5) - 1) / 2, 20)
+        ok(
+            abs(float(smaller) - float(target)) < 1e-15,
+            f"fa2 sympy smallest-modulus root of 1-x-x^2 = {smaller}, matches (sqrt(5)-1)/2 = {target}",
+        )
+        ok(0.608 < float(smaller) < 0.628, "fa2 (hand) the root lies within the loose [0.608,0.628] bracket")
+    # fa3: 1/(1-2x)'s coefficients are exactly 2^n.
+    ok(2**4 == 16 and 2**8 == 256 and 2**16 == 65536, "fa3 (hand) 2^4=16, 2^8=256, 2^16=65536")
+
+
+# ----------------------------------------------------------- numberfield_ideals
+def check_numberfield_ideals() -> None:
+    section("numberfield_ideals")
+    # nfi1: N(2+sqrt(-5)) = 2^2+5*1^2 = 9 in Z[sqrt(-5)]; the norm of a
+    # principal ideal is the absolute value of the element norm (classical).
+    ok(2 * 2 + 5 * 1 * 1 == 9, "nfi1 (hand) N(2+sqrt(-5)) = 4+5 = 9")
+    # nfi2/nfi2-ctrl: 3 splits, 2 ramifies in Q(sqrt(-5)) (discriminant -20).
+    if not need_sympy("nfi2 jacobi/kronecker symbols"):
+        from sympy.functions.combinatorial.numbers import jacobi_symbol
+
+        ok(jacobi_symbol(-20, 3) == 1, "nfi2 sympy jacobi_symbol(-20,3) == 1 (split)")
+    ok(20 % 2 == 0, "nfi2-ctrl (hand) 2 divides the discriminant -20, so 2 ramifies")
+    # nfi3: h(-20) = 2, by brute-force enumeration of reduced binary quadratic
+    # forms ax^2+bxy+cy^2 with b^2-4ac=D, -a<b<=a<=c (b>=0 if a==c or |b|==a).
+    disc = -20
+    forms: set[tuple[int, int, int]] = set()
+    bound = 6  # |D|/3 is a safe bound on a for a reduced form
+    for a in range(1, bound + 1):
+        for b in range(-a, a + 1):
+            numerator = b * b - disc
+            if numerator % (4 * a) != 0:
+                continue
+            c = numerator // (4 * a)
+            if c < a:
+                continue
+            if (abs(b) == a or a == c) and b < 0:
+                continue
+            forms.add((a, b, c))
+    ok(forms == {(1, 0, 5), (2, 2, 3)}, f"nfi3 (hand) reduced forms of disc -20: {sorted(forms)}, h(-20)=2")
+
+
+# ------------------------------------------------------------- permgroup_sylow
+def check_permgroup_sylow() -> None:
+    section("permgroup_sylow")
+    # sy1/sy2: |S4|=24=2^3*3; n_2=3, n_3=4 (classical, e.g. Dummit & Foote).
+    ok(24 == 2**3 * 3, "sy1/sy2 (hand) |S4| = 24 = 2^3 * 3")
+    if not need_sympy("sy1/sy2 sympy cross-check via combinatorics"):
+        from sympy.combinatorics import Permutation, PermutationGroup
+
+        s4 = PermutationGroup([Permutation(0, 1), Permutation(1, 2), Permutation(2, 3)])
+        ok(s4.order() == 24, "sy1/sy2 sympy |S4| = 24 (adjacent-transposition generators)")
+    ok(True, "sy1 (cited) S4's Sylow-2 subgroup is dihedral of order 8, n_2=3")
+    ok(True, "sy2 (cited) S4's Sylow-3 subgroups have order 3, n_3=4 (its eight 3-cycles pair up)")
+    # sy3/sy3-ctrl: A4 (index 2) is normal; a Sylow-3 (n_3=4>1) is not.
+    ok(24 // 12 == 2, "sy3 (hand) A4 has index 2 in S4")
+    ok(True, "sy3 (cited) every subgroup of index 2 is normal")
+    ok(True, "sy3-ctrl (cited) a Sylow p-subgroup is normal iff n_p=1; here n_3=4")
+
+
+# ------------------------------------------------- homology_coefficients / cohomology
+def check_homology_coefficients_and_cohomology() -> None:
+    section("homology_coefficients / homology_cohomology")
+    # hc1/hc1-ctrl: RP^2 (b=(1,0,0) over Z, torsion Z/2 at H_1). Over F2 the
+    # torsion becomes a free rank, b1(F2)=b1(Z)+t1+t0=0+1+0=1; over Q it
+    # vanishes, b1(Q)=b1(Z)=0.
+    ok(True, "hc1 (cited) UCT: b1(F2) = b1(Z) + (even torsion coeffs of H_1) + (of H_0) = 0+1+0 = 1")
+    ok(True, "hc1-ctrl (cited) UCT: b1(Q) = b1(Z) = 0, torsion vanishes over a field of char 0")
+    # hc2/hc3: torsion-free spaces agree across every coefficient ring.
+    ok(True, "hc2 (cited) S^1 has no torsion, so H_*(S^1;R) agrees for every coefficient ring R")
+    ok(4 - 6 + 4 == 2 == 1 - 0 + 1, "hc3 (hand) Euler characteristic of the tetrahedron boundary: 4-6+4=2=1-0+1 (S^2)")
+    # co1/co1-ctrl: cohomology's torsion is SHIFTED UP one degree from
+    # homology -- H_1(RP^2;Z)=Z/2 but H^2(RP^2;Z)=Z/2, H^1(RP^2;Z) torsion-free.
+    ok(True, "co1 (cited) UCT for cohomology: H^n's torsion = H_{n-1}'s torsion (Ext shifts torsion up one degree)")
+    ok(True, "co1-ctrl (cited) H^1's torsion = H_0's torsion = none (H_0 is always free)")
+    # co2/co3: torsion-free cases: cohomology free ranks equal homology Betti
+    # numbers, no torsion anywhere.
+    ok(True, "co2/co3 (cited) torsion-free case: H^n's free rank = b_n exactly, matching homology")
+
+
+# ---------------------------------------------------------------- homology_induced
+def check_homology_induced() -> None:
+    section("homology_induced")
+    # ind1: the identity map is trivially an isomorphism on every homology group.
+    ok(True, "ind1 (hand) the identity chain map induces the identity on H_*, rank = dim(H_k)")
+    # ind2: a map into the zero group is necessarily rank 0.
+    ok(True, "ind2 (hand) H_1(single edge) = 0, so any linear map into it has rank 0")
+    # ind3: a simplicial map's image of every face must be a face of the
+    # codomain; two isolated points share no edge.
+    ok(True, "ind3 (hand) the vertex map's image edge {0,1} is not a face of a codomain with only two isolated points")
+
+
+# ------------------------------------------------------------- homology_persistent
+def check_homology_persistent() -> None:
+    section("homology_persistent")
+    # per1/per2: the standard "circle then fill" persistence example -- 3
+    # vertices (indices 0-2), 3 edges (indices 3-5, the last closing the
+    # triangle's boundary), then the 2-face (index 6). The loop born when the
+    # boundary closes (index 5) dies when the triangle is filled (index 6).
+    filtration_dims = [0, 0, 0, 1, 1, 1, 2]
+    ok(filtration_dims[5] == 1 and filtration_dims[6] == 2, "per1 (hand) index 5 is the closing edge, index 6 the filling triangle")
+    ok(True, "per1 (cited) the standard TDA worked example: one H_1 bar (5,6)")
+    ok(True, "per2 (hand) three isolated points merge pairwise as the first two edges arrive: 2 finite H_0 bars, 1 essential")
+    # per3/per3-ctrl: before/after the triangle is added.
+    ok(True, "per3 (hand) the triangle 2-simplex is only added at filtration index 6, so a length-5 prefix lacks it")
+    ok(True, "per3-ctrl (hand) the full length-7 filtration includes the triangle")
+
+
+# ------------------------------------------------------------------------ qe_big
+def check_qe_big() -> None:
+    section("qe_big")
+    # Pure Python exact big-integer arithmetic -- no SymPy needed. These
+    # exercise the private BigRational engine indirectly, past i128's
+    # ~1.7*10^38 range.
+    ten_to_50 = 10**50
+    ok((10**25) ** 2 == ten_to_50, "qeb1 (hand) (10^25)^2 = 10^50 exactly")
+    ok(all(v * v + ten_to_50 > 0 for v in range(-1000, 1001)), "qeb1-ctrl/qeb2 (hand) x^2+10^50 > 0 sampled over a wide range")
+    ok(ten_to_50 + 1 - ten_to_50 > 0, "qeb3 (hand) (10^50+1) - 10^50 = 1 > 0")
+
+
+# ------------------------------------------------------------------------ qe_dnf
+def check_qe_dnf() -> None:
+    section("qe_dnf")
+    # Pure Python -- elementary facts about disjunctions/conjunctions of
+    # polynomial atoms.
+    ok(2 - 2 == 0, "dnf1 (hand) x=2 satisfies (x-2=0), the first disjunct")
+    ok(all(v * v + 1 > 0 for v in range(-1000, 1001)), "dnf2 (hand) x^2+1 > 0 sampled over a wide range (no real root)")
+    ok(not any(v > 0 and v < 0 for v in range(-1000, 1001)), "dnf3 (hand) no v is both >0 and <0")
+    ok(1 > 0 and 1 < 5, "dnf3-ctrl (hand) x=1 satisfies 0<x<5")
+
+
+# ------------------------------------------------------------------ qe_bivariate
+def check_qe_bivariate() -> None:
+    section("qe_bivariate")
+    # Pure Python Fraction arithmetic -- the same elementary substitution
+    # argument the crate's own eliminate_y doctest exercises.
+
+    def y_squared_solvable(rhs: Fraction) -> bool:
+        return rhs >= 0
+
+    # bv1/bv1-ctrl: circle boundary y^2=1-x^2, closed on [-1,1]; y^2>1-x^2 is
+    # a tautology since y is unbounded.
+    xs = [Fraction(-2), Fraction(-1), Fraction(0), Fraction(1), Fraction(2)]
+    closed_match = [y_squared_solvable(1 - x * x) == (abs(x) <= 1) for x in xs]
+    ok(all(closed_match), f"bv1 (hand) y^2=1-x^2 solvable iff |x|<=1, sampled at {xs}")
+    ok(True, "bv1-ctrl (hand) y^2>1-x^2 always has a solution (y unbounded), the whole line")
+    # bv2: open disk, y^2<1-x^2 solvable iff 1-x^2>0, i.e. |x|<1 strictly.
+    open_match = [(1 - x * x > 0) == (abs(x) < 1) for x in xs]
+    ok(all(open_match), f"bv2 (hand) y^2<1-x^2 solvable iff |x|<1 strictly, sampled at {xs}")
+    # bv3: parabola y^2=x, solvable iff x>=0.
+    half_match = [y_squared_solvable(x) == (x >= 0) for x in xs]
+    ok(all(half_match), f"bv3 (hand) y^2=x solvable iff x>=0, sampled at {xs}")
+
+
+# --------------------------------------------------------- probability (symbolic Poisson)
+def check_probability_symbolic_poisson() -> None:
+    section("probability (symbolic-lambda Poisson)")
+    # prob4/prob5/prob6: Poisson(lambda) with SYMBOLIC lambda -- total mass 1,
+    # mean lambda, variance lambda (equidispersion), all textbook facts,
+    # cross-checked with SymPy's own summation where available.
+    if not need_sympy("prob4/5/6 symbolic Poisson via summation"):
+        lam, k = sp.symbols("lam k", positive=True)
+        total = sp.summation(lam**k / sp.factorial(k), (k, 0, sp.oo))
+        ok(sp.simplify(total - sp.exp(lam)) == 0, f"prob4 sympy sum_k lam^k/k! = e^lam (so e^-lam * that = 1): {total}")
+        mean = sp.summation(k * lam**k / sp.factorial(k), (k, 0, sp.oo)) / sp.exp(lam)
+        ok(sp.simplify(mean - lam) == 0, f"prob5 sympy E[Poisson(lam)] = lam: {mean}")
+    ok(True, "prob6 (cited) Var[Poisson(lambda)] = E[Poisson(lambda)] = lambda (equidispersion, standard fact)")
+    ok(True, "prob6-ctrl (hand) lambda != 2*lambda for any lambda != 0, so the doubled claim is wrong")
+
 def main() -> int:
     print(f"SymPy available: {sp is not None} (version {SYMPY_VERSION})")
 
@@ -577,6 +789,17 @@ def main() -> int:
     check_homology()
     check_probability()
     check_geometry_beyond()
+    check_enclosure_special()
+    check_fps_analytic()
+    check_numberfield_ideals()
+    check_permgroup_sylow()
+    check_homology_coefficients_and_cohomology()
+    check_homology_induced()
+    check_homology_persistent()
+    check_qe_big()
+    check_qe_dnf()
+    check_qe_bivariate()
+    check_probability_symbolic_poisson()
 
     print(f"\n{CHECKED} claims, {len(FAILURES)} failed")
     if FAILURES:

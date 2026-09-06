@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import pathlib
 import subprocess
 import sys
@@ -22,11 +23,18 @@ COMMAND = [
     "cargo", "run", "-q", "-p", "axeyum-lean-kernel", "--example",
     "kernel_declaration_projection",
 ]
+# The debug example took 1,083 s on 2026-09-05 at 4,540 declarations and then
+# exceeded the 1,800 s cap the same evening at ~4,660 under load, so the two
+# knobs below exist for a coordinator regenerating on a loaded host. Defaults
+# are unchanged: no `--release`, 1,800 s.
+if os.environ.get("AXEYUM_PROJECTION_RELEASE") == "1":
+    COMMAND = COMMAND[:3] + ["--release"] + COMMAND[3:]
+TIMEOUT_S = int(os.environ.get("AXEYUM_PROJECTION_TIMEOUT_S", "1800"))
 
 
 def inventory() -> dict[str, dict[str, object]]:
     proc = subprocess.run(
-        COMMAND, cwd=ROOT, check=True, capture_output=True, text=True, timeout=1800
+        COMMAND, cwd=ROOT, check=True, capture_output=True, text=True, timeout=TIMEOUT_S
     )
     rows: dict[str, dict[str, object]] = {}
     for line in proc.stdout.splitlines():

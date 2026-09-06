@@ -1,0 +1,110 @@
+{
+  "schema_version": 1,
+  "id": "F:int-two-squares-descent-entry",
+  "title": "The entry point of Fermat's two-squares descent",
+  "statement": "Let p > 0 with 1 + 1 <= p, and let x satisfy x*x = -1 (mod p). Then there are k and c with k*p = c*c + 1*1 and 0 < k < p. That is: a multiple of p is a sum of two squares, and the multiplier is ALREADY strictly between 0 and p -- which is the invariant the descent's induction needs, and the reason the representative has to be centered before the divisibility is read off. Primality is deliberately NOT a hypothesis: everything here needs only 0 < p and 1 + 1 <= p, and the caller derives the second from p = 2m+1 with m even and p prime, which is Nat work that does not belong in an Int order module.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Int.exists_small_multiple_of_sq_add_one : ((x0 : Int) -> ((x1 : Int) -> ((x2 : Int.lt Int.zero x0) -> ((x3 : Int.le (Int.add Int.one Int.one) x0) -> ((x4 : Int.ModEq x0 (Int.mul x1 x1) (Int.neg Int.one)) -> Exists.{1} Int (fun (x5 : Int) => Exists.{1} Int (fun (x6 : Int) => And (Eq.{1} Int (Int.mul x5 x0) (Int.add (Int.mul x6 x6) (Int.mul Int.one Int.one))) (And (Int.lt Int.zero x5) (Int.lt x5 x0)))))))))",
+    "fragment": "Int",
+    "free_symbols": [
+      "x0",
+      "x1",
+      "x2",
+      "x3",
+      "x4",
+      "x5",
+      "x6"
+    ],
+    "kernel_theorem": "Int.exists_small_multiple_of_sq_add_one"
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:int-exists-centered-representative",
+    "F:int-sq-add-sq-lt-sq-of-bounds",
+    "F:int-modeq-mul",
+    "F:int-modeq-trans",
+    "F:int-modeq-symm",
+    "F:int-modeq-iff-dvd",
+    "F:int-mul-comm",
+    "F:int-sq-nonneg",
+    "F:int-zero-lt-one",
+    "F:int-add-assoc",
+    "F:int-add-comm",
+    "F:int-add-neg",
+    "F:int-add-neg-cancel-right",
+    "F:int-add-zero",
+    "F:int-ediv-add-emod",
+    "F:int-le-of-lt",
+    "F:int-le-trans",
+    "F:int-left-distrib",
+    "F:int-lt-of-lt-of-le",
+    "F:int-mul-one",
+    "F:ml430-int-add-le-add-right-0c9ed495",
+    "F:ml430-int-modeq-mul-6736aa2e"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Int.exists_small_multiple_of_sq_add_one",
+      "kind": "kernel-term",
+      "supports": "Int.exists_small_multiple_of_sq_add_one is admitted by the trusted kernel gate with EXACTLY the type recorded in formal.statement, which is a verbatim quotation of the kernel's own renderer.",
+      "check_status": "checked",
+      "checkers": [
+        "producing-build (Kernel::add_declaration, inside build_int_prelude)",
+        "int_theorem_inventory re-list of the admitted declaration"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example int_theorem_inventory -- Int.exists_small_multiple_of_sq_add_one 2>/dev/null | grep -cE '^theorem[[:space:]]+Int\\\\.exists_small_multiple_of_sq_add_one[[:space:]]'",
+      "checker_seconds": 12,
+      "kernel_declaration": "Int.exists_small_multiple_of_sq_add_one",
+      "notes": "Two independent failure modes, so the exit status depends on the FINDING and not on the run completing: int_theorem_inventory exits non-zero when the named filter matches nothing, and grep -c exits 1 printing 0 when the anchored line is absent. Anchored with [[:space:]] and never with a backslash-t, which a scripted (GNU) grep reads as a literal t. --release is MANDATORY: this tool builds the constructed carriers and overflows the default debug thread stack."
+    },
+    {
+      "id": "evaluation-Int.exists_small_multiple_of_sq_add_one",
+      "kind": "instance-pin",
+      "supports": "What the declaration MEANS: its full forall-telescoped type -- including the nested existential's body -- is rebuilt independently and compared against the type the ENVIRONMENT stores, and it is APPLIED at p = 5 with the hypotheses discharged by reduction, where a non-root of -1 must be REFUSED.",
+      "check_status": "checked",
+      "checkers": [
+        "crates/axeyum-lean-kernel/src/int_prelude/order_squares_tests.rs (7 tests; every battery asserts what must hold AND what must fail)",
+        "crate::Kernel::add_declaration used as the decision procedure (a probe theorem is admitted or refused, and both outcomes are asserted)",
+        "crate::Kernel::def_eq against Environment-stored types, at free variables, for the statement pin"
+      ],
+      "checker_command": "cargo test --release -p axeyum-lean-kernel --lib -- int_prelude::order_squares_tests --test-threads=4 2>/dev/null | grep -cE '^test result: ok\\. 7 passed'",
+      "checker_seconds": 300,
+      "artifact": "crates/axeyum-lean-kernel/src/int_prelude/order_squares_tests.rs",
+      "notes": "The count 7 is pinned deliberately: a suite that silently stopped compiling some of these tests would still print ok with a smaller number, and this repository has shipped a gate that ran zero tests for 15 days while exiting 0. Relevant test: the_descent_entry_point_applies_at_a_square_root_of_minus_one_and_is_refused_off_it. At p = 5 it admits x = 2 (2*2 = 4 = -1 mod 5) and REFUSES x = 1 -- and the refusal row is the discriminating one, because the CONCLUSION at x = 1 is still true (1*5 = 2*2 + 1*1 witnesses it), so a lemma that ignored its congruence hypothesis would pass both rows. The statement pin additionally rebuilds the nested Exists body, which no application test can see."
+    },
+    {
+      "id": "footprint-Int.exists_small_multiple_of_sq_add_one",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the integer prelude's trusted surface is empty (no Axiom, no Opaque, no Quotient), which bounds every declaration in it, including this one.",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint, asserted per declaration AFTER Environment::contains",
+        "nat_axiom_inventory --require-axiom-free (environment-wide trusted-surface enumeration, independent of the per-theorem footprint route)",
+        "int_prelude_tests::every_int_declaration_is_checked_and_axiom_free (coverage derived from kernel.environment(), so an unlisted declaration FAILS rather than going unchecked)"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free integer",
+      "checker_seconds": 12,
+      "notes": "The per-declaration assertion lives in order_squares_tests::every_order_squares_declaration_is_present_and_axiom_free, which checks Environment::contains FIRST for all 25 names -- an empty footprint is also what a MISSING name returns. Coverage is additionally forced by int_prelude_tests::every_int_declaration_is_checked_and_axiom_free, whose subject is derived from kernel.environment(), so all 25 names had to be added to derived_laws (294 -> 319) before it would pass."
+    }
+  ],
+  "provenance": {
+    "date": "2026-09-05",
+    "curation": "curated",
+    "established_by": "lane int-order-two-squares (W3-10 second slice, ADR-1647), crates/axeyum-lean-kernel/src/int_prelude/order_squares.rs, admitted by build_int_prelude",
+    "source": "the entry step of Euler's descent proof (1749) of Fermat's two-square theorem: from -1 being a quadratic residue mod p, some multiple of p below p^2 is a sum of two squares",
+    "prior_art": [
+      {
+        "who": "Fermat; Euler",
+        "what": "Fermat's theorem on sums of two squares (asserted 1640) and Euler's descent proof (1749)",
+        "year": 1749,
+        "where": "classical number theory; standard textbook material",
+        "attribution": "standard textbook attribution; this lane did not consult the primary sources"
+      }
+    ]
+  },
+  "notes": "This is the declaration `two_squares.rs`'s module doc claims already landed under the name `declare_exists_mul_isSumOfTwoSquares_of_residue`. IT DID NOT: measured 2026-09-05, that name occurs exactly once in the file, inside the doc comment, and is not in `declare_two_squares_all`. This row is the first time the entry point exists. The route is five steps, all from lemmas already in the environment: center x modulo p (F:int-exists-centered-representative), square the congruence (Int.ModEq.mul) so c*c = -1, read off p | c*c - (-1) = c*c + 1*1 (Int.ModEq.dvd) giving k with c*c + 1*1 = p*k, get 0 < k from c*c + 1*1 being positive, and k < p from F:int-sq-add-sq-lt-sq-of-bounds at e := 1 putting c*c + 1*1 strictly under p*p. Centering FIRST is what makes the last step available; the uncentered x has no bound at all, and that is exactly why the previous slice could not close this. WHAT THIS DOES NOT DO: it is not Fermat's theorem. F:int-fermat-two-squares remains open, and its notes size the three pieces still missing -- the divisibility m | c*c + e*e that produces the NEXT multiplier, the q != 0 argument (the only step that consumes primality), and the Nat.strongInduction assembly."
+}

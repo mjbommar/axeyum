@@ -1,0 +1,694 @@
+c --- [ banner ] -------------------------------------------------------------
+c 
+c CaDiCaL SAT Solver
+c Copyright (c) 2016-2026
+c A. Biere, M. Fleury, N. Froleyks, K. Fazekas, F. Pollitt, T. Faller
+c JKU Linz, University of Freiburg, TU Wien
+c 
+c Version 3.0.1
+c g++ (Ubuntu 15.2.0-16ubuntu1) 15.2.0 -Wall -Wextra -O3 -DNDEBUG
+c Sat Sep 5 21:04:57 EDT 2026 Linux server7 7.0.0-29-generic x86_64
+c 
+c --- [ limit ] --------------------------------------------------------------
+c 
+c setting time limit to 60 seconds real time (due to '-t 60')
+c 
+c --- [ proof tracing ] ------------------------------------------------------
+c 
+c will not generate nor write DRAT proof
+c 
+c --- [ parsing input ] ------------------------------------------------------
+c 
+c reading DIMACS file from '/home/mjbommar/p4dfa-cnf/string4x16.4._bit16_na6_nr4_paired.cnf'
+c opening file to read '/home/mjbommar/p4dfa-cnf/string4x16.4._bit16_na6_nr4_paired.cnf'
+c found 'p cnf 3098002 11377248' header
+c parsed 11377248 clauses in 2.05 seconds process time
+c closing file '/home/mjbommar/p4dfa-cnf/string4x16.4._bit16_na6_nr4_paired.cnf'
+c after reading 270556109 bytes 258.0 MB
+c 
+c --- [ options ] ------------------------------------------------------------
+c 
+c   --arena=true                   (same as default 'true')
+c   --arenacompact=true            (same as default 'true')
+c   --arenasort=true               (same as default 'true')
+c   --arenatype=3                  (same as default '3')
+c   --backbone=1                   (same as default '1')
+c   --backboneeffort=20            (same as default '20')
+c   --backbonemaxrounds=1000       (same as default '1e3')
+c   --backbonerounds=100           (same as default '100')
+c   --backbonethresh=5             (same as default '5')
+c   --binary=true                  (same as default 'true')
+c   --block=false                  (same as default 'false')
+c   --blockmaxclslim=100000        (same as default '1e5')
+c   --blockminclslim=2             (same as default '2')
+c   --blockocclim=100              (same as default '1e2')
+c   --bump=true                    (same as default 'true')
+c   --bumpreason=true              (same as default 'true')
+c   --bumpreasondepth=1            (same as default '1')
+c   --bumpreasonlimit=10           (same as default '10')
+c   --bumpreasonrate=100           (same as default '100')
+c   --check=false                  (same as default 'false')
+c   --checkassumptions=true        (same as default 'true')
+c   --checkconstraint=true         (same as default 'true')
+c   --checkfailed=true             (same as default 'true')
+c   --checkfrozen=false            (same as default 'false')
+c   --checkproof=3                 (same as default '3')
+c   --checkwitness=true            (same as default 'true')
+c   --chrono=1                     (same as default '1')
+c   --chronoalways=false           (same as default 'false')
+c   --chronolevelim=100            (same as default '1e2')
+c   --chronoreusetrail=true        (same as default 'true')
+c   --compact=true                 (same as default 'true')
+c   --compactint=2000              (same as default '2e3')
+c   --compactlim=100               (same as default '1e2')
+c   --compactmin=100               (same as default '1e2')
+c   --condition=false              (same as default 'false')
+c   --conditioneffort=100          (same as default '100')
+c   --conditionint=10000           (same as default '1e4')
+c   --conditionmaxeff=10000000     (same as default '1e7')
+c   --conditionmaxrat=100          (same as default '100')
+c   --conditionmineff=0            (same as default '0')
+c   --congruence=true              (same as default 'true')
+c   --congruenceand=true           (same as default 'true')
+c   --congruenceandarity=1000000   (same as default '1e6')
+c   --congruencebinaries=true      (same as default 'true')
+c   --congruenceite=true           (same as default 'true')
+c   --congruencexor=true           (same as default 'true')
+c   --congruencexorarity=4         (same as default '4')
+c   --congruencexorcounts=1        (same as default '1')
+c   --cover=false                  (same as default 'false')
+c   --covereffort=4                (same as default '4')
+c   --covermaxclslim=100000        (same as default '1e5')
+c   --covermaxeff=100000000        (same as default '1e8')
+c   --coverminclslim=2             (same as default '2')
+c   --covermineff=0                (same as default '0')
+c   --decompose=true               (same as default 'true')
+c   --decomposerounds=2            (same as default '2')
+c   --deduplicate=true             (same as default 'true')
+c   --deduplicateallinit=false     (same as default 'false')
+c   --eagersubsume=true            (same as default 'true')
+c   --eagersubsumelim=20           (same as default '20')
+c   --elevate=2                    (same as default '2')
+c   --elim=true                    (same as default 'true')
+c   --elimands=true                (same as default 'true')
+c   --elimbackward=true            (same as default 'true')
+c   --elimboundmax=16              (same as default '16')
+c   --elimboundmin=0               (same as default '0')
+c   --elimclslim=100               (same as default '1e2')
+c   --elimdef=false                (same as default 'false')
+c   --elimdefcores=1               (same as default '1')
+c   --elimdefticks=200000          (same as default '2e5')
+c   --elimeffort=1000              (same as default '1e3')
+c   --elimequivs=true              (same as default 'true')
+c   --elimint=2000                 (same as default '2e3')
+c   --elimites=true                (same as default 'true')
+c   --elimlimited=true             (same as default 'true')
+c   --elimmaxeff=2000000000        (same as default '2e9')
+c   --elimmineff=10000000          (same as default '1e7')
+c   --elimocclim=100               (same as default '1e2')
+c   --elimprod=1                   (same as default '1')
+c   --elimrounds=2                 (same as default '2')
+c   --elimsubst=true               (same as default 'true')
+c   --elimsum=1                    (same as default '1')
+c   --elimxorlim=5                 (same as default '5')
+c   --elimxors=true                (same as default 'true')
+c   --emadecisions=100000          (same as default '1e5')
+c   --emagluefast=33               (same as default '33')
+c   --emaglueslow=100000           (same as default '1e5')
+c   --emajump=100000               (same as default '1e5')
+c   --emalevel=100000              (same as default '1e5')
+c   --emasize=100000               (same as default '1e5')
+c   --ematrailfast=100             (same as default '1e2')
+c   --ematrailslow=100000          (same as default '1e5')
+c   --exteagerreasons=false        (same as default 'false')
+c   --exteagerrecalc=true          (same as default 'true')
+c   --exttracecalls=false          (same as default 'false')
+c   --factor=false                 (same as default 'false')
+c   --factorcandrounds=2           (same as default '2')
+c   --factorcheck=1                (same as default '1')
+c   --factordelay=4                (same as default '4')
+c   --factoreffort=50              (same as default '50')
+c   --factoriniticks=300           (same as default '300')
+c   --factorsize=5                 (same as default '5')
+c   --factorthresh=7               (same as default '7')
+c   --factorunbump=true            (same as default 'true')
+c   --fastelim=true                (same as default 'true')
+c   --fastelimbound=8              (same as default '8')
+c   --fastelimclslim=100           (same as default '1e2')
+c   --fastelimocclim=100           (same as default '100')
+c   --fastelimrounds=4             (same as default '4')
+c   --flush=false                  (same as default 'false')
+c   --flushfactor=3                (same as default '3')
+c   --flushint=100000              (same as default '1e5')
+c   --forcephase=false             (same as default 'false')
+c   --frat=0                       (same as default '0')
+c   --idrup=false                  (same as default 'false')
+c   --ilb=0                        (same as default '0')
+c   --incdecay=1                   (same as default '1')
+c   --incdecayint=1000000          (same as default '1e6')
+c   --inprobeint=100               (same as default '100')
+c   --inprobing=true               (same as default 'true')
+c   --inprocessing=true            (same as default 'true')
+c   --instantiate=false            (same as default 'false')
+c   --instantiateclslim=3          (same as default '3')
+c   --instantiateocclim=1          (same as default '1')
+c   --instantiateonce=true         (same as default 'true')
+c   --lidrup=false                 (same as default 'false')
+c   --lrat=false                   (same as default 'false')
+c   --lucky=true                   (same as default 'true')
+c   --luckyassumptions=true        (same as default 'true')
+c   --luckyearly=true              (same as default 'true')
+c   --luckylate=true               (same as default 'true')
+c   --minimize=true                (same as default 'true')
+c   --minimizedepth=1000           (same as default '1e3')
+c   --minimizeticks=true           (same as default 'true')
+c   --otfs=true                    (same as default 'true')
+c   --phase=true                   (same as default 'true')
+c   --preprocessinit=2000000       (same as default '2e6')
+c   --preprocesslight=false        (same as default 'false')
+c   --probe=true                   (same as default 'true')
+c   --probeeffort=8                (same as default '8')
+c   --probehbr=true                (same as default 'true')
+c   --probethresh=0                (same as default '0')
+c   --profile=2                    (same as default '2')
+c   --quiet=false                  (same as default 'false')
+c   --radixsortlim=32              (same as default '32')
+c   --randec=false                 (same as default 'false')
+c   --randecfocused=true           (same as default 'true')
+c   --randecinit=1000              (same as default '1e3')
+c   --randecint=500                (same as default '500')
+c   --randeclength=10              (same as default '10')
+c   --randecstable=false           (same as default 'false')
+c   --realtime=false               (same as default 'false')
+c   --recomputetier=true           (same as default 'true')
+c   --reduce=true                  (same as default 'true')
+c   --reduceinit=300               (same as default '300')
+c   --reduceint=25                 (same as default '25')
+c   --reduceopt=1                  (same as default '1')
+c   --reducetarget=75              (same as default '75')
+c   --reducetier1glue=2            (same as default '2')
+c   --reducetier2glue=6            (same as default '6')
+c   --reluctant=true               (same as default 'true')
+c   --reluctantint=1024            (same as default '1024')
+c   --reluctantmax=1048576         (same as default '1048576')
+c   --rephase=1                    (same as default '1')
+c   --rephaseint=1000              (same as default '1e3')
+c   --report=true                  (same as default 'true')
+c   --reportall=false              (same as default 'false')
+c   --reportsolve=false            (same as default 'false')
+c   --restart=true                 (same as default 'true')
+c   --restartint=2                 (same as default '2')
+c   --restartmarginfocused=10      (same as default '10')
+c   --restartmarginstable=25       (same as default '25')
+c   --restartreusetrail=true       (same as default 'true')
+c   --restoreall=0                 (same as default '0')
+c   --restoreflush=false           (same as default 'false')
+c   --reverse=false                (same as default 'false')
+c   --score=true                   (same as default 'true')
+c   --scorefactor=950              (same as default '950')
+c   --seed=0                       (same as default '0')
+c   --shrink=3                     (same as default '3')
+c   --shrinkreap=true              (same as default 'true')
+c   --shuffle=false                (same as default 'false')
+c   --shufflequeue=true            (same as default 'true')
+c   --shufflerandom=false          (same as default 'false')
+c   --shufflescores=true           (same as default 'true')
+c   --stabilize=true               (same as default 'true')
+c   --stabilizeinit=1000           (same as default '1e3')
+c   --stabilizeonly=false          (same as default 'false')
+c   --stats=false                  (same as default 'false')
+c   --stubbornIOfocused=false      (same as default 'false')
+c   --subsume=true                 (same as default 'true')
+c   --subsumebinlim=10000          (same as default '1e4')
+c   --subsumeclslim=100            (same as default '1e2')
+c   --subsumeeffort=1000           (same as default '1e3')
+c   --subsumelimited=true          (same as default 'true')
+c   --subsumemaxeff=100000000      (same as default '1e8')
+c   --subsumemineff=0              (same as default '0')
+c   --subsumeocclim=100            (same as default '1e2')
+c   --subsumestr=true              (same as default 'true')
+c   --sweep=true                   (same as default 'true')
+c   --sweepclauses=1024            (same as default '1024')
+c   --sweepcomplete=false          (same as default 'false')
+c   --sweepcountbinary=true        (same as default 'true')
+c   --sweepdepth=2                 (same as default '2')
+c   --sweepeffort=100              (same as default '1e2')
+c   --sweepfliprounds=1            (same as default '1')
+c   --sweepmaxclauses=300000       (same as default '3e5')
+c   --sweepmaxdepth=3              (same as default '3')
+c   --sweepmaxvars=8192            (same as default '8192')
+c   --sweeprand=false              (same as default 'false')
+c   --sweepthresh=5                (same as default '5')
+c   --sweepvars=256                (same as default '256')
+c   --target=1                     (same as default '1')
+c   --terminateint=10              (same as default '10')
+c   --ternary=true                 (same as default 'true')
+c   --ternaryeffort=8              (same as default '8')
+c   --ternarymaxadd=1000           (same as default '1e3')
+c   --ternaryocclim=100            (same as default '1e2')
+c   --ternaryrounds=2              (same as default '2')
+c   --ternarythresh=6              (same as default '6')
+c   --tier1limit=50                (same as default '50')
+c   --tier1minglue=0               (same as default '0')
+c   --tier2limit=90                (same as default '90')
+c   --tier2minglue=0               (same as default '0')
+c   --transred=true                (same as default 'true')
+c   --transredeffort=100           (same as default '1e2')
+c   --transredmaxeff=100000000     (same as default '1e8')
+c   --transredmineff=0             (same as default '0')
+c   --verbose=1                    (different from default '0')
+c   --veripb=0                     (same as default '0')
+c   --vivify=true                  (same as default 'true')
+c   --vivifycalctier=false         (same as default 'false')
+c   --vivifydemote=false           (same as default 'false')
+c   --vivifyeffort=50              (same as default '50')
+c   --vivifyflush=true             (same as default 'true')
+c   --vivifyinst=true              (same as default 'true')
+c   --vivifyirred=true             (same as default 'true')
+c   --vivifyirredeff=3             (same as default '3')
+c   --vivifyonce=0                 (same as default '0')
+c   --vivifyretry=0                (same as default '0')
+c   --vivifyschedmax=5000          (same as default '5e3')
+c   --vivifythresh=20              (same as default '20')
+c   --vivifytier1=true             (same as default 'true')
+c   --vivifytier1eff=4             (same as default '4')
+c   --vivifytier2=true             (same as default 'true')
+c   --vivifytier2eff=2             (same as default '2')
+c   --vivifytier3=true             (same as default 'true')
+c   --vivifytier3eff=1             (same as default '1')
+c   --walk=true                    (same as default 'true')
+c   --walkeffort=80                (same as default '80')
+c   --walkfullocc=false            (same as default 'false')
+c   --walkmaxeff=10000000          (same as default '1e7')
+c   --walkmineff=0                 (same as default '0')
+c   --walknonstable=true           (same as default 'true')
+c   --walkredundant=false          (same as default 'false')
+c   --warmup=true                  (same as default 'true')
+c 
+c --- [ solving ] ------------------------------------------------------------
+c 
+c time measured in process time since initialization
+c 
+c  seconds    reduction conflicts       size tier2           variables
+c          MB     restarts   redundant    glue  trail              remaining
+c            level     rate       size/glu tier1   irredundant
+c 
+c *  2.05 1618  0 0   0  0    0    0 0.0 0 0 2 6  0% 11377128 3097026 100%
+c l  2.07 1627  0 0   0  0    0    0 0.0 0 0 2 6  0% 11377128 3097026 100%
+c )  2.07 1627  0 0   0  0    0    0 0.0 0 0 2 6  0% 11377128 3097026 100%
+c l  2.07 1627  0 0   0  0    0    0 0.0 0 0 2 6  0% 11377128 3097026 100%
+c {  2.07 1627  0 0   0  0    0    0 0.0 0 0 2 6  0% 11377128 3097026 100%
+c .  3.18 1808 921 1  17 70  300  254 1.7 8 5 2 6  6% 11377128 3097026 100%
+c G  3.29 1808 921 1  17 70  300  221 1.7 8 5 2 6  6% 11357272 3097026 100%
+c C  3.84 1810 921 1  17 70  300  221 1.7 8 5 2 6  6% 11357272 3097026 100%
+c -  3.84 1810 921 1  17 70  300  221 1.7 8 5 2 6  6% 11357272 3097026 100%
+c }  4.85 1810 374 1 103 33 1001  792 1.6 9 6 2 6  4% 11357272 3097026 100%
+c [  4.85 1810  0 1 103  0 1001  792 0.0 0 0 2 6  0% 11357272 3097026 100%
+c ~  4.85 1810  0 1 103  0 1001  792 0.0 0 0 2 6  0% 11357272 3097026 100%
+c O  4.85 1810 165 1 103 166 1002  793 1.9 33 17 2 6  0% 11357272 3097026 100%
+c .  4.95 1810 599 2 103  2 1623 1414 3.3 83 25 2 6  1% 11357272 3097026 100%
+c G  4.99 1810 599 2 103  2 1623  862 3.3 83 25 2 6  1% 11357272 3097026 100%
+c C  6.63 2223 599 2 103  2 1623  862 3.3 83 25 2 6  1% 11357272 3097026 100%
+c -  6.63 2223 599 2 103  2 1623  862 3.3 83 25 2 6  1% 11357272 3097026 100%
+c ]  8.87 2230 738 2 104  6 2262 1474 3.2 69 22 2 6  5% 11357272 3097026 100%
+c {  8.87 2230 374 2 104 33 2262 1474 1.6 9 6 2 6  4% 11357272 3097026 100%
+c ~  9.99 2231 334 2 167 28 3002 2127 1.7 10 6 2 6  5% 11357272 3097026 100%
+c 
+c  seconds     reduction conflicts       size  tier2           variables
+c          MB      restarts   redundant     glue  trail              remaining
+c             level     rate       size/glue tier1   irredundant
+c 
+c O 10.01 2231 334 2 167 28 3003 2128 1.7 10 6 2 6  5% 11357272 3097026 100%
+c s 13.77 2095 344 2 200 25 3755 2782 2.0 11 6 2 6  6% 11355544 3097026 100%
+c t 14.61 2238 344 2 200 25 3755 2782 2.0 11 6 2 6  6% 11355544 3097026 100%
+c G 19.70 2516 344 2 200 25 3755  697 2.0 11 6 2 6  6% 9142010 1867913 60%
+c C 21.01 2387 344 2 200 25 3755  697 2.0 11 6 2 6  6% 9142010 1867913 60%
+c e 27.24 2379 344 2 200 25 3755  442 2.0 11 6 2 6  6% 8400314 1187446 38%
+c G 28.37 2472 344 2 200 25 3755  442 2.0 11 6 2 6  6% 8400314 1187446 38%
+c C 30.21 2471 344 2 200 25 3755  442 2.0 11 6 2 6  6% 8400314 1187446 38%
+c . 32.46 2119 278 3 426 25 4699 1253 1.8 11 6 2 6  1% 8400314 1187446 38%
+c G 32.48 2119 278 3 426 25 4699  835 1.8 11 6 2 6  1% 8400314 1187446 38%
+c C 33.39 2119 278 3 426 25 4699  835 1.8 11 6 2 6  1% 8400314 1187446 38%
+c - 33.39 2119 278 3 426 25 4699  835 1.8 11 6 2 6  1% 8400314 1187446 38%
+c 2 33.55 2119 262 3 498 24 4979 1086 1.7 11 6 2 6  1% 8400314 1187446 38%
+c d 33.76 2122 262 3 498 24 4979 1086 1.7 11 6 2 6  1% 8400314 1187446 38%
+c p 33.80 2122 262 3 498 24 4979 9276 1.7 11 6 2 6  1% 8400314 1187446 38%
+c c 39.96 2281 262 3 498 24 4979 9276 1.7 11 6 2 6  1% 8138234 1187446 38%
+c d 41.02 2157 262 3 498 24 4979 9262 1.7 11 6 2 6  1% 7876154 1056406 34%
+c k 41.29 2157 262 3 498 24 4979 9262 1.7 11 6 2 6  1% 7876154 1056406 34%
+c 2 41.38 2157 262 3 498 24 4979 9262 1.7 11 6 2 6  1% 7876154 1056406 34%
+c t 41.48 2157 262 3 498 24 4979 9262 1.7 11 6 2 6  1% 7876154 1056406 34%
+c 
+c  seconds     reduction conflicts       size  tier2          variables
+c          MB      restarts   redundant     glue  trail             remaining
+c             level     rate       size/glue tier1   irredundant
+c 
+c k 41.65 2157 262 3 498 24 4979 9262 1.7 11 6 2 6  1% 7876154 1056406 34%
+c ~ 42.46 2157 250 3 646 27 6005 10117 1.7 11 7 4 9  1% 7876153 1056406 34%
+c # 42.46 2157 250 3 646 27 6006 10118 1.7 11 7 4 9  1% 7876153 1056406 34%
+c G 43.27 2157 230 3 866 26 7757 11635 1.6 11 7 4 9  2% 7876150 1056406 34%
+c C 44.52 2124 230 3 866 26 7757 11635 1.6 11 7 4 9  2% 7876150 1056406 34%
+c . 46.14 2118 200 4 1202 24 9709 13204 1.5 11 7 5 10  1% 7876150 1056406 34%
+c G 46.15 2118 200 4 1202 24 9709 4336 1.5 11 7 5 10  1% 7876150 1056406 34%
+c C 46.91 2117 200 4 1202 24 9709 4336 1.5 11 7 5 10  1% 7876150 1056406 34%
+c - 46.91 2117 200 4 1202 24 9709 4336 1.5 11 7 5 10  1% 7876150 1056406 34%
+c 2 46.99 2117 200 4 1202 24 9709 4336 1.5 11 7 5 10  1% 7876150 1056406 34%
+c d 47.15 2118 200 4 1202 24 9709 4336 1.5 11 7 5 10  1% 7876150 1056406 34%
+c p 47.17 2118 200 4 1202 24 9709 4336 1.5 11 7 5 10  1% 7876150 1056406 34%
+c c 50.54 2198 200 4 1202 24 9709 4336 1.5 11 7 5 10  1% 7876150 1056406 34%
+c k 50.72 2118 200 4 1202 24 9709 4336 1.5 11 7 5 10  1% 7876150 1056406 34%
+c 2 50.79 2118 200 4 1202 24 9709 4336 1.5 11 7 5 10  1% 7876150 1056406 34%
+c t 50.88 2118 200 4 1202 24 9709 4336 1.5 11 7 5 10  1% 7876150 1056406 34%
+c k 51.01 2118 200 4 1202 24 9709 4336 1.5 11 7 5 10  1% 7876150 1056406 34%
+c ~ 51.18 2118 199 4 1235 24 10006 4578 1.5 11 7 5 10  1% 7876150 1056406 34%
+c B 51.18 2118 199 4 1235 24 10007 4579 1.5 11 7 5 10  1% 7876150 1056406 34%
+c ~ 52.29 2118 162 4 2010 19 15008 7676 1.5 14 9 8 15  1% 7876149 1056406 34%
+c 
+c  seconds     reductions  conflicts       size  tier2           variables
+c          MB      restarts     redundant     glue   trail             remaining
+c             level      rate        size/glue tier1    irredundant
+c 
+c W 53.30 2118 162 4 2010 19 15009 7677 1.5 14 9 8 15  1% 7876149 1056406 34%
+c s 54.76 2069 164 4 2012 19 15047 7709 1.5 14 9 8 15  1% 7876149 1056406 34%
+c t 55.39 2118 164 4 2012 19 15047 7709 1.5 14 9 8 15  1% 7876149 1056406 34%
+c e 60.15 2230 164 4 2012 19 15047 5855 1.5 14 9 8 15  1% 7532686 884670 29%
+c } 60.90 2253 164 4 2012 19 15047 5855 1.5 14 9 8 15  1% 7532686 884670 29%
+c ? 60.90 2253 164 4 2012 19 15047 5855 1.5 14 9 8 15  1% 7532686 884670 29%
+c 
+c --- [ result ] -------------------------------------------------------------
+c 
+c UNKNOWN
+c 
+c --- [ run-time profiling ] -------------------------------------------------
+c 
+c process time taken by individual solving procedures
+c (percentage relative to process time for solving)
+c 
+c        32.08   54.52% simplify
+c        26.76   45.48% search
+c        21.73   36.92% unstable
+c        16.95   28.81% elim
+c         9.53   16.19% congruence
+c         4.02    6.83% stable
+c         3.21    5.46% subsume
+c         2.05    3.48% parse
+c         1.00    1.70% walk
+c         0.16    0.27% backbone
+c         0.07    0.11% probe
+c         0.02    0.03% lucky
+c   =================================
+c        58.85   96.63% solve
+c 
+c last line shows process time for solving
+c (percentage relative to total process time)
+c 
+c --- [ statistics ] ---------------------------------------------------------
+c 
+c blocked:                       0         0.00 %  of irredundant clauses
+c   blockings:                   0         0.00    internal
+c   candidates:                  0         0.00    per blocking 
+c   blockres:                    0         0.00    per candidate
+c   pure:                        0         0.00 %  of all variables
+c   pureclauses:                 0         0.00    per pure literal
+c chronological:              6843        45.48 %  of conflicts
+c compacts:                      2      7523.50    interval
+c conflicts:                 15047       255.70    per second
+c   backtracked:             18565       123.38 %  of conflicts
+c inc-decay:                     0         0.00 %   per search
+c backbone:                4077852       131.63 %  of vars
+c    rounds:                     5         1.25    per phase
+c    phases:                     4      3761.75    interval
+c    units:                      0         0.00    per phase
+c dedup-init-rnds:                0         0.00 %  of interval
+c dedup-init:                     0         0.00 %  of subsumed
+c conditioned:                   0         0.00 %  of irredundant clauses
+c   conditionings:               0         0.00    interval
+c   condcands:                   0         0.00    candidate clauses
+c   condassinit:                 0.0       0.00 %  initial assigned
+c   condcondinit:                0.0       0.00 %  initial condition
+c   condautinit:                 0.0       0.00 %  initial autarky
+c   condassrem:                  0.0       0.00 %  final assigned
+c   condcondrem:                 0.000     0.00 %  final conditional
+c   condautrem:                  0.000     0.00 %  final autarky
+c   condprops:                   0         0.00    per candidate
+c covered:                       0         0.00 %  of irredundant clauses
+c   coverings:                   0         0.00    interval
+c   asymmetric:                  0         0.00 %  of covered clauses
+c   blocked:                     0         0.00 %  of covered clauses
+c decisions:                274925      4671.86    per second
+c   searched:              4824260        17.55    per decision
+c rand. dec phase:               0         0.00    per interval
+c random decs:                   0         0.00    per phase
+c eliminated:              2081316        67.18 %  of all variables
+c   fastelim:                    0         0.00 %  of eliminated
+c   elimphases:                  2      7523.50    interval
+c   elimrounds:                  2         1.00    per phase
+c   elimtried:             3729140        55.81 %  eliminated
+c   elimgates:             1786281        47.90 %  gates per tried
+c   elimequivs:             176216         9.86 %  equivalence gates
+c   elimands:               632408        35.40 %  and gates
+c   elimites:                   94         0.01 %  if-then-else gates
+c   elimxors:               977563        54.73 %  xor gates
+c   elimdefs:                    0         0.00 %  definitions
+c   elimsubst:             1203287        57.81 %  substituted
+c   elimsubstequi:          353895        29.41 %  equivalence gates
+c   elimsubstands:          718870        59.74 %  and gates
+c   elimsubstites:             361         0.03 %  if-then-else gates
+c   elimsubstxors:         1008090        83.78 %  xor gates
+c   elimsubstdefs:               0         0.00 %  definitions
+c   elimres:             111162847        53.41    per eliminated
+c   elimrestried:         73037254        65.70 %  per resolution
+c   def checked:                 0         0.00    per phase
+c   def extracted:               0         0.00 %  per checked
+c   def units:                   0         0.00 %  per checked
+c ext.prop. calls:               0         0.00 %  of queries
+c   propagating:                 0         0.00 %  per eprop-call
+c   explained:                   0         0.00 %  per eprop-call
+c   falsified:                   0         0.00 %  per eprop-call
+c ext.clause calls:              0         0.00 %  of queries
+c   learned:                     0         0.00 %  per called
+c   conflicting:                 0         0.00 %  per learned
+c   propagating:                 0         0.00 %  per learned
+c ext.final check:               0         0.00 %  of queries
+c factored:                      0         0.00 %  of variables
+c   factor:                      0         0.00    conflict interval
+c   cls factored:                0         0.00    per factored
+c   lits factored:               0         0.00    per factored
+c   cls unfactored:              0         0.00    per factored
+c   lits unfactored:             0         0.00    per factored
+c fixed:                       976         0.03 %  of all variables
+c   failed:                      0         0.00 %  of all variables
+c   probefailed:                 0         0.00 %  per failed
+c   transredunits:               0         0.00 %  per failed
+c   inprobephases:               2      7523.50    interval
+c   inprobesuccess:              1        50.00 %  phases
+c   probingrounds:               2         1.00    per phase
+c   probed:                      1         0.00    per failed
+c   hbrs:                     8190      8190.00    per probed
+c   hbrsizes:                24570         3.00    per hbr
+c   hbreds:                   8190       100.00 %  per hbr
+c   hbrsubs:                     0         0.00 %  per hbr
+c   units:                       0         0.00    interval
+c   binaries:                  195        77.16    interval
+c flushed:                       0         0.00 %  per conflict
+c   hyper:                       0         0.00 %  per conflict
+c   flushings:                   0         0.00    interval
+c instantiated:                  0         0.00 %  of tried
+c   instrounds:                  0         0.00 %  of elimrounds
+c learned:                   13846        92.02 %  per conflict
+c   bumped:                3870736       279.56    per learned
+c   recomputed:              17264       124.69 %  per learned
+c   promoted1:                 239         1.73 %  per learned
+c   promoted2:                 171         1.24 %  per learned
+c   improvedglue:             2339        16.89 %  per learned
+c lucky:                         0         0.00 %  of tried
+c   constantzero                 0         0.00 %  of tried
+c   constantone                  0         0.00 %  of tried
+c   backwardone                  0         0.00 %  of tried
+c   backwardzero                 0         0.00 %  of tried
+c   forwardone                   0         0.00 %  of tried
+c   forwardzero                  0         0.00 %  of tried
+c   positivehorn                 0         0.00 %  of tried
+c   negativehorn                 0         0.00 %  of tried
+c   extendbytes:         486584436       464.04    bytes and MB
+c learned_lits:             345537       100.00 %  learned literals
+c minimized:                     0         0.00 %  learned literals
+c shrunken:                  76597        22.17 %  learned literals
+c minishrunken:              11575         3.35 %  learned literals
+c otfs:                        669         4.45 %  of conflict
+c   subsumed                     8         0.05 %  of conflict
+c   strengthened               661         4.39 %  of conflict
+c propagations:           85766899         1.46 M  per second
+c   coverprops:                  0         0.00 %  of propagations
+c   probeprops:               9231         0.01 %  of propagations
+c   searchprops:          77958232        90.90 %  of propagations
+c   transredprops:         7799436         9.09 %  of propagations
+c   vivifyprops:                 0         0.00 %  of propagations
+c reactivated:                   0         0.00 %  of all variables
+c reduced:                    1682        11.18 %  per conflict
+c   reductions:                  4      3761.75    interval
+c   sqrt scheme:                 0         0.00 %  reductions
+c   prct scheme:                 0         0.00 %  reductions
+c   collections:                 7      2149.57    interval
+c rephased:                      5      3009.40    interval
+c   rephasedbest:                1        20.00 %  rephased best
+c   rephasedflip:                0         0.00 %  rephased flipping
+c   rephasedinv:                 0         0.00 %  rephased inverted
+c   rephasedorig:                2        40.00 %  rephased original
+c   rephasedrand:                1        20.00 %  rephased random
+c   rephasedwalk:                1        20.00 %  rephased walk
+c rescored:                      0         0.00    interval
+c restarts:                   2012         7.48    interval
+c   reused:                   1248        62.03 %  per restart
+c   reusedlevels:            20885         9.92 %  per restart levels
+c restored:                      0         0.00 %  per weakened
+c   restorations:                0         0.00 %  per extension
+c   literals:                    0         0.00    per restored clause
+c stabilizing:                   1         8.37 %  of conflicts
+c   restartstab:                 1         0.05 %  of all restarts
+c   reusedstab:                  0         0.00 %  per stable restarts
+c substituted:              131040         4.23 %  of all variables
+c   decompositions:              3         1.50    per phase
+c sweep equivs:                  0         0.00 %  of swept variables
+c   sweepings:                   0         0.00    vars per sweeping
+c   swept vars:                  0         0.00 %  of all variables
+c   sweep units:                 0         0.00 %  of all variables
+c   solved:                      0         0.00    per swept variable
+c   sat:                         0         0.00 %  solved
+c   unsat:                       0         0.00 %  solved
+c   backbone solved:             0         0.00 %  solved
+c     sat:                       0         0.00 %  backbone solved
+c     unsat:                     0         0.00 %  backbone solved
+c     unknown:                   0         0.00 %  backbone solved
+c     fixed:                     0         0.00   per swept variable
+c     flip:                      0         0.00   per swept variable
+c     flipped:                   0         0.00 %  of backbone flip
+c   equiv solved:                0         0.00 %  solved
+c     sat:                       0         0.00 %  equiv solved
+c     unsat:                     0         0.00 %  equiv solved
+c     unknown:                   0         0.00 %  equiv solved
+c     flip:                      0         0.00    per swept variable
+c     flipped:                   0         0.00 %  of equiv flip
+c   depth:                       0         0.00    per swept variable
+c   environment:                 0         0.00    per swept variable
+c   clauses:                     0         0.00    per swept variable
+c   completed:                   0         0.00    sweeps to complete
+c subsumed:                 528003         2.00 %  of all clauses
+c   subsumephases:               2      7523.50    interval
+c   subsumerounds:               2         1.00    per phase
+c   deduplicated:                0         0.00 %  per subsumed
+c   transreds:                   4      3761.75    interval
+c   transitive:                  0         0.00 %  per subsumed
+c   subirr:                 525895        99.60 %  of subsumed
+c   subred:                      6         0.00 %  of subsumed
+c   subtried:              8563754        16.22    tried per subsumed
+c   subchecks:            48420549         5.65    per tried
+c   subchecks2:               2331         0.00 %  per subcheck
+c   elimotfsub:                  0         0.00 %  of subsumed
+c   elimbwsub:                   0         0.00 %  of subsumed
+c   eagersub:                 2094         0.40 %  of subsumed
+c   eagertried:             304612       145.47    tried per eagersub
+c strengthened:              10030         0.04 %  of all clauses
+c   elimotfstr:               9360        93.32 %  of strengthened
+c   elimbwstr:                   0         0.00 %  of strengthened
+c ternary:                       0         0.00 %  of resolved
+c   phases:                      0         0.00    interval
+c   htr3:                        0         0.00 %  ternary hyper ternres
+c   htr2:                        0         0.00 %  binary hyper ternres
+c ticks:                 396747250         5.09    propagation
+c  searchticks:          370294209        93.33 %  totalticks
+c    stableticks:         61977602        16.74 %  searchticks
+c    unstableticks:      308316607        83.26 %  searchticks
+c  inprobeticks:          26453041         6.67 %  totalticks
+c    backboneticks:        6345988         1.71 %  searchticks
+c    factorticks:                0         0.00 %  searchticks
+c    probeticks:          20107053         5.43 %  searchticks
+c    sweepticks:                 0         0.00 %  searchticks
+c    ternaryticks:               0         0.00 %  searchticks
+c    vivifyticks:                0         0.00 %  searchticks
+c    walkticks:           29519563         7.97 %  searchticks
+c    walkflipticks:       19392528         5.24 %  searchticks
+c    walkflipbrk:         19328256         5.22 %  searchticks
+c    walkflipWL:             64272         0.02 %  searchticks
+c    walkpickticks:       10122658         2.73 %  searchticks
+c    walkbreak:           10118234         2.73 %  searchticks
+c tier recomputed:              13      1157.46    interval
+c trail reuses:                  0         0.00 %  of incremental calls
+c   levels:                      0         0.00    per reuse
+c   literals:                    0         0.00    per reuse
+c   assumptions:                 0         0.00    per reuse
+c vivified:                      0         0.00 %  of all clauses
+c   vivifications:               0         0.00    interval
+c   vivifychecks:                0         0.00 %  per conflict
+c   vivified:                    0         0.00 %  per check
+c   vified-irred:                0         0.00 %  per vivified
+c   vified-tier1:                0         0.00 %  per vivified
+c   vified-tier2:                0         0.00 %  per vivified
+c   vified-tier3:                0         0.00 %  per vivified
+c   vivifysched:                 0         0.00 %  checks per scheduled
+c   vivifyunits:                 0         0.00 %  per vivify check
+c   vivifyinst:                  0         0.00 %  per vivify check
+c   vivifysubs:                  0         0.00 %  per subsumed
+c   vivifyflushed:               0         0.00 %  per subsumed
+c   vivifysubred:                0         0.00 %  per subs
+c   vivifysubirr:                0         0.00 %  per subs
+c   vivifystrs:                  0         0.00 %  per strengthened
+c   vivifystrirr:                0         0.00 %  per vivifystrs
+c   vivifystred1:                0         0.00 %  per vivifystrs
+c   vivifystred2:                0         0.00 %  per viviyfstrs
+c   vivifystred3:                0         0.00 %  per vivifystrs
+c   vivifydemote:                0         0.00 %  per vivifystrs
+c   vivifydecs:                  0         0.00    per checks
+c   vivifyreused:                0         0.00 %  per non-reused decision
+c walked:                        1     15047.00    interval
+c   prop-warmup:           1056406   1056406.00    per warmup
+c   dec-warmup:               4189      4189.00    per warmup
+c   dummydec-w:                  0         0.00    per warmup
+c   conflicts:                7290      7290.00    per warmup
+c   warmup:                      1         1.00    per walk
+c   flips:                    4618         0.00 M  per second
+c   minimum:                  3607         0.01 %  clauses
+c   broken:               18911122      4095.09    per flip
+c   improved:                    1         1.00    per walk
+c weakened:               12673517         3.60    average size
+c   extensions:                  0         0.00    interval
+c   flipped:                     0         0.00    per weakened
+c congruence:                    2      7523.50    interval
+c    units:                      0         0.00    per congruent
+c    cong-and:                   0         0.00    per found gates
+c    cong-ite:                   0         0.00    per found gates
+c    cong-xor:              131040         0.05    per found gates
+c    congruent:             131040         0.00    per round
+c    unaries:                    0         0.00    per round
+c    rewritten:             786240   39312000.00    per round
+c    rewri.-ands:                0         0.00    per rewritten
+c    rewri.-xors:           262080        33.33%  per rewritten
+c    rewri.-ites:           524160        66.67%  per rewritten
+c    subsumed:              524160    262080.00%  per round
+c 
+c seconds are measured in process time for solving
+c 
+c --- [ glue usage ] ---------------------------------------------------------
+c 
+c focused glue 9 used 963 clauses 5.988% accumulated 51.87% tier1
+c focused glue 10 used 460 clauses 2.860% accumulated 54.73%
+c focused glue 11-15 used 3412 clauses 21.21% accumulated 75.95%
+c focused glue 16 used 886 clauses 5.509% accumulated 81.46%
+c focused glue 17 used 958 clauses 5.957% accumulated 87.41% tier2
+c 
+c stable glue 2 used 55 clauses 4.645% accumulated 5.912% tier1
+c stable glue 3 used 68 clauses 5.743% accumulated 11.65%
+c stable glue 4 used 24 clauses 2.027% accumulated 13.68%
+c stable glue 5 used 32 clauses 2.702% accumulated 16.38%
+c stable glue 6 used 20 clauses 1.689% accumulated 18.07% tier2
+c 
+c 
+c --- [ resources ] ----------------------------------------------------------
+c 
+c total process time since initialization:        60.90    seconds
+c total real time since initialization:           60.90    seconds
+c maximum resident set size of process:         2926.18    MB
+c 
+c --- [ shutting down ] ------------------------------------------------------
+c 
+c exit 0
