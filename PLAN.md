@@ -89,21 +89,21 @@ now. Nothing was deleted.
   (baseline 30), LIA cuts **35** (baseline 26), NIA UNSAT **40** (baseline 40),
   NRA degree **40** (baseline 40), and string bound **40** (baseline 8). These
   are load-sensitive local frontier measurements; they do not raise baselines.
-- The append-only head-to-head ledger currently covers **nine divisions**
-  (QF_SLIA, QF_BV, UF, QF_LIA, QF_RDL, QF_LRA, QF_UFLIA, QF_IDL, QF_NIA — the
-  [2026-08-21 gap analysis](docs/plan/gap-analysis-smt-solvers-2026-08-21.md)
-  §1.3 found the committed `QF_ABV.txt` and `QF_UF.txt` parity lists have never
-  been run). Its weak measured edges, all from the 2026-08-21 sweep at solver
-  commit `cb4a391c9`, are QF_NIA **39/83 = 47.0%**, QF_IDL
-  **66/118 = 55.9%**, QF_UFLIA **113/180 = 62.8%** (up from 94/180 after the
-  theory-core-minimisation fix, ADR-0538), QF_LRA **88/134 = 65.7%**, and
-  QF_RDL **102/148 = 68.9%**. Every credited entry has zero disagreements.
-  Read the latest entry per division, sorted by **solver commit** (not date —
-  two commits share the 2026-08-21 date) in
-  [`bench-results/PARITY.md`](bench-results/PARITY.md); never copy an older
-  entry merely because it has a higher score. `scripts/check-parity-freshness.py`
-  exits 1 as of the 2026-09-05 performance review: all nine divisions are past
-  the 14-day budget.
+- The append-only head-to-head ledger covers **all eleven committed lists**,
+  every one re-measured on 2026-09-05 at solver commit `9914a1c0e` on idle
+  fleet hosts (s5, s6, s7), zero disagreements in 2,200 files
+  ([write-up](docs/research/11-design-review/2026-09-05-parity-remeasured.md)).
+  Weak edges: QF_NIA **39/87 = 44.8%**, QF_IDL **70/123 = 56.9%**, QF_LRA
+  **91/145 = 62.8%**, QF_UFLIA **122/180 = 67.8%**, QF_RDL **107/154 = 69.5%**.
+  Against 2026-08-21, Axeyum's count rose in six of nine re-measured divisions
+  (QF_UFLIA +9, QF_RDL +5, QF_IDL +4, QF_LRA +3, UF +2, QF_BV +1, QF_LIA +1)
+  and held in three; the three ratios that fell did so because the reference
+  gained files on an idle host. QF_ABV (179/197 = 90.9%) and QF_UF
+  (162/200 = 81.0%) have first entries. Read the latest entry per division,
+  sorted by **solver commit**, in [`bench-results/PARITY.md`](bench-results/PARITY.md);
+  never copy an older entry merely because it has a higher score.
+  `scripts/check-parity-freshness.py` exits 0 (11 of 11 fresh) as of
+  2026-09-05.
 - QF_BV evidence mode decides 130 UNSAT rows: **93/130 certified (71.5%)**,
   **79/130 rechecked from serialized text alone (60.8%)**, and **93/93
   certified rows independently checked against a fresh re-parse and term
