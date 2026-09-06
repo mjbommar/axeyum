@@ -11,24 +11,116 @@
 //!
 //! The route here avoids the complex plane entirely by working with **moduli**
 //! rather than roots. Factor `q` over ℚ; for each factor `f` decide the minimal
-//! modulus of its roots by one of three routes:
+//! modulus of its roots by one of four routes:
 //!
 //! | route | applies when | the minimal modulus is |
 //! |---|---|---|
 //! | [`ModulusRoute::AllRealRoots`] | `f` has `deg f` distinct real roots (Sturm) | the smallest positive root of `g(t) = f(t)·f(−t)` |
 //! | [`ModulusRoute::ConjugatePair`] | `deg f = 2` with negative discriminant | `√(c/a)`, the root of `g(t) = t² − c/a` |
-//! | [`ModulusRoute::ReciprocalCauchy`] | otherwise | unknown; only the bound `1/(1 + maxᵢ≥₁|aᵢ/a₀|)` |
+//! | [`ModulusRoute::PairwiseResultant`] | any `f` with `f(0) ≠ 0` and `deg f ≤ 4` | the smallest positive root of `s(t²)`, `s` the square-free part of `Res_z(f(z), z^n f(t/z))` |
+//! | [`ModulusRoute::ReciprocalCauchy`] | `deg f > 4` | unknown; only the bound `1/(1 + maxᵢ≥₁|aᵢ/a₀|)` |
 //!
-//! The first two routes are **exact**: `g`'s positive real roots are exactly the
-//! moduli of `f`'s roots, so the radius of the whole function is the smallest
-//! positive root of `G = Π g`, isolated by a Sturm count. The third certifies a
-//! **lower bound** on the radius and nothing more.
+//! The first three are **exact**: `g`'s positive real roots contain the moduli
+//! of `f`'s roots and its *smallest* positive real root is the smallest of them,
+//! so the radius of the whole function is the smallest positive root of
+//! `G = Π g`, isolated by a Sturm count. The fourth certifies a **lower bound**
+//! on the radius and nothing more.
 //!
-//! Nothing here needs the factors to be irreducible. Irreducibility is what
-//! makes the routes *apply* often; it is not what makes the certificate sound.
-//! [`RadiusCertificate::verify`] re-multiplies the factorization, re-derives
-//! every per-factor bound from the factor's own coefficients, and recomputes the
-//! minimum — it never consults how the answer was found.
+//! The first two are kept because they are far cheaper, not because the third
+//! misses anything they catch: [`ModulusRoute::PairwiseResultant`] applies to
+//! every factor the other two do. The routes are tried cheapest first.
+//!
+//! # The theorem behind the pairwise-product route
+//!
+//! > **Theorem.** Let `f ∈ ℝ[z]` have degree `n ≥ 1`, leading coefficient `aₙ`,
+//! > constant term `a₀ ≠ 0`, and complex roots `r₁, …, rₙ` with multiplicity.
+//! > Put
+//! >
+//! > ```text
+//! > g(t) = Res_z( f(z), zⁿ·f(t/z) ).
+//! > ```
+//! >
+//! > Then `g(t) = aₙ^{2n} · Π_{i,j} (t − rᵢrⱼ)`, it has degree `n²`, `g(0) ≠ 0`,
+//! > and **its smallest positive real root is `minᵢ |rᵢ|²`.**
+//!
+//! *Proof.* Write `h_t(z) = zⁿ f(t/z) = Σₖ aₖ tᵏ z^{n−k}`. Its leading
+//! coefficient in `z` is `a₀ ≠ 0`, so `deg_z h_t = n` and the resultant is the
+//! determinant of a `2n × 2n` Sylvester matrix. Evaluating `h_t` at a root of
+//! `f`,
+//!
+//! ```text
+//! h_t(rᵢ) = rᵢⁿ · f(t/rᵢ) = rᵢⁿ · aₙ Πⱼ (t/rᵢ − rⱼ) = aₙ Πⱼ (t − rᵢ rⱼ),
+//! ```
+//!
+//! and `Res_z(f, h_t) = aₙ^{deg h} Πᵢ h_t(rᵢ)` gives the product form. Since no
+//! `rᵢ` is zero, `g(0) = (−1)ⁿ a₀^{2n} ≠ 0`.
+//!
+//! Now let `m = minᵢ |rᵢ| > 0`. Two halves:
+//!
+//! 1. **No root of `g` has modulus below `m²`.** Every root is some `rᵢ rⱼ`, and
+//!    `|rᵢ rⱼ| = |rᵢ|·|rⱼ| ≥ m·m`. A *positive real* root `t` is its own
+//!    modulus, so `t ≥ m²`.
+//! 2. **`m²` is a root of `g`.** This is where `f` being **real** is used: its
+//!    roots are closed under conjugation, so for an index `i` attaining `m`
+//!    there is a `j` with `rⱼ = r̄ᵢ` (`j = i` when `rᵢ` is real), and
+//!    `rᵢ rⱼ = rᵢ r̄ᵢ = |rᵢ|² = m²`, which is positive and real.
+//!
+//! Together, `m²` is a positive real root and none is smaller. ∎
+//!
+//! Two consequences worth stating because they are what make the certificate
+//! small and the checking cheap:
+//!
+//! - **Spurious products need no filtering.** `g` does have positive real roots
+//!   that are not moduli — `f = (z−1)(z−4)` gives the root `4 = 1·4` where the
+//!   moduli squared are `1` and `16`. Part 1 of the proof says such a root can
+//!   only sit *above* `m²`, never below it, so taking the smallest positive root
+//!   is already correct. The certificate therefore records no rejected roots and
+//!   no per-root resultant evaluations: there is nothing to reject.
+//!   `a_spurious_pairwise_product_is_never_the_smallest_positive_root` pins that
+//!   example, and `forged_spurious_pairwise_product_claimed_as_the_radius_is_refused`
+//!   pins that *claiming* the spurious root is caught by the Sturm count.
+//! - **The square-free part is taken before the substitution.** The root *set*
+//!   is what the theorem is about, so dropping multiplicity is free — and it is
+//!   not cosmetic: for `Φ₅` it takes `g = (t−1)⁴·Φ₅(t)³` of degree 16 down to
+//!   `t⁵ − 1`, so the Sturm chain runs at degree 10 rather than 32.
+//!
+//! Finally, `s(t²)` for the square-free `s` turns the squared moduli back into
+//! moduli: `t ↦ t²` is an order isomorphism of the positive reals, so the
+//! smallest positive root of `s(t²)` is `√(m²) = m`.
+//!
+//! ## What the certificate makes falsifiable
+//!
+//! [`FactorModulusBound::verify`] re-derives the resultant from the factor's own
+//! coefficients — it rebuilds the Sylvester matrix, recomputes the determinant,
+//! retakes the square-free part, resubstitutes, and compares — and then re-runs
+//! the Sturm count that the lower bound rests on.
+//!
+//! The determinant itself comes from `axeyum_ir::poly_big::big_determinant`
+//! (exact evaluation–interpolation over `BigRational`). Because a re-derivation
+//! that reuses the same primitive cannot catch that primitive being wrong, the
+//! producer *and* the verifier both check two exact consequences of the product
+//! form that are not how the determinant is computed:
+//!
+//! - `deg g = n²`;
+//! - the monic `g` has `g(0) = Πᵢⱼ(−rᵢrⱼ) = (−1)ⁿ (a₀/aₙ)^{2n}`, using
+//!   `Πᵢ rᵢ = (−1)ⁿ a₀/aₙ`.
+//!
+//! A mismatch **declines** rather than answering. Both checks live in
+//! `accept_pairwise_resultant`, which takes the determinant as an argument
+//! precisely so a test can hand it a corrupted one — a guard whose only input is
+//! a value no test can perturb is a guard no test can kill.
+//!
+//! ## When the lower-bound label still appears
+//!
+//! Only above `MAX_RESULTANT_FACTOR_DEGREE`. The modulus polynomial has degree
+//! `2n²` in the factor's degree, and the Sturm chain that isolates its smallest
+//! positive root costs superlinearly in that; the cap is a **cost** policy, not
+//! a mathematical boundary. So `Φ₅` (degree 4) is now exactly 1 and `Φ₇`
+//! (degree 6) keeps the bound `1/2`, and the reason recorded is the degree.
+//!
+//! The route also declines — never answers wrongly — when the determinant fails
+//! either self-check above, or when the reused factorizer cannot take the
+//! denominator to ℚ-factors at all.
 //!
 //! # What carries what label
 //!
@@ -39,15 +131,52 @@
 //! - [`coefficient_asymptotics`] is **`asymptotic-verified-at-finite-n`**, never
 //!   *certified*. See its documentation for exactly what is and is not claimed.
 //!
+//! # What is still out of reach
+//!
+//! - **Denominator factors above `MAX_RESULTANT_FACTOR_DEGREE`.** A cost cap,
+//!   not a gap in the mathematics: the theorem applies at every degree, and
+//!   raising the cap is a measurement question about the Sturm chain at degree
+//!   `2n²`.
+//! - **Transcendental singularities.** Everything here is about a *rational*
+//!   generating function, whose singularities are poles at the denominator's
+//!   zeros. `1/(1 − eˣ)`, `Γ`-type growth, and any series whose nearest
+//!   singularity is a branch point or an essential one are outside the whole
+//!   construction — there is no denominator to factor.
+//! - **Multivariate series.** `crate::fps` is univariate, so a diagonal or a
+//!   bivariate generating function has no radius here at all; the analogue is a
+//!   domain of convergence, and the modulus construction does not lift to it
+//!   unchanged.
+//! - **An exact constant `C`.** The radius is pinned exactly; the amplitude in
+//!   `a(n) ≈ C·nᵏ·ρ⁻ⁿ` is still only sampled, and
+//!   [`CoefficientAsymptotics`] is labelled accordingly.
+//!
 //! # Reuse
 //!
-//! `crate::factor_int::factor_univariate_over_q` factors the denominator and
+//! `crate::factor_int::factor_univariate_over_q` factors the denominator;
 //! [`crate::sturm::count_real_roots_in`] / [`crate::sturm::isolate_real_roots`]
-//! supply every root count. Both work over the machine-width
-//! `axeyum_ir::Rational`, so a polynomial whose coefficients leave `i128`
-//! declines rather than guessing. The polynomial arithmetic below is over
-//! [`BigRational`] because `crate::fps` is, and because the modulus polynomial
-//! `f(t)·f(−t)` squares the coefficient size before Sturm ever sees it.
+//! answer every root count they can hold; and
+//! `axeyum_ir::poly_big::big_determinant` computes the Sylvester determinant
+//! behind [`ModulusRoute::PairwiseResultant`] by exact
+//! evaluation–interpolation over [`BigRational`].
+//!
+//! The Sylvester *matrix* is the one thing rebuilt rather than reused: the
+//! `axeyum-ir` builder for the machine width takes `i128` coefficients and the
+//! `BigRational` one is private to that crate, so the ten lines are restated
+//! here in the same convention.
+//!
+//! There is also a second Sturm width. `crate::sturm` works over the
+//! machine-width `axeyum_ir::Rational` and declines rather than guessing when a
+//! coefficient leaves `i128` — which the degree-`2n²` modulus polynomials of the
+//! new route do on the second or third remainder of the chain. `RootCounter`
+//! therefore tries that reuse first and falls back to a Sturm chain over
+//! [`BigRational`], with every member positive-scaled to a primitive integer
+//! polynomial so the coefficients do not double at each Euclidean step. The two
+//! widths are held to agree by `bignum_and_machine_sturm_counts_agree` over the
+//! polynomials both can take.
+//!
+//! The polynomial arithmetic below is over [`BigRational`] because `crate::fps`
+//! is, and because every modulus polynomial squares the coefficient size before
+//! Sturm ever sees it.
 
 use axeyum_ir::Rational;
 use num_bigint::BigInt;
@@ -384,9 +513,6 @@ pub enum AnalyticDecline {
     FactorizationDeclined,
     /// A reused Sturm root count declined.
     SturmDeclined,
-    /// The pairwise-product resultant failed its own degree / constant-term
-    /// self-check, so the route refused to answer rather than trust it.
-    ResultantDeclined,
     /// Isolating the smallest positive root of the modulus polynomial did not
     /// converge within the iteration cap.
     IsolationDeclined,
@@ -426,9 +552,6 @@ impl core::fmt::Display for AnalyticDecline {
             AnalyticDecline::SingularAtZero => write!(f, "the denominator vanishes at the origin"),
             AnalyticDecline::FactorizationDeclined => write!(f, "the factorizer declined"),
             AnalyticDecline::SturmDeclined => write!(f, "a Sturm root count declined"),
-            AnalyticDecline::ResultantDeclined => {
-                write!(f, "the pairwise-product resultant failed its self-check")
-            }
             AnalyticDecline::IsolationDeclined => write!(f, "root isolation did not converge"),
             AnalyticDecline::CertificateRefused(inner) => {
                 write!(f, "the producer's own checker refused: {inner}")
@@ -849,28 +972,22 @@ impl RootCounter {
             RootCounter::Machine { machine, poly } => {
                 let narrowed = Rational::from_big_rational(lower)
                     .zip(Rational::from_big_rational(upper))
-                    .and_then(|(low, high)| {
-                        crate::sturm::count_real_roots_in(machine, low, high)
-                    });
+                    .and_then(|(low, high)| crate::sturm::count_real_roots_in(machine, low, high));
                 match narrowed {
                     Some(count) => Some(count),
                     // The `i128` chain overflowed. The same count at full width
                     // is still available, at the cost of rebuilding the chain.
-                    None => Self::count_big(&sturm_chain_big(poly)?, lower, upper),
+                    None => Some(Self::count_big(&sturm_chain_big(poly)?, lower, upper)),
                 }
             }
-            RootCounter::Big(chain) => Self::count_big(chain, lower, upper),
+            RootCounter::Big(chain) => Some(Self::count_big(chain, lower, upper)),
         }
     }
 
-    fn count_big(
-        chain: &[Vec<BigRational>],
-        lower: &BigRational,
-        upper: &BigRational,
-    ) -> Option<usize> {
+    fn count_big(chain: &[Vec<BigRational>], lower: &BigRational, upper: &BigRational) -> usize {
         let at_lower = sign_variations_big(chain, lower);
         let at_upper = sign_variations_big(chain, upper);
-        Some(at_lower.saturating_sub(at_upper))
+        at_lower.saturating_sub(at_upper)
     }
 }
 
@@ -1021,7 +1138,7 @@ fn pairwise_product_resultant(factor: &[BigRational]) -> Option<Vec<BigRational>
     accept_pairwise_resultant(&factor, &determinant)
 }
 
-/// The two identities of [`pairwise_product_resultant`], applied to a candidate
+/// The two identities of `pairwise_product_resultant`, applied to a candidate
 /// determinant: `deg g = n²`, and the monic `g` has
 /// `g(0) = (−1)ⁿ (a₀/aₙ)^{2n}`. `Some(monic g)` when both hold, `None` otherwise.
 ///
@@ -1054,7 +1171,7 @@ fn accept_pairwise_resultant(
 }
 
 /// The modulus polynomial [`ModulusRoute::PairwiseResultant`] defines for
-/// `factor`: the square-free part of [`pairwise_product_resultant`], with `t`
+/// `factor`: the square-free part of `pairwise_product_resultant`, with `t`
 /// substituted by `t²`, made monic.
 ///
 /// Its smallest positive real root is the smallest modulus of a root of
@@ -1091,7 +1208,7 @@ pub enum ModulusRoute {
     /// real-roots-only route is simply wrong.
     ConjugatePair,
     /// Any factor with `f(0) ≠ 0` and degree at most
-    /// [`MAX_RESULTANT_FACTOR_DEGREE`], including one whose roots are complex
+    /// `MAX_RESULTANT_FACTOR_DEGREE`, including one whose roots are complex
     /// and irrational and whose degree is odd. The modulus polynomial is the
     /// square-free part of `g(t) = Res_z(f(z), zⁿ f(t/z))` — whose roots are
     /// every pairwise product `rᵢrⱼ` — with `t` substituted by `t²`. Its
@@ -1430,8 +1547,7 @@ impl RadiusCertificate {
                 }
                 // Exactly one root of `G` in `(0, value]` makes `value` the
                 // smallest positive root, hence the smallest modulus.
-                let counter =
-                    RootCounter::new(&global).ok_or(AnalyticError::SturmDeclined)?;
+                let counter = RootCounter::new(&global).ok_or(AnalyticError::SturmDeclined)?;
                 let count = counter
                     .count(&zero(), value)
                     .ok_or(AnalyticError::SturmDeclined)?;
@@ -1703,18 +1819,16 @@ fn factor_modulus_bound(
     if degree <= MAX_RESULTANT_FACTOR_DEGREE
         && let Some(modulus_polynomial) = resultant_modulus_polynomial(&factor)
     {
-        let lower = fallback.clone();
-        let below = count_roots_in(&modulus_polynomial, &zero(), &lower)
-            .ok_or(AnalyticDecline::SturmDeclined)?;
-        if below != 0 {
-            return Err(AnalyticDecline::ResultantDeclined);
-        }
+        // The `lower` bound is NOT re-checked here. `radius_of_convergence`
+        // runs `RadiusCertificate::verify` over what this returns, and that
+        // re-runs the Sturm count on exactly this polynomial and this bound —
+        // so a producer-side copy would be a guard no test could ever kill.
         return Ok(FactorModulusBound {
             factor,
             multiplicity,
             route: ModulusRoute::PairwiseResultant,
             modulus_polynomial,
-            lower,
+            lower: fallback,
         });
     }
 
@@ -2157,9 +2271,9 @@ pub fn coefficient_asymptotics(
 mod tests {
     use super::{
         AlgebraicRadius, AnalyticDecline, AnalyticError, FactorModulusBound, ModulusRoute,
-        RadiusCertificate, RadiusOfConvergence, accept_pairwise_resultant,
-        coefficient_asymptotics, count_roots_in, pairwise_product_resultant, poly_trim,
-        radius_of_convergence, resultant_modulus_polynomial,
+        RadiusCertificate, RadiusOfConvergence, accept_pairwise_resultant, coefficient_asymptotics,
+        count_roots_in, pairwise_product_resultant, poly_trim, radius_of_convergence,
+        resultant_modulus_polynomial,
     };
     use axeyum_ir::Rational;
     use num_bigint::BigInt;
@@ -2374,10 +2488,7 @@ mod tests {
         let certificate =
             radius_of_convergence(&rats(&[1]), &rats(&[1, 1, 1, 1, 1, 1, 1])).unwrap();
         assert_eq!(certificate.factors.len(), 1);
-        assert_eq!(
-            certificate.factors[0].route,
-            ModulusRoute::ReciprocalCauchy
-        );
+        assert_eq!(certificate.factors[0].route, ModulusRoute::ReciprocalCauchy);
         assert_eq!(certificate.radius, RadiusOfConvergence::LowerBound(q(1, 2)));
         assert!(certificate.radius.bracket().is_none());
         assert_eq!(certificate.verify(), Ok(()));
@@ -2525,7 +2636,15 @@ mod tests {
             rats(&[-6, 11, -6, 1]),
             rats(&[1, 1, 1, 1, 1]),
         ];
-        let points = [q(0, 1), q(1, 4), q(1, 3), q(1, 2), q(1, 1), q(3, 2), q(5, 1)];
+        let points = [
+            q(0, 1),
+            q(1, 4),
+            q(1, 3),
+            q(1, 2),
+            q(1, 1),
+            q(3, 2),
+            q(5, 1),
+        ];
         let mut compared = 0usize;
         for polynomial in &polynomials {
             let machine: Vec<Rational> = polynomial
@@ -2541,7 +2660,7 @@ mod tests {
                     Rational::from_big_rational(high).unwrap(),
                 )
                 .unwrap();
-                let found = super::RootCounter::count_big(&chain, low, high).unwrap();
+                let found = super::RootCounter::count_big(&chain, low, high);
                 assert_eq!(found, expected, "{polynomial:?} on ({low}, {high}]");
                 compared += 1;
             }
@@ -2856,8 +2975,7 @@ mod tests {
         // a(n) = a(n−1) + a(n−3) grows like C·ρ⁻ⁿ with ρ the real root of
         // x³ + x − 1. Wave two could not run this at all: the radius was only
         // bounded, and `coefficient_asymptotics` refuses a bounded radius.
-        let certificate =
-            coefficient_asymptotics(&rats(&[1]), &rats(&[1, -1, 0, -1]), 20).unwrap();
+        let certificate = coefficient_asymptotics(&rats(&[1]), &rats(&[1, -1, 0, -1]), 20).unwrap();
         assert_eq!(certificate.exponent, 0);
         assert_eq!(
             certificate.radius.factors[0].route,
