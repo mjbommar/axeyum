@@ -15,18 +15,38 @@
 //!
 //! # What is implemented here today
 //!
-//! [`Dyadic`]; the radix types ([`Radix`], [`RadixCertificate`], [`MixedRadix`],
-//! [`MixedRadixCertificate`]); and, since migration slice 2,
-//! [`ModularRing`]/[`PlainModRing`] and [`PowModCertificate`]. Everything else
-//! in this file is a **signature sketch**: traits with no bodies, and
-//! certificate structs whose `verify` is `todo!()`. That is deliberate — the
-//! sketch is what makes the design compile-checked without pre-empting the
-//! migration lanes that will implement it against the copies they replace.
+//! **Everything the crate declares.** There is no signature sketch left: every
+//! trait in this file has at least one implementation, every certificate has a
+//! `verify` that re-derives its claim, and there is no `todo!()`.
+//!
+//! - [`Dyadic`] — exact `mantissa · 2^exponent`, five rounding directions,
+//!   relative rounding ([`Dyadic::round`]) and absolute-grid rounding
+//!   ([`Dyadic::round_at_exponent`], migration slice 1), with `round_outward` as
+//!   the only interval-facing entry.
+//! - [`Radix`]/[`RadixCertificate`] and [`MixedRadix`]/[`MixedRadixCertificate`]
+//!   — certified positional notation in any base `b ≥ 2`.
+//! - [`ModularRing`]/[`PlainModRing`] and [`PowModCertificate`] (slice 2) —
+//!   modular arithmetic whose exponentiation hands back the square-and-multiply
+//!   chain instead of the power.
+//! - [`upoly`] — [`ZPoly`] and [`QPoly`], which implement [`UnivariatePoly`]
+//!   (and, for ℤ, [`FractionFree`]); [`PolyBezoutCertificate`],
+//!   [`PolyGcdCertificate`], [`BezoutCertificate`], [`SturmChain`] and
+//!   [`SturmCertificate`]; real-root isolation.
+//! - [`rational`] — [`RawRational`], the unreduced carrier that runs no gcd,
+//!   with [`Normalize`] and a [`NormalizationReceipt`] whose `verify`
+//!   re-derives the reduction.
+//! - [`hensel`] — [`HenselRoot`]/[`HenselLift`] and [`lift_root`], quadratic
+//!   `p`-adic lifting of a simple root with a chain certificate.
+//! - [`AlgebraicNumber`], implemented by `axeyum_ir::RealAlgebraic` and
+//!   `axeyum_ir::poly_big::BigAlgebraic`; the trait lives here and the two
+//!   carriers stay where they are, which is the design note's §5 answer to its
+//!   own second open question.
 //!
 //! # Two standing rules
 //!
-//! - **No C or C++ dependency, and the crate builds for `wasm32`.** The only
-//!   dependencies are `num-bigint` and `num-rational`, both pure Rust.
+//! - **No C or C++ dependency, and the crate builds for `wasm32`.** Every
+//!   dependency is pure Rust, and this crate is the workspace's single naming
+//!   point for them (see [`big`]).
 //! - **An operation that a caller could re-derive returns a certificate that
 //!   the caller can re-derive.** [`RadixCertificate::verify`] is the worked
 //!   example: it evaluates the digits in the base and compares, using nothing
@@ -37,8 +57,13 @@ use core::cmp::Ordering;
 use num_bigint::{BigInt, BigUint, Sign};
 use num_rational::BigRational;
 
+pub mod big;
+pub mod hensel;
+pub mod rational;
 pub mod upoly;
 
+pub use hensel::{HenselCertificate, HenselRoot, MAX_LIFT_STEPS, lift_root};
+pub use rational::{NormalizationReceipt, RawRational};
 pub use upoly::{
     DEFAULT_ISOLATION_STEPS, PolyBezoutCertificate, PolyGcdCertificate, QPoly, SturmChain, ZPoly,
     count_real_roots, count_real_roots_in, evaluate_slice, extended_gcd, isolate_real_roots,
@@ -810,7 +835,10 @@ impl MixedRadixCertificate {
 }
 
 // ---------------------------------------------------------------------------
-// Signature sketch: everything below has no implementation in this crate yet
+// The interface traits. Every one of them has an implementation: `Normalize`
+// in `rational.rs`, `UnivariatePoly`/`FractionFree` in `upoly.rs`,
+// `ModularRing` below, `HenselLift` in `hensel.rs`, and `AlgebraicNumber` in
+// `axeyum-ir` (`real_algebraic.rs` and `poly_big.rs`).
 // ---------------------------------------------------------------------------
 
 /// The normalization policy for a value that can be kept unreduced.
@@ -825,6 +853,10 @@ impl MixedRadixCertificate {
 ///
 /// [`Normalize::normalize`] returns a receipt so that "was this normalized?"
 /// is a measurement rather than an assumption.
+///
+/// [`RawRational`] is the implementation, and
+/// [`NormalizationReceipt::verify`] is what makes the receipt a checker rather
+/// than a log line.
 pub trait Normalize {
     /// What [`Normalize::normalize`] reports about the work it did.
     type Receipt;
@@ -834,21 +866,6 @@ pub trait Normalize {
 
     /// Whether the value is already in normal form.
     fn is_normalized(&self) -> bool;
-}
-
-/// What a [`Normalize::normalize`] call on a rational did.
-///
-/// Recorded rather than discarded because the whole argument for on-demand
-/// normalization is that the gcds are rare; a receipt is how a benchmark
-/// finds out whether they are.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct NormalizationReceipt {
-    /// The gcd that was divided out (one when the value was already reduced).
-    pub common_factor: BigUint,
-    /// Bits in the numerator before the reduction.
-    pub numerator_bits_before: u64,
-    /// Bits in the numerator after the reduction.
-    pub numerator_bits_after: u64,
 }
 
 /// A univariate polynomial over an exact commutative ring.
@@ -1168,6 +1185,9 @@ impl PowModCertificate {
 }
 
 /// Hensel lifting: a root modulo `p^k` refined to a root modulo `p^(2k)`.
+///
+/// [`HenselRoot`] is the implementation, and [`lift_root`] drives it all the
+/// way from a seed root modulo `p` to a certificate a checker can re-derive.
 pub trait HenselLift: Sized {
     /// Lift `self`, a solution modulo `prime^precision`, to modulo
     /// `prime^(2·precision)`.
@@ -1176,18 +1196,33 @@ pub trait HenselLift: Sized {
 
 /// A real algebraic number: a defining polynomial plus an isolating interval.
 ///
-/// `axeyum-ir`'s `RealAlgebraic` and `axeyum-cas`'s `real_algebraic` are the
-/// two existing carriers. Whether this type lives here or stays in the CAS is
-/// the first of the three questions the design note leaves open.
+/// `axeyum-ir`'s `RealAlgebraic` and `poly_big::BigAlgebraic` are the two
+/// existing carriers and both implement this trait; whether the *struct* moves
+/// here is the second of the three questions the design note leaves open, and
+/// this trait is the answer that does not require a public IR change.
+///
+/// **Two deviations from the design note's sketch, both forced by the
+/// carriers.** `refine` returns a `bool` rather than nothing: a carrier whose
+/// endpoints are machine-width (`axeyum_ir::Rational` is `i128`-backed) can
+/// run out of room, and a silent failure to refine would make `enclosure`'s
+/// width a claim nobody checks. `enclosure` returns an `Option`: converting an
+/// endpoint to a [`Dyadic`] declines past [`MAX_EXPONENT`], and the crate's
+/// standing rule is that an operation which cannot answer says so rather than
+/// rounding.
 pub trait AlgebraicNumber {
-    /// The sign of the number: negative, zero or positive.
+    /// The sign of the number: [`Ordering::Less`] for negative,
+    /// [`Ordering::Equal`] for zero, [`Ordering::Greater`] for positive.
     fn sign(&self) -> Ordering;
 
-    /// Refine the isolating interval until it is narrower than `2^-bits`.
-    fn refine(&mut self, bits: u64);
+    /// Refine the isolating interval until it is narrower than `2^-bits`,
+    /// returning whether that width was actually reached.
+    fn refine(&mut self, bits: u64) -> bool;
 
-    /// A dyadic enclosure of the number at the current refinement.
-    fn enclosure(&self) -> (Dyadic, Dyadic);
+    /// A dyadic enclosure of the number at the current refinement, or `None`
+    /// when an endpoint is not representable as a [`Dyadic`].
+    ///
+    /// The enclosure is **outward**: the returned pair contains the number.
+    fn enclosure(&self) -> Option<(Dyadic, Dyadic)>;
 }
 
 #[cfg(test)]

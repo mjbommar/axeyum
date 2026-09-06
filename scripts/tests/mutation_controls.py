@@ -8338,6 +8338,129 @@ SUITES["cas-fps-amplitude"] = (
     ],
 )
 
+# ---------------------------------------------------------------------------
+# ADR-1710 lane `arith-finish`: the three families this lane added.
+#
+# Kept as one appended block, separate from everything above, because a
+# sibling lane was registering slice 2's mutants in this same file at the same
+# time and two lanes appending to one Python file is the conflict shape
+# `lane-merge-additive.py` exists for.
+# ---------------------------------------------------------------------------
+
+SUITES["arith-normalization-receipt"] = (
+    "crates/axeyum-arith/src/rational.rs",
+    Cargo(("-p", "axeyum-arith", "--lib", "rational::"), "arith-normalization-receipt"),
+    [
+        (
+            "there was a rational to reduce (the pre-reduction denominator is nonzero)",
+            "        if self.denominator_before.sign() == Sign::NoSign {\n            return false;\n        }",
+            "        if false {\n            return false;\n        }",
+        ),
+        (
+            # The sign half of the policy: -3/-4 reducing to 3/-4 satisfies
+            # every other guard and denotes the same number, but is not the
+            # normal form this crate promises.
+            "the reduced denominator is strictly positive",
+            "        if self.denominator_after.sign() != Sign::Plus {\n            return false;\n        }",
+            "        if false {\n            return false;\n        }",
+        ),
+        (
+            "the two multiplications re-derive the pre-reduction pair",
+            "        if !(positive || negative) {\n            return false;\n        }",
+            "        let _ = (positive, negative);\n        if false {\n            return false;\n        }",
+        ),
+        (
+            # The product guard passes for ANY common divisor, so this is the
+            # guard that pins the value rather than merely a divisor of it.
+            "the reduced pair is coprime, so the whole gcd was divided out",
+            "        if binary_gcd(\n            self.numerator_after.magnitude(),\n            self.denominator_after.magnitude(),\n        ) != BigUint::from(1u8)\n        {\n            return false;\n        }",
+            "        if false\n        {\n            return false;\n        }",
+        ),
+        (
+            # The receipt is read by a benchmark; a bit count nobody checks is
+            # a measurement nobody can trust.
+            "the recorded bit counts are the recorded numerators' bit counts",
+            "        self.numerator_bits_before == self.numerator_before.magnitude().bits()\n            && self.numerator_bits_after == self.numerator_after.magnitude().bits()",
+            "        true",
+        ),
+    ],
+)
+
+
+SUITES["arith-hensel-lift"] = (
+    "crates/axeyum-arith/src/hensel.rs",
+    Cargo(("-p", "axeyum-arith", "--lib", "hensel::"), "arith-hensel-lift"),
+    [
+        (
+            "the prime is at least two and the precision at least one",
+            "        if self.prime < BigUint::from(2u8) || self.precision == 0 {\n            return false;\n        }",
+            "        if false {\n            return false;\n        }",
+        ),
+        (
+            # A chain padded with a duplicate of its own last rung is made
+            # entirely of true roots, so only the length guard rejects it.
+            "the chain has exactly one rung per doubling step",
+            "        if self.chain.len() != steps.len() {\n            return false;\n        }",
+            "        if false {\n            return false;\n        }",
+        ),
+        (
+            # Hensel's uniqueness is a theorem about this hypothesis; without
+            # it the certificate claims much less than it looks like it does.
+            "the seed is a SIMPLE root: f'(a_1) is invertible mod p",
+            "        if invert_mod(&slope, &self.prime).is_none() {\n            return false;\n        }",
+            "        if false {\n            return false;\n        }",
+        ),
+        (
+            "every rung is a root at its own precision",
+            "            if value.bits() != 0 {\n                return false;\n            }",
+            "            let _ = &value;\n            if false {\n                return false;\n            }",
+        ),
+        (
+            # Without this, a sequence that jumps between two DIFFERENT roots
+            # of the same polynomial passes: every rung is a genuine root.
+            "each rung lifts the previous one rather than being an unrelated root",
+            "            if let Some((previous_rung, previous_modulus)) = &previous\n                && rung % previous_modulus != previous_rung % previous_modulus\n            {\n                return false;\n            }",
+            "            if false\n            {\n                return false;\n            }",
+        ),
+        (
+            "the final rung is the claimed root, reduced",
+            "        self.chain.last() == Some(&self.root) && self.root < final_modulus",
+            "        let _ = &final_modulus;\n        true",
+        ),
+    ],
+)
+
+
+SUITES["arith-boundary-gate"] = (
+    "scripts/check-arith-boundary.sh",
+    Unittest("scripts.tests.test_check_arith_boundary"),
+    [
+        (
+            "a Rust source outside axeyum-arith naming the upstream crate is a violation",
+            '  code_hits+=("$path")',
+            "  :",
+        ),
+        (
+            "a manifest outside axeyum-arith declaring one of the four crates is a violation",
+            '    manifest_hits+=("$path")',
+            "    :",
+        ),
+        (
+            # A stale exception is a hole nobody can see, so the gate has to
+            # fail in the other direction too.
+            "a stale allowlist entry fails the gate",
+            "if [[ $stale -gt 0 ]]; then\n  status=1\nfi",
+            "if false; then\n  status=1\nfi",
+        ),
+        (
+            "an unallowed violation actually sets the exit status",
+            "if [[ $violations -gt 0 ]]; then",
+            "if false && [[ $violations -gt 0 ]]; then",
+        ),
+    ],
+)
+
+
 if __name__ == "__main__":
     raise SystemExit(main(sys.argv))
 

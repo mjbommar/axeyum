@@ -12,8 +12,8 @@
 
 use std::cmp::Ordering;
 
+use axeyum_arith::big::BigInt;
 use axeyum_ir::{Rational, RealAlgebraic, Sign};
-use num_bigint::BigInt;
 
 /// `RealAlgebraic` from an LSB-first integer poly and an integer-endpoint bracket.
 fn ra(poly: Vec<i128>, lo: i128, hi: i128) -> RealAlgebraic {

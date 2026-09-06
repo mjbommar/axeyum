@@ -6,10 +6,10 @@
 //! Same soundness rationale as the `i128`/`Rational` differential test: the
 //! determinant IS the resultant polynomial; the two routes must agree exactly.
 
+use axeyum_arith::big::BigInt;
+use axeyum_arith::big::BigRational;
+use axeyum_arith::big::Zero;
 use axeyum_ir::poly_big::{big_determinant, big_determinant_leibniz};
-use num_bigint::BigInt;
-use num_rational::BigRational;
-use num_traits::Zero;
 
 struct Rng(u64);
 

@@ -12,8 +12,9 @@ categories.workspace = true
 publish = false
 
 [dependencies]
+# The workspace's single naming point for the bignum types (ADR-1710).
+axeyum-arith.workspace = true
 axeyum-ir.workspace = true
-num-bigint.workspace = true
 
 [lints]
 workspace = true

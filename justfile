@@ -409,6 +409,11 @@ facts:
     # carries a certificate at all.
     python3 scripts/check-cas-trust-registry.py --report
     python3 -m unittest scripts.tests.test_check_cas_trust_registry
+    # ADR-1710: `axeyum-arith` is the workspace's single naming point for
+    # num-bigint / num-rational / num-integer / num-traits. The allowlist
+    # fails when it goes stale, so an exception cannot outlive its reason.
+    scripts/check-arith-boundary.sh
+    python3 -m unittest scripts.tests.test_check_arith_boundary
     python3 -m unittest scripts.tests.test_settled_fact_statements
     python3 -m unittest scripts.tests.test_check_draw7_frozen_families
     python3 scripts/check-settled-fact-statements.py

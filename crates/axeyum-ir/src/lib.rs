@@ -30,6 +30,7 @@
 //! # Ok::<(), axeyum_ir::IrError>(())
 //! ```
 
+mod algebraic_bridge;
 mod arena;
 mod bits;
 mod error;
