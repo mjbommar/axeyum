@@ -146,6 +146,46 @@ pub trait TheorySolver {
     fn take_new_atoms(&mut self) -> usize {
         0
     }
+
+    /// The theory's own engine counters, when it keeps any (S4).
+    ///
+    /// **Diagnostic only — nothing in the search branches on these.** They exist
+    /// because "does the feasibility engine warm-start between final checks?"
+    /// and "does this theory propagate anything at all?" are questions a source
+    /// reading answers badly and a counter answers exactly; the S4 warm-start
+    /// and implied-bound work is scored on them. The default is `None`, so a
+    /// theory that keeps no engine reports nothing rather than zero.
+    fn engine_counters(&self) -> Option<TheoryEngineCounters> {
+        None
+    }
+}
+
+/// Diagnostic counters a theory with a feasibility engine can expose to the
+/// driver (S4). Every field is a monotone lifetime total, so a per-call figure
+/// is a difference, and `0` means "this happened zero times" — never "not
+/// measured", which is what the `Option` around the whole struct says.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct TheoryEngineCounters {
+    /// Simplex pivots performed across the theory's whole life.
+    pub simplex_pivots: u64,
+    /// Completed feasibility checks (`simplex::Incremental::check` calls).
+    pub simplex_checks: u64,
+    /// Checks that discarded the basis and restarted from the pristine one —
+    /// the direct measurement of how often the engine was *not* warm.
+    pub simplex_cold_restarts: u64,
+    /// Rows the bound-stack reconciliation retracted, summed over every check.
+    /// With a persistent basis this is far below `simplex_checks × rows`.
+    pub bound_retractions: u64,
+    /// Rows the bound-stack reconciliation (re-)asserted, summed over every
+    /// check.
+    pub bound_assertions: u64,
+    /// Literals the theory offered to the driver's propagation queue.
+    pub propagations: u64,
+    /// Rows of the theory's dense tableau. With `simplex_columns` this prices
+    /// one pivot: `O(rows × columns)` exact-rational operations.
+    pub simplex_rows: u64,
+    /// Columns of the theory's dense tableau (problem variables + rows).
+    pub simplex_columns: u64,
 }
 
 /// An opaque, theory-owned handle to an explanation the theory has **not**
