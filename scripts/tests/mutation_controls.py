@@ -7651,7 +7651,6 @@ SUITES["arith-upoly-certificates"] = (
 )
 
 
-<<<<<<< HEAD
 # --------------------------------------------------------------------------
 # `cas-atom-key` -- the canonical form a transcendental atom is keyed on
 # (`crates/axeyum-cas/src/lib.rs`, `atom_argument_canonical_key`).
@@ -7741,7 +7740,10 @@ SUITES["cas-atom-key"] = (
             "        Some(witness) if witness.mentions_uncanonical_atom() => ZeroTest::Unknown,",
             "",
         ),
-=======
+    ],
+)
+
+
 
 
 # Item 5 wave five (`docs/math-department/13-computer-algebra.md`): matrix
@@ -7874,13 +7876,10 @@ SUITES["cas-matgroup-q"] = (
             "                if u128::try_from(distinct).unwrap_or(u128::MAX) <= *reduced_order {",
             "                if u128::try_from(distinct).unwrap_or(u128::MAX) < *reduced_order {",
         ),
->>>>>>> worktree-agent-acbd7818c9ec87a06
     ],
 )
 
 
-<<<<<<< HEAD
-=======
 # Item 5 wave five: character tables. Each mutation removes one check from
 # `CharacterTableCertificate::verify` or one bound from the abelian producer.
 #
@@ -7977,7 +7976,6 @@ SUITES["cas-chartable"] = (
     ],
 )
 
->>>>>>> worktree-agent-acbd7818c9ec87a06
 if __name__ == "__main__":
     raise SystemExit(main(sys.argv))
 
