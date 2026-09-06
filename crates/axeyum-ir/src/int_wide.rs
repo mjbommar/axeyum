@@ -19,7 +19,7 @@
 //! sites keep their `i128` payload and stay correct **by construction**: they
 //! cannot observe a wide value at all, so there is no truncation to get wrong.
 //!
-//! The payload is [`num_bigint::BigInt`] rather than a hand-rolled limb type.
+//! The payload is [`BigInt`] rather than a hand-rolled limb type.
 //! `WideUint` exists because bit-vectors need fixed-width *wrapping* semantics
 //! mod `2^width` plus a `width` field, which `BigInt` deliberately does not
 //! model; mathematical integers are unbounded and exact, which `BigInt` is. The
@@ -56,9 +56,9 @@
 use std::cmp::Ordering;
 use std::fmt;
 
-use num_bigint::BigInt;
-use num_integer::Integer;
-use num_traits::{Signed, ToPrimitive, Zero};
+use axeyum_arith::big::BigInt;
+use axeyum_arith::big::Integer;
+use axeyum_arith::big::{Signed, ToPrimitive, Zero};
 
 /// An exact mathematical integer with an arbitrary-precision payload.
 ///

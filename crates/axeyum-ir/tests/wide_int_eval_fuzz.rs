@@ -15,7 +15,7 @@
 //!
 //! What *can* fail is the **evaluator**, which computes on wide integers
 //! exactly and is the path every `sat` is replayed through. So the oracle here
-//! is an independent reference interpreter over `num_bigint::BigInt`, written
+//! is an independent reference interpreter over `axeyum_arith::big::BigInt`, written
 //! against the SMT-LIB rules directly and walking the generated tree rather than
 //! the arena — the same discipline ADR-1702 used for `Rational::wide_*`.
 //!
@@ -52,8 +52,8 @@
 //!   deliberately, at wide magnitude too, per the partial-operator hard rule —
 //!   a fuzz that avoids the corner is not a soundness gate.
 
+use axeyum_arith::big::BigInt;
 use axeyum_ir::{Assignment, IrError, TermArena, TermId, Value, WideInt, eval};
-use num_bigint::BigInt;
 
 /// Instances per boundary family.
 const INSTANCES: u64 = 400;
@@ -171,7 +171,7 @@ fn generate(rng: &mut Lcg, depth: u32, pool: &[BigInt], zero_divisor: &mut bool)
 /// Euclidean quotient/remainder: remainder in `0..|b|`. Written here from the
 /// SMT-LIB rule rather than reusing `WideInt`'s, so the two are independent.
 fn euclid(a: &BigInt, b: &BigInt) -> (BigInt, BigInt) {
-    use num_traits::Signed;
+    use axeyum_arith::big::Signed;
     let mut q = a / b;
     let mut r = a - &q * b;
     if r.is_negative() {
@@ -196,12 +196,12 @@ fn euclid(a: &BigInt, b: &BigInt) -> (BigInt, BigInt) {
 struct Overflow;
 
 fn narrow(value: &BigInt) -> bool {
-    use num_traits::ToPrimitive;
+    use axeyum_arith::big::ToPrimitive;
     value.to_i128().is_some()
 }
 
 fn reference(expr: &Expr) -> Result<BigInt, Overflow> {
-    use num_traits::{Signed, Zero};
+    use axeyum_arith::big::{Signed, Zero};
 
     /// Applies a binary rule: exact when either operand is wide, otherwise the
     /// narrow rule, which declines when the exact result leaves `i128`.
@@ -298,7 +298,7 @@ fn build(arena: &mut TermArena, expr: &Expr) -> TermId {
 
 #[test]
 fn integer_evaluation_matches_a_bigint_reference_across_the_i128_boundary() {
-    use num_traits::ToPrimitive;
+    use axeyum_arith::big::ToPrimitive;
 
     let pool = literal_pool();
     let mut agreed_value = 0u64;

@@ -2007,7 +2007,7 @@ fn internal_mint_shares_by_name_within_its_namespace() {
 // rendered text.
 
 fn wide_pow2(n: u32) -> WideInt {
-    let mut value = num_bigint::BigInt::from(1u8);
+    let mut value = axeyum_arith::big::BigInt::from(1u8);
     for _ in 0..n {
         value *= 2;
     }
