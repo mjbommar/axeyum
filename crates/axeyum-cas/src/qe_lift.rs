@@ -1332,3 +1332,498 @@ fn certificate_atoms(decision: &Decision) -> Option<Vec<Atom>> {
         Decision::Unknown(_) => None,
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // ------------------------------------------------------------------
+    // Shapes.
+    // ------------------------------------------------------------------
+
+    fn atom(terms: &[(i64, usize, usize, usize)], relation: Relation) -> TriAtom {
+        TriAtom::new(tri_terms(terms), relation)
+    }
+
+    /// `∃z. x² + y² + z² < 1` — the open unit disc.
+    fn unit_disc() -> ExistsZFormula {
+        ExistsZFormula::new(vec![atom(
+            &[(1, 2, 0, 0), (1, 0, 2, 0), (1, 0, 0, 2), (-1, 0, 0, 0)],
+            Relation::Lt,
+        )])
+    }
+
+    /// `∃z. z² = x ∧ z² = y` — the ray `x = y ≥ 0`.
+    fn two_squares() -> ExistsZFormula {
+        ExistsZFormula::new(vec![
+            atom(&[(1, 0, 0, 2), (-1, 1, 0, 0)], Relation::Eq),
+            atom(&[(1, 0, 0, 2), (-1, 0, 1, 0)], Relation::Eq),
+        ])
+    }
+
+    /// `∃z. x·z = 1 ∧ y·z = 1` — the punctured diagonal `x = y ≠ 0`.
+    fn reciprocals() -> ExistsZFormula {
+        ExistsZFormula::new(vec![
+            atom(&[(1, 1, 0, 1), (-1, 0, 0, 0)], Relation::Eq),
+            atom(&[(1, 0, 1, 1), (-1, 0, 0, 0)], Relation::Eq),
+        ])
+    }
+
+    /// `∃z. 2y² + z² < x` — a branch point at `y = ±√(x/2)`, irrational over
+    /// the sample `x = 1`, so that plane cell is decided in `ℚ(β)`.
+    fn irrational_branch() -> ExistsZFormula {
+        ExistsZFormula::new(vec![atom(
+            &[(2, 0, 2, 0), (1, 0, 0, 2), (-1, 1, 0, 0)],
+            Relation::Lt,
+        )])
+    }
+
+    /// `∃z. x² + z² = 2` — the level-two cut points are `±√2`, so two
+    /// `x`-cells are tower declines.
+    fn algebraic_x_cut() -> ExistsZFormula {
+        ExistsZFormula::new(vec![atom(
+            &[(1, 2, 0, 0), (1, 0, 0, 2), (-2, 0, 0, 0)],
+            Relation::Eq,
+        )])
+    }
+
+    fn certificate(formula: &ExistsZFormula) -> LiftCertificate {
+        let certificate = eliminate_z(formula).expect("the elimination decides this shape");
+        certificate.verify().expect("its own checker accepts it");
+        certificate
+    }
+
+    /// The verdict vector of one `x`-cell's cylinder.
+    fn verdicts(certificate: &LiftCertificate, cell: usize) -> Vec<bool> {
+        match &certificate.cells[cell].line {
+            YLine::Lifted { cells, .. } => cells.iter().map(|plane| plane.verdict).collect(),
+            YLine::TowerDepthUnsupported => panic!("cell {cell} was a tower decline"),
+        }
+    }
+
+    fn plane_cells(certificate: &mut LiftCertificate, cell: usize) -> &mut Vec<PlaneCell> {
+        match &mut certificate.cells[cell].line {
+            YLine::Lifted { cells, .. } => cells,
+            YLine::TowerDepthUnsupported => panic!("cell {cell} was a tower decline"),
+        }
+    }
+
+    fn rational(value: i64) -> BigRational {
+        BigRational::from_integer(BigInt::from(value))
+    }
+
+    // ------------------------------------------------------------------
+    // The three shapes the lifting phase was built for.
+    // ------------------------------------------------------------------
+
+    #[test]
+    fn unit_disc_lifts_to_the_open_disc() {
+        let certificate = certificate(&unit_disc());
+        // Level one eliminates z and leaves the circle; level two leaves x²−1.
+        assert_eq!(certificate.projection_z.len(), 1);
+        assert_eq!(certificate.projection_y.len(), 1);
+        assert_eq!(
+            certificate.roots,
+            vec![
+                SamplePoint::Rational(rational(-1)),
+                SamplePoint::Rational(rational(1)),
+            ]
+        );
+        assert_eq!(certificate.cells.len(), 5);
+        assert!(certificate.is_total());
+        // (−∞,−1) and (1,∞): no branch at all, and no z. {−1} and {1}: one
+        // branch, still no z. (−1,1): two branches, and the strip between them
+        // is the disc.
+        assert_eq!(verdicts(&certificate, 0), vec![false]);
+        assert_eq!(verdicts(&certificate, 1), vec![false, false, false]);
+        assert_eq!(
+            verdicts(&certificate, 2),
+            vec![false, false, true, false, false]
+        );
+        assert_eq!(verdicts(&certificate, 3), vec![false, false, false]);
+        assert_eq!(verdicts(&certificate, 4), vec![false]);
+        assert_eq!(
+            certificate.describe(),
+            "{x ∈ (-1, 1), y ∈ (branch 1, branch 2) [sample 0]}"
+        );
+    }
+
+    #[test]
+    fn two_squares_lift_to_the_nonnegative_diagonal() {
+        let certificate = certificate(&two_squares());
+        assert_eq!(certificate.roots, vec![SamplePoint::Rational(rational(0))]);
+        assert_eq!(certificate.cells.len(), 3);
+        // x < 0: z² = x has no solution, so nothing above it is true.
+        assert_eq!(
+            verdicts(&certificate, 0),
+            vec![false, false, false, false, false]
+        );
+        // x = 0: true exactly at y = 0.
+        assert_eq!(verdicts(&certificate, 1), vec![false, true, false]);
+        // x > 0: the y-branches over the sample x = 1 are 0 and 1, and the
+        // second one — the branch y = x — is where z² = x = y is solvable.
+        assert_eq!(
+            verdicts(&certificate, 2),
+            vec![false, false, false, true, false]
+        );
+        assert_eq!(
+            certificate.describe(),
+            "{x = 0, y = branch 1 [sample 0]} ∪ {x ∈ (0, ∞), y = branch 2 [sample 1]}"
+        );
+    }
+
+    #[test]
+    fn reciprocals_lift_to_the_punctured_diagonal() {
+        let certificate = certificate(&reciprocals());
+        assert_eq!(certificate.roots, vec![SamplePoint::Rational(rational(0))]);
+        // x < 0: the branches over x = −1 are −1 and 0, and y = x = −1 is the
+        // solution. x = 0: x·z = 1 is unsatisfiable. x > 0: y = x again.
+        assert_eq!(
+            verdicts(&certificate, 0),
+            vec![false, true, false, false, false]
+        );
+        assert_eq!(verdicts(&certificate, 1), vec![false, false, false]);
+        assert_eq!(
+            verdicts(&certificate, 2),
+            vec![false, false, false, true, false]
+        );
+        assert_eq!(
+            certificate.describe(),
+            "{x ∈ (-∞, 0), y = branch 1 [sample -1]} ∪ {x ∈ (0, ∞), y = branch 2 [sample 1]}"
+        );
+    }
+
+    #[test]
+    fn an_irrational_branch_point_is_decided_over_the_field() {
+        let certificate = certificate(&irrational_branch());
+        assert_eq!(certificate.cells.len(), 3);
+        let YLine::Lifted { roots, cells } = &certificate.cells[2].line else {
+            panic!("the positive x-cell lifts");
+        };
+        // y = ±√(1/2) at the sample x = 1: two algebraic branch points.
+        assert_eq!(roots.len(), 2);
+        assert!(
+            roots
+                .iter()
+                .all(|root| matches!(root, SamplePoint::Algebraic { .. }))
+        );
+        assert!(matches!(cells[1].fibre, ZFibre::Algebraic(_)));
+        assert!(matches!(cells[3].fibre, ZFibre::Algebraic(_)));
+        assert_eq!(
+            cells.iter().map(|c| c.verdict).collect::<Vec<_>>(),
+            vec![false, false, true, false, false]
+        );
+    }
+
+    #[test]
+    fn an_algebraic_x_cut_point_declines_as_a_tower_and_the_rest_decides() {
+        let certificate = certificate(&algebraic_x_cut());
+        assert_eq!(certificate.roots.len(), 2);
+        assert!(!certificate.is_total());
+        assert!(matches!(
+            certificate.cells[1].line,
+            YLine::TowerDepthUnsupported
+        ));
+        assert!(matches!(
+            certificate.cells[3].line,
+            YLine::TowerDepthUnsupported
+        ));
+        // The three open cells are still decided: z² = 2 − x² needs x² ≤ 2.
+        assert_eq!(verdicts(&certificate, 0), vec![false]);
+        assert_eq!(verdicts(&certificate, 2), vec![true]);
+        assert_eq!(verdicts(&certificate, 4), vec![false]);
+        assert!(certificate.describe().contains("undecided (tower)"));
+    }
+
+    #[test]
+    fn an_empty_conjunction_holds_everywhere() {
+        let certificate = certificate(&ExistsZFormula::default());
+        assert_eq!(certificate.cells.len(), 1);
+        assert_eq!(verdicts(&certificate, 0), vec![true]);
+    }
+
+    // ------------------------------------------------------------------
+    // The named declines.
+    // ------------------------------------------------------------------
+
+    #[test]
+    fn degree_four_is_refused_by_the_bound() {
+        let formula = ExistsZFormula::new(vec![atom(&[(1, 2, 2, 0), (1, 0, 0, 2)], Relation::Lt)]);
+        assert_eq!(
+            eliminate_z(&formula),
+            Err(Fault::DegreeBoundExceeded {
+                atom: 0,
+                total_degree: 4,
+                bound: MAX_TOTAL_DEGREE,
+            })
+        );
+    }
+
+    #[test]
+    fn a_repeated_z_factor_is_a_named_degeneracy() {
+        // (z − x)² ≤ 0: the z-discriminant vanishes identically.
+        let formula = ExistsZFormula::new(vec![atom(
+            &[(1, 0, 0, 2), (-2, 1, 0, 1), (1, 2, 0, 0)],
+            Relation::Le,
+        )]);
+        assert!(matches!(
+            eliminate_z(&formula),
+            Err(Fault::DegenerateProjection { .. })
+        ));
+    }
+
+    #[test]
+    fn a_degenerate_second_level_is_reported_as_the_bivariate_fault() {
+        // The level-one set contains both y and y², whose y-resultant vanishes.
+        let formula = ExistsZFormula::new(vec![
+            atom(&[(1, 0, 0, 1), (1, 0, 1, 0)], Relation::Eq),
+            atom(&[(1, 0, 2, 1), (-1, 0, 0, 0)], Relation::Eq),
+        ]);
+        assert!(matches!(
+            eliminate_z(&formula),
+            Err(Fault::LevelTwoProjection(_))
+        ));
+    }
+
+    // ------------------------------------------------------------------
+    // Forged certificates: one test per guard.
+    // ------------------------------------------------------------------
+
+    #[test]
+    fn a_forged_level_one_projection_is_refused() {
+        let mut certificate = certificate(&reciprocals());
+        certificate.projection_z.pop();
+        assert!(matches!(
+            certificate.verify(),
+            Err(Fault::ProjectionZMismatch { .. })
+        ));
+    }
+
+    #[test]
+    fn a_forged_level_two_projection_is_refused() {
+        let mut certificate = certificate(&reciprocals());
+        certificate
+            .projection_y
+            .push(vec![axeyum_ir::Rational::zero()]);
+        assert!(matches!(
+            certificate.verify(),
+            Err(Fault::ProjectionYMismatch { .. })
+        ));
+    }
+
+    #[test]
+    fn a_forged_cut_polynomial_is_refused() {
+        let mut certificate = certificate(&reciprocals());
+        certificate.cut.push(rational(1));
+        assert!(matches!(
+            certificate.verify(),
+            Err(Fault::CutMismatch { .. })
+        ));
+    }
+
+    #[test]
+    fn a_dropped_cut_point_is_refused() {
+        let mut certificate = certificate(&reciprocals());
+        certificate.roots.clear();
+        assert!(matches!(
+            certificate.verify(),
+            Err(Fault::RootsMismatch { .. })
+        ));
+    }
+
+    #[test]
+    fn a_moved_cut_point_is_refused() {
+        let mut certificate = certificate(&reciprocals());
+        certificate.roots[0] = SamplePoint::Rational(rational(7));
+        assert_eq!(
+            certificate.verify(),
+            Err(Fault::RootValueMismatch { index: 0 })
+        );
+    }
+
+    #[test]
+    fn a_missing_x_cell_is_refused() {
+        let mut certificate = certificate(&reciprocals());
+        certificate.cells.pop();
+        assert!(matches!(
+            certificate.verify(),
+            Err(Fault::CellCountMismatch { .. })
+        ));
+    }
+
+    #[test]
+    fn an_x_sample_outside_its_cell_is_refused() {
+        let mut certificate = certificate(&reciprocals());
+        // Cell 0 is (−∞, 0); move its sample to the far side of the cut point.
+        certificate.cells[0].sample = SamplePoint::Rational(rational(5));
+        assert_eq!(
+            certificate.verify(),
+            Err(Fault::CellSampleOutOfOrder { cell: 0 })
+        );
+    }
+
+    #[test]
+    fn a_tower_marker_at_a_rational_sample_is_refused() {
+        let mut certificate = certificate(&reciprocals());
+        certificate.cells[0].line = YLine::TowerDepthUnsupported;
+        assert_eq!(
+            certificate.verify(),
+            Err(Fault::TowerDepthMisapplied { cell: 0 })
+        );
+    }
+
+    #[test]
+    fn a_dropped_branch_point_is_refused() {
+        let mut certificate = certificate(&reciprocals());
+        if let YLine::Lifted { roots, .. } = &mut certificate.cells[0].line {
+            roots.pop();
+        }
+        assert!(matches!(
+            certificate.verify(),
+            Err(Fault::YRootsMismatch { cell: 0, .. })
+        ));
+    }
+
+    #[test]
+    fn a_moved_branch_point_is_refused() {
+        let mut certificate = certificate(&reciprocals());
+        if let YLine::Lifted { roots, .. } = &mut certificate.cells[0].line {
+            roots[0] = SamplePoint::Rational(rational(9));
+        }
+        assert_eq!(
+            certificate.verify(),
+            Err(Fault::YRootValueMismatch { cell: 0, index: 0 })
+        );
+    }
+
+    #[test]
+    fn a_missing_plane_cell_is_refused() {
+        let mut certificate = certificate(&reciprocals());
+        plane_cells(&mut certificate, 0).pop();
+        assert!(matches!(
+            certificate.verify(),
+            Err(Fault::YCellCountMismatch { cell: 0, .. })
+        ));
+    }
+
+    #[test]
+    fn a_y_sample_outside_its_cell_is_refused() {
+        let mut certificate = certificate(&reciprocals());
+        // Plane cell 0 over x = −1 is y ∈ (−∞, −1); 3 is above both branches.
+        plane_cells(&mut certificate, 0)[0].sample = SamplePoint::Rational(rational(3));
+        assert_eq!(
+            certificate.verify(),
+            Err(Fault::YCellSampleOutOfOrder { cell: 0, y_cell: 0 })
+        );
+    }
+
+    #[test]
+    fn a_fibre_for_another_sample_is_refused() {
+        let mut certificate = certificate(&reciprocals());
+        let cells = plane_cells(&mut certificate, 0);
+        let borrowed = cells[0].fibre.clone();
+        cells[2].fibre = borrowed;
+        assert_eq!(
+            certificate.verify(),
+            Err(Fault::SubstitutionMismatch { cell: 0, y_cell: 2 })
+        );
+    }
+
+    #[test]
+    fn a_flipped_verdict_is_refused() {
+        let mut certificate = certificate(&reciprocals());
+        plane_cells(&mut certificate, 0)[0].verdict = true;
+        assert!(matches!(
+            certificate.verify(),
+            Err(Fault::CellVerdictMismatch {
+                cell: 0,
+                y_cell: 0,
+                ..
+            })
+        ));
+    }
+
+    #[test]
+    fn a_forged_sign_inside_a_rational_fibre_is_refused() {
+        let mut certificate = certificate(&reciprocals());
+        let cells = plane_cells(&mut certificate, 0);
+        if let ZFibre::Rational(Decision::True(witness)) = &mut cells[1].fibre {
+            witness.signs[0] = 1;
+        } else {
+            panic!("plane cell 1 over x = −1 is the satisfied one");
+        }
+        assert!(matches!(
+            certificate.verify(),
+            Err(Fault::Univariate {
+                cell: 0,
+                y_cell: 1,
+                ..
+            })
+        ));
+    }
+
+    #[test]
+    fn a_rational_fibre_on_an_algebraic_sample_is_refused() {
+        let mut certificate = certificate(&irrational_branch());
+        let cells = plane_cells(&mut certificate, 2);
+        let borrowed = cells[0].fibre.clone();
+        cells[1].fibre = borrowed;
+        assert_eq!(
+            certificate.verify(),
+            Err(Fault::FibreKindMismatch { cell: 2, y_cell: 1 })
+        );
+    }
+
+    #[test]
+    fn an_algebraic_fibre_about_another_bracket_is_refused() {
+        let mut certificate = certificate(&irrational_branch());
+        let cells = plane_cells(&mut certificate, 2);
+        if let ZFibre::Algebraic(fibre) = &mut cells[1].fibre {
+            fibre.lower -= rational(1);
+        }
+        assert_eq!(
+            certificate.verify(),
+            Err(Fault::FibreBracketMismatch { cell: 2, y_cell: 1 })
+        );
+    }
+
+    #[test]
+    fn an_algebraic_fibre_whose_modulus_is_not_a_divisor_is_refused() {
+        let mut certificate = certificate(&irrational_branch());
+        let cells = plane_cells(&mut certificate, 2);
+        if let ZFibre::Algebraic(fibre) = &mut cells[1].fibre {
+            // y² + 1 has no real root at all, let alone a branch point.
+            fibre.modulus = vec![rational(1), rational(0), rational(1)];
+        }
+        assert_eq!(
+            certificate.verify(),
+            Err(Fault::ModulusNotADivisor { cell: 2, y_cell: 1 })
+        );
+    }
+
+    #[test]
+    fn a_forged_sign_inside_an_algebraic_fibre_is_refused() {
+        let mut certificate = certificate(&irrational_branch());
+        let cells = plane_cells(&mut certificate, 2);
+        if let ZFibre::Algebraic(boxed) = &mut cells[1].fibre {
+            if let fibre::FibreDecision::False(refutation) = &mut boxed.decision {
+                refutation.failures[0].sign = -refutation.failures[0].sign;
+            } else {
+                panic!("the branch point itself has no z");
+            }
+        }
+        assert!(matches!(
+            certificate.verify(),
+            Err(Fault::Fibre {
+                cell: 2,
+                y_cell: 1,
+                ..
+            })
+        ));
+    }
+
+    #[test]
+    fn the_front_door_verifies_before_answering() {
+        assert!(eliminate_z_checked(&reciprocals()).is_ok());
+    }
+}
