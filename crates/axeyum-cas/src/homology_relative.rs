@@ -894,12 +894,12 @@ mod tests {
         assert!(err.contains("LES exactness"), "got: {err}");
     }
 
-    /// ADVERSARIAL, isolated to `les_exactness_holds`'s H_k(K) node identity
+    /// ADVERSARIAL, isolated to `les_exactness_holds`'s `H_k(K)` node identity
     /// specifically: forge only the wrapped `K`-side betti number fed in,
     /// leaving `relative_betti` and `l_betti` genuine. Mutation-tested:
     /// neutralizing this one node's check (before this test existed) killed
     /// nothing, because the only existing forgery test for this function
-    /// targets the H_k(K,L) node instead.
+    /// targets the `H_k(K,L)` node instead.
     #[test]
     fn verify_refuses_a_k_betti_number_the_exactness_identity_rejects() {
         let disc = complex_of(&[&[0, 1, 2]]);
@@ -936,12 +936,12 @@ mod tests {
         assert!(err.contains("H_0(K)"), "got: {err}");
     }
 
-    /// ADVERSARIAL, isolated to `les_exactness_holds`'s H_k(L) node identity
+    /// ADVERSARIAL, isolated to `les_exactness_holds`'s `H_k(L)` node identity
     /// specifically: forge only the wrapped `L`-side betti number fed in,
     /// leaving `relative_betti` and `k_betti` genuine. Mutation-tested:
     /// neutralizing this one node's check (before this test existed) killed
-    /// nothing, for the same reason as the H_k(K) node above -- the module's
-    /// existing forgery tests target the H_k(K,L) and H_k(K) nodes, never
+    /// nothing, for the same reason as the `H_k(K)` node above -- the module's
+    /// existing forgery tests target the `H_k(K,L)` and `H_k(K)` nodes, never
     /// this one.
     #[test]
     fn verify_refuses_an_l_betti_number_the_exactness_identity_rejects() {
