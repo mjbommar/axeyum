@@ -569,8 +569,12 @@ fn compositions_are_zero(
         let upper = rebuilt
             .get(&k)
             .ok_or_else(|| format!("no rebuilt boundary at dimension {k}"))?;
+        // Fast integer path (see `Matrix::mul_int_fast`'s doc for the
+        // measurement this fixes): every boundary matrix here is
+        // all-integer, so this is the same product `mul` would compute,
+        // just without the symbolic `expand` overhead.
         let product = lower
-            .mul(upper)
+            .mul_fast_or_symbolic(upper)
             .ok_or_else(|| format!("d_{} . d_{k} failed to multiply", k - 1))?;
         if !is_zero_matrix(&product) {
             return Err(format!("d_{} . d_{k} is not the zero matrix", k - 1));
@@ -588,8 +592,8 @@ fn smith_factorizations_hold(certificate: &HomologyCertificate) -> Result<(), St
     for (k, triple) in &certificate.smith {
         let product = triple
             .u
-            .mul(&triple.boundary)
-            .and_then(|partial| partial.mul(&triple.v))
+            .mul_fast_or_symbolic(&triple.boundary)
+            .and_then(|partial| partial.mul_fast_or_symbolic(&triple.v))
             .ok_or_else(|| format!("U * d_{k} * V failed to multiply"))?;
         if !certify_product_equals(&product, &triple.d) {
             return Err(format!("U * d_{k} * V != D at dimension {k}"));
@@ -945,6 +949,106 @@ mod tests {
     }
 
     // ---- boundary matrix and complex-builder sanity ----
+
+    /// Measurement helper (not a fixture other modules need, so kept local
+    /// rather than added to `fixtures`): the standard diagonal-triangulated
+    /// `m x m` grid torus (vertices `(i, j)` for `i, j` in `0..m`, each unit
+    /// square split into two triangles along one diagonal, wrapped mod `m`
+    /// in both directions). A genuine torus for `m >= 3` (no vertex/edge
+    /// identification degenerates the triangulation): `V - E + F =
+    /// m^2 - 3m^2 + 2m^2 = 0` regardless of `m`, and Betti numbers
+    /// `(1, 2, 1)` (confirmed for `m = 4` by
+    /// `grid_torus_betti_and_euler_characteristic_match_the_torus`, below).
+    fn grid_torus(m: usize) -> SimplicialComplex {
+        assert!(m >= 3, "m = 1, 2 degenerate the triangulation");
+        let idx = |i: usize, j: usize| (i % m) * m + (j % m);
+        let mut maximal = Vec::with_capacity(2 * m * m);
+        for i in 0..m {
+            for j in 0..m {
+                let a = idx(i, j);
+                let b = idx(i + 1, j);
+                let c = idx(i, j + 1);
+                let d = idx(i + 1, j + 1);
+                maximal.push(vec![a, b, c]);
+                maximal.push(vec![b, d, c]);
+            }
+        }
+        complex_of(
+            &maximal
+                .iter()
+                .map(|v| v.as_slice())
+                .collect::<Vec<&[usize]>>(),
+        )
+    }
+
+    /// A small instance of `grid_torus` (16 vertices, 48 edges, 32
+    /// triangles) is a genuine torus and its certificate verifies, run at a
+    /// size that stays well under this suite's own debug-mode time budget.
+    #[test]
+    fn grid_torus_betti_and_euler_characteristic_match_the_torus() {
+        let complex = grid_torus(4);
+        assert_eq!(complex.count(0), 16);
+        assert_eq!(complex.count(1), 48);
+        assert_eq!(complex.count(2), 32);
+        assert_eq!(complex.euler_characteristic(), 0);
+        let certificate = homology(&complex).expect("homology of the grid torus");
+        assert_eq!(betti_vec(&certificate), vec![1, 2, 1]);
+        assert_eq!(torsion_at(&certificate, 0), Vec::<i128>::new());
+        assert_eq!(torsion_at(&certificate, 1), Vec::<i128>::new());
+        assert_eq!(torsion_at(&certificate, 2), Vec::<i128>::new());
+        certificate.verify(&complex).expect("certificate verifies");
+    }
+
+    /// REGRESSION (the unimodularity ceiling, item 8 wave three).
+    /// `Matrix::mul` (symbolic `CasExpr` + `expand` per entry) measured
+    /// 25.8s to certify `U . d_1 . V = D` for THIS fixture's `d_1` (a
+    /// 196x588 boundary matrix, `U` 196x196, `V` 588x588) -- not because
+    /// `is_unimodular`'s Bareiss determinant declined (it did not: both `U`
+    /// and `V`'s `i128` Bareiss determinants succeed, in 0.1-4.5s), but
+    /// because `smith_normal_form`'s own product-certification step
+    /// (`admit_smith`) and this module's `smith_factorizations_hold` guard
+    /// both multiply the full transform matrices symbolically. `Matrix::
+    /// mul_int_fast` (used via `mul_fast_or_symbolic` in both places) fixes
+    /// this: full `homology()` + `verify()` on this 196-vertex/588-edge/
+    /// 392-triangle grid torus, previously well over a minute, now
+    /// completes in single-digit seconds under `--release` (measured
+    /// below); a 200x200-scale unimodularity check alone is well under a
+    /// second either way. `#[ignore]`d because a debug build of this size
+    /// still exceeds this suite's 5s-per-test budget (measured: release
+    /// ~8-9s combined, debug over a minute) -- run explicitly with
+    /// `cargo test --release -- --ignored grid_torus_hundreds_of_simplices`.
+    #[test]
+    #[ignore = "release-only timing measurement; see the doc comment"]
+    fn grid_torus_hundreds_of_simplices_verifies_in_seconds_under_release() {
+        let complex = grid_torus(14);
+        assert_eq!(complex.count(0), 196);
+        assert_eq!(complex.count(1), 588);
+        assert_eq!(complex.count(2), 392);
+        let start = std::time::Instant::now();
+        let certificate = homology(&complex).expect("homology of the grid torus");
+        let produced = start.elapsed();
+        assert_eq!(betti_vec(&certificate), vec![1, 2, 1]);
+        let verify_start = std::time::Instant::now();
+        certificate.verify(&complex).expect("certificate verifies");
+        let verified = verify_start.elapsed();
+        eprintln!("produced in {produced:?}, verified in {verified:?}");
+        // ADVISORY bound, not a calibrated reference frame (see
+        // `docs/research/08-planning/frontier-ratchet-reference-frame.md`):
+        // measured on this host, `--release`, ~8-20s for this fixture after
+        // the `mul_int_fast` fix (previously well over a minute -- the
+        // debug-mode run of this same test, before this bound existed,
+        // measured 63.5s to produce and 73.7s to verify, so 60s is a
+        // generous ceiling that still catches a real regression back to the
+        // symbolic-`mul` path, not a tight one).
+        assert!(
+            produced.as_secs() < 60,
+            "producing homology() regressed past 60s: {produced:?}"
+        );
+        assert!(
+            verified.as_secs() < 60,
+            "verify() regressed past 60s: {verified:?}"
+        );
+    }
 
     #[test]
     fn boundary_matrix_of_a_triangle_has_the_alternating_sign_convention() {

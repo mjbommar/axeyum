@@ -52,6 +52,8 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
+use axeyum_ir::Rational;
+
 use super::SimplicialComplex;
 
 /// Finite bars, as `(dimension, birth, death)`.
@@ -118,14 +120,19 @@ fn reduce_persistence(
     (columns, low_to_col)
 }
 
-/// Derive `(finite pairs, essential births)` from a fully reduced column set
-/// and its `low_to_col` map, each finite pair as `(dimension, birth, death)`
-/// and each essential birth as `(dimension, birth)`, both sorted. Shared by
-/// [`persistent_homology`] (the producer) and [`pairs_match`] (the guard
-/// that re-derives the same thing from a certificate under test).
+/// Derive `(finite pairs, essential births)` from a fully reduced column
+/// set's emptiness (one `bool` per filtration index -- field-independent,
+/// since a birth/death pairing depends only on which columns emptied out,
+/// not on the field the reduction ran over) and the reduction's `low_to_col`
+/// map. Each finite pair is `(dimension, birth, death)` and each essential
+/// birth is `(dimension, birth)`, both sorted. Shared by every producer in
+/// this module ([`persistent_homology`] over `F_2`,
+/// [`persistent_homology_over_q`] and [`persistent_homology_mod_p`] over a
+/// general field) and by [`pairs_match`] (the guard that re-derives the same
+/// thing from a certificate under test).
 fn derive_pairs(
     filtration: &[Vec<usize>],
-    reduced: &[BTreeSet<usize>],
+    is_empty: &[bool],
     low_to_col: &BTreeMap<usize, usize>,
 ) -> (PersistencePairs, EssentialBars) {
     let mut pairs: Vec<(usize, usize, usize)> = low_to_col
@@ -135,7 +142,7 @@ fn derive_pairs(
     pairs.sort_unstable();
 
     let mut essential: Vec<(usize, usize)> = (0..filtration.len())
-        .filter(|&i| reduced[i].is_empty() && !low_to_col.contains_key(&i))
+        .filter(|&i| is_empty[i] && !low_to_col.contains_key(&i))
         .map(|i| (filtration[i].len() - 1, i))
         .collect();
     essential.sort_unstable();
@@ -186,7 +193,8 @@ pub fn persistent_homology(filtration: &[Vec<usize>]) -> Option<PersistenceCerti
         .collect();
     let columns = build_boundary_columns(&normalized)?;
     let (reduced, low_to_col) = reduce_persistence(columns);
-    let (pairs, essential) = derive_pairs(&normalized, &reduced, &low_to_col);
+    let is_empty: Vec<bool> = reduced.iter().map(BTreeSet::is_empty).collect();
+    let (pairs, essential) = derive_pairs(&normalized, &is_empty, &low_to_col);
 
     Some(PersistenceCertificate {
         filtration: normalized,
@@ -218,8 +226,9 @@ fn pairs_match(
     certificate: &PersistenceCertificate,
     reduced: &[BTreeSet<usize>],
 ) -> Result<(PersistencePairs, EssentialBars), String> {
+    let is_empty: Vec<bool> = reduced.iter().map(BTreeSet::is_empty).collect();
     let (pairs, essential) =
-        derive_pairs(&certificate.filtration, reduced, &certificate.low_to_col);
+        derive_pairs(&certificate.filtration, &is_empty, &certificate.low_to_col);
     if pairs != certificate.pairs {
         return Err(format!(
             "pairs mismatch: recomputed {pairs:?}, certificate claims {:?}",
@@ -240,27 +249,29 @@ fn pairs_match(
 /// sum, by dimension, of the persistence diagram's bars alive at step `m`
 /// (born by index `m - 1`, not yet killed by index `m`) -- the
 /// Euler-Poincare identity for every sub-level complex in the filtration.
-fn euler_characteristic_at_every_step(certificate: &PersistenceCertificate) -> Result<(), String> {
-    let n = certificate.filtration.len();
-    let mut dim_counts = vec![0i128; n]; // dim_counts[d] = running count of dimension-d simplices
+/// Field-independent (an Euler characteristic identity holds over any
+/// coefficient ring), so shared by every certificate type in this module.
+fn euler_characteristic_at_every_step(
+    filtration: &[Vec<usize>],
+    pairs: &[(usize, usize, usize)],
+    essential: &[(usize, usize)],
+) -> Result<(), String> {
+    let n = filtration.len();
     let mut complex_euler: Vec<i128> = Vec::with_capacity(n);
     let mut running = 0i128;
-    for simplex in &certificate.filtration {
+    for simplex in filtration {
         let dim = simplex.len() - 1;
-        dim_counts[dim] += 1;
         running += if dim % 2 == 0 { 1 } else { -1 };
         complex_euler.push(running);
     }
 
     for m in 1..=n {
-        let bars_euler: i128 = certificate
-            .pairs
+        let bars_euler: i128 = pairs
             .iter()
             .filter(|&&(_, birth, death)| birth < m && death >= m)
             .map(|&(dim, _, _)| if dim % 2 == 0 { 1i128 } else { -1i128 })
             .sum::<i128>()
-            + certificate
-                .essential
+            + essential
                 .iter()
                 .filter(|&&(_, birth)| birth < m)
                 .map(|&(dim, _)| if dim % 2 == 0 { 1i128 } else { -1i128 })
@@ -289,7 +300,7 @@ impl PersistenceCertificate {
     pub fn verify(&self) -> Result<PersistenceReport, String> {
         let reduced = reduction_matches(self)?;
         let (pairs, essential) = pairs_match(self, &reduced)?;
-        euler_characteristic_at_every_step(self)?;
+        euler_characteristic_at_every_step(&self.filtration, &self.pairs, &self.essential)?;
         Ok(PersistenceReport { pairs, essential })
     }
 }
@@ -310,9 +321,446 @@ pub fn prefix_complex(filtration: &[Vec<usize>], m: usize) -> Option<SimplicialC
     SimplicialComplex::from_maximal_simplices(&maximal)
 }
 
+// =============================================================================
+// Wave three: persistence over `Q` and over `F_p`, by the SAME column
+// reduction with general field arithmetic.
+// =============================================================================
+//
+// The `F_2` reduction above works on `BTreeSet<usize>` columns because mod-2
+// coefficients are either present or absent -- addition IS symmetric
+// difference. A general field needs an actual coefficient per row (a
+// `BTreeMap<usize, F>`) and real scalar elimination (`column_j -=
+// (low_j / low_pivot) * column_pivot`, not XOR), and needs SIGNED boundary
+// columns (the alternating-face-removal sign convention
+// [`super::boundary_matrix`] uses, since mod 2 makes signs irrelevant but
+// mod `p` for odd `p`, or over `Q`, does not).
+//
+// [`FieldElement`] abstracts exactly the operations
+// [`reduce_persistence_generic`] needs, so the reduction algorithm itself is
+// written once and instantiated for [`Rational`] (`Q`, exact) and [`Fp`]
+// (`F_p`, modular). [`derive_pairs`] and
+// [`euler_characteristic_at_every_step`] above already work from
+// field-independent data (`is_empty`/`pairs`/`essential`), so they are
+// reused as-is, not reimplemented.
+
+/// The operations the standard column-reduction algorithm needs from a
+/// field: enough to build a signed boundary entry, add/negate/multiply, test
+/// for zero, and invert a nonzero pivot.
+trait FieldElement: Copy + PartialEq {
+    fn zero() -> Self;
+    fn from_sign(sign: i128) -> Self;
+    fn is_zero(&self) -> bool;
+    fn add(self, other: Self) -> Self;
+    fn mul(self, other: Self) -> Self;
+    fn neg(self) -> Self;
+    /// The multiplicative inverse. Only ever called on a genuinely nonzero
+    /// pivot entry, so `None` here would indicate an internal bug (a
+    /// "zero" pivot cannot occur by construction: `low` is defined as the
+    /// highest row with a NONZERO entry).
+    fn inv(self) -> Option<Self>;
+}
+
+impl FieldElement for Rational {
+    fn zero() -> Self {
+        Rational::integer(0)
+    }
+    fn from_sign(sign: i128) -> Self {
+        Rational::integer(sign)
+    }
+    fn is_zero(&self) -> bool {
+        Rational::is_zero(*self)
+    }
+    fn add(self, other: Self) -> Self {
+        self + other
+    }
+    fn mul(self, other: Self) -> Self {
+        self * other
+    }
+    fn neg(self) -> Self {
+        -self
+    }
+    fn inv(self) -> Option<Self> {
+        if self.is_zero() {
+            None
+        } else {
+            Some(Rational::integer(1) / self)
+        }
+    }
+}
+
+/// An element of `F_p` (`p` a caller-chosen small prime, taken on faith --
+/// see [`persistent_homology_mod_p`]'s doc): a value in `0..p`, carrying `p`
+/// alongside it so [`FieldElement`]'s methods need no extra parameter.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct Fp {
+    value: i128,
+    modulus: i128,
+}
+
+impl Fp {
+    fn new(value: i128, modulus: i128) -> Fp {
+        Fp {
+            value: value.rem_euclid(modulus),
+            modulus,
+        }
+    }
+}
+
+/// The extended Euclidean algorithm: returns `(g, x, y)` with `a*x + b*y =
+/// g = gcd(a, b)`. Used only to invert a nonzero `F_p` element (`b` is
+/// always the prime modulus there, so `g = 1` whenever `a != 0`).
+fn extended_gcd(a: i128, b: i128) -> (i128, i128, i128) {
+    if b == 0 {
+        return (a, 1, 0);
+    }
+    let (g, x1, y1) = extended_gcd(b, a.rem_euclid(b));
+    (g, y1, x1 - (a.div_euclid(b)) * y1)
+}
+
+impl FieldElement for Fp {
+    fn zero() -> Self {
+        Fp {
+            value: 0,
+            modulus: 0, // overwritten by every real use via `add`/`mul`'s operands
+        }
+    }
+    fn from_sign(sign: i128) -> Self {
+        // `from_sign` alone cannot carry a modulus (the trait has no
+        // parameter for it); every call site in this module immediately
+        // combines the result with an already-moduled `Fp` via `add`/`mul`,
+        // which is why `zero()`'s placeholder modulus is harmless -- it is
+        // never read on its own, only ever combined with a genuine value.
+        Fp {
+            value: sign,
+            modulus: 0,
+        }
+    }
+    fn is_zero(&self) -> bool {
+        self.value == 0
+    }
+    fn add(self, other: Self) -> Self {
+        let modulus = if self.modulus != 0 {
+            self.modulus
+        } else {
+            other.modulus
+        };
+        Fp::new(self.value + other.value, modulus)
+    }
+    fn mul(self, other: Self) -> Self {
+        let modulus = if self.modulus != 0 {
+            self.modulus
+        } else {
+            other.modulus
+        };
+        Fp::new(self.value * other.value, modulus)
+    }
+    fn neg(self) -> Self {
+        Fp::new(-self.value, self.modulus)
+    }
+    fn inv(self) -> Option<Self> {
+        if self.value == 0 {
+            return None;
+        }
+        let (g, x, _) = extended_gcd(self.value, self.modulus);
+        if g != 1 {
+            return None; // would mean `modulus` is not actually prime
+        }
+        Some(Fp::new(x, self.modulus))
+    }
+}
+
+/// Whether `p` is prime, by trial division -- used to refuse a non-prime
+/// `p` up front rather than silently computing over `Z/p` (a ring with zero
+/// divisors, where "division" by a non-invertible nonzero element would
+/// need to fail differently than this module's `inv` does).
+fn is_small_prime(p: u32) -> bool {
+    if p < 2 {
+        return false;
+    }
+    if p % 2 == 0 {
+        return p == 2;
+    }
+    let mut d = 3u32;
+    while d.saturating_mul(d) <= p {
+        if p % d == 0 {
+            return false;
+        }
+        d += 2;
+    }
+    true
+}
+
+/// Build, for every simplex in a (already normalized: sorted vertex lists)
+/// filtration, its SIGNED boundary column (row index -> `+1`/`-1`, the same
+/// alternating-face-removal convention [`super::boundary_matrix`] uses) --
+/// the field-independent input every field-based reduction in this module
+/// lifts into its own coefficients via [`FieldElement::from_sign`]. Returns
+/// `None` under the same validation [`build_boundary_columns`] performs: a
+/// repeated simplex, a repeated vertex within one simplex, a missing face,
+/// or a face appearing at or after its own coface.
+fn build_signed_boundary_columns(filtration: &[Vec<usize>]) -> Option<Vec<BTreeMap<usize, i128>>> {
+    let mut index_of: BTreeMap<Vec<usize>, usize> = BTreeMap::new();
+    for (i, simplex) in filtration.iter().enumerate() {
+        let mut sorted = simplex.clone();
+        sorted.sort_unstable();
+        sorted.dedup();
+        if sorted.len() != simplex.len() {
+            return None;
+        }
+        if index_of.insert(sorted, i).is_some() {
+            return None;
+        }
+    }
+    let mut columns = Vec::with_capacity(filtration.len());
+    for (i, simplex) in filtration.iter().enumerate() {
+        let mut column = BTreeMap::new();
+        if simplex.len() > 1 {
+            for l in 0..simplex.len() {
+                let mut face = simplex.clone();
+                face.remove(l);
+                let &face_idx = index_of.get(&face)?;
+                if face_idx >= i {
+                    return None;
+                }
+                let sign: i128 = if l % 2 == 0 { 1 } else { -1 };
+                column.insert(face_idx, sign);
+            }
+        }
+        columns.push(column);
+    }
+    Some(columns)
+}
+
+/// The standard column-reduction algorithm, generalized from the `F_2`
+/// [`reduce_persistence`] to any [`FieldElement`]: reduce each column
+/// against an earlier column sharing the same `low` by SCALAR elimination
+/// (`column_j -= (low_j * low_pivot^-1) * column_pivot`) rather than XOR,
+/// until the column empties out (a birth) or its low is new (a death, or --
+/// if never later selected as a low -- an essential birth).
+fn reduce_persistence_generic<F: FieldElement>(
+    mut columns: Vec<BTreeMap<usize, F>>,
+) -> (Vec<BTreeMap<usize, F>>, BTreeMap<usize, usize>) {
+    let mut low_to_col: BTreeMap<usize, usize> = BTreeMap::new();
+    for j in 0..columns.len() {
+        loop {
+            let Some((&low, &low_value)) = columns[j].iter().next_back() else {
+                break;
+            };
+            let Some(&pivot_col) = low_to_col.get(&low) else {
+                low_to_col.insert(low, j);
+                break;
+            };
+            let pivot_value = *columns[pivot_col]
+                .get(&low)
+                .expect("the pivot column's own recorded low is present in it");
+            let factor = low_value.mul(
+                pivot_value
+                    .inv()
+                    .expect("a recorded pivot value is nonzero by construction"),
+            );
+            let other = columns[pivot_col].clone();
+            for (&row, &value) in &other {
+                let scaled = factor.mul(value).neg();
+                let updated = columns[j]
+                    .get(&row)
+                    .copied()
+                    .unwrap_or_else(F::zero)
+                    .add(scaled);
+                if updated.is_zero() {
+                    columns[j].remove(&row);
+                } else {
+                    columns[j].insert(row, updated);
+                }
+            }
+        }
+    }
+    (columns, low_to_col)
+}
+
+/// Which field a [`FieldPersistenceCertificate`] ran the reduction over.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Coefficients {
+    /// The rationals, exact via [`Rational`].
+    Q,
+    /// `F_p` for the given prime `p`.
+    Fp(u32),
+}
+
+/// A checkable certificate of the persistent homology of a filtration over
+/// `Q` or `F_p`, mirroring [`PersistenceCertificate`]'s shape (see its
+/// module documentation for what each field means and what
+/// [`verify`](Self::verify) re-derives) but recording which
+/// [`Coefficients`] the reduction ran over.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct FieldPersistenceCertificate {
+    /// Which field this reduction ran over.
+    pub coefficients: Coefficients,
+    /// The filtration: simplices (sorted vertex lists) in insertion order.
+    pub filtration: Vec<Vec<usize>>,
+    /// The `low -> col` map the reduction produced.
+    pub low_to_col: BTreeMap<usize, usize>,
+    /// Finite bars, as `(dimension, birth, death)`, sorted.
+    pub pairs: Vec<(usize, usize, usize)>,
+    /// Essential (infinite) bars, as `(dimension, birth)`, sorted.
+    pub essential: Vec<(usize, usize)>,
+}
+
+/// The result of a successful [`FieldPersistenceCertificate::verify`].
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct FieldPersistenceReport {
+    /// Finite bars, recomputed.
+    pub pairs: Vec<(usize, usize, usize)>,
+    /// Essential (infinite) bars, recomputed.
+    pub essential: Vec<(usize, usize)>,
+}
+
+/// Shared by every field-based producer: normalize, build signed boundary
+/// columns, lift to `F` via `from_sign`, reduce, and derive the diagram.
+fn persistent_homology_over_field<F: FieldElement>(
+    filtration: &[Vec<usize>],
+    coefficients: Coefficients,
+) -> Option<FieldPersistenceCertificate> {
+    let normalized: Vec<Vec<usize>> = filtration
+        .iter()
+        .map(|s| {
+            let mut sorted = s.clone();
+            sorted.sort_unstable();
+            sorted
+        })
+        .collect();
+    let signed = build_signed_boundary_columns(&normalized)?;
+    let lifted: Vec<BTreeMap<usize, F>> = signed
+        .iter()
+        .map(|col| {
+            col.iter()
+                .map(|(&row, &sign)| (row, F::from_sign(sign)))
+                .collect()
+        })
+        .collect();
+    let (reduced, low_to_col) = reduce_persistence_generic(lifted);
+    let is_empty: Vec<bool> = reduced.iter().map(BTreeMap::is_empty).collect();
+    let (pairs, essential) = derive_pairs(&normalized, &is_empty, &low_to_col);
+    Some(FieldPersistenceCertificate {
+        coefficients,
+        filtration: normalized,
+        low_to_col,
+        pairs,
+        essential,
+    })
+}
+
+/// Compute the persistent homology of `filtration` over `Q` (exact
+/// rationals), by the same column-reduction algorithm [`persistent_homology`]
+/// runs over `F_2`, generalized to real scalar elimination. Returns `None`
+/// under the same filtration-validity conditions.
+#[must_use]
+pub fn persistent_homology_over_q(
+    filtration: &[Vec<usize>],
+) -> Option<FieldPersistenceCertificate> {
+    persistent_homology_over_field::<Rational>(filtration, Coefficients::Q)
+}
+
+/// Compute the persistent homology of `filtration` over `F_p`.
+///
+/// Returns `None` if `filtration` is not a valid filtration, or if `p` is
+/// not prime (checked by trial division: `F_p` is not a field, and this
+/// module's reduction needs one, if `p` is composite).
+#[must_use]
+pub fn persistent_homology_mod_p(
+    filtration: &[Vec<usize>],
+    p: u32,
+) -> Option<FieldPersistenceCertificate> {
+    if !is_small_prime(p) {
+        return None;
+    }
+    let modulus = i128::from(p);
+    let normalized: Vec<Vec<usize>> = filtration
+        .iter()
+        .map(|s| {
+            let mut sorted = s.clone();
+            sorted.sort_unstable();
+            sorted
+        })
+        .collect();
+    let signed = build_signed_boundary_columns(&normalized)?;
+    let lifted: Vec<BTreeMap<usize, Fp>> = signed
+        .iter()
+        .map(|col| {
+            col.iter()
+                .map(|(&row, &sign)| (row, Fp::new(sign, modulus)))
+                .collect()
+        })
+        .collect();
+    let (reduced, low_to_col) = reduce_persistence_generic(lifted);
+    let is_empty: Vec<bool> = reduced.iter().map(BTreeMap::is_empty).collect();
+    let (pairs, essential) = derive_pairs(&normalized, &is_empty, &low_to_col);
+    Some(FieldPersistenceCertificate {
+        coefficients: Coefficients::Fp(p),
+        filtration: normalized,
+        low_to_col,
+        pairs,
+        essential,
+    })
+}
+
+impl FieldPersistenceCertificate {
+    /// Re-derive every claim in this certificate from `(self.filtration,
+    /// self.coefficients)` alone: re-running the SAME producer this
+    /// certificate's `coefficients` names must reproduce the recorded
+    /// `low_to_col`, `pairs`, and `essential` exactly, and the
+    /// field-independent Euler-characteristic identity must hold at every
+    /// step.
+    ///
+    /// # Errors
+    ///
+    /// Returns a distinct, descriptive `Err(String)` for whichever check
+    /// fails first: an invalid `p` (refused up front, same as the
+    /// producer), an invalid filtration, a reduction (`low_to_col`)
+    /// mismatch, a `pairs`/`essential` mismatch, or an Euler-characteristic
+    /// inconsistency at some filtration step.
+    pub fn verify(&self) -> Result<FieldPersistenceReport, String> {
+        let rebuilt = match self.coefficients {
+            Coefficients::Q => persistent_homology_over_q(&self.filtration),
+            Coefficients::Fp(p) => persistent_homology_mod_p(&self.filtration, p),
+        }
+        .ok_or_else(|| {
+            format!(
+                "could not rebuild the {:?} persistence certificate from the recorded filtration",
+                self.coefficients
+            )
+        })?;
+        if rebuilt.low_to_col != self.low_to_col {
+            return Err(format!(
+                "reduction mismatch: fresh reduction gives low_to_col {:?}, certificate claims {:?}",
+                rebuilt.low_to_col, self.low_to_col
+            ));
+        }
+        if rebuilt.pairs != self.pairs {
+            return Err(format!(
+                "pairs mismatch: recomputed {:?}, certificate claims {:?}",
+                rebuilt.pairs, self.pairs
+            ));
+        }
+        if rebuilt.essential != self.essential {
+            return Err(format!(
+                "essential bar mismatch: recomputed {:?}, certificate claims {:?}",
+                rebuilt.essential, self.essential
+            ));
+        }
+        euler_characteristic_at_every_step(&self.filtration, &self.pairs, &self.essential)?;
+        Ok(FieldPersistenceReport {
+            pairs: rebuilt.pairs,
+            essential: rebuilt.essential,
+        })
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use super::persistent_homology;
+    use super::{
+        Coefficients, persistent_homology, persistent_homology_mod_p, persistent_homology_over_q,
+    };
+    use crate::homology::fixtures::rp2_6v;
 
     /// A filtration building the 3-vertex circle then filling it in: three
     /// vertices, then two edges, then the closing edge (which creates the
@@ -523,7 +971,14 @@ mod tests {
         use super::euler_characteristic_at_every_step;
         let filtration = circle_then_fill();
         let mut certificate = persistent_homology(&filtration).expect("valid filtration");
-        assert!(euler_characteristic_at_every_step(&certificate).is_ok());
+        assert!(
+            euler_characteristic_at_every_step(
+                &certificate.filtration,
+                &certificate.pairs,
+                &certificate.essential
+            )
+            .is_ok()
+        );
 
         // Move the (1, 5, 6) bar's death one step earlier, to 5 itself --
         // an edge cannot die at its own birth index, so this both breaks
@@ -541,8 +996,126 @@ mod tests {
                 }
             })
             .collect();
-        let err = euler_characteristic_at_every_step(&certificate)
-            .expect_err("a bar alive at the wrong step must be refused");
+        let err = euler_characteristic_at_every_step(
+            &certificate.filtration,
+            &certificate.pairs,
+            &certificate.essential,
+        )
+        .expect_err("a bar alive at the wrong step must be refused");
         assert!(err.contains("Euler characteristic mismatch"), "got: {err}");
+    }
+
+    // ---- wave three: persistence over Q and F_p ----
+
+    /// A valid filtration of `rp2_6v()`: every vertex, then every edge, then
+    /// every face, each group in the complex's own (sorted) order -- valid
+    /// because every face's own faces already appear in an earlier group.
+    fn rp2_filtration() -> Vec<Vec<usize>> {
+        let complex = rp2_6v();
+        let mut filtration = Vec::new();
+        for k in 0..=complex.max_dimension() {
+            filtration.extend(complex.simplices(k));
+        }
+        filtration
+    }
+
+    #[test]
+    fn circle_then_fill_gives_the_same_bars_over_f2_q_and_f3() {
+        let filtration = circle_then_fill();
+        let over_f2 = persistent_homology(&filtration).expect("valid filtration");
+        over_f2.verify().expect("F_2 certificate verifies");
+        let over_q = persistent_homology_over_q(&filtration).expect("valid filtration");
+        over_q.verify().expect("Q certificate verifies");
+        let over_f3 =
+            persistent_homology_mod_p(&filtration, 3).expect("valid filtration, p = 3 prime");
+        over_f3.verify().expect("F_3 certificate verifies");
+
+        assert_eq!(over_f2.pairs, over_q.pairs, "F_2 and Q pairs must agree");
+        assert_eq!(
+            over_f2.essential, over_q.essential,
+            "F_2 and Q essential bars must agree"
+        );
+        assert_eq!(over_q.pairs, over_f3.pairs, "Q and F_3 pairs must agree");
+        assert_eq!(
+            over_q.essential, over_f3.essential,
+            "Q and F_3 essential bars must agree"
+        );
+    }
+
+    /// `RP^2`'s torsion bar appears over `F_2` only: `b(F_2) = (1, 1, 1)`
+    /// (three essential bars) but `b(F_3) = b(Q) = (1, 0, 0)` (exactly one),
+    /// matching the already-established Betti numbers in
+    /// `homology::coefficients` and `homology` themselves -- this is the
+    /// SAME phenomenon read off the persistence diagram of the full
+    /// filtration instead of a one-shot homology computation.
+    #[test]
+    fn rp2_barcodes_differ_between_f2_and_f3_exactly_at_the_torsion_classes() {
+        let filtration = rp2_filtration();
+        assert_eq!(filtration.len(), 6 + 15 + 10);
+
+        let over_f2 = persistent_homology_mod_p(&filtration, 2).expect("valid filtration");
+        over_f2.verify().expect("F_2 certificate verifies");
+        let over_f3 = persistent_homology_mod_p(&filtration, 3).expect("valid filtration");
+        over_f3.verify().expect("F_3 certificate verifies");
+        let over_q = persistent_homology_over_q(&filtration).expect("valid filtration");
+        over_q.verify().expect("Q certificate verifies");
+
+        assert_eq!(
+            over_f2.essential.len(),
+            3,
+            "F_2: b = (1, 1, 1), three essential bars"
+        );
+        assert_eq!(
+            over_f3.essential.len(),
+            1,
+            "F_3: b = (1, 0, 0), exactly one essential bar"
+        );
+        assert_eq!(
+            over_q.essential.len(),
+            1,
+            "Q: b = (1, 0, 0), exactly one essential bar"
+        );
+        // The dimension-1 and dimension-2 classes born over F_2 (and never
+        // killed) DO die over F_3/Q: they are finite bars there instead.
+        assert!(
+            over_f2.essential.iter().any(|&(dim, _)| dim == 1),
+            "F_2 must have an essential H_1 bar"
+        );
+        assert!(
+            over_f2.essential.iter().any(|&(dim, _)| dim == 2),
+            "F_2 must have an essential H_2 bar"
+        );
+        assert!(
+            over_f3.essential.iter().all(|&(dim, _)| dim == 0),
+            "F_3's only essential bar must be at dimension 0"
+        );
+    }
+
+    #[test]
+    fn persistent_homology_mod_p_refuses_a_non_prime_modulus() {
+        let filtration = circle_then_fill();
+        assert!(persistent_homology_mod_p(&filtration, 4).is_none());
+        assert!(persistent_homology_mod_p(&filtration, 1).is_none());
+        // POSITIVE CONTROL: a genuine prime is accepted.
+        assert!(persistent_homology_mod_p(&filtration, 5).is_some());
+    }
+
+    /// ADVERSARIAL. Forge only the recorded `pairs`, leaving `low_to_col`
+    /// and `essential` genuine.
+    #[test]
+    fn verify_refuses_a_forged_field_persistence_pairs() {
+        let filtration = circle_then_fill();
+        let mut certificate = persistent_homology_over_q(&filtration).expect("valid filtration");
+        assert!(
+            certificate.verify().is_ok(),
+            "genuine certificate must verify"
+        );
+        assert_eq!(certificate.coefficients, Coefficients::Q);
+
+        certificate.pairs.push((1, 0, 1)); // a fabricated bar
+        let err = certificate
+            .verify()
+            .expect_err("a forged pairs list must be refused");
+        assert!(err.contains("pairs mismatch"), "got: {err}");
     }
 }

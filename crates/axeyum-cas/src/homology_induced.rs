@@ -78,9 +78,10 @@ use std::collections::BTreeMap;
 use axeyum_ir::Rational;
 
 use crate::homology::coefficients::rank_over_q;
+use crate::normalforms::{certify_product_equals, smith_normal_form};
 use crate::{CasExpr, Matrix};
 
-use super::{SimplicialComplex, boundary_matrix, is_zero_matrix};
+use super::{SimplicialComplex, boundary_matrix, diagonal_rank, is_zero_matrix, torsion_factors};
 
 /// Whether `vertex_map` sends every face of `domain` (at every dimension,
 /// including vertices) to a face of `codomain`. `false` if `vertex_map` does
@@ -701,13 +702,579 @@ impl SimplicialMapCertificate {
     }
 }
 
+// =============================================================================
+// Wave three: induced maps on `H_*(-; Z)`, including the torsion part.
+// =============================================================================
+//
+// A homomorphism `H_k(X; Z) -> H_k(Y; Z)` between two graded abelian groups
+// `Z^{f_X} (+) T_X` and `Z^{f_Y} (+) T_Y` (`T_*` the torsion subgroup) is, in
+// full generality, a 2x2 block matrix `[[A, B], [C, D]]` (free->free,
+// torsion->free, free->torsion, torsion->torsion). Block `B` (torsion ->
+// free) is ALWAYS zero: a finite-order element cannot map to a nonzero
+// element of a torsion-free group. This module reports `A` (`free_part`) and
+// `D` (`torsion_part`) -- exactly the two pieces the brief asks for -- and
+// certifies `B = 0` as a guard; the mixed block `C` (free -> torsion) is
+// computed internally (it has to be, since the algorithm below derives all
+// four blocks from one uniform construction) but not separately reported.
+//
+// # Deriving explicit `H_k(Z)` generators from two Smith forms
+//
+// Given `d_k`'s own Smith form `U * d_k * V = D` (`U`, `V` unimodular), the
+// "kernel columns" of `V` (those at the zero-diagonal positions of `D`) are a
+// genuine Z-BASIS of `Z_k = ker(d_k)` -- not merely a Q-spanning set, because
+// `V` is unimodular over Z. Call this basis `z_basis` (an `n_k x m` integer
+// matrix, `m = n_k - rank(d_k)`).
+//
+// To locate `B_k = im(d_{k+1})` inside `Z_k`, take `d_{k+1}`'s OWN (fresh,
+// independent) Smith form `U' * d_{k+1} * V' = D'`. The identity `d_{k+1} .
+// V' = U'^{-1} . D'` means the `i`-th generator of `B_k` (`i` up to
+// `rank(d_{k+1})`) is simply `d_{k+1}` applied to the `i`-th column of `V'`
+// -- computable directly, with no matrix inverse needed. Expressing each of
+// these `rank(d_{k+1})` generators in `z_basis` coordinates (solved via
+// [`solve_via_rref`], reused from the `Q` construction above -- exact because
+// every boundary genuinely lies in `Z_k`) gives an `m x rank(d_{k+1})`
+// "relations" matrix `R`. `H_k(Z) = Z^m / im(R)` by construction, and Smith
+// form of `R` itself (`P * R * Q = diag(f_1, ..., f_s, 0, ...)`) diagonalizes
+// exactly this quotient: in the `P`-transformed coordinate system, index `i
+// < s` is torsion with modulus `f_i` (or, when `f_i = 1`, the trivial group
+// -- dropped entirely, since `Z/1 = 0` is not a summand) and index `i >= s`
+// is a free `Z` coordinate.
+//
+// `P` is unimodular, so `P^{-1}` (needed to turn "which coordinate" back into
+// an actual cycle vector in `C_k`) is computed via [`Matrix::solve`] against
+// the identity -- exact, since `det(P) = +/-1` makes every Cramer's-rule
+// denominator `+/-1`. This is a full matrix inverse via Gauss-Jordan, so this
+// module targets the SAME small hand-triangulated fixtures the rest of this
+// crate's induced-map work does (RP^2, circles, the icosahedron below), not
+// the hundreds-of-simplices scale [`super::super`]'s own ceiling work now
+// reaches -- there has been no need to reuse `mul_int_fast` here since every
+// fixture this module is tested on solves in well under the same modest
+// budget the existing `Q` construction above already runs at.
+//
+// # What is certified
+//
+// [`IntegerInducedCertificate::verify`] re-derives every claim via
+// [`compute_induced_block`] -- the SAME function the producer calls, at every
+// degree, fresh from `(vertex_map, domain, codomain)` alone -- and additionally
+// checks four things no rebuild-and-compare alone would catch:
+//
+// - every recorded generator column (domain and codomain) is a genuine cycle
+//   (`d_k . g = 0`), independent of how [`smith_presentation`] built it;
+// - the torsion->free block `B` is exactly zero (`cross_block_is_zero`) --
+//   the "not secretly not a homomorphism" check described above;
+// - every torsion entry `t` at `(row, col)` satisfies `(t * modulus_X(col))
+//   mod modulus_Y(row) == 0` -- a torsion homomorphism `Z/a -> Z/b` must send
+//   the generator to an element whose order divides `gcd(a, ...)`, and this
+//   is the concrete integer form of that constraint;
+// - the domain's and codomain's torsion coefficients, recomputed here via
+//   the relations-matrix Smith form, equal the SAME complex's already-
+//   independently-derived `Z` homology torsion from [`super::homology`] (a
+//   fresh call, not a copy) -- a genuinely separate derivation of the same
+//   invariant, matching this crate's UCT-style cross-checks elsewhere.
+
+/// `matrix`'s entries at rows `row_start..row_end` and columns
+/// `col_start..col_end`, as a `(row_end - row_start) x (col_end -
+/// col_start)` matrix.
+fn submatrix(
+    matrix: &Matrix,
+    row_start: usize,
+    row_end: usize,
+    col_start: usize,
+    col_end: usize,
+) -> Option<Matrix> {
+    let height = row_end.checked_sub(row_start)?;
+    let width = col_end.checked_sub(col_start)?;
+    let mut data = vec![CasExpr::zero(); height.checked_mul(width)?];
+    for (i, r) in (row_start..row_end).enumerate() {
+        for (j, c) in (col_start..col_end).enumerate() {
+            data[i * width + j] = matrix.get(r, c)?.clone();
+        }
+    }
+    Matrix::new(height, width, data)
+}
+
+/// Every entry of `matrix` reduced modulo the corresponding entry of
+/// `moduli` (one modulus per row). Returns `None` on a row-count mismatch or
+/// a non-integer entry.
+fn reduce_rows_mod(matrix: &Matrix, moduli: &[i128]) -> Option<Matrix> {
+    if matrix.rows() != moduli.len() {
+        return None;
+    }
+    let cols = matrix.cols();
+    let mut data = Vec::with_capacity(matrix.rows() * cols);
+    for (r, &modulus) in moduli.iter().enumerate() {
+        for c in 0..cols {
+            let CasExpr::Const(value) = matrix.get(r, c)? else {
+                return None;
+            };
+            if value.denominator() != 1 {
+                return None;
+            }
+            data.push(CasExpr::int(value.numerator().rem_euclid(modulus)));
+        }
+    }
+    Matrix::new(matrix.rows(), cols, data)
+}
+
+/// The internal Smith-form derivation of `H_k(complex; Z)`'s presentation --
+/// everything [`finalize_basis`] needs to build actual generator vectors.
+/// Kept separate from [`IntegerHomologyBasis`] (the certificate-facing
+/// summary) because [`compute_induced_block`] needs `z_basis` and `p` (to
+/// project a chain map's image onto this basis) but the certificate itself
+/// only needs to store and compare the smaller summary.
+struct SmithPresentation {
+    /// `n_k x m`: a Z-basis of `Z_k = ker(d_k)` (`m = n_k - rank(d_k)`).
+    z_basis: Matrix,
+    /// `m x m` unimodular left transform from the Smith form of the
+    /// "relations" matrix (`B_k`'s generators expressed in `z_basis`
+    /// coordinates).
+    p: Matrix,
+    /// The torsion coefficients (`> 1`) of that relations matrix's Smith
+    /// diagonal, in divisibility order -- genuine torsion summands.
+    torsion: Vec<i128>,
+    /// How many of the relations matrix's leading nonzero diagonal entries
+    /// are exactly `1` (trivial: `Z/1 = 0`, not a summand, so these
+    /// `z_basis`/`p`-derived coordinates carry no information and are
+    /// dropped from every reported generator list).
+    null_count: usize,
+}
+
+/// Derive `complex`'s `SmithPresentation` at degree `k`, via two fresh,
+/// independent [`smith_normal_form`] calls (`d_k` and `d_{k+1}`) -- see the
+/// module documentation for the construction. Returns `None` if either
+/// boundary matrix fails to reduce, if a boundary generator does not
+/// actually lie in `z_basis`'s span (would mean a bug upstream, since every
+/// boundary is a cycle by construction), or on a shape/overflow decline.
+fn smith_presentation(complex: &SimplicialComplex, k: usize) -> Option<SmithPresentation> {
+    let d_k = boundary_matrix(complex, k)?;
+    let (_, d_k_diag, v_k) = smith_normal_form(&d_k)?;
+    let rank_k = diagonal_rank(&d_k_diag)?;
+    let n_k = v_k.cols();
+    let m = n_k.checked_sub(rank_k)?;
+    let z_basis = submatrix(&v_k, 0, v_k.rows(), rank_k, n_k)?;
+
+    let d_next = boundary_matrix(complex, k + 1)?;
+    let (_, d_next_diag, v_next) = smith_normal_form(&d_next)?;
+    let rank_next = diagonal_rank(&d_next_diag)?;
+    let v_next_first = submatrix(&v_next, 0, v_next.rows(), 0, rank_next)?;
+    let boundary_gens = d_next.mul_fast_or_symbolic(&v_next_first)?;
+
+    let mut relation_data = vec![CasExpr::zero(); m.checked_mul(rank_next)?];
+    for col in 0..rank_next {
+        let target = column_vector(&boundary_gens, col)?;
+        let coeffs = solve_via_rref(&z_basis, &target)?;
+        if coeffs.len() != m {
+            return None;
+        }
+        for (row, value) in coeffs.iter().enumerate() {
+            if value.denominator() != 1 {
+                return None; // would mean a boundary generator was not actually in Z_k
+            }
+            relation_data[row * rank_next + col] = CasExpr::int(value.numerator());
+        }
+    }
+    let relations = Matrix::new(m, rank_next, relation_data)?;
+    let (p, diag, _q) = smith_normal_form(&relations)?;
+    let s = diagonal_rank(&diag)?;
+    let torsion = torsion_factors(&diag)?;
+    let null_count = s.checked_sub(torsion.len())?;
+
+    Some(SmithPresentation {
+        z_basis,
+        p,
+        torsion,
+        null_count,
+    })
+}
+
+/// A Z-module presentation of `H_k(complex; Z)`, ready to certify and to
+/// feed through a chain map: the KEPT generator cycle vectors (torsion
+/// generators first, in divisibility order, then free generators), the
+/// torsion moduli for the first `torsion.len()` columns, and the free rank
+/// (`generators.cols() - torsion.len()`).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct IntegerHomologyBasis {
+    /// `n_k x (torsion.len() + free_rank)`: the kept generator cycle
+    /// vectors, torsion columns first.
+    pub generators: Matrix,
+    /// The torsion coefficients (`> 1`), in divisibility order, one per
+    /// leading column of `generators`.
+    pub torsion: Vec<i128>,
+    /// The free rank (the number of trailing columns of `generators`).
+    pub free_rank: usize,
+}
+
+/// Build the actual generator matrix from a [`SmithPresentation`]: `z_basis
+/// . P^{-1}`, with the leading `null_count` (trivial, `Z/1 = 0`) columns
+/// dropped. `P^{-1}` is computed via [`Matrix::solve`] against the identity
+/// (exact, since `P` is unimodular).
+fn finalize_basis(raw: &SmithPresentation) -> Option<IntegerHomologyBasis> {
+    let m = raw.p.rows();
+    let p_inv = raw.p.solve(&Matrix::identity(m))?;
+    let full_generators = raw.z_basis.mul_fast_or_symbolic(&p_inv)?;
+    let keep_start = raw.null_count;
+    let generators = submatrix(&full_generators, 0, full_generators.rows(), keep_start, m)?;
+    let kept = m.checked_sub(keep_start)?;
+    let free_rank = kept.checked_sub(raw.torsion.len())?;
+    Some(IntegerHomologyBasis {
+        generators,
+        torsion: raw.torsion.clone(),
+        free_rank,
+    })
+}
+
+/// The full derivation at one degree `k`, shared by the producer
+/// ([`induced_homology_z`]) and the verifier
+/// ([`IntegerInducedCertificate::verify`]) so both call the exact same code.
+struct InducedBlockAtK {
+    basis_x: IntegerHomologyBasis,
+    basis_y: IntegerHomologyBasis,
+    /// `free_rank(Y) x free_rank(X)`: the free->free block (`A`).
+    free_part: Matrix,
+    /// `torsion_Y.len() x torsion_X.len()`: the torsion->torsion block
+    /// (`D`), each entry already reduced mod that row's codomain modulus.
+    torsion_part: Matrix,
+    /// Whether the torsion->free block (`B`) is exactly zero -- must always
+    /// be `true` for a genuine group homomorphism.
+    cross_block_is_zero: bool,
+}
+
+fn compute_induced_block(
+    vertex_map: &BTreeMap<usize, usize>,
+    domain: &SimplicialComplex,
+    codomain: &SimplicialComplex,
+    k: usize,
+) -> Option<InducedBlockAtK> {
+    let raw_x = smith_presentation(domain, k)?;
+    let raw_y = smith_presentation(codomain, k)?;
+    let basis_x = finalize_basis(&raw_x)?;
+    let basis_y = finalize_basis(&raw_y)?;
+
+    let f_k = build_chain_map(vertex_map, domain, codomain, k)?;
+    let images = f_k.mul_fast_or_symbolic(&basis_x.generators)?; // n_k(Y) x g_x
+
+    let m_y = raw_y.p.rows();
+    let g_x = images.cols();
+    let mut y_coords_data = vec![CasExpr::zero(); m_y.checked_mul(g_x)?];
+    for col in 0..g_x {
+        let target = column_vector(&images, col)?;
+        let coeffs = solve_via_rref(&raw_y.z_basis, &target)?;
+        if coeffs.len() != m_y {
+            return None;
+        }
+        for (row, value) in coeffs.iter().enumerate() {
+            if value.denominator() != 1 {
+                return None; // would mean f(g_x) is not actually a cycle of Y
+            }
+            y_coords_data[row * g_x + col] = CasExpr::int(value.numerator());
+        }
+    }
+    let y_coords = Matrix::new(m_y, g_x, y_coords_data)?;
+    let transformed = raw_y.p.mul_fast_or_symbolic(&y_coords)?; // m_y x g_x
+
+    let tx = basis_x.torsion.len();
+    // `transformed`'s ROWS are in Y's FULL (un-reindexed) v'-coordinate
+    // space (`0..m_y`), unlike `basis_x.generators`'s already-reindexed
+    // COLUMNS (torsion first, then free, starting at index 0 -- that
+    // reindexing happened inside `finalize_basis`, which this function does
+    // NOT re-run for the codomain's `transformed`). So the torsion ROWS are
+    // `[raw_y.null_count, raw_y.null_count + ty)`, not `[0, ty)`: the
+    // leading `raw_y.null_count` rows are the trivial (`Z/1 = 0`, "always
+    // congruent to 0 mod 1") coordinates, which are skipped, not zero-
+    // indexed. The free ROWS start at `m_y - basis_y.free_rank`, which
+    // equals `raw_y.null_count + ty` algebraically (`free_rank = m - s`,
+    // `s = null_count + ty`), so that boundary needed no such fix.
+    let torsion_y_start = raw_y.null_count;
+    let free_y_start = m_y.checked_sub(basis_y.free_rank)?;
+
+    let torsion_block_raw = submatrix(&transformed, torsion_y_start, free_y_start, 0, tx)?;
+    let torsion_part = reduce_rows_mod(&torsion_block_raw, &basis_y.torsion)?;
+
+    let free_part = submatrix(&transformed, free_y_start, m_y, tx, g_x)?;
+
+    let cross_block = submatrix(&transformed, free_y_start, m_y, 0, tx)?;
+    let cross_block_is_zero = is_zero_matrix(&cross_block);
+
+    Some(InducedBlockAtK {
+        basis_x,
+        basis_y,
+        free_part,
+        torsion_part,
+        cross_block_is_zero,
+    })
+}
+
+/// A checkable certificate of a simplicial map's induced map on `H_*(-;
+/// Z)`, including the torsion part. See the module documentation for what
+/// [`verify`](Self::verify) re-derives.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct IntegerInducedCertificate {
+    /// The vertex map, domain vertex id to codomain vertex id.
+    pub vertex_map: BTreeMap<usize, usize>,
+    /// `domain.max_dimension()` at the time this certificate was built.
+    pub max_dimension: usize,
+    /// The domain's `H_k(Z)` presentation, for `k` in `0..=max_dimension`.
+    pub domain_basis: BTreeMap<usize, IntegerHomologyBasis>,
+    /// The codomain's `H_k(Z)` presentation, for `k` in `0..=max_dimension`.
+    pub codomain_basis: BTreeMap<usize, IntegerHomologyBasis>,
+    /// The free->free block of the induced map, for `k` in
+    /// `0..=max_dimension`.
+    pub free_part: BTreeMap<usize, Matrix>,
+    /// The torsion->torsion block of the induced map, for `k` in
+    /// `0..=max_dimension`.
+    pub torsion_part: BTreeMap<usize, Matrix>,
+}
+
+/// The result of a successful [`IntegerInducedCertificate::verify`].
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct IntegerInducedReport {
+    /// The free->free block, recomputed.
+    pub free_part: BTreeMap<usize, Matrix>,
+    /// The torsion->torsion block, recomputed.
+    pub torsion_part: BTreeMap<usize, Matrix>,
+}
+
+/// Compute the induced map on `H_*(-; Z)` of a simplicial vertex map,
+/// including the torsion part.
+///
+/// Returns `None` if `vertex_map` is not simplicial, if the torsion->free
+/// block of the induced map is ever nonzero (would mean the constructed map
+/// is not actually a group homomorphism -- not expected for a genuine chain
+/// map, since that block's vanishing follows from `f_#` commuting with the
+/// boundary), or if any step of the Smith-form construction declines.
+#[must_use]
+pub fn induced_homology_z(
+    vertex_map: &BTreeMap<usize, usize>,
+    domain: &SimplicialComplex,
+    codomain: &SimplicialComplex,
+) -> Option<IntegerInducedCertificate> {
+    if !is_simplicial(vertex_map, domain, codomain) {
+        return None;
+    }
+    let max_dim = domain.max_dimension();
+
+    let mut domain_basis = BTreeMap::new();
+    let mut codomain_basis = BTreeMap::new();
+    let mut free_part = BTreeMap::new();
+    let mut torsion_part = BTreeMap::new();
+
+    for k in 0..=max_dim {
+        let block = compute_induced_block(vertex_map, domain, codomain, k)?;
+        if !block.cross_block_is_zero {
+            return None;
+        }
+        domain_basis.insert(k, block.basis_x);
+        codomain_basis.insert(k, block.basis_y);
+        free_part.insert(k, block.free_part);
+        torsion_part.insert(k, block.torsion_part);
+    }
+
+    Some(IntegerInducedCertificate {
+        vertex_map: vertex_map.clone(),
+        max_dimension: max_dim,
+        domain_basis,
+        codomain_basis,
+        free_part,
+        torsion_part,
+    })
+}
+
+/// Guard: every generator column of `basis` (domain or codomain, at degree
+/// `k`) is a genuine cycle of `complex`'s own `d_k`.
+fn generators_are_cycles(
+    basis: &IntegerHomologyBasis,
+    complex: &SimplicialComplex,
+    k: usize,
+    label: &str,
+) -> Result<(), String> {
+    let d_k =
+        boundary_matrix(complex, k).ok_or_else(|| format!("could not rebuild {label} d_{k}"))?;
+    for col in 0..basis.generators.cols() {
+        let g = column_vector(&basis.generators, col)
+            .ok_or_else(|| format!("could not extract {label} generator column {col}"))?;
+        let image = d_k
+            .mul_fast_or_symbolic(&g)
+            .ok_or_else(|| format!("d_{k} . g failed to multiply ({label}, column {col})"))?;
+        if !is_zero_matrix(&image) {
+            return Err(format!(
+                "{label} generator column {col} at degree {k} is not a cycle"
+            ));
+        }
+    }
+    Ok(())
+}
+
+/// Guard: every torsion entry `t` at `(row, col)` of `torsion_part`
+/// satisfies `(t * modulus_X(col)) mod modulus_Y(row) == 0` -- the concrete
+/// integer form of "a homomorphism out of a finite cyclic group must send
+/// the generator to an element whose order divides the generator's order".
+fn torsion_entries_are_consistent(
+    torsion_part: &Matrix,
+    domain_torsion: &[i128],
+    codomain_torsion: &[i128],
+    k: usize,
+) -> Result<(), String> {
+    for row in 0..codomain_torsion.len() {
+        let modulus_y = codomain_torsion[row];
+        for col in 0..domain_torsion.len() {
+            let modulus_x = domain_torsion[col];
+            let CasExpr::Const(entry) = torsion_part.get(row, col).ok_or_else(|| {
+                format!("torsion part missing entry ({row}, {col}) at degree {k}")
+            })?
+            else {
+                return Err(format!(
+                    "torsion part entry ({row}, {col}) at degree {k} is not a constant"
+                ));
+            };
+            let value = entry.numerator();
+            if (value * modulus_x).rem_euclid(modulus_y) != 0 {
+                return Err(format!(
+                    "torsion entry ({row}, {col}) at degree {k} is not a well-defined homomorphism: {value} * {modulus_x} is not 0 mod {modulus_y}"
+                ));
+            }
+        }
+    }
+    Ok(())
+}
+
+/// Guard: the torsion coefficients recomputed here (via the relations-matrix
+/// Smith form) equal the SAME complex's independently-derived `Z` homology
+/// torsion from a fresh [`super::homology`] call -- a genuinely separate
+/// derivation of the same invariant.
+fn torsion_cross_checks_hold(
+    basis: &IntegerHomologyBasis,
+    complex: &SimplicialComplex,
+    k: usize,
+    label: &str,
+) -> Result<(), String> {
+    let certificate = super::homology(complex)
+        .ok_or_else(|| format!("{label} homology() declined at degree {k}"))?;
+    let expected_torsion = certificate.torsion.get(&k).cloned().unwrap_or_default();
+    if basis.torsion != expected_torsion {
+        return Err(format!(
+            "{label} torsion at degree {k} ({:?}) disagrees with the independently-derived Z homology ({:?})",
+            basis.torsion, expected_torsion
+        ));
+    }
+    // `k` beyond `complex.max_dimension()` is a legitimate case (the domain
+    // can have higher dimension than the codomain, e.g. collapsing onto a
+    // point): `H_k = 0` there, so the expected Betti number is `0`, not a
+    // missing-entry error.
+    let expected_free_rank = certificate.betti.get(&k).copied().unwrap_or(0);
+    if basis.free_rank != expected_free_rank {
+        return Err(format!(
+            "{label} free rank at degree {k} ({}) disagrees with the independently-derived Betti number ({expected_free_rank})",
+            basis.free_rank
+        ));
+    }
+    Ok(())
+}
+
+impl IntegerInducedCertificate {
+    /// Re-derive every claim in this certificate from `(vertex_map, domain,
+    /// codomain)` alone, via [`compute_induced_block`] -- the SAME function
+    /// [`induced_homology_z`] calls -- at every degree, plus the additional
+    /// algebraic checks described in the module documentation.
+    ///
+    /// # Errors
+    ///
+    /// Returns a distinct, descriptive `Err(String)` for whichever check
+    /// fails first: the map is not simplicial, a degree mismatch, a
+    /// rebuild-and-compare mismatch on either basis or either block, a
+    /// generator that is not a genuine cycle, a nonzero torsion->free block,
+    /// an inconsistent torsion entry, or a torsion/free-rank cross-check
+    /// against the independently-derived `Z` homology.
+    pub fn verify(
+        &self,
+        domain: &SimplicialComplex,
+        codomain: &SimplicialComplex,
+    ) -> Result<IntegerInducedReport, String> {
+        if !is_simplicial(&self.vertex_map, domain, codomain) {
+            return Err("the recorded vertex map is not simplicial".to_string());
+        }
+        if domain.max_dimension() != self.max_dimension {
+            return Err(format!(
+                "recorded max_dimension {} does not match domain.max_dimension() {}",
+                self.max_dimension,
+                domain.max_dimension()
+            ));
+        }
+
+        let mut free_part = BTreeMap::new();
+        let mut torsion_part = BTreeMap::new();
+
+        for k in 0..=self.max_dimension {
+            let block =
+                compute_induced_block(&self.vertex_map, domain, codomain, k).ok_or_else(|| {
+                    format!("could not rebuild the integer induced map at degree {k}")
+                })?;
+            if !block.cross_block_is_zero {
+                return Err(format!(
+                    "the torsion->free block is nonzero at degree {k} (not a genuine group homomorphism)"
+                ));
+            }
+
+            let Some(recorded_x) = self.domain_basis.get(&k) else {
+                return Err(format!("certificate has no domain basis at degree {k}"));
+            };
+            if recorded_x.torsion != block.basis_x.torsion
+                || recorded_x.free_rank != block.basis_x.free_rank
+                || !certify_product_equals(&recorded_x.generators, &block.basis_x.generators)
+            {
+                return Err(format!("domain H_k(Z) basis mismatch at degree {k}"));
+            }
+            let Some(recorded_y) = self.codomain_basis.get(&k) else {
+                return Err(format!("certificate has no codomain basis at degree {k}"));
+            };
+            if recorded_y.torsion != block.basis_y.torsion
+                || recorded_y.free_rank != block.basis_y.free_rank
+                || !certify_product_equals(&recorded_y.generators, &block.basis_y.generators)
+            {
+                return Err(format!("codomain H_k(Z) basis mismatch at degree {k}"));
+            }
+
+            generators_are_cycles(&block.basis_x, domain, k, "domain")?;
+            generators_are_cycles(&block.basis_y, codomain, k, "codomain")?;
+            torsion_cross_checks_hold(&block.basis_x, domain, k, "domain")?;
+            torsion_cross_checks_hold(&block.basis_y, codomain, k, "codomain")?;
+
+            let Some(recorded_free) = self.free_part.get(&k) else {
+                return Err(format!("certificate has no free part at degree {k}"));
+            };
+            if !certify_product_equals(recorded_free, &block.free_part) {
+                return Err(format!("free part mismatch at degree {k}"));
+            }
+            let Some(recorded_torsion) = self.torsion_part.get(&k) else {
+                return Err(format!("certificate has no torsion part at degree {k}"));
+            };
+            if !certify_product_equals(recorded_torsion, &block.torsion_part) {
+                return Err(format!("torsion part mismatch at degree {k}"));
+            }
+            torsion_entries_are_consistent(
+                recorded_torsion,
+                &block.basis_x.torsion,
+                &block.basis_y.torsion,
+                k,
+            )?;
+
+            free_part.insert(k, block.free_part);
+            torsion_part.insert(k, block.torsion_part);
+        }
+
+        Ok(IntegerInducedReport {
+            free_part,
+            torsion_part,
+        })
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::collections::BTreeMap;
 
-    use super::{induced_homology, is_simplicial};
+    use super::{induced_homology, induced_homology_z, is_simplicial};
     use crate::homology::SimplicialComplex;
-    use crate::homology::fixtures::{circle, hexagon_circle, point};
+    use crate::homology::fixtures::{circle, hexagon_circle, point, rp2_6v};
 
     fn identity_map(complex: &SimplicialComplex) -> BTreeMap<usize, usize> {
         (0..=complex.max_dimension())
@@ -891,5 +1458,191 @@ mod tests {
             .verify(&complex, &complex)
             .expect_err("a non-cycle basis vector must be refused");
         assert!(err.contains("not a cycle"), "got: {err}");
+    }
+
+    /// ADVERSARIAL, isolating `basis_is_a_genuine_extension` specifically --
+    /// this guard had no forgery test at all (item 8 wave three's starting
+    /// gap). Two disjoint circles have `b_1 = 2` and an EMPTY boundary space
+    /// at degree 1 (no 2-simplices anywhere in the complex), so truncating
+    /// the recorded basis to just ONE of the two independent cycle
+    /// directions is still (a) a genuine cycle and (b) trivially
+    /// independent of the (empty) boundary space -- it fails ONLY the
+    /// "extends to the FULL kernel" half of the guard, which
+    /// `basis_vectors_are_cycles` cannot catch (both tests would pass a
+    /// basis that is cycle-valid but simply too small). Confirmed by
+    /// mutation: disabling only the `combined_rank != dim_z_k` check (while
+    /// keeping the independence check) leaves every other test in this
+    /// module green.
+    #[test]
+    fn verify_refuses_a_basis_that_is_independent_but_does_not_span_the_full_kernel() {
+        let complex = SimplicialComplex::from_maximal_simplices(&[
+            vec![0, 1],
+            vec![1, 2],
+            vec![0, 2],
+            vec![3, 4],
+            vec![4, 5],
+            vec![3, 5],
+        ])
+        .expect("two disjoint circles");
+        let vertex_map = identity_map(&complex);
+        let mut certificate =
+            induced_homology(&vertex_map, &complex, &complex).expect("identity is simplicial");
+        assert!(
+            certificate.verify(&complex, &complex).is_ok(),
+            "genuine certificate must verify"
+        );
+        assert_eq!(
+            certificate.basis_domain[&1].len(),
+            2,
+            "two disjoint circles have b_1 = 2"
+        );
+
+        let basis = certificate
+            .basis_domain
+            .get_mut(&1)
+            .expect("degree 1 exists");
+        basis.truncate(1); // drop one of the two independent cycle directions
+
+        let err = certificate
+            .verify(&complex, &complex)
+            .expect_err("an incomplete-but-independent basis must be refused");
+        assert!(
+            err.contains("does not extend to the full kernel"),
+            "got: {err}"
+        );
+    }
+
+    // ---- wave three: induced maps on H_*(Z), including torsion ----
+
+    #[test]
+    fn the_degree_two_wrap_induces_multiplication_by_two_on_h1_z() {
+        let domain = hexagon_circle();
+        let codomain = circle();
+        let vertex_map: BTreeMap<usize, usize> = (0..6).map(|v| (v, v % 3)).collect();
+        let certificate = induced_homology_z(&vertex_map, &domain, &codomain)
+            .expect("degree-2 wrap is simplicial");
+        let report = certificate
+            .verify(&domain, &codomain)
+            .expect("certificate verifies");
+        // Both circles have torsion-free H_1(Z) = Z: no torsion generators
+        // at all, so this exercises the pure free-part path.
+        assert_eq!(certificate.domain_basis[&1].torsion, Vec::<i128>::new());
+        assert_eq!(certificate.codomain_basis[&1].torsion, Vec::<i128>::new());
+        assert_eq!(certificate.domain_basis[&1].free_rank, 1);
+        assert_eq!(certificate.codomain_basis[&1].free_rank, 1);
+        let free = &report.free_part[&1];
+        assert_eq!((free.rows(), free.cols()), (1, 1));
+        let crate::CasExpr::Const(value) = free.get(0, 0).expect("1x1") else {
+            panic!("expected a constant entry")
+        };
+        assert_eq!(
+            value.numerator().unsigned_abs(),
+            2,
+            "expected |entry| = 2, got {value:?}"
+        );
+    }
+
+    #[test]
+    fn the_identity_map_on_rp2_induces_the_identity_on_the_z2_torsion_of_h1() {
+        let complex = rp2_6v();
+        let vertex_map = identity_map(&complex);
+        let certificate =
+            induced_homology_z(&vertex_map, &complex, &complex).expect("identity is simplicial");
+        certificate
+            .verify(&complex, &complex)
+            .expect("certificate verifies");
+        assert_eq!(certificate.domain_basis[&1].torsion, vec![2]);
+        assert_eq!(certificate.codomain_basis[&1].torsion, vec![2]);
+        let torsion = &certificate.torsion_part[&1];
+        assert_eq!((torsion.rows(), torsion.cols()), (1, 1));
+        let crate::CasExpr::Const(value) = torsion.get(0, 0).expect("1x1") else {
+            panic!("expected a constant entry")
+        };
+        assert_eq!(
+            value.numerator(),
+            1,
+            "the identity map must induce 1 (mod 2) on the torsion generator, not 0"
+        );
+
+        // H_2(RP^2; Z) = 0: no free part and no torsion at that degree.
+        assert_eq!(certificate.domain_basis[&2].free_rank, 0);
+        assert_eq!(certificate.domain_basis[&2].torsion, Vec::<i128>::new());
+        assert_eq!(
+            (
+                certificate.free_part[&2].rows(),
+                certificate.free_part[&2].cols()
+            ),
+            (0, 0)
+        );
+    }
+
+    #[test]
+    fn collapsing_rp2_to_a_point_induces_the_zero_map_into_a_trivial_group() {
+        let domain = rp2_6v();
+        let codomain = point();
+        let vertex_map: BTreeMap<usize, usize> = (0..6).map(|v| (v, 0)).collect();
+        assert!(is_simplicial(&vertex_map, &domain, &codomain));
+        let certificate =
+            induced_homology_z(&vertex_map, &domain, &codomain).expect("collapse is simplicial");
+        certificate
+            .verify(&domain, &codomain)
+            .expect("certificate verifies");
+        // H_1(point) = H_2(point) = 0: the codomain has no torsion and no
+        // free part at either degree, so both blocks are empty (0 rows).
+        assert_eq!(certificate.codomain_basis[&1].free_rank, 0);
+        assert_eq!(certificate.codomain_basis[&1].torsion, Vec::<i128>::new());
+        assert_eq!(certificate.torsion_part[&1].rows(), 0);
+        assert_eq!(certificate.free_part[&1].rows(), 0);
+        assert_eq!(certificate.codomain_basis[&2].free_rank, 0);
+        assert_eq!(certificate.torsion_part[&2].rows(), 0);
+        assert_eq!(certificate.free_part[&2].rows(), 0);
+    }
+
+    /// A forged `free_part` (or `torsion_part`) must be refused, with every
+    /// basis and every other block left genuine.
+    #[test]
+    fn verify_refuses_a_forged_integer_induced_matrix() {
+        let complex = rp2_6v();
+        let vertex_map = identity_map(&complex);
+        let mut certificate =
+            induced_homology_z(&vertex_map, &complex, &complex).expect("identity is simplicial");
+        assert!(certificate.verify(&complex, &complex).is_ok());
+
+        let torsion = certificate.torsion_part.get_mut(&1).expect("degree 1");
+        *torsion = crate::Matrix::new(1, 1, vec![crate::CasExpr::int(0)]).expect("1x1");
+        let err = certificate
+            .verify(&complex, &complex)
+            .expect_err("a forged torsion part must be refused");
+        assert!(err.contains("torsion part mismatch"), "got: {err}");
+    }
+
+    /// ADVERSARIAL. Forge only `torsion_part` to an entry that is not a
+    /// well-defined homomorphism (`2 mod 2 != 0` would be fine, but here we
+    /// build a domain/codomain pair with DIFFERENT torsion moduli so a
+    /// mismatched entry is detectable): the degree-2 wrap's domain `Z_2`
+    /// torsion-free case does not exercise this, so instead corrupt RP^2's
+    /// self-map torsion entry to `1` while claiming (falsely, by
+    /// overwriting only the entry, not the recorded moduli) a modulus
+    /// mismatch is impossible here since both sides are Z/2 -- this test
+    /// instead calls `torsion_entries_are_consistent` directly with a
+    /// hand-built inconsistent case, isolating the guard the way the parent
+    /// module's own hard-to-isolate guards are tested.
+    #[test]
+    fn torsion_entries_are_consistent_refuses_an_algebraically_impossible_entry() {
+        use super::torsion_entries_are_consistent;
+        // Domain torsion modulus 2, codomain torsion modulus 4: an entry of
+        // 1 would need `1 * 2 = 2` to be `0 mod 4`, which it is not.
+        let torsion_part = crate::Matrix::new(1, 1, vec![crate::CasExpr::int(1)]).expect("1x1");
+        let err = torsion_entries_are_consistent(&torsion_part, &[2], &[4], 1)
+            .expect_err("an algebraically impossible entry must be refused");
+        assert!(
+            err.contains("not a well-defined homomorphism"),
+            "got: {err}"
+        );
+
+        // POSITIVE CONTROL: an entry of 0 is always consistent (0 * m = 0
+        // for any modulus).
+        let zero_part = crate::Matrix::new(1, 1, vec![crate::CasExpr::int(0)]).expect("1x1");
+        assert!(torsion_entries_are_consistent(&zero_part, &[2], &[4], 1).is_ok());
     }
 }
