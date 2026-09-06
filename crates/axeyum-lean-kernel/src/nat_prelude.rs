@@ -7502,6 +7502,23 @@ pub struct NatPrelude {
     /// `Nat.Subsets.sumSelOn_all : ∀ n F b,
     /// sumSelOn (fun _ => true) n F b = sumSel n F b` — `Eq.refl`.
     pub subsets_sum_sel_on_all: NameId,
+    /// `Nat.Subsets.sumSelOn_add : ∀ P n F,
+    /// sumSelOn P n F true + sumSelOn P n F false = sumSubsetsOn P n F` — the
+    /// masked grading is a partition of the masked fold.
+    pub subsets_sum_sel_on_add: NameId,
+    /// `Nat.Subsets.sumSubsetsOn_card : ∀ P n,
+    /// sumSubsetsOn P n (fun _ => 1) = pow 2 (countRange P n)` — the masked
+    /// fold visits two-to-the-number-of-MASKED-indices subsets, not `2^n`.
+    /// This is the statement the mask exists for, and the one a step that
+    /// ignores the mask fails while still satisfying every other law here.
+    pub subsets_sum_subsets_on_card: NameId,
+    /// `Nat.Subsets.sumSelOn_const_of_mem : ∀ c P n i, Lt i n →
+    /// Eq Bool (P i) true →
+    /// sumSelOn P n (fun _ => c) true = sumSelOn P n (fun _ => c) false` — THE
+    /// ALTERNATING SUM OVER A NON-EMPTY MASK VANISHES, in `Nat`'s graded form.
+    /// [`subsets_sum_sel_const`](Self::subsets_sum_sel_const) is the special
+    /// case at the full mask, where the witness comes for free.
+    pub subsets_sum_sel_on_const: NameId,
 
     // --- general inclusion-exclusion (`inclusion_exclusion.rs`, ADR-1624) ---
     /// `Nat.Subsets.anyOf c n : Bool` -- `exists i < n, c i`, by recursion on
@@ -8963,6 +8980,9 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             subsets_sum_sel_on_succ: kernel.name_str(subsets, "sumSelOn_succ"),
             subsets_sum_subsets_on_all: kernel.name_str(subsets, "sumSubsetsOn_all"),
             subsets_sum_sel_on_all: kernel.name_str(subsets, "sumSelOn_all"),
+            subsets_sum_sel_on_add: kernel.name_str(subsets, "sumSelOn_add"),
+            subsets_sum_subsets_on_card: kernel.name_str(subsets, "sumSubsetsOn_card"),
+            subsets_sum_sel_on_const: kernel.name_str(subsets, "sumSelOn_const_of_mem"),
             subsets_any_of: kernel.name_str(subsets, "anyOf"),
             subsets_none_of: kernel.name_str(subsets, "noneOf"),
             subsets_prod_par: kernel.name_str(subsets, "prodPar"),
@@ -10718,6 +10738,8 @@ mod hall_marriage_tests;
 mod inclusion_exclusion_tests;
 #[cfg(test)]
 mod subset_search_tests;
+#[cfg(test)]
+mod subset_sums_masked_tests;
 #[cfg(test)]
 mod subset_sums_tests;
 

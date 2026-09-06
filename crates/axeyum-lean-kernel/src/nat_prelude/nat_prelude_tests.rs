@@ -730,6 +730,10 @@ fn definition_names(p: &NatPrelude) -> Vec<NameId> {
         // `multiset_select.rs`.
         p.multiset_restrict,
         p.multiset_prod_sel,
+        // `mobius-transfer` lane (roadmap W2-18, ADR-1671):
+        // `subset_sums_masked.rs`.
+        p.subsets_sum_subsets_on,
+        p.subsets_sum_sel_on,
     ]
 }
 
@@ -1926,6 +1930,17 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.prime_counting_mono,
         p.is_prime_eq_true_of_prime,
         p.prime_counting_prime_unbounded,
+        // `mobius-transfer` lane (roadmap W2-18, ADR-1671):
+        // `subset_sums_masked.rs`.
+        p.subsets_sum_subsets_on_zero,
+        p.subsets_sum_subsets_on_succ,
+        p.subsets_sum_sel_on_zero,
+        p.subsets_sum_sel_on_succ,
+        p.subsets_sum_subsets_on_all,
+        p.subsets_sum_sel_on_all,
+        p.subsets_sum_sel_on_add,
+        p.subsets_sum_subsets_on_card,
+        p.subsets_sum_sel_on_const,
     ]
 }
 
