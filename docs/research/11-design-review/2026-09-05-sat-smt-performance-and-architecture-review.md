@@ -298,6 +298,14 @@ on the traced QF_IDL population (its bottleneck is D1, not D2, on every file
 where `TheoryLayerStats` reports data). Slice 2 (moving `CdclT`'s search onto
 the native clause arena) is unimplemented.
 
+*Measured 2026-09-05 (`perf` unavailable, `--trace`/`explain_corpus` fallback):*
+[which functions inside the driver](2026-09-05-arith-timeout-profiles.md) —
+`CdclT::unit_propagate`'s full clause rescan is ~87% of wall clock on the
+QF_IDL rows that produced counters (decisions never leave zero), confirming
+D1 as the slice 2 target there; QF_LRA's bottleneck is a different function,
+`LraTheory::final_check`/`feasibility` (~84% of wall clock), not Boolean
+propagation, so slice 2 is two separate fixes, not one.
+
 **D3. Dispatch is a hand-ordered portfolio of one-shot routes.**
 [`auto.rs`](../../../crates/axeyum-solver/src/auto.rs) is 9,638 lines with 52
 distinct route labels (`grep -oE '"[a-z]+(-[a-z0-9]+)+"' | sort -u`). Each
