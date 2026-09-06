@@ -6374,7 +6374,7 @@ fn an_annotation_does_not_change_the_formula() {
 // the solver at all. These tests pin the admission AND its boundary: nothing
 // that parsed before changes representation, so no existing verdict can move.
 
-/// `2^256`, the magnitude the Certora QF_UFLIA family carries.
+/// `2^256`, the magnitude the Certora `QF_UFLIA` family carries.
 const EVM_WORD: &str =
     "115792089237316195423570985008687907853269984665640564039457584007913129639936";
 

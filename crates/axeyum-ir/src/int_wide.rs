@@ -5,7 +5,7 @@
 //!
 //! `TermNode::IntConst(i128)` and `Value::Int(i128)` bound the modeled `Int`
 //! range to `i128`, and the SMT-LIB front door turned a wider numeral into
-//! `SmtError::Unsupported`, so 26 of the 200 QF_UFLIA competition files — EVM
+//! `SmtError::Unsupported`, so 26 of the 200 `QF_UFLIA` competition files — EVM
 //! `uint256` bounds from Certora — never reached the solver at all.
 //!
 //! ADR-0376 measured the two ways out and recorded the answer. Changing the

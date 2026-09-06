@@ -552,16 +552,15 @@ fn apply(op: Op, vals: &[Value]) -> Result<Value, IrError> {
     // `2^256` literal — a panic on user input, on the one path every `sat` is
     // replayed through.
     if vals.iter().any(is_wide_int_value) {
-        return if supports_wide_int_path(op) {
+        if supports_wide_int_path(op) {
             // Exact `BigInt` arithmetic: it cannot overflow, and it demotes back
             // to `Value::Int` whenever the result fits, so downstream `as_int`
             // callers keep seeing the narrow representation.
-            apply_wide_int(op, vals)
-        } else {
-            Err(IrError::Unsupported(
-                "integer operand outside the i128 reference range",
-            ))
-        };
+            return Ok(apply_wide_int(op, vals));
+        }
+        return Err(IrError::Unsupported(
+            "integer operand outside the i128 reference range",
+        ));
     }
     let b = |v: &Value| v.as_bool().expect("builder guaranteed Bool operand");
     let bv = |v: &Value| v.as_bv().expect("builder guaranteed BitVec operand");
@@ -1200,12 +1199,17 @@ fn supports_wide_int_path(op: Op) -> bool {
 /// [`Value::Int`] when it fits, so a computation that grows past `i128` and
 /// cancels back returns the ordinary narrow value and each integer keeps exactly
 /// one representation.
-fn apply_wide_int(op: Op, vals: &[Value]) -> Result<Value, IrError> {
+///
+/// It cannot fail: `BigInt` has no overflow, `supports_wide_int_path` has
+/// already excluded every operator without an exact rule, and SMT-LIB fixes
+/// `div a 0 = 0` / `mod a 0 = a`. So it returns a `Value`, not a `Result` — a
+/// `Result` here would be an error channel nothing can ever put anything into.
+fn apply_wide_int(op: Op, vals: &[Value]) -> Value {
     let int = |v: &Value| {
         v.integer()
             .expect("wide integer path entered with an Int operand")
     };
-    Ok(match op {
+    match op {
         Op::Eq => Value::Bool(vals[0] == vals[1]),
         Op::IntNeg => Value::from_wide_int(int(&vals[0]).neg()),
         Op::IntAdd => Value::from_wide_int(int(&vals[0]).add(&int(&vals[1]))),
@@ -1235,7 +1239,7 @@ fn apply_wide_int(op: Op, vals: &[Value]) -> Result<Value, IrError> {
         Op::IntGt => Value::Bool(int(&vals[0]).compare(&int(&vals[1])).is_gt()),
         Op::IntGe => Value::Bool(int(&vals[0]).compare(&int(&vals[1])).is_ge()),
         other => unreachable!("apply_wide_int: {other:?} is not in supports_wide_int_path"),
-    })
+    }
 }
 
 fn is_wide_bv_value(v: &Value) -> bool {

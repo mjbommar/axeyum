@@ -1576,7 +1576,7 @@ pub fn check_auto_explained(
 /// already `Rational` and `Rational` already has `wide_*` — is named here and
 /// then runs. Nothing is opted in today, and ADR-0376's ablation (re-measured
 /// 2026-09-06: 6/6 still `unknown` with every wide literal *removed*) says why
-/// opting one in would decide nothing on the QF_UFLIA population: the binding
+/// opting one in would decide nothing on the `QF_UFLIA` population: the binding
 /// constraint there is the decision procedure, not the literal type.
 fn wide_int_admission(features: &Features) -> Option<UnknownReason> {
     if !features.has_wide_int {
@@ -1590,6 +1590,21 @@ fn wide_int_admission(features: &Features) -> Option<UnknownReason> {
     })
 }
 
+/// [`wide_int_admission`] plus the trace entry, so the dispatcher spends three
+/// lines on it rather than six.
+fn wide_int_decline(features: &Features, rec: &mut Recorder<'_>) -> Option<CheckResult> {
+    let reason = wide_int_admission(features)?;
+    with_recorder(rec, |t| {
+        t.record_declined("wide-int-admission", DeclineReason::from_unknown(&reason));
+    });
+    Some(CheckResult::Unknown(reason))
+}
+
+// 102 lines, three of them the ADR-1702 wide-integer admission guard added on
+// 2026-09-06; the function was at 99 before it. Splitting a dispatch ladder to
+// satisfy a line count would scatter the ordering that IS the logic, so the
+// lint is allowed here as it already is at six other sites in this file.
+#[allow(clippy::too_many_lines)]
 fn check_auto_with_recorder(
     arena: &mut TermArena,
     assertions: &[TermId],
@@ -1610,11 +1625,8 @@ fn check_auto_with_recorder(
         )));
     };
     record_probe(&features, has_quantifier, rec);
-    if let Some(reason) = wide_int_admission(&features) {
-        with_recorder(rec, |t| {
-            t.record_declined("wide-int-admission", DeclineReason::from_unknown(&reason));
-        });
-        return Ok(CheckResult::Unknown(reason));
+    if let Some(result) = wide_int_decline(&features, rec) {
+        return Ok(result);
     }
     if crate::term_identity::term_identity_refutation(arena, assertions).is_some() {
         with_recorder(rec, |t| {
@@ -4387,11 +4399,11 @@ fn interval_of(
     if depth > 256 {
         return None;
     }
+    // A `WideIntConst` falls through to the `None` arm below: `IntInterval` is
+    // an `i128` pair, a wider bound has no point in it, and saturating one would
+    // be a WRONG bound rather than a coarse one (ADR-1702 slice 2).
     match arena.node(term) {
         TermNode::IntConst(value) => Some(IntInterval::point(*value)),
-        // `IntInterval` is an `i128` pair; a wider bound has no point in it,
-        // and saturating one would be a WRONG bound, not a coarse one.
-        TermNode::WideIntConst(_) => None,
         TermNode::Symbol(sym) => {
             if arena.sort_of(term) == Sort::Int {
                 bounds.get(sym).copied()
@@ -4466,6 +4478,7 @@ fn interval_of(
         TermNode::BoolConst(_)
         | TermNode::BvConst { .. }
         | TermNode::WideBvConst(_)
+        | TermNode::WideIntConst(_)
         | TermNode::RealConst(_) => None,
     }
 }
@@ -9840,7 +9853,7 @@ mod tests {
 
     // ----- wide integer literals (ADR-1702 slice 2) ---------------------
 
-    /// `2^256`, the EVM `uint256` magnitude the Certora QF_UFLIA family carries.
+    /// `2^256`, the EVM `uint256` magnitude the Certora `QF_UFLIA` family carries.
     /// Built by repeated exact doubling rather than from a decimal constant, so
     /// the fixture cannot be a typo that happens to parse.
     fn wide_pow2(n: u32) -> axeyum_ir::WideInt {

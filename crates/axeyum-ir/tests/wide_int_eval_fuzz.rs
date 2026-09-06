@@ -73,6 +73,11 @@ impl Lcg {
     fn below(&mut self, n: u64) -> u64 {
         self.next_u64() % n
     }
+
+    /// A uniform-ish index into a slice of length `len`.
+    fn pick(&mut self, len: usize) -> usize {
+        usize::try_from(self.below(len as u64)).expect("an index below len fits usize")
+    }
 }
 
 /// The generated expression, kept separately from the arena so the reference
@@ -124,8 +129,7 @@ fn literal_pool() -> Vec<BigInt> {
 
 fn generate(rng: &mut Lcg, depth: u32, pool: &[BigInt], zero_divisor: &mut bool) -> Expr {
     if depth == 0 {
-        let index = rng.below(pool.len() as u64) as usize;
-        return Expr::Lit(pool[index].clone());
+        return Expr::Lit(pool[rng.pick(pool.len())].clone());
     }
     match rng.below(8) {
         0 => Expr::Neg(Box::new(generate(rng, depth - 1, pool, zero_divisor))),
@@ -160,10 +164,7 @@ fn generate(rng: &mut Lcg, depth: u32, pool: &[BigInt], zero_divisor: &mut bool)
                 Expr::Mod(left, right)
             }
         }
-        _ => {
-            let index = rng.below(pool.len() as u64) as usize;
-            Expr::Lit(pool[index].clone())
-        }
+        _ => Expr::Lit(pool[rng.pick(pool.len())].clone()),
     }
 }
 
@@ -336,27 +337,24 @@ fn integer_evaluation_matches_a_bigint_reference_across_the_i128_boundary() {
                 ),
                 (Ok(value), Ok(actual)) => {
                     agreed_value += 1;
-                    match value.to_i128() {
-                        // Canonicality: a result inside `i128` is the NARROW
-                        // variant, so each integer keeps one representation.
-                        Some(small) => {
-                            if !narrow_expr_only(&expr) {
-                                demotions += 1;
-                            }
-                            assert_eq!(
-                                actual,
-                                Value::Int(small),
-                                "seed {seed} depth {depth}: {expr:?}"
-                            );
+                    // Canonicality: a result inside `i128` comes back as the
+                    // NARROW variant, so each integer keeps one representation.
+                    if let Some(small) = value.to_i128() {
+                        if !narrow_expr_only(&expr) {
+                            demotions += 1;
                         }
-                        None => {
-                            wide_results += 1;
-                            assert_eq!(
-                                actual,
-                                Value::WideInt(WideInt::from_big(value.clone())),
-                                "seed {seed} depth {depth}: {expr:?}"
-                            );
-                        }
+                        assert_eq!(
+                            actual,
+                            Value::Int(small),
+                            "seed {seed} depth {depth}: {expr:?}"
+                        );
+                    } else {
+                        wide_results += 1;
+                        assert_eq!(
+                            actual,
+                            Value::WideInt(WideInt::from_big(value.clone())),
+                            "seed {seed} depth {depth}: {expr:?}"
+                        );
                     }
                 }
             }

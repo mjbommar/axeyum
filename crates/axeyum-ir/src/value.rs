@@ -853,8 +853,11 @@ impl Value {
     pub fn as_int(&self) -> Option<i128> {
         match self {
             Value::Int(value) => Some(*value),
-            Value::WideInt(_) => None,
-            Value::Bool(_)
+            // `WideInt` joins the declining arm below: an integer that does not
+            // fit `i128` is not an `i128`, and narrowing it would be the silent
+            // wrong answer ADR-1702 forbids.
+            Value::WideInt(_)
+            | Value::Bool(_)
             | Value::Bv { .. }
             | Value::Array(_)
             | Value::GenericArray(_)

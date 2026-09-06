@@ -370,11 +370,12 @@ impl Relax {
             TermNode::BoolConst(_) | TermNode::RealConst(_) => t,
             // An integer constant `n` reinterprets as the real number `n`.
             TermNode::IntConst(n) => arena.real_const(Rational::integer(n)),
-            // No `Rational::integer` image outside `i128` (ADR-1702 keeps
-            // promotion opt-in): decline rather than narrow.
-            TermNode::WideIntConst(_) => return Ok(None),
-            // No real analogue.
-            TermNode::BvConst { .. } | TermNode::WideBvConst(_) => return Ok(None),
+            // No real analogue for a bit-vector, and no `Rational::integer`
+            // image for an integer outside `i128` (ADR-1702 keeps promotion
+            // opt-in): both decline rather than narrow.
+            TermNode::WideIntConst(_) | TermNode::BvConst { .. } | TermNode::WideBvConst(_) => {
+                return Ok(None);
+            }
             TermNode::Symbol(s) => match arena.sort_of(t) {
                 Sort::Int => self.real_of_int(arena, s)?,
                 Sort::Real | Sort::Bool => t,

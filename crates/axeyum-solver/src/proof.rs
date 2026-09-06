@@ -825,12 +825,11 @@ pub fn export_qf_lia_unsat_proof(
 ) -> Result<UnsatProofOutcome, SolverError> {
     let blasting = match blast_integers(arena, assertions, int_width) {
         Ok(blasting) => blasting,
-        Err(IntBlastError::ConstantOutOfRange { .. }) => {
-            return Ok(UnsatProofOutcome::Inconclusive); // bound too small to bit-blast
-        }
-        // Outside the `i128` range entirely (ADR-1702 slice 2): no bit-blast
-        // proof exists at any width this route accepts.
-        Err(IntBlastError::WideConstantOutOfRange { .. }) => {
+        // Bound too small to bit-blast, or (ADR-1702 slice 2) a constant
+        // outside `i128` for which no width this route accepts is big enough.
+        Err(
+            IntBlastError::ConstantOutOfRange { .. } | IntBlastError::WideConstantOutOfRange { .. },
+        ) => {
             return Ok(UnsatProofOutcome::Inconclusive);
         }
         Err(IntBlastError::InvalidWidth(width)) => {
