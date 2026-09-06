@@ -38,7 +38,18 @@
 //! axiom footprint is whatever `Rat`'s own is — measured empty.
 
 #![cfg_attr(not(test), allow(dead_code))]
-#![allow(clippy::many_single_char_names, clippy::similar_names)]
+// `RatPrelude` is a `Copy` handle carrying the whole `IntPrelude`/`NatPrelude`
+// chain plus ~460 of its own names, so it is large and every function below
+// trips `large_types_passed_by_value`. Same shape, same suppression and the
+// same reason as `rn.rs`, `creal.rs` and `metric.rs`: these are straight-line
+// term constructions and the handle is a `Copy` snapshot by design. The
+// carrier-agnostic half in `super` uses `&self`/`Copy` scalars and needs none
+// of this.
+#![allow(
+    clippy::large_types_passed_by_value,
+    clippy::many_single_char_names,
+    clippy::similar_names
+)]
 
 use crate::ExprNode;
 use crate::RatPrelude;

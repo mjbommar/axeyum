@@ -5,7 +5,7 @@
 //! This is the fifth tactic-layer producer in the sense of
 //! [ADR-0601](../../../docs/research/09-decisions/adr-0601-three-producers-one-trust-anchor.md),
 //! after `linarith` (ADR-1576), `ring` (ADR-1582), `decide` and `simp`:
-//! untrusted search (here a rational LDLᵀ factorization of a Gram matrix),
+//! untrusted search (here a rational `LDLᵀ` factorization of a Gram matrix),
 //! trusted checking ([`Kernel::add_declaration`](crate::Kernel::add_declaration)).
 //! It adds **no** trusted surface of its own: the returned `ExprId` is an
 //! unchecked term the caller pushes through the kernel exactly as it pushes a
@@ -38,7 +38,7 @@
 //! For a goal whose difference `rhs − lhs` is a polynomial of **total degree
 //! ≤ 2**, the search is COMPLETE: a quadratic form's Gram matrix over the affine
 //! basis `(1, x₁, …, xₙ)` is unique, `p` is a sum of squares of rational affine
-//! forms **iff** that matrix is positive semidefinite, and rational LDLᵀ decides
+//! forms **iff** that matrix is positive semidefinite, and rational `LDLᵀ` decides
 //! PSD-ness exactly (see [`Psd::factor`]). A negative pivot is therefore not a
 //! decline but a *finding*: the goal is false, and [`Decline::NotPsd`] says so.
 //!
@@ -53,7 +53,7 @@
 //!
 //! ## Rational weights, and why a SCALE appears in the certificate
 //!
-//! LDLᵀ produces `p = Σ dₖ ℓₖ²` with *rational* `dₖ > 0` and rational `ℓₖ`. The
+//! `LDLᵀ` produces `p = Σ dₖ ℓₖ²` with *rational* `dₖ > 0` and rational `ℓₖ`. The
 //! ring producer that proves the certificate's identity
 //! ([`crate::ring::rat`]) recognizes only the literals `{-1, 0, 1}` — a
 //! rational literal in ℚ is a normalized `num/den` pair with no free structural
@@ -135,7 +135,7 @@ pub enum Decline {
     /// Sound because the degree-≤2 Gram matrix is unique: there is no other
     /// matrix the search could have tried.
     NotPsd {
-        /// Index into the affine basis `(1, x₁, …, xₙ)` at which LDLᵀ found a
+        /// Index into the affine basis `(1, x₁, …, xₙ)` at which `LDLᵀ` found a
         /// negative pivot, or a zero pivot with a nonzero entry beside it.
         pivot: usize,
     },
@@ -203,6 +203,12 @@ fn gcd(a: i128, b: i128) -> i128 {
     i128::try_from(a).unwrap_or(i128::MAX)
 }
 
+// `add`/`sub`/`mul`/`div`/`neg` here are CHECKED and return `Option`, so they
+// cannot be `std::ops` impls: those operators return `Self` and have nowhere to
+// put an overflow. Keeping the arithmetic names is the point -- the search reads
+// as arithmetic -- and the `Option` in every signature is what stops a caller
+// mistaking one for the infallible operator.
+#[allow(clippy::should_implement_trait)]
 impl Q {
     /// `n / d` in lowest terms, or `None` when `d == 0` or the normalization
     /// overflows.
@@ -453,7 +459,7 @@ impl Poly {
 // rational LDL^T: the PSD decision
 // ---------------------------------------------------------------------------
 
-/// The LDLᵀ factorization of a symmetric rational matrix: `A = Σᵢ dᵢ · ℓᵢ ℓᵢᵀ`
+/// The `LDLᵀ` factorization of a symmetric rational matrix: `A = Σᵢ dᵢ · ℓᵢ ℓᵢᵀ`
 /// with every `dᵢ > 0` and `ℓᵢ` a vector whose `i`-th entry is `1`.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Psd {
@@ -467,7 +473,7 @@ impl Psd {
     /// positive semidefinite, and factor it when it is.
     ///
     /// **This is a decision, not a heuristic.** For a PSD matrix a zero diagonal
-    /// pivot forces its whole row and column to be zero, so plain LDLᵀ without
+    /// pivot forces its whole row and column to be zero, so plain `LDLᵀ` without
     /// pivoting never gets stuck on one: a zero pivot beside a nonzero entry is
     /// itself a proof that the matrix is indefinite. That is why
     /// [`Decline::NotPsd`] is reported as a finding.
@@ -488,10 +494,8 @@ impl Psd {
             if pivot.is_zero() {
                 // PSD forces the rest of this row to vanish; a nonzero entry
                 // beside a zero pivot is a 2x2 minor with negative determinant.
-                for j in (i + 1)..n {
-                    if !work[i][j].is_zero() {
-                        return Err(Decline::NotPsd { pivot: i });
-                    }
+                if work[i][(i + 1)..n].iter().any(|entry| !entry.is_zero()) {
+                    return Err(Decline::NotPsd { pivot: i });
                 }
                 continue;
             }
@@ -604,13 +608,6 @@ impl DualWitness {
 /// sorted-multiset order.
 #[must_use]
 pub fn monomials_of_degree(vars: usize, degree: usize) -> Vec<Mono> {
-    if vars == 0 {
-        return if degree == 0 {
-            vec![Vec::new()]
-        } else {
-            Vec::new()
-        };
-    }
     fn walk(vars: usize, degree: usize, start: usize, current: &mut Mono, out: &mut Vec<Mono>) {
         if current.len() == degree {
             out.push(current.clone());
@@ -621,6 +618,13 @@ pub fn monomials_of_degree(vars: usize, degree: usize) -> Vec<Mono> {
             walk(vars, degree, v, current, out);
             current.pop();
         }
+    }
+    if vars == 0 {
+        return if degree == 0 {
+            vec![Vec::new()]
+        } else {
+            Vec::new()
+        };
     }
     let mut out = Vec::new();
     let mut current = Vec::new();
@@ -751,7 +755,7 @@ pub fn search_sos(p: &Poly, vars: usize) -> Result<Certificate, Decline> {
     clear_denominators(&psd.squares)
 }
 
-/// Turn the rational-weight LDLᵀ squares `Σ dₖ ℓₖ²` into an integer-coefficient,
+/// Turn the rational-weight `LDLᵀ` squares `Σ dₖ ℓₖ²` into an integer-coefficient,
 /// integer-multiplicity certificate at a single common scale `M`.
 ///
 /// See the module docs for why the ring producer forces this.

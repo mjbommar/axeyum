@@ -7170,12 +7170,12 @@ SUITES["psatz"] = (
         ),
         (
             "a zero pivot beside a nonzero entry is a NotPsd finding",
-            "                    if !work[i][j].is_zero() {\n"
-            "                        return Err(Decline::NotPsd { pivot: i });\n"
-            "                    }",
-            "                    if false {\n"
-            "                        return Err(Decline::NotPsd { pivot: i });\n"
-            "                    }",
+            "                if work[i][(i + 1)..n].iter().any(|entry| !entry.is_zero()) {\n"
+            "                    return Err(Decline::NotPsd { pivot: i });\n"
+            "                }",
+            "                if false {\n"
+            "                    return Err(Decline::NotPsd { pivot: i });\n"
+            "                }",
         ),
         (
             # Without the division the emitted term proves `0 <= 4p`, not

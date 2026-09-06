@@ -1,5 +1,5 @@
 //! Tests for the carrier-agnostic half of [`super`]: the exact rational
-//! arithmetic, the polynomial algebra, the LDLᵀ PSD decision, the
+//! arithmetic, the polynomial algebra, the `LDLᵀ` PSD decision, the
 //! denominator-clearing search, and the [`DualWitness`] check.
 //!
 //! Nothing here builds a kernel term — that is [`super::rat`]'s own suite.
@@ -118,7 +118,7 @@ fn ldl_reports_a_negative_pivot_as_not_psd() {
 
 #[test]
 fn ldl_reports_a_zero_pivot_beside_a_nonzero_entry_as_not_psd() {
-    // [[0, 1], [1, 0]] — the case plain LDLᵀ would divide by zero on, and the
+    // [[0, 1], [1, 0]] — the case plain `LDLᵀ` would divide by zero on, and the
     // reason a zero pivot is checked against its own row rather than skipped.
     let a = vec![
         vec![Q::zero(), Q::integer(1)],
