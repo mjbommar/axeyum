@@ -71,6 +71,20 @@ use crate::normalforms::{
 };
 use crate::{CasExpr, Matrix, ZeroTest, equal};
 
+// Wave two (item 8, wave two): the next things a topologist reaches for after
+// Betti numbers, each as a sibling file declared here so `lib.rs` stays
+// untouched. Each is a child module of `homology`, so it can reach this
+// module's private helpers (`rebuild_boundaries`, `is_zero_matrix`,
+// `diagonal_rank`, `torsion_factors`, `SmithData`) via `super::`.
+#[path = "homology_coefficients.rs"]
+pub mod coefficients;
+#[path = "homology_cohomology.rs"]
+pub mod cohomology;
+#[path = "homology_induced.rs"]
+pub mod induced;
+#[path = "homology_persistent.rs"]
+pub mod persistent;
+
 /// An abstract simplicial complex over vertex ids `0..`, closed under taking
 /// faces, built from a list of maximal simplices.
 ///
@@ -153,6 +167,131 @@ impl SimplicialComplex {
             total += if dim % 2 == 0 { count } else { -count };
         }
         total
+    }
+
+    /// Whether `face` (a vertex list, sorted and deduplicated by the caller) is
+    /// itself a face of this complex, i.e. present in `self.faces` at
+    /// dimension `face.len() - 1`. Used by [`induced`] to check a vertex map
+    /// is simplicial (every simplex's image is a face of the codomain).
+    ///
+    /// [`induced`]: crate::homology::induced
+    #[must_use]
+    pub fn contains_face(&self, face: &[usize]) -> bool {
+        if face.is_empty() {
+            return false;
+        }
+        self.faces
+            .get(&(face.len() - 1))
+            .is_some_and(|set| set.contains(face))
+    }
+}
+
+/// Small complex builders shared by this module's own tests and by the
+/// wave-two sibling modules' tests, so the standard triangulations (circle,
+/// sphere, torus, `RP^2`, Klein bottle) are defined exactly once.
+#[cfg(test)]
+pub(crate) mod fixtures {
+    use super::SimplicialComplex;
+
+    pub(crate) fn complex_of(maximal: &[&[usize]]) -> SimplicialComplex {
+        let owned: Vec<Vec<usize>> = maximal.iter().map(|s| s.to_vec()).collect();
+        SimplicialComplex::from_maximal_simplices(&owned).expect("valid complex")
+    }
+
+    /// A point: one vertex, no edges.
+    pub(crate) fn point() -> SimplicialComplex {
+        complex_of(&[&[0]])
+    }
+
+    /// The boundary of a triangle: a 3-vertex circle (`b = (1, 1)`).
+    pub(crate) fn circle() -> SimplicialComplex {
+        complex_of(&[&[0, 1], &[1, 2], &[0, 2]])
+    }
+
+    /// A 6-vertex circle wrapping the standard 3-vertex `circle()` twice
+    /// (edges `{i, i+1 mod 6}`).
+    pub(crate) fn hexagon_circle() -> SimplicialComplex {
+        complex_of(&[
+            &[0, 1],
+            &[1, 2],
+            &[2, 3],
+            &[3, 4],
+            &[4, 5],
+            &[5, 0],
+        ])
+    }
+
+    /// The filled triangle `[0, 1, 2]`: contractible, `b = (1, 0)`.
+    pub(crate) fn filled_triangle() -> SimplicialComplex {
+        complex_of(&[&[0, 1, 2]])
+    }
+
+    /// The boundary of a tetrahedron: a 2-sphere (`b = (1, 0, 1)`).
+    pub(crate) fn sphere() -> SimplicialComplex {
+        complex_of(&[&[0, 1, 2], &[0, 1, 3], &[0, 2, 3], &[1, 2, 3]])
+    }
+
+    /// The standard 7-vertex triangulation of the torus (`b = (1, 2, 1)`, no
+    /// torsion at any coefficient ring).
+    pub(crate) fn torus_7v() -> SimplicialComplex {
+        complex_of(&[
+            &[0, 1, 3],
+            &[0, 1, 5],
+            &[0, 2, 3],
+            &[0, 2, 6],
+            &[0, 4, 5],
+            &[0, 4, 6],
+            &[1, 2, 4],
+            &[1, 2, 6],
+            &[1, 3, 4],
+            &[1, 5, 6],
+            &[2, 3, 5],
+            &[2, 4, 5],
+            &[3, 4, 6],
+            &[3, 5, 6],
+        ])
+    }
+
+    /// The standard 6-vertex triangulation of the real projective plane
+    /// (`b = (1, 0, 0)` over Z, torsion `Z/2` at `H_1`).
+    pub(crate) fn rp2_6v() -> SimplicialComplex {
+        complex_of(&[
+            &[0, 1, 2],
+            &[0, 1, 4],
+            &[0, 2, 3],
+            &[0, 3, 5],
+            &[0, 4, 5],
+            &[1, 2, 5],
+            &[1, 3, 4],
+            &[1, 3, 5],
+            &[2, 3, 4],
+            &[2, 4, 5],
+        ])
+    }
+
+    /// The standard 9-vertex, 18-triangle Klein bottle triangulation
+    /// (`b = (1, 1, 0)` over Z, torsion `Z/2` at `H_1`).
+    pub(crate) fn klein_bottle_9v() -> SimplicialComplex {
+        complex_of(&[
+            &[0, 1, 3],
+            &[0, 1, 6],
+            &[0, 2, 5],
+            &[0, 2, 7],
+            &[0, 3, 5],
+            &[0, 6, 7],
+            &[1, 2, 4],
+            &[1, 2, 8],
+            &[1, 3, 4],
+            &[1, 6, 8],
+            &[2, 4, 5],
+            &[2, 7, 8],
+            &[3, 4, 6],
+            &[3, 5, 8],
+            &[3, 6, 8],
+            &[4, 5, 7],
+            &[4, 6, 7],
+            &[5, 7, 8],
+        ])
     }
 }
 
