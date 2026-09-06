@@ -78,6 +78,37 @@
 //! | [`is_principal`] | [`PrincipalityCertificate`] | the correspondence certificate verifies; the recorded principal form is the one `D` determines (`(1,0,−D/4)` or `(1,1,(1−D)/4)`), is reduced and has discriminant `D`; and the recorded verdict is exactly `reduced == principal form` — a forged `true` and a forged `false` are separate refusals |
 //! | [`class_group`] | [`ClassGroupCertificate`] | the wave-two [`super::ClassNumberCertificate`] verifies and its `D` and form list are the recorded ones; `1 ≤ h ≤` [`CLASS_GROUP_ORDER_BOUND`]; the table is `h × h` with every entry in range; **every cell is re-derived by running [`compose`] and verifying its certificate**; the identity index carries the principal form and its row and column are the identity permutation; every inverse is the reduced opposite form `(a, −b, c)` and the table sends the pair to the identity; associativity over all `h³` triples; commutativity; every recorded element order is the least `k ≥ 1` with `gᵏ = e` recomputed from the table; and the invariant factors are each `> 1`, divide in a chain, multiply to `h`, and **predict the recorded multiset of element orders** |
 //!
+//! **Guard order is load-bearing here, and one guard was removed for being
+//! unreachable.** A 43-site mutation sweep (each guard's `return Err(…)` turned
+//! into `return Ok(())`, one at a time) kills at least one test for every guard
+//! and exactly one for 42 of the 43; the exception is
+//! `ReductionResultMismatch`, which two forgeries route through on purpose.
+//! Two findings came out of running it:
+//!
+//! - **A per-step `SL₂(ℤ)` determinant check was deleted.** Both step matrices
+//!   are computed by [`ReductionStep::matrix`] from recorded data that cannot
+//!   make the determinant anything but `1`, so no forgery could reach it. The
+//!   determinant guard that *is* reachable is the one on the recorded total
+//!   transform, which is a separate field.
+//! - **[`ClassGroupCertificate::verify`] runs the group axioms BEFORE the
+//!   recomposition, not after.** The recomposition pins every cell of the table
+//!   exactly, so anything checked after it is a guard no forgery can reach; put
+//!   the axioms first and each of them becomes the guard a table forgery
+//!   actually hits. The cost ordering agrees — the axioms are index lookups and
+//!   the recomposition is `h²` verified compositions.
+//!
+//! The price of that ordering is that the *recomposition* is then the guard
+//! that needs a forgery surviving every axiom: a group law on the same labels,
+//! with the same identity, inverse map, element orders and invariant factors,
+//! that is nonetheless not the composition table. No such thing exists for
+//! `h ≤ 4` — every relabelling that preserves those is an automorphism, and an
+//! automorphism gives back the same table — which is why `D = −20, −23, −56,
+//! −84` cannot test it. It does exist for `ℤ/8`: fix `e, g², g⁴, g⁶` and swap
+//! `g ↔ g³` (and `g⁵ ↔ g⁷`, so the permutation commutes with inversion). That
+//! preserves every order and the whole inverse map, but `g ↦ g³` with `g²` fixed
+//! is not an automorphism of `ℤ/8`. `h(−95) = 8` and cyclic, and that is the
+//! test.
+//!
 //! **Why the order multiset settles the decomposition.** For a finite abelian
 //! group the counting function `k ↦ #{x : xᵏ = e}` determines the isomorphism
 //! type, and that function is a re-encoding of the multiset of element orders.
@@ -2184,6 +2215,19 @@ mod tests {
         assert_eq!(
             backward.verify(),
             Err(ClassGroupCertificateError::BackwardMapMismatch)
+        );
+    }
+
+    // F6, which is a second, independently reachable copy of the same
+    // admissibility check the reduction certificate makes on its own start.
+    #[test]
+    fn the_correspondence_refuses_a_raw_form_of_the_wrong_discriminant() {
+        let order = order(-5);
+        let (_, mut certificate) = class_of_ideal(&order, &ideal(2, 1, 1)).expect("class");
+        certificate.raw_form = form(1, 1, 6);
+        assert_eq!(
+            certificate.verify(),
+            Err(ClassGroupCertificateError::ReductionStartNotAdmissible)
         );
     }
 
