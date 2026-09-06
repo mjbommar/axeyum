@@ -1,0 +1,28 @@
+# Route traces for the two QF_LIA files lost between 9914a1c0e and b32377dc52.
+#
+# explain_corpus is DIAGNOSTIC ONLY: it runs `check_auto_explained` on the FLAT
+# assertion view, not the shipped front door, and measured 2026-08-21 it
+# disagreed with `solve_smtlib` on 134 of 397 committed benchmarks. It is quoted
+# here ONLY for the decline REASON string, which `smtcomp_cli` discards. The
+# verdicts of record are smtcomp_cli's, in qf_lia_lost2_traces.txt.
+#
+# Host s5, idle (load 0.32), taskset -c 0-7.
+# AFTER  binary tree: ~/axeyum-parity-s1        (solver commit b32377dc52)
+# BEFORE binary tree: ~/axeyum-parity-20260905  (solver commit 9914a1c0e)
+
+### AFTER, ex3000_2400_100.smt2
+{"file":"ex3000_2400_100.smt2","status":"decided","oracle":false,"front_door":"solve_smtlib","verdict":"flat-unknown","trace":{"schema_version":1,"attempts":[{"route":"probe","outcome":"probe","detail":"fragment {int}","elapsed_ns":1201069},{"route":"cas-int-units","outcome":"declined","reason":"incomplete","kind":"incomplete","detail":"normalized to k*m = c, but no asserted bound puts a factor of m outside the divisors of c/k","elapsed_ns":812355},{"route":"dl-online","outcome":"declined","reason":"not-applicable","elapsed_ns":18632791},{"route":"lia-simplex","outcome":"declined","reason":"unsupported","elapsed_ns":1392271},{"route":"lia-dpll","outcome":"declined","reason":"budget","detail":"lazy linear arithmetic pre-SAT skeleton exceeds the joint resource boundary (atoms=2850, cnf_vars=6533, base_trigger=>1024/>4096, moderate_envelope<=1280/<=8192, initial_clauses=282, blocking_lemmas=0); declining before the online CDCL(T) probe (dispatch-overrun fix: admission evaluated before the reserve was spent)","elapsed_ns":12633934}]}}
+
+### AFTER, ex4320_2400_100.smt2
+{"file":"ex4320_2400_100.smt2","status":"decided","oracle":false,"front_door":"solve_smtlib","verdict":"flat-unknown","trace":{"schema_version":1,"attempts":[{"route":"probe","outcome":"probe","detail":"fragment {int}","elapsed_ns":1607107},{"route":"cas-int-units","outcome":"declined","reason":"incomplete","kind":"incomplete","detail":"normalized to k*m = c, but no asserted bound puts a factor of m outside the divisors of c/k","elapsed_ns":1377064},{"route":"dl-online","outcome":"declined","reason":"not-applicable","elapsed_ns":17644773},{"route":"lia-simplex","outcome":"declined","reason":"unsupported","elapsed_ns":1413460},{"route":"lia-dpll","outcome":"declined","reason":"budget","detail":"lazy linear arithmetic pre-SAT skeleton exceeds the joint resource boundary (atoms=2850, cnf_vars=6533, base_trigger=>1024/>4096, moderate_envelope<=1280/<=8192, initial_clauses=282, blocking_lemmas=0); declining before the online CDCL(T) probe (dispatch-overrun fix: admission evaluated before the reserve was spent)","elapsed_ns":12030023}]}}
+
+### BEFORE, ex4320_2400_100.smt2
+{"file":"ex4320_2400_100.smt2","status":"decided","oracle":false,"front_door":"solve_smtlib","verdict":"flat-unknown","trace":{"schema_version":1,"attempts":[{"route":"probe","outcome":"probe","detail":"fragment {int}","elapsed_ns":1204045},{"route":"cas-int-units","outcome":"declined","reason":"incomplete","kind":"incomplete","detail":"normalized to k*m = c, but no asserted bound puts a factor of m outside the divisors of c/k","elapsed_ns":9222377},{"route":"dl-online","outcome":"declined","reason":"not-applicable","elapsed_ns":19403419},{"route":"lia-simplex","outcome":"declined","reason":"unsupported","elapsed_ns":6324105},{"route":"lia-dpll","outcome":"declined","reason":"budget","detail":"lazy linear arithmetic pre-SAT skeleton exceeds the joint resource boundary (atoms=2850, cnf_vars=6533, base_trigger=>1024/>4096, moderate_envelope<=1280/<=8192, initial_clauses=282, blocking_lemmas=0); declining before the first SAT round","elapsed_ns":3344351519}]}}
+
+# READING. The atom/CNF-variable counts are IDENTICAL in both arms (2850 / 6533),
+# so `exceeds_pre_sat_skeleton_boundary` was already true before S2. What changed
+# is WHEN it is evaluated: BEFORE declines "before the first SAT round" (i.e.
+# inside IncrementalArithDpll::solve, reached only after the online CDCL(T) probe
+# has already run and, on the front door with a 24 s budget, already returned
+# unsat); AFTER declines "before the online CDCL(T) probe", so the probe never
+# runs and the refutation it used to find is lost.
