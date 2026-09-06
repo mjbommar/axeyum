@@ -38,13 +38,14 @@
       "supports": "What the real model MEANS, at the level the kernel gate cannot reach. Each definition it rests on is evaluated by Kernel::def_eq and each evaluation carries its negative half -- including the two that encode the design decision: Nondeg is a PosBound witness and NOT the negation, and Apart is a PosBound on distSq and NOT the negation of CPoint.Equiv.",
       "check_status": "checked",
       "checkers": [
-        "crates/axeyum-lean-kernel/src/geo/geo_tests.rs",
-        "crate::Kernel::def_eq at free variables for the shape pins, and at CReal.zero/CReal.one for the projections",
-        "crate::Kernel::axiom_footprint over a population derived from Environment::iter, not from a list"
+        "crates/axeyum-lean-kernel/src/geo/geo_tests.rs (20 tests)",
+        "crate::Kernel::def_eq where it SUCCEEDS, plus interned-ExprId comparison against the stored Definition value for the discriminating half",
+        "crate::Kernel::axiom_footprint over a population derived from Environment::iter, not from a list",
+        "scripts/tests/mutation_controls.py geo-incidence (4 registered mutants, 2 of them the real model's)"
       ],
-      "checker_command": "cargo test -p axeyum-lean-kernel --release --lib -- geo:: --test-threads=4",
-      "checker_seconds": 1400,
-      "notes": "Seven new evaluation tests, each with a negative half: the RLine0 projections pick the field their name claims; Geo.RPlane.join's coefficients are (y Q - y P, x P - x Q, ...) IN THAT ORDER and the swap is refuted at FREE VARIABLES (a concrete pair can make two coefficients coincide); Geo.RPlane.onRaw pairs each coefficient with its own coordinate; Geo.RLine0.Nondeg is the PosBound existential and NOT (Equiv (a*a+b*b) 0 -> False); Geo.RPlane.Apart is the PosBound existential and NOT (CPoint.Equiv P Q -> False); CPoint.distSq unfolds definitionally to the coordinate difference squares and NOT to the sum form (joinUnique's cancellation rests on that defeq); and Geo.rplane's carriers are CPoint / Geo.RLine and NOT Geo.QPoint, so the two models are two and not one written twice. Confirm a NONZERO test count."
+      "checker_command": "cargo test -p axeyum-lean-kernel --release --lib -- geo:: --test-threads=2",
+      "checker_seconds": 120,
+      "notes": "Seven new evaluation pins, each with a discriminating half: the RLine0 projections pick the field their name claims; Geo.RPlane.join's coefficients are (y Q - y P, x P - x Q, ...) IN THAT ORDER and the swap is refuted at FREE VARIABLES (a concrete pair can make two coefficients coincide); Geo.RPlane.onRaw pairs each coefficient with its own coordinate; Geo.RLine0.Nondeg is the PosBound existential and NOT (Equiv (a*a+b*b) 0 -> False); Geo.RPlane.Apart is the PosBound existential and NOT (CPoint.Equiv P Q -> False); CPoint.distSq unfolds definitionally to the coordinate difference squares and NOT to the sum form (joinUnique's cancellation rests on that defeq); and Geo.rplane's carriers are CPoint / Geo.RLine and NOT Geo.QPoint, so the two models are two and not one written twice. Confirm a NONZERO test count: measured 20 passed, 0 failed in 117.22s (--release, --test-threads=2). The pins are written as STORED-VALUE comparisons and not as `def_eq` refutations: over CReal a failing `def_eq` between two arithmetic terms is a search that did not finish in ten minutes, while a succeeding one is delta/iota plus congruence and is fast. See ADR-1652's Consequences."
     },
     {
       "id": "footprint-geo-rplane",
@@ -55,9 +56,9 @@
         "Kernel::axiom_footprint",
         "geo_tests::the_handle_names_every_live_geo_declaration (set equality against Environment::iter)"
       ],
-      "checker_command": "cargo test -p axeyum-lean-kernel --release --lib -- geo::geo_tests::every_declaration_is_present_and_axiom_free geo::geo_tests::the_handle_names_every_live_geo_declaration --test-threads=4",
-      "checker_seconds": 1400,
-      "notes": "Environment::contains is asserted BEFORE the footprint, because an empty Kernel::axiom_footprint is also what a MISSING name returns. The population is the set of names rendering under `Geo.`, collected from Environment::iter and required to equal the set the prelude handle names, so a declaration added and forgotten fails and so does one named in the handle the build never emitted. The vacuity floor moves from 70 to 110 with the real model's 41 names."
+      "checker_command": "cargo test -p axeyum-lean-kernel --release --lib -- geo::geo_tests::every_declaration_is_present_and_axiom_free geo::geo_tests::the_handle_names_every_live_geo_declaration --test-threads=2",
+      "checker_seconds": 120,
+      "notes": "Environment::contains is asserted BEFORE the footprint, because an empty Kernel::axiom_footprint is also what a MISSING name returns. The population is the set of names rendering under `Geo.`, collected from Environment::iter and required to equal the set the prelude handle names, so a declaration added and forgotten fails and so does one named in the handle the build never emitted. The vacuity floor moves from 70 to 110 with the real model's 41 names. Measured green at 20 passed, 0 failed."
     }
   ],
   "provenance": {
@@ -66,5 +67,5 @@
     "established_by": "axeyum-lean-kernel build_geo_prelude (crates/axeyum-lean-kernel/src/geo.rs, crates/axeyum-lean-kernel/src/geo/rplane.rs)",
     "source": "ADR-1652 (docs/research/09-decisions/adr-1652-the-real-plane-is-a-model-and-it-needs-no-case-split.md); roadmap W3-8, second slice. formal.statement is the rendered type of the admitted declaration."
   },
-  "notes": "What this fact does NOT say. It does not say the axioms are categorical or that they pin the Euclidean plane -- three incidence axioms do not, which is why Hilbert's Grundlagen has four more groups. It does not say the real plane satisfies Playfair's parallel axiom: no Geo.Affine structure exists, and the obstruction is sized in ADR-1652 section 5 -- uniqueness of the parallel needs a route from `Parallel l m` to `Equiv (a*B - b*A) 0` that does not pass through a negation, because removing the negation is tightness (`Not (Apart x y) -> Equiv x y`), which creal.rs documents as neither proved nor assumed. And it does not say the real model is harder than the rational one: it is SHORTER, because both of its divisions are by a sum of two squares the hypothesis already witnesses as positive, so it needs no case split on which coefficient is nonzero -- which is exactly the step Geo.qplane pays for twice."
+  "notes": "What this fact does NOT say. It does not say the axioms are categorical or that they pin the Euclidean plane -- three incidence axioms do not, which is why Hilbert's Grundlagen has four more groups. It does not say the real plane satisfies Playfair's parallel axiom: no Geo.Affine structure exists. The sizing is in ADR-1652 section 5 and it is a design item rather than a wall -- stated over the NEGATIVE predicate `Parallel l m := forall P, on P l -> on P m -> False` (which Geo.Incidence.Parallel is), uniqueness needs tightness, which creal.rs documents as neither proved nor assumed; stated POSITIVELY -- same direction `Equiv (a*B - b*A) 0` plus a WITNESSED distinctness -- every Playfair obligation becomes a polynomial identity geo/rplane.rs already discharges, and ADR-1652 carries the three identities, verified exactly with Fraction trials before being written down. And it does not say the real model is harder than the rational one: it is SHORTER, because both of its divisions are by a sum of two squares the hypothesis already witnesses as positive, so it needs no case split on which coefficient is nonzero -- which is exactly the step Geo.qplane pays for twice."
 }

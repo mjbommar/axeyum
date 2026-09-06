@@ -79,6 +79,20 @@ stronger than `def_eq` for a shape claim. CLAUDE.md already says a pathological
 negative control is worth deleting; what this adds is that over the constructive
 reals the pathology is the default, not the exception.
 
+## Gates
+
+| gate | result |
+| --- | --- |
+| `cargo test -p axeyum-lean-kernel --release --lib -- geo:: --test-threads=2` | **20 passed, 0 failed**, 117.22 s |
+| `cargo check -p axeyum-lean-kernel --all-targets` | exit 0, 1 m 12 s |
+| `cargo fmt --all --check` | exit 0 |
+| `python3 scripts/validate-facts.py` | exit 0, 2927 facts, 0 errors |
+| `python3 scripts/check-settled-fact-statements.py` | PASS (after `--write`), settled=2652 pinned=2652 drifted=0 |
+| `python3 scripts/check-kernel-trusted-core.py` | exit 0, 5 guards, 0 failures |
+| `python3 scripts/check-autogenesis-holdout-isolation.py` | PASS, held_out=206, references=0 |
+| `scripts/check-merge-hygiene.sh` | PASS (guard 6, `check-shape-duplicates.py --prebuilt`, SKIPPED: no `shape_search` binary on this host) |
+| `./scripts/check-links.sh` | exit 0 |
+
 ## Landed changes
 
 | commit | what |
@@ -89,3 +103,6 @@ reals the pathology is the default, not the exception.
 | `39df0535b` | regenerated PLAN, the ADR index, the census and the statement pins |
 | `6ec73cfdd` | `Geo.Incidence.Parallel`, `parallel_symm`, `parallel_irrefl`, and the finding that the negative form is the wrong primitive for Playfair |
 | `a82b4eabf` | the shape pins rewritten as stored-term comparisons after the `def_eq`-over-`CReal` measurement above |
+| `2e5e6759d` | the `def_eq`-over-`CReal` hazard recorded in the ADR and here |
+| `1904e43fc` | the point setoid laws are a THIRD copy (`metric.rs` has them); corrected in the open |
+| `d924eec4d` | both real-model mutants registered in the `geo-incidence` mutation suite |
