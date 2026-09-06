@@ -1481,22 +1481,30 @@ fn prob1_poisson_convolution() -> Outcome {
 /// Gosper-summable, so `infinite_sum` cannot certify it, even though the
 /// stronger WZ route certifies the Poisson+Poisson convolution identity
 /// above. Expected: `Trust::Uncertified`, not `Trust::Certified`.
-fn prob2_poisson_totalmass_decline() -> Outcome {
+fn prob2_poisson_totalmass() -> Outcome {
+    // Reclassified from `decline_expected` on 2026-09-05: the summation lane
+    // (cas-sum-gaps) taught `infinite_sum` the exponential series, so
+    // `sum_{k>=0} 3^k/k! e^{-3} = 1` now certifies. The corpus is judged by
+    // the harness, not the other way round, so the entry follows the machinery.
     let d = Discrete::Poisson(i(3));
     let cert = d.total_mass();
     let certified = cert.is_certified();
+    let matches_expected = matches!(
+        equal(&cert.claim, &i(1)),
+        ZeroTest::Certified { equal: true, .. }
+    );
     Outcome {
-        verdict: if certified {
-            Verdict::Disagree
-        } else {
+        verdict: if certified && matches_expected {
             Verdict::Agree
+        } else {
+            Verdict::Disagree
         },
         trust: if certified {
             Trust::Certified
         } else {
             Trust::Uncertified
         },
-        expected: "uncertified (true, but lam^k/k! is not Gosper-summable)".to_string(),
+        expected: "certified total mass 1 (exponential series route)".to_string(),
         actual: format!("certified={certified}, claim={}", cert.claim),
     }
 }
@@ -2010,11 +2018,11 @@ fn main() {
             prob1_poisson_convolution
         ),
         e!(
-            "prob2-poisson-totalmass-decline",
+            "prob2-poisson-totalmass",
             None,
             Some("probability"),
-            DeclineExpected,
-            prob2_poisson_totalmass_decline
+            Core,
+            prob2_poisson_totalmass
         ),
         e!(
             "prob3-binomial-mean",

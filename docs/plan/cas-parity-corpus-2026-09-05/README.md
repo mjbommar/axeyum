@@ -179,7 +179,7 @@ the raw per-area total exceed a naive 12×3=36.
 | geometry_beyond | 4 |
 | **total** | **21** (≥ 10 required) |
 
-Tiers: **59 `core`**, **11 `decline_expected`** (≥ 10 required — each entry
+Tiers: **60 `core`**, **10 `decline_expected`** (≥ 10 required — each entry
 cites a classical fact, a source-read capability boundary in `axeyum-cas`,
 or this crate's own progress-log finding; see each entry's `justification`
 in `corpus.json`).
