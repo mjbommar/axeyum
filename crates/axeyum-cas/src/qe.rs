@@ -1,6 +1,7 @@
 //! Real quantifier elimination with sample-point certificates: the univariate
-//! fragment, disjunctive normal form under `∃`, and one bivariate projection
-//! step.
+//! fragment, disjunctive normal form under `∃`, a bivariate projection step,
+//! the lifting phase that carries it into a third variable, and the first
+//! quantifier alternation.
 //!
 //! # What is decided
 //!
@@ -28,6 +29,17 @@
 //! - [`fibre::decide_fibre`] — `∃y. ⋀ᵢ qᵢ(y) ▷ᵢ 0` with `qᵢ ∈ ℚ(α)[y]` for a
 //!   real algebraic `α`, by Sturm chains and real-root isolation over `ℚ(α)`
 //!   with every sign settled at `α` exactly;
+//! - [`lift::ExistsZFormula`] — `∃z. ⋀ᵢ pᵢ(x, y, z) ▷ᵢ 0` at total degree at
+//!   most [`lift::MAX_TOTAL_DEGREE`], decided by [`lift::eliminate_z`]: two
+//!   Collins projections (`z`, then `y`) and then the **lifting phase** —
+//!   a cell of the `x`-line becomes a cylinder of `(x, y)`-cells with sample
+//!   points, over each of which the `z`-fibre is decided exactly;
+//! - [`alt::ForallExistsFormula`] and [`alt::ExistsForallFormula`] — the first
+//!   **quantifier alternation**, `∀x ∃y` and `∃x ∀y`, decided by
+//!   [`alt::decide_forall_exists`] and [`alt::decide_exists_forall`] from the
+//!   bivariate step's quantifier-free output. `∃x ∀y` complements an inner
+//!   existential over a **bivariate DNF** ([`alt::eliminate_y_dnf`]), because
+//!   the negation of a conjunction is a disjunction;
 //! - [`eliminate`] / [`eliminate_forall`] are the thin, self-checking front
 //!   doors: they decide and then *verify their own certificate* before
 //!   returning a `bool`.
@@ -43,11 +55,17 @@
 //!
 //! # What is **not** decided
 //!
-//! - **Full CAD.** [`bivariate`] is one projection step in two variables at
-//!   bounded degree. There is adjacency along the projected line — adjacent
-//!   true cells merge into intervals with algebraic endpoints — but no lifting
-//!   to three or more variables and no cell index.
-//! - **Quantifier alternation.** `∃x∀y` has no representation here.
+//! - **Full CAD.** [`lift`] is three variables at total degree at most three,
+//!   with one existential. There is adjacency along the projected line, and a
+//!   cylinder over each of its cells, but no adjacency **across** levels, no
+//!   cell index, and no fourth variable.
+//! - **A tower of algebraic extensions.** [`fibre`] presents `ℚ(α)` over ℚ, not
+//!   over another field, so a plane cell sitting over an *algebraic* `x` is
+//!   declined by name ([`lift::YLine::TowerDepthUnsupported`]) while every
+//!   other cell of the same decomposition is still decided.
+//! - **A second alternation.** [`alt`] decides `∀x ∃y` and `∃x ∀y`; `∀x ∃y ∀z`
+//!   has no representation, and the cylinder [`lift`] produces is not yet an
+//!   input [`alt`] can quantify over.
 //! - **Transcendental atoms** (`sin`, `exp`, …). Atoms are polynomials.
 //!
 //! # Certificates
@@ -149,6 +167,12 @@ pub mod bivariate;
 
 #[path = "qe_dnf.rs"]
 pub mod dnf;
+
+#[path = "qe_lift.rs"]
+pub mod lift;
+
+#[path = "qe_alt.rs"]
+pub mod alt;
 
 /// How many bisections [`open_cell_samples`] will spend finding a rational
 /// strictly between a rational root and the next root along.

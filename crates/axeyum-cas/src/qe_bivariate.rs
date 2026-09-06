@@ -99,13 +99,14 @@
 //! ([`eliminate_y_to_formula`]) whose endpoints may be algebraic. An atom with
 //! a repeated factor in `y` is handled rather than refused.
 //!
-//! **Not decided.** More than two variables — there is no lifting phase, so a
-//! cell of this line cannot be lifted into a cell of the plane and projected
-//! again. Any quantifier alternation: `∃x∀y` and `∀x∃y` have no representation
-//! here, and the merged interval list is a description of one free variable's
-//! truth set, not an input the module can quantify over again. Two atoms
-//! sharing a factor of positive `y`-degree, which is still
-//! [`Fault::DegenerateProjection`]. And nothing transcendental.
+//! **Not decided here.** Two atoms sharing a factor of positive `y`-degree,
+//! which is still [`Fault::DegenerateProjection`], and nothing transcendental.
+//! The two limitations this module used to name are now elsewhere rather than
+//! absent: the **lifting phase** that carries a cell of this line into a cell
+//! of the plane is [`crate::qe::lift`], and the **quantifier alternations**
+//! `∀x ∃y` and `∃x ∀y` over this module's output are [`crate::qe::alt`], which
+//! also eliminates `y` from a bivariate DNF. Both are built on the projection
+//! operator below rather than on a copy of it.
 //!
 //! # What this step still cannot do
 //!
@@ -113,9 +114,13 @@
 //!   two atoms share a factor of positive `y`-degree and the delineability
 //!   argument above does not apply. That is refused
 //!   ([`Fault::DegenerateProjection`]), not worked around.
-//! - **Three variables, or a second quantifier.** There is a cell adjacency
-//!   structure now, but only along one line; there is no lifting phase, so this
-//!   is still a projection step and not a CAD.
+//! - **Three variables, or a second quantifier, *in this module*.** The cell
+//!   adjacency structure here is along one line only. The lifting phase and the
+//!   alternations live in [`crate::qe::lift`] and [`crate::qe::alt`], which
+//!   reuse `projection_set`, `projection_cut`, `isolate_cut`, `cut_points`,
+//!   `check_sample_in_cell`, `substitute_atoms`, `substitution_atoms` and the
+//!   `ℚ[x][y]` coefficient arithmetic from here; those are `pub(super)` for
+//!   exactly that reason.
 //!
 //! # Cost profile — ADVISORY
 //!
@@ -167,8 +172,10 @@ const MAX_PSEUDO_STEPS: usize = 64;
 pub type BiPoly = Vec<Vec<Rational>>;
 
 /// The same shape over [`num_rational::BigRational`], used where the exact
-/// pseudo-division would otherwise overflow `i128`.
-type BigBiPoly = Vec<Vec<BigRational>>;
+/// pseudo-division would otherwise overflow `i128`, and by
+/// [`crate::qe::lift`] as the coefficient ring `ℚ[x, y]` of the level-one
+/// projection.
+pub type BigBiPoly = Vec<Vec<BigRational>>;
 
 /// One bivariate atom `poly(x, y) ▷ 0`.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -601,7 +608,7 @@ impl ProjectionCertificate {
     }
 
     /// The interval a run of cells `start..=end` denotes.
-    fn interval_of_run(&self, start: usize, end: usize) -> XInterval {
+    pub(super) fn interval_of_run(&self, start: usize, end: usize) -> XInterval {
         let (lower, lower_closed) = if start == 0 {
             (None, false)
         } else if start.is_multiple_of(2) {
@@ -625,7 +632,7 @@ impl ProjectionCertificate {
     }
 
     /// One run of true cells as an interval or a point.
-    fn format_run(&self, start: usize, end: usize) -> String {
+    pub(super) fn format_run(&self, start: usize, end: usize) -> String {
         let last = self.roots.len();
         let (open_left, left) = if start.is_multiple_of(2) {
             let k = start / 2;
@@ -916,7 +923,7 @@ fn decide_cell(
 // ============================================================================
 
 /// Every atom is within [`MAX_TOTAL_DEGREE`].
-fn check_degree_bound(atoms: &[BiAtom]) -> Result<(), Fault> {
+pub(super) fn check_degree_bound(atoms: &[BiAtom]) -> Result<(), Fault> {
     for (index, atom) in atoms.iter().enumerate() {
         let Some(total) = total_degree(&atom.poly) else {
             continue; // the zero polynomial
@@ -1050,7 +1057,7 @@ fn projection_key(p: &[Rational]) -> Vec<(i128, i128)> {
 /// [`Fault::DegenerateProjection`] when a required resultant vanishes
 /// identically, [`Fault::Declined`] on an `i128` overflow inside a Sylvester
 /// determinant.
-fn projection_set(atoms: &[BiAtom]) -> Result<Vec<Vec<Rational>>, Fault> {
+pub(super) fn projection_set(atoms: &[BiAtom]) -> Result<Vec<Vec<Rational>>, Fault> {
     let mut set: BTreeMap<Vec<(i128, i128)>, Vec<Rational>> = BTreeMap::new();
     let mut positive_degree: Vec<BiPoly> = Vec::new();
     for atom in atoms {
@@ -1070,6 +1077,26 @@ fn projection_set(atoms: &[BiAtom]) -> Result<Vec<Vec<Rational>>, Fault> {
     }
     add_pairwise_resultants(&mut set, positive_degree)?;
     Ok(set.into_values().collect())
+}
+
+/// The same projection operator applied to a bare list of polynomials rather
+/// than to atoms — the entry point [`crate::qe::lift`] uses for its second
+/// level, where the input is a projection set and not a formula.
+///
+/// The relation carried by each [`BiAtom`] is immaterial to
+/// [`projection_set`], which reads only the polynomials; building the atoms
+/// here rather than at the caller keeps that fact inside the module that owns
+/// it.
+///
+/// # Errors
+///
+/// The [`Fault`] [`projection_set`] raises.
+pub(super) fn projection_set_of_polys(polys: &[BiPoly]) -> Result<Vec<Vec<Rational>>, Fault> {
+    let atoms: Vec<BiAtom> = polys
+        .iter()
+        .map(|poly| BiAtom::new(poly.clone(), Relation::Eq))
+        .collect();
+    projection_set(&atoms)
 }
 
 /// Insert a candidate cut polynomial, monic, dropping constants.
@@ -1162,7 +1189,7 @@ fn big_bipoly(p: &BiPoly) -> BigBiPoly {
 }
 
 /// Back to the `i128` surface, or `None` if a coefficient does not fit.
-fn bipoly_of_big(p: &BigBiPoly) -> Option<BiPoly> {
+pub(super) fn bipoly_of_big(p: &BigBiPoly) -> Option<BiPoly> {
     p.iter()
         .map(|c| c.iter().map(rational_of_big).collect::<Option<Vec<_>>>())
         .collect()
@@ -1191,7 +1218,7 @@ fn neg_x(a: &[BigRational]) -> Vec<BigRational> {
 }
 
 /// `a + b`, coefficient by coefficient in `ℚ[x]`.
-fn bi_add(a: &BigBiPoly, b: &BigBiPoly) -> BigBiPoly {
+pub(super) fn bi_add(a: &BigBiPoly, b: &BigBiPoly) -> BigBiPoly {
     let mut out = vec![Vec::new(); a.len().max(b.len())];
     for (index, coeff) in a.iter().enumerate() {
         out[index] = add_x(&out[index], coeff);
@@ -1203,17 +1230,17 @@ fn bi_add(a: &BigBiPoly, b: &BigBiPoly) -> BigBiPoly {
 }
 
 /// `a − b`.
-fn bi_sub(a: &BigBiPoly, b: &BigBiPoly) -> BigBiPoly {
+pub(super) fn bi_sub(a: &BigBiPoly, b: &BigBiPoly) -> BigBiPoly {
     bi_add(a, &b.iter().map(|c| neg_x(c)).collect::<BigBiPoly>())
 }
 
 /// `a · c` for a `c ∈ ℚ[x]`.
-fn bi_scale(a: &BigBiPoly, c: &[BigRational]) -> BigBiPoly {
+pub(super) fn bi_scale(a: &BigBiPoly, c: &[BigRational]) -> BigBiPoly {
     a.iter().map(|coeff| big::mul(coeff, c)).collect()
 }
 
 /// `a · yᵏ`.
-fn bi_shift(a: &BigBiPoly, k: usize) -> BigBiPoly {
+pub(super) fn bi_shift(a: &BigBiPoly, k: usize) -> BigBiPoly {
     let mut out = vec![Vec::new(); k];
     out.extend(a.iter().cloned());
     out
@@ -1310,7 +1337,7 @@ fn y_squarefree_part(p: &BiPoly) -> Option<BiPoly> {
 
 /// The **cut polynomial**: the square-free part of the projection set's
 /// product. Empty when the projection set cuts nothing.
-fn projection_cut(projection: &[Vec<Rational>]) -> Vec<BigRational> {
+pub(super) fn projection_cut(projection: &[Vec<Rational>]) -> Vec<BigRational> {
     let mut product = vec![BigRational::one()];
     for candidate in projection {
         product = big::mul(&product, &big_poly(candidate));
@@ -1326,7 +1353,7 @@ fn projection_cut(projection: &[Vec<Rational>]) -> Vec<BigRational> {
 /// # Errors
 ///
 /// [`Fault::Declined`] when the bisection budget runs out.
-fn isolate_cut(cut: &[BigRational]) -> Result<Vec<big::IsolatedRoot>, Fault> {
+pub(super) fn isolate_cut(cut: &[BigRational]) -> Result<Vec<big::IsolatedRoot>, Fault> {
     if big::degree(cut).is_none_or(|d| d == 0) {
         return Ok(Vec::new());
     }
@@ -1337,7 +1364,7 @@ fn isolate_cut(cut: &[BigRational]) -> Result<Vec<big::IsolatedRoot>, Fault> {
 
 /// The cut points as sample points: rational when recognised, an isolating
 /// bracket otherwise.
-fn cut_points(cut: &[BigRational]) -> Result<Vec<SamplePoint>, Fault> {
+pub(super) fn cut_points(cut: &[BigRational]) -> Result<Vec<SamplePoint>, Fault> {
     Ok(isolate_cut(cut)?
         .iter()
         .map(|root| SamplePoint::from_isolated(cut, root))
@@ -1345,7 +1372,7 @@ fn cut_points(cut: &[BigRational]) -> Result<Vec<SamplePoint>, Fault> {
 }
 
 /// The recorded sample of cell `cell` really lies in that cell.
-fn check_sample_in_cell(
+pub(super) fn check_sample_in_cell(
     roots: &[SamplePoint],
     cell: usize,
     sample: &SamplePoint,
@@ -1381,7 +1408,7 @@ fn root_is_above(root: &SamplePoint, value: &BigRational) -> Result<bool, Fault>
 }
 
 /// `divisor` divides `dividend` exactly over ℚ, and is not a constant.
-fn divides(divisor: &[BigRational], dividend: &[BigRational]) -> bool {
+pub(super) fn divides(divisor: &[BigRational], dividend: &[BigRational]) -> bool {
     if big::degree(divisor).is_none_or(|d| d == 0) {
         return false;
     }
@@ -1393,7 +1420,7 @@ fn divides(divisor: &[BigRational], dividend: &[BigRational]) -> bool {
 // ============================================================================
 
 /// `pᵢ(x₀, y)` for every atom at a **rational** `x₀`.
-fn substitute_atoms(atoms: &[BiAtom], x: &BigRational) -> Vec<Atom> {
+pub(super) fn substitute_atoms(atoms: &[BiAtom], x: &BigRational) -> Vec<Atom> {
     atoms
         .iter()
         .map(|atom| {
@@ -1408,7 +1435,7 @@ fn substitute_atoms(atoms: &[BiAtom], x: &BigRational) -> Vec<Atom> {
 }
 
 /// The atoms as the `ℚ(α)` fibre engine wants them.
-fn substitution_atoms(atoms: &[BiAtom]) -> Vec<fibre::SubstitutionAtom> {
+pub(super) fn substitution_atoms(atoms: &[BiAtom]) -> Vec<fibre::SubstitutionAtom> {
     atoms
         .iter()
         .map(|atom| fibre::SubstitutionAtom {
