@@ -44,8 +44,8 @@ use std::collections::BTreeMap;
 use axeyum_ir::Rational;
 
 use crate::geometry_beyond::{
-    conic_polar_is_tangent_problem, tetrahedron_circumcenter_problem,
-    tetrahedron_medians_concurrent_problem,
+    conic_polar_is_tangent_problem, desargues_affine_problem, pascal_parabola_problem,
+    tetrahedron_circumcenter_problem, tetrahedron_medians_concurrent_problem,
 };
 use crate::geometry_certify::{
     Condition, Constraint, DegenerateWitness, GenericWitness, GeometryProblem, Pt, centroid,
@@ -222,6 +222,8 @@ pub fn corpus_entries() -> Vec<CorpusEntry> {
         ),
         CorpusEntry::new(tetrahedron_circumcenter_problem()),
         CorpusEntry::new(conic_polar_is_tangent_problem()),
+        CorpusEntry::costing(pascal_parabola_problem(), SearchCost::Unreturned),
+        CorpusEntry::costing(desargues_affine_problem(), SearchCost::Unreturned),
     ]
 }
 

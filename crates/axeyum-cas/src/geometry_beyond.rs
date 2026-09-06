@@ -2496,32 +2496,6 @@ fn desargues_generic_witness() -> BTreeMap<String, Rational> {
 // Wave four: the two frontier theorems, recoordinatised so they certify
 // =============================================================================
 
-/// `point` lies on the line `L(t, u)` of the parabola `y = x²`, namely
-/// `y = (t+u)·x − t·u`.
-///
-/// `L(t, u)` is the **chord** through `(t, t²)` and `(u, u²)` whenever `t ≠ u`
-/// — substituting either point gives `t² − (t+u)·t + t·u = 0` — and the
-/// **tangent** at `(t, t²)` when `t = u`. So this polynomial states exactly the
-/// classical hypothesis "`X` is on side `P(t)P(u)` of the hexagon" on the
-/// configurations the theorem is about, and extends it to the tangent in the
-/// coincident case rather than going vacuous there.
-///
-/// # Why not `collinear(P(t), P(u), X)`
-///
-/// Because `collinear(P(t), P(u), X) = (u − t)·L(t, u)(X)` identically: the
-/// three-point determinant carries a spurious factor `u − t` that says nothing
-/// about `X`. Stating the side that way is equally faithful but forces six
-/// extra non-degeneracy conditions `u ≠ t` into the certificate — the `2 × 2`
-/// block determinants pick the factor up — and every one of them would then
-/// have to be divided back out. `L` is the same line with the artifact removed.
-fn parabola_chord_incidence(first: &str, second: &str, point: &Pt) -> Option<MvPoly> {
-    let one = MvPoly::var(first);
-    let other = MvPoly::var(second);
-    let slope = one.add(&other)?;
-    let intercept = one.mul(&other)?;
-    point.y.sub(&slope.mul(&point.x)?)?.add(&intercept)
-}
-
 /// The point `O + λ·(A − O)` of the line `OA`.
 ///
 /// Every finite point of line `OA` for some `λ` when `O ≠ A`, and `O` itself
@@ -2537,39 +2511,88 @@ fn perspective_image(origin: &Pt, vertex: &Pt, scalar: &str) -> Option<Pt> {
     })
 }
 
-/// Pascal's theorem for a hexagon inscribed in the parabola `y = x²`.
+/// The incidence "`point` lies on the line `L(t, u)` of the parabola `y = x²`",
+/// homogeneously: `Y − (t+u)·X + t·u·W = 0`.
+///
+/// `L(t, u)` is the **chord** through `(t, t²)` and `(u, u²)` whenever `t ≠ u`
+/// — substituting either point gives `t² − (t+u)·t + t·u = 0` — and the
+/// **tangent** at `(t, t²)` when `t = u`. So this states exactly the classical
+/// hypothesis "`X` is on side `P(t)P(u)` of the hexagon" on the configurations
+/// the theorem is about, and extends it to the tangent in the coincident case
+/// rather than going vacuous there.
+///
+/// # Why not `collinear(P(t), P(u), X)`
+///
+/// Because `collinear(P(t), P(u), X) = (u − t)·L(t, u)(X)` identically: the
+/// three-point determinant carries a spurious factor `u − t` that says nothing
+/// about `X`. Stating the side that way is equally faithful but drags six
+/// "the two vertices are distinct" conditions into the certificate — the block
+/// determinants pick the factor up — and every one of them would then have to
+/// be divided back out. `L` is the same line with the artifact removed.
+fn parabola_chord_incidence(first: &str, second: &str, point: &HPt) -> Option<MvPoly> {
+    let one = MvPoly::var(first);
+    let other = MvPoly::var(second);
+    let slope = one.add(&other)?;
+    let intercept = one.mul(&other)?;
+    point
+        .y
+        .sub(&slope.mul(&point.x)?)?
+        .add(&intercept.mul(&point.w)?)
+}
+
+/// Pascal's theorem for a hexagon inscribed in the parabola `y = x²`, stated
+/// projectively.
 ///
 /// The six vertices are `A = (a, a²) … F = (f, f²)`, so "the six points lie on
 /// a common conic" is true **by construction** and costs no hypothesis at all:
-/// the `6 × 6` monomial determinant that [`beyond_frontier`]'s projective
+/// the `6 × 6` monomial determinant that [`beyond_frontier`]'s general
 /// statement carries — the thing that put Pascal out of reach — disappears, and
-/// what is left is six incidences that are linear in the three intersection
-/// points, three `2 × 2` blocks, and three block determinants that are exactly
-/// the three stated conditions.
+/// what is left is six line incidences that are linear in the three diagonal
+/// points.
+///
+/// # Why the diagonal points are homogeneous, and why that is the whole trick
+///
+/// In the affine chart (`X`, `Y`, `Z` at two coordinates each) this theorem
+/// **cannot** be certified by this crate's rules, and the obstruction is worth
+/// recording because it is not a budget:
+///
+/// - The conclusion is *not* in the plain hypothesis ideal there. Reducing by
+///   the three `Y`-coordinate hypotheses leaves a residue whose `Y.x·Z.x`
+///   coefficient is `d − b`, a *linear* form in the parameters, while the
+///   surviving generators are `Dᵢ·(coordinate) + Pᵢ` whose ideal — modulo the
+///   linear relations among the `Dᵢ` — is generated in degree two. A degree-one
+///   element cannot lie in it, so saturation is genuinely required.
+/// - But every saturating condition would be **unfalsifiable**. A line meets a
+///   conic in at most two points, so two opposite sides can coincide only by
+///   repeating a vertex pair — and in each of the two ways that can happen the
+///   other two diagonal points land on that very line (or coincide with each
+///   other), so the conclusion survives. [`crate::geometry_check`] refuses a
+///   certificate whose condition carries no counterexample, and it is right to.
+///
+/// Homogeneous diagonal points remove both halves at once. `X` is now free up
+/// to scale rather than pinned, the parallel case is not a degeneracy but the
+/// ordinary point at infinity (the second generic witness below is exactly
+/// that), and the conclusion lands in the plain hypothesis ideal — so the
+/// certificate needs **no** non-degeneracy condition, which is a strictly
+/// stronger statement than one that needs three.
 ///
 /// # What this proves, and what it does not
 ///
 /// It proves Pascal's theorem for every hexagon inscribed in one fixed conic,
-/// with all six vertices free. It does **not** prove the projective statement
-/// for an arbitrary conic. Every non-degenerate conic over an algebraically
-/// closed field is projectively equivalent to this one, and collinearity is a
-/// projective invariant, so the general theorem follows — but that reduction is
-/// mathematics stated here in prose and is *not* part of the certificate.
-/// [`beyond_frontier`] keeps the general projective statement, uncertified, for
-/// exactly that reason.
+/// with all six vertices free and the diagonal points allowed at infinity. It
+/// does **not** prove the statement for an arbitrary conic. Every non-degenerate
+/// conic over an algebraically closed field is projectively equivalent to this
+/// one and collinearity is a projective invariant, so the general theorem
+/// follows — but that reduction is mathematics stated here in prose and is
+/// *not* part of the certificate. [`beyond_frontier`] keeps the general
+/// statement, uncertified, for exactly that reason.
 #[must_use]
 pub fn pascal_parabola_problem() -> GeometryProblem {
-    let [point_x, point_y, point_z] = [Pt::free("x"), Pt::free("y"), Pt::free("z")];
-    let side = |first: &str, second: &str, point: &Pt| {
+    let point_x = HPt::free("x");
+    let point_y = HPt::free("y");
+    let point_z = HPt::free("z");
+    let side = |first: &str, second: &str, point: &HPt| {
         parabola_chord_incidence(first, second, point).expect("chord incidence")
-    };
-    // Two sides are parallel exactly when the sums of their parameters agree.
-    let meet = |first: &str, second: &str, third: &str, fourth: &str| {
-        MvPoly::var(third)
-            .add(&MvPoly::var(fourth))
-            .expect("sum")
-            .sub(&MvPoly::var(first).add(&MvPoly::var(second)).expect("sum"))
-            .expect("difference")
     };
     GeometryProblem {
         id: "pascal-parabola-hexagon".into(),
@@ -2577,14 +2600,17 @@ pub fn pascal_parabola_problem() -> GeometryProblem {
                 hexagon are collinear"
             .into(),
         statement: "Let A=(a,a^2), B=(b,b^2), C=(c,c^2), D=(d,d^2), E=(e,e^2), F=(f,f^2) be six \
-                    points of the parabola y = x^2, given by their parameters. Let X lie on the \
-                    line AB and on the line DE, Y on BC and on EF, and Z on CD and on FA, where \
-                    the line through the parabola points at parameters t and u is \
-                    y = (t+u)x - tu (the chord when t and u differ, the tangent when they \
-                    coincide). If each pair of opposite sides is non-parallel -- (d+e) != (a+b), \
-                    (e+f) != (b+c), (f+a) != (c+d) -- then X, Y and Z are collinear. The conic \
-                    hypothesis is discharged by the parametrisation rather than assumed: every \
-                    configuration of six points on THIS conic is covered, and the projective \
+                    points of the parabola y = x^2, given by their parameters, and let the line \
+                    through the parabola points at parameters t and u be y = (t+u)x - tu (the \
+                    chord when t and u differ, the tangent when they coincide). Let X, Y and Z \
+                    be homogeneous points of the projective plane with X on the lines AB and DE, \
+                    Y on BC and EF, and Z on CD and FA. Then X, Y and Z are collinear -- with NO \
+                    non-degeneracy condition: the conclusion lies in the plain hypothesis ideal, \
+                    a diagonal point of a pair of parallel opposite sides is the ordinary point \
+                    at infinity of their common direction rather than a degeneracy, and the \
+                    all-zero representative satisfies the hypotheses and the conclusion alike. \
+                    The conic hypothesis is discharged by the parametrisation rather than \
+                    assumed: every configuration of six points on THIS conic is covered, and the \
                     statement for an arbitrary conic follows by projective equivalence, which is \
                     NOT part of this certificate."
             .into(),
@@ -2595,12 +2621,15 @@ pub fn pascal_parabola_problem() -> GeometryProblem {
             ("td".into(), "D = (td, td^2)".into()),
             ("te".into(), "E = (te, te^2)".into()),
             ("tf".into(), "F = (tf, tf^2)".into()),
-            ("xx".into(), "X.x (AB meet DE)".into()),
-            ("xy".into(), "X.y (AB meet DE)".into()),
-            ("yx".into(), "Y.x (BC meet EF)".into()),
-            ("yy".into(), "Y.y (BC meet EF)".into()),
-            ("zx".into(), "Z.x (CD meet FA)".into()),
-            ("zy".into(), "Z.y (CD meet FA)".into()),
+            ("xx".into(), "X.X (AB meet DE)".into()),
+            ("xy".into(), "X.Y (AB meet DE)".into()),
+            ("xw".into(), "X.W (AB meet DE)".into()),
+            ("yx".into(), "Y.X (BC meet EF)".into()),
+            ("yy".into(), "Y.Y (BC meet EF)".into()),
+            ("yw".into(), "Y.W (BC meet EF)".into()),
+            ("zx".into(), "Z.X (CD meet FA)".into()),
+            ("zy".into(), "Z.Y (CD meet FA)".into()),
+            ("zw".into(), "Z.W (CD meet FA)".into()),
         ],
         hypotheses: vec![
             Constraint::new("x-on-ab", "X lies on the line AB", side("ta", "tb", &point_x)),
@@ -2610,91 +2639,61 @@ pub fn pascal_parabola_problem() -> GeometryProblem {
             Constraint::new("z-on-cd", "Z lies on the line CD", side("tc", "td", &point_z)),
             Constraint::new("z-on-fa", "Z lies on the line FA", side("tf", "ta", &point_z)),
         ],
-        nondegeneracy: vec![
-            Condition::new(
-                "ab-meets-de",
-                "AB is not parallel to DE",
-                meet("ta", "tb", "td", "te"),
-            ),
-            Condition::new(
-                "bc-meets-ef",
-                "BC is not parallel to EF",
-                meet("tb", "tc", "te", "tf"),
-            ),
-            Condition::new(
-                "cd-meets-fa",
-                "CD is not parallel to FA",
-                meet("tc", "td", "tf", "ta"),
-            ),
-        ],
+        nondegeneracy: Vec::new(),
         conclusions: vec![Constraint::new(
             "xyz-collinear",
             "X, Y and Z are collinear",
-            collinear(&point_x, &point_y, &point_z).expect("collinear"),
+            hcollinear(&point_x, &point_y, &point_z).expect("hcollinear"),
         )],
         degenerate_witnesses: Vec::new(),
-        generic_witnesses: vec![GenericWitness {
-            description: "parameters a=0, b=1, c=2, d=3, e=4, f=6, so X=(2,2), Y=(22/7,52/7) \
-                          and Z=(-6,-36), all on the Pascal line"
-                .into(),
-            assignment: pascal_parabola_generic_witness(),
-        }],
+        generic_witnesses: vec![
+            GenericWitness {
+                description: "parameters a=0, b=1, c=2, d=3, e=4, f=6, with the three diagonal \
+                              points finite: X=(2,2,1), Y=(22,52,7), Z=(-6,-36,1)"
+                    .into(),
+                assignment: pascal_parabola_witness(
+                    [0, 1, 2, 3, 4, 6],
+                    [[2, 2, 1], [22, 52, 7], [-6, -36, 1]],
+                ),
+            },
+            GenericWitness {
+                description: "parameters a=0, b=5, c=2, d=1, e=4, f=7, where AB and DE are \
+                              PARALLEL (both of slope 5) and X is their point at infinity \
+                              (1,5,0); Y=(9,43,2) and Z=(-1,-7,2) are finite"
+                    .into(),
+                assignment: pascal_parabola_witness(
+                    [0, 5, 2, 1, 4, 7],
+                    [[1, 5, 0], [9, 43, 2], [-1, -7, 2]],
+                ),
+            },
+        ],
     }
 }
 
-/// The generic configuration of [`pascal_parabola_problem`], with `X`, `Y`, `Z`
-/// computed from the chord-line formula over exact rationals rather than by the
-/// certifier.
-fn pascal_parabola_generic_witness() -> BTreeMap<String, Rational> {
-    let parameters = [0i128, 1, 2, 3, 4, 6].map(Rational::integer);
+/// One configuration of [`pascal_parabola_problem`]: six parameters and the
+/// three diagonal points as explicit homogeneous integer triples.
+///
+/// The triples are written out rather than computed so that a reader can check
+/// them against the chord-line formula by hand, and so that the *projective*
+/// witness — where one diagonal point has `W = 0` and no affine formula applies
+/// — is stated the same way as the finite one.
+fn pascal_parabola_witness(
+    parameters: [i128; 6],
+    diagonals: [[i128; 3]; 3],
+) -> BTreeMap<String, Rational> {
     let mut assignment: BTreeMap<String, Rational> = BTreeMap::new();
     for (name, value) in ["ta", "tb", "tc", "td", "te", "tf"]
         .iter()
         .zip(parameters.iter())
     {
-        assignment.insert((*name).to_string(), *value);
+        assignment.insert((*name).to_string(), Rational::integer(*value));
     }
-    for (name, sides) in [
-        ("x", [0usize, 1, 3, 4]),
-        ("y", [1, 2, 4, 5]),
-        ("z", [2, 3, 5, 0]),
-    ] {
-        let (abscissa, ordinate) = parabola_chord_meet(
-            parameters[sides[0]],
-            parameters[sides[1]],
-            parameters[sides[2]],
-            parameters[sides[3]],
-        )
-        .expect("the generic configuration's opposite sides meet");
-        assignment.insert(format!("{name}x"), abscissa);
-        assignment.insert(format!("{name}y"), ordinate);
+    for (name, point) in ["x", "y", "z"].iter().zip(diagonals.iter()) {
+        for (suffix, value) in ["x", "y", "w"].iter().zip(point.iter()) {
+            assignment.insert(format!("{name}{suffix}"), Rational::integer(*value));
+        }
     }
     assignment
-}
-
-/// Where `L(first, second)` meets `L(third, fourth)`, over exact rationals.
-///
-/// `None` when the two lines are parallel, which is exactly what the theorem's
-/// non-degeneracy conditions exclude.
-fn parabola_chord_meet(
-    first: Rational,
-    second: Rational,
-    third: Rational,
-    fourth: Rational,
-) -> Option<(Rational, Rational)> {
-    let slope = first.checked_add(second)?;
-    let intercept = first.checked_mul(second)?;
-    let other_slope = third.checked_add(fourth)?;
-    let other_intercept = third.checked_mul(fourth)?;
-    let denominator = slope.checked_sub(other_slope)?;
-    if denominator.is_zero() {
-        return None;
-    }
-    let abscissa = intercept
-        .checked_sub(other_intercept)?
-        .checked_div(denominator)?;
-    let ordinate = slope.checked_mul(abscissa)?.checked_sub(intercept)?;
-    Some((abscissa, ordinate))
 }
 
 /// Desargues' theorem in the affine plane.
