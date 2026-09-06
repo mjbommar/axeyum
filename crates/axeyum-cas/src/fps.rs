@@ -34,6 +34,13 @@
 //!   certifies only real ones — is dissolved there by working with root
 //!   *moduli* instead of roots. `1/(1+x²)`, named then as the case a
 //!   real-roots-only bound gets wrong, is exact on that route.
+//!
+//!   Wave three closed the gap wave two left behind it. A denominator factor of
+//!   any degree with complex roots is now exact too, through the polynomial
+//!   whose roots are the pairwise products of the factor's roots: `Φ₅` gives
+//!   exactly 1 where wave two gave the lower bound 1/2, and the lower-bound
+//!   label survives only above a degree cap taken for cost. The theorem and its
+//!   proof are in that module's documentation.
 //! - **P-recursive (holonomic) guessing** is [`guess_p_recursive`] below, beside
 //!   the constant-coefficient [`guess_linear_recurrence`] it generalises.
 //!
