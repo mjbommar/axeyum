@@ -445,7 +445,7 @@ pub struct BlockSearch<'a> {
 
 impl BlockSearch<'_> {
     /// The search [`detect_linear_blocks`] performs: every determinant accepted,
-    /// capped at [`MAX_ROW_CHOICES`] subsets per size.
+    /// capped at the module's `MAX_ROW_CHOICES` (256) subsets per size.
     #[must_use]
     pub fn permissive() -> BlockSearch<'static> {
         BlockSearch {
