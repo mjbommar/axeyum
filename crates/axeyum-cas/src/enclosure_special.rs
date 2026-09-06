@@ -77,9 +77,10 @@
 //! minute between them, and the crate test sweep is a debug build.
 
 use crate::enclosure::{
-    BigInterval, DeclineReason, REDUCTION_CAP, bi, bi_u64, br, exp_point, from_rational, ln_point,
-    pi_enclosure, pow2, rat_floor, ratpow, rmax, rmin,
+    BigInterval, DeclineReason, REDUCTION_CAP, bi, bi_u64, br, exp_point, from_rational,
+    ln_series_point, pi_enclosure, pow2, rat_floor, ratpow, rmax, rmin,
 };
+use axeyum_arith::{Dyadic, Round};
 use axeyum_ir::Rational;
 use num_bigint::BigInt;
 use num_rational::BigRational;
@@ -149,11 +150,12 @@ pub(crate) fn grid_bits(order: u32) -> u32 {
 
 /// The denominator size of the dyadic `r` that [`ln_large`] anchors on.
 ///
-/// The anchor is what [`ln_point`] actually sees, and that cost grows with the
-/// **square** of its denominator size, so the anchor is kept deliberately
-/// coarse and the accuracy is bought back from the cheap `ln(1+w)` correction
-/// instead: 16 bits of anchor put `w` under `2^(-16)`, and `order/8 + 6` terms
-/// then reach `2^(-2·order-112)`, finer than [`grid_bits`].
+/// The anchor is what [`crate::enclosure::ln_series_point`] actually sees, and
+/// that cost grows with the **square** of its denominator size, so the anchor
+/// is kept deliberately coarse and the accuracy is bought back from the cheap
+/// `ln(1+w)` correction instead: 16 bits of anchor put `w` under `2^(-16)`, and
+/// `order/8 + 6` terms then reach `2^(-2·order-112)`, finer than
+/// [`grid_bits`].
 const LN_ANCHOR_BITS: u32 = 16;
 
 /// `ln(1 + w)` for `0 <= w <= 1/2`, truncated after `terms` terms.
@@ -181,9 +183,9 @@ fn ln_one_plus(w: &BigRational, terms: u32) -> Option<BigInterval> {
 /// `ln(p)` for a positive rational whose **denominator may be enormous**, at a
 /// cost that does not grow with that denominator.
 ///
-/// The parent module's [`ln_point`] reduces to `2·atanh((t−1)/(t+1))` with
-/// `|z| <= 1/3`, so it always needs the full `order` terms — and it forms
-/// `z^(2·order+1)` exactly. For `z` with `a` bits that is `2·a·order` bits, and
+/// The parent module's [`crate::enclosure::ln_series_point`] reduces to
+/// `2·atanh((t−1)/(t+1))` with `|z| <= 1/3`, so it always needs the full
+/// `order` terms — and it forms `z^(2·order+1)` exactly. For `z` with `a` bits that is `2·a·order` bits, and
 /// `num-rational` runs a `gcd` after every operation, so the series costs about
 /// `a²·order³/48` word operations. Measured: a certified `2π` at order 64 has
 /// 322-bit endpoints, and one `Gamma` at precision 100 spent **26 s** inside
@@ -197,10 +199,18 @@ fn ln_one_plus(w: &BigRational, terms: u32) -> Option<BigInterval> {
 /// ln p = k·ln 2 + ln r + ln(1 + (t − r)/r)
 /// ```
 ///
-/// `ln r` goes through [`ln_point`] on a **small** argument, and the correction
-/// has `0 <= w < 2^(−16)`, so `terms = order/8 + 6` of the alternating
-/// `ln(1+w)` series reach `2^(−2·order−112)` — finer than the
-/// [`grid_bits`] the argument was rounded to, so it is never the limit.
+/// `ln r` goes through [`crate::enclosure::ln_series_point`] on a **small**
+/// argument, and the correction has `0 <= w < 2^(−16)`, so
+/// `terms = order/8 + 6` of the alternating `ln(1+w)` series reach
+/// `2^(−2·order−112)` — finer than the [`grid_bits`] the argument was rounded
+/// to, so it is never the limit.
+///
+/// **Since ADR-1710 slice 1 this is also what
+/// [`crate::enclosure::ln_point`] calls**, once per rounded endpoint, so the
+/// anchoring is no longer a special route that a caller has to know to ask
+/// for. `ln_point` is what breaks the recursion: it rounds its argument onto
+/// the grid and delegates here, and this function calls the *series* kernel
+/// directly rather than going back through `ln_point`.
 pub(crate) fn ln_large(p: &BigRational, order: u32) -> Option<BigInterval> {
     if !p.is_positive() {
         return None;
@@ -227,30 +237,83 @@ pub(crate) fn ln_large(p: &BigRational, order: u32) -> Option<BigInterval> {
     if !anchor.is_positive() {
         return None;
     }
-    let ln_anchor = ln_point(&anchor, order)?;
+    let ln_anchor = ln_series_point(&anchor, order)?;
     let correction = ln_one_plus(&(&t / &anchor - &one), order / 8 + 6)?;
-    let ln_two = ln_point(&two, order)?;
+    let ln_two = ln_series_point(&two, order)?;
     Some(ln_anchor.add(&correction).add(&ln_two.scale(&bi(exponent))))
 }
 
+/// The `2^(−bits)` grid as a [`Dyadic`] exponent.
+///
+/// `bits` is a `u32` and [`axeyum_arith::MAX_EXPONENT`] is `2^62`, so the
+/// negation always lands inside the contract and this cannot fail.
+pub(crate) fn grid_exponent(bits: u32) -> i64 {
+    -i64::from(bits)
+}
+
 /// The largest multiple of `2^(−bits)` at or below `x`.
+///
+/// **ADR-1710 migration slice 1:** the arithmetic is
+/// [`Dyadic::from_rational_at_exponent`], not a `BigRational` multiply-floor-
+/// divide. The old spelling formed `x · 2^bits` and then divided by `2^bits`,
+/// and `num-rational` runs a Euclidean gcd on each — two gcds over numbers
+/// `bits` wider than the answer, per endpoint, per rounding. The dyadic route
+/// is one `BigUint` division at the place the result needs.
+///
+/// The `None` arm of the dyadic route is unreachable here (see
+/// [`grid_exponent`]); the fallback returns `x` unchanged, which is the
+/// identity rounding and therefore sound in every caller — each one only needs
+/// a value at or below `x`.
 pub(crate) fn dyadic_floor(x: &BigRational, bits: u32) -> BigRational {
-    let scale = pow2(i32::try_from(bits).unwrap_or(i32::MAX));
-    BigRational::from(rat_floor(&(x * &scale))) / scale
+    Dyadic::from_rational_at_exponent(x, grid_exponent(bits), Round::Down)
+        .map_or_else(|| x.clone(), |d| d.to_rational())
 }
 
 /// The smallest multiple of `2^(−bits)` at or above `x`.
+///
+/// Rounded directly rather than as `−floor(−x)`: one rounding at the place the
+/// result needs, and no intermediate negation to get the sign wrong.
 pub(crate) fn dyadic_ceil(x: &BigRational, bits: u32) -> BigRational {
-    -dyadic_floor(&-x, bits)
+    Dyadic::from_rational_at_exponent(x, grid_exponent(bits), Round::Up)
+        .map_or_else(|| x.clone(), |d| d.to_rational())
 }
 
 /// `x` widened **outward** onto the `2^(−bits)` grid.
 ///
 /// Always contains `x`, so substituting it for `x` anywhere an enclosure is
 /// wanted stays sound; it only ever loses accuracy, never validity.
+///
+/// One call to [`BigInterval::coarsen_to_bits`], which is one call to
+/// [`Dyadic::rationals_outward_at_exponent`]: the direction of each endpoint is
+/// chosen inside `axeyum-arith`, so no caller here can name it and no caller
+/// here can name it wrongly.
 pub(crate) fn coarsen(x: &BigInterval, bits: u32) -> BigInterval {
-    let lo = dyadic_floor(x.lo(), bits);
-    let hi = dyadic_ceil(x.hi(), bits);
+    x.coarsen_to_bits(bits)
+}
+
+/// The pre-slice-1 `dyadic_floor`, kept as the differential oracle for
+/// [`tests::the_dyadic_route_agrees_with_the_legacy_rational_route`].
+///
+/// It is not dead code and it is not a second implementation in production: it
+/// exists so the migration has something to be differentially tested *against*,
+/// which is ADR-1710 §8's exit criterion for every slice.
+#[cfg(test)]
+pub(crate) fn legacy_dyadic_floor(x: &BigRational, bits: u32) -> BigRational {
+    let scale = pow2(i32::try_from(bits).unwrap_or(i32::MAX));
+    BigRational::from(rat_floor(&(x * &scale))) / scale
+}
+
+/// The pre-slice-1 `dyadic_ceil`. See [`legacy_dyadic_floor`].
+#[cfg(test)]
+pub(crate) fn legacy_dyadic_ceil(x: &BigRational, bits: u32) -> BigRational {
+    -legacy_dyadic_floor(&-x, bits)
+}
+
+/// The pre-slice-1 `coarsen`. See [`legacy_dyadic_floor`].
+#[cfg(test)]
+pub(crate) fn legacy_coarsen(x: &BigInterval, bits: u32) -> BigInterval {
+    let lo = legacy_dyadic_floor(x.lo(), bits);
+    let hi = legacy_dyadic_ceil(x.hi(), bits);
     BigInterval::new(lo.clone(), hi).unwrap_or_else(|| BigInterval::point(lo))
 }
 
@@ -1395,7 +1458,7 @@ mod tests {
         // measures the asymptotic series and its error bound against a known
         // integer, checked through the parent module's independent `ln`.
         let value = ln_gamma_stirling(&bi(13), 32).expect("Stirling at 13");
-        let reference = ln_point(&bi(479_001_600), 64).expect("ln of 12!");
+        let reference = crate::enclosure::ln_point(&bi(479_001_600), 64).expect("ln of 12!");
         assert!(
             value.lo() <= reference.hi() && reference.lo() <= value.hi(),
             "Stirling gave {value} for ln Gamma(13) but ln(12!) is {reference}"
@@ -1799,6 +1862,136 @@ mod tests {
                 "{:>12} precision {precision:>3}: {:>3} steps  produce {produced:?}  verify {verified:?}",
                 "krawczyk",
                 e.steps.len()
+            );
+        }
+    }
+
+    // -----------------------------------------------------------------------
+    // ADR-1710 migration slice 1: the differential test against the copy the
+    // `Dyadic` route replaces.
+    // -----------------------------------------------------------------------
+
+    /// The deterministic corpus the slice-1 differential test runs over.
+    ///
+    /// No RNG and no clock: a fixed list of rationals chosen to hit the cases
+    /// the two routes could disagree on — exact grid points, values just above
+    /// and just below one, both signs, a value whose denominator is coprime to
+    /// two, a value already a dyadic, and two *computed* endpoints of the kind
+    /// a certified series actually produces (a `pi` endpoint and a `sqrt 2`
+    /// endpoint), which is where the legacy route's two `gcd` normalisations
+    /// were being paid.
+    fn grid_corpus() -> Vec<BigRational> {
+        let mut corpus = vec![
+            BigRational::zero(),
+            BigRational::one(),
+            -BigRational::one(),
+            q(1, 3),
+            q(-1, 3),
+            q(2, 3),
+            q(-2, 3),
+            q(1, 1024),
+            q(-1, 1024),
+            q(1023, 1024),
+            q(22, 7),
+            q(-22, 7),
+            q(355, 113),
+            q(1, 1_000_000),
+            q(999_999, 1_000_000),
+            q(-999_999, 1_000_000),
+            bi(1_000_003),
+            bi(-1_000_003),
+        ];
+        // Computed endpoints: exactly the shape the enclosure modules coarsen.
+        let pi = pi_enclosure(16).expect("pi");
+        corpus.push(pi.lo().clone());
+        corpus.push(pi.hi().clone());
+        let root = crate::enclosure::sqrt_point(&bi(2), 16).expect("sqrt 2");
+        corpus.push(root.lo().clone());
+        corpus.push(root.hi().clone());
+        corpus.push(-root.hi().clone());
+        corpus
+    }
+
+    #[test]
+    fn the_dyadic_route_agrees_with_the_legacy_rational_route() {
+        // ADR-1710 §8's exit criterion for slice 1: a differential test against
+        // the copy it replaces, over that copy's own corpus. `legacy_*` is the
+        // pre-slice `BigRational` multiply-floor-divide, kept under
+        // `cfg(test)` for exactly this.
+        let corpus = grid_corpus();
+        let grids = [1u32, 8, 16, 53, 96, 104, 224, 1_024];
+        let mut operations = 0usize;
+        for value in &corpus {
+            for bits in grids {
+                let new_floor = dyadic_floor(value, bits);
+                let new_ceil = dyadic_ceil(value, bits);
+                let old_floor = legacy_dyadic_floor(value, bits);
+                let old_ceil = legacy_dyadic_ceil(value, bits);
+
+                // Soundness first, stated as containment and not as equality:
+                // the new endpoints must bracket the value at least as widely
+                // as the old ones did. A route that rounded the wrong way, or
+                // that "rounded" to something nearer, fails here.
+                assert!(
+                    new_floor <= *value && *value <= new_ceil,
+                    "the new route does not bracket {value} on the 2^-{bits} grid"
+                );
+                assert!(
+                    new_floor <= old_floor && old_ceil <= new_ceil,
+                    "the new route is NARROWER than the legacy one at {value}, 2^-{bits}"
+                );
+                // And then equality, which is the stronger claim the two
+                // routes actually satisfy: they compute the same function, so
+                // the migration changes cost and nothing else.
+                assert_eq!(new_floor, old_floor, "floor differs at {value}, 2^-{bits}");
+                assert_eq!(new_ceil, old_ceil, "ceil differs at {value}, 2^-{bits}");
+
+                // The interval route, one call, on the pair.
+                let width = q(1, 7);
+                let interval = BigInterval::new(value.clone(), value + &width).expect("interval");
+                let new_box = coarsen(&interval, bits);
+                let old_box = legacy_coarsen(&interval, bits);
+                assert!(
+                    new_box.contains_interval(&interval),
+                    "coarsen lost its input at {value}, 2^-{bits}"
+                );
+                assert!(
+                    new_box.contains_interval(&old_box),
+                    "coarsen is narrower than the legacy route at {value}, 2^-{bits}"
+                );
+                assert_eq!(new_box, old_box, "coarsen differs at {value}, 2^-{bits}");
+                operations += 3;
+            }
+        }
+        assert_eq!(operations, corpus.len() * grids.len() * 3);
+        assert!(
+            operations >= 200,
+            "the differential corpus is {operations} operations, under the 200 the slice requires"
+        );
+    }
+
+    #[test]
+    fn the_grid_bounds_the_denominator_of_a_coarsened_endpoint() {
+        // The point of the whole slice: after coarsening, every endpoint is
+        // `m · 2^(-bits)`, so its denominator divides `2^bits`. Without that
+        // there is no bound at all on what a series kernel is handed.
+        let pi = pi_enclosure(64).expect("pi");
+        assert!(
+            pi.lo().denom().bits() > 200,
+            "the fixture is meant to have a WIDE denominator; it has {} bits",
+            pi.lo().denom().bits()
+        );
+        let coarse = coarsen(&pi, 96);
+        for endpoint in [coarse.lo(), coarse.hi()] {
+            let denominator = endpoint.denom().clone();
+            assert!(
+                denominator.magnitude().trailing_zeros().unwrap_or(0)
+                    == denominator.magnitude().bits() - 1,
+                "a coarsened endpoint's denominator {denominator} is not a power of two"
+            );
+            assert!(
+                denominator.bits() <= 97,
+                "denominator {denominator} is past the grid"
             );
         }
     }
