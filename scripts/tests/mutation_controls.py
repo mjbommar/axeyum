@@ -5105,6 +5105,20 @@ SUITES["merge-hygiene"] = (
             'if [ "$kernel_projection_diff" -gt "$kernel_projection_tolerance" ]; then',
             "if false; then",
         ),
+        (
+            # Lane `hygiene-verdict` (2026-09-05): the finding in
+            # evidence-and-checker-discipline.md, "A green summary line with
+            # a guard that has no subject". `no-binary`/`stale-binary` stay
+            # skip-compatible (host facts); only `tool-failed` -- a present,
+            # fresh binary that still produced nothing -- is new. Mutating
+            # this one condition away restores the old behaviour exactly, so
+            # it must kill exactly the tool-failed test and leave the
+            # no-binary/stale-binary/healthy-binary/opt-out controls green.
+            "M18 a tool-failed shape-duplicates binary fails the gate "
+            "(a guard with no subject, not a host fact)",
+            'if [ "$shape_dupes_token" = "tool-failed" ]; then',
+            "if false; then",
+        ),
     ],
 )
 
