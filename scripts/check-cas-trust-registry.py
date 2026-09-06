@@ -75,7 +75,7 @@ DEFAULT_SRC_ROOT = REPO_ROOT / "crates" / "axeyum-cas" / "src"
 DEFAULT_RATCHET = REPO_ROOT / "scripts" / "check-cas-trust-registry.ratchet"
 
 VOCAB_SUFFIXES = ("Certificate", "Evidence", "Report", "Witness")
-VOCAB_EXACT_NAMES = ("ZeroTest", "CertifiedIntegral")
+VOCAB_EXACT_NAMES = ("ZeroTest", "CertifiedIntegral", "ConditionalIntegral")
 # A name that STARTS WITH "Certified" (and is not literally "Certified" on
 # its own -- that bare name carries no further information and must not be
 # admitted by this rule) also joins the vocabulary. Found 2026-09-05:
