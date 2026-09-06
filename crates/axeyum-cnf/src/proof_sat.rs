@@ -27,7 +27,9 @@ use crate::{CnfAssignment, CnfFormula, CnfLit, CnfVar};
 
 pub(crate) mod theory;
 
-use theory::{FinalCheckOutcome, NativeTheory, NullTheory, PropagationQueue};
+use theory::{
+    ExplanationId, FinalCheckOutcome, NativeTheory, NullTheory, PropagationQueue, TheoryExplanation,
+};
 
 /// Default maximum conflicts before the proof-producing core gives up.
 pub const DEFAULT_PROOF_SAT_CONFLICT_LIMIT: usize = 2_000_000;
@@ -390,6 +392,17 @@ struct Watch {
     blocker: CnfLit,
 }
 
+/// What one [`Cdcl::theory_round`] concluded.
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum TheoryRound {
+    /// The theory added nothing: carry on to the restart check and the decision.
+    Fixpoint,
+    /// The theory enqueued at least one literal; re-run Boolean propagation.
+    Propagated,
+    /// The search must stop with this outcome (always *undecided* today).
+    Stop(SearchOutcome),
+}
+
 /// A clause reference: a stable index into [`Cdcl::headers`] (and the parallel
 /// per-clause metadata vectors). It is the identity used by watches, reasons,
 /// and the proof — replacing the old `usize` clause id of the
@@ -400,6 +413,137 @@ struct Watch {
 /// [`Cdcl::arena`] at `[offset .. offset + len]`; that slice never relocates
 /// either, since the arena only ever appends.
 type CRef = usize;
+
+/// The tag width of a [`Reason`]: the two high bits of the word.
+const REASON_TAG_SHIFT: u32 = 62;
+/// Payload mask: everything below the tag.
+const REASON_PAYLOAD_MASK: u64 = (1u64 << REASON_TAG_SHIFT) - 1;
+const REASON_TAG_DECISION: u64 = 0;
+const REASON_TAG_CLAUSE: u64 = 1;
+const REASON_TAG_THEORY: u64 = 2;
+
+/// How an assigned variable came to be assigned -- its antecedent in the
+/// implication graph (ADR-1701 slice-2 design memo section 4.4 (ii)).
+///
+/// Three cases, packed into **one word**:
+///
+/// - [`Reason::DECISION`] -- a decision literal, an installed assumption, or a
+///   level-zero unit: no antecedent clause.
+/// - `Clause(`[`CRef`]`)` -- the ordinary case: an arena clause whose slot 0 is
+///   the implied literal and whose remaining literals are currently false.
+/// - `Theory(`[`ExplanationId`]`)` -- a literal a [`NativeTheory`] implied with
+///   a **lazy** explanation. The clause does not exist yet; the first time
+///   conflict analysis, minimization or [`Cdcl::analyze_final`] needs it, the
+///   handle is resolved through [`NativeTheory::explain`], the clause is
+///   installed in the arena as an **input** clause (ADR-1704: a theory lemma
+///   enters the Boolean stream as an extension of the input formula, never as
+///   an unlabelled learned clause) and this reason is rewritten in place to
+///   `Clause(cref)` -- so one handle is resolved at most once per assignment,
+///   and the search never pays for an explanation it does not resolve against.
+///   That saving is the entire point of the lazy channel.
+///
+/// # Why a packed word and not an enum
+///
+/// This is one entry per **variable**, read on every step of every conflict
+/// analysis and on every step of recursive minimization. The representation it
+/// replaces, `Option<CRef>`, is **16 bytes** on a 64-bit target (`usize` has no
+/// niche, so the discriminant costs a whole extra word); the three-variant
+/// `enum Reason { Decision, Clause(CRef), Theory(ExplanationId) }` is 16 bytes
+/// for the same reason. This packing is **8 bytes**, so adding the theory case
+/// *halves* per-variable reason memory rather than growing it. Pinned by
+/// `tests::reason_is_one_word_and_no_wider_than_the_option_it_replaced`.
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
+struct Reason(u64);
+
+/// The decoded form of a [`Reason`], for `match`ing. Never stored.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+enum ReasonKind {
+    Decision,
+    Clause(CRef),
+    Theory(ExplanationId),
+}
+
+impl Reason {
+    /// No antecedent: a decision, an assumption, or a level-zero unit.
+    const DECISION: Self = Self(REASON_TAG_DECISION << REASON_TAG_SHIFT);
+
+    /// An arena clause antecedent.
+    #[inline]
+    fn clause(cref: CRef) -> Self {
+        debug_assert!(
+            (cref as u64) <= REASON_PAYLOAD_MASK,
+            "clause reference exceeds the 62-bit Reason payload"
+        );
+        Self((REASON_TAG_CLAUSE << REASON_TAG_SHIFT) | (cref as u64))
+    }
+
+    /// A lazily-explained theory antecedent.
+    ///
+    /// # Panics
+    ///
+    /// Panics when `handle` does not fit the 62-bit payload. A silent truncation
+    /// here would hand `explain` a different handle than the theory issued, so
+    /// this is a hard error rather than a `debug_assert`.
+    #[inline]
+    fn theory(handle: ExplanationId) -> Self {
+        assert!(
+            handle.0 <= REASON_PAYLOAD_MASK,
+            "explanation handle {} exceeds the 62-bit Reason payload",
+            handle.0
+        );
+        Self((REASON_TAG_THEORY << REASON_TAG_SHIFT) | handle.0)
+    }
+
+    #[inline]
+    fn tag(self) -> u64 {
+        self.0 >> REASON_TAG_SHIFT
+    }
+
+    #[inline]
+    fn payload(self) -> u64 {
+        self.0 & REASON_PAYLOAD_MASK
+    }
+
+    /// Is this variable a decision (or assumption, or level-zero unit)?
+    #[inline]
+    fn is_decision(self) -> bool {
+        self.tag() == REASON_TAG_DECISION
+    }
+
+    /// The antecedent clause, when there already is one. `None` for a decision
+    /// **and** for an unresolved theory reason -- callers that must have a
+    /// clause go through [`Cdcl::resolve_reason`].
+    #[inline]
+    fn as_clause(self) -> Option<CRef> {
+        (self.tag() == REASON_TAG_CLAUSE).then(|| self.payload() as CRef)
+    }
+
+    /// The unresolved theory handle, if this is one.
+    #[inline]
+    fn as_theory(self) -> Option<ExplanationId> {
+        (self.tag() == REASON_TAG_THEORY).then(|| ExplanationId(self.payload()))
+    }
+
+    /// Decoded, for `match`.
+    #[inline]
+    fn kind(self) -> ReasonKind {
+        match self.tag() {
+            REASON_TAG_DECISION => ReasonKind::Decision,
+            REASON_TAG_CLAUSE => ReasonKind::Clause(self.payload() as CRef),
+            _ => ReasonKind::Theory(ExplanationId(self.payload())),
+        }
+    }
+}
+
+impl core::fmt::Debug for Reason {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        match self.kind() {
+            ReasonKind::Decision => f.write_str("Decision"),
+            ReasonKind::Clause(cref) => write!(f, "Clause({cref})"),
+            ReasonKind::Theory(handle) => write!(f, "Theory({})", handle.0),
+        }
+    }
+}
 
 /// Per-clause index into the packed literal [`Cdcl::arena`]. Mirrors `BatSat`'s
 /// `ClauseAllocator`/`ClauseHeader`: all clause literals are stored contiguously
@@ -444,7 +588,7 @@ struct Cdcl<'progress, S: DratSink, T: NativeTheory = NullTheory> {
     watches: Vec<Vec<Watch>>,
     assign: Vec<Option<bool>>,
     level: Vec<usize>,
-    reason: Vec<Option<usize>>,
+    reason: Vec<Reason>,
     trail: Vec<usize>,
     trail_lim: Vec<usize>,
     qhead: usize,
@@ -579,6 +723,22 @@ struct Cdcl<'progress, S: DratSink, T: NativeTheory = NullTheory> {
     /// about assignments — the theory's own `qhead`, moved by
     /// [`Cdcl::theory_round`] and reset by [`Cdcl::backtrack_to`].
     theory_qhead: usize,
+    /// The theory lemmas installed into the clause database so far, in
+    /// installation order -- ADR-1704's `lemmas` stream.
+    ///
+    /// Every clause that entered the database from a theory rather than from
+    /// 1-UIP resolution over input clauses is here, and each was registered as
+    /// an **input** clause (`learned[cid] == false`), never as a learned one.
+    /// So the Boolean stream this core emits is a DRAT proof of
+    /// `cnf ++ theory_lemmas`, in that order, and the lemma count is the
+    /// subtraction ADR-1704 section 1 requires --
+    /// `theory_lemmas.len() == extended.len() - cnf.len()` -- rather than a
+    /// number a producer asserts.
+    ///
+    /// Empty on every shipping entry point, all of which use [`NullTheory`]:
+    /// a `NullTheory` never propagates, so no [`Reason::theory`] is ever
+    /// created and nothing is ever installed here.
+    theory_lemmas: Vec<Vec<CnfLit>>,
     /// The driver-owned propagation queue (ADR-1701). Owned for the whole
     /// search and cleared between fixpoint iterations, so its allocation is
     /// paid once instead of per `propagate` call.
@@ -654,7 +814,7 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
             watches,
             assign: vec![None; n],
             level: vec![0; n],
-            reason: vec![None; n],
+            reason: vec![Reason::DECISION; n],
             trail: Vec::new(),
             trail_lim: Vec::new(),
             qhead: 0,
@@ -694,6 +854,7 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
             search_start: Instant::now(),
             theory,
             theory_qhead: 0,
+            theory_lemmas: Vec::new(),
             theory_queue: PropagationQueue::new(),
         };
         // Seed the order heap with every variable that occurs in a clause.
@@ -718,7 +879,7 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
         }
         self.assign.resize(count, None);
         self.level.resize(count, 0);
-        self.reason.resize(count, None);
+        self.reason.resize(count, Reason::DECISION);
         self.activity.resize(count, 0.0);
         self.phase.resize(count, false);
         self.best_phase.resize(count, false);
@@ -828,7 +989,7 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
         }
         for &var in &self.trail {
             self.assign[var] = None;
-            self.reason[var] = None;
+            self.reason[var] = Reason::DECISION;
         }
         // Unwind the theory in lockstep with the trail: one `pop` per level
         // this search pushed, and rewind its cursor. Level-zero assertions made
@@ -1192,7 +1353,7 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
         }
     }
 
-    fn enqueue(&mut self, lit: CnfLit, reason: Option<usize>) {
+    fn enqueue(&mut self, lit: CnfLit, reason: Reason) {
         let var = lit.var().index();
         let value = !lit.is_negated();
         self.assign[var] = Some(value);
@@ -1265,7 +1426,7 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
                     return Ok(SearchOutcome::Unsat);
                 }
                 Some(true) => {}
-                None => self.enqueue(lit, None),
+                None => self.enqueue(lit, Reason::DECISION),
             }
         }
         self.search_loop(assumptions, deadline, max_conflicts)
@@ -1344,7 +1505,7 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
                 self.learned_live += 1;
                 self.bump_clause(clause_id);
                 self.backtrack_to(backjump);
-                self.enqueue(asserting, Some(clause_id));
+                self.enqueue(asserting, Reason::clause(clause_id));
                 self.conflicts_since_restart += 1;
                 self.decay();
                 self.decay_clause();
@@ -1372,9 +1533,17 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
                 // before `reduce_db` can ever run again, so a theory reason
                 // clause could not be deleted between being emitted and being
                 // used.
-                if let Some(outcome) = self.theory_round() {
-                    self.report_progress();
-                    return Ok(outcome);
+                match self.theory_round() {
+                    TheoryRound::Stop(outcome) => {
+                        self.report_progress();
+                        return Ok(outcome);
+                    }
+                    // The theory put literals on the trail: hand them to
+                    // Boolean propagation before deciding anything else, so a
+                    // theory implication is propagated to fixpoint exactly like
+                    // a Boolean one.
+                    TheoryRound::Propagated => continue,
+                    TheoryRound::Fixpoint => {}
                 }
                 // No conflict: snapshot the target phase if this is the deepest
                 // conflict-free assignment yet (the "closest to a model" polarities),
@@ -1422,7 +1591,7 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
                         }
                         None => {
                             self.push_level();
-                            self.enqueue(p, None);
+                            self.enqueue(p, Reason::DECISION);
                         }
                     }
                     continue;
@@ -1437,7 +1606,7 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
                     } else {
                         positive.negated()
                     };
-                    self.enqueue(decision, None);
+                    self.enqueue(decision, Reason::DECISION);
                 } else {
                     // Total Boolean assignment: the one moment a theory's
                     // COMPLETE check runs (ADR-1701's `final_check`). It sits
@@ -1568,7 +1737,7 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
                     }
                     break;
                 }
-                self.enqueue(first, Some(cid));
+                self.enqueue(first, Reason::clause(cid));
             }
             watchers.truncate(j);
             self.watches[code] = watchers;
@@ -1665,8 +1834,130 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
                 return (learned, backjump, lbd);
             }
 
-            clause_id = self.reason[var].expect("implied literal has a reason clause");
+            // Resolving here is what makes the lazy channel pay: a theory
+            // implication that conflict analysis never walks past is never
+            // explained at all. When it IS walked, the explanation becomes an
+            // input clause of the extended formula (ADR-1704) and the rest of
+            // this loop cannot tell it from any other antecedent.
+            clause_id = self.resolve_reason(var);
         }
+    }
+
+    /// Installs a theory explanation as an **input** clause of the extended
+    /// formula and records it in [`Cdcl::theory_lemmas`] (ADR-1704).
+    ///
+    /// `lits` is the explanation the theory handed back; `implied` is the
+    /// literal it justifies. On return, the arena clause has `implied` at slot
+    /// 0 and, at slot 1, the currently-false literal of highest decision level
+    /// -- the two-watched-literal placement that stays correct for a clause
+    /// added under a partial assignment: `implied`'s level is the maximum of
+    /// its antecedents' levels, so any backtrack that unassigns slot 0 also
+    /// unassigns slot 1, and the watch invariant is restored together.
+    ///
+    /// The clause is registered with `learned[cid] = false`. That is the
+    /// ADR-1704 classification (a theory lemma extends the *input* formula) and
+    /// it simultaneously discharges the soundness obligation the slice-2 design
+    /// memo section 4.5 names: `reduce_db` only ever considers clauses with
+    /// `learned[cid]`, so a theory reason clause can never be deleted out from
+    /// under the assigned literal it justifies. The `is_locked` protection is
+    /// not relied on here -- the clause is not a deletion candidate at all.
+    ///
+    /// Nothing is emitted to the DRAT sink: a lemma is an input clause, not a
+    /// derived step. Emitting it would be exactly the unlabelled learned clause
+    /// ADR-1704 section 5 forbids.
+    ///
+    /// # Panics
+    ///
+    /// Panics when the explanation does not contain `implied`, or contains a
+    /// literal that is not currently false. Both are theory contract
+    /// violations, in the same class as the implication-graph invariants
+    /// `analyze` already asserts with `expect`; letting either through would
+    /// put a clause into the database that does not justify the assignment it
+    /// is the reason for.
+    fn install_theory_lemma(&mut self, implied: CnfLit, lits: &[CnfLit]) -> CRef {
+        let mut clause: Vec<CnfLit> = Vec::with_capacity(lits.len());
+        clause.push(implied);
+        for &lit in lits {
+            if lit == implied || clause.contains(&lit) {
+                continue;
+            }
+            assert!(
+                self.value(lit) == Some(false),
+                "theory explanation literal {lit:?} for {implied:?} is not false under the \
+                 current assignment"
+            );
+            clause.push(lit);
+        }
+        assert!(
+            lits.contains(&implied),
+            "theory explanation for {implied:?} does not contain the literal it explains"
+        );
+        // Slot 1 := the highest-level false literal, so the watch pair is
+        // undone together on backtracking (see the doc comment).
+        if clause.len() >= 2 {
+            let mut best = 1;
+            for k in 2..clause.len() {
+                if self.level[clause[k].var().index()] > self.level[clause[best].var().index()] {
+                    best = k;
+                }
+            }
+            clause.swap(1, best);
+        }
+        let cid = self.alloc_clause(&clause);
+        self.lbd.push(0);
+        self.cla_activity.push(0.0);
+        self.deleted.push(false);
+        // NOT `true`: an input clause, never a `reduce_db` candidate.
+        self.learned.push(false);
+        if clause.len() >= 2 {
+            self.watches[lit_code(clause[0])].push(Watch {
+                clause: cid,
+                blocker: clause[1],
+            });
+            self.watches[lit_code(clause[1])].push(Watch {
+                clause: cid,
+                blocker: clause[0],
+            });
+        }
+        self.theory_lemmas.push(clause);
+        cid
+    }
+
+    /// The antecedent clause of assigned variable `var`, resolving a lazy
+    /// theory reason on first use (ADR-1701 slice-2 design memo section 4.4
+    /// (ii)).
+    ///
+    /// For a `Clause` reason this is a load and a shift -- the hot path, and
+    /// the only path a `NullTheory` search ever takes. For a `Theory` reason it
+    /// calls [`NativeTheory::explain`], installs the answer as an input clause
+    /// (see [`Cdcl::install_theory_lemma`]) and **rewrites the reason in
+    /// place**, so the handle is resolved at most once per assignment.
+    ///
+    /// # Panics
+    ///
+    /// Panics when `var` is a decision (callers check `is_decision` first) or
+    /// when the theory cannot resolve a handle it issued. `explain` returning
+    /// `None` is documented as a theory bug, never a verdict, and there is no
+    /// sound answer to continue with: the literal is on the trail and conflict
+    /// analysis needs its antecedent.
+    #[inline]
+    fn resolve_reason(&mut self, var: usize) -> CRef {
+        // The hot arm first and alone: for every `NullTheory` search this is
+        // the whole function, and it is a load, a shift and a compare.
+        if let Some(cid) = self.reason[var].as_clause() {
+            return cid;
+        }
+        let handle = self.reason[var]
+            .as_theory()
+            .unwrap_or_else(|| panic!("resolve_reason called on decision variable {var}"));
+        let implied = self.true_literal(var);
+        let lits = self
+            .theory
+            .explain(handle)
+            .unwrap_or_else(|| panic!("theory failed to explain its own handle {handle:?}"));
+        let cid = self.install_theory_lemma(implied, &lits);
+        self.reason[var] = Reason::clause(cid);
+        cid
     }
 
     /// `MiniSat`'s `analyzeFinal`, specialised to the assumption case: `p` is an
@@ -1684,7 +1975,7 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
     ///
     /// The returned core is a *claim*, and the incremental wrapper's callers
     /// check it: re-solving under the core alone must still be unsatisfiable.
-    fn analyze_final(&self, p: CnfLit) -> Vec<CnfLit> {
+    fn analyze_final(&mut self, p: CnfLit) -> Vec<CnfLit> {
         let mut failed = vec![p];
         if self.decision_level() == 0 {
             // `p` is false at level 0: the clause database alone entails `not p`,
@@ -1701,18 +1992,19 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
             if !seen[var] {
                 continue;
             }
-            match self.reason[var] {
-                None => failed.push(self.true_literal(var)),
-                Some(cid) => {
-                    // Slot 0 holds the implied literal; the rest are its
-                    // antecedents (the invariant `propagate` and the learned-clause
-                    // enqueue both maintain).
-                    let len = self.clause_len(cid);
-                    for slot in 1..len {
-                        let q = self.lit_at(cid, slot);
-                        if self.level[q.var().index()] > 0 {
-                            seen[q.var().index()] = true;
-                        }
+            if self.reason[var].is_decision() {
+                failed.push(self.true_literal(var));
+            } else {
+                // Slot 0 holds the implied literal; the rest are its
+                // antecedents (the invariant `propagate` and the learned-clause
+                // enqueue both maintain). A theory reason is resolved into an
+                // input clause here exactly as `analyze` resolves it.
+                let cid = self.resolve_reason(var);
+                let len = self.clause_len(cid);
+                for slot in 1..len {
+                    let q = self.lit_at(cid, slot);
+                    if self.level[q.var().index()] > 0 {
+                        seen[q.var().index()] = true;
                     }
                 }
             }
@@ -1750,7 +2042,7 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
     /// conflicts; the result depends only on this conflict's `seen` state, the
     /// reason graph, and the input clause order, hence is deterministic
     /// (identical input ⇒ identical clause ⇒ identical proof structure).
-    fn minimize(&self, learned: &mut Vec<CnfLit>, seen: &mut [bool]) {
+    fn minimize(&mut self, learned: &mut Vec<CnfLit>, seen: &mut [bool]) {
         if learned.len() <= 1 {
             return;
         }
@@ -1772,7 +2064,7 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
             let lit = learned[read];
             let v = lit.var().index();
             // Keep `lit` if it is a decision (no reason) or not redundant.
-            if self.reason[v].is_none()
+            if self.reason[v].is_decision()
                 || !self.lit_redundant(lit, abstract_levels, seen, &mut stack, &mut to_clear)
             {
                 learned[write] = lit;
@@ -1796,7 +2088,7 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
     /// set during the walk are retained (the literals are now known redundant),
     /// recorded in `to_clear` for the caller to clear once minimization ends.
     fn lit_redundant(
-        &self,
+        &mut self,
         p: CnfLit,
         abstract_levels: u32,
         seen: &mut [bool],
@@ -1808,14 +2100,18 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
         let top = to_clear.len();
         while let Some(q) = stack.pop() {
             let qv = q.var().index();
-            let rid = self.reason[qv].expect("lit_redundant only walks literals with a reason");
+            // Resolved BEFORE the arena borrow below, so the hot inner loop
+            // stays a plain slice walk with no allocation and no `&mut self`.
+            let rid = self.resolve_reason(qv);
             // Skip the propagated literal itself (slot 0 of its reason clause).
             for &l in &self.lits(rid)[1..] {
                 let lv = l.var().index();
                 if self.level[lv] == 0 || seen[lv] {
                     continue;
                 }
-                if self.reason[lv].is_some() && (self.abstract_level(lv) & abstract_levels) != 0 {
+                if !self.reason[lv].is_decision()
+                    && (self.abstract_level(lv) & abstract_levels) != 0
+                {
                     // `l` may itself be redundant: mark it and recurse.
                     seen[lv] = true;
                     stack.push(l);
@@ -1884,7 +2180,7 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
             return false;
         }
         let v = self.lit_at(cid, 0).var().index();
-        self.assign[v].is_some() && self.reason[v] == Some(cid)
+        self.assign[v].is_some() && self.reason[v].as_clause() == Some(cid)
     }
 
     /// Glucose/MiniSat `reduceDB`: delete the worst (low-activity) half of the
@@ -1984,7 +2280,7 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
             while self.trail.len() > bound {
                 let var = self.trail.pop().expect("trail not empty above bound");
                 self.assign[var] = None;
-                self.reason[var] = None;
+                self.reason[var] = Reason::DECISION;
                 // The variable becomes a branchable candidate again. Re-insert it
                 // into the order heap *only* if it was popped out by `pick_branch`
                 // (lazy deletion): variables still in the heap stay put, avoiding
@@ -2026,41 +2322,89 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
     /// it to propagate into the driver-owned queue, and collects any atoms it
     /// registered. Returns `Some(outcome)` when the search must stop.
     ///
-    /// **In this spike the only stopping outcome is
-    /// [`SearchOutcome::Interrupted`] — the undecided verdict.** A theory
-    /// conflict, a theory propagation and a dynamic atom are each *recognised*
-    /// and then declined, because acting on any of them means putting a clause
-    /// that is not RUP against the CNF into the learned database, which would
-    /// invalidate the DRAT proof this core emits. Deciding the proof contract
-    /// under theory lemmas is slice 2 proper, not this measurement.
-    /// [`NullTheory`] can produce none of the three, so this returns `None`
-    /// on every shipping path.
-    fn theory_round(&mut self) -> Option<SearchOutcome> {
+    /// **Theory *propagations* are acted on; theory *conflicts* and dynamic
+    /// atoms are still declined** with the undecided outcome
+    /// [`SearchOutcome::Interrupted`].
+    ///
+    /// A propagation is enqueued with a [`Reason`]: `Lazy` becomes
+    /// [`Reason::theory`], resolved only if conflict analysis walks past it;
+    /// `Eager` is materialised as an input clause immediately. Either way the
+    /// justifying clause enters the database as an ADR-1704 *lemma* -- an input
+    /// clause recorded in [`Cdcl::theory_lemmas`] -- so the emitted Boolean
+    /// stream is a DRAT proof of `cnf ++ theory_lemmas` and never of `cnf`
+    /// alone. A conflict (from `assert`, from a propagation onto a false
+    /// literal, or from `final_check`) additionally needs the conflict-lemma
+    /// machinery and the two-stream artifact plumbing, which is S7; those are
+    /// recognised and declined rather than guessed.
+    ///
+    /// [`NullTheory`] produces none of these, so this returns
+    /// [`TheoryRound::Fixpoint`] on every shipping path.
+    fn theory_round(&mut self) -> TheoryRound {
         // Design B of the spike measurement: `HAS_THEORY` is an associated
         // CONST, so for `T = NullTheory` the compiler drops this whole function
         // body — including the trail walk, which is the part design A could not
         // make free. Design A (calling the empty hooks unconditionally) measured
         // +5.8% on `proof_sat_solve_php_6_7`; see the design memo.
         if !T::HAS_THEORY {
-            return None;
+            return TheoryRound::Fixpoint;
         }
         while self.theory_qhead < self.trail.len() {
             let var = self.trail[self.theory_qhead];
             self.theory_qhead += 1;
             let value = self.assign[var] == Some(true);
             if self.theory.assert(var, value).is_err() {
-                return Some(SearchOutcome::Interrupted);
+                return TheoryRound::Stop(SearchOutcome::Interrupted);
             }
         }
         self.theory_queue.clear();
         self.theory.propagate_into(&mut self.theory_queue);
-        if !self.theory_queue.is_empty() {
-            return Some(SearchOutcome::Interrupted);
+        let mut propagated = false;
+        let mut theory_conflict = false;
+        // Taken out of the driver-owned queue so the enqueue loop below can
+        // hold `&mut self`; the allocation goes straight back afterwards, so
+        // the queue is still paid for once per search and not once per round.
+        let queued = core::mem::take(&mut self.theory_queue);
+        for index in 0..queued.entries().len() {
+            let lit = queued.entries()[index].0;
+            match self.value(lit) {
+                // Already implied by the Boolean side: nothing to do, and no
+                // lemma is installed for an implication the CNF already has.
+                Some(true) => {}
+                // The theory implies a literal the Boolean side has already
+                // falsified: a theory conflict in propagation clothing. S7.
+                Some(false) => {
+                    theory_conflict = true;
+                    break;
+                }
+                None => {
+                    let reason = match &queued.entries()[index].1 {
+                        TheoryExplanation::Lazy(handle) => Reason::theory(*handle),
+                        TheoryExplanation::Eager(lits) => {
+                            // Cloned so the `&mut self` call below does not
+                            // borrow `queued` and `self` at once. Eager is the
+                            // non-lazy channel by definition; the copy is the
+                            // cost of materialising now instead of never.
+                            let lits = lits.clone();
+                            Reason::clause(self.install_theory_lemma(lit, &lits))
+                        }
+                    };
+                    self.enqueue(lit, reason);
+                    propagated = true;
+                }
+            }
+        }
+        self.theory_queue = queued;
+        if theory_conflict {
+            return TheoryRound::Stop(SearchOutcome::Interrupted);
         }
         if self.theory.take_new_atoms() != 0 {
-            return Some(SearchOutcome::Interrupted);
+            return TheoryRound::Stop(SearchOutcome::Interrupted);
         }
-        None
+        if propagated {
+            TheoryRound::Propagated
+        } else {
+            TheoryRound::Fixpoint
+        }
     }
 
     fn pick_branch(&mut self) -> Option<usize> {
@@ -2096,7 +2440,7 @@ mod tests {
 
     use super::{
         Cdcl, DEFAULT_PROOF_SAT_CONFLICT_LIMIT, Instant, ProofSearchProgress, ProofSolveOutcome,
-        StreamingProofOutcome, Watch, lit_code, solve_with_drat_proof,
+        Reason, StreamingProofOutcome, Watch, lit_code, solve_with_drat_proof,
         solve_with_drat_proof_streaming, solve_with_drat_proof_with_limits,
         solve_with_drat_proof_with_limits_and_progress, solve_with_drat_proof_within,
     };
@@ -2525,9 +2869,9 @@ mod tests {
             if v == asserting_var {
                 return true;
             }
-            match cdcl.reason[v] {
-                None => true,
-                Some(rid) => !cdcl.lits(rid).iter().all(|&q| {
+            match cdcl.reason[v].kind() {
+                super::ReasonKind::Decision | super::ReasonKind::Theory(_) => true,
+                super::ReasonKind::Clause(rid) => !cdcl.lits(rid).iter().all(|&q| {
                     let qv = q.var().index();
                     qv == v || in_learned[qv] || cdcl.level[qv] == 0
                 }),
@@ -2560,10 +2904,10 @@ mod tests {
         for v in 0..4 {
             cdcl.level[v] = 1;
         }
-        cdcl.reason[0] = None; // uip: kept regardless
-        cdcl.reason[1] = None; // a: a decision literal — never redundant, always kept
-        cdcl.reason[2] = Some(0); // b's reason is clause 0 = [~v2, v3]
-        cdcl.reason[3] = Some(1); // c's reason is clause 1 = [~v3, v1]
+        cdcl.reason[0] = Reason::DECISION; // uip: kept regardless
+        cdcl.reason[1] = Reason::DECISION; // a: a decision literal — never redundant, always kept
+        cdcl.reason[2] = Reason::clause(0); // b's reason is clause 0 = [~v2, v3]
+        cdcl.reason[3] = Reason::clause(1); // c's reason is clause 1 = [~v3, v1]
 
         let learned_init = vec![neg(0), neg(1), neg(2)];
 
@@ -2929,7 +3273,7 @@ mod tests {
                     if let Some(v) = got {
                         cdcl.trail_lim.push(cdcl.trail.len());
                         let pos = CnfLit::positive(CnfVar::new(v).unwrap());
-                        cdcl.enqueue(pos, None);
+                        cdcl.enqueue(pos, Reason::DECISION);
                     }
                     cdcl.assert_heap_invariants();
                 }
@@ -3031,11 +3375,11 @@ mod tests {
         // Manually drive three decision levels.
         let dlit = |sign: i64| lit(sign);
         cdcl.trail_lim.push(cdcl.trail.len());
-        cdcl.enqueue(dlit(1), None); // a@1
+        cdcl.enqueue(dlit(1), Reason::DECISION); // a@1
         cdcl.trail_lim.push(cdcl.trail.len());
-        cdcl.enqueue(dlit(2), None); // b@2
+        cdcl.enqueue(dlit(2), Reason::DECISION); // b@2
         cdcl.trail_lim.push(cdcl.trail.len());
-        cdcl.enqueue(dlit(3), None); // c@3
+        cdcl.enqueue(dlit(3), Reason::DECISION); // c@3
         // Add a learned clause that implies d, watched on its first two lits.
         let learned = vec![lit(4), lit(-1), lit(-2), lit(-3)]; // d ∨ ¬a ∨ ¬b ∨ ¬c
         let cid = cdcl.alloc_clause(&learned);
@@ -3052,7 +3396,7 @@ mod tests {
         cdcl.deleted.push(false);
         cdcl.learned.push(true); // parallel to `headers`; `reduce_db` reads it
         cdcl.learned_live += 1;
-        cdcl.enqueue(dlit(4), Some(cid)); // d@3, reason = cid → cid is LOCKED
+        cdcl.enqueue(dlit(4), Reason::clause(cid)); // d@3, reason = cid → cid is LOCKED
         assert!(cdcl.is_locked(cid), "setup: the clause must be locked");
         // Force reduce_db to run regardless of budget.
         cdcl.reduce_db().expect("the vec sink cannot fail");
@@ -3436,6 +3780,88 @@ mod tests {
         }
     }
 
+    /// [`Reason`] must be **one word**, and never wider than the
+    /// `Option<CRef>` it replaced -- the S6 memory requirement, asserted rather
+    /// than assumed. It is read once per variable on every step of every
+    /// conflict analysis and of recursive minimization, so a two-word reason
+    /// would double that traffic across the whole solve.
+    ///
+    /// The comparison is the point: `Option<usize>` has no niche and is
+    /// **16 bytes**, so packing the extra `Theory` case into 8 bytes makes the
+    /// array *smaller* than before this change, not larger.
+    #[test]
+    fn reason_is_one_word_and_no_wider_than_the_option_it_replaced() {
+        assert_eq!(
+            size_of::<Reason>(),
+            size_of::<usize>(),
+            "Reason must be exactly one machine word"
+        );
+        assert!(
+            size_of::<Reason>() <= size_of::<Option<usize>>(),
+            "Reason ({}) must not be wider than the Option<CRef> ({}) it replaced",
+            size_of::<Reason>(),
+            size_of::<Option<usize>>()
+        );
+        // Per-variable memory is what the requirement is actually about.
+        assert!(
+            size_of::<Vec<Reason>>() == size_of::<Vec<Option<usize>>>()
+                && size_of::<Reason>() * 1024 <= size_of::<Option<usize>>() * 1024,
+            "a 1024-variable reason array must not grow"
+        );
+    }
+
+    /// Every [`Reason`] case round-trips through the packing: the tag decides
+    /// the case and the payload comes back bit-identical. A packed
+    /// representation whose payload silently truncated would hand `explain` a
+    /// handle the theory never issued, and the search would then be justified
+    /// by the wrong clause.
+    #[test]
+    fn every_reason_case_round_trips_through_the_packing() {
+        use super::{ExplanationId, ReasonKind};
+
+        assert!(Reason::DECISION.is_decision());
+        assert_eq!(Reason::DECISION.kind(), ReasonKind::Decision);
+        assert_eq!(Reason::DECISION.as_clause(), None);
+        assert_eq!(Reason::DECISION.as_theory(), None);
+
+        // Clause 0 is a real CRef and must NOT be confused with a decision.
+        for cref in [0usize, 1, 42, usize::from(u16::MAX), (1usize << 40) - 1] {
+            let reason = Reason::clause(cref);
+            assert!(
+                !reason.is_decision(),
+                "Clause({cref}) read back as a decision"
+            );
+            assert_eq!(reason.as_clause(), Some(cref));
+            assert_eq!(reason.as_theory(), None);
+            assert_eq!(reason.kind(), ReasonKind::Clause(cref));
+        }
+
+        for handle in [0u64, 1, 7, u64::from(u32::MAX), (1u64 << 40) - 1] {
+            let reason = Reason::theory(ExplanationId(handle));
+            assert!(
+                !reason.is_decision(),
+                "Theory({handle}) read back as a decision"
+            );
+            assert_eq!(reason.as_clause(), None);
+            assert_eq!(reason.as_theory(), Some(ExplanationId(handle)));
+            assert_eq!(reason.kind(), ReasonKind::Theory(ExplanationId(handle)));
+        }
+
+        // The three cases are pairwise distinct at the same payload -- the
+        // property a single-sentinel encoding would lose.
+        assert_ne!(Reason::clause(0), Reason::DECISION);
+        assert_ne!(Reason::theory(ExplanationId(0)), Reason::DECISION);
+        assert_ne!(Reason::clause(3), Reason::theory(ExplanationId(3)));
+    }
+
+    /// A handle too wide for the 62-bit payload is a hard error, not a silent
+    /// truncation to a different handle.
+    #[test]
+    #[should_panic(expected = "exceeds the 62-bit Reason payload")]
+    fn an_oversized_explanation_handle_panics_rather_than_truncating() {
+        let _ = Reason::theory(super::ExplanationId(u64::MAX));
+    }
+
     /// Theory-hook liveness (ADR-1701 slice 2 spike).
     ///
     /// The whole point of the spike measurement is that attaching a theory
@@ -3454,6 +3880,7 @@ mod tests {
             VecProofSink, formula, pigeonhole, solve_with_drat_proof,
         };
         use crate::CnfLit;
+        use crate::proof_sat::SearchOutcome;
         use crate::proof_sat::theory::{
             ExplanationId, FinalCheckOutcome, NativeTheory, PropagationQueue, TheoryExplanation,
         };
@@ -3621,31 +4048,323 @@ mod tests {
             );
         }
 
-        /// A theory that propagates, or that registers an atom, is recognised
-        /// and declined — not silently ignored. Ignoring a sound theory
-        /// propagation would be merely incomplete, but ignoring a theory
-        /// *conflict* would be unsound, and both travel the same code path.
-        struct PropagatingTheory;
-        impl NativeTheory for PropagatingTheory {
+        /// A theory that propagates a literal the Boolean side has already
+        /// **falsified** is a theory conflict wearing a propagation's clothes.
+        /// Acting on it needs the conflict-lemma half of ADR-1704's two-stream
+        /// artifact, which is S7; it is recognised and declined here, never
+        /// ignored -- ignoring a sound theory propagation would be merely
+        /// incomplete, but ignoring a theory *conflict* would be unsound, and
+        /// both travel this code path.
+        struct FalsifyingTheory;
+        impl NativeTheory for FalsifyingTheory {
             fn assert(&mut self, _var: usize, _value: bool) -> Result<(), Vec<CnfLit>> {
                 Ok(())
             }
             fn push(&mut self) {}
             fn pop(&mut self) {}
             fn propagate_into(&mut self, queue: &mut PropagationQueue) {
+                // `unit_contradiction`'s var 0 is fixed TRUE at level zero, so
+                // propagating its negation is always a conflict.
                 queue.push_lazy(
-                    crate::CnfLit::positive(crate::CnfVar::new(0).unwrap()),
+                    crate::CnfLit::positive(crate::CnfVar::new(0).unwrap()).negated(),
                     ExplanationId(1),
                 );
             }
         }
 
         #[test]
-        fn a_theory_propagation_is_declined_not_ignored() {
+        fn a_theory_propagation_onto_a_falsified_literal_is_declined_not_ignored() {
+            // (1) & (1 | 2): var 0 is true at level zero and the formula is
+            // satisfiable, so only the theory's propagation can stop the search.
+            let f = formula(2, &[&[1], &[1, 2]]);
+            let (outcome, steps) = solve_with(&f, FalsifyingTheory);
+            assert_eq!(
+                outcome,
+                StreamingProofOutcome::Interrupted,
+                "a theory conflict is undecided today, never a refutation"
+            );
+            assert!(steps.is_empty(), "no proof step may be emitted: {steps:?}");
+        }
+
+        /// A theory that registers an atom mid-search is likewise recognised
+        /// and declined (the variable-table/order-heap ordering contract is S7).
+        struct AtomRegisteringTheory;
+        impl NativeTheory for AtomRegisteringTheory {
+            fn assert(&mut self, _var: usize, _value: bool) -> Result<(), Vec<CnfLit>> {
+                Ok(())
+            }
+            fn push(&mut self) {}
+            fn pop(&mut self) {}
+            fn propagate_into(&mut self, _queue: &mut PropagationQueue) {}
+            fn take_new_atoms(&mut self) -> usize {
+                1
+            }
+        }
+
+        #[test]
+        fn a_dynamic_atom_registration_is_declined_not_ignored() {
             let f = pigeonhole(4);
-            let (outcome, steps) = solve_with(&f, PropagatingTheory);
+            let (outcome, steps) = solve_with(&f, AtomRegisteringTheory);
             assert_eq!(outcome, StreamingProofOutcome::Interrupted);
             assert!(steps.is_empty(), "no proof step may be emitted: {steps:?}");
+        }
+
+        // ------------------------------------------------------------------
+        // The `Theory` reason path (S6): a lazily-explained theory implication
+        // that conflict analysis walks past.
+        // ------------------------------------------------------------------
+
+        /// The handle `LazyImplyingTheory` issues. Deliberately not 0 and not a
+        /// clause id, so a `Reason` that lost its tag would resolve to the
+        /// wrong thing rather than to nothing.
+        const IMPLY_HANDLE: ExplanationId = ExplanationId(7);
+
+        /// A mock theory whose whole content is the implication
+        /// `¬x1 → x3` -- a fact the CNF does not contain.
+        ///
+        /// It hands the clause back **on demand** (`explain`), which is the
+        /// point: the driver stores `Reason::theory(7)` and only materialises
+        /// `(x3 ∨ x1)` if conflict analysis actually resolves against it.
+        struct LazyImplyingTheory {
+            /// What the driver has told us, per variable.
+            values: Vec<Option<bool>>,
+            /// Assertion trail and its per-decision-level marks, so `pop`
+            /// unwinds in lockstep with the driver's backjump.
+            trail: Vec<usize>,
+            marks: Vec<usize>,
+            /// How many times `explain` was called -- the lazy channel's meter.
+            explains: usize,
+        }
+
+        impl LazyImplyingTheory {
+            fn new(vars: usize) -> Self {
+                Self {
+                    values: vec![None; vars],
+                    trail: Vec::new(),
+                    marks: Vec::new(),
+                    explains: 0,
+                }
+            }
+
+            /// `x1` (variable 0) as a positive literal.
+            fn x1() -> CnfLit {
+                crate::CnfLit::positive(crate::CnfVar::new(0).unwrap())
+            }
+
+            /// `x3` (variable 2) as a positive literal.
+            fn x3() -> CnfLit {
+                crate::CnfLit::positive(crate::CnfVar::new(2).unwrap())
+            }
+        }
+
+        impl NativeTheory for LazyImplyingTheory {
+            fn assert(&mut self, var: usize, value: bool) -> Result<(), Vec<CnfLit>> {
+                self.values[var] = Some(value);
+                self.trail.push(var);
+                Ok(())
+            }
+            fn push(&mut self) {
+                self.marks.push(self.trail.len());
+            }
+            fn pop(&mut self) {
+                let bound = self.marks.pop().unwrap_or(0);
+                while self.trail.len() > bound {
+                    let var = self.trail.pop().expect("trail above its own mark");
+                    self.values[var] = None;
+                }
+            }
+            fn propagate_into(&mut self, queue: &mut PropagationQueue) {
+                // ¬x1 implies x3, and only while x3 is still open.
+                if self.values[0] == Some(false) && self.values[2].is_none() {
+                    queue.push_lazy(Self::x3(), IMPLY_HANDLE);
+                }
+            }
+            fn explain(&mut self, handle: ExplanationId) -> Option<Vec<CnfLit>> {
+                assert_eq!(
+                    handle, IMPLY_HANDLE,
+                    "driver asked for a handle we never issued"
+                );
+                self.explains += 1;
+                // The clause `(x3 ∨ x1)`: the implied literal plus the negation
+                // of the antecedent `¬x1`.
+                Some(vec![Self::x3(), Self::x1()])
+            }
+        }
+
+        /// The fixture: **Boolean-satisfiable**, and unsatisfiable only once the
+        /// theory's `¬x1 → x3` is available. So every step the search takes past
+        /// the first conflict depends on the theory lemma being installed, and
+        /// the emitted stream cannot be a refutation of the CNF alone.
+        ///
+        /// ```text
+        /// c0 ( x1 | x2)   c1 (~x2 | x4)   c2 (~x3 | ~x4 | x5)
+        /// c3 (~x1 | x2)   c4 (~x3 | ~x4 | ~x5)   c5 (~x1 | x3)
+        /// ```
+        ///
+        /// Boolean model: x1=F, x2=T, x4=T, x3=F. With `¬x1 → x3` both branches
+        /// close: `x1=F` gives x2,x4,x3 and c2/c4 conflict; `x1=T` gives x2,x4
+        /// (c3,c1) and x3 (c5), and c2/c4 conflict again.
+        fn lazy_theory_fixture() -> crate::CnfFormula {
+            formula(
+                5,
+                &[
+                    &[1, 2],
+                    &[-2, 4],
+                    &[-3, -4, 5],
+                    &[-1, 2],
+                    &[-3, -4, -5],
+                    &[-1, 3],
+                ],
+            )
+        }
+
+        /// Runs the search keeping the solver alive afterwards, so the
+        /// ADR-1704 lemma stream can be read off it.
+        fn solve_with_lemmas<T: NativeTheory>(
+            f: &crate::CnfFormula,
+            theory: T,
+        ) -> (SearchOutcome, Vec<crate::DratStep>, Vec<Vec<CnfLit>>) {
+            let mut sink = VecProofSink::new();
+            let mut cdcl = Cdcl::new_with_theory(f, &mut sink, theory);
+            let outcome = cdcl
+                .run(&[], None, DEFAULT_PROOF_SAT_CONFLICT_LIMIT)
+                .expect("VecProofSink never fails");
+            let lemmas = cdcl.theory_lemmas.clone();
+            drop(cdcl);
+            (outcome, sink.into_steps(), lemmas)
+        }
+
+        /// `cnf ++ lemmas`, in that order -- ADR-1704 section 1's extended
+        /// formula, built here the way a checker would build it.
+        fn extended_formula(f: &crate::CnfFormula, lemmas: &[Vec<CnfLit>]) -> crate::CnfFormula {
+            let mut extended = crate::CnfFormula::new(f.variable_count());
+            for clause in f.clauses() {
+                extended
+                    .add_clause(crate::CnfClause::new(clause.lits().to_vec()))
+                    .expect("the extended formula has the same variable count");
+            }
+            for lemma in lemmas {
+                extended
+                    .add_clause(crate::CnfClause::new(lemma.clone()))
+                    .expect("a lemma is over the same variables as the CNF");
+            }
+            extended
+        }
+
+        /// The `Theory` reason is resolved through `explain`, the answer lands
+        /// in the arena as an **input** clause (never a learned one, so
+        /// `reduce_db` can never delete the justification of an assigned
+        /// literal), and conflict analysis carries on through it to a verdict.
+        #[test]
+        fn a_lazy_theory_reason_is_resolved_into_an_input_clause_and_analysis_continues() {
+            let f = lazy_theory_fixture();
+            // Control: without the theory the fixture is satisfiable, so the
+            // unsat below is the theory's doing and not the formula's.
+            assert!(
+                matches!(solve_with_drat_proof(&f), ProofSolveOutcome::Sat(_)),
+                "fixture must be Boolean-satisfiable, or the test proves nothing"
+            );
+
+            let (outcome, steps, lemmas) = solve_with_lemmas(&f, LazyImplyingTheory::new(5));
+            assert_eq!(
+                outcome,
+                SearchOutcome::Unsat,
+                "conflict analysis must run through the theory reason to a verdict"
+            );
+            assert_eq!(
+                lemmas.len(),
+                1,
+                "exactly one theory explanation was resolved: {lemmas:?}"
+            );
+            let lemma = &lemmas[0];
+            assert_eq!(
+                lemma[0],
+                LazyImplyingTheory::x3(),
+                "slot 0 of an installed lemma is the literal it justifies"
+            );
+            let mut sorted = lemma.clone();
+            sorted.sort_by_key(|l| (l.var().index(), l.is_negated()));
+            assert_eq!(
+                sorted,
+                vec![LazyImplyingTheory::x1(), LazyImplyingTheory::x3()],
+                "the lemma is the clause the theory handed back"
+            );
+            assert!(
+                steps.iter().all(|step| !matches!(
+                    step,
+                    crate::DratStep::Add(lits) if *lits == *lemma
+                )),
+                "a lemma is an INPUT clause; emitting it as a derived DRAT step is \
+                 exactly the unlabelled learned clause ADR-1704 forbids: {steps:?}"
+            );
+        }
+
+        /// ADR-1704 section 1: the Boolean stream is a proof of
+        /// `cnf ++ lemmas`, **not** of `cnf`. Both directions are asserted, so
+        /// this test cannot pass by the checker accepting everything or by it
+        /// refusing everything.
+        #[test]
+        fn the_boolean_stream_checks_over_the_extended_formula_and_not_over_the_cnf() {
+            let f = lazy_theory_fixture();
+            let (outcome, steps, lemmas) = solve_with_lemmas(&f, LazyImplyingTheory::new(5));
+            assert_eq!(outcome, SearchOutcome::Unsat);
+            assert_eq!(lemmas.len(), 1);
+
+            let extended = extended_formula(&f, &lemmas);
+            assert_eq!(
+                crate::check_drat(&extended, &steps),
+                Ok(true),
+                "the stream must be a checkable refutation of cnf ++ lemmas"
+            );
+            assert_ne!(
+                crate::check_drat(&f, &steps),
+                Ok(true),
+                "the same stream must NOT check as a refutation of the bare CNF -- \
+                 that is the assurance regression ADR-1704 exists to make visible"
+            );
+        }
+
+        /// ADR-1704 section 1's counting rule: the lemma count is the
+        /// **subtraction on the artifact**, `extended.len() - cnf.len()`, not a
+        /// number the producer asserts. A producer that appended its lemmas to
+        /// the CNF and reported zero would fail here.
+        #[test]
+        fn the_theory_lemma_count_is_read_off_the_artifact_not_asserted() {
+            let f = lazy_theory_fixture();
+            let (_, _, lemmas) = solve_with_lemmas(&f, LazyImplyingTheory::new(5));
+            let extended = extended_formula(&f, &lemmas);
+            assert_eq!(
+                extended.clauses().len() - f.clauses().len(),
+                lemmas.len(),
+                "extended must be cnf followed by lemmas, nothing interleaved"
+            );
+            assert_eq!(lemmas.len(), 1, "the counted lemma total for this run");
+            // And the extension really is a suffix: the CNF prefix is untouched.
+            for (before, after) in f.clauses().iter().zip(extended.clauses()) {
+                assert_eq!(before.lits(), after.lits());
+            }
+        }
+
+        /// The lazy channel is lazy: `explain` is called **once**, when
+        /// conflict analysis first walks past the implied literal -- not at
+        /// propagation time, and not again after the reason has been rewritten
+        /// to a clause. Eager materialisation would call it once per
+        /// propagation whether or not it was ever needed.
+        #[test]
+        fn an_explanation_is_resolved_at_most_once_per_assignment() {
+            let f = lazy_theory_fixture();
+            let mut sink = VecProofSink::new();
+            let theory = LazyImplyingTheory::new(5);
+            let mut cdcl = Cdcl::new_with_theory(&f, &mut sink, theory);
+            let outcome = cdcl
+                .run(&[], None, DEFAULT_PROOF_SAT_CONFLICT_LIMIT)
+                .expect("VecProofSink never fails");
+            assert_eq!(outcome, SearchOutcome::Unsat);
+            assert_eq!(
+                cdcl.theory.explains, 1,
+                "one resolution for one lemma; the handle is not re-resolved"
+            );
+            assert_eq!(cdcl.theory_lemmas.len(), cdcl.theory.explains);
         }
     }
 }
