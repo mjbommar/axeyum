@@ -17,7 +17,7 @@
 # only rises on purpose) -- but a new UNCERTIFIED function is never refused;
 # that label is honest, not a violation. See
 # docs/math-department/13-computer-algebra.md item 10.
-COUNT	109
+COUNT	115
 FN	enclosure::enclose	Option<Enclosure>
 FN	enclosure::enclose_constant	Option<Enclosure>
 FN	enclosure::enclose_root	Option<Enclosure>
@@ -77,6 +77,12 @@ FN	numberfield::GaussianInt::factor	Result<GaussianFactorizationCertificate, Dec
 FN	numberfield::QuadraticField::fundamental_unit	Result<FundamentalUnitCertificate, DeclineReason>
 FN	numberfield::QuadraticField::pell_unit	Result<FundamentalUnitCertificate, DeclineReason>
 FN	numberfield::two_squares	Option<TwoSquaresCertificate>
+FN	numberfield_classgroup::QuadraticOrder::class_group	Result<ClassGroupCertificate, ClassGroupDecline>
+FN	numberfield_classgroup::class_group	Result<ClassGroupCertificate, ClassGroupDecline>
+FN	numberfield_classgroup::class_of_ideal	Result<(BinaryQuadraticForm, FormIdealCertificate), ClassGroupDecline>
+FN	numberfield_classgroup::compose	Result<(BinaryQuadraticForm, CompositionCertificate), ClassGroupDecline>
+FN	numberfield_classgroup::is_principal	Result<(bool, PrincipalityCertificate), ClassGroupDecline>
+FN	numberfield_classgroup::reduce_form	Result<(BinaryQuadraticForm, FormReductionCertificate), ClassGroupDecline>
 FN	numberfield_ideals::QuadraticOrder::class_number	Result<(usize, ClassNumberCertificate), IdealDecline>
 FN	numberfield_ideals::QuadraticOrder::factor_ideal	Result<IdealFactorizationCertificate, IdealDecline>
 FN	numberfield_ideals::QuadraticOrder::factor_principal_ideal	Result<(Ideal, IdealFactorizationCertificate), IdealDecline>
@@ -141,6 +147,7 @@ VOCAB	CenterCertificate	struct
 VOCAB	Certificate	struct
 VOCAB	CertifiedIntegral	struct
 VOCAB	CheckReport	struct
+VOCAB	ClassGroupCertificate	struct
 VOCAB	ClassNumberCertificate	struct
 VOCAB	ClosedFormReport	struct
 VOCAB	CoefficientAsymptotics	struct
@@ -149,6 +156,7 @@ VOCAB	CoefficientHomologyReport	struct
 VOCAB	CohomologyCertificate	struct
 VOCAB	CohomologyReport	struct
 VOCAB	CompositeCertificate	struct
+VOCAB	CompositionCertificate	struct
 VOCAB	ConicFiveCertificate	struct
 VOCAB	ConjugacyClassCertificate	struct
 VOCAB	CosetCertificate	struct
@@ -167,6 +175,8 @@ VOCAB	ExtremumCertificate	struct
 VOCAB	FactorModulusBound	struct
 VOCAB	FactorizationCertificate	struct
 VOCAB	ForallDecision	enum
+VOCAB	FormIdealCertificate	struct
+VOCAB	FormReductionCertificate	struct
 VOCAB	FundamentalUnitCertificate	struct
 VOCAB	GaussianFactorizationCertificate	struct
 VOCAB	GenericWitness	struct
@@ -198,6 +208,7 @@ VOCAB	PersistenceReport	struct
 VOCAB	PrattCertificate	struct
 VOCAB	PrimeSplittingCertificate	struct
 VOCAB	PrimitiveElementCertificate	struct
+VOCAB	PrincipalityCertificate	struct
 VOCAB	ProjectionCertificate	struct
 VOCAB	PsdNotSosCertificate	struct
 VOCAB	QuotientOrderCertificate	struct
