@@ -24,7 +24,7 @@ described below is kept ready for the next one, not deleted.
 | file | what it is |
 |---|---|
 | [`ground_truth.py`](ground_truth.py) | independent verification of every checkable expected value in `corpus.json`: via SymPy 1.14.0 where installed, else pure-Python hand/cited proofs (129 claims with SymPy, 75 without — see "SymPy availability" below) |
-| [`corpus.json`](corpus.json) | the corpus: 119 entries, one per query, each with its area, module tag (if any), tier, expected value, and the method that established it |
+| [`corpus.json`](corpus.json) | the corpus: one entry per query, each with its area, module tag (if any), tier, expected value, and the method that established it (current totals in the generated counts block below "Areas and modules") |
 | [`../../../crates/axeyum-cas/examples/parity_corpus.rs`](../../../crates/axeyum-cas/examples/parity_corpus.rs) | the harness: an `axeyum-cas` example (a workspace-member crate, unlike the SMT corpus's standalone `harness/`) that re-derives each `corpus.json` entry's query directly against `axeyum-cas`, compares to the expected value, and reports verdict / trust / wall time per entry |
 
 ## Design, and how it differs from the SMT capability corpus
@@ -193,17 +193,25 @@ declares no public items), `qe_dnf` 4, `qe_bivariate` 4, plus 4 more tagged
 `probability` for the symbolic-lambda Poisson claims (item 9 wave two: total
 mass, mean, and variance all now certify with a SYMBOLIC rate).
 
-Tiers: **109 `core`**, **10 `decline_expected`** (≥ 10 `decline_expected`
-required — each entry cites a classical fact, a source-read capability
-boundary in `axeyum-cas`, or this crate's own progress-log finding; see
-each entry's `justification` in `corpus.json`). `known_defect` is empty:
-wave two found `e1-radical-cross-base`'s tier field in `corpus.json` was
-STALE at `known_defect` even though the Rust harness already treats it as
-a plain `core` agree (the fix landed under lane `cas-witness` and the
-harness was updated, but `corpus.json`'s copy never was) — corrected here
-so the two ledgers agree again.
+<!-- BEGIN GENERATED: cas-parity-corpus-counts (scripts/check-cas-parity-corpus.py --write) -->
+Tiers: **111 `core`**, **12 `decline_expected`**, **0 `known_defect`**. Total entries: **123**.
+<!-- END GENERATED: cas-parity-corpus-counts -->
 
-Total entries: **119** (was 71 before wave two).
+The counts above are generated from `corpus.json`, never hand-written --
+twice in one week this prose drifted from the real entry count (119 recorded
+against 123 present; then 125 against 126) with nothing failing. Run
+`python3 scripts/check-cas-parity-corpus.py` to check the block against
+`corpus.json` (also checks id/tier parity against the Rust harness and
+`ground_truth.py` coverage of every `core` entry), or `--write` to
+regenerate it. ≥ 10 `decline_expected` entries are required — each cites a
+classical fact, a source-read capability boundary in `axeyum-cas`, or this
+crate's own progress-log finding; see each entry's `justification` in
+`corpus.json`. `known_defect` was briefly nonzero here: wave two found
+`e1-radical-cross-base`'s tier field in `corpus.json` was STALE at
+`known_defect` even though the Rust harness already treated it as a plain
+`core` agree (the fix landed under lane `cas-witness` and the harness was
+updated, but `corpus.json`'s copy never was) — corrected, and now checked
+every run by guard (c) above so it cannot silently happen again.
 
 ## Running it
 
