@@ -1465,6 +1465,46 @@ fn normal_mgf(mu: &CasExpr, variance: &CasExpr, t: &str) -> Certificate {
     }
 }
 
+/// `E[Normal(μ, σ²)] = μ`, on whichever route the variance allows.
+///
+/// Both routes decide the same thing: the mean is taken on the **centered**
+/// variable `U = X − μ`, whose odd moment `E[U]` must decide to `0`, and
+/// `E[X] = μ + E[U]`. A concrete `σ²` goes through [`improper_integrate`]
+/// unconditionally; a symbolic one through the Gaussian conditional route, which
+/// carries `σ² > 0` onto the claim rather than dropping it.
+fn normal_mean(mu: &CasExpr, variance: &CasExpr) -> Certificate {
+    let Some(concrete) = as_concrete(variance) else {
+        let centered = normal_symbolic_certificate(variance, 1, CasExpr::zero(), "Normal mean");
+        return match centered.trust {
+            Trust::Certified => Certificate::certified(mu.clone(), Route::ConditionalIntegrate),
+            Trust::CertifiedUnder(conditions) => {
+                Certificate::certified_under(mu.clone(), Route::ConditionalIntegrate, conditions)
+            }
+            Trust::Uncertified(reason) => {
+                Certificate::uncertified(mu.clone(), Route::ConditionalIntegrate, reason)
+            }
+        };
+    };
+    let Some(raw) = normal_raw_moment(concrete, 1) else {
+        return Certificate::uncertified(
+            mu.clone(),
+            Route::ImproperIntegrate,
+            normal_decline_reason(concrete),
+        );
+    };
+    let centered_mean = simplify(&crate::simplify_radicals(&(normal_coeff(concrete) * raw)));
+    match equal(&centered_mean, &CasExpr::zero()) {
+        ZeroTest::Certified { equal: true, .. } => {
+            Certificate::certified(mu.clone(), Route::ImproperIntegrate)
+        }
+        _ => Certificate::uncertified(
+            simplify(&(mu.clone() + centered_mean)),
+            Route::ImproperIntegrate,
+            "the centered odd moment E[U] did not decide equal to 0",
+        ),
+    }
+}
+
 /// `a = 1/(2σ²)`, the rate of the `Normal(μ, σ²)` Gaussian factor `e^{−a·u²}` on
 /// the centered variable `u = x − μ`.
 fn normal_rate(variance: &CasExpr) -> CasExpr {
@@ -1828,52 +1868,7 @@ impl Continuous {
                     ),
                 }
             }
-            Continuous::Normal { mu, variance } => {
-                let Some(concrete) = as_concrete(variance) else {
-                    // E[U] over the centered variable U = X − μ decides to 0, and
-                    // E[X] = μ + E[U] = μ.
-                    let centered =
-                        normal_symbolic_certificate(variance, 1, CasExpr::zero(), "Normal mean");
-                    return match centered.trust {
-                        Trust::Certified => {
-                            Certificate::certified(mu.clone(), Route::ConditionalIntegrate)
-                        }
-                        Trust::CertifiedUnder(conditions) => Certificate::certified_under(
-                            mu.clone(),
-                            Route::ConditionalIntegrate,
-                            conditions,
-                        ),
-                        Trust::Uncertified(reason) => Certificate::uncertified(
-                            mu.clone(),
-                            Route::ConditionalIntegrate,
-                            reason,
-                        ),
-                    };
-                };
-                match normal_raw_moment(concrete, 1) {
-                    Some(raw) => {
-                        let coeff = normal_coeff(concrete);
-                        // E[U] over the centered variable U = X - mu; E[X] = mu + E[U].
-                        let centered_mean = simplify(&crate::simplify_radicals(&(coeff * raw)));
-                        let value = simplify(&(mu.clone() + centered_mean.clone()));
-                        match equal(&centered_mean, &CasExpr::zero()) {
-                            ZeroTest::Certified { equal: true, .. } => {
-                                Certificate::certified(mu.clone(), Route::ImproperIntegrate)
-                            }
-                            _ => Certificate::uncertified(
-                                value,
-                                Route::ImproperIntegrate,
-                                "the centered odd moment E[U] did not decide equal to 0",
-                            ),
-                        }
-                    }
-                    None => Certificate::uncertified(
-                        mu.clone(),
-                        Route::ImproperIntegrate,
-                        normal_decline_reason(concrete),
-                    ),
-                }
-            }
+            Continuous::Normal { mu, variance } => normal_mean(mu, variance),
         }
     }
 
