@@ -17,7 +17,7 @@
 # only rises on purpose) -- but a new UNCERTIFIED function is never refused;
 # that label is honest, not a violation. See
 # docs/math-department/13-computer-algebra.md item 10.
-COUNT	137
+COUNT	138
 FN	enclosure::enclose	Option<Enclosure>
 FN	enclosure::enclose_constant	Option<Enclosure>
 FN	enclosure::enclose_root	Option<Enclosure>
@@ -113,6 +113,7 @@ FN	permgroup::PermutationGroup::derived_subgroup	Result<(PermutationGroup, Deriv
 FN	permgroup::PermutationGroup::is_abelian	AbelianCertificate
 FN	permgroup::PermutationGroup::orbit_stabilizer	Option<(PermutationGroup, OrbitStabilizerCertificate)>
 FN	permgroup::PermutationGroup::order_certificate	&OrderCertificate
+FN	permgroup_iso::PermutationGroup::presentation	PresentationCertificate
 FN	permgroup_sylow::PermutationGroup::invariants	Result<InvariantsCertificate, PermgroupError>
 FN	permgroup_sylow::PermutationGroup::is_normal	Result<NormalityCertificate, PermgroupError>
 FN	permgroup_sylow::PermutationGroup::normal_closure	Result<(PermutationGroup, NormalClosureCertificate), PermgroupError>
@@ -188,6 +189,7 @@ VOCAB	ConditionalIntegral	struct
 VOCAB	ConicFiveCertificate	struct
 VOCAB	ConjugacyClassCertificate	struct
 VOCAB	CosetCertificate	struct
+VOCAB	CosetTableCertificate	struct
 VOCAB	CrtCertificate	enum
 VOCAB	Decision	enum
 VOCAB	DegenerateWitness	struct
@@ -232,6 +234,7 @@ VOCAB	IntegerInducedReport	struct
 VOCAB	InvariantsCertificate	struct
 VOCAB	InverseCertificate	struct
 VOCAB	IrreducibilityCertificate	struct
+VOCAB	IsoCertificate	struct
 VOCAB	IvtCertificate	struct
 VOCAB	LiftCertificate	struct
 VOCAB	LyapunovCertificate	struct
@@ -247,6 +250,7 @@ VOCAB	PartialFractionCertificate	struct
 VOCAB	PersistenceCertificate	struct
 VOCAB	PersistenceReport	struct
 VOCAB	PrattCertificate	struct
+VOCAB	PresentationCertificate	struct
 VOCAB	PrimeSplittingCertificate	struct
 VOCAB	PrimitiveElementCertificate	struct
 VOCAB	PrincipalityCertificate	struct
@@ -261,6 +265,7 @@ VOCAB	RecurrenceCertificate	struct
 VOCAB	RefutationCertificate	struct
 VOCAB	RegulatorCertificate	struct
 VOCAB	SampleCertificate	struct
+VOCAB	SearchExhaustionCertificate	struct
 VOCAB	ShapedCompositionSearchReport	struct
 VOCAB	SimplicialMapCertificate	struct
 VOCAB	SylowCertificate	struct
