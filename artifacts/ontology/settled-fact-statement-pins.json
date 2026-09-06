@@ -4,7 +4,7 @@
   "note": "Statement identity for every settled fact (S1 of the trusted-library safety roadmap, ADR-0763). Per fact: SHA-256 of formal.statement (the canonical kernel rendering for native lean4 rows), SHA-256 of the top-level reader-facing statement, and the kernel_theorem it names. A settled fact's statement is what the ledger CLAIMS; changing any of the three silently turns 'we proved X' into 'we proved something we then labelled X'. Changes require an amendment row naming both digests and a reason; superseded digests are preserved in each pin's history. `coverage_floor` is a ratchet the gate re-derives rather than trusts: slack is itself a violation, so a loosened floor is self-reverting. Written by `scripts/check-settled-fact-statements.py --write`; do not hand-edit.",
   "coverage_floor": {
     "max_unpinned_settled": 0,
-    "min_identity_bound": 2425,
+    "min_identity_bound": 2427,
     "max_header_exempt": 0
   },
   "amendments": [
@@ -1011,11 +1011,25 @@
       "kernel_theorem": "AlgS.add_left_cancel"
     },
     {
+      "fact_id": "F:algs-exchange-lincomb-removeat-insertat",
+      "language": "lean4",
+      "statement_sha256": "54ff82ec1da712731210ec8409d6ca5d43b416db199b5ce6f9f321ccc868f56f",
+      "prose_sha256": "699a2127b14fa500631a126bdfb6f2c036051be84f1a37439a69cb1dcc67f5e5",
+      "kernel_theorem": "AlgS.Exchange.linComb_removeAt_insertAt"
+    },
+    {
       "fact_id": "F:algs-field-mul-left-cancel",
       "language": "lean4",
       "statement_sha256": "1ccfa4f165173133bf99dcd0ff33514260e0d3997a9dc422aeb52992771a0480",
       "prose_sha256": "3ef2fa44a90427ff6bc1bea8bdd45a1d5fb82209c2fc17499b44fb89860cea43",
       "kernel_theorem": "AlgS.Field.mul_left_cancel"
+    },
+    {
+      "fact_id": "F:algs-index-insertat-removeat",
+      "language": "lean4",
+      "statement_sha256": "17ee4ce79140502978942749e61e58f160a14f7484a87a3b2b86591230e561e4",
+      "prose_sha256": "a549dc9614d28976adf683464f682fa61788088e3b85ed51cbe705e00c47a598",
+      "kernel_theorem": "AlgS.Index.insertAt_removeAt"
     },
     {
       "fact_id": "F:algs-inv-inv",

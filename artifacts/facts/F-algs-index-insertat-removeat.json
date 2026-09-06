@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "id": "F:algs-index-insertat-removeat",
+  "title": "Deleting an index from a family and putting its value back rebuilds the family, at every index",
+  "statement": "At the AlgS build position the only Nat vocabulary declared is Nat, Nat.zero, Nat.succ and Nat.rec -- Nat.le, Nat.lt, Nat.beq and Nat.ble are interned about sixty lines later in nat_prelude.rs -- so index surgery on a coefficient family has to be built from Nat.rec alone. AlgS.Index.removeAt deletes an index and shifts the rest down; AlgS.Index.insertAt puts a value at an index and shifts the rest up. Both recurse on the INDEX returning a family TRANSFORMER, (Nat -> a) -> (Nat -> a), which is what lets the recursive call be made at the shifted family fun t => v (succ t); a motive returning a family does not admit that call. insertAt_removeAt says the two are inverse in the direction that has no side condition: insertAt i (v i) (removeAt i v) agrees with v at EVERY index, because below i nothing moved, at i the value is the one taken out, and above i the two shifts cancel. That unconditionality is what lets the linear-combination split inherit its bound from the sum's length rather than from the surgery.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem AlgS.Index.insertAt_removeAt : ((x0 : Sort (1)) -> ((x1 : AxNat) -> ((x2 : ((x2 : AxNat) -> x0)) -> ((x3 : AxNat) -> Eq.{1} x0 (AlgS.Index.insertAt x0 x1 (x2 x1) (AlgS.Index.removeAt x0 x1 x2) x3) (x2 x3)))))",
+    "fragment": "none",
+    "free_symbols": [],
+    "kernel_theorem": "AlgS.Index.insertAt_removeAt"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "external_status": "proved",
+  "depends_on": [],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "algs-index-insertat-removeat-1",
+      "kind": "kernel-term",
+      "supports": "Thirteen AlgS.Index declarations (three definitions, ten theorems) admit with empty footprints, asserted only AFTER Environment::get -- a missing name also returns an empty footprint. The three definitions are checked by EVALUATION at small discriminating arguments, because the trusted gate cannot tell you a definition computes the wrong value: insertAt 2 3 id must enumerate 0, 1, 3, 2, 3, where the inserted value 3 is deliberately a value the identity family already takes so the test cannot pass by matching the wrong occurrence, and index 3 must be the shifted 2, which no shift-free or shift-by-two reading produces. Two negative controls must be REFUSED by the kernel: le_dichotomy with the induction hypothesis at succ n' instead of n', and removeAt_insertAt with the UNSHIFTED family where fun t => v (succ t) belongs.",
+      "check_status": "checked",
+      "checker_command": "out=$(cargo test -p axeyum-lean-kernel --lib --release -- --test-threads=4 nat_prelude::vector_space_exchange nat_prelude::vector_space_steinitz 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -cE 'test result: ok\\. 18 passed; 0 failed')\" -ge 1",
+      "notes": "The pinned count is 18. Mutation, RUN 2026-09-06 against a 25-test baseline (filter nat_prelude::vector_space): removeAt's base case off by one, v (succ j) -> v j, killed 18 of 25; le (succ i) zero returning True instead of False killed 18 of 25. Both mutants change a Definition, which the kernel cannot object to -- the mutated removeAt still has exactly the right type -- so the kills come from the evaluation tests and from the downstream theorems whose Eq.refl stops holding."
+    }
+  ],
+  "concept_refs": [],
+  "provenance": {
+    "date": "2026-09-06",
+    "established_by": "axeyum-lean-kernel nat_prelude::vector_space_exchange, lane invariance-of-dimension, ADR-1657 (roadmap W3-2).",
+    "source": "crates/axeyum-lean-kernel/src/nat_prelude/vector_space_exchange.rs (declare_remove_at, declare_insert_at, declare_insert_at_remove_at); tests nat_prelude::vector_space_exchange::vector_space_exchange_tests::*."
+  },
+  "notes": "This removes the obstruction ADR-1627 named for the general Steinitz exchange. The route taken is Nat.rec surgery, not threading Nat.lt/Nat.beq in as deps: a dep is a NameId already in the environment and those names are declared after the whole AlgS block, so that route is a reordering of the shared prelude build rather than a parameter. All ten defining equations of le, removeAt and insertAt are iota-reductions."
+}
