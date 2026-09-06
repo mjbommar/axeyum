@@ -56886,23 +56886,46 @@ functional (`L(M) = 9+9+8−27 = −1 < 0` against a PSD moment matrix), and
 ## The mutation table — all six RUN, twice, none PREDICTED
 
 Registered as `SUITES["psatz"]` in `scripts/tests/mutation_controls.py`. Run
-once before the prelude theorems landed and once after, so the table records
-what MOVED and why. Baseline 29 tests both times; exit 0 both times; `git
-status` clean afterwards, with no diff in `psatz.rs` or `psatz/rat.rs`.
+THREE times: before the prelude theorems landed, after them, and once more on
+the final tree after the clippy fixes moved one mutant's anchor text. Baseline
+29 tests every time; exit 0 every time; `git status` clean afterwards with no
+diff in `psatz.rs` or `psatz/rat.rs`. Every row below is RUN — none is
+predicted.
 
-| mutant | before | after |
-| --- | --- | --- |
-| a cleared form's coefficient sign reaches the emitted term (the brief's first) | killed 5 | killed 12 |
-| the verified-witness refusal is `PsdNotSos` and not something else (the brief's second) | killed **exactly 1** | killed **exactly 1** |
-| a supplied dual witness is verified rather than believed | killed 1 | killed 1 |
-| a negative LDL pivot is a `NotPsd` finding | killed 7 | killed 7 |
-| a zero pivot beside a nonzero entry is a `NotPsd` finding | killed 3 | killed 3 |
-| the denominator-clearing scale is divided back out | killed 1 | killed 12 |
+| mutant | before prelude | after prelude | final tree |
+| --- | --- | --- | --- |
+| a cleared form's coefficient sign reaches the emitted term (the brief's first) | killed 5 | killed 12 | killed 12 |
+| the verified-witness refusal is `PsdNotSos` and not something else (the brief's second) | killed **exactly 1** | killed **exactly 1** | killed **exactly 1** |
+| a supplied dual witness is verified rather than believed | killed 1 | killed 1 | killed 1 |
+| a negative LDL pivot is a `NotPsd` finding | killed 7 | killed 7 | killed 7 |
+| a zero pivot beside a nonzero entry is a `NotPsd` finding | killed 3 | killed 3 | killed 3 |
+| the denominator-clearing scale is divided back out | killed 1 | killed 12 | killed 12 |
 
-The two rows that MOVED are the two whose mutation now also breaks
-`build_rat_prelude` — which is precisely what the no-fallback design predicts,
-and is better evidence for it than the prose in the module docs. The four that
-did not move are exercised entirely by the search's own tests.
+The two rows that MOVED between the first and second run are the two whose
+mutation now also breaks `build_rat_prelude` — which is precisely what the
+no-fallback design predicts, and is better evidence for it than the prose in
+the module docs. The four that did not move are exercised entirely by the
+search's own tests.
+
+The third run exists because clearing `clippy -D warnings` rewrote the
+zero-pivot row scan, which is one of the mutants' anchor text. An anchor that
+no longer matches reports NOT APPLIED, and NOT APPLIED is not a result — so the
+suite was re-anchored and re-run rather than the table being carried forward.
+It still kills 3.
+
+## A gate this lane did not create and did not fix
+
+`scripts/check-merge-hygiene.sh` exits 1 on one guard:
+`kernel-dependency-projection staleness`, committed 4,425 declarations against
+a live 4,565 (tolerance 100). **137 of those 140 predate this lane.** The
+artifact was last regenerated at `71586fd74` (lane `chebyshev-pi`, same day),
+and 273 commits landed on `main` between that regeneration and this lane's
+branch point; this lane adds exactly 3 kernel declarations. Regenerating an
+8 MB shared artifact from inside one lane, when every other in-flight lane will
+make it stale again, is churn with a merge-conflict cost and no benefit — it
+belongs at merge time, once, after the lanes land. Every other merge-hygiene
+guard passes, and the one this lane DID make stale — the production provenance
+ledger — was regenerated and committed.
 
 ## Facts
 
