@@ -158,6 +158,42 @@ Each is a quarter or more of work and each is gated on Wave 0.
 - **Anything on the `open` Mathlib transcription queue** (262 facts). That is a
   separate, already-running work stream and it does not need a roadmap.
 
+## What comes next — the five, after the 2026-09-06 re-reading
+
+The twelve persona files were re-measured against `main` on 2026-09-06 (their
+verdict lines and progress rows carry the commits). Read together they order
+the next work as follows; each item names the measurement that put it there.
+
+1. **Make the retrieval index see the whole kernel.** `shape_search` builds 15
+   of the kernel's 31 `build_*_prelude` functions, so it is blind to every
+   `fo_*` module (141 declarations), `metric_prod` (12) and the list prelude.
+   That gap is behind most of the false absences found today and most of the
+   lane-hours spent re-deriving lemmas that existed. Derive the tool's group
+   list from the builder list, with a gate that fails when they diverge.
+2. **Close the ledger's blind spots and reword the headline.** 599 of 3,319
+   indexed theorems are named in no fact; the enclosure layer, five committed
+   geometry certificates and the matrix-group work carry no fact at all, so
+   under ADR-0601 they count as zero. The axiom-free headline reads "every
+   proved fact"; the structured field says **2,584 of 2,687**, all on the
+   kernel route. One fact per capability, a coverage ratchet, the honest
+   sentence everywhere.
+3. **Fix the sum-of-squares reconstruction fallback.** On `UnsupportedTerm`
+   it mints two axioms and renders under the same theorem name as the honest
+   route (`crates/axeyum-solver/src/reconstruct.rs`, verified independently by
+   reviewers 11 and 12). A checker that cannot fail, in the sense of
+   [evidence-and-checker-discipline](../contributor-guide/evidence-and-checker-discipline.md).
+4. **Build the three carriers every shelf waits on.** A metric completion
+   (`Metric.Complete` has three witnesses in 4,839 declarations; L¹, ℝⁿ and
+   measure theory all stop there); a product probability space (Hoeffding and
+   every joint-law statement); an ideal with its quotient ring (`ideal` occurs
+   zero times in the kernel). Each is one decision and one construction, and
+   each unblocks two or three fields.
+5. **Replace the production metric.** The retirement count has read 67 since
+   2026-09-03 while some two hundred proved facts landed, because producers now
+   emit theorems nobody hand-wrote and the metric cannot see that channel.
+   Price one held-out family honestly and record the producer channel's output
+   as its own number.
+
 ## Status board
 
 One row per wave. Update when something lands, then append to the history log.
