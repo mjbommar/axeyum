@@ -254,17 +254,17 @@ fn mat_vec_mul(mat: &FpMatrix, v: &[i128], p: i128) -> Vec<i128> {
         .collect()
 }
 
-fn mat_mat_mul(a: &FpMatrix, b: &FpMatrix, p: i128) -> FpMatrix {
-    let n = a.len();
-    let m = b.first().map_or(0, Vec::len);
-    let mut out = vec![vec![0i128; m]; n];
-    for i in 0..n {
-        for (k, a_ik) in a[i].iter().enumerate() {
-            if *a_ik == 0 {
+fn mat_mat_mul(left: &FpMatrix, right: &FpMatrix, p: i128) -> FpMatrix {
+    let rows = left.len();
+    let cols = right.first().map_or(0, Vec::len);
+    let mut out = vec![vec![0i128; cols]; rows];
+    for i in 0..rows {
+        for (k, entry) in left[i].iter().enumerate() {
+            if *entry == 0 {
                 continue;
             }
-            for j in 0..m {
-                out[i][j] = reduce(out[i][j] + a_ik * b[k][j], p);
+            for j in 0..cols {
+                out[i][j] = reduce(out[i][j] + entry * right[k][j], p);
             }
         }
     }
@@ -347,8 +347,13 @@ pub fn determinant_mod_p(matrix: &[Vec<i128>], p: i128) -> Option<i128> {
             if factor == 0 {
                 continue;
             }
-            for c in col..n {
-                m[row][c] = reduce(m[row][c] - factor * m[col][c], p);
+            // `row > col`, so split the matrix to borrow both rows mutably
+            // at once instead of indexing a single Vec twice per column.
+            let (upper, lower) = m.split_at_mut(row);
+            let pivot_row_ref = &upper[col];
+            let target_row = &mut lower[0];
+            for (t, pv) in target_row.iter_mut().zip(pivot_row_ref.iter()).skip(col) {
+                *t = reduce(*t - factor * pv, p);
             }
         }
     }
@@ -711,6 +716,11 @@ impl MatrixGroup {
     /// generator has determinant `1` mod `p` (in which case the group they
     /// generate is contained in `SL(n, p)`, since determinant-1 matrices are
     /// closed under multiplication and inversion).
+    ///
+    /// # Panics
+    ///
+    /// Never panics: every generator was already validated invertible mod
+    /// `p` at construction, so `determinant_mod_p` always returns `Some`.
     #[must_use]
     pub fn special_certificate(&self) -> SpecialCertificate {
         let determinants: Vec<i128> = self
@@ -961,6 +971,11 @@ impl ElementOrderCertificate {
 ///
 /// See [`MatrixGroupError`]: a non-prime `p`, `n == 0`, a malformed or
 /// singular matrix, or a point count exceeding [`MAX_POINTS`].
+///
+/// # Panics
+///
+/// Never panics: `matrix` is validated invertible before its permutation is
+/// built, and a permutation of a finite set always has a finite order.
 pub fn order_of_element(
     p: i128,
     n: usize,
@@ -1043,8 +1058,7 @@ mod tests {
     // A primitive root mod p, for the small primes this module's tests use.
     fn primitive_root(p: i128) -> i128 {
         match p {
-            3 => 2,
-            5 => 2,
+            3 | 5 => 2,
             7 => 3,
             _ => panic!("no primitive root tabulated for p = {p}"),
         }
@@ -1139,7 +1153,9 @@ mod tests {
         let start = Instant::now();
         let g = MatrixGroup::from_generators(2, 3, gl3_f2_generators()).unwrap();
         // Classical formula: |GL(n, q)| = prod_{i=0}^{n-1} (q^n - q^i).
-        let classical: u128 = (0..3u32).map(|i| (8 - 2i128.pow(i)) as u128).product();
+        let classical: u128 = (0..3u32)
+            .map(|i| (8 - 2i128.pow(i)).cast_unsigned())
+            .product();
         assert_eq!(g.order(), classical);
         assert_eq!(g.order(), 168);
         // Over F2 the only unit is 1, so GL(3, 2) = SL(3, 2).
