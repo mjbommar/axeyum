@@ -505,9 +505,17 @@ impl Reason {
     }
 
     /// Is this variable a decision (or assumption, or level-zero unit)?
+    ///
+    /// A single compare, not a shift-and-compare: `DECISION` is tag 0 with a
+    /// zero payload, and every tagged case has a tag of at least
+    /// [`REASON_TAG_CLAUSE`], so the whole word is below
+    /// `REASON_TAG_CLAUSE << REASON_TAG_SHIFT` exactly for a decision. This is
+    /// read once per literal in `lit_redundant`'s inner loop, which is why the
+    /// instruction is worth naming.
     #[inline]
     fn is_decision(self) -> bool {
-        self.tag() == REASON_TAG_DECISION
+        debug_assert_eq!(REASON_TAG_DECISION, 0);
+        self.0 < (REASON_TAG_CLAUSE << REASON_TAG_SHIFT)
     }
 
     /// The antecedent clause, when there already is one. `None` for a decision
@@ -1839,7 +1847,10 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
             // explained at all. When it IS walked, the explanation becomes an
             // input clause of the extended formula (ADR-1704) and the rest of
             // this loop cannot tell it from any other antecedent.
-            clause_id = self.resolve_reason(var);
+            clause_id = match self.reason[var].as_clause() {
+                Some(cid) => cid,
+                None => self.resolve_reason(var),
+            };
         }
     }
 
@@ -1874,6 +1885,8 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
     /// `analyze` already asserts with `expect`; letting either through would
     /// put a clause into the database that does not justify the assignment it
     /// is the reason for.
+    #[cold]
+    #[inline(never)]
     fn install_theory_lemma(&mut self, implied: CnfLit, lits: &[CnfLit]) -> CRef {
         let mut clause: Vec<CnfLit> = Vec::with_capacity(lits.len());
         clause.push(implied);
@@ -1940,10 +1953,18 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
     /// `None` is documented as a theory bug, never a verdict, and there is no
     /// sound answer to continue with: the literal is on the trail and conflict
     /// analysis needs its antecedent.
-    #[inline]
+    ///
+    /// **Out of line and cold on purpose.** Both callers
+    /// ([`Cdcl::analyze`] and [`Cdcl::lit_redundant`]) test `as_clause()`
+    /// inline first, so on every `NullTheory` search this function is never
+    /// entered at all. Inlining it would drag
+    /// [`Cdcl::install_theory_lemma`]'s body into the two hottest loops in the
+    /// core for a case they never take.
+    #[cold]
+    #[inline(never)]
     fn resolve_reason(&mut self, var: usize) -> CRef {
-        // The hot arm first and alone: for every `NullTheory` search this is
-        // the whole function, and it is a load, a shift and a compare.
+        // Kept as a real arm rather than an `expect`: `analyze_final` reaches
+        // here without the caller-side fast path.
         if let Some(cid) = self.reason[var].as_clause() {
             return cid;
         }
@@ -1999,7 +2020,10 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
                 // antecedents (the invariant `propagate` and the learned-clause
                 // enqueue both maintain). A theory reason is resolved into an
                 // input clause here exactly as `analyze` resolves it.
-                let cid = self.resolve_reason(var);
+                let cid = match self.reason[var].as_clause() {
+                    Some(cid) => cid,
+                    None => self.resolve_reason(var),
+                };
                 let len = self.clause_len(cid);
                 for slot in 1..len {
                     let q = self.lit_at(cid, slot);
@@ -2087,6 +2111,14 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
     /// `false`, so a failed probe leaves no state behind. On success the marks
     /// set during the walk are retained (the literals are now known redundant),
     /// recorded in `to_clear` for the caller to clear once minimization ends.
+    ///
+    /// Takes `&mut self` only so an unresolved theory reason can be resolved in
+    /// place; the `as_clause` test below keeps every step of a `NullTheory`
+    /// walk on the shared-read path, and [`Cdcl::resolve_reason`] is `#[cold]`
+    /// and out of line so its body never lands in this loop. A variant that
+    /// kept `&self` by handing the unresolved variable back to
+    /// [`Cdcl::minimize`] for resolution was written and measured: it made no
+    /// difference (see the S6 measurement note), so the simpler form is kept.
     fn lit_redundant(
         &mut self,
         p: CnfLit,
@@ -2100,9 +2132,10 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
         let top = to_clear.len();
         while let Some(q) = stack.pop() {
             let qv = q.var().index();
-            // Resolved BEFORE the arena borrow below, so the hot inner loop
-            // stays a plain slice walk with no allocation and no `&mut self`.
-            let rid = self.resolve_reason(qv);
+            let rid = match self.reason[qv].as_clause() {
+                Some(cid) => cid,
+                None => self.resolve_reason(qv),
+            };
             // Skip the propagated literal itself (slot 0 of its reason clause).
             for &l in &self.lits(rid)[1..] {
                 let lv = l.var().index();
@@ -2339,15 +2372,38 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
     ///
     /// [`NullTheory`] produces none of these, so this returns
     /// [`TheoryRound::Fixpoint`] on every shipping path.
+    ///
+    /// **Split into a trivial `#[inline(always)]` gate and a separate body**,
+    /// and that split is load-bearing rather than stylistic. Design B of the
+    /// slice-2 spike measurement rests on `HAS_THEORY` being an associated
+    /// CONST, so the whole theory half vanishes at monomorphization for
+    /// `NullTheory`. That only happens if the compiler can see the constant
+    /// *at the call site*: when the gate and the body lived in one function,
+    /// the body's growth (the propagation loop below) pushed it past the
+    /// inlining threshold, and `NullTheory`'s "return immediately" turned into
+    /// a real call returning a large enum by `sret` on every decision-side
+    /// iteration of the search loop -- measured at roughly +3% on
+    /// `proof_sat_solve_php_6_7`. With the split the gate always inlines,
+    /// `TheoryRound::Fixpoint` is a constant, and the `match` at the call site
+    /// folds away.
+    #[inline(always)]
     fn theory_round(&mut self) -> TheoryRound {
-        // Design B of the spike measurement: `HAS_THEORY` is an associated
-        // CONST, so for `T = NullTheory` the compiler drops this whole function
-        // body — including the trail walk, which is the part design A could not
-        // make free. Design A (calling the empty hooks unconditionally) measured
-        // +5.8% on `proof_sat_solve_php_6_7`; see the design memo.
         if !T::HAS_THEORY {
             return TheoryRound::Fixpoint;
         }
+        self.theory_round_body()
+    }
+
+    /// The body of [`Cdcl::theory_round`], reached only when a theory is
+    /// actually attached. See that function for the contract.
+    fn theory_round_body(&mut self) -> TheoryRound {
+        // Design B of the spike measurement: `HAS_THEORY` is an associated
+        // CONST, so for `T = NullTheory` the compiler drops this whole function
+        // — including the trail walk, which is the part design A could not
+        // make free. Design A (calling the empty hooks unconditionally) measured
+        // +5.8% on `proof_sat_solve_php_6_7`; see the design memo. The gate that
+        // makes this unreachable for `NullTheory` is in `theory_round`.
+        debug_assert!(T::HAS_THEORY, "theory_round gates this on HAS_THEORY");
         while self.theory_qhead < self.trail.len() {
             let var = self.trail[self.theory_qhead];
             self.theory_qhead += 1;
