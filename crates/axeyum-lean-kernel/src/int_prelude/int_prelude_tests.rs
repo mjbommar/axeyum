@@ -187,7 +187,7 @@ fn int_prelude_admits_all_declarations() {
 
 /// The integer laws this development **derives** from the axiom-free `Nat`
 /// prelude. Each must be a `Theorem` with an empty axiom footprint.
-fn derived_laws(p: &IntPrelude) -> [crate::NameId; 294] {
+fn derived_laws(p: &IntPrelude) -> [crate::NameId; 319] {
     [
         p.gcd_eq_gcd_ab_witnesses,
         p.gcd_div_gcd_div_gcd,
@@ -503,6 +503,33 @@ fn derived_laws(p: &IntPrelude) -> [crate::NameId; 294] {
         p.mul_mul_of_mul_mul,
         p.sq_add_sq_of_mul_left,
         p.descent_step,
+        // `int-order-two-squares` lane (W3-10 second slice, ADR-1647):
+        // `int_prelude/order_squares.rs`.
+        p.ne_zero_of_pos,
+        p.neg_nonpos_of_nonneg,
+        p.neg_nonneg_of_nonpos,
+        p.neg_le_of_neg_le,
+        p.add_nonneg,
+        p.sub_nonpos_of_le,
+        p.le_of_add_le_add_self,
+        p.le_of_mul_le_mul_left,
+        p.neg_mul_neg,
+        p.neg_add_self_self,
+        p.add_sub_add_sub,
+        p.sq_double_add_sq_double,
+        p.sq_le_sq_of_nonneg,
+        p.sq_le_sq_of_neg_le_of_le,
+        p.exists_centered_representative,
+        p.two_mul_sq_add_sq_le_sq,
+        p.sq_add_sq_lt_sq_of_bounds,
+        p.lt_of_add_le_of_nonneg,
+        p.lt_of_mul_lt_mul_left,
+        p.nonneg_of_mul_nonneg_left,
+        p.pos_of_mul_pos_left,
+        p.eq_zero_of_sq_add_sq_eq_zero,
+        p.descent_multiplier_bounds,
+        p.sub_neg_one_eq_add_sq_one,
+        p.exists_small_multiple_of_sq_add_one,
     ]
 }
 
