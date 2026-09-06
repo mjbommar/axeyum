@@ -18475,6 +18475,16 @@ fn positive_sqrt(a: &CasExpr) -> CasExpr {
 /// `exponent = −a·var²`, which is what refuses a linear term (a shifted Gaussian
 /// this route does not complete the square for), a constant term (write it as a
 /// separate `var`-free factor), a cubic, or a `ln(var)`.
+///
+/// **Measured**: deleting that `equal` step kills no test, because for every
+/// shape reachable here the `var`-free test on the quotient has already refused
+/// it — a wrong `a` and a `var`-carrying quotient are the same event while
+/// [`simplify`] divides exactly. So the step is defense in depth against a
+/// future `simplify` that divides lossily, not a live discriminator, and saying
+/// so is more honest than inventing a fixture that cannot exist. The function
+/// keeps its own direct test
+/// (`pure_quadratic_rate_accepts_only_a_pure_quadratic_exponent`), which the
+/// `var`-free test IS falsifiable through: deleting that line kills exactly it.
 fn pure_quadratic_rate(exponent: &CasExpr, var: &str) -> Option<CasExpr> {
     let square = CasExpr::var(var).pow(2);
     let rate = simplify(&(CasExpr::Neg(Box::new(exponent.clone())) / square.clone()));
@@ -34253,6 +34263,30 @@ mod symbolic_geometric_and_gaussian {
             )
             .is_none()
         );
+    }
+
+    /// `pure_quadratic_rate`'s own control: it accepts exactly `−a·var²` for a
+    /// `var`-free `a`, and refuses a linear term, a constant term and a higher
+    /// power. Written against the function directly because mutation showed the
+    /// `equal` step inside it cannot be falsified through the public route — see
+    /// its doc comment. Deleting the `var`-free test on the quotient kills
+    /// exactly this test and nothing else.
+    #[test]
+    fn pure_quadratic_rate_accepts_only_a_pure_quadratic_exponent() {
+        let a = CasExpr::var("a");
+        let pure = simplify(&CasExpr::Neg(Box::new(a.clone() * u().pow(2))));
+        let rate = pure_quadratic_rate(&pure, "u").expect("a pure quadratic exponent");
+        assert!(decides_equal(&rate, &a));
+        // A linear term: the square is not completed, and this route does not
+        // complete it.
+        let shifted = simplify(&CasExpr::Neg(Box::new(u().pow(2) + u())));
+        assert!(pure_quadratic_rate(&shifted, "u").is_none());
+        // A constant term inside the exponent belongs outside the `exp`.
+        let offset = simplify(&(CasExpr::Neg(Box::new(u().pow(2))) + CasExpr::one()));
+        assert!(pure_quadratic_rate(&offset, "u").is_none());
+        // A quartic is not a Gaussian this route knows.
+        let quartic = simplify(&CasExpr::Neg(Box::new(u().pow(4))));
+        assert!(pure_quadratic_rate(&quartic, "u").is_none());
     }
 
     /// The surd seam: `prove_gaussian_antiderivative`'s **second** pass is what
