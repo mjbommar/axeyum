@@ -18449,76 +18449,87 @@ fn conditional_exponential_integral(
 /// resource limit, not a soundness one (the certificate is checked either way).
 const MAX_SYMBOLIC_GAUSSIAN_DEGREE: usize = 12;
 
-/// `√a` for a `var`-free `a` the caller has **recorded as positive**.
+/// `√a` for a `var`-free `a` the caller has **recorded as positive** — the one
+/// place the Gaussian route depends on that sign, since `√a` is real only there.
 ///
-/// [`simplify_radicals`] alone leaves `√(c/d)` as one opaque atom, which is
-/// exactly the wrong form here: the Gaussian route's `a` is `1/(2σ²)`, and the
-/// normalization it has to cancel against carries `√σ²`, so an unsplit
-/// `√(1/(2σ²))` never meets it. The split `√(c/d) = √c/√d` is used only when the
-/// numerator `c` is a **positive rational**, in which case the caller's recorded
-/// `a = c/d > 0` forces `d > 0` and the identity is exact. Every other shape
-/// falls through to the ordinary [`simplify_radicals`] form.
+/// Deliberately **not** split into `√c/√d` for a quotient `a = c/d`. The split is
+/// exact under `a > 0`, but it costs more than it buys: the two identities that
+/// have to close are `(√a·x)² = a·x²` — which [`simplify_radicals`] gets from its
+/// `(√u)^{2k} = u^k` rule only while `√a` is one `Sqrt` head sitting directly in a
+/// product — and the cancellation of `√a` against the erf coefficient's own
+/// `1/(2√a)`, which the zero-test does over `√a` as an atom whatever it spells.
+/// A concrete `a` still folds to lowest terms (`√(1/2) → (√2)/2`, still a product
+/// carrying a `Sqrt`), so nothing regresses there.
 fn positive_sqrt(a: &CasExpr) -> CasExpr {
-    let simplified = simplify(a);
-    if let CasExpr::Div(numerator, denominator) = &simplified
-        && matches!(exact_rational(numerator), Some(c) if c.numerator() > 0)
-    {
-        let root_numerator = simplify_radicals(&(**numerator).clone().sqrt());
-        let root_denominator = simplify_radicals(&(**denominator).clone().sqrt());
-        return fold_trivial(&(root_numerator / root_denominator));
-    }
-    simplify_radicals(&simplified.sqrt())
+    simplify_radicals(&a.clone().sqrt())
 }
 
-/// Split the `var`-free coefficients `[c₀, c₁, c₂]` out of an exponent that is
-/// **quadratic in `var`**, `E = c₀ + c₁·var + c₂·var²`.
+/// The `var`-free `a` of an exponent that is **exactly** `−a·var²`.
 ///
-/// The coefficients are read off by three substitutions (`var = 0, 1, −1`)
-/// rather than by [`normalize`], because [`normalize`] declines on a `Div` and a
-/// Gaussian exponent's coefficient is `1/(2σ²)` — a quotient by a symbol. The
-/// extraction is a *candidate*; `equal` then **decides** that the candidate
-/// reconstructs `E`, so a non-quadratic exponent (a cubic, a `ln(var)`) is
-/// refused here rather than mis-read.
-fn quadratic_var_free_coefficients(exponent: &CasExpr, var: &str) -> Option<[CasExpr; 3]> {
-    let x = CasExpr::var(var);
-    let at_zero = simplify(&exponent.substitute(var, &CasExpr::zero()));
-    let at_one = simplify(&exponent.substitute(var, &CasExpr::one()));
-    let at_minus_one = simplify(
-        &exponent.substitute(var, &CasExpr::Const(Rational::integer(-1))),
-    );
-    let quadratic = simplify(
-        &((at_one.clone() + at_minus_one.clone() - CasExpr::int(2) * at_zero.clone())
-            / CasExpr::int(2)),
-    );
-    let linear = simplify(&((at_one - at_minus_one) / CasExpr::int(2)));
-    if expr_contains_var(&at_zero, var)
-        || expr_contains_var(&linear, var)
-        || expr_contains_var(&quadratic, var)
-    {
+/// Extracted by **division** rather than by [`normalize`]'s coefficient split —
+/// [`normalize`] declines on a `Div`, and a Gaussian exponent's `a` is `1/(2σ²)`,
+/// a quotient by a symbol. Dividing also makes the reconstruction
+/// `simplify(−a·var²)` land back on the caller's own spelling of the exponent,
+/// which is what puts the erf derivative's `exp` and the integrand's `exp` on one
+/// atom key — measured: reading `a` off by substitution instead gives `(1/2)/s`
+/// where the caller wrote `1/(2s)`, and the two `exp` atoms then never meet.
+///
+/// The quotient is only a *candidate*; [`equal`] then **decides** that
+/// `exponent = −a·var²`, which is what refuses a linear term (a shifted Gaussian
+/// this route does not complete the square for), a constant term (write it as a
+/// separate `var`-free factor), a cubic, or a `ln(var)`.
+fn pure_quadratic_rate(exponent: &CasExpr, var: &str) -> Option<CasExpr> {
+    let square = CasExpr::var(var).pow(2);
+    let rate = simplify(&(CasExpr::Neg(Box::new(exponent.clone())) / square.clone()));
+    if expr_contains_var(&rate, var) {
         return None;
     }
-    let rebuilt =
-        at_zero.clone() + linear.clone() * x.clone() + quadratic.clone() * x.pow(2);
+    let rebuilt = simplify(&CasExpr::Neg(Box::new(rate.clone() * square)));
     if !matches!(
         equal(exponent, &rebuilt),
         ZeroTest::Certified { equal: true, .. }
     ) {
         return None;
     }
-    Some([at_zero, linear, quadratic])
+    Some(rate)
 }
 
-/// Split `expr` into `(var-free constant factor incl. e^{c₀}, polynomial
-/// coefficients in `var`, a)` for the Gaussian shape `C·P(var)·e^{−a·var²+c₀}`,
-/// where `C`, every coefficient of `P` and `a` are free of `var` but otherwise
-/// **symbolic**.
+/// The soundness gate of the symbolic-`a` Gaussian route, and the one place it
+/// differs from [`prove_exp_antiderivative`].
 ///
-/// The linear term of the exponent must be **decidably zero**: completing the
-/// square would move it into the polynomial factor as well as the erf argument,
-/// and this route does not do that. A caller that needs a shifted Gaussian
-/// shifts the integration variable itself (which is what
-/// `probability::Continuous::Normal` does — its moments are taken on the
-/// centered variable).
+/// [`prove_derivative`]'s surd retry folds `simplify_radicals` over the **raw**
+/// derivative, and that is one pass too early here: the `erf` derivative rule
+/// spells `(√a·x)²` as the *product* of two copies of its argument, so the
+/// `(√u)^{2k} = u^k` rule has no power to fire on until [`simplify`] has
+/// collected the copies — measured, a symbolic `a` leaves a bare `√a²` standing
+/// and the zero-test returns `Unknown`. Folding radicals again *after* `simplify`
+/// closes it. Both passes are denotation-preserving, so this is a normalization,
+/// not an extra assumption; a failed check still declines.
+fn prove_gaussian_antiderivative(
+    candidate: &CasExpr,
+    integrand: &CasExpr,
+    var: &str,
+) -> Option<ZeroTest> {
+    let direct = prove_derivative(candidate, var, integrand);
+    if matches!(direct, ZeroTest::Certified { equal: true, .. }) {
+        return Some(direct);
+    }
+    let settle = |e: &CasExpr| simplify_radicals(&simplify(&simplify_radicals(e)));
+    let certificate = equal(&settle(&candidate.differentiate(var)), &settle(integrand));
+    matches!(certificate, ZeroTest::Certified { equal: true, .. }).then_some(certificate)
+}
+
+/// Split `expr` into `(var-free constant factor, polynomial coefficients in
+/// `var`, a)` for the Gaussian shape `C·P(var)·e^{−a·var²}`, where `C`, every
+/// coefficient of `P` and `a` are free of `var` but otherwise **symbolic**.
+///
+/// The exponent must be a **pure** `−a·var²`, decided by `pure_quadratic_rate`.
+/// A linear term would need completing the square, which moves the shift into
+/// the polynomial factor as well as the erf argument and is not what this route
+/// does; a constant term belongs outside the `exp`, as an ordinary `var`-free
+/// factor. A caller that needs a shifted Gaussian shifts the integration
+/// variable itself — which is what `probability::Continuous::Normal` does, since
+/// its moments are taken on the centered variable.
 fn match_poly_times_gaussian(
     expr: &CasExpr,
     var: &str,
@@ -18556,11 +18567,7 @@ fn match_poly_times_gaussian(
     } else {
         CasExpr::Add(exp_args)
     };
-    let [intercept, linear, quadratic] = quadratic_var_free_coefficients(&exponent, var)?;
-    if !is_exact_zero(&simplify(&linear)) {
-        return None; // a linear term needs completing the square; not this route
-    }
-    let rate = simplify(&CasExpr::Neg(Box::new(quadratic)));
+    let rate = pure_quadratic_rate(&exponent, var)?;
     let coefficients: Vec<CasExpr> = normalize(&build_product(polynomial))?
         .coeffs_in(var)
         .iter()
@@ -18572,9 +18579,6 @@ fn match_poly_times_gaussian(
     let mut constant = build_product(free_numerator);
     if !free_denominator.is_empty() {
         constant = constant / build_product(free_denominator);
-    }
-    if !is_exact_zero(&intercept) {
-        constant = constant * intercept.exp();
     }
     Some((constant, coefficients, rate))
 }
@@ -18687,10 +18691,13 @@ fn conditional_gaussian_integral(
     };
     let (antiderivative, erf_coefficient) =
         gaussian_polynomial_antiderivative(&constant, &coefficients, &rate, var)?;
-    let certificate = prove_exp_antiderivative(&antiderivative, expr, var)?;
-    let value = simplify(&fold_elementary_constants(
-        &(CasExpr::int(2) * erf_coefficient),
-    ));
+    let certificate = prove_gaussian_antiderivative(&antiderivative, expr, var)?;
+    // Plain `simplify`, NOT `fold_elementary_constants`: the fold respells the
+    // radicand of a symbolic `√a` (`√(1/(2s))` becomes `√((1/2)/s)`), and the
+    // caller's own `√a` — in a pdf normalization, say — then keys a different
+    // atom and never cancels. Measured; there is no elementary constant here for
+    // the fold to reach anyway.
+    let value = simplify(&(CasExpr::int(2) * erf_coefficient));
     Some(ConditionalIntegral {
         value,
         antiderivative,
@@ -34050,5 +34057,230 @@ mod symbolic_rate_exponential {
         // The *conditional* API does reach it — so the decline above is the
         // hypothesis guard, not an absent route.
         assert!(on_half_line(&exponential_pdf()).is_some());
+    }
+}
+
+/// The two **conditional** routes for a symbolic parameter that only a
+/// hypothesis can settle: `geometric_series_sum` (a symbolic ratio, under
+/// `|q| < 1`) and `conditional_gaussian_integral` (a symbolic `a`, under
+/// `a > 0`).
+///
+/// Every test here is written to **die when one guard is deleted**; the guard it
+/// pins is named in its doc comment.
+#[cfg(test)]
+mod symbolic_geometric_and_gaussian {
+    use super::*;
+
+    fn j() -> CasExpr {
+        CasExpr::var("j")
+    }
+
+    fn u() -> CasExpr {
+        CasExpr::var("u")
+    }
+
+    fn decides_equal(a: &CasExpr, b: &CasExpr) -> bool {
+        matches!(equal(a, b), ZeroTest::Certified { equal: true, .. })
+    }
+
+    /// `weight(j)·qʲ`, with the geometric factor in the crate's own
+    /// `exp(j·ln q)` convention.
+    fn geometric(weight: CasExpr, ratio: &CasExpr) -> CasExpr {
+        let ln_q = CasExpr::Unary(UnaryFunc::Ln, Box::new(ratio.clone()));
+        weight * (j() * ln_q).exp()
+    }
+
+    fn sum(f: &CasExpr) -> Option<ConditionalSum> {
+        infinite_sum_conditional(f, "j", &CasExpr::zero())
+    }
+
+    /// `u^power·e^{−(a·u²)}` over the whole line, through the conditional route.
+    fn gaussian_line(power: u32, rate: &CasExpr) -> Option<ConditionalIntegral> {
+        let base = CasExpr::Neg(Box::new(rate.clone() * u().pow(2))).exp();
+        let integrand = if power == 0 { base } else { u().pow(power) * base };
+        improper_integrate_conditional(
+            &integrand,
+            "u",
+            LimitPoint::NegInfinity,
+            LimitPoint::PosInfinity,
+        )
+    }
+
+    /// The whole point of the discrete route: a **symbolic** ratio, which
+    /// `infinite_sum` cannot reach, summed under one recorded condition.
+    #[test]
+    fn a_symbolic_geometric_ratio_sums_under_one_recorded_condition() {
+        let p = CasExpr::var("p");
+        let q = CasExpr::one() - p.clone();
+        let summand = geometric(p, &q);
+        // The unconditional API genuinely declines — this is the gap being closed,
+        // measured rather than assumed.
+        assert!(infinite_sum(&summand, "j", &CasExpr::zero()).is_none());
+        let result = sum(&summand).expect("conditional geometric route");
+        assert!(decides_equal(&result.value, &CasExpr::one()));
+        assert_eq!(result.hypotheses.len(), 1);
+        let SignCondition::Positive(margin) = &result.hypotheses[0] else {
+            panic!("expected a positivity condition, got {:?}", result.hypotheses);
+        };
+        assert!(decides_equal(margin, &(CasExpr::one() - q.abs())));
+    }
+
+    /// A polynomial weight goes through the falling-factorial basis:
+    /// `Σ (j+1)qʲ = 1/(1−q)²`, still symbolic.
+    #[test]
+    fn a_polynomial_weight_sums_through_the_falling_factorial_basis() {
+        let q = CasExpr::var("q");
+        let result = sum(&geometric(j() + CasExpr::one(), &q)).expect("weighted geometric");
+        let expected = CasExpr::one() / (CasExpr::one() - q).pow(2);
+        assert!(decides_equal(&result.value, &expected), "{}", result.value);
+    }
+
+    /// **Negative control**, pinning the concrete-ratio decision in
+    /// `geometric_series_sum`: `Σ 2ʲ` diverges, and the route must decline rather
+    /// than print the analytic continuation `1/(1−2) = −1`. Replace that arm with
+    /// `Vec::new()` and this test dies with a certified `−1`.
+    #[test]
+    fn a_divergent_concrete_ratio_declines_instead_of_continuing_analytically() {
+        assert!(sum(&geometric(CasExpr::one(), &CasExpr::int(2))).is_none());
+        // …and the control in the other direction: the same shape inside the unit
+        // disc is summed, and unconditionally, so the decline is about `|q| ≥ 1`
+        // and not about the shape.
+        let inside = sum(&geometric(CasExpr::one(), &CasExpr::rat(1, 2)))
+            .expect("a convergent concrete ratio");
+        assert!(inside.hypotheses.is_empty());
+        assert!(decides_equal(&inside.value, &CasExpr::int(2)));
+    }
+
+    /// **Near-miss control**, pinning `geometric_series_shape`'s `var`-free
+    /// denominator test: `Σ qʲ/j` is not geometric and must not be read as one.
+    /// Delete that test and this returns `q/(1−q)`-shaped nonsense.
+    #[test]
+    fn a_summand_with_the_index_in_the_denominator_is_not_read_as_geometric() {
+        let q = CasExpr::var("q");
+        assert!(sum(&(geometric(CasExpr::one(), &q) / j())).is_none());
+        // Positive control: the same summand without the `1/j` IS summed.
+        assert!(sum(&geometric(CasExpr::one(), &q)).is_some());
+    }
+
+    /// **Near-miss control**, pinning the `exp`-head test on `var`-dependent
+    /// atoms: `Σ qʲ/j!` is the *exponential* series, not the geometric one, and
+    /// the `Γ(j+1)` atom must refuse this route rather than be treated as a
+    /// constant factor.
+    #[test]
+    fn a_factorial_denominator_is_refused_by_the_geometric_shape() {
+        let q = CasExpr::var("q");
+        let summand = geometric(CasExpr::one(), &q) / (j() + CasExpr::one()).gamma();
+        assert!(geometric_series_shape(&summand, "j").is_none());
+    }
+
+    /// The Gaussian route's three moments, each under exactly one recorded
+    /// positivity on the symbolic rate.
+    #[test]
+    fn a_symbolic_gaussian_rate_integrates_under_one_recorded_positivity() {
+        let a = CasExpr::var("a");
+        for power in [0u32, 1, 2] {
+            let result = gaussian_line(power, &a).expect("conditional Gaussian route");
+            assert!(result.is_certified(), "power {power}: {result:?}");
+            assert_eq!(result.hypotheses.len(), 1, "power {power}");
+            assert_eq!(result.hypotheses[0], SignCondition::Positive(a.clone()));
+        }
+        // `∫u·e^{−au²} = 0` by symmetry, and `∫e^{−au²} = √π/√a`.
+        let mass = gaussian_line(0, &a).expect("mass");
+        assert!(decides_equal(
+            &mass.value,
+            &(CasExpr::var("pi").sqrt() / a.clone().sqrt())
+        ));
+        assert!(decides_equal(
+            &gaussian_line(1, &a).expect("odd moment").value,
+            &CasExpr::zero()
+        ));
+    }
+
+    /// A **concrete** positive rate is decided on the spot, not recorded — the
+    /// same discipline the exponential route follows.
+    #[test]
+    fn a_concrete_positive_gaussian_rate_comes_back_unconditional() {
+        let result = gaussian_line(0, &CasExpr::one()).expect("concrete Gaussian");
+        assert!(result.is_certified());
+        assert!(result.hypotheses.is_empty());
+        assert!(decides_equal(&result.value, &CasExpr::var("pi").sqrt()));
+    }
+
+    /// **Negative control**, pinning the concrete-sign decision in
+    /// `conditional_gaussian_integral`: an *upward* Gaussian `e^{+u²}` diverges
+    /// and has no erf antiderivative. Replace the `Some(_) => return None` arm
+    /// with `Vec::new()` and this test dies with a certified finite value for a
+    /// divergent integral.
+    #[test]
+    fn an_upward_concrete_gaussian_declines() {
+        assert!(gaussian_line(0, &CasExpr::int(-1)).is_none());
+        assert!(gaussian_line(0, &CasExpr::zero()).is_none());
+    }
+
+    /// **Negative control**, pinning `pure_quadratic_rate`'s decided
+    /// reconstruction: a linear term in the exponent means the square has not
+    /// been completed, and this route does not complete it.
+    #[test]
+    fn a_gaussian_exponent_with_a_linear_term_declines() {
+        let shifted = CasExpr::Neg(Box::new(u().pow(2) + u())).exp();
+        assert!(
+            improper_integrate_conditional(
+                &shifted,
+                "u",
+                LimitPoint::NegInfinity,
+                LimitPoint::PosInfinity,
+            )
+            .is_none()
+        );
+        // Positive control: drop the linear term and the same shape integrates.
+        assert!(gaussian_line(0, &CasExpr::one()).is_some());
+    }
+
+    /// **Negative control**, pinning the infinite-bounds guard: `erf` at a finite
+    /// point is not an elementary value, and this route must not pretend the
+    /// decaying part vanishes there.
+    #[test]
+    fn a_gaussian_over_a_finite_bound_declines() {
+        let a = CasExpr::var("a");
+        let integrand = CasExpr::Neg(Box::new(a * u().pow(2))).exp();
+        assert!(
+            improper_integrate_conditional(
+                &integrand,
+                "u",
+                LimitPoint::Finite(Rational::zero()),
+                LimitPoint::PosInfinity,
+            )
+            .is_none()
+        );
+    }
+
+    /// The surd seam: `prove_gaussian_antiderivative`'s **second** pass is what
+    /// closes a rate that is a *quotient* by a symbol — `a = 1/(2σ²)`, which is
+    /// exactly what `Normal(μ, σ²)` hands it. The `erf` derivative spells
+    /// `(√a·u)²` as a product of two copies, and the `(√u)^{2k} = u^k` fold has no
+    /// power to fire on until `simplify` has collected them; for a bare symbol the
+    /// zero-test's own radical-atom products cover it, for `√(1/(2σ²))` they do
+    /// not. Delete the second pass — leaving only the `prove_derivative` call —
+    /// and every symbolic-variance `Normal` certificate dies with it.
+    #[test]
+    fn the_symbolic_surd_needs_the_second_radical_pass() {
+        let a = CasExpr::one() / (CasExpr::int(2) * CasExpr::var("s"));
+        let (constant, coefficients, rate) = {
+            let integrand = CasExpr::Neg(Box::new(a.clone() * u().pow(2))).exp();
+            let matched = match_poly_times_gaussian(&integrand, "u").expect("Gaussian shape");
+            assert!(decides_equal(&matched.2, &a));
+            matched
+        };
+        let (antiderivative, _) =
+            gaussian_polynomial_antiderivative(&constant, &coefficients, &rate, "u")
+                .expect("antiderivative");
+        let integrand = CasExpr::Neg(Box::new(a * u().pow(2))).exp();
+        // The one-pass form genuinely does not settle it…
+        assert!(!matches!(
+            prove_derivative(&antiderivative, "u", &integrand),
+            ZeroTest::Certified { equal: true, .. }
+        ));
+        // …and the two-pass form does.
+        assert!(prove_gaussian_antiderivative(&antiderivative, &integrand, "u").is_some());
     }
 }

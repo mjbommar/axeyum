@@ -1600,7 +1600,7 @@ fn prob5_normal_symbolic_mgf() -> Outcome {
     let t = CasExpr::var("t");
     let d = probability::Continuous::Normal {
         mu: mu.clone(),
-        variance: Rational::integer(4),
+        variance: CasExpr::Const(Rational::integer(4)),
     };
     let cert = d.mgf("t");
     let expected_claim = (t.clone() * mu + i(4) * t.pow(2) / i(2)).exp();
@@ -1637,7 +1637,7 @@ fn prob5_normal_symbolic_mgf() -> Outcome {
 fn prob6_normal_negative_variance_declines() -> Outcome {
     let d = probability::Continuous::Normal {
         mu: CasExpr::var("mu"),
-        variance: Rational::integer(-1),
+        variance: CasExpr::Const(Rational::integer(-1)),
     };
     let cert = d.mgf("t");
     Outcome {
