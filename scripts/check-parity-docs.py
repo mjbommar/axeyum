@@ -924,7 +924,7 @@ def main() -> int:
     propositional_proof_markers = (
         (CNF_LRAT, "This slice supports **RUP-only** proofs"),
         (CNF_LRAT, "RAT additions"),
-        (CNF_INTERNAL_DOC, "in-tree proof-producing CDCL core"),
+        (CNF_INTERNAL_DOC, "in-tree native CDCL core is the SAT engine"),
         (CNF_INTERNAL_DOC, "RUP-only"),
         (PROOF_STACK_DOC, "RUP-only"),
         (CNF_README, "RUP-only"),
@@ -1168,7 +1168,7 @@ def main() -> int:
         (IR_EVAL, "Integers are exact within the i128 reference range"),
         (LEARN_THEORIES, "not an arbitrary-precision implementation claim"),
         (TERM_IR_DOC, "exact within the current `i128` reference range"),
-        (EVALUATOR_DOC, "rational numerator/denominator components are `i128`-based"),
+        (EVALUATOR_DOC, "Rational arithmetic can exceed `i128`, but only where a route opts in"),
         (LIMITATIONS, "Concrete integer/rational reference evaluation is range-bounded"),
     )
     for path, marker in ir_range_markers:
@@ -1273,7 +1273,8 @@ def main() -> int:
 
     sat_bv_backend_text = SAT_BV_BACKEND.read_text(encoding="utf-8")
     for marker in (
-        "config.native_cdcl || config.prove_unsat",
+        "`config.native_cdcl` is a retired no-op",
+        "config.prove_unsat",
         "SatProofStatus::Checked",
         "downgrade to `Unknown`",
     ):

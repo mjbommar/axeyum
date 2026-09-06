@@ -32,16 +32,28 @@
 //! why trust is derived per-entry rather than from one verdict type.
 #![allow(clippy::too_many_lines)] // one flat entry table in main; length is inherent (cf. cas_tour.rs)
 
+use std::collections::BTreeMap;
 use std::time::Instant;
 
-use axeyum_cas::enclosure::enclose_constant;
+use axeyum_cas::enclosure::{BigInterval, enclose, enclose_constant};
+use axeyum_cas::enclosure_special::{MultiPoly, PolySystem, enclose_system};
+use axeyum_cas::fps_analytic::{
+    RadiusOfConvergence, coefficient_asymptotics, radius_of_convergence,
+};
 use axeyum_cas::geometry::Point;
 use axeyum_cas::geometry_beyond::{self, Conic, Isometry};
-use axeyum_cas::homology::{self, SimplicialComplex};
+use axeyum_cas::homology::{
+    self, SimplicialComplex, coefficients, cohomology, induced, persistent,
+};
 use axeyum_cas::numberfield::{self, QuadraticField, TwoSquaresCertificate};
-use axeyum_cas::permgroup::PermutationGroup;
+use axeyum_cas::numberfield_ideals::{
+    OrderElement, QuadraticOrder, SplittingType, class_number as ideal_class_number,
+};
+use axeyum_cas::permgroup::{NormalityCertificate, PermutationGroup};
 use axeyum_cas::permutation::Permutation;
 use axeyum_cas::probability::{self, Discrete};
+use axeyum_cas::qe::bivariate::{BiAtom, ExistsYFormula, eliminate_y};
+use axeyum_cas::qe::dnf::{Dnf, eliminate_dnf};
 use axeyum_cas::qe::{self, Atom, ExistsFormula, ForallFormula, Relation};
 use axeyum_cas::{
     CasExpr, LimitPoint, Matrix, ZeroTest, definite_integrate, dsolve_homogeneous,
@@ -1538,6 +1550,129 @@ fn prob3_binomial_mean() -> Outcome {
     }
 }
 
+/// `M(t) = λ/(λ−t)` for `Exponential(λ)` at a symbolic `λ` **and** a symbolic
+/// `t`, decided under `λ − t > 0` (i.e. `t < λ`, the interval on which the mgf
+/// exists at all). Added 2026-09-05 by lane cas-symbolic-mgf.
+///
+/// The entry agrees only when the condition is recorded **exactly**: if the
+/// hypothesis ever silently disappears, the claim `λ/(λ−t)` becomes an
+/// unconditional falsehood and this entry disagrees, reddening the harness.
+fn prob4_exponential_symbolic_mgf() -> Outcome {
+    let lambda = CasExpr::var("lam");
+    let d = probability::Continuous::Exponential(lambda.clone());
+    let cert = d.mgf("t");
+    let conditions = cert.hypotheses_display();
+    let matches_claim = matches!(
+        equal(
+            &cert.claim,
+            &(lambda.clone() / (lambda - CasExpr::var("t")))
+        ),
+        ZeroTest::Certified { equal: true, .. }
+    );
+    let good = cert.is_decided() && conditions == "lam - t > 0" && matches_claim;
+    Outcome {
+        verdict: if good {
+            Verdict::Agree
+        } else {
+            Verdict::Disagree
+        },
+        trust: if cert.is_decided() {
+            Trust::Certified
+        } else {
+            Trust::Uncertified
+        },
+        expected: "decided lam/(lam - t) under exactly `lam - t > 0`".to_string(),
+        actual: format!(
+            "decided={}, unconditional={}, claim={}, under=[{conditions}]",
+            cert.is_decided(),
+            cert.is_certified(),
+            cert.claim
+        ),
+    }
+}
+
+/// `M(t) = e^{μt + σ²t²/2}` for `Normal(μ, 4)` at a symbolic `μ` and symbolic
+/// `t`, certified **unconditionally** — `σ²` is concrete, so its sign is decided
+/// rather than recorded. Reached by completing the square, not by integrating
+/// `e^{tx}φ(x)` (which declines). Added 2026-09-05 by lane cas-symbolic-mgf.
+fn prob5_normal_symbolic_mgf() -> Outcome {
+    let mu = CasExpr::var("mu");
+    let t = CasExpr::var("t");
+    let d = probability::Continuous::Normal {
+        mu: mu.clone(),
+        variance: Rational::integer(4),
+    };
+    let cert = d.mgf("t");
+    let expected_claim = (t.clone() * mu + i(4) * t.pow(2) / i(2)).exp();
+    let matches_claim = matches!(
+        equal(&cert.claim, &expected_claim),
+        ZeroTest::Certified { equal: true, .. }
+    );
+    let good = cert.is_certified() && cert.hypotheses().is_empty() && matches_claim;
+    Outcome {
+        verdict: if good {
+            Verdict::Agree
+        } else {
+            Verdict::Disagree
+        },
+        trust: if cert.is_certified() {
+            Trust::Certified
+        } else {
+            Trust::Uncertified
+        },
+        expected: "certified exp(mu*t + 4*t^2/2), unconditionally".to_string(),
+        actual: format!(
+            "certified={}, claim={}, under=[{}]",
+            cert.is_certified(),
+            cert.claim,
+            cert.hypotheses_display()
+        ),
+    }
+}
+
+/// `Normal` with a **negative** variance must decline its mgf: the square
+/// completes, but the shifted Gaussian points the wrong way and has no erf
+/// antiderivative. The control that the completing-the-square reduction did not
+/// become a formula-printer. Added 2026-09-05 by lane cas-symbolic-mgf.
+fn prob6_normal_negative_variance_declines() -> Outcome {
+    let d = probability::Continuous::Normal {
+        mu: CasExpr::var("mu"),
+        variance: Rational::integer(-1),
+    };
+    let cert = d.mgf("t");
+    Outcome {
+        verdict: if cert.is_decided() {
+            Verdict::Disagree
+        } else {
+            Verdict::Decline
+        },
+        trust: Trust::Uncertified,
+        expected: "declines: a negative variance is not a Gaussian this route integrates"
+            .to_string(),
+        actual: format!("decided={}, claim={}", cert.is_decided(), cert.claim),
+    }
+}
+
+/// `Geometric(p)`'s mean at a **symbolic** `p` still declines, and not for a
+/// missing hypothesis channel: `gosper_sum` returns `None` on a symbolic ratio
+/// before any convergence question is asked, so there is no value to attach
+/// `0 < p < 1` to. The `decline_expected` counterpart to `prob4`, which shows
+/// where the hypothesis mechanism does and does not reach.
+fn prob7_geometric_symbolic_p_declines() -> Outcome {
+    let d = Discrete::Geometric(CasExpr::var("p"));
+    let cert = d.mean();
+    Outcome {
+        verdict: if cert.is_decided() {
+            Verdict::Disagree
+        } else {
+            Verdict::Decline
+        },
+        trust: Trust::Uncertified,
+        expected: "declines: gosper_sum has no antidifference for a symbolic ratio".to_string(),
+        actual: format!("decided={}, claim={}", cert.is_decided(), cert.claim),
+    }
+}
+
 // ============================================================================
 // Entries: first-pass modules — geometry_beyond
 // ============================================================================
@@ -1674,6 +1809,1531 @@ fn gb2_isometry_shear_rejected() -> Outcome {
             expected: "Err(NotOrthogonal)".to_string(),
             actual: format!("{refusal:?}"),
         },
+    }
+}
+
+// ============================================================================
+// Entries: second-pass modules — enclosure_special
+// ============================================================================
+
+/// Gamma(6) = 5! = 120, exactly (no remainder -- `Gamma` at a positive
+/// integer argument is the module's one exact case).
+fn es1_gamma_integer() -> Outcome {
+    match enclose(&i(6).gamma(), &[], 64) {
+        Some(enc) => {
+            let verified = enc.verify(&i(6).gamma(), &[]).is_ok();
+            let contains = enc
+                .interval
+                .contains(&BigRational::from_integer(BigInt::from(120)));
+            let agree = verified && contains;
+            Outcome {
+                verdict: if agree {
+                    Verdict::Agree
+                } else {
+                    Verdict::Disagree
+                },
+                trust: if verified {
+                    Trust::Certified
+                } else {
+                    Trust::Unknown
+                },
+                expected: "120 (Gamma(6) = 5! = 120, exact)".to_string(),
+                actual: format!("{}, verify_ok={verified}", enc.interval.decimal(6)),
+            }
+        }
+        None => declined("enclose(Gamma(6), [], 64)"),
+    }
+}
+
+/// `erf(1) = 0.84270079294971486934...` -- confirmed independently by
+/// `SymPy`'s `N(erf(1), 20)` in `ground_truth.py`.
+fn es2_erf_one() -> Outcome {
+    match enclose(&i(1).erf(), &[], 64) {
+        Some(enc) => {
+            let verified = enc.verify(&i(1).erf(), &[]).is_ok();
+            let decimal = enc.interval.decimal(8);
+            let matches_digits = decimal.starts_with("[0.84270079");
+            let agree = verified && matches_digits;
+            Outcome {
+                verdict: if agree {
+                    Verdict::Agree
+                } else {
+                    Verdict::Disagree
+                },
+                trust: if verified {
+                    Trust::Certified
+                } else {
+                    Trust::Unknown
+                },
+                expected: "[0.84270079... (erf(1), independently confirmed by SymPy)".to_string(),
+                actual: format!("{decimal}, verify_ok={verified}"),
+            }
+        }
+        None => declined("enclose(erf(1), [], 64)"),
+    }
+}
+/// Near-miss control on the SAME enclosure: `erf(1)` is nowhere near `0.9`
+/// -- the certificate's own interval must exclude it, not just report a
+/// leading-digit match that could be a coincidence.
+fn es2_erf_one_ctrl() -> Outcome {
+    match enclose(&i(1).erf(), &[], 64) {
+        Some(enc) => {
+            let excludes_wrong = !enc
+                .interval
+                .contains(&BigRational::new(BigInt::from(9), BigInt::from(10)));
+            Outcome {
+                verdict: if excludes_wrong {
+                    Verdict::Agree
+                } else {
+                    Verdict::Disagree
+                },
+                trust: Trust::Certified,
+                expected: "the erf(1) enclosure does NOT contain 0.9".to_string(),
+                actual: format!("excludes_0.9={excludes_wrong}"),
+            }
+        }
+        None => declined("enclose(erf(1), [], 64)"),
+    }
+}
+
+/// `J_0(0) = 1` exactly: the Bessel series at `x = 0` has only its `k = 0`
+/// term survive.
+fn es3_besselj0_zero() -> Outcome {
+    match enclose(&i(0).bessel_j(0), &[], 64) {
+        Some(enc) => {
+            let verified = enc.verify(&i(0).bessel_j(0), &[]).is_ok();
+            let contains = enc.interval.contains(&BigRational::one());
+            let agree = verified && contains;
+            Outcome {
+                verdict: if agree {
+                    Verdict::Agree
+                } else {
+                    Verdict::Disagree
+                },
+                trust: if verified {
+                    Trust::Certified
+                } else {
+                    Trust::Unknown
+                },
+                expected: "1 (J_0(0) = 1, exact)".to_string(),
+                actual: format!("{}, verify_ok={verified}", enc.interval.decimal(6)),
+            }
+        }
+        None => declined("enclose(BesselJ_0(0), [], 64)"),
+    }
+}
+
+/// The multivariate Krawczyk root enclosure: the unit circle `x^2+y^2-1=0`
+/// meets the diagonal `y-x=0` at `(1/sqrt(2), 1/sqrt(2))` -- the exact
+/// system and starting box this crate's own `enclosure_special` test suite
+/// uses (`circle_and_line`/`near_the_root`), independently justified by
+/// elementary substitution: `x=y` turns the circle into `2x^2=1`.
+fn es4_krawczyk_circle_line() -> Outcome {
+    let circle = (|| {
+        MultiPoly::zero(2)
+            .with_term(Rational::integer(1), &[2, 0])?
+            .with_term(Rational::integer(1), &[0, 2])?
+            .with_term(Rational::integer(-1), &[0, 0])
+    })();
+    let line = (|| {
+        MultiPoly::zero(2)
+            .with_term(Rational::integer(1), &[0, 1])?
+            .with_term(Rational::integer(-1), &[1, 0])
+    })();
+    let (Some(circle), Some(line)) = (circle, line) else {
+        return declined("MultiPoly::with_term (circle/line)");
+    };
+    let Some(system) = PolySystem::new(vec![circle, line]) else {
+        return declined("PolySystem::new(circle, line)");
+    };
+    let q = |n: i128, d: i128| BigRational::new(BigInt::from(n), BigInt::from(d));
+    let start = (|| {
+        Some(vec![
+            BigInterval::new(q(7, 10), q(18, 25))?,
+            BigInterval::new(q(7, 10), q(18, 25))?,
+        ])
+    })();
+    let Some(start) = start else {
+        return declined("BigInterval::new (start box)");
+    };
+    match enclose_system(&system, &start, 60) {
+        Some(enc) => {
+            let verified = enc.verify(&system, &start).is_ok();
+            Outcome {
+                verdict: if verified {
+                    Verdict::Agree
+                } else {
+                    Verdict::Disagree
+                },
+                trust: if verified {
+                    Trust::Certified
+                } else {
+                    Trust::Unknown
+                },
+                expected: "a certified enclosure of (1/sqrt(2), 1/sqrt(2)), verify Ok".to_string(),
+                actual: format!("verify_ok={verified}"),
+            }
+        }
+        None => declined("enclose_system(circle & line, start, 60)"),
+    }
+}
+
+// ============================================================================
+// Entries: second-pass modules — fps_analytic
+// ============================================================================
+
+/// `1/(1-2x)`'s radius of convergence is exactly `1/2` (geometric series,
+/// classical).
+fn fa1_radius_exact_geometric() -> Outcome {
+    let numerator = vec![bigrat(1)];
+    let denominator = vec![bigrat(1), bigrat(-2)];
+    match radius_of_convergence(&numerator, &denominator) {
+        Ok(cert) => {
+            let verified = cert.verify().is_ok();
+            let half = BigRational::new(BigInt::from(1), BigInt::from(2));
+            let exact_half = matches!(&cert.radius, RadiusOfConvergence::Exact(r) if *r == half);
+            let agree = verified && exact_half;
+            Outcome {
+                verdict: if agree {
+                    Verdict::Agree
+                } else {
+                    Verdict::Disagree
+                },
+                trust: if verified {
+                    Trust::Certified
+                } else {
+                    Trust::Unknown
+                },
+                expected: "Exact(1/2) (1/(1-2x), geometric series)".to_string(),
+                actual: format!("{:?}, verify_ok={verified}", cert.radius),
+            }
+        }
+        Err(reason) => declined(&format!("radius_of_convergence(1/(1-2x)): {reason:?}")),
+    }
+}
+/// Near-miss control: `1/(1-3x)` has a DIFFERENT exact radius, `1/3` -- the
+/// tool must not report the same answer regardless of the denominator.
+fn fa1_radius_exact_geometric_ctrl() -> Outcome {
+    let numerator = vec![bigrat(1)];
+    let denominator = vec![bigrat(1), bigrat(-3)];
+    match radius_of_convergence(&numerator, &denominator) {
+        Ok(cert) => {
+            let verified = cert.verify().is_ok();
+            let third = BigRational::new(BigInt::from(1), BigInt::from(3));
+            let half = BigRational::new(BigInt::from(1), BigInt::from(2));
+            let exact_third = matches!(&cert.radius, RadiusOfConvergence::Exact(r) if *r == third);
+            let not_half = !matches!(&cert.radius, RadiusOfConvergence::Exact(r) if *r == half);
+            let agree = verified && exact_third && not_half;
+            Outcome {
+                verdict: if agree {
+                    Verdict::Agree
+                } else {
+                    Verdict::Disagree
+                },
+                trust: if verified {
+                    Trust::Certified
+                } else {
+                    Trust::Unknown
+                },
+                expected: "Exact(1/3), and NOT 1/2 (1/(1-3x), distinguishing the two denominators)"
+                    .to_string(),
+                actual: format!("{:?}, verify_ok={verified}", cert.radius),
+            }
+        }
+        Err(reason) => declined(&format!("radius_of_convergence(1/(1-3x)): {reason:?}")),
+    }
+}
+
+/// The Fibonacci generating function `x/(1-x-x^2)` has radius `1/phi =
+/// (sqrt(5)-1)/2 ~= 0.6180339887498948` -- the smaller-modulus root of
+/// `1-x-x^2` (confirmed independently by `SymPy` in `ground_truth.py`). The
+/// bracket check uses a loose +/-0.01 margin since the module refines to 96
+/// bits, far tighter than any literal digit string is worth pinning.
+fn fa2_radius_algebraic_fibonacci() -> Outcome {
+    let numerator = vec![bigrat(0), bigrat(1)];
+    let denominator = vec![bigrat(1), bigrat(-1), bigrat(-1)];
+    match radius_of_convergence(&numerator, &denominator) {
+        Ok(cert) => {
+            let verified = cert.verify().is_ok();
+            let is_algebraic = matches!(&cert.radius, RadiusOfConvergence::Algebraic(_));
+            let lower_margin = BigRational::new(BigInt::from(608), BigInt::from(1000));
+            let upper_margin = BigRational::new(BigInt::from(628), BigInt::from(1000));
+            let bracket_ok = cert
+                .radius
+                .bracket()
+                .is_some_and(|(lo, hi)| lower_margin <= lo && hi <= upper_margin);
+            let agree = verified && is_algebraic && bracket_ok;
+            Outcome {
+                verdict: if agree {
+                    Verdict::Agree
+                } else {
+                    Verdict::Disagree
+                },
+                trust: if verified {
+                    Trust::Certified
+                } else {
+                    Trust::Unknown
+                },
+                expected: "an algebraic radius bracketed within [0.608, 0.628] (1/phi ~= 0.618)"
+                    .to_string(),
+                actual: format!("{:?}, verify_ok={verified}", cert.radius),
+            }
+        }
+        Err(reason) => declined(&format!("radius_of_convergence(x/(1-x-x^2)): {reason:?}")),
+    }
+}
+
+/// `1/(1-2x)`'s coefficients are exactly `2^n`; sampled at `n=4,8,16` this is
+/// `16, 256, 65536`.
+fn fa3_coefficient_asymptotics_geometric() -> Outcome {
+    let numerator = vec![bigrat(1)];
+    let denominator = vec![bigrat(1), bigrat(-2)];
+    match coefficient_asymptotics(&numerator, &denominator, 4) {
+        Ok(cert) => {
+            let verified = cert.verify().is_ok();
+            let expected_coeffs = vec![bigrat(16), bigrat(256), bigrat(65536)];
+            let matches_expected = cert.coefficients == expected_coeffs;
+            let agree = verified && matches_expected;
+            Outcome {
+                verdict: if agree {
+                    Verdict::Agree
+                } else {
+                    Verdict::Disagree
+                },
+                trust: if verified {
+                    Trust::Certified
+                } else {
+                    Trust::Unknown
+                },
+                expected: "coefficients [16, 256, 65536] at n=[4,8,16] (2^n)".to_string(),
+                actual: format!("{:?}, verify_ok={verified}", cert.coefficients),
+            }
+        }
+        Err(reason) => declined(&format!(
+            "coefficient_asymptotics(1/(1-2x), base=4): {reason:?}"
+        )),
+    }
+}
+
+// ============================================================================
+// Entries: second-pass modules — numberfield_ideals
+// ============================================================================
+
+/// `N((2+sqrt(-5))) = 2^2 + 5*1^2 = 9` in `Z[sqrt(-5)]` (`d=-5`): the norm
+/// of a principal ideal is the absolute value of the element norm, a
+/// classical fact about principal ideals.
+fn nfi1_ideal_norm_principal() -> Outcome {
+    let order = match QuadraticOrder::new(&BigInt::from(-5)) {
+        Ok(order) => order,
+        Err(err) => return declined(&format!("QuadraticOrder::new(-5): {err:?}")),
+    };
+    let element = OrderElement::from_i64(2, 1); // 2 + 1*sqrt(-5)
+    match order.principal_ideal(&element) {
+        Ok(ideal) => {
+            let norm = ideal.norm();
+            let agree = norm == BigInt::from(9);
+            Outcome {
+                verdict: if agree {
+                    Verdict::Agree
+                } else {
+                    Verdict::Disagree
+                },
+                trust: Trust::Uncertified,
+                expected: "9 (N(2+sqrt(-5)) = 4+5 = 9)".to_string(),
+                actual: format!("norm={norm}"),
+            }
+        }
+        Err(reason) => declined(&format!("principal_ideal(2+sqrt(-5)): {reason:?}")),
+    }
+}
+
+/// `3` splits in `Q(sqrt(-5))` (discriminant `-20`): `(-20/3) = 1` (a
+/// quadratic residue), confirmed independently by `SymPy`'s Jacobi symbol in
+/// `ground_truth.py`.
+fn nfi2_prime_splitting_3_splits() -> Outcome {
+    let order = match QuadraticOrder::new(&BigInt::from(-5)) {
+        Ok(order) => order,
+        Err(err) => return declined(&format!("QuadraticOrder::new(-5): {err:?}")),
+    };
+    match order.split_prime(&BigInt::from(3)) {
+        Ok((_factors, cert)) => {
+            let verified = cert.verify().is_ok();
+            let is_split = matches!(cert.splitting, SplittingType::Split);
+            let agree = verified && is_split;
+            Outcome {
+                verdict: if agree {
+                    Verdict::Agree
+                } else {
+                    Verdict::Disagree
+                },
+                trust: if verified {
+                    Trust::Certified
+                } else {
+                    Trust::Unknown
+                },
+                expected: "Split ((-20/3) = 1)".to_string(),
+                actual: format!("{:?}, verify_ok={verified}", cert.splitting),
+            }
+        }
+        Err(reason) => declined(&format!("split_prime(3) in Q(sqrt(-5)): {reason:?}")),
+    }
+}
+/// Near-miss control: `2` RAMIFIES in the same field (`2` divides the
+/// discriminant `-20`), the flip-side classification at a different prime.
+fn nfi2_prime_splitting_2_ramifies_ctrl() -> Outcome {
+    let order = match QuadraticOrder::new(&BigInt::from(-5)) {
+        Ok(order) => order,
+        Err(err) => return declined(&format!("QuadraticOrder::new(-5): {err:?}")),
+    };
+    match order.split_prime(&BigInt::from(2)) {
+        Ok((_factors, cert)) => {
+            let verified = cert.verify().is_ok();
+            let is_ramified = matches!(cert.splitting, SplittingType::Ramified);
+            let agree = verified && is_ramified;
+            Outcome {
+                verdict: if agree {
+                    Verdict::Agree
+                } else {
+                    Verdict::Disagree
+                },
+                trust: if verified {
+                    Trust::Certified
+                } else {
+                    Trust::Unknown
+                },
+                expected: "Ramified (2 divides the discriminant -20)".to_string(),
+                actual: format!("{:?}, verify_ok={verified}", cert.splitting),
+            }
+        }
+        Err(reason) => declined(&format!("split_prime(2) in Q(sqrt(-5)): {reason:?}")),
+    }
+}
+
+/// The class number of `Q(sqrt(-5))` (discriminant `-20`) is 2 -- the
+/// textbook example of a non-UFD ring of integers (`6 = 2*3 =
+/// (1+sqrt(-5))(1-sqrt(-5))`), independently confirmed by hand-enumerating
+/// reduced binary quadratic forms in `ground_truth.py`.
+fn nfi3_class_number_20() -> Outcome {
+    match ideal_class_number(&BigInt::from(-20)) {
+        Ok((h, cert)) => {
+            let verified = cert.verify().is_ok();
+            let agree = verified && h == 2;
+            Outcome {
+                verdict: if agree {
+                    Verdict::Agree
+                } else {
+                    Verdict::Disagree
+                },
+                trust: if verified {
+                    Trust::Certified
+                } else {
+                    Trust::Unknown
+                },
+                expected: "2 (h(-20) = 2, the classical Z[sqrt(-5)] non-UFD example)".to_string(),
+                actual: format!("h={h}, verify_ok={verified}"),
+            }
+        }
+        Err(reason) => declined(&format!("class_number(-20): {reason:?}")),
+    }
+}
+
+// ============================================================================
+// Entries: second-pass modules — permgroup_sylow
+// ============================================================================
+
+fn s4_group() -> Option<PermutationGroup> {
+    let gens: Vec<Permutation> = (0..3)
+        .map(|i| Permutation::from_cycles(&[vec![i, i + 1]], 4))
+        .collect::<Option<Vec<_>>>()?;
+    PermutationGroup::from_generators(gens, 4)
+}
+fn a4_group() -> Option<PermutationGroup> {
+    let gens: Vec<Permutation> = (2..4)
+        .map(|k| Permutation::from_cycles(&[vec![0, 1, k]], 4))
+        .collect::<Option<Vec<_>>>()?;
+    PermutationGroup::from_generators(gens, 4)
+}
+
+/// `S4`'s Sylow-2 subgroup has order `2^3 = 8` (`|S4|=24=2^3*3`), and there
+/// are `n_2=3` of them -- the standard textbook fact (e.g. Dummit & Foote,
+/// worked as the dihedral-of-the-square example).
+fn sy1_s4_sylow2_order() -> Outcome {
+    let Some(s4) = s4_group() else {
+        return declined("S4 construction");
+    };
+    match s4.sylow_subgroup(2) {
+        Ok((sylow2, cert)) => {
+            let verified = cert.verify().is_ok();
+            let order_ok = sylow2.order() == 8;
+            match s4.sylow_count(&sylow2, 2) {
+                Ok(count_cert) => {
+                    let count_verified = count_cert.verify().is_ok();
+                    let count_ok = count_cert.n_p == 3;
+                    let agree = verified && order_ok && count_verified && count_ok;
+                    Outcome {
+                        verdict: if agree {
+                            Verdict::Agree
+                        } else {
+                            Verdict::Disagree
+                        },
+                        trust: if verified && count_verified {
+                            Trust::Certified
+                        } else {
+                            Trust::Unknown
+                        },
+                        expected: "order 8, n_2=3".to_string(),
+                        actual: format!(
+                            "order={}, n_2={}, verify_ok={verified}, count_verify_ok={count_verified}",
+                            sylow2.order(),
+                            count_cert.n_p
+                        ),
+                    }
+                }
+                Err(reason) => declined(&format!("sylow_count(sylow2, 2): {reason:?}")),
+            }
+        }
+        Err(reason) => declined(&format!("sylow_subgroup(2) of S4: {reason:?}")),
+    }
+}
+
+/// `S4`'s Sylow-3 subgroup has order 3, and there are `n_3=4` of them.
+fn sy2_s4_sylow3_count() -> Outcome {
+    let Some(s4) = s4_group() else {
+        return declined("S4 construction");
+    };
+    match s4.sylow_subgroup(3) {
+        Ok((sylow3, cert)) => {
+            let verified = cert.verify().is_ok();
+            let order_ok = sylow3.order() == 3;
+            match s4.sylow_count(&sylow3, 3) {
+                Ok(count_cert) => {
+                    let count_verified = count_cert.verify().is_ok();
+                    let count_ok = count_cert.n_p == 4;
+                    let agree = verified && order_ok && count_verified && count_ok;
+                    Outcome {
+                        verdict: if agree {
+                            Verdict::Agree
+                        } else {
+                            Verdict::Disagree
+                        },
+                        trust: if verified && count_verified {
+                            Trust::Certified
+                        } else {
+                            Trust::Unknown
+                        },
+                        expected: "order 3, n_3=4".to_string(),
+                        actual: format!(
+                            "order={}, n_3={}, verify_ok={verified}, count_verify_ok={count_verified}",
+                            sylow3.order(),
+                            count_cert.n_p
+                        ),
+                    }
+                }
+                Err(reason) => declined(&format!("sylow_count(sylow3, 3): {reason:?}")),
+            }
+        }
+        Err(reason) => declined(&format!("sylow_subgroup(3) of S4: {reason:?}")),
+    }
+}
+
+/// `A4` (index 2 in `S4`) is normal -- every index-2 subgroup is,
+/// classically.
+fn sy3_a4_normal_in_s4() -> Outcome {
+    let (Some(s4), Some(a4)) = (s4_group(), a4_group()) else {
+        return declined("S4/A4 construction");
+    };
+    match s4.is_normal(&a4) {
+        Ok(cert) => {
+            let verified = cert.verify().is_ok();
+            let is_normal = matches!(cert, NormalityCertificate::Normal { .. });
+            let agree = verified && is_normal;
+            Outcome {
+                verdict: if agree {
+                    Verdict::Agree
+                } else {
+                    Verdict::Disagree
+                },
+                trust: if verified {
+                    Trust::Certified
+                } else {
+                    Trust::Unknown
+                },
+                expected: "Normal (A4 has index 2 in S4)".to_string(),
+                actual: format!("{cert:?}, verify_ok={verified}"),
+            }
+        }
+        Err(reason) => declined(&format!("is_normal(S4, A4): {reason:?}")),
+    }
+}
+/// Near-miss control: a Sylow-3 subgroup of `S4` (order 3, `n_3=4>1`) is NOT
+/// normal -- the flip side of `sy3-a4-normal-in-s4`, by the standard fact
+/// that a Sylow subgroup is normal iff it is the only one.
+fn sy3_a4_normal_in_s4_ctrl() -> Outcome {
+    let Some(s4) = s4_group() else {
+        return declined("S4 construction");
+    };
+    match s4.sylow_subgroup(3) {
+        Ok((sylow3, _)) => match s4.is_normal(&sylow3) {
+            Ok(cert) => {
+                let verified = cert.verify().is_ok();
+                let not_normal = matches!(cert, NormalityCertificate::NotNormal { .. });
+                let agree = verified && not_normal;
+                Outcome {
+                    verdict: if agree {
+                        Verdict::Agree
+                    } else {
+                        Verdict::Disagree
+                    },
+                    trust: if verified {
+                        Trust::Certified
+                    } else {
+                        Trust::Unknown
+                    },
+                    expected: "NotNormal (n_3=4 > 1, so no Sylow-3 subgroup is normal)".to_string(),
+                    actual: format!("{cert:?}, verify_ok={verified}"),
+                }
+            }
+            Err(reason) => declined(&format!("is_normal(S4, sylow3): {reason:?}")),
+        },
+        Err(reason) => declined(&format!("sylow_subgroup(3) of S4: {reason:?}")),
+    }
+}
+
+// ============================================================================
+// Entries: second-pass modules — homology_coefficients / homology_cohomology
+// ============================================================================
+
+/// The standard 6-vertex triangulation of the real projective plane RP^2
+/// (`b=(1,0,0)` over Z with torsion Z/2 at `H_1` -- a classical fact, any
+/// algebraic topology text, e.g. Hatcher).
+fn rp2_6v() -> Option<SimplicialComplex> {
+    SimplicialComplex::from_maximal_simplices(&[
+        vec![0, 1, 2],
+        vec![0, 1, 4],
+        vec![0, 2, 3],
+        vec![0, 3, 5],
+        vec![0, 4, 5],
+        vec![1, 2, 5],
+        vec![1, 3, 4],
+        vec![1, 3, 5],
+        vec![2, 3, 4],
+        vec![2, 4, 5],
+    ])
+}
+
+/// Over `F_2` the torsion becomes a free rank-1 contribution:
+/// `b_1(F2) = b_1(Z) + t_1 + t_0 = 0+1+0 = 1` (universal coefficient
+/// theorem).
+fn hc1_rp2_torsion_f2() -> Outcome {
+    let Some(complex) = rp2_6v() else {
+        return declined("SimplicialComplex::from_maximal_simplices (RP^2)");
+    };
+    match coefficients::homology_with_coefficients(&complex) {
+        Some(cert) => {
+            let verified = cert.verify(&complex).is_ok();
+            let b1_f2 = cert.betti_f2.get(&1).copied();
+            let agree = verified && b1_f2 == Some(1);
+            Outcome {
+                verdict: if agree {
+                    Verdict::Agree
+                } else {
+                    Verdict::Disagree
+                },
+                trust: if verified {
+                    Trust::Certified
+                } else {
+                    Trust::Unknown
+                },
+                expected: "b1(F2)=1 (UCT: b1(Z)=0 plus the even Z/2 torsion of H_1)".to_string(),
+                actual: format!("betti_f2={:?}, verify_ok={verified}", cert.betti_f2),
+            }
+        }
+        None => declined("homology_with_coefficients(RP^2)"),
+    }
+}
+/// Near-miss control on the SAME complex: over `Q`, torsion vanishes and
+/// `b1(Q)=b1(Z)=0` -- DIFFERENT from `b1(F2)=1` above, demonstrating the
+/// coefficient ring genuinely changes the answer.
+fn hc1_rp2_torsion_q_ctrl() -> Outcome {
+    let Some(complex) = rp2_6v() else {
+        return declined("SimplicialComplex::from_maximal_simplices (RP^2)");
+    };
+    match coefficients::homology_with_coefficients(&complex) {
+        Some(cert) => {
+            let verified = cert.verify(&complex).is_ok();
+            let b1_q = cert.betti_q.get(&1).copied();
+            let b1_f2 = cert.betti_f2.get(&1).copied();
+            let agree = verified && b1_q == Some(0) && b1_q != b1_f2;
+            Outcome {
+                verdict: if agree {
+                    Verdict::Agree
+                } else {
+                    Verdict::Disagree
+                },
+                trust: if verified {
+                    Trust::Certified
+                } else {
+                    Trust::Unknown
+                },
+                expected: "b1(Q)=0, DIFFERENT from b1(F2)=1 (coefficients matter)".to_string(),
+                actual: format!(
+                    "betti_q={:?}, betti_f2={:?}, verify_ok={verified}",
+                    cert.betti_q, cert.betti_f2
+                ),
+            }
+        }
+        None => declined("homology_with_coefficients(RP^2)"),
+    }
+}
+
+fn hollow_triangle() -> Option<SimplicialComplex> {
+    SimplicialComplex::from_maximal_simplices(&[vec![0, 1], vec![1, 2], vec![0, 2]])
+}
+fn tetrahedron_boundary() -> Option<SimplicialComplex> {
+    SimplicialComplex::from_maximal_simplices(&[
+        vec![0, 1, 2],
+        vec![0, 1, 3],
+        vec![0, 2, 3],
+        vec![1, 2, 3],
+    ])
+}
+
+/// A hollow triangle (circle S^1, torsion-free): all three coefficient
+/// rings agree, `b=(1,1)`.
+fn hc2_circle_agrees_across_rings() -> Outcome {
+    let Some(complex) = hollow_triangle() else {
+        return declined("SimplicialComplex::from_maximal_simplices (hollow triangle)");
+    };
+    match coefficients::homology_with_coefficients(&complex) {
+        Some(cert) => {
+            let verified = cert.verify(&complex).is_ok();
+            let expected: BTreeMap<usize, usize> = [(0, 1), (1, 1)].into_iter().collect();
+            let agree = verified && cert.betti_f2 == expected && cert.betti_q == expected;
+            Outcome {
+                verdict: if agree {
+                    Verdict::Agree
+                } else {
+                    Verdict::Disagree
+                },
+                trust: if verified {
+                    Trust::Certified
+                } else {
+                    Trust::Unknown
+                },
+                expected: "b=(1,1) over F2 and Q alike (torsion-free)".to_string(),
+                actual: format!(
+                    "betti_f2={:?}, betti_q={:?}, verify_ok={verified}",
+                    cert.betti_f2, cert.betti_q
+                ),
+            }
+        }
+        None => declined("homology_with_coefficients(circle)"),
+    }
+}
+
+/// The boundary of a tetrahedron (four triangular faces on 4 vertices, no
+/// interior) is homotopy equivalent to `S^2`: `b=(1,0,1)`, torsion-free, so
+/// again agrees across `Z`/`F2`/`Q` (Euler characteristic `4-6+4=2=1-0+1`).
+fn hc3_sphere_boundary_tetrahedron() -> Outcome {
+    let Some(complex) = tetrahedron_boundary() else {
+        return declined("SimplicialComplex::from_maximal_simplices (tetrahedron boundary)");
+    };
+    match coefficients::homology_with_coefficients(&complex) {
+        Some(cert) => {
+            let verified = cert.verify(&complex).is_ok();
+            let expected: BTreeMap<usize, usize> = [(0, 1), (1, 0), (2, 1)].into_iter().collect();
+            let agree = verified && cert.betti_f2 == expected && cert.betti_q == expected;
+            Outcome {
+                verdict: if agree {
+                    Verdict::Agree
+                } else {
+                    Verdict::Disagree
+                },
+                trust: if verified {
+                    Trust::Certified
+                } else {
+                    Trust::Unknown
+                },
+                expected: "b=(1,0,1) over F2 and Q alike (S^2, torsion-free)".to_string(),
+                actual: format!(
+                    "betti_f2={:?}, betti_q={:?}, verify_ok={verified}",
+                    cert.betti_f2, cert.betti_q
+                ),
+            }
+        }
+        None => declined("homology_with_coefficients(tetrahedron boundary)"),
+    }
+}
+
+/// RP^2's cohomology has its torsion SHIFTED UP one degree from homology:
+/// `H_1(RP^2;Z)=Z/2` but `H^1(RP^2;Z)` is torsion-free (free rank 0, since
+/// `b_1=0`) while `H^2(RP^2;Z)` carries the torsion -- the classical
+/// universal coefficient theorem for cohomology (Ext shifts torsion up one
+/// degree; any algebraic topology text).
+fn co1_rp2_cohomology_torsion_shift() -> Outcome {
+    let Some(complex) = rp2_6v() else {
+        return declined("SimplicialComplex::from_maximal_simplices (RP^2)");
+    };
+    match cohomology::cohomology(&complex) {
+        Some(cert) => {
+            let verified = cert.verify(&complex).is_ok();
+            let h2_torsion = cert.torsion.get(&2).cloned().unwrap_or_default();
+            let agree = verified && h2_torsion == vec![2];
+            Outcome {
+                verdict: if agree {
+                    Verdict::Agree
+                } else {
+                    Verdict::Disagree
+                },
+                trust: if verified {
+                    Trust::Certified
+                } else {
+                    Trust::Unknown
+                },
+                expected: "H^2 torsion = [2] (the Z/2 shifted up from H_1)".to_string(),
+                actual: format!("torsion={:?}, verify_ok={verified}", cert.torsion),
+            }
+        }
+        None => declined("cohomology(RP^2)"),
+    }
+}
+/// Near-miss control on the SAME complex: `H^1` carries NO torsion (the
+/// shift moves it to `H^2`, not `H^1`) -- the precise degree matters.
+fn co1_rp2_cohomology_torsion_not_at_h1_ctrl() -> Outcome {
+    let Some(complex) = rp2_6v() else {
+        return declined("SimplicialComplex::from_maximal_simplices (RP^2)");
+    };
+    match cohomology::cohomology(&complex) {
+        Some(cert) => {
+            let verified = cert.verify(&complex).is_ok();
+            let h1_torsion = cert.torsion.get(&1).cloned().unwrap_or_default();
+            let agree = verified && h1_torsion.is_empty();
+            Outcome {
+                verdict: if agree {
+                    Verdict::Agree
+                } else {
+                    Verdict::Disagree
+                },
+                trust: if verified {
+                    Trust::Certified
+                } else {
+                    Trust::Unknown
+                },
+                expected: "H^1 torsion = [] (NOT where the torsion lands)".to_string(),
+                actual: format!("torsion={:?}, verify_ok={verified}", cert.torsion),
+            }
+        }
+        None => declined("cohomology(RP^2)"),
+    }
+}
+
+/// The hollow triangle (circle): free ranks `(1,1)`, no torsion anywhere --
+/// cohomology agrees with homology exactly in the torsion-free case.
+fn co2_circle_cohomology() -> Outcome {
+    let Some(complex) = hollow_triangle() else {
+        return declined("SimplicialComplex::from_maximal_simplices (hollow triangle)");
+    };
+    match cohomology::cohomology(&complex) {
+        Some(cert) => {
+            let verified = cert.verify(&complex).is_ok();
+            let expected: BTreeMap<usize, usize> = [(0, 1), (1, 1)].into_iter().collect();
+            let no_torsion = cert.torsion.values().all(Vec::is_empty);
+            let agree = verified && cert.free_rank == expected && no_torsion;
+            Outcome {
+                verdict: if agree {
+                    Verdict::Agree
+                } else {
+                    Verdict::Disagree
+                },
+                trust: if verified {
+                    Trust::Certified
+                } else {
+                    Trust::Unknown
+                },
+                expected: "free_rank=(1,1), no torsion".to_string(),
+                actual: format!(
+                    "free_rank={:?}, torsion={:?}, verify_ok={verified}",
+                    cert.free_rank, cert.torsion
+                ),
+            }
+        }
+        None => declined("cohomology(circle)"),
+    }
+}
+
+/// The boundary of a tetrahedron (`S^2`): free ranks `(1,0,1)`, no torsion.
+fn co3_sphere_cohomology() -> Outcome {
+    let Some(complex) = tetrahedron_boundary() else {
+        return declined("SimplicialComplex::from_maximal_simplices (tetrahedron boundary)");
+    };
+    match cohomology::cohomology(&complex) {
+        Some(cert) => {
+            let verified = cert.verify(&complex).is_ok();
+            let expected: BTreeMap<usize, usize> = [(0, 1), (1, 0), (2, 1)].into_iter().collect();
+            let no_torsion = cert.torsion.values().all(Vec::is_empty);
+            let agree = verified && cert.free_rank == expected && no_torsion;
+            Outcome {
+                verdict: if agree {
+                    Verdict::Agree
+                } else {
+                    Verdict::Disagree
+                },
+                trust: if verified {
+                    Trust::Certified
+                } else {
+                    Trust::Unknown
+                },
+                expected: "free_rank=(1,0,1), no torsion".to_string(),
+                actual: format!(
+                    "free_rank={:?}, torsion={:?}, verify_ok={verified}",
+                    cert.free_rank, cert.torsion
+                ),
+            }
+        }
+        None => declined("cohomology(tetrahedron boundary)"),
+    }
+}
+
+// ============================================================================
+// Entries: second-pass modules — homology_induced
+// ============================================================================
+
+/// The identity map on the hollow triangle (circle) induces an isomorphism
+/// on both `H_0` and `H_1`: rank 1 each.
+fn ind1_circle_identity_isomorphism() -> Outcome {
+    let Some(circle) = hollow_triangle() else {
+        return declined("SimplicialComplex::from_maximal_simplices (circle)");
+    };
+    let vertex_map: BTreeMap<usize, usize> = [(0, 0), (1, 1), (2, 2)].into_iter().collect();
+    match induced::induced_homology(&vertex_map, &circle, &circle) {
+        Some(cert) => {
+            let verified = cert.verify(&circle, &circle).is_ok();
+            let expected: BTreeMap<usize, usize> = [(0, 1), (1, 1)].into_iter().collect();
+            let agree = verified && cert.induced_rank == expected;
+            Outcome {
+                verdict: if agree {
+                    Verdict::Agree
+                } else {
+                    Verdict::Disagree
+                },
+                trust: if verified {
+                    Trust::Certified
+                } else {
+                    Trust::Unknown
+                },
+                expected: "induced_rank=(1,1) (identity is an isomorphism on H_*)".to_string(),
+                actual: format!("induced_rank={:?}, verify_ok={verified}", cert.induced_rank),
+            }
+        }
+        None => declined("induced_homology(identity on circle)"),
+    }
+}
+
+/// Near-miss counterpoint to `ind1`: the SAME circle collapsed onto a single
+/// edge (vertex 2 identified with vertex 0) forces `H_1`'s induced map to
+/// have rank 0 (the target `H_1(edge)=0` has no room for anything nonzero),
+/// while `H_0` still maps isomorphically (both are connected).
+fn ind2_circle_collapse_to_edge() -> Outcome {
+    let Some(circle) = hollow_triangle() else {
+        return declined("SimplicialComplex::from_maximal_simplices (circle)");
+    };
+    let Some(edge) = SimplicialComplex::from_maximal_simplices(&[vec![0, 1]]) else {
+        return declined("SimplicialComplex::from_maximal_simplices (single edge)");
+    };
+    let vertex_map: BTreeMap<usize, usize> = [(0, 0), (1, 1), (2, 0)].into_iter().collect();
+    match induced::induced_homology(&vertex_map, &circle, &edge) {
+        Some(cert) => {
+            let verified = cert.verify(&circle, &edge).is_ok();
+            let expected: BTreeMap<usize, usize> = [(0, 1), (1, 0)].into_iter().collect();
+            let agree = verified && cert.induced_rank == expected;
+            Outcome {
+                verdict: if agree {
+                    Verdict::Agree
+                } else {
+                    Verdict::Disagree
+                },
+                trust: if verified {
+                    Trust::Certified
+                } else {
+                    Trust::Unknown
+                },
+                expected: "induced_rank=(1,0) (H_1 of the target is 0, forcing rank 0)".to_string(),
+                actual: format!("induced_rank={:?}, verify_ok={verified}", cert.induced_rank),
+            }
+        }
+        None => declined("induced_homology(circle collapsed to an edge)"),
+    }
+}
+
+/// `is_simplicial` correctly REJECTS a vertex map whose image is not a face
+/// of the codomain: the circle's edge `{0,1}` would map to `{0,1}`, which
+/// is not a face of a codomain with only two ISOLATED points (no edge
+/// between them).
+fn ind3_is_simplicial_rejects_missing_face() -> Outcome {
+    let Some(circle) = hollow_triangle() else {
+        return declined("SimplicialComplex::from_maximal_simplices (circle)");
+    };
+    let Some(two_points) = SimplicialComplex::from_maximal_simplices(&[vec![0], vec![1]]) else {
+        return declined("SimplicialComplex::from_maximal_simplices (two isolated points)");
+    };
+    let vertex_map: BTreeMap<usize, usize> = [(0, 0), (1, 1), (2, 0)].into_iter().collect();
+    let is_simplicial = induced::is_simplicial(&vertex_map, &circle, &two_points);
+    Outcome {
+        verdict: if is_simplicial {
+            Verdict::Disagree
+        } else {
+            Verdict::Agree
+        },
+        trust: Trust::Uncertified,
+        expected: "false (the image edge {0,1} is not a face of two isolated points)".to_string(),
+        actual: format!("is_simplicial={is_simplicial}"),
+    }
+}
+
+// ============================================================================
+// Entries: second-pass modules — homology_persistent
+// ============================================================================
+
+/// The standard "circle then fill" persistence example: 3 vertices, then 3
+/// edges (closing the triangle's boundary at index 5), then the 2-face
+/// (index 6). The `H_1` loop is born at the closing edge and dies when the
+/// triangle is filled -- the textbook persistent-homology example.
+fn circle_then_fill() -> Vec<Vec<usize>> {
+    vec![
+        vec![0],
+        vec![1],
+        vec![2],
+        vec![0, 1],
+        vec![1, 2],
+        vec![0, 2],
+        vec![0, 1, 2],
+    ]
+}
+
+fn per1_circle_then_fill_h1_bar() -> Outcome {
+    let filtration = circle_then_fill();
+    match persistent::persistent_homology(&filtration) {
+        Some(cert) => {
+            let verified = cert.verify().is_ok();
+            let h1_bars: Vec<_> = cert.pairs.iter().filter(|&&(dim, _, _)| dim == 1).collect();
+            let agree = verified && h1_bars.len() == 1 && *h1_bars[0] == (1, 5, 6);
+            Outcome {
+                verdict: if agree {
+                    Verdict::Agree
+                } else {
+                    Verdict::Disagree
+                },
+                trust: if verified {
+                    Trust::Certified
+                } else {
+                    Trust::Unknown
+                },
+                expected:
+                    "exactly one H_1 bar, (1, 5, 6): born at the closing edge, dies when filled"
+                        .to_string(),
+                actual: format!("h1_bars={h1_bars:?}, verify_ok={verified}"),
+            }
+        }
+        None => declined("persistent_homology(circle_then_fill)"),
+    }
+}
+
+fn per2_circle_then_fill_h0_essential() -> Outcome {
+    let filtration = circle_then_fill();
+    match persistent::persistent_homology(&filtration) {
+        Some(cert) => {
+            let verified = cert.verify().is_ok();
+            let h0_essential = cert.essential.iter().filter(|&&(dim, _)| dim == 0).count();
+            let h0_pairs = cert.pairs.iter().filter(|&&(dim, _, _)| dim == 0).count();
+            let agree = verified && h0_essential == 1 && h0_pairs == 2;
+            Outcome {
+                verdict: if agree {
+                    Verdict::Agree
+                } else {
+                    Verdict::Disagree
+                },
+                trust: if verified {
+                    Trust::Certified
+                } else {
+                    Trust::Unknown
+                },
+                expected: "1 essential H_0 bar (final component), 2 finite H_0 bars (two merges)"
+                    .to_string(),
+                actual: format!(
+                    "h0_essential={h0_essential}, h0_pairs={h0_pairs}, verify_ok={verified}"
+                ),
+            }
+        }
+        None => declined("persistent_homology(circle_then_fill)"),
+    }
+}
+
+/// Before the closing edge is added (`m=5`, the first 5 entries), the
+/// prefix complex is a graph with no 2-simplex -- it cannot yet contain the
+/// filled triangle.
+fn per3_prefix_before_fill_lacks_triangle() -> Outcome {
+    let filtration = circle_then_fill();
+    match persistent::prefix_complex(&filtration, 5) {
+        Some(complex) => {
+            let has_triangle = complex.contains_face(&[0, 1, 2]);
+            Outcome {
+                verdict: if has_triangle {
+                    Verdict::Disagree
+                } else {
+                    Verdict::Agree
+                },
+                trust: Trust::Uncertified,
+                expected: "false (the triangle has not been added yet at m=5)".to_string(),
+                actual: format!("contains_face([0,1,2])={has_triangle}"),
+            }
+        }
+        None => declined("prefix_complex(circle_then_fill, 5)"),
+    }
+}
+/// Near-miss control: at `m=7` (the full filtration), the prefix complex
+/// DOES contain the triangle.
+fn per3_prefix_after_fill_has_triangle_ctrl() -> Outcome {
+    let filtration = circle_then_fill();
+    match persistent::prefix_complex(&filtration, 7) {
+        Some(complex) => {
+            let has_triangle = complex.contains_face(&[0, 1, 2]);
+            Outcome {
+                verdict: if has_triangle {
+                    Verdict::Agree
+                } else {
+                    Verdict::Disagree
+                },
+                trust: Trust::Uncertified,
+                expected: "true (the full filtration includes the triangle)".to_string(),
+                actual: format!("contains_face([0,1,2])={has_triangle}"),
+            }
+        }
+        None => declined("prefix_complex(circle_then_fill, 7)"),
+    }
+}
+
+// ============================================================================
+// Entries: second-pass modules — qe_big (the private BigRational engine,
+// exercised indirectly through the public qe::eliminate/eliminate_forall
+// front door -- qe_big itself declares no public items)
+// ============================================================================
+
+fn huge(pow: u32) -> BigRational {
+    BigRational::from_integer(BigInt::from(10u32).pow(pow))
+}
+
+/// `exists x. x^2 - 10^50 = 0` -- true, witnessed by `10^25`, at a magnitude
+/// that overflows `i128` (max ~1.7e38) even before any Cauchy-bound
+/// squaring.
+fn qeb1_huge_coefficient_exists() -> Outcome {
+    let atom = Atom::new(vec![-huge(50), bigrat(0), bigrat(1)], Relation::Eq);
+    let formula = ExistsFormula::new(vec![atom]);
+    match qe::eliminate(&formula) {
+        Some(true) => Outcome {
+            verdict: Verdict::Agree,
+            trust: Trust::Certified,
+            expected: "true (witnessed by 10^25)".to_string(),
+            actual: "true (self-verified by eliminate)".to_string(),
+        },
+        Some(false) => Outcome {
+            verdict: Verdict::Disagree,
+            trust: Trust::Certified,
+            expected: "true".to_string(),
+            actual: "false (self-verified by eliminate)".to_string(),
+        },
+        None => declined("eliminate(exists x. x^2-10^50=0)"),
+    }
+}
+/// Near-miss control: `exists x. x^2 + 10^50 = 0` -- false (`x^2 >= 0`
+/// always, so the sum with a huge POSITIVE constant is never zero).
+fn qeb1_huge_coefficient_exists_ctrl() -> Outcome {
+    let atom = Atom::new(vec![huge(50), bigrat(0), bigrat(1)], Relation::Eq);
+    let formula = ExistsFormula::new(vec![atom]);
+    match qe::eliminate(&formula) {
+        Some(false) => Outcome {
+            verdict: Verdict::Agree,
+            trust: Trust::Certified,
+            expected: "false (x^2 >= 0 always, so x^2+10^50 never 0)".to_string(),
+            actual: "false (self-verified by eliminate)".to_string(),
+        },
+        Some(true) => Outcome {
+            verdict: Verdict::Disagree,
+            trust: Trust::Certified,
+            expected: "false".to_string(),
+            actual: "true (self-verified by eliminate)".to_string(),
+        },
+        None => declined("eliminate(exists x. x^2+10^50=0)"),
+    }
+}
+
+/// `forall x. x^2 + 10^50 > 0` -- true (always, same reasoning as the
+/// control above but universally quantified).
+fn qeb2_huge_coefficient_forall() -> Outcome {
+    let atom = Atom::new(vec![huge(50), bigrat(0), bigrat(1)], Relation::Gt);
+    let formula = ForallFormula { atoms: vec![atom] };
+    match qe::eliminate_forall(&formula) {
+        Some(true) => Outcome {
+            verdict: Verdict::Agree,
+            trust: Trust::Certified,
+            expected: "true".to_string(),
+            actual: "true (self-verified by eliminate_forall)".to_string(),
+        },
+        Some(false) => Outcome {
+            verdict: Verdict::Disagree,
+            trust: Trust::Certified,
+            expected: "true".to_string(),
+            actual: "false (self-verified by eliminate_forall)".to_string(),
+        },
+        None => declined("eliminate_forall(forall x. x^2+10^50>0)"),
+    }
+}
+
+/// `exists x. x - 10^50 > 0` -- true, witnessed by any `x > 10^50` (a huge
+/// LINEAR coefficient, exercising a different atom shape than the
+/// quadratic cases above).
+fn qeb3_huge_coefficient_inequality() -> Outcome {
+    let atom = Atom::new(vec![-huge(50), bigrat(1)], Relation::Gt);
+    let formula = ExistsFormula::new(vec![atom]);
+    match qe::eliminate(&formula) {
+        Some(true) => Outcome {
+            verdict: Verdict::Agree,
+            trust: Trust::Certified,
+            expected: "true (witnessed by any x > 10^50)".to_string(),
+            actual: "true (self-verified by eliminate)".to_string(),
+        },
+        Some(false) => Outcome {
+            verdict: Verdict::Disagree,
+            trust: Trust::Certified,
+            expected: "true".to_string(),
+            actual: "false (self-verified by eliminate)".to_string(),
+        },
+        None => declined("eliminate(exists x. x-10^50>0)"),
+    }
+}
+
+// ============================================================================
+// Entries: second-pass modules — qe_dnf
+// ============================================================================
+
+/// `exists x. (x-2=0) OR (x+2=0)` -- true (witnessed by the first disjunct
+/// at x=2).
+fn dnf1_true_via_first_disjunct() -> Outcome {
+    let disjuncts = vec![
+        vec![Atom::new(qe::integer_poly(&[-2, 1]), Relation::Eq)],
+        vec![Atom::new(qe::integer_poly(&[2, 1]), Relation::Eq)],
+    ];
+    let formula = Dnf::new(disjuncts);
+    match eliminate_dnf(&formula) {
+        Some(true) => Outcome {
+            verdict: Verdict::Agree,
+            trust: Trust::Certified,
+            expected: "true (x=2 satisfies the first disjunct)".to_string(),
+            actual: "true (self-verified by eliminate_dnf)".to_string(),
+        },
+        Some(false) => Outcome {
+            verdict: Verdict::Disagree,
+            trust: Trust::Certified,
+            expected: "true".to_string(),
+            actual: "false (self-verified by eliminate_dnf)".to_string(),
+        },
+        None => declined("eliminate_dnf((x-2=0) OR (x+2=0))"),
+    }
+}
+
+/// `exists x. x^2+1=0` (a single, unsatisfiable disjunct) -- false, no real
+/// root.
+fn dnf2_false_no_real_root() -> Outcome {
+    let disjuncts = vec![vec![Atom::new(qe::integer_poly(&[1, 0, 1]), Relation::Eq)]];
+    let formula = Dnf::new(disjuncts);
+    match eliminate_dnf(&formula) {
+        Some(false) => Outcome {
+            verdict: Verdict::Agree,
+            trust: Trust::Certified,
+            expected: "false (x^2+1=0 has no real root)".to_string(),
+            actual: "false (self-verified by eliminate_dnf)".to_string(),
+        },
+        Some(true) => Outcome {
+            verdict: Verdict::Disagree,
+            trust: Trust::Certified,
+            expected: "false".to_string(),
+            actual: "true (self-verified by eliminate_dnf)".to_string(),
+        },
+        None => declined("eliminate_dnf(x^2+1=0)"),
+    }
+}
+
+/// `exists x. x>0 AND x<0` (a conjunction WITHIN one disjunct) -- false, the
+/// empty intersection.
+fn dnf3_conjunction_unsat() -> Outcome {
+    let disjuncts = vec![vec![
+        Atom::new(qe::integer_poly(&[0, 1]), Relation::Gt),
+        Atom::new(qe::integer_poly(&[0, 1]), Relation::Lt),
+    ]];
+    let formula = Dnf::new(disjuncts);
+    match eliminate_dnf(&formula) {
+        Some(false) => Outcome {
+            verdict: Verdict::Agree,
+            trust: Trust::Certified,
+            expected: "false (x>0 and x<0 cannot both hold)".to_string(),
+            actual: "false (self-verified by eliminate_dnf)".to_string(),
+        },
+        Some(true) => Outcome {
+            verdict: Verdict::Disagree,
+            trust: Trust::Certified,
+            expected: "false".to_string(),
+            actual: "true (self-verified by eliminate_dnf)".to_string(),
+        },
+        None => declined("eliminate_dnf(x>0 AND x<0)"),
+    }
+}
+/// Near-miss control: `exists x. x>0 AND x<5` -- true (e.g. x=1), the same
+/// conjunction SHAPE as `dnf3` but satisfiable.
+fn dnf3_conjunction_sat_ctrl() -> Outcome {
+    let disjuncts = vec![vec![
+        Atom::new(qe::integer_poly(&[0, 1]), Relation::Gt),
+        Atom::new(qe::integer_poly(&[-5, 1]), Relation::Lt),
+    ]];
+    let formula = Dnf::new(disjuncts);
+    match eliminate_dnf(&formula) {
+        Some(true) => Outcome {
+            verdict: Verdict::Agree,
+            trust: Trust::Certified,
+            expected: "true (e.g. x=1 satisfies 0<x<5)".to_string(),
+            actual: "true (self-verified by eliminate_dnf)".to_string(),
+        },
+        Some(false) => Outcome {
+            verdict: Verdict::Disagree,
+            trust: Trust::Certified,
+            expected: "true".to_string(),
+            actual: "false (self-verified by eliminate_dnf)".to_string(),
+        },
+        None => declined("eliminate_dnf(x>0 AND x<5)"),
+    }
+}
+
+// ============================================================================
+// Entries: second-pass modules — qe_bivariate
+// ============================================================================
+
+fn bipoly(rows: &[&[i128]]) -> Vec<Vec<Rational>> {
+    rows.iter()
+        .map(|row| row.iter().map(|&c| Rational::integer(c)).collect())
+        .collect()
+}
+
+/// The unit circle's boundary `y^2+x^2-1=0`: `exists y` holds exactly on
+/// the CLOSED interval `x in [-1,1]`.
+fn bv1_circle_boundary_closed() -> Outcome {
+    let atom = BiAtom::new(bipoly(&[&[-1, 0, 1], &[0], &[1]]), Relation::Eq);
+    match eliminate_y(&ExistsYFormula::new(vec![atom])) {
+        Ok(cert) => {
+            let verified = cert.verify().is_ok();
+            let description = cert.describe();
+            let agree = verified && description == "x ∈ [-1, 1]";
+            Outcome {
+                verdict: if agree {
+                    Verdict::Agree
+                } else {
+                    Verdict::Disagree
+                },
+                trust: if verified {
+                    Trust::Certified
+                } else {
+                    Trust::Unknown
+                },
+                expected: "x ∈ [-1, 1] (the unit circle's boundary)".to_string(),
+                actual: format!("{description}, verify_ok={verified}"),
+            }
+        }
+        Err(fault) => declined(&format!("eliminate_y(y^2+x^2-1=0): {fault:?}")),
+    }
+}
+/// Near-miss control: the SAME polynomial but `>` instead of `=` -- `exists
+/// y. y^2+x^2-1>0` is a TAUTOLOGY (`y` unbounded, so `y^2` can always
+/// exceed `1-x^2`), the whole line rather than a bounded interval.
+fn bv1_exterior_tautology_ctrl() -> Outcome {
+    let atom = BiAtom::new(bipoly(&[&[-1, 0, 1], &[0], &[1]]), Relation::Gt);
+    match eliminate_y(&ExistsYFormula::new(vec![atom])) {
+        Ok(cert) => {
+            let verified = cert.verify().is_ok();
+            let description = cert.describe();
+            let agree = verified && description == "x ∈ (-∞, ∞)";
+            Outcome {
+                verdict: if agree {
+                    Verdict::Agree
+                } else {
+                    Verdict::Disagree
+                },
+                trust: if verified {
+                    Trust::Certified
+                } else {
+                    Trust::Unknown
+                },
+                expected: "x ∈ (-∞, ∞) (y is unbounded, so this always holds)".to_string(),
+                actual: format!("{description}, verify_ok={verified}"),
+            }
+        }
+        Err(fault) => declined(&format!("eliminate_y(y^2+x^2-1>0): {fault:?}")),
+    }
+}
+
+/// The open unit disk `y^2+x^2-1<0`: `exists y` holds on the OPEN interval
+/// `x in (-1,1)` -- this crate's own doctest example for `eliminate_y`.
+fn bv2_disk_interior_open() -> Outcome {
+    let atom = BiAtom::new(bipoly(&[&[-1, 0, 1], &[0], &[1]]), Relation::Lt);
+    match eliminate_y(&ExistsYFormula::new(vec![atom])) {
+        Ok(cert) => {
+            let verified = cert.verify().is_ok();
+            let description = cert.describe();
+            let agree = verified && description == "x ∈ (-1, 1)";
+            Outcome {
+                verdict: if agree {
+                    Verdict::Agree
+                } else {
+                    Verdict::Disagree
+                },
+                trust: if verified {
+                    Trust::Certified
+                } else {
+                    Trust::Unknown
+                },
+                expected: "x ∈ (-1, 1) (the open unit disk)".to_string(),
+                actual: format!("{description}, verify_ok={verified}"),
+            }
+        }
+        Err(fault) => declined(&format!("eliminate_y(y^2+x^2-1<0): {fault:?}")),
+    }
+}
+
+/// The parabola `y^2-x=0`: `exists y` holds exactly on `x >= 0`.
+fn bv3_parabola_halfline() -> Outcome {
+    let atom = BiAtom::new(bipoly(&[&[0, -1], &[0], &[1]]), Relation::Eq);
+    match eliminate_y(&ExistsYFormula::new(vec![atom])) {
+        Ok(cert) => {
+            let verified = cert.verify().is_ok();
+            let description = cert.describe();
+            let agree = verified && description == "x ∈ [0, ∞)";
+            Outcome {
+                verdict: if agree {
+                    Verdict::Agree
+                } else {
+                    Verdict::Disagree
+                },
+                trust: if verified {
+                    Trust::Certified
+                } else {
+                    Trust::Unknown
+                },
+                expected: "x ∈ [0, ∞) (y=sqrt(x) real iff x>=0)".to_string(),
+                actual: format!("{description}, verify_ok={verified}"),
+            }
+        }
+        Err(fault) => declined(&format!("eliminate_y(y^2-x=0): {fault:?}")),
+    }
+}
+
+// ============================================================================
+// Entries: second-pass — symbolic-lambda Poisson (probability, item 9 wave
+// two)
+// ============================================================================
+
+/// `Poisson(lambda)` with SYMBOLIC lambda: total mass certifies to exactly
+/// 1 (the exponential-series machinery this crate's `infinite_sum` gained,
+/// per file 13's item 9 wave-two log).
+fn prob4_poisson_symbolic_totalmass() -> Outcome {
+    let d = Discrete::Poisson(CasExpr::var("lam"));
+    let cert = d.total_mass();
+    let certified = cert.is_certified();
+    let matches_expected = matches!(
+        equal(&cert.claim, &i(1)),
+        ZeroTest::Certified { equal: true, .. }
+    );
+    Outcome {
+        verdict: if certified && matches_expected {
+            Verdict::Agree
+        } else {
+            Verdict::Disagree
+        },
+        trust: if certified {
+            Trust::Certified
+        } else {
+            Trust::Uncertified
+        },
+        expected: "certified total mass 1, with SYMBOLIC lambda".to_string(),
+        actual: format!("certified={certified}, claim={}", cert.claim),
+    }
+}
+
+/// `E[Poisson(lambda)] = lambda`, symbolic.
+fn prob5_poisson_symbolic_mean() -> Outcome {
+    let d = Discrete::Poisson(CasExpr::var("lam"));
+    let cert = d.mean();
+    let certified = cert.is_certified();
+    let matches_expected = matches!(
+        equal(&cert.claim, &CasExpr::var("lam")),
+        ZeroTest::Certified { equal: true, .. }
+    );
+    Outcome {
+        verdict: if certified && matches_expected {
+            Verdict::Agree
+        } else {
+            Verdict::Disagree
+        },
+        trust: if certified {
+            Trust::Certified
+        } else {
+            Trust::Uncertified
+        },
+        expected: "certified: E[Poisson(lambda)] = lambda, symbolic".to_string(),
+        actual: format!("certified={certified}, claim={}", cert.claim),
+    }
+}
+
+/// `Var[Poisson(lambda)] = lambda`, symbolic (the Poisson's mean and
+/// variance always coincide).
+fn prob6_poisson_symbolic_variance() -> Outcome {
+    let d = Discrete::Poisson(CasExpr::var("lam"));
+    let cert = d.variance();
+    let certified = cert.is_certified();
+    let matches_expected = matches!(
+        equal(&cert.claim, &CasExpr::var("lam")),
+        ZeroTest::Certified { equal: true, .. }
+    );
+    Outcome {
+        verdict: if certified && matches_expected {
+            Verdict::Agree
+        } else {
+            Verdict::Disagree
+        },
+        trust: if certified {
+            Trust::Certified
+        } else {
+            Trust::Uncertified
+        },
+        expected: "certified: Var[Poisson(lambda)] = lambda, symbolic".to_string(),
+        actual: format!("certified={certified}, claim={}", cert.claim),
+    }
+}
+/// Near-miss control: the variance certificate's claim is NOT `2*lambda` --
+/// a plausible-looking wrong answer (mean+variance summed, or a doubled
+/// variance) that the certificate must not agree with.
+fn prob6_poisson_symbolic_variance_ctrl() -> Outcome {
+    let d = Discrete::Poisson(CasExpr::var("lam"));
+    let cert = d.variance();
+    let wrong_claim = i(2) * CasExpr::var("lam");
+    let equals_wrong = matches!(
+        equal(&cert.claim, &wrong_claim),
+        ZeroTest::Certified { equal: true, .. }
+    );
+    Outcome {
+        verdict: if equals_wrong {
+            Verdict::Disagree
+        } else {
+            Verdict::Agree
+        },
+        trust: Trust::Certified,
+        expected: "the variance claim is NOT 2*lambda".to_string(),
+        actual: format!("claim={}, equals_2lambda={equals_wrong}", cert.claim),
     }
 }
 
@@ -2031,6 +3691,34 @@ fn main() {
             Core,
             prob3_binomial_mean
         ),
+        e!(
+            "prob4-exponential-symbolic-mgf",
+            None,
+            Some("probability"),
+            Core,
+            prob4_exponential_symbolic_mgf
+        ),
+        e!(
+            "prob5-normal-symbolic-mgf",
+            None,
+            Some("probability"),
+            Core,
+            prob5_normal_symbolic_mgf
+        ),
+        e!(
+            "prob6-normal-negative-variance",
+            None,
+            Some("probability"),
+            DeclineExpected,
+            prob6_normal_negative_variance_declines
+        ),
+        e!(
+            "prob7-geometric-symbolic-p",
+            None,
+            Some("probability"),
+            DeclineExpected,
+            prob7_geometric_symbolic_p_declines
+        ),
         // first-pass modules: geometry_beyond
         e!(
             "gb1-conic-unit-circle",
@@ -2059,6 +3747,354 @@ fn main() {
             Some("geometry_beyond"),
             Core,
             gb2_isometry_shear_rejected
+        ),
+        // second-pass modules: enclosure_special
+        e!(
+            "es1-gamma-integer",
+            None,
+            Some("enclosure_special"),
+            Core,
+            es1_gamma_integer
+        ),
+        e!(
+            "es2-erf-one",
+            None,
+            Some("enclosure_special"),
+            Core,
+            es2_erf_one
+        ),
+        e!(
+            "es2-erf-one-ctrl",
+            None,
+            Some("enclosure_special"),
+            Core,
+            es2_erf_one_ctrl
+        ),
+        e!(
+            "es3-besselj0-zero",
+            None,
+            Some("enclosure_special"),
+            Core,
+            es3_besselj0_zero
+        ),
+        e!(
+            "es4-krawczyk-circle-line",
+            None,
+            Some("enclosure_special"),
+            Core,
+            es4_krawczyk_circle_line
+        ),
+        // second-pass modules: fps_analytic
+        e!(
+            "fa1-radius-exact-geometric",
+            Some("series"),
+            Some("fps_analytic"),
+            Core,
+            fa1_radius_exact_geometric
+        ),
+        e!(
+            "fa1-radius-exact-geometric-ctrl",
+            Some("series"),
+            Some("fps_analytic"),
+            Core,
+            fa1_radius_exact_geometric_ctrl
+        ),
+        e!(
+            "fa2-radius-algebraic-fibonacci",
+            Some("series"),
+            Some("fps_analytic"),
+            Core,
+            fa2_radius_algebraic_fibonacci
+        ),
+        e!(
+            "fa3-coefficient-asymptotics-geometric",
+            Some("series"),
+            Some("fps_analytic"),
+            Core,
+            fa3_coefficient_asymptotics_geometric
+        ),
+        // second-pass modules: numberfield_ideals
+        e!(
+            "nfi1-ideal-norm-principal",
+            Some("number theory"),
+            Some("numberfield_ideals"),
+            Core,
+            nfi1_ideal_norm_principal
+        ),
+        e!(
+            "nfi2-prime-splitting-3-splits",
+            Some("number theory"),
+            Some("numberfield_ideals"),
+            Core,
+            nfi2_prime_splitting_3_splits
+        ),
+        e!(
+            "nfi2-prime-splitting-2-ramifies-ctrl",
+            Some("number theory"),
+            Some("numberfield_ideals"),
+            Core,
+            nfi2_prime_splitting_2_ramifies_ctrl
+        ),
+        e!(
+            "nfi3-class-number-20",
+            Some("number theory"),
+            Some("numberfield_ideals"),
+            Core,
+            nfi3_class_number_20
+        ),
+        // second-pass modules: permgroup_sylow
+        e!(
+            "sy1-s4-sylow2-order",
+            None,
+            Some("permgroup_sylow"),
+            Core,
+            sy1_s4_sylow2_order
+        ),
+        e!(
+            "sy2-s4-sylow3-count",
+            None,
+            Some("permgroup_sylow"),
+            Core,
+            sy2_s4_sylow3_count
+        ),
+        e!(
+            "sy3-a4-normal-in-s4",
+            None,
+            Some("permgroup_sylow"),
+            Core,
+            sy3_a4_normal_in_s4
+        ),
+        e!(
+            "sy3-a4-normal-in-s4-ctrl",
+            None,
+            Some("permgroup_sylow"),
+            Core,
+            sy3_a4_normal_in_s4_ctrl
+        ),
+        // second-pass modules: homology_coefficients
+        e!(
+            "hc1-rp2-torsion-f2",
+            None,
+            Some("homology_coefficients"),
+            Core,
+            hc1_rp2_torsion_f2
+        ),
+        e!(
+            "hc1-rp2-torsion-q-ctrl",
+            None,
+            Some("homology_coefficients"),
+            Core,
+            hc1_rp2_torsion_q_ctrl
+        ),
+        e!(
+            "hc2-circle-agrees-across-rings",
+            None,
+            Some("homology_coefficients"),
+            Core,
+            hc2_circle_agrees_across_rings
+        ),
+        e!(
+            "hc3-sphere-boundary-tetrahedron",
+            None,
+            Some("homology_coefficients"),
+            Core,
+            hc3_sphere_boundary_tetrahedron
+        ),
+        // second-pass modules: homology_cohomology
+        e!(
+            "co1-rp2-cohomology-torsion-shift",
+            None,
+            Some("homology_cohomology"),
+            Core,
+            co1_rp2_cohomology_torsion_shift
+        ),
+        e!(
+            "co1-rp2-cohomology-torsion-not-at-h1-ctrl",
+            None,
+            Some("homology_cohomology"),
+            Core,
+            co1_rp2_cohomology_torsion_not_at_h1_ctrl
+        ),
+        e!(
+            "co2-circle-cohomology",
+            None,
+            Some("homology_cohomology"),
+            Core,
+            co2_circle_cohomology
+        ),
+        e!(
+            "co3-sphere-cohomology",
+            None,
+            Some("homology_cohomology"),
+            Core,
+            co3_sphere_cohomology
+        ),
+        // second-pass modules: homology_induced
+        e!(
+            "ind1-circle-identity-isomorphism",
+            None,
+            Some("homology_induced"),
+            Core,
+            ind1_circle_identity_isomorphism
+        ),
+        e!(
+            "ind2-circle-collapse-to-edge",
+            None,
+            Some("homology_induced"),
+            Core,
+            ind2_circle_collapse_to_edge
+        ),
+        e!(
+            "ind3-is-simplicial-rejects-missing-face",
+            None,
+            Some("homology_induced"),
+            Core,
+            ind3_is_simplicial_rejects_missing_face
+        ),
+        // second-pass modules: homology_persistent
+        e!(
+            "per1-circle-then-fill-h1-bar",
+            None,
+            Some("homology_persistent"),
+            Core,
+            per1_circle_then_fill_h1_bar
+        ),
+        e!(
+            "per2-circle-then-fill-h0-essential",
+            None,
+            Some("homology_persistent"),
+            Core,
+            per2_circle_then_fill_h0_essential
+        ),
+        e!(
+            "per3-prefix-before-fill-lacks-triangle",
+            None,
+            Some("homology_persistent"),
+            Core,
+            per3_prefix_before_fill_lacks_triangle
+        ),
+        e!(
+            "per3-prefix-after-fill-has-triangle-ctrl",
+            None,
+            Some("homology_persistent"),
+            Core,
+            per3_prefix_after_fill_has_triangle_ctrl
+        ),
+        // second-pass modules: qe_big (indirect, through qe::eliminate/eliminate_forall)
+        e!(
+            "qeb1-huge-coefficient-exists",
+            None,
+            Some("qe_big"),
+            Core,
+            qeb1_huge_coefficient_exists
+        ),
+        e!(
+            "qeb1-huge-coefficient-exists-ctrl",
+            None,
+            Some("qe_big"),
+            Core,
+            qeb1_huge_coefficient_exists_ctrl
+        ),
+        e!(
+            "qeb2-huge-coefficient-forall",
+            None,
+            Some("qe_big"),
+            Core,
+            qeb2_huge_coefficient_forall
+        ),
+        e!(
+            "qeb3-huge-coefficient-inequality",
+            None,
+            Some("qe_big"),
+            Core,
+            qeb3_huge_coefficient_inequality
+        ),
+        // second-pass modules: qe_dnf
+        e!(
+            "dnf1-true-via-first-disjunct",
+            None,
+            Some("qe_dnf"),
+            Core,
+            dnf1_true_via_first_disjunct
+        ),
+        e!(
+            "dnf2-false-no-real-root",
+            None,
+            Some("qe_dnf"),
+            Core,
+            dnf2_false_no_real_root
+        ),
+        e!(
+            "dnf3-conjunction-unsat",
+            None,
+            Some("qe_dnf"),
+            Core,
+            dnf3_conjunction_unsat
+        ),
+        e!(
+            "dnf3-conjunction-sat-ctrl",
+            None,
+            Some("qe_dnf"),
+            Core,
+            dnf3_conjunction_sat_ctrl
+        ),
+        // second-pass modules: qe_bivariate
+        e!(
+            "bv1-circle-boundary-closed",
+            None,
+            Some("qe_bivariate"),
+            Core,
+            bv1_circle_boundary_closed
+        ),
+        e!(
+            "bv1-exterior-tautology-ctrl",
+            None,
+            Some("qe_bivariate"),
+            Core,
+            bv1_exterior_tautology_ctrl
+        ),
+        e!(
+            "bv2-disk-interior-open",
+            None,
+            Some("qe_bivariate"),
+            Core,
+            bv2_disk_interior_open
+        ),
+        e!(
+            "bv3-parabola-halfline",
+            None,
+            Some("qe_bivariate"),
+            Core,
+            bv3_parabola_halfline
+        ),
+        // second-pass — symbolic-lambda Poisson (probability, item 9 wave two)
+        e!(
+            "prob4-poisson-symbolic-totalmass",
+            None,
+            Some("probability"),
+            Core,
+            prob4_poisson_symbolic_totalmass
+        ),
+        e!(
+            "prob5-poisson-symbolic-mean",
+            None,
+            Some("probability"),
+            Core,
+            prob5_poisson_symbolic_mean
+        ),
+        e!(
+            "prob6-poisson-symbolic-variance",
+            None,
+            Some("probability"),
+            Core,
+            prob6_poisson_symbolic_variance
+        ),
+        e!(
+            "prob6-poisson-symbolic-variance-ctrl",
+            None,
+            Some("probability"),
+            Core,
+            prob6_poisson_symbolic_variance_ctrl
         ),
     ];
 

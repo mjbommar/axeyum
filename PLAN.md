@@ -89,21 +89,21 @@ now. Nothing was deleted.
   (baseline 30), LIA cuts **35** (baseline 26), NIA UNSAT **40** (baseline 40),
   NRA degree **40** (baseline 40), and string bound **40** (baseline 8). These
   are load-sensitive local frontier measurements; they do not raise baselines.
-- The append-only head-to-head ledger currently covers **nine divisions**
-  (QF_SLIA, QF_BV, UF, QF_LIA, QF_RDL, QF_LRA, QF_UFLIA, QF_IDL, QF_NIA — the
-  [2026-08-21 gap analysis](docs/plan/gap-analysis-smt-solvers-2026-08-21.md)
-  §1.3 found the committed `QF_ABV.txt` and `QF_UF.txt` parity lists have never
-  been run). Its weak measured edges, all from the 2026-08-21 sweep at solver
-  commit `cb4a391c9`, are QF_NIA **39/83 = 47.0%**, QF_IDL
-  **66/118 = 55.9%**, QF_UFLIA **113/180 = 62.8%** (up from 94/180 after the
-  theory-core-minimisation fix, ADR-0538), QF_LRA **88/134 = 65.7%**, and
-  QF_RDL **102/148 = 68.9%**. Every credited entry has zero disagreements.
-  Read the latest entry per division, sorted by **solver commit** (not date —
-  two commits share the 2026-08-21 date) in
-  [`bench-results/PARITY.md`](bench-results/PARITY.md); never copy an older
-  entry merely because it has a higher score. `scripts/check-parity-freshness.py`
-  exits 1 as of the 2026-09-05 performance review: all nine divisions are past
-  the 14-day budget.
+- The append-only head-to-head ledger covers **all eleven committed lists**,
+  every one re-measured on 2026-09-05 at solver commit `9914a1c0e` on idle
+  fleet hosts (s5, s6, s7), zero disagreements in 2,200 files
+  ([write-up](docs/research/11-design-review/2026-09-05-parity-remeasured.md)).
+  Weak edges: QF_NIA **39/87 = 44.8%**, QF_IDL **70/123 = 56.9%**, QF_LRA
+  **91/145 = 62.8%**, QF_UFLIA **122/180 = 67.8%**, QF_RDL **107/154 = 69.5%**.
+  Against 2026-08-21, Axeyum's count rose in six of nine re-measured divisions
+  (QF_UFLIA +9, QF_RDL +5, QF_IDL +4, QF_LRA +3, UF +2, QF_BV +1, QF_LIA +1)
+  and held in three; the three ratios that fell did so because the reference
+  gained files on an idle host. QF_ABV (179/197 = 90.9%) and QF_UF
+  (162/200 = 81.0%) have first entries. Read the latest entry per division,
+  sorted by **solver commit**, in [`bench-results/PARITY.md`](bench-results/PARITY.md);
+  never copy an older entry merely because it has a higher score.
+  `scripts/check-parity-freshness.py` exits 0 (11 of 11 fresh) as of
+  2026-09-05.
 - QF_BV evidence mode decides 130 UNSAT rows: **93/130 certified (71.5%)**,
   **79/130 rechecked from serialized text alone (60.8%)**, and **93/93
   certified rows independently checked against a fresh re-parse and term
@@ -172,6 +172,12 @@ now. Nothing was deleted.
 | 2026-09-05 | `b8243a54a` | ADR-1631, six facts, the lane status, and the `bernoulli-binomial-model` mutation suite. `validate-facts.py` derived 18 `depends_on` edges from the proof terms that nobody would have written by hand. |
 | 2026-09-05 | `197f26e1b` | The remaining four ADR-1631 theorems registered, so all ten are in the ledger; registering `zero_add` and `mul_neg` made three EXISTING entries incomplete and the ledger noticed. |
 | 2026-09-05 | `b1c450453`, `f4cb80c35`, `9385cd877` | Generated-artifact and formatting follow-ups: production-provenance ledger, `rustfmt` on the two files the `pub(super)` widening reflowed, private-helper census (`files_scanned` 616 → 620, exactly this lane's four files). |
+| 2026-09-05 | `8390bf4cf` | `Complex.abs_sub_le`, `Complex.abs_mul_le_of_bounds`, `Complex.BoundedOn` + `bounded_on_unfold`, `Complex.UniformlyContinuousOn` (+ `.mk`/`.rec`/`.modulus`/`.spec`), `uniformlyContinuous_const`/`_id`, and `uniformlyContinuous_of_hasDerivative` — 12 declarations in a new `complex/estimates.rs`, all axiom-free. `abs_mul_le_of_bounds` is four monotonicity steps here where `CReal.abs_mul_le_of_bounds` needed two nonneg-product identities, because `Complex.abs_mul` is an exact `Equiv`. Seven tests, each positive paired with a negative control that must be REFUSED. |
+| 2026-09-05 | `8b92a520e` | `Complex.hasDerivative_mul` — the product rule — plus `Complex.bounded_on_add` and `Complex.bounded_on_mul`. Corrects two things ADR-1642's prose got wrong about the hypotheses (continuity is on `F`, the third bound on `G'`). Repairs the vacuous halved-modulus control from `8390bf4cf`. Registers a `complex-estimates` mutation suite with the two mutants the brief named, both on live subjects. |
+| 2026-09-05 | `b38f30374` | `Complex.abs_ofReal`, `Complex.abs_re_le`, `Complex.abs_im_le` in a new `complex/components.rs` — the only facts on this shelf that cross back to `CReal`, and Cauchy–Riemann's three prerequisites. All three route through `CReal.sqrt_sq`, whose argument must be NONNEGATIVE, so the square cancelled is `|t|·|t|` and never `t·t`; the bare-`t` form is pinned as a REFUSED control. Four tests, both directions of the `re`/`im` swap included. |
+| 2026-09-05 | `e2300c7f6` | The measured `complex-estimates` mutation run: both mutants killed 83 of 86 with IDENTICAL kill sets, refuting this suite's own prediction that the halving mutant would discriminate. Records the ~25x cost of a rejected ℂ ring identity and the `RUST_TEST_THREADS` requirement. |
+| 2026-09-05 | `b58b1e693` | The 13 new complex-shelf theorems in the fact ledger, generated from a captured `kernel_declaration_projection` emit so `formal.statement` is the kernel's own rendered type verbatim. All 13 carry `axiom_footprint: []`. Statement pins and a regenerated shape census with them. |
+| 2026-09-05 | `b301be53d` | Regenerated the production provenance ledger and the kernel dependency projection, which `check-merge-hygiene.sh` found stale. Not this lane's breakage — the projection was 138 declarations past tolerance with this lane's 17 removed — but fixed rather than passed on. Hygiene is now PASS on all twelve enforced guards, including the two that had SKIPPED on a stale `shape_search`. |
 | 2026-09-05 | `fb502c560` | feat(conic): six-coefficient family, discriminant classification, circle instance, isometry action on coefficients, standard forms, focus-directrix; 56 names in a ConicNames registry |
 | 2026-09-05 | `232166c28` | fix(conic): the invariance corollaries passed the conic where the hypothesis binds (kernel TypeMismatch); adds examples/cpoint_theorem_inventory.rs |
 | 2026-09-05 | `8f6e69f41` | test(conic): register the 56 names in the sweep; 13 tests (5 evaluation with negative controls, 6 verbatim-statement, 2 structural) |
@@ -204,6 +210,10 @@ now. Nothing was deleted.
 | 2026-09-05 | `3243d58e8` | Two curated facts — `F:geo-incidence-model-rational-plane` (the consistency witness, checked by `kernel_declaration_projection --require-declaration Geo.qplane --require-kind definition`, the only in-tree tool that can assert a DEFINITION exists) and `F:geo-distinct-lines-meet-once`. `Geo` added to `validate-facts.py`'s `KERNEL_THEOREM_RE` namespace alternation, with BOTH halves pinned in the allowlist's own control suite: `Geo.qplane` accepted, `Geometry.qplane` and bare `Geo` still rejected. |
 | 2026-09-05 | `8dce39ab1` | `shape_search` declared the `geo` group as well as indexing it. Found through `check-merge-hygiene.sh`'s summary line, not its exit status — see the lane block. |
 | 2026-09-05 | `e15cef034` | Regenerated `artifacts/autogenesis/kernel-dependency-projection-v1.json` (declarations 4291 → 4485), because `check-merge-hygiene.sh` guard 10 compares it against the live `shape_search` count with a tolerance of 100 and `Geo.*` adds 75. |
+| 2026-09-05 | `5aa098f1b` | `int_prelude/order_squares.rs`: the ℤ order shelf as 18 laws — sign/negation plumbing, halving, left cancellation, the two-sided square bound, the centered representative, the strict decrease. Bounds spelled `add c c`, not `mul (ofNat 2) c`. Held-out rows (`integer-natcast`'s `mul_le_mul_of_*`, `descent-and-well-ordering`'s `lt_of_sum_four_squares_eq_mul`) named in the module doc and NOT declared. |
+| 2026-09-05 | `81e9fff1f` | `order_squares_tests.rs`: the statement pin rebuilds all 23 `∀`-telescoped types and compares against the ENVIRONMENT-stored type (an axiom-footprint sweep cannot see a weakened bound); `contains` before `axiom_footprint`; both signs of the square bound admitted and both out-of-band arguments refused; both branches of the centered representative pinned at `m = 5` with `c = 3` refused. `derived_laws` 294 → 312, recounted. |
+| 2026-09-05 | `ee00002dc` | `Int.descentMultiplierBounds` and four supporting laws (`lt_of_mul_lt_mul_left`, `nonneg_of_mul_nonneg_left`, `pos_of_mul_pos_left`, `eq_zero_of_sq_add_sq_eq_zero`). All five admitted on the first attempt. `derived_laws` 312 → 317. Worked instance `5*1 = 2² + 1²` certifies `0 ≤ 1 ∧ 1 < 5`; `q = 2` REFUSED even though `0 ≤ 2 ∧ 2 < 5` is true. |
+| 2026-09-05 | `f6bea17df` | `Int.exists_small_multiple_of_sq_add_one` — the descent's ENTRY POINT, over `Int` alone and WITHOUT primality: from `0 < p`, `1+1 ≤ p` and `x·x ≡ −1 (mod p)`, a `k` and `c` with `k·p = c² + 1²` and `0 < k < p`. Centering `x` first is what makes the bound available. `two_squares.rs`'s module doc claims this landed already under `declare_exists_mul_isSumOfTwoSquares_of_residue`; that name occurs once, inside the doc comment, and does not exist. `derived_laws` 317 → 319. |
 | 2026-09-05 | lean-c4-admission | ADR-1662's recommended trusted-substitution extension, built and re-measured. `dif_pos`, `Eq.subst`, `And.left` reconstructed in `trusted_substitution`; `Nat.le_of_lt_add_one` in `nat_order_substitution`; the kernel's own quotient package exempted from the statement-isolation gate (overturning doc 294's hard rule). Each substitution carries a positive control and a negative control in which the reconstructed value is offered at a deliberately wrong type with every Rust-side guard bypassed. **Census re-run over the same 756 rows: 390 admitted before, 390 after** — the five names fall to zero as first blockers and the same 150 rows reappear behind the next declaration, exactly −150/+150. What is behind the 361 now: 217 rows behind axioms this kernel excludes, 114 behind Lean's well-founded-recursion machinery, 30 behind ordinary constructive names. `eq_self` (97, the largest blocker) is NOT constructive — its own Lean 4.30 closure reaches `propext`, re-confirming docs 240 and 295. Commits `88609630f`, `a43c7dc2d`, `afc01dbd4`; evidence `artifacts/measurements/statement-import-blocker-census-2026-09-05-after-c4.json` (carries `delta_against_baseline`) and ADR-1667. |
 | 2026-09-05 | lean-carrier-ledger | the carrier correspondence ledger: schema, 16-row ledger, gate + control suite + mutation coverage, generated markdown view, ADR-1665, and progress-log rows in `14-lean-lang.md`, `03-classical-analysis.md`, `07-combinatorics.md` |
 | 2026-09-05 | lean-claim-surface | One paragraph on what "Lean compatible" means, reused verbatim in `docs/plan/global/10-status.md`, `README.md`, `docs/PROJECT-STATE.md`; A9 rewritten off the false "neither lean nor elan" premise; K3 row residual sentence added with no assurance-field change; three July Lean docs marked historical (ADR-0717 C-series); `docs/math-department/14-lean-lang.md` items 1 and 10 ticked; ADR-1668 added and indexed. |
@@ -46076,6 +46086,98 @@ and `--require-pin` refuses a missing pin before the projection is even read.
 | the CHECKER registered, not only its tests | `scripts/check.sh`, `justfile` |
 | the decision | `docs/research/09-decisions/adr-1215-…md` |
 
+**The product-rule blocker ADR-1642 named is closed** (`WIP`,
+complex-estimates, 2026-09-05, ADR-1646). `Complex.BoundedOn` and
+`Complex.UniformlyContinuousOn` did not exist; both now do, in the real
+shelf's shape with the interval's two range hypotheses collapsed to one
+`Complex.InDisc` and the modulus still carried as `Nat → Nat` DATA. With them
+came `Complex.abs_sub_le`, `Complex.abs_mul_le_of_bounds`,
+`Complex.bounded_on_unfold`, the two non-vacuity witnesses
+(`uniformlyContinuous_const`/`_id`), and
+`Complex.uniformlyContinuous_of_hasDerivative`.
+
+**The measured finding is that the index arithmetic is not a ℂ problem at
+all.** Every bound in this development is a `CReal` or a `Nat`: the magnitude
+bound `(k+1)/1`, the accuracy `1/(e+1)`, the rescaled index `(k+1)·m + k`, the
+three-way equal split. Nothing in that arithmetic can observe which carrier
+produced the quantity being bounded. So `creal/derivative.rs`'s
+`rescale_index`, `mag_bound`, `fold_index0_first`, `fold_index0_second`,
+`mul_modulus_components`, `weaken_to_addend` and `fuse_three_equal_bounds` were
+made `pub(crate)` and CALLED rather than copied — a seven-line visibility diff
+instead of ~350 lines of transcription that would have diverged on the first
+correction to either side.
+
+**Two corrections to the brief, both from the real shelf's own record rather
+than re-derivation.** ADR-1642 says the product rule needs "a uniform bound on
+`|G|`, one on `|F'|`, one on `|F|`" and "a modulus of continuity for `G`".
+Both halves are off: the continuity requirement is on **`F`**, and the three
+bounds are on `F`, `G` and **`G'`** (`F'` never needs one — it appears only
+inside `F`'s own error term, which `HasDerivativeOn.spec` already bounds).
+`creal/derivative.rs`'s module documentation records that its own prose carried
+the mislabeled version until it was re-verified numerically. Transcribing
+ADR-1642's sentence literally would have produced a theorem that still
+type-checks with the hypotheses on the wrong functions.
+
+**Leibniz landed.** `Complex.hasDerivative_mul` is kernel-checked and
+axiom-free, with the four hypotheses the real one carries. Its
+five-hundred-line six-leaf algebraic shuffle — `expand_bound_term` twice,
+`expand_term3`, `cancel_middle`, and steps 8a–8f bringing `−F(y)G(x)` and
+`+G(x)F(y)` adjacent so they cancel — is ONE `ring_law_proof` call here.
+
+**`Complex.hasDerivative_polyEval` did NOT land, and the obstruction has
+moved.** It is no longer the product rule. An induction over the degree applies
+`hasDerivative_mul` at every step, and every step needs three fresh
+`BoundedOn` facts plus uniform continuity of the accumulator — i.e. closure of
+`BoundedOn` and `UniformlyContinuousOn` under `mul` and `add` on a disc, which
+is the same wall `CReal.hasDerivative_pow` at general `n` hit. Two of the four
+are now landed as well (`Complex.bounded_on_add`, `Complex.bounded_on_mul`),
+both short because `Complex.abs_mul_le_of_bounds` does the ℂ half and
+`fold_mag_bound_sum`/`fold_mag_bound_product` the `Nat` half. What remains is
+`Complex.uniformlyContinuous_mul` — whose real analogue is
+`creal/uniform_continuity.rs`'s separate second entry point, a slice on the
+order of this lane's own — and the induction, which must also carry
+`Complex.pow`'s derivative. Cauchy–Riemann was not reached and is independent
+of all of this: it needs `Complex.abs_ofReal`, `abs_re_le`, `abs_im_le`
+(the first via `CReal.sqrt_sq`, which exists), and a bridge from
+`Complex.HasDerivativeOn` on a disc to `CReal.HasDerivativeOn` on the interval
+a segment through the centre traces.
+
+**Both mutants the brief named were RUN, and the run refuted this lane's own
+prediction about them.** Baseline green at 86 tests; the dropped-cross-term
+mutant on Leibniz killed 83 of 86 and the un-halved-modulus mutant killed 83 of
+86, and the two kill sets are IDENTICAL — symmetric difference computed, not
+eyeballed. The three survivors are the three tests in the module that build no
+prelude. The suite comment had predicted the halving mutant would carry a
+named, small killed-set on top of the mass kill, because the modulus pair pins
+the index directly and its control should invert; it does not.
+`build_complex_prelude` is shared through one `OnceLock`, so either mutant
+takes the module down before any test reaches its own subject. **A mutation
+suite over a shared-prelude module can only report "the kernel refused
+something"** — to attribute a kill to a subject the test has to build its own
+kernel, which is exactly what the two surviving `the_ring_calculus_*` tests do.
+The prediction is recorded as refuted in the suite rather than quietly
+replaced.
+
+Two costs measured rather than assumed: the dropped-cross-term mutant's test
+phase ran **~90 minutes against a 212-second baseline** (~25x) — a wrong ring
+identity is not a cheap rejection on this carrier — and the first attempt was
+OOM-killed by `cargo-serialized.sh`'s 24 G ceiling at the default thread count,
+so the suite now documents `RUST_TEST_THREADS=4`.
+
+**A negative control of this lane's own was VACUOUS on its first run, and only
+the positive half failing exposed it.** The halved-modulus pair left
+`F, F', c, r, hf, k, n` free, so `Kernel::add_declaration` returned
+`UnboundFVar` for BOTH halves: the control asserted a refusal and got one, for
+a reason that had nothing to do with the halving. Had the vacuous half been the
+control's twin instead, the pair would have looked green. The repair runs both
+under binders. The rule this instance adds to the two known ways a negative
+control fails: when a positive/negative pair SHARES a construction, a
+construction error refuses both, and the control cannot tell that apart from
+success — so a control is only evidence while its positive twin is admitted.
+
+Detail in
+[ADR-1646](docs/research/09-decisions/adr-1646-the-complex-estimates-are-a-carrier-change-and-the-index-arithmetic-is-not.md).
+
 **ADR-0521: ℂ is built, it is free, and its missing order is REFUTED rather than
 omitted (`WIP`, agent-complex-foundation, 2026-08-18).** `Complex` — a
 one-constructor pair of `CReal`s with equality the *defined* relation
@@ -51243,6 +51345,58 @@ rule, confirmed complete before this report). `validate-facts.py` — 805
 facts, 0 errors. `validate-autogenesis-operations.py` — unchanged, 27.
 `validate-producer-contract-declines.py` — unchanged, 27.
 `check-autogenesis-holdout-isolation.py` — PASS, held_out=37 unchanged.
+
+**The ordering half of Fermat's two-square descent is built** (`DONE`,
+int-order-two-squares, 2026-09-05). W3-10's first slice (ADR-1633) sized the
+remaining obstruction as "this prelude has no `Int` absolute-value order lemmas
+at all: `natAbs_le_iff`, `mul_le_mul` over ℤ and `sq_le_sq` do not [exist]".
+Re-measured on 2026-09-05 with a freshly built `shape_search`
+(`declarations=3236`, positive control `Int.descentStep` FOUND, so the index
+post-dates the merge that added it): **two of those three already existed.**
+`Int.nat_abs_le_iff_mul_self_le` landed 2026-09-01 in `nat_abs_mirrors.rs` when
+the `integer-absolute-value` held-out family was drawn and scored, and
+`Int.mul_le_mul_of_nonneg_left` was already declared. Only `sq_le_sq` was
+genuinely absent, and the real gap was not a name at all — it was the **shape**
+of the bound.
+
+`int_prelude/order_squares.rs` lands 25 axiom-free laws (ADR-1647): the
+sign/negation plumbing, halving (`le_of_add_le_add_self`) and left cancellation
+(`le_of_mul_le_mul_left`, `lt_of_mul_lt_mul_left`), the two-sided square bound
+`sq_le_sq_of_neg_le_of_le`, the bounded representative
+`exists_centered_representative`, the strict decrease
+`sq_add_sq_lt_sq_of_bounds`, and the descent's termination certificate
+`descentMultiplierBounds`, which takes the FACTORISATION `m*q = c² + e²` rather
+than the measure and returns `0 ≤ q ∧ q < m` — and, on the last pass, the
+descent's **entry point** `exists_small_multiple_of_sq_add_one`, which turns
+`x·x ≡ −1 (mod p)` into a `k` and `c` with `k·p = c² + 1²` and `0 < k < p`.
+
+Every bound is spelled `Int.add c c`, never `Int.mul (ofNat 2) c`. The two are
+equal; the `add` form is the one the existing shelf can move (doubling an
+inequality is `Int.add_le_add h h`), and it removes every numeral from the
+halving step, which is the only division in the whole argument.
+
+**`Int.fermatTwoSquares` did NOT land.** Three pieces plus one bridge remain,
+all sized in the notes of `F:int-fermat-two-squares` and none blocked on a
+missing capability: the `Nat` bridge from a prime `p = 2m+1` with `Nat.Even m`
+to the entry point's two `Int` hypotheses; the divisibility `m ∣ c² + e²` that
+produces the NEXT multiplier; the `q ≠ 0` argument (the only step that consumes
+primality); and the `Nat.strongInduction` assembly. One correction recorded
+there and in ADR-1647: `two_squares.rs`'s module doc says the entry point
+`declare_exists_mul_isSumOfTwoSquares_of_residue` already landed — **it does
+not exist**, the name occurs once in that doc comment and is not in
+`declare_two_squares_all`. This lane built it for the first time, under a
+different name and without primality as a hypothesis.
+
+The statement pin is mutation-measured: changing its own expected conclusion
+for `sq_add_sq_lt_sq_of_bounds` from `lt S (m*m)` to `lt S m`, leaving the
+declaration alone so the prelude still builds, kills **exactly one** test
+(121 passed, 1 failed). The two mutants the brief named both hit the kernel
+instead and kill 119 of 122.
+
+Three real defects the kernel found and this lane fixed:
+`Int.add_le_add_iff_left` binds `(b, c, a)`, so the shared term is its LAST
+argument (three call sites got it wrong), and one `isymm` had its equation ends
+swapped.
 
 **Status:** landed. `Int.sumRange` and eight lemmas exist, all admitted by the
 trusted gate on the first attempt, all `axiom_footprint` 0. ADR-1260's named
@@ -60409,7 +60563,21 @@ targets and preserves branches and live work.
 **Stop.** Never recursively delete a worktree root, infer safety from age alone,
 or remove dirty/unmerged state to meet a free-space target.
 
-### A12 — Solver performance instruments (`TODO`, P1)
+### A12 — Solver performance instruments (`WIP`, P1)
+
+**Plan of record.** The
+[SMT/SAT parity plan](docs/plan/smt-parity-plan-2026-09-05.md) (2026-09-05) names a
+measured or to-be-censused root cause for every one of the eleven divisions,
+twelve ordered slices with scoring files and exit criteria, and the parity
+count each division must reach; its slice table is the queue below this
+paragraph from here on. Items 1 to 3 and 6 to 8 of the original list landed
+on 2026-09-05 (timing ratchet, gate (b) measured, criterion benches, route
+timing and theory stage attribution, rustc-hash in `axeyum-ir`, profiling
+recipes); item 4 landed as ADR-1701 slice 1 and its slice 2 is scoped in
+[the design memo](docs/plan/adr-1701-slice-2-design-2026-09-05.md); item 5 landed as
+ADR-1702 slice 1. The measured root cause of the difference-logic deficit is
+`CdclT::unit_propagate`'s full clause rescan (no watched literals), not the
+engine count; see the plan §2.1.
 
 **Why now.** The
 [2026-09-05 performance review](docs/research/11-design-review/2026-09-05-sat-smt-performance-and-architecture-review.md)

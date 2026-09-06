@@ -3759,7 +3759,7 @@ fn declare_has_derivative_sub(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(),
 /// rescale each term's own accuracy against its own magnitude bound, reading
 /// that rescaled accuracy back down to `1/(3e+3)` (`nat_div_succ_scale`
 /// undoes exactly this shape).
-fn rescale_index(d: &mut IntDev<'_>, k: ExprId, m: ExprId) -> ExprId {
+pub(crate) fn rescale_index(d: &mut IntDev<'_>, k: ExprId, m: ExprId) -> ExprId {
     let succ_k = d.succ(k);
     let mul_km = d.mul(succ_k, m);
     d.add(mul_km, k)
@@ -3769,7 +3769,7 @@ fn rescale_index(d: &mut IntDev<'_>, k: ExprId, m: ExprId) -> ExprId {
 /// magnitude-bound shape `hasDerivative_smul`'s own scalar hypothesis uses,
 /// reused here for three separate hypotheses (`F`, `G` and `G'`, each
 /// bounded by its own `Nat` on `[a,b]`).
-fn mag_bound(d: &mut IntDev<'_>, p: CRealPrelude, k: ExprId) -> ExprId {
+pub(crate) fn mag_bound(d: &mut IntDev<'_>, p: CRealPrelude, k: ExprId) -> ExprId {
     let succ_k = d.succ(k);
     let zero_idx = d.num(0);
     let r = div_succ_expr(d, p, succ_k, zero_idx);
@@ -3957,7 +3957,7 @@ fn bounded_on_mul_index(
 /// folds the two index-`0` bounds into one `natDivSucc`, then the `Nat`
 /// identity's lift (via [`nat_eq_to_rat`]) folds that into `mag_bound k3`
 /// itself. Returns `(mag_bound k1, mag_bound k2, mag_bound k3, k3, proof)`.
-fn fold_mag_bound_product(
+pub(crate) fn fold_mag_bound_product(
     d: &mut IntDev<'_>,
     p: CRealPrelude,
     k1: ExprId,
@@ -4162,7 +4162,7 @@ fn bounded_on_add_index(
 /// directly, then the `Nat` identity's lift (via [`nat_eq_to_rat`]) folds
 /// that into `mag_bound k3`. Returns `(mag_bound k1, mag_bound k2, mag_bound
 /// k3, k3, proof)` — the additive mirror of [`fold_mag_bound_product`].
-fn fold_mag_bound_sum(
+pub(crate) fn fold_mag_bound_sum(
     d: &mut IntDev<'_>,
     p: CRealPrelude,
     k1: ExprId,
@@ -4345,7 +4345,7 @@ fn declare_bounded_on_add(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), Ker
 /// MUST be built as `rescale_index(k, m)` (`Rat.natDivSucc_scale`'s own
 /// index) for the final fold to typecheck. Returns `(big_expr, small_expr,
 /// ofr_out, proof)`.
-fn fold_index0_first(
+pub(crate) fn fold_index0_first(
     d: &mut IntDev<'_>,
     p: CRealPrelude,
     k: ExprId,
@@ -4413,7 +4413,7 @@ fn fold_index0_first(
 /// derive `Equiv` to `ofRat (natDivSucc 1 m)` via one extra `Rat.mul_comm`
 /// step ahead of [`fold_index0_first`]'s own fold. Returns `(small_expr,
 /// big_expr, ofr_out, proof)`.
-fn fold_index0_second(
+pub(crate) fn fold_index0_second(
     d: &mut IntDev<'_>,
     p: CRealPrelude,
     k: ExprId,
@@ -4491,7 +4491,7 @@ fn fold_index0_second(
 /// both times) for `Kernel::add_declaration` to accept `spec`'s type against
 /// `hd_mk`'s expected `deriv_spec_body ... modulus_mul`.
 #[allow(clippy::too_many_arguments, clippy::type_complexity)]
-fn mul_modulus_components(
+pub(crate) fn mul_modulus_components(
     d: &mut IntDev<'_>,
     mg: ExprId,
     mf: ExprId,
@@ -4531,7 +4531,7 @@ fn mul_modulus_components(
 /// and `Rat.natDivSucc_antitone` -- the three-source generalisation of
 /// `hasDerivative_add`'s own two-source combination.
 #[allow(clippy::too_many_arguments)]
-fn weaken_to_addend(
+pub(crate) fn weaken_to_addend(
     d: &mut IntDev<'_>,
     p: CRealPrelude,
     abs_diff: ExprId,
@@ -4807,7 +4807,7 @@ fn expand_term3(
 /// `natDivSucc_scale` at `c := 1`; this is the SAME identity one step
 /// deeper, `c := 2`). Returns `(out_bound, proof)`.
 #[allow(clippy::too_many_arguments)]
-fn fuse_three_equal_bounds(
+pub(crate) fn fuse_three_equal_bounds(
     d: &mut IntDev<'_>,
     p: CRealPrelude,
     e: ExprId,

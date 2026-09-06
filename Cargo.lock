@@ -75,6 +75,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "axeyum-arith"
+version = "0.1.0"
+dependencies = [
+ "num-bigint",
+ "num-rational",
+]
+
+[[package]]
 name = "axeyum-bench"
 version = "0.1.0"
 dependencies = [
