@@ -46,7 +46,7 @@ pub fn value_to_lsb_bits(value: Value) -> Result<Vec<bool>, IrError> {
                 element: array.element_sort(),
             },
         }),
-        Value::Int(_) => Err(IrError::SortMismatch {
+        Value::Int(_) | Value::WideInt(_) => Err(IrError::SortMismatch {
             expected: "Bool or BitVec",
             found: Sort::Int,
         }),

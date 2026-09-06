@@ -304,6 +304,9 @@ pub fn eval_with_memo<S: std::hash::BuildHasher>(
             TermNode::IntConst(value) => {
                 memo.insert(t, Value::Int(*value));
             }
+            TermNode::WideIntConst(value) => {
+                memo.insert(t, Value::WideInt(value.clone()));
+            }
             TermNode::RealConst(value) => {
                 memo.insert(t, Value::Real(*value));
             }

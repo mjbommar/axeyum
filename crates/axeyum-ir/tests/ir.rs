@@ -5,7 +5,7 @@
 
 use axeyum_ir::{
     ArraySortKey, ArrayValue, Assignment, BIT_VECTOR_WIRE_ORDER, BitOrder, FuncValue,
-    GenericArrayValue, IrError, Op, Rational, Sort, TermArena, TermNode, TermStats, Value,
+    GenericArrayValue, IrError, Op, Rational, Sort, TermArena, TermNode, TermStats, Value, WideInt,
     WideUint, bv_value_to_lsb_bits, eval, lsb_bits_to_bv_value, lsb_bits_to_value, render,
     value_to_lsb_bits,
 };
@@ -1994,5 +1994,147 @@ fn internal_mint_shares_by_name_within_its_namespace() {
     assert!(matches!(
         a.declare_internal(name, Sort::BitVec(2)),
         Err(IrError::SymbolSortConflict { .. })
+    ));
+}
+
+// ----- wide integer constants (ADR-1702 slice 2) ------------------------
+//
+// The canonicality invariant these tests pin: a `TermNode::WideIntConst` /
+// `Value::WideInt` never holds an `i128`-representable value, so each integer
+// has exactly one node and the arena's intern table keeps its structural
+// sharing. Breaking it is silent — two nodes for one value still type-check and
+// still evaluate — which is why it is asserted on `TermId` identity, not on
+// rendered text.
+
+fn wide_pow2(n: u32) -> WideInt {
+    let mut value = num_bigint::BigInt::from(1u8);
+    for _ in 0..n {
+        value *= 2;
+    }
+    WideInt::from_big(value)
+}
+
+#[test]
+fn int_const_big_demotes_a_value_that_fits_i128() {
+    let mut a = TermArena::new();
+    // Same value through both constructors must be the SAME interned term, or
+    // structural sharing is silently gone.
+    assert_eq!(a.int_const_big(WideInt::from_i128(5)), a.int_const(5));
+    assert_eq!(
+        a.int_const_big(WideInt::from_i128(i128::MAX)),
+        a.int_const(i128::MAX)
+    );
+    assert_eq!(
+        a.int_const_big(WideInt::from_i128(i128::MIN)),
+        a.int_const(i128::MIN)
+    );
+    // ...and it really is the narrow node, not a wide node that merely compares
+    // equal.
+    let t = a.int_const_big(WideInt::from_i128(-7));
+    assert!(matches!(a.node(t), TermNode::IntConst(-7)));
+}
+
+#[test]
+fn int_const_big_keeps_an_out_of_range_value_wide_and_interns_it_once() {
+    let mut a = TermArena::new();
+    let first = a.int_const_big(wide_pow2(256));
+    let second = a.int_const_big(wide_pow2(256));
+    assert_eq!(first, second, "the same wide integer must intern once");
+    assert_eq!(a.sort_of(first), Sort::Int);
+    match a.node(first) {
+        TermNode::WideIntConst(value) => {
+            assert_eq!(value.bits(), 257);
+            assert!(!value.fits_i128());
+        }
+        other => panic!("expected a wide integer constant, got {other:?}"),
+    }
+    // The boundary: `i128::MAX + 1` is the smallest wide node.
+    let boundary = a.int_const_big(WideInt::from_i128(i128::MAX).add(&WideInt::from_i128(1)));
+    assert!(matches!(a.node(boundary), TermNode::WideIntConst(_)));
+    assert_ne!(boundary, a.int_const(i128::MAX));
+}
+
+#[test]
+fn a_wide_integer_constant_evaluates_to_a_wide_integer_value() {
+    let mut a = TermArena::new();
+    let t = a.int_const_big(wide_pow2(300));
+    let value = eval(&a, t, &Assignment::new()).expect("a constant evaluates");
+    assert_eq!(value.sort(), Sort::Int);
+    assert_eq!(value, Value::WideInt(wide_pow2(300)));
+    // `as_int` declines rather than truncating: this is what keeps every
+    // pre-existing `i128` consumer correct without an audit.
+    assert_eq!(value.as_int(), None);
+    assert_eq!(value.as_wide_int().map(WideInt::bits), Some(301));
+    assert_eq!(value.integer(), Some(wide_pow2(300)));
+}
+
+#[test]
+fn value_from_wide_int_demotes_so_eq_and_hash_stay_value_equality() {
+    use std::collections::hash_map::DefaultHasher;
+    use std::hash::{Hash, Hasher};
+
+    assert_eq!(Value::from_wide_int(WideInt::from_i128(9)), Value::Int(9));
+    assert_eq!(
+        Value::from_wide_int(WideInt::from_i128(i128::MIN)),
+        Value::Int(i128::MIN)
+    );
+    let wide = Value::from_wide_int(wide_pow2(200));
+    assert!(matches!(wide, Value::WideInt(_)));
+    assert_eq!(wide.as_int(), None);
+    assert_eq!(wide.sort(), Sort::Int);
+
+    // Two independently built representations of one value hash alike.
+    let again = Value::from_wide_int(WideInt::parse(&wide_pow2(200).to_string()).unwrap());
+    assert_eq!(wide, again);
+    let mut h1 = DefaultHasher::new();
+    let mut h2 = DefaultHasher::new();
+    wide.hash(&mut h1);
+    again.hash(&mut h2);
+    assert_eq!(h1.finish(), h2.finish());
+    // ...and an in-range value never lands in the wide variant, so `Int(5)` and
+    // a "wide" 5 cannot both exist and compare unequal.
+    assert_ne!(
+        std::mem::discriminant(&Value::from_wide_int(WideInt::from_i128(5))),
+        std::mem::discriminant(&wide)
+    );
+}
+
+#[test]
+fn a_wide_integer_constant_renders_as_smtlib_text() {
+    let mut a = TermArena::new();
+    let positive = a.int_const_big(wide_pow2(256));
+    let text = render(&a, positive);
+    assert_eq!(
+        text,
+        "115792089237316195423570985008687907853269984665640564039457584007913129639936"
+    );
+    // A negative integer is the application `(- n)` in SMT-LIB, never a signed
+    // numeral — same rule `IntConst` already follows.
+    let negative = a.int_const_big(wide_pow2(256).neg());
+    assert_eq!(
+        render(&a, negative),
+        "(- 115792089237316195423570985008687907853269984665640564039457584007913129639936)"
+    );
+    assert_eq!(Value::from_wide_int(wide_pow2(256)).to_string(), text);
+}
+
+#[test]
+fn a_wide_integer_constant_counts_as_one_dag_node() {
+    let mut a = TermArena::new();
+    let t = a.int_const_big(wide_pow2(512));
+    let stats = TermStats::compute(&a, &[t]);
+    assert_eq!(stats.dag_nodes, 1);
+}
+
+#[test]
+fn a_wide_integer_value_has_no_scalar_bit_encoding() {
+    // A `>i128` integer is not a bit-vector; asking for its bits must be the
+    // same sort error an in-range integer gives, not a truncation.
+    assert!(matches!(
+        value_to_lsb_bits(Value::from_wide_int(wide_pow2(400))),
+        Err(IrError::SortMismatch {
+            found: Sort::Int,
+            ..
+        })
     ));
 }
