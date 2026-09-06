@@ -102,6 +102,19 @@ pub use permgroup_sylow::{
     SylowCountCertificate, SylowCountFailure, SylowFailure, distinguish,
 };
 
+// Isomorphism testing and presentations from a BSGS live in a sibling file
+// (wave three of item 5; this module would otherwise exceed its
+// line-count budget); re-exported here so `permgroup::` callers see one
+// flat surface, exactly as if it had stayed inline.
+#[path = "permgroup_iso.rs"]
+mod permgroup_iso;
+pub use permgroup_iso::{
+    COSET_ENUMERATION_BOUND, CosetEnumerationOutcome, CosetTableCertificate, CosetTableFailure,
+    ISOMORPHISM_BOUND, IsoCertificate, IsoFailure, IsomorphismDecision, IsomorphismUnknownReason,
+    NonIsomorphismReason, PresentationCertificate, PresentationFailure, Relator,
+    SearchExhaustionCertificate, SearchExhaustionFailure, isomorphism,
+};
+
 // ---------------------------------------------------------------------------
 // Words: signed (ties a strong generator back to the original generators it
 // was built from) and unsigned (ties a transversal representative to the
