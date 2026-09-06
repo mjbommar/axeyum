@@ -110,6 +110,14 @@ enum Tier {
     /// if the entry starts agreeing, that is a HARD FAILURE (exit nonzero)
     /// demanding the entry be reclassified to `core` — a known defect can
     /// never be quietly forgotten, only fixed-and-promoted or left failing.
+    #[expect(
+        dead_code,
+        reason = "the only tracked defect, `e1-radical-cross-base`, was fixed by lane \
+                  cas-witness and reclassified to `Core`. The tier and its \
+                  reclassify-when-it-stops-reproducing alert are kept for the next one; \
+                  the summary line prints `known_defect=0` so an empty tier is visible \
+                  rather than implied. Delete this attribute when an entry uses it again."
+    )]
     KnownDefect,
 }
 
@@ -154,7 +162,8 @@ fn eq_check(
     actual_label: &str,
 ) -> Outcome {
     match equal(actual, expected) {
-        ZeroTest::Certified { equal: decided, .. } => Outcome {
+        ZeroTest::Certified { equal: decided, .. }
+        | ZeroTest::CertifiedBig { equal: decided, .. } => Outcome {
             verdict: if decided == expect_equal {
                 Verdict::Agree
             } else {
@@ -667,57 +676,28 @@ fn e1_radical() -> Outcome {
     let lhs = i(2).sqrt() * i(2).sqrt();
     eq_check(&lhs, &i(2), true, &format!("lhs={lhs}"))
 }
-/// `sqrt(2)*sqrt(3)` and `sqrt(6)` are mathematically equal (as real
-/// numbers), but `equal`'s zero-test does not know that: it treats
-/// `sqrt(2)`, `sqrt(3)`, and `sqrt(6)` as three unrelated atomic constants
-/// with no multiplicative relation between them (there is no
-/// `sqrt(a)*sqrt(b) = sqrt(a*b)` rewrite rule in the zero-test's atom
-/// algebra — confirmed by printing the witness with `{:?}`: it is the
-/// nonzero free-algebra polynomial `1*(sqrt:2)*(sqrt:3) - 1*(sqrt:6)`).
+/// `sqrt(2)*sqrt(3)` vs `sqrt(6)` — **fixed**, was the harness's one tracked
+/// wrong-refuted.
 ///
-/// **THE FINDING**: this is not an honest decline. `equal` returns
-/// `ZeroTest::Certified { equal: false, .. }` — a CONFIDENT, LABELED-CERTIFIED
-/// claim that these two equal real numbers are different. The certificate is
-/// internally consistent (the witness polynomial genuinely is nonzero *in the
-/// free algebra over these three atoms*, and re-deriving it reproduces the
-/// same witness), so it is not a forged or malformed certificate; but the
-/// atom algebra it certifies over is coarser than real-number equality, and
-/// nothing downstream is told that. This is exactly the shape CLAUDE.md's
-/// evidence-and-checker-discipline warns about: a certificate whose scope is
-/// narrower than the claim its label suggests. A caller reading only
-/// `ZeroTest::Certified { equal: false }` has no way to see this gap.
+/// The zero-test atomized each radical spelling into its own independent
+/// variable, so `sqrt(2)*sqrt(3) - sqrt(6)` was a nonzero polynomial in three
+/// unrelated atoms and came back `Certified { equal: false }` — a certificate
+/// whose scope was narrower than the claim its label made, and the exact shape
+/// CLAUDE.md's evidence-and-checker-discipline warns about.
 ///
-/// **`tier: KnownDefect`, `tracked_by` "file 13, item 1 wave two, lane
-/// cas-witness"**: the fix is owned elsewhere and in flight, so this entry
-/// is excluded from the `agree`/`disagree`/`decline` tally that drives most
-/// of this harness's exit status — but `main`'s loop still asserts the
-/// disagreement PERSISTS (`outcome.verdict == Verdict::Disagree`), and exits
-/// nonzero with a reclassify-to-`core` message the moment it does not.
+/// Lane `cas-witness` repaired the class (ADR-1670 wave two): constant radicals
+/// are canonicalized by their squarefree part at intake, the radicals inside one
+/// monomial are multiplied together and re-extracted, and a refutation whose
+/// difference still multiplies two radical atoms is declined rather than
+/// asserted. Seven sibling identities were wrong-refuted on the same build and
+/// are covered by the `radical_atom_products` tests in `axeyum-cas`.
+///
+/// Now `tier: Core`: it must certify TRUE, and a regression is an ordinary
+/// disagreement rather than a tracked one.
 fn e1_radical_cross_base() -> Outcome {
     let lhs = i(2).sqrt() * i(3).sqrt();
     let rhs = i(6).sqrt();
-    match equal(&lhs, &rhs) {
-        ZeroTest::Unknown => Outcome {
-            verdict: Verdict::Agree,
-            trust: Trust::Unknown,
-            expected: "Unknown (sqrt(2)*sqrt(3) = sqrt(6) is true, but not in the atom algebra)"
-                .to_string(),
-            actual: "declined".to_string(),
-        },
-        ZeroTest::Certified { equal: decided, .. } => Outcome {
-            verdict: if decided {
-                Verdict::Agree
-            } else {
-                Verdict::Disagree
-            },
-            trust: Trust::Certified,
-            expected: "true (sqrt(2)*sqrt(3) = sqrt(6) as real numbers)".to_string(),
-            actual: format!(
-                "Certified{{equal={decided}}} -- a confidently WRONG, certified false; \
-                 see this function's doc comment"
-            ),
-        },
-    }
+    eq_check(&lhs, &rhs, true, &format!("lhs={lhs}"))
 }
 fn e2_poly_identity() -> Outcome {
     let lhs = (x() + i(1)).pow(2);
@@ -743,7 +723,8 @@ fn e3_trig_pythagorean() -> Outcome {
             expected: "Unknown expected (true identity, but see justification)".to_string(),
             actual: "declined".to_string(),
         },
-        ZeroTest::Certified { equal: decided, .. } => Outcome {
+        ZeroTest::Certified { equal: decided, .. }
+        | ZeroTest::CertifiedBig { equal: decided, .. } => Outcome {
             verdict: if decided {
                 Verdict::Agree
             } else {
@@ -1702,7 +1683,7 @@ macro_rules! e {
 }
 
 fn main() {
-    use Tier::{Core, DeclineExpected, KnownDefect};
+    use Tier::{Core, DeclineExpected};
     let entries: Vec<Entry> = vec![
         // differentiate
         e!("d1-cubic", Some("differentiate"), None, Core, d1_cubic),
@@ -1833,14 +1814,13 @@ fn main() {
         ),
         // simplify / equal
         e!("e1-radical", Some("simplify/equal"), None, Core, e1_radical),
-        Entry {
-            id: "e1-radical-cross-base",
-            area: Some("simplify/equal"),
-            module: None,
-            tier: KnownDefect,
-            tracked_by: Some("file 13, item 1 wave two, lane cas-witness"),
-            run: e1_radical_cross_base,
-        },
+        e!(
+            "e1-radical-cross-base",
+            Some("simplify/equal"),
+            None,
+            Core,
+            e1_radical_cross_base
+        ),
         e!(
             "e2-poly-identity",
             Some("simplify/equal"),
