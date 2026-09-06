@@ -2110,7 +2110,6 @@ fn declare_join(
         let pyv = py(d, cp, pt);
         let qxv = px(d, cp, qt);
         let qyv = py(d, cp, qt);
-        let [ca, cb, cc] = join_coeffs(d, cp, cr, pt, qt);
         let (sx, sy) = if at_right { (qxv, qyv) } else { (pxv, pyv) };
         let a_rn = rsub(at(qyv), at(pyv));
         let b_rn = rsub(at(pxv), at(qxv));

@@ -1,5 +1,7 @@
 # Lane `real-incidence` — the real plane as a model of `Geo.Incidence`
 
+<!-- plan-section: lane-status -->
+
 Date: 2026-09-06 (dispatched 2026-09-05)
 Base: local `main` at `fd9cce8e7` (contains `992de4c54`)
 ADR: [ADR-1652](../../research/09-decisions/adr-1652-the-real-plane-is-a-model-and-it-needs-no-case-split.md)

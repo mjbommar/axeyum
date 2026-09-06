@@ -4,7 +4,7 @@
   "note": "Statement identity for every settled fact (S1 of the trusted-library safety roadmap, ADR-0763). Per fact: SHA-256 of formal.statement (the canonical kernel rendering for native lean4 rows), SHA-256 of the top-level reader-facing statement, and the kernel_theorem it names. A settled fact's statement is what the ledger CLAIMS; changing any of the three silently turns 'we proved X' into 'we proved something we then labelled X'. Changes require an amendment row naming both digests and a reason; superseded digests are preserved in each pin's history. `coverage_floor` is a ratchet the gate re-derives rather than trusts: slack is itself a violation, so a loosened floor is self-reverting. Written by `scripts/check-settled-fact-statements.py --write`; do not hand-edit.",
   "coverage_floor": {
     "max_unpinned_settled": 0,
-    "min_identity_bound": 2417,
+    "min_identity_bound": 2418,
     "max_header_exempt": 0
   },
   "amendments": [
@@ -8077,6 +8077,13 @@
       "statement_sha256": "7af32280afad31018d1e06cc179a1e2bf6c25bea6ce3757ec819b89b829b3495",
       "prose_sha256": "8c83586855fdbaeab91164f6c7cea410c22516bcb012b1e890abb9d5f9cde65a",
       "kernel_theorem": "Geo.qplane"
+    },
+    {
+      "fact_id": "F:geo-incidence-model-real-plane",
+      "language": "lean4",
+      "statement_sha256": "fe8715c76deafcaa28ea30c939aa3445834e21d2aa306b83911ebbb67816de15",
+      "prose_sha256": "f624cd2045743a29483d6883b9dfda22bad75fe163ec2d0657dd2d9406f769db",
+      "kernel_theorem": "Geo.rplane"
     },
     {
       "fact_id": "F:geometry-centroid-divides-medians",
