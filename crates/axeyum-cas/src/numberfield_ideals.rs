@@ -2233,6 +2233,18 @@ fn build_primitive_element(
 #[path = "numberfield_classgroup.rs"]
 pub mod numberfield_classgroup;
 
+// Wave four's real-quadratic half, declared here for the same reason as
+// `numberfield_classgroup` above.
+#[path = "numberfield_real.rs"]
+pub mod numberfield_real;
+
+pub use numberfield_real::{
+    CYCLE_STEP_BOUND, FormCycleCertificate, REAL_DISCRIMINANT_BOUND, REGULATOR_PRECISION_BOUND,
+    RealCertificateError, RealClassNumberCertificate, RealDecline, RegulatorCertificate,
+    form_cycles, is_reduced_indefinite, pell_regulator, real_class_number,
+    reduced_indefinite_forms, regulator, regulator_of_unit, rho,
+};
+
 pub use numberfield_classgroup::{
     BezoutData, CLASS_GROUP_ORDER_BOUND, ClassGroupCertificate, ClassGroupCertificateError,
     ClassGroupDecline, CompositionCertificate, FormIdealCertificate, FormReductionCertificate,
