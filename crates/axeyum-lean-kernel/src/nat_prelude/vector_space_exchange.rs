@@ -1299,6 +1299,257 @@ fn declare_remove_at_insert_at(
     Ok(name)
 }
 
+/// `AlgS.Index.le_succ_right : forall p q, le p q -> le p (Nat.succ q)`.
+///
+/// Weakening the bound, which is what pushes a bounded pointwise hypothesis
+/// through the successor step of a fold over `Nat`.
+fn declare_le_succ_right(
+    k: &mut Kernel,
+    lg: &LogicPrelude,
+    c: &IxCtx,
+    ns: NameId,
+) -> Result<NameId, KernelError> {
+    let l0 = k.level_zero();
+    let nat = c.nat;
+
+    let stmt = |k: &mut Kernel, p: ExprId, q: ExprId| {
+        let hyp = c.le_at(k, p, q);
+        let sq = c.succ(k, q);
+        let concl = c.le_at(k, p, sq);
+        (hyp, concl)
+    };
+
+    let motive = {
+        let p = k.fvar(I_FV);
+        let q = k.fvar(J_FV);
+        let (hyp, concl) = stmt(k, p, q);
+        let body = arrow(k, hyp, concl);
+        let body = pi_over(k, J_FV, nat, body);
+        lam_over(k, I_FV, nat, body)
+    };
+    let minor_zero = {
+        let q = k.fvar(J_FV);
+        let (hyp, _) = stmt(k, c.nat_zero, q);
+        // `le zero (succ q) ≡ True`.
+        let ti = k.const_(lg.true_intro, vec![]);
+        let body = lam_over(k, SCRATCH_FV, hyp, ti);
+        lam_over(k, J_FV, nat, body)
+    };
+    let minor_succ = {
+        let pp = k.fvar(I_FV);
+        let spp = c.succ(k, pp);
+        let ih_ty = {
+            let q = k.fvar(J_FV);
+            let (hyp, concl) = stmt(k, pp, q);
+            let body = arrow(k, hyp, concl);
+            pi_over(k, J_FV, nat, body)
+        };
+        let ih = k.fvar(IH_FV);
+        let inner_motive = {
+            let q = k.fvar(J_FV);
+            let (hyp, concl) = stmt(k, spp, q);
+            let body = arrow(k, hyp, concl);
+            lam_over(k, J_FV, nat, body)
+        };
+        let inner_zero = {
+            let (hyp, concl) = stmt(k, spp, c.nat_zero);
+            let h = k.fvar(H1_FV);
+            let body = ex_falso(k, lg, concl, h);
+            lam_over(k, H1_FV, hyp, body)
+        };
+        let inner_succ = {
+            let qp = k.fvar(J_FV);
+            let sqp = c.succ(k, qp);
+            let (hyp, _) = stmt(k, spp, sqp);
+            let inner_ih_ty = {
+                let (h2, c2) = stmt(k, spp, qp);
+                arrow(k, h2, c2)
+            };
+            let h = k.fvar(H1_FV);
+            // `h : le (succ p') (succ q') ≡ le p' q'`, and the goal
+            // `le (succ p') (succ (succ q')) ≡ le p' (succ q')` is `ih q' h`.
+            let body = {
+                let e = k.app(ih, qp);
+                k.app(e, h)
+            };
+            let body = lam_over(k, H1_FV, hyp, body);
+            let body = lam_over(k, SCRATCH_FV, inner_ih_ty, body);
+            lam_over(k, J_FV, nat, body)
+        };
+        let q = k.fvar(J_FV);
+        let rec = k.const_(lg.nat_rec, vec![l0]);
+        let body = t_app(k, rec, &[inner_motive, inner_zero, inner_succ, q]);
+        let body = lam_over(k, J_FV, nat, body);
+        let body = lam_over(k, IH_FV, ih_ty, body);
+        lam_over(k, I_FV, nat, body)
+    };
+
+    let p = k.fvar(I_FV);
+    let q = k.fvar(J_FV);
+    let rec = k.const_(lg.nat_rec, vec![l0]);
+    let outer = t_app(k, rec, &[motive, minor_zero, minor_succ, p]);
+    let body = k.app(outer, q);
+    let value = lam_over(k, J_FV, nat, body);
+    let value = lam_over(k, I_FV, nat, value);
+
+    let ty = {
+        let (hyp, concl) = stmt(k, p, q);
+        let body = arrow(k, hyp, concl);
+        let body = pi_over(k, J_FV, nat, body);
+        pi_over(k, I_FV, nat, body)
+    };
+
+    let name = k.name_str(ns, "le_succ_right");
+    k.add_declaration(Declaration::Theorem {
+        name,
+        uparams: vec![],
+        ty,
+        value,
+    })?;
+    Ok(name)
+}
+
+/// `AlgS.Index.insertAt_removeAt : forall (a : Type) (i : Nat)
+/// (v : Nat -> a) (j : Nat),
+/// Eq a (insertAt a i (v i) (removeAt a i v) j) (v j)`.
+///
+/// **The other roundtrip, and it is also unconditional.** Deleting index `i`
+/// and putting `v i` back rebuilds the family at EVERY index — below `i`
+/// nothing moved, at `i` the value is the one taken out, above `i` the two
+/// shifts cancel. This is what turns a statement about `insertAt` into a
+/// statement about `removeAt` with no order side condition, so
+/// `linComb_removeAt_insertAt` inherits its bound from the sum's length and
+/// not from this step.
+fn declare_insert_at_remove_at(
+    k: &mut Kernel,
+    lg: &LogicPrelude,
+    c: &IxCtx,
+    ns: NameId,
+) -> Result<NameId, KernelError> {
+    let l0 = k.level_zero();
+    let l1 = k.level_succ(l0);
+    let ty1 = k.sort(l1);
+    let nat = c.nat;
+    let al = k.fvar(AL_FV);
+    let fam_ty = arrow(k, nat, al);
+
+    let stmt = |k: &mut Kernel, i: ExprId, v: ExprId, j: ExprId| {
+        let vi = k.app(v, i);
+        let rem = {
+            let cst = k.const_(c.remove_at, vec![]);
+            t_app(k, cst, &[al, i, v])
+        };
+        let lhs = c.ins(k, al, i, vi, rem, j);
+        let rhs = k.app(v, j);
+        eq_of(k, lg, l1, al, lhs, rhs)
+    };
+
+    let motive = {
+        let i = k.fvar(I_FV);
+        let v = k.fvar(V_FV);
+        let j = k.fvar(J_FV);
+        let concl = stmt(k, i, v, j);
+        let body = pi_over(k, J_FV, nat, concl);
+        let body = pi_over(k, V_FV, fam_ty, body);
+        lam_over(k, I_FV, nat, body)
+    };
+    let minor_zero = {
+        let v = k.fvar(V_FV);
+        let inner_motive = {
+            let j = k.fvar(J_FV);
+            let concl = stmt(k, c.nat_zero, v, j);
+            lam_over(k, J_FV, nat, concl)
+        };
+        let inner_zero = {
+            let vz = k.app(v, c.nat_zero);
+            refl_of(k, lg, l1, al, vz)
+        };
+        let inner_succ = {
+            let jp = k.fvar(J_FV);
+            let sjp = c.succ(k, jp);
+            let inner_ih_ty = stmt(k, c.nat_zero, v, jp);
+            let vsjp = k.app(v, sjp);
+            let r = refl_of(k, lg, l1, al, vsjp);
+            let body = lam_over(k, SCRATCH_FV, inner_ih_ty, r);
+            lam_over(k, J_FV, nat, body)
+        };
+        let j = k.fvar(J_FV);
+        let rec = k.const_(lg.nat_rec, vec![l0]);
+        let body = t_app(k, rec, &[inner_motive, inner_zero, inner_succ, j]);
+        let body = lam_over(k, J_FV, nat, body);
+        lam_over(k, V_FV, fam_ty, body)
+    };
+    let minor_succ = {
+        let ip = k.fvar(I_FV);
+        let sip = c.succ(k, ip);
+        let ih_ty = {
+            let v = k.fvar(V_FV);
+            let j = k.fvar(J_FV);
+            let concl = stmt(k, ip, v, j);
+            let body = pi_over(k, J_FV, nat, concl);
+            pi_over(k, V_FV, fam_ty, body)
+        };
+        let ih = k.fvar(IH_FV);
+        let v = k.fvar(V_FV);
+
+        let inner_motive = {
+            let j = k.fvar(J_FV);
+            let concl = stmt(k, sip, v, j);
+            lam_over(k, J_FV, nat, concl)
+        };
+        let inner_zero = {
+            let vz = k.app(v, c.nat_zero);
+            refl_of(k, lg, l1, al, vz)
+        };
+        let inner_succ = {
+            let jp = k.fvar(J_FV);
+            let inner_ih_ty = stmt(k, sip, v, jp);
+            let sv = shift(k, nat, c.nat_succ, v);
+            let body = {
+                let e = k.app(ih, sv);
+                k.app(e, jp)
+            };
+            let body = lam_over(k, SCRATCH_FV, inner_ih_ty, body);
+            lam_over(k, J_FV, nat, body)
+        };
+        let j = k.fvar(J_FV);
+        let rec = k.const_(lg.nat_rec, vec![l0]);
+        let body = t_app(k, rec, &[inner_motive, inner_zero, inner_succ, j]);
+        let body = lam_over(k, J_FV, nat, body);
+        let body = lam_over(k, V_FV, fam_ty, body);
+        let body = lam_over(k, IH_FV, ih_ty, body);
+        lam_over(k, I_FV, nat, body)
+    };
+
+    let i = k.fvar(I_FV);
+    let v = k.fvar(V_FV);
+    let j = k.fvar(J_FV);
+    let rec = k.const_(lg.nat_rec, vec![l0]);
+    let outer = t_app(k, rec, &[motive, minor_zero, minor_succ, i]);
+    let body = t_app(k, outer, &[v, j]);
+    let value = lam_over(k, J_FV, nat, body);
+    let value = lam_over(k, V_FV, fam_ty, value);
+    let value = lam_over(k, I_FV, nat, value);
+    let value = lam_over(k, AL_FV, ty1, value);
+
+    let ty = {
+        let concl = stmt(k, i, v, j);
+        let body = pi_over(k, J_FV, nat, concl);
+        let body = pi_over(k, V_FV, fam_ty, body);
+        let body = pi_over(k, I_FV, nat, body);
+        pi_over(k, AL_FV, ty1, body)
+    };
+
+    let name = k.name_str(ns, "insertAt_removeAt");
+    k.add_declaration(Declaration::Theorem {
+        name,
+        uparams: vec![],
+        ty,
+        value,
+    })?;
+    Ok(name)
+}
+
 // ---------------------------------------------------------------------------
 // Assembly.
 // ---------------------------------------------------------------------------
@@ -1321,6 +1572,8 @@ pub struct IndexNames {
     pub insert_at_below: NameId,
     pub insert_at_above: NameId,
     pub remove_at_insert_at: NameId,
+    pub le_succ_right: NameId,
+    pub insert_at_remove_at: NameId,
 }
 
 /// `#[cfg(test)]` for the same reason `ModuleNames::all` is: these names are
@@ -1328,7 +1581,7 @@ pub struct IndexNames {
 #[cfg(test)]
 impl IndexNames {
     #[must_use]
-    pub fn owned_names(&self) -> [NameId; 11] {
+    pub fn owned_names(&self) -> [NameId; 13] {
         [
             self.le,
             self.remove_at,
@@ -1341,6 +1594,8 @@ impl IndexNames {
             self.insert_at_below,
             self.insert_at_above,
             self.remove_at_insert_at,
+            self.le_succ_right,
+            self.insert_at_remove_at,
         ]
     }
 }
@@ -1365,6 +1620,8 @@ pub(crate) fn declare_index_surgery(
     let insert_at_below = declare_insert_at_below(k, lg, &c, ns)?;
     let insert_at_above = declare_insert_at_above(k, lg, &c, ns)?;
     let remove_at_insert_at = declare_remove_at_insert_at(k, lg, &c, ns)?;
+    let le_succ_right = declare_le_succ_right(k, lg, &c, ns)?;
+    let insert_at_remove_at = declare_insert_at_remove_at(k, lg, &c, ns)?;
     Ok(IndexNames {
         le,
         remove_at,
@@ -1377,6 +1634,8 @@ pub(crate) fn declare_index_surgery(
         insert_at_below,
         insert_at_above,
         remove_at_insert_at,
+        le_succ_right,
+        insert_at_remove_at,
     })
 }
 
