@@ -62,6 +62,16 @@
 //! comparing catches a forged `induced` field but not a bug shared between
 //! production and verification (the same caveat the parent module's own doc
 //! comment states for `Matrix::determinant`).
+//!
+//! # Cost profile
+//!
+//! The `Q` linear algebra (`null_space`, `rref`) is exact `Rational`
+//! Gauss-Jordan; the greedy basis selection re-runs a rank computation once
+//! per candidate column, so `choose_homology_basis` is `O(n^2)` rank calls
+//! for `n` candidates, each itself polynomial. The largest fixture exercised
+//! here is the 6-vertex/6-edge hexagon wrapping the 3-vertex/3-edge triangle
+//! (the degree-two map test); see [`super::coefficients`]'s doc comment for
+//! the whole-suite release timing.
 
 use std::collections::BTreeMap;
 

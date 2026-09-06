@@ -46,7 +46,9 @@
 //! Euler-characteristic guard is `O(n^2)` (checked at every one of `n`
 //! steps). No Smith form, cofactor determinant, or `Rational` arithmetic is
 //! involved anywhere in this module -- it is pure `F_2` combinatorics on
-//! `BTreeSet<usize>`.
+//! `BTreeSet<usize>`. The largest filtration exercised here is the 7-vertex
+//! torus (42 simplices: 7 vertices, 21 edges, 14 triangles); see
+//! [`super::coefficients`]'s doc comment for the whole-suite release timing.
 
 use std::collections::{BTreeMap, BTreeSet};
 

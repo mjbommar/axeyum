@@ -49,7 +49,10 @@
 //! Doubles the Smith-form work the parent module does (one more
 //! `smith_normal_form` call per dimension, on a matrix of the same shape
 //! transposed), so the same cofactor/Bareiss unimodularity cost applies; see
-//! the parent module's doc comment.
+//! the parent module's doc comment. This module's own largest exercised
+//! transpose is the Klein bottle's 27x27 `d_1^T` (an extra unimodularity
+//! check beside the parent module's own on `d_1` itself); see
+//! [`super::coefficients`]'s doc comment for the whole-suite release timing.
 
 use std::collections::BTreeMap;
 
