@@ -4,7 +4,7 @@
   "note": "Statement identity for every settled fact (S1 of the trusted-library safety roadmap, ADR-0763). Per fact: SHA-256 of formal.statement (the canonical kernel rendering for native lean4 rows), SHA-256 of the top-level reader-facing statement, and the kernel_theorem it names. A settled fact's statement is what the ledger CLAIMS; changing any of the three silently turns 'we proved X' into 'we proved something we then labelled X'. Changes require an amendment row naming both digests and a reason; superseded digests are preserved in each pin's history. `coverage_floor` is a ratchet the gate re-derives rather than trusts: slack is itself a violation, so a loosened floor is self-reverting. Written by `scripts/check-settled-fact-statements.py --write`; do not hand-edit.",
   "coverage_floor": {
     "max_unpinned_settled": 0,
-    "min_identity_bound": 2387,
+    "min_identity_bound": 2391,
     "max_header_exempt": 0
   },
   "amendments": [
@@ -8583,6 +8583,13 @@
       "kernel_theorem": "Int.crt_unique"
     },
     {
+      "fact_id": "F:int-descent-multiplier-bounds",
+      "language": "lean4",
+      "statement_sha256": "182ca3b92da092535975bf3fbfabbbbea66761050ec7520fdb74dd821c5e085c",
+      "prose_sha256": "94c6d013a3faed6ad30c6ae67280aa7493346deaec02e9e3c70b5d8955cd444a",
+      "kernel_theorem": "Int.descentMultiplierBounds"
+    },
+    {
       "fact_id": "F:int-dvd-add",
       "language": "lean4",
       "statement_sha256": "5b1b8f6d9f07a3171b8590391f24587abaaecc1223238869db6c727dac9985c2",
@@ -8834,6 +8841,13 @@
       "statement_sha256": "42baf41c80365e21a3a75032f2d7a5341678578fb0f9654aa6371375080418ec",
       "prose_sha256": "e7795ec50ce7904898172b931403d719b1b439c349722e9c3a18099f012b8684",
       "kernel_theorem": "Int.even_iff_nat_abs_even"
+    },
+    {
+      "fact_id": "F:int-exists-centered-representative",
+      "language": "lean4",
+      "statement_sha256": "6b8211b91b49149c729a02874fe4c959dd9f399b0a85b53de6195fd68809986c",
+      "prose_sha256": "84913abce7cd140d46dcd8c238c4a34fb88a53556553c1393fcba9de240e23eb",
+      "kernel_theorem": "Int.exists_centered_representative"
     },
     {
       "fact_id": "F:int-factorial-interior-modeq-one",
@@ -10058,6 +10072,20 @@
       "statement_sha256": "42b091ded915c8f11116214a1653c10eb77f8518c9ed3ef8e1f83e67a4e27b13",
       "prose_sha256": "0ab9e71cd6b9982c8cbf276a0f71bca004cc633d0273df38b2ffcb90fee8dd56",
       "kernel_theorem": "Int.self_inverse_mod_prime"
+    },
+    {
+      "fact_id": "F:int-sq-add-sq-lt-sq-of-bounds",
+      "language": "lean4",
+      "statement_sha256": "66f308de6729db9b8f308dce0577b6e43876480c637fb6f8021b386f0a47bf33",
+      "prose_sha256": "b4e99dabeacb2e906ada8bb3dfee2d35ba9e74cd0fbf70b579475fe3aa7d8c7e",
+      "kernel_theorem": "Int.sq_add_sq_lt_sq_of_bounds"
+    },
+    {
+      "fact_id": "F:int-sq-le-sq-of-neg-le-of-le",
+      "language": "lean4",
+      "statement_sha256": "7bd3cdca9a94f53a3bb11ef75753a4bcb93fb04261269beb8197313ce2ced746",
+      "prose_sha256": "56b86066944b5878e339416abd39889c77d0e77ee91de9275dd95c1801046d65",
+      "kernel_theorem": "Int.sq_le_sq_of_neg_le_of_le"
     },
     {
       "fact_id": "F:int-sq-nonneg",

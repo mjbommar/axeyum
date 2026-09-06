@@ -1457,7 +1457,7 @@ fn bounded_statement(
     let h3 = d.ile(ee, m);
     let target = concl(d, m, c, e);
     let mut stmt = target;
-    for &hyp in [h3, h2, h1, h0].iter() {
+    for &hyp in &[h3, h2, h1, h0] {
         stmt = d.arrow(hyp, stmt);
     }
     (stmt, vec![h0, h1, h2, h3], target)
