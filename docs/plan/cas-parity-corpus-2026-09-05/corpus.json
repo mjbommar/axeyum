@@ -288,6 +288,27 @@
    "expected": {"kind": "cas_identity", "equal": true, "expr": "4*p", "note": "certified"},
    "justification": "hand/sympy: direct expansion of sum_k k*C(4,k)*p^k*(1-p)^(4-k) for k=0..4 simplifies to 4p (checked symbolically); classical binomial mean formula"},
 
+  {"id": "prob4-exponential-symbolic-mgf", "area": null, "module": "probability", "tier": "core",
+   "description": "M(t) = lam/(lam - t) for Exponential(lam) at symbolic lam AND symbolic t, decided under exactly the condition `lam - t > 0` (t < lam); added 2026-09-05 by lane cas-symbolic-mgf. The entry DISAGREES if the condition ever silently disappears, because lam/(lam - t) is false for t >= lam -- the integral diverges there and no mgf exists.",
+   "expected": {"kind": "bool", "value": true, "note": "decided lam/(lam - t) under exactly `lam - t > 0`"},
+   "justification": "hand/sympy: E[e^{tX}] = int_0^inf lam*e^{(t-lam)x} dx converges iff t < lam, to lam/(lam-t); SymPy's integrate(lam*exp(-lam*x)*exp(t*x), (x, 0, oo)) returns exactly this under the assumption re(lam-t) > 0. Classical: the exponential mgf and its domain of existence."},
+
+  {"id": "prob5-normal-symbolic-mgf", "area": null, "module": "probability", "tier": "core",
+   "description": "M(t) = exp(mu*t + 4*t^2/2) for Normal(mu, 4) at symbolic mu and symbolic t, certified UNCONDITIONALLY (the variance is a concrete rational, so its sign is decided rather than recorded); reached by completing the square, since improper_integrate(e^{-x^2 + t*x}) declines. Added 2026-09-05 by lane cas-symbolic-mgf.",
+   "expected": {"kind": "bool", "value": true, "note": "certified exp(mu*t + 4*t^2/2), unconditionally"},
+   "justification": "hand/sympy: the classical Gaussian mgf exp(mu*t + sigma^2*t^2/2); SymPy: integrate(exp(t*x)*exp(-(x-mu)**2/8)/sqrt(8*pi), (x, -oo, oo)) simplifies to exp(mu*t + 2*t**2) = exp(mu*t + 4*t**2/2). Checked symbolically."},
+
+  {"id": "prob6-normal-negative-variance", "area": null, "module": "probability", "tier": "decline_expected",
+   "control_of": "prob5-normal-symbolic-mgf",
+   "description": "control: Normal(mu, -1)'s mgf must DECLINE. The square still completes, but the shifted Gaussian points upward and has no erf antiderivative, so there is nothing to certify. Guards the completing-the-square reduction against becoming a formula-printer.",
+   "expected": {"kind": "decline", "note": "a negative variance is not a probability distribution; no mgf exists"},
+   "justification": "hand: Normal(mu, sigma^2) requires sigma^2 > 0. With sigma^2 = -1 the density is not integrable (int exp(+u^2/2) du diverges), so no mgf exists and any certified answer would be wrong."},
+
+  {"id": "prob7-geometric-symbolic-p", "area": null, "module": "probability", "tier": "decline_expected",
+   "description": "E[Geometric(p)] at symbolic p still declines, and NOT for a missing hypothesis channel: gosper_sum returns None on a symbolic ratio before any convergence question is asked, so there is no value to attach `0 < p < 1` to. The decline_expected counterpart to prob4, marking where the conditional-integration mechanism does and does not reach.",
+   "expected": {"kind": "decline", "note": "gosper_sum has no antidifference for a symbolic geometric ratio"},
+   "justification": "hand/sympy: the mathematical fact E[Geometric(p)] = 1/p is true for 0 < p <= 1 (SymPy: summation(k*p*(1-p)**(k-1), (k, 1, oo)) == 1/p under that assumption); this entry records that OUR summation route declines, not that the identity is false. Reclassify to core if gosper_sum ever gains a symbolic-ratio path."},
+
   {"id": "gb1-conic-unit-circle", "area": null, "module": "geometry_beyond", "tier": "core",
    "description": "the conic through 5 unit-circle points also passes through a held-out 6th unit-circle point",
    "expected": {"kind": "bool", "value": true},

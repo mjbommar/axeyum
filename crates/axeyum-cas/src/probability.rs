@@ -24,19 +24,23 @@
 //! module was written (see the lane's scratch probes); the findings are
 //! structural, not incidental bugs to route around:
 //!
-//! - **A symbolic coefficient inside `exp(...)` breaks every transform-style
-//!   route.** [`crate::laplace_transform`] and the elementary `∫e^{c·x}`
-//!   antiderivative both call `to_univariate`, which requires the polynomial
-//!   coefficients to be concrete [`axeyum_ir::Rational`]s. So `Exponential(λ)`'s
-//!   pdf `λ·e^{−λx}` only transforms for **concrete** `λ`; a *moment generating
-//!   function*'s own argument `t` is, by definition, symbolic, so `e^{t·x}`
-//!   integrated over an **unbounded** domain (Geometric, Poisson, Uniform via
-//!   the plain elementary rule) declines structurally, independent of whether
-//!   the distribution's own parameters are concrete. This is why every
-//!   infinite-support discrete MGF below is uncertified for symbolic `t`, and
-//!   why the continuous MGF route is [`crate::laplace_transform`] evaluated at
-//!   `s = −t` (its *own* variable is `s`; the transform never needs to parse
-//!   `t` as a coefficient) rather than a raw `∫ e^{tx}·f(x)`.
+//! - **A symbolic coefficient inside `exp(...)` used to break every
+//!   transform-style route; it no longer does.** [`crate::laplace_transform`]
+//!   and the elementary `∫e^{c·x}` antiderivative both reach `to_univariate`,
+//!   which needs concrete [`axeyum_ir::Rational`] coefficients, so
+//!   `Exponential(λ)` only transformed for **concrete** `λ` and an mgf's own
+//!   argument `t` — symbolic by definition — declined for every continuous
+//!   family. Two things were missing, and both now exist:
+//!   [`crate::MultiPoly::coeffs_in`] splits a polynomial on one variable while
+//!   keeping the others symbolic, and [`crate::improper_integrate_conditional`]
+//!   has somewhere to put the sign condition that makes the integral converge.
+//!   The route builds the repeated-integration-by-parts antiderivative with the
+//!   rate symbolic, **proves** it against the original integrand with
+//!   [`crate::prove_derivative`], and records what the boundary assumed. That
+//!   closes `Exponential(λ)` at symbolic `λ` (all four quantities) and
+//!   `Uniform(a,b)`'s mgf. A condition it *can* decide it decides: a concrete
+//!   rate of the right sign comes back unconditional, and one of the wrong sign
+//!   — a divergent integral — declines outright.
 //! - **`Σ (j+1)·p·qʲ` certifies; the earlier `k/k` report was a spelling, not a
 //!   gap.** [`crate::gosper_sum`]'s *geometric* path returns a pole-free
 //!   antidifference `X(k)·qᵏ` for `(j+1)·p·qʲ`, and [`crate::limit`] resolves it
@@ -45,9 +49,15 @@
 //!   here: `Geometric`'s **mean and variance certify** for concrete `p` through
 //!   [`crate::infinite_sum`] on the reindexed summand (`j = k−1`, which is what
 //!   puts the geometric factor in the machinery's own `exp(j·ln q)`
-//!   convention). A *symbolic* `p` still declines, and for the reason
-//!   `total_mass` already gave: the convergence test needs a concrete ratio to
-//!   decide `|1−p| < 1`.
+//!   convention). A *symbolic* `p` still declines — and unlike the continuous
+//!   families above, a hypothesis channel would not help. Measured:
+//!   `gosper_sum(p·(1−p)ʲ, j)` and `gosper_sum(qʲ, j)` (a bare symbolic ratio,
+//!   with no `1−p` to normalize) both return `None`, while the concrete control
+//!   `p = 1/3` sums to `1`. The route declines *before* any convergence
+//!   question, so there is no value to attach `0 < p < 1` to; recording the
+//!   condition would decorate a claim nothing decided. The measurement is run,
+//!   not remembered, in
+//!   `the_geometric_symbolic_ratio_declines_before_any_convergence_question`.
 //! - **`λᵏ/k!` is not Gosper-summable — so it goes through the recognized
 //!   exponential series instead.** [`crate::gosper_sum`] genuinely returns
 //!   `None` (no hypergeometric antidifference exists; `eˣ`'s Taylor tail has no
@@ -69,8 +79,25 @@
 //!   `exp(−(√a·(x+d))²)` and the integrand's `exp(−a·x²−…)` in one atom. So
 //!   `Normal(0,1)` (`σ² = 1`, `a = 1/2`) certifies total mass, mean **and**
 //!   variance. An upward Gaussian (`a ≤ 0`) still declines: it is not an erf.
-//!   The `Normal` **mgf** still declines, and for the unrelated symbolic-`t`
-//!   reason above.
+//! - **The `Normal` mgf does not go through an integral in `t` at all.**
+//!   Measured against the live crate, `improper_integrate(e^{−x²+t·x}, −∞, ∞)`
+//!   returns `None` — the symbolic linear coefficient stops the Gaussian finder
+//!   just as it stops the elementary one. **Completing the square** moves `t`
+//!   out of the integral instead:
+//!   `t·x − (x−μ)²/(2σ²) = μt + σ²t²/2 − (x−(μ+σ²t))²/(2σ²)`, an identity
+//!   [`crate::equal`] decides, leaving `∫φ_{μ+σ²t,σ²} = 1` — which is the
+//!   *existing* erf certificate at a symbolic mean. So `M(t) = e^{μt+σ²t²/2}`
+//!   certifies **unconditionally** for symbolic `μ` and symbolic `t`, and a
+//!   non-positive `σ²` declines (at the shifted mass for `σ² < 0`, at the
+//!   identity itself for `σ² = 0`, since its `2σ²` denominator vanishes).
+//! - **A symbolic `σ²` is the one continuous case still out of reach, and the
+//!   blocker is measured, not assumed.** `integrate(e^{−a·x²}, x)` returns
+//!   `None` for a symbolic `a` (positive control: `∫e^{−x²}` over the line is
+//!   `√π`, certified). `integrate_gaussian` carries an irrational `√a` built
+//!   from a *concrete* rational `a`; with `a` symbolic there is no `√a` to
+//!   build and no erf to differentiate back. Every `Normal` quantity therefore
+//!   still requires a concrete variance, which is why the field is an
+//!   [`axeyum_ir::Rational`].
 //! - **The Poisson⊕Poisson convolution identity has its own, independent
 //!   certificate** from [`crate::prove_wz_sum`], the Wilf–Zeilberger prover:
 //!   `Σⱼ C(k,j)·λ₁ʲ·λ₂ᵏ⁻ʲ = (λ₁+λ₂)ᵏ` for *every* `k`, proved symbolically in
@@ -83,14 +110,45 @@
 //! Every quantity returns a [`Certificate`]: a claim (`CasExpr`), the
 //! [`Route`] that produced it, and a [`Trust`] tag. [`Trust::Certified`] means
 //! an independent primitive (never a numeric spot-check, never `f64`) decided
-//! the identity. [`Trust::Uncertified`] carries the specific reason the route
-//! declined — never silently promoted to certified. Each type's `verify_*`
-//! method independently re-derives the claim from
-//! the distribution's definition and re-decides equality with
-//! [`crate::equal`]; a hand-forged certificate (wrong claim, or a claimed
-//! `Certified` that the fresh re-derivation cannot reach) is refused. See
-//! `forged_certificates_are_refused` for the three distinct ways a forgery is
-//! caught.
+//! the identity **unconditionally**. [`Trust::CertifiedUnder`] means the same
+//! primitive decided it, but only under the recorded [`crate::SignCondition`]s
+//! on the symbolic parameters. [`Trust::Uncertified`] carries the specific
+//! reason the route declined — never silently promoted to either of the other
+//! two.
+//!
+//! A conditional certificate is **not** a weaker unconditional one; it
+//! certifies a different, smaller statement, and the condition is part of it.
+//! `λ/(λ−t)` is not approximately the mgf of `Exponential(λ)` at `t ≥ λ` —
+//! there is no mgf there at all, the defining integral diverges. So
+//! [`Certificate::is_certified`] keeps meaning *unconditional* (every existing
+//! caller gates on it), [`Certificate::is_decided`] covers both, and the
+//! conditions propagate into derived claims: [`chebyshev_bound`] and
+//! [`markov_bound`] carry the union of their inputs' conditions.
+//!
+//! Each type's `verify_*` method independently re-derives the claim from the
+//! distribution's definition and re-decides equality with [`crate::equal`]. The
+//! comparison is on the **whole trust tag**, not on "both are certified enough":
+//! that is what refuses the dropped-hypothesis forgery, whose claim is
+//! character-for-character the genuine one and whose condition list is empty.
+//! See `forged_certificates_are_refused` for the three classical forgeries and
+//! `an_mgf_certificate_with_the_hypothesis_dropped_is_refused` for this one.
+//!
+//! # What changed, wave three (symbolic-parameter continuous families)
+//!
+//! | quantity | before | after | hypothesis |
+//! |---|---|---|---|
+//! | `Exponential(λ)` mass, symbolic `λ` | uncertified (`to_univariate`) | certified | `λ > 0` |
+//! | `Exponential(λ)` mean, symbolic `λ` | uncertified | certified `1/λ` | `λ > 0` |
+//! | `Exponential(λ)` variance, symbolic `λ` | uncertified | certified `1/λ²` | `λ > 0` |
+//! | `Exponential(λ)` mgf | uncertified (symbolic `t`) | certified `λ/(λ−t)` | `λ − t > 0` |
+//! | `Uniform(a,b)` mgf | uncertified (symbolic `t`) | certified `(e^{tb}−e^{ta})/(t(b−a))` | `t ≠ 0` |
+//! | `Normal(μ,σ²)` mgf, symbolic `μ`, `t` | uncertified (symbolic `t`) | certified `e^{μt+σ²t²/2}` | none (`σ²` concrete, its sign decided) |
+//! | `Normal` with symbolic `σ²` | not representable | unchanged | — (`integrate(e^{−a·x²})` declines, measured) |
+//! | `Geometric(p)`, symbolic `p` | uncertified | unchanged | — (`gosper_sum` declines before convergence, measured) |
+//!
+//! `Uniform`'s `t ≠ 0` is the removable singularity of the closed form:
+//! `M(0) = 1` is its limit, no route in this crate decides that limit, and so
+//! the certificate does not claim it.
 //!
 //! Chebyshev/Markov bounds are built from certified mean/variance but are
 //! **not themselves re-proved** here — [`Route::Derived`] records exactly
