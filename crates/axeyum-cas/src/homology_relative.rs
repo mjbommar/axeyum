@@ -1033,4 +1033,36 @@ mod tests {
             "got: {err}"
         );
     }
+
+    /// ADVERSARIAL: forge only the WRAPPED `K` homology certificate (a
+    /// betti number), leaving the relative Smith data, counts, torsion and
+    /// Euler characteristic all genuine -- isolates the
+    /// `self.k_cert.verify(k)?` reuse in `verify` (mirrors
+    /// `coefficients::tests::verify_refuses_when_the_wrapped_integer_certificate_is_forged`).
+    #[test]
+    fn verify_refuses_when_the_wrapped_k_certificate_is_forged() {
+        let disc = complex_of(&[&[0, 1, 2]]);
+        let boundary_circle = complex_of(&[&[0, 1], &[1, 2], &[0, 2]]);
+        let mut forged =
+            relative_homology(&disc, &boundary_circle).expect("relative homology of (D^2, S^1)");
+        forged.k_cert.betti.insert(0, 99); // the disc has exactly one component
+        let err = forged
+            .verify(&disc, &boundary_circle)
+            .expect_err("a forged wrapped K certificate must be refused");
+        assert!(err.contains("betti"), "got: {err}");
+    }
+
+    /// The `L` counterpart of the test above.
+    #[test]
+    fn verify_refuses_when_the_wrapped_l_certificate_is_forged() {
+        let disc = complex_of(&[&[0, 1, 2]]);
+        let boundary_circle = complex_of(&[&[0, 1], &[1, 2], &[0, 2]]);
+        let mut forged =
+            relative_homology(&disc, &boundary_circle).expect("relative homology of (D^2, S^1)");
+        forged.l_cert.betti.insert(0, 99); // the boundary circle has exactly one component
+        let err = forged
+            .verify(&disc, &boundary_circle)
+            .expect_err("a forged wrapped L certificate must be refused");
+        assert!(err.contains("betti"), "got: {err}");
+    }
 }
