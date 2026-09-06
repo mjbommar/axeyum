@@ -51,18 +51,66 @@
 //! same face counts by coincidence would only be caught by the boundary-match
 //! guard, not by the simplex-count guard alone.
 //!
-//! # Cost profile
+//! # Cost profile -- the unimodularity ceiling, before and after (item 8,
+//! wave three)
 //!
 //! Every step is exact integer arithmetic (`i128` internally, via
 //! `smith_normal_form`); there is no floating point anywhere in the certified
-//! path. The unimodularity check re-used from `normalforms` is cofactor
-//! determinant, `O(n!)` in the size of `U`/`V` (as large as the simplex count
-//! at that dimension), so this module inherits that crate's small-dimension
-//! intent. Tested here up to the 9-vertex, 18-triangle Klein bottle
-//! triangulation (27 edges, so the largest `U`/`V` computed is `27 x 27`);
-//! `cargo test -p axeyum-cas --lib homology::` was not separately timed under
-//! `--release`, so no wall-clock number is claimed here -- treat this as
-//! untested past a few dozen simplices per dimension until measured.
+//! path. Wave two's doc comment here named the unimodularity check's `O(n!)`
+//! cofactor fallback as the ceiling on complex size, tested only up to the
+//! 9-vertex, 18-triangle Klein bottle (27x27 `U`/`V`). Wave three measured a
+//! genuinely larger fixture -- a 196-vertex/588-edge/392-triangle grid torus
+//! (`fixtures::grid_torus`, called with `m = 14` by this module's own
+//! `#[ignore]`d timing test) -- to find out **what actually happens** at
+//! that size, rather than assume:
+//!
+//! - **The premise was wrong.** `is_unimodular`'s `i128` Bareiss determinant
+//!   did NOT decline on either transform at this size (`U` 196x196 in
+//!   ~0.1-0.2s, `V` 588x588 in ~3-4.5s) -- the `O(n!)` cofactor path was
+//!   never actually reached. So "Bareiss declines" was not the bottleneck
+//!   this fixture exhibits.
+//! - **The real bottleneck measured 25.8s**: `Matrix::mul`'s symbolic
+//!   `CasExpr` + `expand`-per-entry machinery, used both by
+//!   `smith_normal_form`'s own product certification (`admit_smith`, in
+//!   `normalforms.rs`) and by this module's own `smith_factorizations_hold`/
+//!   `compositions_are_zero` guards, to certify `U . d_1 . V = D` for that
+//!   one `196x588` boundary matrix. Every entry of that product is a literal
+//!   integer, so `expand`'s general polynomial canonicalization is pure
+//!   overhead there.
+//! - **The fix**: `Matrix::mul_int_fast` (`matrix.rs`) computes the same
+//!   product via direct `i128`-checked multiply-accumulate when every entry
+//!   is integer-valued, declining (falling back to `mul`, never silently
+//!   wrong) on a non-integer entry or an overflow. Wired in via
+//!   `mul_fast_or_symbolic` at every product-certification site this module
+//!   and `normalforms.rs`'s `admit_hermite`/`admit_smith` reach.
+//! - **Measured after the fix** (this host, `--release`, single-threaded,
+//!   ADVISORY): full `homology()` + `verify()` on the same 196/588/392
+//!   fixture went from well over a minute to ~6-13s to produce and ~10-23s
+//!   to verify (combined under 30s every run so far). A 200x200-scale
+//!   unimodularity check specifically (the literal claim this item asked
+//!   for) is comfortably under a second either way, before or after this
+//!   fix -- it was never the part that was slow.
+//!
+//! **What remains a genuine ceiling**: the Smith-form reduction itself
+//! (`smith_grids` in `normalforms.rs`, the row/column elimination that
+//! builds `U`, `D`, `V` in the first place, independent of how the result is
+//! later certified) is still the dominant remaining cost at this scale
+//! (measured: `smith_normal_form(d_1)` alone, ~6s of the ~13s total
+//! production time) and was NOT touched here -- lifting it further would
+//! mean changing the reduction algorithm's own asymptotic behavior, a
+//! materially different (and soundness-sensitive) change from a
+//! product-certification fast path, out of this wave's scope. A debug
+//! build of the same 196/588/392 fixture measured 63.5s to produce and
+//! 73.7s to verify (before the timing assertions in the `#[ignore]`d test
+//! existed to catch a regression), which is why that test stays
+//! release-only rather than joining this module's ordinary (debug-mode,
+//! sub-5s) test sweep.
+//!
+//! What comes next for this module: a cohomology RING structure (cup
+//! product) rather than just graded groups, relative homology `H_*(X, A)`,
+//! and simplicial homotopy (fundamental group / higher homotopy invariants,
+//! which homology alone cannot distinguish -- e.g. it cannot tell the
+//! dunce hat, contractible but not collapsible, apart from a point).
 
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -71,11 +119,16 @@ use crate::normalforms::{
 };
 use crate::{CasExpr, Matrix, ZeroTest, equal};
 
-// Wave two (item 8, wave two): the next things a topologist reaches for after
-// Betti numbers, each as a sibling file declared here so `lib.rs` stays
-// untouched. Each is a child module of `homology`, so it can reach this
-// module's private helpers (`rebuild_boundaries`, `is_zero_matrix`,
-// `diagonal_rank`, `torsion_factors`, `SmithData`) via `super::`.
+// The next things a topologist reaches for after Betti numbers, each as a
+// sibling file declared here so `lib.rs` stays untouched. Each is a child
+// module of `homology`, so it can reach this module's private helpers
+// (`rebuild_boundaries`, `is_zero_matrix`, `diagonal_rank`, `torsion_factors`,
+// `SmithData`) via `super::`. Wave two (item 8, wave two) added coefficients,
+// cohomology, induced maps over Q, and persistence over F_2; wave three
+// (item 8, wave three) added induced maps over Z (including torsion,
+// `induced::induced_homology_z`) and persistence over Q/F_p
+// (`persistent::persistent_homology_over_q`/`persistent_homology_mod_p`) to
+// the SAME files, plus the unimodularity-ceiling fix described above.
 #[path = "homology_coefficients.rs"]
 pub mod coefficients;
 #[path = "homology_cohomology.rs"]
@@ -285,6 +338,32 @@ pub(crate) mod fixtures {
             &[4, 6, 7],
             &[5, 7, 8],
         ])
+    }
+
+    /// The boundary of the `(n + 1)`-simplex on vertices `0..(n + 2)`: the
+    /// standard `n + 2`-vertex triangulation of `S^n` (each of the `n + 2`
+    /// maximal faces omits exactly one vertex). `n = 1` and `n = 2`
+    /// reproduce [`circle`] and [`sphere`] respectively (different vertex
+    /// count -- 3 and 4 -- from those hand-written fixtures, but the same
+    /// space); used here for `n` up to `4` as regression fixtures for
+    /// `S^n`'s Betti numbers `(1, 0, ..., 0, 1)` and Euler characteristic
+    /// `1 + (-1)^n`.
+    pub(crate) fn sphere_boundary(n: usize) -> SimplicialComplex {
+        let vertex_count = n + 2;
+        let maximal: Vec<Vec<usize>> = (0..vertex_count)
+            .map(|omit| (0..vertex_count).filter(|&v| v != omit).collect())
+            .collect();
+        SimplicialComplex::from_maximal_simplices(&maximal).expect("valid complex")
+    }
+
+    /// The standard 5-vertex, 5-triangle triangulation of the Mobius band
+    /// (a "pentagonal strip with a half-twist": triangles `{i, i+1, i+2}`
+    /// mod 5, using every edge of `K5`). Has boundary (unlike the closed
+    /// surfaces above), so `H_2 = 0`; homotopy-equivalent to its own core
+    /// circle, so `b = (1, 1, 0)` with NO torsion (unlike `RP^2`, whose
+    /// closed-up version of this same strip has `Z/2` torsion at `H_1`).
+    pub(crate) fn mobius_band_5v() -> SimplicialComplex {
+        complex_of(&[&[0, 1, 2], &[1, 2, 3], &[2, 3, 4], &[3, 4, 0], &[4, 0, 1]])
     }
 }
 
@@ -738,6 +817,7 @@ impl HomologyCertificate {
 
 #[cfg(test)]
 mod tests {
+    use super::fixtures::{mobius_band_5v, sphere_boundary};
     use super::{
         HomologyCertificate, SimplicialComplex, boundaries_match, boundary_matrix,
         compositions_are_zero, euler_characteristic_matches, homology, rebuild_boundaries,
@@ -959,26 +1039,21 @@ mod tests {
     /// m^2 - 3m^2 + 2m^2 = 0` regardless of `m`, and Betti numbers
     /// `(1, 2, 1)` (confirmed for `m = 4` by
     /// `grid_torus_betti_and_euler_characteristic_match_the_torus`, below).
-    fn grid_torus(m: usize) -> SimplicialComplex {
-        assert!(m >= 3, "m = 1, 2 degenerate the triangulation");
-        let idx = |i: usize, j: usize| (i % m) * m + (j % m);
-        let mut maximal = Vec::with_capacity(2 * m * m);
-        for i in 0..m {
-            for j in 0..m {
-                let a = idx(i, j);
-                let b = idx(i + 1, j);
-                let c = idx(i, j + 1);
-                let d = idx(i + 1, j + 1);
-                maximal.push(vec![a, b, c]);
-                maximal.push(vec![b, d, c]);
+    fn grid_torus(size: usize) -> SimplicialComplex {
+        assert!(size >= 3, "size = 1, 2 degenerate the triangulation");
+        let idx = |row: usize, col: usize| (row % size) * size + (col % size);
+        let mut maximal = Vec::with_capacity(2 * size * size);
+        for row in 0..size {
+            for col in 0..size {
+                let top_left = idx(row, col);
+                let top_right = idx(row + 1, col);
+                let bottom_left = idx(row, col + 1);
+                let bottom_right = idx(row + 1, col + 1);
+                maximal.push(vec![top_left, top_right, bottom_left]);
+                maximal.push(vec![top_right, bottom_right, bottom_left]);
             }
         }
-        complex_of(
-            &maximal
-                .iter()
-                .map(|v| v.as_slice())
-                .collect::<Vec<&[usize]>>(),
-        )
+        complex_of(&maximal.iter().map(Vec::as_slice).collect::<Vec<&[usize]>>())
     }
 
     /// A small instance of `grid_torus` (16 vertices, 48 edges, 32
@@ -996,6 +1071,100 @@ mod tests {
         assert_eq!(torsion_at(&certificate, 0), Vec::<i128>::new());
         assert_eq!(torsion_at(&certificate, 1), Vec::<i128>::new());
         assert_eq!(torsion_at(&certificate, 2), Vec::<i128>::new());
+        certificate.verify(&complex).expect("certificate verifies");
+    }
+
+    // ---- item 8 wave three: Betti/Euler regression fixtures for standard
+    // families (S^n for n <= 4, and the Mobius band) ----
+
+    #[test]
+    fn s0_two_points_has_betti_two_and_euler_characteristic_two() {
+        // S^0: the boundary of the 1-simplex, i.e. two disjoint points.
+        let complex = sphere_boundary(0);
+        assert_eq!(complex.count(0), 2);
+        assert_eq!(complex.max_dimension(), 0);
+        assert_eq!(complex.euler_characteristic(), 2);
+        let certificate = homology(&complex).expect("homology of S^0");
+        assert_eq!(betti_vec(&certificate), vec![2]);
+        certificate.verify(&complex).expect("certificate verifies");
+    }
+
+    #[test]
+    fn s1_three_vertex_boundary_has_betti_one_one_and_euler_characteristic_zero() {
+        // S^1: the boundary of the 2-simplex (a triangle) -- the same space
+        // as `fixtures::circle`, built via the generic `sphere_boundary`
+        // construction instead.
+        let complex = sphere_boundary(1);
+        assert_eq!(complex.count(0), 3);
+        assert_eq!(complex.count(1), 3);
+        assert_eq!(complex.euler_characteristic(), 0);
+        let certificate = homology(&complex).expect("homology of S^1");
+        assert_eq!(betti_vec(&certificate), vec![1, 1]);
+        certificate.verify(&complex).expect("certificate verifies");
+    }
+
+    #[test]
+    fn s2_four_vertex_boundary_has_betti_one_zero_one_and_euler_characteristic_two() {
+        // S^2: the boundary of the 3-simplex (a tetrahedron) -- the same
+        // space as `fixtures::sphere`.
+        let complex = sphere_boundary(2);
+        assert_eq!(complex.count(0), 4);
+        assert_eq!(complex.count(2), 4);
+        assert_eq!(complex.euler_characteristic(), 2);
+        let certificate = homology(&complex).expect("homology of S^2");
+        assert_eq!(betti_vec(&certificate), vec![1, 0, 1]);
+        certificate.verify(&complex).expect("certificate verifies");
+    }
+
+    #[test]
+    fn s3_five_vertex_boundary_has_betti_one_zero_zero_one_and_euler_characteristic_zero() {
+        // S^3: the boundary of the 4-simplex, 5 vertices, 5 tetrahedral
+        // (3-simplex) facets each omitting one vertex.
+        let complex = sphere_boundary(3);
+        assert_eq!(complex.count(0), 5);
+        assert_eq!(complex.count(3), 5);
+        assert_eq!(complex.euler_characteristic(), 0);
+        let certificate = homology(&complex).expect("homology of S^3");
+        assert_eq!(betti_vec(&certificate), vec![1, 0, 0, 1]);
+        for k in 0..=3 {
+            assert_eq!(torsion_at(&certificate, k), Vec::<i128>::new());
+        }
+        certificate.verify(&complex).expect("certificate verifies");
+    }
+
+    #[test]
+    fn s4_six_vertex_boundary_has_betti_one_zero_zero_zero_one_and_euler_characteristic_two() {
+        // S^4: the boundary of the 5-simplex, 6 vertices, 6 four-dimensional
+        // facets each omitting one vertex.
+        let complex = sphere_boundary(4);
+        assert_eq!(complex.count(0), 6);
+        assert_eq!(complex.count(4), 6);
+        assert_eq!(complex.euler_characteristic(), 2);
+        let certificate = homology(&complex).expect("homology of S^4");
+        assert_eq!(betti_vec(&certificate), vec![1, 0, 0, 0, 1]);
+        for k in 0..=4 {
+            assert_eq!(torsion_at(&certificate, k), Vec::<i128>::new());
+        }
+        certificate.verify(&complex).expect("certificate verifies");
+    }
+
+    /// The Mobius band (a surface WITH boundary): homotopy-equivalent to
+    /// its core circle, so `b = (1, 1, 0)` -- unlike `RP^2` (the closed
+    /// surface this same 5-triangle strip becomes once a disk is glued
+    /// along its boundary circle), the Mobius band itself carries NO
+    /// torsion at `H_1`.
+    #[test]
+    fn mobius_band_has_betti_one_one_zero_and_no_torsion() {
+        let complex = mobius_band_5v();
+        assert_eq!(complex.count(0), 5);
+        assert_eq!(complex.count(1), 10);
+        assert_eq!(complex.count(2), 5);
+        assert_eq!(complex.euler_characteristic(), 0);
+        let certificate = homology(&complex).expect("homology of the Mobius band");
+        assert_eq!(betti_vec(&certificate), vec![1, 1, 0]);
+        for k in 0..=2 {
+            assert_eq!(torsion_at(&certificate, k), Vec::<i128>::new());
+        }
         certificate.verify(&complex).expect("certificate verifies");
     }
 

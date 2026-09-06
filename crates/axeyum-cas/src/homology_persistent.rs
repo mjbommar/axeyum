@@ -1,4 +1,5 @@
-//! Persistent homology of a filtration, over `F_2`.
+//! Persistent homology of a filtration, over `F_2`, `Q`, or `F_p` for a
+//! caller-chosen small prime `p` (wave three).
 //!
 //! # What this computes
 //!
@@ -477,12 +478,12 @@ fn is_small_prime(p: u32) -> bool {
     if p < 2 {
         return false;
     }
-    if p % 2 == 0 {
+    if p.is_multiple_of(2) {
         return p == 2;
     }
     let mut d = 3u32;
     while d.saturating_mul(d) <= p {
-        if p % d == 0 {
+        if p.is_multiple_of(d) {
             return false;
         }
         d += 2;
@@ -542,10 +543,7 @@ fn reduce_persistence_generic<F: FieldElement>(
 ) -> (Vec<BTreeMap<usize, F>>, BTreeMap<usize, usize>) {
     let mut low_to_col: BTreeMap<usize, usize> = BTreeMap::new();
     for j in 0..columns.len() {
-        loop {
-            let Some((&low, &low_value)) = columns[j].iter().next_back() else {
-                break;
-            };
+        while let Some((&low, &low_value)) = columns[j].iter().next_back() {
             let Some(&pivot_col) = low_to_col.get(&low) else {
                 low_to_col.insert(low, j);
                 break;

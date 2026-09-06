@@ -1,4 +1,6 @@
-//! Simplicial maps and their induced maps on homology over `Q`.
+//! Simplicial maps and their induced maps on homology over `Q` and, since
+//! wave three, over `Z` (including the torsion part -- see the "Wave three"
+//! section below).
 //!
 //! # What this computes
 //!
@@ -1114,10 +1116,8 @@ fn torsion_entries_are_consistent(
     codomain_torsion: &[i128],
     k: usize,
 ) -> Result<(), String> {
-    for row in 0..codomain_torsion.len() {
-        let modulus_y = codomain_torsion[row];
-        for col in 0..domain_torsion.len() {
-            let modulus_x = domain_torsion[col];
+    for (row, &modulus_y) in codomain_torsion.iter().enumerate() {
+        for (col, &modulus_x) in domain_torsion.iter().enumerate() {
             let CasExpr::Const(entry) = torsion_part.get(row, col).ok_or_else(|| {
                 format!("torsion part missing entry ({row}, {col}) at degree {k}")
             })?
@@ -1172,8 +1172,8 @@ fn torsion_cross_checks_hold(
 
 impl IntegerInducedCertificate {
     /// Re-derive every claim in this certificate from `(vertex_map, domain,
-    /// codomain)` alone, via [`compute_induced_block`] -- the SAME function
-    /// [`induced_homology_z`] calls -- at every degree, plus the additional
+    /// codomain)` alone, via the same internal derivation
+    /// [`induced_homology_z`] calls at every degree, plus the additional
     /// algebraic checks described in the module documentation.
     ///
     /// # Errors
