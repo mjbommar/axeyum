@@ -69,3 +69,6 @@ crates/axeyum-cas/tests/telescoping_identities.rs   # import rewrite pending
 crates/axeyum-lean-kernel/Cargo.toml                # import rewrite pending (see STATUS)
 crates/axeyum-lean-kernel/examples/creal_eval_cost.rs # import rewrite pending
 crates/axeyum-lean-kernel/src/expr.rs               # import rewrite pending; the kernel's NatLit bridge
+crates/axeyum-cas/src/chartable.rs # import rewrite pending (landed 2026-09-06 by a concurrent CAS lane, after this allowlist was written)
+crates/axeyum-cas/src/fps_amplitude.rs # import rewrite pending (landed 2026-09-06 by a concurrent CAS lane, after this allowlist was written)
+crates/axeyum-cas/src/matgroup_q.rs # import rewrite pending (landed 2026-09-06 by a concurrent CAS lane, after this allowlist was written)
