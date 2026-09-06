@@ -1618,7 +1618,7 @@ fn prob5_normal_symbolic_mgf() -> Outcome {
     let t = CasExpr::var("t");
     let d = probability::Continuous::Normal {
         mu: mu.clone(),
-        variance: Rational::integer(4),
+        variance: CasExpr::Const(Rational::integer(4)),
     };
     let cert = d.mgf("t");
     let expected_claim = (t.clone() * mu + i(4) * t.pow(2) / i(2)).exp();
@@ -1655,7 +1655,7 @@ fn prob5_normal_symbolic_mgf() -> Outcome {
 fn prob6_normal_negative_variance_declines() -> Outcome {
     let d = probability::Continuous::Normal {
         mu: CasExpr::var("mu"),
-        variance: Rational::integer(-1),
+        variance: CasExpr::Const(Rational::integer(-1)),
     };
     let cert = d.mgf("t");
     Outcome {
@@ -1671,13 +1671,149 @@ fn prob6_normal_negative_variance_declines() -> Outcome {
     }
 }
 
-/// `Geometric(p)`'s mean at a **symbolic** `p` still declines, and not for a
-/// missing hypothesis channel: `gosper_sum` returns `None` on a symbolic ratio
-/// before any convergence question is asked, so there is no value to attach
-/// `0 < p < 1` to. The `decline_expected` counterpart to `prob4`, which shows
-/// where the hypothesis mechanism does and does not reach.
-fn prob7_geometric_symbolic_p_declines() -> Outcome {
-    let d = Discrete::Geometric(CasExpr::var("p"));
+/// `E[Geometric(p)] = 1/p` at a **symbolic** `p`, decided under exactly
+/// `0 < p < 1`. Was `decline_expected` until 2026-09-06: `gosper_sum` still has
+/// no antidifference for a symbolic ratio, but `infinite_sum_conditional`'s
+/// geometric series reaches the same summand with `|1−p| < 1` recorded.
+/// Reclassified by lane `cas-sum-gaps-2` after the harness flagged the
+/// disagreement — the direction the corpus is meant to move.
+///
+/// The entry DISAGREES if the conditions ever silently disappear: `1/p` is not
+/// the mean of anything at `p ≤ 0` or `p ≥ 1`, where the series does not
+/// converge to it.
+fn prob7_geometric_symbolic_p_mean() -> Outcome {
+    let p = CasExpr::var("p");
+    let d = Discrete::Geometric(p.clone());
+    let cert = d.mean();
+    let conditions = cert.hypotheses_display();
+    let matches_claim = matches!(
+        equal(&cert.claim, &(CasExpr::one() / p)),
+        ZeroTest::Certified { equal: true, .. }
+    );
+    let good = cert.is_decided() && conditions == "p > 0 and 1 - p > 0" && matches_claim;
+    Outcome {
+        verdict: if good {
+            Verdict::Agree
+        } else {
+            Verdict::Disagree
+        },
+        trust: if cert.is_decided() {
+            Trust::Certified
+        } else {
+            Trust::Uncertified
+        },
+        expected: "decided 1/p under exactly `p > 0 and 1 - p > 0`".to_string(),
+        actual: format!(
+            "decided={}, unconditional={}, claim={}, under=[{conditions}]",
+            cert.is_decided(),
+            cert.is_certified(),
+            cert.claim
+        ),
+    }
+}
+
+/// `Geometric(p)`'s mgf at a symbolic `p` **and** symbolic `t`, decided under
+/// `0 < p < 1` together with `t < −ln(1−p)`. The third condition is the one the
+/// mgf genuinely needs and the moments do not: `(1−p)eᵗ` leaves the unit disc as
+/// `t` grows, and `pe^t/(1−(1−p)e^t)` is negative there rather than an mgf.
+fn prob8_geometric_symbolic_mgf() -> Outcome {
+    let p = CasExpr::var("p");
+    let d = Discrete::Geometric(p.clone());
+    let cert = d.mgf("t");
+    let conditions = cert.hypotheses_display();
+    let e = CasExpr::var("t").exp();
+    let expected_claim = (p.clone() * e.clone()) / (CasExpr::one() - (CasExpr::one() - p) * e);
+    let matches_claim = matches!(
+        equal(&cert.claim, &expected_claim),
+        ZeroTest::Certified { equal: true, .. }
+    );
+    let good = cert.is_decided()
+        && conditions == "p > 0 and 1 - p > 0 and -ln(1 - p) - t > 0"
+        && matches_claim;
+    Outcome {
+        verdict: if good {
+            Verdict::Agree
+        } else {
+            Verdict::Disagree
+        },
+        trust: if cert.is_decided() {
+            Trust::Certified
+        } else {
+            Trust::Uncertified
+        },
+        expected: "decided p*e^t/(1-(1-p)*e^t) under exactly `0 < p < 1` and `t < -ln(1-p)`"
+            .to_string(),
+        actual: format!(
+            "decided={}, unconditional={}, claim={}, under=[{conditions}]",
+            cert.is_decided(),
+            cert.is_certified(),
+            cert.claim
+        ),
+    }
+}
+
+/// `Normal(μ, σ²)` at a **symbolic** variance: mass `1`, mean `μ`, variance `σ²`
+/// and mgf `e^{μt+σ²t²/2}`, each decided under exactly `σ² > 0`. Added
+/// 2026-09-06 by lane `cas-sum-gaps-2`; before it, a symbolic variance was not
+/// even representable (the field was a concrete rational).
+///
+/// All four are checked in one entry because the failure mode being guarded is
+/// shared: if the `σ² > 0` condition ever disappears, every one of them becomes
+/// a claim about an "upward Gaussian" that has no finite integral at all.
+fn prob9_normal_symbolic_variance() -> Outcome {
+    let mu = CasExpr::var("mu");
+    let s = CasExpr::var("s");
+    let t = CasExpr::var("t");
+    let d = probability::Continuous::Normal {
+        mu: mu.clone(),
+        variance: s.clone(),
+    };
+    let mgf_target = (t.clone() * mu.clone() + s.clone() * t.pow(2) / i(2)).exp();
+    let quantities = [
+        (d.total_mass(), CasExpr::one()),
+        (d.mean(), mu),
+        (d.variance(), s),
+        (d.mgf("t"), mgf_target),
+    ];
+    let mut good = true;
+    let mut report = Vec::new();
+    for (cert, expected_claim) in &quantities {
+        let conditions = cert.hypotheses_display();
+        let matches_claim = matches!(
+            equal(&cert.claim, expected_claim),
+            ZeroTest::Certified { equal: true, .. }
+        );
+        good &= cert.is_decided() && conditions == "s > 0" && matches_claim;
+        report.push(format!(
+            "{}|decided={}|under=[{conditions}]",
+            cert.claim,
+            cert.is_decided()
+        ));
+    }
+    Outcome {
+        verdict: if good {
+            Verdict::Agree
+        } else {
+            Verdict::Disagree
+        },
+        trust: if good {
+            Trust::Certified
+        } else {
+            Trust::Uncertified
+        },
+        expected:
+            "mass 1, mean mu, variance s, mgf exp(mu*t + s*t^2/2), each under exactly `s > 0`"
+                .to_string(),
+        actual: report.join(" ; "),
+    }
+}
+
+/// **Control** for `prob7`/`prob8`: a `Geometric` whose ratio leaves the unit
+/// disc must decline, not print the analytic continuation. `Geometric(2)` has
+/// `q = 1 − 2 = −1`, so `Σ qʲ` oscillates and has no value; the closed form
+/// `1/(1−q) = 1/2` is spellable and wrong.
+fn prob10_geometric_divergent_ratio_declines() -> Outcome {
+    let d = Discrete::Geometric(i(2));
     let cert = d.mean();
     Outcome {
         verdict: if cert.is_decided() {
@@ -1686,7 +1822,7 @@ fn prob7_geometric_symbolic_p_declines() -> Outcome {
             Verdict::Decline
         },
         trust: Trust::Uncertified,
-        expected: "declines: gosper_sum has no antidifference for a symbolic ratio".to_string(),
+        expected: "declines: |1-p| = 1, so the geometric series does not converge".to_string(),
         actual: format!("decided={}, claim={}", cert.is_decided(), cert.claim),
     }
 }
@@ -3734,8 +3870,29 @@ fn main() {
             "prob7-geometric-symbolic-p",
             None,
             Some("probability"),
+            Core,
+            prob7_geometric_symbolic_p_mean
+        ),
+        e!(
+            "prob8-geometric-symbolic-mgf",
+            None,
+            Some("probability"),
+            Core,
+            prob8_geometric_symbolic_mgf
+        ),
+        e!(
+            "prob9-normal-symbolic-variance",
+            None,
+            Some("probability"),
+            Core,
+            prob9_normal_symbolic_variance
+        ),
+        e!(
+            "prob10-geometric-divergent-ratio",
+            None,
+            Some("probability"),
             DeclineExpected,
-            prob7_geometric_symbolic_p_declines
+            prob10_geometric_divergent_ratio_declines
         ),
         // first-pass modules: geometry_beyond
         e!(
