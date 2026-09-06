@@ -151,5 +151,32 @@
     "reason": "Intentional cross-check, and the point of ADR-1607: the SAME statement proved two ways, once through CReal.supOn (metric/compactness.rs, via CReal.evt_approx_max plus And-reassociation) and once through the general metric EVT applied to Metric.creal_totallyBoundedOn_interval and Metric.creal_uniformly_continuous_on (metric/interval.rs). The duplication IS the evidence that the interval EVT is an instance of the metric one -- metric_tests::the_interval_evt_is_the_metric_evt_at_one_type asserts the kernel holds one interned ExprId for both types, with Metric.evt_approx_max's own type as the non-vacuity control. Making either a forwarding alias would delete exactly the fact being claimed. Same shape as the Apollonius entry above.",
     "adjudicated": "2026-09-04",
     "source": "docs/research/09-decisions/adr-1607-the-metric-layer-carries-w2-2-and-w2-3.md"
+  },
+  {
+    "names": [
+      "Geo.RPlane.pointRefl",
+      "Metric.CPoint.equivRefl"
+    ],
+    "reason": "Geo.RPlane's point setoid laws restate Metric.CPoint's equivRefl/equivSymm/equivTrans: one proposition, two proof terms, because build_geo_prelude consumes the cpoint prelude and NOT the metric prelude, so Geo cannot forward to Metric.CPoint's proof term without a build-order change (geo would have to depend on metric). Disclosed by lane real-incidence (ADR-1652) at the point of use; the lane's shape_search ran without --include-constructed, which indexes none of creal/cpoint/metric/geo while clearing the 3,050-declaration floor, so the duplicate was not visible to it. Deliberate until a lane makes geo consume metric and turns these into aliases; the adjudication is recorded here so the gate keeps answering.",
+    "adjudicated": "2026-09-06 coordinator (ADR-1652)",
+    "source": "2026-09-06 coordinator (ADR-1652)"
+  },
+  {
+    "names": [
+      "Geo.RPlane.pointSymm",
+      "Metric.CPoint.equivSymm"
+    ],
+    "reason": "Geo.RPlane's point setoid laws restate Metric.CPoint's equivRefl/equivSymm/equivTrans: one proposition, two proof terms, because build_geo_prelude consumes the cpoint prelude and NOT the metric prelude, so Geo cannot forward to Metric.CPoint's proof term without a build-order change (geo would have to depend on metric). Disclosed by lane real-incidence (ADR-1652) at the point of use; the lane's shape_search ran without --include-constructed, which indexes none of creal/cpoint/metric/geo while clearing the 3,050-declaration floor, so the duplicate was not visible to it. Deliberate until a lane makes geo consume metric and turns these into aliases; the adjudication is recorded here so the gate keeps answering.",
+    "adjudicated": "2026-09-06 coordinator (ADR-1652)",
+    "source": "2026-09-06 coordinator (ADR-1652)"
+  },
+  {
+    "names": [
+      "Geo.RPlane.pointTrans",
+      "Metric.CPoint.equivTrans"
+    ],
+    "reason": "Geo.RPlane's point setoid laws restate Metric.CPoint's equivRefl/equivSymm/equivTrans: one proposition, two proof terms, because build_geo_prelude consumes the cpoint prelude and NOT the metric prelude, so Geo cannot forward to Metric.CPoint's proof term without a build-order change (geo would have to depend on metric). Disclosed by lane real-incidence (ADR-1652) at the point of use; the lane's shape_search ran without --include-constructed, which indexes none of creal/cpoint/metric/geo while clearing the 3,050-declaration floor, so the duplicate was not visible to it. Deliberate until a lane makes geo consume metric and turns these into aliases; the adjudication is recorded here so the gate keeps answering.",
+    "adjudicated": "2026-09-06 coordinator (ADR-1652)",
+    "source": "2026-09-06 coordinator (ADR-1652)"
   }
 ]
