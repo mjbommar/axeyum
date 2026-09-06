@@ -562,5 +562,22 @@
   {"id": "ct3-c6-abelian-table", "area": null, "module": "chartable", "tier": "core",
    "description": "the cyclic group of order 6 has exactly six irreducible characters, all of degree 1, PRODUCED (not supplied) by the abelian route and then passed through the same independent checker. Added 2026-09-06 by lane cas-matgroup-2.",
    "expected": {"kind": "int", "value": 6, "note": "6 characters, every degree 1, verify() Ok"},
-   "justification": "cited/hand: a finite abelian group G has exactly |G| irreducible characters, all of degree 1 (the dual group is isomorphic to G). For C6 = <g> they are chi_j(g^k) = zeta_6^(jk), j = 0..5. sympy.combinatorics: PermutationGroup([Permutation(0,1,2,3,4,5)]).order() == 6 and is_abelian is True, so there are 6 conjugacy classes and the degrees square-sum to 6 = 6*1^2."}
+   "justification": "cited/hand: a finite abelian group G has exactly |G| irreducible characters, all of degree 1 (the dual group is isomorphic to G). For C6 = <g> they are chi_j(g^k) = zeta_6^(jk), j = 0..5. sympy.combinatorics: PermutationGroup([Permutation(0,1,2,3,4,5)]).order() == 6 and is_abelian is True, so there are 6 conjugacy classes and the degrees square-sum to 6 = 6*1^2."},
+  {"id": "fam1-amplitude-exact-geometric", "area": "series", "module": "fps_amplitude", "tier": "core",
+   "description": "the asymptotic amplitude of 1/(1-2x) is exactly C = 1 at the simple pole zeta = 1/2, so a(n) ~ 1 * n^0 * (1/2)^(-n) and the certificate carries C in Q rather than a float",
+   "expected": {"kind": "amplitude", "pole": "1/2", "multiplicity": 1, "value": "1"},
+   "justification": "hand: 1/(1-2x) = sum 2^n x^n exactly, so a(n) = 2^n and a(n)/2^n = 1 for EVERY n, hence C = 1; sympy: sp.series(1/(1-2*x), x, 0, 6) gives 1+2x+4x^2+8x^3+16x^4+32x^5, and sp.limit(2**n/2**n, n, sp.oo) == 1"},
+  {"id": "fam1-amplitude-exact-geometric-ctrl", "area": "series", "module": "fps_amplitude", "tier": "core",
+   "control_of": "fam1-amplitude-exact-geometric",
+   "description": "near-miss control: for 1/(1-2x)^3 the spellable-and-wrong closed form is a(n) ~ n^2 * 2^n, i.e. C = 1. The true amplitude is C = 1/2, because a(n) = binom(n+2,2) * 2^n and binom(n+2,2) ~ n^2/2 -- the 1/(m-1)! factor a residue computation carries and a naive leading-term reading drops. The entry asserts 1/2 AND not 1.",
+   "expected": {"kind": "amplitude", "pole": "1/2", "multiplicity": 3, "value": "1/2", "not_value": "1"},
+   "justification": "hand: [x^n](1-2x)^(-3) = binom(n+2,2)*2^n, and binom(n+2,2)/n^2 = (n+1)(n+2)/(2n^2) -> 1/2, so C = 1/2 and NOT 1; sympy: sp.limit(sp.binomial(n+2,2)/n**2, n, sp.oo) == 1/2"},
+  {"id": "fam2-amplitude-fibonacci-one-over-sqrt-five", "area": "series", "module": "fps_amplitude", "tier": "core",
+   "description": "Fibonacci's amplitude is the irrational 1/sqrt(5): F(n) ~ phi^n/sqrt(5). The tool returns it as the exact element 1/5 + (2/5)*zeta of Q(zeta), zeta = (sqrt(5)-1)/2 a root of z^2+z-1, and the entry also checks that element's SQUARE is the rational 1/5, which pins it as 1/sqrt(5) without taking a square root anywhere.",
+   "expected": {"kind": "amplitude", "field_minimal_polynomial": "z^2 + z - 1", "coefficients": ["1/5", "2/5"], "square": "1/5"},
+   "justification": "cited: Binet's formula F(n) = (phi^n - psi^n)/sqrt(5) with |psi| < 1 gives F(n) ~ phi^n/sqrt(5) (classical). sympy: sp.limit(sp.fibonacci(n)/sp.GoldenRatio**n, n, sp.oo) == sqrt(5)/5 = 1/sqrt(5). hand: with zeta = (sqrt(5)-1)/2, so zeta^2 = 1-zeta, (1/5 + (2/5)zeta)^2 = (1/25 + 4/25) + (4/25 - 4/25)zeta = 1/5 exactly, and numerically 1/5 + (2/5)(0.6180339887498949) = 0.4472135954999579 = 1/sqrt(5)"},
+  {"id": "fam3-amplitude-periodic-declines", "area": "series", "module": "fps_amplitude", "tier": "decline_expected",
+   "description": "1/(1+x^2) has coefficients 1, 0, -1, 0, ...: its two dominant singularities +-i share a modulus, so no single C * n^k * rho^(-n) describes them. The tool must DECLINE rather than average -- a confident constant here would be a wrong answer for a sequence that has none.",
+   "expected": {"kind": "decline", "note": "two dominant singularities of equal modulus; the coefficients are periodic"},
+   "justification": "hand: 1/(1+x^2) = sum_k (-1)^k x^(2k), so a(n) = 0 at odd n and (-1)^(n/2) at even n; no C, k, rho make a(n)/(C*n^k*rho^(-n)) converge to 1, since the sequence has infinitely many zeros and its nonzero terms alternate in sign. cited: singularity analysis needs a UNIQUE dominant singularity -- Flajolet & Sedgewick, Analytic Combinatorics, Theorem IV.10 and the periodicity discussion in section IV.6; with several, the coefficients carry an oscillating factor and no single amplitude exists."}
 ]

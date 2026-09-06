@@ -79,6 +79,7 @@ pub mod enclosure_special;
 pub mod extremum;
 mod factor_int;
 pub mod fps;
+pub mod fps_amplitude;
 pub mod fps_analytic;
 pub mod geometry;
 pub mod geometry_beyond;

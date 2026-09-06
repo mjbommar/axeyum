@@ -197,7 +197,7 @@ declares no public items), `qe_dnf` 4, `qe_bivariate` 4, plus 4 more tagged
 mass, mean, and variance all now certify with a SYMBOLIC rate).
 
 <!-- BEGIN GENERATED: cas-parity-corpus-counts (scripts/check-cas-parity-corpus.py --write) -->
-Tiers: **123 `core`**, **11 `decline_expected`**, **0 `known_defect`**. Total entries: **134**.
+Tiers: **126 `core`**, **12 `decline_expected`**, **0 `known_defect`**. Total entries: **138**.
 <!-- END GENERATED: cas-parity-corpus-counts -->
 
 The counts above are generated from `corpus.json`, never hand-written --

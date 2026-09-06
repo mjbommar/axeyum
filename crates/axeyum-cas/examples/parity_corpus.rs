@@ -40,6 +40,7 @@ use axeyum_cas::chartable::{
 };
 use axeyum_cas::enclosure::{BigInterval, EULER_GAMMA_NAME, enclose, enclose_constant};
 use axeyum_cas::enclosure_special::{MultiPoly, PolySystem, enclose_system};
+use axeyum_cas::fps_amplitude::{Amplitude, DominantPole, dominant_pole_amplitude};
 use axeyum_cas::fps_analytic::{
     RadiusOfConvergence, coefficient_asymptotics, radius_of_convergence,
 };
@@ -2298,6 +2299,162 @@ fn fa3_coefficient_asymptotics_geometric() -> Outcome {
 }
 
 // ============================================================================
+// Entries: second-pass modules — fps_amplitude
+// ============================================================================
+
+/// `1/(1-2x)` has `a(n) = 2^n` exactly, so the asymptotic amplitude is exactly
+/// `C = 1` at a simple pole `zeta = 1/2`.
+fn fam1_amplitude_exact_geometric() -> Outcome {
+    let numerator = vec![bigrat(1)];
+    let denominator = vec![bigrat(1), bigrat(-2)];
+    match dominant_pole_amplitude(&numerator, &denominator, 8) {
+        Ok(cert) => {
+            let verified = cert.verify().is_ok();
+            let half = BigRational::new(BigInt::from(1), BigInt::from(2));
+            let pole_is_half = cert.pole == DominantPole::Rational(half);
+            let amplitude_is_one =
+                cert.amplitude == Amplitude::Rational(BigRational::from_integer(BigInt::from(1)));
+            let simple = cert.multiplicity == 1;
+            let agree = verified && pole_is_half && amplitude_is_one && simple;
+            Outcome {
+                verdict: if agree {
+                    Verdict::Agree
+                } else {
+                    Verdict::Disagree
+                },
+                trust: if verified {
+                    Trust::Certified
+                } else {
+                    Trust::Unknown
+                },
+                expected: "C = 1 exactly, at the simple pole zeta = 1/2 (a(n) = 2^n)".to_string(),
+                actual: format!(
+                    "C = {:?} at {:?}, m = {}, verify_ok={verified}",
+                    cert.amplitude, cert.pole, cert.multiplicity
+                ),
+            }
+        }
+        Err(reason) => declined(&format!("dominant_pole_amplitude(1/(1-2x)): {reason:?}")),
+    }
+}
+
+/// Near-miss control: for `1/(1-2x)^3` the spellable-and-wrong closed form is
+/// `a(n) ~ n^2 * 2^n`, i.e. `C = 1`. The true amplitude is `C = 1/2`, because
+/// `a(n) = binom(n+2,2) 2^n` and `binom(n+2,2) ~ n^2/2` — the `1/(m-1)!` factor
+/// a residue computation carries and a naive "leading term" reading drops. The
+/// entry asserts the tool reports `1/2` and NOT `1`.
+fn fam1_amplitude_exact_geometric_ctrl() -> Outcome {
+    let numerator = vec![bigrat(1)];
+    let denominator = vec![bigrat(1), bigrat(-6), bigrat(12), bigrat(-8)];
+    match dominant_pole_amplitude(&numerator, &denominator, 400) {
+        Ok(cert) => {
+            let verified = cert.verify().is_ok();
+            let half = BigRational::new(BigInt::from(1), BigInt::from(2));
+            let one = BigRational::from_integer(BigInt::from(1));
+            let is_half = cert.amplitude == Amplitude::Rational(half);
+            let not_one = cert.amplitude != Amplitude::Rational(one);
+            let exponent_two = cert.exponent() == 2;
+            let agree = verified && is_half && not_one && exponent_two;
+            Outcome {
+                verdict: if agree {
+                    Verdict::Agree
+                } else {
+                    Verdict::Disagree
+                },
+                trust: if verified {
+                    Trust::Certified
+                } else {
+                    Trust::Unknown
+                },
+                expected: "C = 1/2 with growth exponent 2, NOT the naive C = 1".to_string(),
+                actual: format!(
+                    "C = {:?}, k = {}, verify_ok={verified}",
+                    cert.amplitude,
+                    cert.exponent()
+                ),
+            }
+        }
+        Err(reason) => declined(&format!("dominant_pole_amplitude(1/(1-2x)^3): {reason:?}")),
+    }
+}
+
+/// Fibonacci: `F(n) ~ phi^n / sqrt(5)`, so the amplitude is the irrational
+/// `1/sqrt(5)`. The tool returns it as the exact element `1/5 + (2/5) zeta` of
+/// `Q(zeta)` with `zeta^2 = 1 - zeta`; the entry checks the coordinates AND that
+/// the element's square is the rational `1/5`, which is what pins it as
+/// `1/sqrt(5)` without ever taking a square root.
+fn fam2_amplitude_fibonacci_one_over_sqrt_five() -> Outcome {
+    let numerator = vec![bigrat(0), bigrat(1)];
+    let denominator = vec![bigrat(1), bigrat(-1), bigrat(-1)];
+    match dominant_pole_amplitude(&numerator, &denominator, 8) {
+        Ok(cert) => {
+            let verified = cert.verify().is_ok();
+            let fifth = BigRational::new(BigInt::from(1), BigInt::from(5));
+            let two_fifths = BigRational::new(BigInt::from(2), BigInt::from(5));
+            let expected_coords = vec![fifth.clone(), two_fifths.clone()];
+            let (coords_ok, square_is_a_fifth) = match &cert.amplitude {
+                Amplitude::Algebraic { coefficients } => {
+                    // (a + b z)^2 with z^2 = 1 - z is (a^2 + b^2) + (2ab - b^2) z.
+                    let (a, b) = (&coefficients[0], &coefficients[1]);
+                    let constant = a * a + b * b;
+                    let linear = BigRational::from_integer(BigInt::from(2)) * a * b - b * b;
+                    (
+                        *coefficients == expected_coords,
+                        constant == fifth && linear == BigRational::from_integer(BigInt::from(0)),
+                    )
+                }
+                Amplitude::Rational(_) => (false, false),
+            };
+            let agree = verified && coords_ok && square_is_a_fifth;
+            Outcome {
+                verdict: if agree {
+                    Verdict::Agree
+                } else {
+                    Verdict::Disagree
+                },
+                trust: if verified {
+                    Trust::Certified
+                } else {
+                    Trust::Unknown
+                },
+                expected: "C = 1/5 + (2/5) zeta in Q(zeta), zeta^2 = 1 - zeta, and C^2 = 1/5"
+                    .to_string(),
+                actual: format!(
+                    "C = {:?}, C^2 rational and equal to 1/5: {square_is_a_fifth}, verify_ok={verified}",
+                    cert.amplitude
+                ),
+            }
+        }
+        Err(reason) => declined(&format!("dominant_pole_amplitude(x/(1-x-x^2)): {reason:?}")),
+    }
+}
+
+/// `1/(1+x^2)` has coefficients `1, 0, -1, 0, ...`: its two dominant
+/// singularities `+-i` share a modulus, so no single `C n^k rho^(-n)` describes
+/// the coefficients at all. The tool must DECLINE rather than average — a wrong
+/// answer here would be a confident constant for a sequence that has none.
+fn fam3_amplitude_periodic_declines() -> Outcome {
+    let numerator = vec![bigrat(1)];
+    let denominator = vec![bigrat(1), bigrat(0), bigrat(1)];
+    match dominant_pole_amplitude(&numerator, &denominator, 8) {
+        Ok(cert) => Outcome {
+            verdict: Verdict::Disagree,
+            trust: Trust::Uncertified,
+            expected: "a decline: +-i share the dominant modulus, so no amplitude exists"
+                .to_string(),
+            actual: format!("answered C = {:?}", cert.amplitude),
+        },
+        Err(reason) => Outcome {
+            verdict: Verdict::Decline,
+            trust: Trust::Unknown,
+            expected: "a decline: +-i share the dominant modulus, so no amplitude exists"
+                .to_string(),
+            actual: format!("declined: {reason:?}"),
+        },
+    }
+}
+
+// ============================================================================
 // Entries: second-pass modules — numberfield_ideals
 // ============================================================================
 
@@ -4255,6 +4412,35 @@ fn main() {
             Some("fps_analytic"),
             Core,
             fa3_coefficient_asymptotics_geometric
+        ),
+        // second-pass modules: fps_amplitude
+        e!(
+            "fam1-amplitude-exact-geometric",
+            Some("series"),
+            Some("fps_amplitude"),
+            Core,
+            fam1_amplitude_exact_geometric
+        ),
+        e!(
+            "fam1-amplitude-exact-geometric-ctrl",
+            Some("series"),
+            Some("fps_amplitude"),
+            Core,
+            fam1_amplitude_exact_geometric_ctrl
+        ),
+        e!(
+            "fam2-amplitude-fibonacci-one-over-sqrt-five",
+            Some("series"),
+            Some("fps_amplitude"),
+            Core,
+            fam2_amplitude_fibonacci_one_over_sqrt_five
+        ),
+        e!(
+            "fam3-amplitude-periodic-declines",
+            Some("series"),
+            Some("fps_amplitude"),
+            DeclineExpected,
+            fam3_amplitude_periodic_declines
         ),
         // second-pass modules: numberfield_ideals
         e!(

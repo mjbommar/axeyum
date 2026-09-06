@@ -8107,6 +8107,237 @@ SUITES["cas-chartable"] = (
     ],
 )
 
+
+# --------------------------------------------------------------------------
+# The exact asymptotic amplitude guards (lane cas-fps-4, file 13 item 3 wave
+# four).
+#
+# Every route here can only turn a decline into a NUMBER, so the risk is an
+# over-eager acceptance: an amplitude computed for a function whose dominant
+# singularity is not unique, not real, or not the one the certificate names.
+# Each mutation below removes exactly one of the guards in
+# `AmplitudeCertificate::verify` that refuse those, and each is paired with the
+# forged certificate that dies when it is gone.
+#
+# The order of the two amplitude checks is load-bearing and is why both are
+# killable: the partial-fraction cross-check runs BEFORE the residue
+# recomputation, so a forged rational amplitude is refused by the cross-check
+# and a forged ALGEBRAIC one (which the machine-width partial-fraction route
+# cannot express) by the recomputation. Put the recomputation first and the
+# cross-check becomes unkillable.
+# --------------------------------------------------------------------------
+
+SUITES["cas-fps-amplitude"] = (
+    "crates/axeyum-cas/src/fps_amplitude.rs",
+    Cargo(("-p", "axeyum-cas", "--lib", "fps_amplitude::"), "cas-fps-amplitude"),
+    [
+        (
+            # The certificate must describe the same function its radius does.
+            "the amplitude and radius certificates must name one function",
+            "        if self.radius.numerator != numerator || self.radius.denominator != denominator {\n"
+            "            return Err(AmplitudeError::FunctionMismatch);\n        }",
+            "        if false {\n            return Err(AmplitudeError::FunctionMismatch);\n        }",
+        ),
+        (
+            # A stated tolerance looser than the module's cap would let a forger
+            # buy acceptance by widening the claim.
+            "a tolerance above the module cap is refused",
+            "        if !self.tolerance.is_positive() || self.tolerance > tolerance_cap() {\n"
+            "            return Err(AmplitudeError::ToleranceTooLoose);\n        }",
+            "        if false {\n            return Err(AmplitudeError::ToleranceTooLoose);\n        }",
+        ),
+        (
+            # A non-monic factor is not the minimal polynomial of anything, and
+            # the number-field arithmetic downstream assumes it is.
+            "the dominant factor must be monic",
+            "        if declared_degree == 0 || !declared[declared_degree].is_one() {\n"
+            "            return Err(AmplitudeError::DominantFactorNotMonic);\n        }",
+            "        if false {\n            return Err(AmplitudeError::DominantFactorNotMonic);\n        }",
+        ),
+        (
+            # TWO factors attaining the radius means two singularities of equal
+            # modulus and no single amplitude. Without this the last one wins.
+            "exactly one factor may attain the radius",
+            "        if attaining != 1 {\n"
+            "            return Err(AmplitudeError::SharedDominantModulus { factors: attaining });\n        }",
+            "        if false {\n"
+            "            return Err(AmplitudeError::SharedDominantModulus { factors: attaining });\n        }",
+        ),
+        (
+            # The declared factor and multiplicity must be the ones the radius
+            # certificate's own factorization carries.
+            "the declared dominant factor and multiplicity must match the factorization",
+            "        if monic(&bound.factor) != declared || bound.multiplicity != self.multiplicity {\n"
+            "            return Err(AmplitudeError::DominantFactorMismatch);\n        }",
+            "        if false {\n            return Err(AmplitudeError::DominantFactorMismatch);\n        }",
+        ),
+        (
+            # `f^m * s = q` is what makes `m` the pole's ORDER rather than a
+            # number the certificate asserts.
+            "the factor/cofactor split must reproduce the reduced denominator",
+            "        if let Some(degree) = first_disagreement(&rebuilt, &self.radius.reduced_denominator) {\n"
+            "            return Err(AmplitudeError::CofactorMismatch { degree });\n        }",
+            "        if let Some(degree) = first_disagreement(&rebuilt, &rebuilt) {\n"
+            "            return Err(AmplitudeError::CofactorMismatch { degree });\n        }",
+        ),
+        (
+            # A rational pole that is not a root of the factor is not a pole.
+            "a rational pole must be a root of the dominant factor",
+            "                if !eval(&factor, value).is_zero() {\n"
+            "                    return Err(AmplitudeError::PoleNotARoot);\n                }",
+            "                if false {\n"
+            "                    return Err(AmplitudeError::PoleNotARoot);\n                }",
+        ),
+        (
+            # An algebraic pole is named by a bracket; a bracket naming a
+            # different polynomial's root names nothing.
+            "an algebraic pole's minimal polynomial must be the dominant factor",
+            "                if trim(minimal_polynomial.clone()) != factor {\n"
+            "                    return Err(AmplitudeError::MinimalPolynomialMismatch);\n                }",
+            "                if false {\n"
+            "                    return Err(AmplitudeError::MinimalPolynomialMismatch);\n                }",
+        ),
+        (
+            # `lower >= upper` is not a bracket. Killed by the degenerate
+            # bracket; the STRADDLING half of the same condition is caught
+            # downstream by `modulus_interval`, so only the ordering half is
+            # load-bearing here.
+            "a pole bracket must be properly ordered",
+            "                if lower >= upper || !(lower.is_positive() || upper.is_negative()) {\n"
+            "                    return Err(AmplitudeError::MalformedPoleBracket);\n                }",
+            "                if !(lower.is_positive() || upper.is_negative()) {\n"
+            "                    return Err(AmplitudeError::MalformedPoleBracket);\n                }",
+        ),
+        (
+            # A bracket holding two roots does not say WHICH root is the pole.
+            "the pole bracket must isolate exactly one root",
+            "                if count != 1 {\n"
+            "                    return Err(AmplitudeError::PoleNotIsolated {\n"
+            "                        expected: 1,\n                        found: count,\n                    });\n                }",
+            "                if false {\n"
+            "                    return Err(AmplitudeError::PoleNotIsolated {\n"
+            "                        expected: 1,\n                        found: count,\n                    });\n                }",
+        ),
+        (
+            # The pole's modulus must be inside the radius's certified bracket;
+            # without it the SUBDOMINANT root of the same factor is accepted.
+            "the pole's modulus must lie inside the radius bracket",
+            "        if modulus_lower < *bracket_lower || modulus_upper > *bracket_upper {\n"
+            "            return Err(AmplitudeError::PoleModulusMismatch);\n        }",
+            "        if false {\n            return Err(AmplitudeError::PoleModulusMismatch);\n        }",
+        ),
+        (
+            # THIS ONE SURVIVES, and the impossibility is the finding, not an
+            # oversight. It is a fail-closed self-check: the modulus polynomial
+            # divides the global one, the radius certificate has already been
+            # verified to have exactly one root of that product at or below the
+            # bracket's upper end, and the modulus-polynomial theorem puts
+            # |zeta| among its roots -- so with the containment guard above
+            # holding, `below` can only be 1. It stays because it is what would
+            # catch a future modulus route whose polynomial does not carry every
+            # root modulus, and nothing else would.
+            "the pole must be the factor's minimal-modulus root",
+            "        if below != 1 {\n"
+            "            return Err(AmplitudeError::PoleModulusNotMinimal { found: below });\n        }",
+            "        if false {\n"
+            "            return Err(AmplitudeError::PoleModulusNotMinimal { found: below });\n        }",
+        ),
+        (
+            # The uniqueness test: without it a conjugate pair or a +-rho pair
+            # inside ONE irreducible factor is accepted and an amplitude is
+            # reported for a periodic sequence.
+            "the minimal modulus must be attained by exactly one root",
+            "            Some(false) => return Err(AmplitudeError::DominantModulusNotSimple),",
+            "            Some(false) => {}",
+        ),
+        (
+            # The independent second route to C.
+            "the partial-fraction cross-check must agree",
+            "            Some(value) if value != *claimed => Err(AmplitudeError::PartialFractionDisagrees),",
+            "            Some(value) if value == *claimed && value != *claimed => {\n"
+            "                Err(AmplitudeError::PartialFractionDisagrees)\n            }",
+        ),
+        (
+            # The residue recomputation itself, in the number field. Anchored on
+            # the ALGEBRAIC branch, which the cross-check cannot reach.
+            "the residue recomputation must reproduce an algebraic amplitude",
+            "                if value.coeffs() != coefficients.as_slice() {\n"
+            "                    return Err(AmplitudeError::AmplitudeMismatch);\n                }",
+            "                if false {\n"
+            "                    return Err(AmplitudeError::AmplitudeMismatch);\n                }",
+        ),
+        (
+            # A tail bound at or below the radius says nothing at all.
+            "the tail bound must be above the radius",
+            "                if bound <= bracket_upper {\n"
+            "                    return Err(AmplitudeError::TailBoundNotAboveRadius);\n                }",
+            "                if false {\n"
+            "                    return Err(AmplitudeError::TailBoundNotAboveRadius);\n                }",
+        ),
+        (
+            # ...and the gap it claims must actually be empty.
+            "the claimed tail gap must hold no further singularity",
+            "        if found != 0 {\n"
+            "            return Err(AmplitudeError::TailBoundNotCertified { found });\n        }",
+            "        if false {\n"
+            "            return Err(AmplitudeError::TailBoundNotCertified { found });\n        }",
+        ),
+        (
+            # A window of the wrong length is not the window this module states.
+            "the window must have the stated length",
+            "        if self.samples.len() != WINDOW_LEN {\n"
+            "            return Err(AmplitudeError::MalformedWindow);\n        }",
+            "        if false {\n"
+            "            return Err(AmplitudeError::MalformedWindow);\n        }",
+        ),
+        (
+            # Samples below the floor are pre-asymptotic and say nothing.
+            "the window must start at or above the floor",
+            "        if base < MIN_WINDOW_BASE {\n"
+            "            return Err(AmplitudeError::MalformedWindow);\n        }",
+            "        if false {\n            return Err(AmplitudeError::MalformedWindow);\n        }",
+        ),
+        (
+            # A window with a gap is a hand-picked sample, not a window.
+            "the window's indices must be consecutive",
+            "            if sample.index != base + offset {\n"
+            "                return Err(AmplitudeError::MalformedWindow);\n            }",
+            "            if false {\n                return Err(AmplitudeError::MalformedWindow);\n            }",
+        ),
+        (
+            # Each carried coefficient must be the expansion's own.
+            "each window coefficient must be the reused expansion's",
+            "            if *coefficient != sample.coefficient {\n"
+            "                return Err(AmplitudeError::CoefficientMismatch { index: offset });\n            }",
+            "            if false {\n"
+            "                return Err(AmplitudeError::CoefficientMismatch { index: offset });\n            }",
+        ),
+        (
+            # ...and each carried error bound must be the recomputed one.
+            "each window error bound must be the recomputed one",
+            "            if bound != sample.error_bound {\n"
+            "                return Err(AmplitudeError::ErrorBoundMismatch { index: offset });\n            }",
+            "            if false {\n"
+            "                return Err(AmplitudeError::ErrorBoundMismatch { index: offset });\n            }",
+        ),
+        (
+            # ...and be inside the stated tolerance.
+            "each window error bound must meet the stated tolerance",
+            "            if bound > self.tolerance {\n"
+            "                return Err(AmplitudeError::ToleranceExceeded { index: offset });\n            }",
+            "            if false {\n"
+            "                return Err(AmplitudeError::ToleranceExceeded { index: offset });\n            }",
+        ),
+        (
+            # ...and the window must show convergence, not divergence.
+            "the window's error must not grow",
+            "        if last.error_bound > first.error_bound {\n"
+            "            return Err(AmplitudeError::ErrorDoesNotShrink);\n        }",
+            "        if false {\n            return Err(AmplitudeError::ErrorDoesNotShrink);\n        }",
+        ),
+    ],
+)
+
 if __name__ == "__main__":
     raise SystemExit(main(sys.argv))
 

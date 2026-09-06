@@ -17,7 +17,7 @@
 # only rises on purpose) -- but a new UNCERTIFIED function is never refused;
 # that label is honest, not a violation. See
 # docs/math-department/13-computer-algebra.md item 10.
-COUNT	150
+COUNT	151
 FN	chartable::character_table_of_abelian_group	Result<CharacterTableCertificate, CharacterTableError>
 FN	enclosure::enclose	Option<Enclosure>
 FN	enclosure::enclose_constant	Option<Enclosure>
@@ -39,6 +39,7 @@ FN	fps::RecurrenceCertificate::new	RecurrenceCertificate
 FN	fps::guess_linear_recurrence	Option<RecurrenceCertificate>
 FN	fps::guess_p_recursive	Result<PRecursiveCertificate, PRecursiveDecline>
 FN	fps::rational_generating_function	Option<RationalGeneratingFunction>
+FN	fps_amplitude::dominant_pole_amplitude	Result<AmplitudeCertificate, AmplitudeDecline>
 FN	fps_analytic::coefficient_asymptotics	Result<CoefficientAsymptotics, AnalyticDecline>
 FN	fps_analytic::radius_of_convergence	Result<RadiusCertificate, AnalyticDecline>
 FN	geometry_beyond::Conic::through_five_points	Result<(Conic, ConicFiveCertificate), ConicRefusal>
@@ -171,6 +172,7 @@ FN	telescoping_check::check_closed_form_symbolic	Result<SymbolicClosedFormReport
 VOCAB	AbelianCertificate	enum
 VOCAB	ActionCertificate	struct
 VOCAB	AlternationWitness	struct
+VOCAB	AmplitudeCertificate	struct
 VOCAB	BarrierCertificate	struct
 VOCAB	BigWitness	struct
 VOCAB	BinaryExtensionConnectedAdamsTraceReport	struct
