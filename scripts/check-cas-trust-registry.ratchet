@@ -17,7 +17,7 @@
 # only rises on purpose) -- but a new UNCERTIFIED function is never refused;
 # that label is honest, not a violation. See
 # docs/math-department/13-computer-algebra.md item 10.
-COUNT	126
+COUNT	137
 FN	enclosure::enclose	Option<Enclosure>
 FN	enclosure::enclose_constant	Option<Enclosure>
 FN	enclosure::enclose_root	Option<Enclosure>
@@ -97,6 +97,12 @@ FN	numberfield_ideals::QuadraticOrder::multiply_ideals	Result<(Ideal, IdealProdu
 FN	numberfield_ideals::QuadraticOrder::split_prime	Result<(Vec<Ideal>, PrimeSplittingCertificate), IdealDecline>
 FN	numberfield_ideals::class_number	Result<(usize, ClassNumberCertificate), IdealDecline>
 FN	numberfield_ideals::primitive_element	Result<PrimitiveElementCertificate, IdealDecline>
+FN	numberfield_real::QuadraticOrder::real_class_number	Result<RealClassNumberCertificate, RealDecline>
+FN	numberfield_real::form_cycles	Result<FormCycleCertificate, RealDecline>
+FN	numberfield_real::pell_regulator	Result<RegulatorCertificate, RealDecline>
+FN	numberfield_real::real_class_number	Result<RealClassNumberCertificate, RealDecline>
+FN	numberfield_real::regulator	Result<RegulatorCertificate, RealDecline>
+FN	numberfield_real::regulator_of_unit	Result<RegulatorCertificate, RealDecline>
 FN	partial_fractions::partial_fractions	Option<PartialFractionCertificate>
 FN	permgroup::PermutationGroup::cayley_table	Result<CayleyTableCertificate, PermgroupError>
 FN	permgroup::PermutationGroup::center	Result<(PermutationGroup, CenterCertificate), PermgroupError>
@@ -130,10 +136,15 @@ FN	prove_squared_binomial_falling_moment	Option<CertifiedSquaredBinomialFallingM
 FN	prove_squared_binomial_moment	Option<CertifiedSquaredBinomialMoment>
 FN	qe::decide_exists	Decision
 FN	qe::decide_forall	ForallDecision
+FN	qe_alt::decide_exists_forall	Result<ExistsForallCertificate, Fault>
+FN	qe_alt::decide_forall_exists	Result<ForallExistsCertificate, Fault>
+FN	qe_alt::eliminate_y_dnf	Result<DnfProjectionCertificate, Fault>
 FN	qe_bivariate::eliminate_y	Result<ProjectionCertificate, Fault>
 FN	qe_bivariate::eliminate_y_to_formula	Result<FormulaCertificate, Fault>
 FN	qe_dnf::decide_exists_dnf	DnfDecision
 FN	qe_fibre::decide_fibre	Result<FibreCertificate, Fault>
+FN	qe_lift::eliminate_z	Result<LiftCertificate, Fault>
+FN	qe_lift::eliminate_z_checked	Result<LiftCertificate, Fault>
 FN	rationality::decide_rationality	Option<RationalityCertificate>
 FN	real_algebraic::polynomial_ivt	Option<IvtCertificate>
 FN	sos::check	Result<CheckReport, String>
@@ -145,6 +156,7 @@ FN	taylor::polynomial_taylor	Option<TaylorCertificate>
 FN	telescoping_check::check_closed_form	Result<ClosedFormReport, Vec<String>>
 FN	telescoping_check::check_closed_form_symbolic	Result<SymbolicClosedFormReport, Vec<String>>
 VOCAB	AbelianCertificate	enum
+VOCAB	AlternationWitness	struct
 VOCAB	BarrierCertificate	struct
 VOCAB	BigWitness	struct
 VOCAB	BinaryExtensionConnectedAdamsTraceReport	struct
@@ -182,11 +194,14 @@ VOCAB	DegenerateWitness	struct
 VOCAB	DerivedSubgroupCertificate	struct
 VOCAB	DistancePreservingCertificate	struct
 VOCAB	DistinguishCertificate	struct
+VOCAB	DnfCellCertificate	struct
 VOCAB	DnfDecision	enum
+VOCAB	DnfProjectionCertificate	struct
 VOCAB	DnfRefutationCertificate	struct
 VOCAB	DnfSampleCertificate	struct
 VOCAB	ElementMinPolyCertificate	struct
 VOCAB	Enclosure	struct
+VOCAB	ExistsForallCertificate	struct
 VOCAB	ExtremumCertificate	struct
 VOCAB	FactorModulusBound	struct
 VOCAB	FactorizationCertificate	struct
@@ -195,6 +210,8 @@ VOCAB	FibreWitness	struct
 VOCAB	FieldPersistenceCertificate	struct
 VOCAB	FieldPersistenceReport	struct
 VOCAB	ForallDecision	enum
+VOCAB	ForallExistsCertificate	struct
+VOCAB	FormCycleCertificate	struct
 VOCAB	FormIdealCertificate	struct
 VOCAB	FormReductionCertificate	struct
 VOCAB	FormulaCertificate	struct
@@ -216,6 +233,7 @@ VOCAB	InvariantsCertificate	struct
 VOCAB	InverseCertificate	struct
 VOCAB	IrreducibilityCertificate	struct
 VOCAB	IvtCertificate	struct
+VOCAB	LiftCertificate	struct
 VOCAB	LyapunovCertificate	struct
 VOCAB	MembershipCertificate	enum
 VOCAB	MvtCertificate	struct
@@ -238,8 +256,10 @@ VOCAB	QuotientOrderCertificate	struct
 VOCAB	RadiusCertificate	struct
 VOCAB	RationalGeneratingFunction	struct
 VOCAB	RationalityCertificate	struct
+VOCAB	RealClassNumberCertificate	struct
 VOCAB	RecurrenceCertificate	struct
 VOCAB	RefutationCertificate	struct
+VOCAB	RegulatorCertificate	struct
 VOCAB	SampleCertificate	struct
 VOCAB	ShapedCompositionSearchReport	struct
 VOCAB	SimplicialMapCertificate	struct
