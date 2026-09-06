@@ -735,6 +735,9 @@ fn unnamed_but_live_declarations(p: &RatPrelude) -> Vec<crate::NameId> {
         p.fourth_moment.expectation_sum_vars_mul,
         p.fourth_moment.expectation_sum_vars_mul_eq_zero,
         p.fourth_moment.fourwise_uncorrelated,
+        p.fourth_moment.expectation_sq_sum_vars_mul_sq,
+        p.fourth_moment.fourth_moment_sum_vars_le,
+        p.fourth_moment.fourth_moment_tail_sum_vars,
     ]
 }
 

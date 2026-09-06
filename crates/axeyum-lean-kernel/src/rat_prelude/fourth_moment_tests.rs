@@ -36,6 +36,9 @@ fn fourth_moment_declarations_are_axiom_free() {
         g.expectation_sum_vars_mul,
         g.expectation_sum_vars_mul_eq_zero,
         g.fourwise_uncorrelated,
+        g.expectation_sq_sum_vars_mul_sq,
+        g.fourth_moment_sum_vars_le,
+        g.fourth_moment_tail_sum_vars,
     ];
     for name in names {
         assert!(
@@ -67,6 +70,9 @@ fn fourwise_uncorrelated_applies_to_four_indices_and_yields_the_lone_index_momen
     let mut d = IntDev::new(&mut k, p.int);
 
     let nat = d.nat_ty();
+    let carrier = rat_ty(&mut d);
+    let fn_ty = d.arrow(nat, carrier);
+    let x_ty = d.arrow(nat, fn_ty);
 
     let y_fv = d.fresh_fvar();
     let y = d.kernel().fvar(y_fv);
@@ -144,11 +150,22 @@ fn fourwise_uncorrelated_applies_to_four_indices_and_yields_the_lone_index_momen
                 d.lam_fv(idx_fv[slot], nat, t)
             };
         }
-        if pi {
+        t = if pi {
             d.pi_fv(h_fv, whole, t)
         } else {
             d.lam_fv(h_fv, whole, t)
+        };
+        // `Y`, `p`, `n` and `m` are free in every term above; a kernel cannot
+        // infer a type for a term with a dangling free variable, so they are
+        // discharged too.
+        for (fv, ty) in [(m_fv, nat), (n_fv, nat), (pf_fv, fn_ty), (y_fv, x_ty)] {
+            t = if pi {
+                d.pi_fv(fv, ty, t)
+            } else {
+                d.lam_fv(fv, ty, t)
+            };
         }
+        t
     };
 
     let term = close(&mut d, applied, false);
@@ -364,5 +381,212 @@ fn expectation_sum_vars_mul_eq_zero_concludes_zero_and_not_one() {
     assert!(
         !d.kernel().def_eq(got, wrong),
         "the conclusion is `= zero`; a control that cannot see `= one` is vacuous"
+    );
+}
+
+/// **The multinomial coefficient is 3, and this test can see that it is not 6.**
+///
+/// `Rat.fourth_moment_sumVars_le`'s declared type is compared against the
+/// statement rebuilt with THREE copies of `T·T` and against the same statement
+/// with SIX. The first must match and the second must not. Without the second
+/// half, "the bound is `Σ M₄ + 3(Σ σ²)²`" would be a claim about the source
+/// rather than about the admitted declaration — and 3 is exactly the constant
+/// the multinomial expansion of a fourth power puts there.
+#[test]
+fn fourth_moment_bound_carries_three_square_terms_and_not_six() {
+    let (mut k, p) = prelude();
+    let names = p.fourth_moment;
+    let mut d = IntDev::new(&mut k, p.int);
+
+    let nat = d.nat_ty();
+    let carrier = rat_ty(&mut d);
+    let fn_ty = d.arrow(nat, carrier);
+    let x_ty = d.arrow(nat, fn_ty);
+
+    let c = d.kernel().const_(names.fourth_moment_sum_vars_le, vec![]);
+    let got = d
+        .kernel()
+        .infer(c)
+        .expect("Rat.fourth_moment_sumVars_le must be declared");
+
+    let build = |d: &mut IntDev<'_>, copies: usize| -> ExprId {
+        let y_fv = d.fresh_fvar();
+        let y = d.kernel().fvar(y_fv);
+        let pf_fv = d.fresh_fvar();
+        let pf = d.kernel().fvar(pf_fv);
+        let n_fv = d.fresh_fvar();
+        let n = d.kernel().fvar(n_fv);
+        let m4_fv = d.fresh_fvar();
+        let m4 = d.kernel().fvar(m4_fv);
+        let s2_fv = d.fresh_fvar();
+        let s2 = d.kernel().fvar(s2_fv);
+        let m_fv = d.fresh_fvar();
+        let m = d.kernel().fvar(m_fv);
+
+        let zero_r = rzero(d, p);
+        let hd_ty = is_distribution(d, p, pf, n);
+        let hs2_ty = rle(d, p, zero_r, s2);
+        let hfw_ty = d.const_app(names.fourwise_uncorrelated, &[y, m, pf, n]);
+        let h4_ty = fourth_moment_bounded(d, p, y, m4, pf, n, m);
+        let h2_ty = second_moment_bounded(d, p, y, s2, pf, n, m);
+
+        let lhs = expect_of(
+            d,
+            p,
+            &|d, kk| {
+                let s = sv_at(d, p, y, m, kk);
+                let ss = rmul(d, s, s);
+                rmul(d, ss, ss)
+            },
+            pf,
+            n,
+        );
+        let const_m4 = const_fn(d, m4);
+        let const_s2 = const_fn(d, s2);
+        let sm = rsum_range(d, p, const_m4, m);
+        let tsum = rsum_range(d, p, const_s2, m);
+        let sq = rmul(d, tsum, tsum);
+        let mut acc = sq;
+        for _ in 1..copies {
+            acc = radd(d, acc, sq);
+        }
+        let rhs = radd(d, sm, acc);
+        let concl = rle(d, p, lhs, rhs);
+
+        let t = d.arrow(h2_ty, concl);
+        let t = d.arrow(h4_ty, t);
+        let t = d.arrow(hfw_ty, t);
+        let t = d.pi_fv(m_fv, nat, t);
+        let t = d.arrow(hs2_ty, t);
+        let t = d.arrow(hd_ty, t);
+        let t = d.pi_fv(s2_fv, carrier, t);
+        let t = d.pi_fv(m4_fv, carrier, t);
+        let t = d.pi_fv(n_fv, nat, t);
+        let t = d.pi_fv(pf_fv, fn_ty, t);
+        d.pi_fv(y_fv, x_ty, t)
+    };
+
+    let want = build(&mut d, 3);
+    assert!(
+        d.kernel().def_eq(got, want),
+        "the fourth-moment bound must be `Σ M₄ + 3(Σ σ²)²`"
+    );
+    let wrong = build(&mut d, 6);
+    assert!(
+        !d.kernel().def_eq(got, wrong),
+        "6 is the OTHER multinomial coefficient in a fourth power; a control \
+         blind to the difference is not a control on the coefficient"
+    );
+}
+
+/// **The tail's threshold is `a⁴`, not `a²`.**
+///
+/// The whole point of paying for a fourth moment is that the threshold enters
+/// at the fourth power, which is where the `1/m²` comes from; at `a²` this
+/// would be Chebyshev's shape carrying a fourth-moment right-hand side, a
+/// different and unproved claim. The declared type must be the `a⁴` one and
+/// must NOT be the `a²` one.
+#[test]
+fn fourth_moment_tail_threshold_is_a_to_the_fourth_and_not_a_squared() {
+    let (mut k, p) = prelude();
+    let names = p.fourth_moment;
+    let mut d = IntDev::new(&mut k, p.int);
+
+    let nat = d.nat_ty();
+    let carrier = rat_ty(&mut d);
+    let fn_ty = d.arrow(nat, carrier);
+    let x_ty = d.arrow(nat, fn_ty);
+
+    let c = d.kernel().const_(names.fourth_moment_tail_sum_vars, vec![]);
+    let got = d
+        .kernel()
+        .infer(c)
+        .expect("Rat.fourth_moment_tailSumVars must be declared");
+
+    let build = |d: &mut IntDev<'_>, fourth_power: bool| -> ExprId {
+        let y_fv = d.fresh_fvar();
+        let y = d.kernel().fvar(y_fv);
+        let pf_fv = d.fresh_fvar();
+        let pf = d.kernel().fvar(pf_fv);
+        let n_fv = d.fresh_fvar();
+        let n = d.kernel().fvar(n_fv);
+        let m4_fv = d.fresh_fvar();
+        let m4 = d.kernel().fvar(m4_fv);
+        let s2_fv = d.fresh_fvar();
+        let s2 = d.kernel().fvar(s2_fv);
+        let a_fv = d.fresh_fvar();
+        let a = d.kernel().fvar(a_fv);
+        let m_fv = d.fresh_fvar();
+        let m = d.kernel().fvar(m_fv);
+
+        let zero_r = rzero(d, p);
+        let hd_ty = is_distribution(d, p, pf, n);
+        let hs2_ty = rle(d, p, zero_r, s2);
+        let ha_ty = rlt(d, p, zero_r, a);
+        let hc_ty = {
+            let i_fv = d.fresh_fvar();
+            let i = d.kernel().fvar(i_fv);
+            let hi = d.lt(i, m);
+            let yi = d.apply(y, &[i]);
+            let e = expectation(d, p, yi, pf, n);
+            let concl = req(d, e, zero_r);
+            let inner = d.arrow(hi, concl);
+            d.pi_fv(i_fv, nat, inner)
+        };
+        let hfw_ty = d.const_app(names.fourwise_uncorrelated, &[y, m, pf, n]);
+        let h4_ty = fourth_moment_bounded(d, p, y, m4, pf, n, m);
+        let h2_ty = second_moment_bounded(d, p, y, s2, pf, n, m);
+
+        let sv = d.const_app(p.sum_vars, &[y, m]);
+        let mu = expectation(d, p, sv, pf, n);
+        let a_sq = rmul(d, a, a);
+        let a_4 = rmul(d, a_sq, a_sq);
+        let threshold = if fourth_power { a_4 } else { a_sq };
+        let dev_fn = rat_fn(d, &|d, kk| {
+            let sk = sv_at(d, p, y, m, kk);
+            let gap = rsub(d, p, sk, mu);
+            let sq = rmul(d, gap, gap);
+            rmul(d, sq, sq)
+        });
+        let ind = d.const_app(p.indicator, &[threshold, dev_fn]);
+        let e_ind = expectation(d, p, ind, pf, n);
+        let lhs = rmul(d, threshold, e_ind);
+
+        let const_m4 = const_fn(d, m4);
+        let const_s2 = const_fn(d, s2);
+        let sm = rsum_range(d, p, const_m4, m);
+        let tsum = rsum_range(d, p, const_s2, m);
+        let sq = rmul(d, tsum, tsum);
+        let two = radd(d, sq, sq);
+        let three = radd(d, two, sq);
+        let rhs = radd(d, sm, three);
+        let concl = rle(d, p, lhs, rhs);
+
+        let t = d.arrow(h2_ty, concl);
+        let t = d.arrow(h4_ty, t);
+        let t = d.arrow(hfw_ty, t);
+        let t = d.arrow(hc_ty, t);
+        let t = d.arrow(ha_ty, t);
+        let t = d.arrow(hs2_ty, t);
+        let t = d.arrow(hd_ty, t);
+        let t = d.pi_fv(m_fv, nat, t);
+        let t = d.pi_fv(a_fv, carrier, t);
+        let t = d.pi_fv(s2_fv, carrier, t);
+        let t = d.pi_fv(m4_fv, carrier, t);
+        let t = d.pi_fv(n_fv, nat, t);
+        let t = d.pi_fv(pf_fv, fn_ty, t);
+        d.pi_fv(y_fv, x_ty, t)
+    };
+
+    let want = build(&mut d, true);
+    assert!(
+        d.kernel().def_eq(got, want),
+        "the tail must be stated at the threshold `a⁴`"
+    );
+    let wrong = build(&mut d, false);
+    assert!(
+        !d.kernel().def_eq(got, wrong),
+        "at `a²` this would be Chebyshev's shape carrying a fourth-moment \
+         right-hand side, which is a different and unproved claim"
     );
 }
