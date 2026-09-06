@@ -448,13 +448,7 @@ fn exists_ty(d: &mut IntDev<'_>, ty: ExprId, pred: ExprId) -> ExprId {
 }
 
 /// `Exists.intro.{1} ty pred w proof`.
-fn exists_intro(
-    d: &mut IntDev<'_>,
-    ty: ExprId,
-    pred: ExprId,
-    w: ExprId,
-    proof: ExprId,
-) -> ExprId {
+fn exists_intro(d: &mut IntDev<'_>, ty: ExprId, pred: ExprId, w: ExprId, proof: ExprId) -> ExprId {
     let one = d.level_one();
     let name = d.int().logic.exists_intro;
     let c = d.kernel().const_(name, vec![one]);
@@ -518,13 +512,7 @@ fn rev3(a: RnExpr, b: RnExpr, c: RnExpr, s: RnExpr, t: RnExpr) -> RnExpr {
 }
 
 /// Given `h : Equiv x CReal.zero`, a proof of `Equiv (mul f x) CReal.zero`.
-fn mul_hyp_zero(
-    d: &mut IntDev<'_>,
-    cr: CRealPrelude,
-    f: ExprId,
-    x: ExprId,
-    h: ExprId,
-) -> ExprId {
+fn mul_hyp_zero(d: &mut IntDev<'_>, cr: CRealPrelude, f: ExprId, x: ExprId, h: ExprId) -> ExprId {
     let zero = rn_czero(d, cr);
     let refl_f = rn_crefl(d, cr, f);
     let step = d.lemma(cr.mul_congr, &[f, f, x, zero, refl_f, h]);
@@ -677,11 +665,7 @@ fn declare_projection(
 }
 
 /// `Geo.RLine0.Nondeg` and `Geo.RLine`.
-fn declare_nondeg(
-    d: &mut IntDev<'_>,
-    cr: CRealPrelude,
-    r: RPlaneNames,
-) -> Result<(), KernelError> {
+fn declare_nondeg(d: &mut IntDev<'_>, cr: CRealPrelude, r: RPlaneNames) -> Result<(), KernelError> {
     let line0 = line0_ty(d, r);
     let prop = prop_ty(d);
 
@@ -1076,10 +1060,7 @@ fn declare_pos_bound_lemmas(
         let zero = rn_czero(d, cr);
         let refl_zero = rn_crefl(d, cr, zero);
         let positive = d.lemma(cr.pos_of_pos_bound, &[x, k, hb]);
-        let degenerate = d.lemma(
-            cr.lt_congr,
-            &[zero, zero, x, zero, refl_zero, hz, positive],
-        );
+        let degenerate = d.lemma(cr.lt_congr, &[zero, zero, x, zero, refl_zero, hz, positive]);
         let irrefl = d.lemma(cr.lt_irrefl, &[zero]);
         let proof = d.apply(irrefl, &[degenerate]);
 
@@ -1538,9 +1519,7 @@ fn declare_defects(
     {
         let fvs: Vec<u64> = (0..6).map(|_| d.fresh_fvar()).collect();
         let terms: Vec<ExprId> = fvs.iter().map(|&fv| d.kernel().fvar(fv)).collect();
-        let (a, b, aa, bb, u, v) = (
-            terms[0], terms[1], terms[2], terms[3], terms[4], terms[5],
-        );
+        let (a, b, aa, bb, u, v) = (terms[0], terms[1], terms[2], terms[3], terms[4], terms[5]);
         let h1_fv = d.fresh_fvar();
         let h2_fv = d.fresh_fvar();
         let h1 = d.kernel().fvar(h1_fv);
@@ -1582,10 +1561,7 @@ fn declare_defects(
         let lhs = rn_cmul(d, cr, norm, dab);
 
         let lhs_rn = RnExpr::mul(
-            RnExpr::add(
-                RnExpr::mul(at(u), at(u)),
-                RnExpr::mul(at(v), at(v)),
-            ),
+            RnExpr::add(RnExpr::mul(at(u), at(u)), RnExpr::mul(at(v), at(v))),
             rsub(RnExpr::mul(at(a), at(bb)), RnExpr::mul(at(b), at(aa))),
         );
         let rhs_rn = RnExpr::add(
@@ -1676,11 +1652,7 @@ fn declare_defects(
         let e_small_rn = rev3(at(a), at(b), at(c), at(p), at(q));
         let e_big_rn = rev3(at(aa), at(bb), at(cc), at(p), at(q));
         let dab_rn = rsub(RnExpr::mul(at(a), at(bb)), RnExpr::mul(at(b), at(aa)));
-        let corr_rn = if which_bc {
-            at(p)
-        } else {
-            RnExpr::neg(at(q))
-        };
+        let corr_rn = if which_bc { at(p) } else { RnExpr::neg(at(q)) };
         let target_rn = rsub(
             RnExpr::mul(left_rn.clone(), at(cc)),
             RnExpr::mul(at(c), mid_rn.clone()),
@@ -1696,11 +1668,7 @@ fn declare_defects(
         let vanish = sum_hyp_zero(
             d,
             cr,
-            &[
-                (left, e_big, h2),
-                (neg_mid, e_small, h1),
-                (corr, dab, h3),
-            ],
+            &[(left, e_big, h2), (neg_mid, e_small, h1), (corr, dab, h3)],
         );
         let rhs = {
             let t1 = rn_cmul(d, cr, left, e_big);
@@ -1766,14 +1734,8 @@ fn declare_defects(
         let minus_one = rn_cneg(d, cr, one);
         let scaled = rn_cmul(d, cr, minus_one, src);
 
-        let src_rn = rsub(
-            RnExpr::mul(at(al), at(be2)),
-            RnExpr::mul(at(be), at(al2)),
-        );
-        let target_rn = rsub(
-            RnExpr::mul(at(al2), at(be)),
-            RnExpr::mul(at(be2), at(al)),
-        );
+        let src_rn = rsub(RnExpr::mul(at(al), at(be2)), RnExpr::mul(at(be), at(al2)));
+        let target_rn = rsub(RnExpr::mul(at(al2), at(be)), RnExpr::mul(at(be2), at(al)));
         let scaled_rn = RnExpr::mul(RnExpr::neg(RnExpr::One), src_rn);
         let identity = ring(d, cr, &target_rn, &scaled_rn);
         let vanish = mul_hyp_zero(d, cr, minus_one, src, h);
@@ -1864,10 +1826,7 @@ fn declare_defects(
         let product = rn_cmul(d, cr, norm, big);
 
         let lhs_rn = RnExpr::mul(
-            RnExpr::add(
-                RnExpr::mul(at(a), at(a)),
-                RnExpr::mul(at(b), at(b)),
-            ),
+            RnExpr::add(RnExpr::mul(at(a), at(a)), RnExpr::mul(at(b), at(b))),
             rev3(at(aa), at(bb), at(cc), at(x), at(y)),
         );
         let dab_rn = rsub(RnExpr::mul(at(a), at(bb)), RnExpr::mul(at(b), at(aa)));
@@ -1877,10 +1836,7 @@ fn declare_defects(
             RnExpr::add(
                 RnExpr::add(
                     RnExpr::mul(
-                        RnExpr::add(
-                            RnExpr::mul(at(a), at(aa)),
-                            RnExpr::mul(at(b), at(bb)),
-                        ),
+                        RnExpr::add(RnExpr::mul(at(a), at(aa)), RnExpr::mul(at(b), at(bb))),
                         rev3(at(a), at(b), at(c), at(x), at(y)),
                     ),
                     RnExpr::mul(
@@ -2118,7 +2074,6 @@ fn declare_join(
     let point = point_ty(d, cp);
     let line0 = line0_ty(d, r);
     let nat = d.nat_ty();
-    let zero = rn_czero(d, cr);
 
     // join P Q := mk (y Q − y P) (x P − x Q) (y P * x Q − x P * y Q).
     {
@@ -2156,19 +2111,10 @@ fn declare_join(
         let qxv = px(d, cp, qt);
         let qyv = py(d, cp, qt);
         let [ca, cb, cc] = join_coeffs(d, cp, cr, pt, qt);
-        let (sx, sy) = if at_right {
-            (qxv, qyv)
-        } else {
-            (pxv, pyv)
-        };
-        let lhs = eval3(d, cr, ca, cb, cc, sx, sy);
-
+        let (sx, sy) = if at_right { (qxv, qyv) } else { (pxv, pyv) };
         let a_rn = rsub(at(qyv), at(pyv));
         let b_rn = rsub(at(pxv), at(qxv));
-        let c_rn = rsub(
-            RnExpr::mul(at(pyv), at(qxv)),
-            RnExpr::mul(at(pxv), at(qyv)),
-        );
+        let c_rn = rsub(RnExpr::mul(at(pyv), at(qxv)), RnExpr::mul(at(pxv), at(qyv)));
         let lhs_rn = rev3(a_rn, b_rn, c_rn, at(sx), at(sy));
         let proof = ring(d, cr, &lhs_rn, &RnExpr::Zero);
 
@@ -2178,7 +2124,6 @@ fn declare_join(
         } else {
             d.const_app(r.on_raw, &[pt, joined])
         };
-        let _ = lhs;
         let ty = {
             let t = d.pi_fv(q_fv, point, target);
             d.pi_fv(p_fv, point, t)
@@ -2331,7 +2276,6 @@ fn declare_join(
             ty,
             value,
         })?;
-        let _ = zero;
     }
     Ok(())
 }
@@ -2403,10 +2347,7 @@ fn declare_join_unique(
     // hu : Equiv (a*u + b*v) 0, hU : Equiv (A*u + B*v) 0.
     let minus_one = rn_cneg(d, cr, one);
     let mut differences: Vec<ExprId> = Vec::with_capacity(2);
-    for (ca, cb, cc_, ea, eb, hx, hy) in [
-        (a, b, c, e1, e2, h1, h2),
-        (aa, bb, cc, f1, f2, h3, h4),
-    ] {
+    for (ca, cb, cc_, ea, eb, hx, hy) in [(a, b, c, e1, e2, h1, h2), (aa, bb, cc, f1, f2, h3, h4)] {
         let lhs = {
             let m1 = rn_cmul(d, cr, ca, u);
             let m2 = rn_cmul(d, cr, cb, v);
@@ -2417,10 +2358,7 @@ fn declare_join_unique(
             RnExpr::mul(at(cb), rsub(at(pyv), at(qyv))),
         );
         let rhs_rn = RnExpr::add(
-            RnExpr::mul(
-                RnExpr::One,
-                rev3(at(ca), at(cb), at(cc_), at(pxv), at(pyv)),
-            ),
+            RnExpr::mul(RnExpr::One, rev3(at(ca), at(cb), at(cc_), at(pxv), at(pyv))),
             RnExpr::mul(
                 RnExpr::neg(RnExpr::One),
                 rev3(at(ca), at(cb), at(cc_), at(qxv), at(qyv)),
@@ -2461,14 +2399,8 @@ fn declare_join_unique(
     let hkm = d.kernel().fvar(hkm_fv);
 
     let hdab = d.lemma(r.cancel_pos_bound, &[norm_pq, dab, k, hk, pivot]);
-    let hdac = d.lemma(
-        r.defect_ac,
-        &[a, b, c, aa, bb, cc, pxv, pyv, h1, h3, hdab],
-    );
-    let hdbc = d.lemma(
-        r.defect_bc,
-        &[a, b, c, aa, bb, cc, pxv, pyv, h1, h3, hdab],
-    );
+    let hdac = d.lemma(r.defect_ac, &[a, b, c, aa, bb, cc, pxv, pyv, h1, h3, hdab]);
+    let hdbc = d.lemma(r.defect_bc, &[a, b, c, aa, bb, cc, pxv, pyv, h1, h3, hdab]);
     let hdab2 = d.lemma(r.defect_swap, &[a, b, aa, bb, hdab]);
     let hdac2 = d.lemma(r.defect_swap, &[a, c, aa, cc, hdac]);
     let hdbc2 = d.lemma(r.defect_swap, &[b, c, bb, cc, hdbc]);
@@ -2658,16 +2590,10 @@ fn declare_two_points(
 
             let x0_rn = RnExpr::mul(RnExpr::neg(RnExpr::mul(at(a), at(c))), at(ninv));
             let y0_rn = RnExpr::mul(RnExpr::neg(RnExpr::mul(at(b), at(c))), at(ninv));
-            let norm_rn = RnExpr::add(
-                RnExpr::mul(at(a), at(a)),
-                RnExpr::mul(at(b), at(b)),
-            );
+            let norm_rn = RnExpr::add(RnExpr::mul(at(a), at(a)), RnExpr::mul(at(b), at(b)));
             let lhs_rn = rev3(at(a), at(b), at(c), x0_rn, y0_rn);
             let mid_rn = RnExpr::add(
-                RnExpr::neg(RnExpr::mul(
-                    at(c),
-                    RnExpr::mul(norm_rn, at(ninv)),
-                )),
+                RnExpr::neg(RnExpr::mul(at(c), RnExpr::mul(norm_rn, at(ninv)))),
                 at(c),
             );
             let identity = ring(d, cr, &lhs_rn, &mid_rn);
@@ -2681,10 +2607,7 @@ fn declare_two_points(
             let neg_c = rn_cneg(d, cr, c);
             let negged = d.lemma(cr.neg_congr, &[c_nninv, c, collapse]);
             let tail = rn_cadd(d, cr, neg_c, c);
-            let lifted = d.lemma(
-                cr.add_congr,
-                &[neg_c_nninv, neg_c, c, c, negged, refl_c],
-            );
+            let lifted = d.lemma(cr.add_congr, &[neg_c_nninv, neg_c, c, c, negged, refl_c]);
             let tail_rn = RnExpr::add(RnExpr::neg(at(c)), at(c));
             let finish = ring(d, cr, &tail_rn, &RnExpr::Zero);
             let (_, proof) = rn_cchain(
@@ -2715,18 +2638,12 @@ fn declare_two_points(
         // Apart P0 P1 — their distSq IS the line's own `a*a + b*b`.
         let apart_p0p1 = {
             let dd = dist_sq(d, cp, p0, p1);
-            let lhs_rn = RnExpr::add(
-                RnExpr::mul(at(a), at(a)),
-                RnExpr::mul(at(b), at(b)),
-            );
+            let lhs_rn = RnExpr::add(RnExpr::mul(at(a), at(a)), RnExpr::mul(at(b), at(b)));
             let x1_rn = RnExpr::add(at(x0), RnExpr::neg(at(b)));
             let y1_rn = RnExpr::add(at(y0), at(a));
             let du = rsub(at(x0), x1_rn);
             let dv = rsub(at(y0), y1_rn);
-            let rhs_rn = RnExpr::add(
-                RnExpr::mul(du.clone(), du),
-                RnExpr::mul(dv.clone(), dv),
-            );
+            let rhs_rn = RnExpr::add(RnExpr::mul(du.clone(), du), RnExpr::mul(dv.clone(), dv));
             let same = ring(d, cr, &lhs_rn, &rhs_rn);
             let moved = d.lemma(r.pos_bound_congr, &[norm, dd, k, same, hk]);
             let pred = {
@@ -2876,20 +2793,35 @@ fn declare_triangle(
     let one_pos = d.kernel().const_(cr.zero_lt_one, vec![]);
     let one_const = d.kernel().const_(cr.one, vec![]);
 
-    let coords = |flag: bool| -> (RnExpr, RnExpr) {
-        if flag {
-            (RnExpr::One, RnExpr::Zero)
-        } else {
-            (RnExpr::Zero, RnExpr::Zero)
-        }
-    };
-    let _ = coords;
-
     let mut aparts: Vec<ExprId> = Vec::with_capacity(3);
     for (left, right, lx, ly, rx, ry, is_two) in [
-        (a0, b0, RnExpr::Zero, RnExpr::Zero, RnExpr::One, RnExpr::Zero, false),
-        (a0, c0, RnExpr::Zero, RnExpr::Zero, RnExpr::Zero, RnExpr::One, false),
-        (b0, c0, RnExpr::One, RnExpr::Zero, RnExpr::Zero, RnExpr::One, true),
+        (
+            a0,
+            b0,
+            RnExpr::Zero,
+            RnExpr::Zero,
+            RnExpr::One,
+            RnExpr::Zero,
+            false,
+        ),
+        (
+            a0,
+            c0,
+            RnExpr::Zero,
+            RnExpr::Zero,
+            RnExpr::Zero,
+            RnExpr::One,
+            false,
+        ),
+        (
+            b0,
+            c0,
+            RnExpr::One,
+            RnExpr::Zero,
+            RnExpr::Zero,
+            RnExpr::One,
+            true,
+        ),
     ] {
         let dd = dist_sq(d, cp, left, right);
         let expanded = RnExpr::add(
@@ -2964,11 +2896,7 @@ fn declare_triangle(
                 d,
                 cr,
                 coeff,
-                &[
-                    (coeff_zero, step1),
-                    (pair, step2),
-                    (zero, pair_zero),
-                ],
+                &[(coeff_zero, step1), (pair, step2), (zero, pair_zero)],
             );
             vanishing.push(done);
         }
@@ -2993,8 +2921,7 @@ fn declare_triangle(
             RnExpr::mul(RnExpr::Zero, RnExpr::Zero),
         );
         let finish = ring(d, cr, &both_rn, &RnExpr::Zero);
-        let (_, norm_zero) =
-            rn_cchain(d, cr, norm, &[(both, lifted), (zero, finish)]);
+        let (_, norm_zero) = rn_cchain(d, cr, norm, &[(both, lifted), (zero, finish)]);
 
         let pred = {
             let j_fv = d.fresh_fvar();
@@ -3045,7 +2972,6 @@ fn declare_triangle(
     let tail = and_intro(d, bc_ty, no_line_ty, aparts[2], no_line);
     let mid_ty = and_ty(d, ac_ty, tail_ty);
     let mid = and_intro(d, ac_ty, tail_ty, aparts[1], tail);
-    let payload_ty = and_ty(d, ab_ty, mid_ty);
     let payload = and_intro(d, ab_ty, mid_ty, aparts[0], mid);
 
     // The three predicates, built with the outer points still free so that the
@@ -3101,8 +3027,6 @@ fn declare_triangle(
         let ex_mid = exists_ty(d, point, mid);
         d.lam_fv(x_fv, point, ex_mid)
     };
-    let _ = payload_ty;
-
     let level_c = exists_intro(d, point, pred_c, c0, payload);
     let level_b = exists_intro(d, point, pred_b, b0, level_c);
     let proof = exists_intro(d, point, pred_a, a0, level_b);
@@ -3117,11 +3041,7 @@ fn declare_triangle(
 }
 
 /// `Geo.rplane : Geo.Incidence` — the model itself.
-fn declare_instance(
-    d: &mut IntDev<'_>,
-    p: GeoPrelude,
-    r: RPlaneNames,
-) -> Result<(), KernelError> {
+fn declare_instance(d: &mut IntDev<'_>, p: GeoPrelude, r: RPlaneNames) -> Result<(), KernelError> {
     let cp = p.cpoint;
     let point = point_ty(d, cp);
     let line = line_ty(d, r);

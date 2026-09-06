@@ -590,3 +590,408 @@ fn incidence_pairs_each_coefficient_with_its_own_coordinate() {
         );
     });
 }
+
+// ---------------------------------------------------------------------------
+// The real model. Same discipline as the rational one above: every
+// `Definition` is pinned at concrete or symbolic arguments, and every pin
+// carries the negative half that the mutation suite actually runs.
+// ---------------------------------------------------------------------------
+
+/// `Geo.RLine0.a`/`.b`/`.c` pick the field their name claims. The third
+/// argument is a compound so `c` cannot pass by reading `a` or `b`.
+#[test]
+fn the_real_line_projections_pick_the_field_their_name_claims() {
+    use crate::creal_point::{rn_cadd, rn_cone, rn_czero};
+    use crate::int_prelude::ops::IntDev;
+    on_a_deep_stack(|| {
+        let (mut kernel, prelude) = built();
+        let rp = prelude.rplane;
+        let cr = prelude.cpoint.creal;
+        let mut dev = IntDev::new(&mut kernel, cr.rat.int);
+        let d = &mut dev;
+        let zero = rn_czero(d, cr);
+        let one = rn_cone(d, cr);
+        let compound = rn_cadd(d, cr, zero, one);
+
+        let line = d.const_app(rp.rline0_mk, &[zero, one, compound]);
+        let got_a = d.const_app(rp.rline0_a, &[line]);
+        let got_b = d.const_app(rp.rline0_b, &[line]);
+        let got_c = d.const_app(rp.rline0_c, &[line]);
+        assert!(d.kernel().def_eq(got_a, zero), "a (mk 0 1 (0+1)) must be 0");
+        assert!(d.kernel().def_eq(got_b, one), "b (mk 0 1 (0+1)) must be 1");
+        assert!(
+            d.kernel().def_eq(got_c, compound),
+            "c (mk 0 1 (0+1)) must be the third field"
+        );
+        assert!(
+            !d.kernel().def_eq(got_b, zero),
+            "b (mk 0 1 (0+1)) must NOT be 0"
+        );
+        assert!(
+            !d.kernel().def_eq(got_c, one),
+            "c (mk 0 1 (0+1)) must NOT be the second field"
+        );
+    });
+}
+
+/// **`Geo.RPlane.join` is `⟨y Q − y P, x P − x Q, y P · x Q − x P · y Q⟩`.**
+/// Symbolic, at free-variable points, because a concrete pair can make two
+/// coefficients coincide — and the swap of the first two is exactly what the
+/// mutation suite tries.
+#[test]
+fn the_real_join_coefficients_are_not_swapped() {
+    use crate::creal_point::{rn_cadd, rn_cmul, rn_cneg};
+    use crate::int_prelude::ops::IntDev;
+    on_a_deep_stack(|| {
+        let (mut kernel, prelude) = built();
+        let rp = prelude.rplane;
+        let cp = prelude.cpoint;
+        let cr = cp.creal;
+        let mut dev = IntDev::new(&mut kernel, cr.rat.int);
+        let d = &mut dev;
+
+        let p_fv = d.fresh_fvar();
+        let q_fv = d.fresh_fvar();
+        let pt = d.kernel().fvar(p_fv);
+        let qt = d.kernel().fvar(q_fv);
+        let pxv = d.const_app(cp.x, &[pt]);
+        let pyv = d.const_app(cp.y, &[pt]);
+        let qxv = d.const_app(cp.x, &[qt]);
+        let qyv = d.const_app(cp.y, &[qt]);
+
+        let expect_a = {
+            let n = rn_cneg(d, cr, pyv);
+            rn_cadd(d, cr, qyv, n)
+        };
+        let expect_b = {
+            let n = rn_cneg(d, cr, qxv);
+            rn_cadd(d, cr, pxv, n)
+        };
+        let expect_c = {
+            let m1 = rn_cmul(d, cr, pyv, qxv);
+            let m2 = rn_cmul(d, cr, pxv, qyv);
+            let n = rn_cneg(d, cr, m2);
+            rn_cadd(d, cr, m1, n)
+        };
+
+        let joined = d.const_app(rp.join, &[pt, qt]);
+        let got_a = d.const_app(rp.rline0_a, &[joined]);
+        let got_b = d.const_app(rp.rline0_b, &[joined]);
+        let got_c = d.const_app(rp.rline0_c, &[joined]);
+        assert!(
+            d.kernel().def_eq(got_a, expect_a),
+            "the real join's a coefficient must be `y Q - y P`"
+        );
+        assert!(
+            d.kernel().def_eq(got_b, expect_b),
+            "the real join's b coefficient must be `x P - x Q`"
+        );
+        assert!(
+            d.kernel().def_eq(got_c, expect_c),
+            "the real join's c coefficient must be `y P * x Q - x P * y Q`"
+        );
+        assert!(
+            !d.kernel().def_eq(got_a, expect_b),
+            "the real join's a coefficient must NOT be `x P - x Q`"
+        );
+        assert!(
+            !d.kernel().def_eq(got_b, expect_a),
+            "the real join's b coefficient must NOT be `y Q - y P`"
+        );
+    });
+}
+
+/// **`Geo.RPlane.onRaw` pairs each coefficient with the matching coordinate**,
+/// and states an `Equiv`, not an `Eq`: over ℝ there is no decidable equality
+/// to state it with. The negative half is the `a`-against-`y` pairing swap,
+/// which type-checks and says something else.
+#[test]
+fn real_incidence_pairs_each_coefficient_with_its_own_coordinate() {
+    use crate::creal_point::{rn_cadd, rn_cmul, rn_czero};
+    use crate::int_prelude::ops::IntDev;
+    on_a_deep_stack(|| {
+        let (mut kernel, prelude) = built();
+        let rp = prelude.rplane;
+        let cp = prelude.cpoint;
+        let cr = cp.creal;
+        let mut dev = IntDev::new(&mut kernel, cr.rat.int);
+        let d = &mut dev;
+
+        let p_fv = d.fresh_fvar();
+        let l_fv = d.fresh_fvar();
+        let pt = d.kernel().fvar(p_fv);
+        let l = d.kernel().fvar(l_fv);
+        let pxv = d.const_app(cp.x, &[pt]);
+        let pyv = d.const_app(cp.y, &[pt]);
+        let av = d.const_app(rp.rline0_a, &[l]);
+        let bv = d.const_app(rp.rline0_b, &[l]);
+        let cv = d.const_app(rp.rline0_c, &[l]);
+        let zero = rn_czero(d, cr);
+
+        let expect = {
+            let m1 = rn_cmul(d, cr, av, pxv);
+            let m2 = rn_cmul(d, cr, bv, pyv);
+            let sum = rn_cadd(d, cr, m1, m2);
+            let lhs = rn_cadd(d, cr, sum, cv);
+            d.const_app(cr.equiv, &[lhs, zero])
+        };
+        let swapped = {
+            let m1 = rn_cmul(d, cr, av, pyv);
+            let m2 = rn_cmul(d, cr, bv, pxv);
+            let sum = rn_cadd(d, cr, m1, m2);
+            let lhs = rn_cadd(d, cr, sum, cv);
+            d.const_app(cr.equiv, &[lhs, zero])
+        };
+        let got = d.const_app(rp.on_raw, &[pt, l]);
+        assert!(
+            d.kernel().def_eq(got, expect),
+            "the real onRaw must be `Equiv (a * x P + b * y P + c) 0`"
+        );
+        assert!(
+            !d.kernel().def_eq(got, swapped),
+            "the real onRaw must NOT pair `a` with `y` -- the swap type-checks"
+        );
+    });
+}
+
+/// **`Geo.RLine0.Nondeg` is a `PosBound` WITNESS, not a negation.**
+///
+/// This is the file's load-bearing design decision and the first mutation the
+/// suite runs: `(Equiv (a*a + b*b) 0) → False` type-checks perfectly well as a
+/// non-degeneracy predicate and is what a ℚ-shaped port would write, but it
+/// constructs no modulus, so `CReal.inv` cannot consume it and `joinUnique`'s
+/// division does not typecheck. Both halves are asserted.
+#[test]
+fn real_nondegeneracy_is_a_positive_bound_witness_not_a_negation() {
+    use crate::creal_point::{rn_cadd, rn_cmul, rn_czero};
+    use crate::int_prelude::ops::IntDev;
+    on_a_deep_stack(|| {
+        let (mut kernel, prelude) = built();
+        let rp = prelude.rplane;
+        let cr = prelude.cpoint.creal;
+        let logic = cr.rat.int.logic;
+        let mut dev = IntDev::new(&mut kernel, cr.rat.int);
+        let d = &mut dev;
+
+        let l_fv = d.fresh_fvar();
+        let l = d.kernel().fvar(l_fv);
+        let av = d.const_app(rp.rline0_a, &[l]);
+        let bv = d.const_app(rp.rline0_b, &[l]);
+        let norm = {
+            let m1 = rn_cmul(d, cr, av, av);
+            let m2 = rn_cmul(d, cr, bv, bv);
+            rn_cadd(d, cr, m1, m2)
+        };
+
+        let expect = {
+            let nat = d.nat_ty();
+            let k_fv = d.fresh_fvar();
+            let k = d.kernel().fvar(k_fv);
+            let pb = d.const_app(cr.pos_bound, &[norm, k]);
+            let pred = d.lam_fv(k_fv, nat, pb);
+            let one = d.level_one();
+            let ex = d.kernel().const_(logic.exists_, vec![one]);
+            d.apply(ex, &[nat, pred])
+        };
+        let negated = {
+            let zero = rn_czero(d, cr);
+            let eq = d.const_app(cr.equiv, &[norm, zero]);
+            let f = d.kernel().const_(logic.false_, vec![]);
+            d.arrow(eq, f)
+        };
+        let got = d.const_app(rp.nondeg, &[l]);
+        assert!(
+            d.kernel().def_eq(got, expect),
+            "Nondeg must be `exists k, PosBound (a*a + b*b) k`"
+        );
+        assert!(
+            !d.kernel().def_eq(got, negated),
+            "Nondeg must NOT be `Equiv (a*a + b*b) 0 -> False` -- the negated \
+             form is the mutation, and it constructs no modulus for CReal.inv"
+        );
+    });
+}
+
+/// **`Geo.RPlane.Apart` is a `PosBound` on the squared distance**, the same
+/// decision one dimension up, and the reason `Geo.Incidence` carries `apart`
+/// as its own field rather than deriving it from `pEq`.
+#[test]
+fn real_apartness_is_a_positive_bound_on_the_squared_distance() {
+    use crate::int_prelude::ops::IntDev;
+    on_a_deep_stack(|| {
+        let (mut kernel, prelude) = built();
+        let rp = prelude.rplane;
+        let cp = prelude.cpoint;
+        let cr = cp.creal;
+        let logic = cr.rat.int.logic;
+        let mut dev = IntDev::new(&mut kernel, cr.rat.int);
+        let d = &mut dev;
+
+        let p_fv = d.fresh_fvar();
+        let q_fv = d.fresh_fvar();
+        let pt = d.kernel().fvar(p_fv);
+        let qt = d.kernel().fvar(q_fv);
+        let dd = d.const_app(cp.dist_sq, &[pt, qt]);
+
+        let expect = {
+            let nat = d.nat_ty();
+            let k_fv = d.fresh_fvar();
+            let k = d.kernel().fvar(k_fv);
+            let pb = d.const_app(cr.pos_bound, &[dd, k]);
+            let pred = d.lam_fv(k_fv, nat, pb);
+            let one = d.level_one();
+            let ex = d.kernel().const_(logic.exists_, vec![one]);
+            d.apply(ex, &[nat, pred])
+        };
+        let negated = {
+            let eq = d.const_app(cp.point_equiv, &[pt, qt]);
+            let f = d.kernel().const_(logic.false_, vec![]);
+            d.arrow(eq, f)
+        };
+        let got = d.const_app(rp.apart, &[pt, qt]);
+        assert!(
+            d.kernel().def_eq(got, expect),
+            "Apart must be `exists k, PosBound (distSq P Q) k`"
+        );
+        assert!(
+            !d.kernel().def_eq(got, negated),
+            "Apart must NOT be `CPoint.Equiv P Q -> False` -- that is the ℚ \
+             model's notion and it constructs nothing over ℝ"
+        );
+    });
+}
+
+/// **`CPoint.distSq P Q` IS `(x P − x Q)² + (y P − y Q)²`, definitionally.**
+///
+/// `pivotAB`'s conclusion is stated over the coordinate expression and
+/// `cancelPosBound` is fed the `Apart` witness, which is stated over `distSq`;
+/// the whole of `joinUnique` rests on those two being the same term after
+/// δ/ι. If `distSq` ever stops unfolding this way the model breaks, and this
+/// says so here rather than inside a 200-line proof.
+#[test]
+fn dist_sq_unfolds_to_the_coordinate_difference_squares() {
+    use crate::creal_point::{rn_cadd, rn_cmul, rn_cneg};
+    use crate::int_prelude::ops::IntDev;
+    on_a_deep_stack(|| {
+        let (mut kernel, prelude) = built();
+        let cp = prelude.cpoint;
+        let cr = cp.creal;
+        let mut dev = IntDev::new(&mut kernel, cr.rat.int);
+        let d = &mut dev;
+
+        let p_fv = d.fresh_fvar();
+        let q_fv = d.fresh_fvar();
+        let pt = d.kernel().fvar(p_fv);
+        let qt = d.kernel().fvar(q_fv);
+        let pxv = d.const_app(cp.x, &[pt]);
+        let pyv = d.const_app(cp.y, &[pt]);
+        let qxv = d.const_app(cp.x, &[qt]);
+        let qyv = d.const_app(cp.y, &[qt]);
+        let u = {
+            let n = rn_cneg(d, cr, qxv);
+            rn_cadd(d, cr, pxv, n)
+        };
+        let v = {
+            let n = rn_cneg(d, cr, qyv);
+            rn_cadd(d, cr, pyv, n)
+        };
+        let expect = {
+            let m1 = rn_cmul(d, cr, u, u);
+            let m2 = rn_cmul(d, cr, v, v);
+            rn_cadd(d, cr, m1, m2)
+        };
+        // The sum, not the difference: the sign error that would still be a
+        // symmetric non-negative quantity and would still typecheck.
+        let wrong = {
+            let su = rn_cadd(d, cr, pxv, qxv);
+            let sv = rn_cadd(d, cr, pyv, qyv);
+            let m1 = rn_cmul(d, cr, su, su);
+            let m2 = rn_cmul(d, cr, sv, sv);
+            rn_cadd(d, cr, m1, m2)
+        };
+        let got = d.const_app(cp.dist_sq, &[pt, qt]);
+        assert!(
+            d.kernel().def_eq(got, expect),
+            "distSq must unfold to `(x P - x Q)^2 + (y P - y Q)^2`"
+        );
+        assert!(
+            !d.kernel().def_eq(got, wrong),
+            "distSq must NOT be the sum-of-coordinates form"
+        );
+    });
+}
+
+/// `Geo.rplane` really is an inhabitant of the record, its point carrier is
+/// `CPoint` and its line carrier is `Geo.RLine` — and it is a DIFFERENT model
+/// from `Geo.qplane`, which is the whole reason for building it.
+#[test]
+fn the_real_plane_is_a_second_and_different_model() {
+    use crate::int_prelude::ops::IntDev;
+    on_a_deep_stack(|| {
+        let (mut kernel, prelude) = built();
+        let rp = prelude.rplane;
+        let q = prelude.qplane;
+        let cp = prelude.cpoint;
+        let mut dev = IntDev::new(&mut kernel, cp.creal.rat.int);
+        let d = &mut dev;
+
+        let model = d.kernel().const_(rp.instance, vec![]);
+        let got_point = d.const_app(prelude.record.sel(POINT), &[model]);
+        let got_line = d.const_app(prelude.record.sel(LINE), &[model]);
+        let cpoint_ty = d.kernel().const_(cp.point, vec![]);
+        let rline_ty = d.kernel().const_(rp.rline, vec![]);
+        let qpoint_ty = d.kernel().const_(q.qpoint, vec![]);
+        assert!(
+            d.kernel().def_eq(got_point, cpoint_ty),
+            "Geo.rplane's point carrier must be CPoint"
+        );
+        assert!(
+            d.kernel().def_eq(got_line, rline_ty),
+            "Geo.rplane's line carrier must be Geo.RLine"
+        );
+        assert!(
+            !d.kernel().def_eq(got_point, qpoint_ty),
+            "Geo.rplane's point carrier must NOT be Geo.QPoint -- two models, \
+             not one written twice"
+        );
+
+        let rational = d.kernel().const_(q.instance, vec![]);
+        let q_point = d.const_app(prelude.record.sel(POINT), &[rational]);
+        assert!(
+            d.kernel().def_eq(q_point, qpoint_ty),
+            "Geo.qplane's point carrier must still be Geo.QPoint"
+        );
+    });
+}
+
+/// The record's derived theorems apply to the real model: instantiating
+/// `distinct_lines_meet_once` and `triangle_not_collinear` at `Geo.rplane`
+/// type-checks, which is the payoff of proving them over an arbitrary
+/// structure.
+#[test]
+fn the_derived_theorems_instantiate_at_the_real_model() {
+    use crate::int_prelude::ops::IntDev;
+    on_a_deep_stack(|| {
+        let (mut kernel, prelude) = built();
+        let rp = prelude.rplane;
+        let cp = prelude.cpoint;
+        let mut dev = IntDev::new(&mut kernel, cp.creal.rat.int);
+        let d = &mut dev;
+
+        let model = d.kernel().const_(rp.instance, vec![]);
+        for (label, name) in [
+            ("Collinear", prelude.collinear),
+            ("collinear_intro", prelude.collinear_intro),
+            ("collinear_perm", prelude.collinear_perm),
+            ("distinct_lines_meet_once", prelude.distinct_lines_meet_once),
+            ("triangle_not_collinear", prelude.triangle_not_collinear),
+        ] {
+            let applied = d.const_app(name, &[model]);
+            let inferred = d.kernel().infer(applied);
+            assert!(
+                inferred.is_ok(),
+                "{label} does not apply to Geo.rplane: {inferred:?}"
+            );
+        }
+    });
+}
