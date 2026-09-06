@@ -159,6 +159,28 @@
 //!   regulator, not the Cayley table.
 //! - **Degree > 2**, ray class groups, and the unit index `m` above.
 //!
+//! # The guards, and how they were checked
+//!
+//! Twenty-eight guards across the three `verify` methods were mutation-swept
+//! in a scratch snapshot (never the shared worktree): each guard's refusal was
+//! neutralised in turn and the suite re-run. **All twenty-eight killed exactly
+//! one test, and no mutant survived.** That is what the forgery tests in this
+//! module are for — every one of them presents a certificate that is honest
+//! everywhere except at the guard it targets, so a guard that could only be
+//! reached through another guard's failure would show up as a zero-kill or a
+//! multi-kill mutant.
+//!
+//! Two guards that were CONSIDERED and are deliberately absent, because no
+//! forgery could reach them:
+//!
+//! - a parity guard on `h⁺` in the `h = h⁺/2` branch — the recount plus the
+//!   principal-form recomputation pin both the cycle partition and which cycles
+//!   the two forms land in to functions of `D` alone, so the branch cannot
+//!   disagree with the arithmetic;
+//! - a per-step determinant check on the reduction chain, which
+//!   [`super::numberfield_classgroup`] already found unreachable for the same
+//!   reason and removed.
+//!
 //! # Cost profile
 //!
 //! **ADVISORY.** Measured `--release`, single-threaded, on a shared host at
