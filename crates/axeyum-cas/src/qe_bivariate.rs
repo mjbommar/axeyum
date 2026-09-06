@@ -1933,6 +1933,109 @@ mod tests {
     }
 
     #[test]
+    fn an_algebraic_cell_whose_substituted_atoms_were_tampered_with_is_refused() {
+        let mut certificate = decided(vec![
+            atom(&[&[-2, 0, 1], &[0], &[1]], Relation::Eq),
+            atom(&[&[0], &[1]], Relation::Gt),
+        ]);
+        let CellFibre::Algebraic(fibre_certificate) = &mut certificate.cells[3].fibre else {
+            panic!("cell 3 is the point cell at √2");
+        };
+        // Claim the fibre is `y² + 1 = 0` where the substitution gives `y² = 0`.
+        fibre_certificate.atoms[0].poly[0] = vec![q(1)];
+        assert_eq!(
+            certificate.verify(),
+            Err(Fault::SubstitutionMismatch { cell: 3 })
+        );
+    }
+
+    #[test]
+    fn a_fibre_refutation_that_drops_a_y_root_is_refused_as_an_incomplete_root_list() {
+        let mut certificate = decided(vec![
+            atom(&[&[-2, 0, 1], &[0], &[1]], Relation::Eq),
+            atom(&[&[0], &[1]], Relation::Gt),
+        ]);
+        let CellFibre::Algebraic(fibre_certificate) = &mut certificate.cells[3].fibre else {
+            panic!("cell 3 is the point cell at √2");
+        };
+        let fibre::FibreDecision::False(refutation) = &mut fibre_certificate.decision else {
+            panic!("the fibre over √2 is unsatisfiable");
+        };
+        assert_eq!(refutation.roots.len(), 1, "the only y-root is 0");
+        // Drop it, keeping every count self-consistent so the counting guards
+        // do not fire first: one cell, one open sample, no roots.
+        refutation.roots.clear();
+        refutation.open_samples.truncate(1);
+        refutation.failures.truncate(1);
+        assert!(matches!(
+            certificate.verify(),
+            Err(Fault::Fibre {
+                cell: 3,
+                fault: fibre::Fault::IncompleteRootList { .. }
+            })
+        ));
+    }
+
+    #[test]
+    fn a_fibre_cell_nominating_a_conjunct_that_holds_is_refused() {
+        let mut certificate = decided(vec![
+            atom(&[&[-2, 0, 1], &[0], &[1]], Relation::Eq),
+            atom(&[&[0], &[1]], Relation::Gt),
+        ]);
+        let CellFibre::Algebraic(fibre_certificate) = &mut certificate.cells[3].fibre else {
+            panic!("cell 3 is the point cell at √2");
+        };
+        let fibre::FibreDecision::False(refutation) = &mut fibre_certificate.decision else {
+            panic!("the fibre over √2 is unsatisfiable");
+        };
+        // In the y-cell {0} it is `y > 0` that fails, not `y² = 0`.
+        refutation.failures[1] = fibre::FibreCellFailure {
+            conjunct: 0,
+            sign: 0,
+        };
+        assert!(matches!(
+            certificate.verify(),
+            Err(Fault::Fibre {
+                cell: 3,
+                fault: fibre::Fault::ConjunctDoesNotFail {
+                    cell: 1,
+                    index: 0,
+                    sign: 0
+                }
+            })
+        ));
+    }
+
+    #[test]
+    fn a_fibre_witness_whose_bracket_holds_two_roots_is_refused() {
+        // The fibre over ∛2 is `y² = ∛2`, whose two real roots are ±2^{1/6};
+        // widening the witness bracket to hold both makes it name nothing.
+        let mut certificate = decided(vec![
+            atom(&[&[0, -1], &[0], &[1]], Relation::Eq),
+            atom(&[&[-2, 0, 0, 1]], Relation::Eq),
+        ]);
+        let CellFibre::Algebraic(fibre_certificate) = &mut certificate.cells[3].fibre else {
+            panic!("cell 3 is the point cell at ∛2");
+        };
+        let fibre::FibreDecision::True(witness) = &mut fibre_certificate.decision else {
+            panic!("y² = ∛2 is solvable");
+        };
+        let fibre::FieldSample::Algebraic { upper, .. } = &mut witness.sample else {
+            panic!("the witnessing y is algebraic over K");
+        };
+        *upper = q(10);
+        assert!(matches!(
+            certificate.verify(),
+            Err(Fault::Fibre {
+                cell: 3,
+                fault: fibre::Fault::SampleNotIsolating {
+                    roots_in_bracket: 2
+                }
+            })
+        ));
+    }
+
+    #[test]
     fn a_rational_cell_carrying_an_algebraic_fibre_is_refused_as_a_kind_mismatch() {
         let mut certificate = decided(vec![
             atom(&[&[-2, 0, 1], &[0], &[1]], Relation::Eq),
