@@ -122,6 +122,51 @@ fn all_declarations(p: GeoPrelude) -> Vec<crate::name::NameId> {
         q.triangle,
         q.instance,
     ];
+    let rp = p.rplane;
+    out.extend([
+        // --- the real model -----------------------------------------------
+        rp.rline0,
+        rp.rline0_mk,
+        rp.rline0_rec,
+        rp.rline0_a,
+        rp.rline0_b,
+        rp.rline0_c,
+        rp.nondeg,
+        rp.rline,
+        rp.on_raw,
+        rp.on,
+        rp.apart,
+        rp.line_equiv,
+        rp.line_equiv_refl,
+        rp.line_equiv_symm,
+        rp.line_equiv_trans,
+        rp.pos_bound_congr,
+        rp.not_zero_of_pos_bound,
+        rp.cancel_pos_bound,
+        rp.point_refl,
+        rp.point_symm,
+        rp.point_trans,
+        rp.on_point,
+        rp.on_line,
+        rp.apart_ne,
+        rp.apart_symm,
+        rp.apart_congr,
+        rp.join,
+        rp.join_on_left,
+        rp.join_on_right,
+        rp.join_nondeg,
+        rp.join_exists,
+        rp.pivot_ab,
+        rp.defect_ac,
+        rp.defect_bc,
+        rp.defect_swap,
+        rp.on_of_defects,
+        rp.join_unique,
+        rp.two_points_raw,
+        rp.two_points,
+        rp.triangle,
+        rp.instance,
+    ]);
     for i in 0..p.record.field_count() {
         out.push(p.record.sel(i));
     }
@@ -137,7 +182,7 @@ fn every_declaration_is_present_and_axiom_free() {
     let all = all_declarations(prelude);
     assert_eq!(
         all.len(),
-        FIELD_COUNT + 8 + 46,
+        FIELD_COUNT + 8 + 46 + 41,
         "the declaration list is out of step with the record's field count"
     );
     for name in all {
@@ -173,7 +218,7 @@ fn the_handle_names_every_live_geo_declaration() {
     // true against an empty handle list, and a filter typo produces exactly
     // that.
     assert!(
-        live.len() >= 70,
+        live.len() >= 110,
         "only {} declarations render under `Geo.` -- the filter is wrong, or \
          the build stopped early",
         live.len()

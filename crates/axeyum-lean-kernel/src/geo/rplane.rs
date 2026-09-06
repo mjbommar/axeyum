@@ -195,6 +195,17 @@ pub struct RPlaneNames {
     /// `CReal.inv`/`CReal.mul_inv_cancel` route.
     pub cancel_pos_bound: NameId,
 
+    /// `Geo.RPlane.pointRefl : ∀ P, CPoint.Equiv P P`.
+    ///
+    /// `CPoint.Equiv` is a `Definition` and `creal_point.rs` never stated its
+    /// three setoid laws; the record's `pEq` slot needs all three.
+    pub point_refl: NameId,
+    /// `Geo.RPlane.pointSymm : ∀ P Q, CPoint.Equiv P Q → CPoint.Equiv Q P`.
+    pub point_symm: NameId,
+    /// `Geo.RPlane.pointTrans : ∀ P Q R, CPoint.Equiv P Q → CPoint.Equiv Q R →
+    /// CPoint.Equiv P R`.
+    pub point_trans: NameId,
+
     /// `Geo.RPlane.onPoint : ∀ P Q l, CPoint.Equiv P Q → on P l → on Q l`.
     pub on_point: NameId,
     /// `Geo.RPlane.onLine : ∀ P l m, Geo.RLine.Equiv l m → on P l → on P m`.
@@ -282,6 +293,10 @@ pub(crate) fn intern(kernel: &mut Kernel, geo: NameId) -> RPlaneNames {
         pos_bound_congr: kernel.name_str(plane, "posBoundCongr"),
         not_zero_of_pos_bound: kernel.name_str(plane, "notZeroOfPosBound"),
         cancel_pos_bound: kernel.name_str(plane, "cancelPosBound"),
+
+        point_refl: kernel.name_str(plane, "pointRefl"),
+        point_symm: kernel.name_str(plane, "pointSymm"),
+        point_trans: kernel.name_str(plane, "pointTrans"),
 
         on_point: kernel.name_str(plane, "onPoint"),
         on_line: kernel.name_str(plane, "onLine"),
@@ -586,11 +601,14 @@ pub(crate) fn declare_all(kernel: &mut Kernel, p: GeoPrelude) -> Result<(), Kern
     declare_incidence(d, cp, cr, r)?;
     declare_line_equiv(d, cp, r)?;
     declare_pos_bound_lemmas(d, cr, r)?;
+    declare_point_setoid(d, cp, cr, r)?;
     declare_congruences(d, cp, cr, r)?;
     declare_defects(d, cr, r)?;
-    // SCAFFOLD: join / joinUnique / twoPoints / triangle / the instance land
-    // in the following commits.
-    Ok(())
+    declare_join(d, cp, cr, r)?;
+    declare_join_unique(d, cp, cr, r)?;
+    declare_two_points(d, cp, cr, r)?;
+    declare_triangle(d, cp, cr, r)?;
+    declare_instance(d, p, r)
 }
 
 /// `Geo.RLine0` and its three projections.
@@ -1930,4 +1948,1239 @@ fn declare_defects(
         })?;
     }
     Ok(())
+}
+
+/// `pointRefl`, `pointSymm`, `pointTrans` — `CPoint.Equiv`'s three setoid
+/// laws, which `creal_point.rs` defines the relation without ever stating.
+fn declare_point_setoid(
+    d: &mut IntDev<'_>,
+    cp: CPointPrelude,
+    cr: CRealPrelude,
+    r: RPlaneNames,
+) -> Result<(), KernelError> {
+    let point = point_ty(d, cp);
+
+    // pointRefl : ∀ P, CPoint.Equiv P P.
+    {
+        let p_fv = d.fresh_fvar();
+        let pt = d.kernel().fvar(p_fv);
+        let proof = point_equiv_refl(d, cp, cr, pt);
+        let stmt = d.const_app(cp.point_equiv, &[pt, pt]);
+        let ty = d.pi_fv(p_fv, point, stmt);
+        let value = d.lam_fv(p_fv, point, proof);
+        d.kernel().add_declaration(Declaration::Theorem {
+            name: r.point_refl,
+            uparams: vec![],
+            ty,
+            value,
+        })?;
+    }
+
+    // pointSymm : ∀ P Q, CPoint.Equiv P Q → CPoint.Equiv Q P.
+    {
+        let p_fv = d.fresh_fvar();
+        let q_fv = d.fresh_fvar();
+        let h_fv = d.fresh_fvar();
+        let pt = d.kernel().fvar(p_fv);
+        let qt = d.kernel().fvar(q_fv);
+        let h = d.kernel().fvar(h_fv);
+        let pxv = px(d, cp, pt);
+        let pyv = py(d, cp, pt);
+        let qxv = px(d, cp, qt);
+        let qyv = py(d, cp, qt);
+        let ex = ceq(d, cr, pxv, qxv);
+        let ey = ceq(d, cr, pyv, qyv);
+        let hx = and_l(d, ex, ey, h);
+        let hy = and_r(d, ex, ey, h);
+        let bx = rn_csymm(d, cr, pxv, qxv, hx);
+        let by = rn_csymm(d, cr, pyv, qyv, hy);
+        let rx = ceq(d, cr, qxv, pxv);
+        let ry = ceq(d, cr, qyv, pyv);
+        let proof = and_intro(d, rx, ry, bx, by);
+
+        let hyp = d.const_app(cp.point_equiv, &[pt, qt]);
+        let concl = d.const_app(cp.point_equiv, &[qt, pt]);
+        let ty = {
+            let t = d.arrow(hyp, concl);
+            let t = d.pi_fv(q_fv, point, t);
+            d.pi_fv(p_fv, point, t)
+        };
+        let value = {
+            let t = d.lam_fv(h_fv, hyp, proof);
+            let t = d.lam_fv(q_fv, point, t);
+            d.lam_fv(p_fv, point, t)
+        };
+        d.kernel().add_declaration(Declaration::Theorem {
+            name: r.point_symm,
+            uparams: vec![],
+            ty,
+            value,
+        })?;
+    }
+
+    // pointTrans : ∀ P Q R, CPoint.Equiv P Q → CPoint.Equiv Q R →
+    //              CPoint.Equiv P R.
+    {
+        let p_fv = d.fresh_fvar();
+        let q_fv = d.fresh_fvar();
+        let s_fv = d.fresh_fvar();
+        let h1_fv = d.fresh_fvar();
+        let h2_fv = d.fresh_fvar();
+        let pt = d.kernel().fvar(p_fv);
+        let qt = d.kernel().fvar(q_fv);
+        let st = d.kernel().fvar(s_fv);
+        let h1 = d.kernel().fvar(h1_fv);
+        let h2 = d.kernel().fvar(h2_fv);
+        let pxv = px(d, cp, pt);
+        let pyv = py(d, cp, pt);
+        let qxv = px(d, cp, qt);
+        let qyv = py(d, cp, qt);
+        let sxv = px(d, cp, st);
+        let syv = py(d, cp, st);
+        let ex1 = ceq(d, cr, pxv, qxv);
+        let ey1 = ceq(d, cr, pyv, qyv);
+        let ex2 = ceq(d, cr, qxv, sxv);
+        let ey2 = ceq(d, cr, qyv, syv);
+        let ax = and_l(d, ex1, ey1, h1);
+        let ay = and_r(d, ex1, ey1, h1);
+        let bx = and_l(d, ex2, ey2, h2);
+        let by = and_r(d, ex2, ey2, h2);
+        let tx = rn_ctrans(d, cr, pxv, qxv, sxv, ax, bx);
+        let tyy = rn_ctrans(d, cr, pyv, qyv, syv, ay, by);
+        let rx = ceq(d, cr, pxv, sxv);
+        let ry = ceq(d, cr, pyv, syv);
+        let proof = and_intro(d, rx, ry, tx, tyy);
+
+        let hyp1 = d.const_app(cp.point_equiv, &[pt, qt]);
+        let hyp2 = d.const_app(cp.point_equiv, &[qt, st]);
+        let concl = d.const_app(cp.point_equiv, &[pt, st]);
+        let ty = {
+            let t = d.arrow(hyp2, concl);
+            let t = d.arrow(hyp1, t);
+            let t = d.pi_fv(s_fv, point, t);
+            let t = d.pi_fv(q_fv, point, t);
+            d.pi_fv(p_fv, point, t)
+        };
+        let value = {
+            let t = d.lam_fv(h2_fv, hyp2, proof);
+            let t = d.lam_fv(h1_fv, hyp1, t);
+            let t = d.lam_fv(s_fv, point, t);
+            let t = d.lam_fv(q_fv, point, t);
+            d.lam_fv(p_fv, point, t)
+        };
+        d.kernel().add_declaration(Declaration::Theorem {
+            name: r.point_trans,
+            uparams: vec![],
+            ty,
+            value,
+        })?;
+    }
+    Ok(())
+}
+
+/// The three coefficients of `Geo.RPlane.join P Q`, spelled out so that
+/// `rn_ring_proof` sees reals rather than a stuck projection.
+fn join_coeffs(
+    d: &mut IntDev<'_>,
+    cp: CPointPrelude,
+    cr: CRealPrelude,
+    p: ExprId,
+    q: ExprId,
+) -> [ExprId; 3] {
+    let pxv = px(d, cp, p);
+    let pyv = py(d, cp, p);
+    let qxv = px(d, cp, q);
+    let qyv = py(d, cp, q);
+    let big_a = {
+        let n = rn_cneg(d, cr, pyv);
+        rn_cadd(d, cr, qyv, n)
+    };
+    let big_b = {
+        let n = rn_cneg(d, cr, qxv);
+        rn_cadd(d, cr, pxv, n)
+    };
+    let big_c = {
+        let m1 = rn_cmul(d, cr, pyv, qxv);
+        let m2 = rn_cmul(d, cr, pxv, qyv);
+        let n = rn_cneg(d, cr, m2);
+        rn_cadd(d, cr, m1, n)
+    };
+    [big_a, big_b, big_c]
+}
+
+/// `join`, `joinOnLeft`, `joinOnRight`, `joinNondeg`, `joinExists`.
+fn declare_join(
+    d: &mut IntDev<'_>,
+    cp: CPointPrelude,
+    cr: CRealPrelude,
+    r: RPlaneNames,
+) -> Result<(), KernelError> {
+    let point = point_ty(d, cp);
+    let line0 = line0_ty(d, r);
+    let nat = d.nat_ty();
+    let zero = rn_czero(d, cr);
+
+    // join P Q := mk (y Q − y P) (x P − x Q) (y P * x Q − x P * y Q).
+    {
+        let p_fv = d.fresh_fvar();
+        let q_fv = d.fresh_fvar();
+        let pt = d.kernel().fvar(p_fv);
+        let qt = d.kernel().fvar(q_fv);
+        let [ca, cb, cc] = join_coeffs(d, cp, cr, pt, qt);
+        let body = lmk(d, r, ca, cb, cc);
+        let value = {
+            let inner = d.lam_fv(q_fv, point, body);
+            d.lam_fv(p_fv, point, inner)
+        };
+        let ty = {
+            let inner = d.arrow(point, line0);
+            d.arrow(point, inner)
+        };
+        d.kernel().add_declaration(Declaration::Definition {
+            name: r.join,
+            uparams: vec![],
+            ty,
+            value,
+            hint: ReducibilityHint::Regular(1),
+        })?;
+    }
+
+    // joinOnLeft / joinOnRight : ∀ P Q, onRaw P (join P Q) / onRaw Q (join P Q).
+    for at_right in [false, true] {
+        let p_fv = d.fresh_fvar();
+        let q_fv = d.fresh_fvar();
+        let pt = d.kernel().fvar(p_fv);
+        let qt = d.kernel().fvar(q_fv);
+        let pxv = px(d, cp, pt);
+        let pyv = py(d, cp, pt);
+        let qxv = px(d, cp, qt);
+        let qyv = py(d, cp, qt);
+        let [ca, cb, cc] = join_coeffs(d, cp, cr, pt, qt);
+        let (sx, sy) = if at_right {
+            (qxv, qyv)
+        } else {
+            (pxv, pyv)
+        };
+        let lhs = eval3(d, cr, ca, cb, cc, sx, sy);
+
+        let a_rn = rsub(at(qyv), at(pyv));
+        let b_rn = rsub(at(pxv), at(qxv));
+        let c_rn = rsub(
+            RnExpr::mul(at(pyv), at(qxv)),
+            RnExpr::mul(at(pxv), at(qyv)),
+        );
+        let lhs_rn = rev3(a_rn, b_rn, c_rn, at(sx), at(sy));
+        let proof = ring(d, cr, &lhs_rn, &RnExpr::Zero);
+
+        let joined = d.const_app(r.join, &[pt, qt]);
+        let target = if at_right {
+            d.const_app(r.on_raw, &[qt, joined])
+        } else {
+            d.const_app(r.on_raw, &[pt, joined])
+        };
+        let _ = lhs;
+        let ty = {
+            let t = d.pi_fv(q_fv, point, target);
+            d.pi_fv(p_fv, point, t)
+        };
+        let value = {
+            let t = d.lam_fv(q_fv, point, proof);
+            d.lam_fv(p_fv, point, t)
+        };
+        let name = if at_right {
+            r.join_on_right
+        } else {
+            r.join_on_left
+        };
+        d.kernel().add_declaration(Declaration::Theorem {
+            name,
+            uparams: vec![],
+            ty,
+            value,
+        })?;
+    }
+
+    // joinNondeg : ∀ P Q k, PosBound (distSq P Q) k → Nondeg (join P Q).
+    {
+        let p_fv = d.fresh_fvar();
+        let q_fv = d.fresh_fvar();
+        let k_fv = d.fresh_fvar();
+        let hk_fv = d.fresh_fvar();
+        let pt = d.kernel().fvar(p_fv);
+        let qt = d.kernel().fvar(q_fv);
+        let k = d.kernel().fvar(k_fv);
+        let hk = d.kernel().fvar(hk_fv);
+
+        let pxv = px(d, cp, pt);
+        let pyv = py(d, cp, pt);
+        let qxv = px(d, cp, qt);
+        let qyv = py(d, cp, qt);
+        let joined = d.const_app(r.join, &[pt, qt]);
+        let ja = la(d, r, joined);
+        let jb = lb(d, r, joined);
+        let norm = {
+            let m1 = rn_cmul(d, cr, ja, ja);
+            let m2 = rn_cmul(d, cr, jb, jb);
+            rn_cadd(d, cr, m1, m2)
+        };
+        let pred = {
+            let k2_fv = d.fresh_fvar();
+            let k2 = d.kernel().fvar(k2_fv);
+            let pb = pos_bound(d, cr, norm, k2);
+            d.lam_fv(k2_fv, nat, pb)
+        };
+
+        let dd = dist_sq(d, cp, pt, qt);
+        let lhs_rn = RnExpr::add(
+            RnExpr::mul(rsub(at(pxv), at(qxv)), rsub(at(pxv), at(qxv))),
+            RnExpr::mul(rsub(at(pyv), at(qyv)), rsub(at(pyv), at(qyv))),
+        );
+        let a_rn = rsub(at(qyv), at(pyv));
+        let b_rn = rsub(at(pxv), at(qxv));
+        let rhs_rn = RnExpr::add(
+            RnExpr::mul(a_rn.clone(), a_rn),
+            RnExpr::mul(b_rn.clone(), b_rn),
+        );
+        let same = ring(d, cr, &lhs_rn, &rhs_rn);
+        let moved = d.lemma(r.pos_bound_congr, &[dd, norm, k, same, hk]);
+        let proof = exists_intro(d, nat, pred, k, moved);
+
+        let hk_ty = pos_bound(d, cr, dd, k);
+        let concl = d.const_app(r.nondeg, &[joined]);
+        let ty = {
+            let t = d.arrow(hk_ty, concl);
+            let t = d.pi_fv(k_fv, nat, t);
+            let t = d.pi_fv(q_fv, point, t);
+            d.pi_fv(p_fv, point, t)
+        };
+        let value = {
+            let t = d.lam_fv(hk_fv, hk_ty, proof);
+            let t = d.lam_fv(k_fv, nat, t);
+            let t = d.lam_fv(q_fv, point, t);
+            d.lam_fv(p_fv, point, t)
+        };
+        d.kernel().add_declaration(Declaration::Theorem {
+            name: r.join_nondeg,
+            uparams: vec![],
+            ty,
+            value,
+        })?;
+    }
+
+    // joinExists : ∀ P Q, Apart P Q → ∃ l, on P l ∧ on Q l.
+    {
+        let line = line_ty(d, r);
+        let p_fv = d.fresh_fvar();
+        let q_fv = d.fresh_fvar();
+        let ha_fv = d.fresh_fvar();
+        let pt = d.kernel().fvar(p_fv);
+        let qt = d.kernel().fvar(q_fv);
+        let ha = d.kernel().fvar(ha_fv);
+
+        let line_pred = {
+            let l_fv = d.fresh_fvar();
+            let l = d.kernel().fvar(l_fv);
+            let opl = d.const_app(r.on, &[pt, l]);
+            let oql = d.const_app(r.on, &[qt, l]);
+            let both = and_ty(d, opl, oql);
+            d.lam_fv(l_fv, line, both)
+        };
+        let target = exists_ty(d, line, line_pred);
+
+        let dd = dist_sq(d, cp, pt, qt);
+        let apart_pred = {
+            let k_fv = d.fresh_fvar();
+            let k = d.kernel().fvar(k_fv);
+            let pb = pos_bound(d, cr, dd, k);
+            d.lam_fv(k_fv, nat, pb)
+        };
+        let minor = {
+            let k_fv = d.fresh_fvar();
+            let hk_fv = d.fresh_fvar();
+            let k = d.kernel().fvar(k_fv);
+            let hk = d.kernel().fvar(hk_fv);
+            let hk_ty = pos_bound(d, cr, dd, k);
+            let joined = d.const_app(r.join, &[pt, qt]);
+            let nd = d.lemma(r.join_nondeg, &[pt, qt, k, hk]);
+            let sub = lsub(d, r, joined, nd);
+            let left = d.lemma(r.join_on_left, &[pt, qt]);
+            let right = d.lemma(r.join_on_right, &[pt, qt]);
+            let opl = d.const_app(r.on, &[pt, sub]);
+            let oql = d.const_app(r.on, &[qt, sub]);
+            let pair = and_intro(d, opl, oql, left, right);
+            let body = exists_intro(d, line, line_pred, sub, pair);
+            let inner = d.lam_fv(hk_fv, hk_ty, body);
+            d.lam_fv(k_fv, nat, inner)
+        };
+        let proof = exists_elim(d, apart_pred, target, ha, minor);
+
+        let ha_ty = d.const_app(r.apart, &[pt, qt]);
+        let ty = {
+            let t = d.arrow(ha_ty, target);
+            let t = d.pi_fv(q_fv, point, t);
+            d.pi_fv(p_fv, point, t)
+        };
+        let value = {
+            let t = d.lam_fv(ha_fv, ha_ty, proof);
+            let t = d.lam_fv(q_fv, point, t);
+            d.lam_fv(p_fv, point, t)
+        };
+        d.kernel().add_declaration(Declaration::Theorem {
+            name: r.join_exists,
+            uparams: vec![],
+            ty,
+            value,
+        })?;
+        let _ = zero;
+    }
+    Ok(())
+}
+
+/// `joinUnique` — the whole point of the file.
+fn declare_join_unique(
+    d: &mut IntDev<'_>,
+    cp: CPointPrelude,
+    cr: CRealPrelude,
+    r: RPlaneNames,
+) -> Result<(), KernelError> {
+    let point = point_ty(d, cp);
+    let line = line_ty(d, r);
+    let nat = d.nat_ty();
+    let zero = rn_czero(d, cr);
+    let one = rn_cone(d, cr);
+
+    let p_fv = d.fresh_fvar();
+    let q_fv = d.fresh_fvar();
+    let l_fv = d.fresh_fvar();
+    let m_fv = d.fresh_fvar();
+    let ha_fv = d.fresh_fvar();
+    let h1_fv = d.fresh_fvar();
+    let h2_fv = d.fresh_fvar();
+    let h3_fv = d.fresh_fvar();
+    let h4_fv = d.fresh_fvar();
+    let pt = d.kernel().fvar(p_fv);
+    let qt = d.kernel().fvar(q_fv);
+    let l = d.kernel().fvar(l_fv);
+    let m = d.kernel().fvar(m_fv);
+    let ha = d.kernel().fvar(ha_fv);
+    let h1 = d.kernel().fvar(h1_fv);
+    let h2 = d.kernel().fvar(h2_fv);
+    let h3 = d.kernel().fvar(h3_fv);
+    let h4 = d.kernel().fvar(h4_fv);
+
+    let raw_l = lval(d, r, l);
+    let raw_m = lval(d, r, m);
+    let a = la(d, r, raw_l);
+    let b = lb(d, r, raw_l);
+    let c = lc(d, r, raw_l);
+    let aa = la(d, r, raw_m);
+    let bb = lb(d, r, raw_m);
+    let cc = lc(d, r, raw_m);
+
+    let pxv = px(d, cp, pt);
+    let pyv = py(d, cp, pt);
+    let qxv = px(d, cp, qt);
+    let qyv = py(d, cp, qt);
+    let u = {
+        let n = rn_cneg(d, cr, qxv);
+        rn_cadd(d, cr, pxv, n)
+    };
+    let v = {
+        let n = rn_cneg(d, cr, qyv);
+        rn_cadd(d, cr, pyv, n)
+    };
+    let norm_pq = {
+        let m1 = rn_cmul(d, cr, u, u);
+        let m2 = rn_cmul(d, cr, v, v);
+        rn_cadd(d, cr, m1, m2)
+    };
+
+    let e1 = eval3(d, cr, a, b, c, pxv, pyv);
+    let e2 = eval3(d, cr, a, b, c, qxv, qyv);
+    let f1 = eval3(d, cr, aa, bb, cc, pxv, pyv);
+    let f2 = eval3(d, cr, aa, bb, cc, qxv, qyv);
+
+    // hu : Equiv (a*u + b*v) 0, hU : Equiv (A*u + B*v) 0.
+    let minus_one = rn_cneg(d, cr, one);
+    let mut differences: Vec<ExprId> = Vec::with_capacity(2);
+    for (ca, cb, cc_, ea, eb, hx, hy) in [
+        (a, b, c, e1, e2, h1, h2),
+        (aa, bb, cc, f1, f2, h3, h4),
+    ] {
+        let lhs = {
+            let m1 = rn_cmul(d, cr, ca, u);
+            let m2 = rn_cmul(d, cr, cb, v);
+            rn_cadd(d, cr, m1, m2)
+        };
+        let lhs_rn = RnExpr::add(
+            RnExpr::mul(at(ca), rsub(at(pxv), at(qxv))),
+            RnExpr::mul(at(cb), rsub(at(pyv), at(qyv))),
+        );
+        let rhs_rn = RnExpr::add(
+            RnExpr::mul(
+                RnExpr::One,
+                rev3(at(ca), at(cb), at(cc_), at(pxv), at(pyv)),
+            ),
+            RnExpr::mul(
+                RnExpr::neg(RnExpr::One),
+                rev3(at(ca), at(cb), at(cc_), at(qxv), at(qyv)),
+            ),
+        );
+        let identity = ring(d, cr, &lhs_rn, &rhs_rn);
+        let vanish = sum_hyp_zero(d, cr, &[(one, ea, hx), (minus_one, eb, hy)]);
+        let rhs = {
+            let t1 = rn_cmul(d, cr, one, ea);
+            let t2 = rn_cmul(d, cr, minus_one, eb);
+            rn_cadd(d, cr, t1, t2)
+        };
+        differences.push(rn_ctrans(d, cr, lhs, rhs, zero, identity, vanish));
+    }
+    let hu = differences[0];
+    let h_big_u = differences[1];
+
+    let dab = {
+        let m1 = rn_cmul(d, cr, a, bb);
+        let m2 = rn_cmul(d, cr, b, aa);
+        let n2 = rn_cneg(d, cr, m2);
+        rn_cadd(d, cr, m1, n2)
+    };
+    let pivot = d.lemma(r.pivot_ab, &[a, b, aa, bb, u, v, hu, h_big_u]);
+
+    // The three `Nat` witnesses: `Apart P Q`, `Nondeg l`, `Nondeg m`.
+    let k_fv = d.fresh_fvar();
+    let hk_fv = d.fresh_fvar();
+    let kl_fv = d.fresh_fvar();
+    let hkl_fv = d.fresh_fvar();
+    let km_fv = d.fresh_fvar();
+    let hkm_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+    let hk = d.kernel().fvar(hk_fv);
+    let kl = d.kernel().fvar(kl_fv);
+    let hkl = d.kernel().fvar(hkl_fv);
+    let km = d.kernel().fvar(km_fv);
+    let hkm = d.kernel().fvar(hkm_fv);
+
+    let hdab = d.lemma(r.cancel_pos_bound, &[norm_pq, dab, k, hk, pivot]);
+    let hdac = d.lemma(
+        r.defect_ac,
+        &[a, b, c, aa, bb, cc, pxv, pyv, h1, h3, hdab],
+    );
+    let hdbc = d.lemma(
+        r.defect_bc,
+        &[a, b, c, aa, bb, cc, pxv, pyv, h1, h3, hdab],
+    );
+    let hdab2 = d.lemma(r.defect_swap, &[a, b, aa, bb, hdab]);
+    let hdac2 = d.lemma(r.defect_swap, &[a, c, aa, cc, hdac]);
+    let hdbc2 = d.lemma(r.defect_swap, &[b, c, bb, cc, hdbc]);
+
+    let target = d.const_app(r.line_equiv, &[l, m]);
+    let body = {
+        let x_fv = d.fresh_fvar();
+        let xt = d.kernel().fvar(x_fv);
+        let xx = px(d, cp, xt);
+        let xy = py(d, cp, xt);
+        let oxl = d.const_app(r.on, &[xt, l]);
+        let oxm = d.const_app(r.on, &[xt, m]);
+        let fwd_ty = d.arrow(oxl, oxm);
+        let bwd_ty = d.arrow(oxm, oxl);
+        let fwd = {
+            let hx_fv = d.fresh_fvar();
+            let hx = d.kernel().fvar(hx_fv);
+            let step = d.lemma(
+                r.on_of_defects,
+                &[a, b, c, aa, bb, cc, xx, xy, kl, hkl, hdab, hdac, hdbc, hx],
+            );
+            d.lam_fv(hx_fv, oxl, step)
+        };
+        let bwd = {
+            let hx_fv = d.fresh_fvar();
+            let hx = d.kernel().fvar(hx_fv);
+            let step = d.lemma(
+                r.on_of_defects,
+                &[
+                    aa, bb, cc, a, b, c, xx, xy, km, hkm, hdab2, hdac2, hdbc2, hx,
+                ],
+            );
+            d.lam_fv(hx_fv, oxm, step)
+        };
+        let pair = and_intro(d, fwd_ty, bwd_ty, fwd, bwd);
+        d.lam_fv(x_fv, point, pair)
+    };
+
+    // Wrap the three eliminations, innermost first.
+    let norm_m = {
+        let m1 = rn_cmul(d, cr, aa, aa);
+        let m2 = rn_cmul(d, cr, bb, bb);
+        rn_cadd(d, cr, m1, m2)
+    };
+    let norm_l = {
+        let m1 = rn_cmul(d, cr, a, a);
+        let m2 = rn_cmul(d, cr, b, b);
+        rn_cadd(d, cr, m1, m2)
+    };
+    let pred_m = {
+        let j_fv = d.fresh_fvar();
+        let j = d.kernel().fvar(j_fv);
+        let pb = pos_bound(d, cr, norm_m, j);
+        d.lam_fv(j_fv, nat, pb)
+    };
+    let pred_l = {
+        let j_fv = d.fresh_fvar();
+        let j = d.kernel().fvar(j_fv);
+        let pb = pos_bound(d, cr, norm_l, j);
+        d.lam_fv(j_fv, nat, pb)
+    };
+    let dd = dist_sq(d, cp, pt, qt);
+    let pred_a = {
+        let j_fv = d.fresh_fvar();
+        let j = d.kernel().fvar(j_fv);
+        let pb = pos_bound(d, cr, dd, j);
+        d.lam_fv(j_fv, nat, pb)
+    };
+
+    let minor_m = {
+        let hkm_ty = pos_bound(d, cr, norm_m, km);
+        let inner = d.lam_fv(hkm_fv, hkm_ty, body);
+        d.lam_fv(km_fv, nat, inner)
+    };
+    let prop_m = lprop(d, r, m);
+    let after_m = exists_elim(d, pred_m, target, prop_m, minor_m);
+
+    let minor_l = {
+        let hkl_ty = pos_bound(d, cr, norm_l, kl);
+        let inner = d.lam_fv(hkl_fv, hkl_ty, after_m);
+        d.lam_fv(kl_fv, nat, inner)
+    };
+    let prop_l = lprop(d, r, l);
+    let after_l = exists_elim(d, pred_l, target, prop_l, minor_l);
+
+    let minor_a = {
+        let hk_ty = pos_bound(d, cr, dd, k);
+        let inner = d.lam_fv(hk_fv, hk_ty, after_l);
+        d.lam_fv(k_fv, nat, inner)
+    };
+    let proof = exists_elim(d, pred_a, target, ha, minor_a);
+
+    let ha_ty = d.const_app(r.apart, &[pt, qt]);
+    let h1_ty = d.const_app(r.on, &[pt, l]);
+    let h2_ty = d.const_app(r.on, &[qt, l]);
+    let h3_ty = d.const_app(r.on, &[pt, m]);
+    let h4_ty = d.const_app(r.on, &[qt, m]);
+    let ty = {
+        let t = d.arrow(h4_ty, target);
+        let t = d.arrow(h3_ty, t);
+        let t = d.arrow(h2_ty, t);
+        let t = d.arrow(h1_ty, t);
+        let t = d.arrow(ha_ty, t);
+        let t = d.pi_fv(m_fv, line, t);
+        let t = d.pi_fv(l_fv, line, t);
+        let t = d.pi_fv(q_fv, point, t);
+        d.pi_fv(p_fv, point, t)
+    };
+    let value = {
+        let t = d.lam_fv(h4_fv, h4_ty, proof);
+        let t = d.lam_fv(h3_fv, h3_ty, t);
+        let t = d.lam_fv(h2_fv, h2_ty, t);
+        let t = d.lam_fv(h1_fv, h1_ty, t);
+        let t = d.lam_fv(ha_fv, ha_ty, t);
+        let t = d.lam_fv(m_fv, line, t);
+        let t = d.lam_fv(l_fv, line, t);
+        let t = d.lam_fv(q_fv, point, t);
+        d.lam_fv(p_fv, point, t)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: r.join_unique,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `twoPointsRaw` and `twoPoints`.
+fn declare_two_points(
+    d: &mut IntDev<'_>,
+    cp: CPointPrelude,
+    cr: CRealPrelude,
+    r: RPlaneNames,
+) -> Result<(), KernelError> {
+    let point = point_ty(d, cp);
+    let line0 = line0_ty(d, r);
+    let line = line_ty(d, r);
+    let nat = d.nat_ty();
+    let zero = rn_czero(d, cr);
+
+    // twoPointsRaw : ∀ l k, PosBound (a*a + b*b) k →
+    //                ∃ P Q, Apart P Q ∧ (onRaw P l ∧ onRaw Q l).
+    {
+        let l_fv = d.fresh_fvar();
+        let k_fv = d.fresh_fvar();
+        let hk_fv = d.fresh_fvar();
+        let l = d.kernel().fvar(l_fv);
+        let k = d.kernel().fvar(k_fv);
+        let hk = d.kernel().fvar(hk_fv);
+
+        let a = la(d, r, l);
+        let b = lb(d, r, l);
+        let c = lc(d, r, l);
+        let norm = {
+            let m1 = rn_cmul(d, cr, a, a);
+            let m2 = rn_cmul(d, cr, b, b);
+            rn_cadd(d, cr, m1, m2)
+        };
+        let ninv = d.const_app(cr.inv, &[norm, k, hk]);
+        let cancel = d.lemma(cr.mul_inv_cancel, &[norm, k, hk]);
+
+        let x0 = {
+            let ac = rn_cmul(d, cr, a, c);
+            let n = rn_cneg(d, cr, ac);
+            rn_cmul(d, cr, n, ninv)
+        };
+        let y0 = {
+            let bc = rn_cmul(d, cr, b, c);
+            let n = rn_cneg(d, cr, bc);
+            rn_cmul(d, cr, n, ninv)
+        };
+        let p0 = pmk(d, cp, x0, y0);
+        let x1 = {
+            let n = rn_cneg(d, cr, b);
+            rn_cadd(d, cr, x0, n)
+        };
+        let y1 = rn_cadd(d, cr, y0, a);
+        let p1 = pmk(d, cp, x1, y1);
+
+        // onRaw P0 l.
+        let on_p0 = {
+            let lhs = eval3(d, cr, a, b, c, x0, y0);
+            let n_ninv = rn_cmul(d, cr, norm, ninv);
+            let c_nninv = rn_cmul(d, cr, c, n_ninv);
+            let neg_c_nninv = rn_cneg(d, cr, c_nninv);
+            let mid = rn_cadd(d, cr, neg_c_nninv, c);
+
+            let x0_rn = RnExpr::mul(RnExpr::neg(RnExpr::mul(at(a), at(c))), at(ninv));
+            let y0_rn = RnExpr::mul(RnExpr::neg(RnExpr::mul(at(b), at(c))), at(ninv));
+            let norm_rn = RnExpr::add(
+                RnExpr::mul(at(a), at(a)),
+                RnExpr::mul(at(b), at(b)),
+            );
+            let lhs_rn = rev3(at(a), at(b), at(c), x0_rn, y0_rn);
+            let mid_rn = RnExpr::add(
+                RnExpr::neg(RnExpr::mul(
+                    at(c),
+                    RnExpr::mul(norm_rn, at(ninv)),
+                )),
+                at(c),
+            );
+            let identity = ring(d, cr, &lhs_rn, &mid_rn);
+
+            let one = rn_cone(d, cr);
+            let refl_c = rn_crefl(d, cr, c);
+            let to_one = d.lemma(cr.mul_congr, &[c, c, n_ninv, one, refl_c, cancel]);
+            let c_one = rn_cmul(d, cr, c, one);
+            let strip = d.lemma(cr.mul_one, &[c]);
+            let collapse = rn_ctrans(d, cr, c_nninv, c_one, c, to_one, strip);
+            let neg_c = rn_cneg(d, cr, c);
+            let negged = d.lemma(cr.neg_congr, &[c_nninv, c, collapse]);
+            let tail = rn_cadd(d, cr, neg_c, c);
+            let lifted = d.lemma(
+                cr.add_congr,
+                &[neg_c_nninv, neg_c, c, c, negged, refl_c],
+            );
+            let tail_rn = RnExpr::add(RnExpr::neg(at(c)), at(c));
+            let finish = ring(d, cr, &tail_rn, &RnExpr::Zero);
+            let (_, proof) = rn_cchain(
+                d,
+                cr,
+                lhs,
+                &[(mid, identity), (tail, lifted), (zero, finish)],
+            );
+            proof
+        };
+
+        // onRaw P1 l — the shift by `(−b, a)` cancels in the ring.
+        let on_p1 = {
+            let lhs = eval3(d, cr, a, b, c, x1, y1);
+            let rhs = eval3(d, cr, a, b, c, x0, y0);
+            let lhs_rn = rev3(
+                at(a),
+                at(b),
+                at(c),
+                RnExpr::add(at(x0), RnExpr::neg(at(b))),
+                RnExpr::add(at(y0), at(a)),
+            );
+            let rhs_rn = rev3(at(a), at(b), at(c), at(x0), at(y0));
+            let same = ring(d, cr, &lhs_rn, &rhs_rn);
+            rn_ctrans(d, cr, lhs, rhs, zero, same, on_p0)
+        };
+
+        // Apart P0 P1 — their distSq IS the line's own `a*a + b*b`.
+        let apart_p0p1 = {
+            let dd = dist_sq(d, cp, p0, p1);
+            let lhs_rn = RnExpr::add(
+                RnExpr::mul(at(a), at(a)),
+                RnExpr::mul(at(b), at(b)),
+            );
+            let x1_rn = RnExpr::add(at(x0), RnExpr::neg(at(b)));
+            let y1_rn = RnExpr::add(at(y0), at(a));
+            let du = rsub(at(x0), x1_rn);
+            let dv = rsub(at(y0), y1_rn);
+            let rhs_rn = RnExpr::add(
+                RnExpr::mul(du.clone(), du),
+                RnExpr::mul(dv.clone(), dv),
+            );
+            let same = ring(d, cr, &lhs_rn, &rhs_rn);
+            let moved = d.lemma(r.pos_bound_congr, &[norm, dd, k, same, hk]);
+            let pred = {
+                let j_fv = d.fresh_fvar();
+                let j = d.kernel().fvar(j_fv);
+                let pb = pos_bound(d, cr, dd, j);
+                d.lam_fv(j_fv, nat, pb)
+            };
+            exists_intro(d, nat, pred, k, moved)
+        };
+
+        let apart_ty = d.const_app(r.apart, &[p0, p1]);
+        let on0_ty = d.const_app(r.on_raw, &[p0, l]);
+        let on1_ty = d.const_app(r.on_raw, &[p1, l]);
+        let ons_ty = and_ty(d, on0_ty, on1_ty);
+        let ons = and_intro(d, on0_ty, on1_ty, on_p0, on_p1);
+        let payload = and_intro(d, apart_ty, ons_ty, apart_p0p1, ons);
+
+        let inner_pred = {
+            let qq_fv = d.fresh_fvar();
+            let qq = d.kernel().fvar(qq_fv);
+            let ap = d.const_app(r.apart, &[p0, qq]);
+            let o0 = d.const_app(r.on_raw, &[p0, l]);
+            let o1 = d.const_app(r.on_raw, &[qq, l]);
+            let os = and_ty(d, o0, o1);
+            let both = and_ty(d, ap, os);
+            d.lam_fv(qq_fv, point, both)
+        };
+        let outer_pred = {
+            let pp_fv = d.fresh_fvar();
+            let pp = d.kernel().fvar(pp_fv);
+            let qq_fv = d.fresh_fvar();
+            let qq = d.kernel().fvar(qq_fv);
+            let ap = d.const_app(r.apart, &[pp, qq]);
+            let o0 = d.const_app(r.on_raw, &[pp, l]);
+            let o1 = d.const_app(r.on_raw, &[qq, l]);
+            let os = and_ty(d, o0, o1);
+            let both = and_ty(d, ap, os);
+            let inner = d.lam_fv(qq_fv, point, both);
+            let ex = exists_ty(d, point, inner);
+            d.lam_fv(pp_fv, point, ex)
+        };
+        let inner_witness = exists_intro(d, point, inner_pred, p1, payload);
+        let proof = exists_intro(d, point, outer_pred, p0, inner_witness);
+
+        let hk_ty = pos_bound(d, cr, norm, k);
+        let concl = exists_ty(d, point, outer_pred);
+        let ty = {
+            let t = d.arrow(hk_ty, concl);
+            let t = d.pi_fv(k_fv, nat, t);
+            d.pi_fv(l_fv, line0, t)
+        };
+        let value = {
+            let t = d.lam_fv(hk_fv, hk_ty, proof);
+            let t = d.lam_fv(k_fv, nat, t);
+            d.lam_fv(l_fv, line0, t)
+        };
+        d.kernel().add_declaration(Declaration::Theorem {
+            name: r.two_points_raw,
+            uparams: vec![],
+            ty,
+            value,
+        })?;
+    }
+
+    // twoPoints : ∀ l, ∃ P Q, Apart P Q ∧ (on P l ∧ on Q l).
+    {
+        let l_fv = d.fresh_fvar();
+        let l = d.kernel().fvar(l_fv);
+        let raw = lval(d, r, l);
+        let a = la(d, r, raw);
+        let b = lb(d, r, raw);
+        let norm = {
+            let m1 = rn_cmul(d, cr, a, a);
+            let m2 = rn_cmul(d, cr, b, b);
+            rn_cadd(d, cr, m1, m2)
+        };
+        let pred = {
+            let j_fv = d.fresh_fvar();
+            let j = d.kernel().fvar(j_fv);
+            let pb = pos_bound(d, cr, norm, j);
+            d.lam_fv(j_fv, nat, pb)
+        };
+        let outer_pred = {
+            let pp_fv = d.fresh_fvar();
+            let pp = d.kernel().fvar(pp_fv);
+            let qq_fv = d.fresh_fvar();
+            let qq = d.kernel().fvar(qq_fv);
+            let ap = d.const_app(r.apart, &[pp, qq]);
+            let o0 = d.const_app(r.on, &[pp, l]);
+            let o1 = d.const_app(r.on, &[qq, l]);
+            let os = and_ty(d, o0, o1);
+            let both = and_ty(d, ap, os);
+            let inner = d.lam_fv(qq_fv, point, both);
+            let ex = exists_ty(d, point, inner);
+            d.lam_fv(pp_fv, point, ex)
+        };
+        let target = exists_ty(d, point, outer_pred);
+        let minor = {
+            let k_fv = d.fresh_fvar();
+            let hk_fv = d.fresh_fvar();
+            let k = d.kernel().fvar(k_fv);
+            let hk = d.kernel().fvar(hk_fv);
+            let hk_ty = pos_bound(d, cr, norm, k);
+            let body = d.lemma(r.two_points_raw, &[raw, k, hk]);
+            let inner = d.lam_fv(hk_fv, hk_ty, body);
+            d.lam_fv(k_fv, nat, inner)
+        };
+        let prop = lprop(d, r, l);
+        let proof = exists_elim(d, pred, target, prop, minor);
+
+        let ty = d.pi_fv(l_fv, line, target);
+        let value = d.lam_fv(l_fv, line, proof);
+        d.kernel().add_declaration(Declaration::Theorem {
+            name: r.two_points,
+            uparams: vec![],
+            ty,
+            value,
+        })?;
+    }
+    Ok(())
+}
+
+/// `triangle` — `(0,0)`, `(1,0)`, `(0,1)`, pairwise apart, on no common line.
+fn declare_triangle(
+    d: &mut IntDev<'_>,
+    cp: CPointPrelude,
+    cr: CRealPrelude,
+    r: RPlaneNames,
+) -> Result<(), KernelError> {
+    let point = point_ty(d, cp);
+    let line = line_ty(d, r);
+    let nat = d.nat_ty();
+    let zero = rn_czero(d, cr);
+    let one = rn_cone(d, cr);
+
+    let a0 = pmk(d, cp, zero, zero);
+    let b0 = pmk(d, cp, one, zero);
+    let c0 = pmk(d, cp, zero, one);
+
+    // `Equiv <literal> (distSq X Y)` for each pair, then `pos_bound_of_lt`.
+    let refl_zero = rn_crefl(d, cr, zero);
+    let two_const = d.kernel().const_(cp.two, vec![]);
+    let zero_nat = d.num(0);
+    let two_witness = d.kernel().const_(cp.two_pos_bound, vec![]);
+    let two_pos = d.lemma(cr.pos_of_pos_bound, &[two_const, zero_nat, two_witness]);
+    let one_pos = d.kernel().const_(cr.zero_lt_one, vec![]);
+    let one_const = d.kernel().const_(cr.one, vec![]);
+
+    let coords = |flag: bool| -> (RnExpr, RnExpr) {
+        if flag {
+            (RnExpr::One, RnExpr::Zero)
+        } else {
+            (RnExpr::Zero, RnExpr::Zero)
+        }
+    };
+    let _ = coords;
+
+    let mut aparts: Vec<ExprId> = Vec::with_capacity(3);
+    for (left, right, lx, ly, rx, ry, is_two) in [
+        (a0, b0, RnExpr::Zero, RnExpr::Zero, RnExpr::One, RnExpr::Zero, false),
+        (a0, c0, RnExpr::Zero, RnExpr::Zero, RnExpr::Zero, RnExpr::One, false),
+        (b0, c0, RnExpr::One, RnExpr::Zero, RnExpr::Zero, RnExpr::One, true),
+    ] {
+        let dd = dist_sq(d, cp, left, right);
+        let expanded = RnExpr::add(
+            RnExpr::mul(rsub(lx.clone(), rx.clone()), rsub(lx, rx)),
+            RnExpr::mul(rsub(ly.clone(), ry.clone()), rsub(ly, ry)),
+        );
+        let literal = if is_two {
+            RnExpr::add(RnExpr::One, RnExpr::One)
+        } else {
+            RnExpr::One
+        };
+        let same = ring(d, cr, &literal, &expanded);
+        let (scalar, positive) = if is_two {
+            (two_const, two_pos)
+        } else {
+            (one_const, one_pos)
+        };
+        let lifted = d.lemma(
+            cr.lt_congr,
+            &[zero, zero, scalar, dd, refl_zero, same, positive],
+        );
+        aparts.push(d.lemma(cr.pos_bound_of_lt, &[dd, lifted]));
+    }
+
+    // ∀ l, on A l → on B l → on C l → False.
+    let no_line = {
+        let l_fv = d.fresh_fvar();
+        let ha_fv = d.fresh_fvar();
+        let hb_fv = d.fresh_fvar();
+        let hc_fv = d.fresh_fvar();
+        let l = d.kernel().fvar(l_fv);
+        let ha = d.kernel().fvar(ha_fv);
+        let hb = d.kernel().fvar(hb_fv);
+        let hc = d.kernel().fvar(hc_fv);
+
+        let raw = lval(d, r, l);
+        let a = la(d, r, raw);
+        let b = lb(d, r, raw);
+        let c = lc(d, r, raw);
+
+        // c ~ 0, from `on A l` at the origin.
+        let at_origin = eval3(d, cr, a, b, c, zero, zero);
+        let origin_rn = rev3(at(a), at(b), at(c), RnExpr::Zero, RnExpr::Zero);
+        let to_c = ring(d, cr, &origin_rn, &at(c));
+        let back_c = rn_csymm(d, cr, at_origin, c, to_c);
+        let hc_zero = rn_ctrans(d, cr, c, at_origin, zero, back_c, ha);
+
+        // a ~ 0 and b ~ 0, from the two unit points.
+        let mut vanishing: Vec<ExprId> = Vec::with_capacity(2);
+        for (coeff, sx, sy, sx_rn, sy_rn, hyp) in [
+            (a, one, zero, RnExpr::One, RnExpr::Zero, hb),
+            (b, zero, one, RnExpr::Zero, RnExpr::One, hc),
+        ] {
+            let at_unit = eval3(d, cr, a, b, c, sx, sy);
+            let unit_rn = rev3(at(a), at(b), at(c), sx_rn, sy_rn);
+            let pair = rn_cadd(d, cr, coeff, c);
+            let pair_rn = RnExpr::add(at(coeff), at(c));
+            let to_pair = ring(d, cr, &unit_rn, &pair_rn);
+            let back = rn_csymm(d, cr, at_unit, pair, to_pair);
+            let pair_zero = rn_ctrans(d, cr, pair, at_unit, zero, back, hyp);
+
+            let coeff_zero = rn_cadd(d, cr, coeff, zero);
+            let strip = d.lemma(cr.add_zero, &[coeff]);
+            let step1 = rn_csymm(d, cr, coeff_zero, coeff, strip);
+            let refl_coeff = rn_crefl(d, cr, coeff);
+            let back_c_zero = rn_csymm(d, cr, c, zero, hc_zero);
+            let step2 = d.lemma(
+                cr.add_congr,
+                &[coeff, coeff, zero, c, refl_coeff, back_c_zero],
+            );
+            let (_, done) = rn_cchain(
+                d,
+                cr,
+                coeff,
+                &[
+                    (coeff_zero, step1),
+                    (pair, step2),
+                    (zero, pair_zero),
+                ],
+            );
+            vanishing.push(done);
+        }
+        let ha_zero = vanishing[0];
+        let hb_zero = vanishing[1];
+
+        // a*a + b*b ~ 0, contradicting the line's own non-degeneracy witness.
+        let norm = {
+            let m1 = rn_cmul(d, cr, a, a);
+            let m2 = rn_cmul(d, cr, b, b);
+            rn_cadd(d, cr, m1, m2)
+        };
+        let sq_a = rn_cmul(d, cr, a, a);
+        let sq_b = rn_cmul(d, cr, b, b);
+        let zz = rn_cmul(d, cr, zero, zero);
+        let ca = d.lemma(cr.mul_congr, &[a, zero, a, zero, ha_zero, ha_zero]);
+        let cb = d.lemma(cr.mul_congr, &[b, zero, b, zero, hb_zero, hb_zero]);
+        let both = rn_cadd(d, cr, zz, zz);
+        let lifted = d.lemma(cr.add_congr, &[sq_a, zz, sq_b, zz, ca, cb]);
+        let both_rn = RnExpr::add(
+            RnExpr::mul(RnExpr::Zero, RnExpr::Zero),
+            RnExpr::mul(RnExpr::Zero, RnExpr::Zero),
+        );
+        let finish = ring(d, cr, &both_rn, &RnExpr::Zero);
+        let (_, norm_zero) =
+            rn_cchain(d, cr, norm, &[(both, lifted), (zero, finish)]);
+
+        let pred = {
+            let j_fv = d.fresh_fvar();
+            let j = d.kernel().fvar(j_fv);
+            let pb = pos_bound(d, cr, norm, j);
+            d.lam_fv(j_fv, nat, pb)
+        };
+        let f = false_ty(d);
+        let minor = {
+            let k_fv = d.fresh_fvar();
+            let hk_fv = d.fresh_fvar();
+            let k = d.kernel().fvar(k_fv);
+            let hk = d.kernel().fvar(hk_fv);
+            let hk_ty = pos_bound(d, cr, norm, k);
+            let body = d.lemma(r.not_zero_of_pos_bound, &[norm, k, hk, norm_zero]);
+            let inner = d.lam_fv(hk_fv, hk_ty, body);
+            d.lam_fv(k_fv, nat, inner)
+        };
+        let prop = lprop(d, r, l);
+        let body = exists_elim(d, pred, f, prop, minor);
+
+        let oal = d.const_app(r.on, &[a0, l]);
+        let obl = d.const_app(r.on, &[b0, l]);
+        let ocl = d.const_app(r.on, &[c0, l]);
+        let t = d.lam_fv(hc_fv, ocl, body);
+        let t = d.lam_fv(hb_fv, obl, t);
+        let t = d.lam_fv(ha_fv, oal, t);
+        d.lam_fv(l_fv, line, t)
+    };
+
+    // Assemble `∃ A B C, …`.
+    let no_line_ty = {
+        let l_fv = d.fresh_fvar();
+        let l = d.kernel().fvar(l_fv);
+        let oal = d.const_app(r.on, &[a0, l]);
+        let obl = d.const_app(r.on, &[b0, l]);
+        let ocl = d.const_app(r.on, &[c0, l]);
+        let f = false_ty(d);
+        let t = d.arrow(ocl, f);
+        let t = d.arrow(obl, t);
+        let t = d.arrow(oal, t);
+        d.pi_fv(l_fv, line, t)
+    };
+    let ab_ty = d.const_app(r.apart, &[a0, b0]);
+    let ac_ty = d.const_app(r.apart, &[a0, c0]);
+    let bc_ty = d.const_app(r.apart, &[b0, c0]);
+    let tail_ty = and_ty(d, bc_ty, no_line_ty);
+    let tail = and_intro(d, bc_ty, no_line_ty, aparts[2], no_line);
+    let mid_ty = and_ty(d, ac_ty, tail_ty);
+    let mid = and_intro(d, ac_ty, tail_ty, aparts[1], tail);
+    let payload_ty = and_ty(d, ab_ty, mid_ty);
+    let payload = and_intro(d, ab_ty, mid_ty, aparts[0], mid);
+
+    // The three predicates, built with the outer points still free so that the
+    // statement is the record's `triangle` shape verbatim.
+    let body_at = |d: &mut IntDev<'_>, x: ExprId, y: ExprId, z: ExprId| -> ExprId {
+        let ab = d.const_app(r.apart, &[x, y]);
+        let ac = d.const_app(r.apart, &[x, z]);
+        let bc = d.const_app(r.apart, &[y, z]);
+        let nl = {
+            let l_fv = d.fresh_fvar();
+            let l = d.kernel().fvar(l_fv);
+            let oal = d.const_app(r.on, &[x, l]);
+            let obl = d.const_app(r.on, &[y, l]);
+            let ocl = d.const_app(r.on, &[z, l]);
+            let f = false_ty(d);
+            let t = d.arrow(ocl, f);
+            let t = d.arrow(obl, t);
+            let t = d.arrow(oal, t);
+            d.pi_fv(l_fv, line, t)
+        };
+        let t = and_ty(d, bc, nl);
+        let t = and_ty(d, ac, t);
+        and_ty(d, ab, t)
+    };
+
+    let pred_c = {
+        let z_fv = d.fresh_fvar();
+        let z = d.kernel().fvar(z_fv);
+        let body = body_at(d, a0, b0, z);
+        d.lam_fv(z_fv, point, body)
+    };
+    let pred_b = {
+        let y_fv = d.fresh_fvar();
+        let y = d.kernel().fvar(y_fv);
+        let z_fv = d.fresh_fvar();
+        let z = d.kernel().fvar(z_fv);
+        let body = body_at(d, a0, y, z);
+        let inner = d.lam_fv(z_fv, point, body);
+        let ex = exists_ty(d, point, inner);
+        d.lam_fv(y_fv, point, ex)
+    };
+    let pred_a = {
+        let x_fv = d.fresh_fvar();
+        let x = d.kernel().fvar(x_fv);
+        let y_fv = d.fresh_fvar();
+        let y = d.kernel().fvar(y_fv);
+        let z_fv = d.fresh_fvar();
+        let z = d.kernel().fvar(z_fv);
+        let body = body_at(d, x, y, z);
+        let inner = d.lam_fv(z_fv, point, body);
+        let ex_inner = exists_ty(d, point, inner);
+        let mid = d.lam_fv(y_fv, point, ex_inner);
+        let ex_mid = exists_ty(d, point, mid);
+        d.lam_fv(x_fv, point, ex_mid)
+    };
+    let _ = payload_ty;
+
+    let level_c = exists_intro(d, point, pred_c, c0, payload);
+    let level_b = exists_intro(d, point, pred_b, b0, level_c);
+    let proof = exists_intro(d, point, pred_a, a0, level_b);
+    let ty = exists_ty(d, point, pred_a);
+
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: r.triangle,
+        uparams: vec![],
+        ty,
+        value: proof,
+    })
+}
+
+/// `Geo.rplane : Geo.Incidence` — the model itself.
+fn declare_instance(
+    d: &mut IntDev<'_>,
+    p: GeoPrelude,
+    r: RPlaneNames,
+) -> Result<(), KernelError> {
+    let cp = p.cpoint;
+    let point = point_ty(d, cp);
+    let line = line_ty(d, r);
+
+    let peq = d.kernel().const_(cp.point_equiv, vec![]);
+    let prefl = d.kernel().const_(r.point_refl, vec![]);
+    let psymm = d.kernel().const_(r.point_symm, vec![]);
+    let ptrans = d.kernel().const_(r.point_trans, vec![]);
+    let leq = d.kernel().const_(r.line_equiv, vec![]);
+    let lrefl = d.kernel().const_(r.line_equiv_refl, vec![]);
+    let lsymm = d.kernel().const_(r.line_equiv_symm, vec![]);
+    let ltrans = d.kernel().const_(r.line_equiv_trans, vec![]);
+    let on = d.kernel().const_(r.on, vec![]);
+    let on_point = d.kernel().const_(r.on_point, vec![]);
+    let on_line = d.kernel().const_(r.on_line, vec![]);
+    let apart = d.kernel().const_(r.apart, vec![]);
+    let apart_ne = d.kernel().const_(r.apart_ne, vec![]);
+    let apart_symm = d.kernel().const_(r.apart_symm, vec![]);
+    let apart_congr = d.kernel().const_(r.apart_congr, vec![]);
+    let join_exists = d.kernel().const_(r.join_exists, vec![]);
+    let join_unique = d.kernel().const_(r.join_unique, vec![]);
+    let two_points = d.kernel().const_(r.two_points, vec![]);
+    let triangle = d.kernel().const_(r.triangle, vec![]);
+
+    let args = [
+        point,
+        line,
+        peq,
+        prefl,
+        psymm,
+        ptrans,
+        leq,
+        lrefl,
+        lsymm,
+        ltrans,
+        on,
+        on_point,
+        on_line,
+        apart,
+        apart_ne,
+        apart_symm,
+        apart_congr,
+        join_exists,
+        join_unique,
+        two_points,
+        triangle,
+    ];
+    assert_eq!(
+        args.len(),
+        super::FIELD_COUNT,
+        "the instance's argument list is out of step with the record"
+    );
+    let value = mk_instance(d.kernel(), &p.record, &args);
+    let ty = d.kernel().const_(p.record.ind, vec![]);
+    d.kernel().add_declaration(Declaration::Definition {
+        name: r.instance,
+        uparams: vec![],
+        ty,
+        value,
+        hint: ReducibilityHint::Regular(1),
+    })
 }
