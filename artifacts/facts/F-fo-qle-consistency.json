@@ -1,0 +1,64 @@
+{
+  "schema_version": 1,
+  "id": "F:fo-qle-consistency",
+  "title": "Q with the order axioms is consistent, by exhibiting a model",
+  "statement": "There is no derivation of falsity from the thirteen axioms of FO.Qle -- Robinson's seven plus the six order axioms -- in the first-order natural-deduction calculus: Not (FO.Provable FO.Qle FO.Formula.bot). The proof is soundness applied at the ℕ structure with the constant-zero valuation, exactly as for FO.Q: a derivation of bot from Qle would give FO.sat Nat FO.natStructureQ FO.Formula.bot v, which iota-reduces to False.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem FO.Qle.consistency : Not (FO.Provable FO.Qle FO.Formula.bot)",
+    "kernel_theorem": "FO.Qle.consistency",
+    "fragment": "Nat",
+    "free_symbols": []
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "depends_on": [
+    "F:fo-soundness",
+    "F:fo-qle-order-context"
+  ],
+  "evidence": [
+    {
+      "id": "kernel-FO.Qle.consistency",
+      "kind": "kernel-term",
+      "kernel_declaration": "FO.Qle.consistency",
+      "supports": "FO.Qle.consistency is admitted by the trusted kernel gate with the type recorded in formal.statement, and rests on no axiom. The proof term is one line: fun d => FO.soundness Nat FO.natStructureQ FO.Qle FO.Formula.bot d (fun _ => Nat.zero) (FO.Qle.natModels (fun _ => Nat.zero)).",
+      "check_status": "checked",
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example fo_order_inventory -- FO.Qle.consistency --exact --require-axiom-free",
+      "checkers": [
+        "Kernel::add_declaration",
+        "Kernel::axiom_footprint"
+      ],
+      "notes": "The ℕ structure is doing real work: an arbitrary FO.Structure M would not do, because M could be empty and the argument still needs a valuation Nat -> M to exist."
+    },
+    {
+      "id": "it-is-about-Qle-and-not-about-Q",
+      "kind": "kernel-term",
+      "kernel_declaration": "FO.Qle.consistency",
+      "supports": "The type is rebuilt from FO.Provable, FO.Qle and FO.Formula.bot inside the test and compared by Kernel::def_eq rather than by rendering, with a negative control that the SAME statement over FO.Q -- which is fo_robinson.rs's already-landed FO.Q.consistency -- is a DIFFERENT type. So a fact that had silently degraded to the strictly weaker statement about the smaller theory is a failure here.",
+      "check_status": "checked",
+      "checker_command": "cargo test -p axeyum-lean-kernel --release --lib -- fo_order::tests --test-threads=4",
+      "checkers": [
+        "Kernel::def_eq",
+        "Kernel::infer"
+      ],
+      "notes": "fo_order::tests::qle_consistency_states_the_underivability_of_bot_from_qle."
+    }
+  ],
+  "provenance": {
+    "date": "2026-09-06",
+    "established_by": "axeyum-lean-kernel build_fo_order_prelude, lane fo-diagonal-lemma (W3-7, ADR-1669)",
+    "source": "authored from the roadmap item; the soundness route is fo_soundness.rs's, applied at the larger context",
+    "prior_art": [
+      {
+        "who": "Raphael M. Robinson",
+        "what": "the finitely axiomatised essentially undecidable arithmetic Q",
+        "year": 1950,
+        "where": "R. M. Robinson, 'An essentially undecidable axiom system', Proc. ICM 1950, vol. 1, 729-730",
+        "attribution": "standard textbook attribution; this lane did not consult the primary source"
+      }
+    ]
+  },
+  "notes": "This is a strictly stronger consistency statement than F:fo-q-consistency, over a strictly larger theory, and it is what a later Gödel-I slice would need: the order axioms are exactly the ones that make the uniqueness half of representability reachable, and an incompleteness argument has to be about a theory that can represent its own syntax. As with FO.Q, the proof is model-theoretic and lives in the metatheory, so it is exactly the kind of consistency proof Qle cannot carry out about itself.",
+  "proof_route": "kernel-lean",
+  "axiom_footprint": []
+}
