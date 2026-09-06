@@ -84,4 +84,55 @@ first-class `unknown` on a route that can be improved — plus the representatio
 itself, which QF_LIA and QF_NIA and the finite-field and EVM front ends need
 independently.
 
-<!-- section 3 (the implementation) and 4 (before/after) follow below -->
+## 3. What was built, and the two things the measurement changed about it
+
+Full rationale is [ADR-1702's "Slice 2" section](../09-decisions/adr-1702-rational-i128-fast-path-bignum-slow-path.md);
+this records what the measurements above decided.
+
+**The shape is a sibling variant, not a two-representation payload.** The brief
+asked for `Value::Int` to take the shape ADR-1702 gave `Rational`. That shape
+kept 5,500 consumers correct because `Rational` is a *struct* whose layout could
+stay fixed. `Value::Int` is an enum *variant*, and the move that keeps a
+variant's consumers correct is a second variant — which is also the design
+[ADR-0376](../09-decisions/adr-0376-integer-literals-wider-than-i128.md) had
+already recorded for the day this was justified, payload type and canonicality
+rule included. So `TermNode::WideIntConst(WideInt)` and `Value::WideInt(WideInt)`
+sit beside the `i128` ones exactly as `WideBvConst`/`WideBv` already do at 128
+bits, and the ~390 `Value::Int` and ~210 `IntConst` sites are safe by
+construction: they cannot match a wide value, so they have no truncation to get
+wrong. `WideInt::to_i128` still panics rather than truncating, and
+`Value::as_int` returns `None` — slice 1's hazard contract, verbatim.
+
+**The audit is compile-driven**: adding the two variants broke **62 `match`
+sites across 13 crates**, and `cargo check --workspace --all-targets
+--all-features` is the gate that enumerated them. That is the second argument
+for the sibling shape — a payload change would have kept many of those sites
+compiling while changing their meaning.
+
+**The real defect found was a panic on user input**, and it was in the
+evaluator, not in a solver route. `eval`'s `int_bin`/`int_cmp` and eleven
+siblings read operands with `as_int().expect("builder guaranteed Int operand")`,
+and `as_int` is `None` for a wide value — so admitting the literal without
+touching `eval` would have panicked on a parsed `2^256`, on the one path every
+`sat` is replayed through. `eval` now takes a wide-integer detour mirroring the
+wide-BV one beside it: an explicit operator list computes exactly in `BigInt`,
+everything else declines with `IrError::Unsupported` before reaching the
+`expect`, and narrow-by-narrow arithmetic is untouched so `i128::MAX + 1` still
+reports `ArithmeticOverflow`.
+
+**No route opted in, and §2 is why.** `Features::has_wide_int` is the opt-in
+point and `wide_int_admission` declines at the dispatch boundary with a named
+`unknown`. It changes no verdict — every route already fails closed, and
+`ArithAbstractor::ensure_supported_atom` re-runs the linearizer before an atom
+becomes a Boolean proposition, so a wide-bearing atom cannot become an opaque
+literal the CDCL(T) loop satisfies vacuously. What it changes is cost and
+explanation, and the cost is not hypothetical: see §4.
+
+Out of scope, named: opting `IntCollector::linearize` (and through it the
+exact-rational simplex, whose tableau is already `Rational` and so already
+carries ADR-1702's wide path) into wide bounds. It would decide **nothing** on
+this population by §2, and that linearizer is on every LIA query's path, so the
+regression risk is real against a measured gain of zero. It is the obvious first
+opt-in the day a non-width-bound integer route exists.
+
+<!-- section 4 (before/after) follows below -->

@@ -14,7 +14,7 @@ use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use axeyum_fp::{FloatFormat, RoundingMode};
 use axeyum_ir::{
     ArraySortKey, FuncId, IrError, MAX_BV_WIDTH, Op, Rational, Sort, SymbolId, TermArena, TermId,
-    TermNode, WideUint,
+    TermNode, WideInt, WideUint,
 };
 use axeyum_strings::regex::Regex;
 
@@ -16021,26 +16021,31 @@ fn parse_atom(
         return Ok(t);
     }
     // A bare numeral is a non-negative integer literal (negatives are `(- n)`).
-    if a.bytes().all(|b| b.is_ascii_digit()) {
-        // SMT-LIB `Int` is unbounded, but `Value::Int` is an `i128`, so a numeral
-        // above that range is *representationally* out of reach — it is not
-        // malformed input. Reporting `Syntax` here claimed the benchmark was
-        // ill-formed, which turned a well-formed file into an operational
-        // `parse-error`: the measurement harness then refused to count it at all
-        // and raised an integrity alarm, and `unknown` is supposed to be
-        // first-class rather than an error.
+    if a.bytes().all(|b| b.is_ascii_digit()) && !a.is_empty() {
+        // SMT-LIB `Int` is unbounded. It used to be bounded HERE, by
+        // `Value::Int(i128)`, and a wider numeral was declined as `Unsupported`
+        // — honest, but it meant 26 of the 200 QF_UFLIA competition files (the
+        // `20230314-Jaroslav-Bendik-Certora` family, carrying EVM `uint256`
+        // bounds because Certora verifies Ethereum contracts) never reached the
+        // solver at all.
         //
-        // Real cost, not hypothetical: `UFLIA/20230314-Jaroslav-Bendik-Certora`
-        // carries `2^256 - 1` (max `uint256`) because Certora verifies Ethereum
-        // contracts, so the whole family — and by extension the crypto and
-        // smart-contract corner of the library — reported as a syntax error.
-        // Declining is honest; claiming the input is broken is not.
-        let value = a.parse::<i128>().map_err(|_| {
-            SmtError::Unsupported(format!(
-                "integer literal `{a}` exceeds the modeled `Int` range"
-            ))
+        // ADR-1702 slice 2 removes the ceiling from the front door:
+        // `int_const_big` builds `TermNode::IntConst` when the value fits `i128`
+        // and `TermNode::WideIntConst` when it does not, so nothing changes for
+        // any numeral that parsed before, and a wider one now becomes a real
+        // term. What happens next is a per-route decision — the routes that
+        // cannot handle a wide constant decline with `unknown`, which is
+        // first-class — rather than a parse-time refusal that made a well-formed
+        // benchmark look ill-formed.
+        if let Ok(value) = a.parse::<i128>() {
+            return Ok(arena.int_const(value));
+        }
+        let wide = WideInt::parse(a).ok_or_else(|| {
+            // An all-ASCII-digit atom that `BigInt` cannot parse is genuinely
+            // malformed, not merely out of range.
+            SmtError::Syntax(format!("integer literal `{a}` is not a valid numeral"))
         })?;
-        return Ok(arena.int_const(value));
+        return Ok(arena.int_const_big(wide));
     }
     // A decimal literal `d.ddd` is a non-negative real (ADR-0015).
     if let Some(rational) = parse_decimal(a) {

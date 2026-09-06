@@ -334,19 +334,14 @@ fn detail_member(detail: &str) -> String {
     out
 }
 
-/// Recognizes only ADR-0376's valid-but-unrepresentable wide integer literal.
-/// Other unsupported input remains a generic parse error and cannot silently
-/// enter a corpus census as this narrower, understood class.
-fn is_wide_integer_unsupported(detail: &str) -> bool {
-    const PREFIX: &str = "integer literal `";
-    const SUFFIX: &str = "` exceeds the modeled `Int` range";
-    detail
-        .strip_prefix(PREFIX)
-        .and_then(|rest| rest.strip_suffix(SUFFIX))
-        .is_some_and(|digits| {
-            !digits.is_empty() && digits.bytes().all(|byte| byte.is_ascii_digit())
-        })
-}
+// ADR-0376's `is_wide_integer_unsupported` classifier lived here. It is GONE
+// rather than kept, because ADR-1702 slice 2 made the front door admit an
+// integer literal wider than `i128` (`TermArena::int_const_big`), so the parse
+// error it recognized can no longer be produced. A classifier that cannot fire
+// is worse than none: it keeps a census category alive that nothing can ever
+// enter, and the next reader takes an empty column for a measurement. These
+// files now parse and dispatch like any other, so they are counted by their
+// verdict.
 
 fn validate_worker_output(
     stdout: &[u8],
@@ -585,25 +580,6 @@ fn main() {
         };
         let mut script = match parse_script(&text) {
             Ok(script) => script,
-            Err(SmtError::Unsupported(detail)) if is_wide_integer_unsupported(&detail) => {
-                if json {
-                    emit_json(
-                        &identity,
-                        "ingest-unsupported",
-                        &format!(
-                            ",\"verdict\":\"{NOT_ATTEMPTED}\",\"route\":\"smtlib-ingest\",\
-                             \"reason\":\"unsupported\",\"kind\":\"wide-integer-literal\"{}",
-                            detail_member(&detail) + &confirmation(None)
-                        ),
-                    );
-                } else {
-                    println!(
-                        "{identity}: {NOT_ATTEMPTED} (unsupported during ingest: {detail}){}",
-                        prose_confirmation(None)
-                    );
-                }
-                continue;
-            }
             Err(SmtError::ResourceLimit(detail)) => {
                 if json {
                     emit_json(
@@ -772,8 +748,8 @@ fn main() {
 mod tests {
     use super::{
         Bare, NOT_ATTEMPTED, Refusal, agrees_with_front_door, confirm_member, flat_token,
-        front_door_token, is_wide_integer_unsupported, post_solve_refusal, pre_solve_refusal,
-        read_exact_list, validate_worker_output,
+        front_door_token, post_solve_refusal, pre_solve_refusal, read_exact_list,
+        validate_worker_output,
     };
 
     // --- the 2026-08-21 divergence census, pinned -----------------------
@@ -1018,20 +994,19 @@ mod tests {
         std::fs::remove_dir_all(root).expect("remove fixture");
     }
 
+    /// The guard that replaces `wide_integer_unsupported_match_is_exact`: the
+    /// front door must ADMIT the literal that classifier existed to recognize.
+    /// If a change ever restores the parse-time ceiling this fails and says so,
+    /// where the old test would have gone on passing about a dead code path.
     #[test]
-    fn wide_integer_unsupported_match_is_exact() {
-        assert!(is_wide_integer_unsupported(
-            "integer literal `170141183460469231731687303715884105728` exceeds the modeled `Int` range"
-        ));
-        assert!(!is_wide_integer_unsupported(
-            "integer literal `` exceeds the modeled `Int` range"
-        ));
-        assert!(!is_wide_integer_unsupported(
-            "integer literal `12x` exceeds the modeled `Int` range"
-        ));
-        assert!(!is_wide_integer_unsupported(
-            "operator `unsupported` is outside the modeled `Int` range"
-        ));
+    fn a_wide_integer_literal_reaches_the_solver_instead_of_being_classified() {
+        let script = axeyum_smtlib::parse_script(
+            "(set-logic QF_LIA)\n(declare-const x Int)\n\
+             (assert (> x 115792089237316195423570985008687907853269984665640564039457584007913129639936))\n\
+             (check-sat)\n",
+        )
+        .expect("a 2^256 literal parses");
+        assert_eq!(script.assertions.len(), 1);
     }
 
     #[test]

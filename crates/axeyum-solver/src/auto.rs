@@ -1555,6 +1555,41 @@ pub fn check_auto_explained(
 /// The shared dispatch for [`check_auto`] / [`check_auto_explained`]. `rec` is an
 /// optional [`RouteTrace`] recorder, threaded down the single dispatch path;
 /// recording is a side effect only, so the verdict is independent of `rec`.
+/// The route-boundary admission check for integer constants outside `i128`
+/// (ADR-1702 slice 2). `None` admits; `Some(reason)` is a first-class
+/// `unknown` naming why.
+///
+/// **Why a check and not just per-route decline.** Every route already fails
+/// closed on a `WideIntConst` — the LIA/LRA linearizers' wildcard arm returns
+/// `Unsupported`, `int_blast` returns `WideConstantOutOfRange`, the certificate
+/// emitters decline — so this guard changes no verdict. What it changes is the
+/// COST and the EXPLANATION. Without it a 15 MB Certora file walks the whole
+/// dispatch ladder before every rung declines for the same reason: measured on
+/// `3106_1c933134166dbad31f79_38_QF_UFLIA.smt2`, that is the full 24 s budget
+/// instead of a fast, named `unknown`. And a trace that ends in a dozen
+/// unrelated declines does not tell the next reader that ONE thing was missing.
+///
+/// **Why it is not permanent.** This is ADR-1702's opt-in-per-route discipline,
+/// transplanted from `Rational` to the literal: promotion is a route's decision,
+/// not a property of the type. A route that gains an exact wide path — the
+/// exact-rational simplex is the obvious first candidate, since its tableau is
+/// already `Rational` and `Rational` already has `wide_*` — is named here and
+/// then runs. Nothing is opted in today, and ADR-0376's ablation (re-measured
+/// 2026-09-06: 6/6 still `unknown` with every wide literal *removed*) says why
+/// opting one in would decide nothing on the QF_UFLIA population: the binding
+/// constraint there is the decision procedure, not the literal type.
+fn wide_int_admission(features: &Features) -> Option<UnknownReason> {
+    if !features.has_wide_int {
+        return None;
+    }
+    Some(UnknownReason {
+        kind: UnknownKind::Incomplete,
+        detail: "query contains an integer literal outside the i128 reference range; \
+                 no route has opted into wide integer constants (ADR-1702 slice 2)"
+            .to_owned(),
+    })
+}
+
 fn check_auto_with_recorder(
     arena: &mut TermArena,
     assertions: &[TermId],
@@ -1575,6 +1610,12 @@ fn check_auto_with_recorder(
         )));
     };
     record_probe(&features, has_quantifier, rec);
+    if let Some(reason) = wide_int_admission(&features) {
+        with_recorder(rec, |t| {
+            t.record_declined("wide-int-admission", DeclineReason::from_unknown(&reason));
+        });
+        return Ok(CheckResult::Unknown(reason));
+    }
     if crate::term_identity::term_identity_refutation(arena, assertions).is_some() {
         with_recorder(rec, |t| {
             t.record_decided("term-identity-refuter", Verdict::Unsat);
@@ -8091,6 +8132,16 @@ struct Features {
     has_non_bv_array: bool,
     /// Any array whose index or element sort is outside exact Bool/BitVec theory.
     has_non_bool_bv_array: bool,
+    /// Any integer constant outside the `i128` reference range
+    /// (`TermNode::WideIntConst`, ADR-1702 slice 2).
+    ///
+    /// This is the OPT-IN POINT. ADR-1702 made arbitrary-precision arithmetic a
+    /// per-route decision rather than a property of the type, because `i128`
+    /// exhaustion is load-bearing for one population of consumers and a
+    /// liability for another. The same discipline applies to a wide integer
+    /// *literal*: no route claims it today, so `wide_int_admission` declines
+    /// with a named reason. A route that opts in is named there.
+    has_wide_int: bool,
 }
 
 impl Features {
@@ -8110,6 +8161,7 @@ impl Features {
             has_array: false,
             has_non_bv_array: false,
             has_non_bool_bv_array: false,
+            has_wide_int: false,
         };
         let mut seen = BTreeSet::new();
         let mut stack = assertions.to_vec();
@@ -8121,6 +8173,9 @@ impl Features {
                 continue;
             }
             features.note_sort(arena.sort_of(term));
+            if matches!(arena.node(term), TermNode::WideIntConst(_)) {
+                features.has_wide_int = true;
+            }
             if let TermNode::App { op, args } = arena.node(term) {
                 if matches!(op, Op::Apply(_)) {
                     features.has_bitblast = true;
@@ -9780,6 +9835,85 @@ mod tests {
         assert!(matches!(
             prove_unsat_by_ematching(&mut arena, &assertions, &config).unwrap(),
             CheckResult::Unknown(_)
+        ));
+    }
+
+    // ----- wide integer literals (ADR-1702 slice 2) ---------------------
+
+    /// `2^256`, the EVM `uint256` magnitude the Certora QF_UFLIA family carries.
+    /// Built by repeated exact doubling rather than from a decimal constant, so
+    /// the fixture cannot be a typo that happens to parse.
+    fn wide_pow2(n: u32) -> axeyum_ir::WideInt {
+        let mut value = axeyum_ir::WideInt::from_i128(1);
+        let two = axeyum_ir::WideInt::from_i128(2);
+        for _ in 0..n {
+            value = value.mul(&two);
+        }
+        assert!(!value.fits_i128(), "the fixture must be outside i128");
+        value
+    }
+
+    /// The admission check fires on a wide literal and NOT on anything else.
+    /// The negative half is the load-bearing one: a guard that declines every
+    /// query would also "pass" the positive half.
+    #[test]
+    fn wide_int_admission_fires_only_on_a_wide_integer_constant() {
+        let mut arena = TermArena::new();
+        let x = arena.int_var("x").unwrap();
+        let narrow = arena.int_const(i128::MAX);
+        let narrow_atom = arena.int_gt(x, narrow).unwrap();
+        let features = Features::scan_within(&arena, &[narrow_atom], None).unwrap();
+        assert!(!features.has_wide_int);
+        assert!(wide_int_admission(&features).is_none());
+
+        let wide = arena.int_const_big(wide_pow2(256));
+        let wide_atom = arena.int_gt(x, wide).unwrap();
+        let features = Features::scan_within(&arena, &[wide_atom], None).unwrap();
+        assert!(features.has_wide_int);
+        let reason = wide_int_admission(&features).expect("a wide literal is not admitted");
+        assert_eq!(reason.kind, UnknownKind::Incomplete);
+        assert!(
+            reason.detail.contains("i128"),
+            "the decline must name the reason: {}",
+            reason.detail
+        );
+    }
+
+    /// End to end through the front door: a query carrying a `2^256` bound is
+    /// ATTEMPTED and returns a first-class `unknown` — never a panic, and never
+    /// a verdict. Before ADR-1702 slice 2 it never got past the parser.
+    #[test]
+    fn a_query_with_a_wide_literal_declines_rather_than_panicking() {
+        let mut arena = TermArena::new();
+        let x = arena.int_var("x").unwrap();
+        let wide = arena.int_const_big(wide_pow2(256));
+        let assertion = arena.int_gt(x, wide).unwrap();
+        let result = check_auto(&mut arena, &[assertion], &SolverConfig::new()).unwrap();
+        match result {
+            CheckResult::Unknown(reason) => assert!(reason.detail.contains("i128")),
+            other => panic!("a wide literal must decline, got {other:?}"),
+        }
+    }
+
+    /// Soundness-negative: the guard must not cost us a query we could decide.
+    /// The same shapes without a wide literal still get real verdicts, so the
+    /// decline above is about the literal and not about the query shape.
+    #[test]
+    fn the_admission_check_does_not_touch_narrow_queries() {
+        let mut arena = TermArena::new();
+        let x = arena.int_var("x").unwrap();
+        let five = arena.int_const(5);
+        let three = arena.int_const(3);
+        let lower = arena.int_gt(x, five).unwrap();
+        let upper = arena.int_lt(x, three).unwrap();
+        assert!(matches!(
+            check_auto(&mut arena, &[lower, upper], &SolverConfig::new()).unwrap(),
+            CheckResult::Unsat
+        ));
+        let satisfiable = arena.int_gt(x, three).unwrap();
+        assert!(matches!(
+            check_auto(&mut arena, &[satisfiable], &SolverConfig::new()).unwrap(),
+            CheckResult::Sat(_)
         ));
     }
 }

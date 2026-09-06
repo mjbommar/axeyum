@@ -237,4 +237,111 @@ per-route audit slice 2 inherits.
   crate. It is documented as append-only and capped, and `big_pool_len()` is
   exposed so a test or a diagnosis can see it.
 - Slice 2 (`Value::Int`, the parser, and the 416 accessor sites) is now
-  unblocked and is the change that admits the 26 QF_UFLIA files.
+  unblocked and is the change that admits the 26 QF_UFLIA files. It landed on
+  2026-09-06; see **Slice 2** below.
+
+---
+
+## Slice 2 (landed 2026-09-06): the integer literal, and why its shape differs
+
+Slice 2 admits an integer literal wider than `i128` at the SMT-LIB front door.
+All 26 QF_UFLIA files that carried EVM `uint256` bounds now parse and dispatch
+instead of being refused before any solver work. The measured record is
+[`docs/research/11-design-review/2026-09-06-s9-int-wide-measured.md`](../11-design-review/2026-09-06-s9-int-wide-measured.md);
+the artifacts are under `bench-results/s9-int-wide-20260906/`.
+
+### It is a sibling variant, not a two-representation payload
+
+Slice 1's move was to keep `Rational`'s layout and put promotion behind an
+opt-in family, so its ~5,500 by-value consumers were unaffected. That works
+because `Rational` is a **struct**. `Value::Int` is an enum **variant**, and the
+analogous "consumers stay correct by construction" move for a variant is a
+second variant:
+
+| | slice 1 | slice 2 |
+|---|---|---|
+| the type | `struct Rational` | `enum Value` / `enum TermNode` |
+| keeping consumers correct | same layout, same signatures, promotion opt-in | a sibling variant the `i128` arms never match |
+| the precedent | `WideUint`'s pool-handle trick | `Value::Bv`/`WideBv`, `BvConst`/`WideBvConst` |
+
+So slice 2 adds `TermNode::WideIntConst(WideInt)` and `Value::WideInt(WideInt)`,
+with `WideInt` a `num_bigint::BigInt` newtype in
+[`crates/axeyum-ir/src/int_wide.rs`](../../../crates/axeyum-ir/src/int_wide.rs).
+This is the design **ADR-0376 already recorded** for the day this widening was
+justified, down to the payload type and the canonicality rule, and it is
+recorded there because ADR-0376 had rejected the alternative on measurement:
+changing `IntConst`'s payload breaks the `*value` deref at every match site and
+turns every `arena.int_const(0)` on the hot LIA path into a heap allocation.
+
+The `i128` sites end up with a **stronger** guarantee than slice 1's 416
+accessor sites got. Slice 1's sites are safe because nothing creates a promoted
+`Rational` unless a route calls `wide_*`; slice 2's ~390 `Value::Int` and ~210
+`IntConst` sites are safe because they cannot pattern-match a wide value at all.
+There is no truncation for them to get wrong.
+
+`WideInt::to_i128` still carries slice 1's hazard contract verbatim: it returns
+`i128` and **panics** rather than truncating or saturating, exactly as
+`Rational::numerator` and `WideUint::to_u128` do, with `checked_i128` and `big`
+as the non-panicking routes. `Value::as_int` returns `None` for a wide value.
+
+### Canonicality is the invariant that has to hold
+
+`TermNode` keys the arena's intern table and both enums derive `Hash`/`Eq`, so a
+value with two representations silently breaks structural sharing. The rule:
+
+> A well-formed `WideIntConst(w)` / `Value::WideInt(w)` satisfies
+> `w.checked_i128().is_none()`.
+
+It is enforced at the two constructors that build those nodes,
+`TermArena::int_const_big` and `Value::from_wide_int`, both of which **demote**.
+`int_const_big(5)` and `int_const(5)` return the same `TermId`, and the test
+asserts that on `TermId` identity rather than on rendered text, because breaking
+the invariant is silent: two nodes for one value still type-check and still
+evaluate.
+
+### The evaluator was a panic on user input, and that is what slice 2 fixes
+
+`eval`'s `int_bin`/`int_cmp` and eleven sibling handlers read operands with
+`as_int().expect("builder guaranteed Int operand")`. `as_int` is `None` for a
+wide value, so admitting the literal without touching `eval` would have panicked
+on a parsed `2^256` — on the one path every `sat` is replayed through. `eval`
+now takes a wide-integer detour mirroring the wide-BV one already beside it: an
+explicit `supports_wide_int_path` list (`Eq`, `IntNeg/Add/Sub/Mul/Div/Mod/Abs`,
+the four comparisons) computes exactly in `BigInt`, and every other operator
+declines with `IrError::Unsupported` **before** reaching the `expect`.
+
+Narrow-by-narrow arithmetic is bit-for-bit unchanged, so `i128::MAX + 1` still
+reports `ArithmeticOverflow` instead of quietly promoting. That is slice 1's
+`axeyum-cas` lesson applied again: `i128` exhaustion is load-bearing for some
+consumers, so promotion must be something a caller reaches for, never something
+that happens to it.
+
+### The audit was compile-driven
+
+Adding the two variants broke **62 `match` sites across 13 crates**. That is the
+second reason for the sibling shape: the compiler enumerates the audit, where a
+payload change would have compiled at many of those sites and changed their
+meaning. Every site was resolved as a decline or an exact rule, never a
+narrowing — notably `IntInterval` bound extraction returns `None`, because
+saturating a `2^256` bound into an `i128` interval would be a *wrong* bound, not
+a coarse one.
+
+### Nothing has opted in, and that is a measurement, not an omission
+
+`Features::has_wide_int` is the opt-in point, and `wide_int_admission` declines
+at the dispatch boundary with a named `unknown`. It changes no verdict — every
+route already fails closed, and the LIA/LRA linearizers' wildcard arm plus
+`ArithAbstractor::ensure_supported_atom` mean a wide-bearing atom is rejected at
+abstraction time rather than becoming an opaque literal the CDCL(T) loop could
+satisfy vacuously. What it changes is cost and explanation.
+
+Opting a route in is out of scope for this slice, and ADR-0376's ablation —
+re-run on today's HEAD before any code was written — is the reason. With every
+wide literal *rescaled into range*, and again with every assert mentioning one
+*deleted*, all six files cvc5 decides are still `unknown`. The binding
+constraint on that population is the decision procedure, not the literal type,
+so the parity plan's "+6 measured against cvc5" for row S9 is the count cvc5
+decides and not a measured axeyum gain. The honest yield of slice 2 on QF_UFLIA
+is the 26 files moving from *not attempted* to a first-class `unknown` on a
+route that can now be improved, plus a representation that QF_LIA, QF_NIA and
+the EVM/finite-field front ends need independently.
