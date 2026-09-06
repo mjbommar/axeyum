@@ -133,6 +133,23 @@
 //!   has relative error `Θ(1/n)`, so `m ≥ 2` needs a base of a few hundred where
 //!   `m = 1` converges geometrically.
 //!
+//! # The one guard no test can kill, and why it stays
+//!
+//! [`AmplitudeError::PoleModulusNotMinimal`] is fail-closed. By the time it runs,
+//! the nested [`RadiusCertificate`] has been verified — so the global modulus
+//! polynomial has exactly one root at or below the radius bracket's upper end —
+//! the factor's own modulus polynomial divides that product, the containment
+//! guard above it has put `|ζ|` inside that bracket, and the modulus-polynomial
+//! theorem puts `|ζ|` among the factor's root moduli. The count can therefore
+//! only be one, and the mutation control records it as a **survivor**: no input
+//! distinguishes it, so no test can die when it is deleted.
+//!
+//! It stays because it is the one check that does not rest on that theorem. A
+//! future [`crate::fps_analytic::ModulusRoute`] whose polynomial did not carry
+//! *every* root modulus — only the smallest, say — would be caught here and
+//! nowhere else. Per this repository's rule, the impossibility IS the finding,
+//! and it is recorded rather than papered over with a test that cannot fail.
+//!
 //! # Reuse
 //!
 //! [`crate::fps_analytic::radius_of_convergence`] for `ρ` and the factorization,
