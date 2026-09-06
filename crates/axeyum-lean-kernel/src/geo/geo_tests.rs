@@ -21,6 +21,7 @@
 //! 3. **The `Sort 1` universe control** is stated in the open as well as
 //!    inside `declare_record`, so deleting it from the spine is visible here.
 
+use super::affine::{AFFINE_FIELD_COUNT, AFFINE_FIELD_SUFFIXES, affine_fields};
 use super::{
     APART, FIELD_COUNT, FIELD_SUFFIXES, GeoPrelude, JOIN_UNIQUE, L_EQ, LINE, ON, P_EQ, POINT,
     TRIANGLE, TWO_POINTS, build_geo_prelude, incidence_fields,
@@ -170,8 +171,21 @@ fn all_declarations(p: GeoPrelude) -> Vec<crate::name::NameId> {
         rp.triangle,
         rp.instance,
     ]);
+    let af = p.affine;
+    out.extend([
+        // --- the affine layer ---------------------------------------------
+        af.record.ind,
+        af.record.mk,
+        af.record.rec,
+        af.parallel_pos_parallel,
+        af.parallel_pos_irrefl,
+        af.parallel_trans,
+    ]);
     for i in 0..p.record.field_count() {
         out.push(p.record.sel(i));
+    }
+    for i in 0..af.record.field_count() {
+        out.push(af.record.sel(i));
     }
     out
 }
@@ -185,7 +199,7 @@ fn every_declaration_is_present_and_axiom_free() {
     let all = all_declarations(prelude);
     assert_eq!(
         all.len(),
-        FIELD_COUNT + 11 + 46 + 41,
+        FIELD_COUNT + 11 + 46 + 41 + AFFINE_FIELD_COUNT + 6,
         "the declaration list is out of step with the record's field count"
     );
     for name in all {
@@ -221,7 +235,7 @@ fn the_handle_names_every_live_geo_declaration() {
     // true against an empty handle list, and a filter typo produces exactly
     // that.
     assert!(
-        live.len() >= 110,
+        live.len() >= 130,
         "only {} declarations render under `Geo.` -- the filter is wrong, or \
          the build stopped early",
         live.len()
@@ -250,6 +264,61 @@ fn field_list_matches_the_suffix_table() {
             "field {i}'s shape and its selector name disagree"
         );
     }
+}
+
+/// The affine record's field list and its suffix table describe the same
+/// record.
+#[test]
+fn the_affine_field_list_matches_its_suffix_table() {
+    let (_, prelude) = built();
+    let specs = affine_fields(prelude);
+    assert_eq!(specs.len(), AFFINE_FIELD_COUNT);
+    for (i, spec) in specs.iter().enumerate() {
+        assert_eq!(
+            spec.suffix, AFFINE_FIELD_SUFFIXES[i],
+            "affine field {i}'s shape and its selector name disagree"
+        );
+    }
+}
+
+/// **Negative control for the affine record**: the same seven fields declared
+/// at `Sort 1` must be REFUSED. The zeroth field is a `Geo.Incidence`, which
+/// lives in `Sort 2`, so the record cannot be a `Sort 1` one; `declare_record`
+/// runs this control itself on every build and this test states it in the open.
+#[test]
+fn the_affine_record_is_refused_at_sort_one() {
+    on_a_deep_stack(|| {
+        use crate::nat_prelude::structures::close_pi;
+        let mut kernel = Kernel::new();
+        let prelude = build_geo_prelude(&mut kernel).expect("Geo prelude must build");
+        let logic = prelude.cpoint.creal.rat.int.logic;
+        let l0 = kernel.level_zero();
+        let l1 = kernel.level_succ(l0);
+
+        let specs = affine_fields(prelude);
+        let fvars: Vec<u64> = (0..specs.len()).map(|i| 10_000 + i as u64).collect();
+        let mut ctor_fields: Vec<(u64, crate::expr::ExprId)> = Vec::with_capacity(specs.len());
+        let mut vals: Vec<crate::expr::ExprId> = Vec::with_capacity(specs.len());
+        for (i, spec) in specs.iter().enumerate() {
+            let ty = (spec.build)(&mut kernel, &logic, l1, &vals);
+            ctor_fields.push((fvars[i], ty));
+            let v = kernel.fvar(fvars[i]);
+            vals.push(v);
+        }
+        let anon = kernel.anon();
+        let ind = kernel.name_str(anon, "GeoAffineSortOneControl");
+        let mk = kernel.name_str(ind, "mk");
+        let sort1 = kernel.sort(l1);
+        let ind_const = kernel.const_(ind, vec![]);
+        let ctor = close_pi(&mut kernel, &ctor_fields, ind_const);
+        assert!(
+            kernel
+                .add_inductive(ind, &[], 0, sort1, &[(mk, ctor)])
+                .is_err(),
+            "a record carrying a Geo.Incidence field was ACCEPTED at Sort 1 -- \
+             the ADR-1495 ConstructorFieldUniverseTooBig guard did not fire"
+        );
+    });
 }
 
 /// The field-index constants really do point at the fields their names claim.
