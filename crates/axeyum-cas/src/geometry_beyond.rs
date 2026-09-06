@@ -246,7 +246,8 @@ use axeyum_ir::Rational;
 
 use crate::geometry::{Circle, Line, Point};
 use crate::geometry_certify::{
-    Condition, Constraint, DegenerateWitness, GenericWitness, GeometryProblem,
+    Condition, Constraint, DegenerateWitness, GenericWitness, GeometryProblem, Pt, collinear,
+    parallel,
 };
 use crate::mvpoly::MvPoly;
 use crate::{CasExpr, Matrix, ZeroTest, equal, simplify_radicals};
@@ -2491,9 +2492,464 @@ fn desargues_generic_witness() -> BTreeMap<String, Rational> {
     assignment
 }
 
+// =============================================================================
+// Wave four: the two frontier theorems, recoordinatised so they certify
+// =============================================================================
+
+/// `point` lies on the line `L(t, u)` of the parabola `y = x²`, namely
+/// `y = (t+u)·x − t·u`.
+///
+/// `L(t, u)` is the **chord** through `(t, t²)` and `(u, u²)` whenever `t ≠ u`
+/// — substituting either point gives `t² − (t+u)·t + t·u = 0` — and the
+/// **tangent** at `(t, t²)` when `t = u`. So this polynomial states exactly the
+/// classical hypothesis "`X` is on side `P(t)P(u)` of the hexagon" on the
+/// configurations the theorem is about, and extends it to the tangent in the
+/// coincident case rather than going vacuous there.
+///
+/// # Why not `collinear(P(t), P(u), X)`
+///
+/// Because `collinear(P(t), P(u), X) = (u − t)·L(t, u)(X)` identically: the
+/// three-point determinant carries a spurious factor `u − t` that says nothing
+/// about `X`. Stating the side that way is equally faithful but forces six
+/// extra non-degeneracy conditions `u ≠ t` into the certificate — the `2 × 2`
+/// block determinants pick the factor up — and every one of them would then
+/// have to be divided back out. `L` is the same line with the artifact removed.
+fn parabola_chord_incidence(first: &str, second: &str, point: &Pt) -> Option<MvPoly> {
+    let one = MvPoly::var(first);
+    let other = MvPoly::var(second);
+    let slope = one.add(&other)?;
+    let intercept = one.mul(&other)?;
+    point.y.sub(&slope.mul(&point.x)?)?.add(&intercept)
+}
+
+/// The point `O + λ·(A − O)` of the line `OA`.
+///
+/// Every finite point of line `OA` for some `λ` when `O ≠ A`, and `O` itself
+/// when `O = A` — so "`O`, `A`, `A'` are collinear" is stated by construction,
+/// costing one variable instead of two plus a hypothesis, and the certifier
+/// never has to eliminate `A'`.
+fn perspective_image(origin: &Pt, vertex: &Pt, scalar: &str) -> Option<Pt> {
+    let ratio = MvPoly::var(scalar);
+    let delta = vertex.sub(origin)?;
+    Some(Pt {
+        x: origin.x.add(&ratio.mul(&delta.x)?)?,
+        y: origin.y.add(&ratio.mul(&delta.y)?)?,
+    })
+}
+
+/// Pascal's theorem for a hexagon inscribed in the parabola `y = x²`.
+///
+/// The six vertices are `A = (a, a²) … F = (f, f²)`, so "the six points lie on
+/// a common conic" is true **by construction** and costs no hypothesis at all:
+/// the `6 × 6` monomial determinant that [`beyond_frontier`]'s projective
+/// statement carries — the thing that put Pascal out of reach — disappears, and
+/// what is left is six incidences that are linear in the three intersection
+/// points, three `2 × 2` blocks, and three block determinants that are exactly
+/// the three stated conditions.
+///
+/// # What this proves, and what it does not
+///
+/// It proves Pascal's theorem for every hexagon inscribed in one fixed conic,
+/// with all six vertices free. It does **not** prove the projective statement
+/// for an arbitrary conic. Every non-degenerate conic over an algebraically
+/// closed field is projectively equivalent to this one, and collinearity is a
+/// projective invariant, so the general theorem follows — but that reduction is
+/// mathematics stated here in prose and is *not* part of the certificate.
+/// [`beyond_frontier`] keeps the general projective statement, uncertified, for
+/// exactly that reason.
+#[must_use]
+pub fn pascal_parabola_problem() -> GeometryProblem {
+    let [point_x, point_y, point_z] = [Pt::free("x"), Pt::free("y"), Pt::free("z")];
+    let side = |first: &str, second: &str, point: &Pt| {
+        parabola_chord_incidence(first, second, point).expect("chord incidence")
+    };
+    // Two sides are parallel exactly when the sums of their parameters agree.
+    let meet = |first: &str, second: &str, third: &str, fourth: &str| {
+        MvPoly::var(third)
+            .add(&MvPoly::var(fourth))
+            .expect("sum")
+            .sub(&MvPoly::var(first).add(&MvPoly::var(second)).expect("sum"))
+            .expect("difference")
+    };
+    GeometryProblem {
+        id: "pascal-parabola-hexagon".into(),
+        title: "Pascal's theorem on a parabola: the three diagonal points of an inscribed \
+                hexagon are collinear"
+            .into(),
+        statement: "Let A=(a,a^2), B=(b,b^2), C=(c,c^2), D=(d,d^2), E=(e,e^2), F=(f,f^2) be six \
+                    points of the parabola y = x^2, given by their parameters. Let X lie on the \
+                    line AB and on the line DE, Y on BC and on EF, and Z on CD and on FA, where \
+                    the line through the parabola points at parameters t and u is \
+                    y = (t+u)x - tu (the chord when t and u differ, the tangent when they \
+                    coincide). If each pair of opposite sides is non-parallel -- (d+e) != (a+b), \
+                    (e+f) != (b+c), (f+a) != (c+d) -- then X, Y and Z are collinear. The conic \
+                    hypothesis is discharged by the parametrisation rather than assumed: every \
+                    configuration of six points on THIS conic is covered, and the projective \
+                    statement for an arbitrary conic follows by projective equivalence, which is \
+                    NOT part of this certificate."
+            .into(),
+        coordinate_gloss: vec![
+            ("ta".into(), "A = (ta, ta^2)".into()),
+            ("tb".into(), "B = (tb, tb^2)".into()),
+            ("tc".into(), "C = (tc, tc^2)".into()),
+            ("td".into(), "D = (td, td^2)".into()),
+            ("te".into(), "E = (te, te^2)".into()),
+            ("tf".into(), "F = (tf, tf^2)".into()),
+            ("xx".into(), "X.x (AB meet DE)".into()),
+            ("xy".into(), "X.y (AB meet DE)".into()),
+            ("yx".into(), "Y.x (BC meet EF)".into()),
+            ("yy".into(), "Y.y (BC meet EF)".into()),
+            ("zx".into(), "Z.x (CD meet FA)".into()),
+            ("zy".into(), "Z.y (CD meet FA)".into()),
+        ],
+        hypotheses: vec![
+            Constraint::new("x-on-ab", "X lies on the line AB", side("ta", "tb", &point_x)),
+            Constraint::new("x-on-de", "X lies on the line DE", side("td", "te", &point_x)),
+            Constraint::new("y-on-bc", "Y lies on the line BC", side("tb", "tc", &point_y)),
+            Constraint::new("y-on-ef", "Y lies on the line EF", side("te", "tf", &point_y)),
+            Constraint::new("z-on-cd", "Z lies on the line CD", side("tc", "td", &point_z)),
+            Constraint::new("z-on-fa", "Z lies on the line FA", side("tf", "ta", &point_z)),
+        ],
+        nondegeneracy: vec![
+            Condition::new(
+                "ab-meets-de",
+                "AB is not parallel to DE",
+                meet("ta", "tb", "td", "te"),
+            ),
+            Condition::new(
+                "bc-meets-ef",
+                "BC is not parallel to EF",
+                meet("tb", "tc", "te", "tf"),
+            ),
+            Condition::new(
+                "cd-meets-fa",
+                "CD is not parallel to FA",
+                meet("tc", "td", "tf", "ta"),
+            ),
+        ],
+        conclusions: vec![Constraint::new(
+            "xyz-collinear",
+            "X, Y and Z are collinear",
+            collinear(&point_x, &point_y, &point_z).expect("collinear"),
+        )],
+        degenerate_witnesses: Vec::new(),
+        generic_witnesses: vec![GenericWitness {
+            description: "parameters a=0, b=1, c=2, d=3, e=4, f=6, so X=(2,2), Y=(22/7,52/7) \
+                          and Z=(-6,-36), all on the Pascal line"
+                .into(),
+            assignment: pascal_parabola_generic_witness(),
+        }],
+    }
+}
+
+/// The generic configuration of [`pascal_parabola_problem`], with `X`, `Y`, `Z`
+/// computed from the chord-line formula over exact rationals rather than by the
+/// certifier.
+fn pascal_parabola_generic_witness() -> BTreeMap<String, Rational> {
+    let parameters = [0i128, 1, 2, 3, 4, 6].map(Rational::integer);
+    let mut assignment: BTreeMap<String, Rational> = BTreeMap::new();
+    for (name, value) in ["ta", "tb", "tc", "td", "te", "tf"]
+        .iter()
+        .zip(parameters.iter())
+    {
+        assignment.insert((*name).to_string(), *value);
+    }
+    for (name, sides) in [
+        ("x", [0usize, 1, 3, 4]),
+        ("y", [1, 2, 4, 5]),
+        ("z", [2, 3, 5, 0]),
+    ] {
+        let (abscissa, ordinate) = parabola_chord_meet(
+            parameters[sides[0]],
+            parameters[sides[1]],
+            parameters[sides[2]],
+            parameters[sides[3]],
+        )
+        .expect("the generic configuration's opposite sides meet");
+        assignment.insert(format!("{name}x"), abscissa);
+        assignment.insert(format!("{name}y"), ordinate);
+    }
+    assignment
+}
+
+/// Where `L(first, second)` meets `L(third, fourth)`, over exact rationals.
+///
+/// `None` when the two lines are parallel, which is exactly what the theorem's
+/// non-degeneracy conditions exclude.
+fn parabola_chord_meet(
+    first: Rational,
+    second: Rational,
+    third: Rational,
+    fourth: Rational,
+) -> Option<(Rational, Rational)> {
+    let slope = first.checked_add(second)?;
+    let intercept = first.checked_mul(second)?;
+    let other_slope = third.checked_add(fourth)?;
+    let other_intercept = third.checked_mul(fourth)?;
+    let denominator = slope.checked_sub(other_slope)?;
+    if denominator.is_zero() {
+        return None;
+    }
+    let abscissa = intercept
+        .checked_sub(other_intercept)?
+        .checked_div(denominator)?;
+    let ordinate = slope.checked_mul(abscissa)?.checked_sub(intercept)?;
+    Some((abscissa, ordinate))
+}
+
+/// Desargues' theorem in the affine plane.
+///
+/// `O`, `A`, `B`, `C` are free; the second triangle is `A' = O + λ_A·(A − O)`
+/// and so on, which **is** "`O`, `A`, `A'` are collinear" written as a
+/// construction, so the perspectivity from `O` costs three variables and no
+/// hypothesis and the images never have to be eliminated. `X`, `Y`, `Z` are
+/// free points asserted to lie on the two corresponding side lines, exactly as
+/// [`crate::geometry_corpus`]'s Pappus states its three cross points, and each
+/// pair of incidences is a `2 × 2` block whose determinant is the stated
+/// "these two sides are not parallel" condition.
+///
+/// # What this proves, and what it does not
+///
+/// It proves Desargues for a finite centre, finite vertices and finite
+/// intersection points — the affine reading of the theorem. It does not prove
+/// the projective statement in [`beyond_frontier`], where any of those may lie
+/// on the line at infinity.
+#[must_use]
+pub fn desargues_affine_problem() -> GeometryProblem {
+    let origin = Pt::free("o");
+    let vertex_a = Pt::free("a");
+    let vertex_b = Pt::free("b");
+    let vertex_c = Pt::free("c");
+    let image = |vertex: &Pt, scalar: &str| {
+        perspective_image(&origin, vertex, scalar).expect("perspective image")
+    };
+    let image_a = image(&vertex_a, "la");
+    let image_b = image(&vertex_b, "lb");
+    let image_c = image(&vertex_c, "lc");
+    let [point_x, point_y, point_z] = [Pt::free("x"), Pt::free("y"), Pt::free("z")];
+    let on = |first: &Pt, second: &Pt, point: &Pt| collinear(first, second, point).expect("on");
+    let meets = |first: &Pt, second: &Pt, third: &Pt, fourth: &Pt| {
+        parallel(first, second, third, fourth).expect("parallel")
+    };
+    GeometryProblem {
+        id: "desargues-affine-perspective".into(),
+        title: "Desargues' theorem in the affine plane: perspective from a point implies \
+                perspective from a line"
+            .into(),
+        statement: "Let O, A, B, C be points of the affine plane and let A' = O + la*(A-O), \
+                    B' = O + lb*(B-O), C' = O + lc*(C-O), so that the triangles ABC and A'B'C' \
+                    are in perspective from O by construction (A' ranges over every finite point \
+                    of the line OA). Let X lie on BC and on B'C', Y on CA and on C'A', and Z on \
+                    AB and on A'B'. If BC is not parallel to B'C', CA is not parallel to C'A' \
+                    and AB is not parallel to A'B', then X, Y and Z are collinear. This is the \
+                    AFFINE reading: the centre, the six vertices and the three intersection \
+                    points are all finite. The projective statement, where any of them may lie \
+                    on the line at infinity, is stated separately and is not certified."
+            .into(),
+        coordinate_gloss: vec![
+            ("ox".into(), "O.x".into()),
+            ("oy".into(), "O.y".into()),
+            ("ax".into(), "A.x".into()),
+            ("ay".into(), "A.y".into()),
+            ("bx".into(), "B.x".into()),
+            ("by".into(), "B.y".into()),
+            ("cx".into(), "C.x".into()),
+            ("cy".into(), "C.y".into()),
+            ("la".into(), "the ratio OA'/OA".into()),
+            ("lb".into(), "the ratio OB'/OB".into()),
+            ("lc".into(), "the ratio OC'/OC".into()),
+            ("xx".into(), "X.x (BC meet B'C')".into()),
+            ("xy".into(), "X.y (BC meet B'C')".into()),
+            ("yx".into(), "Y.x (CA meet C'A')".into()),
+            ("yy".into(), "Y.y (CA meet C'A')".into()),
+            ("zx".into(), "Z.x (AB meet A'B')".into()),
+            ("zy".into(), "Z.y (AB meet A'B')".into()),
+        ],
+        hypotheses: vec![
+            Constraint::new("x-on-bc", "X lies on BC", on(&vertex_b, &vertex_c, &point_x)),
+            Constraint::new(
+                "x-on-b2c2",
+                "X lies on B'C'",
+                on(&image_b, &image_c, &point_x),
+            ),
+            Constraint::new("y-on-ca", "Y lies on CA", on(&vertex_c, &vertex_a, &point_y)),
+            Constraint::new(
+                "y-on-c2a2",
+                "Y lies on C'A'",
+                on(&image_c, &image_a, &point_y),
+            ),
+            Constraint::new("z-on-ab", "Z lies on AB", on(&vertex_a, &vertex_b, &point_z)),
+            Constraint::new(
+                "z-on-a2b2",
+                "Z lies on A'B'",
+                on(&image_a, &image_b, &point_z),
+            ),
+        ],
+        nondegeneracy: vec![
+            Condition::new(
+                "bc-meets-b2c2",
+                "BC is not parallel to B'C'",
+                meets(&vertex_b, &vertex_c, &image_b, &image_c),
+            ),
+            Condition::new(
+                "ca-meets-c2a2",
+                "CA is not parallel to C'A'",
+                meets(&vertex_c, &vertex_a, &image_c, &image_a),
+            ),
+            Condition::new(
+                "ab-meets-a2b2",
+                "AB is not parallel to A'B'",
+                meets(&vertex_a, &vertex_b, &image_a, &image_b),
+            ),
+        ],
+        conclusions: vec![Constraint::new(
+            "xyz-collinear",
+            "X, Y and Z are collinear",
+            collinear(&point_x, &point_y, &point_z).expect("collinear"),
+        )],
+        degenerate_witnesses: vec![
+            degenerate_desargues("bc-meets-b2c2"),
+            degenerate_desargues("ca-meets-c2a2"),
+            degenerate_desargues("ab-meets-a2b2"),
+        ],
+        generic_witnesses: vec![GenericWitness {
+            description: "O=(0,0), A=(1,0), B=(0,1), C=(2,3) with la=2, lb=3, lc=4, so \
+                          X=(-16,-15), Y=(-1,-6) and Z=(4,-3) are collinear"
+                .into(),
+            assignment: desargues_affine_generic_witness(),
+        }],
+    }
+}
+
+/// The counterexample for one Desargues condition: the centre put **on** the
+/// side line the condition is about, with the two ratios along it equal.
+///
+/// Then that side and its image are the *same* line, its intersection point is
+/// free along it, and the other two intersection points are pinned off it — so
+/// placing the free point anywhere off the line through those two falsifies the
+/// conclusion while every hypothesis still holds. Coinciding rather than merely
+/// parallel is forced: two *distinct* parallel lines have no common point at
+/// all, so no configuration satisfying both incidence hypotheses exists there,
+/// and a counterexample has to be built on the coincident stratum.
+fn degenerate_desargues(condition_id: &str) -> DegenerateWitness {
+    // One configuration, relabelled per condition by the cyclic symmetry
+    // A -> B -> C -> A, which carries X -> Y -> Z -> X.
+    let (free, first, second) = match condition_id {
+        "bc-meets-b2c2" => ("x", "y", "z"),
+        "ca-meets-c2a2" => ("y", "z", "x"),
+        _ => ("z", "x", "y"),
+    };
+    // The three vertices in the order (on the axis, on the axis, off it) that
+    // matches the condition: for `bc-meets-b2c2` that is B, C, A.
+    let (near, far, apex) = match condition_id {
+        "bc-meets-b2c2" => ("b", "c", "a"),
+        "ca-meets-c2a2" => ("c", "a", "b"),
+        _ => ("a", "b", "c"),
+    };
+    let mut assignment: BTreeMap<String, Rational> = BTreeMap::new();
+    for (name, numerator, denominator) in [
+        ("ox".to_string(), 0, 1),
+        ("oy".to_string(), 0, 1),
+        (format!("{near}x"), 1, 1),
+        (format!("{near}y"), 0, 1),
+        (format!("{far}x"), 2, 1),
+        (format!("{far}y"), 0, 1),
+        (format!("{apex}x"), 0, 1),
+        (format!("{apex}y"), 1, 1),
+        (format!("l{near}"), 3, 1),
+        (format!("l{far}"), 3, 1),
+        (format!("l{apex}"), 2, 1),
+        // The free point, anywhere on the collapsed line: the origin will do.
+        (format!("{free}x"), 0, 1),
+        (format!("{free}y"), 0, 1),
+        // The two pinned points, both off that line.
+        (format!("{first}x"), -6, 1),
+        (format!("{first}y"), 4, 1),
+        (format!("{second}x"), -3, 1),
+        (format!("{second}y"), 4, 1),
+    ] {
+        assignment.insert(name, Rational::new(numerator, denominator));
+    }
+    DegenerateWitness::rational(
+        condition_id,
+        "the centre O=(0,0) lies on the collapsing side line (the x-axis) and the two ratios \
+         along it are both 3, so that side and its image are the same line; its intersection \
+         point is free along it and is placed at the origin, while the other two are pinned at \
+         (-6,4) and (-3,4)",
+        assignment,
+    )
+}
+
+/// The generic configuration of [`desargues_affine_problem`].
+fn desargues_affine_generic_witness() -> BTreeMap<String, Rational> {
+    let mut assignment: BTreeMap<String, Rational> = BTreeMap::new();
+    for (name, numerator, denominator) in [
+        ("ox", 0, 1),
+        ("oy", 0, 1),
+        ("ax", 1, 1),
+        ("ay", 0, 1),
+        ("bx", 0, 1),
+        ("by", 1, 1),
+        ("cx", 2, 1),
+        ("cy", 3, 1),
+        ("la", 2, 1),
+        ("lb", 3, 1),
+        ("lc", 4, 1),
+        ("xx", -16, 1),
+        ("xy", -15, 1),
+        ("yx", -1, 1),
+        ("yy", -6, 1),
+        ("zx", 4, 1),
+        ("zy", -3, 1),
+    ] {
+        assignment.insert(name.to_string(), Rational::new(numerator, denominator));
+    }
+    assignment
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// TEMPORARY diagnostic for wave four; removed before the lane closes.
+    #[test]
+    #[ignore = "diagnostic"]
+    fn wave_four_probe() {
+        for problem in [pascal_parabola_problem(), desargues_affine_problem()] {
+            let started = std::time::Instant::now();
+            let outcome = certify_any_route(&problem, geometry_limits());
+            let elapsed = started.elapsed();
+            match outcome {
+                crate::geometry_certify::ProofOutcome::Certified(certificate) => {
+                    println!(
+                        "{}: CERTIFIED in {elapsed:.1?}, saturations={:?}",
+                        problem.id,
+                        certificate
+                            .saturations
+                            .iter()
+                            .map(|s| s.condition_id.clone())
+                            .collect::<Vec<_>>()
+                    );
+                    println!(
+                        "  verdict {:?}",
+                        check_certificate(&certificate, &CheckOptions::default())
+                    );
+                }
+                crate::geometry_certify::ProofOutcome::NotInSaturatedIdeal {
+                    conclusion_id,
+                    remainder,
+                } => println!(
+                    "{}: NOT IN IDEAL ({elapsed:.1?}) `{conclusion_id}` remainder {} terms",
+                    problem.id,
+                    remainder.term_count()
+                ),
+                crate::geometry_certify::ProofOutcome::Declined(reason) => {
+                    println!("{}: DECLINED {reason:?} ({elapsed:.1?})", problem.id);
+                }
+            }
+        }
+    }
+
     use crate::geometry::Point as GPoint;
     use crate::geometry_certify::{certify_any_route, geometry_limits};
     use crate::geometry_check::{CheckOptions, GeometryVerdict, check_certificate};
