@@ -137,3 +137,78 @@ not checked.
 | `104e8f0a0` | `AlgS.Exchange.*`, the split, and the per-declaration admission harness |
 | `c65c6bc00` | `le_succ_right` and `insertAt_removeAt` |
 | `59f0e72e7` | clippy: hoist the `comm_group` index alias above the statements |
+| `eed1b1979` | ADR-1657, two facts, and this status file |
+| `07a1dbd5f` | rustfmt the index-surgery call site |
+| `f268fb519` | merge main (173 commits) -- three conflicts, all in generated files |
+| `f37947f12` | regenerate the four generated files after the merge |
+
+## The merge
+
+Main moved 173 commits while this lane was mid-wrap-up. `git merge --no-edit
+main` conflicted in exactly three files, **all generated**: the frontier shape
+census, the settled-fact statement pins, and the ADR index. Each was resolved by
+taking main's side and re-running its generator, so this lane's rows are
+re-derived rather than hand-merged into another lane's output -- a hand-merge of
+two generators' outputs is how a stale half survives mid-file. `nat_prelude.rs`
+auto-merged; both registration points and all four
+`vector_space_{exchange,steinitz}` files are intact, and no other lane claimed
+`AlgS.Index`, `AlgS.Exchange` or ADR number 1657.
+
+`gen-plan.py` and `gen-py-prelude-fields.py` were re-run and wrote nothing:
+PLAN.md had already auto-merged with this lane's block intact, and the
+`axeyum-py` mirror is unaffected because these names are deliberately not
+threaded into `NatPrelude`.
+
+One correction worth recording. Before the merge, `check-merge-hygiene.sh`
+failed on `kernel-dependency-projection staleness` (committed 4635, live 4754,
+diff 119 > tolerance 100). That gate was **already red on main** -- this lane's
+17 declarations account for 17 of the 119, and main's own drift was 102, over
+tolerance on its own. Main regenerated the projection during the 173 commits,
+so after the merge the guard reads `kernel_projection=ok` with no action from
+this lane. Regenerating it here would have been a large-JSON conflict for
+nothing.
+
+## Gates
+
+Every one re-run against the MERGED tree, exit status captured from the command
+and not from a pipeline.
+
+| gate | result | exit |
+| --- | --- | --- |
+| `cargo check --workspace --all-targets` | 0 errors | 0 |
+| `cargo clippy -p axeyum-lean-kernel --all-targets -- -D warnings` | 0 errors | 0 |
+| `cargo fmt --all --check` | clean | 0 |
+| `cargo test --release -p axeyum-lean-kernel --lib -- nat_prelude::vector_space` | **25 passed**, 0 failed | 0 |
+| `cargo test --release -p axeyum-lean-kernel --lib -- nat_prelude::nat_prelude_tests` | **249 passed**, 0 failed | 0 |
+| `validate-facts.py` | 2956 facts, 0 errors | 0 |
+| `check-settled-fact-statements.py` | settled 2682, pinned 2682, drifted 0 | 0 |
+| `check-kernel-trusted-core.py` | 5 guards, 0 failures | 0 |
+| `check-autogenesis-holdout-isolation.py` | held_out 206, references 0, PASS | 0 |
+| `check-links.sh` | all links ok | 0 |
+| `check-merge-hygiene.sh` | PASS, `kernel_projection=ok` | 0 |
+
+The two kernel suites are the load-bearing ones and both report a NONZERO
+count: a feature-gated suite that compiled to nothing would print
+`running 0 tests ... ok` and exit 0.
+
+## Mutation
+
+All three RUN, and re-run a second time against the merged tree with identical
+kill counts. Baseline: 25 tests, 25 passed, exit 0. Each mutant was applied,
+built, run against the same 25-test collection, and restored byte-for-byte
+(`git status` clean after each).
+
+| mutant | change | pre-merge | post-merge |
+| --- | --- | --- | --- |
+| A | `removeAt`'s base case off by one: `v (succ j)` to `v j` | killed 18/25 | killed 18/25 |
+| B | the split lemma's bound reversed: `le i n` to `le n i` | killed 7/25 | killed 7/25 |
+| C | `le (succ i) zero` returns `True` instead of `False` | killed 18/25 | killed 18/25 |
+
+No mutant is PREDICTED. Mutants A and C change a **`Definition`**, which the
+trusted gate cannot object to -- the mutated `removeAt` still has exactly the
+right type -- so their kills come from the evaluation tests and from the
+downstream theorems whose `Eq.refl` stops holding. That is why this module has
+evaluation tests at all. Mutant B is confined to `AlgS.Exchange` (7 of 25)
+because the reversed bound is rejected where the split hands its hypothesis to
+`linComb_insertAt`, and nothing in `AlgS.Index` depends on it; the 18 survivors
+are the correct ones.
