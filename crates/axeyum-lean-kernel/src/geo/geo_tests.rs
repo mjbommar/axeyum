@@ -642,14 +642,6 @@ fn the_real_line_projections_pick_the_field_their_name_claims() {
     });
 }
 
-/// **`Geo.RPlane.join` is `⟨y Q − y P, x P − x Q, y P · x Q − x P · y Q⟩`.**
-/// Symbolic, at free-variable points, because a concrete pair can make two
-/// coefficients coincide — and the swap of the first two is exactly what the
-
-/// **`Geo.RPlane.onRaw` pairs each coefficient with the matching coordinate**,
-/// and states an `Equiv`, not an `Eq`: over ℝ there is no decidable equality
-/// to state it with. The negative half is the `a`-against-`y` pairing swap,
-
 /// **`Geo.RLine0.Nondeg` is a `PosBound` WITNESS, not a negation.**
 ///
 /// This is the file's load-bearing design decision and the first mutation the
@@ -756,13 +748,6 @@ fn real_apartness_is_a_positive_bound_on_the_squared_distance() {
         );
     });
 }
-
-/// **`CPoint.distSq P Q` IS `(x P − x Q)² + (y P − y Q)²`, definitionally.**
-///
-/// `pivotAB`'s conclusion is stated over the coordinate expression and
-/// `cancelPosBound` is fed the `Apart` witness, which is stated over `distSq`;
-/// the whole of `joinUnique` rests on those two being the same term after
-/// δ/ι. If `distSq` ever stops unfolding this way the model breaks, and this
 
 /// `Geo.rplane` really is an inhabitant of the record, its point carrier is
 /// `CPoint` and its line carrier is `Geo.RLine` — and it is a DIFFERENT model
