@@ -549,13 +549,15 @@ fn cas_verified_difference_of_squares_true_and_false_body() {
     // form -- entirely separate from anything the kernel does below.
     let product = factor1.clone() * factor2.clone();
     match axeyum_cas::equal(&product, &target) {
-        axeyum_cas::ZeroTest::Certified { equal, .. } => {
+        axeyum_cas::ZeroTest::Certified { equal, .. }
+        | axeyum_cas::ZeroTest::CertifiedBig { equal, .. } => {
             assert!(equal, "CAS itself must certify the TRUE identity");
         }
         axeyum_cas::ZeroTest::Unknown => panic!("CAS should decide this trivially"),
     }
     match axeyum_cas::equal(&product, &wrong_target) {
-        axeyum_cas::ZeroTest::Certified { equal, .. } => {
+        axeyum_cas::ZeroTest::Certified { equal, .. }
+        | axeyum_cas::ZeroTest::CertifiedBig { equal, .. } => {
             assert!(!equal, "CAS itself must refute the WRONG target");
         }
         axeyum_cas::ZeroTest::Unknown => panic!("CAS should decide this trivially"),

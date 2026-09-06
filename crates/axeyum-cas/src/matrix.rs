@@ -809,10 +809,12 @@ mod tests {
     fn assert_expr_equal(left: &CasExpr, right: &CasExpr) {
         match equal(left, right) {
             ZeroTest::Certified {
-                equal: is_equal,
-                witness,
+                equal: is_equal, ..
+            }
+            | ZeroTest::CertifiedBig {
+                equal: is_equal, ..
             } => {
-                assert!(is_equal, "expected equal; difference witness = {witness:?}");
+                assert!(is_equal, "expected equal");
             }
             ZeroTest::Unknown => panic!("expected a decidable (Certified) result"),
         }
