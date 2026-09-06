@@ -766,6 +766,72 @@ def check_probability_symbolic_poisson() -> None:
     ok(True, "prob6 (cited) Var[Poisson(lambda)] = E[Poisson(lambda)] = lambda (equidispersion, standard fact)")
     ok(True, "prob6-ctrl (hand) lambda != 2*lambda for any lambda != 0, so the doubled claim is wrong")
 
+def check_probability_wave_four() -> None:
+    section("probability (symbolic-p Geometric, symbolic-variance Normal)")
+    # prob7/prob8: Geometric(p) at symbolic p. E[X] = 1/p and the mgf
+    # p*e^t/(1-(1-p)*e^t), each only where the underlying geometric series
+    # converges -- |1-p| < 1 for the moments, |(1-p)*e^t| < 1 for the mgf.
+    if not need_sympy("prob7/prob8 symbolic-p Geometric via summation"):
+        pp, k, t = sp.symbols("p k t", positive=True)
+        mean = sp.summation(k * pp * (1 - pp) ** (k - 1), (k, 1, sp.oo))
+        ok(
+            sp.simplify(sp.limit(mean, pp, sp.Rational(1, 3)) - 3) == 0,
+            f"prob7 sympy E[Geometric(p)] = 1/p (checked at p=1/3 -> 3): {mean}",
+        )
+        # The mgf as a geometric series in the ratio (1-p)*e^t, summed by hand
+        # and checked against SymPy at a point inside the domain of convergence
+        # (p = 1/2, t = -1, so the ratio is e^{-1}/2 < 1).
+        closed = pp * sp.exp(t) / (1 - (1 - pp) * sp.exp(t))
+        numeric = sp.summation(
+            sp.exp(t * k) * pp * (1 - pp) ** (k - 1), (k, 1, sp.oo)
+        ).subs({pp: sp.Rational(1, 2), t: -1})
+        ok(
+            sp.simplify(numeric - closed.subs({pp: sp.Rational(1, 2), t: -1})) == 0,
+            "prob8 sympy the Geometric mgf equals p*e^t/(1-(1-p)*e^t) inside |(1-p)e^t| < 1",
+        )
+    else:
+        ok(True, "prob7 (cited) E[Geometric(p)] = 1/p for 0 < p <= 1 (standard fact)")
+        ok(
+            True,
+            "prob8 (cited) M_Geometric(t) = p*e^t/(1-(1-p)*e^t) for t < -ln(1-p) (standard fact)",
+        )
+    # prob9: Normal(mu, sigma^2) at symbolic sigma^2 -- mass 1, mean mu,
+    # variance sigma^2, mgf exp(mu*t + sigma^2*t^2/2). All four require
+    # sigma^2 > 0; the defining integral diverges otherwise.
+    if not need_sympy("prob9 symbolic-variance Normal via integration"):
+        s_sym, u, t2 = sp.symbols("s u t", positive=True)
+        mass = sp.integrate(
+            sp.exp(-(u**2) / (2 * s_sym)) / sp.sqrt(2 * sp.pi * s_sym), (u, -sp.oo, sp.oo)
+        )
+        ok(sp.simplify(mass - 1) == 0, f"prob9 sympy the Normal(mu, s) mass is 1 for s > 0: {mass}")
+        second = sp.integrate(
+            u**2 * sp.exp(-(u**2) / (2 * s_sym)) / sp.sqrt(2 * sp.pi * s_sym),
+            (u, -sp.oo, sp.oo),
+        )
+        ok(
+            sp.simplify(second - s_sym) == 0,
+            f"prob9 sympy the centered second moment is s for s > 0: {second}",
+        )
+    else:
+        ok(True, "prob9 (cited) Normal(mu, sigma^2) has mass 1, mean mu, variance sigma^2")
+    ok(
+        True,
+        "prob9 (hand) the Gaussian mgf exp(mu*t + sigma^2*t^2/2) follows by completing the square, "
+        "which needs only that the shifted density integrates to 1 -- i.e. sigma^2 > 0",
+    )
+    # prob10: the divergent control. sum_{j>=0} (-1)^j has no limit; its partial
+    # sums alternate 1, 0, 1, 0. Computed, not cited.
+    partial = 0
+    seen = set()
+    for j in range(8):
+        partial += (-1) ** j
+        seen.add(partial)
+    ok(
+        seen == {0, 1},
+        f"prob10 (hand) the partial sums of sum_j (-1)^j alternate over {sorted(seen)}, so the series diverges",
+    )
+
+
 def main() -> int:
     print(f"SymPy available: {sp is not None} (version {SYMPY_VERSION})")
 
@@ -800,6 +866,7 @@ def main() -> int:
     check_qe_dnf()
     check_qe_bivariate()
     check_probability_symbolic_poisson()
+    check_probability_wave_four()
 
     print(f"\n{CHECKED} claims, {len(FAILURES)} failed")
     if FAILURES:

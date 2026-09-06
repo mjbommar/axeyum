@@ -7160,11 +7160,7 @@ pub struct ConditionalSum {
 /// assert!(matches!(sum.hypotheses[0], SignCondition::Positive(_)));
 /// ```
 #[must_use]
-pub fn infinite_sum_conditional(
-    f: &CasExpr,
-    var: &str,
-    lower: &CasExpr,
-) -> Option<ConditionalSum> {
+pub fn infinite_sum_conditional(f: &CasExpr, var: &str, lower: &CasExpr) -> Option<ConditionalSum> {
     if let Some(value) = infinite_sum(f, var, lower) {
         return Some(ConditionalSum {
             value,
@@ -18616,9 +18612,7 @@ fn gaussian_polynomial_antiderivative(
         match n {
             0 => {
                 decaying.push(CasExpr::zero());
-                erf_weight.push(
-                    CasExpr::var("pi").sqrt() / (CasExpr::int(2) * sqrt_rate.clone()),
-                );
+                erf_weight.push(CasExpr::var("pi").sqrt() / (CasExpr::int(2) * sqrt_rate.clone()));
             }
             1 => {
                 decaying.push(CasExpr::Neg(Box::new(CasExpr::one() / two_rate.clone())));
@@ -18647,9 +18641,8 @@ fn gaussian_polynomial_antiderivative(
     }
     let gaussian = CasExpr::Neg(Box::new(rate.clone() * x.clone().pow(2))).exp();
     let erf_term = (sqrt_rate * x).erf();
-    let antiderivative = simplify(
-        &(constant.clone() * (decaying_part * gaussian + erf_part.clone() * erf_term)),
-    );
+    let antiderivative =
+        simplify(&(constant.clone() * (decaying_part * gaussian + erf_part.clone() * erf_term)));
     Some((antiderivative, simplify(&(constant.clone() * erf_part))))
 }
 
@@ -34097,7 +34090,11 @@ mod symbolic_geometric_and_gaussian {
     /// `u^power·e^{−(a·u²)}` over the whole line, through the conditional route.
     fn gaussian_line(power: u32, rate: &CasExpr) -> Option<ConditionalIntegral> {
         let base = CasExpr::Neg(Box::new(rate.clone() * u().pow(2))).exp();
-        let integrand = if power == 0 { base } else { u().pow(power) * base };
+        let integrand = if power == 0 {
+            base
+        } else {
+            u().pow(power) * base
+        };
         improper_integrate_conditional(
             &integrand,
             "u",
@@ -34120,7 +34117,10 @@ mod symbolic_geometric_and_gaussian {
         assert!(decides_equal(&result.value, &CasExpr::one()));
         assert_eq!(result.hypotheses.len(), 1);
         let SignCondition::Positive(margin) = &result.hypotheses[0] else {
-            panic!("expected a positivity condition, got {:?}", result.hypotheses);
+            panic!(
+                "expected a positivity condition, got {:?}",
+                result.hypotheses
+            );
         };
         assert!(decides_equal(margin, &(CasExpr::one() - q.abs())));
     }

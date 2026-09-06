@@ -49,15 +49,22 @@
 //!   here: `Geometric`'s **mean and variance certify** for concrete `p` through
 //!   [`crate::infinite_sum`] on the reindexed summand (`j = k−1`, which is what
 //!   puts the geometric factor in the machinery's own `exp(j·ln q)`
-//!   convention). A *symbolic* `p` still declines — and unlike the continuous
-//!   families above, a hypothesis channel would not help. Measured:
-//!   `gosper_sum(p·(1−p)ʲ, j)` and `gosper_sum(qʲ, j)` (a bare symbolic ratio,
-//!   with no `1−p` to normalize) both return `None`, while the concrete control
-//!   `p = 1/3` sums to `1`. The route declines *before* any convergence
-//!   question, so there is no value to attach `0 < p < 1` to; recording the
-//!   condition would decorate a claim nothing decided. The measurement is run,
-//!   not remembered, in
-//!   `the_geometric_symbolic_ratio_declines_before_any_convergence_question`.
+//!   convention).
+//! - **A *symbolic* `p` needed a whole route, not a hypothesis bolted onto the
+//!   old one.** Gosper genuinely has no antidifference for a symbolic ratio
+//!   (`gosper_sum(p·(1−p)ʲ, j)` and `gosper_sum(qʲ, j)` both return `None`, run
+//!   rather than remembered in
+//!   `the_symbolic_ratio_still_declines_in_gosper_and_is_reached_conditionally`),
+//!   so there was nothing for a `SignCondition` to attach to — the earlier
+//!   reading, that a hypothesis channel "would not help", was right about *that*
+//!   route and wrong about the conclusion. [`crate::infinite_sum_conditional`]
+//!   adds the missing one: the geometric series
+//!   `Σ_{j≥0} j^{(m)}·qʲ = m!·qᵐ/(1−q)^{m+1}`, one recognized identity with the
+//!   shape and the falling-factorial expansion both decided by [`crate::equal`],
+//!   and `|q| < 1` recorded where it cannot be decided. All four `Geometric`
+//!   quantities now certify at symbolic `p` under `0 < p < 1` (the mgf also
+//!   under `t < −ln(1−p)`), while a concrete ratio is still decided on the spot
+//!   — `Σ 2ʲ` declines rather than printing the continuation `−1`.
 //! - **`λᵏ/k!` is not Gosper-summable — so it goes through the recognized
 //!   exponential series instead.** [`crate::gosper_sum`] genuinely returns
 //!   `None` (no hypergeometric antidifference exists; `eˣ`'s Taylor tail has no
@@ -90,14 +97,26 @@
 //!   certifies **unconditionally** for symbolic `μ` and symbolic `t`, and a
 //!   non-positive `σ²` declines (at the shifted mass for `σ² < 0`, at the
 //!   identity itself for `σ² = 0`, since its `2σ²` denominator vanishes).
-//! - **A symbolic `σ²` is the one continuous case still out of reach, and the
-//!   blocker is measured, not assumed.** `integrate(e^{−a·x²}, x)` returns
-//!   `None` for a symbolic `a` (positive control: `∫e^{−x²}` over the line is
-//!   `√π`, certified). `integrate_gaussian` carries an irrational `√a` built
-//!   from a *concrete* rational `a`; with `a` symbolic there is no `√a` to
-//!   build and no erf to differentiate back. Every `Normal` quantity therefore
-//!   still requires a concrete variance, which is why the field is an
-//!   [`axeyum_ir::Rational`].
+//! - **A symbolic `σ²` needed the erf antiderivative to be built with `√a`
+//!   symbolic, and two spellings to be made to meet.** `integrate_gaussian`
+//!   reaches `to_univariate`, which needs a concrete rational coefficient of
+//!   `x²`, so `integrate(e^{−a·x²}, x)` still returns `None` for a symbolic `a`
+//!   — that measurement has not changed.
+//!   [`crate::improper_integrate_conditional`] now carries a second shape past
+//!   it: `C·P(x)·e^{−a·x²}` over the whole line, with the antiderivative built
+//!   from the standard reduction, **proved** by [`crate::prove_derivative`], and
+//!   `a > 0` recorded for the two infinite bounds. Two spelling problems had to
+//!   be solved for the certificate to close at all, and both are recorded at the
+//!   code: the route reads `a` back out *by division* so the reconstruction
+//!   lands on the caller's own spelling of the exponent (reading it off by
+//!   substitution gives `(1/2)/s` where the caller wrote `1/(2s)`, and the two
+//!   `exp` atoms then never meet), and the pdf's normalizer is spelled
+//!   `√a/√π` — the one form that cancels against the route's `√π/√a` without a
+//!   radical rewrite this crate does not have for a symbolic radicand — with
+//!   `c·c·2πσ² = 1` **decided** to confirm it is `1/√(2πσ²)`. All four `Normal`
+//!   quantities now certify at symbolic `σ²` under `σ² > 0`, and the field is a
+//!   [`CasExpr`]; a concrete `σ²` still goes through the unchanged
+//!   [`crate::improper_integrate`] path and stays unconditional.
 //! - **The Poisson⊕Poisson convolution identity has its own, independent
 //!   certificate** from [`crate::prove_wz_sum`], the Wilf–Zeilberger prover:
 //!   `Σⱼ C(k,j)·λ₁ʲ·λ₂ᵏ⁻ʲ = (λ₁+λ₂)ᵏ` for *every* `k`, proved symbolically in
@@ -143,12 +162,45 @@
 //! | `Exponential(λ)` mgf | uncertified (symbolic `t`) | certified `λ/(λ−t)` | `λ − t > 0` |
 //! | `Uniform(a,b)` mgf | uncertified (symbolic `t`) | certified `(e^{tb}−e^{ta})/(t(b−a))` | `t ≠ 0` |
 //! | `Normal(μ,σ²)` mgf, symbolic `μ`, `t` | uncertified (symbolic `t`) | certified `e^{μt+σ²t²/2}` | none (`σ²` concrete, its sign decided) |
-//! | `Normal` with symbolic `σ²` | not representable | unchanged | — (`integrate(e^{−a·x²})` declines, measured) |
-//! | `Geometric(p)`, symbolic `p` | uncertified | unchanged | — (`gosper_sum` declines before convergence, measured) |
+//! | `Normal` with symbolic `σ²` | not representable | see wave four | — |
+//! | `Geometric(p)`, symbolic `p` | uncertified | see wave four | — |
 //!
 //! `Uniform`'s `t ≠ 0` is the removable singularity of the closed form:
 //! `M(0) = 1` is its limit, no route in this crate decides that limit, and so
 //! the certificate does not claim it.
+//!
+//! # What changed, wave four (the two families that were still declining)
+//!
+//! | quantity | before | after | hypothesis |
+//! |---|---|---|---|
+//! | `Normal(μ,σ²)` mass, symbolic `σ²` | not representable | certified `1` | `σ² > 0` |
+//! | `Normal(μ,σ²)` mean, symbolic `σ²` | not representable | certified `μ` | `σ² > 0` |
+//! | `Normal(μ,σ²)` variance, symbolic `σ²` | not representable | certified `σ²` | `σ² > 0` |
+//! | `Normal(μ,σ²)` mgf, symbolic `σ²` | not representable | certified `e^{μt+σ²t²/2}` | `σ² > 0` |
+//! | `Geometric(p)` mass, symbolic `p` | uncertified | certified `1` | `0 < p < 1` |
+//! | `Geometric(p)` mean, symbolic `p` | uncertified | certified `1/p` | `0 < p < 1` |
+//! | `Geometric(p)` variance, symbolic `p` | uncertified | certified `(1−p)/p²` | `0 < p < 1` |
+//! | `Geometric(p)` mgf, symbolic `p` and `t` | uncertified | certified `pe^t/(1−(1−p)e^t)` | `0 < p < 1` and `t < −ln(1−p)` |
+//!
+//! Both new hypotheses are **restated** from what the deciding route actually
+//! recorded, and each restatement is guarded by an [`equal`] check that refuses
+//! to relabel a condition it does not recognize: `1/(2σ²) > 0` becomes `σ² > 0`
+//! only once `a·2σ² = 1` is decided, and `1 − |q| > 0` becomes `0 < p < 1` only
+//! once the margin is decided to be this distribution's own. The geometric
+//! restatement records conditions that **imply** what the route needed
+//! (`0 < p < 1 ⟹ |1−p| < 1`) rather than restating an equivalence: a certificate
+//! under a stronger hypothesis is a certificate of a smaller statement, which is
+//! the reading [`Trust::CertifiedUnder`] already has, and `0 < p < 1` is the
+//! parameter domain `Geometric(p)` is defined on. Recording something *weaker*
+//! than the route needed would not be sound, and is exactly what the guard
+//! prevents.
+//!
+//! What is still uncertified after wave four: a `Normal` whose variance is
+//! symbolic but whose Gaussian factor is spelled differently from `e^{−(a·u²)}`
+//! (an honest decline at the differentiate-and-check, not a wrong answer), a
+//! `Gaussian` integrand with an uncompleted linear term in the exponent, and a
+//! geometric summand with the index in a denominator or under a factorial —
+//! each with its own negative control.
 //!
 //! Chebyshev/Markov bounds are built from certified mean/variance but are
 //! **not themselves re-proved** here — [`Route::Derived`] records exactly
@@ -977,8 +1029,10 @@ fn poisson_decline_reason(lambda: &CasExpr) -> String {
 /// [`crate::infinite_sum`]'s exponential series.
 ///
 /// `e^{t·k}·λᵏ` is ONE exponential factor of rate `t + ln λ`, so the mgf's own
-/// symbolic `t` is never read as a polynomial coefficient — which is why this
-/// certifies where every other infinite-support discrete mgf here declines.
+/// symbolic `t` is never read as a polynomial coefficient. The `Geometric` mgf
+/// reaches its own closed form the same way, by merging `e^{t·k}` into the
+/// geometric ratio — but conditionally, since that ratio's modulus is what
+/// convergence turns on.
 fn poisson_mgf(lambda: &CasExpr, t: &str) -> Certificate {
     let target = (lambda.clone() * (CasExpr::var(t).exp() - CasExpr::one())).exp();
     let index = free_index(&[lambda], &[t]);
@@ -1094,7 +1148,9 @@ fn geometric_conditional_certificate(
         return Certificate::uncertified(
             sum.value,
             Route::InfiniteSum,
-            format!("the conditional sum's value did not decide equal to the {subject} closed form"),
+            format!(
+                "the conditional sum's value did not decide equal to the {subject} closed form"
+            ),
         );
     }
     let mut hypotheses: Vec<SignCondition> = Vec::new();
@@ -1444,11 +1500,8 @@ fn normal_symbolic_coeff(variance: &CasExpr) -> CasExpr {
 /// `2`, a `σ` where `σ²` belongs) fails, and every symbolic-`σ²` certificate is
 /// gated on it.
 fn normal_symbolic_coeff_is_the_pdf(coeff: &CasExpr, variance: &CasExpr) -> bool {
-    let squared = coeff.clone()
-        * coeff.clone()
-        * CasExpr::int(2)
-        * CasExpr::var("pi")
-        * variance.clone();
+    let squared =
+        coeff.clone() * coeff.clone() * CasExpr::int(2) * CasExpr::var("pi") * variance.clone();
     let settled = crate::simplify_radicals(&simplify(&crate::simplify_radicals(&squared)));
     matches!(
         equal(&settled, &CasExpr::one()),
@@ -1467,8 +1520,7 @@ fn normal_symbolic_coeff_is_the_pdf(coeff: &CasExpr, variance: &CasExpr) -> bool
 /// certificate.
 fn normal_symbolic_moment(variance: &CasExpr, power: u32) -> Option<ConditionalIntegral> {
     let u = CasExpr::var("u");
-    let gaussian =
-        CasExpr::Neg(Box::new(normal_rate(variance) * u.clone().pow(2))).exp();
+    let gaussian = CasExpr::Neg(Box::new(normal_rate(variance) * u.clone().pow(2))).exp();
     let integrand = if power == 0 {
         gaussian
     } else {
@@ -1532,7 +1584,9 @@ fn normal_symbolic_certificate(
         return Certificate::uncertified(
             normalized,
             Route::ConditionalIntegrate,
-            format!("the normalized Gaussian moment did not decide equal to the {subject} closed form"),
+            format!(
+                "the normalized Gaussian moment did not decide equal to the {subject} closed form"
+            ),
         );
     }
     let hypotheses: Vec<SignCondition> = moment
@@ -1581,8 +1635,8 @@ pub enum Continuous {
         /// Upper bound.
         b: Rational,
     },
-    /// `Exponential(λ)`, rate `λ`, possibly symbolic (declines for symbolic
-    /// `λ`; see the module doc).
+    /// `Exponential(λ)`, rate `λ`, possibly symbolic (a symbolic `λ` certifies
+    /// under `λ > 0`; see the module doc).
     Exponential(CasExpr),
     /// `Normal(μ, σ²)`: mean `μ` (possibly symbolic — added back by a shift
     /// that does not need the summation/integration machinery) and variance
@@ -2680,7 +2734,7 @@ mod tests {
 
     // ---------------------------------------------------------------
     // Continuous: Normal(0,1) — mass/mean/variance certify with an irrational
-    // sqrt(a); only the mgf declines, and for the symbolic-t reason.
+    // sqrt(a), unconditionally, on the concrete-variance route.
     // ---------------------------------------------------------------
 
     #[test]
@@ -3313,8 +3367,8 @@ mod tests {
             "p > 0 and 1 - p > 0 and -ln(1 - p) - t > 0"
         );
         let e = CasExpr::var("t").exp();
-        let target = (symbol.clone() * e.clone())
-            / (CasExpr::one() - (CasExpr::one() - symbol) * e);
+        let target =
+            (symbol.clone() * e.clone()) / (CasExpr::one() - (CasExpr::one() - symbol) * e);
         assert!(matches!(
             equal(&mgf.claim, &target),
             ZeroTest::Certified { equal: true, .. }
@@ -3360,9 +3414,8 @@ mod tests {
     #[test]
     fn an_unrecognized_convergence_condition_is_not_relabelled() {
         let symbol = CasExpr::var("p");
-        let genuine = SignCondition::Positive(
-            CasExpr::one() - (CasExpr::one() - symbol.clone()).abs(),
-        );
+        let genuine =
+            SignCondition::Positive(CasExpr::one() - (CasExpr::one() - symbol.clone()).abs());
         assert_eq!(
             restate_geometric(&genuine, &symbol, None),
             vec![
@@ -3371,8 +3424,7 @@ mod tests {
             ]
         );
         // A margin for a DIFFERENT ratio is not this distribution's condition.
-        let foreign =
-            SignCondition::Positive(CasExpr::one() - CasExpr::var("q").abs());
+        let foreign = SignCondition::Positive(CasExpr::one() - CasExpr::var("q").abs());
         assert_eq!(
             restate_geometric(&foreign, &symbol, None),
             vec![foreign.clone()]
@@ -3422,9 +3474,7 @@ mod tests {
         assert_eq!(conditions_of(&mgf), "s > 0");
         assert_eq!(mgf.route, Route::GaussianShift);
         let t = CasExpr::var("t");
-        let target = (t.clone() * mu
-            + sigma_squared * t.pow(2) / CasExpr::int(2))
-        .exp();
+        let target = (t.clone() * mu + sigma_squared * t.pow(2) / CasExpr::int(2)).exp();
         assert!(matches!(
             equal(&mgf.claim, &target),
             ZeroTest::Certified { equal: true, .. }
@@ -3458,13 +3508,12 @@ mod tests {
             &s
         ));
         // `√(1/σ²)/√π` — the same shape with the `2` dropped out of the rate.
-        let missing_two =
-            crate::simplify_radicals(&(CasExpr::one() / s.clone()).sqrt())
-                / CasExpr::var("pi").sqrt();
+        let missing_two = crate::simplify_radicals(&(CasExpr::one() / s.clone()).sqrt())
+            / CasExpr::var("pi").sqrt();
         assert!(!normal_symbolic_coeff_is_the_pdf(&missing_two, &s));
         // `1/√(2πσ)` — the standard deviation where the variance belongs.
-        let sigma_not_variance = CasExpr::one()
-            / (CasExpr::int(2) * CasExpr::var("pi") * s.clone().sqrt()).sqrt();
+        let sigma_not_variance =
+            CasExpr::one() / (CasExpr::int(2) * CasExpr::var("pi") * s.clone().sqrt()).sqrt();
         assert!(!normal_symbolic_coeff_is_the_pdf(&sigma_not_variance, &s));
     }
 
