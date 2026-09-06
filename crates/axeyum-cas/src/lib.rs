@@ -2243,12 +2243,11 @@ fn atom_name(head: &str, arg: &CasExpr) -> String {
         // the raw pair is one representation among many and rendering it keyed two
         // spellings of one argument as two independent atoms.
         // `canonical_key_form` picks the representative.
-        let rf = match raw.canonical_key_form() {
-            Some(canonical) => canonical,
-            None => {
-                mark = ATOM_UNCANONICAL;
-                raw
-            }
+        let rf = if let Some(canonical) = raw.canonical_key_form() {
+            canonical
+        } else {
+            mark = ATOM_UNCANONICAL;
+            raw
         };
         let num = rf.num.to_expr();
         if rf.den == MultiPoly::constant(Rational::integer(1)) {
