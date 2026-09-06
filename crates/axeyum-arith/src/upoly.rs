@@ -1936,10 +1936,27 @@ mod tests {
 
     #[test]
     fn a_sturm_certificate_with_an_inverted_interval_is_rejected() {
-        let p = qi(&[-6, 11, -6, 1]);
-        let chain = SturmChain::new(&p).unwrap();
+        // `x² + 1` has no real roots, so the count is 0 on every interval and
+        // `saturating_sub` gives 0 on an inverted one too. That is deliberate:
+        // it makes the COUNT guard indifferent to the swap, so only the
+        // interval guard can reject this certificate. Picking a polynomial with
+        // roots would let the count guard catch it and the interval guard would
+        // then be untestable — a guard nobody can remove is decoration.
+        let chain = SturmChain::new(&qi(&[1, 0, 1])).unwrap();
         let mut certificate = chain.certificate(&r(0, 1), &r(2, 1));
+        assert_eq!(certificate.root_count, 0);
         core::mem::swap(&mut certificate.lower, &mut certificate.upper);
+        let recorded: Vec<ZPoly> = certificate
+            .chain
+            .iter()
+            .map(|coeffs| ZPoly::from_coefficients(coeffs.clone()))
+            .collect();
+        assert_eq!(
+            sign_variations(&recorded, &certificate.lower)
+                .saturating_sub(sign_variations(&recorded, &certificate.upper)),
+            certificate.root_count,
+            "the count guard still passes, so only the interval guard can fire"
+        );
         assert!(!certificate.verify(), "the interval guard");
     }
 
