@@ -3300,15 +3300,32 @@ mod tests {
     #[test]
     fn sqrt_point_bounds_its_endpoint_denominators_by_the_grid() {
         // Before the slice this iterate doubled in size on every Newton step to
-        // a 2^(-2048) floor. The upper endpoint is now on the grid, so its
-        // denominator divides 2^grid_bits(order).
-        let root = sqrt_point(&bi(2), 32).expect("sqrt 2");
-        let bits = crate::enclosure_special::grid_bits(32);
-        assert!(
-            root.hi().denom().bits() <= u64::from(bits) + 1,
-            "the upper endpoint's denominator has {} bits, past the {bits}-bit grid",
-            root.hi().denom().bits()
-        );
+        // a 2^(-2048) floor. The upper endpoint is now ON the grid, so it is an
+        // integer multiple of 2^(-grid_bits(order)).
+        //
+        // "On the grid" and not merely "denominator under the bound": the bound
+        // alone is not a test of this guard, and that is measured, not
+        // supposed. Unrounded Newton from x0 = 2 converges past the 2^(-160)
+        // grid step of order 32 in six iterations, and the sixth exact iterate
+        // 665857/470832 has a denominator of only 77 bits -- comfortably under
+        // 161. A mutation removing the per-iterate rounding SURVIVED the
+        // bound-only form of this assertion. It does not survive this one:
+        // 470832 is not a power of two.
+        for order in [4u32, 32, 128] {
+            let root = sqrt_point(&bi(2), order).expect("sqrt 2");
+            let bits = crate::enclosure_special::grid_bits(order);
+            let scale = pow2(i32::try_from(bits).expect("grid fits an i32"));
+            assert!(
+                (root.hi() * &scale).is_integer(),
+                "the upper endpoint {} is not a multiple of 2^-{bits}",
+                root.hi()
+            );
+            assert!(
+                root.hi().denom().bits() <= u64::from(bits) + 1,
+                "the upper endpoint's denominator has {} bits, past the {bits}-bit grid",
+                root.hi().denom().bits()
+            );
+        }
     }
 
     #[test]
