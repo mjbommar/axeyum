@@ -96,21 +96,21 @@ it.
 
 ## Next five, in their priority order
 
-- [ ] **1. The quotient and extensionality ADR.** Add `Quot.sound`, commit to
+- [x] **1. The quotient and extensionality ADR.** — *done 2026-09-04, ADR-1595: setoid quotients, no `Quot.sound`; the first iso theorem cost three lines.* Add `Quot.sound`, commit to
       setoid quotients, or admit it in a labelled second tier with separately
       reported footprints. Unblocks or scopes reviewers 04, 05, 06, 09.
-- [ ] **2. The classical-axiom policy ADR.** Excluded middle as a labelled
+- [x] **2. The classical-axiom policy ADR.** — *done 2026-09-04, ADR-1601: classical principles as hypotheses, 11 binders and 0 obligations.* Excluded middle as a labelled
       footprint entry, or as an explicit hypothesis discharged at use — the
       route `Nat.em_implies_lnp` already demonstrates. Unblocks or scopes
       reviewers 03, 08, 10.
-- [ ] **3. A landmark count beside the total.** Define what counts as a named
+- [x] **3. A landmark count beside the total.** — *done 2026-09-04: `scripts/count-landmark-facts.py` with an exact-count baseline gated at push.* Define what counts as a named
       result, count them, and report both numbers. Their view: 2,487 is a real
       number that tells a reader nothing about depth, and the first hostile
       reviewer will say so.
-- [ ] **4. Close one `computed` result into a kernel statement.** The Rado
+- [x] **4. Close one `computed` result into a kernel statement.** — *done 2026-09-04 (W1-1): `IsRadoNumber` stated in-kernel and Schur's `R_2(x=y+z)=5` proved with both halves from search; the four-colour numbers stay `computed`, correctly.* The Rado
       number is the flagship candidate. It converts the project's thesis from
       an architecture diagram into a demonstrated result.
-- [ ] **5. Write down the kernel's own metatheoretic status**, per reviewer
+- [x] **5. Write down the kernel's own metatheoretic status** — *done 2026-09-04, ADR-1600: the kernel's metatheoretic status, trusted base 5,526 lines.*, per reviewer
       10. What is trusted, what is cross-checked against official Lean, and
       what a relative consistency result would require. Nobody outside can
       assess the headline metric without it.
