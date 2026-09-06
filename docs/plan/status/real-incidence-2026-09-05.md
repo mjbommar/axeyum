@@ -84,6 +84,9 @@ reals the pathology is the default, not the exception.
 | gate | result |
 | --- | --- |
 | `cargo test -p axeyum-lean-kernel --release --lib -- geo:: --test-threads=2` | **20 passed, 0 failed**, 117.22 s |
+| `cargo test -p axeyum-lean-kernel --lib -- geo::geo_tests::geo_prelude_builds --test-threads=1` (debug) | 1 passed, 0 failed, 435.72 s |
+| `cargo clippy -p axeyum-lean-kernel --all-targets -- -D warnings` | exit 0 |
+| `shape_search --include-constructed --ns Geo` | FOUND **119**, and the pinned count is `FIELD_COUNT + 11 + 46 + 41 = 21 + 11 + 46 + 41 = 119` |
 | `cargo check -p axeyum-lean-kernel --all-targets` | exit 0, 1 m 12 s |
 | `cargo fmt --all --check` | exit 0 |
 | `python3 scripts/validate-facts.py` | exit 0, 2927 facts, 0 errors |
