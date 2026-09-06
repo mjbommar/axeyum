@@ -1,1624 +1,519 @@
 [
- {
-  "id": "d1-cubic",
-  "area": "differentiate",
-  "module": null,
-  "tier": "core",
-  "description": "d/dx(x^3 - 2x + 1) = 3x^2 - 2",
-  "expected": {
-   "kind": "cas_identity",
-   "equal": true,
-   "expr": "3*x^2 - 2"
-  },
-  "justification": "sympy: sp.diff(x**3-2*x+1, x) == 3*x**2-2"
- },
- {
-  "id": "d1-cubic-ctrl",
-  "area": "differentiate",
-  "module": null,
-  "tier": "core",
-  "description": "control: d/dx(x^3-2x+1) != 3x^2-2+1",
-  "control_of": "d1-cubic",
-  "expected": {
-   "kind": "cas_identity",
-   "equal": false,
-   "expr": "3*x^2 - 2 + 1"
-  },
-  "justification": "hand: the derivative is exactly 3x^2-2, not 3x^2-1"
- },
- {
-  "id": "d2-product",
-  "area": "differentiate",
-  "module": null,
-  "tier": "core",
-  "description": "d/dx(x*sin(x)) = sin(x) + x*cos(x)",
-  "expected": {
-   "kind": "cas_identity",
-   "equal": true,
-   "expr": "sin(x) + x*cos(x)"
-  },
-  "justification": "sympy: sp.diff(x*sin(x), x) == sin(x)+x*cos(x) (product rule)"
- },
- {
-  "id": "d2-product-ctrl",
-  "area": "differentiate",
-  "module": null,
-  "tier": "core",
-  "description": "control: d/dx(x*sin(x)) != sin(x) - x*cos(x)",
-  "control_of": "d2-product",
-  "expected": {
-   "kind": "cas_identity",
-   "equal": false,
-   "expr": "sin(x) - x*cos(x)"
-  },
-  "justification": "hand: wrong sign on the second product-rule term"
- },
- {
-  "id": "d3-chain",
-  "area": "differentiate",
-  "module": null,
-  "tier": "core",
-  "description": "d/dx(sin(x^2)) = 2x*cos(x^2)",
-  "expected": {
-   "kind": "cas_identity",
-   "equal": true,
-   "expr": "2*x*cos(x^2)"
-  },
-  "justification": "sympy: sp.diff(sp.sin(x**2), x) == 2*x*cos(x**2) (chain rule)"
- },
- {
-  "id": "d3-chain-ctrl",
-  "area": "differentiate",
-  "module": null,
-  "tier": "core",
-  "description": "control: d/dx(sin(x^2)) != 2*cos(x^2) (missing chain-rule factor)",
-  "control_of": "d3-chain",
-  "expected": {
-   "kind": "cas_identity",
-   "equal": false,
-   "expr": "2*cos(x^2)"
-  },
-  "justification": "hand: dropping the inner-derivative factor x is the classic chain-rule mistake"
- },
- {
-  "id": "i1-def-poly",
-  "area": "integrate",
-  "module": null,
-  "tier": "core",
-  "description": "int_0^1 (3x^2+2x) dx = 2",
-  "expected": {
-   "kind": "cas_identity",
-   "equal": true,
-   "expr": "2"
-  },
-  "justification": "sympy: sp.integrate(3*x**2+2*x, (x,0,1)) == 2"
- },
- {
-  "id": "i2-def-log",
-  "area": "integrate",
-  "module": null,
-  "tier": "core",
-  "description": "int_1^e (1/x) dx = 1",
-  "expected": {
-   "kind": "cas_identity",
-   "equal": true,
-   "expr": "1"
-  },
-  "justification": "sympy: sp.integrate(1/x, (x,1,sp.E)) == 1"
- },
- {
-  "id": "i3-indef-trig",
-  "area": "integrate",
-  "module": null,
-  "tier": "core",
-  "description": "integrate(x*sin(x), x) = sin(x) - x*cos(x) (+C)",
-  "expected": {
-   "kind": "cas_identity",
-   "equal": true,
-   "expr": "sin(x) - x*cos(x)"
-  },
-  "justification": "sympy: sp.integrate(x*sp.sin(x), x) == -x*cos(x)+sin(x)"
- },
- {
-  "id": "i3-indef-trig-ctrl",
-  "area": "integrate",
-  "module": null,
-  "tier": "core",
-  "description": "control: the antiderivative of x*sin(x) is not x*cos(x)+sin(x)",
-  "control_of": "i3-indef-trig",
-  "expected": {
-   "kind": "cas_identity",
-   "equal": false,
-   "expr": "x*cos(x) + sin(x)"
-  },
-  "justification": "hand: wrong sign on the x*cos(x) term"
- },
- {
-  "id": "i4-gaussian-erf",
-  "area": "integrate",
-  "module": null,
-  "tier": "core",
-  "description": "integrate(e^{-x^2}, x) = (sqrt(pi)/2)*erf(x), certified. FOUND EMPIRICALLY: a first draft of this entry assumed axeyum-cas would decline (no elementary closed form exists, Liouville), but it has a dedicated Gaussian-integral route to erf and gets it right",
-  "expected": {
-   "kind": "cas_identity",
-   "equal": true,
-   "expr": "(sqrt(pi)/2)*erf(x)"
-  },
-  "justification": "sympy: sp.integrate(sp.exp(-x**2), x) also returns sqrt(pi)*erf(x)/2; hand: d/dx[(sqrt(pi)/2) erf(x)] = (sqrt(pi)/2)*(2/sqrt(pi))*e^{-x^2} = e^{-x^2}, confirming correctness. erf itself is a real (non-elementary) special function -- Liouville's theorem says no ELEMENTARY antiderivative exists, which is still true and not contradicted; axeyum-cas's route simply reaches outside the elementary functions, same as sympy"
- },
- {
-  "id": "l1-removable",
-  "area": "limit",
-  "module": null,
-  "tier": "core",
-  "description": "lim x->2 (x^2-4)/(x-2) = 4",
-  "expected": {
-   "kind": "cas_identity",
-   "equal": true,
-   "expr": "4"
-  },
-  "justification": "sympy: sp.limit((x**2-4)/(x-2), x, 2) == 4"
- },
- {
-  "id": "l2-sinc",
-  "area": "limit",
-  "module": null,
-  "tier": "decline_expected",
-  "description": "lim x->0 sin(x)/x = 1, but axeyum-cas's limit() has no rule for a transcendental 0/0 ratio",
-  "expected": {
-   "kind": "decline"
-  },
-  "justification": "sympy confirms the mathematical value is 1 (classical); source reading of crates/axeyum-cas/src/lib.rs's limit() dispatcher found no rule covering a Div of two transcendental heads (only rational-function Div, continuous-head-of-rational-inner composition, additive linearity, and several +-infinity rules) -- expected to decline, not to wrongly answer"
- },
- {
-  "id": "l3-cos-quad",
-  "area": "limit",
-  "module": null,
-  "tier": "decline_expected",
-  "description": "lim x->0 (1-cos x)/x^2 = 1/2, same reasoning as l2-sinc",
-  "expected": {
-   "kind": "decline"
-  },
-  "justification": "sympy confirms the value is 1/2 (classical); same limit()-dispatcher reading as l2-sinc -- a transcendental 0/0 Div is outside every implemented rule"
- },
- {
-  "id": "l4-e-definition",
-  "area": "limit",
-  "module": null,
-  "tier": "core",
-  "description": "lim x->+inf (1+1/x)^x = e, written as exp(x*ln(1+1/x)) since CasExpr::Pow only takes integer exponents",
-  "expected": {
-   "kind": "cas_identity",
-   "equal": true,
-   "expr": "exp(1)"
-  },
-  "justification": "sympy: sp.limit((1+1/x)**x, x, sp.oo) == E (the classical definition of e); axeyum-cas's limit() dispatcher explicitly names this exact example (exp(x ln(1+1/x)) -> e) in its own source comment for the exp-composition rule"
- },
- {
-  "id": "s1-exp",
-  "area": "series",
-  "module": null,
-  "tier": "core",
-  "description": "series(exp(x), x, 4) = 1+x+x^2/2+x^3/6+x^4/24",
-  "expected": {
-   "kind": "cas_identity",
-   "equal": true,
-   "expr": "1 + x + x^2/2 + x^3/6 + x^4/24"
-  },
-  "justification": "sympy: sp.series(sp.exp(x), x, 0, 5) matches; also axeyum-cas's own series() rustdoc doctest uses exactly this example"
- },
- {
-  "id": "s2-sin",
-  "area": "series",
-  "module": null,
-  "tier": "core",
-  "description": "series(sin(x), x, 5) = x - x^3/6 + x^5/120",
-  "expected": {
-   "kind": "cas_identity",
-   "equal": true,
-   "expr": "x - x^3/6 + x^5/120"
-  },
-  "justification": "sympy: sp.series(sp.sin(x), x, 0, 6) matches"
- },
- {
-  "id": "s3-ln",
-  "area": "series",
-  "module": null,
-  "tier": "core",
-  "description": "series(ln(1+x), x, 4) = x - x^2/2 + x^3/3 - x^4/4",
-  "expected": {
-   "kind": "cas_identity",
-   "equal": true,
-   "expr": "x - x^2/2 + x^3/3 - x^4/4"
-  },
-  "justification": "sympy: sp.series(sp.log(1+x), x, 0, 5) matches"
- },
- {
-  "id": "s4-sqrt-branch",
-  "area": "series",
-  "module": null,
-  "tier": "decline_expected",
-  "description": "series(sqrt(x), x, 4) about x=0: sqrt is not analytic at a branch point, so no Taylor series exists",
-  "expected": {
-   "kind": "decline"
-  },
-  "justification": "cited: classical complex-analysis fact (sqrt has a branch point at 0); axeyum-cas's series() rustdoc says it returns 'the Taylor polynomial... no certificate' and is expected to decline outside its supported fragment, which does not include a genuine branch point"
- },
- {
-  "id": "sum1-linear",
-  "area": "sum",
-  "module": null,
-  "tier": "core",
-  "description": "sum_polynomial(n, n) = sum_{k=0}^{n-1} k = (n^2-n)/2",
-  "expected": {
-   "kind": "cas_identity",
-   "equal": true,
-   "expr": "(n^2 - n)/2"
-  },
-  "justification": "sympy: sp.summation(k, (k,0,n-1)) simplifies to n*(n-1)/2 = (n^2-n)/2"
- },
- {
-  "id": "sum2-quadratic",
-  "area": "sum",
-  "module": null,
-  "tier": "core",
-  "description": "sum_polynomial(n^2, n) = sum_{k=0}^{n-1} k^2 = (2n^3-3n^2+n)/6",
-  "expected": {
-   "kind": "cas_identity",
-   "equal": true,
-   "expr": "(2*n^3 - 3*n^2 + n)/6"
-  },
-  "justification": "sympy: sp.summation(k**2, (k,0,n-1)) simplifies to (2n^3-3n^2+n)/6"
- },
- {
-  "id": "sum3-gosper",
-  "area": "sum",
-  "module": null,
-  "tier": "core",
-  "description": "gosper_sum(1/(k(k+1)), k): the antidifference S(k) with S(k+1)-S(k)=1/(k(k+1)) is S(k) = -1/k",
-  "expected": {
-   "kind": "cas_identity",
-   "equal": true,
-   "expr": "-1/k"
-  },
-  "justification": "hand proof (also checked symbolically in ground_truth.py): -1/(k+1) - (-1/k) = 1/k - 1/(k+1) = 1/(k(k+1)), clearing denominators gives -k+(k+1)=1"
- },
- {
-  "id": "solve1-rational-roots",
-  "area": "solve",
-  "module": null,
-  "tier": "core",
-  "description": "roots of x^2-3x+2 = {1, 2}",
-  "expected": {
-   "kind": "root_set",
-   "roots": [
-    "1",
-    "2"
-   ]
-  },
-  "justification": "sympy: sp.solve(x**2-3*x+2, x) == [1, 2]"
- },
- {
-  "id": "solve2-irrational-roots",
-  "area": "solve",
-  "module": null,
-  "tier": "core",
-  "description": "roots of x^2-2 = {-sqrt(2), sqrt(2)}",
-  "expected": {
-   "kind": "root_set",
-   "roots": [
-    "-sqrt(2)",
-    "sqrt(2)"
-   ]
-  },
-  "justification": "sympy: sp.solve(x**2-2, x) == [-sqrt(2), sqrt(2)]"
- },
- {
-  "id": "solve3-quintic",
-  "area": "solve",
-  "module": null,
-  "tier": "decline_expected",
-  "description": "x^5-x-1 has no radical solution: Abel-Ruffini via its Galois group. FOUND EMPIRICALLY: solve()'s own rustdoc documents that irreducible cubic-or-higher factors are OMITTED from its result, not asserted root-free, so the correct expectation is Some([]) (an honestly incomplete list), not None -- a first draft of this entry wrongly expected None and was corrected against the read source",
-  "expected": {
-   "kind": "root_set",
-   "roots": [],
-   "note": "Some(empty), documented as 'omitted', not a claim of no roots"
-  },
-  "justification": "sympy: sp.Poly(x**5-x-1,x).is_irreducible is True, and sp.polys.numberfields.galoisgroups.galois_group finds a Galois group of order 120 (= |S5|), which is not solvable; by Abel-Ruffini there is no radical formula for the roots. Standard textbook example (e.g. Stewart, 'Galois Theory'). axeyum-cas's solve() rustdoc: 'complex roots and irreducible cubics+ omitted' -- so Some([]) is the documented, honest (not wrong) result"
- },
- {
-  "id": "f1-quadratic",
-  "area": "factor",
-  "module": null,
-  "tier": "core",
-  "description": "factor(x^2-3x+2) = (x-1)(x-2)",
-  "expected": {
-   "kind": "cas_identity",
-   "equal": true,
-   "expr": "(x-1)*(x-2)"
-  },
-  "justification": "sympy: sp.factor(x**2-3*x+2) == (x-1)*(x-2)"
- },
- {
-  "id": "f1-quadratic-ctrl",
-  "area": "factor",
-  "module": null,
-  "tier": "core",
-  "description": "control: factor(x^2-3x+2) != (x-1)(x-3)",
-  "control_of": "f1-quadratic",
-  "expected": {
-   "kind": "cas_identity",
-   "equal": false,
-   "expr": "(x-1)*(x-3)"
-  },
-  "justification": "hand: (x-1)(x-3) = x^2-4x+3, not x^2-3x+2"
- },
- {
-  "id": "f2-quartic",
-  "area": "factor",
-  "module": null,
-  "tier": "core",
-  "description": "factor_expr(x^4-1) = (x-1)(x+1)(x^2+1)",
-  "expected": {
-   "kind": "cas_identity",
-   "equal": true,
-   "expr": "(x-1)*(x+1)*(x^2+1)"
-  },
-  "justification": "sympy: sp.factor(x**4-1) == (x-1)*(x+1)*(x**2+1)"
- },
- {
-  "id": "f2-quartic-ctrl",
-  "area": "factor",
-  "module": null,
-  "tier": "core",
-  "description": "control: factor_expr(x^4-1) != (x-1)(x+1)(x^2-1)",
-  "control_of": "f2-quartic",
-  "expected": {
-   "kind": "cas_identity",
-   "equal": false,
-   "expr": "(x-1)*(x+1)*(x^2-1)"
-  },
-  "justification": "hand: (x-1)(x+1)(x^2-1) = (x^2-1)^2 = x^4-2x^2+1, not x^4-1"
- },
- {
-  "id": "f3-multivariate",
-  "area": "factor",
-  "module": null,
-  "tier": "decline_expected",
-  "description": "x*y^2+x^2*y-x-y = (x+y)(xy-1), a genuinely bivariate (non-quadratic-in-one-variable) factorization",
-  "expected": {
-   "kind": "decline"
-  },
-  "justification": "sympy: sp.factor(x*y**2+x**2*y-x-y) == (x+y)*(x*y-1), confirmed correct and non-trivial; source reading of factor()'s dispatch in crates/axeyum-cas/src/lib.rs shows only a univariate route plus two special bivariate forms (a bivariate quadratic in one variable, and sums/differences of like powers) -- this cubic-total-degree bivariate polynomial matches neither, so None is expected (docs/math-department/13-computer-algebra.md chair 04)"
- },
- {
-  "id": "e1-radical",
-  "area": "simplify/equal",
-  "module": null,
-  "tier": "core",
-  "description": "sqrt(2)*sqrt(2) = 2",
-  "expected": {
-   "kind": "cas_identity",
-   "equal": true,
-   "expr": "2"
-  },
-  "justification": "sympy: sp.nsimplify(sp.sqrt(2)*sp.sqrt(2)-2) == 0; this exact identity is also demonstrated in the crate's own cas_tour.rs example"
- },
- {
-  "id": "e1-radical-cross-base",
-  "area": "simplify/equal",
-  "module": null,
-  "tier": "core",
-  "description": "sqrt(2)*sqrt(3) = sqrt(6): the zero-test's atom algebra used to treat sqrt(2), sqrt(3), sqrt(6) as three independent atoms and certify a confidently WRONG equal=false (file 13 item 1 wave two, lane cas-witness). FIXED: found stale during item 10 wave two (2026-09-05) -- the Rust harness's e1_radical_cross_base already expects and gets equal=true (a plain agree, tier core); this entry's tier/fields were still recorded as the old known_defect and are corrected here to match.",
-  "expected": {
-   "kind": "cas_identity",
-   "equal": true,
-   "expr": "true (as real numbers)"
-  },
-  "justification": "sympy: sp.simplify(sp.sqrt(2)*sp.sqrt(3)-sp.sqrt(6)) == 0, confirming the identity is true; the crate now certifies it too"
- },
- {
-  "id": "e2-poly-identity",
-  "area": "simplify/equal",
-  "module": null,
-  "tier": "core",
-  "description": "(x+1)^2 = x^2+2x+1",
-  "expected": {
-   "kind": "cas_identity",
-   "equal": true,
-   "expr": "x^2 + 2*x + 1"
-  },
-  "justification": "sympy: sp.expand((x+1)**2 - (x**2+2*x+1)) == 0"
- },
- {
-  "id": "e2-poly-identity-ctrl",
-  "area": "simplify/equal",
-  "module": null,
-  "tier": "core",
-  "description": "control: (x+1)^2 != x^2+2x+2",
-  "control_of": "e2-poly-identity",
-  "expected": {
-   "kind": "cas_identity",
-   "equal": false,
-   "expr": "x^2 + 2*x + 2"
-  },
-  "justification": "hand: (x+1)^2 = x^2+2x+1, off by the constant term"
- },
- {
-  "id": "e3-trig-pythagorean",
-  "area": "simplify/equal",
-  "module": null,
-  "tier": "decline_expected",
-  "description": "sin(x)^2+cos(x)^2 = 1 is transcendentally true but not a polynomial identity over the atoms sin(x), cos(x) unless the zero-test's atom algebra specifically knows the Pythagorean identity",
-  "expected": {
-   "kind": "decline"
-  },
-  "justification": "sympy: sp.simplify(sp.sin(x)**2+sp.cos(x)**2-1) == 0, confirming the identity is true; equal()'s zero-test is a polynomial normal-form check over opaque transcendental atoms (read in crates/axeyum-cas/src/lib.rs) with no documented Pythagorean-identity rewrite rule, so Unknown is expected. A certified True here is a genuine, welcome capability finding -- see the harness's printed actual value, not a failure of this entry"
- },
- {
-  "id": "la1-det",
-  "area": "linear algebra",
-  "module": null,
-  "tier": "core",
-  "description": "det([[2,0],[0,3]]) = 6",
-  "expected": {
-   "kind": "cas_identity",
-   "equal": true,
-   "expr": "6"
-  },
-  "justification": "sympy: sp.Matrix([[2,0],[0,3]]).det() == 6; also demonstrated in cas_tour.rs"
- },
- {
-  "id": "la2-eigen",
-  "area": "linear algebra",
-  "module": null,
-  "tier": "core",
-  "description": "eigenvalues of [[2,0],[0,3]] are {2, 3}",
-  "expected": {
-   "kind": "eigenvalue_set",
-   "eigenvalues": [
-    "2",
-    "3"
-   ]
-  },
-  "justification": "sympy: sp.Matrix([[2,0],[0,3]]).eigenvects() gives eigenvalues {2,3} (diagonal matrix, trivial)"
- },
- {
-  "id": "la3-minpoly-jordan",
-  "area": "linear algebra",
-  "module": null,
-  "tier": "core",
-  "description": "minimal_polynomial([[2,1],[0,2]]) = (L-2)^2, since this Jordan block is NOT diagonalizable",
-  "expected": {
-   "kind": "cas_identity",
-   "equal": true,
-   "expr": "(L-2)^2"
-  },
-  "justification": "hand/sympy: (A-2I) != 0 but (A-2I)^2 = 0 for A=[[2,1],[0,2]] (checked directly with sympy Matrix arithmetic in ground_truth.py); classical fact that a non-diagonalizable matrix's minimal polynomial has a repeated root"
- },
- {
-  "id": "la3-minpoly-jordan-ctrl",
-  "area": "linear algebra",
-  "module": null,
-  "tier": "core",
-  "description": "control: minimal_polynomial([[2,1],[0,2]]) != (L-2) (the naive characteristic-polynomial-degree-1 guess)",
-  "control_of": "la3-minpoly-jordan",
-  "expected": {
-   "kind": "cas_identity",
-   "equal": false,
-   "expr": "L-2"
-  },
-  "justification": "hand: (A-2I) != 0 directly, so L-2 does not annihilate A"
- },
- {
-  "id": "nt1-mersenne-prime",
-  "area": "number theory",
-  "module": null,
-  "tier": "core",
-  "description": "is_prime(2^31-1) = true (a Mersenne prime)",
-  "expected": {
-   "kind": "bool",
-   "value": true
-  },
-  "justification": "hand: trial division up to sqrt(2^31-1) in ground_truth.py finds no factor; also demonstrated in cas_tour.rs"
- },
- {
-  "id": "nt1-mersenne-prime-ctrl",
-  "area": "number theory",
-  "module": null,
-  "tier": "core",
-  "description": "control: is_prime(2^31-3) = false (2147483645 = 5 * 429496729)",
-  "control_of": "nt1-mersenne-prime",
-  "expected": {
-   "kind": "bool",
-   "value": false
-  },
-  "justification": "hand: 2147483645 mod 5 == 0, an explicit witness factor"
- },
- {
-  "id": "nt2-factorize",
-  "area": "number theory",
-  "module": null,
-  "tier": "core",
-  "description": "factorize(360) = 2^3 * 3^2 * 5",
-  "expected": {
-   "kind": "factorization",
-   "factors": [
-    [
-     2,
-     3
-    ],
-    [
-     3,
-     2
-    ],
-    [
-     5,
-     1
-    ]
-   ]
-  },
-  "justification": "hand: trial-division factorization in ground_truth.py; also demonstrated in cas_tour.rs"
- },
- {
-  "id": "nt3-legendre",
-  "area": "number theory",
-  "module": null,
-  "tier": "core",
-  "description": "legendre_symbol(3, 7) = -1 (3 is a quadratic non-residue mod 7)",
-  "expected": {
-   "kind": "int",
-   "value": -1
-  },
-  "justification": "sympy: sp.legendre_symbol(3,7) == -1; hand: squares mod 7 are {0,1,2,4}, 3 is not among them"
- },
- {
-  "id": "nt4-pell",
-  "area": "number theory",
-  "module": null,
-  "tier": "core",
-  "description": "the Pell equation x^2-61y^2=1's fundamental solution is (1766319049, 226153980)",
-  "expected": {
-   "kind": "int_pair",
-   "value": [
-    1766319049,
-    226153980
-   ]
-  },
-  "justification": "hand: 1766319049^2 - 61*226153980^2 = 1, checked with exact Python integers; cited as the classic large-fundamental-solution example (Weil, 'Number Theory: An Approach Through History')"
- },
- {
-  "id": "ode1-homog",
-  "area": "ODE",
-  "module": null,
-  "tier": "core",
-  "description": "dsolve_homogeneous([1,0,1], x) solves y''+y=0; substituting the returned solution back must zero-test to 0",
-  "expected": {
-   "kind": "cas_identity",
-   "equal": true,
-   "expr": "0",
-   "note": "residual y''+y after substitution"
-  },
-  "justification": "sympy: dsolve(f(x).diff(x,2)+f(x), f(x)) then substituting back and simplifying gives residual 0"
- },
- {
-  "id": "ode2-inhomog",
-  "area": "ODE",
-  "module": null,
-  "tier": "core",
-  "description": "dsolve_inhomogeneous([1,1], x, x) solves y'+y=x; substituting the returned solution back must zero-test to 0",
-  "expected": {
-   "kind": "cas_identity",
-   "equal": true,
-   "expr": "0",
-   "note": "residual y'+y-x after substitution"
-  },
-  "justification": "sympy: dsolve(f(x).diff(x)+f(x)-x, f(x)) then substituting back and simplifying gives residual 0"
- },
- {
-  "id": "ode3-tan-forcing",
-  "area": "ODE",
-  "module": null,
-  "tier": "decline_expected",
-  "description": "y'+y=tan(x): the integrating-factor route needs integrate(e^x tan(x), x), which is not elementary",
-  "expected": {
-   "kind": "decline"
-  },
-  "justification": "sympy: sp.integrate(sp.exp(x)*sp.tan(x), x) does not reduce to an elementary closed form (returns an unevaluated Integral); axeyum-cas's dsolve_inhomogeneous's non-polynomial first-order route is the certified integrating-factor method, which needs exactly this integral, so None is expected"
- },
- {
-  "id": "tr1-laplace-t",
-  "area": "transforms",
-  "module": null,
-  "tier": "core",
-  "description": "laplace_transform(t, t, s) = 1/s^2",
-  "expected": {
-   "kind": "cas_identity",
-   "equal": true,
-   "expr": "1/s^2"
-  },
-  "justification": "sympy: sp.laplace_transform(t, t, s, noconds=True) == 1/s**2; also the exact example in laplace_transform's own rustdoc doctest"
- },
- {
-  "id": "tr2-z-geometric",
-  "area": "transforms",
-  "module": null,
-  "tier": "core",
-  "description": "z_transform(2^n, n, z) = z/(z-2)",
-  "expected": {
-   "kind": "cas_identity",
-   "equal": true,
-   "expr": "z/(z-2)"
-  },
-  "justification": "cited: standard unilateral Z-transform table entry Z{a^n} = z/(z-a); z_transform's own rustdoc names this exact family"
- },
- {
-  "id": "tr3-laplace-decline",
-  "area": "transforms",
-  "module": null,
-  "tier": "decline_expected",
-  "description": "laplace_transform(tan(t), t, s): tan(t) (written sin(t)/cos(t)) is outside the documented product-with-polynomial fragment",
-  "expected": {
-   "kind": "decline"
-  },
-  "justification": "cited: tan(t) has poles on the positive real axis so its naive Laplace integral does not converge to an elementary closed form; laplace_transform's own rustdoc lists its supported fragment as t^k*e^{at}, t^k*sin(bt), t^k*cos(bt), t^k*Bessel, and polynomials -- a ratio like sin(t)/cos(t) matches none of those. There is also no Fourier transform in this crate at all (chair 03, docs/math-department/13-computer-algebra.md)"
- },
- {
-  "id": "fps1-fibonacci",
-  "area": "series",
-  "module": "fps",
-  "tier": "core",
-  "description": "guess_linear_recurrence recovers a_n=a_{n-1}+a_{n-2} from 10 Fibonacci terms",
-  "expected": {
-   "kind": "recurrence",
-   "order": 2,
-   "coefficients": [
-    "1",
-    "1"
-   ]
-  },
-  "justification": "hand: Fibonacci's defining recurrence, checked directly on the given terms in ground_truth.py"
- },
- {
-  "id": "fps2-primes-decline",
-  "area": "series",
-  "module": "fps",
-  "tier": "decline_expected",
-  "description": "guess_linear_recurrence on the first 13 primes (2..41). CORRECTED: a first draft used only 10 primes, which let an order-5 fit trivially overfit (Berlekamp-Massey can always fit floor(len/2) unknowns to len data points, so with only 10 terms an order-5 'recurrence' is an uninformative artifact, not a finding) -- fixed to match this crate's own regression test's 13-term sample, which is large enough that the true minimal complexity exceeds floor(13/2)=6 and the module honestly declines",
-  "expected": {
-   "kind": "decline"
-  },
-  "justification": "cited: the primes admit no constant-coefficient linear recurrence of any order (a linearly-recursive integer sequence is eventually a sum of terms c*r^n*poly(n) for algebraic r, unlike the primes); also directly recorded in this crate's own fps progress log (docs/math-department/13-computer-algebra.md, 2026-09-05): 'recovers Fibonacci, Lucas, Padovan; declines on the primes', and its own regression test crates/axeyum-cas/src/fps.rs::berlekamp_massey_declines_on_the_primes_which_satisfy_no_short_recurrence uses exactly these 13 terms"
- },
- {
-  "id": "enc1-pi",
-  "area": null,
-  "module": "enclosure",
-  "tier": "core",
-  "description": "enclose_constant(\"pi\", 64), verified, decimal(6) matches pi's known digits",
-  "expected": {
-   "kind": "decimal_prefix",
-   "prefix": "[3.141592"
-  },
-  "justification": "cited: OEIS A000796 (pi = 3.14159265358979323846...); also the exact example in enclose_constant's own rustdoc doctest"
- },
- {
-  "id": "enc2-gamma-decline",
-  "area": null,
-  "module": "enclosure",
-  "tier": "decline_expected",
-  "description": "enclose_constant(\"gamma\", 40): the Euler-Mascheroni constant is not a recognized name",
-  "expected": {
-   "kind": "decline"
-  },
-  "justification": "source reading of enclosure.rs's enclose_constant: only \"pi\", \"e\", \"ln2\"/\"ln 2\", \"sqrt2\"/\"sqrt 2\" are recognized, with a catch-all None arm; matches docs/math-department/13-computer-algebra.md's item-2 progress-log note that 'gamma, Bessel, erf and non-integer powers still decline'"
- },
- {
-  "id": "qe1-exists-sqrt2",
-  "area": null,
-  "module": "qe",
-  "tier": "core",
-  "description": "exists x. x^2-2=0 is true (self-verified by eliminate)",
-  "expected": {
-   "kind": "bool",
-   "value": true
-  },
-  "justification": "hand: sqrt(2) is a real witness; sympy: sp.solve(x**2-2,x) is non-empty"
- },
- {
-  "id": "qe2-forall-positive",
-  "area": null,
-  "module": "qe",
-  "tier": "core",
-  "description": "forall x. x^2+1>0 is true (self-verified by eliminate_forall)",
-  "expected": {
-   "kind": "bool",
-   "value": true
-  },
-  "justification": "hand: a real square plus 1 is always positive; sympy confirms x^2+1 is never non-positive for real x"
- },
- {
-  "id": "qe3-large-coefficient",
-  "area": null,
-  "module": "qe",
-  "tier": "core",
-  "description": "exists x. x^2-10^30=0 is true (witnessed by 10^15). FOUND EMPIRICALLY: a first draft of this entry (id qe3-overflow-decline) expected None, citing this crate's own 2026-09-05 progress log for item 7's first slice ('x^2 - 10^30 returns Unknown because the reused root isolation is still i128'). Mid-development this corpus's own `git merge main` picked up item 7's wave-two fix (qe's Atom coefficients widened from i128-backed Rational to BigRational), which fixed exactly this overflow -- re-running the harness after that merge found this entry flip from a documented decline to a correct, certified decision, a genuine capability gain the corpus caught happening in real time",
-  "expected": {
-   "kind": "bool",
-   "value": true,
-   "note": "certified"
-  },
-  "justification": "hand: 10^15 squared is exactly 10^30, a valid witness, so the true answer is True. This crate's fix for the previously-documented i128 overflow (docs/math-department/13-computer-algebra.md item 7 wave two) is what makes eliminate() now decide it"
- },
- {
-  "id": "nf1-two-squares-41",
-  "area": "number theory",
-  "module": "numberfield",
-  "tier": "core",
-  "description": "two_squares(41): 41 = 4^2+5^2 (Fermat's two-squares theorem, 41 prime and 1 mod 4)",
-  "expected": {
-   "kind": "two_squares",
-   "represented": true
-  },
-  "justification": "hand: 4^2+5^2=41, checked directly; 41 is prime and 41 mod 4 = 1"
- },
- {
-  "id": "nf2-two-squares-43-refuted",
-  "area": "number theory",
-  "module": "numberfield",
-  "tier": "core",
-  "description": "two_squares(43): 43 is prime and 3 mod 4 (odd exponent), so NOT a sum of two squares",
-  "control_of": "nf1-two-squares-41",
-  "expected": {
-   "kind": "two_squares",
-   "represented": false
-  },
-  "justification": "hand: 43 is prime, 43 mod 4 = 3; exhaustive check in ground_truth.py over a,b in [0,7] finds no representation"
- },
- {
-  "id": "nf3-fundamental-unit-61",
-  "area": "number theory",
-  "module": "numberfield",
-  "tier": "core",
-  "description": "the fundamental unit of Z[sqrt(61)] is 29718+3805*sqrt(61)",
-  "expected": {
-   "kind": "unit",
-   "a": 29718,
-   "b": 3805
-  },
-  "justification": "hand: |29718^2-61*3805^2|=1 (norm -1), and squaring this unit gives exactly the d=61 Pell fundamental solution 1766319049+226153980*sqrt(61) -- checked directly in ground_truth.py. This is exactly the correction this crate's own numberfield progress log (2026-09-05) recorded against an initial brief's confusion of the unit with the Pell solution"
- },
- {
-  "id": "pg1-s3-order",
-  "area": null,
-  "module": "permgroup",
-  "tier": "core",
-  "description": "the group generated by a 3-cycle and a transposition on 3 points is S3, order 6",
-  "expected": {
-   "kind": "int",
-   "value": 6
-  },
-  "justification": "sympy.combinatorics: PermutationGroup([Permutation(0,1,2), Permutation(0,1)]).order() == 6"
- },
- {
-  "id": "pg2-c4-order",
-  "area": null,
-  "module": "permgroup",
-  "tier": "core",
-  "description": "the group generated by a single 4-cycle on 4 points is C4, order 4",
-  "expected": {
-   "kind": "int",
-   "value": 4
-  },
-  "justification": "sympy.combinatorics: PermutationGroup([Permutation(0,1,2,3)]).order() == 4"
- },
- {
-  "id": "hom1-circle-betti",
-  "area": null,
-  "module": "homology",
-  "tier": "core",
-  "description": "a hollow triangle (3 edges, no 2-face) is a circle S^1: b0=1, b1=1",
-  "expected": {
-   "kind": "betti",
-   "b0": 1,
-   "b1": 1
-  },
-  "justification": "cited: classical algebraic topology -- a circle's Betti numbers are b0=1 (connected), b1=1 (one independent 1-cycle); no direct SymPy equivalent for simplicial homology, so this is a cited fact rather than a sympy computation"
- },
- {
-  "id": "hom2-disk-betti",
-  "area": null,
-  "module": "homology",
-  "tier": "core",
-  "description": "a filled 2-simplex is contractible: b0=1, b1=0",
-  "expected": {
-   "kind": "betti",
-   "b0": 1,
-   "b1": 0
-  },
-  "justification": "cited: a filled simplex (a disk, topologically) is contractible, so all Betti numbers above b0 vanish"
- },
- {
-  "id": "prob1-poisson-convolution",
-  "area": null,
-  "module": "probability",
-  "tier": "core",
-  "description": "convolve_poisson(Poisson(2), Poisson(3)) is certified: Poisson(2)+Poisson(3) ~ Poisson(5)",
-  "expected": {
-   "kind": "bool",
-   "value": true,
-   "note": "certified"
-  },
-  "justification": "hand/sympy: verified via the probability-generating-function argument -- pgf(Poisson(lam)) = e^{lam(z-1)}, and pgfs of independent sums multiply, so pgf(Poisson(l1))*pgf(Poisson(l2)) = pgf(Poisson(l1+l2)) exactly (checked symbolically in ground_truth.py); classical convolution-of-independent-Poissons theorem"
- },
- {
-  "id": "prob2-poisson-totalmass",
-  "area": null,
-  "module": "probability",
-  "tier": "core",
-  "description": "Poisson(3)'s total mass sums to 1; certified since 2026-09-05 through infinite_sum's exponential-series route (was decline_expected before lane cas-sum-gaps)",
-  "expected": {
-   "kind": "bool",
-   "value": true,
-   "note": "sum_{k>=0} 3^k/k! * e^{-3} = 1; SymPy: summation(3**k/factorial(k)*exp(-3), (k, 0, oo)) == 1"
-  },
-  "justification": "hand/sympy: sum_k e^{-lam} lam^k/k! = e^{-lam}*e^{lam} = 1 is a true, classical identity (checked symbolically). Until 2026-09-05 this entry was decline_expected because lam^k/k! is not Gosper-summable; lane cas-sum-gaps taught infinite_sum the exponential series, the harness flagged the entry as a disagreement, and it was reclassified to core, which is the direction the corpus is meant to move."
- },
- {
-  "id": "prob3-binomial-mean",
-  "area": null,
-  "module": "probability",
-  "tier": "core",
-  "description": "E[Binomial(4,p)] = 4p, certified (finite enumerable support)",
-  "expected": {
-   "kind": "cas_identity",
-   "equal": true,
-   "expr": "4*p",
-   "note": "certified"
-  },
-  "justification": "hand/sympy: direct expansion of sum_k k*C(4,k)*p^k*(1-p)^(4-k) for k=0..4 simplifies to 4p (checked symbolically); classical binomial mean formula"
- },
- {
-  "id": "gb1-conic-unit-circle",
-  "area": null,
-  "module": "geometry_beyond",
-  "tier": "core",
-  "description": "the conic through 5 unit-circle points also passes through a held-out 6th unit-circle point",
-  "expected": {
-   "kind": "bool",
-   "value": true
-  },
-  "justification": "hand: all five input points and the sixth held-out point satisfy x^2+y^2-1=0 exactly, checked directly with exact rationals in ground_truth.py; since 5 points determine a conic uniquely (up to scale), a conic through 5 points of the unit circle IS the unit circle"
- },
- {
-  "id": "gb1-conic-unit-circle-ctrl",
-  "area": null,
-  "module": "geometry_beyond",
-  "tier": "core",
-  "description": "control: perturbing one of the five points off the unit circle, the recovered conic should NOT pass through the held-out 6th unit-circle point",
-  "control_of": "gb1-conic-unit-circle",
-  "expected": {
-   "kind": "bool",
-   "value": false
-  },
-  "justification": "hand: (3/5, 9/5) does not satisfy x^2+y^2=1 (9/25+81/25=90/25 != 1), so the resulting conic is generically a different curve, not the unit circle"
- },
- {
-  "id": "gb2-isometry-rotation",
-  "area": null,
-  "module": "geometry_beyond",
-  "tier": "core",
-  "description": "a 90-degree rotation preserves distance (certified)",
-  "expected": {
-   "kind": "bool",
-   "value": true
-  },
-  "justification": "hand: the rotation matrix [[0,-1],[1,0]] satisfies M*M^T=I (checked directly), i.e. it is orthogonal, which is exactly the condition that makes it distance-preserving"
- },
- {
-  "id": "gb2-isometry-shear-rejected",
-  "area": null,
-  "module": "geometry_beyond",
-  "tier": "core",
-  "description": "a shear [[1,1],[0,1]] is correctly rejected by Isometry::new as not orthogonal",
-  "control_of": "gb2-isometry-rotation",
-  "expected": {
-   "kind": "bool",
-   "value": true,
-   "note": "expected: construction is rejected (Err)"
-  },
-  "justification": "hand: the shear matrix's second column (1,1) has norm sqrt(2) != 1, so M*M^T != I, checked directly"
- },
- {
-  "id": "es1-gamma-integer",
-  "area": null,
-  "module": "enclosure_special",
-  "tier": "core",
-  "description": "Gamma(6) = 5! = 120, a certified exact enclosure",
-  "expected": {
-   "kind": "int",
-   "value": 120
-  },
-  "justification": "sympy: sp.gamma(6) == 120 (exact, no remainder at a positive integer argument)"
- },
- {
-  "id": "es2-erf-one",
-  "area": null,
-  "module": "enclosure_special",
-  "tier": "core",
-  "description": "erf(1) = 0.84270079294971486934...",
-  "expected": {
-   "kind": "decimal_prefix",
-   "prefix": "[0.84270079"
-  },
-  "justification": "sympy: sp.N(sp.erf(1), 20) == 0.84270079294971486934"
- },
- {
-  "id": "es2-erf-one-ctrl",
-  "area": null,
-  "module": "enclosure_special",
-  "tier": "core",
-  "description": "control: the erf(1) enclosure does not contain 0.9",
-  "control_of": "es2-erf-one",
-  "expected": {
-   "kind": "bool",
-   "value": true,
-   "note": "excludes 9/10"
-  },
-  "justification": "hand: erf(1)~=0.8427 is not within any correct enclosure containing 0.9"
- },
- {
-  "id": "es3-besselj0-zero",
-  "area": null,
-  "module": "enclosure_special",
-  "tier": "core",
-  "description": "J_0(0) = 1 exactly (only the k=0 series term survives at x=0)",
-  "expected": {
-   "kind": "int",
-   "value": 1
-  },
-  "justification": "sympy: sp.besselj(0, 0) == 1"
- },
- {
-  "id": "es4-krawczyk-circle-line",
-  "area": null,
-  "module": "enclosure_special",
-  "tier": "core",
-  "description": "the unit circle x^2+y^2-1=0 meets the diagonal y-x=0 at (1/sqrt(2), 1/sqrt(2)), a certified Krawczyk multivariate root enclosure",
-  "expected": {
-   "kind": "bool",
-   "value": true,
-   "note": "verify Ok; this crate's own enclosure_special test fixture (circle_and_line/near_the_root)"
-  },
-  "justification": "hand: substituting x=y into x^2+y^2=1 gives 2x^2=1, so x=y=1/sqrt(2); the starting box [7/10,18/25]^2 is checked by direct rational inequality in ground_truth.py"
- },
- {
-  "id": "fa1-radius-exact-geometric",
-  "area": "series",
-  "module": "fps_analytic",
-  "tier": "core",
-  "description": "1/(1-2x) has radius of convergence exactly 1/2",
-  "expected": {
-   "kind": "radius",
-   "form": "exact",
-   "value": "1/2"
-  },
-  "justification": "hand: the geometric series sum (2x)^n converges iff |2x|<1, i.e. |x|<1/2"
- },
- {
-  "id": "fa1-radius-exact-geometric-ctrl",
-  "area": "series",
-  "module": "fps_analytic",
-  "tier": "core",
-  "description": "control: 1/(1-3x) has a DIFFERENT exact radius, 1/3, not 1/2",
-  "control_of": "fa1-radius-exact-geometric",
-  "expected": {
-   "kind": "radius",
-   "form": "exact",
-   "value": "1/3",
-   "not_value": "1/2"
-  },
-  "justification": "hand: the geometric series sum (3x)^n converges iff |x|<1/3"
- },
- {
-  "id": "fa2-radius-algebraic-fibonacci",
-  "area": "series",
-  "module": "fps_analytic",
-  "tier": "core",
-  "description": "the Fibonacci generating function x/(1-x-x^2) has radius of convergence 1/phi ~= 0.6180339887498948",
-  "expected": {
-   "kind": "radius",
-   "form": "algebraic",
-   "value": "(sqrt(5)-1)/2",
-   "bracket": [
-    "0.608",
-    "0.628"
-   ]
-  },
-  "justification": "sympy: the smaller-modulus root of 1-x-x^2=0 is (sqrt(5)-1)/2 ~= 0.61803398874989484820 (sp.solve(1-x-x**2, x))"
- },
- {
-  "id": "fa3-coefficient-asymptotics-geometric",
-  "area": "series",
-  "module": "fps_analytic",
-  "tier": "core",
-  "description": "1/(1-2x)'s coefficients at n=4,8,16 are 2^n = 16, 256, 65536",
-  "expected": {
-   "kind": "coefficients",
-   "samples": [
-    4,
-    8,
-    16
-   ],
-   "values": [
-    "16",
-    "256",
-    "65536"
-   ]
-  },
-  "justification": "hand: 1/(1-2x) = sum 2^n x^n exactly, so a(n)=2^n"
- },
- {
-  "id": "nfi1-ideal-norm-principal",
-  "area": "number theory",
-  "module": "numberfield_ideals",
-  "tier": "core",
-  "description": "N((2+sqrt(-5))) = 2^2+5*1^2 = 9 in Z[sqrt(-5)]",
-  "expected": {
-   "kind": "int",
-   "value": 9
-  },
-  "justification": "hand: the norm of a principal ideal is the absolute value of the element norm; N(2+sqrt(-5))=4+5=9"
- },
- {
-  "id": "nfi2-prime-splitting-3-splits",
-  "area": "number theory",
-  "module": "numberfield_ideals",
-  "tier": "core",
-  "description": "3 splits in Q(sqrt(-5)) (discriminant -20): (-20/3)=1",
-  "expected": {
-   "kind": "splitting",
-   "value": "split"
-  },
-  "justification": "sympy: jacobi_symbol(-20, 3) == 1 (a quadratic residue mod 3)"
- },
- {
-  "id": "nfi2-prime-splitting-2-ramifies-ctrl",
-  "area": "number theory",
-  "module": "numberfield_ideals",
-  "tier": "core",
-  "description": "control: 2 RAMIFIES in the same field (2 divides the discriminant -20)",
-  "control_of": "nfi2-prime-splitting-3-splits",
-  "expected": {
-   "kind": "splitting",
-   "value": "ramified"
-  },
-  "justification": "hand: 2 | 20, so 2 is ramified by the standard criterion for quadratic fields"
- },
- {
-  "id": "nfi3-class-number-20",
-  "area": "number theory",
-  "module": "numberfield_ideals",
-  "tier": "core",
-  "description": "the class number of Q(sqrt(-5)) (discriminant -20) is 2, the textbook non-UFD example",
-  "expected": {
-   "kind": "int",
-   "value": 2
-  },
-  "justification": "hand: brute-force enumeration of reduced binary quadratic forms of discriminant -20 finds exactly (1,0,5) and (2,2,3); classical fact, 6=2*3=(1+sqrt(-5))(1-sqrt(-5))"
- },
- {
-  "id": "sy1-s4-sylow2-order",
-  "area": null,
-  "module": "permgroup_sylow",
-  "tier": "core",
-  "description": "S4's Sylow-2 subgroup has order 8 (|S4|=24=2^3*3), and there are n_2=3 of them",
-  "expected": {
-   "kind": "sylow",
-   "order": 8,
-   "count": 3
-  },
-  "justification": "cited: standard textbook fact (e.g. Dummit and Foote), S4's Sylow-2 is dihedral of order 8, n_2=3"
- },
- {
-  "id": "sy2-s4-sylow3-count",
-  "area": null,
-  "module": "permgroup_sylow",
-  "tier": "core",
-  "description": "S4's Sylow-3 subgroup has order 3, and there are n_3=4 of them",
-  "expected": {
-   "kind": "sylow",
-   "order": 3,
-   "count": 4
-  },
-  "justification": "cited: standard textbook fact, S4's four 3-Sylow subgroups are generated by its eight 3-cycles"
- },
- {
-  "id": "sy3-a4-normal-in-s4",
-  "area": null,
-  "module": "permgroup_sylow",
-  "tier": "core",
-  "description": "A4 (index 2 in S4) is normal in S4",
-  "expected": {
-   "kind": "bool",
-   "value": true
-  },
-  "justification": "cited: every subgroup of index 2 is normal (a classical, elementary group-theory fact)"
- },
- {
-  "id": "sy3-a4-normal-in-s4-ctrl",
-  "area": null,
-  "module": "permgroup_sylow",
-  "tier": "core",
-  "description": "control: a Sylow-3 subgroup of S4 (order 3, n_3=4>1) is NOT normal",
-  "control_of": "sy3-a4-normal-in-s4",
-  "expected": {
-   "kind": "bool",
-   "value": false
-  },
-  "justification": "cited: a Sylow p-subgroup is normal iff it is the unique one (n_p=1); here n_3=4"
- },
- {
-  "id": "hc1-rp2-torsion-f2",
-  "area": null,
-  "module": "homology_coefficients",
-  "tier": "core",
-  "description": "the 6-vertex real projective plane RP^2 has b1(F2)=1 (the Z/2 torsion of H_1 becomes a free F2 rank)",
-  "expected": {
-   "kind": "betti_by_ring",
-   "ring": "F2",
-   "b0": 1,
-   "b1": 1
-  },
-  "justification": "cited: the universal coefficient theorem, applied to H_1(RP^2;Z)=Z/2 (any algebraic topology text, e.g. Hatcher)"
- },
- {
-  "id": "hc1-rp2-torsion-q-ctrl",
-  "area": null,
-  "module": "homology_coefficients",
-  "tier": "core",
-  "description": "control: over Q the same complex has b1(Q)=0, DIFFERENT from b1(F2)=1",
-  "control_of": "hc1-rp2-torsion-f2",
-  "expected": {
-   "kind": "betti_by_ring",
-   "ring": "Q",
-   "b0": 1,
-   "b1": 0
-  },
-  "justification": "cited: torsion vanishes over a field of characteristic 0, so b1(Q)=b1(Z)=0 for RP^2"
- },
- {
-  "id": "hc2-circle-agrees-across-rings",
-  "area": null,
-  "module": "homology_coefficients",
-  "tier": "core",
-  "description": "a hollow triangle (circle S^1, torsion-free): b=(1,1) over F2 and Q alike",
-  "expected": {
-   "kind": "betti_by_ring",
-   "ring": "F2=Q",
-   "b0": 1,
-   "b1": 1
-  },
-  "justification": "cited: S^1 has no torsion, so H_*(S^1;R) is the same free module for every coefficient ring R"
- },
- {
-  "id": "hc3-sphere-boundary-tetrahedron",
-  "area": null,
-  "module": "homology_coefficients",
-  "tier": "core",
-  "description": "the boundary of a tetrahedron (S^2): b=(1,0,1) over F2 and Q alike",
-  "expected": {
-   "kind": "betti_by_ring",
-   "ring": "F2=Q",
-   "b0": 1,
-   "b1": 0,
-   "b2": 1
-  },
-  "justification": "hand: Euler characteristic 4-6+4=2=1-0+1; S^2 is torsion-free, classical"
- },
- {
-  "id": "co1-rp2-cohomology-torsion-shift",
-  "area": null,
-  "module": "homology_cohomology",
-  "tier": "core",
-  "description": "RP^2's cohomology has its torsion SHIFTED UP one degree: H^2(RP^2;Z) carries the Z/2, not H^1",
-  "expected": {
-   "kind": "cohomology_torsion",
-   "degree": 2,
-   "value": [
-    2
-   ]
-  },
-  "justification": "cited: the universal coefficient theorem for cohomology (Ext shifts torsion up one degree; any algebraic topology text)"
- },
- {
-  "id": "co1-rp2-cohomology-torsion-not-at-h1-ctrl",
-  "area": null,
-  "module": "homology_cohomology",
-  "tier": "core",
-  "description": "control: H^1(RP^2;Z) carries NO torsion (the shift moves it to H^2, not H^1)",
-  "control_of": "co1-rp2-cohomology-torsion-shift",
-  "expected": {
-   "kind": "cohomology_torsion",
-   "degree": 1,
-   "value": []
-  },
-  "justification": "cited: same UCT-for-cohomology argument, evaluated at the degree where torsion does NOT appear"
- },
- {
-  "id": "co2-circle-cohomology",
-  "area": null,
-  "module": "homology_cohomology",
-  "tier": "core",
-  "description": "the hollow triangle (circle): cohomology free ranks (1,1), no torsion",
-  "expected": {
-   "kind": "cohomology_free_rank",
-   "b0": 1,
-   "b1": 1,
-   "torsion": []
-  },
-  "justification": "cited: torsion-free case, cohomology agrees with homology exactly"
- },
- {
-  "id": "co3-sphere-cohomology",
-  "area": null,
-  "module": "homology_cohomology",
-  "tier": "core",
-  "description": "the boundary of a tetrahedron (S^2): cohomology free ranks (1,0,1), no torsion",
-  "expected": {
-   "kind": "cohomology_free_rank",
-   "b0": 1,
-   "b1": 0,
-   "b2": 1,
-   "torsion": []
-  },
-  "justification": "hand: S^2 is torsion-free, classical"
- },
- {
-  "id": "ind1-circle-identity-isomorphism",
-  "area": null,
-  "module": "homology_induced",
-  "tier": "core",
-  "description": "the identity map on the hollow triangle (circle) induces an isomorphism on H_0 and H_1: rank 1 each",
-  "expected": {
-   "kind": "induced_rank",
-   "b0": 1,
-   "b1": 1
-  },
-  "justification": "hand: the identity chain map is trivially an isomorphism on every homology group"
- },
- {
-  "id": "ind2-circle-collapse-to-edge",
-  "area": null,
-  "module": "homology_induced",
-  "tier": "core",
-  "description": "control: the SAME circle collapsed onto a single edge forces the H_1 induced map to rank 0 (the target H_1 is 0)",
-  "control_of": "ind1-circle-identity-isomorphism",
-  "expected": {
-   "kind": "induced_rank",
-   "b0": 1,
-   "b1": 0
-  },
-  "justification": "hand: a linear map into the zero group is necessarily rank 0, regardless of the source"
- },
- {
-  "id": "ind3-is-simplicial-rejects-missing-face",
-  "area": null,
-  "module": "homology_induced",
-  "tier": "core",
-  "description": "is_simplicial correctly rejects a vertex map whose image edge is not a face of the codomain (two isolated points, no edge)",
-  "expected": {
-   "kind": "bool",
-   "value": false
-  },
-  "justification": "hand: by definition, a simplicial map's image of every face must be a face of the codomain; two isolated points have no edge"
- },
- {
-  "id": "per1-circle-then-fill-h1-bar",
-  "area": null,
-  "module": "homology_persistent",
-  "tier": "core",
-  "description": "the textbook 'circle then fill' persistence example: exactly one H_1 bar, born at the closing edge (index 5), dying when the triangle is filled (index 6)",
-  "expected": {
-   "kind": "persistence_bar",
-   "dim": 1,
-   "birth": 5,
-   "death": 6
-  },
-  "justification": "cited: the standard persistent-homology worked example (any TDA text/tutorial)"
- },
- {
-  "id": "per2-circle-then-fill-h0-essential",
-  "area": null,
-  "module": "homology_persistent",
-  "tier": "core",
-  "description": "the same filtration: 1 essential H_0 bar (the final connected component), 2 finite H_0 bars (the two vertex merges)",
-  "expected": {
-   "kind": "persistence_h0",
-   "essential": 1,
-   "finite": 2
-  },
-  "justification": "hand: three isolated points merge pairwise as the first two edges are added, leaving one surviving component"
- },
- {
-  "id": "per3-prefix-before-fill-lacks-triangle",
-  "area": null,
-  "module": "homology_persistent",
-  "tier": "core",
-  "description": "before the closing edge (m=5), the prefix complex has no 2-simplex",
-  "expected": {
-   "kind": "bool",
-   "value": false,
-   "note": "contains_face([0,1,2])"
-  },
-  "justification": "hand: the triangle 2-simplex is only added at filtration index 6, past m=5"
- },
- {
-  "id": "per3-prefix-after-fill-has-triangle-ctrl",
-  "area": null,
-  "module": "homology_persistent",
-  "tier": "core",
-  "description": "control: at m=7 (the full filtration), the prefix complex DOES contain the triangle",
-  "control_of": "per3-prefix-before-fill-lacks-triangle",
-  "expected": {
-   "kind": "bool",
-   "value": true,
-   "note": "contains_face([0,1,2])"
-  },
-  "justification": "hand: the full filtration includes all 7 entries, including the triangle"
- },
- {
-  "id": "qeb1-huge-coefficient-exists",
-  "area": null,
-  "module": "qe_big",
-  "tier": "core",
-  "description": "exists x. x^2-10^50=0, true (witnessed by 10^25), past i128's ~1.7e38 range",
-  "expected": {
-   "kind": "bool",
-   "value": true
-  },
-  "justification": "hand: (10^25)^2 = 10^50 exactly, verified with Python's exact big integers"
- },
- {
-  "id": "qeb1-huge-coefficient-exists-ctrl",
-  "area": null,
-  "module": "qe_big",
-  "tier": "core",
-  "description": "control: exists x. x^2+10^50=0, false (x^2>=0 always, sum with a huge positive constant never zero)",
-  "control_of": "qeb1-huge-coefficient-exists",
-  "expected": {
-   "kind": "bool",
-   "value": false
-  },
-  "justification": "hand: x^2 is nonnegative for every real x, so x^2+10^50 >= 10^50 > 0 always"
- },
- {
-  "id": "qeb2-huge-coefficient-forall",
-  "area": null,
-  "module": "qe_big",
-  "tier": "core",
-  "description": "forall x. x^2+10^50>0, true (always)",
-  "expected": {
-   "kind": "bool",
-   "value": true
-  },
-  "justification": "hand: same nonnegativity argument as the exists control, universally quantified"
- },
- {
-  "id": "qeb3-huge-coefficient-inequality",
-  "area": null,
-  "module": "qe_big",
-  "tier": "core",
-  "description": "exists x. x-10^50>0, true (witnessed by any x>10^50), a huge LINEAR coefficient",
-  "expected": {
-   "kind": "bool",
-   "value": true
-  },
-  "justification": "hand: e.g. x=10^50+1 satisfies x-10^50=1>0"
- },
- {
-  "id": "dnf1-true-via-first-disjunct",
-  "area": null,
-  "module": "qe_dnf",
-  "tier": "core",
-  "description": "exists x. (x-2=0) OR (x+2=0), true (witnessed by the first disjunct at x=2)",
-  "expected": {
-   "kind": "bool",
-   "value": true
-  },
-  "justification": "hand: x=2 satisfies x-2=0"
- },
- {
-  "id": "dnf2-false-no-real-root",
-  "area": null,
-  "module": "qe_dnf",
-  "tier": "core",
-  "description": "exists x. x^2+1=0 (a single, unsatisfiable disjunct), false",
-  "expected": {
-   "kind": "bool",
-   "value": false
-  },
-  "justification": "hand: x^2+1>=1>0 for every real x"
- },
- {
-  "id": "dnf3-conjunction-unsat",
-  "area": null,
-  "module": "qe_dnf",
-  "tier": "core",
-  "description": "exists x. x>0 AND x<0 (a conjunction within one disjunct), false, the empty intersection",
-  "expected": {
-   "kind": "bool",
-   "value": false
-  },
-  "justification": "hand: no real number is both positive and negative"
- },
- {
-  "id": "dnf3-conjunction-sat-ctrl",
-  "area": null,
-  "module": "qe_dnf",
-  "tier": "core",
-  "description": "control: exists x. x>0 AND x<5, true (e.g. x=1), the same conjunction shape but satisfiable",
-  "control_of": "dnf3-conjunction-unsat",
-  "expected": {
-   "kind": "bool",
-   "value": true
-  },
-  "justification": "hand: x=1 satisfies 0<x<5"
- },
- {
-  "id": "bv1-circle-boundary-closed",
-  "area": null,
-  "module": "qe_bivariate",
-  "tier": "core",
-  "description": "the unit circle's boundary y^2+x^2-1=0: exists y holds exactly on the CLOSED interval x in [-1,1]",
-  "expected": {
-   "kind": "interval",
-   "value": "[-1, 1]"
-  },
-  "justification": "hand: y^2=1-x^2 has a real solution iff 1-x^2>=0, i.e. -1<=x<=1"
- },
- {
-  "id": "bv1-exterior-tautology-ctrl",
-  "area": null,
-  "module": "qe_bivariate",
-  "tier": "core",
-  "description": "control: the SAME polynomial with > instead of =: exists y. y^2+x^2-1>0 is a TAUTOLOGY, the whole line",
-  "control_of": "bv1-circle-boundary-closed",
-  "expected": {
-   "kind": "interval",
-   "value": "(-inf, inf)"
-  },
-  "justification": "hand: y is unbounded, so y^2 can always exceed 1-x^2 for any fixed x"
- },
- {
-  "id": "bv2-disk-interior-open",
-  "area": null,
-  "module": "qe_bivariate",
-  "tier": "core",
-  "description": "the open unit disk y^2+x^2-1<0: exists y holds on the OPEN interval x in (-1,1)",
-  "expected": {
-   "kind": "interval",
-   "value": "(-1, 1)"
-  },
-  "justification": "this crate's own eliminate_y doctest (qe_bivariate.rs): y^2+x^2-1<0 decides x in (-1,1); hand-confirmed: y^2<1-x^2 solvable iff 1-x^2>0"
- },
- {
-  "id": "bv3-parabola-halfline",
-  "area": null,
-  "module": "qe_bivariate",
-  "tier": "core",
-  "description": "the parabola y^2-x=0: exists y holds exactly on x>=0",
-  "expected": {
-   "kind": "interval",
-   "value": "[0, inf)"
-  },
-  "justification": "hand: y=sqrt(x) is real iff x>=0"
- },
- {
-  "id": "prob4-poisson-symbolic-totalmass",
-  "area": null,
-  "module": "probability",
-  "tier": "core",
-  "description": "Poisson(lambda) with SYMBOLIC lambda: total mass certifies to exactly 1",
-  "expected": {
-   "kind": "cas_identity",
-   "equal": true,
-   "expr": "1",
-   "note": "certified, symbolic lambda"
-  },
-  "justification": "sympy: sp.summation(l**k/sp.factorial(k), (k, 0, sp.oo)) == sp.exp(l), so e^{-l}*e^{l}=1 for symbolic l"
- },
- {
-  "id": "prob5-poisson-symbolic-mean",
-  "area": null,
-  "module": "probability",
-  "tier": "core",
-  "description": "E[Poisson(lambda)] = lambda, symbolic",
-  "expected": {
-   "kind": "cas_identity",
-   "equal": true,
-   "expr": "lam",
-   "note": "certified, symbolic lambda"
-  },
-  "justification": "cited: the Poisson distribution's mean equals its rate parameter (standard probability fact)"
- },
- {
-  "id": "prob6-poisson-symbolic-variance",
-  "area": null,
-  "module": "probability",
-  "tier": "core",
-  "description": "Var[Poisson(lambda)] = lambda, symbolic",
-  "expected": {
-   "kind": "cas_identity",
-   "equal": true,
-   "expr": "lam",
-   "note": "certified, symbolic lambda"
-  },
-  "justification": "cited: the Poisson distribution's variance equals its mean (equidispersion, standard probability fact)"
- },
- {
-  "id": "prob6-poisson-symbolic-variance-ctrl",
-  "area": null,
-  "module": "probability",
-  "tier": "core",
-  "description": "control: the variance claim is NOT 2*lambda (a plausible-looking wrong answer)",
-  "control_of": "prob6-poisson-symbolic-variance",
-  "expected": {
-   "kind": "cas_identity",
-   "equal": false,
-   "expr": "2*lam"
-  },
-  "justification": "hand: Var[Poisson(lambda)]=lambda != 2*lambda for any lambda != 0"
- },
- {
-  "id": "prob4-exponential-symbolic-mgf",
-  "area": null,
-  "module": "probability",
-  "tier": "core",
-  "description": "M(t) = lam/(lam - t) for Exponential(lam) at symbolic lam AND symbolic t, decided under exactly the condition `lam - t > 0` (t < lam); added 2026-09-05 by lane cas-symbolic-mgf. The entry DISAGREES if the condition ever silently disappears, because lam/(lam - t) is false for t >= lam -- the integral diverges there and no mgf exists.",
-  "expected": {
-   "kind": "bool",
-   "value": true,
-   "note": "decided lam/(lam - t) under exactly `lam - t > 0`"
-  },
-  "justification": "hand/sympy: E[e^{tX}] = int_0^inf lam*e^{(t-lam)x} dx converges iff t < lam, to lam/(lam-t); SymPy's integrate(lam*exp(-lam*x)*exp(t*x), (x, 0, oo)) returns exactly this under the assumption re(lam-t) > 0. Classical: the exponential mgf and its domain of existence."
- },
- {
-  "id": "prob5-normal-symbolic-mgf",
-  "area": null,
-  "module": "probability",
-  "tier": "core",
-  "description": "M(t) = exp(mu*t + 4*t^2/2) for Normal(mu, 4) at symbolic mu and symbolic t, certified UNCONDITIONALLY (the variance is a concrete rational, so its sign is decided rather than recorded); reached by completing the square, since improper_integrate(e^{-x^2 + t*x}) declines. Added 2026-09-05 by lane cas-symbolic-mgf.",
-  "expected": {
-   "kind": "bool",
-   "value": true,
-   "note": "certified exp(mu*t + 4*t^2/2), unconditionally"
-  },
-  "justification": "hand/sympy: the classical Gaussian mgf exp(mu*t + sigma^2*t^2/2); SymPy: integrate(exp(t*x)*exp(-(x-mu)**2/8)/sqrt(8*pi), (x, -oo, oo)) simplifies to exp(mu*t + 2*t**2) = exp(mu*t + 4*t**2/2). Checked symbolically."
- },
- {
-  "id": "prob6-normal-negative-variance",
-  "area": null,
-  "module": "probability",
-  "tier": "decline_expected",
-  "control_of": "prob5-normal-symbolic-mgf",
-  "description": "control: Normal(mu, -1)'s mgf must DECLINE. The square still completes, but the shifted Gaussian points upward and has no erf antiderivative, so there is nothing to certify. Guards the completing-the-square reduction against becoming a formula-printer.",
-  "expected": {
-   "kind": "decline",
-   "note": "a negative variance is not a probability distribution; no mgf exists"
-  },
-  "justification": "hand: Normal(mu, sigma^2) requires sigma^2 > 0. With sigma^2 = -1 the density is not integrable (int exp(+u^2/2) du diverges), so no mgf exists and any certified answer would be wrong."
- },
- {
-  "id": "prob7-geometric-symbolic-p",
-  "area": null,
-  "module": "probability",
-  "tier": "decline_expected",
-  "description": "E[Geometric(p)] at symbolic p still declines, and NOT for a missing hypothesis channel: gosper_sum returns None on a symbolic ratio before any convergence question is asked, so there is no value to attach `0 < p < 1` to. The decline_expected counterpart to prob4, marking where the conditional-integration mechanism does and does not reach.",
-  "expected": {
-   "kind": "decline",
-   "note": "gosper_sum has no antidifference for a symbolic geometric ratio"
-  },
-  "justification": "hand/sympy: the mathematical fact E[Geometric(p)] = 1/p is true for 0 < p <= 1 (SymPy: summation(k*p*(1-p)**(k-1), (k, 1, oo)) == 1/p under that assumption); this entry records that OUR summation route declines, not that the identity is false. Reclassify to core if gosper_sum ever gains a symbolic-ratio path."
- }
+  {"id": "d1-cubic", "area": "differentiate", "module": null, "tier": "core",
+   "description": "d/dx(x^3 - 2x + 1) = 3x^2 - 2",
+   "expected": {"kind": "cas_identity", "equal": true, "expr": "3*x^2 - 2"},
+   "justification": "sympy: sp.diff(x**3-2*x+1, x) == 3*x**2-2"},
+  {"id": "d1-cubic-ctrl", "area": "differentiate", "module": null, "tier": "core",
+   "description": "control: d/dx(x^3-2x+1) != 3x^2-2+1",
+   "control_of": "d1-cubic",
+   "expected": {"kind": "cas_identity", "equal": false, "expr": "3*x^2 - 2 + 1"},
+   "justification": "hand: the derivative is exactly 3x^2-2, not 3x^2-1"},
+  {"id": "d2-product", "area": "differentiate", "module": null, "tier": "core",
+   "description": "d/dx(x*sin(x)) = sin(x) + x*cos(x)",
+   "expected": {"kind": "cas_identity", "equal": true, "expr": "sin(x) + x*cos(x)"},
+   "justification": "sympy: sp.diff(x*sin(x), x) == sin(x)+x*cos(x) (product rule)"},
+  {"id": "d2-product-ctrl", "area": "differentiate", "module": null, "tier": "core",
+   "description": "control: d/dx(x*sin(x)) != sin(x) - x*cos(x)",
+   "control_of": "d2-product",
+   "expected": {"kind": "cas_identity", "equal": false, "expr": "sin(x) - x*cos(x)"},
+   "justification": "hand: wrong sign on the second product-rule term"},
+  {"id": "d3-chain", "area": "differentiate", "module": null, "tier": "core",
+   "description": "d/dx(sin(x^2)) = 2x*cos(x^2)",
+   "expected": {"kind": "cas_identity", "equal": true, "expr": "2*x*cos(x^2)"},
+   "justification": "sympy: sp.diff(sp.sin(x**2), x) == 2*x*cos(x**2) (chain rule)"},
+  {"id": "d3-chain-ctrl", "area": "differentiate", "module": null, "tier": "core",
+   "description": "control: d/dx(sin(x^2)) != 2*cos(x^2) (missing chain-rule factor)",
+   "control_of": "d3-chain",
+   "expected": {"kind": "cas_identity", "equal": false, "expr": "2*cos(x^2)"},
+   "justification": "hand: dropping the inner-derivative factor x is the classic chain-rule mistake"},
+  {"id": "i1-def-poly", "area": "integrate", "module": null, "tier": "core",
+   "description": "int_0^1 (3x^2+2x) dx = 2",
+   "expected": {"kind": "cas_identity", "equal": true, "expr": "2"},
+   "justification": "sympy: sp.integrate(3*x**2+2*x, (x,0,1)) == 2"},
+  {"id": "i2-def-log", "area": "integrate", "module": null, "tier": "core",
+   "description": "int_1^e (1/x) dx = 1",
+   "expected": {"kind": "cas_identity", "equal": true, "expr": "1"},
+   "justification": "sympy: sp.integrate(1/x, (x,1,sp.E)) == 1"},
+  {"id": "i3-indef-trig", "area": "integrate", "module": null, "tier": "core",
+   "description": "integrate(x*sin(x), x) = sin(x) - x*cos(x) (+C)",
+   "expected": {"kind": "cas_identity", "equal": true, "expr": "sin(x) - x*cos(x)"},
+   "justification": "sympy: sp.integrate(x*sp.sin(x), x) == -x*cos(x)+sin(x)"},
+  {"id": "i3-indef-trig-ctrl", "area": "integrate", "module": null, "tier": "core",
+   "description": "control: the antiderivative of x*sin(x) is not x*cos(x)+sin(x)",
+   "control_of": "i3-indef-trig",
+   "expected": {"kind": "cas_identity", "equal": false, "expr": "x*cos(x) + sin(x)"},
+   "justification": "hand: wrong sign on the x*cos(x) term"},
+  {"id": "i4-gaussian-erf", "area": "integrate", "module": null, "tier": "core",
+   "description": "integrate(e^{-x^2}, x) = (sqrt(pi)/2)*erf(x), certified. FOUND EMPIRICALLY: a first draft of this entry assumed axeyum-cas would decline (no elementary closed form exists, Liouville), but it has a dedicated Gaussian-integral route to erf and gets it right",
+   "expected": {"kind": "cas_identity", "equal": true, "expr": "(sqrt(pi)/2)*erf(x)"},
+   "justification": "sympy: sp.integrate(sp.exp(-x**2), x) also returns sqrt(pi)*erf(x)/2; hand: d/dx[(sqrt(pi)/2) erf(x)] = (sqrt(pi)/2)*(2/sqrt(pi))*e^{-x^2} = e^{-x^2}, confirming correctness. erf itself is a real (non-elementary) special function -- Liouville's theorem says no ELEMENTARY antiderivative exists, which is still true and not contradicted; axeyum-cas's route simply reaches outside the elementary functions, same as sympy"},
+  {"id": "l1-removable", "area": "limit", "module": null, "tier": "core",
+   "description": "lim x->2 (x^2-4)/(x-2) = 4",
+   "expected": {"kind": "cas_identity", "equal": true, "expr": "4"},
+   "justification": "sympy: sp.limit((x**2-4)/(x-2), x, 2) == 4"},
+  {"id": "l2-sinc", "area": "limit", "module": null, "tier": "decline_expected",
+   "description": "lim x->0 sin(x)/x = 1, but axeyum-cas's limit() has no rule for a transcendental 0/0 ratio",
+   "expected": {"kind": "decline"},
+   "justification": "sympy confirms the mathematical value is 1 (classical); source reading of crates/axeyum-cas/src/lib.rs's limit() dispatcher found no rule covering a Div of two transcendental heads (only rational-function Div, continuous-head-of-rational-inner composition, additive linearity, and several +-infinity rules) -- expected to decline, not to wrongly answer"},
+  {"id": "l3-cos-quad", "area": "limit", "module": null, "tier": "decline_expected",
+   "description": "lim x->0 (1-cos x)/x^2 = 1/2, same reasoning as l2-sinc",
+   "expected": {"kind": "decline"},
+   "justification": "sympy confirms the value is 1/2 (classical); same limit()-dispatcher reading as l2-sinc -- a transcendental 0/0 Div is outside every implemented rule"},
+  {"id": "l4-e-definition", "area": "limit", "module": null, "tier": "core",
+   "description": "lim x->+inf (1+1/x)^x = e, written as exp(x*ln(1+1/x)) since CasExpr::Pow only takes integer exponents",
+   "expected": {"kind": "cas_identity", "equal": true, "expr": "exp(1)"},
+   "justification": "sympy: sp.limit((1+1/x)**x, x, sp.oo) == E (the classical definition of e); axeyum-cas's limit() dispatcher explicitly names this exact example (exp(x ln(1+1/x)) -> e) in its own source comment for the exp-composition rule"},
+  {"id": "s1-exp", "area": "series", "module": null, "tier": "core",
+   "description": "series(exp(x), x, 4) = 1+x+x^2/2+x^3/6+x^4/24",
+   "expected": {"kind": "cas_identity", "equal": true, "expr": "1 + x + x^2/2 + x^3/6 + x^4/24"},
+   "justification": "sympy: sp.series(sp.exp(x), x, 0, 5) matches; also axeyum-cas's own series() rustdoc doctest uses exactly this example"},
+  {"id": "s2-sin", "area": "series", "module": null, "tier": "core",
+   "description": "series(sin(x), x, 5) = x - x^3/6 + x^5/120",
+   "expected": {"kind": "cas_identity", "equal": true, "expr": "x - x^3/6 + x^5/120"},
+   "justification": "sympy: sp.series(sp.sin(x), x, 0, 6) matches"},
+  {"id": "s3-ln", "area": "series", "module": null, "tier": "core",
+   "description": "series(ln(1+x), x, 4) = x - x^2/2 + x^3/3 - x^4/4",
+   "expected": {"kind": "cas_identity", "equal": true, "expr": "x - x^2/2 + x^3/3 - x^4/4"},
+   "justification": "sympy: sp.series(sp.log(1+x), x, 0, 5) matches"},
+  {"id": "s4-sqrt-branch", "area": "series", "module": null, "tier": "decline_expected",
+   "description": "series(sqrt(x), x, 4) about x=0: sqrt is not analytic at a branch point, so no Taylor series exists",
+   "expected": {"kind": "decline"},
+   "justification": "cited: classical complex-analysis fact (sqrt has a branch point at 0); axeyum-cas's series() rustdoc says it returns 'the Taylor polynomial... no certificate' and is expected to decline outside its supported fragment, which does not include a genuine branch point"},
+  {"id": "sum1-linear", "area": "sum", "module": null, "tier": "core",
+   "description": "sum_polynomial(n, n) = sum_{k=0}^{n-1} k = (n^2-n)/2",
+   "expected": {"kind": "cas_identity", "equal": true, "expr": "(n^2 - n)/2"},
+   "justification": "sympy: sp.summation(k, (k,0,n-1)) simplifies to n*(n-1)/2 = (n^2-n)/2"},
+  {"id": "sum2-quadratic", "area": "sum", "module": null, "tier": "core",
+   "description": "sum_polynomial(n^2, n) = sum_{k=0}^{n-1} k^2 = (2n^3-3n^2+n)/6",
+   "expected": {"kind": "cas_identity", "equal": true, "expr": "(2*n^3 - 3*n^2 + n)/6"},
+   "justification": "sympy: sp.summation(k**2, (k,0,n-1)) simplifies to (2n^3-3n^2+n)/6"},
+  {"id": "sum3-gosper", "area": "sum", "module": null, "tier": "core",
+   "description": "gosper_sum(1/(k(k+1)), k): the antidifference S(k) with S(k+1)-S(k)=1/(k(k+1)) is S(k) = -1/k",
+   "expected": {"kind": "cas_identity", "equal": true, "expr": "-1/k"},
+   "justification": "hand proof (also checked symbolically in ground_truth.py): -1/(k+1) - (-1/k) = 1/k - 1/(k+1) = 1/(k(k+1)), clearing denominators gives -k+(k+1)=1"},
+  {"id": "solve1-rational-roots", "area": "solve", "module": null, "tier": "core",
+   "description": "roots of x^2-3x+2 = {1, 2}",
+   "expected": {"kind": "root_set", "roots": ["1", "2"]},
+   "justification": "sympy: sp.solve(x**2-3*x+2, x) == [1, 2]"},
+  {"id": "solve2-irrational-roots", "area": "solve", "module": null, "tier": "core",
+   "description": "roots of x^2-2 = {-sqrt(2), sqrt(2)}",
+   "expected": {"kind": "root_set", "roots": ["-sqrt(2)", "sqrt(2)"]},
+   "justification": "sympy: sp.solve(x**2-2, x) == [-sqrt(2), sqrt(2)]"},
+  {"id": "solve3-quintic", "area": "solve", "module": null, "tier": "decline_expected",
+   "description": "x^5-x-1 has no radical solution: Abel-Ruffini via its Galois group. FOUND EMPIRICALLY: solve()'s own rustdoc documents that irreducible cubic-or-higher factors are OMITTED from its result, not asserted root-free, so the correct expectation is Some([]) (an honestly incomplete list), not None -- a first draft of this entry wrongly expected None and was corrected against the read source",
+   "expected": {"kind": "root_set", "roots": [], "note": "Some(empty), documented as 'omitted', not a claim of no roots"},
+   "justification": "sympy: sp.Poly(x**5-x-1,x).is_irreducible is True, and sp.polys.numberfields.galoisgroups.galois_group finds a Galois group of order 120 (= |S5|), which is not solvable; by Abel-Ruffini there is no radical formula for the roots. Standard textbook example (e.g. Stewart, 'Galois Theory'). axeyum-cas's solve() rustdoc: 'complex roots and irreducible cubics+ omitted' -- so Some([]) is the documented, honest (not wrong) result"},
+  {"id": "f1-quadratic", "area": "factor", "module": null, "tier": "core",
+   "description": "factor(x^2-3x+2) = (x-1)(x-2)",
+   "expected": {"kind": "cas_identity", "equal": true, "expr": "(x-1)*(x-2)"},
+   "justification": "sympy: sp.factor(x**2-3*x+2) == (x-1)*(x-2)"},
+  {"id": "f1-quadratic-ctrl", "area": "factor", "module": null, "tier": "core",
+   "description": "control: factor(x^2-3x+2) != (x-1)(x-3)",
+   "control_of": "f1-quadratic",
+   "expected": {"kind": "cas_identity", "equal": false, "expr": "(x-1)*(x-3)"},
+   "justification": "hand: (x-1)(x-3) = x^2-4x+3, not x^2-3x+2"},
+  {"id": "f2-quartic", "area": "factor", "module": null, "tier": "core",
+   "description": "factor_expr(x^4-1) = (x-1)(x+1)(x^2+1)",
+   "expected": {"kind": "cas_identity", "equal": true, "expr": "(x-1)*(x+1)*(x^2+1)"},
+   "justification": "sympy: sp.factor(x**4-1) == (x-1)*(x+1)*(x**2+1)"},
+  {"id": "f2-quartic-ctrl", "area": "factor", "module": null, "tier": "core",
+   "description": "control: factor_expr(x^4-1) != (x-1)(x+1)(x^2-1)",
+   "control_of": "f2-quartic",
+   "expected": {"kind": "cas_identity", "equal": false, "expr": "(x-1)*(x+1)*(x^2-1)"},
+   "justification": "hand: (x-1)(x+1)(x^2-1) = (x^2-1)^2 = x^4-2x^2+1, not x^4-1"},
+  {"id": "f3-multivariate", "area": "factor", "module": null, "tier": "decline_expected",
+   "description": "x*y^2+x^2*y-x-y = (x+y)(xy-1), a genuinely bivariate (non-quadratic-in-one-variable) factorization",
+   "expected": {"kind": "decline"},
+   "justification": "sympy: sp.factor(x*y**2+x**2*y-x-y) == (x+y)*(x*y-1), confirmed correct and non-trivial; source reading of factor()'s dispatch in crates/axeyum-cas/src/lib.rs shows only a univariate route plus two special bivariate forms (a bivariate quadratic in one variable, and sums/differences of like powers) -- this cubic-total-degree bivariate polynomial matches neither, so None is expected (docs/math-department/13-computer-algebra.md chair 04)"},
+  {"id": "e1-radical", "area": "simplify/equal", "module": null, "tier": "core",
+   "description": "sqrt(2)*sqrt(2) = 2",
+   "expected": {"kind": "cas_identity", "equal": true, "expr": "2"},
+   "justification": "sympy: sp.nsimplify(sp.sqrt(2)*sp.sqrt(2)-2) == 0; this exact identity is also demonstrated in the crate's own cas_tour.rs example"},
+  {"id": "e1-radical-cross-base", "area": "simplify/equal", "module": null, "tier": "core",
+   "description": "sqrt(2)*sqrt(3) = sqrt(6): the zero-test's atom algebra used to treat sqrt(2), sqrt(3), sqrt(6) as three independent atoms and certify a confidently WRONG equal=false (file 13 item 1 wave two, lane cas-witness). FIXED: found stale during item 10 wave two (2026-09-05) -- the Rust harness's e1_radical_cross_base already expects and gets equal=true (a plain agree, tier core); this entry's tier/fields were still recorded as the old known_defect and are corrected here to match.",
+   "expected": {"kind": "cas_identity", "equal": true, "expr": "true (as real numbers)"},
+   "justification": "sympy: sp.simplify(sp.sqrt(2)*sp.sqrt(3)-sp.sqrt(6)) == 0, confirming the identity is true; the crate now certifies it too"},
+  {"id": "e2-poly-identity", "area": "simplify/equal", "module": null, "tier": "core",
+   "description": "(x+1)^2 = x^2+2x+1",
+   "expected": {"kind": "cas_identity", "equal": true, "expr": "x^2 + 2*x + 1"},
+   "justification": "sympy: sp.expand((x+1)**2 - (x**2+2*x+1)) == 0"},
+  {"id": "e2-poly-identity-ctrl", "area": "simplify/equal", "module": null, "tier": "core",
+   "description": "control: (x+1)^2 != x^2+2x+2",
+   "control_of": "e2-poly-identity",
+   "expected": {"kind": "cas_identity", "equal": false, "expr": "x^2 + 2*x + 2"},
+   "justification": "hand: (x+1)^2 = x^2+2x+1, off by the constant term"},
+  {"id": "e3-trig-pythagorean", "area": "simplify/equal", "module": null, "tier": "decline_expected",
+   "description": "sin(x)^2+cos(x)^2 = 1 is transcendentally true but not a polynomial identity over the atoms sin(x), cos(x) unless the zero-test's atom algebra specifically knows the Pythagorean identity",
+   "expected": {"kind": "decline"},
+   "justification": "sympy: sp.simplify(sp.sin(x)**2+sp.cos(x)**2-1) == 0, confirming the identity is true; equal()'s zero-test is a polynomial normal-form check over opaque transcendental atoms (read in crates/axeyum-cas/src/lib.rs) with no documented Pythagorean-identity rewrite rule, so Unknown is expected. A certified True here is a genuine, welcome capability finding -- see the harness's printed actual value, not a failure of this entry"},
+  {"id": "la1-det", "area": "linear algebra", "module": null, "tier": "core",
+   "description": "det([[2,0],[0,3]]) = 6",
+   "expected": {"kind": "cas_identity", "equal": true, "expr": "6"},
+   "justification": "sympy: sp.Matrix([[2,0],[0,3]]).det() == 6; also demonstrated in cas_tour.rs"},
+  {"id": "la2-eigen", "area": "linear algebra", "module": null, "tier": "core",
+   "description": "eigenvalues of [[2,0],[0,3]] are {2, 3}",
+   "expected": {"kind": "eigenvalue_set", "eigenvalues": ["2", "3"]},
+   "justification": "sympy: sp.Matrix([[2,0],[0,3]]).eigenvects() gives eigenvalues {2,3} (diagonal matrix, trivial)"},
+  {"id": "la3-minpoly-jordan", "area": "linear algebra", "module": null, "tier": "core",
+   "description": "minimal_polynomial([[2,1],[0,2]]) = (L-2)^2, since this Jordan block is NOT diagonalizable",
+   "expected": {"kind": "cas_identity", "equal": true, "expr": "(L-2)^2"},
+   "justification": "hand/sympy: (A-2I) != 0 but (A-2I)^2 = 0 for A=[[2,1],[0,2]] (checked directly with sympy Matrix arithmetic in ground_truth.py); classical fact that a non-diagonalizable matrix's minimal polynomial has a repeated root"},
+  {"id": "la3-minpoly-jordan-ctrl", "area": "linear algebra", "module": null, "tier": "core",
+   "description": "control: minimal_polynomial([[2,1],[0,2]]) != (L-2) (the naive characteristic-polynomial-degree-1 guess)",
+   "control_of": "la3-minpoly-jordan",
+   "expected": {"kind": "cas_identity", "equal": false, "expr": "L-2"},
+   "justification": "hand: (A-2I) != 0 directly, so L-2 does not annihilate A"},
+  {"id": "nt1-mersenne-prime", "area": "number theory", "module": null, "tier": "core",
+   "description": "is_prime(2^31-1) = true (a Mersenne prime)",
+   "expected": {"kind": "bool", "value": true},
+   "justification": "hand: trial division up to sqrt(2^31-1) in ground_truth.py finds no factor; also demonstrated in cas_tour.rs"},
+  {"id": "nt1-mersenne-prime-ctrl", "area": "number theory", "module": null, "tier": "core",
+   "description": "control: is_prime(2^31-3) = false (2147483645 = 5 * 429496729)",
+   "control_of": "nt1-mersenne-prime",
+   "expected": {"kind": "bool", "value": false},
+   "justification": "hand: 2147483645 mod 5 == 0, an explicit witness factor"},
+  {"id": "nt2-factorize", "area": "number theory", "module": null, "tier": "core",
+   "description": "factorize(360) = 2^3 * 3^2 * 5",
+   "expected": {"kind": "factorization", "factors": [[2, 3], [3, 2], [5, 1]]},
+   "justification": "hand: trial-division factorization in ground_truth.py; also demonstrated in cas_tour.rs"},
+  {"id": "nt3-legendre", "area": "number theory", "module": null, "tier": "core",
+   "description": "legendre_symbol(3, 7) = -1 (3 is a quadratic non-residue mod 7)",
+   "expected": {"kind": "int", "value": -1},
+   "justification": "sympy: sp.legendre_symbol(3,7) == -1; hand: squares mod 7 are {0,1,2,4}, 3 is not among them"},
+  {"id": "nt4-pell", "area": "number theory", "module": null, "tier": "core",
+   "description": "the Pell equation x^2-61y^2=1's fundamental solution is (1766319049, 226153980)",
+   "expected": {"kind": "int_pair", "value": [1766319049, 226153980]},
+   "justification": "hand: 1766319049^2 - 61*226153980^2 = 1, checked with exact Python integers; cited as the classic large-fundamental-solution example (Weil, 'Number Theory: An Approach Through History')"},
+  {"id": "ode1-homog", "area": "ODE", "module": null, "tier": "core",
+   "description": "dsolve_homogeneous([1,0,1], x) solves y''+y=0; substituting the returned solution back must zero-test to 0",
+   "expected": {"kind": "cas_identity", "equal": true, "expr": "0", "note": "residual y''+y after substitution"},
+   "justification": "sympy: dsolve(f(x).diff(x,2)+f(x), f(x)) then substituting back and simplifying gives residual 0"},
+  {"id": "ode2-inhomog", "area": "ODE", "module": null, "tier": "core",
+   "description": "dsolve_inhomogeneous([1,1], x, x) solves y'+y=x; substituting the returned solution back must zero-test to 0",
+   "expected": {"kind": "cas_identity", "equal": true, "expr": "0", "note": "residual y'+y-x after substitution"},
+   "justification": "sympy: dsolve(f(x).diff(x)+f(x)-x, f(x)) then substituting back and simplifying gives residual 0"},
+  {"id": "ode3-tan-forcing", "area": "ODE", "module": null, "tier": "decline_expected",
+   "description": "y'+y=tan(x): the integrating-factor route needs integrate(e^x tan(x), x), which is not elementary",
+   "expected": {"kind": "decline"},
+   "justification": "sympy: sp.integrate(sp.exp(x)*sp.tan(x), x) does not reduce to an elementary closed form (returns an unevaluated Integral); axeyum-cas's dsolve_inhomogeneous's non-polynomial first-order route is the certified integrating-factor method, which needs exactly this integral, so None is expected"},
+  {"id": "tr1-laplace-t", "area": "transforms", "module": null, "tier": "core",
+   "description": "laplace_transform(t, t, s) = 1/s^2",
+   "expected": {"kind": "cas_identity", "equal": true, "expr": "1/s^2"},
+   "justification": "sympy: sp.laplace_transform(t, t, s, noconds=True) == 1/s**2; also the exact example in laplace_transform's own rustdoc doctest"},
+  {"id": "tr2-z-geometric", "area": "transforms", "module": null, "tier": "core",
+   "description": "z_transform(2^n, n, z) = z/(z-2)",
+   "expected": {"kind": "cas_identity", "equal": true, "expr": "z/(z-2)"},
+   "justification": "cited: standard unilateral Z-transform table entry Z{a^n} = z/(z-a); z_transform's own rustdoc names this exact family"},
+  {"id": "tr3-laplace-decline", "area": "transforms", "module": null, "tier": "decline_expected",
+   "description": "laplace_transform(tan(t), t, s): tan(t) (written sin(t)/cos(t)) is outside the documented product-with-polynomial fragment",
+   "expected": {"kind": "decline"},
+   "justification": "cited: tan(t) has poles on the positive real axis so its naive Laplace integral does not converge to an elementary closed form; laplace_transform's own rustdoc lists its supported fragment as t^k*e^{at}, t^k*sin(bt), t^k*cos(bt), t^k*Bessel, and polynomials -- a ratio like sin(t)/cos(t) matches none of those. There is also no Fourier transform in this crate at all (chair 03, docs/math-department/13-computer-algebra.md)"},
+  {"id": "fps1-fibonacci", "area": "series", "module": "fps", "tier": "core",
+   "description": "guess_linear_recurrence recovers a_n=a_{n-1}+a_{n-2} from 10 Fibonacci terms",
+   "expected": {"kind": "recurrence", "order": 2, "coefficients": ["1", "1"]},
+   "justification": "hand: Fibonacci's defining recurrence, checked directly on the given terms in ground_truth.py"},
+  {"id": "fps2-primes-decline", "area": "series", "module": "fps", "tier": "decline_expected",
+   "description": "guess_linear_recurrence on the first 13 primes (2..41). CORRECTED: a first draft used only 10 primes, which let an order-5 fit trivially overfit (Berlekamp-Massey can always fit floor(len/2) unknowns to len data points, so with only 10 terms an order-5 'recurrence' is an uninformative artifact, not a finding) -- fixed to match this crate's own regression test's 13-term sample, which is large enough that the true minimal complexity exceeds floor(13/2)=6 and the module honestly declines",
+   "expected": {"kind": "decline"},
+   "justification": "cited: the primes admit no constant-coefficient linear recurrence of any order (a linearly-recursive integer sequence is eventually a sum of terms c*r^n*poly(n) for algebraic r, unlike the primes); also directly recorded in this crate's own fps progress log (docs/math-department/13-computer-algebra.md, 2026-09-05): 'recovers Fibonacci, Lucas, Padovan; declines on the primes', and its own regression test crates/axeyum-cas/src/fps.rs::berlekamp_massey_declines_on_the_primes_which_satisfy_no_short_recurrence uses exactly these 13 terms"},
+  {"id": "enc1-pi", "area": null, "module": "enclosure", "tier": "core",
+   "description": "enclose_constant(\"pi\", 64), verified, decimal(6) matches pi's known digits",
+   "expected": {"kind": "decimal_prefix", "prefix": "[3.141592"},
+   "justification": "cited: OEIS A000796 (pi = 3.14159265358979323846...); also the exact example in enclose_constant's own rustdoc doctest"},
+  {"id": "enc2-gamma-decline", "area": null, "module": "enclosure", "tier": "decline_expected",
+   "description": "enclose_constant(\"gamma\", 40): the Euler-Mascheroni constant is not a recognized name",
+   "expected": {"kind": "decline"},
+   "justification": "source reading of enclosure.rs's enclose_constant: only \"pi\", \"e\", \"ln2\"/\"ln 2\", \"sqrt2\"/\"sqrt 2\" are recognized, with a catch-all None arm; matches docs/math-department/13-computer-algebra.md's item-2 progress-log note that 'gamma, Bessel, erf and non-integer powers still decline'"},
+  {"id": "qe1-exists-sqrt2", "area": null, "module": "qe", "tier": "core",
+   "description": "exists x. x^2-2=0 is true (self-verified by eliminate)",
+   "expected": {"kind": "bool", "value": true},
+   "justification": "hand: sqrt(2) is a real witness; sympy: sp.solve(x**2-2,x) is non-empty"},
+  {"id": "qe2-forall-positive", "area": null, "module": "qe", "tier": "core",
+   "description": "forall x. x^2+1>0 is true (self-verified by eliminate_forall)",
+   "expected": {"kind": "bool", "value": true},
+   "justification": "hand: a real square plus 1 is always positive; sympy confirms x^2+1 is never non-positive for real x"},
+  {"id": "qe3-large-coefficient", "area": null, "module": "qe", "tier": "core",
+   "description": "exists x. x^2-10^30=0 is true (witnessed by 10^15). FOUND EMPIRICALLY: a first draft of this entry (id qe3-overflow-decline) expected None, citing this crate's own 2026-09-05 progress log for item 7's first slice ('x^2 - 10^30 returns Unknown because the reused root isolation is still i128'). Mid-development this corpus's own `git merge main` picked up item 7's wave-two fix (qe's Atom coefficients widened from i128-backed Rational to BigRational), which fixed exactly this overflow -- re-running the harness after that merge found this entry flip from a documented decline to a correct, certified decision, a genuine capability gain the corpus caught happening in real time",
+   "expected": {"kind": "bool", "value": true, "note": "certified"},
+   "justification": "hand: 10^15 squared is exactly 10^30, a valid witness, so the true answer is True. This crate's fix for the previously-documented i128 overflow (docs/math-department/13-computer-algebra.md item 7 wave two) is what makes eliminate() now decide it"},
+  {"id": "nf1-two-squares-41", "area": "number theory", "module": "numberfield", "tier": "core",
+   "description": "two_squares(41): 41 = 4^2+5^2 (Fermat's two-squares theorem, 41 prime and 1 mod 4)",
+   "expected": {"kind": "two_squares", "represented": true},
+   "justification": "hand: 4^2+5^2=41, checked directly; 41 is prime and 41 mod 4 = 1"},
+  {"id": "nf2-two-squares-43-refuted", "area": "number theory", "module": "numberfield", "tier": "core",
+   "description": "two_squares(43): 43 is prime and 3 mod 4 (odd exponent), so NOT a sum of two squares",
+   "control_of": "nf1-two-squares-41",
+   "expected": {"kind": "two_squares", "represented": false},
+   "justification": "hand: 43 is prime, 43 mod 4 = 3; exhaustive check in ground_truth.py over a,b in [0,7] finds no representation"},
+  {"id": "nf3-fundamental-unit-61", "area": "number theory", "module": "numberfield", "tier": "core",
+   "description": "the fundamental unit of Z[sqrt(61)] is 29718+3805*sqrt(61)",
+   "expected": {"kind": "unit", "a": 29718, "b": 3805},
+   "justification": "hand: |29718^2-61*3805^2|=1 (norm -1), and squaring this unit gives exactly the d=61 Pell fundamental solution 1766319049+226153980*sqrt(61) -- checked directly in ground_truth.py. This is exactly the correction this crate's own numberfield progress log (2026-09-05) recorded against an initial brief's confusion of the unit with the Pell solution"},
+  {"id": "pg1-s3-order", "area": null, "module": "permgroup", "tier": "core",
+   "description": "the group generated by a 3-cycle and a transposition on 3 points is S3, order 6",
+   "expected": {"kind": "int", "value": 6},
+   "justification": "sympy.combinatorics: PermutationGroup([Permutation(0,1,2), Permutation(0,1)]).order() == 6"},
+  {"id": "pg2-c4-order", "area": null, "module": "permgroup", "tier": "core",
+   "description": "the group generated by a single 4-cycle on 4 points is C4, order 4",
+   "expected": {"kind": "int", "value": 4},
+   "justification": "sympy.combinatorics: PermutationGroup([Permutation(0,1,2,3)]).order() == 4"},
+  {"id": "hom1-circle-betti", "area": null, "module": "homology", "tier": "core",
+   "description": "a hollow triangle (3 edges, no 2-face) is a circle S^1: b0=1, b1=1",
+   "expected": {"kind": "betti", "b0": 1, "b1": 1},
+   "justification": "cited: classical algebraic topology -- a circle's Betti numbers are b0=1 (connected), b1=1 (one independent 1-cycle); no direct SymPy equivalent for simplicial homology, so this is a cited fact rather than a sympy computation"},
+  {"id": "hom2-disk-betti", "area": null, "module": "homology", "tier": "core",
+   "description": "a filled 2-simplex is contractible: b0=1, b1=0",
+   "expected": {"kind": "betti", "b0": 1, "b1": 0},
+   "justification": "cited: a filled simplex (a disk, topologically) is contractible, so all Betti numbers above b0 vanish"},
+  {"id": "prob1-poisson-convolution", "area": null, "module": "probability", "tier": "core",
+   "description": "convolve_poisson(Poisson(2), Poisson(3)) is certified: Poisson(2)+Poisson(3) ~ Poisson(5)",
+   "expected": {"kind": "bool", "value": true, "note": "certified"},
+   "justification": "hand/sympy: verified via the probability-generating-function argument -- pgf(Poisson(lam)) = e^{lam(z-1)}, and pgfs of independent sums multiply, so pgf(Poisson(l1))*pgf(Poisson(l2)) = pgf(Poisson(l1+l2)) exactly (checked symbolically in ground_truth.py); classical convolution-of-independent-Poissons theorem"},
+  {"id": "prob2-poisson-totalmass", "area": null, "module": "probability", "tier": "core",
+   "description": "Poisson(3)'s total mass sums to 1; certified since 2026-09-05 through infinite_sum's exponential-series route (was decline_expected before lane cas-sum-gaps)",
+   "expected": {"kind": "bool", "value": true, "note": "sum_{k>=0} 3^k/k! * e^{-3} = 1; SymPy: summation(3**k/factorial(k)*exp(-3), (k, 0, oo)) == 1"},
+   "justification": "hand/sympy: sum_k e^{-lam} lam^k/k! = e^{-lam}*e^{lam} = 1 is a true, classical identity (checked symbolically). Until 2026-09-05 this entry was decline_expected because lam^k/k! is not Gosper-summable; lane cas-sum-gaps taught infinite_sum the exponential series, the harness flagged the entry as a disagreement, and it was reclassified to core, which is the direction the corpus is meant to move."},
+  {"id": "prob3-binomial-mean", "area": null, "module": "probability", "tier": "core",
+   "description": "E[Binomial(4,p)] = 4p, certified (finite enumerable support)",
+   "expected": {"kind": "cas_identity", "equal": true, "expr": "4*p", "note": "certified"},
+   "justification": "hand/sympy: direct expansion of sum_k k*C(4,k)*p^k*(1-p)^(4-k) for k=0..4 simplifies to 4p (checked symbolically); classical binomial mean formula"},
+  {"id": "gb1-conic-unit-circle", "area": null, "module": "geometry_beyond", "tier": "core",
+   "description": "the conic through 5 unit-circle points also passes through a held-out 6th unit-circle point",
+   "expected": {"kind": "bool", "value": true},
+   "justification": "hand: all five input points and the sixth held-out point satisfy x^2+y^2-1=0 exactly, checked directly with exact rationals in ground_truth.py; since 5 points determine a conic uniquely (up to scale), a conic through 5 points of the unit circle IS the unit circle"},
+  {"id": "gb1-conic-unit-circle-ctrl", "area": null, "module": "geometry_beyond", "tier": "core",
+   "description": "control: perturbing one of the five points off the unit circle, the recovered conic should NOT pass through the held-out 6th unit-circle point",
+   "control_of": "gb1-conic-unit-circle",
+   "expected": {"kind": "bool", "value": false},
+   "justification": "hand: (3/5, 9/5) does not satisfy x^2+y^2=1 (9/25+81/25=90/25 != 1), so the resulting conic is generically a different curve, not the unit circle"},
+  {"id": "gb2-isometry-rotation", "area": null, "module": "geometry_beyond", "tier": "core",
+   "description": "a 90-degree rotation preserves distance (certified)",
+   "expected": {"kind": "bool", "value": true},
+   "justification": "hand: the rotation matrix [[0,-1],[1,0]] satisfies M*M^T=I (checked directly), i.e. it is orthogonal, which is exactly the condition that makes it distance-preserving"},
+  {"id": "gb2-isometry-shear-rejected", "area": null, "module": "geometry_beyond", "tier": "core",
+   "description": "a shear [[1,1],[0,1]] is correctly rejected by Isometry::new as not orthogonal",
+   "control_of": "gb2-isometry-rotation",
+   "expected": {"kind": "bool", "value": true, "note": "expected: construction is rejected (Err)"},
+   "justification": "hand: the shear matrix's second column (1,1) has norm sqrt(2) != 1, so M*M^T != I, checked directly"},
+  {"id": "es1-gamma-integer", "area": null, "module": "enclosure_special", "tier": "core",
+   "description": "Gamma(6) = 5! = 120, a certified exact enclosure",
+   "expected": {"kind": "int", "value": 120},
+   "justification": "sympy: sp.gamma(6) == 120 (exact, no remainder at a positive integer argument)"},
+  {"id": "es2-erf-one", "area": null, "module": "enclosure_special", "tier": "core",
+   "description": "erf(1) = 0.84270079294971486934...",
+   "expected": {"kind": "decimal_prefix", "prefix": "[0.84270079"},
+   "justification": "sympy: sp.N(sp.erf(1), 20) == 0.84270079294971486934"},
+  {"id": "es2-erf-one-ctrl", "area": null, "module": "enclosure_special", "tier": "core",
+   "description": "control: the erf(1) enclosure does not contain 0.9",
+   "control_of": "es2-erf-one",
+   "expected": {"kind": "bool", "value": true, "note": "excludes 9/10"},
+   "justification": "hand: erf(1)~=0.8427 is not within any correct enclosure containing 0.9"},
+  {"id": "es3-besselj0-zero", "area": null, "module": "enclosure_special", "tier": "core",
+   "description": "J_0(0) = 1 exactly (only the k=0 series term survives at x=0)",
+   "expected": {"kind": "int", "value": 1},
+   "justification": "sympy: sp.besselj(0, 0) == 1"},
+  {"id": "es4-krawczyk-circle-line", "area": null, "module": "enclosure_special", "tier": "core",
+   "description": "the unit circle x^2+y^2-1=0 meets the diagonal y-x=0 at (1/sqrt(2), 1/sqrt(2)), a certified Krawczyk multivariate root enclosure",
+   "expected": {"kind": "bool", "value": true, "note": "verify Ok; this crate's own enclosure_special test fixture (circle_and_line/near_the_root)"},
+   "justification": "hand: substituting x=y into x^2+y^2=1 gives 2x^2=1, so x=y=1/sqrt(2); the starting box [7/10,18/25]^2 is checked by direct rational inequality in ground_truth.py"},
+  {"id": "fa1-radius-exact-geometric", "area": "series", "module": "fps_analytic", "tier": "core",
+   "description": "1/(1-2x) has radius of convergence exactly 1/2",
+   "expected": {"kind": "radius", "form": "exact", "value": "1/2"},
+   "justification": "hand: the geometric series sum (2x)^n converges iff |2x|<1, i.e. |x|<1/2"},
+  {"id": "fa1-radius-exact-geometric-ctrl", "area": "series", "module": "fps_analytic", "tier": "core",
+   "description": "control: 1/(1-3x) has a DIFFERENT exact radius, 1/3, not 1/2",
+   "control_of": "fa1-radius-exact-geometric",
+   "expected": {"kind": "radius", "form": "exact", "value": "1/3", "not_value": "1/2"},
+   "justification": "hand: the geometric series sum (3x)^n converges iff |x|<1/3"},
+  {"id": "fa2-radius-algebraic-fibonacci", "area": "series", "module": "fps_analytic", "tier": "core",
+   "description": "the Fibonacci generating function x/(1-x-x^2) has radius of convergence 1/phi ~= 0.6180339887498948",
+   "expected": {"kind": "radius", "form": "algebraic", "value": "(sqrt(5)-1)/2", "bracket": ["0.608", "0.628"]},
+   "justification": "sympy: the smaller-modulus root of 1-x-x^2=0 is (sqrt(5)-1)/2 ~= 0.61803398874989484820 (sp.solve(1-x-x**2, x))"},
+  {"id": "fa3-coefficient-asymptotics-geometric", "area": "series", "module": "fps_analytic", "tier": "core",
+   "description": "1/(1-2x)'s coefficients at n=4,8,16 are 2^n = 16, 256, 65536",
+   "expected": {"kind": "coefficients", "samples": [4, 8, 16], "values": ["16", "256", "65536"]},
+   "justification": "hand: 1/(1-2x) = sum 2^n x^n exactly, so a(n)=2^n"},
+  {"id": "nfi1-ideal-norm-principal", "area": "number theory", "module": "numberfield_ideals", "tier": "core",
+   "description": "N((2+sqrt(-5))) = 2^2+5*1^2 = 9 in Z[sqrt(-5)]",
+   "expected": {"kind": "int", "value": 9},
+   "justification": "hand: the norm of a principal ideal is the absolute value of the element norm; N(2+sqrt(-5))=4+5=9"},
+  {"id": "nfi2-prime-splitting-3-splits", "area": "number theory", "module": "numberfield_ideals", "tier": "core",
+   "description": "3 splits in Q(sqrt(-5)) (discriminant -20): (-20/3)=1",
+   "expected": {"kind": "splitting", "value": "split"},
+   "justification": "sympy: jacobi_symbol(-20, 3) == 1 (a quadratic residue mod 3)"},
+  {"id": "nfi2-prime-splitting-2-ramifies-ctrl", "area": "number theory", "module": "numberfield_ideals", "tier": "core",
+   "description": "control: 2 RAMIFIES in the same field (2 divides the discriminant -20)",
+   "control_of": "nfi2-prime-splitting-3-splits",
+   "expected": {"kind": "splitting", "value": "ramified"},
+   "justification": "hand: 2 | 20, so 2 is ramified by the standard criterion for quadratic fields"},
+  {"id": "nfi3-class-number-20", "area": "number theory", "module": "numberfield_ideals", "tier": "core",
+   "description": "the class number of Q(sqrt(-5)) (discriminant -20) is 2, the textbook non-UFD example",
+   "expected": {"kind": "int", "value": 2},
+   "justification": "hand: brute-force enumeration of reduced binary quadratic forms of discriminant -20 finds exactly (1,0,5) and (2,2,3); classical fact, 6=2*3=(1+sqrt(-5))(1-sqrt(-5))"},
+  {"id": "sy1-s4-sylow2-order", "area": null, "module": "permgroup_sylow", "tier": "core",
+   "description": "S4's Sylow-2 subgroup has order 8 (|S4|=24=2^3*3), and there are n_2=3 of them",
+   "expected": {"kind": "sylow", "order": 8, "count": 3},
+   "justification": "cited: standard textbook fact (e.g. Dummit and Foote), S4's Sylow-2 is dihedral of order 8, n_2=3"},
+  {"id": "sy2-s4-sylow3-count", "area": null, "module": "permgroup_sylow", "tier": "core",
+   "description": "S4's Sylow-3 subgroup has order 3, and there are n_3=4 of them",
+   "expected": {"kind": "sylow", "order": 3, "count": 4},
+   "justification": "cited: standard textbook fact, S4's four 3-Sylow subgroups are generated by its eight 3-cycles"},
+  {"id": "sy3-a4-normal-in-s4", "area": null, "module": "permgroup_sylow", "tier": "core",
+   "description": "A4 (index 2 in S4) is normal in S4",
+   "expected": {"kind": "bool", "value": true},
+   "justification": "cited: every subgroup of index 2 is normal (a classical, elementary group-theory fact)"},
+  {"id": "sy3-a4-normal-in-s4-ctrl", "area": null, "module": "permgroup_sylow", "tier": "core",
+   "description": "control: a Sylow-3 subgroup of S4 (order 3, n_3=4>1) is NOT normal",
+   "control_of": "sy3-a4-normal-in-s4",
+   "expected": {"kind": "bool", "value": false},
+   "justification": "cited: a Sylow p-subgroup is normal iff it is the unique one (n_p=1); here n_3=4"},
+  {"id": "hc1-rp2-torsion-f2", "area": null, "module": "homology_coefficients", "tier": "core",
+   "description": "the 6-vertex real projective plane RP^2 has b1(F2)=1 (the Z/2 torsion of H_1 becomes a free F2 rank)",
+   "expected": {"kind": "betti_by_ring", "ring": "F2", "b0": 1, "b1": 1},
+   "justification": "cited: the universal coefficient theorem, applied to H_1(RP^2;Z)=Z/2 (any algebraic topology text, e.g. Hatcher)"},
+  {"id": "hc1-rp2-torsion-q-ctrl", "area": null, "module": "homology_coefficients", "tier": "core",
+   "description": "control: over Q the same complex has b1(Q)=0, DIFFERENT from b1(F2)=1",
+   "control_of": "hc1-rp2-torsion-f2",
+   "expected": {"kind": "betti_by_ring", "ring": "Q", "b0": 1, "b1": 0},
+   "justification": "cited: torsion vanishes over a field of characteristic 0, so b1(Q)=b1(Z)=0 for RP^2"},
+  {"id": "hc2-circle-agrees-across-rings", "area": null, "module": "homology_coefficients", "tier": "core",
+   "description": "a hollow triangle (circle S^1, torsion-free): b=(1,1) over F2 and Q alike",
+   "expected": {"kind": "betti_by_ring", "ring": "F2=Q", "b0": 1, "b1": 1},
+   "justification": "cited: S^1 has no torsion, so H_*(S^1;R) is the same free module for every coefficient ring R"},
+  {"id": "hc3-sphere-boundary-tetrahedron", "area": null, "module": "homology_coefficients", "tier": "core",
+   "description": "the boundary of a tetrahedron (S^2): b=(1,0,1) over F2 and Q alike",
+   "expected": {"kind": "betti_by_ring", "ring": "F2=Q", "b0": 1, "b1": 0, "b2": 1},
+   "justification": "hand: Euler characteristic 4-6+4=2=1-0+1; S^2 is torsion-free, classical"},
+  {"id": "co1-rp2-cohomology-torsion-shift", "area": null, "module": "homology_cohomology", "tier": "core",
+   "description": "RP^2's cohomology has its torsion SHIFTED UP one degree: H^2(RP^2;Z) carries the Z/2, not H^1",
+   "expected": {"kind": "cohomology_torsion", "degree": 2, "value": [2]},
+   "justification": "cited: the universal coefficient theorem for cohomology (Ext shifts torsion up one degree; any algebraic topology text)"},
+  {"id": "co1-rp2-cohomology-torsion-not-at-h1-ctrl", "area": null, "module": "homology_cohomology", "tier": "core",
+   "description": "control: H^1(RP^2;Z) carries NO torsion (the shift moves it to H^2, not H^1)",
+   "control_of": "co1-rp2-cohomology-torsion-shift",
+   "expected": {"kind": "cohomology_torsion", "degree": 1, "value": []},
+   "justification": "cited: same UCT-for-cohomology argument, evaluated at the degree where torsion does NOT appear"},
+  {"id": "co2-circle-cohomology", "area": null, "module": "homology_cohomology", "tier": "core",
+   "description": "the hollow triangle (circle): cohomology free ranks (1,1), no torsion",
+   "expected": {"kind": "cohomology_free_rank", "b0": 1, "b1": 1, "torsion": []},
+   "justification": "cited: torsion-free case, cohomology agrees with homology exactly"},
+  {"id": "co3-sphere-cohomology", "area": null, "module": "homology_cohomology", "tier": "core",
+   "description": "the boundary of a tetrahedron (S^2): cohomology free ranks (1,0,1), no torsion",
+   "expected": {"kind": "cohomology_free_rank", "b0": 1, "b1": 0, "b2": 1, "torsion": []},
+   "justification": "hand: S^2 is torsion-free, classical"},
+  {"id": "ind1-circle-identity-isomorphism", "area": null, "module": "homology_induced", "tier": "core",
+   "description": "the identity map on the hollow triangle (circle) induces an isomorphism on H_0 and H_1: rank 1 each",
+   "expected": {"kind": "induced_rank", "b0": 1, "b1": 1},
+   "justification": "hand: the identity chain map is trivially an isomorphism on every homology group"},
+  {"id": "ind2-circle-collapse-to-edge", "area": null, "module": "homology_induced", "tier": "core",
+   "description": "control: the SAME circle collapsed onto a single edge forces the H_1 induced map to rank 0 (the target H_1 is 0)",
+   "control_of": "ind1-circle-identity-isomorphism",
+   "expected": {"kind": "induced_rank", "b0": 1, "b1": 0},
+   "justification": "hand: a linear map into the zero group is necessarily rank 0, regardless of the source"},
+  {"id": "ind3-is-simplicial-rejects-missing-face", "area": null, "module": "homology_induced", "tier": "core",
+   "description": "is_simplicial correctly rejects a vertex map whose image edge is not a face of the codomain (two isolated points, no edge)",
+   "expected": {"kind": "bool", "value": false},
+   "justification": "hand: by definition, a simplicial map's image of every face must be a face of the codomain; two isolated points have no edge"},
+  {"id": "per1-circle-then-fill-h1-bar", "area": null, "module": "homology_persistent", "tier": "core",
+   "description": "the textbook 'circle then fill' persistence example: exactly one H_1 bar, born at the closing edge (index 5), dying when the triangle is filled (index 6)",
+   "expected": {"kind": "persistence_bar", "dim": 1, "birth": 5, "death": 6},
+   "justification": "cited: the standard persistent-homology worked example (any TDA text/tutorial)"},
+  {"id": "per2-circle-then-fill-h0-essential", "area": null, "module": "homology_persistent", "tier": "core",
+   "description": "the same filtration: 1 essential H_0 bar (the final connected component), 2 finite H_0 bars (the two vertex merges)",
+   "expected": {"kind": "persistence_h0", "essential": 1, "finite": 2},
+   "justification": "hand: three isolated points merge pairwise as the first two edges are added, leaving one surviving component"},
+  {"id": "per3-prefix-before-fill-lacks-triangle", "area": null, "module": "homology_persistent", "tier": "core",
+   "description": "before the closing edge (m=5), the prefix complex has no 2-simplex",
+   "expected": {"kind": "bool", "value": false, "note": "contains_face([0,1,2])"},
+   "justification": "hand: the triangle 2-simplex is only added at filtration index 6, past m=5"},
+  {"id": "per3-prefix-after-fill-has-triangle-ctrl", "area": null, "module": "homology_persistent", "tier": "core",
+   "description": "control: at m=7 (the full filtration), the prefix complex DOES contain the triangle",
+   "control_of": "per3-prefix-before-fill-lacks-triangle",
+   "expected": {"kind": "bool", "value": true, "note": "contains_face([0,1,2])"},
+   "justification": "hand: the full filtration includes all 7 entries, including the triangle"},
+  {"id": "qeb1-huge-coefficient-exists", "area": null, "module": "qe_big", "tier": "core",
+   "description": "exists x. x^2-10^50=0, true (witnessed by 10^25), past i128's ~1.7e38 range",
+   "expected": {"kind": "bool", "value": true},
+   "justification": "hand: (10^25)^2 = 10^50 exactly, verified with Python's exact big integers"},
+  {"id": "qeb1-huge-coefficient-exists-ctrl", "area": null, "module": "qe_big", "tier": "core",
+   "description": "control: exists x. x^2+10^50=0, false (x^2>=0 always, sum with a huge positive constant never zero)",
+   "control_of": "qeb1-huge-coefficient-exists",
+   "expected": {"kind": "bool", "value": false},
+   "justification": "hand: x^2 is nonnegative for every real x, so x^2+10^50 >= 10^50 > 0 always"},
+  {"id": "qeb2-huge-coefficient-forall", "area": null, "module": "qe_big", "tier": "core",
+   "description": "forall x. x^2+10^50>0, true (always)",
+   "expected": {"kind": "bool", "value": true},
+   "justification": "hand: same nonnegativity argument as the exists control, universally quantified"},
+  {"id": "qeb3-huge-coefficient-inequality", "area": null, "module": "qe_big", "tier": "core",
+   "description": "exists x. x-10^50>0, true (witnessed by any x>10^50), a huge LINEAR coefficient",
+   "expected": {"kind": "bool", "value": true},
+   "justification": "hand: e.g. x=10^50+1 satisfies x-10^50=1>0"},
+  {"id": "dnf1-true-via-first-disjunct", "area": null, "module": "qe_dnf", "tier": "core",
+   "description": "exists x. (x-2=0) OR (x+2=0), true (witnessed by the first disjunct at x=2)",
+   "expected": {"kind": "bool", "value": true},
+   "justification": "hand: x=2 satisfies x-2=0"},
+  {"id": "dnf2-false-no-real-root", "area": null, "module": "qe_dnf", "tier": "core",
+   "description": "exists x. x^2+1=0 (a single, unsatisfiable disjunct), false",
+   "expected": {"kind": "bool", "value": false},
+   "justification": "hand: x^2+1>=1>0 for every real x"},
+  {"id": "dnf3-conjunction-unsat", "area": null, "module": "qe_dnf", "tier": "core",
+   "description": "exists x. x>0 AND x<0 (a conjunction within one disjunct), false, the empty intersection",
+   "expected": {"kind": "bool", "value": false},
+   "justification": "hand: no real number is both positive and negative"},
+  {"id": "dnf3-conjunction-sat-ctrl", "area": null, "module": "qe_dnf", "tier": "core",
+   "description": "control: exists x. x>0 AND x<5, true (e.g. x=1), the same conjunction shape but satisfiable",
+   "control_of": "dnf3-conjunction-unsat",
+   "expected": {"kind": "bool", "value": true},
+   "justification": "hand: x=1 satisfies 0<x<5"},
+  {"id": "bv1-circle-boundary-closed", "area": null, "module": "qe_bivariate", "tier": "core",
+   "description": "the unit circle's boundary y^2+x^2-1=0: exists y holds exactly on the CLOSED interval x in [-1,1]",
+   "expected": {"kind": "interval", "value": "[-1, 1]"},
+   "justification": "hand: y^2=1-x^2 has a real solution iff 1-x^2>=0, i.e. -1<=x<=1"},
+  {"id": "bv1-exterior-tautology-ctrl", "area": null, "module": "qe_bivariate", "tier": "core",
+   "description": "control: the SAME polynomial with > instead of =: exists y. y^2+x^2-1>0 is a TAUTOLOGY, the whole line",
+   "control_of": "bv1-circle-boundary-closed",
+   "expected": {"kind": "interval", "value": "(-inf, inf)"},
+   "justification": "hand: y is unbounded, so y^2 can always exceed 1-x^2 for any fixed x"},
+  {"id": "bv2-disk-interior-open", "area": null, "module": "qe_bivariate", "tier": "core",
+   "description": "the open unit disk y^2+x^2-1<0: exists y holds on the OPEN interval x in (-1,1)",
+   "expected": {"kind": "interval", "value": "(-1, 1)"},
+   "justification": "this crate's own eliminate_y doctest (qe_bivariate.rs): y^2+x^2-1<0 decides x in (-1,1); hand-confirmed: y^2<1-x^2 solvable iff 1-x^2>0"},
+  {"id": "bv3-parabola-halfline", "area": null, "module": "qe_bivariate", "tier": "core",
+   "description": "the parabola y^2-x=0: exists y holds exactly on x>=0",
+   "expected": {"kind": "interval", "value": "[0, inf)"},
+   "justification": "hand: y=sqrt(x) is real iff x>=0"},
+  {"id": "prob4-poisson-symbolic-totalmass", "area": null, "module": "probability", "tier": "core",
+   "description": "Poisson(lambda) with SYMBOLIC lambda: total mass certifies to exactly 1",
+   "expected": {"kind": "cas_identity", "equal": true, "expr": "1", "note": "certified, symbolic lambda"},
+   "justification": "sympy: sp.summation(l**k/sp.factorial(k), (k, 0, sp.oo)) == sp.exp(l), so e^{-l}*e^{l}=1 for symbolic l"},
+  {"id": "prob5-poisson-symbolic-mean", "area": null, "module": "probability", "tier": "core",
+   "description": "E[Poisson(lambda)] = lambda, symbolic",
+   "expected": {"kind": "cas_identity", "equal": true, "expr": "lam", "note": "certified, symbolic lambda"},
+   "justification": "cited: the Poisson distribution's mean equals its rate parameter (standard probability fact)"},
+  {"id": "prob6-poisson-symbolic-variance", "area": null, "module": "probability", "tier": "core",
+   "description": "Var[Poisson(lambda)] = lambda, symbolic",
+   "expected": {"kind": "cas_identity", "equal": true, "expr": "lam", "note": "certified, symbolic lambda"},
+   "justification": "cited: the Poisson distribution's variance equals its mean (equidispersion, standard probability fact)"},
+  {"id": "prob6-poisson-symbolic-variance-ctrl", "area": null, "module": "probability", "tier": "core",
+   "description": "control: the variance claim is NOT 2*lambda (a plausible-looking wrong answer)",
+   "control_of": "prob6-poisson-symbolic-variance",
+   "expected": {"kind": "cas_identity", "equal": false, "expr": "2*lam"},
+   "justification": "hand: Var[Poisson(lambda)]=lambda != 2*lambda for any lambda != 0"},
+  {"id": "prob4-exponential-symbolic-mgf", "area": null, "module": "probability", "tier": "core",
+   "description": "M(t) = lam/(lam - t) for Exponential(lam) at symbolic lam AND symbolic t, decided under exactly the condition `lam - t > 0` (t < lam); added 2026-09-05 by lane cas-symbolic-mgf. The entry DISAGREES if the condition ever silently disappears, because lam/(lam - t) is false for t >= lam -- the integral diverges there and no mgf exists.",
+   "expected": {"kind": "bool", "value": true, "note": "decided lam/(lam - t) under exactly `lam - t > 0`"},
+   "justification": "hand/sympy: E[e^{tX}] = int_0^inf lam*e^{(t-lam)x} dx converges iff t < lam, to lam/(lam-t); SymPy's integrate(lam*exp(-lam*x)*exp(t*x), (x, 0, oo)) returns exactly this under the assumption re(lam-t) > 0. Classical: the exponential mgf and its domain of existence."},
+  {"id": "prob5-normal-symbolic-mgf", "area": null, "module": "probability", "tier": "core",
+   "description": "M(t) = exp(mu*t + 4*t^2/2) for Normal(mu, 4) at symbolic mu and symbolic t, certified UNCONDITIONALLY (the variance is a concrete rational, so its sign is decided rather than recorded); reached by completing the square, since improper_integrate(e^{-x^2 + t*x}) declines. Added 2026-09-05 by lane cas-symbolic-mgf.",
+   "expected": {"kind": "bool", "value": true, "note": "certified exp(mu*t + 4*t^2/2), unconditionally"},
+   "justification": "hand/sympy: the classical Gaussian mgf exp(mu*t + sigma^2*t^2/2); SymPy: integrate(exp(t*x)*exp(-(x-mu)**2/8)/sqrt(8*pi), (x, -oo, oo)) simplifies to exp(mu*t + 2*t**2) = exp(mu*t + 4*t**2/2). Checked symbolically."},
+  {"id": "prob6-normal-negative-variance", "area": null, "module": "probability", "tier": "decline_expected",
+   "control_of": "prob5-normal-symbolic-mgf",
+   "description": "control: Normal(mu, -1)'s mgf must DECLINE. The square still completes, but the shifted Gaussian points upward and has no erf antiderivative, so there is nothing to certify. Guards the completing-the-square reduction against becoming a formula-printer.",
+   "expected": {"kind": "decline", "note": "a negative variance is not a probability distribution; no mgf exists"},
+   "justification": "hand: Normal(mu, sigma^2) requires sigma^2 > 0. With sigma^2 = -1 the density is not integrable (int exp(+u^2/2) du diverges), so no mgf exists and any certified answer would be wrong."},
+  {"id": "prob7-geometric-symbolic-p", "area": null, "module": "probability", "tier": "decline_expected",
+   "description": "E[Geometric(p)] at symbolic p still declines, and NOT for a missing hypothesis channel: gosper_sum returns None on a symbolic ratio before any convergence question is asked, so there is no value to attach `0 < p < 1` to. The decline_expected counterpart to prob4, marking where the conditional-integration mechanism does and does not reach.",
+   "expected": {"kind": "decline", "note": "gosper_sum has no antidifference for a symbolic geometric ratio"},
+   "justification": "hand/sympy: the mathematical fact E[Geometric(p)] = 1/p is true for 0 < p <= 1 (SymPy: summation(k*p*(1-p)**(k-1), (k, 1, oo)) == 1/p under that assumption); this entry records that OUR summation route declines, not that the identity is false. Reclassify to core if gosper_sum ever gains a symbolic-ratio path."}
 ]

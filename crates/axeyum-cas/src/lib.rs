@@ -34,6 +34,7 @@
 //! let claimed = CasExpr::int(2) * x;
 //! match equal(&df, &claimed) {
 //!     ZeroTest::Certified { equal, .. } => assert!(equal),
+//!     ZeroTest::CertifiedBig { equal, .. } => assert!(equal),
 //!     ZeroTest::Unknown => panic!("should be decidable"),
 //! }
 //! ```
