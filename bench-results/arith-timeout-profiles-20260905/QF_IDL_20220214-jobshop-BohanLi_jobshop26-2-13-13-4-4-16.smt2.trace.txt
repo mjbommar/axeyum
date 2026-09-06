@@ -1,0 +1,26 @@
+=== QF_IDL/20220214-jobshop-BohanLi/jobshop26-2-13-13-4-4-16.smt2 ===
+unknown
+	Command being timed: "taskset -c 0-7 /home/mjbommar/axeyum-parity-20260905/target/release/examples/smtcomp_cli /nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/20220214-jobshop-BohanLi/jobshop26-2-13-13-4-4-16.smt2 --timeout-ms 24000 --trace"
+	User time (seconds): 24.98
+	System time (seconds): 0.02
+	Percent of CPU this job got: 99%
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 0:25.00
+	Average shared text size (kbytes): 0
+	Average unshared data size (kbytes): 0
+	Average stack size (kbytes): 0
+	Average total size (kbytes): 0
+	Maximum resident set size (kbytes): 34880
+	Average resident set size (kbytes): 0
+	Major (requiring I/O) page faults: 0
+	Minor (reclaiming a frame) page faults: 12237
+	Voluntary context switches: 5
+	Involuntary context switches: 237
+	Swaps: 0
+	File system inputs: 216
+	File system outputs: 0
+	Socket messages sent: 0
+	Socket messages received: 0
+	Signals delivered: 0
+	Page size (bytes): 4096
+	Exit status: 0
+--- exit status: 0 ---
