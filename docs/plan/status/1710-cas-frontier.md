@@ -1,11 +1,8 @@
-# Lane: cas-frontier — one line saying what this lane is for
+# Lane: cas-frontier — advancing the ten items of docs/math-department/13-computer-algebra.md in waves
 
 <!-- plan-section: lane-status -->
 
 **CAS frontier (`WIP`, cas-frontier / coordinator axeyum-15, 2026-09-06).** The plan is `docs/math-department/13-computer-algebra.md`: ten items, each advanced by lanes in waves, the file's checklist and progress log updated at every merge. On 2026-09-06 twelve lanes landed (see rows): items 1, 3, 5, 6, 9 and 10 each moved a wave, `axeyum-arith` (ADR-1710) reached its designed surface with `axeyum-ir` and `axeyum-fp` off the raw bignum crates, and three checkers that can fail were added (parity-ledger drift, the arith dependency boundary, the fallback entry gate). Trust registry floor 151; parity corpus 138 entries, 0 disagreements. Next: the CAS and kernel import rewrite behind `scripts/arith-boundary-allowlist.txt` (one compiling commit per crate); an exp-tower path for the zero-test (the generic fallback costs 217x, measured); Burnside-Dixon for nonabelian character tables; algebraic-logarithmic singularities for item 3; Pascal on an arbitrary conic. Blocked on nothing; the kernel numeral bridge waits on the user's word.
-
-and what the next lane needs to know. State a negative as precisely as a
-positive — a sized negative is a complete deliverable here.
 
 <!-- plan-section: landed-changes -->
 
@@ -30,4 +27,3 @@ positive — a sized negative is a complete deliverable here.
 | 2026-09-06 | `6c864e9f6` | Lane cas-numberfield-4: real quadratic class numbers by form cycles, and the regulator as an enclosure (file 13 item 4, wave four) |
 | 2026-09-06 | `ab7a5a088` | Lane cas-qe-4: three variables with one existential, and the first quantifier alternation (file 13 item 7, wave four) |
 
-| 2026-09-06 | cas-frontier | what landed, in one line |
