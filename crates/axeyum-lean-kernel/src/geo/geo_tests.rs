@@ -74,6 +74,9 @@ fn all_declarations(p: GeoPrelude) -> Vec<crate::name::NameId> {
         p.collinear_perm,
         p.distinct_lines_meet_once,
         p.triangle_not_collinear,
+        p.parallel,
+        p.parallel_symm,
+        p.parallel_irrefl,
         // --- the rational model -------------------------------------------
         q.qpoint,
         q.qpoint_mk,
@@ -182,7 +185,7 @@ fn every_declaration_is_present_and_axiom_free() {
     let all = all_declarations(prelude);
     assert_eq!(
         all.len(),
-        FIELD_COUNT + 8 + 46 + 41,
+        FIELD_COUNT + 11 + 46 + 41,
         "the declaration list is out of step with the record's field count"
     );
     for name in all {

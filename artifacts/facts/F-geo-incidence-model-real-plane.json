@@ -1,0 +1,70 @@
+{
+  "schema_version": 1,
+  "id": "F:geo-incidence-model-real-plane",
+  "title": "The real coordinate plane is a model of Hilbert's incidence axioms, with apartness as a witnessed positive bound",
+  "statement": "Geo.rplane is a constructive witness that the three incidence axioms stated as the record Geo.Incidence are satisfied by the REAL plane: points are CPoint (pairs of Cauchy reals, equal up to CPoint.Equiv rather than Eq), lines are coefficient triples (a, b, c) carrying a witness that a*a + b*b is positively bounded away from zero, and incidence is CReal.Equiv (a*x + b*y + c) 0. Two points are apart when there is a Nat k with CReal.PosBound (CPoint.distSq P Q) k -- a WITNESS, not the negation of equality, which over the reals would construct nothing that CReal.inv could consume. This is the second model of the same record; the first is Geo.qplane over the rationals, whose point equality is the kernel's own Eq and whose apartness IS the negation. That one record serves both is what the abstract apart field of ADR-1635 was for, and this fact is the measurement that the field was necessary.",
+  "formal": {
+    "language": "lean4",
+    "statement": "def Geo.rplane : Geo.Incidence",
+    "fragment": "Prop",
+    "free_symbols": [],
+    "kernel_theorem": "Geo.rplane"
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:geo-incidence-model-rational-plane"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Geo.rplane",
+      "kind": "kernel-term",
+      "supports": "Geo.rplane is a Definition admitted by the trusted kernel gate at the type Geo.Incidence, which re-derives the type from the term -- so every one of the record's 21 fields, including the four axiom fields, was supplied and checked over the reals.",
+      "check_status": "checked",
+      "checkers": [
+        "producing-build (Kernel::add_declaration, inside build_geo_prelude)",
+        "kernel_declaration_projection --require-declaration with --require-kind definition"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example kernel_declaration_projection -- --require-declaration Geo.rplane --require-kind definition",
+      "checker_seconds": 400,
+      "kernel_declaration": "Geo.rplane",
+      "notes": "The exit status depends on the finding: --require-declaration exits 1 and prints to stderr when no constructed prelude's environment holds a declaration with that exact rendered name, and --require-kind exits 1 when the match is of a different kind. This is the only in-tree inventory tool that can assert a Definition exists -- theorem_dependency_inventory, nat_theorem_inventory and prelude_theorem_inventory all filter to Declaration::Theorem. --release is MANDATORY: the binary builds creal/complex/cpoint/metric/rn/geo, which recurse deep enough to overflow the default debug thread stack."
+    },
+    {
+      "id": "evaluation-geo-rplane",
+      "kind": "instance-pin",
+      "supports": "What the real model MEANS, at the level the kernel gate cannot reach. Each definition it rests on is evaluated by Kernel::def_eq and each evaluation carries its negative half -- including the two that encode the design decision: Nondeg is a PosBound witness and NOT the negation, and Apart is a PosBound on distSq and NOT the negation of CPoint.Equiv.",
+      "check_status": "checked",
+      "checkers": [
+        "crates/axeyum-lean-kernel/src/geo/geo_tests.rs",
+        "crate::Kernel::def_eq at free variables for the shape pins, and at CReal.zero/CReal.one for the projections",
+        "crate::Kernel::axiom_footprint over a population derived from Environment::iter, not from a list"
+      ],
+      "checker_command": "cargo test -p axeyum-lean-kernel --release --lib -- geo:: --test-threads=4",
+      "checker_seconds": 1400,
+      "notes": "Seven new evaluation tests, each with a negative half: the RLine0 projections pick the field their name claims; Geo.RPlane.join's coefficients are (y Q - y P, x P - x Q, ...) IN THAT ORDER and the swap is refuted at FREE VARIABLES (a concrete pair can make two coefficients coincide); Geo.RPlane.onRaw pairs each coefficient with its own coordinate; Geo.RLine0.Nondeg is the PosBound existential and NOT (Equiv (a*a+b*b) 0 -> False); Geo.RPlane.Apart is the PosBound existential and NOT (CPoint.Equiv P Q -> False); CPoint.distSq unfolds definitionally to the coordinate difference squares and NOT to the sum form (joinUnique's cancellation rests on that defeq); and Geo.rplane's carriers are CPoint / Geo.RLine and NOT Geo.QPoint, so the two models are two and not one written twice. Confirm a NONZERO test count."
+    },
+    {
+      "id": "footprint-geo-rplane",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- every declaration under `Geo.`, the 41 new real-plane ones included, is axiom-free, over a population read from the environment rather than from a list.",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "geo_tests::the_handle_names_every_live_geo_declaration (set equality against Environment::iter)"
+      ],
+      "checker_command": "cargo test -p axeyum-lean-kernel --release --lib -- geo::geo_tests::every_declaration_is_present_and_axiom_free geo::geo_tests::the_handle_names_every_live_geo_declaration --test-threads=4",
+      "checker_seconds": 1400,
+      "notes": "Environment::contains is asserted BEFORE the footprint, because an empty Kernel::axiom_footprint is also what a MISSING name returns. The population is the set of names rendering under `Geo.`, collected from Environment::iter and required to equal the set the prelude handle names, so a declaration added and forgotten fails and so does one named in the handle the build never emitted. The vacuity floor moves from 70 to 110 with the real model's 41 names."
+    }
+  ],
+  "provenance": {
+    "date": "2026-09-06",
+    "curation": "curated",
+    "established_by": "axeyum-lean-kernel build_geo_prelude (crates/axeyum-lean-kernel/src/geo.rs, crates/axeyum-lean-kernel/src/geo/rplane.rs)",
+    "source": "ADR-1652 (docs/research/09-decisions/adr-1652-the-real-plane-is-a-model-and-it-needs-no-case-split.md); roadmap W3-8, second slice. formal.statement is the rendered type of the admitted declaration."
+  },
+  "notes": "What this fact does NOT say. It does not say the axioms are categorical or that they pin the Euclidean plane -- three incidence axioms do not, which is why Hilbert's Grundlagen has four more groups. It does not say the real plane satisfies Playfair's parallel axiom: no Geo.Affine structure exists, and the obstruction is sized in ADR-1652 section 5 -- uniqueness of the parallel needs a route from `Parallel l m` to `Equiv (a*B - b*A) 0` that does not pass through a negation, because removing the negation is tightness (`Not (Apart x y) -> Equiv x y`), which creal.rs documents as neither proved nor assumed. And it does not say the real model is harder than the rational one: it is SHORTER, because both of its divisions are by a sum of two squares the hypothesis already witnesses as positive, so it needs no case split on which coefficient is nonzero -- which is exactly the step Geo.qplane pays for twice."
+}

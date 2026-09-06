@@ -674,6 +674,35 @@ pub struct GeoPrelude {
     /// [`Self::collinear`], which this makes checkable rather than asserted.
     pub triangle_not_collinear: NameId,
 
+    /// `Geo.Incidence.Parallel : Π (I : Geo.Incidence) (l m : line I), Prop`
+    /// — `∀ P, on P l → on P m → False`, i.e. **two lines are parallel when
+    /// they share no point**. A `Definition`, so it unfolds.
+    ///
+    /// This is the *strict* notion: a line is not parallel to itself, and
+    /// [`Self::parallel_irrefl`] proves it from axiom I.2 rather than
+    /// asserting it.
+    ///
+    /// **Do not state Playfair's uniqueness over this predicate.** It is the
+    /// classical, NEGATIVE form, and a negative hypothesis yields only a
+    /// negative conclusion: over ℝ the uniqueness half comes out as
+    /// `Not (Apart (a*B − b*A) 0)`, and closing that gap is tightness, which
+    /// `CReal` does not have. The affine layer wants parallelism stated
+    /// POSITIVELY — same direction (`Equiv (a*B − b*A) 0`) plus a *witnessed*
+    /// distinctness — which is the same move `apart` already makes for points
+    /// and which makes every Playfair obligation a polynomial identity
+    /// `geo/rplane.rs` already discharges. ADR-1652 § 5 carries the three
+    /// identities, verified. This predicate is here because it is the
+    /// classical definition and because `parallel_irrefl` is a real theorem
+    /// about it; it is not the primitive an affine record should carry.
+    pub parallel: NameId,
+    /// `Geo.Incidence.parallel_symm : ∀ I l m, Parallel I l m → Parallel I m l`.
+    pub parallel_symm: NameId,
+    /// `Geo.Incidence.parallel_irrefl : ∀ I l, Parallel I l l → False` — a
+    /// line is never parallel to itself, **because every line carries a
+    /// point** (`twoPoints`, Hilbert I.2). The only derived theorem here that
+    /// consumes an existence axiom.
+    pub parallel_irrefl: NameId,
+
     /// The rational coordinate plane, the model that proves these axioms
     /// consistent.
     pub qplane: QPlaneNames,
@@ -710,6 +739,9 @@ pub(crate) fn intern(kernel: &mut Kernel, cpoint: CPointPrelude) -> GeoPrelude {
         collinear_perm: kernel.name_str(inc, "collinear_perm"),
         distinct_lines_meet_once: kernel.name_str(inc, "distinct_lines_meet_once"),
         triangle_not_collinear: kernel.name_str(inc, "triangle_not_collinear"),
+        parallel: kernel.name_str(inc, "Parallel"),
+        parallel_symm: kernel.name_str(inc, "parallel_symm"),
+        parallel_irrefl: kernel.name_str(inc, "parallel_irrefl"),
         qplane: qplane::intern(kernel, geo),
         rplane: rplane::intern(kernel, geo),
     }
@@ -762,6 +794,9 @@ pub fn build_geo_prelude(kernel: &mut Kernel) -> Result<GeoPrelude, KernelError>
     declare_collinear_perm(kernel, &logic, p)?;
     declare_distinct_lines_meet_once(kernel, &logic, p)?;
     declare_triangle_not_collinear(kernel, &logic, p)?;
+    declare_parallel(kernel, &logic, p)?;
+    declare_parallel_symm(kernel, &logic, p)?;
+    declare_parallel_irrefl(kernel, &logic, p)?;
 
     qplane::declare_all(kernel, p)?;
     rplane::declare_all(kernel, p)?;
@@ -1132,6 +1167,210 @@ fn declare_triangle_not_collinear(
     };
     k.add_declaration(Declaration::Theorem {
         name: p.triangle_not_collinear,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `Geo.Incidence.Parallel I l m := ∀ P, on I P l → on I P m → False`.
+fn declare_parallel(k: &mut Kernel, lg: &LogicPrelude, p: GeoPrelude) -> Result<(), KernelError> {
+    let inc = inc_ty(k, p);
+    let i = k.fvar(G_I);
+    let pt = field(k, p, POINT, i);
+    let ln = field(k, p, LINE, i);
+
+    let l = k.fvar(G_L);
+    let m = k.fvar(G_M);
+    let body = {
+        let pp = k.fvar(G_P);
+        let opl = on_of(k, p, i, pp, l);
+        let opm = on_of(k, p, i, pp, m);
+        let f = false_of(k, lg);
+        let t = arrow(k, opm, f);
+        let t = arrow(k, opl, t);
+        pi_over(k, G_P, pt, t)
+    };
+    let value = {
+        let t = lam_over(k, G_M, ln, body);
+        let t = lam_over(k, G_L, ln, t);
+        lam_over(k, G_I, inc, t)
+    };
+    let ty = {
+        let prop = prop_sort(k);
+        let t = pi_over(k, G_M, ln, prop);
+        let t = pi_over(k, G_L, ln, t);
+        pi_over(k, G_I, inc, t)
+    };
+    k.add_declaration(Declaration::Definition {
+        name: p.parallel,
+        uparams: vec![],
+        ty,
+        value,
+        hint: ReducibilityHint::Regular(1),
+    })
+}
+
+/// `Geo.Incidence.parallel_symm : ∀ I l m, Parallel I l m → Parallel I m l`.
+fn declare_parallel_symm(
+    k: &mut Kernel,
+    _lg: &LogicPrelude,
+    p: GeoPrelude,
+) -> Result<(), KernelError> {
+    let inc = inc_ty(k, p);
+    let i = k.fvar(G_I);
+    let pt = field(k, p, POINT, i);
+    let ln = field(k, p, LINE, i);
+
+    let l = k.fvar(G_L);
+    let m = k.fvar(G_M);
+    let h = k.fvar(G_H1);
+    let source = capp(k, p.parallel, &[i, l, m]);
+    let target = capp(k, p.parallel, &[i, m, l]);
+
+    let body = {
+        let pp = k.fvar(G_P);
+        let opl = on_of(k, p, i, pp, l);
+        let opm = on_of(k, p, i, pp, m);
+        let h1 = k.fvar(G_H2);
+        let h2 = k.fvar(G_H3);
+        let applied = app_all(k, h, &[pp, h2, h1]);
+        let inner = lam_over(k, G_H3, opl, applied);
+        let inner = lam_over(k, G_H2, opm, inner);
+        lam_over(k, G_P, pt, inner)
+    };
+    let value = {
+        let t = lam_over(k, G_H1, source, body);
+        let t = lam_over(k, G_M, ln, t);
+        let t = lam_over(k, G_L, ln, t);
+        lam_over(k, G_I, inc, t)
+    };
+    let ty = {
+        let t = arrow(k, source, target);
+        let t = pi_over(k, G_M, ln, t);
+        let t = pi_over(k, G_L, ln, t);
+        pi_over(k, G_I, inc, t)
+    };
+    k.add_declaration(Declaration::Theorem {
+        name: p.parallel_symm,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `Geo.Incidence.parallel_irrefl : ∀ I l, Parallel I l l → False`.
+///
+/// The one derived theorem that consumes an EXISTENCE axiom: `twoPoints`
+/// hands back a point on `l`, and `Parallel l l` at that point is `False`.
+/// Both `Exists`es eliminate into `False`, which is a `Prop`, so no witness
+/// leaves the elimination.
+fn declare_parallel_irrefl(
+    k: &mut Kernel,
+    lg: &LogicPrelude,
+    p: GeoPrelude,
+) -> Result<(), KernelError> {
+    let inc = inc_ty(k, p);
+    let i = k.fvar(G_I);
+    let pt = field(k, p, POINT, i);
+    let ln = field(k, p, LINE, i);
+    let l0 = k.level_zero();
+    let l1 = k.level_succ(l0);
+
+    let l = k.fvar(G_L);
+    let hpar = k.fvar(G_H1);
+    let source = capp(k, p.parallel, &[i, l, l]);
+    let false_ty = false_of(k, lg);
+
+    // The body of `twoPoints I l`, as the two nested predicates it is built
+    // from -- the same shape `two_points_field` writes.
+    let inner_body = |k: &mut Kernel, pp: ExprId, qq: ExprId| -> ExprId {
+        let ap = field(k, p, APART, i);
+        let a = app_all(k, ap, &[pp, qq]);
+        let opl = on_of(k, p, i, pp, l);
+        let oql = on_of(k, p, i, qq, l);
+        let ons = and_of(k, lg, opl, oql);
+        and_of(k, lg, a, ons)
+    };
+    let inner_pred = {
+        let pp = k.fvar(G_A);
+        let qq = k.fvar(G_Q);
+        let body = inner_body(k, pp, qq);
+        lam_over(k, G_Q, pt, body)
+    };
+    let outer_pred = {
+        let pp = k.fvar(G_P);
+        let qq = k.fvar(G_Q);
+        let body = inner_body(k, pp, qq);
+        let inner = lam_over(k, G_Q, pt, body);
+        let ex = exists_of(k, lg, l1, pt, inner);
+        lam_over(k, G_P, pt, ex)
+    };
+
+    // minor₂ : ∀ Q, (apart A Q ∧ (on A l ∧ on Q l)) → False, with `A` the
+    // point the outer elimination bound.
+    let minor_inner = {
+        let pp = k.fvar(G_A);
+        let qq = k.fvar(G_Q);
+        let hyp = inner_body(k, pp, qq);
+        let hh = k.fvar(G_H2);
+        let ap = field(k, p, APART, i);
+        let a = app_all(k, ap, &[pp, qq]);
+        let opl = on_of(k, p, i, pp, l);
+        let oql = on_of(k, p, i, qq, l);
+        let ons_ty = and_of(k, lg, opl, oql);
+        let ons = and_right(k, lg, a, ons_ty, hh);
+        let hp = and_left(k, lg, opl, oql, ons);
+        let clash = app_all(k, hpar, &[pp, hp, hp]);
+        let with_h = lam_over(k, G_H2, hyp, clash);
+        lam_over(k, G_Q, pt, with_h)
+    };
+    let after_inner = {
+        let pp = k.fvar(G_A);
+        let body = {
+            let qq = k.fvar(G_Q);
+            let b = inner_body(k, pp, qq);
+            lam_over(k, G_Q, pt, b)
+        };
+        let ex = exists_of(k, lg, l1, pt, body);
+        let motive = lam_over(k, G_H4, ex, false_ty);
+        let h_inner = k.fvar(G_H3);
+        let rec = k.const_(lg.exists_rec, vec![l1]);
+        app_all(k, rec, &[pt, inner_pred, motive, minor_inner, h_inner])
+    };
+    let minor_outer = {
+        let pp = k.fvar(G_A);
+        let body = {
+            let qq = k.fvar(G_Q);
+            let b = inner_body(k, pp, qq);
+            lam_over(k, G_Q, pt, b)
+        };
+        let hyp = exists_of(k, lg, l1, pt, body);
+        let with_h = lam_over(k, G_H3, hyp, after_inner);
+        lam_over(k, G_A, pt, with_h)
+    };
+
+    let two = field(k, p, TWO_POINTS, i);
+    let witness = k.app(two, l);
+    let motive = {
+        let outer_ex = exists_of(k, lg, l1, pt, outer_pred);
+        lam_over(k, G_H5, outer_ex, false_ty)
+    };
+    let rec = k.const_(lg.exists_rec, vec![l1]);
+    let proof = app_all(k, rec, &[pt, outer_pred, motive, minor_outer, witness]);
+
+    let ty = {
+        let t = arrow(k, source, false_ty);
+        let t = pi_over(k, G_L, ln, t);
+        pi_over(k, G_I, inc, t)
+    };
+    let value = {
+        let t = lam_over(k, G_H1, source, proof);
+        let t = lam_over(k, G_L, ln, t);
+        lam_over(k, G_I, inc, t)
+    };
+    k.add_declaration(Declaration::Theorem {
+        name: p.parallel_irrefl,
         uparams: vec![],
         ty,
         value,

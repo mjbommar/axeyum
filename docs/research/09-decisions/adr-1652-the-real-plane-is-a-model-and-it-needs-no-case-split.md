@@ -18,9 +18,12 @@ positive — `distSq P Q` from `Apart`, `a*a + b*b` from `Nondeg`. The pivot nev
 has to know which of `a`, `b` is large. `joinUnique` routes through one new
 six-variable identity (`Geo.RPlane.pivotAB`) whose second factor is
 **definitionally** `CPoint.distSq P Q`, so `Apart`'s own witness cancels it with
-no transport at all. Playfair did **not** land, and the obstruction is sized and
-recorded: uniqueness over ℝ needs `Not (Apart x 0) → Equiv x 0` (tightness),
-which `creal.rs` documents as absent by design.
+no transport at all. Playfair did **not** land, and sizing it produced a second finding: the
+obstruction is the SHAPE of the parallel predicate, not a missing principle.
+"No common point" is negative and forces uniqueness through tightness (absent
+by design); parallelism stated positively -- same direction plus a WITNESSED
+distinctness -- makes every Playfair obligation a polynomial identity this file
+already discharges, with the identities verified and recorded in § 5.
 Index-status: proposed
 
 ## Context
@@ -142,39 +145,60 @@ declared here (`Geo.RPlane.pointRefl`/`pointSymm`/`pointTrans`) rather than in
 `creal_point.rs`, which this lane was told not to edit. If a third consumer
 appears they belong upstream.
 
-### 5. Playfair did not land, and the obstruction is not budget
+### 5. Playfair did not land — and the obstruction is the SHAPE of `parallel`, not a missing principle
 
-`Geo.Affine` — parallelism as "no common point", with existence and uniqueness
-of the parallel through an outside point — is **not** in this change. Existence
-is easy in both models (the parallel through `P` to `(a,b,c)` is
-`(a, b, −(a·x P + b·y P))`, and it inherits `(a,b)`'s non-degeneracy). Uniqueness
-is where the two models part company:
+`Geo.Affine` is **not** in this change. What follows is the sizing, and it
+corrects a wrong first answer that is worth recording because it is the same
+mistake ADR-1635 already made once and fixed.
 
-- Over ℚ it is reachable: two lines through `P` both disjoint from `l` must have
-  coefficient vectors proportional to `l`'s, because otherwise the explicit
-  intersection point `((b*C − B*c)/(a*B − b*A), (A*c − a*C)/(a*B − b*A))` exists
-  and contradicts disjointness — and `Geo.Rat.eqOrNe` decides the denominator.
-  It needs a new file (this lane must not edit `qplane.rs`) and it needs
-  `Geo.QPlane.onOfProp` re-exported through it; it did not fit this slice.
-- Over ℝ it is **blocked on a proposition this kernel does not have**. The same
-  argument gives only `Not (CReal.Apart (a*B − b*A) 0)`; turning that into
-  `Equiv (a*B − b*A) 0` is tightness, and `creal.rs`'s
-  `not_apart_one_of_pow_succ_eq_one` doc states the position in the open:
-  "the converse (tightness, `Not (Apart x y) → Equiv x y`) is Markov's
-  principle, *neither proved nor assumed* anywhere in this development … a
-  genuinely different (classically-flavoured) proposition, not a missing lemma
-  this file failed to look up."
+**The wrong answer.** Define `Parallel l m := ∀ P, on P l → on P m → False`
+("no common point", the classical definition, and what
+`Geo.Incidence.Parallel` in this change actually is). Playfair's *uniqueness*
+then needs `Parallel l m → Equiv (a*B − b*A) 0`, and the only route from a
+negative hypothesis is by contradiction: assume the defect is apart from zero,
+construct the intersection point, contradict disjointness. That yields
+`Not (Apart (a*B − b*A) 0)`, and turning that into `Equiv (a*B − b*A) 0` is
+tightness, which `creal.rs`'s `not_apart_one_of_pow_succ_eq_one` doc calls
+Markov's principle and says is "neither proved nor assumed". Over ℚ the same
+route works, because `Geo.Rat.eqOrNe` decides the denominator.
 
-  That is a claim about *this* route, not about ℝ-Playfair, and the honest
-  statement of the residue is: **either** find a route to
-  `Parallel l m → Equiv (a*B − b*A) 0` that never passes through a negation
-  (none is known to this lane), **or** prove tightness for `CReal.Apart`, which
-  is constructively available for Cauchy reals — the negation of the two `lt`s
-  reduces to a rational-level decision at each index — but is a development of
-  its own and is not what `creal.rs`'s doc says it is. Deciding which of those
-  two is right is the next slice's question, and it should not be settled by
-  quoting the doc comment above, which asserts more than the Cauchy construction
-  forces.
+Stopping there and reporting "ℝ-Playfair is blocked on tightness" would have
+been wrong in exactly the way ADR-1635's `apart` decision was set up to
+prevent: **a negative primitive blocks, and the fix is to state the primitive
+positively with a witness, not to acquire a classical principle.** Parallelism
+is not "they fail to meet"; it is "they have the same direction and are
+distinct", and both halves are witnessable:
+
+```text
+par l m  :=  Equiv (a*B − b*A) 0                                    -- same direction
+         ∧   ∃ k, PosBound ((a*C − c*A)^2 + (b*C − c*B)^2) k        -- distinct, witnessed
+```
+
+With that shape every Playfair obligation is a polynomial identity of the kind
+this file already discharges, with no case split and no new kernel machinery.
+The identities are verified exactly (`Fraction` trials, 300 random tuples,
+before encoding):
+
+| obligation | route |
+| --- | --- |
+| `par l m → on X l → on X m → False` | `a*C − c*A = a*(A*x+B*y+C) − A*(a*x+b*y+c) − y*(a*B − b*A)` and its `b` mirror; both correction terms vanish, so the distinctness witness's own quantity is `~ 0`, refuted by its `PosBound` |
+| existence, through `P` **apart from** `l` | `m := (a, b, −(a·x P + b·y P))`; then `(a*C − c*A)^2 + (b*C − c*B)^2 = (a² + b²)·e_P²`, so the witness is the product of the line's `Nondeg` and `P`'s apartness from `l` |
+| uniqueness | with `D := A*B' − A'*B`, the unconditional pair `a*D = A*(a*B' − b*A') − A'*(a*B − b*A)` and `b*D = B*(a*B' − b*A') − B'*(a*B − b*A)` gives `(a² + b²)*D ~ 0`, and `Nondeg l` cancels it — the same `cancelPosBound` step `joinUnique` uses. The other two defects of `m` against `n` then come from `defectAC`/`defectBC`, **already declared in this change**, at the shared point `P` |
+
+Note the second row: existence needs `P` **apart from** `l`, not merely
+`on P l → False` — the witnessed form `∃ k, PosBound (e_P * e_P) k` — which is
+the same strengthening one dimension down that `apart` is for points. That is
+the residue this slice hands on, and it is a *design* item, not a blocked one.
+
+So the honest statement is: **`Geo.Affine` did not land for budget, not for
+mathematics.** It needs a record with `par` as a primitive field (or as a
+per-model positive definition), a witnessed point-apart-from-line relation, and
+two instances; the ℝ instance's algebra is the three rows above and reuses
+`defectAC`, `defectBC`, `cancelPosBound` and `onOfDefects` unchanged. What this
+change ships toward it is `Geo.Incidence.Parallel` (the classical negative
+predicate), `parallel_symm`, and `parallel_irrefl` — the last being the only
+derived theorem here that consumes an *existence* axiom, since a line is not
+parallel to itself precisely because `twoPoints` puts a point on it.
 
 ## Consequences
 
