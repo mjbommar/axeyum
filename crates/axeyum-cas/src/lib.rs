@@ -18361,7 +18361,7 @@ fn prove_exp_antiderivative(
 /// ```
 ///
 /// A second shape is tried when the affine-rate one declines: a **Gaussian**
-/// `C·P(x)·e^{−a·x²+c₀}` over the whole line with a symbolic `a`, under `a > 0`
+/// `C·P(x)·e^{−a·x²}` over the whole line with a symbolic `a`, under `a > 0`
 /// (see `conditional_gaussian_integral`). The two are disjoint — a Gaussian has
 /// a nonzero `x²` coefficient, which the affine matcher refuses, and an affine
 /// exponent gives `a = 0`, which the Gaussian one refuses.
@@ -18646,7 +18646,7 @@ fn gaussian_polynomial_antiderivative(
     Some((antiderivative, simplify(&(constant.clone() * erf_part))))
 }
 
-/// `∫_{−∞}^{∞} C·P(x)·e^{−a·x²+c₀} dx` with a **symbolic** `a`, under `a > 0` —
+/// `∫_{−∞}^{∞} C·P(x)·e^{−a·x²} dx` with a **symbolic** `a`, under `a > 0` —
 /// the Gaussian half of [`improper_integrate_conditional`].
 ///
 /// This is the route [`improper_integrate`] structurally cannot take:
