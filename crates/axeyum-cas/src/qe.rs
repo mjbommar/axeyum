@@ -150,6 +150,12 @@ pub mod bivariate;
 #[path = "qe_dnf.rs"]
 pub mod dnf;
 
+#[path = "qe_lift.rs"]
+pub mod lift;
+
+#[path = "qe_alt.rs"]
+pub mod alt;
+
 /// How many bisections [`open_cell_samples`] will spend finding a rational
 /// strictly between a rational root and the next root along.
 const MAX_SEPARATION_STEPS: usize = 4096;
