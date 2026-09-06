@@ -7540,8 +7540,139 @@ SUITES["cas-atom-key"] = (
         (
             "the uncanonical-atom guard is gone: an argument the key could not "
             "canonicalize is refuted instead of declined",
-            "        Some(witness) if witness.mentions_uncanonical_atom() => ZeroTest::Unknown,",
+            "        Ok(witness) if witness.mentions_uncanonical_atom() => "
+            "Err(ZeroTestDecline::RelationBlind(\n"
+            "            RelationLimit::UncanonicalAtomKey,\n"
+            "        )),",
             "",
+        ),
+    ],
+)
+
+
+# --------------------------------------------------------------------------
+# `cas-fallback-gate` -- when the zero-test hands an input to the unbounded
+# fallback (`crates/axeyum-cas/src/lib.rs`, `fallback_entry_gate`).
+#
+# The fallback (ADR-1670) used to run on every `ZeroTest::Unknown` the bounded
+# `i128` core produced, and `Unknown` meant BOTH "exact arithmetic overflowed"
+# (the unbounded ring is the fix) and "this left the fragment" (the unbounded
+# ring runs the same normal form and stops in the same place).  Wave four
+# classifies the exit and routes on the class.
+#
+# The gate is the only thing in the zero-test that can turn a DECISION into an
+# `Unknown` by declining to look, and in the head-gated class the verdict is
+# `Unknown` either way -- so nothing but the entry COUNT can see the difference.
+# That is why the two route tests read a per-thread counter rather than a
+# verdict, and why the mutants below are pointed at the routing rather than at
+# the arithmetic.
+#
+# MEASURED 2026-09-06, baseline green at 14 tests, all six killed:
+#
+#   gate always enters          killed 1  a_head_gated_input_never_reaches_the_fallback
+#   gate never enters           killed 4  a_multiplicative_atom_relation_..._still_enters,
+#                                         a_relation_blind_input_..._still_certifies,
+#                                         an_overflow_is_classified_..._decides_it,
+#                                         a_plain_overflow_still_reaches_the_fallback
+#   head precedence gone        killed 3  an_exp_coefficient_past_u32_...,
+#                                         a_declined_head_is_named_...,
+#                                         a_head_gated_input_never_reaches_the_fallback
+#   gate stops consulting ring  killed 4  the_entry_gate_names_exactly_the_heads_...,
+#                                         plus the three above
+#   division-by-zero merged     killed 1  a_division_by_the_zero_function_is_named_...
+#   exp u32 range merged        killed 1  an_exp_coefficient_past_u32_is_out_of_fragment_...
+#
+# Three of six isolate exactly one test, and the one the slice is FOR is among
+# them: "the gate always enters" -- the state of the world before this lane --
+# is killed by exactly `a_head_gated_input_never_reaches_the_fallback`, which is
+# the only test that can see it, because the verdict is `Unknown` either way and
+# only the entry COUNT differs.
+#
+# The other three are not guards but capability, and a one-test kill would have
+# been the wrong outcome for them:
+#
+#   "gate never enters" removes the unbounded fallback from the engine, so it
+#   should take every test that depends on the fallback deciding, and it does.
+#
+#   "head precedence gone" and "gate stops consulting ring" are two ways to sever
+#   the same wire, so they kill overlapping sets.  Note what the SECOND one shows
+#   and the first cannot: an earlier draft of this family mutated
+#   `big_ring_declines_head` instead, and that mutant CANNOT kill
+#   `the_entry_gate_names_exactly_the_heads_the_ring_declines` -- the normalizer
+#   and the gate both read that one predicate, so they stay in agreement and the
+#   consistency test passes over a broken engine.  A single-source predicate makes
+#   its own consistency test unfalsifiable; the mutant that falsifies it is the
+#   one that severs the gate from the ring, which is why that is the one here.
+# --------------------------------------------------------------------------
+
+SUITES["cas-fallback-gate"] = (
+    "crates/axeyum-cas/src/lib.rs",
+    Cargo(
+        (
+            "-j",
+            "4",
+            "-p",
+            "axeyum-cas",
+            "--lib",
+            "fallback_entry_gate::",
+        ),
+        "cas-fallback-gate",
+    ),
+    [
+        (
+            "the gate always enters: every decline is handed to the fallback "
+            "again, including the heads it cannot normalize",
+            "            ZeroTestDecline::Overflowed | ZeroTestDecline::RelationBlind(_) => true,\n"
+            "            ZeroTestDecline::OutOfFragment(_) => false,",
+            "            _ => true,",
+        ),
+        (
+            "the gate never enters: the unbounded fallback is unreachable, so "
+            "an overflow can no longer be decided",
+            "            ZeroTestDecline::Overflowed | ZeroTestDecline::RelationBlind(_) => true,\n"
+            "            ZeroTestDecline::OutOfFragment(_) => false,",
+            "            _ => false,",
+        ),
+        (
+            "the head precedence is gone: a mixed input (an overflowing "
+            "polynomial plus one `exp`) classifies by its arithmetic and enters",
+            "    match unbounded_ring_declined_head(a).or_else(|| unbounded_ring_declined_head(b)) {\n"
+            "        Some(head) => {\n"
+            "            note_head_gated_decline(&reason);\n"
+            "            ZeroTestDecline::OutOfFragment(FragmentLimit::UnboundedRingDeclinesHead(head))\n"
+            "        }\n"
+            "        None => reason,\n"
+            "    }",
+            "    reason",
+        ),
+        (
+            "the gate stops consulting the ring: `unbounded_ring_declined_head` "
+            "never names a head, while the normalizer still declines `exp`",
+            "            if big_ring_declines_head(*func) {\n"
+            "                Some(func.name())\n"
+            "            } else {\n"
+            "                unbounded_ring_declined_head(arg)\n"
+            "            }",
+            "            unbounded_ring_declined_head(arg)",
+        ),
+        (
+            "a division by the zero function is classified as an overflow, so "
+            "the fallback is entered to reach the same `None`",
+            "            if divisor.num.is_zero() {\n"
+            "                return Err(ZeroTestDecline::OutOfFragment(\n"
+            "                    FragmentLimit::DivisionByZeroFunction,\n"
+            "                ));\n"
+            "            }",
+            "",
+        ),
+        (
+            "an `exp` coefficient past the shared `u32` exponent range is "
+            "classified as an overflow instead of a fragment limit",
+            "            let power = u32::try_from(coeff.numerator().unsigned_abs()).map_err(|_| {\n"
+            "                ZeroTestDecline::OutOfFragment(FragmentLimit::ExpCoefficientOutOfRange)\n"
+            "            })?;",
+            "            let power = u32::try_from(coeff.numerator().unsigned_abs())\n"
+            "                .map_err(|_| ZeroTestDecline::Overflowed)?;",
         ),
     ],
 )

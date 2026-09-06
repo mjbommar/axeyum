@@ -3213,52 +3213,66 @@ pub fn explain_decline(a: &CasExpr, b: &CasExpr) -> Option<ZeroTestDecline> {
         .or_else(|| equal_core_bounded_classified(a, b).err())
 }
 
-/// Test-only instrumentation: how many times [`equal_core`] has handed an input
-/// to the unbounded fallback in this process.
-///
-/// The entry *count* is the thing a change to the entry condition moves, and it
-/// is not visible in a verdict — a composite caller like `dsolve_inhomogeneous`
-/// makes hundreds of `equal` calls and reports one answer. Reading it is only
-/// meaningful under `--test-threads=1`; see `fallback_entry_cost`.
+// Test-only instrumentation for the fallback's entry gate.
+//
+// PER THREAD, deliberately. The entry *count* is the thing a change to the
+// entry condition moves, and it is not visible in a verdict — a composite
+// caller like `dsolve_inhomogeneous` makes hundreds of `equal` calls and
+// reports one answer. The test harness gives each test its own thread, so a
+// per-thread counter makes a before/after delta readable without serializing
+// the suite; a process-wide one would have been a race between every test that
+// reads it.
 #[cfg(test)]
-static FALLBACK_ENTRIES: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+thread_local! {
+    /// How many times [`equal_core`] handed an input to the unbounded fallback
+    /// on this thread.
+    static FALLBACK_ENTRIES: std::cell::Cell<u64> = const { std::cell::Cell::new(0) };
+    /// The declines the head gate ([`escalate_to_declined_head`]) turned away
+    /// on this thread, split by the reason they would otherwise have carried:
+    /// `.0` an overflow, `.1` a withheld refutation.
+    ///
+    /// This is the number that prices porting a head INTO the unbounded ring:
+    /// every one of these becomes a fallback entry again the moment
+    /// [`big_ring_declines_head`] stops naming that head.
+    static HEAD_GATED_DECLINES: std::cell::Cell<(u64, u64)> =
+        const { std::cell::Cell::new((0, 0)) };
+}
+
+/// This thread's fallback entry count.
+#[cfg(test)]
+fn fallback_entries() -> u64 {
+    FALLBACK_ENTRIES.with(std::cell::Cell::get)
+}
+
+/// This thread's head-gated decline counts, `(overflow, relation-blind)`.
+#[cfg(test)]
+fn head_gated_declines() -> (u64, u64) {
+    HEAD_GATED_DECLINES.with(std::cell::Cell::get)
+}
 
 /// Count one entry into the unbounded fallback. Compiles to nothing outside
 /// tests.
 #[inline]
 fn note_fallback_entry() {
     #[cfg(test)]
-    FALLBACK_ENTRIES.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+    FALLBACK_ENTRIES.with(|entries| entries.set(entries.get() + 1));
 }
-
-/// Test-only instrumentation: the declines the head gate
-/// ([`escalate_to_declined_head`]) turned away, split by the reason they would
-/// otherwise have carried — `[0]` an overflow, `[1]` a withheld refutation.
-///
-/// This is the number that says what porting a head into the unbounded ring
-/// would cost: every one of these becomes a fallback entry again the moment
-/// [`big_ring_declines_head`] stops naming that head.
-#[cfg(test)]
-static HEAD_GATED_DECLINES: [std::sync::atomic::AtomicU64; 2] = [
-    std::sync::atomic::AtomicU64::new(0),
-    std::sync::atomic::AtomicU64::new(0),
-];
 
 /// Count one decline the head gate turned away. Compiles to nothing outside
 /// tests.
 #[inline]
 fn note_head_gated_decline(reason: &ZeroTestDecline) {
     #[cfg(test)]
-    {
-        let slot = match reason {
-            ZeroTestDecline::Overflowed => 0,
-            ZeroTestDecline::RelationBlind(_) => 1,
+    HEAD_GATED_DECLINES.with(|gated| {
+        let (overflow, relation) = gated.get();
+        match reason {
+            ZeroTestDecline::Overflowed => gated.set((overflow + 1, relation)),
+            ZeroTestDecline::RelationBlind(_) => gated.set((overflow, relation + 1)),
             // Already out of fragment for another reason; the head gate did not
             // change the routing, so it turned nothing away.
-            ZeroTestDecline::OutOfFragment(_) => return,
-        };
-        HEAD_GATED_DECLINES[slot].fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-    }
+            ZeroTestDecline::OutOfFragment(_) => {}
+        }
+    });
     #[cfg(not(test))]
     let _ = reason;
 }
@@ -34751,11 +34765,12 @@ mod fallback_entry_cost {
     /// *count* — how many of those calls reach the fallback — and the solver's
     /// wall time, not the final check's.
     ///
-    /// Read under `--test-threads=1`: [`FALLBACK_ENTRIES`] is process-wide.
+    /// The counters are per thread, so the deltas are exact whatever
+    /// `--test-threads` says; `1` is still worth passing for the *timings*,
+    /// which are contended like any other number on a shared box.
     #[test]
     #[ignore = "a measurement, not a guard; run with --release --ignored --nocapture"]
     fn solver_fallback_entries() {
-        use std::sync::atomic::Ordering;
         let ig = Rational::integer;
         println!(
             "\n{:<24} | {:>16} | {:>24} | {:>7} | {:>11}",
@@ -34774,18 +34789,16 @@ mod fallback_entry_cost {
                 (CasExpr::int(3) * x()).sin(),
             ),
         ] {
-            let before = FALLBACK_ENTRIES.load(Ordering::Relaxed);
-            let gated_before = (
-                HEAD_GATED_DECLINES[0].load(Ordering::Relaxed),
-                HEAD_GATED_DECLINES[1].load(Ordering::Relaxed),
-            );
+            let before = fallback_entries();
+            let gated_before = head_gated_declines();
             let start = Instant::now();
             let solved = dsolve_inhomogeneous(&coeffs, &forcing, "x").is_some();
             let wall = start.elapsed();
-            let entries = FALLBACK_ENTRIES.load(Ordering::Relaxed) - before;
+            let entries = fallback_entries() - before;
+            let after_gated = head_gated_declines();
             let gated = (
-                HEAD_GATED_DECLINES[0].load(Ordering::Relaxed) - gated_before.0,
-                HEAD_GATED_DECLINES[1].load(Ordering::Relaxed) - gated_before.1,
+                after_gated.0 - gated_before.0,
+                after_gated.1 - gated_before.1,
             );
             total_entries += entries;
             total_gated = (total_gated.0 + gated.0, total_gated.1 + gated.1);
@@ -34797,5 +34810,475 @@ mod fallback_entry_cost {
             "TOTAL",
             format!("{} overflow / {} relation", total_gated.0, total_gated.1)
         );
+    }
+}
+
+/// The fallback's entry gate: one fixture per classification the bounded core
+/// makes, in both directions (ADR-1670 wave four).
+///
+/// The gate is the only thing in the zero-test that can turn a *decision* into
+/// an `Unknown` by declining to look, so every arm of [`ZeroTestDecline`] is
+/// pinned three ways here:
+///
+/// - the classification itself, asserted against
+///   [`equal_core_bounded_classified`] — the classifier `equal_core` routes on,
+///   so a test that passes is a statement about the shipped route;
+/// - a **satisfiable side**: a TRUE identity in that class that must still
+///   certify, which is what stops the gate buying speed with capability;
+/// - a **false side**: a FALSE identity in that class that must decline or
+///   refute and must never certify equal.
+///
+/// Plus the two route facts the whole slice exists for: a head-gated input
+/// never reaches the fallback, and a plain overflow still does.
+#[cfg(test)]
+mod fallback_entry_gate {
+    use super::*;
+
+    fn x() -> CasExpr {
+        CasExpr::var("x")
+    }
+
+    fn y() -> CasExpr {
+        CasExpr::var("y")
+    }
+
+    fn s() -> CasExpr {
+        CasExpr::var("s")
+    }
+
+    fn u() -> CasExpr {
+        CasExpr::var("u")
+    }
+
+    /// `(x + 1)^n`, unexpanded.
+    fn binom(n: u32) -> CasExpr {
+        (x() + CasExpr::int(1)).pow(n)
+    }
+
+    /// The classification the shipped zero-test routes on.
+    fn reason(a: &CasExpr, b: &CasExpr) -> ZeroTestDecline {
+        equal_core_bounded_classified(a, b)
+            .expect_err("this fixture is only adversarial if the bounded path declines it")
+    }
+
+    fn certifies_equal(a: &CasExpr, b: &CasExpr) -> bool {
+        matches!(
+            equal(a, b),
+            ZeroTest::Certified { equal: true, .. } | ZeroTest::CertifiedBig { equal: true, .. }
+        )
+    }
+
+    // --- Overflowed: the class the fallback exists for ----------------------
+
+    /// A pure `i128` overflow classifies as one, says the fallback can help,
+    /// and the fallback decides it. Satisfiable side.
+    #[test]
+    fn an_overflow_is_classified_as_one_and_the_fallback_decides_it() {
+        let left = CasExpr::Mul(vec![binom(80), binom(80)]);
+        let right = binom(160);
+        assert_eq!(reason(&left, &right), ZeroTestDecline::Overflowed);
+        assert!(reason(&left, &right).fallback_can_help());
+        assert!(
+            certifies_equal(&left, &right),
+            "the overflow class must still be decided by the fallback"
+        );
+        // The positive control below the wall: the same identity decides in the
+        // bounded path, so the row above is about width and not about shape.
+        assert!(certifies_equal(
+            &CasExpr::Mul(vec![binom(4), binom(4)]),
+            &binom(8)
+        ));
+    }
+
+    /// False side of the overflow class: a difference of `x³` at degree 160
+    /// must be refuted, never certified equal, and the certificate must
+    /// re-check.
+    #[test]
+    fn a_false_identity_at_overflow_scale_is_refuted_and_never_certified_equal() {
+        let left = CasExpr::Mul(vec![binom(80), binom(80)]);
+        let right = binom(160) + x().pow(3);
+        assert_eq!(reason(&left, &right), ZeroTestDecline::Overflowed);
+        let verdict = equal(&left, &right);
+        assert!(
+            matches!(
+                verdict,
+                ZeroTest::Certified { equal: false, .. }
+                    | ZeroTest::CertifiedBig { equal: false, .. }
+                    | ZeroTest::Unknown
+            ),
+            "a false identity must refute or decline, never certify equal"
+        );
+        assert!(recheck_zero_test(&left, &right, &verdict));
+    }
+
+    // --- RelationBlind: the arithmetic completed, and the fallback STILL
+    // --- helps, because the two rings do not share a fold dictionary --------
+
+    /// `√2·∛2 = root6(32)` is TRUE and the bounded path withholds the
+    /// refutation because the monomial multiplies two radical atoms.
+    #[test]
+    fn a_multiplicative_atom_relation_is_relation_blind_and_still_enters() {
+        let left = CasExpr::int(2).sqrt() * CasExpr::int(2).nth_root(3);
+        let right = CasExpr::int(32).nth_root(6);
+        assert_eq!(
+            reason(&left, &right),
+            ZeroTestDecline::RelationBlind(RelationLimit::MultiplicativeAtomRelation)
+        );
+        assert!(
+            reason(&left, &right).fallback_can_help(),
+            "the unbounded fold dictionary is built with `normalize_rational_big_within`, \
+             which resolves radicands `normalize` rejects, so this class must still enter"
+        );
+    }
+
+    /// The satisfiable side of that class, and the reason it is not
+    /// out-of-fragment: `√(ln x)² = ln x` is declined by the bounded fold —
+    /// whose radicand dictionary is built with [`normalize`], which rejects a
+    /// transcendental head — and CERTIFIED by the unbounded one. No overflow is
+    /// involved anywhere in it.
+    #[test]
+    fn a_relation_blind_input_the_unbounded_fold_resolves_still_certifies() {
+        let left = x().ln().sqrt() * x().ln().sqrt();
+        let right = x().ln();
+        assert_eq!(
+            reason(&left, &right),
+            ZeroTestDecline::RelationBlind(RelationLimit::MultiplicativeAtomRelation)
+        );
+        assert!(
+            certifies_equal(&left, &right),
+            "gating this class out would lose a decision the fallback makes today"
+        );
+    }
+
+    /// False side of the relation-blind class: `√x·√y = √(xy) + 1` is false and
+    /// must never certify equal.
+    #[test]
+    fn a_false_radical_identity_is_never_certified_equal() {
+        let left = x().sqrt() * y().sqrt();
+        let right = (x() * y()).sqrt() + CasExpr::int(1);
+        assert!(
+            !certifies_equal(&left, &right),
+            "a false radical identity must not be certified equal"
+        );
+        // And the true one it is a near-miss of is declined rather than refuted,
+        // which is the guard this class is named for.
+        assert!(matches!(
+            equal(&left, &(x() * y()).sqrt()),
+            ZeroTest::Unknown
+        ));
+    }
+
+    /// An atom whose argument the key could not canonicalize — a rational
+    /// content past `i128` — is relation-blind, not out-of-fragment: the
+    /// unbounded ring keys with the same [`atom_name`] but its refutation
+    /// branch is stricter, so it declines rather than refuting.
+    #[test]
+    fn an_uncanonical_atom_key_is_relation_blind_and_never_refutes() {
+        let huge = CasExpr::Const(Rational::new(1, i128::MAX));
+        let twice = CasExpr::Const(Rational::new(2, i128::MAX));
+        let left = (x() / (huge * s() + CasExpr::rat(1, 3) * u())).ln();
+        let right = ((CasExpr::int(2) * x()) / (twice * s() + CasExpr::rat(2, 3) * u())).ln();
+        assert_ne!(
+            atom_name("ln", &left),
+            atom_name("ln", &right),
+            "the fixture is only adversarial while the two keys really are distinct"
+        );
+        assert_eq!(
+            reason(&left, &right),
+            ZeroTestDecline::RelationBlind(RelationLimit::UncanonicalAtomKey)
+        );
+        assert!(matches!(equal(&left, &right), ZeroTest::Unknown));
+    }
+
+    // --- OutOfFragment: the classes the gate turns away ---------------------
+
+    /// The head the whole gate is about. An overflowing polynomial carrying one
+    /// `exp` is out-of-fragment BY THE HEAD, not by its arithmetic — and the
+    /// reason names the head, so a reader can see why.
+    #[test]
+    fn a_declined_head_is_named_and_takes_precedence_over_the_overflow() {
+        let left = CasExpr::Mul(vec![binom(80), binom(80)]) + x().exp() * y().exp();
+        let right = binom(160) + (x() + y()).exp();
+        assert_eq!(
+            reason(&left, &right),
+            ZeroTestDecline::OutOfFragment(FragmentLimit::UnboundedRingDeclinesHead(
+                "exp".to_owned()
+            ))
+        );
+        // The route this reason produces is `a_head_gated_input_never_reaches_
+        // the_fallback`'s subject, not this test's; asserting it here too would
+        // make one fact fail in two places and hide which guard broke.
+        //
+        // The precedence claim, stated separately: the SAME polynomial pair with
+        // the `exp` removed really is an overflow, so the head is what changed
+        // the classification and not the arithmetic.
+        assert_eq!(
+            reason(
+                &CasExpr::Mul(vec![binom(80), binom(80)]),
+                &binom(160).clone()
+            ),
+            ZeroTestDecline::Overflowed
+        );
+        assert_eq!(
+            explain_decline(&left, &right),
+            Some(ZeroTestDecline::OutOfFragment(
+                FragmentLimit::UnboundedRingDeclinesHead("exp".to_owned())
+            ))
+        );
+    }
+
+    /// Satisfiable side of the head-gated class: the identity the gate turns
+    /// away at overflow scale still certifies BELOW the wall, where the bounded
+    /// path decomposes `exp` itself. So the decline is about the width the
+    /// unbounded ring would have been needed for, not about `exp`.
+    #[test]
+    fn the_head_gated_identity_still_certifies_below_the_wall() {
+        for (left, right) in [
+            (x().exp() * y().exp(), (x() + y()).exp()),
+            ((CasExpr::int(2) * x()).exp(), x().exp().pow(2)),
+            (
+                (CasExpr::int(3) * CasExpr::int(2).ln()).exp(),
+                CasExpr::int(8),
+            ),
+            (x().exp() * (CasExpr::zero() - x()).exp(), CasExpr::int(1)),
+        ] {
+            assert!(
+                certifies_equal(&left, &right),
+                "{left} = {right} must certify below the wall"
+            );
+        }
+    }
+
+    /// False side of the head-gated class: a FALSE `exp` identity at overflow
+    /// scale must never be certified equal — the gate declines to look, and
+    /// declining is not refuting.
+    #[test]
+    fn a_false_exp_identity_at_overflow_scale_is_never_certified() {
+        for (left, right) in [
+            (x().exp() * y().exp(), (x() + y() + CasExpr::int(1)).exp()),
+            ((CasExpr::int(2) * x()).exp(), x().exp()),
+        ] {
+            let big_left = CasExpr::Mul(vec![binom(80), binom(80)]) + left.clone();
+            let big_right = binom(160) + right.clone();
+            assert!(
+                !certifies_equal(&big_left, &big_right),
+                "{left} = {right} is FALSE and must never be certified equal"
+            );
+            // And it is not certified below the wall either, so the gate is not
+            // what is protecting soundness here.
+            assert!(!certifies_equal(&left, &right));
+        }
+    }
+
+    /// A division by the identically zero function is out-of-fragment at every
+    /// width: [`BigRatFunc::div`] declines on the same condition, written the
+    /// same way.
+    #[test]
+    fn a_division_by_the_zero_function_is_named_and_does_not_enter() {
+        let left = x() / (x() - x());
+        let right = CasExpr::int(1);
+        assert_eq!(
+            reason(&left, &right),
+            ZeroTestDecline::OutOfFragment(FragmentLimit::DivisionByZeroFunction)
+        );
+        assert!(matches!(equal(&left, &right), ZeroTest::Unknown));
+        // Positive control: a divisor that is merely SMALL, not the zero
+        // function, decides — so the decline is about the divisor being zero.
+        assert!(certifies_equal(
+            &(x() / (x() + CasExpr::int(1))),
+            &(x() / (x() + CasExpr::int(1)))
+        ));
+    }
+
+    /// An `exp` argument coefficient past the `u32` exponent range is
+    /// out-of-fragment because that range is the same in both rings.
+    ///
+    /// Asserted at [`normalize_rational_classified`] rather than through
+    /// `equal`, and that is the finding rather than a convenience: while
+    /// `big_ring_declines_head` names `exp`, every input that could reach this
+    /// classification carries an `exp` head, so
+    /// [`escalate_to_declined_head`] rewrites the reason to
+    /// [`FragmentLimit::UnboundedRingDeclinesHead`] before a caller sees it.
+    /// The arm is reachable and correct; it is currently *masked* end to end,
+    /// and it stops being masked the day `exp` is ported.
+    #[test]
+    fn an_exp_coefficient_past_u32_is_out_of_fragment_at_the_normalizer() {
+        let coefficient = CasExpr::Const(Rational::integer(i128::from(u32::MAX) + 1));
+        let huge = (coefficient * x()).exp();
+        assert_eq!(
+            normalize_rational_classified(&huge).expect_err("a u32 exponent cannot hold this"),
+            ZeroTestDecline::OutOfFragment(FragmentLimit::ExpCoefficientOutOfRange)
+        );
+        // The control: one less, and the same shape normalizes.
+        let fits = (CasExpr::Const(Rational::integer(i128::from(u32::MAX))) * x()).exp();
+        assert!(normalize_rational_classified(&fits).is_ok());
+        // And the end-to-end masking this test documents, stated so a change to
+        // it is visible rather than silent.
+        assert_eq!(
+            reason(&huge, &CasExpr::int(1)),
+            ZeroTestDecline::OutOfFragment(FragmentLimit::UnboundedRingDeclinesHead(
+                "exp".to_owned()
+            ))
+        );
+    }
+
+    // --- the two route facts, which is where the gate is falsifiable --------
+
+    /// **A head-gated input never reaches the fallback.** This is the test the
+    /// whole slice is for: the verdict is `Unknown` either way, so nothing but
+    /// the entry count can see the difference.
+    ///
+    /// Dies when the gate is deleted (everything enters again).
+    #[test]
+    fn a_head_gated_input_never_reaches_the_fallback() {
+        let left = CasExpr::Mul(vec![binom(80), binom(80)]) + x().exp() * y().exp();
+        let right = binom(160) + (x() + y()).exp();
+        let before = fallback_entries();
+        let gated_before = head_gated_declines();
+        assert!(matches!(equal(&left, &right), ZeroTest::Unknown));
+        assert_eq!(
+            fallback_entries(),
+            before,
+            "an `exp` head at overflow scale must not spend any of the work budget"
+        );
+        let gated = head_gated_declines();
+        assert!(
+            gated.0 > gated_before.0,
+            "and the gate must be what turned it away, on the overflow reason"
+        );
+    }
+
+    /// **A plain overflow still reaches the fallback.** The other direction, so
+    /// the gate cannot buy its speed by never entering at all.
+    ///
+    /// Dies when the gate is made to decline everything.
+    #[test]
+    fn a_plain_overflow_still_reaches_the_fallback() {
+        let left = CasExpr::Mul(vec![binom(80), binom(80)]);
+        let right = binom(160);
+        let before = fallback_entries();
+        assert!(certifies_equal(&left, &right));
+        assert!(
+            fallback_entries() > before,
+            "the overflow class is what the fallback exists for; it must be entered"
+        );
+    }
+
+    /// The gate's head list is derived from the ring, not from a literal.
+    ///
+    /// [`big_ring_declines_head`] is the one predicate
+    /// [`normalize_rational_big_within`] matches on and
+    /// [`unbounded_ring_declined_head`] reads, and this walks **every**
+    /// [`UnaryFunc`] variant — the list built from the type's own constructors,
+    /// not typed out here — asserting the two agree. A head the gate names but
+    /// the ring normalizes would be a decline bought for nothing; a head the
+    /// ring declines but the gate does not name is the 2.35 ms this slice
+    /// removed, back again.
+    #[test]
+    fn the_entry_gate_names_exactly_the_heads_the_ring_declines() {
+        let mut checked = 0usize;
+        for func in every_unary_func() {
+            let expr = CasExpr::Unary(func, Box::new(x()));
+            let mut budget = BIG_FALLBACK_WORK_BUDGET;
+            let ring_declines = normalize_rational_big_within(&expr, &mut budget).is_none();
+            let gate_names = unbounded_ring_declined_head(&expr).is_some();
+            assert_eq!(
+                ring_declines,
+                gate_names,
+                "the gate and the ring disagree about `{}`: ring declines={ring_declines}, \
+                 gate names={gate_names}",
+                func.name()
+            );
+            assert_eq!(gate_names, big_ring_declines_head(func));
+            checked += 1;
+        }
+        assert!(
+            checked >= 20,
+            "the variant list looks short at {checked}; a head added to `UnaryFunc` \
+             without being added here would make this test measure a memory"
+        );
+    }
+
+    /// Every [`UnaryFunc`] variant, built from the type rather than listed.
+    ///
+    /// `UnaryFunc` is `Copy` and non-exhaustive matching is a compile error, so
+    /// the exhaustive `match` below is the compiler's own guarantee that a new
+    /// variant cannot be forgotten here.
+    fn every_unary_func() -> Vec<UnaryFunc> {
+        let sample = UnaryFunc::Ln;
+        // A total match over the type: adding a variant to `UnaryFunc` makes
+        // this fail to compile until it is listed in the vector below too.
+        match sample {
+            UnaryFunc::Ln
+            | UnaryFunc::Exp
+            | UnaryFunc::Sin
+            | UnaryFunc::Cos
+            | UnaryFunc::Tan
+            | UnaryFunc::Atan
+            | UnaryFunc::Sqrt
+            | UnaryFunc::Abs
+            | UnaryFunc::Sign
+            | UnaryFunc::Floor
+            | UnaryFunc::Ceiling
+            | UnaryFunc::Erf
+            | UnaryFunc::Si
+            | UnaryFunc::Ci
+            | UnaryFunc::Ei
+            | UnaryFunc::Li
+            | UnaryFunc::Shi
+            | UnaryFunc::Chi
+            | UnaryFunc::FresnelS
+            | UnaryFunc::FresnelC
+            | UnaryFunc::NthRoot(_)
+            | UnaryFunc::BesselJ(_)
+            | UnaryFunc::BesselI(_)
+            | UnaryFunc::Asin
+            | UnaryFunc::Acos
+            | UnaryFunc::Asinh
+            | UnaryFunc::Acosh
+            | UnaryFunc::Gamma
+            | UnaryFunc::PolyGamma(_)
+            | UnaryFunc::Ai
+            | UnaryFunc::AiPrime
+            | UnaryFunc::Bi
+            | UnaryFunc::BiPrime
+            | UnaryFunc::LambertW => {}
+        }
+        vec![
+            UnaryFunc::Ln,
+            UnaryFunc::Exp,
+            UnaryFunc::Sin,
+            UnaryFunc::Cos,
+            UnaryFunc::Tan,
+            UnaryFunc::Atan,
+            UnaryFunc::Sqrt,
+            UnaryFunc::Abs,
+            UnaryFunc::Sign,
+            UnaryFunc::Floor,
+            UnaryFunc::Ceiling,
+            UnaryFunc::Erf,
+            UnaryFunc::Si,
+            UnaryFunc::Ci,
+            UnaryFunc::Ei,
+            UnaryFunc::Li,
+            UnaryFunc::Shi,
+            UnaryFunc::Chi,
+            UnaryFunc::FresnelS,
+            UnaryFunc::FresnelC,
+            UnaryFunc::NthRoot(3),
+            UnaryFunc::BesselJ(2),
+            UnaryFunc::BesselI(2),
+            UnaryFunc::Asin,
+            UnaryFunc::Acos,
+            UnaryFunc::Asinh,
+            UnaryFunc::Acosh,
+            UnaryFunc::Gamma,
+            UnaryFunc::PolyGamma(1),
+            UnaryFunc::Ai,
+            UnaryFunc::AiPrime,
+            UnaryFunc::Bi,
+            UnaryFunc::BiPrime,
+            UnaryFunc::LambertW,
+        ]
     }
 }
