@@ -138,6 +138,23 @@
       },
       "authority": "docs/research/09-decisions/adr-0542-held-out-partition-breach-repair.md",
       "irreversible": true
+    },
+    {
+      "date": "2026-09-05",
+      "family": "discrete-step-and-counting-bounds",
+      "from": "held-out",
+      "to": "development",
+      "reason": "one of the ten rows was cited by name in a producer contract: `artifacts/autogenesis/producer-contracts/psatz-sum-of-squares-v1.json` (lane psatz-producer, ADR-1649, merged c27636688 on 2026-09-05) lists F:ml430-int-le-sub-one-of-not-le-fc32b89d as a `non_example` with a reason that quotes its statement. Nothing was proved (all ten rows are still `open`), but the family's blind-evaluation value is spent the moment a lane reads a row to decide what a producer must NOT target; scripts/check-autogenesis-holdout-isolation.py reports it as `held-out-reference`. Per ADR-0542 the partition unit is the whole family, so all ten rows move together, recorded here rather than by deleting the citation (a deletion would hide the spend, not undo it). This is the same family the chebyshev-pi lane (ADR-1637, 88ee63a0e, earlier the same day) deliberately declined to prove into because it was never scored; it is spent anyway. Detected by the coordinator's post-merge holdout-isolation run on 2026-09-05, before push.",
+      "breach": {
+        "fact_id": "F:ml430-int-le-sub-one-of-not-le-fc32b89d",
+        "proof_shape": "discrete-step-and-counting-bounds:reference-only (no proof; cited as a producer-contract non-example)",
+        "operation_id": "psatz-sum-of-squares-v1",
+        "registered_commit": "c27636688",
+        "registered_date": "2026-09-05",
+        "detected_date": "2026-09-05"
+      },
+      "authority": "docs/research/09-decisions/adr-0542-held-out-partition-breach-repair.md",
+      "irreversible": true
     }
   ],
   "policy_amendments": [

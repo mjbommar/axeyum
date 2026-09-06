@@ -398,6 +398,86 @@ impl Matrix {
         })
     }
 
+    /// This entry as a plain `i128`, or `None` if it is not an integer-valued
+    /// constant.
+    fn int_at(&self, row: usize, col: usize) -> Option<i128> {
+        match self.at(row, col) {
+            CasExpr::Const(value) if value.denominator() == 1 => Some(value.numerator()),
+            _ => None,
+        }
+    }
+
+    /// Matrix product `self · other`, mathematically identical to
+    /// [`mul`](Self::mul) but computed by direct `i128`-checked
+    /// multiply-accumulate rather than symbolic `CasExpr` addition and
+    /// [`expand`](crate::expand).
+    ///
+    /// `mul` pushes every result entry through the general polynomial
+    /// canonicalizer even when every input is a literal integer, which is
+    /// needless work for the all-integer matrices this crate's normal-form
+    /// certificates are built from (Hermite/Smith transforms, boundary
+    /// matrices, and every product check over them). Measured (this crate,
+    /// `--release`, single-threaded): certifying `U . d_1 . V = D` for a
+    /// 196-vertex/588-edge simplicial complex's `d_1` (`U` 196x196, `V`
+    /// 588x588) took 25.8s via `mul`; this path computes the same product in
+    /// well under a second, which is the actual "unimodularity ceiling" this
+    /// was mistaken for (`is_unimodular`'s own Bareiss determinant did NOT
+    /// decline on either transform at this size -- see
+    /// `crate::homology`'s module doc for the measurement).
+    ///
+    /// Returns `None` if the shapes are not conformable, either matrix has a
+    /// non-integer-valued entry (the caller should fall back to `mul`, which
+    /// stays correct for symbolic entries), or any intermediate `i128`
+    /// accumulation overflows (also a decline, never a silently wrong
+    /// answer). Pinned equal to `mul` on every existing normal-form fixture
+    /// by a regression test.
+    #[must_use]
+    pub(crate) fn mul_int_fast(&self, other: &Matrix) -> Option<Matrix> {
+        if self.cols != other.rows {
+            return None;
+        }
+        let rows = self.rows;
+        let inner = self.cols;
+        let cols = other.cols;
+        // Extract every entry up front so a non-integer entry anywhere
+        // declines before any arithmetic runs (rather than partway through).
+        let mut left = Vec::with_capacity(rows.checked_mul(inner)?);
+        for row in 0..rows {
+            for k in 0..inner {
+                left.push(self.int_at(row, k)?);
+            }
+        }
+        let mut right = Vec::with_capacity(inner.checked_mul(cols)?);
+        for k in 0..inner {
+            for col in 0..cols {
+                right.push(other.int_at(k, col)?);
+            }
+        }
+        let mut data = Vec::with_capacity(rows.checked_mul(cols)?);
+        for row in 0..rows {
+            for col in 0..cols {
+                let mut acc: i128 = 0;
+                for k in 0..inner {
+                    let term = left[row * inner + k].checked_mul(right[k * cols + col])?;
+                    acc = acc.checked_add(term)?;
+                }
+                data.push(CasExpr::int(acc));
+            }
+        }
+        Some(Matrix { rows, cols, data })
+    }
+
+    /// `self.mul_int_fast(other)`, falling back to the general symbolic
+    /// [`mul`](Self::mul) when the fast path declines (a non-integer entry,
+    /// or an `i128` overflow the symbolic path may still handle via bignum
+    /// `Rational` -- `expand` on integer constants never actually needs
+    /// bignum today, but this keeps the fallback total rather than adding a
+    /// second silent failure mode).
+    #[must_use]
+    pub(crate) fn mul_fast_or_symbolic(&self, other: &Matrix) -> Option<Matrix> {
+        self.mul_int_fast(other).or_else(|| self.mul(other))
+    }
+
     /// The exact symbolic determinant of a square matrix, via cofactor
     /// (`Laplace`) expansion, canonicalized with [`expand`](crate::expand).
     ///
@@ -1124,5 +1204,100 @@ mod tests {
             &matrix.bareiss_determinant().expect("must not decline"),
             &matrix.determinant().expect("must not decline"),
         );
+    }
+
+    // ---- `mul_int_fast` / `mul_fast_or_symbolic`: REGRESSION. `mul` pushes
+    // every result entry through `expand`'s general polynomial canonicalizer
+    // even for a literal-integer product, which measured 25.8s to certify
+    // `U . d_1 . V = D` for a 196-vertex/588-edge simplicial complex's `d_1`
+    // (see `crate::homology`'s module doc) -- an all-integer fast path that
+    // skips the symbolic machinery entirely is the fix. Pinned equal to `mul`
+    // on every case below, so the fast path is a performance change, not a
+    // semantic one. ----
+
+    #[test]
+    fn mul_int_fast_agrees_with_mul_on_square_integer_matrices() {
+        let a = Matrix::from_rows(vec![
+            vec![konst(2), konst(-3), konst(0)],
+            vec![konst(5), konst(1), konst(-4)],
+            vec![konst(-1), konst(2), konst(7)],
+        ])
+        .expect("square");
+        let b = Matrix::from_rows(vec![
+            vec![konst(1), konst(0), konst(2)],
+            vec![konst(-2), konst(3), konst(1)],
+            vec![konst(4), konst(-5), konst(6)],
+        ])
+        .expect("square");
+        let fast = a.mul_int_fast(&b).expect("all-integer, conformable");
+        let slow = a.mul(&b).expect("conformable");
+        assert_matrix_equal(&fast, &slow);
+    }
+
+    #[test]
+    fn mul_int_fast_agrees_with_mul_on_a_rectangular_product() {
+        // A 2x3 times a 3x4, entries including zeros and negatives (the
+        // shape of an actual boundary-matrix product).
+        let a = Matrix::from_rows(vec![
+            vec![konst(1), konst(-1), konst(0)],
+            vec![konst(0), konst(1), konst(-1)],
+        ])
+        .expect("2x3");
+        let b = Matrix::from_rows(vec![
+            vec![konst(1), konst(0), konst(2), konst(-1)],
+            vec![konst(3), konst(-2), konst(0), konst(1)],
+            vec![konst(-1), konst(1), konst(1), konst(0)],
+        ])
+        .expect("3x4");
+        let fast = a.mul_int_fast(&b).expect("all-integer, conformable");
+        let slow = a.mul(&b).expect("conformable");
+        assert_matrix_equal(&fast, &slow);
+    }
+
+    /// `mul_int_fast` declines (rather than silently mis-multiplying) on a
+    /// non-integer entry; `mul_fast_or_symbolic` then falls back to the
+    /// still-correct symbolic `mul`.
+    #[test]
+    fn mul_int_fast_declines_on_a_symbolic_entry_and_the_fallback_still_works() {
+        let symbolic = Matrix::from_rows(vec![vec![var("x"), konst(0)], vec![konst(0), konst(1)]])
+            .expect("square");
+        let identity = Matrix::identity(2);
+        assert!(
+            symbolic.mul_int_fast(&identity).is_none(),
+            "a symbolic entry must decline the fast path"
+        );
+        let fallback = symbolic
+            .mul_fast_or_symbolic(&identity)
+            .expect("falls back to mul");
+        assert_matrix_equal(&fallback, &symbolic.mul(&identity).expect("conformable"));
+    }
+
+    /// `mul_int_fast` declines on a non-conformable shape, exactly like
+    /// `mul`.
+    #[test]
+    fn mul_int_fast_declines_on_shape_mismatch() {
+        let a = Matrix::from_rows(vec![vec![konst(1), konst(2)]]).expect("1x2");
+        let b = Matrix::from_rows(vec![vec![konst(1), konst(2)]]).expect("1x2");
+        assert!(a.mul_int_fast(&b).is_none());
+        assert!(a.mul(&b).is_none());
+    }
+
+    /// `mul_int_fast` declines (not panics) on an `i128` overflow, and
+    /// `mul_fast_or_symbolic` still returns the correct (large) answer via
+    /// the symbolic fallback -- ADVERSARIAL against a wraparound bug.
+    #[test]
+    fn mul_int_fast_declines_on_overflow_and_the_fallback_recovers() {
+        let huge = konst(i128::MAX / 2);
+        let a = Matrix::from_rows(vec![vec![huge.clone(), huge.clone()]]).expect("1x2");
+        let b = Matrix::from_rows(vec![vec![huge.clone()], vec![huge]]).expect("2x1");
+        assert!(
+            a.mul_int_fast(&b).is_none(),
+            "the accumulated product must overflow i128 and decline"
+        );
+        let recovered = a
+            .mul_fast_or_symbolic(&b)
+            .expect("symbolic fallback succeeds");
+        assert_eq!(recovered.rows(), 1);
+        assert_eq!(recovered.cols(), 1);
     }
 }

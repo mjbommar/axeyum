@@ -277,6 +277,7 @@ compute-side realization of destinations the research tree already names:
 | [rational-integration.md](rational-integration.md) | `∫ P/Q dx` algorithm (Horowitz) + certification + log-part roadmap | done |
 | [next-wave-roadmap.md](next-wave-roadmap.md) | Post-G18 SymPy/Mathematica capability survey; prioritized top-15 | historical (2026-09-05) — see [13-computer-algebra.md](../../math-department/13-computer-algebra.md) |
 | [curriculum-gaps.md](curriculum-gaps.md) | Union of the 7 per-branch curriculum reviews; Tier A–D ranked gaps | historical (2026-09-05) — see [13-computer-algebra.md](../../math-department/13-computer-algebra.md) |
+| [axeyum-arith-design.md](axeyum-arith-design.md) | The shared exact-arithmetic crate: inventory of the eight duplicated ℚ[x] copies, the Rust bignum ecosystem, the module map, the certificate discipline, and the migration order ([ADR-1710](../09-decisions/adr-1710-a-shared-exact-arithmetic-crate-not-eight-private-copies.md)) | proposed (2026-09-05) |
 
 **Decisions:** [ADR-0301](../09-decisions/adr-0301-cas-layer-reduce-to-decide.md)
 (the `axeyum-cas` layer + reduce-to-decide certifier).

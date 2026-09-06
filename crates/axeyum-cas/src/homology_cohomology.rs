@@ -175,10 +175,12 @@ fn coboundary_smith_holds(
                 "recorded coboundary at dimension {k} does not match d_{k}^T rebuilt from the complex"
             ));
         }
+        // Fast integer path (see `crate::homology`'s module doc and
+        // `Matrix::mul_int_fast`'s doc for the measurement this fixes).
         let product = data
             .u
-            .mul(&data.boundary)
-            .and_then(|partial| partial.mul(&data.v))
+            .mul_fast_or_symbolic(&data.boundary)
+            .and_then(|partial| partial.mul_fast_or_symbolic(&data.v))
             .ok_or_else(|| format!("U * d_{k}^T * V failed to multiply"))?;
         if !certify_product_equals(&product, &data.d) {
             return Err(format!("U * d_{k}^T * V != D at dimension {k}"));

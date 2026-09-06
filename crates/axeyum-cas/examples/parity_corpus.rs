@@ -1550,6 +1550,129 @@ fn prob3_binomial_mean() -> Outcome {
     }
 }
 
+/// `M(t) = λ/(λ−t)` for `Exponential(λ)` at a symbolic `λ` **and** a symbolic
+/// `t`, decided under `λ − t > 0` (i.e. `t < λ`, the interval on which the mgf
+/// exists at all). Added 2026-09-05 by lane cas-symbolic-mgf.
+///
+/// The entry agrees only when the condition is recorded **exactly**: if the
+/// hypothesis ever silently disappears, the claim `λ/(λ−t)` becomes an
+/// unconditional falsehood and this entry disagrees, reddening the harness.
+fn prob4_exponential_symbolic_mgf() -> Outcome {
+    let lambda = CasExpr::var("lam");
+    let d = probability::Continuous::Exponential(lambda.clone());
+    let cert = d.mgf("t");
+    let conditions = cert.hypotheses_display();
+    let matches_claim = matches!(
+        equal(
+            &cert.claim,
+            &(lambda.clone() / (lambda - CasExpr::var("t")))
+        ),
+        ZeroTest::Certified { equal: true, .. }
+    );
+    let good = cert.is_decided() && conditions == "lam - t > 0" && matches_claim;
+    Outcome {
+        verdict: if good {
+            Verdict::Agree
+        } else {
+            Verdict::Disagree
+        },
+        trust: if cert.is_decided() {
+            Trust::Certified
+        } else {
+            Trust::Uncertified
+        },
+        expected: "decided lam/(lam - t) under exactly `lam - t > 0`".to_string(),
+        actual: format!(
+            "decided={}, unconditional={}, claim={}, under=[{conditions}]",
+            cert.is_decided(),
+            cert.is_certified(),
+            cert.claim
+        ),
+    }
+}
+
+/// `M(t) = e^{μt + σ²t²/2}` for `Normal(μ, 4)` at a symbolic `μ` and symbolic
+/// `t`, certified **unconditionally** — `σ²` is concrete, so its sign is decided
+/// rather than recorded. Reached by completing the square, not by integrating
+/// `e^{tx}φ(x)` (which declines). Added 2026-09-05 by lane cas-symbolic-mgf.
+fn prob5_normal_symbolic_mgf() -> Outcome {
+    let mu = CasExpr::var("mu");
+    let t = CasExpr::var("t");
+    let d = probability::Continuous::Normal {
+        mu: mu.clone(),
+        variance: Rational::integer(4),
+    };
+    let cert = d.mgf("t");
+    let expected_claim = (t.clone() * mu + i(4) * t.pow(2) / i(2)).exp();
+    let matches_claim = matches!(
+        equal(&cert.claim, &expected_claim),
+        ZeroTest::Certified { equal: true, .. }
+    );
+    let good = cert.is_certified() && cert.hypotheses().is_empty() && matches_claim;
+    Outcome {
+        verdict: if good {
+            Verdict::Agree
+        } else {
+            Verdict::Disagree
+        },
+        trust: if cert.is_certified() {
+            Trust::Certified
+        } else {
+            Trust::Uncertified
+        },
+        expected: "certified exp(mu*t + 4*t^2/2), unconditionally".to_string(),
+        actual: format!(
+            "certified={}, claim={}, under=[{}]",
+            cert.is_certified(),
+            cert.claim,
+            cert.hypotheses_display()
+        ),
+    }
+}
+
+/// `Normal` with a **negative** variance must decline its mgf: the square
+/// completes, but the shifted Gaussian points the wrong way and has no erf
+/// antiderivative. The control that the completing-the-square reduction did not
+/// become a formula-printer. Added 2026-09-05 by lane cas-symbolic-mgf.
+fn prob6_normal_negative_variance_declines() -> Outcome {
+    let d = probability::Continuous::Normal {
+        mu: CasExpr::var("mu"),
+        variance: Rational::integer(-1),
+    };
+    let cert = d.mgf("t");
+    Outcome {
+        verdict: if cert.is_decided() {
+            Verdict::Disagree
+        } else {
+            Verdict::Decline
+        },
+        trust: Trust::Uncertified,
+        expected: "declines: a negative variance is not a Gaussian this route integrates"
+            .to_string(),
+        actual: format!("decided={}, claim={}", cert.is_decided(), cert.claim),
+    }
+}
+
+/// `Geometric(p)`'s mean at a **symbolic** `p` still declines, and not for a
+/// missing hypothesis channel: `gosper_sum` returns `None` on a symbolic ratio
+/// before any convergence question is asked, so there is no value to attach
+/// `0 < p < 1` to. The `decline_expected` counterpart to `prob4`, which shows
+/// where the hypothesis mechanism does and does not reach.
+fn prob7_geometric_symbolic_p_declines() -> Outcome {
+    let d = Discrete::Geometric(CasExpr::var("p"));
+    let cert = d.mean();
+    Outcome {
+        verdict: if cert.is_decided() {
+            Verdict::Disagree
+        } else {
+            Verdict::Decline
+        },
+        trust: Trust::Uncertified,
+        expected: "declines: gosper_sum has no antidifference for a symbolic ratio".to_string(),
+        actual: format!("decided={}, claim={}", cert.is_decided(), cert.claim),
+    }
+}
+
 // ============================================================================
 // Entries: first-pass modules — geometry_beyond
 // ============================================================================
@@ -3567,6 +3690,34 @@ fn main() {
             Some("probability"),
             Core,
             prob3_binomial_mean
+        ),
+        e!(
+            "prob4-exponential-symbolic-mgf",
+            None,
+            Some("probability"),
+            Core,
+            prob4_exponential_symbolic_mgf
+        ),
+        e!(
+            "prob5-normal-symbolic-mgf",
+            None,
+            Some("probability"),
+            Core,
+            prob5_normal_symbolic_mgf
+        ),
+        e!(
+            "prob6-normal-negative-variance",
+            None,
+            Some("probability"),
+            DeclineExpected,
+            prob6_normal_negative_variance_declines
+        ),
+        e!(
+            "prob7-geometric-symbolic-p",
+            None,
+            Some("probability"),
+            DeclineExpected,
+            prob7_geometric_symbolic_p_declines
         ),
         // first-pass modules: geometry_beyond
         e!(

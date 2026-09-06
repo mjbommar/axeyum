@@ -4507,10 +4507,10 @@ pub(super) fn creal_sub(p: &CRealPrelude) -> Vec<(&'static str, Sub)> {
     vec![("rat", Sub::Rat(Box::new(p.rat)))]
 }
 
-/// The `ComplexPrelude` field table (168 names,
+/// The `ComplexPrelude` field table (186 names,
 /// 0 name lists, 1 sub-packages).
 ///
-/// 39 of the names come from ADR-1512 per-module registries and
+/// 57 of the names come from ADR-1512 per-module registries and
 /// carry a dotted field name (`pi.pi_le_four`); the rest are flat
 /// fields on `ComplexPrelude` itself.
 #[must_use]
@@ -4721,6 +4721,39 @@ pub(super) fn complex(p: &ComplexPrelude) -> Fields {
             ("deriv.holomorphic_id", p.deriv.holomorphic_id),
             ("deriv.holomorphic_neg", p.deriv.holomorphic_neg),
             ("deriv.holomorphic_add", p.deriv.holomorphic_add),
+            ("estimates.abs_sub_le", p.estimates.abs_sub_le),
+            (
+                "estimates.abs_mul_le_of_bounds",
+                p.estimates.abs_mul_le_of_bounds,
+            ),
+            ("estimates.bounded_on", p.estimates.bounded_on),
+            ("estimates.bounded_on_unfold", p.estimates.bounded_on_unfold),
+            ("estimates.bounded_on_add", p.estimates.bounded_on_add),
+            ("estimates.bounded_on_mul", p.estimates.bounded_on_mul),
+            (
+                "estimates.uniformly_continuous_on",
+                p.estimates.uniformly_continuous_on,
+            ),
+            ("estimates.uc_mk", p.estimates.uc_mk),
+            ("estimates.uc_rec", p.estimates.uc_rec),
+            ("estimates.uc_modulus", p.estimates.uc_modulus),
+            ("estimates.uc_spec", p.estimates.uc_spec),
+            (
+                "estimates.uniformly_continuous_const",
+                p.estimates.uniformly_continuous_const,
+            ),
+            (
+                "estimates.uniformly_continuous_id",
+                p.estimates.uniformly_continuous_id,
+            ),
+            (
+                "estimates.uniformly_continuous_of_has_derivative",
+                p.estimates.uniformly_continuous_of_has_derivative,
+            ),
+            ("leibniz.has_derivative_mul", p.leibniz.has_derivative_mul),
+            ("components.abs_of_real", p.components.abs_of_real),
+            ("components.abs_re_le", p.components.abs_re_le),
+            ("components.abs_im_le", p.components.abs_im_le),
             ("comm_ring_s", p.comm_ring_s),
         ],
         lists: Vec::new(),
