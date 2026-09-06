@@ -137,6 +137,7 @@ now. Nothing was deleted.
 
 | Date | Commit | Result |
 |---|---|---|
+| 2026-09-06 | `d29250247` | Lane arith-slice-4: the three remaining polynomial copies stay, each with a measured reason; slice 2's mutants registered; the fibre layer gets its first differential oracle (ADR-1710, file 13 item 1) |
 | 2026-09-06 | `6cdcda3c7` | Lane arith-finish: Normalize, HenselLift and AlgebraicNumber implemented in axeyum-arith; axeyum-ir and axeyum-fp no longer name num-bigint or num-rational; a boundary gate with an allowlist (ADR-1710, file 13 item 1) |
 | 2026-09-06 | `be1ca0a4c` | Lane cas-fps-4: the exact asymptotic amplitude of a rational generating function (file 13 item 3, wave four) |
 | 2026-09-06 | `ae6d38279` | Lane cas-bigfallback-1: the zero-test's fallback entry distinguishes overflow from out-of-fragment; exp measured and kept out (file 13 item 1, wave five) |
