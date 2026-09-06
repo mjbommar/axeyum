@@ -58074,6 +58074,28 @@ reals the pathology is the default, not the exception.
 | `scripts/check-merge-hygiene.sh` | PASS (guard 6, `check-shape-duplicates.py --prebuilt`, SKIPPED: no `shape_search` binary on this host) |
 | `./scripts/check-links.sh` | exit 0 |
 
+## A second hazard, and a measurement that names it
+
+`Geo.RPlane.pointRefl`/`pointSymm`/`pointTrans` are the **third** copies of
+those three propositions: `metric.rs` already has
+`Metric.CPoint.equivRefl`/`equivSymm`/`equivTrans`. They are kept deliberately
+(the geo prelude builds `cpoint`, not `metric`), but the search that missed them
+is worth naming, because the tool answered confidently:
+
+```text
+shape_search --name-like equivRefl                       → ABSENT
+    groups=[logic,nat,axreal,integer,ipc,rat,characterization,string]
+    declarations=3275   (positive control: any-kind=3275)
+shape_search --include-constructed --name-like equivRefl → FOUND 20,
+    including Metric.CPoint.equivRefl : ∀ P, CPoint.Equiv P P
+```
+
+**Without `--include-constructed` the index covers none of `creal`, `cpoint`,
+`metric`, `geo`, `complex`, `intspace`, `rn`, `top`** — yet its `declarations=`
+count (3275) clears the 3,050 floor a brief asks a lane to check. An ABSENT
+verdict from the default index is not a statement about any of those
+namespaces.
+
 ## Landed changes
 
 | commit | what |

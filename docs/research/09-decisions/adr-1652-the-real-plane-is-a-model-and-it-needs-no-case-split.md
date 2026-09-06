@@ -150,10 +150,29 @@ so is one this lane initially got wrong.** `metric.rs` already declares
 "the plane prelude builds this inline and never names it". The search that
 missed them looked at `CPointPrelude`'s field list — which is *not* the
 authority for names under `CPoint`, because another prelude may declare into
-that namespace, exactly as CLAUDE.md's kernel gotcha says. The correct search
-is over the whole environment, and the gate that catches this class is
-merge-hygiene guard 6 (`check-shape-duplicates.py --prebuilt`), which SKIPPED
-on this host for want of a built `shape_search`.
+that namespace, exactly as CLAUDE.md's kernel gotcha says.
+
+The right search is `shape_search`, and it needs one flag that is easy to
+omit. **Measured on this host, after building the example:**
+
+```text
+shape_search --name-like equivRefl                     → ABSENT
+    coverage: groups=[logic,nat,axreal,integer,ipc,rat,characterization,string]
+              declarations=3275   (positive control: any-kind=3275)
+shape_search --include-constructed --name-like equivRefl → FOUND 20,
+    among them  Metric.CPoint.equivRefl  theorem  arity=1  CPoint → CPoint.Equiv
+                Geo.QLine.equiv_refl, Geo.RLine.equiv_refl, CReal.Equiv.refl
+```
+
+So the default index does **not** cover `creal`, `cpoint`, `metric`, `geo`,
+`complex`, `intspace`, `rn` or `top` at all: an ABSENT verdict without
+`--include-constructed` is not a statement about any of them, and its
+`declarations=` count clears CLAUDE.md's 3,050 floor while covering none of the
+namespaces a geometry lane works in. That is the trap, and it is worse than the
+`CPointPrelude`-field-list mistake because the tool answered confidently.
+Merge-hygiene guard 6 (`check-shape-duplicates.py --prebuilt`) is the gate for
+this class; it SKIPPED on this host for want of a built `shape_search`, and the
+binary is now built.
 
 The duplication is kept rather than removed because reuse costs more than it
 saves: `build_geo_prelude` depends on `build_cpoint_prelude`, not on

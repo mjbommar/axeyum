@@ -7197,15 +7197,26 @@ SUITES["central-binomial-in-kernel"] = (
 
 SUITES["geo-incidence"] = (
     "crates/axeyum-lean-kernel/src/geo.rs",
-    # Deliberately NOT `--release`. Both mutants fail at PRELUDE-BUILD time,
-    # not at test-execution time, so the run is dominated by compiling the
-    # kernel crate three times (baseline plus two mutants) and the debug
-    # profile is several times cheaper. The suite's tests all go through
-    # `on_a_deep_stack`, so the debug frame growth CLAUDE.md warns about for
-    # the `--release`-only example binaries does not apply here — measured
-    # green in debug at 7 passed / 0 failed before the mutants were run.
+    # Deliberately NOT `--release`. All FOUR mutants fail at PRELUDE-BUILD
+    # time, not at test-execution time, so the run is dominated by compiling
+    # the kernel crate once per mutant and the debug profile is several times
+    # cheaper. The suite's tests all go through `on_a_deep_stack`, so the debug
+    # frame growth CLAUDE.md warns about for the `--release`-only example
+    # binaries does not apply here.
+    #
+    # The filter is the SINGLE prelude-build test, not the whole `geo::`
+    # module, and that is a measurement rather than a preference. Once the ℝ
+    # model landed (ADR-1652) the module grew to 20 tests, each of which
+    # CLONES the built kernel; run in debug at cargo's default thread count
+    # the baseline produced `running 20 tests` and then no `test result:` line
+    # at all — the harness's own INCONSISTENT verdict, and the signature of the
+    # 24 G memory ceiling firing on several concurrent kernel clones. The one
+    # test kept is the one every mutation here actually kills, and it is
+    # measured at 435.72 s in debug, 1 passed / 0 failed. Run the whole module
+    # in `--release` instead (20 passed in 117 s); it is not what a mutation
+    # sweep needs.
     Cargo(
-        ("-p", "axeyum-lean-kernel", "--lib", "geo::"),
+        ("-p", "axeyum-lean-kernel", "--lib", "geo::geo_tests::geo_prelude_builds"),
         "geo-incidence",
     ),
     [
