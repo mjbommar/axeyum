@@ -1524,3 +1524,22 @@ all three.
 | load average (start / end) | 1.01 1.00 1.00 / 0.82 0.98 0.99 — 8 cores; a high load DEPRESSES this result |
 | per-file detail | `bench-results/parity-details/QF_RDL.tsv` |
 
+## QF_SLIA — 2026-09-06T01:04:49Z
+
+| field | value |
+|---|---|
+| axeyum solved | 193/200 |
+| reference solved | 194/200 |
+| **ratio (axeyum / reference)** | **99.5%** |
+| **disagreements** | **0** |
+| soundness | SOUND |
+| both / axeyum-only / reference-only | 187 / 6 / 7 |
+| reference | `cvc5 1.3.4 [git f3b21c4 on branch HEAD]` |
+| reference options | `<none — plain invocation, NOT a competition portfolio>` |
+| axeyum options | `<none — shipped default configuration>` |
+| protocol | 24s wall, 8GiB, per-file |
+| benchmark list | `bench-results/parity-lists/QF_SLIA.txt` (sha256 7d539c0182a6, 200 files) |
+| solver commit | `9914a1c0e` |
+| load average (start / end) | 0.82 0.98 0.99 / 0.87 0.93 0.99 — 8 cores; a high load DEPRESSES this result |
+| per-file detail | `bench-results/parity-details/QF_SLIA.tsv` |
+
