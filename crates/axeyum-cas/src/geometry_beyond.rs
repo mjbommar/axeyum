@@ -61,35 +61,55 @@
 //!   there". The cofactors are `1` and `2t` — a direct substitution, not a
 //!   search — and no non-degeneracy condition is needed.
 //!
+//! # Pascal and Desargues: certified by recoordinatisation, not by a bigger search
+//!
+//! Both theorems are now in [`crate::geometry_corpus::corpus`] with committed
+//! artifacts — [`pascal_parabola_problem`] and [`desargues_affine_problem`] —
+//! and every previous wave's decline is a fact about the *statements* those
+//! waves handed the certifier, not about the theorems. The general statements
+//! in [`beyond_frontier`] are kept, still uncertified, because they are
+//! genuinely stronger than what is proved: an arbitrary conic rather than one
+//! fixed one, and a projective rather than an affine centre.
+//!
+//! What actually moved each one:
+//!
+//! - **Pascal.** Parametrising the six vertices as the parabola points
+//!   `(t, t²)` discharges the "six points on a common conic" hypothesis by
+//!   construction, and the `6 × 6` monomial determinant that made the search
+//!   hopeless simply disappears. Two further obstacles then showed up, and
+//!   neither was a budget. In the *affine* chart the conclusion is not in the
+//!   plain hypothesis ideal, and every condition that would let it saturate is
+//!   **unfalsifiable** — a line meets a conic in at most two points, so two
+//!   opposite sides can coincide only by repeating a vertex pair, and then the
+//!   other two diagonal points land on that very line — which
+//!   [`crate::geometry_check`] refuses, correctly. With *homogeneous* free
+//!   diagonal points the unfalsifiability goes away but a projective point
+//!   cannot be pinned by incidences, so the elimination leaves a 14-term
+//!   residue that the `DegRevLex` handover does not settle (365.6 s, declines
+//!   on `ReductionSteps`). **Constructing** the diagonal points as the cross
+//!   product of the two side lines clears all of it: no non-degeneracy
+//!   condition at all, 2.8 ms release. The construction is not taken on trust —
+//!   `the_constructed_diagonal_points_lie_on_both_of_their_sides` proves
+//!   `L·(L × M) = 0` and `M·(L × M) = 0` as *identities*.
+//! - **Desargues.** The affine reading, with the second triangle constructed as
+//!   `A' = O + λ_A·(A − O)`, leaves only `X`, `Y`, `Z` to eliminate, and each
+//!   pair of incidences is a `2 × 2` block whose determinant is exactly the
+//!   stated "this side is not parallel to its image" condition — the same shape
+//!   `pappus-hexagon` has. All three conditions are used, and unlike Pascal's
+//!   each has a counterexample: put the centre **on** the collapsing side line
+//!   with the two ratios along it equal, and that point goes free while the
+//!   other two stay pinned off it. 570.5 ms release.
+//!
+//! The general statements in [`beyond_frontier`] still decline for the reason
+//! measured on 2026-09-05 against the widened block scope
+//! ([`crate::geometry_certify::BlockScope::Joint`]), release, host at load 18,
+//! ADVISORY — the elimination leaves a residue on the conclusion
+//! `xyz-collinear` that the bounded handover does not settle
+//! (`pascal-hexagon` 1.8 ms, `desargues-perspective-triangles` 2.5 ms, so they
+//! decline promptly rather than burning a budget).
+//!
 //! # What is stated but **not** certified, and why
 //!
-//! - **Pascal's theorem** and **the projective statement of Desargues'
-//!   theorem** are stated correctly in [`beyond_frontier`] — hypotheses,
-//!   conclusion, and a concrete rational configuration confirmed (by direct
-//!   polynomial evaluation, independent of the certifier) to satisfy every
-//!   hypothesis and the conclusion — but neither has a committed certificate.
-//!   Pascal's "six points on a common conic" hypothesis is the same
-//!   6-row `[x², xy, y², x, y, 1]` determinant this module's `on_common_conic`
-//!   uses, and it is large enough (the corpus's own `pappus-hexagon` needed a
-//!   dedicated linear-elimination-plus-bounded-ansatz route to move from
-//!   292 s to 6.7 ms on a hypothesis an order of magnitude smaller); a bounded
-//!   attempt here (`reduction_steps` capped far below
-//!   [`crate::geometry_certify::geometry_limits`]) declines rather than run
-//!   an open-ended search on a host shared with other lanes
-//!   (`docs/contributor-guide/multi-agent-worktrees.md`). Desargues is
-//!   similarly left frontier, not because a fresh technical wall was found —
-//!   see the next paragraph — but because reaching it would need the same
-//!   kind of dedicated route Pappus needed, which this lane did not have
-//!   budget to build.
-//!
-//!   Re-measured 2026-09-05 against the widened block scope
-//!   ([`crate::geometry_certify::BlockScope::Joint`]), release, host at load
-//!   18, ADVISORY: both still decline, and both decline for the *same* reason
-//!   as before rather than a new one — the elimination leaves a residue on the
-//!   conclusion `xyz-collinear` that the bounded handover does not settle
-//!   (`pascal-hexagon` 1.8 ms, `desargues-perspective-triangles` 2.5 ms, so
-//!   they decline promptly rather than burning a budget). Widening the
-//!   detector's scope was not the missing piece for either.
 //! - **Whether the certifier's non-degeneracy encoding can state "two
 //!   projective points are distinct".** It cannot, as a *single* polynomial:
 //!   `P = Q` projectively means every 2×2 minor of their coordinate pair
@@ -2129,6 +2149,16 @@ pub fn conic_polar_is_tangent_problem() -> GeometryProblem {
 /// why each stays here rather than in
 /// [`crate::geometry_corpus::corpus`]/`artifacts/geometry-certificates/`.
 ///
+/// # These are not "Pascal and Desargues, unproved"
+///
+/// Both theorems **are** certified, in [`pascal_parabola_problem`] and
+/// [`desargues_affine_problem`], with committed artifacts. What is left here is
+/// the difference between those statements and these: an arbitrary conic rather
+/// than one fixed one, and a projective centre and projective intersection
+/// points rather than finite ones. That difference is real mathematics and it is
+/// not proved, so the entries stay — but a reader who takes this list as "the
+/// certifier cannot do Pascal" would be reading it wrong.
+///
 /// Mirrors [`crate::geometry_corpus::frontier`]'s idiom: a theorem here is
 /// **unproved, not unchecked** — the module tests replay every generic
 /// witness against its own polynomials directly, independent of the
@@ -3109,10 +3139,33 @@ mod tests {
     /// All three stated conditions are used, and each carries a counterexample —
     /// which is what the affine reading buys over the projective one.
     ///
+    /// # Why this test does not run the checker, and what does
+    ///
+    /// [`crate::geometry_check::check_certificate`] on this certificate costs a
+    /// flat **3.2 s** in debug — measured 2026-09-06, host at load 23, ADVISORY
+    /// — and cutting the numeric grid from 24 points to 1 saves only 1.7 s of
+    /// it, so the cost is the symbolic expansion of `Σ uᵢ·gᵢ` over nine
+    /// generators with degree-five cofactors, not the grid. Together with the
+    /// 2.4 s certification that is over this suite's 5 s per-test budget, and a
+    /// slow unit test taxes every lane's gate.
+    ///
+    /// The full-strength independent re-derivation of **this same certificate**
+    /// therefore happens where it belongs, in
+    /// `tests/geometry_certificate_artifacts.rs`, which reads
+    /// `artifacts/geometry-certificates/desargues-affine-perspective.json`,
+    /// expands the identity, re-evaluates it at 24 integer points, and replays
+    /// all three counterexamples and the generic configuration. What this test
+    /// adds that the artifact suite cannot is that the **shipped route** still
+    /// reaches the theorem and still reaches it on the same three conditions —
+    /// a claim about the certifier, not about a file.
+    ///
     /// # Cost, ADVISORY
     ///
-    /// Measured 2026-09-06 on a loaded shared host, debug: 4.8 s, all of it the
-    /// joint-scope block search and the three eliminations.
+    /// Measured 2026-09-06, debug, single-threaded, host at load 23:
+    /// `certify_any_route` 3.3 s in total, of which 1.7 s is the combination
+    /// route declining before the linear one is tried and 1.6 s the joint-scope
+    /// block search and the three eliminations. Release, from the emitter:
+    /// 570.5 ms.
     #[test]
     fn desargues_in_the_affine_chart_certifies_on_three_conditions() {
         let problem = desargues_affine_problem();
@@ -3134,14 +3187,28 @@ mod tests {
             ],
             "Desargues needs all three sides to meet their images"
         );
-        match check_certificate(&certificate, &CheckOptions::default()) {
-            GeometryVerdict::Verified(report) => {
-                assert_eq!(report.conclusions_checked, 1);
-                assert_eq!(report.conditions_used.len(), 3);
-                assert_eq!(report.degenerate_witnesses_checked, 3);
-                assert!(report.numeric_points_checked > 0);
-            }
-            GeometryVerdict::Rejected(reason) => panic!("the checker rejected Desargues: {reason}"),
+        assert_eq!(certificate.conclusions.len(), 1);
+        assert_eq!(certificate.hypotheses.len(), 6);
+        assert_eq!(
+            certificate.generators.len(),
+            9,
+            "six hypotheses and three saturation generators"
+        );
+        assert_eq!(certificate.degenerate_witnesses.len(), 3);
+        // Every saturation carries a nonzero cofactor, so all three conditions
+        // are genuinely consumed rather than listed. The checker rejects a
+        // certificate that fails this; asserting it here means a route change
+        // that quietly stopped using one would fail at the source too.
+        for (slot, saturation) in certificate.saturations.iter().enumerate() {
+            let index = certificate.hypotheses.len() + slot;
+            assert!(
+                certificate
+                    .conclusions
+                    .iter()
+                    .any(|conclusion| !conclusion.cofactors[index].is_zero()),
+                "condition `{}` is listed but never used",
+                saturation.condition_id
+            );
         }
     }
 
@@ -3839,7 +3906,8 @@ mod tests {
                 !matches!(outcome, crate::geometry_certify::ProofOutcome::Certified(_)),
                 "{}: certified faster than expected under a deliberately small budget -- if this \
                  starts passing, promote the theorem to `crate::geometry_corpus::corpus` with a \
-                 committed artifact instead of leaving it here",
+                 committed artifact instead of leaving it here. These are the GENERAL statements; \
+                 the recoordinatised Pascal and Desargues are already in the corpus",
                 problem.id
             );
         }
