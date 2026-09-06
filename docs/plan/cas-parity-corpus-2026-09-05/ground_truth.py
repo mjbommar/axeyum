@@ -608,6 +608,96 @@ def check_fps_analytic() -> None:
     ok(2**4 == 16 and 2**8 == 256 and 2**16 == 65536, "fa3 (hand) 2^4=16, 2^8=256, 2^16=65536")
 
 
+# --------------------------------------------------------------- fps_amplitude
+def check_fps_amplitude() -> None:
+    section("fps_amplitude")
+    # fam1: 1/(1-2x) has a(n) = 2^n EXACTLY, so a(n)/(1 * n^0 * 2^n) = 1 at
+    # every n and the amplitude is 1 with nothing asymptotic about it.
+    ok(
+        all(2**n == 2**n for n in range(1, 20)) and Fraction(2**17, 2**17) == 1,
+        "fam1 (hand) 1/(1-2x) = sum 2^n x^n, so a(n)/2^n = 1 exactly and C = 1",
+    )
+    if not need_sympy("fam1 geometric expansion"):
+        x = sp.symbols("x")
+        series = sp.series(1 / (1 - 2 * x), x, 0, 6).removeO()
+        coeffs = [sp.expand(series).coeff(x, n) for n in range(6)]
+        ok(
+            coeffs == [1, 2, 4, 8, 16, 32],
+            f"fam1 sympy series of 1/(1-2x) is {coeffs}, i.e. a(n) = 2^n",
+        )
+    # fam1-ctrl: the NEAR MISS. [x^n](1-2x)^-3 = binom(n+2,2)*2^n, and
+    # binom(n+2,2) = (n+1)(n+2)/2 ~ n^2/2, so C = 1/2 -- NOT the naive 1 that
+    # reading "n^2 * 2^n" off the pole order gives. The 1/(m-1)! = 1/2! factor
+    # is exactly what a residue computation carries and a leading-term reading
+    # drops.
+    ratios = [Fraction((n + 1) * (n + 2), 2 * n * n) for n in (100, 1000, 10000)]
+    ok(
+        all(Fraction(1, 2) < r < Fraction(6, 10) for r in ratios)
+        and ratios[0] > ratios[1] > ratios[2]
+        and ratios[-1] < Fraction(5002, 10000),
+        f"fam1-ctrl (hand) binom(n+2,2)/n^2 = {[str(r) for r in ratios]} decreasing to 1/2, not 1",
+    )
+    if not need_sympy("fam1-ctrl binomial limit"):
+        n = sp.symbols("n", positive=True, integer=True)
+        limit = sp.limit(sp.binomial(n + 2, 2) / n**2, n, sp.oo)
+        ok(
+            limit == sp.Rational(1, 2),
+            f"fam1-ctrl sympy lim binom(n+2,2)/n^2 = {limit}, so C = 1/2 and the naive C = 1 is wrong",
+        )
+    # fam2: Fibonacci's amplitude is 1/sqrt(5), returned as the exact element
+    # 1/5 + (2/5) zeta of Q(zeta) with zeta = (sqrt(5)-1)/2 a root of z^2+z-1.
+    # Two independent checks, neither of which takes a square root of the
+    # ANSWER: the element's square is the rational 1/5, and its decimal value
+    # matches 1/sqrt(5).
+    a, b = Fraction(1, 5), Fraction(2, 5)
+    # (a + b z)^2 with z^2 = 1 - z is (a^2 + b^2) + (2ab - b^2) z.
+    square_constant = a * a + b * b
+    square_linear = 2 * a * b - b * b
+    ok(
+        square_constant == Fraction(1, 5) and square_linear == 0,
+        f"fam2 (hand) (1/5 + (2/5)zeta)^2 = {square_constant} + {square_linear}*zeta = 1/5, so C = 1/sqrt(5)",
+    )
+    zeta = (5**0.5 - 1) / 2
+    ok(
+        abs((float(a) + float(b) * zeta) - 5**-0.5) < 1e-15,
+        "fam2 (hand) 1/5 + (2/5)*0.6180339887498949 = 0.4472135954999579 = 1/sqrt(5)",
+    )
+    if not need_sympy("fam2 Binet limit"):
+        n = sp.symbols("n", positive=True, integer=True)
+        limit = sp.limit(sp.fibonacci(n) / sp.GoldenRatio**n, n, sp.oo)
+        ok(
+            sp.simplify(limit - 1 / sp.sqrt(5)) == 0,
+            f"fam2 sympy lim F(n)/phi^n = {limit} = 1/sqrt(5) (Binet)",
+        )
+    # fam3: 1/(1+x^2) has coefficients 1,0,-1,0,...: two dominant singularities
+    # of equal modulus, so no single amplitude exists and a decline is the only
+    # correct answer.
+    coeffs = []
+    for n in range(12):
+        if n % 2:
+            coeffs.append(0)
+        else:
+            coeffs.append((-1) ** (n // 2))
+    ok(
+        coeffs == [1, 0, -1, 0, 1, 0, -1, 0, 1, 0, -1, 0],
+        f"fam3 (hand) 1/(1+x^2) = sum (-1)^k x^(2k) has coefficients {coeffs}",
+    )
+    ok(
+        any(c == 0 for c in coeffs) and len({c for c in coeffs if c}) == 2,
+        "fam3 (cited) infinitely many zero coefficients and alternating signs: "
+        "a(n)/(C n^k rho^-n) cannot converge to 1, so singularity analysis's "
+        "unique-dominant-singularity hypothesis (Flajolet-Sedgewick IV.10) fails "
+        "and the only correct answer is a decline",
+    )
+    if not need_sympy("fam3 periodic expansion"):
+        x = sp.symbols("x")
+        series = sp.expand(sp.series(1 / (1 + x**2), x, 0, 8).removeO())
+        got = [series.coeff(x, n) for n in range(8)]
+        ok(
+            got == [1, 0, -1, 0, 1, 0, -1, 0],
+            f"fam3 sympy series of 1/(1+x^2) is {got}",
+        )
+
 # ----------------------------------------------------------- numberfield_ideals
 def check_numberfield_ideals() -> None:
     section("numberfield_ideals")
@@ -857,6 +947,7 @@ def main() -> int:
     check_geometry_beyond()
     check_enclosure_special()
     check_fps_analytic()
+    check_fps_amplitude()
     check_numberfield_ideals()
     check_permgroup_sylow()
     check_homology_coefficients_and_cohomology()

@@ -738,7 +738,7 @@ fn poly_squarefree(poly: &[BigRational]) -> Vec<BigRational> {
 }
 
 /// A Cauchy bound: every complex root of `poly` has modulus below the result.
-fn cauchy_upper_bound(poly: &[BigRational]) -> Option<BigRational> {
+pub(crate) fn cauchy_upper_bound(poly: &[BigRational]) -> Option<BigRational> {
     QPoly::from_slice(poly).cauchy_bound()
 }
 
@@ -898,7 +898,11 @@ fn sign_variations_big(chain: &[Vec<BigRational>], x: &BigRational) -> usize {
 
 /// Distinct real roots of `poly` in the half-open interval `(lower, upper]`.
 /// `None` when neither width reaches a count.
-fn count_roots_in(poly: &[BigRational], lower: &BigRational, upper: &BigRational) -> Option<usize> {
+pub(crate) fn count_roots_in(
+    poly: &[BigRational],
+    lower: &BigRational,
+    upper: &BigRational,
+) -> Option<usize> {
     RootCounter::new(poly)?.count(lower, upper)
 }
 
@@ -973,7 +977,7 @@ fn sylvester_matrix_big(
 ///
 /// Neither identity is how the determinant is computed, so together they are an
 /// independent check on the primitive rather than a restatement of it.
-fn pairwise_product_resultant(factor: &[BigRational]) -> Option<Vec<BigRational>> {
+pub(crate) fn pairwise_product_resultant(factor: &[BigRational]) -> Option<Vec<BigRational>> {
     let factor = poly_trim(factor.to_vec());
     let degree = poly_degree(&factor)?;
     if degree == 0 || factor[0].is_zero() {
