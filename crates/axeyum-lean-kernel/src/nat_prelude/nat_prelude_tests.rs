@@ -690,6 +690,7 @@ fn definition_names(p: &NatPrelude) -> Vec<NameId> {
         // `hall-theorem` lane (roadmap W2-12): `hall_theorem.rs` (ADR-1644).
         p.finset_subset_fixed,
         p.finset_restrict,
+        p.hall_critical_b,
         // `inclusion-exclusion-mobius` lane (roadmap W2-19): `subset_sums.rs`
         // (ADR-1624). `Supported` is a `Prop`-valued `Definition`, so it lands
         // in this list rather than the theorem one.
@@ -841,6 +842,18 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.finset_bound_restrict,
         p.finset_mem_b_restrict,
         p.finset_mem_b_union_sdiff_self,
+        // `hall-assembly` lane (roadmap W2-12): `hall_descent.rs` (ADR-1645).
+        p.finset_mem_b_of_subset_fixed_of_bound_le,
+        p.finset_card_add_card_sdiff,
+        p.finset_card_lt_card_of_subset_fixed,
+        p.finset_card_sdiff_lt_card_of_subset_fixed,
+        // `hall-assembly` lane (roadmap W2-12): `hall_marriage.rs` (ADR-1645).
+        p.finset_mem_b_sdiff_congr,
+        p.hall_is_matching_of_family_sdiff,
+        p.hall_mem_b_false_of_family_sdiff,
+        p.hall_critical_b_congr,
+        p.hall_sufficient,
+        p.hall_marriage_iff,
         // `inclusion-exclusion-mobius` lane (roadmap W2-19): `subset_sums.rs`
         // (ADR-1624).
         p.subsets_sum_subsets_zero,
