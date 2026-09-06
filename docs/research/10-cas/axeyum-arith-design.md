@@ -572,18 +572,36 @@ evaluation matches. `from_parts` exists precisely so a *forged* certificate can
 be constructed and rejected. Mixed radix is what a CRT reconstruction, a
 factorial number system and a bounded odometer all are.
 
-Signature-only today, with the migration slice named on each:
+**Status 2026-09-06: nothing in this crate is signature-only any more.** Every
+trait has at least one implementation, every certificate has a `verify` that
+re-derives its claim, and the crate contains no `todo!()`. The table below is
+kept as the map from interface to implementation and to the copies each one is
+there to replace — the third column is the migration debt, not the crate's.
 
-| item | shape | replaces |
+| item | implemented by | still to replace |
 |---|---|---|
-| `Normalize` + `NormalizationReceipt` | on-demand normalization with a receipt recording the gcd and the bit counts | the policy question §3.2 leaves open; the receipt is how a benchmark finds out whether the gcds are actually rare |
-| `UnivariatePoly` | `Coeff`, `degree`, `coefficient`, `evaluate`, `derivative` | the ten columns of §2.1 |
-| `FractionFree` | `pseudo_remainder`, `subresultant_prs`, `resultant`, `gcd_certified` | `mvpoly/big.rs:669`, `qe_bivariate.rs:1237` |
-| `BezoutCertificate` | `gcd`, two cofactors, two inputs, `verify` | the three ext-gcds of §2.1 |
-| `SturmCertificate` | the chain, the interval, the claimed count, `verify` | the six Sturm chains |
-| `ModularRing` + `PowModCertificate` | Barrett by default, Montgomery when the modulus is odd; `pow_mod` returns the square-and-multiply chain | the five `pow_mod`s |
-| `HenselLift` | `lift(prime, precision) -> 2·precision` — **and it needs a linear sibling**, per Monagan's measurement in §3.2 | `factor_int.rs:713` |
-| `AlgebraicNumber` | `sign`, `refine(bits)`, `enclosure() -> (Dyadic, Dyadic)` | see below |
+| `Normalize` + `NormalizationReceipt` | `rational.rs`'s `RawRational`; `verify` re-derives the reduction and pins the sign, the coprimality and the bit counts | the policy question §3.2 leaves open. The receipt is how a benchmark answers it; no consumer has been migrated onto the lazy carrier yet |
+| `UnivariatePoly` | `upoly.rs`, for both `ZPoly` and `QPoly` | the ten columns of §2.1 |
+| `FractionFree` | `upoly.rs`, for `ZPoly` (fraction-free is a ℤ notion; `QPoly` has no impl and needs none) | `mvpoly/big.rs:669`, `qe_bivariate.rs:1237` |
+| `BezoutCertificate` | `upoly.rs`'s `extended_gcd`. **Live, not superseded** by `PolyBezoutCertificate`: that one is the ℚ[x] object, this one the ℤ object | the three ext-gcds of §2.1 |
+| `SturmCertificate` | `upoly.rs`'s `SturmChain::certificate`. Live for the same reason: `SturmChain` is the producer, this is its receipt | the six Sturm chains |
+| `ModularRing` + `PowModCertificate` | `PlainModRing` (slice 2). Plain schoolbook reduction, a documented performance deviation from the Barrett/Montgomery plan, not a shape deviation | — (`ntheory.rs`'s two integer `pow_mod`s migrated) |
+| `HenselLift` | `hensel.rs`'s `HenselRoot` + `lift_root`, quadratic lifting of a **simple root**, with a chain certificate | `factor_int.rs:713`, which is the *polynomial* half: linear two-factor lifting in 𝔽ₚ[x] on `i128` whose overflow is the termination argument. That is slice 7 and it is NOT done |
+| `AlgebraicNumber` | `axeyum-ir`'s `algebraic_bridge.rs`, for **both** `RealAlgebraic` and `poly_big::BigAlgebraic` | `axeyum-cas`'s `algebraic::AlgebraicReal`, which is `i128`-backed and not yet on the trait |
+
+Two signature changes the carriers forced, recorded rather than smoothed over:
+`refine` returns a `bool` (an `i128`-backed endpoint can run out of room, and a
+silent failure to refine makes `enclosure`'s width a claim nobody checks), and
+`enclosure` returns an `Option` (a `Dyadic` conversion declines past
+`MAX_EXPONENT`).
+
+**The crate is also the workspace's single naming point for `num-bigint`,
+`num-rational`, `num-integer` and `num-traits`** — `axeyum_arith::big`, plain
+re-exports — and `scripts/check-arith-boundary.sh` enforces that no other crate
+names them, in code or in a manifest. `axeyum-ir` and `axeyum-fp` are migrated;
+`axeyum-cas` (31 files) and `axeyum-lean-kernel` (2 files) are on that gate's
+allowlist with a per-file reason, and the allowlist itself fails the gate when
+it goes stale.
 
 **Two placement decisions, argued rather than assumed.**
 
