@@ -17,7 +17,7 @@
 # only rises on purpose) -- but a new UNCERTIFIED function is never refused;
 # that label is honest, not a violation. See
 # docs/math-department/13-computer-algebra.md item 10.
-COUNT	120
+COUNT	125
 FN	enclosure::enclose	Option<Enclosure>
 FN	enclosure::enclose_constant	Option<Enclosure>
 FN	enclosure::enclose_root	Option<Enclosure>
@@ -60,10 +60,15 @@ FN	homology_coefficients::CoefficientHomologyCertificate::verify	Result<Coeffici
 FN	homology_coefficients::homology_with_coefficients	Option<CoefficientHomologyCertificate>
 FN	homology_cohomology::CohomologyCertificate::verify	Result<CohomologyReport, String>
 FN	homology_cohomology::cohomology	Option<CohomologyCertificate>
+FN	homology_induced::IntegerInducedCertificate::verify	Result<IntegerInducedReport, String>
 FN	homology_induced::SimplicialMapCertificate::verify	Result<InducedReport, String>
 FN	homology_induced::induced_homology	Option<SimplicialMapCertificate>
+FN	homology_induced::induced_homology_z	Option<IntegerInducedCertificate>
+FN	homology_persistent::FieldPersistenceCertificate::verify	Result<FieldPersistenceReport, String>
 FN	homology_persistent::PersistenceCertificate::verify	Result<PersistenceReport, String>
 FN	homology_persistent::persistent_homology	Option<PersistenceCertificate>
+FN	homology_persistent::persistent_homology_mod_p	Option<FieldPersistenceCertificate>
+FN	homology_persistent::persistent_homology_over_q	Option<FieldPersistenceCertificate>
 FN	integrate	Option<CertifiedIntegral>
 FN	inverse::polynomial_inverse	Option<InverseCertificate>
 FN	mvt::polynomial_mvt	Option<MvtCertificate>
@@ -185,6 +190,8 @@ VOCAB	FactorModulusBound	struct
 VOCAB	FactorizationCertificate	struct
 VOCAB	FibreCertificate	struct
 VOCAB	FibreWitness	struct
+VOCAB	FieldPersistenceCertificate	struct
+VOCAB	FieldPersistenceReport	struct
 VOCAB	ForallDecision	enum
 VOCAB	FormIdealCertificate	struct
 VOCAB	FormReductionCertificate	struct
@@ -201,6 +208,8 @@ VOCAB	HomologyReport	struct
 VOCAB	IdealFactorizationCertificate	struct
 VOCAB	IdealProductCertificate	struct
 VOCAB	InducedReport	struct
+VOCAB	IntegerInducedCertificate	struct
+VOCAB	IntegerInducedReport	struct
 VOCAB	InvariantsCertificate	struct
 VOCAB	InverseCertificate	struct
 VOCAB	IrreducibilityCertificate	struct
