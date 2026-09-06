@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "id": "F:algs-exchange-lincomb-removeat-insertat",
+  "title": "A linear combination of succ n terms splits as the combination without index i plus the i-th term",
+  "statement": "AlgS.Module.linComb R M smul c v n is the sum over i below n of (c i) scaled into (v i), folded on the RIGHT: linComb at succ j is M.op of linComb at j with smul (c j) (v j). The Steinitz exchange has to pull ONE term out of that sum by index, and the index it pulls is not the last one. This is that lemma: for i at most n, linComb c v (succ n) is equivalent to M.op (linComb (removeAt i c) (removeAt i v) n) (smul (c i) (v i)) -- the sum is the sum over the family with index i deleted, plus the i-th term, which is the linear combination unchanged up to the swapped term. The measured finding is an asymmetry: removeAt and insertAt recurse on the INDEX, linComb recurses on the LENGTH, and only the length induction closes -- the removeAt form leaves removeAt (succ i') c n' stuck on a variable at every step. So the insertAt form is what is proved by induction, with AlgS.Index.le_succ_cases splitting exactly the two cases the fold can see (the inserted value strictly inside the prefix, where insertAt_above shifts the top term and one op_swap_last finishes; or the inserted value IS the top term, where insertAt_at and insertAt_below close it with no induction hypothesis at all), and the removeAt form is a COROLLARY one trans away, because insertAt_removeAt is unconditional.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem AlgS.Exchange.linComb_removeAt_insertAt : ((x0 : AlgS.CommRing) -> ((x1 : AlgS.CommGroup) -> ((x2 : ((x2 : AlgS.CommRing.carrier x0) -> ((x3 : AlgS.CommGroup.carrier x1) -> AlgS.CommGroup.carrier x1))) -> ((x3 : AlgS.Module.IsModule x0 x1 x2) -> ((x4 : ((x4 : AxNat) -> AlgS.CommRing.carrier x0)) -> ((x5 : ((x5 : AxNat) -> AlgS.CommGroup.carrier x1)) -> ((x6 : AxNat) -> ((x7 : AxNat) -> ((x8 : AlgS.Index.le x7 x6) -> AlgS.CommGroup.equiv x1 (AlgS.Module.linComb x0 x1 x2 x4 x5 (AxNat.succ x6)) (AlgS.CommGroup.op x1 (AlgS.Module.linComb x0 x1 x2 (AlgS.Index.removeAt (AlgS.CommRing.carrier x0) x7 x4) (AlgS.Index.removeAt (AlgS.CommGroup.carrier x1) x7 x5) x6) (x2 (x4 x7) (x5 x7))))))))))))",
+    "fragment": "none",
+    "free_symbols": [],
+    "kernel_theorem": "AlgS.Exchange.linComb_removeAt_insertAt"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "external_status": "proved",
+  "depends_on": [
+    "F:algs-index-insertat-removeat"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "algs-exchange-lincomb-removeat-insertat-1",
+      "kind": "kernel-term",
+      "supports": "Four AlgS.Exchange theorems admit with empty footprints, asserted only AFTER Environment::get. Each is declared on its OWN in dependency order by each_result_is_admitted_on_its_own, because one bad declaration poisons a shared build and a bundled expect cannot say which declaration a rejection came from -- that harness is what located this lemma's one rejection, a symm applied at the wrong pair. The rendered type is read from the kernel and asserted to mention linComb, removeAt at BOTH carriers, the AlgS.Index.le bound and AlgS.Module.IsModule, so a version that had lost the bound or cut only the coefficient family would fail. op_swap_last is separately asserted NOT to mention AlgS.Module: it is a pure CommGroup fact. One negative control must be REFUSED: op_swap_last's middle step with comm at the wrong pair, comm a c where comm b c belongs.",
+      "check_status": "checked",
+      "checker_command": "out=$(cargo test -p axeyum-lean-kernel --lib --release -- --test-threads=4 nat_prelude::vector_space_exchange nat_prelude::vector_space_steinitz 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -cE 'test result: ok\\. 18 passed; 0 failed')\" -ge 1",
+      "notes": "The pinned count is 18. Mutation, RUN 2026-09-06 against a 25-test baseline (filter nat_prelude::vector_space): reversing this lemma's order bound from le i n to le n i killed 7 of 25. The kill is confined to AlgS.Exchange because the reversed bound is rejected by the kernel exactly where the split hands its hypothesis to linComb_insertAt, and nothing in AlgS.Index depends on it."
+    }
+  ],
+  "concept_refs": [],
+  "provenance": {
+    "date": "2026-09-06",
+    "established_by": "axeyum-lean-kernel nat_prelude::vector_space_steinitz, lane invariance-of-dimension, ADR-1657 (roadmap W3-2).",
+    "source": "crates/axeyum-lean-kernel/src/nat_prelude/vector_space_steinitz.rs (declare_op_swap_last, declare_lin_comb_ext_below, declare_lin_comb_insert_at, declare_lin_comb_remove_at_insert_at); tests nat_prelude::vector_space_steinitz::vector_space_steinitz_tests::*."
+  },
+  "notes": "The general Steinitz exchange is still NOT here, but the obstruction has moved. It is no longer index surgery. The exchange step needs 'a linear combination apart from zero has a coefficient apart from zero', and independence supplies only the NEGATION 'not all coefficients are zero'; constructively that does not yield an apartness, and AlgS.CommGroup carries no apartness relation at all so cotransitivity has nothing to start from. The route that does work runs the whole bound as a refutation resolved by AlgS.Index.le_dichotomy, and it needs AlgS.Field.IsTight -- deliberately a predicate and not a record field (ADR-1627), because CReal cannot prove it. So invariance of dimension over this shelf is a theorem about TIGHT fields, and the real numbers are not one of them. See ADR-1657."
+}
