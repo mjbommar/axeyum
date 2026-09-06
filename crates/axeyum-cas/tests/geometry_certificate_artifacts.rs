@@ -465,6 +465,40 @@ fn on_locus_but_harmless() -> Vec<(&'static str, BTreeMap<String, Rational>)> {
             "A=(0,0,0) B=(4,0,0) C=(0,4,0) D=(2,2,0), coplanar but still the true centroid",
             tetrahedron_medians_locus_but_harmless(),
         ),
+        // `desargues-affine-perspective`, on the locus of ALL THREE conditions
+        // at once -- which, as with `simson-line`, is the only way onto this
+        // certificate's locus here. Collapsing the centre and all three vertices
+        // to the origin with every ratio zero collapses the images too, so each
+        // side and its image are the same (degenerate) line: every incidence
+        // hypothesis is vacuous and all three "not parallel to its image"
+        // determinants are `det(0, 0) = 0`. The three intersection points are
+        // then free, and putting them back on one line -- (0,0), (1,1), (2,2) --
+        // leaves the conclusion true. The committed counterexamples are the
+        // configurations where only ONE side collapses, so the other two points
+        // stay pinned off it at (-6,4) and (-3,4); that is the whole difference
+        // between a counterexample and a bystander.
+        (
+            "O=A=B=C=(0,0) with every ratio zero and X, Y, Z back on one line",
+            at(&[
+                ("ox", 0, 1),
+                ("oy", 0, 1),
+                ("ax", 0, 1),
+                ("ay", 0, 1),
+                ("bx", 0, 1),
+                ("by", 0, 1),
+                ("cx", 0, 1),
+                ("cy", 0, 1),
+                ("la", 0, 1),
+                ("lb", 0, 1),
+                ("lc", 0, 1),
+                ("xx", 0, 1),
+                ("xy", 0, 1),
+                ("yx", 1, 1),
+                ("yy", 1, 1),
+                ("zx", 2, 1),
+                ("zy", 2, 1),
+            ]),
+        ),
     ]
 }
 
