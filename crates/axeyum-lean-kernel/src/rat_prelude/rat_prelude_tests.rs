@@ -727,6 +727,14 @@ fn unnamed_but_live_declarations(p: &RatPrelude) -> Vec<crate::NameId> {
         p.binomial_rat.binomial_variance,
         p.binomial_rat.binomial_chebyshev,
         p.binomial_rat.fourth_moment_inequality,
+        // ADR-1653: four-wise uncorrelatedness and the `sumVars` peeling
+        // lemmas the fourth-moment expansion runs on. Listed here, not in a
+        // string list, for the same reason as the ADR-1631 block above: the
+        // sweep must read the per-module registry, so a name that is declared
+        // and unlisted fails rather than passing quietly.
+        p.fourth_moment.expectation_sum_vars_mul,
+        p.fourth_moment.expectation_sum_vars_mul_eq_zero,
+        p.fourth_moment.fourwise_uncorrelated,
     ]
 }
 
