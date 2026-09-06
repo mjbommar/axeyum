@@ -72,6 +72,7 @@ pub mod boolean_circuit;
 pub mod cofactor_ansatz;
 pub mod combinatorics;
 pub mod enclosure;
+pub mod enclosure_integral;
 pub mod enclosure_special;
 pub mod extremum;
 mod factor_int;

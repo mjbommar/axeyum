@@ -527,6 +527,14 @@ pub enum DeclineReason {
     /// The isolating interval handed to [`enclose_root`] does not contain
     /// exactly one root by Sturm's theorem, or the polynomial was rejected.
     NotIsolating,
+    /// [`crate::enclosure_integral::enclose_integral`] could not enclose the
+    /// integrand on a panel of its partition — an interior pole, a domain
+    /// violation, or a head with no certified route. The string names the
+    /// panel and the underlying obstacle. Distinct from
+    /// [`DeclineReason::DivisorContainsZero`], which is what a single division
+    /// reports: the integral's decline says *where* in the interval of
+    /// integration the integrand stopped being enclosable.
+    IntegrandNotEnclosable(String),
 }
 
 impl fmt::Display for DeclineReason {
@@ -546,6 +554,9 @@ impl fmt::Display for DeclineReason {
             DeclineReason::ResourceLimit => write!(f, "resource limit reached"),
             DeclineReason::NotIsolating => {
                 write!(f, "the interval does not isolate exactly one root")
+            }
+            DeclineReason::IntegrandNotEnclosable(detail) => {
+                write!(f, "the integrand could not be enclosed {detail}")
             }
         }
     }
@@ -600,6 +611,33 @@ pub enum StepHead {
     BesselJ(u32),
     /// A bisection-refined root of a univariate polynomial.
     Root,
+    /// Euler's constant `gamma`, enclosed by Euler-Maclaurin on `1/t`.
+    EulerGamma,
+    /// The sine integral `Si`.
+    Si,
+    /// The cosine integral `Ci`, on a strictly positive argument.
+    Ci,
+    /// The exponential integral `Ei`, on an argument not containing `0`.
+    Ei,
+    /// The logarithmic integral `li`, on a positive argument not containing
+    /// `1`.
+    Li,
+    /// The hyperbolic sine integral `Shi`.
+    Shi,
+    /// The hyperbolic cosine integral `Chi`, on a strictly positive argument.
+    Chi,
+    /// The Fresnel sine integral `S`.
+    FresnelS,
+    /// The Fresnel cosine integral `C`.
+    FresnelC,
+    /// `asin`, on an argument inside `[-1, 1]`.
+    Asin,
+    /// `acos`, on an argument inside `[-1, 1]`.
+    Acos,
+    /// `asinh`, on any real argument.
+    Asinh,
+    /// `acosh`, on an argument at or above `1`.
+    Acosh,
 }
 
 impl StepHead {
@@ -618,6 +656,19 @@ impl StepHead {
                 | StepHead::Erf
                 | StepHead::Gamma
                 | StepHead::BesselJ(_)
+                | StepHead::EulerGamma
+                | StepHead::Si
+                | StepHead::Ci
+                | StepHead::Ei
+                | StepHead::Li
+                | StepHead::Shi
+                | StepHead::Chi
+                | StepHead::FresnelS
+                | StepHead::FresnelC
+                | StepHead::Asin
+                | StepHead::Acos
+                | StepHead::Asinh
+                | StepHead::Acosh
         )
     }
 }
@@ -1126,6 +1177,21 @@ fn eval_head_raw(
             .ok_or(DeclineReason::PrecisionUnreachable),
         StepHead::Sin => sin_interval(unary(0)?, order).ok_or(DeclineReason::ResourceLimit),
         StepHead::Cos => cos_interval(unary(0)?, order).ok_or(DeclineReason::ResourceLimit),
+        StepHead::EulerGamma => {
+            crate::enclosure_integral::euler_gamma(order).ok_or(DeclineReason::ResourceLimit)
+        }
+        StepHead::Si => crate::enclosure_integral::si_interval(unary(0)?, order),
+        StepHead::Ci => crate::enclosure_integral::ci_interval(unary(0)?, order),
+        StepHead::Ei => crate::enclosure_integral::ei_interval(unary(0)?, order),
+        StepHead::Li => crate::enclosure_integral::li_interval(unary(0)?, order),
+        StepHead::Shi => crate::enclosure_integral::shi_interval(unary(0)?, order),
+        StepHead::Chi => crate::enclosure_integral::chi_interval(unary(0)?, order),
+        StepHead::FresnelS => crate::enclosure_integral::fresnel_s_interval(unary(0)?, order),
+        StepHead::FresnelC => crate::enclosure_integral::fresnel_c_interval(unary(0)?, order),
+        StepHead::Asin => crate::enclosure_integral::asin_interval(unary(0)?, order),
+        StepHead::Acos => crate::enclosure_integral::acos_interval(unary(0)?, order),
+        StepHead::Asinh => crate::enclosure_integral::asinh_interval(unary(0)?, order),
+        StepHead::Acosh => crate::enclosure_integral::acosh_interval(unary(0)?, order),
     }
 }
 
@@ -1196,7 +1262,110 @@ fn step_head_for(func: UnaryFunc) -> Result<StepHead, DeclineReason> {
         UnaryFunc::Erf => Ok(StepHead::Erf),
         UnaryFunc::Gamma => Ok(StepHead::Gamma),
         UnaryFunc::BesselJ(order) => Ok(StepHead::BesselJ(order)),
+        UnaryFunc::Si => Ok(StepHead::Si),
+        UnaryFunc::Ci => Ok(StepHead::Ci),
+        UnaryFunc::Ei => Ok(StepHead::Ei),
+        UnaryFunc::Li => Ok(StepHead::Li),
+        UnaryFunc::Shi => Ok(StepHead::Shi),
+        UnaryFunc::Chi => Ok(StepHead::Chi),
+        UnaryFunc::FresnelS => Ok(StepHead::FresnelS),
+        UnaryFunc::FresnelC => Ok(StepHead::FresnelC),
+        UnaryFunc::Asin => Ok(StepHead::Asin),
+        UnaryFunc::Acos => Ok(StepHead::Acos),
+        UnaryFunc::Asinh => Ok(StepHead::Asinh),
+        UnaryFunc::Acosh => Ok(StepHead::Acosh),
         other => Err(DeclineReason::UnsupportedHead(format!("{other:?}"))),
+    }
+}
+
+/// The free-variable name that denotes Euler's constant `gamma`.
+///
+/// Spelled out rather than `"gamma"` because `gamma` is also the name of the
+/// **function** on this crate's [`UnaryFunc`], and a certificate that confused
+/// the two would be unreadable. [`enclose_constant`] accepts both spellings
+/// because there is no expression there to be ambiguous with.
+pub const EULER_GAMMA_NAME: &str = "euler_gamma";
+
+/// The head a reserved free-variable name denotes, or `None` when the name is
+/// an ordinary variable.
+///
+/// One function, so the producer's walk and the verifier's `expected_head`
+/// cannot drift apart on which names are reserved — the two disagreeing is
+/// exactly how a certificate would verify against a different expression from
+/// the one it was produced for.
+fn reserved_constant(name: &str) -> Option<StepHead> {
+    match name {
+        "pi" => Some(StepHead::Pi),
+        EULER_GAMMA_NAME => Some(StepHead::EulerGamma),
+        _ => None,
+    }
+}
+
+/// Evaluate an expression over a binding box at **one fixed truncation order**,
+/// returning only the interval.
+///
+/// The deterministic kernel beneath [`enclose`], without the order ladder,
+/// without the evidence, and **without any width guarantee**: it is a pure
+/// function of `(expr, bindings, order)`, which is what makes it usable as the
+/// re-derivation step of a certificate that records an order rather than a
+/// per-node evidence trail. The quadrature certificate of
+/// [`crate::enclosure_integral`] is built and checked entirely through it.
+///
+/// The bindings are [`BigInterval`]s rather than the `i128` [`Interval`] of
+/// [`enclose`], because a quadrature panel endpoint is a computed dyadic and
+/// does not fit the bounded type.
+///
+/// # Errors
+///
+/// The same [`DeclineReason`]s [`enclose`] reports, except
+/// [`DeclineReason::PrecisionUnreachable`] from the width guard, which this
+/// function does not apply.
+pub fn enclose_fixed_order(
+    expr: &CasExpr,
+    bindings: &BTreeMap<String, BigInterval>,
+    order: u32,
+) -> Result<BigInterval, DeclineReason> {
+    match expr {
+        CasExpr::Const(value) => Ok(BigInterval::point(from_rational(*value))),
+        CasExpr::Var(name) => {
+            if let Some(bound) = bindings.get(name) {
+                Ok(bound.clone())
+            } else if let Some(head) = reserved_constant(name) {
+                eval_head_raw(&head, &[], order)
+            } else {
+                Err(DeclineReason::UnboundVariable(name.clone()))
+            }
+        }
+        CasExpr::Add(parts) | CasExpr::Mul(parts) => {
+            let head = if matches!(expr, CasExpr::Add(_)) {
+                StepHead::Add
+            } else {
+                StepHead::Mul
+            };
+            let mut inputs = Vec::with_capacity(parts.len());
+            for part in parts {
+                inputs.push(enclose_fixed_order(part, bindings, order)?);
+            }
+            eval_head_raw(&head, &inputs, order)
+        }
+        CasExpr::Neg(inner) => {
+            let input = enclose_fixed_order(inner, bindings, order)?;
+            eval_head_raw(&StepHead::Neg, &[input], order)
+        }
+        CasExpr::Div(numerator, denominator) => {
+            let a = enclose_fixed_order(numerator, bindings, order)?;
+            let b = enclose_fixed_order(denominator, bindings, order)?;
+            eval_head_raw(&StepHead::Div, &[a, b], order)
+        }
+        CasExpr::Pow(base, exponent) => {
+            let input = enclose_fixed_order(base, bindings, order)?;
+            eval_head_raw(&StepHead::Pow(*exponent), &[input], order)
+        }
+        CasExpr::Unary(func, argument) => {
+            let head = step_head_for(*func)?;
+            let input = enclose_fixed_order(argument, bindings, order)?;
+            eval_head_raw(&head, &[input], order)
+        }
     }
 }
 
@@ -1227,10 +1396,10 @@ fn build(
         CasExpr::Var(name) => {
             if let Some(bound) = bindings.get(name) {
                 Ok(leaf(StepHead::Var(name.clone()), bound.clone(), evidence))
-            } else if name == "pi" {
-                let (output, remainder, order) = adaptive(&StepHead::Pi, &[], tolerance)?;
+            } else if let Some(head) = reserved_constant(name) {
+                let (output, remainder, order) = adaptive(&head, &[], tolerance)?;
                 evidence.push(Step {
-                    head: StepHead::Pi,
+                    head,
                     inputs: Vec::new(),
                     order,
                     remainder,
@@ -1534,8 +1703,8 @@ fn expected_head(
         CasExpr::Var(name) => {
             if bindings.contains_key(name) {
                 StepHead::Var(name.clone())
-            } else if name == "pi" {
-                StepHead::Pi
+            } else if let Some(head) = reserved_constant(name) {
+                head
             } else {
                 return Err(format!("unbound variable `{name}`"));
             }
@@ -1840,6 +2009,7 @@ pub fn enclose_constant(name: &str, precision: u32) -> Option<Enclosure> {
         "pi" => enclose(&CasExpr::var("pi"), &[], precision),
         "e" => enclose(&CasExpr::int(1).exp(), &[], precision),
         "ln2" | "ln 2" => enclose(&CasExpr::int(2).ln(), &[], precision),
+        "euler_gamma" | "gamma" => enclose(&CasExpr::var(EULER_GAMMA_NAME), &[], precision),
         "sqrt2" | "sqrt 2" => enclose_root(
             &[
                 Rational::integer(-2),
