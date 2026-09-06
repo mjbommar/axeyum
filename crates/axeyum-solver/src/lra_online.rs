@@ -92,6 +92,17 @@ const MAX_FM_CONSTRAINTS: usize = 20_000;
 /// pathological, so no in-corpus instance is turned into `Unknown` by the belt.
 const DEFAULT_STEP_BUDGET: usize = 16_000_000;
 
+/// Literals one [`LraTheory::propagate_bounds`] call will offer before it stops
+/// (S4).
+///
+/// Propagation must never cost more than it saves, so a single call is bounded.
+/// The value is not a completeness limit: the driver runs propagation to a
+/// fixpoint and every literal this call emits is assigned before the next
+/// iteration, so a capped call resumes on the remaining atoms rather than losing
+/// them. It is set well above the per-call yield measured on the QF_LRA timeout
+/// population, so it bounds a pathological call rather than a normal one.
+const MAX_BOUND_PROPAGATIONS_PER_CALL: usize = 256;
+
 /// Whether the caller-owned absolute deadline has passed.
 fn past_deadline(deadline: Option<Instant>) -> bool {
     deadline.is_some_and(|d| Instant::now() >= d)
@@ -198,6 +209,17 @@ struct Constraint {
     /// `None` for a constraint that is not a registered template (the intermediate
     /// constraints Fourier–Motzkin derives, which the tableau never sees).
     row: Option<(usize, simplex::Rel, Rational)>,
+    /// The **linear form** this constraint bounds, and the bound it imposes on
+    /// it: `(form id, is an upper bound, the bound's value)`, with the bound
+    /// strict exactly when [`Self::strict`] is (S4).
+    ///
+    /// Two constraints over the same linear functional up to positive scaling
+    /// — `x + y ≤ 3` and `2x + 2y ≤ 7`, or an order atom's two polarities —
+    /// share a form id, which is what makes "this asserted atom already entails
+    /// that unassigned one" an O(1) comparison instead of a simplex probe.
+    /// `None` for a constraint whose normalization overflowed, and for the
+    /// intermediate constraints Fourier–Motzkin derives.
+    form: Option<(usize, bool, Rational)>,
 }
 
 /// Outcome of an incremental feasibility check over the asserted constraints.
@@ -378,14 +400,19 @@ pub struct LraTheory {
     /// completeness if this flipped globally. Only the `CdclT`-driven adapter
     /// ([`crate::lra_theory::check_qf_lra_online_cdclt`]) turns it on.
     deferred_final_check: bool,
-    /// Per real variable, the tightest currently-asserted lower bound and the
-    /// atom that imposed it. Maintained only in `deferred_final_check` mode: it
-    /// is the O(1) partial check `assert` keeps once the complete decision has
-    /// moved to `final_check`, and the source of the cheap bound-implication
-    /// propagation.
-    bound_lower: Vec<Option<VarBound>>,
-    /// Per real variable, the tightest currently-asserted upper bound.
-    bound_upper: Vec<Option<VarBound>>,
+    /// Per **linear form** (S4; see [`assign_forms`]), the tightest
+    /// currently-asserted lower bound and the atom that imposed it. Maintained
+    /// only in `deferred_final_check` mode: it is the O(1) partial check
+    /// `assert` keeps once the complete decision has moved to `final_check`, and
+    /// the source of the cheap bound-implication propagation.
+    ///
+    /// Indexed by form rather than by variable since S4. A single variable is
+    /// the form with one coefficient, so this strictly extends what it held
+    /// before; what it gains is every multi-variable atom, which is most of
+    /// them.
+    bound_lower: Vec<Option<FormBound>>,
+    /// Per linear form, the tightest currently-asserted upper bound.
+    bound_upper: Vec<Option<FormBound>>,
     /// One entry per [`Self::live`] constraint (in `deferred_final_check` mode):
     /// the bound slot that constraint overwrote, so `pop` restores the bound
     /// tables in lockstep with `live.truncate`.
@@ -396,12 +423,13 @@ pub struct LraTheory {
     propagations_offered: u64,
 }
 
-/// A one-variable bound currently asserted, with the atom that imposed it — the
-/// state behind `assert`'s cheap partial check (ADR-1701).
+/// A bound on one linear form, currently asserted, with the atom that imposed
+/// it — the state behind `assert`'s cheap partial check (ADR-1701, generalized
+/// from a variable to a form by S4).
 #[derive(Debug, Clone)]
-struct VarBound {
-    /// The bound's value: `x <= value` for an upper bound, `x >= value` for a
-    /// lower one (strictly, when `strict`).
+struct FormBound {
+    /// The bound's value: `f <= value` for an upper bound, `f >= value` for a
+    /// lower one (strictly, when `strict`), with `f` the canonical form.
     value: Rational,
     strict: bool,
     /// The registered atom that imposed it.
@@ -411,9 +439,9 @@ struct VarBound {
 /// What one live constraint changed in the bound tables, so `pop` can undo it.
 #[derive(Debug, Clone)]
 struct BoundUndo {
-    var: usize,
+    form: usize,
     upper: bool,
-    previous: Option<VarBound>,
+    previous: Option<FormBound>,
 }
 
 /// Why construction of an online LRA theory stopped before all atoms were
@@ -480,6 +508,11 @@ impl LraTheory {
         }
         let nvars = builder.vars.len();
         let count = atoms.len();
+        // S4: forms are assigned BEFORE the tableau is built, because
+        // `build_simplex_engine` can decline (an oversized tableau, an
+        // overflowed right-hand side) and the cheap bound check must keep
+        // working when it does.
+        let forms = assign_forms(&mut atoms);
         let simplex = build_simplex_engine(&mut atoms, nvars).map(RefCell::new);
         Ok(Self {
             atoms,
@@ -492,8 +525,8 @@ impl LraTheory {
             deadline,
             simplex,
             deferred_final_check: false,
-            bound_lower: vec![None; nvars],
-            bound_upper: vec![None; nvars],
+            bound_lower: vec![None; forms],
+            bound_upper: vec![None; forms],
             bound_log: Vec::new(),
             propagations_offered: 0,
         })
@@ -535,26 +568,24 @@ impl LraTheory {
         self
     }
 
-    /// The one-variable bound a constraint imposes, or `None` when it names
-    /// zero or several variables (nothing cheap to say about it).
+    /// The bound a constraint imposes on its **linear form**, read off the
+    /// `form` slot [`assign_forms`] filled at construction: `(form id, is an
+    /// upper bound, value, strict)`.
     ///
-    /// `a·x + k {<,≤} 0` is `x ≤ -k/a` for `a > 0` and `x ≥ -k/a` for `a < 0`.
-    fn unit_bound(c: &Constraint) -> Option<(usize, bool, Rational, bool)> {
-        if c.expr.coeffs.len() != 1 {
-            return None;
-        }
-        let (&var, &a) = c.expr.coeffs.iter().next()?;
-        if a.is_zero() {
-            return None;
-        }
-        let value = c.expr.constant.checked_neg()?.checked_div(a)?;
-        // `a > 0` keeps the relation direction (upper bound); `a < 0` flips it.
-        let upper = a.checked_cmp(&Rational::zero())? == Ordering::Greater;
-        Some((var, upper, value, c.strict))
+    /// This is the S4 generalization of the one-variable version it replaces.
+    /// The old form asked `c.expr.coeffs.len() == 1` and so said nothing at all
+    /// about a multi-variable atom — which is most of them, and is why
+    /// `propagations_offered` read 79 across 6,571 final checks on
+    /// `QF_LRA/2019-ezsmt/blending/1.smt2`. A one-variable constraint is just
+    /// the special case whose form has a single coefficient, so nothing that
+    /// propagated before stops propagating.
+    fn form_bound(c: &Constraint) -> Option<(usize, bool, Rational, bool)> {
+        let (form, upper, value) = c.form?;
+        Some((form, upper, value, c.strict))
     }
 
     /// Whether `candidate` is strictly tighter than `current` on the same side.
-    fn tighter(candidate: (&Rational, bool), current: &VarBound, upper: bool) -> Option<bool> {
+    fn tighter(candidate: (&Rational, bool), current: &FormBound, upper: bool) -> Option<bool> {
         let ordering = candidate.0.checked_cmp(&current.value)?;
         let strictly_better = if upper {
             ordering == Ordering::Less
@@ -580,15 +611,15 @@ impl LraTheory {
     fn install_bounds(&mut self, first: usize) -> Option<Vec<TheoryLit>> {
         let mut conflict: Option<Vec<TheoryLit>> = None;
         for index in first..self.live.len() {
-            let Some((var, upper, value, strict)) = Self::unit_bound(&self.live[index]) else {
+            let Some((form, upper, value, strict)) = Self::form_bound(&self.live[index]) else {
                 self.bound_log.push(None);
                 continue;
             };
             let atom = self.live[index].atom;
             let current = if upper {
-                &self.bound_upper[var]
+                &self.bound_upper[form]
             } else {
-                &self.bound_lower[var]
+                &self.bound_lower[form]
             };
             let install = match current {
                 None => true,
@@ -596,20 +627,20 @@ impl LraTheory {
             };
             if install {
                 let previous = if upper {
-                    self.bound_upper[var].replace(VarBound {
+                    self.bound_upper[form].replace(FormBound {
                         value,
                         strict,
                         atom,
                     })
                 } else {
-                    self.bound_lower[var].replace(VarBound {
+                    self.bound_lower[form].replace(FormBound {
                         value,
                         strict,
                         atom,
                     })
                 };
                 self.bound_log.push(Some(BoundUndo {
-                    var,
+                    form,
                     upper,
                     previous,
                 }));
@@ -617,18 +648,21 @@ impl LraTheory {
                 self.bound_log.push(None);
             }
             if conflict.is_none() {
-                conflict = self.bound_crossing(var);
+                conflict = self.bound_crossing(form);
             }
         }
         conflict
     }
 
-    /// The two-literal core when variable `var`'s lower and upper bounds cross,
-    /// else `None`. Inconclusive arithmetic (an overflowed comparison) reports
-    /// nothing — a missed conflict costs completeness, never soundness.
-    fn bound_crossing(&self, var: usize) -> Option<Vec<TheoryLit>> {
-        let lower = self.bound_lower[var].as_ref()?;
-        let upper = self.bound_upper[var].as_ref()?;
+    /// The two-literal core when linear form `form`'s lower and upper bounds
+    /// cross, else `None`. Inconclusive arithmetic (an overflowed comparison)
+    /// reports nothing — a missed conflict costs completeness, never soundness.
+    ///
+    /// Sound at a form exactly as it was at a variable: `f ≥ l` and `f ≤ u` with
+    /// `l > u` is infeasible on those two literals alone, whatever `f` is.
+    fn bound_crossing(&self, form: usize) -> Option<Vec<TheoryLit>> {
+        let lower = self.bound_lower[form].as_ref()?;
+        let upper = self.bound_upper[form].as_ref()?;
         let ordering = lower.value.checked_cmp(&upper.value)?;
         let crosses = ordering == Ordering::Greater
             || (ordering == Ordering::Equal && (lower.strict || upper.strict));
@@ -658,25 +692,41 @@ impl LraTheory {
             };
             let Some(undo) = entry else { continue };
             if undo.upper {
-                self.bound_upper[undo.var] = undo.previous;
+                self.bound_upper[undo.form] = undo.previous;
             } else {
-                self.bound_lower[undo.var] = undo.previous;
+                self.bound_lower[undo.form] = undo.previous;
             }
         }
     }
 
-    /// Cheap bound-implication propagation (ADR-1701): an unassigned order atom
-    /// whose *true* polarity is a one-variable bound already entailed by the
-    /// tightest asserted bound on that variable is propagated true, explained by
-    /// the single atom holding that bound; symmetrically for its false polarity.
+    /// Cheap implied-bound propagation (ADR-1701, generalized by S4): an
+    /// unassigned order atom whose *true* polarity bounds a linear form the
+    /// tightest asserted bound on that **same form** already entails is
+    /// propagated true, explained by the single atom holding that bound;
+    /// symmetrically for its false polarity.
     ///
-    /// This is the propagation the bound tables already expose — one comparison
-    /// per atom, no simplex probe — and it replaces the negation probe while the
-    /// complete decision is deferred. Only genuinely-entailed literals are
-    /// emitted: an inconclusive comparison yields nothing.
+    /// This is the implication the bound tables already expose — one rational
+    /// comparison per atom, no simplex probe and no tableau scan. Soundness is
+    /// immediate and independent of what the form is: from `f ≤ u` and `u ≤ b`
+    /// follows `f ≤ b`, so the lemma `¬(reason ∧ ¬entailed)` rests on the single
+    /// asserted literal named in the explanation. Only genuinely-entailed
+    /// literals are emitted: an inconclusive comparison yields nothing, which
+    /// costs completeness and never soundness.
+    ///
+    /// # The budget, and why capping a call is free
+    ///
+    /// One call stops after [`MAX_BOUND_PROPAGATIONS_PER_CALL`] literals. The
+    /// scan itself is already bounded — `atoms.len()` is capped at
+    /// `MAX_ONLINE_LRA_ATOMS` (1,024) by the route that enables this mode — but
+    /// the *reason* the emission cap costs nothing is structural: the driver
+    /// runs propagation to a fixpoint, and an atom this call emitted is assigned
+    /// by the time the next iteration runs, so a capped call defers work to the
+    /// next iteration rather than discarding it. The cap therefore bounds the
+    /// latency of one call without bounding what the fixpoint derives.
     fn propagate_bounds(&mut self, queue: &mut PropagationQueue) {
+        let mut emitted = 0usize;
         for atom in 0..self.atoms.len() {
-            if past_deadline(self.deadline) {
+            if past_deadline(self.deadline) || emitted >= MAX_BOUND_PROPAGATIONS_PER_CALL {
                 return;
             }
             if self.assigned.get(atom).copied().flatten().is_some() {
@@ -690,16 +740,17 @@ impl LraTheory {
                 continue;
             };
             for (constraint, value) in [(when_true, true), (when_false, false)] {
-                let Some((var, upper, bound, strict)) = Self::unit_bound(constraint) else {
+                let Some((form, upper, bound, strict)) = Self::form_bound(constraint) else {
                     continue;
                 };
-                // `constraint` says `x ≤ bound` (or `x ≥ bound`). It is entailed
-                // when the already-asserted bound on the same side is at least
-                // as tight.
+                // `constraint` says `f ≤ bound` (or `f ≥ bound`) for its
+                // canonical linear form `f`. It is entailed when the
+                // already-asserted bound on the same side of the SAME form is at
+                // least as tight.
                 let held = if upper {
-                    self.bound_upper[var].as_ref()
+                    self.bound_upper[form].as_ref()
                 } else {
-                    self.bound_lower[var].as_ref()
+                    self.bound_lower[form].as_ref()
                 };
                 let Some(held) = held else { continue };
                 let Some(ordering) = held.value.checked_cmp(&bound) else {
@@ -730,6 +781,7 @@ impl LraTheory {
                     }],
                 );
                 self.propagations_offered += 1;
+                emitted += 1;
                 break;
             }
         }
@@ -1125,6 +1177,92 @@ impl TheorySolver for LraTheory {
     }
 }
 
+/// Assigns every constraint template of every registered atom the **linear form**
+/// it bounds, mutating the templates in place so [`tag`] carries the form onto
+/// each asserted copy; returns the number of distinct forms (S4).
+///
+/// A constraint is `Σ aⱼ·xⱼ + k {<,≤} 0`. Dividing through by the coefficient of
+/// its lowest-indexed variable puts the *functional* into a canonical shape whose
+/// leading coefficient is exactly `1`, and turns the constraint into a bound on
+/// that shape: for a positive leading coefficient the direction is kept
+/// (`f ≤ −k/a₀`, an upper bound), for a negative one it flips (`f ≥ −k/a₀`).
+/// Two constraints share a form id exactly when they bound the same functional
+/// up to positive scaling, which is what lets one entail the other by a single
+/// rational comparison.
+///
+/// The key is the canonical coefficient vector as `(variable, numerator,
+/// denominator)` triples in variable order. `Rational` keeps one representation
+/// per value, so equal functionals produce equal keys; a `BTreeMap` keeps the id
+/// assignment deterministic, which the determinism promise requires.
+///
+/// A constraint whose normalization overflows `i128` gets no form — it simply
+/// never participates in the cheap check, exactly as a multi-variable constraint
+/// never did before.
+fn assign_forms(atoms: &mut [AtomKind]) -> usize {
+    type FormKey = Vec<(usize, i128, i128)>;
+
+    fn canonicalize(c: &mut Constraint, forms: &mut BTreeMap<FormKey, usize>) {
+        let Some((&_lead_var, &lead)) = c.expr.coeffs.iter().find(|(_, a)| !a.is_zero()) else {
+            // A constraint over no variable is `k {<,≤} 0`: a ground fact, not a
+            // bound on anything, so it has no form.
+            return;
+        };
+        let mut key: FormKey = Vec::with_capacity(c.expr.coeffs.len());
+        for (&var, &a) in &c.expr.coeffs {
+            if a.is_zero() {
+                continue;
+            }
+            let Some(scaled) = a.checked_div(lead) else {
+                return;
+            };
+            // `numerator()` PANICS on a promoted value. `checked_div` declines
+            // rather than promoting (ADR-1702's `wide_*` opt-in is contained in
+            // `simplex`), so this cannot fire today — but a form key is not worth
+            // a panic if that ever changes, and a constraint with no form simply
+            // does not take part in the cheap check.
+            let (Some(num), Some(den)) = (scaled.checked_numerator(), scaled.checked_denominator())
+            else {
+                return;
+            };
+            key.push((var, num, den));
+        }
+        let Some(value) = c
+            .expr
+            .constant
+            .checked_neg()
+            .and_then(|n| n.checked_div(lead))
+        else {
+            return;
+        };
+        let Some(order) = lead.checked_cmp(&Rational::zero()) else {
+            return;
+        };
+        let upper = order == Ordering::Greater;
+        let next = forms.len();
+        let id = *forms.entry(key).or_insert(next);
+        c.form = Some((id, upper, value));
+    }
+
+    let mut forms: BTreeMap<FormKey, usize> = BTreeMap::new();
+    for kind in atoms.iter_mut() {
+        match kind {
+            AtomKind::Order {
+                when_true,
+                when_false,
+            } => {
+                canonicalize(when_true, &mut forms);
+                canonicalize(when_false, &mut forms);
+            }
+            AtomKind::Equality { when_true } => {
+                canonicalize(&mut when_true[0], &mut forms);
+                canonicalize(&mut when_true[1], &mut forms);
+            }
+            AtomKind::Unsupported => {}
+        }
+    }
+    forms.len()
+}
+
 /// Assigns every constraint template of every registered atom a fixed tableau row
 /// (mutating the templates in place so [`tag`] carries the row onto each asserted
 /// copy) and builds the warm simplex over them.
@@ -1237,6 +1375,7 @@ fn tag(template: &Constraint, atom: usize) -> Constraint {
         mult: Vec::new(),
         atom,
         row: template.row,
+        form: template.form,
     }
 }
 
@@ -1409,6 +1548,7 @@ impl AtomBuilder {
                             mult: Vec::new(),
                             atom: 0,
                             row: None,
+                            form: None,
                         },
                         Constraint {
                             expr: diff_neg,
@@ -1416,6 +1556,7 @@ impl AtomBuilder {
                             mult: Vec::new(),
                             atom: 0,
                             row: None,
+                            form: None,
                         },
                     ],
                 }
@@ -1526,6 +1667,7 @@ fn normalize(op: Op, left: &LinExpr, right: &LinExpr) -> Option<Constraint> {
         mult: Vec::new(),
         atom: 0,
         row: None,
+        form: None,
     })
 }
 
@@ -1580,6 +1722,7 @@ fn solve(constraints: &[Constraint], nvars: usize, deadline: Option<Instant>) ->
             mult: unit_vec(n, i),
             atom: c.atom,
             row: c.row,
+            form: c.form,
         });
     }
 
@@ -1707,6 +1850,7 @@ fn eliminate(
                 mult,
                 atom: p.atom,
                 row: None,
+                form: None,
             });
         }
     }
@@ -3475,6 +3619,7 @@ fn run_online_diag(arena: &TermArena, assertions: &[TermId]) -> Option<OnlineDia
         .collect();
     let nvars = builder.vars.len();
     let mut atoms = atoms;
+    let forms = assign_forms(&mut atoms);
     let simplex = build_simplex_engine(&mut atoms, nvars).map(RefCell::new);
     let mut theory = LraTheory {
         atoms,
@@ -3487,8 +3632,8 @@ fn run_online_diag(arena: &TermArena, assertions: &[TermId]) -> Option<OnlineDia
         deadline: None,
         simplex,
         deferred_final_check: false,
-        bound_lower: vec![None; nvars],
-        bound_upper: vec![None; nvars],
+        bound_lower: vec![None; forms],
+        bound_upper: vec![None; forms],
         bound_log: Vec::new(),
         propagations_offered: 0,
     };
@@ -3631,6 +3776,114 @@ mod tests {
         let engine = theory.simplex.as_ref().expect("engine").borrow();
         // One row per ORDER atom (both polarities share the slack).
         assert_eq!(engine.row_atom, vec![0, 1]);
+    }
+
+    /// S4: the implied-bound tables are indexed by **linear form**, not by
+    /// variable, so an asserted bound on `x + y` settles every unassigned atom
+    /// bounding the same form — including one written at a different scale.
+    ///
+    /// Positive and negative in one test, because a propagator that emits
+    /// everything passes any purely positive test: `x + y ≤ 3` must entail
+    /// `2x + 2y ≤ 8` (the same form at `≤ 4`, looser) and must **not** entail
+    /// `2x + 2y ≤ 4` (the same form at `≤ 2`, tighter — genuinely undecided).
+    #[test]
+    fn an_asserted_form_bound_entails_looser_atoms_on_that_form_and_no_others() {
+        let mut arena = TermArena::new();
+        let x = rvar(&mut arena, "x");
+        let y = rvar(&mut arena, "y");
+        let two = rconst(&mut arena, 2);
+        let sum = arena.real_add(x, y).expect("x+y");
+        let two_x = arena.real_mul(two, x).expect("2x");
+        let two_y = arena.real_mul(two, y).expect("2y");
+        let double = arena.real_add(two_x, two_y).expect("2x+2y");
+        let three = rconst(&mut arena, 3);
+        let eight = rconst(&mut arena, 8);
+        let four = rconst(&mut arena, 4);
+        // atom 0: x + y ≤ 3     atom 1: 2x + 2y ≤ 8 (⇔ x + y ≤ 4, looser)
+        // atom 2: 2x + 2y ≤ 4 (⇔ x + y ≤ 2, tighter)
+        let a0 = arena.real_le(sum, three).expect("x+y<=3");
+        let a1 = arena.real_le(double, eight).expect("2x+2y<=8");
+        let a2 = arena.real_le(double, four).expect("2x+2y<=4");
+
+        let mut theory = LraTheory::new(&arena, &[a0, a1, a2]).with_deferred_final_check();
+        assert!(theory.assert(0, true).is_ok(), "x+y<=3 alone is feasible");
+
+        let mut queue = PropagationQueue::default();
+        theory.propagate_into(&mut queue);
+        let emitted: Vec<(usize, bool)> = queue
+            .entries()
+            .iter()
+            .map(|(lit, _)| (lit.atom, lit.value))
+            .collect();
+        assert!(
+            emitted.contains(&(1, true)),
+            "x+y<=3 entails 2x+2y<=8; emitted {emitted:?}"
+        );
+        assert!(
+            !emitted.iter().any(|&(atom, _)| atom == 2),
+            "x+y<=3 does NOT decide 2x+2y<=4 either way; emitted {emitted:?}"
+        );
+        // The explanation must be exactly the asserted literal that holds the bound.
+        let (_, reason) = queue
+            .entries()
+            .iter()
+            .find(|(lit, _)| lit.atom == 1)
+            .expect("the entailed literal is present");
+        let TheoryExplanation::Eager(lits) = reason else {
+            panic!("the bound propagator materialises its reason");
+        };
+        assert_eq!(
+            lits.as_slice(),
+            &[TheoryLit {
+                atom: 0,
+                value: true
+            }],
+            "the reason is the single asserted atom holding the bound"
+        );
+    }
+
+    /// S4: two crossing bounds on the same multi-variable form are refuted by
+    /// `assert`'s O(1) check, with a two-literal core and **no simplex run** —
+    /// the generalization of the one-variable crossing test to a form.
+    ///
+    /// `x + y ≤ 3` and `2x + 2y ≥ 10` (⇔ `x + y ≥ 5`) cross. The near-miss
+    /// control is the same pair at `≥ 6` against `≤ 8`, which does not.
+    #[test]
+    fn crossing_bounds_on_one_multi_variable_form_are_refuted_with_a_two_literal_core() {
+        let mut arena = TermArena::new();
+        let x = rvar(&mut arena, "x");
+        let y = rvar(&mut arena, "y");
+        let two = rconst(&mut arena, 2);
+        let sum = arena.real_add(x, y).expect("x+y");
+        let two_x = arena.real_mul(two, x).expect("2x");
+        let two_y = arena.real_mul(two, y).expect("2y");
+        let double = arena.real_add(two_x, two_y).expect("2x+2y");
+        let three = rconst(&mut arena, 3);
+        let ten = rconst(&mut arena, 10);
+        let eight = rconst(&mut arena, 8);
+        let six = rconst(&mut arena, 6);
+
+        let le3 = arena.real_le(sum, three).expect("x+y<=3");
+        let ge10 = arena.real_le(ten, double).expect("2x+2y>=10");
+        let mut theory = LraTheory::new(&arena, &[le3, ge10]).with_deferred_final_check();
+        assert!(theory.assert(0, true).is_ok());
+        let Err(core) = theory.assert(1, true) else {
+            panic!("x+y<=3 and x+y>=5 cross and must be refuted by the cheap check");
+        };
+        assert_eq!(core.len(), 2, "the crossing core is exactly two literals");
+        assert!(core.iter().any(|l| l.atom == 0 && l.value));
+        assert!(core.iter().any(|l| l.atom == 1 && l.value));
+
+        // Control: `x + y ≤ 8` with `x + y ≥ 3` is satisfiable. A checker that
+        // reported a crossing here would be manufacturing conflicts.
+        let le8 = arena.real_le(sum, eight).expect("x+y<=8");
+        let ge6 = arena.real_le(six, double).expect("2x+2y>=6");
+        let mut ok = LraTheory::new(&arena, &[le8, ge6]).with_deferred_final_check();
+        assert!(ok.assert(0, true).is_ok());
+        assert!(
+            ok.assert(1, true).is_ok(),
+            "x+y<=8 and x+y>=3 is satisfiable and must not be refuted"
+        );
     }
 
     /// **Soundness-negative through the theory API**: a *satisfiable* live set must
@@ -4383,6 +4636,7 @@ mod tests {
             .collect();
         let nvars = builder.vars.len();
         let mut atoms = atoms;
+        let forms = assign_forms(&mut atoms);
         let simplex = build_simplex_engine(&mut atoms, nvars).map(RefCell::new);
         let theory = LraTheory {
             atoms,
@@ -4395,8 +4649,8 @@ mod tests {
             deadline: None,
             simplex,
             deferred_final_check: false,
-            bound_lower: vec![None; nvars],
-            bound_upper: vec![None; nvars],
+            bound_lower: vec![None; forms],
+            bound_upper: vec![None; forms],
             bound_log: Vec::new(),
             propagations_offered: 0,
         };
