@@ -4,7 +4,7 @@
   "note": "Statement identity for every settled fact (S1 of the trusted-library safety roadmap, ADR-0763). Per fact: SHA-256 of formal.statement (the canonical kernel rendering for native lean4 rows), SHA-256 of the top-level reader-facing statement, and the kernel_theorem it names. A settled fact's statement is what the ledger CLAIMS; changing any of the three silently turns 'we proved X' into 'we proved something we then labelled X'. Changes require an amendment row naming both digests and a reason; superseded digests are preserved in each pin's history. `coverage_floor` is a ratchet the gate re-derives rather than trusts: slack is itself a violation, so a loosened floor is self-reverting. Written by `scripts/check-settled-fact-statements.py --write`; do not hand-edit.",
   "coverage_floor": {
     "max_unpinned_settled": 0,
-    "min_identity_bound": 2425,
+    "min_identity_bound": 2434,
     "max_header_exempt": 0
   },
   "amendments": [
@@ -1637,6 +1637,13 @@
       "kernel_theorem": "Complex.abs_congr"
     },
     {
+      "fact_id": "F:complex-abs-i",
+      "language": "lean4",
+      "statement_sha256": "d23500bafdac61585fa2cc8ac9569c9b0f524a740b82b1cefdaf57a1751deb2c",
+      "prose_sha256": "d4bb99906404dc0dae4ce2b6b1e1d5e66b5875da2f14d6e724d93b4c41eec94e",
+      "kernel_theorem": "Complex.abs_I"
+    },
+    {
       "fact_id": "F:complex-abs-im-le",
       "language": "lean4",
       "statement_sha256": "9f205670d6a98620449c19cad7a58ddb03b12f7347c7b7eb12834d87e3e1d5b3",
@@ -2106,6 +2113,13 @@
       "kernel_theorem": "Complex.hasDerivative_add"
     },
     {
+      "fact_id": "F:complex-hasderivative-congr",
+      "language": "lean4",
+      "statement_sha256": "b55dc124118d3429f04f14db6df38b1b1cb64ead49d737aa65df4e4fb9ebfa4c",
+      "prose_sha256": "23394ad36098b1f565f00d1329dda8cd7a4200ee8c5a441589abf29bf6f9e3af",
+      "kernel_theorem": "Complex.hasDerivative_congr"
+    },
+    {
       "fact_id": "F:complex-hasderivative-const",
       "language": "lean4",
       "statement_sha256": "3e50beebeca4257fd0156c6a68a0251c3165645a8e821d6795c0c6148419c11f",
@@ -2132,6 +2146,13 @@
       "statement_sha256": "539cc7db042b987a02d406a33375e364f3f9b1276664bcdbbc3df757044c6336",
       "prose_sha256": "fc16f7a6cf70b1050c10e212e6832af10f7cd400edef18bbf8c7d0ce4cb521a7",
       "kernel_theorem": "Complex.hasDerivative_neg"
+    },
+    {
+      "fact_id": "F:complex-hasderivative-pow",
+      "language": "lean4",
+      "statement_sha256": "14a1ea6d2be7cfc3bcb539b98f539a1793479c86f00f3233868033fa4e4d9deb",
+      "prose_sha256": "a49900e949040c0118b37866792c34aeb38e3fa1c501bc46eadb2005541824bd",
+      "kernel_theorem": "Complex.hasDerivative_pow"
     },
     {
       "fact_id": "F:complex-hasderivativeon-spec",
@@ -2269,6 +2290,34 @@
       "statement_sha256": "a961de36b3be1eb4c1436cce9a952a718f4cbd725f6eff3d22f2a0a63815fd78",
       "prose_sha256": "5220cee395f3bd53faad7e80df2ce4caeb0e6525f9d0e0deadf27e1c3b89a9f6",
       "kernel_theorem": "Complex.im_congr"
+    },
+    {
+      "fact_id": "F:complex-indisc-i-of-two-sided",
+      "language": "lean4",
+      "statement_sha256": "f2e0b4a023c6d3fa2ed2dec8f909421445ab3e8c4dbda8e7dfae523d6b351d0e",
+      "prose_sha256": "88f1aab1b30d88b4fb0c2f3c547b3869b392d96668ead1f7f24e6fb37fc81dd4",
+      "kernel_theorem": "Complex.inDisc_I_of_two_sided"
+    },
+    {
+      "fact_id": "F:complex-indisc-i-offset",
+      "language": "lean4",
+      "statement_sha256": "9621ed80a219ab1ab23a498dcb0d623934785471f6416db2cc240ba027f337df",
+      "prose_sha256": "f143c5ffee78b48d6849b1594d4fe75a93d37a8aed33e70266d5b8ba02fa28bb",
+      "kernel_theorem": "Complex.inDisc_I_offset"
+    },
+    {
+      "fact_id": "F:complex-indisc-of-two-sided",
+      "language": "lean4",
+      "statement_sha256": "257bdd34e311b4bebe855310f7179eedccc4bcb1d847104d12846c6ed76765e5",
+      "prose_sha256": "5888a3cacc586ec72205907e9930bddba71e16fd6b17a835f757864d009cb997",
+      "kernel_theorem": "Complex.inDisc_of_two_sided"
+    },
+    {
+      "fact_id": "F:complex-indisc-ofreal-offset",
+      "language": "lean4",
+      "statement_sha256": "de1bd1e8b73e584b2c0dc3c560a750d5a277143173d8c00c3c8311cf6ec530a2",
+      "prose_sha256": "351248ad1c2f2afbf8e9430ba6b7bce293aca3837eafcbf96bc3d6c7eebf7d6c",
+      "kernel_theorem": "Complex.inDisc_ofReal_offset"
     },
     {
       "fact_id": "F:complex-inv-congr",
@@ -2872,6 +2921,13 @@
       "kernel_theorem": "Complex.sumRange_zero"
     },
     {
+      "fact_id": "F:complex-uniformlycontinuous-add",
+      "language": "lean4",
+      "statement_sha256": "a206c59c1df5fd582751888a474ea55a9faf1921478e8cb50e48fe33724a0d69",
+      "prose_sha256": "b53ccd7e8a98e309afa7f7292961d2e31432d386921c962f49ec0b088907d428",
+      "kernel_theorem": "Complex.uniformlyContinuous_add"
+    },
+    {
       "fact_id": "F:complex-uniformlycontinuous-const",
       "language": "lean4",
       "statement_sha256": "a2d1330653fc78b57cdee845576a07f9244cd021e5564e09039259aa2ade4b98",
@@ -2884,6 +2940,13 @@
       "statement_sha256": "e698c3e63c333c2dbb6231718305d9357e8495c12288fa499a80673034060ef1",
       "prose_sha256": "4b39a997ac719a97972e2ac0880b02733dc02e18279b0988c02a20aaf7e51afc",
       "kernel_theorem": "Complex.uniformlyContinuous_id"
+    },
+    {
+      "fact_id": "F:complex-uniformlycontinuous-mul",
+      "language": "lean4",
+      "statement_sha256": "126e4f61de52cf23608deba5dc7edb1b18cd0fd98a243babb7ae2b178a6e93c0",
+      "prose_sha256": "366b94184bddabdd06cb2063762165e681f375113a96147c192ef447c17e346c",
+      "kernel_theorem": "Complex.uniformlyContinuous_mul"
     },
     {
       "fact_id": "F:complex-uniformlycontinuous-of-hasderivative",
