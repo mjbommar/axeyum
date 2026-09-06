@@ -21,6 +21,7 @@
 //! 3. **The `Sort 1` universe control** is stated in the open as well as
 //!    inside `declare_record`, so deleting it from the spine is visible here.
 
+use super::affine::{AFFINE_FIELD_COUNT, AFFINE_FIELD_SUFFIXES, affine_fields};
 use super::{
     APART, FIELD_COUNT, FIELD_SUFFIXES, GeoPrelude, JOIN_UNIQUE, L_EQ, LINE, ON, P_EQ, POINT,
     TRIANGLE, TWO_POINTS, build_geo_prelude, incidence_fields,
@@ -170,8 +171,61 @@ fn all_declarations(p: GeoPrelude) -> Vec<crate::name::NameId> {
         rp.triangle,
         rp.instance,
     ]);
+    let af = p.affine;
+    out.extend([
+        // --- the affine layer ---------------------------------------------
+        af.record.ind,
+        af.record.mk,
+        af.record.rec,
+        af.parallel_pos_parallel,
+        af.parallel_pos_irrefl,
+        af.parallel_trans,
+    ]);
+    let qa = p.qaffine;
+    out.extend([
+        // --- the rational model's affine layer ------------------------------
+        qa.off_raw,
+        qa.off,
+        qa.par_pos_raw,
+        qa.par_pos,
+        qa.off_not_on,
+        qa.defect_ac,
+        qa.defect_bc,
+        qa.par_pos_disjoint,
+        qa.par_line,
+        qa.par_line_on,
+        qa.par_line_dir,
+        qa.par_nondeg_pair,
+        qa.playfair_exists,
+        qa.dir_pivot,
+        qa.prop_swap,
+        qa.playfair_unique,
+        qa.instance,
+    ]);
+    let rr = p.raffine;
+    out.extend([
+        // --- the real model's affine layer ----------------------------------
+        rr.off_raw,
+        rr.off,
+        rr.par_pos_raw,
+        rr.par_pos,
+        rr.off_not_on,
+        rr.par_pos_disjoint,
+        rr.pos_bound_mul,
+        rr.par_line,
+        rr.par_line_on,
+        rr.par_line_dir,
+        rr.par_line_norm,
+        rr.playfair_exists,
+        rr.dir_pivot,
+        rr.playfair_unique,
+        rr.instance,
+    ]);
     for i in 0..p.record.field_count() {
         out.push(p.record.sel(i));
+    }
+    for i in 0..af.record.field_count() {
+        out.push(af.record.sel(i));
     }
     out
 }
@@ -185,7 +239,7 @@ fn every_declaration_is_present_and_axiom_free() {
     let all = all_declarations(prelude);
     assert_eq!(
         all.len(),
-        FIELD_COUNT + 11 + 46 + 41,
+        FIELD_COUNT + 11 + 46 + 41 + AFFINE_FIELD_COUNT + 6 + 17 + 15,
         "the declaration list is out of step with the record's field count"
     );
     for name in all {
@@ -221,7 +275,7 @@ fn the_handle_names_every_live_geo_declaration() {
     // true against an empty handle list, and a filter typo produces exactly
     // that.
     assert!(
-        live.len() >= 110,
+        live.len() >= 160,
         "only {} declarations render under `Geo.` -- the filter is wrong, or \
          the build stopped early",
         live.len()
@@ -250,6 +304,61 @@ fn field_list_matches_the_suffix_table() {
             "field {i}'s shape and its selector name disagree"
         );
     }
+}
+
+/// The affine record's field list and its suffix table describe the same
+/// record.
+#[test]
+fn the_affine_field_list_matches_its_suffix_table() {
+    let (_, prelude) = built();
+    let specs = affine_fields(prelude);
+    assert_eq!(specs.len(), AFFINE_FIELD_COUNT);
+    for (i, spec) in specs.iter().enumerate() {
+        assert_eq!(
+            spec.suffix, AFFINE_FIELD_SUFFIXES[i],
+            "affine field {i}'s shape and its selector name disagree"
+        );
+    }
+}
+
+/// **Negative control for the affine record**: the same seven fields declared
+/// at `Sort 1` must be REFUSED. The zeroth field is a `Geo.Incidence`, which
+/// lives in `Sort 2`, so the record cannot be a `Sort 1` one; `declare_record`
+/// runs this control itself on every build and this test states it in the open.
+#[test]
+fn the_affine_record_is_refused_at_sort_one() {
+    on_a_deep_stack(|| {
+        use crate::nat_prelude::structures::close_pi;
+        let mut kernel = Kernel::new();
+        let prelude = build_geo_prelude(&mut kernel).expect("Geo prelude must build");
+        let logic = prelude.cpoint.creal.rat.int.logic;
+        let l0 = kernel.level_zero();
+        let l1 = kernel.level_succ(l0);
+
+        let specs = affine_fields(prelude);
+        let fvars: Vec<u64> = (0..specs.len()).map(|i| 10_000 + i as u64).collect();
+        let mut ctor_fields: Vec<(u64, crate::expr::ExprId)> = Vec::with_capacity(specs.len());
+        let mut vals: Vec<crate::expr::ExprId> = Vec::with_capacity(specs.len());
+        for (i, spec) in specs.iter().enumerate() {
+            let ty = (spec.build)(&mut kernel, &logic, l1, &vals);
+            ctor_fields.push((fvars[i], ty));
+            let v = kernel.fvar(fvars[i]);
+            vals.push(v);
+        }
+        let anon = kernel.anon();
+        let ind = kernel.name_str(anon, "GeoAffineSortOneControl");
+        let mk = kernel.name_str(ind, "mk");
+        let sort1 = kernel.sort(l1);
+        let ind_const = kernel.const_(ind, vec![]);
+        let ctor = close_pi(&mut kernel, &ctor_fields, ind_const);
+        assert!(
+            kernel
+                .add_inductive(ind, &[], 0, sort1, &[(mk, ctor)])
+                .is_err(),
+            "a record carrying a Geo.Incidence field was ACCEPTED at Sort 1 -- \
+             the ADR-1495 ConstructorFieldUniverseTooBig guard did not fire"
+        );
+    });
 }
 
 /// The field-index constants really do point at the fields their names claim.
@@ -1047,5 +1156,357 @@ fn dist_sq_is_definitionally_the_coordinate_difference_squares() {
             d.kernel().def_eq(got, expect),
             "CPoint.distSq must unfold to `(x P - x Q)^2 + (y P - y Q)^2`"
         );
+    });
+}
+
+// ---------------------------------------------------------------------------
+// The affine layer (ADR-1659). Same discipline: every new `Definition` is
+// pinned, every pin carries its discriminating half, and the two mutations the
+// suite runs are named at the tests that die.
+// ---------------------------------------------------------------------------
+
+/// The `Geo.Affine` selectors pick the field their name claims, evaluated at
+/// the two instances. `inc` is the one that separates the models, so the
+/// negative half is the CROSS pairing: `Geo.qaffine`'s incidence structure is
+/// `Geo.qplane` and NOT `Geo.rplane`.
+#[test]
+fn the_two_affine_planes_are_two_models_and_not_one() {
+    use crate::int_prelude::ops::IntDev;
+    on_a_deep_stack(|| {
+        let (mut kernel, prelude) = built();
+        let af = prelude.affine;
+        let qa = prelude.qaffine;
+        let ra = prelude.raffine;
+        let mut dev = IntDev::new(&mut kernel, prelude.cpoint.creal.rat.int);
+        let d = &mut dev;
+
+        let q_model = d.kernel().const_(qa.instance, vec![]);
+        let r_model = d.kernel().const_(ra.instance, vec![]);
+        let qplane = d.kernel().const_(prelude.qplane.instance, vec![]);
+        let rplane = d.kernel().const_(prelude.rplane.instance, vec![]);
+
+        let inc = af.record.sel(super::affine::INC);
+        let got_q = d.const_app(inc, &[q_model]);
+        let got_r = d.const_app(inc, &[r_model]);
+        assert!(
+            d.kernel().def_eq(got_q, qplane),
+            "Geo.qaffine's incidence structure must be Geo.qplane"
+        );
+        assert!(
+            d.kernel().def_eq(got_r, rplane),
+            "Geo.raffine's incidence structure must be Geo.rplane"
+        );
+        assert!(
+            !d.kernel().def_eq(got_q, rplane),
+            "Geo.qaffine's incidence structure must NOT be Geo.rplane -- the \
+             two affine planes would then be one model written twice"
+        );
+
+        // `parPos` and `off` come out of the SAME instance, so a selector that
+        // read the wrong slot would show up here.
+        let par = af.record.sel(super::affine::PAR_POS);
+        let off = af.record.sel(super::affine::OFF);
+        let got_par = d.const_app(par, &[q_model]);
+        let got_off = d.const_app(off, &[q_model]);
+        let want_par = d.kernel().const_(qa.par_pos, vec![]);
+        let want_off = d.kernel().const_(qa.off, vec![]);
+        assert!(
+            d.kernel().def_eq(got_par, want_par),
+            "Geo.Affine.parPos must select Geo.QPlane.parPos"
+        );
+        assert!(
+            d.kernel().def_eq(got_off, want_off),
+            "Geo.Affine.off must select Geo.QPlane.off"
+        );
+        assert!(
+            !d.kernel().def_eq(got_par, want_off),
+            "parPos and off must not be the same slot"
+        );
+    });
+}
+
+/// **Positive parallelism is witnessed over ℝ and negated over ℚ**, and that
+/// difference is the reason `Geo.Affine` carries `parPos` as a field rather
+/// than deriving it: over `CReal` the negated form constructs nothing.
+///
+/// The ℝ half is a STORED-VALUE comparison rather than a `def_eq` refutation,
+/// for the reason the banner above `stored_value` records.
+#[test]
+fn positive_parallelism_is_witnessed_over_the_reals_and_negated_over_the_rationals() {
+    use crate::creal_point::{rn_cadd, rn_cmul, rn_cneg, rn_czero};
+    use crate::int_prelude::ops::IntDev;
+    on_a_deep_stack(|| {
+        let (mut kernel, prelude) = built();
+        let rp = prelude.rplane;
+        let ra = prelude.raffine;
+        let cr = prelude.cpoint.creal;
+        let logic = cr.rat.int.logic;
+        let stored = stored_value(&kernel, ra.par_pos_raw);
+        let mut dev = IntDev::new(&mut kernel, cr.rat.int);
+        let d = &mut dev;
+
+        let line0 = d.kernel().const_(rp.rline0, vec![]);
+        let l_fv = d.fresh_fvar();
+        let m_fv = d.fresh_fvar();
+        let l = d.kernel().fvar(l_fv);
+        let m = d.kernel().fvar(m_fv);
+        let a = d.const_app(rp.rline0_a, &[l]);
+        let b = d.const_app(rp.rline0_b, &[l]);
+        let c = d.const_app(rp.rline0_c, &[l]);
+        let aa = d.const_app(rp.rline0_a, &[m]);
+        let bb = d.const_app(rp.rline0_b, &[m]);
+        let cc = d.const_app(rp.rline0_c, &[m]);
+        let zero = rn_czero(d, cr);
+        let dab = {
+            let p1 = rn_cmul(d, cr, a, bb);
+            let p2 = rn_cmul(d, cr, b, aa);
+            let n2 = rn_cneg(d, cr, p2);
+            rn_cadd(d, cr, p1, n2)
+        };
+        let dac = {
+            let p1 = rn_cmul(d, cr, a, cc);
+            let p2 = rn_cmul(d, cr, c, aa);
+            let n2 = rn_cneg(d, cr, p2);
+            rn_cadd(d, cr, p1, n2)
+        };
+        let dbc = {
+            let p1 = rn_cmul(d, cr, b, cc);
+            let p2 = rn_cmul(d, cr, c, bb);
+            let n2 = rn_cneg(d, cr, p2);
+            rn_cadd(d, cr, p1, n2)
+        };
+        let dir = d.const_app(cr.equiv, &[dab, zero]);
+        let sq = {
+            let s1 = rn_cmul(d, cr, dac, dac);
+            let s2 = rn_cmul(d, cr, dbc, dbc);
+            rn_cadd(d, cr, s1, s2)
+        };
+        let witnessed = {
+            let nat = d.nat_ty();
+            let k_fv = d.fresh_fvar();
+            let k = d.kernel().fvar(k_fv);
+            let pb = d.const_app(cr.pos_bound, &[sq, k]);
+            let pred = d.lam_fv(k_fv, nat, pb);
+            let one = d.level_one();
+            let ex = d.kernel().const_(logic.exists_, vec![one]);
+            d.apply(ex, &[nat, pred])
+        };
+        let negated = {
+            let eq = d.const_app(cr.equiv, &[sq, zero]);
+            let f = d.kernel().const_(logic.false_, vec![]);
+            d.arrow(eq, f)
+        };
+        let and = d.int().logic.and;
+        let expect_body = d.const_app(and, &[dir, witnessed]);
+        let wrong_body = d.const_app(and, &[dir, negated]);
+        let expect = {
+            let inner = d.lam_fv(m_fv, line0, expect_body);
+            d.lam_fv(l_fv, line0, inner)
+        };
+        let wrong = {
+            let inner = d.lam_fv(m_fv, line0, wrong_body);
+            d.lam_fv(l_fv, line0, inner)
+        };
+        assert_ne!(
+            expect, wrong,
+            "liveness: the negated distinctness form must be a DIFFERENT term"
+        );
+        assert_eq!(
+            stored, expect,
+            "Geo.RPlane.parPosRaw must be `Equiv (a*B - b*A) 0` AND a PosBound \
+             witness on the other two defects"
+        );
+        assert_ne!(
+            stored, wrong,
+            "Geo.RPlane.parPosRaw must NOT state distinctness as a negation -- \
+             over CReal that constructs no modulus"
+        );
+    });
+}
+
+/// **The distinctness conjunct is what stops a line being parallel to
+/// itself**, and this test computes the degenerate witness the mutation would
+/// admit.
+///
+/// The mutation drops the second conjunct of `parPosRaw`, leaving only the
+/// direction identity. At the concrete line `(1, 0, 0)` — the `y` axis —
+/// every one of the three proportionalities against ITSELF evaluates to a true
+/// equation between `Rat.zero` and `Rat.zero`, which is asserted below; so with
+/// only the direction conjunct, `parPos l l` would be provable by a ring
+/// identity and `Geo.Affine.parallelPos_irrefl` could not hold at either model.
+#[test]
+fn dropping_the_distinctness_conjunct_would_make_a_line_parallel_to_itself() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::rat_prelude::ops::{req, rmul, rone, rzero};
+    on_a_deep_stack(|| {
+        let (mut kernel, prelude) = built();
+        let q = prelude.qplane;
+        let qa = prelude.qaffine;
+        let rat = prelude.cpoint.creal.rat;
+
+        // The theorem the mutation would make unprovable.
+        assert!(
+            kernel
+                .environment()
+                .get(prelude.affine.parallel_pos_irrefl)
+                .is_some(),
+            "Geo.Affine.parallelPos_irrefl must be declared"
+        );
+        assert!(
+            kernel
+                .axiom_footprint(prelude.affine.parallel_pos_irrefl)
+                .is_empty(),
+            "Geo.Affine.parallelPos_irrefl must be axiom-free"
+        );
+
+        let mut dev = IntDev::new(&mut kernel, rat.int);
+        let d = &mut dev;
+        let zero = rzero(d, rat);
+        let one = rone(d, rat);
+        let l0 = d.const_app(q.qline0_mk, &[one, zero, zero]);
+        let a = d.const_app(q.qline0_a, &[l0]);
+        let b = d.const_app(q.qline0_b, &[l0]);
+        let c = d.const_app(q.qline0_c, &[l0]);
+
+        // All three proportionalities of `l0` against itself hold by
+        // computation: `1*0 = 0*1`, `1*0 = 0*1`, `0*0 = 0*0`.
+        for (label, u, v, s, t) in [
+            ("direction a*b = b*a", a, b, b, a),
+            ("a*c = c*a", a, c, c, a),
+            ("b*c = c*b", b, c, c, b),
+        ] {
+            let lhs = rmul(d, u, v);
+            let rhs = rmul(d, s, t);
+            assert!(
+                d.kernel().def_eq(lhs, rhs),
+                "{label} must hold at the line (1, 0, 0) -- the degenerate \
+                 witness the distinctness conjunct exists to exclude"
+            );
+            assert!(
+                d.kernel().def_eq(lhs, zero),
+                "{label}'s left side must compute to Rat.zero at (1, 0, 0)"
+            );
+        }
+
+        // ... and yet `parPosRaw` is NOT that direction identity alone.
+        let line0 = d.kernel().const_(q.qline0, vec![]);
+        let dir_only = {
+            let l_fv = d.fresh_fvar();
+            let m_fv = d.fresh_fvar();
+            let l = d.kernel().fvar(l_fv);
+            let m = d.kernel().fvar(m_fv);
+            let al = d.const_app(q.qline0_a, &[l]);
+            let bl = d.const_app(q.qline0_b, &[l]);
+            let am = d.const_app(q.qline0_a, &[m]);
+            let bm = d.const_app(q.qline0_b, &[m]);
+            let lhs = rmul(d, al, bm);
+            let rhs = rmul(d, bl, am);
+            let body = req(d, lhs, rhs);
+            let inner = d.lam_fv(m_fv, line0, body);
+            d.lam_fv(l_fv, line0, inner)
+        };
+        let got = d.kernel().const_(qa.par_pos_raw, vec![]);
+        assert!(
+            !d.kernel().def_eq(got, dir_only),
+            "Geo.QPlane.parPosRaw must be MORE than the direction identity -- \
+             the direction identity alone holds at a line against itself"
+        );
+    });
+}
+
+/// **The parallel through a point keeps the line's leading coefficients**, so
+/// its non-degeneracy is the original's with nothing to prove, and its
+/// constant is the NEGATED evaluation. Checked at free-variable arguments: a
+/// concrete point can make the negation coincide with its own negative.
+#[test]
+fn the_parallel_through_a_point_keeps_the_leading_coefficients() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::rat_prelude::ops::{radd, rmul, rneg};
+    on_a_deep_stack(|| {
+        let (mut kernel, prelude) = built();
+        let q = prelude.qplane;
+        let qa = prelude.qaffine;
+        let rat = prelude.cpoint.creal.rat;
+        let mut dev = IntDev::new(&mut kernel, rat.int);
+        let d = &mut dev;
+
+        let p_fv = d.fresh_fvar();
+        let l_fv = d.fresh_fvar();
+        let pt = d.kernel().fvar(p_fv);
+        let l = d.kernel().fvar(l_fv);
+        let a = d.const_app(q.qline0_a, &[l]);
+        let b = d.const_app(q.qline0_b, &[l]);
+        let sx = d.const_app(q.qpoint_x, &[pt]);
+        let sy = d.const_app(q.qpoint_y, &[pt]);
+
+        let m = d.const_app(qa.par_line, &[pt, l]);
+        let got_a = d.const_app(q.qline0_a, &[m]);
+        let got_b = d.const_app(q.qline0_b, &[m]);
+        let got_c = d.const_app(q.qline0_c, &[m]);
+        let want_c = {
+            let m1 = rmul(d, a, sx);
+            let m2 = rmul(d, b, sy);
+            let sum = radd(d, m1, m2);
+            rneg(d, sum)
+        };
+        let unnegated = {
+            let m1 = rmul(d, a, sx);
+            let m2 = rmul(d, b, sy);
+            radd(d, m1, m2)
+        };
+        assert!(
+            d.kernel().def_eq(got_a, a),
+            "the parallel's `a` must be the original's"
+        );
+        assert!(
+            d.kernel().def_eq(got_b, b),
+            "the parallel's `b` must be the original's"
+        );
+        assert!(
+            !d.kernel().def_eq(got_a, b),
+            "the parallel's leading coefficients must NOT be swapped"
+        );
+        assert!(
+            d.kernel().def_eq(got_c, want_c),
+            "the parallel's `c` must be the NEGATED evaluation at P"
+        );
+        assert!(
+            !d.kernel().def_eq(got_c, unnegated),
+            "the parallel's `c` must NOT be the unnegated evaluation -- the \
+             point would then be off its own parallel"
+        );
+    });
+}
+
+/// The affine layer's three derived theorems apply to BOTH models, which is
+/// the payoff of proving them over an arbitrary `A : Geo.Affine` and the
+/// reason the record carries a `Geo.Incidence` rather than restating it.
+#[test]
+fn the_derived_affine_theorems_instantiate_at_both_models() {
+    use crate::int_prelude::ops::IntDev;
+    on_a_deep_stack(|| {
+        let (mut kernel, prelude) = built();
+        let af = prelude.affine;
+        let mut dev = IntDev::new(&mut kernel, prelude.cpoint.creal.rat.int);
+        let d = &mut dev;
+
+        for (model_label, model_name) in [
+            ("Geo.qaffine", prelude.qaffine.instance),
+            ("Geo.raffine", prelude.raffine.instance),
+        ] {
+            let model = d.kernel().const_(model_name, vec![]);
+            for (label, name) in [
+                ("parallelPos_parallel", af.parallel_pos_parallel),
+                ("parallelPos_irrefl", af.parallel_pos_irrefl),
+                ("parallel_trans", af.parallel_trans),
+            ] {
+                let applied = d.const_app(name, &[model]);
+                let inferred = d.kernel().infer(applied);
+                assert!(
+                    inferred.is_ok(),
+                    "{label} does not apply to {model_label}: {inferred:?}"
+                );
+            }
+        }
     });
 }

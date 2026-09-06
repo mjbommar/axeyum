@@ -7353,6 +7353,70 @@ SUITES["geo-incidence"] = (
 
 
 # --------------------------------------------------------------------------
+# The affine layer's two guards (ADR-1659, lane `playfair`).
+#
+# Kept as its own suite rather than appended to `geo-incidence` because it runs
+# in a DIFFERENT profile. `geo-incidence` is deliberately debug: its four
+# mutants all fail at prelude-build time, so the run is dominated by compiling
+# the crate and debug is cheaper. That reasoning inverted once the affine layer
+# landed -- measured 2026-09-06, the single prelude-build test costs ~45 s in
+# release against ~435 s in debug, while the mutant's recompile costs ~4 min in
+# release against ~30 s in debug, so release is the cheaper total here and the
+# two suites disagree on purpose.
+#
+# Both mutants below also fail at PRELUDE-BUILD time, and that is the finding
+# worth stating: neither predicate can be weakened and left provable. The
+# positive parallel is not a convention this development happens to adopt, it
+# is the only shape from which the models' obligations follow.
+# --------------------------------------------------------------------------
+
+SUITES["geo-affine"] = (
+    "crates/axeyum-lean-kernel/src/geo/affine.rs",
+    Cargo(
+        (
+            "--release",
+            "-p",
+            "axeyum-lean-kernel",
+            "--lib",
+            "geo::geo_tests::geo_prelude_builds",
+        ),
+        "geo-affine",
+    ),
+    [
+        # Playfair's uniqueness half concludes `lEq m n` -- the two parallels
+        # in the order the hypotheses named them. Swap the conclusion and both
+        # models' `playfairUnique`, which prove extensional line equality in
+        # that order, no longer have the field's type: extensional equality is
+        # `forall P, (on P l -> on P m) AND (on P m -> on P l)`, and swapping
+        # gives `And A B` against `And B A`, which is symmetric propositionally
+        # and NOT definitionally. So the instance cannot be assembled.
+        (
+            "Playfair's uniqueness concludes at the two parallels in order",
+            "            let concl = app_all(k, leq, &[m, n]);",
+            "            let concl = app_all(k, leq, &[n, m]);",
+        ),
+        # ADR-1659's load-bearing decision, and ADR-1652 section 5's finding
+        # acted on. `parPos` is same-direction AND a witnessed distinctness;
+        # drop the second conjunct and the direction identity alone is left,
+        # which a line satisfies against ITSELF by a ring identity (computed at
+        # the line (1, 0, 0) in
+        # `dropping_the_distinctness_conjunct_would_make_a_line_parallel_to_itself`).
+        # `Geo.RPlane.parPosDisjoint` then has no witness to contradict and
+        # `Geo.Affine.parallelPos_irrefl` would be false at the real model.
+        (
+            "positive parallelism carries a distinctness witness, not only a direction",
+            "        let distinct = bounded(d, cr, sq);\n"
+            "        let body = and_ty(d, dir, distinct);",
+            "        let distinct = bounded(d, cr, sq);\n"
+            "        let _ = distinct;\n"
+            "        let body = dir;",
+            "crates/axeyum-lean-kernel/src/geo/raffine.rs",
+        ),
+    ],
+)
+
+
+# --------------------------------------------------------------------------
 # The CAS summation / Gaussian guards (lane cas-sum-gaps).
 #
 # Both new routes here can only ever turn a decline into a value, so the risk
