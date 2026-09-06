@@ -17700,6 +17700,34 @@ pub fn improper_integrate(
     if let Some(anti) = improper_reciprocal_antisymmetry(expr, var, lower, upper) {
         return Some(anti);
     }
+    if let Some(fundamental) = improper_integrate_via_antiderivative(expr, var, lower, upper) {
+        return Some(fundamental);
+    }
+    // Last resort: the symbolic-rate exponential route, which reaches shapes the
+    // elementary rules decline because they need a **concrete** `Rational`
+    // coefficient of `var` inside `e^{…}`. Admitted here only when it comes back
+    // **unconditional** — a rate this route had to record a `SignCondition` for is
+    // not an unconditional value, and belongs to
+    // [`improper_integrate_conditional`], whose caller can see the hypotheses.
+    let conditional = improper_integrate_conditional(expr, var, lower, upper)?;
+    if !conditional.hypotheses.is_empty() {
+        return None;
+    }
+    Some(DefiniteIntegral {
+        value: conditional.value,
+        antiderivative: conditional.antiderivative,
+        certificate: conditional.certificate,
+    })
+}
+
+/// The fundamental-theorem tail of [`improper_integrate`]: a certified
+/// antiderivative from [`integrate`], evaluated at the two bounds.
+fn improper_integrate_via_antiderivative(
+    expr: &CasExpr,
+    var: &str,
+    lower: LimitPoint,
+    upper: LimitPoint,
+) -> Option<DefiniteIntegral> {
     let indefinite = integrate(expr, var)?;
     let antiderivative = &indefinite.antiderivative;
     // An antiderivative with a **log-singular** integral head (`Ci`/`Ei`/`Chi`/`li`,
@@ -17728,6 +17756,357 @@ pub fn improper_integrate(
         value,
         antiderivative: indefinite.antiderivative,
         certificate: indefinite.certificate,
+    })
+}
+
+/// A sign condition on a `var`-free expression that a symbolic-rate integral's
+/// **existence** (a nonzero rate to divide by) or **convergence** (an
+/// exponential that decays toward the infinite bound) rests on.
+///
+/// The point of the type is that the condition is *recorded*, never decided.
+/// `∫₀^∞ λ·e^{(t−λ)x} dx` is `λ/(λ−t)` when `t < λ` and divergent otherwise, and
+/// nothing in this crate can decide `t < λ` for symbolic `t, λ`. Returning the
+/// value alone would be a false claim; returning it with its condition attached
+/// is the true one. [`improper_integrate_conditional`] never returns a condition
+/// it *could* have decided: a concrete rate is decided on the spot, and a
+/// concrete rate of the wrong sign declines outright.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum SignCondition {
+    /// `expr < 0`.
+    Negative(CasExpr),
+    /// `expr > 0`.
+    Positive(CasExpr),
+    /// `expr ≠ 0`.
+    NonZero(CasExpr),
+}
+
+impl std::fmt::Display for SignCondition {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            SignCondition::Negative(e) => write!(f, "{e} < 0"),
+            SignCondition::Positive(e) => write!(f, "{e} > 0"),
+            SignCondition::NonZero(e) => write!(f, "{e} != 0"),
+        }
+    }
+}
+
+/// A definite integral evaluated from a **certified** antiderivative, together
+/// with the [`SignCondition`]s on its symbolic parameters that the evaluation
+/// assumed. `hypotheses` empty means the result is unconditional — exactly what
+/// [`improper_integrate`] returns.
+#[derive(Debug, Clone)]
+pub struct ConditionalIntegral {
+    /// The evaluated value `F(b) − F(a)`, simplified.
+    pub value: CasExpr,
+    /// The antiderivative `F` used.
+    pub antiderivative: CasExpr,
+    /// `equal(dF/dvar, integrand)` — the ordinary differentiate-and-check
+    /// certificate, which is **unconditional**: `F` is an antiderivative of the
+    /// integrand as a formal identity, whatever the parameters are. Only the
+    /// *boundary evaluation* needs the hypotheses.
+    pub certificate: ZeroTest,
+    /// The sign conditions the boundary evaluation assumed, in a deterministic
+    /// order (upper bound first, then lower, then the nonzero-rate condition).
+    pub hypotheses: Vec<SignCondition>,
+}
+
+impl ConditionalIntegral {
+    /// Whether the antiderivative was certified (and hence, by the fundamental
+    /// theorem of calculus **under [`Self::hypotheses`]**, the value).
+    #[must_use]
+    pub fn is_certified(&self) -> bool {
+        matches!(self.certificate, ZeroTest::Certified { equal: true, .. })
+    }
+}
+
+/// Flatten `expr` into multiplicative atoms tagged with whether they sit in a
+/// **denominator**, descending through `Mul`, `Div` and `Neg`. `Neg(e)` becomes
+/// `(-1)·e`. Everything else is an atom.
+///
+/// The tag is what makes the exponential routes robust to
+/// [`simplify`]'s own output: `simplify(λ·e^{−λx})` is
+/// `Div(λ, exp(λ·x))`, so the rate `−λ` only exists once the reciprocal is read
+/// as a *negated* exponent rather than as an opaque denominator.
+fn collect_multiplicative_atoms(expr: &CasExpr, inverted: bool, out: &mut Vec<(CasExpr, bool)>) {
+    match expr {
+        CasExpr::Mul(factors) => {
+            for factor in factors {
+                collect_multiplicative_atoms(factor, inverted, out);
+            }
+        }
+        CasExpr::Div(numerator, denominator) => {
+            collect_multiplicative_atoms(numerator, inverted, out);
+            collect_multiplicative_atoms(denominator, !inverted, out);
+        }
+        CasExpr::Neg(inner) => {
+            out.push((CasExpr::Const(Rational::integer(-1)), false));
+            collect_multiplicative_atoms(inner, inverted, out);
+        }
+        other => out.push((other.clone(), inverted)),
+    }
+}
+
+/// The exponent of a `var`-dependent exponential atom: `e^{u}` gives `u`, and
+/// `(e^{u})^n` gives `n·u` (which is how [`simplify`] spells `e^{5t}`). `None`
+/// for anything else, including a `var`-free exponential (which is an ordinary
+/// constant factor).
+fn exp_exponent_of(expr: &CasExpr, var: &str) -> Option<CasExpr> {
+    match expr {
+        CasExpr::Unary(UnaryFunc::Exp, arg) if expr_contains_var(arg, var) => Some((**arg).clone()),
+        CasExpr::Pow(base, power) => {
+            let inner = exp_exponent_of(base, var)?;
+            Some(CasExpr::Const(Rational::integer(i128::from(*power))) * inner)
+        }
+        _ => None,
+    }
+}
+
+/// Split `expr` into `(var-free constant factor, polynomial coefficients in
+/// `var`, rate)` for the shape `C · P(var) · e^{r·var + q}` where `C`, every
+/// coefficient of `P`, `r` and `q` are free of `var` but otherwise **symbolic**.
+///
+/// This is the shape [`to_univariate`](MultiPoly::to_univariate) cannot express:
+/// it demands concrete [`Rational`] coefficients, so `e^{t·x}` with a symbolic
+/// `t` is rejected before any integration rule is tried.
+/// [`MultiPoly::coeffs_in`] splits on `var` alone instead.
+///
+/// Several `e^{…}` factors are merged into one exponent, a denominator
+/// exponential contributing its exponent **negated** — this is what makes an mgf
+/// integrand `pdf(x)·e^{t·x}` a single rate `t − λ`. Declines when there is no
+/// `var`-dependent exponential, when the exponent is not affine in `var`, when a
+/// non-exponential `var`-dependent factor sits in a denominator, or when the
+/// remaining factors are not polynomial in `var`.
+fn match_poly_times_exp(expr: &CasExpr, var: &str) -> Option<(CasExpr, Vec<CasExpr>, CasExpr)> {
+    let simplified = simplify(expr);
+    let mut atoms: Vec<(CasExpr, bool)> = Vec::new();
+    collect_multiplicative_atoms(&simplified, false, &mut atoms);
+    let mut exp_args: Vec<CasExpr> = Vec::new();
+    let mut polynomial: Vec<CasExpr> = Vec::new();
+    let mut free_numerator: Vec<CasExpr> = Vec::new();
+    let mut free_denominator: Vec<CasExpr> = Vec::new();
+    for (atom, inverted) in atoms {
+        if let Some(exponent) = exp_exponent_of(&atom, var) {
+            exp_args.push(if inverted {
+                CasExpr::Neg(Box::new(exponent))
+            } else {
+                exponent
+            });
+        } else if expr_contains_var(&atom, var) {
+            if inverted {
+                return None; // `var` in a non-exponential denominator: not this shape
+            }
+            polynomial.push(atom);
+        } else if inverted {
+            free_denominator.push(atom);
+        } else {
+            free_numerator.push(atom);
+        }
+    }
+    if exp_args.is_empty() {
+        return None;
+    }
+    let exponent = if exp_args.len() == 1 {
+        exp_args.into_iter().next()?
+    } else {
+        CasExpr::Add(exp_args)
+    };
+    // The exponent must be affine in `var` with a genuinely present linear term:
+    // `coeffs_in` returns a dense vector, so length 2 is exactly `q + r·var`.
+    let exponent_coeffs = normalize(&exponent)?.coeffs_in(var);
+    if exponent_coeffs.len() != 2 {
+        return None;
+    }
+    let rate = exponent_coeffs[1].to_expr();
+    let intercept = exponent_coeffs[0].to_expr();
+    let coefficients: Vec<CasExpr> = normalize(&build_product(polynomial))?
+        .coeffs_in(var)
+        .iter()
+        .map(MultiPoly::to_expr)
+        .collect();
+    if coefficients.is_empty() {
+        return None; // the polynomial factor is identically zero
+    }
+    let mut constant = build_product(free_numerator);
+    if !free_denominator.is_empty() {
+        constant = constant / build_product(free_denominator);
+    }
+    if !is_exact_zero(&intercept) {
+        constant = constant * intercept.exp();
+    }
+    Some((constant, coefficients, rate))
+}
+/// Whether `expr` normalizes to the exact rational constant `0`.
+fn is_exact_zero(expr: &CasExpr) -> bool {
+    matches!(exact_rational(expr), Some(c) if c.is_zero())
+}
+
+/// If `expr` normalizes to an exact rational constant, that constant.
+fn exact_rational(expr: &CasExpr) -> Option<Rational> {
+    normalize(expr).and_then(|p| multipoly_as_constant(&p))
+}
+
+/// The maximum polynomial degree the symbolic-rate exponential antiderivative is
+/// built for. The `j`-loop below forms a falling factorial `n!/(n−j)!`, which is
+/// bounded well inside `i128` at this degree; the bound is a resource limit, not
+/// a soundness one (the certificate is checked either way).
+const MAX_SYMBOLIC_EXP_DEGREE: usize = 12;
+
+/// `∫ C·P(x)·e^{r·x} dx = C·e^{r·x}·Σₙ aₙ·Σ_{j=0}^{n} (−1)ʲ·(n!/(n−j)!)·x^{n−j}/r^{j+1}`,
+/// the closed form of repeated integration by parts, built with `r` and the `aₙ`
+/// **symbolic**. Correctness is not assumed from the formula: the caller runs the
+/// ordinary [`prove_derivative`] check against the original integrand.
+fn exp_polynomial_antiderivative(
+    constant: &CasExpr,
+    coefficients: &[CasExpr],
+    rate: &CasExpr,
+    var: &str,
+) -> Option<CasExpr> {
+    if coefficients.len() > MAX_SYMBOLIC_EXP_DEGREE + 1 {
+        return None;
+    }
+    let x = CasExpr::var(var);
+    let mut terms: Vec<CasExpr> = Vec::new();
+    for (n, coefficient) in coefficients.iter().enumerate() {
+        if is_exact_zero(coefficient) {
+            continue;
+        }
+        let mut falling: i128 = 1;
+        for j in 0..=n {
+            if j > 0 {
+                falling = falling.checked_mul(i128::try_from(n - j + 1).ok()?)?;
+            }
+            let signed = if j % 2 == 0 {
+                falling
+            } else {
+                falling.checked_neg()?
+            };
+            let mut factor = CasExpr::Const(Rational::integer(signed)) * coefficient.clone();
+            let power = u32::try_from(n - j).ok()?;
+            if power > 0 {
+                factor = factor * x.clone().pow(power);
+            }
+            terms.push(factor / rate.clone().pow(u32::try_from(j + 1).ok()?));
+        }
+    }
+    if terms.is_empty() {
+        return None; // identically-zero integrand: nothing for the caller to use
+    }
+    let sum = if terms.len() == 1 {
+        terms.into_iter().next()?
+    } else {
+        CasExpr::Add(terms)
+    };
+    Some(simplify(
+        &(constant.clone() * (rate.clone() * x).exp() * sum),
+    ))
+}
+
+/// `∫ₗᵘ C·P(x)·e^{r·x} dx` with a **symbolic** rate `r` and symbolic polynomial
+/// coefficients, returning the value together with the [`SignCondition`]s its
+/// boundary evaluation assumed.
+///
+/// This is the route [`improper_integrate`] structurally cannot take: every
+/// elementary exponential rule in this crate reaches
+/// [`to_univariate`](MultiPoly::to_univariate), which needs a concrete
+/// [`Rational`] coefficient of the integration variable, and a moment generating
+/// function's own argument `t` is symbolic by definition.
+///
+/// What is decided and what is assumed:
+///
+/// - The antiderivative is **proved** by [`prove_derivative`] against the
+///   original integrand — an unconditional formal identity. A failed check
+///   declines; no unproved antiderivative is ever returned.
+/// - A **finite** bound is evaluated by substitution, needing nothing.
+/// - `+∞` contributes `0` because `e^{r·x}·P(x) → 0`; that needs `r < 0`.
+///   Symmetrically `−∞` needs `r > 0`.
+/// - Dividing by `r` needs `r ≠ 0`, recorded only when no strict condition on
+///   `r` was already recorded (which implies it).
+///
+/// A **concrete** rate is decided here rather than recorded: the right sign
+/// yields an unconditional result (`hypotheses` empty) and the wrong sign — a
+/// genuinely divergent integral — declines with `None`.
+///
+/// ```
+/// use axeyum_cas::{CasExpr, LimitPoint, SignCondition, improper_integrate_conditional};
+/// use axeyum_ir::Rational;
+/// // ∫₀^∞ λ·e^{−λx} dx = 1, under λ > 0 (spelled `−λ < 0`).
+/// let (x, lam) = (CasExpr::var("x"), CasExpr::var("lambda"));
+/// let pdf = lam.clone() * (CasExpr::Neg(Box::new(lam.clone())) * x).exp();
+/// let result = improper_integrate_conditional(
+///     &pdf,
+///     "x",
+///     LimitPoint::Finite(Rational::zero()),
+///     LimitPoint::PosInfinity,
+/// )
+/// .unwrap();
+/// assert!(result.is_certified());
+/// assert_eq!(result.hypotheses.len(), 1);
+/// let SignCondition::Negative(rate) = &result.hypotheses[0] else { panic!() };
+/// // The rate is `−λ`, spelled by `simplify` as `(−1)·λ`.
+/// assert!(matches!(
+///     axeyum_cas::equal(rate, &CasExpr::Neg(Box::new(lam))),
+///     axeyum_cas::ZeroTest::Certified { equal: true, .. }
+/// ));
+/// ```
+#[must_use]
+pub fn improper_integrate_conditional(
+    expr: &CasExpr,
+    var: &str,
+    lower: LimitPoint,
+    upper: LimitPoint,
+) -> Option<ConditionalIntegral> {
+    let (constant, coefficients, rate) = match_poly_times_exp(expr, var)?;
+    let concrete_rate = exact_rational(&rate);
+    if matches!(concrete_rate, Some(c) if c.is_zero()) {
+        return None; // `∫ P(x)·e^0` is a polynomial integral; not this route's job
+    }
+    let antiderivative = exp_polynomial_antiderivative(&constant, &coefficients, &rate, var)?;
+    let certificate = prove_derivative(&antiderivative, var, expr);
+    if !matches!(certificate, ZeroTest::Certified { equal: true, .. }) {
+        return None;
+    }
+    let mut hypotheses: Vec<SignCondition> = Vec::new();
+    let mut boundary = |point: LimitPoint| -> Option<CasExpr> {
+        match point {
+            LimitPoint::Finite(a) => Some(simplify(&fold_elementary_constants(
+                &antiderivative.substitute(var, &CasExpr::Const(a)),
+            ))),
+            // `e^{r·x}·P(x) → 0` at `+∞` iff `r < 0` (the exponential beats any
+            // polynomial); at `−∞` iff `r > 0`.
+            LimitPoint::PosInfinity | LimitPoint::NegInfinity => {
+                let at_plus = point == LimitPoint::PosInfinity;
+                match concrete_rate {
+                    Some(c) if at_plus && c.numerator() < 0 => Some(CasExpr::zero()),
+                    Some(c) if !at_plus && c.numerator() > 0 => Some(CasExpr::zero()),
+                    // A concrete rate of the wrong sign: the integral diverges.
+                    Some(_) => None,
+                    None => {
+                        let needed = if at_plus {
+                            SignCondition::Negative(rate.clone())
+                        } else {
+                            SignCondition::Positive(rate.clone())
+                        };
+                        if !hypotheses.contains(&needed) {
+                            hypotheses.push(needed);
+                        }
+                        Some(CasExpr::zero())
+                    }
+                }
+            }
+        }
+    };
+    let at_upper = boundary(upper)?;
+    let at_lower = boundary(lower)?;
+    if concrete_rate.is_none() && hypotheses.is_empty() {
+        // Both bounds finite: only the division by `r` needs a condition.
+        hypotheses.push(SignCondition::NonZero(rate));
+    }
+    let value = simplify(&fold_elementary_constants(&(at_upper - at_lower)));
+    Some(ConditionalIntegral {
+        value,
+        antiderivative,
+        certificate,
+        hypotheses,
     })
 }
 
@@ -32815,5 +33194,221 @@ mod bignum_overflow_fallback {
                 ratio(zero_test_unbounded, zero_test_bounded),
             );
         }
+    }
+}
+
+/// The symbolic-coefficient integration route: `MultiPoly::coeffs_in` and
+/// [`improper_integrate_conditional`].
+///
+/// Every test here is written to **die when one guard is deleted**; the guard it
+/// pins is named in its doc comment.
+#[cfg(test)]
+mod symbolic_rate_exponential {
+    use super::*;
+
+    fn x() -> CasExpr {
+        CasExpr::var("x")
+    }
+
+    fn lambda() -> CasExpr {
+        CasExpr::var("lambda")
+    }
+
+    fn t() -> CasExpr {
+        CasExpr::var("t")
+    }
+
+    /// `λ·e^{−λx}`, the exponential pdf with a **symbolic** rate.
+    fn exponential_pdf() -> CasExpr {
+        lambda() * (CasExpr::Neg(Box::new(lambda())) * x()).exp()
+    }
+
+    fn decides_equal(a: &CasExpr, b: &CasExpr) -> bool {
+        matches!(equal(a, b), ZeroTest::Certified { equal: true, .. })
+    }
+
+    fn on_half_line(integrand: &CasExpr) -> Option<ConditionalIntegral> {
+        improper_integrate_conditional(
+            integrand,
+            "x",
+            LimitPoint::Finite(Rational::zero()),
+            LimitPoint::PosInfinity,
+        )
+    }
+
+    /// `coeffs_in` splits on one variable and keeps the others symbolic, where
+    /// `to_univariate` refuses outright. This is the whole enabling step.
+    #[test]
+    fn coeffs_in_carries_symbolic_coefficients_where_to_univariate_declines() {
+        // `t·x + q` — two variables, so `to_univariate` cannot express it.
+        let poly = normalize(&(t() * x() + CasExpr::var("q"))).expect("polynomial");
+        assert!(
+            poly.to_univariate("x").is_none(),
+            "to_univariate must refuse a second variable — that refusal is the blocker"
+        );
+        let coefficients = poly.coeffs_in("x");
+        assert_eq!(coefficients.len(), 2);
+        assert!(decides_equal(
+            &coefficients[0].to_expr(),
+            &CasExpr::var("q")
+        ));
+        assert!(decides_equal(&coefficients[1].to_expr(), &t()));
+    }
+
+    /// A monomial with no power of the split variable lands in the constant
+    /// coefficient, and a pure power of it lands with coefficient `1`.
+    #[test]
+    fn coeffs_in_splits_every_monomial_exactly_once() {
+        let poly = normalize(&(x().pow(2) * CasExpr::var("a") + x() + CasExpr::var("b")))
+            .expect("polynomial");
+        let coefficients = poly.coeffs_in("x");
+        assert_eq!(coefficients.len(), 3);
+        assert!(decides_equal(
+            &coefficients[0].to_expr(),
+            &CasExpr::var("b")
+        ));
+        assert!(decides_equal(&coefficients[1].to_expr(), &CasExpr::one()));
+        assert!(decides_equal(
+            &coefficients[2].to_expr(),
+            &CasExpr::var("a")
+        ));
+    }
+
+    /// `∫₀^∞ λ·e^{−λx} dx = 1` **under `−λ < 0`**, with the antiderivative
+    /// proved by differentiate-and-check against the original integrand.
+    #[test]
+    fn exponential_mass_certifies_under_a_recorded_sign_condition() {
+        let result = on_half_line(&exponential_pdf()).expect("symbolic-rate route");
+        assert!(result.is_certified());
+        assert!(decides_equal(&result.value, &CasExpr::one()));
+        assert_eq!(result.hypotheses.len(), 1);
+        let SignCondition::Negative(rate) = &result.hypotheses[0] else {
+            panic!("expected a strict-negativity condition on the rate");
+        };
+        assert!(decides_equal(rate, &CasExpr::Neg(Box::new(lambda()))));
+    }
+
+    /// The first two moments, same route, same single hypothesis.
+    #[test]
+    fn exponential_moments_certify_under_the_same_condition() {
+        let mean = on_half_line(&(x() * exponential_pdf())).expect("mean");
+        assert!(mean.is_certified());
+        assert!(decides_equal(&mean.value, &(CasExpr::one() / lambda())));
+        let second = on_half_line(&(x().pow(2) * exponential_pdf())).expect("second moment");
+        assert!(second.is_certified());
+        assert!(decides_equal(
+            &second.value,
+            &(CasExpr::int(2) / lambda().pow(2))
+        ));
+        assert_eq!(mean.hypotheses, second.hypotheses);
+        assert_eq!(mean.hypotheses.len(), 1);
+    }
+
+    /// The mgf integrand carries **two** exponentials whose rates must merge into
+    /// the single `t − λ`, and the recorded condition is exactly `t < λ`.
+    #[test]
+    fn exponential_mgf_merges_two_exponentials_into_one_rate() {
+        let integrand = exponential_pdf() * (t() * x()).exp();
+        let result = on_half_line(&integrand).expect("mgf");
+        assert!(result.is_certified());
+        assert!(decides_equal(&result.value, &(lambda() / (lambda() - t()))));
+        assert_eq!(result.hypotheses.len(), 1);
+        let SignCondition::Negative(rate) = &result.hypotheses[0] else {
+            panic!("expected a strict-negativity condition on the merged rate");
+        };
+        assert!(decides_equal(rate, &(t() - lambda())));
+    }
+
+    /// **Negative control (divergence).** A *concrete* rate of the wrong sign is
+    /// decided here, not recorded: `∫₀^∞ e^{2x}` diverges and must decline.
+    /// Pins the `Some(_) => None` arm of the boundary match.
+    #[test]
+    fn a_concrete_divergent_rate_declines_rather_than_certifying() {
+        assert!(on_half_line(&(CasExpr::int(2) * x()).exp()).is_none());
+        // …and the mirror at `−∞`: `∫_{−∞}^0 e^{−2x}` diverges too.
+        assert!(
+            improper_integrate_conditional(
+                &(CasExpr::int(-2) * x()).exp(),
+                "x",
+                LimitPoint::NegInfinity,
+                LimitPoint::Finite(Rational::zero()),
+            )
+            .is_none()
+        );
+    }
+
+    /// A **concrete** rate of the right sign is decided, so the result comes back
+    /// with no hypotheses at all. Pins the `concrete_rate` decision: were it
+    /// dropped, this would carry a vacuous `−3 < 0` condition.
+    #[test]
+    fn a_concrete_convergent_rate_is_unconditional() {
+        let result =
+            on_half_line(&(CasExpr::int(3) * (CasExpr::int(-3) * x()).exp())).expect("concrete");
+        assert!(result.is_certified());
+        assert!(result.hypotheses.is_empty());
+        assert!(decides_equal(&result.value, &CasExpr::one()));
+    }
+
+    /// Both bounds finite: convergence is not at issue, but dividing by the rate
+    /// still is. Pins the trailing `NonZero` push.
+    #[test]
+    fn a_finite_interval_records_only_the_nonzero_rate_condition() {
+        let result = improper_integrate_conditional(
+            &(t() * x()).exp(),
+            "x",
+            LimitPoint::Finite(Rational::zero()),
+            LimitPoint::Finite(Rational::integer(1)),
+        )
+        .expect("uniform-shaped integrand");
+        assert!(result.is_certified());
+        assert_eq!(result.hypotheses, vec![SignCondition::NonZero(t())]);
+        assert!(decides_equal(
+            &result.value,
+            &((t().exp() - CasExpr::one()) / t())
+        ));
+    }
+
+    /// **Negative control (shape).** A quadratic exponent is a Gaussian, not this
+    /// route's `e^{r·x}`. Pins the `exponent_coeffs.len() != 2` guard: deleting it
+    /// would index past the end or silently read a wrong rate.
+    #[test]
+    fn a_nonaffine_exponent_declines() {
+        assert!(on_half_line(&(CasExpr::Neg(Box::new(x().pow(2)))).exp()).is_none());
+    }
+
+    /// **Negative control (shape).** `var` in a non-exponential denominator is
+    /// outside `P(x)·e^{r·x}`. Pins the `if inverted { return None }` arm.
+    #[test]
+    fn a_variable_in_a_non_exponential_denominator_declines() {
+        let integrand = (CasExpr::Neg(Box::new(x()))).exp() / (x() + CasExpr::one());
+        assert!(on_half_line(&integrand).is_none());
+    }
+
+    /// A rate that is exactly `0` is a polynomial integral, not this route's.
+    /// Pins the zero-rate early return (which otherwise divides by zero).
+    #[test]
+    fn a_zero_rate_declines() {
+        let zero_rate = (CasExpr::var("c") - CasExpr::var("c")) * x();
+        assert!(on_half_line(&zero_rate.exp()).is_none());
+    }
+
+    /// `improper_integrate` may consult the new route, but **only** for an
+    /// unconditional result: a symbolic rate must never reach it, because a
+    /// `DefiniteIntegral` has nowhere to carry the hypothesis.
+    #[test]
+    fn improper_integrate_never_returns_a_conditional_value() {
+        assert!(
+            improper_integrate(
+                &exponential_pdf(),
+                "x",
+                LimitPoint::Finite(Rational::zero()),
+                LimitPoint::PosInfinity,
+            )
+            .is_none(),
+            "a symbolic λ has an unrecordable hypothesis; the unconditional API must decline"
+        );
+        // The *conditional* API does reach it — so the decline above is the
+        // hypothesis guard, not an absent route.
+        assert!(on_half_line(&exponential_pdf()).is_some());
     }
 }
