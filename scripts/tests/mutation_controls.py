@@ -6996,6 +6996,33 @@ SUITES["cas-trust-registry"] = (
             "    if new_certified:",
             "    if False:",
         ),
+        # G7-G10 added 2026-09-05, math-department file 13 item 10 wave two:
+        # the vocabulary derivation now also admits a `Certified*`-prefixed
+        # type name (found missing: `CertifiedGosperSum`) and tightens the
+        # existing verify/check-method rule to require a `self` receiver and
+        # a `Result`/`bool` return, so an associated function or a
+        # non-verdict return type cannot admit a type on the strength of a
+        # method name alone.
+        (
+            "G7 the Certified* prefix rule admitting a type to the vocabulary",
+            "    return any(name.startswith(p) and name != p for p in VOCAB_PREFIXES)",
+            "    return False",
+        ),
+        (
+            "G8 the bare word 'Certified' (no suffix) is excluded from the prefix rule",
+            "    return any(name.startswith(p) and name != p for p in VOCAB_PREFIXES)",
+            "    return any(name.startswith(p) for p in VOCAB_PREFIXES)",
+        ),
+        (
+            "G9 a verify/check method needs a self receiver to admit its type",
+            "        if not fn.has_self:",
+            "        if False:",
+        ),
+        (
+            "G10 a verify/check method needs a Result/bool return to admit its type",
+            "        if not _VERIFY_CHECK_RETURN_RE.match(fn.return_type.strip()):",
+            "        if False:",
+        ),
     ],
 )
 
