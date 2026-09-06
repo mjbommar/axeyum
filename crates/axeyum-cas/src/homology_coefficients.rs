@@ -321,7 +321,9 @@ impl CoefficientHomologyCertificate {
 #[cfg(test)]
 mod tests {
     use super::{CoefficientHomologyCertificate, homology_with_coefficients, uct_holds};
-    use crate::homology::fixtures::{circle, klein_bottle_9v, rp2_6v, torus_7v};
+    use crate::homology::fixtures::{
+        circle, filled_triangle, klein_bottle_9v, rp2_6v, sphere, torus_7v,
+    };
 
     fn betti_vec(map: &std::collections::BTreeMap<usize, usize>, max_dim: usize) -> Vec<usize> {
         (0..=max_dim).map(|k| map[&k]).collect()
@@ -424,6 +426,17 @@ mod tests {
             .verify(&complex)
             .expect_err("a forged wrapped Z certificate must be refused");
         assert!(err.contains("betti"), "got: {err}");
+    }
+
+    #[test]
+    fn contractible_complexes_are_unchanged_across_all_three_rings() {
+        for complex in [filled_triangle(), sphere()] {
+            let certificate =
+                homology_with_coefficients(&complex).expect("coefficient homology");
+            assert_eq!(certificate.integer.betti, certificate.betti_f2);
+            assert_eq!(certificate.integer.betti, certificate.betti_q);
+            certificate.verify(&complex).expect("certificate verifies");
+        }
     }
 
     /// Positive control isolating `rank_mod2`/`rank_over_q` against a hand
