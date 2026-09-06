@@ -3,7 +3,7 @@
 use std::fmt::Write as _;
 
 use axeyum_ir::{
-    ArraySortKey, Assignment, GenericArrayValue, Sort, SymbolId, TermStats, Value, eval,
+    ArraySortKey, Assignment, GenericArrayValue, Sort, SymbolId, TermNode, TermStats, Value, eval,
 };
 use axeyum_smtlib::{ScriptCommand, SmtError, parse_script, write_script};
 
@@ -2398,40 +2398,53 @@ fn string_to_int_over_length_literal_requires_an_exact_source_refutation() {
     assert!(script.word_only_fallback.is_none());
 }
 
-/// An `Int` numeral beyond `i128` **declines**; it is not a syntax error.
+/// An `Int` numeral beyond `i128` is **admitted**, as a wide constant.
 ///
-/// SMT-LIB `Int` is unbounded, so such a literal is well-formed input we cannot
-/// represent — `Value::Int` is an `i128`. Classifying it as `Syntax` claimed the
-/// benchmark was broken, which made a valid file surface as an operational
-/// `parse-error`: the measurement harness refuses to count those and raises an
-/// integrity alarm, and `unknown` is supposed to be first-class rather than an
-/// error.
+/// This test's contract changed with ADR-1702 slice 2 and the history is the
+/// point of keeping it here. SMT-LIB `Int` is unbounded; the modeled range was
+/// `i128` because `Value::Int` was, so such a literal was first a `Syntax`
+/// error (which claimed a valid benchmark was malformed, made it surface as an
+/// operational `parse-error`, and tripped the measurement harness's integrity
+/// alarm), then an `Unsupported` decline (honest, but the file still never
+/// reached the solver). It is now a term: `TermArena::int_const_big` builds a
+/// `WideIntConst`, and whether the query can be DECIDED is a per-route question
+/// answered downstream with a first-class `unknown`.
 ///
 /// The value below is `2^256 - 1`, max `uint256`. It is not synthetic — it comes
 /// from `UFLIA/20230314-Jaroslav-Bendik-Certora`, which verifies Ethereum
-/// contracts, so this classification governs whether the crypto and
-/// smart-contract corner of the library is reported as *undecided* or as
-/// *malformed*.
+/// contracts, so this governs whether the crypto and smart-contract corner of
+/// the library is even attempted.
 #[test]
-fn oversized_int_literal_declines_and_is_not_a_syntax_error() {
+fn oversized_int_literal_is_admitted_as_a_wide_constant() {
     const MAX_UINT256: &str =
         "115792089237316195423570985008687907853269984665640564039457584007913129639935";
-    let err = parse_script(&format!(
+    let script = parse_script(&format!(
         "(declare-fun n () Int)\n(assert (= n {MAX_UINT256}))\n(check-sat)\n"
     ))
-    .expect_err("an Int literal beyond i128 is outside the modeled range");
-    assert!(
-        matches!(err, SmtError::Unsupported(_)),
-        "a well-formed numeral must DECLINE, never report as malformed input: {err:?}"
-    );
+    .expect("a well-formed numeral must be admitted, not refused at the front door");
+    let arena = &script.arena;
+    let TermNode::App { args, .. } = arena.node(script.assertions[0]) else {
+        panic!("expected an equality");
+    };
+    match arena.node(args[1]) {
+        TermNode::WideIntConst(value) => assert_eq!(value.to_string(), MAX_UINT256),
+        other => panic!("expected a wide integer constant, got {other:?}"),
+    }
 
-    // The boundary itself still parses, so the decline is about representation
-    // and not about long numerals in general.
+    // The boundary itself is unchanged and still a NARROW node, so no benchmark
+    // that parsed before changes representation.
     let ok = parse_script(&format!(
         "(declare-fun n () Int)\n(assert (= n {}))\n(check-sat)\n",
         i128::MAX
+    ))
+    .expect("i128::MAX must still parse");
+    let TermNode::App { args, .. } = ok.arena.node(ok.assertions[0]) else {
+        panic!("expected an equality");
+    };
+    assert!(matches!(
+        ok.arena.node(args[1]),
+        TermNode::IntConst(i128::MAX)
     ));
-    assert!(ok.is_ok(), "i128::MAX must still parse: {ok:?}");
 }
 
 #[test]
@@ -6351,5 +6364,143 @@ fn an_annotation_does_not_change_the_formula() {
             .is_some()
             && bare.arena.quantifier_patterns(bare.assertions[0]).is_none(),
         "the only difference is the hint channel"
+    );
+}
+
+// ----- integer literals wider than `i128` (ADR-1702 slice 2) --------------
+//
+// The front door used to decline these with `SmtError::Unsupported`, which kept
+// 26 of the 200 QF_UFLIA competition files (EVM `uint256` bounds) from reaching
+// the solver at all. These tests pin the admission AND its boundary: nothing
+// that parsed before changes representation, so no existing verdict can move.
+
+/// `2^256`, the magnitude the Certora `QF_UFLIA` family carries.
+const EVM_WORD: &str =
+    "115792089237316195423570985008687907853269984665640564039457584007913129639936";
+
+#[test]
+fn an_integer_literal_wider_than_i128_parses() {
+    let script = parse_script(&format!(
+        "(set-logic QF_LIA)\n(declare-const x Int)\n(assert (> x {EVM_WORD}))\n(check-sat)\n"
+    ))
+    .expect("a 2^256 literal is a well-formed numeral, not a parse error");
+    assert_eq!(script.assertions.len(), 1);
+    let arena = &script.arena;
+    let TermNode::App { args, .. } = arena.node(script.assertions[0]) else {
+        panic!("expected a comparison application");
+    };
+    match arena.node(args[1]) {
+        TermNode::WideIntConst(value) => {
+            assert_eq!(value.to_string(), EVM_WORD);
+            assert_eq!(value.bits(), 257);
+        }
+        other => panic!("expected a wide integer constant, got {other:?}"),
+    }
+    assert_eq!(arena.sort_of(args[1]), Sort::Int);
+}
+
+/// The boundary, in both directions. `i128::MAX` must stay a narrow node —
+/// otherwise every previously-parsed benchmark silently changes representation
+/// and the claim "no existing verdict can move" is false.
+#[test]
+fn the_i128_boundary_decides_which_node_a_numeral_becomes() {
+    let script = parse_script(
+        "(set-logic QF_LIA)\n(declare-const x Int)\n\
+         (assert (> x 170141183460469231731687303715884105727))\n\
+         (assert (> x 170141183460469231731687303715884105728))\n\
+         (assert (> x 0))\n(check-sat)\n",
+    )
+    .expect("both sides of the boundary parse");
+    let arena = &script.arena;
+    let constant_of = |assertion| {
+        let TermNode::App { args, .. } = arena.node(assertion) else {
+            panic!("expected a comparison application");
+        };
+        arena.node(args[1])
+    };
+    assert!(matches!(
+        constant_of(script.assertions[0]),
+        TermNode::IntConst(i128::MAX)
+    ));
+    assert!(matches!(
+        constant_of(script.assertions[1]),
+        TermNode::WideIntConst(_)
+    ));
+    assert!(matches!(
+        constant_of(script.assertions[2]),
+        TermNode::IntConst(0)
+    ));
+}
+
+/// Round-trip: the writer renders the full numeral and re-parsing it yields the
+/// SAME interned node, which is what the canonicality invariant buys.
+#[test]
+fn a_wide_integer_literal_round_trips_through_the_writer() {
+    let source = format!(
+        "(set-logic QF_LIA)\n(declare-const x Int)\n\
+         (assert (= x (- {EVM_WORD})))\n(check-sat)\n"
+    );
+    let first = parse_script(&source).expect("parses");
+    let text = write_script(&first.arena, &first.assertions);
+    assert!(
+        text.contains(EVM_WORD),
+        "the writer must emit the full numeral, not a narrowed one: {text}"
+    );
+    let second = parse_script(&text).expect("the written script re-parses");
+    assert_eq!(
+        write_script(&second.arena, &second.assertions),
+        text,
+        "writing is idempotent, so the second parse built the same term"
+    );
+}
+
+/// Exactness end to end: the evaluator computes on the parsed wide constants
+/// with no narrowing, and demotes a result that lands back inside `i128`. This
+/// is the path every `sat` is replayed through.
+#[test]
+fn wide_integer_literals_evaluate_exactly_and_demote() {
+    let script = parse_script(&format!(
+        "(set-logic QF_LIA)\n\
+         (assert (= (- {EVM_WORD} {EVM_WORD}) 0))\n\
+         (assert (> (+ {EVM_WORD} 1) {EVM_WORD}))\n\
+         (check-sat)\n"
+    ))
+    .expect("parses");
+    for &assertion in &script.assertions {
+        assert_eq!(
+            eval(&script.arena, assertion, &Assignment::new()).expect("evaluates"),
+            Value::Bool(true)
+        );
+    }
+    // Demotion, asserted on a term the parser cannot pre-fold: `x` is a symbol,
+    // so `(+ (- x 2^256) 2^256)` stays an application, and evaluating it at
+    // `x = 7` must give the NARROW `Value::Int(7)` — the intermediate left the
+    // `i128` range and came back, and the value has one representation.
+    let demote = parse_script(&format!(
+        "(set-logic QF_LIA)\n(declare-const x Int)\n\
+         (assert (= (+ (- x {EVM_WORD}) {EVM_WORD}) x))\n(check-sat)\n"
+    ))
+    .expect("parses");
+    let TermNode::App { args, .. } = demote.arena.node(demote.assertions[0]) else {
+        panic!("expected an equality");
+    };
+    let symbol = demote.arena.find_symbol("x").expect("x is declared");
+    let mut assignment = Assignment::new();
+    assignment.set(symbol, Value::Int(7));
+    assert_eq!(
+        eval(&demote.arena, args[0], &assignment).expect("evaluates"),
+        Value::Int(7)
+    );
+}
+
+/// A malformed all-digit atom is still a syntax error, not an "out of range"
+/// decline — the negative control for the admission above.
+#[test]
+fn a_numeral_that_is_not_a_numeral_is_still_rejected() {
+    let error = parse_script("(set-logic QF_LIA)\n(assert (> 12x 1))\n(check-sat)\n")
+        .expect_err("`12x` is not a numeral");
+    assert!(
+        matches!(error, SmtError::Syntax(_) | SmtError::Unsupported(_)),
+        "expected a parse-level rejection, got {error:?}"
     );
 }

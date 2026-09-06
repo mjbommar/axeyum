@@ -1744,6 +1744,21 @@ impl TermArena {
         self.intern_node(TermNode::IntConst(value), Sort::Int)
     }
 
+    /// An integer constant of arbitrary magnitude (ADR-1702 slice 2).
+    ///
+    /// **Demotes**: a value that fits `i128` becomes a [`TermNode::IntConst`],
+    /// so `int_const_big(BigInt::from(5))` and `int_const(5)` return the *same*
+    /// `TermId`. That is what keeps each integer to one interned node, the way
+    /// [`TermArena::bv_const`] promotes to `WideBvConst` above 128 bits. Build
+    /// every wide integer literal through here and never intern a
+    /// `TermNode::WideIntConst` directly.
+    pub fn int_const_big(&mut self, value: crate::int_wide::WideInt) -> TermId {
+        match value.checked_i128() {
+            Some(narrow) => self.int_const(narrow),
+            None => self.intern_node(TermNode::WideIntConst(value), Sort::Int),
+        }
+    }
+
     /// Declares an integer symbol and returns its variable term.
     ///
     /// # Errors

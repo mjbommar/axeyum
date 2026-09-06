@@ -277,6 +277,7 @@ impl InputBinding {
                 )),
             },
             Value::WideBv(_)
+            | Value::WideInt(_)
             | Value::Array(_)
             | Value::GenericArray(_)
             | Value::Real(_)

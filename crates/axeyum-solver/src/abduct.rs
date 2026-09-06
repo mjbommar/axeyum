@@ -519,6 +519,7 @@ fn collect_shared_terms(
                 TermNode::BvConst { .. }
                     | TermNode::WideBvConst(_)
                     | TermNode::IntConst(_)
+                    | TermNode::WideIntConst(_)
                     | TermNode::RealConst(_)
                     | TermNode::BoolConst(_)
             ) {
@@ -606,6 +607,7 @@ fn collect_atoms(
         | TermNode::BvConst { .. }
         | TermNode::WideBvConst(_)
         | TermNode::IntConst(_)
+        | TermNode::WideIntConst(_)
         | TermNode::RealConst(_) => {}
     }
 }
@@ -684,6 +686,7 @@ fn collect_vocabulary(
             | TermNode::BvConst { .. }
             | TermNode::WideBvConst(_)
             | TermNode::IntConst(_)
+            | TermNode::WideIntConst(_)
             | TermNode::RealConst(_) => {}
         }
     }

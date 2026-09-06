@@ -1163,6 +1163,7 @@ fn is_constant(node: &TermNode) -> bool {
             | TermNode::BvConst { .. }
             | TermNode::WideBvConst(_)
             | TermNode::IntConst(_)
+            | TermNode::WideIntConst(_)
             | TermNode::RealConst(_)
     )
 }
@@ -2306,6 +2307,7 @@ impl Bridge {
                         | TermNode::BvConst { .. }
                         | TermNode::WideBvConst(_)
                         | TermNode::IntConst(_)
+                        | TermNode::WideIntConst(_)
                         | TermNode::RealConst(_) => {
                             // Each distinct literal value is a distinct constant node.
                             let key = DeclKey::Const(format!("{:?}", arena.node(t)));

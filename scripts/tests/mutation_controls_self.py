@@ -66,8 +66,8 @@ MUTATIONS: list[tuple[str, ...]] = [
     ),
     (
         "cargo death names are parsed",
-        r'r"^test (\S+) \.\.\. FAILED$"',
-        r'r"^test (\S+) \.\.\. NEVERFAILED$"',
+        r'r"^test (\S+)(?: - should panic)? \.\.\. FAILED$"',
+        r'r"^test (\S+)(?: - should panic)? \.\.\. NEVERFAILED$"',
     ),
     # ---- did the mutation actually change anything?
     ("an absent anchor", "    if occurrences == 0:", "    if False:"),

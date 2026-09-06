@@ -24,6 +24,7 @@ fn eval_eq(a: &mut TermArena, term: TermId) -> TermId {
         | Value::Array(_)
         | Value::GenericArray(_)
         | Value::Int(_)
+        | Value::WideInt(_)
         | Value::Real(_)
         | Value::RealAlgebraic(_)
         | Value::Datatype { .. }

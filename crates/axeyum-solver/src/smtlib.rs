@@ -3662,6 +3662,11 @@ fn smtlib_value_text(arena: &TermArena, value: &Value, as_string: bool) -> Resul
     match value {
         Value::Bool(b) => Ok(b.to_string()),
         Value::Int(n) => Ok(smtlib_int_text(*n)),
+        Value::WideInt(n) => Ok(if n.is_negative() {
+            format!("(- {})", n.neg())
+        } else {
+            n.to_string()
+        }),
         Value::Real(r) => {
             let (num, den) = (r.numerator(), r.denominator());
             if den == 1 {

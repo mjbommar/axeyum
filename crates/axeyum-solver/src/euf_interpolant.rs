@@ -745,6 +745,7 @@ impl Bridge {
             | TermNode::BvConst { .. }
             | TermNode::WideBvConst(_)
             | TermNode::IntConst(_)
+            | TermNode::WideIntConst(_)
             | TermNode::RealConst(_) => {
                 let key = DeclKey::Const(format!("{:?}", arena.node(term)));
                 let decl = self.decl(key);

@@ -1056,6 +1056,7 @@ fn query_leaf_key(arena: &TermArena, leaf: &IrTermNode) -> String {
         IrTermNode::BvConst { width, value } => format!("q.bv.{width}.{value}"),
         IrTermNode::WideBvConst(value) => format!("q.wbv.{value:?}"),
         IrTermNode::IntConst(value) => format!("q.int.{value}"),
+        IrTermNode::WideIntConst(value) => format!("q.int.{value}"),
         IrTermNode::RealConst(value) => format!("q.real.{value}"),
         IrTermNode::App { .. } => unreachable!("applications are rendered structurally"),
     }

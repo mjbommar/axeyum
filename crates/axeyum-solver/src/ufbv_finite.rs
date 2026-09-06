@@ -278,6 +278,7 @@ fn collect_bool_uf_signature(
         TermNode::BvConst { .. }
         | TermNode::WideBvConst(_)
         | TermNode::IntConst(_)
+        | TermNode::WideIntConst(_)
         | TermNode::RealConst(_) => None,
     }
 }
@@ -372,6 +373,7 @@ fn eval_bool_uf_term(
         TermNode::BvConst { .. }
         | TermNode::WideBvConst(_)
         | TermNode::IntConst(_)
+        | TermNode::WideIntConst(_)
         | TermNode::RealConst(_) => None,
     }
 }

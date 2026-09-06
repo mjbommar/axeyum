@@ -56,6 +56,7 @@ pub fn write_script(arena: &TermArena, assertions: &[TermId]) -> String {
             | TermNode::BvConst { .. }
             | TermNode::WideBvConst(_)
             | TermNode::IntConst(_)
+            | TermNode::WideIntConst(_)
             | TermNode::RealConst(_) => {}
         }
     }
@@ -375,6 +376,15 @@ fn render_node(arena: &TermArena, root: TermId, names: &HashMap<TermId, String>)
                 // SMT-LIB renders negative integers as `(- n)`.
                 if *value < 0 {
                     memo.insert(t, format!("(- {})", value.unsigned_abs()));
+                } else {
+                    memo.insert(t, value.to_string());
+                }
+            }
+            TermNode::WideIntConst(value) => {
+                // Same rule at arbitrary magnitude: the numeral round-trips
+                // through the parser back to the identical node.
+                if value.is_negative() {
+                    memo.insert(t, format!("(- {})", value.neg()));
                 } else {
                     memo.insert(t, value.to_string());
                 }

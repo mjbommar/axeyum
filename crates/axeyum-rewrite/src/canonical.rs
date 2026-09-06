@@ -1191,6 +1191,7 @@ fn canonicalize_root_bounded(
             | TermNode::BvConst { .. }
             | TermNode::WideBvConst(_)
             | TermNode::IntConst(_)
+            | TermNode::WideIntConst(_)
             | TermNode::RealConst(_)
             | TermNode::Symbol(_) => {
                 memo.insert(term, term);
@@ -1680,6 +1681,7 @@ fn fold_bv_add_constant_chain(
             }
             TermNode::BoolConst(_)
             | TermNode::IntConst(_)
+            | TermNode::WideIntConst(_)
             | TermNode::RealConst(_)
             | TermNode::Symbol(_)
             | TermNode::App { .. } => {}
@@ -2281,6 +2283,7 @@ fn cancel_bv_add_constant_across_eq(
             }
             TermNode::BoolConst(_)
             | TermNode::IntConst(_)
+            | TermNode::WideIntConst(_)
             | TermNode::RealConst(_)
             | TermNode::Symbol(_)
             | TermNode::App { .. } => symbolic.push(arg),
@@ -2826,6 +2829,7 @@ pub fn replace_subterms(
         | TermNode::BvConst { .. }
         | TermNode::WideBvConst(_)
         | TermNode::IntConst(_)
+        | TermNode::WideIntConst(_)
         | TermNode::RealConst(_)
         | TermNode::Symbol(_) => term,
         TermNode::App { op, args } => {
@@ -2947,6 +2951,7 @@ fn fold_ground_int(
     };
     match value {
         Value::Int(value) => Ok(Some(arena.int_const(value))),
+        Value::WideInt(value) => Ok(Some(arena.int_const_big(value))),
         Value::Bool(value) => Ok(Some(arena.bool_const(value))),
         _ => Ok(None),
     }
@@ -2976,6 +2981,7 @@ fn value_to_term(arena: &mut TermArena, value: Value) -> Result<TermId, IrError>
             },
         }),
         Value::Int(value) => Ok(arena.int_const(value)),
+        Value::WideInt(value) => Ok(arena.int_const_big(value)),
         Value::Real(value) => Ok(arena.real_const(value)),
         // A real-algebraic value has no constant-term encoding (ADR-0038): it is
         // produced by the NRA decider's witness model and is never folded back
@@ -3001,6 +3007,7 @@ fn bool_const(arena: &TermArena, term: TermId) -> Option<bool> {
         TermNode::BvConst { .. }
         | TermNode::WideBvConst(_)
         | TermNode::IntConst(_)
+        | TermNode::WideIntConst(_)
         | TermNode::RealConst(_)
         | TermNode::Symbol(_)
         | TermNode::App { .. } => None,
@@ -3017,6 +3024,7 @@ fn bv_const(arena: &TermArena, term: TermId) -> Option<(u32, u128)> {
         TermNode::BoolConst(_)
         | TermNode::WideBvConst(_)
         | TermNode::IntConst(_)
+        | TermNode::WideIntConst(_)
         | TermNode::RealConst(_)
         | TermNode::Symbol(_)
         | TermNode::App { .. } => None,

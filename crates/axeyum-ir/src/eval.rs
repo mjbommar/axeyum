@@ -304,6 +304,9 @@ pub fn eval_with_memo<S: std::hash::BuildHasher>(
             TermNode::IntConst(value) => {
                 memo.insert(t, Value::Int(*value));
             }
+            TermNode::WideIntConst(value) => {
+                memo.insert(t, Value::WideInt(value.clone()));
+            }
             TermNode::RealConst(value) => {
                 memo.insert(t, Value::Real(*value));
             }
@@ -541,6 +544,23 @@ fn apply(op: Op, vals: &[Value]) -> Result<Value, IrError> {
         // The wide path is all mod-2^width bit-vector arithmetic (no Int/Real
         // crossing), so it is infallible: no overflow can occur there.
         return Ok(apply_wide(op, vals));
+    }
+    // Integers outside the `i128` range (ADR-1702 slice 2) take the same shape
+    // of detour. This guard must come BEFORE the `int(...)` closure below: that
+    // closure is `as_int().expect(...)`, and `as_int` returns `None` for a
+    // `Value::WideInt`, so without this the evaluator would PANIC on a parsed
+    // `2^256` literal — a panic on user input, on the one path every `sat` is
+    // replayed through.
+    if vals.iter().any(is_wide_int_value) {
+        if supports_wide_int_path(op) {
+            // Exact `BigInt` arithmetic: it cannot overflow, and it demotes back
+            // to `Value::Int` whenever the result fits, so downstream `as_int`
+            // callers keep seeing the narrow representation.
+            return Ok(apply_wide_int(op, vals));
+        }
+        return Err(IrError::Unsupported(
+            "integer operand outside the i128 reference range",
+        ));
     }
     let b = |v: &Value| v.as_bool().expect("builder guaranteed Bool operand");
     let bv = |v: &Value| v.as_bv().expect("builder guaranteed BitVec operand");
@@ -1142,6 +1162,84 @@ fn result_exceeds_128(op: Op, vals: &[Value]) -> bool {
 
 fn is_bv_value(v: &Value) -> bool {
     matches!(v, Value::Bv { .. } | Value::WideBv(_))
+}
+
+/// Whether `v` is an integer outside the `i128` reference range.
+fn is_wide_int_value(v: &Value) -> bool {
+    matches!(v, Value::WideInt(_))
+}
+
+/// The operators whose evaluation is defined at arbitrary integer magnitude.
+///
+/// Deliberately a small, explicit list rather than a fallback: an operator that
+/// is not here declines with `IrError::Unsupported`, which the solver turns into
+/// `unknown`. Adding one means committing to an exact `BigInt` rule for it in
+/// [`apply_wide_int`], not to a narrowing conversion.
+fn supports_wide_int_path(op: Op) -> bool {
+    matches!(
+        op,
+        Op::Eq
+            | Op::IntNeg
+            | Op::IntAdd
+            | Op::IntSub
+            | Op::IntMul
+            | Op::IntDiv
+            | Op::IntMod
+            | Op::IntAbs
+            | Op::IntLt
+            | Op::IntLe
+            | Op::IntGt
+            | Op::IntGe
+    )
+}
+
+/// Exact integer evaluation at arbitrary magnitude.
+///
+/// Every result goes through [`Value::from_wide_int`], which demotes back to
+/// [`Value::Int`] when it fits, so a computation that grows past `i128` and
+/// cancels back returns the ordinary narrow value and each integer keeps exactly
+/// one representation.
+///
+/// It cannot fail: `BigInt` has no overflow, `supports_wide_int_path` has
+/// already excluded every operator without an exact rule, and SMT-LIB fixes
+/// `div a 0 = 0` / `mod a 0 = a`. So it returns a `Value`, not a `Result` — a
+/// `Result` here would be an error channel nothing can ever put anything into.
+fn apply_wide_int(op: Op, vals: &[Value]) -> Value {
+    let int = |v: &Value| {
+        v.integer()
+            .expect("wide integer path entered with an Int operand")
+    };
+    match op {
+        Op::Eq => Value::Bool(vals[0] == vals[1]),
+        Op::IntNeg => Value::from_wide_int(int(&vals[0]).neg()),
+        Op::IntAdd => Value::from_wide_int(int(&vals[0]).add(&int(&vals[1]))),
+        Op::IntSub => Value::from_wide_int(int(&vals[0]).sub(&int(&vals[1]))),
+        Op::IntMul => Value::from_wide_int(int(&vals[0]).mul(&int(&vals[1]))),
+        // Euclidean div/mod, verbatim from the narrow path: `mod` lands in
+        // `0..|b|`, and by SMT-LIB convention `div a 0 = 0`, `mod a 0 = a`.
+        Op::IntDiv => {
+            let (x, y) = (int(&vals[0]), int(&vals[1]));
+            if y.is_zero() {
+                Value::Int(0)
+            } else {
+                Value::from_wide_int(x.div_euclid(&y))
+            }
+        }
+        Op::IntMod => {
+            let (x, y) = (int(&vals[0]), int(&vals[1]));
+            if y.is_zero() {
+                Value::from_wide_int(x)
+            } else {
+                Value::from_wide_int(x.rem_euclid(&y))
+            }
+        }
+        Op::IntAbs => Value::from_wide_int(int(&vals[0]).abs()),
+        Op::IntLt => Value::Bool(int(&vals[0]).compare(&int(&vals[1])).is_lt()),
+        Op::IntLe => Value::Bool(int(&vals[0]).compare(&int(&vals[1])).is_le()),
+        Op::IntGt => Value::Bool(int(&vals[0]).compare(&int(&vals[1])).is_gt()),
+        Op::IntGe => Value::Bool(int(&vals[0]).compare(&int(&vals[1])).is_ge()),
+        other => unreachable!("apply_wide_int: {other:?} is not in supports_wide_int_path"),
+    }
 }
 
 fn is_wide_bv_value(v: &Value) -> bool {

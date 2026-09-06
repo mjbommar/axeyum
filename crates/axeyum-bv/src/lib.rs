@@ -1476,7 +1476,7 @@ impl<'a> LoweringBuilder<'a> {
                     }
                 }
             }
-            TermNode::IntConst(_) => {
+            TermNode::IntConst(_) | TermNode::WideIntConst(_) => {
                 unreachable!("integer terms are rejected before bit lowering (ADR-0014)")
             }
             TermNode::RealConst(_) => {
@@ -1675,7 +1675,7 @@ impl<'a> LoweringBuilder<'a> {
                     })
                 })
                 .collect(),
-            TermNode::IntConst(_) => {
+            TermNode::IntConst(_) | TermNode::WideIntConst(_) => {
                 unreachable!("integer terms are rejected before bit lowering (ADR-0014)")
             }
             TermNode::RealConst(_) => {
@@ -1906,7 +1906,7 @@ impl<'a> LoweringBuilder<'a> {
                         .collect::<Vec<_>>();
                     self.record(term, bits)?;
                 }
-                TermNode::IntConst(_) => {
+                TermNode::IntConst(_) | TermNode::WideIntConst(_) => {
                     // Integers are not bit-blasted (ADR-0014); callers preflight
                     // with `first_unsupported_sort`.
                     unreachable!("integer terms are rejected before bit lowering (ADR-0014)")
@@ -3367,6 +3367,7 @@ impl DemandAdmissionScreen {
                 | TermNode::BvConst { .. }
                 | TermNode::WideBvConst(_)
                 | TermNode::IntConst(_)
+                | TermNode::WideIntConst(_)
                 | TermNode::RealConst(_) => {}
             }
         }
@@ -3762,6 +3763,7 @@ impl DenseBitDemand {
                 | TermNode::BvConst { .. }
                 | TermNode::WideBvConst(_)
                 | TermNode::IntConst(_)
+                | TermNode::WideIntConst(_)
                 | TermNode::RealConst(_) => {}
             }
         }

@@ -116,7 +116,9 @@ fn source_shape(arena: &TermArena, root: TermId) -> Option<SourceShape> {
                 stack.extend(args.iter().map(|&argument| (argument, depth + 1)));
             }
             TermNode::BoolConst(_) | TermNode::BvConst { .. } | TermNode::WideBvConst(_) => {}
-            TermNode::IntConst(_) | TermNode::RealConst(_) => return None,
+            TermNode::IntConst(_) | TermNode::WideIntConst(_) | TermNode::RealConst(_) => {
+                return None;
+            }
         }
     }
     let free = symbols.difference(&binders).copied().collect::<Vec<_>>();

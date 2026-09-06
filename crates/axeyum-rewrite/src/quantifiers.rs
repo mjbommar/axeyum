@@ -116,6 +116,7 @@ impl Expander {
             | TermNode::BvConst { .. }
             | TermNode::WideBvConst(_)
             | TermNode::IntConst(_)
+            | TermNode::WideIntConst(_)
             | TermNode::RealConst(_)
             | TermNode::Symbol(_) => (term, 1),
             TermNode::App {
@@ -244,6 +245,7 @@ fn substitute(
         | TermNode::BvConst { .. }
         | TermNode::WideBvConst(_)
         | TermNode::IntConst(_)
+        | TermNode::WideIntConst(_)
         | TermNode::RealConst(_)
         | TermNode::Symbol(_) => term,
         TermNode::App { op, args } => {
@@ -972,6 +974,7 @@ fn term_is_ground(
         | TermNode::BvConst { .. }
         | TermNode::WideBvConst(_)
         | TermNode::IntConst(_)
+        | TermNode::WideIntConst(_)
         | TermNode::RealConst(_) => true,
         TermNode::Symbol(symbol) => !bound.contains(symbol),
         TermNode::App { args, .. } => args
@@ -1024,6 +1027,7 @@ fn ground_universe(
             | TermNode::BvConst { .. }
             | TermNode::WideBvConst(_)
             | TermNode::IntConst(_)
+            | TermNode::WideIntConst(_)
             | TermNode::RealConst(_) => true,
             TermNode::Symbol(symbol) => !bound.contains(symbol),
             TermNode::App { args, .. } => {

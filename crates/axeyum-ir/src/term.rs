@@ -357,8 +357,19 @@ pub enum TermNode {
     },
     /// A bit-vector constant of width `> 128` (wide-BV).
     WideBvConst(crate::wide::WideUint),
-    /// An integer constant (ADR-0014).
+    /// An integer constant within the `i128` reference range (ADR-0014).
+    /// Integers outside it are [`TermNode::WideIntConst`]; the two never
+    /// overlap.
     IntConst(i128),
+    /// An integer constant **outside** the `i128` range (ADR-1702 slice 2,
+    /// realizing the design ADR-0376 recorded).
+    ///
+    /// Well-formedness: `value.checked_i128().is_none()`. Every
+    /// `i128`-representable integer is [`TermNode::IntConst`], so each integer
+    /// has exactly one node and the arena's intern table keeps its structural
+    /// sharing. [`crate::TermArena::int_const_big`] is what enforces it, by
+    /// demoting a value that fits.
+    WideIntConst(crate::int_wide::WideInt),
     /// A real constant as an exact rational (ADR-0015).
     RealConst(crate::rational::Rational),
     /// A free variable referring to a declared symbol.

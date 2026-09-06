@@ -363,7 +363,7 @@ fn translate(
                     "z3 oracle does not support >128-bit bit-vectors yet".to_owned(),
                 ));
             }
-            TermNode::IntConst(_) => {
+            TermNode::IntConst(_) | TermNode::WideIntConst(_) => {
                 return Err(SolverError::Unsupported(
                     "z3 oracle does not support integer terms yet (ADR-0014)".to_owned(),
                 ));

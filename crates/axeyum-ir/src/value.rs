@@ -33,8 +33,18 @@ pub enum Value {
     /// arrays.
     GenericArray(GenericArrayValue),
     /// A mathematical integer value (ADR-0014); exact within the `i128`
-    /// reference range.
+    /// reference range. Integers outside it are [`Value::WideInt`]; the two
+    /// never overlap.
     Int(i128),
+    /// A mathematical integer value **outside** the `i128` range (ADR-1702
+    /// slice 2).
+    ///
+    /// Well-formedness: `value.checked_i128().is_none()`, mirroring
+    /// [`Value::Bv`] / [`Value::WideBv`]. [`Value::from_wide_int`] enforces it
+    /// by demoting a value that fits, so [`Value::Int`] and this variant give
+    /// each integer exactly one representation and derived `Eq`/`Hash` stay
+    /// value equality.
+    WideInt(crate::int_wide::WideInt),
     /// A mathematical real value as an exact rational (ADR-0015).
     Real(Rational),
     /// A real *algebraic* value — possibly irrational — as a defining integer
@@ -697,7 +707,9 @@ impl Value {
             Value::Array(_) | Value::GenericArray(_) => {
                 panic!("scalar encoding of an array value")
             }
-            Value::Int(_) => panic!("scalar encoding of an integer value"),
+            Value::Int(_) | Value::WideInt(_) => {
+                panic!("scalar encoding of an integer value")
+            }
             Value::Real(_) => panic!("scalar encoding of a real value"),
             Value::RealAlgebraic(_) => panic!("scalar encoding of a real-algebraic value"),
             Value::Datatype { .. } => panic!("scalar encoding of a datatype value"),
@@ -731,7 +743,7 @@ impl Value {
                 index: array.index_sort(),
                 element: array.element_sort(),
             },
-            Value::Int(_) => Sort::Int,
+            Value::Int(_) | Value::WideInt(_) => Sort::Int,
             Value::Real(_) | Value::RealAlgebraic(_) => Sort::Real,
             Value::Datatype { datatype, .. } => Sort::Datatype(*datatype),
             Value::Uninterpreted { sort, .. } => Sort::Uninterpreted(*sort),
@@ -753,6 +765,7 @@ impl Value {
             | Value::Array(_)
             | Value::GenericArray(_)
             | Value::Int(_)
+            | Value::WideInt(_)
             | Value::Real(_)
             | Value::RealAlgebraic(_)
             | Value::Datatype { .. }
@@ -770,6 +783,7 @@ impl Value {
             | Value::Array(_)
             | Value::GenericArray(_)
             | Value::Int(_)
+            | Value::WideInt(_)
             | Value::Real(_)
             | Value::RealAlgebraic(_)
             | Value::Datatype { .. }
@@ -787,6 +801,7 @@ impl Value {
             | Value::Bv { .. }
             | Value::GenericArray(_)
             | Value::Int(_)
+            | Value::WideInt(_)
             | Value::Real(_)
             | Value::RealAlgebraic(_)
             | Value::Datatype { .. }
@@ -805,6 +820,7 @@ impl Value {
             | Value::Bv { .. }
             | Value::Array(_)
             | Value::Int(_)
+            | Value::WideInt(_)
             | Value::Real(_)
             | Value::RealAlgebraic(_)
             | Value::Datatype { .. }
@@ -814,11 +830,34 @@ impl Value {
         }
     }
 
+    /// An integer value of arbitrary magnitude (ADR-1702 slice 2).
+    ///
+    /// **Demotes**: a value that fits `i128` becomes a [`Value::Int`], so each
+    /// integer has exactly one representation and derived `Eq`/`Hash` remain
+    /// value equality. Build every out-of-range integer value through here.
+    #[must_use]
+    pub fn from_wide_int(value: crate::int_wide::WideInt) -> Value {
+        match value.checked_i128() {
+            Some(narrow) => Value::Int(narrow),
+            None => Value::WideInt(value),
+        }
+    }
+
     /// Returns the integer payload, or `None` for non-integer values.
+    ///
+    /// A [`Value::WideInt`] is integer-sorted but does **not** fit `i128`, so
+    /// this returns `None` for it rather than truncating — callers that must
+    /// handle an out-of-range integer dispatch on [`Value::as_wide_int`]. This
+    /// is what keeps every pre-existing `as_int` caller correct without an
+    /// audit: it can only ever see a value that really is an `i128`.
     pub fn as_int(&self) -> Option<i128> {
         match self {
             Value::Int(value) => Some(*value),
-            Value::Bool(_)
+            // `WideInt` joins the declining arm below: an integer that does not
+            // fit `i128` is not an `i128`, and narrowing it would be the silent
+            // wrong answer ADR-1702 forbids.
+            Value::WideInt(_)
+            | Value::Bool(_)
             | Value::Bv { .. }
             | Value::Array(_)
             | Value::GenericArray(_)
@@ -844,6 +883,7 @@ impl Value {
             | Value::Array(_)
             | Value::GenericArray(_)
             | Value::Int(_)
+            | Value::WideInt(_)
             | Value::RealAlgebraic(_)
             | Value::Datatype { .. }
             | Value::Uninterpreted { .. }
@@ -865,6 +905,25 @@ impl Value {
     pub fn as_wide_bv(&self) -> Option<&crate::wide::WideUint> {
         match self {
             Value::WideBv(w) => Some(w),
+            _ => None,
+        }
+    }
+
+    /// Returns the out-of-`i128` integer payload, or `None` for any other value
+    /// (including an in-range [`Value::Int`]).
+    pub fn as_wide_int(&self) -> Option<&crate::int_wide::WideInt> {
+        match self {
+            Value::WideInt(value) => Some(value),
+            _ => None,
+        }
+    }
+
+    /// The integer payload of any integer-sorted value, exactly, at arbitrary
+    /// magnitude — the accessor a route that has opted into wide integers uses.
+    pub fn integer(&self) -> Option<crate::int_wide::WideInt> {
+        match self {
+            Value::Int(value) => Some(crate::int_wide::WideInt::from_i128(*value)),
+            Value::WideInt(value) => Some(value.clone()),
             _ => None,
         }
     }
@@ -981,6 +1040,7 @@ impl core::fmt::Display for Value {
                 write!(f, ")")
             }
             Value::Int(value) => write!(f, "{value}"),
+            Value::WideInt(value) => write!(f, "{value}"),
             Value::Real(value) => write!(f, "{value}"),
             Value::RealAlgebraic(value) => write!(f, "{value}"),
             Value::Datatype {

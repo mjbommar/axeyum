@@ -52,6 +52,7 @@ impl TermStats {
                 | TermNode::BvConst { .. }
                 | TermNode::WideBvConst(_)
                 | TermNode::IntConst(_)
+                | TermNode::WideIntConst(_)
                 | TermNode::RealConst(_) => {
                     stats.dag_nodes += 1;
                     memo.insert(t, (1, 1));

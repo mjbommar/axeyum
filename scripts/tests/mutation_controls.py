@@ -1386,7 +1386,13 @@ _CARGO_RUNNING = re.compile(r"^running (\d+) tests?$", re.M)
 _CARGO_RESULT = re.compile(
     r"^test result: (?:ok|FAILED)\. (\d+) passed; (\d+) failed;", re.M
 )
-_CARGO_DEATH = re.compile(r"^test (\S+) \.\.\. FAILED$", re.M)
+# A `#[should_panic]` test prints `test NAME - should panic ... FAILED`, so the
+# obvious `^test (\S+) \.\.\. FAILED$` cannot NAME it and every such death was
+# reported as INCONSISTENT ("the summary says 1 died but 0 were named"), which
+# is "the harness could not tell" rather than a result. Found 2026-09-06 by the
+# first mutation of a panic contract (`WideInt::to_i128`, ADR-1702 slice 2) --
+# i.e. this harness could not measure a panic-contract guard at all.
+_CARGO_DEATH = re.compile(r"^test (\S+)(?: - should panic)? \.\.\. FAILED$", re.M)
 
 
 def classify_cargo(returncode: int, output: str, baseline_tests: int | None) -> Report:
@@ -8708,6 +8714,101 @@ SUITES["arith-ky-differential"] = (
             "the K[y] evaluation multiplies by the point at each Horner step",
             "            acc = add_elements(&scale_element(&acc, q), coeff);",
             "            acc = add_elements(&acc, coeff);",
+        ),
+    ],
+)
+
+
+# --------------------------------------------------------------------------
+# `wide-int-narrowing` -- ADR-1702 slice 2's one hazard, made falsifiable.
+#
+# `WideInt::to_i128` returns `i128` and PANICS on a value that does not fit,
+# rather than truncating or saturating.  That is a soundness contract, not a
+# style choice: an out-of-range bound silently narrowed to a different number is
+# how a wrong `sat`/`unsat` gets produced.  A contract nobody can break is
+# untested, so each mutation below is a plausible "simplification" a future
+# reader might make, and each must kill a test.
+# --------------------------------------------------------------------------
+
+SUITES["wide-int-narrowing"] = (
+    "crates/axeyum-ir/src/int_wide.rs",
+    Cargo(("-p", "axeyum-ir", "--lib", "int_wide"), "wide-int-narrowing"),
+    [
+        (
+            "to_i128 truncates to the low 128 bits instead of panicking",
+            """        match self.0.to_i128() {
+            Some(value) => value,
+            None => panic!(
+                "to_i128 on a {}-bit integer literal (`{}`); use checked_i128 or big",
+                self.bits(),
+                self.0
+            ),
+        }""",
+            """        match self.0.to_i128() {
+            Some(value) => value,
+            None => {
+                let bytes = self.0.to_signed_bytes_le();
+                let mut low = [0u8; 16];
+                for (slot, byte) in low.iter_mut().zip(bytes.iter()) {
+                    *slot = *byte;
+                }
+                i128::from_le_bytes(low)
+            }
+        }""",
+        ),
+        (
+            "to_i128 saturates instead of panicking",
+            """        match self.0.to_i128() {
+            Some(value) => value,
+            None => panic!(
+                "to_i128 on a {}-bit integer literal (`{}`); use checked_i128 or big",
+                self.bits(),
+                self.0
+            ),
+        }""",
+            """        match self.0.to_i128() {
+            Some(value) => value,
+            None if self.0.is_negative() => i128::MIN,
+            None => i128::MAX,
+        }""",
+        ),
+    ],
+)
+
+
+# --------------------------------------------------------------------------
+# `wide-int-eval` -- the exact-arithmetic half of the same slice.  These
+# mutations leave the panic alone and make the WIDE path compute a slightly
+# wrong number, which is what the differential fuzz against the independent
+# `BigInt` reference exists to catch.
+# --------------------------------------------------------------------------
+
+SUITES["wide-int-eval"] = (
+    "crates/axeyum-ir/src/eval.rs",
+    Cargo(("-p", "axeyum-ir", "--test", "wide_int_eval_fuzz"), "wide-int-eval"),
+    [
+        (
+            "wide `mod` returns the quotient instead of the remainder",
+            "                Value::from_wide_int(x.rem_euclid(&y))",
+            "                Value::from_wide_int(x.div_euclid(&y))",
+        ),
+        (
+            "wide `div` by zero returns the dividend instead of the SMT-LIB 0",
+            """            if y.is_zero() {
+                Value::Int(0)
+            } else {
+                Value::from_wide_int(x.div_euclid(&y))
+            }""",
+            """            if y.is_zero() {
+                Value::from_wide_int(x)
+            } else {
+                Value::from_wide_int(x.div_euclid(&y))
+            }""",
+        ),
+        (
+            "the wide path stops demoting an addition that fits i128 again",
+            "        Op::IntAdd => Value::from_wide_int(int(&vals[0]).add(&int(&vals[1]))),",
+            "        Op::IntAdd => Value::WideInt(int(&vals[0]).add(&int(&vals[1]))),",
         ),
     ],
 )

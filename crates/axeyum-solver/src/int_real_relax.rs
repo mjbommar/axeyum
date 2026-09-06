@@ -169,8 +169,12 @@ impl Relax {
             TermNode::BoolConst(_) | TermNode::RealConst(_) => t,
             // An integer constant `n` reinterprets as the real number `n`.
             TermNode::IntConst(n) => arena.real_const(Rational::integer(n)),
-            // Bit-vector constants have no real analogue: abort.
-            TermNode::BvConst { .. } | TermNode::WideBvConst(_) => return Ok(None),
+            // Bit-vector constants have no real analogue, and an integer
+            // outside `i128` has no `Rational::integer` image (ADR-1702 keeps
+            // promotion opt-in): both leave the fragment rather than narrow.
+            TermNode::WideIntConst(_) | TermNode::BvConst { .. } | TermNode::WideBvConst(_) => {
+                return Ok(None);
+            }
             TermNode::Symbol(s) => match arena.sort_of(t) {
                 // An integer symbol becomes its fresh real surrogate.
                 Sort::Int => self.real_of_int(arena, s)?,

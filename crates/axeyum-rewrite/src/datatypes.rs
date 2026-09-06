@@ -54,6 +54,7 @@ fn simplify(
         | TermNode::BvConst { .. }
         | TermNode::WideBvConst(_)
         | TermNode::IntConst(_)
+        | TermNode::WideIntConst(_)
         | TermNode::RealConst(_)
         | TermNode::Symbol(_) => term,
         TermNode::App { op, args } => {

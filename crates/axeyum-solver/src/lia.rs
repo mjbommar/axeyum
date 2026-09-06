@@ -60,6 +60,17 @@ pub fn check_with_int_blasting<B: SolverBackend>(
                 ),
             }));
         }
+        // ADR-1702 slice 2: no width this route accepts can hold it, so the
+        // honest report names the range, not a bound to widen.
+        Err(IntBlastError::WideConstantOutOfRange { bits, width }) => {
+            return Ok(CheckResult::Unknown(UnknownReason {
+                kind: UnknownKind::Incomplete,
+                detail: format!(
+                    "integer constant of {bits} bits is outside the i128 range and does not \
+                     fit the bounded width {width}; bit-blasting cannot decide this query"
+                ),
+            }));
+        }
         Err(IntBlastError::InvalidWidth(width)) => {
             return Err(SolverError::Backend(format!(
                 "invalid integer bit-blast width {width}"

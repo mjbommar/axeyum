@@ -381,6 +381,7 @@ impl Translator {
             | TermNode::BvConst { .. }
             | TermNode::WideBvConst(_)
             | TermNode::IntConst(_)
+            | TermNode::WideIntConst(_)
             | TermNode::RealConst(_) => term,
             TermNode::App { op, args } => {
                 let mut new_args = Vec::with_capacity(args.len());
@@ -497,6 +498,7 @@ fn collect_vocabulary(
             | TermNode::BvConst { .. }
             | TermNode::WideBvConst(_)
             | TermNode::IntConst(_)
+            | TermNode::WideIntConst(_)
             | TermNode::RealConst(_) => {}
         }
     }

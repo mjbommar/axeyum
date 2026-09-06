@@ -40,6 +40,15 @@ pub enum IntBlastError {
         /// The chosen bit-width.
         width: u32,
     },
+    /// An integer constant outside the `i128` reference range (ADR-1702 slice
+    /// 2). It cannot fit any width this route accepts, so it is a decline, not
+    /// a narrowing; the caller should treat it as `unknown`.
+    WideConstantOutOfRange {
+        /// Bit length of the offending constant's magnitude.
+        bits: u64,
+        /// The chosen bit-width.
+        width: u32,
+    },
     /// The requested width is zero or exceeds [`MAX_INT_BLAST_WIDTH`].
     InvalidWidth(u32),
     /// An integer operator with no faithful finite bit-vector encoding in this
@@ -58,6 +67,13 @@ impl core::fmt::Display for IntBlastError {
                 write!(
                     f,
                     "integer constant {value} does not fit in signed {width} bits"
+                )
+            }
+            IntBlastError::WideConstantOutOfRange { bits, width } => {
+                write!(
+                    f,
+                    "integer constant of {bits} bits is outside the i128 range and \
+                     does not fit signed {width} bits"
                 )
             }
             IntBlastError::InvalidWidth(width) => {
@@ -231,6 +247,17 @@ impl Blaster {
             | TermNode::WideBvConst(_)
             | TermNode::RealConst(_) => term,
             TermNode::IntConst(value) => self.encode_constant(arena, value)?,
+            // A literal outside `i128` cannot fit any width this route
+            // accepts (`MAX_INT_BLAST_WIDTH` is 64), so it declines with
+            // its own error rather than being narrowed. Every caller of
+            // `blast_integers` already maps an `IntBlastError` to
+            // `unknown`.
+            TermNode::WideIntConst(value) => {
+                return Err(IntBlastError::WideConstantOutOfRange {
+                    bits: value.bits(),
+                    width: self.width,
+                });
+            }
             TermNode::Symbol(symbol) => {
                 if arena.sort_of(term) == Sort::Int {
                     let bv_sym = self.blast_symbol(arena, symbol)?;
@@ -454,7 +481,7 @@ fn contains_integer(arena: &TermArena, term: TermId) -> bool {
             return true;
         }
         match arena.node(t) {
-            TermNode::IntConst(_) => return true,
+            TermNode::IntConst(_) | TermNode::WideIntConst(_) => return true,
             TermNode::App { args, .. } => stack.extend(args.iter().copied()),
             TermNode::BoolConst(_)
             | TermNode::BvConst { .. }

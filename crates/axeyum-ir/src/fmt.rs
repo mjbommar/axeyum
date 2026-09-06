@@ -132,6 +132,15 @@ pub fn render(arena: &TermArena, term: TermId) -> String {
                     memo.insert(t, value.to_string());
                 }
             }
+            TermNode::WideIntConst(value) => {
+                // Same SMT-LIB rendering rule as `IntConst`: a negative integer
+                // is the application `(- n)`, never a signed numeral.
+                if value.is_negative() {
+                    memo.insert(t, format!("(- {})", value.neg()));
+                } else {
+                    memo.insert(t, value.to_string());
+                }
+            }
             TermNode::RealConst(value) => {
                 // SMT-LIB rationals: `(/ n d)`, or `(- ...)` for negatives.
                 let num = value.numerator();

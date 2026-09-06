@@ -611,6 +611,21 @@ impl PyTermNode {
                     crate::convert::value_to_py(py, &axeyum_ir::Value::Int(*value))?.unbind(),
                 ),
             },
+            // Same `kind` as the narrow case on purpose: the split is a storage
+            // detail of the IR, and Python integers are unbounded, so a caller
+            // reading `kind == "int_const"` sees one uniform notion of integer
+            // constant.
+            TermNode::WideIntConst(value) => Self {
+                kind: "int_const",
+                op: None,
+                op_params: empty_params,
+                args: empty_args,
+                symbol: None,
+                value: Some(
+                    crate::convert::value_to_py(py, &axeyum_ir::Value::WideInt(value.clone()))?
+                        .unbind(),
+                ),
+            },
             TermNode::RealConst(value) => Self {
                 kind: "real_const",
                 op: None,

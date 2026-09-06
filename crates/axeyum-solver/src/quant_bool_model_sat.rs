@@ -692,6 +692,7 @@ pub(crate) fn admitted_positive_universal_bv(
                 ..
             }
             | TermNode::IntConst(_)
+            | TermNode::WideIntConst(_)
             | TermNode::RealConst(_) => return None,
             TermNode::App {
                 op: Op::Forall(binder),

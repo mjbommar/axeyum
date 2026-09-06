@@ -420,6 +420,7 @@ impl Bridge2 {
             | TermNode::BvConst { .. }
             | TermNode::WideBvConst(_)
             | TermNode::IntConst(_)
+            | TermNode::WideIntConst(_)
             | TermNode::RealConst(_) => {
                 let key = DeclKey::Const(format!("{:?}", arena.node(term)));
                 let decl = self.decl(key);
@@ -604,6 +605,9 @@ fn term_to_alethe(arena: &TermArena, t: TermId) -> Option<AletheTerm> {
         }
         TermNode::WideBvConst(w) => Some(AletheTerm::Const(format!("#wbv:{w:?}"))),
         TermNode::IntConst(i) => Some(AletheTerm::Const(format!("#int:{i}"))),
+        // The full decimal, so two distinct wide constants stay distinct
+        // tokens and neither collides with a narrow one.
+        TermNode::WideIntConst(i) => Some(AletheTerm::Const(format!("#int:{i}"))),
         TermNode::RealConst(r) => Some(AletheTerm::Const(format!("#real:{r:?}"))),
         TermNode::App { op, args, .. } => match op {
             Op::Eq if args.len() == 2 => {

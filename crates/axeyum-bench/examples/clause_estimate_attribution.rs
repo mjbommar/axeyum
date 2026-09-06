@@ -268,6 +268,7 @@ fn leaf_label(node: &TermNode) -> String {
         TermNode::WideBvConst(_) => "WideBvConst".to_string(),
         TermNode::Symbol(_) => "Symbol".to_string(),
         TermNode::IntConst(_) => "IntConst".to_string(),
+        TermNode::WideIntConst(_) => "WideIntConst".to_string(),
         TermNode::RealConst(_) => "RealConst".to_string(),
         TermNode::App { .. } => unreachable!(),
     }
