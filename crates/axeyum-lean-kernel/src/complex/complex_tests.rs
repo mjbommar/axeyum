@@ -347,6 +347,14 @@ fn every_named_complex_declaration_is_checked_and_footprint_free() {
             p.estimates.uniformly_continuous_of_has_derivative,
         ),
         ("Complex.hasDerivative_mul", p.leibniz.has_derivative_mul),
+        (
+            "Complex.uniformlyContinuous_add",
+            p.uc_closure.uniformly_continuous_add,
+        ),
+        (
+            "Complex.uniformlyContinuous_mul",
+            p.uc_closure.uniformly_continuous_mul,
+        ),
         ("Complex.abs_ofReal", p.components.abs_of_real),
         ("Complex.abs_re_le", p.components.abs_re_le),
         ("Complex.abs_im_le", p.components.abs_im_le),

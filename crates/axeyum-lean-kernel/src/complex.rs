@@ -98,6 +98,7 @@ pub(crate) mod estimates;
 pub(crate) mod leibniz;
 pub(crate) mod poly;
 mod ring;
+pub(crate) mod uc_closure;
 
 #[cfg(test)]
 mod complex_tests;
@@ -1431,6 +1432,10 @@ pub struct ComplexPrelude {
     /// (`complex/leibniz.rs`). Owns its own names for the same reason
     /// [`Self::poly`] does.
     pub leibniz: leibniz::LeibnizNames,
+    /// Closure of `Complex.UniformlyContinuousOn` under `+` and `·`
+    /// (`complex/uc_closure.rs`). Owns its own names for the same reason
+    /// [`Self::poly`] does.
+    pub uc_closure: uc_closure::UcClosureNames,
     /// The modulus-versus-component facts (`complex/components.rs`): the
     /// embedding ℝ ↪ ℂ is an isometry, and each component is bounded by the
     /// modulus. Owns its own names for the same reason [`Self::poly`] does.
@@ -1617,6 +1622,7 @@ fn intern_names(kernel: &mut Kernel, creal: CRealPrelude) -> ComplexPrelude {
         deriv: deriv::intern_names(kernel, complex),
         estimates: estimates::intern_names(kernel, complex),
         leibniz: leibniz::intern_names(kernel, complex),
+        uc_closure: uc_closure::intern_names(kernel, complex),
         components: components::intern_names(kernel, complex),
         comm_ring_s: kernel.name_str(complex, "commRingS"),
     }
@@ -3865,6 +3871,28 @@ const STEPS: &[BuildStep] = &[
         // is LAST.
         provides: &[],
         run: leibniz::declare_leibniz,
+    },
+    BuildStep {
+        label: "uc_closure::declare_uc_closure",
+        requires: &[
+            |p: ComplexPrelude| p.abs,
+            |p: ComplexPrelude| p.abs_add_le,
+            |p: ComplexPrelude| p.abs_congr,
+            |p: ComplexPrelude| p.add,
+            |p: ComplexPrelude| p.complex,
+            |p: ComplexPrelude| p.equiv,
+            |p: ComplexPrelude| p.mul,
+            |p: ComplexPrelude| p.neg,
+            |p: ComplexPrelude| p.zero,
+        ],
+        // Its names live in `UcClosureNames`, so it provides nothing at hub
+        // granularity. Its dependence on `deriv::declare_derivative` (for
+        // `Complex.InDisc`) and `estimates::declare_estimates` (for
+        // `UniformlyContinuousOn`, its two projections, and
+        // `abs_mul_le_of_bounds`) is enforced by position: this entry is
+        // AFTER both.
+        provides: &[],
+        run: uc_closure::declare_uc_closure,
     },
     BuildStep {
         label: "components::declare_components",
