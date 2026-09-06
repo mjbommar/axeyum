@@ -133,11 +133,13 @@ use crate::nat_prelude::structures::{
 use crate::prelude::LogicPrelude;
 
 pub mod qplane;
+pub mod rplane;
 
 #[cfg(test)]
 mod geo_tests;
 
 pub use qplane::QPlaneNames;
+pub use rplane::RPlaneNames;
 
 // ---------------------------------------------------------------------------
 // Field indices. Index a field through these, never with a bare integer.
@@ -675,6 +677,10 @@ pub struct GeoPrelude {
     /// The rational coordinate plane, the model that proves these axioms
     /// consistent.
     pub qplane: QPlaneNames,
+
+    /// The **real** coordinate plane — the second model, the one ADR-1635
+    /// shaped `apart` for. See [`rplane`].
+    pub rplane: RPlaneNames,
 }
 
 /// Pre-compute every name this module declares.
@@ -705,6 +711,7 @@ pub(crate) fn intern(kernel: &mut Kernel, cpoint: CPointPrelude) -> GeoPrelude {
         distinct_lines_meet_once: kernel.name_str(inc, "distinct_lines_meet_once"),
         triangle_not_collinear: kernel.name_str(inc, "triangle_not_collinear"),
         qplane: qplane::intern(kernel, geo),
+        rplane: rplane::intern(kernel, geo),
     }
 }
 
@@ -757,6 +764,7 @@ pub fn build_geo_prelude(kernel: &mut Kernel) -> Result<GeoPrelude, KernelError>
     declare_triangle_not_collinear(kernel, &logic, p)?;
 
     qplane::declare_all(kernel, p)?;
+    rplane::declare_all(kernel, p)?;
 
     Ok(p)
 }
