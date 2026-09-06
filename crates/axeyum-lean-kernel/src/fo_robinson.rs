@@ -1,0 +1,1118 @@
+//! **Robinson's Q as an `FO.Context`** (`fo_*.rs`, ADR-1651): the seven
+//! Robinson axioms written down over the signature `0, S, +, ·, <`, the ℕ
+//! structure that interprets that signature, `ℕ ⊨ Q`, the consistency of Q
+//! that soundness then gives for free, and the numeral arithmetic Q proves.
+//!
+//! ```text
+//! FO.natStructureQ : FO.Structure Nat
+//! FO.Q.axSuccNeZero, FO.Q.axSuccInj, FO.Q.axCases,
+//! FO.Q.axAddZero, FO.Q.axAddSucc, FO.Q.axMulZero, FO.Q.axMulSucc : FO.Formula
+//! FO.Q : FO.Context
+//! FO.Q.natModels : Π (v : Nat -> Nat), FO.ctxSat Nat FO.natStructureQ FO.Q v
+//! FO.Q.consistency : Not (FO.Provable FO.Q FO.Formula.bot)
+//! FO.Term.subst_numeral : Π s n, Eq FO.Term (FO.Term.subst (numeral n) s) (numeral n)
+//! ```
+//!
+//! ## The signature, and why `FO.natStructure` could NOT be the model
+//!
+//! `fo_syntax.rs` gives `Nat`-indexed families of function symbols at arities
+//! `0, 1, 2`. This slice fixes the five Robinson symbols inside those families:
+//!
+//! | symbol | term | interpreted in `FO.natStructureQ` as |
+//! | --- | --- | --- |
+//! | `0` | `FO.Term.f0 0` | `Nat.zero` |
+//! | `S t` | `FO.Term.f1 1 t` | `Nat.succ` |
+//! | `a + b` | `FO.Term.f2 0 a b` | `Nat.add` |
+//! | `a · b` | `FO.Term.f2 1 a b` | `Nat.mul` |
+//! | `a < b` | `FO.Formula.rel2 0 a b` | `Nat.lt` |
+//!
+//! The `0` and `S` rows are forced, not chosen: `FO.Term.numeral`
+//! (`fo_roundtrip.rs`) is `Nat.rec` with base `FO.Term.f0 0` and step
+//! `FO.Term.f1 1`, so the numerals of THIS signature are exactly the numerals
+//! the arithmetization already codes. Choosing any other pair would have made
+//! the eventual bridge to `FO.Code.diagAux_code` a translation rather than an
+//! identity.
+//!
+//! `FO.natStructure` (`fo_semantics.rs`) cannot be the model, and this is a
+//! measured obstruction rather than a preference: its binary family is
+//! `fn2 k x y := Nat.add (Nat.add x y) k`, i.e. `x + y + k` at **every** index
+//! `k`. No index of that family is multiplication, so `·` has no
+//! interpretation there and `Q6`/`Q7` are not merely unproved but
+//! unsatisfiable-by-construction. `FO.natStructureQ` therefore dispatches on
+//! the symbol index,
+//!
+//! ```text
+//! fn2 := fun k x y => Nat.rec.{1} (motive := fun _ => Nat)
+//!                       (Nat.add x y) (fun _ _ => Nat.mul x y) k
+//! ```
+//!
+//! so `fn2 0` ι-reduces to `Nat.add` and `fn2 (succ _)` to `Nat.mul`. The
+//! other four families are `FO.natStructure`'s verbatim, which is what keeps
+//! `fn1 1 = Nat.succ` and `rel2 0 = Nat.lt` definitional.
+//!
+//! ## Both `fo_*` chains, in one kernel, for the first time
+//!
+//! `fo_syntax.rs` has two descendant chains — `semantics → provable →
+//! soundness` and `code → numbering → decode → roundtrip` — and each `build_*`
+//! entry point rebuilds the whole chain beneath it, so calling two of them on
+//! one kernel fails at `FO.Term` with `KernelError::DeclarationExists`. This
+//! slice needs BOTH (`FO.Provable` from one, `FO.Term.numeral` from the
+//! other), so `fo_semantics.rs`, `fo_provable.rs` and `fo_soundness.rs` each
+//! gained a `declare_*_over` entry point that takes the already-built
+//! dependency, in the shape `fo_substitution.rs` already used. Nothing else
+//! about those files changed, and the three `build_*_prelude` functions keep
+//! their signatures and their behaviour.
+//!
+//! ## The seven axioms
+//!
+//! De Bruijn indices, so `all (all φ)` has the OUTER variable at index `1`:
+//!
+//! ```text
+//! axSuccNeZero := all (imp (eqf (S (var 0)) 0) bot)
+//! axSuccInj    := all (all (imp (eqf (S (var 1)) (S (var 0))) (eqf (var 1) (var 0))))
+//! axCases      := all (or_ (eqf (var 0) 0) (ex (eqf (var 1) (S (var 0)))))
+//! axAddZero    := all (eqf (var 0 + 0) (var 0))
+//! axAddSucc    := all (all (eqf (var 1 + S (var 0)) (S (var 1 + var 0))))
+//! axMulZero    := all (eqf (var 0 · 0) 0)
+//! axMulSucc    := all (all (eqf (var 1 · S (var 0)) (var 1 · var 0 + var 1)))
+//! ```
+//!
+//! `axCases` is stated as the **disjunction** `x = 0 ∨ ∃y. x = S y`, not as
+//! the classically equivalent `¬(x = 0) → ∃y. x = S y`. This kernel has no
+//! `Classical.em`, so the two are genuinely different formulas here, and the
+//! disjunction is the stronger one — it is what ℕ actually satisfies
+//! constructively (by `Nat.rec`), and the weaker form is derivable from it.
+//! Taking the weaker one would have been a silent weakening of Q.
+//!
+//! `<` is in the signature and is interpreted, but none of the seven axioms
+//! mentions it: that is Robinson's Q as usually presented (Q1–Q7), where the
+//! order is a definitional extension rather than a primitive. Nothing in this
+//! slice uses `rel2`.
+//!
+//! ## `ℕ ⊨ Q`, and consistency for free
+//!
+//! Each of the seven satisfaction obligations is one line, and four of them
+//! are `Eq.refl`, because `Nat.add` and `Nat.mul` recurse on their RIGHT
+//! argument in this kernel — so `x + 0 = x`, `x + S y = S (x + y)`,
+//! `x · 0 = 0` and `x · S y = x · y + x` are the DEFINING equations, i.e.
+//! exactly Q4–Q7. `axSuccNeZero` is `Nat.succ_ne_zero`, `axSuccInj` is
+//! `Nat.succ_injective`, and `axCases` is a two-case `Nat.rec` that discards
+//! its induction hypothesis.
+//!
+//! `FO.Q.consistency` is then `FO.soundness` at `FO.natStructureQ` with the
+//! constant-zero valuation, exactly as `FO.consistency` is at the empty
+//! context: a derivation of `⊥` from Q would give `FO.sat _ _ bot _`, which
+//! ι-reduces to `False`. The ℕ structure is doing the work — an arbitrary
+//! structure would not do, because its carrier could be empty and the argument
+//! still needs a valuation `Nat -> M`.
+//!
+//! ## The one lemma the de Bruijn encoding forces
+//!
+//! ```text
+//! FO.Term.subst_numeral : Π (s : Nat -> FO.Term) (n : Nat),
+//!      Eq FO.Term (FO.Term.subst (FO.Term.numeral n) s) (FO.Term.numeral n)
+//! ```
+//!
+//! `FO.Provable.all_elim`'s conclusion is
+//! `Formula.subst p (Subst.cons t Subst.id)`, an UNREDUCED application. When
+//! `t` is a closed term of literal constructors that reduces away; when `t` is
+//! `FO.Term.numeral a` for a **symbolic** `a` it does not, because
+//! `FO.Term.numeral` is a `Nat.rec` stuck on `a`. `FO.Term.subst_numeral` is
+//! the lemma that unsticks it, and it is a two-case `Nat.rec` whose successor
+//! case is `Eq` congruence under `FO.Term.f1 1` (`Term.subst` ι-reduces
+//! through every constructor, so only the numeral itself is stuck).
+
+// The mathematical variables in this group are the ones the literature uses --
+// `M`/`S` for a structure, `w`/`v` for a valuation, `s` for a substitution,
+// `t` for a term, `p`/`q` for formulas, `g` for a context, `n`/`k` for de
+// Bruijn indices. Renaming them to satisfy `many_single_char_names` /
+// `similar_names` would make every proof term harder to check against the
+// semantics it encodes, which is the only thing that matters here. Same
+// judgement, same wording, as `fo_soundness.rs`.
+#![allow(clippy::many_single_char_names)]
+#![allow(clippy::similar_names)]
+// `LogicPrelude` and `NatPrelude` are `Copy` structs of `NameId`s threaded by
+// value through every combinator, exactly as the rest of this crate does.
+#![allow(clippy::large_types_passed_by_value)]
+#![allow(clippy::too_many_arguments)]
+#![allow(clippy::too_many_lines)]
+
+use crate::build_fo_roundtrip_prelude;
+use crate::fo_provable::declare_fo_provable_over;
+use crate::fo_provable::{CalcNames, cons_app, provable_app};
+use crate::fo_semantics::declare_fo_semantics_over;
+use crate::fo_soundness::declare_fo_soundness_over;
+use crate::fo_syntax::SyntaxNames;
+use crate::fo_syntax::{apply_all, arrow, gcongr, geq, grefl, lam_fv, lams, pi_fv};
+use crate::{
+    BinderInfo, Declaration, ExprId, FoRoundTripPrelude, FoSoundnessPrelude, KernelError, LevelId,
+    LogicPrelude, NameId, NatPrelude, ReducibilityHint,
+};
+
+/// Names produced by [`build_fo_robinson_prelude`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct FoRobinsonPrelude {
+    /// The arithmetization chain (`FO.Term.numeral`, `FO.Code.diagAux_code`).
+    pub roundtrip: FoRoundTripPrelude,
+    /// The calculus and its soundness, built over the SAME `fo_syntax`.
+    pub soundness: FoSoundnessPrelude,
+
+    // --- the model -----------------------------------------------------------
+    /// `FO.natStructureQ : FO.Structure Nat` — ℕ with `+` at `f2 0` and `·` at
+    /// `f2 1`.
+    pub nat_structure_q: NameId,
+
+    // --- the seven axioms ----------------------------------------------------
+    /// `FO.Q.axSuccNeZero : FO.Formula` — `∀x, ¬(S x = 0)`.
+    pub ax_succ_ne_zero: NameId,
+    /// `FO.Q.axSuccInj : FO.Formula` — `∀x∀y, S x = S y → x = y`.
+    pub ax_succ_inj: NameId,
+    /// `FO.Q.axCases : FO.Formula` — `∀x, x = 0 ∨ ∃y, x = S y`.
+    pub ax_cases: NameId,
+    /// `FO.Q.axAddZero : FO.Formula` — `∀x, x + 0 = x`.
+    pub ax_add_zero: NameId,
+    /// `FO.Q.axAddSucc : FO.Formula` — `∀x∀y, x + S y = S (x + y)`.
+    pub ax_add_succ: NameId,
+    /// `FO.Q.axMulZero : FO.Formula` — `∀x, x · 0 = 0`.
+    pub ax_mul_zero: NameId,
+    /// `FO.Q.axMulSucc : FO.Formula` — `∀x∀y, x · S y = x · y + x`.
+    pub ax_mul_succ: NameId,
+
+    // --- the theory and its model -------------------------------------------
+    /// `FO.Q : FO.Context` — the seven axioms, in the order above.
+    pub q: NameId,
+    /// `FO.Q.natModels : Π v, FO.ctxSat Nat FO.natStructureQ FO.Q v`.
+    pub nat_models: NameId,
+    /// `FO.Q.consistency : Not (FO.Provable FO.Q FO.Formula.bot)`.
+    pub consistency: NameId,
+
+    // --- the substitution lemma numerals need --------------------------------
+    /// `FO.Term.subst_numeral` — a numeral is closed, so substitution fixes it.
+    pub subst_numeral: NameId,
+}
+
+/// The shared names every builder below threads.
+struct Rob {
+    syn: SyntaxNames,
+    calc: CalcNames,
+    logic: LogicPrelude,
+    nat: NatPrelude,
+    /// The `FO.Q` namespace (which is also the context's own name).
+    q_ns: NameId,
+    nat_ty: ExprId,
+    term_ty: ExprId,
+    formula_ty: ExprId,
+    /// `Nat -> Nat`, the type of a valuation into the ℕ structure.
+    val_ty: ExprId,
+    /// `Nat -> FO.Term`, the type of a parallel substitution.
+    subst_ty: ExprId,
+    zero_lvl: LevelId,
+    one: LevelId,
+    /// `FO.Term.numeral`, from the arithmetization chain.
+    numeral: NameId,
+    /// `FO.Term.subst`, from `fo_syntax.rs`.
+    term_subst: NameId,
+    /// `FO.Structure`, `FO.sat` and `FO.ctxSat`.
+    structure: NameId,
+    sat: NameId,
+    ctx_sat: NameId,
+}
+
+/// A monotone supply of free-variable ids, disjoint from every other `fo_*`
+/// block (ADR-1651 owns the `1_651_xxx` range).
+struct Fv(u64);
+
+impl Fv {
+    fn next(&mut self) -> u64 {
+        self.0 += 1;
+        self.0
+    }
+}
+
+// ============================================================================
+// Small combinators over the Robinson signature.
+// ============================================================================
+
+impl Rob {
+    /// The unary `Nat` literal `Nat.succ^n Nat.zero`. Only ever called at `0`
+    /// and `1` — the two symbol indices this signature uses.
+    fn nat_lit(&self, kernel: &mut crate::Kernel, n: u32) -> ExprId {
+        let mut e = kernel.const_(self.nat.zero, vec![]);
+        let succ = kernel.const_(self.nat.succ, vec![]);
+        for _ in 0..n {
+            e = kernel.app(succ, e);
+        }
+        e
+    }
+
+    /// `FO.Term.var i` at a literal de Bruijn index.
+    fn tvar(&self, kernel: &mut crate::Kernel, i: u32) -> ExprId {
+        let idx = self.nat_lit(kernel, i);
+        let head = kernel.const_(self.syn.var, vec![]);
+        kernel.app(head, idx)
+    }
+
+    /// `0`, i.e. `FO.Term.f0 0`.
+    fn tzero(&self, kernel: &mut crate::Kernel) -> ExprId {
+        let idx = self.nat_lit(kernel, 0);
+        let head = kernel.const_(self.syn.f0, vec![]);
+        kernel.app(head, idx)
+    }
+
+    /// `S t`, i.e. `FO.Term.f1 1 t`.
+    fn tsucc(&self, kernel: &mut crate::Kernel, t: ExprId) -> ExprId {
+        let idx = self.nat_lit(kernel, 1);
+        let head = kernel.const_(self.syn.f1, vec![]);
+        apply_all(kernel, head, &[idx, t])
+    }
+
+    /// `a + b`, i.e. `FO.Term.f2 0 a b`.
+    fn tadd(&self, kernel: &mut crate::Kernel, a: ExprId, b: ExprId) -> ExprId {
+        let idx = self.nat_lit(kernel, 0);
+        let head = kernel.const_(self.syn.f2, vec![]);
+        apply_all(kernel, head, &[idx, a, b])
+    }
+
+    /// `a · b`, i.e. `FO.Term.f2 1 a b`.
+    fn tmul(&self, kernel: &mut crate::Kernel, a: ExprId, b: ExprId) -> ExprId {
+        let idx = self.nat_lit(kernel, 1);
+        let head = kernel.const_(self.syn.f2, vec![]);
+        apply_all(kernel, head, &[idx, a, b])
+    }
+
+    /// `FO.Term.numeral n` at a `Nat`-valued expression `n`.
+    fn tnum(&self, kernel: &mut crate::Kernel, n: ExprId) -> ExprId {
+        let head = kernel.const_(self.numeral, vec![]);
+        kernel.app(head, n)
+    }
+
+    fn f_eqf(&self, kernel: &mut crate::Kernel, a: ExprId, b: ExprId) -> ExprId {
+        let head = kernel.const_(self.syn.eqf, vec![]);
+        apply_all(kernel, head, &[a, b])
+    }
+
+    fn f_imp(&self, kernel: &mut crate::Kernel, a: ExprId, b: ExprId) -> ExprId {
+        let head = kernel.const_(self.syn.imp, vec![]);
+        apply_all(kernel, head, &[a, b])
+    }
+
+    fn f_or(&self, kernel: &mut crate::Kernel, a: ExprId, b: ExprId) -> ExprId {
+        let head = kernel.const_(self.syn.or_, vec![]);
+        apply_all(kernel, head, &[a, b])
+    }
+
+    fn f_bot(&self, kernel: &mut crate::Kernel) -> ExprId {
+        kernel.const_(self.syn.bot, vec![])
+    }
+
+    fn f_all(&self, kernel: &mut crate::Kernel, body: ExprId) -> ExprId {
+        let head = kernel.const_(self.syn.all, vec![]);
+        kernel.app(head, body)
+    }
+
+    fn f_ex(&self, kernel: &mut crate::Kernel, body: ExprId) -> ExprId {
+        let head = kernel.const_(self.syn.ex, vec![]);
+        kernel.app(head, body)
+    }
+
+    /// `Nat.add a b`.
+    fn nadd(&self, kernel: &mut crate::Kernel, a: ExprId, b: ExprId) -> ExprId {
+        let head = kernel.const_(self.nat.add, vec![]);
+        apply_all(kernel, head, &[a, b])
+    }
+
+    /// `Nat.mul a b`.
+    fn nmul(&self, kernel: &mut crate::Kernel, a: ExprId, b: ExprId) -> ExprId {
+        let head = kernel.const_(self.nat.mul, vec![]);
+        apply_all(kernel, head, &[a, b])
+    }
+
+    /// `Nat.succ n`.
+    fn nsucc(&self, kernel: &mut crate::Kernel, n: ExprId) -> ExprId {
+        let head = kernel.const_(self.nat.succ, vec![]);
+        kernel.app(head, n)
+    }
+
+    /// `Eq Nat a b`.
+    fn neq(&self, kernel: &mut crate::Kernel, a: ExprId, b: ExprId) -> ExprId {
+        let ty = self.nat_ty;
+        geq(kernel, self.logic, ty, a, b)
+    }
+
+    /// `Eq FO.Term a b`.
+    fn teq(&self, kernel: &mut crate::Kernel, a: ExprId, b: ExprId) -> ExprId {
+        let ty = self.term_ty;
+        geq(kernel, self.logic, ty, a, b)
+    }
+
+    /// `FO.Term.subst t s`.
+    fn tsubst(&self, kernel: &mut crate::Kernel, t: ExprId, s: ExprId) -> ExprId {
+        let head = kernel.const_(self.term_subst, vec![]);
+        apply_all(kernel, head, &[t, s])
+    }
+
+    /// `FO.sat Nat S p v`.
+    fn sat_of(&self, kernel: &mut crate::Kernel, s: ExprId, p: ExprId, v: ExprId) -> ExprId {
+        let head = kernel.const_(self.sat, vec![]);
+        let nat_ty = self.nat_ty;
+        apply_all(kernel, head, &[nat_ty, s, p, v])
+    }
+
+    /// `FO.ctxSat Nat S g v`.
+    fn ctx_sat_of(&self, kernel: &mut crate::Kernel, s: ExprId, g: ExprId, v: ExprId) -> ExprId {
+        let head = kernel.const_(self.ctx_sat, vec![]);
+        let nat_ty = self.nat_ty;
+        apply_all(kernel, head, &[nat_ty, s, g, v])
+    }
+}
+
+// ============================================================================
+// The build entry point.
+// ============================================================================
+
+/// Build Robinson's Q as an `FO.Context`, its ℕ model, and its consistency.
+///
+/// This is the first builder that puts BOTH `fo_*` chains in one kernel: the
+/// arithmetization (`fo_code` → `fo_roundtrip`, which owns `FO.Term.numeral`)
+/// and the calculus (`fo_semantics` → `fo_soundness`). It enters the second
+/// chain through the `declare_*_over` entry points so `fo_syntax` is built
+/// exactly once.
+///
+/// # Errors
+///
+/// Returns the [`KernelError`] from any of the underlying trusted gates if a
+/// declaration fails to admit.
+pub fn build_fo_robinson_prelude(
+    kernel: &mut crate::Kernel,
+) -> Result<FoRobinsonPrelude, KernelError> {
+    let roundtrip = build_fo_roundtrip_prelude(kernel)?;
+    let syntax = roundtrip.decode.numbering.code.syntax;
+    let semantics = declare_fo_semantics_over(kernel, syntax)?;
+    let calculus = declare_fo_provable_over(kernel, semantics)?;
+    let soundness = declare_fo_soundness_over(kernel, calculus)?;
+
+    let syn = syntax.names(kernel);
+    let calc = calculus.calc(kernel);
+    let nat = syntax.nat;
+    let logic = nat.logic;
+    let zero_lvl = kernel.level_zero();
+    let one = kernel.level_succ(zero_lvl);
+
+    let nat_ty = kernel.const_(nat.nat, vec![]);
+    let term_ty = kernel.const_(syntax.term, vec![]);
+    let formula_ty = kernel.const_(syntax.formula, vec![]);
+    let val_ty = arrow(kernel, nat_ty, nat_ty);
+    let subst_ty = arrow(kernel, nat_ty, term_ty);
+    let q_ns = kernel.name_str(syn.fo, "Q");
+
+    let r = Rob {
+        syn,
+        calc,
+        logic,
+        nat,
+        q_ns,
+        nat_ty,
+        term_ty,
+        formula_ty,
+        val_ty,
+        subst_ty,
+        zero_lvl,
+        one,
+        numeral: roundtrip.term_numeral,
+        term_subst: syntax.term_subst,
+        structure: semantics.structure,
+        sat: semantics.sat,
+        ctx_sat: calculus.ctx_sat,
+    };
+
+    let mut fv = Fv(1_651_000);
+
+    let nat_structure_q = declare_nat_structure_q(kernel, &r, semantics.structure_mk, &mut fv)?;
+    let axioms = declare_axioms(kernel, &r)?;
+    let q = declare_q_context(kernel, &r, &axioms)?;
+    let nat_models = declare_nat_models(kernel, &r, nat_structure_q, &axioms, q, &mut fv)?;
+    let consistency = declare_consistency(
+        kernel,
+        &r,
+        &soundness,
+        nat_structure_q,
+        q,
+        nat_models,
+        &mut fv,
+    )?;
+    let subst_numeral = declare_subst_numeral(kernel, &r, &mut fv)?;
+
+    Ok(FoRobinsonPrelude {
+        roundtrip,
+        soundness,
+        nat_structure_q,
+        ax_succ_ne_zero: axioms.succ_ne_zero,
+        ax_succ_inj: axioms.succ_inj,
+        ax_cases: axioms.cases,
+        ax_add_zero: axioms.add_zero,
+        ax_add_succ: axioms.add_succ,
+        ax_mul_zero: axioms.mul_zero,
+        ax_mul_succ: axioms.mul_succ,
+        q,
+        nat_models,
+        consistency,
+        subst_numeral,
+    })
+}
+
+/// The seven axiom names, in the order `FO.Q` conses them.
+struct Axioms {
+    succ_ne_zero: NameId,
+    succ_inj: NameId,
+    cases: NameId,
+    add_zero: NameId,
+    add_succ: NameId,
+    mul_zero: NameId,
+    mul_succ: NameId,
+}
+
+impl Axioms {
+    /// The seven names in context order, so index `i` is the `i`th `cons`.
+    fn ordered(&self) -> [NameId; 7] {
+        [
+            self.succ_ne_zero,
+            self.succ_inj,
+            self.cases,
+            self.add_zero,
+            self.add_succ,
+            self.mul_zero,
+            self.mul_succ,
+        ]
+    }
+}
+
+// ============================================================================
+// The ℕ structure for the Robinson signature.
+// ============================================================================
+
+/// `FO.natStructureQ : FO.Structure Nat`.
+///
+/// Four of the five families are `FO.natStructure`'s verbatim; `fn2` is the
+/// one that changes, and it dispatches on the symbol index so that `f2 0` is
+/// `Nat.add` and `f2 (succ _)` is `Nat.mul`.
+fn declare_nat_structure_q(
+    kernel: &mut crate::Kernel,
+    r: &Rob,
+    structure_mk: NameId,
+    fv: &mut Fv,
+) -> Result<NameId, KernelError> {
+    let nat_ty = r.nat_ty;
+
+    // fn0 := fun k => k
+    let i_fn0 = {
+        let k_id = fv.next();
+        let k = kernel.fvar(k_id);
+        lam_fv(kernel, k_id, nat_ty, k)
+    };
+    // fn1 := fun k x => Nat.add x k -- so `f1 1` is `Nat.succ`, definitionally
+    let i_fn1 = {
+        let k_id = fv.next();
+        let x_id = fv.next();
+        let k = kernel.fvar(k_id);
+        let x = kernel.fvar(x_id);
+        let body = r.nadd(kernel, x, k);
+        lams(kernel, &[(k_id, nat_ty), (x_id, nat_ty)], body)
+    };
+    // fn2 := fun k x y => Nat.rec.{1} (fun _ => Nat) (x + y) (fun _ _ => x * y) k
+    let i_fn2 = {
+        let k_id = fv.next();
+        let x_id = fv.next();
+        let y_id = fv.next();
+        let k = kernel.fvar(k_id);
+        let x = kernel.fvar(x_id);
+        let y = kernel.fvar(y_id);
+        let motive = {
+            let anon = kernel.anon();
+            kernel.lam(anon, nat_ty, nat_ty, BinderInfo::Default)
+        };
+        let base = r.nadd(kernel, x, y);
+        let step = {
+            let j_id = fv.next();
+            let ih_id = fv.next();
+            let product = r.nmul(kernel, x, y);
+            lams(kernel, &[(j_id, nat_ty), (ih_id, nat_ty)], product)
+        };
+        let rec = kernel.const_(r.nat.rec, vec![r.one]);
+        let applied = apply_all(kernel, rec, &[motive, base, step, k]);
+        lams(
+            kernel,
+            &[(k_id, nat_ty), (x_id, nat_ty), (y_id, nat_ty)],
+            applied,
+        )
+    };
+    // rel1 := fun k x => Nat.lt k x
+    let i_rel1 = {
+        let k_id = fv.next();
+        let x_id = fv.next();
+        let k = kernel.fvar(k_id);
+        let x = kernel.fvar(x_id);
+        let lt = kernel.const_(r.nat.lt, vec![]);
+        let body = apply_all(kernel, lt, &[k, x]);
+        lams(kernel, &[(k_id, nat_ty), (x_id, nat_ty)], body)
+    };
+    // rel2 := fun k x y => Nat.lt (Nat.add x k) y -- so `rel2 0` is `Nat.lt`
+    let i_rel2 = {
+        let k_id = fv.next();
+        let x_id = fv.next();
+        let y_id = fv.next();
+        let k = kernel.fvar(k_id);
+        let x = kernel.fvar(x_id);
+        let y = kernel.fvar(y_id);
+        let xk = r.nadd(kernel, x, k);
+        let lt = kernel.const_(r.nat.lt, vec![]);
+        let body = apply_all(kernel, lt, &[xk, y]);
+        lams(
+            kernel,
+            &[(k_id, nat_ty), (x_id, nat_ty), (y_id, nat_ty)],
+            body,
+        )
+    };
+
+    let mk = kernel.const_(structure_mk, vec![]);
+    let value = apply_all(kernel, mk, &[nat_ty, i_fn0, i_fn1, i_fn2, i_rel1, i_rel2]);
+
+    let structure_const = kernel.const_(r.structure, vec![]);
+    let ty = kernel.app(structure_const, nat_ty);
+
+    let name = kernel.name_str(r.syn.fo, "natStructureQ");
+    kernel.add_declaration(Declaration::Definition {
+        name,
+        uparams: vec![],
+        ty,
+        value,
+        hint: ReducibilityHint::Regular(0),
+    })?;
+    Ok(name)
+}
+
+// ============================================================================
+// The seven axioms and the context.
+// ============================================================================
+
+fn declare_formula(
+    kernel: &mut crate::Kernel,
+    r: &Rob,
+    label: &str,
+    value: ExprId,
+) -> Result<NameId, KernelError> {
+    let name = kernel.name_str(r.q_ns, label);
+    let ty = r.formula_ty;
+    kernel.add_declaration(Declaration::Definition {
+        name,
+        uparams: vec![],
+        ty,
+        value,
+        hint: ReducibilityHint::Regular(0),
+    })?;
+    Ok(name)
+}
+
+/// The seven Robinson axioms, each a closed `FO.Formula`.
+fn declare_axioms(kernel: &mut crate::Kernel, r: &Rob) -> Result<Axioms, KernelError> {
+    // Q1: all (imp (eqf (S (var 0)) 0) bot)
+    let succ_ne_zero = {
+        let x = r.tvar(kernel, 0);
+        let sx = r.tsucc(kernel, x);
+        let zero = r.tzero(kernel);
+        let atom = r.f_eqf(kernel, sx, zero);
+        let bot = r.f_bot(kernel);
+        let body = r.f_imp(kernel, atom, bot);
+        let value = r.f_all(kernel, body);
+        declare_formula(kernel, r, "axSuccNeZero", value)?
+    };
+    // Q2: all (all (imp (eqf (S (var 1)) (S (var 0))) (eqf (var 1) (var 0))))
+    let succ_inj = {
+        let x = r.tvar(kernel, 1);
+        let y = r.tvar(kernel, 0);
+        let sx = r.tsucc(kernel, x);
+        let sy = r.tsucc(kernel, y);
+        let hyp = r.f_eqf(kernel, sx, sy);
+        let x2 = r.tvar(kernel, 1);
+        let y2 = r.tvar(kernel, 0);
+        let concl = r.f_eqf(kernel, x2, y2);
+        let body = r.f_imp(kernel, hyp, concl);
+        let inner = r.f_all(kernel, body);
+        let value = r.f_all(kernel, inner);
+        declare_formula(kernel, r, "axSuccInj", value)?
+    };
+    // Q3: all (or_ (eqf (var 0) 0) (ex (eqf (var 1) (S (var 0)))))
+    let cases = {
+        let x = r.tvar(kernel, 0);
+        let zero = r.tzero(kernel);
+        let left = r.f_eqf(kernel, x, zero);
+        let outer = r.tvar(kernel, 1);
+        let inner_var = r.tvar(kernel, 0);
+        let s_inner = r.tsucc(kernel, inner_var);
+        let atom = r.f_eqf(kernel, outer, s_inner);
+        let right = r.f_ex(kernel, atom);
+        let body = r.f_or(kernel, left, right);
+        let value = r.f_all(kernel, body);
+        declare_formula(kernel, r, "axCases", value)?
+    };
+    // Q4: all (eqf (var 0 + 0) (var 0))
+    let add_zero = {
+        let x = r.tvar(kernel, 0);
+        let zero = r.tzero(kernel);
+        let lhs = r.tadd(kernel, x, zero);
+        let rhs = r.tvar(kernel, 0);
+        let body = r.f_eqf(kernel, lhs, rhs);
+        let value = r.f_all(kernel, body);
+        declare_formula(kernel, r, "axAddZero", value)?
+    };
+    // Q5: all (all (eqf (var 1 + S (var 0)) (S (var 1 + var 0))))
+    let add_succ = {
+        let x = r.tvar(kernel, 1);
+        let y = r.tvar(kernel, 0);
+        let sy = r.tsucc(kernel, y);
+        let lhs = r.tadd(kernel, x, sy);
+        let x2 = r.tvar(kernel, 1);
+        let y2 = r.tvar(kernel, 0);
+        let sum = r.tadd(kernel, x2, y2);
+        let rhs = r.tsucc(kernel, sum);
+        let body = r.f_eqf(kernel, lhs, rhs);
+        let inner = r.f_all(kernel, body);
+        let value = r.f_all(kernel, inner);
+        declare_formula(kernel, r, "axAddSucc", value)?
+    };
+    // Q6: all (eqf (var 0 * 0) 0)
+    let mul_zero = {
+        let x = r.tvar(kernel, 0);
+        let zero = r.tzero(kernel);
+        let lhs = r.tmul(kernel, x, zero);
+        let rhs = r.tzero(kernel);
+        let body = r.f_eqf(kernel, lhs, rhs);
+        let value = r.f_all(kernel, body);
+        declare_formula(kernel, r, "axMulZero", value)?
+    };
+    // Q7: all (all (eqf (var 1 * S (var 0)) (var 1 * var 0 + var 1)))
+    let mul_succ = {
+        let x = r.tvar(kernel, 1);
+        let y = r.tvar(kernel, 0);
+        let sy = r.tsucc(kernel, y);
+        let lhs = r.tmul(kernel, x, sy);
+        let x2 = r.tvar(kernel, 1);
+        let y2 = r.tvar(kernel, 0);
+        let product = r.tmul(kernel, x2, y2);
+        let x3 = r.tvar(kernel, 1);
+        let rhs = r.tadd(kernel, product, x3);
+        let body = r.f_eqf(kernel, lhs, rhs);
+        let inner = r.f_all(kernel, body);
+        let value = r.f_all(kernel, inner);
+        declare_formula(kernel, r, "axMulSucc", value)?
+    };
+
+    Ok(Axioms {
+        succ_ne_zero,
+        succ_inj,
+        cases,
+        add_zero,
+        add_succ,
+        mul_zero,
+        mul_succ,
+    })
+}
+
+/// The context tail after the first `from` axioms — `FO.Context.nil` at
+/// `from = 7`.
+fn axiom_tail(kernel: &mut crate::Kernel, r: &Rob, axioms: &Axioms, from: usize) -> ExprId {
+    let ordered = axioms.ordered();
+    let mut acc = kernel.const_(r.calc.nil, vec![]);
+    for &name in ordered[from..].iter().rev() {
+        let head = kernel.const_(name, vec![]);
+        acc = cons_app(kernel, &r.calc, head, acc);
+    }
+    acc
+}
+
+/// `FO.Q : FO.Context`.
+fn declare_q_context(
+    kernel: &mut crate::Kernel,
+    r: &Rob,
+    axioms: &Axioms,
+) -> Result<NameId, KernelError> {
+    let value = axiom_tail(kernel, r, axioms, 0);
+    let ty = r.calc.context_ty;
+    kernel.add_declaration(Declaration::Definition {
+        name: r.q_ns,
+        uparams: vec![],
+        ty,
+        value,
+        hint: ReducibilityHint::Regular(0),
+    })?;
+    Ok(r.q_ns)
+}
+
+// ============================================================================
+// ℕ ⊨ Q, and the consistency of Q.
+// ============================================================================
+
+/// `FO.Q.natModels : Π (v : Nat -> Nat), FO.ctxSat Nat FO.natStructureQ FO.Q v`.
+fn declare_nat_models(
+    kernel: &mut crate::Kernel,
+    r: &Rob,
+    nat_structure_q: NameId,
+    axioms: &Axioms,
+    q: NameId,
+    fv: &mut Fv,
+) -> Result<NameId, KernelError> {
+    let s = kernel.const_(nat_structure_q, vec![]);
+
+    let v_id = fv.next();
+    let v = kernel.fvar(v_id);
+
+    let q_const = kernel.const_(q, vec![]);
+    let goal = r.ctx_sat_of(kernel, s, q_const, v);
+    let ty = pi_fv(kernel, v_id, r.val_ty, goal);
+
+    let proofs = [
+        model_succ_ne_zero(kernel, r, fv),
+        model_succ_inj(kernel, r, fv),
+        model_cases(kernel, r, fv),
+        model_add_zero(kernel, r, fv),
+        model_add_succ(kernel, r, fv),
+        model_named_law(kernel, r, r.nat.mul_zero, LawShape::Unary, fv),
+        model_named_law(kernel, r, r.nat.mul_succ, LawShape::Binary, fv),
+    ];
+
+    let ordered = axioms.ordered();
+    let mut acc = kernel.const_(r.logic.true_intro, vec![]);
+    for index in (0..7).rev() {
+        let head_formula = kernel.const_(ordered[index], vec![]);
+        let a = r.sat_of(kernel, s, head_formula, v);
+        let tail = axiom_tail(kernel, r, axioms, index + 1);
+        let b = r.ctx_sat_of(kernel, s, tail, v);
+        let intro = kernel.const_(r.logic.and_intro, vec![]);
+        acc = apply_all(kernel, intro, &[a, b, proofs[index], acc]);
+    }
+    let value = lam_fv(kernel, v_id, r.val_ty, acc);
+
+    let name = kernel.name_str(r.q_ns, "natModels");
+    kernel.add_declaration(Declaration::Theorem {
+        name,
+        uparams: vec![],
+        ty,
+        value,
+    })?;
+    Ok(name)
+}
+
+/// Whether a defining law quantifies one or two variables.
+#[derive(Clone, Copy)]
+enum LawShape {
+    Unary,
+    Binary,
+}
+
+/// Q4 in ℕ: `fun x => Eq.refl Nat x`. The goal `fn2 0 x (fn0 0) = x` ι-reduces
+/// to `Nat.add x Nat.zero = x`, and `Nat.add` recurses on its right argument.
+fn model_add_zero(kernel: &mut crate::Kernel, r: &Rob, fv: &mut Fv) -> ExprId {
+    let nat_ty = r.nat_ty;
+    let x_id = fv.next();
+    let x = kernel.fvar(x_id);
+    let body = grefl(kernel, r.logic, nat_ty, x);
+    lam_fv(kernel, x_id, nat_ty, body)
+}
+
+/// Q5 in ℕ: `fun x y => Eq.refl Nat (Nat.succ (Nat.add x y))`.
+fn model_add_succ(kernel: &mut crate::Kernel, r: &Rob, fv: &mut Fv) -> ExprId {
+    let nat_ty = r.nat_ty;
+    let x_id = fv.next();
+    let y_id = fv.next();
+    let x = kernel.fvar(x_id);
+    let y = kernel.fvar(y_id);
+    let sum = r.nadd(kernel, x, y);
+    let target = r.nsucc(kernel, sum);
+    let body = grefl(kernel, r.logic, nat_ty, target);
+    lams(kernel, &[(x_id, nat_ty), (y_id, nat_ty)], body)
+}
+
+/// `fun x => law x` / `fun x y => law x y`, for a `Nat` defining equation that
+/// is already a theorem (`Nat.mul_zero`, `Nat.mul_succ`).
+fn model_named_law(
+    kernel: &mut crate::Kernel,
+    r: &Rob,
+    law: NameId,
+    shape: LawShape,
+    fv: &mut Fv,
+) -> ExprId {
+    let nat_ty = r.nat_ty;
+    let head = kernel.const_(law, vec![]);
+    match shape {
+        LawShape::Unary => {
+            let x_id = fv.next();
+            let x = kernel.fvar(x_id);
+            let body = kernel.app(head, x);
+            lam_fv(kernel, x_id, nat_ty, body)
+        }
+        LawShape::Binary => {
+            let x_id = fv.next();
+            let y_id = fv.next();
+            let x = kernel.fvar(x_id);
+            let y = kernel.fvar(y_id);
+            let body = apply_all(kernel, head, &[x, y]);
+            lams(kernel, &[(x_id, nat_ty), (y_id, nat_ty)], body)
+        }
+    }
+}
+
+/// Q1 in ℕ: `fun x h => Nat.succ_ne_zero x h`. The hypothesis binder is
+/// written in the reduced form the goal presents (`Eq Nat (Nat.succ x) 0`).
+fn model_succ_ne_zero(kernel: &mut crate::Kernel, r: &Rob, fv: &mut Fv) -> ExprId {
+    let nat_ty = r.nat_ty;
+    let x_id = fv.next();
+    let h_id = fv.next();
+    let x = kernel.fvar(x_id);
+    let h = kernel.fvar(h_id);
+    let sx = r.nsucc(kernel, x);
+    let zero = kernel.const_(r.nat.zero, vec![]);
+    let hyp_ty = r.neq(kernel, sx, zero);
+    let head = kernel.const_(r.nat.succ_ne_zero, vec![]);
+    let body = apply_all(kernel, head, &[x, h]);
+    let inner = lam_fv(kernel, h_id, hyp_ty, body);
+    lam_fv(kernel, x_id, nat_ty, inner)
+}
+
+/// Q2 in ℕ: `fun x y h => Nat.succ_injective x y h`.
+fn model_succ_inj(kernel: &mut crate::Kernel, r: &Rob, fv: &mut Fv) -> ExprId {
+    let nat_ty = r.nat_ty;
+    let x_id = fv.next();
+    let y_id = fv.next();
+    let h_id = fv.next();
+    let x = kernel.fvar(x_id);
+    let y = kernel.fvar(y_id);
+    let h = kernel.fvar(h_id);
+    let sx = r.nsucc(kernel, x);
+    let sy = r.nsucc(kernel, y);
+    let hyp_ty = r.neq(kernel, sx, sy);
+    let head = kernel.const_(r.nat.succ_injective, vec![]);
+    let body = apply_all(kernel, head, &[x, y, h]);
+    let inner = lam_fv(kernel, h_id, hyp_ty, body);
+    lams(kernel, &[(x_id, nat_ty), (y_id, nat_ty)], inner)
+}
+
+/// Q3 in ℕ: `∀x, x = 0 ∨ ∃y, x = S y`, by a two-case `Nat.rec` that discards
+/// its induction hypothesis (this is a CASE ANALYSIS, and `Nat.rec` is how
+/// this kernel spells one).
+fn model_cases(kernel: &mut crate::Kernel, r: &Rob, fv: &mut Fv) -> ExprId {
+    let nat_ty = r.nat_ty;
+
+    let disjunction = |kernel: &mut crate::Kernel, n: ExprId, y_id: u64| -> ExprId {
+        let zero = kernel.const_(r.nat.zero, vec![]);
+        let left = r.neq(kernel, n, zero);
+        let y = kernel.fvar(y_id);
+        let sy = r.nsucc(kernel, y);
+        let eq = r.neq(kernel, n, sy);
+        let predicate = lam_fv(kernel, y_id, nat_ty, eq);
+        let exists_head = kernel.const_(r.logic.exists_, vec![r.one]);
+        let right = apply_all(kernel, exists_head, &[nat_ty, predicate]);
+        let or_head = kernel.const_(r.logic.or, vec![]);
+        apply_all(kernel, or_head, &[left, right])
+    };
+    let sides = |kernel: &mut crate::Kernel, n: ExprId, y_id: u64| -> (ExprId, ExprId, ExprId) {
+        let zero = kernel.const_(r.nat.zero, vec![]);
+        let left = r.neq(kernel, n, zero);
+        let y = kernel.fvar(y_id);
+        let sy = r.nsucc(kernel, y);
+        let eq = r.neq(kernel, n, sy);
+        let predicate = lam_fv(kernel, y_id, nat_ty, eq);
+        let exists_head = kernel.const_(r.logic.exists_, vec![r.one]);
+        let right = apply_all(kernel, exists_head, &[nat_ty, predicate]);
+        (left, right, predicate)
+    };
+
+    let motive = {
+        let n_id = fv.next();
+        let y_id = fv.next();
+        let n = kernel.fvar(n_id);
+        let body = disjunction(kernel, n, y_id);
+        lam_fv(kernel, n_id, nat_ty, body)
+    };
+
+    let base = {
+        let y_id = fv.next();
+        let zero = kernel.const_(r.nat.zero, vec![]);
+        let (left, right, _) = sides(kernel, zero, y_id);
+        let zero2 = kernel.const_(r.nat.zero, vec![]);
+        let refl = grefl(kernel, r.logic, nat_ty, zero2);
+        let inl = kernel.const_(r.logic.or_inl, vec![]);
+        apply_all(kernel, inl, &[left, right, refl])
+    };
+
+    let step = {
+        let k_id = fv.next();
+        let ih_id = fv.next();
+        let y_id = fv.next();
+        let ih_y_id = fv.next();
+        let k = kernel.fvar(k_id);
+        let sk = r.nsucc(kernel, k);
+        let (left, right, predicate) = sides(kernel, sk, y_id);
+        let refl = grefl(kernel, r.logic, nat_ty, sk);
+        let intro = kernel.const_(r.logic.exists_intro, vec![r.one]);
+        let witnessed = apply_all(kernel, intro, &[nat_ty, predicate, k, refl]);
+        let inr = kernel.const_(r.logic.or_inr, vec![]);
+        let body = apply_all(kernel, inr, &[left, right, witnessed]);
+        let ih_ty = disjunction(kernel, k, ih_y_id);
+        let inner = lam_fv(kernel, ih_id, ih_ty, body);
+        lam_fv(kernel, k_id, nat_ty, inner)
+    };
+
+    let x_id = fv.next();
+    let x = kernel.fvar(x_id);
+    let rec = kernel.const_(r.nat.rec, vec![r.zero_lvl]);
+    let applied = apply_all(kernel, rec, &[motive, base, step, x]);
+    lam_fv(kernel, x_id, nat_ty, applied)
+}
+
+/// `FO.Q.consistency : Not (FO.Provable FO.Q FO.Formula.bot)`.
+fn declare_consistency(
+    kernel: &mut crate::Kernel,
+    r: &Rob,
+    soundness: &FoSoundnessPrelude,
+    nat_structure_q: NameId,
+    q: NameId,
+    nat_models: NameId,
+    fv: &mut Fv,
+) -> Result<NameId, KernelError> {
+    let nat_ty = r.nat_ty;
+    let s = kernel.const_(nat_structure_q, vec![]);
+    let q_const = kernel.const_(q, vec![]);
+    let bot = r.f_bot(kernel);
+
+    let d_id = fv.next();
+    let junk_id = fv.next();
+    let d = kernel.fvar(d_id);
+
+    let valuation = {
+        let zero = kernel.const_(r.nat.zero, vec![]);
+        lam_fv(kernel, junk_id, nat_ty, zero)
+    };
+    let hypothesis = {
+        let head = kernel.const_(nat_models, vec![]);
+        kernel.app(head, valuation)
+    };
+
+    let head = kernel.const_(soundness.soundness, vec![]);
+    let body = apply_all(
+        kernel,
+        head,
+        &[nat_ty, s, q_const, bot, d, valuation, hypothesis],
+    );
+
+    let deriv_ty = provable_app(kernel, &r.calc, q_const, bot);
+    let value = lam_fv(kernel, d_id, deriv_ty, body);
+    let ty = {
+        let not_const = kernel.const_(r.logic.not, vec![]);
+        kernel.app(not_const, deriv_ty)
+    };
+
+    let name = kernel.name_str(r.q_ns, "consistency");
+    kernel.add_declaration(Declaration::Theorem {
+        name,
+        uparams: vec![],
+        ty,
+        value,
+    })?;
+    Ok(name)
+}
+
+// ============================================================================
+// The substitution lemma numerals force.
+// ============================================================================
+
+/// `FO.Term.subst_numeral : Π (s : Nat -> FO.Term) (n : Nat),
+///   Eq FO.Term (FO.Term.subst (FO.Term.numeral n) s) (FO.Term.numeral n)`.
+///
+/// A `Nat.rec` on `n`. The base case is `Eq.refl` (`Term.subst (f0 0) s`
+/// ι-reduces to `f0 0`), and the successor case is congruence under
+/// `FO.Term.f1 1` applied to the induction hypothesis, because
+/// `Term.subst (f1 1 t) s` ι-reduces to `f1 1 (Term.subst t s)`.
+fn declare_subst_numeral(
+    kernel: &mut crate::Kernel,
+    r: &Rob,
+    fv: &mut Fv,
+) -> Result<NameId, KernelError> {
+    let nat_ty = r.nat_ty;
+    let subst_ty = r.subst_ty;
+
+    let claim = |kernel: &mut crate::Kernel, n: ExprId, s: ExprId| -> ExprId {
+        let num = r.tnum(kernel, n);
+        let lhs = r.tsubst(kernel, num, s);
+        let rhs = r.tnum(kernel, n);
+        r.teq(kernel, lhs, rhs)
+    };
+
+    let s_id = fv.next();
+    let s = kernel.fvar(s_id);
+
+    let motive = {
+        let n_id = fv.next();
+        let n = kernel.fvar(n_id);
+        let body = claim(kernel, n, s);
+        lam_fv(kernel, n_id, nat_ty, body)
+    };
+
+    let base = {
+        let zero = kernel.const_(r.nat.zero, vec![]);
+        let target = r.tnum(kernel, zero);
+        grefl(kernel, r.logic, r.term_ty, target)
+    };
+
+    let step = {
+        let k_id = fv.next();
+        let ih_id = fv.next();
+        let cong_fv = fv.next();
+        let k = kernel.fvar(k_id);
+        let ih = kernel.fvar(ih_id);
+        let num_k = r.tnum(kernel, k);
+        let lhs = r.tsubst(kernel, num_k, s);
+        let rhs = r.tnum(kernel, k);
+        let term_ty = r.term_ty;
+        let congruence = gcongr(
+            kernel,
+            r.logic,
+            term_ty,
+            term_ty,
+            lhs,
+            rhs,
+            ih,
+            &|kernel, t| r.tsucc(kernel, t),
+            cong_fv,
+        );
+        let ih_ty = claim(kernel, k, s);
+        let inner = lam_fv(kernel, ih_id, ih_ty, congruence);
+        lam_fv(kernel, k_id, nat_ty, inner)
+    };
+
+    let n_id = fv.next();
+    let n = kernel.fvar(n_id);
+    let rec = kernel.const_(r.nat.rec, vec![r.zero_lvl]);
+    let applied = apply_all(kernel, rec, &[motive, base, step, n]);
+    let value = {
+        let inner = lam_fv(kernel, n_id, nat_ty, applied);
+        lam_fv(kernel, s_id, subst_ty, inner)
+    };
+    let ty = {
+        let n_id2 = fv.next();
+        let n2 = kernel.fvar(n_id2);
+        let body = claim(kernel, n2, s);
+        let inner = pi_fv(kernel, n_id2, nat_ty, body);
+        pi_fv(kernel, s_id, subst_ty, inner)
+    };
+
+    let name = kernel.name_str(r.syn.term, "subst_numeral");
+    kernel.add_declaration(Declaration::Theorem {
+        name,
+        uparams: vec![],
+        ty,
+        value,
+    })?;
+    Ok(name)
+}
+
+#[cfg(test)]
+mod tests;
