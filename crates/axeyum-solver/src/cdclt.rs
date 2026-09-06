@@ -1305,7 +1305,7 @@ impl CdclT {
     pub fn solve<T: TheorySolver>(&mut self, theory: &mut T) -> Outcome {
         let outcome = self.solve_inner(theory);
         if self.collect_layer_stats {
-            let stats = self.theory_layer_stats();
+            let stats = self.theory_layer_stats(theory);
             LAST_THEORY_LAYER_STATS.with(|c| c.set(Some(stats)));
         }
         outcome
@@ -1316,7 +1316,8 @@ impl CdclT {
     /// accumulated stage timings and counters into the typed, named
     /// [`TheoryLayerStats`] a caller can compare or print, exactly as
     /// `BvLayerStats` lifts the `sat-bv` backend's counters.
-    fn theory_layer_stats(&self) -> TheoryLayerStats {
+    fn theory_layer_stats<T: TheorySolver>(&self, theory: &T) -> TheoryLayerStats {
+        let engine = theory.engine_counters();
         TheoryLayerStats {
             boolean_propagate: self.time_boolean_propagate,
             theory_assert: self.time_theory_assert,
@@ -1334,10 +1335,16 @@ impl CdclT {
             #[allow(clippy::cast_possible_truncation)]
             decisions: self.decisions as u64,
             restarts: self.restarts(),
-            // The generic `TheorySolver` trait has no pivot-count method
-            // (D2, 2026-09-05 architecture review); a concrete simplex-backed
-            // theory would need to expose one before this can be `Some`.
-            simplex_pivots: None,
+            // S4 wired `TheorySolver::engine_counters`; a theory that keeps no
+            // feasibility engine still reports `None` here rather than zero.
+            simplex_pivots: engine.map(|e| e.simplex_pivots),
+            simplex_checks: engine.map(|e| e.simplex_checks),
+            simplex_cold_restarts: engine.map(|e| e.simplex_cold_restarts),
+            bound_retractions: engine.map(|e| e.bound_retractions),
+            bound_assertions: engine.map(|e| e.bound_assertions),
+            theory_propagations_offered: engine.map(|e| e.propagations),
+            simplex_rows: engine.map(|e| e.simplex_rows),
+            simplex_columns: engine.map(|e| e.simplex_columns),
         }
     }
 

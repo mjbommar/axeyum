@@ -322,6 +322,12 @@ struct Tableau {
     /// Farkas certificate; [`farkas_holds`] rejects any candidate that puts a
     /// nonzero multiplier on one.
     rel_rhs: Vec<Option<(Rel, Rational)>>,
+    /// Pivots performed over this tableau's whole life, across every
+    /// [`Tableau::run`]. Diagnostic only — nothing branches on it. It is what
+    /// makes "does the basis persist between checks?" a measurement rather than
+    /// a reading of the source: a warm engine's pivots-per-check falls while its
+    /// check count rises, a cold one's does not.
+    total_pivots: u64,
 }
 
 impl Tableau {
@@ -342,6 +348,7 @@ impl Tableau {
             is_basic: vec![false; n],
             rows_sparse,
             rel_rhs,
+            total_pivots: 0,
         };
         t.reset_structure();
         t
@@ -532,6 +539,7 @@ impl Tableau {
             } else {
                 self.upper[b].expect("violated upper ⇒ bound exists")
             };
+            self.total_pivots += 1;
             self.pivot_and_update(r, j, target)?;
         }
     }
@@ -565,12 +573,47 @@ impl Tableau {
 
     /// Pivot nonbasic `enter` into the basis in row `r` (whose current basic var
     /// `leave` moves to nonbasic at value `target`), then repair all rows.
+    ///
+    /// # Cost, and why the value repair is not a recompute (S4)
+    ///
+    /// This is Dutertre–de Moura's `pivotAndUpdate`. The **row** rewrite is
+    /// inherently `O(rows × columns)` for a dense tableau, but the **value**
+    /// repair is only `O(rows)`: the entering variable moves by
+    /// `θ = (target − β(leave)) / a_re`, so every other basic variable moves by
+    /// `a_{i,enter} · θ` with `a_{i,enter}` read from the tableau *before* the
+    /// elimination zeroes that column. Recomputing every basic value from its
+    /// row instead — which this function did until S4 — is a second
+    /// `O(rows × columns)` pass in `ℚ(δ)` (two rationals per cell, so the more
+    /// expensive of the two halves), spent re-deriving numbers the update
+    /// already determines.
+    ///
+    /// That is not a micro-optimisation here: measured on
+    /// `QF_LRA/2019-ezsmt/blending/1.smt2` the tableau is 350 × 425, one pivot
+    /// cost 1.41 ms, and `final_check` was 21.7 s of a 24 s budget across 6,571
+    /// checks at 2.3 pivots each. The counters that establish it are
+    /// [`Incremental::pivots`], [`Incremental::checks`] and
+    /// [`Incremental::cold_restarts`] — the last of which read `0`, i.e. the
+    /// basis was already persisting between checks and pivot *count* was never
+    /// the problem.
     // The pivot rewrites parallel dense rows by column index `v`, indexing several
     // arrays at once — a plain range loop is the clearest form here.
     #[allow(clippy::needless_range_loop)]
     fn pivot_and_update(&mut self, r: usize, enter: usize, target: Delta) -> R<()> {
         let leave = self.basic[r];
         let a_re = self.row[r][enter];
+        let recip = div(Rational::integer(1), a_re)?;
+
+        // The entering variable's column as it stands BEFORE the elimination
+        // below zeroes it. Both the row rewrite and the O(rows) value update read
+        // it, and the update must see the *old* coefficients.
+        let col: Vec<Rational> = (0..self.m).map(|i| self.row[i][enter]).collect();
+
+        // How far `enter` must move so that `leave` reaches `target`:
+        //   leave_old = value[leave]; enter changes by θ; leave changes by a_re·θ,
+        //   so θ = (target - value[leave]) / a_re. Read from the OLD values.
+        let theta = target.sub(self.value[leave])?.scale(recip)?;
+        let enter_new = self.value[enter].add(theta)?;
+
         // Solve row r for `enter`:  leave = Σ a_rv·v  ⇒
         //   enter = (leave - Σ_{v≠enter} a_rv·v) / a_re, i.e. rewrite the row.
         // New row (for the now-basic `enter`): coefficient of `leave` becomes 1/a_re,
@@ -583,61 +626,94 @@ impl Tableau {
             if v == leave {
                 continue;
             }
-            new_row[v] = sub(Rational::zero(), div(self.row[r][v], a_re)?)?;
+            let a = self.row[r][v];
+            if a.is_zero() {
+                // `new_row[v]` is already zero; skipping saves an exact division
+                // per zero cell, and a tableau row is mostly zeros.
+                continue;
+            }
+            new_row[v] = sub(Rational::zero(), div(a, a_re)?)?;
         }
-        new_row[leave] = div(Rational::integer(1), a_re)?;
+        new_row[leave] = recip;
         // `enter` becomes basic in row r; `leave` becomes nonbasic.
         self.row[r] = new_row;
         self.basic[r] = enter;
         self.is_basic[enter] = true;
         self.is_basic[leave] = false;
 
-        // Determine how far `enter` must move so that `leave` reaches `target`.
-        //   leave_old = value[leave]; enter changes by θ; leave changes by a_re·θ.
-        //   want leave_new = target ⇒ θ = (target - value[leave]) / a_re.
-        let recip = div(Rational::integer(1), a_re)?;
-        let theta = target.sub(self.value[leave])?.scale(recip)?;
-        let enter_new = self.value[enter].add(theta)?;
-
-        // Substitute `enter`'s new expression into every OTHER row and update values.
+        // Substitute `enter`'s new expression into every OTHER row.
         // The pivot row is cloned ONCE, not per affected row — at a few thousand
-        // columns the per-row clone was the dominant cost of a pivot.
+        // columns the per-row clone was the dominant cost of a pivot — and only its
+        // NONZERO columns are visited: adding `coeff · 0` is an exact multiply and
+        // add that provably cannot change the cell.
         let base = self.row[r].clone();
+        let base_nz: Vec<usize> = (0..self.n).filter(|&v| !base[v].is_zero()).collect();
         for i in 0..self.m {
             if i == r {
                 continue;
             }
-            let coeff = self.row[i][enter];
+            let coeff = col[i];
             if coeff.is_zero() {
                 continue;
             }
             // row_i := row_i + coeff · new_row (eliminating `enter`'s column).
-            for v in 0..self.n {
+            for &v in &base_nz {
                 let delta = mul(coeff, base[v])?;
                 self.row[i][v] = add(self.row[i][v], delta)?;
             }
             self.row[i][enter] = Rational::zero();
         }
 
-        // Update the stored values: leave → target, enter → enter_new, and every
-        // basic variable recomputed from its (updated) row over the nonbasic vars.
+        // Values: the Dutertre–de Moura O(rows) update. `leave` lands on the bound
+        // it violated, `enter` absorbs θ, and every other basic variable moves by
+        // its OLD coefficient of `enter` times θ. This preserves the tableau
+        // invariant `value[basic[i]] = Σ_{v nonbasic} row[i][v]·value[v]`, which
+        // `tableau_invariant_holds_after_every_pivot` checks directly rather than
+        // trusting this comment.
         self.value[leave] = target;
         self.value[enter] = enter_new;
         for i in 0..self.m {
-            let bi = self.basic[i];
-            let mut acc = Delta::zero();
-            for v in 0..self.n {
-                if self.is_basic[v] {
-                    continue;
-                }
-                if self.row[i][v].is_zero() {
-                    continue;
-                }
-                acc = acc.add(self.value[v].scale(self.row[i][v])?)?;
+            if i == r {
+                continue;
             }
-            self.value[bi] = acc;
+            let coeff = col[i];
+            if coeff.is_zero() {
+                continue;
+            }
+            let b = self.basic[i];
+            self.value[b] = self.value[b].add(theta.scale(coeff)?)?;
         }
         Ok(())
+    }
+
+    /// Whether every basic variable's cached value equals its row evaluated over
+    /// the nonbasic variables — the invariant the pivot's `O(rows)` value update
+    /// maintains in place of a full recompute. Test-only.
+    ///
+    /// An arithmetic decline answers `true`: this checks the update, not the
+    /// arithmetic, and a promoted-value overflow is a separate, already-handled
+    /// path.
+    #[cfg(test)]
+    fn value_invariant_holds(&self) -> bool {
+        for i in 0..self.m {
+            let mut acc = Delta::zero();
+            for v in 0..self.n {
+                if self.is_basic[v] || self.row[i][v].is_zero() {
+                    continue;
+                }
+                let Ok(term) = self.value[v].scale(self.row[i][v]) else {
+                    return true;
+                };
+                let Ok(next) = acc.add(term) else {
+                    return true;
+                };
+                acc = next;
+            }
+            if self.value[self.basic[i]].cmp(acc) != core::cmp::Ordering::Equal {
+                return false;
+            }
+        }
+        true
     }
 
     /// Materialize a concrete rational point from the current (feasible) δ-assignment
@@ -819,6 +895,12 @@ pub struct Incremental {
     /// Set when an overflow left [`Tableau::value`] inconsistent; the next `check`
     /// rebuilds before deciding anything.
     poisoned: bool,
+    /// Completed [`Incremental::check`] calls. Diagnostic only.
+    checks: u64,
+    /// Checks that had to discard the basis and restart from the pristine one
+    /// (the `poisoned` recovery path). Diagnostic only, and the number that
+    /// distinguishes a genuinely warm engine from one silently rebuilding.
+    cold_restarts: u64,
 }
 
 impl Incremental {
@@ -837,6 +919,8 @@ impl Incremental {
         Some(Incremental {
             tab: Tableau::new_rows(nvars, rows_sparse),
             poisoned: false,
+            checks: 0,
+            cold_restarts: 0,
         })
     }
 
@@ -870,7 +954,9 @@ impl Incremental {
     /// Re-decides feasibility of the currently-bounded rows, warm-starting from the
     /// present basis.
     pub fn check(&mut self, deadline: Option<Instant>) -> Status {
+        self.checks += 1;
         if self.poisoned {
+            self.cold_restarts += 1;
             // Recover: pristine basis, bounds preserved, values recomputed.
             self.tab.reset_structure();
             for v in 0..self.tab.n {
@@ -895,6 +981,35 @@ impl Incremental {
                 Status::Unknown
             }
         }
+    }
+
+    /// Pivots this engine has performed over its whole life, across every
+    /// [`Incremental::check`]. Diagnostic only — no decision reads it.
+    #[must_use]
+    pub fn pivots(&self) -> u64 {
+        self.tab.total_pivots
+    }
+
+    /// Completed [`Incremental::check`] calls. Diagnostic only.
+    #[must_use]
+    pub fn checks(&self) -> u64 {
+        self.checks
+    }
+
+    /// Total columns of the dense tableau (`nvars + rows`). Diagnostic only;
+    /// paired with [`Incremental::rows`] it is what prices one pivot, which is
+    /// `O(rows × columns)` rational operations.
+    #[must_use]
+    pub fn columns(&self) -> u64 {
+        self.tab.n as u64
+    }
+
+    /// Checks that discarded the basis and restarted from the pristine one.
+    /// Diagnostic only; a nonzero value means the engine was **not** warm for
+    /// that many checks.
+    #[must_use]
+    pub fn cold_restarts(&self) -> u64 {
+        self.cold_restarts
     }
 
     /// A concrete rational point for the problem variables after a
@@ -1237,6 +1352,87 @@ mod tests {
             let span = u64::try_from(hi - lo + 1).unwrap();
             lo + i128::from(self.next() % span)
         }
+    }
+
+    /// The `O(rows)` value update inside [`Tableau::pivot_and_update`] must leave
+    /// the tableau invariant `β(basic[i]) = Σ_{v nonbasic} row[i][v]·β(v)` true
+    /// after **every single pivot**, not merely at the end of a run — that
+    /// invariant is what the removed `O(rows × columns)` recompute used to
+    /// re-establish by brute force (S4).
+    ///
+    /// The pivot loop is stepped one pivot at a time (`budget = 1`) and the
+    /// invariant checked between steps, over random systems in both the feasible
+    /// and infeasible directions. Deleting the value-update loop, or reading the
+    /// entering column *after* the elimination has zeroed it, makes this fail.
+    #[test]
+    fn tableau_invariant_holds_after_every_pivot() {
+        let mut pivots_observed = 0u32;
+        let mut systems_with_pivots = 0u32;
+        for seed in 0..300u64 {
+            let mut rng = Lcg(seed
+                .wrapping_mul(6_364_136_223_846_793_005)
+                .wrapping_add(1_442_695_040_888_963_407));
+            let nvars = usize::try_from(rng.in_range(2, 4)).unwrap();
+            let ncon = usize::try_from(rng.in_range(2, 6)).unwrap();
+            let mut cs: Vec<Constraint> = Vec::with_capacity(ncon);
+            for _ in 0..ncon {
+                let coeffs: Vec<Rational> = (0..nvars).map(|_| r(rng.in_range(-3, 3))).collect();
+                let rel = match rng.in_range(0, 4) {
+                    0 => Rel::Le,
+                    1 => Rel::Ge,
+                    2 => Rel::Eq,
+                    3 => Rel::Lt,
+                    _ => Rel::Gt,
+                };
+                cs.push(Constraint {
+                    coeffs,
+                    rel,
+                    rhs: r(rng.in_range(-4, 4)),
+                });
+            }
+            let mut tab = Tableau::new(nvars, &cs);
+            for v in 0..tab.n {
+                if tab.clamp_nonbasic(v).is_err() {
+                    break;
+                }
+            }
+            assert!(
+                tab.value_invariant_holds(),
+                "seed {seed}: invariant broken before any pivot"
+            );
+            let mut steps = 0u32;
+            loop {
+                let before = tab.total_pivots;
+                match tab.run(None, 1) {
+                    Ok(RunOutcome::Feasible | RunOutcome::Infeasible(_)) | Err(Overflow) => break,
+                    Ok(RunOutcome::Unknown) => {}
+                }
+                if tab.total_pivots > before {
+                    pivots_observed += 1;
+                    if steps == 0 {
+                        systems_with_pivots += 1;
+                    }
+                }
+                assert!(
+                    tab.value_invariant_holds(),
+                    "seed {seed}: tableau invariant broken after pivot {steps}"
+                );
+                steps += 1;
+                if steps > 64 {
+                    break;
+                }
+            }
+        }
+        // A vacuous pass — every system feasible at the pristine basis, so no pivot
+        // ever ran — would check nothing. Require real pivots on real systems.
+        assert!(
+            pivots_observed > 100,
+            "only {pivots_observed} pivots exercised; the invariant check is near-vacuous"
+        );
+        assert!(
+            systems_with_pivots > 20,
+            "only {systems_with_pivots} systems pivoted at all"
+        );
     }
 
     /// Adversarial differential: `simplex::feasible` must agree on sat/unsat with the

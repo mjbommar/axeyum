@@ -66,7 +66,8 @@ use axeyum_ir::{
 
 use crate::backend::{CheckResult, SolverConfig, SolverError, UnknownKind, UnknownReason};
 use crate::euf_egraph::{
-    FinalCheckOutcome, PropagationQueue, TheoryExplanation, TheoryLit, TheoryProp, TheorySolver,
+    FinalCheckOutcome, PropagationQueue, TheoryEngineCounters, TheoryExplanation, TheoryLit,
+    TheoryProp, TheorySolver,
 };
 use crate::model::Model;
 use crate::simplex;
@@ -254,6 +255,14 @@ struct SimplexEngine {
     /// row means the live system is not representable here and [`SimplexEngine::sync`]
     /// declines rather than silently dropping the earlier bound.
     row_bounded: Vec<bool>,
+    /// Rows [`SimplexEngine::sync`] has retracted over this engine's whole life.
+    /// Diagnostic only (S4): with a persistent bound stack this stays far below
+    /// `checks × rows`, which is what distinguishes a warm reconciliation from a
+    /// rebuild.
+    sync_retractions: u64,
+    /// Rows [`SimplexEngine::sync`] has (re-)asserted over its whole life.
+    /// Diagnostic only (S4).
+    sync_assertions: u64,
 }
 
 impl SimplexEngine {
@@ -285,6 +294,7 @@ impl SimplexEngine {
                 .expect("non-empty above the shared prefix");
             self.inner.retract(row);
             self.row_bounded[row] = false;
+            self.sync_retractions += 1;
         }
         for c in &live[shared..] {
             let Some((row, rel, rhs)) = c.row else {
@@ -296,6 +306,7 @@ impl SimplexEngine {
             self.inner.assert_bound(row, rel, rhs);
             self.row_bounded[row] = true;
             self.active.push((row, rel, rhs));
+            self.sync_assertions += 1;
         }
         true
     }
@@ -379,6 +390,10 @@ pub struct LraTheory {
     /// the bound slot that constraint overwrote, so `pop` restores the bound
     /// tables in lockstep with `live.truncate`.
     bound_log: Vec<Option<BoundUndo>>,
+    /// Literals this theory has offered to the driver's propagation queue.
+    /// Diagnostic only (S4) — the counter that answers "does `propagate` return
+    /// anything for `LraTheory`?" with a number instead of a reading.
+    propagations_offered: u64,
 }
 
 /// A one-variable bound currently asserted, with the atom that imposed it — the
@@ -480,6 +495,7 @@ impl LraTheory {
             bound_lower: vec![None; nvars],
             bound_upper: vec![None; nvars],
             bound_log: Vec::new(),
+            propagations_offered: 0,
         })
     }
 
@@ -658,7 +674,7 @@ impl LraTheory {
     /// per atom, no simplex probe — and it replaces the negation probe while the
     /// complete decision is deferred. Only genuinely-entailed literals are
     /// emitted: an inconclusive comparison yields nothing.
-    fn propagate_bounds(&self, queue: &mut PropagationQueue) {
+    fn propagate_bounds(&mut self, queue: &mut PropagationQueue) {
         for atom in 0..self.atoms.len() {
             if past_deadline(self.deadline) {
                 return;
@@ -705,13 +721,15 @@ impl LraTheory {
                 if held.atom == atom {
                     continue;
                 }
+                let reason_atom = held.atom;
                 queue.push_eager(
                     TheoryLit { atom, value },
                     vec![TheoryLit {
-                        atom: held.atom,
+                        atom: reason_atom,
                         value: reason_value,
                     }],
                 );
+                self.propagations_offered += 1;
                 break;
             }
         }
@@ -728,6 +746,25 @@ impl LraTheory {
     #[must_use]
     pub(crate) fn real_model(&self) -> Option<Model> {
         self.model(&self.vars)
+    }
+
+    /// The engine counters behind [`TheorySolver::engine_counters`] (S4).
+    /// Diagnostic only; `None` when this instance runs on Fourier–Motzkin
+    /// because the warm engine declined to exist.
+    #[must_use]
+    pub(crate) fn engine_counters(&self) -> Option<TheoryEngineCounters> {
+        let cell = self.simplex.as_ref()?;
+        let engine = cell.borrow();
+        Some(TheoryEngineCounters {
+            simplex_pivots: engine.inner.pivots(),
+            simplex_checks: engine.inner.checks(),
+            simplex_cold_restarts: engine.inner.cold_restarts(),
+            bound_retractions: engine.sync_retractions,
+            bound_assertions: engine.sync_assertions,
+            propagations: self.propagations_offered,
+            simplex_rows: engine.inner.rows() as u64,
+            simplex_columns: engine.inner.columns(),
+        })
     }
 
     /// Whether atom `index` is an LRA order/equality atom this theory tracks.
@@ -1079,7 +1116,12 @@ impl TheorySolver for LraTheory {
         }
         for prop in LraTheory::propagate(self) {
             queue.push_eager(prop.lit, prop.reason);
+            self.propagations_offered += 1;
         }
+    }
+
+    fn engine_counters(&self) -> Option<TheoryEngineCounters> {
+        LraTheory::engine_counters(self)
     }
 }
 
@@ -1167,6 +1209,8 @@ fn build_simplex_engine(atoms: &mut [AtomKind], nvars: usize) -> Option<SimplexE
         row_atom,
         active: Vec::new(),
         row_bounded,
+        sync_retractions: 0,
+        sync_assertions: 0,
     })
 }
 
@@ -3446,6 +3490,7 @@ fn run_online_diag(arena: &TermArena, assertions: &[TermId]) -> Option<OnlineDia
         bound_lower: vec![None; nvars],
         bound_upper: vec![None; nvars],
         bound_log: Vec::new(),
+        propagations_offered: 0,
     };
     let mut solver = Dpll::new(enc.var_count, atom_count, clauses);
     let _ = solver.solve(&mut theory);
@@ -4353,6 +4398,7 @@ mod tests {
             bound_lower: vec![None; nvars],
             bound_upper: vec![None; nvars],
             bound_log: Vec::new(),
+            propagations_offered: 0,
         };
         let solver = Dpll::new(enc.var_count, atom_count, clauses);
         (solver, theory)
