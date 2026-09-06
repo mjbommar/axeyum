@@ -37,41 +37,46 @@
 //!   why the continuous MGF route is [`crate::laplace_transform`] evaluated at
 //!   `s = −t` (its *own* variable is `s`; the transform never needs to parse
 //!   `t` as a coefficient) rather than a raw `∫ e^{tx}·f(x)`.
-//! - **`Σ k·cᵏ` cannot be limited to `∞`, even after independently re-verifying
-//!   a hand-cancelled antidifference.** [`crate::gosper_sum`] finds a valid
-//!   telescoping antidifference `S(k)` for `k·pq^k` (re-verified here via
-//!   [`crate::equal`] on the telescoping identity itself, independently of the
-//!   producer — see `geometric_mean_and_variance_decline_but_recorded_reason`),
-//!   but the raw `S(k)` carries an unreduced `k/k` factor that [`crate::limit`]
-//!   cannot resolve, and it still cannot after cancelling that factor by hand.
-//!   So `Geometric`'s **mean and variance decline**, for *every* `p`, concrete
-//!   or symbolic — not a parameter-concreteness issue at all. This is recorded
-//!   here as a genuine capability gap, not hidden behind a fallback.
-//! - **`λᵏ/k!` is not Gosper-summable.** [`crate::gosper_sum`] returns `None`
-//!   for `λᵏ/k!` at both a concrete `λ` (`3`) and a symbolic one: there is no
-//!   hypergeometric closed-form antidifference (the underlying reason `eˣ`'s
-//!   Taylor tail has no telescoping form). So **every** `Poisson` quantity
-//!   (mass, mean, variance, mgf) is uncertified through this crate's summation
-//!   machinery, for any `λ`. The closed forms reported are the standard ones,
-//!   labelled accordingly.
-//! - **`integrate_gaussian` requires `√a` rational.** For a pdf normalized as
-//!   `e^{−x²/(2σ²)}`, `a = 1/(2σ²)`; `σ² = 1` (the textbook `Normal(0,1)`) gives
-//!   `a = 1/2`, whose square root is irrational, so the erf-antiderivative
-//!   finder declines — for total mass, mean, *and* variance, not just the mgf.
-//!   `σ² = 1/2` gives `a = 1` (`√a = 1`, rational) and everything but the mgf
-//!   certifies. This module therefore reports the **honest decline** for
-//!   `Normal(0,1)` exactly as anticipated, and a second, certifying concrete
-//!   instance to demonstrate the route actually works when the crate's own
-//!   precondition holds.
-//! - **The Poisson⊕Poisson convolution identity *does* have a general
-//!   certificate** — not from [`crate::infinite_sum`] (which cannot even certify
-//!   a single Poisson's own total mass) but from [`crate::prove_wz_sum`], the
-//!   Wilf–Zeilberger prover: `Σⱼ C(k,j)·λ₁ʲ·λ₂ᵏ⁻ʲ = (λ₁+λ₂)ᵏ` for *every* `k`,
-//!   proved symbolically in `k` for concrete `λ₁, λ₂` (a genuinely different,
-//!   stronger machine than the one this module's own `Poisson::total_mass`
-//!   uses, which is why the convolution's closed-form match certifies while
-//!   the underlying single-Poisson total mass does not — recorded honestly,
-//!   not smoothed over).
+//! - **`Σ (j+1)·p·qʲ` certifies; the earlier `k/k` report was a spelling, not a
+//!   gap.** [`crate::gosper_sum`]'s *geometric* path returns a pole-free
+//!   antidifference `X(k)·qᵏ` for `(j+1)·p·qʲ`, and [`crate::limit`] resolves it
+//!   at `∞`; only the *rational* Gosper reconstruction carries the removable
+//!   `1/p(k)` pole that was reported as an unresolvable `k/k`. Re-measured
+//!   here: `Geometric`'s **mean and variance certify** for concrete `p` through
+//!   [`crate::infinite_sum`] on the reindexed summand (`j = k−1`, which is what
+//!   puts the geometric factor in the machinery's own `exp(j·ln q)`
+//!   convention). A *symbolic* `p` still declines, and for the reason
+//!   `total_mass` already gave: the convergence test needs a concrete ratio to
+//!   decide `|1−p| < 1`.
+//! - **`λᵏ/k!` is not Gosper-summable — so it goes through the recognized
+//!   exponential series instead.** [`crate::gosper_sum`] genuinely returns
+//!   `None` (no hypergeometric antidifference exists; `eˣ`'s Taylor tail has no
+//!   telescoping form), so [`crate::infinite_sum`] falls through to its
+//!   exponential-series route: `∑_{k≥0} P(k)·μᵏ/k! = e^μ·∑ⱼ (Δʲ P(0)/j!)·μʲ`,
+//!   resting on the single base identity `∑ k^{(j)}·μᵏ/k! = μʲ·e^μ` with **both**
+//!   steps that reach it decided by [`crate::equal`] — the shape reconstruction
+//!   and the falling-factorial expansion of `P`. All four `Poisson` quantities
+//!   (mass, mean, variance, mgf) now certify, for symbolic `λ` and symbolic `t`
+//!   alike; the mgf works because `e^{t·k}·λᵏ` is one exponential factor of rate
+//!   `t + ln λ`, so `t` is never read as a polynomial coefficient. Near-miss
+//!   summands (`λᵏ/(k!·(k+1))`, the misindexed `λᵏ/(k−1)!`) are refused, not
+//!   read as `e^λ`.
+//! - **`integrate_gaussian` no longer requires `√a` rational.** It completes the
+//!   square with a symbolic `√a`, and the differentiate-and-check certificate
+//!   closes because [`crate::prove_derivative`] retries under
+//!   [`crate::simplify_radicals`], which now distributes an exponent over a
+//!   product carrying a surd — that is what puts the erf derivative's
+//!   `exp(−(√a·(x+d))²)` and the integrand's `exp(−a·x²−…)` in one atom. So
+//!   `Normal(0,1)` (`σ² = 1`, `a = 1/2`) certifies total mass, mean **and**
+//!   variance. An upward Gaussian (`a ≤ 0`) still declines: it is not an erf.
+//!   The `Normal` **mgf** still declines, and for the unrelated symbolic-`t`
+//!   reason above.
+//! - **The Poisson⊕Poisson convolution identity has its own, independent
+//!   certificate** from [`crate::prove_wz_sum`], the Wilf–Zeilberger prover:
+//!   `Σⱼ C(k,j)·λ₁ʲ·λ₂ᵏ⁻ʲ = (λ₁+λ₂)ᵏ` for *every* `k`, proved symbolically in
+//!   `k` for concrete `λ₁, λ₂`. It is a different machine from the exponential
+//!   series `Poisson::total_mass` now uses, so the two are genuine cross-checks
+//!   rather than one route reported twice.
 //!
 //! # Trust model
 //!
@@ -112,8 +117,10 @@ pub enum Route {
     /// [`crate::definite_sum`]'s telescoping certificate over a finite,
     /// symbolic-bound range.
     DefiniteSum,
-    /// [`crate::infinite_sum`]'s telescoping-plus-limit certificate over an
-    /// unbounded discrete support.
+    /// [`crate::infinite_sum`] over an unbounded discrete support: its
+    /// telescoping-plus-limit certificate, or — for the `λᵏ/k!` family, which has
+    /// no antidifference — its recognized exponential series, whose two
+    /// obligations are themselves decided by [`equal`].
     InfiniteSum,
     /// [`crate::improper_integrate`]'s certified antiderivative/limit route
     /// over a continuous support.
@@ -408,11 +415,25 @@ impl Discrete {
                     ),
                 }
             }
-            Discrete::Poisson(lambda) => Certificate::uncertified(
-                CasExpr::one(),
-                Route::InfiniteSum,
-                poisson_decline_reason(lambda),
-            ),
+            Discrete::Poisson(lambda) => {
+                let index = free_index(&[lambda], &[]);
+                let summand = poisson_summand(lambda, &index);
+                let mass = infinite_sum_certificate(
+                    &summand,
+                    &index,
+                    CasExpr::one(),
+                    "Poisson total-mass",
+                );
+                if mass.is_certified() {
+                    mass
+                } else {
+                    Certificate::uncertified(
+                        CasExpr::one(),
+                        Route::InfiniteSum,
+                        poisson_decline_reason(lambda),
+                    )
+                }
+            }
         }
     }
 
@@ -478,17 +499,34 @@ impl Discrete {
             }
             Discrete::Geometric(p) => {
                 let target = CasExpr::one() / p.clone();
-                Certificate::uncertified(
-                    target,
-                    Route::InfiniteSum,
-                    geometric_moment_decline_reason(),
-                )
+                let Some(p_val) = as_concrete(p) else {
+                    return Certificate::uncertified(
+                        target,
+                        Route::InfiniteSum,
+                        geometric_symbolic_p_reason(),
+                    );
+                };
+                let index = free_index(&[p], &[]);
+                // E[X] = Σ_{j≥0} (j+1)·p·qʲ under the reindexing j = k−1.
+                let weight = CasExpr::var(&index) + CasExpr::one();
+                let summand = geometric_moment_summand(p_val, &index, &weight);
+                infinite_sum_certificate(&summand, &index, target, "Geometric mean")
             }
-            Discrete::Poisson(lambda) => Certificate::uncertified(
-                lambda.clone(),
-                Route::InfiniteSum,
-                poisson_decline_reason(lambda),
-            ),
+            Discrete::Poisson(lambda) => {
+                let index = free_index(&[lambda], &[]);
+                let summand = CasExpr::var(&index) * poisson_summand(lambda, &index);
+                let mean =
+                    infinite_sum_certificate(&summand, &index, lambda.clone(), "Poisson mean");
+                if mean.is_certified() {
+                    mean
+                } else {
+                    Certificate::uncertified(
+                        lambda.clone(),
+                        Route::InfiniteSum,
+                        poisson_decline_reason(lambda),
+                    )
+                }
+            }
         }
     }
 
@@ -505,19 +543,55 @@ impl Discrete {
             Discrete::Binomial { n, p } => self.binomial_variance(*n, p),
             Discrete::DiscreteUniform { a, b } => discrete_uniform_variance(*a, *b),
             Discrete::Geometric(p) => {
-                let q = CasExpr::one() - p.clone();
-                let target = q / p.clone().pow(2);
-                Certificate::uncertified(
-                    target,
-                    Route::InfiniteSum,
-                    geometric_moment_decline_reason(),
-                )
+                let target = (CasExpr::one() - p.clone()) / p.clone().pow(2);
+                let Some(p_val) = as_concrete(p) else {
+                    return Certificate::uncertified(
+                        target,
+                        Route::InfiniteSum,
+                        geometric_symbolic_p_reason(),
+                    );
+                };
+                let index = free_index(&[p], &[]);
+                let shifted = CasExpr::var(&index) + CasExpr::one();
+                // Var[X] = E[X²] − E[X]², both sums under the reindexing j = k−1.
+                let second = infinite_sum(
+                    &geometric_moment_summand(p_val, &index, &shifted.clone().pow(2)),
+                    &index,
+                    &CasExpr::zero(),
+                );
+                let first = infinite_sum(
+                    &geometric_moment_summand(p_val, &index, &shifted),
+                    &index,
+                    &CasExpr::zero(),
+                );
+                moment_difference_certificate(second, first, target, "Geometric variance")
             }
-            Discrete::Poisson(lambda) => Certificate::uncertified(
-                lambda.clone(),
-                Route::InfiniteSum,
-                poisson_decline_reason(lambda),
-            ),
+            Discrete::Poisson(lambda) => {
+                let index = free_index(&[lambda], &[]);
+                let summand = poisson_summand(lambda, &index);
+                let second = infinite_sum(
+                    &(CasExpr::var(&index).pow(2) * summand.clone()),
+                    &index,
+                    &CasExpr::zero(),
+                );
+                let first =
+                    infinite_sum(&(CasExpr::var(&index) * summand), &index, &CasExpr::zero());
+                let variance = moment_difference_certificate(
+                    second,
+                    first,
+                    lambda.clone(),
+                    "Poisson variance",
+                );
+                if variance.is_certified() {
+                    variance
+                } else {
+                    Certificate::uncertified(
+                        lambda.clone(),
+                        Route::InfiniteSum,
+                        poisson_decline_reason(lambda),
+                    )
+                }
+            }
         }
     }
 
@@ -622,10 +696,7 @@ impl Discrete {
                      coefficient extraction, that declines)",
                 )
             }
-            Discrete::Poisson(lambda) => {
-                let target = (lambda.clone() * (CasExpr::var(t).exp() - CasExpr::one())).exp();
-                Certificate::uncertified(target, Route::InfiniteSum, poisson_decline_reason(lambda))
-            }
+            Discrete::Poisson(lambda) => poisson_mgf(lambda, t),
         }
     }
 
@@ -771,18 +842,131 @@ fn poisson_decline_reason(lambda: &CasExpr) -> String {
         "symbolic"
     };
     format!(
-        "λ^k/k! is not Gosper-summable ({which} λ): gosper_sum finds no hypergeometric \
-         antidifference (confirmed for λ=3 and for symbolic λ), so infinite_sum, and every \
-         quantity built on it, declines regardless of parameter concreteness"
+        "infinite_sum's exponential-series route declined on the ({which} λ) Poisson summand: \
+         λ^k/k! has no hypergeometric antidifference, so the value rests on the recognized \
+         series, and one of that route's two equal-decided obligations (the shape \
+         reconstruction, or the falling-factorial expansion of the polynomial weight) did not \
+         certify"
     )
 }
 
-fn geometric_moment_decline_reason() -> String {
-    "gosper_sum finds a telescoping antidifference for k·p·q^k, independently re-verified via \
-     equal on the telescoping identity itself, but the raw antidifference carries an unreduced \
-     k/k factor that the limit routine cannot resolve at k->infinity, even after cancelling \
-     that factor by hand and re-confirming the cancelled form via equal; this holds for every \
-     p, concrete or symbolic"
+/// `M(t) = E[e^{tX}] = e^{λ(e^t − 1)}` for `Poisson(λ)`, through
+/// [`crate::infinite_sum`]'s exponential series.
+///
+/// `e^{t·k}·λᵏ` is ONE exponential factor of rate `t + ln λ`, so the mgf's own
+/// symbolic `t` is never read as a polynomial coefficient — which is why this
+/// certifies where every other infinite-support discrete mgf here declines.
+fn poisson_mgf(lambda: &CasExpr, t: &str) -> Certificate {
+    let target = (lambda.clone() * (CasExpr::var(t).exp() - CasExpr::one())).exp();
+    let index = free_index(&[lambda], &[t]);
+    let summand = (CasExpr::var(&index) * CasExpr::var(t)).exp() * poisson_summand(lambda, &index);
+    let mgf = infinite_sum_certificate(&summand, &index, target.clone(), "Poisson mgf");
+    if mgf.is_certified() {
+        mgf
+    } else {
+        Certificate::uncertified(target, Route::InfiniteSum, poisson_decline_reason(lambda))
+    }
+}
+
+/// The Poisson pmf `λᵏ·e^{−λ}/k!` as a summand in the bound variable `var`, with
+/// `λᵏ` spelled `exp(var·ln λ)` — the canonical form [`crate::infinite_sum`]'s
+/// exponential-series route reads, for symbolic and concrete `λ` alike.
+fn poisson_summand(lambda: &CasExpr, var: &str) -> CasExpr {
+    let k = CasExpr::var(var);
+    let power = (k.clone() * CasExpr::Unary(UnaryFunc::Ln, Box::new(lambda.clone()))).exp();
+    let normalizer = CasExpr::Neg(Box::new(lambda.clone())).exp();
+    (power * normalizer) / (k + CasExpr::one()).gamma()
+}
+
+/// A summation index clashing with neither the parameters nor the mgf variable.
+fn free_index(parameters: &[&CasExpr], reserved: &[&str]) -> String {
+    for candidate in ["k", "j", "n", "i", "m"] {
+        if reserved.contains(&candidate) {
+            continue;
+        }
+        if parameters
+            .iter()
+            .any(|e| crate::expr_contains_var(e, candidate))
+        {
+            continue;
+        }
+        return candidate.to_string();
+    }
+    "cas_index".to_string()
+}
+
+/// Decide `Σ_{var≥0} summand = target` through [`crate::infinite_sum`], keeping an
+/// honest decline when either the summation route or the zero-test does not settle
+/// it. `subject` names the quantity in the recorded reason.
+fn infinite_sum_certificate(
+    summand: &CasExpr,
+    var: &str,
+    target: CasExpr,
+    subject: &str,
+) -> Certificate {
+    match infinite_sum(summand, var, &CasExpr::zero()) {
+        Some(value) => match equal(&value, &target) {
+            ZeroTest::Certified { equal: true, .. } => {
+                Certificate::certified(target, Route::InfiniteSum)
+            }
+            _ => Certificate::uncertified(
+                value,
+                Route::InfiniteSum,
+                format!("infinite_sum's value did not decide equal to the {subject} closed form"),
+            ),
+        },
+        None => Certificate::uncertified(
+            target,
+            Route::InfiniteSum,
+            format!("infinite_sum declined on the {subject} summand"),
+        ),
+    }
+}
+
+/// `Σ_{j≥0} weight(j)·p·(1−p)ʲ` for a concrete `p` — the `Geometric(p)` moments
+/// after the reindexing `j = k−1` that puts the support at `0, 1, 2, …` and the
+/// geometric factor in the machinery's own `exp(j·ln q)` convention.
+fn geometric_moment_summand(p: Rational, var: &str, weight: &CasExpr) -> CasExpr {
+    let j = CasExpr::var(var);
+    let q = CasExpr::one() - CasExpr::Const(p);
+    let ln_q = CasExpr::Unary(UnaryFunc::Ln, Box::new(q));
+    weight.clone() * CasExpr::Const(p) * (j * ln_q).exp()
+}
+
+/// `Var[X] = E[X²] − E[X]²` from two [`crate::infinite_sum`] values, decided
+/// against `target` by [`equal`]. Uncertified — never silently promoted — when
+/// either sum declined or the difference did not decide.
+fn moment_difference_certificate(
+    second: Option<CasExpr>,
+    first: Option<CasExpr>,
+    target: CasExpr,
+    subject: &str,
+) -> Certificate {
+    let (Some(second), Some(first)) = (second, first) else {
+        return Certificate::uncertified(
+            target,
+            Route::InfiniteSum,
+            format!("infinite_sum declined on a {subject} moment summand"),
+        );
+    };
+    let value = simplify(&(second - first.clone() * first));
+    match equal(&value, &target) {
+        ZeroTest::Certified { equal: true, .. } => {
+            Certificate::certified(target, Route::InfiniteSum)
+        }
+        _ => Certificate::uncertified(
+            value,
+            Route::InfiniteSum,
+            format!("E[X^2] - E[X]^2 did not decide equal to the {subject} closed form"),
+        ),
+    }
+}
+
+/// The reason a `Geometric` quantity declines for a **symbolic** `p`: the
+/// convergence test the summation route runs needs a concrete ratio.
+fn geometric_symbolic_p_reason() -> String {
+    "symbolic p: infinite_sum's convergence/limit check needs a concrete ratio to decide \
+     |1-p| < 1"
         .to_string()
 }
 
@@ -887,7 +1071,7 @@ impl Continuous {
             Continuous::Normal { variance, .. } => match normal_raw_moment(*variance, 0) {
                 Some(raw) => {
                     let coeff = normal_coeff(*variance);
-                    let value = simplify(&(coeff * raw));
+                    let value = simplify(&crate::simplify_radicals(&(coeff * raw)));
                     match equal(&value, &CasExpr::one()) {
                         ZeroTest::Certified { equal: true, .. } => {
                             Certificate::certified(CasExpr::one(), Route::ImproperIntegrate)
@@ -986,7 +1170,7 @@ impl Continuous {
                 Some(raw) => {
                     let coeff = normal_coeff(*variance);
                     // E[U] over the centered variable U = X - mu; E[X] = mu + E[U].
-                    let centered_mean = simplify(&(coeff * raw));
+                    let centered_mean = simplify(&crate::simplify_radicals(&(coeff * raw)));
                     let value = simplify(&(mu.clone() + centered_mean.clone()));
                     match equal(&centered_mean, &CasExpr::zero()) {
                         ZeroTest::Certified { equal: true, .. } => {
@@ -1022,7 +1206,7 @@ impl Continuous {
             Continuous::Normal { variance, .. } => match normal_raw_moment(*variance, 2) {
                 Some(raw) => {
                     let coeff = normal_coeff(*variance);
-                    let value = simplify(&(coeff * raw));
+                    let value = simplify(&crate::simplify_radicals(&(coeff * raw)));
                     match equal(&value, &CasExpr::Const(*variance)) {
                         ZeroTest::Certified { equal: true, .. } => Certificate::certified(
                             CasExpr::Const(*variance),
@@ -1272,9 +1456,10 @@ fn normal_coeff(variance: Rational) -> CasExpr {
 
 fn normal_decline_reason(variance: Rational) -> String {
     format!(
-        "integrate_gaussian requires sqrt(a) rational where a = 1/(2*variance); for \
-         variance={variance:?} this square root is irrational, so the erf-antiderivative \
-         finder declines (this is the Normal(0,1) case when variance=1, since a=1/2)"
+        "improper_integrate declined on the Gaussian moment for variance={variance:?} \
+         (a = 1/(2*variance)): the erf antiderivative accepts an irrational sqrt(a), so a \
+         decline here means the differentiate-and-check certificate or the boundary limit \
+         did not close, not that sqrt(a) is a surd"
     )
 }
 
@@ -1427,11 +1612,11 @@ fn named_convolution_match(
 /// un-normalized identity is exactly proving the pmf match). `None` if either
 /// `λ` is symbolic or the WZ prover declines.
 ///
-/// The result carries **no** `sums_to_one` claim: `Discrete::Poisson`'s own
-/// `total_mass` is itself uncertified through this crate's summation
-/// machinery (see the module doc), so this function does not claim a
-/// stronger result about the convolved distribution's total mass than a
-/// single Poisson's own `total_mass` achieves.
+/// The result carries **no** `sums_to_one` claim. That is now a scope choice
+/// rather than a shortfall: `Discrete::Poisson::total_mass` does certify (the
+/// recognized exponential series), but the convolved distribution's total mass
+/// is a different sum this function does not run, and claiming it here would
+/// report a result nothing computed.
 #[must_use]
 pub fn convolve_poisson(x: &Discrete, y: &Discrete) -> Option<Certificate> {
     let (Discrete::Poisson(l1), Discrete::Poisson(l2)) = (x, y) else {
@@ -1600,7 +1785,7 @@ mod tests {
     }
 
     // ---------------------------------------------------------------
-    // Discrete: Geometric(1/3) mean 3 (uncertified: recorded machinery gap)
+    // Discrete: Geometric(1/3) mean 3, variance 6 — all through infinite_sum
     // ---------------------------------------------------------------
 
     #[test]
@@ -1619,54 +1804,104 @@ mod tests {
     }
 
     #[test]
-    fn geometric_one_third_mean_three_uncertified() {
+    fn geometric_one_third_mean_three_and_variance_six_certify() {
         let d = Discrete::Geometric(p(1, 3));
         let mean = d.mean();
-        // The closed form is correct (1/p = 3) even though the route declined.
+        assert!(mean.is_certified(), "{mean:?}");
         assert!(matches!(
             equal(&mean.claim, &CasExpr::int(3)),
             ZeroTest::Certified { equal: true, .. }
         ));
-        assert!(
-            !mean.is_certified(),
-            "mean must be honestly uncertified: {mean:?}"
-        );
-        let Trust::Uncertified(reason) = &mean.trust else {
-            panic!("expected Uncertified");
-        };
-        assert!(reason.contains("k/k"));
+        assert!(d.verify_mean(&mean));
+
+        // Var = (1-p)/p^2 = (2/3)/(1/9) = 6.
+        let variance = d.variance();
+        assert!(variance.is_certified(), "{variance:?}");
+        assert!(matches!(
+            equal(&variance.claim, &CasExpr::int(6)),
+            ZeroTest::Certified { equal: true, .. }
+        ));
+        assert!(d.verify_variance(&variance));
+    }
+
+    #[test]
+    fn geometric_symbolic_p_moments_still_decline_on_convergence() {
+        // Not a summation gap: the convergence test needs a concrete ratio, the
+        // same reason `total_mass` gives. The claims are still the right ones.
+        let d = Discrete::Geometric(CasExpr::var("p"));
+        for cert in [d.mean(), d.variance()] {
+            assert!(!cert.is_certified(), "{cert:?}");
+            let Trust::Uncertified(reason) = &cert.trust else {
+                panic!("expected Uncertified");
+            };
+            assert!(reason.contains("concrete ratio"), "{reason}");
+        }
     }
 
     // ---------------------------------------------------------------
-    // Discrete: Poisson(3) mean 3 variance 3 (uncertified: not Gosper-summable)
+    // Discrete: Poisson — all four quantities via the recognized exp series
     // ---------------------------------------------------------------
 
     #[test]
-    fn poisson_three_mean_and_variance_three_uncertified() {
+    fn poisson_three_mass_mean_and_variance_three_certify() {
         let d = Discrete::Poisson(CasExpr::int(3));
+        let total = d.total_mass();
+        assert!(total.is_certified(), "{total:?}");
+        assert!(d.verify_total_mass(&total));
+
         let mean = d.mean();
+        assert!(mean.is_certified(), "{mean:?}");
         assert!(matches!(
             equal(&mean.claim, &CasExpr::int(3)),
             ZeroTest::Certified { equal: true, .. }
         ));
-        assert!(!mean.is_certified());
 
         let variance = d.variance();
+        assert!(variance.is_certified(), "{variance:?}");
         assert!(matches!(
             equal(&variance.claim, &CasExpr::int(3)),
             ZeroTest::Certified { equal: true, .. }
         ));
-        assert!(!variance.is_certified());
-
-        let total = d.total_mass();
-        assert!(!total.is_certified());
     }
 
     #[test]
-    fn poisson_symbolic_lambda_also_declines() {
+    fn poisson_symbolic_lambda_certifies_all_four_including_the_mgf() {
         let d = Discrete::Poisson(CasExpr::var("lam"));
-        assert!(!d.total_mass().is_certified());
-        assert!(!d.mean().is_certified());
+        let total = d.total_mass();
+        assert!(total.is_certified(), "{total:?}");
+
+        let mean = d.mean();
+        assert!(mean.is_certified(), "{mean:?}");
+        assert!(matches!(
+            equal(&mean.claim, &CasExpr::var("lam")),
+            ZeroTest::Certified { equal: true, .. }
+        ));
+
+        let variance = d.variance();
+        assert!(variance.is_certified(), "{variance:?}");
+        assert!(matches!(
+            equal(&variance.claim, &CasExpr::var("lam")),
+            ZeroTest::Certified { equal: true, .. }
+        ));
+
+        // M(t) = e^{λ(e^t − 1)}, with BOTH λ and t symbolic.
+        let mgf = d.mgf("t");
+        assert!(mgf.is_certified(), "{mgf:?}");
+        let target = (CasExpr::var("lam") * (CasExpr::var("t").exp() - CasExpr::one())).exp();
+        assert!(matches!(
+            equal(&mgf.claim, &target),
+            ZeroTest::Certified { equal: true, .. }
+        ));
+        assert!(d.verify_mgf("t", &mgf));
+    }
+
+    #[test]
+    fn poisson_mgf_index_does_not_collide_with_the_mgf_variable() {
+        // The summation index is chosen free of the mgf variable and of λ, so
+        // naming the mgf variable `k` (the default index) must not change it.
+        let d = Discrete::Poisson(CasExpr::var("k"));
+        let mgf = d.mgf("k");
+        assert!(mgf.is_certified(), "{mgf:?}");
     }
 
     // ---------------------------------------------------------------
@@ -1773,28 +2008,48 @@ mod tests {
     }
 
     // ---------------------------------------------------------------
-    // Continuous: Normal(0,1) mgf e^{t^2/2} if the Gaussian route certifies,
-    // else the honest decline recorded — measured: it declines.
+    // Continuous: Normal(0,1) — mass/mean/variance certify with an irrational
+    // sqrt(a); only the mgf declines, and for the symbolic-t reason.
     // ---------------------------------------------------------------
 
     #[test]
-    fn normal_0_1_declines_honestly() {
+    fn normal_0_1_certifies_mass_mean_and_variance() {
+        // a = 1/(2*variance) = 1/2, whose square root is irrational.
         let d = Continuous::Normal {
             mu: CasExpr::zero(),
             variance: Rational::integer(1),
         };
-        assert!(
-            !d.total_mass().is_certified(),
-            "Normal(0,1): a=1/2 is not a perfect square"
-        );
-        assert!(!d.mean().is_certified());
-        assert!(!d.variance().is_certified());
-        assert!(!d.mgf("t").is_certified());
+        let total = d.total_mass();
+        assert!(total.is_certified(), "{total:?}");
+        assert!(d.verify_total_mass(&total));
+
+        let mean = d.mean();
+        assert!(mean.is_certified(), "{mean:?}");
+        assert!(matches!(
+            equal(&mean.claim, &CasExpr::zero()),
+            ZeroTest::Certified { equal: true, .. }
+        ));
+
+        let variance = d.variance();
+        assert!(variance.is_certified(), "{variance:?}");
+        assert!(matches!(
+            equal(&variance.claim, &CasExpr::int(1)),
+            ZeroTest::Certified { equal: true, .. }
+        ));
+
+        // The mgf still declines: symbolic `t`, not a variance issue.
+        let mgf = d.mgf("t");
+        assert!(!mgf.is_certified());
+        let Trust::Uncertified(reason) = &mgf.trust else {
+            panic!("expected Uncertified");
+        };
+        assert!(reason.contains("symbolic t"), "{reason}");
     }
 
     #[test]
     fn normal_0_variance_half_certifies_total_mass_mean_variance() {
-        // sigma^2 = 1/2 => a = 1/(2*1/2) = 1, a perfect square: the erf route certifies.
+        // sigma^2 = 1/2 => a = 1: the rational-sqrt case, kept as the control that
+        // the erf route did not stop working for the easy `a`.
         let d = Continuous::Normal {
             mu: CasExpr::zero(),
             variance: p(1, 2).into_const().unwrap(),
@@ -1924,9 +2179,12 @@ mod tests {
 
     #[test]
     fn chebyshev_bound_propagates_uncertified_input() {
-        let d = Discrete::Geometric(p(1, 3));
+        // A symbolic `p` is the surviving Geometric decline (the convergence
+        // test needs a concrete ratio), so it is the honest uncertified input.
+        let d = Discrete::Geometric(CasExpr::var("p"));
         let mean = d.mean(); // uncertified
         let variance = d.variance(); // uncertified
+        assert!(!mean.is_certified() && !variance.is_certified());
         let bound = chebyshev_bound(&mean, &variance, &CasExpr::int(1));
         assert!(!bound.is_certified());
     }
@@ -1960,8 +2218,9 @@ mod tests {
         //    re-derivation would (hypothetically) decline -- modeled here by
         //    forging Certified on a value that does not match at all, since
         //    Binomial's own mean always certifies; the falsely-labeled case is
-        //    instead exercised on Poisson below.
-        let d2 = Discrete::Poisson(CasExpr::int(3));
+        //    instead exercised on a symbolic-p Geometric below, whose mean is
+        //    the surviving honest decline.
+        let d2 = Discrete::Geometric(CasExpr::var("p"));
         let genuinely_uncertified = d2.mean();
         assert!(!genuinely_uncertified.is_certified());
         let falsely_certified =
