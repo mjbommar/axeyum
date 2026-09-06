@@ -2100,7 +2100,7 @@ pub(super) fn nat_sub(p: &NatPrelude) -> Vec<(&'static str, Sub)> {
     vec![("logic", Sub::Logic(Box::new(p.logic)))]
 }
 
-/// The `IntPrelude` field table (426 names,
+/// The `IntPrelude` field table (438 names,
 /// 0 name lists, 2 sub-packages).
 #[must_use]
 #[allow(clippy::too_many_lines)] // a generated field table; length is the point.
@@ -2659,6 +2659,24 @@ pub(super) fn int(p: &IntPrelude) -> Fields {
                 "exists_small_multiple_of_sq_add_one",
                 p.exists_small_multiple_of_sq_add_one,
             ),
+            ("dvd_zero", p.dvd_zero),
+            ("dvd_of_mod_eq_zero", p.dvd_of_mod_eq_zero),
+            ("mul_mod_eq_zero", p.mul_mod_eq_zero),
+            ("sq_add_sq_mod_eq_of_mod_eq", p.sq_add_sq_mod_eq_of_mod_eq),
+            ("exists_next_multiplier", p.exists_next_multiplier),
+            ("sq_mul_add_sq_mul", p.sq_mul_add_sq_mul),
+            ("dvd_of_degenerate_descent", p.dvd_of_degenerate_descent),
+            ("lt_of_nat_of_lt", p.lt_of_nat_of_lt),
+            ("le_two_of_nat_le_two", p.le_two_of_nat_le_two),
+            (
+                "not_dvd_of_nat_of_prime_of_lt",
+                p.not_dvd_of_nat_of_prime_of_lt,
+            ),
+            (
+                "exists_sum_of_two_squares_of_multiple",
+                p.exists_sum_of_two_squares_of_multiple,
+            ),
+            ("fermat_two_squares", p.fermat_two_squares),
         ],
         lists: Vec::new(),
     }
