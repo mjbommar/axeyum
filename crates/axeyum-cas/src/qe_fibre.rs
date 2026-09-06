@@ -12,7 +12,7 @@
 //! 1. **Exact arithmetic in `K`.** An element is a [`num_rational::BigRational`]
 //!    polynomial of degree below `deg m`, reduced modulo `m`. Sum, difference
 //!    and product are polynomial operations followed by one reduction; the
-//!    **inverse** is the extended Euclidean algorithm modulo `m` ([`xgcd`]).
+//!    **inverse** is the half-extended Euclidean algorithm modulo `m`.
 //!
 //! 2. **The sign of an element at `α`.** `e(α)` is a real number and its sign
 //!    is decidable. `crate::qe::big`'s `sign_at_algebraic` settles `e(α) = 0`

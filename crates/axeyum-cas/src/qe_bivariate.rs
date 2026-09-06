@@ -44,7 +44,7 @@
 //! fewer of them than `deg_y r` suggests. So when the discriminant vanishes
 //! identically the square-free part of `r` in `y` is formed (by a
 //! pseudo-remainder gcd over `ℚ[x]`, exact and in `BigRational`, see
-//! [`y_squarefree_part`]) and *its* discriminant is used instead: distinct
+//! `y_squarefree_part`) and *its* discriminant is used instead: distinct
 //! branches of `r` collide exactly where that one vanishes. A square-free part
 //! of `y`-degree at most one describes a single branch, which cannot collide
 //! with itself, and contributes nothing. The pseudo-division leaves the result
