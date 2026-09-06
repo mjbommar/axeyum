@@ -252,7 +252,7 @@ pub fn rat_to_int_poly(p: &[Rational], max_abs_coeff: i128) -> Option<Vec<i128>>
 /// ```
 #[must_use]
 pub fn rat_to_int_poly_wide(p: &[Rational], max_abs_coeff: i128) -> Option<Vec<i128>> {
-    use num_bigint::BigInt;
+    use axeyum_arith::big::BigInt;
 
     /// Euclid gcd of two **non-negative** `BigInt`s.
     fn big_gcd(a: &BigInt, b: &BigInt) -> BigInt {

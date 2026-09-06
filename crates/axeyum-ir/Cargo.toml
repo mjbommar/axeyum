@@ -18,10 +18,7 @@ publish = false
 # Unconditional deps: pure Rust, MIT/Apache-2.0, allowed by the no-C/C++ hard rule
 # (`cargo deny` passes them). Algebraic values appear only in NRA witnesses (rare),
 # so the always-bignum storage is fine; the core `Rational` type stays `i128`.
-num-bigint.workspace = true
-num-rational.workspace = true
-num-integer.workspace = true
-num-traits.workspace = true
+axeyum-arith.workspace = true
 # Fast, seedless, deterministic hasher for the intern table and lookup maps
 # (D5 in the 2026-09-05 performance review); see src/fast_map.rs.
 rustc-hash = { workspace = true }

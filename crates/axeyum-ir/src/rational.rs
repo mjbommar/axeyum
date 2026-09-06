@@ -70,9 +70,9 @@
 
 use std::sync::{LazyLock, RwLock};
 
-use num_bigint::BigInt;
-use num_rational::BigRational;
-use num_traits::ToPrimitive;
+use axeyum_arith::big::BigInt;
+use axeyum_arith::big::BigRational;
+use axeyum_arith::big::ToPrimitive;
 
 use crate::fast_map::FastMap;
 
@@ -940,8 +940,8 @@ fn gcd(mut a: u128, mut b: u128) -> u128 {
 mod tests {
     use super::Rational;
     use core::hash::{Hash, Hasher};
-    use num_bigint::BigInt;
-    use num_rational::BigRational;
+    use axeyum_arith::big::BigInt;
+    use axeyum_arith::big::BigRational;
 
     /// `10^exp` built independently of anything under test.
     fn ten_pow(exp: u32) -> BigInt {
