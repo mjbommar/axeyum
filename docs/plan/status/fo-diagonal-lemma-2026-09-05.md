@@ -1,5 +1,11 @@
 # Lane `fo-diagonal-lemma` — Q with order (W3-7, fourth slice)
 
+<!-- plan-section: lane-status -->
+
+**`FO.Qle` — Robinson's Q extended by six order axioms, its ℕ model and its
+consistency; nine declarations, all axiom-free** (`PARTIAL`, fo-diagonal-lemma,
+2026-09-06, ADR-1669).
+
 Status: **deliverable 1 landed**; deliverables 2–4 not attempted (scope narrowed
 mid-session by the coordinator after a process restart).
 
