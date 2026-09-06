@@ -1,50 +1,48 @@
 {
   "schema_version": 1,
-  "id": "F:int-fermat-two-squares",
-  "title": "Fermat's theorem on sums of two squares",
-  "statement": "Every prime p with p = 1 (mod 4) is a sum of two integer squares. Stated here as: for every natural m, if p = 2m+1 is prime (2 <= p, and every divisor of p is 1 or p) and m is EVEN, then Int.IsSumOfTwoSquares (ofNat p) -- there are integers a and b with p = a*a + b*b. ESTABLISHED HERE, axiom-free, by Euler's descent. The hypotheses are spelled exactly as Int.firstSupplementaryLawResidue spells them, because the residue half is the only route this development has into the descent.",
+  "id": "F:int-two-squares-next-multiplier",
+  "title": "The descent's next multiplier exists",
+  "statement": "Let m*p = a*a + b*b, and let c and e be congruent to a and b modulo m. Then c*c + e*e is again a multiple of m: there is a q with m*q = c*c + e*e. This is the step that turns a bounded choice of representatives into the NEXT multiplier of Euler's descent. Positivity of m is deliberately NOT a hypothesis -- every congruence used is unconditional in the modulus -- and the conclusion is spelled m*q = c*c + e*e rather than Int.dvd's own c*c + e*e = m*q so that it matches Int.descentMultiplierBounds and Int.descentStep verbatim.",
   "formal": {
     "language": "lean4",
-    "statement": "theorem Int.fermatTwoSquares : ((x0 : AxNat) -> ((x1 : And (AxNat.le (AxNat.succ (AxNat.succ AxNat.zero)) (AxNat.succ (AxNat.mul (AxNat.succ (AxNat.succ AxNat.zero)) x0))) (((x1 : AxNat) -> ((x2 : AxNat.dvd x1 (AxNat.succ (AxNat.mul (AxNat.succ (AxNat.succ AxNat.zero)) x0))) -> Or (Eq.{1} AxNat x1 (AxNat.succ AxNat.zero)) (Eq.{1} AxNat x1 (AxNat.succ (AxNat.mul (AxNat.succ (AxNat.succ AxNat.zero)) x0))))))) -> ((x2 : AxNat.Even x0) -> Int.IsSumOfTwoSquares (Int.ofNat (AxNat.succ (AxNat.mul (AxNat.succ (AxNat.succ AxNat.zero)) x0))))))",
+    "statement": "theorem Int.exists_next_multiplier : ((x0 : Int) -> ((x1 : Int) -> ((x2 : Int) -> ((x3 : Int) -> ((x4 : Int) -> ((x5 : Int) -> ((x6 : Eq.{1} Int (Int.mul x0 x1) (Int.add (Int.mul x2 x2) (Int.mul x3 x3))) -> ((x7 : Int.ModEq x0 x4 x2) -> ((x8 : Int.ModEq x0 x5 x3) -> Exists.{1} Int (fun (x9 : Int) => Eq.{1} Int (Int.mul x0 x9) (Int.add (Int.mul x4 x4) (Int.mul x5 x5))))))))))))",
     "fragment": "Int",
     "free_symbols": [
       "x0",
       "x1",
-      "x2"
+      "x2",
+      "x3",
+      "x4",
+      "x5",
+      "x6",
+      "x7",
+      "x8",
+      "x9"
     ],
-    "kernel_theorem": "Int.fermatTwoSquares"
+    "kernel_theorem": "Int.exists_next_multiplier"
   },
   "epistemic_status": "proved",
   "external_status": "proved",
+  "proof_route": "kernel-lean",
   "depends_on": [
-    "F:int-brahmagupta-fibonacci",
-    "F:int-two-squares-descent-cross-terms",
-    "F:int-two-squares-descent-step",
-    "F:int-firstsupplementarylawresidue",
-    "F:int-two-squares-descent-entry",
-    "F:int-two-squares-next-multiplier",
-    "F:int-two-squares-degenerate-divides",
-    "F:int-two-squares-descent",
-    "F:nat-strong-induction",
-    "F:int-le-of-lt",
-    "F:int-of-nat-nat-abs-of-nonneg",
-    "F:ml430-int-lt-of-ofnat-lt-ofnat-968e5a43",
-    "F:nat-le-succ-succ",
-    "F:nat-zero-le"
+    "F:int-modeq-trans",
+    "F:int-modeq-mul",
+    "F:ml430-int-modeq-mul-6736aa2e"
   ],
+  "axiom_footprint": [],
   "evidence": [
     {
-      "id": "kernel-Int.fermatTwoSquares",
+      "id": "kernel-Int.exists_next_multiplier",
       "kind": "kernel-term",
-      "supports": "Int.fermatTwoSquares is admitted by the trusted kernel gate with EXACTLY the type recorded in formal.statement, which is a verbatim quotation of the kernel's own renderer.",
+      "supports": "Int.exists_next_multiplier is admitted by the trusted kernel gate with EXACTLY the type recorded in formal.statement, which is a verbatim quotation of the kernel's own renderer.",
       "check_status": "checked",
       "checkers": [
         "producing-build (Kernel::add_declaration, inside build_int_prelude)",
         "int_theorem_inventory re-list of the admitted declaration"
       ],
-      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example int_theorem_inventory -- Int.fermatTwoSquares 2>/dev/null | grep -cE '^theorem[[:space:]]+Int\\\\.fermatTwoSquares[[:space:]]'",
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example int_theorem_inventory -- Int.exists_next_multiplier 2>/dev/null | grep -cE '^theorem[[:space:]]+Int\\\\.exists_next_multiplier[[:space:]]'",
       "checker_seconds": 12,
-      "kernel_declaration": "Int.fermatTwoSquares",
+      "kernel_declaration": "Int.exists_next_multiplier",
       "notes": "Two independent failure modes, so the exit status depends on the FINDING and not on the run completing: int_theorem_inventory exits non-zero when the named filter matches nothing, and grep -c exits 1 printing 0 when the anchored line is absent. Anchored with [[:space:]] and never with a backslash-t, which a scripted (GNU) grep reads as a literal t. --release is MANDATORY: this tool builds the constructed carriers and overflows the default debug thread stack."
     },
     {
@@ -81,7 +79,7 @@
     "date": "2026-09-06",
     "curation": "curated",
     "established_by": "lane fermat-two-squares (W3-10 third slice, ADR-1650), crates/axeyum-lean-kernel/src/int_prelude/fermat_two_squares.rs, admitted by build_int_prelude",
-    "source": "Fermat's theorem on sums of two squares (asserted 1640, proved by Euler in 1749 by infinite descent)",
+    "source": "a step of Euler's descent proof (1749) of Fermat's theorem on sums of two squares",
     "prior_art": [
       {
         "who": "Fermat; Euler",
@@ -92,7 +90,5 @@
       }
     ]
   },
-  "notes": "CLOSED 2026-09-06. This row was open with a SIZED obstruction from 2026-09-05 (ADR-1633, then ADR-1647), and every piece those sizings named was built without any of them turning out to be stale -- a departure from ADR-1647's own finding that two thirds of ADR-1633's obstruction had already been false when written. WORTH RECORDING: the formal.statement this row carried while it was OPEN is byte-identical to the type the kernel now renders for the admitted theorem. The prediction was exact, and it was CHECKED rather than assumed -- the flip asserted equality between the recorded string and a fresh int_theorem_inventory render before writing anything, and would have exited non-zero otherwise. THE FOUR PIECES, all admitted on the first attempt: (1) the next multiplier, F:int-two-squares-next-multiplier; (2) the q != 0 argument in two halves, the primality-free F:int-two-squares-degenerate-divides and the single primality-consuming step that refutes it; (3) the descent by Nat.strongInduction, F:int-two-squares-descent; (4) this. THE DESIGN CALL that carries the assembly: the descent quantifies its multiplier as Int.ofNat n over a Nat index rather than as an Int carrying a natAbs m = n bridge hypothesis, so 0 < m, m < p and 1 < m are all the Nat hypotheses themselves under the order_coercion.rs defeq, and the whole proof contains exactly ONE transport across of_nat_nat_abs_of_nonneg -- at the recursive call, where q genuinely arrives as an Int. WHAT THIS DOES NOT DO: F:int-two-squares-composite-characterisation stays open on a different obstruction, recorded there, which this lane did not touch -- its statement EVALUATES over a factor multiset rather than inducting past a factorisation.",
-  "proof_route": "kernel-lean",
-  "axiom_footprint": []
+  "notes": "The first of the four pieces ADR-1647 sized as remaining for Fermat's theorem. The route: c*c + e*e = a*a + b*b = m*p = 0 (mod m), so m divides c*c + e*e, and Int.dvd's own existential IS the q. Two supporting laws had to be built because they were simply absent (shape_search --ns Int --concl Int.dvd --arity 1 finds only Int.dvd_refl): Int.dvd_zero and Int.dvd_of_modEq_zero. The latter goes through the UNCONDITIONAL Int.ModEq.dvd_iff rather than the 0 < n-scoped Int.modEq_iff_dvd, because the latter concludes n | (b - a) and would have needed a sub_zero this prelude does not have and which ring::int declines -- ADR-1633's zero-collapse finding hit from the other side. The symm from Int.dvd's orientation happens ONCE, inside this lemma, instead of at both call sites."
 }
