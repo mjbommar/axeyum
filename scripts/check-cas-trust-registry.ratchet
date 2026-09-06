@@ -17,7 +17,7 @@
 # only rises on purpose) -- but a new UNCERTIFIED function is never refused;
 # that label is honest, not a violation. See
 # docs/math-department/13-computer-algebra.md item 10.
-COUNT	145
+COUNT	148
 FN	enclosure::enclose	Option<Enclosure>
 FN	enclosure::enclose_constant	Option<Enclosure>
 FN	enclosure::enclose_root	Option<Enclosure>
@@ -79,6 +79,9 @@ FN	homology_relative::relative_homology	Option<RelativeHomologyCertificate>
 FN	improper_integrate_conditional	Option<ConditionalIntegral>
 FN	integrate	Option<CertifiedIntegral>
 FN	inverse::polynomial_inverse	Option<InverseCertificate>
+FN	matgroup::MatrixGroup::action_certificate	&ActionCertificate
+FN	matgroup::MatrixGroup::special_certificate	SpecialCertificate
+FN	matgroup::order_of_element	Result<ElementOrderCertificate, MatrixGroupError>
 FN	mvt::polynomial_mvt	Option<MvtCertificate>
 FN	ntheory_certify::certify_composite	Option<CompositeCertificate>
 FN	ntheory_certify::certify_crt	Option<CrtCertificate>
@@ -164,6 +167,7 @@ FN	taylor::polynomial_taylor	Option<TaylorCertificate>
 FN	telescoping_check::check_closed_form	Result<ClosedFormReport, Vec<String>>
 FN	telescoping_check::check_closed_form_symbolic	Result<SymbolicClosedFormReport, Vec<String>>
 VOCAB	AbelianCertificate	enum
+VOCAB	ActionCertificate	struct
 VOCAB	AlternationWitness	struct
 VOCAB	BarrierCertificate	struct
 VOCAB	BigWitness	struct
@@ -211,6 +215,7 @@ VOCAB	DnfProjectionCertificate	struct
 VOCAB	DnfRefutationCertificate	struct
 VOCAB	DnfSampleCertificate	struct
 VOCAB	ElementMinPolyCertificate	struct
+VOCAB	ElementOrderCertificate	struct
 VOCAB	Enclosure	struct
 VOCAB	ExistsForallCertificate	struct
 VOCAB	ExtremumCertificate	struct
@@ -280,6 +285,7 @@ VOCAB	SampleCertificate	struct
 VOCAB	SearchExhaustionCertificate	struct
 VOCAB	ShapedCompositionSearchReport	struct
 VOCAB	SimplicialMapCertificate	struct
+VOCAB	SpecialCertificate	struct
 VOCAB	SylowCertificate	struct
 VOCAB	SylowCountCertificate	struct
 VOCAB	SymbolicClosedFormReport	struct
