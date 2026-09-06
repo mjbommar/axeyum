@@ -121,6 +121,59 @@
 //! the lemma that unsticks it, and it is a two-case `Nat.rec` whose successor
 //! case is `Eq` congruence under `FO.Term.f1 1` (`Term.subst` ι-reduces
 //! through every constructor, so only the numeral itself is stuck).
+//!
+//! ## Numeral arithmetic, and representability of the pairing
+//!
+//! ```text
+//! FO.Q.add_numeral : Π a b, Provable Q (eqf (numeral a + numeral b) (numeral (a+b)))
+//! FO.Q.mul_numeral : Π a b, Provable Q (eqf (numeral a · numeral b) (numeral (a·b)))
+//! FO.Q.pairGraph   : Term -> Term -> Term -> Formula
+//!                    := fun x y z => eqf (z + z) (((x+y)·(x+y) + (x+y)) + (x+x))
+//! FO.Q.pairFormula : Formula := pairGraph (var 2) (var 1) (var 0)
+//! FO.Q.pair_represented : Π a b,
+//!      Provable Q (pairGraph (numeral a) (numeral b) (numeral (FO.Code.pair a b)))
+//! ```
+//!
+//! Both numeral theorems are `Nat.rec` on the SECOND argument, mirroring the
+//! recursion in `Nat.add`/`Nat.mul` and in the axioms `axAddSucc`/`axMulSucc`
+//! — which is what makes each successor step a single `eqf_subst` (the Leibniz
+//! rule) against the induction hypothesis, with no separate object-level
+//! congruence or transitivity lemma. `mul_numeral` needs `add_numeral`:
+//! `axMulSucc` gives `a · S k = a · k + a`, and rewriting `a · k` to its
+//! numeral leaves an object-level SUM rather than a numeral.
+//!
+//! `FO.Code.pair a b = FO.Code.tri (a + b) + a` and `tri` is a `Nat.rec`, so
+//! the pairing is not first-order definable by unfolding it. What makes it
+//! definable with no recursion at all is the doubling identity
+//! `FO.Code.tri_two : tri n + tri n = n·n + n`, which turns the graph into one
+//! polynomial equation — that is `FO.Q.pairGraph`, and
+//! `FO.Q.pair_represented` is the POSITIVE half of representability: Q proves
+//! the graph at every numeral triple, by evaluating the polynomial side down
+//! to a single numeral in five Leibniz steps and transferring the result in a
+//! sixth.
+//!
+//! ### What is NOT landed, and why it is not a matter of effort
+//!
+//! The uniqueness half — `Q ⊢ ∀z (pairGraph(ā, b̄, z) → z = pair(a,b)‾)` — is
+//! open, and the brief anticipated this. **Q has no induction, and none of its
+//! seven axioms says anything about a variable in a `∀` position**: from Q4–Q7
+//! one can compute with numerals and nothing else, so `Q ⊢ ∀z (z + z = m̄ → z =
+//! k̄)` is not derivable. The textbook route adds the ORDER axioms (Q with
+//! `<` constrained, i.e. Q⁺) and the numeral case-split
+//! `∀x (x < n̄ → x = 0̄ ∨ … ∨ x = (n-1)‾)`, then Σ₁-completeness on top; that is
+//! a strictly larger theory than the seven axioms this slice was asked to
+//! write down. `fo_robinson/tests.rs` asserts the ABSENCE of any
+//! `FO.Q.pair_unique` rather than leaving the gap as prose.
+//!
+//! What IS available at this strength is *numeralwise* uniqueness — for each
+//! numeral `c̄` with `c ≠ pair(a,b)`, `Q ⊢ ¬ pairGraph(ā, b̄, c̄)` — and it
+//! needs one further ingredient this slice does not have: the negative twin
+//! `Π a b, ¬(a = b) → Provable Q (imp (eqf (numeral a) (numeral b)) bot)`.
+//! That derivation lives under an `imp_intro`, i.e. in the context
+//! `cons φ FO.Q` rather than in `FO.Q`, and every helper below is written at
+//! the fixed context `FO.Q`; generalising them over the context is the sized
+//! next step (the `Rob::prov_q`, `q_axiom_derivation`, `all_elim_at`,
+//! `cast_derivation` and `leibniz` group — five signatures).
 
 // The mathematical variables in this group are the ones the literature uses --
 // `M`/`S` for a structure, `w`/`v` for a valuation, `s` for a substitution,
@@ -195,6 +248,20 @@ pub struct FoRobinsonPrelude {
     pub add_numeral: NameId,
     /// `FO.Q.mul_numeral : Π a b, Provable Q (numeral a · numeral b = numeral (a·b))`.
     pub mul_numeral: NameId,
+
+    // --- representability of the pairing -------------------------------------
+    /// `FO.Code.tri_two : Π n, Eq Nat (tri n + tri n) (n · n + n)`.
+    pub tri_two: NameId,
+    /// `FO.Code.pair_two` — the doubling identity for `FO.Code.pair`.
+    pub pair_two: NameId,
+    /// `FO.Q.pairGraph : Term -> Term -> Term -> Formula` — the defining
+    /// formula `z + z = ((x+y)·(x+y) + (x+y)) + (x+x)`.
+    pub pair_graph: NameId,
+    /// `FO.Q.pairFormula : FO.Formula` — `pairGraph (var 2) (var 1) (var 0)`.
+    pub pair_formula: NameId,
+    /// `FO.Q.pair_represented` — Q proves the graph formula at every numeral
+    /// triple `(ā, b̄, pair(a,b)‾)`.
+    pub pair_represented: NameId,
 }
 
 /// The shared names every builder below threads.
@@ -227,6 +294,10 @@ struct Rob {
     /// `FO.Subst.lift` and `FO.Subst.shift`, from `fo_syntax.rs`.
     subst_lift: NameId,
     subst_shift: NameId,
+    /// The `FO.Code` namespace and the pairing it owns (`fo_code.rs`).
+    code_ns: NameId,
+    code_tri: NameId,
+    code_pair: NameId,
 }
 
 impl Rob {
@@ -252,6 +323,7 @@ impl Rob {
         let val_ty = arrow(kernel, nat_ty, nat_ty);
         let subst_ty = arrow(kernel, nat_ty, term_ty);
         let q_ns = kernel.name_str(syn.fo, "Q");
+        let code_ns = kernel.name_str(syn.fo, "Code");
 
         // The rule order is `fo_provable.rs`'s, and the `rule::*` index
         // constants used below index INTO this array, so the two must agree.
@@ -300,6 +372,9 @@ impl Rob {
             rules,
             subst_lift: syntax.subst_lift,
             subst_shift: syntax.subst_shift,
+            code_ns,
+            code_tri: roundtrip.decode.numbering.code.tri,
+            code_pair: roundtrip.decode.numbering.code.pair,
         }
     }
 }
@@ -539,6 +614,20 @@ pub fn build_fo_robinson_prelude(
     let add_numeral = declare_add_numeral(kernel, &r, &axioms, subst_numeral, &mut fv)?;
     let mul_numeral =
         declare_mul_numeral(kernel, &r, &axioms, subst_numeral, add_numeral, &mut fv)?;
+    let tri_two = declare_tri_two(kernel, &r, &mut fv)?;
+    let pair_two = declare_pair_two(kernel, &r, tri_two, &mut fv)?;
+    let pair_graph = declare_pair_graph(kernel, &r, &mut fv)?;
+    let pair_formula = declare_pair_formula(kernel, &r, pair_graph)?;
+    let pair_represented = declare_pair_represented(
+        kernel,
+        &r,
+        subst_numeral,
+        add_numeral,
+        mul_numeral,
+        pair_two,
+        pair_graph,
+        &mut fv,
+    )?;
 
     Ok(FoRobinsonPrelude {
         roundtrip,
@@ -557,6 +646,11 @@ pub fn build_fo_robinson_prelude(
         subst_numeral,
         add_numeral,
         mul_numeral,
+        tri_two,
+        pair_two,
+        pair_graph,
+        pair_formula,
+        pair_represented,
     })
 }
 
@@ -1340,11 +1434,81 @@ fn congr_chain(
 struct Leibniz<'a> {
     /// The `Nat` arguments of the numerals occurring literally in `p`.
     numerals: &'a [ExprId],
-    /// Rebuild `p` at given hole values and a given value for `var 0`.
-    shape: &'a dyn Fn(&mut crate::Kernel, &[ExprId], ExprId) -> ExprId,
+    /// `p` as data: the numerals are `Tm::Num` slots into `numerals` and the
+    /// rewritten position is `Tm::Hole`.
+    shape: &'a EqShape,
     /// The two sides of the equation being used.
     s: ExprId,
     t: ExprId,
+}
+
+/// A term of the Robinson signature written over numeral slots and the single
+/// rewritten position, so a formula shape is data rather than a closure. Every
+/// occurrence of one slot moves together, which is exactly what
+/// `FO.Formula.subst` does to the numerals it cannot reduce past.
+#[derive(Clone)]
+enum Tm {
+    /// `FO.Term.var 0` — the position `FO.Provable.eqf_subst` rewrites.
+    Hole,
+    /// `FO.Term.numeral n` for the slot's `Nat` argument.
+    Num(usize),
+    Suc(Box<Tm>),
+    Add(Box<Tm>, Box<Tm>),
+    Mul(Box<Tm>, Box<Tm>),
+}
+
+impl Tm {
+    fn build(&self, kernel: &mut crate::Kernel, r: &Rob, slots: &[ExprId], hole: ExprId) -> ExprId {
+        match self {
+            Self::Hole => hole,
+            Self::Num(index) => slots[*index],
+            Self::Suc(inner) => {
+                let t = inner.build(kernel, r, slots, hole);
+                r.tsucc(kernel, t)
+            }
+            Self::Add(left, right) => {
+                let a = left.build(kernel, r, slots, hole);
+                let b = right.build(kernel, r, slots, hole);
+                r.tadd(kernel, a, b)
+            }
+            Self::Mul(left, right) => {
+                let a = left.build(kernel, r, slots, hole);
+                let b = right.build(kernel, r, slots, hole);
+                r.tmul(kernel, a, b)
+            }
+        }
+    }
+}
+
+/// The formula `eqf lhs rhs`, as data.
+struct EqShape {
+    lhs: Tm,
+    rhs: Tm,
+}
+
+impl EqShape {
+    fn build(&self, kernel: &mut crate::Kernel, r: &Rob, slots: &[ExprId], hole: ExprId) -> ExprId {
+        let a = self.lhs.build(kernel, r, slots, hole);
+        let b = self.rhs.build(kernel, r, slots, hole);
+        r.f_eqf(kernel, a, b)
+    }
+}
+
+/// `Tm::Num(index)`, spelled without the boxing noise at the call sites.
+fn num(index: usize) -> Tm {
+    Tm::Num(index)
+}
+
+fn suc(inner: Tm) -> Tm {
+    Tm::Suc(Box::new(inner))
+}
+
+fn add(left: Tm, right: Tm) -> Tm {
+    Tm::Add(Box::new(left), Box::new(right))
+}
+
+fn mul(left: Tm, right: Tm) -> Tm {
+    Tm::Mul(Box::new(left), Box::new(right))
 }
 
 fn leibniz(
@@ -1359,7 +1523,7 @@ fn leibniz(
     let formula_ty = r.formula_ty;
     let numeral_terms: Vec<ExprId> = step.numerals.iter().map(|&n| r.tnum(kernel, n)).collect();
     let var0 = r.tvar(kernel, 0);
-    let p = (step.shape)(kernel, &numeral_terms, var0);
+    let p = step.shape.build(kernel, r, &numeral_terms, var0);
 
     // --- the `s` side: repair `p[s]` back to the numeral-free form.
     let sigma_s = r.inst_subst(kernel, step.s);
@@ -1373,8 +1537,9 @@ fn leibniz(
         .map(|&n| r.subst_numeral_at(kernel, subst_numeral, sigma_s, n))
         .collect();
     let repaired = {
-        let shape_s =
-            |kernel: &mut crate::Kernel, holes: &[ExprId]| (step.shape)(kernel, holes, step.s);
+        let shape_s = |kernel: &mut crate::Kernel, holes: &[ExprId]| {
+            step.shape.build(kernel, r, holes, step.s)
+        };
         let chain = congr_chain(kernel, r, &froms_s, &numeral_terms, &proofs_s, &shape_s, fv);
         let start = shape_s(kernel, &froms_s);
         let end = shape_s(kernel, &numeral_terms);
@@ -1404,7 +1569,7 @@ fn leibniz(
         .map(|&n| r.subst_numeral_at(kernel, subst_numeral, sigma_t, n))
         .collect();
     let shape_t =
-        |kernel: &mut crate::Kernel, holes: &[ExprId]| (step.shape)(kernel, holes, step.t);
+        |kernel: &mut crate::Kernel, holes: &[ExprId]| step.shape.build(kernel, r, holes, step.t);
     let chain = congr_chain(kernel, r, &froms_t, &numeral_terms, &proofs_t, &shape_t, fv);
     let start = shape_t(kernel, &froms_t);
     let end = shape_t(kernel, &numeral_terms);
@@ -1585,11 +1750,9 @@ fn declare_add_numeral(
             let sum = r.nadd(kernel, a, k);
             r.tnum(kernel, sum)
         };
-        let shape = |kernel: &mut crate::Kernel, holes: &[ExprId], x: ExprId| -> ExprId {
-            let snk = r.tsucc(kernel, holes[1]);
-            let lhs = r.tadd(kernel, holes[0], snk);
-            let rhs = r.tsucc(kernel, x);
-            r.f_eqf(kernel, lhs, rhs)
+        let shape = EqShape {
+            lhs: add(num(0), suc(num(1))),
+            rhs: suc(Tm::Hole),
         };
         let numerals = [a, k];
         let plan = Leibniz {
@@ -1726,11 +1889,9 @@ fn declare_mul_numeral(
                 let product = r.nmul(kernel, a, k);
                 r.tnum(kernel, product)
             };
-            let shape = |kernel: &mut crate::Kernel, holes: &[ExprId], x: ExprId| -> ExprId {
-                let snk = r.tsucc(kernel, holes[1]);
-                let lhs = r.tmul(kernel, holes[0], snk);
-                let rhs = r.tadd(kernel, x, holes[0]);
-                r.f_eqf(kernel, lhs, rhs)
+            let shape = EqShape {
+                lhs: mul(num(0), suc(num(1))),
+                rhs: add(Tm::Hole, num(0)),
             };
             let plan = Leibniz {
                 numerals: &numerals,
@@ -1754,10 +1915,9 @@ fn declare_mul_numeral(
                 let head = kernel.const_(add_numeral, vec![]);
                 apply_all(kernel, head, &[product, a])
             };
-            let shape = |kernel: &mut crate::Kernel, holes: &[ExprId], x: ExprId| -> ExprId {
-                let snk = r.tsucc(kernel, holes[1]);
-                let lhs = r.tmul(kernel, holes[0], snk);
-                r.f_eqf(kernel, lhs, x)
+            let shape = EqShape {
+                lhs: mul(num(0), suc(num(1))),
+                rhs: Tm::Hole,
             };
             let plan = Leibniz {
                 numerals: &numerals,
@@ -1785,6 +1945,610 @@ fn declare_mul_numeral(
     };
 
     let name = kernel.name_str(r.q_ns, "mul_numeral");
+    kernel.add_declaration(Declaration::Theorem {
+        name,
+        uparams: vec![],
+        ty,
+        value,
+    })?;
+    Ok(name)
+}
+
+// ============================================================================
+// Representability of `FO.Code.pair` in Q.
+// ============================================================================
+//
+// `FO.Code.pair a b = FO.Code.tri (a + b) + a`, and `tri` is a `Nat.rec`, so
+// the pairing is NOT first-order definable by unfolding it. What makes it
+// definable without any recursion is the doubling identity
+// `tri n + tri n = n · n + n`, which turns the graph of `pair` into a single
+// polynomial equation:
+//
+//     pair a b = c   iff   c + c = ((a+b)·(a+b) + (a+b)) + (a+a)
+//
+// The right-hand side is a term of the Robinson signature, so
+// `FO.Q.pairGraph` is a genuine `FO.Formula` in three free variables, and
+// `FO.Q.pair_represented` is the POSITIVE half of representability: Q proves
+// the graph at every numeral triple `(ā, b̄, pair(a,b)‾)`.
+//
+// The other half -- `Q ⊢ ∀z (pairGraph(ā, b̄, z) → z = pair(a,b)‾)` -- is NOT
+// landed and is not a matter of effort: Q has no induction and none of its
+// seven axioms constrains a variable, so `Q ⊢ ∀z (z + z = m̄ → z = k̄)` is not
+// available. The standard route to it adds the order axioms of Q⁺ and the
+// `∀x (x < n̄ → x = 0̄ ∨ … ∨ x = (n-1)‾)` machinery, i.e. a strictly larger
+// theory than the seven axioms this slice was asked for. See the module docs.
+
+/// `FO.Code.tri_two : Π (n : Nat),
+///   Eq Nat (Nat.add (tri n) (tri n)) (Nat.add (Nat.mul n n) n)`.
+///
+/// `Nat.rec` on `n`. `FO.Code.tri` is `Nat.rec 0 (fun k ih => ih + succ k)`, so
+/// `tri 0` and `tri (succ k)` ι-reduce to `0` and `tri k + succ k`; the base
+/// case is `Eq.refl` and the successor case is four rewrites:
+/// `add_add_add_comm` to pair the two copies, the induction hypothesis,
+/// `add_assoc` backwards, and `succ_mul` backwards (`mul (S k) (S k)` already
+/// ι-reduces to `mul (S k) k + S k`, so only the inner product needs it).
+fn declare_tri_two(
+    kernel: &mut crate::Kernel,
+    r: &Rob,
+    fv: &mut Fv,
+) -> Result<NameId, KernelError> {
+    let nat_ty = r.nat_ty;
+    let tri = |kernel: &mut crate::Kernel, n: ExprId| -> ExprId {
+        let head = kernel.const_(r.code_tri, vec![]);
+        kernel.app(head, n)
+    };
+    let claim = |kernel: &mut crate::Kernel, n: ExprId| -> ExprId {
+        let t = tri(kernel, n);
+        let t2 = tri(kernel, n);
+        let lhs = r.nadd(kernel, t, t2);
+        let square = r.nmul(kernel, n, n);
+        let rhs = r.nadd(kernel, square, n);
+        r.neq(kernel, lhs, rhs)
+    };
+
+    let motive = {
+        let n_id = fv.next();
+        let n = kernel.fvar(n_id);
+        let body = claim(kernel, n);
+        lam_fv(kernel, n_id, nat_ty, body)
+    };
+
+    let base = {
+        let zero = kernel.const_(r.nat.zero, vec![]);
+        grefl(kernel, r.logic, nat_ty, zero)
+    };
+
+    let step = {
+        let k_id = fv.next();
+        let ih_id = fv.next();
+        let k = kernel.fvar(k_id);
+        let ih = kernel.fvar(ih_id);
+        let sk = r.nsucc(kernel, k);
+        let tri_k = tri(kernel, k);
+        let square = r.nmul(kernel, k, k);
+        let square_plus = r.nadd(kernel, square, k);
+        let two_sk = r.nadd(kernel, sk, sk);
+
+        // L0 := (tri k + S k) + (tri k + S k)
+        let leg = r.nadd(kernel, tri_k, sk);
+        let l0 = r.nadd(kernel, leg, leg);
+        // L1 := (tri k + tri k) + (S k + S k)
+        let doubled = r.nadd(kernel, tri_k, tri_k);
+        let l1 = r.nadd(kernel, doubled, two_sk);
+        let h1 = {
+            let head = kernel.const_(r.nat.add_add_add_comm, vec![]);
+            apply_all(kernel, head, &[tri_k, sk, tri_k, sk])
+        };
+
+        // L2 := (k·k + k) + (S k + S k), by the induction hypothesis.
+        let l2 = r.nadd(kernel, square_plus, two_sk);
+        let cong_fv = fv.next();
+        let h2 = gcongr(
+            kernel,
+            r.logic,
+            nat_ty,
+            nat_ty,
+            doubled,
+            square_plus,
+            ih,
+            &|kernel, u| r.nadd(kernel, u, two_sk),
+            cong_fv,
+        );
+
+        // L3 := ((k·k + k) + S k) + S k, by `add_assoc` backwards.
+        let inner_sum = r.nadd(kernel, square_plus, sk);
+        let l3 = r.nadd(kernel, inner_sum, sk);
+        let h3 = {
+            let head = kernel.const_(r.nat.add_assoc, vec![]);
+            let forward = apply_all(kernel, head, &[square_plus, sk, sk]);
+            let symm_fv = fv.next();
+            gsymm(kernel, r.logic, nat_ty, l3, l2, forward, symm_fv)
+        };
+
+        // L4 := ((S k · k) + S k) + S k, by `succ_mul` backwards. This is
+        // definitionally `S k · S k + S k`, the goal's right-hand side.
+        let succ_product = r.nmul(kernel, sk, k);
+        let l4 = {
+            let inner = r.nadd(kernel, succ_product, sk);
+            r.nadd(kernel, inner, sk)
+        };
+        let h4 = {
+            let head = kernel.const_(r.nat.succ_mul, vec![]);
+            let forward = apply_all(kernel, head, &[k, k]);
+            let symm_fv = fv.next();
+            let backward = gsymm(
+                kernel,
+                r.logic,
+                nat_ty,
+                succ_product,
+                square_plus,
+                forward,
+                symm_fv,
+            );
+            let cong_fv = fv.next();
+            gcongr(
+                kernel,
+                r.logic,
+                nat_ty,
+                nat_ty,
+                square_plus,
+                succ_product,
+                backward,
+                &|kernel, u| {
+                    let inner = r.nadd(kernel, u, sk);
+                    r.nadd(kernel, inner, sk)
+                },
+                cong_fv,
+            )
+        };
+
+        let t1 = fv.next();
+        let t2 = fv.next();
+        let t3 = fv.next();
+        let chain = gtrans(kernel, r.logic, nat_ty, l0, l1, l2, h1, h2, t1);
+        let chain = gtrans(kernel, r.logic, nat_ty, l0, l2, l3, chain, h3, t2);
+        let chain = gtrans(kernel, r.logic, nat_ty, l0, l3, l4, chain, h4, t3);
+
+        let ih_ty = claim(kernel, k);
+        lams(kernel, &[(k_id, nat_ty), (ih_id, ih_ty)], chain)
+    };
+
+    let n_id = fv.next();
+    let n = kernel.fvar(n_id);
+    let rec = kernel.const_(r.nat.rec, vec![r.zero_lvl]);
+    let applied = apply_all(kernel, rec, &[motive, base, step, n]);
+    let value = lam_fv(kernel, n_id, nat_ty, applied);
+    let ty = {
+        let n2_id = fv.next();
+        let n2 = kernel.fvar(n2_id);
+        let body = claim(kernel, n2);
+        pi_fv(kernel, n2_id, nat_ty, body)
+    };
+
+    let name = kernel.name_str(r.code_ns, "tri_two");
+    kernel.add_declaration(Declaration::Theorem {
+        name,
+        uparams: vec![],
+        ty,
+        value,
+    })?;
+    Ok(name)
+}
+
+/// The `Nat` value of the graph formula's right-hand side:
+/// `((a+b)·(a+b) + (a+b)) + (a+a)`.
+fn pair_graph_value(kernel: &mut crate::Kernel, r: &Rob, a: ExprId, b: ExprId) -> ExprId {
+    let sum = r.nadd(kernel, a, b);
+    let square = r.nmul(kernel, sum, sum);
+    let left = r.nadd(kernel, square, sum);
+    let twice = r.nadd(kernel, a, a);
+    r.nadd(kernel, left, twice)
+}
+
+/// `FO.Code.pair_two : Π (a b : Nat),
+///   Eq Nat (Nat.add (pair a b) (pair a b)) (((a+b)·(a+b) + (a+b)) + (a+a))`.
+///
+/// `pair a b` δ-unfolds to `tri (a+b) + a`, so the left-hand side is
+/// `(tri s + a) + (tri s + a)`; `add_add_add_comm` regroups it to
+/// `(tri s + tri s) + (a + a)` and `FO.Code.tri_two` closes it. Two steps.
+fn declare_pair_two(
+    kernel: &mut crate::Kernel,
+    r: &Rob,
+    tri_two: NameId,
+    fv: &mut Fv,
+) -> Result<NameId, KernelError> {
+    let nat_ty = r.nat_ty;
+    let a_id = fv.next();
+    let b_id = fv.next();
+    let a = kernel.fvar(a_id);
+    let b = kernel.fvar(b_id);
+
+    let sum = r.nadd(kernel, a, b);
+    let tri_sum = {
+        let head = kernel.const_(r.code_tri, vec![]);
+        kernel.app(head, sum)
+    };
+    let leg = r.nadd(kernel, tri_sum, a);
+    let l0 = r.nadd(kernel, leg, leg);
+    let doubled = r.nadd(kernel, tri_sum, tri_sum);
+    let twice = r.nadd(kernel, a, a);
+    let l1 = r.nadd(kernel, doubled, twice);
+    let h1 = {
+        let head = kernel.const_(r.nat.add_add_add_comm, vec![]);
+        apply_all(kernel, head, &[tri_sum, a, tri_sum, a])
+    };
+    let square = r.nmul(kernel, sum, sum);
+    let square_plus = r.nadd(kernel, square, sum);
+    let l2 = r.nadd(kernel, square_plus, twice);
+    let h2 = {
+        let head = kernel.const_(tri_two, vec![]);
+        let doubling = kernel.app(head, sum);
+        let cong_fv = fv.next();
+        gcongr(
+            kernel,
+            r.logic,
+            nat_ty,
+            nat_ty,
+            doubled,
+            square_plus,
+            doubling,
+            &|kernel, u| r.nadd(kernel, u, twice),
+            cong_fv,
+        )
+    };
+    let trans_fv = fv.next();
+    let value_body = gtrans(kernel, r.logic, nat_ty, l0, l1, l2, h1, h2, trans_fv);
+    let value = lams(kernel, &[(a_id, nat_ty), (b_id, nat_ty)], value_body);
+
+    let ty = {
+        let a2_id = fv.next();
+        let b2_id = fv.next();
+        let a2 = kernel.fvar(a2_id);
+        let b2 = kernel.fvar(b2_id);
+        let pair_head = kernel.const_(r.code_pair, vec![]);
+        let coded = apply_all(kernel, pair_head, &[a2, b2]);
+        let lhs = r.nadd(kernel, coded, coded);
+        let rhs = pair_graph_value(kernel, r, a2, b2);
+        let body = r.neq(kernel, lhs, rhs);
+        pis(kernel, &[(a2_id, nat_ty), (b2_id, nat_ty)], body)
+    };
+
+    let name = kernel.name_str(r.code_ns, "pair_two");
+    kernel.add_declaration(Declaration::Theorem {
+        name,
+        uparams: vec![],
+        ty,
+        value,
+    })?;
+    Ok(name)
+}
+
+/// `FO.Q.pairGraph : FO.Term -> FO.Term -> FO.Term -> FO.Formula
+///   := fun x y z => eqf (z + z) (((x + y) · (x + y) + (x + y)) + (x + x))`.
+fn declare_pair_graph(
+    kernel: &mut crate::Kernel,
+    r: &Rob,
+    fv: &mut Fv,
+) -> Result<NameId, KernelError> {
+    let term_ty = r.term_ty;
+    let x_id = fv.next();
+    let y_id = fv.next();
+    let z_id = fv.next();
+    let x = kernel.fvar(x_id);
+    let y = kernel.fvar(y_id);
+    let z = kernel.fvar(z_id);
+    let body = pair_graph_formula(kernel, r, x, y, z);
+    let value = lams(
+        kernel,
+        &[(x_id, term_ty), (y_id, term_ty), (z_id, term_ty)],
+        body,
+    );
+    let ty = {
+        let inner = arrow(kernel, term_ty, r.formula_ty);
+        let middle = arrow(kernel, term_ty, inner);
+        arrow(kernel, term_ty, middle)
+    };
+    let name = kernel.name_str(r.q_ns, "pairGraph");
+    kernel.add_declaration(Declaration::Definition {
+        name,
+        uparams: vec![],
+        ty,
+        value,
+        hint: ReducibilityHint::Regular(0),
+    })?;
+    Ok(name)
+}
+
+/// `eqf (z + z) (((x + y) · (x + y) + (x + y)) + (x + x))` at given terms.
+fn pair_graph_formula(
+    kernel: &mut crate::Kernel,
+    r: &Rob,
+    x: ExprId,
+    y: ExprId,
+    z: ExprId,
+) -> ExprId {
+    let lhs = r.tadd(kernel, z, z);
+    let rhs = pair_graph_rhs(kernel, r, x, y);
+    r.f_eqf(kernel, lhs, rhs)
+}
+
+/// `((x + y) · (x + y) + (x + y)) + (x + x)`.
+fn pair_graph_rhs(kernel: &mut crate::Kernel, r: &Rob, x: ExprId, y: ExprId) -> ExprId {
+    let sum = r.tadd(kernel, x, y);
+    let square = r.tmul(kernel, sum, sum);
+    let left = r.tadd(kernel, square, sum);
+    let twice = r.tadd(kernel, x, x);
+    r.tadd(kernel, left, twice)
+}
+
+/// `FO.Q.pairFormula : FO.Formula := pairGraph (var 2) (var 1) (var 0)` — the
+/// graph as a single formula in three free de Bruijn indices, so the statement
+/// "there is a formula defining `FO.Code.pair`" is itself a kernel object.
+fn declare_pair_formula(
+    kernel: &mut crate::Kernel,
+    r: &Rob,
+    pair_graph: NameId,
+) -> Result<NameId, KernelError> {
+    let x = r.tvar(kernel, 2);
+    let y = r.tvar(kernel, 1);
+    let z = r.tvar(kernel, 0);
+    let head = kernel.const_(pair_graph, vec![]);
+    let value = apply_all(kernel, head, &[x, y, z]);
+    let ty = r.formula_ty;
+    let name = kernel.name_str(r.q_ns, "pairFormula");
+    kernel.add_declaration(Declaration::Definition {
+        name,
+        uparams: vec![],
+        ty,
+        value,
+        hint: ReducibilityHint::Regular(0),
+    })?;
+    Ok(name)
+}
+
+/// `FO.Q.pair_represented : Π (a b : Nat), FO.Provable FO.Q
+///   (FO.Q.pairGraph (numeral a) (numeral b) (numeral (FO.Code.pair a b)))`.
+///
+/// Six Leibniz steps. The first five evaluate the polynomial side down to a
+/// single numeral, starting from `FO.Provable.eqf_refl` at the polynomial
+/// itself and rewriting one subterm at a time with `FO.Q.add_numeral` /
+/// `FO.Q.mul_numeral`; the sixth transfers the result onto
+/// `numeral (pair a b) + numeral (pair a b)`, whose own evaluation is
+/// `add_numeral` transported along `FO.Code.pair_two`.
+fn declare_pair_represented(
+    kernel: &mut crate::Kernel,
+    r: &Rob,
+    subst_numeral: NameId,
+    add_numeral: NameId,
+    mul_numeral: NameId,
+    pair_two: NameId,
+    pair_graph: NameId,
+    fv: &mut Fv,
+) -> Result<NameId, KernelError> {
+    let nat_ty = r.nat_ty;
+    let a_id = fv.next();
+    let b_id = fv.next();
+    let a = kernel.fvar(a_id);
+    let b = kernel.fvar(b_id);
+
+    let na = r.tnum(kernel, a);
+    let nb = r.tnum(kernel, b);
+    let big = pair_graph_rhs(kernel, r, na, nb);
+
+    // The `Nat` values the five evaluation steps produce.
+    let s1 = r.nadd(kernel, a, b); // a + b
+    let s2 = r.nmul(kernel, s1, s1); // (a+b)·(a+b)
+    let s3 = r.nadd(kernel, s2, s1); // (a+b)·(a+b) + (a+b)
+    let s4 = r.nadd(kernel, a, a); // a + a
+    let s5 = r.nadd(kernel, s3, s4); // the whole right-hand side
+    let m1 = r.tnum(kernel, s1);
+    let m3 = r.tnum(kernel, s3);
+    let m5 = r.tnum(kernel, s5);
+
+    // `BIG` as a shape over the two numeral slots `a` and `b`.
+    let big_shape = || {
+        add(
+            add(
+                mul(add(num(0), num(1)), add(num(0), num(1))),
+                add(num(0), num(1)),
+            ),
+            add(num(0), num(0)),
+        )
+    };
+
+    let seed = {
+        let head = kernel.const_(r.rules[rule::EQF_REFL], vec![]);
+        let q = kernel.const_(r.q_ns, vec![]);
+        apply_all(kernel, head, &[q, big])
+    };
+
+    // Step 1: (na + nb) -> numeral (a+b), at all three occurrences.
+    let after1 = {
+        let s = r.tadd(kernel, na, nb);
+        let equation = {
+            let head = kernel.const_(add_numeral, vec![]);
+            apply_all(kernel, head, &[a, b])
+        };
+        let shape = EqShape {
+            lhs: add(add(mul(Tm::Hole, Tm::Hole), Tm::Hole), add(num(0), num(0))),
+            rhs: big_shape(),
+        };
+        let numerals = [a, b];
+        let plan = Leibniz {
+            numerals: &numerals,
+            shape: &shape,
+            s,
+            t: m1,
+        };
+        leibniz(kernel, r, subst_numeral, &plan, equation, seed, fv)
+    };
+
+    // Step 2: numeral (a+b) · numeral (a+b) -> numeral ((a+b)·(a+b)).
+    let after2 = {
+        let s = r.tmul(kernel, m1, m1);
+        let t = r.tnum(kernel, s2);
+        let equation = {
+            let head = kernel.const_(mul_numeral, vec![]);
+            apply_all(kernel, head, &[s1, s1])
+        };
+        let shape = EqShape {
+            lhs: add(add(Tm::Hole, num(2)), add(num(0), num(0))),
+            rhs: big_shape(),
+        };
+        let numerals = [a, b, s1];
+        let plan = Leibniz {
+            numerals: &numerals,
+            shape: &shape,
+            s,
+            t,
+        };
+        leibniz(kernel, r, subst_numeral, &plan, equation, after1, fv)
+    };
+
+    // Step 3: numeral ((a+b)·(a+b)) + numeral (a+b) -> numeral of the sum.
+    let after3 = {
+        let m2 = r.tnum(kernel, s2);
+        let s = r.tadd(kernel, m2, m1);
+        let equation = {
+            let head = kernel.const_(add_numeral, vec![]);
+            apply_all(kernel, head, &[s2, s1])
+        };
+        let shape = EqShape {
+            lhs: add(Tm::Hole, add(num(0), num(0))),
+            rhs: big_shape(),
+        };
+        let numerals = [a, b];
+        let plan = Leibniz {
+            numerals: &numerals,
+            shape: &shape,
+            s,
+            t: m3,
+        };
+        leibniz(kernel, r, subst_numeral, &plan, equation, after2, fv)
+    };
+
+    // Step 4: na + na -> numeral (a + a).
+    let after4 = {
+        let s = r.tadd(kernel, na, na);
+        let t = r.tnum(kernel, s4);
+        let equation = {
+            let head = kernel.const_(add_numeral, vec![]);
+            apply_all(kernel, head, &[a, a])
+        };
+        let shape = EqShape {
+            lhs: add(num(2), Tm::Hole),
+            rhs: big_shape(),
+        };
+        let numerals = [a, b, s3];
+        let plan = Leibniz {
+            numerals: &numerals,
+            shape: &shape,
+            s,
+            t,
+        };
+        leibniz(kernel, r, subst_numeral, &plan, equation, after3, fv)
+    };
+
+    // Step 5: the last sum collapses, leaving `eqf (numeral s5) BIG`.
+    let after5 = {
+        let m4 = r.tnum(kernel, s4);
+        let s = r.tadd(kernel, m3, m4);
+        let equation = {
+            let head = kernel.const_(add_numeral, vec![]);
+            apply_all(kernel, head, &[s3, s4])
+        };
+        let shape = EqShape {
+            lhs: Tm::Hole,
+            rhs: big_shape(),
+        };
+        let numerals = [a, b];
+        let plan = Leibniz {
+            numerals: &numerals,
+            shape: &shape,
+            s,
+            t: m5,
+        };
+        leibniz(kernel, r, subst_numeral, &plan, equation, after4, fv)
+    };
+
+    // `numeral (pair a b) + numeral (pair a b) = numeral s5`, by `add_numeral`
+    // at the code transported along `FO.Code.pair_two`.
+    let coded = {
+        let head = kernel.const_(r.code_pair, vec![]);
+        apply_all(kernel, head, &[a, b])
+    };
+    let nc = r.tnum(kernel, coded);
+    let doubled_code = r.tadd(kernel, nc, nc);
+    let code_eval = {
+        let head = kernel.const_(add_numeral, vec![]);
+        let raw = apply_all(kernel, head, &[coded, coded]);
+        let doubling = {
+            let head = kernel.const_(pair_two, vec![]);
+            apply_all(kernel, head, &[a, b])
+        };
+        let raw_sum = r.nadd(kernel, coded, coded);
+        let cong_fv = fv.next();
+        let formula_eq = gcongr(
+            kernel,
+            r.logic,
+            nat_ty,
+            r.formula_ty,
+            raw_sum,
+            s5,
+            doubling,
+            &|kernel, value| {
+                let numeral = r.tnum(kernel, value);
+                let lhs = r.tadd(kernel, nc, nc);
+                r.f_eqf(kernel, lhs, numeral)
+            },
+            cong_fv,
+        );
+        let from = {
+            let numeral = r.tnum(kernel, raw_sum);
+            r.f_eqf(kernel, doubled_code, numeral)
+        };
+        let to = r.f_eqf(kernel, doubled_code, m5);
+        cast_derivation(kernel, r, from, to, formula_eq, raw, fv)
+    };
+
+    // Step 6: replace `numeral s5` by the polynomial, on the right of the
+    // code's own equation. This is the only step whose `p` has the hole on the
+    // RIGHT, and it is what turns the evaluation chain back into the graph.
+    let derivation = {
+        let shape = EqShape {
+            lhs: add(num(0), num(0)),
+            rhs: Tm::Hole,
+        };
+        let numerals = [coded];
+        let plan = Leibniz {
+            numerals: &numerals,
+            shape: &shape,
+            s: m5,
+            t: big,
+        };
+        leibniz(kernel, r, subst_numeral, &plan, after5, code_eval, fv)
+    };
+
+    let value = lams(kernel, &[(a_id, nat_ty), (b_id, nat_ty)], derivation);
+    let ty = {
+        let a2_id = fv.next();
+        let b2_id = fv.next();
+        let a2 = kernel.fvar(a2_id);
+        let b2 = kernel.fvar(b2_id);
+        let na2 = r.tnum(kernel, a2);
+        let nb2 = r.tnum(kernel, b2);
+        let coded2 = {
+            let head = kernel.const_(r.code_pair, vec![]);
+            apply_all(kernel, head, &[a2, b2])
+        };
+        let nc2 = r.tnum(kernel, coded2);
+        let head = kernel.const_(pair_graph, vec![]);
+        let formula = apply_all(kernel, head, &[na2, nb2, nc2]);
+        let body = r.prov_q(kernel, formula);
+        pis(kernel, &[(a2_id, nat_ty), (b2_id, nat_ty)], body)
+    };
+
+    let name = kernel.name_str(r.q_ns, "pair_represented");
     kernel.add_declaration(Declaration::Theorem {
         name,
         uparams: vec![],

@@ -579,6 +579,149 @@ fn mul_numeral_depends_on_add_numeral() {
 }
 
 // ============================================================================
+// Representability of `FO.Code.pair`.
+// ============================================================================
+
+/// The `Nat` doubling identities compute at concrete arguments. Both are
+/// `Theorem`s, so the gate checked them; these rows are the non-vacuity check
+/// that they say something about the REAL `FO.Code.tri` and `FO.Code.pair`,
+/// with a neighbouring-value negative control on each.
+#[test]
+fn the_doubling_identities_compute() {
+    let mut f = Fixture::new();
+
+    // tri: 0, 1, 3, 6, 10 -- so `tri n + tri n` is 0, 2, 6, 12, 20 and
+    // `n*n + n` is 0, 2, 6, 12, 20.
+    for n in 0..5_u32 {
+        let ne = f.nat_lit(n);
+        let head = f.kernel.const_(f.r.code_tri, vec![]);
+        let tri = f.kernel.app(head, ne);
+        let doubled = f.r.nadd(&mut f.kernel, tri, tri);
+        let want = f.nat_lit(n * n + n);
+        f.assert_eq_expr(doubled, want, &format!("tri {n} + tri {n}"));
+        let off = f.nat_lit(n * n + n + 1);
+        f.assert_ne_expr(
+            doubled,
+            off,
+            &format!("tri {n} doubling must not be off by one"),
+        );
+    }
+
+    // pair: the anti-diagonal enumeration, doubled.
+    for (a, b) in [(0_u32, 0_u32), (0, 1), (1, 0), (2, 1), (1, 3)] {
+        let ae = f.nat_lit(a);
+        let be = f.nat_lit(b);
+        let head = f.kernel.const_(f.r.code_pair, vec![]);
+        let coded = apply_all(&mut f.kernel, head, &[ae, be]);
+        let doubled = f.r.nadd(&mut f.kernel, coded, coded);
+        let s = a + b;
+        let want = f.nat_lit(s * s + s + a + a);
+        f.assert_eq_expr(doubled, want, &format!("pair {a} {b} doubled"));
+    }
+}
+
+/// `FO.Q.pairFormula` really is a formula in three free de Bruijn indices, and
+/// `FO.Q.pairGraph` really is the polynomial equation the module doc states.
+#[test]
+fn the_pair_graph_is_the_stated_polynomial_equation() {
+    let mut f = Fixture::new();
+    // Rebuilt from the constructors, so a graph with a dropped `+ (x + x)`
+    // term -- the difference between `pair` and `tri` -- is a failure here.
+    let x = f.r.tvar(&mut f.kernel, 2);
+    let y = f.r.tvar(&mut f.kernel, 1);
+    let z = f.r.tvar(&mut f.kernel, 0);
+    let sum = f.r.tadd(&mut f.kernel, x, y);
+    let square = f.r.tmul(&mut f.kernel, sum, sum);
+    let left = f.r.tadd(&mut f.kernel, square, sum);
+    let twice = f.r.tadd(&mut f.kernel, x, x);
+    let rhs = f.r.tadd(&mut f.kernel, left, twice);
+    let lhs = f.r.tadd(&mut f.kernel, z, z);
+    let want = f.r.f_eqf(&mut f.kernel, lhs, rhs);
+
+    let got = f.kernel.const_(f.p.pair_formula, vec![]);
+    f.assert_eq_expr(got, want, "FO.Q.pairFormula");
+
+    // Negative control: the same equation WITHOUT the `+ (x + x)` summand is
+    // the graph of `tri (x+y)`, not of `pair`, and is a different formula.
+    let without = f.r.f_eqf(&mut f.kernel, lhs, left);
+    f.assert_ne_expr(got, without, "FO.Q.pairFormula vs the tri-only graph");
+}
+
+/// `FO.Q.pair_represented` instantiates: at concrete `(a, b)` its conclusion is
+/// `FO.Provable FO.Q` of the graph at the three literal numerals, and NOT of
+/// the graph at a neighbouring code.
+#[test]
+fn pair_representability_instantiates_at_literals() {
+    let mut f = Fixture::new();
+    // pair 0 0 = 0, pair 0 1 = 1, pair 1 0 = 2, pair 1 1 = 4, pair 2 1 = 7.
+    for (a, b, code) in [
+        (0_u32, 0_u32, 0_u32),
+        (0, 1, 1),
+        (1, 0, 2),
+        (1, 1, 4),
+        (2, 1, 8),
+    ] {
+        let ae = f.nat_lit(a);
+        let be = f.nat_lit(b);
+        let head = f.kernel.const_(f.p.pair_represented, vec![]);
+        let applied = apply_all(&mut f.kernel, head, &[ae, be]);
+        let got = f.kernel.infer(applied).expect("must infer");
+
+        let na = f.r.tnum(&mut f.kernel, ae);
+        let nb = f.r.tnum(&mut f.kernel, be);
+        let lit = f.nat_lit(code);
+        let nc = f.r.tnum(&mut f.kernel, lit);
+        let graph = f.kernel.const_(f.p.pair_graph, vec![]);
+        let formula = apply_all(&mut f.kernel, graph, &[na, nb, nc]);
+        let want = f.r.prov_q(&mut f.kernel, formula);
+        f.assert_eq_expr(
+            got,
+            want,
+            &format!("Q proves the pair graph at ({a}, {b}, {code})"),
+        );
+
+        // Negative control: the neighbouring code is a different statement, so
+        // the row above is pinning the VALUE of the pairing and not just its
+        // shape.
+        let off = f.nat_lit(code + 1);
+        let nc_off = f.r.tnum(&mut f.kernel, off);
+        let graph2 = f.kernel.const_(f.p.pair_graph, vec![]);
+        let formula_off = apply_all(&mut f.kernel, graph2, &[na, nb, nc_off]);
+        let wrong = f.r.prov_q(&mut f.kernel, formula_off);
+        f.assert_ne_expr(
+            got,
+            wrong,
+            &format!("the graph at ({a}, {b}, {}) is a different claim", code + 1),
+        );
+    }
+}
+
+/// The obstruction the module doc records, stated as a test over the
+/// environment rather than as prose: NOTHING in this package states the
+/// uniqueness half of representability, because Q has no induction. If a later
+/// slice lands it, this test is what says so.
+#[test]
+fn the_uniqueness_half_of_representability_is_not_claimed() {
+    let f = Fixture::new();
+    let names: Vec<String> = f
+        .kernel
+        .environment()
+        .iter()
+        .map(|(_, declaration)| f.kernel.display_name(declaration.name()).to_string())
+        .collect();
+    assert!(
+        names.iter().any(|n| n == "FO.Q.pair_represented"),
+        "coverage control: the positive half must be present"
+    );
+    for absent in ["FO.Q.pair_unique", "FO.Q.pair_functional"] {
+        assert!(
+            !names.iter().any(|n| n == absent),
+            "{absent} exists, so the module docs' obstruction note is stale"
+        );
+    }
+}
+
+// ============================================================================
 // The every-declaration sweep.
 // ============================================================================
 
@@ -601,6 +744,11 @@ fn every_declaration_of_this_slice_is_axiom_free() {
         (p.subst_numeral, "FO.Term.subst_numeral"),
         (p.add_numeral, "FO.Q.add_numeral"),
         (p.mul_numeral, "FO.Q.mul_numeral"),
+        (p.tri_two, "FO.Code.tri_two"),
+        (p.pair_two, "FO.Code.pair_two"),
+        (p.pair_graph, "FO.Q.pairGraph"),
+        (p.pair_formula, "FO.Q.pairFormula"),
+        (p.pair_represented, "FO.Q.pair_represented"),
     ] {
         f.assert_axiom_free(name, label);
     }
@@ -610,7 +758,7 @@ fn every_declaration_of_this_slice_is_axiom_free() {
 /// `build_nat_prelude`: the whole `fo_roundtrip` chain (61, pinned in
 /// `fo_roundtrip/tests.rs`) plus the `semantics`/`provable`/`soundness` chain
 /// plus this slice's twelve. Pinned so drift in EITHER direction is a failure.
-const FO_ROBINSON_DECLARATIONS: usize = 127;
+const FO_ROBINSON_DECLARATIONS: usize = 132;
 
 /// The every-declaration sweep for the whole package, derived from the
 /// environment rather than from a list, with coverage controls drawn from BOTH
@@ -652,6 +800,10 @@ fn the_whole_robinson_package_is_axiom_free() {
         "FO.Term.subst_numeral",
         "FO.Q.add_numeral",
         "FO.Q.mul_numeral",
+        "FO.Code.tri_two",
+        "FO.Code.pair_two",
+        "FO.Q.pairFormula",
+        "FO.Q.pair_represented",
         // the arithmetization chain
         "FO.Term.numeral",
         "FO.Code.diagAux_code",
