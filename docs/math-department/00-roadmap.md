@@ -265,8 +265,7 @@ Reviewer verdicts as of the last reconciliation:
 | 09 category theory | the subject exists; 107 declarations, footprint 0 (re-measured 2026-09-06; was: absent, opposed; morphism-equality question answered by W0-1) | W1-3 lands (cheap), W3-3 (real) |
 | 10 logic & foundations | most interested, and the shelf that moved the most (re-measured 2026-09-06; was: most interested; W0-4 landed) | W1-9 lands |
 | 11 applied & computational | most novel object; the ledger under-records the CAS (re-measured 2026-09-06; was: most novel object here) | W1-1, W1-5 land |
-| 12 the chair | would sign the report; W0-1 written, W1-4 landed | W0-2 is written |
-
+| 12 the chair | would sign, and strike three sentences: the coverage claim, the axiom-free headline as worded, the production rate (re-measured 2026-09-06; was: would sign the report; W0-1 written, W1-4 landed) | W0-2 is written |
 ## History
 
 | date | commit | change |
