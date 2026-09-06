@@ -2,7 +2,7 @@
 
 Reviewer: the department head, doubling as an external referee
 Verdict, 2026-09-04: **would sign the report, and would not let the coverage claim through**
-Last measured: 2026-09-04 at `1856cdb3c`
+Last measured: 2026-09-06 at `493045f00` (board and ledger); the persona text below is the 2026-09-04 reading and stands
 
 > "Eleven colleagues, four favourable, three blocked on the same door, and one
 > saying you have not written down what your kernel assumes. That is a healthy
@@ -96,21 +96,21 @@ it.
 
 ## Next five, in their priority order
 
-- [ ] **1. The quotient and extensionality ADR.** Add `Quot.sound`, commit to
+- [x] **1. The quotient and extensionality ADR.** — *done 2026-09-04, ADR-1595: setoid quotients, no `Quot.sound`; the first iso theorem cost three lines.* Add `Quot.sound`, commit to
       setoid quotients, or admit it in a labelled second tier with separately
       reported footprints. Unblocks or scopes reviewers 04, 05, 06, 09.
-- [ ] **2. The classical-axiom policy ADR.** Excluded middle as a labelled
+- [x] **2. The classical-axiom policy ADR.** — *done 2026-09-04, ADR-1601: classical principles as hypotheses, 11 binders and 0 obligations.* Excluded middle as a labelled
       footprint entry, or as an explicit hypothesis discharged at use — the
       route `Nat.em_implies_lnp` already demonstrates. Unblocks or scopes
       reviewers 03, 08, 10.
-- [ ] **3. A landmark count beside the total.** Define what counts as a named
+- [x] **3. A landmark count beside the total.** — *done 2026-09-04: `scripts/count-landmark-facts.py` with an exact-count baseline gated at push.* Define what counts as a named
       result, count them, and report both numbers. Their view: 2,487 is a real
       number that tells a reader nothing about depth, and the first hostile
       reviewer will say so.
-- [ ] **4. Close one `computed` result into a kernel statement.** The Rado
+- [x] **4. Close one `computed` result into a kernel statement.** — *done 2026-09-04 (W1-1): `IsRadoNumber` stated in-kernel and Schur's `R_2(x=y+z)=5` proved with both halves from search; the four-colour numbers stay `computed`, correctly.* The Rado
       number is the flagship candidate. It converts the project's thesis from
       an architecture diagram into a demonstrated result.
-- [ ] **5. Write down the kernel's own metatheoretic status**, per reviewer
+- [x] **5. Write down the kernel's own metatheoretic status** — *done 2026-09-04, ADR-1600: the kernel's metatheoretic status, trusted base 5,526 lines.*, per reviewer
       10. What is trusted, what is cross-checked against official Lean, and
       what a relative consistency result would require. Nobody outside can
       assess the headline metric without it.
@@ -121,6 +121,7 @@ it.
 |---|---|---|
 | 2026-09-04 | File created. Baseline: 2,487 proved / 262 open / 4 refuted, empty footprint throughout, 67 producer retirements in one week. Department-wide finding: two unwritten ADRs block six of twelve fields. | ledger snapshot at `1856cdb3c` |
 | 2026-09-04 | **Next Five items 1, 3 and 5 landed.** W0-1 decided by measurement (ADR-1595, setoid quotients); the landmark count shipped as a registered checker with its own controls — 1,432 landmarks of 2,487 proved, 57.6%; ADR-1600 records the kernel's metatheoretic status. Item 2, the classical-axiom policy, remains the outstanding decision. Off-roadmap: the safety-matrix gate was found red on main since 2026-08-31 and regenerated. | `8b4f277d4`, `2a640c9b6` |
+| 2026-09-06 | **Two days of the board, measured.** Ledger at `493045f00`: 2,668 proved / 267 open / 4 refuted, every proved fact with an empty axiom footprint. Roadmap board: 52 items, **41 landed, 7 in progress, 4 already done, 0 not started** (the board's own totals table, recomputed from its rows). Landed since the chair's first reading, one line each: Schur's number and `R(3,3)=6` from search; the category of groups with products; Hall's marriage theorem (six slices); inclusion–exclusion; fields with apartness and vector spaces; L¹ as a metric space; the topological carrier as a frame; conics as a family; first-order soundness and consistency of Robinson's Q; Gödel numbering with the decode round trip; the incidence axioms with the rational and real planes as models; Fermat's two-squares theorem; a sum-of-squares producer whose theorems carry no hand-written proof; the first Hoeffding-class concentration rate. **What the chair would still not let through**: the coverage claim, unchanged — the department-wide finding (62% of proved facts uncharacterised, ADR-1605) is being worked by the characterisation gate but is not closed; and two evaluation families were spent this week by producer contracts citing held-out rows as non-examples (ADR-0542 amendments on 09-03 and 09-05), which the chair would count against process, not mathematics. Three coordinator sessions now share one push protocol; 63 history rows on the board record every landing by commit. | `493045f00`; `validate-facts.py` 0 errors |
 
 ## How to re-measure
 

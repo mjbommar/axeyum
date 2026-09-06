@@ -475,12 +475,29 @@ pub struct TheoryLayerStats {
     /// Completed Luby restarts.
     pub restarts: u64,
     /// Simplex pivots performed by the driving theory, when it exposes a
-    /// pivot count. `None` when the `TheorySolver` trait implementation in
-    /// use does not report one — the trait
-    /// (`crate::euf_egraph::TheorySolver`) has no pivot-count method today
-    /// (2026-09-05 architecture review, D2), so this is always `None` until
-    /// a theory adapter is wired to report it explicitly.
+    /// pivot count (`TheorySolver::engine_counters`, S4). `None` when the
+    /// `TheorySolver` implementation in use keeps no feasibility engine —
+    /// which is every theory but the LRA one today.
     pub simplex_pivots: Option<u64>,
+    /// Feasibility checks the driving theory's engine completed, when it
+    /// exposes them. Paired with `simplex_pivots` this is the pivots-per-check
+    /// figure the warm-start work is scored on.
+    pub simplex_checks: Option<u64>,
+    /// Checks that discarded the basis and restarted from the pristine one.
+    /// A nonzero value is the direct measurement of a *cold* engine.
+    pub simplex_cold_restarts: Option<u64>,
+    /// Rows the theory's bound-stack reconciliation retracted, summed over
+    /// every check — how much of the previous state each check throws away.
+    pub bound_retractions: Option<u64>,
+    /// Rows that reconciliation (re-)asserted, summed over every check.
+    pub bound_assertions: Option<u64>,
+    /// Literals the theory offered to the driver's propagation queue. Distinct
+    /// from `theory_propagations`, which counts the ones the driver *assigned*.
+    pub theory_propagations_offered: Option<u64>,
+    /// Rows of the driving theory's dense tableau, when it keeps one.
+    pub simplex_rows: Option<u64>,
+    /// Columns of that tableau. With `simplex_rows` this prices one pivot.
+    pub simplex_columns: Option<u64>,
 }
 
 impl TheoryLayerStats {

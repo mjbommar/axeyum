@@ -71,6 +71,43 @@ recording is requested; and an `unsat` **under assumptions** derives no empty
 clause at all, reporting a failed-assumption core instead — that is inherent to
 assumption-based solving.
 
+**A theory changes the claim, so it changes the artifact.** "Every learned clause
+is RUP" holds for the Boolean core alone; a **theory lemma is not RUP against the
+CNF**, so learning one into the stream would turn the emitted refutation into a
+refutation-*modulo-theory* with nothing in the artifact saying so. ADR-1704
+settles that: a CDCL(T) `unsat` is **two streams** — the Boolean DRAT/LRAT proof,
+checked over the CNF **extended by the enumerated theory lemmas as additional
+input clauses**, plus the lemma list itself, each entry carrying its theory and
+its theory-level explanation (a Farkas combination, a negative cycle, a
+congruence chain) for the per-theory checkers to discharge. `check_drat` and
+`check_lrat` are unchanged — the contract is about which formula they are handed,
+not about what they accept. The lemma count is read off the artifact rather than
+asserted, prints beside `certified`/`checked` as `theory_lemmas_unchecked`, and a
+refutation modulo N ≥ 1 lemmas is graded at `TrustId::SatRefutationModuloTheory`,
+never at `SatRefutation`. See
+[ADR-1704](../research/09-decisions/adr-1704-cdclt-unsat-is-two-streams-a-boolean-refutation-over-cnf-plus-enumerated-theory-lemmas.md);
+the boundary is pinned by
+`crates/axeyum-cnf/tests/theory_lemma_proof_contract.rs`.
+
+**How a theory lemma actually enters the clause database.** A variable's
+antecedent in the native core is a one-word `Reason`: a decision, an arena
+clause, or a **theory explanation the theory has not materialised** (S6 of the
+SMT parity plan; the slice-2 design memo section 4.4 (ii)). Conflict analysis,
+recursive minimization and the failed-assumption walk each resolve that third
+case by asking the theory for its clause, installing it in the arena as an
+**input** clause and rewriting the reason in place, so a handle is resolved at
+most once per assignment and the search never pays for an explanation it does
+not resolve against. The installed clause is registered with
+`learned[cid] = false`, which is ADR-1704's classification and also makes it
+structurally impossible for `reduce_db` -- which only ever considers learned
+clauses -- to delete the justification of an assigned literal. Nothing is
+emitted to the DRAT sink for such a clause: a lemma is an input clause, not a
+derived step, and emitting it would be the unlabelled learned clause ADR-1704
+section 5 forbids. Every shipping entry point attaches `NullTheory`, which never
+propagates, so on those paths no theory reason is ever created and the lemma
+list is empty. Measured, no verdict and no proof byte changed: see the
+[S6 measurement note](../research/11-design-review/2026-09-06-s6-reason-repr-measured.md).
+
 The public contract is unchanged in shape: SAT models must replay, and UNSAT
 assurance is stated at the level actually checked — a search verdict is never
 relabelled as a checked proof. See the

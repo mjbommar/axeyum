@@ -306,8 +306,16 @@ def render(global_parts: list[tuple[str, str]], lanes: list[dict[str, object]]) 
 
 
 def load() -> tuple[list[tuple[str, str]], list[dict[str, object]]]:
+    # Global sections are rebased for the same reason lane bodies are: generation
+    # moves the text from `docs/plan/global/` to `PLAN.md` at the root, so a link
+    # that is correct where it sits (`../smt-parity-plan-2026-09-05.md`) escapes
+    # the repository once inlined. This was applied to lane bodies only, and
+    # `check-links.sh` went red on two such links the moment a global section
+    # first used one (2026-09-05, `20-next-actions.md`). `rebase_links` rewrites
+    # only what actually resolves from the source file's own directory, so a
+    # section already written root-relative for `PLAN.md`'s benefit is untouched.
     global_parts = [
-        (path.name, path.read_text(encoding="utf-8"))
+        (path.name, rebase_links(path.read_text(encoding="utf-8"), path))
         for path in sorted(GLOBAL_DIR.glob("*.md"))
         if path.name != "README.md"
     ]

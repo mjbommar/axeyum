@@ -344,12 +344,10 @@ fn nested_sum(
 ) -> ExprId {
     let mut acc: Option<ExprId> = None;
     for (i, &(k, e, _)) in terms.iter().enumerate() {
-        let x = if i < zeroed {
-            z
-        } else if i == zeroed {
-            hole.unwrap_or(e)
-        } else {
-            e
+        let x = match i.cmp(&zeroed) {
+            std::cmp::Ordering::Less => z,
+            std::cmp::Ordering::Equal => hole.unwrap_or(e),
+            std::cmp::Ordering::Greater => e,
         };
         let m = rmul(d, k, x);
         acc = Some(match acc {
