@@ -214,6 +214,24 @@ parallel to itself precisely because `twoPoints` puts a point on it.
   names had to be added to the handle list; the vacuity floor moves 70 → 110.
 - `creal_point.rs`'s `rn_ring_proof` is now used from outside `creal_point.rs`
   for the first time. It is `pub(crate)` and needed no change.
+- **A negative control over `CReal` must not be a `def_eq` refutation between
+  two arithmetic terms.** Measured here, and it cost a verification cycle: the
+  first version of the `distSq` pin asserted
+  `!def_eq(distSq P Q, sum-of-coordinates form)` and the first `onRaw` pin
+  asserted `!def_eq(correct pairing, swapped pairing)`. Both ran past **ten
+  minutes** in `--release` on an otherwise-green run and were killed, while the
+  identical ℚ pins in the same file finish in seconds. When congruence on
+  `CReal.add`/`CReal.mul` fails, the kernel unfolds both sides into `CReal.mk`
+  with their regularity proofs and compares sequences under a binder; refuting
+  at `CReal.Equiv` is worse still, because `Equiv` unfolds to a `∀ n` over
+  `Rat` arithmetic. The rule the rewritten pins follow: **over `CReal`, assert
+  `def_eq` only where it SUCCEEDS** (δ/ι plus congruence, fast), and do the
+  discriminating half by comparing the stored `Definition` value as an interned
+  `ExprId` — exact, `O(1)`, and strictly stronger than `def_eq` for a shape
+  claim because it separates shapes that are denotationally equal. CLAUDE.md
+  already says a pathological test is worth deleting *including a pathological
+  negative control*; what this adds is that over the constructive reals the
+  pathology is the default rather than the exception.
 
 ## Alternatives considered
 

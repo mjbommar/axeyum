@@ -60,9 +60,32 @@ transport at all. That defeq is pinned on its own
 (`dist_sq_unfolds_to_the_coordinate_difference_squares`) because the whole of
 `joinUnique` rests on it.
 
+## The measurement hazard this lane hit
+
+**A negative control over `CReal` must not be a `def_eq` refutation between two
+arithmetic terms.** The first `distSq` and `onRaw` shape pins asserted
+`!def_eq(correct, wrong)` over `CReal` expressions; both ran past **ten
+minutes** in `--release` on an otherwise-green run and were killed, while the
+identical ℚ pins in the same file finish in seconds. Failing `def_eq` over
+`CReal` is a search: congruence fails, and the kernel then unfolds both sides
+into `CReal.mk` with their regularity proofs and compares sequences under a
+binder. Refuting at `CReal.Equiv` is worse again — `Equiv` itself unfolds to a
+`∀ n` over `Rat` arithmetic.
+
+The rule the rewritten pins follow: over `CReal`, assert `def_eq` only where it
+**succeeds**, and do the discriminating half by comparing the stored
+`Definition` value as an interned `ExprId` — exact, `O(1)`, and strictly
+stronger than `def_eq` for a shape claim. CLAUDE.md already says a pathological
+negative control is worth deleting; what this adds is that over the constructive
+reals the pathology is the default, not the exception.
+
 ## Landed changes
 
 | commit | what |
 | --- | --- |
 | `d69e35d83` | scaffold: carriers, `Nondeg` as an apartness witness, incidence, line equality, the `PosBound` lemmas, the congruences, the algebraic core |
 | `7122b520f` | `join`, `joinUnique`, `twoPoints`, `triangle`, `Geo.rplane`, `CPoint.Equiv`'s setoid laws; the sweep's 41 new names |
+| `5014f32bb` | the evaluation pins, ADR-1652, this file |
+| `39df0535b` | regenerated PLAN, the ADR index, the census and the statement pins |
+| `6ec73cfdd` | `Geo.Incidence.Parallel`, `parallel_symm`, `parallel_irrefl`, and the finding that the negative form is the wrong primitive for Playfair |
+| `a82b4eabf` | the shape pins rewritten as stored-term comparisons after the `def_eq`-over-`CReal` measurement above |
