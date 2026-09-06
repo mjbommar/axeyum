@@ -23,8 +23,13 @@ described below is kept ready for the next one, not deleted.
 
 | file | what it is |
 |---|---|
+<<<<<<< HEAD
 | [`ground_truth.py`](ground_truth.py) | independent verification of every checkable expected value in `corpus.json`: via SymPy 1.14.0 where installed, else pure-Python hand/cited proofs (129 claims with SymPy, 75 without — see "SymPy availability" below) |
 | [`corpus.json`](corpus.json) | the corpus: one entry per query, each with its area, module tag (if any), tier, expected value, and the method that established it (current totals in the generated counts block below "Areas and modules") |
+=======
+| [`ground_truth.py`](ground_truth.py) | independent verification of every checkable expected value in `corpus.json`: via SymPy 1.14.0 where installed, else pure-Python hand/cited proofs (94 claims without SymPy, measured 2026-09-06; the with-SymPy figure was 129 at 126 entries and has NOT been re-measured since — SymPy is not installed on this host — see "SymPy availability" below) |
+| [`corpus.json`](corpus.json) | the corpus: 132 entries, one per query, each with its area, module tag (if any), tier, expected value, and the method that established it |
+>>>>>>> worktree-agent-acbd7818c9ec87a06
 | [`../../../crates/axeyum-cas/examples/parity_corpus.rs`](../../../crates/axeyum-cas/examples/parity_corpus.rs) | the harness: an `axeyum-cas` example (a workspace-member crate, unlike the SMT corpus's standalone `harness/`) that re-derives each `corpus.json` entry's query directly against `axeyum-cas`, compares to the expected value, and reports verdict / trust / wall time per entry |
 
 ## Design, and how it differs from the SMT capability corpus
@@ -44,10 +49,17 @@ SMT solver's verdict space (`sat`/`unsat`/`unknown`) and a CAS's:
    justification; the harness's per-entry Rust function reconstructs the
    same query against `axeyum-cas` and looks up the matching id by
    construction (the two are kept in sync by hand: a script cross-check run
+<<<<<<< HEAD
    during development confirmed the two id sets are identical — 128 in
    each, re-verified after item 10 wave two's 48-entry growth, after the
    item 9 wave three and wave four probability entries, and after the item 1
    wave four atom-key pair).
+=======
+   during development confirmed the two id sets are identical — 132 in
+   each, re-verified after item 10 wave two's 48-entry growth, after the
+   item 9 wave three and wave four probability entries, and again after
+   item 5 wave five's six `matgroup_q`/`chartable` entries).
+>>>>>>> worktree-agent-acbd7818c9ec87a06
 2. **Trust classification is derived per entry, not from a single verdict
    type.** Some `axeyum-cas` functions return a certificate object directly
    (`CertifiedIntegral`, `Enclosure`, `HomologyCertificate`,
@@ -196,9 +208,10 @@ declares no public items), `qe_dnf` 4, `qe_bivariate` 4, plus 4 more tagged
 mass, mean, and variance all now certify with a SYMBOLIC rate).
 
 <!-- BEGIN GENERATED: cas-parity-corpus-counts (scripts/check-cas-parity-corpus.py --write) -->
-Tiers: **117 `core`**, **11 `decline_expected`**, **0 `known_defect`**. Total entries: **128**.
+Tiers: **123 `core`**, **11 `decline_expected`**, **0 `known_defect`**. Total entries: **134**.
 <!-- END GENERATED: cas-parity-corpus-counts -->
 
+<<<<<<< HEAD
 The counts above are generated from `corpus.json`, never hand-written --
 twice in one week this prose drifted from the real entry count (119 recorded
 against 123 present; then 125 against 126) with nothing failing. Run
@@ -214,6 +227,16 @@ crate's own progress-log finding; see each entry's `justification` in
 `core` agree (the fix landed under lane `cas-witness` and the harness was
 updated, but `corpus.json`'s copy never was) — corrected, and now checked
 every run by guard (c) above so it cannot silently happen again.
+=======
+Total entries: **132** (was 71 before item 10 wave two, 119 after it,
+123 after item 9 wave three, 126 after item 9 wave four). The README's own
+count sat at 119 through wave three, which added four entries without
+updating it — corrected then. Item 5 wave five (lane `cas-matgroup-2`,
+2026-09-06) added six: three for `matgroup_q` (finiteness and order over
+ℚ, and the Minkowski bound) and three for `chartable` (A₅'s classical
+character table, a near-miss control that transposes the golden ratio into
+the wrong row, and C₆'s produced table).
+>>>>>>> worktree-agent-acbd7818c9ec87a06
 
 ## Running it
 
@@ -269,9 +292,12 @@ instant it does not.
 
 **`ground_truth.py`**: with SymPy 1.14.0 installed (this host's system
 Python has no SymPy; installed into a scratch venv with `uv venv` +
-`uv pip install sympy` to run it), **129 claims, 0 failed** (was 75 before
-wave two). Without SymPy (plain `python3`, confirmed by re-running with the
-system interpreter), **75 claims, 0 failed, exit 0** (was 32) — every `qe`,
+`uv pip install sympy` to run it), **129 claims, 0 failed** — measured at
+126 entries and NOT re-measured since, because SymPy is still not installed
+here; the item 5 wave five entries add four SymPy-gated claims that nothing
+in this session ran. Without SymPy (plain `python3`, the system
+interpreter), **94 claims, 0 failed, exit 0** (was 75 at 126 entries, 32
+before wave two) — every `qe`,
 `numberfield`, `permgroup`, `homology`, `probability`, `geometry_beyond`,
 `fps`, `enclosure`, `enclosure_special`, `fps_analytic`,
 `numberfield_ideals`, `permgroup_sylow`, `homology_coefficients`,

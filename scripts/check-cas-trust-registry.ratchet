@@ -17,7 +17,8 @@
 # only rises on purpose) -- but a new UNCERTIFIED function is never refused;
 # that label is honest, not a violation. See
 # docs/math-department/13-computer-algebra.md item 10.
-COUNT	148
+COUNT	150
+FN	chartable::character_table_of_abelian_group	Result<CharacterTableCertificate, CharacterTableError>
 FN	enclosure::enclose	Option<Enclosure>
 FN	enclosure::enclose_constant	Option<Enclosure>
 FN	enclosure::enclose_root	Option<Enclosure>
@@ -82,6 +83,7 @@ FN	inverse::polynomial_inverse	Option<InverseCertificate>
 FN	matgroup::MatrixGroup::action_certificate	&ActionCertificate
 FN	matgroup::MatrixGroup::special_certificate	SpecialCertificate
 FN	matgroup::order_of_element	Result<ElementOrderCertificate, MatrixGroupError>
+FN	matgroup_q::classify_rational_matrix_group	Result<RationalGroupVerdict, RationalMatrixGroupError>
 FN	mvt::polynomial_mvt	Option<MvtCertificate>
 FN	ntheory_certify::certify_composite	Option<CompositeCertificate>
 FN	ntheory_certify::certify_crt	Option<CrtCertificate>
@@ -185,6 +187,7 @@ VOCAB	CertifiedGosperSum	struct
 VOCAB	CertifiedIntegral	struct
 VOCAB	CertifiedSquaredBinomialFallingMoment	struct
 VOCAB	CertifiedSquaredBinomialMoment	struct
+VOCAB	CharacterTableCertificate	struct
 VOCAB	CheckReport	struct
 VOCAB	ClassGroupCertificate	struct
 VOCAB	ClassNumberCertificate	struct
@@ -225,6 +228,7 @@ VOCAB	FibreCertificate	struct
 VOCAB	FibreWitness	struct
 VOCAB	FieldPersistenceCertificate	struct
 VOCAB	FieldPersistenceReport	struct
+VOCAB	FiniteRationalGroupCertificate	struct
 VOCAB	ForallDecision	enum
 VOCAB	ForallExistsCertificate	struct
 VOCAB	FormCycleCertificate	struct
@@ -243,6 +247,7 @@ VOCAB	HomologyReport	struct
 VOCAB	IdealFactorizationCertificate	struct
 VOCAB	IdealProductCertificate	struct
 VOCAB	InducedReport	struct
+VOCAB	InfiniteRationalGroupCertificate	struct
 VOCAB	IntegerInducedCertificate	struct
 VOCAB	IntegerInducedReport	struct
 VOCAB	IntegralEnclosure	struct
@@ -274,6 +279,7 @@ VOCAB	PsdNotSosCertificate	struct
 VOCAB	QuotientOrderCertificate	struct
 VOCAB	RadiusCertificate	struct
 VOCAB	RationalGeneratingFunction	struct
+VOCAB	RationalGroupVerdict	enum
 VOCAB	RationalityCertificate	struct
 VOCAB	RealClassNumberCertificate	struct
 VOCAB	RecurrenceCertificate	struct
