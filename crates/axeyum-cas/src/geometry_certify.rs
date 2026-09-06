@@ -1080,9 +1080,10 @@ pub fn certify_by_linear_elimination_scoped(
 ///
 /// It does not hand a residue over. The combination adds identities with
 /// polynomial weights, so it adds their residues with those weights too, and the
-/// result is a materially larger ideal-membership question than
-/// [`settle_residue`] was measured on. The contract is the narrow one:
-/// conclusions that linear algebra settles by itself. See [`combined_identity`].
+/// result is a materially larger ideal-membership question than the residue
+/// handover was measured on. The contract is the narrow one: conclusions that
+/// linear algebra settles by itself, and the private `combined_identity` refuses
+/// the rest.
 #[must_use]
 pub fn certify_by_combined_elimination(
     problem: &GeometryProblem,
@@ -2708,6 +2709,15 @@ fn combined_identity(
     // anything the combination believes. A combined identity that does not
     // re-expand is refused here rather than emitted for the independent checker
     // to reject.
+    //
+    // Mutation-checked, and the result is worth stating rather than burying:
+    // deleting this guard kills **no** test. That is not a licence to keep it
+    // unexamined — it says the real backstop is elsewhere, and it is
+    // `geometry_beyond`'s `tetrahedron_medians_concurrent_certifies_and_checks`,
+    // which runs `geometry_check::check_certificate` over what this route
+    // produces and shares no code with it. What the guard buys on top is the
+    // *shape* of the failure: a decline here, an emitted certificate the checker
+    // rejects there, and the first is what a producer should do.
     let expanded = combination(&identity.cofactors, hypotheses)?.add(&identity.residue)?;
     if identity.multiplier.mul(conclusion)? != expanded {
         return None;
