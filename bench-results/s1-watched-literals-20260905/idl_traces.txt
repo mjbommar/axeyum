@@ -1,0 +1,41 @@
+### RVpredict_13.smt2 [before] wall_ms=25019
+unknown
+### RVpredict_13.smt2 [after] wall_ms=25011
+unknown
+### jobshop20-2-10-10-4-4-16.smt2 [before] wall_ms=25013
+unknown
+### jobshop20-2-10-10-4-4-16.smt2 [after] wall_ms=25017
+unknown
+### jobshop26-2-13-13-4-4-16.smt2 [before] wall_ms=25068
+unknown
+### jobshop26-2-13-13-4-4-16.smt2 [after] wall_ms=25020
+unknown
+### edge-matching-width=7-height=7-colours=11.smt2 [before] wall_ms=23880
+; theory-layer boolean_propagate_ms=17520 theory_assert_ms=0 theory_propagate_ms=0 theory_push_pop_ms=0 conflict_analysis_ms=0 theory_final_check_ms=0 theory_explain_ms=0 theory_conflicts=0 theory_propagations=0 final_checks=0 decisions=0 restarts=0
+unknown
+### edge-matching-width=7-height=7-colours=11.smt2 [after] wall_ms=23540
+; theory-layer boolean_propagate_ms=1895 theory_assert_ms=239 theory_propagate_ms=1 theory_push_pop_ms=7 conflict_analysis_ms=63 theory_final_check_ms=0 theory_explain_ms=0 theory_conflicts=2728 theory_propagations=0 final_checks=0 decisions=45516 restarts=14
+unknown
+### a7.3.0.tweaked.3.asp.smt2 [before] wall_ms=23454
+; theory-layer boolean_propagate_ms=16881 theory_assert_ms=0 theory_propagate_ms=0 theory_push_pop_ms=0 conflict_analysis_ms=0 theory_final_check_ms=0 theory_explain_ms=0 theory_conflicts=0 theory_propagations=0 final_checks=0 decisions=0 restarts=0
+unknown
+### a7.3.0.tweaked.3.asp.smt2 [after] wall_ms=25109
+unknown
+### a7.3.0.tweaked.3.asp.smt2 [before repeat 1] wall_ms=22730
+; theory-layer boolean_propagate_ms=17983 theory_assert_ms=0 theory_propagate_ms=0 theory_push_pop_ms=0 conflict_analysis_ms=0 theory_final_check_ms=0 theory_explain_ms=0 theory_conflicts=0 theory_propagations=0 final_checks=0 decisions=0 restarts=0
+unknown
+### a7.3.0.tweaked.3.asp.smt2 [after repeat 1] wall_ms=22415
+; theory-layer boolean_propagate_ms=1144 theory_assert_ms=44 theory_propagate_ms=1 theory_push_pop_ms=3 conflict_analysis_ms=10 theory_final_check_ms=0 theory_explain_ms=0 theory_conflicts=353 theory_propagations=0 final_checks=0 decisions=48307 restarts=3
+unknown
+### a7.3.0.tweaked.3.asp.smt2 [before repeat 2] wall_ms=22275
+; theory-layer boolean_propagate_ms=19056 theory_assert_ms=0 theory_propagate_ms=0 theory_push_pop_ms=0 conflict_analysis_ms=0 theory_final_check_ms=0 theory_explain_ms=0 theory_conflicts=0 theory_propagations=0 final_checks=0 decisions=0 restarts=0
+unknown
+### a7.3.0.tweaked.3.asp.smt2 [after repeat 2] wall_ms=22253
+; theory-layer boolean_propagate_ms=1129 theory_assert_ms=44 theory_propagate_ms=1 theory_push_pop_ms=3 conflict_analysis_ms=9 theory_final_check_ms=0 theory_explain_ms=0 theory_conflicts=351 theory_propagations=0 final_checks=0 decisions=46007 restarts=3
+unknown
+### a7.3.0.tweaked.3.asp.smt2 [before repeat 3] wall_ms=22349
+; theory-layer boolean_propagate_ms=19041 theory_assert_ms=0 theory_propagate_ms=0 theory_push_pop_ms=0 conflict_analysis_ms=0 theory_final_check_ms=0 theory_explain_ms=0 theory_conflicts=0 theory_propagations=0 final_checks=0 decisions=0 restarts=0
+unknown
+### a7.3.0.tweaked.3.asp.smt2 [after repeat 3] wall_ms=22366
+; theory-layer boolean_propagate_ms=1049 theory_assert_ms=52 theory_propagate_ms=1 theory_push_pop_ms=5 conflict_analysis_ms=10 theory_final_check_ms=0 theory_explain_ms=0 theory_conflicts=349 theory_propagations=0 final_checks=0 decisions=42729 restarts=2
+unknown
