@@ -1280,8 +1280,12 @@ enum Decomposition {
     /// One licensed decomposition, shared by every conclusion.
     Joint(Vec<LinearBlock>),
     /// Several decompositions whose eliminations the combination route adds
-    /// together. Every entry has one block per component.
-    Combine(Vec<Vec<LinearBlock>>),
+    /// together (every entry has one block per component), and the combination
+    /// every conclusion shares when they all predict the same multipliers.
+    Combine {
+        decompositions: Vec<Vec<LinearBlock>>,
+        shared: Option<Box<(Vec<MvPoly>, CombinationTrace)>>,
+    },
 }
 
 /// Plan one condition subset's decomposition.
@@ -1307,10 +1311,13 @@ fn plan_decomposition(
                 &search,
                 COMBINATION_ALTERNATIVES,
             );
-            Decomposition::Combine(combination_decompositions(
-                &per_component,
-                COMBINATION_ALTERNATIVES,
-            ))
+            let decompositions =
+                combination_decompositions(&per_component, COMBINATION_ALTERNATIVES);
+            let shared = shared_combination(targets, &decompositions, conditions).map(Box::new);
+            Decomposition::Combine {
+                decompositions,
+                shared,
+            }
         }
         BlockScope::Joint => {
             // The filter is inside the search here, so everything it returns is
@@ -1355,8 +1362,17 @@ fn linear_cofactors(
             };
             Identity::from_elimination(found)
         }
-        Decomposition::Combine(decompositions) => {
-            match combined_identity(hypotheses, &conclusion.poly, conditions, decompositions) {
+        Decomposition::Combine {
+            decompositions,
+            shared,
+        } => {
+            match combined_identity(
+                hypotheses,
+                &conclusion.poly,
+                conditions,
+                decompositions,
+                shared.as_deref(),
+            ) {
                 Some((identity, _)) => identity,
                 None => {
                     return Err(ProofOutcome::Declined(
@@ -1908,6 +1924,22 @@ const COMBINATION_ROUNDS: usize = 16;
 /// degree 2 and degree 1.
 const COMBINATION_COFACTOR_DEGREE: u32 = 3;
 
+/// How many division passes [`grow_factor_basis`] runs before it stops looking
+/// for new factors.
+///
+/// A backstop: each pass either adds a factor or ends the loop, and the factors
+/// of a fixed multiplier set are finite. The medians converge in two.
+const COMBINATION_BASIS_PASSES: usize = 8;
+
+/// The largest Macaulay system [`solve_group`] will build before it asks the
+/// question a different way.
+///
+/// Set from the two systems the medians produce — 39 columns and 546 — so that
+/// the first is answered by exact linear algebra and the second is not. It is a
+/// *routing* threshold: both routes are exact, and neither's answer depends on
+/// where the line is.
+const COMBINATION_ANSATZ_COLUMNS: usize = 256;
+
 /// How many alternative blocks per component the combination route enumerates.
 const COMBINATION_ALTERNATIVES: usize = 64;
 
@@ -2018,6 +2050,7 @@ pub fn combine_block_multipliers(
         })
         .collect();
     let mut trace = CombinationTrace::default();
+    let mut basis: Vec<MvPoly> = Vec::new();
     for _ in 0..COMBINATION_ROUNDS {
         if let Some(index) = items
             .iter()
@@ -2027,7 +2060,20 @@ pub fn combine_block_multipliers(
             trace.weights.clone_from(&items[index].weights);
             return Some(trace);
         }
-        let (members, step) = combine_one_round(&items, conditions)?;
+        // The basis is grown from every item on the first round and from the
+        // round's *fresh* item thereafter. Regrowing from the whole set each
+        // round re-ran divisions whose answer had not changed: measured on the
+        // medians, 10.70 s of grouping against 5.12 s once only new multipliers
+        // are scanned and a group's artifacts are divided out lazily. An item
+        // that survives a round is the same polynomial it was, so its factors
+        // are too.
+        let scanned: &[Virtual] = if basis.is_empty() {
+            &items
+        } else {
+            &items[items.len() - 1..]
+        };
+        grow_factor_basis(&mut basis, scanned);
+        let (members, step) = combine_one_round(&items, &basis, conditions)?;
         let fresh = fold_group(&items, &members, &step, multipliers)?;
         let chosen: BTreeSet<usize> = members.iter().copied().collect();
         items = items
@@ -2042,85 +2088,304 @@ pub fn combine_block_multipliers(
     None
 }
 
+/// One candidate group: the factor its multipliers share, who is in it, and what
+/// is left of each after the shared factor is divided out.
+struct Group {
+    shared: MvPoly,
+    members: Vec<usize>,
+    /// The smallest total degree the group's artifact factors will have — known
+    /// from the degrees alone, before any division runs. It is what bounds the
+    /// cofactor degree the group's solve needs, hence what orders the groups.
+    floor: u64,
+}
+
+/// Grow the round's **factor basis**: the shared factors the grouping is allowed
+/// to try, discovered once and extended by exact division thereafter.
+///
+/// # Why this is not just a cache
+///
+/// The obvious grouping computes `gcd(mᵢ, mⱼ)` for every pair, every round. That
+/// was measured on `tetrahedron-medians-concurrent`: 98 multivariate GCDs over
+/// twelve variables, **22.47 s** of a 24.35 s debug run — the grouping cost more
+/// than everything else in the route put together.
+///
+/// One GCD is enough. It splits some multiplier `m = g·a`, and *both* halves go
+/// into the basis; every other multiplier is then split by trial division against
+/// what is already known — `mᵢ / g` is a new factor, and so is `mᵢ / a` — and the
+/// passes repeat until nothing new appears. On the medians the basis converges to
+/// the six direction coordinates and the three cross-product components with a
+/// single GCD, and the later rounds pick up `Δ` the same way, by dividing a
+/// combined multiplier `αᵢ·Δ` by the `αᵢ` already in the basis.
+///
+/// A basis grown this way can be incomplete, which is why
+/// [`combine_one_round`] still falls back to a GCD enumeration when nothing in
+/// the basis yields a usable group. Incompleteness costs reach, never soundness:
+/// every group it proposes is checked by exact division and every combination it
+/// produces is re-expanded.
+fn grow_factor_basis(basis: &mut Vec<MvPoly>, items: &[Virtual]) {
+    if basis.is_empty() {
+        'seed: for left in 0..items.len() {
+            for right in (left + 1)..items.len() {
+                let Some(shared) = items[left].multiplier.gcd(&items[right].multiplier) else {
+                    continue;
+                };
+                if shared.total_degree() == 0 {
+                    continue;
+                }
+                for side in [left, right] {
+                    if let Some(rest) = items[side].multiplier.exact_div(&shared) {
+                        remember_factor(basis, rest);
+                    }
+                }
+                remember_factor(basis, shared);
+                break 'seed;
+            }
+        }
+    }
+    for _ in 0..COMBINATION_BASIS_PASSES {
+        let divisors = basis.clone();
+        let before = basis.len();
+        for item in items {
+            for divisor in &divisors {
+                if divisor.total_degree() > item.multiplier.total_degree() {
+                    continue;
+                }
+                if let Some(rest) = item.multiplier.exact_div(divisor) {
+                    remember_factor(basis, rest);
+                }
+            }
+        }
+        if basis.len() == before {
+            break;
+        }
+    }
+}
+
+/// Add a factor to the basis unless it is a constant or an associate of one
+/// already there.
+///
+/// Associates rather than equals: `exact_div` returns the exact quotient, so the
+/// same geometric factor arrives as `u_x` from one division and `u_x/3` from
+/// another, and two associates generate the identical group for twice the work.
+fn remember_factor(basis: &mut Vec<MvPoly>, factor: MvPoly) {
+    if factor.total_degree() == 0 {
+        return;
+    }
+    // Degrees first: an associate has the *same* degree, and comparing two
+    // integers is what keeps the quadratic scan from paying for a polynomial
+    // division per basis entry.
+    let known = basis.iter().any(|seen| {
+        seen.total_degree() == factor.total_degree()
+            && seen
+                .exact_div(&factor)
+                .is_some_and(|quotient| quotient.total_degree() == 0)
+    });
+    if !known {
+        basis.push(factor);
+    }
+}
+
+/// The group a shared factor induces over the current items, with the *degree*
+/// its artifacts would have but not yet the artifacts themselves.
+///
+/// Exact division is the expensive primitive here, and a group that is never
+/// tried should not pay for one per member. The degree is exact without dividing:
+/// division by a factor subtracts its degree.
+fn group_by(items: &[Virtual], shared: &MvPoly) -> Option<Group> {
+    let members: Vec<usize> = (0..items.len())
+        .filter(|&index| items[index].multiplier.exact_div(shared).is_some())
+        .collect();
+    if members.len() < 2 {
+        return None;
+    }
+    let floor = members
+        .iter()
+        .map(|&index| {
+            items[index]
+                .multiplier
+                .total_degree()
+                .saturating_sub(shared.total_degree())
+        })
+        .min()
+        .unwrap_or_default();
+    Some(Group {
+        shared: shared.clone(),
+        members,
+        floor,
+    })
+}
+
+/// The artifact factors of a group, divided out when the group is actually
+/// tried.
+fn group_artifacts(items: &[Virtual], group: &Group) -> Option<Vec<MvPoly>> {
+    let mut artifacts: Vec<MvPoly> = Vec::with_capacity(group.members.len());
+    for &index in &group.members {
+        artifacts.push(items[index].multiplier.exact_div(&group.shared)?);
+    }
+    Some(artifacts)
+}
+
 /// One grouping round: the group that combined, and what it combined to.
+///
+/// # The order the groups are tried in
+///
+/// The cheapest question first. The cofactor degree is the *exponent* in the
+/// Macaulay system's monomial count, so it dominates the size of the exact solve;
+/// the artifact count is only the linear factor. On the medians the two groups an
+/// anchor offers are degree-one cofactors over three artifacts — a 39-column
+/// system — and degree-two over six, which is 546 columns. Both reach `Δ²`;
+/// taking the cheap one first is the difference between one large solve in the
+/// whole run and three.
+///
+/// # The fallback
+///
+/// [`grow_factor_basis`] is cheap and incomplete. When nothing it knows about
+/// yields a usable group, the round falls back to the general enumeration: for
+/// each **anchor** in turn, `gcd(anchor, other)` for every later item, that
+/// anchor's groups tried before the next anchor is looked at. Nothing is lost by
+/// anchoring: a round removes the group it uses, so an item some earlier anchor
+/// already covered is gone, and an item in no group at all eventually becomes the
+/// anchor itself.
 fn combine_one_round(
     items: &[Virtual],
+    basis: &[MvPoly],
     conditions: &[MvPoly],
 ) -> Option<(Vec<usize>, CombinationStep)> {
-    let mut groups: Vec<(MvPoly, Vec<usize>)> = Vec::new();
-    for left in 0..items.len() {
-        for right in (left + 1)..items.len() {
-            let Some(shared) = items[left].multiplier.gcd(&items[right].multiplier) else {
+    let targets = combination_targets(conditions);
+    let reference = targets
+        .iter()
+        .map(MvPoly::total_degree)
+        .max()
+        .unwrap_or_default();
+    let known: Vec<Group> = basis
+        .iter()
+        .filter_map(|shared| group_by(items, shared))
+        .collect();
+    if let Some(found) = try_groups(items, known, &targets, reference) {
+        return Some(found);
+    }
+    for anchor in 0..items.len() {
+        let mut groups: Vec<Group> = Vec::new();
+        for other in (anchor + 1)..items.len() {
+            let Some(shared) = items[anchor].multiplier.gcd(&items[other].multiplier) else {
                 continue;
             };
             if shared.total_degree() == 0 {
                 continue;
             }
-            let members: Vec<usize> = (0..items.len())
-                .filter(|&index| items[index].multiplier.exact_div(&shared).is_some())
-                .collect();
-            if members.len() < 2 {
+            if groups.iter().any(|group| group.shared == shared) {
                 continue;
             }
-            if groups
-                .iter()
-                .any(|(seen, taken)| *taken == members && *seen == shared)
-            {
+            if basis.iter().any(|seen| *seen == shared) {
                 continue;
             }
-            groups.push((shared, members));
+            if let Some(group) = group_by(items, &shared) {
+                groups.push(group);
+            }
+        }
+        if let Some(found) = try_groups(items, groups, &targets, reference) {
+            return Some(found);
         }
     }
-    // Biggest group first; ties keep discovery order, which is the ascending
-    // index order the loops above impose. `sort_by_key` is stable, so this is
-    // deterministic without a total order on `MvPoly`.
-    groups.sort_by_key(|(_, members)| std::cmp::Reverse(members.len()));
+    None
+}
 
-    for (shared, members) in &groups {
-        let mut artifacts: Vec<MvPoly> = Vec::with_capacity(members.len());
-        for &index in members {
-            let Some(artifact) = items[index].multiplier.exact_div(shared) else {
-                break;
-            };
-            artifacts.push(artifact);
-        }
-        if artifacts.len() != members.len() {
+/// Try each group, cheapest predicted solve first.
+fn try_groups(
+    items: &[Virtual],
+    mut groups: Vec<Group>,
+    targets: &[MvPoly],
+    reference: u64,
+) -> Option<(Vec<usize>, CombinationStep)> {
+    groups.sort_by_key(|group| (reference.saturating_sub(group.floor), group.members.len()));
+    for group in &groups {
+        let Some(artifacts) = group_artifacts(items, group) else {
             continue;
-        }
-        let floor = artifacts
-            .iter()
-            .map(MvPoly::total_degree)
-            .min()
-            .unwrap_or_default();
-        for target in combination_targets(conditions) {
-            let ceiling = u32::try_from(target.total_degree().saturating_sub(floor))
+        };
+        for target in targets {
+            let ceiling = u32::try_from(target.total_degree().saturating_sub(group.floor))
                 .unwrap_or(COMBINATION_COFACTOR_DEGREE)
                 .min(COMBINATION_COFACTOR_DEGREE);
-            let limits = AnsatzLimits {
-                max_cofactor_degree: ceiling,
-                ..AnsatzLimits::geometry()
-            };
-            let AnsatzOutcome::Solved {
-                cofactors: coefficients,
-                ..
-            } = cofactors_by_ansatz(&artifacts, &target, limits)
-            else {
+            let Some(coefficients) = solve_group(&artifacts, target, ceiling) else {
                 continue;
             };
-            let multiplier = shared.mul(&target)?;
+            let multiplier = group.shared.mul(target)?;
             return Some((
-                members.clone(),
+                group.members.clone(),
                 CombinationStep {
-                    shared: shared.clone(),
-                    artifacts: artifacts.clone(),
+                    shared: group.shared.clone(),
+                    artifacts,
                     coefficients,
-                    reached: target,
+                    reached: target.clone(),
                     multiplier,
                 },
             ));
         }
     }
     None
+}
+
+/// Solve `Σ cᵢ·artifactᵢ = target` for one round, by whichever exact route the
+/// question is the right size for.
+///
+/// # Why there are two
+///
+/// [`cofactors_by_ansatz`] answers a *degree slice* by one exact linear solve, and
+/// it is the right tool when the slice is small — it is decided, it has no budget
+/// in it, and on a 39-column system it is instant. Its cost is the wrong shape
+/// when the slice is not small: the unknown count is `artifacts × C(vars+d, d)`,
+/// so degree two over twelve variables is a 546-column system whose exact
+/// Gaussian elimination is minutes in a debug build, for a question that is not
+/// itself hard.
+///
+/// The medians' last round is exactly that question and it is *easy* in the other
+/// encoding: the artifacts there are six **linear** forms, and `Δ` lies in the
+/// ideal they generate for a reason a row echelon form exposes in one pass.
+/// [`reduce_many_with_cofactors`] is that pass, and Buchberger's algorithm on
+/// linear generators is an echelon form. So the ansatz is used where its encoding
+/// is cheap and the general cofactor reduction where it is not, and the two are
+/// not a fallback chain: a small system's `NotInDegree` is a *decided* answer and
+/// escalating it would be asking a different question, more expensively, for no
+/// reach this route needs.
+fn solve_group(artifacts: &[MvPoly], target: &MvPoly, ceiling: u32) -> Option<Vec<MvPoly>> {
+    if predicted_columns(artifacts, target, ceiling) <= COMBINATION_ANSATZ_COLUMNS {
+        let limits = AnsatzLimits {
+            max_cofactor_degree: ceiling,
+            ..AnsatzLimits::geometry()
+        };
+        return match cofactors_by_ansatz(artifacts, target, limits) {
+            AnsatzOutcome::Solved { cofactors, .. } => Some(cofactors),
+            AnsatzOutcome::NotInDegree(_) | AnsatzOutcome::Declined(_) => None,
+        };
+    }
+    let outcomes =
+        reduce_many_with_cofactors(artifacts, std::slice::from_ref(target), geometry_limits());
+    match outcomes.into_iter().next()? {
+        CofactorOutcome::Reduced {
+            cofactors,
+            remainder,
+        } if remainder.is_zero() => Some(cofactors),
+        CofactorOutcome::Reduced { .. } | CofactorOutcome::Declined(_) => None,
+    }
+}
+
+/// The number of unknowns [`cofactors_by_ansatz`] would introduce for this
+/// question: one per generator per monomial of degree at most `ceiling` over the
+/// variables that occur.
+fn predicted_columns(artifacts: &[MvPoly], target: &MvPoly, ceiling: u32) -> usize {
+    let mut variables: BTreeSet<String> = target.variables();
+    for artifact in artifacts {
+        variables.extend(artifact.variables());
+    }
+    let count = u64::try_from(variables.len()).unwrap_or(u64::MAX);
+    // `C(count + ceiling, ceiling)`, built one factor at a time so each partial
+    // product is an exact binomial coefficient and the division is exact.
+    let mut monomials: u64 = 1;
+    for step in 1..=u64::from(ceiling) {
+        monomials = monomials.saturating_mul(count.saturating_add(step)) / step;
+    }
+    usize::try_from(monomials.saturating_mul(u64::try_from(artifacts.len()).unwrap_or(u64::MAX)))
+        .unwrap_or(usize::MAX)
 }
 
 /// What a round tries to drive the artifact factors to: `1` first — the unit
@@ -2258,6 +2523,7 @@ fn combined_identity(
     conclusion: &MvPoly,
     conditions: &[MvPoly],
     decompositions: &[Vec<LinearBlock>],
+    shared: Option<&(Vec<MvPoly>, CombinationTrace)>,
 ) -> Option<(Identity, CombinationTrace)> {
     // The probe: if the first decomposition leaves a residue, no decomposition of
     // this shape settles the conclusion outright and there is nothing here to
@@ -2267,16 +2533,25 @@ fn combined_identity(
         return None;
     }
 
-    let mut multipliers: Vec<MvPoly> = Vec::with_capacity(decompositions.len());
-    for blocks in decompositions {
-        let mut multiplier = MvPoly::constant(Rational::integer(1));
-        for block in blocks {
-            let power = joint_degree(conclusion, &block.unknowns);
-            multiplier = multiplier.mul(&block.determinant.pow(power)?)?;
-        }
-        multipliers.push(multiplier);
+    let multipliers = predicted_multipliers(conclusion, decompositions)?;
+    // A theorem states its conclusions one component at a time and they are
+    // usually the same shape, so the multipliers a second conclusion predicts are
+    // usually the first one's. Reusing the trace when they *are* equal skips the
+    // whole grouping search, and comparing the vectors is the cheap half of that
+    // question. This is a memo, not a shortcut: a mismatch recomputes.
+    let trace = match shared {
+        Some((seen, trace)) if *seen == multipliers => trace.clone(),
+        _ => combine_block_multipliers(&multipliers, conditions)?,
+    };
+    // Strict additivity, enforced rather than asserted. A trace with no rounds
+    // means some single decomposition's multiplier was already licensed, which is
+    // `certify_by_linear_elimination_scoped`'s theorem and has committed
+    // artifacts. Refusing here is what lets `certify_any_route` try this route
+    // *first* — ahead of the plain route's exhaustive licensed search — without
+    // any risk of re-deriving an existing certificate by a different identity.
+    if trace.steps.is_empty() {
+        return None;
     }
-    let trace = combine_block_multipliers(&multipliers, conditions)?;
     let reached = trace.multiplier.clone()?;
 
     let mut cofactors = vec![MvPoly::zero(); hypotheses.len()];
@@ -2322,6 +2597,56 @@ fn combined_identity(
         return None;
     }
     Some((identity, trace))
+}
+
+/// The multiplier each decomposition would carry for `conclusion`: the product of
+/// its blocks' determinants raised to the conclusion's joint degree in that
+/// block's unknowns.
+///
+/// A prediction, not a measurement — `eliminate_blocks` measures a later block's
+/// degree against the *residue* the earlier ones left, which for a
+/// multi-component decomposition need not be the conclusion's. Every prediction
+/// the combination actually uses is compared with the real multiplier before it
+/// becomes a certificate.
+fn predicted_multipliers(
+    conclusion: &MvPoly,
+    decompositions: &[Vec<LinearBlock>],
+) -> Option<Vec<MvPoly>> {
+    let mut multipliers: Vec<MvPoly> = Vec::with_capacity(decompositions.len());
+    for blocks in decompositions {
+        let mut multiplier = MvPoly::constant(Rational::integer(1));
+        for block in blocks {
+            let power = joint_degree(conclusion, &block.unknowns);
+            multiplier = multiplier.mul(&block.determinant.pow(power)?)?;
+        }
+        multipliers.push(multiplier);
+    }
+    Some(multipliers)
+}
+
+/// The combination every conclusion of a theorem shares, when they all predict
+/// the same multipliers — which is the ordinary case, because a theorem states
+/// one point's coordinates one component at a time.
+///
+/// `None` when they disagree or when no combination exists; the per-conclusion
+/// path then does its own work and reaches the same verdict.
+fn shared_combination(
+    targets: &[MvPoly],
+    decompositions: &[Vec<LinearBlock>],
+    conditions: &[MvPoly],
+) -> Option<(Vec<MvPoly>, CombinationTrace)> {
+    let mut agreed: Option<Vec<MvPoly>> = None;
+    for target in targets {
+        let multipliers = predicted_multipliers(target, decompositions)?;
+        match &agreed {
+            None => agreed = Some(multipliers),
+            Some(previous) if *previous == multipliers => {}
+            Some(_) => return None,
+        }
+    }
+    let multipliers = agreed?;
+    let trace = combine_block_multipliers(&multipliers, conditions)?;
+    Some((multipliers, trace))
 }
 
 /// The unknowns the combination route searches over: the conclusions' variables
@@ -2395,14 +2720,15 @@ mod tests {
     use super::{
         BlockScope, Condition, Constraint, DegenerateWitness, GenericWitness, GeometryCertificate,
         GeometryDecline, GeometryProblem, JOINT_CHOICES, JOINT_EXAMINED, ProofOutcome, Pt, certify,
-        certify_any_route, certify_by_linear_elimination, certify_by_linear_elimination_scoped,
-        collinear, detect_linear_blocks, factors_into, geometry_limits, licensed_blocks, midpoint,
-        parallel, perpendicular, same_point,
+        certify_any_route, certify_by_combined_elimination, certify_by_linear_elimination,
+        certify_by_linear_elimination_scoped, collinear, combination_scope,
+        combine_block_multipliers, detect_linear_blocks, factors_into, geometry_limits,
+        licensed_blocks, midpoint, parallel, perpendicular, same_point,
     };
     use crate::groebner_cert::Limits;
     use crate::mvpoly::MvPoly;
     use axeyum_ir::Rational;
-    use std::collections::BTreeMap;
+    use std::collections::{BTreeMap, BTreeSet};
 
     /// Re-expand `Σ uᵢ·gᵢ` and compare it with the conclusion, without any of the
     /// machinery that produced the cofactors. This is what the independent
@@ -3350,6 +3676,197 @@ mod tests {
                 "{id}: the route selector needed Buchberger, so it is not on the widened scope"
             );
         }
+    }
+
+    // --- Combining elimination identities ----------------------------------
+
+    /// The whole mechanism in three variables. Neither `x·d` nor `y·d` is
+    /// licensed by `d`; their shared factor is `d`, their artifact factors are
+    /// `x` and `y`, and `d` was chosen to be `x + y` so the coefficients that
+    /// drive the artifacts to `d` are `1` and `1`. The combined multiplier is
+    /// `d²`, which is licensed.
+    #[test]
+    fn two_unlicensed_multipliers_combine_to_the_condition_squared() {
+        let x = MvPoly::var("x");
+        let y = MvPoly::var("y");
+        let condition = x.add(&y).expect("sum");
+        let left = x.mul(&condition).expect("product");
+        let right = y.mul(&condition).expect("product");
+        assert!(!factors_into(&left, std::slice::from_ref(&condition)));
+        assert!(!factors_into(&right, std::slice::from_ref(&condition)));
+
+        let trace = combine_block_multipliers(
+            &[left.clone(), right.clone()],
+            std::slice::from_ref(&condition),
+        )
+        .expect("a combination");
+        let square = condition.mul(&condition).expect("square");
+        assert_eq!(trace.multiplier.as_ref(), Some(&square));
+        assert!(factors_into(&square, std::slice::from_ref(&condition)));
+        assert_eq!(trace.steps.len(), 1);
+        assert_eq!(trace.steps[0].shared, condition);
+        assert_eq!(trace.steps[0].artifacts, vec![x, y]);
+        assert_eq!(trace.steps[0].reached, condition);
+
+        let mut total = MvPoly::zero();
+        for (index, weight) in &trace.weights {
+            let source = if *index == 0 { &left } else { &right };
+            total = total
+                .add(&weight.mul(source).expect("product"))
+                .expect("sum");
+        }
+        assert_eq!(total, square, "the weights re-expand to the multiplier");
+    }
+
+    /// `x·z` and `y·z` share `z`, and neither `1` nor `z` lies in `(x, y)`, so
+    /// there is nothing to combine to. The answer is `None` — no certificate, and
+    /// no condition invented to make one.
+    #[test]
+    fn artifacts_with_a_common_zero_admit_no_combination() {
+        let x = MvPoly::var("x");
+        let y = MvPoly::var("y");
+        let z = MvPoly::var("z");
+        let left = x.mul(&z).expect("product");
+        let right = y.mul(&z).expect("product");
+        assert_eq!(
+            combine_block_multipliers(&[left, right], std::slice::from_ref(&z)),
+            None
+        );
+    }
+
+    /// A synthetic probe, not a geometry theorem: every block determinant is
+    /// `ax·bx`, the stated condition licenses `ax`, and nothing licenses `bx`.
+    /// Because the artifact factors are **not** coprime — they are all `1` over a
+    /// shared `ax·bx` — no combination can remove what they share.
+    fn artifact_factors_sharing_a_factor() -> GeometryProblem {
+        let scale = MvPoly::var("ax").mul(&MvPoly::var("bx")).expect("product");
+        let one = MvPoly::constant(Rational::integer(1));
+        let row = |unknown: &str| {
+            scale
+                .mul(&MvPoly::var(unknown))
+                .expect("product")
+                .sub(&scale)
+                .expect("difference")
+        };
+        GeometryProblem {
+            id: "artifact-factors-share-a-factor".into(),
+            title: "a synthetic probe for the combination route's own decline".into(),
+            statement: "Not a theorem of geometry. Three rows, each `ax·bx·(v − 1) = 0`, give \
+                        the block search two alternatives whose determinants are identical, so \
+                        their artifact factors share every factor they have and no combination \
+                        of them can reach a product of the stated condition `ax`."
+                .into(),
+            coordinate_gloss: Vec::new(),
+            hypotheses: vec![
+                Constraint::new("first-x", "ax·bx·(P.x − 1) = 0", row("px")),
+                Constraint::new("first-y", "ax·bx·(P.y − 1) = 0", row("py")),
+                Constraint::new("again-x", "the same row a second time", row("px")),
+            ],
+            nondegeneracy: vec![Condition::new("ax-nonzero", "A.x ≠ 0", MvPoly::var("ax"))],
+            conclusions: vec![
+                Constraint::new(
+                    "x-is-one",
+                    "P.x = 1",
+                    MvPoly::var("px").sub(&one).expect("difference"),
+                ),
+                Constraint::new(
+                    "y-is-one",
+                    "P.y = 1",
+                    MvPoly::var("py").sub(&one).expect("difference"),
+                ),
+            ],
+            degenerate_witnesses: Vec::new(),
+            generic_witnesses: Vec::new(),
+        }
+    }
+
+    /// The combination route declines with **its own** reason when the artifact
+    /// factors share a factor, rather than reporting
+    /// [`GeometryDecline::UndividableMultiplier`], which is a claim about one
+    /// decomposition and would say the wrong thing here.
+    #[test]
+    fn the_combination_route_declines_when_every_artifact_shares_a_factor() {
+        let problem = artifact_factors_sharing_a_factor();
+        assert_eq!(
+            certify_by_combined_elimination(&problem, None),
+            ProofOutcome::Declined(GeometryDecline::UncombinableMultipliers)
+        );
+    }
+
+    /// The route is **strictly additive**: on the two theorems the plain joint
+    /// route reaches it declines instead of producing a second, different
+    /// identity for a certificate that is already committed.
+    ///
+    /// This is what makes trying the combination *first* in
+    /// [`certify_any_route`] safe, and it is the assertion that would die if the
+    /// `trace.steps.is_empty()` refusal in [`combined_identity`] were removed.
+    #[test]
+    fn the_combination_route_declines_where_the_plain_linear_route_succeeds() {
+        for id in ["centroid-divides-medians", "parallelogram-diagonals-bisect"] {
+            let problem = crate::geometry_corpus::corpus()
+                .into_iter()
+                .find(|problem| problem.id == id)
+                .expect("a corpus theorem");
+            assert!(
+                matches!(
+                    certify_by_linear_elimination_scoped(
+                        &problem,
+                        Some(geometry_limits()),
+                        BlockScope::Joint,
+                    ),
+                    ProofOutcome::Certified(_)
+                ),
+                "{id}: the plain joint route was expected to reach this"
+            );
+            let combined = certify_by_combined_elimination(&problem, Some(geometry_limits()));
+            assert!(
+                !matches!(combined, ProofOutcome::Certified(_)),
+                "{id}: the combination route certified a theorem the plain route already \
+                 reaches, so `certify_any_route` would rewrite its committed artifact: \
+                 {combined:?}"
+            );
+        }
+    }
+
+    /// The unknown scope the combination route searches over drops every
+    /// coordinate a non-degeneracy condition mentions.
+    ///
+    /// Pinned because it is the whole reason the medians are affordable: their
+    /// conclusions mention all fifteen coordinates and the unfiltered search
+    /// examines 54,263 subsystems, while this scope is the three coordinates of
+    /// `P` and 83 subsystems settle it.
+    #[test]
+    fn the_combination_scope_drops_the_coordinates_the_conditions_constrain() {
+        let problem = crate::geometry_beyond::tetrahedron_medians_concurrent_problem();
+        let targets: Vec<MvPoly> = problem
+            .conclusions
+            .iter()
+            .map(|conclusion| conclusion.poly.clone())
+            .collect();
+        let conditions: Vec<MvPoly> = problem
+            .nondegeneracy
+            .iter()
+            .map(|condition| condition.poly.clone())
+            .collect();
+        let unscoped: BTreeSet<String> = targets
+            .iter()
+            .flat_map(MvPoly::variables)
+            .collect::<BTreeSet<String>>();
+        assert_eq!(
+            unscoped.len(),
+            15,
+            "the conclusions mention every coordinate"
+        );
+        let scope = combination_scope(&targets, &conditions);
+        assert_eq!(
+            scope,
+            ["px", "py", "pz"]
+                .into_iter()
+                .map(str::to_string)
+                .collect::<BTreeSet<String>>()
+        );
+        // And the fallback: with no conditions there is nothing to drop.
+        assert_eq!(combination_scope(&targets, &[]), unscoped);
     }
 
     /// Why widening the scope does **not** rescue the tetrahedron medians.
