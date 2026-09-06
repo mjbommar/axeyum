@@ -7381,8 +7381,8 @@ SUITES["cas-summation-and-gaussian"] = (
             # guard, `Σ_{k≥1} 3ᵏ/k!` silently returns `e³` (the k=0 term, 1,
             # is not subtracted).
             "the exponential series is only claimed from a lower bound of 0",
-            "    if integer_constant(lower)? != 0 {\n        return None;\n    }",
-            "    if false {\n        return None;\n    }",
+            "    if integer_constant(lower)? != 0 {\n        return None;\n    }\n    let shape = exponential_series_shape(f, var)?;",
+            "    if false {\n        return None;\n    }\n    let shape = exponential_series_shape(f, var)?;",
         ),
         (
             # `λᵏ/(k!·(k+1))` leaves `(k+1)` in the residual denominator. Drop
