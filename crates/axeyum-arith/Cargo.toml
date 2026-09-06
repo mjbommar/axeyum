@@ -14,12 +14,12 @@ publish = false
 [dependencies]
 # The only two dependencies, both pure Rust and MIT OR Apache-2.0, so this
 # crate builds for `wasm32-unknown-unknown` and `wasm32-wasip1` and adds no
-# C/C++ surface (the ADR-0002 hard rule). The versions match the ones already
-# resolved in `Cargo.lock` for `axeyum-ir`, `axeyum-cas`, `axeyum-fp` and
-# `axeyum-lean-kernel`, so this crate introduces no new registry version into
-# the tree. No default features beyond `std`.
-num-bigint = { version = "0.4" }
-num-rational = { version = "0.4", default-features = false, features = ["num-bigint"] }
+# C/C++ surface (the ADR-0002 hard rule). Resolved through
+# `[workspace.dependencies]` (ADR-1710 slice 0) so this crate, `axeyum-ir`,
+# `axeyum-cas`, `axeyum-fp` and `axeyum-lean-kernel` all resolve one version.
+# No default features beyond `std`.
+num-bigint.workspace = true
+num-rational.workspace = true
 
 [lints]
 workspace = true

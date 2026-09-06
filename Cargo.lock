@@ -113,6 +113,7 @@ dependencies = [
 name = "axeyum-cas"
 version = "0.1.0"
 dependencies = [
+ "axeyum-arith",
  "axeyum-ir",
  "num-bigint",
  "num-rational",
