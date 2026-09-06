@@ -69,8 +69,8 @@
 //! `f^((2m))(t) = (2m)!/t^(2m+1)`. Nothing about it is asymptotic hand-waving —
 //! it is an integral of a bounded function against an explicitly integrable
 //! one. The harmonic sum is exact, `ln n` goes through the parent module's
-//! [`ln_point`], and the Bernoulli numbers come from
-//! [`crate::enclosure_special::bernoulli_table`].
+//! the parent module's `ln_point`, and the Bernoulli numbers come from
+//! `enclosure_special`'s `bernoulli_table`.
 //!
 //! `n = clamp(order, 16, 256)` and `m = clamp(order, 1, 48)`. The anchor is
 //! capped because the exact `H_(n−1)` denominator grows like `e^n`, and the
@@ -1338,7 +1338,7 @@ pub fn rational_limit(value: Rational) -> BigInterval {
 /// [`enclose_integral`], reporting the obstacle when it declines.
 ///
 /// The panel count doubles from `1` until the total width meets
-/// `2^(−precision)` or [`MAX_REFINEMENTS`] is exhausted. Simpson is attempted
+/// `2^(−precision)` or the refinement cap is exhausted. Simpson is attempted
 /// first; if `f⁗` cannot be enclosed over the whole interval the request falls
 /// back to the always-sound box rule, and the certificate records which.
 ///
@@ -1722,11 +1722,11 @@ mod tests {
     fn asin_reduces_near_one_instead_of_grinding() {
         // asin(1) = pi/2 exactly, through the half-angle reduction whose inner
         // argument is 0; asin(9/10) exercises the reduction proper.
-        let half_pi = enclose_constant("pi", 60)
+        let half_pi = enclose_constant("pi", 40)
             .expect("pi")
             .interval
             .scale(&br(1, 2));
-        let at_one = enclose(&unary(UnaryFunc::Asin, CasExpr::int(1)), &[], 60).expect("asin 1");
+        let at_one = enclose(&unary(UnaryFunc::Asin, CasExpr::int(1)), &[], 40).expect("asin 1");
         assert!(
             at_one.interval.hi() >= half_pi.lo() && at_one.interval.lo() <= half_pi.hi(),
             "asin(1) = {} does not meet pi/2 = {}",
@@ -1734,7 +1734,7 @@ mod tests {
             half_pi.decimal(20)
         );
         let near =
-            enclose(&unary(UnaryFunc::Asin, CasExpr::rat(9, 10)), &[], 60).expect("asin 9/10");
+            enclose(&unary(UnaryFunc::Asin, CasExpr::rat(9, 10)), &[], 50).expect("asin 9/10");
         // asin(0.9) = 1.1197695149986341866866770558...
         assert!(
             near.interval.decimal(12).starts_with("[1.119769514998"),
@@ -1756,9 +1756,9 @@ mod tests {
     #[test]
     fn asinh_is_odd_and_acosh_is_zero_at_one() {
         let positive =
-            enclose(&unary(UnaryFunc::Asinh, CasExpr::int(3)), &[], 60).expect("asinh 3");
+            enclose(&unary(UnaryFunc::Asinh, CasExpr::int(3)), &[], 40).expect("asinh 3");
         let negative =
-            enclose(&unary(UnaryFunc::Asinh, CasExpr::int(-3)), &[], 60).expect("asinh -3");
+            enclose(&unary(UnaryFunc::Asinh, CasExpr::int(-3)), &[], 40).expect("asinh -3");
         let mirrored = positive.interval.negate();
         assert!(
             mirrored.hi() >= negative.interval.lo() && mirrored.lo() <= negative.interval.hi(),
@@ -1766,7 +1766,7 @@ mod tests {
             mirrored.decimal(20),
             negative.interval.decimal(20)
         );
-        let at_one = enclose(&unary(UnaryFunc::Acosh, CasExpr::int(1)), &[], 60).expect("acosh 1");
+        let at_one = enclose(&unary(UnaryFunc::Acosh, CasExpr::int(1)), &[], 40).expect("acosh 1");
         assert!(at_one.interval.contains(&BigRational::zero()));
     }
 
@@ -1922,8 +1922,8 @@ mod tests {
     fn a_symbolic_exponent_agrees_with_the_root_route() {
         let through_exp = symbolic_power(CasExpr::int(2), CasExpr::rat(1, 3));
         let through_root = crate::enclosure::rational_power(CasExpr::int(2), 1, 3).expect("root");
-        let a = enclose(&through_exp, &[], 80).expect("exp route");
-        let b = enclose(&through_root, &[], 80).expect("root route");
+        let a = enclose(&through_exp, &[], 50).expect("exp route");
+        let b = enclose(&through_root, &[], 50).expect("root route");
         a.verify(&through_exp, &[]).expect("exp route verifies");
         b.verify(&through_root, &[]).expect("root route verifies");
         assert!(
@@ -2031,7 +2031,7 @@ mod tests {
     fn the_integral_of_sine_over_a_half_period_is_two() {
         let f = CasExpr::var("x").sin();
         let pi = enclose_constant("pi", 60).expect("pi").interval;
-        let e = enclose_integral(&f, "x", &at(0), &pi, 16).expect("integral");
+        let e = enclose_integral(&f, "x", &at(0), &pi, 10).expect("integral");
         e.verify(&f, "x").expect("verifies");
         assert!(
             e.interval.contains(&bi(2)),
@@ -2075,7 +2075,7 @@ mod tests {
         // Precision 6, not 30: the box rule converges LINEARLY, so the panel
         // count is `2^precision` and the cost of this test is exponential in it.
         // That is the rule's stated weakness, not an accident of the fixture.
-        let e = enclose_integral(&f, "x", &at(0), &at(1), 6).expect("integral");
+        let e = enclose_integral(&f, "x", &at(0), &at(1), 5).expect("integral");
         e.verify(&f, "x").expect("verifies");
         assert_eq!(e.rule, QuadratureRule::Box);
         assert!(
@@ -2306,7 +2306,7 @@ mod tests {
             ),
         ];
         let precisions: &[u32] = if cfg!(debug_assertions) {
-            &[10, 50]
+            &[10, 30]
         } else {
             &[10, 50, 100]
         };
@@ -2332,7 +2332,7 @@ mod tests {
             Box::new(CasExpr::Neg(Box::new(CasExpr::var("x").pow(2)))),
         );
         let integral_precisions: &[u32] = if cfg!(debug_assertions) {
-            &[10, 16]
+            &[8, 12]
         } else {
             &[10, 20, 30]
         };

@@ -153,7 +153,7 @@
 //!   is a `BTreeMap` lookup. Do not quote 8.8 µs as the cost of checking a `γ`
 //!   certificate on a cold process; the produce column is that number.
 //! - **`Ei(1)` costs the same at precision 50 and 100** because both land on
-//!   the same rung of [`ORDERS`], exactly as `Gamma` does at 100 and 200.
+//!   the same rung of the `ORDERS` ladder, exactly as `Gamma` does at 100 and 200.
 //! - The heads that carry `γ` and a logarithm (`Ci`, `Ei`, `Chi`, `li`) run a
 //!   few times a bare alternating series, and every one of them is well under a
 //!   tenth of what `Gamma` costs at the same precision.
@@ -1181,6 +1181,33 @@ fn cos_interval(x: &BigInterval, order: u32) -> Option<BigInterval> {
 ///
 /// Shared verbatim by the producer and the verifier; nothing about it depends
 /// on how the order was chosen.
+/// The image of an **increasing** head over an interval: evaluate the point
+/// kernel at each endpoint and take the outer ends.
+///
+/// One function rather than six near-identical match arms in
+/// [`eval_head_raw`]. The per-head part is the domain check and the kernel; the
+/// rest of the argument — increasing, so the endpoints bound the image, and a
+/// kernel that gives up declines with `decline` — is the same every time.
+///
+/// # Errors
+///
+/// `decline` when either endpoint's kernel gives up, and
+/// [`DeclineReason::PrecisionUnreachable`] when the two endpoints come back in
+/// the wrong order (which a sound kernel cannot produce, so it is a guard on
+/// the kernel rather than on the argument).
+fn endpoints<F>(
+    x: &BigInterval,
+    decline: &DeclineReason,
+    kernel: F,
+) -> Result<BigInterval, DeclineReason>
+where
+    F: Fn(&BigRational) -> Option<BigInterval>,
+{
+    let lo = kernel(&x.lo).ok_or_else(|| decline.clone())?;
+    let hi = kernel(&x.hi).ok_or_else(|| decline.clone())?;
+    BigInterval::new(lo.lo, hi.hi).ok_or(DeclineReason::PrecisionUnreachable)
+}
+
 fn eval_head_raw(
     head: &StepHead,
     inputs: &[BigInterval],
@@ -1219,13 +1246,11 @@ fn eval_head_raw(
                 .ok_or(DeclineReason::DivisorContainsZero)
         }
         StepHead::Pow(exponent) => Ok(unary(0)?.pow(*exponent)),
-        StepHead::Exp => {
-            let x = unary(0)?;
-            // exp is increasing, so the image of [a, b] is [exp a, exp b].
-            let lo = exp_point(&x.lo, order).ok_or(DeclineReason::ResourceLimit)?;
-            let hi = exp_point(&x.hi, order).ok_or(DeclineReason::ResourceLimit)?;
-            BigInterval::new(lo.lo, hi.hi).ok_or(DeclineReason::PrecisionUnreachable)
-        }
+        // exp, ln, atan, the roots and erf are all increasing on their
+        // domains, so each is its domain check plus one call to `endpoints`.
+        StepHead::Exp => endpoints(unary(0)?, &DeclineReason::ResourceLimit, |t| {
+            exp_point(t, order)
+        }),
         StepHead::Ln => {
             let x = unary(0)?;
             if !x.lo.is_positive() {
@@ -1233,16 +1258,11 @@ fn eval_head_raw(
                     "ln of an interval reaching 0 or below".to_string(),
                 ));
             }
-            let lo = ln_point(&x.lo, order).ok_or(DeclineReason::ResourceLimit)?;
-            let hi = ln_point(&x.hi, order).ok_or(DeclineReason::ResourceLimit)?;
-            BigInterval::new(lo.lo, hi.hi).ok_or(DeclineReason::PrecisionUnreachable)
+            endpoints(x, &DeclineReason::ResourceLimit, |t| ln_point(t, order))
         }
-        StepHead::Atan => {
-            let x = unary(0)?;
-            let lo = atan_point(&x.lo, order).ok_or(DeclineReason::ResourceLimit)?;
-            let hi = atan_point(&x.hi, order).ok_or(DeclineReason::ResourceLimit)?;
-            BigInterval::new(lo.lo, hi.hi).ok_or(DeclineReason::PrecisionUnreachable)
-        }
+        StepHead::Atan => endpoints(unary(0)?, &DeclineReason::ResourceLimit, |t| {
+            atan_point(t, order)
+        }),
         StepHead::Sqrt => {
             let x = unary(0)?;
             if x.lo.is_negative() {
@@ -1250,9 +1270,7 @@ fn eval_head_raw(
                     "sqrt of an interval reaching below 0".to_string(),
                 ));
             }
-            let lo = sqrt_point(&x.lo, order).ok_or(DeclineReason::ResourceLimit)?;
-            let hi = sqrt_point(&x.hi, order).ok_or(DeclineReason::ResourceLimit)?;
-            BigInterval::new(lo.lo, hi.hi).ok_or(DeclineReason::PrecisionUnreachable)
+            endpoints(x, &DeclineReason::ResourceLimit, |t| sqrt_point(t, order))
         }
         StepHead::NthRoot(degree) => {
             let x = unary(0)?;
@@ -1266,42 +1284,75 @@ fn eval_head_raw(
                     "root_{degree} of an interval reaching below 0"
                 )));
             }
-            let lo = crate::enclosure_special::nth_root_point(&x.lo, *degree, order)
-                .ok_or(DeclineReason::ResourceLimit)?;
-            let hi = crate::enclosure_special::nth_root_point(&x.hi, *degree, order)
-                .ok_or(DeclineReason::ResourceLimit)?;
-            BigInterval::new(lo.lo, hi.hi).ok_or(DeclineReason::PrecisionUnreachable)
+            endpoints(x, &DeclineReason::ResourceLimit, |t| {
+                crate::enclosure_special::nth_root_point(t, *degree, order)
+            })
         }
-        StepHead::Erf => {
-            let x = unary(0)?;
-            // erf is strictly increasing, so the image of [a, b] is
-            // [erf a, erf b].
-            let lo = crate::enclosure_special::erf_point(&x.lo, order)
-                .ok_or(DeclineReason::PrecisionUnreachable)?;
-            let hi = crate::enclosure_special::erf_point(&x.hi, order)
-                .ok_or(DeclineReason::PrecisionUnreachable)?;
-            BigInterval::new(lo.lo, hi.hi).ok_or(DeclineReason::PrecisionUnreachable)
-        }
+        // `erf` declines an order below its monotonicity index, which the
+        // ladder in `adaptive` must be free to climb past — so its decline is
+        // `PrecisionUnreachable`, not the resource cap the others use.
+        StepHead::Erf => endpoints(unary(0)?, &DeclineReason::PrecisionUnreachable, |t| {
+            crate::enclosure_special::erf_point(t, order)
+        }),
         StepHead::Gamma => crate::enclosure_special::gamma_interval(unary(0)?, order),
         StepHead::BesselJ(n) => crate::enclosure_special::bessel_j_interval(*n, unary(0)?, order)
             .ok_or(DeclineReason::PrecisionUnreachable),
         StepHead::Sin => sin_interval(unary(0)?, order).ok_or(DeclineReason::ResourceLimit),
         StepHead::Cos => cos_interval(unary(0)?, order).ok_or(DeclineReason::ResourceLimit),
-        StepHead::EulerGamma => {
-            crate::enclosure_integral::euler_gamma(order).ok_or(DeclineReason::ResourceLimit)
-        }
-        StepHead::Si => crate::enclosure_integral::si_interval(unary(0)?, order),
-        StepHead::Ci => crate::enclosure_integral::ci_interval(unary(0)?, order),
-        StepHead::Ei => crate::enclosure_integral::ei_interval(unary(0)?, order),
-        StepHead::Li => crate::enclosure_integral::li_interval(unary(0)?, order),
-        StepHead::Shi => crate::enclosure_integral::shi_interval(unary(0)?, order),
-        StepHead::Chi => crate::enclosure_integral::chi_interval(unary(0)?, order),
-        StepHead::FresnelS => crate::enclosure_integral::fresnel_s_interval(unary(0)?, order),
-        StepHead::FresnelC => crate::enclosure_integral::fresnel_c_interval(unary(0)?, order),
-        StepHead::Asin => crate::enclosure_integral::asin_interval(unary(0)?, order),
-        StepHead::Acos => crate::enclosure_integral::acos_interval(unary(0)?, order),
-        StepHead::Asinh => crate::enclosure_integral::asinh_interval(unary(0)?, order),
-        StepHead::Acosh => crate::enclosure_integral::acosh_interval(unary(0)?, order),
+        StepHead::EulerGamma
+        | StepHead::Si
+        | StepHead::Ci
+        | StepHead::Ei
+        | StepHead::Li
+        | StepHead::Shi
+        | StepHead::Chi
+        | StepHead::FresnelS
+        | StepHead::FresnelC
+        | StepHead::Asin
+        | StepHead::Acos
+        | StepHead::Asinh
+        | StepHead::Acosh => eval_integral_head(head, inputs, order),
+    }
+}
+
+/// The wave-three heads of [`crate::enclosure_integral`], dispatched from
+/// [`eval_head_raw`].
+///
+/// Split out only so that function stays under clippy's line budget; it has no
+/// behaviour of its own beyond the arity check, and every arm is the same
+/// deterministic function of `(head, inputs, order)` as the arms beside it.
+///
+/// # Errors
+///
+/// Whatever the head's kernel declines with — a domain error, a resource cap
+/// past the magnitude limit, or [`DeclineReason::PrecisionUnreachable`] at an
+/// order below the one the head's tail bound needs.
+fn eval_integral_head(
+    head: &StepHead,
+    inputs: &[BigInterval],
+    order: u32,
+) -> Result<BigInterval, DeclineReason> {
+    use crate::enclosure_integral as integral;
+    if matches!(head, StepHead::EulerGamma) {
+        return integral::euler_gamma(order).ok_or(DeclineReason::ResourceLimit);
+    }
+    let x = inputs
+        .first()
+        .ok_or_else(|| DeclineReason::UnsupportedHead("arity mismatch".to_string()))?;
+    match head {
+        StepHead::Si => integral::si_interval(x, order),
+        StepHead::Ci => integral::ci_interval(x, order),
+        StepHead::Ei => integral::ei_interval(x, order),
+        StepHead::Li => integral::li_interval(x, order),
+        StepHead::Shi => integral::shi_interval(x, order),
+        StepHead::Chi => integral::chi_interval(x, order),
+        StepHead::FresnelS => integral::fresnel_s_interval(x, order),
+        StepHead::FresnelC => integral::fresnel_c_interval(x, order),
+        StepHead::Asin => integral::asin_interval(x, order),
+        StepHead::Acos => integral::acos_interval(x, order),
+        StepHead::Asinh => integral::asinh_interval(x, order),
+        StepHead::Acosh => integral::acosh_interval(x, order),
+        other => Err(DeclineReason::UnsupportedHead(format!("{other:?}"))),
     }
 }
 
