@@ -179,7 +179,10 @@ impl CorpusEntry {
 ///   [`crate::geometry_certify::geometry_limits`]'s own doc comment records from
 ///   the `grevlex` switch of 2026-08-15.
 /// - `tetrahedron-medians-concurrent` — 769 s, from
-///   [`crate::geometry_beyond`]'s cost profile.
+///   [`crate::geometry_beyond`]'s cost profile; re-measured at 955.5 s on
+///   2026-09-05 on a host at load 18, which is what an ADVISORY figure on a
+///   shared box looks like and why the walk's budget is two orders of magnitude
+///   below either number rather than close to one of them.
 /// - `euler-line`, `pappus-hexagon`, `simson-line` — [`SearchCost::Unreturned`].
 ///   The first two are the theorems the linear-elimination route exists for; the
 ///   third was killed at 90 s in release on 2026-08-15.
