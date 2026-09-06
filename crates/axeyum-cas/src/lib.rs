@@ -70,6 +70,7 @@ pub mod assumptions;
 pub mod boolean;
 pub mod boolean_anf;
 pub mod boolean_circuit;
+pub mod chartable;
 pub mod cofactor_ansatz;
 pub mod combinatorics;
 pub mod enclosure;
