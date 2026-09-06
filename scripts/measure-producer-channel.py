@@ -118,14 +118,33 @@ from __future__ import annotations
 import argparse
 import collections
 import json
+import os
 import pathlib
 import re
 import sys
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
-KERNEL_SRC = ROOT / "crates/axeyum-lean-kernel/src"
-FACTS = ROOT / "artifacts/facts"
-BASELINE = ROOT / "scripts/producer-channel-baseline.json"
+
+
+def _input(env: str, default: pathlib.Path) -> pathlib.Path:
+    """Resolve one input, redirectable for the control suite ONLY.
+
+    The default is the real in-tree path, so the gate does not depend on an
+    ambient variable being set -- `scripts/tests/test-producer-channel-controls.sh`
+    runs the unmutated script with `env -u` on all three and requires it green,
+    which is what stops this from becoming "a gate on one shell".
+    """
+    value = os.environ.get(env)
+    return pathlib.Path(value) if value else default
+
+
+KERNEL_SRC = _input(
+    "AXEYUM_PRODUCER_CHANNEL_KERNEL_SRC", ROOT / "crates/axeyum-lean-kernel/src"
+)
+FACTS = _input("AXEYUM_PRODUCER_CHANNEL_FACTS", ROOT / "artifacts/facts")
+BASELINE = _input(
+    "AXEYUM_PRODUCER_CHANNEL_BASELINE", ROOT / "scripts/producer-channel-baseline.json"
+)
 
 PRODUCERS = ("linarith", "ring", "simp", "psatz", "decide", "tactic")
 
@@ -350,7 +369,11 @@ def main() -> int:
     print("# Producer channel measurement")
     print()
     print("METHOD: producer entry-point call sites in")
-    print(f"        {KERNEL_SRC.relative_to(ROOT)}, excluding test paths and the")
+    try:
+        where = KERNEL_SRC.relative_to(ROOT)
+    except ValueError:  # redirected by the control suite
+        where = KERNEL_SRC
+    print(f"        {where}, excluding test paths and the")
     print("        producer modules themselves; classified EMIT / ASSIST / CONFIG,")
     print("        fail-closed on an unclassified entry point. Names are EXTRACTED")
     print("        from `field: kernel.name_str(ns, \"leaf\")`, never guessed.")
@@ -373,11 +396,11 @@ def main() -> int:
     print()
     for line in unclassified:
         print(f"    UNCLASSIFIED  {line}")
-    if unclassified:
-        errors.append(
-            f"{len(unclassified)} producer entry point(s) in no bucket: a producer "
-            "route this metric cannot see"
-        )
+    if unclassified:  # GUARD:unclassified
+        errors.append(  # GUARD:unclassified
+            f"{len(unclassified)} producer entry point(s) in no bucket: a producer "  # GUARD:unclassified
+            "route this metric cannot see"  # GUARD:unclassified
+        )  # GUARD:unclassified
 
     # ---- L2 -------------------------------------------------------------
     resolved: dict[str, set[str]] = {}
@@ -446,12 +469,12 @@ def main() -> int:
     print()
 
     # ---- vacuity and floor ---------------------------------------------
-    if n_emit == 0:
-        errors.append("zero EMIT sites: this report would pass vacuously")
-    if proved == 0:
-        errors.append("zero proved facts: the ledger join would pass vacuously")
-    if with_theorem == 0:
-        errors.append("no proved fact carries formal.kernel_theorem: L3 is blind")
+    if n_emit == 0:  # GUARD:vacuous-emit
+        errors.append("zero EMIT sites: this report would pass vacuously")  # GUARD:vacuous-emit
+    if proved == 0:  # GUARD:vacuous-ledger
+        errors.append("zero proved facts: the ledger join would pass vacuously")  # GUARD:vacuous-ledger
+    if with_theorem == 0:  # GUARD:blind-join
+        errors.append("no proved fact carries formal.kernel_theorem: L3 is blind")  # GUARD:blind-join
 
     floor = json.loads(BASELINE.read_text()) if BASELINE.exists() else None
     if floor is not None:
@@ -463,17 +486,18 @@ def main() -> int:
             ("producer_emitted_proved_facts", len(hit)),
         ):
             want = floor.get(key)
-            if want is None:
-                errors.append(f"baseline has no floor for `{key}`")
-                continue
-            ok = observed >= want
-            print(f"  {key:32s} floor {want:5d}  observed {observed:5d}  "
+            if want is None:  # GUARD:floor-missing
+                errors.append(f"baseline has no floor for `{key}`")  # GUARD:floor-missing
+                continue  # GUARD:floor-missing
+            ok = want is None or observed >= want
+            shown = "  n/a" if want is None else f"{want:5d}"
+            print(f"  {key:32s} floor {shown}  observed {observed:5d}  "
                   f"{'ok' if ok else 'BELOW FLOOR'}")
-            if not ok:
-                errors.append(
-                    f"`{key}` fell from {want} to {observed}: the producer channel "
-                    "shrank, or the census stopped seeing part of it"
-                )
+            if not ok:  # GUARD:floor-breach
+                errors.append(  # GUARD:floor-breach
+                    f"`{key}` fell from {want} to {observed}: the producer channel "  # GUARD:floor-breach
+                    "shrank, or the census stopped seeing part of it"  # GUARD:floor-breach
+                )  # GUARD:floor-breach
         print()
 
     if errors:
