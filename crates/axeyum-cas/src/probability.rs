@@ -102,8 +102,10 @@ use std::collections::BTreeMap;
 use axeyum_ir::Rational;
 
 use crate::{
-    CasExpr, LimitPoint, UnaryFunc, ZeroTest, binomial_coefficient, definite_sum, equal, expand,
-    improper_integrate, infinite_sum, laplace_transform, ntheory, prove_wz_sum, simplify,
+    CasExpr, ConditionalIntegral, LimitPoint, SignCondition, UnaryFunc, ZeroTest,
+    binomial_coefficient, definite_sum, equal, expand, improper_integrate,
+    improper_integrate_conditional, infinite_sum, laplace_transform, ntheory, prove_wz_sum,
+    simplify,
 };
 
 /// Which existing certified primitive established a [`Certificate`]'s claim.
@@ -127,6 +129,17 @@ pub enum Route {
     ImproperIntegrate,
     /// [`crate::laplace_transform`] evaluated at `s = −t`.
     LaplaceTransform,
+    /// [`crate::improper_integrate_conditional`]'s symbolic-rate exponential
+    /// route: the same proved antiderivative and the same fundamental theorem,
+    /// with the boundary evaluation's sign conditions recorded rather than
+    /// decided. Produces a [`Trust::CertifiedUnder`] whenever a parameter is
+    /// symbolic — never a bare [`Trust::Certified`].
+    ConditionalIntegrate,
+    /// Completing the square in a Gaussian exponent, which reduces `E[e^{tX}]`
+    /// to the **total mass of a shifted Normal**. Two obligations, both decided
+    /// by existing machinery: the exponent identity by [`equal`], and the
+    /// shifted mass by [`Continuous::total_mass`]'s own erf certificate.
+    GaussianShift,
     /// The Wilf–Zeilberger prover [`crate::prove_wz_sum`]: a general
     /// (all-`k`) symbolic proof of a hypergeometric sum identity.
     WzProof,
@@ -139,8 +152,20 @@ pub enum Route {
 /// specific reason the deciding route declined.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Trust {
-    /// An independent primitive decided the claim exactly.
+    /// An independent primitive decided the claim exactly, with no side
+    /// condition on any parameter.
     Certified,
+    /// An independent primitive decided the claim exactly, but **only under**
+    /// the recorded side conditions on the symbolic parameters.
+    ///
+    /// This is not a weaker certificate; it is a certificate of a different,
+    /// smaller statement, and the conditions are part of it. `λ/(λ−t)` is not
+    /// "approximately" the mgf of `Exponential(λ)` at `t ≥ λ` — there is no mgf
+    /// there at all, the defining integral diverges. So a caller that drops the
+    /// conditions is asserting something false, and [`agree`] refuses a
+    /// certificate whose conditions differ from a fresh re-derivation's,
+    /// including one that has none.
+    CertifiedUnder(Vec<SignCondition>),
     /// The route declined; the claim is the standard closed form, presented
     /// for reference only. Never promoted to `Certified`.
     Uncertified(String),
@@ -167,6 +192,18 @@ impl Certificate {
         }
     }
 
+    fn certified_under(claim: CasExpr, route: Route, hypotheses: Vec<SignCondition>) -> Self {
+        debug_assert!(
+            !hypotheses.is_empty(),
+            "an empty condition list is an unconditional `Certified`, not a `CertifiedUnder`"
+        );
+        Certificate {
+            claim,
+            route,
+            trust: Trust::CertifiedUnder(hypotheses),
+        }
+    }
+
     fn uncertified(claim: CasExpr, route: Route, reason: impl Into<String>) -> Self {
         Certificate {
             claim,
@@ -175,20 +212,61 @@ impl Certificate {
         }
     }
 
-    /// Whether this certificate's claim was independently decided.
+    /// Whether this certificate's claim was independently decided **and needs
+    /// no side condition**. A [`Trust::CertifiedUnder`] is deliberately *not*
+    /// certified by this predicate: every existing caller that gates on it
+    /// (the convolution and bound builders) would otherwise silently drop the
+    /// conditions on the way into a derived claim.
     #[must_use]
     pub fn is_certified(&self) -> bool {
         matches!(self.trust, Trust::Certified)
     }
+
+    /// Whether an independent primitive decided the claim, conditionally or
+    /// not. Use with [`Self::hypotheses`]; a conditional claim is only true
+    /// under those.
+    #[must_use]
+    pub fn is_decided(&self) -> bool {
+        matches!(self.trust, Trust::Certified | Trust::CertifiedUnder(_))
+    }
+
+    /// The side conditions this claim rests on — empty for an unconditional
+    /// [`Trust::Certified`] and for anything uncertified.
+    #[must_use]
+    pub fn hypotheses(&self) -> &[SignCondition] {
+        match &self.trust {
+            Trust::CertifiedUnder(conditions) => conditions,
+            Trust::Certified | Trust::Uncertified(_) => &[],
+        }
+    }
+
+    /// The side conditions rendered for a ledger row, e.g. `"lambda > 0"` or
+    /// `"lambda - t > 0"`. Empty string when there are none.
+    #[must_use]
+    pub fn hypotheses_display(&self) -> String {
+        self.hypotheses()
+            .iter()
+            .map(ToString::to_string)
+            .collect::<Vec<_>>()
+            .join(" and ")
+    }
 }
 
-/// Two certificates **agree**: both are independently certified, and
-/// [`crate::equal`] confirms their claims are the same expression. Used by
-/// every `verify_*` method to catch a forged certificate — whether forged by
-/// a wrong `claim`, a falsely claimed `Trust::Certified`, or both.
+/// Two certificates **agree**: the fresh re-derivation `a` decided its claim,
+/// the presented certificate `b` carries the *same* trust tag — the same side
+/// conditions, in the same order, or none on both sides — and [`crate::equal`]
+/// confirms the claims are the same expression.
+///
+/// The trust tags are compared for equality rather than both being tested for
+/// "certified enough". That is what refuses the **dropped-hypothesis forgery**:
+/// a certificate claiming a bare `Trust::Certified` for `λ/(λ−t)` does not
+/// agree with the re-derivation's `Trust::CertifiedUnder([λ − t > 0])`, even
+/// though the *claim* is character-for-character identical. Both sides are
+/// produced by the same deterministic code path, so a genuine certificate
+/// always matches spelling as well as content.
 fn agree(a: &Certificate, b: &Certificate) -> bool {
-    a.is_certified()
-        && b.is_certified()
+    a.is_decided()
+        && a.trust == b.trust
         && matches!(
             equal(&a.claim, &b.claim),
             ZeroTest::Certified { equal: true, .. }
@@ -962,8 +1040,234 @@ fn moment_difference_certificate(
     }
 }
 
-/// The reason a `Geometric` quantity declines for a **symbolic** `p`: the
-/// convergence test the summation route runs needs a concrete ratio.
+/// Restate a route condition in the distribution's own parameters: `e < 0`
+/// becomes `−e > 0`, which is how a probabilist writes `λ > 0` (the route
+/// records it as `−λ < 0`, the sign of the *rate* in `e^{−λx}`) and `t < λ`
+/// (recorded as `t − λ < 0`).
+///
+/// The rewrite is **decided, not assumed**: `equal(e + (−e), 0)` is checked, so
+/// a condition whose negation the zero-test cannot confirm passes through
+/// unchanged rather than being restated on faith. `> 0` and `≠ 0` conditions are
+/// already in the reader's terms and pass through.
+fn restate_positive(condition: &SignCondition) -> SignCondition {
+    let SignCondition::Negative(rate) = condition else {
+        return condition.clone();
+    };
+    let flipped = simplify(&CasExpr::Neg(Box::new(rate.clone())));
+    match equal(&(rate.clone() + flipped.clone()), &CasExpr::zero()) {
+        ZeroTest::Certified { equal: true, .. } => SignCondition::Positive(flipped),
+        _ => condition.clone(),
+    }
+}
+
+/// Decide a [`ConditionalIntegral`] against `target` and package it as a
+/// [`Certificate`].
+///
+/// Three things must hold before anything is certified, and each is a separate
+/// guard: the route's own differentiate-and-check certificate closed, the
+/// evaluated value decides equal to `target`, and the recorded conditions are
+/// carried onto the certificate. A result with no conditions is an ordinary
+/// [`Trust::Certified`]; one with conditions is a [`Trust::CertifiedUnder`],
+/// never silently promoted.
+fn decide_conditional(
+    result: &ConditionalIntegral,
+    target: &CasExpr,
+    subject: &str,
+) -> Certificate {
+    if !result.is_certified() {
+        return Certificate::uncertified(
+            result.value.clone(),
+            Route::ConditionalIntegrate,
+            format!("the {subject} antiderivative's differentiate-and-check did not close"),
+        );
+    }
+    match equal(&result.value, target) {
+        ZeroTest::Certified { equal: true, .. } => {
+            let hypotheses: Vec<SignCondition> =
+                result.hypotheses.iter().map(restate_positive).collect();
+            if hypotheses.is_empty() {
+                Certificate::certified(target.clone(), Route::ConditionalIntegrate)
+            } else {
+                Certificate::certified_under(
+                    target.clone(),
+                    Route::ConditionalIntegrate,
+                    hypotheses,
+                )
+            }
+        }
+        _ => Certificate::uncertified(
+            result.value.clone(),
+            Route::ConditionalIntegrate,
+            format!(
+                "the conditional integral's value did not decide equal to the {subject} closed form"
+            ),
+        ),
+    }
+}
+
+/// `∫ₗᵘ integrand dx` through [`crate::improper_integrate_conditional`],
+/// decided against `target`. This is the symbolic-parameter counterpart of
+/// [`infinite_sum_certificate`]: the same shape, one extra output (the
+/// conditions).
+fn conditional_integral_certificate(
+    integrand: &CasExpr,
+    var: &str,
+    lower: LimitPoint,
+    upper: LimitPoint,
+    target: CasExpr,
+    subject: &str,
+) -> Certificate {
+    match improper_integrate_conditional(integrand, var, lower, upper) {
+        Some(result) => decide_conditional(&result, &target, subject),
+        None => Certificate::uncertified(
+            target,
+            Route::ConditionalIntegrate,
+            format!("improper_integrate_conditional declined on the {subject} integrand"),
+        ),
+    }
+}
+
+/// The `Exponential(λ)` pdf `λ·e^{−λx}`, for a symbolic or concrete `λ`.
+fn exponential_pdf(lambda: &CasExpr) -> CasExpr {
+    lambda.clone() * (CasExpr::Neg(Box::new(lambda.clone())) * CasExpr::var("x")).exp()
+}
+
+/// `∫₀^∞ weight(x)·λ·e^{−λx} dx` decided against `target` — the whole
+/// `Exponential(λ)` family at a **symbolic** `λ`, under `λ > 0`.
+fn exponential_half_line(
+    weight: &CasExpr,
+    lambda: &CasExpr,
+    target: CasExpr,
+    subject: &str,
+) -> Certificate {
+    conditional_integral_certificate(
+        &(weight.clone() * exponential_pdf(lambda)),
+        "x",
+        LimitPoint::Finite(Rational::zero()),
+        LimitPoint::PosInfinity,
+        target,
+        subject,
+    )
+}
+
+/// `Var[X] = E[X²] − E[X]²` from two **conditionally** decided moments: the
+/// difference is decided by [`equal`], and the certificate carries the union of
+/// the two moments' conditions (in first-seen order, deduplicated — so a
+/// condition both moments need is recorded once).
+fn conditional_variance(
+    second: &Certificate,
+    first: &Certificate,
+    target: CasExpr,
+    subject: &str,
+) -> Certificate {
+    if !second.is_decided() || !first.is_decided() {
+        return Certificate::uncertified(
+            target,
+            Route::ConditionalIntegrate,
+            format!("a {subject} moment was not decided, so the variance is not either"),
+        );
+    }
+    let value = simplify(&(second.claim.clone() - first.claim.clone() * first.claim.clone()));
+    if !matches!(
+        equal(&value, &target),
+        ZeroTest::Certified { equal: true, .. }
+    ) {
+        return Certificate::uncertified(
+            value,
+            Route::ConditionalIntegrate,
+            format!("E[X^2] - E[X]^2 did not decide equal to the {subject} closed form"),
+        );
+    }
+    let mut hypotheses: Vec<SignCondition> = Vec::new();
+    for condition in second.hypotheses().iter().chain(first.hypotheses()) {
+        if !hypotheses.contains(condition) {
+            hypotheses.push(condition.clone());
+        }
+    }
+    if hypotheses.is_empty() {
+        Certificate::certified(target, Route::ConditionalIntegrate)
+    } else {
+        Certificate::certified_under(target, Route::ConditionalIntegrate, hypotheses)
+    }
+}
+
+/// `M(t) = e^{μt + σ²t²/2}` for `Normal(μ, σ²)`, by **completing the square** in
+/// the exponent rather than integrating `e^{tx}·φ(x)` directly.
+///
+/// Direct integration is not merely awkward here, it declines: measured against
+/// the live crate, `improper_integrate(e^{−x²+t·x}, −∞, ∞)` returns `None`,
+/// because the Gaussian finder reaches `to_univariate` and `t` is not a concrete
+/// [`axeyum_ir::Rational`]. Completing the square moves the symbolic `t` out of
+/// the integral entirely, leaving an integral this crate already certifies.
+///
+/// Two obligations, both decided by existing machinery:
+///
+/// 1. the exponent identity
+///    `t·x − (x−μ)²/(2σ²) = μt + σ²t²/2 − (x − (μ+σ²t))²/(2σ²)`,
+///    a rational-function identity in `x, t, μ` decided by [`equal`];
+/// 2. `∫ φ_{μ+σ²t, σ²} = 1`, which is exactly [`Continuous::total_mass`] of the
+///    **shifted** Normal — the same erf-antiderivative certificate, at a
+///    symbolic mean (the mean never enters `normal_raw_moment`, which integrates
+///    the centered variable).
+///
+/// Together `M(t) = e^{μt+σ²t²/2} · ∫ φ_{μ+σ²t,σ²} = e^{μt+σ²t²/2}`, with `μ`
+/// and `t` symbolic throughout. No [`SignCondition`] is recorded, because `σ²`
+/// is a concrete rational whose sign the route **decides**: a non-positive `σ²`
+/// makes the shifted mass decline (an upward Gaussian is not an erf), and the
+/// mgf declines with it.
+fn normal_mgf(mu: &CasExpr, variance: Rational, t: &str) -> Certificate {
+    let tv = CasExpr::var(t);
+    let sigma = CasExpr::Const(variance);
+    let target =
+        (tv.clone() * mu.clone() + sigma.clone() * tv.clone().pow(2) / CasExpr::int(2)).exp();
+    let x = CasExpr::var("x");
+    let two_sigma = CasExpr::int(2) * sigma.clone();
+    let shifted_mu = simplify(&(mu.clone() + sigma.clone() * tv.clone()));
+    let direct = tv.clone() * x.clone() - (x.clone() - mu.clone()).pow(2) / two_sigma.clone();
+    let completed = mu.clone() * tv.clone() + sigma * tv.pow(2) / CasExpr::int(2)
+        - (x - shifted_mu.clone()).pow(2) / two_sigma;
+    if !matches!(
+        equal(&simplify(&direct), &simplify(&completed)),
+        ZeroTest::Certified { equal: true, .. }
+    ) {
+        return Certificate::uncertified(
+            target,
+            Route::GaussianShift,
+            "completing the square in the Gaussian exponent did not decide as an identity",
+        );
+    }
+    let shifted = Continuous::Normal {
+        mu: shifted_mu,
+        variance,
+    };
+    let mass = shifted.total_mass();
+    if !mass.is_certified() {
+        return Certificate::uncertified(
+            target,
+            Route::GaussianShift,
+            format!(
+                "the shifted Normal's total mass is not certified, so the square-completion \
+                 reduction has nothing to stand on: {}",
+                match &mass.trust {
+                    Trust::Uncertified(reason) => reason.clone(),
+                    other => format!("{other:?}"),
+                }
+            ),
+        );
+    }
+    Certificate::certified(target, Route::GaussianShift)
+}
+
+/// The reason a `Geometric` quantity declines for a **symbolic** `p`.
+///
+/// Unlike the continuous families, this one is *not* a missing hypothesis
+/// channel: [`crate::gosper_sum`] declines outright on a symbolic ratio, before
+/// any convergence question is asked. Measured against the live crate,
+/// `gosper_sum(p·(1−p)ʲ, j)` and `gosper_sum(qʲ, j)` (a bare symbolic ratio,
+/// with no `1−p` to normalize) both return `None`, while the concrete control
+/// `p = 1/3` sums to `1`. So there is no certified value here to hang a
+/// `SignCondition` on, and recording `0 < p < 1` would decorate a claim nothing
+/// decided.
 fn geometric_symbolic_p_reason() -> String {
     "symbolic p: infinite_sum's convergence/limit check needs a concrete ratio to decide \
      |1-p| < 1"
@@ -1034,12 +1338,11 @@ impl Continuous {
             }
             Continuous::Exponential(lambda) => {
                 let Some(lam) = as_concrete(lambda) else {
-                    return Certificate::uncertified(
+                    return exponential_half_line(
+                        &CasExpr::one(),
+                        lambda,
                         CasExpr::one(),
-                        Route::ImproperIntegrate,
-                        "symbolic λ: to_univariate requires a concrete Rational exponent \
-                         coefficient inside e^{-λx}, so the elementary antiderivative rule \
-                         (and improper_integrate's boundary limit) both decline",
+                        "exponential total mass",
                     );
                 };
                 let x = CasExpr::var("x");
@@ -1133,10 +1436,11 @@ impl Continuous {
             }
             Continuous::Exponential(lambda) => {
                 let Some(lam) = as_concrete(lambda) else {
-                    return Certificate::uncertified(
+                    return exponential_half_line(
+                        &CasExpr::var("x"),
+                        lambda,
                         CasExpr::one() / lambda.clone(),
-                        Route::ImproperIntegrate,
-                        "symbolic λ: same to_univariate constraint as total_mass",
+                        "exponential mean",
                     );
                 };
                 let x = CasExpr::var("x");
@@ -1238,24 +1542,31 @@ impl Continuous {
     pub fn mgf(&self, t: &str) -> Certificate {
         match self {
             Continuous::Uniform { a, b } => {
+                let width = b.checked_sub(*a).expect("a<b");
                 let target = ((CasExpr::var(t) * CasExpr::Const(*b)).exp()
                     - (CasExpr::var(t) * CasExpr::Const(*a)).exp())
-                    / (CasExpr::var(t) * CasExpr::Const(b.checked_sub(*a).expect("a<b")));
-                Certificate::uncertified(
+                    / (CasExpr::var(t) * CasExpr::Const(width));
+                let integrand = (CasExpr::one() / CasExpr::Const(width))
+                    * (CasExpr::var(t) * CasExpr::var("x")).exp();
+                conditional_integral_certificate(
+                    &integrand,
+                    "x",
+                    LimitPoint::Finite(*a),
+                    LimitPoint::Finite(*b),
                     target,
-                    Route::ImproperIntegrate,
-                    "symbolic t: the elementary rule integrate(e^{t*x}, x) requires \
-                     to_univariate to extract a concrete Rational coefficient of x; t \
-                     must remain symbolic for an mgf, so this declines regardless of a, b",
+                    "uniform mgf",
                 )
             }
             Continuous::Exponential(lambda) => {
                 let Some(lam) = as_concrete(lambda) else {
-                    return Certificate::uncertified(
+                    // `E[e^{tX}]` straight from the definition. The pdf's `e^{−λx}`
+                    // and the mgf's `e^{tx}` merge into the single rate `t − λ`, so
+                    // the recorded condition is `λ − t > 0`, i.e. `t < λ`.
+                    return exponential_half_line(
+                        &(CasExpr::var(t) * CasExpr::var("x")).exp(),
+                        lambda,
                         lambda.clone() / (lambda.clone() - CasExpr::var(t)),
-                        Route::LaplaceTransform,
-                        "symbolic λ: laplace_transform's exp-shift extraction needs a \
-                         concrete Rational coefficient inside e^{-λx}",
+                        "exponential mgf",
                     );
                 };
                 let x = CasExpr::var("x");
@@ -1285,19 +1596,7 @@ impl Continuous {
                     ),
                 }
             }
-            Continuous::Normal { mu, variance } => {
-                let target = (CasExpr::var(t) * mu.clone()
-                    + CasExpr::Const(*variance) * CasExpr::var(t).pow(2) / CasExpr::int(2))
-                .exp();
-                Certificate::uncertified(
-                    target,
-                    Route::ImproperIntegrate,
-                    "symbolic t: to_univariate requires the exponent's linear coefficient \
-                     (here the mgf argument t itself) to be a concrete Rational, so no \
-                     antiderivative/Fourier route in this crate accepts a symbolic t here, \
-                     for any variance",
-                )
-            }
+            Continuous::Normal { mu, variance } => normal_mgf(mu, *variance, t),
         }
     }
 
@@ -1383,10 +1682,24 @@ fn uniform_variance(a: Rational, b: Rational) -> Certificate {
 /// this does not occur for realistic `λ`.
 fn exponential_variance(lambda: &CasExpr) -> Certificate {
     let Some(lam) = as_concrete(lambda) else {
-        return Certificate::uncertified(
+        let x = CasExpr::var("x");
+        let second = exponential_half_line(
+            &(x.clone() * x),
+            lambda,
+            CasExpr::int(2) / lambda.clone().pow(2),
+            "exponential second moment",
+        );
+        let first = exponential_half_line(
+            &CasExpr::var("x"),
+            lambda,
+            CasExpr::one() / lambda.clone(),
+            "exponential mean",
+        );
+        return conditional_variance(
+            &second,
+            &first,
             CasExpr::one() / lambda.clone().pow(2),
-            Route::ImproperIntegrate,
-            "symbolic λ: same to_univariate constraint as total_mass",
+            "exponential variance",
         );
     };
     let x = CasExpr::var("x");
@@ -1661,19 +1974,39 @@ pub fn convolve_poisson(x: &Discrete, y: &Discrete) -> Option<Certificate> {
 #[must_use]
 pub fn chebyshev_bound(mean: &Certificate, variance: &Certificate, k: &CasExpr) -> Certificate {
     let bound = variance.claim.clone() / k.clone().pow(2);
-    if mean.is_certified() && variance.is_certified() {
+    if !mean.is_decided() || !variance.is_decided() {
+        return Certificate::uncertified(
+            bound,
+            Route::Derived,
+            "built from an uncertified mean and/or variance input",
+        );
+    }
+    // A bound built from conditional inputs is conditional on the union of
+    // their conditions — dropping them here is exactly the failure the
+    // `CertifiedUnder` tag exists to prevent.
+    let hypotheses = union_of_hypotheses(&[mean, variance]);
+    if hypotheses.is_empty() {
         Certificate {
             claim: bound,
             route: Route::Derived,
             trust: Trust::Certified,
         }
     } else {
-        Certificate::uncertified(
-            bound,
-            Route::Derived,
-            "built from an uncertified mean and/or variance input",
-        )
+        Certificate::certified_under(bound, Route::Derived, hypotheses)
     }
+}
+
+/// The conditions of several certificates, in first-seen order, deduplicated.
+fn union_of_hypotheses(certificates: &[&Certificate]) -> Vec<SignCondition> {
+    let mut union: Vec<SignCondition> = Vec::new();
+    for certificate in certificates {
+        for condition in certificate.hypotheses() {
+            if !union.contains(condition) {
+                union.push(condition.clone());
+            }
+        }
+    }
+    union
 }
 
 /// `P(X >= a) <= E[X] / a` for `a > 0` (Markov's inequality, requires `X >=
@@ -1682,18 +2015,22 @@ pub fn chebyshev_bound(mean: &Certificate, variance: &Certificate, k: &CasExpr) 
 #[must_use]
 pub fn markov_bound(mean: &Certificate, a: &CasExpr) -> Certificate {
     let bound = mean.claim.clone() / a.clone();
-    if mean.is_certified() {
+    if !mean.is_decided() {
+        return Certificate::uncertified(
+            bound,
+            Route::Derived,
+            "built from an uncertified mean input",
+        );
+    }
+    let hypotheses = union_of_hypotheses(&[mean]);
+    if hypotheses.is_empty() {
         Certificate {
             claim: bound,
             route: Route::Derived,
             trust: Trust::Certified,
         }
     } else {
-        Certificate::uncertified(
-            bound,
-            Route::Derived,
-            "built from an uncertified mean input",
-        )
+        Certificate::certified_under(bound, Route::Derived, hypotheses)
     }
 }
 
@@ -1998,13 +2335,21 @@ mod tests {
         assert!(d.verify_mgf("t", &mgf));
     }
 
+    /// A symbolic `λ` is no longer an outright decline — but it is also not an
+    /// *unconditional* certificate, and `is_certified` (which every existing
+    /// caller gates on) must keep saying so.
     #[test]
-    fn exponential_symbolic_lambda_all_decline() {
+    fn exponential_symbolic_lambda_is_never_unconditionally_certified() {
         let d = Continuous::Exponential(CasExpr::var("lam"));
-        assert!(!d.total_mass().is_certified());
-        assert!(!d.mean().is_certified());
-        assert!(!d.variance().is_certified());
-        assert!(!d.mgf("t").is_certified());
+        for certificate in [d.total_mass(), d.mean(), d.variance(), d.mgf("t")] {
+            assert!(
+                !certificate.is_certified(),
+                "a symbolic parameter must never yield an unconditional certificate: \
+                 {certificate:?}"
+            );
+            assert!(certificate.is_decided(), "{certificate:?}");
+            assert!(!certificate.hypotheses().is_empty(), "{certificate:?}");
+        }
     }
 
     // ---------------------------------------------------------------
@@ -2037,13 +2382,19 @@ mod tests {
             ZeroTest::Certified { equal: true, .. }
         ));
 
-        // The mgf still declines: symbolic `t`, not a variance issue.
+        // The mgf now certifies too, unconditionally: completing the square
+        // takes the symbolic `t` out of the integral (see `normal_mgf`).
         let mgf = d.mgf("t");
-        assert!(!mgf.is_certified());
-        let Trust::Uncertified(reason) = &mgf.trust else {
-            panic!("expected Uncertified");
-        };
-        assert!(reason.contains("symbolic t"), "{reason}");
+        assert!(mgf.is_certified(), "{mgf:?}");
+        assert_eq!(mgf.route, Route::GaussianShift);
+        assert!(matches!(
+            equal(
+                &mgf.claim,
+                &(CasExpr::var("t").pow(2) / CasExpr::int(2)).exp()
+            ),
+            ZeroTest::Certified { equal: true, .. }
+        ));
+        assert!(d.verify_mgf("t", &mgf));
     }
 
     #[test]
@@ -2072,8 +2423,17 @@ mod tests {
             ZeroTest::Certified { equal: true, .. }
         ));
 
-        // mgf still declines regardless (symbolic t, not a variance issue).
-        assert!(!d.mgf("t").is_certified());
+        // The mgf certifies here too: `M(t) = e^{t²/4}` for `σ² = 1/2`.
+        let mgf = d.mgf("t");
+        assert!(mgf.is_certified(), "{mgf:?}");
+        assert!(matches!(
+            equal(
+                &mgf.claim,
+                &(CasExpr::var("t").pow(2) / CasExpr::int(4)).exp()
+            ),
+            ZeroTest::Certified { equal: true, .. }
+        ));
+        assert!(d.verify_mgf("t", &mgf));
     }
 
     #[test]
