@@ -1,19 +1,24 @@
 # 03 — Classical analysis
 
 Reviewer: a classical analyst — measure theory, functional analysis, PDE
-Verdict, 2026-09-04: **unmoved**
-Last measured: 2026-09-04 at `1856cdb3c`
+Verdict, 2026-09-06: **moved, and one complete function space short of interested**
+Last measured: 2026-09-06 at `d38d49fce`
 
 > "You have a very careful Riemann integral. I have not used a Riemann
-> integral since graduate school."
+> integral since graduate school." — 2026-09-04
+>
+> "Now there is an integral, a metric, a frame, and an L¹. None of the L¹ is
+> complete. That is my whole subject in one sentence." — 2026-09-06
 
-> **AUDITED 2026-09-04.** Every absence claim in this file was re-checked
-> against a freshly rebuilt kernel index. See
-> [AUDIT-2026-09-04.md](AUDIT-2026-09-04.md) for the evidence, and the
-> corrections marked **[AUDIT]** below. Across the twelve files, 11 of 76
-> absence claims were false and 12 more overstated the gap; the cause is that
-> the ledger characterises only 38% of its proved facts and does not cover 430
-> kernel theorems at all (ADR-1605).
+> **AUDITED 2026-09-04.** Every absence claim in the 2026-09-04 reading was
+> re-checked against a freshly rebuilt kernel index. See
+> [AUDIT-2026-09-04.md](AUDIT-2026-09-04.md) for the evidence; row **B12** is
+> the one that touches this file (Next Five item 1 was already partly decided
+> by ADR-0603 and ADR-1010). Across the twelve files, 11 of 76 absence claims
+> were false and 12 more overstated the gap; the cause is that the ledger
+> characterises only 38% of its proved facts and does not cover 430 kernel
+> theorems at all (ADR-1605). **This file was re-measured again on 2026-09-06**
+> and six more of its rows were false by then — see the last progress-log row.
 
 ## The persona
 
@@ -26,106 +31,181 @@ complete".
 
 ## What the library has today
 
-Everything in [02-constructive-analysis.md](02-constructive-analysis.md), read
-from this side of the aisle:
+Measured at `d38d49fce`. The kernel index reports **4,765 declarations** across
+sixteen prelude groups; the namespaces this reviewer cares about are
+`Metric` 97, `IntSpace` 98, `RN` 58, `Top` 53, `Complex` 196, `CReal` 629. The
+ledger holds **2,954 facts, 2,678 proved**.
 
-| what they want | what exists |
+| what they want | what exists, 2026-09-06 |
 |---|---|
-| Lebesgue integral | nothing; Riemann sums over an interval-relative mesh |
-| measure, σ-algebra | nothing (the 117 grep hits for "measure" are all the word "measured" in comments) |
-| dominated / monotone convergence | nothing |
-| metric space | nothing; completeness proved for ℝ only, as `converges_of_cauchy` |
-| topological space, open sets, compactness | nothing |
-| normed space, Banach, Hilbert | nothing |
-| Lᵖ spaces | nothing |
-| Fourier analysis | nothing |
+| Lebesgue integral | no. `IntSpace` (98 declarations) is a **predicative pre-integration space**: the integral is the primitive and measure is derived (ADR-1612). Three instances — the interval Riemann integral, finite sums, a Dirac space |
+| measure, σ-algebra | measure yes, σ-algebra no. `IntSpace.measure` is the integral of an integrable indicator, with `measure_nonneg`, `measure_le_total`, `measure_univ`, `measure_const`, `measure_witness_independent`, `countingMeasure` and `dirac_measure_detachable`. Nothing named `sigmaAlgebra` or `Measurable` is declared — the one `measurable` occurrence in the kernel is a doc comment in `intspace/measure.rs` |
+| dominated / monotone convergence | monotone only, and on a hypothesis: `IntSpace.MonotoneSeq`, `MonotoneConvergence`, `RealMonotoneConvergence`, `monotone_convergence_of_real` — an ADR-0603 graded family whose classical member carries a decision principle on one binder. **No dominated convergence for an integral**; the four declarations matching "dominated" are series comparison tests (`CReal.sumRange_converges_of_dominated` and kin) |
+| metric space | yes, and it is the load-bearing layer. `Metric`: a 12-field record, ℝ and the plane as instances, `Complete`, `TotallyBounded`, `Compact`/`CompactOn` (Bishop's, no covers), `Continuous`/`UniformlyContinuous` over an arbitrary pair of spaces, `subspace`, and `prod` (the max metric) with completeness transfer |
+| topological space, open sets, compactness | a **frame**, not a family of open sets: `Top.Frame`, `Top.Opens`, `Top.MemOpen`, 53 declarations, with `Top.ballFrame` — the open-ball frame of the real line — as the instance (ADR-1602, ADR-1643). Compactness lives on the metric side; nothing on the frame side is compact |
+| normed space, Banach, Hilbert | nothing abstract: no declaration in the kernel matches `banach` or `hilbert`. Concretely `RN` (58 declarations) is ℝⁿ with `dot`, `norm`, **unsquared `cauchy_schwarz` at symbolic dimension**, Minkowski (`norm_add_le`), and hence `RN.metric n`. **ℝⁿ is not proved complete** |
+| Lᵖ spaces | L¹, as a metric space only: `IntSpace.bundledL1` on bundled integrable functions with the seminorm `∫ \|f−g\|`, `L1Equiv` as constructive "equal almost everywhere", and two instances (`crealIntervalL1`, `crealFiniteL1`). **Not complete, and there is no completion functor** — no declaration matches `completion` |
+| Fourier analysis | nothing. `Complex.IsRootOfUnity` exists; no transform and no orthogonality relation is on `main` |
 | distributions, Sobolev, PDE | nothing |
-| complex analysis | `Complex` exists as a carrier with polynomials; no holomorphy, no contour integration |
-| what does exist | IVT, EVT, uniform continuity on intervals, derivatives, Riemann integration, exp/cos/π/√ |
+| complex analysis | a **uniform** derivative on a closed disc, and holomorphy over it: 46 declarations across `complex/{deriv,estimates,leibniz,uc_closure,polyderiv,components,cauchy_riemann}.rs` — const/id/neg/add/**mul**/**pow** rules, `HolomorphicOn` as a `Sigma`, `BoundedOn` and `UniformlyContinuousOn` closed under `+` and `·`, the three modulus-versus-component inequalities, and the disc-membership bridge. **No Cauchy–Riemann equations, no polynomial derivative, no contour integral, no Cauchy theorem** — nothing matches `cauchyRiemann` or `hasDerivative_poly` |
+| what does exist | IVT; EVT, now **as an instance of the metric-space theorem** rather than a one-off; uniform continuity on intervals; derivatives; Riemann integration on an interval-relative mesh; exp/cos/π/√; and power series with a radius of convergence (`CReal.powerSeriesConvergesWithinRadius`, ADR-1638), with exp and cos exhibited as instances |
 
 ## Their verdict
 
-Blunt: the analysis shelf stops in 1867. Riemann integration with explicit
-moduli is a fine undergraduate development and it is not what modern analysis
-is made of. Every technique they rely on — measure-zero exceptional sets,
-almost-everywhere convergence, completeness of function spaces, compactness
-arguments in infinite dimensions — is unavailable, and most of them are
-unavailable *in principle* under the constructive commitment rather than
-merely unbuilt.
+The 2026-09-04 reading said the analysis shelf stops in 1867. That is no longer
+the sentence. In two days the library acquired a metric layer, Bishop
+compactness, ℝⁿ with Cauchy–Schwarz at symbolic dimension, a pointfree
+topological carrier, an integration space with a derived measure, L¹ as a
+metric space, a radius of convergence, and a complex derivative with a product
+and a power rule. Four of this reviewer's five Next Five items moved.
 
-Two specific objections they would raise, and both are fair:
+What has not changed is the thing they actually test for. **Nothing in the
+library is a complete function space.** `Metric.Complete` exists as a general
+predicate, and the whole kernel contains exactly two proofs of it —
+`Metric.creal_complete` (ℝ) and `Metric.prod_complete` (transfer across a
+product). It is not proved for ℝⁿ, for L¹[a,b], or for anything else.
+`IntSpace.bundledL1` is a metric space whose points are functions, which is
+genuinely the first object here they would recognise as theirs — and the
+completeness statement about it is unproved, not merely unstated. There is no
+L², because there is no inner product on a function space; `RN.dot` is
+finite-dimensional by construction.
 
-**Constructive analysis makes the wrong theorems true.** They would point out
-that the classical statements they use are often constructively false, not
-merely unproved: a continuous function on a closed interval need not attain
-its maximum constructively, and the library's EVT is therefore a different
-theorem than the one they teach. That is not a defect of the library, but it
-means a Mathlib-parity claim in analysis is not meaningful in this area
-without saying which statement is meant.
+Their two 2026-09-04 objections still stand, one of them now with a decision
+attached:
+
+**Constructive analysis makes the wrong theorems true.** The classical
+statements they use are often constructively false, not merely unproved: a
+continuous function on a closed interval need not attain its maximum, and the
+library's EVT is a different theorem than the one they teach. This is now
+*recorded* rather than argued about: `CC:creal-real` in the carrier-
+correspondence ledger grades `CReal`↔Mathlib's `Real` `constructively-stronger`
+on IVT with footprints `[]` against `[propext, Classical.choice, Quot.sound]`,
+and carries EVT as a deliberately non-dominant second witness (ADR-1665). A
+Mathlib-parity claim in analysis is still not meaningful without saying which
+statement is meant — but there is now a table that says it.
 
 **Measure theory is where the subject actually lives, and it needs classical
-logic.** Constructive measure theory exists (Bishop has a chapter) and almost
-nobody uses it. A library that wants classical analysts as users has to decide
-whether to admit classical axioms in a labelled second tier.
+logic.** The project answered this and the answer went against them: ADR-1601
+decides that classical principles enter as **hypotheses, never axioms**. The
+measurement behind it was that carrying a decision principle costs 11 binders
+and 14 argument positions across ten theorems and zero proof obligations, and
+does not grow with depth; the axiom route would have cost at least three axioms
+(EM, countable choice, `funext`) and killed three passing gates. What arrived
+under that policy is exactly what the policy predicts: monotone convergence as
+a graded family with the classical member on one explicit binder. This
+reviewer's response is that a decision principle on a binder is a fine
+*bookkeeping* answer, and it does not make `∫ lim = lim ∫` a lemma they can
+apply without thinking, which is the property they were asking for.
 
-Their one point of genuine interest: the library's habit of recording
+Their one point of genuine interest is unchanged and is now paying: the
+library's habit of recording
 [graded statement families](../research/09-decisions/adr-0603-classical-theorems-land-as-graded-statement-families.md)
-— constructive form, boundary refutation, decidable-fragment exact form,
-labelled import — is exactly the right instrument for the disagreement above.
-It lets the classical statement be present and labelled rather than absent or
-silently substituted.
+lets the classical statement be present and labelled rather than absent or
+silently substituted. Monotone convergence is the first analysis theorem to
+land in that shape.
 
 ## What they would say is missing
 
-Everything above. Ordered by what would change their assessment first:
+Reordered by what would change their assessment first, now that the carriers
+exist.
 
-- **A topology carrier.** Open sets, continuity in the topological sense,
-  compactness. Nothing in classical analysis composes without it. See
-  [06-topology.md](06-topology.md).
-- **Measure and the Lebesgue integral**, with the three convergence theorems.
-- **Normed and inner-product spaces**, with completeness, and ℝⁿ and ℓ² as
-  instances.
-- **Complex analysis.** Holomorphy, Cauchy's theorem, the residue calculus.
-  This is also the gate on analytic number theory
+- **A completion.** Any one complete function space, by any route. This is the
+  single item standing between the library and their test. Sized once already:
+  of the 33 declarations in `creal/completeness.rs` and `creal/convergence.rs`,
+  the l1-completion lane measured **1 as reusable** (`CReal.limit`), because
+  every other one is stated about `CReal` alone and `CReal` is not the
+  completion functor applied to ℚ (ADR-1625). *That 33 is the lane's count and
+  is not re-derivable by the same method today — `convergence.rs` declares
+  through `creal.rs`'s shared step table, not through a local name struct — but
+  its consequence is re-measured and holds: only ℝ and a product are complete.*
+- **Dominated convergence**, in whatever regime ADR-1601 forces. Monotone
+  convergence landed; the dominated theorem is the one they reach for, and it
+  is not stated.
+- **A σ-algebra, or an argued replacement.** ADR-1612 derives measure from the
+  integral and never builds a measurable-set structure. That is a defensible
+  construction order; it is not one this reviewer can map onto their own
+  training without a written correspondence.
+- **Complex analysis above the derivative.** Cauchy–Riemann, contour
+  integration, Cauchy's theorem, residues. The derivative shelf is real; the
+  theorems that make complex analysis *useful* start one level up. This is also
+  the gate on analytic number theory
   ([01-number-theory.md](01-number-theory.md)).
-- **Multivariate calculus.** No ℝⁿ, no partial derivatives, no Fubini.
+- **Multivariate calculus.** `RN` gives the carrier, the inner product and the
+  norm; there are no partial derivatives, no differentials, and no Fubini for
+  integrals (the eight `fubini` hits in the kernel source are all the
+  *discrete* sum-swap lemma over ℕ and ℚ).
 
 ## The blocker
 
-**A decision, not a construction.** Classical analysis needs excluded middle,
-countable choice, and function extensionality, and the kernel has none of
-them. The library's headline metric is that its axiom footprint is empty, and
-importing this reviewer's subject means giving that up for the part of the
-library that serves them.
+**No longer a decision — a construction, and the library knows which one.**
 
-The existing machinery for this is ADR-0603's graded families plus the axiom
-footprint: a classically-proved theorem is admissible if the classical axiom
-appears in its footprint and the ledger reports it, so the empty-footprint
-count stays honest and separate. Nothing about that mechanism is built for
-analysis yet, and `Nat.em_implies_lnp` / `lnp_unrestricted_implies_em` show the
-kernel can already reason about EM as an explicit hypothesis rather than an
-axiom — which may be the better route: *theorems conditional on EM*, keeping
-the footprint empty.
+The 2026-09-04 reading said the blocker was a policy question about excluded
+middle. That question is closed (ADR-1601: hypotheses, not axioms), and the
+route it left open works: a classical member of a graded family carries its
+decision principle on a binder, the axiom footprint stays empty, and the ledger
+still reports which statement is which.
 
-That choice — classical axioms as footprint entries, versus classical
-hypotheses discharged at use — is this reviewer's real question for the
-project, and it is unresolved.
+What blocks this reviewer now is measured and narrow: **every completeness
+proof in the library is about `CReal`.** `Metric.Complete` is a general
+predicate — the metric layer generalized the *statement* — but the only
+witnesses in 4,765 declarations are `Metric.creal_complete` and the transfer
+`Metric.prod_complete`. There is no generic `Metric.completion`, and the
+l1-completion lane's number for why is 1 of 33. So L¹ is a metric space nobody
+can complete, ℝⁿ is a metric space nobody has completed, and the reviewer's
+test sentence — "L² is complete" — fails at two independent points: no L², and
+no completion.
+
+The second-order finding, which the department should carry: **the general
+theorems are cheap and the instances are the work.** The metric lane measured
+34 declarations for every carrier against 10 more for one interval; the L¹ lane
+measured all six of its analytic obligations discharged by existing lemmas and
+zero new estimates. Sizing future analysis work should weight instantiation at
+least as heavily as the theorem.
 
 ## Next five, in their priority order
 
-- [ ] **1. Decide and document the classical-axiom policy.** Either EM as a
-      labelled footprint entry, or EM as an explicit hypothesis in the
-      statement. An ADR, not code. Everything else on this list depends on it.
-- [ ] **2. A topological-space carrier**, even a minimal one, with ℝ as the
-      first instance. Their view: the single structural piece whose absence
-      blocks the most.
-- [ ] **3. Metric and normed spaces, with completeness**, generalizing the
-      existing `converges_of_cauchy` off ℝ.
-- [ ] **4. Measure and the Lebesgue integral on ℝ**, with monotone and
-      dominated convergence, stated in whichever regime (1) selects.
-- [~] **5. Complex analysis: holomorphy and Cauchy's integral theorem** — *derivative, holomorphy, Leibniz, the power rule and the Cauchy–Riemann bridge landed by 2026-09-06; polynomial derivatives, the CR equations and the integral theorem open.*, over
-      the existing `Complex` carrier. Serves this reviewer and unblocks
-      analytic number theory at the same time.
+The 2026-09-04 list, with today's state and a measured reason for each.
+
+- [x] **1. Decide and document the classical-axiom policy.** Landed
+      `80aa8e52c` (ADR-1601): classical principles stay **hypotheses**, never
+      axioms. The lane says plainly this is not the answer the reviewer asked
+      for.
+- [x] **2. A topological-space carrier**, ℝ as the first instance. Landed
+      `e0f0be745` (ADR-1643): `Top.Frame` as a 16-field frame record with
+      `Nat`-indexed joins, `Top.ballFrame` the open-ball frame of ℝ, **53
+      declarations in the `Top` namespace**. Pointfree, per ADR-1602 — not the
+      open-set carrier this item asked for.
+- [~] **3. Metric and normed spaces, with completeness.** Metric landed
+      (`b7df58b7b`, `5bb30b809`, `84320ce9e`): **97 indexed `Metric`
+      declarations plus 12 in `metric_prod.rs` that the index does not see.**
+      ℝⁿ landed (`d00d2a33c`, ADR-1606): **58 `RN` declarations** with norm,
+      unsquared Cauchy–Schwarz and Minkowski. **Open:** no abstract normed- or
+      inner-product-space record, and `Metric.Complete` has exactly two
+      witnesses — ℝ and the product transfer — so ℝⁿ is not complete.
+- [~] **4. Measure and the Lebesgue integral on ℝ.** Opened `3d5320f68`
+      (ADR-1612) and extended `a46e882b9` (ADR-1625): **98 `IntSpace`
+      declarations**, measure derived from the integral, monotone convergence
+      as a graded family, L¹ as a metric space with two instances. **Open:** no
+      σ-algebra, no Lebesgue integral as a primitive, no dominated convergence,
+      L¹ not complete.
+- [~] **5. Complex analysis: holomorphy and Cauchy's integral theorem.** Four
+      slices landed (`8900ed072`, `dbe5a5169`, `feb36ea21`, and the
+      `holomorphic_pow` follow-on `2758e7b18`): **46 declarations across seven
+      modules** — uniform derivative on a disc, holomorphy, Leibniz, the
+      estimate shelf, uniform continuity closed under `+` and `·`, the power
+      rule, the modulus-versus-component inequalities and the disc-membership
+      bridge. **Open:** the Cauchy–Riemann equations themselves (blocked on
+      component extraction — the real part has no homomorphism law for
+      products), the polynomial derivative (needs a recursion building
+      magnitude bounds along the coefficient list), contour integration, and
+      Cauchy's theorem.
+
+**What they would put first now**, given items 1 and 2 are closed:
+(a) `Metric.completion`, or completeness of any one function space;
+(b) dominated convergence in ADR-1601's regime;
+(c) the Cauchy–Riemann equations, the last brick before the contour integral.
+Each is named as an obstruction in a landed lane's own record, so none of the
+three needs a fresh design decision first.
 
 ## Progress log
 
@@ -140,22 +220,62 @@ project, and it is unresolved.
 | 2026-09-05 | **Item 5, first slice** (roadmap W3-5, ADR-1642): `Complex.HasDerivativeOn` in Bishop's uniform form on a closed disc, mirroring the real shelf (which has no pointwise derivative), with const/id/neg/add rules, and `Complex.HolomorphicOn` as a `Sigma` over the derivative; 18 axiom-free declarations. The ring half of each transcription collapses to one producer call; the analysis half is verbatim from the real shelf. **Leibniz is blocked on estimates, not algebra**: `Complex.BoundedOn` and `UniformlyContinuousOn` do not exist. That is the next brick before any of Cauchy–Riemann, complex power series, or the integral theorem. | `8900ed072`; `complex::` 73 passed in the lane |
 | 2026-09-05 | **Item 5, second slice** (roadmap W3-5, ADR-1646): the bounded and uniformly-continuous predicates on ℂ, the product rule with the real shelf's hypotheses, and the modulus-versus-component inequalities Cauchy–Riemann needs; 17 axiom-free declarations. Two hypothesis placements in the earlier ADR's prose were wrong and are corrected. Next: closure of uniform continuity under products (for polynomial derivatives), then the CR bridge. | `dbe5a5169`; `complex::` 86 passed in the lane |
 | 2026-09-06 | **Item 5, third slice** (roadmap W3-5, ADR-1656): uniform continuity closed under sums and products, the power rule with its holomorphic instance, and the bridge from disc membership to segment endpoints that Cauchy–Riemann needs, which cost two rewriting steps and no estimate; 10 axiom-free declarations. Polynomial derivatives wait on a recursion building the magnitude bounds along the coefficient list; the CR equations wait on component extraction, since the real part has no homomorphism law for products. | `feb36ea21`; `complex::` 92 passed in the lane |
+| 2026-09-06 | **Re-measured end to end; the verdict moves from "unmoved" to "moved, and one complete function space short of interested".** Four of the five Next Five items have landed or partly landed since 2026-09-04, and six rows of this file's 2026-09-04 table were false by today. Measured at `d38d49fce`: the kernel index reports **4,765 declarations**, with `Metric` 97 (+12 in `metric_prod.rs`, which `shape_search` does **not** index — a blind spot confirmed today by `Metric.prod` returning 0 matches in a dump of all 4,765 names, and re-read from source), `IntSpace` 98, `RN` 58, `Top` 53, `Complex` 196, `CReal` 629. The ledger holds **2,954 facts, 2,678 proved, 1,576 landmark (58.85%)**; all 14 `Metric`/`RN`/`Top` facts, all 6 `IntSpace` facts and all 32 complex-derivative/estimate facts read `proved`. Corrections: "metric space — nothing" was false (a whole layer, with Bishop compactness and EVT as an instance); "topological space — nothing" was false (`Top.Frame`, pointfree); "measure — nothing, the 117 grep hits are the word *measured*" was false (`IntSpace.measure` and five theorems about it); "Lᵖ — nothing" was false (L¹ as a metric space); "no holomorphy" was false (46 declarations across seven modules, up to a power rule); and the file's own re-measure recipe now returns misleading NONZERO counts for `hilbert` (prose about Hilbert's incidence axioms in `geo.rs`), `fubini` (the discrete sum-swap over ℕ/ℚ) and `measure` (191 files, mostly the word "measured") — so the recipe is replaced below with one that counts declarations. What did **not** move, verified against the full name dump with `Metric`/`IntSpace` (193 names) as the positive control in the same invocation: zero declarations match `banach`, `hilbert`, `lebesgue`, `sigmaAlgebra`, `Measurable`, `completion`, `contour`, `fourier`, `cauchyRiemann` or `hasDerivative_poly`, and `Metric.Complete` has exactly two witnesses (`Metric.creal_complete`, `Metric.prod_complete`). No worktree ahead of `main` carries analysis work: the 24 branches touching `complex`/`creal`/`creal_point` are all stale checkpoints from 2026-08-23…28. | `d38d49fce`; `shape_search --include-constructed --list-namespaces` (build 231.6 s, `declarations=4765`); `shape_search --include-constructed --limit 6000 --kind theorem --kind definition --kind axiom --kind inductive --kind constructor --kind recursor` → 4,765 names; `python3 scripts/count-landmark-facts.py` → `total=2954 proved=2678 landmark=1576` |
 
 ## How to re-measure
 
+The old recipe grepped the kernel *source* for eleven words and read a zero as
+absence. It no longer discriminates: `measure` returns 191 files (mostly the
+word "measured"), `hilbert` returns 1 (prose about Hilbert's incidence axioms
+in `geo.rs`), `fubini` returns 8 (the *discrete* sum-swap lemma). Count
+declarations, not files.
+
 ```sh
-for t in measure lebesgue sigma_algebra topology compact metric_space \
-         banach hilbert holomorphic contour_integral fubini; do
-  printf '%-20s %s\n' "$t" "$(grep -rli "$t" crates/axeyum-lean-kernel/src/ | wc -l)"
+# 1. The namespace census. ~2-4 min: it builds every constructed prelude.
+#    Metric / IntSpace / RN / Top / Complex are this reviewer's shelves.
+cargo run --release -p axeyum-lean-kernel --example shape_search -- \
+  --include-constructed --list-namespaces
+
+# 2. Every declaration name, once, so an absence has a same-invocation
+#    positive control. Grepping this file is the ONLY honest absence test
+#    here: a word in a doc comment is not a declaration.
+cargo run --release -p axeyum-lean-kernel --example shape_search -- \
+  --include-constructed --limit 6000 --kind theorem --kind definition \
+  --kind axiom --kind inductive --kind constructor --kind recursor \
+  | awk '$1=="MATCH"{print $2}' > /tmp/axeyum-names.txt
+grep -icE 'banach|hilbert|lebesgue|sigmaAlgebra|Measurable|completion|contour|fourier' /tmp/axeyum-names.txt
+grep -cE '^(Metric|IntSpace)\.' /tmp/axeyum-names.txt   # positive control, must be non-zero
+
+# 3. metric_prod.rs is NOT in that index (measured 2026-09-06: `Metric.prod`
+#    returns 0 matches in the dump above). Read it from source; the names
+#    struct has one field per declaration.
+grep -cE '^\s+pub [a-z_0-9]+: NameId,' crates/axeyum-lean-kernel/src/metric_prod.rs
+
+# 4. The complex-analysis shelf, module by module, the same way.
+for m in deriv estimates leibniz uc_closure polyderiv components cauchy_riemann; do
+  printf '%-16s %s\n' "$m" \
+    "$(grep -cE '^\s+pub [a-z_0-9]+: NameId,' crates/axeyum-lean-kernel/src/complex/$m.rs)"
 done
-# positive control: riemann returns 16 files, so a zero above is a real zero
+
+# 5. The ledger.
+python3 scripts/count-landmark-facts.py
+ls artifacts/facts/ | grep -cE '^F-(metric|rn|top|intspace)-'
 ```
 
 ## Related
 
 - [02-constructive-analysis.md](02-constructive-analysis.md) — the same shelf,
   judged favourably
-- [06-topology.md](06-topology.md) — the prerequisite
+- [06-topology.md](06-topology.md) — the prerequisite, now partly built
 - [08-probability-and-statistics.md](08-probability-and-statistics.md) —
   blocked behind measure theory
 - [ADR-0603](../research/09-decisions/adr-0603-classical-theorems-land-as-graded-statement-families.md)
+  — classical theorems land as graded statement families
+- [ADR-1601](../research/09-decisions/adr-1601-classical-logic-enters-as-a-hypothesis-not-as-an-axiom.md)
+  — classical logic enters as a hypothesis, not as an axiom
+- [ADR-1612](../research/09-decisions/adr-1612-the-integral-is-primitive-and-measure-is-derived-predicatively.md)
+  — the integral is primitive and measure is derived predicatively
+- [ADR-1625](../research/09-decisions/adr-1625-l1-is-a-metric-space-from-a-pointwise-distance-and-the-completion-functor-does-not-exist-yet.md)
+  — L¹ is a metric space; the completion functor does not exist yet
+- [ADR-1643](../research/09-decisions/adr-1643-the-frame-carrier-is-nat-indexed-and-the-ball-index-is-not-a-nat.md)
+  — the frame carrier is `Nat`-indexed
