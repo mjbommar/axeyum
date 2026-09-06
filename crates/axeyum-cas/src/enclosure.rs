@@ -121,6 +121,48 @@
 //! cheapest thing in the table because the operator converges quadratically:
 //! six steps take a box of width `10^-2` to `2^-200`.
 //!
+//! The wave-three heads, `cost_table_wave_three`, measured 2026-09-06 under
+//! `--release` from the prebuilt test binary, produce / verify.
+//!
+//! **ADVISORY ONLY, NOT A BASELINE** — a shared host whose load average the
+//! test prints before it starts (19.35 for this run), one unpinned run per row.
+//!
+//! | head | 10 | 50 | 100 |
+//! |---|---|---|---|
+//! | `euler_gamma` | 242 µs / 8.8 µs | 309 µs / 6.7 µs | 4.37 ms / 14 µs |
+//! | `Si(1)` | 249 / 226 µs | 772 / 531 µs | 2.05 / 1.31 ms |
+//! | `Ci(1)` | 503 / 463 µs | 1.43 / 0.95 ms | 9.23 / 5.69 ms |
+//! | `Ei(1)` | 1.29 / 0.82 ms | 7.84 / 5.03 ms | 7.84 / 4.92 ms |
+//! | `FresnelC(1)` | 930 / 840 µs | 10.7 / 6.9 ms | 34.4 / 23.0 ms |
+//! | `asin(1/2)` | 90 / 116 µs | 1.37 / 0.79 ms | 3.69 / 2.32 ms |
+//! | `asinh(1)` | 3.34 / 3.23 ms | 19.5 / 10.4 ms | 45.8 / 26.4 ms |
+//! | `2^(1/2)` via `exp(y·ln x)` | 810 / 593 µs | 9.16 / 6.52 ms | 101 / 79 ms |
+//!
+//! and the definite integral `∫₀¹ e^(−x²)`, same conditions:
+//!
+//! | precision | panels | produce | verify |
+//! |---|---|---|---|
+//! | 10 | 4 | 5.24 ms | 2.90 ms |
+//! | 20 | 16 | 29.6 ms | 16.1 ms |
+//! | 30 | 64 | 275 ms | 148 ms |
+//!
+//! Four things in that table are worth reading, and one of them is a warning.
+//!
+//! - **`euler_gamma`'s verify column is not a verification cost.** `γ` is
+//!   memoised per order, so the produce run fills the table and the verify run
+//!   is a `BTreeMap` lookup. Do not quote 8.8 µs as the cost of checking a `γ`
+//!   certificate on a cold process; the produce column is that number.
+//! - **`Ei(1)` costs the same at precision 50 and 100** because both land on
+//!   the same rung of [`ORDERS`], exactly as `Gamma` does at 100 and 200.
+//! - The heads that carry `γ` and a logarithm (`Ci`, `Ei`, `Chi`, `li`) run a
+//!   few times a bare alternating series, and every one of them is well under a
+//!   tenth of what `Gamma` costs at the same precision.
+//! - The integral is roughly linear in the panel count, and Simpson's panel
+//!   count is `error^(−1/4)`: **ten more bits of precision costs about 5.6×**,
+//!   which is what the 10 / 20 / 30 rows show. The box rule's panel count is
+//!   `2^precision` instead, which is why Simpson is tried first and why the
+//!   box-rule test in this crate asks for precision 6 rather than 30.
+//!
 //! # Out of scope
 //!
 //! Deliberately **not** handled here, and not silently approximated either —

@@ -1454,7 +1454,7 @@ impl IntegralEnclosure {
         // Guard 2: partition gaps and inverted panels.
         for (index, panel) in self.panels.iter().enumerate() {
             if panel.lo > panel.hi {
-                return Err(format!("panel {index} is inverted"));
+                return Err(format!("panel {index} has lo above hi"));
             }
             if index > 0 && self.panels[index - 1].hi != panel.lo {
                 return Err(format!(
@@ -1856,15 +1856,44 @@ mod tests {
 
     #[test]
     fn the_geometric_majorant_is_refused_while_its_ratio_is_large() {
-        // Shi has positive terms, so its bound needs the ratio at the first
-        // omitted index to be below 1/2; at magnitude 10 and order 2 it is not.
-        let argument = BigInterval::point(bi(10));
-        assert!(odd_series_ratio(&bi(10), 3) >= br(1, 2));
+        // Shi has positive terms, so its tail needs a geometric majorant
+        // `t_(n+1)/(1 − R)`. That is valid for any `R < 1`; the module refuses
+        // at `R >= 1/2` instead, so the majorant is never marginal. Both halves
+        // of that sentence need a control, and they fail differently — the
+        // first version of this test had only the first case and the guard
+        // deletion SURVIVED it:
+        //
+        //  * at magnitude 10 and order 2 the ratio exceeds 1, so `1 − R` is
+        //    negative and the interval constructor refuses on its own. Deleting
+        //    the guard still declines here, so this case alone measures
+        //    nothing about the guard;
+        //  * at magnitude 15/2 and order 2 the ratio is 0.607, inside
+        //    `[1/2, 1)`: the majorant is mathematically valid there and only
+        //    the module's own margin refuses it. This is the case that dies
+        //    when the guard is deleted.
+        let far = BigInterval::point(bi(10));
+        assert!(
+            odd_series_ratio(&bi(10), 3) >= BigRational::one(),
+            "the runaway control needs a ratio at or above 1"
+        );
         assert!(matches!(
-            shi_interval(&argument, 2),
+            shi_interval(&far, 2),
             Err(DeclineReason::PrecisionUnreachable)
         ));
-        assert!(shi_interval(&argument, 32).is_ok());
+        let margin = BigInterval::point(br(15, 2));
+        let ratio = odd_series_ratio(&br(15, 2), 3);
+        assert!(
+            ratio >= br(1, 2) && ratio < BigRational::one(),
+            "the margin control needs a ratio in [1/2, 1), got {ratio}"
+        );
+        assert!(matches!(
+            shi_interval(&margin, 2),
+            Err(DeclineReason::PrecisionUnreachable)
+        ));
+        // ...and a high enough order answers in both cases, so neither decline
+        // is about the argument.
+        assert!(shi_interval(&far, 32).is_ok());
+        assert!(shi_interval(&margin, 32).is_ok());
     }
 
     #[test]
@@ -2119,8 +2148,31 @@ mod tests {
 
     #[test]
     fn guard_two_refuses_a_partition_gap() {
+        // The second panel is moved up AND recomputed honestly at its new
+        // endpoints, and the total is the honest sum of what is left. Every
+        // other guard therefore passes: each panel contains its own recomputed
+        // contribution, each sliver is honest, and the interval contains the
+        // sum. The only thing wrong with this certificate is that the stretch
+        // `[mid, mid + 2^-8]` is covered by nothing — which is exactly what the
+        // partition guard exists to see, and nothing else can.
         let (f, mut e) = honest_two_panels();
-        e.panels[1].lo = &e.panels[1].lo + pow2(-8);
+        let derivative = f.differentiate_n("x", 4);
+        let moved = &e.panels[1].lo + pow2(-8);
+        e.panels[1] = panel_from(
+            &f,
+            &derivative,
+            "x",
+            &moved,
+            &e.panels[1].hi.clone(),
+            e.rule,
+            e.order,
+        )
+        .expect("the moved panel");
+        let mut total = e.low_edge.add(&e.high_edge);
+        for panel in &e.panels {
+            total = total.add(&panel.value);
+        }
+        e.interval = total;
         let message = e.verify(&f, "x").expect_err("a gap must be refused");
         assert!(message.contains("does not start where"), "{message}");
     }
@@ -2135,7 +2187,11 @@ mod tests {
             "the swap did not invert the panel, so this control is vacuous"
         );
         let message = e.verify(&f, "x").expect_err("inversion must be refused");
-        assert!(message.contains("inverted"), "{message}");
+        // Deliberately NOT the word `panel_from` uses for the same condition:
+        // if this guard is deleted the panel still fails to re-evaluate, and an
+        // assertion on shared wording would pass on the fallback and leave this
+        // control unable to fail.
+        assert!(message.contains("lo above hi"), "{message}");
     }
 
     #[test]
