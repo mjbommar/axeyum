@@ -61,6 +61,17 @@ use crate::fps::{CertificateError as SeriesError, FormalPowerSeries};
 /// only exact rational evaluation and never a deeper Sturm chain.
 const REFINEMENT_BITS: u32 = 96;
 
+/// The largest factor degree [`ModulusRoute::PairwiseResultant`] will attempt.
+///
+/// The route's modulus polynomial has degree `2n²` in the factor's degree `n`,
+/// and the Sturm chain that isolates its smallest positive root costs
+/// superlinearly in that. At `n = 4` the polynomial has degree 32 before the
+/// square-free reduction and the whole radius lands well inside a second; at
+/// `n = 6` it is degree 72 and the chain dominates the crate's test sweep.
+/// Above the cap the factor keeps the [`ModulusRoute::ReciprocalCauchy`]
+/// lower-bound label, with that as the stated reason.
+const MAX_RESULTANT_FACTOR_DEGREE: usize = 4;
+
 /// The largest relative error [`CoefficientAsymptotics::verify`] will accept at
 /// the coarsest sample. A certificate stating a looser tolerance is refused, so
 /// a forger cannot buy acceptance by widening the claim.
@@ -175,6 +186,15 @@ pub enum AnalyticError {
     /// A reused root count declined — a coefficient outside `i128`, or one of
     /// the Sturm machinery's own caps. Not a refutation.
     SturmDeclined,
+    /// The pairwise-product resultant could not be re-derived for this factor:
+    /// the determinant came back at the wrong degree, or failed the
+    /// constant-term identity `g(0) = (−1)ⁿ (a₀/aₙ)^{2n}` that pins it. Not a
+    /// refutation of the radius — a refusal to trust the primitive that
+    /// produced it.
+    ResultantDeclined {
+        /// Index of the offending factor.
+        factor: usize,
+    },
     /// The asymptotics certificate names a different function than its radius
     /// certificate does.
     FunctionMismatch,
@@ -300,6 +320,10 @@ impl core::fmt::Display for AnalyticError {
             }
             AnalyticError::NoSignChange => write!(f, "the refined bracket has no sign change"),
             AnalyticError::SturmDeclined => write!(f, "the reused root count declined"),
+            AnalyticError::ResultantDeclined { factor } => write!(
+                f,
+                "the pairwise-product resultant of factor {factor} did not re-derive"
+            ),
             AnalyticError::FunctionMismatch => {
                 write!(f, "the radius certificate describes a different function")
             }
@@ -360,6 +384,9 @@ pub enum AnalyticDecline {
     FactorizationDeclined,
     /// A reused Sturm root count declined.
     SturmDeclined,
+    /// The pairwise-product resultant failed its own degree / constant-term
+    /// self-check, so the route refused to answer rather than trust it.
+    ResultantDeclined,
     /// Isolating the smallest positive root of the modulus polynomial did not
     /// converge within the iteration cap.
     IsolationDeclined,
@@ -399,6 +426,9 @@ impl core::fmt::Display for AnalyticDecline {
             AnalyticDecline::SingularAtZero => write!(f, "the denominator vanishes at the origin"),
             AnalyticDecline::FactorizationDeclined => write!(f, "the factorizer declined"),
             AnalyticDecline::SturmDeclined => write!(f, "a Sturm root count declined"),
+            AnalyticDecline::ResultantDeclined => {
+                write!(f, "the pairwise-product resultant failed its self-check")
+            }
             AnalyticDecline::IsolationDeclined => write!(f, "root isolation did not converge"),
             AnalyticDecline::CertificateRefused(inner) => {
                 write!(f, "the producer's own checker refused: {inner}")
@@ -515,6 +545,74 @@ fn poly_reflect(poly: &[BigRational]) -> Vec<BigRational> {
     )
 }
 
+/// `p(t²)`: spread the coefficients over the even degrees.
+///
+/// The positive real roots of `p(t²)` are exactly the square roots of the
+/// positive real roots of `p`, order-preserving, so the *smallest* positive root
+/// of `p(t²)` is the square root of the smallest positive root of `p`. That is
+/// how [`ModulusRoute::PairwiseResultant`] turns a polynomial in the squared
+/// moduli into one in the moduli themselves.
+fn poly_substitute_square(poly: &[BigRational]) -> Vec<BigRational> {
+    let trimmed = poly_trim(poly.to_vec());
+    let mut out = Vec::with_capacity(trimmed.len().saturating_mul(2));
+    for (index, coeff) in trimmed.iter().enumerate() {
+        if index > 0 {
+            out.push(zero());
+        }
+        out.push(coeff.clone());
+    }
+    poly_trim(out)
+}
+
+/// Scale `poly` by a **positive** rational so that its coefficients are coprime
+/// integers.
+///
+/// Sign variations are what a Sturm chain counts, and a positive scale changes
+/// none of them — so normalizing every chain member this way is free of
+/// semantic content and keeps the bignum coefficients from doubling in size at
+/// each Euclidean step, which is the whole cost of a degree-`n²` chain.
+fn poly_primitive(poly: &[BigRational]) -> Vec<BigRational> {
+    let trimmed = poly_trim(poly.to_vec());
+    if trimmed.is_empty() {
+        return trimmed;
+    }
+    let mut denominator_lcm = BigInt::one();
+    for coeff in &trimmed {
+        let denominator = coeff.denom().magnitude().clone();
+        let gcd = gcd_big(&denominator_lcm.magnitude().clone(), &denominator);
+        denominator_lcm = BigInt::from(&denominator_lcm.magnitude().clone() / &gcd * &denominator);
+    }
+    let scaled: Vec<BigInt> = trimmed
+        .iter()
+        .map(|coeff| (coeff * BigRational::from_integer(denominator_lcm.clone())).to_integer())
+        .collect();
+    let mut content = num_bigint::BigUint::from(0u32);
+    for value in &scaled {
+        content = gcd_big(&content, value.magnitude());
+    }
+    if content.is_zero() {
+        return trimmed;
+    }
+    let content = BigInt::from(content);
+    poly_trim(
+        scaled
+            .into_iter()
+            .map(|value| BigRational::from_integer(value / &content))
+            .collect(),
+    )
+}
+
+/// Binary GCD of two magnitudes, by Euclid.
+fn gcd_big(left: &num_bigint::BigUint, right: &num_bigint::BigUint) -> num_bigint::BigUint {
+    let mut a = left.clone();
+    let mut b = right.clone();
+    while !b.is_zero() {
+        let remainder = a % &b;
+        a = core::mem::replace(&mut b, remainder);
+    }
+    a
+}
+
 fn poly_derivative(poly: &[BigRational]) -> Vec<BigRational> {
     poly_trim(
         poly.iter()
@@ -570,7 +668,13 @@ fn poly_gcd(left: &[BigRational], right: &[BigRational]) -> Vec<BigRational> {
             break;
         };
         a = b;
-        b = remainder;
+        // Positive-scale each remainder to a primitive integer polynomial. The
+        // gcd is defined up to a unit and the result is made monic below, so
+        // this changes nothing about the answer -- it only stops the
+        // coefficients doubling in size at every step, which is what makes the
+        // degree-`n²` modulus polynomials of `ModulusRoute::PairwiseResultant`
+        // affordable at all.
+        b = poly_primitive(&remainder);
     }
     poly_monic(&a)
 }
@@ -697,13 +801,131 @@ fn to_machine_poly(poly: &[BigRational]) -> Option<Vec<Rational>> {
     poly.iter().map(Rational::from_big_rational).collect()
 }
 
-/// Distinct real roots of `poly` in the half-open interval `(lower, upper]`,
-/// by [`crate::sturm::count_real_roots_in`]. `None` when that reuse declines.
+/// A Sturm root counter for one fixed polynomial.
+///
+/// Two widths, tried in that order:
+///
+/// * [`RootCounter::Machine`] is the reuse — [`crate::sturm::count_real_roots_in`]
+///   over the crate's `i128` [`Rational`]. It is what every wave-two route used
+///   and what still answers every wave-two shape.
+/// * [`RootCounter::Big`] is a Sturm chain over [`BigRational`], built once and
+///   reused across counts. It exists because the modulus polynomial of
+///   [`ModulusRoute::PairwiseResultant`] has degree `2·(deg f)²` — degree 18 for
+///   a cubic, 32 for a quartic — and a Sturm chain of that degree leaves `i128`
+///   on the second or third remainder, so the machine reuse simply declines
+///   there. Each chain member is normalized to a primitive integer polynomial by
+///   a **positive** scale, which no sign variation can see.
+///
+/// The two are held to agree: `bignum_and_machine_sturm_counts_agree` in this
+/// module's tests compares them over a family of polynomials both widths can
+/// take, so the fallback is not an unchecked second opinion.
+enum RootCounter {
+    /// The `i128` reuse, with the original polynomial kept so a count that
+    /// overflows at some endpoint can still fall through to the bignum chain.
+    Machine {
+        /// The polynomial narrowed to `i128` rationals.
+        machine: Vec<Rational>,
+        /// The same polynomial at full width.
+        poly: Vec<BigRational>,
+    },
+    /// A `BigRational` Sturm chain of the square-free part, built once.
+    Big(Vec<Vec<BigRational>>),
+}
+
+impl RootCounter {
+    /// Build a counter for `poly`. `None` only for the zero polynomial, where
+    /// every point is a root and there is nothing to count.
+    fn new(poly: &[BigRational]) -> Option<Self> {
+        let poly = poly_trim(poly.to_vec());
+        if let Some(machine) = to_machine_poly(&poly) {
+            return Some(RootCounter::Machine { machine, poly });
+        }
+        Some(RootCounter::Big(sturm_chain_big(&poly)?))
+    }
+
+    /// Distinct real roots in the half-open interval `(lower, upper]`.
+    fn count(&self, lower: &BigRational, upper: &BigRational) -> Option<usize> {
+        match self {
+            RootCounter::Machine { machine, poly } => {
+                let narrowed = Rational::from_big_rational(lower)
+                    .zip(Rational::from_big_rational(upper))
+                    .and_then(|(low, high)| {
+                        crate::sturm::count_real_roots_in(machine, low, high)
+                    });
+                match narrowed {
+                    Some(count) => Some(count),
+                    // The `i128` chain overflowed. The same count at full width
+                    // is still available, at the cost of rebuilding the chain.
+                    None => Self::count_big(&sturm_chain_big(poly)?, lower, upper),
+                }
+            }
+            RootCounter::Big(chain) => Self::count_big(chain, lower, upper),
+        }
+    }
+
+    fn count_big(
+        chain: &[Vec<BigRational>],
+        lower: &BigRational,
+        upper: &BigRational,
+    ) -> Option<usize> {
+        let at_lower = sign_variations_big(chain, lower);
+        let at_upper = sign_variations_big(chain, upper);
+        Some(at_lower.saturating_sub(at_upper))
+    }
+}
+
+/// The Sturm chain `s₀ = squarefree(p)`, `s₁ = s₀′`, `s_{k+1} = −rem(s_{k−1}, s_k)`
+/// over [`BigRational`], every member scaled to a primitive integer polynomial by
+/// a positive rational. `None` for the zero polynomial.
+fn sturm_chain_big(poly: &[BigRational]) -> Option<Vec<Vec<BigRational>>> {
+    let first = poly_primitive(&poly_squarefree(poly));
+    let degree = poly_degree(&first)?;
+    let mut chain = vec![first];
+    if degree == 0 {
+        return Some(chain); // a nonzero constant: no roots anywhere
+    }
+    let derivative = poly_primitive(&poly_derivative(&chain[0]));
+    if poly_degree(&derivative).is_none() {
+        return Some(chain);
+    }
+    chain.push(derivative);
+    // Each remainder drops the degree by at least one, so the chain is bounded.
+    while chain.len() <= degree + 2 {
+        let len = chain.len();
+        let (_, remainder) = poly_divrem(&chain[len - 2], &chain[len - 1])?;
+        let remainder = poly_trim(remainder);
+        if poly_degree(&remainder).is_none() {
+            break;
+        }
+        chain.push(poly_primitive(&poly_scale(&remainder, &-one())));
+    }
+    Some(chain)
+}
+
+/// Sign changes in the chain at `x`, zeros skipped.
+fn sign_variations_big(chain: &[Vec<BigRational>], x: &BigRational) -> usize {
+    let mut variations = 0usize;
+    let mut previous: Option<bool> = None;
+    for member in chain {
+        let value = poly_eval(member, x);
+        if value.is_zero() {
+            continue;
+        }
+        let positive = value.is_positive();
+        if let Some(prev) = previous
+            && prev != positive
+        {
+            variations += 1;
+        }
+        previous = Some(positive);
+    }
+    variations
+}
+
+/// Distinct real roots of `poly` in the half-open interval `(lower, upper]`.
+/// `None` when neither width reaches a count.
 fn count_roots_in(poly: &[BigRational], lower: &BigRational, upper: &BigRational) -> Option<usize> {
-    let machine = to_machine_poly(poly)?;
-    let low = Rational::from_big_rational(lower)?;
-    let high = Rational::from_big_rational(upper)?;
-    crate::sturm::count_real_roots_in(&machine, low, high)
+    RootCounter::new(poly)?.count(lower, upper)
 }
 
 /// The number of distinct real roots of `poly`, by
@@ -711,6 +933,127 @@ fn count_roots_in(poly: &[BigRational], lower: &BigRational, upper: &BigRational
 fn distinct_real_root_count(poly: &[BigRational]) -> Option<usize> {
     let machine = to_machine_poly(poly)?;
     crate::sturm::isolate_real_roots(&machine).map(|intervals| intervals.len())
+}
+
+// ---------------------------------------------------------------------------
+// The pairwise-product resultant
+// ---------------------------------------------------------------------------
+
+/// The Sylvester matrix of two polynomials in `z` whose coefficients are
+/// themselves polynomials in `t`, in the convention
+/// `axeyum_ir::poly::sylvester_matrix` uses: `deg q` rows of `p`'s coefficients
+/// (most significant first) above `deg p` rows of `q`'s.
+///
+/// The `axeyum-ir` builders are not reusable here — the `i128` one takes the
+/// wrong coefficient width and the `BigRational` one is private — so the ten
+/// lines are rebuilt, deliberately matching that convention so the determinant
+/// primitive below sees the matrix it expects.
+fn sylvester_matrix_big(
+    p_coeffs: &[Vec<BigRational>],
+    q_coeffs: &[Vec<BigRational>],
+) -> Option<Vec<Vec<Vec<BigRational>>>> {
+    let p_degree = p_coeffs.len().checked_sub(1)?;
+    let q_degree = q_coeffs.len().checked_sub(1)?;
+    if p_degree == 0 || q_degree == 0 {
+        return None;
+    }
+    let dimension = p_degree + q_degree;
+    let mut matrix = vec![vec![vec![zero()]; dimension]; dimension];
+    for (row, slot) in matrix.iter_mut().take(q_degree).enumerate() {
+        for (column, coeff) in p_coeffs.iter().rev().enumerate() {
+            slot[row + column].clone_from(coeff);
+        }
+    }
+    for (row, slot) in matrix.iter_mut().skip(q_degree).take(p_degree).enumerate() {
+        for (column, coeff) in q_coeffs.iter().rev().enumerate() {
+            slot[row + column].clone_from(coeff);
+        }
+    }
+    Some(matrix)
+}
+
+/// The **monic** polynomial whose roots are every pairwise product `rᵢ·rⱼ` of the
+/// roots of `factor`, from the resultant
+/// `g(t) = Res_z(f(z), zⁿ·f(t/z))`.
+///
+/// # Why the roots are the pairwise products
+///
+/// Write `f(z) = aₙ Πᵢ (z − rᵢ)` and `h_t(z) = zⁿ f(t/z) = Σₖ aₖ tᵏ z^{n−k}`,
+/// which has degree `n` in `z` exactly because `f(0) = a₀ ≠ 0`. Then
+/// `h_t(rᵢ) = rᵢⁿ f(t/rᵢ) = aₙ Πⱼ (t − rᵢrⱼ)`, so
+///
+/// ```text
+/// Res_z(f, h_t) = aₙ^n Πᵢ h_t(rᵢ) = aₙ^{2n} Π_{i,j} (t − rᵢ rⱼ).
+/// ```
+///
+/// # The two identities this checks
+///
+/// The determinant is computed by `axeyum_ir::poly_big::big_determinant`
+/// (exact evaluation–interpolation over `BigRational`). Two exact consequences
+/// of the display above are re-checked against it, and a mismatch **declines**
+/// rather than answering:
+///
+/// * `deg g = n²`;
+/// * the monic `g` satisfies `g(0) = Π_{i,j}(−rᵢrⱼ) = (−1)ⁿ (a₀/aₙ)^{2n}`, using
+///   `Πᵢ rᵢ = (−1)ⁿ a₀/aₙ`.
+///
+/// Neither identity is how the determinant is computed, so together they are an
+/// independent check on the primitive rather than a restatement of it.
+fn pairwise_product_resultant(factor: &[BigRational]) -> Option<Vec<BigRational>> {
+    let factor = poly_trim(factor.to_vec());
+    let degree = poly_degree(&factor)?;
+    if degree == 0 || factor[0].is_zero() {
+        return None;
+    }
+    // f(z): coefficients constant in t.
+    let p_coeffs: Vec<Vec<BigRational>> = factor.iter().map(|a| vec![a.clone()]).collect();
+    // h_t(z) = zⁿ f(t/z): the coefficient of z^j is a_{n−j}·t^{n−j}.
+    let q_coeffs: Vec<Vec<BigRational>> = (0..=degree)
+        .map(|j| {
+            let exponent = degree - j;
+            let mut cell = vec![zero(); exponent + 1];
+            cell[exponent] = factor[exponent].clone();
+            cell
+        })
+        .collect();
+    let matrix = sylvester_matrix_big(&p_coeffs, &q_coeffs)?;
+    let determinant = poly_trim(axeyum_ir::poly_big::big_determinant(&matrix));
+    if poly_degree(&determinant)? != degree * degree {
+        return None;
+    }
+    let monic = poly_monic(&determinant);
+    let ratio = &factor[0] / &factor[degree];
+    let mut expected = one();
+    for _ in 0..(2 * degree) {
+        expected *= &ratio;
+    }
+    if degree % 2 == 1 {
+        expected = -expected;
+    }
+    if monic[0] != expected {
+        return None;
+    }
+    Some(monic)
+}
+
+/// The modulus polynomial [`ModulusRoute::PairwiseResultant`] defines for
+/// `factor`: the square-free part of [`pairwise_product_resultant`], with `t`
+/// substituted by `t²`, made monic.
+///
+/// Its smallest positive real root is the smallest modulus of a root of
+/// `factor` — see the module documentation for the theorem and its proof.
+///
+/// The square-free reduction happens **before** the substitution and is not
+/// cosmetic: for `Φ₅` it takes the degree-16 resultant `(t−1)⁴·Φ₅(t)³` down to
+/// `t⁵ − 1`, so the Sturm chain that follows runs at degree 10 rather than 32.
+fn resultant_modulus_polynomial(factor: &[BigRational]) -> Option<Vec<BigRational>> {
+    let resultant = pairwise_product_resultant(factor)?;
+    let squarefree = poly_squarefree(&resultant);
+    let substituted = poly_monic(&poly_substitute_square(&squarefree));
+    if poly_eval(&substituted, &zero()).is_zero() {
+        return None;
+    }
+    Some(substituted)
 }
 
 // ---------------------------------------------------------------------------
@@ -730,6 +1073,15 @@ pub enum ModulusRoute {
     /// root of `g(t) = t² − c/a`. **Exact**, and the case `1/(1+x²)` on which a
     /// real-roots-only route is simply wrong.
     ConjugatePair,
+    /// Any factor with `f(0) ≠ 0` and degree at most
+    /// [`MAX_RESULTANT_FACTOR_DEGREE`], including one whose roots are complex
+    /// and irrational and whose degree is odd. The modulus polynomial is the
+    /// square-free part of `g(t) = Res_z(f(z), zⁿ f(t/z))` — whose roots are
+    /// every pairwise product `rᵢrⱼ` — with `t` substituted by `t²`. Its
+    /// smallest positive root is `minᵢ |rᵢ|`. **Exact**, and the case `Φ₅` on
+    /// which the two wave-two routes gave a lower bound of `1/2` where the
+    /// truth is `1`.
+    PairwiseResultant,
     /// Neither exact route applies. Only the reciprocal Cauchy bound
     /// `1/(1 + maxᵢ≥₁|aᵢ/a₀|)` is certified, which is a **lower bound** on every
     /// root's modulus and therefore on the radius.
@@ -823,6 +1175,25 @@ impl FactorModulusBound {
                     return Err(AnalyticError::ModulusPolynomialMismatch { factor: index });
                 }
                 if &self.lower * &self.lower >= modulus_squared {
+                    return Err(AnalyticError::LowerBoundNotCertified { factor: index });
+                }
+                Ok(())
+            }
+            ModulusRoute::PairwiseResultant => {
+                if degree > MAX_RESULTANT_FACTOR_DEGREE {
+                    return Err(AnalyticError::RouteNotApplicable { factor: index });
+                }
+                let expected = resultant_modulus_polynomial(&factor)
+                    .ok_or(AnalyticError::ResultantDeclined { factor: index })?;
+                if poly_monic(&self.modulus_polynomial) != expected {
+                    return Err(AnalyticError::ModulusPolynomialMismatch { factor: index });
+                }
+                // No modulus below `lower`: the smallest positive root of the
+                // modulus polynomial IS the smallest modulus, so no positive
+                // root there means no root of the factor there either.
+                let below = count_roots_in(&expected, &zero(), &self.lower)
+                    .ok_or(AnalyticError::SturmDeclined)?;
+                if below != 0 {
                     return Err(AnalyticError::LowerBoundNotCertified { factor: index });
                 }
                 Ok(())
@@ -1042,8 +1413,11 @@ impl RadiusCertificate {
                 }
                 // Exactly one root of `G` in `(0, value]` makes `value` the
                 // smallest positive root, hence the smallest modulus.
-                let count =
-                    count_roots_in(&global, &zero(), value).ok_or(AnalyticError::SturmDeclined)?;
+                let counter =
+                    RootCounter::new(&global).ok_or(AnalyticError::SturmDeclined)?;
+                let count = counter
+                    .count(&zero(), value)
+                    .ok_or(AnalyticError::SturmDeclined)?;
                 if count != 1 {
                     return Err(AnalyticError::RootCountMismatch {
                         expected: 1,
@@ -1072,7 +1446,9 @@ impl RadiusCertificate {
                 {
                     return Err(AnalyticError::MalformedBracket);
                 }
-                let below = count_roots_in(&global, &zero(), coarse_lower)
+                let counter = RootCounter::new(&global).ok_or(AnalyticError::SturmDeclined)?;
+                let below = counter
+                    .count(&zero(), coarse_lower)
                     .ok_or(AnalyticError::SturmDeclined)?;
                 if below != 0 {
                     return Err(AnalyticError::RootCountMismatch {
@@ -1080,7 +1456,8 @@ impl RadiusCertificate {
                         found: below,
                     });
                 }
-                let inside = count_roots_in(&global, coarse_lower, coarse_upper)
+                let inside = counter
+                    .count(coarse_lower, coarse_upper)
                     .ok_or(AnalyticError::SturmDeclined)?;
                 if inside != 1 {
                     return Err(AnalyticError::RootCountMismatch {
@@ -1303,6 +1680,27 @@ fn factor_modulus_bound(
         });
     }
 
+    // The general route. It subsumes both routes above -- they are kept because
+    // they are far cheaper and answer most shapes -- and it is the only one that
+    // reaches an irreducible factor of odd degree with complex roots.
+    if degree <= MAX_RESULTANT_FACTOR_DEGREE
+        && let Some(modulus_polynomial) = resultant_modulus_polynomial(&factor)
+    {
+        let lower = fallback.clone();
+        let below = count_roots_in(&modulus_polynomial, &zero(), &lower)
+            .ok_or(AnalyticDecline::SturmDeclined)?;
+        if below != 0 {
+            return Err(AnalyticDecline::ResultantDeclined);
+        }
+        return Ok(FactorModulusBound {
+            factor,
+            multiplicity,
+            route: ModulusRoute::PairwiseResultant,
+            modulus_polynomial,
+            lower,
+        });
+    }
+
     Ok(FactorModulusBound {
         factor,
         multiplicity,
@@ -1336,6 +1734,10 @@ fn exact_radius(bounds: &[FactorModulusBound]) -> Result<RadiusOfConvergence, An
         global = poly_mul(&global, &bound.modulus_polynomial);
     }
     let upper = cauchy_upper_bound(&global).ok_or(AnalyticDecline::IsolationDeclined)?;
+    // One Sturm chain for the whole isolation. At the degrees
+    // `ModulusRoute::PairwiseResultant` reaches, rebuilding it per count is the
+    // dominant cost of the route.
+    let counter = RootCounter::new(&global).ok_or(AnalyticDecline::IsolationDeclined)?;
 
     // An exactly rational radius is often a modulus one of the factors already
     // names: a rational root of a linear factor, or the square root of a
@@ -1364,8 +1766,9 @@ fn exact_radius(bounds: &[FactorModulusBound]) -> Result<RadiusOfConvergence, An
         if !poly_eval(&global, candidate).is_zero() {
             continue;
         }
-        let count =
-            count_roots_in(&global, &zero(), candidate).ok_or(AnalyticDecline::SturmDeclined)?;
+        let count = counter
+            .count(&zero(), candidate)
+            .ok_or(AnalyticDecline::SturmDeclined)?;
         if count == 1 {
             return Ok(RadiusOfConvergence::Exact(candidate.clone()));
         }
@@ -1377,7 +1780,9 @@ fn exact_radius(bounds: &[FactorModulusBound]) -> Result<RadiusOfConvergence, An
     let mut high = upper;
     let mut isolated = false;
     for _ in 0..128 {
-        let count = count_roots_in(&global, &low, &high).ok_or(AnalyticDecline::SturmDeclined)?;
+        let count = counter
+            .count(&low, &high)
+            .ok_or(AnalyticDecline::SturmDeclined)?;
         if count == 0 {
             return Err(AnalyticDecline::IsolationDeclined);
         }
@@ -1386,7 +1791,9 @@ fn exact_radius(bounds: &[FactorModulusBound]) -> Result<RadiusOfConvergence, An
             break;
         }
         let mid = (&low + &high) / int(2);
-        let left = count_roots_in(&global, &low, &mid).ok_or(AnalyticDecline::SturmDeclined)?;
+        let left = counter
+            .count(&low, &mid)
+            .ok_or(AnalyticDecline::SturmDeclined)?;
         if left >= 1 {
             high = mid;
         } else {
