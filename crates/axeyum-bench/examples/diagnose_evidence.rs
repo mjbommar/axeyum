@@ -190,6 +190,7 @@ fn node_label(node: &TermNode) -> String {
         TermNode::BvConst { width, value } => format!("BvConst(width={width}, value={value})"),
         TermNode::WideBvConst(value) => format!("WideBvConst(width={})", value.width()),
         TermNode::IntConst(value) => format!("IntConst({value})"),
+        TermNode::WideIntConst(value) => format!("WideIntConst({value})"),
         TermNode::RealConst(value) => format!("RealConst({value})"),
         TermNode::Symbol(symbol) => format!("Symbol({})", symbol.index()),
         TermNode::App { op, args } => format!("App({op:?}, arity={})", args.len()),

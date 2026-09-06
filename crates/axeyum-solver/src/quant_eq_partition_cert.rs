@@ -55,6 +55,7 @@ fn scan(
         TermNode::BoolConst(_) | TermNode::IntConst(_) => true,
         TermNode::BvConst { .. }
         | TermNode::WideBvConst(_)
+        | TermNode::WideIntConst(_)
         | TermNode::RealConst(_)
         | TermNode::App {
             op: Op::Apply(_), ..

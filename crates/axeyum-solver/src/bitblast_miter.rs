@@ -372,7 +372,7 @@ fn reference_bits(
             reference_op(op, &arg_bits, aig)?
         }
         // Integer/real constants never reach the bit-blaster.
-        TermNode::IntConst(_) | TermNode::RealConst(_) => return None,
+        TermNode::IntConst(_) | TermNode::WideIntConst(_) | TermNode::RealConst(_) => return None,
     };
     memo.insert(term, bits.clone());
     Some(bits)

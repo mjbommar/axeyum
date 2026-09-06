@@ -162,6 +162,7 @@ fn same_sort_int_like(arena: &TermArena, a: TermId, b: TermId) -> bool {
 fn arg_kind(arena: &TermArena, term: TermId) -> &'static str {
     match arena.node(term) {
         TermNode::IntConst(_) => "int-const",
+        TermNode::WideIntConst(_) => "wide-int-const",
         TermNode::BoolConst(_) => "bool-const",
         TermNode::BvConst { .. } | TermNode::WideBvConst(_) => "bv-const",
         TermNode::Symbol(_) if arena.sort_of(term) == Sort::Int => "int-symbol",

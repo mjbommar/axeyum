@@ -294,7 +294,7 @@ fn collect_enumerable_symbols_rec(
                 }
             }
         }
-        TermNode::IntConst(_) | TermNode::RealConst(_) => {
+        TermNode::IntConst(_) | TermNode::WideIntConst(_) | TermNode::RealConst(_) => {
             return Err(SolverError::Unsupported(
                 "enumeration certificate: query uses integer/real arithmetic".to_owned(),
             ));

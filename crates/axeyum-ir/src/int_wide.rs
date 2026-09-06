@@ -57,6 +57,7 @@ use std::cmp::Ordering;
 use std::fmt;
 
 use num_bigint::BigInt;
+use num_integer::Integer;
 use num_traits::{Signed, ToPrimitive, Zero};
 
 /// An exact mathematical integer with an arbitrary-precision payload.
@@ -190,6 +191,45 @@ impl WideInt {
     #[must_use]
     pub fn abs(&self) -> Self {
         Self(self.0.abs())
+    }
+
+    /// Euclidean quotient (SMT-LIB `div`): the remainder it pairs with lands in
+    /// `0..|other|`, which is **not** what truncating division gives for a
+    /// negative dividend. `other == 0` is the caller's to handle (SMT-LIB fixes
+    /// `div a 0 = 0`), and this panics on it rather than guessing.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `other` is zero.
+    #[must_use]
+    pub fn div_euclid(&self, other: &Self) -> Self {
+        Self(self.euclid_div_rem(other).0)
+    }
+
+    /// Euclidean remainder (SMT-LIB `mod`), always in `0..|other|`.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `other` is zero.
+    #[must_use]
+    pub fn rem_euclid(&self, other: &Self) -> Self {
+        Self(self.euclid_div_rem(other).1)
+    }
+
+    /// `(quotient, remainder)` with the remainder in `0..|other|`.
+    fn euclid_div_rem(&self, other: &Self) -> (BigInt, BigInt) {
+        assert!(!other.is_zero(), "euclidean division by zero");
+        let (mut quotient, mut remainder) = self.0.div_rem(&other.0);
+        if remainder.is_negative() {
+            if other.0.is_positive() {
+                quotient -= 1;
+                remainder += &other.0;
+            } else {
+                quotient += 1;
+                remainder -= &other.0;
+            }
+        }
+        (quotient, remainder)
     }
 
     /// Ordering against another exact integer.

@@ -458,6 +458,15 @@ fn term_fingerprint(arena: &TermArena, root: TermId) -> u64 {
                 update_bytes(&mut hash, &value.to_le_bytes());
                 memo.insert(term, hash);
             }
+            TermNode::WideIntConst(value) => {
+                // Its own tag (8), not `IntConst`'s 5: a wide constant and a
+                // narrow one are different nodes and must not share a hash
+                // preimage just because their byte encodings could align.
+                let mut hash = FNV_OFFSET;
+                update_u64(&mut hash, 8);
+                update_bytes(&mut hash, &value.big().to_signed_bytes_le());
+                memo.insert(term, hash);
+            }
             TermNode::RealConst(value) => {
                 let mut hash = FNV_OFFSET;
                 update_u64(&mut hash, 6);
@@ -518,6 +527,7 @@ fn support_for_terms(arena: &TermArena, roots: &[TermId]) -> BTreeSet<SymbolId> 
             | TermNode::BvConst { .. }
             | TermNode::WideBvConst(_)
             | TermNode::IntConst(_)
+            | TermNode::WideIntConst(_)
             | TermNode::RealConst(_) => {}
         }
     }

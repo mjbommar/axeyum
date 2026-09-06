@@ -687,6 +687,7 @@ fn is_ground_leaf(arena: &TermArena, t: TermId) -> bool {
             | TermNode::BvConst { .. }
             | TermNode::WideBvConst(_)
             | TermNode::IntConst(_)
+            | TermNode::WideIntConst(_)
             | TermNode::RealConst(_)
     )
 }
@@ -707,6 +708,7 @@ fn substitute(
         | TermNode::BvConst { .. }
         | TermNode::WideBvConst(_)
         | TermNode::IntConst(_)
+        | TermNode::WideIntConst(_)
         | TermNode::RealConst(_) => Some(term),
         TermNode::App { args, .. } => {
             let args = args.clone();
@@ -752,6 +754,9 @@ fn term_to_alethe(arena: &TermArena, t: TermId) -> Option<AletheTerm> {
         }
         TermNode::WideBvConst(w) => Some(AletheTerm::Const(format!("#wbv:{w:?}"))),
         TermNode::IntConst(i) => Some(AletheTerm::Const(format!("#int:{i}"))),
+        // The full decimal, so two distinct wide constants stay distinct
+        // tokens and neither collides with a narrow one.
+        TermNode::WideIntConst(i) => Some(AletheTerm::Const(format!("#int:{i}"))),
         TermNode::RealConst(r) => Some(AletheTerm::Const(format!("#real:{r:?}"))),
         TermNode::App { op, args } => {
             let head = match op {

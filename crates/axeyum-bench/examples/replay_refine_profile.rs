@@ -516,6 +516,9 @@ fn profile_terms_with_label(label: &str, arena: &TermArena, roots: &[TermId]) {
             TermNode::IntConst(_) => {
                 *counts.entry("IntConst".to_owned()).or_default() += 1;
             }
+            TermNode::WideIntConst(_) => {
+                *counts.entry("WideIntConst".to_owned()).or_default() += 1;
+            }
             TermNode::RealConst(_) => {
                 *counts.entry("RealConst".to_owned()).or_default() += 1;
             }

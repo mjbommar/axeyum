@@ -107,6 +107,7 @@ fn collect(
             | TermNode::BvConst { .. }
             | TermNode::WideBvConst(_)
             | TermNode::IntConst(_)
+            | TermNode::WideIntConst(_)
             | TermNode::RealConst(_) => {}
         }
     }

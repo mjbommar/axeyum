@@ -128,6 +128,19 @@ pub(crate) fn value_to_py<'py>(py: Python<'py>, value: &Value) -> PyResult<Bound
             .into_pyobject(py)?
             .into_any()),
         Value::Int(i) => Ok(i.into_pyobject(py)?.into_any()),
+        // Python integers are unbounded, so a wide value crosses exactly, with
+        // no narrowing: `int.from_bytes` on its two's-complement encoding.
+        Value::WideInt(i) => Ok(py
+            .get_type::<pyo3::types::PyInt>()
+            .call_method1(
+                "from_bytes",
+                (
+                    pyo3::types::PyBytes::new(py, &i.big().to_signed_bytes_le()),
+                    "little",
+                    true,
+                ),
+            )?
+            .into_any()),
         Value::Real(r) => Ok(fraction(py, r.numerator(), r.denominator())?.into_bound()),
         Value::Seq(elements) => seq_to_py(py, elements),
         Value::Array(array) => Ok(ArrayValue::build(array).into_pyobject(py)?.into_any()),

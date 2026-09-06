@@ -318,6 +318,7 @@ impl Eliminator {
             | TermNode::BvConst { .. }
             | TermNode::WideBvConst(_)
             | TermNode::IntConst(_)
+            | TermNode::WideIntConst(_)
             | TermNode::RealConst(_)
             | TermNode::Symbol(_) => term,
             TermNode::App {
@@ -564,6 +565,7 @@ fn contains_array(arena: &TermArena, term: TermId) -> bool {
             | TermNode::BvConst { .. }
             | TermNode::WideBvConst(_)
             | TermNode::IntConst(_)
+            | TermNode::WideIntConst(_)
             | TermNode::RealConst(_)
             | TermNode::Symbol(_) => {}
         }

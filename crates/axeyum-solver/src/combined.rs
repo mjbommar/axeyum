@@ -103,6 +103,15 @@ pub fn check_with_all_theories<B: SolverBackend>(
                 "integer constant {value} does not fit the bounded width {width}; widen the bound"
             )));
         }
+        // ADR-1702 slice 2: a literal outside `i128` cannot fit ANY width this
+        // route accepts (`MAX_INT_BLAST_WIDTH` is 64), so widening the bound is
+        // not the advice; this is a route decline, reported as `unknown`.
+        Err(IntBlastError::WideConstantOutOfRange { bits, width }) => {
+            return Ok(unknown(format!(
+                "integer constant of {bits} bits is outside the i128 range and does not fit \
+                 the bounded width {width}; the bit-blasting route cannot decide this query"
+            )));
+        }
         Err(IntBlastError::InvalidWidth(width)) => {
             return Err(SolverError::Backend(format!(
                 "invalid integer bit-blast width {width}"

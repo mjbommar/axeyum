@@ -856,6 +856,7 @@ impl Abstractor {
             TermNode::BvConst { .. }
             | TermNode::WideBvConst(_)
             | TermNode::IntConst(_)
+            | TermNode::WideIntConst(_)
             | TermNode::RealConst(_) => Err(SolverError::Unsupported(
                 "lazy SMT: non-Boolean constant at a Boolean position".to_owned(),
             )),

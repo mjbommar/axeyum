@@ -828,6 +828,11 @@ pub fn export_qf_lia_unsat_proof(
         Err(IntBlastError::ConstantOutOfRange { .. }) => {
             return Ok(UnsatProofOutcome::Inconclusive); // bound too small to bit-blast
         }
+        // Outside the `i128` range entirely (ADR-1702 slice 2): no bit-blast
+        // proof exists at any width this route accepts.
+        Err(IntBlastError::WideConstantOutOfRange { .. }) => {
+            return Ok(UnsatProofOutcome::Inconclusive);
+        }
         Err(IntBlastError::InvalidWidth(width)) => {
             return Err(SolverError::Backend(format!(
                 "invalid integer bit-blast width {width}"

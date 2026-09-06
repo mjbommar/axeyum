@@ -2315,6 +2315,10 @@ impl LiraLower {
                 return Err(milp_out_of_fragment());
             }
             TermNode::IntConst(n) => arena.real_const(Rational::integer(n)),
+            // An integer constant outside `i128` has no `Rational::integer`
+            // image (ADR-1702 keeps promotion opt-in), so it leaves this
+            // fragment rather than being narrowed.
+            TermNode::WideIntConst(_) => return Err(milp_out_of_fragment()),
             TermNode::Symbol(s) => match arena.sort_of(t) {
                 Sort::Int => self.real_of_int(arena, s)?,
                 Sort::Real | Sort::Bool => t,
@@ -4344,6 +4348,9 @@ fn interval_of(
     }
     match arena.node(term) {
         TermNode::IntConst(value) => Some(IntInterval::point(*value)),
+        // `IntInterval` is an `i128` pair; a wider bound has no point in it,
+        // and saturating one would be a WRONG bound, not a coarse one.
+        TermNode::WideIntConst(_) => None,
         TermNode::Symbol(sym) => {
             if arena.sort_of(term) == Sort::Int {
                 bounds.get(sym).copied()
