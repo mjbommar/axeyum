@@ -1,0 +1,160 @@
+=== x2015_09_10_16_53_56_537_1094926.smt_in.smt2
+[qtrace] forall-exists-witness +0.000s declined
+[qtrace] finite-expansion +0.000s declined
+[qtrace] uf-fmf-probe +1.556s declined
+[qtrace] egraph-seg +0.000s closed-universal done
+[qtrace] egraph-seg +0.000s targeted done
+[qtrace] nested-quant +0.002s registered active=348 nested=15 patterns=225 | vars=5 triggers=2 | vars=6 triggers=0 | vars=4 triggers=1 | vars=2 triggers=1 | vars=2 triggers=1 | vars=2 triggers=1 | vars=2 triggers=1 | vars=3 triggers=2 | vars=3 triggers=2 | vars=3 triggers=2 | vars=3 triggers=2 | vars=3 triggers=1 | vars=3 triggers=2 | vars=3 triggers=2 | vars=3 triggers=1
+[qtrace] egraph-seg +0.081s qf-check round=0 ground=21
+[qtrace] match-seg +0.000s dirty n=225
+[qtrace] match-seg +0.000s join done
+[qtrace] egraph-seg +0.001s admit-batch round=0 ground=28
+[qtrace] match-seg +0.000s candidates n=52
+[qtrace] match-seg +0.000s join done
+[qtrace] egraph-seg +0.000s admit-batch round=1 ground=34
+[qtrace] match-seg +0.000s candidates n=24
+[qtrace] match-seg +0.000s join done
+[qtrace] egraph-seg +0.000s admit-batch round=2 ground=38
+[qtrace] match-seg +0.000s join done
+[qtrace] egraph-seg +0.001s admit-batch round=3 ground=113
+[qtrace] nested-quant +0.000s discovery staged=0 promoted=0 registered=12 rebuilds=1 totals: positive=0 ground=0 regs=12 rejected=0
+[qtrace] egraph-seg +0.017s qf-check round=4 ground=113
+[qtrace] match-seg +0.000s dirty n=231
+[qtrace] match-seg +0.000s join done
+[qtrace] egraph-seg +0.002s admit-batch round=4 ground=151
+[qtrace] nested-quant +0.000s discovery staged=57 promoted=0 registered=0 rebuilds=1 totals: positive=83 ground=57 regs=12 rejected=27
+[qtrace] egraph-seg +0.003s qf-check round=5 ground=208
+[qtrace] match-seg +0.000s candidates n=80
+[qtrace] match-seg +0.000s join done
+[qtrace] egraph-seg +0.003s admit-batch round=5 ground=229
+[qtrace] nested-quant +0.000s discovery staged=59 promoted=0 registered=0 rebuilds=1 totals: positive=251 ground=116 regs=12 rejected=55
+[qtrace] egraph-seg +0.004s qf-check round=6 ground=288
+    wall_ms=1911
+=== x2015_09_10_16_57_47_544_1522663.smt_in.smt2
+[qtrace] forall-exists-witness +0.000s declined
+[qtrace] finite-expansion +0.000s declined
+[qtrace] uf-fmf-probe +17.140s declined
+[qtrace] egraph-seg +0.000s closed-universal done
+[qtrace] egraph-seg +0.001s targeted done
+[qtrace] nested-quant +0.003s registered active=375 nested=19 patterns=287 | vars=2 triggers=1 | vars=2 triggers=1 | vars=2 triggers=1 | vars=2 triggers=1 | vars=3 triggers=0 | vars=3 triggers=0 | vars=7 triggers=3 | vars=8 triggers=4 | vars=5 triggers=0 | vars=6 triggers=0 | vars=7 triggers=0 | vars=3 triggers=0 | vars=2 triggers=1 | vars=3 triggers=1 | vars=3 triggers=1 | vars=3 triggers=1 | vars=3 triggers=0 | vars=3 triggers=0 | vars=2 triggers=0
+[qtrace] egraph-seg +0.001s qf-check round=0 ground=38
+[qtrace] match-seg +0.000s dirty n=287
+[qtrace] match-seg +0.000s join done
+[qtrace] egraph-seg +0.001s admit-batch round=0 ground=71
+[qtrace] match-seg +0.000s candidates n=87
+[qtrace] match-seg +0.000s join done
+[qtrace] egraph-seg +0.001s admit-batch round=1 ground=111
+[qtrace] match-seg +0.000s candidates n=100
+[qtrace] match-seg +0.000s join done
+[qtrace] egraph-seg +0.009s admit-batch round=2 ground=493
+[qtrace] match-seg +0.016s candidates n=105
+[qtrace] match-seg +0.002s join done
+[qtrace] egraph-seg +0.040s admit-batch round=3 ground=1019
+[qtrace] nested-quant +0.087s nested-activity | vars=2 triggers=1 tuples=0 starved=0 | vars=2 triggers=1 tuples=0 starved=0 | vars=2 triggers=1 tuples=0 starved=0 | vars=2 triggers=1 tuples=0 starved=0 | vars=3 triggers=0 tuples=0 starved=0 | vars=3 triggers=0 tuples=0 starved=0 | vars=7 triggers=3 tuples=0 starved=0 | vars=8 triggers=4 tuples=0 starved=0 | vars=5 triggers=0 tuples=0 starved=0 | vars=6 triggers=0 tuples=0 starved=0 | vars=7 triggers=0 tuples=0 starved=0 | vars=3 triggers=0 tuples=0 starved=0 | vars=2 triggers=1 tuples=0 starved=0 | vars=3 triggers=1 tuples=0 starved=0 | vars=3 triggers=1 tuples=0 starved=0 | vars=3 triggers=1 tuples=0 starved=0 | vars=3 triggers=0 tuples=0 starved=0 | vars=3 triggers=0 tuples=0 starved=0 | vars=2 triggers=0 tuples=0 starved=0
+[qtrace] mbqi-quick +0.198s declined
+[qtrace] egraph-seg +0.000s closed-universal done
+[qtrace] egraph-seg +0.001s targeted done
+[qtrace] nested-quant +0.004s registered active=369 nested=37 patterns=272 | vars=2 triggers=1 | vars=2 triggers=1 | vars=2 triggers=1 | vars=2 triggers=1 | vars=2 triggers=1 | vars=2 triggers=1 | vars=2 triggers=1 | vars=2 triggers=1 | vars=3 triggers=1 | vars=3 triggers=1 | vars=3 triggers=0 | vars=4 triggers=0 | vars=6 triggers=0 | vars=7 triggers=0 | vars=3 triggers=0 | vars=3 triggers=0 | vars=3 triggers=1 | vars=2 triggers=1 | vars=2 triggers=1 | vars=2 triggers=1 | vars=2 triggers=1 | vars=3 triggers=1 | vars=2 triggers=0 | vars=2 triggers=0 | vars=2 triggers=1 | vars=2 triggers=1 | vars=2 triggers=1 | vars=2 triggers=1 | vars=3 triggers=2 | vars=2 triggers=1 | vars=2 triggers=1 | vars=2 triggers=1 | vars=4 triggers=2 | vars=3 triggers=0 | vars=3 triggers=2 | vars=3 triggers=0 | vars=3 triggers=0
+[qtrace] egraph-seg +0.001s qf-check round=0 ground=38
+[qtrace] match-seg +0.000s dirty n=272
+[qtrace] match-seg +0.000s join done
+[qtrace] egraph-seg +0.001s admit-batch round=0 ground=74
+[qtrace] match-seg +0.000s candidates n=86
+[qtrace] match-seg +0.000s join done
+    wall_ms=17745
+=== x2015_09_10_17_00_37_157_1687977.smt_in.smt2
+[qtrace] forall-exists-witness +0.000s declined
+[qtrace] finite-expansion +0.000s declined
+[qtrace] uf-fmf-probe +1.455s declined
+[qtrace] egraph-seg +0.000s closed-universal done
+[qtrace] egraph-seg +0.000s targeted done
+[qtrace] nested-quant +0.003s registered active=317 nested=7 patterns=172 | vars=3 triggers=1 | vars=3 triggers=1 | vars=3 triggers=1 | vars=3 triggers=0 | vars=3 triggers=0 | vars=3 triggers=1 | vars=3 triggers=1
+[qtrace] egraph-seg +0.001s qf-check round=0 ground=11
+[qtrace] match-seg +0.000s dirty n=172
+[qtrace] match-seg +0.000s join done
+[qtrace] egraph-seg +0.001s admit-batch round=0 ground=18
+[qtrace] match-seg +0.000s candidates n=51
+[qtrace] match-seg +0.000s join done
+[qtrace] egraph-seg +0.001s admit-batch round=1 ground=31
+[qtrace] match-seg +0.000s join done
+[qtrace] egraph-seg +0.001s admit-batch round=2 ground=98
+[qtrace] egraph-seg +0.178s qf-check round=3 ground=98
+[qtrace] match-seg +0.000s candidates n=133
+[qtrace] match-seg +0.000s join done
+[qtrace] egraph-seg +0.002s admit-batch round=3 ground=150
+[qtrace] egraph-seg +0.003s qf-check round=4 ground=150
+[qtrace] match-seg +0.000s candidates n=82
+[qtrace] match-seg +0.000s join done
+[qtrace] egraph-seg +0.004s admit-batch round=4 ground=187
+[qtrace] egraph-seg +0.003s qf-check round=5 ground=187
+[qtrace] match-seg +0.000s join done
+[qtrace] egraph-seg +0.008s admit-batch round=5 ground=530
+[qtrace] nested-quant +0.000s discovery staged=0 promoted=0 registered=10 rebuilds=1 totals: positive=0 ground=0 regs=10 rejected=0
+[qtrace] egraph-seg +0.014s qf-check round=6 ground=530
+[qtrace] match-seg +0.001s dirty n=175
+[qtrace] match-seg +0.001s join done
+    wall_ms=2134
+=== x2015_09_10_17_04_05_259_1960786.smt_in.smt2
+[qtrace] forall-exists-witness +0.000s declined
+[qtrace] finite-expansion +0.000s declined
+[qtrace] uf-fmf-probe +1.051s declined
+[qtrace] egraph-seg +0.000s closed-universal done
+[qtrace] egraph-seg +0.000s targeted done
+[qtrace] nested-quant +0.002s registered active=367 nested=11 patterns=190 | vars=3 triggers=2 | vars=3 triggers=2 | vars=3 triggers=2 | vars=3 triggers=2 | vars=3 triggers=1 | vars=3 triggers=2 | vars=3 triggers=2 | vars=3 triggers=2 | vars=3 triggers=2 | vars=2 triggers=1 | vars=2 triggers=1
+[qtrace] egraph-seg +0.000s qf-check round=0 ground=9
+[qtrace] match-seg +0.000s dirty n=190
+[qtrace] match-seg +0.000s join done
+[qtrace] egraph-seg +0.000s admit-batch round=0 ground=15
+[qtrace] match-seg +0.000s candidates n=79
+[qtrace] match-seg +0.000s join done
+[qtrace] egraph-seg +0.000s admit-batch round=1 ground=32
+[qtrace] match-seg +0.000s candidates n=80
+[qtrace] match-seg +0.000s join done
+[qtrace] egraph-seg +0.001s admit-batch round=2 ground=52
+[qtrace] match-seg +0.000s candidates n=79
+[qtrace] match-seg +0.000s join done
+[qtrace] egraph-seg +0.001s admit-batch round=3 ground=86
+[qtrace] match-seg +0.000s candidates n=80
+[qtrace] match-seg +0.000s join done
+[qtrace] egraph-seg +0.001s admit-batch round=4 ground=124
+[qtrace] match-seg +0.000s candidates n=79
+[qtrace] match-seg +0.000s join done
+[qtrace] egraph-seg +0.005s admit-batch round=5 ground=174
+[qtrace] match-seg +0.000s candidates n=80
+[qtrace] match-seg +0.000s join done
+[qtrace] egraph-seg +0.003s admit-batch round=6 ground=226
+[qtrace] match-seg +0.000s candidates n=79
+[qtrace] match-seg +0.000s join done
+    wall_ms=1220
+=== x2015_09_10_17_09_42_195_2416479.smt_in.smt2
+[qtrace] forall-exists-witness +0.000s declined
+[qtrace] finite-expansion +0.000s declined
+[qtrace] uf-fmf-probe +8.052s declined
+[qtrace] egraph-seg +0.000s closed-universal done
+[qtrace] egraph-seg +0.000s targeted done
+[qtrace] nested-quant +0.003s registered active=404 nested=38 patterns=361 | vars=4 triggers=0 | vars=7 triggers=0 | vars=5 triggers=0 | vars=8 triggers=0 | vars=5 triggers=0 | vars=8 triggers=0 | vars=5 triggers=0 | vars=5 triggers=0 | vars=5 triggers=0 | vars=7 triggers=0 | vars=7 triggers=0 | vars=7 triggers=0 | vars=6 triggers=0 | vars=7 triggers=0 | vars=3 triggers=0 | vars=6 triggers=0 | vars=3 triggers=0 | vars=7 triggers=3 | vars=8 triggers=4 | vars=5 triggers=0 | vars=3 triggers=0 | vars=4 triggers=0 | vars=4 triggers=0 | vars=4 triggers=0 | vars=4 triggers=0 | vars=5 triggers=4 | vars=3 triggers=2 | vars=3 triggers=0 | vars=3 triggers=0 | vars=5 triggers=0 | vars=5 triggers=0 | vars=3 triggers=0 | vars=4 triggers=0 | vars=7 triggers=0 | vars=7 triggers=0 | vars=2 triggers=0 | vars=2 triggers=0 | vars=7 triggers=0
+[qtrace] egraph-seg +0.069s qf-check round=0 ground=16
+[qtrace] match-seg +0.000s dirty n=361
+[qtrace] match-seg +0.000s join done
+[qtrace] egraph-seg +0.001s admit-batch round=0 ground=38
+[qtrace] nested-quant +0.000s discovery staged=1 promoted=0 registered=0 rebuilds=0 totals: positive=1 ground=1 regs=0 rejected=0
+[qtrace] egraph-seg +0.382s qf-check round=1 ground=39
+[qtrace] match-seg +0.000s candidates n=87
+[qtrace] match-seg +0.000s join done
+[qtrace] egraph-seg +0.001s admit-batch round=1 ground=62
+[qtrace] nested-quant +0.000s discovery staged=3 promoted=0 registered=0 rebuilds=0 totals: positive=5 ground=4 regs=0 rejected=0
+[qtrace] egraph-seg +0.252s qf-check round=2 ground=65
+[qtrace] match-seg +0.000s candidates n=101
+[qtrace] match-seg +0.000s join done
+[qtrace] egraph-seg +0.001s admit-batch round=2 ground=77
+[qtrace] nested-quant +0.000s discovery staged=4 promoted=0 registered=0 rebuilds=0 totals: positive=13 ground=8 regs=0 rejected=0
+[qtrace] egraph-seg +0.002s qf-check round=3 ground=81
+[qtrace] match-seg +0.000s candidates n=36
+[qtrace] match-seg +0.000s join done
+[qtrace] egraph-seg +0.001s admit-batch round=3 ground=129
+[qtrace] nested-quant +0.000s discovery staged=8 promoted=0 registered=0 rebuilds=0 totals: positive=29 ground=16 regs=0 rejected=0
+[qtrace] egraph-seg +0.003s qf-check round=4 ground=137
+[qtrace] match-seg +0.000s candidates n=36
+[qtrace] match-seg +0.000s join done
+[qtrace] egraph-seg +0.004s admit-batch round=4 ground=329
+    wall_ms=9127

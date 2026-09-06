@@ -213,6 +213,22 @@ what the driver's propagation fixpoint derives. Measurements are in the
 - an error means the request or infrastructure failed; it is never converted
   into `unsat`.
 
+An admission bound belongs to the rung that owns the budget, not to the
+procedure. The declared-sort lazy CEGAR route (`ufbv-declared-sort-lazy`)
+refuses oversized congruence-pair counts because unbounded refinement over the
+bit-vector encoding once starved an *enclosing* e-matching search — so the bound
+is a parameter (`check_qf_ufbv_lazy_with_pair_bound`), and the quantifier-free
+dispatcher, which reaches this route as its terminal rung with the whole
+wall-clock budget still unspent and nothing running after it, passes the larger
+`DECLARED_SORT_CEGAR_PAIRS_TERMINAL_RUNG`. Time there is bounded by the loop's
+own shared deadline; the pair count survives only as the memory bound on the
+`O(pairs)` preseed scan. That route's `sat` escapes exactly when its lifted
+model replays against the original assertions, the same gate every other `sat`
+in the stack passes — an uninterpreted sort carries no semantics beyond equality
+and non-emptiness, so replay is what certifies that symbols the query needs
+distinct did not collide in the encoding. Measured evidence:
+[2026-09-06 S11a](../research/11-design-review/2026-09-06-s11a-uf-ackermann-measured.md).
+
 See [Solver configuration](../reference/solver-config.md) for public controls,
 [Adding a solver route](../contributor-guide/adding-a-solver-route.md) for the
 implementation checklist, and [Proof and evidence routes](proof-stack.md) for

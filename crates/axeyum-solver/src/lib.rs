@@ -686,7 +686,10 @@ pub mod theories {
 
     /// Uninterpreted-function state and direct EUF procedures.
     pub mod uninterpreted_functions {
-        pub use crate::euf::{check_qf_ufbv_lazy, check_with_function_elimination};
+        pub use crate::euf::{
+            DECLARED_SORT_CEGAR_PAIRS_TERMINAL_RUNG, check_qf_ufbv_lazy,
+            check_qf_ufbv_lazy_with_pair_bound, check_with_function_elimination,
+        };
         pub use crate::euf_egraph::{
             EufConflict, EufTheory, check_qf_uf, check_qf_uf_online_cdclt, check_qf_uf_with_config,
             prove_unsat_by_congruence, prove_unsat_lazy, prove_unsat_qf_uf_online,

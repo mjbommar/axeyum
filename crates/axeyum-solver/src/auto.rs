@@ -2943,7 +2943,22 @@ fn dispatch_declared_sort_ufbv_lazy(
     }
 
     let mut backend = SatBvBackend::new();
-    match crate::euf::check_qf_ufbv_lazy(&mut backend, arena, assertions, config) {
+    // This dispatcher is the TERMINAL rung of `dispatch_uf_fast_paths` for a
+    // declared-sort, function-carrying, arithmetic-free query: `euf-online`,
+    // `dispatch_ufbv_online` and `euf-offline` have all declined above it, and
+    // nothing runs after it. So the congruence-pair bound whose whole purpose is
+    // to stop this route stealing an enclosing search's budget has no enclosing
+    // search to protect here, and the wall-clock budget it refuses to spend is
+    // discarded rather than handed on (measured: 214 ms of 24 s on the QF_UF
+    // parity losses). Pass the terminal-rung bound; the loop's own shared
+    // deadline is what bounds its time.
+    match crate::euf::check_qf_ufbv_lazy_with_pair_bound(
+        &mut backend,
+        arena,
+        assertions,
+        config,
+        crate::euf::DECLARED_SORT_CEGAR_PAIRS_TERMINAL_RUNG,
+    ) {
         Ok(result) => {
             with_recorder(rec, |t| match &result {
                 CheckResult::Sat(_) => t.record_decided("ufbv-declared-sort-lazy", Verdict::Sat),

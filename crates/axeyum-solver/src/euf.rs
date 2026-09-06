@@ -185,6 +185,24 @@ const MAX_POST_CANDIDATE_SIBLING_LEMMAS: usize = 1;
 /// [`check_qf_ufbv_lazy`].
 const MAX_ENCODED_DECLARED_SORT_CEGAR_PAIRS: usize = 64;
 
+/// The same admission bound for a caller that reaches the encoded declared-sort
+/// CEGAR route as the **terminal rung of the quantifier-free ladder**, where no
+/// enclosing instantiation search exists to starve and the whole wall-clock
+/// budget is otherwise discarded.
+///
+/// The default's `64` is a 1.6x margin over a then-measured deciding frontier of
+/// 40 pairs. Measured 2026-09-06 (S11a) on the three `QF_UF` parity losses that
+/// this route declines, the deciding frontier for the terminal rung is `8425`
+/// pairs (0.4 s / 8.4 s / 8.7 s of a 24 s budget at 68 / 1 009 / 8 425 pairs,
+/// all three `sat` and replay-confirmed). `16384` is the same margin style
+/// (1.94x) over that frontier, and stays well below the 44 537 – 1 549 516 pair
+/// range in which the original measurement found the refinement not converging.
+///
+/// Time is bounded by the loop's shared deadline, not by this number; the number
+/// is the MEMORY bound on the `O(pairs)` preseed scan and lemma pool. Raise it
+/// only with a measured instance that decides — the same rule as the default.
+pub const DECLARED_SORT_CEGAR_PAIRS_TERMINAL_RUNG: usize = 16_384;
+
 /// Whether any term reachable from `assertions` has a declared (uninterpreted)
 /// sort — the trigger for the encoded declared-sort CEGAR admission bound.
 /// Iterative walk with a visited set; never recurses.
@@ -486,6 +504,37 @@ pub fn check_qf_ufbv_lazy<B: SolverBackend>(
     assertions: &[TermId],
     config: &SolverConfig,
 ) -> Result<CheckResult, SolverError> {
+    check_qf_ufbv_lazy_with_pair_bound(
+        backend,
+        arena,
+        assertions,
+        config,
+        MAX_ENCODED_DECLARED_SORT_CEGAR_PAIRS,
+    )
+}
+
+/// [`check_qf_ufbv_lazy`] with a caller-chosen congruence-pair admission bound
+/// for the **encoded declared-sort** case.
+///
+/// The bound exists to stop this route stealing an *enclosing* search's budget,
+/// not because the refinement is unsound above it — so the ladder that owns the
+/// budget is the right place to choose it. `check_qf_ufbv_lazy` keeps the
+/// conservative default ([`MAX_ENCODED_DECLARED_SORT_CEGAR_PAIRS`]); the
+/// quantifier-free dispatcher, which reaches this route as its terminal rung
+/// with the whole wall-clock budget still unspent, passes
+/// [`DECLARED_SORT_CEGAR_PAIRS_TERMINAL_RUNG`]. Scalar `QF_UFBV` queries (no
+/// uninterpreted-sort term) never consult either value.
+///
+/// # Errors
+///
+/// As [`check_qf_ufbv_lazy`].
+pub fn check_qf_ufbv_lazy_with_pair_bound<B: SolverBackend>(
+    backend: &mut B,
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    config: &SolverConfig,
+    max_encoded_declared_sort_pairs: usize,
+) -> Result<CheckResult, SolverError> {
     // Deterministic admission bound for the ENCODED (declared-sort) CEGAR case
     // only — scalar `QF_UFBV` queries are untouched. Measured on the scored UF
     // 200 (24 s): the ground queries the quantifier-instantiation driver hands
@@ -519,14 +568,31 @@ pub fn check_qf_ufbv_lazy<B: SolverBackend>(
     // the measured corpus it never once returned `Unsat` while its budget theft
     // flipped two decided sledgehammer unsats to unknown. The fast refusal
     // dominates; re-measure before changing this shape.
+    //
+    // 2026-09-06 (S11a) — the bound is now a PARAMETER, and the paragraph above
+    // is the rationale for its *default*, not for every caller. Every measured
+    // failure it records is budget theft from an ENCLOSING search: the
+    // e-matching driver's rounds, the sledgehammer unsats it flipped. When this
+    // route is the terminal rung of the quantifier-free ladder there is no
+    // enclosing search to starve and the whole wall-clock budget is otherwise
+    // thrown away — measured on the three QF_UF parity losses that decline here,
+    // the route gave up after 214 ms / 1.6 s / 2.6 s of a 24 s budget. Admitted,
+    // the same three converge and decide (`sat`, replay-confirmed) in 0.4 s /
+    // 8.4 s / 8.7 s at 68 / 1 009 / 8 425 pairs, which is the "measured instance
+    // that decides" the paragraph above asks for. The loop itself is already
+    // deadline-bounded (the shared `deadline` below), so time is bounded by the
+    // caller's budget, not by this count; the count remains as a MEMORY bound on
+    // the O(pairs) preseed scan and lemma pool.
+    // `DECLARED_SORT_CEGAR_PAIRS_TERMINAL_RUNG` is where the deciding frontier
+    // now sits plus the same margin style the default uses.
     if has_uninterpreted_sort_term(arena, assertions) {
         let pairs = ackermann_congruence_pairs(arena, assertions);
-        if pairs > MAX_ENCODED_DECLARED_SORT_CEGAR_PAIRS {
+        if pairs > max_encoded_declared_sort_pairs {
             return Ok(CheckResult::Unknown(UnknownReason {
                 kind: UnknownKind::ResourceLimit,
                 detail: format!(
                     "declared-sort lazy CEGAR refuses {pairs} congruence pairs (bound \
-                     {MAX_ENCODED_DECLARED_SORT_CEGAR_PAIRS}): measured refinement over the \
+                     {max_encoded_declared_sort_pairs}): measured refinement over the \
                      bit-vector encoding does not converge within realistic budgets at this \
                      size and starves the enclosing instantiation search"
                 ),
@@ -600,16 +666,35 @@ pub fn check_qf_ufbv_lazy<B: SolverBackend>(
     if !encoded_uninterpreted_sorts {
         return Ok(result);
     }
-    Ok(match result {
-        CheckResult::Sat(_) => CheckResult::Unknown(UnknownReason {
-            kind: UnknownKind::Incomplete,
-            detail: "uninterpreted sorts were encoded as bit-vectors; satisfiability does \
-                     not transfer back because the model interprets the encoding, not the \
-                     original sort"
-                .to_owned(),
-        }),
-        other => other,
-    })
+    // A `Sat` reaching here has ALREADY passed the replay gate: the loop returns
+    // `Sat` only from `project_replay_build`, which evaluates every ORIGINAL
+    // assertion under the projected model through the ground evaluator and
+    // declines to `Unknown` on any non-`true` or indeterminate outcome. The
+    // model it replayed is the LIFTED one (`lift_encoded_model` above), so it is
+    // keyed by the original symbols, not the `!us*` encoding.
+    //
+    // This block used to discard that `Sat` unconditionally, on the stated
+    // ground that "satisfiability does not transfer back because the model
+    // interprets the encoding, not the original sort". Measured 2026-09-06
+    // (S11a), that premise does not hold for the queries that reach it: the
+    // three QF_UF parity losses that converge here all replay clean and their
+    // declared verdict is `sat`, so the discard was throwing away three correct,
+    // witness-checked answers.
+    //
+    // It is also sound to keep them. An uninterpreted sort carries no semantics
+    // beyond equality and non-emptiness, so ANY assignment of distinct tokens to
+    // its symbols is a legitimate interpretation — including the bit-vector
+    // values the encoding chose. Replay is what certifies it: if two symbols the
+    // query needs distinct were given the same value, the `distinct`/`=` atom
+    // would evaluate `false` and `project_replay_build` would have declined. The
+    // repository's standing rule ("every `sat` result must be checkable by
+    // evaluating the original term against the lifted model") is therefore
+    // satisfied here in exactly the same way as on the scalar path, and a `sat`
+    // that does NOT replay still degrades to a sound `Unknown` inside the loop.
+    //
+    // `unsat` is unaffected in both directions: it transfers because the encoded
+    // domain is wide enough to keep every symbol distinct, exactly as before.
+    Ok(result)
 }
 
 /// EUF + arithmetic (`QF_UFLIA` / `QF_UFLRA`): eliminate uninterpreted functions by
@@ -2018,7 +2103,10 @@ pub fn certify_ackermann_unsat(
 #[cfg(test)]
 #[allow(clippy::many_single_char_names, clippy::similar_names)]
 mod tests {
-    use super::check_qf_ufbv_lazy;
+    use super::{
+        DECLARED_SORT_CEGAR_PAIRS_TERMINAL_RUNG, MAX_ENCODED_DECLARED_SORT_CEGAR_PAIRS,
+        ackermann_congruence_pairs, check_qf_ufbv_lazy, check_qf_ufbv_lazy_with_pair_bound,
+    };
     use crate::backend::{CheckResult, SolverConfig, UnknownKind, UnknownReason};
     use crate::combined::check_with_all_theories;
     use crate::lia::DEFAULT_INT_WIDTH;
@@ -2107,15 +2195,21 @@ mod tests {
     }
 
     #[test]
-    fn lazy_declared_sort_encoded_sat_never_escapes_as_sat() {
-        // SOUNDNESS-NEGATIVE (the anchor near `project_replay_build`): when the
-        // uninterpreted-sort encoding fired, a satisfiable query must NOT come
-        // back `Sat` from this route — the candidate model interprets the finite
-        // bit-vector encoding, and the route's contract degrades it to a sound
-        // `Unknown`. The model-lift that closes the completeness gap must not
-        // reopen this: f(a) = b is satisfiable, the loop converges with no
-        // violated pairs, replay may even confirm — and the result must still be
-        // degraded, never an escaped `Sat`.
+    fn lazy_declared_sort_encoded_sat_only_escapes_when_it_replays() {
+        // SOUNDNESS-POSITIVE (the anchor near `project_replay_build`). Until
+        // 2026-09-06 this route discarded EVERY `Sat` once the uninterpreted-sort
+        // encoding fired, on the stated ground that the candidate "interprets the
+        // encoding, not the original sort". Measured (S11a), that discard was
+        // throwing away replay-confirmed models on real QF_UF parity files, so
+        // the contract is now the same one every other `sat` in this repository
+        // carries: a `Sat` may escape, and if it does its model MUST satisfy the
+        // ORIGINAL assertions under the ground evaluator.
+        //
+        // `f(a) = b` is satisfiable; the loop converges with no violated pairs.
+        // The two failures this guards are (i) a wrong `Unsat` on a satisfiable
+        // query and (ii) a `Sat` whose model does not replay. Mutating
+        // `project_replay_build` to skip its replay check, or the lift to leave
+        // the `!us*` vocabulary in place, kills this test.
         let mut arena = TermArena::new();
         let sort = Sort::Uninterpreted(arena.declare_uninterpreted_sort("S"));
         let f = arena.declare_fun("f", &[sort], sort).unwrap();
@@ -2128,10 +2222,101 @@ mod tests {
         let mut backend = SatBvBackend::new();
         let config = SolverConfig::default();
         let result = check_qf_ufbv_lazy(&mut backend, &mut arena, &[fa_eq_b], &config).unwrap();
+        match result {
+            CheckResult::Sat(model) => {
+                assert!(
+                    crate::check_model(&arena, &[fa_eq_b], &model).unwrap(),
+                    "an escaped Sat must replay against the ORIGINAL assertions"
+                );
+            }
+            CheckResult::Unknown(_) => {}
+            CheckResult::Unsat => panic!("satisfiable declared-sort query refuted"),
+        }
+    }
+
+    #[test]
+    fn lazy_declared_sort_terminal_rung_bound_admits_above_the_default() {
+        // The terminal-rung bound is the S11a lever: an instance ABOVE the
+        // conservative default must still decline through `check_qf_ufbv_lazy`
+        // (the public default contract is unchanged) and must be ADMITTED — i.e.
+        // reach the refinement loop and produce a different message or a verdict
+        // — through `check_qf_ufbv_lazy_with_pair_bound` at the terminal-rung
+        // bound.
+        //
+        // SCOPE, stated so nobody mistakes this for more than it is: this pins
+        // the PARAMETER, not the dispatcher's choice of it. Rewiring
+        // `dispatch_declared_sort_ufbv_lazy` back to the default does NOT kill
+        // this test, and no unit fixture can gate that wiring, because any
+        // synthetic declared-sort query small enough to build here is decided by
+        // `euf-online` several rungs earlier and never reaches this route. The
+        // wiring's gate is the corpus mutation recorded in
+        // `docs/research/11-design-review/2026-09-06-s11a-uf-ackermann-measured.md`:
+        // restore the default and the three QF_UF parity files decline again
+        // with the bound message.
+        const {
+            assert!(
+                DECLARED_SORT_CEGAR_PAIRS_TERMINAL_RUNG > MAX_ENCODED_DECLARED_SORT_CEGAR_PAIRS,
+                "the terminal-rung bound must be strictly above the default"
+            );
+        }
+        let mut arena = TermArena::new();
+        let sort = Sort::Uninterpreted(arena.declare_uninterpreted_sort("S"));
+        let f = arena.declare_fun("f", &[sort], sort).unwrap();
+        // 20 distinct applications = 190 pairs: over the default 64, under the
+        // terminal-rung 16384.
+        let mut assertions = Vec::new();
+        let mut previous = None;
+        for i in 0..20 {
+            let x = arena.declare(&format!("x{i}"), sort).unwrap();
+            let xv = arena.var(x);
+            let fx = arena.apply(f, &[xv]).unwrap();
+            if let Some(prev) = previous {
+                let eq = arena.eq(prev, fx).unwrap();
+                assertions.push(arena.not(eq).unwrap());
+            }
+            previous = Some(fx);
+        }
+        let pairs = ackermann_congruence_pairs(&arena, &assertions);
         assert!(
-            !matches!(result, CheckResult::Sat(_)),
-            "an encoded-domain candidate model must never escape as Sat, got {result:?}"
+            pairs > MAX_ENCODED_DECLARED_SORT_CEGAR_PAIRS
+                && pairs <= DECLARED_SORT_CEGAR_PAIRS_TERMINAL_RUNG,
+            "fixture must sit between the two bounds, got {pairs} pairs"
         );
+
+        let config = SolverConfig::default();
+        let mut default_backend = SatBvBackend::new();
+        let defaulted =
+            check_qf_ufbv_lazy(&mut default_backend, &mut arena, &assertions, &config).unwrap();
+        match defaulted {
+            CheckResult::Unknown(reason) => assert!(
+                reason.detail.contains("declared-sort lazy CEGAR refuses"),
+                "the public default must still refuse above 64, got: {}",
+                reason.detail
+            ),
+            other => panic!("the public default must refuse above 64, got {other:?}"),
+        }
+
+        let mut rung_backend = SatBvBackend::new();
+        let admitted = check_qf_ufbv_lazy_with_pair_bound(
+            &mut rung_backend,
+            &mut arena,
+            &assertions,
+            &config,
+            DECLARED_SORT_CEGAR_PAIRS_TERMINAL_RUNG,
+        )
+        .unwrap();
+        match admitted {
+            CheckResult::Unknown(reason) => assert!(
+                !reason.detail.contains("declared-sort lazy CEGAR refuses"),
+                "the terminal-rung bound must ADMIT this instance, not refuse it: {}",
+                reason.detail
+            ),
+            CheckResult::Sat(model) => assert!(
+                crate::check_model(&arena, &assertions, &model).unwrap(),
+                "an escaped Sat must replay against the ORIGINAL assertions"
+            ),
+            CheckResult::Unsat => panic!("satisfiable chain refuted"),
+        }
     }
 
     #[test]
@@ -2184,8 +2369,13 @@ mod tests {
     fn lazy_declared_sort_distinct_chain_stays_non_sat_and_sound() {
         // A satisfiable declared-sort query whose encoding pressure is real
         // (three symbols forced pairwise distinct, domain width must be >= 2):
-        // must not produce a wrong `unsat` (the domain-width soundness rule) and
-        // must not leak an encoded `Sat`.
+        // must not produce a wrong `unsat` (the domain-width soundness rule),
+        // and any `Sat` it does return must replay against the ORIGINAL
+        // assertions. The second half is what remains of the old "must not leak
+        // an encoded Sat" guard now that a replay-confirmed model is allowed to
+        // escape (S11a); it is strictly stronger on the case that matters,
+        // because it fails on a model that satisfies the ENCODING but not the
+        // original distinctness constraints.
         let mut arena = TermArena::new();
         let sort = Sort::Uninterpreted(arena.declare_uninterpreted_sort("S"));
         let f = arena.declare_fun("f", &[sort], sort).unwrap();
@@ -2203,11 +2393,17 @@ mod tests {
         let mut backend = SatBvBackend::new();
         let config = SolverConfig::default();
         let result = check_qf_ufbv_lazy(&mut backend, &mut arena, &assertions, &config).unwrap();
-        assert!(
-            !matches!(result, CheckResult::Sat(_) | CheckResult::Unsat),
-            "satisfiable declared-sort query must neither leak encoded Sat nor \
-             wrongly refute, got {result:?}"
-        );
+        match result {
+            CheckResult::Sat(model) => assert!(
+                crate::check_model(&arena, &assertions, &model).unwrap(),
+                "an escaped Sat must replay against the ORIGINAL assertions, \
+                 including every original distinctness constraint"
+            ),
+            CheckResult::Unknown(_) => {}
+            CheckResult::Unsat => {
+                panic!("satisfiable declared-sort query must not be wrongly refuted")
+            }
+        }
     }
 
     #[test]
