@@ -121,6 +121,9 @@ use num_traits::{One, Zero};
 #[path = "qe_big.rs"]
 pub(crate) mod big;
 
+#[path = "qe_fibre.rs"]
+pub mod fibre;
+
 #[path = "qe_bivariate.rs"]
 pub mod bivariate;
 
