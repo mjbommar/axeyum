@@ -18,6 +18,38 @@
 //!
 //! Reference: Bronstein, *Symbolic Integration I*, Ch. 2 (the classical
 //! Horowitz–Ostrogradsky method).
+//!
+//! # Deliberately NOT migrated onto `axeyum-arith` (ADR-1710 slice 4)
+//!
+//! The design note's inventory lists this file as one of the eight univariate
+//! ℚ[x] copies. Read rather than grepped, it is not one: the sentence above is
+//! literal, and every polynomial operation here is a call into
+//! `axeyum_ir::poly`. [`divrem`] is three such calls; [`is_zero`] and
+//! [`monomial`] are one-liners over a bare `Vec`. There is no divmod, gcd,
+//! derivative, content, resultant or Sturm chain owned by this module, so
+//! there is nothing here for `axeyum_arith::{ZPoly, QPoly, SturmChain}` to
+//! replace. Migrating the *call sites* would mean migrating `axeyum_ir::poly`
+//! itself, which slice 4 also stopped — see that module's own note, and
+//! [`crate::sturm`]'s.
+//!
+//! What this module genuinely does own is the **exact Gauss–Jordan pair**
+//! [`solve_linear_i128`] and [`solve_linear_big`]. That is the design note's
+//! *linear-algebra* row, not its ℚ[x] row: six copies plus `Matrix::rref`, and
+//! `axeyum-arith` has no linear algebra at all today. It is the `PA = LD⁻¹U`
+//! slice's work, and it needs a shared home built before it has one to move to.
+//! Three things a later slice must preserve, each pinned by a test here:
+//!
+//! - `solve_linear` declines on a **singular** system through *both* arms of
+//!   its `or_else` chain (`solve_linear_declines_on_singular_system`).
+//! - `solve_linear_big` is capped at `MAX_BIG_LINEAR_DIMENSION` and demotes
+//!   every answer back to `i128`, so a coefficient that does not fit is a
+//!   decline and not a wider answer.
+//! - `poly::rat_exact_div` returns `None` on a **nonzero remainder**, and both
+//!   [`verify_horowitz`]'s divisibility guard and [`verify_log_terms`]'s
+//!   completeness guard rest on that `None`. `QPoly::div_exact` is *not* an
+//!   equivalent — it is `div_rem` with the remainder discarded, so substituting
+//!   it makes both guards unfailable. The shared spelling is `div_rem` plus an
+//!   explicit `remainder.is_zero()`.
 
 use axeyum_ir::{Rational, poly};
 use num_bigint::BigInt;

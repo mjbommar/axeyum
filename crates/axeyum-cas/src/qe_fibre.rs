@@ -296,6 +296,42 @@ fn two() -> BigRational {
 pub type Element = Vec<BigRational>;
 
 /// A polynomial in `y` over `K`, LSB-first: `p[j]` is the coefficient of `yʲ`.
+///
+/// # Deliberately NOT migrated onto `axeyum-arith` (ADR-1710 slice 4)
+///
+/// Slice 4 was asked to move this layer *only if* it is genuinely univariate
+/// over a coefficient field the crate already represents. It is not, and the
+/// reason is structural rather than a matter of effort:
+///
+/// - **`K` is not a field.** [`RealField`] presents `K = ℚ[x]/(m)` with `m`
+///   deliberately allowed to be **reducible** — that is the whole point of the
+///   module, which refuses to depend on a ℚ-factorization. So `K` is a
+///   commutative ring with zero divisors, and `RealField::invert` is partial.
+/// - **Its failure is control flow, not an error.** A non-unit `gcd(e, m)` is a
+///   *proper factor of `m`*, and `Inner::Split` carries it back to
+///   `decide_fibre`, which restarts the whole decision with a smaller
+///   modulus. No operation in `axeyum-arith` can say "your ring was wrong".
+/// - **`is_zero` on a coefficient is partial too**, which is the unusual part.
+///   `RealField::ktrim` must call `RealField::sign` to decide whether a
+///   leading coefficient vanishes at `α`, and that can exhaust a budget *or*
+///   discover a split. So degree, trim, and hence the loop condition of
+///   `RealField::kdivrem` are all fallible — a shared `UPoly` whose `degree()`
+///   returns a plain `Option<usize>` cannot host this.
+///
+/// A generic `UPoly<F>` would therefore not be enough: it would need a
+/// *ring-object* trait carried through every method, with `inv` **and**
+/// `is_zero` fallible and their error able to demand a different ring.
+/// ADR-1710 already placed the splitting outside the arithmetic layer for
+/// exactly this reason, and slice 4 confirms the placement rather than
+/// reopening it.
+///
+/// The cheaper shared piece, if one is wanted later, is **not** a generic
+/// coefficient ring but a `axeyum_arith::SturmChain` generic over
+/// a *sign oracle*: `KSturm` and `qe_big`'s chain differ from the shared one
+/// only in spelling `sign_of_rational` as `field.sign(..)?`, and that would
+/// absorb two of the inventory's six chains at once.
+///
+/// The ℚ\[x\] layer above this one already moved; see `divmod` and `xgcd`.
 pub type FieldPoly = Vec<Element>;
 
 /// `a + b`, as polynomials in `α`. Reduction is unnecessary: both are already

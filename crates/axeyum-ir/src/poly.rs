@@ -14,6 +14,43 @@
 //! Degree / coefficient guards are passed in as parameters (`max_degree`,
 //! `max_abs_coeff`) so the same primitive serves callers with different bounds
 //! without baking one policy into the leaf crate.
+//!
+//! # Deliberately NOT migrated onto `axeyum-arith` (ADR-1710 slice 4)
+//!
+//! The design note lists this module as one of the eight univariate copies and
+//! its `sturm_chain` as one of the six chains. Slice 4 opened it and stopped,
+//! for two independent reasons, either of which is sufficient:
+//!
+//! - **It is the `i128` arm of three live differential pairs.**
+//!   `axeyum-cas`'s `sturm` module is built entirely on these primitives
+//!   (`rat_trim`, `rat_degree`, `rat_derivative`, `rat_rem`,
+//!   `squarefree_part`, `eval_rat_poly`), and its own module doc records that
+//!   it is kept as an independent second implementation of
+//!   `axeyum_arith::SturmChain`. Migrating this module migrates that one
+//!   transitively, which would make `fps_analytic`'s
+//!   `bignum_and_machine_sturm_counts_agree` (54 pairs), `sturm`'s
+//!   `shared_and_machine_routes_agree_where_both_answer`, and the solver's
+//!   `nra_real_root::real_algebra_parity` compare the shared chain **against
+//!   itself** — passing while checking nothing. The same hazard sits inside
+//!   this crate: `tests/sylvester_determinant_diff.rs` compares
+//!   [`sylvester_determinant`] against [`sylvester_determinant_leibniz`], and
+//!   both arms live here.
+//! - **Every `None` here is an overflow decline that callers branch on.**
+//!   `axeyum-cas`'s `RootCounter::Machine` falls through to the bignum chain on
+//!   `None`; `axeyum_arith`'s `ZPoly`/`QPoly` are unconditionally arbitrary
+//!   precision and cannot produce one. Replacing these bodies is therefore the
+//!   *global* widening ADR-1702 measured and rejected — 25 failing tests and
+//!   about seven that stopped terminating — arriving through a different door.
+//!
+//! Two hazards a later slice must handle rather than inherit.
+//! [`rat_to_int_poly`], [`rat_to_int_poly_wide`] and [`sign_of_rational`] call
+//! `Rational::numerator()`/`denominator()`, which **panic** on an
+//! ADR-1702-promoted operand; they are safe today only because nothing on
+//! their route has opted into the `wide_*` family. And `axeyum-ir` does not
+//! depend on `axeyum-arith` — there is no cycle (`axeyum-arith` is
+//! `num-bigint` + `num-rational` and nothing else), but adding that edge puts
+//! `axeyum-arith` beneath *every* crate in the workspace, since everything
+//! depends on this one. That is a placement decision, not a refactor.
 
 use core::cmp::Ordering;
 
