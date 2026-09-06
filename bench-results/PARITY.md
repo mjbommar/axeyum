@@ -1695,3 +1695,98 @@ all three.
 | load average (start / end) | 6.14 2.30 0.84 / 0.99 1.22 0.91 — 8 cores; a high load DEPRESSES this result |
 | per-file detail | `bench-results/parity-details/QF_UF.tsv` |
 
+## QF_LIA — 2026-09-06T21:59:39Z
+
+| field | value |
+|---|---|
+| axeyum solved | 113/200 |
+| reference solved | 139/200 |
+| **ratio (axeyum / reference)** | **81.3%** |
+| **disagreements** | **0** |
+| soundness | SOUND |
+| both / axeyum-only / reference-only | 111 / 2 / 28 |
+| reference | `cvc5 1.3.4 [git f3b21c4 on branch HEAD]` |
+| reference options | `<none — plain invocation, NOT a competition portfolio>` |
+| axeyum options | `<none — shipped default configuration>` |
+| protocol | 24s wall, 8GiB, per-file |
+| benchmark list | `bench-results/parity-lists/QF_LIA.txt` (sha256 9ede4b69b2ec, 200 files) |
+| solver commit | `c28d7b7c6` |
+| load average (start / end) | 6.11 2.19 0.79 / 1.06 1.09 1.04 — 8 cores; a high load DEPRESSES this result |
+| per-file detail | `bench-results/parity-details/QF_LIA.tsv` |
+
+## QF_IDL — 2026-09-06T22:21:15Z
+
+| field | value |
+|---|---|
+| axeyum solved | 105/200 |
+| reference solved | 123/200 |
+| **ratio (axeyum / reference)** | **85.4%** |
+| **disagreements** | **0** |
+| soundness | SOUND |
+| both / axeyum-only / reference-only | 103 / 2 / 20 |
+| reference | `cvc5 1.3.4 [git f3b21c4 on branch HEAD]` |
+| reference options | `<none — plain invocation, NOT a competition portfolio>` |
+| axeyum options | `<none — shipped default configuration>` |
+| protocol | 24s wall, 8GiB, per-file |
+| benchmark list | `bench-results/parity-lists/QF_IDL.txt` (sha256 d7c9713a0280, 200 files) |
+| solver commit | `c28d7b7c65` |
+| load average (start / end) | 5.17 2.12 0.79 / 1.09 1.05 1.01 — 8 cores; a high load DEPRESSES this result |
+| per-file detail | `bench-results/parity-details/QF_IDL.tsv` |
+
+## QF_UFLIA — 2026-09-06T22:33:03Z
+
+| field | value |
+|---|---|
+| axeyum solved | 122/200 |
+| reference solved | 180/200 |
+| **ratio (axeyum / reference)** | **67.8%** |
+| **disagreements** | **0** |
+| soundness | SOUND |
+| both / axeyum-only / reference-only | 122 / 0 / 58 |
+| reference | `cvc5 1.3.4 [git f3b21c4 on branch HEAD]` |
+| reference options | `<none — plain invocation, NOT a competition portfolio>` |
+| axeyum options | `<none — shipped default configuration>` |
+| protocol | 24s wall, 8GiB, per-file |
+| benchmark list | `bench-results/parity-lists/QF_UFLIA.txt` (sha256 f88e67890fae, 200 files) |
+| solver commit | `c28d7b7c6` |
+| load average (start / end) | 1.06 1.09 1.04 / 1.04 1.04 1.01 — 8 cores; a high load DEPRESSES this result |
+| per-file detail | `bench-results/parity-details/QF_UFLIA.tsv` |
+
+## UF — 2026-09-06T22:35:13Z
+
+| field | value |
+|---|---|
+| axeyum solved | 85/200 |
+| reference solved | 93/200 |
+| **ratio (axeyum / reference)** | **91.4%** |
+| **disagreements** | **0** |
+| soundness | SOUND |
+| both / axeyum-only / reference-only | 61 / 24 / 32 |
+| reference | `cvc5 1.3.4 [git f3b21c4 on branch HEAD]` |
+| reference options | `<none — plain invocation, NOT a competition portfolio>` |
+| axeyum options | `<none — shipped default configuration>` |
+| protocol | 24s wall, 8GiB, per-file |
+| benchmark list | `bench-results/parity-lists/UF.txt` (sha256 ab432240d2f7, 200 files) |
+| solver commit | `c28d7b7c65` |
+| load average (start / end) | 0.99 1.22 0.91 / 1.02 1.00 1.00 — 8 cores; a high load DEPRESSES this result |
+| per-file detail | `bench-results/parity-details/UF.tsv` |
+
+## QF_RDL — 2026-09-06T23:10:22Z
+
+| field | value |
+|---|---|
+| axeyum solved | 142/200 |
+| reference solved | 154/200 |
+| **ratio (axeyum / reference)** | **92.2%** |
+| **disagreements** | **0** |
+| soundness | SOUND |
+| both / axeyum-only / reference-only | 140 / 2 / 14 |
+| reference | `cvc5 1.3.4 [git f3b21c4 on branch HEAD]` |
+| reference options | `<none — plain invocation, NOT a competition portfolio>` |
+| axeyum options | `<none — shipped default configuration>` |
+| protocol | 24s wall, 8GiB, per-file |
+| benchmark list | `bench-results/parity-lists/QF_RDL.txt` (sha256 9dc32e2c5dfb, 200 files) |
+| solver commit | `c28d7b7c65` |
+| load average (start / end) | 1.09 1.05 1.01 / 0.96 0.98 1.00 — 8 cores; a high load DEPRESSES this result |
+| per-file detail | `bench-results/parity-details/QF_RDL.tsv` |
+

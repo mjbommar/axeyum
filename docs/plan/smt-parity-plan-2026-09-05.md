@@ -41,21 +41,22 @@ hosts, zero disagreements everywhere
 | Division | Solver commit | Ours | Theirs | Ratio | both / ours / theirs | Gap |
 |---|---|---:|---:|---:|---|---:|
 | QF_SLIA | `9914a1c0e` | 193 | 194 | 99.5% | 187 / 6 / 7 | 1 |
-| QF_BV | `9914a1c0e` | 188 | 194 | 96.9% | 188 / 0 / 6 | 6 |
 | QF_UF | `c28d7b7c6` | 196 | 200 | 98.0% | 196 / 0 / 4 | 4 |
-| UF | `b32377dc5` | 85 | 93 | 91.4% | 61 / 24 / 32 | 8 |
+| QF_BV | `9914a1c0e` | 188 | 194 | 96.9% | 188 / 0 / 6 | 6 |
+| QF_RDL | `c28d7b7c6` | 142 | 154 | 92.2% | 140 / 2 / 14 | 12 |
+| UF | `c28d7b7c6` | 85 | 93 | 91.4% | 61 / 24 / 32 | 8 |
 | QF_ABV | `9914a1c0e` | 179 | 197 | 90.9% | 178 / 1 / 19 | 18 |
-| QF_RDL | `b32377dc5` | 128 | 154 | 83.1% | 127 / 1 / 27 | 26 |
-| QF_LIA | `b32377dc5` | 112 | 139 | 80.6% | 110 / 2 / 29 | 27 |
-| QF_IDL | `b32377dc5` | 86 | 123 | 69.9% | 84 / 2 / 39 | 37 |
-| QF_UFLIA | `5c9b3a7c2` | 123 | 180 | 68.3% | 123 / 0 / 57 | 57 |
+| QF_IDL | `c28d7b7c6` | 105 | 123 | 85.4% | 103 / 2 / 20 | 18 |
+| QF_LIA | `c28d7b7c6` | 113 | 139 | 81.3% | 111 / 2 / 28 | 26 |
+| QF_UFLIA | `c28d7b7c6` | 122 | 180 | 67.8% | 122 / 0 / 58 | 58 |
 | QF_LRA | `5c9b3a7c2` | 93 | 145 | 64.1% | 93 / 0 / 52 | 52 |
 | QF_NIA | `9914a1c0e` | 39 | 87 | 44.8% | 26 / 13 / 61 | 48 |
 
-Total gap to parity: **284 files, down from 356** at the start of the plan
-(ours 1,422 of 1,706 reference decisions; QF_UF re-measured at `c28d7b7c6`
-after the S1b + S11a merges, 190 -> 196, zero disagreements; the other five
-re-measured divisions are pending below). S1 and S2 together moved 65 files
+Total gap to parity: **251 files, down from 356** at the start of the plan
+(ours 1,455 of 1,706 reference decisions). The six divisions re-measured at
+`c28d7b7c6` after the S1b + S11a + S9 merges are in the entry directly
+below; QF_SLIA, QF_BV, QF_ABV and QF_NIA still stand at `9914a1c0e` and
+QF_LRA at `5c9b3a7c2` because no merged slice since targets them. S1 and S2 together moved 65 files
 (QF_IDL +16, QF_RDL +21, QF_UF +28; the measuring commit `b32377dc5` contains
 both, so the split between them is not measured); S4 moved 3 (QF_LRA +2,
 QF_UFLIA +1). The two
@@ -142,6 +143,30 @@ session says "clean"; two green branches can fail `clippy -D warnings` on
 merge through a size-threshold lint, so the post-merge gate is check plus
 clippy on every crate either branch touched.
 
+### 2026-09-06, evening: the six-division re-measurement at `c28d7b7c6`
+
+Idle s5/s6/s7, `taskset -c 0-7`, 24 s / 8 GiB, fresh checkouts from a
+bundle, fresh sidecars, no resume; references cvc5 1.3.4 plain. Zero
+disagreements in all six. Board gap **290 -> 251**.
+
+| Division | Before (commit) | After | Change | Reads as |
+|---|---|---|---:|---|
+| QF_IDL | 86/123 (`b32377dc5`) | **105/123**, 85.4% | +19 | S1b's order heap on the full division; the 50-file timeout population had gone 11 -> 27 |
+| QF_RDL | 128/154 (`b32377dc5`) | **142/154**, 92.2% | +14 | same lever; 14 reference-only left, 2 ours-only |
+| QF_UF | 190/200 (`b32377dc5`) | **196/200**, 98.0% | +6 | S1b's heap plus S11a's three cap fixes; 4 left |
+| QF_LIA | 112/139 (`b32377dc5`) | **113/139**, 81.3% | +1 | the S2 preflight follow-up (§2.6) is still owed |
+| UF | 85/93 (`b32377dc5`) | **85/93**, 91.4% | 0 | as S11a predicted: the 32 are not cap-bound and did not respond to the heap; front-door cause still unnamed |
+| QF_UFLIA | 123/180 (`5c9b3a7c2`) | **122/180**, 67.8% | -1 | budget-marginal, not a regression: `mathsat/Hash/hash_sat_04_11` decides `sat` under BOTH the old and the merged binary in 23.96-24.03 s on idle s6 (two interleaved repeats each), so it straddles the 24 s budget either way |
+
+S9 was expected to yield 0 on QF_UFLIA and did. The two levers the board
+now points at are unchanged: S7 (engine) for the arithmetic timeouts in
+QF_UFLIA/QF_LRA/QF_IDL, and the S2 follow-up for QF_LIA's two files.
+
+**Next steps, revised:** the full 200-file QF_UF and UF sweeps S11a owed are
+now done (these are them); S7 is next; the S2 follow-up (let the size-gated
+`lia-dpll` route still run the online probe) is a small independent slice
+worth dispatching alongside S7.
+
 ### 2026-09-06, later: S1b, S11a and S9 merged onto `main`
 
 All three finished branches are on `main`, in that order, each as a
@@ -181,8 +206,8 @@ wasm build on default features prints three dead-code warnings
 because those diagnostics are only constructed behind `full`; a `cfg` on
 the module is a cheap follow-up for whichever lane next touches `layers.rs`.
 
-**Re-measurement launched** at `c28d7b7c6` (first result: QF_UF 196/200,
-98.0%, 0 disagreements, 4 reference-only left) (solver code identical to
+**Re-measurement launched** at `c28d7b7c6` (results in the evening entry
+above) (solver code identical to
 `b40a0f309`; the later commits are docs and a harness anchor fix) on idle
 s5 (QF_IDL, QF_RDL), s6 (QF_UF, UF), s7 (QF_LIA, QF_UFLIA), fresh
 `~/axeyum-parity-m1` checkouts from a bundle, fresh sidecars, no resume.
