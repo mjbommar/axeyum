@@ -918,7 +918,7 @@ fn decide_cell(
 // ============================================================================
 
 /// Every atom is within [`MAX_TOTAL_DEGREE`].
-fn check_degree_bound(atoms: &[BiAtom]) -> Result<(), Fault> {
+pub(super) fn check_degree_bound(atoms: &[BiAtom]) -> Result<(), Fault> {
     for (index, atom) in atoms.iter().enumerate() {
         let Some(total) = total_degree(&atom.poly) else {
             continue; // the zero polynomial
@@ -1052,7 +1052,7 @@ fn projection_key(p: &[Rational]) -> Vec<(i128, i128)> {
 /// [`Fault::DegenerateProjection`] when a required resultant vanishes
 /// identically, [`Fault::Declined`] on an `i128` overflow inside a Sylvester
 /// determinant.
-fn projection_set(atoms: &[BiAtom]) -> Result<Vec<Vec<Rational>>, Fault> {
+pub(super) fn projection_set(atoms: &[BiAtom]) -> Result<Vec<Vec<Rational>>, Fault> {
     let mut set: BTreeMap<Vec<(i128, i128)>, Vec<Rational>> = BTreeMap::new();
     let mut positive_degree: Vec<BiPoly> = Vec::new();
     for atom in atoms {
@@ -1415,7 +1415,7 @@ pub(super) fn divides(divisor: &[BigRational], dividend: &[BigRational]) -> bool
 // ============================================================================
 
 /// `pᵢ(x₀, y)` for every atom at a **rational** `x₀`.
-fn substitute_atoms(atoms: &[BiAtom], x: &BigRational) -> Vec<Atom> {
+pub(super) fn substitute_atoms(atoms: &[BiAtom], x: &BigRational) -> Vec<Atom> {
     atoms
         .iter()
         .map(|atom| {
@@ -1430,7 +1430,7 @@ fn substitute_atoms(atoms: &[BiAtom], x: &BigRational) -> Vec<Atom> {
 }
 
 /// The atoms as the `ℚ(α)` fibre engine wants them.
-fn substitution_atoms(atoms: &[BiAtom]) -> Vec<fibre::SubstitutionAtom> {
+pub(super) fn substitution_atoms(atoms: &[BiAtom]) -> Vec<fibre::SubstitutionAtom> {
     atoms
         .iter()
         .map(|atom| fibre::SubstitutionAtom {
