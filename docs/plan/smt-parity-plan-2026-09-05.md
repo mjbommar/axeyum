@@ -53,8 +53,10 @@ hosts, zero disagreements everywhere
 | QF_NIA | `9914a1c0e` | 39 | 87 | 44.8% | 26 / 13 / 61 | 48 |
 
 Total gap to parity: **290 files, down from 356** at the start of the plan
-(ours 1,416 of 1,706 reference decisions). S1 alone moved 65 files (QF_IDL
-+16, QF_RDL +21, QF_UF +28); S4 moved 3 (QF_LRA +2, QF_UFLIA +1). The two
+(ours 1,416 of 1,706 reference decisions). S1 and S2 together moved 65 files
+(QF_IDL +16, QF_RDL +21, QF_UF +28; the measuring commit `b32377dc5` contains
+both, so the split between them is not measured); S4 moved 3 (QF_LRA +2,
+QF_UFLIA +1). The two
 QF_LIA files that appeared lost under S1 were traced by S1b to S2's admission
 preflight, not to the watched literals (see the S1b status file). QF_SLIA,
 QF_BV, QF_ABV and QF_NIA have not been re-measured since `9914a1c0e` because
@@ -65,8 +67,12 @@ of 403 losses, 217 are admission declines on constants, 137 search timeouts,
 41 other, 6 unsupported shapes, 2 parser rejects. QF_IDL's 46 of 54 were the
 S1/S2 signature and have largely converted. UF and QF_UF's 70 were one
 admission cap on eager Ackermann expansion with no timeouts; S11a is on it.
-QF_SLIA and QF_NIA both hit the 32-bit int-blast width ladder, a shared
-S11/S12 target not previously named. One QF_LIA file overflows `i128` inside
+QF_SLIA and QF_NIA both hit the int-blast width ladder, a shared S11/S12
+target not previously named. Two constants are in play and both are real:
+the ladder's top rung is `DEFAULT_INT_WIDTH = 32` (`lia.rs`, the "bounded
+integer width 32" the census records) and the rewrite-level admission ceiling
+is `MAX_INT_BLAST_WIDTH = 64` (`axeyum-rewrite/src/int_blast.rs`, the number
+S9's ablation names). One QF_LIA file overflows `i128` inside
 the simplex, not the parser, so S9's parser fix alone will not close it.
 
 **Three more slices finished in worktrees after the pause, gates green,
@@ -137,6 +143,30 @@ session says "clean"; two green branches can fail `clippy -D warnings` on
 merge through a size-threshold lint, so the post-merge gate is check plus
 clippy on every crate either branch touched.
 
+### 2026-09-06, plan audited against the ledger, the census artifacts and `main`
+
+Every number in the progress-log board was rebuilt from
+`bench-results/PARITY.md` (latest entry per division) and matches: 290 gap,
+1,416 of 1,706, zero disagreements in all eleven. Every code claim was checked
+on `main` at `27dd9142c`: the `CdclT` rescan loop is gone and watch lists are
+present (S1); `arith_dpll_admission_preflight` and the
+`; theory-layer unavailable` line exist (S2); `engine_counters` and the
+O(rows) pivot exist (S4); the native core's `Reason` is the tagged word (S6).
+`TrustId::SatRefutationModuloTheory` exists only in ADR-1704, not in code:
+S5 landed the contract, and the "then implement" half of row S5 is S7's.
+The three unmerged branches are still 6 / 9 / 4 commits ahead of `main`.
+
+Corrections applied to the body below in this audit, each marked
+**Corrected 2026-09-06** where it sits: the S4 warm-start premise (the warm
+start already existed; the cost was one redundant pass in the pivot); the
+S9 "+6 against cvc5" claim (refuted by ablation; expected yield 0); the
+§2.5 census verdict that S1 "lands nothing" for UF/QF_UF (S1 moved QF_UF
++28 and S11a found the census class misattributed on 67 of 70 files); the
+QF_LRA atom-cap count (23 by the census, not the August 29); the row S3
+scope (all eleven divisions were censused, not seven); and the stale
+"(census needed)" headings. §4 now carries a status column and rows for
+S1b and S11a.
+
 ## 0. The rule this plan runs under
 
 **Parity is a count on a pinned list, measured by `scripts/parity-run.sh` on an
@@ -156,6 +186,9 @@ Two lessons from today are rules here:
    while our count rose or held, because cvc5 gained files on an idle host.
 
 ## 1. The board and where the losses are
+
+**This is the starting board, kept as the baseline every slice is scored
+against.** The current board is the one in the progress log above.
 
 At solver commit `9914a1c0e`, idle hosts, 24 s / 8 GiB, plain references
 ([`bench-results/PARITY.md`](../../bench-results/PARITY.md)):
@@ -188,13 +221,17 @@ on an idle host and classify each loss as one of `search-timeout`,
 `admission-decline(constant)`, `route-decline(unsupported)`, `parser-reject`,
 `dispatch-overrun`, with the declining route and the dominant stage named.
 The census is the measurement rule 1 demands; no slice for a censused division
-is authorized before it.
+is authorized before it. **Done (S3, `4339eb793`)** for all eleven divisions,
+403 files; each subsection below carries its result. Two method corrections
+from S11a apply when reading any census row: the `class` column is the LAST
+route's message, not the route that spent the budget, and `explain_corpus`
+is not the front door (see §6).
 
 ### 2.1 Difference logic: QF_IDL and QF_RDL, 101 files (measured)
 
-**Cause.** `CdclT::unit_propagate`
-(`crates/axeyum-solver/src/cdclt.rs:702`) is a full clause-database rescan per
-fixpoint pass with no watch lists and no blocking literals, and it clones the
+**Cause (fixed by S1, `eff6a464b`; S2, `b4d042ae4`).** `CdclT::unit_propagate`
+(`crates/axeyum-solver/src/cdclt.rs`) was a full clause-database rescan per
+fixpoint pass with no watch lists and no blocking literals, and it cloned the
 reason clause on every implication. On the five traced QF_IDL timeouts it is
 19.4 s of a 24 s budget (87% of wall) with the theory at 0 ms
 ([profiles](../research/11-design-review/2026-09-05-arith-timeout-profiles.md)).
@@ -206,11 +243,14 @@ evaluated at t = 0, so the sum exceeds the budget and the watchdog kills the
 process before any statistics print (3 of 5 traced IDL files). The
 2026-08-21 diagnosis priced the reserve at 6 s; today's measurement says ~8 s.
 
-**Lever.** Two-watched-literal propagation with blocking literals inside
+**Lever (landed).** Two-watched-literal propagation with blocking literals inside
 `CdclT`, ported verbatim from `proof_sat.rs`'s `Watch`/`ClauseHeader` design so
 the later engine unification is a deletion rather than a reconciliation
 ([memo §6](adr-1701-slice-2-design-2026-09-05.md)). Separately, make
-`lia-dpll` evaluate its size admission before consuming its reserve.
+`lia-dpll` evaluate its size admission before consuming its reserve. Result at
+`b32377dc5`: QF_IDL 70 -> 86, QF_RDL 107 -> 128. S1b (unmerged) adds the VSIDS
+order heap and recursive minimization: the 50-file IDL timeout population goes
+11 -> 27 decided on idle s5, zero verdict changes.
 
 **Census (S3, 2026-09-05/06).** QF_IDL 54/54 losses classified: 46
 admission-decline (all `lia-dpll`'s pre-SAT resource boundary, but
@@ -227,11 +267,25 @@ is 84% of wall on the traced QF_LRA timeouts, called 1,150 to 15,000 times per
 file at 1.3 to 15 ms per call; Boolean propagation is 10%. The interface
 widening (ADR-1701 slice 1) moved the cost from `assert` to `final_check` as
 designed and converted 2 of 33 timeouts; the simplex itself is now the cost.
-A further 29 QF_LRA files are refused at the 1,024-atom admission cap, which
-the diagnosis measured as load-bearing protection (removing it: 0 new
-decides, 54 memory aborts).
+A further 23 QF_LRA files (by the S3 census; the August diagnosis counted 29
+on an older list) are refused at the 1,024-atom admission cap, which the
+diagnosis measured as load-bearing protection (removing it: 0 new decides, 54
+memory aborts).
 
-**Lever.** (a) Warm-start each final check from the previous tableau instead
+**Corrected 2026-09-06 (S4, `69742894a`).** Lever (a) below rested on a
+false premise: the S4 lane wired six engine counters before changing anything
+and measured `simplex_cold_restarts = 0` across 6,571 checks on the traced
+file. The tableau was already warm; each check cost 2.3 pivots, and each pivot
+paid a second `O(rows x columns)` value pass that recomputed what the update
+already determined. S4 replaced it with Dutertre-de Moura's `O(rows)`
+`pivotAndUpdate` (4.5x on the simplex bench, 20x on a traced file with
+byte-identical search) and made implied bounds work over the whole linear
+form (before, `unit_bound` returned `None` for any multi-variable atom, so
+propagation offered 79 literals in 6,571 checks). Measured yield on the board:
+QF_LRA +2, QF_UFLIA +1. The remaining 31 QF_LRA timeouts are now S7's
+(engine) and the per-call simplex cost's.
+
+**Lever (as written 2026-09-05).** (a) Warm-start each final check from the previous tableau instead
 of re-deciding feasibility; (b) theory propagation of implied bounds through
 the propagate hook so the Boolean search stops proposing assignments the
 theory rejects, cutting the call count; (c) once the atom cap is a memory
@@ -249,12 +303,25 @@ split. Full detail: [parity loss census](../research/11-design-review/2026-09-05
 **Cause.** The 2026-08-21 diagnosis traced 82 of 82 misses to the lazy
 UF/arith CEGAR loop, and 26 files never reach the solver: `Int` literals above
 2^127 (EVM 2^256 words) are rejected at the parser on `Value::Int(i128)`. cvc5
-decides 6 of those 26. Today's +9 came from the widened interface; the
-remaining 58 have not been re-censused since.
+decides 6 of those 26 (they are the 6 `route-decline` rows in the census
+below). Today's +9 came from the widened interface; the remaining 58 have not
+been re-censused since.
+
+**Corrected 2026-09-06 (S9, unmerged at `d975a1fbb`).** Lever (b)'s "+6
+measured against cvc5" was never an axeyum measurement; it was cvc5's count.
+ADR-0376's ablation, re-run on today's HEAD at 24 s: rescale every wide numeral
+to a distinct `2^60 + i`, 6 of 6 still `unknown`; delete every assert that
+mentions one, 6 of 6 still `unknown` (the runner is not vacuous: 2 `sat`, 2
+`unsat` on four control files). The binding constraint is the decision
+procedure's width (`MAX_INT_BLAST_WIDTH = 64`, with a measured cliff between
+2^24 and 2^32), not the literal type. S9 therefore lands the parser and the
+evaluator (all 26 files parse, every route declines by name, a panic on user
+input in the replay evaluator is fixed) with an **expected QF_UFLIA yield of
+0**. The 6 files are S11/S12 width-ladder work.
 
 **Lever.** (a) Re-census after today's changes; (b) ADR-1702 slice 2:
 `Value::Int` and the SMT-LIB integer-literal parser gain the same opt-in
-wide path the simplex has (+6 measured against cvc5); (c) the LRA levers
+wide path the simplex has (the "+6" here is refuted, see above); (c) the LRA levers
 above apply to the arithmetic half; (d) the CEGAR loop's refinement policy
 gets the route-timing instrument before any change.
 
@@ -288,10 +355,12 @@ moves by 13 files run to run, so the honest target is the axeyum count.
 **Census (S3, 2026-09-05/06).** QF_NIA 61/61 losses classified: 30
 search-timeout (`int-blast-ladder`), 18 admission-decline (17 the ladder's
 CNF-clause size cap at 64,000,000, 1 an ingest `distinct`-arity cap), 13
-other (11 bounded-width-32 model incompleteness, 2 divergence). Full
+other (11 bounded-width-32 model incompleteness, 2 divergence). The width 32
+is the ladder's top rung `DEFAULT_INT_WIDTH`; the rewrite ceiling
+`MAX_INT_BLAST_WIDTH` is 64. Full
 detail: [parity loss census](../research/11-design-review/2026-09-05-parity-loss-census.md).
 
-### 2.5 Uninterpreted functions: UF, 32 theirs / 24 ours; QF_UF, 38 theirs / 0 ours (census needed)
+### 2.5 Uninterpreted functions: UF, 32 theirs / 24 ours; QF_UF, 38 theirs / 0 ours at the start (now 10 theirs), censused
 
 **What is known.** UF's remaining losses are finite-model-finding benchmarks
 (2026-08-21 gap analysis §5), a technique gap rather than general UF weakness;
@@ -311,11 +380,28 @@ admission-decline, all one shape (`declared-sort lazy CEGAR refuses N
 congruence pairs, bound 64`, route `ufbv-declared-sort-lazy`) -- a single
 uniform S11 target, not a mix. QF_UF 38/38 losses classified: all 38
 admission-decline, split 35 eager-Ackermann-elimination congruence-count
-(route `qf-bv`) / 3 the same bound-64 CEGAR shape as UF. Neither division
-has a single search-timeout file; 2.1's fix lands nothing here. Full
+(route `qf-bv`) / 3 the same bound-64 CEGAR shape as UF. The census then
+concluded that neither division had a search-timeout file and that 2.1's fix
+would land nothing here. Full
 detail: [parity loss census](../research/11-design-review/2026-09-05-parity-loss-census.md).
 
-### 2.6 Linear integers: QF_LIA, 27 theirs / 2 ours (census needed)
+**Corrected 2026-09-06 (S1 measured; S11a, unmerged at `5801c2d4b`).** That
+conclusion was wrong two ways. S1's watched literals moved QF_UF 162 -> 190
+at `b32377dc5`, so 28 of the 38 were search timeouts after all. S11a then
+re-measured the remaining files through the front door: on 35 QF_UF files
+`euf-online` is entered first and spends 23.5 s of the 24 s budget, and the
+`qf-bv` Ackermann decline that named the census class is a millisecond tail
+after the budget is gone; `euf-online` carries no admission constant to
+raise. On all 32 UF files the census class is an artifact of
+`explain_corpus` (flat assertion view; at the front door none of them ends at
+the CEGAR bound). The cap genuinely blocked 3 QF_UF files, and S11a converts
+them (a replay-confirmed `sat` is no longer discarded in `check_qf_ufbv_lazy`;
+the terminal rung passes a 16,384-pair bound because nothing runs after it):
+38-file population 27 -> 29, zero flips. The UF/QF_UF lever is therefore
+S1b's heap and S7's engine, not a cap; UF's 32 still have no front-door cause
+named, and the finite-model-finding hypothesis above is unmeasured.
+
+### 2.6 Linear integers: QF_LIA, 27 theirs / 2 ours at the start (29 theirs after S2), censused
 
 **What is known.** QF_LIA runs the LIA DPLL(T) driver (`dpll_lia.rs`), the
 same family as QF_UFLIA, plus cuts. It gained one file today with the
@@ -327,6 +413,12 @@ cores.
 cut-generation limits (a slice on the Gomory/branching budget, scored on the
 27).
 
+**Note (S1b).** QF_LIA fell 114 -> 112 at `b32377dc5`. Both files
+(`bofill-scheduling/SMT_real_LIA/ex3000_2400_100`, `ex4320_2400_100`) were
+refuted in 8.1 s by the online probe that S2's admission preflight now
+declines at 109 ms before it runs; an S2 follow-up should let the size-gated
+route still run that probe. Not a watched-literal regression.
+
 **Census (S3, 2026-09-05/06).** QF_LIA 27/27 losses classified: 15
 admission-decline (`lia-dpll`'s pre-SAT resource boundary, the same family
 as QF_IDL's dominant class), 4 search-timeout, 4 other
@@ -336,7 +428,7 @@ normally on all four), 3 other (branch-and-bound node-cap incompleteness),
 point beyond QF_UFLIA's parser case). Admission-decline outweighs
 search-timeout more than 3:1. Full detail: [parity loss census](../research/11-design-review/2026-09-05-parity-loss-census.md).
 
-### 2.7 Arrays over bit-vectors: QF_ABV, 19 theirs / 1 ours (census needed)
+### 2.7 Arrays over bit-vectors: QF_ABV, 19 theirs / 1 ours, censused
 
 **What is known.** First entry, 90.9%. The route is read-over-write plus
 Ackermann elimination to QF_BV, with lazy ROW inside the canonical CDCL(T)
@@ -436,26 +528,29 @@ timeouts) and `qf_lra_population.tsv` (33 QF_LRA timeouts); the per-division
 reference-only lists come from the parity sidecars on the measuring hosts and
 are to be committed by the census slice as `bench-results/parity-losses-20260905/<DIV>.txt`.
 
-| # | Slice | Division(s) | Scoring files | Exit criterion | Gate |
-|---|---|---|---|---|---|
-| S1 | **Two-watched-literal propagation in `CdclT`**, blocking literals, ported verbatim from `proof_sat.rs`; no trait, caller or proof change | QF_IDL, QF_RDL, QF_UF, UF, QF_LIA, QF_LRA (Boolean part) | 50-file IDL population; 33-file LRA population | `TheoryLayerStats::boolean_propagate` falls on the 5 traced IDL files; IDL population decided rises from 0; zero verdict changes | solver `--lib --features full`, corpus sweep, cdclt suites, z3 fuzzes, frontier, then `parity-run.sh QF_IDL` and `QF_RDL` on an idle host |
-| S2 | **Dispatch overrun fix**: `lia-dpll` evaluates its size admission before consuming its reserve; a declined route's budget returns to the pool | QF_IDL, QF_RDL, QF_LRA | the 3 of 5 traced IDL files that print no stats | every timeout prints a `; theory-layer` line; no verdict changes | route-trace tests, corpus sweep |
-| S3 | **Loss census** for QF_UF, UF, QF_LIA, QF_ABV, QF_SLIA, QF_BV, QF_UFLIA: classify every reference-only file | the six censused divisions plus QF_UFLIA | one TSV per division with class, declining route, dominant stage; committed lists | measurement only | none (docs and artifacts) |
-| S4 | **Simplex warm start** across final checks, and **implied-bound propagation** through the propagate hook | QF_LRA, QF_UFLIA, QF_LIA | 33-file LRA population; QF_UFLIA reference-only list | `theory_final_check_ms` per call and call count both fall on the 5 traced LRA files; LRA population decided rises from 5 | as S1 plus `parity-run.sh QF_LRA`, `QF_UFLIA` |
-| S5 | **ADR: the proof contract under theory lemmas** (two streams, assumptions counted), then implement | all CDCL(T) divisions | none; a contract | a CDCL(T) `unsat` produces an artifact whose theory assumptions are enumerable and counted | evidence suites |
-| S6 | **Reason representation** in the native core (`Option<CRef>` → tagged `Reason`), measured alone | prerequisite for S7 | criterion `proof_sat_solve_php_6_7`; 20 p4dfa CNFs | within the noise band; p4dfa decided unchanged | cnf suites, corpus |
-| S7 | **Move CDCL(T) onto the native core** behind the measured hooks; `TheoryLayerStats` ported first; `CdclT::new` signature preserved | every theory division | full board | `cdclt_solve_php_6_7` closes most of the gap to `proof_sat_solve_php_6_7`; every verdict unchanged; then the full eleven-division parity sweep | everything in S1 plus the full sweep |
-| S8 | **Native-core throughput**: profile propagate/analyze on p4dfa CNF by counters; arena locality, `reduce_db` tiering, restarts, in measured order | QF_BV first, all after S7 | 113 p4dfa CNFs at 20 s; the 6 Bitwuzla-only files | conflicts/s ratio to Kissat rises from 0.6 toward 1; p4dfa decided rises from 6 toward 11 | gate (b) rerun, `parity-run.sh QF_BV` |
-| S9 | **ADR-1702 slice 2**: `Value::Int` and the integer-literal parser gain the opt-in wide path | QF_UFLIA (+6 measured), QF_LIA, QF_NIA | the 26 rejected QF_UFLIA files | they reach the solver; 6 decide; zero verdict changes | ir and solver suites, z3 fuzzes, corpus |
-| S10 | **Dynamic atom registration** via the widened trait, retiring driver side tables; then revisit the 1,024-atom cap as a memory budget | QF_LRA | the 29 atom-cap refusals | a measured memory budget replaces the constant; refusals convert or are reported as memory-bound with the number | as S4 |
-| S11 | **Per-division capability slices from the census**: nested arrays or ADR-0085 boundary shapes (QF_ABV); certifiable string refutations (QF_SLIA); bounded finite-model finding (UF); cut budget (QF_LIA) | as named | each division's committed loss list | division count rises by the classified files | division suites plus its `parity-run.sh` |
-| S12 | **NIA coefficient-width rung** via eager small-domain product split | QF_NIA | the 32 one-live-rung files | decided rises from 0 on those 32; zero verdict changes | nia suites, corpus, `parity-run.sh QF_NIA` |
+| # | Slice | Division(s) | Scoring files | Exit criterion | Gate | Status 2026-09-06 |
+|---|---|---|---|---|---|---|
+| S1 | **Two-watched-literal propagation in `CdclT`**, blocking literals, ported verbatim from `proof_sat.rs`; no trait, caller or proof change | QF_IDL, QF_RDL, QF_UF, UF, QF_LIA, QF_LRA (Boolean part) | 50-file IDL population; 33-file LRA population | `TheoryLayerStats::boolean_propagate` falls on the 5 traced IDL files; IDL population decided rises from 0; zero verdict changes | solver `--lib --features full`, corpus sweep, cdclt suites, z3 fuzzes, frontier, then `parity-run.sh QF_IDL` and `QF_RDL` on an idle host | **landed** `eff6a464b`; QF_IDL +16, QF_RDL +21, QF_UF +28 with S2 |
+| S1b | **VSIDS order heap and recursive clause minimization in `CdclT`**, ported verbatim from `proof_sat.rs` | QF_IDL, QF_RDL, QF_UF, UF, QF_LIA, QF_LRA (Boolean part) | 50-file IDL population; 33-file LRA population | IDL population decided rises; zero verdict changes | as S1 | **finished, unmerged** `649a12add`; IDL population 11 -> 27 of 50, PAR-2 -40.1%, zero flips |
+| S2 | **Dispatch overrun fix**: `lia-dpll` evaluates its size admission before consuming its reserve; a declined route's budget returns to the pool | QF_IDL, QF_RDL, QF_LRA | the 3 of 5 traced IDL files that print no stats | every timeout prints a `; theory-layer` line; no verdict changes | route-trace tests, corpus sweep | **landed** `b4d042ae4`; QF_LIA -2 is its preflight, follow-up owed (§2.6) |
+| S3 | **Loss census** for QF_UF, UF, QF_LIA, QF_ABV, QF_SLIA, QF_BV, QF_UFLIA: classify every reference-only file | the six censused divisions plus QF_UFLIA | one TSV per division with class, declining route, dominant stage; committed lists | measurement only | none (docs and artifacts) | **landed** `4339eb793`; all eleven divisions, 403 files, not seven |
+| S4 | **Simplex per-check cost** (planned as warm start; landed as the O(rows) pivot update), and **implied-bound propagation** through the propagate hook | QF_LRA, QF_UFLIA, QF_LIA | 33-file LRA population; QF_UFLIA reference-only list | `theory_final_check_ms` per call and call count both fall on the 5 traced LRA files; LRA population decided rises from 5 | as S1 plus `parity-run.sh QF_LRA`, `QF_UFLIA` | **landed** `69742894a`; premise corrected (§2.2): O(rows) pivot + whole-form bounds; QF_LRA +2, QF_UFLIA +1 |
+| S5 | **ADR: the proof contract under theory lemmas** (two streams, assumptions counted), then implement | all CDCL(T) divisions | none; a contract | a CDCL(T) `unsat` produces an artifact whose theory assumptions are enumerable and counted | evidence suites | **ADR landed** `5c9b3a7c2` (ADR-1704, boundary pinned by 11 tests); the implementation half is S7's |
+| S6 | **Reason representation** in the native core (`Option<CRef>` → tagged `Reason`), measured alone | prerequisite for S7 | criterion `proof_sat_solve_php_6_7`; 20 p4dfa CNFs | within the noise band; p4dfa decided unchanged | cnf suites, corpus | **landed** `3b6d42f6c`; `Reason` 16 B -> 8 B, DRAT byte-identical, p4dfa 9/20 unchanged |
+| S7 | **Move CDCL(T) onto the native core** behind the measured hooks; `TheoryLayerStats` ported first; `CdclT::new` signature preserved | every theory division | full board | `cdclt_solve_php_6_7` closes most of the gap to `proof_sat_solve_php_6_7`; every verdict unchanged; then the full eleven-division parity sweep | everything in S1 plus the full sweep | next; S5 and S6 satisfied |
+| S8 | **Native-core throughput**: profile propagate/analyze on p4dfa CNF by counters; arena locality, `reduce_db` tiering, restarts, in measured order | QF_BV first, all after S7 | 113 p4dfa CNFs at 20 s; the 6 Bitwuzla-only files | conflicts/s ratio to Kissat rises from 0.6 toward 1; p4dfa decided rises from 6 toward 11 | gate (b) rerun, `parity-run.sh QF_BV` | after S7 |
+| S9 | **ADR-1702 slice 2**: `Value::Int` and the integer-literal parser gain the opt-in wide path | QF_UFLIA (0 expected), QF_LIA, QF_NIA | the 26 rejected QF_UFLIA files | they reach the solver and every route declines by name; zero verdict changes; the 6 cvc5 decides are width-ladder work | ir and solver suites, z3 fuzzes, corpus | **finished, unmerged** `d975a1fbb`; "+6" refuted, expected yield 0 (§2.3) |
+| S10 | **Dynamic atom registration** via the widened trait, retiring driver side tables; then revisit the 1,024-atom cap as a memory budget | QF_LRA | the 23 atom-cap refusals | a measured memory budget replaces the constant; refusals convert or are reported as memory-bound with the number | as S4 | after S7; 23 refusals by census, not 29 |
+| S11 | **Per-division capability slices from the census**: nested arrays or ADR-0085 boundary shapes (QF_ABV); certifiable string refutations (QF_SLIA); bounded finite-model finding (UF); cut budget (QF_LIA) | as named | each division's committed loss list | division count rises by the classified files | division suites plus its `parity-run.sh` | S11a finished, unmerged `5801c2d4b` (+3 QF_UF, §2.5); remainder by census class |
+| S11a | **UF/QF_UF Ackermann and declared-sort CEGAR cap**, scored on the 70 census files | UF, QF_UF | the 38 QF_UF and 32 UF census lists | the census's cap attribution measured through the front door; classified files convert | uf suites, `parity-run.sh QF_UF`, `UF` | **finished, unmerged** `5801c2d4b`; census wrong on 67 of 70, 3 real cap losses fixed, full 200-file sweeps not yet run |
+| S12 | **NIA coefficient-width rung** via eager small-domain product split | QF_NIA | the 32 one-live-rung files | decided rises from 0 on those 32; zero verdict changes | nia suites, corpus, `parity-run.sh QF_NIA` | last |
 
-Dependencies: S1, S2, S3 start now and are independent. S4 needs S1's
-instrument unchanged (it is) and starts now. S5 gates S7. S6 and S5 are
-independent and can run together. S8 after S7 so the gain reaches every
-division. S9, S10, S11, S12 are independent of the engine work and are
-scheduled by census result.
+Dependencies (as of 2026-09-06): S1 through S6 are on `main`; S1b, S9 and
+S11a are finished on branches and merge next. S7 is unblocked (S5 contract,
+S6 reason word) and is the next engine slice; S8 after S7 so the gain reaches
+every division. S10 waits on S7. S11's remainder and S12 are independent of
+the engine work and are scheduled by census class, read with the two S11a
+method corrections.
 
 ## 5. What "parity or better" means per division, and when to stop
 
@@ -463,12 +558,12 @@ scheduled by census result.
 |---|---:|---|---|
 | QF_SLIA | 194 | S11 string refutations, 7 files | at or above 194 with 0 disagreements |
 | QF_BV | 194 | S8, 6 files, Bitwuzla-only since July | at or above 194 |
-| UF | 93 | S1 plus S11 finite-model finding | at or above 93; the 24 axeyum-only stay |
+| UF | 93 | S1 (landed, +0), S1b, S7; the finite-model-finding hypothesis is unmeasured and the census class was an artifact (§2.5) | at or above 93; the 24 axeyum-only stay |
 | QF_ABV | 197 | S1 plus S11 array shapes | at or above 197 |
 | QF_LIA | 139 | S1, S4, S11 cuts | at or above 139 |
-| QF_UF | 200 | S1 plus census | 200 |
+| QF_UF | 200 | S1 landed (+28), S11a (+3), then S1b and S7 for the timeouts | 200 |
 | QF_RDL | 154 | S1, S2 | at or above 154 |
-| QF_UFLIA | 180 | S1, S4, S9 | at or above 180 |
+| QF_UFLIA | 180 | S1, S4 (landed, +1), S7; S9 yields 0 here, the 6 wide files are width-ladder work | at or above 180 |
 | QF_LRA | 145 | S4, S10 | at or above 145 |
 | QF_IDL | 123 | S1, S2 | at or above 123 |
 | QF_NIA | 87 | S12; reference count unstable | axeyum count above 61 (the current theirs-only) with the family split reported; ratio not the target |
@@ -492,12 +587,22 @@ make regression visible.
   (capability and timing ratchets), clippy, workspace check, and the WASM
   build before merge; the coordinator reruns them on main after merge.
 - A verdict change on any file is P0 and stops the lane.
+- **Added 2026-09-06 (from S11a).** A loss is classified by the route that
+  spent the budget (read the timed trace), never by the last route's message;
+  and it is classified through the front door (`solve_smtlib`, as
+  `smtcomp_cli` runs it), never through `explain_corpus`, which runs the flat
+  assertion view and disagrees with the front door on 134 of 397 benchmarks.
+  The S3 census predates both rules; its `class` column is reliable only where
+  a later slice has confirmed it.
 
 ## 7. What this plan does not claim
 
 - Ratios against cvc5 on QF_NIA are not a stable target; the axeyum count is.
-- The census divisions have no cause named yet; their slices are scheduled by
-  the census, not by this document.
+- The census divisions' causes are as reliable as the census method (§6,
+  last bullet): confirmed for QF_IDL, QF_RDL, QF_LRA and QF_UFLIA by the
+  slices that acted on them, refuted for UF/QF_UF by S11a, and unconfirmed
+  for QF_LIA, QF_ABV, QF_SLIA, QF_BV and QF_NIA until a slice re-measures them
+  through the front door.
 - The 24 s budget is the competition convention; nothing here says what a
   longer budget shows.
 - Beating the references on decided counts is the floor. The lead this
