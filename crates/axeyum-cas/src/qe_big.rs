@@ -38,10 +38,10 @@
 
 use core::cmp::Ordering;
 
-use axeyum_arith::{QPoly, UnivariatePoly};
+use axeyum_arith::QPoly;
 use num_bigint::{BigInt, BigUint};
 use num_rational::BigRational;
-use num_traits::{One, Signed, Zero};
+use num_traits::{One, Zero};
 
 /// How many bisections [`isolate`] will spend separating the real roots of one
 /// polynomial before declining. Each step halves an interval, so this is a
@@ -108,11 +108,11 @@ pub(crate) fn sign_at(p: &[BigRational], x: &BigRational) -> i8 {
     axeyum_arith::sign_at_slice(p, x)
 }
 
-/// `p′`.
-#[must_use]
-pub(crate) fn derivative(p: &[BigRational]) -> Vec<BigRational> {
-    UnivariatePoly::derivative(&QPoly::from_slice(p)).into_coefficients()
-}
+// `derivative` and `div_exact` are gone: after the migration nothing in this
+// module called them, because the two routines that did — `SturmChain::new` and
+// `squarefree_part` — now delegate whole. That is a measured consequence of
+// ADR-1710 slice 4, not an unrelated tidy-up, and the differential test still
+// compares the shared implementations of both against the bodies deleted here.
 
 /// `a · b`.
 #[must_use]
@@ -144,15 +144,6 @@ pub(crate) fn gcd(a: &[BigRational], b: &[BigRational]) -> Vec<BigRational> {
     QPoly::from_slice(a)
         .gcd(&QPoly::from_slice(b))
         .into_coefficients()
-}
-
-/// The exact quotient `a / b`. `None` if `b` is the zero polynomial. The
-/// remainder is discarded; every caller here divides by a known divisor.
-#[must_use]
-fn div_exact(a: &[BigRational], b: &[BigRational]) -> Option<Vec<BigRational>> {
-    QPoly::from_slice(a)
-        .div_exact(&QPoly::from_slice(b))
-        .map(QPoly::into_coefficients)
 }
 
 /// The square-free part `p / gcd(p, p′)`, monic — the polynomial with the same
@@ -204,19 +195,6 @@ impl SturmChain {
     #[must_use]
     pub(crate) fn count_in(&self, lo: &BigRational, hi: &BigRational) -> usize {
         self.inner.count_in(lo, hi)
-    }
-
-    /// The count on `(lo, hi]` packaged as a certificate a caller can
-    /// re-derive: the chain is rebuilt from its own first member and the sign
-    /// variations are recounted, neither step reusing anything this module
-    /// computed.
-    #[must_use]
-    pub(crate) fn certificate(
-        &self,
-        lo: &BigRational,
-        hi: &BigRational,
-    ) -> axeyum_arith::SturmCertificate {
-        self.inner.certificate(lo, hi)
     }
 }
 
@@ -494,6 +472,8 @@ pub(crate) fn compare_algebraic_to_rational(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use axeyum_arith::UnivariatePoly;
+    use num_traits::Signed;
 
     // -----------------------------------------------------------------------
     // The pre-migration bodies, kept verbatim as the differential oracle for
@@ -501,6 +481,20 @@ mod tests {
     // shipped module calls them, and they exist only so the assertions below
     // compare two independent implementations rather than one against itself.
     // -----------------------------------------------------------------------
+
+    /// `derivative` and `div_exact` no longer exist in this module — the
+    /// migration removed their last internal caller — so the differential test
+    /// compares the SHARED implementations, which is what actually replaced
+    /// the deleted bodies.
+    fn shared_derivative(p: &[BigRational]) -> Vec<BigRational> {
+        UnivariatePoly::derivative(&QPoly::from_slice(p)).into_coefficients()
+    }
+
+    fn shared_div_exact(a: &[BigRational], b: &[BigRational]) -> Option<Vec<BigRational>> {
+        QPoly::from_slice(a)
+            .div_exact(&QPoly::from_slice(b))
+            .map(QPoly::into_coefficients)
+    }
 
     fn legacy_trim(mut p: Vec<BigRational>) -> Vec<BigRational> {
         while p.last().is_some_and(Zero::is_zero) {
@@ -685,11 +679,7 @@ mod tests {
         variations
     }
 
-    fn legacy_count_in(
-        members: &[Vec<BigRational>],
-        lo: &BigRational,
-        hi: &BigRational,
-    ) -> usize {
+    fn legacy_count_in(members: &[Vec<BigRational>], lo: &BigRational, hi: &BigRational) -> usize {
         legacy_variations(members, lo).saturating_sub(legacy_variations(members, hi))
     }
 
@@ -700,23 +690,23 @@ mod tests {
     fn differential_corpus() -> Vec<Vec<BigRational>> {
         let huge = BigRational::from_integer(BigInt::from(10u8).pow(30));
         vec![
-            vec![],                                  // zero
-            ip(&[7]),                                // nonzero constant
-            ip(&[0, 1]),                             // x
-            ip(&[-2, 1]),                            // x - 2
-            ip(&[-2, 0, 1]),                         // x^2 - 2, irrational roots
-            ip(&[1, 0, 1]),                          // x^2 + 1, no real roots
-            ip(&[1, -2, 1]),                         // (x-1)^2, repeated
-            ip(&[-6, 11, -6, 1]),                    // (x-1)(x-2)(x-3)
-            ip(&[-30, 31, -10, 1]),                  // (x-2)(x-3)(x-5)
-            ip(&[0, -1, 0, 1]),                      // x^3 - x
-            ip(&[-1, 0, 0, 0, 1]),                   // x^4 - 1
-            ip(&[6, -5, 1]),                         // x^2 - 5x + 6
-            ip(&[2, -5, 4, -1]),                     // -(x-1)^2(x-2)
+            vec![],                 // zero
+            ip(&[7]),               // nonzero constant
+            ip(&[0, 1]),            // x
+            ip(&[-2, 1]),           // x - 2
+            ip(&[-2, 0, 1]),        // x^2 - 2, irrational roots
+            ip(&[1, 0, 1]),         // x^2 + 1, no real roots
+            ip(&[1, -2, 1]),        // (x-1)^2, repeated
+            ip(&[-6, 11, -6, 1]),   // (x-1)(x-2)(x-3)
+            ip(&[-30, 31, -10, 1]), // (x-2)(x-3)(x-5)
+            ip(&[0, -1, 0, 1]),     // x^3 - x
+            ip(&[-1, 0, 0, 0, 1]),  // x^4 - 1
+            ip(&[6, -5, 1]),        // x^2 - 5x + 6
+            ip(&[2, -5, 4, -1]),    // -(x-1)^2(x-2)
             vec![frac(1, 2), frac(-3, 4), frac(5, 6)],
             vec![frac(-7, 3), q(0), frac(2, 9), q(1)],
-            vec![-huge.clone(), q(0), q(1)],         // x^2 - 10^30
-            vec![q(1), huge, q(1)],                  // 10^30 x, no real roots
+            vec![-huge.clone(), q(0), q(1)], // x^2 - 10^30
+            vec![q(1), huge, q(1)],          // 10^30 x, no real roots
         ]
     }
 
@@ -735,7 +725,7 @@ mod tests {
         for a in &corpus {
             assert_eq!(trim(a.clone()), legacy_trim(a.clone()), "trim");
             assert_eq!(degree(a), legacy_degree(a), "degree");
-            assert_eq!(derivative(a), legacy_derivative(a), "derivative");
+            assert_eq!(shared_derivative(a), legacy_derivative(a), "derivative");
             assert_eq!(monic(a), legacy_monic(a), "monic");
             assert_eq!(squarefree_part(a), legacy_squarefree_part(a), "squarefree");
             assert_eq!(cauchy_bound(a), legacy_cauchy_bound(a), "cauchy");
@@ -748,7 +738,7 @@ mod tests {
                 assert_eq!(mul(a, b), legacy_mul(a, b), "mul");
                 assert_eq!(rem(a, b), legacy_rem(a, b), "rem");
                 assert_eq!(gcd(a, b), legacy_gcd(a, b), "gcd");
-                assert_eq!(div_exact(a, b), legacy_div_exact(a, b), "div_exact");
+                assert_eq!(shared_div_exact(a, b), legacy_div_exact(a, b), "div_exact");
             }
         }
         assert_eq!(pairs, 289, "every ordered pair was compared");
@@ -821,10 +811,14 @@ mod tests {
             let Some(chain) = SturmChain::new(&p) else {
                 continue;
             };
+            let shared = axeyum_arith::SturmChain::new(&QPoly::from_slice(&p)).unwrap();
             for (lo, hi) in [(q(-10), q(10)), (q(0), q(3)), (frac(-1, 2), frac(5, 2))] {
-                let certificate = chain.certificate(&lo, &hi);
+                let certificate = shared.certificate(&lo, &hi);
                 assert_eq!(certificate.root_count, chain.count_in(&lo, &hi));
-                assert!(certificate.verify(), "certificate for {p:?} on ({lo}, {hi}]");
+                assert!(
+                    certificate.verify(),
+                    "certificate for {p:?} on ({lo}, {hi}]"
+                );
                 verified += 1;
             }
         }
