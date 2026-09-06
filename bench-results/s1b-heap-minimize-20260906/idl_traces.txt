@@ -1,0 +1,90 @@
+### jobshop20-2-10-10-4-4-16.smt2 [before rep=1] wall_ms=21132
+; theory-layer boolean_propagate_ms=29 theory_assert_ms=17 theory_propagate_ms=20429 theory_push_pop_ms=11 conflict_analysis_ms=1 theory_final_check_ms=0 theory_explain_ms=0 theory_conflicts=850 theory_propagations=217126 final_checks=0 decisions=78270 restarts=6 simplex_pivots=n/a simplex_checks=n/a simplex_cold_restarts=n/a bound_retractions=n/a bound_assertions=n/a propagations_offered=n/a simplex_rows=n/a simplex_columns=n/a
+unknown
+### jobshop20-2-10-10-4-4-16.smt2 [after rep=1] wall_ms=21131
+; theory-layer boolean_propagate_ms=30 theory_assert_ms=17 theory_propagate_ms=20860 theory_push_pop_ms=12 conflict_analysis_ms=1 theory_final_check_ms=0 theory_explain_ms=0 theory_conflicts=859 theory_propagations=219666 final_checks=0 decisions=80052 restarts=6 learned_clauses=1040 learned_literals=7158 learned_literals_premin=7163 simplex_pivots=n/a simplex_checks=n/a simplex_cold_restarts=n/a bound_retractions=n/a bound_assertions=n/a propagations_offered=n/a simplex_rows=n/a simplex_columns=n/a
+unknown
+### jobshop26-2-13-13-4-4-16.smt2 [before rep=1] wall_ms=21130
+; theory-layer boolean_propagate_ms=22 theory_assert_ms=15 theory_propagate_ms=20581 theory_push_pop_ms=11 conflict_analysis_ms=1 theory_final_check_ms=0 theory_explain_ms=0 theory_conflicts=471 theory_propagations=289589 final_checks=0 decisions=30439 restarts=5 simplex_pivots=n/a simplex_checks=n/a simplex_cold_restarts=n/a bound_retractions=n/a bound_assertions=n/a propagations_offered=n/a simplex_rows=n/a simplex_columns=n/a
+unknown
+### jobshop26-2-13-13-4-4-16.smt2 [after rep=1] wall_ms=21131
+; theory-layer boolean_propagate_ms=23 theory_assert_ms=15 theory_propagate_ms=20855 theory_push_pop_ms=12 conflict_analysis_ms=1 theory_final_check_ms=0 theory_explain_ms=0 theory_conflicts=475 theory_propagations=292805 final_checks=0 decisions=31195 restarts=5 learned_clauses=633 learned_literals=4734 learned_literals_premin=4735 simplex_pivots=n/a simplex_checks=n/a simplex_cold_restarts=n/a bound_retractions=n/a bound_assertions=n/a propagations_offered=n/a simplex_rows=n/a simplex_columns=n/a
+unknown
+### RVpredict_13.smt2 [before rep=1] wall_ms=15526
+; theory-layer boolean_propagate_ms=492 theory_assert_ms=363 theory_propagate_ms=42 theory_push_pop_ms=96 conflict_analysis_ms=1 theory_final_check_ms=0 theory_explain_ms=0 theory_conflicts=3415 theory_propagations=0 final_checks=1 decisions=2364618 restarts=17 simplex_pivots=n/a simplex_checks=n/a simplex_cold_restarts=n/a bound_retractions=n/a bound_assertions=n/a propagations_offered=n/a simplex_rows=n/a simplex_columns=n/a
+sat
+### RVpredict_13.smt2 [after rep=1] wall_ms=1813
+; theory-layer boolean_propagate_ms=469 theory_assert_ms=355 theory_propagate_ms=42 theory_push_pop_ms=92 conflict_analysis_ms=1 theory_final_check_ms=0 theory_explain_ms=0 theory_conflicts=3415 theory_propagations=0 final_checks=1 decisions=2364618 restarts=17 learned_clauses=3415 learned_literals=21485 learned_literals_premin=21486 simplex_pivots=n/a simplex_checks=n/a simplex_cold_restarts=n/a bound_retractions=n/a bound_assertions=n/a propagations_offered=n/a simplex_rows=n/a simplex_columns=n/a
+sat
+### edge-matching-width=7-height=7-colours=11.smt2 [before rep=1] wall_ms=22631
+; theory-layer boolean_propagate_ms=1046 theory_assert_ms=227 theory_propagate_ms=1 theory_push_pop_ms=5 conflict_analysis_ms=21 theory_final_check_ms=0 theory_explain_ms=0 theory_conflicts=5667 theory_propagations=0 final_checks=0 decisions=90628 restarts=30 simplex_pivots=n/a simplex_checks=n/a simplex_cold_restarts=n/a bound_retractions=n/a bound_assertions=n/a propagations_offered=n/a simplex_rows=n/a simplex_columns=n/a
+unknown
+### edge-matching-width=7-height=7-colours=11.smt2 [after rep=1] wall_ms=22532
+; theory-layer boolean_propagate_ms=15529 theory_assert_ms=3817 theory_propagate_ms=48 theory_push_pop_ms=175 conflict_analysis_ms=70 theory_final_check_ms=0 theory_explain_ms=0 theory_conflicts=18060 theory_propagations=0 final_checks=0 decisions=2613875 restarts=62 learned_clauses=18192 learned_literals=224294 learned_literals_premin=227349 simplex_pivots=n/a simplex_checks=n/a simplex_cold_restarts=n/a bound_retractions=n/a bound_assertions=n/a propagations_offered=n/a simplex_rows=n/a simplex_columns=n/a
+unknown
+### a7.3.0.tweaked.3.asp.smt2 [before rep=1] wall_ms=22231
+; theory-layer boolean_propagate_ms=693 theory_assert_ms=34 theory_propagate_ms=1 theory_push_pop_ms=4 conflict_analysis_ms=3 theory_final_check_ms=0 theory_explain_ms=0 theory_conflicts=383 theory_propagations=0 final_checks=0 decisions=79845 restarts=3 simplex_pivots=n/a simplex_checks=n/a simplex_cold_restarts=n/a bound_retractions=n/a bound_assertions=n/a propagations_offered=n/a simplex_rows=n/a simplex_columns=n/a
+unknown
+### a7.3.0.tweaked.3.asp.smt2 [after rep=1] wall_ms=22232
+; theory-layer boolean_propagate_ms=16629 theory_assert_ms=372 theory_propagate_ms=4 theory_push_pop_ms=17 conflict_analysis_ms=138 theory_final_check_ms=0 theory_explain_ms=0 theory_conflicts=1484 theory_propagations=0 final_checks=0 decisions=230993 restarts=9 learned_clauses=1537 learned_literals=193122 learned_literals_premin=250486 simplex_pivots=n/a simplex_checks=n/a simplex_cold_restarts=n/a bound_retractions=n/a bound_assertions=n/a propagations_offered=n/a simplex_rows=n/a simplex_columns=n/a
+unknown
+### jobshop20-2-10-10-4-4-16.smt2 [before rep=2] wall_ms=21130
+; theory-layer boolean_propagate_ms=31 theory_assert_ms=18 theory_propagate_ms=20431 theory_push_pop_ms=12 conflict_analysis_ms=1 theory_final_check_ms=0 theory_explain_ms=0 theory_conflicts=854 theory_propagations=217672 final_checks=0 decisions=79247 restarts=6 simplex_pivots=n/a simplex_checks=n/a simplex_cold_restarts=n/a bound_retractions=n/a bound_assertions=n/a propagations_offered=n/a simplex_rows=n/a simplex_columns=n/a
+unknown
+### jobshop20-2-10-10-4-4-16.smt2 [after rep=2] wall_ms=21132
+; theory-layer boolean_propagate_ms=30 theory_assert_ms=17 theory_propagate_ms=20860 theory_push_pop_ms=12 conflict_analysis_ms=1 theory_final_check_ms=0 theory_explain_ms=0 theory_conflicts=861 theory_propagations=219853 final_checks=0 decisions=80271 restarts=6 learned_clauses=1042 learned_literals=7164 learned_literals_premin=7169 simplex_pivots=n/a simplex_checks=n/a simplex_cold_restarts=n/a bound_retractions=n/a bound_assertions=n/a propagations_offered=n/a simplex_rows=n/a simplex_columns=n/a
+unknown
+### jobshop26-2-13-13-4-4-16.smt2 [before rep=2] wall_ms=21131
+; theory-layer boolean_propagate_ms=22 theory_assert_ms=15 theory_propagate_ms=20579 theory_push_pop_ms=11 conflict_analysis_ms=1 theory_final_check_ms=0 theory_explain_ms=0 theory_conflicts=472 theory_propagations=290916 final_checks=0 decisions=30681 restarts=5 simplex_pivots=n/a simplex_checks=n/a simplex_cold_restarts=n/a bound_retractions=n/a bound_assertions=n/a propagations_offered=n/a simplex_rows=n/a simplex_columns=n/a
+unknown
+### jobshop26-2-13-13-4-4-16.smt2 [after rep=2] wall_ms=21132
+; theory-layer boolean_propagate_ms=23 theory_assert_ms=15 theory_propagate_ms=20855 theory_push_pop_ms=12 conflict_analysis_ms=1 theory_final_check_ms=0 theory_explain_ms=0 theory_conflicts=475 theory_propagations=292988 final_checks=0 decisions=31250 restarts=5 learned_clauses=634 learned_literals=4739 learned_literals_premin=4740 simplex_pivots=n/a simplex_checks=n/a simplex_cold_restarts=n/a bound_retractions=n/a bound_assertions=n/a propagations_offered=n/a simplex_rows=n/a simplex_columns=n/a
+unknown
+### RVpredict_13.smt2 [before rep=2] wall_ms=15526
+; theory-layer boolean_propagate_ms=492 theory_assert_ms=364 theory_propagate_ms=43 theory_push_pop_ms=96 conflict_analysis_ms=1 theory_final_check_ms=0 theory_explain_ms=0 theory_conflicts=3415 theory_propagations=0 final_checks=1 decisions=2364618 restarts=17 simplex_pivots=n/a simplex_checks=n/a simplex_cold_restarts=n/a bound_retractions=n/a bound_assertions=n/a propagations_offered=n/a simplex_rows=n/a simplex_columns=n/a
+sat
+### RVpredict_13.smt2 [after rep=2] wall_ms=1813
+; theory-layer boolean_propagate_ms=469 theory_assert_ms=347 theory_propagate_ms=42 theory_push_pop_ms=92 conflict_analysis_ms=1 theory_final_check_ms=0 theory_explain_ms=0 theory_conflicts=3415 theory_propagations=0 final_checks=1 decisions=2364618 restarts=17 learned_clauses=3415 learned_literals=21485 learned_literals_premin=21486 simplex_pivots=n/a simplex_checks=n/a simplex_cold_restarts=n/a bound_retractions=n/a bound_assertions=n/a propagations_offered=n/a simplex_rows=n/a simplex_columns=n/a
+sat
+### edge-matching-width=7-height=7-colours=11.smt2 [before rep=2] wall_ms=22532
+; theory-layer boolean_propagate_ms=1100 theory_assert_ms=246 theory_propagate_ms=1 theory_push_pop_ms=4 conflict_analysis_ms=21 theory_final_check_ms=0 theory_explain_ms=0 theory_conflicts=5588 theory_propagations=0 final_checks=0 decisions=90050 restarts=30 simplex_pivots=n/a simplex_checks=n/a simplex_cold_restarts=n/a bound_retractions=n/a bound_assertions=n/a propagations_offered=n/a simplex_rows=n/a simplex_columns=n/a
+unknown
+### edge-matching-width=7-height=7-colours=11.smt2 [after rep=2] wall_ms=22533
+; theory-layer boolean_propagate_ms=15510 theory_assert_ms=3878 theory_propagate_ms=48 theory_push_pop_ms=174 conflict_analysis_ms=71 theory_final_check_ms=0 theory_explain_ms=0 theory_conflicts=18054 theory_propagations=0 final_checks=0 decisions=2594380 restarts=62 learned_clauses=18186 learned_literals=224282 learned_literals_premin=227337 simplex_pivots=n/a simplex_checks=n/a simplex_cold_restarts=n/a bound_retractions=n/a bound_assertions=n/a propagations_offered=n/a simplex_rows=n/a simplex_columns=n/a
+unknown
+### a7.3.0.tweaked.3.asp.smt2 [before rep=2] wall_ms=22230
+; theory-layer boolean_propagate_ms=697 theory_assert_ms=35 theory_propagate_ms=1 theory_push_pop_ms=4 conflict_analysis_ms=4 theory_final_check_ms=0 theory_explain_ms=0 theory_conflicts=383 theory_propagations=0 final_checks=0 decisions=79853 restarts=3 simplex_pivots=n/a simplex_checks=n/a simplex_cold_restarts=n/a bound_retractions=n/a bound_assertions=n/a propagations_offered=n/a simplex_rows=n/a simplex_columns=n/a
+unknown
+### a7.3.0.tweaked.3.asp.smt2 [after rep=2] wall_ms=22231
+; theory-layer boolean_propagate_ms=16648 theory_assert_ms=374 theory_propagate_ms=4 theory_push_pop_ms=17 conflict_analysis_ms=133 theory_final_check_ms=0 theory_explain_ms=0 theory_conflicts=1477 theory_propagations=0 final_checks=0 decisions=230162 restarts=9 learned_clauses=1530 learned_literals=193108 learned_literals_premin=250472 simplex_pivots=n/a simplex_checks=n/a simplex_cold_restarts=n/a bound_retractions=n/a bound_assertions=n/a propagations_offered=n/a simplex_rows=n/a simplex_columns=n/a
+unknown
+### jobshop20-2-10-10-4-4-16.smt2 [before rep=3] wall_ms=21132
+; theory-layer boolean_propagate_ms=30 theory_assert_ms=17 theory_propagate_ms=20422 theory_push_pop_ms=11 conflict_analysis_ms=1 theory_final_check_ms=0 theory_explain_ms=0 theory_conflicts=853 theory_propagations=217342 final_checks=0 decisions=78962 restarts=6 simplex_pivots=n/a simplex_checks=n/a simplex_cold_restarts=n/a bound_retractions=n/a bound_assertions=n/a propagations_offered=n/a simplex_rows=n/a simplex_columns=n/a
+unknown
+### jobshop20-2-10-10-4-4-16.smt2 [after rep=3] wall_ms=21133
+; theory-layer boolean_propagate_ms=30 theory_assert_ms=17 theory_propagate_ms=20859 theory_push_pop_ms=12 conflict_analysis_ms=1 theory_final_check_ms=0 theory_explain_ms=0 theory_conflicts=861 theory_propagations=219702 final_checks=0 decisions=80113 restarts=6 learned_clauses=1042 learned_literals=7164 learned_literals_premin=7169 simplex_pivots=n/a simplex_checks=n/a simplex_cold_restarts=n/a bound_retractions=n/a bound_assertions=n/a propagations_offered=n/a simplex_rows=n/a simplex_columns=n/a
+unknown
+### jobshop26-2-13-13-4-4-16.smt2 [before rep=3] wall_ms=21129
+; theory-layer boolean_propagate_ms=23 theory_assert_ms=15 theory_propagate_ms=20578 theory_push_pop_ms=11 conflict_analysis_ms=1 theory_final_check_ms=0 theory_explain_ms=0 theory_conflicts=472 theory_propagations=290851 final_checks=0 decisions=30656 restarts=5 simplex_pivots=n/a simplex_checks=n/a simplex_cold_restarts=n/a bound_retractions=n/a bound_assertions=n/a propagations_offered=n/a simplex_rows=n/a simplex_columns=n/a
+unknown
+### jobshop26-2-13-13-4-4-16.smt2 [after rep=3] wall_ms=21132
+; theory-layer boolean_propagate_ms=22 theory_assert_ms=15 theory_propagate_ms=20858 theory_push_pop_ms=11 conflict_analysis_ms=1 theory_final_check_ms=0 theory_explain_ms=0 theory_conflicts=469 theory_propagations=288403 final_checks=0 decisions=30074 restarts=5 learned_clauses=626 learned_literals=4685 learned_literals_premin=4686 simplex_pivots=n/a simplex_checks=n/a simplex_cold_restarts=n/a bound_retractions=n/a bound_assertions=n/a propagations_offered=n/a simplex_rows=n/a simplex_columns=n/a
+unknown
+### RVpredict_13.smt2 [before rep=3] wall_ms=15526
+; theory-layer boolean_propagate_ms=492 theory_assert_ms=365 theory_propagate_ms=43 theory_push_pop_ms=97 conflict_analysis_ms=1 theory_final_check_ms=0 theory_explain_ms=0 theory_conflicts=3415 theory_propagations=0 final_checks=1 decisions=2364618 restarts=17 simplex_pivots=n/a simplex_checks=n/a simplex_cold_restarts=n/a bound_retractions=n/a bound_assertions=n/a propagations_offered=n/a simplex_rows=n/a simplex_columns=n/a
+sat
+### RVpredict_13.smt2 [after rep=3] wall_ms=1814
+; theory-layer boolean_propagate_ms=470 theory_assert_ms=350 theory_propagate_ms=42 theory_push_pop_ms=93 conflict_analysis_ms=1 theory_final_check_ms=0 theory_explain_ms=0 theory_conflicts=3415 theory_propagations=0 final_checks=1 decisions=2364618 restarts=17 learned_clauses=3415 learned_literals=21485 learned_literals_premin=21486 simplex_pivots=n/a simplex_checks=n/a simplex_cold_restarts=n/a bound_retractions=n/a bound_assertions=n/a propagations_offered=n/a simplex_rows=n/a simplex_columns=n/a
+sat
+### edge-matching-width=7-height=7-colours=11.smt2 [before rep=3] wall_ms=22531
+; theory-layer boolean_propagate_ms=1095 theory_assert_ms=244 theory_propagate_ms=2 theory_push_pop_ms=4 conflict_analysis_ms=21 theory_final_check_ms=0 theory_explain_ms=0 theory_conflicts=5642 theory_propagations=0 final_checks=0 decisions=90378 restarts=30 simplex_pivots=n/a simplex_checks=n/a simplex_cold_restarts=n/a bound_retractions=n/a bound_assertions=n/a propagations_offered=n/a simplex_rows=n/a simplex_columns=n/a
+unknown
+### edge-matching-width=7-height=7-colours=11.smt2 [after rep=3] wall_ms=22533
+; theory-layer boolean_propagate_ms=15519 theory_assert_ms=3834 theory_propagate_ms=48 theory_push_pop_ms=177 conflict_analysis_ms=69 theory_final_check_ms=0 theory_explain_ms=0 theory_conflicts=18057 theory_propagations=0 final_checks=0 decisions=2603240 restarts=62 learned_clauses=18189 learned_literals=224288 learned_literals_premin=227343 simplex_pivots=n/a simplex_checks=n/a simplex_cold_restarts=n/a bound_retractions=n/a bound_assertions=n/a propagations_offered=n/a simplex_rows=n/a simplex_columns=n/a
+unknown
+### a7.3.0.tweaked.3.asp.smt2 [before rep=3] wall_ms=22231
+; theory-layer boolean_propagate_ms=701 theory_assert_ms=34 theory_propagate_ms=1 theory_push_pop_ms=4 conflict_analysis_ms=3 theory_final_check_ms=0 theory_explain_ms=0 theory_conflicts=382 theory_propagations=0 final_checks=0 decisions=79637 restarts=3 simplex_pivots=n/a simplex_checks=n/a simplex_cold_restarts=n/a bound_retractions=n/a bound_assertions=n/a propagations_offered=n/a simplex_rows=n/a simplex_columns=n/a
+unknown
+### a7.3.0.tweaked.3.asp.smt2 [after rep=3] wall_ms=22232
+; theory-layer boolean_propagate_ms=16572 theory_assert_ms=376 theory_propagate_ms=4 theory_push_pop_ms=17 conflict_analysis_ms=139 theory_final_check_ms=0 theory_explain_ms=0 theory_conflicts=1481 theory_propagations=0 final_checks=0 decisions=230766 restarts=9 learned_clauses=1534 learned_literals=193116 learned_literals_premin=250480 simplex_pivots=n/a simplex_checks=n/a simplex_cold_restarts=n/a bound_retractions=n/a bound_assertions=n/a propagations_offered=n/a simplex_rows=n/a simplex_columns=n/a
+unknown
