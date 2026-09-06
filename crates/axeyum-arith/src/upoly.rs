@@ -1758,16 +1758,16 @@ mod tests {
         not_monic.cofactor_b = not_monic.cofactor_b.scale(&r(2, 1));
         assert!(!not_monic.verify(), "monic guard");
 
-        // `1 = u·a + v·b` for the *coprime* pair (x-1, x-2), rescaled so the
-        // identity holds but the claimed gcd divides neither input.
-        let coprime_a = qi(&[-1, 1]);
-        let coprime_b = qi(&[-2, 1]);
+        // `x·(x−1) − x·(x−2) = x`, so the identity holds exactly — and `x`
+        // divides neither `x−1` nor `x−2`. This is the forgery the identity
+        // guard alone cannot catch: `u·a + v·b` is a multiple of the true gcd
+        // for ANY cofactors, so hitting the identity proves nothing on its own.
         let forged = PolyBezoutCertificate {
-            gcd: qi(&[-3, 1]),
-            cofactor_a: qi(&[3]),
-            cofactor_b: qi(&[-3]),
-            input_a: coprime_a,
-            input_b: coprime_b,
+            gcd: qi(&[0, 1]),
+            cofactor_a: qi(&[0, 1]),
+            cofactor_b: qi(&[0, -1]),
+            input_a: qi(&[-1, 1]),
+            input_b: qi(&[-2, 1]),
         };
         let combination = forged
             .cofactor_a

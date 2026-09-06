@@ -38,6 +38,7 @@
 
 use core::cmp::Ordering;
 
+use axeyum_arith::{QPoly, UnivariatePoly};
 use num_bigint::{BigInt, BigUint};
 use num_rational::BigRational;
 use num_traits::{One, Signed, Zero};
@@ -70,187 +71,104 @@ const MAX_REFINE_STEPS: usize = 4096;
 
 /// Drop trailing zero coefficients, so a polynomial has a unique representation
 /// and [`degree`] is well defined.
+///
+/// **Migrated onto `axeyum_arith::QPoly` (ADR-1710 migration slice 4)**, as is
+/// every function in this section and [`SturmChain`] below. The
+/// `Vec<BigRational>` shape survives at the boundary because `crate::qe`,
+/// `crate::qe_fibre` and `crate::qe_bivariate` spell it at some forty call
+/// sites; what moved is the arithmetic underneath. The pre-migration bodies are
+/// kept in this module's test block as `legacy_*` and are asserted to agree
+/// with the shared layer on this module's own corpus.
 #[must_use]
-pub(crate) fn trim(mut p: Vec<BigRational>) -> Vec<BigRational> {
-    while p.last().is_some_and(Zero::is_zero) {
-        p.pop();
-    }
-    p
+pub(crate) fn trim(p: Vec<BigRational>) -> Vec<BigRational> {
+    axeyum_arith::trim_coefficients(p)
 }
 
 /// The degree, or `None` for the zero polynomial.
 #[must_use]
 pub(crate) fn degree(p: &[BigRational]) -> Option<usize> {
-    p.iter().rposition(|c| !c.is_zero())
+    axeyum_arith::slice_degree(p)
 }
 
 /// `p(x)` by Horner. Exact; cannot overflow.
 #[must_use]
 pub(crate) fn eval(p: &[BigRational], x: &BigRational) -> BigRational {
-    let mut acc = BigRational::zero();
-    for coeff in p.iter().rev() {
-        acc = acc * x + coeff;
-    }
-    acc
+    axeyum_arith::evaluate_slice(p, x)
 }
 
 /// `-1`, `0`, `1` — the sign of a rational.
 #[must_use]
 pub(crate) fn sign_of(value: &BigRational) -> i8 {
-    if value.is_zero() {
-        0
-    } else if value.is_negative() {
-        -1
-    } else {
-        1
-    }
+    axeyum_arith::sign_of_rational(value)
 }
 
 /// The sign of `p` at the rational `x`. Total and exact.
 #[must_use]
 pub(crate) fn sign_at(p: &[BigRational], x: &BigRational) -> i8 {
-    sign_of(&eval(p, x))
+    axeyum_arith::sign_at_slice(p, x)
 }
 
 /// `p′`.
 #[must_use]
 pub(crate) fn derivative(p: &[BigRational]) -> Vec<BigRational> {
-    if p.len() <= 1 {
-        return Vec::new();
-    }
-    trim(
-        p.iter()
-            .enumerate()
-            .skip(1)
-            .map(|(k, c)| c * BigRational::from_integer(BigInt::from(k)))
-            .collect(),
-    )
+    UnivariatePoly::derivative(&QPoly::from_slice(p)).into_coefficients()
 }
 
 /// `a · b`.
 #[must_use]
 pub(crate) fn mul(a: &[BigRational], b: &[BigRational]) -> Vec<BigRational> {
-    if a.is_empty() || b.is_empty() {
-        return Vec::new();
-    }
-    let mut out = vec![BigRational::zero(); a.len() + b.len() - 1];
-    for (i, left) in a.iter().enumerate() {
-        if left.is_zero() {
-            continue;
-        }
-        for (j, right) in b.iter().enumerate() {
-            out[i + j] += left * right;
-        }
-    }
-    trim(out)
+    QPoly::from_slice(a)
+        .mul(&QPoly::from_slice(b))
+        .into_coefficients()
 }
 
 /// The remainder of `a` on division by `b`, over ℚ. `None` when `b` is the zero
 /// polynomial.
 #[must_use]
 pub(crate) fn rem(a: &[BigRational], b: &[BigRational]) -> Option<Vec<BigRational>> {
-    let b_degree = degree(b)?;
-    let mut remainder = trim(a.to_vec());
-    let leading = b[b_degree].clone();
-    while let Some(r_degree) = degree(&remainder) {
-        if r_degree < b_degree {
-            break;
-        }
-        let factor = &remainder[r_degree] / &leading;
-        let shift = r_degree - b_degree;
-        for (index, coeff) in b.iter().enumerate().take(b_degree + 1) {
-            remainder[index + shift] -= &factor * coeff;
-        }
-        remainder = trim(remainder);
-        // The leading term cancels exactly, so the degree strictly drops.
-    }
-    Some(remainder)
+    QPoly::from_slice(a)
+        .rem(&QPoly::from_slice(b))
+        .map(QPoly::into_coefficients)
 }
 
 /// The polynomial scaled so its leading coefficient is `1`. The zero polynomial
 /// is returned as the empty vector.
 #[must_use]
 pub(crate) fn monic(p: &[BigRational]) -> Vec<BigRational> {
-    match degree(p) {
-        None => Vec::new(),
-        Some(d) => {
-            let leading = p[d].clone();
-            trim(p.iter().take(d + 1).map(|c| c / &leading).collect())
-        }
-    }
+    QPoly::from_slice(p).monic().into_coefficients()
 }
 
 /// `gcd(a, b)`, monic. `gcd(0, 0)` is the zero polynomial.
 #[must_use]
 pub(crate) fn gcd(a: &[BigRational], b: &[BigRational]) -> Vec<BigRational> {
-    let mut left = trim(a.to_vec());
-    let mut right = trim(b.to_vec());
-    while degree(&right).is_some() {
-        let Some(next) = rem(&left, &right) else {
-            break;
-        };
-        left = right;
-        right = next;
-    }
-    monic(&left)
+    QPoly::from_slice(a)
+        .gcd(&QPoly::from_slice(b))
+        .into_coefficients()
 }
 
 /// The exact quotient `a / b`. `None` if `b` is the zero polynomial. The
 /// remainder is discarded; every caller here divides by a known divisor.
 #[must_use]
 fn div_exact(a: &[BigRational], b: &[BigRational]) -> Option<Vec<BigRational>> {
-    let b_degree = degree(b)?;
-    let mut remainder = trim(a.to_vec());
-    let leading = b[b_degree].clone();
-    let mut quotient: Vec<BigRational> = Vec::new();
-    while let Some(r_degree) = degree(&remainder) {
-        if r_degree < b_degree {
-            break;
-        }
-        let factor = &remainder[r_degree] / &leading;
-        let shift = r_degree - b_degree;
-        if quotient.len() < shift + 1 {
-            quotient.resize(shift + 1, BigRational::zero());
-        }
-        quotient[shift] = factor.clone();
-        for (index, coeff) in b.iter().enumerate().take(b_degree + 1) {
-            remainder[index + shift] -= &factor * coeff;
-        }
-        remainder = trim(remainder);
-    }
-    Some(trim(quotient))
+    QPoly::from_slice(a)
+        .div_exact(&QPoly::from_slice(b))
+        .map(QPoly::into_coefficients)
 }
 
 /// The square-free part `p / gcd(p, p′)`, monic — the polynomial with the same
 /// real roots as `p`, each simple. `None` for the zero polynomial.
 #[must_use]
 pub(crate) fn squarefree_part(p: &[BigRational]) -> Option<Vec<BigRational>> {
-    degree(p)?;
-    let common = gcd(p, &derivative(p));
-    if degree(&common).is_none_or(|d| d == 0) {
-        return Some(monic(p));
-    }
-    let quotient = div_exact(p, &common)?;
-    Some(monic(&quotient))
+    QPoly::from_slice(p)
+        .squarefree_part()
+        .map(QPoly::into_coefficients)
 }
 
 /// A Cauchy bound `B = 1 + maxₖ |aₖ / aₙ|`: every real root of `p` lies in the
 /// **open** interval `(−B, B)`. `None` for the zero polynomial or a constant.
 #[must_use]
 pub(crate) fn cauchy_bound(p: &[BigRational]) -> Option<BigRational> {
-    let d = degree(p)?;
-    if d == 0 {
-        return None;
-    }
-    let leading = p[d].clone();
-    let mut max_ratio = BigRational::zero();
-    for coeff in p.iter().take(d) {
-        let ratio = (coeff / &leading).abs();
-        if ratio > max_ratio {
-            max_ratio = ratio;
-        }
-    }
-    Some(max_ratio + BigRational::one())
+    QPoly::from_slice(p).cauchy_bound()
 }
 
 // ============================================================================
@@ -262,55 +180,43 @@ pub(crate) fn cauchy_bound(p: &[BigRational]) -> Option<BigRational> {
 /// Built from the **square-free part**, so `V(lo) − V(hi)` is exactly the number
 /// of distinct real roots in `(lo, hi]` — the same convention as
 /// [`crate::sturm::count_real_roots_in`], which this replaces.
+///
+/// **Migrated onto `axeyum_arith::SturmChain` (ADR-1710 slice 4).** The shared
+/// chain scales every member to a primitive integer polynomial by a *positive*
+/// rational, which this one did not. A positive scale changes no sign
+/// variation, so the counts are identical on every interval — that equality is
+/// asserted directly against the pre-migration chain in
+/// `legacy_and_shared_chains_agree_on_every_interval`, over this module's own
+/// corpus plus a coefficient far beyond `i128`.
 #[derive(Debug, Clone)]
 pub(crate) struct SturmChain {
-    members: Vec<Vec<BigRational>>,
+    inner: axeyum_arith::SturmChain,
 }
 
 impl SturmChain {
     /// Build the chain for `p`. `None` for the zero polynomial.
     #[must_use]
     pub(crate) fn new(p: &[BigRational]) -> Option<SturmChain> {
-        let squarefree = squarefree_part(p)?;
-        let mut members = vec![squarefree];
-        let first_derivative = derivative(&members[0]);
-        if degree(&first_derivative).is_none() {
-            return Some(SturmChain { members }); // a constant: no roots
-        }
-        members.push(first_derivative);
-        loop {
-            let len = members.len();
-            let remainder = rem(&members[len - 2], &members[len - 1])?;
-            if degree(&remainder).is_none() {
-                break;
-            }
-            members.push(remainder.iter().map(core::ops::Neg::neg).collect());
-        }
-        Some(SturmChain { members })
-    }
-
-    /// The number of sign changes in the chain at `x`, zeros skipped.
-    #[must_use]
-    fn variations(&self, x: &BigRational) -> usize {
-        let mut variations = 0usize;
-        let mut previous: Option<i8> = None;
-        for member in &self.members {
-            let sign = sign_at(member, x);
-            if sign == 0 {
-                continue;
-            }
-            if previous.is_some_and(|prev| prev != sign) {
-                variations += 1;
-            }
-            previous = Some(sign);
-        }
-        variations
+        axeyum_arith::SturmChain::new(&QPoly::from_slice(p)).map(|inner| SturmChain { inner })
     }
 
     /// The number of **distinct** real roots in the half-open `(lo, hi]`.
     #[must_use]
     pub(crate) fn count_in(&self, lo: &BigRational, hi: &BigRational) -> usize {
-        self.variations(lo).saturating_sub(self.variations(hi))
+        self.inner.count_in(lo, hi)
+    }
+
+    /// The count on `(lo, hi]` packaged as a certificate a caller can
+    /// re-derive: the chain is rebuilt from its own first member and the sign
+    /// variations are recounted, neither step reusing anything this module
+    /// computed.
+    #[must_use]
+    pub(crate) fn certificate(
+        &self,
+        lo: &BigRational,
+        hi: &BigRational,
+    ) -> axeyum_arith::SturmCertificate {
+        self.inner.certificate(lo, hi)
     }
 }
 
@@ -588,6 +494,342 @@ pub(crate) fn compare_algebraic_to_rational(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // -----------------------------------------------------------------------
+    // The pre-migration bodies, kept verbatim as the differential oracle for
+    // ADR-1710 slice 4. They are `legacy_*` and `#[cfg(test)]`: nothing in the
+    // shipped module calls them, and they exist only so the assertions below
+    // compare two independent implementations rather than one against itself.
+    // -----------------------------------------------------------------------
+
+    fn legacy_trim(mut p: Vec<BigRational>) -> Vec<BigRational> {
+        while p.last().is_some_and(Zero::is_zero) {
+            p.pop();
+        }
+        p
+    }
+
+    fn legacy_degree(p: &[BigRational]) -> Option<usize> {
+        p.iter().rposition(|c| !c.is_zero())
+    }
+
+    fn legacy_eval(p: &[BigRational], x: &BigRational) -> BigRational {
+        let mut acc = BigRational::zero();
+        for coeff in p.iter().rev() {
+            acc = acc * x + coeff;
+        }
+        acc
+    }
+
+    fn legacy_derivative(p: &[BigRational]) -> Vec<BigRational> {
+        if p.len() <= 1 {
+            return Vec::new();
+        }
+        legacy_trim(
+            p.iter()
+                .enumerate()
+                .skip(1)
+                .map(|(k, c)| c * BigRational::from_integer(BigInt::from(k)))
+                .collect(),
+        )
+    }
+
+    fn legacy_mul(a: &[BigRational], b: &[BigRational]) -> Vec<BigRational> {
+        if a.is_empty() || b.is_empty() {
+            return Vec::new();
+        }
+        let mut out = vec![BigRational::zero(); a.len() + b.len() - 1];
+        for (i, left) in a.iter().enumerate() {
+            if left.is_zero() {
+                continue;
+            }
+            for (j, right) in b.iter().enumerate() {
+                out[i + j] += left * right;
+            }
+        }
+        legacy_trim(out)
+    }
+
+    fn legacy_rem(a: &[BigRational], b: &[BigRational]) -> Option<Vec<BigRational>> {
+        let b_degree = legacy_degree(b)?;
+        let mut remainder = legacy_trim(a.to_vec());
+        let leading = b[b_degree].clone();
+        while let Some(r_degree) = legacy_degree(&remainder) {
+            if r_degree < b_degree {
+                break;
+            }
+            let factor = &remainder[r_degree] / &leading;
+            let shift = r_degree - b_degree;
+            for (index, coeff) in b.iter().enumerate().take(b_degree + 1) {
+                remainder[index + shift] -= &factor * coeff;
+            }
+            remainder = legacy_trim(remainder);
+        }
+        Some(remainder)
+    }
+
+    fn legacy_monic(p: &[BigRational]) -> Vec<BigRational> {
+        match legacy_degree(p) {
+            None => Vec::new(),
+            Some(d) => {
+                let leading = p[d].clone();
+                legacy_trim(p.iter().take(d + 1).map(|c| c / &leading).collect())
+            }
+        }
+    }
+
+    fn legacy_gcd(a: &[BigRational], b: &[BigRational]) -> Vec<BigRational> {
+        let mut left = legacy_trim(a.to_vec());
+        let mut right = legacy_trim(b.to_vec());
+        while legacy_degree(&right).is_some() {
+            let Some(next) = legacy_rem(&left, &right) else {
+                break;
+            };
+            left = right;
+            right = next;
+        }
+        legacy_monic(&left)
+    }
+
+    fn legacy_div_exact(a: &[BigRational], b: &[BigRational]) -> Option<Vec<BigRational>> {
+        let b_degree = legacy_degree(b)?;
+        let mut remainder = legacy_trim(a.to_vec());
+        let leading = b[b_degree].clone();
+        let mut quotient: Vec<BigRational> = Vec::new();
+        while let Some(r_degree) = legacy_degree(&remainder) {
+            if r_degree < b_degree {
+                break;
+            }
+            let factor = &remainder[r_degree] / &leading;
+            let shift = r_degree - b_degree;
+            if quotient.len() < shift + 1 {
+                quotient.resize(shift + 1, BigRational::zero());
+            }
+            quotient[shift] = factor.clone();
+            for (index, coeff) in b.iter().enumerate().take(b_degree + 1) {
+                remainder[index + shift] -= &factor * coeff;
+            }
+            remainder = legacy_trim(remainder);
+        }
+        Some(legacy_trim(quotient))
+    }
+
+    fn legacy_squarefree_part(p: &[BigRational]) -> Option<Vec<BigRational>> {
+        legacy_degree(p)?;
+        let common = legacy_gcd(p, &legacy_derivative(p));
+        if legacy_degree(&common).is_none_or(|d| d == 0) {
+            return Some(legacy_monic(p));
+        }
+        let quotient = legacy_div_exact(p, &common)?;
+        Some(legacy_monic(&quotient))
+    }
+
+    fn legacy_cauchy_bound(p: &[BigRational]) -> Option<BigRational> {
+        let d = legacy_degree(p)?;
+        if d == 0 {
+            return None;
+        }
+        let leading = p[d].clone();
+        let mut max_ratio = BigRational::zero();
+        for coeff in p.iter().take(d) {
+            let ratio = (coeff / &leading).abs();
+            if ratio > max_ratio {
+                max_ratio = ratio;
+            }
+        }
+        Some(max_ratio + BigRational::one())
+    }
+
+    /// The pre-migration Sturm chain: members are NOT scaled to primitive
+    /// integer polynomials. That is the normalization difference the design
+    /// note calls out as slice 4's headline risk.
+    fn legacy_sturm_members(p: &[BigRational]) -> Option<Vec<Vec<BigRational>>> {
+        let squarefree = legacy_squarefree_part(p)?;
+        let mut members = vec![squarefree];
+        let first_derivative = legacy_derivative(&members[0]);
+        if legacy_degree(&first_derivative).is_none() {
+            return Some(members);
+        }
+        members.push(first_derivative);
+        loop {
+            let len = members.len();
+            let remainder = legacy_rem(&members[len - 2], &members[len - 1])?;
+            if legacy_degree(&remainder).is_none() {
+                break;
+            }
+            members.push(remainder.iter().map(core::ops::Neg::neg).collect());
+        }
+        Some(members)
+    }
+
+    fn legacy_variations(members: &[Vec<BigRational>], x: &BigRational) -> usize {
+        let mut variations = 0usize;
+        let mut previous: Option<i8> = None;
+        for member in members {
+            let value = legacy_eval(member, x);
+            let sign = if value.is_zero() {
+                0
+            } else if value.is_negative() {
+                -1
+            } else {
+                1
+            };
+            if sign == 0 {
+                continue;
+            }
+            if previous.is_some_and(|prev| prev != sign) {
+                variations += 1;
+            }
+            previous = Some(sign);
+        }
+        variations
+    }
+
+    fn legacy_count_in(
+        members: &[Vec<BigRational>],
+        lo: &BigRational,
+        hi: &BigRational,
+    ) -> usize {
+        legacy_variations(members, lo).saturating_sub(legacy_variations(members, hi))
+    }
+
+    /// The differential corpus: every polynomial the pre-migration module was
+    /// exercised on, plus the degenerate shapes (zero, constant, repeated
+    /// roots, no real roots) and a coefficient far beyond `i128` — which is the
+    /// wall this module's own header says it exists to clear.
+    fn differential_corpus() -> Vec<Vec<BigRational>> {
+        let huge = BigRational::from_integer(BigInt::from(10u8).pow(30));
+        vec![
+            vec![],                                  // zero
+            ip(&[7]),                                // nonzero constant
+            ip(&[0, 1]),                             // x
+            ip(&[-2, 1]),                            // x - 2
+            ip(&[-2, 0, 1]),                         // x^2 - 2, irrational roots
+            ip(&[1, 0, 1]),                          // x^2 + 1, no real roots
+            ip(&[1, -2, 1]),                         // (x-1)^2, repeated
+            ip(&[-6, 11, -6, 1]),                    // (x-1)(x-2)(x-3)
+            ip(&[-30, 31, -10, 1]),                  // (x-2)(x-3)(x-5)
+            ip(&[0, -1, 0, 1]),                      // x^3 - x
+            ip(&[-1, 0, 0, 0, 1]),                   // x^4 - 1
+            ip(&[6, -5, 1]),                         // x^2 - 5x + 6
+            ip(&[2, -5, 4, -1]),                     // -(x-1)^2(x-2)
+            vec![frac(1, 2), frac(-3, 4), frac(5, 6)],
+            vec![frac(-7, 3), q(0), frac(2, 9), q(1)],
+            vec![-huge.clone(), q(0), q(1)],         // x^2 - 10^30
+            vec![q(1), huge, q(1)],                  // 10^30 x, no real roots
+        ]
+    }
+
+    /// Every migrated primitive agrees with the body it replaced, on the whole
+    /// corpus, pairwise where the operation is binary.
+    ///
+    /// This is the exit criterion the design note's §8 sets for a slice: a
+    /// differential test against the copy it replaces, over that copy's own
+    /// test corpus. The corpus is 17 polynomials, so 289 ordered pairs.
+    #[test]
+    fn legacy_and_shared_polynomial_layers_agree() {
+        let corpus = differential_corpus();
+        assert_eq!(corpus.len(), 17, "the corpus size this test's name claims");
+        let points = [q(0), q(1), q(-1), q(2), frac(1, 3), frac(-7, 2), q(1000)];
+        let mut pairs = 0usize;
+        for a in &corpus {
+            assert_eq!(trim(a.clone()), legacy_trim(a.clone()), "trim");
+            assert_eq!(degree(a), legacy_degree(a), "degree");
+            assert_eq!(derivative(a), legacy_derivative(a), "derivative");
+            assert_eq!(monic(a), legacy_monic(a), "monic");
+            assert_eq!(squarefree_part(a), legacy_squarefree_part(a), "squarefree");
+            assert_eq!(cauchy_bound(a), legacy_cauchy_bound(a), "cauchy");
+            for x in &points {
+                assert_eq!(eval(a, x), legacy_eval(a, x), "eval");
+                assert_eq!(sign_at(a, x), sign_of(&legacy_eval(a, x)), "sign_at");
+            }
+            for b in &corpus {
+                pairs += 1;
+                assert_eq!(mul(a, b), legacy_mul(a, b), "mul");
+                assert_eq!(rem(a, b), legacy_rem(a, b), "rem");
+                assert_eq!(gcd(a, b), legacy_gcd(a, b), "gcd");
+                assert_eq!(div_exact(a, b), legacy_div_exact(a, b), "div_exact");
+            }
+        }
+        assert_eq!(pairs, 289, "every ordered pair was compared");
+    }
+
+    /// The chains use **different normalizations** — the shared one scales each
+    /// member to a primitive integer polynomial, this module's did not — and
+    /// still produce the same root count on every interval either can be asked
+    /// about. That equality is the whole justification for one chain replacing
+    /// six, so it is asserted directly rather than inferred from the counts
+    /// matching on a handful of examples.
+    #[test]
+    fn legacy_and_shared_chains_agree_on_every_interval() {
+        let endpoints = [
+            q(-1_000_000),
+            q(-10),
+            q(-3),
+            q(-1),
+            frac(-1, 2),
+            q(0),
+            frac(1, 3),
+            q(1),
+            frac(3, 2),
+            q(2),
+            frac(5, 2),
+            q(3),
+            q(10),
+            q(1_000_000),
+        ];
+        let mut compared = 0usize;
+        let mut chains = 0usize;
+        for p in differential_corpus() {
+            let shared = SturmChain::new(&p);
+            let legacy = legacy_sturm_members(&p);
+            assert_eq!(
+                shared.is_some(),
+                legacy.is_some(),
+                "the two chains decline on the same inputs"
+            );
+            let (Some(shared), Some(legacy)) = (shared, legacy) else {
+                continue;
+            };
+            chains += 1;
+            for lo in &endpoints {
+                for hi in &endpoints {
+                    if lo > hi {
+                        continue;
+                    }
+                    compared += 1;
+                    assert_eq!(
+                        shared.count_in(lo, hi),
+                        legacy_count_in(&legacy, lo, hi),
+                        "root count on ({lo}, {hi}] for {p:?}"
+                    );
+                }
+            }
+        }
+        assert_eq!(chains, 16, "every non-zero corpus member built a chain");
+        assert_eq!(compared, 1680, "every ordered interval pair was compared");
+    }
+
+    /// Every count the migrated chain reports carries a certificate that
+    /// re-derives it — the chain rebuilt from its own first member, the sign
+    /// variations recounted. Nothing in `verify` reuses what `count_in`
+    /// computed.
+    #[test]
+    fn every_migrated_sturm_count_carries_a_verifiable_certificate() {
+        let mut verified = 0usize;
+        for p in differential_corpus() {
+            let Some(chain) = SturmChain::new(&p) else {
+                continue;
+            };
+            for (lo, hi) in [(q(-10), q(10)), (q(0), q(3)), (frac(-1, 2), frac(5, 2))] {
+                let certificate = chain.certificate(&lo, &hi);
+                assert_eq!(certificate.root_count, chain.count_in(&lo, &hi));
+                assert!(certificate.verify(), "certificate for {p:?} on ({lo}, {hi}]");
+                verified += 1;
+            }
+        }
+        assert_eq!(verified, 48, "16 chains x 3 intervals");
+    }
 
     fn q(n: i64) -> BigRational {
         BigRational::from_integer(BigInt::from(n))

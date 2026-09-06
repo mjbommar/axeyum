@@ -85,6 +85,7 @@
 
 use core::cmp::Ordering;
 
+use axeyum_arith::QPoly;
 use num_bigint::BigInt;
 use num_rational::BigRational;
 use num_traits::{One, Signed, Zero};
@@ -250,39 +251,23 @@ fn as_fault(inner: Inner) -> Fault {
 
 /// `(quotient, remainder)` of `a` on division by `b` over ℚ. `None` when `b` is
 /// the zero polynomial.
+///
+/// **Migrated onto `axeyum_arith::QPoly` (ADR-1710 migration slice 5)**, as are
+/// [`sub_poly`] and [`xgcd`]. Only the ℚ[x] layer moved: the K[y] layer below —
+/// the polynomials in `y` whose coefficients are field elements — keeps its own
+/// arithmetic, because its coefficient ring is `K`, not ℚ, and the design note
+/// counts it as a separate implementation for exactly that reason.
 fn divmod(a: &[BigRational], b: &[BigRational]) -> Option<(Vec<BigRational>, Vec<BigRational>)> {
-    let b_degree = big::degree(b)?;
-    let mut remainder = big::trim(a.to_vec());
-    let leading = b[b_degree].clone();
-    let mut quotient: Vec<BigRational> = Vec::new();
-    while let Some(r_degree) = big::degree(&remainder) {
-        if r_degree < b_degree {
-            break;
-        }
-        let factor = &remainder[r_degree] / &leading;
-        let shift = r_degree - b_degree;
-        if quotient.len() < shift + 1 {
-            quotient.resize(shift + 1, BigRational::zero());
-        }
-        quotient[shift] = factor.clone();
-        for (index, coeff) in b.iter().enumerate().take(b_degree + 1) {
-            remainder[index + shift] -= &factor * coeff;
-        }
-        remainder = big::trim(remainder);
-    }
-    Some((big::trim(quotient), remainder))
+    QPoly::from_slice(a)
+        .div_rem(&QPoly::from_slice(b))
+        .map(|(quotient, remainder)| (quotient.into_coefficients(), remainder.into_coefficients()))
 }
 
 /// `a − b` over ℚ, LSB-first.
 fn sub_poly(a: &[BigRational], b: &[BigRational]) -> Vec<BigRational> {
-    let mut out = vec![BigRational::zero(); a.len().max(b.len())];
-    for (index, coeff) in a.iter().enumerate() {
-        out[index] += coeff;
-    }
-    for (index, coeff) in b.iter().enumerate() {
-        out[index] -= coeff;
-    }
-    big::trim(out)
+    QPoly::from_slice(a)
+        .sub(&QPoly::from_slice(b))
+        .into_coefficients()
 }
 
 /// `(g, s)` with `g = gcd(a, m)` monic and `s · a ≡ g (mod m)`.
@@ -290,30 +275,15 @@ fn sub_poly(a: &[BigRational], b: &[BigRational]) -> Vec<BigRational> {
 /// The half-extended Euclidean algorithm: only the cofactor of `a` is tracked,
 /// which is all an inverse modulo `m` needs. A unit `g` therefore hands back
 /// `a⁻¹` directly, and a non-unit `g` hands back a proper factor of `m`.
+///
+/// **Migrated onto `axeyum_arith::QPoly::half_ext_gcd`.** The non-unit-`g`
+/// outcome is preserved deliberately and is documented on the shared method as
+/// a first-class outcome rather than an error — it is the signal
+/// [`Inner::Split`] carries, and the design note §5 names it as the contract
+/// that had to survive this slice.
 fn xgcd(a: &[BigRational], m: &[BigRational]) -> (Vec<BigRational>, Vec<BigRational>) {
-    let mut r0 = big::trim(m.to_vec());
-    let mut r1 = big::trim(a.to_vec());
-    let mut s0: Vec<BigRational> = Vec::new();
-    let mut s1: Vec<BigRational> = vec![BigRational::one()];
-    while big::degree(&r1).is_some() {
-        let Some((quotient, remainder)) = divmod(&r0, &r1) else {
-            break;
-        };
-        r0 = r1;
-        r1 = remainder;
-        let next = sub_poly(&s0, &big::mul(&quotient, &s1));
-        s0 = s1;
-        s1 = next;
-    }
-    match big::degree(&r0) {
-        None => (Vec::new(), Vec::new()),
-        Some(degree) => {
-            let leading = r0[degree].clone();
-            let g = big::trim(r0.iter().map(|c| c / &leading).collect());
-            let s = big::trim(s0.iter().map(|c| c / &leading).collect());
-            (g, s)
-        }
-    }
+    let (gcd, cofactor) = QPoly::from_slice(a).half_ext_gcd(&QPoly::from_slice(m));
+    (gcd.into_coefficients(), cofactor.into_coefficients())
 }
 
 fn two() -> BigRational {
@@ -1466,8 +1436,128 @@ fn first_failure(atoms: &[FieldAtom], signs: &[i8]) -> Option<FibreCellFailure> 
 mod tests {
     use super::*;
 
+    // -----------------------------------------------------------------------
+    // ADR-1710 slice 5: the pre-migration ℚ[x] bodies, kept as the differential
+    // oracle for `divmod`, `sub_poly` and `xgcd`.
+    // -----------------------------------------------------------------------
+
+    fn legacy_divmod(
+        a: &[BigRational],
+        b: &[BigRational],
+    ) -> Option<(Vec<BigRational>, Vec<BigRational>)> {
+        let b_degree = big::degree(b)?;
+        let mut remainder = big::trim(a.to_vec());
+        let leading = b[b_degree].clone();
+        let mut quotient: Vec<BigRational> = Vec::new();
+        while let Some(r_degree) = big::degree(&remainder) {
+            if r_degree < b_degree {
+                break;
+            }
+            let factor = &remainder[r_degree] / &leading;
+            let shift = r_degree - b_degree;
+            if quotient.len() < shift + 1 {
+                quotient.resize(shift + 1, BigRational::zero());
+            }
+            quotient[shift] = factor.clone();
+            for (index, coeff) in b.iter().enumerate().take(b_degree + 1) {
+                remainder[index + shift] -= &factor * coeff;
+            }
+            remainder = big::trim(remainder);
+        }
+        Some((big::trim(quotient), remainder))
+    }
+
+    fn legacy_sub_poly(a: &[BigRational], b: &[BigRational]) -> Vec<BigRational> {
+        let mut out = vec![BigRational::zero(); a.len().max(b.len())];
+        for (index, coeff) in a.iter().enumerate() {
+            out[index] += coeff;
+        }
+        for (index, coeff) in b.iter().enumerate() {
+            out[index] -= coeff;
+        }
+        big::trim(out)
+    }
+
+    fn legacy_xgcd(a: &[BigRational], m: &[BigRational]) -> (Vec<BigRational>, Vec<BigRational>) {
+        let mut r0 = big::trim(m.to_vec());
+        let mut r1 = big::trim(a.to_vec());
+        let mut s0: Vec<BigRational> = Vec::new();
+        let mut s1: Vec<BigRational> = vec![BigRational::one()];
+        while big::degree(&r1).is_some() {
+            let Some((quotient, remainder)) = legacy_divmod(&r0, &r1) else {
+                break;
+            };
+            r0 = r1;
+            r1 = remainder;
+            let next = legacy_sub_poly(&s0, &big::mul(&quotient, &s1));
+            s0 = s1;
+            s1 = next;
+        }
+        match big::degree(&r0) {
+            None => (Vec::new(), Vec::new()),
+            Some(degree) => {
+                let leading = r0[degree].clone();
+                let g = big::trim(r0.iter().map(|c| c / &leading).collect());
+                let s = big::trim(s0.iter().map(|c| c / &leading).collect());
+                (g, s)
+            }
+        }
+    }
+
+    /// The corpus: the moduli this module actually splits on — reducible and
+    /// irreducible — plus the degenerate shapes.
+    fn qx_differential_corpus() -> Vec<Vec<BigRational>> {
+        vec![
+            vec![],
+            vec![q(3)],
+            vec![q(0), q(1)],
+            vec![q(-2), q(1)],
+            vec![q(-2), q(0), q(1)],            // x^2 - 2, irreducible over ℚ
+            vec![q(-2), q(-1), q(1)],           // (x-2)(x+1), reducible
+            vec![q(1), q(-2), q(1)],            // (x-1)^2
+            vec![q(1), q(0), q(1)],             // x^2 + 1
+            vec![q(-6), q(11), q(-6), q(1)],    // (x-1)(x-2)(x-3)
+            vec![q(-2), q(0), q(0), q(1)],      // x^3 - 2
+            vec![
+                BigRational::new(BigInt::from(1), BigInt::from(2)),
+                q(0),
+                BigRational::new(BigInt::from(-3), BigInt::from(5)),
+            ],
+        ]
+    }
+
+    /// The migrated ℚ[x] layer agrees with the bodies it replaced, over every
+    /// ordered pair — including the split-signalling case where `xgcd` returns
+    /// a **non-unit** gcd, which is the contract the design note flags as the
+    /// one that had to survive this slice.
+    #[test]
+    fn legacy_and_shared_qx_layers_agree() {
+        let corpus = qx_differential_corpus();
+        assert_eq!(corpus.len(), 11, "the corpus size this test's name claims");
+        let mut pairs = 0usize;
+        let mut non_unit_gcds = 0usize;
+        for a in &corpus {
+            for b in &corpus {
+                pairs += 1;
+                assert_eq!(divmod(a, b), legacy_divmod(a, b), "divmod");
+                assert_eq!(sub_poly(a, b), legacy_sub_poly(a, b), "sub_poly");
+                let shared = xgcd(a, b);
+                assert_eq!(shared, legacy_xgcd(a, b), "xgcd");
+                if big::degree(&shared.0).is_some_and(|degree| degree > 0) {
+                    non_unit_gcds += 1;
+                }
+            }
+        }
+        assert_eq!(pairs, 121, "every ordered pair was compared");
+        assert!(
+            non_unit_gcds > 0,
+            "the corpus really does exercise the split path: {non_unit_gcds}"
+        );
+    }
+
     fn q(n: i64) -> BigRational {
         BigRational::from_integer(BigInt::from(n))
+    }
     }
 
     fn qp(coefficients: &[i64]) -> Vec<BigRational> {
