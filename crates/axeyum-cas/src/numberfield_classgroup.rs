@@ -135,15 +135,35 @@
 //!
 //! # Cost profile
 //!
-//! **ADVISORY**, measured `--release` on a shared host; the numbers and the
-//! load are in the lane report. The shape, independent of any clock: the
-//! enumeration inherited from wave two is `Θ(|D|)` bignum operations, the table
-//! is `h²` compositions each of which is a constant number of `BigInt`
-//! extended-gcd and Hermite steps, `verify` re-runs every one of those `h²`
-//! compositions, and the associativity guard is `h³` index lookups with no
-//! arithmetic at all. So `verify` costs about what production costs plus the
-//! `Θ(|D|)` recount, and the practical ceiling is `h`, not `|D|` — which is why
-//! [`CLASS_GROUP_ORDER_BOUND`] exists.
+//! **ADVISORY.** Measured 2026-09-05 `--release`, single-threaded, on a shared
+//! host at load average 20.6 rising to 25.6 during the run — so read these as
+//! upper bounds with a wide error bar, not as a benchmark.
+//!
+//! | `D` | `h(D)` | forms (wave two) | recount | group produce | group verify |
+//! |---|---|---|---|---|---|
+//! | `−20` | 2 | 27 µs | 7 µs | 74 µs | 172 µs |
+//! | `−84` | 4 | 5 µs | 7 µs | 145 µs | 630 µs |
+//! | `−95` | 8 | 7 µs | 9 µs | 551 µs | 2.54 ms |
+//! | `−1003` | 4 | 15 µs | 30 µs | 169 µs | 467 µs |
+//! | `−9967` | 39 | 89 µs | 248 µs | 15.0 ms | 46.8 ms |
+//! | `−9992` | 40 | 92 µs | 248 µs | 15.4 ms | 78.3 ms |
+//! | `−9995` | 40 | 89 µs | 253 µs | 16.1 ms | 77.3 ms |
+//!
+//! At `|D| = 10⁴` the whole group is therefore about **15 ms to produce and 50
+//! to 80 ms to check**, and the reduced-form enumeration wave two owns is
+//! 0.6 % of that. One composition costs about **9.4 µs** to produce (1521 of
+//! them at `D = −9967` in 14.3 ms) and about **31 µs** to verify.
+//!
+//! The shape, independent of any clock: the enumeration inherited from wave two
+//! is `Θ(|D|)` bignum operations, the table is `h²` compositions each of which
+//! is a constant number of `BigInt` extended-gcd and Hermite steps, `verify`
+//! re-runs every one of those `h²` compositions *and* the ideal product
+//! certificate inside each, and the associativity guard is `h³` index lookups
+//! with no arithmetic at all. So the `h²` term dominates everything by
+//! `|D| = 10⁴` already, and the practical ceiling is `h`, not `|D|` — which is
+//! why [`CLASS_GROUP_ORDER_BOUND`] is a bound on `h`. At the bound, `h = 200`,
+//! the table is 26× the `h = 39` measurement, so roughly 0.4 s to produce and
+//! 1.2 s to check.
 
 use core::fmt;
 
@@ -484,7 +504,10 @@ impl fmt::Display for ReductionStep {
 }
 
 /// `f ∘ M` for `M = (p q; r s)`: the form `f(p·x + q·y, r·x + s·y)`.
+#[allow(clippy::many_single_char_names)]
 fn apply_matrix(form: &BinaryQuadraticForm, matrix: &[BigInt; 4]) -> BinaryQuadraticForm {
+    // The single letters are the ones the substitution is always written with;
+    // renaming them makes the three lines below unreadable against any source.
     let (a, b, c) = form.coefficients();
     let [p, q, r, s] = matrix;
     let leading = a * p * p + b * p * r + c * r * r;
@@ -1324,15 +1347,18 @@ pub fn compose(
         }
     }
     let swapped = left.coefficients().0 > right.coefficients().0;
-    let (first, second) = if swapped { (right, left) } else { (left, right) };
+    let (first, second) = if swapped {
+        (right, left)
+    } else {
+        (left, right)
+    };
     let (first_leading, first_middle, _) = first.coefficients();
     let (second_leading, second_middle, second_trailing) = second.coefficients();
     // s = (b1 + b2)/2 and n = b2 - s, Cohen's initialization.
     let half_trace = exact_div(&(first_middle + second_middle), &BigInt::from(2))?;
     let offset = second_middle - &half_trace;
     // First Euclidean step: y1*a2 + v*a1 = d = gcd(a2, a1).
-    let (first_gcd, first_multiplier, first_cofactor) =
-        big_ext_gcd(second_leading, first_leading);
+    let (first_gcd, first_multiplier, first_cofactor) = big_ext_gcd(second_leading, first_leading);
     // Second Euclidean step: x2*s - y2*d = d1 = gcd(s, d).
     let (content, second_x, second_y) = if (&half_trace % &first_gcd).is_zero() {
         (first_gcd.clone(), big_zero(), -big_one())
@@ -1694,8 +1720,7 @@ impl ClassGroupCertificate {
             for middle in 0..size {
                 let left_middle = self.table[left][middle];
                 for right in 0..size {
-                    if self.table[left_middle][right]
-                        != self.table[left][self.table[middle][right]]
+                    if self.table[left_middle][right] != self.table[left][self.table[middle][right]]
                     {
                         return Err(ClassGroupCertificateError::NotAssociative {
                             left,
@@ -1709,8 +1734,8 @@ impl ClassGroupCertificate {
         // G13: every recorded element order is the least k >= 1 with g^k = e.
         let recomputed = element_orders_from_table(&self.table, self.identity)
             .ok_or(ClassGroupCertificateError::ElementOrderMismatch { index: 0 })?;
-        for index in 0..size {
-            if recomputed[index] != self.orders[index] {
+        for (index, element_order) in recomputed.iter().enumerate() {
+            if element_order != &self.orders[index] {
                 return Err(ClassGroupCertificateError::ElementOrderMismatch { index });
             }
         }
@@ -1897,10 +1922,7 @@ mod tests {
         );
         // Computed by hand from the three step matrices, not read back from the
         // producer: M = (1 -1; 0 1)(0 -1; 1 0)(1 -1; 0 1) = (-1 0; 1 -1).
-        assert_eq!(
-            certificate.transform,
-            [big(-1), big(0), big(1), big(-1)]
-        );
+        assert_eq!(certificate.transform, [big(-1), big(0), big(1), big(-1)]);
         certificate.verify().expect("verify");
     }
 
@@ -2211,10 +2233,7 @@ mod tests {
     fn the_ideal_two_one_plus_sqrt_minus_five_is_certified_nonprincipal() {
         let order = order(-5);
         let generated = order
-            .ideal_from_generators(&[
-                OrderElement::from_i64(2, 0),
-                OrderElement::from_i64(1, 1),
-            ])
+            .ideal_from_generators(&[OrderElement::from_i64(2, 0), OrderElement::from_i64(1, 1)])
             .expect("ideal");
         assert_eq!(generated, ideal(2, 1, 1));
         let (principal, certificate) = is_principal(&order, &generated).expect("principality");
@@ -2301,10 +2320,7 @@ mod tests {
         // reduced one, are both computed by hand in the module documentation.
         assert_eq!(certificate.composite, form(4, 5, 3));
         assert_eq!(certificate.bezout.content, big(1));
-        assert_eq!(
-            certificate.lambda_numerator,
-            OrderElement::from_i64(-2, -2)
-        );
+        assert_eq!(certificate.lambda_numerator, OrderElement::from_i64(-2, -2));
         assert_eq!(certificate.lambda_denominator, big(4));
     }
 

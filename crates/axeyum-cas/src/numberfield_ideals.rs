@@ -2227,8 +2227,11 @@ fn build_primitive_element(
 // not become one more shared append point. The child module is what lets the
 // composition guards read this module's private `big_gcd`, `big_ext_gcd` and
 // `big_mod_positive` without widening them to the crate.
+// `pub` so rustdoc renders the module documentation and CHECKS its intra-doc
+// links; a private module's `//!` block is generated nowhere and its links are
+// never resolved, so `-D warnings` would pass over it silently.
 #[path = "numberfield_classgroup.rs"]
-mod numberfield_classgroup;
+pub mod numberfield_classgroup;
 
 pub use numberfield_classgroup::{
     BezoutData, CLASS_GROUP_ORDER_BOUND, ClassGroupCertificate, ClassGroupCertificateError,
