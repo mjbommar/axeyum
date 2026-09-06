@@ -894,6 +894,91 @@ mod tests {
         assert!(err.contains("LES exactness"), "got: {err}");
     }
 
+    /// ADVERSARIAL, isolated to `les_exactness_holds`'s `H_k(K)` node identity
+    /// specifically: forge only the wrapped `K`-side betti number fed in,
+    /// leaving `relative_betti` and `l_betti` genuine. Mutation-tested:
+    /// neutralizing this one node's check (before this test existed) killed
+    /// nothing, because the only existing forgery test for this function
+    /// targets the `H_k(K,L)` node instead.
+    #[test]
+    fn verify_refuses_a_k_betti_number_the_exactness_identity_rejects() {
+        let disc = complex_of(&[&[0, 1, 2]]);
+        let boundary_circle = complex_of(&[&[0, 1], &[1, 2], &[0, 2]]);
+        let genuine =
+            relative_homology(&disc, &boundary_circle).expect("relative homology of (D^2, S^1)");
+        let k_cert = homology(&disc).expect("homology of D^2");
+        let l_cert = homology(&boundary_circle).expect("homology of S^1");
+
+        // POSITIVE CONTROL: the genuine betti numbers are admitted.
+        assert!(
+            les_exactness_holds(
+                &disc,
+                &boundary_circle,
+                genuine.max_dimension,
+                &genuine.betti,
+                &k_cert.betti,
+                &l_cert.betti,
+            )
+            .is_ok()
+        );
+
+        let mut forged_k_betti = k_cert.betti.clone();
+        forged_k_betti.insert(0, 99); // the disc has exactly one component, not 99
+        let err = les_exactness_holds(
+            &disc,
+            &boundary_circle,
+            genuine.max_dimension,
+            &genuine.betti,
+            &forged_k_betti,
+            &l_cert.betti,
+        )
+        .expect_err("a forged K-side betti number must be refused at the H_k(K) node");
+        assert!(err.contains("H_0(K)"), "got: {err}");
+    }
+
+    /// ADVERSARIAL, isolated to `les_exactness_holds`'s `H_k(L)` node identity
+    /// specifically: forge only the wrapped `L`-side betti number fed in,
+    /// leaving `relative_betti` and `k_betti` genuine. Mutation-tested:
+    /// neutralizing this one node's check (before this test existed) killed
+    /// nothing, for the same reason as the `H_k(K)` node above -- the module's
+    /// existing forgery tests target the `H_k(K,L)` and `H_k(K)` nodes, never
+    /// this one.
+    #[test]
+    fn verify_refuses_an_l_betti_number_the_exactness_identity_rejects() {
+        let disc = complex_of(&[&[0, 1, 2]]);
+        let boundary_circle = complex_of(&[&[0, 1], &[1, 2], &[0, 2]]);
+        let genuine =
+            relative_homology(&disc, &boundary_circle).expect("relative homology of (D^2, S^1)");
+        let k_cert = homology(&disc).expect("homology of D^2");
+        let l_cert = homology(&boundary_circle).expect("homology of S^1");
+
+        // POSITIVE CONTROL: the genuine betti numbers are admitted.
+        assert!(
+            les_exactness_holds(
+                &disc,
+                &boundary_circle,
+                genuine.max_dimension,
+                &genuine.betti,
+                &k_cert.betti,
+                &l_cert.betti,
+            )
+            .is_ok()
+        );
+
+        let mut forged_l_betti = l_cert.betti.clone();
+        forged_l_betti.insert(0, 99); // the boundary circle has exactly one component, not 99
+        let err = les_exactness_holds(
+            &disc,
+            &boundary_circle,
+            genuine.max_dimension,
+            &genuine.betti,
+            &k_cert.betti,
+            &forged_l_betti,
+        )
+        .expect_err("a forged L-side betti number must be refused at the H_k(L) node");
+        assert!(err.contains("H_0(L)"), "got: {err}");
+    }
+
     /// Direct unit test of `connecting_map` at the disc/circle fixture: the
     /// connecting map at dimension 2 is rank 1 (an isomorphism `H_2(D,S^1) ->
     /// H_1(S^1)`, both one-dimensional), which is the specific claim that
@@ -1050,6 +1135,57 @@ mod tests {
             .verify(&disc, &boundary_circle)
             .expect_err("a forged wrapped K certificate must be refused");
         assert!(err.contains("betti"), "got: {err}");
+    }
+
+    /// ADVERSARIAL, isolated to `relative_boundaries_match`: forge only the
+    /// recorded Smith triple's `boundary` field at one dimension, leaving `U`,
+    /// `D`, `V`, the counts, betti, torsion and euler characteristic all
+    /// genuine. Mutation-tested: neutralizing this guard's mismatch check
+    /// alone (before this test existed) killed nothing, because every other
+    /// existing forged-certificate test happens to forge a field this guard
+    /// does not read. `relative_boundaries_match` runs BEFORE
+    /// `smith_factorizations_hold` in `verify`, so this must be refused here
+    /// specifically, before the (now self-inconsistent) `U . boundary . V = D`
+    /// factorization is ever checked.
+    #[test]
+    fn verify_refuses_a_forged_relative_boundary_matrix() {
+        let torus = crate::homology::fixtures::torus_7v();
+        let meridian = complex_of(&[&[0, 1], &[1, 2], &[0, 2]]);
+        let mut forged =
+            relative_homology(&torus, &meridian).expect("relative homology of (T^2, circle)");
+        assert!(
+            forged.verify(&torus, &meridian).is_ok(),
+            "genuine certificate must verify"
+        );
+
+        let triple = forged
+            .smith
+            .get_mut(&1)
+            .expect("dimension 1 smith data exists");
+        assert!(
+            triple.boundary.rows() > 0 && triple.boundary.cols() > 0,
+            "fixture needs a non-degenerate dimension-1 relative boundary matrix"
+        );
+        let rows = triple.boundary.rows();
+        let cols = triple.boundary.cols();
+        let mut data = Vec::with_capacity(rows * cols);
+        for r in 0..rows {
+            for c in 0..cols {
+                if r == 0 && c == 0 {
+                    // Every genuine boundary entry here is -1, 0, or 1; 999
+                    // cannot coincide with the real one.
+                    data.push(crate::CasExpr::int(999));
+                } else {
+                    data.push(triple.boundary.get(r, c).expect("in bounds").clone());
+                }
+            }
+        }
+        triple.boundary = crate::Matrix::new(rows, cols, data).expect("same shape");
+
+        let err = forged
+            .verify(&torus, &meridian)
+            .expect_err("a forged relative boundary matrix must be refused");
+        assert!(err.contains("relative boundary"), "got: {err}");
     }
 
     /// The `L` counterpart of the test above.
