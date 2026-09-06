@@ -4,7 +4,7 @@
 
 **Closure of `Complex.UniformlyContinuousOn` under `+` and `·`,
 `Complex.hasDerivative_congr`, `Complex.hasDerivative_pow`, and the
-Cauchy–Riemann disc-membership bridge — nine declarations, all axiom-free**
+Cauchy–Riemann disc-membership bridge — ten declarations, all axiom-free**
 (`PARTIAL`, complex-polyderiv, 2026-09-06, ADR-1656).
 
 ## What this slice is
@@ -34,7 +34,7 @@ subject. **No target of this lane is in a blind evaluation population.**
 
 ## What landed
 
-Nine declarations across three new files, all under `crates/axeyum-lean-kernel/src/complex/`.
+Ten declarations across three new files, all under `crates/axeyum-lean-kernel/src/complex/`.
 
 `uc_closure.rs`:
 
@@ -49,6 +49,7 @@ Nine declarations across three new files, all under `crates/axeyum-lean-kernel/s
 | --- | --- |
 | `Complex.hasDerivative_congr` | transport a derivative along pointwise `Complex.Equiv` agreement **on the disc only** |
 | `Complex.hasDerivative_pow` | the power rule at exponent `Nat.succ n`, gated on two `Nat → Nat` magnitude Skolems |
+| `Complex.holomorphic_pow` | the same, packed into the `Sigma`, so the derivative is `Sigma.fst` rather than something the caller re-spells |
 
 `cauchy_riemann.rs`:
 

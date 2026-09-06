@@ -163,7 +163,10 @@ named lemma yet.
   reusable by anything that produces a derivative in a non-canonical syntactic
   form.
 - `Complex.hasDerivative_pow` gives the monomial derivative at every exponent,
-  gated on the two magnitude Skolems.
+  gated on the two magnitude Skolems, and `Complex.holomorphic_pow` packs it
+  into the `Sigma` so a consumer reads the derivative back with
+  `Complex.holomorphicDeriv` instead of re-spelling it. The four Skolem
+  hypotheses are supplied once per disc rather than once per exponent.
 - `Complex.hasDerivative_polyEval` and `Complex.holomorphic_polyEval` did NOT
   land. With `hasDerivative_pow` in place the remaining work is a second
   induction over the coefficient list of `Complex.polyEval`, which needs

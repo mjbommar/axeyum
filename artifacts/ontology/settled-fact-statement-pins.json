@@ -4,7 +4,7 @@
   "note": "Statement identity for every settled fact (S1 of the trusted-library safety roadmap, ADR-0763). Per fact: SHA-256 of formal.statement (the canonical kernel rendering for native lean4 rows), SHA-256 of the top-level reader-facing statement, and the kernel_theorem it names. A settled fact's statement is what the ledger CLAIMS; changing any of the three silently turns 'we proved X' into 'we proved something we then labelled X'. Changes require an amendment row naming both digests and a reason; superseded digests are preserved in each pin's history. `coverage_floor` is a ratchet the gate re-derives rather than trusts: slack is itself a violation, so a loosened floor is self-reverting. Written by `scripts/check-settled-fact-statements.py --write`; do not hand-edit.",
   "coverage_floor": {
     "max_unpinned_settled": 0,
-    "min_identity_bound": 2434,
+    "min_identity_bound": 2435,
     "max_header_exempt": 0
   },
   "amendments": [
@@ -2188,6 +2188,13 @@
       "statement_sha256": "938466a3ebb2f20cdacf5d4befb4cbae80aeca81d1fb73e8b532ab6d7d42c354",
       "prose_sha256": "55b1988d2ad9561d305ae3cac6eeb8b022b1445d0ca55cc177222cafad2002b9",
       "kernel_theorem": "Complex.holomorphic_neg"
+    },
+    {
+      "fact_id": "F:complex-holomorphic-pow",
+      "language": "lean4",
+      "statement_sha256": "c1cc10dc793ed5bfd446490cde264f1d222cd8928ef3960a9fa723471caa236a",
+      "prose_sha256": "b07bf6a29ca76942849ff3b44983b2231090c1c73d05d78d156eff3f91e225fe",
+      "kernel_theorem": "Complex.holomorphic_pow"
     },
     {
       "fact_id": "F:complex-holomorphic-spec",
