@@ -172,6 +172,10 @@ now. Nothing was deleted.
 | 2026-09-06 | mobius-transfer | `sumSelOn_add`, `sumSubsetsOn_card` (the only law a mask-ignoring fold fails) and `sumSelOn_const_of_mem`, plus 7 evaluation tests with a NECESSITY control — `91dc6fb96` |
 | 2026-09-06 | mobius-transfer | `Nat.Multiset.count_le_of_dvd_prod` (ADR-1658's missing piece A) and 3 tests; `Nat.pow_dvd_pow_of_le` found already present and the duplicate deleted unlanded — `fb81000a5` |
 | 2026-09-06 | mobius-transfer | ADR-1671 and three facts; `dirichlet_assoc`, the range-to-subset transfer and Möbius inversion sized, not landed |
+| 2026-09-06 | production-metric | `scripts/measure-producer-channel.py` + baseline: the three-layer producer-channel census, fail-closed on an unclassified entry point (`94545a516`) |
+| 2026-09-06 | production-metric | `scripts/tests/test-producer-channel-controls.sh`: 6 guards, 6 controls, guard deletion kills exactly one (`5d9bf340f`) |
+| 2026-09-06 | production-metric | `scripts/price-holdout-family.py` + `scripts/tests/test-holdout-price-controls.sh`: one family = 10 propositions = 4.9% of the remaining blind rows (`00ce1744c`) |
+| 2026-09-06 | production-metric | ADR-1679; the retirement metric retired as a rate in four dated records, each keeping its figure and gaining a forward note |
 | 2026-09-06 | `7376295cf` | `CdclT::unit_propagate` becomes two-watched-literal BCP with blocking literals: `lit_code`, `Watch { clause, blocker }`, `ClauseHeader { offset, len }` over a flat literal arena, the `i`/`j` watch-list compaction, and the highest-level-literal-to-index-1 convention in `analyze_conflict` — all copied from `axeyum-cnf`'s `proof_sat.rs` so slice S7 is a deletion. Reasons become clause ids read from the arena on the conflict path instead of a `Vec<Lit>` cloned at every implication. `add_permanent_clause` installs assignment-aware watches plus one pending evaluation, so a clause inserted at the final-check boundary still implies when unit and conflicts when falsified. Solver `--lib --features full`: 1449 passed, 0 failed. |
 | 2026-09-06 | `889b9e558` | `clippy -p axeyum-solver --all-targets --all-features -- -D warnings`: both clause arguments are consumed into the arena rather than copied out of a borrow (no signature moves, so the ten call sites stand), the deadline-check constant moves to module scope, and the BCP loop carries a reasoned `too_many_lines` allow — splitting it would create the second watch scheme the memo warns against. |
 | 2026-09-06 | `703dc05ef` | Before/after on the committed 50-file QF_IDL and 33-file QF_LRA timeout populations, arms interleaved per file on a loaded shared host, binaries confirmed different by `sha256sum`. QF_IDL 0/50 → 6/50 decided, PAR-2 −8.6%; QF_LRA 4/33 → 5/33, PAR-2 −3.1%; zero verdicts contradicting `declared`, nothing lost. |
@@ -42468,6 +42472,17 @@ combinator's cost is the sum of what it dispatches to"). `check-fact-
 depends-derived.py --fix`: 11 facts gained the emitter's dependency edges;
 `validate-facts.py`: 2742 facts, 0 errors.
 
+> **Retired as a rate, 2026-09-06 (ADR-1679).** The total above is correct for
+> this lane on its own date and is kept as written. It must NOT be quoted
+> forward as a production rate. It counts hand proofs *deleted*, and since
+> 2026-09-04 the work has been in producers that EMIT theorems which never had
+> a hand proof, so the number reads flat while production continues. The
+> channel metric is `scripts/measure-producer-channel.py`. The two count
+> different things and are not comparable: one is a count of removals from the
+> prelude sources, the other a count of producer-emitted declarations and the
+> proved facts that join to them.
+
+
 Did not run: the full unbounded `cargo test --lib` sweep (killed by the
 box's own resource limit partway through the `complex`/`creal` suites,
 unrelated to this lane's changes — no failures observed before the kill;
@@ -42547,11 +42562,22 @@ Running retirement total: ADR-1589's 62 + this lane's 5 = **67** (plus
 whatever `tactic-list-int` landed separately, not re-counted here — see
 that lane's own status file for its own total).
 
+> **Retired as a rate, 2026-09-06 (ADR-1679).** The total above is correct for
+> this lane on its own date and is kept as written. It must NOT be quoted
+> forward as a production rate. It counts hand proofs *deleted*, and since
+> 2026-09-04 the work has been in producers that EMIT theorems which never had
+> a hand proof, so the number reads flat while production continues. The
+> channel metric is `scripts/measure-producer-channel.py`. The two count
+> different things and are not comparable: one is a count of removals from the
+> prelude sources, the other a count of producer-emitted declarations and the
+> proved facts that join to them.
+
 SHAs: `186eb83f1` (status stub), `638a15909` (deliverable 2: `AlgS.Group`
 theorems + `Alg.neg_neg` derivation), `3dba85b46` (deliverable 3+4:
 `AlgS.OrderedRing` + `linarith::generic` setoid backend), plus this
 close-out commit (`CReal.addGroupS`, the 5 retirements, facts, this
 status file, `PLAN.md`, the ADR index).
+
 
 **Did not run / not attempted**: `just check`/`./scripts/check.sh` (the
 full aggregate gate — out of scope for a single-lane close-out per
@@ -42653,6 +42679,17 @@ Data structures: `Nat.Multiset`, `Nat.Finset` (now with
 `card_le_of_injOn`, the Finset `pigeonhole`, and the constructive
 `exists_collision` witness pair), `List.{u}` with `Perm`; consumer
 `Rat.rankCols_le_rank` unconditional.
+
+> **Retired as a rate, 2026-09-06 (ADR-1679).** The total above is correct for
+> this lane on its own date and is kept as written. It must NOT be quoted
+> forward as a production rate. It counts hand proofs *deleted*, and since
+> 2026-09-04 the work has been in producers that EMIT theorems which never had
+> a hand proof, so the number reads flat while production continues. The
+> channel metric is `scripts/measure-producer-channel.py`. The two count
+> different things and are not comparable: one is a count of removals from the
+> prelude sources, the other a count of producer-emitted declarations and the
+> proved facts that join to them.
+
 
 **Three defects on `main` found and fixed by the coordinator during landing,
 none of them the mathematics.** (1) The eleven `creal_linarith_*` tests built
@@ -58461,6 +58498,79 @@ curriculum, 0 errors), `scripts/gen-adr-index.py --check` (696 rows, no new
 duplicates), `scripts/check-links.sh` (all links ok). The full workspace gate
 was **not** run (out of scope for a docs/data-graph change; the coordinator
 re-verifies before merge per standing practice).
+
+**Your lane's block (`DONE`, production-metric, 2026-09-06).** ADR-1679. The
+"hand proofs retired" total read **67** for three days while roughly two hundred
+proved facts landed and zero retirement commits touched the kernel crate. The
+cause is structural: the work moved into producers that EMIT theorems nobody
+ever wrote by hand, so there is no hand proof to retire and a metric defined as
+"hand proofs deleted" is blind to the channel that replaced it. The rule this
+lane records is that **a production metric must be able to see every channel
+that produces, or it will read flat while the system accelerates.**
+
+**The new number.** `scripts/measure-producer-channel.py`, three layers, each
+printing its own coverage line and its blind spots on every run:
+
+| Layer | Measured 2026-09-06 |
+| --- | --- |
+| L1 site census | 38 EMIT, 50 ASSIST, 44 CONFIG producer entry-point calls in the kernel crate; **0 unclassified** (an unclassified entry point is an ERROR, not an "other" bucket) |
+| L2 name resolution | 3,735 field→leaf bindings EXTRACTED, never guessed — 1,808 (48.4%) have a leaf differing from the field; **92.1%** of EMIT sites resolve |
+| L3 ledger join | **21** proved facts whose `formal.kernel_theorem` a producer emitted, against 2,455 proved facts carrying that field |
+
+L3 is a lower bound by construction: ambiguous leaves dropped, ASSIST not
+joined, bridge-routed producers attributed to the bridge.
+
+**What it cannot see, and the one field that would fix it.** The ledger's
+`provenance.established_by` names the PRELUDE BUILDER
+(`axeyum-lean-kernel build_nat_prelude`) on all 2,963 facts, never the producer,
+so L3 has to reach through Rust source text to answer a ledger question. One
+field on one path closes it: **`fact.provenance.produced_by : string | null`**,
+`null` meaning hand-authored as an assertion rather than an absence, written
+where a lane already fills in `formal.kernel_theorem`. `provenance` is
+`additionalProperties`-open, so a lane can start recording it today; a later ADR
+should make it required.
+
+**Held-out family price.** `scripts/price-holdout-family.py`. Blind population
+**20 families / 206 rows**; **9 families spent in 14 days** (0.64/day, ~31 days
+of runway); **one family costs 10 propositions = 4.9% of remaining rows**, with
+no partial spend — naming ONE row costs what proving all ten costs. Two of the
+nine spends were exactly that: an id in a producer contract's `non_examples`
+list. The script never prints a held-out id and guards its own output for one.
+Population derived by the isolation gate's own rule and cross-checked against
+it: 206 = 206.
+
+**Two derivation traps, measured.** Amendments OVERRIDE the manifests'
+preregistered `family_partitions` — `natural-elementary-bounds` and
+`discrete-step-and-counting-bounds` still read `held-out` there and are
+`development` by amendment, so the preregistration overcounts by two families.
+And `check-holdout-adjacency.py`'s 20 rows are one per DRAW, not an inventory of
+what is held out; they coincide at 20 today and nothing makes them coincide in
+general.
+
+**Retiring the old number.** Four in-tree quotes (three lane status files,
+ADR-1589) are dated records, so each keeps its figure and gains a forward note:
+correct on its date, not a rate, not comparable, pointer to the channel metric.
+`docs/math-department/11-applied-and-computational.md` (rows 219, 226) and
+`docs/math-department/12-the-chair.md` (lines 127, 318) carry the other two;
+another session owns that directory and this lane reports rather than edits.
+The chair's line 318 already asks for a derived, gated number — that is now
+`measure-producer-channel.py`.
+
+**Evidence.** Both new checkers have a control suite where each guard has ONE
+control asserting on that guard's OWN finding text, and a `--guard-deletion`
+mode: producer-channel 6 guards / 6 controls / exactly 1 death each;
+holdout-price 5 testable guards / 5 controls / exactly 1 death each, with
+`empty-family` reported UNTESTED rather than implied (a zero-row held-out family
+is not constructible from the manifests). The suites found four real defects in
+their own subjects, one of which — a moved `ROOT` making four of five deletions
+blame the wrong control — would have read green under a suite that only asserted
+"the mutant fails".
+
+**Not done, with the obstruction.** ASSIST sites are not joined to the ledger:
+the theorem name is not at the call site, and resolving it needs the enclosing
+declaration, which is a heuristic this lane declined to ship as a number.
+Instrumenting the prelude build for a runtime emission count is the honest
+measurement and is out of scope — this lane may not touch a crate.
 
 **Done (`proof-isolated-subjects`, 2026-08-31).** `scripts/check-trust-closure.py`'s
 `unresolved` moved **62 -> 20**, `subjects` **2121 -> 2123**, with a **fifth

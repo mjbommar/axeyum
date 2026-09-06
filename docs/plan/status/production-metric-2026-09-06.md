@@ -77,8 +77,6 @@ measurement and is out of scope — this lane may not touch a crate.
 
 <!-- plan-section: landed-changes -->
 
-| Date | Lane | Change |
-| --- | --- | --- |
 | 2026-09-06 | production-metric | `scripts/measure-producer-channel.py` + baseline: the three-layer producer-channel census, fail-closed on an unclassified entry point (`94545a516`) |
 | 2026-09-06 | production-metric | `scripts/tests/test-producer-channel-controls.sh`: 6 guards, 6 controls, guard deletion kills exactly one (`5d9bf340f`) |
 | 2026-09-06 | production-metric | `scripts/price-holdout-family.py` + `scripts/tests/test-holdout-price-controls.sh`: one family = 10 propositions = 4.9% of the remaining blind rows (`00ce1744c`) |
