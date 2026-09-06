@@ -2065,41 +2065,77 @@ impl RatFunc {
 /// Expand a [`CasExpr`] (rational-function fragment) to a [`RatFunc`], or `None`
 /// on overflow or a division by an identically-zero denominator.
 fn normalize_rational(expr: &CasExpr) -> Option<RatFunc> {
+    normalize_rational_classified(expr).ok()
+}
+
+/// [`normalize_rational`], with each `None` exit classified (ADR-1670 wave
+/// four). See [`ZeroTestDecline`] for what the two classes buy.
+///
+/// All but two of the exits here are `checked_*` arithmetic inside
+/// [`RatFunc`]/[`MultiPoly`], and so are [`ZeroTestDecline::Overflowed`]. The two
+/// that are not: a division whose divisor is the identically zero function
+/// (`RatFunc::div` declines on that condition at every width, and so does its
+/// unbounded twin), and the `exp` coefficient range in
+/// [`normalize_exp_classified`].
+fn normalize_rational_classified(expr: &CasExpr) -> Result<RatFunc, ZeroTestDecline> {
+    let overflowed = || ZeroTestDecline::Overflowed;
     match expr {
-        CasExpr::Const(r) => Some(RatFunc::from_poly(MultiPoly::constant(*r))),
-        CasExpr::Var(v) => Some(RatFunc::from_poly(MultiPoly::single_var(v))),
+        CasExpr::Const(r) => Ok(RatFunc::from_poly(MultiPoly::constant(*r))),
+        CasExpr::Var(v) => Ok(RatFunc::from_poly(MultiPoly::single_var(v))),
         CasExpr::Add(terms) => {
             let mut acc = RatFunc::from_poly(MultiPoly::zero());
             for t in terms {
-                acc = acc.add(&normalize_rational(t)?)?;
+                acc = acc
+                    .add(&normalize_rational_classified(t)?)
+                    .ok_or_else(overflowed)?;
             }
-            Some(acc)
+            Ok(acc)
         }
         CasExpr::Mul(factors) => {
             let mut acc = RatFunc::from_poly(MultiPoly::constant(Rational::integer(1)));
             for f in factors {
-                acc = acc.mul(&normalize_rational(f)?)?;
+                acc = acc
+                    .mul(&normalize_rational_classified(f)?)
+                    .ok_or_else(overflowed)?;
             }
-            Some(acc)
+            Ok(acc)
         }
-        CasExpr::Neg(inner) => normalize_rational(inner)?.neg(),
-        CasExpr::Div(u, w) => normalize_rational(u)?.div(&normalize_rational(w)?),
-        CasExpr::Pow(base, exp) => normalize_rational(base)?.pow(*exp),
+        CasExpr::Neg(inner) => normalize_rational_classified(inner)?
+            .neg()
+            .ok_or_else(overflowed),
+        CasExpr::Div(u, w) => {
+            let (numerator, divisor) = (
+                normalize_rational_classified(u)?,
+                normalize_rational_classified(w)?,
+            );
+            // Split `RatFunc::div`'s one `None` into its two causes: a divisor
+            // that is the zero *function* is not a width limit, and no
+            // coefficient type reaches past it.
+            if divisor.num.is_zero() {
+                return Err(ZeroTestDecline::OutOfFragment(
+                    FragmentLimit::DivisionByZeroFunction,
+                ));
+            }
+            numerator.div(&divisor).ok_or_else(overflowed)
+        }
+        CasExpr::Pow(base, exp) => normalize_rational_classified(base)?
+            .pow(*exp)
+            .ok_or_else(overflowed),
         // Treat `ln(v)` as an opaque atom (a fresh variable keyed by `v`'s
         // canonical rendering). This makes the zero-test **sound**: a zero normal
         // form proves equality (the atoms are independent), while genuine log
         // identities conservatively fail to reduce (→ not certified, never a false
         // certification). It is exactly what lets `d/dx (c·ln v) = c'·ln v + c·v'/v`
         // certify — the spurious `c'·ln v` term drops when `c` is constant.
-        CasExpr::Unary(UnaryFunc::Exp, arg) => normalize_exp(arg),
+        CasExpr::Unary(UnaryFunc::Exp, arg) => normalize_exp_classified(arg),
         // `√` of a non-negative rational constant is canonicalized rather than
         // atomized, so `√4`, `√8` and `√(1/2)` reduce and every spelling of one
         // number takes one atom key. See `canonical_constant_sqrt_poly`.
-        CasExpr::Unary(UnaryFunc::Sqrt, arg) => Some(RatFunc::from_poly(
+        CasExpr::Unary(UnaryFunc::Sqrt, arg) => Ok(RatFunc::from_poly(
             canonical_constant_sqrt_poly(arg)
                 .unwrap_or_else(|| MultiPoly::single_var(&atom_name("sqrt", arg))),
         )),
-        CasExpr::Unary(func, arg) => Some(RatFunc::from_poly(MultiPoly::single_var(&atom_name(
+        CasExpr::Unary(func, arg) => Ok(RatFunc::from_poly(MultiPoly::single_var(&atom_name(
             &func.name(),
             arg,
         )))),
@@ -2149,9 +2185,10 @@ fn exp_ln_inverse(monomial: &Monomial, coeff: Rational) -> Option<Rational> {
     Some(value)
 }
 
-fn normalize_exp(arg: &CasExpr) -> Option<RatFunc> {
+fn normalize_exp_classified(arg: &CasExpr) -> Result<RatFunc, ZeroTestDecline> {
+    let overflowed = || ZeroTestDecline::Overflowed;
     let opaque = || {
-        Some(RatFunc::from_poly(MultiPoly::single_var(&atom_name(
+        Ok(RatFunc::from_poly(MultiPoly::single_var(&atom_name(
             "exp", arg,
         ))))
     };
@@ -2173,10 +2210,15 @@ fn normalize_exp(arg: &CasExpr) -> Option<RatFunc> {
     if den_const.is_zero() {
         return opaque();
     }
-    let inverse_den = Rational::integer(1).checked_div(den_const)?;
-    let arg_poly = ratio.num.mul(&MultiPoly::constant(inverse_den))?;
+    let inverse_den = Rational::integer(1)
+        .checked_div(den_const)
+        .ok_or_else(overflowed)?;
+    let arg_poly = ratio
+        .num
+        .mul(&MultiPoly::constant(inverse_den))
+        .ok_or_else(overflowed)?;
     if arg_poly.is_zero() {
-        return Some(RatFunc::from_poly(MultiPoly::constant(Rational::integer(
+        return Ok(RatFunc::from_poly(MultiPoly::constant(Rational::integer(
             1,
         )))); // exp(0) = 1
     }
@@ -2185,7 +2227,9 @@ fn normalize_exp(arg: &CasExpr) -> Option<RatFunc> {
     for (monomial, coeff) in &arg_poly.terms {
         // exp/ln inverse: exp(k·ln v) = vᵏ for a positive rational v and integer k.
         if let Some(value) = exp_ln_inverse(monomial, *coeff) {
-            result = result.mul(&RatFunc::from_poly(MultiPoly::constant(value)))?;
+            result = result
+                .mul(&RatFunc::from_poly(MultiPoly::constant(value)))
+                .ok_or_else(overflowed)?;
             continue;
         }
         let negative = coeff.numerator() < 0;
@@ -2194,13 +2238,16 @@ fn normalize_exp(arg: &CasExpr) -> Option<RatFunc> {
         // exp(m)^c` — so `exp(2x) = exp(x)²` and `exp(x)·exp(2x) = exp(3x)` decide.
         // Otherwise key on the whole `|coeff|·monomial` term (power 1).
         let (primitive_coeff, power) = if coeff.denominator() == 1 {
-            (
-                Rational::integer(1),
-                u32::try_from(coeff.numerator().unsigned_abs()).ok()?,
-            )
+            // The `u32` exponent range is the SAME in both rings, so no
+            // coefficient width reaches past this one: it is a fragment limit,
+            // not an overflow. See `FragmentLimit::ExpCoefficientOutOfRange`.
+            let power = u32::try_from(coeff.numerator().unsigned_abs()).map_err(|_| {
+                ZeroTestDecline::OutOfFragment(FragmentLimit::ExpCoefficientOutOfRange)
+            })?;
+            (Rational::integer(1), power)
         } else {
             let magnitude = if negative {
-                coeff.checked_neg()?
+                coeff.checked_neg().ok_or_else(overflowed)?
             } else {
                 *coeff
             };
@@ -2211,13 +2258,16 @@ fn normalize_exp(arg: &CasExpr) -> Option<RatFunc> {
         let atom = MultiPoly::single_var(&atom_name("exp", &MultiPoly { terms: single }.to_expr()));
         let base = if negative {
             // exp(negative term) = 1 / exp(positive term).
-            one().div(&RatFunc::from_poly(atom))?
+            one()
+                .div(&RatFunc::from_poly(atom))
+                .ok_or_else(overflowed)?
         } else {
             RatFunc::from_poly(atom)
         };
-        result = result.mul(&base.pow(power)?)?;
+        let raised = base.pow(power).ok_or_else(overflowed)?;
+        result = result.mul(&raised).ok_or_else(overflowed)?;
     }
-    Some(result)
+    Ok(result)
 }
 
 /// A collision-resistant variable name standing for a transcendental atom
@@ -2941,13 +2991,166 @@ const MAX_WEIGHTED_BESSEL_ORDER: u32 = 32;
 /// an input the bounded form decided, so it cannot change an existing verdict —
 /// it can only turn an overflow `Unknown` into a decision.
 fn equal_core(a: &CasExpr, b: &CasExpr) -> ZeroTest {
-    match equal_core_bounded(a, b) {
-        ZeroTest::Unknown => {
+    match equal_core_bounded_classified(a, b) {
+        Ok(decided) => decided,
+        // The reason is recorded but not yet acted on: every decline still
+        // enters the fallback, exactly as before, so this slice is
+        // behaviour-preserving by construction and the classification can be
+        // checked against the shipped verdicts before anything routes on it.
+        // The next commit gates the entry on `Overflowed`.
+        Err(_) => {
             note_fallback_entry();
             equal_core_unbounded(a, b)
         }
-        decided @ (ZeroTest::Certified { .. } | ZeroTest::CertifiedBig { .. }) => decided,
     }
+}
+
+/// Why a zero-test produced [`ZeroTest::Unknown`], and — the distinction the
+/// whole entry gate turns on — whether the unbounded fallback (ADR-1670) can do
+/// anything about it.
+///
+/// Before this existed, the bounded core's exit was an `Option` and `None`
+/// meant *both* "exact `i128` arithmetic overflowed" and "this expression is
+/// outside the fragment the normal form decides at all". Those need opposite
+/// treatment: the first is exactly what the unbounded ring is for, and the
+/// second is a place the unbounded ring stops too, because it runs **the same
+/// normal form** over a wider coefficient type.
+///
+/// Read one with [`explain_decline`].
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ZeroTestDecline {
+    /// Exact `i128` arithmetic overflowed somewhere in the expansion, the
+    /// cross-multiplication or the fold passes, so the bounded path produced no
+    /// difference at all.
+    ///
+    /// This is the class the fallback is entered for. When it appears in an
+    /// [`explain_decline`] result it therefore also means the fallback ran and
+    /// declined in its turn — on its work budget, or on a surviving atom on the
+    /// refutation branch.
+    Overflowed,
+    /// The input carries a construct **no coefficient width decides**, named by
+    /// the payload. The fallback is not entered.
+    OutOfFragment(FragmentLimit),
+}
+
+/// The construct that put an input outside the fragment — the payload of
+/// [`ZeroTestDecline::OutOfFragment`], and what makes a decline readable rather
+/// than a bare `Unknown`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum FragmentLimit {
+    /// A `Unary` head [`normalize_rational_big_within`] declines outright
+    /// (today: `exp`, which the bounded path *decomposes* rather than atomizes
+    /// and which has no unbounded twin yet). The `String` is the head's own
+    /// name. Detected by [`unbounded_ring_declined_head`] *before* any budget
+    /// is spent.
+    UnboundedRingDeclinesHead(String),
+    /// A division whose divisor normalizes to the identically zero function.
+    /// Not a width limit: the unbounded ring's `div` declines on exactly the
+    /// same condition.
+    DivisionByZeroFunction,
+    /// The bounded path computed a difference, found it **nonzero**, and
+    /// declined to call that a refutation because a monomial multiplies two
+    /// radical or absolute-value atoms and `√a·√b = √(ab)` could still collapse
+    /// it ([`MultiPoly::relates_multiplicative_atoms`]).
+    ///
+    /// The arithmetic completed, so there is nothing for a wider integer type
+    /// to do — and the unbounded refutation branch is *stricter* still, since it
+    /// declines on any surviving atom.
+    MultiplicativeAtomRelation,
+    /// The bounded path computed a nonzero difference over an atom whose
+    /// argument [`atom_name`] could not bring to a canonical form, so one value
+    /// may sit under two keys ([`MultiPoly::mentions_uncanonical_atom`]). The
+    /// arithmetic completed here too, and the unbounded ring builds its atom
+    /// keys with the same [`atom_name`].
+    UncanonicalAtomKey,
+    /// An `exp` argument term whose integer coefficient does not fit the `u32`
+    /// exponent [`normalize_exp`] raises the primitive atom to. Exponents are
+    /// `u32` in **both** rings, so no coefficient width reaches this one.
+    ExpCoefficientOutOfRange,
+}
+
+impl std::fmt::Display for ZeroTestDecline {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ZeroTestDecline::Overflowed => write!(
+                f,
+                "exact i128 arithmetic overflowed and the unbounded fallback also declined"
+            ),
+            ZeroTestDecline::OutOfFragment(limit) => {
+                write!(f, "outside the decided fragment: {limit}")
+            }
+        }
+    }
+}
+
+impl std::fmt::Display for FragmentLimit {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            FragmentLimit::UnboundedRingDeclinesHead(head) => write!(
+                f,
+                "the `{head}` head, which the unbounded ring does not normalize"
+            ),
+            FragmentLimit::DivisionByZeroFunction => {
+                write!(f, "a division by the identically zero function")
+            }
+            FragmentLimit::MultiplicativeAtomRelation => write!(
+                f,
+                "a monomial multiplying two radical or absolute-value atoms, \
+                 which `sqrt(a)*sqrt(b) = sqrt(ab)` could still collapse"
+            ),
+            FragmentLimit::UncanonicalAtomKey => write!(
+                f,
+                "an atom whose argument could not be canonicalized, so one value \
+                 may sit under two keys"
+            ),
+            FragmentLimit::ExpCoefficientOutOfRange => write!(
+                f,
+                "an `exp` argument coefficient outside the u32 exponent range \
+                 both rings use"
+            ),
+        }
+    }
+}
+
+/// Why [`equal`] declined this pair, or `None` when it decided.
+///
+/// The reason is read off **the same classifier the zero-test itself used** —
+/// [`equal_core_bounded_classified`] — not recomputed by a second
+/// implementation that could disagree with it. So a decline this reports is the
+/// decline that happened.
+///
+/// ```
+/// use axeyum_cas::{CasExpr, ZeroTestDecline, FragmentLimit, equal, explain_decline};
+///
+/// let x = CasExpr::var("x");
+/// // A decided pair has nothing to explain.
+/// assert!(explain_decline(&x, &x).is_none());
+///
+/// // `sqrt(2)*cbrt(2) = root6(32)` is TRUE, and the zero-test declines rather
+/// // than refuting it — because the difference multiplies two radical atoms.
+/// let left = CasExpr::int(2).sqrt() * CasExpr::int(2).nth_root(3);
+/// let right = CasExpr::int(32).nth_root(6);
+/// assert_eq!(
+///     explain_decline(&left, &right),
+///     Some(ZeroTestDecline::OutOfFragment(
+///         FragmentLimit::MultiplicativeAtomRelation
+///     ))
+/// );
+/// ```
+#[must_use]
+pub fn explain_decline(a: &CasExpr, b: &CasExpr) -> Option<ZeroTestDecline> {
+    if !matches!(equal(a, b), ZeroTest::Unknown) {
+        return None;
+    }
+    // `equal` re-checks on the Euler canonical form before it would assert
+    // anything, so that call is the one whose reason the reader needs; the
+    // direct spelling is the fallback when the canonical form decided nothing
+    // new about *why*.
+    let canonical_a = canonicalize_for_equality(a);
+    let canonical_b = canonicalize_for_equality(b);
+    equal_core_bounded_classified(&canonical_a, &canonical_b)
+        .err()
+        .or_else(|| equal_core_bounded_classified(a, b).err())
 }
 
 /// Test-only instrumentation: how many times [`equal_core`] has handed an input
@@ -2980,21 +3183,50 @@ fn note_fallback_entry() {
 /// [`atom_name`] could not bring to a canonical form, so one value may sit under
 /// two keys. The equality branch needs no such guard: a zero difference is zero
 /// whatever the atoms denote.
+///
+/// Test-only since ADR-1670 wave four gave the zero-test a *classified* exit:
+/// [`equal_core`] routes on the reason, so nothing outside the test suite wants
+/// the collapsed answer. Kept because a large family of tests is written
+/// against it, and because "the bounded path alone does not decide this" is
+/// exactly the adversarial precondition those tests assert.
+#[cfg(test)]
 fn equal_core_bounded(a: &CasExpr, b: &CasExpr) -> ZeroTest {
-    match bounded_difference(a, b) {
-        Some(witness) if witness.is_zero() => ZeroTest::Certified {
+    equal_core_bounded_classified(a, b).unwrap_or(ZeroTest::Unknown)
+}
+
+/// [`equal_core_bounded`], with the decline **classified** instead of collapsed
+/// into one `Unknown` (ADR-1670 wave four).
+///
+/// Every exit that used to be `ZeroTest::Unknown` now names a
+/// [`ZeroTestDecline`], and the whole point of the name is the entry gate in
+/// [`equal_core`]: only [`ZeroTestDecline::Overflowed`] is worth handing to the
+/// unbounded fallback.
+///
+/// Two of the three decline exits are cases where the bounded **arithmetic
+/// completed** — a difference was computed and then declined on. A wider
+/// coefficient type has nothing to add to a computation that never overflowed,
+/// so those are [`ZeroTestDecline::OutOfFragment`] by construction. The third is
+/// the arithmetic itself failing, which [`bounded_difference_classified`]
+/// splits into an overflow and the fragment limits that are not about width.
+fn equal_core_bounded_classified(a: &CasExpr, b: &CasExpr) -> Result<ZeroTest, ZeroTestDecline> {
+    match bounded_difference_classified(a, b) {
+        Ok(witness) if witness.is_zero() => Ok(ZeroTest::Certified {
             equal: true,
             witness,
-        },
-        Some(witness) if witness.relates_multiplicative_atoms() => ZeroTest::Unknown,
+        }),
+        Ok(witness) if witness.relates_multiplicative_atoms() => Err(
+            ZeroTestDecline::OutOfFragment(FragmentLimit::MultiplicativeAtomRelation),
+        ),
         // An atom whose argument could not be canonicalized may sit under two
         // keys for one value, so a nonzero difference over it proves nothing.
-        Some(witness) if witness.mentions_uncanonical_atom() => ZeroTest::Unknown,
-        Some(witness) => ZeroTest::Certified {
+        Ok(witness) if witness.mentions_uncanonical_atom() => Err(ZeroTestDecline::OutOfFragment(
+            FragmentLimit::UncanonicalAtomKey,
+        )),
+        Ok(witness) => Ok(ZeroTest::Certified {
             equal: false,
             witness,
-        },
-        None => ZeroTest::Unknown,
+        }),
+        Err(reason) => Err(reason),
     }
 }
 
@@ -3004,14 +3236,48 @@ fn equal_core_bounded(a: &CasExpr, b: &CasExpr) -> ZeroTest {
 /// Split out of [`equal_core_bounded`] so [`recheck_zero_test`] can recompute
 /// the same difference without going through a [`ZeroTest`].
 fn bounded_difference(a: &CasExpr, b: &CasExpr) -> Option<MultiPoly> {
-    let (Some(ra), Some(rb)) = (normalize_rational(a), normalize_rational(b)) else {
-        return None;
-    };
+    bounded_difference_classified(a, b).ok()
+}
+
+/// [`bounded_difference`], with each of its `None` exits classified.
+///
+/// The classification rule, in one line: an exit is
+/// [`ZeroTestDecline::Overflowed`] when a wider coefficient type would have got
+/// past it, and [`ZeroTestDecline::OutOfFragment`] when it would not.
+///
+/// One case dominates the rest and is checked first. A `Unary` head the
+/// unbounded ring declines outright makes the whole input out-of-fragment
+/// *however* the bounded arithmetic failed — because the fallback would expand
+/// everything up to that head, on the full work budget, and then stop at it.
+/// Without this precedence a mixed input (an overflowing polynomial plus one
+/// `exp`) classifies as an overflow, which is true of its arithmetic and
+/// useless as a routing decision.
+fn bounded_difference_classified(a: &CasExpr, b: &CasExpr) -> Result<MultiPoly, ZeroTestDecline> {
+    if let Some(head) = unbounded_ring_declined_head(a).or_else(|| unbounded_ring_declined_head(b))
+        && bounded_difference_arithmetic(a, b).is_err()
+    {
+        return Err(ZeroTestDecline::OutOfFragment(
+            FragmentLimit::UnboundedRingDeclinesHead(head),
+        ));
+    }
+    bounded_difference_arithmetic(a, b)
+}
+
+/// The bounded difference proper: the classification of every `None` the
+/// `i128` arithmetic itself can produce, with no reference to what the
+/// unbounded ring would make of the input.
+fn bounded_difference_arithmetic(a: &CasExpr, b: &CasExpr) -> Result<MultiPoly, ZeroTestDecline> {
+    let (ra, rb) = (
+        normalize_rational_classified(a)?,
+        normalize_rational_classified(b)?,
+    );
     // a·d − c·b
     let (Some(ad), Some(cb)) = (ra.num.mul(&rb.den), rb.num.mul(&ra.den)) else {
-        return None;
+        return Err(ZeroTestDecline::Overflowed);
     };
-    let neg_cb = cb.neg()?;
+    let Some(neg_cb) = cb.neg() else {
+        return Err(ZeroTestDecline::Overflowed);
+    };
     // Resolve each `sqrt` atom's symbolic radicand so `fold_radical` can apply
     // `(√u)² = u` (not just the constant `(√c)² = c`). Keys match the atom names
     // `normalize_rational` emits.
@@ -3068,6 +3334,8 @@ fn bounded_difference(a: &CasExpr, b: &CasExpr) -> Option<MultiPoly> {
             _ => {}
         }
     }
+    // Every one of these is a `checked_*` arithmetic failure inside a fold, so
+    // every one of them is an overflow.
     ad.add(&neg_cb)
         .and_then(|w| w.fold_imaginary())
         .and_then(|w| w.fold_pythagorean())
@@ -3076,6 +3344,7 @@ fn bounded_difference(a: &CasExpr, b: &CasExpr) -> Option<MultiPoly> {
         .and_then(|w| w.fold_abs(&abs_args))
         .and_then(|w| w.fold_nth_root(&nth_roots))
         .and_then(|w| w.fold_bessel_recurrences(&bessel_recurrences))
+        .ok_or(ZeroTestDecline::Overflowed)
 }
 
 // --- The arbitrary-precision overflow fallback (ADR-1670) --------------------
@@ -3801,6 +4070,49 @@ fn big_atom_folds(a: &CasExpr, b: &CasExpr, budget: &mut u64) -> BigAtomFolds {
 /// roughly a million big-integer multiply-accumulates.
 const BIG_FALLBACK_WORK_BUDGET: u64 = 1_000_000;
 
+/// The `Unary` heads [`normalize_rational_big_within`] declines **outright** —
+/// it returns `None` at the head rather than atomizing it.
+///
+/// This is one predicate rather than two lists on purpose: the normalizer
+/// matches on it, and so does the fallback's entry gate
+/// ([`unbounded_ring_declined_head`]), so the gate cannot drift from what the
+/// ring actually does. `the_entry_gate_names_exactly_the_heads_the_ring_declines`
+/// asserts the two agree over every [`UnaryFunc`] variant, deriving the variant
+/// list from the type rather than from a literal.
+fn big_ring_declines_head(func: UnaryFunc) -> bool {
+    matches!(func, UnaryFunc::Exp)
+}
+
+/// The first head in `expr` that [`normalize_rational_big_within`] declines
+/// outright, or `None` when the whole expression is inside the unbounded ring's
+/// fragment.
+///
+/// A syntactic walk, and deliberately so: the point is to answer *before*
+/// spending any of [`BIG_FALLBACK_WORK_BUDGET`]. Without it the fallback
+/// expands everything up to such a head and only then discovers it cannot
+/// finish — measured at 2.35 ms per call on an overflowing polynomial carrying
+/// one `exp`, on every `equal` the ODE and integration routes make against a
+/// Euler form.
+fn unbounded_ring_declined_head(expr: &CasExpr) -> Option<String> {
+    match expr {
+        CasExpr::Const(_) | CasExpr::Var(_) => None,
+        CasExpr::Add(items) | CasExpr::Mul(items) => {
+            items.iter().find_map(unbounded_ring_declined_head)
+        }
+        CasExpr::Neg(a) | CasExpr::Pow(a, _) => unbounded_ring_declined_head(a),
+        CasExpr::Div(a, b) => {
+            unbounded_ring_declined_head(a).or_else(|| unbounded_ring_declined_head(b))
+        }
+        CasExpr::Unary(func, arg) => {
+            if big_ring_declines_head(*func) {
+                Some(func.name())
+            } else {
+                unbounded_ring_declined_head(arg)
+            }
+        }
+    }
+}
+
 /// Expand a [`CasExpr`] to a [`BigRatFunc`], mirroring [`normalize_rational`]
 /// over unbounded integers.
 ///
@@ -3844,9 +4156,10 @@ fn normalize_rational_big_within(expr: &CasExpr, budget: &mut u64) -> Option<Big
         CasExpr::Div(u, w) => normalize_rational_big_within(u, budget)?
             .div(&normalize_rational_big_within(w, budget)?, budget),
         CasExpr::Pow(base, exp) => normalize_rational_big_within(base, budget)?.pow(*exp, budget),
-        // See the doc comment: `exp` is decomposed by the bounded path, not
-        // atomized, and that decomposition has no unbounded counterpart yet.
-        CasExpr::Unary(UnaryFunc::Exp, _) => None,
+        // See [`big_ring_declines_head`]: `exp` is decomposed by the bounded
+        // path, not atomized, and that decomposition has no unbounded
+        // counterpart yet.
+        CasExpr::Unary(func, _) if big_ring_declines_head(*func) => None,
         // The unbounded twin of the bounded normalizer's `√`-of-a-constant
         // canonicalization, so the two rings agree on what `√8` *is*.
         CasExpr::Unary(UnaryFunc::Sqrt, arg)
