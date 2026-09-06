@@ -521,8 +521,17 @@ impl Reason {
     /// The antecedent clause, when there already is one. `None` for a decision
     /// **and** for an unresolved theory reason -- callers that must have a
     /// clause go through [`Cdcl::resolve_reason`].
+    // The payload of a CLAUSE reason is only ever written by `Reason::clause`
+    // from a `CRef`, which IS a `usize`, so the round-trip cannot lose bits on
+    // any pointer width -- including wasm32, where `usize` is 32 bits and this
+    // lint is not hypothetical. A `try_from` here would put a fallible
+    // conversion on the hottest read in conflict analysis to re-check an
+    // invariant the constructor already holds; the `debug_assert` states it
+    // instead.
+    #[allow(clippy::cast_possible_truncation)]
     #[inline]
     fn as_clause(self) -> Option<CRef> {
+        debug_assert!(self.tag() != REASON_TAG_CLAUSE || usize::try_from(self.payload()).is_ok());
         (self.tag() == REASON_TAG_CLAUSE).then(|| self.payload() as CRef)
     }
 
@@ -533,6 +542,8 @@ impl Reason {
     }
 
     /// Decoded, for `match`.
+    // Same round-trip invariant as `as_clause`.
+    #[allow(clippy::cast_possible_truncation)]
     #[inline]
     fn kind(self) -> ReasonKind {
         match self.tag() {
@@ -2386,6 +2397,11 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
     /// `proof_sat_solve_php_6_7`. With the split the gate always inlines,
     /// `TheoryRound::Fixpoint` is a constant, and the `match` at the call site
     /// folds away.
+    // `inline(always)` and not `inline`: the whole point is that the call site
+    // sees `T::HAS_THEORY` as a constant, and a hint the optimizer is free to
+    // decline would make design B's "measured free" claim depend on an
+    // inlining heuristic. See the doc comment above for the measurement.
+    #[allow(clippy::inline_always)]
     #[inline(always)]
     fn theory_round(&mut self) -> TheoryRound {
         if !T::HAS_THEORY {
