@@ -222,6 +222,29 @@ fn theory_layer_report_line(
     )
 }
 
+/// S2 dispatch-overrun fix (2026-09-05,
+/// `docs/plan/smt-parity-plan-2026-09-05.md` row S2): the `; theory-layer …`
+/// line the watchdog-timeout path in `main` prints when it cannot report real
+/// [`axeyum_solver::theories::cdclt_diagnostics::TheoryLayerStats`] — the
+/// worker's snapshot is thread-local to the worker thread (see
+/// `crate::theories::cdclt_diagnostics`), so a watchdog firing on the main
+/// thread has no live snapshot to read. `None` when `trace_mode` is off, so a
+/// default run's output is unaffected — same convention as every other lever
+/// in this file.
+///
+/// Before this fix the watchdog-timeout path printed nothing for `--trace` —
+/// not even a stale partial stat — because the whole `(verdict, evidence,
+/// trace_line)` triple was hardcoded to `("unknown", None, None)`. Three of
+/// five traced `QF_IDL` timeouts hit exactly this path
+/// (`docs/research/11-design-review/2026-09-05-arith-timeout-profiles.md`,
+/// Finding 0). A caller can tell "the search never got far enough to report
+/// anything" (this line) apart from "collection was never enabled" (no line
+/// at all, the pre-existing and unchanged behavior of a normal, in-budget
+/// return with `trace_mode` off) without guessing.
+fn watchdog_unavailable_line(trace_mode: bool, reason: &str) -> Option<String> {
+    trace_mode.then(|| format!("; theory-layer unavailable: {reason}"))
+}
+
 /// Installs the progress sink (see the module header) on `config` when
 /// `progress_mode` is set, returning the (possibly updated) config alongside
 /// the receiver end. `progress_rx` outlives the `solve` closure built from the
@@ -681,13 +704,42 @@ fn main() -> ExitCode {
             // A closed channel means the watchdog already answered; drop quietly.
             let _ = tx.send(solve());
         });
+    // S2 dispatch-overrun fix (2026-09-05,
+    // `docs/plan/smt-parity-plan-2026-09-05.md` row S2): a watchdog timeout used
+    // to hardcode `("unknown", None, None)` regardless of `trace_mode`, so a
+    // query whose internal dispatch ran past the watchdog printed NOTHING for
+    // `--trace` — not even a stale partial stat — because the `; theory-layer …`
+    // line is built only after the worker's `solve()` call returns
+    // (`TheoryLayerStatsGuard`'s snapshot is thread-local to the worker thread,
+    // per `crate::theories::cdclt_diagnostics`, so the main thread cannot read
+    // a live in-progress snapshot without new cross-thread state). Three of
+    // five traced `QF_IDL` timeouts hit exactly this path
+    // (`docs/research/11-design-review/2026-09-05-arith-timeout-profiles.md`,
+    // Finding 0). Rather than add shared mutable state to a hot search loop for
+    // a diagnostic-only line, a watchdog timeout now always prints an explicit
+    // `; theory-layer unavailable: <reason>` line when `--trace` is set, so a
+    // trace is never silently empty — a caller can tell "no stats yet" apart
+    // from "collection was never enabled" without guessing.
     let (verdict, evidence, trace_line) = match worker {
-        Ok(_) => rx
-            .recv_timeout(Duration::from_millis(ms) + WATCHDOG_GRACE)
-            .unwrap_or(("unknown", None, None)),
+        Ok(_) => match rx.recv_timeout(Duration::from_millis(ms) + WATCHDOG_GRACE) {
+            Ok(outcome) => outcome,
+            Err(_) => (
+                "unknown",
+                None,
+                watchdog_unavailable_line(
+                    trace_mode,
+                    "watchdog fired before the worker thread returned (no CDCL(T) \
+                     search on this query completed before the deadline)",
+                ),
+            ),
+        },
         // Could not spawn a worker: a resource failure, which is `unknown` —
         // never a guess and never a crash.
-        Err(_) => ("unknown", None, None),
+        Err(_) => (
+            "unknown",
+            None,
+            watchdog_unavailable_line(trace_mode, "failed to spawn the solver worker thread"),
+        ),
     };
 
     // Progress lines first (see the no-timeout branch above for why), then the
@@ -712,4 +764,64 @@ fn main() -> ExitCode {
     // correct, so exit rather than block on a thread that has no deadline.
     std::io::Write::flush(&mut std::io::stdout()).ok();
     std::process::exit(0);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn watchdog_unavailable_line_is_none_off_trace_and_some_on_trace() {
+        assert_eq!(
+            watchdog_unavailable_line(false, "anything"),
+            None,
+            "a default (non-trace) run's output must stay byte-identical"
+        );
+        let line = watchdog_unavailable_line(
+            true,
+            "watchdog fired before the worker thread returned (no CDCL(T) search on this \
+             query completed before the deadline)",
+        )
+        .expect("trace_mode=true must always yield a line, never nothing");
+        assert!(
+            line.starts_with("; theory-layer unavailable: "),
+            "got: {line}"
+        );
+        assert!(line.contains("watchdog fired"), "got: {line}");
+    }
+
+    /// End-to-end regression for the actual race in `main`: a worker that
+    /// never answers before `recv_timeout` gives up must still, when
+    /// `--trace` is set, produce SOME `; theory-layer …` line — never
+    /// nothing (the measured defect,
+    /// `docs/research/11-design-review/2026-09-05-arith-timeout-profiles.md`
+    /// Finding 0: three of five traced `QF_IDL` timeouts printed nothing at
+    /// all). This exercises the identical `mpsc` + `recv_timeout` shape
+    /// `main` uses — a worker that outlives the deadline — not a synthetic
+    /// solver: the fix lives entirely in what happens when `recv_timeout`
+    /// returns `Err`, which is exactly what this reproduces.
+    #[test]
+    fn a_worker_that_outlives_the_deadline_still_yields_a_theory_layer_line() {
+        let (tx, rx) = std::sync::mpsc::channel::<(&'static str, Option<String>, Option<String>)>();
+        let _worker = std::thread::spawn(move || {
+            std::thread::sleep(Duration::from_secs(2));
+            let _ = tx.send(("unknown", None, None));
+        });
+        let trace_mode = true;
+        let (verdict, _evidence, trace_line) = match rx.recv_timeout(Duration::from_millis(10)) {
+            Ok(outcome) => outcome,
+            Err(_) => (
+                "unknown",
+                None,
+                watchdog_unavailable_line(
+                    trace_mode,
+                    "watchdog fired before the worker thread returned (no CDCL(T) \
+                     search on this query completed before the deadline)",
+                ),
+            ),
+        };
+        assert_eq!(verdict, "unknown");
+        let line = trace_line.expect("a timed-out solve with --trace must still print a line");
+        assert!(line.starts_with("; theory-layer"), "got: {line}");
+    }
 }

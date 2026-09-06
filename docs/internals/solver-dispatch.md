@@ -35,6 +35,37 @@ Fallback happens after `unknown`, not after a contradictory definitive result,
 and all routes share the caller's remaining deadline. The explained dispatcher
 adds a deterministic route trace without changing the verdict.
 
+"Share the remaining deadline" is aspirational in one respect worth naming: a
+few routes carve a fixed *reserve* out of the caller's nominal timeout rather
+than tracking actual elapsed wall clock (`dl_probe_budget` hands the
+difference-logic probe `timeout - min(timeout/4, 6s)`, and
+`online_lia_probe_config` hands the LIA online CDCL(T) probe a flat third of
+the timeout). A reserve is deliberate and load-bearing — an unreserved
+difference-logic probe can spend the *whole* budget on a hard instance and
+starve every route below it of the time it needs to decide a genuinely easy
+one (`QF_IDL/sal/lpsat/lpsat-goal-18`, decided by `lia-dpll` in ~4s, would
+regress to `unknown` without it) — but a reserve is only ever a **bound on
+how much a route may spend before checking**, never a promise that it will
+spend that much. A route with a cheap admission constant (an atom or
+CNF-variable count, say) must evaluate that constant BEFORE running the
+expensive part of its own reserve, so a query that is already inadmissible
+declines near-instantly and hands the unspent reserve back to the pool
+implicitly (by simply not having consumed it), rather than the caller getting
+charged for a probe that was always going to fail. `dpll_lia`'s
+`arith_dpll_admission_preflight` is the worked example: before this landed,
+`check_with_arith_dpll` always ran the online LIA probe first and only
+checked `exceeds_pre_sat_skeleton_boundary` afterward, inside the legacy
+fallback — so an oversized query paid the probe's full fixed share (a
+measured ~8s on the standard 24s budget) before declining on a constant it
+could have evaluated at t≈0. Three of five traced `QF_IDL` timeouts summed
+enough fixed reserves across routes to exceed the caller's own watchdog,
+which is a distinct failure from a route simply being slow: nothing was
+`unknown` because the problem was hard, everything was `unknown` because two
+sequential fixed allowances didn't fit inside one shared budget
+(`docs/plan/smt-parity-plan-2026-09-05.md` row S2,
+`docs/research/11-design-review/2026-09-05-arith-timeout-profiles.md` Finding
+0).
+
 Current fragment coverage belongs in the generated
 [support matrix](../reference/support-matrix.md), not in a hard-coded route list
 on this page.
