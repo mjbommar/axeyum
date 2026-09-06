@@ -17,7 +17,7 @@
 # only rises on purpose) -- but a new UNCERTIFIED function is never refused;
 # that label is honest, not a violation. See
 # docs/math-department/13-computer-algebra.md item 10.
-COUNT	115
+COUNT	117
 FN	enclosure::enclose	Option<Enclosure>
 FN	enclosure::enclose_constant	Option<Enclosure>
 FN	enclosure::enclose_root	Option<Enclosure>
@@ -122,7 +122,9 @@ FN	prove_derivative	ZeroTest
 FN	qe::decide_exists	Decision
 FN	qe::decide_forall	ForallDecision
 FN	qe_bivariate::eliminate_y	Result<ProjectionCertificate, Fault>
+FN	qe_bivariate::eliminate_y_to_formula	Result<FormulaCertificate, Fault>
 FN	qe_dnf::decide_exists_dnf	DnfDecision
+FN	qe_fibre::decide_fibre	Result<FibreCertificate, Fault>
 FN	rationality::decide_rationality	Option<RationalityCertificate>
 FN	real_algebraic::polynomial_ivt	Option<IvtCertificate>
 FN	sos::check	Result<CheckReport, String>
@@ -174,9 +176,12 @@ VOCAB	Enclosure	struct
 VOCAB	ExtremumCertificate	struct
 VOCAB	FactorModulusBound	struct
 VOCAB	FactorizationCertificate	struct
+VOCAB	FibreCertificate	struct
+VOCAB	FibreWitness	struct
 VOCAB	ForallDecision	enum
 VOCAB	FormIdealCertificate	struct
 VOCAB	FormReductionCertificate	struct
+VOCAB	FormulaCertificate	struct
 VOCAB	FundamentalUnitCertificate	struct
 VOCAB	GaussianFactorizationCertificate	struct
 VOCAB	GenericWitness	struct
