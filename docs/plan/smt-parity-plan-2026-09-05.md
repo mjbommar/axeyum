@@ -69,19 +69,52 @@ QF_SLIA and QF_NIA both hit the 32-bit int-blast width ladder, a shared
 S11/S12 target not previously named. One QF_LIA file overflows `i128` inside
 the simplex, not the parser, so S9's parser fix alone will not close it.
 
-**In flight at the pause, in isolated worktrees, not merged:** S1b (VSIDS
-order heap and recursive clause minimization in `CdclT`; measurement
-committed), S9 (ADR-1702 slice 2: wide integer literals through the parser,
-term node, route declines, differential fuzz; six commits), S11a (routing the
-UF/QF_UF cap losses; the census's Ackermann attribution does not survive the
-front door and the lane relocated the declared-sort CEGAR bound to the rung
-that owns the budget). Their status files under `docs/plan/status/` record
-exactly which gates ran.
+**Three more slices finished in worktrees after the pause, gates green,
+awaiting merge behind the push freeze** (status files under
+`docs/plan/status/`):
+
+- **S1b** (`worktree-agent-a03c88d2048b0e8ba`, `649a12add`): VSIDS order heap
+  and recursive clause minimization in `CdclT`. QF_IDL timeout population
+  **11 -> 27 of 50** on idle s5; `RVpredict_13` makes identical decisions in
+  both arms and falls 15.5 s -> 1.8 s, so the cost was the linear decision
+  scan alone. The two QF_LIA files "lost" under S1 were S2's admission
+  preflight declining before the online probe that used to refute them
+  (`bofill-scheduling/SMT_real_LIA/ex3000_2400_100`, `ex4320_2400_100`); an S2
+  follow-up should let the size-gated route still run the online probe.
+- **S9** (`worktree-agent-a464d7d70f97462cc`, `d975a1fbb`): wide integer
+  literals as sibling `WideIntConst`/`WideInt` variants; the parser admits
+  them; every route declines at its boundary; a **panic on user input** in
+  the replay evaluator is fixed. The plan's "+6 against cvc5" for the 26
+  QF_UFLIA files is **unsupported**: ADR-0376's ablation re-run on today's
+  HEAD gives 0 of 6 either way, so the binding constraint is the 64-bit
+  int-blast width, not the literal type. Also fixed: the mutation harness
+  could not name a `should_panic` death.
+- **S11a** (`worktree-agent-aca5ca910320deff7`, `5801c2d4b`): **the census's
+  UF/QF_UF attribution was wrong for 67 of 70 files**, two ways: the census
+  `class` is the last route's message (on 35 QF_UF files `euf-online` is
+  entered first and times out at 23.5 s; the Ackermann decline that named the
+  class costs milliseconds after the budget is gone), and `explain_corpus` is
+  not the front door (all 32 UF files end at quantifier-instantiation limits
+  there, none at the CEGAR bound). `euf-online` was already first in dispatch.
+  On today's main 26 of the 38 QF_UF "losses" already decide. The cap
+  genuinely blocked 3 files; fixed by no longer discarding a replay-confirmed
+  `sat` in `check_qf_ufbv_lazy` and passing a terminal-rung pair bound
+  (16,384) where nothing runs after it. 38-file population 27 -> 29, 0 flips.
+
+Two corrections to the census method follow from S11a: classify by the
+route that spent the budget, not the last message, and classify through the
+front door, never through `explain_corpus`. The UF/QF_UF lever is S1b's heap
+and S7's engine, not a cap.
+
+**In flight at the pause:** none; every dispatched slice has reported.
 
 **Next steps, in order:**
-1. Review and merge S1b, S9, S11a from their branches; run each's full gate
+1. Merge S1b, S9, S11a from their branches after the push freeze (S9 will
+   conflict with the CAS lanes in `scripts/tests/mutation_controls.py`; take
+   the sorted union and run that harness's self-suite); run each's full gate
    list on `main` after merge, clippy included (the composition failure of
-   2026-09-06 was a clippy size lint, not a compile error).
+   2026-09-06 was a clippy size lint, not a compile error). Then run the full
+   200-file QF_UF and UF sweeps S11a did not run.
 2. Re-measure QF_IDL, QF_RDL, QF_UF, UF, QF_LIA and QF_UFLIA on idle hosts at
    the merged commit; append entries; fresh sidecars, no resume across
    binaries.
