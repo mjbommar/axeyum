@@ -12,13 +12,18 @@ use crate::nat_prelude::structures_setoid::intern_structures_s_names;
 struct Fixture {
     lg: LogicPrelude,
     ix: IndexNames,
+    algs: NameId,
 }
 
 fn build(k: &mut Kernel) -> Fixture {
     let lg = build_logic_prelude(k).expect("logic prelude must build");
     let p = intern_structures_s_names(k);
     let ix = declare_index_surgery(k, &lg, p.algs).expect("AlgS.Index must admit");
-    Fixture { lg, ix }
+    Fixture {
+        lg,
+        ix,
+        algs: p.algs,
+    }
 }
 
 /// `Nat.succ^n Nat.zero`. Kept to single digits: every `Nat` numeral at this
@@ -227,4 +232,266 @@ fn remove_undoes_insert_at_small_indices() {
             );
         }
     }
+}
+
+/// The eight lemmas are `Theorem`s — the kernel checked their proof terms —
+/// and the three surgeries are `Definition`s.
+#[test]
+fn the_index_lemmas_are_checked_theorems() {
+    let mut k = Kernel::new();
+    let f = build(&mut k);
+    for name in [
+        f.ix.le_zero_eq,
+        f.ix.le_refl,
+        f.ix.le_dichotomy,
+        f.ix.le_succ_cases,
+        f.ix.insert_at_at,
+        f.ix.insert_at_below,
+        f.ix.insert_at_above,
+        f.ix.remove_at_insert_at,
+    ] {
+        let decl = k.environment().get(name).expect("must exist").clone();
+        assert!(
+            matches!(decl, Declaration::Theorem { .. }),
+            "{name:?} must be a Theorem"
+        );
+    }
+    for name in [f.ix.le, f.ix.remove_at, f.ix.insert_at] {
+        let decl = k.environment().get(name).expect("must exist").clone();
+        assert!(
+            matches!(decl, Declaration::Definition { .. }),
+            "{name:?} must be a Definition"
+        );
+    }
+}
+
+/// **The inventory for ADR-1657's fact ledger entries.** Prints every
+/// declaration this module owns as `INDEX-INVENTORY|<name>|<rendered type>`,
+/// read from `Kernel::environment` — so a fact's `formal.statement` is
+/// transcribed from the KERNEL and never from source text.
+///
+/// The count is derived from `owned_names`, the authority, not from a
+/// literal in this test.
+#[test]
+fn the_index_declaration_inventory() {
+    let mut k = Kernel::new();
+    let f = build(&mut k);
+    let expected = f.ix.owned_names().len();
+    let mut printed = 0usize;
+    for name in f.ix.owned_names() {
+        let decl = k
+            .environment()
+            .get(name)
+            .expect("declaration must exist")
+            .clone();
+        let ty = match &decl {
+            Declaration::Definition { ty, .. } | Declaration::Theorem { ty, .. } => *ty,
+            _ => panic!("unexpected declaration kind"),
+        };
+        let rendered = k.render_lean(ty);
+        assert!(!rendered.trim().is_empty(), "{name:?} rendered empty");
+        assert!(
+            rendered.contains("Nat"),
+            "every AlgS.Index type is indexed by Nat, got: {rendered}"
+        );
+        println!("INDEX-INVENTORY|{name:?}|{rendered}");
+        printed += 1;
+    }
+    assert_eq!(printed, expected, "every owned name must have printed");
+}
+
+/// The four order lemmas must mention `AlgS.Index.le` in their rendered
+/// types, and the four surgery lemmas must mention the surgery they are
+/// about — a lemma about the wrong constant would render differently.
+#[test]
+fn the_lemma_types_are_about_what_they_claim() {
+    let mut k = Kernel::new();
+    let f = build(&mut k);
+    let render = |k: &mut Kernel, name| {
+        let decl = k.environment().get(name).expect("must exist").clone();
+        let ty = match &decl {
+            Declaration::Definition { ty, .. } | Declaration::Theorem { ty, .. } => *ty,
+            _ => panic!("unexpected declaration kind"),
+        };
+        k.render_lean(ty)
+    };
+    for name in [
+        f.ix.le_zero_eq,
+        f.ix.le_refl,
+        f.ix.le_dichotomy,
+        f.ix.le_succ_cases,
+    ] {
+        let r = render(&mut k, name);
+        assert!(
+            r.contains("AlgS.Index.le"),
+            "an order lemma must be about AlgS.Index.le, got: {r}"
+        );
+    }
+    for name in [
+        f.ix.insert_at_at,
+        f.ix.insert_at_below,
+        f.ix.insert_at_above,
+    ] {
+        let r = render(&mut k, name);
+        assert!(
+            r.contains("AlgS.Index.insertAt"),
+            "an insertion lemma must be about AlgS.Index.insertAt, got: {r}"
+        );
+    }
+    let r = render(&mut k, f.ix.remove_at_insert_at);
+    assert!(
+        r.contains("AlgS.Index.removeAt") && r.contains("AlgS.Index.insertAt"),
+        "the inverse lemma must mention BOTH surgeries, got: {r}"
+    );
+    // `le_dichotomy` must really be a disjunction, not one half of one.
+    let r = render(&mut k, f.ix.le_dichotomy);
+    assert!(
+        r.contains("Or"),
+        "le_dichotomy must conclude an Or, got: {r}"
+    );
+    // `removeAt_insertAt` must carry NO hypothesis: it holds at every index.
+    let r = render(&mut k, f.ix.remove_at_insert_at);
+    assert!(
+        !r.contains("AlgS.Index.le"),
+        "removeAt_insertAt is unconditional — it must not take an order hypothesis, got: {r}"
+    );
+}
+
+/// **Negative control for `le_dichotomy`.** The successor branch returns the
+/// induction hypothesis `ih n'` because `Or (le (succ m') (succ n'))
+/// (le (succ (succ n')) (succ m'))` ι-reduces to `Or (le m' n')
+/// (le (succ n') m')`. Feeding `ih` at the WRONG index — `ih` applied to
+/// `succ n'` rather than `n'` — must be refused: it proves
+/// `Or (le m' (succ n')) (le (succ (succ n')) m')`, which is a different
+/// proposition.
+#[test]
+fn control_le_dichotomy_needs_the_hypothesis_at_the_predecessor() {
+    let mut k = Kernel::new();
+    let f = build(&mut k);
+    let nat = k.const_(f.lg.nat, vec![]);
+    let succ = k.const_(f.lg.nat_succ, vec![]);
+    let or_c = k.const_(f.lg.or, vec![]);
+
+    let mp = k.fvar(91_000);
+    let np = k.fvar(91_001);
+    let smp = k.app(succ, mp);
+    let snp = k.app(succ, np);
+
+    let goal = {
+        let le = k.const_(f.ix.le, vec![]);
+        let a = t_app(&mut k, le, &[smp, snp]);
+        let le = k.const_(f.ix.le, vec![]);
+        let ssnp = k.app(succ, snp);
+        let b = t_app(&mut k, le, &[ssnp, smp]);
+        app2(&mut k, or_c, a, b)
+    };
+    let ih_ty = {
+        let n = k.fvar(91_002);
+        let le = k.const_(f.ix.le, vec![]);
+        let a = t_app(&mut k, le, &[mp, n]);
+        let le = k.const_(f.ix.le, vec![]);
+        let sn = k.app(succ, n);
+        let b = t_app(&mut k, le, &[sn, mp]);
+        let g = app2(&mut k, or_c, a, b);
+        pi_over(&mut k, 91_002, nat, g)
+    };
+    let ih = k.fvar(91_003);
+    // MUTATION: `ih (succ n')` where `ih n'` is required.
+    let bad = k.app(ih, snp);
+    let value = lam_over(&mut k, 91_003, ih_ty, bad);
+    let value = lam_over(&mut k, 91_001, nat, value);
+    let value = lam_over(&mut k, 91_000, nat, value);
+    let ty = arrow(&mut k, ih_ty, goal);
+    let ty = pi_over(&mut k, 91_001, nat, ty);
+    let ty = pi_over(&mut k, 91_000, nat, ty);
+
+    let ns = k.name_str(f.algs, "IndexControl");
+    let name = k.name_str(ns, "dichotomy_at_the_wrong_index");
+    let got = k.add_declaration(Declaration::Theorem {
+        name,
+        uparams: vec![],
+        ty,
+        value,
+    });
+    assert!(
+        got.is_err(),
+        "the induction hypothesis at `succ n'` proves a different disjunction"
+    );
+    // Positive twin: the real lemma is present.
+    assert!(
+        k.environment().get(f.ix.le_dichotomy).is_some(),
+        "the real le_dichotomy must be present"
+    );
+}
+
+/// **Negative control for `removeAt_insertAt`.** Its successor step is the
+/// induction hypothesis at the SHIFTED family `fun t => v (succ t)`. Passing
+/// the unshifted `v` — a one-token change — must be refused.
+#[test]
+fn control_remove_at_insert_at_needs_the_shifted_family() {
+    let mut k = Kernel::new();
+    let f = build(&mut k);
+    let nat = k.const_(f.lg.nat, vec![]);
+    let succ = k.const_(f.lg.nat_succ, vec![]);
+    let l0 = k.level_zero();
+    let l1 = k.level_succ(l0);
+    let fam_ty = arrow(&mut k, nat, nat);
+
+    let w = k.fvar(92_000);
+    let ip = k.fvar(92_001);
+    let v = k.fvar(92_002);
+    let jp = k.fvar(92_003);
+    let sip = k.app(succ, ip);
+    let sjp = k.app(succ, jp);
+
+    let stmt = |k: &mut Kernel, i: ExprId, v: ExprId, j: ExprId| {
+        let c = k.const_(f.ix.insert_at, vec![]);
+        let ins = t_app(k, c, &[nat, i, w, v]);
+        let c = k.const_(f.ix.remove_at, vec![]);
+        let lhs = t_app(k, c, &[nat, i, ins, j]);
+        let rhs = k.app(v, j);
+        eq_of(k, &f.lg, l1, nat, lhs, rhs)
+    };
+
+    let ih_ty = {
+        let vv = k.fvar(92_004);
+        let jj = k.fvar(92_005);
+        let s = stmt(&mut k, ip, vv, jj);
+        let b = pi_over(&mut k, 92_005, nat, s);
+        pi_over(&mut k, 92_004, fam_ty, b)
+    };
+    let ih = k.fvar(92_006);
+    let goal = stmt(&mut k, sip, v, sjp);
+    // MUTATION: the unshifted family `v` where `fun t => v (succ t)` belongs.
+    let bad = {
+        let e = k.app(ih, v);
+        k.app(e, jp)
+    };
+    let value = lam_over(&mut k, 92_006, ih_ty, bad);
+    let value = lam_over(&mut k, 92_003, nat, value);
+    let value = lam_over(&mut k, 92_002, fam_ty, value);
+    let value = lam_over(&mut k, 92_001, nat, value);
+    let value = lam_over(&mut k, 92_000, nat, value);
+    let ty = arrow(&mut k, ih_ty, goal);
+    let ty = pi_over(&mut k, 92_003, nat, ty);
+    let ty = pi_over(&mut k, 92_002, fam_ty, ty);
+    let ty = pi_over(&mut k, 92_001, nat, ty);
+    let ty = pi_over(&mut k, 92_000, nat, ty);
+
+    let ns = k.name_str(f.algs, "IndexControl");
+    let name = k.name_str(ns, "remove_insert_unshifted_family");
+    let got = k.add_declaration(Declaration::Theorem {
+        name,
+        uparams: vec![],
+        ty,
+        value,
+    });
+    assert!(
+        got.is_err(),
+        "the induction hypothesis at the UNSHIFTED family proves the wrong equation"
+    );
+    assert!(
+        k.environment().get(f.ix.remove_at_insert_at).is_some(),
+        "the real removeAt_insertAt must be present"
+    );
 }
