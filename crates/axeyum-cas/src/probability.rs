@@ -49,15 +49,22 @@
 //!   here: `Geometric`'s **mean and variance certify** for concrete `p` through
 //!   [`crate::infinite_sum`] on the reindexed summand (`j = k−1`, which is what
 //!   puts the geometric factor in the machinery's own `exp(j·ln q)`
-//!   convention). A *symbolic* `p` still declines — and unlike the continuous
-//!   families above, a hypothesis channel would not help. Measured:
-//!   `gosper_sum(p·(1−p)ʲ, j)` and `gosper_sum(qʲ, j)` (a bare symbolic ratio,
-//!   with no `1−p` to normalize) both return `None`, while the concrete control
-//!   `p = 1/3` sums to `1`. The route declines *before* any convergence
-//!   question, so there is no value to attach `0 < p < 1` to; recording the
-//!   condition would decorate a claim nothing decided. The measurement is run,
-//!   not remembered, in
-//!   `the_geometric_symbolic_ratio_declines_before_any_convergence_question`.
+//!   convention).
+//! - **A *symbolic* `p` needed a whole route, not a hypothesis bolted onto the
+//!   old one.** Gosper genuinely has no antidifference for a symbolic ratio
+//!   (`gosper_sum(p·(1−p)ʲ, j)` and `gosper_sum(qʲ, j)` both return `None`, run
+//!   rather than remembered in
+//!   `the_symbolic_ratio_still_declines_in_gosper_and_is_reached_conditionally`),
+//!   so there was nothing for a `SignCondition` to attach to — the earlier
+//!   reading, that a hypothesis channel "would not help", was right about *that*
+//!   route and wrong about the conclusion. [`crate::infinite_sum_conditional`]
+//!   adds the missing one: the geometric series
+//!   `Σ_{j≥0} j^{(m)}·qʲ = m!·qᵐ/(1−q)^{m+1}`, one recognized identity with the
+//!   shape and the falling-factorial expansion both decided by [`crate::equal`],
+//!   and `|q| < 1` recorded where it cannot be decided. All four `Geometric`
+//!   quantities now certify at symbolic `p` under `0 < p < 1` (the mgf also
+//!   under `t < −ln(1−p)`), while a concrete ratio is still decided on the spot
+//!   — `Σ 2ʲ` declines rather than printing the continuation `−1`.
 //! - **`λᵏ/k!` is not Gosper-summable — so it goes through the recognized
 //!   exponential series instead.** [`crate::gosper_sum`] genuinely returns
 //!   `None` (no hypergeometric antidifference exists; `eˣ`'s Taylor tail has no
@@ -90,14 +97,26 @@
 //!   certifies **unconditionally** for symbolic `μ` and symbolic `t`, and a
 //!   non-positive `σ²` declines (at the shifted mass for `σ² < 0`, at the
 //!   identity itself for `σ² = 0`, since its `2σ²` denominator vanishes).
-//! - **A symbolic `σ²` is the one continuous case still out of reach, and the
-//!   blocker is measured, not assumed.** `integrate(e^{−a·x²}, x)` returns
-//!   `None` for a symbolic `a` (positive control: `∫e^{−x²}` over the line is
-//!   `√π`, certified). `integrate_gaussian` carries an irrational `√a` built
-//!   from a *concrete* rational `a`; with `a` symbolic there is no `√a` to
-//!   build and no erf to differentiate back. Every `Normal` quantity therefore
-//!   still requires a concrete variance, which is why the field is an
-//!   [`axeyum_ir::Rational`].
+//! - **A symbolic `σ²` needed the erf antiderivative to be built with `√a`
+//!   symbolic, and two spellings to be made to meet.** `integrate_gaussian`
+//!   reaches `to_univariate`, which needs a concrete rational coefficient of
+//!   `x²`, so `integrate(e^{−a·x²}, x)` still returns `None` for a symbolic `a`
+//!   — that measurement has not changed.
+//!   [`crate::improper_integrate_conditional`] now carries a second shape past
+//!   it: `C·P(x)·e^{−a·x²}` over the whole line, with the antiderivative built
+//!   from the standard reduction, **proved** by [`crate::prove_derivative`], and
+//!   `a > 0` recorded for the two infinite bounds. Two spelling problems had to
+//!   be solved for the certificate to close at all, and both are recorded at the
+//!   code: the route reads `a` back out *by division* so the reconstruction
+//!   lands on the caller's own spelling of the exponent (reading it off by
+//!   substitution gives `(1/2)/s` where the caller wrote `1/(2s)`, and the two
+//!   `exp` atoms then never meet), and the pdf's normalizer is spelled
+//!   `√a/√π` — the one form that cancels against the route's `√π/√a` without a
+//!   radical rewrite this crate does not have for a symbolic radicand — with
+//!   `c·c·2πσ² = 1` **decided** to confirm it is `1/√(2πσ²)`. All four `Normal`
+//!   quantities now certify at symbolic `σ²` under `σ² > 0`, and the field is a
+//!   [`CasExpr`]; a concrete `σ²` still goes through the unchanged
+//!   [`crate::improper_integrate`] path and stays unconditional.
 //! - **The Poisson⊕Poisson convolution identity has its own, independent
 //!   certificate** from [`crate::prove_wz_sum`], the Wilf–Zeilberger prover:
 //!   `Σⱼ C(k,j)·λ₁ʲ·λ₂ᵏ⁻ʲ = (λ₁+λ₂)ᵏ` for *every* `k`, proved symbolically in
@@ -143,12 +162,45 @@
 //! | `Exponential(λ)` mgf | uncertified (symbolic `t`) | certified `λ/(λ−t)` | `λ − t > 0` |
 //! | `Uniform(a,b)` mgf | uncertified (symbolic `t`) | certified `(e^{tb}−e^{ta})/(t(b−a))` | `t ≠ 0` |
 //! | `Normal(μ,σ²)` mgf, symbolic `μ`, `t` | uncertified (symbolic `t`) | certified `e^{μt+σ²t²/2}` | none (`σ²` concrete, its sign decided) |
-//! | `Normal` with symbolic `σ²` | not representable | unchanged | — (`integrate(e^{−a·x²})` declines, measured) |
-//! | `Geometric(p)`, symbolic `p` | uncertified | unchanged | — (`gosper_sum` declines before convergence, measured) |
+//! | `Normal` with symbolic `σ²` | not representable | see wave four | — |
+//! | `Geometric(p)`, symbolic `p` | uncertified | see wave four | — |
 //!
 //! `Uniform`'s `t ≠ 0` is the removable singularity of the closed form:
 //! `M(0) = 1` is its limit, no route in this crate decides that limit, and so
 //! the certificate does not claim it.
+//!
+//! # What changed, wave four (the two families that were still declining)
+//!
+//! | quantity | before | after | hypothesis |
+//! |---|---|---|---|
+//! | `Normal(μ,σ²)` mass, symbolic `σ²` | not representable | certified `1` | `σ² > 0` |
+//! | `Normal(μ,σ²)` mean, symbolic `σ²` | not representable | certified `μ` | `σ² > 0` |
+//! | `Normal(μ,σ²)` variance, symbolic `σ²` | not representable | certified `σ²` | `σ² > 0` |
+//! | `Normal(μ,σ²)` mgf, symbolic `σ²` | not representable | certified `e^{μt+σ²t²/2}` | `σ² > 0` |
+//! | `Geometric(p)` mass, symbolic `p` | uncertified | certified `1` | `0 < p < 1` |
+//! | `Geometric(p)` mean, symbolic `p` | uncertified | certified `1/p` | `0 < p < 1` |
+//! | `Geometric(p)` variance, symbolic `p` | uncertified | certified `(1−p)/p²` | `0 < p < 1` |
+//! | `Geometric(p)` mgf, symbolic `p` and `t` | uncertified | certified `pe^t/(1−(1−p)e^t)` | `0 < p < 1` and `t < −ln(1−p)` |
+//!
+//! Both new hypotheses are **restated** from what the deciding route actually
+//! recorded, and each restatement is guarded by an [`equal`] check that refuses
+//! to relabel a condition it does not recognize: `1/(2σ²) > 0` becomes `σ² > 0`
+//! only once `a·2σ² = 1` is decided, and `1 − |q| > 0` becomes `0 < p < 1` only
+//! once the margin is decided to be this distribution's own. The geometric
+//! restatement records conditions that **imply** what the route needed
+//! (`0 < p < 1 ⟹ |1−p| < 1`) rather than restating an equivalence: a certificate
+//! under a stronger hypothesis is a certificate of a smaller statement, which is
+//! the reading [`Trust::CertifiedUnder`] already has, and `0 < p < 1` is the
+//! parameter domain `Geometric(p)` is defined on. Recording something *weaker*
+//! than the route needed would not be sound, and is exactly what the guard
+//! prevents.
+//!
+//! What is still uncertified after wave four: a `Normal` whose variance is
+//! symbolic but whose Gaussian factor is spelled differently from `e^{−(a·u²)}`
+//! (an honest decline at the differentiate-and-check, not a wrong answer), a
+//! `Gaussian` integrand with an uncompleted linear term in the exponent, and a
+//! geometric summand with the index in a denominator or under a factorial —
+//! each with its own negative control.
 //!
 //! Chebyshev/Markov bounds are built from certified mean/variance but are
 //! **not themselves re-proved** here — [`Route::Derived`] records exactly
@@ -162,8 +214,8 @@ use axeyum_ir::Rational;
 use crate::{
     CasExpr, ConditionalIntegral, LimitPoint, SignCondition, UnaryFunc, ZeroTest,
     binomial_coefficient, definite_sum, equal, expand, improper_integrate,
-    improper_integrate_conditional, infinite_sum, laplace_transform, ntheory, prove_wz_sum,
-    simplify,
+    improper_integrate_conditional, infinite_sum, infinite_sum_conditional, laplace_transform,
+    ntheory, prove_wz_sum, simplify,
 };
 
 /// Which existing certified primitive established a [`Certificate`]'s claim.
@@ -518,38 +570,19 @@ impl Discrete {
                 }
             }
             Discrete::Geometric(p) => {
-                let Some(p_val) = as_concrete(p) else {
-                    return Certificate::uncertified(
-                        CasExpr::one(),
-                        Route::InfiniteSum,
-                        "symbolic p: infinite_sum's convergence/limit check needs a concrete \
-                         ratio to decide |1-p| < 1",
-                    );
-                };
                 // Reindex j = k-1 (support 0,1,2,…) so the summand matches the
                 // machinery's own exp(j·ln q) convention; mathematically identical
                 // to Σ_{k=1}^∞ p(1-p)^{k-1} by relabelling j = k-1.
-                let j = CasExpr::var("j");
-                let q = CasExpr::one() - CasExpr::Const(p_val);
-                let ln_q = CasExpr::Unary(UnaryFunc::Ln, Box::new(q));
-                let summand = CasExpr::Const(p_val) * (j.clone() * ln_q).exp();
-                match infinite_sum(&summand, "j", &CasExpr::zero()) {
-                    Some(value) => match equal(&value, &CasExpr::one()) {
-                        ZeroTest::Certified { equal: true, .. } => {
-                            Certificate::certified(CasExpr::one(), Route::InfiniteSum)
-                        }
-                        _ => Certificate::uncertified(
-                            value,
-                            Route::InfiniteSum,
-                            "infinite_sum's value did not decide equal to 1",
-                        ),
-                    },
-                    None => Certificate::uncertified(
-                        CasExpr::one(),
-                        Route::InfiniteSum,
-                        "infinite_sum declined on the reindexed geometric summand",
-                    ),
-                }
+                let index = free_index(&[p], &[]);
+                let summand = geometric_moment_summand(p, &index, &CasExpr::one());
+                geometric_conditional_certificate(
+                    &summand,
+                    &index,
+                    CasExpr::one(),
+                    p,
+                    None,
+                    "Geometric total-mass",
+                )
             }
             Discrete::Poisson(lambda) => {
                 let index = free_index(&[lambda], &[]);
@@ -635,18 +668,18 @@ impl Discrete {
             }
             Discrete::Geometric(p) => {
                 let target = CasExpr::one() / p.clone();
-                let Some(p_val) = as_concrete(p) else {
-                    return Certificate::uncertified(
-                        target,
-                        Route::InfiniteSum,
-                        geometric_symbolic_p_reason(),
-                    );
-                };
                 let index = free_index(&[p], &[]);
                 // E[X] = Σ_{j≥0} (j+1)·p·qʲ under the reindexing j = k−1.
                 let weight = CasExpr::var(&index) + CasExpr::one();
-                let summand = geometric_moment_summand(p_val, &index, &weight);
-                infinite_sum_certificate(&summand, &index, target, "Geometric mean")
+                let summand = geometric_moment_summand(p, &index, &weight);
+                geometric_conditional_certificate(
+                    &summand,
+                    &index,
+                    target,
+                    p,
+                    None,
+                    "Geometric mean",
+                )
             }
             Discrete::Poisson(lambda) => {
                 let index = free_index(&[lambda], &[]);
@@ -680,27 +713,26 @@ impl Discrete {
             Discrete::DiscreteUniform { a, b } => discrete_uniform_variance(*a, *b),
             Discrete::Geometric(p) => {
                 let target = (CasExpr::one() - p.clone()) / p.clone().pow(2);
-                let Some(p_val) = as_concrete(p) else {
-                    return Certificate::uncertified(
-                        target,
-                        Route::InfiniteSum,
-                        geometric_symbolic_p_reason(),
-                    );
-                };
                 let index = free_index(&[p], &[]);
                 let shifted = CasExpr::var(&index) + CasExpr::one();
                 // Var[X] = E[X²] − E[X]², both sums under the reindexing j = k−1.
-                let second = infinite_sum(
-                    &geometric_moment_summand(p_val, &index, &shifted.clone().pow(2)),
+                let second = geometric_conditional_certificate(
+                    &geometric_moment_summand(p, &index, &shifted.clone().pow(2)),
                     &index,
-                    &CasExpr::zero(),
+                    (CasExpr::int(2) - p.clone()) / p.clone().pow(2),
+                    p,
+                    None,
+                    "Geometric second moment",
                 );
-                let first = infinite_sum(
-                    &geometric_moment_summand(p_val, &index, &shifted),
+                let first = geometric_conditional_certificate(
+                    &geometric_moment_summand(p, &index, &shifted),
                     &index,
-                    &CasExpr::zero(),
+                    CasExpr::one() / p.clone(),
+                    p,
+                    None,
+                    "Geometric mean",
                 );
-                moment_difference_certificate(second, first, target, "Geometric variance")
+                conditional_variance(&second, &first, target, "Geometric variance")
             }
             Discrete::Poisson(lambda) => {
                 let index = free_index(&[lambda], &[]);
@@ -823,13 +855,20 @@ impl Discrete {
                 let e = CasExpr::var(t).exp();
                 let q = CasExpr::one() - p.clone();
                 let target = (p.clone() * e.clone()) / (CasExpr::one() - q * e);
-                Certificate::uncertified(
+                let index = free_index(&[p], &[t]);
+                // M(t) = Σ_{j≥0} e^{t(j+1)}·p·qʲ under the reindexing j = k−1: the
+                // mgf's own `e^{t·k}` merges with the geometric factor into the
+                // single ratio `q·e^t`, which is why `t` is never read as a
+                // polynomial coefficient here.
+                let weight = (CasExpr::var(t) * (CasExpr::var(&index) + CasExpr::one())).exp();
+                let summand = geometric_moment_summand(p, &index, &weight);
+                geometric_conditional_certificate(
+                    &summand,
+                    &index,
                     target,
-                    Route::InfiniteSum,
-                    "symbolic t: convergence requires t < -ln(1-p), a sign the limit \
-                     routine cannot decide symbolically (mirrors the continuous-mgf \
-                     to_univariate constraint: here it is the convergence test, not \
-                     coefficient extraction, that declines)",
+                    p,
+                    Some(t),
+                    "Geometric mgf",
                 )
             }
             Discrete::Poisson(lambda) => poisson_mgf(lambda, t),
@@ -990,8 +1029,10 @@ fn poisson_decline_reason(lambda: &CasExpr) -> String {
 /// [`crate::infinite_sum`]'s exponential series.
 ///
 /// `e^{t·k}·λᵏ` is ONE exponential factor of rate `t + ln λ`, so the mgf's own
-/// symbolic `t` is never read as a polynomial coefficient — which is why this
-/// certifies where every other infinite-support discrete mgf here declines.
+/// symbolic `t` is never read as a polynomial coefficient. The `Geometric` mgf
+/// reaches its own closed form the same way, by merging `e^{t·k}` into the
+/// geometric ratio — but conditionally, since that ratio's modulus is what
+/// convergence turns on.
 fn poisson_mgf(lambda: &CasExpr, t: &str) -> Certificate {
     let target = (lambda.clone() * (CasExpr::var(t).exp() - CasExpr::one())).exp();
     let index = free_index(&[lambda], &[t]);
@@ -1059,14 +1100,160 @@ fn infinite_sum_certificate(
     }
 }
 
-/// `Σ_{j≥0} weight(j)·p·(1−p)ʲ` for a concrete `p` — the `Geometric(p)` moments
-/// after the reindexing `j = k−1` that puts the support at `0, 1, 2, …` and the
-/// geometric factor in the machinery's own `exp(j·ln q)` convention.
-fn geometric_moment_summand(p: Rational, var: &str, weight: &CasExpr) -> CasExpr {
+/// `Σ_{j≥0} weight(j)·p·(1−p)ʲ` for a concrete **or symbolic** `p` — the
+/// `Geometric(p)` moments after the reindexing `j = k−1` that puts the support at
+/// `0, 1, 2, …` and the geometric factor in the machinery's own `exp(j·ln q)`
+/// convention.
+fn geometric_moment_summand(p: &CasExpr, var: &str, weight: &CasExpr) -> CasExpr {
     let j = CasExpr::var(var);
-    let q = CasExpr::one() - CasExpr::Const(p);
-    let ln_q = CasExpr::Unary(UnaryFunc::Ln, Box::new(q));
-    weight.clone() * CasExpr::Const(p) * (j * ln_q).exp()
+    let ln_q = CasExpr::Unary(UnaryFunc::Ln, Box::new(geometric_ratio(p)));
+    weight.clone() * p.clone() * (j * ln_q).exp()
+}
+
+/// The geometric ratio `q = 1 − p`, in the one spelling both the summand and the
+/// hypothesis restatement use — they have to agree, because `1 − |q| > 0` is
+/// compared as an expression.
+fn geometric_ratio(p: &CasExpr) -> CasExpr {
+    simplify(&(CasExpr::one() - p.clone()))
+}
+
+/// Decide `Σ_{var≥0} summand = target` through [`crate::infinite_sum_conditional`]
+/// and package it as a [`Certificate`], restating the route's convergence
+/// condition in the distribution's own parameter.
+///
+/// The `Geometric(p)` counterpart of [`conditional_integral_certificate`]: the
+/// same shape, with the convergence condition where the boundary condition was.
+/// A concrete `p` comes back with no conditions at all (the route decides
+/// `|1−p| < 1` on the spot), so every certificate that was unconditional stays
+/// unconditional.
+fn geometric_conditional_certificate(
+    summand: &CasExpr,
+    var: &str,
+    target: CasExpr,
+    p: &CasExpr,
+    mgf_variable: Option<&str>,
+    subject: &str,
+) -> Certificate {
+    let Some(sum) = infinite_sum_conditional(summand, var, &CasExpr::zero()) else {
+        return Certificate::uncertified(
+            target,
+            Route::InfiniteSum,
+            format!("infinite_sum_conditional declined on the {subject} summand"),
+        );
+    };
+    if !matches!(
+        equal(&sum.value, &target),
+        ZeroTest::Certified { equal: true, .. }
+    ) {
+        return Certificate::uncertified(
+            sum.value,
+            Route::InfiniteSum,
+            format!(
+                "the conditional sum's value did not decide equal to the {subject} closed form"
+            ),
+        );
+    }
+    let mut restated: Vec<SignCondition> = Vec::new();
+    for condition in &sum.hypotheses {
+        for one in restate_geometric(condition, p, mgf_variable) {
+            if !restated.contains(&one) {
+                restated.push(one);
+            }
+        }
+    }
+    let Some(hypotheses) = settle_decidable_conditions(&restated) else {
+        return Certificate::uncertified(
+            target,
+            Route::InfiniteSum,
+            format!(
+                "a {subject} condition is concretely FALSE, so there is no statement here to \
+                 certify"
+            ),
+        );
+    };
+    if hypotheses.is_empty() {
+        Certificate::certified(target, Route::InfiniteSum)
+    } else {
+        Certificate::certified_under(target, Route::InfiniteSum, hypotheses)
+    }
+}
+
+/// Drop every condition this crate can **decide**, and refuse the whole
+/// certificate if one of them is decidably **false**.
+///
+/// The restatements above are stated in the distribution's parameters, and some
+/// of those may be concrete: `Geometric(1/3)`'s mgf genuinely needs
+/// `t < −ln(2/3)` (its `t` is symbolic), but `1/3 > 0` and `1 − 1/3 > 0` are
+/// arithmetic, and recording them would make a conditional certificate out of
+/// two facts the crate settles on the spot — the same wrong shape the
+/// integration and summation routes already avoid by deciding a concrete rate
+/// rather than recording it. Measured before this existed: `Geometric(1/3)`'s
+/// mgf came back under `1/3 > 0 and 1 - (1/3) > 0 and -ln(2/3) - t > 0`.
+///
+/// `None` means one of them is concretely false, and the certificate has to go
+/// with it.
+fn settle_decidable_conditions(conditions: &[SignCondition]) -> Option<Vec<SignCondition>> {
+    let mut kept = Vec::new();
+    for condition in conditions {
+        let SignCondition::Positive(expr) = condition else {
+            kept.push(condition.clone());
+            continue;
+        };
+        match concrete_value(expr) {
+            Some(value) if value.numerator() > 0 => {} // decided true: not a hypothesis
+            Some(_) => return None,                    // decided false: nothing to certify
+            None => kept.push(condition.clone()),
+        }
+    }
+    Some(kept)
+}
+
+/// Restate the geometric route's own convergence condition `1 − |q| > 0` in the
+/// distribution's parameters: `0 < p < 1` for a moment (`q = 1−p`), and
+/// additionally `t < −ln(1−p)` for the mgf (`q = (1−p)·eᵗ`).
+///
+/// The rewrite is **guarded, not assumed**: [`equal`] must decide that the
+/// route's condition is exactly `1 − |q| > 0` for the `q` this distribution's own
+/// summand carries. A condition of any other shape passes through unchanged,
+/// so a route that ever records something else cannot be silently relabelled.
+///
+/// What is recorded **implies** what the route needed, which is the safe
+/// direction: `0 < p < 1` gives `0 < 1−p < 1`, hence `|1−p| < 1`; and with
+/// `t < −ln(1−p)` it gives `(1−p)eᵗ < 1` with both factors positive, hence
+/// `|(1−p)eᵗ| < 1`. A certificate under a stronger hypothesis is a certificate
+/// of a smaller statement — the same reading [`Trust::CertifiedUnder`] already
+/// has — and `0 < p < 1` is the parameter domain `Geometric(p)` is defined on
+/// anyway. Recording a *weaker* condition than the route needed would not be
+/// sound, and is what the guard prevents.
+fn restate_geometric(
+    condition: &SignCondition,
+    p: &CasExpr,
+    mgf_variable: Option<&str>,
+) -> Vec<SignCondition> {
+    let SignCondition::Positive(margin) = condition else {
+        return vec![condition.clone()];
+    };
+    let q = match mgf_variable {
+        None => geometric_ratio(p),
+        Some(t) => simplify(&(geometric_ratio(p) * CasExpr::var(t).exp())),
+    };
+    if !matches!(
+        equal(margin, &(CasExpr::one() - q.abs())),
+        ZeroTest::Certified { equal: true, .. }
+    ) {
+        return vec![condition.clone()];
+    }
+    let mut restated = vec![
+        SignCondition::Positive(p.clone()),
+        SignCondition::Positive(CasExpr::one() - p.clone()),
+    ];
+    if let Some(t) = mgf_variable {
+        let ln_q = CasExpr::Unary(UnaryFunc::Ln, Box::new(geometric_ratio(p)));
+        restated.push(SignCondition::Positive(
+            CasExpr::Neg(Box::new(ln_q)) - CasExpr::var(t),
+        ));
+    }
+    restated
 }
 
 /// `Var[X] = E[X²] − E[X]²` from two [`crate::infinite_sum`] values, decided
@@ -1218,10 +1405,11 @@ fn conditional_variance(
     target: CasExpr,
     subject: &str,
 ) -> Certificate {
+    let route = second.route;
     if !second.is_decided() || !first.is_decided() {
         return Certificate::uncertified(
             target,
-            Route::ConditionalIntegrate,
+            route,
             format!("a {subject} moment was not decided, so the variance is not either"),
         );
     }
@@ -1232,7 +1420,7 @@ fn conditional_variance(
     ) {
         return Certificate::uncertified(
             value,
-            Route::ConditionalIntegrate,
+            route,
             format!("E[X^2] - E[X]^2 did not decide equal to the {subject} closed form"),
         );
     }
@@ -1243,9 +1431,9 @@ fn conditional_variance(
         }
     }
     if hypotheses.is_empty() {
-        Certificate::certified(target, Route::ConditionalIntegrate)
+        Certificate::certified(target, route)
     } else {
-        Certificate::certified_under(target, Route::ConditionalIntegrate, hypotheses)
+        Certificate::certified_under(target, route, hypotheses)
     }
 }
 
@@ -1269,13 +1457,15 @@ fn conditional_variance(
 ///    the centered variable).
 ///
 /// Together `M(t) = e^{μt+σ²t²/2} · ∫ φ_{μ+σ²t,σ²} = e^{μt+σ²t²/2}`, with `μ`
-/// and `t` symbolic throughout. No [`SignCondition`] is recorded, because `σ²`
-/// is a concrete rational whose sign the route **decides**: a non-positive `σ²`
-/// makes the shifted mass decline (an upward Gaussian is not an erf), and the
-/// mgf declines with it.
-fn normal_mgf(mu: &CasExpr, variance: Rational, t: &str) -> Certificate {
+/// and `t` symbolic throughout. The conditions are **whatever the shifted mass
+/// recorded, and nothing else**: for a concrete `σ²` the mass decides its own
+/// sign and the mgf is unconditional (a non-positive `σ²` makes the mass decline
+/// — an upward Gaussian is not an erf — and the mgf declines with it), and for a
+/// symbolic `σ²` the mass certifies under `σ² > 0` and the mgf inherits exactly
+/// that.
+fn normal_mgf(mu: &CasExpr, variance: &CasExpr, t: &str) -> Certificate {
     let tv = CasExpr::var(t);
-    let sigma = CasExpr::Const(variance);
+    let sigma = variance.clone();
     let target =
         (tv.clone() * mu.clone() + sigma.clone() * tv.clone().pow(2) / CasExpr::int(2)).exp();
     let x = CasExpr::var("x");
@@ -1296,40 +1486,217 @@ fn normal_mgf(mu: &CasExpr, variance: Rational, t: &str) -> Certificate {
     }
     let shifted = Continuous::Normal {
         mu: shifted_mu,
-        variance,
+        variance: variance.clone(),
     };
     let mass = shifted.total_mass();
-    if !mass.is_certified() {
-        return Certificate::uncertified(
+    match mass.trust {
+        Trust::Certified => Certificate::certified(target, Route::GaussianShift),
+        Trust::CertifiedUnder(conditions) => {
+            Certificate::certified_under(target, Route::GaussianShift, conditions)
+        }
+        Trust::Uncertified(reason) => Certificate::uncertified(
             target,
             Route::GaussianShift,
             format!(
                 "the shifted Normal's total mass is not certified, so the square-completion \
-                 reduction has nothing to stand on: {}",
-                match &mass.trust {
-                    Trust::Uncertified(reason) => reason.clone(),
-                    other => format!("{other:?}"),
-                }
+                 reduction has nothing to stand on: {reason}"
+            ),
+        ),
+    }
+}
+
+/// `E[Normal(μ, σ²)] = μ`, on whichever route the variance allows.
+///
+/// Both routes decide the same thing: the mean is taken on the **centered**
+/// variable `U = X − μ`, whose odd moment `E[U]` must decide to `0`, and
+/// `E[X] = μ + E[U]`. A concrete `σ²` goes through [`improper_integrate`]
+/// unconditionally; a symbolic one through the Gaussian conditional route, which
+/// carries `σ² > 0` onto the claim rather than dropping it.
+fn normal_mean(mu: &CasExpr, variance: &CasExpr) -> Certificate {
+    let Some(concrete) = as_concrete(variance) else {
+        let centered = normal_symbolic_certificate(variance, 1, CasExpr::zero(), "Normal mean");
+        return match centered.trust {
+            Trust::Certified => Certificate::certified(mu.clone(), Route::ConditionalIntegrate),
+            Trust::CertifiedUnder(conditions) => {
+                Certificate::certified_under(mu.clone(), Route::ConditionalIntegrate, conditions)
+            }
+            Trust::Uncertified(reason) => {
+                Certificate::uncertified(mu.clone(), Route::ConditionalIntegrate, reason)
+            }
+        };
+    };
+    let Some(raw) = normal_raw_moment(concrete, 1) else {
+        return Certificate::uncertified(
+            mu.clone(),
+            Route::ImproperIntegrate,
+            normal_decline_reason(concrete),
+        );
+    };
+    let centered_mean = simplify(&crate::simplify_radicals(&(normal_coeff(concrete) * raw)));
+    match equal(&centered_mean, &CasExpr::zero()) {
+        ZeroTest::Certified { equal: true, .. } => {
+            Certificate::certified(mu.clone(), Route::ImproperIntegrate)
+        }
+        _ => Certificate::uncertified(
+            simplify(&(mu.clone() + centered_mean)),
+            Route::ImproperIntegrate,
+            "the centered odd moment E[U] did not decide equal to 0",
+        ),
+    }
+}
+
+/// `a = 1/(2σ²)`, the rate of the `Normal(μ, σ²)` Gaussian factor `e^{−a·u²}` on
+/// the centered variable `u = x − μ`.
+fn normal_rate(variance: &CasExpr) -> CasExpr {
+    CasExpr::one() / (CasExpr::int(2) * variance.clone())
+}
+
+/// The `Normal` pdf's normalizing constant for a **symbolic** `σ²`, spelled
+/// `√a/√π` with `a = 1/(2σ²)` rather than `1/√(2πσ²)`.
+///
+/// The spelling is forced by what has to cancel. The Gaussian route's value
+/// carries `√π/√a` as one `√a` atom, and `1/√(2πσ²)` is a *different* atom that
+/// no rewrite in this crate relates to it (`√(2πσ²) = √2·√π·√σ²` needs the
+/// nonnegativity of a symbolic factor, which `simplify_radicals` splits out only
+/// for a positive **rational**). `√a/√π` cancels against `√π/√a` as rational
+/// arithmetic over two atoms, with no radical rewriting at all.
+///
+/// That it really is the normalizer is [`normal_symbolic_coeff_is_the_pdf`]'s
+/// job to **decide**, not this function's to assert.
+fn normal_symbolic_coeff(variance: &CasExpr) -> CasExpr {
+    crate::simplify_radicals(&normal_rate(variance).sqrt()) / CasExpr::var("pi").sqrt()
+}
+
+/// Decide that [`normal_symbolic_coeff`] is the `Normal` pdf's normalizing
+/// constant `1/√(2πσ²)`, rather than take it on faith.
+///
+/// Squaring removes every radical, and `c·c·2πσ² = 1` is then a plain rational
+/// identity in `σ²` that [`equal`] settles. Both `c` and `1/√(2πσ²)` are
+/// positive (a principal square root over a positive `σ²`, which is the recorded
+/// hypothesis), and two positive reals with equal squares are equal — so this
+/// decides `c = 1/√(2πσ²)` exactly.
+///
+/// The obligation is not decorative: it is what a wrong constant (a missing
+/// `2`, a `σ` where `σ²` belongs) fails, and every symbolic-`σ²` certificate is
+/// gated on it.
+fn normal_symbolic_coeff_is_the_pdf(coeff: &CasExpr, variance: &CasExpr) -> bool {
+    let squared =
+        coeff.clone() * coeff.clone() * CasExpr::int(2) * CasExpr::var("pi") * variance.clone();
+    let settled = crate::simplify_radicals(&simplify(&crate::simplify_radicals(&squared)));
+    matches!(
+        equal(&settled, &CasExpr::one()),
+        ZeroTest::Certified { equal: true, .. }
+    )
+}
+
+/// `∫_{−∞}^{∞} u^power·e^{−u²/(2σ²)} du` for a **symbolic** `σ²`, through
+/// [`improper_integrate_conditional`]'s Gaussian route.
+///
+/// The integrand is spelled `exp(−(a·u²))` with `a = 1/(2σ²)` deliberately: the
+/// route reads `a` back out by dividing the exponent by `u²`, and the erf
+/// derivative's own `exp(−(√a·u)²)` folds to `exp(−(a·u²))`, so this spelling is
+/// the one on which the two `exp` atoms coincide and the differentiate-and-check
+/// closes. A different spelling of the same number declines — honestly, at the
+/// certificate.
+fn normal_symbolic_moment(variance: &CasExpr, power: u32) -> Option<ConditionalIntegral> {
+    let u = CasExpr::var("u");
+    let gaussian = CasExpr::Neg(Box::new(normal_rate(variance) * u.clone().pow(2))).exp();
+    let integrand = if power == 0 {
+        gaussian
+    } else {
+        u.pow(power) * gaussian
+    };
+    improper_integrate_conditional(
+        &integrand,
+        "u",
+        LimitPoint::NegInfinity,
+        LimitPoint::PosInfinity,
+    )
+}
+
+/// The normalized centered moment `∫ u^power·φ(u) du` of `Normal(μ, σ²)` at a
+/// **symbolic** `σ²`, decided against `target` and carrying `σ² > 0`.
+///
+/// Three separate guards, each of which declines on its own: the Gaussian
+/// route's differentiate-and-check must close, the normalizer must be **decided**
+/// to be the pdf's ([`normal_symbolic_coeff_is_the_pdf`]), and the normalized
+/// value must decide equal to `target`.
+fn normal_symbolic_certificate(
+    variance: &CasExpr,
+    power: u32,
+    target: CasExpr,
+    subject: &str,
+) -> Certificate {
+    let Some(moment) = normal_symbolic_moment(variance, power) else {
+        return Certificate::uncertified(
+            target,
+            Route::ConditionalIntegrate,
+            format!(
+                "improper_integrate_conditional's Gaussian route declined on the \
+                 {subject} integrand"
+            ),
+        );
+    };
+    if !moment.is_certified() {
+        return Certificate::uncertified(
+            moment.value,
+            Route::ConditionalIntegrate,
+            format!("the {subject} antiderivative's differentiate-and-check did not close"),
+        );
+    }
+    let coeff = normal_symbolic_coeff(variance);
+    if !normal_symbolic_coeff_is_the_pdf(&coeff, variance) {
+        return Certificate::uncertified(
+            target,
+            Route::ConditionalIntegrate,
+            format!(
+                "the {subject} normalizing constant was not decided to be 1/sqrt(2*pi*variance)"
             ),
         );
     }
-    Certificate::certified(target, Route::GaussianShift)
+    let normalized = crate::simplify_radicals(&simplify(&crate::simplify_radicals(
+        &(coeff * moment.value.clone()),
+    )));
+    if !matches!(
+        equal(&normalized, &target),
+        ZeroTest::Certified { equal: true, .. }
+    ) {
+        return Certificate::uncertified(
+            normalized,
+            Route::ConditionalIntegrate,
+            format!(
+                "the normalized Gaussian moment did not decide equal to the {subject} closed form"
+            ),
+        );
+    }
+    let hypotheses: Vec<SignCondition> = moment
+        .hypotheses
+        .iter()
+        .map(|condition| restate_variance_positive(condition, variance))
+        .collect();
+    if hypotheses.is_empty() {
+        Certificate::certified(target, Route::ConditionalIntegrate)
+    } else {
+        Certificate::certified_under(target, Route::ConditionalIntegrate, hypotheses)
+    }
 }
 
-/// The reason a `Geometric` quantity declines for a **symbolic** `p`.
+/// Restate the Gaussian route's condition on its own rate, `1/(2σ²) > 0`, as the
+/// condition a probabilist writes, `σ² > 0`.
 ///
-/// Unlike the continuous families, this one is *not* a missing hypothesis
-/// channel: [`crate::gosper_sum`] declines outright on a symbolic ratio, before
-/// any convergence question is asked. Measured against the live crate,
-/// `gosper_sum(p·(1−p)ʲ, j)` and `gosper_sum(qʲ, j)` (a bare symbolic ratio,
-/// with no `1−p` to normalize) both return `None`, while the concrete control
-/// `p = 1/3` sums to `1`. So there is no certified value here to hang a
-/// `SignCondition` on, and recording `0 < p < 1` would decorate a claim nothing
-/// decided.
-fn geometric_symbolic_p_reason() -> String {
-    "symbolic p: infinite_sum's convergence/limit check needs a concrete ratio to decide \
-     |1-p| < 1"
-        .to_string()
+/// **Decided, not assumed**: [`equal`] must settle `a·2σ² = 1`, which pins `a` to
+/// be exactly `1/(2σ²)`; a positive `a` of that form then forces `σ² > 0` and
+/// conversely. A condition of any other shape passes through unchanged rather
+/// than being relabelled on faith.
+fn restate_variance_positive(condition: &SignCondition, variance: &CasExpr) -> SignCondition {
+    let SignCondition::Positive(rate) = condition else {
+        return condition.clone();
+    };
+    let product = rate.clone() * CasExpr::int(2) * variance.clone();
+    match equal(&product, &CasExpr::one()) {
+        ZeroTest::Certified { equal: true, .. } => SignCondition::Positive(variance.clone()),
+        _ => condition.clone(),
+    }
 }
 
 // ============================================================================
@@ -1348,18 +1715,21 @@ pub enum Continuous {
         /// Upper bound.
         b: Rational,
     },
-    /// `Exponential(λ)`, rate `λ`, possibly symbolic (declines for symbolic
-    /// `λ`; see the module doc).
+    /// `Exponential(λ)`, rate `λ`, possibly symbolic (a symbolic `λ` certifies
+    /// under `λ > 0`; see the module doc).
     Exponential(CasExpr),
     /// `Normal(μ, σ²)`: mean `μ` (possibly symbolic — added back by a shift
-    /// that does not need the summation/integration machinery), variance
-    /// `σ²` concrete (the erf-antiderivative finder needs `1/(2σ²)` to have a
-    /// rational square root to certify at all; see the module doc).
+    /// that does not need the summation/integration machinery) and variance
+    /// `σ²`, **also possibly symbolic**. A concrete `σ²` goes through
+    /// [`crate::improper_integrate`] and certifies unconditionally; a symbolic
+    /// one goes through [`crate::improper_integrate_conditional`]'s Gaussian
+    /// route and certifies under `σ² > 0`.
     Normal {
         /// Mean, possibly symbolic.
         mu: CasExpr,
-        /// Variance (not standard deviation — see the module doc for why).
-        variance: Rational,
+        /// Variance (not standard deviation — see the module doc for why),
+        /// possibly symbolic.
+        variance: CasExpr,
     },
 }
 
@@ -1429,27 +1799,37 @@ impl Continuous {
                     ),
                 }
             }
-            Continuous::Normal { variance, .. } => match normal_raw_moment(*variance, 0) {
-                Some(raw) => {
-                    let coeff = normal_coeff(*variance);
-                    let value = simplify(&crate::simplify_radicals(&(coeff * raw)));
-                    match equal(&value, &CasExpr::one()) {
-                        ZeroTest::Certified { equal: true, .. } => {
-                            Certificate::certified(CasExpr::one(), Route::ImproperIntegrate)
+            Continuous::Normal { variance, .. } => {
+                let Some(concrete) = as_concrete(variance) else {
+                    return normal_symbolic_certificate(
+                        variance,
+                        0,
+                        CasExpr::one(),
+                        "Normal total-mass",
+                    );
+                };
+                match normal_raw_moment(concrete, 0) {
+                    Some(raw) => {
+                        let coeff = normal_coeff(concrete);
+                        let value = simplify(&crate::simplify_radicals(&(coeff * raw)));
+                        match equal(&value, &CasExpr::one()) {
+                            ZeroTest::Certified { equal: true, .. } => {
+                                Certificate::certified(CasExpr::one(), Route::ImproperIntegrate)
+                            }
+                            _ => Certificate::uncertified(
+                                value,
+                                Route::ImproperIntegrate,
+                                "normalized Gaussian moment did not decide equal to 1",
+                            ),
                         }
-                        _ => Certificate::uncertified(
-                            value,
-                            Route::ImproperIntegrate,
-                            "normalized Gaussian moment did not decide equal to 1",
-                        ),
                     }
+                    None => Certificate::uncertified(
+                        CasExpr::one(),
+                        Route::ImproperIntegrate,
+                        normal_decline_reason(concrete),
+                    ),
                 }
-                None => Certificate::uncertified(
-                    CasExpr::one(),
-                    Route::ImproperIntegrate,
-                    normal_decline_reason(*variance),
-                ),
-            },
+            }
         }
     }
 
@@ -1528,29 +1908,7 @@ impl Continuous {
                     ),
                 }
             }
-            Continuous::Normal { mu, variance } => match normal_raw_moment(*variance, 1) {
-                Some(raw) => {
-                    let coeff = normal_coeff(*variance);
-                    // E[U] over the centered variable U = X - mu; E[X] = mu + E[U].
-                    let centered_mean = simplify(&crate::simplify_radicals(&(coeff * raw)));
-                    let value = simplify(&(mu.clone() + centered_mean.clone()));
-                    match equal(&centered_mean, &CasExpr::zero()) {
-                        ZeroTest::Certified { equal: true, .. } => {
-                            Certificate::certified(mu.clone(), Route::ImproperIntegrate)
-                        }
-                        _ => Certificate::uncertified(
-                            value,
-                            Route::ImproperIntegrate,
-                            "the centered odd moment E[U] did not decide equal to 0",
-                        ),
-                    }
-                }
-                None => Certificate::uncertified(
-                    mu.clone(),
-                    Route::ImproperIntegrate,
-                    normal_decline_reason(*variance),
-                ),
-            },
+            Continuous::Normal { mu, variance } => normal_mean(mu, variance),
         }
     }
 
@@ -1565,28 +1923,38 @@ impl Continuous {
         match self {
             Continuous::Uniform { a, b } => uniform_variance(*a, *b),
             Continuous::Exponential(lambda) => exponential_variance(lambda),
-            Continuous::Normal { variance, .. } => match normal_raw_moment(*variance, 2) {
-                Some(raw) => {
-                    let coeff = normal_coeff(*variance);
-                    let value = simplify(&crate::simplify_radicals(&(coeff * raw)));
-                    match equal(&value, &CasExpr::Const(*variance)) {
-                        ZeroTest::Certified { equal: true, .. } => Certificate::certified(
-                            CasExpr::Const(*variance),
-                            Route::ImproperIntegrate,
-                        ),
-                        _ => Certificate::uncertified(
-                            value,
-                            Route::ImproperIntegrate,
-                            "the centered second moment did not decide equal to the variance parameter",
-                        ),
+            Continuous::Normal { variance, .. } => {
+                let Some(concrete) = as_concrete(variance) else {
+                    return normal_symbolic_certificate(
+                        variance,
+                        2,
+                        variance.clone(),
+                        "Normal variance",
+                    );
+                };
+                match normal_raw_moment(concrete, 2) {
+                    Some(raw) => {
+                        let coeff = normal_coeff(concrete);
+                        let value = simplify(&crate::simplify_radicals(&(coeff * raw)));
+                        match equal(&value, &CasExpr::Const(concrete)) {
+                            ZeroTest::Certified { equal: true, .. } => Certificate::certified(
+                                CasExpr::Const(concrete),
+                                Route::ImproperIntegrate,
+                            ),
+                            _ => Certificate::uncertified(
+                                value,
+                                Route::ImproperIntegrate,
+                                "the centered second moment did not decide equal to the variance parameter",
+                            ),
+                        }
                     }
+                    None => Certificate::uncertified(
+                        CasExpr::Const(concrete),
+                        Route::ImproperIntegrate,
+                        normal_decline_reason(concrete),
+                    ),
                 }
-                None => Certificate::uncertified(
-                    CasExpr::Const(*variance),
-                    Route::ImproperIntegrate,
-                    normal_decline_reason(*variance),
-                ),
-            },
+            }
         }
     }
 
@@ -1654,7 +2022,7 @@ impl Continuous {
                     ),
                 }
             }
-            Continuous::Normal { mu, variance } => normal_mgf(mu, *variance, t),
+            Continuous::Normal { mu, variance } => normal_mgf(mu, variance, t),
         }
     }
 
@@ -2191,11 +2559,14 @@ mod tests {
         assert!(d.verify_total_mass(&total));
     }
 
+    /// A concrete ratio outside the unit disc is a genuinely divergent series,
+    /// and the whole family must decline: `Geometric(2)` has `q = −1`.
     #[test]
-    fn geometric_one_third_symbolic_p_total_mass_declines() {
-        let d = Discrete::Geometric(CasExpr::var("p"));
-        let total = d.total_mass();
-        assert!(!total.is_certified());
+    fn geometric_with_a_divergent_ratio_declines() {
+        let d = Discrete::Geometric(CasExpr::int(2));
+        assert!(!d.total_mass().is_decided());
+        assert!(!d.mean().is_decided());
+        assert!(!d.variance().is_decided());
     }
 
     #[test]
@@ -2217,20 +2588,6 @@ mod tests {
             ZeroTest::Certified { equal: true, .. }
         ));
         assert!(d.verify_variance(&variance));
-    }
-
-    #[test]
-    fn geometric_symbolic_p_moments_still_decline_on_convergence() {
-        // Not a summation gap: the convergence test needs a concrete ratio, the
-        // same reason `total_mass` gives. The claims are still the right ones.
-        let d = Discrete::Geometric(CasExpr::var("p"));
-        for cert in [d.mean(), d.variance()] {
-            assert!(!cert.is_certified(), "{cert:?}");
-            let Trust::Uncertified(reason) = &cert.trust else {
-                panic!("expected Uncertified");
-            };
-            assert!(reason.contains("concrete ratio"), "{reason}");
-        }
     }
 
     // ---------------------------------------------------------------
@@ -2412,7 +2769,7 @@ mod tests {
 
     // ---------------------------------------------------------------
     // Continuous: Normal(0,1) — mass/mean/variance certify with an irrational
-    // sqrt(a); only the mgf declines, and for the symbolic-t reason.
+    // sqrt(a), unconditionally, on the concrete-variance route.
     // ---------------------------------------------------------------
 
     #[test]
@@ -2420,7 +2777,7 @@ mod tests {
         // a = 1/(2*variance) = 1/2, whose square root is irrational.
         let d = Continuous::Normal {
             mu: CasExpr::zero(),
-            variance: Rational::integer(1),
+            variance: CasExpr::Const(Rational::integer(1)),
         };
         let total = d.total_mass();
         assert!(total.is_certified(), "{total:?}");
@@ -2461,7 +2818,7 @@ mod tests {
         // the erf route did not stop working for the easy `a`.
         let d = Continuous::Normal {
             mu: CasExpr::zero(),
-            variance: p(1, 2).into_const().unwrap(),
+            variance: p(1, 2),
         };
         let total = d.total_mass();
         assert!(total.is_certified(), "{total:?}");
@@ -2498,7 +2855,7 @@ mod tests {
     fn normal_symbolic_mu_still_certifies_mean_via_shift() {
         let d = Continuous::Normal {
             mu: CasExpr::var("mu"),
-            variance: p(1, 2).into_const().unwrap(),
+            variance: p(1, 2),
         };
         let mean = d.mean();
         assert!(mean.is_certified(), "{mean:?}");
@@ -2597,9 +2954,9 @@ mod tests {
 
     #[test]
     fn chebyshev_bound_propagates_uncertified_input() {
-        // A symbolic `p` is the surviving Geometric decline (the convergence
-        // test needs a concrete ratio), so it is the honest uncertified input.
-        let d = Discrete::Geometric(CasExpr::var("p"));
+        // `Geometric(2)` has ratio `q = −1`: a genuinely divergent series, and
+        // therefore an honest uncertified input rather than a contrived one.
+        let d = Discrete::Geometric(CasExpr::int(2));
         let mean = d.mean(); // uncertified
         let variance = d.variance(); // uncertified
         assert!(!mean.is_certified() && !variance.is_certified());
@@ -2636,9 +2993,9 @@ mod tests {
         //    re-derivation would (hypothetically) decline -- modeled here by
         //    forging Certified on a value that does not match at all, since
         //    Binomial's own mean always certifies; the falsely-labeled case is
-        //    instead exercised on a symbolic-p Geometric below, whose mean is
-        //    the surviving honest decline.
-        let d2 = Discrete::Geometric(CasExpr::var("p"));
+        //    instead exercised on a divergent-ratio Geometric below, whose mean
+        //    is an honest decline.
+        let d2 = Discrete::Geometric(CasExpr::int(2));
         let genuinely_uncertified = d2.mean();
         assert!(!genuinely_uncertified.is_certified());
         let falsely_certified =
@@ -2845,7 +3202,7 @@ mod tests {
         let mu = CasExpr::var("mu");
         let d = Continuous::Normal {
             mu: mu.clone(),
-            variance: Rational::integer(4),
+            variance: CasExpr::Const(Rational::integer(4)),
         };
         let mgf = d.mgf("t");
         assert!(mgf.is_certified(), "{mgf:?}");
@@ -2871,7 +3228,7 @@ mod tests {
         let reason_for = |variance: Rational| -> String {
             let d = Continuous::Normal {
                 mu: CasExpr::var("mu"),
-                variance,
+                variance: CasExpr::Const(variance),
             };
             let mgf = d.mgf("t");
             assert!(!mgf.is_decided(), "variance {variance:?}: {mgf:?}");
@@ -2967,26 +3324,306 @@ mod tests {
         assert_eq!(chebyshev.hypotheses().len(), 1);
     }
 
-    /// `Geometric` with a symbolic `p` is still an honest decline, and for a
-    /// reason that is **not** a missing hypothesis channel: `gosper_sum` returns
-    /// `None` for a symbolic ratio in either spelling, so there is no value to
-    /// attach a condition to. The two `gosper_sum` calls here are the measurement
-    /// the module doc cites, run rather than remembered.
+    /// `gosper_sum` still declines on a symbolic ratio — that measurement has
+    /// not changed and is run here, not remembered. What changed is that the
+    /// decline is no longer the end of the road: `infinite_sum_conditional`
+    /// reaches the same summand through the geometric series, under a recorded
+    /// condition. Both halves are asserted so neither can rot silently.
     #[test]
-    fn the_geometric_symbolic_ratio_declines_before_any_convergence_question() {
+    fn the_symbolic_ratio_still_declines_in_gosper_and_is_reached_conditionally() {
         let j = CasExpr::var("j");
         let p_symbol = CasExpr::var("p");
         let ratio = CasExpr::one() - p_symbol.clone();
         let summand = p_symbol * (j.clone() * ratio.ln()).exp();
         assert!(
             crate::gosper_sum(&summand, "j").is_none(),
-            "if this starts returning an antidifference, the Geometric decline is stale"
+            "the geometric route exists because Gosper has no antidifference here"
         );
         let bare = (j.clone() * CasExpr::var("q").ln()).exp();
         assert!(crate::gosper_sum(&bare, "j").is_none());
-        // Positive control at a concrete ratio, so the two negatives above are
-        // not an empty result from a route that never fires.
+        assert!(
+            crate::infinite_sum(&summand, "j", &CasExpr::zero()).is_none(),
+            "and neither does the unconditional summation API"
+        );
+        assert!(infinite_sum_conditional(&summand, "j", &CasExpr::zero()).is_some());
+        // Positive control at a concrete ratio, so the negatives above are not an
+        // empty result from a route that never fires.
         let concrete = CasExpr::rat(1, 3) * (j * CasExpr::rat(2, 3).ln()).exp();
         assert!(crate::infinite_sum(&concrete, "j", &CasExpr::zero()).is_some());
+    }
+
+    // ---------------------------------------------------------------
+    // Wave four: the two symbolic-parameter families that used to decline.
+    // ---------------------------------------------------------------
+
+    fn conditions_of(cert: &Certificate) -> String {
+        cert.hypotheses_display()
+    }
+
+    /// `Geometric(p)` at a **symbolic** `p`: all four quantities certify, each
+    /// under `0 < p < 1` and the mgf additionally under `t < −ln(1−p)`.
+    #[test]
+    fn geometric_symbolic_p_certifies_all_four_under_zero_lt_p_lt_one() {
+        let symbol = CasExpr::var("p");
+        let d = Discrete::Geometric(symbol.clone());
+
+        let total = d.total_mass();
+        assert!(total.is_decided() && !total.is_certified(), "{total:?}");
+        assert_eq!(conditions_of(&total), "p > 0 and 1 - p > 0");
+        assert!(matches!(
+            equal(&total.claim, &CasExpr::one()),
+            ZeroTest::Certified { equal: true, .. }
+        ));
+        assert!(d.verify_total_mass(&total));
+
+        let mean = d.mean();
+        assert_eq!(conditions_of(&mean), "p > 0 and 1 - p > 0");
+        assert!(matches!(
+            equal(&mean.claim, &(CasExpr::one() / symbol.clone())),
+            ZeroTest::Certified { equal: true, .. }
+        ));
+        assert!(d.verify_mean(&mean));
+
+        let variance = d.variance();
+        assert_eq!(conditions_of(&variance), "p > 0 and 1 - p > 0");
+        assert!(matches!(
+            equal(
+                &variance.claim,
+                &((CasExpr::one() - symbol.clone()) / symbol.clone().pow(2))
+            ),
+            ZeroTest::Certified { equal: true, .. }
+        ));
+        assert!(d.verify_variance(&variance));
+
+        let mgf = d.mgf("t");
+        assert!(mgf.is_decided(), "{mgf:?}");
+        assert_eq!(
+            conditions_of(&mgf),
+            "p > 0 and 1 - p > 0 and -ln(1 - p) - t > 0"
+        );
+        let e = CasExpr::var("t").exp();
+        let target =
+            (symbol.clone() * e.clone()) / (CasExpr::one() - (CasExpr::one() - symbol) * e);
+        assert!(matches!(
+            equal(&mgf.claim, &target),
+            ZeroTest::Certified { equal: true, .. }
+        ));
+        assert!(d.verify_mgf("t", &mgf));
+    }
+
+    /// A **concrete** `p` still certifies with no conditions at all: the route
+    /// decides `|1−p| < 1` on the spot, so nothing that used to be unconditional
+    /// silently became conditional.
+    #[test]
+    fn a_concrete_geometric_p_stays_unconditional() {
+        let d = Discrete::Geometric(p(1, 3));
+        for cert in [d.total_mass(), d.mean(), d.variance()] {
+            assert!(cert.is_certified(), "{cert:?}");
+            assert!(cert.hypotheses().is_empty());
+        }
+        // The mgf's `t` is symbolic, so ONE condition survives -- and only one:
+        // `1/3 > 0` and `1 - 1/3 > 0` are arithmetic this crate settles, and a
+        // certificate that recorded them would be conditional on nothing.
+        let mgf = d.mgf("t");
+        assert!(mgf.is_decided(), "{mgf:?}");
+        assert_eq!(conditions_of(&mgf), "-ln(2/3) - t > 0");
+    }
+
+    /// **Guard**, pinning `settle_decidable_conditions`' *false* branch: a
+    /// concrete parameter outside the distribution's domain must be refused, not
+    /// certified under a condition that is concretely false.
+    ///
+    /// The reachable path is the **mgf**, and only the mgf: for a moment the
+    /// route's ratio `1−p` is concrete exactly when `p` is, so it decides
+    /// convergence itself and records nothing for the restatement to settle --
+    /// `Geometric(3/2)`'s mass genuinely sums to `1` and certifies, which is a
+    /// true statement about the series and is how every other family here treats
+    /// an out-of-domain parameter. The mgf's ratio `(1−p)eᵗ` is never a rational,
+    /// so its condition IS recorded, the restatement produces `1 − 3/2 > 0`, and
+    /// that is what has to be caught.
+    #[test]
+    fn a_concrete_p_outside_the_domain_is_refused_by_the_mgf() {
+        let d = Discrete::Geometric(p(3, 2));
+        // The precondition: the SERIES is fine (|1−p| = 1/2), so the guard is
+        // what refuses, not a decline upstream of it.
+        assert!(d.total_mass().is_certified(), "{:?}", d.total_mass());
+        let mgf = d.mgf("t");
+        assert!(!mgf.is_decided(), "{mgf:?}");
+        let Trust::Uncertified(reason) = &mgf.trust else {
+            panic!("expected Uncertified");
+        };
+        assert!(reason.contains("concretely FALSE"), "{reason}");
+        // Positive control: an in-domain concrete `p` keeps exactly the one
+        // condition that is genuinely undecided.
+        assert_eq!(
+            conditions_of(&Discrete::Geometric(p(1, 3)).mgf("t")),
+            "-ln(2/3) - t > 0"
+        );
+    }
+
+    /// **Forgery control.** A `Geometric` certificate with the hypotheses
+    /// dropped has a claim character-for-character identical to the genuine one
+    /// and must still be refused.
+    #[test]
+    fn a_geometric_certificate_with_the_hypotheses_dropped_is_refused() {
+        let d = Discrete::Geometric(CasExpr::var("p"));
+        let genuine = d.mean();
+        assert!(d.verify_mean(&genuine));
+        let forged = Certificate::certified(genuine.claim.clone(), genuine.route);
+        assert!(!d.verify_mean(&forged));
+        // …and one that keeps only the weaker half of the pair is refused too.
+        let half = Certificate::certified_under(
+            genuine.claim.clone(),
+            genuine.route,
+            vec![SignCondition::Positive(CasExpr::var("p"))],
+        );
+        assert!(!d.verify_mean(&half));
+    }
+
+    /// **Guard**, pinning `restate_geometric`'s `equal` check: a condition that
+    /// is not the route's own `1 − |q| > 0` for *this* `p` passes through
+    /// unchanged rather than being relabelled `0 < p < 1`. Delete the check and
+    /// this test dies, because the unrelated condition comes back as the pair.
+    #[test]
+    fn an_unrecognized_convergence_condition_is_not_relabelled() {
+        let symbol = CasExpr::var("p");
+        let genuine =
+            SignCondition::Positive(CasExpr::one() - (CasExpr::one() - symbol.clone()).abs());
+        assert_eq!(
+            restate_geometric(&genuine, &symbol, None),
+            vec![
+                SignCondition::Positive(symbol.clone()),
+                SignCondition::Positive(CasExpr::one() - symbol.clone()),
+            ]
+        );
+        // A margin for a DIFFERENT ratio is not this distribution's condition.
+        let foreign = SignCondition::Positive(CasExpr::one() - CasExpr::var("q").abs());
+        assert_eq!(
+            restate_geometric(&foreign, &symbol, None),
+            vec![foreign.clone()]
+        );
+        // …and so is a condition of another kind entirely.
+        let other = SignCondition::NonZero(symbol.clone());
+        assert_eq!(restate_geometric(&other, &symbol, None), vec![other]);
+    }
+
+    /// `Normal(μ, σ²)` at a **symbolic** `σ²`: all four quantities certify, each
+    /// under exactly `σ² > 0` and nothing else.
+    #[test]
+    fn normal_symbolic_variance_certifies_all_four_under_variance_positive() {
+        let sigma_squared = CasExpr::var("s");
+        let mu = CasExpr::var("mu");
+        let d = Continuous::Normal {
+            mu: mu.clone(),
+            variance: sigma_squared.clone(),
+        };
+
+        let total = d.total_mass();
+        assert!(total.is_decided() && !total.is_certified(), "{total:?}");
+        assert_eq!(conditions_of(&total), "s > 0");
+        assert!(matches!(
+            equal(&total.claim, &CasExpr::one()),
+            ZeroTest::Certified { equal: true, .. }
+        ));
+        assert!(d.verify_total_mass(&total));
+
+        let mean = d.mean();
+        assert_eq!(conditions_of(&mean), "s > 0");
+        assert!(matches!(
+            equal(&mean.claim, &mu),
+            ZeroTest::Certified { equal: true, .. }
+        ));
+        assert!(d.verify_mean(&mean));
+
+        let variance = d.variance();
+        assert_eq!(conditions_of(&variance), "s > 0");
+        assert!(matches!(
+            equal(&variance.claim, &sigma_squared),
+            ZeroTest::Certified { equal: true, .. }
+        ));
+        assert!(d.verify_variance(&variance));
+
+        let mgf = d.mgf("t");
+        assert_eq!(conditions_of(&mgf), "s > 0");
+        assert_eq!(mgf.route, Route::GaussianShift);
+        let t = CasExpr::var("t");
+        let target = (t.clone() * mu + sigma_squared * t.pow(2) / CasExpr::int(2)).exp();
+        assert!(matches!(
+            equal(&mgf.claim, &target),
+            ZeroTest::Certified { equal: true, .. }
+        ));
+        assert!(d.verify_mgf("t", &mgf));
+    }
+
+    /// **Forgery control** for the continuous side: the same claim with `σ² > 0`
+    /// dropped is refused.
+    #[test]
+    fn a_normal_certificate_with_the_variance_hypothesis_dropped_is_refused() {
+        let d = Continuous::Normal {
+            mu: CasExpr::zero(),
+            variance: CasExpr::var("s"),
+        };
+        let genuine = d.variance();
+        assert!(d.verify_variance(&genuine));
+        let forged = Certificate::certified(genuine.claim.clone(), genuine.route);
+        assert!(!d.verify_variance(&forged));
+    }
+
+    /// **Guard**, pinning `normal_symbolic_coeff_is_the_pdf`: the normalizer is
+    /// *decided* to be `1/√(2πσ²)`, not asserted. A constant off by a factor —
+    /// the classic `σ` where `σ²` belongs, or a missing `2` — is refused. Make
+    /// the function return `true` unconditionally and this test dies.
+    #[test]
+    fn the_normalizer_obligation_refuses_a_wrong_constant() {
+        let s = CasExpr::var("s");
+        assert!(normal_symbolic_coeff_is_the_pdf(
+            &normal_symbolic_coeff(&s),
+            &s
+        ));
+        // `√(1/σ²)/√π` — the same shape with the `2` dropped out of the rate.
+        let missing_two = crate::simplify_radicals(&(CasExpr::one() / s.clone()).sqrt())
+            / CasExpr::var("pi").sqrt();
+        assert!(!normal_symbolic_coeff_is_the_pdf(&missing_two, &s));
+        // `1/√(2πσ)` — the standard deviation where the variance belongs.
+        let sigma_not_variance =
+            CasExpr::one() / (CasExpr::int(2) * CasExpr::var("pi") * s.clone().sqrt()).sqrt();
+        assert!(!normal_symbolic_coeff_is_the_pdf(&sigma_not_variance, &s));
+    }
+
+    /// **Guard**, pinning `restate_variance_positive`'s `equal` check: only a
+    /// condition on something decided to be `1/(2σ²)` is restated as `σ² > 0`.
+    #[test]
+    fn a_condition_that_is_not_the_gaussian_rate_is_not_restated() {
+        let s = CasExpr::var("s");
+        let rate = SignCondition::Positive(normal_rate(&s));
+        assert_eq!(
+            restate_variance_positive(&rate, &s),
+            SignCondition::Positive(s.clone())
+        );
+        // Not the rate: `1/σ²` is positive exactly when `σ²` is, but the guard
+        // must not take that on faith — `equal(a·2σ², 1)` is what it checks.
+        let not_the_rate = SignCondition::Positive(CasExpr::one() / s.clone());
+        assert_eq!(
+            restate_variance_positive(&not_the_rate, &s),
+            not_the_rate.clone()
+        );
+        let negative = SignCondition::Negative(normal_rate(&s));
+        assert_eq!(restate_variance_positive(&negative, &s), negative);
+    }
+
+    /// A **concrete** variance still certifies unconditionally, through the
+    /// unchanged `improper_integrate` path: the symbolic route is additive, not
+    /// a replacement.
+    #[test]
+    fn a_concrete_variance_stays_on_the_unconditional_route() {
+        let d = Continuous::Normal {
+            mu: CasExpr::zero(),
+            variance: CasExpr::int(1),
+        };
+        for cert in [d.total_mass(), d.mean(), d.variance()] {
+            assert!(cert.is_certified(), "{cert:?}");
+            assert!(cert.hypotheses().is_empty());
+            assert_eq!(cert.route, Route::ImproperIntegrate);
+        }
     }
 }

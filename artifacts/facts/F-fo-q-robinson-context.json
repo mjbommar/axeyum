@@ -1,0 +1,73 @@
+{
+  "schema_version": 1,
+  "id": "F:fo-q-robinson-context",
+  "title": "Robinson's Q as a first-order context, and the natural numbers are a model of it",
+  "statement": "The seven Robinson axioms over the signature 0, S, +, times, < are written down as a single FO.Context, FO.Q, in the de Bruijn syntax of fo_syntax.rs, and the natural numbers satisfy every one of them: for every valuation v, FO.ctxSat Nat FO.natStructureQ FO.Q v. The structure interprets the constant symbol f0 0 as zero, the unary symbol f1 1 as successor, the binary symbols f2 0 and f2 1 as addition and multiplication, and the binary relation rel2 0 as strict order.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem FO.Q.natModels : ((x0 : ((x0 : AxNat) -> AxNat)) -> FO.ctxSat AxNat FO.natStructureQ FO.Q x0)",
+    "kernel_theorem": "FO.Q.natModels",
+    "fragment": "Nat",
+    "free_symbols": []
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "depends_on": [
+    "F:fo-soundness"
+  ],
+  "evidence": [
+    {
+      "id": "kernel-FO.Q.natModels",
+      "kind": "kernel-term",
+      "kernel_declaration": "FO.Q.natModels",
+      "supports": "FO.Q.natModels is admitted by the trusted kernel gate with the type recorded in formal.statement, and rests on no axiom. Four of the seven satisfaction obligations are Eq.refl: Nat.add and Nat.mul recurse on their RIGHT argument in this kernel, so x + 0 = x, x + S y = S (x + y), x * 0 = 0 and x * S y = x * y + x are the DEFINING equations, i.e. exactly Q4-Q7. Q1 is Nat.succ_ne_zero, Q2 is Nat.succ_injective, and Q3 is a two-case Nat.rec that discards its induction hypothesis.",
+      "check_status": "checked",
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example fo_robinson_inventory -- FO.Q.natModels --exact --require-axiom-free",
+      "checkers": [
+        "Kernel::add_declaration",
+        "Kernel::axiom_footprint"
+      ],
+      "notes": "The checker FAILS on absence rather than reporting an empty set: a named filter matching nothing exits 1. --exact matters here because FO.Q also prefixes axAddZero, axMulSucc, consistency, add_numeral, mul_numeral, pairGraph, pairFormula and pair_represented. Declared in crates/axeyum-lean-kernel/src/fo_robinson.rs by declare_nat_models."
+    },
+    {
+      "id": "the-structure-interprets-by-index",
+      "kind": "kernel-term",
+      "kernel_declaration": "FO.natStructureQ",
+      "supports": "FO.natStructureQ is a Definition, so admission says nothing about what it interprets. Its five families are pinned by Kernel::def_eq at concrete small arguments: fn0 at 0 and 3, fn1 1 2 = 3, fn2 0 2 3 = 5 with a negative control against 6, fn2 1 2 3 = 6 with a negative control against 5, and fn2 2 2 3 = 6 so the dispatch is a genuine two-way split rather than an accident of the literal 1.",
+      "check_status": "checked",
+      "checker_command": "cargo test -p axeyum-lean-kernel --release --lib -- fo_robinson::tests --test-threads=4",
+      "checkers": [
+        "Kernel::def_eq"
+      ],
+      "notes": "The companion test measures the OBSTRUCTION this structure exists for: FO.natStructure -- the ℕ structure fo_semantics.rs already builds -- has fn2 k x y = x + y + k at every symbol index, so no index is multiplication. One data point is not enough to show that and the first draft of the test was wrong for exactly that reason (fn2 1 2 3 = 6 = 2*3); it now uses two witness pairs, (3,4) and (2,5), which agree with multiplication only at k = 5 and k = 3 respectively, plus a positive control that each index really computes x + y + k."
+    },
+    {
+      "id": "footprint-whole-package",
+      "kind": "instance-pin",
+      "supports": "axiom_footprint: [] -- for all 132 declarations build_fo_robinson_prelude adds on top of the Nat prelude, not only the headline theorem. The row set is a SET DIFFERENCE against a kernel carrying only build_nat_prelude, recomputed on every run, so it is derived from the environment rather than from a hand-maintained list. This package is the first that holds BOTH fo_* chains -- the arithmetization (FO.Code.diagAux_code) and the calculus (FO.soundness) -- in one kernel, so the sweep covers both.",
+      "check_status": "checked",
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example fo_robinson_inventory -- --require-axiom-free --expect-count 132",
+      "checkers": [
+        "Kernel::axiom_footprint"
+      ],
+      "notes": "--expect-count fails on drift in EITHER direction, so a declaration silently disappearing is a failure too. The same set difference is recomputed inside the test suite by fo_robinson::tests::the_whole_robinson_package_is_axiom_free, with coverage controls drawn from BOTH chains (FO.Code.diagAux_code and FO.soundness) so it cannot pass vacuously and cannot pass if the two chains stopped composing."
+    }
+  ],
+  "provenance": {
+    "date": "2026-09-06",
+    "established_by": "axeyum-lean-kernel build_fo_robinson_prelude, lane fo-representability (W3-7, ADR-1651)",
+    "source": "authored from the roadmap item; the axiom list is Robinson's, the encoding, the structure and every proof term are written here",
+    "prior_art": [
+      {
+        "who": "Raphael M. Robinson",
+        "what": "the finitely axiomatised essentially undecidable arithmetic Q",
+        "year": 1950,
+        "where": "R. M. Robinson, 'An essentially undecidable axiom system', Proc. ICM 1950, vol. 1, 729-730",
+        "attribution": "standard textbook attribution; this lane did not consult the primary source"
+      }
+    ]
+  },
+  "notes": "WHY A SECOND ℕ STRUCTURE. fo_semantics.rs's FO.natStructure could not be the model: its binary family is fn2 k x y := Nat.add (Nat.add x y) k, i.e. x + y + k at EVERY symbol index, so multiplication is not a member of it and Q6/Q7 have no interpretation there at all. FO.natStructureQ dispatches fn2 on the symbol index through Nat.rec so f2 0 iota-reduces to Nat.add and f2 (succ _) to Nat.mul, and keeps the other four families verbatim -- which is what makes FO.Term.numeral (from the arithmetization chain, fo_roundtrip.rs) the numeral function of THIS signature rather than a translation of it.\n\nWHY axCases IS THE DISJUNCTION. Q3 is stated as x = 0 or exists y, x = S y, not as the classically equivalent not (x = 0) implies exists y, x = S y. This kernel has no Classical.em, so the two are genuinely different formulas here, and the disjunction is the stronger one: it is what ℕ satisfies constructively, by Nat.rec, and the implication is derivable from it. Taking the weaker form would have been a silent weakening of Q.\n\nWHAT < IS DOING. The order symbol is in the signature and IS interpreted (rel2 0 is Nat.lt, definitionally), but none of the seven axioms mentions it -- that is Robinson's Q as usually presented, with the order a definitional extension. The consequence is recorded in F:fo-q-pair-representable: it is exactly the axioms Q lacks about < that put the uniqueness half of representability out of reach.",
+  "proof_route": "kernel-lean",
+  "axiom_footprint": []
+}

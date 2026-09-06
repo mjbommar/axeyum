@@ -136,6 +136,21 @@ pub fn build_fo_soundness_prelude(
     kernel: &mut crate::Kernel,
 ) -> Result<FoSoundnessPrelude, KernelError> {
     let calculus = build_fo_provable_prelude(kernel)?;
+    declare_fo_soundness_over(kernel, calculus)
+}
+
+/// Build soundness over a calculus prelude the caller ALREADY built.
+/// See `fo_semantics.rs`'s `declare_fo_semantics_over` for why the entry
+/// point exists.
+///
+/// # Errors
+///
+/// Returns the [`KernelError`] from any of the underlying trusted gates if a
+/// declaration fails to admit.
+pub fn declare_fo_soundness_over(
+    kernel: &mut crate::Kernel,
+    calculus: FoProvablePrelude,
+) -> Result<FoSoundnessPrelude, KernelError> {
     // NOT `build_fo_substitution_prelude`: that would re-run
     // `build_fo_semantics_prelude`, and the trusted gate refuses the second
     // `FO.Structure` with `DeclarationExists`. Both packages sit on the ONE

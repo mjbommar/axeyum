@@ -1,6 +1,6 @@
 //! Arbitrary-precision (bignum) algebraic-number primitives: the exact-rational
 //! resultant + squarefree + Sturm-isolation routines computed over
-//! [`num_rational::BigRational`] / [`num_bigint::BigInt`] (ADR-0045 storage
+//! [`axeyum_arith::big::BigRational`] / [`axeyum_arith::big::BigInt`] (ADR-0045 storage
 //! widening).
 //!
 //! Since [`crate::RealAlgebraic`] now stores its defining polynomial and isolating
@@ -23,10 +23,10 @@
 
 use core::cmp::Ordering;
 
-use num_bigint::BigInt;
-use num_integer::Integer;
-use num_rational::BigRational;
-use num_traits::{One, Zero};
+use axeyum_arith::big::BigInt;
+use axeyum_arith::big::BigRational;
+use axeyum_arith::big::Integer;
+use axeyum_arith::big::{One, Zero};
 
 use crate::real_algebraic::Sign;
 
@@ -85,7 +85,7 @@ fn big_from_bigint(poly: &[BigInt]) -> BigVec {
 
 /// Drop trailing zero coefficients.
 fn big_trim(mut p: BigVec) -> BigVec {
-    while p.last().is_some_and(num_traits::Zero::is_zero) {
+    while p.last().is_some_and(axeyum_arith::big::Zero::is_zero) {
         p.pop();
     }
     p
@@ -103,9 +103,9 @@ fn big_degree(p: &[BigRational]) -> Option<usize> {
 /// The sign of a bignum rational.
 pub(crate) fn big_sign(r: &BigRational) -> Sign {
     match r.numer().sign() {
-        num_bigint::Sign::Minus => Sign::Neg,
-        num_bigint::Sign::NoSign => Sign::Zero,
-        num_bigint::Sign::Plus => Sign::Pos,
+        axeyum_arith::big::Sign::Minus => Sign::Neg,
+        axeyum_arith::big::Sign::NoSign => Sign::Zero,
+        axeyum_arith::big::Sign::Plus => Sign::Pos,
     }
 }
 
@@ -236,7 +236,7 @@ fn big_to_int_poly(p: &[BigRational]) -> Option<Vec<BigInt>> {
         }
         out.push(q);
     }
-    while out.len() > 1 && out.last().is_some_and(num_traits::Zero::is_zero) {
+    while out.len() > 1 && out.last().is_some_and(axeyum_arith::big::Zero::is_zero) {
         out.pop();
     }
     Some(out)
@@ -619,7 +619,7 @@ fn big_resultant_then_squarefree(pa: &[BigVec], pb: &[BigVec]) -> Option<Vec<Big
     }
     let mat = big_sylvester_matrix(pa, pb)?;
     let det = big_determinant(&mat);
-    if det.iter().all(num_traits::Zero::is_zero) {
+    if det.iter().all(axeyum_arith::big::Zero::is_zero) {
         return None;
     }
     let res_int = big_to_int_poly(&det)?;
@@ -629,7 +629,7 @@ fn big_resultant_then_squarefree(pa: &[BigVec], pb: &[BigVec]) -> Option<Vec<Big
     let rat = bigint_poly_to_rat(&res_int);
     let sqfree = big_squarefree_part(&rat, BIG_MAX_DEGREE_GUARD)?;
     let q = big_to_int_poly(&sqfree)?;
-    if q.len() <= 1 || q.last().is_some_and(num_traits::Zero::is_zero) {
+    if q.len() <= 1 || q.last().is_some_and(axeyum_arith::big::Zero::is_zero) {
         return None;
     }
     Some(q)

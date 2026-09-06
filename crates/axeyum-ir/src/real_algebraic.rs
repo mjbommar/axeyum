@@ -10,7 +10,7 @@
 //! isolation).
 //!
 //! **Storage (ADR-0045):** the defining polynomial is `Vec<BigInt>` and the
-//! interval endpoints are [`num_rational::BigRational`] — arbitrary precision.
+//! interval endpoints are [`axeyum_arith::big::BigRational`] — arbitrary precision.
 //! This removes the former `i128`-storage ceiling: algebraic field arithmetic
 //! (`add`/`mul`/`neg`) computes entirely in bignum (via the `crate::poly_big`
 //! primitives), so higher-degree coupled NRA witnesses (e.g. the degree-4
@@ -44,9 +44,9 @@
 
 use core::cmp::Ordering;
 
-use num_bigint::BigInt;
-use num_rational::BigRational;
-use num_traits::Zero;
+use axeyum_arith::big::BigInt;
+use axeyum_arith::big::BigRational;
+use axeyum_arith::big::Zero;
 
 use crate::poly_big::{
     BigAlgebraic, Combine, big_eval_int_at, big_poly_divides, big_sign, bigint_poly_from_i128,
@@ -469,7 +469,7 @@ impl core::fmt::Display for RealAlgebraic {
 
 /// Render a [`BigRational`] as `n` (integer) or `n/d`.
 fn fmt_big(r: &BigRational) -> String {
-    use num_traits::One;
+    use axeyum_arith::big::One;
     if r.denom().is_one() {
         r.numer().to_string()
     } else {
@@ -491,7 +491,7 @@ fn write_poly(f: &mut core::fmt::Formatter<'_>, coeffs: &[BigInt]) -> core::fmt:
         if c.is_zero() {
             continue;
         }
-        let neg = c.sign() == num_bigint::Sign::Minus;
+        let neg = c.sign() == axeyum_arith::big::Sign::Minus;
         if first {
             write!(f, "{c}")?;
             first = false;

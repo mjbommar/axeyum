@@ -178,7 +178,7 @@ pub(super) fn list(p: &ListPrelude) -> Fields {
     }
 }
 
-/// The `NatPrelude` field table (1435 names,
+/// The `NatPrelude` field table (1453 names,
 /// 0 name lists, 1 sub-packages).
 ///
 /// 113 of the names come from ADR-1512 per-module registries and
@@ -1489,6 +1489,23 @@ pub(super) fn nat(p: &NatPrelude) -> Fields {
             ("prod_range_mul", p.prod_range_mul),
             ("prod_range_add_of_one_above", p.prod_range_add_of_one_above),
             ("multiset_prod_add", p.multiset_prod_add),
+            ("mul_dvd_mul", p.mul_dvd_mul),
+            ("prod_range_dvd_prod_range", p.prod_range_dvd_prod_range),
+            ("bool_select_nat_inj_of_pos", p.bool_select_nat_inj_of_pos),
+            ("multiset_restrict", p.multiset_restrict),
+            ("multiset_prod_sel", p.multiset_prod_sel),
+            ("multiset_bound_restrict", p.multiset_bound_restrict),
+            ("multiset_count_restrict", p.multiset_count_restrict),
+            ("multiset_count_restrict_pos", p.multiset_count_restrict_pos),
+            (
+                "multiset_prod_sel_eq_prod_restrict",
+                p.multiset_prod_sel_eq_prod_restrict,
+            ),
+            ("multiset_prod_sel_all", p.multiset_prod_sel_all),
+            ("multiset_prod_sel_empty", p.multiset_prod_sel_empty),
+            ("multiset_prod_sel_congr", p.multiset_prod_sel_congr),
+            ("multiset_prod_sel_dvd_prod", p.multiset_prod_sel_dvd_prod),
+            ("multiset_prod_sel_injective", p.multiset_prod_sel_injective),
             ("min_fac_aux_two_le", p.min_fac_aux_two_le),
             ("min_fac_aux_dvd", p.min_fac_aux_dvd),
             ("min_fac_two_le", p.min_fac_two_le),
@@ -2075,6 +2092,13 @@ pub(super) fn nat(p: &NatPrelude) -> Fields {
             ("primorial_pos", p.primorial_pos),
             ("primorial_le_succ", p.primorial_le_succ),
             ("primorial_mono", p.primorial_mono),
+            ("prime_counting_prime_mono", p.prime_counting_prime_mono),
+            ("prime_counting_mono", p.prime_counting_mono),
+            ("is_prime_eq_true_of_prime", p.is_prime_eq_true_of_prime),
+            (
+                "prime_counting_prime_unbounded",
+                p.prime_counting_prime_unbounded,
+            ),
             ("mul_two_eq_add_self", p.mul_two_eq_add_self),
             ("le_of_add_self_le_add_self", p.le_of_add_self_le_add_self),
             (
@@ -4549,10 +4573,10 @@ pub(super) fn creal_sub(p: &CRealPrelude) -> Vec<(&'static str, Sub)> {
     vec![("rat", Sub::Rat(Box::new(p.rat)))]
 }
 
-/// The `ComplexPrelude` field table (186 names,
+/// The `ComplexPrelude` field table (196 names,
 /// 0 name lists, 1 sub-packages).
 ///
-/// 57 of the names come from ADR-1512 per-module registries and
+/// 67 of the names come from ADR-1512 per-module registries and
 /// carry a dotted field name (`pi.pi_le_four`); the rest are flat
 /// fields on `ComplexPrelude` itself.
 #[must_use]
@@ -4793,6 +4817,40 @@ pub(super) fn complex(p: &ComplexPrelude) -> Fields {
                 p.estimates.uniformly_continuous_of_has_derivative,
             ),
             ("leibniz.has_derivative_mul", p.leibniz.has_derivative_mul),
+            (
+                "uc_closure.uniformly_continuous_add",
+                p.uc_closure.uniformly_continuous_add,
+            ),
+            (
+                "uc_closure.uniformly_continuous_mul",
+                p.uc_closure.uniformly_continuous_mul,
+            ),
+            (
+                "polyderiv.has_derivative_congr",
+                p.polyderiv.has_derivative_congr,
+            ),
+            (
+                "polyderiv.has_derivative_pow",
+                p.polyderiv.has_derivative_pow,
+            ),
+            ("polyderiv.holomorphic_pow", p.polyderiv.holomorphic_pow),
+            ("cauchy_riemann.abs_i", p.cauchy_riemann.abs_i),
+            (
+                "cauchy_riemann.in_disc_of_real_offset",
+                p.cauchy_riemann.in_disc_of_real_offset,
+            ),
+            (
+                "cauchy_riemann.in_disc_i_offset",
+                p.cauchy_riemann.in_disc_i_offset,
+            ),
+            (
+                "cauchy_riemann.in_disc_of_two_sided",
+                p.cauchy_riemann.in_disc_of_two_sided,
+            ),
+            (
+                "cauchy_riemann.in_disc_i_of_two_sided",
+                p.cauchy_riemann.in_disc_i_of_two_sided,
+            ),
             ("components.abs_of_real", p.components.abs_of_real),
             ("components.abs_re_le", p.components.abs_re_le),
             ("components.abs_im_le", p.components.abs_im_le),

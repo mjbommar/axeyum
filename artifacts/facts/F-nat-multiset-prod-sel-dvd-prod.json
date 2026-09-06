@@ -1,0 +1,56 @@
+{
+  "schema_version": 1,
+  "id": "F:nat-multiset-prod-sel-dvd-prod",
+  "title": "Every predicate-selected sub-product of a multiset divides the whole product",
+  "statement": "For any Nat.Multiset m and any predicate s : Nat -> Bool, the product of m restricted to s divides the product of m. No hypotheses at all -- not primality, not positivity, not a support condition. This is the easy direction of ADR-1624's divisors-to-subsets correspondence: every selection names a divisor.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Nat.Multiset.prodSel_dvd_prod : ((x0 : AxNat.Multiset) -> ((x1 : ((x1 : AxNat) -> Bool)) -> AxNat.dvd (AxNat.Multiset.prodSel x0 x1) (AxNat.Multiset.prod x0)))",
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.Multiset.prodSel_dvd_prod"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:nat-multiset-prod-add",
+    "F:nat-mul-assoc",
+    "F:nat-mul-comm",
+    "F:nat-dvd-refl",
+    "F:nat-one-mul"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-nat-multiset-prod-sel-dvd-prod",
+      "kind": "kernel-term",
+      "kernel_declaration": "Nat.Multiset.prodSel_dvd_prod",
+      "supports": "Nat.Multiset.prodSel_dvd_prod is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q --release -p axeyum-lean-kernel --example nat_theorem_inventory -- Nat.Multiset.prodSel_dvd_prod 2>/dev/null | grep -Fc '((x0 : AxNat.Multiset) -> ((x1 : ((x1 : AxNat) -> Bool)) -> AxNat.dvd (AxNat.Multiset.prodSel x0 x1) (AxNat.Multiset.prod x0)))')\" -ge 1",
+      "notes": "The pattern is the FULL admitted type as rendered by Kernel::render_lean, not the theorem's name, so a drifted statement fails this check. Nat.prodRange_dvd_prodRange pushes a pointwise divisibility under the product fold; the pointwise fact is a two-branch Bool.rec, dvd x x on the selected side and dvd 1 x on the unselected side. Nat.mul_dvd_mul is the successor step and had to be declared here: the prelude had Nat.dvd_mul, Nat.dvd_mul_right_of_dvd and Nat.dvd_trans but nothing MULTIPLYING two divisibilities."
+    },
+    {
+      "id": "footprint-nat-multiset-prod-sel-dvd-prod",
+      "kind": "instance-pin",
+      "supports": "axiom_footprint: [] -- read from Kernel::axiom_footprint for this declaration, not from a maintained list",
+      "check_status": "checked",
+      "checker_command": "cargo test -q --release -p axeyum-lean-kernel --lib -- nat_prelude::multiset_select_tests::every_multiset_select_declaration_is_present_and_axiom_free --test-threads=1",
+      "notes": "That test asserts Environment::contains FIRST for each of the fourteen names this module declares and only then that Kernel::axiom_footprint is empty -- an absent name has an EMPTY footprint, so the order is load-bearing."
+    },
+    {
+      "id": "evaluation-nat-multiset-prod-sel-dvd-prod",
+      "kind": "instance-pin",
+      "supports": "The general theorem, instantiated at concrete small arguments, infers to a statement about independently computed values, with negative controls.",
+      "check_status": "checked",
+      "checker_command": "cargo test -q --release -p axeyum-lean-kernel --lib -- nat_prelude::multiset_select_tests:: --test-threads=4",
+      "notes": "the_two_bridge_theorems_instantiate_at_the_worked_multiset instantiates this at m = {2,2,3} and s = (. = 2), where it states 4 | 12, with 12 | 4 as the negative control."
+    }
+  ],
+  "provenance": {
+    "date": "2026-09-06",
+    "established_by": "axeyum-lean-kernel build_nat_prelude (nat_prelude/multiset_select.rs)",
+    "source": "theorem name and canonical type read directly via nat_theorem_inventory, which prints render_lean of the admitted type; lane mobius-inversion, ADR-1658."
+  },
+  "notes": "Landed by lane mobius-inversion (ADR-1658). Paired with F:nat-multiset-prod-sel-injective it gives an injection from selections into the divisors; the missing half is surjectivity onto the divisors of a squarefree number.",
+  "external_status": "proved"
+}

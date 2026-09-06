@@ -35,8 +35,12 @@
 use std::collections::BTreeMap;
 use std::time::Instant;
 
+use axeyum_cas::chartable::{
+    CharacterTableCertificate, Cyclotomic, character_table_of_abelian_group,
+};
 use axeyum_cas::enclosure::{BigInterval, EULER_GAMMA_NAME, enclose, enclose_constant};
 use axeyum_cas::enclosure_special::{MultiPoly, PolySystem, enclose_system};
+use axeyum_cas::fps_amplitude::{Amplitude, DominantPole, dominant_pole_amplitude};
 use axeyum_cas::fps_analytic::{
     RadiusOfConvergence, coefficient_asymptotics, radius_of_convergence,
 };
@@ -44,6 +48,9 @@ use axeyum_cas::geometry::Point;
 use axeyum_cas::geometry_beyond::{self, Conic, Isometry};
 use axeyum_cas::homology::{
     self, SimplicialComplex, coefficients, cohomology, induced, persistent,
+};
+use axeyum_cas::matgroup_q::{
+    RationalGroupVerdict, classify_rational_matrix_group, minkowski_bound, rational_matrix,
 };
 use axeyum_cas::numberfield::{self, QuadraticField, TwoSquaresCertificate};
 use axeyum_cas::numberfield_ideals::{
@@ -719,6 +726,28 @@ fn e2_poly_identity() -> Outcome {
 fn e2_poly_identity_ctrl() -> Outcome {
     let lhs = (x() + i(1)).pow(2);
     let rhs = x().pow(2) + i(2) * x() + i(2);
+    eq_check(&lhs, &rhs, false, &format!("lhs={lhs}"))
+}
+/// One function under two spellings. `equal` returned a confidently wrong
+/// `Certified { equal: false }` here: `atom_name` keyed the transcendental atom
+/// on the rendering of an **unreduced** `RatFunc`, so `(-1/2*u^2)/s` and
+/// `(-u^2)/(2*s)` became two independent atom variables. Reported by the
+/// probability lane proving the Gaussian antiderivative with a symbolic
+/// variance; fixed by `RatFunc::canonical_key_form` (file 13, item 1 wave
+/// three, lane `cas-witness-3`).
+fn e4_gaussian_exponent_spelling() -> Outcome {
+    let s = CasExpr::var("s");
+    let u = CasExpr::var("u");
+    let lhs = (-((r(1, 2) / s.clone()) * u.clone().pow(2))).exp();
+    let rhs = (-(u.pow(2) / (i(2) * s))).exp();
+    eq_check(&lhs, &rhs, true, &format!("lhs={lhs}"))
+}
+/// The control: two different variances must stay apart.
+fn e4_gaussian_exponent_spelling_ctrl() -> Outcome {
+    let s = CasExpr::var("s");
+    let u = CasExpr::var("u");
+    let lhs = (-(u.clone().pow(2) / (i(2) * s.clone()))).exp();
+    let rhs = (-(u.pow(2) / (i(2) * s.pow(2)))).exp();
     eq_check(&lhs, &rhs, false, &format!("lhs={lhs}"))
 }
 /// The Pythagorean identity is transcendentally true but is not a polynomial
@@ -1618,7 +1647,7 @@ fn prob5_normal_symbolic_mgf() -> Outcome {
     let t = CasExpr::var("t");
     let d = probability::Continuous::Normal {
         mu: mu.clone(),
-        variance: Rational::integer(4),
+        variance: CasExpr::Const(Rational::integer(4)),
     };
     let cert = d.mgf("t");
     let expected_claim = (t.clone() * mu + i(4) * t.pow(2) / i(2)).exp();
@@ -1655,7 +1684,7 @@ fn prob5_normal_symbolic_mgf() -> Outcome {
 fn prob6_normal_negative_variance_declines() -> Outcome {
     let d = probability::Continuous::Normal {
         mu: CasExpr::var("mu"),
-        variance: Rational::integer(-1),
+        variance: CasExpr::Const(Rational::integer(-1)),
     };
     let cert = d.mgf("t");
     Outcome {
@@ -1671,13 +1700,149 @@ fn prob6_normal_negative_variance_declines() -> Outcome {
     }
 }
 
-/// `Geometric(p)`'s mean at a **symbolic** `p` still declines, and not for a
-/// missing hypothesis channel: `gosper_sum` returns `None` on a symbolic ratio
-/// before any convergence question is asked, so there is no value to attach
-/// `0 < p < 1` to. The `decline_expected` counterpart to `prob4`, which shows
-/// where the hypothesis mechanism does and does not reach.
-fn prob7_geometric_symbolic_p_declines() -> Outcome {
-    let d = Discrete::Geometric(CasExpr::var("p"));
+/// `E[Geometric(p)] = 1/p` at a **symbolic** `p`, decided under exactly
+/// `0 < p < 1`. Was `decline_expected` until 2026-09-06: `gosper_sum` still has
+/// no antidifference for a symbolic ratio, but `infinite_sum_conditional`'s
+/// geometric series reaches the same summand with `|1−p| < 1` recorded.
+/// Reclassified by lane `cas-sum-gaps-2` after the harness flagged the
+/// disagreement — the direction the corpus is meant to move.
+///
+/// The entry DISAGREES if the conditions ever silently disappear: `1/p` is not
+/// the mean of anything at `p ≤ 0` or `p ≥ 1`, where the series does not
+/// converge to it.
+fn prob7_geometric_symbolic_p_mean() -> Outcome {
+    let p = CasExpr::var("p");
+    let d = Discrete::Geometric(p.clone());
+    let cert = d.mean();
+    let conditions = cert.hypotheses_display();
+    let matches_claim = matches!(
+        equal(&cert.claim, &(CasExpr::one() / p)),
+        ZeroTest::Certified { equal: true, .. }
+    );
+    let good = cert.is_decided() && conditions == "p > 0 and 1 - p > 0" && matches_claim;
+    Outcome {
+        verdict: if good {
+            Verdict::Agree
+        } else {
+            Verdict::Disagree
+        },
+        trust: if cert.is_decided() {
+            Trust::Certified
+        } else {
+            Trust::Uncertified
+        },
+        expected: "decided 1/p under exactly `p > 0 and 1 - p > 0`".to_string(),
+        actual: format!(
+            "decided={}, unconditional={}, claim={}, under=[{conditions}]",
+            cert.is_decided(),
+            cert.is_certified(),
+            cert.claim
+        ),
+    }
+}
+
+/// `Geometric(p)`'s mgf at a symbolic `p` **and** symbolic `t`, decided under
+/// `0 < p < 1` together with `t < −ln(1−p)`. The third condition is the one the
+/// mgf genuinely needs and the moments do not: `(1−p)eᵗ` leaves the unit disc as
+/// `t` grows, and `pe^t/(1−(1−p)e^t)` is negative there rather than an mgf.
+fn prob8_geometric_symbolic_mgf() -> Outcome {
+    let p = CasExpr::var("p");
+    let d = Discrete::Geometric(p.clone());
+    let cert = d.mgf("t");
+    let conditions = cert.hypotheses_display();
+    let e = CasExpr::var("t").exp();
+    let expected_claim = (p.clone() * e.clone()) / (CasExpr::one() - (CasExpr::one() - p) * e);
+    let matches_claim = matches!(
+        equal(&cert.claim, &expected_claim),
+        ZeroTest::Certified { equal: true, .. }
+    );
+    let good = cert.is_decided()
+        && conditions == "p > 0 and 1 - p > 0 and -ln(1 - p) - t > 0"
+        && matches_claim;
+    Outcome {
+        verdict: if good {
+            Verdict::Agree
+        } else {
+            Verdict::Disagree
+        },
+        trust: if cert.is_decided() {
+            Trust::Certified
+        } else {
+            Trust::Uncertified
+        },
+        expected: "decided p*e^t/(1-(1-p)*e^t) under exactly `0 < p < 1` and `t < -ln(1-p)`"
+            .to_string(),
+        actual: format!(
+            "decided={}, unconditional={}, claim={}, under=[{conditions}]",
+            cert.is_decided(),
+            cert.is_certified(),
+            cert.claim
+        ),
+    }
+}
+
+/// `Normal(μ, σ²)` at a **symbolic** variance: mass `1`, mean `μ`, variance `σ²`
+/// and mgf `e^{μt+σ²t²/2}`, each decided under exactly `σ² > 0`. Added
+/// 2026-09-06 by lane `cas-sum-gaps-2`; before it, a symbolic variance was not
+/// even representable (the field was a concrete rational).
+///
+/// All four are checked in one entry because the failure mode being guarded is
+/// shared: if the `σ² > 0` condition ever disappears, every one of them becomes
+/// a claim about an "upward Gaussian" that has no finite integral at all.
+fn prob9_normal_symbolic_variance() -> Outcome {
+    let mu = CasExpr::var("mu");
+    let s = CasExpr::var("s");
+    let t = CasExpr::var("t");
+    let d = probability::Continuous::Normal {
+        mu: mu.clone(),
+        variance: s.clone(),
+    };
+    let mgf_target = (t.clone() * mu.clone() + s.clone() * t.pow(2) / i(2)).exp();
+    let quantities = [
+        (d.total_mass(), CasExpr::one()),
+        (d.mean(), mu),
+        (d.variance(), s),
+        (d.mgf("t"), mgf_target),
+    ];
+    let mut good = true;
+    let mut report = Vec::new();
+    for (cert, expected_claim) in &quantities {
+        let conditions = cert.hypotheses_display();
+        let matches_claim = matches!(
+            equal(&cert.claim, expected_claim),
+            ZeroTest::Certified { equal: true, .. }
+        );
+        good &= cert.is_decided() && conditions == "s > 0" && matches_claim;
+        report.push(format!(
+            "{}|decided={}|under=[{conditions}]",
+            cert.claim,
+            cert.is_decided()
+        ));
+    }
+    Outcome {
+        verdict: if good {
+            Verdict::Agree
+        } else {
+            Verdict::Disagree
+        },
+        trust: if good {
+            Trust::Certified
+        } else {
+            Trust::Uncertified
+        },
+        expected:
+            "mass 1, mean mu, variance s, mgf exp(mu*t + s*t^2/2), each under exactly `s > 0`"
+                .to_string(),
+        actual: report.join(" ; "),
+    }
+}
+
+/// **Control** for `prob7`/`prob8`: a `Geometric` whose ratio leaves the unit
+/// disc must decline, not print the analytic continuation. `Geometric(2)` has
+/// `q = 1 − 2 = −1`, so `Σ qʲ` oscillates and has no value; the closed form
+/// `1/(1−q) = 1/2` is spellable and wrong.
+fn prob10_geometric_divergent_ratio_declines() -> Outcome {
+    let d = Discrete::Geometric(i(2));
     let cert = d.mean();
     Outcome {
         verdict: if cert.is_decided() {
@@ -1686,7 +1851,7 @@ fn prob7_geometric_symbolic_p_declines() -> Outcome {
             Verdict::Decline
         },
         trust: Trust::Uncertified,
-        expected: "declines: gosper_sum has no antidifference for a symbolic ratio".to_string(),
+        expected: "declines: |1-p| = 1, so the geometric series does not converge".to_string(),
         actual: format!("decided={}, claim={}", cert.is_decided(), cert.claim),
     }
 }
@@ -2130,6 +2295,162 @@ fn fa3_coefficient_asymptotics_geometric() -> Outcome {
         Err(reason) => declined(&format!(
             "coefficient_asymptotics(1/(1-2x), base=4): {reason:?}"
         )),
+    }
+}
+
+// ============================================================================
+// Entries: second-pass modules — fps_amplitude
+// ============================================================================
+
+/// `1/(1-2x)` has `a(n) = 2^n` exactly, so the asymptotic amplitude is exactly
+/// `C = 1` at a simple pole `zeta = 1/2`.
+fn fam1_amplitude_exact_geometric() -> Outcome {
+    let numerator = vec![bigrat(1)];
+    let denominator = vec![bigrat(1), bigrat(-2)];
+    match dominant_pole_amplitude(&numerator, &denominator, 8) {
+        Ok(cert) => {
+            let verified = cert.verify().is_ok();
+            let half = BigRational::new(BigInt::from(1), BigInt::from(2));
+            let pole_is_half = cert.pole == DominantPole::Rational(half);
+            let amplitude_is_one =
+                cert.amplitude == Amplitude::Rational(BigRational::from_integer(BigInt::from(1)));
+            let simple = cert.multiplicity == 1;
+            let agree = verified && pole_is_half && amplitude_is_one && simple;
+            Outcome {
+                verdict: if agree {
+                    Verdict::Agree
+                } else {
+                    Verdict::Disagree
+                },
+                trust: if verified {
+                    Trust::Certified
+                } else {
+                    Trust::Unknown
+                },
+                expected: "C = 1 exactly, at the simple pole zeta = 1/2 (a(n) = 2^n)".to_string(),
+                actual: format!(
+                    "C = {:?} at {:?}, m = {}, verify_ok={verified}",
+                    cert.amplitude, cert.pole, cert.multiplicity
+                ),
+            }
+        }
+        Err(reason) => declined(&format!("dominant_pole_amplitude(1/(1-2x)): {reason:?}")),
+    }
+}
+
+/// Near-miss control: for `1/(1-2x)^3` the spellable-and-wrong closed form is
+/// `a(n) ~ n^2 * 2^n`, i.e. `C = 1`. The true amplitude is `C = 1/2`, because
+/// `a(n) = binom(n+2,2) 2^n` and `binom(n+2,2) ~ n^2/2` — the `1/(m-1)!` factor
+/// a residue computation carries and a naive "leading term" reading drops. The
+/// entry asserts the tool reports `1/2` and NOT `1`.
+fn fam1_amplitude_exact_geometric_ctrl() -> Outcome {
+    let numerator = vec![bigrat(1)];
+    let denominator = vec![bigrat(1), bigrat(-6), bigrat(12), bigrat(-8)];
+    match dominant_pole_amplitude(&numerator, &denominator, 400) {
+        Ok(cert) => {
+            let verified = cert.verify().is_ok();
+            let half = BigRational::new(BigInt::from(1), BigInt::from(2));
+            let one = BigRational::from_integer(BigInt::from(1));
+            let is_half = cert.amplitude == Amplitude::Rational(half);
+            let not_one = cert.amplitude != Amplitude::Rational(one);
+            let exponent_two = cert.exponent() == 2;
+            let agree = verified && is_half && not_one && exponent_two;
+            Outcome {
+                verdict: if agree {
+                    Verdict::Agree
+                } else {
+                    Verdict::Disagree
+                },
+                trust: if verified {
+                    Trust::Certified
+                } else {
+                    Trust::Unknown
+                },
+                expected: "C = 1/2 with growth exponent 2, NOT the naive C = 1".to_string(),
+                actual: format!(
+                    "C = {:?}, k = {}, verify_ok={verified}",
+                    cert.amplitude,
+                    cert.exponent()
+                ),
+            }
+        }
+        Err(reason) => declined(&format!("dominant_pole_amplitude(1/(1-2x)^3): {reason:?}")),
+    }
+}
+
+/// Fibonacci: `F(n) ~ phi^n / sqrt(5)`, so the amplitude is the irrational
+/// `1/sqrt(5)`. The tool returns it as the exact element `1/5 + (2/5) zeta` of
+/// `Q(zeta)` with `zeta^2 = 1 - zeta`; the entry checks the coordinates AND that
+/// the element's square is the rational `1/5`, which is what pins it as
+/// `1/sqrt(5)` without ever taking a square root.
+fn fam2_amplitude_fibonacci_one_over_sqrt_five() -> Outcome {
+    let numerator = vec![bigrat(0), bigrat(1)];
+    let denominator = vec![bigrat(1), bigrat(-1), bigrat(-1)];
+    match dominant_pole_amplitude(&numerator, &denominator, 8) {
+        Ok(cert) => {
+            let verified = cert.verify().is_ok();
+            let fifth = BigRational::new(BigInt::from(1), BigInt::from(5));
+            let two_fifths = BigRational::new(BigInt::from(2), BigInt::from(5));
+            let expected_coords = vec![fifth.clone(), two_fifths.clone()];
+            let (coords_ok, square_is_a_fifth) = match &cert.amplitude {
+                Amplitude::Algebraic { coefficients } => {
+                    // (a + b z)^2 with z^2 = 1 - z is (a^2 + b^2) + (2ab - b^2) z.
+                    let (a, b) = (&coefficients[0], &coefficients[1]);
+                    let constant = a * a + b * b;
+                    let linear = BigRational::from_integer(BigInt::from(2)) * a * b - b * b;
+                    (
+                        *coefficients == expected_coords,
+                        constant == fifth && linear == BigRational::from_integer(BigInt::from(0)),
+                    )
+                }
+                Amplitude::Rational(_) => (false, false),
+            };
+            let agree = verified && coords_ok && square_is_a_fifth;
+            Outcome {
+                verdict: if agree {
+                    Verdict::Agree
+                } else {
+                    Verdict::Disagree
+                },
+                trust: if verified {
+                    Trust::Certified
+                } else {
+                    Trust::Unknown
+                },
+                expected: "C = 1/5 + (2/5) zeta in Q(zeta), zeta^2 = 1 - zeta, and C^2 = 1/5"
+                    .to_string(),
+                actual: format!(
+                    "C = {:?}, C^2 rational and equal to 1/5: {square_is_a_fifth}, verify_ok={verified}",
+                    cert.amplitude
+                ),
+            }
+        }
+        Err(reason) => declined(&format!("dominant_pole_amplitude(x/(1-x-x^2)): {reason:?}")),
+    }
+}
+
+/// `1/(1+x^2)` has coefficients `1, 0, -1, 0, ...`: its two dominant
+/// singularities `+-i` share a modulus, so no single `C n^k rho^(-n)` describes
+/// the coefficients at all. The tool must DECLINE rather than average — a wrong
+/// answer here would be a confident constant for a sequence that has none.
+fn fam3_amplitude_periodic_declines() -> Outcome {
+    let numerator = vec![bigrat(1)];
+    let denominator = vec![bigrat(1), bigrat(0), bigrat(1)];
+    match dominant_pole_amplitude(&numerator, &denominator, 8) {
+        Ok(cert) => Outcome {
+            verdict: Verdict::Disagree,
+            trust: Trust::Uncertified,
+            expected: "a decline: +-i share the dominant modulus, so no amplitude exists"
+                .to_string(),
+            actual: format!("answered C = {:?}", cert.amplitude),
+        },
+        Err(reason) => Outcome {
+            verdict: Verdict::Decline,
+            trust: Trust::Unknown,
+            expected: "a decline: +-i share the dominant modulus, so no amplitude exists"
+                .to_string(),
+            actual: format!("declined: {reason:?}"),
+        },
     }
 }
 
@@ -3355,6 +3676,232 @@ fn prob6_poisson_symbolic_variance_ctrl() -> Outcome {
     }
 }
 
+// ============================================================================
+// Entries: third-pass modules — matgroup_q (matrix groups over Q)
+// ============================================================================
+
+/// The quarter turn generates a cyclic group of order 4 inside `GL(2, Q)`.
+fn mgq1_quarter_turn_order() -> Outcome {
+    let Some(r) = rational_matrix(&[&[(0, 1), (-1, 1)], &[(1, 1), (0, 1)]]) else {
+        return declined("rational_matrix(quarter turn)");
+    };
+    match classify_rational_matrix_group(2, vec![r]) {
+        Ok(RationalGroupVerdict::Declined(reason)) => {
+            declined(&format!("classify_rational_matrix_group: {reason:?}"))
+        }
+        Ok(verdict) => {
+            let order = verdict.order();
+            let verified = verdict.verify().is_ok();
+            Outcome {
+                verdict: if order == Some(4) {
+                    Verdict::Agree
+                } else {
+                    Verdict::Disagree
+                },
+                trust: if verified {
+                    Trust::Certified
+                } else {
+                    Trust::Unknown
+                },
+                expected: "finite of order 4".to_string(),
+                actual: format!("order={order:?}, verify_ok={verified}"),
+            }
+        }
+        Err(err) => declined(&format!("classify_rational_matrix_group: {err:?}")),
+    }
+}
+
+/// The unipotent shear generates an infinite group, certified by the
+/// Minkowski overflow route rather than declined.
+fn mgq2_shear_is_infinite() -> Outcome {
+    let Some(u) = rational_matrix(&[&[(1, 1), (1, 1)], &[(0, 1), (1, 1)]]) else {
+        return declined("rational_matrix(shear)");
+    };
+    match classify_rational_matrix_group(2, vec![u]) {
+        Ok(RationalGroupVerdict::Declined(reason)) => {
+            declined(&format!("classify_rational_matrix_group: {reason:?}"))
+        }
+        Ok(verdict) => {
+            let infinite = verdict.is_infinite();
+            let verified = verdict.verify().is_ok();
+            Outcome {
+                verdict: if infinite {
+                    Verdict::Agree
+                } else {
+                    Verdict::Disagree
+                },
+                trust: if verified {
+                    Trust::Certified
+                } else {
+                    Trust::Unknown
+                },
+                expected: "infinite".to_string(),
+                actual: format!("is_infinite={infinite}, verify_ok={verified}"),
+            }
+        }
+        Err(err) => declined(&format!("classify_rational_matrix_group: {err:?}")),
+    }
+}
+
+/// The Minkowski bound in dimension 4 is 5760.
+fn mgq3_minkowski_bound_dimension_four() -> Outcome {
+    let got = minkowski_bound(4);
+    Outcome {
+        verdict: if got == BigInt::from(5760) {
+            Verdict::Agree
+        } else {
+            Verdict::Disagree
+        },
+        trust: Trust::Uncertified,
+        expected: "M(4) = 5760".to_string(),
+        actual: format!("{got}"),
+    }
+}
+
+// ============================================================================
+// Entries: third-pass modules — chartable (character tables)
+// ============================================================================
+
+/// `A5`'s classical character table, entries in `Q(zeta_30)`.
+fn a5_character_table() -> Option<CharacterTableCertificate> {
+    let five_cycle = Permutation::from_cycles(&[vec![0, 1, 2, 3, 4]], 5)?;
+    let three_cycle = Permutation::from_cycles(&[vec![0, 1, 2]], 5)?;
+    let group = PermutationGroup::from_generators(vec![five_cycle, three_cycle], 5)?;
+    let classes = group.conjugacy_classes().ok()?;
+    let representatives = [
+        Permutation::identity(5),
+        Permutation::from_cycles(&[vec![0, 1], vec![2, 3]], 5)?,
+        Permutation::from_cycles(&[vec![0, 1, 2]], 5)?,
+        Permutation::from_cycles(&[vec![0, 1, 2, 3, 4]], 5)?,
+        Permutation::from_cycles(&[vec![0, 2, 4, 1, 3]], 5)?,
+    ];
+    let columns: Vec<usize> = representatives
+        .iter()
+        .map(|r| classes.classes.iter().position(|c| c.contains(r)))
+        .collect::<Option<Vec<usize>>>()?;
+    // (1 + sqrt 5)/2 = 1 + zeta_5 + zeta_5^4 and (1 - sqrt 5)/2 =
+    // 1 + zeta_5^2 + zeta_5^3, written in Q(zeta_30) since zeta_5 = zeta_30^6.
+    let phi = Cyclotomic::sum_of_roots(30, &[0, 6, 24])?;
+    let phi_bar = Cyclotomic::sum_of_roots(30, &[0, 12, 18])?;
+    let cyc = |v: i64| Cyclotomic::integer(30, v);
+    let rows: Vec<Vec<Cyclotomic>> = vec![
+        vec![cyc(1)?, cyc(1)?, cyc(1)?, cyc(1)?, cyc(1)?],
+        vec![cyc(4)?, cyc(0)?, cyc(1)?, cyc(-1)?, cyc(-1)?],
+        vec![cyc(5)?, cyc(1)?, cyc(-1)?, cyc(0)?, cyc(0)?],
+        vec![cyc(3)?, cyc(-1)?, cyc(0)?, phi.clone(), phi_bar.clone()],
+        vec![cyc(3)?, cyc(-1)?, cyc(0)?, phi_bar, phi],
+    ];
+    let table = rows
+        .iter()
+        .map(|row| {
+            let mut out = row.clone();
+            for (i, &c) in columns.iter().enumerate() {
+                out[c] = row[i].clone();
+            }
+            out
+        })
+        .collect();
+    Some(CharacterTableCertificate {
+        classes,
+        conductor: 30,
+        table,
+    })
+}
+
+/// The classical `A5` table must verify: both orthogonality relations, the
+/// degrees, and the Galois relation, all exactly over `Q(zeta_30)`.
+fn ct1_a5_character_table() -> Outcome {
+    let Some(cert) = a5_character_table() else {
+        return declined("building A5's character table");
+    };
+    let verified = cert.verify();
+    Outcome {
+        verdict: if verified.is_ok() {
+            Verdict::Agree
+        } else {
+            Verdict::Disagree
+        },
+        trust: if verified.is_ok() {
+            Trust::Certified
+        } else {
+            Trust::Unknown
+        },
+        expected: "the classical A5 table verifies (5 rows, degrees 1,3,3,4,5)".to_string(),
+        actual: format!("verify={verified:?}"),
+    }
+}
+
+/// Near-miss control: swap the golden ratio and its conjugate in ONE of the
+/// two three-dimensional rows. The closed form is perfectly spellable —
+/// `(1 - sqrt 5)/2` is a real algebraic integer that really does appear in
+/// this table — and it is simply in the wrong row, which makes that row a
+/// copy of the other one. The checker must refuse it.
+fn ct2_a5_swapped_golden_ratio_ctrl() -> Outcome {
+    let Some(mut cert) = a5_character_table() else {
+        return declined("building A5's character table");
+    };
+    let Some(phi) = Cyclotomic::sum_of_roots(30, &[0, 6, 24]) else {
+        return declined("building the golden ratio");
+    };
+    let Some(row) = cert.table.iter().position(|r| r.contains(&phi)) else {
+        return declined("locating a golden-ratio row");
+    };
+    let columns: Vec<usize> = (0..cert.table[row].len())
+        .filter(|&k| cert.table[row][k].as_rational().is_none())
+        .collect();
+    if columns.len() != 2 {
+        return declined("locating the two irrational columns");
+    }
+    cert.table[row].swap(columns[0], columns[1]);
+    let refused = cert.verify().is_err();
+    Outcome {
+        verdict: if refused {
+            Verdict::Agree
+        } else {
+            Verdict::Disagree
+        },
+        trust: Trust::Certified,
+        expected: "the altered A5 table is REFUSED".to_string(),
+        actual: format!("refused={refused}, verify={:?}", cert.verify()),
+    }
+}
+
+/// A produced table: the cyclic group of order 6 has exactly six irreducible
+/// characters, all of degree 1, and the produced table passes the same
+/// independent checker.
+fn ct3_c6_abelian_table() -> Outcome {
+    let Some(g) = Permutation::from_cycles(&[vec![0, 1, 2, 3, 4, 5]], 6) else {
+        return declined("Permutation::from_cycles(6-cycle)");
+    };
+    let Some(group) = PermutationGroup::from_generators(vec![g], 6) else {
+        return declined("PermutationGroup::from_generators(C6)");
+    };
+    match character_table_of_abelian_group(&group) {
+        Ok(cert) => {
+            let rows = cert.table.len();
+            let verified = cert.verify().is_ok();
+            let all_linear = cert
+                .degrees()
+                .is_some_and(|d| d.iter().all(num_traits::One::is_one));
+            Outcome {
+                verdict: if rows == 6 && all_linear {
+                    Verdict::Agree
+                } else {
+                    Verdict::Disagree
+                },
+                trust: if verified {
+                    Trust::Certified
+                } else {
+                    Trust::Unknown
+                },
+                expected: "6 characters, every degree 1".to_string(),
+                actual: format!("rows={rows}, all_linear={all_linear}, verify_ok={verified}"),
+            }
+        }
+        Err(err) => declined(&format!("character_table_of_abelian_group: {err:?}")),
+    }
+}
+
 macro_rules! e {
     ($id:literal, $area:expr, $module:expr, $tier:expr, $f:expr) => {
         Entry {
@@ -3527,6 +4074,20 @@ fn main() {
             None,
             DeclineExpected,
             e3_trig_pythagorean
+        ),
+        e!(
+            "e4-gaussian-exponent-spelling",
+            Some("simplify/equal"),
+            None,
+            Core,
+            e4_gaussian_exponent_spelling
+        ),
+        e!(
+            "e4-gaussian-exponent-spelling-ctrl",
+            Some("simplify/equal"),
+            None,
+            Core,
+            e4_gaussian_exponent_spelling_ctrl
         ),
         // linear algebra
         e!("la1-det", Some("linear algebra"), None, Core, la1_det),
@@ -3734,8 +4295,29 @@ fn main() {
             "prob7-geometric-symbolic-p",
             None,
             Some("probability"),
+            Core,
+            prob7_geometric_symbolic_p_mean
+        ),
+        e!(
+            "prob8-geometric-symbolic-mgf",
+            None,
+            Some("probability"),
+            Core,
+            prob8_geometric_symbolic_mgf
+        ),
+        e!(
+            "prob9-normal-symbolic-variance",
+            None,
+            Some("probability"),
+            Core,
+            prob9_normal_symbolic_variance
+        ),
+        e!(
+            "prob10-geometric-divergent-ratio",
+            None,
+            Some("probability"),
             DeclineExpected,
-            prob7_geometric_symbolic_p_declines
+            prob10_geometric_divergent_ratio_declines
         ),
         // first-pass modules: geometry_beyond
         e!(
@@ -3830,6 +4412,35 @@ fn main() {
             Some("fps_analytic"),
             Core,
             fa3_coefficient_asymptotics_geometric
+        ),
+        // second-pass modules: fps_amplitude
+        e!(
+            "fam1-amplitude-exact-geometric",
+            Some("series"),
+            Some("fps_amplitude"),
+            Core,
+            fam1_amplitude_exact_geometric
+        ),
+        e!(
+            "fam1-amplitude-exact-geometric-ctrl",
+            Some("series"),
+            Some("fps_amplitude"),
+            Core,
+            fam1_amplitude_exact_geometric_ctrl
+        ),
+        e!(
+            "fam2-amplitude-fibonacci-one-over-sqrt-five",
+            Some("series"),
+            Some("fps_amplitude"),
+            Core,
+            fam2_amplitude_fibonacci_one_over_sqrt_five
+        ),
+        e!(
+            "fam3-amplitude-periodic-declines",
+            Some("series"),
+            Some("fps_amplitude"),
+            DeclineExpected,
+            fam3_amplitude_periodic_declines
         ),
         // second-pass modules: numberfield_ideals
         e!(
@@ -4113,6 +4724,50 @@ fn main() {
             Some("probability"),
             Core,
             prob6_poisson_symbolic_variance_ctrl
+        ),
+        // third-pass modules: matgroup_q
+        e!(
+            "mgq1-quarter-turn-order",
+            None,
+            Some("matgroup_q"),
+            Core,
+            mgq1_quarter_turn_order
+        ),
+        e!(
+            "mgq2-shear-is-infinite",
+            None,
+            Some("matgroup_q"),
+            Core,
+            mgq2_shear_is_infinite
+        ),
+        e!(
+            "mgq3-minkowski-bound-dimension-four",
+            None,
+            Some("matgroup_q"),
+            Core,
+            mgq3_minkowski_bound_dimension_four
+        ),
+        // third-pass modules: chartable
+        e!(
+            "ct1-a5-character-table",
+            None,
+            Some("chartable"),
+            Core,
+            ct1_a5_character_table
+        ),
+        e!(
+            "ct2-a5-swapped-golden-ratio-ctrl",
+            None,
+            Some("chartable"),
+            Core,
+            ct2_a5_swapped_golden_ratio_ctrl
+        ),
+        e!(
+            "ct3-c6-abelian-table",
+            None,
+            Some("chartable"),
+            Core,
+            ct3_c6_abelian_table
         ),
     ];
 

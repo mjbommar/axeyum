@@ -70,6 +70,7 @@ pub mod assumptions;
 pub mod boolean;
 pub mod boolean_anf;
 pub mod boolean_circuit;
+pub mod chartable;
 pub mod cofactor_ansatz;
 pub mod combinatorics;
 pub mod enclosure;
@@ -78,6 +79,7 @@ pub mod enclosure_special;
 pub mod extremum;
 mod factor_int;
 pub mod fps;
+pub mod fps_amplitude;
 pub mod fps_analytic;
 pub mod geometry;
 pub mod geometry_beyond;
@@ -102,6 +104,7 @@ pub mod interval_arith;
 pub mod inverse;
 pub mod linear_elim;
 pub mod matgroup;
+pub mod matgroup_q;
 mod matrix;
 pub mod mvpoly;
 pub mod mvt;
@@ -1761,6 +1764,70 @@ impl MultiPoly {
         Some(MultiPoly { terms })
     }
 
+    /// Does any variable in this polynomial name an atom whose argument
+    /// [`atom_name`] could not canonicalize ([`ATOM_UNCANONICAL`])?
+    ///
+    /// A nonzero difference over such an atom is not a refutation: the same
+    /// value may sit under two keys, exactly as it did before
+    /// [`RatFunc::canonical_key_form`] existed. [`equal_core_bounded`] declines
+    /// instead. The equality branch needs no such guard — a zero difference is
+    /// zero whatever the atoms denote.
+    #[must_use]
+    fn mentions_uncanonical_atom(&self) -> bool {
+        self.terms
+            .keys()
+            .any(|mono| mono.powers.keys().any(|v| v.contains(ATOM_UNCANONICAL)))
+    }
+
+    /// The term this polynomial **leads** with: the one [`MultiPoly::to_expr`]
+    /// renders first — greatest total degree, with the monomial order breaking
+    /// ties. `None` for the zero polynomial.
+    ///
+    /// "Leading" has to mean *something* fixed for [`MultiPoly::signed_content`]
+    /// to normalize a sign, and this is the crate's own rendering order, so the
+    /// normalized sign is the sign of the first term a reader sees.
+    #[must_use]
+    fn leading_term(&self) -> Option<(&Monomial, &Rational)> {
+        self.terms.iter().max_by(|a, b| {
+            a.0.total_degree()
+                .cmp(&b.0.total_degree())
+                .then_with(|| b.0.cmp(a.0))
+        })
+    }
+
+    /// The signed rational `c` for which `self / c` has **coprime integer**
+    /// coefficients and a **positive leading coefficient**: the polynomial's
+    /// content, carrying the sign of its [leading term](MultiPoly::leading_term).
+    ///
+    /// For coefficients `nᵢ/dᵢ` in lowest terms the content is
+    /// `gcd(nᵢ) / lcm(dᵢ)`, so dividing by it clears the denominators and strips
+    /// the common integer factor in one step. Dividing a `num`/`den` pair by the
+    /// **denominator's** signed content is what makes an atom key unique — see
+    /// [`RatFunc::canonical_key_form`].
+    ///
+    /// `None` for the zero polynomial (which has no content) or on `i128`
+    /// overflow.
+    #[must_use]
+    fn signed_content(&self) -> Option<Rational> {
+        let mut numerator_gcd: i128 = 0;
+        let mut denominator_lcm: i128 = 1;
+        for coeff in self.terms.values() {
+            numerator_gcd = ntheory::gcd(numerator_gcd, coeff.checked_numerator()?);
+            denominator_lcm = ntheory::lcm(denominator_lcm, coeff.checked_denominator()?)?;
+        }
+        if numerator_gcd == 0 {
+            return None; // the zero polynomial
+        }
+        let magnitude = Rational::checked_new(numerator_gcd, denominator_lcm)?;
+        // The sign normalization. Without it `(-u^2)/(2*s)` and `(u^2)/(-2*s)`
+        // stay two keys for one function.
+        if self.leading_term()?.1.checked_numerator()? < 0 {
+            magnitude.checked_neg()
+        } else {
+            Some(magnitude)
+        }
+    }
+
     /// Exact evaluation at a rational point (trusted checker for tests). `None`
     /// on a missing assignment or `i128` overflow.
     #[must_use]
@@ -1931,6 +1998,64 @@ impl RatFunc {
         }
     }
 
+    /// The representation this fraction is **keyed** on when it is the argument
+    /// of a transcendental head ([`atom_name`]), and the *only* place a `RatFunc`
+    /// needs a unique form.
+    ///
+    /// `RatFunc` arithmetic only cross-multiplies, so one function has many
+    /// `num`/`den` pairs: `exp(−((1/2)/s)·u²)` builds `(−1/2·u²)/s` and
+    /// `exp(−u²/(2·s))` builds `(−u²)/(2·s)`. Those render to different strings,
+    /// so they became two independent atom variables and the zero test **refuted
+    /// a true equality**.
+    ///
+    /// The canonical pair is `(num/c) / (den/c)` where `c` is the denominator's
+    /// [signed content](MultiPoly::signed_content), preceded by a GCD reduction
+    /// when there is a non-constant denominator to cancel against. Afterwards the
+    /// denominator is a primitive integer polynomial with a positive leading
+    /// coefficient, and the whole rational scale and sign sit on the numerator.
+    /// Two representations of one function differ by a rational scalar `λ` once
+    /// their common polynomial factor is gone — `num' = λ·num`, `den' = λ·den` —
+    /// and `c` scales with `λ`, so both divide out to the same pair. A constant
+    /// denominator collapses to `1`, so `ln(x/2)` and `ln((1/2)·x)` also key
+    /// alike, which the raw form got wrong too.
+    ///
+    /// # The residual class, and why it is a decline
+    ///
+    /// Two limits survive. Uniqueness is only **up to a common polynomial
+    /// factor**, and that factor is cancelled only where [`RatFunc::reduced`]
+    /// finds it — the multivariate GCD ([`mvpoly::MvPoly::gcd`]) declines rather
+    /// than failing, and `reduced` then keeps the unreduced fraction. And the
+    /// canonical pair may simply not fit `i128`: for `x / ((1/i128::MAX)·s +
+    /// (1/3)·u)` the denominator's content is `1/(3·i128::MAX)` and dividing by
+    /// it leaves the ring, so this returns `None`.
+    ///
+    /// On either, two keys for one value survive — which is the defect this
+    /// method exists to fix, narrowed rather than closed. So the `None` is not
+    /// swallowed: [`atom_name`] marks the key with [`ATOM_UNCANONICAL`] and
+    /// [`equal_core_bounded`] declines a refutation that mentions such an atom.
+    /// The residual is `ZeroTest::Unknown`, never a wrong verdict. See
+    /// `a_content_beyond_i128_declines_instead_of_refuting`.
+    #[must_use]
+    fn canonical_key_form(&self) -> Option<RatFunc> {
+        if self.num.is_zero() {
+            return Some(RatFunc::from_poly(MultiPoly::zero()));
+        }
+        // A constant denominator is absorbed by the scaling below, so the GCD is
+        // only run where there is a polynomial factor to cancel. This path is on
+        // every atom key in the crate; `reduced` is a multivariate GCD.
+        let base = if multipoly_as_constant(&self.den).is_some() {
+            self.clone()
+        } else {
+            self.reduced().unwrap_or_else(|| self.clone())
+        };
+        let content = base.den.signed_content()?;
+        let inverse = MultiPoly::constant(Rational::integer(1).checked_div(content)?);
+        Some(RatFunc {
+            num: base.num.mul(&inverse)?,
+            den: base.den.mul(&inverse)?,
+        })
+    }
+
     /// Reduce a multivariate rational function to lowest terms via the
     /// multivariate GCD ([`mvpoly::MvPoly`]). `None` if any conversion or exact
     /// division declines (the caller then keeps the unreduced form).
@@ -1961,37 +2086,73 @@ impl RatFunc {
 /// Expand a [`CasExpr`] (rational-function fragment) to a [`RatFunc`], or `None`
 /// on overflow or a division by an identically-zero denominator.
 fn normalize_rational(expr: &CasExpr) -> Option<RatFunc> {
+    normalize_rational_classified(expr).ok()
+}
+
+/// [`normalize_rational`], with each `None` exit classified (ADR-1670 wave
+/// four). See [`ZeroTestDecline`] for what the two classes buy.
+///
+/// All but two of the exits here are `checked_*` arithmetic inside
+/// [`RatFunc`]/[`MultiPoly`], and so are [`ZeroTestDecline::Overflowed`]. The two
+/// that are not: a division whose divisor is the identically zero function
+/// (`RatFunc::div` declines on that condition at every width, and so does its
+/// unbounded twin), and the `exp` coefficient range in
+/// [`normalize_exp_classified`].
+fn normalize_rational_classified(expr: &CasExpr) -> Result<RatFunc, ZeroTestDecline> {
+    let overflowed = || ZeroTestDecline::Overflowed;
     match expr {
-        CasExpr::Const(r) => Some(RatFunc::from_poly(MultiPoly::constant(*r))),
-        CasExpr::Var(v) => Some(RatFunc::from_poly(MultiPoly::single_var(v))),
+        CasExpr::Const(r) => Ok(RatFunc::from_poly(MultiPoly::constant(*r))),
+        CasExpr::Var(v) => Ok(RatFunc::from_poly(MultiPoly::single_var(v))),
         CasExpr::Add(terms) => {
             let mut acc = RatFunc::from_poly(MultiPoly::zero());
             for t in terms {
-                acc = acc.add(&normalize_rational(t)?)?;
+                acc = acc
+                    .add(&normalize_rational_classified(t)?)
+                    .ok_or_else(overflowed)?;
             }
-            Some(acc)
+            Ok(acc)
         }
         CasExpr::Mul(factors) => {
             let mut acc = RatFunc::from_poly(MultiPoly::constant(Rational::integer(1)));
             for f in factors {
-                acc = acc.mul(&normalize_rational(f)?)?;
+                acc = acc
+                    .mul(&normalize_rational_classified(f)?)
+                    .ok_or_else(overflowed)?;
             }
-            Some(acc)
+            Ok(acc)
         }
-        CasExpr::Neg(inner) => normalize_rational(inner)?.neg(),
-        CasExpr::Div(u, w) => normalize_rational(u)?.div(&normalize_rational(w)?),
-        CasExpr::Pow(base, exp) => normalize_rational(base)?.pow(*exp),
+        CasExpr::Neg(inner) => normalize_rational_classified(inner)?
+            .neg()
+            .ok_or_else(overflowed),
+        CasExpr::Div(u, w) => {
+            let (numerator, divisor) = (
+                normalize_rational_classified(u)?,
+                normalize_rational_classified(w)?,
+            );
+            // Split `RatFunc::div`'s one `None` into its two causes: a divisor
+            // that is the zero *function* is not a width limit, and no
+            // coefficient type reaches past it.
+            if divisor.num.is_zero() {
+                return Err(ZeroTestDecline::OutOfFragment(
+                    FragmentLimit::DivisionByZeroFunction,
+                ));
+            }
+            numerator.div(&divisor).ok_or_else(overflowed)
+        }
+        CasExpr::Pow(base, exp) => normalize_rational_classified(base)?
+            .pow(*exp)
+            .ok_or_else(overflowed),
         // Treat `ln(v)` as an opaque atom (a fresh variable keyed by `v`'s
         // canonical rendering). This makes the zero-test **sound**: a zero normal
         // form proves equality (the atoms are independent), while genuine log
         // identities conservatively fail to reduce (→ not certified, never a false
         // certification). It is exactly what lets `d/dx (c·ln v) = c'·ln v + c·v'/v`
         // certify — the spurious `c'·ln v` term drops when `c` is constant.
-        CasExpr::Unary(UnaryFunc::Exp, arg) => normalize_exp(arg),
+        CasExpr::Unary(UnaryFunc::Exp, arg) => normalize_exp_classified(arg),
         // `√` of a non-negative rational constant is canonicalized rather than
         // atomized, so `√4`, `√8` and `√(1/2)` reduce and every spelling of one
         // number takes one atom key. See `canonical_constant_sqrt_poly`.
-        CasExpr::Unary(UnaryFunc::Sqrt, arg) => Some(RatFunc::from_poly(
+        CasExpr::Unary(UnaryFunc::Sqrt, arg) => Ok(RatFunc::from_poly(
             canonical_constant_sqrt_poly(arg)
                 .unwrap_or_else(|| MultiPoly::single_var(&atom_name("sqrt", arg))),
         )),
@@ -2000,12 +2161,12 @@ fn normalize_rational(expr: &CasExpr) -> Option<RatFunc> {
         // `root_6(4)` and `∛2` one atom rather than two, and what puts a `√`
         // and a `∛` in a form `fold_radical_products` can meet over their common
         // index. See `canonical_constant_radical`.
-        CasExpr::Unary(UnaryFunc::NthRoot(q), arg) => Some(RatFunc::from_poly(
+        CasExpr::Unary(UnaryFunc::NthRoot(q), arg) => Ok(RatFunc::from_poly(
             canonical_constant_radical_poly(arg, *q).unwrap_or_else(|| {
                 MultiPoly::single_var(&atom_name(&UnaryFunc::NthRoot(*q).name(), arg))
             }),
         )),
-        CasExpr::Unary(func, arg) => Some(RatFunc::from_poly(MultiPoly::single_var(&atom_name(
+        CasExpr::Unary(func, arg) => Ok(RatFunc::from_poly(MultiPoly::single_var(&atom_name(
             &func.name(),
             arg,
         )))),
@@ -2055,9 +2216,10 @@ fn exp_ln_inverse(monomial: &Monomial, coeff: Rational) -> Option<Rational> {
     Some(value)
 }
 
-fn normalize_exp(arg: &CasExpr) -> Option<RatFunc> {
+fn normalize_exp_classified(arg: &CasExpr) -> Result<RatFunc, ZeroTestDecline> {
+    let overflowed = || ZeroTestDecline::Overflowed;
     let opaque = || {
-        Some(RatFunc::from_poly(MultiPoly::single_var(&atom_name(
+        Ok(RatFunc::from_poly(MultiPoly::single_var(&atom_name(
             "exp", arg,
         ))))
     };
@@ -2069,16 +2231,25 @@ fn normalize_exp(arg: &CasExpr) -> Option<RatFunc> {
     let Some(ratio) = normalize_rational(arg) else {
         return opaque();
     };
+    // Canonicalize before asking whether the denominator is constant, so the two
+    // routes out of this function agree: without it `exp((x²−1)/(x−1))` takes the
+    // opaque-atom route while `exp(x+1)` decomposes, and the two never meet.
+    let ratio = ratio.canonical_key_form().unwrap_or(ratio);
     let Some(den_const) = multipoly_as_constant(&ratio.den) else {
         return opaque(); // non-constant denominator — a genuine fraction argument
     };
     if den_const.is_zero() {
         return opaque();
     }
-    let inverse_den = Rational::integer(1).checked_div(den_const)?;
-    let arg_poly = ratio.num.mul(&MultiPoly::constant(inverse_den))?;
+    let inverse_den = Rational::integer(1)
+        .checked_div(den_const)
+        .ok_or_else(overflowed)?;
+    let arg_poly = ratio
+        .num
+        .mul(&MultiPoly::constant(inverse_den))
+        .ok_or_else(overflowed)?;
     if arg_poly.is_zero() {
-        return Some(RatFunc::from_poly(MultiPoly::constant(Rational::integer(
+        return Ok(RatFunc::from_poly(MultiPoly::constant(Rational::integer(
             1,
         )))); // exp(0) = 1
     }
@@ -2087,7 +2258,9 @@ fn normalize_exp(arg: &CasExpr) -> Option<RatFunc> {
     for (monomial, coeff) in &arg_poly.terms {
         // exp/ln inverse: exp(k·ln v) = vᵏ for a positive rational v and integer k.
         if let Some(value) = exp_ln_inverse(monomial, *coeff) {
-            result = result.mul(&RatFunc::from_poly(MultiPoly::constant(value)))?;
+            result = result
+                .mul(&RatFunc::from_poly(MultiPoly::constant(value)))
+                .ok_or_else(overflowed)?;
             continue;
         }
         let negative = coeff.numerator() < 0;
@@ -2096,13 +2269,16 @@ fn normalize_exp(arg: &CasExpr) -> Option<RatFunc> {
         // exp(m)^c` — so `exp(2x) = exp(x)²` and `exp(x)·exp(2x) = exp(3x)` decide.
         // Otherwise key on the whole `|coeff|·monomial` term (power 1).
         let (primitive_coeff, power) = if coeff.denominator() == 1 {
-            (
-                Rational::integer(1),
-                u32::try_from(coeff.numerator().unsigned_abs()).ok()?,
-            )
+            // The `u32` exponent range is the SAME in both rings, so no
+            // coefficient width reaches past this one: it is a fragment limit,
+            // not an overflow. See `FragmentLimit::ExpCoefficientOutOfRange`.
+            let power = u32::try_from(coeff.numerator().unsigned_abs()).map_err(|_| {
+                ZeroTestDecline::OutOfFragment(FragmentLimit::ExpCoefficientOutOfRange)
+            })?;
+            (Rational::integer(1), power)
         } else {
             let magnitude = if negative {
-                coeff.checked_neg()?
+                coeff.checked_neg().ok_or_else(overflowed)?
             } else {
                 *coeff
             };
@@ -2113,13 +2289,16 @@ fn normalize_exp(arg: &CasExpr) -> Option<RatFunc> {
         let atom = MultiPoly::single_var(&atom_name("exp", &MultiPoly { terms: single }.to_expr()));
         let base = if negative {
             // exp(negative term) = 1 / exp(positive term).
-            one().div(&RatFunc::from_poly(atom))?
+            one()
+                .div(&RatFunc::from_poly(atom))
+                .ok_or_else(overflowed)?
         } else {
             RatFunc::from_poly(atom)
         };
-        result = result.mul(&base.pow(power)?)?;
+        let raised = base.pow(power).ok_or_else(overflowed)?;
+        result = result.mul(&raised).ok_or_else(overflowed)?;
     }
-    Some(result)
+    Ok(result)
 }
 
 /// A collision-resistant variable name standing for a transcendental atom
@@ -2134,20 +2313,37 @@ fn atom_name(head: &str, arg: &CasExpr) -> String {
     // transcendental atom, e.g. `ln(x)+1`), fall back to `normalize_rational`, which
     // atomizes that sub-head — otherwise `ln(ln(x)+1)` and `ln(1+ln(x))` would take
     // different (source-order) keys and the zero-test would miss the equality.
-    let canonical = normalize(arg)
-        .map(|poly| poly.to_expr())
-        .or_else(|| {
-            normalize_rational(arg).map(|rf| {
-                let num = rf.num.to_expr();
-                if rf.den == MultiPoly::constant(Rational::integer(1)) {
-                    num
-                } else {
-                    CasExpr::Div(Box::new(num), Box::new(rf.den.to_expr()))
-                }
-            })
-        })
-        .unwrap_or_else(|| arg.clone());
-    format!("\0{head}:{}", canonical.render(0))
+    // Set to [`ATOM_UNCANONICAL`] on the routes that cannot produce a key unique
+    // to the argument's *value*, so a refutation over the atom is declined
+    // instead of asserted. See `equal_core_bounded`.
+    let mut mark = "";
+    let canonical = if let Some(poly) = normalize(arg) {
+        poly.to_expr()
+    } else if let Some(raw) = normalize_rational(arg) {
+        // A `RatFunc` is not reduced or scale-normalized by its own arithmetic, so
+        // the raw pair is one representation among many and rendering it keyed two
+        // spellings of one argument as two independent atoms.
+        // `canonical_key_form` picks the representative.
+        let rf = if let Some(canonical) = raw.canonical_key_form() {
+            canonical
+        } else {
+            mark = ATOM_UNCANONICAL;
+            raw
+        };
+        let num = rf.num.to_expr();
+        if rf.den == MultiPoly::constant(Rational::integer(1)) {
+            num
+        } else {
+            CasExpr::Div(Box::new(num), Box::new(rf.den.to_expr()))
+        }
+    } else {
+        // Outside the fragment altogether (overflow, or a division by the zero
+        // function): the source spelling is the key and two spellings of one
+        // argument will not meet.
+        mark = ATOM_UNCANONICAL;
+        arg.clone()
+    };
+    format!("\0{head}:{mark}{}", canonical.render(0))
 }
 
 /// Collect a decoding dictionary `atom_name → Unary(head, arg)` from every
@@ -3115,10 +3311,298 @@ const MAX_WEIGHTED_BESSEL_ORDER: u32 = 32;
 /// an input the bounded form decided, so it cannot change an existing verdict —
 /// it can only turn an overflow `Unknown` into a decision.
 fn equal_core(a: &CasExpr, b: &CasExpr) -> ZeroTest {
-    match equal_core_bounded(a, b) {
-        ZeroTest::Unknown => equal_core_unbounded(a, b),
-        decided @ (ZeroTest::Certified { .. } | ZeroTest::CertifiedBig { .. }) => decided,
+    match equal_core_bounded_classified(a, b) {
+        Ok(decided) => decided,
+        Err(reason) if reason.fallback_can_help() => {
+            note_fallback_entry();
+            equal_core_unbounded(a, b)
+        }
+        // The unbounded ring reaches the same wall, so entering it would spend
+        // the work budget on a search that cannot succeed. Decline at once,
+        // with the reason available from `explain_decline`.
+        Err(_) => ZeroTest::Unknown,
     }
+}
+
+/// Why a zero-test produced [`ZeroTest::Unknown`], and — the distinction the
+/// whole entry gate turns on — whether the unbounded fallback (ADR-1670) can do
+/// anything about it.
+///
+/// Before this existed, the bounded core's exit was an `Option` and `None`
+/// meant *both* "exact `i128` arithmetic overflowed" and "this expression is
+/// outside the fragment the normal form decides at all". Those need opposite
+/// treatment: the first is exactly what the unbounded ring is for, and the
+/// second is a place the unbounded ring stops too, because it runs **the same
+/// normal form** over a wider coefficient type.
+///
+/// Read one with [`explain_decline`], and route on
+/// [`ZeroTestDecline::fallback_can_help`].
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ZeroTestDecline {
+    /// Exact `i128` arithmetic overflowed somewhere in the expansion, the
+    /// cross-multiplication or the fold passes, so the bounded path produced no
+    /// difference at all. **The fallback is entered**: this is the class it
+    /// exists for.
+    ///
+    /// When it appears in an [`explain_decline`] result it therefore also means
+    /// the fallback ran and declined in its turn — on its work budget, or on a
+    /// surviving atom on the refutation branch.
+    Overflowed,
+    /// The bounded arithmetic **completed** and produced a *nonzero* difference,
+    /// and the bounded path withheld the refutation because a relation its fold
+    /// set cannot see could still collapse it. **The fallback is entered.**
+    ///
+    /// This arm exists because the obvious reading — "the arithmetic completed,
+    /// so a wider integer type has nothing to add" — is measurably false. The
+    /// two rings do not have the same fold set: the bounded dictionary is built
+    /// with [`normalize`], which *rejects* a transcendental head, while the
+    /// unbounded one is built with `normalize_rational_big_within`, which
+    /// *atomizes* it. So `√(ln x)·√(ln x) = ln x` is declined by the bounded
+    /// fold and certified by the unbounded one, with no overflow anywhere in
+    /// it (`a_transcendental_radicand_is_resolved_by_the_unbounded_fold`).
+    RelationBlind(RelationLimit),
+    /// The input carries a construct the unbounded ring stops at **too**, named
+    /// by the payload. The fallback is **not** entered: it would spend its work
+    /// budget reaching the same wall.
+    OutOfFragment(FragmentLimit),
+}
+
+impl ZeroTestDecline {
+    /// Whether handing this input to the unbounded fallback can turn the
+    /// decline into a decision — the one question `equal_core` routes on.
+    ///
+    /// Each `false` is a claim that the unbounded ring reaches the same wall,
+    /// and each has a reason in [`FragmentLimit`] that names the construct.
+    #[must_use]
+    pub fn fallback_can_help(&self) -> bool {
+        match self {
+            ZeroTestDecline::Overflowed | ZeroTestDecline::RelationBlind(_) => true,
+            ZeroTestDecline::OutOfFragment(_) => false,
+        }
+    }
+}
+
+/// The relation the bounded fold set could not see — the payload of
+/// [`ZeroTestDecline::RelationBlind`].
+///
+/// Both of these are *withheld refutations*: the difference was computed and
+/// found nonzero, and calling that `≠` would have been unsound.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum RelationLimit {
+    /// A monomial multiplies two radical or absolute-value atoms, so
+    /// `√a·√b = √(ab)` could still collapse a nonzero polynomial in three
+    /// independent variables (`MultiPoly::relates_multiplicative_atoms`).
+    MultiplicativeAtomRelation,
+    /// The difference mentions an atom whose argument `atom_name` could not
+    /// bring to a canonical form, so one value may sit under two keys
+    /// (`MultiPoly::mentions_uncanonical_atom`).
+    UncanonicalAtomKey,
+}
+
+/// The construct that puts an input outside the fragment **both** rings
+/// decide — the payload of [`ZeroTestDecline::OutOfFragment`], and what makes a
+/// decline readable rather than a bare `Unknown`.
+///
+/// Every variant here is a claim that the unbounded ring reaches the same wall,
+/// and the claim is what licenses not entering the fallback.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum FragmentLimit {
+    /// A `Unary` head `normalize_rational_big_within` declines outright
+    /// (today: `exp`, which the bounded path *decomposes* rather than atomizes
+    /// and which has no unbounded twin yet). The `String` is the head's own
+    /// name. Found by `unbounded_ring_declined_head`, a syntactic walk, so it
+    /// is known *before* any of `BIG_FALLBACK_WORK_BUDGET` is spent.
+    UnboundedRingDeclinesHead(String),
+    /// A division whose divisor normalizes to the identically zero function.
+    /// Not a width limit: `BigRatFunc::div` declines on exactly the same
+    /// condition, written the same way.
+    DivisionByZeroFunction,
+    /// An `exp` argument term whose integer coefficient does not fit the `u32`
+    /// exponent `normalize_exp` raises the primitive atom to. Exponents are
+    /// `u32` in **both** rings, so no coefficient width reaches this one.
+    ExpCoefficientOutOfRange,
+}
+
+impl std::fmt::Display for ZeroTestDecline {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ZeroTestDecline::Overflowed => write!(
+                f,
+                "exact i128 arithmetic overflowed and the unbounded fallback also declined"
+            ),
+            ZeroTestDecline::RelationBlind(limit) => write!(
+                f,
+                "the difference is nonzero but a refutation was withheld: {limit}"
+            ),
+            ZeroTestDecline::OutOfFragment(limit) => {
+                write!(f, "outside the fragment both rings decide: {limit}")
+            }
+        }
+    }
+}
+
+impl std::fmt::Display for RelationLimit {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            RelationLimit::MultiplicativeAtomRelation => write!(
+                f,
+                "a monomial multiplying two radical or absolute-value atoms, \
+                 which `sqrt(a)*sqrt(b) = sqrt(ab)` could still collapse"
+            ),
+            RelationLimit::UncanonicalAtomKey => write!(
+                f,
+                "an atom whose argument could not be canonicalized, so one value \
+                 may sit under two keys"
+            ),
+        }
+    }
+}
+
+impl std::fmt::Display for FragmentLimit {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            FragmentLimit::UnboundedRingDeclinesHead(head) => write!(
+                f,
+                "the `{head}` head, which the unbounded ring does not normalize"
+            ),
+            FragmentLimit::DivisionByZeroFunction => {
+                write!(f, "a division by the identically zero function")
+            }
+            FragmentLimit::ExpCoefficientOutOfRange => write!(
+                f,
+                "an `exp` argument coefficient outside the u32 exponent range \
+                 both rings use"
+            ),
+        }
+    }
+}
+
+/// Why [`equal`] declined this pair, or `None` when it decided.
+///
+/// The reason is read off **the same classifier the zero-test itself used** —
+/// `equal_core_bounded_classified` — not recomputed by a second
+/// implementation that could disagree with it. So a decline this reports is the
+/// decline that happened.
+///
+/// ```
+/// use axeyum_cas::{CasExpr, RelationLimit, ZeroTestDecline, equal, explain_decline};
+///
+/// let x = CasExpr::var("x");
+/// // A decided pair has nothing to explain.
+/// assert!(explain_decline(&x, &x).is_none());
+///
+/// // `sqrt(2)*cbrt(2) = root6(32)` is decided (constant radicals are merged over
+/// // their common index), so it has nothing to explain either.
+/// let left = CasExpr::int(2).sqrt() * CasExpr::int(2).nth_root(3);
+/// let right = CasExpr::int(32).nth_root(6);
+/// assert!(explain_decline(&left, &right).is_none());
+///
+/// // `sqrt(x) * sqrt(y) = sqrt(x*y)` is TRUE, and the zero-test declines rather
+/// // than refuting it — the bounded path withholds the refutation because the
+/// // monomial multiplies two radical atoms. The fallback IS entered for this
+/// // class; it declined too.
+/// let y = CasExpr::var("y");
+/// let left = x.clone().sqrt() * y.clone().sqrt();
+/// let right = (x.clone() * y).sqrt();
+/// assert_eq!(
+///     explain_decline(&left, &right),
+///     Some(ZeroTestDecline::RelationBlind(
+///         RelationLimit::MultiplicativeAtomRelation
+///     ))
+/// );
+///
+/// // An `exp` head at overflow scale is the class the fallback is NOT entered
+/// // for, and the reason names the head.
+/// let big = |n: u32| (x.clone() + CasExpr::int(1)).pow(n);
+/// let left = CasExpr::Mul(vec![big(80), big(80)]) + x.clone().exp();
+/// let right = big(160) + CasExpr::var("y").exp();
+/// assert_eq!(
+///     explain_decline(&left, &right).map(|reason| reason.to_string()),
+///     Some(
+///         "outside the fragment both rings decide: the `exp` head, \
+///          which the unbounded ring does not normalize"
+///             .to_owned()
+///     )
+/// );
+/// ```
+#[must_use]
+pub fn explain_decline(a: &CasExpr, b: &CasExpr) -> Option<ZeroTestDecline> {
+    if !matches!(equal(a, b), ZeroTest::Unknown) {
+        return None;
+    }
+    // `equal` re-checks on the Euler canonical form before it would assert
+    // anything, so that call is the one whose reason the reader needs; the
+    // direct spelling is the fallback when the canonical form decided nothing
+    // new about *why*.
+    let canonical_a = canonicalize_for_equality(a);
+    let canonical_b = canonicalize_for_equality(b);
+    equal_core_bounded_classified(&canonical_a, &canonical_b)
+        .err()
+        .or_else(|| equal_core_bounded_classified(a, b).err())
+}
+
+// Test-only instrumentation for the fallback's entry gate.
+//
+// PER THREAD, deliberately. The entry *count* is the thing a change to the
+// entry condition moves, and it is not visible in a verdict — a composite
+// caller like `dsolve_inhomogeneous` makes hundreds of `equal` calls and
+// reports one answer. The test harness gives each test its own thread, so a
+// per-thread counter makes a before/after delta readable without serializing
+// the suite; a process-wide one would have been a race between every test that
+// reads it.
+#[cfg(test)]
+thread_local! {
+    /// How many times [`equal_core`] handed an input to the unbounded fallback
+    /// on this thread.
+    static FALLBACK_ENTRIES: std::cell::Cell<u64> = const { std::cell::Cell::new(0) };
+    /// The declines the head gate ([`escalate_to_declined_head`]) turned away
+    /// on this thread, split by the reason they would otherwise have carried:
+    /// `.0` an overflow, `.1` a withheld refutation.
+    ///
+    /// This is the number that prices porting a head INTO the unbounded ring:
+    /// every one of these becomes a fallback entry again the moment
+    /// [`big_ring_declines_head`] stops naming that head.
+    static HEAD_GATED_DECLINES: std::cell::Cell<(u64, u64)> =
+        const { std::cell::Cell::new((0, 0)) };
+}
+
+/// This thread's fallback entry count.
+#[cfg(test)]
+fn fallback_entries() -> u64 {
+    FALLBACK_ENTRIES.with(std::cell::Cell::get)
+}
+
+/// This thread's head-gated decline counts, `(overflow, relation-blind)`.
+#[cfg(test)]
+fn head_gated_declines() -> (u64, u64) {
+    HEAD_GATED_DECLINES.with(std::cell::Cell::get)
+}
+
+/// Count one entry into the unbounded fallback. Compiles to nothing outside
+/// tests.
+#[inline]
+fn note_fallback_entry() {
+    #[cfg(test)]
+    FALLBACK_ENTRIES.with(|entries| entries.set(entries.get() + 1));
+}
+
+/// Count one decline the head gate turned away. Compiles to nothing outside
+/// tests.
+#[inline]
+fn note_head_gated_decline(reason: &ZeroTestDecline) {
+    #[cfg(test)]
+    HEAD_GATED_DECLINES.with(|gated| {
+        let (overflow, relation) = gated.get();
+        match reason {
+            ZeroTestDecline::Overflowed => gated.set((overflow + 1, relation)),
+            ZeroTestDecline::RelationBlind(_) => gated.set((overflow, relation + 1)),
+            // Already out of fragment for another reason; the head gate did not
+            // change the routing, so it turned nothing away.
+            ZeroTestDecline::OutOfFragment(_) => {}
+        }
+    });
+    #[cfg(not(test))]
+    let _ = reason;
 }
 
 /// The bounded (`i128`) cross-multiplication zero-test.
@@ -3128,20 +3612,79 @@ fn equal_core(a: &CasExpr, b: &CasExpr) -> ZeroTest {
 /// any fold and must be declined instead:
 /// [`MultiPoly::relates_multiplicative_atoms`] — a monomial multiplying two
 /// radical or absolute-value atoms, where `√a·√b = √(ab)` makes a nonzero
-/// polynomial in three independent variables prove nothing. The equality branch
-/// needs no such guard: a zero difference is zero whatever the atoms denote.
+/// polynomial in three independent variables prove nothing. A second is
+/// [`MultiPoly::mentions_uncanonical_atom`] — an atom whose argument
+/// [`atom_name`] could not bring to a canonical form, so one value may sit under
+/// two keys. The equality branch needs no such guard: a zero difference is zero
+/// whatever the atoms denote.
+///
+/// Test-only since ADR-1670 wave four gave the zero-test a *classified* exit:
+/// [`equal_core`] routes on the reason, so nothing outside the test suite wants
+/// the collapsed answer. Kept because a large family of tests is written
+/// against it, and because "the bounded path alone does not decide this" is
+/// exactly the adversarial precondition those tests assert.
+#[cfg(test)]
 fn equal_core_bounded(a: &CasExpr, b: &CasExpr) -> ZeroTest {
-    match bounded_difference(a, b) {
-        Some(witness) if witness.is_zero() => ZeroTest::Certified {
+    equal_core_bounded_classified(a, b).unwrap_or(ZeroTest::Unknown)
+}
+
+/// [`equal_core_bounded`], with the decline **classified** instead of collapsed
+/// into one `Unknown` (ADR-1670 wave four).
+///
+/// Every exit that used to be `ZeroTest::Unknown` now names a
+/// [`ZeroTestDecline`], and the whole point of the name is the entry gate in
+/// [`equal_core`]: only [`ZeroTestDecline::Overflowed`] is worth handing to the
+/// unbounded fallback.
+///
+/// Two of the three decline exits are cases where the bounded **arithmetic
+/// completed** — a difference was computed and then declined on. A wider
+/// coefficient type has nothing to add to a computation that never overflowed,
+/// so those are [`ZeroTestDecline::OutOfFragment`] by construction. The third is
+/// the arithmetic itself failing, which [`bounded_difference_classified`]
+/// splits into an overflow and the fragment limits that are not about width.
+fn equal_core_bounded_classified(a: &CasExpr, b: &CasExpr) -> Result<ZeroTest, ZeroTestDecline> {
+    let outcome = match bounded_difference_classified(a, b) {
+        Ok(witness) if witness.is_zero() => Ok(ZeroTest::Certified {
             equal: true,
             witness,
-        },
-        Some(witness) if witness.relates_multiplicative_atoms() => ZeroTest::Unknown,
-        Some(witness) => ZeroTest::Certified {
+        }),
+        Ok(witness) if witness.relates_multiplicative_atoms() => Err(
+            ZeroTestDecline::RelationBlind(RelationLimit::MultiplicativeAtomRelation),
+        ),
+        // An atom whose argument could not be canonicalized may sit under two
+        // keys for one value, so a nonzero difference over it proves nothing.
+        Ok(witness) if witness.mentions_uncanonical_atom() => Err(ZeroTestDecline::RelationBlind(
+            RelationLimit::UncanonicalAtomKey,
+        )),
+        Ok(witness) => Ok(ZeroTest::Certified {
             equal: false,
             witness,
-        },
-        None => ZeroTest::Unknown,
+        }),
+        Err(reason) => Err(reason),
+    };
+    match outcome {
+        Ok(decided) => Ok(decided),
+        Err(reason) => Err(escalate_to_declined_head(a, b, reason)),
+    }
+}
+
+/// A `Unary` head the unbounded ring declines outright makes the whole input
+/// out-of-fragment **however** the bounded path came to decline it.
+///
+/// Applied at the one place every decline exit passes through, because the
+/// precedence is what makes the gate worth having. A mixed input — an
+/// overflowing polynomial plus one `exp` — really did overflow, and saying so
+/// is a true statement about its arithmetic and a useless routing decision: the
+/// fallback would expand the polynomial half against the whole work budget and
+/// then stop at the `exp` regardless. Measured at 2.35 ms per call, on every
+/// `equal` the ODE and integration routes make against a Euler form.
+fn escalate_to_declined_head(a: &CasExpr, b: &CasExpr, reason: ZeroTestDecline) -> ZeroTestDecline {
+    match unbounded_ring_declined_head(a).or_else(|| unbounded_ring_declined_head(b)) {
+        Some(head) => {
+            note_head_gated_decline(&reason);
+            ZeroTestDecline::OutOfFragment(FragmentLimit::UnboundedRingDeclinesHead(head))
+        }
+        None => reason,
     }
 }
 
@@ -3151,14 +3694,30 @@ fn equal_core_bounded(a: &CasExpr, b: &CasExpr) -> ZeroTest {
 /// Split out of [`equal_core_bounded`] so [`recheck_zero_test`] can recompute
 /// the same difference without going through a [`ZeroTest`].
 fn bounded_difference(a: &CasExpr, b: &CasExpr) -> Option<MultiPoly> {
-    let (Some(ra), Some(rb)) = (normalize_rational(a), normalize_rational(b)) else {
-        return None;
-    };
+    bounded_difference_classified(a, b).ok()
+}
+
+/// [`bounded_difference`], with each of its `None` exits classified.
+///
+/// The classification rule, in one line: an exit is
+/// [`ZeroTestDecline::Overflowed`] when a wider coefficient type would have got
+/// past it, and [`ZeroTestDecline::OutOfFragment`] when it would not.
+///
+/// This classifies only what the `i128` arithmetic itself can produce; the
+/// precedence a declined `Unary` head takes over all of it is applied once, in
+/// [`escalate_to_declined_head`].
+fn bounded_difference_classified(a: &CasExpr, b: &CasExpr) -> Result<MultiPoly, ZeroTestDecline> {
+    let (ra, rb) = (
+        normalize_rational_classified(a)?,
+        normalize_rational_classified(b)?,
+    );
     // a·d − c·b
     let (Some(ad), Some(cb)) = (ra.num.mul(&rb.den), rb.num.mul(&ra.den)) else {
-        return None;
+        return Err(ZeroTestDecline::Overflowed);
     };
-    let neg_cb = cb.neg()?;
+    let Some(neg_cb) = cb.neg() else {
+        return Err(ZeroTestDecline::Overflowed);
+    };
     // Resolve each `sqrt` atom's symbolic radicand so `fold_radical` can apply
     // `(√u)² = u` (not just the constant `(√c)² = c`). Keys match the atom names
     // `normalize_rational` emits.
@@ -3215,6 +3774,8 @@ fn bounded_difference(a: &CasExpr, b: &CasExpr) -> Option<MultiPoly> {
             _ => {}
         }
     }
+    // Every one of these is a `checked_*` arithmetic failure inside a fold, so
+    // every one of them is an overflow.
     ad.add(&neg_cb)
         .and_then(|w| w.fold_imaginary())
         .and_then(|w| w.fold_pythagorean())
@@ -3223,6 +3784,7 @@ fn bounded_difference(a: &CasExpr, b: &CasExpr) -> Option<MultiPoly> {
         .and_then(|w| w.fold_abs(&abs_args))
         .and_then(|w| w.fold_nth_root(&nth_roots))
         .and_then(|w| w.fold_bessel_recurrences(&bessel_recurrences))
+        .ok_or(ZeroTestDecline::Overflowed)
 }
 
 // --- The arbitrary-precision overflow fallback (ADR-1670) --------------------
@@ -3305,6 +3867,18 @@ impl BigRatFunc {
 /// The prefix [`atom_name`] gives every transcendental atom variable. A user
 /// variable name cannot contain it, so a name carrying it is always an atom.
 const ATOM_PREFIX: char = '\0';
+/// The mark [`atom_name`] puts in front of an argument it could **not** bring
+/// to a canonical form (an `i128` overflow in the content computation, or an
+/// argument outside the rational-function fragment altogether).
+///
+/// Such a key is still deterministic — the same spelling always produces it —
+/// but it is no longer *unique to the value*, so two spellings of one argument
+/// can take two keys and a nonzero difference over them proves nothing.
+/// [`MultiPoly::mentions_uncanonical_atom`] finds the mark and
+/// [`equal_core_bounded`] declines the refutation. Like `\0` it cannot occur in
+/// a user variable name, and it sits *after* the `\0head:` prefix so the
+/// per-head prefixes below still match.
+const ATOM_UNCANONICAL: &str = "\u{1}";
 /// The atom-key prefix for a `sqrt` head; see [`atom_name`].
 const ATOM_SQRT: &str = "\0sqrt:";
 /// The atom-key prefix for an `abs` head.
@@ -3950,6 +4524,49 @@ fn big_atom_folds(a: &CasExpr, b: &CasExpr, budget: &mut u64) -> BigAtomFolds {
 /// roughly a million big-integer multiply-accumulates.
 const BIG_FALLBACK_WORK_BUDGET: u64 = 1_000_000;
 
+/// The `Unary` heads [`normalize_rational_big_within`] declines **outright** —
+/// it returns `None` at the head rather than atomizing it.
+///
+/// This is one predicate rather than two lists on purpose: the normalizer
+/// matches on it, and so does the fallback's entry gate
+/// ([`unbounded_ring_declined_head`]), so the gate cannot drift from what the
+/// ring actually does. `the_entry_gate_names_exactly_the_heads_the_ring_declines`
+/// asserts the two agree over every [`UnaryFunc`] variant, deriving the variant
+/// list from the type rather than from a literal.
+fn big_ring_declines_head(func: UnaryFunc) -> bool {
+    matches!(func, UnaryFunc::Exp)
+}
+
+/// The first head in `expr` that [`normalize_rational_big_within`] declines
+/// outright, or `None` when the whole expression is inside the unbounded ring's
+/// fragment.
+///
+/// A syntactic walk, and deliberately so: the point is to answer *before*
+/// spending any of [`BIG_FALLBACK_WORK_BUDGET`]. Without it the fallback
+/// expands everything up to such a head and only then discovers it cannot
+/// finish — measured at 2.35 ms per call on an overflowing polynomial carrying
+/// one `exp`, on every `equal` the ODE and integration routes make against a
+/// Euler form.
+fn unbounded_ring_declined_head(expr: &CasExpr) -> Option<String> {
+    match expr {
+        CasExpr::Const(_) | CasExpr::Var(_) => None,
+        CasExpr::Add(items) | CasExpr::Mul(items) => {
+            items.iter().find_map(unbounded_ring_declined_head)
+        }
+        CasExpr::Neg(a) | CasExpr::Pow(a, _) => unbounded_ring_declined_head(a),
+        CasExpr::Div(a, b) => {
+            unbounded_ring_declined_head(a).or_else(|| unbounded_ring_declined_head(b))
+        }
+        CasExpr::Unary(func, arg) => {
+            if big_ring_declines_head(*func) {
+                Some(func.name())
+            } else {
+                unbounded_ring_declined_head(arg)
+            }
+        }
+    }
+}
+
 /// Expand a [`CasExpr`] to a [`BigRatFunc`], mirroring [`normalize_rational`]
 /// over unbounded integers.
 ///
@@ -4010,10 +4627,10 @@ fn normalize_rational_big_within(expr: &CasExpr, budget: &mut u64) -> Option<Big
         CasExpr::Div(u, w) => normalize_rational_big_within(u, budget)?
             .div(&normalize_rational_big_within(w, budget)?, budget),
         CasExpr::Pow(base, exp) => normalize_rational_big_within(base, budget)?.pow(*exp, budget),
-        // See the doc comment: `exp` is decomposed by the bounded path, not
-        // atomized, and wave three measured that wiring the decomposition in
-        // here costs more than it buys.
-        CasExpr::Unary(UnaryFunc::Exp, _) => None,
+        // See [`big_ring_declines_head`]: `exp` is decomposed by the bounded
+        // path, not atomized, and that decomposition has no unbounded
+        // counterpart yet.
+        CasExpr::Unary(func, _) if big_ring_declines_head(*func) => None,
         // The unbounded twin of the bounded normalizer's radical-of-a-constant
         // canonicalization, so the two rings agree on what `√8` and `root_6(4)`
         // *are* — including the index reduction that puts `root_6(4)` and `∛2`
@@ -7461,6 +8078,289 @@ fn exponential_of_rate(rate: &CasExpr) -> CasExpr {
         _ => CasExpr::Mul(factors),
     };
     simplify(&fold_elementary_constants(&product))
+}
+
+/// A convergent infinite sum together with the [`SignCondition`]s its
+/// **convergence** rests on. `hypotheses` empty means the value is
+/// unconditional — exactly what [`infinite_sum`] returns.
+///
+/// The discrete counterpart of [`ConditionalIntegral`]: an infinite geometric
+/// family `Σ P(k)·qᵏ` has a closed form only where `|q| < 1`, and nothing in
+/// this crate decides `|q| < 1` for a symbolic `q`. Returning the value alone
+/// would be a false claim (`Σ 2ᵏ` is not `−1`); returning it with the condition
+/// attached is the true one.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ConditionalSum {
+    /// The value of the sum, true under [`Self::hypotheses`].
+    pub value: CasExpr,
+    /// The sign conditions the convergence argument assumed, in a deterministic
+    /// order. Empty means unconditional.
+    pub hypotheses: Vec<SignCondition>,
+}
+
+/// `∑_{var=lower}^{∞} f(var)` together with the [`SignCondition`]s its
+/// convergence rests on — the conditional counterpart of [`infinite_sum`], and
+/// the discrete counterpart of [`improper_integrate_conditional`].
+///
+/// [`infinite_sum`] is tried first and its value is returned **unconditionally**
+/// (`hypotheses` empty), so every value that route already produced is
+/// unchanged. Only when it declines does the geometric route run, and that route
+/// is the one place a symbolic ratio can produce a value at all:
+/// [`crate::gosper_sum`] needs a concrete ratio to build an antidifference and
+/// [`limit`] needs one to decide that antidifference's limit at `∞`, so
+/// `∑_{j≥0} p·(1−p)ʲ` at a symbolic `p` declines twice over inside
+/// [`infinite_sum`].
+///
+/// A **concrete** ratio is decided here rather than recorded: `|q| < 1` yields
+/// an unconditional result and `|q| ≥ 1` — a genuinely divergent series —
+/// declines with `None`.
+///
+/// ```
+/// use axeyum_cas::{CasExpr, SignCondition, UnaryFunc, ZeroTest, equal, infinite_sum_conditional};
+/// // Σ_{j≥0} p·(1−p)ʲ = 1, under |1−p| < 1.
+/// let p = CasExpr::var("p");
+/// let q = CasExpr::one() - p.clone();
+/// let ln_q = CasExpr::Unary(UnaryFunc::Ln, Box::new(q));
+/// let summand = p * (CasExpr::var("j") * ln_q).exp();
+/// let sum = infinite_sum_conditional(&summand, "j", &CasExpr::zero()).unwrap();
+/// assert!(matches!(
+///     equal(&sum.value, &CasExpr::one()),
+///     ZeroTest::Certified { equal: true, .. }
+/// ));
+/// assert_eq!(sum.hypotheses.len(), 1);
+/// assert!(matches!(sum.hypotheses[0], SignCondition::Positive(_)));
+/// ```
+#[must_use]
+pub fn infinite_sum_conditional(f: &CasExpr, var: &str, lower: &CasExpr) -> Option<ConditionalSum> {
+    if let Some(value) = infinite_sum(f, var, lower) {
+        return Some(ConditionalSum {
+            value,
+            hypotheses: Vec::new(),
+        });
+    }
+    geometric_series_sum(f, var, lower)
+}
+
+/// The shape `f = e^{E(var)}·P(var)/denominator` with `E` affine in `var`, and
+/// the denominator and every coefficient of `P` free of `var` but otherwise
+/// symbolic. The geometric counterpart of `ExponentialSeriesShape` — the same
+/// split, without the `Γ(var+1)` cancellation.
+struct GeometricSeriesShape {
+    /// The `var`-free residual denominator.
+    denominator: CasExpr,
+    /// `E(0)`, the `var`-free part of the exponent.
+    constant_exponent: CasExpr,
+    /// The coefficient of `var` in `E`, i.e. `ln q`.
+    rate_exponent: CasExpr,
+    /// Dense coefficients of `P` in `var`, least significant first.
+    coefficients: Vec<CasExpr>,
+}
+
+/// Split `f` into `e^{E(var)}·P(var)/denominator`, exactly as
+/// `exponential_series_shape` does but **without** the `Γ(var+1)` cancellation:
+/// a geometric summand has no factorial, and one that does must not be read here
+/// (`qʲ/j!` belongs to the exponential route, `qʲ/j` to neither).
+///
+/// Declines when the residual denominator mentions `var` (which is what refuses
+/// the near-miss `qʲ/j`), when a `var`-dependent atom is anything other than an
+/// `exp` head (which refuses `qʲ/Γ(j+1)`, whose factorial is not an `exp`), when
+/// the exponential factor is not common to every monomial, or when the exponent
+/// is not affine in `var`. The affine split and the final reconstruction are
+/// both **decided** by [`equal`], never assumed.
+fn geometric_series_shape(f: &CasExpr, var: &str) -> Option<GeometricSeriesShape> {
+    let rf = normalize_rational(f)?;
+    if rf.den.is_zero() {
+        return None;
+    }
+    let mut dictionary = BTreeMap::new();
+    collect_atom_dictionary(f, &mut dictionary);
+    let denominator = deatomize_from(&rf.den.to_expr(), f);
+    if expr_contains_var(&denominator, var) {
+        return None;
+    }
+
+    let mut exponent_atoms: Option<BTreeMap<String, u32>> = None;
+    let mut coefficients: Vec<CasExpr> = Vec::new();
+    for (monomial, coefficient) in &rf.num.terms {
+        let mut dependent: BTreeMap<String, u32> = BTreeMap::new();
+        let mut degree = 0usize;
+        let mut factor = CasExpr::Const(*coefficient);
+        for (name, power) in &monomial.powers {
+            if name == var {
+                degree = usize::try_from(*power).ok()?;
+                continue;
+            }
+            let atom = dictionary
+                .get(name)
+                .cloned()
+                .unwrap_or_else(|| CasExpr::var(name));
+            if expr_contains_var(&atom, var) {
+                // Only an `exp` head may depend on `var` here: a `Γ(var+1)`, a
+                // `ln(var)` or anything else is outside this fragment.
+                if !matches!(atom, CasExpr::Unary(UnaryFunc::Exp, _)) {
+                    return None;
+                }
+                dependent.insert(name.clone(), *power);
+            } else {
+                factor = factor * atom.pow(*power);
+            }
+        }
+        match &exponent_atoms {
+            None => exponent_atoms = Some(dependent),
+            Some(shared) if *shared == dependent => {}
+            Some(_) => return None, // the geometric factor is not common
+        }
+        if degree >= coefficients.len() {
+            coefficients.resize(degree + 1, CasExpr::zero());
+        }
+        coefficients[degree] = coefficients[degree].clone() + factor;
+    }
+    let exponent_atoms = exponent_atoms?;
+    if exponent_atoms.is_empty() {
+        return None; // no `qᵏ` factor: not this family
+    }
+    for coefficient in &mut coefficients {
+        *coefficient = simplify(coefficient);
+    }
+
+    let mut exponent = CasExpr::zero();
+    for (name, power) in &exponent_atoms {
+        let CasExpr::Unary(UnaryFunc::Exp, argument) = dictionary.get(name)? else {
+            return None;
+        };
+        exponent =
+            exponent + CasExpr::Const(Rational::integer(i128::from(*power))) * (**argument).clone();
+    }
+    let at_zero = simplify(&exponent.substitute(var, &CasExpr::zero()));
+    let at_one = simplify(&exponent.substitute(var, &CasExpr::one()));
+    let rate = simplify(&(at_one - at_zero.clone()));
+    if expr_contains_var(&at_zero, var) || expr_contains_var(&rate, var) {
+        return None;
+    }
+    if !matches!(
+        equal(
+            &exponent,
+            &(at_zero.clone() + CasExpr::var(var) * rate.clone())
+        ),
+        ZeroTest::Certified { equal: true, .. }
+    ) {
+        return None; // the exponent is not affine in `var`
+    }
+
+    // Obligation 1: the reconstruction must be the summand itself.
+    let polynomial = polynomial_from_coefficients(&coefficients, var);
+    let reconstruction = (exponent.exp() * polynomial) / denominator.clone();
+    if !matches!(
+        equal(f, &reconstruction),
+        ZeroTest::Certified { equal: true, .. }
+    ) {
+        return None;
+    }
+    Some(GeometricSeriesShape {
+        denominator,
+        constant_exponent: at_zero,
+        rate_exponent: rate,
+        coefficients,
+    })
+}
+
+/// The **geometric-series** value of `∑_{var=0}^{∞} f(var)` when `f` is
+/// `c·e^{u₀}·P(var)·q^var` for a polynomial `P` and a possibly **symbolic** ratio
+/// `q` — the family [`crate::gosper_sum`] reaches only with a concrete ratio,
+/// because its antidifference and that antidifference's limit at `∞` both need
+/// one.
+///
+/// # Why this is not a table lookup
+///
+/// The value rests on **one** recognized identity,
+///
+/// ```text
+/// ∑_{j≥0} j^{(m)}·qʲ = m!·qᵐ/(1−q)^{m+1}          (|q| < 1)
+/// ```
+///
+/// — the `m`-th derivative of `∑ qʲ = 1/(1−q)`, in the falling-factorial form
+/// `j^{(m)} = m!·C(j,m)`. Everything that gets from `f` to that identity is
+/// **decided by [`equal`]**, and a value is returned only if both obligations
+/// certify:
+///
+/// 1. **Shape.** `geometric_series_shape` produces candidates for the
+///    denominator, the exponent and `P`, and requires
+///    `equal(f, e^{E(var)}·P(var)/denominator)` to certify. The near-miss `qʲ/j`
+///    (a `var`-carrying denominator) and `qʲ/j!` (a `Γ` atom that is not an
+///    `exp`) are refused there, not read as geometric.
+/// 2. **Newton basis.** `P` is re-expressed in the falling-factorial basis with
+///    `c_m = Δᵐ P(0)/m!`, and `equal(P(var), Σₘ c_m·var^{(m)})` must certify.
+///    That is what licenses applying the base identity term by term.
+///
+/// The condition `|q| < 1` is **recorded, never assumed**: a concrete ratio is
+/// decided on the spot (`|q| ≥ 1` declines, a divergent series), and a symbolic
+/// one produces `1 − |q| > 0` on the returned [`ConditionalSum`].
+///
+/// Declines for a lower bound other than `0`, for `q = 1` (the closed form's
+/// denominator vanishes), and wherever either obligation fails to certify.
+fn geometric_series_sum(f: &CasExpr, var: &str, lower: &CasExpr) -> Option<ConditionalSum> {
+    if integer_constant(lower)? != 0 {
+        return None;
+    }
+    let shape = geometric_series_shape(f, var)?;
+
+    // Obligation 2: the Newton forward-difference expansion of `P`.
+    let newton = newton_falling_factorial_coefficients(&shape.coefficients)?;
+    let mut rebuilt = CasExpr::zero();
+    for (m, c) in newton.iter().enumerate() {
+        let order = u32::try_from(m).ok()?;
+        rebuilt = rebuilt + c.clone() * falling_factorial(&CasExpr::var(var), order);
+    }
+    let polynomial = polynomial_from_coefficients(&shape.coefficients, var);
+    if !matches!(
+        equal(&polynomial, &rebuilt),
+        ZeroTest::Certified { equal: true, .. }
+    ) {
+        return None;
+    }
+
+    // `q = e^{rate}`. The base identity is stated in `q`, so this is where the
+    // ratio leaves the logarithm it was carried in.
+    let q = exponential_of_rate(&shape.rate_exponent);
+    let hypotheses = match exact_rational(&q) {
+        // A concrete ratio is DECIDED here, not recorded.
+        Some(c) if ratio_is_inside_unit_disc(c) => Vec::new(),
+        Some(_) => return None, // `|q| ≥ 1`: the series diverges
+        None => vec![SignCondition::Positive(CasExpr::one() - q.clone().abs())],
+    };
+    let one_minus_q = simplify(&(CasExpr::one() - q.clone()));
+    if is_exact_zero(&one_minus_q) {
+        return None;
+    }
+
+    let mut tail = CasExpr::zero();
+    for (m, c) in newton.iter().enumerate() {
+        let order = u32::try_from(m).ok()?;
+        let factorial = Rational::integer(ntheory::factorial(i128::from(order))?);
+        let numerator = CasExpr::Const(factorial) * c.clone() * pow_from_one(&q, order);
+        tail = tail + numerator / pow_from_one(&one_minus_q, order.checked_add(1)?);
+    }
+    let prefactor = shape.constant_exponent.exp() / shape.denominator;
+    Some(ConditionalSum {
+        value: simplify(&fold_elementary_constants(&(prefactor * tail))),
+        hypotheses,
+    })
+}
+
+/// `|c| < 1` for an exact rational ratio — the convergence test the symbolic
+/// route has to record instead of deciding.
+fn ratio_is_inside_unit_disc(c: Rational) -> bool {
+    c.numerator().unsigned_abs() < c.denominator().unsigned_abs()
+}
+
+/// `base^order`, with `order = 0` giving `1` rather than an un-simplified
+/// `Pow(base, 0)` (which the atom machinery would carry around).
+fn pow_from_one(base: &CasExpr, order: u32) -> CasExpr {
+    if order == 0 {
+        CasExpr::one()
+    } else {
+        base.clone().pow(order)
+    }
 }
 
 /// The **finite product** `∏_{var=lower}^{upper} f(var)` over **concrete integer**
@@ -18430,8 +19330,30 @@ fn prove_exp_antiderivative(
 ///     axeyum_cas::ZeroTest::Certified { equal: true, .. }
 /// ));
 /// ```
+///
+/// A second shape is tried when the affine-rate one declines: a **Gaussian**
+/// `C·P(x)·e^{−a·x²}` over the whole line with a symbolic `a`, under `a > 0`
+/// (see `conditional_gaussian_integral`). The two are disjoint — a Gaussian has
+/// a nonzero `x²` coefficient, which the affine matcher refuses, and an affine
+/// exponent gives `a = 0`, which the Gaussian one refuses.
 #[must_use]
 pub fn improper_integrate_conditional(
+    expr: &CasExpr,
+    var: &str,
+    lower: LimitPoint,
+    upper: LimitPoint,
+) -> Option<ConditionalIntegral> {
+    if let Some(exponential) = conditional_exponential_integral(expr, var, lower, upper) {
+        return Some(exponential);
+    }
+    conditional_gaussian_integral(expr, var, lower, upper)
+}
+
+/// The affine-rate half of [`improper_integrate_conditional`]:
+/// `∫ₗᵘ C·P(x)·e^{r·x} dx` with a symbolic rate `r`. Split out so the Gaussian
+/// half can be tried when this one declines, and so each half's decline is
+/// attributable.
+fn conditional_exponential_integral(
     expr: &CasExpr,
     var: &str,
     lower: LimitPoint,
@@ -18481,6 +19403,275 @@ pub fn improper_integrate_conditional(
         hypotheses.push(SignCondition::NonZero(rate));
     }
     let value = simplify(&fold_elementary_constants(&(at_upper - at_lower)));
+    Some(ConditionalIntegral {
+        value,
+        antiderivative,
+        certificate,
+        hypotheses,
+    })
+}
+
+/// The maximum polynomial degree the symbolic-`a` Gaussian antiderivative is
+/// built for. The reduction below is linear in the degree; the bound is a
+/// resource limit, not a soundness one (the certificate is checked either way).
+const MAX_SYMBOLIC_GAUSSIAN_DEGREE: usize = 12;
+
+/// `√a` for a `var`-free `a` the caller has **recorded as positive** — the one
+/// place the Gaussian route depends on that sign, since `√a` is real only there.
+///
+/// Deliberately **not** split into `√c/√d` for a quotient `a = c/d`. The split is
+/// exact under `a > 0`, but it costs more than it buys: the two identities that
+/// have to close are `(√a·x)² = a·x²` — which [`simplify_radicals`] gets from its
+/// `(√u)^{2k} = u^k` rule only while `√a` is one `Sqrt` head sitting directly in a
+/// product — and the cancellation of `√a` against the erf coefficient's own
+/// `1/(2√a)`, which the zero-test does over `√a` as an atom whatever it spells.
+/// A concrete `a` still folds to lowest terms (`√(1/2) → (√2)/2`, still a product
+/// carrying a `Sqrt`), so nothing regresses there.
+fn positive_sqrt(a: &CasExpr) -> CasExpr {
+    simplify_radicals(&a.clone().sqrt())
+}
+
+/// The `var`-free `a` of an exponent that is **exactly** `−a·var²`.
+///
+/// Extracted by **division** rather than by [`normalize`]'s coefficient split —
+/// [`normalize`] declines on a `Div`, and a Gaussian exponent's `a` is `1/(2σ²)`,
+/// a quotient by a symbol. Dividing also makes the reconstruction
+/// `simplify(−a·var²)` land back on the caller's own spelling of the exponent,
+/// which is what puts the erf derivative's `exp` and the integrand's `exp` on one
+/// atom key — measured: reading `a` off by substitution instead gives `(1/2)/s`
+/// where the caller wrote `1/(2s)`, and the two `exp` atoms then never meet.
+///
+/// The quotient is only a *candidate*; [`equal`] then **decides** that
+/// `exponent = −a·var²`, which is what refuses a linear term (a shifted Gaussian
+/// this route does not complete the square for), a constant term (write it as a
+/// separate `var`-free factor), a cubic, or a `ln(var)`.
+///
+/// **Measured**: deleting that `equal` step kills no test, because for every
+/// shape reachable here the `var`-free test on the quotient has already refused
+/// it — a wrong `a` and a `var`-carrying quotient are the same event while
+/// [`simplify`] divides exactly. So the step is defense in depth against a
+/// future `simplify` that divides lossily, not a live discriminator, and saying
+/// so is more honest than inventing a fixture that cannot exist. The function
+/// keeps its own direct test
+/// (`pure_quadratic_rate_accepts_only_a_pure_quadratic_exponent`), which the
+/// `var`-free test IS falsifiable through: deleting that line kills exactly it.
+fn pure_quadratic_rate(exponent: &CasExpr, var: &str) -> Option<CasExpr> {
+    let square = CasExpr::var(var).pow(2);
+    let rate = simplify(&(CasExpr::Neg(Box::new(exponent.clone())) / square.clone()));
+    if expr_contains_var(&rate, var) {
+        return None;
+    }
+    let rebuilt = simplify(&CasExpr::Neg(Box::new(rate.clone() * square)));
+    if !matches!(
+        equal(exponent, &rebuilt),
+        ZeroTest::Certified { equal: true, .. }
+    ) {
+        return None;
+    }
+    Some(rate)
+}
+
+/// The soundness gate of the symbolic-`a` Gaussian route, and the one place it
+/// differs from [`prove_exp_antiderivative`].
+///
+/// [`prove_derivative`]'s surd retry folds `simplify_radicals` over the **raw**
+/// derivative, and that is one pass too early here: the `erf` derivative rule
+/// spells `(√a·x)²` as the *product* of two copies of its argument, so the
+/// `(√u)^{2k} = u^k` rule has no power to fire on until [`simplify`] has
+/// collected the copies — measured, a symbolic `a` leaves a bare `√a²` standing
+/// and the zero-test returns `Unknown`. Folding radicals again *after* `simplify`
+/// closes it. Both passes are denotation-preserving, so this is a normalization,
+/// not an extra assumption; a failed check still declines.
+fn prove_gaussian_antiderivative(
+    candidate: &CasExpr,
+    integrand: &CasExpr,
+    var: &str,
+) -> Option<ZeroTest> {
+    let direct = prove_derivative(candidate, var, integrand);
+    if matches!(direct, ZeroTest::Certified { equal: true, .. }) {
+        return Some(direct);
+    }
+    let settle = |e: &CasExpr| simplify_radicals(&simplify(&simplify_radicals(e)));
+    let certificate = equal(&settle(&candidate.differentiate(var)), &settle(integrand));
+    matches!(certificate, ZeroTest::Certified { equal: true, .. }).then_some(certificate)
+}
+
+/// Split `expr` into `(var-free constant factor, polynomial coefficients in
+/// `var`, a)` for the Gaussian shape `C·P(var)·e^{−a·var²}`, where `C`, every
+/// coefficient of `P` and `a` are free of `var` but otherwise **symbolic**.
+///
+/// The exponent must be a **pure** `−a·var²`, decided by `pure_quadratic_rate`.
+/// A linear term would need completing the square, which moves the shift into
+/// the polynomial factor as well as the erf argument and is not what this route
+/// does; a constant term belongs outside the `exp`, as an ordinary `var`-free
+/// factor. A caller that needs a shifted Gaussian shifts the integration
+/// variable itself — which is what `probability::Continuous::Normal` does, since
+/// its moments are taken on the centered variable.
+fn match_poly_times_gaussian(
+    expr: &CasExpr,
+    var: &str,
+) -> Option<(CasExpr, Vec<CasExpr>, CasExpr)> {
+    let simplified = simplify(expr);
+    let mut atoms: Vec<(CasExpr, bool)> = Vec::new();
+    collect_multiplicative_atoms(&simplified, false, &mut atoms);
+    let mut exp_args: Vec<CasExpr> = Vec::new();
+    let mut polynomial: Vec<CasExpr> = Vec::new();
+    let mut free_numerator: Vec<CasExpr> = Vec::new();
+    let mut free_denominator: Vec<CasExpr> = Vec::new();
+    for (atom, inverted) in atoms {
+        if let Some(exponent) = exp_exponent_of(&atom, var) {
+            exp_args.push(if inverted {
+                CasExpr::Neg(Box::new(exponent))
+            } else {
+                exponent
+            });
+        } else if expr_contains_var(&atom, var) {
+            if inverted {
+                return None; // `var` in a non-exponential denominator: not this shape
+            }
+            polynomial.push(atom);
+        } else if inverted {
+            free_denominator.push(atom);
+        } else {
+            free_numerator.push(atom);
+        }
+    }
+    if exp_args.is_empty() {
+        return None;
+    }
+    let exponent = if exp_args.len() == 1 {
+        exp_args.into_iter().next()?
+    } else {
+        CasExpr::Add(exp_args)
+    };
+    let rate = pure_quadratic_rate(&exponent, var)?;
+    let coefficients: Vec<CasExpr> = normalize(&build_product(polynomial))?
+        .coeffs_in(var)
+        .iter()
+        .map(MultiPoly::to_expr)
+        .collect();
+    if coefficients.is_empty() {
+        return None; // the polynomial factor is identically zero
+    }
+    let mut constant = build_product(free_numerator);
+    if !free_denominator.is_empty() {
+        constant = constant / build_product(free_denominator);
+    }
+    Some((constant, coefficients, rate))
+}
+
+/// `∫ C·P(x)·e^{−a·x²} dx = C·(D(x)·e^{−a·x²} + E·erf(√a·x))`, built from the
+/// standard reduction
+///
+/// ```text
+/// ∫ xⁿ·e^{−a x²} dx = −xⁿ⁻¹/(2a)·e^{−a x²} + (n−1)/(2a)·∫ xⁿ⁻²·e^{−a x²} dx
+/// ```
+///
+/// with bases `∫ e^{−a x²} = (√π/(2√a))·erf(√a·x)` and
+/// `∫ x·e^{−a x²} = −1/(2a)·e^{−a x²}`, all with `a` and the coefficients of `P`
+/// **symbolic**. Correctness is not assumed from the recursion: the caller runs
+/// the ordinary [`prove_derivative`] check against the original integrand.
+///
+/// Returns `(antiderivative, C·E)`. The second component is what the boundary
+/// evaluation needs on its own: the `D(x)·e^{−a x²}` part vanishes at both
+/// infinities under `a > 0`, so `∫_{−∞}^{∞} = 2·C·E`.
+fn gaussian_polynomial_antiderivative(
+    constant: &CasExpr,
+    coefficients: &[CasExpr],
+    rate: &CasExpr,
+    var: &str,
+) -> Option<(CasExpr, CasExpr)> {
+    if coefficients.len() > MAX_SYMBOLIC_GAUSSIAN_DEGREE + 1 {
+        return None;
+    }
+    let x = CasExpr::var(var);
+    let sqrt_rate = positive_sqrt(rate);
+    let two_rate = CasExpr::int(2) * rate.clone();
+    let mut decaying: Vec<CasExpr> = Vec::with_capacity(coefficients.len());
+    let mut erf_weight: Vec<CasExpr> = Vec::with_capacity(coefficients.len());
+    for n in 0..coefficients.len() {
+        match n {
+            0 => {
+                decaying.push(CasExpr::zero());
+                erf_weight.push(CasExpr::var("pi").sqrt() / (CasExpr::int(2) * sqrt_rate.clone()));
+            }
+            1 => {
+                decaying.push(CasExpr::Neg(Box::new(CasExpr::one() / two_rate.clone())));
+                erf_weight.push(CasExpr::zero());
+            }
+            _ => {
+                let power = u32::try_from(n - 1).ok()?;
+                let weight = CasExpr::Const(Rational::integer(i128::try_from(n - 1).ok()?))
+                    / two_rate.clone();
+                decaying.push(
+                    CasExpr::Neg(Box::new(x.clone().pow(power) / two_rate.clone()))
+                        + weight.clone() * decaying[n - 2].clone(),
+                );
+                erf_weight.push(weight * erf_weight[n - 2].clone());
+            }
+        }
+    }
+    let mut decaying_part = CasExpr::zero();
+    let mut erf_part = CasExpr::zero();
+    for (n, coefficient) in coefficients.iter().enumerate() {
+        if is_exact_zero(coefficient) {
+            continue;
+        }
+        decaying_part = decaying_part + coefficient.clone() * decaying[n].clone();
+        erf_part = erf_part + coefficient.clone() * erf_weight[n].clone();
+    }
+    let gaussian = CasExpr::Neg(Box::new(rate.clone() * x.clone().pow(2))).exp();
+    let erf_term = (sqrt_rate * x).erf();
+    let antiderivative =
+        simplify(&(constant.clone() * (decaying_part * gaussian + erf_part.clone() * erf_term)));
+    Some((antiderivative, simplify(&(constant.clone() * erf_part))))
+}
+
+/// `∫_{−∞}^{∞} C·P(x)·e^{−a·x²} dx` with a **symbolic** `a`, under `a > 0` —
+/// the Gaussian half of [`improper_integrate_conditional`].
+///
+/// This is the route [`improper_integrate`] structurally cannot take:
+/// `integrate_gaussian` reaches [`to_univariate`](MultiPoly::to_univariate),
+/// which needs a concrete [`Rational`] coefficient of `x²`, so a variance carried
+/// as a symbol stops it before any `√a` is built.
+///
+/// What is decided and what is assumed:
+///
+/// - The antiderivative is **proved** by [`prove_derivative`] against the
+///   original integrand, unconditionally. A failed check declines.
+/// - Both bounds are infinite: `D(x)·e^{−a x²} → 0` and `erf(√a·x) → ±1`. Both
+///   need `a > 0` and nothing else, so that is the single recorded condition.
+/// - A **concrete** `a` is decided rather than recorded: `a > 0` comes back
+///   unconditional, and `a ≤ 0` — an upward or flat Gaussian, whose integral
+///   diverges and whose `√a` is not real — declines with `None`.
+///
+/// Finite bounds decline: `erf` at a finite point is not an elementary value and
+/// this route has nothing to say about it.
+fn conditional_gaussian_integral(
+    expr: &CasExpr,
+    var: &str,
+    lower: LimitPoint,
+    upper: LimitPoint,
+) -> Option<ConditionalIntegral> {
+    if lower != LimitPoint::NegInfinity || upper != LimitPoint::PosInfinity {
+        return None;
+    }
+    let (constant, coefficients, rate) = match_poly_times_gaussian(expr, var)?;
+    let hypotheses = match exact_rational(&rate) {
+        Some(c) if c.numerator() > 0 => Vec::new(),
+        // A non-positive concrete `a`: not a convergent Gaussian, and not an erf.
+        Some(_) => return None,
+        None => vec![SignCondition::Positive(rate.clone())],
+    };
+    let (antiderivative, erf_coefficient) =
+        gaussian_polynomial_antiderivative(&constant, &coefficients, &rate, var)?;
+    let certificate = prove_gaussian_antiderivative(&antiderivative, expr, var)?;
+    // Plain `simplify`, NOT `fold_elementary_constants`: the fold respells the
+    // radicand of a symbolic `√a` (`√(1/(2s))` becomes `√((1/2)/s)`), and the
+    // caller's own `√a` — in a pdf normalization, say — then keys a different
+    // atom and never cancels. Measured; there is no elementary constant here for
+    // the fold to reach anyway.
+    let value = simplify(&(CasExpr::int(2) * erf_coefficient));
     Some(ConditionalIntegral {
         value,
         antiderivative,
@@ -32825,6 +34016,411 @@ mod radical_atom_products {
     }
 }
 
+/// **One argument, two spellings, two atom keys.**
+///
+/// `exp(−((1/2)/s)·u²)` and `exp(−u²/(2·s))` are the same function of `s` and
+/// `u`. [`equal`] returned `ZeroTest::Certified { equal: false }` for the pair —
+/// a *refutation of a true equality*, the worst verdict this crate can produce.
+/// The probability lane (item 9) hit it proving the Gaussian antiderivative with
+/// a symbolic variance and worked around it by choosing one spelling.
+///
+/// The cause is in [`atom_name`]. A transcendental head whose argument is not a
+/// polynomial is keyed on `render(0)` of a [`RatFunc`], and a `RatFunc` is
+/// **never reduced or scale-normalized** — [`RatFunc::add`], [`RatFunc::mul`]
+/// and [`RatFunc::div`] only cross-multiply. So the two spellings reach
+/// `(−1/2·u²)/s` and `(−u²)/(2·s)`, two distinct strings, two independent atom
+/// variables, and a nonzero difference that the zero-test reports as `≠`.
+///
+/// Every head is affected, not just `exp`: `normalize_rational`'s catch-all arm
+/// sends every [`UnaryFunc`] through [`atom_name`], `Sqrt` joins it whenever the
+/// radicand is not a rational constant, and [`normalize_exp`] falls back to it
+/// whenever the argument has a non-constant denominator — which is exactly this
+/// shape. So `every_head_keys_the_two_spellings_alike` is the real statement and
+/// the `exp` test is the reported instance of it.
+#[cfg(test)]
+mod atom_argument_canonical_key {
+    use super::*;
+
+    fn s() -> CasExpr {
+        CasExpr::var("s")
+    }
+
+    fn u() -> CasExpr {
+        CasExpr::var("u")
+    }
+
+    /// `−((1/2)/s)·u²` — the spelling the Gaussian antiderivative builds, with
+    /// the constant factored out of the quotient.
+    fn scaled_spelling() -> CasExpr {
+        -((CasExpr::rat(1, 2) / s()) * u().pow(2))
+    }
+
+    /// `−u²/(2·s)` — the spelling a person writes. The same function.
+    fn fraction_spelling() -> CasExpr {
+        -(u().pow(2) / (CasExpr::int(2) * s()))
+    }
+
+    /// One representative of **every** [`UnaryFunc`] variant.
+    ///
+    /// The `match` below has no wildcard arm, so adding a variant to the enum is
+    /// a compile error here until it is listed — the coverage is ratcheted to the
+    /// type rather than to a maintainer's memory. The `assert` catches the other
+    /// direction, a variant listed twice under one name.
+    fn every_head() -> Vec<UnaryFunc> {
+        let heads = vec![
+            UnaryFunc::Ln,
+            UnaryFunc::Exp,
+            UnaryFunc::Sin,
+            UnaryFunc::Cos,
+            UnaryFunc::Tan,
+            UnaryFunc::Atan,
+            UnaryFunc::Sqrt,
+            UnaryFunc::Abs,
+            UnaryFunc::Sign,
+            UnaryFunc::Floor,
+            UnaryFunc::Ceiling,
+            UnaryFunc::Erf,
+            UnaryFunc::Si,
+            UnaryFunc::Ci,
+            UnaryFunc::Ei,
+            UnaryFunc::Li,
+            UnaryFunc::Shi,
+            UnaryFunc::Chi,
+            UnaryFunc::FresnelS,
+            UnaryFunc::FresnelC,
+            UnaryFunc::BesselJ(1),
+            UnaryFunc::BesselI(2),
+            UnaryFunc::Asin,
+            UnaryFunc::Acos,
+            UnaryFunc::Asinh,
+            UnaryFunc::Acosh,
+            UnaryFunc::Gamma,
+            UnaryFunc::NthRoot(3),
+            UnaryFunc::PolyGamma(1),
+            UnaryFunc::Ai,
+            UnaryFunc::AiPrime,
+            UnaryFunc::Bi,
+            UnaryFunc::BiPrime,
+            UnaryFunc::LambertW,
+        ];
+        for head in &heads {
+            // Exhaustiveness ratchet — no wildcard arm.
+            match head {
+                UnaryFunc::Ln
+                | UnaryFunc::Exp
+                | UnaryFunc::Sin
+                | UnaryFunc::Cos
+                | UnaryFunc::Tan
+                | UnaryFunc::Atan
+                | UnaryFunc::Sqrt
+                | UnaryFunc::Abs
+                | UnaryFunc::Sign
+                | UnaryFunc::Floor
+                | UnaryFunc::Ceiling
+                | UnaryFunc::Erf
+                | UnaryFunc::Si
+                | UnaryFunc::Ci
+                | UnaryFunc::Ei
+                | UnaryFunc::Li
+                | UnaryFunc::Shi
+                | UnaryFunc::Chi
+                | UnaryFunc::FresnelS
+                | UnaryFunc::FresnelC
+                | UnaryFunc::BesselJ(_)
+                | UnaryFunc::BesselI(_)
+                | UnaryFunc::Asin
+                | UnaryFunc::Acos
+                | UnaryFunc::Asinh
+                | UnaryFunc::Acosh
+                | UnaryFunc::Gamma
+                | UnaryFunc::NthRoot(_)
+                | UnaryFunc::PolyGamma(_)
+                | UnaryFunc::Ai
+                | UnaryFunc::AiPrime
+                | UnaryFunc::Bi
+                | UnaryFunc::BiPrime
+                | UnaryFunc::LambertW => {}
+            }
+        }
+        let names: BTreeSet<String> = heads.iter().map(|h| h.name()).collect();
+        assert_eq!(
+            names.len(),
+            heads.len(),
+            "each head must appear once: two entries share a name"
+        );
+        heads
+    }
+
+    fn apply(head: UnaryFunc, arg: CasExpr) -> CasExpr {
+        CasExpr::Unary(head, Box::new(arg))
+    }
+
+    fn x() -> CasExpr {
+        CasExpr::var("x")
+    }
+
+    fn y() -> CasExpr {
+        CasExpr::var("y")
+    }
+
+    /// A pair that must **not** be certified equal. A refutation is fine and its
+    /// certificate must re-check; a decline is fine; certifying a false equality
+    /// is the failure.
+    ///
+    /// A decline passing means this assertion could go vacuous, so: measured on
+    /// the live crate, all four callers below reach `Certified { equal: false }`,
+    /// not `Unknown`. And the assertion is falsifiable — a key that drops the
+    /// denominator makes `the_denominator_is_part_of_the_key` certify a false
+    /// equality here.
+    #[track_caller]
+    fn assert_never_equal(left: &CasExpr, right: &CasExpr, context: &str) {
+        let verdict = equal(left, right);
+        match &verdict {
+            ZeroTest::Certified { equal, .. } | ZeroTest::CertifiedBig { equal, .. } => {
+                assert!(
+                    !*equal,
+                    "{context}: {left} = {right} was CERTIFIED but the two differ"
+                );
+                assert!(
+                    recheck_zero_test(left, right, &verdict),
+                    "{context}: the certificate for {left} = {right} must re-check"
+                );
+            }
+            ZeroTest::Unknown => {}
+        }
+    }
+
+    #[track_caller]
+    fn assert_equal_and_rechecks(left: &CasExpr, right: &CasExpr, context: &str) {
+        let verdict = equal(left, right);
+        match &verdict {
+            ZeroTest::Certified { equal, .. } | ZeroTest::CertifiedBig { equal, .. } => {
+                assert!(
+                    *equal,
+                    "{context}: {left} = {right} was REFUTED but is true"
+                );
+            }
+            ZeroTest::Unknown => panic!("{context}: {left} = {right} must decide"),
+        }
+        assert!(
+            recheck_zero_test(left, right, &verdict),
+            "{context}: the certificate for {left} = {right} must re-check"
+        );
+    }
+
+    /// **The reported input.** `exp(−((1/2)/s)·u²) = exp(−u²/(2·s))`.
+    #[test]
+    fn the_reported_gaussian_exponent_certifies_equal() {
+        assert_equal_and_rechecks(&scaled_spelling().exp(), &fraction_spelling().exp(), "exp");
+    }
+
+    /// The same pair under every transcendental head the crate keys through
+    /// [`atom_name`], because the defect is in the keying, not in `exp`.
+    #[test]
+    fn every_head_keys_the_two_spellings_alike() {
+        for head in every_head() {
+            let name = head.name();
+            assert_equal_and_rechecks(
+                &apply(head, scaled_spelling()),
+                &apply(head, fraction_spelling()),
+                &name,
+            );
+        }
+    }
+
+    /// The keying seam itself, below [`equal`]: the two spellings must produce
+    /// one atom key. Stated separately so a future change that makes the pair
+    /// decide by some *other* route (a fold, a rewrite) does not hide a
+    /// regression in the key.
+    #[test]
+    fn the_two_spellings_produce_one_atom_key() {
+        for head in every_head() {
+            let name = head.name();
+            assert_eq!(
+                atom_name(&name, &scaled_spelling()),
+                atom_name(&name, &fraction_spelling()),
+                "{name}: the two spellings of one argument must key alike"
+            );
+        }
+    }
+
+    // --- Equal pairs: one distinction per test, so a deleted guard names itself.
+
+    /// The **content cancellation**. `2/3` and `4/6` are one scale, and it does
+    /// not matter which side of the bar the common factor was written on.
+    #[test]
+    fn a_constant_scale_moved_between_numerator_and_denominator() {
+        assert_equal_and_rechecks(
+            &((CasExpr::int(2) * x()) / (CasExpr::int(3) * y())).ln(),
+            &((CasExpr::int(4) * x()) / (CasExpr::int(6) * y())).ln(),
+            "content",
+        );
+    }
+
+    /// The **sign normalization**. A minus sign in the denominator is the same
+    /// function as a minus sign in the numerator.
+    #[test]
+    fn a_sign_moved_into_the_denominator() {
+        assert_equal_and_rechecks(
+            &(-(u().pow(2)) / (CasExpr::int(2) * s())).ln(),
+            &(u().pow(2) / (CasExpr::int(-2) * s())).ln(),
+            "sign",
+        );
+    }
+
+    /// A constant denominator is absorbed into the numerator, so the quotient
+    /// spelling and the coefficient spelling of one argument meet. This was a
+    /// second wrong refutation on the same line: the polynomial route rendered
+    /// `1/2·x` while the fraction route rendered `x/2`.
+    #[test]
+    fn a_constant_denominator_collapses_into_the_numerator() {
+        assert_equal_and_rechecks(
+            &(x() / CasExpr::int(2)).ln(),
+            &(CasExpr::rat(1, 2) * x()).ln(),
+            "constant denominator",
+        );
+    }
+
+    /// `a/(b·c)` and `(a/b)/c` build the same `num`/`den` pair, and reordering
+    /// the terms of a numerator was already handled by [`MultiPoly`]'s canonical
+    /// form. Both are controls: the repair must not be what makes them work, and
+    /// it must not break them either.
+    #[test]
+    fn associativity_and_term_order_still_meet() {
+        let z = CasExpr::var("z");
+        assert_equal_and_rechecks(
+            &(x() / (y() * z.clone())).ln(),
+            &((x() / y()) / z.clone()).ln(),
+            "associativity",
+        );
+        assert_equal_and_rechecks(
+            &((x() + y()) / (CasExpr::int(2) * z.clone())).ln(),
+            &((y() + x()) / (CasExpr::int(2) * z)).ln(),
+            "term order",
+        );
+    }
+
+    /// The nested-atom case the crate already documented as working. Keeping it
+    /// green is the point: the argument here is not a polynomial, so it takes the
+    /// [`RatFunc`] route that this lane rewrote.
+    #[test]
+    fn nested_atoms_still_meet() {
+        assert_equal_and_rechecks(
+            &(CasExpr::int(1) + x().ln()).ln(),
+            &(x().ln() + CasExpr::int(1)).ln(),
+            "nested",
+        );
+    }
+
+    /// The **GCD cancellation**, on both of [`RatFunc::reduced`]'s branches and
+    /// through [`normalize_exp`], which is the route that would otherwise
+    /// disagree with [`atom_name`]: `exp((x²−1)/(x−1))` took the opaque-atom
+    /// route while `exp(x+1)` decomposed into per-term factors.
+    #[test]
+    fn a_common_polynomial_factor_is_cancelled() {
+        // Univariate (`poly::rat_gcd`).
+        assert_equal_and_rechecks(
+            &((x().pow(2) - CasExpr::int(1)) / (x() - CasExpr::int(1))).ln(),
+            &(x() + CasExpr::int(1)).ln(),
+            "univariate gcd",
+        );
+        // Multivariate (`mvpoly::MvPoly::gcd`).
+        assert_equal_and_rechecks(
+            &((x().pow(2) - y().pow(2)) / (x() - y())).ln(),
+            &(x() + y()).ln(),
+            "multivariate gcd",
+        );
+        // And the same two through `normalize_exp`.
+        assert_equal_and_rechecks(
+            &((x().pow(2) - CasExpr::int(1)) / (x() - CasExpr::int(1))).exp(),
+            &(x() + CasExpr::int(1)).exp(),
+            "exp univariate gcd",
+        );
+        assert_equal_and_rechecks(
+            &((x().pow(2) - y().pow(2)) / (x() - y())).exp(),
+            &(x() + y()).exp(),
+            "exp multivariate gcd",
+        );
+    }
+
+    // --- Unequal pairs: the repair must not equate what differs.
+
+    /// The denominator is part of the key: `2·s` and `2·s²` are different
+    /// variances.
+    #[test]
+    fn the_denominator_is_part_of_the_key() {
+        assert_never_equal(
+            &(u().pow(2) / (CasExpr::int(2) * s())).exp(),
+            &(u().pow(2) / (CasExpr::int(2) * s().pow(2))).exp(),
+            "s vs s^2",
+        );
+    }
+
+    /// The sign is part of the key: a Gaussian and its reciprocal are not the
+    /// same function.
+    #[test]
+    fn the_sign_is_part_of_the_key() {
+        assert_never_equal(
+            &(-(u().pow(2)) / (CasExpr::int(2) * s())).exp(),
+            &(u().pow(2) / (CasExpr::int(2) * s())).exp(),
+            "sign",
+        );
+    }
+
+    /// The scale is part of the key: variance 1 and variance 3/2 differ.
+    #[test]
+    fn the_scale_is_part_of_the_key() {
+        assert_never_equal(
+            &(u().pow(2) / (CasExpr::int(2) * s())).exp(),
+            &(u().pow(2) / (CasExpr::int(3) * s())).exp(),
+            "scale",
+        );
+    }
+
+    /// Absorbing a constant denominator into an *argument* must not absorb one
+    /// that is outside the head: `ln(x/2)` is not `ln(x)/2`.
+    #[test]
+    fn a_quotient_inside_ln_is_not_a_quotient_of_ln() {
+        assert_never_equal(
+            &(x() / CasExpr::int(2)).ln(),
+            &(x().ln() / CasExpr::int(2)),
+            "ln(x/2) vs ln(x)/2",
+        );
+    }
+
+    // --- The residual class.
+
+    /// **The limit, recorded as a decline rather than a wrong verdict.**
+    ///
+    /// The canonical pair is `(num/c) / (den/c)` for the denominator's content
+    /// `c`, and here `c = 1/(3·i128::MAX)`, so dividing by it leaves the ring and
+    /// [`RatFunc::canonical_key_form`] returns `None`. The two spellings below
+    /// are the same function and still take two keys.
+    ///
+    /// Before the [`ATOM_UNCANONICAL`] mark this pair measured
+    /// `Certified { equal: false }` — a refutation of a true equality, the very
+    /// defect this module exists for, surviving at a scale the key cannot reach.
+    /// It now declines.
+    #[test]
+    fn a_content_beyond_i128_declines_instead_of_refuting() {
+        let huge = CasExpr::Const(Rational::new(1, i128::MAX));
+        let twice = CasExpr::Const(Rational::new(2, i128::MAX));
+        let left = (x() / (huge * s() + CasExpr::rat(1, 3) * u())).ln();
+        let right = ((CasExpr::int(2) * x()) / (twice * s() + CasExpr::rat(2, 3) * u())).ln();
+        // The two keys really are distinct — otherwise this test would pass for
+        // the wrong reason and the guard below would never be exercised.
+        assert_ne!(
+            atom_name("ln", &left),
+            atom_name("ln", &right),
+            "the residual class must still produce two keys, or this is not it"
+        );
+        assert!(
+            matches!(equal(&left, &right), ZeroTest::Unknown),
+            "an argument the key cannot canonicalize must decline, never refute"
+        );
+    }
+}
+
 /// The arbitrary-precision overflow fallback (ADR-1670).
 ///
 /// Every test here names the input it was written for, because the finding this
@@ -34082,5 +35678,1052 @@ mod symbolic_rate_exponential {
         // The *conditional* API does reach it — so the decline above is the
         // hypothesis guard, not an absent route.
         assert!(on_half_line(&exponential_pdf()).is_some());
+    }
+}
+
+/// The two **conditional** routes for a symbolic parameter that only a
+/// hypothesis can settle: `geometric_series_sum` (a symbolic ratio, under
+/// `|q| < 1`) and `conditional_gaussian_integral` (a symbolic `a`, under
+/// `a > 0`).
+///
+/// Every test here is written to **die when one guard is deleted**; the guard it
+/// pins is named in its doc comment.
+#[cfg(test)]
+mod symbolic_geometric_and_gaussian {
+    use super::*;
+
+    fn j() -> CasExpr {
+        CasExpr::var("j")
+    }
+
+    fn u() -> CasExpr {
+        CasExpr::var("u")
+    }
+
+    fn decides_equal(a: &CasExpr, b: &CasExpr) -> bool {
+        matches!(equal(a, b), ZeroTest::Certified { equal: true, .. })
+    }
+
+    /// `weight(j)·qʲ`, with the geometric factor in the crate's own
+    /// `exp(j·ln q)` convention.
+    fn geometric(weight: CasExpr, ratio: &CasExpr) -> CasExpr {
+        let ln_q = CasExpr::Unary(UnaryFunc::Ln, Box::new(ratio.clone()));
+        weight * (j() * ln_q).exp()
+    }
+
+    fn sum(f: &CasExpr) -> Option<ConditionalSum> {
+        infinite_sum_conditional(f, "j", &CasExpr::zero())
+    }
+
+    /// `u^power·e^{−(a·u²)}` over the whole line, through the conditional route.
+    fn gaussian_line(power: u32, rate: &CasExpr) -> Option<ConditionalIntegral> {
+        let base = CasExpr::Neg(Box::new(rate.clone() * u().pow(2))).exp();
+        let integrand = if power == 0 {
+            base
+        } else {
+            u().pow(power) * base
+        };
+        improper_integrate_conditional(
+            &integrand,
+            "u",
+            LimitPoint::NegInfinity,
+            LimitPoint::PosInfinity,
+        )
+    }
+
+    /// The whole point of the discrete route: a **symbolic** ratio, which
+    /// `infinite_sum` cannot reach, summed under one recorded condition.
+    #[test]
+    fn a_symbolic_geometric_ratio_sums_under_one_recorded_condition() {
+        let p = CasExpr::var("p");
+        let q = CasExpr::one() - p.clone();
+        let summand = geometric(p, &q);
+        // The unconditional API genuinely declines — this is the gap being closed,
+        // measured rather than assumed.
+        assert!(infinite_sum(&summand, "j", &CasExpr::zero()).is_none());
+        let result = sum(&summand).expect("conditional geometric route");
+        assert!(decides_equal(&result.value, &CasExpr::one()));
+        assert_eq!(result.hypotheses.len(), 1);
+        let SignCondition::Positive(margin) = &result.hypotheses[0] else {
+            panic!(
+                "expected a positivity condition, got {:?}",
+                result.hypotheses
+            );
+        };
+        assert!(decides_equal(margin, &(CasExpr::one() - q.abs())));
+    }
+
+    /// A polynomial weight goes through the falling-factorial basis:
+    /// `Σ (j+1)qʲ = 1/(1−q)²`, still symbolic.
+    #[test]
+    fn a_polynomial_weight_sums_through_the_falling_factorial_basis() {
+        let q = CasExpr::var("q");
+        let result = sum(&geometric(j() + CasExpr::one(), &q)).expect("weighted geometric");
+        let expected = CasExpr::one() / (CasExpr::one() - q).pow(2);
+        assert!(decides_equal(&result.value, &expected), "{}", result.value);
+    }
+
+    /// **Negative control**, pinning the concrete-ratio decision in
+    /// `geometric_series_sum`: `Σ 2ʲ` diverges, and the route must decline rather
+    /// than print the analytic continuation `1/(1−2) = −1`. Replace that arm with
+    /// `Vec::new()` and this test dies with a certified `−1`.
+    #[test]
+    fn a_divergent_concrete_ratio_declines_instead_of_continuing_analytically() {
+        assert!(sum(&geometric(CasExpr::one(), &CasExpr::int(2))).is_none());
+        // …and the control in the other direction: the same shape inside the unit
+        // disc is summed, and unconditionally, so the decline is about `|q| ≥ 1`
+        // and not about the shape.
+        let inside = sum(&geometric(CasExpr::one(), &CasExpr::rat(1, 2)))
+            .expect("a convergent concrete ratio");
+        assert!(inside.hypotheses.is_empty());
+        assert!(decides_equal(&inside.value, &CasExpr::int(2)));
+    }
+
+    /// **Near-miss control**, pinning `geometric_series_shape`'s `var`-free
+    /// denominator test: `Σ qʲ/j` is not geometric and must not be read as one.
+    /// Delete that test and this returns `q/(1−q)`-shaped nonsense.
+    #[test]
+    fn a_summand_with_the_index_in_the_denominator_is_not_read_as_geometric() {
+        let q = CasExpr::var("q");
+        assert!(sum(&(geometric(CasExpr::one(), &q) / j())).is_none());
+        // Positive control: the same summand without the `1/j` IS summed.
+        assert!(sum(&geometric(CasExpr::one(), &q)).is_some());
+    }
+
+    /// **Near-miss control**, pinning the `exp`-head test on `var`-dependent
+    /// atoms: `Σ qʲ/j!` is the *exponential* series, not the geometric one, and
+    /// the `Γ(j+1)` atom must refuse this route rather than be treated as a
+    /// constant factor.
+    #[test]
+    fn a_factorial_denominator_is_refused_by_the_geometric_shape() {
+        let q = CasExpr::var("q");
+        let summand = geometric(CasExpr::one(), &q) / (j() + CasExpr::one()).gamma();
+        assert!(geometric_series_shape(&summand, "j").is_none());
+    }
+
+    /// The Gaussian route's three moments, each under exactly one recorded
+    /// positivity on the symbolic rate.
+    #[test]
+    fn a_symbolic_gaussian_rate_integrates_under_one_recorded_positivity() {
+        let a = CasExpr::var("a");
+        for power in [0u32, 1, 2] {
+            let result = gaussian_line(power, &a).expect("conditional Gaussian route");
+            assert!(result.is_certified(), "power {power}: {result:?}");
+            assert_eq!(result.hypotheses.len(), 1, "power {power}");
+            assert_eq!(result.hypotheses[0], SignCondition::Positive(a.clone()));
+        }
+        // `∫u·e^{−au²} = 0` by symmetry, and `∫e^{−au²} = √π/√a`.
+        let mass = gaussian_line(0, &a).expect("mass");
+        assert!(decides_equal(
+            &mass.value,
+            &(CasExpr::var("pi").sqrt() / a.clone().sqrt())
+        ));
+        assert!(decides_equal(
+            &gaussian_line(1, &a).expect("odd moment").value,
+            &CasExpr::zero()
+        ));
+    }
+
+    /// A **concrete** positive rate is decided on the spot, not recorded — the
+    /// same discipline the exponential route follows.
+    #[test]
+    fn a_concrete_positive_gaussian_rate_comes_back_unconditional() {
+        let result = gaussian_line(0, &CasExpr::one()).expect("concrete Gaussian");
+        assert!(result.is_certified());
+        assert!(result.hypotheses.is_empty());
+        assert!(decides_equal(&result.value, &CasExpr::var("pi").sqrt()));
+    }
+
+    /// **Negative control**, pinning the concrete-sign decision in
+    /// `conditional_gaussian_integral`: an *upward* Gaussian `e^{+u²}` diverges
+    /// and has no erf antiderivative. Replace the `Some(_) => return None` arm
+    /// with `Vec::new()` and this test dies with a certified finite value for a
+    /// divergent integral.
+    #[test]
+    fn an_upward_concrete_gaussian_declines() {
+        assert!(gaussian_line(0, &CasExpr::int(-1)).is_none());
+        assert!(gaussian_line(0, &CasExpr::zero()).is_none());
+    }
+
+    /// **Negative control**, pinning `pure_quadratic_rate`'s decided
+    /// reconstruction: a linear term in the exponent means the square has not
+    /// been completed, and this route does not complete it.
+    #[test]
+    fn a_gaussian_exponent_with_a_linear_term_declines() {
+        let shifted = CasExpr::Neg(Box::new(u().pow(2) + u())).exp();
+        assert!(
+            improper_integrate_conditional(
+                &shifted,
+                "u",
+                LimitPoint::NegInfinity,
+                LimitPoint::PosInfinity,
+            )
+            .is_none()
+        );
+        // Positive control: drop the linear term and the same shape integrates.
+        assert!(gaussian_line(0, &CasExpr::one()).is_some());
+    }
+
+    /// **Negative control**, pinning the infinite-bounds guard: `erf` at a finite
+    /// point is not an elementary value, and this route must not pretend the
+    /// decaying part vanishes there.
+    #[test]
+    fn a_gaussian_over_a_finite_bound_declines() {
+        let a = CasExpr::var("a");
+        let integrand = CasExpr::Neg(Box::new(a * u().pow(2))).exp();
+        assert!(
+            improper_integrate_conditional(
+                &integrand,
+                "u",
+                LimitPoint::Finite(Rational::zero()),
+                LimitPoint::PosInfinity,
+            )
+            .is_none()
+        );
+    }
+
+    /// `pure_quadratic_rate`'s own control: it accepts exactly `−a·var²` for a
+    /// `var`-free `a`, and refuses a linear term, a constant term and a higher
+    /// power. Written against the function directly because mutation showed the
+    /// `equal` step inside it cannot be falsified through the public route — see
+    /// its doc comment. Deleting the `var`-free test on the quotient kills
+    /// exactly this test and nothing else.
+    #[test]
+    fn pure_quadratic_rate_accepts_only_a_pure_quadratic_exponent() {
+        let a = CasExpr::var("a");
+        let pure = simplify(&CasExpr::Neg(Box::new(a.clone() * u().pow(2))));
+        let rate = pure_quadratic_rate(&pure, "u").expect("a pure quadratic exponent");
+        assert!(decides_equal(&rate, &a));
+        // A linear term: the square is not completed, and this route does not
+        // complete it.
+        let shifted = simplify(&CasExpr::Neg(Box::new(u().pow(2) + u())));
+        assert!(pure_quadratic_rate(&shifted, "u").is_none());
+        // A constant term inside the exponent belongs outside the `exp`.
+        let offset = simplify(&(CasExpr::Neg(Box::new(u().pow(2))) + CasExpr::one()));
+        assert!(pure_quadratic_rate(&offset, "u").is_none());
+        // A quartic is not a Gaussian this route knows.
+        let quartic = simplify(&CasExpr::Neg(Box::new(u().pow(4))));
+        assert!(pure_quadratic_rate(&quartic, "u").is_none());
+    }
+
+    /// The surd seam: `prove_gaussian_antiderivative`'s **second** pass is what
+    /// closes a rate that is a *quotient* by a symbol — `a = 1/(2σ²)`, which is
+    /// exactly what `Normal(μ, σ²)` hands it. The `erf` derivative spells
+    /// `(√a·u)²` as a product of two copies, and the `(√u)^{2k} = u^k` fold has no
+    /// power to fire on until `simplify` has collected them; for a bare symbol the
+    /// zero-test's own radical-atom products cover it, for `√(1/(2σ²))` they do
+    /// not. Delete the second pass — leaving only the `prove_derivative` call —
+    /// and every symbolic-variance `Normal` certificate dies with it.
+    #[test]
+    fn the_symbolic_surd_needs_the_second_radical_pass() {
+        let a = CasExpr::one() / (CasExpr::int(2) * CasExpr::var("s"));
+        let (constant, coefficients, rate) = {
+            let integrand = CasExpr::Neg(Box::new(a.clone() * u().pow(2))).exp();
+            let matched = match_poly_times_gaussian(&integrand, "u").expect("Gaussian shape");
+            assert!(decides_equal(&matched.2, &a));
+            matched
+        };
+        let (antiderivative, _) =
+            gaussian_polynomial_antiderivative(&constant, &coefficients, &rate, "u")
+                .expect("antiderivative");
+        let integrand = CasExpr::Neg(Box::new(a * u().pow(2))).exp();
+        // The one-pass form genuinely does not settle it…
+        assert!(!matches!(
+            prove_derivative(&antiderivative, "u", &integrand),
+            ZeroTest::Certified { equal: true, .. }
+        ));
+        // …and the two-pass form does.
+        assert!(prove_gaussian_antiderivative(&antiderivative, &integrand, "u").is_some());
+    }
+}
+
+/// The cost of *entering* the unbounded fallback, measured per input class.
+///
+/// The fallback (ADR-1670) runs whenever [`equal_core_bounded`] returns
+/// [`ZeroTest::Unknown`], and that one word covers two very different
+/// situations: exact arithmetic overflowed `i128` (the unbounded ring can
+/// finish the job) and the expression left the fragment the normal form decides
+/// at all (it cannot). This module measures which inputs take which route and
+/// what each costs, so a change to the entry condition has a before column.
+///
+/// Run it deliberately — it is `#[ignore]`d because it is a measurement, not a
+/// guard:
+///
+/// ```text
+/// cargo test -p axeyum-cas --lib --release fallback_entry_cost -- --ignored --nocapture
+/// ```
+#[cfg(test)]
+mod fallback_entry_cost {
+    use super::*;
+    use std::time::Duration;
+    use std::time::Instant;
+
+    /// How many times each input is timed; the reported number is the **min**,
+    /// which is the least contaminated by the other lanes sharing this box.
+    const RUNS: u32 = 15;
+
+    fn x() -> CasExpr {
+        CasExpr::var("x")
+    }
+
+    fn y() -> CasExpr {
+        CasExpr::var("y")
+    }
+
+    /// `(x + 1)^n`, unexpanded. `n = 80` squared overflows `i128`; `n = 4` does
+    /// not, which is what makes the small rows controls rather than duplicates.
+    fn binom(n: u32) -> CasExpr {
+        (x() + CasExpr::int(1)).pow(n)
+    }
+
+    /// An overflowing but **identically zero** polynomial prefix, so a row can
+    /// be pushed past the `i128` wall without changing what it asserts.
+    fn overflowing_zero() -> CasExpr {
+        CasExpr::Mul(vec![binom(80), binom(80)]) - binom(160)
+    }
+
+    /// The residual/forcing pairs the ODE route actually asks `equal` about —
+    /// the shapes wave three measured at 20x. Built by running the solver, so
+    /// they are the real inputs and not a guess at their shape.
+    fn variation_of_parameters_pairs() -> Vec<(String, CasExpr, CasExpr)> {
+        let ig = Rational::integer;
+        let mut out = Vec::new();
+        for (label, coeffs) in [
+            ("y''-y=e^x", vec![ig(-1), ig(0), ig(1)]),
+            ("y''-3y'+2y=e^x", vec![ig(2), ig(-3), ig(1)]),
+            ("y''-2y'+y=e^x", vec![ig(1), ig(-2), ig(1)]),
+        ] {
+            let forcing = x().exp();
+            let Some(sol) = dsolve_inhomogeneous(&coeffs, &forcing, "x") else {
+                continue;
+            };
+            let residual = coeffs
+                .iter()
+                .enumerate()
+                .fold(CasExpr::zero(), |acc, (k, &c)| {
+                    acc + CasExpr::Const(c) * sol.differentiate_n("x", k)
+                });
+            out.push((
+                format!("vop residual {label}"),
+                simplify_radicals(&simplify(&residual)),
+                forcing,
+            ));
+        }
+        for (label, coeffs, freq) in [
+            ("y''+y=sin x", vec![ig(1), ig(0), ig(1)], 1),
+            ("y''+4y=sin 3x", vec![ig(4), ig(0), ig(1)], 3),
+        ] {
+            let forcing = (CasExpr::int(freq) * x()).sin();
+            let Some(sol) = dsolve_inhomogeneous(&coeffs, &forcing, "x") else {
+                continue;
+            };
+            let residual = coeffs
+                .iter()
+                .enumerate()
+                .fold(CasExpr::zero(), |acc, (k, &c)| {
+                    acc + CasExpr::Const(c) * sol.differentiate_n("x", k)
+                });
+            out.push((
+                format!("vop residual {label}"),
+                simplify_radicals(&simplify(&residual)),
+                forcing,
+            ));
+        }
+        out
+    }
+
+    /// The timing corpus: variation-of-parameters shapes, pure-overflow shapes
+    /// with no transcendental head at all, and mixtures of the two.
+    fn corpus() -> Vec<(String, CasExpr, CasExpr)> {
+        let mut rows = variation_of_parameters_pairs();
+        let big = || CasExpr::Mul(vec![binom(80), binom(80)]);
+        let small = || CasExpr::Mul(vec![binom(4), binom(4)]);
+        let owned = |name: &str, a: CasExpr, b: CasExpr| (name.to_owned(), a, b);
+        rows.extend([
+            // --- pure overflow, no transcendental head -----------------------
+            owned("overflow (x+1)^80^2 = (x+1)^160 [TRUE]", big(), binom(160)),
+            owned(
+                "overflow (x+1/3)^41^2 = (x+1/3)^82 [TRUE]",
+                CasExpr::Mul(vec![
+                    (x() + CasExpr::rat(1, 3)).pow(41),
+                    (x() + CasExpr::rat(1, 3)).pow(41),
+                ]),
+                (x() + CasExpr::rat(1, 3)).pow(82),
+            ),
+            owned(
+                "overflow (x+1)^80^2 = (x+1)^160 + x^3 [FALSE]",
+                big(),
+                binom(160) + x().pow(3),
+            ),
+            owned(
+                "overflow 2*(x+1)^160 = (x+1)^160 [FALSE]",
+                CasExpr::int(2) * binom(160),
+                binom(160),
+            ),
+            owned(
+                "overflow (x+1)^90^2/(x+2) = (x+1)^180/(x+2) [TRUE]",
+                CasExpr::Mul(vec![binom(90), binom(90)]) / (x() + CasExpr::int(2)),
+                binom(180) / (x() + CasExpr::int(2)),
+            ),
+            // --- no overflow, transcendental heads ---------------------------
+            owned(
+                "in-fragment exp(x)exp(y) = exp(x+y) [TRUE]",
+                x().exp() * y().exp(),
+                (x() + y()).exp(),
+            ),
+            owned(
+                "in-fragment sin^2+cos^2 = 1 [TRUE]",
+                x().sin().pow(2) + x().cos().pow(2),
+                CasExpr::int(1),
+            ),
+            owned(
+                "in-fragment exp(x) + (x+1)^4^2 = exp(x) + (x+1)^8 [TRUE]",
+                x().exp() + small(),
+                x().exp() + binom(8),
+            ),
+            owned("in-fragment exp(x) = exp(y) [FALSE]", x().exp(), y().exp()),
+            owned(
+                "in-fragment sqrt(2)*cbrt(2) = root6(32) [TRUE]",
+                CasExpr::int(2).sqrt() * CasExpr::int(2).nth_root(3),
+                CasExpr::int(32).nth_root(6),
+            ),
+            // --- mixed: an overflowing polynomial plus a transcendental head --
+            owned(
+                "mixed exp(x)exp(y) = exp(x+y) at overflow scale [TRUE]",
+                big() + x().exp() * y().exp(),
+                binom(160) + (x() + y()).exp(),
+            ),
+            owned(
+                "mixed exp(2x) = exp(x)^2 at overflow scale [TRUE]",
+                big() + (CasExpr::int(2) * x()).exp(),
+                binom(160) + x().exp().pow(2),
+            ),
+            owned(
+                "mixed exp(3 ln 2) = 8 at overflow scale [TRUE]",
+                big() + (CasExpr::int(3) * CasExpr::int(2).ln()).exp(),
+                binom(160) + CasExpr::int(8),
+            ),
+            owned(
+                "mixed exp(x)exp(y) = exp(x+y+1) at overflow scale [FALSE]",
+                big() + x().exp() * y().exp(),
+                binom(160) + (x() + y() + CasExpr::int(1)).exp(),
+            ),
+            owned(
+                "mixed sqrt(x)^2 = x at overflow scale [TRUE]",
+                x().sqrt() * x().sqrt() + big(),
+                x() + binom(160),
+            ),
+            owned(
+                "mixed sin^2+cos^2 = 1 at overflow scale [TRUE]",
+                x().sin().pow(2) + x().cos().pow(2) + overflowing_zero(),
+                CasExpr::int(1),
+            ),
+            owned(
+                "mixed exp(x) = exp(y) at overflow scale [FALSE]",
+                x().exp() + overflowing_zero(),
+                y().exp() + overflowing_zero(),
+            ),
+        ]);
+        rows
+    }
+
+    fn verdict(result: &ZeroTest) -> &'static str {
+        match result {
+            ZeroTest::Certified { equal: true, .. } => "certified(=)",
+            ZeroTest::Certified { equal: false, .. } => "certified(!=)",
+            ZeroTest::CertifiedBig { equal: true, .. } => "certifiedBig(=)",
+            ZeroTest::CertifiedBig { equal: false, .. } => "certifiedBig(!=)",
+            ZeroTest::Unknown => "unknown",
+        }
+    }
+
+    /// The bounded path's own answer, read off [`equal_core_bounded_classified`]
+    /// — the classifier the zero-test itself routes on, not a re-derivation
+    /// that could disagree with it.
+    fn bounded_route(a: &CasExpr, b: &CasExpr) -> String {
+        match equal_core_bounded_classified(a, b) {
+            Ok(decided) => format!("decided {}", verdict(&decided)),
+            Err(reason) => {
+                let entered = if reason.fallback_can_help() {
+                    "ENTERS"
+                } else {
+                    "declines"
+                };
+                let label = match &reason {
+                    ZeroTestDecline::Overflowed => "overflowed".to_owned(),
+                    ZeroTestDecline::RelationBlind(limit) => format!("relation-blind {limit:?}"),
+                    ZeroTestDecline::OutOfFragment(limit) => format!("out-of-fragment {limit:?}"),
+                };
+                format!("{entered}: {label}")
+            }
+        }
+    }
+
+    fn time_min<T>(mut f: impl FnMut() -> T) -> Duration {
+        let mut best = Duration::MAX;
+        for _ in 0..RUNS {
+            let start = Instant::now();
+            let value = f();
+            let elapsed = start.elapsed();
+            std::hint::black_box(value);
+            best = best.min(elapsed);
+        }
+        best
+    }
+
+    /// The cost table. Prints one row per input: the bounded route, the
+    /// fallback's own verdict and cost, and the whole `equal` cost.
+    #[test]
+    #[ignore = "a measurement, not a guard; run with --release --ignored --nocapture"]
+    fn cost_table() {
+        println!(
+            "\n{:<52} | {:<60} | {:<16} | {:>11} | {:>11} | {:>11}",
+            "input", "bounded route", "equal verdict", "bounded", "unbounded", "equal"
+        );
+        for (name, a, b) in corpus() {
+            let route = bounded_route(&a, &b);
+            let final_verdict = verdict(&equal(&a, &b));
+            let bounded = time_min(|| equal_core_bounded(&a, &b));
+            let unbounded = time_min(|| equal_core_unbounded(&a, &b));
+            let whole = time_min(|| equal(&a, &b));
+            println!(
+                "{name:<52} | {route:<60} | {final_verdict:<16} | {bounded:>11.3?} | {unbounded:>11.3?} | {whole:>11.3?}"
+            );
+        }
+    }
+
+    /// The composite row the 20x actually lives in.
+    ///
+    /// A residual/forcing pair is decided by the bounded path in microseconds
+    /// (see `cost_table`); the cost wave three measured is *inside*
+    /// `dsolve_inhomogeneous`, which makes hundreds of `equal` calls against
+    /// intermediate `exp`-bearing forms. So the number to move is the entry
+    /// *count* — how many of those calls reach the fallback — and the solver's
+    /// wall time, not the final check's.
+    ///
+    /// The counters are per thread, so the deltas are exact whatever
+    /// `--test-threads` says; `1` is still worth passing for the *timings*,
+    /// which are contended like any other number on a shared box.
+    #[test]
+    #[ignore = "a measurement, not a guard; run with --release --ignored --nocapture"]
+    fn solver_fallback_entries() {
+        let ig = Rational::integer;
+        println!(
+            "\n{:<24} | {:>16} | {:>24} | {:>7} | {:>11}",
+            "solver call", "fallback entries", "head gate turned away", "solved", "wall"
+        );
+        let mut total_entries = 0u64;
+        let mut total_gated = (0u64, 0u64);
+        for (label, coeffs, forcing) in [
+            ("y''-y=e^x", vec![ig(-1), ig(0), ig(1)], x().exp()),
+            ("y''-3y'+2y=e^x", vec![ig(2), ig(-3), ig(1)], x().exp()),
+            ("y''-2y'+y=e^x", vec![ig(1), ig(-2), ig(1)], x().exp()),
+            ("y''+y=sin x", vec![ig(1), ig(0), ig(1)], x().sin()),
+            (
+                "y''+4y=sin 3x",
+                vec![ig(4), ig(0), ig(1)],
+                (CasExpr::int(3) * x()).sin(),
+            ),
+        ] {
+            let before = fallback_entries();
+            let gated_before = head_gated_declines();
+            let start = Instant::now();
+            let solved = dsolve_inhomogeneous(&coeffs, &forcing, "x").is_some();
+            let wall = start.elapsed();
+            let entries = fallback_entries() - before;
+            let after_gated = head_gated_declines();
+            let gated = (
+                after_gated.0 - gated_before.0,
+                after_gated.1 - gated_before.1,
+            );
+            total_entries += entries;
+            total_gated = (total_gated.0 + gated.0, total_gated.1 + gated.1);
+            let gated = format!("{} overflow / {} relation", gated.0, gated.1);
+            println!("{label:<24} | {entries:>16} | {gated:>24} | {solved:>7} | {wall:>11.3?}");
+        }
+        println!(
+            "{:<24} | {total_entries:>16} | {:>24} |",
+            "TOTAL",
+            format!("{} overflow / {} relation", total_gated.0, total_gated.1)
+        );
+    }
+}
+
+/// The fallback's entry gate: one fixture per classification the bounded core
+/// makes, in both directions (ADR-1670 wave four).
+///
+/// The gate is the only thing in the zero-test that can turn a *decision* into
+/// an `Unknown` by declining to look, so every arm of [`ZeroTestDecline`] is
+/// pinned three ways here:
+///
+/// - the classification itself, asserted against
+///   [`equal_core_bounded_classified`] — the classifier `equal_core` routes on,
+///   so a test that passes is a statement about the shipped route;
+/// - a **satisfiable side**: a TRUE identity in that class that must still
+///   certify, which is what stops the gate buying speed with capability;
+/// - a **false side**: a FALSE identity in that class that must decline or
+///   refute and must never certify equal.
+///
+/// Plus the two route facts the whole slice exists for: a head-gated input
+/// never reaches the fallback, and a plain overflow still does.
+#[cfg(test)]
+mod fallback_entry_gate {
+    use super::*;
+
+    fn x() -> CasExpr {
+        CasExpr::var("x")
+    }
+
+    fn y() -> CasExpr {
+        CasExpr::var("y")
+    }
+
+    fn s() -> CasExpr {
+        CasExpr::var("s")
+    }
+
+    fn u() -> CasExpr {
+        CasExpr::var("u")
+    }
+
+    /// `(x + 1)^n`, unexpanded.
+    fn binom(n: u32) -> CasExpr {
+        (x() + CasExpr::int(1)).pow(n)
+    }
+
+    /// The classification the shipped zero-test routes on.
+    fn reason(a: &CasExpr, b: &CasExpr) -> ZeroTestDecline {
+        equal_core_bounded_classified(a, b)
+            .expect_err("this fixture is only adversarial if the bounded path declines it")
+    }
+
+    fn certifies_equal(a: &CasExpr, b: &CasExpr) -> bool {
+        matches!(
+            equal(a, b),
+            ZeroTest::Certified { equal: true, .. } | ZeroTest::CertifiedBig { equal: true, .. }
+        )
+    }
+
+    // --- Overflowed: the class the fallback exists for ----------------------
+
+    /// A pure `i128` overflow classifies as one, says the fallback can help,
+    /// and the fallback decides it. Satisfiable side.
+    #[test]
+    fn an_overflow_is_classified_as_one_and_the_fallback_decides_it() {
+        let left = CasExpr::Mul(vec![binom(80), binom(80)]);
+        let right = binom(160);
+        assert_eq!(reason(&left, &right), ZeroTestDecline::Overflowed);
+        assert!(reason(&left, &right).fallback_can_help());
+        assert!(
+            certifies_equal(&left, &right),
+            "the overflow class must still be decided by the fallback"
+        );
+        // The positive control below the wall: the same identity decides in the
+        // bounded path, so the row above is about width and not about shape.
+        assert!(certifies_equal(
+            &CasExpr::Mul(vec![binom(4), binom(4)]),
+            &binom(8)
+        ));
+    }
+
+    /// False side of the overflow class: a difference of `x³` at degree 160
+    /// must be refuted, never certified equal, and the certificate must
+    /// re-check.
+    #[test]
+    fn a_false_identity_at_overflow_scale_is_refuted_and_never_certified_equal() {
+        let left = CasExpr::Mul(vec![binom(80), binom(80)]);
+        let right = binom(160) + x().pow(3);
+        assert_eq!(reason(&left, &right), ZeroTestDecline::Overflowed);
+        let verdict = equal(&left, &right);
+        assert!(
+            matches!(
+                verdict,
+                ZeroTest::Certified { equal: false, .. }
+                    | ZeroTest::CertifiedBig { equal: false, .. }
+                    | ZeroTest::Unknown
+            ),
+            "a false identity must refute or decline, never certify equal"
+        );
+        assert!(recheck_zero_test(&left, &right, &verdict));
+    }
+
+    // --- RelationBlind: the arithmetic completed, and the fallback STILL
+    // --- helps, because the two rings do not share a fold dictionary --------
+
+    /// `√(ln x)·√(ln x) = ln x` is TRUE and the bounded path withholds the
+    /// refutation because the monomial squares a radical atom whose radicand
+    /// [`normalize`] rejects. (This fixture was `√2·∛2 = root6(32)` when the
+    /// lane was written; item 1 wave three's constant-radical canonicalization
+    /// merges those over their common index, so the bounded path now DECIDES
+    /// that pair — asserted below — and it no longer reaches the guard.)
+    #[test]
+    fn a_multiplicative_atom_relation_is_relation_blind_and_still_enters() {
+        let left = x().ln().sqrt() * x().ln().sqrt();
+        let right = x().ln();
+        assert_eq!(
+            reason(&left, &right),
+            ZeroTestDecline::RelationBlind(RelationLimit::MultiplicativeAtomRelation)
+        );
+        assert!(
+            reason(&left, &right).fallback_can_help(),
+            "the unbounded fold dictionary is built with `normalize_rational_big_within`, \
+             which resolves radicands `normalize` rejects, so this class must still enter"
+        );
+        // The constant-radical pair is decided by the bounded path, not withheld.
+        let const_left = CasExpr::int(2).sqrt() * CasExpr::int(2).nth_root(3);
+        let const_right = CasExpr::int(32).nth_root(6);
+        assert!(equal_core_bounded_classified(&const_left, &const_right).is_ok());
+        assert!(certifies_equal(&const_left, &const_right));
+    }
+
+    /// The satisfiable side of that class, and the reason it is not
+    /// out-of-fragment: `√(ln x)² = ln x` is declined by the bounded fold —
+    /// whose radicand dictionary is built with [`normalize`], which rejects a
+    /// transcendental head — and CERTIFIED by the unbounded one. No overflow is
+    /// involved anywhere in it.
+    #[test]
+    fn a_relation_blind_input_the_unbounded_fold_resolves_still_certifies() {
+        let left = x().ln().sqrt() * x().ln().sqrt();
+        let right = x().ln();
+        assert_eq!(
+            reason(&left, &right),
+            ZeroTestDecline::RelationBlind(RelationLimit::MultiplicativeAtomRelation)
+        );
+        assert!(
+            certifies_equal(&left, &right),
+            "gating this class out would lose a decision the fallback makes today"
+        );
+    }
+
+    /// False side of the relation-blind class: `√x·√y = √(xy) + 1` is false and
+    /// must never certify equal.
+    #[test]
+    fn a_false_radical_identity_is_never_certified_equal() {
+        let left = x().sqrt() * y().sqrt();
+        let right = (x() * y()).sqrt() + CasExpr::int(1);
+        assert!(
+            !certifies_equal(&left, &right),
+            "a false radical identity must not be certified equal"
+        );
+        // And the true one it is a near-miss of is declined rather than refuted,
+        // which is the guard this class is named for.
+        assert!(matches!(
+            equal(&left, &(x() * y()).sqrt()),
+            ZeroTest::Unknown
+        ));
+    }
+
+    /// An atom whose argument the key could not canonicalize — a rational
+    /// content past `i128` — is relation-blind, not out-of-fragment: the
+    /// unbounded ring keys with the same [`atom_name`] but its refutation
+    /// branch is stricter, so it declines rather than refuting.
+    #[test]
+    fn an_uncanonical_atom_key_is_relation_blind_and_never_refutes() {
+        let huge = CasExpr::Const(Rational::new(1, i128::MAX));
+        let twice = CasExpr::Const(Rational::new(2, i128::MAX));
+        let left = (x() / (huge * s() + CasExpr::rat(1, 3) * u())).ln();
+        let right = ((CasExpr::int(2) * x()) / (twice * s() + CasExpr::rat(2, 3) * u())).ln();
+        assert_ne!(
+            atom_name("ln", &left),
+            atom_name("ln", &right),
+            "the fixture is only adversarial while the two keys really are distinct"
+        );
+        assert_eq!(
+            reason(&left, &right),
+            ZeroTestDecline::RelationBlind(RelationLimit::UncanonicalAtomKey)
+        );
+        assert!(matches!(equal(&left, &right), ZeroTest::Unknown));
+    }
+
+    // --- OutOfFragment: the classes the gate turns away ---------------------
+
+    /// The head the whole gate is about. An overflowing polynomial carrying one
+    /// `exp` is out-of-fragment BY THE HEAD, not by its arithmetic — and the
+    /// reason names the head, so a reader can see why.
+    #[test]
+    fn a_declined_head_is_named_and_takes_precedence_over_the_overflow() {
+        let left = CasExpr::Mul(vec![binom(80), binom(80)]) + x().exp() * y().exp();
+        let right = binom(160) + (x() + y()).exp();
+        assert_eq!(
+            reason(&left, &right),
+            ZeroTestDecline::OutOfFragment(FragmentLimit::UnboundedRingDeclinesHead(
+                "exp".to_owned()
+            ))
+        );
+        // The route this reason produces is `a_head_gated_input_never_reaches_
+        // the_fallback`'s subject, not this test's; asserting it here too would
+        // make one fact fail in two places and hide which guard broke.
+        //
+        // The precedence claim, stated separately: the SAME polynomial pair with
+        // the `exp` removed really is an overflow, so the head is what changed
+        // the classification and not the arithmetic.
+        assert_eq!(
+            reason(
+                &CasExpr::Mul(vec![binom(80), binom(80)]),
+                &binom(160).clone()
+            ),
+            ZeroTestDecline::Overflowed
+        );
+        assert_eq!(
+            explain_decline(&left, &right),
+            Some(ZeroTestDecline::OutOfFragment(
+                FragmentLimit::UnboundedRingDeclinesHead("exp".to_owned())
+            ))
+        );
+    }
+
+    /// Satisfiable side of the head-gated class: the identity the gate turns
+    /// away at overflow scale still certifies BELOW the wall, where the bounded
+    /// path decomposes `exp` itself. So the decline is about the width the
+    /// unbounded ring would have been needed for, not about `exp`.
+    #[test]
+    fn the_head_gated_identity_still_certifies_below_the_wall() {
+        for (left, right) in [
+            (x().exp() * y().exp(), (x() + y()).exp()),
+            ((CasExpr::int(2) * x()).exp(), x().exp().pow(2)),
+            (
+                (CasExpr::int(3) * CasExpr::int(2).ln()).exp(),
+                CasExpr::int(8),
+            ),
+            (x().exp() * (CasExpr::zero() - x()).exp(), CasExpr::int(1)),
+        ] {
+            assert!(
+                certifies_equal(&left, &right),
+                "{left} = {right} must certify below the wall"
+            );
+        }
+    }
+
+    /// False side of the head-gated class: a FALSE `exp` identity at overflow
+    /// scale must never be certified equal — the gate declines to look, and
+    /// declining is not refuting.
+    #[test]
+    fn a_false_exp_identity_at_overflow_scale_is_never_certified() {
+        for (left, right) in [
+            (x().exp() * y().exp(), (x() + y() + CasExpr::int(1)).exp()),
+            ((CasExpr::int(2) * x()).exp(), x().exp()),
+        ] {
+            let big_left = CasExpr::Mul(vec![binom(80), binom(80)]) + left.clone();
+            let big_right = binom(160) + right.clone();
+            assert!(
+                !certifies_equal(&big_left, &big_right),
+                "{left} = {right} is FALSE and must never be certified equal"
+            );
+            // And it is not certified below the wall either, so the gate is not
+            // what is protecting soundness here.
+            assert!(!certifies_equal(&left, &right));
+        }
+    }
+
+    /// A division by the identically zero function is out-of-fragment at every
+    /// width: [`BigRatFunc::div`] declines on the same condition, written the
+    /// same way.
+    #[test]
+    fn a_division_by_the_zero_function_is_named_and_does_not_enter() {
+        let left = x() / (x() - x());
+        let right = CasExpr::int(1);
+        assert_eq!(
+            reason(&left, &right),
+            ZeroTestDecline::OutOfFragment(FragmentLimit::DivisionByZeroFunction)
+        );
+        assert!(matches!(equal(&left, &right), ZeroTest::Unknown));
+        // Positive control: a divisor that is merely SMALL, not the zero
+        // function, decides — so the decline is about the divisor being zero.
+        assert!(certifies_equal(
+            &(x() / (x() + CasExpr::int(1))),
+            &(x() / (x() + CasExpr::int(1)))
+        ));
+    }
+
+    /// An `exp` argument coefficient past the `u32` exponent range is
+    /// out-of-fragment because that range is the same in both rings.
+    ///
+    /// Asserted at [`normalize_rational_classified`] rather than through
+    /// `equal`, and that is the finding rather than a convenience: while
+    /// `big_ring_declines_head` names `exp`, every input that could reach this
+    /// classification carries an `exp` head, so
+    /// [`escalate_to_declined_head`] rewrites the reason to
+    /// [`FragmentLimit::UnboundedRingDeclinesHead`] before a caller sees it.
+    /// The arm is reachable and correct; it is currently *masked* end to end,
+    /// and it stops being masked the day `exp` is ported.
+    #[test]
+    fn an_exp_coefficient_past_u32_is_out_of_fragment_at_the_normalizer() {
+        let coefficient = CasExpr::Const(Rational::integer(i128::from(u32::MAX) + 1));
+        let huge = (coefficient * x()).exp();
+        assert_eq!(
+            normalize_rational_classified(&huge).expect_err("a u32 exponent cannot hold this"),
+            ZeroTestDecline::OutOfFragment(FragmentLimit::ExpCoefficientOutOfRange)
+        );
+        // The control: one less, and the same shape normalizes.
+        let fits = (CasExpr::Const(Rational::integer(i128::from(u32::MAX))) * x()).exp();
+        assert!(normalize_rational_classified(&fits).is_ok());
+        // And the end-to-end masking this test documents, stated so a change to
+        // it is visible rather than silent.
+        assert_eq!(
+            reason(&huge, &CasExpr::int(1)),
+            ZeroTestDecline::OutOfFragment(FragmentLimit::UnboundedRingDeclinesHead(
+                "exp".to_owned()
+            ))
+        );
+    }
+
+    // --- the two route facts, which is where the gate is falsifiable --------
+
+    /// **A head-gated input never reaches the fallback.** This is the test the
+    /// whole slice is for: the verdict is `Unknown` either way, so nothing but
+    /// the entry count can see the difference.
+    ///
+    /// Dies when the gate is deleted (everything enters again).
+    #[test]
+    fn a_head_gated_input_never_reaches_the_fallback() {
+        let left = CasExpr::Mul(vec![binom(80), binom(80)]) + x().exp() * y().exp();
+        let right = binom(160) + (x() + y()).exp();
+        let before = fallback_entries();
+        let gated_before = head_gated_declines();
+        assert!(matches!(equal(&left, &right), ZeroTest::Unknown));
+        assert_eq!(
+            fallback_entries(),
+            before,
+            "an `exp` head at overflow scale must not spend any of the work budget"
+        );
+        let gated = head_gated_declines();
+        assert!(
+            gated.0 > gated_before.0,
+            "and the gate must be what turned it away, on the overflow reason"
+        );
+    }
+
+    /// **A plain overflow still reaches the fallback.** The other direction, so
+    /// the gate cannot buy its speed by never entering at all.
+    ///
+    /// Dies when the gate is made to decline everything.
+    #[test]
+    fn a_plain_overflow_still_reaches_the_fallback() {
+        let left = CasExpr::Mul(vec![binom(80), binom(80)]);
+        let right = binom(160);
+        let before = fallback_entries();
+        assert!(certifies_equal(&left, &right));
+        assert!(
+            fallback_entries() > before,
+            "the overflow class is what the fallback exists for; it must be entered"
+        );
+    }
+
+    /// The gate's head list is derived from the ring, not from a literal.
+    ///
+    /// [`big_ring_declines_head`] is the one predicate
+    /// [`normalize_rational_big_within`] matches on and
+    /// [`unbounded_ring_declined_head`] reads, and this walks **every**
+    /// [`UnaryFunc`] variant — the list built from the type's own constructors,
+    /// not typed out here — asserting the two agree. A head the gate names but
+    /// the ring normalizes would be a decline bought for nothing; a head the
+    /// ring declines but the gate does not name is the 2.35 ms this slice
+    /// removed, back again.
+    #[test]
+    fn the_entry_gate_names_exactly_the_heads_the_ring_declines() {
+        let mut checked = 0usize;
+        for func in every_unary_func() {
+            let expr = CasExpr::Unary(func, Box::new(x()));
+            let mut budget = BIG_FALLBACK_WORK_BUDGET;
+            let ring_declines = normalize_rational_big_within(&expr, &mut budget).is_none();
+            let gate_names = unbounded_ring_declined_head(&expr).is_some();
+            assert_eq!(
+                ring_declines,
+                gate_names,
+                "the gate and the ring disagree about `{}`: ring declines={ring_declines}, \
+                 gate names={gate_names}",
+                func.name()
+            );
+            assert_eq!(gate_names, big_ring_declines_head(func));
+            checked += 1;
+        }
+        assert!(
+            checked >= 20,
+            "the variant list looks short at {checked}; a head added to `UnaryFunc` \
+             without being added here would make this test measure a memory"
+        );
+    }
+
+    /// Every [`UnaryFunc`] variant, built from the type rather than listed.
+    ///
+    /// `UnaryFunc` is `Copy` and non-exhaustive matching is a compile error, so
+    /// the exhaustive `match` below is the compiler's own guarantee that a new
+    /// variant cannot be forgotten here.
+    fn every_unary_func() -> Vec<UnaryFunc> {
+        let sample = UnaryFunc::Ln;
+        // A total match over the type: adding a variant to `UnaryFunc` makes
+        // this fail to compile until it is listed in the vector below too.
+        match sample {
+            UnaryFunc::Ln
+            | UnaryFunc::Exp
+            | UnaryFunc::Sin
+            | UnaryFunc::Cos
+            | UnaryFunc::Tan
+            | UnaryFunc::Atan
+            | UnaryFunc::Sqrt
+            | UnaryFunc::Abs
+            | UnaryFunc::Sign
+            | UnaryFunc::Floor
+            | UnaryFunc::Ceiling
+            | UnaryFunc::Erf
+            | UnaryFunc::Si
+            | UnaryFunc::Ci
+            | UnaryFunc::Ei
+            | UnaryFunc::Li
+            | UnaryFunc::Shi
+            | UnaryFunc::Chi
+            | UnaryFunc::FresnelS
+            | UnaryFunc::FresnelC
+            | UnaryFunc::NthRoot(_)
+            | UnaryFunc::BesselJ(_)
+            | UnaryFunc::BesselI(_)
+            | UnaryFunc::Asin
+            | UnaryFunc::Acos
+            | UnaryFunc::Asinh
+            | UnaryFunc::Acosh
+            | UnaryFunc::Gamma
+            | UnaryFunc::PolyGamma(_)
+            | UnaryFunc::Ai
+            | UnaryFunc::AiPrime
+            | UnaryFunc::Bi
+            | UnaryFunc::BiPrime
+            | UnaryFunc::LambertW => {}
+        }
+        vec![
+            UnaryFunc::Ln,
+            UnaryFunc::Exp,
+            UnaryFunc::Sin,
+            UnaryFunc::Cos,
+            UnaryFunc::Tan,
+            UnaryFunc::Atan,
+            UnaryFunc::Sqrt,
+            UnaryFunc::Abs,
+            UnaryFunc::Sign,
+            UnaryFunc::Floor,
+            UnaryFunc::Ceiling,
+            UnaryFunc::Erf,
+            UnaryFunc::Si,
+            UnaryFunc::Ci,
+            UnaryFunc::Ei,
+            UnaryFunc::Li,
+            UnaryFunc::Shi,
+            UnaryFunc::Chi,
+            UnaryFunc::FresnelS,
+            UnaryFunc::FresnelC,
+            UnaryFunc::NthRoot(3),
+            UnaryFunc::BesselJ(2),
+            UnaryFunc::BesselI(2),
+            UnaryFunc::Asin,
+            UnaryFunc::Acos,
+            UnaryFunc::Asinh,
+            UnaryFunc::Acosh,
+            UnaryFunc::Gamma,
+            UnaryFunc::PolyGamma(1),
+            UnaryFunc::Ai,
+            UnaryFunc::AiPrime,
+            UnaryFunc::Bi,
+            UnaryFunc::BiPrime,
+            UnaryFunc::LambertW,
+        ]
     }
 }

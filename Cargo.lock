@@ -79,7 +79,9 @@ name = "axeyum-arith"
 version = "0.1.0"
 dependencies = [
  "num-bigint",
+ "num-integer",
  "num-rational",
+ "num-traits",
 ]
 
 [[package]]
@@ -158,8 +160,8 @@ dependencies = [
 name = "axeyum-fp"
 version = "0.1.0"
 dependencies = [
+ "axeyum-arith",
  "axeyum-ir",
- "num-bigint",
  "rustc_apfloat",
 ]
 
@@ -167,11 +169,8 @@ dependencies = [
 name = "axeyum-ir"
 version = "0.1.0"
 dependencies = [
+ "axeyum-arith",
  "criterion",
- "num-bigint",
- "num-integer",
- "num-rational",
- "num-traits",
  "rustc-hash 2.1.2",
 ]
 

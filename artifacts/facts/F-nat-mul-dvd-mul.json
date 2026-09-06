@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "id": "F:nat-mul-dvd-mul",
+  "title": "Divisibility multiplies",
+  "statement": "For naturals a, b, c, e: if a divides b and c divides e then a*c divides b*e. The general law under pushing a pointwise divisibility through a product fold; the Nat prelude had Nat.dvd_mul, Nat.dvd_mul_right_of_dvd and Nat.dvd_trans but nothing multiplying two divisibilities.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Nat.mul_dvd_mul : ((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat) -> ((x4 : AxNat.dvd x0 x1) -> ((x5 : AxNat.dvd x2 x3) -> AxNat.dvd (AxNat.mul x0 x2) (AxNat.mul x1 x3)))))))",
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.mul_dvd_mul"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:nat-mul-assoc",
+    "F:nat-mul-comm"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-nat-mul-dvd-mul",
+      "kind": "kernel-term",
+      "kernel_declaration": "Nat.mul_dvd_mul",
+      "supports": "Nat.mul_dvd_mul is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q --release -p axeyum-lean-kernel --example nat_theorem_inventory -- Nat.mul_dvd_mul 2>/dev/null | grep -Fc '((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat) -> ((x4 : AxNat.dvd x0 x1) -> ((x5 : AxNat.dvd x2 x3) -> AxNat.dvd (AxNat.mul x0 x2) (AxNat.mul x1 x3)))))))')\" -ge 1",
+      "notes": "The pattern is the FULL admitted type as rendered by Kernel::render_lean, not the theorem's name, so a drifted statement fails this check. Two Exists-eliminations on the divisibility hypotheses, then the witness is the product of the two cofactors and the equation is the four-factor rearrangement (a*u)*(c*v) = (a*c)*(u*v) -- three mul_assoc and one mul_comm, the same shape Nat.prodRange_mul's successor step uses."
+    },
+    {
+      "id": "footprint-nat-mul-dvd-mul",
+      "kind": "instance-pin",
+      "supports": "axiom_footprint: [] -- read from Kernel::axiom_footprint for this declaration, not from a maintained list",
+      "check_status": "checked",
+      "checker_command": "cargo test -q --release -p axeyum-lean-kernel --lib -- nat_prelude::multiset_select_tests::every_multiset_select_declaration_is_present_and_axiom_free --test-threads=1",
+      "notes": "That test asserts Environment::contains FIRST for each of the fourteen names this module declares and only then that Kernel::axiom_footprint is empty -- an absent name has an EMPTY footprint, so the order is load-bearing."
+    },
+    {
+      "id": "evaluation-nat-mul-dvd-mul",
+      "kind": "instance-pin",
+      "supports": "The general theorem, instantiated at concrete small arguments, infers to a statement about independently computed values, with negative controls.",
+      "check_status": "checked",
+      "checker_command": "cargo test -q --release -p axeyum-lean-kernel --lib -- nat_prelude::multiset_select_tests:: --test-threads=4",
+      "notes": "Exercised through Nat.prodRange_dvd_prodRange, whose only consumer is Nat.Multiset.prodSel_dvd_prod; that theorem is instantiated at m = {2,2,3} and s = (. = 2) in the_two_bridge_theorems_instantiate_at_the_worked_multiset, where it must state 4 | 12 and must NOT state 12 | 4."
+    }
+  ],
+  "provenance": {
+    "date": "2026-09-06",
+    "established_by": "axeyum-lean-kernel build_nat_prelude (nat_prelude/multiset_select.rs)",
+    "source": "theorem name and canonical type read directly via nat_theorem_inventory, which prints render_lean of the admitted type; lane mobius-inversion, ADR-1658."
+  },
+  "notes": "Landed by lane mobius-inversion (ADR-1658) as a by-product of roadmap W2-18.",
+  "external_status": "proved"
+}

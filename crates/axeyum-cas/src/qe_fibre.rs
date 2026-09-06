@@ -1,5 +1,5 @@
 //! Deciding the fibre `∃y. ⋀ᵢ qᵢ(y) ▷ᵢ 0` over a **real algebraic** `x = α`,
-//! with every operation carried out in `K = ℚ(α) = ℚ[x]/(m)`.
+//! with every operation carried out in `K = ℚ(α) = ℚ\[x\]/(m)`.
 //!
 //! This is the engine that makes an irrational cell boundary decidable in
 //! [`crate::qe::bivariate`]. A point cell of the projected `x`-line sits at a
@@ -40,7 +40,7 @@
 //!
 //! # Why the modulus need not be irreducible, and what happens when it is not
 //!
-//! `K = ℚ[x]/(m)` is a field only when `m` is irreducible, and the modulus this
+//! `K = ℚ\[x\]/(m)` is a field only when `m` is irreducible, and the modulus this
 //! module is handed is the projection's cut polynomial, which is square-free but
 //! usually **not** irreducible. Rather than depend on a factorization over ℚ,
 //! this module *splits on demand* (the classical D5 / dynamic-evaluation trick):
@@ -85,6 +85,7 @@
 
 use core::cmp::Ordering;
 
+use axeyum_arith::QPoly;
 use num_bigint::BigInt;
 use num_rational::BigRational;
 use num_traits::{One, Signed, Zero};
@@ -250,70 +251,36 @@ fn as_fault(inner: Inner) -> Fault {
 
 /// `(quotient, remainder)` of `a` on division by `b` over ℚ. `None` when `b` is
 /// the zero polynomial.
+///
+/// **Migrated onto `axeyum_arith::QPoly` (ADR-1710 migration slice 5)**, as are
+/// [`sub_poly`] and [`xgcd`]. Only the ℚ\[x\] layer moved: the K\[y\] layer below —
+/// the polynomials in `y` whose coefficients are field elements — keeps its own
+/// arithmetic, because its coefficient ring is `K`, not ℚ, and the design note
+/// counts it as a separate implementation for exactly that reason.
 fn divmod(a: &[BigRational], b: &[BigRational]) -> Option<(Vec<BigRational>, Vec<BigRational>)> {
-    let b_degree = big::degree(b)?;
-    let mut remainder = big::trim(a.to_vec());
-    let leading = b[b_degree].clone();
-    let mut quotient: Vec<BigRational> = Vec::new();
-    while let Some(r_degree) = big::degree(&remainder) {
-        if r_degree < b_degree {
-            break;
-        }
-        let factor = &remainder[r_degree] / &leading;
-        let shift = r_degree - b_degree;
-        if quotient.len() < shift + 1 {
-            quotient.resize(shift + 1, BigRational::zero());
-        }
-        quotient[shift] = factor.clone();
-        for (index, coeff) in b.iter().enumerate().take(b_degree + 1) {
-            remainder[index + shift] -= &factor * coeff;
-        }
-        remainder = big::trim(remainder);
-    }
-    Some((big::trim(quotient), remainder))
+    QPoly::from_slice(a)
+        .div_rem(&QPoly::from_slice(b))
+        .map(|(quotient, remainder)| (quotient.into_coefficients(), remainder.into_coefficients()))
 }
 
-/// `a − b` over ℚ, LSB-first.
-fn sub_poly(a: &[BigRational], b: &[BigRational]) -> Vec<BigRational> {
-    let mut out = vec![BigRational::zero(); a.len().max(b.len())];
-    for (index, coeff) in a.iter().enumerate() {
-        out[index] += coeff;
-    }
-    for (index, coeff) in b.iter().enumerate() {
-        out[index] -= coeff;
-    }
-    big::trim(out)
-}
+// `sub_poly` is gone: `xgcd` was its only caller and now delegates whole. Its
+// pre-migration body is the differential oracle in this module's test block,
+// compared against `axeyum_arith::QPoly::sub`.
 
 /// `(g, s)` with `g = gcd(a, m)` monic and `s · a ≡ g (mod m)`.
 ///
 /// The half-extended Euclidean algorithm: only the cofactor of `a` is tracked,
 /// which is all an inverse modulo `m` needs. A unit `g` therefore hands back
 /// `a⁻¹` directly, and a non-unit `g` hands back a proper factor of `m`.
+///
+/// **Migrated onto `axeyum_arith::QPoly::half_ext_gcd`.** The non-unit-`g`
+/// outcome is preserved deliberately and is documented on the shared method as
+/// a first-class outcome rather than an error — it is the signal
+/// [`Inner::Split`] carries, and the design note §5 names it as the contract
+/// that had to survive this slice.
 fn xgcd(a: &[BigRational], m: &[BigRational]) -> (Vec<BigRational>, Vec<BigRational>) {
-    let mut r0 = big::trim(m.to_vec());
-    let mut r1 = big::trim(a.to_vec());
-    let mut s0: Vec<BigRational> = Vec::new();
-    let mut s1: Vec<BigRational> = vec![BigRational::one()];
-    while big::degree(&r1).is_some() {
-        let Some((quotient, remainder)) = divmod(&r0, &r1) else {
-            break;
-        };
-        r0 = r1;
-        r1 = remainder;
-        let next = sub_poly(&s0, &big::mul(&quotient, &s1));
-        s0 = s1;
-        s1 = next;
-    }
-    match big::degree(&r0) {
-        None => (Vec::new(), Vec::new()),
-        Some(degree) => {
-            let leading = r0[degree].clone();
-            let g = big::trim(r0.iter().map(|c| c / &leading).collect());
-            let s = big::trim(s0.iter().map(|c| c / &leading).collect());
-            (g, s)
-        }
-    }
+    let (gcd, cofactor) = QPoly::from_slice(a).half_ext_gcd(&QPoly::from_slice(m));
+    (gcd.into_coefficients(), cofactor.into_coefficients())
 }
 
 fn two() -> BigRational {
@@ -329,6 +296,42 @@ fn two() -> BigRational {
 pub type Element = Vec<BigRational>;
 
 /// A polynomial in `y` over `K`, LSB-first: `p[j]` is the coefficient of `yʲ`.
+///
+/// # Deliberately NOT migrated onto `axeyum-arith` (ADR-1710 slice 4)
+///
+/// Slice 4 was asked to move this layer *only if* it is genuinely univariate
+/// over a coefficient field the crate already represents. It is not, and the
+/// reason is structural rather than a matter of effort:
+///
+/// - **`K` is not a field.** [`RealField`] presents `K = ℚ[x]/(m)` with `m`
+///   deliberately allowed to be **reducible** — that is the whole point of the
+///   module, which refuses to depend on a ℚ-factorization. So `K` is a
+///   commutative ring with zero divisors, and `RealField::invert` is partial.
+/// - **Its failure is control flow, not an error.** A non-unit `gcd(e, m)` is a
+///   *proper factor of `m`*, and `Inner::Split` carries it back to
+///   `decide_fibre`, which restarts the whole decision with a smaller
+///   modulus. No operation in `axeyum-arith` can say "your ring was wrong".
+/// - **`is_zero` on a coefficient is partial too**, which is the unusual part.
+///   `RealField::ktrim` must call `RealField::sign` to decide whether a
+///   leading coefficient vanishes at `α`, and that can exhaust a budget *or*
+///   discover a split. So degree, trim, and hence the loop condition of
+///   `RealField::kdivrem` are all fallible — a shared `UPoly` whose `degree()`
+///   returns a plain `Option<usize>` cannot host this.
+///
+/// A generic `UPoly<F>` would therefore not be enough: it would need a
+/// *ring-object* trait carried through every method, with `inv` **and**
+/// `is_zero` fallible and their error able to demand a different ring.
+/// ADR-1710 already placed the splitting outside the arithmetic layer for
+/// exactly this reason, and slice 4 confirms the placement rather than
+/// reopening it.
+///
+/// The cheaper shared piece, if one is wanted later, is **not** a generic
+/// coefficient ring but a `axeyum_arith::SturmChain` generic over
+/// a *sign oracle*: `KSturm` and `qe_big`'s chain differ from the shared one
+/// only in spelling `sign_of_rational` as `field.sign(..)?`, and that would
+/// absorb two of the inventory's six chains at once.
+///
+/// The ℚ\[x\] layer above this one already moved; see `divmod` and `xgcd`.
 pub type FieldPoly = Vec<Element>;
 
 /// `a + b`, as polynomials in `α`. Reduction is unnecessary: both are already
@@ -376,7 +379,7 @@ fn kdegree(p: &FieldPoly) -> Option<usize> {
 // The field.
 // ============================================================================
 
-/// `K = ℚ[x]/(m)` presented by a **real** root `α` of `m`: the unique one in
+/// `K = ℚ\[x\]/(m)` presented by a **real** root `α` of `m`: the unique one in
 /// the half-open bracket `(lower, upper]`.
 ///
 /// `m` need not be irreducible; the module documentation explains how a
@@ -1041,7 +1044,7 @@ impl RealField {
 // Atoms, certificates, and their checkers.
 // ============================================================================
 
-/// One fibre conjunct `q(y) ▷ 0` with `q ∈ K[y]`.
+/// One fibre conjunct `q(y) ▷ 0` with `q ∈ K\[y\]`.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct FieldAtom {
     /// The polynomial in `y` over `K`.
@@ -1466,6 +1469,134 @@ fn first_failure(atoms: &[FieldAtom], signs: &[i8]) -> Option<FibreCellFailure> 
 mod tests {
     use super::*;
 
+    // -----------------------------------------------------------------------
+    // ADR-1710 slice 5: the pre-migration ℚ[x] bodies, kept as the differential
+    // oracle for `divmod`, `sub_poly` and `xgcd`.
+    // -----------------------------------------------------------------------
+
+    /// `sub_poly` no longer exists in this module — the migration removed its
+    /// last caller — so the differential test compares the SHARED subtraction,
+    /// which is what actually replaced the deleted body.
+    fn shared_sub(a: &[BigRational], b: &[BigRational]) -> Vec<BigRational> {
+        QPoly::from_slice(a)
+            .sub(&QPoly::from_slice(b))
+            .into_coefficients()
+    }
+
+    fn legacy_divmod(
+        a: &[BigRational],
+        b: &[BigRational],
+    ) -> Option<(Vec<BigRational>, Vec<BigRational>)> {
+        let b_degree = big::degree(b)?;
+        let mut remainder = big::trim(a.to_vec());
+        let leading = b[b_degree].clone();
+        let mut quotient: Vec<BigRational> = Vec::new();
+        while let Some(r_degree) = big::degree(&remainder) {
+            if r_degree < b_degree {
+                break;
+            }
+            let factor = &remainder[r_degree] / &leading;
+            let shift = r_degree - b_degree;
+            if quotient.len() < shift + 1 {
+                quotient.resize(shift + 1, BigRational::zero());
+            }
+            quotient[shift] = factor.clone();
+            for (index, coeff) in b.iter().enumerate().take(b_degree + 1) {
+                remainder[index + shift] -= &factor * coeff;
+            }
+            remainder = big::trim(remainder);
+        }
+        Some((big::trim(quotient), remainder))
+    }
+
+    fn legacy_sub_poly(a: &[BigRational], b: &[BigRational]) -> Vec<BigRational> {
+        let mut out = vec![BigRational::zero(); a.len().max(b.len())];
+        for (index, coeff) in a.iter().enumerate() {
+            out[index] += coeff;
+        }
+        for (index, coeff) in b.iter().enumerate() {
+            out[index] -= coeff;
+        }
+        big::trim(out)
+    }
+
+    fn legacy_xgcd(a: &[BigRational], m: &[BigRational]) -> (Vec<BigRational>, Vec<BigRational>) {
+        let mut r0 = big::trim(m.to_vec());
+        let mut r1 = big::trim(a.to_vec());
+        let mut s0: Vec<BigRational> = Vec::new();
+        let mut s1: Vec<BigRational> = vec![BigRational::one()];
+        while big::degree(&r1).is_some() {
+            let Some((quotient, remainder)) = legacy_divmod(&r0, &r1) else {
+                break;
+            };
+            r0 = r1;
+            r1 = remainder;
+            let next = legacy_sub_poly(&s0, &big::mul(&quotient, &s1));
+            s0 = s1;
+            s1 = next;
+        }
+        match big::degree(&r0) {
+            None => (Vec::new(), Vec::new()),
+            Some(degree) => {
+                let leading = r0[degree].clone();
+                let g = big::trim(r0.iter().map(|c| c / &leading).collect());
+                let s = big::trim(s0.iter().map(|c| c / &leading).collect());
+                (g, s)
+            }
+        }
+    }
+
+    /// The corpus: the moduli this module actually splits on — reducible and
+    /// irreducible — plus the degenerate shapes.
+    fn qx_differential_corpus() -> Vec<Vec<BigRational>> {
+        vec![
+            vec![],
+            vec![q(3)],
+            vec![q(0), q(1)],
+            vec![q(-2), q(1)],
+            vec![q(-2), q(0), q(1)],         // x^2 - 2, irreducible over ℚ
+            vec![q(-2), q(-1), q(1)],        // (x-2)(x+1), reducible
+            vec![q(1), q(-2), q(1)],         // (x-1)^2
+            vec![q(1), q(0), q(1)],          // x^2 + 1
+            vec![q(-6), q(11), q(-6), q(1)], // (x-1)(x-2)(x-3)
+            vec![q(-2), q(0), q(0), q(1)],   // x^3 - 2
+            vec![
+                BigRational::new(BigInt::from(1), BigInt::from(2)),
+                q(0),
+                BigRational::new(BigInt::from(-3), BigInt::from(5)),
+            ],
+        ]
+    }
+
+    /// The migrated ℚ\[x\] layer agrees with the bodies it replaced, over every
+    /// ordered pair — including the split-signalling case where `xgcd` returns
+    /// a **non-unit** gcd, which is the contract the design note flags as the
+    /// one that had to survive this slice.
+    #[test]
+    fn legacy_and_shared_qx_layers_agree() {
+        let corpus = qx_differential_corpus();
+        assert_eq!(corpus.len(), 11, "the corpus size this test's name claims");
+        let mut pairs = 0usize;
+        let mut non_unit_gcds = 0usize;
+        for a in &corpus {
+            for b in &corpus {
+                pairs += 1;
+                assert_eq!(divmod(a, b), legacy_divmod(a, b), "divmod");
+                assert_eq!(shared_sub(a, b), legacy_sub_poly(a, b), "sub_poly");
+                let shared = xgcd(a, b);
+                assert_eq!(shared, legacy_xgcd(a, b), "xgcd");
+                if big::degree(&shared.0).is_some_and(|degree| degree > 0) {
+                    non_unit_gcds += 1;
+                }
+            }
+        }
+        assert_eq!(pairs, 121, "every ordered pair was compared");
+        assert!(
+            non_unit_gcds > 0,
+            "the corpus really does exercise the split path: {non_unit_gcds}"
+        );
+    }
+
     fn q(n: i64) -> BigRational {
         BigRational::from_integer(BigInt::from(n))
     }
@@ -1616,6 +1747,222 @@ mod tests {
             Err(Fault::ModulusNotIsolating {
                 roots_in_bracket: 2
             })
+        );
+    }
+    // -----------------------------------------------------------------------
+    // ADR-1710 slice 4: the K[y] layer's first differential corpus.
+    //
+    // Slice 4 declined to migrate this layer (see `FieldPoly`'s note) and found
+    // that it had NO differential oracle of any kind: the end-to-end tests
+    // above check `decide_fibre` against `FibreCertificate::verify`, which is
+    // the same K[y] code, so a systematic K[y] bug is invisible to them. The
+    // corpus below is the oracle that was missing, and it is the one a future
+    // migration would have to pass.
+    //
+    // The construction is the degenerate case of K that happens to be a field
+    // the shared crate already carries. With `m = x - 2` the bracket `(1, 2]`
+    // isolates `α = 2`, so `K = ℚ[x]/(x - 2) ≅ ℚ`, and a K[y] polynomial whose
+    // coefficients are CONSTANT elements is exactly a ℚ[y] polynomial. Every
+    // K[y] routine must then agree with `axeyum_arith::QPoly` term for term.
+    // Nothing about the corpus depends on `α` being 2 rather than 0; what it
+    // depends on is `deg m = 1`, which is the only case where the two rings
+    // coincide.
+    // -----------------------------------------------------------------------
+
+    // `QPoly::{degree, evaluate, derivative}` live on the trait, not on the
+    // inherent impl.
+    use axeyum_arith::UnivariatePoly;
+
+    /// `K = ℚ[x]/(x - 2)` with `α = 2` isolated in `(1, 2]`, i.e. `K ≅ ℚ`.
+    fn rational_field() -> RealField {
+        RealField::new(&[q(-2), q(1)], &q(1), &q(2)).expect("x - 2 isolates 2 in (1, 2]")
+    }
+
+    /// A ℚ\[y\] coefficient vector as a K\[y\] polynomial of constant elements.
+    fn lift_ky(coeffs: &[BigRational]) -> FieldPoly {
+        coeffs.iter().map(|c| big::trim(vec![c.clone()])).collect()
+    }
+
+    /// The inverse of [`lift_ky`], with the constant-coefficient precondition
+    /// asserted rather than assumed: a coefficient of degree `> 0` in `α` would
+    /// mean the routine under test left `K ≅ ℚ`, which is itself a finding.
+    fn lower_ky(p: &FieldPoly) -> QPoly {
+        QPoly::from_coefficients(
+            p.iter()
+                .map(|element| {
+                    assert!(
+                        element.len() <= 1,
+                        "a K-coefficient escaped ℚ under a degree-1 modulus: {element:?}"
+                    );
+                    element.first().cloned().unwrap_or_else(BigRational::zero)
+                })
+                .collect(),
+        )
+    }
+
+    /// The ℚ\[y\] corpus. Deliberately includes the zero polynomial, a nonzero
+    /// constant, a repeated root, a polynomial with no real root, one with
+    /// three distinct real roots, and non-integer coefficients.
+    fn ky_differential_corpus() -> Vec<Vec<BigRational>> {
+        vec![
+            vec![],
+            vec![q(3)],
+            vec![q(0), q(1)],                // y
+            vec![q(-2), q(1)],               // y - 2
+            vec![q(-2), q(0), q(1)],         // y^2 - 2
+            vec![q(1), q(-2), q(1)],         // (y - 1)^2
+            vec![q(1), q(0), q(1)],          // y^2 + 1, no real root
+            vec![q(-6), q(11), q(-6), q(1)], // (y-1)(y-2)(y-3)
+            vec![q(-2), q(0), q(0), q(1)],   // y^3 - 2
+            vec![
+                BigRational::new(BigInt::from(1), BigInt::from(2)),
+                q(0),
+                BigRational::new(BigInt::from(-3), BigInt::from(5)),
+            ],
+        ]
+    }
+
+    /// Under a degree-1 modulus the K\[y\] layer and `axeyum_arith::QPoly` are
+    /// two implementations of ℚ\[y\], and this compares them over every ordered
+    /// pair: division with remainder, gcd, product, derivative, and evaluation.
+    ///
+    /// The `None`/decline conditions are compared too, not just the values:
+    /// `kdivrem` must fault exactly where `QPoly::div_rem` returns `None`, and
+    /// the test asserts a nonzero count of each outcome so it cannot pass by
+    /// declining everywhere.
+    #[test]
+    fn the_ky_layer_agrees_with_qpoly_under_a_degree_one_modulus() {
+        let field = rational_field();
+        let corpus = ky_differential_corpus();
+        assert_eq!(corpus.len(), 10, "the corpus size this test's name claims");
+
+        let mut pairs = 0usize;
+        let mut divided = 0usize;
+        let mut declined = 0usize;
+        let mut nontrivial_gcds = 0usize;
+        for a in &corpus {
+            for b in &corpus {
+                pairs += 1;
+                let (ka, kb) = (lift_ky(a), lift_ky(b));
+                let (qa, qb) = (QPoly::from_slice(a), QPoly::from_slice(b));
+
+                match (field.kdivrem(&ka, &kb), qa.div_rem(&qb)) {
+                    (Ok((quotient, remainder)), Some((expected_q, expected_r))) => {
+                        divided += 1;
+                        assert_eq!(lower_ky(&quotient), expected_q, "quotient of {a:?} / {b:?}");
+                        assert_eq!(
+                            lower_ky(&remainder),
+                            expected_r,
+                            "remainder of {a:?} / {b:?}"
+                        );
+                    }
+                    (Err(Inner::Fault(_)), None) => declined += 1,
+                    (left, right) => panic!(
+                        "kdivrem and QPoly::div_rem disagree on whether {a:?} / {b:?} is defined: \
+                         {} vs {}",
+                        if left.is_ok() { "answered" } else { "declined" },
+                        if right.is_some() {
+                            "answered"
+                        } else {
+                            "declined"
+                        },
+                    ),
+                }
+
+                let gcd = field.kgcd(&ka, &kb).expect("gcd over a field never splits");
+                let expected = qa.gcd(&qb);
+                assert_eq!(lower_ky(&gcd), expected, "gcd of {a:?} and {b:?}");
+                if expected.degree().is_some_and(|degree| degree > 0) {
+                    nontrivial_gcds += 1;
+                }
+
+                assert_eq!(lower_ky(&field.kmul(&ka, &kb)), qa.mul(&qb), "product");
+            }
+
+            let ka = lift_ky(a);
+            let qa = QPoly::from_slice(a);
+            assert_eq!(
+                lower_ky(&field.kderivative(&ka)),
+                qa.derivative(),
+                "derivative of {a:?}"
+            );
+            for at in [
+                q(0),
+                q(1),
+                q(-3),
+                BigRational::new(BigInt::from(2), BigInt::from(7)),
+            ] {
+                let evaluated: FieldPoly = vec![field.keval(&ka, &at)];
+                assert_eq!(
+                    lower_ky(&evaluated),
+                    QPoly::constant(qa.evaluate(&at)),
+                    "evaluation of {a:?} at {at}"
+                );
+            }
+        }
+
+        assert_eq!(pairs, 100, "every ordered pair was compared");
+        assert!(
+            divided > 0 && declined > 0,
+            "both outcomes occur: {divided} answered, {declined} declined"
+        );
+        assert!(
+            nontrivial_gcds > 0,
+            "the corpus exercises a non-unit gcd: {nontrivial_gcds}"
+        );
+    }
+
+    /// The sixth Sturm chain in ADR-1710's inventory, counted against the
+    /// shared one. `KSturm` counts distinct real roots in `(lo, hi]` with each
+    /// sign taken at `α`; under a degree-1 modulus that is
+    /// `axeyum_arith::count_real_roots_in` on the same polynomial.
+    ///
+    /// The zero polynomial is the one place the two contracts differ, and it is
+    /// asserted rather than skipped: `count_real_roots_in` declines and
+    /// `KSturm` answers 0.
+    #[test]
+    fn the_ky_sturm_chain_counts_what_the_shared_chain_counts() {
+        let field = rational_field();
+        let brackets = [
+            (q(-10), q(10)),
+            (q(0), q(10)),
+            (q(-10), q(0)),
+            (q(1), q(3)),
+            (q(2), q(2)),
+        ];
+        let mut checked = 0usize;
+        let mut nonzero_counts = 0usize;
+        for coeffs in ky_differential_corpus() {
+            let polynomial = QPoly::from_slice(&coeffs);
+            let chain = KSturm::new(&field, &lift_ky(&coeffs)).expect("the chain never splits");
+            for (lower, upper) in &brackets {
+                let ours = chain.count_in(&field, lower, upper).expect("K count");
+                if let Some(shared) = axeyum_arith::count_real_roots_in(&polynomial, lower, upper) {
+                    assert_eq!(
+                        ours, shared,
+                        "root count of {coeffs:?} in ({lower}, {upper}]"
+                    );
+                    if shared > 0 {
+                        nonzero_counts += 1;
+                    }
+                } else {
+                    assert!(
+                        polynomial.is_zero(),
+                        "the shared chain declined on a nonzero polynomial {coeffs:?}"
+                    );
+                    assert_eq!(ours, 0, "the K chain answers 0 for the zero polynomial");
+                }
+                checked += 1;
+            }
+        }
+        assert_eq!(
+            checked,
+            10 * 5,
+            "every (polynomial, bracket) pair was counted"
+        );
+        assert!(
+            nonzero_counts > 0,
+            "the corpus really does find roots: {nonzero_counts}"
         );
     }
 }

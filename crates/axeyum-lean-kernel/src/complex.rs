@@ -92,18 +92,24 @@ use crate::rat_prelude::ops::{den, num, radd, rat_eq_rewrite, rle, rneg, rsymm, 
 use crate::{Kernel, KernelError};
 
 pub(crate) mod algebra_instance;
+pub(crate) mod cauchy_riemann;
 pub(crate) mod components;
 pub(crate) mod deriv;
 pub(crate) mod estimates;
 pub(crate) mod leibniz;
 pub(crate) mod poly;
+pub(crate) mod polyderiv;
 mod ring;
+pub(crate) mod uc_closure;
 
 #[cfg(test)]
 mod complex_tests;
 
 #[cfg(test)]
 mod estimates_tests;
+
+#[cfg(test)]
+mod uc_closure_tests;
 
 #[cfg(test)]
 mod components_tests;
@@ -1431,6 +1437,18 @@ pub struct ComplexPrelude {
     /// (`complex/leibniz.rs`). Owns its own names for the same reason
     /// [`Self::poly`] does.
     pub leibniz: leibniz::LeibnizNames,
+    /// Closure of `Complex.UniformlyContinuousOn` under `+` and `·`
+    /// (`complex/uc_closure.rs`). Owns its own names for the same reason
+    /// [`Self::poly`] does.
+    pub uc_closure: uc_closure::UcClosureNames,
+    /// Transport of a derivative along disc-local `Complex.Equiv` agreement,
+    /// and the power rule (`complex/polyderiv.rs`). Owns its own names for
+    /// the same reason [`Self::poly`] does.
+    pub polyderiv: polyderiv::PolyDerivNames,
+    /// The disc-membership bridge for horizontal and vertical segments
+    /// (`complex/cauchy_riemann.rs`). Owns its own names for the same reason
+    /// [`Self::poly`] does.
+    pub cauchy_riemann: cauchy_riemann::CauchyRiemannNames,
     /// The modulus-versus-component facts (`complex/components.rs`): the
     /// embedding ℝ ↪ ℂ is an isometry, and each component is bounded by the
     /// modulus. Owns its own names for the same reason [`Self::poly`] does.
@@ -1617,6 +1635,9 @@ fn intern_names(kernel: &mut Kernel, creal: CRealPrelude) -> ComplexPrelude {
         deriv: deriv::intern_names(kernel, complex),
         estimates: estimates::intern_names(kernel, complex),
         leibniz: leibniz::intern_names(kernel, complex),
+        uc_closure: uc_closure::intern_names(kernel, complex),
+        polyderiv: polyderiv::intern_names(kernel, complex),
+        cauchy_riemann: cauchy_riemann::intern_names(kernel, complex),
         components: components::intern_names(kernel, complex),
         comm_ring_s: kernel.name_str(complex, "commRingS"),
     }
@@ -3867,6 +3888,54 @@ const STEPS: &[BuildStep] = &[
         run: leibniz::declare_leibniz,
     },
     BuildStep {
+        label: "uc_closure::declare_uc_closure",
+        requires: &[
+            |p: ComplexPrelude| p.abs,
+            |p: ComplexPrelude| p.abs_add_le,
+            |p: ComplexPrelude| p.abs_congr,
+            |p: ComplexPrelude| p.add,
+            |p: ComplexPrelude| p.complex,
+            |p: ComplexPrelude| p.equiv,
+            |p: ComplexPrelude| p.mul,
+            |p: ComplexPrelude| p.neg,
+            |p: ComplexPrelude| p.zero,
+        ],
+        // Its names live in `UcClosureNames`, so it provides nothing at hub
+        // granularity. Its dependence on `deriv::declare_derivative` (for
+        // `Complex.InDisc`) and `estimates::declare_estimates` (for
+        // `UniformlyContinuousOn`, its two projections, and
+        // `abs_mul_le_of_bounds`) is enforced by position: this entry is
+        // AFTER both.
+        provides: &[],
+        run: uc_closure::declare_uc_closure,
+    },
+    BuildStep {
+        label: "polyderiv::declare_polyderiv",
+        requires: &[
+            |p: ComplexPrelude| p.abs,
+            |p: ComplexPrelude| p.add,
+            |p: ComplexPrelude| p.add_congr,
+            |p: ComplexPrelude| p.complex,
+            |p: ComplexPrelude| p.equiv,
+            |p: ComplexPrelude| p.mul,
+            |p: ComplexPrelude| p.mul_comm,
+            |p: ComplexPrelude| p.mul_congr,
+            |p: ComplexPrelude| p.neg,
+            |p: ComplexPrelude| p.neg_congr,
+            |p: ComplexPrelude| p.of_nat,
+            |p: ComplexPrelude| p.one,
+            |p: ComplexPrelude| p.pow,
+            |p: ComplexPrelude| p.zero,
+        ],
+        // Its names live in `PolyDerivNames`, so it provides nothing at hub
+        // granularity. Its dependence on `deriv`, `estimates` and `leibniz`
+        // (it consumes `hasDerivative_id`, `uniformlyContinuous_id` and
+        // `hasDerivative_mul`) is enforced by position: this entry is AFTER
+        // all three.
+        provides: &[],
+        run: polyderiv::declare_polyderiv,
+    },
+    BuildStep {
         label: "components::declare_components",
         requires: &[
             |p: ComplexPrelude| p.abs,
@@ -3880,6 +3949,32 @@ const STEPS: &[BuildStep] = &[
         // granularity.
         provides: &[],
         run: components::declare_components,
+    },
+    BuildStep {
+        label: "cauchy_riemann::declare_cauchy_riemann",
+        requires: &[
+            |p: ComplexPrelude| p.abs,
+            |p: ComplexPrelude| p.abs_congr,
+            |p: ComplexPrelude| p.abs_mul,
+            |p: ComplexPrelude| p.add,
+            |p: ComplexPrelude| p.complex,
+            |p: ComplexPrelude| p.equiv,
+            |p: ComplexPrelude| p.i,
+            |p: ComplexPrelude| p.mul,
+            |p: ComplexPrelude| p.neg,
+            |p: ComplexPrelude| p.of_real,
+            |p: ComplexPrelude| p.zero,
+        ],
+        // Its names live in `CauchyRiemannNames`, so it provides nothing at
+        // hub granularity. Its dependence on `deriv::declare_derivative` (for
+        // `Complex.InDisc`) and on `components::declare_components` (for
+        // `Complex.abs_ofReal`) is enforced by position: this entry is LAST,
+        // after both. Putting it before `components` -- as a first draft did
+        // -- fails the whole prelude with `UnknownConst`, since the hub
+        // `requires` table cannot express a dependency on a name owned by
+        // another module's own `*Names` struct.
+        provides: &[],
+        run: cauchy_riemann::declare_cauchy_riemann,
     },
 ];
 

@@ -156,6 +156,27 @@ boundary (`CdclT::add_permanent_clause`) get their watches chosen against the
 *current* assignment and one full evaluation from a pending queue, so a clause
 that arrives already unit implies and one that arrives already falsified
 conflicts. [Measurement](../research/11-design-review/2026-09-05-s1-watched-literals-measured.md).
+A fifth defaulted hook, `engine_counters`, was added by S4 of the [parity
+plan](../plan/smt-parity-plan-2026-09-05.md) and is diagnostic only: it carries
+a theory's own `simplex_pivots` / `simplex_checks` / `simplex_cold_restarts` /
+bound-reconciliation / propagation counts and its tableau's dimensions out
+through `TheoryLayerStats` to `smtcomp_cli --trace`, where an absent counter
+prints `n/a` rather than a measured `0`. It exists because the plan's stated
+QF_LRA lever — "warm-start each final check instead of re-deciding feasibility"
+— was **wrong about the mechanism**, and only a counter could say so:
+`simplex_cold_restarts` reads `0` on the traced timeouts, i.e. the basis was
+already persisting across final checks, at 2.3–5.5 pivots per check. The cost
+was one pivot (1.4–3.4 ms over a 350×425 tableau), because
+`Tableau::pivot_and_update` recomputed every basic variable's value from its row
+— a second `O(rows × columns)` pass in `ℚ(δ)` — where Dutertre–de Moura's
+`pivotAndUpdate` derives them in `O(rows)`. S4 replaced that pass and generalized
+`LraTheory`'s implied-bound tables from a single variable to the whole **linear
+form** a constraint bounds (`assign_forms`), so an asserted `f ≤ u` now settles
+every unassigned atom saying `f ≤ b` with `u ≤ b` by one rational comparison
+instead of no propagation at all; the per-call emission cap is
+`MAX_BOUND_PROPAGATIONS_PER_CALL`, which bounds a call's latency without bounding
+what the driver's propagation fixpoint derives. Measurements are in the
+[S4 note](../research/11-design-review/2026-09-05-s4-simplex-warm-start-measured.md).
 
 ## Result discipline
 

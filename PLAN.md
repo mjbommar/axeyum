@@ -137,14 +137,46 @@ now. Nothing was deleted.
 
 | Date | Commit | Result |
 |---|---|---|
+| 2026-09-06 | `d29250247` | Lane arith-slice-4: the three remaining polynomial copies stay, each with a measured reason; slice 2's mutants registered; the fibre layer gets its first differential oracle (ADR-1710, file 13 item 1) |
+| 2026-09-06 | `6cdcda3c7` | Lane arith-finish: Normalize, HenselLift and AlgebraicNumber implemented in axeyum-arith; axeyum-ir and axeyum-fp no longer name num-bigint or num-rational; a boundary gate with an allowlist (ADR-1710, file 13 item 1) |
+| 2026-09-06 | `be1ca0a4c` | Lane cas-fps-4: the exact asymptotic amplitude of a rational generating function (file 13 item 3, wave four) |
+| 2026-09-06 | `ae6d38279` | Lane cas-bigfallback-1: the zero-test's fallback entry distinguishes overflow from out-of-fragment; exp measured and kept out (file 13 item 1, wave five) |
+| 2026-09-06 | `5a7355b2a` | Lane cas-matgroup-2: finiteness and order of matrix groups over Q, and a character-table checker (file 13 item 5, wave five) |
+| 2026-09-06 | `e176b2f06` | Lane cas-geometry-4: Pascal on the parabola and affine Desargues certify (file 13 item 6, wave four) |
+| 2026-09-06 | `06e18899c` | Lane cas-corpus-counts: a checker that fails when the parity corpus's three ledgers drift (file 13 item 10) |
+| 2026-09-06 | `7278d6404` | Lane cas-witness-3: transcendental atoms key on a canonical rational form; three wrong refutations fixed (file 13 item 1, wave four) |
+| 2026-09-06 | `750bde174` | Lane arith-slice-2: enclosure rounding moves onto Dyadic; sqrt and ln round their arguments outward (ADR-1710, file 13 items 1 and 4) |
+| 2026-09-06 | `35e4aff98` | Lane arith-slice-3: ZPoly/QPoly, the fraction-free layer and one Sturm chain in axeyum-arith; four of five CAS copies migrated (ADR-1710, file 13 item 1) |
+| 2026-09-06 | `de37ceb08` | Lane cas-sum-gaps-2: Geometric with symbolic p and Normal with symbolic variance certify under hypotheses (file 13 item 9, wave four) |
+| 2026-09-06 | `ffb32f715` | Lane cas-witness-2: constant radicals of every root index canonicalize together; exp measured and not shipped; the degree wall corrected (file 13 item 1, wave three) |
+| 2026-09-06 | `3cc85756e` | Lane homology-guards: the eleven cup-product and relative-homology guards each kill exactly one test |
+| 2026-09-06 | `5685a328a` | Lane cas-matgroup: finite matrix groups over F_p through certified permutation actions (file 13 item 5, wave four) |
+| 2026-09-06 | `a1c5c7c76` | Lane cas-homology-4: relative homology with the long exact sequence, and the cup product (file 13 item 8, wave four) |
+| 2026-09-06 | `e9f47afc5` | Lane cas-enclosure-3: the integral-defined heads, symbolic exponents, certified quadrature (file 13 item 2, wave three) |
+| 2026-09-06 | `8fa1b9340` | Lane arith-slice-1: workspace dependencies hoisted; ModularRing and PowModCertificate; two pow_mod copies migrated (ADR-1710 slices 0 and 2) |
+| 2026-09-06 | `0db8a5b03` | Lane cas-permgroup-3: isomorphism testing and presentations (file 13 item 5, wave three) |
+| 2026-09-06 | `ec716a889` | Lane cas-elim-combine: a power of a stated condition is what gets inverted; the medians certify in a second (file 13 item 6, wave three) |
+| 2026-09-06 | `6c864e9f6` | Lane cas-numberfield-4: real quadratic class numbers by form cycles, and the regulator as an enclosure (file 13 item 4, wave four) |
+| 2026-09-06 | `ab7a5a088` | Lane cas-qe-4: three variables with one existential, and the first quantifier alternation (file 13 item 7, wave four) |
 | 2026-09-06 | `5789bb773` | `Int.exists_sum_of_two_squares_of_multiple` (Euler's descent by `Nat.strongInduction` at a `Prop` motive, multiplier quantified as `Int.ofNat n`) and `Int.fermatTwoSquares`. All twelve declarations admitted first try, axiom-free. `derived_laws` 319 → 331, recounted. ADR-1650 and this status file. |
 | 2026-09-06 | `f5a7c4392` | `fermat_two_squares_tests.rs`: the instantiation battery wanted `Even m`, not `Even 2m`. Diagnosed by handing the same argument pair to the untouched `Int.firstSupplementaryLawResidue` and watching it fail identically. 5 passed, 0 failed. |
+| 2026-09-06 | `eab182faf` | `declare_fo_semantics_over` / `declare_fo_provable_over` / `declare_fo_soundness_over`. Both `fo_*` chains descend from `fo_syntax.rs` and every `build_*_prelude` rebuilds the chain beneath it, so no kernel could hold `FO.Provable` and `FO.Term.numeral` at once -- the second `FO.Term` fails with `DeclarationExists`. The three entry points take the already-built dependency, in the shape `declare_fo_substitution_over` already used for the same reason; each `build_*_prelude` keeps its signature and delegates. |
+| 2026-09-06 | `87675da01` | `FO.Q : FO.Context` -- the seven Robinson axioms over `0, S, +, *, <` -- with `FO.natStructureQ`, `FO.Q.natModels` and `FO.Q.consistency`. `FO.natStructure` could NOT be the model and the test MEASURES that rather than asserting it: its binary family is `x + y + k` at every symbol index. Four of the seven satisfaction obligations are `Eq.refl`, because `Nat.add`/`Nat.mul` recurse on their right argument and Q4-Q7 are therefore the defining equations. |
+| 2026-09-06 | `272994713` | `FO.Q.add_numeral`, `FO.Q.mul_numeral`, `FO.Term.subst_numeral`. `Nat.rec` on the SECOND argument, so each successor step is one `eqf_subst`. The two-variable axioms leave the outer numeral under `Subst.lift` as a stuck `Term.subst (Term.subst (numeral a) Subst.shift) sigma`; `subst_numeral` is what unsticks it, twice per instantiation. `mul_numeral` depends on `add_numeral` and the test reads that edge out of the kernel's own proof term. |
+| 2026-09-06 | `bbce3bdfa` | `FO.Code.tri_two`, `FO.Code.pair_two`, `FO.Q.pairGraph`, `FO.Q.pairFormula`, `FO.Q.pair_represented`. The doubling identity removes `tri`'s recursion and turns the pairing's graph into ONE polynomial equation, so `pairFormula` is a genuine `FO.Formula` in three free indices. Positive half only: the uniqueness half is refused because Q has no induction, and a test asserts the ABSENCE of `FO.Q.pair_unique` so the refusal cannot go stale. |
+| 2026-09-06 | mobius-inversion | `Nat.Multiset.restrict`/`prodSel` + 12 theorems (`multiset_select.rs`), registered in the every-declaration sweep — `236c37763` |
+| 2026-09-06 | mobius-inversion | the `symm` in `prodSel_eq_prod_restrict` had its endpoints swapped, which is what made the previous commit unable to build the prelude — `1718bad75` |
+| 2026-09-06 | mobius-inversion | 6 tests (`multiset_select_tests.rs`): evaluation with named wrong values, both bridge theorems instantiated, the injectivity NECESSITY control, and contains-then-footprint over all 14 names — `2e342d998` |
+| 2026-09-06 | mobius-inversion | ADR-1658 and three facts; the bijection's surjective half and the range-to-subset sum transfer sized, not landed |
 | 2026-09-06 | `7376295cf` | `CdclT::unit_propagate` becomes two-watched-literal BCP with blocking literals: `lit_code`, `Watch { clause, blocker }`, `ClauseHeader { offset, len }` over a flat literal arena, the `i`/`j` watch-list compaction, and the highest-level-literal-to-index-1 convention in `analyze_conflict` — all copied from `axeyum-cnf`'s `proof_sat.rs` so slice S7 is a deletion. Reasons become clause ids read from the arena on the conflict path instead of a `Vec<Lit>` cloned at every implication. `add_permanent_clause` installs assignment-aware watches plus one pending evaluation, so a clause inserted at the final-check boundary still implies when unit and conflicts when falsified. Solver `--lib --features full`: 1449 passed, 0 failed. |
 | 2026-09-06 | `889b9e558` | `clippy -p axeyum-solver --all-targets --all-features -- -D warnings`: both clause arguments are consumed into the arena rather than copied out of a borrow (no signature moves, so the ten call sites stand), the deadline-check constant moves to module scope, and the BCP loop carries a reasoned `too_many_lines` allow — splitting it would create the second watch scheme the memo warns against. |
 | 2026-09-06 | `703dc05ef` | Before/after on the committed 50-file QF_IDL and 33-file QF_LRA timeout populations, arms interleaved per file on a loaded shared host, binaries confirmed different by `sha256sum`. QF_IDL 0/50 → 6/50 decided, PAR-2 −8.6%; QF_LRA 4/33 → 5/33, PAR-2 −3.1%; zero verdicts contradicting `declared`, nothing lost. |
 | 2026-09-06 | `71d24d86e` | `--trace` stage tables on the five profiled QF_IDL files, both arms, with `a7.3.0` repeated three times per arm; plus the blocking-literal mutation, which costs a 13x–97x propagation-stage regression and one decided file while changing no verdict into a wrong one. Three of the five files still emit no trace line in either arm — Finding 0, slice S2's subject. |
 | 2026-09-06 | 23202a7d9 | S2 admission-preflight fix (WIP snapshot: compiles, tests/gates not yet run) |
 | 2026-09-06 | 3dcf8693e | Calibrate the S2 regression test to a load-robust reference frame; add the solver-dispatch.md paragraph |
+| 2026-09-06 | 54a7591c3 | Pin the CDCL(T) theory-lemma proof contract at the checker boundary (11 tests, no production change) |
+| 2026-09-06 | e97db1bf4 | ADR-1704: a CDCL(T) unsat is two streams, and the theory lemmas are enumerated and counted |
+| 2026-09-06 | 99f19e32a | Point `docs/internals/cnf-and-sat.md`'s UNSAT-assurance text and parity-plan §3 at ADR-1704 |
 | 2026-09-05 | sigma-subtype | evaluation tests for the two definitions covered only by their types; mutation-verified at exactly one death |
 | 2026-09-05 | hall-counting | `unionOver`'s congruence and the family-modification transports: 11 theorems, `nat_prelude::` 580 → 591 (46a61c2ac) |
 | 2026-09-05 | hall-counting | the matching union on disjoint images, plus the union's membership calculus: 5 theorems + 1 definition, `nat_prelude::` 595 (b4cda2323) |
@@ -9052,6 +9084,8 @@ ms → 50 ms but the file still times out on decisions alone). This measurement
 covered 50+33 files, not either division's full competition list; a
 corpus-wide PAR-2/decided-count claim was explicitly not attempted (see "What
 this measurement does and does not establish" in the design-review note).
+
+**CAS frontier (`WIP`, cas-frontier / coordinator axeyum-15, 2026-09-06).** The plan is `docs/math-department/13-computer-algebra.md`: ten items, each advanced by lanes in waves, the file's checklist and progress log updated at every merge. On 2026-09-06 twelve lanes landed (see rows): items 1, 3, 5, 6, 9 and 10 each moved a wave, `axeyum-arith` (ADR-1710) reached its designed surface with `axeyum-ir` and `axeyum-fp` off the raw bignum crates, and three checkers that can fail were added (parity-ledger drift, the arith dependency boundary, the fallback entry gate). Trust registry floor 151; parity corpus 138 entries, 0 disagreements. Next: the CAS and kernel import rewrite behind `scripts/arith-boundary-allowlist.txt` (one compiling commit per crate); an exp-tower path for the zero-test (the generic fallback costs 217x, measured); Burnside-Dixon for nonabelian character tables; algebraic-logarithmic singularities for item 3; Pascal on an arbitrary conic. Blocked on nothing; the kernel numeral bridge waits on the user's word.
 
 **Status: LANDED and kernel-accepted (`DONE`, pi-rung3, 2026-08-28).**
 
@@ -46027,6 +46061,64 @@ warm, so a re-run is cheap.
 
 <!-- /plan-section -->
 
+**Status:** shelf opened, keystone landed; Chebyshev's bounds NOT landed and
+re-sized from measurement. ADR-1655.
+
+## What landed
+
+Four theorems in `crates/axeyum-lean-kernel/src/nat_prelude/prime_counting_bounds.rs`,
+all admitted through `Kernel::add_declaration` with an EMPTY `axiom_footprint`:
+
+| name | statement |
+| --- | --- |
+| `Nat.primeCounting'_mono` | `∀ m n, m ≤ n → primeCounting' m ≤ primeCounting' n` |
+| `Nat.primeCounting_mono` | `∀ m n, m ≤ n → primeCounting m ≤ primeCounting n` |
+| `Nat.isPrime_eq_true_of_prime` | `∀ n, prime_condition n → isPrime n = true` |
+| `Nat.primeCounting'_unbounded` | `∀ k, ∃ n, k ≤ primeCounting' n` |
+
+Four fact-ledger rows, all `proved` / `kernel-lean` / empty footprint:
+`F:nat-prime-counting-prime-mono`, `F:nat-prime-counting-mono`,
+`F:nat-is-prime-eq-true-of-prime`, `F:nat-prime-counting-prime-unbounded`.
+
+## The finding
+
+The brief's blocker was not Chebyshev's combinatorics. `Nat.isPrime` was
+declared construction-only under ADR-0653 and had **no theorem at all** —
+`shape_search --const Nat.isPrime` over 3,277 declarations returns ABSENT — so
+no source of primes in the kernel could reach `Nat.primeCounting'`.
+Monotonicity was landable without that bridge only because it is true of
+`Nat.countRange` at an ARBITRARY predicate, which is what made the shelf look
+open when it was not. `Nat.isPrime_eq_true_of_prime` is the bridge, and
+`Nat.primeCounting'_unbounded` (Euclid in counting form) is the first statement
+on the shelf that is not also true of `countRange` at an arbitrary predicate.
+
+## What did not land
+
+* **Erdős's primorial bound `primorial n ≤ 4^n`.** Needs a product-over-
+  restricted-range divisibility law (`shape_search --const Nat.prodRangeIf
+  --const Nat.dvd`: ABSENT, ~650 lines, ADR-1637's estimate stands) AND
+  `p ∣ choose (2m+1) m` for `m+1 < p ≤ 2m+1`, which is also unbuilt: the only
+  choose-divisibility lemma in the kernel is `Nat.prime_dvd_choose :
+  ∀ p k, prime p → 0 < k → k < p → p ∣ choose p k`, the freshman's-dream lemma
+  with the prime on TOP. Different statement, cannot be specialised.
+* **Chebyshev's lower bound in ℕ exponent form.** Needs both of the above plus
+  Legendre's `p^(v_p(choose 2n n)) ≤ 2n`, and that piece is additionally
+  **partition-blocked**: `Nat.divMaxPow`'s lemmas are in
+  `natural-max-power-dividing`, genuinely held-out, which also carries
+  Bertrand's postulate.
+
+## Partition trap worth carrying forward
+
+`artifacts/autogenesis/nursery-v2-extension.json` states each family's partition
+in two disagreeing places. The per-entry `partition` field is CURRENT; the
+top-level `family_partitions` / `preregistered_family_partitions` maps are the
+PREREGISTERED record and are stale for exactly the two families moved by breach
+repairs (`discrete-step-and-counting-bounds`, `natural-elementary-bounds`); the
+other 52 agree. A lane checking only the map refuses briefable work. A lane
+filtering on `partition != "development"` also mis-classifies every `train`
+family as held-out — this lane did that on its first pass and had to redo the
+check.
+
 **A bucket MIS-attribution is now loud, not just an unattributed one** (`COMPLETE`, classifier-fail-loud, 2026-08-31). ADR-1215.
 
 `scripts/measure-curriculum-kernel-coverage.py`'s residual counter catches a
@@ -46207,6 +46299,121 @@ Next: (a) a plain-commutative-ring telescope, since ADR-0457's is parameterised
 over an *ordered* ring and ℂ is not one; (b) ℚ(i) for `geometry_certify`, which
 ADR-0512 deferred ℂ in favour of; (c) `CReal` completeness, which `abs`, `√` and
 algebraic closure are all downstream of.
+
+**Closure of `Complex.UniformlyContinuousOn` under `+` and `·`,
+`Complex.hasDerivative_congr`, `Complex.hasDerivative_pow`, and the
+Cauchy–Riemann disc-membership bridge — ten declarations, all axiom-free**
+(`PARTIAL`, complex-polyderiv, 2026-09-06, ADR-1656).
+
+## What this slice is
+
+ADR-1642 put the ℂ derivative on the real shelf's UNIFORM footing, with a closed
+disc replacing the interval; ADR-1646 landed `Complex.BoundedOn` and
+`Complex.UniformlyContinuousOn`; `complex/leibniz.rs` landed the product rule.
+That rule takes four hypotheses it does not derive, and `leibniz.rs`'s own
+module documentation named the obstruction between it and a polynomial's
+derivative exactly: an induction over the degree applies the product rule at
+every step and must **rebuild** all four for the accumulated partial
+polynomial. Two of the four (`bounded_on_add`, `bounded_on_mul`) were already
+closed. This lane closed the other two, then went as far up the ladder as they
+reach.
+
+## Partition check
+
+Run before proving anything, and it came back clean. None of `Complex`,
+`uniformlyContinuous`, `UniformlyContinuous`, `polyEval`, `hasDerivative`,
+`CauchyRiemann`, `Holomorphic` or `holomorphic` occurs in
+`artifacts/structural-index/held-out-exclusion-manifest.json`,
+`artifacts/autogenesis/nursery-v2-extension.json`, or
+`corpus/glaurung-proof-populations/`. Coverage was confirmed positively with a
+control term of the same kind (`Nat`), which hits all three sources — so the
+empty result is a real negative and not a grep that never pointed at its
+subject. **No target of this lane is in a blind evaluation population.**
+
+## What landed
+
+Ten declarations across three new files, all under `crates/axeyum-lean-kernel/src/complex/`.
+
+`uc_closure.rs`:
+
+| name | what it says |
+| --- | --- |
+| `Complex.uniformlyContinuous_add` | uniform continuity is closed under pointwise `+` on a disc |
+| `Complex.uniformlyContinuous_mul` | …and under pointwise `·`, given `BoundedOn` for both factors |
+
+`polyderiv.rs`:
+
+| name | what it says |
+| --- | --- |
+| `Complex.hasDerivative_congr` | transport a derivative along pointwise `Complex.Equiv` agreement **on the disc only** |
+| `Complex.hasDerivative_pow` | the power rule at exponent `Nat.succ n`, gated on two `Nat → Nat` magnitude Skolems |
+| `Complex.holomorphic_pow` | the same, packed into the `Sigma`, so the derivative is `Sigma.fst` rather than something the caller re-spells |
+
+`cauchy_riemann.rs`:
+
+| name | what it says |
+| --- | --- |
+| `Complex.abs_I` | `Complex.abs I ~ CReal.one` |
+| `Complex.inDisc_ofReal_offset` | a point at real offset `u` from `c` is in the disc as soon as `\|u\| ≤ r` |
+| `Complex.inDisc_I_offset` | the same on the vertical segment |
+| `Complex.inDisc_of_two_sided` | …from the two ONE-SIDED bounds, the form interval hypotheses arrive in |
+| `Complex.inDisc_I_of_two_sided` | the vertical twin |
+
+## The three calls worth reading (ADR-1656)
+
+1. **The accuracy budget is `CReal`'s verbatim; only the algebra is
+   re-derived.** `Complex.UniformlyContinuousOn`'s bound is
+   `CReal.le (Complex.abs …) (CReal.ofRat …)`, so nothing past the modulus is
+   complex, and `natDivSucc_antitone` / `natDivSucc_scale` (through
+   `fold_index0_first`) / `natDivSucc_add` / `natDivSucc_halve` are reused
+   exactly rather than approximately. What ℂ buys is the algebra: the real
+   shelf's private ~60-line `product_diff_identity` and its
+   `add4_comm`/`neg_add` shuffle are each ONE `ring_law_proof` call here.
+
+2. **The power induction still commutes the product, and
+   `uniformlyContinuous_mul` does not change that.** `hasDerivative_mul` needs
+   continuity of its FIRST factor; `pow z (succ j) ≡ mul (pow z j) z` puts the
+   already-built `pow (·, j)` there, and that function's own continuity is
+   exactly what is missing at an arbitrary `j`. Closure under products answers
+   a different question. So the step uses `F := id` and transports across
+   `mul_comm` — which is what `hasDerivative_congr` is for.
+
+3. **The Cauchy–Riemann bridge is cheap and is NOT the obstruction.** Cost,
+   measured: two rewriting steps and no estimate. `(c + ofReal u) − c ~ ofReal
+   u` is a two-atom ring identity, `Complex.abs_ofReal` converts the modulus,
+   `CReal.le_congr` carries the bound. The vertical segment costs one lemma
+   more (`abs_I`). What CR is blocked on is **component extraction** — see
+   below.
+
+## What did NOT land, and the sized obstruction
+
+- **`Complex.hasDerivative_polyEval` / `Complex.holomorphic_polyEval`.** With
+  `hasDerivative_pow` in place the remaining work is a second induction over
+  `Complex.polyEval`'s coefficient list. Both closures it needs are now
+  available, but every application of `hasDerivative_mul` inside that induction
+  needs its three magnitude Skolems supplied **at the accumulated degree**, so
+  the slice needs a `Nat → Nat` built by recursion over the same list. That
+  recursion, not the analysis, is what remains.
+
+- **The Cauchy–Riemann equations themselves.** Blocked on component extraction:
+  from `Complex.HasDerivativeOn F F' c r` produce
+  `CReal.HasDerivativeOn (fun t => re (F (c + ofReal t))) … a b`. The real
+  obstruction is that `re` has no HOMOMORPHISM law here — `complex.rs` has
+  `re_congr` (a congruence for `Equiv`) but for `mul` there is no law to have,
+  since `re (z·w) = re z · re w − im z · im w`. Controlling the imaginary parts
+  is precisely the content of the CR equations, so the two directions
+  (horizontal and vertical) must be computed separately and compared. That is a
+  genuine slice, not a corollary.
+
+## Files
+
+- `crates/axeyum-lean-kernel/src/complex/uc_closure.rs` (new)
+- `crates/axeyum-lean-kernel/src/complex/polyderiv.rs` (new)
+- `crates/axeyum-lean-kernel/src/complex/cauchy_riemann.rs` (new)
+- `crates/axeyum-lean-kernel/src/complex.rs` (module registration, `STEPS`)
+- `crates/axeyum-lean-kernel/src/complex/complex_tests.rs` (every-declaration
+  sweep, `EXPECTED_STEP_ORDER`)
+- `docs/research/09-decisions/adr-1656-the-complex-polynomial-derivative-is-a-transport-and-the-cauchy-riemann-block-is-component-extraction.md`
 
 **Your lane's block (`DONE`, conics, 2026-09-05).** W3-9 is landed in a NEW
 file (`crates/axeyum-lean-kernel/src/creal_point/conic.rs`, registered from
@@ -49546,6 +49753,78 @@ the shape guards (`eqf_subst_consumes_the_equality_and_moves_the_instance`,
 `diag_aux_is_subst_code_aux_at_the_formulas_own_numeral`,
 `size_is_not_bounded_by_the_code`) each carry their own negative control built
 from a specific wrong variant.
+
+**Q as an `FO.Context` with the ℕ model, its consistency, the numeral arithmetic
+it proves, and the positive half of representability for `FO.Code.pair`**
+(`DONE`, fo-representability, 2026-09-06, ADR-1651).
+
+## What landed
+
+`build_fo_robinson_prelude` (`crates/axeyum-lean-kernel/src/fo_robinson.rs`) is
+the first builder that holds BOTH `fo_*` chains in one kernel — 132 declarations
+over the `Nat` prelude, every one axiom-free, checked as a set difference
+against the authority rather than against a list.
+
+| declaration | statement |
+| --- | --- |
+| `FO.natStructureQ` | `FO.Structure Nat` with `+` at `f2 0` and `·` at `f2 1` |
+| `FO.Q.axSuccNeZero` … `FO.Q.axMulSucc` | the seven Robinson axioms, as `FO.Formula` |
+| `FO.Q` | `FO.Context` — the seven, in that order |
+| `FO.Q.natModels` | `Π v, FO.ctxSat Nat FO.natStructureQ FO.Q v` |
+| `FO.Q.consistency` | `Not (FO.Provable FO.Q FO.Formula.bot)` |
+| `FO.Term.subst_numeral` | `Π s n, Term.subst (numeral n) s = numeral n` |
+| `FO.Q.add_numeral` | `Π a b, Provable Q (numeral a + numeral b = numeral (a+b))` |
+| `FO.Q.mul_numeral` | `Π a b, Provable Q (numeral a · numeral b = numeral (a·b))` |
+| `FO.Code.tri_two` | `Π n, tri n + tri n = n·n + n` |
+| `FO.Code.pair_two` | `Π a b, pair a b + pair a b = ((a+b)·(a+b) + (a+b)) + (a+a)` |
+| `FO.Q.pairGraph`, `FO.Q.pairFormula` | the defining formula, and it as one `FO.Formula` |
+| `FO.Q.pair_represented` | `Π a b, Provable Q (pairGraph ā b̄ pair(a,b)‾)` |
+
+## The brief's premise that had to change
+
+`FO.natStructure` — the ℕ structure `fo_semantics.rs` already builds — **has no
+multiplication at any symbol index**: its binary family is `x + y + k` for every
+`k`. So `ℕ ⊨ Q` could not be proved against it and Q6/Q7 could not even be
+interpreted. The lane built `FO.natStructureQ` instead, dispatching `fn2` on the
+symbol index, and kept the other four families verbatim so
+`FO.Term.numeral` (from the arithmetization chain) is the numeral function of
+this signature rather than a translation of it.
+
+The first version of the test that measures this was **wrong at one data
+point**: `fn2 1 2 3 = 6 = 2 · 3`. It now uses two witness pairs plus a positive
+control, which is the general shape a "this family is not that function" check
+needs.
+
+## What did NOT land, sized
+
+- **The uniqueness half of representability**,
+  `Q ⊢ ∀z (pairGraph(ā,b̄,z) → z = pair(a,b)‾)`. Not effort: Q has no induction
+  and none of its seven axioms constrains a variable, so
+  `Q ⊢ ∀z (z + z = m̄ → z = k̄)` is unavailable. Needs the order axioms plus the
+  numeral case-split — a strictly larger theory, its own slice, its own ADR. A
+  test asserts the ABSENCE of `FO.Q.pair_unique` so the note cannot rot.
+- **The negative twin** `a ≠ b → Q ⊢ ¬(ā = b̄)`, which is the last ingredient
+  for *numeralwise* uniqueness. Its derivation lives under an `imp_intro`, i.e.
+  in `cons φ FO.Q`; every helper in `fo_robinson.rs` is written at the fixed
+  context `FO.Q`. Cost: generalise five signatures over the context.
+- **`unpair`, `diag`, the provability-level diagonal lemma.** Gated on the two
+  above.
+
+## Gates
+
+`cargo test --release -p axeyum-lean-kernel --lib -- fo_robinson:: --test-threads=4`
+runs **18** tests, all passing. Two mutants were RUN from a clean tree, each
+rebuilt and re-measured in the same foreground call, each killing **18 of 18**
+at `Kernel::add_declaration` with a `TypeMismatch`:
+
+| mutant | RUN / PREDICTED | kills |
+| --- | --- | --- |
+| `axSuccNeZero` asserts `S x = 0` instead of refuting it | RUN | 18 / 18 |
+| `add_numeral`'s conclusion swaps `a` and `b` | RUN | 18 / 18 |
+
+Both are blunt: the package is one build, so a rejected declaration takes every
+test with it. Neither isolates the theorem it targets, and that is a property of
+the prelude-shaped fixture, not of the guards.
 
 **Four-wise uncorrelatedness, the fourth central moment of a sum, and the `1/m²`
 tail that follows, all at ℚ and all axiom-free** (`DONE`, fourth-moment,
@@ -55862,6 +56141,90 @@ Two families and two singletons: ten `stirlingFirst`/`stirlingSecond` rows
 like the next coherent group, on the same shape as this one — the definitions
 exist and no theorem about either has been declared.
 
+**Your lane's block (`PARTIAL — deliverable 1 in full, deliverable 2 by half,
+deliverable 3 not at all`, mobius-inversion, 2026-09-06).** Roadmap **W2-18**,
+second slice. ADR
+[1658](docs/research/09-decisions/adr-1658-a-multiset-is-selected-by-value-because-it-has-no-positions.md).
+
+The brief asked for a multiset selected by a `Nat → Bool` predicate over the
+multiset's *list positions*. **`Nat.Multiset` has no list** — it is a
+multiplicity function plus a bound (ADR-1520) — so the selection landed by
+VALUE, over `[0, bound m)`, which is the index space `Nat.Subsets` already folds
+over. The deviation, its cost, and the one place it bites are ADR-1658 §1.
+
+**Landed:** 14 declarations, all axiom-free, all registered in
+`nat_prelude_tests::definition_names`/`theorem_names` (so the every-declaration
+sweep covers them). Definitions `Nat.Multiset.restrict` and
+`Nat.Multiset.prodSel`; theorems `Nat.mul_dvd_mul`,
+`Nat.prodRange_dvd_prodRange`, `Nat.bool_select_nat_inj_of_pos`, and
+`Nat.Multiset.`{`bound_restrict`, `count_restrict`, `count_restrict_pos`,
+`prodSel_eq_prod_restrict`, `prodSel_all`, `prodSel_empty`, `prodSel_congr`,
+`prodSel_dvd_prod`, `prodSel_injective`}.
+
+The two that matter are `prodSel_dvd_prod` (every selection is a divisor of the
+whole product — no hypotheses at all) and `prodSel_injective` (two selections
+with equal products agree at every value the multiset contains). Together they
+are an injection from selections into the divisors: the injective half of
+ADR-1624's bijection. `prodSel_injective` cost **no new arithmetic** — it is
+`Nat.Multiset.count_eq_of_prod_eq` (uniqueness of prime factorization, already
+proved) read through the one bridge theorem `prodSel_eq_prod_restrict`, which
+says the selection fold IS a multiset product.
+
+Two of the fourteen are general and belong to no carrier: the prelude had
+`Nat.dvd_mul`, `Nat.dvd_mul_right_of_dvd` and `Nat.dvd_trans` but **nothing
+multiplying two divisibilities**, so a pointwise divisibility could not be
+pushed under a product fold at all.
+
+**Not attempted or not reached, and this is the handoff:**
+
+- **Surjectivity** — every divisor of a squarefree `n` IS a `prodSel`. Needs
+  `d ∣ prod m → ∀ q, count (factorization d) q ≤ count m q`. Bounded work; the
+  valuation halves it needs (`pow_count_dvd_prod`,
+  `not_pow_succ_count_dvd_prod`, `exponent_unique_of_exact_dvd`) are already in
+  `multiset.rs`.
+- **The sum transfer, which is the expensive half.**
+  `sumRangeIf (· ∣ n) f (n+1) = sumSubsets … (fun s => f (prodSel m s))` relates
+  two DIFFERENT index shapes — a `Nat` range and a `Nat → Bool` recursion on the
+  width. `Nat.countRange_bij` is the cross-bound law for COUNTS over two `Nat`
+  RANGES; there is no `sumRange` twin and no range-to-subset twin of anything,
+  so both would be new primitives. It also carries an unmade decision: the
+  widths do not match, because `sumSubsets (bound m)` enumerates
+  `2^(bound m)` predicates while a squarefree `n` has `2^(distinct primes)`
+  divisors, and closing that gap is either a restriction to supported predicates
+  or the support enumeration this lane declined. ADR-1658 states it; it does not
+  decide it.
+- **`Σ_{d∣n} μ(d) = 0` and Möbius inversion.** `Nat.moebiusPos`/`moebiusNeg`/
+  `moebiusAbs` already existed (ADR-1619), so the *definition* was never the
+  gap. `Nat.dirichlet_assoc` was NOT attempted and remains absent.
+- An alternative route that avoids the bijection entirely — the `p`-adic parity
+  involution `T(k) = if p²∣k then k else if p∣k then k/p else k*p` at
+  `p = minFac n`, which `Nat.sumRange_permute` would consume directly — is
+  written into ADR-1658 so it is not re-derived. It needs
+  `Squarefree (k*p) ↔ Squarefree k ∧ p ∤ k` and
+  `omegaCount (k*p) = omegaCount k + 1`, neither of which exists.
+
+**Mutation: the result is the finding.** Two mutants RUN from a clean tree in
+the foreground, restored byte-for-byte. Both killed 6 of 6 tests in
+`multiset_select_tests` (exit 101) — but both by a **kernel rejection** at the
+same named step (`prodSel laws`), so the prelude never built and the evaluation
+controls never ran. Both guards reject through one shared check. No mutant was
+found that the kernel admits and the tests catch; that absence is reported
+rather than smoothed over.
+
+**Facts:** `F:nat-multiset-prod-sel-injective`,
+`F:nat-multiset-prod-sel-dvd-prod`, `F:nat-mul-dvd-mul` — all `proved`,
+`axiom_footprint: []`, three evidence rows each (full-rendered-type pin,
+footprint, evaluation). `depends_on` edges were completed by
+`scripts/check-fact-depends-derived.py --fix`, which derives them from the proof
+term rather than from what the author remembered.
+
+**Partition check:** `Nat.Multiset`, `prodSel`, `mul_dvd_mul` and `prodRange`
+appear in NONE of `artifacts/structural-index/held-out-exclusion-manifest.json`,
+`artifacts/autogenesis/nursery-v2-extension.json`, or
+`corpus/glaurung-proof-populations/`. Positive control: both files exist and are
+non-empty (`ml430` occurs 1112 times in the nursery extension) and every
+held-out id is `F:ml430-int-*`. No held-out family was touched.
+
 **Your lane's block (`DONE`, model-theory, 2026-09-05).** W3-6 is landed: the
 `ipc_*.rs` arc — syntax as an inductive, semantics as a recursor application,
 soundness by induction on derivations — lifted one quantifier level, in five
@@ -59466,6 +59829,308 @@ ADR-1701 slice 2's two-watched-literal lever), which is a separate, larger
 slice and untouched here — edge-matching/fastfood/lpsat-goal-18 all still
 bottleneck there, not on anything S2 touches.
 
+**S4 of the [SMT/SAT parity plan](docs/plan/smt-parity-plan-2026-09-05.md) landed:
+the pivot's redundant `O(rows × columns)` value pass is gone (4.5x on the
+committed simplex bench, 20x on a traced file whose search is byte-identical
+between arms) and implied bounds are now computed over the whole linear form
+rather than one variable** (`DONE`, s4-simplex-warm-start, 2026-09-05).
+
+Commits `21b5f29f1`, `e9117040a`, `1266c3abd`, and this one. Full measurement:
+[the S4 note](docs/research/11-design-review/2026-09-05-s4-simplex-warm-start-measured.md).
+
+## Deliverable 0 — the brief's premise was measurably false
+
+The plan §2.2 and the lane brief both located the QF_LRA cost in a missing warm
+start: "each final check appears to re-decide feasibility from the current
+bounds rather than resuming the previous tableau". Six counters were wired
+through a new defaulted `TheorySolver::engine_counters` before anything was
+changed. On `QF_LRA/2019-ezsmt/blending/1.smt2` at the merge-base:
+`simplex_checks = 6,571`, `simplex_pivots = 15,375` (**2.3 per check**),
+`simplex_cold_restarts = **0**`, tableau 350 × 425,
+`theory_final_check_ms = 21,686` of 24,000.
+
+Not one of those 6,571 checks discarded the basis, and `bound_assertions`
+tracked the search's own total live pushes, i.e. each asserted constraint
+entered the tableau exactly once. **The warm start already existed.** What the
+counters price is one pivot: 1.41 ms on that file, 3.39 ms on
+`_count_by_k.i_3_3_2.bpl_7`.
+
+Propagation was separately near-inert: 79 literals offered across those 6,571
+checks, because `unit_bound` returned `None` for any constraint naming more
+than one variable — which is most LRA atoms.
+
+## What landed
+
+1. **`Tableau::pivot_and_update` does Dutertre–de Moura's `pivotAndUpdate`.**
+   The entering column is read once before the elimination zeroes it, θ comes
+   from the old values, and every other basic variable moves by
+   `a_{i,enter}·θ` in `O(rows)` — replacing a second `O(rows × columns)` pass
+   that recomputed each basic value from its row in `ℚ(δ)` (two rationals per
+   cell, so the more expensive half), re-deriving numbers the update already
+   determines. Zero cells are skipped in both the pivot-row rewrite and the
+   elimination.
+2. **Implied bounds over the linear form.** `assign_forms` gives every
+   constraint template its canonical functional (divide through by the
+   lowest-indexed variable's coefficient; direction kept for a positive leading
+   coefficient, flipped for a negative one). `bound_lower`/`bound_upper` are
+   indexed by form, not by variable, so `x + y ≤ 3` now settles `2x + 2y ≤ 8`
+   by one rational comparison, and two crossing bounds on a multi-variable form
+   are refuted by `assert` with a two-literal core and no simplex run. A single
+   variable is the form with one coefficient, so nothing that propagated before
+   stops. `MAX_BOUND_PROPAGATIONS_PER_CALL = 256` bounds a call and costs no
+   completeness — the driver runs propagation to a fixpoint, so a capped call
+   resumes on the next iteration rather than discarding.
+3. **The counters**, out to `smtcomp_cli --trace`, where an absent counter
+   prints `n/a` and never a measured `0`.
+4. **`scripts/gen-plan.py` now rebases links in global sections too.**
+   `check-links.sh` was red on main: `rebase_links` was applied to lane bodies
+   only, so the first `../`-relative link in a `docs/plan/global/` section
+   (`20-next-actions.md`, landed with the parity plan) escaped the repository
+   once inlined into `PLAN.md`. Not this lane's link, but its gate.
+
+## Measured
+
+| measurement | before | after |
+|---|---|---|
+| criterion `simplex_pivot` (12 vars, 18 rows) | 207.30 µs | **46.25 µs** (4.5x, non-overlapping CIs) |
+| `p-driverlogNumeric_s7` final-check, identical search both arms | 968 ms / 75 checks | **48 ms / 75 checks** (20x) |
+| `blending/1` ms per final check | 3.18 | **0.80** |
+| `blending/5` ms per final check | 4.00 | **0.65** |
+| 33-file QF_LRA population, same-protocol arms | 4 / 33 decided | **5 / 33** |
+
+The conversion is `2019-ezsmt/blending/5.smt2`, unknown 24,156 ms → **unsat
+21,343 ms**. **No P0**: not one verdict in either arm contradicts the
+population's `declared` column across 66 runs.
+
+## The exit criterion is not met as written, and the reason is structural
+
+The criterion was *per-call final-check time and call count both fall on the
+five*. Per-call time falls on 4 of 5 (up to 20x) and rises 1.45x on
+`_count_by_k`. The call count falls on **1** of 5, is flat on one, and rises on
+three — sharply on the two blending files (6,798 → 17,016 and 5,125 → 18,410).
+
+That conjunction is self-defeating on a fixed budget. `final_checks` is not a
+fixed amount of work; it is how many total Boolean assignments the search
+reached in 24 seconds. Make each check 4x cheaper and the search reaches more
+of them — on `blending/5`, 2.8x more decisions and 3.6x more final checks in
+the same budget, which is exactly what converted the file to `unsat`. A falling
+call count at a fixed budget would mean the search got *slower* per assignment.
+
+The count falls the way the criterion intends only where propagation prunes
+faster than the cheaper check adds. That happened on `_count_by_k`
+(propagations 926 → 7,315, final checks 880 → 611) and **did not pay**: more
+live constraints per check drove 73 pivots per check against 5.5, per-call time
+rose, and `theory_final_check_ms` came out flat. **The propagation half is not
+uniformly a win**, and that file is the recorded counter-example.
+
+## Mutation controls
+
+| mutation | effect | verdict |
+|---|---|---|
+| warm start disabled (`check` rebuilds the pristine basis every call) on `p-driverlogNumeric_s7` | pivots per final check **5.25 → 127.0** (24.2x); final-check 48 → 528 ms; `simplex_cold_restarts` 0 → 75; decisions/final_checks/conflicts identical (1904/75/180) | `sat`, **unchanged** |
+| the `O(rows)` value-update loop deleted | `tableau_invariant_holds_after_every_pivot` fails at `seed 0 … after pivot 0` | — |
+
+Both restored; the suites re-run green after restore.
+
+## Gates
+
+`--lib --features full` 1450 passed · `--test cdclt_lra_online` 9 · `--test
+corpus_regression` 1 (159 s) · z3 fuzzes `qf_lra_differential_fuzz` 5,
+`simplex_lra_fallback_differential` 1, `qf_uflra_differential_fuzz` 1 (the
+documented 5+1+1) · `progress_frontier --features full --test-threads=1`
+**12 passed** on the second attempt; the first reported `REGRESSION
+[bv_reduction] 27 < 30`, and the control says it was contention, not this
+change: run alone, `frontier_bv_reduction` **passes in both arms** · `check
+--workspace --all-targets` · `clippy -p axeyum-solver --all-targets
+--all-features -D warnings` · wasm32 build · `check-links.sh` all links ok.
+
+## Not done
+
+- `scripts/parity-run.sh QF_LRA` / `QF_UFLIA` on an idle host — the plan §6
+  protocol for a division count. This lane measured the 33-file population, not
+  the 200-file parity list.
+- QF_UFLIA was **not** scored: `bench-results/parity-losses-20260905/QF_UFLIA.txt`
+  did not exist on local main at measurement time.
+- The tableau-**row** implied-bound scan the brief named literally. In this
+  encoding bounds live only on slack variables while every problem variable is
+  unbounded, so at the pristine basis no row implies a finite bound on
+  anything; the form-indexed check is the derivation that pays here, and the
+  reasoning is recorded in the note rather than left as an omission.
+- The first three commits of this lane carry `Agent: retire-generic-1`: the
+  session's `AXEYUM_AGENT` was stale from an earlier lane and was not
+  overridden until `1266c3abd`. Recorded, not rewritten.
+
+**Done (`s5-theory-lemma-proof-contract`, 2026-09-06).** The contract S7 is
+gated on is decided and enforced. No solver behaviour changed.
+
+[ADR-1704](docs/research/09-decisions/adr-1704-cdclt-unsat-is-two-streams-a-boolean-refutation-over-cnf-plus-enumerated-theory-lemmas.md)
+adopts the slice-2 memo's option (2), two streams. A CDCL(T) `unsat` artifact
+carries the CNF, the enumerated theory lemmas (each with its theory and its
+theory-level explanation — a Farkas combination, a negative cycle, a congruence
+chain), and a Boolean DRAT/LRAT stream over the CNF **extended by those lemmas
+as additional input clauses**. `check_drat` and `check_lrat` are unchanged: the
+contract is a statement about which formula they are handed, so the trusted base
+does not grow by a line. Per-lemma discharge is by the theory checkers that
+already exist. The lemma count is a subtraction on the artifact
+(`extended.len() - cnf.len()`), never a producer-asserted field, and
+`theory_lemmas_unchecked` prints beside `certified`/`checked`. A refutation
+modulo N ≥ 1 lemmas is graded at a **new** `TrustId::SatRefutationModuloTheory`;
+reusing `SatRefutation` would relabel a strictly weaker statement at the stronger
+level, which is one of the two things the ADR forbids S7 from doing (the other:
+no unlabelled theory lemma in the RUP stream). Options (1) and (3) are rejected
+with reasons; Alethe/Carcara is noted as the eventual portable single-artifact
+form if (1) is ever wanted.
+
+Read from the code, not from prose. **Have a checkable per-lemma form:** LRA
+(`FarkasCertificate::verify`, `crates/axeyum-solver/src/lra.rs:498` — pure
+exact-rational, no search); DL, which already builds *and verifies* a
+unit-multiplier Farkas object for every conflict and then **drops** it
+(`dl_online.rs:1159`, `:1516`) because `TheoryExplanation` has no slot for it;
+EUF, which has `ProofStep` congruence chains plus an independent re-checker
+`check_congruence` (`crates/axeyum-egraph/src/lib.rs:206`, `:1311`) that the
+online CDCL(T) path never calls. **Do not:** strings (`string_theory.rs:1063`
+returns a bare `CheckResult::Unsat`); NIA/NRA, whose SOS/Handelman certificates
+are whole-query refutations rather than per-lemma objects. So the structural gap
+is one trait slot, not new proof theory — which is why S7 gains a checked
+Boolean half on day one, moving every theory route from `Evidence::Unsat(None)`
+with empty `trusted_steps` to `checked modulo N`.
+
+The boundary is pinned by
+`crates/axeyum-cnf/tests/theory_lemma_proof_contract.rs` (11 tests, no
+production change): a three-variable difference-logic skeleton that is
+**satisfiable** propositionally, plus the negative-cycle lemma. `check_drat`
+and `check_lrat` reject the lemma as a derived step (neither RUP nor RAT; no
+hint chain exists) and accept the identical refutation once the lemma is an
+input clause. Mutation-checked on a `lane-snapshot.sh` copy, each restored and
+the baseline re-confirmed at 11/11, all three runs collecting 11 tests:
+disabling `is_rat`'s resolvent-RUP requirement killed **2**; accepting an LRAT
+addition whose hint chain never conflicts killed **1**; deleting the lemma from
+the extended input CNF killed **3**. Vacuity controls in the suite show a
+genuinely RUP addition and a genuinely hinted LRAT addition over the *same*
+skeleton are accepted, so the rejections are about the lemma and not about the
+checkers refusing everything.
+
+**Next for whoever takes S7:** the only structural prerequisite is a discharge
+slot on `TheoryExplanation` (`crates/axeyum-solver/src/euf_egraph.rs:164`,
+with `assert` at `:80` and `final_check` at `:181`). DL's already-computed
+certificate is the cheapest first discharge to wire, and EUF's `check_congruence`
+the second.
+
+**S6 of the [SMT/SAT parity plan](docs/plan/smt-parity-plan-2026-09-05.md) landed: the
+native core's `reason[v]` is a packed one-word `Reason { Decision, Clause(CRef),
+Theory(ExplanationId) }`, the theory case is resolved lazily into an ADR-1704
+input clause, the DRAT stream is byte-identical to the merge-base, and p4dfa's
+decided count is unchanged** (`DONE`, s6-native-reason-repr, 2026-09-06).
+
+Commits `521b4405a`, `905ca6b1c`, `dfbb2e691`, and this one. Full measurement:
+[the S6 note](docs/research/11-design-review/2026-09-06-s6-reason-repr-measured.md).
+
+## What landed
+
+1. **`Reason` is one word — and per-variable memory went DOWN, not up.**
+   `Option<CRef>` is 16 bytes (`usize` has no niche) and so is the naive
+   three-variant enum; the two-bit tag packing is **8 bytes** and carries one
+   more case. `tests::reason_is_one_word_and_no_wider_than_the_option_it_replaced`
+   compares against `size_of::<Option<usize>>()`, not against a literal.
+2. **`analyze`, `lit_redundant` and `analyze_final` resolve a `Theory`
+   reason** by asking the theory for its clause, installing it in the arena as
+   an **input** clause and rewriting the reason in place — so one handle is
+   resolved at most once per assignment and the search never pays for an
+   explanation it does not resolve against. That is the saving the lazy channel
+   exists for.
+3. **The lemma is registered `learned[cid] = false`.** That is ADR-1704's
+   classification and it discharges the slice-2 memo §4.5 soundness obligation
+   *by construction* rather than by a lock: `reduce_db` only ever considers
+   learned clauses, so a theory reason clause is never a deletion candidate.
+   Nothing is emitted to the DRAT sink for it — a lemma is an input clause, not
+   a derived step.
+4. **`theory_round` acts on theory propagations** (lazy → `Reason::theory`,
+   eager → materialised now) and returns a three-way `TheoryRound` so a theory
+   implication reaches Boolean fixpoint like any other. Theory *conflicts* —
+   from `assert`, from a propagation onto a falsified literal, and from
+   `final_check` — and dynamic atom registration are still **declined** with the
+   undecided `Interrupted`; each has a test that says so.
+5. **`crates/axeyum-cnf/examples/drat_stream_dump.rs`**, a reusable byte-identity
+   instrument: the exact proof text for the DIMACS given plus a seeded random
+   3-SAT family generated in-process, so two builds are compared with `cmp`.
+
+No shipping entry point is affected: they all construct with `NullTheory`, which
+never propagates, so no `Reason::theory` is ever created and the lemma list is
+empty.
+
+## Measured
+
+| measurement | before | after |
+|---|---|---|
+| `size_of::<Reason>()` vs `size_of::<Option<CRef>>()` | 16 B | **8 B** |
+| DRAT text, 33 instances (10 unsat), 38,333 bytes | sha256 `09704208…` | **identical** |
+| p4dfa 20 CNFs @ 20 s — decided | 9 / 20 | **9 / 20**, no verdict changed |
+| p4dfa 20 CNFs @ 20 s — total wall | 262,261 ms | 258,452 ms (**−1.45%**) |
+| criterion `proof_sat_solve_php_6_7`, 20 paired runs | — | **+3% paired median** |
+
+The p4dfa −1.45% sign is **not** significant: load average was 22 at the start
+of both sweeps and fell to 8.7 during the AFTER one. The reportable result is
+the bar the plan set — within 3%, decided unchanged.
+
+## The +3% is real, and it is not attributed
+
+A **null control** settles the statistics: the merge-base source built twice,
+the second build perturbed in code *layout* only (`#[inline(never)]` on
+`analyze_final` — identical verdicts, identical proof), measured the same way.
+
+| comparison | paired median | second slower in | min-of-20 |
+|---|---:|---:|---:|
+| null control (same source, layout perturbed) | **−0.4%** | 9/20 | +2.0% |
+| S6, four variants built and measured | +2.8% … +3.5% | 15–20/20 | +2.0% … +5.2% |
+
+So **min-of-N carries about 2% of pure layout noise on this box** and is not a
+usable statistic; the paired median is, and by it the ~3% is above the control.
+
+Three hypotheses were built and refuted: `theory_round` losing its inline (a
+gate/body split did not move it), `resolve_reason`/`install_theory_lemma`
+bloating the hot loops (`#[cold] #[inline(never)]` did not move it), and
+`lit_redundant`'s `&mut self` receiver blocking pointer hoisting (a `&self`
+re-probe design was written, tested and **reverted** — complexity justified by a
+false attribution does not belong in the tree). The first two are kept because
+the shape is right, and the commit says they are structural, not measured wins.
+
+**The cheapest unrun experiment**, for whoever picks this up: apply *only* the
+type change to the merge-base (packed `Reason`, `enqueue`, `is_decision`,
+`as_clause`) with none of the theory plumbing, and measure that alone.
+
+## Mutation controls
+
+| mutation | effect |
+|---|---|
+| a lazy `Theory` reason is enqueued as a `Decision` (`TheoryExplanation::Lazy(_) => Reason::DECISION`) | 51/51 → **47 passed, 4 failed**, and the four are exactly the theory-reason tests; the 47 the mutation cannot reach do not move |
+| `lit_redundant` always returns `false` (no minimization) — the teeth check on the byte-identity instrument | DRAT dump 38,333 → **47,904 bytes**, `cmp` differs at byte 62 |
+
+Both applied in `lane-snapshot.sh` copies, never the shared tree; both reverted
+and the baseline re-confirmed (51/51 and byte-identical respectively).
+
+## Gates
+
+`test -p axeyum-cnf` **534 passed** · `test -p axeyum-cnf --features
+batsat-reference` **546 passed**, including the native-vs-BatSat differential at
+a **nonzero 3** (it collects 0 without the feature) · `test -p axeyum-solver
+--lib --features full --test-threads=8` · `test -p axeyum-solver --features full
+--test corpus_regression` · `check --workspace --all-targets` · `clippy -p
+axeyum-cnf --all-targets --all-features -D warnings` · wasm32 build ·
+`check-links.sh`.
+
+## Not done
+
+- The ~3% on `proof_sat_solve_php_6_7` is measured and **not attributed**. The
+  next lane should run the isolation experiment above rather than inherit a
+  guess.
+- Theory conflicts and dynamic atom registration remain declined
+  (`Interrupted`). Both need the conflict half of ADR-1704's two-stream
+  artifact, which is S7, and both are pinned by a test so neither can be
+  silently ignored.
+- `Cdcl::theory_lemmas` is read by tests only; carrying it out through
+  `ProofSolveOutcome` to the evidence front door is S7's plumbing, and there is
+  no public entry point that could produce a non-empty one today.
+
 **Done, s6-wire-real-ledger, 2026-08-30.** [ADR-0810](docs/research/09-decisions/adr-0810-wire-the-credit-transaction-into-the-real-fact-ledger.md)
 records the full measurement. Follow-on to
 [ADR-0785](docs/research/09-decisions/adr-0785-credit-transactions-two-phase-commit-with-a-crash-sweep-that-actually-crashes.md)
@@ -61311,6 +61976,13 @@ or remove dirty/unmerged state to meet a free-space target.
 
 ### A12 — Solver performance instruments (`WIP`, P1)
 
+**Progress, 2026-09-06.** Slices S1, S2, S3, S4, S5 and S6 of the plan are on
+`main` and verified; the gap to parity fell from 356 files to 290 (S1 alone
++65: QF_IDL 70 -> 86, QF_RDL 107 -> 128, QF_UF 162 -> 190). S1b, S9 and S11a
+are in flight in worktrees with status files. The plan's "Progress log"
+section carries the current board and the ordered next steps (merge the
+three lanes, re-measure six divisions, then S7 engine unification).
+
 **Plan of record.** The
 [SMT/SAT parity plan](docs/plan/smt-parity-plan-2026-09-05.md) (2026-09-05) names a
 measured or to-be-censused root cause for every one of the eleven divisions,
@@ -61401,7 +62073,7 @@ ledger entry; this is instrumentation, not a `PARITY.md` sweep.
 | Evidence and Lean reconstruction | `WIP` | A6 and A9; distinct certificate/check/reconstruction claims. |
 | Route exploration | `BLOCKED` beyond catalogue work | Proposed track; T0.2/T0.6/T0.1/T2.3 precede T3.5. |
 | SMT-LIB/API conformance | `WIP` | A8 then A10; S1 command/event IR first. |
-| CAS parity | `WIP`; second capability wave landed 2026-09-05 | The wave-24 pause (`01d47334`, `245d8f25`, both on main) ended. Ten new modules landed from the Next Ten in `docs/math-department/13-computer-algebra.md`, plus the trust-registry gate `scripts/check-cas-trust-registry.py` (78 certified, 59 checker, 845 uncertified of 982 public functions at `9914a1c0e`). The live priority list and status are in file 13, not here. |
+| CAS parity | `WIP`; waves three to five landed 2026-09-06 (status lane `1710-cas-frontier`) | The wave-24 pause (`01d47334`, `245d8f25`, both on main) ended. Ten new modules landed from the Next Ten in `docs/math-department/13-computer-algebra.md`, plus the trust-registry gate `scripts/check-cas-trust-registry.py` (78 certified, 59 checker, 845 uncertified of 982 public functions at `9914a1c0e`). The live priority list and status are in file 13, not here. |
 | Consumer apps / verified systems | `WIP`, non-critical path | Existing EVM, verifier, property, reflection, and symbolic-execution slices remain useful; do not preempt A2–A7 without measured demand. |
 | Foundational resources | `WIP`, separate content lane | Keep generated-resource gates green; record only project-level priority changes here. |
 | Public documentation and examples | `DONE`, current comprehensive pass | Public/crate/consumer/prover/curriculum/contributor front doors are indexed; all 203 Cargo examples and the consumer 48-case aggregate are guarded. Corrected built/planned, Lean 4.30/offline quotient, strings/P2.7, proof assurance, `i128` LRA/Farkas, native-CDCL/BatSat, RUP-only LRAT, online combination/fallback, CAS-local-vs-solver evidence, route-specific FP/datatype/nonlinear/quantifier boundaries, optional EVM/verifier certificate fields, and source-comment UNSAT-proof overclaims. Source-backed guards require nonzero full-feature tests across cookbook, learner, contributor, foundational-resource, and rules docs. Generated authorities remain canonical; reopen only for concrete drift. |

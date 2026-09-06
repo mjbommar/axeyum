@@ -1,0 +1,61 @@
+{
+  "id": "F:nat-is-prime-eq-true-of-prime",
+  "title": "A prime has exactly two divisors, so the Bool primality predicate answers true",
+  "statement": "If n is prime -- 2 <= n and every divisor of n is 1 or n -- then the Bool predicate Nat.isPrime, which decides primality by counting the divisors of n among 1..n and comparing that count to 2, answers true at n.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Nat.isPrime_eq_true_of_prime : ((x0 : AxNat) -> ((x1 : And (AxNat.le (AxNat.succ (AxNat.succ AxNat.zero)) x0) (((x1 : AxNat) -> ((x2 : AxNat.dvd x1 x0) -> Or (Eq.{1} AxNat x1 (AxNat.succ AxNat.zero)) (Eq.{1} AxNat x1 x0))))) -> Eq.{1} Bool (AxNat.isPrime x0) Bool.true))",
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.isPrime_eq_true_of_prime",
+    "free_symbols": [
+      "n"
+    ]
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "proof_route": "kernel-lean",
+  "axiom_footprint": [],
+  "depends_on": [
+    "F:ml430-nat-dvd-iff-mod-eq-zero-d795bfff",
+    "F:ml430-nat-prime-pred-pos-4e67ac4c",
+    "F:ml430-nat-succ-pred-prime-4feb123f",
+    "F:nat-beq-eq-false-of-ne",
+    "F:nat-beq-eq-true-of-eq",
+    "F:nat-countrange-eq-zero-of-all-false",
+    "F:nat-countrange-split",
+    "F:nat-countrange-zero",
+    "F:nat-lt-irrefl",
+    "F:nat-mod-self",
+    "F:nat-one-mul",
+    "F:nat-succ-add",
+    "F:nat-succ-injective",
+    "F:nat-succ-ne-zero",
+    "F:nat-succ-pred-of-pos",
+    "F:nat-zero-add"
+  ],
+  "evidence": [
+    {
+      "id": "kernel-Nat.isPrime_eq_true_of_prime",
+      "kind": "kernel-term",
+      "supports": "prime_condition n implies Nat.isPrime n = true",
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- 'Nat.isPrime_eq_true_of_prime' 2>/dev/null | grep -xFc 'Nat.isPrime_eq_true_of_prime\t4\t((x0 : AxNat) -> ((x1 : And (AxNat.le (AxNat.succ (AxNat.succ AxNat.zero)) x0) (((x1 : AxNat) -> ((x2 : AxNat.dvd x1 x0) -> Or (Eq.{1} AxNat x1 (AxNat.succ AxNat.zero)) (Eq.{1} AxNat x1 x0))))) -> Eq.{1} Bool (AxNat.isPrime x0) Bool.true))')\" -ge 1",
+      "notes": "`Nat.isPrime n` unfolds to `beq (countRange (fun j => beq (n % (j+1)) 0) n) 2` -- a divisor COUNT, not a trial division. The proof shows that count is exactly two for a prime: `1 | n` supplies the index 0, `Nat.mod_self` supplies the index n-1, and every index between is refuted by primality's own divisor clause (`c = 1` by `succ_ne_zero`, `c = n` by `lt_irrefl` against the range hypothesis). The count is assembled by peeling the last index with `countRange_succ_of_true` and the first with `countRange_split` at 1, leaving `countRange_eq_zero_of_all_false` for the middle: 2 = 1 + 0 + 1. The rendered type is matched in full because the weakening that matters here is invisible to a name check: `Nat.isPrime` is universe- and argument-compatible with any `AxNat -> Bool`, so a checker that read only the name would be satisfied by a theorem about a different predicate entirely."
+    },
+    {
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the Nat prelude's trusted surface is empty",
+      "check_status": "checked",
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "notes": "`nat_axiom_inventory` bounds the footprint by enumerating the whole trusted surface: a theorem cannot depend on a trusted declaration the environment does not contain. All three kinds are covered -- counting `Declaration::Axiom` alone would not suffice, because `Opaque` has no proof body and `Quotient` admits `Quot.sound`. The module's own test `the_prime_counting_shelf_is_admitted_and_axiom_free` additionally asserts `Environment::contains` BEFORE reading the footprint, because `axiom_footprint` returns an empty set for a name that was never declared.",
+      "id": "footprint-Nat.isPrime_eq_true_of_prime"
+    }
+  ],
+  "schema_version": 1,
+  "provenance": {
+    "date": "2026-09-06",
+    "established_by": "lane chebyshev-pi-bounds (ADR-1655), roadmap W3-11",
+    "source": "statement authored here against this kernel's own vocabulary; nothing copied"
+  },
+  "notes": "The keystone of the prime-counting shelf. `prime_counting.rs` declared `Nat.isPrime` under ADR-0653 as a CONSTRUCTION ONLY, with no theorem about it, and a shape_search over the whole environment (declarations=3277) for anything whose type mentions `Nat.isPrime` returned ABSENT. So before this nothing connected the Bool predicate that `Nat.primeCounting'` actually counts to this prelude's propositional `prime_condition`, and every source of primes in the kernel (`Nat.exists_prime_gt`, `Nat.exists_prime_dvd`, `Nat.min_fac_prime`) produces the latter. Monotonicity was landable without it only because monotonicity is true of `countRange` at an arbitrary predicate. ONLY THE FORWARD DIRECTION IS PROVED. The converse -- `isPrime n = true` implies `prime_condition n` -- is a different argument (a count of two forces the divisor set to be exactly {1, n}, which needs a pigeonhole on the count rather than two witnesses) and is NOT claimed here."
+}

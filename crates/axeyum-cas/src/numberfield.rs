@@ -7,7 +7,7 @@
 //!
 //! # What this module computes
 //!
-//! - [`NumberField`] — a simple extension `ℚ(α) = ℚ[x]/(f)` for a **monic**
+//! - [`NumberField`] — a simple extension `ℚ(α) = ℚ\[x\]/(f)` for a **monic**
 //!   `f` that is **irreducible over ℚ**. Irreducibility is decided, not
 //!   assumed: [`NumberField::new`] runs the crate's own
 //!   [`factor_univariate_over_q`] and refuses a reducible modulus with
@@ -57,7 +57,7 @@
 //! What is **not** reused: there is no public arbitrary-precision polynomial
 //! arithmetic in the workspace (`axeyum-ir`'s `poly_big` is private and its
 //! two public entry points take a private type alias), so the `BigRational`
-//! `ℚ[x]` helpers at the top of this file are new. The public `axeyum_ir::poly`
+//! `ℚ\[x\]` helpers at the top of this file are new. The public `axeyum_ir::poly`
 //! API is `i128` and would overflow on the `x⁴ − 10x² + 1` char-poly work.
 //!
 //! # What is certified, and what is `uncertified`
@@ -144,6 +144,7 @@ use num_bigint::BigInt;
 use num_rational::BigRational;
 use num_traits::{One, Signed, Zero};
 
+use axeyum_arith::QPoly;
 use axeyum_ir::Rational;
 
 use crate::factor_univariate_over_q;
@@ -184,11 +185,11 @@ pub enum CertificateError {
     /// The modulus is the zero polynomial, a constant, or has a zero leading
     /// coefficient after trimming.
     ModulusDegenerate,
-    /// The modulus is not monic. `ℚ[x]/(f)` is unchanged by scaling `f`, but
+    /// The modulus is not monic. `ℚ\[x\]/(f)` is unchanged by scaling `f`, but
     /// this module requires the caller to have normalized so that a
     /// certificate's `minpoly` field is canonical.
     ModulusNotMonic,
-    /// The modulus factors over ℚ, so `ℚ[x]/(f)` is not a field. Carries how
+    /// The modulus factors over ℚ, so `ℚ\[x\]/(f)` is not a field. Carries how
     /// many irreducible factors (with multiplicity) were found.
     ReducibleModulus {
         /// Number of non-constant irreducible factors counted with
@@ -367,128 +368,86 @@ pub(crate) fn rat_int(value: i64) -> BigRational {
 }
 
 /// Drop trailing zero coefficients so the leading entry is nonzero.
-pub(crate) fn poly_trim(mut poly: Vec<BigRational>) -> Vec<BigRational> {
-    while poly.last().is_some_and(num_traits::Zero::is_zero) {
-        poly.pop();
-    }
-    poly
+///
+/// **Migrated onto `axeyum_arith::QPoly` (ADR-1710 migration slice 5)**, as is
+/// every `poly_*` function below. The `Vec<BigRational>` shape survives at the
+/// boundary; the arithmetic moved. The pre-migration bodies are kept in this
+/// module's test block as `legacy_*` and are asserted to agree with the shared
+/// layer over this module's own corpus.
+pub(crate) fn poly_trim(poly: Vec<BigRational>) -> Vec<BigRational> {
+    axeyum_arith::trim_coefficients(poly)
 }
 
 /// Degree, or `None` for the zero polynomial.
 pub(crate) fn poly_degree(poly: &[BigRational]) -> Option<usize> {
-    let mut index = poly.len();
-    while index > 0 {
-        index -= 1;
-        if !poly[index].is_zero() {
-            return Some(index);
-        }
-    }
-    None
+    axeyum_arith::slice_degree(poly)
 }
 
+/// `left + right`.
 pub(crate) fn poly_add(left: &[BigRational], right: &[BigRational]) -> Vec<BigRational> {
-    let mut out = vec![rat_zero(); left.len().max(right.len())];
-    for (index, value) in left.iter().enumerate() {
-        out[index] += value;
-    }
-    for (index, value) in right.iter().enumerate() {
-        out[index] += value;
-    }
-    poly_trim(out)
+    QPoly::from_slice(left)
+        .add(&QPoly::from_slice(right))
+        .into_coefficients()
 }
 
+/// `left − right`.
 pub(crate) fn poly_sub(left: &[BigRational], right: &[BigRational]) -> Vec<BigRational> {
-    let mut out = vec![rat_zero(); left.len().max(right.len())];
-    for (index, value) in left.iter().enumerate() {
-        out[index] += value;
-    }
-    for (index, value) in right.iter().enumerate() {
-        out[index] -= value;
-    }
-    poly_trim(out)
+    QPoly::from_slice(left)
+        .sub(&QPoly::from_slice(right))
+        .into_coefficients()
 }
 
+/// `left · right`.
 pub(crate) fn poly_mul(left: &[BigRational], right: &[BigRational]) -> Vec<BigRational> {
-    if left.is_empty() || right.is_empty() {
-        return Vec::new();
-    }
-    let mut out = vec![rat_zero(); left.len() + right.len() - 1];
-    for (i, a) in left.iter().enumerate() {
-        if a.is_zero() {
-            continue;
-        }
-        for (j, b) in right.iter().enumerate() {
-            let term = a * b;
-            out[i + j] += term;
-        }
-    }
-    poly_trim(out)
+    QPoly::from_slice(left)
+        .mul(&QPoly::from_slice(right))
+        .into_coefficients()
 }
 
+/// `poly · factor` for a rational scalar.
 pub(crate) fn poly_scale(poly: &[BigRational], factor: &BigRational) -> Vec<BigRational> {
-    poly_trim(poly.iter().map(|c| c * factor).collect())
+    QPoly::from_slice(poly).scale(factor).into_coefficients()
 }
 
-/// Long division in `ℚ[x]`. `None` exactly when `divisor` is the zero
+/// Long division in `ℚ\[x\]`. `None` exactly when `divisor` is the zero
 /// polynomial.
 pub(crate) fn poly_divrem(
     dividend: &[BigRational],
     divisor: &[BigRational],
 ) -> Option<(Vec<BigRational>, Vec<BigRational>)> {
-    let divisor_degree = poly_degree(divisor)?;
-    let lead_inverse = divisor[divisor_degree].clone().recip();
-    let mut remainder = dividend.to_vec();
-    let mut quotient = vec![rat_zero(); dividend.len().saturating_sub(divisor_degree) + 1];
-    while let Some(remainder_degree) = poly_degree(&remainder) {
-        if remainder_degree < divisor_degree {
-            break;
-        }
-        let factor = &remainder[remainder_degree] * &lead_inverse;
-        let shift = remainder_degree - divisor_degree;
-        quotient[shift] = factor.clone();
-        for index in 0..=divisor_degree {
-            let term = &factor * &divisor[index];
-            remainder[shift + index] -= term;
-        }
-        remainder = poly_trim(remainder);
-    }
-    Some((poly_trim(quotient), poly_trim(remainder)))
+    QPoly::from_slice(dividend)
+        .div_rem(&QPoly::from_slice(divisor))
+        .map(|(quotient, remainder)| (quotient.into_coefficients(), remainder.into_coefficients()))
 }
 
-/// Extended Euclid in `ℚ[x]`: returns `(g, s, t)` with `s·a + t·b = g` and `g`
+/// Extended Euclid in `ℚ\[x\]`: returns `(g, s, t)` with `s·a + t·b = g` and `g`
 /// monic (or the zero polynomial when both inputs are zero).
+///
+/// **Migrated onto `axeyum_arith::QPoly::ext_gcd`**, which returns the same
+/// triple packaged as a [`axeyum_arith::PolyBezoutCertificate`] — so a caller
+/// that wants the identity re-multiplied rather than trusted now has one call
+/// for it. [`poly_ext_gcd_certified`] is that entry point; this one keeps the
+/// old shape for the module's existing callers.
 pub(crate) fn poly_ext_gcd(
     left: &[BigRational],
     right: &[BigRational],
 ) -> (Vec<BigRational>, Vec<BigRational>, Vec<BigRational>) {
-    let mut remainder_prev = poly_trim(left.to_vec());
-    let mut remainder_curr = poly_trim(right.to_vec());
-    let mut s_prev = vec![rat_one()];
-    let mut s_curr: Vec<BigRational> = Vec::new();
-    let mut t_prev: Vec<BigRational> = Vec::new();
-    let mut t_curr = vec![rat_one()];
-    while poly_degree(&remainder_curr).is_some() {
-        // `remainder_curr` is nonzero here, so `poly_divrem` cannot fail.
-        let Some((quotient, remainder)) = poly_divrem(&remainder_prev, &remainder_curr) else {
-            break;
-        };
-        let s_next = poly_sub(&s_prev, &poly_mul(&quotient, &s_curr));
-        let t_next = poly_sub(&t_prev, &poly_mul(&quotient, &t_curr));
-        remainder_prev = core::mem::replace(&mut remainder_curr, remainder);
-        s_prev = core::mem::replace(&mut s_curr, s_next);
-        t_prev = core::mem::replace(&mut t_curr, t_next);
-    }
-    match poly_degree(&remainder_prev) {
-        None => (remainder_prev, s_prev, t_prev),
-        Some(degree) => {
-            let inverse = remainder_prev[degree].clone().recip();
-            (
-                poly_scale(&remainder_prev, &inverse),
-                poly_scale(&s_prev, &inverse),
-                poly_scale(&t_prev, &inverse),
-            )
-        }
-    }
+    let certificate = poly_ext_gcd_certified(left, right);
+    (
+        certificate.gcd.into_coefficients(),
+        certificate.cofactor_a.into_coefficients(),
+        certificate.cofactor_b.into_coefficients(),
+    )
+}
+
+/// The same extended Euclid, returning the certificate rather than discarding
+/// it. `verify` re-multiplies `s·a + t·b` and re-divides `a` and `b` by `g`,
+/// using nothing this module computed.
+pub(crate) fn poly_ext_gcd_certified(
+    left: &[BigRational],
+    right: &[BigRational],
+) -> axeyum_arith::PolyBezoutCertificate {
+    QPoly::from_slice(left).ext_gcd(&QPoly::from_slice(right))
 }
 
 /// Convert a `BigRational` coefficient vector to the `i128` `Rational` vector
@@ -639,17 +598,17 @@ fn matrix_poly_is_zero(poly: &[BigRational], matrix: &[Vec<BigRational>]) -> boo
 // NumberField
 // ---------------------------------------------------------------------------
 
-/// A simple algebraic extension `ℚ(α) = ℚ[x]/(f)`.
+/// A simple algebraic extension `ℚ(α) = ℚ\[x\]/(f)`.
 ///
 /// `f` is monic and irreducible over ℚ; both are checked at construction, so a
-/// `NumberField` value is evidence that `ℚ[x]/(f)` really is a field.
+/// `NumberField` value is evidence that `ℚ\[x\]/(f)` really is a field.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct NumberField {
     minpoly: Vec<BigRational>,
 }
 
 impl NumberField {
-    /// Build `ℚ[x]/(f)` from a monic, least-significant-first `f`.
+    /// Build `ℚ\[x\]/(f)` from a monic, least-significant-first `f`.
     ///
     /// # Errors
     ///
@@ -857,7 +816,7 @@ impl Element {
     /// The multiplicative inverse together with a certificate, or `None` for
     /// the zero element.
     ///
-    /// The inverse is computed by extended Euclid in `ℚ[x]`; the certificate's
+    /// The inverse is computed by extended Euclid in `ℚ\[x\]`; the certificate's
     /// [`verify`](InverseCertificate::verify) re-multiplies and reduces
     /// instead, so it never consults the Euclid run.
     #[must_use]
@@ -1754,7 +1713,7 @@ pub fn two_squares_outcome(n: &BigInt) -> TwoSquaresOutcome {
 // Quadratic fields
 // ---------------------------------------------------------------------------
 
-/// `ℚ(√d)` for a squarefree `d ∉ {0, 1}`, presented as `ℚ[x]/(x² − d)`.
+/// `ℚ(√d)` for a squarefree `d ∉ {0, 1}`, presented as `ℚ\[x\]/(x² − d)`.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct QuadraticField {
     radicand: BigInt,
@@ -1800,7 +1759,7 @@ impl QuadraticField {
         &self.radicand
     }
 
-    /// The underlying [`NumberField`] `ℚ[x]/(x² − d)`.
+    /// The underlying [`NumberField`] `ℚ\[x\]/(x² − d)`.
     #[must_use]
     pub fn as_number_field(&self) -> &NumberField {
         &self.field
@@ -2068,6 +2027,218 @@ pub fn integer(value: i64) -> BigRational {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // -----------------------------------------------------------------------
+    // ADR-1710 slice 5: the pre-migration `poly_*` bodies, kept verbatim as the
+    // differential oracle. `#[cfg(test)]` and `legacy_`-prefixed, so nothing
+    // shipped calls them.
+    // -----------------------------------------------------------------------
+
+    fn legacy_poly_trim(mut poly: Vec<BigRational>) -> Vec<BigRational> {
+        while poly.last().is_some_and(num_traits::Zero::is_zero) {
+            poly.pop();
+        }
+        poly
+    }
+
+    fn legacy_poly_degree(poly: &[BigRational]) -> Option<usize> {
+        let mut index = poly.len();
+        while index > 0 {
+            index -= 1;
+            if !poly[index].is_zero() {
+                return Some(index);
+            }
+        }
+        None
+    }
+
+    fn legacy_poly_add(left: &[BigRational], right: &[BigRational]) -> Vec<BigRational> {
+        let mut out = vec![rat_zero(); left.len().max(right.len())];
+        for (index, value) in left.iter().enumerate() {
+            out[index] += value;
+        }
+        for (index, value) in right.iter().enumerate() {
+            out[index] += value;
+        }
+        legacy_poly_trim(out)
+    }
+
+    fn legacy_poly_sub(left: &[BigRational], right: &[BigRational]) -> Vec<BigRational> {
+        let mut out = vec![rat_zero(); left.len().max(right.len())];
+        for (index, value) in left.iter().enumerate() {
+            out[index] += value;
+        }
+        for (index, value) in right.iter().enumerate() {
+            out[index] -= value;
+        }
+        legacy_poly_trim(out)
+    }
+
+    fn legacy_poly_mul(left: &[BigRational], right: &[BigRational]) -> Vec<BigRational> {
+        if left.is_empty() || right.is_empty() {
+            return Vec::new();
+        }
+        let mut out = vec![rat_zero(); left.len() + right.len() - 1];
+        for (i, a) in left.iter().enumerate() {
+            if a.is_zero() {
+                continue;
+            }
+            for (j, b) in right.iter().enumerate() {
+                let term = a * b;
+                out[i + j] += term;
+            }
+        }
+        legacy_poly_trim(out)
+    }
+
+    fn legacy_poly_scale(poly: &[BigRational], factor: &BigRational) -> Vec<BigRational> {
+        legacy_poly_trim(poly.iter().map(|c| c * factor).collect())
+    }
+
+    fn legacy_poly_divrem(
+        dividend: &[BigRational],
+        divisor: &[BigRational],
+    ) -> Option<(Vec<BigRational>, Vec<BigRational>)> {
+        let divisor_degree = legacy_poly_degree(divisor)?;
+        let lead_inverse = divisor[divisor_degree].clone().recip();
+        let mut remainder = dividend.to_vec();
+        let mut quotient = vec![rat_zero(); dividend.len().saturating_sub(divisor_degree) + 1];
+        while let Some(remainder_degree) = legacy_poly_degree(&remainder) {
+            if remainder_degree < divisor_degree {
+                break;
+            }
+            let factor = &remainder[remainder_degree] * &lead_inverse;
+            let shift = remainder_degree - divisor_degree;
+            quotient[shift] = factor.clone();
+            for index in 0..=divisor_degree {
+                let term = &factor * &divisor[index];
+                remainder[shift + index] -= term;
+            }
+            remainder = legacy_poly_trim(remainder);
+        }
+        Some((legacy_poly_trim(quotient), legacy_poly_trim(remainder)))
+    }
+
+    fn legacy_poly_ext_gcd(
+        left: &[BigRational],
+        right: &[BigRational],
+    ) -> (Vec<BigRational>, Vec<BigRational>, Vec<BigRational>) {
+        let mut remainder_prev = legacy_poly_trim(left.to_vec());
+        let mut remainder_curr = legacy_poly_trim(right.to_vec());
+        let mut s_prev = vec![rat_one()];
+        let mut s_curr: Vec<BigRational> = Vec::new();
+        let mut t_prev: Vec<BigRational> = Vec::new();
+        let mut t_curr = vec![rat_one()];
+        while legacy_poly_degree(&remainder_curr).is_some() {
+            let Some((quotient, remainder)) = legacy_poly_divrem(&remainder_prev, &remainder_curr)
+            else {
+                break;
+            };
+            let s_next = legacy_poly_sub(&s_prev, &legacy_poly_mul(&quotient, &s_curr));
+            let t_next = legacy_poly_sub(&t_prev, &legacy_poly_mul(&quotient, &t_curr));
+            remainder_prev = core::mem::replace(&mut remainder_curr, remainder);
+            s_prev = core::mem::replace(&mut s_curr, s_next);
+            t_prev = core::mem::replace(&mut t_curr, t_next);
+        }
+        match legacy_poly_degree(&remainder_prev) {
+            None => (remainder_prev, s_prev, t_prev),
+            Some(degree) => {
+                let inverse = remainder_prev[degree].clone().recip();
+                (
+                    legacy_poly_scale(&remainder_prev, &inverse),
+                    legacy_poly_scale(&s_prev, &inverse),
+                    legacy_poly_scale(&t_prev, &inverse),
+                )
+            }
+        }
+    }
+
+    /// The differential corpus: the minimal polynomials this module actually
+    /// builds fields from, plus the degenerate shapes.
+    fn poly_differential_corpus() -> Vec<Vec<BigRational>> {
+        let f = |n: i64, d: i64| BigRational::new(BigInt::from(n), BigInt::from(d));
+        vec![
+            vec![],
+            vec![rat_int(5)],
+            vec![rat_int(0), rat_int(1)],
+            vec![rat_int(-2), rat_int(0), rat_int(1)], // x^2 - 2
+            vec![rat_int(-3), rat_int(0), rat_int(1)], // x^2 - 3
+            vec![rat_int(1), rat_int(1), rat_int(1)],  // x^2 + x + 1
+            vec![rat_int(-2), rat_int(0), rat_int(0), rat_int(1)], // x^3 - 2
+            vec![rat_int(1), rat_int(0), rat_int(0), rat_int(0), rat_int(1)], // x^4 + 1
+            vec![rat_int(-1), rat_int(1)],
+            vec![rat_int(2), rat_int(-3), rat_int(1)], // (x-1)(x-2)
+            vec![rat_int(1), rat_int(-2), rat_int(1)], // (x-1)^2
+            vec![f(1, 2), f(-3, 4), f(5, 6)],
+            vec![f(-7, 3), rat_int(0), f(2, 9), rat_int(1)],
+        ]
+    }
+
+    /// Every migrated `poly_*` agrees with the body it replaced, over the whole
+    /// corpus and every ordered pair.
+    #[test]
+    fn legacy_and_shared_poly_layers_agree() {
+        let corpus = poly_differential_corpus();
+        assert_eq!(corpus.len(), 13, "the corpus size this test's name claims");
+        let scales = [rat_int(0), rat_int(1), rat_int(-3), rat_one() / rat_int(7)];
+        let mut pairs = 0usize;
+        for a in &corpus {
+            assert_eq!(poly_trim(a.clone()), legacy_poly_trim(a.clone()), "trim");
+            assert_eq!(poly_degree(a), legacy_poly_degree(a), "degree");
+            for factor in &scales {
+                assert_eq!(poly_scale(a, factor), legacy_poly_scale(a, factor), "scale");
+            }
+            for b in &corpus {
+                pairs += 1;
+                assert_eq!(poly_add(a, b), legacy_poly_add(a, b), "add");
+                assert_eq!(poly_sub(a, b), legacy_poly_sub(a, b), "sub");
+                assert_eq!(poly_mul(a, b), legacy_poly_mul(a, b), "mul");
+                assert_eq!(poly_divrem(a, b), legacy_poly_divrem(a, b), "divrem");
+                assert_eq!(poly_ext_gcd(a, b), legacy_poly_ext_gcd(a, b), "ext_gcd");
+            }
+        }
+        assert_eq!(pairs, 169, "every ordered pair was compared");
+    }
+
+    /// The migrated extended Euclid now hands back a certificate, and every one
+    /// of them re-derives. A checker that could not fail would be worse than
+    /// none, so the same loop tampers with a cofactor and requires rejection.
+    ///
+    /// The tamper is applied only where it can bite: adding `1` to
+    /// `cofactor_a` changes `cofactor_a·input_a` **only when `input_a` is
+    /// nonzero**, so the zero-`input_a` pairs are excluded by construction
+    /// rather than absorbed into a slack threshold. The expected count is
+    /// derived from the corpus — `13 × 12` — not written down, so a corpus
+    /// change cannot silently make this test vacuous.
+    #[test]
+    fn every_migrated_ext_gcd_carries_a_verifiable_certificate() {
+        let corpus = poly_differential_corpus();
+        let nonzero = corpus.iter().filter(|p| poly_degree(p).is_some()).count();
+        let mut verified = 0usize;
+        let mut tampered = 0usize;
+        for a in &corpus {
+            for b in &corpus {
+                let certificate = poly_ext_gcd_certified(a, b);
+                assert!(certificate.verify(), "certificate for {a:?}, {b:?}");
+                verified += 1;
+                if poly_degree(a).is_none() {
+                    continue; // `cofactor_a · 0` is insensitive to the tamper
+                }
+                let mut forged = certificate.clone();
+                forged.cofactor_a = forged
+                    .cofactor_a
+                    .add(&axeyum_arith::QPoly::constant(rat_one()));
+                assert!(
+                    !forged.verify(),
+                    "a tampered cofactor must be rejected for {a:?}, {b:?}"
+                );
+                tampered += 1;
+            }
+        }
+        assert_eq!(verified, corpus.len() * corpus.len(), "every ordered pair");
+        assert_eq!(tampered, nonzero * corpus.len(), "every tamperable pair");
+        assert!(tampered > 0, "the tamper loop is not vacuous");
+    }
 
     fn field(coeffs: &[i64]) -> NumberField {
         let poly: Vec<BigRational> = coeffs.iter().map(|&c| integer(c)).collect();

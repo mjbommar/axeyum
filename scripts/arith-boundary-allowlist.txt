@@ -1,0 +1,74 @@
+# Allowlist for scripts/check-arith-boundary.sh.
+#
+# One path per line; text after `#` is the reason. EVERY entry must carry one.
+# The gate fails on a stale entry (a path that no longer names any of the four
+# crates), so this file cannot quietly outlive the exceptions it records.
+#
+# The goal state is an EMPTY file. Nothing below is a permanent exception:
+# every line is "the mechanical import rewrite for this crate has not landed
+# yet", named per file so the next lane has a work list rather than a vague
+# "the CAS still needs doing".
+#
+# STATUS 2026-09-06. `axeyum-arith`, `axeyum-ir` and `axeyum-fp` are clean and
+# their manifests no longer list num-bigint / num-rational / num-integer /
+# num-traits; the boundary is enforced for them. `axeyum-cas` (31 files) and
+# `axeyum-lean-kernel` (2 files) are not rewritten. Two reasons, and neither is
+# "it is hard":
+#
+#   1. FOUR CAS LANES WERE LIVE while this ran (`fps_analytic.rs`,
+#      `matgroup.rs`, the `lib.rs` zero-test region, `geometry*.rs`). A
+#      whole-crate import rewrite conflicts with every one of them, and a
+#      conflict on a `use` block resolved as "keep both" gives E0252 on main
+#      rather than a marker anyone can see.
+#   2. THE REWRITE MUST BE ONE COMMIT PER CRATE and must compile, so it cannot
+#      be half-landed. This lane ran out of budget after `axeyum-ir` and
+#      `axeyum-fp`; landing half of `axeyum-cas` would be worse than landing
+#      none.
+#
+# The rewrite itself is `s/num_(bigint|rational|integer|traits)::/axeyum_arith::big::/`
+# plus dropping the three manifest lines from `crates/axeyum-cas/Cargo.toml`
+# and the one from `crates/axeyum-lean-kernel/Cargo.toml`. `axeyum-cas`
+# already depends on `axeyum-arith`; `axeyum-lean-kernel` does not and would
+# gain the dependency.
+#
+# Manifests are NOT allowlisted below on purpose for the two clean crates; the
+# two that are still listed carry their own line.
+
+crates/axeyum-cas/Cargo.toml                        # import rewrite pending (see STATUS)
+crates/axeyum-cas/examples/certify_theta_dual.rs    # import rewrite pending
+crates/axeyum-cas/examples/parity_corpus.rs         # import rewrite pending
+crates/axeyum-cas/src/enclosure.rs                  # import rewrite pending
+crates/axeyum-cas/src/enclosure_integral.rs         # import rewrite pending
+crates/axeyum-cas/src/enclosure_special.rs          # import rewrite pending
+crates/axeyum-cas/src/fps.rs                        # import rewrite pending
+crates/axeyum-cas/src/fps_analytic.rs               # import rewrite pending; a CAS lane was live in this file
+crates/axeyum-cas/src/gf2.rs                        # import rewrite pending
+crates/axeyum-cas/src/gf2_extension.rs              # import rewrite pending
+crates/axeyum-cas/src/lib.rs                        # import rewrite pending; a CAS lane was live in the zero-test region
+crates/axeyum-cas/src/mvpoly/big.rs                 # import rewrite pending
+crates/axeyum-cas/src/ntheory.rs                    # import rewrite pending
+crates/axeyum-cas/src/numberfield.rs                # import rewrite pending
+crates/axeyum-cas/src/numberfield_classgroup.rs     # import rewrite pending
+crates/axeyum-cas/src/numberfield_ideals.rs         # import rewrite pending
+crates/axeyum-cas/src/numberfield_real.rs           # import rewrite pending
+crates/axeyum-cas/src/qe.rs                         # import rewrite pending
+crates/axeyum-cas/src/qe_alt.rs                     # import rewrite pending
+crates/axeyum-cas/src/qe_big.rs                     # import rewrite pending
+crates/axeyum-cas/src/qe_bivariate.rs               # import rewrite pending
+crates/axeyum-cas/src/qe_dnf.rs                     # import rewrite pending
+crates/axeyum-cas/src/qe_fibre.rs                   # import rewrite pending; a sibling lane was adding a K[y] corpus here
+crates/axeyum-cas/src/qe_lift.rs                    # import rewrite pending
+crates/axeyum-cas/src/ratint.rs                     # import rewrite pending
+crates/axeyum-cas/src/real_algebraic.rs             # import rewrite pending
+crates/axeyum-cas/src/sos/psd_big.rs                # import rewrite pending
+crates/axeyum-cas/src/sos/theta.rs                  # import rewrite pending
+crates/axeyum-cas/src/sturm.rs                      # import rewrite pending
+crates/axeyum-cas/src/telescoping.rs                # import rewrite pending
+crates/axeyum-cas/src/telescoping_check.rs          # import rewrite pending
+crates/axeyum-cas/tests/telescoping_identities.rs   # import rewrite pending
+crates/axeyum-lean-kernel/Cargo.toml                # import rewrite pending (see STATUS)
+crates/axeyum-lean-kernel/examples/creal_eval_cost.rs # import rewrite pending
+crates/axeyum-lean-kernel/src/expr.rs               # import rewrite pending; the kernel's NatLit bridge
+crates/axeyum-cas/src/chartable.rs # import rewrite pending (landed 2026-09-06 by a concurrent CAS lane, after this allowlist was written)
+crates/axeyum-cas/src/fps_amplitude.rs # import rewrite pending (landed 2026-09-06 by a concurrent CAS lane, after this allowlist was written)
+crates/axeyum-cas/src/matgroup_q.rs # import rewrite pending (landed 2026-09-06 by a concurrent CAS lane, after this allowlist was written)

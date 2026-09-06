@@ -205,24 +205,37 @@
 //! the enumeration — so checking costs about what producing does, and
 //! [`REAL_DISCRIMINANT_BOUND`] is the practical ceiling, not `h`.
 //!
-//! **The regulator is three to five orders of magnitude more expensive, and it
-//! is the binding constraint on this module.** Produce + verify, `--release`:
+//! **The regulator used to be three to five orders of magnitude more expensive,
+//! and it was the binding constraint on this module.** It is not any more.
+//! Produce + verify, `--release`, before and after ADR-1710 migration slice 1
+//! gave `enclosure`'s `sqrt` and `ln` kernels the outward dyadic rounding of
+//! their arguments that `Gamma` already had:
 //!
-//! | `d` | precision 32 | precision 64 | precision 100 |
-//! |---|---|---|---|
-//! | `2` | 0.015 s | 1.86 s | 1.82 s |
-//! | `5` | 0.126 s | 0.613 s | 0.609 s |
-//! | `61` | 0.956 s | 5.18 s | did not finish in 9 min |
+//! | `d` | p 32 before | p 32 after | p 64 before | p 64 after | p 100 before | p 100 after |
+//! |---|---|---|---|---|---|---|
+//! | `2` | 0.008 s | 0.021 s | 1.80 s | 0.052 s | 1.79 s | 0.056 s |
+//! | `5` | 0.122 s | 0.023 s | 0.597 s | 0.055 s | 0.591 s | 0.056 s |
+//! | `61` | 0.932 s | 0.024 s | 4.93 s | 0.054 s | **did not finish in 6.5 min** | **0.058 s** |
 //!
-//! The cost is flat inside one of [`crate::enclosure::enclose`]'s slack tiers
-//! and jumps between them, and it grows sharply with the *magnitude* of the
-//! unit: `d = 61`'s `29718 + 3805√61 ≈ 59436` costs 8.5× what `d = 5`'s
-//! `2 + √5` does at the same precision. The named cause, and the follow-up this
-//! module cannot make itself: `enclosure`'s `sqrt` and `ln` kernels evaluate
-//! their series over exact rationals without the outward dyadic rounding that
-//! took `Γ(1/3)` at precision 100 from 26 s to 1.5 s in item 2's second wave.
-//! Until those two heads get the same treatment, 30 decimal digits of a
-//! regulator is affordable only for a small unit.
+//! **ADVISORY**, one unpinned run per row on a shared host: the *before* column
+//! at load average 5.2 rising to 15, the *after* column at 17.6 rising to 19.5.
+//! Both columns come from the `cost_table` test in this module. Read the shape,
+//! not the third digit — and note the one cell that got *worse*: `d = 2` at
+//! precision 32 costs about 2.5× what it did, because rounding the argument
+//! costs a step on [`crate::enclosure::enclose`]'s order ladder that the
+//! cheapest case did not need. That is the trade, and it is bounded: the whole
+//! 3 × 5 grid is now 0.46 s where one of its fifteen cells used to be six and a
+//! half minutes.
+//!
+//! The named cause was diagnosed here and fixed there. `sqrt_point` ran Newton
+//! on exact rationals to a `2^(-2048)` floor, so the iterate doubled in size on
+//! every step and handed `ln` an argument with a two-thousand-bit denominator;
+//! `ln_point` then formed `z^(2·order+1)` of it. Both kernels now round outward
+//! onto the `2^(-2·order-96)` dyadic grid — the treatment that took `Γ(1/3)` at
+//! precision 100 from 26 s to 1.5 s in item 2's second wave. Thirty decimal
+//! digits of a regulator is no longer affordable only for a small unit: all
+//! three fields below are checked to thirty digits, in the ordinary debug test
+//! sweep, in about a second each.
 
 use core::fmt;
 
@@ -1894,28 +1907,26 @@ mod tests {
     // -----------------------------------------------------------------------
     // The regulator
     //
-    // COST, and why the precisions differ between the tests below. Measured in
-    // DEBUG on a shared host at load average ~10, produce + verify, with the
-    // grid printed by a temporary probe:
+    // COST. The three 30-digit checks below used to be release-only, because in
+    // DEBUG they cost 31 s, 11 s and over 180 s. Measured after ADR-1710
+    // migration slice 1, on this same shared host at load average ~20, each
+    // whole test (produce + verify) in DEBUG:
     //
-    //   d = 2   p=28 0.061 s   p=32 0.178 s   p=40 7.3 s    p=100 31.3 s
-    //   d = 5   p=24 0.686 s   p=32 2.48 s    p=40 2.46 s   p=100 10.9 s
-    //   d = 61  p=8  1.13 s    p=24 4.02 s    p=40 17.5 s   p=100 > 180 s
+    //   d = 2   p=100  1.01 s
+    //   d = 5   p=100  1.08 s
+    //   d = 61  p=64   1.50 s
     //
-    // and in RELEASE, produce + verify, from `cost_table` below:
+    // so all three now fit the five-second debug budget with headroom and none
+    // of them is `ignore`d any more. What changed is not this module: the
+    // `sqrt` and `ln` kernels in `crate::enclosure` now round their arguments
+    // outward onto the dyadic grid, so an iterate can no longer double in size
+    // on every Newton step and a logarithm can no longer be asked for
+    // `z^(2·order+1)` of a two-thousand-bit denominator. The release before /
+    // after grid is in the module documentation above.
     //
-    //   d = 2   p=32 0.015 s   p=64 1.86 s    p=100 1.82 s
-    //   d = 5   p=32 0.126 s   p=64 0.613 s   p=100 0.609 s
-    //   d = 61  p=32 0.956 s   p=64 5.18 s    p=100 did not finish in 9 min
-    //
-    // The steps are `enclosure::enclose`'s slack ladder [0, 8, 24, 56, 120]:
-    // cost is flat inside a tier and jumps when a tier fails. So the 30-digit
-    // (precision 100) checks the brief asks for do not fit a five-second debug
-    // budget for ANY of the three, and they are marked
-    // `cfg_attr(debug_assertions, ignore)` — they run under
-    // `cargo test --release`, which is where the lane measured them. The debug
-    // suite checks the SAME reference values at the highest precision that
-    // fits.
+    // The remaining shape is unchanged: cost is flat inside one of
+    // `enclosure::enclose`'s slack tiers [0, 8, 24, 56, 120] and jumps when a
+    // tier fails.
     // -----------------------------------------------------------------------
 
     /// Assert `certificate`'s interval sits inside
@@ -1960,56 +1971,67 @@ mod tests {
     fn regulator_of_five() {
         // Z[sqrt 5]'s unit is 2 + sqrt 5 = ((1+sqrt 5)/2)^3, so this is 3*R_K.
         // The module documentation says so; nothing here silently claims R_K.
-        let certificate = regulator(&field(5), 24).expect("regulator");
+        // Precision 32 and eight digits, not 24 and six: the grid rounding in
+        // the `sqrt`/`ln` kernels made the tier this lands in cheaper than the
+        // one below it used to be.
+        let certificate = regulator(&field(5), 32).expect("regulator");
         certificate.verify().expect("verify");
         assert_eq!(certificate.unit.a, big(2));
         assert_eq!(certificate.unit.b, big(1));
-        assert_encloses(&certificate, REGULATOR_5, 6);
+        assert_encloses(&certificate, REGULATOR_5, 8);
     }
 
     #[test]
     fn regulator_of_sixty_one() {
         // d = 61 is the classical big-unit case: 29718 + 3805 sqrt(61), norm -1.
-        // Precision 8, not 24: the next slack tier costs 4.1 s in debug at load
-        // 15, which is inside the five-second budget but with no headroom. The
-        // accuracy claim for this field is the release-only test below; what
-        // this one pins is that the fundamental unit is the right one and that
-        // R is near 10.99 rather than near 21.99 (the Pell unit's logarithm).
-        let certificate = regulator(&field(61), 8).expect("regulator");
+        // Precision 32 and eight digits, not 8 and two: before ADR-1710 slice 1
+        // the next slack tier up cost 4.1 s in debug at load 15 -- inside the
+        // five-second budget with no headroom -- and it now costs a fraction of
+        // a second. What this test pins is that the fundamental unit is the
+        // right one and that R is near 10.99 rather than near 21.99 (the Pell
+        // unit's logarithm); the thirty-digit claim is the test below.
+        let certificate = regulator(&field(61), 32).expect("regulator");
         certificate.verify().expect("verify");
         assert_eq!(certificate.unit.a, big(29_718));
         assert_eq!(certificate.unit.b, big(3_805));
         assert!(certificate.fundamental_certified);
-        assert_encloses(&certificate, REGULATOR_61, 2);
+        assert_encloses(&certificate, REGULATOR_61, 8);
     }
 
+    /// Thirty digits, in the ordinary debug sweep. It cost 31 s in debug and
+    /// was `ignore`d until ADR-1710 slice 1; it now costs about a second.
     #[test]
-    #[cfg_attr(debug_assertions, ignore = "31 s in debug; runs under --release")]
     fn regulator_of_two_to_thirty_digits() {
         let certificate = regulator(&field(2), 100).expect("regulator");
         certificate.verify().expect("verify");
         assert_encloses(&certificate, REGULATOR_2, 28);
     }
 
+    /// Thirty digits, in the ordinary debug sweep. It cost 11 s in debug and
+    /// was `ignore`d until ADR-1710 slice 1; it now costs about a second.
     #[test]
-    #[cfg_attr(debug_assertions, ignore = "11 s in debug; runs under --release")]
     fn regulator_of_five_to_thirty_digits() {
         let certificate = regulator(&field(5), 100).expect("regulator");
         certificate.verify().expect("verify");
         assert_encloses(&certificate, REGULATOR_5, 28);
     }
 
-    /// Nineteen digits, not thirty, and that is a MEASURED wall rather than a
-    /// choice: at precision 100 this did not finish in nine minutes under
-    /// `--release`, while precision 64 costs 5.2 s. The brief asked for thirty
-    /// digits here; what the lane can defend is nineteen, plus the measurement
-    /// that says why. `d = 2` and `d = 5` do reach thirty digits (above).
+    /// Thirty digits, and this one is the whole point of ADR-1710 slice 1.
+    ///
+    /// It used to be *nineteen* digits, and that was a MEASURED wall rather
+    /// than a choice: at precision 100 the regulator of the big-unit field did
+    /// not finish in nine minutes under `--release`, while precision 64 cost
+    /// 5.2 s. Both numbers were re-measured on this host before the slice
+    /// (4.93 s at precision 64; still running at 6.5 minutes at precision 100)
+    /// and after it: 0.058 s at precision 100 in release, 1.5 s in debug. So
+    /// the wall was the two kernels' unrounded arguments and not the size of
+    /// the unit, and the claim this file can defend is now thirty digits for
+    /// all three fields rather than two of three.
     #[test]
-    #[cfg_attr(debug_assertions, ignore = "5.2 s in release, far worse in debug")]
-    fn regulator_of_sixty_one_to_nineteen_digits() {
-        let certificate = regulator(&field(61), 64).expect("regulator");
+    fn regulator_of_sixty_one_to_thirty_digits() {
+        let certificate = regulator(&field(61), 100).expect("regulator");
         certificate.verify().expect("verify");
-        assert_encloses(&certificate, REGULATOR_61, 17);
+        assert_encloses(&certificate, REGULATOR_61, 28);
     }
 
     #[test]
@@ -2017,8 +2039,10 @@ mod tests {
         // The Pell unit is 1766319049 + 226153980 sqrt(61), the square of the
         // fundamental one, so its logarithm is 2R. The two intervals must
         // intersect after doubling -- an exact assertion, no fudge factor.
-        let fundamental = regulator(&field(61), 8).expect("regulator");
-        let pell = pell_regulator(&field(61), 8).expect("pell regulator");
+        // Precision 32, not 8: a tighter pair makes the intersection below a
+        // sharper assertion, and it is affordable since ADR-1710 slice 1.
+        let fundamental = regulator(&field(61), 32).expect("regulator");
+        let pell = pell_regulator(&field(61), 32).expect("pell regulator");
         fundamental.verify().expect("verify");
         pell.verify().expect("verify");
         assert_eq!(pell.unit.a, big(1_766_319_049));

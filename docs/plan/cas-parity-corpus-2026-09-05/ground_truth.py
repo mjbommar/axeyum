@@ -239,6 +239,17 @@ def check_factor() -> None:
 # ---------------------------------------------------------------- simplify/equal
 def check_equal() -> None:
     section("simplify/equal")
+    # e4 by hand FIRST, so the pair is checked on a host without SymPy too.
+    # `exp` is injective on the reals, so exp(A) = exp(B) iff A = B, and the two
+    # exponents are compared as exact `Fraction`s at sample points.
+    for s_val, u_val in ((Fraction(2), Fraction(1)), (Fraction(-3), Fraction(5)), (Fraction(1, 7), Fraction(-2))):
+        left = -(Fraction(1, 2) / s_val) * u_val**2
+        right = -(u_val**2) / (2 * s_val)
+        ok(left == right, f"e4 (hand) exponents agree at s={s_val}, u={u_val}: {left}")
+    ok(
+        -(Fraction(1) ** 2) / (2 * Fraction(2)) != -(Fraction(1) ** 2) / (2 * Fraction(2) ** 2),
+        "e4-ctrl (hand) at s=2, u=1 the exponents are -1/4 and -1/8, so the two exps differ",
+    )
     if need_sympy("e1/e2/e3"):
         return
     x = sp.symbols("x")
@@ -246,6 +257,24 @@ def check_equal() -> None:
     ok(sp.simplify(sp.sqrt(2) * sp.sqrt(3) - sp.sqrt(6)) == 0, "e1-ctrl sqrt(2)*sqrt(3) = sqrt(6) (true)")
     ok(sp.expand((x + 1) ** 2 - (x**2 + 2 * x + 1)) == 0, "e2 (x+1)^2 = x^2+2x+1")
     ok(sp.simplify(sp.sin(x) ** 2 + sp.cos(x) ** 2 - 1) == 0, "e3 sin^2(x)+cos^2(x) = 1 (Pythagorean identity, true)")
+    s, u = sp.symbols("s u")
+    ok(
+        sp.simplify(sp.exp(-(sp.Rational(1, 2) / s) * u**2) - sp.exp(-(u**2) / (2 * s))) == 0,
+        "e4 exp(-((1/2)/s)*u^2) = exp(-u^2/(2*s)) (one function, two spellings)",
+    )
+    # The control is a genuine inequality, so a symbolic `simplify` to 0 must
+    # FAIL *and* a concrete point must separate the two. Both are asserted: a
+    # symbolic non-simplification on its own is also what a too-weak simplifier
+    # prints for a true identity.
+    ok(
+        sp.simplify(sp.exp(-(u**2) / (2 * s)) - sp.exp(-(u**2) / (2 * s**2))) != 0,
+        "e4-ctrl exp(-u^2/(2*s)) - exp(-u^2/(2*s^2)) does not simplify to 0",
+    )
+    ok(
+        sp.exp(-(u**2) / (2 * s)).subs({s: 2, u: 1})
+        != sp.exp(-(u**2) / (2 * s**2)).subs({s: 2, u: 1}),
+        "e4-ctrl at s=2, u=1: exp(-1/4) != exp(-1/8)",
+    )
 
 
 # ---------------------------------------------------------------- linear algebra
@@ -608,6 +637,96 @@ def check_fps_analytic() -> None:
     ok(2**4 == 16 and 2**8 == 256 and 2**16 == 65536, "fa3 (hand) 2^4=16, 2^8=256, 2^16=65536")
 
 
+# --------------------------------------------------------------- fps_amplitude
+def check_fps_amplitude() -> None:
+    section("fps_amplitude")
+    # fam1: 1/(1-2x) has a(n) = 2^n EXACTLY, so a(n)/(1 * n^0 * 2^n) = 1 at
+    # every n and the amplitude is 1 with nothing asymptotic about it.
+    ok(
+        all(2**n == 2**n for n in range(1, 20)) and Fraction(2**17, 2**17) == 1,
+        "fam1 (hand) 1/(1-2x) = sum 2^n x^n, so a(n)/2^n = 1 exactly and C = 1",
+    )
+    if not need_sympy("fam1 geometric expansion"):
+        x = sp.symbols("x")
+        series = sp.series(1 / (1 - 2 * x), x, 0, 6).removeO()
+        coeffs = [sp.expand(series).coeff(x, n) for n in range(6)]
+        ok(
+            coeffs == [1, 2, 4, 8, 16, 32],
+            f"fam1 sympy series of 1/(1-2x) is {coeffs}, i.e. a(n) = 2^n",
+        )
+    # fam1-ctrl: the NEAR MISS. [x^n](1-2x)^-3 = binom(n+2,2)*2^n, and
+    # binom(n+2,2) = (n+1)(n+2)/2 ~ n^2/2, so C = 1/2 -- NOT the naive 1 that
+    # reading "n^2 * 2^n" off the pole order gives. The 1/(m-1)! = 1/2! factor
+    # is exactly what a residue computation carries and a leading-term reading
+    # drops.
+    ratios = [Fraction((n + 1) * (n + 2), 2 * n * n) for n in (100, 1000, 10000)]
+    ok(
+        all(Fraction(1, 2) < r < Fraction(6, 10) for r in ratios)
+        and ratios[0] > ratios[1] > ratios[2]
+        and ratios[-1] < Fraction(5002, 10000),
+        f"fam1-ctrl (hand) binom(n+2,2)/n^2 = {[str(r) for r in ratios]} decreasing to 1/2, not 1",
+    )
+    if not need_sympy("fam1-ctrl binomial limit"):
+        n = sp.symbols("n", positive=True, integer=True)
+        limit = sp.limit(sp.binomial(n + 2, 2) / n**2, n, sp.oo)
+        ok(
+            limit == sp.Rational(1, 2),
+            f"fam1-ctrl sympy lim binom(n+2,2)/n^2 = {limit}, so C = 1/2 and the naive C = 1 is wrong",
+        )
+    # fam2: Fibonacci's amplitude is 1/sqrt(5), returned as the exact element
+    # 1/5 + (2/5) zeta of Q(zeta) with zeta = (sqrt(5)-1)/2 a root of z^2+z-1.
+    # Two independent checks, neither of which takes a square root of the
+    # ANSWER: the element's square is the rational 1/5, and its decimal value
+    # matches 1/sqrt(5).
+    a, b = Fraction(1, 5), Fraction(2, 5)
+    # (a + b z)^2 with z^2 = 1 - z is (a^2 + b^2) + (2ab - b^2) z.
+    square_constant = a * a + b * b
+    square_linear = 2 * a * b - b * b
+    ok(
+        square_constant == Fraction(1, 5) and square_linear == 0,
+        f"fam2 (hand) (1/5 + (2/5)zeta)^2 = {square_constant} + {square_linear}*zeta = 1/5, so C = 1/sqrt(5)",
+    )
+    zeta = (5**0.5 - 1) / 2
+    ok(
+        abs((float(a) + float(b) * zeta) - 5**-0.5) < 1e-15,
+        "fam2 (hand) 1/5 + (2/5)*0.6180339887498949 = 0.4472135954999579 = 1/sqrt(5)",
+    )
+    if not need_sympy("fam2 Binet limit"):
+        n = sp.symbols("n", positive=True, integer=True)
+        limit = sp.limit(sp.fibonacci(n) / sp.GoldenRatio**n, n, sp.oo)
+        ok(
+            sp.simplify(limit - 1 / sp.sqrt(5)) == 0,
+            f"fam2 sympy lim F(n)/phi^n = {limit} = 1/sqrt(5) (Binet)",
+        )
+    # fam3: 1/(1+x^2) has coefficients 1,0,-1,0,...: two dominant singularities
+    # of equal modulus, so no single amplitude exists and a decline is the only
+    # correct answer.
+    coeffs = []
+    for n in range(12):
+        if n % 2:
+            coeffs.append(0)
+        else:
+            coeffs.append((-1) ** (n // 2))
+    ok(
+        coeffs == [1, 0, -1, 0, 1, 0, -1, 0, 1, 0, -1, 0],
+        f"fam3 (hand) 1/(1+x^2) = sum (-1)^k x^(2k) has coefficients {coeffs}",
+    )
+    ok(
+        any(c == 0 for c in coeffs) and len({c for c in coeffs if c}) == 2,
+        "fam3 (cited) infinitely many zero coefficients and alternating signs: "
+        "a(n)/(C n^k rho^-n) cannot converge to 1, so singularity analysis's "
+        "unique-dominant-singularity hypothesis (Flajolet-Sedgewick IV.10) fails "
+        "and the only correct answer is a decline",
+    )
+    if not need_sympy("fam3 periodic expansion"):
+        x = sp.symbols("x")
+        series = sp.expand(sp.series(1 / (1 + x**2), x, 0, 8).removeO())
+        got = [series.coeff(x, n) for n in range(8)]
+        ok(
+            got == [1, 0, -1, 0, 1, 0, -1, 0],
+            f"fam3 sympy series of 1/(1+x^2) is {got}",
+        )
+
 # ----------------------------------------------------------- numberfield_ideals
 def check_numberfield_ideals() -> None:
     section("numberfield_ideals")
@@ -766,6 +885,283 @@ def check_probability_symbolic_poisson() -> None:
     ok(True, "prob6 (cited) Var[Poisson(lambda)] = E[Poisson(lambda)] = lambda (equidispersion, standard fact)")
     ok(True, "prob6-ctrl (hand) lambda != 2*lambda for any lambda != 0, so the doubled claim is wrong")
 
+def check_probability_wave_four() -> None:
+    section("probability (symbolic-p Geometric, symbolic-variance Normal)")
+    # prob7/prob8: Geometric(p) at symbolic p. E[X] = 1/p and the mgf
+    # p*e^t/(1-(1-p)*e^t), each only where the underlying geometric series
+    # converges -- |1-p| < 1 for the moments, |(1-p)*e^t| < 1 for the mgf.
+    if not need_sympy("prob7/prob8 symbolic-p Geometric via summation"):
+        pp, k, t = sp.symbols("p k t", positive=True)
+        mean = sp.summation(k * pp * (1 - pp) ** (k - 1), (k, 1, sp.oo))
+        ok(
+            sp.simplify(sp.limit(mean, pp, sp.Rational(1, 3)) - 3) == 0,
+            f"prob7 sympy E[Geometric(p)] = 1/p (checked at p=1/3 -> 3): {mean}",
+        )
+        # The mgf as a geometric series in the ratio (1-p)*e^t, summed by hand
+        # and checked against SymPy at a point inside the domain of convergence
+        # (p = 1/2, t = -1, so the ratio is e^{-1}/2 < 1).
+        closed = pp * sp.exp(t) / (1 - (1 - pp) * sp.exp(t))
+        numeric = sp.summation(
+            sp.exp(t * k) * pp * (1 - pp) ** (k - 1), (k, 1, sp.oo)
+        ).subs({pp: sp.Rational(1, 2), t: -1})
+        ok(
+            sp.simplify(numeric - closed.subs({pp: sp.Rational(1, 2), t: -1})) == 0,
+            "prob8 sympy the Geometric mgf equals p*e^t/(1-(1-p)*e^t) inside |(1-p)e^t| < 1",
+        )
+    else:
+        ok(True, "prob7 (cited) E[Geometric(p)] = 1/p for 0 < p <= 1 (standard fact)")
+        ok(
+            True,
+            "prob8 (cited) M_Geometric(t) = p*e^t/(1-(1-p)*e^t) for t < -ln(1-p) (standard fact)",
+        )
+    # prob9: Normal(mu, sigma^2) at symbolic sigma^2 -- mass 1, mean mu,
+    # variance sigma^2, mgf exp(mu*t + sigma^2*t^2/2). All four require
+    # sigma^2 > 0; the defining integral diverges otherwise.
+    if not need_sympy("prob9 symbolic-variance Normal via integration"):
+        s_sym, u, t2 = sp.symbols("s u t", positive=True)
+        mass = sp.integrate(
+            sp.exp(-(u**2) / (2 * s_sym)) / sp.sqrt(2 * sp.pi * s_sym), (u, -sp.oo, sp.oo)
+        )
+        ok(sp.simplify(mass - 1) == 0, f"prob9 sympy the Normal(mu, s) mass is 1 for s > 0: {mass}")
+        second = sp.integrate(
+            u**2 * sp.exp(-(u**2) / (2 * s_sym)) / sp.sqrt(2 * sp.pi * s_sym),
+            (u, -sp.oo, sp.oo),
+        )
+        ok(
+            sp.simplify(second - s_sym) == 0,
+            f"prob9 sympy the centered second moment is s for s > 0: {second}",
+        )
+    else:
+        ok(True, "prob9 (cited) Normal(mu, sigma^2) has mass 1, mean mu, variance sigma^2")
+    ok(
+        True,
+        "prob9 (hand) the Gaussian mgf exp(mu*t + sigma^2*t^2/2) follows by completing the square, "
+        "which needs only that the shifted density integrates to 1 -- i.e. sigma^2 > 0",
+    )
+    # prob10: the divergent control. sum_{j>=0} (-1)^j has no limit; its partial
+    # sums alternate 1, 0, 1, 0. Computed, not cited.
+    partial = 0
+    seen = set()
+    for j in range(8):
+        partial += (-1) ** j
+        seen.add(partial)
+    ok(
+        seen == {0, 1},
+        f"prob10 (hand) the partial sums of sum_j (-1)^j alternate over {sorted(seen)}, so the series diverges",
+    )
+
+
+
+def check_matgroup_q() -> None:
+    """mgq1-mgq3: matrix groups over Q, and the Minkowski bound.
+
+    Nothing here imports axeyum. The quarter turn's order is found by
+    multiplying 2x2 integer matrices with Python's own arithmetic; the shear's
+    infiniteness by exhibiting distinct powers; the Minkowski bound by the
+    explicit product formula, cross-checked against Minkowski's own table.
+    """
+
+    def matmul(a, b):
+        return [
+            [sum(a[i][k] * b[k][j] for k in range(len(b))) for j in range(len(b[0]))]
+            for i in range(len(a))
+        ]
+
+    identity2 = [[1, 0], [0, 1]]
+
+    # mgq1: the quarter turn has order exactly 4.
+    r = [[0, -1], [1, 0]]
+    power = [row[:] for row in identity2]
+    order = None
+    for k in range(1, 50):
+        power = matmul(power, r)
+        if power == identity2:
+            order = k
+            break
+    ok(order == 4, f"mgq1 (hand) [[0,-1],[1,0]] has order {order}, expected 4")
+    if sp is not None:
+        m = sp.Matrix([[0, -1], [1, 0]])
+        ok(
+            (m**4) == sp.eye(2) and (m**2) != sp.eye(2),
+            "mgq1 (sympy) Matrix([[0,-1],[1,0]])**4 == eye(2) and **2 != eye(2)",
+        )
+
+    # mgq2: the shear's powers are pairwise distinct, so the group is infinite.
+    u = [[1, 1], [0, 1]]
+    power = [row[:] for row in identity2]
+    seen = set()
+    for _ in range(200):
+        power = matmul(power, u)
+        seen.add((power[0][0], power[0][1], power[1][0], power[1][1]))
+    ok(
+        len(seen) == 200,
+        f"mgq2 (hand) 200 powers of [[1,1],[0,1]] are pairwise distinct ({len(seen)} found), so the group is infinite",
+    )
+    # ...and both cheap root-of-unity tests pass on it, which is why the entry
+    # exercises the Minkowski route rather than a determinant or trace bound.
+    ok(
+        u[0][0] * u[1][1] - u[0][1] * u[1][0] == 1 and abs(u[0][0] + u[1][1]) == 2,
+        "mgq2 (hand) the shear has determinant 1 and trace 2 = n, inside both root-of-unity bounds",
+    )
+
+    # mgq3: Minkowski's bound, from the product formula.
+    def is_prime(n: int) -> bool:
+        if n < 2:
+            return False
+        d = 2
+        while d * d <= n:
+            if n % d == 0:
+                return False
+            d += 1
+        return True
+
+    def minkowski(n: int) -> int:
+        bound = 1
+        for ell in range(2, n + 2):
+            if not is_prime(ell):
+                continue
+            exponent = 0
+            denom = ell - 1
+            while n // denom:
+                exponent += n // denom
+                denom *= ell
+            bound *= ell**exponent
+        return bound
+
+    table = [minkowski(n) for n in range(1, 7)]
+    ok(
+        table == [2, 24, 48, 5760, 11520, 2903040],
+        f"mgq3 (cited) Minkowski's bound M(1..6) = {table}, expected [2, 24, 48, 5760, 11520, 2903040]",
+    )
+    ok(minkowski(4) == 5760, f"mgq3 (hand) M(4) = {minkowski(4)}, expected 5760")
+
+
+def check_chartable() -> None:
+    """ct1-ct3: the character table of A5, its near-miss, and C6's table.
+
+    A5's entries live in Q(sqrt 5), so this file carries a two-line exact
+    arithmetic for a + b*sqrt(5) with Fraction coefficients rather than
+    depending on SymPy. Nothing here imports axeyum.
+    """
+
+    class Q5:
+        """a + b*sqrt(5), exactly."""
+
+        __slots__ = ("a", "b")
+
+        def __init__(self, a, b=0):
+            self.a = Fraction(a)
+            self.b = Fraction(b)
+
+        def __add__(self, other):
+            return Q5(self.a + other.a, self.b + other.b)
+
+        def __mul__(self, other):
+            return Q5(
+                self.a * other.a + 5 * self.b * other.b,
+                self.a * other.b + self.b * other.a,
+            )
+
+        def scaled(self, k):
+            return Q5(self.a * k, self.b * k)
+
+        def __eq__(self, other):
+            return self.a == other.a and self.b == other.b
+
+        def __repr__(self):
+            return f"{self.a}+{self.b}*sqrt5"
+
+    def q(x):
+        return Q5(x, 0)
+
+    phi = Q5(Fraction(1, 2), Fraction(1, 2))  # (1 + sqrt 5)/2
+    phibar = Q5(Fraction(1, 2), Fraction(-1, 2))  # (1 - sqrt 5)/2
+    ok(phi * phibar == q(-1), "ct1 (hand) phi * phibar = -1")
+    ok(phi + phibar == q(1), "ct1 (hand) phi + phibar = 1")
+    ok(phi * phi == phi + q(1), "ct1 (hand) phi^2 = phi + 1")
+
+    # Class sizes of A5 at (e, (12)(34), (123), (12345), (13524)).
+    sizes = [1, 15, 20, 12, 12]
+    ok(sum(sizes) == 60, f"ct1 (hand) A5's class equation sums to {sum(sizes)}, expected 60")
+    table = [
+        [q(1), q(1), q(1), q(1), q(1)],
+        [q(4), q(0), q(1), q(-1), q(-1)],
+        [q(5), q(1), q(-1), q(0), q(0)],
+        [q(3), q(-1), q(0), phi, phibar],
+        [q(3), q(-1), q(0), phibar, phi],
+    ]
+    # Every entry is real, so complex conjugation is the identity here and the
+    # inner product is the plain weighted sum.
+    def inner(i, j):
+        acc = q(0)
+        for k, size in enumerate(sizes):
+            acc = acc + (table[i][k] * table[j][k]).scaled(size)
+        return acc
+
+    failures = []
+    for i in range(5):
+        for j in range(5):
+            want = q(60) if i == j else q(0)
+            if inner(i, j) != want:
+                failures.append((i, j, inner(i, j)))
+    ok(
+        not failures,
+        f"ct1 (cited) A5's classical table satisfies row orthogonality; offending pairs {failures}",
+    )
+    degrees = [row[0].a for row in table]
+    ok(
+        sorted(degrees) == [1, 3, 3, 4, 5] and sum(d * d for d in degrees) == 60,
+        f"ct1 (cited) A5's degrees {sorted(degrees)} square-sum to {sum(d * d for d in degrees)}, expected 60",
+    )
+
+    # ct2: transposing phi and phibar in ONE three-dimensional row makes it a
+    # copy of the other, so its inner product with that row becomes 60, not 0.
+    altered = [row[:] for row in table]
+    altered[3][3], altered[3][4] = altered[3][4], altered[3][3]
+
+    def inner_altered(i, j):
+        acc = q(0)
+        for k, size in enumerate(sizes):
+            acc = acc + (altered[i][k] * altered[j][k]).scaled(size)
+        return acc
+
+    ok(
+        inner_altered(3, 4) == q(60),
+        f"ct2 (hand) the altered A5 table has <chi3, chi3'> = {inner_altered(3, 4)}, not 0, so it is not a character table",
+    )
+    ok(
+        altered[3] == altered[4],
+        "ct2 (hand) the altered row is literally the other three-dimensional row",
+    )
+
+    # ct3: a finite abelian group has |G| irreducible characters, all linear.
+    # For C6 they are chi_j(g^k) = zeta_6^(jk); orthogonality is the discrete
+    # Fourier relation, checked here on the exponents.
+    import cmath
+
+    n = 6
+    zeta = [cmath.exp(2j * cmath.pi * k / n) for k in range(n)]
+    worst = 0.0
+    for i in range(n):
+        for j in range(n):
+            s = sum(zeta[(i * k) % n] * zeta[(-j * k) % n] for k in range(n))
+            want = complex(n if i == j else 0)
+            worst = max(worst, abs(s - want))
+    ok(
+        worst < 1e-9,
+        f"ct3 (hand) C6's {n} linear characters are orthogonal (worst deviation {worst:.2e})",
+    )
+    if sp is not None:
+        from sympy.combinatorics import Permutation as SpPermutation
+        from sympy.combinatorics import PermutationGroup as SpPermutationGroup
+
+        g = SpPermutationGroup([SpPermutation(0, 1, 2, 3, 4, 5)])
+        ok(
+            g.order() == 6 and g.is_abelian,
+            "ct3 (sympy) PermutationGroup([Permutation(0,1,2,3,4,5)]) is abelian of order 6",
+        )
+
+
 def main() -> int:
     print(f"SymPy available: {sp is not None} (version {SYMPY_VERSION})")
 
@@ -791,6 +1187,7 @@ def main() -> int:
     check_geometry_beyond()
     check_enclosure_special()
     check_fps_analytic()
+    check_fps_amplitude()
     check_numberfield_ideals()
     check_permgroup_sylow()
     check_homology_coefficients_and_cohomology()
@@ -800,6 +1197,9 @@ def main() -> int:
     check_qe_dnf()
     check_qe_bivariate()
     check_probability_symbolic_poisson()
+    check_probability_wave_four()
+    check_matgroup_q()
+    check_chartable()
 
     print(f"\n{CHECKED} claims, {len(FAILURES)} failed")
     if FAILURES:

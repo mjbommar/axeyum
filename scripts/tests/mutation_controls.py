@@ -1492,8 +1492,22 @@ class Cargo:
         return {"CARGO_TARGET_DIR": f"{root}/{self.slug}"}
 
     def _cargo(self, work: Path, extra: list[str]) -> tuple[int, str]:
+        # `--no-run` is a CARGO flag, so it has to land BEFORE the `--` that
+        # hands the remaining words to libtest.  Appending it blindly puts it
+        # after the separator, libtest answers `error: Unrecognized option:
+        # 'no-run'`, and the classifier reads that as BASELINE DID NOT BUILD --
+        # a whole suite unmeasurable for a reason that has nothing to do with
+        # any mutation.  Measured 2026-09-06 on `arith-enclosure-rounding`,
+        # which is the first suite to need a `--` (libtest ORs several test
+        # filters, and a single substring cannot name tests in two modules).
+        args = list(self.args)
+        if "--" in args:
+            cut = args.index("--")
+            args = args[:cut] + list(extra) + args[cut:]
+        else:
+            args.extend(extra)
         return _capture(
-            [str(ROOT / "scripts" / "cargo-serialized.sh"), "test", *self.args, *extra],
+            [str(ROOT / "scripts" / "cargo-serialized.sh"), "test", *args],
             work,
             self._env(),
         )
@@ -7555,6 +7569,1145 @@ SUITES["psatz"] = (
             "    if scale <= 1 {\n        return h_total;\n    }",
             "    if true {\n        return h_total;\n    }",
             "crates/axeyum-lean-kernel/src/psatz/rat.rs",
+        ),
+    ],
+)
+
+
+SUITES["arith-upoly-certificates"] = (
+    "crates/axeyum-arith/src/upoly.rs",
+    Cargo(("-p", "axeyum-arith", "--lib", "upoly::"), "arith-upoly-certificates"),
+    [
+        # -- BezoutCertificate::verify, one mutation per guard ----------------
+        (
+            # Bezout certifies a gcd only up to sign (design note 3.2), so the
+            # normalization is pinned rather than assumed.
+            "the integer gcd's sign is pinned non-negative",
+            "    if certificate.gcd.sign() != Sign::Plus {\n        return false;\n    }",
+            "    if false {\n        return false;\n    }",
+        ),
+        (
+            "the Bezout identity is re-multiplied",
+            "    if combination != certificate.gcd {\n        return false;\n    }",
+            "    let _ = &combination;\n    if false {\n        return false;\n    }",
+        ),
+        (
+            # `u*a + v*b` is a multiple of the true gcd for ANY cofactors, so
+            # the identity alone admits `6*1 + 4*1 = 10`, which divides neither.
+            "the claimed integer gcd must divide both inputs",
+            "        if !int_is_zero(&(input % &certificate.gcd)) {\n            return false;\n        }",
+            "        let _ = input;\n        if false {\n            return false;\n        }",
+        ),
+        # -- SturmCertificate::verify ----------------------------------------
+        (
+            # A member rescaled by a positive constant changes NO sign
+            # variation, so the count guard is blind to it and only the
+            # rebuild can catch it.
+            "the chain is rebuilt from its own recorded first member",
+            "    if rebuilt.members() != recorded.as_slice() {\n        return false;\n    }",
+            "    let _ = rebuilt.members();\n    if false {\n        return false;\n    }",
+        ),
+        (
+            "the claimed root count is recounted from the recorded chain",
+            "    at_lower.saturating_sub(at_upper) == certificate.root_count",
+            "    let _ = (at_lower, at_upper);\n    true",
+        ),
+        (
+            # `saturating_sub` reads 0 on an inverted interval, so a
+            # zero-root certificate would otherwise be accepted backwards.
+            "the interval must not be inverted",
+            "    if certificate.lower > certificate.upper {\n        return false;\n    }",
+            "    if false {\n        return false;\n    }",
+        ),
+        # -- PolyBezoutCertificate::verify (Q[x]) -----------------------------
+        (
+            "the Q[x] gcd is monic",
+            "        if self.gcd.leading() != rat_one() {\n            return false;\n        }",
+            "        if false {\n            return false;\n        }",
+        ),
+        (
+            "the Q[x] Bezout identity is re-multiplied",
+            "        if combination != self.gcd {\n            return false;\n        }",
+            "        let _ = &combination;\n        if false {\n            return false;\n        }",
+        ),
+        (
+            # `x*(x-1) - x*(x-2) = x` hits the identity and divides neither.
+            "the claimed Q[x] gcd must divide both inputs",
+            "            if !remainder.is_zero() {\n                return false;\n            }",
+            "            let _ = &remainder;\n            if false {\n                return false;\n            }",
+        ),
+        # -- PolyGcdCertificate::verify (Z[x], not a Bezout domain) -----------
+        (
+            "the Z[x] gcd's leading coefficient is positive",
+            "        if self.gcd.leading().sign() != Sign::Plus {\n            return false;\n        }",
+            "        if false {\n            return false;\n        }",
+        ),
+        (
+            "the first divisibility quotient is re-multiplied",
+            "        if self.gcd.mul(&self.quotient_a) != self.input_a {\n            return false;\n        }",
+            "        if false {\n            return false;\n        }",
+        ),
+        (
+            # The producer computes the content SEPARATELY from the primitive
+            # part, so the receipt records it separately (design note 6).
+            "the recorded content is the gcd of the two contents",
+            "        if self.gcd.content() != self.content {\n            return false;\n        }",
+            "        if false {\n            return false;\n        }",
+        ),
+        (
+            # Z[x] is not a Bezout domain, so `g divides both` does not make g
+            # GREATEST; the Q[x] witness on the primitive parts is what does.
+            "the Q[x] maximality witness is checked",
+            "        if !self.maximality.verify() {\n            return false;\n        }",
+            "        if false {\n            return false;\n        }",
+        ),
+    ],
+)
+
+
+# --------------------------------------------------------------------------
+# `cas-atom-key` -- the canonical form a transcendental atom is keyed on
+# (`crates/axeyum-cas/src/lib.rs`, `atom_argument_canonical_key`).
+#
+# `equal` refuted `exp(-((1/2)/s)*u^2) = exp(-u^2/(2*s))`, one function under
+# two spellings, because `atom_name` keyed the atom on the rendering of an
+# unreduced `RatFunc`.  `RatFunc::canonical_key_form` picks a representative:
+# divide the `num`/`den` pair by the denominator's signed content, after a GCD
+# reduction where there is a polynomial factor to cancel.  These five mutants
+# take out one part of that each, plus the guard that turns what the key still
+# cannot reach into a decline.
+#
+# A guard here is falsifiable only against a SATISFIABLE query -- an equal pair
+# for the parts that make two spellings meet, an unequal pair for the part that
+# keeps two functions apart -- which is why the suite's tests come in both
+# directions.
+#
+# MEASURED 2026-09-06, baseline green at 14 tests:
+#
+#   content cancellation gone   killed 4
+#   sign normalization gone     killed 1  a_sign_moved_into_the_denominator
+#   key ignores the denominator killed 1  the_denominator_is_part_of_the_key
+#   GCD reduction gone          killed 1  a_common_polynomial_factor_is_cancelled
+#   uncanonical guard gone      killed 1  a_content_beyond_i128_declines_...
+#
+# Four of five isolate exactly one test. The content mutant kills four because
+# the reported input IS a moved constant scale, and the module states it three
+# ways on purpose -- through `equal`, through every head, and at the key itself
+# -- plus its own fixture. That is one distinction with four views, not four
+# guards, and the number is left here rather than tuned down to one.
+# --------------------------------------------------------------------------
+
+SUITES["cas-atom-key"] = (
+    "crates/axeyum-cas/src/lib.rs",
+    Cargo(
+        (
+            "-j",
+            "4",
+            "-p",
+            "axeyum-cas",
+            "--lib",
+            "atom_argument_canonical_key::",
+        ),
+        "cas-atom-key",
+    ),
+    [
+        (
+            "the content cancellation is gone: the key keeps whatever integer "
+            "scale the source spelling happened to write",
+            "        let magnitude = Rational::checked_new(numerator_gcd, denominator_lcm)?;",
+            "        let magnitude = Rational::integer(1);",
+        ),
+        (
+            "the sign normalization is gone: a minus sign in the denominator "
+            "keys differently from the same sign in the numerator",
+            "        if self.leading_term()?.1.checked_numerator()? < 0 {\n"
+            "            magnitude.checked_neg()\n"
+            "        } else {\n"
+            "            Some(magnitude)\n"
+            "        }",
+            "        Some(magnitude)",
+        ),
+        (
+            "the key ignores the denominator entirely, so two functions that "
+            "differ only there collide",
+            "        let num = rf.num.to_expr();\n"
+            "        if rf.den == MultiPoly::constant(Rational::integer(1)) {\n"
+            "            num\n"
+            "        } else {\n"
+            "            CasExpr::Div(Box::new(num), Box::new(rf.den.to_expr()))\n"
+            "        }",
+            "        rf.num.to_expr()",
+        ),
+        (
+            "the GCD reduction is gone: a common polynomial factor survives in "
+            "the key",
+            "        let base = if multipoly_as_constant(&self.den).is_some() {\n"
+            "            self.clone()\n"
+            "        } else {\n"
+            "            self.reduced().unwrap_or_else(|| self.clone())\n"
+            "        };",
+            "        let base = self.clone();",
+        ),
+        (
+            "the uncanonical-atom guard is gone: an argument the key could not "
+            "canonicalize is refuted instead of declined",
+            "        Ok(witness) if witness.mentions_uncanonical_atom() => "
+            "Err(ZeroTestDecline::RelationBlind(\n"
+            "            RelationLimit::UncanonicalAtomKey,\n"
+            "        )),",
+            "",
+        ),
+    ],
+)
+
+
+
+
+# Item 5 wave five (`docs/math-department/13-computer-algebra.md`): matrix
+# groups over ℚ. Every mutation below deletes or weakens ONE guard in
+# `FiniteRationalGroupCertificate::verify`,
+# `InfiniteRationalGroupCertificate::verify`, or the producer's two cheap
+# infiniteness tests.
+#
+# Two guards are deliberately absent from this list, and the reason is the
+# finding rather than an omission:
+#
+# - a CONNECTIVITY check (every listed element reachable from the identity)
+#   was written first and then removed, because it cannot fail: a finite set
+#   containing the identity and closed under right multiplication by the
+#   generators already contains the group they generate, so with the count
+#   guard in place the two sets are equal. `verify`'s doc carries the argument.
+# - the ORDER-DIVIDES-`M(n)` guard is a cross-check, not an independent
+#   constraint on a valid certificate -- a real finite subgroup's order divides
+#   the Minkowski bound by the theorem. It is mutated below anyway because its
+#   POSITION in the check order is load-bearing: it runs before the element
+#   list is examined, which is what makes a bogus order-5 "finite" certificate
+#   report the mathematically informative failure instead of a count mismatch.
+SUITES["cas-matgroup-q"] = (
+    "crates/axeyum-cas/src/matgroup_q.rs",
+    Cargo(("-p", "axeyum-cas", "--lib", "matgroup_q"), "cas-matgroup-2"),
+    [
+        (
+            "the reduction modulus must be ODD (Minkowski is false at 2)",
+            "    if prime <= 2 || !is_prime(prime) {",
+            "    if !is_prime(prime) {",
+        ),
+        (
+            "the carried Minkowski bound is recomputed, not trusted",
+            """        if self.minkowski_bound != minkowski_bound(self.n) {
+            return Err(RationalGroupFailure::MinkowskiBoundWrong);
+        }
+""",
+            "",
+        ),
+        (
+            "a finite group's order divides M(n)",
+            """        if (&self.minkowski_bound % BigInt::from(self.reduced_order)) != BigInt::from(0) {
+            return Err(RationalGroupFailure::OrderDoesNotDivideMinkowskiBound);
+        }
+""",
+            "",
+        ),
+        (
+            "the element list is sorted and distinct",
+            """        if !self.elements.windows(2).all(|w| w[0] < w[1]) {
+            return Err(RationalGroupFailure::ElementsNotDistinct);
+        }
+""",
+            "",
+        ),
+        (
+            "the element count is the reduced order",
+            """        if u128::try_from(self.elements.len()).unwrap_or(u128::MAX) != self.reduced_order {
+            return Err(RationalGroupFailure::ElementCountWrong {
+                claimed: self.reduced_order,
+                listed: self.elements.len(),
+            });
+        }
+""",
+            "",
+        ),
+        (
+            "the identity is in the element list",
+            """        if !set.contains(&id) {
+            return Err(RationalGroupFailure::IdentityMissing);
+        }
+""",
+            "",
+        ),
+        (
+            "every generator is in the element list",
+            """        for (gi, g) in self.generators.iter().enumerate() {
+            if !set.contains(g) {
+                return Err(RationalGroupFailure::GeneratorMissing {
+                    generator_index: gi,
+                });
+            }
+        }
+""",
+            "",
+        ),
+        (
+            "the element list is closed under the generators",
+            """        for (ei, e) in self.elements.iter().enumerate() {
+            for (gi, g) in self.generators.iter().enumerate() {
+                if !set.contains(&mat_mul(e, g)) {
+                    return Err(RationalGroupFailure::NotClosed {
+                        element_index: ei,
+                        generator_index: gi,
+                    });
+                }
+            }
+        }
+""",
+            "",
+        ),
+        (
+            "the producer's trace bound is |tr| > n, not |tr| > n + 1",
+            """                let tr = trace_q(&product);
+                if tr.abs() > n_as_rational {""",
+            """                let tr = trace_q(&product);
+                if tr.abs() > &n_as_rational + &one() {""",
+        ),
+        (
+            "the producer tests each generator's determinant for being a unit",
+            """        let det = det_q(g);
+        if det.abs() != one() {
+            return Some(InfiniteRoute::DeterminantNotUnit {
+                word: vec![gi],
+                determinant: det,
+            });
+        }
+""",
+            "",
+        ),
+        (
+            "the overflow route's witnesses are pairwise distinct",
+            """                    if !values.insert(value) {
+                        return Err(RationalGroupFailure::WitnessesNotDistinct);
+                    }""",
+            "                    values.insert(value);",
+        ),
+        (
+            "the overflow route needs MORE witnesses than the reduced order",
+            "                if u128::try_from(distinct).unwrap_or(u128::MAX) <= *reduced_order {",
+            "                if u128::try_from(distinct).unwrap_or(u128::MAX) < *reduced_order {",
+        ),
+    ],
+)
+
+
+# --------------------------------------------------------------------------
+# `cas-fallback-gate` -- when the zero-test hands an input to the unbounded
+# fallback (`crates/axeyum-cas/src/lib.rs`, `fallback_entry_gate`).
+#
+# The fallback (ADR-1670) used to run on every `ZeroTest::Unknown` the bounded
+# `i128` core produced, and `Unknown` meant BOTH "exact arithmetic overflowed"
+# (the unbounded ring is the fix) and "this left the fragment" (the unbounded
+# ring runs the same normal form and stops in the same place).  Wave four
+# classifies the exit and routes on the class.
+#
+# The gate is the only thing in the zero-test that can turn a DECISION into an
+# `Unknown` by declining to look, and in the head-gated class the verdict is
+# `Unknown` either way -- so nothing but the entry COUNT can see the difference.
+# That is why the two route tests read a per-thread counter rather than a
+# verdict, and why the mutants below are pointed at the routing rather than at
+# the arithmetic.
+#
+# MEASURED 2026-09-06, baseline green at 14 tests, all six killed:
+#
+#   gate always enters          killed 1  a_head_gated_input_never_reaches_the_fallback
+#   gate never enters           killed 4  a_multiplicative_atom_relation_..._still_enters,
+#                                         a_relation_blind_input_..._still_certifies,
+#                                         an_overflow_is_classified_..._decides_it,
+#                                         a_plain_overflow_still_reaches_the_fallback
+#   head precedence gone        killed 3  an_exp_coefficient_past_u32_...,
+#                                         a_declined_head_is_named_...,
+#                                         a_head_gated_input_never_reaches_the_fallback
+#   gate stops consulting ring  killed 4  the_entry_gate_names_exactly_the_heads_...,
+#                                         plus the three above
+#   division-by-zero merged     killed 1  a_division_by_the_zero_function_is_named_...
+#   exp u32 range merged        killed 1  an_exp_coefficient_past_u32_is_out_of_fragment_...
+#
+# Three of six isolate exactly one test, and the one the slice is FOR is among
+# them: "the gate always enters" -- the state of the world before this lane --
+# is killed by exactly `a_head_gated_input_never_reaches_the_fallback`, which is
+# the only test that can see it, because the verdict is `Unknown` either way and
+# only the entry COUNT differs.
+#
+# The other three are not guards but capability, and a one-test kill would have
+# been the wrong outcome for them:
+#
+#   "gate never enters" removes the unbounded fallback from the engine, so it
+#   should take every test that depends on the fallback deciding, and it does.
+#
+#   "head precedence gone" and "gate stops consulting ring" are two ways to sever
+#   the same wire, so they kill overlapping sets.  Note what the SECOND one shows
+#   and the first cannot: an earlier draft of this family mutated
+#   `big_ring_declines_head` instead, and that mutant CANNOT kill
+#   `the_entry_gate_names_exactly_the_heads_the_ring_declines` -- the normalizer
+#   and the gate both read that one predicate, so they stay in agreement and the
+#   consistency test passes over a broken engine.  A single-source predicate makes
+#   its own consistency test unfalsifiable; the mutant that falsifies it is the
+#   one that severs the gate from the ring, which is why that is the one here.
+# --------------------------------------------------------------------------
+
+SUITES["cas-fallback-gate"] = (
+    "crates/axeyum-cas/src/lib.rs",
+    Cargo(
+        (
+            "-j",
+            "4",
+            "-p",
+            "axeyum-cas",
+            "--lib",
+            "fallback_entry_gate::",
+        ),
+        "cas-fallback-gate",
+    ),
+    [
+        (
+            "the gate always enters: every decline is handed to the fallback "
+            "again, including the heads it cannot normalize",
+            "            ZeroTestDecline::Overflowed | ZeroTestDecline::RelationBlind(_) => true,\n"
+            "            ZeroTestDecline::OutOfFragment(_) => false,",
+            "            _ => true,",
+        ),
+        (
+            "the gate never enters: the unbounded fallback is unreachable, so "
+            "an overflow can no longer be decided",
+            "            ZeroTestDecline::Overflowed | ZeroTestDecline::RelationBlind(_) => true,\n"
+            "            ZeroTestDecline::OutOfFragment(_) => false,",
+            "            _ => false,",
+        ),
+        (
+            "the head precedence is gone: a mixed input (an overflowing "
+            "polynomial plus one `exp`) classifies by its arithmetic and enters",
+            "    match unbounded_ring_declined_head(a).or_else(|| unbounded_ring_declined_head(b)) {\n"
+            "        Some(head) => {\n"
+            "            note_head_gated_decline(&reason);\n"
+            "            ZeroTestDecline::OutOfFragment(FragmentLimit::UnboundedRingDeclinesHead(head))\n"
+            "        }\n"
+            "        None => reason,\n"
+            "    }",
+            "    reason",
+        ),
+        (
+            "the gate stops consulting the ring: `unbounded_ring_declined_head` "
+            "never names a head, while the normalizer still declines `exp`",
+            "            if big_ring_declines_head(*func) {\n"
+            "                Some(func.name())\n"
+            "            } else {\n"
+            "                unbounded_ring_declined_head(arg)\n"
+            "            }",
+            "            unbounded_ring_declined_head(arg)",
+        ),
+        (
+            "a division by the zero function is classified as an overflow, so "
+            "the fallback is entered to reach the same `None`",
+            "            if divisor.num.is_zero() {\n"
+            "                return Err(ZeroTestDecline::OutOfFragment(\n"
+            "                    FragmentLimit::DivisionByZeroFunction,\n"
+            "                ));\n"
+            "            }",
+            "",
+        ),
+        (
+            "an `exp` coefficient past the shared `u32` exponent range is "
+            "classified as an overflow instead of a fragment limit",
+            "            let power = u32::try_from(coeff.numerator().unsigned_abs()).map_err(|_| {\n"
+            "                ZeroTestDecline::OutOfFragment(FragmentLimit::ExpCoefficientOutOfRange)\n"
+            "            })?;",
+            "            let power = u32::try_from(coeff.numerator().unsigned_abs())\n"
+            "                .map_err(|_| ZeroTestDecline::Overflowed)?;",
+        ),
+    ],
+)
+
+# `arith-enclosure-rounding` -- the outward dyadic rounding of the `sqrt` and
+# `ln` enclosure kernels (ADR-1710 migration slice 2,
+# `crates/axeyum-arith/src/lib.rs` + `crates/axeyum-cas/src/enclosure*.rs`).
+#
+# Slice 2 moved three roundings onto `Dyadic` and added two ARGUMENT roundings
+# that were not there before.  Every one of them is a soundness claim, and the
+# family below is one mutation per claim.  Two things about it are worth
+# reading rather than counting.
+#
+# **The two fallbacks are textually identical and live in the same file.**
+# `sqrt_point` and `ln_point` both spell the below-the-grid-step guard as
+# `let low_argument = { let floor = dyadic_floor(p, bits); if
+# floor.is_positive() { floor } else { p.clone() } };`, so the bare body is an
+# AMBIGUOUS ANCHOR -- two matches, nobody can say which copy was mutated.  M1
+# and M2 therefore anchor on the body PLUS the comment above it, which is the
+# only text that differs between them.
+#
+# **The filter is narrow on purpose, and M3 is not in this family at all.**
+# M3 removes the per-iterate grid rounding, which does not make Newton *wrong*
+# -- it makes it EXACT, and an exact rational Newton iterate squares its
+# denominator on every step.  So the mutant does not fail fast; it computes, in
+# debug `BigRational`, for as long as you let it.  The slice-2 lane reported
+# about nine CPU-minutes for the precision-200 `sqrt 2` digit test, which is
+# why the filter here stops at order 128 and never reaches that test.  That was
+# not enough: measured 2026-09-06, M3 inside this seven-test filter was still
+# running after **47 CPU-minutes** and had to be killed, while the same seven
+# tests unmutated finish in **7.2 s**.  The expensive test is
+# `sqrt_point_brackets_the_root_over_a_deterministic_corpus` -- 600
+# `sqrt_point` calls -- not the digit test the earlier warning named.
+#
+# So M3 lives in `arith-enclosure-rounding-iterate` below, against the ONE
+# bounded test written to catch it.  Splitting it is not bookkeeping: a
+# mutation that runs forever is reported as neither `killed` nor `SURVIVED`,
+# and an unmeasurable mutation sitting in a family is exactly the "the harness
+# could not tell" outcome this file exists to keep separate from a finding.
+#
+# M6 (the direction of `dyadic_ceil`) kills **five** of the seven, measured
+# 2026-09-06, and that is the correct outcome rather than a defect in the
+# family: `dyadic_ceil` is the single entry both kernels' upper endpoint goes
+# through, so reversing it breaks the `sqrt` bracket, the `ln` hull and the
+# legacy differential at once.  A guard that only one test could remove would
+# be the surprising result here.  The two survivors are the two that never
+# touch the upper endpoint: `coarsen_to_bits_...`, which calls
+# `Dyadic::rationals_outward_at_exponent` directly rather than through
+# `dyadic_ceil`, and `sqrt_point_keeps_a_positive_lower_endpoint_...`, which is
+# about the FLOOR.  M4 kills two for the mirror-image reason: `coarsen` in
+# `enclosure_special.rs` is one call to `coarsen_to_bits`, so the legacy
+# differential dies with it.
+# --------------------------------------------------------------------------
+
+SUITES["arith-enclosure-rounding"] = (
+    "crates/axeyum-cas/src/enclosure.rs",
+    Cargo(
+        (
+            "-p",
+            "axeyum-cas",
+            "--lib",
+            "--",
+            "enclosure::tests::sqrt_point",
+            "enclosure::tests::ln_point",
+            "enclosure::tests::coarsen_to_bits",
+            "enclosure_special::tests::the_dyadic_route",
+        ),
+        "arith-enclosure-rounding",
+    ),
+    [
+        (
+            # M1. Below the grid step `floor` is 0, so `low_argument/x` is 0 and
+            # the lower endpoint collapses: still sound, and useless.
+            "sqrt_point falls back to the exact argument below the grid step",
+            "    // Rounding DOWN can reach 0 for a `p` below the grid step; the exact `p` is\n"
+            "    // the sound fallback there, as in `ln_point`.\n"
+            "    let low_argument = {\n"
+            "        let floor = crate::enclosure_special::dyadic_floor(p, bits);\n"
+            "        if floor.is_positive() {\n"
+            "            floor\n"
+            "        } else {\n"
+            "            p.clone()\n"
+            "        }\n"
+            "    };",
+            "    let low_argument = crate::enclosure_special::dyadic_floor(p, bits);",
+        ),
+        (
+            # M2. The same guard in `ln_point`, where the failure is louder:
+            # `ln 0` is not a number, so the head DECLINES for an ordinary
+            # argument rather than returning a wide answer.
+            "ln_point falls back to the exact argument below the grid step",
+            "    // Rounding DOWN can reach 0 for a `p` below the grid step, and `ln 0` is\n"
+            "    // not a number. Falling back to the exact `p` there is sound (it is the\n"
+            "    // identity rounding) and costs only the speed-up, never the answer.\n"
+            "    let low_argument = {\n"
+            "        let floor = crate::enclosure_special::dyadic_floor(p, bits);\n"
+            "        if floor.is_positive() {\n"
+            "            floor\n"
+            "        } else {\n"
+            "            p.clone()\n"
+            "        }\n"
+            "    };",
+            "    let low_argument = crate::enclosure_special::dyadic_floor(p, bits);",
+        ),
+        (
+            # M4. `coarsen_to_bits` is the module's ONE dyadic entry point.
+            # Returning the input unchanged is sound (it contains itself) and
+            # loses the bounded denominator that is the whole point.
+            "coarsen_to_bits actually rounds onto the grid",
+            "            Some((lo, hi)) => BigInterval {\n"
+            "                lo: lo.to_rational(),\n"
+            "                hi: hi.to_rational(),\n"
+            "            },\n"
+            "            None => self.clone(),",
+            "            Some((lo, hi)) => {\n"
+            "                let _ = (lo, hi);\n"
+            "                self.clone()\n"
+            "            }\n"
+            "            None => self.clone(),",
+        ),
+        (
+            # M5. `ln` is increasing, so `[ln(floor p), ln(ceil p)]` contains
+            # `ln p` and either endpoint alone does not.  Keeping only the
+            # lower one returns an interval that is strictly BELOW the value --
+            # a wrong answer, not a wide one.
+            "ln_point hulls both rounded endpoints",
+            "    let high = crate::enclosure_special::ln_large(&high_argument, order)?;\n"
+            "    BigInterval::new(low.lo.clone(), high.hi)",
+            "    let high = crate::enclosure_special::ln_large(&high_argument, order)?;\n"
+            "    let _ = high;\n"
+            "    BigInterval::new(low.lo.clone(), low.hi.clone())",
+        ),
+        (
+            # M6. The direction itself.  `dyadic_ceil` rounds directly rather
+            # than as `-floor(-x)` precisely so that one `Round::` names the
+            # answer; this mutation is the defect that spelling exists to make
+            # visible.  Kills more than one; see the note above.
+            "dyadic_ceil rounds UP",
+            "    Dyadic::from_rational_at_exponent(x, grid_exponent(bits), Round::Up)",
+            "    Dyadic::from_rational_at_exponent(x, grid_exponent(bits), Round::Down)",
+            "crates/axeyum-cas/src/enclosure_special.rs",
+        ),
+    ],
+)
+
+
+# Item 5 wave five: character tables. Each mutation removes one check from
+# `CharacterTableCertificate::verify` or one bound from the abelian producer.
+#
+# COLUMN orthogonality is deliberately NOT mutated here, and that is a
+# measurement rather than an oversight: for a SQUARE table the two
+# orthogonality relations are the two halves of `U U* = I` and `U* U = I` for
+# the same unitary matrix, so column orthogonality cannot fail once row
+# orthogonality holds. It is kept as a cross-check on the row computation and
+# documented as such, not claimed as an independent constraint.
+SUITES["cas-chartable"] = (
+    "crates/axeyum-cas/src/chartable.rs",
+    Cargo(("-p", "axeyum-cas", "--lib", "chartable"), "cas-matgroup-2"),
+    [
+        (
+            "the carried conjugacy classes are verified before anything else",
+            """        if self.classes.verify().is_err() {
+            return Err(CharacterTableFailure::ClassesInvalid);
+        }
+""",
+            "",
+        ),
+        (
+            "the table is square on the classes",
+            """        if self.table.len() != count {
+            return Err(CharacterTableFailure::NotSquare {
+                classes: count,
+                rows: self.table.len(),
+            });
+        }
+""",
+            "",
+        ),
+        (
+            "every row is as wide as the class list",
+            """            if row.len() != count {
+                return Err(CharacterTableFailure::RowWidthWrong {
+                    row: i,
+                    width: row.len(),
+                });
+            }
+""",
+            "",
+        ),
+        (
+            "the conductor is the RECOMPUTED exponent, not a padded field",
+            """        if self.conductor != data.exponent {
+            return Err(CharacterTableFailure::ConductorIsNotTheExponent {
+                claimed: self.conductor,
+                exponent: data.exponent,
+            });
+        }
+""",
+            "",
+        ),
+        (
+            "every entry lives in the field the conductor names",
+            """                if entry.conductor != self.conductor || entry.coefficients.len() != width {
+                    return Err(CharacterTableFailure::EntryOutsideTheField { row: i, column: k });
+                }
+""",
+            "",
+        ),
+        (
+            "row orthogonality",
+            "        self.check_row_orthogonality(&data)?;\n",
+            "",
+        ),
+        (
+            "the degrees are positive integers dividing |G|, one trivial row",
+            "        self.check_degrees_and_trivial_row(&data)?;\n",
+            "",
+        ),
+        (
+            "the Galois relation sigma_t(chi(g)) = chi(g^t)",
+            "        self.check_galois(&data)",
+            "        let _ = self.check_galois(&data);\n        Ok(())",
+        ),
+        (
+            "the abelian producer refuses a nonabelian group",
+            """        if class.len() != 1 {
+            return Err(CharacterTableError::NotAbelian {
+                class: index,
+                size: class.len(),
+            });
+        }
+""",
+            "",
+        ),
+        (
+            "the abelian producer's search bound",
+            "    if tuples > ABELIAN_SEARCH_BOUND {",
+            "    if tuples > ABELIAN_SEARCH_BOUND * 1_000 {",
+        ),
+    ],
+)
+
+
+# --------------------------------------------------------------------------
+# The exact asymptotic amplitude guards (lane cas-fps-4, file 13 item 3 wave
+# four).
+#
+# Every route here can only turn a decline into a NUMBER, so the risk is an
+# over-eager acceptance: an amplitude computed for a function whose dominant
+# singularity is not unique, not real, or not the one the certificate names.
+# Each mutation below removes exactly one of the guards in
+# `AmplitudeCertificate::verify` that refuse those, and each is paired with the
+# forged certificate that dies when it is gone.
+#
+# The order of the two amplitude checks is load-bearing and is why both are
+# killable: the partial-fraction cross-check runs BEFORE the residue
+# recomputation, so a forged rational amplitude is refused by the cross-check
+# and a forged ALGEBRAIC one (which the machine-width partial-fraction route
+# cannot express) by the recomputation. Put the recomputation first and the
+# cross-check becomes unkillable.
+# --------------------------------------------------------------------------
+
+SUITES["cas-fps-amplitude"] = (
+    "crates/axeyum-cas/src/fps_amplitude.rs",
+    Cargo(("-p", "axeyum-cas", "--lib", "fps_amplitude::"), "cas-fps-amplitude"),
+    [
+        (
+            # The certificate must describe the same function its radius does.
+            "the amplitude and radius certificates must name one function",
+            "        if self.radius.numerator != numerator || self.radius.denominator != denominator {\n"
+            "            return Err(AmplitudeError::FunctionMismatch);\n        }",
+            "        if false {\n            return Err(AmplitudeError::FunctionMismatch);\n        }",
+        ),
+        (
+            # A stated tolerance looser than the module's cap would let a forger
+            # buy acceptance by widening the claim.
+            "a tolerance above the module cap is refused",
+            "        if !self.tolerance.is_positive() || self.tolerance > tolerance_cap() {\n"
+            "            return Err(AmplitudeError::ToleranceTooLoose);\n        }",
+            "        if false {\n            return Err(AmplitudeError::ToleranceTooLoose);\n        }",
+        ),
+        (
+            # A non-monic factor is not the minimal polynomial of anything, and
+            # the number-field arithmetic downstream assumes it is.
+            "the dominant factor must be monic",
+            "        if declared_degree == 0 || !declared[declared_degree].is_one() {\n"
+            "            return Err(AmplitudeError::DominantFactorNotMonic);\n        }",
+            "        if false {\n            return Err(AmplitudeError::DominantFactorNotMonic);\n        }",
+        ),
+        (
+            # TWO factors attaining the radius means two singularities of equal
+            # modulus and no single amplitude. Without this the last one wins.
+            "exactly one factor may attain the radius",
+            "        if attaining != 1 {\n"
+            "            return Err(AmplitudeError::SharedDominantModulus { factors: attaining });\n        }",
+            "        if false {\n"
+            "            return Err(AmplitudeError::SharedDominantModulus { factors: attaining });\n        }",
+        ),
+        (
+            # The declared factor and multiplicity must be the ones the radius
+            # certificate's own factorization carries.
+            "the declared dominant factor and multiplicity must match the factorization",
+            "        if monic(&bound.factor) != declared || bound.multiplicity != self.multiplicity {\n"
+            "            return Err(AmplitudeError::DominantFactorMismatch);\n        }",
+            "        if false {\n            return Err(AmplitudeError::DominantFactorMismatch);\n        }",
+        ),
+        (
+            # `f^m * s = q` is what makes `m` the pole's ORDER rather than a
+            # number the certificate asserts.
+            "the factor/cofactor split must reproduce the reduced denominator",
+            "        if let Some(degree) = first_disagreement(&rebuilt, &self.radius.reduced_denominator) {\n"
+            "            return Err(AmplitudeError::CofactorMismatch { degree });\n        }",
+            "        if let Some(degree) = first_disagreement(&rebuilt, &rebuilt) {\n"
+            "            return Err(AmplitudeError::CofactorMismatch { degree });\n        }",
+        ),
+        (
+            # A rational pole that is not a root of the factor is not a pole.
+            "a rational pole must be a root of the dominant factor",
+            "                if !eval(&factor, value).is_zero() {\n"
+            "                    return Err(AmplitudeError::PoleNotARoot);\n                }",
+            "                if false {\n"
+            "                    return Err(AmplitudeError::PoleNotARoot);\n                }",
+        ),
+        (
+            # An algebraic pole is named by a bracket; a bracket naming a
+            # different polynomial's root names nothing.
+            "an algebraic pole's minimal polynomial must be the dominant factor",
+            "                if trim(minimal_polynomial.clone()) != factor {\n"
+            "                    return Err(AmplitudeError::MinimalPolynomialMismatch);\n                }",
+            "                if false {\n"
+            "                    return Err(AmplitudeError::MinimalPolynomialMismatch);\n                }",
+        ),
+        (
+            # `lower >= upper` is not a bracket. Killed by the degenerate
+            # bracket; the STRADDLING half of the same condition is caught
+            # downstream by `modulus_interval`, so only the ordering half is
+            # load-bearing here.
+            "a pole bracket must be properly ordered",
+            "                if lower >= upper || !(lower.is_positive() || upper.is_negative()) {\n"
+            "                    return Err(AmplitudeError::MalformedPoleBracket);\n                }",
+            "                if !(lower.is_positive() || upper.is_negative()) {\n"
+            "                    return Err(AmplitudeError::MalformedPoleBracket);\n                }",
+        ),
+        (
+            # A bracket holding two roots does not say WHICH root is the pole.
+            "the pole bracket must isolate exactly one root",
+            "                if count != 1 {\n"
+            "                    return Err(AmplitudeError::PoleNotIsolated {\n"
+            "                        expected: 1,\n                        found: count,\n                    });\n                }",
+            "                if false {\n"
+            "                    return Err(AmplitudeError::PoleNotIsolated {\n"
+            "                        expected: 1,\n                        found: count,\n                    });\n                }",
+        ),
+        (
+            # The pole's modulus must be inside the radius's certified bracket;
+            # without it the SUBDOMINANT root of the same factor is accepted.
+            "the pole's modulus must lie inside the radius bracket",
+            "        if modulus_lower < *bracket_lower || modulus_upper > *bracket_upper {\n"
+            "            return Err(AmplitudeError::PoleModulusMismatch);\n        }",
+            "        if false {\n            return Err(AmplitudeError::PoleModulusMismatch);\n        }",
+        ),
+        (
+            # THIS ONE SURVIVES, and the impossibility is the finding, not an
+            # oversight. It is a fail-closed self-check: the modulus polynomial
+            # divides the global one, the radius certificate has already been
+            # verified to have exactly one root of that product at or below the
+            # bracket's upper end, and the modulus-polynomial theorem puts
+            # |zeta| among its roots -- so with the containment guard above
+            # holding, `below` can only be 1. It stays because it is what would
+            # catch a future modulus route whose polynomial does not carry every
+            # root modulus, and nothing else would.
+            "the pole must be the factor's minimal-modulus root",
+            "        if below != 1 {\n"
+            "            return Err(AmplitudeError::PoleModulusNotMinimal { found: below });\n        }",
+            "        if false {\n"
+            "            return Err(AmplitudeError::PoleModulusNotMinimal { found: below });\n        }",
+        ),
+        (
+            # The uniqueness test: without it a conjugate pair or a +-rho pair
+            # inside ONE irreducible factor is accepted and an amplitude is
+            # reported for a periodic sequence.
+            "the minimal modulus must be attained by exactly one root",
+            "            Some(false) => return Err(AmplitudeError::DominantModulusNotSimple),",
+            "            Some(false) => {}",
+        ),
+        (
+            # The independent second route to C.
+            "the partial-fraction cross-check must agree",
+            "            Some(value) if value != *claimed => Err(AmplitudeError::PartialFractionDisagrees),",
+            "            Some(value) if value == *claimed && value != *claimed => {\n"
+            "                Err(AmplitudeError::PartialFractionDisagrees)\n            }",
+        ),
+        (
+            # The residue recomputation itself, in the number field. Anchored on
+            # the ALGEBRAIC branch, which the cross-check cannot reach.
+            "the residue recomputation must reproduce an algebraic amplitude",
+            "                if value.coeffs() != coefficients.as_slice() {\n"
+            "                    return Err(AmplitudeError::AmplitudeMismatch);\n                }",
+            "                if false {\n"
+            "                    return Err(AmplitudeError::AmplitudeMismatch);\n                }",
+        ),
+        (
+            # A tail bound at or below the radius says nothing at all.
+            "the tail bound must be above the radius",
+            "                if bound <= bracket_upper {\n"
+            "                    return Err(AmplitudeError::TailBoundNotAboveRadius);\n                }",
+            "                if false {\n"
+            "                    return Err(AmplitudeError::TailBoundNotAboveRadius);\n                }",
+        ),
+        (
+            # ...and the gap it claims must actually be empty.
+            "the claimed tail gap must hold no further singularity",
+            "        if found != 0 {\n"
+            "            return Err(AmplitudeError::TailBoundNotCertified { found });\n        }",
+            "        if false {\n"
+            "            return Err(AmplitudeError::TailBoundNotCertified { found });\n        }",
+        ),
+        (
+            # A window of the wrong length is not the window this module states.
+            "the window must have the stated length",
+            "        if self.samples.len() != WINDOW_LEN {\n"
+            "            return Err(AmplitudeError::MalformedWindow);\n        }",
+            "        if false {\n"
+            "            return Err(AmplitudeError::MalformedWindow);\n        }",
+        ),
+        (
+            # Samples below the floor are pre-asymptotic and say nothing.
+            "the window must start at or above the floor",
+            "        if base < MIN_WINDOW_BASE {\n"
+            "            return Err(AmplitudeError::MalformedWindow);\n        }",
+            "        if false {\n            return Err(AmplitudeError::MalformedWindow);\n        }",
+        ),
+        (
+            # A window with a gap is a hand-picked sample, not a window.
+            "the window's indices must be consecutive",
+            "            if sample.index != base + offset {\n"
+            "                return Err(AmplitudeError::MalformedWindow);\n            }",
+            "            if false {\n                return Err(AmplitudeError::MalformedWindow);\n            }",
+        ),
+        (
+            # Each carried coefficient must be the expansion's own.
+            "each window coefficient must be the reused expansion's",
+            "            if *coefficient != sample.coefficient {\n"
+            "                return Err(AmplitudeError::CoefficientMismatch { index: offset });\n            }",
+            "            if false {\n"
+            "                return Err(AmplitudeError::CoefficientMismatch { index: offset });\n            }",
+        ),
+        (
+            # ...and each carried error bound must be the recomputed one.
+            "each window error bound must be the recomputed one",
+            "            if bound != sample.error_bound {\n"
+            "                return Err(AmplitudeError::ErrorBoundMismatch { index: offset });\n            }",
+            "            if false {\n"
+            "                return Err(AmplitudeError::ErrorBoundMismatch { index: offset });\n            }",
+        ),
+        (
+            # ...and be inside the stated tolerance.
+            "each window error bound must meet the stated tolerance",
+            "            if bound > self.tolerance {\n"
+            "                return Err(AmplitudeError::ToleranceExceeded { index: offset });\n            }",
+            "            if false {\n"
+            "                return Err(AmplitudeError::ToleranceExceeded { index: offset });\n            }",
+        ),
+        (
+            # ...and the window must show convergence, not divergence.
+            "the window's error must not grow",
+            "        if last.error_bound > first.error_bound {\n"
+            "            return Err(AmplitudeError::ErrorDoesNotShrink);\n        }",
+            "        if false {\n            return Err(AmplitudeError::ErrorDoesNotShrink);\n        }",
+        ),
+    ],
+)
+
+# `arith-enclosure-rounding-iterate` -- M3 of the family above, on its own,
+# against the ONE test written to catch it.  See that family's note for why it
+# cannot share a filter: unmutated the seven tests take 7.2 s, and this single
+# mutation inside them was still running at 47 CPU-minutes.
+#
+# The test it must kill is worth reading, because the OBVIOUS assertion does
+# not work.  Removing the per-iterate rounding leaves the bracket correct --
+# AM-GM only needs `x >= sqrt p`, which an exact iterate satisfies -- so no
+# soundness property can see it.  Nor can a denominator BOUND: the slice-2 lane
+# measured that unrounded Newton from `x0 = 2` passes the order-32 grid step in
+# six iterations with a denominator of 77 bits, comfortably under the 161-bit
+# bound, and a bound-only assertion SURVIVED this mutation.  What kills it is
+# grid MEMBERSHIP -- that `hi * 2^bits` is an integer -- because 470832 is not
+# a power of two.
+# --------------------------------------------------------------------------
+
+SUITES["arith-enclosure-rounding-iterate"] = (
+    "crates/axeyum-cas/src/enclosure.rs",
+    Cargo(
+        (
+            "-p",
+            "axeyum-cas",
+            "--lib",
+            "enclosure::tests::sqrt_point_bounds_its_endpoint_denominators_by_the_grid",
+        ),
+        "arith-enclosure-rounding-iterate",
+    ),
+    [
+        (
+            "each Newton iterate is rounded back onto the grid",
+            "        let next = crate::enclosure_special::dyadic_ceil(&((&x + &lower) / &two), bits);",
+            "        let next = (&x + &lower) / &two;",
+        ),
+    ],
+)
+
+# ---------------------------------------------------------------------------
+# ADR-1710 lane `arith-finish`: the three families this lane added.
+#
+# Kept as one appended block, separate from everything above, because a
+# sibling lane was registering slice 2's mutants in this same file at the same
+# time and two lanes appending to one Python file is the conflict shape
+# `lane-merge-additive.py` exists for.
+# ---------------------------------------------------------------------------
+
+SUITES["arith-normalization-receipt"] = (
+    "crates/axeyum-arith/src/rational.rs",
+    Cargo(("-p", "axeyum-arith", "--lib", "rational::"), "arith-normalization-receipt"),
+    [
+        (
+            "there was a rational to reduce (the pre-reduction denominator is nonzero)",
+            "        if self.denominator_before.sign() == Sign::NoSign {\n            return false;\n        }",
+            "        if false {\n            return false;\n        }",
+        ),
+        (
+            # The sign half of the policy: -3/-4 reducing to 3/-4 satisfies
+            # every other guard and denotes the same number, but is not the
+            # normal form this crate promises.
+            "the reduced denominator is strictly positive",
+            "        if self.denominator_after.sign() != Sign::Plus {\n            return false;\n        }",
+            "        if false {\n            return false;\n        }",
+        ),
+        (
+            "the two multiplications re-derive the pre-reduction pair",
+            "        if !(positive || negative) {\n            return false;\n        }",
+            "        let _ = (positive, negative);\n        if false {\n            return false;\n        }",
+        ),
+        (
+            # The product guard passes for ANY common divisor, so this is the
+            # guard that pins the value rather than merely a divisor of it.
+            "the reduced pair is coprime, so the whole gcd was divided out",
+            "        if binary_gcd(\n            self.numerator_after.magnitude(),\n            self.denominator_after.magnitude(),\n        ) != BigUint::from(1u8)\n        {\n            return false;\n        }",
+            "        if false\n        {\n            return false;\n        }",
+        ),
+        (
+            # The receipt is read by a benchmark; a bit count nobody checks is
+            # a measurement nobody can trust.
+            "the recorded bit counts are the recorded numerators' bit counts",
+            "        self.numerator_bits_before == self.numerator_before.magnitude().bits()\n            && self.numerator_bits_after == self.numerator_after.magnitude().bits()",
+            "        true",
+        ),
+    ],
+)
+
+
+SUITES["arith-hensel-lift"] = (
+    "crates/axeyum-arith/src/hensel.rs",
+    Cargo(("-p", "axeyum-arith", "--lib", "hensel::"), "arith-hensel-lift"),
+    [
+        (
+            "the prime is at least two and the precision at least one",
+            "        if self.prime < BigUint::from(2u8) || self.precision == 0 {\n            return false;\n        }",
+            "        if false {\n            return false;\n        }",
+        ),
+        (
+            # A chain padded with a duplicate of its own last rung is made
+            # entirely of true roots, so only the length guard rejects it.
+            "the chain has exactly one rung per doubling step",
+            "        if self.chain.len() != steps.len() {\n            return false;\n        }",
+            "        if false {\n            return false;\n        }",
+        ),
+        (
+            # Hensel's uniqueness is a theorem about this hypothesis; without
+            # it the certificate claims much less than it looks like it does.
+            "the seed is a SIMPLE root: f'(a_1) is invertible mod p",
+            "        if invert_mod(&slope, &self.prime).is_none() {\n            return false;\n        }",
+            "        if false {\n            return false;\n        }",
+        ),
+        (
+            "every rung is a root at its own precision",
+            "            if value.bits() != 0 {\n                return false;\n            }",
+            "            let _ = &value;\n            if false {\n                return false;\n            }",
+        ),
+        (
+            # Without this, a sequence that jumps between two DIFFERENT roots
+            # of the same polynomial passes: every rung is a genuine root.
+            "each rung lifts the previous one rather than being an unrelated root",
+            "            if let Some((previous_rung, previous_modulus)) = &previous\n                && rung % previous_modulus != previous_rung % previous_modulus\n            {\n                return false;\n            }",
+            "            if false\n            {\n                return false;\n            }",
+        ),
+        (
+            "the final rung is the claimed root, reduced",
+            "        self.chain.last() == Some(&self.root) && self.root < final_modulus",
+            "        let _ = &final_modulus;\n        true",
+        ),
+    ],
+)
+
+
+SUITES["arith-boundary-gate"] = (
+    "scripts/check-arith-boundary.sh",
+    Unittest("scripts.tests.test_check_arith_boundary"),
+    [
+        (
+            "a Rust source outside axeyum-arith naming the upstream crate is a violation",
+            '  code_hits+=("$path")',
+            "  :",
+        ),
+        (
+            "a manifest outside axeyum-arith declaring one of the four crates is a violation",
+            '    manifest_hits+=("$path")',
+            "    :",
+        ),
+        (
+            # A stale exception is a hole nobody can see, so the gate has to
+            # fail in the other direction too.
+            "a stale allowlist entry fails the gate",
+            "if [[ $stale -gt 0 ]]; then\n  status=1\nfi",
+            "if false; then\n  status=1\nfi",
+        ),
+        (
+            "an unallowed violation actually sets the exit status",
+            "if [[ $violations -gt 0 ]]; then",
+            "if false && [[ $violations -gt 0 ]]; then",
+        ),
+    ],
+)
+
+# `arith-ky-differential` -- the K[y] layer's differential corpus against
+# `axeyum_arith::QPoly` (ADR-1710 slice 4, `crates/axeyum-cas/src/qe_fibre.rs`).
+#
+# Slice 4 declined to migrate this layer -- `K = Q[x]/(m)` with `m` deliberately
+# reducible is a ring with zero divisors, not a field -- and found that it had
+# NO differential oracle of any kind.  The corpus it added compares K[y] against
+# `QPoly` under a DEGREE-1 modulus, the one case where `K` really is Q.
+#
+# This family exists because that corpus is a new checker, and a checker nobody
+# can make fail is decoration.  Each mutation below is a defect the corpus is
+# claimed to catch, in a routine the end-to-end fibre tests exercise only
+# transitively -- and those tests cannot catch any of them, because their oracle
+# (`FibreCertificate::verify`) is the same K[y] code.
+#
+# A FOURTH mutation was tried and withdrawn, and it is worth recording rather
+# than quietly dropping.  Halving `kdivrem`'s quotient shift
+# (`r_degree - b_degree`) does not produce a wrong quotient -- it produces a
+# HANG.  That loop's termination argument is that the leading term cancels
+# EXACTLY at `deg r` on every pass; with the wrong shift the subtraction lands
+# elsewhere, `remainder[r_degree]` never changes, and the degree never drops.
+# A mutation that runs forever is neither `killed` nor `SURVIVED`, so it is not
+# a result and does not belong in a coverage claim.  (It is separately a fact
+# about `kdivrem` worth knowing: its termination rests on exact cancellation,
+# not on a step counter.)
+# --------------------------------------------------------------------------
+
+SUITES["arith-ky-differential"] = (
+    "crates/axeyum-cas/src/qe_fibre.rs",
+    Cargo(
+        ("-p", "axeyum-cas", "--lib", "qe::fibre::tests::the_ky_"),
+        "arith-ky-differential",
+    ),
+    [
+        (
+            # The formal derivative's factor is the exponent.  Off by one and
+            # every coefficient is wrong while the DEGREE is unchanged, so
+            # nothing structural notices.
+            "the K[y] derivative scales by the exponent",
+            "            .map(|(k, c)| scale_element(c, &BigRational::from_integer(BigInt::from(k))))",
+            "            .map(|(k, c)| scale_element(c, &BigRational::from_integer(BigInt::from(k + 1))))",
+        ),
+        (
+            # `kgcd` is specified monic, and `ksquarefree` and `KSturm` both
+            # rely on it.  A non-monic gcd still divides both inputs, so a
+            # divisibility check would not see this.
+            "the K[y] gcd is normalized monic",
+            "        self.kmonic(&left)" "\n" "    }",
+            "        Ok(left)" "\n" "    }",
+        ),
+        (
+            # Horner needs the point.  Dropping the scale makes `keval` return
+            # the SUM of the coefficients whatever `q` is -- and `KSturm`'s
+            # sign counting is `keval` at each endpoint, so the chain then
+            # counts the same thing at both ends.
+            "the K[y] evaluation multiplies by the point at each Horner step",
+            "            acc = add_elements(&scale_element(&acc, q), coeff);",
+            "            acc = add_elements(&acc, coeff);",
         ),
     ],
 )
