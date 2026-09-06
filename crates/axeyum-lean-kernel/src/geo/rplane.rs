@@ -197,8 +197,23 @@ pub struct RPlaneNames {
 
     /// `Geo.RPlane.pointRefl : ∀ P, CPoint.Equiv P P`.
     ///
-    /// `CPoint.Equiv` is a `Definition` and `creal_point.rs` never stated its
-    /// three setoid laws; the record's `pEq` slot needs all three.
+    /// `CPoint.Equiv` is a `Definition` and `creal_point.rs` builds its setoid
+    /// laws inline without ever naming them; the record's `pEq` slot needs all
+    /// three as terms.
+    ///
+    /// **These are the THIRD copies of these three propositions, and that is a
+    /// deliberate trade, not an oversight.** `metric.rs` already declares
+    /// `Metric.CPoint.equivRefl`/`equivSymm`/`equivTrans` — its own doc says
+    /// "the plane prelude builds this inline and never names it" — but
+    /// `build_geo_prelude` depends on `build_cpoint_prelude`, not on
+    /// `build_metric_prelude`, and reusing them would put the whole metric
+    /// prelude into every geo build to save three one-line lemmas. The right
+    /// long-term home for them is `creal_point.rs` beside `CPoint.Equiv`
+    /// itself, at which point both copies here and in `metric.rs` should go.
+    /// Recorded rather than quietly duplicated, because the search that would
+    /// have found `metric.rs`'s copies is the one this lane skipped: the
+    /// `CPointPrelude` field list is not the authority for names under
+    /// `CPoint`, since another prelude may declare into that namespace.
     pub point_refl: NameId,
     /// `Geo.RPlane.pointSymm : ∀ P Q, CPoint.Equiv P Q → CPoint.Equiv Q P`.
     pub point_symm: NameId,

@@ -137,13 +137,31 @@ Every polynomial identity above is emitted by `creal_point.rs`'s `rn_ring_proof`
 and none is written by hand. The largest has 14 monomials on the right, which is
 why no staging was needed.
 
-### 4. `CPoint.Equiv`'s setoid laws were missing
+### 4. `CPoint.Equiv`'s setoid laws, and a duplicate this lane created knowingly
 
-`creal_point.rs` defines `CPoint.Equiv` and never states its reflexivity,
-symmetry or transitivity; the record's `pEq` slot needs all three. They are
-declared here (`Geo.RPlane.pointRefl`/`pointSymm`/`pointTrans`) rather than in
-`creal_point.rs`, which this lane was told not to edit. If a third consumer
-appears they belong upstream.
+`creal_point.rs` defines `CPoint.Equiv` and builds its reflexivity, symmetry
+and transitivity inline without ever naming them; the record's `pEq` slot needs
+all three as terms, so they are declared here as
+`Geo.RPlane.pointRefl`/`pointSymm`/`pointTrans`.
+
+**They are the third copies, not the first, and the check that would have said
+so is one this lane initially got wrong.** `metric.rs` already declares
+`Metric.CPoint.equivRefl`/`equivSymm`/`equivTrans`, with its own doc noting
+"the plane prelude builds this inline and never names it". The search that
+missed them looked at `CPointPrelude`'s field list — which is *not* the
+authority for names under `CPoint`, because another prelude may declare into
+that namespace, exactly as CLAUDE.md's kernel gotcha says. The correct search
+is over the whole environment, and the gate that catches this class is
+merge-hygiene guard 6 (`check-shape-duplicates.py --prebuilt`), which SKIPPED
+on this host for want of a built `shape_search`.
+
+The duplication is kept rather than removed because reuse costs more than it
+saves: `build_geo_prelude` depends on `build_cpoint_prelude`, not on
+`build_metric_prelude`, so citing `metric.rs`'s copies would add the whole
+metric prelude to every geo build to save three one-line lemmas. The right
+long-term home is `creal_point.rs` beside `CPoint.Equiv` itself, at which point
+both this copy and `metric.rs`'s should be deleted. Recorded here so the next
+lane finds the fact rather than making a fourth copy.
 
 ### 5. Playfair did not land — and the obstruction is the SHAPE of `parallel`, not a missing principle
 
