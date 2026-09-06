@@ -3036,7 +3036,7 @@ pub enum ZeroTestDecline {
     /// so a wider integer type has nothing to add" — is measurably false. The
     /// two rings do not have the same fold set: the bounded dictionary is built
     /// with [`normalize`], which *rejects* a transcendental head, while the
-    /// unbounded one is built with [`normalize_rational_big_within`], which
+    /// unbounded one is built with `normalize_rational_big_within`, which
     /// *atomizes* it. So `√(ln x)·√(ln x) = ln x` is declined by the bounded
     /// fold and certified by the unbounded one, with no overflow anywhere in
     /// it (`a_transcendental_radicand_is_resolved_by_the_unbounded_fold`).
@@ -3049,7 +3049,7 @@ pub enum ZeroTestDecline {
 
 impl ZeroTestDecline {
     /// Whether handing this input to the unbounded fallback can turn the
-    /// decline into a decision — the one question [`equal_core`] routes on.
+    /// decline into a decision — the one question `equal_core` routes on.
     ///
     /// Each `false` is a claim that the unbounded ring reaches the same wall,
     /// and each has a reason in [`FragmentLimit`] that names the construct.
@@ -3071,11 +3071,11 @@ impl ZeroTestDecline {
 pub enum RelationLimit {
     /// A monomial multiplies two radical or absolute-value atoms, so
     /// `√a·√b = √(ab)` could still collapse a nonzero polynomial in three
-    /// independent variables ([`MultiPoly::relates_multiplicative_atoms`]).
+    /// independent variables (`MultiPoly::relates_multiplicative_atoms`).
     MultiplicativeAtomRelation,
-    /// The difference mentions an atom whose argument [`atom_name`] could not
+    /// The difference mentions an atom whose argument `atom_name` could not
     /// bring to a canonical form, so one value may sit under two keys
-    /// ([`MultiPoly::mentions_uncanonical_atom`]).
+    /// (`MultiPoly::mentions_uncanonical_atom`).
     UncanonicalAtomKey,
 }
 
@@ -3087,18 +3087,18 @@ pub enum RelationLimit {
 /// and the claim is what licenses not entering the fallback.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum FragmentLimit {
-    /// A `Unary` head [`normalize_rational_big_within`] declines outright
+    /// A `Unary` head `normalize_rational_big_within` declines outright
     /// (today: `exp`, which the bounded path *decomposes* rather than atomizes
     /// and which has no unbounded twin yet). The `String` is the head's own
-    /// name. Found by [`unbounded_ring_declined_head`], a syntactic walk, so it
-    /// is known *before* any of [`BIG_FALLBACK_WORK_BUDGET`] is spent.
+    /// name. Found by `unbounded_ring_declined_head`, a syntactic walk, so it
+    /// is known *before* any of `BIG_FALLBACK_WORK_BUDGET` is spent.
     UnboundedRingDeclinesHead(String),
     /// A division whose divisor normalizes to the identically zero function.
-    /// Not a width limit: [`BigRatFunc::div`] declines on exactly the same
+    /// Not a width limit: `BigRatFunc::div` declines on exactly the same
     /// condition, written the same way.
     DivisionByZeroFunction,
     /// An `exp` argument term whose integer coefficient does not fit the `u32`
-    /// exponent [`normalize_exp`] raises the primitive atom to. Exponents are
+    /// exponent `normalize_exp` raises the primitive atom to. Exponents are
     /// `u32` in **both** rings, so no coefficient width reaches this one.
     ExpCoefficientOutOfRange,
 }
@@ -3160,7 +3160,7 @@ impl std::fmt::Display for FragmentLimit {
 /// Why [`equal`] declined this pair, or `None` when it decided.
 ///
 /// The reason is read off **the same classifier the zero-test itself used** —
-/// [`equal_core_bounded_classified`] — not recomputed by a second
+/// `equal_core_bounded_classified` — not recomputed by a second
 /// implementation that could disagree with it. So a decline this reports is the
 /// decline that happened.
 ///
