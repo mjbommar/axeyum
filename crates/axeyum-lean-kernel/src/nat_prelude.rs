@@ -10656,3 +10656,6 @@ mod factorization_multiset_tests;
 
 #[cfg(test)]
 mod computability_tests;
+
+#[cfg(test)]
+mod multiset_select_tests;
