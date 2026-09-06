@@ -171,7 +171,7 @@ pub fn build_chain_map(
 }
 
 /// One column of `matrix` as an `n x 1` [`Matrix`].
-fn column_vector(matrix: &Matrix, col: usize) -> Option<Matrix> {
+pub(crate) fn column_vector(matrix: &Matrix, col: usize) -> Option<Matrix> {
     let rows = matrix.rows();
     let mut data = Vec::with_capacity(rows);
     for row in 0..rows {
@@ -182,7 +182,7 @@ fn column_vector(matrix: &Matrix, col: usize) -> Option<Matrix> {
 
 /// Stack a list of `n x 1` column vectors side by side into an `n x m`
 /// matrix. Returns `None` on a shape mismatch or overflow.
-fn columns_to_matrix(columns: &[Matrix], rows: usize) -> Option<Matrix> {
+pub(crate) fn columns_to_matrix(columns: &[Matrix], rows: usize) -> Option<Matrix> {
     let cols = columns.len();
     let mut data = vec![CasExpr::zero(); rows.checked_mul(cols)?];
     for (c, column) in columns.iter().enumerate() {
@@ -198,7 +198,7 @@ fn columns_to_matrix(columns: &[Matrix], rows: usize) -> Option<Matrix> {
 
 /// The rank of the span of a list of `n x 1` column vectors (`0` for an
 /// empty list).
-fn rank_of_columns(columns: &[Matrix], rows: usize) -> Option<usize> {
+pub(crate) fn rank_of_columns(columns: &[Matrix], rows: usize) -> Option<usize> {
     if columns.is_empty() {
         return Some(0);
     }
@@ -209,7 +209,7 @@ fn rank_of_columns(columns: &[Matrix], rows: usize) -> Option<usize> {
 /// `B_k = im(d_{k+1})`), by walking its columns left to right and keeping
 /// each one that increases the accumulated rank. Deterministic (fixed
 /// column order).
-fn choose_boundary_basis(boundary_next: &Matrix) -> Option<Vec<Matrix>> {
+pub(crate) fn choose_boundary_basis(boundary_next: &Matrix) -> Option<Vec<Matrix>> {
     let rows = boundary_next.rows();
     let mut chosen: Vec<Matrix> = Vec::new();
     let mut rank_so_far = 0usize;
@@ -232,7 +232,7 @@ fn choose_boundary_basis(boundary_next: &Matrix) -> Option<Vec<Matrix>> {
 /// order and kept whenever it increases the accumulated rank). Returns
 /// `(boundary_basis, homology_basis)`, both lists of `n_k x 1` column
 /// vectors of length `d_k.cols()`.
-fn choose_homology_basis(
+pub(crate) fn choose_homology_basis(
     boundary_k: &Matrix,
     boundary_next: &Matrix,
 ) -> Option<(Vec<Matrix>, Vec<Matrix>)> {
@@ -262,7 +262,7 @@ fn choose_homology_basis(
 /// or a shape/overflow problem) -- this is the one place a caller can detect
 /// "target was not actually in the span" instead of silently misreading a
 /// row.
-fn solve_via_rref(basis: &Matrix, target: &Matrix) -> Option<Vec<Rational>> {
+pub(crate) fn solve_via_rref(basis: &Matrix, target: &Matrix) -> Option<Vec<Rational>> {
     let rows = basis.rows();
     let cols = basis.cols();
     if cols == 0 {
@@ -306,6 +306,49 @@ fn solve_via_rref(basis: &Matrix, target: &Matrix) -> Option<Vec<Rational>> {
         }
     }
     Some(coefficients)
+}
+
+/// The shared "chain map on cycle representatives -> induced matrix on
+/// `H_*(-; Q)`" construction this module's own [`induced_homology`] runs
+/// inline in its per-degree loop, factored out so [`super::relative`] (item
+/// 8, wave four) can reuse it verbatim for the inclusion and quotient maps of
+/// a relative pair, rather than re-deriving the same linear-algebra recipe:
+/// express `chain_map * z` (a genuine cycle of the codomain, guaranteed
+/// whenever `chain_map` commutes with the boundary) in the codomain's
+/// `[boundary_basis | homology_basis]` basis of its cycle space via
+/// [`solve_via_rref`], and keep the `homology_basis`-tail of each coefficient
+/// vector as one column of the induced matrix.
+///
+/// Returns `None` on a shape mismatch, a non-conformable multiply, or if
+/// `solve_via_rref` declines (which happens if `chain_map * z` is not
+/// actually a cycle spanned by the supplied basis -- i.e. the caller's
+/// `chain_map` did not genuinely commute with the boundary at this degree).
+#[must_use]
+pub(crate) fn induced_map_from_chain_map(
+    chain_map: &Matrix,
+    domain_h_basis: &[Matrix],
+    codomain_boundary_basis: &[Matrix],
+    codomain_h_basis: &[Matrix],
+    codomain_rows: usize,
+) -> Option<Matrix> {
+    let combined: Vec<Matrix> = codomain_boundary_basis
+        .iter()
+        .cloned()
+        .chain(codomain_h_basis.iter().cloned())
+        .collect();
+    let q = columns_to_matrix(&combined, codomain_rows)?;
+    let b_x = domain_h_basis.len();
+    let b_y = codomain_h_basis.len();
+    let mut data = vec![CasExpr::zero(); b_y.checked_mul(b_x)?];
+    for (i, z) in domain_h_basis.iter().enumerate() {
+        let image = chain_map.mul(z)?;
+        let coefficients = solve_via_rref(&q, &image)?;
+        for j in 0..b_y {
+            let value = coefficients[codomain_boundary_basis.len() + j];
+            data[j * b_x + i] = CasExpr::Const(value);
+        }
+    }
+    Matrix::new(b_y, b_x, data)
 }
 
 /// A checkable certificate of a simplicial map's chain map and its induced

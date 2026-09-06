@@ -137,6 +137,26 @@ shows its bottleneck is the CDCL(T) driver's own Boolean search, not the
 theory's `assert`/`propagate` cost, so widening the theory interface had
 nothing to speed up there.
 
+That Boolean search is now watch-based. `CdclT::unit_propagate` used to rescan
+the whole clause database on every fixpoint pass and clone the reason clause at
+each implication; it is now **two-watched-literal propagation with blocking
+literals**, with the clause store a flat literal arena plus `(offset, len)`
+headers, and a reason recorded as a clause id read out of the arena only when
+conflict analysis asks for it. The design is ported verbatim from the
+proof-producing native core (`axeyum_cnf`'s `proof_sat.rs`: `Watch`,
+`ClauseHeader`, `lit_code`, the `i`/`j` watch-list compaction) so that moving
+CDCL(T) onto that engine is a deletion rather than a reconciliation of two
+watch schemes. The `TheorySolver` trait, the ten `CdclT::new` call sites and
+`TheoryLayerStats` are untouched, so `boolean_propagate` measures the same
+stage before and after and is its own scoreboard: on the two profiled QF_IDL
+files that emit a trace line it falls from 17.5 s / 16.9 s of a 24 s budget to
+1.9 s / 1.1 s, and `decisions` rises from zero — the search had never left its
+first propagation fixpoint. Clauses inserted mid-search at the final-check
+boundary (`CdclT::add_permanent_clause`) get their watches chosen against the
+*current* assignment and one full evaluation from a pending queue, so a clause
+that arrives already unit implies and one that arrives already falsified
+conflicts. [Measurement](../research/11-design-review/2026-09-05-s1-watched-literals-measured.md).
+
 ## Result discipline
 
 - `sat` requires a source-level model accepted by the appropriate checker.

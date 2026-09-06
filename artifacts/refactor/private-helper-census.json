@@ -14,18 +14,18 @@
     ]
   },
   "population": {
-    "files_scanned": 691,
-    "private_fns": 14150,
-    "private_fns_outside_tests": 11485,
-    "distinct_names": 10961,
-    "distinct_body_digests": 12493,
-    "duplicated_name_groups": 1169,
-    "duplicated_body_groups": 603,
-    "sites_in_duplicated_body_groups": 2260,
-    "inline_step_fns": 9316,
-    "inline_step_name_groups": 795,
-    "inline_step_body_groups": 393,
-    "sites_in_inline_step_body_groups": 1348
+    "files_scanned": 693,
+    "private_fns": 14188,
+    "private_fns_outside_tests": 11516,
+    "distinct_names": 10994,
+    "distinct_body_digests": 12528,
+    "duplicated_name_groups": 1170,
+    "duplicated_body_groups": 605,
+    "sites_in_duplicated_body_groups": 2265,
+    "inline_step_fns": 9347,
+    "inline_step_name_groups": 796,
+    "inline_step_body_groups": 395,
+    "sites_in_inline_step_body_groups": 1352
   },
   "by_name": [
     {
@@ -1425,6 +1425,36 @@
       ]
     },
     {
+      "key": "ne_of_lt",
+      "count": 13,
+      "names": [
+        "ne_of_lt"
+      ],
+      "files": 13,
+      "carriers": [
+        "IntDev",
+        "NatDev"
+      ],
+      "body_lines": 11,
+      "signature": "fn ne_of_lt(d: &mut IntDev<'_>, a: ExprId, b: ExprId, hlt: ExprId) -> ExprId",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/int_prelude/prod.rs:473",
+        "crates/axeyum-lean-kernel/src/nat_prelude/factorization_multiset.rs:160",
+        "crates/axeyum-lean-kernel/src/nat_prelude/finite.rs:1588",
+        "crates/axeyum-lean-kernel/src/nat_prelude/finset_singleton.rs:224",
+        "crates/axeyum-lean-kernel/src/nat_prelude/min_fac_dvd.rs:167",
+        "crates/axeyum-lean-kernel/src/nat_prelude/multiset.rs:1333",
+        "crates/axeyum-lean-kernel/src/nat_prelude/perfect.rs:391",
+        "crates/axeyum-lean-kernel/src/rat_prelude/det_mul.rs:167",
+        "crates/axeyum-lean-kernel/src/rat_prelude/echelon_invariant.rs:634",
+        "crates/axeyum-lean-kernel/src/rat_prelude/echelon_section.rs:93",
+        "crates/axeyum-lean-kernel/src/rat_prelude/fourth_moment.rs:788",
+        "crates/axeyum-lean-kernel/src/rat_prelude/matrix_det_mul.rs:959",
+        "crates/axeyum-lean-kernel/src/rat_prelude/matrix_n.rs:870"
+      ]
+    },
+    {
       "key": "cle",
       "count": 12,
       "names": [
@@ -1566,35 +1596,6 @@
         "crates/axeyum-lean-kernel/src/nat_prelude/sum_range_permute.rs:123",
         "crates/axeyum-lean-kernel/src/nat_prelude/totient_lemmas.rs:1944",
         "crates/axeyum-lean-kernel/src/nat_prelude/xor_trichotomy.rs:346"
-      ]
-    },
-    {
-      "key": "ne_of_lt",
-      "count": 12,
-      "names": [
-        "ne_of_lt"
-      ],
-      "files": 12,
-      "carriers": [
-        "IntDev",
-        "NatDev"
-      ],
-      "body_lines": 11,
-      "signature": "fn ne_of_lt(d: &mut IntDev<'_>, a: ExprId, b: ExprId, hlt: ExprId) -> ExprId",
-      "test_file_members": 0,
-      "sites": [
-        "crates/axeyum-lean-kernel/src/int_prelude/prod.rs:473",
-        "crates/axeyum-lean-kernel/src/nat_prelude/factorization_multiset.rs:160",
-        "crates/axeyum-lean-kernel/src/nat_prelude/finite.rs:1588",
-        "crates/axeyum-lean-kernel/src/nat_prelude/finset_singleton.rs:224",
-        "crates/axeyum-lean-kernel/src/nat_prelude/min_fac_dvd.rs:167",
-        "crates/axeyum-lean-kernel/src/nat_prelude/multiset.rs:1333",
-        "crates/axeyum-lean-kernel/src/nat_prelude/perfect.rs:391",
-        "crates/axeyum-lean-kernel/src/rat_prelude/det_mul.rs:167",
-        "crates/axeyum-lean-kernel/src/rat_prelude/echelon_invariant.rs:634",
-        "crates/axeyum-lean-kernel/src/rat_prelude/echelon_section.rs:93",
-        "crates/axeyum-lean-kernel/src/rat_prelude/matrix_det_mul.rs:959",
-        "crates/axeyum-lean-kernel/src/rat_prelude/matrix_n.rs:870"
       ]
     },
     {
@@ -2015,7 +2016,7 @@
         "crates/axeyum-lean-kernel/src/creal.rs:6331",
         "crates/axeyum-lean-kernel/src/creal_point.rs:1625",
         "crates/axeyum-lean-kernel/src/int_prelude.rs:2171",
-        "crates/axeyum-lean-kernel/src/rat_prelude.rs:3264"
+        "crates/axeyum-lean-kernel/src/rat_prelude.rs:3271"
       ]
     },
     {
@@ -4922,6 +4923,28 @@
       ]
     },
     {
+      "key": "ne_symm",
+      "count": 5,
+      "names": [
+        "ne_symm"
+      ],
+      "files": 5,
+      "carriers": [
+        "IntDev",
+        "NatDev"
+      ],
+      "body_lines": 8,
+      "signature": "fn ne_symm(d: &mut IntDev<'_>, a: ExprId, b: ExprId, h: ExprId) -> ExprId",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/int_prelude/wilson.rs:4506",
+        "crates/axeyum-lean-kernel/src/nat_prelude/finite.rs:1607",
+        "crates/axeyum-lean-kernel/src/nat_prelude/min_fac_dvd.rs:179",
+        "crates/axeyum-lean-kernel/src/rat_prelude/fourth_moment.rs:1268",
+        "crates/axeyum-lean-kernel/src/rat_prelude/matrix_n.rs:856"
+      ]
+    },
+    {
       "key": "neg_add",
       "count": 5,
       "names": [
@@ -5001,6 +5024,25 @@
         "crates/axeyum-lean-kernel/src/ring/rat.rs:169",
         "crates/axeyum-lean-kernel/src/simp/list.rs:1208",
         "crates/axeyum-lean-kernel/src/simp/nat.rs:540"
+      ]
+    },
+    {
+      "key": "prelude",
+      "count": 5,
+      "names": [
+        "prelude"
+      ],
+      "files": 5,
+      "carriers": [],
+      "body_lines": 3,
+      "signature": "fn prelude(&mut self) -> NatPrelude",
+      "test_file_members": 4,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/nat_prelude/ops.rs:95",
+        "crates/axeyum-lean-kernel/src/rat_prelude/binomial_rat_tests.rs:19",
+        "crates/axeyum-lean-kernel/src/rat_prelude/binomial_s_tests.rs:30",
+        "crates/axeyum-lean-kernel/src/rat_prelude/fourth_moment_tests.rs:22",
+        "crates/axeyum-lean-kernel/src/rat_prelude/probability_s_tests.rs:42"
       ]
     },
     {
@@ -6129,27 +6171,6 @@
       ]
     },
     {
-      "key": "ne_symm",
-      "count": 4,
-      "names": [
-        "ne_symm"
-      ],
-      "files": 4,
-      "carriers": [
-        "IntDev",
-        "NatDev"
-      ],
-      "body_lines": 8,
-      "signature": "fn ne_symm(d: &mut IntDev<'_>, a: ExprId, b: ExprId, h: ExprId) -> ExprId",
-      "test_file_members": 0,
-      "sites": [
-        "crates/axeyum-lean-kernel/src/int_prelude/wilson.rs:4506",
-        "crates/axeyum-lean-kernel/src/nat_prelude/finite.rs:1607",
-        "crates/axeyum-lean-kernel/src/nat_prelude/min_fac_dvd.rs:179",
-        "crates/axeyum-lean-kernel/src/rat_prelude/matrix_n.rs:856"
-      ]
-    },
-    {
       "key": "neg_add_distrib",
       "count": 4,
       "names": [
@@ -6402,24 +6423,6 @@
         "crates/axeyum-lean-kernel/src/nat_prelude/finite.rs:570",
         "crates/axeyum-lean-kernel/src/nat_prelude/perfect.rs:198",
         "crates/axeyum-lean-kernel/src/nat_prelude/totient.rs:134"
-      ]
-    },
-    {
-      "key": "prelude",
-      "count": 4,
-      "names": [
-        "prelude"
-      ],
-      "files": 4,
-      "carriers": [],
-      "body_lines": 3,
-      "signature": "fn prelude(&mut self) -> NatPrelude",
-      "test_file_members": 3,
-      "sites": [
-        "crates/axeyum-lean-kernel/src/nat_prelude/ops.rs:95",
-        "crates/axeyum-lean-kernel/src/rat_prelude/binomial_rat_tests.rs:19",
-        "crates/axeyum-lean-kernel/src/rat_prelude/binomial_s_tests.rs:30",
-        "crates/axeyum-lean-kernel/src/rat_prelude/probability_s_tests.rs:42"
       ]
     },
     {
@@ -6791,6 +6794,26 @@
         "crates/axeyum-lean-kernel/src/int_prelude/dvd_mul_split.rs:165",
         "crates/axeyum-lean-kernel/src/int_prelude/gcd.rs:2956",
         "crates/axeyum-lean-kernel/src/nat_prelude/gcd_dvd_mirrors.rs:21"
+      ]
+    },
+    {
+      "key": "zero_mul",
+      "count": 4,
+      "names": [
+        "zero_mul"
+      ],
+      "files": 4,
+      "carriers": [
+        "IntDev"
+      ],
+      "body_lines": 8,
+      "signature": "fn zero_mul(d: &mut IntDev<'_>, p: CRealPrelude, a: ExprId) -> ExprId",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/complex/ring.rs:436",
+        "crates/axeyum-lean-kernel/src/int_prelude/sign.rs:23",
+        "crates/axeyum-lean-kernel/src/rat_prelude/fourth_moment.rs:173",
+        "crates/axeyum-lean-kernel/src/rat_prelude/matrix.rs:3329"
       ]
     },
     {
@@ -10831,25 +10854,6 @@
         "crates/axeyum-lean-kernel/src/creal/exp_fn.rs:176",
         "crates/axeyum-lean-kernel/src/creal/lub_boundary.rs:208",
         "crates/axeyum-lean-kernel/src/creal/trig_fn.rs:512"
-      ]
-    },
-    {
-      "key": "zero_mul",
-      "count": 3,
-      "names": [
-        "zero_mul"
-      ],
-      "files": 3,
-      "carriers": [
-        "IntDev"
-      ],
-      "body_lines": 8,
-      "signature": "fn zero_mul(d: &mut IntDev<'_>, p: CRealPrelude, a: ExprId) -> ExprId",
-      "test_file_members": 0,
-      "sites": [
-        "crates/axeyum-lean-kernel/src/complex/ring.rs:436",
-        "crates/axeyum-lean-kernel/src/int_prelude/sign.rs:23",
-        "crates/axeyum-lean-kernel/src/rat_prelude/matrix.rs:3329"
       ]
     },
     {
@@ -18897,6 +18901,25 @@
       ]
     },
     {
+      "key": "ne_of_lt_rev",
+      "count": 2,
+      "names": [
+        "ne_of_lt_rev"
+      ],
+      "files": 2,
+      "carriers": [
+        "IntDev",
+        "NatDev"
+      ],
+      "body_lines": 11,
+      "signature": "fn ne_of_lt_rev(d: &mut NatDev<'_>, p: &NatPrelude, a: ExprId, b: ExprId, hlt: ExprId) -> ExprId",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/nat_prelude/multiset.rs:1347",
+        "crates/axeyum-lean-kernel/src/rat_prelude/fourth_moment.rs:1256"
+      ]
+    },
+    {
       "key": "ne_of_lt_symm",
       "count": 2,
       "names": [
@@ -25683,6 +25706,24 @@
       ]
     },
     {
+      "key": "7e996b866d28c452",
+      "count": 4,
+      "names": [
+        "prelude"
+      ],
+      "files": 4,
+      "carriers": [],
+      "body_lines": 5,
+      "signature": "fn prelude() -> (Kernel, RatPrelude)",
+      "test_file_members": 4,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/rat_prelude/binomial_rat_tests.rs:19",
+        "crates/axeyum-lean-kernel/src/rat_prelude/binomial_s_tests.rs:30",
+        "crates/axeyum-lean-kernel/src/rat_prelude/fourth_moment_tests.rs:22",
+        "crates/axeyum-lean-kernel/src/rat_prelude/probability_s_tests.rs:42"
+      ]
+    },
+    {
       "key": "8c038d81671689e0",
       "count": 4,
       "names": [
@@ -27158,23 +27199,6 @@
       ]
     },
     {
-      "key": "7e996b866d28c452",
-      "count": 3,
-      "names": [
-        "prelude"
-      ],
-      "files": 3,
-      "carriers": [],
-      "body_lines": 5,
-      "signature": "fn prelude() -> (Kernel, RatPrelude)",
-      "test_file_members": 3,
-      "sites": [
-        "crates/axeyum-lean-kernel/src/rat_prelude/binomial_rat_tests.rs:19",
-        "crates/axeyum-lean-kernel/src/rat_prelude/binomial_s_tests.rs:30",
-        "crates/axeyum-lean-kernel/src/rat_prelude/probability_s_tests.rs:42"
-      ]
-    },
-    {
       "key": "7fee8e307dede467",
       "count": 3,
       "names": [
@@ -28579,6 +28603,25 @@
       "sites": [
         "crates/axeyum-lean-kernel/src/int_prelude/prod.rs:1355",
         "crates/axeyum-lean-kernel/src/int_prelude/wilson.rs:2969"
+      ]
+    },
+    {
+      "key": "06ec11af6c2d5442",
+      "count": 2,
+      "names": [
+        "rat_zero_mul",
+        "zero_mul"
+      ],
+      "files": 2,
+      "carriers": [
+        "IntDev"
+      ],
+      "body_lines": 8,
+      "signature": "fn zero_mul(d: &mut IntDev<'_>, p: RatPrelude, c: ExprId) -> ExprId",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/rat_prelude/fourth_moment.rs:173",
+        "crates/axeyum-lean-kernel/src/rat_prelude/probability.rs:921"
       ]
     },
     {
@@ -30631,6 +30674,25 @@
       "sites": [
         "crates/axeyum-lean-kernel/src/creal/geometric.rs:1236",
         "crates/axeyum-lean-kernel/src/rat_prelude/bernoulli.rs:161"
+      ]
+    },
+    {
+      "key": "68853a3e7d8e7e4a",
+      "count": 2,
+      "names": [
+        "ne_of_lt",
+        "ne_of_lt_nat"
+      ],
+      "files": 2,
+      "carriers": [
+        "IntDev"
+      ],
+      "body_lines": 9,
+      "signature": "fn ne_of_lt(d: &mut IntDev<'_>, a: ExprId, b: ExprId, hlt: ExprId) -> ExprId",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/rat_prelude/fourth_moment.rs:788",
+        "crates/axeyum-lean-kernel/src/rat_prelude/probability.rs:4705"
       ]
     },
     {
@@ -34780,6 +34842,36 @@
       ]
     },
     {
+      "key": "ne_of_lt",
+      "count": 13,
+      "names": [
+        "ne_of_lt"
+      ],
+      "files": 13,
+      "carriers": [
+        "IntDev",
+        "NatDev"
+      ],
+      "body_lines": 11,
+      "signature": "fn ne_of_lt(d: &mut IntDev<'_>, a: ExprId, b: ExprId, hlt: ExprId) -> ExprId",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/int_prelude/prod.rs:473",
+        "crates/axeyum-lean-kernel/src/nat_prelude/factorization_multiset.rs:160",
+        "crates/axeyum-lean-kernel/src/nat_prelude/finite.rs:1588",
+        "crates/axeyum-lean-kernel/src/nat_prelude/finset_singleton.rs:224",
+        "crates/axeyum-lean-kernel/src/nat_prelude/min_fac_dvd.rs:167",
+        "crates/axeyum-lean-kernel/src/nat_prelude/multiset.rs:1333",
+        "crates/axeyum-lean-kernel/src/nat_prelude/perfect.rs:391",
+        "crates/axeyum-lean-kernel/src/rat_prelude/det_mul.rs:167",
+        "crates/axeyum-lean-kernel/src/rat_prelude/echelon_invariant.rs:634",
+        "crates/axeyum-lean-kernel/src/rat_prelude/echelon_section.rs:93",
+        "crates/axeyum-lean-kernel/src/rat_prelude/fourth_moment.rs:788",
+        "crates/axeyum-lean-kernel/src/rat_prelude/matrix_det_mul.rs:959",
+        "crates/axeyum-lean-kernel/src/rat_prelude/matrix_n.rs:870"
+      ]
+    },
+    {
       "key": "theorem",
       "count": 13,
       "names": [
@@ -34891,35 +34983,6 @@
         "crates/axeyum-lean-kernel/src/nat_prelude/sum_range_permute.rs:123",
         "crates/axeyum-lean-kernel/src/nat_prelude/totient_lemmas.rs:1944",
         "crates/axeyum-lean-kernel/src/nat_prelude/xor_trichotomy.rs:346"
-      ]
-    },
-    {
-      "key": "ne_of_lt",
-      "count": 12,
-      "names": [
-        "ne_of_lt"
-      ],
-      "files": 12,
-      "carriers": [
-        "IntDev",
-        "NatDev"
-      ],
-      "body_lines": 11,
-      "signature": "fn ne_of_lt(d: &mut IntDev<'_>, a: ExprId, b: ExprId, hlt: ExprId) -> ExprId",
-      "test_file_members": 0,
-      "sites": [
-        "crates/axeyum-lean-kernel/src/int_prelude/prod.rs:473",
-        "crates/axeyum-lean-kernel/src/nat_prelude/factorization_multiset.rs:160",
-        "crates/axeyum-lean-kernel/src/nat_prelude/finite.rs:1588",
-        "crates/axeyum-lean-kernel/src/nat_prelude/finset_singleton.rs:224",
-        "crates/axeyum-lean-kernel/src/nat_prelude/min_fac_dvd.rs:167",
-        "crates/axeyum-lean-kernel/src/nat_prelude/multiset.rs:1333",
-        "crates/axeyum-lean-kernel/src/nat_prelude/perfect.rs:391",
-        "crates/axeyum-lean-kernel/src/rat_prelude/det_mul.rs:167",
-        "crates/axeyum-lean-kernel/src/rat_prelude/echelon_invariant.rs:634",
-        "crates/axeyum-lean-kernel/src/rat_prelude/echelon_section.rs:93",
-        "crates/axeyum-lean-kernel/src/rat_prelude/matrix_det_mul.rs:959",
-        "crates/axeyum-lean-kernel/src/rat_prelude/matrix_n.rs:870"
       ]
     },
     {
@@ -35157,7 +35220,7 @@
         "crates/axeyum-lean-kernel/src/creal.rs:6331",
         "crates/axeyum-lean-kernel/src/creal_point.rs:1625",
         "crates/axeyum-lean-kernel/src/int_prelude.rs:2171",
-        "crates/axeyum-lean-kernel/src/rat_prelude.rs:3264"
+        "crates/axeyum-lean-kernel/src/rat_prelude.rs:3271"
       ]
     },
     {
@@ -36869,6 +36932,28 @@
       ]
     },
     {
+      "key": "ne_symm",
+      "count": 5,
+      "names": [
+        "ne_symm"
+      ],
+      "files": 5,
+      "carriers": [
+        "IntDev",
+        "NatDev"
+      ],
+      "body_lines": 8,
+      "signature": "fn ne_symm(d: &mut IntDev<'_>, a: ExprId, b: ExprId, h: ExprId) -> ExprId",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/int_prelude/wilson.rs:4506",
+        "crates/axeyum-lean-kernel/src/nat_prelude/finite.rs:1607",
+        "crates/axeyum-lean-kernel/src/nat_prelude/min_fac_dvd.rs:179",
+        "crates/axeyum-lean-kernel/src/rat_prelude/fourth_moment.rs:1268",
+        "crates/axeyum-lean-kernel/src/rat_prelude/matrix_n.rs:856"
+      ]
+    },
+    {
       "key": "neg_add",
       "count": 5,
       "names": [
@@ -37677,27 +37762,6 @@
       ]
     },
     {
-      "key": "ne_symm",
-      "count": 4,
-      "names": [
-        "ne_symm"
-      ],
-      "files": 4,
-      "carriers": [
-        "IntDev",
-        "NatDev"
-      ],
-      "body_lines": 8,
-      "signature": "fn ne_symm(d: &mut IntDev<'_>, a: ExprId, b: ExprId, h: ExprId) -> ExprId",
-      "test_file_members": 0,
-      "sites": [
-        "crates/axeyum-lean-kernel/src/int_prelude/wilson.rs:4506",
-        "crates/axeyum-lean-kernel/src/nat_prelude/finite.rs:1607",
-        "crates/axeyum-lean-kernel/src/nat_prelude/min_fac_dvd.rs:179",
-        "crates/axeyum-lean-kernel/src/rat_prelude/matrix_n.rs:856"
-      ]
-    },
-    {
       "key": "neg_add_distrib",
       "count": 4,
       "names": [
@@ -38135,6 +38199,26 @@
         "crates/axeyum-lean-kernel/src/int_prelude/dvd_mul_split.rs:165",
         "crates/axeyum-lean-kernel/src/int_prelude/gcd.rs:2956",
         "crates/axeyum-lean-kernel/src/nat_prelude/gcd_dvd_mirrors.rs:21"
+      ]
+    },
+    {
+      "key": "zero_mul",
+      "count": 4,
+      "names": [
+        "zero_mul"
+      ],
+      "files": 4,
+      "carriers": [
+        "IntDev"
+      ],
+      "body_lines": 8,
+      "signature": "fn zero_mul(d: &mut IntDev<'_>, p: CRealPrelude, a: ExprId) -> ExprId",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/complex/ring.rs:436",
+        "crates/axeyum-lean-kernel/src/int_prelude/sign.rs:23",
+        "crates/axeyum-lean-kernel/src/rat_prelude/fourth_moment.rs:173",
+        "crates/axeyum-lean-kernel/src/rat_prelude/matrix.rs:3329"
       ]
     },
     {
@@ -40995,25 +41079,6 @@
         "crates/axeyum-lean-kernel/src/creal/exp_fn.rs:176",
         "crates/axeyum-lean-kernel/src/creal/lub_boundary.rs:208",
         "crates/axeyum-lean-kernel/src/creal/trig_fn.rs:512"
-      ]
-    },
-    {
-      "key": "zero_mul",
-      "count": 3,
-      "names": [
-        "zero_mul"
-      ],
-      "files": 3,
-      "carriers": [
-        "IntDev"
-      ],
-      "body_lines": 8,
-      "signature": "fn zero_mul(d: &mut IntDev<'_>, p: CRealPrelude, a: ExprId) -> ExprId",
-      "test_file_members": 0,
-      "sites": [
-        "crates/axeyum-lean-kernel/src/complex/ring.rs:436",
-        "crates/axeyum-lean-kernel/src/int_prelude/sign.rs:23",
-        "crates/axeyum-lean-kernel/src/rat_prelude/matrix.rs:3329"
       ]
     },
     {
@@ -47070,6 +47135,25 @@
       "sites": [
         "crates/axeyum-lean-kernel/src/rat_prelude/clear_below.rs:207",
         "crates/axeyum-lean-kernel/src/rat_prelude/probability.rs:4705"
+      ]
+    },
+    {
+      "key": "ne_of_lt_rev",
+      "count": 2,
+      "names": [
+        "ne_of_lt_rev"
+      ],
+      "files": 2,
+      "carriers": [
+        "IntDev",
+        "NatDev"
+      ],
+      "body_lines": 11,
+      "signature": "fn ne_of_lt_rev(d: &mut NatDev<'_>, p: &NatPrelude, a: ExprId, b: ExprId, hlt: ExprId) -> ExprId",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/nat_prelude/multiset.rs:1347",
+        "crates/axeyum-lean-kernel/src/rat_prelude/fourth_moment.rs:1256"
       ]
     },
     {
@@ -53405,6 +53489,25 @@
       ]
     },
     {
+      "key": "06ec11af6c2d5442",
+      "count": 2,
+      "names": [
+        "rat_zero_mul",
+        "zero_mul"
+      ],
+      "files": 2,
+      "carriers": [
+        "IntDev"
+      ],
+      "body_lines": 8,
+      "signature": "fn zero_mul(d: &mut IntDev<'_>, p: RatPrelude, c: ExprId) -> ExprId",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/rat_prelude/fourth_moment.rs:173",
+        "crates/axeyum-lean-kernel/src/rat_prelude/probability.rs:921"
+      ]
+    },
+    {
       "key": "075c88aa00a6e329",
       "count": 2,
       "names": [
@@ -54720,6 +54823,25 @@
       "sites": [
         "crates/axeyum-lean-kernel/src/creal/geometric.rs:1236",
         "crates/axeyum-lean-kernel/src/rat_prelude/bernoulli.rs:161"
+      ]
+    },
+    {
+      "key": "68853a3e7d8e7e4a",
+      "count": 2,
+      "names": [
+        "ne_of_lt",
+        "ne_of_lt_nat"
+      ],
+      "files": 2,
+      "carriers": [
+        "IntDev"
+      ],
+      "body_lines": 9,
+      "signature": "fn ne_of_lt(d: &mut IntDev<'_>, a: ExprId, b: ExprId, hlt: ExprId) -> ExprId",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/rat_prelude/fourth_moment.rs:788",
+        "crates/axeyum-lean-kernel/src/rat_prelude/probability.rs:4705"
       ]
     },
     {

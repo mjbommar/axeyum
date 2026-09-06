@@ -1,0 +1,61 @@
+{
+  "schema_version": 1,
+  "id": "F:rat-fourth-moment-tail-sumvars",
+  "title": "A 1/m^2 concentration tail, the first Hoeffding-class rate this carrier can state",
+  "statement": "Let Y be a family of rational-valued random variables on a finite index range [0, n) with a distribution p, four-wise uncorrelated below m, each of the first m centred with fourth moment at most M4 and second moment at most s2, and let a be a positive rational. Then a^4 times the expectation of the indicator of the event that the fourth power of the deviation of the sum from its mean is at least a^4 is bounded by m*M4 + 3*(m*s2)^2. Dividing through -- which the statement deliberately does not do, so that no Rat.inv is introduced -- this reads P(|S - E S| >= a) <= (m*M4 + 3*m^2*s2^2)/a^4, and at the sample-mean deviation a = m*eps it decays like 1/m^2 in the sample size, against the 1/m that Chebyshev gives on the same shelf. That is the first Hoeffding-class rate this carrier reaches. It is NOT Hoeffding: an exponential tail needs the product rule for expectations over a joint law and the functional equation of the exponential, and this development has neither a product space nor expFn_add.",
+  "formal": {
+    "language": "lean4-surface",
+    "statement": "theorem Rat.fourth_moment_tailSumVars : ((x0 : ((x0 : AxNat) -> ((x1 : AxNat) -> Rat))) -> ((x1 : ((x1 : AxNat) -> Rat)) -> ((x2 : AxNat) -> ((x3 : Rat) -> ((x4 : Rat) -> ((x5 : Rat) -> ((x6 : AxNat) -> ((x7 : Rat.IsDistribution x1 x2) -> ((x8 : Rat.le Rat.zero x4) -> ((x9 : Rat.lt Rat.zero x5) -> ((x10 : ((x10 : AxNat) -> ((x11 : AxNat.lt x10 x6) -> Eq.{1} Rat (Rat.expectation (x0 x10) x1 x2) Rat.zero))) -> ((x11 : Rat.FourwiseUncorrelated x0 x6 x1 x2) -> ((x12 : ((x12 : AxNat) -> ((x13 : AxNat.lt x12 x6) -> Rat.le (Rat.expectation (fun (x14 : AxNat) => Rat.mul (Rat.mul (x0 x12 x14) (x0 x12 x14)) (Rat.mul (x0 x12 x14) (x0 x12 x14))) x1 x2) x3))) -> ((x13 : ((x13 : AxNat) -> ((x14 : AxNat.lt x13 x6) -> Rat.le (Rat.expectation (fun (x15 : AxNat) => Rat.mul (x0 x13 x15) (x0 x13 x15)) x1 x2) x4))) -> Rat.le (Rat.mul (Rat.mul (Rat.mul x5 x5) (Rat.mul x5 x5)) (Rat.expectation (Rat.indicator (Rat.mul (Rat.mul x5 x5) (Rat.mul x5 x5)) (fun (x14 : AxNat) => Rat.mul (Rat.mul (Rat.sub (Rat.sumVars x0 x6 x14) (Rat.expectation (Rat.sumVars x0 x6) x1 x2)) (Rat.sub (Rat.sumVars x0 x6 x14) (Rat.expectation (Rat.sumVars x0 x6) x1 x2))) (Rat.mul (Rat.sub (Rat.sumVars x0 x6 x14) (Rat.expectation (Rat.sumVars x0 x6) x1 x2)) (Rat.sub (Rat.sumVars x0 x6 x14) (Rat.expectation (Rat.sumVars x0 x6) x1 x2))))) x1 x2)) (Rat.add (Rat.sumRange (fun (x14 : AxNat) => x3) x6) (Rat.add (Rat.add (Rat.mul (Rat.sumRange (fun (x14 : AxNat) => x4) x6) (Rat.sumRange (fun (x14 : AxNat) => x4) x6)) (Rat.mul (Rat.sumRange (fun (x14 : AxNat) => x4) x6) (Rat.sumRange (fun (x14 : AxNat) => x4) x6))) (Rat.mul (Rat.sumRange (fun (x14 : AxNat) => x4) x6) (Rat.sumRange (fun (x14 : AxNat) => x4) x6))))))))))))))))))",
+    "fragment": "Prop",
+    "kernel_theorem": "Rat.fourth_moment_tailSumVars"
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:rat-fourth-moment-sumvars-le",
+    "F:rat-fourth-moment-inequality",
+    "F:rat-expectation-sumvars",
+    "F:rat-add-zero",
+    "F:rat-le-trans",
+    "F:rat-neg-zero",
+    "F:rat-sumrange-congr",
+    "F:rat-sumrange-eq-zero-of-lt"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-axiom-free",
+      "kind": "kernel-term",
+      "supports": "The declaration is admitted by the trusted kernel gate with an empty Kernel::axiom_footprint, together with every other ADR-1653 declaration. The test asserts Environment::contains FIRST, because an absent name has an empty footprint too. ",
+      "check_status": "checked",
+      "checkers": [
+        "producing-build (Kernel::add_declaration)",
+        "fourth_moment_declarations_are_axiom_free",
+        "every_rat_declaration_is_checked_and_axiom_free"
+      ],
+      "checker_command": "cargo test --release -p axeyum-lean-kernel --lib rat_prelude::fourth_moment::fourth_moment_tests::fourth_moment_declarations_are_axiom_free -- --exact 2>&1 | grep -c '^test result: ok. 1 passed'",
+      "checker_seconds": 120,
+      "kernel_declaration": "Rat.fourth_moment_tailSumVars",
+      "notes": "grep -c, not grep -q: -q would SIGPIPE the producer under pipefail, and -c exits 1 printing 0 when the line is absent, so a suite that compiled to zero tests and exited 0 is caught rather than counted as a pass. --release is mandatory: the rational prelude SIGABRTs on the default debug thread stack."
+    },
+    {
+      "id": "threshold-is-a-fourth-not-a-squared",
+      "kind": "kernel-term",
+      "supports": "The declared type is compared against the statement at threshold a^4 and against the same statement at threshold a^2; the first must be definitionally equal and the second must not. The fourth power of the threshold is where the 1/m^2 comes from, so a test blind to the difference would not distinguish this bound from Chebyshev's shape carrying a fourth-moment right-hand side, which is a different and unproved claim.",
+      "check_status": "checked",
+      "checkers": [
+        "fourth_moment_tail_threshold_is_a_to_the_fourth_and_not_a_squared"
+      ],
+      "checker_command": "cargo test --release -p axeyum-lean-kernel --lib rat_prelude::fourth_moment::fourth_moment_tests::fourth_moment_tail_threshold_is_a_to_the_fourth_and_not_a_squared -- --exact 2>&1 | grep -c '^test result: ok. 1 passed'",
+      "checker_seconds": 120,
+      "kernel_declaration": "Rat.fourth_moment_tailSumVars",
+      "notes": "grep -c, not grep -q: -q would SIGPIPE the producer under pipefail, and -c exits 1 printing 0 when the line is absent, so a suite that compiled to zero tests and exited 0 is caught rather than counted as a pass. --release is mandatory: the rational prelude SIGABRTs on the default debug thread stack."
+    }
+  ],
+  "provenance": {
+    "date": "2026-09-06",
+    "established_by": "lane fourth-moment (roadmap W3-12, ADR-1653)"
+  },
+  "notes": "The indicator keeps the deviation form S - E S untouched. Only the right-hand expectation is rewritten to E[S^4], through the per-variable centring hypothesis, because rewriting under the Rat.indicator binder would need function extensionality this kernel does not have."
+}
