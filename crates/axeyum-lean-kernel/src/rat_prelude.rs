@@ -73,6 +73,7 @@ mod field;
 /// ADR-1627 / roadmap W3-2: `Rat.fieldS : AlgS.Field`, the decidable-equality
 /// instance of the constructive field record, plus `Rat.fieldS_isTight`.
 mod field_setoid_instance;
+pub mod fourth_moment;
 pub(crate) mod group;
 pub(crate) mod lattice;
 mod laws;
@@ -118,6 +119,7 @@ use algebra_instances::AlgebraNames;
 use binomial_rat::BinomialRatNames;
 use binomial_s::BinomialSNames;
 use field_setoid_instance::RatFieldSNames;
+use fourth_moment::FourthMomentNames;
 use ordered_ring_ext::OrderedRingExtNames;
 use ordered_ring_ext_s::OrderedRingExtSNames;
 use probability_s::ProbSNames;
@@ -3223,6 +3225,11 @@ pub struct RatPrelude {
     /// with that variance substituted. At `ℚ` rather than over the record
     /// because the variance of a sum needs `mulComm`; see [`binomial_rat`].
     pub binomial_rat: BinomialRatNames,
+
+    /// ADR-1653, the slice after: `Rat.FourwiseUncorrelated`, the `sumVars`
+    /// peeling lemmas the fourth-moment expansion runs on, the fourth central
+    /// moment of a sum, and the `1/m²` tail. See [`fourth_moment`].
+    pub fourth_moment: FourthMomentNames,
 }
 
 impl RatPrelude {
@@ -3788,6 +3795,7 @@ fn intern_names(kernel: &mut Kernel, int: IntPrelude) -> RatPrelude {
         vector_space: RatVectorSpaceNames::intern(kernel, root),
         binomial_s: binomial_s::intern_binomial_s(kernel),
         binomial_rat: binomial_rat::intern_binomial_rat(kernel),
+        fourth_moment: fourth_moment::intern_fourth_moment(kernel),
     }
 }
 
@@ -3892,6 +3900,7 @@ pub fn build_rat_prelude(kernel: &mut Kernel) -> Result<RatPrelude, KernelError>
         vector_space_instance::declare_rat_vector_space(d.kernel(), &prelude)?;
         binomial_s::declare_binomial_s_all(&mut d, &prelude)?;
         binomial_rat::declare_binomial_rat_all(&mut d, &prelude)?;
+        fourth_moment::declare_fourth_moment_all(&mut d, &prelude)?;
         // LAST, and not by preference: `psatz::rat` reads twelve `RatPrelude`
         // order/ring theorems and calls `ring::rat::prove_eq`, which reads nine
         // more. Every one of them must already be DECLARED, not merely

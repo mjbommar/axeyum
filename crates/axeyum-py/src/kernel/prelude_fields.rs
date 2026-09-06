@@ -2673,10 +2673,10 @@ pub(super) fn int_sub(p: &IntPrelude) -> Vec<(&'static str, Sub)> {
     ]
 }
 
-/// The `RatPrelude` field table (610 names,
+/// The `RatPrelude` field table (616 names,
 /// 0 name lists, 1 sub-packages).
 ///
-/// 100 of the names come from ADR-1512 per-module registries and
+/// 106 of the names come from ADR-1512 per-module registries and
 /// carry a dotted field name (`pi.pi_le_four`); the rest are flat
 /// fields on `RatPrelude` itself.
 #[must_use]
@@ -3515,6 +3515,30 @@ pub(super) fn rat(p: &RatPrelude) -> Fields {
             (
                 "binomial_rat.fourth_moment_inequality",
                 p.binomial_rat.fourth_moment_inequality,
+            ),
+            (
+                "fourth_moment.expectation_sum_vars_mul",
+                p.fourth_moment.expectation_sum_vars_mul,
+            ),
+            (
+                "fourth_moment.expectation_sum_vars_mul_eq_zero",
+                p.fourth_moment.expectation_sum_vars_mul_eq_zero,
+            ),
+            (
+                "fourth_moment.fourwise_uncorrelated",
+                p.fourth_moment.fourwise_uncorrelated,
+            ),
+            (
+                "fourth_moment.expectation_sq_sum_vars_mul_sq",
+                p.fourth_moment.expectation_sq_sum_vars_mul_sq,
+            ),
+            (
+                "fourth_moment.fourth_moment_sum_vars_le",
+                p.fourth_moment.fourth_moment_sum_vars_le,
+            ),
+            (
+                "fourth_moment.fourth_moment_tail_sum_vars",
+                p.fourth_moment.fourth_moment_tail_sum_vars,
             ),
         ],
         lists: Vec::new(),

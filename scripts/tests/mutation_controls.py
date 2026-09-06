@@ -2630,6 +2630,71 @@ SUITES["bernoulli-binomial-model"] = (
 )
 
 
+# ADR-1653: four-wise uncorrelatedness, the fourth central moment of a sum, and
+# the 1/m^2 tail.
+#
+# The two PROOF mutations below are kernel kills, and that is the finding, not a
+# shortcoming of the suite -- the same shape `bernoulli-binomial-model` records
+# above. A wrong multinomial coefficient is not a wrong theorem the tests have
+# to notice: it is a term whose inferred type no longer matches its declared
+# one, `build_rat_prelude` returns `Err`, and every registered test dies at
+# `prelude()`. So their kill count is the suite size rather than one.
+#
+# The two TEST mutations are the reason the suite is not only kernel kills.
+# Each turns a NEGATIVE control into its own positive case -- the 6-copy bound
+# becomes the 3-copy one, the `a^2` threshold becomes `a^4` -- so a control that
+# could not fail would survive, and each must kill EXACTLY the one test that
+# owns it. That is the "negative controls fail two ways" check: vacuous (cannot
+# fail) is as bad as absent, and only a mutation shows which one you have.
+SUITES["fourth-moment-concentration"] = (
+    "crates/axeyum-lean-kernel/src/rat_prelude/fourth_moment.rs",
+    Cargo(
+        (
+            "--release",
+            "-p",
+            "axeyum-lean-kernel",
+            "--lib",
+            "rat_prelude::fourth_moment",
+        ),
+        "fourth-moment-concentration",
+    ),
+    [
+        (
+            "the multinomial coefficient of the sum's fourth moment is 3, not 6",
+            "        let t = rsum_range(d, p, const_s2, bnd);\n"
+            "        let sq = rmul(d, t, t);\n"
+            "        let two = radd(d, sq, sq);\n"
+            "        let three = radd(d, two, sq);\n",
+            "        let t = rsum_range(d, p, const_s2, bnd);\n"
+            "        let sq = rmul(d, t, t);\n"
+            "        let two = radd(d, sq, sq);\n"
+            "        let three0 = radd(d, two, sq);\n"
+            "        let three = radd(d, three0, three0);\n",
+        ),
+        (
+            "the tail threshold is a^4, not a^2 -- the fourth-moment inequality "
+            "is applied at the FOURTH power",
+            "    let a_4 = rmul(d, a_sq, a_sq);",
+            "    let a_4 = a_sq;",
+        ),
+        (
+            "the coefficient test's negative control is the 6-copy bound, not "
+            "a second copy of the 3-copy one",
+            "    let wrong = build(&mut d, 6);",
+            "    let wrong = build(&mut d, 3);",
+            "crates/axeyum-lean-kernel/src/rat_prelude/fourth_moment_tests.rs",
+        ),
+        (
+            "the threshold test's negative control is the a^2 statement, not a "
+            "second copy of the a^4 one",
+            "    let wrong = build(&mut d, false);",
+            "    let wrong = build(&mut d, true);",
+            "crates/axeyum-lean-kernel/src/rat_prelude/fourth_moment_tests.rs",
+        ),
+    ],
+)
+
+
 SUITES["settled-fact-statement-identity"] = (
     "scripts/check-settled-fact-statements.py",
     "scripts.tests.test_settled_fact_statements",
