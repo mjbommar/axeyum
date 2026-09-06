@@ -1,0 +1,45 @@
+{
+  "id": "F:nat-prime-counting-prime-mono",
+  "title": "The prime-counting function is monotone",
+  "statement": "If m <= n then the number of primes strictly below m is at most the number of primes strictly below n.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Nat.primeCounting'_mono : ((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat.le x0 x1) -> AxNat.le (AxNat.primeCounting' x0) (AxNat.primeCounting' x1))))",
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.primeCounting'_mono",
+    "free_symbols": [
+      "m",
+      "n"
+    ]
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "proof_route": "kernel-lean",
+  "axiom_footprint": [],
+  "depends_on": [],
+  "evidence": [
+    {
+      "id": "kernel-Nat.primeCounting'_mono",
+      "kind": "kernel-term",
+      "supports": "pi'(m) <= pi'(n) whenever m <= n",
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- 'Nat.primeCounting'_mono' 2>/dev/null | grep -xFc 'Nat.primeCounting'_mono\t3\t((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat.le x0 x1) -> AxNat.le (AxNat.primeCounting' x0) (AxNat.primeCounting' x1))))')\" -ge 1",
+      "notes": "`Nat.primeCounting' n` is `Nat.count Nat.isPrime n`, and `Nat.count` is definitionally `Nat.countRange`; both are `Regular` definitions with strictly decreasing delta heights (14 -> 13 -> 12), so the kernel accepts `Nat.countRange_le_of_le` at the predicate `Nat.isPrime` against this stated type by delta alone. The checker matches the FULL RENDERED TYPE rather than the name: a name-only checker is satisfied by a weakened statement, and here the weakening that matters is swapping `primeCounting'` for `primeCounting`, which is a DIFFERENT function (exclusive vs inclusive) with the same monotonicity proof."
+    },
+    {
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the Nat prelude's trusted surface is empty",
+      "check_status": "checked",
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "notes": "`nat_axiom_inventory` bounds the footprint by enumerating the whole trusted surface: a theorem cannot depend on a trusted declaration the environment does not contain. All three kinds are covered -- counting `Declaration::Axiom` alone would not suffice, because `Opaque` has no proof body and `Quotient` admits `Quot.sound`. The module's own test `the_prime_counting_shelf_is_admitted_and_axiom_free` additionally asserts `Environment::contains` BEFORE reading the footprint, because `axiom_footprint` returns an empty set for a name that was never declared.",
+      "id": "footprint-Nat.primeCounting'_mono"
+    }
+  ],
+  "schema_version": 1,
+  "provenance": {
+    "date": "2026-09-06",
+    "established_by": "lane chebyshev-pi-bounds (ADR-1655), roadmap W3-11",
+    "source": "statement authored here against this kernel's own vocabulary; nothing copied"
+  },
+  "notes": "Monotonicity is the ONLY kind of fact about `Nat.primeCounting'` that is provable without knowing what `Nat.isPrime` means: it is true of `Nat.countRange` at an arbitrary predicate. That is why it landed first and why it is not evidence that the shelf is usable -- see `F:nat-is-prime-eq-true-of-prime`, which is."
+}

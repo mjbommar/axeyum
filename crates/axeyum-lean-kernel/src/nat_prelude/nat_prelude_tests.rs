@@ -1920,6 +1920,12 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.multiset_prod_sel_congr,
         p.multiset_prod_sel_dvd_prod,
         p.multiset_prod_sel_injective,
+        // `chebyshev-pi-bounds` lane (roadmap W3-11, ADR-1655):
+        // `prime_counting_bounds.rs`.
+        p.prime_counting_prime_mono,
+        p.prime_counting_mono,
+        p.is_prime_eq_true_of_prime,
+        p.prime_counting_prime_unbounded,
     ]
 }
 

@@ -1,0 +1,60 @@
+{
+  "id": "F:nat-prime-counting-prime-unbounded",
+  "title": "The prime-counting function is unbounded",
+  "statement": "For every k there is an n with k <= pi'(n): the prime-counting function takes arbitrarily large values. This is Euclid's theorem in counting form.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Nat.primeCounting'_unbounded : ((x0 : AxNat) -> Exists.{1} AxNat (fun (x1 : AxNat) => AxNat.le x0 (AxNat.primeCounting' x1)))",
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.primeCounting'_unbounded",
+    "free_symbols": [
+      "k",
+      "n"
+    ]
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "proof_route": "kernel-lean",
+  "axiom_footprint": [],
+  "depends_on": [
+    "F:nat-exists-prime-gt",
+    "F:nat-is-prime-eq-true-of-prime",
+    "F:nat-prime-counting-prime-mono",
+    "F:nat-le-trans",
+    "F:nat-succ-le-succ",
+    "F:nat-zero-le"
+  ],
+  "evidence": [
+    {
+      "id": "kernel-Nat.primeCounting'_unbounded",
+      "kind": "kernel-term",
+      "supports": "pi' takes arbitrarily large values",
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- 'Nat.primeCounting'_unbounded' 2>/dev/null | grep -xFc 'Nat.primeCounting'_unbounded\t1\t((x0 : AxNat) -> Exists.{1} AxNat (fun (x1 : AxNat) => AxNat.le x0 (AxNat.primeCounting' x1)))')\" -ge 1",
+      "notes": "Induction on k. The base takes the witness 0 and `Nat.zero_le`. The step eliminates the hypothesis' witness n, takes a prime p > n from `Nat.exists_prime_gt`, and uses the witness succ p: pi'(succ p) = succ (pi'(p)) >= succ (pi'(n)) >= succ k. The first equality is `countRange_succ_of_true`, which needs `Eq Bool (isPrime p) true` -- and that is exactly where `F:nat-is-prime-eq-true-of-prime` is spent. Without it the two halves do not meet and this statement is not reachable from anything else in the prelude."
+    },
+    {
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the Nat prelude's trusted surface is empty",
+      "check_status": "checked",
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "notes": "`nat_axiom_inventory` bounds the footprint by enumerating the whole trusted surface: a theorem cannot depend on a trusted declaration the environment does not contain. All three kinds are covered -- counting `Declaration::Axiom` alone would not suffice, because `Opaque` has no proof body and `Quotient` admits `Quot.sound`. The module's own test `the_prime_counting_shelf_is_admitted_and_axiom_free` additionally asserts `Environment::contains` BEFORE reading the footprint, because `axiom_footprint` returns an empty set for a name that was never declared.",
+      "id": "footprint-Nat.primeCounting'_unbounded"
+    }
+  ],
+  "schema_version": 1,
+  "provenance": {
+    "date": "2026-09-06",
+    "established_by": "lane chebyshev-pi-bounds (ADR-1655), roadmap W3-11",
+    "source": "statement authored here against this kernel's own vocabulary; nothing copied",
+    "prior_art": [
+      {
+        "who": "Euclid",
+        "what": "Elements, Book IX, Proposition 20 (the set form)",
+        "year": -300,
+        "attribution": "standard textbook attribution; this lane did not consult the primary source"
+      }
+    ]
+  },
+  "notes": "`F:nat-exists-prime-gt` already says the primes are unbounded as a SET. This says the prime-counting FUNCTION is unbounded, which is the form every Chebyshev-style estimate is compared against, and it is the first statement about `Nat.primeCounting'` that is not also true of `Nat.countRange` at an arbitrary predicate. It is a lower bound with no rate: it says nothing about how large n must be for pi'(n) to reach k. A rate is what Chebyshev's bounds supply, and those did not land -- see ADR-1655 for the measured obstruction."
+}

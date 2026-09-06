@@ -1,0 +1,48 @@
+{
+  "id": "F:nat-prime-counting-mono",
+  "title": "The inclusive prime-counting function is monotone",
+  "statement": "If m <= n then the number of primes up to and including m is at most the number of primes up to and including n.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Nat.primeCounting_mono : ((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat.le x0 x1) -> AxNat.le (AxNat.primeCounting x0) (AxNat.primeCounting x1))))",
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.primeCounting_mono",
+    "free_symbols": [
+      "m",
+      "n"
+    ]
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "proof_route": "kernel-lean",
+  "axiom_footprint": [],
+  "depends_on": [
+    "F:nat-prime-counting-prime-mono",
+    "F:nat-succ-le-succ"
+  ],
+  "evidence": [
+    {
+      "id": "kernel-Nat.primeCounting_mono",
+      "kind": "kernel-term",
+      "supports": "pi(m) <= pi(n) whenever m <= n",
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- 'Nat.primeCounting_mono' 2>/dev/null | grep -xFc 'Nat.primeCounting_mono\t3\t((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat.le x0 x1) -> AxNat.le (AxNat.primeCounting x0) (AxNat.primeCounting x1))))')\" -ge 1",
+      "notes": "`Nat.primeCounting n` is `Nat.primeCounting' (succ n)`, so this is `Nat.countRange_le_of_le` again with the hypothesis moved by `Nat.succ_le_succ`. The rendered type is what separates it from `F:nat-prime-counting-prime-mono`: the two differ only in which of the two counting conventions appears, and `primeCounting' 2 = 0` while `primeCounting 2 = 1`."
+    },
+    {
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the Nat prelude's trusted surface is empty",
+      "check_status": "checked",
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "notes": "`nat_axiom_inventory` bounds the footprint by enumerating the whole trusted surface: a theorem cannot depend on a trusted declaration the environment does not contain. All three kinds are covered -- counting `Declaration::Axiom` alone would not suffice, because `Opaque` has no proof body and `Quotient` admits `Quot.sound`. The module's own test `the_prime_counting_shelf_is_admitted_and_axiom_free` additionally asserts `Environment::contains` BEFORE reading the footprint, because `axiom_footprint` returns an empty set for a name that was never declared.",
+      "id": "footprint-Nat.primeCounting_mono"
+    }
+  ],
+  "schema_version": 1,
+  "provenance": {
+    "date": "2026-09-06",
+    "established_by": "lane chebyshev-pi-bounds (ADR-1655), roadmap W3-11",
+    "source": "statement authored here against this kernel's own vocabulary; nothing copied"
+  },
+  "notes": "The inclusive convention. Kept as a separate fact rather than folded into the exclusive one because they are different propositions about different functions, and the module's evaluation tests pin the smallest argument at which they disagree (n = 2)."
+}
