@@ -936,6 +936,49 @@ mod tests {
         assert!(err.contains("H_0(K)"), "got: {err}");
     }
 
+    /// ADVERSARIAL, isolated to `les_exactness_holds`'s H_k(L) node identity
+    /// specifically: forge only the wrapped `L`-side betti number fed in,
+    /// leaving `relative_betti` and `k_betti` genuine. Mutation-tested:
+    /// neutralizing this one node's check (before this test existed) killed
+    /// nothing, for the same reason as the H_k(K) node above -- the module's
+    /// existing forgery tests target the H_k(K,L) and H_k(K) nodes, never
+    /// this one.
+    #[test]
+    fn verify_refuses_an_l_betti_number_the_exactness_identity_rejects() {
+        let disc = complex_of(&[&[0, 1, 2]]);
+        let boundary_circle = complex_of(&[&[0, 1], &[1, 2], &[0, 2]]);
+        let genuine =
+            relative_homology(&disc, &boundary_circle).expect("relative homology of (D^2, S^1)");
+        let k_cert = homology(&disc).expect("homology of D^2");
+        let l_cert = homology(&boundary_circle).expect("homology of S^1");
+
+        // POSITIVE CONTROL: the genuine betti numbers are admitted.
+        assert!(
+            les_exactness_holds(
+                &disc,
+                &boundary_circle,
+                genuine.max_dimension,
+                &genuine.betti,
+                &k_cert.betti,
+                &l_cert.betti,
+            )
+            .is_ok()
+        );
+
+        let mut forged_l_betti = l_cert.betti.clone();
+        forged_l_betti.insert(0, 99); // the boundary circle has exactly one component, not 99
+        let err = les_exactness_holds(
+            &disc,
+            &boundary_circle,
+            genuine.max_dimension,
+            &genuine.betti,
+            &k_cert.betti,
+            &forged_l_betti,
+        )
+        .expect_err("a forged L-side betti number must be refused at the H_k(L) node");
+        assert!(err.contains("H_0(L)"), "got: {err}");
+    }
+
     /// Direct unit test of `connecting_map` at the disc/circle fixture: the
     /// connecting map at dimension 2 is rank 1 (an isomorphism `H_2(D,S^1) ->
     /// H_1(S^1)`, both one-dimensional), which is the specific claim that
