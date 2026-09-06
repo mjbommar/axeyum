@@ -46,6 +46,18 @@
 //! | `atan` | `abs(z) <= 1/2` alternating series; `pi/4 + atan((p−1)/(p+1))` for `abs(p) <= 1`; `±pi/2 − atan(1/p)` beyond | `abs(z)^(2n+3)/(2n+3)` (alternating) |
 //! | `sin`, `cos` | reduce by an integer multiple of a certified `2·pi`, then Taylor about `0` | Lagrange `abs(t)^(k+2)/(k+2)!` |
 //! | `pi` | Machin: `pi = 16·atan(1/5) − 4·atan(1/239)` | the two `atan` tails |
+//! | `root_q` | Newton `x <- ((q−1)·x + p/x^(q−1))/q` from above; the same AM–GM bracket as `sqrt`, generalised | `(x − p/x^(q−1))/2` |
+//! | `erf` | alternating Maclaurin below magnitude 8; the complementary tail bound beyond | see [`crate::enclosure_special`] |
+//! | `Gamma` | exact at integers and half-integers; the shift identity in logarithms plus Stirling elsewhere | see [`crate::enclosure_special`] |
+//! | `J_n` | the power series, evaluated over the interval | see [`crate::enclosure_special`] |
+//!
+//! The four wave-two heads live in [`crate::enclosure_special`], which states
+//! each bound **with its hypothesis** — an alternating-series bound is only
+//! valid from the index where the terms actually start falling, and that index
+//! is computed in exact rational arithmetic rather than assumed. Rational
+//! powers `x^(p/q)` have two independent routes, [`rational_power`] through
+//! `root_q` and [`rational_power_via_exp_ln`] through `exp`/`ln`; multivariate
+//! root enclosures are [`crate::enclosure_special::enclose_system`].
 //!
 //! The remainder a step records is defined uniformly as the **half-width of the
 //! head re-evaluated at each endpoint of its input as a degenerate interval**,
@@ -78,19 +90,44 @@
 //! the verifier does one evaluation per step at the recorded order while the
 //! producer searches the `ORDERS` ladder for it.
 //!
+//! The wave-two heads, same conditions (`cost_table_wave_two`, host load
+//! average 25, single unpinned run, produce / verify). **ADVISORY ONLY.**
+//! `krawczyk` is the circle/line system of
+//! [`crate::enclosure_special::enclose_system`], and its row carries a step
+//! count rather than an order.
+//!
+//! | head | 10 | 50 | 100 | 200 |
+//! |---|---|---|---|---|
+//! | `2^(1/3)` | 1.1 / 1.0 ms | 4.0 / 2.8 ms | 3.7 / 2.9 ms | 15.3 / 5.5 ms |
+//! | `erf(1)` | 8.1 / 5.9 ms | 16.6 / 8.8 ms | 32.5 / 15.9 ms | 72.2 / 40.6 ms |
+//! | `Gamma(1/3)` | 38.1 / 25.1 ms | 347 / 269 ms | 1.49 / 1.12 s | 1.46 / 1.10 s |
+//! | `J_0(1)` | 0.25 / 0.22 ms | 0.55 / 0.32 ms | 1.3 / 0.88 ms | 3.8 / 2.8 ms |
+//! | `krawczyk` | 0.23 / 0.16 ms (1 step) | 1.4 / 1.1 ms (4) | 2.6 / 2.0 ms (5) | 5.4 / 4.1 ms (6) |
+//!
+//! `Gamma` is two to three orders of magnitude dearer than the others and is
+//! the only head whose cost is worth planning around. Precisions 100 and 200
+//! cost the same because both land on order 64. The Krawczyk rows are the
+//! cheapest thing in the table because the operator converges quadratically:
+//! six steps take a box of width `10^-2` to `2^-200`.
+//!
 //! # Out of scope
 //!
 //! Deliberately **not** handled here, and not silently approximated either —
 //! each declines with a reason:
 //!
-//! - **multivariate root enclosures** ([`enclose_root`] is univariate only);
-//! - **`pow` with a non-integer exponent** (`CasExpr::Pow` carries a `u32`, and
-//!   `x^q` for rational `q` is not routed through `exp`/`ln` here);
-//! - **`gamma`, the Bessel functions, `erf`** and the rest of the
-//!   special-function heads — they have no remainder bound in this module and
+//! - **`Si`, `Ci`, `Ei`, `li`, the Fresnel integrals, the Airy functions,
+//!   `LambertW`, the modified Bessel `I_n`** and the rest of the
+//!   special-function heads — they have no remainder bound here and
 //!   [`enclose`] declines with [`DeclineReason::UnsupportedHead`];
+//! - **`Gamma` at a non-positive argument**, and **`J_n` of negative order**;
+//! - **a non-square or non-polynomial system**, and a system at a **multiple**
+//!   root, where the Krawczyk inclusion cannot succeed because the Jacobian is
+//!   singular there — a decline, never a wrong answer;
 //! - **the `f64` [`evalf`](crate::evalf) itself**, which is unchanged. This
 //!   module adds a route; it does not replace one.
+//!
+//! Wave two removed three entries that used to be on this list: non-integer
+//! rational powers, `erf`/`Gamma`/`J_n`, and multivariate root enclosures.
 
 use crate::interval_arith::Interval;
 use crate::{CasExpr, UnaryFunc};
@@ -106,11 +143,11 @@ use std::collections::BTreeMap;
 /// Deterministic and shared by every head: the producer takes the first order
 /// whose remainder meets the step budget and records it, so the verifier
 /// recomputes exactly one evaluation per step.
-const ORDERS: [u32; 9] = [4, 8, 16, 32, 64, 128, 256, 512, 1024];
+pub(crate) const ORDERS: [u32; 9] = [4, 8, 16, 32, 64, 128, 256, 512, 1024];
 
 /// Cap on the halvings/doublings an argument reduction may perform before the
 /// module declines rather than grinding.
-const REDUCTION_CAP: i64 = 4096;
+pub(crate) const REDUCTION_CAP: i64 = 4096;
 
 // ---------------------------------------------------------------------------
 // BigInterval — the BigRational lift of `interval_arith::Interval`.
@@ -325,7 +362,7 @@ impl BigInterval {
     ///
     /// Sound only when the true value is known a priori to lie in the bound —
     /// used for `exp > 0` and `|sin| <= 1`, never to hide an error.
-    fn clamp(&self, lo_bound: &BigRational, hi_bound: &BigRational) -> BigInterval {
+    pub(crate) fn clamp(&self, lo_bound: &BigRational, hi_bound: &BigRational) -> BigInterval {
         let lo = if self.lo < *lo_bound {
             lo_bound.clone()
         } else {
@@ -368,22 +405,22 @@ impl fmt::Display for BigInterval {
 // ---------------------------------------------------------------------------
 
 /// `n/d` as a `BigRational`.
-fn br(n: i64, d: i64) -> BigRational {
+pub(crate) fn br(n: i64, d: i64) -> BigRational {
     BigRational::new(BigInt::from(n), BigInt::from(d))
 }
 
 /// `n` as a `BigRational`.
-fn bi(n: i64) -> BigRational {
+pub(crate) fn bi(n: i64) -> BigRational {
     BigRational::from(BigInt::from(n))
 }
 
 /// The crate's `i128` rational lifted to a `BigRational`.
-fn from_rational(r: Rational) -> BigRational {
+pub(crate) fn from_rational(r: Rational) -> BigRational {
     BigRational::new(BigInt::from(r.numerator()), BigInt::from(r.denominator()))
 }
 
 /// `2^k` for any `i32` exponent, positive or negative.
-fn pow2(k: i32) -> BigRational {
+pub(crate) fn pow2(k: i32) -> BigRational {
     let magnitude = BigInt::from(2u32).pow(k.unsigned_abs());
     if k >= 0 {
         BigRational::from(magnitude)
@@ -393,7 +430,7 @@ fn pow2(k: i32) -> BigRational {
 }
 
 /// `x^n` for a `BigRational` base and `u32` exponent (binary exponentiation).
-fn ratpow(x: &BigRational, n: u32) -> BigRational {
+pub(crate) fn ratpow(x: &BigRational, n: u32) -> BigRational {
     let mut result = BigRational::one();
     let mut base = x.clone();
     let mut exponent = n;
@@ -408,17 +445,17 @@ fn ratpow(x: &BigRational, n: u32) -> BigRational {
 }
 
 /// The larger of two `BigRational`s.
-fn rmax(a: BigRational, b: BigRational) -> BigRational {
+pub(crate) fn rmax(a: BigRational, b: BigRational) -> BigRational {
     if a >= b { a } else { b }
 }
 
 /// The smaller of two `BigRational`s.
-fn rmin(a: BigRational, b: BigRational) -> BigRational {
+pub(crate) fn rmin(a: BigRational, b: BigRational) -> BigRational {
     if a <= b { a } else { b }
 }
 
 /// `floor(q)` as a `BigInt`.
-fn rat_floor(q: &BigRational) -> BigInt {
+pub(crate) fn rat_floor(q: &BigRational) -> BigInt {
     let (num, den) = (q.numer(), q.denom());
     let quotient = num / den;
     if num < &BigInt::zero() && &(&quotient * den) != num {
@@ -549,6 +586,18 @@ pub enum StepHead {
     Atan,
     /// Principal square root.
     Sqrt,
+    /// The principal `q`-th root `x^(1/q)` on a non-negative argument, the
+    /// degree carried in the variant. `NthRoot(2)` and [`StepHead::Sqrt`] are
+    /// the same function by two routes; both are kept so an existing `sqrt`
+    /// certificate still verifies unchanged.
+    NthRoot(u32),
+    /// The error function `erf`.
+    Erf,
+    /// The gamma function `Gamma` on a positive argument.
+    Gamma,
+    /// The Bessel function of the first kind `J_n`, the integer order `n`
+    /// carried in the variant.
+    BesselJ(u32),
     /// A bisection-refined root of a univariate polynomial.
     Root,
 }
@@ -565,6 +614,10 @@ impl StepHead {
                 | StepHead::Cos
                 | StepHead::Atan
                 | StepHead::Sqrt
+                | StepHead::NthRoot(_)
+                | StepHead::Erf
+                | StepHead::Gamma
+                | StepHead::BesselJ(_)
         )
     }
 }
@@ -697,7 +750,7 @@ fn atan_small(z: &BigRational, order: u32) -> Option<BigInterval> {
 /// Machin's identity is exact; the only error is the two series tails, each of
 /// which carries its own alternating bound. `1/5` and `1/239` are both below
 /// `1/2`, so neither `atan` needs `pi` itself — the recursion is well founded.
-fn pi_enclosure(order: u32) -> Option<BigInterval> {
+pub(crate) fn pi_enclosure(order: u32) -> Option<BigInterval> {
     let a = atan_small(&br(1, 5), order)?;
     let b = atan_small(&br(1, 239), order)?;
     Some(a.scale(&bi(16)).sub(&b.scale(&bi(4))))
@@ -710,7 +763,7 @@ fn pi_enclosure(order: u32) -> Option<BigInterval> {
 /// `2·|y|^(n+1)/(n+1)!` (the geometric majorant with ratio `1/2`). Squaring an
 /// interval with a non-negative lower endpoint is monotone in both endpoints,
 /// so the enclosure property survives the unwinding.
-fn exp_point(p: &BigRational, order: u32) -> Option<BigInterval> {
+pub(crate) fn exp_point(p: &BigRational, order: u32) -> Option<BigInterval> {
     let half = br(1, 2);
     let two = bi(2);
     let mut y = p.clone();
@@ -753,7 +806,7 @@ fn exp_point(p: &BigRational, order: u32) -> Option<BigInterval> {
 /// `ln p = k·ln 2 + 2·atanh((t−1)/(t+1))` with `ln 2 = 2·atanh(1/3)`. Both
 /// `atanh` arguments are at most `1/3`, so the series converges at a fixed rate
 /// independent of `p`.
-fn ln_point(p: &BigRational, order: u32) -> Option<BigInterval> {
+pub(crate) fn ln_point(p: &BigRational, order: u32) -> Option<BigInterval> {
     if !p.is_positive() {
         return None;
     }
@@ -789,7 +842,7 @@ fn ln_point(p: &BigRational, order: u32) -> Option<BigInterval> {
 /// certificate. `order` is the iteration cap; the loop also stops once the
 /// bracket is narrower than `2^(−2048)`, which keeps the denominators finite
 /// and is deterministic in the value, not in the schedule.
-fn sqrt_point(p: &BigRational, order: u32) -> Option<BigInterval> {
+pub(crate) fn sqrt_point(p: &BigRational, order: u32) -> Option<BigInterval> {
     if p.is_negative() {
         return None;
     }
@@ -852,7 +905,7 @@ fn cos_point(t: &BigRational, order: u32) -> BigInterval {
 }
 
 /// A `u64` as a `BigRational`.
-fn bi_u64(n: u64) -> BigRational {
+pub(crate) fn bi_u64(n: u64) -> BigRational {
     BigRational::from(BigInt::from(n))
 }
 
@@ -1040,6 +1093,37 @@ fn eval_head_raw(
             let hi = sqrt_point(&x.hi, order).ok_or(DeclineReason::ResourceLimit)?;
             BigInterval::new(lo.lo, hi.hi).ok_or(DeclineReason::PrecisionUnreachable)
         }
+        StepHead::NthRoot(degree) => {
+            let x = unary(0)?;
+            if *degree == 0 {
+                return Err(DeclineReason::DomainError(
+                    "the 0-th root is not a function".to_string(),
+                ));
+            }
+            if x.lo.is_negative() {
+                return Err(DeclineReason::DomainError(format!(
+                    "root_{degree} of an interval reaching below 0"
+                )));
+            }
+            let lo = crate::enclosure_special::nth_root_point(&x.lo, *degree, order)
+                .ok_or(DeclineReason::ResourceLimit)?;
+            let hi = crate::enclosure_special::nth_root_point(&x.hi, *degree, order)
+                .ok_or(DeclineReason::ResourceLimit)?;
+            BigInterval::new(lo.lo, hi.hi).ok_or(DeclineReason::PrecisionUnreachable)
+        }
+        StepHead::Erf => {
+            let x = unary(0)?;
+            // erf is strictly increasing, so the image of [a, b] is
+            // [erf a, erf b].
+            let lo = crate::enclosure_special::erf_point(&x.lo, order)
+                .ok_or(DeclineReason::PrecisionUnreachable)?;
+            let hi = crate::enclosure_special::erf_point(&x.hi, order)
+                .ok_or(DeclineReason::PrecisionUnreachable)?;
+            BigInterval::new(lo.lo, hi.hi).ok_or(DeclineReason::PrecisionUnreachable)
+        }
+        StepHead::Gamma => crate::enclosure_special::gamma_interval(unary(0)?, order),
+        StepHead::BesselJ(n) => crate::enclosure_special::bessel_j_interval(*n, unary(0)?, order)
+            .ok_or(DeclineReason::PrecisionUnreachable),
         StepHead::Sin => sin_interval(unary(0)?, order).ok_or(DeclineReason::ResourceLimit),
         StepHead::Cos => cos_interval(unary(0)?, order).ok_or(DeclineReason::ResourceLimit),
     }
@@ -1108,6 +1192,10 @@ fn step_head_for(func: UnaryFunc) -> Result<StepHead, DeclineReason> {
         UnaryFunc::Cos => Ok(StepHead::Cos),
         UnaryFunc::Atan => Ok(StepHead::Atan),
         UnaryFunc::Sqrt => Ok(StepHead::Sqrt),
+        UnaryFunc::NthRoot(degree) => Ok(StepHead::NthRoot(degree)),
+        UnaryFunc::Erf => Ok(StepHead::Erf),
+        UnaryFunc::Gamma => Ok(StepHead::Gamma),
+        UnaryFunc::BesselJ(order) => Ok(StepHead::BesselJ(order)),
         other => Err(DeclineReason::UnsupportedHead(format!("{other:?}"))),
     }
 }
@@ -1665,6 +1753,72 @@ impl Enclosure {
 }
 
 // ---------------------------------------------------------------------------
+// Rational powers.
+// ---------------------------------------------------------------------------
+
+/// The expression `base^(p/q)` built from the certified `root_q` head: the
+/// principal `q`-th root by Newton, then an integer power (and a reciprocal
+/// when `p` is negative).
+///
+/// `q` must be at least `1`; `q = 1` degenerates to an ordinary integer power.
+/// The exponent is *not* reduced to lowest terms — `rational_power(x, 2, 4)`
+/// takes the fourth root and squares it, which agrees with `x^(1/2)` on the
+/// non-negative arguments this route accepts and is the honest reading of the
+/// principal-root convention. Returns `None` only for `q = 0`.
+///
+/// The base must enclose to a non-negative interval: [`enclose`] declines a
+/// negative one with [`DeclineReason::DomainError`] naming the root degree,
+/// which is a different message from the `ln` domain error the
+/// [`rational_power_via_exp_ln`] route produces on the same input.
+///
+/// ```
+/// use axeyum_cas::CasExpr;
+/// use axeyum_cas::enclosure::{enclose, rational_power};
+/// let expr = rational_power(CasExpr::int(2), 1, 3).unwrap();
+/// let e = enclose(&expr, &[], 60).unwrap();
+/// // 2^(1/3) = 1.259921049894873164...
+/// assert!(e.interval.decimal(6).starts_with("[1.259921"));
+/// ```
+#[must_use]
+pub fn rational_power(base: CasExpr, p: i64, q: u32) -> Option<CasExpr> {
+    if q == 0 {
+        return None;
+    }
+    let root = if q == 1 {
+        base
+    } else {
+        CasExpr::Unary(UnaryFunc::NthRoot(q), Box::new(base))
+    };
+    let magnitude = u32::try_from(p.unsigned_abs()).ok()?;
+    let raised = CasExpr::Pow(Box::new(root), magnitude);
+    Some(if p < 0 {
+        CasExpr::Div(Box::new(CasExpr::int(1)), Box::new(raised))
+    } else {
+        raised
+    })
+}
+
+/// The expression `base^(p/q)` built as `exp((p/q)·ln base)`, through the
+/// certified `exp` and `ln` heads already in this module.
+///
+/// The analytic route, valid only where `base` encloses to a **strictly
+/// positive** interval; a base reaching `0` or below declines with the `ln`
+/// domain error. It agrees with [`rational_power`] wherever both apply — the
+/// two are independent routes to the same number, which is what the
+/// `rational_power_routes_agree` test checks. Returns `None` for `q = 0`.
+#[must_use]
+pub fn rational_power_via_exp_ln(base: CasExpr, p: i64, q: u32) -> Option<CasExpr> {
+    let exponent = Rational::checked_new(i128::from(p), i128::from(q))?;
+    Some(CasExpr::Unary(
+        UnaryFunc::Exp,
+        Box::new(CasExpr::Mul(vec![
+            CasExpr::Const(exponent),
+            CasExpr::Unary(UnaryFunc::Ln, Box::new(base)),
+        ])),
+    ))
+}
+
+// ---------------------------------------------------------------------------
 // Named constants.
 // ---------------------------------------------------------------------------
 
@@ -1968,7 +2122,10 @@ mod tests {
 
     #[test]
     fn an_uncertified_head_declines_rather_than_approximating() {
-        let expr = CasExpr::Unary(UnaryFunc::Erf, Box::new(CasExpr::int(1)));
+        // This test named `Erf` until wave two certified it. The head it names
+        // has to be one the module genuinely has no bound for, or it stops
+        // measuring anything: `Si` has no remainder bound here.
+        let expr = CasExpr::Unary(UnaryFunc::Si, Box::new(CasExpr::int(1)));
         let reason = enclose_with_reason(&expr, &[], 10).unwrap_err();
         assert!(matches!(reason, DeclineReason::UnsupportedHead(_)));
     }
@@ -2234,6 +2391,324 @@ mod tests {
         let message = e.verify_root(&p, isolating).unwrap_err();
         assert!(
             message.contains("not inside the isolating interval"),
+            "expected the containment guard, got: {message}"
+        );
+    }
+
+    // -- Wave two: rational powers -----------------------------------------
+
+    /// The 30-decimal truncations of the wave-two reference values, all from
+    /// the standard tables (OEIS A002580 for `2^(1/3)`, A248266 for `erf(1)`,
+    /// A002161 for `sqrt(pi) = Gamma(1/2)`, A073005 for `Gamma(1/3)`, and
+    /// A197036 for `J_0(1)`). Each is the value **truncated** to 30 places, not
+    /// rounded, because [`digit_band`] brackets `[d, d + 10^-30]`. A mismatch
+    /// against these means the **enclosure** is wrong; the digit strings are the
+    /// cited authority.
+    const CBRT2_30: &str = "1.259921049894873164767210607278";
+    const ERF1_30: &str = "0.842700792949714869341220635082";
+    const ERF_HALF_30: &str = "0.520499877813046537682746653891";
+    const ROOT_PI_30: &str = "1.772453850905516027298167483341";
+    const GAMMA_5_2_30: &str = "1.329340388179137020473625612505";
+    const GAMMA_1_3_30: &str = "2.678938534707747633655692940974";
+    const J0_1_30: &str = "0.765197686557966551449717526102";
+    const J1_1_30: &str = "0.440050585744933515959682203718";
+
+    #[test]
+    fn rational_power_of_two_matches_the_cited_digits_at_precision_100() {
+        let expr = rational_power(CasExpr::int(2), 1, 3).expect("cube root");
+        let e = enclose(&expr, &[], 100).expect("2^(1/3) at precision 100");
+        assert!(e.interval.width() <= pow2(-100));
+        assert!(
+            digit_band(CBRT2_30).contains_interval(&e.interval),
+            "2^(1/3) enclosure {} is outside the cited 30 digits",
+            e.interval.decimal(32)
+        );
+        e.verify(&expr, &[]).expect("verifies");
+    }
+
+    #[test]
+    fn the_two_third_power_over_one_to_eight_contains_one_to_four() {
+        // x^(2/3) on [1, 8] has image exactly [1, 4]; the head evaluator must
+        // return an interval that contains all of it. The final-width guard of
+        // `enclose` cannot be met by a box this wide, so the head is exercised
+        // directly — the same function the producer and the verifier both call.
+        let x = BigInterval::new(bi(1), bi(8)).expect("box");
+        let root = eval_head_raw(&StepHead::NthRoot(3), &[x], 64).expect("cube root of the box");
+        let squared = root.pow(2);
+        let image = BigInterval::new(bi(1), bi(4)).expect("image");
+        assert!(
+            squared.contains_interval(&image),
+            "x^(2/3) over [1, 8] gave {squared} which does not contain [1, 4]"
+        );
+    }
+
+    #[test]
+    fn rational_power_routes_agree() {
+        // The Newton root_q route and the exp/ln route are independent; their
+        // enclosures of 2^(1/3) must overlap, and each must hold the digits.
+        let by_root = rational_power(CasExpr::int(2), 1, 3).expect("root route");
+        let by_logarithm = rational_power_via_exp_ln(CasExpr::int(2), 1, 3).expect("log route");
+        let a = enclose(&by_root, &[], 60).expect("root enclosure");
+        let b = enclose(&by_logarithm, &[], 60).expect("log enclosure");
+        a.verify(&by_root, &[]).expect("root route verifies");
+        b.verify(&by_logarithm, &[]).expect("log route verifies");
+        assert_near(&a.interval, CBRT2_30, 17);
+        assert_near(&b.interval, CBRT2_30, 17);
+        assert!(
+            a.interval.lo() <= b.interval.hi() && b.interval.lo() <= a.interval.hi(),
+            "the two routes disagree: {} and {}",
+            a.interval,
+            b.interval
+        );
+    }
+
+    #[test]
+    fn a_negative_base_declines_with_a_reason_naming_the_route() {
+        let by_root = rational_power(CasExpr::int(-2), 1, 3).expect("root route");
+        let root_reason = enclose_with_reason(&by_root, &[], 10).unwrap_err();
+        let DeclineReason::DomainError(root_detail) = &root_reason else {
+            panic!("expected a domain error, got {root_reason:?}");
+        };
+        assert!(
+            root_detail.contains("root_3"),
+            "the root route's decline does not name the degree: {root_detail}"
+        );
+
+        let by_logarithm = rational_power_via_exp_ln(CasExpr::int(-2), 1, 3).expect("log route");
+        let log_reason = enclose_with_reason(&by_logarithm, &[], 10).unwrap_err();
+        let DeclineReason::DomainError(log_detail) = &log_reason else {
+            panic!("expected a domain error, got {log_reason:?}");
+        };
+        assert!(
+            log_detail.contains("ln of an interval"),
+            "the log route's decline does not name `ln`: {log_detail}"
+        );
+        assert_ne!(root_detail, log_detail);
+    }
+
+    #[test]
+    fn a_zero_degree_root_is_not_constructible() {
+        assert!(rational_power(CasExpr::int(2), 1, 0).is_none());
+    }
+
+    #[test]
+    fn a_negative_rational_exponent_takes_the_reciprocal() {
+        // 8^(-2/3) = 1/4.
+        let expr = rational_power(CasExpr::int(8), -2, 3).expect("negative exponent");
+        let e = enclose(&expr, &[], 60).expect("8^(-2/3)");
+        assert!(e.interval.contains(&br(1, 4)));
+        e.verify(&expr, &[]).expect("verifies");
+    }
+
+    // -- Wave two: erf ------------------------------------------------------
+
+    #[test]
+    fn erf_at_one_matches_the_cited_digits() {
+        let expr = CasExpr::Unary(UnaryFunc::Erf, Box::new(CasExpr::int(1)));
+        let e = enclose(&expr, &[], 120).expect("erf(1)");
+        assert!(
+            digit_band(ERF1_30).contains_interval(&e.interval),
+            "erf(1) enclosure {} is outside the cited 30 digits",
+            e.interval.decimal(32)
+        );
+        e.verify(&expr, &[]).expect("verifies");
+    }
+
+    #[test]
+    fn erf_over_a_box_covers_the_whole_image() {
+        // erf is increasing, so the image of [0, 1/2] is [0, erf(1/2)] and the
+        // enclosure must contain all of it.
+        let expr = CasExpr::Unary(UnaryFunc::Erf, Box::new(CasExpr::var("x")));
+        let box_ = Interval::new(Rational::zero(), Rational::new(1, 2)).expect("box");
+        let e = enclose(&expr, &[("x", box_)], 0).expect("erf over the box");
+        assert!(*e.interval.lo() <= BigRational::zero());
+        assert!(*e.interval.hi() >= decimal_to_rational(ERF_HALF_30));
+        e.verify(&expr, &[("x", box_)]).expect("verifies");
+    }
+
+    #[test]
+    fn erf_beyond_the_series_limit_uses_the_complementary_tail_bound() {
+        // At 9 the Maclaurin route is abandoned for erfc(x) <= e^-x^2/(x*sqrt pi);
+        // erf(9) = 1 - 4.1e-37..., so the enclosure must sit just below 1 and
+        // must not exceed it.
+        let expr = CasExpr::Unary(UnaryFunc::Erf, Box::new(CasExpr::int(9)));
+        let e = enclose(&expr, &[], 100).expect("erf(9)");
+        assert!(*e.interval.hi() <= BigRational::one());
+        assert!(*e.interval.lo() >= decimal_to_rational("0.999999999999999999999999999999999999"));
+        e.verify(&expr, &[]).expect("verifies");
+    }
+
+    #[test]
+    fn erf_is_odd() {
+        let positive = CasExpr::Unary(UnaryFunc::Erf, Box::new(CasExpr::int(1)));
+        let negative = CasExpr::Unary(UnaryFunc::Erf, Box::new(CasExpr::int(-1)));
+        let a = enclose(&positive, &[], 60).expect("erf(1)");
+        let b = enclose(&negative, &[], 60).expect("erf(-1)");
+        assert_eq!(a.interval.negate(), b.interval);
+        b.verify(&negative, &[]).expect("verifies");
+    }
+
+    // -- Wave two: gamma ----------------------------------------------------
+
+    #[test]
+    fn gamma_at_a_half_is_the_square_root_of_pi() {
+        let expr = CasExpr::Unary(UnaryFunc::Gamma, Box::new(CasExpr::rat(1, 2)));
+        let e = enclose(&expr, &[], 120).expect("Gamma(1/2)");
+        assert!(
+            digit_band(ROOT_PI_30).contains_interval(&e.interval),
+            "Gamma(1/2) enclosure {} is outside the cited digits of sqrt(pi)",
+            e.interval.decimal(32)
+        );
+        e.verify(&expr, &[]).expect("verifies");
+    }
+
+    #[test]
+    fn gamma_at_five_halves_matches_the_closed_form() {
+        let expr = CasExpr::Unary(UnaryFunc::Gamma, Box::new(CasExpr::rat(5, 2)));
+        let e = enclose(&expr, &[], 120).expect("Gamma(5/2)");
+        assert!(
+            digit_band(GAMMA_5_2_30).contains_interval(&e.interval),
+            "Gamma(5/2) enclosure {} is outside the cited 30 digits",
+            e.interval.decimal(32)
+        );
+        e.verify(&expr, &[]).expect("verifies");
+
+        // Cross-check against the crate's closed-form `special::gamma`, which
+        // returns the same identity as an exact `CasExpr`: enclosing that
+        // expression must land on the same number.
+        // Kept at precision 20: `special::gamma` returns `(3/4)*sqrt(pi)`, whose
+        // `sqrt` goes through the parent module's Newton on a `pi` endpoint, and
+        // that iteration doubles its denominator every step.
+        let closed = crate::special::gamma(Rational::new(5, 2)).expect("closed form");
+        let f = enclose(&closed, &[], 20).expect("closed-form enclosure");
+        assert!(
+            e.interval.lo() <= f.interval.hi() && f.interval.lo() <= e.interval.hi(),
+            "the head and the closed form disagree"
+        );
+    }
+
+    #[test]
+    fn gamma_at_positive_integers_is_the_exact_factorial() {
+        for (argument, factorial) in [(1i64, 1i64), (2, 1), (5, 24), (7, 720)] {
+            let expr = CasExpr::Unary(
+                UnaryFunc::Gamma,
+                Box::new(CasExpr::Const(Rational::integer(i128::from(argument)))),
+            );
+            let e = enclose(&expr, &[], 60).expect("Gamma at an integer");
+            assert_eq!(
+                e.interval,
+                BigInterval::point(bi(factorial)),
+                "Gamma({argument}) is not exactly {factorial}"
+            );
+            e.verify(&expr, &[]).expect("verifies");
+        }
+    }
+
+    #[test]
+    fn gamma_at_a_third_is_enclosed_by_the_stirling_route() {
+        let expr = CasExpr::Unary(UnaryFunc::Gamma, Box::new(CasExpr::rat(1, 3)));
+        // Precision 30 lands on order 16; 60 lands on 64 and costs 13 s in a
+        // debug build, which is the build the crate sweep uses.
+        let e = enclose(&expr, &[], 30).expect("Gamma(1/3)");
+        assert!(e.interval.width() <= pow2(-30));
+        // Precision 30 is a width of about 2^-31, so the band is 1e-13.
+        assert_near(&e.interval, GAMMA_1_3_30, 13);
+        e.verify(&expr, &[]).expect("verifies");
+    }
+
+    #[test]
+    fn gamma_of_a_non_positive_interval_declines_as_a_domain_error() {
+        let expr = CasExpr::Unary(UnaryFunc::Gamma, Box::new(CasExpr::var("x")));
+        let bindings = [("x", interval(-1, 2))];
+        let reason = enclose_with_reason(&expr, &bindings, 10).unwrap_err();
+        let DeclineReason::DomainError(detail) = &reason else {
+            panic!("expected a domain error, got {reason:?}");
+        };
+        assert!(detail.contains("gamma"), "the decline does not name gamma");
+    }
+
+    #[test]
+    fn gamma_over_a_positive_box_contains_the_whole_image() {
+        // Gamma is increasing on [2, 3] with image [Gamma 2, Gamma 3] = [1, 2].
+        // The shift-and-Stirling route over-widens, so this checks the head
+        // directly rather than through the final-width guard.
+        let x = BigInterval::new(bi(2), bi(3)).expect("box");
+        let image = eval_head_raw(&StepHead::Gamma, &[x], 16).expect("gamma over the box");
+        assert!(
+            image.contains_interval(&BigInterval::new(bi(1), bi(2)).expect("image")),
+            "gamma over [2, 3] gave {image} which does not contain [1, 2]"
+        );
+    }
+
+    // -- Wave two: Bessel ---------------------------------------------------
+
+    #[test]
+    fn bessel_j0_at_one_matches_the_cited_digits() {
+        let expr = CasExpr::Unary(UnaryFunc::BesselJ(0), Box::new(CasExpr::int(1)));
+        let e = enclose(&expr, &[], 120).expect("J_0(1)");
+        assert!(
+            digit_band(J0_1_30).contains_interval(&e.interval),
+            "J_0(1) enclosure {} is outside the cited 30 digits",
+            e.interval.decimal(32)
+        );
+        e.verify(&expr, &[]).expect("verifies");
+    }
+
+    #[test]
+    fn bessel_j1_over_the_unit_interval_covers_its_image() {
+        // J_1 increases on [0, 1] from 0 to 0.4400505857..., so the enclosure
+        // must contain that whole range.
+        let expr = CasExpr::Unary(UnaryFunc::BesselJ(1), Box::new(CasExpr::var("x")));
+        let box_ = Interval::new(Rational::zero(), Rational::integer(1)).expect("box");
+        let e = enclose(&expr, &[("x", box_)], 0).expect("J_1 over [0, 1]");
+        assert!(*e.interval.lo() <= BigRational::zero());
+        assert!(*e.interval.hi() >= decimal_to_rational(J1_1_30));
+        e.verify(&expr, &[("x", box_)]).expect("verifies");
+    }
+
+    #[test]
+    fn bessel_j1_at_one_matches_the_cited_digits() {
+        let expr = CasExpr::Unary(UnaryFunc::BesselJ(1), Box::new(CasExpr::int(1)));
+        let e = enclose(&expr, &[], 120).expect("J_1(1)");
+        assert!(
+            digit_band(J1_1_30).contains_interval(&e.interval),
+            "J_1(1) enclosure {} is outside the cited 30 digits",
+            e.interval.decimal(32)
+        );
+        e.verify(&expr, &[]).expect("verifies");
+    }
+
+    // -- Wave two: the forged-certificate guards on the new heads ------------
+
+    #[test]
+    fn a_forged_order_on_an_erf_step_is_refused() {
+        let expr = CasExpr::Unary(UnaryFunc::Erf, Box::new(CasExpr::int(1)));
+        let mut e = enclose(&expr, &[], 60).expect("erf(1)");
+        // The erf step is the second node; claim the cheapest order and report
+        // its honest (large) remainder, so only the order guard can catch it.
+        let (_, honest) = eval_head(&StepHead::Erf, &e.evidence[1].inputs, ORDERS[0])
+            .expect("re-evaluate at the cheapest order");
+        e.evidence[1].order = ORDERS[0];
+        e.evidence[1].remainder = honest;
+        let message = e.verify(&expr, &[]).unwrap_err();
+        assert!(
+            message.contains("per-step budget"),
+            "expected the order guard, got: {message}"
+        );
+    }
+
+    #[test]
+    fn a_forged_gamma_output_is_refused() {
+        let expr = CasExpr::Unary(UnaryFunc::Gamma, Box::new(CasExpr::rat(1, 3)));
+        let mut e = enclose(&expr, &[], 20).expect("Gamma(1/3)");
+        let shifted = e.evidence[1]
+            .output
+            .add(&BigInterval::point(BigRational::one()));
+        e.evidence[1].output = shifted.clone();
+        e.interval = shifted;
+        let message = e.verify(&expr, &[]).unwrap_err();
+        assert!(
+            message.contains("does not contain the recomputed"),
             "expected the containment guard, got: {message}"
         );
     }
