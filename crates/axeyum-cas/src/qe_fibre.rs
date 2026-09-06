@@ -263,12 +263,9 @@ fn divmod(a: &[BigRational], b: &[BigRational]) -> Option<(Vec<BigRational>, Vec
         .map(|(quotient, remainder)| (quotient.into_coefficients(), remainder.into_coefficients()))
 }
 
-/// `a − b` over ℚ, LSB-first.
-fn sub_poly(a: &[BigRational], b: &[BigRational]) -> Vec<BigRational> {
-    QPoly::from_slice(a)
-        .sub(&QPoly::from_slice(b))
-        .into_coefficients()
-}
+// `sub_poly` is gone: `xgcd` was its only caller and now delegates whole. Its
+// pre-migration body is the differential oracle in this module's test block,
+// compared against `axeyum_arith::QPoly::sub`.
 
 /// `(g, s)` with `g = gcd(a, m)` monic and `s · a ≡ g (mod m)`.
 ///
@@ -1441,6 +1438,15 @@ mod tests {
     // oracle for `divmod`, `sub_poly` and `xgcd`.
     // -----------------------------------------------------------------------
 
+    /// `sub_poly` no longer exists in this module — the migration removed its
+    /// last caller — so the differential test compares the SHARED subtraction,
+    /// which is what actually replaced the deleted body.
+    fn shared_sub(a: &[BigRational], b: &[BigRational]) -> Vec<BigRational> {
+        QPoly::from_slice(a)
+            .sub(&QPoly::from_slice(b))
+            .into_coefficients()
+    }
+
     fn legacy_divmod(
         a: &[BigRational],
         b: &[BigRational],
@@ -1512,12 +1518,12 @@ mod tests {
             vec![q(3)],
             vec![q(0), q(1)],
             vec![q(-2), q(1)],
-            vec![q(-2), q(0), q(1)],            // x^2 - 2, irreducible over ℚ
-            vec![q(-2), q(-1), q(1)],           // (x-2)(x+1), reducible
-            vec![q(1), q(-2), q(1)],            // (x-1)^2
-            vec![q(1), q(0), q(1)],             // x^2 + 1
-            vec![q(-6), q(11), q(-6), q(1)],    // (x-1)(x-2)(x-3)
-            vec![q(-2), q(0), q(0), q(1)],      // x^3 - 2
+            vec![q(-2), q(0), q(1)],         // x^2 - 2, irreducible over ℚ
+            vec![q(-2), q(-1), q(1)],        // (x-2)(x+1), reducible
+            vec![q(1), q(-2), q(1)],         // (x-1)^2
+            vec![q(1), q(0), q(1)],          // x^2 + 1
+            vec![q(-6), q(11), q(-6), q(1)], // (x-1)(x-2)(x-3)
+            vec![q(-2), q(0), q(0), q(1)],   // x^3 - 2
             vec![
                 BigRational::new(BigInt::from(1), BigInt::from(2)),
                 q(0),
@@ -1540,7 +1546,7 @@ mod tests {
             for b in &corpus {
                 pairs += 1;
                 assert_eq!(divmod(a, b), legacy_divmod(a, b), "divmod");
-                assert_eq!(sub_poly(a, b), legacy_sub_poly(a, b), "sub_poly");
+                assert_eq!(shared_sub(a, b), legacy_sub_poly(a, b), "sub_poly");
                 let shared = xgcd(a, b);
                 assert_eq!(shared, legacy_xgcd(a, b), "xgcd");
                 if big::degree(&shared.0).is_some_and(|degree| degree > 0) {
@@ -1557,7 +1563,6 @@ mod tests {
 
     fn q(n: i64) -> BigRational {
         BigRational::from_integer(BigInt::from(n))
-    }
     }
 
     fn qp(coefficients: &[i64]) -> Vec<BigRational> {
