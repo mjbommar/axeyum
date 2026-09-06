@@ -360,6 +360,7 @@ fn every_named_complex_declaration_is_checked_and_footprint_free() {
             p.polyderiv.has_derivative_congr,
         ),
         ("Complex.hasDerivative_pow", p.polyderiv.has_derivative_pow),
+        ("Complex.holomorphic_pow", p.polyderiv.holomorphic_pow),
         ("Complex.abs_I", p.cauchy_riemann.abs_i),
         (
             "Complex.inDisc_ofReal_offset",

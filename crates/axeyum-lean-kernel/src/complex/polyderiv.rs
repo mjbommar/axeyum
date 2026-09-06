@@ -75,7 +75,9 @@
     clippy::too_many_lines
 )]
 
-use super::deriv::{abs_le_of_equiv, fn_ty, hd_ty, in_disc_ty, zadd, zmul, zsub};
+use super::deriv::{
+    abs_le_of_equiv, fn_ty, hd_ty, holomorphic_mk, holomorphic_ty, in_disc_ty, zadd, zmul, zsub,
+};
 use super::estimates::bounded_on_ty;
 use super::{CExpr, ComplexPrelude, complex_ty, creal_ty, ring_law_proof};
 use crate::Kernel;
@@ -98,6 +100,10 @@ pub struct PolyDerivNames {
     /// `Complex.hasDerivative_pow` — the power rule at exponent `Nat.succ n`,
     /// gated on Skolem magnitude bounds for `pow (·, n)` and its derivative.
     pub has_derivative_pow: NameId,
+    /// `Complex.holomorphic_pow` — the same, as the `Sigma` instance, so a
+    /// monomial can be consumed by anything that takes a `HolomorphicOn`
+    /// witness without the caller re-supplying the derivative.
+    pub holomorphic_pow: NameId,
 }
 
 /// Interns this module's names under `complex`. Called once from
@@ -106,6 +112,7 @@ pub(super) fn intern_names(kernel: &mut Kernel, complex: NameId) -> PolyDerivNam
     PolyDerivNames {
         has_derivative_congr: kernel.name_str(complex, "hasDerivative_congr"),
         has_derivative_pow: kernel.name_str(complex, "hasDerivative_pow"),
+        holomorphic_pow: kernel.name_str(complex, "holomorphic_pow"),
     }
 }
 
@@ -117,7 +124,8 @@ pub(super) fn intern_names(kernel: &mut Kernel, complex: NameId) -> PolyDerivNam
 /// **refused** a proof, not that a script gave up.
 pub(super) fn declare_polyderiv(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), KernelError> {
     declare_has_derivative_congr(d, p)?;
-    declare_has_derivative_pow(d, p)
+    declare_has_derivative_pow(d, p)?;
+    declare_holomorphic_pow(d, p)
 }
 
 // ---------------------------------------------------------------------------
@@ -639,6 +647,122 @@ fn declare_has_derivative_pow(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(
 
     d.kernel().add_declaration(Declaration::Theorem {
         name: p.polyderiv.has_derivative_pow,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+// ---------------------------------------------------------------------------
+// the power rule as a `Sigma` instance
+// ---------------------------------------------------------------------------
+
+/// `Complex.holomorphic_pow : ∀ c r k1, BoundedOn (fun z => z) c r k1 →
+/// ∀ (kb kd : Nat → Nat),
+///   (∀ n, BoundedOn (fun z => pow z n) c r (kb n)) →
+///   (∀ n, BoundedOn (fun x => mul (ofNat (Nat.succ n)) (pow x n)) c r (kd n)) →
+///   ∀ n, HolomorphicOn (fun z => pow z (Nat.succ n)) c r`.
+///
+/// [`declare_has_derivative_pow`] packed into the `Sigma`, exactly as
+/// `Complex.holomorphic_add` packs `hasDerivative_add`. The point of the
+/// packed form is that a consumer no longer has to name the derivative: it is
+/// `Sigma.fst` of the witness, and `Complex.holomorphicDeriv` reads it back.
+///
+/// The four hypotheses do NOT go away — they are the same Skolem magnitudes,
+/// for the reason this module's documentation gives — but they are supplied
+/// once per disc rather than once per exponent.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection.
+fn declare_holomorphic_pow(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), KernelError> {
+    let carrier = complex_ty(d, p);
+    let real = creal_ty(d, p);
+    let nat = d.nat_ty();
+
+    let c_fv = d.fresh_fvar();
+    let c = d.kernel().fvar(c_fv);
+    let r_fv = d.fresh_fvar();
+    let r = d.kernel().fvar(r_fv);
+    let k1_fv = d.fresh_fvar();
+    let k1 = d.kernel().fvar(k1_fv);
+
+    let id_fn = {
+        let z_fv = d.fresh_fvar();
+        let z = d.kernel().fvar(z_fv);
+        d.lam_fv(z_fv, carrier, z)
+    };
+    let hb_id_ty = bounded_on_ty(d, p, id_fn, c, r, k1);
+    let hb_id_fv = d.fresh_fvar();
+    let hb_id = d.kernel().fvar(hb_id_fv);
+
+    let nat_to_nat = d.arrow(nat, nat);
+    let kb_fv = d.fresh_fvar();
+    let kb = d.kernel().fvar(kb_fv);
+    let kd_fv = d.fresh_fvar();
+    let kd = d.kernel().fvar(kd_fv);
+
+    let hb_body_ty = {
+        let v_fv = d.fresh_fvar();
+        let v = d.kernel().fvar(v_fv);
+        let z_fv = d.fresh_fvar();
+        let z = d.kernel().fvar(z_fv);
+        let pz = d.const_app(p.pow, &[z, v]);
+        let pf = d.lam_fv(z_fv, carrier, pz);
+        let kbv = d.apply(kb, &[v]);
+        let bt = bounded_on_ty(d, p, pf, c, r, kbv);
+        d.pi_fv(v_fv, nat, bt)
+    };
+    let hb_fv = d.fresh_fvar();
+    let hb = d.kernel().fvar(hb_fv);
+
+    let hd_body_ty = {
+        let v_fv = d.fresh_fvar();
+        let v = d.kernel().fvar(v_fv);
+        let df = pow_deriv_fn(d, p, carrier, v);
+        let kdv = d.apply(kd, &[v]);
+        let bt = bounded_on_ty(d, p, df, c, r, kdv);
+        d.pi_fv(v_fv, nat, bt)
+    };
+    let hd_fv = d.fresh_fvar();
+    let hd = d.kernel().fvar(hd_fv);
+
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+
+    let subject = pow_succ_fn(d, p, carrier, n);
+    let deriv = pow_deriv_fn(d, p, carrier, n);
+    let witness = d.const_app(
+        p.polyderiv.has_derivative_pow,
+        &[c, r, k1, hb_id, kb, kd, hb, hd, n],
+    );
+    let body = holomorphic_mk(d, p, subject, c, r, deriv, witness);
+
+    let value = {
+        let with_n = d.lam_fv(n_fv, nat, body);
+        let with_hd = d.lam_fv(hd_fv, hd_body_ty, with_n);
+        let with_hb = d.lam_fv(hb_fv, hb_body_ty, with_hd);
+        let with_kd = d.lam_fv(kd_fv, nat_to_nat, with_hb);
+        let with_kb = d.lam_fv(kb_fv, nat_to_nat, with_kd);
+        let with_hbid = d.lam_fv(hb_id_fv, hb_id_ty, with_kb);
+        let with_k1 = d.lam_fv(k1_fv, nat, with_hbid);
+        let with_r = d.lam_fv(r_fv, real, with_k1);
+        d.lam_fv(c_fv, carrier, with_r)
+    };
+    let ty = {
+        let claim = holomorphic_ty(d, p, subject, c, r);
+        let with_n = d.pi_fv(n_fv, nat, claim);
+        let with_hd = d.arrow(hd_body_ty, with_n);
+        let with_hb = d.arrow(hb_body_ty, with_hd);
+        let with_kd = d.pi_fv(kd_fv, nat_to_nat, with_hb);
+        let with_kb = d.pi_fv(kb_fv, nat_to_nat, with_kd);
+        let with_hbid = d.arrow(hb_id_ty, with_kb);
+        let with_k1 = d.pi_fv(k1_fv, nat, with_hbid);
+        let with_r = d.pi_fv(r_fv, real, with_k1);
+        d.pi_fv(c_fv, carrier, with_r)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.polyderiv.holomorphic_pow,
         uparams: vec![],
         ty,
         value,
