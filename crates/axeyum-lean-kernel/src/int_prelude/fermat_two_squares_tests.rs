@@ -24,7 +24,7 @@
 //!    conclusion's type does not depend on which proof inhabits it. Two
 //!    refusals accompany it: the instantiation at `m = 2` must NOT be
 //!    `IsSumOfTwoSquares (ofNat 7)`, and `Even 2`'s witness must NOT be
-//!    accepted where `Even 3` is demanded — without those halves an
+//!    accepted where `Even 6` is demanded — without those halves an
 //!    application test only says the theorem has enough arguments.
 //!
 //! Magnitudes are deliberately tiny: `Nat` numerals here are unary and cost is
@@ -143,27 +143,38 @@ fn exists_norm(d: &mut IntDev<'_>, lhs: ExprId) -> ExprId {
     super::two_squares::int_exists(d, outer)
 }
 
-/// A real proof of `Nat.Even (2·h)` at a numeral: `Even n := ∃ k, n = k + k`,
-/// and `Nat.add h h` reduces to the numeral, so the equation is `Eq.refl`.
-fn even_witness(d: &mut IntDev<'_>, half: u32) -> ExprId {
+/// A real proof of `Nat.Even value` at an EVEN numeral: `Nat.Even n` is
+/// `∃ k, n = k + k`, `Nat.add k k` reduces at a numeral, so the equation is
+/// `Eq.refl` and the witness is `value / 2`.
+///
+/// The parameter is the number whose evenness is claimed, NOT its half. That
+/// distinction is what the first version of this file got wrong: the theorem's
+/// hypothesis is `Nat.Even m` for the `m` in `p = 2m+1`, so at `p = 5` it wants
+/// `Even 2` and not `Even 4`, and the kernel refused the whole application with
+/// a bare `TypeMismatch` naming two `ExprId`s. The refusal was diagnosed by
+/// handing the SAME argument pair to `Int.firstSupplementaryLawResidue`, an
+/// existing declaration this lane did not touch, and watching it fail
+/// identically -- which located the defect in the test rather than the theorem.
+fn even_witness(d: &mut IntDev<'_>, value: u32) -> ExprId {
+    assert_eq!(value % 2, 0, "even_witness is only for an even numeral");
     let nat = d.nat_ty();
     let one = d.level_one();
     let p = d.int();
-    let value = d.num(2 * half);
-    let k = d.num(half);
+    let target = d.num(value);
+    let k = d.num(value / 2);
     let predicate = {
         let k_fv = d.fresh_fvar();
         let bound = d.kernel().fvar(k_fv);
         let sum = d.add(bound, bound);
-        let body = d.eq(value, sum);
+        let body = d.eq(target, sum);
         d.lam_fv(k_fv, nat, body)
     };
     // `Nat.add k k` reduces to the numeral, so `Eq.refl` closes the equation
-    // the predicate demands (`Eq value (add k k)`) up to iota.
+    // the predicate demands (`Eq target (add k k)`) up to iota.
     let equation = {
         let eq_refl = d.int().logic.eq_refl;
         let refl = d.kernel().const_(eq_refl, vec![one]);
-        d.apply(refl, &[nat, value])
+        d.apply(refl, &[nat, target])
     };
     let intro_name = p.logic.exists_intro;
     let intro = d.kernel().const_(intro_name, vec![one]);
@@ -466,9 +477,9 @@ fn fermat_two_squares_declarations_state_the_intended_types() {
 /// the primality condition as a free variable registered in a `LocalContext`.
 ///
 /// Returns the instantiated type the kernel infers.
-fn fermat_at(d: &mut IntDev<'_>, half: u32) -> ExprId {
+fn fermat_at(d: &mut IntDev<'_>, m_value: u32) -> ExprId {
     let p = d.int();
-    let m = d.num(half);
+    let m = d.num(m_value);
     let two_nat = d.num(2);
     let doubled = d.mul(two_nat, m);
     let pn = d.succ(doubled);
@@ -476,7 +487,7 @@ fn fermat_at(d: &mut IntDev<'_>, half: u32) -> ExprId {
     let prime_ty = super::wilson::prime_condition(d, pn);
     let prime_fv = d.fresh_fvar();
     let prime_proof = d.kernel().fvar(prime_fv);
-    let even = even_witness(d, half);
+    let even = even_witness(d, m_value);
 
     let head = d.const_app(p.fermat_two_squares, &[m]);
     let applied = d.apply(head, &[prime_proof, even]);
@@ -515,12 +526,12 @@ fn fermat_two_squares_instantiates_at_five_thirteen_and_seventeen() {
     let mut d = IntDev::new(&mut k, p);
 
     let mut checked = 0_usize;
-    for (half, prime) in [(2_u32, 5_u32), (6, 13), (8, 17)] {
-        let inferred = fermat_at(&mut d, half);
+    for (m_value, prime) in [(2_u32, 5_u32), (6, 13), (8, 17)] {
+        let inferred = fermat_at(&mut d, m_value);
         let expected = sum_of_two_squares_at(&mut d, prime);
         assert!(
             d.kernel().def_eq(inferred, expected),
-            "Int.fermatTwoSquares at m = {half} must conclude \
+            "Int.fermatTwoSquares at m = {m_value} must conclude \
              Int.IsSumOfTwoSquares (ofNat {prime})"
         );
         checked += 1;
@@ -549,7 +560,7 @@ fn fermat_two_squares_instantiation_is_discriminating() {
         );
     }
 
-    // `Nat.Even 4`'s witness is not a proof of `Nat.Even 6`: the parity
+    // `Nat.Even 2`'s witness is not a proof of `Nat.Even 6`: the parity
     // hypothesis is load-bearing, not decorative.
     let m = d.num(6);
     let two_nat = d.num(2);
@@ -572,7 +583,7 @@ fn fermat_two_squares_instantiation_is_discriminating() {
     });
     assert!(
         d.kernel().infer_in(applied, &mut ctx).is_err(),
-        "Int.fermatTwoSquares must REFUSE Nat.Even 4's witness where \
+        "Int.fermatTwoSquares must REFUSE Nat.Even 2's witness where \
          Nat.Even 6 is demanded"
     );
 }
