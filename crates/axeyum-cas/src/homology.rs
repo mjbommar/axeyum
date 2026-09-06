@@ -174,14 +174,14 @@ use crate::{CasExpr, Matrix, ZeroTest, equal};
 pub mod coefficients;
 #[path = "homology_cohomology.rs"]
 pub mod cohomology;
+#[path = "homology_cup_product.rs"]
+pub mod cup_product;
 #[path = "homology_induced.rs"]
 pub mod induced;
 #[path = "homology_persistent.rs"]
 pub mod persistent;
 #[path = "homology_relative.rs"]
 pub mod relative;
-#[path = "homology_cup_product.rs"]
-pub mod cup_product;
 
 /// An abstract simplicial complex over vertex ids `0..`, closed under taking
 /// faces, built from a list of maximal simplices.

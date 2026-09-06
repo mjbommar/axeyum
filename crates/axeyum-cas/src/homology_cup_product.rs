@@ -229,9 +229,9 @@ fn rank_of_columns_mod2(columns: &[Matrix], rows: usize) -> Option<usize> {
     }
     let cols = columns.len();
     let mut grid = vec![vec![0u8; cols]; rows];
-    for (c, column) in columns.iter().enumerate() {
-        for r in 0..rows {
-            grid[r][c] = mod2_of(column.get(r, 0)?)?;
+    for (r, row) in grid.iter_mut().enumerate() {
+        for (c, column) in columns.iter().enumerate() {
+            row[c] = mod2_of(column.get(r, 0)?)?;
         }
     }
     Some(rref_mod2_inplace(&mut grid, cols).len())
@@ -306,11 +306,11 @@ fn solve_mod2(basis: &[Matrix], target: &Matrix) -> Option<Vec<u8>> {
         };
     }
     let mut grid = vec![vec![0u8; cols + 1]; rows];
-    for r in 0..rows {
+    for (r, row) in grid.iter_mut().enumerate() {
         for (c, column) in basis.iter().enumerate() {
-            grid[r][c] = mod2_of(column.get(r, 0)?)?;
+            row[c] = mod2_of(column.get(r, 0)?)?;
         }
-        grid[r][cols] = mod2_of(target.get(r, 0)?)?;
+        row[cols] = mod2_of(target.get(r, 0)?)?;
     }
     rref_mod2_inplace(&mut grid, cols + 1);
     let mut coefficients = Vec::with_capacity(cols);
@@ -548,13 +548,21 @@ fn cup_product(
 
 /// Compute the cup product `H^p(complex; Q) x H^q(complex; Q) -> H^{p+q}(complex; Q)`.
 #[must_use]
-pub fn cup_product_q(complex: &SimplicialComplex, p: usize, q: usize) -> Option<CupProductCertificate> {
+pub fn cup_product_q(
+    complex: &SimplicialComplex,
+    p: usize,
+    q: usize,
+) -> Option<CupProductCertificate> {
     cup_product(complex, p, q, None)
 }
 
 /// Compute the cup product `H^p(complex; F_2) x H^q(complex; F_2) -> H^{p+q}(complex; F_2)`.
 #[must_use]
-pub fn cup_product_f2(complex: &SimplicialComplex, p: usize, q: usize) -> Option<CupProductCertificate> {
+pub fn cup_product_f2(
+    complex: &SimplicialComplex,
+    p: usize,
+    q: usize,
+) -> Option<CupProductCertificate> {
     cup_product(complex, p, q, Some(2))
 }
 
@@ -570,7 +578,115 @@ fn bases_match(rebuilt: &[Matrix], recorded: &[Matrix], name: &str) -> Result<()
     }
     for (i, (r, c)) in rebuilt.iter().zip(recorded.iter()).enumerate() {
         if !certify_product_equals(r, c) {
-            return Err(format!("{name} basis vector {i} does not match the recorded one"));
+            return Err(format!(
+                "{name} basis vector {i} does not match the recorded one"
+            ));
+        }
+    }
+    Ok(())
+}
+
+/// Recompute and check one table entry `(i, j)`: rebuild `alpha ∪ beta`,
+/// confirm it is a cocycle, solve for its class in the `H^{p+q}` basis,
+/// compare to the recorded entry, and check graded commutativity against the
+/// independently recomputed `beta ∪ alpha`. Returns the recomputed
+/// coordinates on success. Factored out of [`CupProductCertificate::verify`]
+/// so that function stays a readable top-level checklist.
+#[allow(clippy::too_many_arguments)]
+fn check_table_entry(
+    complex: &SimplicialComplex,
+    p: usize,
+    q: usize,
+    i: usize,
+    j: usize,
+    alpha: &Matrix,
+    beta: &Matrix,
+    delta_pq: &Matrix,
+    combined_gamma: &[Matrix],
+    rows_gamma: usize,
+    boundary_gamma_len: usize,
+    modulus: Option<i128>,
+    sign_odd: bool,
+    recorded: &[Rational],
+) -> Result<Vec<Rational>, String> {
+    let gamma = alexander_whitney_cup(complex, p, q, alpha, beta, modulus)
+        .ok_or_else(|| format!("could not build the cup product cochain at ({i},{j})"))?;
+    if !is_cocycle(delta_pq, &gamma, modulus).unwrap_or(false) {
+        return Err(format!(
+            "the cup product cochain at ({i},{j}) is not a cocycle"
+        ));
+    }
+    let coefficients = solve_in_combined_basis(combined_gamma, &gamma, rows_gamma, modulus)
+        .ok_or_else(|| {
+            format!("cup product class at ({i},{j}) is not expressible in the H^(p+q) basis")
+        })?;
+    let tail = coefficients[boundary_gamma_len..].to_vec();
+    if tail != recorded {
+        return Err(format!("cup product table entry ({i},{j}) mismatch"));
+    }
+
+    // Graded commutativity: beta ∪ alpha == (-1)^{pq} * (alpha ∪ beta).
+    let swapped = alexander_whitney_cup(complex, q, p, beta, alpha, modulus)
+        .ok_or_else(|| format!("could not build the swapped cup product at ({i},{j})"))?;
+    let swapped_coefficients =
+        solve_in_combined_basis(combined_gamma, &swapped, rows_gamma, modulus)
+            .ok_or_else(|| format!("swapped cup product class at ({i},{j}) is not expressible"))?;
+    let swapped_tail = &swapped_coefficients[boundary_gamma_len..];
+    for (r, (&expected_before_sign, &actual)) in tail.iter().zip(swapped_tail.iter()).enumerate() {
+        let expected = if sign_odd && modulus.is_none() {
+            expected_before_sign
+                .checked_neg()
+                .ok_or_else(|| "sign negation overflow".to_string())?
+        } else {
+            expected_before_sign
+        };
+        if expected != actual {
+            return Err(format!(
+                "graded commutativity fails at ({i},{j}), coordinate {r}"
+            ));
+        }
+    }
+    Ok(tail)
+}
+
+/// Guard: every basis vector at each of the three degrees (`p`, `q`, `p+q`)
+/// is a genuine cocycle, and each degree's basis is a genuine extension of
+/// its own boundary basis to the FULL cocycle space (not a proper subspace
+/// of it). Factored out of [`CupProductCertificate::verify`] so that
+/// function stays a readable top-level checklist.
+#[allow(clippy::similar_names)] // delta_p/delta_q/delta_pq name the p, q, p+q degrees, not accidental near-duplicates
+fn bases_are_cocycles_and_genuine_extensions(
+    delta_p: &Matrix,
+    delta_q: &Matrix,
+    delta_pq: &Matrix,
+    basis_alpha: &(Vec<Matrix>, Vec<Matrix>),
+    basis_beta: &(Vec<Matrix>, Vec<Matrix>),
+    basis_gamma: &(Vec<Matrix>, Vec<Matrix>),
+    modulus: Option<i128>,
+) -> Result<(), String> {
+    for (name, delta, basis) in [
+        ("H^p", delta_p, &basis_alpha.1),
+        ("H^q", delta_q, &basis_beta.1),
+        ("H^(p+q)", delta_pq, &basis_gamma.1),
+    ] {
+        for (i, v) in basis.iter().enumerate() {
+            if !is_cocycle(delta, v, modulus).unwrap_or(false) {
+                return Err(format!("{name} basis vector {i} is not a cocycle"));
+            }
+        }
+    }
+
+    for (name, kernel_source, boundary_basis, homology_basis) in [
+        ("H^p", delta_p, &basis_alpha.0, &basis_alpha.1),
+        ("H^q", delta_q, &basis_beta.0, &basis_beta.1),
+        ("H^(p+q)", delta_pq, &basis_gamma.0, &basis_gamma.1),
+    ] {
+        if !basis_is_genuine_extension(kernel_source, boundary_basis, homology_basis, modulus)
+            .unwrap_or(false)
+        {
+            return Err(format!(
+                "{name} basis is not a genuine extension of the boundary basis to the full cocycle space"
+            ));
         }
     }
     Ok(())
@@ -585,12 +701,15 @@ impl CupProductCertificate {
     ///
     /// Returns a distinct, descriptive `Err(String)` for whichever guard
     /// fails first.
+    #[allow(clippy::similar_names)] // delta_p/delta_q/delta_pq name the p, q, p+q degrees, not accidental near-duplicates
     pub fn verify(&self, complex: &SimplicialComplex) -> Result<CupProductReport, String> {
         let modulus = self.modulus;
         if !matches!(modulus, None | Some(2)) {
             return Err("only Q (None) and F_2 (Some(2)) are supported".to_string());
         }
 
+        // `delta_*` doubles as each degree's "kernel source": the matrix
+        // whose null space is the cocycle space at that degree.
         let delta_p = boundary_matrix(complex, self.p + 1)
             .ok_or("could not build delta^p")?
             .transpose();
@@ -600,18 +719,9 @@ impl CupProductCertificate {
         let delta_pq = boundary_matrix(complex, self.p + self.q + 1)
             .ok_or("could not build delta^(p+q)")?
             .transpose();
-        let kernel_source_p = boundary_matrix(complex, self.p + 1)
-            .ok_or("could not build delta^p")?
-            .transpose();
-        let kernel_source_q = boundary_matrix(complex, self.q + 1)
-            .ok_or("could not build delta^q")?
-            .transpose();
-        let kernel_source_pq = boundary_matrix(complex, self.p + self.q + 1)
-            .ok_or("could not build delta^(p+q)")?
-            .transpose();
 
-        let (b_alpha, h_alpha) = cohomology_basis(complex, self.p, modulus)
-            .ok_or("could not rebuild H^p basis")?;
+        let (b_alpha, h_alpha) =
+            cohomology_basis(complex, self.p, modulus).ok_or("could not rebuild H^p basis")?;
         let (b_beta, h_beta) =
             cohomology_basis(complex, self.q, modulus).ok_or("could not rebuild H^q basis")?;
         let (b_gamma, h_gamma) = cohomology_basis(complex, self.p + self.q, modulus)
@@ -624,36 +734,15 @@ impl CupProductCertificate {
         bases_match(&b_gamma, &self.basis_gamma.0, "H^(p+q) boundary")?;
         bases_match(&h_gamma, &self.basis_gamma.1, "H^(p+q) homology")?;
 
-        for (name, delta, basis) in [
-            ("H^p", &delta_p, &self.basis_alpha.1),
-            ("H^q", &delta_q, &self.basis_beta.1),
-            ("H^(p+q)", &delta_pq, &self.basis_gamma.1),
-        ] {
-            for (i, v) in basis.iter().enumerate() {
-                if !is_cocycle(delta, v, modulus).unwrap_or(false) {
-                    return Err(format!("{name} basis vector {i} is not a cocycle"));
-                }
-            }
-        }
-
-        for (name, kernel_source, boundary_basis, homology_basis) in [
-            ("H^p", &kernel_source_p, &self.basis_alpha.0, &self.basis_alpha.1),
-            ("H^q", &kernel_source_q, &self.basis_beta.0, &self.basis_beta.1),
-            (
-                "H^(p+q)",
-                &kernel_source_pq,
-                &self.basis_gamma.0,
-                &self.basis_gamma.1,
-            ),
-        ] {
-            if !basis_is_genuine_extension(kernel_source, boundary_basis, homology_basis, modulus)
-                .unwrap_or(false)
-            {
-                return Err(format!(
-                    "{name} basis is not a genuine extension of the boundary basis to the full cocycle space"
-                ));
-            }
-        }
+        bases_are_cocycles_and_genuine_extensions(
+            &delta_p,
+            &delta_q,
+            &delta_pq,
+            &self.basis_alpha,
+            &self.basis_beta,
+            &self.basis_gamma,
+            modulus,
+        )?;
 
         let rows_gamma = complex.count(self.p + self.q);
         let combined_gamma: Vec<Matrix> = self
@@ -663,6 +752,7 @@ impl CupProductCertificate {
             .cloned()
             .chain(self.basis_gamma.1.iter().cloned())
             .collect();
+        let boundary_gamma_len = self.basis_gamma.0.len();
 
         if self.table.len() != h_alpha.len() {
             return Err(format!(
@@ -683,50 +773,22 @@ impl CupProductCertificate {
             }
             let mut row = Vec::with_capacity(h_beta.len());
             for (j, beta) in h_beta.iter().enumerate() {
-                let gamma = alexander_whitney_cup(complex, self.p, self.q, alpha, beta, modulus)
-                    .ok_or_else(|| format!("could not build the cup product cochain at ({i},{j})"))?;
-                if !is_cocycle(&delta_pq, &gamma, modulus).unwrap_or(false) {
-                    return Err(format!(
-                        "the cup product cochain at ({i},{j}) is not a cocycle"
-                    ));
-                }
-                let coefficients =
-                    solve_in_combined_basis(&combined_gamma, &gamma, rows_gamma, modulus)
-                        .ok_or_else(|| {
-                            format!("cup product class at ({i},{j}) is not expressible in the H^(p+q) basis")
-                        })?;
-                let tail = coefficients[self.basis_gamma.0.len()..].to_vec();
-                let recorded = &self.table[i][j];
-                if &tail != recorded {
-                    return Err(format!("cup product table entry ({i},{j}) mismatch"));
-                }
-
-                // Graded commutativity: beta ∪ alpha == (-1)^{pq} * (alpha ∪ beta).
-                let swapped = alexander_whitney_cup(complex, self.q, self.p, beta, alpha, modulus)
-                    .ok_or_else(|| format!("could not build the swapped cup product at ({i},{j})"))?;
-                let swapped_coefficients =
-                    solve_in_combined_basis(&combined_gamma, &swapped, rows_gamma, modulus)
-                        .ok_or_else(|| {
-                            format!("swapped cup product class at ({i},{j}) is not expressible")
-                        })?;
-                let swapped_tail = &swapped_coefficients[self.basis_gamma.0.len()..];
-                for (r, (&expected_before_sign, &actual)) in
-                    tail.iter().zip(swapped_tail.iter()).enumerate()
-                {
-                    let expected = if sign_odd && modulus.is_none() {
-                        expected_before_sign
-                            .checked_neg()
-                            .ok_or_else(|| "sign negation overflow".to_string())?
-                    } else {
-                        expected_before_sign
-                    };
-                    if expected != actual {
-                        return Err(format!(
-                            "graded commutativity fails at ({i},{j}), coordinate {r}"
-                        ));
-                    }
-                }
-
+                let tail = check_table_entry(
+                    complex,
+                    self.p,
+                    self.q,
+                    i,
+                    j,
+                    alpha,
+                    beta,
+                    &delta_pq,
+                    &combined_gamma,
+                    rows_gamma,
+                    boundary_gamma_len,
+                    modulus,
+                    sign_odd,
+                    &self.table[i][j],
+                )?;
                 row.push(tail);
             }
             recomputed_table.push(row);
@@ -741,9 +803,9 @@ impl CupProductCertificate {
 #[cfg(test)]
 mod tests {
     use super::{CupProductCertificate, cup_product_f2, cup_product_q};
-    use crate::homology::fixtures::rp2_6v;
     use crate::homology::SimplicialComplex;
     use crate::homology::coefficients::homology_with_coefficients;
+    use crate::homology::fixtures::rp2_6v;
     use axeyum_ir::Rational;
 
     fn complex_of(maximal: &[&[usize]]) -> SimplicialComplex {
@@ -799,7 +861,9 @@ mod tests {
 
         let torus_table = cup_product_q(&torus, 1, 1).expect("torus cup product H^1 x H^1 -> H^2");
         assert_eq!(torus_table.basis_alpha.1.len(), 2, "H^1(T^2; Q) has rank 2");
-        torus_table.verify(&torus).expect("torus certificate verifies");
+        torus_table
+            .verify(&torus)
+            .expect("torus certificate verifies");
         let torus_nonzero = torus_table
             .table
             .iter()
@@ -810,13 +874,21 @@ mod tests {
             "the torus's H^1 generators must have a nonzero cup product somewhere in the table"
         );
 
-        let wedge_table =
-            cup_product_q(&wedge, 1, 1).expect("wedge cup product H^1 x H^1 -> H^2");
-        assert_eq!(wedge_table.basis_alpha.1.len(), 2, "H^1(wedge; Q) has rank 2");
-        wedge_table.verify(&wedge).expect("wedge certificate verifies");
+        let wedge_table = cup_product_q(&wedge, 1, 1).expect("wedge cup product H^1 x H^1 -> H^2");
+        assert_eq!(
+            wedge_table.basis_alpha.1.len(),
+            2,
+            "H^1(wedge; Q) has rank 2"
+        );
+        wedge_table
+            .verify(&wedge)
+            .expect("wedge certificate verifies");
         for row in &wedge_table.table {
             for entry in row {
-                assert!(!nonzero(entry), "the wedge's cup product must vanish, got {entry:?}");
+                assert!(
+                    !nonzero(entry),
+                    "the wedge's cup product must vanish, got {entry:?}"
+                );
             }
         }
 
@@ -831,8 +903,16 @@ mod tests {
     fn rp2_generator_squares_to_a_nonzero_class_over_f2() {
         let rp2 = rp2_6v();
         let certificate = cup_product_f2(&rp2, 1, 1).expect("RP^2 cup product H^1 x H^1 -> H^2");
-        assert_eq!(certificate.basis_alpha.1.len(), 1, "H^1(RP^2; F_2) is 1-dimensional");
-        assert_eq!(certificate.basis_gamma.1.len(), 1, "H^2(RP^2; F_2) is 1-dimensional");
+        assert_eq!(
+            certificate.basis_alpha.1.len(),
+            1,
+            "H^1(RP^2; F_2) is 1-dimensional"
+        );
+        assert_eq!(
+            certificate.basis_gamma.1.len(),
+            1,
+            "H^2(RP^2; F_2) is 1-dimensional"
+        );
         certificate.verify(&rp2).expect("certificate verifies");
         assert!(
             nonzero(&certificate.table[0][0]),
@@ -848,8 +928,7 @@ mod tests {
     #[test]
     fn a_contractible_complex_has_an_empty_h1_cup_table() {
         let triangle = complex_of(&[&[0, 1, 2]]);
-        let certificate =
-            cup_product_q(&triangle, 1, 1).expect("cup product on a filled triangle");
+        let certificate = cup_product_q(&triangle, 1, 1).expect("cup product on a filled triangle");
         assert_eq!(certificate.basis_alpha.1.len(), 0);
         assert_eq!(certificate.table.len(), 0);
         certificate.verify(&triangle).expect("certificate verifies");
@@ -864,7 +943,10 @@ mod tests {
         let rp2 = rp2_6v();
         let mut forged: CupProductCertificate =
             cup_product_f2(&rp2, 1, 1).expect("RP^2 cup product H^1 x H^1 -> H^2");
-        assert!(forged.verify(&rp2).is_ok(), "genuine certificate must verify");
+        assert!(
+            forged.verify(&rp2).is_ok(),
+            "genuine certificate must verify"
+        );
         forged.table[0][0] = vec![Rational::integer(0)]; // the true value is 1
         let err = forged
             .verify(&rp2)
@@ -882,16 +964,21 @@ mod tests {
         let rp2 = rp2_6v();
         let mut forged: CupProductCertificate =
             cup_product_f2(&rp2, 1, 1).expect("RP^2 cup product H^1 x H^1 -> H^2");
-        assert!(forged.verify(&rp2).is_ok(), "genuine certificate must verify");
+        assert!(
+            forged.verify(&rp2).is_ok(),
+            "genuine certificate must verify"
+        );
         // Zero out the one H^1 basis vector: still shape-compatible, no
         // longer the recorded (nonzero) cocycle representative.
         let width = forged.basis_alpha.1[0].rows();
-        forged.basis_alpha.1[0] =
-            crate::Matrix::zeros(width, 1);
+        forged.basis_alpha.1[0] = crate::Matrix::zeros(width, 1);
         let err = forged
             .verify(&rp2)
             .expect_err("a forged basis vector must be refused");
-        assert!(err.contains("basis vector") || err.contains("cocycle"), "got: {err}");
+        assert!(
+            err.contains("basis vector") || err.contains("cocycle"),
+            "got: {err}"
+        );
     }
 
     /// ADVERSARIAL, isolated to graded commutativity: forge the table so
@@ -905,7 +992,10 @@ mod tests {
         let torus = crate::homology::fixtures::torus_7v();
         let mut forged: CupProductCertificate =
             cup_product_q(&torus, 1, 1).expect("torus cup product H^1 x H^1 -> H^2");
-        assert!(forged.verify(&torus).is_ok(), "genuine certificate must verify");
+        assert!(
+            forged.verify(&torus).is_ok(),
+            "genuine certificate must verify"
+        );
         // Flip the sign of one off-diagonal entry: still a valid H^2 class
         // shape-wise, but no longer consistent with delta(gamma)=0 solved
         // fresh, OR (if it happens to still solve, since H^2 is 1-dim here

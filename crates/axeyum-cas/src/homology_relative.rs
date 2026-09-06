@@ -229,11 +229,7 @@ fn absolute_q_basis(complex: &SimplicialComplex, dim: usize) -> Option<(Vec<Matr
 /// shared basis vectors, so it commutes with the boundary map trivially (both
 /// complexes assign the same face-removal boundary formula to the same
 /// simplex).
-fn inclusion_chain_map(
-    k: &SimplicialComplex,
-    l: &SimplicialComplex,
-    dim: usize,
-) -> Option<Matrix> {
+fn inclusion_chain_map(k: &SimplicialComplex, l: &SimplicialComplex, dim: usize) -> Option<Matrix> {
     let k_simplices = k.simplices(dim);
     let l_simplices = l.simplices(dim);
     let row_index: BTreeMap<Vec<usize>, usize> = k_simplices
@@ -281,11 +277,7 @@ fn quotient_chain_map(k: &SimplicialComplex, l: &SimplicialComplex, dim: usize) 
 
 /// `i_*(dim) : H_dim(L; Q) -> H_dim(K; Q)`, the induced map of
 /// [`inclusion_chain_map`], reusing [`induced_map_from_chain_map`] verbatim.
-fn inclusion_induced(
-    k: &SimplicialComplex,
-    l: &SimplicialComplex,
-    dim: usize,
-) -> Option<Matrix> {
+fn inclusion_induced(k: &SimplicialComplex, l: &SimplicialComplex, dim: usize) -> Option<Matrix> {
     let chain_map = inclusion_chain_map(k, l, dim)?;
     let (_, h_l) = absolute_q_basis(l, dim)?;
     let (b_k, h_k) = absolute_q_basis(k, dim)?;
@@ -392,6 +384,7 @@ fn q_rank(matrix: &Matrix) -> Option<usize> {
 /// (`relative_betti`, `k_betti`, `l_betti`) rather than a value silently
 /// recomputed on the side -- see the module doc for why this is what makes a
 /// forged relative Betti number specifically an exactness-guard finding.
+#[allow(clippy::similar_names)] // dim_k/dim_l name the K- and L-sides of the pair, not accidental near-duplicates
 fn les_exactness_holds(
     k_complex: &SimplicialComplex,
     l_complex: &SimplicialComplex,
@@ -412,31 +405,27 @@ fn les_exactness_holds(
 
         let rank_i = q_rank(&i_star).ok_or_else(|| format!("i_* rank declined at {k}"))?;
         let rank_j = q_rank(&j_star).ok_or_else(|| format!("j_* rank declined at {k}"))?;
-        let rank_delta_k =
-            q_rank(&delta_k).ok_or_else(|| format!("delta rank declined at {k}"))?;
+        let rank_delta_k = q_rank(&delta_k).ok_or_else(|| format!("delta rank declined at {k}"))?;
         let rank_delta_next =
             q_rank(&delta_next).ok_or_else(|| format!("delta rank declined at {}", k + 1))?;
 
-        let dim_k_complex = *k_betti.get(&k).unwrap_or(&0);
-        let dim_l_complex = *l_betti.get(&k).unwrap_or(&0);
+        let dim_k = *k_betti.get(&k).unwrap_or(&0);
+        let dim_l = *l_betti.get(&k).unwrap_or(&0);
         let dim_relative = *relative_betti.get(&k).unwrap_or(&0);
 
-        if rank_i + rank_j != dim_k_complex {
+        if rank_i + rank_j != dim_k {
             return Err(format!(
-                "LES exactness fails at H_{k}(K): rank(i_*) + rank(j_*) = {} + {} != dim H_{k}(K) = {dim_k_complex}",
-                rank_i, rank_j
+                "LES exactness fails at H_{k}(K): rank(i_*) + rank(j_*) = {rank_i} + {rank_j} != dim H_{k}(K) = {dim_k}"
             ));
         }
         if rank_j + rank_delta_k != dim_relative {
             return Err(format!(
-                "LES exactness fails at H_{k}(K,L): rank(j_*) + rank(delta) = {} + {} != dim H_{k}(K,L) = {dim_relative}",
-                rank_j, rank_delta_k
+                "LES exactness fails at H_{k}(K,L): rank(j_*) + rank(delta) = {rank_j} + {rank_delta_k} != dim H_{k}(K,L) = {dim_relative}"
             ));
         }
-        if rank_delta_next + rank_i != dim_l_complex {
+        if rank_delta_next + rank_i != dim_l {
             return Err(format!(
-                "LES exactness fails at H_{k}(L): rank(delta) + rank(i_*) = {} + {} != dim H_{k}(L) = {dim_l_complex}",
-                rank_delta_next, rank_i
+                "LES exactness fails at H_{k}(L): rank(delta) + rank(i_*) = {rank_delta_next} + {rank_i} != dim H_{k}(L) = {dim_l}"
             ));
         }
     }
@@ -496,6 +485,7 @@ fn rebuild_relative_boundaries(
 /// Returns `None` if `l` is not a subcomplex of `k` ([`is_subcomplex`]), or
 /// under the same conditions [`homology`] and [`smith_normal_form`] do.
 #[must_use]
+#[allow(clippy::many_single_char_names)] // k, l name the pair; u, d, v are the standard Smith triple
 pub fn relative_homology(
     k: &SimplicialComplex,
     l: &SimplicialComplex,
@@ -639,7 +629,9 @@ fn relative_betti_and_torsion_match(
             ));
         };
         let Some(&claimed) = certificate.betti.get(&dim) else {
-            return Err(format!("certificate has no recorded betti at dimension {dim}"));
+            return Err(format!(
+                "certificate has no recorded betti at dimension {dim}"
+            ));
         };
         if recomputed != claimed {
             return Err(format!(
@@ -652,8 +644,9 @@ fn relative_betti_and_torsion_match(
     let mut torsion = BTreeMap::new();
     for dim in 0..=certificate.max_dimension {
         let recomputed = match certificate.smith.get(&(dim + 1)) {
-            Some(triple) => torsion_factors(&triple.d)
-                .ok_or_else(|| format!("non-integer diagonal entry in D at dimension {}", dim + 1))?,
+            Some(triple) => torsion_factors(&triple.d).ok_or_else(|| {
+                format!("non-integer diagonal entry in D at dimension {}", dim + 1)
+            })?,
             None => Vec::new(),
         };
         let claimed = certificate.torsion.get(&dim).cloned().unwrap_or_default();
@@ -809,7 +802,9 @@ mod tests {
         assert!(is_subcomplex(&empty, &torus));
         let relative =
             relative_homology(&torus, &empty).expect("relative homology of (T^2, empty)");
-        relative.verify(&torus, &empty).expect("certificate verifies");
+        relative
+            .verify(&torus, &empty)
+            .expect("certificate verifies");
         let absolute = homology(&torus).expect("absolute homology of T^2");
         assert_eq!(relative.betti, absolute.betti);
         assert_eq!(relative.torsion, absolute.torsion);
@@ -917,7 +912,10 @@ mod tests {
             crate::equal(entry, &crate::CasExpr::zero()),
             crate::ZeroTest::Certified { equal: true, .. }
         );
-        assert!(is_nonzero, "delta_2 must be an isomorphism, got a zero entry");
+        assert!(
+            is_nonzero,
+            "delta_2 must be an isomorphism, got a zero entry"
+        );
     }
 
     /// Direct unit test of `relative_boundaries_match`-guarded verification:
