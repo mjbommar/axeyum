@@ -432,6 +432,18 @@ step cas-internal-residue-tests python3 -m unittest scripts.tests.test_check_cas
 # its recorded floor is refused; a new uncertified function is not).
 step cas-trust-registry python3 scripts/check-cas-trust-registry.py --report
 step cas-trust-registry-tests python3 -m unittest scripts.tests.test_check_cas_trust_registry
+# Math-department file 13, Next Ten item 10 (second half): the SymPy parity
+# corpus. Ground truth is independent of this repository
+# (docs/plan/cas-parity-corpus-2026-09-05/ground_truth.py); the harness
+# (crates/axeyum-cas/examples/parity_corpus.rs) re-derives each of
+# corpus.json's 71 queries against axeyum-cas and exits nonzero iff any entry
+# DISAGREES (a decline is not a failure). Measured 2026-09-05: ~0.2s in
+# --release, so this step's cap is not the constraint. As of that date this
+# step FAILS ON PURPOSE: one confirmed finding (e1-radical-cross-base) is a
+# `Certified{equal:false}` from `equal` for sqrt(2)*sqrt(3) vs sqrt(6), which
+# ARE equal -- see the corpus README before treating this as a flake.
+step cas-parity-corpus cargo run --release -q -p axeyum-cas --example parity_corpus
+step cas-parity-ground-truth python3 docs/plan/cas-parity-corpus-2026-09-05/ground_truth.py
 step settled-fact-statement-tests python3 -m unittest scripts.tests.test_settled_fact_statements
 step draw7-frozen-families-tests python3 -m unittest scripts.tests.test_check_draw7_frozen_families
 step settled-fact-statements python3 scripts/check-settled-fact-statements.py
@@ -1858,6 +1870,12 @@ step lean-tactic                   bash scripts/check-lean-tactic.sh
 # 1,077-command `#print axioms` audit (2026-09-05), which no aggregate gate
 # can carry. The full build is `just lean-creal-library`, run deliberately.
 step lean-creal-library            bash scripts/check-lean-creal-library.sh --slice
+# The render -> read -> same-term gate over every `lean4` fact (Next Ten item 9,
+# ADR-1680). Ledger-wide, builds every prelude into one kernel: ~50 s in release,
+# minutes and a stack overflow in the debug profile the push hook runs, so the
+# suite's ledger tests are `#[ignore]`d and run HERE with `-- --ignored`; the
+# push partition runs only its cheap live smoke test.
+step lean-read-round-trip          scripts/cargo-serialized.sh test --release -p axeyum-lean-kernel --test lean_read_round_trip -- --ignored
 step declaration-spec python3 scripts/check-declaration-spec.py
 step proof-plan                    python3 scripts/check-proof-plan.py
 step proof-plan-tests              python3 scripts/tests/test-proof-plan-check.py

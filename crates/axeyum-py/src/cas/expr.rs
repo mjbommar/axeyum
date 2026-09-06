@@ -712,18 +712,26 @@ impl ZeroTest {
 #[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
 #[pymethods]
 impl ZeroTest {
-    /// `"certified"` or `"unknown"` — the variant tag.
+    /// `"certified"`, `"certified-big"` or `"unknown"` — the variant tag.
+    ///
+    /// `"certified-big"` is the same strength as `"certified"`; it says the
+    /// certificate's coefficients do not fit `i128`, so `witness` is `None`
+    /// even though the test decided (ADR-1670 wave two).
     #[getter]
     fn kind(&self) -> &'static str {
         match self.inner {
             CasZeroTest::Certified { .. } => "certified",
+            CasZeroTest::CertifiedBig { .. } => "certified-big",
             CasZeroTest::Unknown => "unknown",
         }
     }
 
     /// Whether the test decided at all (as opposed to overflowing).
     fn is_decided(&self) -> bool {
-        matches!(self.inner, CasZeroTest::Certified { .. })
+        matches!(
+            self.inner,
+            CasZeroTest::Certified { .. } | CasZeroTest::CertifiedBig { .. }
+        )
     }
 
     /// Whether the two expressions were decided **equal**.
@@ -732,7 +740,9 @@ impl ZeroTest {
     #[getter]
     fn equal(&self) -> Option<bool> {
         match self.inner {
-            CasZeroTest::Certified { equal, .. } => Some(equal),
+            CasZeroTest::Certified { equal, .. } | CasZeroTest::CertifiedBig { equal, .. } => {
+                Some(equal)
+            }
             CasZeroTest::Unknown => None,
         }
     }
@@ -741,10 +751,17 @@ impl ZeroTest {
     ///
     /// `None` on `Unknown`. This is the certificate — re-normalize the
     /// difference yourself and confirm it agrees.
+    ///
+    /// Also `None` on `"certified-big"`, whose certificate does not fit this
+    /// bounded polynomial type; read `kind` rather than treating a `None`
+    /// witness as an undecided test.
     #[getter]
     fn witness(&self) -> Option<MultiPoly> {
         match &self.inner {
             CasZeroTest::Certified { witness, .. } => Some(MultiPoly::wrap(witness.clone())),
+            CasZeroTest::CertifiedBig { witness, .. } => {
+                witness.to_multipoly().map(MultiPoly::wrap)
+            }
             CasZeroTest::Unknown => None,
         }
     }
@@ -770,6 +787,11 @@ impl ZeroTest {
             CasZeroTest::Certified { equal, witness } => {
                 format!("ZeroTest(Certified, equal={equal}, witness={witness:?})")
             }
+            CasZeroTest::CertifiedBig { equal, witness } => format!(
+                "ZeroTest(CertifiedBig, equal={equal}, terms={}, coefficient_bits={})",
+                witness.term_count(),
+                witness.coefficient_bits()
+            ),
             CasZeroTest::Unknown => "ZeroTest(Unknown)".to_owned(),
         }
     }

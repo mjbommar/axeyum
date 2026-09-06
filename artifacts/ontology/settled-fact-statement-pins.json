@@ -4,7 +4,7 @@
   "note": "Statement identity for every settled fact (S1 of the trusted-library safety roadmap, ADR-0763). Per fact: SHA-256 of formal.statement (the canonical kernel rendering for native lean4 rows), SHA-256 of the top-level reader-facing statement, and the kernel_theorem it names. A settled fact's statement is what the ledger CLAIMS; changing any of the three silently turns 'we proved X' into 'we proved something we then labelled X'. Changes require an amendment row naming both digests and a reason; superseded digests are preserved in each pin's history. `coverage_floor` is a ratchet the gate re-derives rather than trusts: slack is itself a violation, so a loosened floor is self-reverting. Written by `scripts/check-settled-fact-statements.py --write`; do not hand-edit.",
   "coverage_floor": {
     "max_unpinned_settled": 0,
-    "min_identity_bound": 2390,
+    "min_identity_bound": 2396,
     "max_header_exempt": 0
   },
   "amendments": [
@@ -7852,6 +7852,13 @@
       "kernel_theorem": "FO.consistency"
     },
     {
+      "fact_id": "F:fo-diagonal-identity",
+      "language": "lean4",
+      "statement_sha256": "97ba8f4072322790fc119ff599d858a11d0a7836f5e769e7e4ab50cff39463a8",
+      "prose_sha256": "1e4002b70452f99c51f80aa46611ee7f6270d90bf48d3d72e465134bade07cb1",
+      "kernel_theorem": "FO.Code.diagAux_code"
+    },
+    {
       "fact_id": "F:fo-formula-code-injective",
       "language": "lean4",
       "statement_sha256": "0cd9683460e0eba24a3d7ece33cedb73d397c890345ab3ed04643b75def7ba45",
@@ -7859,11 +7866,25 @@
       "kernel_theorem": "FO.Formula.code_injective"
     },
     {
+      "fact_id": "F:fo-formula-decode-code",
+      "language": "lean4",
+      "statement_sha256": "1aa9ee4ae472157bbd00a7ee219bb408bee54bc22542518cf0898214221c5a26",
+      "prose_sha256": "986b7490b4c412011b308fc2739b6a57c86d5b06d273ce6b8c907114b1ca5065",
+      "kernel_theorem": "FO.Formula.decode_code"
+    },
+    {
       "fact_id": "F:fo-soundness",
       "language": "lean4",
       "statement_sha256": "f56d95533ee4bb45d61cc50a3525d63e7b1369947c54bb6e1e95ac9099aacbdd",
       "prose_sha256": "c675d7703da57f10b685b9bb43e88da7a60d94653bafe53021e5b19bf4a7ad11",
       "kernel_theorem": "FO.soundness"
+    },
+    {
+      "fact_id": "F:fo-subst-code-commutes",
+      "language": "lean4",
+      "statement_sha256": "0b47e643fe92cd3ee3c589968c0cbfac4dc5a4407f1b2d2d874a8acbcfdd81e8",
+      "prose_sha256": "2828cdac590eebc681959b00d0c2ce44a290ec2d56d344cd1cac010b2a933a09",
+      "kernel_theorem": "FO.Code.substCodeAux_commutes"
     },
     {
       "fact_id": "F:fo-substitution-lemma",
@@ -7878,6 +7899,13 @@
       "statement_sha256": "733c0286a2989a59a5c917be16af3406c4f91bfb9ca87139842c5d21fa683fec",
       "prose_sha256": "05cb2a36b451eef048ad90e22708d65c23bb08368f7201c6a19a8af5b13c2b5c",
       "kernel_theorem": "FO.Term.code_injective"
+    },
+    {
+      "fact_id": "F:fo-term-decode-code",
+      "language": "lean4",
+      "statement_sha256": "5153e490d1801872110ecf4722d41697774434feda0ccca069676536aae3d219",
+      "prose_sha256": "f309ecf174925a656472037613b9f63e1e64be73019b96ca3bcf8fc60125d072",
+      "kernel_theorem": "FO.Term.decode_code"
     },
     {
       "fact_id": "F:fp16-add-monotone-rne",
@@ -8196,6 +8224,20 @@
       "statement_sha256": "f469aa33c069eb78171f51a1fb5647c5b82994f2c5216479817f2dbd8ba3b6f1",
       "prose_sha256": "5774cf82d6b25432ebe82b0734075470b6a89b014d4c6e35148c6a0481f3e6f6",
       "kernel_theorem": "Nat.Hall.hallCondition_sdiff_of_critical"
+    },
+    {
+      "fact_id": "F:hall-descent-measure",
+      "language": "lean4",
+      "statement_sha256": "1cb2380ee64dd28c761f2a47bf187c83f750b1627e5b0b255f564471c4b01fb7",
+      "prose_sha256": "2c770dd10380263874a124ddd8c9e0423c033e95d7fd4ab7086cafb0d1347af9",
+      "kernel_theorem": "Nat.Finset.card_lt_card_of_subsetFixed"
+    },
+    {
+      "fact_id": "F:hall-marriage-theorem",
+      "language": "lean4",
+      "statement_sha256": "a4d78103bfc54cbd6051558900c192dd302234501016234d850edef607939734",
+      "prose_sha256": "471d35bf6ed779a91f5de33805b98cb3c9a848da0282da62597e54a9a4977880",
+      "kernel_theorem": "Nat.Hall.marriage_iff"
     },
     {
       "fact_id": "F:hall-matching-union-disjoint-images",

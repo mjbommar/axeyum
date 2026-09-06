@@ -55,7 +55,7 @@ axiom-freedom:
 # not hide any of them — the chain still fails — it stops them hiding everything
 # else. Note the earlier claim that `adr-remote-collisions` was already last was
 # wrong: it was #40 of 41, so `local-ci-freshness` sat behind it.
-check: fmt fmt-all facts facts-replay clippy gate-controls kernel-stack-envelope deep-stack-call-sites axiom-freedom external-coupling autogenesis-knowledge-controls tactic-catalog-controls autogenesis-proposer-isolation autogenesis-induction-search autogenesis-apply-search autogenesis-result autogenesis-nursery autogenesis-mathlib-source autogenesis-mathlib-dependencies autogenesis-mathlib-review autogenesis-mathlib-facts test frontier gate-liveness golden-lean-pins kernel-suite-partition lean-gate prelude-reuse moment-proofs ntheory-certificates doc py-check qfbv-profile reflection-semantics-gate benchmark-repetition-tests glaurung-qfbv-regular foundational-resources rules-as-code smtcomp-resume parity-docs generated-trackers solver-module-graph plan-authority links gate-step-timeout shared-index sos-negative-controls evidence-portability aggregate-scope adr-remote-collisions local-ci-freshness parity-freshness episodes product-health obstruction-graph mobility-census python-coverage lane-turn-controls correspondences autogenesis-kernel-projection autogenesis-kernel-lemma-index autogenesis-obstruction-projection autogenesis-transport-projection autogenesis-capability-gap autogenesis-concept-coverage autogenesis-producer-outcomes autogenesis-producer-evaluation-frontier autogenesis-binomial-arrow autogenesis-next-reusable-family autogenesis-producer-evaluation-protocol autogenesis-producer-evaluation-result-contract autogenesis-capability-demand autogenesis-nat-modeq-imported-bridge-assay autogenesis-nat-modeq-remainder-contract autogenesis-nat-modeq-remainder-contract-v2 autogenesis-nat-modeq-remainder-operation tock-log2-maestro-controls library-artifact-contract module-baseline module-baseline-controls kernel-differential kernel-conformance lean-divergences declaration-graph graph-join infrastructure-frontier effort-taxonomy graph-dispatcher structural-index checked-interchange lean-adapter lean-tactic declaration-spec proof-plan absence-claims curriculum-bucket-cohesion curriculum-bucket-cohesion-controls lean-creal-library-slice
+check: fmt fmt-all facts facts-replay clippy gate-controls kernel-stack-envelope deep-stack-call-sites axiom-freedom external-coupling autogenesis-knowledge-controls tactic-catalog-controls autogenesis-proposer-isolation autogenesis-induction-search autogenesis-apply-search autogenesis-result autogenesis-nursery autogenesis-mathlib-source autogenesis-mathlib-dependencies autogenesis-mathlib-review autogenesis-mathlib-facts test frontier gate-liveness golden-lean-pins kernel-suite-partition lean-gate prelude-reuse moment-proofs ntheory-certificates doc py-check qfbv-profile reflection-semantics-gate benchmark-repetition-tests glaurung-qfbv-regular foundational-resources rules-as-code smtcomp-resume parity-docs generated-trackers solver-module-graph plan-authority links gate-step-timeout shared-index sos-negative-controls evidence-portability aggregate-scope adr-remote-collisions local-ci-freshness parity-freshness episodes product-health obstruction-graph mobility-census python-coverage lane-turn-controls correspondences autogenesis-kernel-projection autogenesis-kernel-lemma-index autogenesis-obstruction-projection autogenesis-transport-projection autogenesis-capability-gap autogenesis-concept-coverage autogenesis-producer-outcomes autogenesis-producer-evaluation-frontier autogenesis-binomial-arrow autogenesis-next-reusable-family autogenesis-producer-evaluation-protocol autogenesis-producer-evaluation-result-contract autogenesis-capability-demand autogenesis-nat-modeq-imported-bridge-assay autogenesis-nat-modeq-remainder-contract autogenesis-nat-modeq-remainder-contract-v2 autogenesis-nat-modeq-remainder-operation tock-log2-maestro-controls library-artifact-contract module-baseline module-baseline-controls kernel-differential kernel-conformance lean-divergences declaration-graph graph-join infrastructure-frontier effort-taxonomy graph-dispatcher structural-index checked-interchange lean-adapter lean-tactic declaration-spec proof-plan absence-claims curriculum-bucket-cohesion curriculum-bucket-cohesion-controls lean-creal-library-slice lean-read-round-trip
 
 fmt:
     cargo fmt --all --check
@@ -391,6 +391,10 @@ facts:
     # kernel-reconstructed AT ALL: a fact regressing to cas-internal (or
     # vanishing) is refused, a new cas-internal fact is not.
     python3 scripts/check-cas-internal-residue.py --report
+    # SymPy parity corpus (docs/plan/cas-parity-corpus-2026-09-05): a DISAGREE is a
+    # failure, a decline is not, and a known_defect entry must keep disagreeing.
+    cargo run --release -q -p axeyum-cas --example parity_corpus
+    python3 docs/plan/cas-parity-corpus-2026-09-05/ground_truth.py
     python3 -m unittest scripts.tests.test_check_cas_internal_residue
     # Math-department file 13, Next Ten item 10 (first half): a per-function
     # trust registry for axeyum-cas -- distinct from cas-internal-residue
@@ -1854,6 +1858,18 @@ bench-micro:
 bench-micro-z3:
     cargo run --release -p axeyum-bench --features z3 -- corpus/micro --backend z3 --timeout-ms 1000 --out /tmp/axeyum-bench-micro-z3.json
 
+# CAS SymPy parity corpus (math-department file 13, item 10, second half):
+# per-entry verdict (agree/disagree/decline), trust classification
+# (certified/uncertified/unknown), and wall time against
+# docs/plan/cas-parity-corpus-2026-09-05/corpus.json. Ground truth is
+# independent of this repository (docs/plan/cas-parity-corpus-2026-09-05/ground_truth.py).
+# Exit status is nonzero iff any entry DISAGREES -- as of 2026-09-05 this
+# includes one confirmed finding (e1-radical-cross-base: `equal` returns a
+# confidently WRONG `Certified{equal:false}` for sqrt(2)*sqrt(3) vs sqrt(6)),
+# so this currently exits 1 by design, not by flake. See the corpus README.
+bench-cas-parity:
+    cargo run --release -p axeyum-cas --example parity_corpus
+
 # Deterministically bind a shadow-diff capture index's trusted verdict/family/tier
 # facts to the exact `.smt2` bytes. The generator rejects missing or unlisted
 # queries and validates its output through the benchmark's normal manifest path.
@@ -2559,6 +2575,13 @@ lean-creal-library:
 # recipe above is minutes to an hour and is run deliberately, not per check.
 lean-creal-library-slice:
     bash scripts/check-lean-creal-library.sh --slice
+
+# lean-read-round-trip (Next Ten item 9, ADR-1680): every `lean4` fact's statement
+# read back into a kernel term, byte-exact round trip and def-eq to the declared
+# type. Release, ~50 s; the tests are `#[ignore]`d so the push hook's debug run
+# does not pay for them.
+lean-read-round-trip:
+    scripts/cargo-serialized.sh test --release -p axeyum-lean-kernel --test lean_read_round_trip -- --ignored
 
 # declaration-spec (L3 phase D1, ADR-0965): the declarative declaration-spec
 # pilot. Builds examples/declaration_spec_pilot (release -- debug SIGABRTs on

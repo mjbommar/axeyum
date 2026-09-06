@@ -65,6 +65,7 @@ mod fo_code;
 mod fo_decode;
 mod fo_numbering;
 mod fo_provable;
+mod fo_roundtrip;
 mod fo_semantics;
 mod fo_soundness;
 mod fo_substitution;
@@ -79,6 +80,7 @@ mod ipc_provable;
 mod ipc_soundness;
 mod lean_export;
 mod lean_pp;
+mod lean_read;
 mod level;
 pub mod linarith;
 mod list_prelude;
@@ -129,6 +131,7 @@ pub use fo_code::{FoCodePrelude, build_fo_code_prelude};
 pub use fo_decode::{FoDecodePrelude, build_fo_decode_prelude};
 pub use fo_numbering::{FoNumberingPrelude, build_fo_numbering_prelude};
 pub use fo_provable::{FoProvablePrelude, build_fo_provable_prelude};
+pub use fo_roundtrip::{FoRoundTripPrelude, build_fo_roundtrip_prelude};
 pub use fo_semantics::{FoSemanticsPrelude, build_fo_semantics_prelude};
 pub use fo_soundness::{FoSoundnessPrelude, build_fo_soundness_prelude};
 pub use fo_substitution::{FoSubstitutionPrelude, build_fo_substitution_prelude};
@@ -164,6 +167,7 @@ pub use lean_pp::{
     LeanPreludeModule, importing_module_banner, self_contained_module_banner,
     shared_prelude_module_banner, split_module_banner,
 };
+pub use lean_read::ReadError;
 pub use level::{LevelId, LevelNode};
 pub use list_prelude::{
     ListNatBridge, ListPerm, ListPrelude, build_list_nat_bridge, build_list_perm,

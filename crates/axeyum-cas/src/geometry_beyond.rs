@@ -37,6 +37,9 @@
 //!   769.0 s in release, so its `#[test]` carries `#[ignore]` — see the Cost
 //!   profile section and that test's doc for the measured diagnosis and why a
 //!   smaller budget was tried and declined rather than shrinking the cost.
+//!   **The first diagnosis of that cost was wrong and has been corrected**:
+//!   the certifier's per-conclusion block scoping is real, and it is not what
+//!   keeps this theorem on the slow route. See the Cost profile below.
 //! - [`tetrahedron_circumcenter_problem`] — the six perpendicular-bisector
 //!   *planes* of a tetrahedron's edges meet at a common point: "P equidistant
 //!   from A & B, from B & C, and from C & D" already forces P equidistant from
@@ -78,6 +81,15 @@
 //!   see the next paragraph — but because reaching it would need the same
 //!   kind of dedicated route Pappus needed, which this lane did not have
 //!   budget to build.
+//!
+//!   Re-measured 2026-09-05 against the widened block scope
+//!   ([`crate::geometry_certify::BlockScope::Joint`]), release, host at load
+//!   18, ADVISORY: both still decline, and both decline for the *same* reason
+//!   as before rather than a new one — the elimination leaves a residue on the
+//!   conclusion `xyz-collinear` that the bounded handover does not settle
+//!   (`pascal-hexagon` 1.8 ms, `desargues-perspective-triangles` 2.5 ms, so
+//!   they decline promptly rather than burning a budget). Widening the
+//!   detector's scope was not the missing piece for either.
 //! - **Whether the certifier's non-degeneracy encoding can state "two
 //!   projective points are distinct".** It cannot, as a *single* polynomial:
 //!   `P = Q` projectively means every 2×2 minor of their coordinate pair
@@ -126,12 +138,30 @@
 //! - [`tetrahedron_medians_concurrent_problem`] (15 coordinate variables, 6
 //!   hypotheses, 3 conclusions, 1 non-degeneracy condition): **769.0 s**,
 //!   release — by far the most expensive reduction in this module, and the
-//!   reason its own `#[test]` carries `#[ignore]` (see that test's doc for
-//!   the diagnosis: `certify_any_route`'s linear-block detector is scoped per
-//!   *conclusion*, and each per-axis conclusion here mentions only one of
-//!   `px,py,pz` while every hypothesis row mixes two of the three
-//!   coordinates, so the fast linear route cannot see all three unknowns
-//!   together and the search falls back to the general, slow route). A
+//!   reason its own `#[test]` carries `#[ignore]`.
+//!
+//!   The diagnosis first recorded here — that
+//!   [`crate::geometry_certify::certify_any_route`]'s linear-block detector is
+//!   scoped per *conclusion*, so it cannot see `px`, `py` and `pz` together —
+//!   describes a real limitation of the detector and is **not** why this
+//!   theorem is slow. The scoping was removed on 2026-09-05
+//!   ([`crate::geometry_certify::BlockScope::Joint`]) and the medians did not
+//!   move. What actually blocks the linear route, measured and pinned by
+//!   `the_widened_scope_still_cannot_license_a_block_for_the_tetrahedron_medians`:
+//!   all eighteen nonsingular `3×3` subsystems over `{px, py, pz}` settle
+//!   every conclusion with a **zero residue** in microseconds, and not one of
+//!   their determinants is a product of the stated condition
+//!   `abcd-not-coplanar` — nor even divisible by it — so there is nothing to
+//!   divide the multiplier back out with. Writing the two median directions as
+//!   `u` and `v`, the hypotheses are `u × (P − A) = 0` and `v × (P − B) = 0`,
+//!   so the coefficient matrix of `P` is the rank-two skew matrices `[u]ₓ` and
+//!   `[v]ₓ` stacked, and every `3×3` minor of that stack is one coordinate of
+//!   `u` or `v` times one component of `u × v`. The second factor is the
+//!   geometry; the first is an artifact of the cross-product encoding, and a
+//!   certificate that inverted it would be proving a weaker theorem. An
+//!   exhaustive licensing-aware search over every subset of the fifteen
+//!   candidate unknowns (400,000 subsystems, 1.2 s release) finds no usable
+//!   block at all. A
 //!   shrunk `Limits` (`reduction_steps` 4,000 vs. the default 50,000) was
 //!   tried and *declined outright* rather than certifying faster, confirming
 //!   the instance could not be cheaply shrunk without changing the certifier
@@ -2641,12 +2671,18 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "measured 922.68s in release (--test-threads=1, this host, 2026-09-05): \
-                certify_any_route's linear-block detector is scoped per CONCLUSION, and each \
-                per-axis conclusion here ('4 P.x = ...') mentions only one of px,py,pz, while \
-                every hypothesis row (a 3D cross-product component) mixes two of the three \
-                coordinates -- so the block search cannot see all three unknowns together and \
-                falls back to the general (slow) route. A shrunk Limits was tried first \
+    #[ignore = "measured 922.68s in release (--test-threads=1, this host, 2026-09-05): the \
+                theorem falls to the general (slow) Groebner route. The linear route CAN \
+                eliminate P outright -- every one of the eighteen nonsingular 3x3 subsystems \
+                over {px,py,pz} leaves a zero residue in microseconds -- but none of their \
+                determinants is licensed by the stated condition abcd-not-coplanar, so the \
+                multiplier cannot be divided back out and the route declines with \
+                UndividableMultiplier. This was first recorded as a per-CONCLUSION scoping \
+                limit of the block detector; that scoping is real, was removed on 2026-09-05 \
+                (geometry_certify::BlockScope::Joint), and moved this theorem not at all. See \
+                the module doc's Cost profile and \
+                the_widened_scope_still_cannot_license_a_block_for_the_tetrahedron_medians. \
+                A shrunk Limits was tried first \
                 (reduction_steps 4_000 vs the default 50_000) and DECLINED outright \
                 (Reduction(ReductionSteps)) rather than certifying faster, so the instance \
                 could not be cheaply shrunk without changing the certifier itself, which is out \

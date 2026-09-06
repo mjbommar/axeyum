@@ -1,0 +1,62 @@
+{
+  "schema_version": 1,
+  "id": "F:fo-term-decode-code",
+  "title": "The fuel-additive decoder round trip for first-order terms",
+  "statement": "FO.Term.decodeAux, given at least FO.Term.size t units of fuel, returns t from FO.Term.code t. Stated additively -- for every t and every f, decodeAux (Nat.add f (size t)) (code t) = t -- so the theorem covers every sufficient fuel at once rather than one distinguished amount, and the corollary FO.Term.decode_code_at_size is the case f = Nat.zero. Together with F:fo-term-code-injective this makes FO.Term.code a genuine numbering: injective, and inverted by a total computable function of the code.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem FO.Term.decode_code : ((x0 : FO.Term) -> ((x1 : AxNat) -> Eq.{1} FO.Term (FO.Term.decodeAux (AxNat.add x1 (FO.Term.size x0)) (FO.Term.code x0)) x0))",
+    "kernel_theorem": "FO.Term.decode_code",
+    "fragment": "Nat",
+    "free_symbols": []
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "depends_on": [
+    "F:fo-code-pairing-round-trip",
+    "F:fo-term-code-injective",
+    "F:fo-formula-decoder"
+  ],
+  "proof_route": "kernel-lean",
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-FO.Term.decode_code",
+      "kind": "kernel-term",
+      "kernel_declaration": "FO.Term.decode_code",
+      "supports": "FO.Term.decode_code is admitted by the trusted kernel gate with the type recorded in formal.statement and rests on no axiom. It is one FO.Term.rec at the motive 'forall f, decodeAux (add f (size t)) (code t) = t', so the recursor's arity fixes all four constructor cases and a skipped case is not possible.",
+      "check_status": "checked",
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example fo_code_inventory -- FO.Term.decode_code --exact --require-axiom-free",
+      "checkers": [
+        "Kernel::add_declaration",
+        "Kernel::axiom_footprint"
+      ],
+      "notes": "Declared in crates/axeyum-lean-kernel/src/fo_roundtrip.rs by declare_decode_code, the same builder that produces FO.Formula.decode_code; the two differ only in the constructor table they are handed. The checker fails on absence."
+    },
+    {
+      "id": "rendered-statement-is-pinned",
+      "kind": "kernel-term",
+      "supports": "The theorem's declared type is rendered with Kernel::render_lean and compared against a literal in the test module, so a silently weakened statement (a dropped binder, a different decoder, the fuel on the other side of the Nat.add) fails the suite rather than passing unnoticed.",
+      "check_status": "checked",
+      "checker_command": "cargo test -p axeyum-lean-kernel --release --lib -- fo_roundtrip::tests::the_round_trip_theorems_have_the_stated_types",
+      "checkers": [
+        "Kernel::render_lean"
+      ]
+    }
+  ],
+  "provenance": {
+    "date": "2026-09-05",
+    "established_by": "lane fo-diagonal (ADR-1648), by proof-term construction in crates/axeyum-lean-kernel/src/fo_roundtrip.rs",
+    "source": "roadmap W3-7 second slice; the theorem ADR-1640 sized and left open",
+    "prior_art": [
+      {
+        "who": "Kurt Goedel",
+        "what": "arithmetization of syntax: a numbering of formulas whose decoding and substitution are primitive-recursive, and the diagonal identity that the code of a formula with its own numeral substituted is a computable function of the formula's code",
+        "year": 1931,
+        "where": "Goedel, 'Ueber formal unentscheidbare Saetze der Principia Mathematica und verwandter Systeme I', Monatshefte fuer Mathematik und Physik 38 (1931)",
+        "attribution": "standard textbook attribution; this lane did not consult the primary source"
+      }
+    ]
+  },
+  "notes": "THE FUEL IS ON THE LEFT OF THE Nat.add AND THAT IS LOAD-BEARING. Nat.add recurses on its RIGHT argument in this prelude, so Nat.add f (Nat.succ x) iota-reduces to Nat.succ (Nat.add f x) and the decoder's step body appears at fuel Nat.add F (size child) -- LITERALLY the induction hypothesis's fuel, not merely a bound on it. Mutation RUN: rewriting the statement as Nat.add (size t) f makes the kernel reject the theorem with TypeMismatch and kills all twelve of the module's tests.\n\nWHAT THIS IS NOT. It is not decode (code p) = p for the SELF-fuelled wrapper decode n := decodeAux n n. That would need Nat.le (size p) (code p), and that statement is FALSE: FO.Formula.code FO.Formula.bot and FO.Term.code (FO.Term.var 0) are both Nat.zero while both sizes are 1, pinned by Kernel::def_eq in fo_roundtrip/tests.rs::size_is_not_bounded_by_the_code. The self-fuelled wrappers are still believed correct -- the decoder spends one unit of fuel per constructor while FO.Code.pair a b is strictly larger than b -- but the route is a strong induction on the code with Nat.lt (FO.Code.snd n) n, which needs monotonicity of FO.Code.tri and a well-founded Nat recursion nobody has built. See F:fo-formula-decoder, which stays open for exactly that statement.\n\nEACH MINOR COSTS ONE TRANSPORT ALONG FO.Code.fst_pair, because FO.Code.fst (FO.Code.pair 2 x) is NOT definitionally 2 -- FO.Code.fst unfolds to Nat.Pair.fst (unpair ...) and unpair of a symbolic code is a stuck Nat.rec. After the transport the tag tree's scrutinee is a literal numeral, the tree iota-reduces to its arm, and the arm's payload projections are rewritten one at a time along FO.Code.fst_pair / FO.Code.snd_pair."
+}

@@ -159,6 +159,7 @@ now. Nothing was deleted.
 | 2026-09-05 | `f019d503f` | `IncrementalSat` re-based on the native core with its surface unchanged; the adapter moved whole to `batsat_reference.rs` behind a non-default feature; `SatBvBackend` dispatches to the native core unconditionally and `SolverConfig::native_cdcl` becomes a documented no-op; `native_vs_batsat_differential.rs` added (3 tests with the feature, 0 without). |
 | 2026-09-05 | `6240f013e` | A zero conflict budget admits no search (restoring the `resource_limit = 0` contract), and `classify_sat_unknown` recognises the native core's budget wording — both caught by the full `-p axeyum-solver --lib --features full` sweep. |
 | 2026-09-05 | `9833fadb5` | ADR-1703 cites the gate (b) measurement, run for the first time since ADR-0012 deferred to it: the native core is never worse than BatSat and sometimes better (p4dfa 6 vs 4 decided; Noetzli sample tied), with zero cross-engine disagreements. |
+| 2026-09-05 | theory-trait-final-check | Measured ADR-1701 slice 1 before/after on 50 QF_IDL + 33 QF_LRA diagnosis-miss files: QF_LRA 3/33→5/33 decided (PAR-2 45.00s→42.40s, one file 13x faster), QF_IDL 0/50→0/50 (bottleneck is D1's Boolean search, not D2's theory interface); added `docs/research/11-design-review/2026-09-05-adr-1701-slice-1-measured.md`, a "Theory interface" section to `docs/internals/solver-dispatch.md`, and raw data under `bench-results/adr-1701-slice-1-20260905/`. |
 | 2026-09-05 | `399b10e9b` | `FO.Code` — the anti-diagonal pairing, its structural inverse, the round trip and both injectivities; a new pairing rather than `Nat.pair`, which is a held-out family (ADR-1640). |
 | 2026-09-05 | `2f986f4c2` | `FO.Term.code`, `FO.Formula.code` and both `code_injective` — the Gödel numbering of the first-order syntax, 16 + 81 cases (ADR-1640). |
 | 2026-09-05 | `a15383b71` | The every-declaration sweep derived from the environment, and `examples/fo_code_inventory.rs`, which fails on absence (ADR-1640). |
@@ -178,9 +179,16 @@ now. Nothing was deleted.
 | 2026-09-05 | `950d0adfb` | chore(plan): regenerate PLAN.md with the conics lane block |
 | 2026-09-05 | `d8ac6a1b5` | chore(ledger): regenerate the production provenance ledger; merge hygiene PASS |
 | 2026-09-05 | `8341545f5` | merge main (picks up `cc8cb0861`, the MetricProdNames::all rename); five generated files reconciled by regeneration; post-merge suite 82 passed, hygiene PASS |
+| 2026-09-05 | `24a055abf` | The arithmetization half of the diagonal lemma: `FO.Term.numeral`, `FO.Code.diagAux`, `FO.Code.diagAux_code` (`diag ⌜p⌝ = ⌜p(⌜p⌝)⌝`). Records the measured fact that the diagonal is NOT evaluable at any genuine code — unary numerals put `eqf (var 0) (var 0)`'s diagonalised code over ten million and `rel1 0 (var 0)`'s past the stack — so `diagAux` is pinned symbolically. |
+| 2026-09-05 | `b6d2de455` | The commuting lemma at explicit fuel (`FO.Code.substCodeAux_commutes`), the image lemma (`FO.Code.isFormulaCodeAux_code`), and `FO.Provable`'s seventeenth constructor `eqf_subst` — the Leibniz rule — with its soundness minor. ADR-1636's "needs a fifth induction over `FO.Formula`" was wrong: `FO.sat_inst` puts the term in as a VALUE, so the case is one `Eq.rec`. |
+| 2026-09-05 | `752e3c483` | `fo_roundtrip.rs`: `FO.Term.size`, `FO.Formula.size` and the fuel-additive decoder round trip for both carriers, with the fuel on the LEFT of the `Nat.add`. Also the measurement that `Nat.le (size x) (code x)` is FALSE at `FO.Term.var 0` and `FO.Formula.bot`, which is why nothing downstream is stated at the self-fuelled wrappers. |
 | 2026-09-05 | frame-carrier | `7e8fc512e` — `Top.Frame`, a sixteen-field pointfree topological carrier with a countable join, its nine derived generic theorems, the open-ball frame of ℝ (`Top.Opens`, `Top.ballFrame`), and the point lemmas; 53 declarations, all axiom-free, 11 of 11 tests |
 | 2026-09-05 | frame-carrier | `c4754b326` — `top_frame_theorem_inventory` (exit status depends on both an absent filter and a nonempty footprint), and `Top.MemBall`/`Top.MemOpen` folded into the three statements that had spelled them out |
 | 2026-09-05 | frame-carrier | `2db998539` — ADR-1643, four facts, the `top` group `shape_search` was blind to, and the repair of two duplicated "keep both sides" lines in `shape_search` |
+| 2026-09-05 | `bc6948454` | The descent measure: `Nat.Finset.card_add_card_sdiff` (the exact split of a count at a subset), the two strict inequalities over `subsetFixed`, and `memB_of_subsetFixed_of_bound_le`, the bridge from the search's output to the counting shelf's input. Five tests. The two measure tests APPLY the lemma at a closed instance and compare the INFERRED type against `Lt 1 3` / `Lt 2 3`, asserting it is not def-eq to the weak `Le`; a rendered-string check cannot separate them. |
+| 2026-09-05 | `319bdec75` | `Nat.Hall.sufficient` and `Nat.Hall.marriage_iff`, plus `criticalB` and its congruence, the two family-weakening lemmas, and `Nat.Finset.memB_sdiff_congr`. Five tests, including the instance that pins the truncation hazard: the predicate accepts a set that is not a subset, and the search's bound equation is why that is sound. |
+| 2026-09-05 | `7887bc69e` | Registered the three mutants as `SUITES["hall-marriage-in-kernel"]` so the guards cannot rot back to survivable in a commit message. All three RUN, `killed 44` of a 44-test baseline, harness exit 0, 21m06s. |
+| 2026-09-05 | `e57f53593` | Sorted the new `mod`/`use` lines and regenerated the `axeyum-py` prelude-field mirror; `cargo check --workspace --all-targets` because a `NatPrelude` change reaches a generated consumer a kernel-only check never compiles. |
 | 2026-09-05 | hall-singleton | the empty/singleton shelf and the count-to-member direction: 9 declarations in the new `nat_prelude/finset_singleton.rs` (5cc0ab0ae) |
 | 2026-09-05 | hall-singleton | Hall's base case, empty case and `isMatching_congr`, plus `card_pos_of_memB`: 4 theorems in the new `nat_prelude/hall_sufficiency.rs` (a7d5f071d) |
 | 2026-09-05 | hall-singleton | ADR-1630 and two facts; Hall sufficiency re-sized at one missing lemma, `Nat.Finset.allBelow_congr` |
@@ -225,6 +233,11 @@ now. Nothing was deleted.
 | 2026-09-05 | `f3d8b3d95` | the census over every carrier: shared harness `tests/support/replay_census.rs`, new suite `real_lean_replay_census_all` (17 carriers, one `#[test]` each), carrier list derived from `src/lib.rs`'s re-export block, `creal` floor raised 1,900 -> 3,350, `check-lean-gate.sh` `CHECK_FLOOR` 261 -> 278 with the new suite registered |
 | 2026-09-05 | (this commit) | `artifacts/measurements/lean-replay-census-2026-09-05.md`, ADR-1661, ADR index regenerated, and the four rows in `docs/math-department/14-lean-lang.md` this run moved |
 | 2026-09-05 | coordinator | sixteen nested carriers moved behind `--ignored`, `CHECK_FLOOR` 278 -> 262; the gate keeps the `everything` census only (see ADR-1661's coordinator note) |
+| 2026-09-05 | lean-statement-reader | `crates/axeyum-lean-kernel/src/lean_read.rs` added: `Kernel::read_lean`, typed `ReadError` (7 classes), 14 unit tests; wired via `mod lean_read;` + `pub use lean_read::ReadError;` in `lib.rs`. Trusted core unchanged (5,545/5,900 lines, same 9 files, guard D 0 failures). `209bb940f` |
+| 2026-09-05 | lean-statement-reader | Ledger-wide round-trip suite `crates/axeyum-lean-kernel/tests/lean_read_round_trip.rs` added and found a real cross-fact contamination bug in constant resolution (see lane-status); fixed with one `environment().contains()` check, 15th unit test added as a regression control. See ADR-1680 for the corrected per-fragment table. `8808f0951` |
+| 2026-09-05 | lean-statement-reader | Merged local `main` (conics work, 21 files); trusted core re-measured unchanged (5,545/5,900, 9 files, guard D 0 failures) after the merge; `python3 scripts/gen-plan.py` and `check-merge-hygiene.sh` re-run clean. `cargo check --workspace --all-targets` clean post-merge. Population moved to 2,023 `lean4` facts (3 new `CPoint` conic facts); re-verification queued but did not complete under host contention (see above). |
+| 2026-09-05 | coordinator | re-measured on the merged tree: 2,023 `lean4` facts, 1,967 read, 1,961 round-trip, 1,923/1,925 def-eq; lane closed out (ADR-1680) |
+| 2026-09-05 | coordinator | debug (push-hook profile) run overflowed its stack and ran past 60 s: bodies moved onto `on_a_deep_stack`, the four ledger tests `#[ignore]`d and run by check.sh step `lean-read-round-trip` / `just lean-read-round-trip` in release (50.77 s, 4 passed); a live logic-prelude smoke test keeps the push half non-inert (1 passed) |
 | 2026-09-05 | lean-tactic | ADR-1666 + `lean/axeyum-tactic` (Lake package: `Axeyum.Shim` 13 proved rows, `Axeyum.Protocol`, `Axeyum.Tactic` = `by axeyum`; `Tests/NatLinear` 11 goals accepted, `Tests/Mutations` 11 rejections + 1 control, `Tests/ShimCorrespondence` axiom census + reverse re-derivation) + `axeyum_lean_import::tactic_bridge` (goal decode, ℕ translator, name map, Lean printer, 11 unit tests) + `examples/axeyum_sidecar.rs` + `examples/axeyum_tactic_probe.rs` + `scripts/check-lean-tactic.sh` (4 floors, 3 negative controls) registered in `scripts/check.sh` and `just lean-tactic` |
 | 2026-09-05 | `a0619473d` | scaffold Metric.prod (max metric, 12-field record + projections + continuity + completeness + cpoint relation); compiles clean, kernel acceptance not yet run |
 | 2026-09-05 | `7068500cf` | fix: move metric_prod_tests under metric_prod/; fix Metric.ContinuousAtWith's modulus (Nat -> Nat, not Nat) |
@@ -8963,6 +8976,57 @@ baseline may be raised from this run and the improvements are not claimed.
 the three dependencies, and the ~70 historical documentation references. Not
 before the native core has carried a full public-corpus run under the new
 default.
+
+**Measurement landed (`done`, theory-trait-final-check / theory-trait-measure,
+2026-09-05).** A prior lane landed
+[ADR-1701](docs/research/09-decisions/adr-1701-the-theory-interface-gains-final-check-a-driver-owned-queue-lazy-explanation-and-dynamic-atoms.md)
+slice 1 — `TheorySolver` gains `final_check`/`propagate_into`/`explain`/
+`take_new_atoms`, all defaulted, with `DlTheory` (`dl_online.rs`) and
+`LraTheory` (`lra_online.rs`) opting in — as `c64928295` (the trait) and
+`2d0cf09d8` (the two opt-ins), merged to `main` at `188dddf99`, with a follow-up
+clippy fix at `96a343276`. It was cut off before the before/after measurement
+ADR-1701 itself deferred ("Slice 1's measured effect on the QF_IDL and QF_LRA
+miss populations is reported with the implementation"). This lane changed no
+production Rust; it built two release binaries (`ef119b385` pre-ADR-1701 and
+current `main` post-slice-1, SHA-256-confirmed to differ) and measured both
+against 83 files drawn from the 2026-08-21 linear-arithmetic diagnosis's own
+miss populations.
+
+**Result.** QF_LRA (33 files, `Timeout`-class misses excluding the
+`ResourceLimit` atom-cap refusals slice 1 does not touch): 3/33 → 5/33 decided,
+PAR-2 45.00 s → 42.40 s, zero regressions, one already-decided file 13x faster
+(17,229 ms → 1,313 ms). QF_IDL (50 files, `Timeout`+`ResourceLimit`-class
+misses): 0/50 → 0/50 decided, no measured effect. Stage attribution
+(`smtcomp_cli --trace`, 5 files per population) explains both results directly
+from `TheoryLayerStats` counters, not by inference: on QF_LRA,
+`theory_assert`/`theory_propagate` collapse from 15–24 s to single/low-double
+digit ms and `final_check` takes over the completeness work, exactly as
+ADR-1701 designed; on QF_IDL, the theory's own cost is 0–112 ms against
+18–20 s of Boolean propagation on every file that reports data at all, so a
+wider theory interface has nothing to speed up — QF_IDL needs ADR-1701's
+un-landed slice 2 (the CDCL(T) search-engine unification), not slice 1. Full
+method, both before/after tables, and the stage-attribution tables are in
+[the design-review note](docs/research/11-design-review/2026-09-05-adr-1701-slice-1-measured.md);
+raw data is under `bench-results/adr-1701-slice-1-20260905/`.
+
+**Gates run, and by whom.** This lane ran no `cargo test`/`clippy`/`just
+check` gate — it wrote no production Rust, per its brief, and the prior
+landing lane's own status is what ADR-1701 itself records as green (full
+solver sweep 1449, corpus sweep, both `cdclt_*_online` suites, three z3
+differential fuzzes, frontier ratchets 12/12, clippy, workspace check, wasm —
+see ADR-1701 and its landing commits). This lane ran `./scripts/check-links.sh`
+(clean) on the docs it touched and `python3 scripts/gen-plan.py --check`
+before and after adding this file.
+
+**Not done / next.** Slice 2 (moving `CdclT`'s hand-rolled Boolean search onto
+the native `proof_sat` clause arena, or making `NativeIncrementalCdcl` the
+CDCL(T) driver's search) is unimplemented; `clocksynchro_4clocks.main_invar.base.smt2`
+in this lane's own QF_LRA trace is direct, named evidence that at least one
+file needs it even after slice 1's stage collapse (`theory_propagate` 23,792
+ms → 50 ms but the file still times out on decisions alone). This measurement
+covered 50+33 files, not either division's full competition list; a
+corpus-wide PAR-2/decided-count claim was explicitly not attempted (see "What
+this measurement does and does not establish" in the design-review note).
 
 **Status: LANDED and kernel-accepted (`DONE`, pi-rung3, 2026-08-28).**
 
@@ -49187,6 +49251,88 @@ any Lean or `lean4export` invocation; the producer dispatch itself.
 | `307e5d2e6` | ADR-1510's two guards + the contract sizing/retirement and 26 resolution backfills |
 | `71cd59d04` | mutation-control registration for the six new guards + the ambiguous-anchor fix |
 
+**The decoder round trip is proved; the self-fuelled wrapper is REFUTED, not
+merely unproved** (`WIP`, fo-diagonal, 2026-09-05). Thirteen new checked,
+axiom-free declarations in `crates/axeyum-lean-kernel/src/fo_roundtrip.rs`:
+`FO.Term.size`, `FO.Formula.size`, `FO.Term.decode_code`,
+`FO.Formula.decode_code` and their `Nat.zero_add` corollaries
+`*.decode_code_at_size`; then `FO.Code.substCodeAux` with
+`FO.Code.substCodeAux_commutes` (the commuting lemma),
+`FO.Code.isFormulaCodeAux` with `FO.Code.isFormulaCodeAux_code`, and
+`FO.Term.numeral`, `FO.Code.diagAux`, `FO.Code.diagAux_code`. Plus, additively,
+`FO.Provable`'s **seventeenth** constructor `eqf_subst` — the Leibniz rule —
+with its soundness minor; `FO.soundness` and `FO.consistency` stay green and
+axiom-free.
+
+ADR-1640 made three predictions about the round trip's cost. **Two were right
+and one was false in a way only building it could show.** The fuel goes on the
+LEFT of the `Nat.add` (`Nat.add` recurses right, so `Nat.add f (Nat.succ x)`
+ι-reduces and the recursive call's fuel *is* the induction hypothesis's — the
+mutation putting it on the right makes the kernel reject the theorem); each of
+the thirteen minors does cost one transport along `FO.Code.fst_pair`, because
+`FO.Code.fst (FO.Code.pair 4 x)` is not definitionally `4` when `unpair` of a
+symbolic code is stuck. But item (3), `Nat.le (size p) (code p)` for the
+self-fuelled `decode n := decodeAux n n`, is **false**: `FO.Formula.code
+FO.Formula.bot` and `FO.Term.code (FO.Term.var 0)` are both `Nat.zero` while
+both sizes are `1`, pinned by `def_eq`. So every downstream theorem is stated
+at EXPLICIT fuel — `substCodeAux`, `isFormulaCodeAux`, `diagAux` — and the
+self-fuelled wrappers stay untheoremed. `F:fo-formula-decoder` therefore stays
+`open`, with its remaining route rewritten from "prove the size bound" to
+"strong induction on the code via `Nat.lt (FO.Code.snd n) n`", which needs
+`FO.Code.tri` monotonicity and a well-founded `Nat` recursion.
+
+**ADR-1636's estimate for the Leibniz rule was also wrong, and in our favour.**
+It recorded that the soundness case needed "a fifth induction over
+`FO.Formula`". It needs none. `FO.sat_inst` already reduces `sat (φ[t]) w` to
+`sat φ (Val.cons M (Term.eval M S t w) w)`, in which the term appears ONLY as
+the value `Term.eval M S t w` — a valuation entry, not a subterm — so the minor
+is `sat_inst` forward, one `Eq.rec` at the motive `fun x => sat p (Val.cons M x
+w)`, and `sat_inst` backward. The rule is stated with the substitution on both
+sides for exactly this reason; a form with `s` occurring literally inside `φ`
+would have needed the predicted induction. The general lesson: a cost estimate
+for a soundness case is a claim about **where the syntax appears in the
+semantics**, and the substitution lemma had already moved it.
+
+**The provability-level diagonal lemma did NOT land**, and the obstruction is a
+strand rather than a step: `Γ_Q` has to *prove* `diag m̄ = ⌜δ⌝`, i.e. the
+diagonal function must be representable in Q. Three things are missing and none
+is proof-term engineering — nothing in `fo_*.rs` relates `FO.Provable` to a
+computation on `Nat` in either direction (there is no "`Nat.beq a b = true` →
+`Provable Γ_Q (eqf ā b̄)`", the base case of Σ₁-completeness, and `Γ_Q` is not
+written down as an `FO.Context`); `FO.Formula` has no `Iff` connective; and
+representing `diag` means Σ₁-defining `FO.Code.pair`, `tri`, `unpair` and the
+fuel recursion. Gödel I was not attempted. What DID land is the arithmetization
+half, `FO.Code.diagAux_code : diag ⌜p⌝ = ⌜p(⌜p⌝)⌝`, which is one application of
+the commuting lemma.
+
+One measured hazard worth carrying forward: **the diagonal is not evaluable in
+this kernel at any genuine code.** Numerals are unary, and `diagAux (code p)`
+contains `FO.Term.code (FO.Term.numeral (FO.Formula.code p))`. At the smallest
+formula with a free variable — `FO.Formula.eqf (var 0) (var 0)`, code `2` — the
+diagonalised code is over ten million; at `FO.Formula.rel1 0 (var 0)` (code `5`)
+the first draft of the evaluation test **overflowed the stack**, measured on
+this host. `FO.Code.diagAux` is therefore pinned by `def_eq` at three FREE
+variables, which is pure δ/β, with a negative control that its fourth argument
+is the code of the *numeral* of `n` and not `n`. A later lane should not read
+the absence of a concrete evaluation test as an oversight, and should not expect
+"just compute δ and check it" to be an available shortcut.
+
+Detail and the sizing of each obstruction:
+[ADR-1648](docs/research/09-decisions/adr-1648-the-round-trip-carries-its-fuel-and-leibniz-needed-no-induction.md).
+
+Mutation evidence, both RUN against a 12-test green baseline: the round trip's
+fuel moved to the right of the `Nat.add` killed **12 of 12** with
+`TypeMismatch`; the commuting lemma with `FO.Formula.code p` and `FO.Term.code
+t` swapped in `substCodeAux`'s argument list killed **12 of 12** with
+`DeclarationValueMismatch`. Both are mass kills through the fixture, because a
+rejected declaration fails `build_fo_roundtrip_prelude` and every test builds
+it — that is honest but weak evidence about any individual test, which is why
+the shape guards (`eqf_subst_consumes_the_equality_and_moves_the_instance`,
+`subst_code_aux_actually_substitutes`,
+`diag_aux_is_subst_code_aux_at_the_formulas_own_numeral`,
+`size_is_not_bounded_by_the_code`) each carry their own negative control built
+from a specific wrong variant.
+
 Status: complete (2026-09-05). Roadmap W2-21 — a topological carrier built as a
 frame, with the open-ball frame of ℝ as the first instance. ADR-1643.
 
@@ -50404,6 +50550,93 @@ with a positive control of the same declaration kind before being trusted.
 
 No facts were registered, no declarations were built, nothing under
 `crates/` was touched (measurement/documentation task per brief).
+
+**Hall's marriage theorem is proved in the kernel, axiom-free, in both
+directions** (`DONE`, hall-assembly, 2026-09-05, ADR-1645).
+
+```text
+Nat.Hall.sufficient   : ∀ s nb, HallCondition s nb → ∃ f, IsMatching s nb f
+Nat.Hall.marriage_iff : ∀ s nb, HallCondition s nb ↔ ∃ f, IsMatching s nb f
+```
+
+Eleven declarations landed, all admitted axiom-free, all registered in
+`nat_prelude_tests::definition_names`/`theorem_names`, and that sweep was RUN
+(`every_nat_declaration_is_checked_and_axiom_free`,
+`every_promised_name_is_admitted_with_the_expected_kind`, 3 passed). Kernel
+inventory 3,236 → 3,247 declarations (theorems 2,150 → 2,160, definitions
+866 → 867), read from a `shape_search` rebuilt at this lane's HEAD.
+
+This closes the six-slice sequence ADR-1608 → 1614 → 1623 → 1630 → 1644 → 1645.
+
+ADR-1644 sized the remainder as "assembly, and nothing that has been shown to
+need a new idea", and named the two descent steps as the one place a surprise
+was still possible. The descent was the cheap part. **Three other things were
+not, and none appears in any prior slice's sizing.**
+
+**1. The descent needs an EQUATION, and the nearest existing name is the wrong
+statement.** `Nat.Finset.card_le_card_sdiff_add` already existed and reads like
+the lemma you want; it is `card s ≤ card (sdiff s t) + card t`, holds without
+the subset hypothesis, and bounds `card s` from ABOVE — the useless direction
+for a descent. The lemma actually needed is
+`Nat.Finset.card_add_card_sdiff`, a composition of `memB_union_sdiff_self` +
+`card_congr_of_memB` + `card_union_of_disjoint`, none of whose names mentions
+counting a complement. Same retrieval failure ADR-1644 recorded for
+`sum_union_disjoint`, one slice later.
+
+**2. `criticalB s nb t = true` does NOT imply `t ⊆ s`.** `subsetFixed` loops to
+`bound s`, so `Nat.Hall.criticalB (range 3) nb (singleton 5)` is `true` and
+`5 ∉ range 3`. The proof never assumes otherwise:
+`Nat.Finset.existsSubset_of_search` returns `bound t = bound s` ALONGSIDE the
+verdict, and it is that equation — fed to the new
+`Nat.Finset.memB_of_subsetFixed_of_bound_le` — that upgrades a decision to a real
+inclusion. Without it the critical branch would recurse on a non-subset. The
+committed test asserts BOTH halves (the predicate accepts `singleton 5`; the
+search cannot return it, because the bounds differ) rather than picking an
+instance where the predicate happened to say `false` and hiding the hazard
+behind a green assertion.
+
+**3. The search predicate carries TWO positivity conjuncts, and neither implies
+the other.** They sit on opposite sides of the split and each is exactly one
+descent lemma's hypothesis. Drop `ble 1 (card t)` and the branch fires at
+`t = empty` — whose COMPLEMENT is nonempty — and recurses on `sdiff s empty` at
+the same count. Drop `ble 1 (card (sdiff s t))` and it fires at `t = s` — which
+IS nonempty — and recurses on `t` at the same count.
+`neither_positivity_conjunct_subsumes_the_other` asserts the four counts that
+make that so instead of asserting it in prose.
+
+A fourth thing, smaller: `forallSubset_of_search` yields
+`criticalB s nb w' = false` and the branch needs
+`card w < card (unionOver nb w)`. Going directly needs `ble a b = false → Lt b a`,
+and this tree carries only `ble_eq_false_of_lt`, the other way — ADR-1644's
+corrected blocker list missed the asymmetry because it checked only that a
+reflection PAIR existed. No new lemma was written: the branch decides with
+`lt_or_ge` and on the weak side BUILDS `criticalB = true` from the four
+conjuncts with `andB_intro`, clashing it against the search's `false`.
+
+**One earlier deliverable turned out unusable by the induction it was landed
+for.** `Nat.Hall.exists_isMatching_singleton` (ADR-1630) is stated at a LITERAL
+`Nat.Finset.singleton a`, and an arbitrary `s` with `card s = 1` is not
+definitionally one — there is no route from the count to the spelling without
+set extensionality. It is not needed: the non-critical branch commits one index
+and recurses on `sdiff s (singleton x)`, which the empty case answers. Recorded
+in ADR-1645 rather than dropped, so a later reader finding it unreferenced knows
+it was measured as unusable here, not forgotten.
+
+Three mutants RUN, none predicted, registered as
+`SUITES["hall-marriage-in-kernel"]` so they are re-runnable: descent measure
+weakened `<` → `≤`, the two branches exchanged, the two positivity conjuncts
+collapsed. Baseline green 44 tests; all three `killed 44`, harness exit 0. That
+number is ONE kill mechanism, not 44 guards — each mutant produces a declaration
+the trusted gate rejects, so the prelude fails to build and every test in the
+filter dies together. The first mutant has a second, independent killer that does
+not go through the prelude build:
+`hall_descent_tests::the_subset_measure_conclusion_is_strict` applies the lemma
+at a closed instance, infers the type, and requires it to be `Lt 1 3` and not
+def-eq to `Le 1 3` — a rendered-string check cannot separate them, since
+`Nat.lt a b` unfolds to `Nat.le (succ a) b`.
+
+Detail in
+[ADR-1645](docs/research/09-decisions/adr-1645-halls-marriage-theorem-lands-and-the-search-predicate-carries-two-positivity-tests.md).
 
 **Your lane's block (`DONE`, hall-singleton, 2026-09-05).** **The empty set and
 the singleton are closed; Hall's sufficiency has a base case and an empty case
@@ -54320,6 +54553,77 @@ it aside (exit 0) and putting it back.
   (wrong proof, wrong goal, no inheritance).
 - `scripts/check-lean-gate.sh` — both suites registered; `CHECK_FLOOR`
   261 → 278.
+
+**Your lane's block (`DONE`, lean-statement-reader, 2026-09-05; closed out by the coordinator after the lane was terminated by an account spend limit).**
+[Next Ten item 9](docs/math-department/14-lean-lang.md#the-next-ten-in-priority-order),
+FIRST HALF ONLY (the census in ADR-1662 found the Mathlib-surface half gated
+at 5 elaboration-blocked rows, so its demand gate is not met — not built,
+per the brief).
+
+`Kernel::read_lean` (`crates/axeyum-lean-kernel/src/lean_read.rs`) parses the
+`Kernel::render_lean` fragment back into a kernel `ExprId`: binders,
+Pi-as-arrow, flat application spines, `Sort`, dotted constant names with
+`.{levels}`, `let`, projections, Nat/Str literals. It is untrusted (calls
+only public term constructors, never an admission gate) and lives outside
+`scripts/check-kernel-trusted-core.py`'s trusted set — measured unchanged at
+5,545 of the 5,900-line ceiling, same 9 files, guard D's pinned
+`TRUSTED_FILES` set untouched.
+
+15 unit tests in `lean_read.rs` cover the grammar directly (round trips,
+shadowing, a doubly atom-wrapped Pi, projection, literals, max/imax levels)
+plus negative controls (renamed constant, dropped universe, garbage input,
+trailing input, unknown-constant vs unbound-variable classification, and a
+regression test for the cross-fact contamination bug below).
+
+**A real bug the ledger-wide gate found, not invented in the abstract.** The
+first design resolved a constant by name-TABLE membership alone
+(`lookup_name_str`), reasoning that a name reachable there must already be
+declared. True for one statement; false once one kernel reads 2,020 in
+sequence for efficiency, because interning is a table SHARED across every
+`read_lean` call: an earlier fact's ordinary local binder (e.g. some
+statement's own `n`) mints `NameNode::Str(anon, "n")`, and a LATER,
+unrelated fact's bare `n` was silently accepted as if it denoted that same
+constant. Concretely this misdirected `F:nat-le-refl`'s read into a
+confusing `expected ')', found ':'` deep in the fallback parse, instead of a
+precisely located `unbound-variable`. Fixed with one
+`environment().contains(name)` check after the full segment walk, before
+building the `Const` node.
+
+`crates/axeyum-lean-kernel/tests/lean_read_round_trip.rs` is the ledger-wide
+gate (outcome B): every `formal.language == "lean4"` fact, derived from
+`artifacts/facts/*.json` at test time, read against ONE kernel carrying every
+prelude this crate builds (mirrors `real_lean_replay_census_all.rs`'s
+`everything` carrier), scored for byte-exact round trip and, where
+`kernel_theorem` names a resolvable declaration, `def_eq` against its
+declared type. Three more negative controls run against real ledger facts
+(swapped argument order, renamed constant, dropped universe argument), all
+passing.
+
+**Final measured totals** (post-fix, `missing == 0` asserted, against commit
+`8808f0951`): of **2,020** `lean4` facts, **1,964 read**, **1,958 round-trip
+byte-exact**, **1,920 of 1,922** resolvable `kernel_theorem`s `def_eq` their
+declared type. Every failure is classified (roundtrip-mismatch 6,
+def-eq-mismatch 2, trailing-input 19, unexpected-token 19, unbound-variable
+16, unknown-constant 2) and traced to a specific cause in ADR-1680's
+per-fragment table — almost all ledger-content findings (hand-authored
+prose mislabeled `lean4`, `imported-kernel-lean` facts in Mathlib's own
+vocabulary, two stale statements, six stale `Nat` renderings), plus one
+honest reader limitation (non-ASCII/Greek identifiers, 3 facts) and one
+test-construction coverage gap (`Geo` prelude not in the union kernel, 1
+fact).
+
+**Re-measured by the coordinator on the merged tree (main merged at `2ff20b5ac`, release, 48.55 s)** after the lane was terminated by an account spend limit: of **2,023** `lean4` facts, **1,967 read**, **1,961 round-trip byte-exact**, **1,923 of 1,925** resolvable `kernel_theorem`s `def_eq` their declared type; the three `CPoint` facts the conics merge added all pass; failure classes unchanged (def-eq-mismatch 2, roundtrip-mismatch 6, trailing-input 19, unbound-variable 16, unexpected-token 19, unknown-constant 2). The suite is auto-enumerated by `scripts/check-kernel-suites.sh` into its `push` partition.
+
+**Registration (outcome D) needed no edits.** Both places the brief named are
+auto-discovered, not literal lists:
+`scripts/check-kernel-suites.sh --list` scans `crates/axeyum-lean-kernel/tests/*.rs`
+by content (does the suite use `support/lean_probe.rs`?), so the new suite is
+automatically classified `push` (no external Lean needed) —
+verified: `lean_read_round_trip                                 push`.
+`justfile`'s `check` target already runs `test` (`scripts/check-workspace-tests.sh`,
+which is `cargo test --workspace` under the hood) and `kernel-suite-partition`
+(re-validates the same auto-discovered split); neither needed a new line. No
+Python checker was added, so `scripts/check.sh` needed no new step either.
 
 **Your lane's block (`DONE` for the ℕ fragment, `lean-tactic`, 2026-09-05).**
 `docs/math-department/14-lean-lang.md` Next Ten item 6 is landed for ℕ:
@@ -60003,7 +60307,7 @@ ledger entry; this is instrumentation, not a `PARITY.md` sweep.
 | Evidence and Lean reconstruction | `WIP` | A6 and A9; distinct certificate/check/reconstruction claims. |
 | Route exploration | `BLOCKED` beyond catalogue work | Proposed track; T0.2/T0.6/T0.1/T2.3 precede T3.5. |
 | SMT-LIB/API conformance | `WIP` | A8 then A10; S1 command/event IR first. |
-| CAS parity | `BLOCKED` by deliberate pause | Wave-24 code `01d47334` and pause commit `245d8f25` are ancestors of current main. Do not start wave 25 until the user resumes it and retained specialized gate evidence is re-audited. |
+| CAS parity | `WIP`; second capability wave landed 2026-09-05 | The wave-24 pause (`01d47334`, `245d8f25`, both on main) ended. Ten new modules landed from the Next Ten in `docs/math-department/13-computer-algebra.md`, plus the trust-registry gate `scripts/check-cas-trust-registry.py` (78 certified, 59 checker, 845 uncertified of 982 public functions at `9914a1c0e`). The live priority list and status are in file 13, not here. |
 | Consumer apps / verified systems | `WIP`, non-critical path | Existing EVM, verifier, property, reflection, and symbolic-execution slices remain useful; do not preempt A2–A7 without measured demand. |
 | Foundational resources | `WIP`, separate content lane | Keep generated-resource gates green; record only project-level priority changes here. |
 | Public documentation and examples | `DONE`, current comprehensive pass | Public/crate/consumer/prover/curriculum/contributor front doors are indexed; all 203 Cargo examples and the consumer 48-case aggregate are guarded. Corrected built/planned, Lean 4.30/offline quotient, strings/P2.7, proof assurance, `i128` LRA/Farkas, native-CDCL/BatSat, RUP-only LRAT, online combination/fallback, CAS-local-vs-solver evidence, route-specific FP/datatype/nonlinear/quantifier boundaries, optional EVM/verifier certificate fields, and source-comment UNSAT-proof overclaims. Source-backed guards require nonzero full-feature tests across cookbook, learner, contributor, foundational-resource, and rules docs. Generated authorities remain canonical; reopen only for concrete drift. |
