@@ -191,6 +191,28 @@ fn reachable(
     seen
 }
 
+/// What `shape_search` reaches, computed ONCE over the widest call graph.
+///
+/// Both gates below ask the same question of different denominators, and the
+/// path to a prelude can leave the prelude family: `build_list_prelude` is
+/// reached only through `build_list_nat_bridge`, which is not a `*_prelude`.
+/// Computing reachability over the narrow graph alone therefore reports a
+/// prelude as blind while the example does build it. One graph, two
+/// denominators.
+fn shape_search_reach() -> (BTreeSet<String>, BTreeSet<String>) {
+    let defs = exported_builder_definitions();
+    let authority: BTreeSet<String> = defs.keys().cloned().collect();
+    let graph = call_graph(&defs);
+    let direct = shape_search_direct(&authority);
+    assert!(
+        !direct.is_empty(),
+        "the call-site scan of examples/shape_search.rs found no builder at \
+         all, so neither gate below could fail no matter what the example built"
+    );
+    let covered = reachable(&direct, &graph);
+    (direct, covered)
+}
+
 fn join(names: impl IntoIterator<Item = impl AsRef<str>>) -> String {
     names
         .into_iter()
@@ -213,14 +235,8 @@ fn shape_search_indexes_every_prelude_builder() {
         authority.len()
     );
 
-    let graph = call_graph(&defs);
-    let direct = shape_search_direct(&authority);
-    assert!(
-        !direct.is_empty(),
-        "the call-site scan of examples/shape_search.rs found no builder at \
-         all, so this test could not fail no matter what the example built"
-    );
-    let covered = reachable(&direct, &graph);
+    let (all_direct, covered) = shape_search_reach();
+    let direct: BTreeSet<String> = all_direct.intersection(&authority).cloned().collect();
 
     let allowed: BTreeSet<String> = DELIBERATELY_UNINDEXED
         .iter()
@@ -230,7 +246,8 @@ fn shape_search_indexes_every_prelude_builder() {
         .iter()
         .filter(|name| !covered.contains(*name) && !allowed.contains(*name))
         .collect();
-    let transitive: Vec<&String> = covered.difference(&direct).collect();
+    let reached: BTreeSet<String> = covered.intersection(&authority).cloned().collect();
+    let transitive: Vec<&String> = reached.difference(&direct).collect();
 
     println!("authority ({}): {}", authority.len(), join(&authority));
     println!("built directly ({}): {}", direct.len(), join(&direct));
@@ -265,15 +282,119 @@ fn shape_search_indexes_every_prelude_builder() {
     );
 }
 
+/// Builders that are not `*_prelude` and that the index deliberately skips.
+///
+/// Same contract as `DELIBERATELY_UNINDEXED`: `(builder, measured reason)`.
+const DELIBERATELY_UNINDEXED_NON_PRELUDE: &[(&str, &str)] = &[];
+
+/// Every `pub fn build_*` under `src/` that `src/lib.rs` also names, mapped to
+/// the file that owns it.
+///
+/// `*_prelude` is not the whole builder surface, and the difference is not
+/// cosmetic. Measured 2026-09-06: `build_list_prelude` alone gives 15 rows
+/// under `List` and `--name-contains List.Perm` returns NOTHING, because
+/// `List.Perm` is declared by `build_list_perm` over `build_list_nat_bridge`.
+/// A census restricted to `*_prelude` would have called that covered. So the
+/// authority for this second gate is every builder an example could actually
+/// call: defined `pub` under `src/`, and named in `src/lib.rs`.
+fn exported_builder_definitions() -> BTreeMap<String, PathBuf> {
+    let lib =
+        std::fs::read_to_string(manifest_dir().join("src/lib.rs")).expect("src/lib.rs is readable");
+    let exported = strip_line_comments(&lib);
+    let mut files = Vec::new();
+    source_files(&manifest_dir().join("src"), &mut files);
+    files.sort();
+    let mut defs = BTreeMap::new();
+    for file in files {
+        let text = std::fs::read_to_string(&file).expect("source file is readable");
+        for line in text.lines() {
+            let Some(rest) = line.strip_prefix("pub fn build_") else {
+                continue;
+            };
+            let Some(suffix) = rest.split(['(', '<']).next() else {
+                continue;
+            };
+            let name = format!("build_{suffix}");
+            if exported.contains(&name) {
+                defs.insert(name, file.clone());
+            }
+        }
+    }
+    defs
+}
+
+/// The wider gate: the same reachability question over every EXPORTED builder,
+/// `*_prelude` or not.
+#[test]
+fn shape_search_indexes_every_exported_builder() {
+    let defs = exported_builder_definitions();
+    let authority: BTreeSet<String> = defs.keys().cloned().collect();
+    let preludes = builder_definitions();
+    assert!(
+        authority.len() > preludes.len(),
+        "the exported-builder scan found {} builders and the prelude scan found \
+         {}; the wider scan is not wider, so it is measuring the same thing \
+         twice and cannot catch what the narrow one misses (positive control: \
+         40 exported vs. 31 prelude builders on 2026-09-06)",
+        authority.len(),
+        preludes.len()
+    );
+
+    let (direct, covered) = shape_search_reach();
+
+    let allowed: BTreeSet<String> = DELIBERATELY_UNINDEXED
+        .iter()
+        .chain(DELIBERATELY_UNINDEXED_NON_PRELUDE)
+        .map(|(name, _)| (*name).to_owned())
+        .collect();
+    let missing: Vec<&String> = authority
+        .iter()
+        .filter(|name| !covered.contains(*name) && !allowed.contains(*name))
+        .collect();
+    let transitive: Vec<&String> = covered.difference(&direct).collect();
+
+    println!(
+        "exported authority ({}): {}",
+        authority.len(),
+        join(&authority)
+    );
+    println!("built directly ({}): {}", direct.len(), join(&direct));
+    println!(
+        "reached transitively ({}): {}",
+        transitive.len(),
+        join(&transitive)
+    );
+    println!("BLIND ({}): {}", missing.len(), join(&missing));
+
+    assert!(
+        missing.is_empty(),
+        "shape_search is blind to {} of the crate's {} EXPORTED builders:\n  {}\n\
+         These declare into the kernel like any prelude does, so an ABSENT \
+         verdict for what they declare is a confident wrong answer. Index them \
+         in examples/shape_search.rs or list them in \
+         DELIBERATELY_UNINDEXED_NON_PRELUDE with a MEASURED reason.",
+        missing.len(),
+        authority.len(),
+        missing
+            .iter()
+            .map(|name| name.as_str())
+            .collect::<Vec<_>>()
+            .join("\n  "),
+    );
+}
+
 /// An allowlist entry with no measured reason is an omission wearing a badge.
 #[test]
 fn reasons_are_measured() {
-    let defs = builder_definitions();
-    for (name, reason) in DELIBERATELY_UNINDEXED {
+    let defs = exported_builder_definitions();
+    for (name, reason) in DELIBERATELY_UNINDEXED
+        .iter()
+        .chain(DELIBERATELY_UNINDEXED_NON_PRELUDE)
+    {
         assert!(
             defs.contains_key(*name),
             "DELIBERATELY_UNINDEXED names {name}, which is not a \
-             `pub fn build_*_prelude` in this crate — a stale entry silently \
+             exported `pub fn build_*` in this crate — a stale entry silently \
              excuses nothing and hides a real gap"
         );
         assert!(
