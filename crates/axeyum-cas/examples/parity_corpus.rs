@@ -3583,7 +3583,7 @@ fn mgq3_minkowski_bound_dimension_four() -> Outcome {
 // Entries: third-pass modules — chartable (character tables)
 // ============================================================================
 
-/// `A5`'s classical character table, entries in Q(zeta_30).
+/// `A5`'s classical character table, entries in `Q(zeta_30)`.
 fn a5_character_table() -> Option<CharacterTableCertificate> {
     let five_cycle = Permutation::from_cycles(&[vec![0, 1, 2, 3, 4]], 5)?;
     let three_cycle = Permutation::from_cycles(&[vec![0, 1, 2]], 5)?;
