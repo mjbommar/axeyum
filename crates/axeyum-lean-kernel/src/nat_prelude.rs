@@ -328,6 +328,9 @@ mod vandermonde;
 /// ADR-1627 / roadmap W3-2: `AlgS.VectorSpace.*`, modules over an
 /// `AlgS.Field`, and the first dimension statement.
 pub mod vector_space;
+/// ADR-1657 / roadmap W3-2: `AlgS.Index.*`, the index calculus the Steinitz
+/// exchange needs at a build position where `Nat.le`/`Nat.lt` do not exist.
+pub mod vector_space_exchange;
 mod xor;
 mod xor_algebra;
 mod xor_order;
@@ -7665,6 +7668,17 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             &field_s,
             &structures_s.comm_group,
             &module_s,
+            structures_s_names.algs,
+        )?;
+
+        // ADR-1657 / roadmap W3-2: `AlgS.Index.*`, the family surgery the
+        // Steinitz exchange rewrites its coefficient families with. Needs
+        // only `logic` plus the interned `AlgS` root, so it lands beside the
+        // vector-space layer that consumes it. Names are DELIBERATELY not
+        // threaded into `NatPrelude`, for the reason `AlgS.Poly.*`'s are not.
+        let _index_s = vector_space_exchange::declare_index_surgery(
+            kernel,
+            &logic,
             structures_s_names.algs,
         )?;
 
