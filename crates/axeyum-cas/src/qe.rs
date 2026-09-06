@@ -20,7 +20,14 @@
 //! - [`bivariate::ExistsYFormula`] — `∃y. ⋀ᵢ pᵢ(x, y) ▷ᵢ 0` at total degree at
 //!   most [`bivariate::MAX_TOTAL_DEGREE`], eliminated by
 //!   [`bivariate::eliminate_y`] into a quantifier-free description of the
-//!   `x`-line as a list of cells with a verdict each;
+//!   `x`-line as a list of cells with a verdict each, or by
+//!   [`bivariate::eliminate_y_to_formula`] into the merged union of
+//!   `x`-intervals with algebraic endpoints. A cell boundary that is **not**
+//!   rational is decided, not declined: [`fibre`] does the fibre arithmetic in
+//!   `ℚ(α)`;
+//! - [`fibre::decide_fibre`] — `∃y. ⋀ᵢ qᵢ(y) ▷ᵢ 0` with `qᵢ ∈ ℚ(α)[y]` for a
+//!   real algebraic `α`, by Sturm chains and real-root isolation over `ℚ(α)`
+//!   with every sign settled at `α` exactly;
 //! - [`eliminate`] / [`eliminate_forall`] are the thin, self-checking front
 //!   doors: they decide and then *verify their own certificate* before
 //!   returning a `bool`.
@@ -37,14 +44,9 @@
 //! # What is **not** decided
 //!
 //! - **Full CAD.** [`bivariate`] is one projection step in two variables at
-//!   bounded degree. There is no lifting to three or more variables, no cell
-//!   adjacency structure, and no cell index.
-//! - **Irrational cell boundaries in the bivariate step.** A projection root
-//!   that is not rational forces a decline
-//!   ([`bivariate::Fault::IrrationalCellBoundary`]): substituting a real
-//!   algebraic `x` into the atoms would need arithmetic in `ℚ(α)`, which this
-//!   slice does not have. The *univariate* module has no such restriction —
-//!   there an algebraic sample is a first-class point.
+//!   bounded degree. There is adjacency along the projected line — adjacent
+//!   true cells merge into intervals with algebraic endpoints — but no lifting
+//!   to three or more variables and no cell index.
 //! - **Quantifier alternation.** `∃x∀y` has no representation here.
 //! - **Transcendental atoms** (`sin`, `exp`, …). Atoms are polynomials.
 //!
