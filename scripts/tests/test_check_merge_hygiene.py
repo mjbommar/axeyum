@@ -355,6 +355,61 @@ class MergeHygieneControls(unittest.TestCase):
         self.assertEqual(done.returncode, 1, _ctx(done))
         self.assertIn("FAIL: check-shape-duplicates.py --prebuilt (exit 2)", done.stdout)
 
+    def test_a_tool_failed_shape_duplicates_binary_fails_the_gate(self) -> None:
+        """The finding this lane exists to close (evidence-and-checker-
+        discipline.md, "A green summary line with a guard that has no
+        subject"). Measured 2026-09-05: `check-merge-hygiene.sh` printed
+        `shape_duplicates=skipped(tool-failed)|...|PASS` with exit 0 while
+        `shape_search --include-constructed` was panicking on a real
+        coverage defect. `tool-failed` means the binary is PRESENT and NOT
+        STALE and still produced nothing -- unlike `no-binary`/`stale-binary`
+        (a host fact about `target/`, still skip-compatible below), a
+        crashing fresh binary is a guard with no subject and must fail."""
+        done = self.run_gate(
+            {"check_shape_duplicates": "SHAPE-DUPLICATES|UNAVAILABLE tool-failed -- panicked"},
+            check_shape_duplicates=2,
+        )
+        self.assertEqual(done.returncode, 1, _ctx(done))
+        self.assertIn("FAIL: check-shape-duplicates.py --prebuilt (tool-failed: no subject)", done.stdout)
+        self.assertIn("tool-failed", done.stdout)
+        self.assertIn("MERGE_HYGIENE|FAILED", done.stdout)
+
+    def test_a_healthy_shape_duplicates_binary_still_passes(self) -> None:
+        """The other outcome the new rule must not disturb: a binary that
+        runs cleanly (rc=0, no UNAVAILABLE marker) reports `ok` and the gate
+        passes, same as before this change."""
+        done = self.run_gate(check_shape_duplicates=0)
+        self.assertEqual(done.returncode, 0, _ctx(done))
+        self.assertIn("shape_duplicates=ok", done.stdout)
+        self.assertIn("|PASS", done.stdout)
+
+    def test_no_binary_and_stale_binary_remain_skip_not_fail(self) -> None:
+        """The other two `UNAVAILABLE` tokens are host facts -- not built
+        here yet, or built before a kernel source changed -- not defects, and
+        must stay PASS-compatible. Only `tool-failed` is new behaviour."""
+        for token in ("no-binary", "stale-binary"):
+            with self.subTest(token=token):
+                done = self.run_gate(
+                    {"check_shape_duplicates": f"SHAPE-DUPLICATES|UNAVAILABLE {token} -- n/a"},
+                    check_shape_duplicates=2,
+                )
+                self.assertEqual(done.returncode, 0, _ctx(done))
+                self.assertIn(f"shape_duplicates=skipped({token})", done.stdout)
+                self.assertIn("|PASS", done.stdout)
+
+    # -- guard 5: pinned-inventory counts: a legitimate empty population -----
+
+    def test_pinned_inventories_reports_n_a_empty_not_not_answerable(self) -> None:
+        """`n/a-empty` (a KNOWN, proven-zero population -- there being no live
+        pinned-inventory array is itself the checked finding) must read
+        distinctly from `not-answerable` (the guard could not tell) and must
+        still pass, on the clean-tree control."""
+        done = self.run_gate()
+        self.assertEqual(done.returncode, 0, _ctx(done))
+        self.assertIn("pinned_inventories=n/a-empty", done.stdout)
+        self.assertNotIn("pinned_inventories=not-answerable", done.stdout)
+        self.assertIn("|PASS", done.stdout)
+
     def test_the_shape_duplicates_check_can_be_opted_out(self) -> None:
         """The documented escape, defaulting ON. It must be reported in the
         summary rather than silently absent, so a run that did not check is

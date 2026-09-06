@@ -30,6 +30,14 @@
 //! `linarith::generic::prove` say needs it not at all; a goal that DOES
 //! need positive slack is out of reach until a caller supplies
 //! `Rat.zero_le_one` through [`Ctx`].
+//!
+//! **[`Tactic::Psatz`] is the NONLINEAR arm** (ADR-1649), added after the
+//! three above. `linarith` decides linear order goals and declines outright on
+//! a goal carrying `x*y`; [`crate::psatz::rat`] takes exactly the goals whose
+//! difference is a polynomial and searches for a sum-of-squares certificate.
+//! The two are complements, not a stronger and a weaker form of one producer,
+//! which is why [`Tactic::First`] over both is the useful composition and why
+//! `psatz` gets its OWN hypothesis list on [`Ctx`] — see that field's docs.
 
 // This whole module is exercised only by its own test suite so far (no
 // production `rat_prelude` retirement calls into it yet). Remove once a
@@ -43,6 +51,7 @@ use crate::expr::ExprId;
 use crate::int_prelude::ops::IntDev;
 use crate::linarith;
 use crate::nat_prelude::NatOps;
+use crate::psatz;
 use crate::ring;
 
 /// The context a [`run`] needs: the prelude every producer takes, and the
@@ -55,6 +64,19 @@ pub(crate) struct Ctx<'a> {
     /// A proof of `Rat.le Rat.zero Rat.one`, when the caller has one —
     /// see the module docs on when `linarith::generic::prove` needs it.
     pub zero_le_one: Option<ExprId>,
+    /// Hypotheses [`psatz::rat`] may use, each a `(statement, proof)` pair
+    /// whose statement is `Rat.le Rat.zero h`.
+    ///
+    /// A SEPARATE list from [`Self::assumptions`], not an oversight: those are
+    /// stated against the `Alg.OrderedRing` selector applications
+    /// `linarith::generic` parses, and `psatz::rat` parses `Rat.le`/`Rat.add`/
+    /// `Rat.mul` directly — the same terms `ring::rat` parses, because the
+    /// certificate's identity goes through `ring::rat`. Sharing one list would
+    /// mean one of the two producers silently seeing hypotheses it cannot read.
+    pub psatz_assumptions: &'a [(ExprId, ExprId)],
+    /// An optional non-SOS witness for [`psatz::rat`]; see
+    /// [`psatz::DualWitness`].
+    pub psatz_dual: Option<&'a psatz::DualWitness>,
 }
 
 /// A producer, or a way of composing two or more of them. No `Simp` variant
@@ -66,6 +88,11 @@ pub(crate) enum Tactic {
     Ring,
     /// [`linarith::generic::prove`] at `Rat.orderedRing`.
     Linarith,
+    /// [`psatz::rat::prove`] — the NONLINEAR arm. `linarith` decides linear
+    /// order goals and declines a `x*y` term outright; this one takes exactly
+    /// the goals whose difference is a polynomial, so the two are complements
+    /// rather than a stronger and a weaker version of one thing.
+    Psatz,
     /// Sequential fallback ONLY — try the first, and on decline try the
     /// second on the SAME goal. See the module docs on why there is no
     /// normalize-then-glue regime here.
@@ -87,6 +114,11 @@ pub enum Decline {
     Ring(ring::Decline),
     /// [`linarith::generic::prove`] declined.
     Linarith(linarith::Decline),
+    /// [`psatz::rat::prove`] declined. Two of its variants —
+    /// [`psatz::Decline::NotPsd`] and [`psatz::Decline::PsdNotSos`] — are
+    /// FINDINGS rather than refusals, and survive into this wrapper unchanged
+    /// so a caller that cares can still read them.
+    Psatz(psatz::Decline),
     /// [`Tactic::First`] tried every listed tactic and none succeeded.
     First(Vec<Decline>),
 }
@@ -144,6 +176,14 @@ pub(crate) fn run(
         Tactic::Decide => decide::rat::run(d, &ctx.prelude, goal).map_err(Decline::Decide),
         Tactic::Ring => ring::rat::prove(d, &ctx.prelude, goal).map_err(Decline::Ring),
         Tactic::Linarith => linarith_generic(d, ctx, goal).map_err(Decline::Linarith),
+        Tactic::Psatz => {
+            let psatz_ctx = psatz::rat::Ctx {
+                prelude: ctx.prelude,
+                assumptions: ctx.psatz_assumptions,
+                dual: ctx.psatz_dual,
+            };
+            psatz::rat::prove(d, &psatz_ctx, goal).map_err(Decline::Psatz)
+        }
         Tactic::Then(first, second) => match run(d, ctx, first, goal) {
             Ok(term) => Ok(term),
             Err(_) => run(d, ctx, second, goal),

@@ -2100,7 +2100,7 @@ pub(super) fn nat_sub(p: &NatPrelude) -> Vec<(&'static str, Sub)> {
     vec![("logic", Sub::Logic(Box::new(p.logic)))]
 }
 
-/// The `IntPrelude` field table (401 names,
+/// The `IntPrelude` field table (426 names,
 /// 0 name lists, 2 sub-packages).
 #[must_use]
 #[allow(clippy::too_many_lines)] // a generated field table; length is the point.
@@ -2625,6 +2625,40 @@ pub(super) fn int(p: &IntPrelude) -> Fields {
             ("mul_mul_of_mul_mul", p.mul_mul_of_mul_mul),
             ("sq_add_sq_of_mul_left", p.sq_add_sq_of_mul_left),
             ("descent_step", p.descent_step),
+            ("ne_zero_of_pos", p.ne_zero_of_pos),
+            ("neg_nonpos_of_nonneg", p.neg_nonpos_of_nonneg),
+            ("neg_nonneg_of_nonpos", p.neg_nonneg_of_nonpos),
+            ("neg_le_of_neg_le", p.neg_le_of_neg_le),
+            ("add_nonneg", p.add_nonneg),
+            ("sub_nonpos_of_le", p.sub_nonpos_of_le),
+            ("le_of_add_le_add_self", p.le_of_add_le_add_self),
+            ("le_of_mul_le_mul_left", p.le_of_mul_le_mul_left),
+            ("neg_mul_neg", p.neg_mul_neg),
+            ("neg_add_self_self", p.neg_add_self_self),
+            ("add_sub_add_sub", p.add_sub_add_sub),
+            ("sq_double_add_sq_double", p.sq_double_add_sq_double),
+            ("sq_le_sq_of_nonneg", p.sq_le_sq_of_nonneg),
+            ("sq_le_sq_of_neg_le_of_le", p.sq_le_sq_of_neg_le_of_le),
+            (
+                "exists_centered_representative",
+                p.exists_centered_representative,
+            ),
+            ("two_mul_sq_add_sq_le_sq", p.two_mul_sq_add_sq_le_sq),
+            ("sq_add_sq_lt_sq_of_bounds", p.sq_add_sq_lt_sq_of_bounds),
+            ("lt_of_add_le_of_nonneg", p.lt_of_add_le_of_nonneg),
+            ("lt_of_mul_lt_mul_left", p.lt_of_mul_lt_mul_left),
+            ("nonneg_of_mul_nonneg_left", p.nonneg_of_mul_nonneg_left),
+            ("pos_of_mul_pos_left", p.pos_of_mul_pos_left),
+            (
+                "eq_zero_of_sq_add_sq_eq_zero",
+                p.eq_zero_of_sq_add_sq_eq_zero,
+            ),
+            ("descent_multiplier_bounds", p.descent_multiplier_bounds),
+            ("sub_neg_one_eq_add_sq_one", p.sub_neg_one_eq_add_sq_one),
+            (
+                "exists_small_multiple_of_sq_add_one",
+                p.exists_small_multiple_of_sq_add_one,
+            ),
         ],
         lists: Vec::new(),
     }
@@ -2639,7 +2673,7 @@ pub(super) fn int_sub(p: &IntPrelude) -> Vec<(&'static str, Sub)> {
     ]
 }
 
-/// The `RatPrelude` field table (607 names,
+/// The `RatPrelude` field table (610 names,
 /// 0 name lists, 1 sub-packages).
 ///
 /// 100 of the names come from ADR-1512 per-module registries and
@@ -2728,6 +2762,9 @@ pub(super) fn rat(p: &RatPrelude) -> Fields {
             ("left_distrib", p.left_distrib),
             ("mul_nonneg", p.mul_nonneg),
             ("sq_nonneg", p.sq_nonneg),
+            ("two_mul_le_sq_add_sq", p.two_mul_le_sq_add_sq),
+            ("mul_add_le_sq_add_sq_three", p.mul_add_le_sq_add_sq_three),
+            ("four_mul_le_sq_add", p.four_mul_le_sq_add),
             ("le_total", p.le_total),
             ("lt_of_not_le", p.lt_of_not_le),
             ("le_antisymm", p.le_antisymm),
@@ -4470,10 +4507,10 @@ pub(super) fn creal_sub(p: &CRealPrelude) -> Vec<(&'static str, Sub)> {
     vec![("rat", Sub::Rat(Box::new(p.rat)))]
 }
 
-/// The `ComplexPrelude` field table (168 names,
+/// The `ComplexPrelude` field table (186 names,
 /// 0 name lists, 1 sub-packages).
 ///
-/// 39 of the names come from ADR-1512 per-module registries and
+/// 57 of the names come from ADR-1512 per-module registries and
 /// carry a dotted field name (`pi.pi_le_four`); the rest are flat
 /// fields on `ComplexPrelude` itself.
 #[must_use]
@@ -4684,6 +4721,39 @@ pub(super) fn complex(p: &ComplexPrelude) -> Fields {
             ("deriv.holomorphic_id", p.deriv.holomorphic_id),
             ("deriv.holomorphic_neg", p.deriv.holomorphic_neg),
             ("deriv.holomorphic_add", p.deriv.holomorphic_add),
+            ("estimates.abs_sub_le", p.estimates.abs_sub_le),
+            (
+                "estimates.abs_mul_le_of_bounds",
+                p.estimates.abs_mul_le_of_bounds,
+            ),
+            ("estimates.bounded_on", p.estimates.bounded_on),
+            ("estimates.bounded_on_unfold", p.estimates.bounded_on_unfold),
+            ("estimates.bounded_on_add", p.estimates.bounded_on_add),
+            ("estimates.bounded_on_mul", p.estimates.bounded_on_mul),
+            (
+                "estimates.uniformly_continuous_on",
+                p.estimates.uniformly_continuous_on,
+            ),
+            ("estimates.uc_mk", p.estimates.uc_mk),
+            ("estimates.uc_rec", p.estimates.uc_rec),
+            ("estimates.uc_modulus", p.estimates.uc_modulus),
+            ("estimates.uc_spec", p.estimates.uc_spec),
+            (
+                "estimates.uniformly_continuous_const",
+                p.estimates.uniformly_continuous_const,
+            ),
+            (
+                "estimates.uniformly_continuous_id",
+                p.estimates.uniformly_continuous_id,
+            ),
+            (
+                "estimates.uniformly_continuous_of_has_derivative",
+                p.estimates.uniformly_continuous_of_has_derivative,
+            ),
+            ("leibniz.has_derivative_mul", p.leibniz.has_derivative_mul),
+            ("components.abs_of_real", p.components.abs_of_real),
+            ("components.abs_re_le", p.components.abs_re_le),
+            ("components.abs_im_le", p.components.abs_im_le),
             ("comm_ring_s", p.comm_ring_s),
         ],
         lists: Vec::new(),

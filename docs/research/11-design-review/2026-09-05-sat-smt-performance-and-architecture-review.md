@@ -431,7 +431,18 @@ apart from dispatch.
    (SAT share 0.97 and 0.95) and run BatSat, the native core, CaDiCaL and
    Kissat on identical DIMACS. About a day of work; it decides whether the
    native core becomes the default and whether D1's third engine should be
-   replaced rather than tuned.
+   replaced rather than tuned. *Measured 2026-09-05* (gate (b):
+   [`2026-09-05-gate-b-sat-core-measured.md`](2026-09-05-gate-b-sat-core-measured.md);
+   the follow-up profiling that measurement's own "what this does not
+   establish" section named as missing:
+   [`2026-09-05-native-core-vs-kissat-search-stats.md`](2026-09-05-native-core-vs-kissat-search-stats.md)
+   — on the files Kissat decides that the native core does not, Kissat's own
+   profiler attributes the majority of its wall time to core CDCL search
+   (51-100%, mean 58.7%), not to inprocessing (mean 25.7%), so the gap is
+   mixed rather than an inprocessing story: partly raw search throughput
+   (Kissat ~1.57x median conflicts/second on non-outlier shared-verdict
+   files) and partly a smaller conflict-count difference, not a dominant
+   inprocessing effect).
 3. **Add micro-benchmarks for six hot paths**, bound to the same calibration
    scheme so they can gate: `CdclT::propagate`, `proof_sat` propagate,
    `tseitin_encode`, `AndUniqueTable` insert, simplex pivot, e-graph merge

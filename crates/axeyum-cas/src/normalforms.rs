@@ -608,7 +608,16 @@ fn admit_hermite(
     unimodular: &Matrix,
     hermite: &Matrix,
 ) -> Option<(Matrix, Matrix)> {
-    let product = unimodular.mul(source)?;
+    // REGRESSION (measured, `axeyum_cas::homology`'s wave-three fixtures):
+    // `Matrix::mul` pushes every result entry through `expand`'s general
+    // polynomial canonicalizer even though `unimodular` and `source` are
+    // always all-integer here (both are built from `to_int_grid`). For a
+    // 196x588 boundary matrix this product alone measured 25.8s; the
+    // all-integer fast path (`mul_int_fast`, falling back to `mul` only if a
+    // non-integer entry or an `i128` overflow is ever met) computes the same
+    // certified product in well under a second. See
+    // `crate::homology`'s module doc for the before/after numbers.
+    let product = unimodular.mul_fast_or_symbolic(source)?;
     if !certify_product_equals(&product, hermite) {
         return None;
     }
@@ -630,7 +639,11 @@ fn admit_smith(
     diagonal: &Matrix,
     right: &Matrix,
 ) -> Option<(Matrix, Matrix, Matrix)> {
-    let product = left.mul(source)?.mul(right)?;
+    // REGRESSION: see `admit_hermite`'s comment above -- same fix, same
+    // measurement, applied to the two-sided Smith product.
+    let product = left
+        .mul_fast_or_symbolic(source)?
+        .mul_fast_or_symbolic(right)?;
     if !certify_product_equals(&product, diagonal) {
         return None;
     }

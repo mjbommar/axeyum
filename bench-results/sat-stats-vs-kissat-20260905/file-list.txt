@@ -1,0 +1,35 @@
+# 20-file population for the search-statistics comparison, drawn from
+# bench-results/sat-core-gate-b-20260905/per-file-p4dfa.tsv (2026-09-05 gate
+# (b) measurement). Two groups:
+#
+# Group A (11 files): every p4dfa file Kissat 4.0.4 decided (sat/unsat, not
+# "unknown") within the gate (b) 20 s budget. This is the full population,
+# not a sample -- Kissat decided exactly 11/113 p4dfa files.
+#
+# Group B (9 files): p4dfa files Kissat did NOT decide within 20 s, chosen to
+# span the size range (40K to 3.1M CNF variables) plus one file
+# (compose.p3.*) where the native core and CaDiCaL both decide (sat) but
+# Kissat does not -- the interesting case for the inprocessing question.
+#
+# Group A -- Kissat decides
+compose.p2._bit8_na6_nr3_paired.cnf
+compose.s2._bit8_na6_nr3_paired.cnf
+compose.s2._bit8_na6_nr4_paired.cnf
+mobiledevice_bit8_na1_nr1_twocond.cnf
+mobiledevice_bit8_na6_nr3_paired.cnf
+mobiledevice_bit8_na6_nr3_twocond.cnf
+simple_bit8_na1_nr1_twocond.cnf
+string1x8.3._bit8_na6_nr3_paired.cnf
+string1x8.6._bit8_na6_nr3_paired.cnf
+string1x8.7._bit8_na6_nr3_paired.cnf
+videoconf_simple_bit8_na6_nr3_paired.cnf
+# Group B -- Kissat does NOT decide within 20s
+compose.p3._bit8_na6_nr3_paired.cnf
+string1x8.4._bit8_na6_nr3_paired.cnf
+tcp_open_bit8_na6_nr3_paired.cnf
+string1x16.4._bit8_na6_nr3_paired.cnf
+videoconf_full_bit8_na6_nr3_paired.cnf
+string2x8.4._bit8_na6_nr3_paired.cnf
+string4x8.8._bit8_na6_nr3_paired.cnf
+compose.s3._bit8_na6_nr3_paired.cnf
+string4x16.4._bit16_na6_nr4_paired.cnf
