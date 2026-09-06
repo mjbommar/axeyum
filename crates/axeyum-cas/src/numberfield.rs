@@ -417,12 +417,7 @@ pub(crate) fn poly_divrem(
 ) -> Option<(Vec<BigRational>, Vec<BigRational>)> {
     QPoly::from_slice(dividend)
         .div_rem(&QPoly::from_slice(divisor))
-        .map(|(quotient, remainder)| {
-            (
-                quotient.into_coefficients(),
-                remainder.into_coefficients(),
-            )
-        })
+        .map(|(quotient, remainder)| (quotient.into_coefficients(), remainder.into_coefficients()))
 }
 
 /// Extended Euclid in `ℚ[x]`: returns `(g, s, t)` with `s·a + t·b = g` and `g`
@@ -2166,14 +2161,14 @@ mod tests {
             vec![],
             vec![rat_int(5)],
             vec![rat_int(0), rat_int(1)],
-            vec![rat_int(-2), rat_int(0), rat_int(1)],  // x^2 - 2
-            vec![rat_int(-3), rat_int(0), rat_int(1)],  // x^2 - 3
-            vec![rat_int(1), rat_int(1), rat_int(1)],   // x^2 + x + 1
+            vec![rat_int(-2), rat_int(0), rat_int(1)], // x^2 - 2
+            vec![rat_int(-3), rat_int(0), rat_int(1)], // x^2 - 3
+            vec![rat_int(1), rat_int(1), rat_int(1)],  // x^2 + x + 1
             vec![rat_int(-2), rat_int(0), rat_int(0), rat_int(1)], // x^3 - 2
             vec![rat_int(1), rat_int(0), rat_int(0), rat_int(0), rat_int(1)], // x^4 + 1
             vec![rat_int(-1), rat_int(1)],
-            vec![rat_int(2), rat_int(-3), rat_int(1)],  // (x-1)(x-2)
-            vec![rat_int(1), rat_int(-2), rat_int(1)],  // (x-1)^2
+            vec![rat_int(2), rat_int(-3), rat_int(1)], // (x-1)(x-2)
+            vec![rat_int(1), rat_int(-2), rat_int(1)], // (x-1)^2
             vec![f(1, 2), f(-3, 4), f(5, 6)],
             vec![f(-7, 3), rat_int(0), f(2, 9), rat_int(1)],
         ]
@@ -2191,11 +2186,7 @@ mod tests {
             assert_eq!(poly_trim(a.clone()), legacy_poly_trim(a.clone()), "trim");
             assert_eq!(poly_degree(a), legacy_poly_degree(a), "degree");
             for factor in &scales {
-                assert_eq!(
-                    poly_scale(a, factor),
-                    legacy_poly_scale(a, factor),
-                    "scale"
-                );
+                assert_eq!(poly_scale(a, factor), legacy_poly_scale(a, factor), "scale");
             }
             for b in &corpus {
                 pairs += 1;
@@ -2211,40 +2202,47 @@ mod tests {
 
     /// The migrated extended Euclid now hands back a certificate, and every one
     /// of them re-derives. A checker that could not fail would be worse than
-    /// none, so the same loop asserts a tampered cofactor is rejected.
+    /// none, so the same loop tampers with a cofactor and requires rejection.
+    ///
+    /// The tamper is applied only where it can bite: adding `1` to
+    /// `cofactor_a` changes `cofactor_a·input_a` **only when `input_a` is
+    /// nonzero**, so the zero-`input_a` pairs are excluded by construction
+    /// rather than absorbed into a slack threshold. The expected count is
+    /// derived from the corpus — `13 × 12` — not written down, so a corpus
+    /// change cannot silently make this test vacuous.
     #[test]
     fn every_migrated_ext_gcd_carries_a_verifiable_certificate() {
         let corpus = poly_differential_corpus();
+        let nonzero = corpus.iter().filter(|p| poly_degree(p).is_some()).count();
         let mut verified = 0usize;
-        let mut rejected = 0usize;
+        let mut tampered = 0usize;
         for a in &corpus {
             for b in &corpus {
                 let certificate = poly_ext_gcd_certified(a, b);
                 assert!(certificate.verify(), "certificate for {a:?}, {b:?}");
                 verified += 1;
-                if certificate.gcd.is_zero() {
-                    continue; // both inputs zero: nothing to tamper with
+                if poly_degree(a).is_none() {
+                    continue; // `cofactor_a · 0` is insensitive to the tamper
                 }
                 let mut forged = certificate.clone();
                 forged.cofactor_a = forged
                     .cofactor_a
                     .add(&axeyum_arith::QPoly::constant(rat_one()));
-                if !forged.verify() {
-                    rejected += 1;
-                }
+                assert!(
+                    !forged.verify(),
+                    "a tampered cofactor must be rejected for {a:?}, {b:?}"
+                );
+                tampered += 1;
             }
         }
-        assert_eq!(verified, 169, "every ordered pair produced a certificate");
-        assert!(
-            rejected >= 160,
-            "a tampered cofactor is rejected almost everywhere: {rejected}"
-        );
+        assert_eq!(verified, corpus.len() * corpus.len(), "every ordered pair");
+        assert_eq!(tampered, nonzero * corpus.len(), "every tamperable pair");
+        assert!(tampered > 0, "the tamper loop is not vacuous");
     }
 
     fn field(coeffs: &[i64]) -> NumberField {
         let poly: Vec<BigRational> = coeffs.iter().map(|&c| integer(c)).collect();
         NumberField::new(&poly).expect("field")
-    }
     }
 
     fn g(re: i64, im: i64) -> GaussianInt {
