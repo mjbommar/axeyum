@@ -277,10 +277,11 @@ fn the_split_lemma_is_about_what_it_claims() {
 /// `equiv (op a c) (op c a)` does not fit the `equiv (op b c) (op c b)` slot.
 #[test]
 fn control_op_swap_last_needs_comm_at_the_inner_pair() {
+    use idx::comm_group as g;
+
     let mut k = Kernel::new();
     let f = build(&mut k);
     let cg = f.st.comm_group;
-    use idx::comm_group as g;
     let group_ty = k.const_(cg.ind, vec![]);
     let gv = k.fvar(96_000);
     let carrier = sel(&mut k, &cg, g::CARRIER, gv);
