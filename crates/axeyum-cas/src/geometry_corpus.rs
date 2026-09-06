@@ -101,10 +101,11 @@ fn at(entries: &[(&str, i128, i128)]) -> BTreeMap<String, Rational> {
 /// (`docs/research/08-planning/frontier-ratchet-reference-frame.md`). They are
 /// used only to answer "is this entry cheap enough for a unit test", a question
 /// with an order-of-magnitude answer, and never to assert a performance claim.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum SearchCost {
     /// Nobody has measured it. The entry is walked, and the walk's deadline is
     /// what decides whether that assumption still holds.
+    #[default]
     Unmeasured,
     /// Measured wall-clock milliseconds for [`crate::geometry_certify::certify`]
     /// under `--release`, ADVISORY (see the type's docs).
@@ -115,12 +116,6 @@ pub enum SearchCost {
     /// principle; nobody has waited. Deliberately not a large number: a figure
     /// nobody measured should not look like one somebody did.
     Unreturned,
-}
-
-impl Default for SearchCost {
-    fn default() -> SearchCost {
-        SearchCost::Unmeasured
-    }
 }
 
 impl SearchCost {

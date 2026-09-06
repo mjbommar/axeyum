@@ -1059,6 +1059,14 @@ pub fn certify_by_linear_elimination_scoped(
         .map(|hypothesis| hypothesis.poly.clone())
         .collect();
 
+    // The theorem's conclusions, which `BlockScope::Joint` scopes its candidate
+    // unknowns to. Built once: they do not vary with the condition subset.
+    let targets: Vec<MvPoly> = problem
+        .conclusions
+        .iter()
+        .map(|conclusion| conclusion.poly.clone())
+        .collect();
+
     let mut last_failure = ProofOutcome::Declined(GeometryDecline::UndividableMultiplier);
 
     for subset in &subsets {
@@ -1073,11 +1081,10 @@ pub fn certify_by_linear_elimination_scoped(
             .iter()
             .map(|&index| problem.nondegeneracy[index].poly.clone())
             .collect();
-        let targets: Vec<MvPoly> = problem
-            .conclusions
-            .iter()
-            .map(|conclusion| conclusion.poly.clone())
-            .collect();
+        let plan = BlockPlan {
+            scope,
+            targets: &targets,
+        };
         for conclusion in &problem.conclusions {
             match linear_cofactors(
                 &hypotheses,
@@ -1086,8 +1093,7 @@ pub fn certify_by_linear_elimination_scoped(
                 &conditions,
                 conclusion,
                 handover,
-                scope,
-                &targets,
+                &plan,
             ) {
                 Ok(cofactors) => cofactor_sets.push(cofactors),
                 Err(outcome) => {
@@ -1194,6 +1200,17 @@ pub fn certify_any_route(problem: &GeometryProblem, limits: Limits) -> ProofOutc
     }
 }
 
+/// Which blocks `linear_cofactors` is allowed to look for: the scope, and the
+/// conclusions [`BlockScope::Joint`] scopes the candidate unknowns to.
+///
+/// One struct rather than two arguments because the two are meaningless apart —
+/// `targets` is read only under [`BlockScope::Joint`] — and because the caller
+/// builds it once for a whole theorem.
+struct BlockPlan<'a> {
+    scope: BlockScope,
+    targets: &'a [MvPoly],
+}
+
 /// The cofactor vector for one conclusion under one condition subset, or the
 /// outcome that explains why there is none.
 fn linear_cofactors(
@@ -1203,9 +1220,9 @@ fn linear_cofactors(
     conditions: &[MvPoly],
     conclusion: &Constraint,
     handover: Option<Limits>,
-    scope: BlockScope,
-    targets: &[MvPoly],
+    plan: &BlockPlan<'_>,
 ) -> Result<Vec<MvPoly>, ProofOutcome> {
+    let (scope, targets) = (plan.scope, plan.targets);
     let overflow = || ProofOutcome::Declined(GeometryDecline::Reduction(DeclineReason::Overflow));
     let blocks = match scope {
         BlockScope::PerConclusion => licensed_blocks(
@@ -1718,6 +1735,7 @@ mod tests {
         collinear, detect_linear_blocks, factors_into, geometry_limits, licensed_blocks, midpoint,
         parallel, perpendicular, same_point,
     };
+    use crate::groebner_cert::Limits;
     use crate::mvpoly::MvPoly;
     use axeyum_ir::Rational;
     use std::collections::BTreeMap;
@@ -2627,6 +2645,45 @@ mod tests {
                 certify_any_route(&problem, geometry_limits()),
                 certify(&problem, geometry_limits()),
                 "{id}: the shipped route left the committed certificate"
+            );
+        }
+    }
+
+    /// The shipped route reaches the two newly-reached theorems **without**
+    /// Buchberger's algorithm.
+    ///
+    /// Written because the obvious assertion cannot fail. The widened route and
+    /// the Gröbner route return the identical certificate on these two, so
+    /// comparing them says nothing about which one ran — and a check that cannot
+    /// fail is worse than no check at all.
+    ///
+    /// Starving the general route is the discriminator that has no clock in it.
+    /// Under a budget of one reduction step [`certify`] cannot settle either
+    /// theorem, so a [`certify_any_route`] that still certifies did the work by
+    /// linear algebra. Put the route selector back on
+    /// [`BlockScope::PerConclusion`] and this dies: the linear pass declines,
+    /// the fall-through hits the starved Gröbner route, and nothing is certified.
+    #[test]
+    fn the_shipped_route_certifies_the_newly_reached_theorems_without_buchberger() {
+        let starved = Limits {
+            reduction_steps: 1,
+            ..geometry_limits()
+        };
+        for id in ["centroid-divides-medians", "parallelogram-diagonals-bisect"] {
+            let problem = crate::geometry_corpus::corpus()
+                .into_iter()
+                .find(|problem| problem.id == id)
+                .expect("a corpus theorem");
+            assert!(
+                !matches!(certify(&problem, starved), ProofOutcome::Certified(_)),
+                "{id}: the negative control is vacuous -- one reduction step settled the theorem"
+            );
+            assert!(
+                matches!(
+                    certify_any_route(&problem, starved),
+                    ProofOutcome::Certified(_)
+                ),
+                "{id}: the route selector needed Buchberger, so it is not on the widened scope"
             );
         }
     }
