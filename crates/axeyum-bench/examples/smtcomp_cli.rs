@@ -231,7 +231,8 @@ fn theory_layer_report_line(
          bound_retractions={} bound_assertions={} propagations_offered={} \
          simplex_rows={} simplex_columns={} assert_partial_conflicts={} \
          final_check_conflicts={} final_check_core_literals={} \
-         final_check_core_widenings={} final_check_live_rows={}",
+         final_check_core_widenings={} final_check_live_rows={} \
+         bound_scan_calls={} bound_scan_atoms={}",
         stats.boolean_propagate.as_millis(),
         stats.theory_assert.as_millis(),
         stats.theory_propagate.as_millis(),
@@ -260,6 +261,8 @@ fn theory_layer_report_line(
         optional(stats.final_check_core_literals),
         optional(stats.final_check_core_widenings),
         optional(stats.final_check_live_rows),
+        optional(stats.bound_scan_calls),
+        optional(stats.bound_scan_atoms),
     )
 }
 

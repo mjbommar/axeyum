@@ -529,6 +529,14 @@ pub struct TheoryLayerStats {
     /// Live constraint rows summed over every complete check: the denominator
     /// the mean core width is a fraction of.
     pub final_check_live_rows: Option<u64>,
+    /// Propagation calls the driving theory served, and the atoms those calls
+    /// examined. `bound_scan_atoms / bound_scan_calls` prices one propagation
+    /// call in work rather than in wall time, which is what distinguishes a
+    /// propagation that is expensive because it derives a lot from one that is
+    /// expensive because it looks at everything and derives nothing.
+    pub bound_scan_calls: Option<u64>,
+    /// Atoms those calls examined; see `bound_scan_calls`.
+    pub bound_scan_atoms: Option<u64>,
 }
 
 impl TheoryLayerStats {

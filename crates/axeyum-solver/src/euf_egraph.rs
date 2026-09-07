@@ -210,6 +210,12 @@ pub struct TheoryEngineCounters {
     /// Live constraint rows summed over every complete check — the denominator
     /// the mean core width is a fraction of.
     pub final_check_live_rows: u64,
+    /// Propagation calls the theory served, and the atoms those calls examined,
+    /// summed over its life. Clock-free, so the cost of a scan is readable as a
+    /// count rather than inferred from a wall time a busy host moves.
+    pub bound_scan_calls: u64,
+    /// Atoms those calls examined; see `bound_scan_calls`.
+    pub bound_scan_atoms: u64,
 }
 
 /// An opaque, theory-owned handle to an explanation the theory has **not**

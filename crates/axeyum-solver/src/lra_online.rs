@@ -421,9 +421,21 @@ pub struct LraTheory {
     /// Diagnostic only (S4) — the counter that answers "does `propagate` return
     /// anything for `LraTheory`?" with a number instead of a reading.
     propagations_offered: u64,
+    /// The order atoms [`Self::propagate_bounds`] can ever emit: those at least
+    /// one of whose two polarity forms is **also** bounded by some *other*
+    /// atom. See [`propagatable_atoms`] for why restricting the scan to this
+    /// list is exactly output-preserving rather than an approximation, and for
+    /// the measurement it exists for (75% of a 24 s budget spent scanning, zero
+    /// literals offered).
+    propagatable: Vec<usize>,
     /// Conflicts [`Self::install_bounds`] found — the cheap partial check at
     /// `assert` time. Diagnostic only.
     assert_partial_conflicts: u64,
+    /// [`Self::propagate_bounds`] calls, and the atoms they examined, summed
+    /// over this theory's life. Clock-free, so a scan cost is readable as a
+    /// count rather than inferred from a wall time a busy host moves.
+    bound_scan_calls: u64,
+    bound_scan_atoms: u64,
     /// Complete checks that answered `Conflict`, the literals summed over their
     /// cores, how many of those cores came from the `rows_to_core` widening
     /// fallback, and the live rows summed over every complete check.
@@ -525,6 +537,8 @@ impl LraTheory {
         // working when it does.
         let forms = assign_forms(&mut atoms);
         let simplex = build_simplex_engine(&mut atoms, nvars).map(RefCell::new);
+        // Order-preserving scan filter for `propagate_bounds`; see the field docs.
+        let propagatable = propagatable_atoms(&atoms, forms);
         Ok(Self {
             atoms,
             nvars,
@@ -539,8 +553,11 @@ impl LraTheory {
             bound_lower: vec![None; forms],
             bound_upper: vec![None; forms],
             bound_log: Vec::new(),
+            propagatable,
             propagations_offered: 0,
             assert_partial_conflicts: 0,
+            bound_scan_calls: 0,
+            bound_scan_atoms: 0,
             final_check_conflicts: 0,
             final_check_core_literals: 0,
             final_check_core_widenings: 0,
@@ -744,10 +761,17 @@ impl LraTheory {
     /// latency of one call without bounding what the fixpoint derives.
     fn propagate_bounds(&mut self, queue: &mut PropagationQueue) {
         let mut emitted = 0usize;
-        for atom in 0..self.atoms.len() {
+        self.bound_scan_calls += 1;
+        // `propagatable` is the ascending subsequence of atom indices that can
+        // emit at all (see [`propagatable_atoms`]), so this visits the same
+        // atoms in the same order as the full `0..atoms.len()` scan it replaces,
+        // minus ones the `held.atom == atom` guard would have rejected anyway.
+        for index in 0..self.propagatable.len() {
+            let atom = self.propagatable[index];
             if past_deadline(self.deadline) || emitted >= MAX_BOUND_PROPAGATIONS_PER_CALL {
                 return;
             }
+            self.bound_scan_atoms += 1;
             if self.assigned.get(atom).copied().flatten().is_some() {
                 continue;
             }
@@ -840,6 +864,8 @@ impl LraTheory {
             final_check_core_literals: self.final_check_core_literals,
             final_check_core_widenings: self.final_check_core_widenings,
             final_check_live_rows: self.final_check_live_rows,
+            bound_scan_calls: self.bound_scan_calls,
+            bound_scan_atoms: self.bound_scan_atoms,
         })
     }
 
@@ -1203,6 +1229,83 @@ impl TheorySolver for LraTheory {
     fn engine_counters(&self) -> Option<TheoryEngineCounters> {
         LraTheory::engine_counters(self)
     }
+}
+
+/// The order atoms [`LraTheory::propagate_bounds`] can ever emit: those sharing
+/// at least one polarity **form** with some *other* registered atom.
+///
+/// # Why this is exact, not a heuristic
+///
+/// `propagate_bounds` emits an atom only when the tightest currently-asserted
+/// bound on one of that atom's two forms entails the atom's own threshold, and
+/// it explains the emission by the atom that **imposed** that bound. A bound on
+/// form `f` can only ever be installed from a live constraint whose template
+/// carries `f`, i.e. by an atom that touches `f`. So if `f` is touched by one
+/// atom alone, the only bound `f` can ever hold was imposed by that atom — and
+/// the emission is then refused by the existing `held.atom == atom` guard.
+/// Dropping such an atom from the scan therefore removes iterations that
+/// provably emit nothing, in the same order, rather than trading completeness
+/// for speed.
+///
+/// # The number this exists for
+///
+/// Measured on `QF_LRA/miplib/pp08a-1000.smt2` at a 24 s budget:
+/// `theory_propagate` was **18.05 s of 24.03 s (75%)** and
+/// `propagations_offered` was **0**. The scan visits every registered atom at
+/// both polarities on every propagation call, and that file takes 1.9 M
+/// decisions — so the loop overhead alone, not the rational comparison it
+/// guards, spent three quarters of the budget producing nothing.
+fn propagatable_atoms(atoms: &[AtomKind], forms: usize) -> Vec<usize> {
+    /// Every form a registered atom's constraint templates bound.
+    fn atom_forms(atom: &AtomKind, out: &mut Vec<usize>) {
+        out.clear();
+        let constraints: [&Constraint; 2] = match atom {
+            AtomKind::Order {
+                when_true,
+                when_false,
+            } => [when_true, when_false],
+            AtomKind::Equality { when_true } => [&when_true[0], &when_true[1]],
+            AtomKind::Unsupported => return,
+        };
+        for c in constraints {
+            if let Some((form, _, _)) = c.form {
+                out.push(form);
+            }
+        }
+    }
+
+    // `owner[f]` is the single atom seen touching form `f` so far; `shared[f]`
+    // records that a second, DIFFERENT atom also touches it. An equality atom
+    // contributes two templates of its own, which must not make its form look
+    // shared — hence the comparison against the stored owner rather than a count.
+    let mut owner: Vec<Option<usize>> = vec![None; forms];
+    let mut shared: Vec<bool> = vec![false; forms];
+    let mut scratch = Vec::with_capacity(2);
+    for (index, atom) in atoms.iter().enumerate() {
+        atom_forms(atom, &mut scratch);
+        for &form in &scratch {
+            match owner[form] {
+                None => owner[form] = Some(index),
+                Some(first) if first != index => shared[form] = true,
+                Some(_) => {}
+            }
+        }
+    }
+
+    // Only `Order` atoms are propagation TARGETS (the scan skips every other
+    // kind), but any kind can be the atom that HOLDS the entailing bound, which
+    // is why `shared` above is computed over all of them.
+    let mut out = Vec::new();
+    for (index, atom) in atoms.iter().enumerate() {
+        if !matches!(atom, AtomKind::Order { .. }) {
+            continue;
+        }
+        atom_forms(atom, &mut scratch);
+        if scratch.iter().any(|&form| shared[form]) {
+            out.push(index);
+        }
+    }
+    out
 }
 
 /// Assigns every constraint template of every registered atom the **linear form**
@@ -3649,6 +3752,8 @@ fn run_online_diag(arena: &TermArena, assertions: &[TermId]) -> Option<OnlineDia
     let mut atoms = atoms;
     let forms = assign_forms(&mut atoms);
     let simplex = build_simplex_engine(&mut atoms, nvars).map(RefCell::new);
+    // Order-preserving scan filter for `propagate_bounds`; see the field docs.
+    let propagatable = propagatable_atoms(&atoms, forms);
     let mut theory = LraTheory {
         atoms,
         nvars,
@@ -3663,8 +3768,11 @@ fn run_online_diag(arena: &TermArena, assertions: &[TermId]) -> Option<OnlineDia
         bound_lower: vec![None; forms],
         bound_upper: vec![None; forms],
         bound_log: Vec::new(),
+        propagatable,
         propagations_offered: 0,
         assert_partial_conflicts: 0,
+        bound_scan_calls: 0,
+        bound_scan_atoms: 0,
         final_check_conflicts: 0,
         final_check_core_literals: 0,
         final_check_core_widenings: 0,
@@ -3872,6 +3980,147 @@ mod tests {
                 value: true
             }],
             "the reason is the single asserted atom holding the bound"
+        );
+    }
+
+    /// **This is the test the `propagatable` scan filter is mutation-checked
+    /// against.** Restricting `propagate_bounds` to atoms sharing a form is a
+    /// claim of EXACT output equivalence, not of a good approximation, so the
+    /// control re-derives what the full `0..atoms.len()` scan would offer and
+    /// requires the two to agree literal for literal, reason for reason, in the
+    /// same order.
+    ///
+    /// The fixture deliberately mixes both populations: three atoms on one
+    /// shared form (so the filter must keep them and the propagator must still
+    /// fire) and three on forms nothing else touches (so the filter must drop
+    /// them, and dropping them must change nothing). A filter that kept
+    /// everything would pass; a filter that dropped a *shared* atom must fail
+    /// here.
+    #[test]
+    fn the_scan_filter_offers_exactly_what_a_full_scan_would() {
+        let mut arena = TermArena::new();
+        let x = rvar(&mut arena, "x");
+        let y = rvar(&mut arena, "y");
+        let z = rvar(&mut arena, "z");
+        let w = rvar(&mut arena, "w");
+        let two = rconst(&mut arena, 2);
+        let sum = arena.real_add(x, y).expect("x+y");
+        let two_x = arena.real_mul(two, x).expect("2x");
+        let two_y = arena.real_mul(two, y).expect("2y");
+        let double = arena.real_add(two_x, two_y).expect("2x+2y");
+        let three = rconst(&mut arena, 3);
+        let eight = rconst(&mut arena, 8);
+        let four = rconst(&mut arena, 4);
+        let one = rconst(&mut arena, 1);
+        let seven = rconst(&mut arena, 7);
+        let nine = rconst(&mut arena, 9);
+        let zw = arena.real_add(z, w).expect("z+w");
+        // Shared form (x + y up to positive scaling): atoms 0, 1, 2.
+        let a0 = arena.real_le(sum, three).expect("x+y<=3");
+        let a1 = arena.real_le(double, eight).expect("2x+2y<=8");
+        let a2 = arena.real_le(double, four).expect("2x+2y<=4");
+        // Forms nobody else touches: atoms 3, 4, 5.
+        let a3 = arena.real_le(z, one).expect("z<=1");
+        let a4 = arena.real_le(w, seven).expect("w<=7");
+        let a5 = arena.real_le(zw, nine).expect("z+w<=9");
+        let atoms = [a0, a1, a2, a3, a4, a5];
+
+        // The full scan, re-derived here: the body `propagate_bounds` had before
+        // the filter, over EVERY registered atom index.
+        fn full_scan(theory: &LraTheory) -> Vec<(TheoryLit, Vec<TheoryLit>)> {
+            let mut out = Vec::new();
+            for atom in 0..theory.atoms.len() {
+                if theory.assigned.get(atom).copied().flatten().is_some() {
+                    continue;
+                }
+                let AtomKind::Order {
+                    when_true,
+                    when_false,
+                } = &theory.atoms[atom]
+                else {
+                    continue;
+                };
+                for (constraint, value) in [(when_true, true), (when_false, false)] {
+                    let Some((form, upper, bound, strict)) = LraTheory::form_bound(constraint)
+                    else {
+                        continue;
+                    };
+                    let held = if upper {
+                        theory.bound_upper[form].as_ref()
+                    } else {
+                        theory.bound_lower[form].as_ref()
+                    };
+                    let Some(held) = held else { continue };
+                    let Some(ordering) = held.value.checked_cmp(&bound) else {
+                        continue;
+                    };
+                    let entailed = if upper {
+                        ordering == Ordering::Less
+                            || (ordering == Ordering::Equal && (held.strict || !strict))
+                    } else {
+                        ordering == Ordering::Greater
+                            || (ordering == Ordering::Equal && (held.strict || !strict))
+                    };
+                    if !entailed {
+                        continue;
+                    }
+                    let Some(reason_value) = theory.assigned.get(held.atom).copied().flatten()
+                    else {
+                        continue;
+                    };
+                    if held.atom == atom {
+                        continue;
+                    }
+                    out.push((
+                        TheoryLit { atom, value },
+                        vec![TheoryLit {
+                            atom: held.atom,
+                            value: reason_value,
+                        }],
+                    ));
+                    break;
+                }
+            }
+            out
+        }
+
+        // Every single-atom assertion, so the comparison covers a bound on the
+        // shared form, a bound on a solitary form, and both polarities.
+        let mut compared = 0usize;
+        let mut nonempty = 0usize;
+        for atom in 0..atoms.len() {
+            for value in [true, false] {
+                let mut theory = LraTheory::new(&arena, &atoms).with_deferred_final_check();
+                if theory.assert(atom, value).is_err() {
+                    continue;
+                }
+                let want = full_scan(&theory);
+                let mut queue = PropagationQueue::default();
+                theory.propagate_into(&mut queue);
+                let got: Vec<(TheoryLit, Vec<TheoryLit>)> = queue
+                    .entries()
+                    .iter()
+                    .map(|(lit, reason)| {
+                        let TheoryExplanation::Eager(lits) = reason else {
+                            panic!("the bound propagator materialises its reason");
+                        };
+                        (*lit, lits.clone())
+                    })
+                    .collect();
+                assert_eq!(got, want, "asserting atom {atom} = {value}");
+                compared += 1;
+                if !want.is_empty() {
+                    nonempty += 1;
+                }
+            }
+        }
+        // A comparison where the reference never emits anything would pass with
+        // the propagator deleted, so require that some assertion really did
+        // propagate — this is the guard against a vacuous control.
+        assert!(compared >= 8, "too few assertions compared: {compared}");
+        assert!(
+            nonempty >= 1,
+            "the reference scan never emitted, so the comparison is vacuous"
         );
     }
 
@@ -4671,6 +4920,8 @@ mod tests {
         let mut atoms = atoms;
         let forms = assign_forms(&mut atoms);
         let simplex = build_simplex_engine(&mut atoms, nvars).map(RefCell::new);
+        // Order-preserving scan filter for `propagate_bounds`; see the field docs.
+        let propagatable = propagatable_atoms(&atoms, forms);
         let theory = LraTheory {
             atoms,
             nvars,
@@ -4685,8 +4936,11 @@ mod tests {
             bound_lower: vec![None; forms],
             bound_upper: vec![None; forms],
             bound_log: Vec::new(),
+            propagatable,
             propagations_offered: 0,
             assert_partial_conflicts: 0,
+            bound_scan_calls: 0,
+            bound_scan_atoms: 0,
             final_check_conflicts: 0,
             final_check_core_literals: 0,
             final_check_core_widenings: 0,
