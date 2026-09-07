@@ -447,22 +447,38 @@ pub(crate) fn solve_native<T: TheorySolver>(
     // heuristics: `CdclT` decides `true` first and does no target rephasing.
     // A model-based consumer can lose a verdict on a different-but-correct
     // model, and one did (see `TheorySolveOptions`).
+    // `--trace` is a second consumer behind the same guard `CdclT` reads, and it
+    // has to be honoured HERE rather than at construction because on this core
+    // collection is a `TheorySolveOptions` field. A route moved onto this engine
+    // otherwise stops answering `--trace` silently -- which is what
+    // `lra_theory::tests::theory_layer_stats_are_populated_on_a_theory_conflict`
+    // caught the moment `lra_theory` moved. Off unless asked: the timing hooks
+    // are per-call clock reads.
+    let collect_layer_stats = crate::cdclt::layer_stats_enabled();
     let options = TheorySolveOptions {
         initial_phase: true,
         target_rephase: false,
-        collect_layer_stats: false,
+        collect_layer_stats,
         record_proof: recording_artifacts(),
         proof_literal_budget: PROOF_LITERAL_BUDGET,
     };
-    match solve_with_theory_and_drat_proof_with_options(
+    let (outcome, native_stats) = solve_with_theory_and_drat_proof_with_options(
         &formula,
         &mut adapter,
         deadline,
         usize::MAX,
         options,
-    )
-    .0
-    {
+    );
+    if collect_layer_stats {
+        // The engine counters come from the THEORY, exactly as
+        // `CdclT::theory_layer_stats` takes them, so an LRA route keeps
+        // reporting simplex pivots through this engine too.
+        crate::cdclt::publish_theory_layer_stats(&theory_layer_stats(
+            &native_stats,
+            adapter.theory.engine_counters(),
+        ));
+    }
+    match outcome {
         TheorySolveOutcome::Sat(assignment) => NativeSolveOutcome::Sat(NativeModel {
             assignment,
             occurring,
@@ -479,6 +495,46 @@ pub(crate) fn solve_native<T: TheorySolver>(
         TheorySolveOutcome::ResourceOut | TheorySolveOutcome::Interrupted => {
             NativeSolveOutcome::Unknown
         }
+    }
+}
+
+/// Lifts the native core's [`axeyum_cnf::NativeLayerStats`] into the
+/// [`TheoryLayerStats`] `--trace` already prints, so one channel means the same
+/// thing whichever engine ran.
+///
+/// The fifteen driver-side fields are a field-for-field port (S7b landed them at
+/// the same increment sites in the native core); the engine-side fields come
+/// from the theory's own `engine_counters`, which is where `CdclT` gets them
+/// too. `None` there means "this theory keeps no feasibility engine", never
+/// "zero".
+fn theory_layer_stats(
+    native: &axeyum_cnf::NativeLayerStats,
+    engine: Option<crate::euf_egraph::TheoryEngineCounters>,
+) -> crate::layers::TheoryLayerStats {
+    crate::layers::TheoryLayerStats {
+        boolean_propagate: native.boolean_propagate,
+        theory_assert: native.theory_assert,
+        theory_propagate: native.theory_propagate,
+        theory_push_pop: native.theory_push_pop,
+        conflict_analysis: native.conflict_analysis,
+        theory_final_check: native.theory_final_check,
+        theory_explain: native.theory_explain,
+        final_checks: native.final_checks,
+        theory_conflicts: native.theory_conflicts,
+        theory_propagations: native.theory_propagations,
+        decisions: native.decisions,
+        learned_clauses: native.learned_clauses,
+        learned_literals: native.learned_literals,
+        learned_literals_before_minimization: native.learned_literals_before_minimization,
+        restarts: native.restarts,
+        simplex_pivots: engine.map(|e| e.simplex_pivots),
+        simplex_checks: engine.map(|e| e.simplex_checks),
+        simplex_cold_restarts: engine.map(|e| e.simplex_cold_restarts),
+        bound_retractions: engine.map(|e| e.bound_retractions),
+        bound_assertions: engine.map(|e| e.bound_assertions),
+        theory_propagations_offered: engine.map(|e| e.propagations),
+        simplex_rows: engine.map(|e| e.simplex_rows),
+        simplex_columns: engine.map(|e| e.simplex_columns),
     }
 }
 

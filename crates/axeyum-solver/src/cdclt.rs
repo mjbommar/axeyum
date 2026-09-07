@@ -123,6 +123,27 @@ impl Drop for TheoryLayerStatsGuard {
     }
 }
 
+/// Whether a [`TheoryLayerStatsGuard`] is active on this thread.
+///
+/// `CdclT` reads `COLLECT_LAYER_STATS` at construction. The native core
+/// (`crate::native_cdclt`) is a second driver behind the same guard, and it has
+/// to ask before every solve rather than at construction, because its
+/// collection is a `TheorySolveOptions` field. Without this, a route moved onto
+/// the native core silently stops answering `--trace` -- which is exactly what
+/// `lra_theory::tests::theory_layer_stats_are_populated_on_a_theory_conflict`
+/// caught when `lra_theory` moved.
+#[must_use]
+pub(crate) fn layer_stats_enabled() -> bool {
+    COLLECT_LAYER_STATS.with(Cell::get)
+}
+
+/// Publishes `stats` as the most recent search's layer stats, for a driver that
+/// is not `CdclT`. One channel, so `last_theory_layer_stats` means the same
+/// thing whichever engine ran.
+pub(crate) fn publish_theory_layer_stats(stats: &TheoryLayerStats) {
+    LAST_THEORY_LAYER_STATS.with(|c| c.set(Some(*stats)));
+}
+
 /// The [`TheoryLayerStats`] collected by the most recently completed
 /// [`CdclT::solve`] call on this thread while a [`TheoryLayerStatsGuard`] was
 /// active. `None` if collection was never enabled, or no CDCL(T) search has

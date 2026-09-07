@@ -523,7 +523,9 @@ fn an_exhausted_deadline_is_unknown_before_any_propagation() {
         }],
     ];
     let mut theory = CubeTheory::new(2, vec![vec![(0, true), (1, true)]], false);
-    let past = std::time::Instant::now() - std::time::Duration::from_secs(1);
+    let past = std::time::Instant::now()
+        .checked_sub(std::time::Duration::from_secs(1))
+        .expect("the process clock is at least a second past its epoch");
     let outcome = solve_native(2, 2, &clauses, Some(past), &mut theory);
     assert!(
         matches!(outcome, NativeSolveOutcome::Unknown),

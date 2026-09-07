@@ -18,10 +18,19 @@
 //! original assertion is evaluated by the ground evaluator's `Op::Apply` arm,
 //! which never touches this pass.
 
+#![allow(clippy::many_single_char_names)]
+
 use axeyum_ir::{Sort, TermArena, TermId};
 use axeyum_rewrite::{
     FUNCTION_ABSTRACTION_WITNESS_SAMPLES, eliminate_functions, witness_function_abstraction,
 };
+
+/// The default must exceed the two corner samples, or
+/// `the_two_corner_samples_alone_cannot_distinguish_applications` below is
+/// comparing the default against itself. Checked at COMPILE time: as a runtime
+/// `assert!` it is a constant expression, which clippy rejects and which would
+/// be no weaker written this way.
+const _: () = assert!(FUNCTION_ABSTRACTION_WITNESS_SAMPLES > 2);
 
 /// `f(x) = c0 ∧ f(y) = c1 ∧ x = y` over 4-bit vectors — the shape whose
 /// abstraction is load-bearing: it is refutable only through the fresh symbols
@@ -220,7 +229,6 @@ fn the_two_corner_samples_alone_cannot_distinguish_applications() {
         full.disagreement.is_some(),
         "the pseudorandom samples are what give the witness teeth"
     );
-    assert!(FUNCTION_ABSTRACTION_WITNESS_SAMPLES > 2);
 }
 
 /// The STRUCTURAL half: an original application the abstraction never named.

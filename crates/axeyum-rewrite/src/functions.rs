@@ -1035,13 +1035,11 @@ pub fn witness_function_abstraction(
             let mut values = Vec::with_capacity(args.len());
             let mut resolved = true;
             for &arg in args {
-                match eval(arena, arg, &assignment) {
-                    Ok(value) => values.push(value),
-                    Err(_) => {
-                        resolved = false;
-                        break;
-                    }
-                }
+                let Ok(value) = eval(arena, arg, &assignment) else {
+                    resolved = false;
+                    break;
+                };
+                values.push(value);
             }
             if !resolved {
                 witness.unavailable += 1;
@@ -1133,13 +1131,11 @@ fn bind_application_symbols(
             let mut values = Vec::with_capacity(args.len());
             let mut resolved = true;
             for &arg in args {
-                match eval(arena, arg, assignment) {
-                    Ok(value) => values.push(value),
-                    Err(_) => {
-                        resolved = false;
-                        break;
-                    }
-                }
+                let Ok(value) = eval(arena, arg, assignment) else {
+                    resolved = false;
+                    break;
+                };
+                values.push(value);
             }
             if !resolved {
                 still_pending.push(position);
@@ -1148,14 +1144,13 @@ fn bind_application_symbols(
             let (_, _, result_sort) = arena.function(func);
             let seed_base = seeds.get(&func).copied().unwrap_or(1);
             let table = tables.entry(func).or_default();
-            let result = match table.iter().find(|(key, _)| *key == values) {
-                Some((_, existing)) => existing.clone(),
-                None => {
-                    let seed = crate::arrays::mix(seed_base, table.len() as u64 + 1);
-                    let value = sample_value_of_sort(result_sort, sample, seed)?;
-                    table.push((values.clone(), value.clone()));
-                    value
-                }
+            let result = if let Some((_, existing)) = table.iter().find(|(key, _)| *key == values) {
+                existing.clone()
+            } else {
+                let seed = crate::arrays::mix(seed_base, table.len() as u64 + 1);
+                let value = sample_value_of_sort(result_sort, sample, seed)?;
+                table.push((values.clone(), value.clone()));
+                value
             };
             assignment.set(fresh, result);
             progressed = true;
