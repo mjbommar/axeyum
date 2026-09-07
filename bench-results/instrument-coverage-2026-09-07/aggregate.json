@@ -1,0 +1,1094 @@
+{
+  "QF_ABV": {
+    "files": 8,
+    "total_wall_ms": 171106,
+    "front_door_ms": 64,
+    "dl_online_ms": 0,
+    "bv_layer_ms": 19173,
+    "theory_layer_ms": 0,
+    "traced_total_ms": 19237,
+    "untraced_ms": 151869,
+    "traced_fraction_pct": 11.2,
+    "per_file": [
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_ABV/2018-Mann/arbiter_array_cex_w32d32q16n4b34.smt2",
+        "wall_ms": 24432,
+        "verdict": "unsolved",
+        "front_door_ms": 62,
+        "dl_online_ms": 0,
+        "bv_layer_ms": 5154,
+        "theory_layer_ms": 0,
+        "traced_ms": 5216
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_ABV/bmc-arrays/bubbleSort.smt2",
+        "wall_ms": 25026,
+        "verdict": "unsolved",
+        "front_door_ms": 0,
+        "dl_online_ms": 0,
+        "bv_layer_ms": 0,
+        "theory_layer_ms": 0,
+        "traced_ms": 0
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_ABV/brummayerbiere/fifo32ia04k08.smt2",
+        "wall_ms": 25037,
+        "verdict": "unsolved",
+        "front_door_ms": 2,
+        "dl_online_ms": 0,
+        "bv_layer_ms": 13967,
+        "theory_layer_ms": 0,
+        "traced_ms": 13969
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_ABV/brummayerbiere/wchains140se.smt2",
+        "wall_ms": 13073,
+        "verdict": "unsolved",
+        "front_door_ms": 0,
+        "dl_online_ms": 0,
+        "bv_layer_ms": 0,
+        "theory_layer_ms": 0,
+        "traced_ms": 0
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_ABV/dwp_formulas/try3_noof_functions_dwp_md5sum.set_char_quoting.il.dwp.smt2",
+        "wall_ms": 25038,
+        "verdict": "unsolved",
+        "front_door_ms": 0,
+        "dl_online_ms": 0,
+        "bv_layer_ms": 0,
+        "theory_layer_ms": 0,
+        "traced_ms": 0
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_ABV/dwp_formulas/try3_noof_functions_dwp_ptx.bkm_scale.il.dwp.smt2",
+        "wall_ms": 25045,
+        "verdict": "unsolved",
+        "front_door_ms": 0,
+        "dl_online_ms": 0,
+        "bv_layer_ms": 0,
+        "theory_layer_ms": 0,
+        "traced_ms": 0
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_ABV/dwp_formulas/try3_noof_functions_dwp_sum.set_char_quoting.il.dwp.smt2",
+        "wall_ms": 25039,
+        "verdict": "unsolved",
+        "front_door_ms": 0,
+        "dl_online_ms": 0,
+        "bv_layer_ms": 0,
+        "theory_layer_ms": 0,
+        "traced_ms": 0
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_ABV/dwp_formulas/try5_small_difret_functions_dwp_cat.next_line_num.il.dwp.smt2",
+        "wall_ms": 8416,
+        "verdict": "unsolved",
+        "front_door_ms": 0,
+        "dl_online_ms": 0,
+        "bv_layer_ms": 52,
+        "theory_layer_ms": 0,
+        "traced_ms": 52
+      }
+    ]
+  },
+  "QF_BV": {
+    "files": 6,
+    "total_wall_ms": 148221,
+    "front_door_ms": 418,
+    "dl_online_ms": 1,
+    "bv_layer_ms": 118913,
+    "theory_layer_ms": 0,
+    "traced_total_ms": 119332,
+    "untraced_ms": 28889,
+    "traced_fraction_pct": 80.5,
+    "per_file": [
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_BV/2017-BuchwaldFried/counterexample.dump.ia32_Mul_base_disp--Add32.load32.Mul32.Mulh_u32.0005.smt2",
+        "wall_ms": 24235,
+        "verdict": "unsolved",
+        "front_door_ms": 1,
+        "dl_online_ms": 0,
+        "bv_layer_ms": 24130,
+        "theory_layer_ms": 0,
+        "traced_ms": 24131
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_BV/Sage2/bench_13795.smt2",
+        "wall_ms": 24940,
+        "verdict": "unsolved",
+        "front_door_ms": 338,
+        "dl_online_ms": 0,
+        "bv_layer_ms": 23228,
+        "theory_layer_ms": 0,
+        "traced_ms": 23566
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_BV/asp/TravellingSalesperson/tsp_rand_70_300_1155482584_12.lp.smt2",
+        "wall_ms": 24540,
+        "verdict": "unsolved",
+        "front_door_ms": 75,
+        "dl_online_ms": 1,
+        "bv_layer_ms": 23424,
+        "theory_layer_ms": 0,
+        "traced_ms": 23500
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_BV/bruttomesso/core/ext_con_028_008_0064.smt2",
+        "wall_ms": 24131,
+        "verdict": "unsolved",
+        "front_door_ms": 3,
+        "dl_online_ms": 0,
+        "bv_layer_ms": 24034,
+        "theory_layer_ms": 0,
+        "traced_ms": 24037
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_BV/bruttomesso/simple_processor/simple_processors_008_006_0004.smt2",
+        "wall_ms": 24238,
+        "verdict": "unsolved",
+        "front_door_ms": 1,
+        "dl_online_ms": 0,
+        "bv_layer_ms": 24097,
+        "theory_layer_ms": 0,
+        "traced_ms": 24098
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_BV/stp/testcase15.stp.smt2",
+        "wall_ms": 26137,
+        "verdict": "unsolved",
+        "front_door_ms": 0,
+        "dl_online_ms": 0,
+        "bv_layer_ms": 0,
+        "theory_layer_ms": 0,
+        "traced_ms": 0
+      }
+    ]
+  },
+  "QF_IDL": {
+    "files": 8,
+    "total_wall_ms": 71831,
+    "front_door_ms": 343,
+    "dl_online_ms": 68730,
+    "bv_layer_ms": 0,
+    "theory_layer_ms": 0,
+    "traced_total_ms": 69073,
+    "untraced_ms": 2758,
+    "traced_fraction_pct": 96.2,
+    "per_file": [
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/20210312-Bouvier/vlsat3_c00.smt2",
+        "wall_ms": 24036,
+        "verdict": "unsolved",
+        "front_door_ms": 4,
+        "dl_online_ms": 23869,
+        "bv_layer_ms": 0,
+        "theory_layer_ms": 0,
+        "traced_ms": 23873
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/20220214-RVpredict-BohanLi/RVpredict_13.smt2",
+        "wall_ms": 1208,
+        "verdict": "sat",
+        "front_door_ms": 12,
+        "dl_online_ms": 1077,
+        "bv_layer_ms": 0,
+        "theory_layer_ms": 0,
+        "traced_ms": 1089
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/asp/BlockedNQueens/156.48.1960.36.1721325133.dat.smt2",
+        "wall_ms": 5112,
+        "verdict": "unsat",
+        "front_door_ms": 31,
+        "dl_online_ms": 4829,
+        "bv_layer_ms": 0,
+        "theory_layer_ms": 0,
+        "traced_ms": 4860
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/asp/ChannelRouting/channelRoute.in9.smt2",
+        "wall_ms": 8617,
+        "verdict": "sat",
+        "front_door_ms": 174,
+        "dl_online_ms": 7293,
+        "bv_layer_ms": 0,
+        "theory_layer_ms": 0,
+        "traced_ms": 7467
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/asp/Fastfood/a9.8.11.asp.smt2",
+        "wall_ms": 6116,
+        "verdict": "unsat",
+        "front_door_ms": 22,
+        "dl_online_ms": 5803,
+        "bv_layer_ms": 0,
+        "theory_layer_ms": 0,
+        "traced_ms": 5825
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/asp/GeneralizedSlitherlink/penrose.34.asp.smt2",
+        "wall_ms": 1308,
+        "verdict": "sat",
+        "front_door_ms": 28,
+        "dl_online_ms": 1016,
+        "bv_layer_ms": 0,
+        "theory_layer_ms": 0,
+        "traced_ms": 1044
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/asp/GeneralizedSlitherlink/trisquares.41.asp.smt2",
+        "wall_ms": 4211,
+        "verdict": "sat",
+        "front_door_ms": 48,
+        "dl_online_ms": 3874,
+        "bv_layer_ms": 0,
+        "theory_layer_ms": 0,
+        "traced_ms": 3922
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/asp/GraphColouring/graph-colouring-nodes=130-density=0.1-instance=10.smt2",
+        "wall_ms": 21223,
+        "verdict": "unsolved",
+        "front_door_ms": 24,
+        "dl_online_ms": 20969,
+        "bv_layer_ms": 0,
+        "theory_layer_ms": 0,
+        "traced_ms": 20993
+      }
+    ]
+  },
+  "QF_LIA": {
+    "files": 8,
+    "total_wall_ms": 161310,
+    "front_door_ms": 177,
+    "dl_online_ms": 398,
+    "bv_layer_ms": 0,
+    "theory_layer_ms": 17878,
+    "traced_total_ms": 18453,
+    "untraced_ms": 142857,
+    "traced_fraction_pct": 11.4,
+    "per_file": [
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LIA/20180326-Bromberger/more_slacked/CAV_2009_benchmarks/smt/30-vars/v30_problem_2__023.smt2.slack.smt2",
+        "wall_ms": 24425,
+        "verdict": "unsolved",
+        "front_door_ms": 0,
+        "dl_online_ms": 0,
+        "bv_layer_ms": 0,
+        "theory_layer_ms": 0,
+        "traced_ms": 0
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LIA/2019-cmodelsdiff/stillLive/0006-still_live-11-1.smt2",
+        "wall_ms": 1407,
+        "verdict": "sat",
+        "front_door_ms": 155,
+        "dl_online_ms": 397,
+        "bv_layer_ms": 0,
+        "theory_layer_ms": 0,
+        "traced_ms": 552
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LIA/2019-ezsmt/incrementalScheduling/182-incremental_scheduling-17280-0.smt2",
+        "wall_ms": 24130,
+        "verdict": "unsolved",
+        "front_door_ms": 6,
+        "dl_online_ms": 0,
+        "bv_layer_ms": 0,
+        "theory_layer_ms": 7880,
+        "traced_ms": 7886
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LIA/20210219-Dartagnan/ReachSafety-Loops/apache-get-tag-O0.smt2",
+        "wall_ms": 25135,
+        "verdict": "unsolved",
+        "front_door_ms": 0,
+        "dl_online_ms": 0,
+        "bv_layer_ms": 0,
+        "theory_layer_ms": 0,
+        "traced_ms": 0
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LIA/20210219-Dartagnan/ReachSafety-Loops/jm2006_variant-O0.smt2",
+        "wall_ms": 25131,
+        "verdict": "unsolved",
+        "front_door_ms": 0,
+        "dl_online_ms": 0,
+        "bv_layer_ms": 0,
+        "theory_layer_ms": 0,
+        "traced_ms": 0
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LIA/20220307-SMPT/BART-PT-020/RF-13.smt2",
+        "wall_ms": 10618,
+        "verdict": "unsolved",
+        "front_door_ms": 16,
+        "dl_online_ms": 1,
+        "bv_layer_ms": 0,
+        "theory_layer_ms": 9998,
+        "traced_ms": 10015
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LIA/20220307-SMPT/FamilyReunion-PT-L00400M0040C020P020G001/RC-07.smt2",
+        "wall_ms": 25435,
+        "verdict": "unsolved",
+        "front_door_ms": 0,
+        "dl_online_ms": 0,
+        "bv_layer_ms": 0,
+        "theory_layer_ms": 0,
+        "traced_ms": 0
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LIA/20220307-SMPT/RwMutex-PT-r0010w0500/RC-09.smt2",
+        "wall_ms": 25029,
+        "verdict": "unsolved",
+        "front_door_ms": 0,
+        "dl_online_ms": 0,
+        "bv_layer_ms": 0,
+        "theory_layer_ms": 0,
+        "traced_ms": 0
+      }
+    ]
+  },
+  "QF_LRA": {
+    "files": 8,
+    "total_wall_ms": 158147,
+    "front_door_ms": 1385,
+    "dl_online_ms": 281,
+    "bv_layer_ms": 0,
+    "theory_layer_ms": 108860,
+    "traced_total_ms": 110526,
+    "untraced_ms": 47621,
+    "traced_fraction_pct": 69.9,
+    "per_file": [
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LRA/2017-Heizmann-UltimateInvariantSynthesis/_count_by_k.i_3_3_2.bpl_7.smt2",
+        "wall_ms": 24131,
+        "verdict": "unsolved",
+        "front_door_ms": 2,
+        "dl_online_ms": 0,
+        "bv_layer_ms": 0,
+        "theory_layer_ms": 19542,
+        "traced_ms": 19544
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LRA/2017-Heizmann-UltimateInvariantSynthesis/_half_2.i_3_6_2.bpl_7.smt2",
+        "wall_ms": 24130,
+        "verdict": "unsolved",
+        "front_door_ms": 6,
+        "dl_online_ms": 0,
+        "bv_layer_ms": 0,
+        "theory_layer_ms": 23235,
+        "traced_ms": 23241
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LRA/2017-Heizmann-UltimateInvariantSynthesis/_standard_copy3_ground.i_3_2_2.bpl_7.smt2",
+        "wall_ms": 24033,
+        "verdict": "unsolved",
+        "front_door_ms": 12,
+        "dl_online_ms": 0,
+        "bv_layer_ms": 0,
+        "theory_layer_ms": 23126,
+        "traced_ms": 23138
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LRA/2017-Heizmann-UltimateInvariantSynthesis/_standard_two_index_06.i_3_2_2.bpl_7.smt2",
+        "wall_ms": 24132,
+        "verdict": "unsolved",
+        "front_door_ms": 3,
+        "dl_online_ms": 0,
+        "bv_layer_ms": 0,
+        "theory_layer_ms": 23577,
+        "traced_ms": 23580
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LRA/2019-ezsmt/Labyrinth/SCC_Strong/0051-labyrinth-12-0.smt2",
+        "wall_ms": 19132,
+        "verdict": "unsolved",
+        "front_door_ms": 702,
+        "dl_online_ms": 145,
+        "bv_layer_ms": 0,
+        "theory_layer_ms": 0,
+        "traced_ms": 847
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LRA/2019-ezsmt/Labyrinth/SCC_Strong/0132-labyrinth-12-0.smt2",
+        "wall_ms": 22851,
+        "verdict": "unsolved",
+        "front_door_ms": 658,
+        "dl_online_ms": 136,
+        "bv_layer_ms": 0,
+        "theory_layer_ms": 0,
+        "traced_ms": 794
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LRA/2019-ezsmt/blending/1.smt2",
+        "wall_ms": 10521,
+        "verdict": "unsat",
+        "front_door_ms": 1,
+        "dl_online_ms": 0,
+        "bv_layer_ms": 0,
+        "theory_layer_ms": 10361,
+        "traced_ms": 10362
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LRA/2019-ezsmt/blending/5.smt2",
+        "wall_ms": 9217,
+        "verdict": "unsat",
+        "front_door_ms": 1,
+        "dl_online_ms": 0,
+        "bv_layer_ms": 0,
+        "theory_layer_ms": 9019,
+        "traced_ms": 9020
+      }
+    ]
+  },
+  "QF_NIA": {
+    "files": 8,
+    "total_wall_ms": 157026,
+    "front_door_ms": 85,
+    "dl_online_ms": 6,
+    "bv_layer_ms": 27467,
+    "theory_layer_ms": 28256,
+    "traced_total_ms": 55814,
+    "untraced_ms": 101212,
+    "traced_fraction_pct": 35.5,
+    "per_file": [
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/CInteger/Stroeder_15__svcomp_ex2.c__p25866_terminationG_0.smt2",
+        "wall_ms": 24237,
+        "verdict": "unsolved",
+        "front_door_ms": 1,
+        "dl_online_ms": 0,
+        "bv_layer_ms": 13261,
+        "theory_layer_ms": 707,
+        "traced_ms": 13969
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/ITS/From_AProVE_2014__FlattenTreeListRec.jar-obl-10__p29567_safety_0.smt2",
+        "wall_ms": 25136,
+        "verdict": "unsolved",
+        "front_door_ms": 0,
+        "dl_online_ms": 0,
+        "bv_layer_ms": 0,
+        "theory_layer_ms": 0,
+        "traced_ms": 0
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/ITS/From_AProVE_2014__SortCount.jar-obl-10__terminationS_2_0.smt2",
+        "wall_ms": 11127,
+        "verdict": "unsolved",
+        "front_door_ms": 5,
+        "dl_online_ms": 0,
+        "bv_layer_ms": 1,
+        "theory_layer_ms": 6590,
+        "traced_ms": 6596
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/ITS/From_AProVE_2014__Test6.jar-obl-13__terminationS_36_0.smt2",
+        "wall_ms": 25038,
+        "verdict": "unsolved",
+        "front_door_ms": 72,
+        "dl_online_ms": 6,
+        "bv_layer_ms": 6861,
+        "theory_layer_ms": 6490,
+        "traced_ms": 13429
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/ITS/From_AProVE_2014__Velroyen08-factorial.jar-obl-8__p13829_terminationG_0.smt2",
+        "wall_ms": 25127,
+        "verdict": "unsolved",
+        "front_door_ms": 0,
+        "dl_online_ms": 0,
+        "bv_layer_ms": 0,
+        "theory_layer_ms": 0,
+        "traced_ms": 0
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/ITS/From_AProVE_2014__cousot_rec.jar-obl-8__p28312_terminationG_0.smt2",
+        "wall_ms": 24431,
+        "verdict": "unsolved",
+        "front_door_ms": 1,
+        "dl_online_ms": 0,
+        "bv_layer_ms": 7342,
+        "theory_layer_ms": 1171,
+        "traced_ms": 8514
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/ITS/From_AProVE_2014__juHashMapCreate.jar-obl-10__p4943_safety_0.smt2",
+        "wall_ms": 10915,
+        "verdict": "unsolved",
+        "front_door_ms": 3,
+        "dl_online_ms": 0,
+        "bv_layer_ms": 1,
+        "theory_layer_ms": 6652,
+        "traced_ms": 6656
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/ITS/From_AProVE_2014__juHashMapCreateClear.jar-obl-11__p30726_safety_0.smt2",
+        "wall_ms": 11015,
+        "verdict": "unsolved",
+        "front_door_ms": 3,
+        "dl_online_ms": 0,
+        "bv_layer_ms": 1,
+        "theory_layer_ms": 6646,
+        "traced_ms": 6650
+      }
+    ]
+  },
+  "QF_NRA": {
+    "files": 8,
+    "total_wall_ms": 80576,
+    "front_door_ms": 62,
+    "dl_online_ms": 3,
+    "bv_layer_ms": 0,
+    "theory_layer_ms": 53,
+    "traced_total_ms": 118,
+    "untraced_ms": 80458,
+    "traced_fraction_pct": 0.1,
+    "per_file": [
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NRA/20161105-Sturm-MBO/mbo_E1.smt2",
+        "wall_ms": 1108,
+        "verdict": "unsolved",
+        "front_door_ms": 4,
+        "dl_online_ms": 0,
+        "bv_layer_ms": 0,
+        "theory_layer_ms": 0,
+        "traced_ms": 4
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NRA/20161105-Sturm-MBO/mbo_E13E18.smt2",
+        "wall_ms": 25032,
+        "verdict": "unsolved",
+        "front_door_ms": 0,
+        "dl_online_ms": 0,
+        "bv_layer_ms": 0,
+        "theory_layer_ms": 0,
+        "traced_ms": 0
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NRA/20161105-Sturm-MBO/mbo_E20E26.smt2",
+        "wall_ms": 407,
+        "verdict": "unsolved",
+        "front_door_ms": 1,
+        "dl_online_ms": 0,
+        "bv_layer_ms": 0,
+        "theory_layer_ms": 0,
+        "traced_ms": 1
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NRA/20161105-Sturm-MBO/mbo_E2E5.smt2",
+        "wall_ms": 25035,
+        "verdict": "unsolved",
+        "front_door_ms": 0,
+        "dl_online_ms": 0,
+        "bv_layer_ms": 0,
+        "theory_layer_ms": 0,
+        "traced_ms": 0
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NRA/20161105-Sturm-MBO/mbo_E5E13.smt2",
+        "wall_ms": 24136,
+        "verdict": "unsolved",
+        "front_door_ms": 57,
+        "dl_online_ms": 3,
+        "bv_layer_ms": 0,
+        "theory_layer_ms": 0,
+        "traced_ms": 60
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NRA/20180501-Economics-Mulligan/MulliganEconomicsModel0051a.smt2",
+        "wall_ms": 2614,
+        "verdict": "unsolved",
+        "front_door_ms": 0,
+        "dl_online_ms": 0,
+        "bv_layer_ms": 0,
+        "theory_layer_ms": 51,
+        "traced_ms": 51
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NRA/20180501-Economics-Mulligan/MulliganEconomicsModel0082a.smt2",
+        "wall_ms": 921,
+        "verdict": "unsolved",
+        "front_door_ms": 0,
+        "dl_online_ms": 0,
+        "bv_layer_ms": 0,
+        "theory_layer_ms": 1,
+        "traced_ms": 1
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NRA/20200911-Pine/1599121863243316000.smt2",
+        "wall_ms": 1323,
+        "verdict": "unsolved",
+        "front_door_ms": 0,
+        "dl_online_ms": 0,
+        "bv_layer_ms": 0,
+        "theory_layer_ms": 1,
+        "traced_ms": 1
+      }
+    ]
+  },
+  "QF_RDL": {
+    "files": 8,
+    "total_wall_ms": 151902,
+    "front_door_ms": 12318,
+    "dl_online_ms": 60973,
+    "bv_layer_ms": 0,
+    "theory_layer_ms": 0,
+    "traced_total_ms": 73291,
+    "untraced_ms": 78611,
+    "traced_fraction_pct": 48.2,
+    "per_file": [
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/SMT-Temporal-Planning-Benchmarks/tempo-depth-5.smt2",
+        "wall_ms": 19725,
+        "verdict": "unsolved",
+        "front_door_ms": 1351,
+        "dl_online_ms": 17715,
+        "bv_layer_ms": 0,
+        "theory_layer_ms": 0,
+        "traced_ms": 19066
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/SMT-Temporal-Planning-Benchmarks/tempo-depth-6.smt2",
+        "wall_ms": 21423,
+        "verdict": "unsolved",
+        "front_door_ms": 3046,
+        "dl_online_ms": 17643,
+        "bv_layer_ms": 0,
+        "theory_layer_ms": 0,
+        "traced_ms": 20689
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/SMT-Temporal-Planning-Benchmarks/tempo-depth-7.smt2",
+        "wall_ms": 24935,
+        "verdict": "unsolved",
+        "front_door_ms": 6345,
+        "dl_online_ms": 17459,
+        "bv_layer_ms": 0,
+        "theory_layer_ms": 0,
+        "traced_ms": 23804
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/SMT-Temporal-Planning-Benchmarks/tempo-matrix2x2.pddl.smt2",
+        "wall_ms": 25133,
+        "verdict": "unsolved",
+        "front_door_ms": 0,
+        "dl_online_ms": 0,
+        "bv_layer_ms": 0,
+        "theory_layer_ms": 0,
+        "traced_ms": 0
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/SMT-Temporal-Planning-Benchmarks/tempo-width-4.smt2",
+        "wall_ms": 8118,
+        "verdict": "sat",
+        "front_door_ms": 1474,
+        "dl_online_ms": 6120,
+        "bv_layer_ms": 0,
+        "theory_layer_ms": 0,
+        "traced_ms": 7594
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/SMT-Temporal-Planning-Benchmarks/tempo-width-5.smt2",
+        "wall_ms": 25130,
+        "verdict": "unsolved",
+        "front_door_ms": 0,
+        "dl_online_ms": 0,
+        "bv_layer_ms": 0,
+        "theory_layer_ms": 0,
+        "traced_ms": 0
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/SMT-Temporal-Planning-Benchmarks/tempo-width-6.smt2",
+        "wall_ms": 25130,
+        "verdict": "unsolved",
+        "front_door_ms": 0,
+        "dl_online_ms": 0,
+        "bv_layer_ms": 0,
+        "theory_layer_ms": 0,
+        "traced_ms": 0
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/SMT-Temporal-Planning-Benchmarks/tms-2-3-light-30.smt2",
+        "wall_ms": 2308,
+        "verdict": "sat",
+        "front_door_ms": 102,
+        "dl_online_ms": 2036,
+        "bv_layer_ms": 0,
+        "theory_layer_ms": 0,
+        "traced_ms": 2138
+      }
+    ]
+  },
+  "QF_SLIA": {
+    "files": 7,
+    "total_wall_ms": 63823,
+    "front_door_ms": 55,
+    "dl_online_ms": 0,
+    "bv_layer_ms": 74,
+    "theory_layer_ms": 95,
+    "traced_total_ms": 224,
+    "untraced_ms": 63599,
+    "traced_fraction_pct": 0.4,
+    "per_file": [
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_SLIA/2015-Norn/StringReplace/norn-benchmark-10.smt2",
+        "wall_ms": 206,
+        "verdict": "unsolved",
+        "front_door_ms": 1,
+        "dl_online_ms": 0,
+        "bv_layer_ms": 5,
+        "theory_layer_ms": 0,
+        "traced_ms": 6
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_SLIA/20180523-Reynolds/kaluza/sat/big/new.8618.corecstrs.readable.smt2",
+        "wall_ms": 25038,
+        "verdict": "unsolved",
+        "front_door_ms": 0,
+        "dl_online_ms": 0,
+        "bv_layer_ms": 0,
+        "theory_layer_ms": 0,
+        "traced_ms": 0
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_SLIA/2019-Jiang/slent/slent_stranger_str_rep_20496_sink.smt2",
+        "wall_ms": 12824,
+        "verdict": "unsolved",
+        "front_door_ms": 48,
+        "dl_online_ms": 0,
+        "bv_layer_ms": 59,
+        "theory_layer_ms": 8,
+        "traced_ms": 115
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_SLIA/2019-full_str_int/py-conbyte_trauc/leetcode_int-addStrings/964.smt2",
+        "wall_ms": 507,
+        "verdict": "unsolved",
+        "front_door_ms": 3,
+        "dl_online_ms": 0,
+        "bv_layer_ms": 10,
+        "theory_layer_ms": 87,
+        "traced_ms": 100
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_SLIA/2019-full_str_int/py-conbyte_z3seq/lib_int-ipaddress__ip_int_from_string/586.smt2",
+        "wall_ms": 25036,
+        "verdict": "unsolved",
+        "front_door_ms": 0,
+        "dl_online_ms": 0,
+        "bv_layer_ms": 0,
+        "theory_layer_ms": 0,
+        "traced_ms": 0
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_SLIA/20230331-transducer-plus/Equivalence/htmlUnescape-htmlEscape.smt2",
+        "wall_ms": 106,
+        "verdict": "unsolved",
+        "front_door_ms": 0,
+        "dl_online_ms": 0,
+        "bv_layer_ms": 0,
+        "theory_layer_ms": 0,
+        "traced_ms": 0
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_SLIA/20230403-webapp/str-rep-all/str_replace_all62.smt2",
+        "wall_ms": 106,
+        "verdict": "unsolved",
+        "front_door_ms": 3,
+        "dl_online_ms": 0,
+        "bv_layer_ms": 0,
+        "theory_layer_ms": 0,
+        "traced_ms": 3
+      }
+    ]
+  },
+  "QF_UF": {
+    "files": 8,
+    "total_wall_ms": 90872,
+    "front_door_ms": 473,
+    "dl_online_ms": 0,
+    "bv_layer_ms": 999,
+    "theory_layer_ms": 62494,
+    "traced_total_ms": 63966,
+    "untraced_ms": 26906,
+    "traced_fraction_pct": 70.4,
+    "per_file": [
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UF/2018-Goel-hwbench/QF_UF_Heap_ab_cti_max.smt2",
+        "wall_ms": 206,
+        "verdict": "sat",
+        "front_door_ms": 4,
+        "dl_online_ms": 0,
+        "bv_layer_ms": 6,
+        "theory_layer_ms": 9,
+        "traced_ms": 19
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UF/2018-Goel-hwbench/QF_UF_cambridge.7.prop2_ab_fp_max.smt2",
+        "wall_ms": 5111,
+        "verdict": "sat",
+        "front_door_ms": 21,
+        "dl_online_ms": 0,
+        "bv_layer_ms": 491,
+        "theory_layer_ms": 439,
+        "traced_ms": 951
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UF/2018-Goel-hwbench/QF_UF_hanoi.3.prop1_ab_br_max.smt2",
+        "wall_ms": 5612,
+        "verdict": "sat",
+        "front_door_ms": 28,
+        "dl_online_ms": 0,
+        "bv_layer_ms": 502,
+        "theory_layer_ms": 679,
+        "traced_ms": 1209
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UF/2018-Goel-hwbench/QF_UF_rushhour.3.prop1_ab_cti_max.smt2",
+        "wall_ms": 24233,
+        "verdict": "unsolved",
+        "front_door_ms": 48,
+        "dl_online_ms": 0,
+        "bv_layer_ms": 0,
+        "theory_layer_ms": 21815,
+        "traced_ms": 21863
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UF/NEQ/NEQ033_size6.smt2",
+        "wall_ms": 24434,
+        "verdict": "unsolved",
+        "front_door_ms": 362,
+        "dl_online_ms": 0,
+        "bv_layer_ms": 0,
+        "theory_layer_ms": 14803,
+        "traced_ms": 15165
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UF/PEQ/PEQ013_size5.smt2",
+        "wall_ms": 20550,
+        "verdict": "unsat",
+        "front_door_ms": 2,
+        "dl_online_ms": 0,
+        "bv_layer_ms": 0,
+        "theory_layer_ms": 16518,
+        "traced_ms": 16520
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UF/QG-classification/loops6/dead_dnd015.smt2",
+        "wall_ms": 2810,
+        "verdict": "unsat",
+        "front_door_ms": 7,
+        "dl_online_ms": 0,
+        "bv_layer_ms": 0,
+        "theory_layer_ms": 1603,
+        "traced_ms": 1610
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UF/QG-classification/qg5/dead_dnd011.smt2",
+        "wall_ms": 7916,
+        "verdict": "unsat",
+        "front_door_ms": 1,
+        "dl_online_ms": 0,
+        "bv_layer_ms": 0,
+        "theory_layer_ms": 6628,
+        "traced_ms": 6629
+      }
+    ]
+  },
+  "QF_UFLIA": {
+    "files": 8,
+    "total_wall_ms": 55011,
+    "front_door_ms": 5874,
+    "dl_online_ms": 0,
+    "bv_layer_ms": 0,
+    "theory_layer_ms": 0,
+    "traced_total_ms": 5874,
+    "untraced_ms": 49137,
+    "traced_fraction_pct": 10.7,
+    "per_file": [
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/20230314-Jaroslav-Bendik-Certora/3106_1c933134166dbad31f79_41_QF_UFLIA.smt2",
+        "wall_ms": 206,
+        "verdict": "unsolved",
+        "front_door_ms": 92,
+        "dl_online_ms": 0,
+        "bv_layer_ms": 0,
+        "theory_layer_ms": 0,
+        "traced_ms": 92
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/20230314-Jaroslav-Bendik-Certora/44289_e5a2e5c780236919ee6a_18_QF_UFLIA.smt2",
+        "wall_ms": 3411,
+        "verdict": "unsolved",
+        "front_door_ms": 3323,
+        "dl_online_ms": 0,
+        "bv_layer_ms": 0,
+        "theory_layer_ms": 0,
+        "traced_ms": 3323
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/20230314-Jaroslav-Bendik-Certora/63058_64ab9a7ef7b6c3492507_22_QF_UFLIA.smt2",
+        "wall_ms": 2509,
+        "verdict": "unsolved",
+        "front_door_ms": 2433,
+        "dl_online_ms": 0,
+        "bv_layer_ms": 0,
+        "theory_layer_ms": 0,
+        "traced_ms": 2433
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/20230314-Jaroslav-Bendik-Certora/63058_aa742630eef64f949de269382c1f9035_25_UFLIA.smt2",
+        "wall_ms": 106,
+        "verdict": "unsolved",
+        "front_door_ms": 6,
+        "dl_online_ms": 0,
+        "bv_layer_ms": 0,
+        "theory_layer_ms": 0,
+        "traced_ms": 6
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/20230314-Jaroslav-Bendik-Certora/65782_cd31513fdcd15701933b_7_QF_UFLIA.smt2",
+        "wall_ms": 107,
+        "verdict": "unsolved",
+        "front_door_ms": 6,
+        "dl_online_ms": 0,
+        "bv_layer_ms": 0,
+        "theory_layer_ms": 0,
+        "traced_ms": 6
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/20230314-Jaroslav-Bendik-Certora/72771_f9d228efc97cf1458e38_64_QF_UFLIA.smt2",
+        "wall_ms": 107,
+        "verdict": "unsolved",
+        "front_door_ms": 13,
+        "dl_online_ms": 0,
+        "bv_layer_ms": 0,
+        "theory_layer_ms": 0,
+        "traced_ms": 13
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/EufLaArithmetic/hard/hard12.smt2",
+        "wall_ms": 24236,
+        "verdict": "unsolved",
+        "front_door_ms": 0,
+        "dl_online_ms": 0,
+        "bv_layer_ms": 0,
+        "theory_layer_ms": 0,
+        "traced_ms": 0
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/EufLaArithmetic/hard/hard15.smt2",
+        "wall_ms": 24329,
+        "verdict": "unsolved",
+        "front_door_ms": 1,
+        "dl_online_ms": 0,
+        "bv_layer_ms": 0,
+        "theory_layer_ms": 0,
+        "traced_ms": 1
+      }
+    ]
+  },
+  "UF": {
+    "files": 8,
+    "total_wall_ms": 148015,
+    "front_door_ms": 84,
+    "dl_online_ms": 0,
+    "bv_layer_ms": 600,
+    "theory_layer_ms": 19134,
+    "traced_total_ms": 19818,
+    "untraced_ms": 128197,
+    "traced_fraction_pct": 13.4,
+    "per_file": [
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UF/20170428-Barrett/cdt-cade2015/nada/afp/bindag/x2015_09_10_16_53_56_537_1094926.smt_in.smt2",
+        "wall_ms": 15426,
+        "verdict": "unsolved",
+        "front_door_ms": 16,
+        "dl_online_ms": 0,
+        "bv_layer_ms": 95,
+        "theory_layer_ms": 3401,
+        "traced_ms": 3512
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UF/20170428-Barrett/cdt-cade2015/nada/afp/coinductive_list/x2015_09_10_16_57_47_544_1522663.smt_in.smt2",
+        "wall_ms": 25340,
+        "verdict": "unsolved",
+        "front_door_ms": 0,
+        "dl_online_ms": 0,
+        "bv_layer_ms": 0,
+        "theory_layer_ms": 0,
+        "traced_ms": 0
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UF/20170428-Barrett/cdt-cade2015/nada/afp/coinductive_list/x2015_09_10_17_00_37_157_1687977.smt_in.smt2",
+        "wall_ms": 9713,
+        "verdict": "unsolved",
+        "front_door_ms": 16,
+        "dl_online_ms": 0,
+        "bv_layer_ms": 65,
+        "theory_layer_ms": 2425,
+        "traced_ms": 2506
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UF/20170428-Barrett/cdt-cade2015/nada/afp/coinductive_list/x2015_09_10_17_04_05_259_1960786.smt_in.smt2",
+        "wall_ms": 14823,
+        "verdict": "unsolved",
+        "front_door_ms": 11,
+        "dl_online_ms": 0,
+        "bv_layer_ms": 123,
+        "theory_layer_ms": 4341,
+        "traced_ms": 4475
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UF/20170428-Barrett/cdt-cade2015/nada/afp/coinductive_list/x2015_09_10_17_09_42_195_2416479.smt_in.smt2",
+        "wall_ms": 22926,
+        "verdict": "unsolved",
+        "front_door_ms": 13,
+        "dl_online_ms": 0,
+        "bv_layer_ms": 170,
+        "theory_layer_ms": 3404,
+        "traced_ms": 3587
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UF/20170428-Barrett/cdt-cade2015/nada/afp/coinductive_list/x2015_09_10_17_10_47_003_2500061.smt_in.smt2",
+        "wall_ms": 14326,
+        "verdict": "unsolved",
+        "front_door_ms": 14,
+        "dl_online_ms": 0,
+        "bv_layer_ms": 64,
+        "theory_layer_ms": 5559,
+        "traced_ms": 5637
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UF/20170428-Barrett/cdt-cade2015/nada/afp/coinductive_list/x2015_09_10_17_20_02_499_2906170.smt_in.smt2",
+        "wall_ms": 25437,
+        "verdict": "unsolved",
+        "front_door_ms": 0,
+        "dl_online_ms": 0,
+        "bv_layer_ms": 0,
+        "theory_layer_ms": 0,
+        "traced_ms": 0
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UF/20170428-Barrett/cdt-cade2015/nada/afp/coinductive_stream/x2015_09_10_17_25_01_009_1227491.smt_in.smt2",
+        "wall_ms": 20024,
+        "verdict": "unsolved",
+        "front_door_ms": 14,
+        "dl_online_ms": 0,
+        "bv_layer_ms": 83,
+        "theory_layer_ms": 4,
+        "traced_ms": 101
+      }
+    ]
+  },
+  "_overall": {
+    "total_wall_ms": 1457840,
+    "traced_total_ms": 555726,
+    "traced_fraction_pct": 38.1,
+    "non_additivity_guard_violations": []
+  }
+}

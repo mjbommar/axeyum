@@ -2006,6 +2006,89 @@ fn timeout_result(detail: String) -> CheckResult {
     })
 }
 
+std::thread_local! {
+    /// Whether `--trace`'s `; dl-online …` line is being collected on this
+    /// thread. See [`DlOnlineStatsGuard`].
+    static COLLECT_DL_ONLINE_STATS: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+    /// Cumulative wall time inside [`try_check_qf_dl`] (timed at its single
+    /// call site, `crate::auto::dispatch_difference_logic`, so every
+    /// internal early-return path is covered without instrumenting them
+    /// individually) since the active [`DlOnlineStatsGuard`] was created.
+    static DL_ONLINE_TIME_ACCUM: std::cell::Cell<Duration> =
+        const { std::cell::Cell::new(Duration::ZERO) };
+    /// Number of times `dispatch_difference_logic`'s call to
+    /// [`try_check_qf_dl`] has been timed since the active
+    /// [`DlOnlineStatsGuard`] was created. Distinguishes "this dispatch
+    /// branch never ran for this query" (0, e.g. every `QF_BV` query, which
+    /// never reaches the linear-arithmetic dispatch chain at all) from "it
+    /// ran and cost close to nothing" (>=1, `DL_ONLINE_TIME_ACCUM` can
+    /// legitimately still round to `0` at millisecond granularity) — a
+    /// distinction a bare `Duration` accumulator cannot make on its own.
+    static DL_ONLINE_CALL_COUNT: std::cell::Cell<u64> = const { std::cell::Cell::new(0) };
+}
+
+/// Whether [`try_check_qf_dl`] call timing is currently enabled on this
+/// thread.
+pub(crate) fn dl_online_stats_collecting() -> bool {
+    COLLECT_DL_ONLINE_STATS.with(std::cell::Cell::get)
+}
+
+/// Adds `elapsed` to this thread's cumulative dl-online time and increments
+/// the call count. Only called from `crate::auto::dispatch_difference_logic`,
+/// already gated on [`dl_online_stats_collecting`] — this itself does not
+/// re-check the flag.
+pub(crate) fn record_dl_online_time(elapsed: Duration) {
+    DL_ONLINE_TIME_ACCUM.with(|c| c.set(c.get() + elapsed));
+    DL_ONLINE_CALL_COUNT.with(|c| c.set(c.get() + 1));
+}
+
+/// Enables `--trace`'s dl-online call timing on this thread for the lifetime
+/// of the returned guard, restoring the previous setting on drop. Resets the
+/// accumulator to zero on `enable()` — same convention as
+/// `smtlib::FrontDoorStatsGuard` / `layers::BvLayerStatsGuard` /
+/// `cdclt::TheoryLayerStatsGuard`, the other opt-in, off-by-default,
+/// thread-local diagnostics `--trace` composes. Off by default costs nothing:
+/// [`dl_online_stats_collecting`] is one thread-local `bool` read, and the
+/// clock is read only when it returns `true` (`.then(Instant::now)` at the
+/// call site), so the default path adds no clock read.
+pub struct DlOnlineStatsGuard(bool);
+
+impl DlOnlineStatsGuard {
+    /// Enables collection for the lifetime of the returned guard.
+    #[must_use]
+    pub fn enable() -> Self {
+        let previous = COLLECT_DL_ONLINE_STATS.with(|c| c.replace(true));
+        DL_ONLINE_TIME_ACCUM.with(|c| c.set(Duration::ZERO));
+        DL_ONLINE_CALL_COUNT.with(|c| c.set(0));
+        DlOnlineStatsGuard(previous)
+    }
+}
+
+impl Drop for DlOnlineStatsGuard {
+    fn drop(&mut self) {
+        COLLECT_DL_ONLINE_STATS.with(|c| c.set(self.0));
+    }
+}
+
+/// This thread's cumulative dl-online call time since the active (or most
+/// recently dropped) [`DlOnlineStatsGuard`] was created, paired with the
+/// number of times the call was timed. `(Duration::ZERO, 0)` when either
+/// collection was never enabled on this thread OR the query never reached
+/// `dispatch_difference_logic`'s call to [`try_check_qf_dl`] at all (e.g. a
+/// `QF_BV` query, which never enters the linear-arithmetic dispatch chain) -
+/// a caller distinguishes the two the same way it distinguishes "never
+/// enabled" for `smtlib::last_front_door_stats`: by whether it enabled a
+/// guard in the first place. The count is what lets a caller tell "ran, cost
+/// nothing" apart from "never ran" when the accumulated duration alone would
+/// round to zero either way.
+#[must_use]
+pub fn last_dl_online_stats() -> (Duration, u64) {
+    (
+        DL_ONLINE_TIME_ACCUM.with(std::cell::Cell::get),
+        DL_ONLINE_CALL_COUNT.with(std::cell::Cell::get),
+    )
+}
+
 /// Decides a **pure difference-logic** query (`QF_IDL` / `QF_RDL`) through the
 /// generic CDCL(T) driver with negative-cycle detection as the theory.
 ///

@@ -1,0 +1,4 @@
+; front-door parse_ms=1
+; dl-online total_ms=0
+; theory-layer boolean_propagate_ms=80 theory_assert_ms=21 theory_propagate_ms=317 theory_push_pop_ms=9 conflict_analysis_ms=33 theory_final_check_ms=8580 theory_explain_ms=0 theory_conflicts=21152 theory_propagations=7793 final_checks=21138 decisions=57456 restarts=76 learned_clauses=21316 learned_literals=237181 learned_literals_premin=356143 simplex_pivots=38284 simplex_checks=21138 simplex_cold_restarts=0 bound_retractions=193318 bound_assertions=193624 propagations_offered=7793 simplex_rows=350 simplex_columns=425
+unsat
