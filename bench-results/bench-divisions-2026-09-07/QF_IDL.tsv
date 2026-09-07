@@ -1,0 +1,9 @@
+division	file	wall_ms	verdict	trace_line
+QF_IDL	/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/20210312-Bouvier/vlsat3_c00.smt2	24022	unsolved	
+QF_IDL	/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/20220214-RVpredict-BohanLi/RVpredict_13.smt2	1109	sat	
+QF_IDL	/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/asp/BlockedNQueens/156.48.1960.36.1721325133.dat.smt2	3312	unsat	
+QF_IDL	/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/asp/ChannelRouting/channelRoute.in9.smt2	5712	sat	
+QF_IDL	/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/asp/Fastfood/a9.8.11.asp.smt2	5813	unsat	
+QF_IDL	/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/asp/GeneralizedSlitherlink/penrose.34.asp.smt2	1109	sat	
+QF_IDL	/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/asp/GeneralizedSlitherlink/trisquares.41.asp.smt2	3011	sat	
+QF_IDL	/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/asp/GraphColouring/graph-colouring-nodes=130-density=0.1-instance=10.smt2	21224	unsolved	

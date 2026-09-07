@@ -1,0 +1,9 @@
+division	file	wall_ms	verdict	trace_line
+QF_RDL	/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/SMT-Temporal-Planning-Benchmarks/tempo-depth-5.smt2	19024	unsolved	
+QF_RDL	/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/SMT-Temporal-Planning-Benchmarks/tempo-depth-6.smt2	20825	unsolved	
+QF_RDL	/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/SMT-Temporal-Planning-Benchmarks/tempo-depth-7.smt2	25126	unsolved	; theory-layer unavailable: watchdog fired before the worker thread returned (no CDCL(T) search on this query completed before the deadline)
+QF_RDL	/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/SMT-Temporal-Planning-Benchmarks/tempo-matrix2x2.pddl.smt2	25120	unsolved	; theory-layer unavailable: watchdog fired before the worker thread returned (no CDCL(T) search on this query completed before the deadline)
+QF_RDL	/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/SMT-Temporal-Planning-Benchmarks/tempo-width-4.smt2	5912	sat	
+QF_RDL	/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/SMT-Temporal-Planning-Benchmarks/tempo-width-5.smt2	24018	unsolved	
+QF_RDL	/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/SMT-Temporal-Planning-Benchmarks/tempo-width-6.smt2	25122	unsolved	; theory-layer unavailable: watchdog fired before the worker thread returned (no CDCL(T) search on this query completed before the deadline)
+QF_RDL	/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/SMT-Temporal-Planning-Benchmarks/tms-2-3-light-30.smt2	2711	sat	

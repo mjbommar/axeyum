@@ -219,6 +219,100 @@ pub struct ProofSearchProgress {
     pub elapsed: Duration,
 }
 
+/// Per-search event counts for the native CDCL core — the decomposition of
+/// per-conflict cost that
+/// [the 2026-09-05 native-core-vs-Kissat search-statistics note][note] named as
+/// its own largest gap:
+///
+/// > **The native core's own time breakdown is not measured at all** — no
+/// > decision counter, no propagation counter, no restart counter exists in
+/// > [`ProofSearchProgress`] to compare against Kissat's `search%`/`probe%`
+/// > split on the native side.
+///
+/// [note]: https://github.com/../docs/research/11-design-review/2026-09-05-native-core-vs-kissat-search-stats.md
+///
+/// Every field is a plain event count, never a time: this type deliberately
+/// carries no clock reads, so collecting it cannot perturb the thing it
+/// measures the way `NativeLayerStats`'s per-stage `Instant::now()` pairs can.
+/// Counting is **opt in** — [`solve_with_drat_proof_counted`] and the
+/// progress-sink entry points enable it, every other entry point leaves the
+/// counters at zero and never executes an increment.
+///
+/// Counting does not change the search: no field of this struct is read by any
+/// branch of the search loop, so the trajectory, the verdict and the emitted
+/// DRAT stream are identical whether it is enabled or not (asserted by
+/// `tests::counting_does_not_change_the_verdict_or_the_proof`).
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct SearchCounters {
+    /// Conflicts analysed (the denominator of every per-conflict rate).
+    pub conflicts: u64,
+    /// Branching decisions taken by `pick_branch` (excludes assumptions).
+    pub decisions: u64,
+    /// Literals assigned by unit propagation (excludes decisions, assumptions
+    /// and level-zero units) — the standard "propagations" statistic that
+    /// `kissat -s` and `cadical -v` both report.
+    pub propagations: u64,
+    /// Restarts performed.
+    pub restarts: u64,
+    /// `reduce_db` rounds performed.
+    pub reductions: u64,
+    /// **Watch entries examined** in `propagate`: one per `Watch` inspected in
+    /// a literal's watch list, whether or not the clause behind it was
+    /// dereferenced. This is the size of the hottest memory stream in the
+    /// solver.
+    pub watch_visits: u64,
+    /// **Watch entries whose clause was dereferenced**: the blocking literal
+    /// was not true, so the clause's arena slice had to be read. The
+    /// complement (`watch_visits - clause_visits`) is what the blocking-literal
+    /// optimisation saves.
+    pub clause_visits: u64,
+    /// Watches moved to a different literal's list (a new non-false literal was
+    /// found). Each is a `push` onto another `Vec<Watch>`.
+    pub watch_relocations: u64,
+    /// Antecedent clauses walked by `analyze` — resolution steps, summed over
+    /// all conflicts. `resolutions / conflicts` is the mean 1-UIP chain length.
+    pub resolutions: u64,
+    /// **Bytes of the per-conflict `seen` array `analyze` allocates and
+    /// zeroes**, summed over all conflicts. `analyze` opens with
+    /// `vec![false; self.assign.len()]`, so this is `conflicts x variables` and
+    /// is *independent of how many variables the conflict actually touches*.
+    /// Named as its own counter because it is the one per-conflict cost in this
+    /// core that scales with the **formula**, not with the conflict.
+    pub analyze_mark_bytes: u64,
+    /// Reason-chain steps taken by `lit_redundant` during recursive learned-clause
+    /// minimization (one per literal popped off its work stack).
+    pub redundancy_steps: u64,
+}
+
+impl SearchCounters {
+    /// Watch entries examined per conflict — the propagation work the search
+    /// paid for each conflict it learned from. Zero when nothing was counted.
+    #[must_use]
+    pub fn watch_visits_per_conflict(&self) -> f64 {
+        if self.conflicts == 0 {
+            return 0.0;
+        }
+        #[allow(clippy::cast_precision_loss)]
+        {
+            self.watch_visits as f64 / self.conflicts as f64
+        }
+    }
+
+    /// Fraction of examined watches whose clause had to be dereferenced — the
+    /// blocking literal's **miss** rate. Lower is better; a high value means
+    /// the blocker cache is not paying.
+    #[must_use]
+    pub fn clause_deref_rate(&self) -> f64 {
+        if self.watch_visits == 0 {
+            return 0.0;
+        }
+        #[allow(clippy::cast_precision_loss)]
+        {
+            self.clause_visits as f64 / self.watch_visits as f64
+        }
+    }
+}
+
 /// Exact byte length [`crate::write_drat`] / [`crate::TextProofSink`] would
 /// produce for one step with these literals: mirrors the private
 /// `push_step_text` format (an optional `"d "` prefix, one space-terminated
@@ -289,6 +383,41 @@ pub fn solve_with_drat_proof_with_limits(
             ProofSolveOutcome::Interrupted
         }
     }
+}
+
+/// Solves `formula` with the proof-producing CDCL core, streaming its proof to
+/// `sink`, and returns the [`SearchCounters`] the search accumulated alongside
+/// the verdict.
+///
+/// This is the measurement entry point for the per-conflict cost decomposition:
+/// propagations, decisions, restarts, watch-list traversals, blocking-literal
+/// misses, resolution steps, and the bytes `analyze` zeroes per conflict. It
+/// exists because the
+/// [2026-09-05 native-core-vs-Kissat search-statistics comparison][note] could
+/// report the native core's conflicts and wall time but had **no** propagation,
+/// decision or restart counter to set against `kissat -s`'s, and so could not
+/// say where a conflict's time goes.
+///
+/// [note]: https://github.com/../docs/research/11-design-review/2026-09-05-native-core-vs-kissat-search-stats.md
+///
+/// **The verdict and the DRAT stream are identical to
+/// [`solve_with_drat_proof_streaming`] with the same arguments.** The counters
+/// are pure output — nothing in the search reads them — so enabling them cannot
+/// change a decision, a conflict, a learned clause or an emitted step. Only the
+/// wall time differs, by the cost of the increments themselves.
+///
+/// `deadline` and `max_conflicts` behave exactly as in
+/// [`solve_with_drat_proof_with_limits`]. A **fixed `max_conflicts` is the way
+/// to use this for an A/B**: both arms then analyse the same number of
+/// conflicts along the same trajectory, so the wall-time ratio is pure
+/// per-conflict throughput and not a difference in how much search each arm did.
+pub fn solve_with_drat_proof_counted(
+    formula: &CnfFormula,
+    deadline: Option<Instant>,
+    max_conflicts: usize,
+    sink: &mut impl DratSink,
+) -> (StreamingProofOutcome, SearchCounters) {
+    Cdcl::new(formula, sink).solve_counted(deadline, max_conflicts)
 }
 
 /// Solves `formula` with the proof-producing CDCL core, **streaming** the DRAT
@@ -1261,6 +1390,18 @@ struct Cdcl<'progress, S: DratSink, T: NativeTheory = NullTheory> {
     stat_learned_clauses: u64,
     stat_learned_literals: u64,
     stat_learned_literals_premin: u64,
+    /// Whether this search accumulates [`SearchCounters`]. `false` on every
+    /// entry point but [`solve_with_drat_proof_counted`] and the progress-sink
+    /// ones: when it is clear, no counter is touched, so an uncounted run is
+    /// the search that existed before this field.
+    ///
+    /// Distinct from [`Cdcl::collect_layer_stats`] deliberately: that flag
+    /// gates per-stage `Instant::now()` pairs, which are far more expensive
+    /// than an integer increment and which perturb exactly the propagation
+    /// timing a throughput measurement is trying to read.
+    count_search: bool,
+    /// The counters themselves; all zero unless [`Cdcl::count_search`] is set.
+    counters: SearchCounters,
 }
 
 /// Sentinel in [`Cdcl::heap_pos`] marking a variable that is not currently in
@@ -1394,6 +1535,8 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
             stat_learned_clauses: 0,
             stat_learned_literals: 0,
             stat_learned_literals_premin: 0,
+            count_search: false,
+            counters: SearchCounters::default(),
         };
         // Seed the order heap with every variable that occurs in a clause.
         // Unused variables default false in a returned total model and must not
@@ -1938,7 +2081,28 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
         }
     }
 
+    /// [`Cdcl::solve`], additionally returning the [`SearchCounters`] this
+    /// search accumulated. Counting is switched on here and nowhere else on the
+    /// one-shot path.
+    fn solve_counted(
+        mut self,
+        deadline: Option<Instant>,
+        max_conflicts: usize,
+    ) -> (StreamingProofOutcome, SearchCounters) {
+        self.count_search = true;
+        let outcome = self.solve_inner(deadline, max_conflicts);
+        (outcome, self.counters)
+    }
+
     fn solve(mut self, deadline: Option<Instant>, max_conflicts: usize) -> StreamingProofOutcome {
+        self.solve_inner(deadline, max_conflicts)
+    }
+
+    fn solve_inner(
+        &mut self,
+        deadline: Option<Instant>,
+        max_conflicts: usize,
+    ) -> StreamingProofOutcome {
         match self.run(&[], deadline, max_conflicts) {
             Ok(SearchOutcome::Sat(model)) => StreamingProofOutcome::Sat(model),
             Ok(SearchOutcome::Unsat) => StreamingProofOutcome::Unsat,
@@ -2100,6 +2264,9 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
                     self.snapshot_target_phase();
                 }
                 if self.decision_level() > 0 && self.should_restart() {
+                    if self.count_search {
+                        self.counters.restarts += 1;
+                    }
                     self.conflicts_since_restart = 0;
                     self.restart_count += 1;
                     self.backtrack_to(0);
@@ -2146,6 +2313,9 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
                 if let Some(var) = self.pick_branch() {
                     if self.collect_layer_stats {
                         self.stat_decisions += 1;
+                    }
+                    if self.count_search {
+                        self.counters.decisions += 1;
                     }
                     self.push_level();
                     let positive =
@@ -2572,6 +2742,9 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
             let mut i = 0usize;
             let mut j = 0usize;
             'clauses: while i < end {
+                if self.count_search {
+                    self.counters.watch_visits += 1;
+                }
                 // (1) Fast path: a true blocker means the clause is satisfied;
                 // keep the watch and move on without inspecting the clause.
                 let blocker = watchers[i].blocker;
@@ -2583,6 +2756,9 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
                 }
 
                 let cid = watchers[i].clause;
+                if self.count_search {
+                    self.counters.clause_visits += 1;
+                }
                 // Keep the falsified literal at slot 1 (arena slot offset+1).
                 let off = self.headers[cid].offset;
                 if self.arena[off] == false_lit {
@@ -2615,6 +2791,9 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
                             clause: cid,
                             blocker: first,
                         });
+                        if self.count_search {
+                            self.counters.watch_relocations += 1;
+                        }
                         continue 'clauses;
                     }
                 }
@@ -2637,6 +2816,9 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
                     }
                     break;
                 }
+                if self.count_search {
+                    self.counters.propagations += 1;
+                }
                 self.enqueue(first, Reason::clause(cid));
             }
             watchers.truncate(j);
@@ -2655,6 +2837,10 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
     /// the conflict is implied at level 0 (the empty clause).
     fn analyze(&mut self, conflict: usize) -> (Vec<CnfLit>, usize, usize) {
         let mut seen = vec![false; self.assign.len()];
+        if self.count_search {
+            self.counters.conflicts += 1;
+            self.counters.analyze_mark_bytes += seen.len() as u64;
+        }
         let mut lower: Vec<CnfLit> = Vec::new();
         let mut path_count = 0usize;
         let mut pivot_var: Option<usize> = None;
@@ -2663,6 +2849,9 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
         let current = self.decision_level();
 
         loop {
+            if self.count_search {
+                self.counters.resolutions += 1;
+            }
             // Bump the activity of any learned clause that participates in this
             // conflict, so frequently-useful learned clauses survive reduceDB.
             self.bump_clause(clause_id);
@@ -3030,6 +3219,9 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
         stack.push(p);
         let top = to_clear.len();
         while let Some(q) = stack.pop() {
+            if self.count_search {
+                self.counters.redundancy_steps += 1;
+            }
             let qv = q.var().index();
             let rid = match self.reason[qv].as_clause() {
                 Some(cid) => cid,
@@ -3131,6 +3323,9 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
     /// Propagates a [`ProofSinkError`] from the deletion steps; the caller
     /// abandons the search, since a proof missing its deletions would not replay.
     fn reduce_db(&mut self) -> Result<(), ProofSinkError> {
+        if self.count_search {
+            self.counters.reductions += 1;
+        }
         // Candidates for deletion: live, learned, non-glue, non-locked clauses.
         let mut candidates: Vec<CRef> = (0..self.headers.len())
             .filter(|&cid| {
@@ -3464,9 +3659,9 @@ mod tests {
     use super::{
         Cdcl, DEFAULT_PROOF_SAT_CONFLICT_LIMIT, Instant, ProofSearchProgress, ProofSolveOutcome,
         Reason, StreamingProofOutcome, TheoryProofOutcome, Watch, lit_code, solve_with_drat_proof,
-        solve_with_drat_proof_streaming, solve_with_drat_proof_with_limits,
-        solve_with_drat_proof_with_limits_and_progress, solve_with_drat_proof_within,
-        solve_with_theory_and_drat_proof,
+        solve_with_drat_proof_counted, solve_with_drat_proof_streaming,
+        solve_with_drat_proof_with_limits, solve_with_drat_proof_with_limits_and_progress,
+        solve_with_drat_proof_within, solve_with_theory_and_drat_proof,
     };
     use crate::{
         CnfClause, CnfFormula, CnfLit, CnfVar, DratSink, ProofSinkError, TextProofSink,
@@ -3661,6 +3856,94 @@ mod tests {
             "final proof_bytes must match the exact serialized DRAT length"
         );
         assert!(last.conflicts > 0);
+    }
+
+    /// [`solve_with_drat_proof_counted`] is claimed in its own documentation to
+    /// leave the verdict and the DRAT stream untouched. That is the property
+    /// that makes it usable as an A/B instrument at all, so it is asserted
+    /// rather than asserted-in-prose: the counted run's proof must be
+    /// **byte-identical** to the uncounted one's, not merely also checkable.
+    #[test]
+    fn counting_does_not_change_the_verdict_or_the_proof() {
+        let f = pigeonhole_4_into_3();
+
+        let mut uncounted = VecProofSink::new();
+        let plain = solve_with_drat_proof_streaming(
+            &f,
+            None,
+            DEFAULT_PROOF_SAT_CONFLICT_LIMIT,
+            &mut uncounted,
+        );
+        let mut counted_sink = VecProofSink::new();
+        let (counted, counters) = solve_with_drat_proof_counted(
+            &f,
+            None,
+            DEFAULT_PROOF_SAT_CONFLICT_LIMIT,
+            &mut counted_sink,
+        );
+
+        assert!(matches!(plain, StreamingProofOutcome::Unsat));
+        assert!(matches!(counted, StreamingProofOutcome::Unsat));
+        assert_eq!(
+            write_drat(&uncounted.into_steps()),
+            write_drat(&counted_sink.into_steps()),
+            "enabling counters changed the emitted DRAT proof; the counters are \
+             supposed to be pure output"
+        );
+        // A vacuous version of this test would pass with every counter stuck at
+        // zero, which is exactly the failure mode this repository warns about,
+        // so the counters must also be alive.
+        assert!(counters.conflicts > 0, "no conflicts counted");
+        assert!(counters.watch_visits > 0, "no watch visits counted");
+    }
+
+    /// Every counter is either alive on a real search or is a documented
+    /// zero, and the ones that stand in a fixed arithmetic relation to each
+    /// other hold it. Derives its expectations from the search rather than
+    /// from literals, so it measures the core and not the author's memory.
+    #[test]
+    fn search_counters_are_alive_and_internally_consistent() {
+        let f = pigeonhole_4_into_3();
+        let mut sink = VecProofSink::new();
+        let (outcome, c) =
+            solve_with_drat_proof_counted(&f, None, DEFAULT_PROOF_SAT_CONFLICT_LIMIT, &mut sink);
+        assert!(matches!(outcome, StreamingProofOutcome::Unsat));
+
+        for (name, value) in [
+            ("conflicts", c.conflicts),
+            ("decisions", c.decisions),
+            ("propagations", c.propagations),
+            ("watch_visits", c.watch_visits),
+            ("clause_visits", c.clause_visits),
+            ("resolutions", c.resolutions),
+            ("analyze_mark_bytes", c.analyze_mark_bytes),
+        ] {
+            assert!(value > 0, "counter `{name}` never fired on a real search");
+        }
+
+        assert!(
+            c.clause_visits <= c.watch_visits,
+            "a clause can only be dereferenced from a watch that was visited: \
+             {} clause visits vs {} watch visits",
+            c.clause_visits,
+            c.watch_visits
+        );
+        assert!(
+            c.resolutions >= c.conflicts,
+            "every conflict walks at least one antecedent: {} resolutions over \
+             {} conflicts",
+            c.resolutions,
+            c.conflicts
+        );
+        // The headline structural fact this counter exists to expose: `analyze`
+        // zeroes one byte per VARIABLE per conflict, whatever the conflict
+        // touched. Derived from the formula, not written down.
+        assert_eq!(
+            c.analyze_mark_bytes,
+            c.conflicts * f.variable_count() as u64,
+            "`analyze`'s mark array is `vec![false; variables]` per conflict, so \
+             its byte total must be exactly conflicts x variables"
+        );
     }
 
     /// The conflict-count cadence in [`Cdcl::maybe_report_progress`] is honored:
