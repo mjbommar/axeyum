@@ -6,12 +6,19 @@
 //! third-party brute force agrees with both, so "they agree" cannot mean "they
 //! are wrong in the same way".
 //!
-//! The theory here is deliberately the **hostile** one `cdclt`'s own
-//! termination suite uses in spirit: its truth is a fixed set of forbidden
-//! cubes, its reporting on partial assignments is non-monotone (it may report a
-//! contained cube, miss one it could report, or report a superset), and it is
-//! complete on total assignments. A theory that only ever reported minimal,
-//! monotone cores would exercise none of the paths the two drivers differ on.
+//! The theory is a set of forbidden cubes, and it is deliberately **incomplete
+//! on partial assignments**: `assert` reports only a violated cube that names
+//! the literal it was just handed, so a cube that became violated through some
+//! earlier assignment is MISSED and surfaces later, at `final_check`. That is
+//! not fastidiousness — a core with no current-decision-level literal
+//! underflows 1-UIP's path counter in BOTH drivers (`c9d332c1`), so a fixture
+//! that reported any violated cube would be testing a contract violation rather
+//! than the adapter.
+//!
+//! It propagates: any cube one literal short of complete entails the negation of
+//! that literal, with the rest of the cube as its reason. Both the eager and the
+//! deferred explanation channel are exercised, because the second is where the
+//! two drivers' translation of a reason differs and where both defects were.
 
 use std::collections::BTreeSet;
 
@@ -52,12 +59,12 @@ impl Lcg {
 
 /// A theory whose truth is "none of these cubes may all hold at once".
 ///
-/// `assert` reports a conflict as soon as every literal of some forbidden cube
-/// is asserted, and always folds the trigger literal into the core — the
-/// current-decision-level invariant 1-UIP analysis relies on. `propagate` emits
-/// the last literal of any cube that is one short of complete, negated, with the
-/// rest of the cube as its reason: a genuinely entailed literal, so both drivers
-/// may assign it without a decision.
+/// `assert` reports a conflict only for a violated cube that NAMES the literal
+/// it was just handed, so the core always contains a current-decision-level
+/// literal (see the module header). `propagate` emits the last literal of any
+/// cube that is one short of complete, negated, with the rest of the cube as
+/// its reason: a genuinely entailed literal, so both drivers may assign it
+/// without a decision. `final_check` catches whatever `assert` missed.
 #[derive(Clone)]
 struct CubeTheory {
     forbidden: Vec<Vec<(usize, bool)>>,

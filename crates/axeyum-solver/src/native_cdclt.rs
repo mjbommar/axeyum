@@ -272,6 +272,14 @@ impl<T: TheorySolver> NativeTheory for NativeTheoryAdapter<'_, T> {
         solver_queue.clear();
         self.theory.propagate_into(&mut solver_queue);
         for (lit, explanation) in solver_queue.entries() {
+            // An atom the driver has no variable for is skipped, not indexed:
+            // `CdclT::theory_propagate` does exactly this
+            // (`let Some(var) = self.theory_variable(lit.atom) else { continue }`),
+            // and a theory that offers one is offering a propagation the driver
+            // cannot act on rather than committing a contract violation.
+            if lit.atom >= self.var_for_atom.len() {
+                continue;
+            }
             let implied = self.cnf_lit(*lit);
             match explanation {
                 TheoryExplanation::Eager(antecedents) => {
