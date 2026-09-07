@@ -264,6 +264,7 @@ name = "axeyum-rewrite"
 version = "0.1.0"
 dependencies = [
  "axeyum-ir",
+ "criterion",
 ]
 
 [[package]]
