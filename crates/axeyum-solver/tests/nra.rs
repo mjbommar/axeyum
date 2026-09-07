@@ -890,12 +890,17 @@ fn cross_product_chain(n: usize) -> (TermArena, Vec<axeyum_ir::TermId>) {
         let p = a.real_mul(vars[i], vars[i + 1]).unwrap();
         sum = a.real_add(sum, p).unwrap();
     }
-    // A division keeps the query off the exact polynomial deciders upstream, so
-    // it actually reaches `check_nonlinear_abstraction` — the routine under test.
+    // A division keeps the query off the exact polynomial deciders upstream, and
+    // the far-out threshold keeps it off `sat_witness_probe`, whose grid is small
+    // rationals (`0, ±1, ±2, ±3`): no grid point can reach `−10⁶` when every term
+    // is bounded by 9 in magnitude. Both are needed for the query to actually
+    // reach `check_nonlinear_abstraction`, the routine under test — the first
+    // draft of this helper used `> 1` and the probe answered `sat` at all-ones
+    // before admission was ever consulted.
     let d = a.real_div(vars[0], vars[n]).unwrap();
     let lhs = a.real_add(sum, d).unwrap();
-    let one = a.real_const(Rational::integer(1));
-    let atom = a.real_gt(lhs, one).unwrap();
+    let far = a.real_const(Rational::integer(-1_000_000));
+    let atom = a.real_lt(lhs, far).unwrap();
     (a, vec![atom])
 }
 
@@ -903,7 +908,7 @@ fn cross_product_chain(n: usize) -> (TermArena, Vec<axeyum_ir::TermId>) {
 /// consuming engine's atom ceiling, and the decline **names the number it
 /// refused on** — the atom count and the capacity, not a cross-product count.
 ///
-/// That last part is the point, not decoration. The 2026-09-06 QF_NRA loss
+/// That last part is the point, not decoration. The 2026-09-06 `QF_NRA` loss
 /// census attributed 62 of 77 losses to a cross-product bound that, on 25 of
 /// them, was measurably not the binding constraint: the abstraction was refused
 /// one layer down by the LRA atom cap in the same time and the same memory. A
@@ -956,11 +961,13 @@ fn three_cross_products_are_no_longer_refused_by_a_count() {
         );
     }
     // Soundness is independent of admission, and stays checked: the chain
-    // `v₀v₁+v₁v₂+v₂v₃ + v₀/v₃ > 1` is satisfiable (v₀=v₁=2, v₂=v₃=1 gives
-    // 4+2+1+2 = 9 > 1), so an `Unsat` here would be a wrong verdict.
+    // `v₀v₁+v₁v₂+v₂v₃ + v₀/v₃ < −10⁶` is satisfiable — at
+    // `v₀ = −10⁷, v₁ = v₂ = v₃ = 1` it evaluates to
+    // `−10⁷ + 1 + 1 + (−10⁷) = −2·10⁷ + 2`, comfortably below `−10⁶` — so an
+    // `Unsat` here would be a wrong verdict.
     assert!(
         !matches!(r, CheckResult::Unsat),
-        "the chain is satisfiable (v₀=v₁=2, v₂=v₃=1 ⇒ 9 > 1); never Unsat, got {r:?}"
+        "the chain is satisfiable (v₀=−10⁷, v₁=v₂=v₃=1 ⇒ ≈ −2·10⁷); never Unsat, got {r:?}"
     );
     // Any `Sat` must replay against the ORIGINAL assertions through the
     // independent ground evaluator — the guard in `check_with_nra` that makes

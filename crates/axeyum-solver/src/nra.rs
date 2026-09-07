@@ -100,7 +100,7 @@ const MAX_BNB_DEPTH: usize = 6;
 /// It was introduced by `9a8b09220` (2026-06-19) as an **OOM guard**: the commit
 /// records that ≥3 cross-products drove the DPLL(T)/exact-rational relaxation to
 /// exhaust memory *inside a single solve call*, with the bounded variant aborting
-/// at a 64 GiB cap. Re-measured 2026-09-07 on the 62 QF_NRA parity files the
+/// at a 64 GiB cap. Re-measured 2026-09-07 on the 62 `QF_NRA` parity files the
 /// 2026-09-06 loss census attributes to this bound (one binary, arms differing
 /// only in an env override, 24 s / 8 GiB, `taskset -c 0-7` on an idle s6):
 ///
@@ -129,7 +129,7 @@ const LEGACY_ADMISSION_CROSS_PRODUCTS: usize = 2;
 /// so any positive share is strictly more search than it gets now — this bound can
 /// only add decisions, never remove one. It exists because `unknown` is a
 /// fall-through for two callers, not a terminal answer:
-/// [`crate::int_real_relax`] relaxes a QF_NIA query into this engine and tries
+/// [`crate::int_real_relax`] relaxes a `QF_NIA` query into this engine and tries
 /// other integer routes on `unknown`, and `dispatch_uf_nra` does the same for
 /// UF+NRA. A newly-admitted query that consumed the whole budget would starve
 /// those routes of the time they have today.
