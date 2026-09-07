@@ -60,7 +60,7 @@ fn every_metric_completion_declaration_is_present_and_derived() {
     let named = names.owned_names();
     assert_eq!(
         named.len(),
-        13,
+        16,
         "the declaration list changed; update this count deliberately"
     );
     for (label, name) in named {
@@ -145,7 +145,7 @@ fn the_new_declarations_are_exactly_the_owned_names() {
     );
     assert_eq!(
         added.len(),
-        13,
+        16,
         "the module's declaration count changed; update it deliberately"
     );
 }

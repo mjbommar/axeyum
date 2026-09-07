@@ -26,7 +26,10 @@ alone" is the *precondition* for applicability, not a disqualification. Its
 `33` itself IS re-derivable, by a method it did not state (live
 `add_declaration` sites outside `#[cfg(test)]` modules: the naive count is 36,
 and the three extras are `converges_le_tests`'s own mutation probes). The one
-genuinely new piece of mathematics is a single metric-level estimate.
+genuinely new piece of mathematics is a single metric-level estimate — the
+four-point reverse triangle inequality `Metric.dist_diff_le` — and it LANDED
+here, with the rearrangement it needed and its instance at the completion's own
+four points, so the remaining slice carries no new estimate at all.
 
 Index-status: proposed
 
@@ -258,14 +261,16 @@ predicate is a rename of something shipped.
 
 `crates/axeyum-lean-kernel/src/metric_completion.rs` — a new top-level module
 on the `metric_prod.rs` pattern, so `metric.rs`, `metric/` and `metric_prod.rs`
-are untouched and the `Metric` prelude's build cost does not move. Thirteen
+are untouched and the `Metric` prelude's build cost does not move. Sixteen
 declarations, zero axioms:
 
 `Metric.RegularSeq`, `Metric.regularSeq_cauchyAt`, `Metric.regularSeq_bound`,
 `Metric.CompletionSeq`, `Metric.completionSeq_carrier`, `Metric.completionVal`,
 `Metric.completionRegular`, `Metric.completionDistSeq`,
 `Metric.completionDistSeq_eval`, `Metric.embedSeq`, `Metric.embedSeq_val`,
-`Metric.embedSeq_dist`, `Metric.embedSeq_reflects`.
+`Metric.embedSeq_dist`, `Metric.embedSeq_reflects`,
+`Metric.CReal.addNegShuffle`, `Metric.dist_diff_le`,
+`Metric.completionDistSeq_diff_le`.
 
 Two things about that list are deliberate.
 
@@ -288,9 +293,35 @@ module) and any `starts_with` filter. Differencing
 `build_metric_completion_prelude`'s makes the subject the kernel's own
 declaration set, and closes both directions at once.
 
-**Not landed, with the exact obstruction:** `Metric.dist_diff_le` — the
-four-point reverse triangle inequality — and therefore `Metric.completionDist`
-and the `Metric` instance. `Metric.dist_quadrilateral M a c e b` gives
+**The one new estimate also landed.** `Metric.dist_diff_le` — the four-point
+reverse triangle inequality this ADR sized as the whole new-mathematics budget
+— is admitted and axiom-free, together with the rearrangement it needed
+(`Metric.CReal.addNegShuffle`) and its instance at the completion's own four
+points (`Metric.completionDistSeq_diff_le`). Sixteen declarations in all.
+
+`Metric.completionDistSeq_diff_le` exists because the estimate's PAIRING is not
+guarded by its own admission: `le (abs (d a b − d c e)) (d a e + d b c)` is
+also a true four-point inequality and the trusted gate admits it just as
+happily. Only the instance at `(x m, y m, x n, y n)` shows the pairing is the
+one `Metric.RegularSeq` closes, because its two bounds are about
+`d (x m) (x n)` and `d (y m) (y n)` and nothing else. **A true statement is not
+the right statement, and for an inequality with four free points the gate
+cannot tell them apart.**
+
+Building it found a real defect the type-checker caught and no reading would
+have: `shifted_quadrilateral` at the swapped points `(c, e, a, b)` returns
+`d c a + d e b`, with BOTH summands reversed, so branch two needs two
+`Metric.distComm` rewrites and not one. The kernel's `TypeMismatch` named the
+exact subterm (`Metric.dist M f4 f2` against `Metric.dist M f2 f4`).
+
+**Not landed, with the exact obstruction:** nothing blocking remains.
+`Metric.completionDist`, the `Metric` instance, density and completeness are
+the next slice, and by the accounting above they carry **no new estimate** —
+`completionDistSeq_diff_le` is exactly the shape
+`CReal.scaledCauchy_of_abs_diff_le` consumes, at `K := 2`.
+
+The prose that follows was this ADR's obstruction note before the estimate
+landed; it is kept because it is the derivation. `Metric.dist_quadrilateral M a c e b` gives
 `d a b ≤ d a c + (d c e + d e b)` (checked against the declaration: its
 statement is `le (d a e) (d a b + (d b c + d c e))`, so the instance is at
 `(a, c, e, b)`); turning that into `d a b + (-(d c e)) ≤ d a c + d b e` needs
