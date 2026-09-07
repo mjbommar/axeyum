@@ -5089,6 +5089,80 @@ mod tests {
             );
         }
 
+        /// A theory whose only content is `x1 -> x2`, offered **lazily** at
+        /// level zero.
+        struct LevelZeroImplier {
+            x1: bool,
+        }
+
+        const LEVEL_ZERO_HANDLE: ExplanationId = ExplanationId(11);
+
+        impl NativeTheory for LevelZeroImplier {
+            fn assert(&mut self, var: usize, value: bool) -> Result<(), Vec<CnfLit>> {
+                if var == 0 {
+                    self.x1 = value;
+                }
+                Ok(())
+            }
+            fn push(&mut self) {}
+            fn pop(&mut self) {}
+            fn propagate_into(&mut self, queue: &mut PropagationQueue) {
+                if self.x1 {
+                    queue.push_lazy(
+                        crate::CnfLit::positive(crate::CnfVar::new(1).unwrap()),
+                        LEVEL_ZERO_HANDLE,
+                    );
+                }
+            }
+            fn explain(&mut self, handle: ExplanationId) -> Option<Vec<CnfLit>> {
+                assert_eq!(handle, LEVEL_ZERO_HANDLE);
+                // The clause `(x2 | ~x1)`.
+                Some(vec![
+                    crate::CnfLit::positive(crate::CnfVar::new(1).unwrap()),
+                    crate::CnfLit::positive(crate::CnfVar::new(0).unwrap()).negated(),
+                ])
+            }
+        }
+
+        /// The level-zero refutation path resolves the lazy theory reasons it
+        /// leaned on before emitting the empty clause.
+        ///
+        /// This is the one shape where conflict analysis never runs -- a
+        /// conflict at decision level zero is a refutation outright -- so the
+        /// theory implication that produced it is justified by a handle and by
+        /// nothing else. `check_drat` replays unit propagation over
+        /// `cnf ++ lemmas` and cannot see a handle, so without
+        /// `materialize_trail_theory_reasons` the emitted empty clause is not
+        /// RUP and the artifact is rejected by its own checker.
+        #[test]
+        fn a_level_zero_refutation_materialises_the_lazy_reasons_it_leaned_on() {
+            // (x1) & (~x2 | x3) & (~x2 | ~x3): satisfiable with x2 false, and
+            // closed only once the theory supplies `x1 -> x2`.
+            let f = formula(3, &[&[1], &[-2, 3], &[-2, -3]]);
+            assert!(
+                matches!(solve_with_drat_proof(&f), ProofSolveOutcome::Sat(_)),
+                "fixture must be Boolean-satisfiable, or the test proves nothing"
+            );
+            let (outcome, steps, lemmas) = solve_with_lemmas(&f, LevelZeroImplier { x1: false });
+            assert_eq!(outcome, SearchOutcome::Unsat);
+            assert_eq!(
+                lemmas.len(),
+                1,
+                "the lazy reason the refutation leaned on is materialised: {lemmas:?}"
+            );
+            let extended = extended_formula(&f, &lemmas);
+            assert_eq!(
+                crate::check_drat(&extended, &steps),
+                Ok(true),
+                "the empty clause must be RUP over cnf ++ lemmas"
+            );
+            assert_ne!(
+                crate::check_drat(&f, &steps),
+                Ok(true),
+                "and must not be RUP over the bare CNF"
+            );
+        }
+
         /// ADR-1704 prohibition 1, enforced where it CAN be: every clause that
         /// entered the database from the theory is enumerated in the lemma
         /// stream.
