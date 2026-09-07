@@ -578,6 +578,112 @@ fn a_non_expanding_bound_cannot_reflect_equivalence() {
     });
 }
 
+/// **`Metric.embedSeq_dist` is an EQUATION, and this is the guard that says so
+/// about the shipped declaration** rather than re-deriving the discrimination
+/// inline.
+///
+/// `a_non_expanding_bound_cannot_reflect_equivalence` above shows the two
+/// relations differ in strength, but it never mentions `Metric.embedSeq_dist`
+/// — so weakening that declaration from `Eq` to `CReal.le` (a true, admissible
+/// statement: the non-expanding form) would leave it green. **Measured: it
+/// does.** This test consumes the declaration itself, as the argument of
+/// `Eq.symm`, which only an `Eq` can be.
+///
+/// The negative twin offers a `CReal.le_refl` proof in the same slot — the
+/// exact shape a non-expanding bound has — and must be refused.
+#[test]
+fn embed_seq_dist_is_an_equation_not_a_bound() {
+    on_a_deep_stack(|| {
+        let (mut kernel, names) = built();
+        let p = crate::build_metric_prelude(&mut kernel).expect("Metric prelude must build");
+        let c = p.cpoint.creal;
+        let mut d = crate::int_prelude::ops::IntDev::new(&mut kernel, c.rat.int);
+        let logic = c.rat.int.logic;
+        let one = d.level_one();
+
+        let metric_ty = d.kernel().const_(p.record.ind, vec![]);
+        let m_fv = d.fresh_fvar();
+        let m = d.kernel().fvar(m_fv);
+        let carrier = {
+            let s = d.kernel().const_(p.record.sel(super::CARRIER), vec![]);
+            d.apply(s, &[m])
+        };
+        let nat = d.nat_ty();
+        let creal_ty = d.kernel().const_(c.creal, vec![]);
+
+        let a_fv = d.fresh_fvar();
+        let a = d.kernel().fvar(a_fv);
+        let b_fv = d.fresh_fvar();
+        let b = d.kernel().fvar(b_fv);
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+
+        let ea = d.const_app(names.embed_seq, &[m, a]);
+        let eb = d.const_app(names.embed_seq, &[m, b]);
+        let sampled = d.const_app(names.completion_dist_seq, &[m, ea, eb, k]);
+        let honest = {
+            let s = d.kernel().const_(p.record.sel(super::DIST), vec![]);
+            let dist = d.apply(s, &[m]);
+            d.apply(dist, &[a, b])
+        };
+
+        // `Eq CReal (M.dist a b) (completionDistSeq …)` — the SYMMETRIC form,
+        // reachable only from an equation.
+        let goal = {
+            let head = d.kernel().const_(logic.eq, vec![one]);
+            d.apply(head, &[creal_ty, honest, sampled])
+        };
+
+        let offer = |witness: crate::expr::ExprId,
+                     label: &str,
+                     d: &mut crate::int_prelude::ops::IntDev<'_>| {
+            let proof = {
+                let head = d.kernel().const_(logic.eq_symm, vec![one]);
+                d.apply(head, &[creal_ty, sampled, honest, witness])
+            };
+            let ty = {
+                let t = d.pi_fv(k_fv, nat, goal);
+                let t = d.pi_fv(b_fv, carrier, t);
+                let t = d.pi_fv(a_fv, carrier, t);
+                d.pi_fv(m_fv, metric_ty, t)
+            };
+            let value = {
+                let t = d.lam_fv(k_fv, nat, proof);
+                let t = d.lam_fv(b_fv, carrier, t);
+                let t = d.lam_fv(a_fv, carrier, t);
+                d.lam_fv(m_fv, metric_ty, t)
+            };
+            let anon = d.kernel().anon();
+            let name = d.kernel().name_str(anon, label);
+            d.kernel()
+                .add_declaration(crate::env::Declaration::Theorem {
+                    name,
+                    uparams: vec![],
+                    ty,
+                    value,
+                })
+        };
+
+        let equation = d.const_app(names.embed_seq_dist, &[m, a, b, k]);
+        let ok = offer(equation, "__metricEmbedDistSymmOk", &mut d);
+        assert!(
+            ok.is_ok(),
+            "`Metric.embedSeq_dist` must be usable as an `Eq` (its symmetric \
+             form must admit): {ok:?}"
+        );
+
+        // The non-expanding shape: a `CReal.le`, in the slot `Eq.symm` demands
+        // an `Eq`.
+        let bound = d.lemma(c.le_refl, &[honest]);
+        let bad = offer(bound, "__metricEmbedDistSymmNonExpanding", &mut d);
+        assert!(
+            bad.is_err(),
+            "the trusted gate took a `CReal.le` where an `Eq` was demanded; \
+             this guard cannot tell an isometry from a non-expanding map"
+        );
+    });
+}
+
 /// Sanity: `owned_names`'s labels are unique (a copy/paste `NameId` collision
 /// would otherwise make two rows check the same declaration twice).
 #[test]
