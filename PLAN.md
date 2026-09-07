@@ -55925,14 +55925,32 @@ predicate.
 
 ### What landed in the kernel
 
-`crates/axeyum-lean-kernel/src/metric_completion.rs`, 11 declarations, zero
-axioms:
+`crates/axeyum-lean-kernel/src/metric_completion.rs`, **16 declarations, zero
+axioms**:
 
-- `Metric.RegularSeq`, `Metric.regularSeq_cauchyAt`, `Metric.regularSeq_bound`
-- `Metric.CompletionSeq`, `Metric.completionSeq_carrier`
-- `Metric.completionVal`, `Metric.completionRegular`
-- `Metric.completionDistSeq`, `Metric.completionDistSeq_eval`
-- `Metric.embedSeq`, `Metric.embedSeq_val`
+- the carrier: `Metric.RegularSeq`, `Metric.regularSeq_cauchyAt`,
+  `Metric.regularSeq_bound`, `Metric.CompletionSeq`,
+  `Metric.completionSeq_carrier`, `Metric.completionVal`,
+  `Metric.completionRegular`
+- the distance sequence: `Metric.completionDistSeq`,
+  `Metric.completionDistSeq_eval`
+- the embedding: `Metric.embedSeq`, `Metric.embedSeq_val`,
+  `Metric.embedSeq_dist` (the isometry), `Metric.embedSeq_reflects`
+- **the one new estimate**: `Metric.CReal.addNegShuffle`,
+  `Metric.dist_diff_le`, `Metric.completionDistSeq_diff_le`
+
+`Metric.dist_diff_le` is the whole new-mathematics budget ADR-1678 sized, and
+it landed. `Metric.completionDistSeq_diff_le` guards its PAIRING: the wrong
+pairing `le (abs (d a b − d c e)) (d a e + d b c)` is also a true four-point
+inequality and the trusted gate admits it just as happily — only the instance
+at `(x m, y m, x n, y n)` shows the pairing is the one `Metric.RegularSeq` can
+close. **A true statement is not the right statement, and for an inequality
+with four free points the gate cannot tell them apart.**
+
+Building it found a defect the type-checker caught and no reading would have:
+`shifted_quadrilateral` at the swapped points returns `d c a + d e b` with BOTH
+summands reversed, so branch two needs two `Metric.distComm` rewrites and not
+one.
 
 The accounting test derives its subject by **differencing two kernels** (one
 with `build_metric_prelude` alone, one with `build_metric_completion_prelude`)
@@ -55962,6 +55980,7 @@ a test that consumes the declaration proves the declaration carries it.**
 | gate | count | exit |
 | --- | --- | --- |
 | `cargo test -p axeyum-lean-kernel --release --lib -- metric_completion --test-threads=2` | **12** tests, 12 passed | 0 |
+| `cargo clippy -p axeyum-lean-kernel --all-targets --all-features -- -D warnings` | — | 0 |
 | `cargo check --workspace --all-targets` (via `cargo-serialized.sh`) | — | 0 |
 | `cargo fmt --all --check` | 0 diff lines | 0 |
 | `scripts/check-links.sh` | all links ok | 0 |
@@ -55975,13 +55994,19 @@ builds at 10.2 GB RSS. The first of those printed `running 10 tests` and then
 nothing, and piping it through `tail` reported exit 0 — `tail`'s. Use
 `--test-threads=2` on this suite.
 
-## Next
+## Next — and it carries NO new estimate
 
-1. `Metric.dist_diff_le` — the one new estimate.
-2. `Metric.completionDist` via `CReal.mk (speedup (diagonal D) K)`, then the
-   twelve field witnesses with `equiv := dist ~ 0`.
-3. `Metric.Complete (Metric.completion M)`, then `RN.metric n` (58 `RN`
-   declarations wait on it).
+1. `Metric.completionDist` := `CReal.mk (speedup (diagonal D) 4)` via
+   `CReal.scaledCauchy_of_abs_diff_le` fed with
+   `Metric.completionDistSeq_diff_le` at `K := 2`, then
+   `CReal.regular_of_scaled_cauchy`. Four steps, all shipped, and
+   `creal/supremum.rs:4946-5007` already runs exactly this sequence for
+   `CReal.sup_on`.
+2. The twelve field witnesses, with `equiv := dist ~ 0` (ADR-1625 section 2's
+   own trick), which makes `distSelf`/`distEquiv` `fun a b h => h` and leaves
+   the rest to `CReal.converges_*`.
+3. Density of the image, then `Metric.Complete (Metric.completion M)`, then
+   `RN.metric n` (58 `RN` declarations wait on it).
 
 **Your lane's block (`DONE`, metric-products, 2026-09-05).** W2-10's
 product-metric half is landed, in a NEW file
