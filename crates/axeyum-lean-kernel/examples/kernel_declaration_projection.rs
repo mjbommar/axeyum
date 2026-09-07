@@ -52,8 +52,9 @@ use axeyum_lean_kernel::{
     build_cpoint_prelude, build_creal_prelude, build_fo_order_prelude, build_fo_soundness_prelude,
     build_fo_substitution_prelude, build_geo_prelude, build_int_prelude, build_intspace_prelude,
     build_ipc_eval_prelude, build_ipc_soundness_prelude, build_list_nat_bridge, build_list_perm,
-    build_logic_prelude, build_metric_prelude, build_metric_prod_prelude, build_nat_prelude,
-    build_rat_prelude, build_rn_prelude, build_string_prelude, build_top_frame_prelude,
+    build_logic_prelude, build_metric_completion_prelude, build_metric_prelude,
+    build_metric_prod_prelude, build_nat_prelude, build_rat_prelude, build_rn_prelude,
+    build_string_prelude, build_top_frame_prelude,
 };
 
 fn kind(declaration: &Declaration) -> &'static str {
@@ -377,6 +378,16 @@ fn run() -> ExitCode {
         emit("metric_prod", &metric_prod);
     }
 
+    // `Metric.completion*` (ADR-1678) likewise sits on `metric` and is reached
+    // by nothing else here. check-trust-closure.py reads this environment, so a
+    // namespace missing here is reported as a subject that does not exist.
+    let mut metric_completion = Kernel::new();
+    let _ = build_metric_completion_prelude(&mut metric_completion)
+        .expect("Metric.completion prelude must build");
+    if unfiltered {
+        emit("metric_completion", &metric_completion);
+    }
+
     // `Top.*` (ADR-1643, the pointfree topological carrier) sits on `creal`
     // and is a SIBLING of `metric`, not a consumer of it.
     let mut top = Kernel::new();
@@ -418,6 +429,7 @@ fn run() -> ExitCode {
         ("fo_soundness", &fo_soundness),
         ("fo_substitution", &fo_substitution),
         ("metric_prod", &metric_prod),
+        ("metric_completion", &metric_completion),
         ("top", &top),
     ]
     .into_iter()

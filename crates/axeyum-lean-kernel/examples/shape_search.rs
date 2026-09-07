@@ -116,9 +116,10 @@ use axeyum_lean_kernel::{
     build_cpoint_prelude, build_creal_prelude, build_fo_order_prelude, build_fo_soundness_prelude,
     build_fo_substitution_prelude, build_geo_prelude, build_int_prelude, build_intspace_prelude,
     build_ipc_eval_prelude, build_ipc_soundness_prelude, build_list_nat_bridge, build_list_perm,
-    build_logic_prelude, build_metric_prelude, build_metric_prod_prelude, build_nat_prelude,
-    build_rat_prelude, build_rn_prelude, build_string_length_append, build_string_prelude,
-    build_string_substr_arithmetic, build_top_frame_prelude, on_a_deep_stack,
+    build_logic_prelude, build_metric_completion_prelude, build_metric_prelude,
+    build_metric_prod_prelude, build_nat_prelude, build_rat_prelude, build_rn_prelude,
+    build_string_length_append, build_string_prelude, build_string_substr_arithmetic,
+    build_top_frame_prelude, on_a_deep_stack,
 };
 
 const USAGE: &str = "\
@@ -380,6 +381,13 @@ fn build_metric(kernel: &mut Kernel) {
     let _ = build_metric_prelude(kernel).expect("Metric prelude must build");
 }
 
+fn build_metric_completion(kernel: &mut Kernel) {
+    // `Metric.completion*` (ADR-1678) sits on `metric` and is reached by
+    // nothing else in this table. It landed 2026-09-06, AFTER this table was
+    // written, and the census test caught the divergence on the next push.
+    let _ = build_metric_completion_prelude(kernel).expect("Metric.completion prelude must build");
+}
+
 fn build_metric_prod(kernel: &mut Kernel) {
     // `Metric.prod*` sits on top of `metric` and is reached by nothing else in
     // this table; before 2026-09-06 `build_metric_prod_prelude` was called only
@@ -528,6 +536,12 @@ const GROUPS: &[Group] = &[
         constructed: true,
         build: build_metric_prod,
         why: "Metric.prod*, on metric; reached by nothing else in this table",
+    },
+    Group {
+        name: "metric_completion",
+        constructed: true,
+        build: build_metric_completion,
+        why: "Metric.completion* (ADR-1678), on metric; reached by nothing else",
     },
     Group {
         name: "intspace",
