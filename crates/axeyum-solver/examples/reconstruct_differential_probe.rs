@@ -147,6 +147,9 @@ fn main() {
         .iter()
         .map(|s| match s {
             axeyum_cnf::LratStep::Add { hints, .. } => hints.len(),
+            axeyum_cnf::LratStep::AddRat { candidates, .. } => {
+                candidates.iter().map(|c| c.hints.len()).sum()
+            }
             axeyum_cnf::LratStep::Delete { .. } => 0,
         })
         .sum();

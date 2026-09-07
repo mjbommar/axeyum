@@ -83,10 +83,10 @@ pub use compact::{CompactMap, compact};
 #[cfg(unix)]
 pub use drat::CacheDroppingWriter;
 pub use drat::{
-    DratCheckOutcome, DratCheckProgress, DratError, DratSink, DratStep, DratTextReader,
-    ProofSinkError, TextProofSink, VecProofSink, check_drat, check_drat_streaming,
+    BinaryProofSink, DratCheckOutcome, DratCheckProgress, DratError, DratSink, DratStep,
+    DratTextReader, ProofSinkError, TextProofSink, VecProofSink, check_drat, check_drat_streaming,
     check_drat_streaming_with_limits_and_progress, check_drat_with_limits_and_progress, parse_drat,
-    write_drat,
+    parse_drat_binary, write_drat, write_drat_binary,
 };
 pub use drat_backward::{
     check_drat_backward, check_drat_backward_reader, check_drat_backward_reader_within,
@@ -104,7 +104,7 @@ pub use interpolant::{
 };
 pub use lrat::{
     LratCertifyOutcome, LratDecline, LratElaborateOutcome, LratElaborateProgress, LratError,
-    LratStep, certify_unsat_via_lrat, check_lrat, elaborate_drat_to_lrat,
+    LratStep, RatCandidate, certify_unsat_via_lrat, check_lrat, elaborate_drat_to_lrat,
     elaborate_drat_to_lrat_backward, elaborate_drat_to_lrat_with_limits_and_progress, parse_lrat,
     write_lrat,
 };
