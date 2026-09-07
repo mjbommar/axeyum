@@ -86,11 +86,12 @@ use std::time::{Duration, Instant};
 use axeyum_ir::{Op, Rational, Sort, SymbolId, TermArena, TermId, TermNode, Value, eval};
 
 use crate::backend::{CheckResult, SolverConfig, UnknownKind, UnknownReason};
-use crate::cdclt::{CdclT, Lit as CdcltLit, Outcome};
+use crate::cdclt::Lit as CdcltLit;
 use crate::euf_egraph::{ExplanationId, PropagationQueue, TheoryLit, TheoryProp, TheorySolver};
 use crate::lra::{FarkasAtom, FarkasCertificate};
 use crate::lra_online::{Encoder, Lit};
 use crate::model::Model;
+use crate::native_cdclt::{NativeModel, NativeSolveOutcome};
 
 /// Ceiling on the least common multiple of rational-bound denominators. Above
 /// it the scaled weights lose the `i128` headroom a path sum needs, so the
@@ -1850,7 +1851,7 @@ fn add_boolean_leaves(
     arena: &TermArena,
     enc: &Encoder,
     atom_count: usize,
-    solver: &CdclT,
+    assignment: &NativeModel,
     model: &mut Model,
 ) {
     let mut term_vars: Vec<(TermId, usize)> = enc.term_var.iter().map(|(&t, &v)| (t, v)).collect();
@@ -1861,7 +1862,7 @@ fn add_boolean_leaves(
         }
         if let TermNode::Symbol(symbol) = arena.node(term)
             && arena.sort_of(term) == Sort::Bool
-            && let Some(value) = solver.value(var)
+            && let Some(value) = assignment.value(var)
         {
             model.set(*symbol, Value::Bool(value));
         }
@@ -2096,21 +2097,35 @@ pub(crate) fn try_check_qf_dl(
     }
     let atom_count = scan.atom_terms.len();
     let mut theory = DlTheory::new(&scan, deadline);
-    let mut solver = CdclT::new(enc.var_count, atom_count, driver_clauses, deadline);
-    match solver.solve(&mut theory) {
-        Outcome::Unsat => Some(CheckResult::Unsat),
-        Outcome::Unknown => Some(timeout_result(timeout_detail(
+    // The NATIVE proof-producing core, not `CdclT` (plan slice S7b). Same
+    // watch scheme, same order heap, same clause minimizer -- S1 and S1b ported
+    // all three into `CdclT` verbatim so this would be a swap and not a
+    // reconciliation -- and, unlike `CdclT`, it emits a DRAT stream and
+    // enumerates every clause the theory contributed. So a refutation from this
+    // route now arrives at the evidence layer as the ADR-1704 two-stream
+    // artifact instead of a bare `unsat` whose theory reasoning is trusted and
+    // uncounted. See `crate::native_cdclt`.
+    let solved = crate::native_cdclt::solve_native(
+        enc.var_count,
+        atom_count,
+        &driver_clauses,
+        deadline,
+        &mut theory,
+    );
+    match solved {
+        NativeSolveOutcome::Unsat => Some(CheckResult::Unsat),
+        NativeSolveOutcome::Unknown => Some(timeout_result(timeout_detail(
             "budget exhausted in the online difference-logic driver",
             &scan,
             Some((&enc, &clauses)),
         ))),
-        Outcome::Sat => {
+        NativeSolveOutcome::Sat(assignment) => {
             let Some(mut model) = lift_model(&scan, &theory.graph) else {
                 return Some(CheckResult::Unknown(unknown(
                     "difference-logic potentials did not lift to an exact model",
                 )));
             };
-            add_boolean_leaves(arena, &enc, atom_count, &solver, &mut model);
+            add_boolean_leaves(arena, &enc, atom_count, &assignment, &mut model);
             if replays(arena, assertions, &model) {
                 Some(CheckResult::Sat(model))
             } else {

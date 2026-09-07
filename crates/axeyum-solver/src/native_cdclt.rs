@@ -34,6 +34,7 @@
 //! happens once per literal. Nothing downstream of it sees the asserted form
 //! and nothing upstream of it sees the clause form.
 
+use std::cell::RefCell;
 use std::time::Instant;
 
 use axeyum_cnf::theory::{
@@ -45,16 +46,45 @@ use axeyum_cnf::{
     solve_with_theory_and_drat_proof,
 };
 
-use crate::cdclt::{Lit, Outcome};
+use crate::cdclt::Lit;
 use crate::euf_egraph::{
     ExplanationId, FinalCheckOutcome, PropagationQueue, TheoryExplanation, TheoryLit, TheorySolver,
 };
 
+thread_local! {
+    /// The ADR-1704 artifact of the most recent native CDCL(T) refutation on
+    /// this thread, for a caller that reaches the verdict through an API with
+    /// nowhere to put it.
+    ///
+    /// `CheckResult::Unsat` is a unit variant and every route in this crate
+    /// returns one, so a refutation's artifact has no channel to the evidence
+    /// layer. Rather than widen `CheckResult` (which every backend, every
+    /// dispatcher arm and every test would have to move with it), the artifact
+    /// is published here and taken there — the same shape
+    /// `cdclt_diagnostics::last_theory_layer_stats` already uses for the same
+    /// reason.
+    ///
+    /// **Taken, not read.** [`take_last_theory_refutation`] clears the slot, so
+    /// a later `unsat` from a route that produces no artifact cannot pick up
+    /// the previous route's, which would attach a trust step to a refutation
+    /// that did not produce it.
+    static LAST_THEORY_REFUTATION: RefCell<Option<TheoryRefutation>> =
+        const { RefCell::new(None) };
+}
+
+/// Removes and returns the artifact of the last native CDCL(T) refutation on
+/// this thread, leaving the slot empty.
+pub(crate) fn take_last_theory_refutation() -> Option<TheoryRefutation> {
+    LAST_THEORY_REFUTATION.with(|slot| slot.borrow_mut().take())
+}
+
+/// Clears the slot without reading it. A route that is about to solve calls
+/// this so a verdict it does not reach cannot inherit an older artifact.
+pub(crate) fn clear_last_theory_refutation() {
+    LAST_THEORY_REFUTATION.with(|slot| *slot.borrow_mut() = None);
+}
+
 /// What a native CDCL(T) solve produced.
-///
-/// `Unsat` carries the ADR-1704 artifact rather than a bare verdict, which is
-/// the whole reason this route exists: a `CdclT` refutation has no artifact to
-/// carry, so the theory reasoning behind it is trusted and *uncounted*.
 #[derive(Debug, Clone)]
 pub(crate) enum NativeSolveOutcome {
     /// A Boolean- and theory-consistent total assignment. The theory is left in
@@ -62,22 +92,16 @@ pub(crate) enum NativeSolveOutcome {
     /// model from the theory plus [`NativeModel`] for the Boolean leaves.
     Sat(NativeModel),
     /// Unsatisfiable modulo the enumerated theory lemmas.
-    Unsat(Box<TheoryRefutation>),
+    ///
+    /// The artifact itself is **not** a payload here. It travels through
+    /// [`take_last_theory_refutation`], because that is the channel the
+    /// evidence layer can reach: a route returns a `CheckResult`, whose `Unsat`
+    /// is a unit variant, so a payload on this enum would have to be dropped by
+    /// every caller anyway. One channel, not two.
+    Unsat,
     /// Undecided: the deadline passed, the theory step budget was exhausted, or
     /// the theory could not substantiate an answer. Never a verdict.
     Unknown,
-}
-
-impl NativeSolveOutcome {
-    /// The bare verdict, for a caller that only needs to branch the way it
-    /// branched on `CdclT::solve`'s [`Outcome`].
-    pub(crate) fn outcome(&self) -> Outcome {
-        match self {
-            NativeSolveOutcome::Sat(_) => Outcome::Sat,
-            NativeSolveOutcome::Unsat(_) => Outcome::Unsat,
-            NativeSolveOutcome::Unknown => Outcome::Unknown,
-        }
-    }
 }
 
 /// The Boolean assignment behind a native `sat`, in the shape the routes'
@@ -282,13 +306,13 @@ impl<T: TheorySolver> NativeTheory for NativeTheoryAdapter<'_, T> {
 pub(crate) fn solve_native<T: TheorySolver>(
     var_count: usize,
     theory_atom_count: usize,
-    clauses: Vec<Vec<Lit>>,
+    clauses: &[Vec<Lit>],
     deadline: Option<Instant>,
     theory: &mut T,
 ) -> NativeSolveOutcome {
     let mut formula = CnfFormula::new(var_count);
     let mut occurring = vec![false; var_count];
-    for clause in &clauses {
+    for clause in clauses {
         let lits = clause
             .iter()
             .map(|l| {
@@ -309,12 +333,16 @@ pub(crate) fn solve_native<T: TheorySolver>(
             .expect("clause literals are in range");
     }
     let mut adapter = NativeTheoryAdapter::new(theory, var_count, theory_atom_count);
+    clear_last_theory_refutation();
     match solve_with_theory_and_drat_proof(&formula, &mut adapter, deadline, usize::MAX) {
         TheoryProofOutcome::Sat(assignment) => NativeSolveOutcome::Sat(NativeModel {
             assignment,
             occurring,
         }),
-        TheoryProofOutcome::Unsat(refutation) => NativeSolveOutcome::Unsat(Box::new(refutation)),
+        TheoryProofOutcome::Unsat(refutation) => {
+            LAST_THEORY_REFUTATION.with(|slot| *slot.borrow_mut() = Some(refutation));
+            NativeSolveOutcome::Unsat
+        }
         TheoryProofOutcome::ResourceOut | TheoryProofOutcome::Interrupted => {
             NativeSolveOutcome::Unknown
         }

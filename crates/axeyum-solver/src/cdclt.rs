@@ -3972,7 +3972,7 @@ mod adr1701_tests {
 /// was a panic in this file, not a disagreement.
 #[cfg(test)]
 mod lazy_propagation_conflict_tests {
-    use super::{CdclT, Lit, Outcome};
+    use super::{CdclT, Outcome};
     use crate::euf_egraph::{
         ExplanationId, FinalCheckOutcome, PropagationQueue, TheoryLit, TheoryProp, TheorySolver,
     };
@@ -4073,22 +4073,28 @@ mod lazy_propagation_conflict_tests {
     /// The driver must return a verdict rather than trip its own
     /// implication-graph assertion.
     ///
-    /// `(x0)` forces `x0`; the theory then propagates `x1` lazily and refuses
-    /// the assertion of `x1` in the same breath. Before the handle was recorded
-    /// ahead of the assignment, `x1` sat on the trail at the current level with
-    /// no reason clause, no reason-clause id and no handle, and the 1-UIP walk
-    /// panicked on "a current-level implied literal has a reason clause". The
-    /// verdict itself is not in doubt -- `x0 & x1` is refuted and `x0` is
-    /// forced, so `unsat` -- which is the point: what was broken was reaching
-    /// any verdict at all.
+    /// **The conflict has to arrive above level zero**, and that is the whole
+    /// design of this fixture. There are NO clauses: `x0` is reached as a
+    /// DECISION (the driver's saved phase starts `true`), the theory then
+    /// propagates `x1` lazily at that same level, and its own `assert` of
+    /// `x1` conflicts. Only then does 1-UIP analysis have to walk back through
+    /// `x1` -- and before the handle was recorded ahead of the assignment,
+    /// `x1` sat on the trail at the current level with no reason clause, no
+    /// reason-clause id and no handle, so the walk panicked on "a current-level
+    /// implied literal has a reason clause".
+    ///
+    /// An earlier version of this test forced `x0` with a unit clause. That
+    /// puts the conflict at level zero, where `learn_and_backjump` returns
+    /// `Unsat` before analysis walks anything: it passed with the defect
+    /// reinstated, which is how it was caught. The mutation control is the test
+    /// of the test.
+    ///
+    /// The verdict is `Sat`: with `x0` false the theory propagates nothing and
+    /// `x1` is free. What was broken was reaching any verdict at all.
     #[test]
     fn a_lazy_propagation_that_conflicts_on_its_own_assert_still_decides() {
-        let clauses = vec![vec![Lit {
-            var: 0,
-            positive: true,
-        }]];
         let mut theory = ConflictOnItsOwnPropagation::new();
-        let mut solver = CdclT::new(2, 2, clauses, None);
-        assert_eq!(solver.solve(&mut theory), Outcome::Unsat);
+        let mut solver = CdclT::new(2, 2, Vec::new(), None);
+        assert_eq!(solver.solve(&mut theory), Outcome::Sat);
     }
 }

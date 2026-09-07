@@ -1193,3 +1193,85 @@ fn large_boolean_structured_refutation_is_decided_not_unknown() {
     );
     assert_eq!(report.provenance.backend, "dl-online");
 }
+
+/// The same route, the same verdict, and now a trust ledger that is not empty
+/// (plan slice S7b).
+///
+/// This is the fact the ADR-1704 contract was written for. Until this slice the
+/// route above reported `Evidence::Unsat(None)` with `trusted_steps` EMPTY: the
+/// verdict rests on theory lemmas no propositional checker can see, and the
+/// report said nothing about them at all. An empty slot is indistinguishable
+/// from "nothing was assumed", which is the one reading a ledger must never
+/// allow.
+///
+/// Since the route runs the native proof-producing core it carries the
+/// two-stream artifact, and `theory_refutation_trust_step` reads the grade off
+/// it: lemmas were assumed, so the step is
+/// [`TrustId::SatRefutationModuloTheory`] and is **never** certified (ADR-1704
+/// prohibition 2). The count it branches on is `|extended| - |cnf|`, a
+/// subtraction on the artifact rather than a number a producer wrote.
+#[test]
+fn a_boolean_structured_difference_logic_unsat_now_carries_a_trust_step() {
+    let mut arena = TermArena::new();
+    let mut assertions = large_unsat_chain(&mut arena, 800);
+    let first = assertions[0];
+    assertions[0] = arena.or(first, first).expect("or");
+    let report =
+        crate::evidence::produce_evidence(&mut arena, &assertions, &config()).expect("evidence");
+    assert_eq!(
+        report.provenance.backend, "dl-online",
+        "the fixture must reach the route under test, got {}",
+        report.provenance.backend
+    );
+    assert!(
+        matches!(report.evidence, crate::Evidence::Unsat(_)),
+        "expected an unsat verdict, got {}",
+        report.evidence.kind_label()
+    );
+    assert_eq!(
+        report.trusted_steps.len(),
+        1,
+        "exactly one step, read off the artifact: {:?}",
+        report.trusted_steps
+    );
+    let step = report.trusted_steps[0];
+    assert_eq!(step.id, crate::trust::TrustId::SatRefutationModuloTheory);
+    assert!(
+        !step.certified,
+        "no per-lemma discharge is wired, so this grade is never certified"
+    );
+}
+
+/// The control. A `sat` from the same route carries NO trust step, so the
+/// assertion above is about the refutation and not about the route always
+/// appending something. Without this, an implementation that stamped every
+/// report would pass.
+#[test]
+fn a_satisfiable_difference_logic_query_carries_no_trust_step() {
+    let mut arena = TermArena::new();
+    // The same chain WITHOUT the closing edge: a strictly decreasing path is
+    // satisfiable, and large enough to reach the same route.
+    let vars: Vec<TermId> = (0..=800)
+        .map(|i| real(&mut arena, &format!("sat_chain_x{i}")))
+        .collect();
+    let m1 = arena.real_const(Rational::integer(-1));
+    let mut assertions = Vec::with_capacity(801);
+    for i in 0..800 {
+        let d = arena.real_sub(vars[i + 1], vars[i]).expect("difference");
+        assertions.push(arena.real_le(d, m1).expect("bound"));
+    }
+    let first = assertions[0];
+    assertions[0] = arena.or(first, first).expect("or");
+    let report =
+        crate::evidence::produce_evidence(&mut arena, &assertions, &config()).expect("evidence");
+    assert!(
+        matches!(report.evidence, crate::Evidence::Sat(_)),
+        "a strictly decreasing chain is satisfiable, got {}",
+        report.evidence.kind_label()
+    );
+    assert!(
+        report.trusted_steps.is_empty(),
+        "a `sat` assumes no theory lemma: {:?}",
+        report.trusted_steps
+    );
+}

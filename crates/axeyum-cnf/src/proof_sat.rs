@@ -807,6 +807,13 @@ struct ClauseHeader {
 /// [`NativeTheory::HAS_THEORY`] is `false`, so a `Cdcl<'_, S, NullTheory>`
 /// decides exactly what the pre-spike core decided, in the same order, with the
 /// same DRAT stream.
+// Four `bool` flags: three long-standing schedule/heuristic selectors
+// (`has_empty_clause`, `use_target_rephase`, `use_ema_restart`) plus S7b's
+// `collect_layer_stats`. Grouping them into a config struct would add an
+// indirection to the search loop's reads to satisfy a lint about argument
+// confusion at a positional CONSTRUCTOR this type does not have — every field
+// is set by name in `new_with_theory`.
+#[allow(clippy::struct_excessive_bools)]
 struct Cdcl<'progress, S: DratSink, T: NativeTheory = NullTheory> {
     /// Where derived clauses and deletions are emitted, in derivation order.
     sink: S,
@@ -1023,6 +1030,10 @@ impl<S: DratSink> Cdcl<'_, S, NullTheory> {
 }
 
 impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
+    // One flat field-by-field initializer. Splitting it to satisfy a line count
+    // would separate a field's default from the struct it belongs to for no
+    // reader's benefit.
+    #[allow(clippy::too_many_lines)]
     fn new_with_theory(formula: &CnfFormula, sink: S, theory: T) -> Self {
         let n = formula.variable_count();
         // Pack every clause's literals contiguously into one arena, recording a

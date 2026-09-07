@@ -191,7 +191,7 @@ impl TheorySolver for CubeTheory {
     }
 
     fn explain(&mut self, handle: ExplanationId) -> Option<Vec<TheoryLit>> {
-        self.issued.get(handle.0 as usize).cloned()
+        self.issued.get(usize::try_from(handle.0).ok()?).cloned()
     }
 
     fn final_check(&mut self) -> FinalCheckOutcome {
@@ -283,14 +283,18 @@ fn run_both(inst: &Instance, lazy: bool) -> (Outcome, Outcome) {
     let legacy = solver.solve(&mut cdclt_theory);
 
     let mut native_theory = CubeTheory::new(inst.atom_count, inst.forbidden.clone(), lazy);
-    let native = solve_native(
+    let native = match solve_native(
         inst.var_count,
         inst.atom_count,
-        inst.clauses.clone(),
+        &inst.clauses,
         None,
         &mut native_theory,
-    );
-    (legacy, native.outcome())
+    ) {
+        NativeSolveOutcome::Sat(_) => Outcome::Sat,
+        NativeSolveOutcome::Unsat => Outcome::Unsat,
+        NativeSolveOutcome::Unknown => Outcome::Unknown,
+    };
+    (legacy, native)
 }
 
 /// The gate. Two independent engines and one brute force over thousands of
@@ -360,10 +364,16 @@ fn a_native_refutation_carries_a_checkable_two_stream_artifact() {
         }],
     ];
     let mut theory = CubeTheory::new(2, vec![vec![(0, true), (1, true)]], false);
-    let outcome = solve_native(2, 2, clauses, None, &mut theory);
-    let NativeSolveOutcome::Unsat(artifact) = outcome else {
-        panic!("the theory refutes the only Boolean model: {outcome:?}");
-    };
+    let outcome = solve_native(2, 2, &clauses, None, &mut theory);
+    assert!(
+        matches!(outcome, NativeSolveOutcome::Unsat),
+        "the theory refutes the only Boolean model: {outcome:?}"
+    );
+    // Through the published slot, which is the channel the evidence layer
+    // reads: a test that took the artifact from a return value would not
+    // exercise the path a shipping route actually uses.
+    let artifact =
+        super::take_last_theory_refutation().expect("a native refutation publishes its artifact");
     assert_eq!(
         artifact.theory_lemma_count(),
         1,
@@ -410,14 +420,14 @@ fn the_asserted_to_clause_translation_runs_in_the_right_direction() {
     ];
     let mut theory = CubeTheory::new(2, forbidden.clone(), false);
     assert!(matches!(
-        solve_native(2, 2, clauses.clone(), None, &mut theory),
-        NativeSolveOutcome::Unsat(_)
+        solve_native(2, 2, &clauses, None, &mut theory),
+        NativeSolveOutcome::Unsat
     ));
     // Dropping the `x0 & x1` cube leaves exactly one model that satisfies both
     // the clause and the theory, and the engine must FIND it. Without this the
     // assertion above would pass for a translation that refuses everything.
     let mut theory = CubeTheory::new(2, forbidden[1..].to_vec(), false);
-    let outcome = solve_native(2, 2, clauses, None, &mut theory);
+    let outcome = solve_native(2, 2, &clauses, None, &mut theory);
     let NativeSolveOutcome::Sat(model) = outcome else {
         panic!("x0 = x1 = true satisfies the clause and violates no remaining cube: {outcome:?}");
     };
