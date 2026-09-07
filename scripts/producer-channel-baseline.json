@@ -1,0 +1,8 @@
+{
+  "_why": "Floors for scripts/measure-producer-channel.py. A drop means the producer channel shrank OR the census stopped seeing part of it; both are findings, and the script cannot tell them apart, so it reports and fails rather than choosing. Re-pin deliberately, never to silence a red run.",
+  "_pinned_on": "2026-09-06",
+  "_pinned_by": "lane production-metric (ADR-1679)",
+  "emit_sites": 38,
+  "assist_sites": 50,
+  "producer_emitted_proved_facts": 21
+}

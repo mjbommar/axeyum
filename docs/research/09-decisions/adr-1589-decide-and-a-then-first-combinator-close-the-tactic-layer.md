@@ -25,6 +25,15 @@ Running total across the tactic layer: **62** hand proofs retired
 (ADR-1576 15, ADR-1581 +5, ADR-1580 10, ADR-1582 +10, ADR-1586 14, this
 lane 8), plus 10 test-mechanism conversions this lane does not count in
 that ledger (they retire a *test's assertion*, not a *hand proof*).
+
+> **Retired as a rate, 2026-09-06 (ADR-1679).** The 62 above is correct for this
+> ADR on its date and is kept as written. It must NOT be quoted forward as a
+> production rate: it counts hand proofs *deleted*, and since 2026-09-04 the
+> work has been in producers that EMIT theorems which never had a hand proof, so
+> the number reads flat while production continues. The channel metric is
+> `scripts/measure-producer-channel.py`; the two count different things and are
+> not comparable.
+
 `decide` costs 0.006–0.025 ms per closed term (no search); a representative
 `Then(Simp, Linarith)` costs 1.1–1.3 ms, tracking `linarith`'s own measured
 range — consistent with "the combinator's cost is the sum of what it
