@@ -65,6 +65,7 @@ set -uo pipefail
 cd "$(dirname "$0")/../.." || exit 2
 
 SCRIPT="$PWD/scripts/check-parity-freshness.py"
+REAL_LEDGER="$PWD/bench-results/PARITY.md"
 [ -r "$SCRIPT" ] || { echo "FAIL: cannot read $SCRIPT"; exit 1; }
 WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
@@ -284,19 +285,60 @@ else
   echo "ok   case:real-ledger-coverage -> logics=$real_logics from bench-results/PARITY.md"
 fi
 
-# --- 12. …and that the real QF_BV row comes from its EVIDENCE MODE entry. The
-#         shipped ledger's freshest QF_BV entry is `2026-08-17T20:21:52Z —
-#         EVIDENCE MODE`; a label-blind parser would report the 2026-08-02 one
-#         instead. Asserted against the real file so the fixture in case 4
-#         cannot be the only thing keeping the label group alive. ------------
+# --- 12. …and that the label group is alive against the REAL file, so the
+#         fixture in case 4 cannot be the only thing keeping it so.
+#
+#         DERIVED, NOT PINNED (rewritten 2026-09-06). This case used to assert
+#         the literal string `2026-08-17T20:21Z`, on the reasoning that the
+#         shipped ledger's FRESHEST QF_BV entry was an `— EVIDENCE MODE` one and
+#         a label-blind parser would report the 2026-08-02 entry instead. That
+#         reasoning expired the moment a later QF_BV sweep landed: by
+#         2026-09-05 the freshest QF_BV entry was unlabelled, the literal no
+#         longer matched, and the case failed in CI for a reason that had
+#         nothing to do with the parser. A control that pins a literal measures
+#         the maintainer's memory, which is the failure this suite exists to
+#         prevent -- so it now derives both halves from the ledger.
+#
+#         Half one: the reported row for each logic is that logic's freshest
+#         entry, computed from the file. Half two: the file still contains at
+#         least one labelled entry, and the checker accepts it. Half two is
+#         what keeps the label group alive, and it does so through the
+#         unclassified-header raise rather than through entry selection --
+#         MEASURED 2026-09-06 on a scratch copy: deleting the `(?: — (?P<label>
+#         .+))?` group makes this script exit 2 on the real ledger ("a header
+#         this parser does not classify would be SKIPPED"), because the two
+#         labelled QF_BV headers stop matching. That kill does not depend on a
+#         labelled entry being the freshest, so it survives every future sweep.
+#         ------------------------------------------------------------------
 asserted=$((asserted + 1))
-hits=$(printf '%s\n' "$real_out" | grep -cF "QF_BV")
-qfbv_line=$(printf '%s\n' "$real_out" | awk '$1=="QF_BV"{print; exit}')
-if [ "${hits:-0}" -eq 0 ] || ! printf '%s\n' "$qfbv_line" | grep -cF "2026-08-17T20:21Z" >/dev/null; then
-  echo "FAIL case:real-ledger-evidence-entry QF_BV row='$qfbv_line' (want the 2026-08-17 EVIDENCE MODE entry)"
+labelled=$(grep -cE '^## [A-Z][A-Z0-9_]* — [0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z — .+$' "$REAL_LEDGER")
+ledger_logics=$(grep -oE '^## [A-Z][A-Z0-9_]* — ' "$REAL_LEDGER" | sort -u | wc -l)
+reported_rows=$(printf '%s\n' "$real_out" | awk '/^  [A-Z]/{n++} END{print n+0}')
+freshest_mismatch=""
+for lg in $(printf '%s\n' "$real_out" | awk '/^  [A-Z]/{print $1}'); do
+  want=$(grep -oE "^## ${lg} — [0-9T:Z-]+" "$REAL_LEDGER" | sed -E "s/^## ${lg} — //" | sort | tail -1 | cut -c1-16)
+  got=$(printf '%s\n' "$real_out" | awk -v L="$lg" '$1==L{print $3; exit}' | cut -c1-16)
+  if [ -n "$want" ] && [ "$want" != "$got" ]; then
+    freshest_mismatch="$freshest_mismatch $lg(want=$want got=$got)"
+  fi
+done
+if [ "${reported_rows:-0}" -lt "${ledger_logics:-9}" ]; then
+  # NON-VACUITY GUARD. Without this the case passes on an ERROR: the loop below
+  # iterates over rows parsed out of $real_out, and an error output has none, so
+  # an empty loop leaves $freshest_mismatch empty and every assertion "holds".
+  # MEASURED 2026-09-06: the first draft of this rewrite reported ok under a
+  # surgical label-group mutation for exactly that reason. A control that cannot
+  # fail is worse than no control.
+  echo "FAIL case:real-ledger-label-group the checker reported ${reported_rows:-0} row(s) for ${ledger_logics} logic(s) in the ledger — it did not parse the real file, so nothing below was actually asserted: $(printf '%s' "$real_out" | tr '\n' '|' | cut -c1-200)"
+  fail=1
+elif [ "${labelled:-0}" -lt 1 ]; then
+  echo "FAIL case:real-ledger-label-group the real ledger carries NO labelled entry, so nothing here exercises ENTRY_RE's label group; add one or move this assertion"
+  fail=1
+elif [ -n "$freshest_mismatch" ]; then
+  echo "FAIL case:real-ledger-label-group reported row is not the freshest entry for:$freshest_mismatch"
   fail=1
 else
-  echo "ok   case:real-ledger-evidence-entry -> $qfbv_line"
+  echo "ok   case:real-ledger-label-group -> $labelled labelled entry/entries; every reported row is its logic's freshest"
 fi
 
 # --- 13. SOLVER CURRENCY against the REAL ledger and the REAL checkout: at
