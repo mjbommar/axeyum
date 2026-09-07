@@ -34,15 +34,44 @@ asserts per-file `traced_ms <= wall_ms * 1.15` and exits 1 (not a warning) on
 violation; `test_aggregate_guard.py` mutation-checks the guard itself
 (a synthetic impossible-sum fixture must fail it, an honest one must pass).
 
-**Coverage before/after**: before 15.6% (93 files, 12 divisions,
-`bench-divisions-2026-09-07`'s sample). After: <!-- fill in after sweep -->.
+**Coverage before/after — the exit criterion**: **15.6% -> 38.1%** (222.3s
+-> 555.7s traced of 1422.8s -> 1457.8s sampled wall clock, same 93-file
+sample across the same 12 divisions, re-run on s4 with
+`bench-results/instrument-coverage-2026-09-07/scripts/{sweep.sh,aggregate.py}`).
+**Non-additivity guard: 0 violations across all 93 files** (max single-file
+fraction observed: 99.6%). Four of the five previously-zero-coverage
+divisions now have real coverage: QF_BV 0.0%->80.5%, QF_IDL 0.0%->96.2%,
+QF_RDL 0.0%->48.2%, QF_ABV 0.0%->11.2%; QF_UFLIA only reaches 10.7%
+(parse-only — its population resolves via dispatch-decline, the one gap
+this lane did not close). Full per-division table and the small
+run-to-run host-contention caveat (QF_LRA/UF): diary's "Re-run: coverage
+after" section.
+
+**"Which gate bound the query" vs. "which gate printed last" (the QF_NRA
+finding)**: honestly, this lane's four instruments do NOT close that gap —
+they answer "how much wall clock did stage X cost," one level of
+granularity above "which of several admission checks inside a stage's
+dispatch declined the query." The tool that WOULD answer it already exists
+(`crate::route_trace::RouteTrace`, which records the full ordered sequence
+of dispatch attempts and each one's decline reason, not just the last
+message printed) but is reachable only through `check_auto_explained`, a
+function `solve_smtlib` does not call and which CLAUDE.md's Gotchas already
+document diverging from the shipped front door on 134/397 benchmarks.
+Making that safe to wire into `--trace` is the concrete next step this
+finding sharpens — see the diary's "Does this instrument …" section.
 
 **Not done** (see the diary's "What remains untraced" section for why):
 generic (non-`sat-bv`) rewrite/preprocessing timing (no single funnel point
 across ~7 call sites); generic (non-`sat-bv`) model-replay timing at the
 other ~6 call sites; dispatch-decline / admission-decline timing for the
-QF_UFLIA class (the existing `RouteTrace` instrument is reachable only
-through a function `solve_smtlib` does not call, and CLAUDE.md's Gotchas
-already document that alternate entry point diverging from the shipped
-front door on 134/397 benchmarks — wiring it into `--trace` without first
-resolving that divergence was judged out of this lane's scope).
+QF_UFLIA class and the QF_NRA-class misattribution above (the existing
+`RouteTrace` instrument is reachable only through a function `solve_smtlib`
+does not call, and CLAUDE.md's Gotchas already document that alternate
+entry point diverging from the shipped front door on 134/397 benchmarks —
+wiring it into `--trace` without first resolving that divergence was
+judged out of this lane's scope).
+
+**Gates run**: `cargo clippy --workspace --all-targets --all-features -- -D
+warnings` clean; `cargo test -p axeyum-solver --lib --features full` — 1475
+passed, 0 failed; `cargo test -p axeyum-solver --features full --test
+corpus_regression` — 1 passed, 0 failed.

@@ -1,0 +1,5 @@
+; front-door parse_ms=0
+; dl-online total_ms=0
+; bv-layer bit_blast_ms=0 cnf_encode_ms=0 cnf_inprocess_ms=0 solve_ms=0 model_lift_ms=0 model_replay_ms=0 total_ms=0 bit_demand_analysis_nested_in_bit_blast_ms=0 range_demand_admission_nested_in_bit_blast_ms=0 aig_nodes=1 cnf_variables=0 cnf_clauses=0
+; theory-layer boolean_propagate_ms=0 theory_assert_ms=0 theory_propagate_ms=0 theory_push_pop_ms=0 conflict_analysis_ms=0 theory_final_check_ms=1 theory_explain_ms=0 theory_conflicts=28 theory_propagations=205 final_checks=19 decisions=385 restarts=0 learned_clauses=28 learned_literals=71 learned_literals_premin=71 simplex_pivots=73 simplex_checks=19 simplex_cold_restarts=0 bound_retractions=665 bound_assertions=755 propagations_offered=205 simplex_rows=122 simplex_columns=132
+unknown

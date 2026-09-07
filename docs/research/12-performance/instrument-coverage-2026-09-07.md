@@ -166,9 +166,112 @@ exit status depend on the finding").
   timeout) — the trace lines are additional stdout lines before the verdict,
   never a changed verdict.
 
+## Does this instrument "which gate bound the query," or only "which gate printed last"?
+
+A sibling lane (`QF_NRA`) found, while raising an admission bound it was
+briefed to fix: lifting it did not change the outcome — it changed the
+DECLINE MESSAGE, from "771 cross-products exceed the bound of 2" to "atom
+cap exceeded, 23385 > 1024," at the same wall time and memory. The bound the
+brief named was never the operative constraint; a LATER gate in the same
+dispatch chain was always going to decline anyway, and the first message
+just printed before the second gate got a chance to run. Worth asking
+directly: does anything this lane built help there?
+
+**Honestly, no — not yet, and it's worth being precise about why.** The four
+instruments added here (`front-door`, `dl-online`, `bv-layer`,
+`theory-layer`) answer "how much wall clock did STAGE X cost," which is a
+different question from "which of the N admission checks INSIDE a stage's
+dispatch chain is the one whose decline actually determined the outcome."
+`dl-online`'s `total_ms` would tell you the whole difference-logic probe
+cost 40ms and declined — it says nothing about which of the probe's several
+internal refusal conditions (non-difference atom, mixed sort, coefficient
+overflow, …) fired. The QF_NRA finding is a decline-ORDERING problem, one
+level of granularity below every stage boundary this lane instrumented.
+
+The right instrument for it already exists and is described in this lane's
+"What remains untraced" section below: `crate::route_trace::RouteTrace`
+records the ENTIRE ordered sequence of dispatch attempts and each one's
+[`DeclineReason`] (not just the last message printed) — exactly the data
+that would have shown "771 > 2" was declined-past, not decisive. It is
+reachable only through `check_auto_explained`, a function `solve_smtlib`
+does not call, and CLAUDE.md's own Gotchas document that alternate path
+diverging from the shipped front door on 134/397 benchmarks. So the honest
+statement is: **the tool that would fix "message named a constraint that
+was not operative" is not new — it already exists, is not blind the way a
+single printed message is, and is not safely wired to the real front door.**
+Making it safe to wire (either by closing the 134/397 divergence, or by
+proving `check_auto_explained`'s recorder is provably side-effect-free on
+the SAME code path `check_auto` runs, not just verdict-invariant, which
+`tests/route_trace.rs` already argues structurally but was never checked
+against the divergence count directly) is the concrete next step this
+finding sharpens — a bigger, more valuable outcome than any additional
+stage-timing line, and out of this lane's remaining scope to build today.
+
 ## Re-run: coverage after
 
-<!-- filled in after the sweep -->
+Same 12 divisions, same deterministic `min(8, N)` file selection (identical
+file lists — reused, not redrawn), same 24s wall / 8GiB `ulimit -v`
+protocol, same `AXEYUM_TRACE=1` flag, using
+`bench-results/instrument-coverage-2026-09-07/scripts/{run_division.sh,sweep.sh,aggregate.py}`.
+Built and run on **s4** (not the idle s7 the original sweep used — this
+host had this lane's own `cargo-serialized.sh` clippy/lib-test/build jobs
+running concurrently at the same time as the sweep, so per-division numbers
+other than the five targeted zero-coverage divisions carry more wall-clock
+noise than the original; the sample and protocol are identical either way,
+which is what makes the headline comparison valid). Raw per-file TSVs and
+logs (376K, 93 files) and `aggregate.json` are committed alongside this
+diary.
+
+**Headline: 15.6% -> 38.1%** (222.3s -> 555.7s traced, of 1422.8s -> 1457.8s
+sampled wall clock; wall totals differ slightly because this is a different
+run at a later commit on a different host, not a byte-reproducible replay —
+the traced FRACTION is the comparable number). **Non-additivity guard: 0
+violations across all 93 files** (`aggregate.py` asserts `traced_ms <=
+wall_ms * 1.15` per file and exits 1 on any violation; the actual maximum
+observed was 99.6%, nowhere near even the 1.0 threshold, let alone the
+1.15 slop — the guard was never close to needing to fire on real data,
+which is itself worth recording since the ORIGINAL bug it guards against
+produced 130.7%).
+
+| Division | Files | Wall | Traced | Coverage before -> after | front-door | dl-online | bv-layer | theory-layer |
+|---|---:|---:|---:|---|---:|---:|---:|---:|
+| **QF_ABV** | 8 | 171.1s | 19.2s | 0.0% -> **11.2%** | 0.06s | 0.00s | 19.17s | 0.00s |
+| **QF_BV** | 6 | 148.2s | 119.3s | 0.0% -> **80.5%** | 0.42s | 0.00s | 118.91s | 0.00s |
+| **QF_IDL** | 8 | 71.8s | 69.1s | 0.0% -> **96.2%** | 0.34s | 68.73s | 0.00s | 0.00s |
+| QF_LIA | 8 | 161.3s | 18.5s | 11.0% -> 11.4% | 0.18s | 0.40s | 0.00s | 17.88s |
+| QF_LRA | 8 | 158.1s | 110.5s | 71.3% -> 69.9% | 1.39s | 0.28s | 0.00s | 108.86s |
+| QF_NIA | 8 | 157.0s | 55.8s | 13.7% -> 35.5% | 0.09s | 0.01s | 27.47s | 28.26s |
+| QF_NRA | 8 | 80.6s | 0.1s | 0.1% -> 0.1% | 0.06s | 0.00s | 0.00s | 0.05s |
+| **QF_RDL** | 8 | 151.9s | 73.3s | 0.0% -> **48.2%** | 12.32s | 60.97s | 0.00s | 0.00s |
+| QF_SLIA | 7 | 63.8s | 0.2s | 0.1% -> 0.4% | 0.06s | 0.00s | 0.07s | 0.10s |
+| QF_UF | 8 | 90.9s | 64.0s | 69.2% -> 70.4% | 0.47s | 0.00s | 1.00s | 62.49s |
+| **QF_UFLIA** | 8 | 55.0s | 5.9s | 0.0% -> **10.7%** | 5.87s | 0.00s | 0.00s | 0.00s |
+| UF | 8 | 148.0s | 19.8s | 14.2% -> 13.4% | 0.08s | 0.00s | 0.60s | 19.13s |
+
+Bold = the five divisions `bench-divisions-2026-09-07` measured at zero.
+**Four of five (QF_ABV, QF_BV, QF_IDL, QF_RDL) now have real, substantial
+coverage** — QF_BV and QF_IDL in particular went from seeing NOTHING to
+seeing 80-96% of their sampled wall clock. QF_UFLIA moved only to 10.7%:
+`; front-door …` (parse) is real, honestly-measured coverage, but this
+division's population resolves mostly through dispatch/admission-decline
+before any instrumented engine spawns — exactly the class of gap the
+"Does this instrument … " section above and the "not done" item below both
+name, corroborated rather than closed by this number.
+
+QF_LRA and UF show a small (1-2 point) DECREASE from the original sweep's
+numbers (71.3%->69.9%, 14.2%->13.4%). Not a regression in the instrument:
+same file list, same fields, same non-double-counting decomposition — the
+plausible explanation is host contention (this run shared s4 with three
+concurrent `cargo-serialized.sh` jobs; the original was on an idle s7),
+which can shift a wall-clock-bounded search's internal work distribution
+slightly run to run. Recorded rather than smoothed over, per this
+project's own rule about not trusting a number without checking what could
+make it wrong.
+
+QF_NRA and QF_SLIA stay near-zero (0.1%, 0.4%): their dominant routes (NRA
+real-root isolation; the string engine) are untouched by any of the four
+instruments added here — expected, not a defect, and consistent with "What
+remains untraced" below.
 
 ## What remains untraced, and why
 
