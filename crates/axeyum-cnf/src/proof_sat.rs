@@ -2069,16 +2069,36 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
     #[cold]
     #[inline(never)]
     fn materialize_explanation(&mut self, explanation: TheoryExplanation) -> Option<Vec<CnfLit>> {
+        self.materialize_explanation_of(explanation, None)
+    }
+
+    /// [`Cdcl::materialize_explanation`] for a handle whose clause is known to
+    /// contain `implied`.
+    ///
+    /// The distinction is invisible to a theory that materialises its own
+    /// clauses and load-bearing for an adapter over a channel that carries
+    /// *asserted* literals: a conflict core turns into a clause by negating
+    /// every literal, whereas a propagation reason turns into one by negating
+    /// every antecedent and then adding the implied literal back. Passing
+    /// `None` where a reason was meant drops that literal, and the resulting
+    /// clause is stronger than anything the theory entails.
+    #[cold]
+    #[inline(never)]
+    fn materialize_explanation_of(
+        &mut self,
+        explanation: TheoryExplanation,
+        implied: Option<CnfLit>,
+    ) -> Option<Vec<CnfLit>> {
         match explanation {
             TheoryExplanation::Eager(lits) => Some(lits),
             TheoryExplanation::Lazy(handle) => {
                 if self.collect_layer_stats {
                     let started = Instant::now();
-                    let explained = self.theory.explain(handle);
+                    let explained = self.theory.explain(handle, implied);
                     self.time_theory_explain += started.elapsed();
                     explained
                 } else {
-                    self.theory.explain(handle)
+                    self.theory.explain(handle, implied)
                 }
             }
         }
@@ -2217,7 +2237,7 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
                 continue;
             };
             let implied = self.true_literal(var);
-            let Some(lits) = self.theory.explain(handle) else {
+            let Some(lits) = self.theory.explain(handle, Some(implied)) else {
                 return false;
             };
             let cid = self.install_theory_lemma(implied, &lits);
@@ -2590,7 +2610,7 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
         let implied = self.true_literal(var);
         let lits = self
             .theory
-            .explain(handle)
+            .explain(handle, Some(implied))
             .unwrap_or_else(|| panic!("theory failed to explain its own handle {handle:?}"));
         let cid = self.install_theory_lemma(implied, &lits);
         self.reason[var] = Reason::clause(cid);
@@ -3074,7 +3094,7 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
             self.theory.propagate_into(&mut self.theory_queue);
         }
         let mut propagated = false;
-        let mut conflict: Option<TheoryExplanation> = None;
+        let mut conflict: Option<(TheoryExplanation, CnfLit)> = None;
         // Taken out of the driver-owned queue so the enqueue loop below can
         // hold `&mut self`; the allocation goes straight back afterwards, so
         // the queue is still paid for once per search and not once per round.
@@ -3091,7 +3111,16 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
                 // here -- `lit` included -- so it is already the conflict
                 // clause and needs no negation.
                 Some(false) => {
-                    conflict = Some(queued.entries()[index].1.clone());
+                    // The handle stands for the REASON clause of `lit`, which
+                    // contains `lit`; it is not a bare conflict core. A theory
+                    // that materialises clauses itself cannot tell the
+                    // difference, but an adapter over a channel that carries
+                    // *asserted* literals can and must -- dropping `lit` here
+                    // would install `~antecedents` as an ADR-1704 input clause,
+                    // and that is not a theory lemma: the theory entails
+                    // `antecedents -> lit`, not `~antecedents`. Refuting the
+                    // extended formula would then be a wrong `unsat`.
+                    conflict = Some((queued.entries()[index].1.clone(), lit));
                     break;
                 }
                 None => {
@@ -3115,8 +3144,8 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
             }
         }
         self.theory_queue = queued;
-        if let Some(explanation) = conflict {
-            return match self.materialize_explanation(explanation) {
+        if let Some((explanation, implied)) = conflict {
+            return match self.materialize_explanation_of(explanation, Some(implied)) {
                 Some(core) => TheoryRound::Conflict(core),
                 // A theory that cannot explain the propagation it just made is
                 // a theory bug. Undecided, never a verdict.
@@ -5029,7 +5058,11 @@ mod tests {
                     queue.push_lazy(Self::x3(), IMPLY_HANDLE);
                 }
             }
-            fn explain(&mut self, handle: ExplanationId) -> Option<Vec<CnfLit>> {
+            fn explain(
+                &mut self,
+                handle: ExplanationId,
+                _implied: Option<CnfLit>,
+            ) -> Option<Vec<CnfLit>> {
                 assert_eq!(
                     handle, IMPLY_HANDLE,
                     "driver asked for a handle we never issued"
@@ -5382,7 +5415,11 @@ mod tests {
                     );
                 }
             }
-            fn explain(&mut self, handle: ExplanationId) -> Option<Vec<CnfLit>> {
+            fn explain(
+                &mut self,
+                handle: ExplanationId,
+                _implied: Option<CnfLit>,
+            ) -> Option<Vec<CnfLit>> {
                 assert_eq!(handle, LEVEL_ZERO_HANDLE);
                 // The clause `(x2 | ~x1)`.
                 Some(vec![
@@ -5804,5 +5841,177 @@ mod layer_stats_tests {
         assert_eq!(stats.theory_push_pop, Duration::ZERO);
         assert!(stats.decisions > 0, "the Boolean side still decides");
         assert!(stats.learned_clauses > 0, "and still learns: {stats:?}");
+    }
+}
+
+/// What the driver asks a lazy handle FOR (plan slice S7b).
+///
+/// A handle can stand for two different things and the difference is invisible
+/// to a theory that materialises its own clauses — which is every fixture in
+/// this file, and why nothing here could fail on it before. It is entirely
+/// visible to an adapter over a channel that carries *asserted* literals
+/// (`axeyum_solver::euf_egraph::TheorySolver`), where a conflict core becomes a
+/// clause by negating every literal and a propagation reason becomes one by
+/// negating every antecedent and then adding the implied literal back.
+///
+/// Ask for a conflict core where a reason was meant and that literal is
+/// dropped. The resulting clause is **stronger than the theory entails** —
+/// `~antecedents` instead of `~antecedents \/ implied` — and it is installed as
+/// an ADR-1704 *input* clause of the extended formula, so refuting that formula
+/// would be a wrong `unsat`. Found by the S7b engine differential
+/// (`axeyum_solver::native_cdclt`), which disagreed on 39 of 8,000 runs.
+#[cfg(test)]
+mod explain_contract_tests {
+    use super::theory::{
+        ExplanationId, FinalCheckOutcome, NativeTheory, PropagationQueue, TheoryExplanation,
+    };
+    use super::{DEFAULT_PROOF_SAT_CONFLICT_LIMIT, solve_with_theory_and_drat_proof};
+    use crate::{CnfClause, CnfFormula, CnfLit, CnfVar};
+    use std::cell::RefCell;
+    use std::rc::Rc;
+
+    fn lit(value: i64) -> CnfLit {
+        let var = CnfVar::new(usize::try_from(value.unsigned_abs() - 1).unwrap()).unwrap();
+        let positive = CnfLit::positive(var);
+        if value < 0 {
+            positive.negated()
+        } else {
+            positive
+        }
+    }
+
+    fn formula(variable_count: usize, clauses: &[&[i64]]) -> CnfFormula {
+        let mut f = CnfFormula::new(variable_count);
+        for clause in clauses {
+            f.add_clause(CnfClause::new(clause.iter().copied().map(lit).collect()))
+                .unwrap();
+        }
+        f
+    }
+
+    /// A theory that lazily propagates `x2` once `x1` is asserted true, with
+    /// `x1` as its only antecedent, and records what the driver asked each
+    /// handle for.
+    struct RecordingLazyImplier {
+        asked: Rc<RefCell<Vec<Option<CnfLit>>>>,
+        x1_true: bool,
+    }
+
+    impl NativeTheory for RecordingLazyImplier {
+        fn assert(&mut self, var: usize, value: bool) -> Result<(), Vec<CnfLit>> {
+            if var == 0 {
+                self.x1_true = value;
+            }
+            Ok(())
+        }
+
+        fn push(&mut self) {}
+
+        fn pop(&mut self) {}
+
+        fn propagate_into(&mut self, queue: &mut PropagationQueue) {
+            if self.x1_true {
+                queue.push_lazy(lit(2), ExplanationId(7));
+            }
+        }
+
+        fn final_check(&mut self) -> FinalCheckOutcome {
+            FinalCheckOutcome::Sat
+        }
+
+        fn explain(
+            &mut self,
+            handle: ExplanationId,
+            implied: Option<CnfLit>,
+        ) -> Option<Vec<CnfLit>> {
+            assert_eq!(handle, ExplanationId(7));
+            self.asked.borrow_mut().push(implied);
+            // The reason CLAUSE for `x1 -> x2`, which contains the implied
+            // literal. An asserted-literal channel would have returned `[x1]`
+            // and relied on `implied` to rebuild this.
+            Some(vec![lit(2), lit(-1)])
+        }
+    }
+
+    /// The propagate-onto-an-already-false-literal path asks for the literal's
+    /// **reason**, so it must name that literal. Before this was threaded the
+    /// call passed `None`, i.e. "give me a conflict core", and an adapter
+    /// obeying that would have installed a clause the theory does not entail.
+    #[test]
+    fn a_propagation_onto_a_false_literal_asks_for_the_reason_not_a_core() {
+        // `(x1)` and `(~x2)` are both level-zero units, so by the time the
+        // theory round runs, `x2` is already FALSE and the theory's propagation
+        // of `x2` lands on it. That is the path under test.
+        let f = formula(2, &[&[1], &[-2]]);
+        let asked = Rc::new(RefCell::new(Vec::new()));
+        let mut theory = RecordingLazyImplier {
+            asked: Rc::clone(&asked),
+            x1_true: false,
+        };
+        let _ = solve_with_theory_and_drat_proof(
+            &f,
+            &mut theory,
+            None,
+            DEFAULT_PROOF_SAT_CONFLICT_LIMIT,
+        );
+        let asked = asked.borrow();
+        assert!(
+            !asked.is_empty(),
+            "the fixture must reach the propagate-onto-false path at all"
+        );
+        assert!(
+            asked.iter().all(|implied| *implied == Some(lit(2))),
+            "every ask on this path names the implied literal, got {asked:?}"
+        );
+    }
+
+    /// The companion case: a handle standing for a `final_check` **conflict
+    /// core** is asked for with `None`. Without this the test above would pass
+    /// for a driver that named a literal everywhere, which would break the
+    /// other direction of the translation just as badly.
+    #[test]
+    fn a_final_check_conflict_handle_is_asked_for_as_a_core() {
+        struct LazyRefuter {
+            asked: Rc<RefCell<Vec<Option<CnfLit>>>>,
+        }
+        impl NativeTheory for LazyRefuter {
+            fn assert(&mut self, _var: usize, _value: bool) -> Result<(), Vec<CnfLit>> {
+                Ok(())
+            }
+            fn push(&mut self) {}
+            fn pop(&mut self) {}
+            fn propagate_into(&mut self, _queue: &mut PropagationQueue) {}
+            fn final_check(&mut self) -> FinalCheckOutcome {
+                FinalCheckOutcome::Conflict(TheoryExplanation::Lazy(ExplanationId(3)))
+            }
+            fn explain(
+                &mut self,
+                handle: ExplanationId,
+                implied: Option<CnfLit>,
+            ) -> Option<Vec<CnfLit>> {
+                assert_eq!(handle, ExplanationId(3));
+                self.asked.borrow_mut().push(implied);
+                // `~x1 \/ ~x2`: every literal false under the total assignment
+                // the fixture's two units force.
+                Some(vec![lit(-1), lit(-2)])
+            }
+        }
+        let f = formula(2, &[&[1], &[2]]);
+        let asked = Rc::new(RefCell::new(Vec::new()));
+        let mut theory = LazyRefuter {
+            asked: Rc::clone(&asked),
+        };
+        let _ = solve_with_theory_and_drat_proof(
+            &f,
+            &mut theory,
+            None,
+            DEFAULT_PROOF_SAT_CONFLICT_LIMIT,
+        );
+        let asked = asked.borrow();
+        assert!(!asked.is_empty(), "the fixture must reach `final_check`");
+        assert!(
+            asked.iter().all(Option::is_none),
+            "a conflict core names no implied literal, got {asked:?}"
+        );
     }
 }

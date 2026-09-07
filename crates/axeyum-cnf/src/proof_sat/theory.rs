@@ -174,8 +174,21 @@ pub trait NativeTheory {
     /// for: the implied literal (for a propagation) or nothing else (for a
     /// conflict), plus one false literal per antecedent. `None` is a theory
     /// bug, never a verdict.
-    fn explain(&mut self, handle: ExplanationId) -> Option<Vec<CnfLit>> {
-        let _ = handle;
+    ///
+    /// `implied` says which of the two the driver is asking for: `Some(lit)`
+    /// when the handle justifies the propagation of `lit` (so `lit` must be in
+    /// the returned clause), `None` when it is a conflict core (so every
+    /// literal returned is false under the current assignment).
+    ///
+    /// A theory whose handles already stand for whole clauses ignores the
+    /// argument. It exists for the adapters: `axeyum_solver::euf_egraph`'s
+    /// `TheorySolver::explain` returns the **asserted literals** whose
+    /// conjunction justifies the handle, and turning those into this module's
+    /// clause form needs the implied literal that the asserted form leaves
+    /// out. Without it an adapter would have to force every reason eagerly and
+    /// the lazy channel would never pay.
+    fn explain(&mut self, handle: ExplanationId, implied: Option<CnfLit>) -> Option<Vec<CnfLit>> {
+        let _ = (handle, implied);
         None
     }
 
@@ -215,7 +228,7 @@ impl NativeTheory for NullTheory {
     }
 
     #[inline]
-    fn explain(&mut self, _handle: ExplanationId) -> Option<Vec<CnfLit>> {
+    fn explain(&mut self, _handle: ExplanationId, _implied: Option<CnfLit>) -> Option<Vec<CnfLit>> {
         None
     }
 
@@ -260,8 +273,8 @@ impl<T: NativeTheory + ?Sized> NativeTheory for &mut T {
     }
 
     #[inline]
-    fn explain(&mut self, handle: ExplanationId) -> Option<Vec<CnfLit>> {
-        (**self).explain(handle)
+    fn explain(&mut self, handle: ExplanationId, implied: Option<CnfLit>) -> Option<Vec<CnfLit>> {
+        (**self).explain(handle, implied)
     }
 
     #[inline]
