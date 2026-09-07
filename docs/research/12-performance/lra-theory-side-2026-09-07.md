@@ -24,7 +24,7 @@ splits the loss cleanly in two, with no third class:
 Two things this lane will not do. It will not unify the engine — measured on
 2026-09-06, `CdclT` is already 3.4% *faster* than the native core. And it will
 not raise the atom constant; if that moves it becomes a measured budget
-([ADR-1752](../09-decisions/adr-1752-the-lra-admission-cap-becomes-a-memory-budget.md)).
+([ADR-1752](../09-decisions/adr-1752-the-lra-admission-cap-becomes-budget-relative.md)).
 
 ## The method, and why it is not negotiable here
 
@@ -118,31 +118,67 @@ fast path that *succeeds* where the general body declines changes the search
 trajectory, not only its speed. The random draw did not catch that mutant; the
 named boundary case does, and finding that gap is what the named cases exist for.
 
-### 3. The atom cap became a memory budget (ADR-1752)
+### 3. The atom cap: three cost models, three refutations (ADR-1752)
 
 Mid-lane the coordinator established that this half is the larger one: the
 QF_NRA lane's A/B showed `MAX_ONLINE_LRA_ATOMS` is the real gate behind **62
 QF_NRA losses** as well as this division's 23.
 
-Reading the code before measuring found something better than a tuning
-opportunity. The cap's own doc records the measurement it rests on — the 8 GiB
-abort at 1,492 atoms — and names `AtomBuilder` normalization as the cost. That
-measurement is dated **2026-08-03** (`e62086742`). `MAX_LRA_CACHED_COEFFICIENTS`,
-which bounds exactly that cost, landed **2026-08-06** (`96ff85930`), three days
-later, and the cap was never re-measured. The number the cap rests on describes
-a tree in which the thing it protects against was unbounded.
+Reading the code before measuring found something that looked better than a
+tuning opportunity. The cap's own doc records the measurement it rests on — the
+8 GiB abort at 1,492 atoms — and names `AtomBuilder` normalization as the cost.
+That measurement is dated **2026-08-03** (`e62086742`).
+`MAX_LRA_CACHED_COEFFICIENTS`, which bounds exactly that cost, landed
+**2026-08-06** (`96ff85930`), three days later, and the cap was never
+re-measured. The number the cap rests on describes a tree in which the thing it
+protects against was unbounded.
 
 That is the CLAUDE.md gotcha in its pure form: *a file that records obstacles
 accumulates stale ones by construction, and its authority is what makes them
 expensive.* The doc was specific, numerate and authoritative, which is exactly
 why it survived a month unchecked.
 
-The replacement is in ADR-1752. The short form for a sibling division: a **count**
-is the wrong currency, because the footprint is `atoms × coefficients-per-atom`
-and 23,385 atoms over a handful of variables cost less than 1,492 over 700. The
-budget is charged in coefficients, deterministically, from the builder's own
-counters rather than a resident-set probe, and a refusal now says *projected N
-MiB > budget M MiB at K atoms over V variables* instead of `1493 > 1024`.
+**And then I got the replacement wrong three times.** This is the part worth
+reading, because it is the part I would have got away with if the corpus sweep
+had not been part of the protocol.
+
+| | the model | how the corpus refuted it |
+|---|---|---|
+| 1 | retained coefficients × a measured per-coefficient cost | passed `_sanfoundry_10_ground.i_6_3_3.bpl_13.smt2`, which then **aborted at 7.8 GB / 5.3 s** where it had declined in 0.82 s at 121 MB. Those bytes are not coefficients. |
+| 2 | the dense tableau's projected size | caught that file **and** refused `TM/p5-driverlogNumeric_s9.smt2`, which the Fourier–Motzkin fallback decides `unsat` in 0.18 s at 41 MB. Net on 200 files: 97 → 97, one gain and one loss. |
+| 3 | Fourier–Motzkin's own entry and per-step allocations, bounded in bytes where they are made | correct as far as it goes — and still did not stop `miplib/danoint-266.smt2`: **7.8 GB, 11 s**, previously a 0.04 s decline at 15 MB, with `simplex_rows=n/a` and `final_checks=1`. |
+
+Each was plausible from the source. Each survived my own reading. Only the
+200-file sweep separated them, and it separated them one at a time — model 2 was
+built *because* the sweep refuted model 1, and model 3 *because* it refuted
+model 2.
+
+Model 3 is kept regardless of the rest: `MAX_FM_CONSTRAINTS` capped a **count**
+whose bytes had no bound at all, and the per-step check has to sit *before* the
+partition loop that clones a length-`n` multiplier vector per row — putting it
+after (my first attempt) leaves the allocation already made.
+
+What I did not manage is to find where `danoint-266`'s 7.8 GB actually goes.
+`memory_budget.rs` already says why that is ADR-sized: with no
+`#[global_allocator]` hook, nothing here can attribute an allocation it did not
+itself make. Three refutations in one lane is enough evidence that a per-atom
+cost model is not available at this altitude, and a fourth guess would be
+guessing against a corpus that has said no three times.
+
+So the count **survives**, as the outer conservative screen, calibrated to
+reproduce `1_024` exactly at the default budget — which is what makes the
+shipped build's admission behaviour byte-identical and the change unable to
+regress it. What ADR-1752 delivers is therefore narrower than it was scoped as,
+and worth stating plainly:
+
+- the gate **moves** with `SolverConfig::memory_limit_mb` (8 GiB buys 13,107
+  atoms), where before no amount of memory bought one atom past 1,024 — that is
+  the knob the QF_NRA lane needs;
+- a refusal **states its numbers and what to do about them**;
+- the Fourier–Motzkin fallback is **bounded in bytes** for the first time;
+- and the three dead ends are recorded with their file names and numbers, so the
+  next attempt starts from "where do `danoint-266`'s 7.8 GB go" rather than from
+  a fresh guess.
 
 ## Log
 
@@ -162,10 +198,19 @@ and `CdclT::run_final_check`. Nothing measured. Five hypotheses registered.
 `spider_benchmarks/no_op_accs.base.smt2` moving unknown → unsat at 19.2 s. But
 `blending/1` and `blending/5` were 1.70x and 1.66x *slower*, all from Stein.
 
-### 2026-09-07 — the fix, and the budget
+### 2026-09-07 — the fix, and the first budget
 
-`4acb9332f`. Narrowed Euclid replaces Stein; the atom cap becomes ADR-1752's
-byte budget; `smtcomp_cli` gains `--memory-limit-mb` and a
+`4acb9332f`. Narrowed Euclid replaces Stein; the atom cap becomes a coefficient
+budget; `smtcomp_cli` gains `--memory-limit-mb` and a
 `; give-up kind=… detail=…` line under `--trace`, because the binary was
 discarding `UnknownReason` entirely — so in every recorded run a resource
 refusal was indistinguishable from a search timeout.
+
+### 2026-09-07 — the 200-file sweep refutes the budget, twice more
+
+`c615e835b`, `6a37b934d`, `ad2b40370`. The sweep found the 7.8 GB abort the
+coefficient budget could not see, then found that the tableau guard which caught
+it also lost a file, then found that bounding Fourier–Motzkin in place — correct
+and kept — still did not stop `danoint-266`. The count returns as a
+budget-relative screen; see § 3 above for why that is the honest end state
+rather than a fourth guess.

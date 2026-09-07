@@ -77,7 +77,7 @@ the change rather than of the search.
 | `spider_benchmarks/fs_not_sc_seen` | 5368 | 4593 | — | — |
 | `spider_benchmarks/no_op_accs` | unknown 24102 | **unsat 19229** | — | — |
 
-**Decided: base 7/33, cand 8/33.** The c2 row is completed in section 5.
+**Decided: base 7/33, cand 8/33.**
 
 ## 3. The atom-cap census class, re-measured after ADR-1752
 
@@ -156,3 +156,49 @@ gate behind 62 QF_NRA losses:
   8.7 GiB, median 759 MiB, one file over 8 GiB. A QF_NRA query reaching this
   route with 23 385 atoms should be expected to be admitted; what it should be
   watched for is process RSS, and the number to watch it against is the one above.
+
+
+## 5. The shipped result
+
+Arm **base** = `75286df9` (counters only, no behaviour change).
+Arm **final** = `c7b1fa67` (the whole lane).
+Binaries confirmed different by `sha256sum`; both arms 24 s / 8 GiB per file,
+one file at a time, pinned to one core half of an otherwise idle s7.
+
+| population | decided base | decided after | gains | losses | sat/unsat flips | wall on commonly-decided |
+|---|---:|---:|---:|---:|---:|---:|
+| committed 200-file parity list | 97 | **98** | 1 | **0** | **0** | 57 840 → 50 890 ms (**0.880x**) |
+| 33-file scoring population | 7 | **8** | 1 | **0** | **0** | 31 765 → 28 363 ms (**0.893x**) |
+
+The single gain is `spider_benchmarks/no_op_accs.base.smt2`, unknown → **unsat**.
+
+### The six files that defined the cap work
+
+Each of these decided the design of one guard, and three of them refuted one.
+Measured on the shipped binary, 8 GiB `ulimit -v`, same host:
+
+| file | base | shipped |
+|---|---|---|
+| `miplib/danoint-266` | unknown 0.04 s, 15 MB | unknown 0.04 s, 18 MB |
+| `miplib/fixnet-5000` | unknown, small | unknown 0.04 s, 19 MB |
+| `miplib/vpm2-5` | unknown, small | unknown 0.03 s, 16 MB |
+| `TM/p5-driverlogNumeric_s9` | **unsat** 0.27 s, 40 MB | **unsat** 0.18 s, 42 MB |
+| `Heizmann/_sanfoundry_10_ground…bpl_13` | unknown 0.82 s, 121 MB | unknown 0.61 s, 123 MB |
+| `spider_benchmarks/no_op_accs` | unknown 24.1 s | **unsat** 19.2 s |
+
+Between base and shipped, three intermediate builds each took one of the first
+five files to a **7.8 GB abort** or to a lost `unsat`. None of those was visible
+to review; each was found by the 200-file sweep. The three refuted cost models
+are tabulated in
+[the diary](lra-theory-side-2026-09-07.md#3-the-atom-cap-three-cost-models-three-refutations-adr-1752)
+and in ADR-1752.
+
+### A protocol note on the timing numbers
+
+Two of the arms above were run on opposite core halves of the same host at the
+same time, which is a deliberate departure from the one-arm-at-a-time protocol:
+it halves the wall clock of a **verdict** comparison, which is what the
+no-regression check is, and verdicts near the 24 s boundary were re-checked
+individually. It is *not* how the ratios were taken — those come from arms run
+alone, and the same file measured under contention read 0.99x where the idle run
+read 0.86x. Quote the shape, not the third digit.
