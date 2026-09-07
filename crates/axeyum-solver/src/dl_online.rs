@@ -882,6 +882,28 @@ fn scan_dl(
     })
 }
 
+/// Cheap, purely structural check: does the whole query fit the
+/// difference-logic fragment [`scan_dl`] would accept, *before* any search
+/// runs? Exactly [`try_check_qf_dl`]'s own `None` — the "not-applicable"
+/// outcome `dispatch_difference_logic` records — reused rather than
+/// re-derived, so a caller cannot silently drift from what `dl-online`
+/// actually accepts.
+///
+/// [`crate::dpll_lia`]'s admission preflight uses this to decide whether its
+/// own bounded online-probe fallback is safe to attempt: measured
+/// (`docs/plan/status/s2-followup-lia-probe.md`), `dl-online` declines a
+/// non-difference-logic query in single-digit milliseconds, so the caller's
+/// nominal budget is still intact; a genuine `QF_IDL`/`QF_RDL` query is
+/// difference-logic shaped by construction and `dl-online` (if it ran first)
+/// already spent up to its full reserved share (`dl_probe_budget`) trying —
+/// spending another bounded probe on top of that is how the dispatch overrun
+/// S2 fixed comes back. `deadline: None` because this call is already O(one
+/// linear scan of the assertions) with no simplex/search inside it, so it
+/// needs no separate time budget of its own.
+pub(crate) fn is_difference_logic_shape(arena: &mut TermArena, assertions: &[TermId]) -> bool {
+    scan_dl(arena, assertions, None).is_some()
+}
+
 // ---------------------------------------------------------------------------
 // The constraint graph
 // ---------------------------------------------------------------------------

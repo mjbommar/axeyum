@@ -1,0 +1,42 @@
+taskset -c 8-15 on s6 (cores 0-7 held by a concurrent lane's uf_unknown_probe;
+8-15 confirmed idle via mpstat -P ALL immediately before this run). Binary:
+probe_bound_experiment, sha256 7e5952c16a7a43c2c6a46267771959075c582e11ea195a462828658d9bdb8ed5
+(same on s6 and s7), calling axeyum_solver::theories::arithmetic::check_qf_lia_online_cdclt
+directly with the given explicit millisecond timeout, TheoryLayerStatsGuard enabled.
+
+ex3000_2400_100.smt2 @6000ms: verdict=Unknown(Timeout) elapsed_ms=6038
+  stats: decisions=0 theory_conflicts=0 restarts=0 boolean_propagate=6.035s theory_assert=6.034s
+ex4320_2400_100.smt2 @6000ms: verdict=Unknown(Timeout) elapsed_ms=6060
+  stats: decisions=0 theory_conflicts=0 restarts=0 boolean_propagate=6.057s theory_assert=6.056s
+
+ex3000_2400_100.smt2 @7000ms: verdict=Unsat elapsed_ms=7005
+  stats: decisions=0 theory_conflicts=1 restarts=0 boolean_propagate=7.002s theory_assert=7.001s
+ex4320_2400_100.smt2 @7000ms: verdict=Unsat elapsed_ms=7055
+  stats: decisions=0 theory_conflicts=1 restarts=0 boolean_propagate=7.052s theory_assert=7.051s
+
+ex3000_2400_100.smt2 @8000ms: verdict=Unsat elapsed_ms=8033
+  stats: decisions=0 theory_conflicts=1 restarts=0 boolean_propagate=8.030s theory_assert=8.029s
+ex4320_2400_100.smt2 @8000ms: verdict=Unsat elapsed_ms=8061
+  stats: decisions=0 theory_conflicts=1 restarts=0 boolean_propagate=8.059s theory_assert=8.058s
+
+ex3000_2400_100.smt2 @30000ms: verdict=Unsat elapsed_ms=26391
+  stats: decisions=0 theory_conflicts=1 restarts=0 boolean_propagate=26.389s theory_assert=26.387s
+ex4320_2400_100.smt2 @30000ms: verdict=Unsat elapsed_ms=30012
+  stats: decisions=0 theory_conflicts=1 restarts=0 boolean_propagate=30.009s theory_assert=30.008s
+
+Finding: both files refute via a pure root-propagation fixpoint (decisions=0,
+restarts=0, one theory conflict) at EVERY tested budget >= 7000ms, but the wall
+time to reach that fixpoint scales with the budget handed to
+check_qf_lia_online_cdclt (7.0s at a 7s cap, ~8.0s at an 8s cap, 26-30s at a
+30s cap) rather than converging to a single intrinsic completion time once
+above threshold. 6000ms is not enough (both time out). This was independently
+confirmed clean on a second idle host (s7, then also contended -- see
+dispatch_probe measurements) and matches the S1b lane's independent prior
+measurement of ~8.1s for the OLD (pre-S2) dispatch order that ran this same
+probe with an 8s share (timeout/3 of a 24s caller budget).
+
+Repeated 5x at 8000ms on this same host before this sweep (see the s2fu-before
+build session): 8009, 8040, 8024, 8004, 8003 ms -- consistent within ~40ms,
+not host-load noise (that noise was ruled out separately: cores 0-7 were
+independently confirmed loaded to 84% user by another lane's process while
+8-15 were 100% idle per `mpstat -P ALL`; all sweep numbers above are on 8-15).

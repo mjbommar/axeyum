@@ -1,5 +1,15 @@
 # Reference-only file lists, 2026-09-05 (S3 loss census)
 
+> **The `class` and `last_route` columns in the `*.census.tsv` files here are
+> NOT reliable.** They were produced through `explain_corpus`, which runs the
+> flat assertion view rather than the shipped front door and disagrees with it
+> on 134 of 397 benchmarks, and they name the last route rather than the route
+> that spent the budget. Re-measurement refuted at least 67 of 70 rows across
+> QF_UF and UF. The `<DIV>.txt` populations, the wall times and the
+> `smtcomp_cli` verdicts are unaffected and remain good. Full correction:
+> [the census note](../../docs/research/11-design-review/2026-09-05-parity-loss-census.md).
+
+
 Extracted with `awk -F'\t' 'NR>1 && $2=="unsolved" && ($3=="sat"||$3=="unsat") {print $1}'`
 from the parity sidecars at `~/axeyum-parity-20260905/bench-results/parity-details/<DIV>.tsv`
 on hosts s5 (QF_BV, QF_ABV, QF_UF, UF), s6 (QF_LRA, QF_IDL, QF_RDL, QF_SLIA), and s7

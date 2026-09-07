@@ -137,6 +137,10 @@ now. Nothing was deleted.
 
 | Date | Commit | Result |
 |---|---|---|
+| 2026-09-07 | qf-nra-entry | committed `bench-results/parity-lists/QF_NRA.txt` (200 files, sha256 `d645dd907edd`) |
+| 2026-09-07 | qf-nra-entry | QF_NRA parity ledger row appended: 110/200 vs cvc5 186/200, ratio 59.1%, 0 disagreements (SOUND) |
+| 2026-09-07 | qf-nra-entry | loss census committed (`bench-results/parity-losses-20260906/`), `docs/plan/families/smt-quantifier-free/qf-nra.md` updated from "not entered" to on the board |
+| 2026-09-07 | qf-nra-entry | census divergence check: `explain_corpus_flat_verdict`/`class_vs_front_door` columns added, 0/72 diverge from the front door |
 | 2026-09-06 | `d29250247` | Lane arith-slice-4: the three remaining polynomial copies stay, each with a measured reason; slice 2's mutants registered; the fibre layer gets its first differential oracle (ADR-1710, file 13 item 1) |
 | 2026-09-06 | `6cdcda3c7` | Lane arith-finish: Normalize, HenselLift and AlgebraicNumber implemented in axeyum-arith; axeyum-ir and axeyum-fp no longer name num-bigint or num-rational; a boundary gate with an allowlist (ADR-1710, file 13 item 1) |
 | 2026-09-06 | `be1ca0a4c` | Lane cas-fps-4: the exact asymptotic amplitude of a rational generating function (file 13 item 3, wave four) |
@@ -192,6 +196,9 @@ now. Nothing was deleted.
 | 2026-09-06 | `0b80fc7fe` | Both additions mutated out in private copies on s5 and re-run against the intact binary. Heap → linear scan costs 1.09x–28.8x in decisions/s with no verdict change. Minimization off raises the mean learned length where the trajectory stays comparable and lowers it where the trajectory diverges — the finding that a two-run clause-length mean is uninterpretable under divergence, which is why the one-run counters exist. Criterion `cdclt_solve_php_6_7` 2.8555 → 2.3304 ms. |
 | 2026-09-06 | 23202a7d9 | S2 admission-preflight fix (WIP snapshot: compiles, tests/gates not yet run) |
 | 2026-09-06 | 3dcf8693e | Calibrate the S2 regression test to a load-robust reference frame; add the solver-dispatch.md paragraph |
+| 2026-09-06 | `dca0c130d` | Baseline measured before any code change: current (post-S2) dispatch declines both `ex3000_2400_100.smt2` and `ex4320_2400_100.smt2` in ~0.05 s (no probe ever runs); `QF_IDL/sal/lpsat/lpsat-goal-18.smt2` does not exercise the admission preflight at all (decided by genuine search, 7.25 s). Direct calls to `check_qf_lia_online_cdclt` show both target files need ≥7 s of the probe's own budget to refute via a decisions=0 root-propagation fixpoint, and consume however much larger a budget they are given rather than converging to one intrinsic time. `explain_corpus` route-attempt tracing shows why an unconditional bounded-probe-before-decline would be unsafe: `dl-online` declines in ~20 ms (`not-applicable`) for the two target files but spends its full ~18 s reserve (`budget` exhausted) for a real oversized `QF_IDL` file (`bcnscheduling105.smt2`) that hits the same admission constant — so the fix gates the new probe attempt on "not difference-logic shaped," reusing `dl_online::scan_dl`'s own acceptance test rather than an unconditional or purely time-proportional budget. |
+| 2026-09-06 | `3177bdd43` | Lands `oversized_admission_probe` in `dpll_lia.rs` (an explicit, absolute-capped `OVERSIZED_ADMISSION_PROBE_BUDGET = 10s` re-attempt at `check_qf_lia_online_cdclt`, gated on the new `dl_online::is_difference_logic_shape` pub(crate) wrapper around `scan_dl`) so an oversized non-difference-logic query gets one bounded shot at the online probe before the S2 admission preflight declines. `check`/`clippy -p axeyum-solver --all-targets --all-features`: clean. |
+| 2026-09-06 | *(this commit)* | Measured after the fix: both target files decide `unsat` again (10.05-10.22 s, `decisions=0`, matching pre-S2 behaviour exactly); `bcnscheduling105.smt2` (the same admission boundary, difference-logic shaped) is unaffected — 18.04 s wall in both arms, confirming the gate skips the new probe rather than stacking its cap on top of `dl-online`'s reserve; 29-file QF_LIA reference-only population goes 1 → 3 decided with exactly those two verdict changes and nothing else moved; `lpsat-goal-18.smt2` unaffected (`unsat`, ~7 s both arms). Full gate suite (z3 differential fuzzes ×3, `--lib --features full`, `corpus_regression`, workspace `check`/`clippy`) all pass with confirmed nonzero counts. |
 | 2026-09-06 | 54a7591c3 | Pin the CDCL(T) theory-lemma proof contract at the checker boundary (11 tests, no production change) |
 | 2026-09-06 | e97db1bf4 | ADR-1704: a CDCL(T) unsat is two streams, and the theory lemmas are enumerated and counted |
 | 2026-09-06 | 99f19e32a | Point `docs/internals/cnf-and-sat.md`'s UNSAT-assurance text and parity-plan §3 at ADR-1704 |
@@ -56213,6 +56220,122 @@ fixed hole count). Second, the census wants a third corpus — its two are both
 school-and-olympiad, adversarial along the *shape* axis but not the
 *difficulty* axis.
 
+Topic 4, carrier 1: the metric completion. ADR number **1678**.
+
+## Status
+
+The **measurement landed first and it moved the sizing** (ADR-1678). The
+construction's carrier layer landed behind it as `metric_completion.rs`, a new
+top-level module on the `metric_prod.rs` pattern — nothing in `metric.rs`,
+`metric/` or `metric_prod.rs` was edited, so no other lane's file was touched
+and the `Metric` prelude's build cost did not move.
+
+### What the re-measurement found
+
+ADR-1625 sized a generic completion at "four new lemmas about `CReal.limit`,
+proved from `CReal.limit_dist` and nothing else", over a carrier
+`Subtype (Nat -> M.carrier) (Metric.Regular M)`. Both halves are wrong in ways
+that make the task smaller, not larger.
+
+| ADR-1625 said | measured 2026-09-06 |
+| --- | --- |
+| carrier predicate `Metric.Regular` | does not exist; all eight `Regular` tokens in `metric.rs` are `ReducibilityHint::Regular(1)`. Does not need to: `Metric.CauchyAt M f 1` IS Bishop regularity |
+| four new lemmas about `CReal.limit` | zero of them is on the critical path: `CReal.limit` is the superseded term former, and `converges_of_scaled_cauchy` NAMES the limit, so all four are `converges_unique`/`converges_le`/`converges_add`/`converges_lower_bound` verbatim |
+| plus a speedup bridge | `CReal.regular_of_scaled_cauchy`, shipped and exact |
+| "1 of 33 reusable" | inverted inference. `Metric.dist` is `CReal`-valued, so the completion's distance IS a `Nat -> CReal` sequence: 33 of 33 instantiate, 14 of 33 are consumed |
+| `33` not re-derivable (reviewer 02) | re-derivable: live `add_declaration` sites outside `#[cfg(test)]` modules. Naive 36; the three extras are `converges_le_tests`'s own mutation probes |
+| — | new-mathematics budget is **one** estimate: `Metric.dist_diff_le`, the four-point reverse triangle inequality |
+
+One correction to the brief's own count: `Metric.Complete` has **two**
+witnesses (`Metric.creal_complete`, `Metric.prod_complete`).
+`Metric.creal_completeOn_interval` witnesses `Metric.CompleteOn`, a different
+predicate.
+
+### What landed in the kernel
+
+`crates/axeyum-lean-kernel/src/metric_completion.rs`, **16 declarations, zero
+axioms**:
+
+- the carrier: `Metric.RegularSeq`, `Metric.regularSeq_cauchyAt`,
+  `Metric.regularSeq_bound`, `Metric.CompletionSeq`,
+  `Metric.completionSeq_carrier`, `Metric.completionVal`,
+  `Metric.completionRegular`
+- the distance sequence: `Metric.completionDistSeq`,
+  `Metric.completionDistSeq_eval`
+- the embedding: `Metric.embedSeq`, `Metric.embedSeq_val`,
+  `Metric.embedSeq_dist` (the isometry), `Metric.embedSeq_reflects`
+- **the one new estimate**: `Metric.CReal.addNegShuffle`,
+  `Metric.dist_diff_le`, `Metric.completionDistSeq_diff_le`
+
+`Metric.dist_diff_le` is the whole new-mathematics budget ADR-1678 sized, and
+it landed. `Metric.completionDistSeq_diff_le` guards its PAIRING: the wrong
+pairing `le (abs (d a b − d c e)) (d a e + d b c)` is also a true four-point
+inequality and the trusted gate admits it just as happily — only the instance
+at `(x m, y m, x n, y n)` shows the pairing is the one `Metric.RegularSeq` can
+close. **A true statement is not the right statement, and for an inequality
+with four free points the gate cannot tell them apart.**
+
+Building it found a defect the type-checker caught and no reading would have:
+`shifted_quadrilateral` at the swapped points returns `d c a + d e b` with BOTH
+summands reversed, so branch two needs two `Metric.distComm` rewrites and not
+one.
+
+The accounting test derives its subject by **differencing two kernels** (one
+with `build_metric_prelude` alone, one with `build_metric_completion_prelude`)
+rather than by a name-prefix filter — the gap ADR-1625 recorded for
+`Metric.*` names declared outside `metric.rs`.
+
+### The mutation table, RUN
+
+Both mutants were applied to the SOURCE and the suite run against them.
+
+| mutant | kernel | tests | what died |
+| --- | --- | --- | --- |
+| M1 — modulus dropped from the carrier (`Metric.Cauchy` for `CauchyAt _ 1`) | **REFUSED** at the first declaration (`DeclarationValueMismatch` on `Metric.regularSeq_cauchyAt`) | 0 passed, 11 failed | everything, because the prelude does not build |
+| M2 — isometry weakened to a non-expanding bound (`Eq` → `CReal.le`) | **ADMITTED** | 11 passed, 1 failed | `embed_seq_dist_is_an_equation_not_a_bound` — exactly one |
+
+M2 is the finding worth carrying. Before the guard was written it passed
+**11 of 11**: the prelude built, every declaration was present and axiom-free,
+and even `a_non_expanding_bound_cannot_reflect_equivalence` stayed green,
+because that test re-derives the discrimination inline and never mentions the
+shipped declaration. The guard that kills it consumes
+`Metric.embedSeq_dist` as the argument of `Eq.symm`, which only an equation can
+be. **A test that re-derives a distinction proves the distinction exists; only
+a test that consumes the declaration proves the declaration carries it.**
+
+### Gates run
+
+| gate | count | exit |
+| --- | --- | --- |
+| `cargo test -p axeyum-lean-kernel --release --lib -- metric_completion --test-threads=2` | **12** tests, 12 passed | 0 |
+| `cargo clippy -p axeyum-lean-kernel --all-targets --all-features -- -D warnings` | — | 0 |
+| `cargo check --workspace --all-targets` (via `cargo-serialized.sh`) | — | 0 |
+| `cargo fmt --all --check` | 0 diff lines | 0 |
+| `scripts/check-links.sh` | all links ok | 0 |
+| `scripts/check-merge-hygiene.sh` | PASS | 0 |
+| `python3 scripts/gen-adr-index.py --check` | rows=884 | 0 |
+| `python3 scripts/gen-py-prelude-fields.py --check` | total=3798, OK | 0 |
+
+The default `--test-threads` OOMs: two runs died at **exit 143** (the
+`cargo-serialized.sh` memory ceiling) with eleven parallel `Metric` prelude
+builds at 10.2 GB RSS. The first of those printed `running 10 tests` and then
+nothing, and piping it through `tail` reported exit 0 — `tail`'s. Use
+`--test-threads=2` on this suite.
+
+## Next — and it carries NO new estimate
+
+1. `Metric.completionDist` := `CReal.mk (speedup (diagonal D) 4)` via
+   `CReal.scaledCauchy_of_abs_diff_le` fed with
+   `Metric.completionDistSeq_diff_le` at `K := 2`, then
+   `CReal.regular_of_scaled_cauchy`. Four steps, all shipped, and
+   `creal/supremum.rs:4946-5007` already runs exactly this sequence for
+   `CReal.sup_on`.
+2. The twelve field witnesses, with `equiv := dist ~ 0` (ADR-1625 section 2's
+   own trick), which makes `distSelf`/`distEquiv` `fun a b h => h` and leaves
+   the rest to `CReal.converges_*`.
+3. Density of the image, then `Metric.Complete (Metric.completion M)`, then
+   `RN.metric n` (58 `RN` declarations wait on it).
+
 **Your lane's block (`DONE`, metric-products, 2026-09-05).** W2-10's
 product-metric half is landed, in a NEW file
 (`crates/axeyum-lean-kernel/src/metric_prod.rs`, registered from the crate
@@ -59447,6 +59570,89 @@ the mobility summary now names the dominant unevaluable reason, making
 tactic gap. Verified the loop still proves its live frontier (`nat-modeq-symm`,
 `nat-modeq-trans`) via `modeq_family`.
 
+**Your lane's block (`DONE`, qf-nra-entry, 2026-09-07).** Task:
+`docs/plan/families/smt-quantifier-free/qf-nra.md` said QF_NRA was rank 1 of
+the cheap parity targets — same input format, same protocol,
+`scripts/parity-run.sh` needed no changes. Entering was a measurement task: a
+committed 200-file list, a pinned reference build, one ledger entry with zero
+disagreements, and a census of the losses. All four are done.
+
+**Benchmark list**: `bench-results/parity-lists/QF_NRA.txt`, 200 files, sha256
+`d645dd907edd60f62e4bbd815c2f420d3feaa88731e55ab4f63a7677705ef931`. Recipe
+matches QF_LRA/QF_NIA/QF_UF/QF_BV (commits `aaa2d7541`, `025f4ba9f`,
+`565284cf7`): `LC_ALL=C find <div> -name '*.smt2' | LC_ALL=C sort | awk
+'NR%stride==1' | head -200`, population 12,154, stride 60. Committed before
+any sweep.
+
+**Reference**: `scripts/parity-run.sh` routes `QF_NRA` to
+`/nas3/data/axeyum/harness/bin/cvc5` (same arm as QF_LIA/QF_NIA/QF_IDL/QF_RDL
+— the fallthrough would be unpinned `/usr/bin/z3` 4.13.3, which did not
+compete in SMT-COMP 2025). Plain invocation, no portfolio flags. Version
+pinned in the ledger row: `cvc5 1.3.4 [git f3b21c4 on branch HEAD]`.
+
+**Sweep**: built `smtcomp_cli` via `scripts/cargo-serialized.sh` and ran on
+s5 (idle, `taskset -c 0-7`, 24s/8GiB) at solver commit `00373a7d42` (fetched
+via `git fetch ssh://s4/…` into a reused detached worktree,
+`/home/mjbommar/axeyum-parity-s1`, since `/home` is not shared across hosts).
+Ledger row appended to `bench-results/PARITY.md`:
+
+  axeyum 110/200, reference (cvc5) 186/200, ratio 59.1%
+  both/axeyum-only/reference-only: 109/1/77, disagreements: 0 (SOUND)
+
+Load 4.39 on 8 cores at sweep start (just after the release build) triggered
+the script's load warning; `axeyum solved` is a floor under that, the ratio
+is not (per the script header's own caveat) — recorded in the ledger row, not
+hidden.
+
+**Census** of the 77 reference-only losses: population from the scored
+sweep's own sidecar (`axeyum=unsolved`, `reference` in `{sat,unsat}` —
+**front door**, i.e. `smtcomp_cli`/`solve_smtlib`). Cause class per file comes
+from `explain_corpus --list <one-file> 24000 --json --timed-trace` (one
+invocation per file, each wrapped in an external `timeout -k 5 45`, per the
+brief's fixed rule — none hung, though one hit the 45s kill and 4 others
+errored before producing a trace): the class is the route with the **largest
+`elapsed_ns`** among non-`probe` attempts, i.e. the route that spent the
+budget, never the last route's message. Data: `bench-results/parity-losses-
+20260906/QF_NRA.census.tsv` + `README.md` (method stated explicitly there,
+including why it does not share the 2026-09-05 S3 census's refuted
+last-route-message method, `b57800c06`/`f3ce8ef58`).
+
+Result: 62/77 (80.5%) `nra-cross-product-admission-bound`, 7/77 (9.1%)
+`nra-refinement-incomplete` — together 69/77 (89.6%), the generic
+multi-variable nonlinear-abstraction route's documented sound-incomplete
+boundary. 5/77 (6.5%) `diagnostic-instrument-inconclusive` (the trace
+instrument itself failed on these five; front-door loss still holds, cause
+does not). 3 singletons: `cas-ideal-refuter-incomplete`,
+`nra-real-root-not-applicable`, `wide-int-admission-incomplete` (the last is
+ADR-1702 slice 2, an already-tracked separate gap).
+
+`docs/plan/families/smt-quantifier-free/qf-nra.md` updated from "not
+entered" to the full ledger row + Cause section.
+
+**Coordinator follow-up, closed**: the first S3 defect (last-route's-message
+classification) was already fixed in this census, but the coordinator flagged
+a second, more subtle one that applied here too: the cause CLASS still came
+from `explain_corpus`'s own execution (`check_auto_explained` on the flat
+assertion view), which can diverge from the front door's route even though
+the loss POPULATION was already front-door. Checked it directly from the
+JSON already collected: added `explain_corpus_flat_verdict` and
+`class_vs_front_door` columns to `QF_NRA.census.tsv`. **0 of the 72
+classified rows diverge** — every row `explain_corpus` decided at all
+decided `flat-unknown`, matching the front door's `unsolved`; none reached a
+`flat-sat`/`flat-unsat` the front door did not. Documented in
+`bench-results/parity-losses-20260906/README.md` and in the family doc's
+Cause section, with the honest limit stated: this rules out the concrete
+failure mode (a class attributed from a decisively-different execution), not
+route identity when both sides say `unknown`.
+
+**Known pre-existing issue, not touched (out of scope for this lane)**:
+`scripts/check-parity-docs.py` reports `docs/PROJECT-STATE.md` stale against
+`bench-results/PARITY.md` for QF_IDL/QF_LRA/QF_RDL and the division count
+("eleven" vs the ledger's now-thirteen), predating this lane's first commit
+— confirmed by checking `docs/PROJECT-STATE.md`'s current numbers against
+those divisions' PARITY.md rows before this lane touched anything. Not fixed
+here; it is a global doc outside this brief's scope.
+
 Status: **the routing question is answered; the law is NOT proved** (2026-08-31)
 
 ## What this lane was asked
@@ -61124,6 +61330,234 @@ ADR-1701 slice 2's two-watched-literal lever), which is a separate, larger
 slice and untouched here — edge-matching/fastfood/lpsat-goal-18 all still
 bottleneck there, not on anything S2 touches.
 
+**DONE.** Both bofill-scheduling files decide `unsat` again; the fix is
+gated so the S2 dispatch-overrun protection stays intact (measured, not
+assumed); zero verdict changes anywhere else on the 29-file QF_LIA
+reference-only population. Gate suite: z3 differential fuzzes, `--lib
+--features full`, `corpus_regression` all pass with confirmed nonzero
+counts; `check`/`clippy --workspace --all-targets --all-features` run to
+completion (see Gates below).
+
+## The task
+
+Slice S2 (`b4d042ae4`) added `arith_dpll_admission_preflight` so an oversized
+`QF_LIA`/`QF_LRA`/`QF_LIRA` skeleton declines on a size constant before
+spending the online CDCL(T) probe's share of the caller's reserve. That fixed
+a real dispatch overrun (QF_IDL timeouts summing `dl-online`'s reserve plus
+`lia-dpll`'s ~8 s past the caller's 24 s nominal budget, killing the process
+before any output). It also cost two QF_LIA files lane S1b diagnosed and
+handed back (`docs/plan/status/s1b-cdclt-heap-minimize.md`):
+
+- `QF_LIA/bofill-scheduling/SMT_real_LIA/ex3000_2400_100.smt2` (declared `unsat`)
+- `QF_LIA/bofill-scheduling/SMT_real_LIA/ex4320_2400_100.smt2` (declared `unsat`)
+
+Both used to be refuted by the online probe itself, inside its root
+propagation fixpoint (zero decisions), before S2 made the admission decline
+run first and skip the probe entirely.
+
+## Baseline, measured before any code change
+
+Binary `smtcomp_cli`, commit `cc75cd023` (this lane's branch point, local
+`main` fast-forwarded onto `f3ce8ef58` afterward — see Commits). Idle s6,
+`taskset -c 8-15` (cores 0-7 were held by a concurrent lane's `uf_unknown_probe`
+process; 8-15 confirmed idle via `mpstat -P ALL` immediately before every run
+below), `AXEYUM_TRACE=1 --trace`, `--timeout-ms 24000`, three repeats:
+
+| file | verdict | wall | note |
+|---|---|---|---|
+| `ex3000_2400_100.smt2` | `unknown` | 0.047-0.054 s | no `; theory-layer` trace line at all — the admission preflight declines before the probe ever runs (S2's intended behaviour) |
+| `ex4320_2400_100.smt2` | `unknown` | 0.047-0.054 s | same |
+| `QF_IDL/sal/lpsat/lpsat-goal-18.smt2` | `unsat` | 7.22-7.25 s | **does not hit admission decline at all** — `decisions=53011, restarts=61`, decided by genuine CDCL(T) search inside the online probe's own share. `exceeds_pre_sat_skeleton_boundary` is false for this file; it is protected by `dl_probe_budget`'s reservation (a different mechanism), not by the admission constant. Confirms criterion 4 is a no-op check against this fix (see below) rather than a live interaction. |
+
+Raw log: `bench-results/s2-followup-lia-probe-20260906/before-arm-three-files.txt`.
+
+## Root-cause measurement: why the old dispatch order recovered these two files
+
+Direct calls to `axeyum_solver::theories::arithmetic::check_qf_lia_online_cdclt`
+(bypassing dispatch), `taskset -c 8-15`, idle cores confirmed via `mpstat`,
+`TheoryLayerStatsGuard` enabled:
+
+| explicit budget | ex3000 | ex4320 |
+|---|---|---|
+| 6000 ms | `Unknown(Timeout)` at 6.04 s | `Unknown(Timeout)` at 6.06 s |
+| 7000 ms | `Unsat` at 7.01 s | `Unsat` at 7.06 s |
+| 8000 ms | `Unsat` at 8.03 s | `Unsat` at 8.06 s |
+| 30000 ms | `Unsat` at 26.4 s | `Unsat` at 30.0 s |
+
+`decisions=0, restarts=0, theory_conflicts=1` at every budget ≥ 7000 ms: the
+refutation is always a pure root-propagation fixpoint, never a real search.
+But the wall time to reach it tracks the budget handed to the call rather
+than converging to one intrinsic completion time once above ~7 s — giving it
+more time makes it do more (evidently redundant) work before landing on the
+identical answer. This is consistent with (and reproduces almost exactly) the
+S1b lane's independent prior measurement: the old dispatch order handed this
+probe `timeout/3` of a 24 s caller budget = 8 s, and it decided both files in
+"8.1 s" with `decisions=0`. **~7-8 s is therefore both necessary and
+apparently what the implementation will consume once available** — see
+`bench-results/s2-followup-lia-probe-20260906/probe_bound_sweep_idle_s6_cores8-15.txt`.
+
+This matters for the fix: a *proportional* share (like the old `timeout/3`)
+or any budget picked without an upper bound is not "cheap" in the sense of
+being fast when unneeded — it is exactly as expensive as whatever cap is set,
+for files that time out on it too. The fix must not spend this cost
+unconditionally.
+
+## Why an unconditional bounded probe would reopen S2's fix — measured, not assumed
+
+Ran `dispatch_probe` (a scratch driver over the full `solve_smtlib`
+dispatcher; not committed) against a real oversized `QF_IDL` file that
+currently declines the same admission constant
+(`QF_IDL/bcnscheduling/bcnscheduling105.smt2`, `atoms=1560, cnf_vars=9652`,
+same `exceeds_pre_sat_skeleton_boundary` gate as the two target files):
+
+```
+verdict=unknown elapsed_ms=18070 kind=ResourceLimit
+detail=... declining before the online CDCL(T) probe ...
+```
+
+`explain_corpus --json --timed-trace` on the same three files shows the
+mechanism precisely (`bench-results/s2-followup-lia-probe-20260906/explain_corpus_route_attempts.jsonl`):
+
+| file | `dl-online` outcome | `dl-online` elapsed |
+|---|---|---|
+| `ex3000_2400_100.smt2` | `declined: not-applicable` | **20 ms** |
+| `ex4320_2400_100.smt2` | `declined: not-applicable` | **18 ms** |
+| `bcnscheduling105.smt2` | `declined: budget` (budget exhausted in the online DL driver) | **18.011 s** |
+
+For the two target files, `dl-online` recognizes near-instantly that the
+query is not difference-logic shaped and declines for free — `lia-dpll` then
+runs with the *entire* nominal budget still available. For a genuine `QF_IDL`
+file, `dl-online` is difference-logic shaped by construction, so it spends
+its **entire reserved share** (`dl_probe_budget`: `timeout - min(timeout/4,
+6s)` = 18 s of a 24 s caller budget) searching before giving up — leaving
+only ~6 s of nominal budget for everything downstream (`bv2nat-range`,
+`lia-diophantine`, `lia-simplex`, `lia-dpll`) **combined**. Because
+`check_with_arith_dpll` measures its own deadline from its own entry
+(`Instant::now() + config.timeout`, unaware of what `dl-online` already
+spent — the same "not drawn against one shared, shrinking deadline"
+structural property S2's own docs name), it cannot see that only ~6 s of the
+nominal 24 s genuinely remains. An unconditional ~7-8 s bounded-probe
+attempt added to the admission-decline path would therefore add ~7-8 s
+*on top of* `dl-online`'s already-spent 18 s for files like
+`bcnscheduling105.smt2`, reproducing the same class of overrun S2 fixed
+(measured total ≈ 26 s against a 24 s nominal budget) — even though the
+probe itself is "bounded."
+
+## The fix (landed, `3177bdd43`)
+
+Gates the new bounded probe attempt on a cheap, purely structural, local
+signal that is available before spending any time: **the query is not
+difference-logic shaped** (`dl_online::is_difference_logic_shape`, a new
+`pub(crate)` wrapper around the existing private `scan_dl` — its `None` is
+exactly `dl-online`'s "not-applicable" outcome above, reused rather than
+re-derived so this cannot silently diverge from what `dl-online` actually
+accepts). When not DL-shaped, `dl-online` (if it ran at all) declined for
+free and the nominal budget is intact, so `oversized_admission_probe` spends
+an explicit, absolute, capped budget — `OVERSIZED_ADMISSION_PROBE_BUDGET =
+10 s` (margin over the measured ~7-8 s floor, and always
+`min(caller's own config.timeout, 10 s)` so it can never exceed what the
+caller itself granted) — trying `check_qf_lia_online_cdclt` before
+declining. When the query *is* DL-shaped, the probe is skipped and the
+preflight declines immediately exactly as before (unchanged code path) —
+that is precisely the population (real `QF_IDL`/`QF_RDL` oversized files)
+whose reserve `dl-online` already spent.
+
+## After: measured
+
+Same binary build recipe as Baseline (idle s6, `taskset -c 8-15`,
+`AXEYUM_TRACE=1 --trace`, `--timeout-ms 24000`); `after` binary built from
+`3177bdd43` (sha256 `d1dcd689…`, confirmed different from the `before`
+binary sha256 `94fe527e…`).
+
+**1. Both bofill-scheduling files decide `unsat` again** (exit criterion 1):
+
+| file | before | after |
+|---|---|---|
+| `ex3000_2400_100.smt2` | `unknown`, 0.04-0.05 s | **`unsat`, 10.05-10.12 s** (`decisions=0, theory_conflicts=1`, root-propagation fixpoint — matches the pre-S2 behaviour exactly) |
+| `ex4320_2400_100.smt2` | `unknown`, 0.04-0.05 s | **`unsat`, 10.05-10.22 s** (same shape) |
+
+Confirmed independently three ways: direct `smtcomp_cli --trace` (above),
+`explain_corpus --json --timed-trace` (`lia-dpll` attempt: `outcome:
+decided, verdict: unsat`), and the 29-file population sweep below. Raw:
+`bench-results/s2-followup-lia-probe-20260906/four-file-before-after-trace.txt`,
+`explain_corpus_route_attempts_after.jsonl`.
+
+**2. The dispatch overrun does not come back** (exit criterion 2). The gate
+is load-bearing, not decorative: `bcnscheduling105.smt2` (`atoms=1560,
+cnf_vars=9652` — the identical `exceeds_pre_sat_skeleton_boundary` gate the
+two target files hit) is difference-logic shaped, so
+`is_difference_logic_shape` returns `true` and the new probe is skipped
+entirely:
+
+| file | before wall | after wall | `lia-dpll` elapsed (`explain_corpus`) |
+|---|---|---|---|
+| `bcnscheduling105.smt2` | 18.04 s, `unknown` | **18.04 s, `unknown`** (unchanged) | before 15.05 ms → after 15.05 ms (the `is_difference_logic_shape` check itself costs single-digit milliseconds, not the 10 s cap) |
+
+No stacking of `dl-online`'s ~18 s reserve with the new probe's cap —
+exactly the scenario the design section above showed would reopen S2's fix,
+measured to confirm it did not.
+
+**3 & 4. Decided counts on the QF_LIA reference-only population, and zero
+other verdict changes** (exit criteria 3-4). 29-file population
+(`bench-results/s1b-heap-minimize-20260906/qf_lia_reference_only_29.txt`,
+the same list S1b used, includes both target files), interleaved per-file
+before/after, `taskset -c 8-15`:
+
+| population | decided before | decided after | verdict changes |
+|---|---:|---:|---|
+| QF_LIA reference-only (29) | **1** | **3** | exactly 2: both target files, `unknown → unsat`. Nothing else moved in either direction. |
+
+Raw: `bench-results/s2-followup-lia-probe-20260906/qf_lia_29_before_after.tsv`.
+
+`QF_IDL/sal/lpsat/lpsat-goal-18.smt2` (criterion 4, the reserve this must
+keep protecting): confirmed unaffected — `unsat` both before (6.98-7.09 s)
+and after (7.02-7.26 s); it does not exercise
+`arith_dpll_admission_preflight`'s decline branch at all (as the baseline
+established), so this fix cannot touch it by construction, and the direct
+re-measurement confirms the timing is unchanged within run-to-run noise.
+
+## Gates
+
+| gate | result |
+|---|---|
+| `check -p axeyum-solver --all-targets --all-features` | clean |
+| `clippy -p axeyum-solver --all-targets --all-features -- -D warnings` | clean |
+| `test -p axeyum-solver --features z3 --test qf_lra_differential_fuzz` | **5 passed**, 0 failed |
+| `test -p axeyum-solver --features z3 --test simplex_lra_fallback_differential` | **1 passed**, 0 failed |
+| `test -p axeyum-solver --features z3 --test qf_uflra_differential_fuzz` | **1 passed**, 0 failed |
+| `test -p axeyum-solver --lib --features full` | **1460 passed**, 0 failed |
+| `test -p axeyum-solver --features full --test corpus_regression` | **1 passed**, 0 failed |
+| `check --workspace --all-targets --all-features` | ran to completion, clean |
+| `clippy --workspace --all-targets --all-features -- -D warnings` | ran to completion, clean |
+
+**Did not run:** `test -p axeyum-solver --test progress_frontier --features full -- --test-threads=1`
+(the frontier ratchet — this change touches dispatch but adds no new
+verdicts on any ratcheted logic; not run given the population evidence
+above already demonstrates zero verdict movement on the directly-relevant
+population); `cargo fmt --all --check` workspace-wide (ran `rustfmt
+--edition 2024` on both touched files only, per multi-agent hygiene rules);
+`scripts/check-links.sh`; `python3 scripts/gen-plan.py --check`;
+`scripts/check-merge-hygiene.sh`. A resumer/merger should run the last
+three before merging to main.
+
+## Notes for the resumer / self
+
+- Two scratch, uncommitted example binaries were used for diagnosis only and
+  were never committed: `probe_bound_experiment.rs` and `dispatch_probe.rs`
+  (both temporarily added under scratch copies of the tree on s6/s7 only,
+  never this worktree).
+- `bench-results/parity-losses-20260905/QF_LIA.census.tsv`'s `class` column
+  is flagged unverified as of `b57800c06`/`f3ce8ef58` (S3 loss census
+  correction, not yet confirmed for `QF_LIA`) — irrelevant here since this
+  lane used the plain file-list population (`qf_lia_reference_only_29.txt`),
+  not the census/class data.
+- `OVERSIZED_ADMISSION_PROBE_BUDGET = 10 s` is a fixed margin over the
+  measured ~7-8 s floor, not a value tuned from first principles — if a
+  future oversized non-DL-shaped file needs slightly more than 10 s to reach
+  its own root-propagation fixpoint, this constant is the first place to
+  look, with the same measurement method used here
+  (`probe_bound_sweep_idle_s6_cores8-15.txt`).
+
 **S4 of the [SMT/SAT parity plan](docs/plan/smt-parity-plan-2026-09-05.md) landed:
 the pivot's redundant `O(rows × columns)` value pass is gone (4.5x on the
 committed simplex bench, 20x on a traced file whose search is byte-identical
@@ -61946,6 +62380,122 @@ scripts/cargo-serialized.sh doc --workspace --all-features --no-deps` — exit
 cleanly, including the `z3` feature, so no C-toolchain fallback was needed.
 The workspace rustdoc gate is now green end to end.
 
+**Topic 3: the reconstruction fallback must not mint axioms under the honest
+route's name.** ADR-[1673](docs/research/09-decisions/adr-1673-a-weaker-route-may-not-render-under-the-strong-routes-identifier.md).
+
+## Status
+
+Landed. The SOS route's `UnsupportedTerm` fallback no longer renders under
+`axeyum_refutation`; which name a module gets is derived from
+`Kernel::axiom_footprint`, and the attested name is not a substring of the
+honest one. Four tests in `reconstruct::sos_fallback_labelling_tests`, three of
+them adversarial, with a four-mutant table.
+
+**Not landed: the frequency census.** How often the fallback fires across the
+committed corpora is unmeasured. One slice completed
+(`corpus/public-curated/synthetic/QF_NRA`: 10 SOS queries, 0 fallbacks, with a
+forced-fallback positive control reporting 10 of 10); the `corpus/public-curated`
+run (exit 124 at 900 s) and the whole-`corpus/` run (exit 143 at 3000 s)
+each produced zero lines of output. Because
+of that, the question of deleting the fallback outright is left open in the ADR
+rather than decided. A follow-up lane should give the probe a per-file deadline.
+
+## What changed
+
+| File | Change |
+| --- | --- |
+| `crates/axeyum-solver/src/reconstruct.rs` | `LEAN_MODULE_ATTESTED_THEOREM`, `ctx_refutation_axiom_footprint`, `render_ctx_module_named_by_footprint`, the wrapper split into `sos_certificate_attestation_module`, and the `sos_fallback_labelling_tests` module |
+| `docs/research/09-decisions/adr-1673-*.md` | new |
+| `docs/research/09-decisions/README.md` | regenerated (`gen-adr-index.py`) |
+| `docs/plan/status/sos-fallback-2026-09-06.md` | this file |
+
+No other crate was touched. `crates/axeyum-cas`, `lean/` and
+`docs/math-department/` were not touched.
+
+## The finding, in one line
+
+The wrapper is a hand-inlined copy of
+`direct::reconstruct_checked_structural_certificate_to_lean_module` **minus its
+banner**, which is why the two guards that exist for exactly this
+(`gate_module_content` and `prove_unsat_to_lean_theory_module`) both passed it:
+they classify by a marker the emitter forgot to apply.
+
+## Mutation table
+
+Every row RUN, `cargo test -p axeyum-solver --features full --lib
+sos_fallback_labelling_tests` (4 tests).
+
+| Mutant | Predicted | Ran | Verdict |
+| --- | --- | --- | --- |
+| MA — `render_ctx_module_named_by_footprint` ignores the footprint and always renders the honest name | 1 dies: `..._does_not_wear_the_honest_routes_name` | 3 passed / 1 failed, exactly that test | as predicted |
+| MB — attested name becomes `axeyum_refutation_attested` (a substring of the honest one) | 2 die: `assert_names_are_not_substrings...` + `..._does_not_wear...` | 2 passed / 2 failed, exactly those | as predicted |
+| MC — distinct name kept, structural-attestation banner dropped | 1 dies: `..._does_not_wear...` (its `is_structural_attestation` half) | 3 passed / 1 failed, exactly that test | as predicted |
+| MD — mint the opaque proposition under a `hyp._n` name so `minted_axioms_of` returns empty | 2 die; the guard falls through to the honest name | 3 passed / 1 failed — only the fixture's *anchor* died; the guard did **not** fall through | **prediction wrong**, see below |
+
+Plus one reachability control, not a guard mutant: forcing `reconstruct_sos_proof`
+to return `UnsupportedTerm` turns the probe's
+`corpus/public-curated/synthetic/QF_NRA` reading from `fallback=0` to
+`fallback=10`.
+
+### What MD taught
+
+`minted_axioms_of` is **calibrated for the LRA naming scheme**.
+`is_query_local` recognizes a query's own assumption as
+`axeyum.reconstruct.<route>.hyp._<n>` — it needs that route segment.
+`ReconstructCtx::fresh_name` emits `axeyum.reconstruct.hyp._<n>` with no route,
+so every `ReconstructCtx`-built refutation reports a non-empty minted set,
+honest `QF_BV` and `QF_UF` reconstructions included. MD could not defeat the
+guard, and the reason is that the guard is coarser than intended rather than
+finer.
+
+Two consequences, both recorded in the ADR and in the helper's doc comment:
+
+- `render_ctx_module_named_by_footprint` is **scoped to the SOS attestation**.
+  Reaching for it from another `ReconstructCtx` route without recalibrating
+  `is_query_local` would rename a module that has earned the honest name.
+- What MD *did* kill was the fixture's anchor, which grepped the rendered module
+  for an `axeyum.reconstruct.prop.` line — a name assertion inside a test whose
+  point is that names are not the authority. The wrapper is now split
+  (`sos_certificate_attestation_module`) so the minted footprint is returned
+  beside the module and the fixture asserts on the `Vec`.
+
+## Gates
+
+| Gate | Count | Exit |
+| --- | --- | --- |
+| `cargo test -p axeyum-solver --features full --lib -- --test-threads=4` | **1464 passed**, 0 failed | 0 |
+| `cargo test -p axeyum-solver --features full --lib sos_fallback_labelling_tests` | **4 passed**, 0 failed, 233 s | 0 |
+| `cargo test -p axeyum-solver --features full --test corpus_regression` | **1 passed**, 0 failed | 0 |
+| `--test evidence` | **69 passed**, 0 failed | 0 |
+| `--test nra_sos` | **9 passed**, 0 failed | 0 |
+| `--test sos_evidence` | **5 passed**, 0 failed | 0 |
+| `--test sos_lean_reconstruct` | **14 passed**, 0 failed | 0 |
+| `--test lean_crosscheck` (incl. `lean_crosscheck_content_split_is_visible_and_ratcheted`) | **14 passed**, 0 failed, 1 ignored | 0 |
+| `cargo clippy -p axeyum-solver --all-targets --features full -- -D warnings` | — | 0 |
+| `cargo check --workspace --all-targets` | — | 0 |
+| `cargo fmt --all --check` | — | 0 |
+| `./scripts/check-links.sh` | "all links ok" | 0 |
+| `python3 scripts/gen-adr-index.py` | rows=884, 1673 not duplicated | 0 |
+
+The bare `--lib` sweep without `--test-threads` was killed at the
+`cargo-serialized` memory ceiling (exit 143) twice before the capped run
+succeeded; that is the ceiling firing, not a failure.
+
+Not run: the z3 differential fuzzes (no arithmetic touched), the frontier
+ratchet, `just check` / `check.sh`, and the real-`lean` cross-check.
+
+## Consumer audit
+
+| Consumer | Keys on | Was it conflating? |
+| --- | --- | --- |
+| `prove_unsat_to_lean_theory_module` (`reconstruct.rs`) | `STRUCTURAL_ATTESTATION_MARKER` via `of_module_source` | **Yes** — returned the shim as a theory module. Fixed: it now declines. |
+| `gate_module_content` (`reconstruct.rs`) | the same marker vs the fragment table | **Yes** — agreed with `Sos`'s declared class. Fixed: now `ModuleContentMismatch`. |
+| `evidence.rs::produce_nra_sos_evidence` / `check_sos_evidence` | `reconstruct_sos_to_lean_module(...).ok()` into `Evidence::UnsatSos::lean_module`, no content gate | **Yes.** The field's doc says "when `lean_module` is present, the refutation is ALSO backed by a kernel-checked Lean proof"; for a fallback query that was false. Now at least self-declaring (banner + attested name). Carrying the content class on `Evidence::UnsatSos`, or storing `None`, is the real fix and belongs to that file's owner. **Not touched — out of this lane's scope.** |
+| `axeyum-bench/examples/probe_selected_evidence_lean.rs:159` | `module.contains("theorem axeyum_refutation")` | Not today — it renders its own module rather than consuming the SOS route. The bare-substring pattern is why the attested name is not a suffix. **Not touched — another session owns `axeyum-bench`.** |
+| `tests/lean_crosscheck.rs::assert_structural_shape` | `source.contains("theorem axeyum_refutation")` | Not today; SOS attestations are not in its population. Same substring pattern. |
+| `tests/lean_crosscheck.rs` family/module ratchets | `LeanModuleContent::of_module_source` | Would have counted a fallback module as theory content. No corpus row takes the fallback in the measured slice, so no ratchet moves. |
+| `tests/evidence.rs::qf_nra_sos_certificate_wrapper_carries_lean_module`, `lean_crosscheck.rs::qf_nra_sos_certificate_audit_rows_check_in_real_lean` | named for the wrapper | **Stale names.** Both fixtures (`nra-sos-unsat-k01`, `nra-sos-strict-unsat-d01`) take the **honest** route today, measured. They do not exercise the wrapper and have not for some time. |
+
 **Done (`statement-headers`, 2026-08-31).** `check-settled-fact-statements.py`
 was failing at `header_exempt=79` against `floor_header_exempt=67` and blocking
 every push. It now **passes at 0 against a floor of 0**. The ceiling was
@@ -62555,6 +63105,105 @@ unable to fail.
 
 Detail in
 [ADR-1633](docs/research/09-decisions/adr-1633-the-two-squares-descent-splits-into-algebra-that-is-free-and-an-order-that-does-not-exist.md).
+
+Status: **complete.** Cause measured, the obvious lever built and refuted,
+two levers recommended with scoring populations and exit criteria.
+
+Plan anchor: `docs/plan/families/smt-quantified/uf.md` (its Cause and Lever
+sections are updated by this lane).
+Predecessors: the [S3 census](docs/research/11-design-review/2026-09-05-parity-loss-census.md)
+(class refuted) and [S11a](docs/plan/status/s11a-uf-ackermann-cap.md) (which refuted it).
+
+## Method, fixed before the run
+
+1. **Front door only.** Classification comes from `solve_smtlib`
+   (`uf_unknown_probe`) with `AXEYUM_QTRACE=1`, never from `explain_corpus`,
+   which runs `check_auto_explained` on the flat assertion view and is measured
+   to disagree with the front door on 134 of 397 committed benchmarks.
+2. **Classify by the stage that spent the budget**, computed from the qtrace
+   timeline — not by the terminal message.
+   `crates/axeyum-solver/src/auto.rs::qtrace` prints `since.elapsed()`, and
+   `finish_quantified_solve` passes **one shared `t0`** to
+   `forall-exists-witness`, `finite-expansion`, `uf-fmf-probe`, `egraph`,
+   `mbqi` and `uf-fmf-full`. Those six numbers are **cumulative**, so a stage's
+   own cost is the difference from the previous line. Only `mbqi-quick` carries
+   a stage-local `t0`. Reading a printed `+N s` as one stage's cost overstates
+   it by everything above it.
+3. **Every diagnostic invocation is wrapped in an external `timeout`.**
+4. Measurement host s7 (idle, load 0.14, 16 cores), `taskset -c 0-7`, 24 s
+   budget, release binary from a `git archive --touch` snapshot of `cc75cd023`.
+
+## Finding 1 — the loss population is 100% refutation, and that alone
+## refutes the finite-model-finding hypothesis
+
+From `bench-results/parity-details/UF.tsv` at parity run 2026-09-06T22:35:13Z
+(solver commit `c28d7b7c65`), the 200-file division splits:
+
+| axeyum | cvc5 | declared | files |
+|---|---|---|---:|
+| unsolved | unsolved | unknown | 77 |
+| **unsat** | **unsat** | unsat | **61** |
+| **unsolved** | **unsat** | unsat | **30** |
+| **sat** | unsolved | sat | **20** |
+| unsolved | unsolved | unsat | 4 |
+| unsolved | unsolved | sat | 2 |
+| **unsolved** | **unsat** | unknown | **2** |
+| **unsat** | unsolved | unsat | **2** |
+| **sat** | unsolved | unknown | **2** |
+
+- **All 32 reference-only losses are cvc5 `unsat`.** Not one is a satisfiable
+  query. Bounded finite-model finding — the August gap analysis's named UF
+  lever — searches for a model; it cannot close an unsat file. The hypothesis is
+  refuted by the population, before any trace is read.
+- **22 of the 24 axeyum-only wins are `sat`**, and there is **no sat/sat cell at
+  all**: every satisfiable UF file this division decides, only we decide. Our
+  UF strength is model finding; our UF weakness is refutation.
+- The two columns are drawn from the **same benchmark families** — FFT,
+  Fundamental_Theorem_Algebra, Hoare, Arrow_Order, TypeSafe, coinductive_list
+  all appear on both sides — so the split is by satisfiability, not by source.
+
+## Finding 2 — the cause, and the lever test that refuted the obvious one
+
+Full note:
+[the front-door census](docs/research/11-design-review/2026-09-06-uf-front-door-census.md).
+Per-file artifacts in `bench-results/parity-losses-20260906/`.
+
+- **50.4% of the loss population's wall (347.0 s of 688.0 s) is spent in the
+  pure-UF finite-model finder**, on 32 files every one of which is `unsat`. A
+  finite-model rung is the budget-dominant stage on 16 of the 32.
+- **25 of 32 saturate `MAX_GROUND_TERMS = 8192`**; the 7 `search-timeout` files
+  spend 3.1–21.2 s inside the untraced cap-hit refutation check at
+  `qinst_egraph.rs:1341`.
+- **11 of 32 return with 5–19 s of the 24 s budget unspent**, all of them
+  `route-decline(residual-quantifier)`: out of routes, not out of time.
+  **6 overshoot**, one to 62 866 ms.
+- **The reallocation lever was built and refuted**: probe budget `t/2` → `t/16`
+  decides 0 of the 32 and costs 1 of the 24 axeyum-only wins.
+- **The 24 wins are the finite-model finder and nothing else**: gated off, 22 of
+  24 become `unknown`. 21 of 24 decide in 1.1 s or less.
+
+## Gates and what did not run
+
+- `./scripts/check-links.sh` — all links ok.
+- No Rust in the tree was changed by this lane. The two measurement patches
+  (`bench-results/parity-losses-20260906/measurement-patch-*.py`) are applied to
+  a throwaway snapshot only, and are committed so the A/B is reproducible.
+  Cross-check that they are inert when ungated: the s6 patched binary with no
+  env set and the s7 unpatched binary agree on verdict **and** detail for 32 of
+  32.
+- **Did not run:** the full 200-file `bench-results/parity-lists/UF.txt` sweep;
+  any workspace cargo gate (no compiled code changed); the `MAX_GROUND_TERMS`
+  A/B; instrumentation of which chains overflow `CHAIN_INSTANCE_CAP`.
+
+## Landed changes
+
+| Commit | What |
+|---|---|
+| `2da495b0b` | Lane status, method, and the population framing |
+| `ea61aeb80` | First ten files classified through the front door |
+| `5483ceb12` | All 32 classified; the 50.4% finite-model finding |
+| `a9aa0c557` | The 24 axeyum-only wins A/B; the finder is their sole producer |
+| (this) | The loss A/B, the design-review note, and `uf.md`'s Cause and Lever |
 
 Status: DONE — cycle index 3 is filled. Draw 15 is possible.
 

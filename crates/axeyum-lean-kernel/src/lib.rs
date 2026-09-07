@@ -87,6 +87,7 @@ mod level;
 pub mod linarith;
 mod list_prelude;
 mod metric;
+mod metric_completion;
 mod metric_prod;
 mod name;
 mod nat_prelude;
@@ -186,6 +187,7 @@ pub use metric::{
     EQUIV_SYMM as METRIC_EQUIV_SYMM, EQUIV_TRANS as METRIC_EQUIV_TRANS,
     FIELD_COUNT as METRIC_FIELD_COUNT, MetricPrelude, build_metric_prelude,
 };
+pub use metric_completion::{MetricCompletionNames, build_metric_completion_prelude};
 pub use metric_prod::{MetricProdNames, build_metric_prod_prelude};
 pub use name::{NameId, NameNode};
 pub use nat_prelude::image_group::{ImageGroupDeps, ImageGroupNames};
