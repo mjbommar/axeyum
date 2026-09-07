@@ -26,6 +26,11 @@ pin also fails, with an instruction to lower the pin. A one-sided ratchet
 silently stops measuring the moment somebody fixes things faster than they
 update the number.
 
+A second pin, `PIN_DECLARING`, holds the number of instruments that declare
+coverage at ANY size. The threshold pin cannot see a single-prelude tool losing
+its coverage line, and that gap was measured rather than imagined: deleting
+`nat_theorem_inventory`'s line left `--check` green until this pin existed.
+
 Method notes, since each of these has produced a wrong answer somewhere in this
 repository:
 
@@ -55,6 +60,16 @@ COVERAGE_THRESHOLD = 3
 # or above the threshold that do NOT print a coverage line. Lower it as tools
 # are fixed; `--check` fails in both directions.
 PIN_UNCOVERED = 13
+
+# Instruments of ANY size that DO print a coverage line, measured the same day.
+#
+# The threshold pin above cannot protect a single-prelude tool's coverage line,
+# and that is not hypothetical: deleting `nat_theorem_inventory`'s line left the
+# ratchet green (mutant M7, run 2026-09-06), because that tool builds one
+# prelude and never enters the >= 3 population. A tool whose whole failure mode
+# is being read as a statement about the kernel needs its declaration held
+# whatever its size. Two-sided for the same reason as the pin above.
+PIN_DECLARING = 5
 
 
 def strip_line_comments(text: str) -> str:
@@ -186,11 +201,14 @@ def main() -> int:
 
     at_threshold = [r for r in rows if len(r["preludes"]) >= COVERAGE_THRESHOLD]
     uncovered = [r for r in at_threshold if not r["declares"]]
+    declaring = [r for r in rows if r["declares"]]
     print()
     print(
         f"control: {len(rows)} instruments build a prelude, "
         f"{len(at_threshold)} build >= {COVERAGE_THRESHOLD}, "
-        f"{len(uncovered)} of those declare no coverage (pin {PIN_UNCOVERED})"
+        f"{len(uncovered)} of those declare no coverage (pin {PIN_UNCOVERED}); "
+        f"{len(declaring)} declare coverage at any size (pin {PIN_DECLARING}): "
+        + ", ".join(r["tool"] for r in declaring)
     )
     for row in uncovered:
         print(f"  UNDECLARED  {row['tool']}  builds {len(row['preludes'])}")
@@ -221,7 +239,23 @@ def main() -> int:
             "stops measuring."
         )
         return 1
-    print("OK: coverage-declaration ratchet holds")
+    if len(declaring) < PIN_DECLARING:
+        print(
+            f"FAIL: {len(declaring)} instruments declare coverage and the pin "
+            f"says {PIN_DECLARING}. A coverage line was removed. The threshold "
+            "ratchet above cannot see this when the tool builds fewer than "
+            f"{COVERAGE_THRESHOLD} preludes."
+        )
+        return 1
+    if len(declaring) > PIN_DECLARING:
+        print(
+            f"FAIL: {len(declaring)} instruments now declare coverage and the "
+            f"pin still says {PIN_DECLARING}. Raise PIN_DECLARING to "
+            f"{len(declaring)}. A ratchet that is not tightened stops "
+            "measuring."
+        )
+        return 1
+    print("OK: coverage-declaration ratchets hold")
     return 0
 
 
