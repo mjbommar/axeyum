@@ -143,6 +143,66 @@ session says "clean"; two green branches can fail `clippy -D warnings` on
 merge through a size-threshold lint, so the post-merge gate is check plus
 clippy on every crate either branch touched.
 
+### 2026-09-07, overnight: six lanes dispatched against the families tree, all merged and pushed
+
+Every lane below is on `origin/main` at `fcc988900`. Each was verified after
+merge with the staged set audited against the lane's own diff before committing,
+so nothing foreign rode along; the fully merged tree is green on merge hygiene,
+links, fmt, both generated files, `check --workspace --all-targets --all-features`
+and `clippy --workspace -D warnings`.
+
+| Lane | Merge | What it established |
+|---|---|---|
+| qf-nra-entry | `4675fac14` | **QF_NRA joins the board**, the twelfth division: 110/200 vs cvc5 186/200, 0 disagreements; 89.6% of losses trace to one cross-product admission bound |
+| uf-front-door-census | `4c14ac468` | **UF's first measured cause** (§2.5 was wrong, twice over) |
+| s2-followup-lia-probe | `156e79dc7` | the two `bofill-scheduling` files recovered without reopening the overrun |
+| s7-engine-unification | `f39ff592b` | **S7a**: the native core decides under a theory and enumerates what it assumed |
+| sat-entry-surface | `a96561ab1` | the SAT competition entry surface (ADR-1722) |
+| evidence-preprocessing | `d41715585` | the array-elim recheck could not see a wrong `unsat`; now it can (ADR-1721) |
+
+**The three findings that change what comes next.**
+
+1. **UF's cause is not a search problem and never was.** All 32 losses are
+   refutations, the division has no `sat`/`sat` cell at all, and **50.4% of the
+   loss population's wall goes to a finite-model finder that cannot decide an
+   unsat file** — it runs before the refutation family and takes `timeout/2`.
+   That is why neither S1 nor S1b moved this division by a single file. The
+   obvious lever was **built and refuted**: returning the probe's half-budget
+   gains 0 of 32 and costs 1 of 24, so those files are capability-limited, not
+   budget-starved. Do not spend a slice re-tuning the ladder order or the probe
+   budget; that question is answered. The supported lever is the flooded
+   cap-hit refutation check, scored on the 7 files that all reach
+   `ground = 8192` and die in the same call.
+
+2. **Preprocessing does produce artifacts, and this plan said otherwise.** The
+   claim that the rewrite layer emits nothing checkable was **false**. Array
+   elimination and Ackermann both have a `recheck`. What they do is
+   *re-derive* the replacement half rather than interpret it — `trust.rs`
+   already called this "determinism, not faithfulness" and cited a shipped
+   wrong-`unsat` that survived re-derivation. **An artifact that checks the
+   wrong half is more dangerous than none, because it looks like coverage.**
+   Demonstrated, not argued: swapping read-over-write's branches over a
+   satisfiable query made `recheck` return `Ok(true)`.
+
+3. **The trust-hole count went 6 -> 7 and that is an improvement.** A CDCL(T)
+   `unsat` reaches the front door as `Evidence::Unsat(None)` with empty
+   `trusted_steps` — theory reasoning trusted and **uncounted**. The seventh row
+   names what was already there.
+
+**Next, in order.** S7b, whose scope and ordering the S7a lane wrote down (thread
+the theory through `run`/`search_loop` rather than storing it; port the driver
+counters and reproduce them on the traced five *before* anything moves). Then
+UF's cap-hit refutation slice. Then QF_RDL's 14 and QF_UF's 4, neither of which
+has a front-door cause. QF_NRA's 62-file admission bound is now the single
+largest named cause on the board.
+
+**Method corrections earned tonight**, all in [the census correction block](../research/11-design-review/2026-09-05-parity-loss-census.md):
+a control that pins a literal measures the maintainer's memory (the parity
+freshness gate went red in CI for exactly that); a diagnostic tool with partial
+coverage manufactures false positives in every artifact built on it; and a
+frozen wrong measurement needs labelling where the data lives, with a removal
+rule, because unlike a coverage gap it never self-heals.
+
 ### 2026-09-06, evening: the six-division re-measurement at `c28d7b7c6`
 
 Idle s5/s6/s7, `taskset -c 0-7`, 24 s / 8 GiB, fresh checkouts from a
