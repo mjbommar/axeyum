@@ -1,0 +1,907 @@
+{
+  "QF_ABV": {
+    "files": 8,
+    "total_wall_ms": 170749,
+    "files_with_theory_layer_line": 0,
+    "files_watchdog_unavailable": 4,
+    "files_no_line_at_all": 4,
+    "boolean_search_ms": 0,
+    "theory_work_ms_conservative": 0,
+    "theory_assert_ms_excluded_overlap": 0,
+    "traced_total_ms": 0,
+    "untraced_ms": 170749,
+    "traced_fraction_pct": 0.0,
+    "naive_traced_total_ms_DO_NOT_TRUST": 0,
+    "naive_traced_fraction_pct_DO_NOT_TRUST": 0.0,
+    "field_sums_ms": {
+      "boolean_propagate_ms": 0,
+      "conflict_analysis_ms": 0,
+      "theory_propagate_ms": 0,
+      "theory_push_pop_ms": 0,
+      "theory_final_check_ms": 0,
+      "theory_explain_ms": 0,
+      "theory_assert_ms": 0
+    },
+    "per_file": [
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_ABV/2018-Mann/arbiter_array_cex_w32d32q16n4b34.smt2",
+        "wall_ms": 24719,
+        "verdict": "unsolved",
+        "theory_layer": "no_line"
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_ABV/bmc-arrays/bubbleSort.smt2",
+        "wall_ms": 25129,
+        "verdict": "unsolved",
+        "theory_layer": "unavailable"
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_ABV/brummayerbiere/fifo32ia04k08.smt2",
+        "wall_ms": 24522,
+        "verdict": "unsolved",
+        "theory_layer": "no_line"
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_ABV/brummayerbiere/wchains140se.smt2",
+        "wall_ms": 12893,
+        "verdict": "unsolved",
+        "theory_layer": "no_line"
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_ABV/dwp_formulas/try3_noof_functions_dwp_md5sum.set_char_quoting.il.dwp.smt2",
+        "wall_ms": 25125,
+        "verdict": "unsolved",
+        "theory_layer": "unavailable"
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_ABV/dwp_formulas/try3_noof_functions_dwp_ptx.bkm_scale.il.dwp.smt2",
+        "wall_ms": 25125,
+        "verdict": "unsolved",
+        "theory_layer": "unavailable"
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_ABV/dwp_formulas/try3_noof_functions_dwp_sum.set_char_quoting.il.dwp.smt2",
+        "wall_ms": 25122,
+        "verdict": "unsolved",
+        "theory_layer": "unavailable"
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_ABV/dwp_formulas/try5_small_difret_functions_dwp_cat.next_line_num.il.dwp.smt2",
+        "wall_ms": 8114,
+        "verdict": "unsolved",
+        "theory_layer": "no_line"
+      }
+    ]
+  },
+  "QF_BV": {
+    "files": 6,
+    "total_wall_ms": 147646,
+    "files_with_theory_layer_line": 0,
+    "files_watchdog_unavailable": 1,
+    "files_no_line_at_all": 5,
+    "boolean_search_ms": 0,
+    "theory_work_ms_conservative": 0,
+    "theory_assert_ms_excluded_overlap": 0,
+    "traced_total_ms": 0,
+    "untraced_ms": 147646,
+    "traced_fraction_pct": 0.0,
+    "naive_traced_total_ms_DO_NOT_TRUST": 0,
+    "naive_traced_fraction_pct_DO_NOT_TRUST": 0.0,
+    "field_sums_ms": {
+      "boolean_propagate_ms": 0,
+      "conflict_analysis_ms": 0,
+      "theory_propagate_ms": 0,
+      "theory_push_pop_ms": 0,
+      "theory_final_check_ms": 0,
+      "theory_explain_ms": 0,
+      "theory_assert_ms": 0
+    },
+    "per_file": [
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_BV/2017-BuchwaldFried/counterexample.dump.ia32_Mul_base_disp--Add32.load32.Mul32.Mulh_u32.0005.smt2",
+        "wall_ms": 24324,
+        "verdict": "unsolved",
+        "theory_layer": "no_line"
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_BV/Sage2/bench_13795.smt2",
+        "wall_ms": 24728,
+        "verdict": "unsolved",
+        "theory_layer": "no_line"
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_BV/asp/TravellingSalesperson/tsp_rand_70_300_1155482584_12.lp.smt2",
+        "wall_ms": 24224,
+        "verdict": "unsolved",
+        "theory_layer": "no_line"
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_BV/bruttomesso/core/ext_con_028_008_0064.smt2",
+        "wall_ms": 24219,
+        "verdict": "unsolved",
+        "theory_layer": "no_line"
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_BV/bruttomesso/simple_processor/simple_processors_008_006_0004.smt2",
+        "wall_ms": 24330,
+        "verdict": "unsolved",
+        "theory_layer": "no_line"
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_BV/stp/testcase15.stp.smt2",
+        "wall_ms": 25821,
+        "verdict": "unsolved",
+        "theory_layer": "unavailable"
+      }
+    ]
+  },
+  "QF_IDL": {
+    "files": 8,
+    "total_wall_ms": 65312,
+    "files_with_theory_layer_line": 0,
+    "files_watchdog_unavailable": 0,
+    "files_no_line_at_all": 8,
+    "boolean_search_ms": 0,
+    "theory_work_ms_conservative": 0,
+    "theory_assert_ms_excluded_overlap": 0,
+    "traced_total_ms": 0,
+    "untraced_ms": 65312,
+    "traced_fraction_pct": 0.0,
+    "naive_traced_total_ms_DO_NOT_TRUST": 0,
+    "naive_traced_fraction_pct_DO_NOT_TRUST": 0.0,
+    "field_sums_ms": {
+      "boolean_propagate_ms": 0,
+      "conflict_analysis_ms": 0,
+      "theory_propagate_ms": 0,
+      "theory_push_pop_ms": 0,
+      "theory_final_check_ms": 0,
+      "theory_explain_ms": 0,
+      "theory_assert_ms": 0
+    },
+    "per_file": [
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/20210312-Bouvier/vlsat3_c00.smt2",
+        "wall_ms": 24022,
+        "verdict": "unsolved",
+        "theory_layer": "no_line"
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/20220214-RVpredict-BohanLi/RVpredict_13.smt2",
+        "wall_ms": 1109,
+        "verdict": "sat",
+        "theory_layer": "no_line"
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/asp/BlockedNQueens/156.48.1960.36.1721325133.dat.smt2",
+        "wall_ms": 3312,
+        "verdict": "unsat",
+        "theory_layer": "no_line"
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/asp/ChannelRouting/channelRoute.in9.smt2",
+        "wall_ms": 5712,
+        "verdict": "sat",
+        "theory_layer": "no_line"
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/asp/Fastfood/a9.8.11.asp.smt2",
+        "wall_ms": 5813,
+        "verdict": "unsat",
+        "theory_layer": "no_line"
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/asp/GeneralizedSlitherlink/penrose.34.asp.smt2",
+        "wall_ms": 1109,
+        "verdict": "sat",
+        "theory_layer": "no_line"
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/asp/GeneralizedSlitherlink/trisquares.41.asp.smt2",
+        "wall_ms": 3011,
+        "verdict": "sat",
+        "theory_layer": "no_line"
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/asp/GraphColouring/graph-colouring-nodes=130-density=0.1-instance=10.smt2",
+        "wall_ms": 21224,
+        "verdict": "unsolved",
+        "theory_layer": "no_line"
+      }
+    ]
+  },
+  "QF_LIA": {
+    "files": 8,
+    "total_wall_ms": 161166,
+    "files_with_theory_layer_line": 2,
+    "files_watchdog_unavailable": 4,
+    "files_no_line_at_all": 2,
+    "boolean_search_ms": 10030,
+    "theory_work_ms_conservative": 7761,
+    "theory_assert_ms_excluded_overlap": 10207,
+    "traced_total_ms": 17791,
+    "untraced_ms": 143375,
+    "traced_fraction_pct": 11.0,
+    "naive_traced_total_ms_DO_NOT_TRUST": 27998,
+    "naive_traced_fraction_pct_DO_NOT_TRUST": 17.4,
+    "field_sums_ms": {
+      "boolean_propagate_ms": 10030,
+      "conflict_analysis_ms": 0,
+      "theory_propagate_ms": 7761,
+      "theory_push_pop_ms": 0,
+      "theory_final_check_ms": 0,
+      "theory_explain_ms": 0,
+      "theory_assert_ms": 10207
+    },
+    "per_file": [
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LIA/20180326-Bromberger/more_slacked/CAV_2009_benchmarks/smt/30-vars/v30_problem_2__023.smt2.slack.smt2",
+        "wall_ms": 24221,
+        "verdict": "unsolved",
+        "theory_layer": "no_line"
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LIA/2019-cmodelsdiff/stillLive/0006-still_live-11-1.smt2",
+        "wall_ms": 1310,
+        "verdict": "sat",
+        "theory_layer": "no_line"
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LIA/2019-ezsmt/incrementalScheduling/182-incremental_scheduling-17280-0.smt2",
+        "wall_ms": 24123,
+        "verdict": "unsolved",
+        "theory_layer": "present",
+        "traced_ms": 8012
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LIA/20210219-Dartagnan/ReachSafety-Loops/apache-get-tag-O0.smt2",
+        "wall_ms": 25128,
+        "verdict": "unsolved",
+        "theory_layer": "unavailable"
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LIA/20210219-Dartagnan/ReachSafety-Loops/jm2006_variant-O0.smt2",
+        "wall_ms": 25122,
+        "verdict": "unsolved",
+        "theory_layer": "unavailable"
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LIA/20220307-SMPT/BART-PT-020/RF-13.smt2",
+        "wall_ms": 10814,
+        "verdict": "unsolved",
+        "theory_layer": "present",
+        "traced_ms": 19986
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LIA/20220307-SMPT/FamilyReunion-PT-L00400M0040C020P020G001/RC-07.smt2",
+        "wall_ms": 25423,
+        "verdict": "unsolved",
+        "theory_layer": "unavailable"
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LIA/20220307-SMPT/RwMutex-PT-r0010w0500/RC-09.smt2",
+        "wall_ms": 25025,
+        "verdict": "unsolved",
+        "theory_layer": "unavailable"
+      }
+    ]
+  },
+  "QF_LRA": {
+    "files": 8,
+    "total_wall_ms": 143556,
+    "files_with_theory_layer_line": 6,
+    "files_watchdog_unavailable": 0,
+    "files_no_line_at_all": 2,
+    "boolean_search_ms": 873,
+    "theory_work_ms_conservative": 101532,
+    "theory_assert_ms_excluded_overlap": 470,
+    "traced_total_ms": 102405,
+    "untraced_ms": 41151,
+    "traced_fraction_pct": 71.3,
+    "naive_traced_total_ms_DO_NOT_TRUST": 102875,
+    "naive_traced_fraction_pct_DO_NOT_TRUST": 71.7,
+    "field_sums_ms": {
+      "boolean_propagate_ms": 797,
+      "conflict_analysis_ms": 76,
+      "theory_propagate_ms": 44239,
+      "theory_push_pop_ms": 333,
+      "theory_final_check_ms": 56960,
+      "theory_explain_ms": 0,
+      "theory_assert_ms": 470
+    },
+    "per_file": [
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LRA/2017-Heizmann-UltimateInvariantSynthesis/_count_by_k.i_3_3_2.bpl_7.smt2",
+        "wall_ms": 24118,
+        "verdict": "unsolved",
+        "theory_layer": "present",
+        "traced_ms": 19957
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LRA/2017-Heizmann-UltimateInvariantSynthesis/_half_2.i_3_6_2.bpl_7.smt2",
+        "wall_ms": 24126,
+        "verdict": "unsolved",
+        "theory_layer": "present",
+        "traced_ms": 23472
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LRA/2017-Heizmann-UltimateInvariantSynthesis/_standard_copy3_ground.i_3_2_2.bpl_7.smt2",
+        "wall_ms": 24118,
+        "verdict": "unsolved",
+        "theory_layer": "present",
+        "traced_ms": 23482
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LRA/2017-Heizmann-UltimateInvariantSynthesis/_standard_two_index_06.i_3_2_2.bpl_7.smt2",
+        "wall_ms": 24024,
+        "verdict": "unsolved",
+        "theory_layer": "present",
+        "traced_ms": 23668
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LRA/2019-ezsmt/Labyrinth/SCC_Strong/0051-labyrinth-12-0.smt2",
+        "wall_ms": 17323,
+        "verdict": "unsolved",
+        "theory_layer": "no_line"
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LRA/2019-ezsmt/Labyrinth/SCC_Strong/0132-labyrinth-12-0.smt2",
+        "wall_ms": 17321,
+        "verdict": "unsolved",
+        "theory_layer": "no_line"
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LRA/2019-ezsmt/blending/1.smt2",
+        "wall_ms": 6615,
+        "verdict": "unsat",
+        "theory_layer": "present",
+        "traced_ms": 6494
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LRA/2019-ezsmt/blending/5.smt2",
+        "wall_ms": 5911,
+        "verdict": "unsat",
+        "theory_layer": "present",
+        "traced_ms": 5802
+      }
+    ]
+  },
+  "QF_NIA": {
+    "files": 8,
+    "total_wall_ms": 156577,
+    "files_with_theory_layer_line": 5,
+    "files_watchdog_unavailable": 3,
+    "files_no_line_at_all": 0,
+    "boolean_search_ms": 616,
+    "theory_work_ms_conservative": 20788,
+    "theory_assert_ms_excluded_overlap": 687,
+    "traced_total_ms": 21404,
+    "untraced_ms": 135173,
+    "traced_fraction_pct": 13.7,
+    "naive_traced_total_ms_DO_NOT_TRUST": 22091,
+    "naive_traced_fraction_pct_DO_NOT_TRUST": 14.1,
+    "field_sums_ms": {
+      "boolean_propagate_ms": 616,
+      "conflict_analysis_ms": 0,
+      "theory_propagate_ms": 20788,
+      "theory_push_pop_ms": 0,
+      "theory_final_check_ms": 0,
+      "theory_explain_ms": 0,
+      "theory_assert_ms": 687
+    },
+    "per_file": [
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/CInteger/Stroeder_15__svcomp_ex2.c__p25866_terminationG_0.smt2",
+        "wall_ms": 24227,
+        "verdict": "unsolved",
+        "theory_layer": "present",
+        "traced_ms": 707
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/ITS/From_AProVE_2014__FlattenTreeListRec.jar-obl-10__p29567_safety_0.smt2",
+        "wall_ms": 25218,
+        "verdict": "unsolved",
+        "theory_layer": "unavailable"
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/ITS/From_AProVE_2014__SortCount.jar-obl-10__terminationS_2_0.smt2",
+        "wall_ms": 10815,
+        "verdict": "unsolved",
+        "theory_layer": "present",
+        "traced_ms": 6628
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/ITS/From_AProVE_2014__Test6.jar-obl-13__terminationS_36_0.smt2",
+        "wall_ms": 25127,
+        "verdict": "unsolved",
+        "theory_layer": "unavailable"
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/ITS/From_AProVE_2014__Velroyen08-factorial.jar-obl-8__p13829_terminationG_0.smt2",
+        "wall_ms": 24228,
+        "verdict": "unsolved",
+        "theory_layer": "present",
+        "traced_ms": 853
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/ITS/From_AProVE_2014__cousot_rec.jar-obl-8__p28312_terminationG_0.smt2",
+        "wall_ms": 25131,
+        "verdict": "unsolved",
+        "theory_layer": "unavailable"
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/ITS/From_AProVE_2014__juHashMapCreate.jar-obl-10__p4943_safety_0.smt2",
+        "wall_ms": 10915,
+        "verdict": "unsolved",
+        "theory_layer": "present",
+        "traced_ms": 6997
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/ITS/From_AProVE_2014__juHashMapCreateClear.jar-obl-11__p30726_safety_0.smt2",
+        "wall_ms": 10916,
+        "verdict": "unsolved",
+        "theory_layer": "present",
+        "traced_ms": 6906
+      }
+    ]
+  },
+  "QF_NRA": {
+    "files": 8,
+    "total_wall_ms": 81618,
+    "files_with_theory_layer_line": 5,
+    "files_watchdog_unavailable": 3,
+    "files_no_line_at_all": 0,
+    "boolean_search_ms": 3,
+    "theory_work_ms_conservative": 73,
+    "theory_assert_ms_excluded_overlap": 1,
+    "traced_total_ms": 76,
+    "untraced_ms": 81542,
+    "traced_fraction_pct": 0.1,
+    "naive_traced_total_ms_DO_NOT_TRUST": 77,
+    "naive_traced_fraction_pct_DO_NOT_TRUST": 0.1,
+    "field_sums_ms": {
+      "boolean_propagate_ms": 3,
+      "conflict_analysis_ms": 0,
+      "theory_propagate_ms": 69,
+      "theory_push_pop_ms": 0,
+      "theory_final_check_ms": 4,
+      "theory_explain_ms": 0,
+      "theory_assert_ms": 1
+    },
+    "per_file": [
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NRA/20161105-Sturm-MBO/mbo_E1.smt2",
+        "wall_ms": 1009,
+        "verdict": "unsolved",
+        "theory_layer": "present",
+        "traced_ms": 0
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NRA/20161105-Sturm-MBO/mbo_E13E18.smt2",
+        "wall_ms": 25125,
+        "verdict": "unsolved",
+        "theory_layer": "unavailable"
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NRA/20161105-Sturm-MBO/mbo_E20E26.smt2",
+        "wall_ms": 407,
+        "verdict": "unsolved",
+        "theory_layer": "present",
+        "traced_ms": 0
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NRA/20161105-Sturm-MBO/mbo_E2E5.smt2",
+        "wall_ms": 25127,
+        "verdict": "unsolved",
+        "theory_layer": "unavailable"
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NRA/20161105-Sturm-MBO/mbo_E5E13.smt2",
+        "wall_ms": 25121,
+        "verdict": "unsolved",
+        "theory_layer": "unavailable"
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NRA/20180501-Economics-Mulligan/MulliganEconomicsModel0051a.smt2",
+        "wall_ms": 2811,
+        "verdict": "unsolved",
+        "theory_layer": "present",
+        "traced_ms": 74
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NRA/20180501-Economics-Mulligan/MulliganEconomicsModel0082a.smt2",
+        "wall_ms": 709,
+        "verdict": "unsolved",
+        "theory_layer": "present",
+        "traced_ms": 1
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NRA/20200911-Pine/1599121863243316000.smt2",
+        "wall_ms": 1309,
+        "verdict": "unsolved",
+        "theory_layer": "present",
+        "traced_ms": 2
+      }
+    ]
+  },
+  "QF_RDL": {
+    "files": 8,
+    "total_wall_ms": 147858,
+    "files_with_theory_layer_line": 0,
+    "files_watchdog_unavailable": 3,
+    "files_no_line_at_all": 5,
+    "boolean_search_ms": 0,
+    "theory_work_ms_conservative": 0,
+    "theory_assert_ms_excluded_overlap": 0,
+    "traced_total_ms": 0,
+    "untraced_ms": 147858,
+    "traced_fraction_pct": 0.0,
+    "naive_traced_total_ms_DO_NOT_TRUST": 0,
+    "naive_traced_fraction_pct_DO_NOT_TRUST": 0.0,
+    "field_sums_ms": {
+      "boolean_propagate_ms": 0,
+      "conflict_analysis_ms": 0,
+      "theory_propagate_ms": 0,
+      "theory_push_pop_ms": 0,
+      "theory_final_check_ms": 0,
+      "theory_explain_ms": 0,
+      "theory_assert_ms": 0
+    },
+    "per_file": [
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/SMT-Temporal-Planning-Benchmarks/tempo-depth-5.smt2",
+        "wall_ms": 19024,
+        "verdict": "unsolved",
+        "theory_layer": "no_line"
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/SMT-Temporal-Planning-Benchmarks/tempo-depth-6.smt2",
+        "wall_ms": 20825,
+        "verdict": "unsolved",
+        "theory_layer": "no_line"
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/SMT-Temporal-Planning-Benchmarks/tempo-depth-7.smt2",
+        "wall_ms": 25126,
+        "verdict": "unsolved",
+        "theory_layer": "unavailable"
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/SMT-Temporal-Planning-Benchmarks/tempo-matrix2x2.pddl.smt2",
+        "wall_ms": 25120,
+        "verdict": "unsolved",
+        "theory_layer": "unavailable"
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/SMT-Temporal-Planning-Benchmarks/tempo-width-4.smt2",
+        "wall_ms": 5912,
+        "verdict": "sat",
+        "theory_layer": "no_line"
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/SMT-Temporal-Planning-Benchmarks/tempo-width-5.smt2",
+        "wall_ms": 24018,
+        "verdict": "unsolved",
+        "theory_layer": "no_line"
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/SMT-Temporal-Planning-Benchmarks/tempo-width-6.smt2",
+        "wall_ms": 25122,
+        "verdict": "unsolved",
+        "theory_layer": "unavailable"
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/SMT-Temporal-Planning-Benchmarks/tms-2-3-light-30.smt2",
+        "wall_ms": 2711,
+        "verdict": "sat",
+        "theory_layer": "no_line"
+      }
+    ]
+  },
+  "QF_SLIA": {
+    "files": 7,
+    "total_wall_ms": 64510,
+    "files_with_theory_layer_line": 3,
+    "files_watchdog_unavailable": 2,
+    "files_no_line_at_all": 2,
+    "boolean_search_ms": 5,
+    "theory_work_ms_conservative": 78,
+    "theory_assert_ms_excluded_overlap": 14,
+    "traced_total_ms": 83,
+    "untraced_ms": 64427,
+    "traced_fraction_pct": 0.1,
+    "naive_traced_total_ms_DO_NOT_TRUST": 97,
+    "naive_traced_fraction_pct_DO_NOT_TRUST": 0.2,
+    "field_sums_ms": {
+      "boolean_propagate_ms": 5,
+      "conflict_analysis_ms": 0,
+      "theory_propagate_ms": 78,
+      "theory_push_pop_ms": 0,
+      "theory_final_check_ms": 0,
+      "theory_explain_ms": 0,
+      "theory_assert_ms": 14
+    },
+    "per_file": [
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_SLIA/2015-Norn/StringReplace/norn-benchmark-10.smt2",
+        "wall_ms": 309,
+        "verdict": "unsolved",
+        "theory_layer": "present",
+        "traced_ms": 0
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_SLIA/20180523-Reynolds/kaluza/sat/big/new.8618.corecstrs.readable.smt2",
+        "wall_ms": 25130,
+        "verdict": "unsolved",
+        "theory_layer": "unavailable"
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_SLIA/2019-Jiang/slent/slent_stranger_str_rep_20496_sink.smt2",
+        "wall_ms": 13221,
+        "verdict": "unsolved",
+        "theory_layer": "present",
+        "traced_ms": 7
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_SLIA/2019-full_str_int/py-conbyte_trauc/leetcode_int-addStrings/964.smt2",
+        "wall_ms": 508,
+        "verdict": "unsolved",
+        "theory_layer": "present",
+        "traced_ms": 90
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_SLIA/2019-full_str_int/py-conbyte_z3seq/lib_int-ipaddress__ip_int_from_string/586.smt2",
+        "wall_ms": 25125,
+        "verdict": "unsolved",
+        "theory_layer": "unavailable"
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_SLIA/20230331-transducer-plus/Equivalence/htmlUnescape-htmlEscape.smt2",
+        "wall_ms": 109,
+        "verdict": "unsolved",
+        "theory_layer": "no_line"
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_SLIA/20230403-webapp/str-rep-all/str_replace_all62.smt2",
+        "wall_ms": 108,
+        "verdict": "unsolved",
+        "theory_layer": "no_line"
+      }
+    ]
+  },
+  "QF_UF": {
+    "files": 8,
+    "total_wall_ms": 87526,
+    "files_with_theory_layer_line": 8,
+    "files_watchdog_unavailable": 0,
+    "files_no_line_at_all": 0,
+    "boolean_search_ms": 41789,
+    "theory_work_ms_conservative": 18805,
+    "theory_assert_ms_excluded_overlap": 53822,
+    "traced_total_ms": 60594,
+    "untraced_ms": 26932,
+    "traced_fraction_pct": 69.2,
+    "naive_traced_total_ms_DO_NOT_TRUST": 114416,
+    "naive_traced_fraction_pct_DO_NOT_TRUST": 130.7,
+    "field_sums_ms": {
+      "boolean_propagate_ms": 41496,
+      "conflict_analysis_ms": 293,
+      "theory_propagate_ms": 17214,
+      "theory_push_pop_ms": 1591,
+      "theory_final_check_ms": 0,
+      "theory_explain_ms": 0,
+      "theory_assert_ms": 53822
+    },
+    "per_file": [
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UF/2018-Goel-hwbench/QF_UF_Heap_ab_cti_max.smt2",
+        "wall_ms": 208,
+        "verdict": "sat",
+        "theory_layer": "present",
+        "traced_ms": 14
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UF/2018-Goel-hwbench/QF_UF_cambridge.7.prop2_ab_fp_max.smt2",
+        "wall_ms": 4812,
+        "verdict": "sat",
+        "theory_layer": "present",
+        "traced_ms": 1334
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UF/2018-Goel-hwbench/QF_UF_hanoi.3.prop1_ab_br_max.smt2",
+        "wall_ms": 5412,
+        "verdict": "sat",
+        "theory_layer": "present",
+        "traced_ms": 1351
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UF/2018-Goel-hwbench/QF_UF_rushhour.3.prop1_ab_cti_max.smt2",
+        "wall_ms": 24224,
+        "verdict": "unsolved",
+        "theory_layer": "present",
+        "traced_ms": 39702
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UF/NEQ/NEQ033_size6.smt2",
+        "wall_ms": 24523,
+        "verdict": "unsolved",
+        "theory_layer": "present",
+        "traced_ms": 26484
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UF/PEQ/PEQ013_size5.smt2",
+        "wall_ms": 19222,
+        "verdict": "unsat",
+        "theory_layer": "present",
+        "traced_ms": 33207
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UF/QG-classification/loops6/dead_dnd015.smt2",
+        "wall_ms": 2412,
+        "verdict": "unsat",
+        "theory_layer": "present",
+        "traced_ms": 2738
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UF/QG-classification/qg5/dead_dnd011.smt2",
+        "wall_ms": 6713,
+        "verdict": "unsat",
+        "theory_layer": "present",
+        "traced_ms": 9586
+      }
+    ]
+  },
+  "QF_UFLIA": {
+    "files": 8,
+    "total_wall_ms": 55609,
+    "files_with_theory_layer_line": 0,
+    "files_watchdog_unavailable": 0,
+    "files_no_line_at_all": 8,
+    "boolean_search_ms": 0,
+    "theory_work_ms_conservative": 0,
+    "theory_assert_ms_excluded_overlap": 0,
+    "traced_total_ms": 0,
+    "untraced_ms": 55609,
+    "traced_fraction_pct": 0.0,
+    "naive_traced_total_ms_DO_NOT_TRUST": 0,
+    "naive_traced_fraction_pct_DO_NOT_TRUST": 0.0,
+    "field_sums_ms": {
+      "boolean_propagate_ms": 0,
+      "conflict_analysis_ms": 0,
+      "theory_propagate_ms": 0,
+      "theory_push_pop_ms": 0,
+      "theory_final_check_ms": 0,
+      "theory_explain_ms": 0,
+      "theory_assert_ms": 0
+    },
+    "per_file": [
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/20230314-Jaroslav-Bendik-Certora/3106_1c933134166dbad31f79_41_QF_UFLIA.smt2",
+        "wall_ms": 209,
+        "verdict": "unsolved",
+        "theory_layer": "no_line"
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/20230314-Jaroslav-Bendik-Certora/44289_e5a2e5c780236919ee6a_18_QF_UFLIA.smt2",
+        "wall_ms": 3710,
+        "verdict": "unsolved",
+        "theory_layer": "no_line"
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/20230314-Jaroslav-Bendik-Certora/63058_64ab9a7ef7b6c3492507_22_QF_UFLIA.smt2",
+        "wall_ms": 2710,
+        "verdict": "unsolved",
+        "theory_layer": "no_line"
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/20230314-Jaroslav-Bendik-Certora/63058_aa742630eef64f949de269382c1f9035_25_UFLIA.smt2",
+        "wall_ms": 109,
+        "verdict": "unsolved",
+        "theory_layer": "no_line"
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/20230314-Jaroslav-Bendik-Certora/65782_cd31513fdcd15701933b_7_QF_UFLIA.smt2",
+        "wall_ms": 109,
+        "verdict": "unsolved",
+        "theory_layer": "no_line"
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/20230314-Jaroslav-Bendik-Certora/72771_f9d228efc97cf1458e38_64_QF_UFLIA.smt2",
+        "wall_ms": 109,
+        "verdict": "unsolved",
+        "theory_layer": "no_line"
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/EufLaArithmetic/hard/hard12.smt2",
+        "wall_ms": 24325,
+        "verdict": "unsolved",
+        "theory_layer": "no_line"
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/EufLaArithmetic/hard/hard15.smt2",
+        "wall_ms": 24328,
+        "verdict": "unsolved",
+        "theory_layer": "no_line"
+      }
+    ]
+  },
+  "UF": {
+    "files": 8,
+    "total_wall_ms": 140635,
+    "files_with_theory_layer_line": 6,
+    "files_watchdog_unavailable": 1,
+    "files_no_line_at_all": 1,
+    "boolean_search_ms": 2526,
+    "theory_work_ms_conservative": 17421,
+    "theory_assert_ms_excluded_overlap": 6395,
+    "traced_total_ms": 19947,
+    "untraced_ms": 120688,
+    "traced_fraction_pct": 14.2,
+    "naive_traced_total_ms_DO_NOT_TRUST": 26342,
+    "naive_traced_fraction_pct_DO_NOT_TRUST": 18.7,
+    "field_sums_ms": {
+      "boolean_propagate_ms": 2526,
+      "conflict_analysis_ms": 0,
+      "theory_propagate_ms": 17393,
+      "theory_push_pop_ms": 28,
+      "theory_final_check_ms": 0,
+      "theory_explain_ms": 0,
+      "theory_assert_ms": 6395
+    },
+    "per_file": [
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UF/20170428-Barrett/cdt-cade2015/nada/afp/bindag/x2015_09_10_16_53_56_537_1094926.smt_in.smt2",
+        "wall_ms": 15220,
+        "verdict": "unsolved",
+        "theory_layer": "present",
+        "traced_ms": 7890
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UF/20170428-Barrett/cdt-cade2015/nada/afp/coinductive_list/x2015_09_10_16_57_47_544_1522663.smt_in.smt2",
+        "wall_ms": 25323,
+        "verdict": "unsolved",
+        "theory_layer": "unavailable"
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UF/20170428-Barrett/cdt-cade2015/nada/afp/coinductive_list/x2015_09_10_17_00_37_157_1687977.smt_in.smt2",
+        "wall_ms": 8017,
+        "verdict": "unsolved",
+        "theory_layer": "present",
+        "traced_ms": 3488
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UF/20170428-Barrett/cdt-cade2015/nada/afp/coinductive_list/x2015_09_10_17_04_05_259_1960786.smt_in.smt2",
+        "wall_ms": 14718,
+        "verdict": "unsolved",
+        "theory_layer": "present",
+        "traced_ms": 4667
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UF/20170428-Barrett/cdt-cade2015/nada/afp/coinductive_list/x2015_09_10_17_09_42_195_2416479.smt_in.smt2",
+        "wall_ms": 23020,
+        "verdict": "unsolved",
+        "theory_layer": "present",
+        "traced_ms": 3780
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UF/20170428-Barrett/cdt-cade2015/nada/afp/coinductive_list/x2015_09_10_17_10_47_003_2500061.smt_in.smt2",
+        "wall_ms": 14419,
+        "verdict": "unsolved",
+        "theory_layer": "present",
+        "traced_ms": 6511
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UF/20170428-Barrett/cdt-cade2015/nada/afp/coinductive_list/x2015_09_10_17_20_02_499_2906170.smt_in.smt2",
+        "wall_ms": 24499,
+        "verdict": "unsolved",
+        "theory_layer": "no_line"
+      },
+      {
+        "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UF/20170428-Barrett/cdt-cade2015/nada/afp/coinductive_stream/x2015_09_10_17_25_01_009_1227491.smt_in.smt2",
+        "wall_ms": 15419,
+        "verdict": "unsolved",
+        "theory_layer": "present",
+        "traced_ms": 6
+      }
+    ]
+  }
+}
