@@ -178,7 +178,9 @@ the next work as follows; each item names the measurement that put it there.
    all of them on the `kernel-lean` route**, with 101 of the remaining 103 on
    routes where an empty footprint is rejected outright and 2 named `kernel-lean`
    exceptions. ADR-1674 fixes the wording; "all `kernel-lean` facts are
-   axiom-free" is false by exactly two. One fact per capability, a coverage ratchet, the honest
+   axiom-free" is false by exactly two. Re-run `validate-facts.py` rather than
+   quoting either number: the denominator moved by fourteen facts within an
+   hour of being measured. The stable claim is the shape, not the count. One fact per capability, a coverage ratchet, the honest
    sentence everywhere.
 3. **Fix the sum-of-squares reconstruction fallback.** On `UnsupportedTerm`
    it mints two axioms and renders under the same theorem name as the honest

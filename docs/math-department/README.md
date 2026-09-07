@@ -107,6 +107,8 @@ them on the `kernel-lean` route — the only route that can make the claim, sinc
 `validate-facts.py` rejects an empty footprint on the other five. Of the 103
 remaining, 101 are on those five routes and 2 are `kernel-lean` exceptions.
 
+**Do not quote these two numbers; re-run the command.** The denominator moves daily: it read 2,687 proved at `9f2489a1f` and 2,701 within the hour as three lanes landed, so a pinned figure is stale before it is read. What is stable is the SHAPE — every empty footprint is on the `kernel-lean` route, the only route where `validate-facts.py` permits one, and the `kernel-lean` exceptions are named individually rather than counted. Two audits without a shared denominator cannot be quoted against each other ([evidence-and-checker-discipline](../contributor-guide/evidence-and-checker-discipline.md)).
+
 ## The constraint that shapes almost every verdict
 
 The kernel admits Lean's four-declaration quotient package (`Quot`,
