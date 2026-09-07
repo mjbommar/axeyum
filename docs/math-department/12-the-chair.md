@@ -291,6 +291,18 @@ is the list the chair would write today, with a measurement behind each.
 
 ## How to re-measure
 
+
+**Standing caveat on every ABSENT claim in this file (added 2026-09-06).**
+The retrieval index these measurements used builds 22 of the kernel's 31
+prelude builders. It indexes **no** `FO.*` declaration, **no** `Metric.prod*`,
+and no list prelude, so an ABSENT verdict in those three areas is a statement
+about the instrument, not about the library. The same gap makes
+`check-trust-closure.py` report 21 facts as having absent subjects when their
+subjects exist. A partial-coverage tool does not merely fail to find things;
+it produces false positives in every gate built on it. Absence claims here
+outside those three areas are unaffected, and each was paired with a positive
+control in the same invocation. Re-measure once ADR-1672's derived-coverage
+gate has landed.
 ```sh
 python3 scripts/validate-facts.py          # facts, routes, and the axiom-free count
 python3 scripts/count-landmark-facts.py    # landmark share, generated and imported splits

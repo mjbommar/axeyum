@@ -277,6 +277,18 @@ have their own fact and 9 of the 24 without one are theorems, not definitions. `
 
 ## How to re-measure
 
+
+**Standing caveat on every ABSENT claim in this file (added 2026-09-06).**
+The retrieval index these measurements used builds 22 of the kernel's 31
+prelude builders. It indexes **no** `FO.*` declaration, **no** `Metric.prod*`,
+and no list prelude, so an ABSENT verdict in those three areas is a statement
+about the instrument, not about the library. The same gap makes
+`check-trust-closure.py` report 21 facts as having absent subjects when their
+subjects exist. A partial-coverage tool does not merely fail to find things;
+it produces false positives in every gate built on it. Absence claims here
+outside those three areas are unaffected, and each was paired with a positive
+control in the same invocation. Re-measure once ADR-1672's derived-coverage
+gate has landed.
 The name grep this section used to carry was **broken and silently so**: the
 prelude does not write `"Rat.expectation_add"` anywhere — names are interned
 as `child(kernel, "expectation_add")` under a `Rat` root — so the grep matched
