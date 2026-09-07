@@ -139,6 +139,10 @@ pub enum ZeroDivisorCongruence {
 }
 ```
 
+(The shipped names are `rewritten()` for the prefix and `added_constraints()`
+for the tail; `from_parts` reconstructs the object, which is what lets an
+adversarial fixture present a **wrong** elimination to the witness.)
+
 `assertions()[..original_count()]` are the rewritten originals and the rest are
 the added constraints — the same "snapshot, then extend" tail-slice discipline
 `arrays.rs`, `functions.rs` and `int_blast.rs` already implement and that
@@ -219,7 +223,87 @@ Measured in this tree:
 
 ## Mutation — teeth, measured
 
-Recorded after the run; see the lane status file for the raw counts.
+All runs on the isolated snapshot `snap-int-divmod-witness-dd5b93a4e`, never in
+the shared worktree. Every mutant was reverted and the snapshot's source
+confirmed byte-identical to the worktree's afterwards, with the witness suite
+reconfirmed at 10/10.
+
+**Baseline populations.** `axeyum-rewrite`: 154 lib tests + 27 integration tests
+(the new witness suite is 10 of those 27). `axeyum-solver --features full`:
+`--test int_divmod` 7, `--test lia` 10, `--test nia_divmod_linearize` 13 — the
+30 tests that exercise this pass end to end.
+
+### The producer mutation: `|c| − 1` → `c − 1`
+
+The Euclidean remainder bound loses its absolute value, so for a **negative**
+divisor the pass emits `0 ≤ r ≤ c − 1` with `c − 1 < 0` — unsatisfiable. That is a
+*strengthening*, the direction that turns a satisfiable query `unsat`.
+
+- **It is a wrong `unsat` at the front door, not a formality.** `solve` on
+  `mod(x, −3) = 2` — satisfiable, e.g. `x = 2` or `x = −1`, since a Euclidean
+  remainder lies in `[0, |c|)` — returned `CheckResult::Unsat` under the mutant.
+  The same probe on the unmutated snapshot returns non-`Unsat`. (Probe file
+  deleted afterwards; it was scaffolding, not a fixture.)
+- **Everything that already exists accepts it.** All **30 of 30** solver tests
+  above pass under the mutant, and all 154 `axeyum-rewrite` lib tests plus the 17
+  non-witness integration tests pass. That is not a surprise and it is the point:
+  before this slice the pass carried **no artifact at all**, so there was nothing
+  that *could* reject it. The default gate additionally has no negative-divisor
+  coverage — the only fuzz that emits one (`qf_nia_divmod_const_differential_fuzz`,
+  divisors `−1` and `−2`) needs `--features z3` and so is not a default gate.
+- **The witness catches it, and exactly one test dies:**
+  `witness_covers_a_negative_constant_divisor`, reporting
+  `Constraint { sample: 1, constraint: 0, value: Bool(false) }`. The other 9
+  witness tests survive.
+
+### Guard deletion: four guards, four single deaths
+
+Deleting one guard from `witness_int_divmod` must kill **exactly one** test, or
+the suite is rejecting everything through one shared check.
+
+| Guard deleted | Test that died | Others |
+|---|---|---|
+| replacement comparison `lhs != rhs` | `witness_rejects_an_original_that_is_not_what_was_rewritten` | 9 pass |
+| constraint check `value != Bool(true)` | `witness_rejects_an_added_constraint_that_is_not_a_consequence` | 9 pass |
+| `is_faithful`'s `compared > 0` | `an_empty_witness_is_not_a_pass` | 9 pass |
+| the honest mode report (`Omitted` → `Closed { lemmas: 0 }`) | `zero_divisor_congruence_above_the_cap_is_omitted_and_sat_does_not_transfer` | 9 pass |
+
+Four deletions, four *different* single deaths. The fourth is the guard on the
+metadata rather than on the witness: a producer that lies about which mode it
+took is caught, which is what stops `ZeroDivisorCongruence` from being decoration.
+
+### The two halves are separately load-bearing — measured, not asserted
+
+A **consistent** quotient/remainder swap (the substitution map *and* the
+`replacements` record swapped together) leaves the replacement half agreeing,
+exactly as §Decision 2 predicted: both positive controls failed with
+`Constraint { sample: 1, constraint: 0, value: Bool(false) }` and **no**
+`Replacement` finding appeared anywhere in the run. Two pre-existing solver tests
+also die on that mutation (`mod_out_of_range_value_is_unsat`,
+`constant_divisor_still_decides`), so it is not the teeth demonstration — it is
+the evidence that the constraint half is not redundant.
+
+### One defect the witness found on its first honest run
+
+The negative-divisor fixture failed on the *unmutated* pass. Cause: a group
+holding only `mod a c` and no `div a c` still emits `a = c·q + r`, so the output
+mentioned a fresh `q` that stood for **no recorded term**. A checker can only
+sample such a symbol blindly, which makes a perfectly sound constraint evaluate
+false. Both fresh variables are now recorded against the term they denote whether
+or not the query mentioned it. A witness that could not be handed the producer's
+real output would not have found this.
+
+### What was NOT demonstrated
+
+**Reachability of the `Omitted` mode through the front door.** Two probe shapes
+carrying 49–102 distinct zero-divisor dividends over a query that is `unsat` only
+under congruence (`x = y ∧ mod(x,0) < mod(y,0)` plus filler groups) never reached
+`guard_zero_divisor_sat`: one shape was declined on the lazy-arithmetic resource
+envelope, the other was refuted correctly by an earlier route. So the guard is
+defensive and its firing is unmeasured. It cannot regress a sound `sat` — it fires
+only when the relaxation is not congruence-closed, where the `sat` was already
+untrustworthy — but "this converts a wrong answer in production" is **not** a
+claim this lane established.
 
 ## Alternatives
 

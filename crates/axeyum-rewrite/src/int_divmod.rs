@@ -384,34 +384,7 @@ pub fn eliminate_int_divmod(
     // so it can never break `unsat` and it is `sat` that degrades. The branch taken
     // is reported to the caller as `ZeroDivisorCongruence` rather than being
     // silent, which is the whole point of the mode being here at all.
-    let congruence = if zero_groups.is_empty() {
-        ZeroDivisorCongruence::NotApplicable
-    } else if zero_groups.len() <= MAX_CONGRUENCE_GROUPS {
-        let before = constraints.len();
-        for i in 0..zero_groups.len() {
-            for j in (i + 1)..zero_groups.len() {
-                let (gi, gj) = (&zero_groups[i], &zero_groups[j]);
-                let same_dividend = arena.eq(gi.dividend, gj.dividend)?;
-                if let (Some(qi), Some(qj)) = (gi.q, gj.q) {
-                    let q_eq = arena.eq(qi, qj)?;
-                    constraints.push(arena.implies(same_dividend, q_eq)?);
-                }
-                if let (Some(ri), Some(rj)) = (gi.r, gj.r) {
-                    let r_eq = arena.eq(ri, rj)?;
-                    constraints.push(arena.implies(same_dividend, r_eq)?);
-                }
-            }
-        }
-        ZeroDivisorCongruence::Closed {
-            groups: zero_groups.len(),
-            lemmas: constraints.len() - before,
-        }
-    } else {
-        ZeroDivisorCongruence::Omitted {
-            groups: zero_groups.len(),
-            limit: MAX_CONGRUENCE_GROUPS,
-        }
-    };
+    let congruence = emit_zero_divisor_congruence(arena, &zero_groups, &mut constraints)?;
 
     // Substitute the eliminated terms throughout the assertions and constraints
     // (nested div/mod inside a dividend or constraint are handled too).
@@ -428,6 +401,45 @@ pub fn eliminate_int_divmod(
         original_count: assertions.len(),
         replacements,
         congruence,
+    })
+}
+
+/// Emits the pairwise Ackermann congruence lemmas over the zero-divisor groups and
+/// reports which mode was taken.
+///
+/// Split out of [`eliminate_int_divmod`] for length; the body is verbatim.
+fn emit_zero_divisor_congruence(
+    arena: &mut TermArena,
+    zero_groups: &[ZeroGroup],
+    constraints: &mut Vec<TermId>,
+) -> Result<ZeroDivisorCongruence, IrError> {
+    if zero_groups.is_empty() {
+        return Ok(ZeroDivisorCongruence::NotApplicable);
+    }
+    if zero_groups.len() > MAX_CONGRUENCE_GROUPS {
+        return Ok(ZeroDivisorCongruence::Omitted {
+            groups: zero_groups.len(),
+            limit: MAX_CONGRUENCE_GROUPS,
+        });
+    }
+    let before = constraints.len();
+    for i in 0..zero_groups.len() {
+        for j in (i + 1)..zero_groups.len() {
+            let (gi, gj) = (&zero_groups[i], &zero_groups[j]);
+            let same_dividend = arena.eq(gi.dividend, gj.dividend)?;
+            if let (Some(qi), Some(qj)) = (gi.q, gj.q) {
+                let q_eq = arena.eq(qi, qj)?;
+                constraints.push(arena.implies(same_dividend, q_eq)?);
+            }
+            if let (Some(ri), Some(rj)) = (gi.r, gj.r) {
+                let r_eq = arena.eq(ri, rj)?;
+                constraints.push(arena.implies(same_dividend, r_eq)?);
+            }
+        }
+    }
+    Ok(ZeroDivisorCongruence::Closed {
+        groups: zero_groups.len(),
+        lemmas: constraints.len() - before,
     })
 }
 
@@ -571,7 +583,7 @@ pub const INT_DIVMOD_WITNESS_SAMPLES: usize = 8;
 /// reported by the evaluator as an error, which the witness must count as
 /// *unavailable* rather than compare. Keeping the samples small keeps the
 /// coverage real.
-const SAMPLED_INT_BOUND: i128 = 33;
+const SAMPLED_INT_BOUND: u64 = 33;
 
 /// What the witness found wrong, and where.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -788,8 +800,8 @@ fn sample_int(sample: usize, seed: u64) -> i128 {
         0 => 0,
         1 => -1,
         _ => {
-            let span = (SAMPLED_INT_BOUND * 2 + 1) as u64;
-            i128::from(seed % span) - SAMPLED_INT_BOUND
+            let span = SAMPLED_INT_BOUND * 2 + 1;
+            i128::from(seed % span) - i128::from(SAMPLED_INT_BOUND)
         }
     }
 }
