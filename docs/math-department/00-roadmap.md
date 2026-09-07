@@ -174,8 +174,9 @@ the next work as follows; each item names the measurement that put it there.
    indexed theorems are named in no fact; the enclosure layer, five committed
    geometry certificates and the matrix-group work carry no fact at all, so
    under ADR-0601 they count as zero. The axiom-free headline reads "every
-   proved fact"; the structured field says **2,584 of 2,687**, all on the
-   kernel route. One fact per capability, a coverage ratchet, the honest
+   proved fact"; the structured field says **2,584 of the 2,586 `kernel-lean`
+   facts**, a 0.08% gap — the route is the honest denominator, and the
+   cross-route "2,584 of 2,687" is marked not comparable by the validator. One fact per capability, a coverage ratchet, the honest
    sentence everywhere.
 3. **Fix the sum-of-squares reconstruction fallback.** On `UnsupportedTerm`
    it mints two axioms and renders under the same theorem name as the honest
