@@ -1,0 +1,62 @@
+files: 24   arms: base, probe16, nofmf
+
+arm         decided  unknown  PAR-2 (s)   wall (s)
+base             24        0       20.8       20.8
+probe16          23        1       59.1       35.2
+nofmf             2       22     1057.7      263.4
+
+== verdict changes base -> probe16: 1
+   smtlib.1262852.smt2                            sat -> unknown
+   contradictory verdicts (sat vs unsat): 0
+
+== verdict changes base -> nofmf: 22
+   x2015_09_10_17_02_44_169_1850576.smt_in.smt2   sat -> unknown
+   x2015_09_10_17_08_02_969_2287043.smt_in.smt2   sat -> unknown
+   smtlib.573364.smt2                             sat -> <none>
+   uf.599118.smt2                                 sat -> unknown
+   uf.628947.smt2                                 sat -> unknown
+   uf.652299.smt2                                 sat -> unknown
+   uf.681247.smt2                                 sat -> unknown
+   uf.758281.smt2                                 sat -> unknown
+   uf.832362.smt2                                 sat -> unknown
+   smtlib.723818.smt2                             sat -> unknown
+   uf.624285.smt2                                 sat -> unknown
+   uf.908739.smt2                                 sat -> unknown
+   uf.937758.smt2                                 sat -> unknown
+   uf.575042.smt2                                 sat -> unknown
+   uf.780982.smt2                                 sat -> unknown
+   uf.717452.smt2                                 sat -> unknown
+   uf.757404.smt2                                 sat -> unknown
+   uf.787833.smt2                                 sat -> unknown
+   uf.728413.smt2                                 sat -> unknown
+   uf.752244.smt2                                 sat -> unknown
+   uf.815613.smt2                                 sat -> unknown
+   smtlib.1262852.smt2                            sat -> unknown
+   contradictory verdicts (sat vs unsat): 0
+
+== per-file wall (ms)
+file                                                 base     probe16       nofmf
+x2015_09_10_17_02_44_169_1850576.smt_in.smt2      sat/607     sat/608  unkno/4010
+x2015_09_10_17_08_02_969_2287043.smt_in.smt2      sat/208     sat/209  unkno/5813
+smtlib.573364.smt2                                sat/108     sat/107  <none/120193
+uf.558544.smt2                                 unsat/2409  unsat/2009   unsat/108
+uf.599118.smt2                                    sat/107     sat/108  unkno/2109
+uf.628947.smt2                                   sat/1108    sat/1108  unkno/9214
+uf.652299.smt2                                    sat/408     sat/409  unkno/1309
+uf.681247.smt2                                    sat/108     sat/109  unkno/20020
+uf.758281.smt2                                    sat/108     sat/108  unkno/2711
+uf.832362.smt2                                    sat/107     sat/108  unkno/3510
+smtlib.723818.smt2                                sat/209     sat/207  unkno/6513
+uf.590503.smt2                                 unsat/4010  unsat/3310  unsat/1608
+uf.624285.smt2                                    sat/107     sat/107   unkno/108
+uf.908739.smt2                                    sat/108     sat/108  unkno/5814
+uf.937758.smt2                                    sat/109     sat/108  unkno/5711
+uf.575042.smt2                                    sat/108     sat/107   unkno/107
+uf.780982.smt2                                    sat/108     sat/108  unkno/4212
+uf.717452.smt2                                    sat/107     sat/108  unkno/1709
+uf.757404.smt2                                    sat/508     sat/508  unkno/11216
+uf.787833.smt2                                    sat/107     sat/108  unkno/1209
+uf.728413.smt2                                   sat/1011    sat/1009  unkno/2811
+uf.752244.smt2                                    sat/208     sat/207  unkno/4911
+uf.815613.smt2                                    sat/208     sat/208  unkno/24227
+smtlib.1262852.smt2                              sat/8616  unkno/24123  unkno/24229
