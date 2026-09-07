@@ -25,8 +25,11 @@
 > the wall times, and the `smtcomp_cli` verdicts. **What is not:** every
 > `class` and `last_route` value, in every division, until a front-door
 > re-measurement confirms it. Divisions confirmed since: QF_IDL, QF_RDL,
-> QF_LRA and QF_UFLIA by the slices that acted on them. Divisions **not**
-> confirmed: QF_LIA, QF_ABV, QF_SLIA, QF_BV, QF_NIA.
+> QF_LRA and QF_UFLIA by the slices that acted on them, and **UF, whose classes
+> were re-derived through the front door on 2026-09-06** — re-derived and
+> **superseded**, not confirmed: all 32 rows were wrong, and the replacement is
+> [the UF front-door census](2026-09-06-uf-front-door-census.md). Divisions
+> **not** confirmed: QF_LIA, QF_ABV, QF_SLIA, QF_BV, QF_NIA.
 >
 > The general shape, worth carrying beyond this file: **a diagnostic tool with
 > partial coverage does not merely fail to find things — it manufactures
@@ -53,9 +56,9 @@
 >   measurements: nothing about them improves on its own, so no expiry date
 >   applies and none should be written here.
 >
-> Known to be moving as of 2026-09-06: a UF front-door census is in flight, and
-> QF_NRA is being censused through the front door as a new division and is not
-> in either list because it is not part of this census.
+> Known to be moving as of 2026-09-06: QF_NRA is being censused through the
+> front door as a new division and is not in either list because it is not part
+> of this census. (The UF front-door census landed; see the confirmed list.)
 
 Status: **measurement only**. This is the S3 slice of
 [`docs/plan/smt-parity-plan-2026-09-05.md`](../../plan/smt-parity-plan-2026-09-05.md):
@@ -123,11 +126,23 @@ Top routes: `qf-bv` (5, all search-timeout).
 
 ### UF -- 32 files (s5)
 
+> **SUPERSEDED, 2026-09-06.** Every row in this table is wrong. Re-measured
+> through the front door (`solve_smtlib`, `AXEYUM_QTRACE=1`), all 32 files enter
+> the *quantified* ladder, where the declared-sort CEGAR bound does not live;
+> the string `declared-sort` appears in no trace or verdict of any of the 32.
+> The replacement classification, with the stage that spent the budget rather
+> than the last route's message, is
+> [the UF front-door census](2026-09-06-uf-front-door-census.md) and
+> `bench-results/parity-losses-20260906/UF.front-door.census.tsv`: 23
+> `route-decline(residual-quantifier)`, 7 `search-timeout`, 2
+> `other(instantiation-satisfiable)`.
+
 | class | files |
 |---|---:|
-| `admission-decline(declared-sort lazy CEGAR refuses N congruence pairs, bound 64)` | 32 |
+| ~~`admission-decline(declared-sort lazy CEGAR refuses N congruence pairs, bound 64)`~~ | ~~32~~ |
 
-Top routes: `ufbv-declared-sort-lazy` (32, all of them).
+Top routes: ~~`ufbv-declared-sort-lazy` (32, all of them)~~ — no front-door trace
+of any of the 32 reaches that route.
 
 ### QF_ABV -- 19 files (s5)
 

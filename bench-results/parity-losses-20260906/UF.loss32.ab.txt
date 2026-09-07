@@ -1,0 +1,43 @@
+files: 32   arms: base, probe16
+
+arm         decided  unknown  PAR-2 (s)   wall (s)
+base              0       32     1536.0      690.5
+probe16           0       32     1536.0      733.8
+
+== verdict changes base -> probe16: 0
+   contradictory verdicts (sat vs unsat): 0
+
+== per-file wall (ms)
+file                                                 base     probe16
+x2015_09_10_16_53_56_537_1094926.smt_in.smt2   unkno/15125  unkno/15124
+x2015_09_10_16_57_47_544_1522663.smt_in.smt2   unkno/26237  unkno/22632
+x2015_09_10_17_00_37_157_1687977.smt_in.smt2   unkno/7816  unkno/7818
+x2015_09_10_17_04_05_259_1960786.smt_in.smt2   unkno/14424  unkno/14424
+x2015_09_10_17_09_42_195_2416479.smt_in.smt2   unkno/22732  unkno/20832
+x2015_09_10_17_10_47_003_2500061.smt_in.smt2   unkno/14324  unkno/14323
+x2015_09_10_17_20_02_499_2906170.smt_in.smt2   unkno/28438  unkno/28938
+x2015_09_10_17_25_01_009_1227491.smt_in.smt2   unkno/14824  unkno/14725
+x2015_09_10_16_46_58_732_1021788.smt_in.smt2   unkno/24734  unkno/25731
+x2015_09_10_16_53_37_371_1432776.smt_in.smt2   unkno/18725  unkno/17925
+x2015_09_10_16_57_14_271_1048482.smt_in.smt2   unkno/26535  unkno/18930
+x2015_09_10_16_49_54_437_992499.smt_in.smt2    unkno/6016  unkno/6016
+x2015_09_10_16_51_44_982_1071529.smt_in.smt2   unkno/17326  unkno/17026
+dl_remove_postcondition_of_dl_remove_50_4.smt2 unkno/24134  unkno/24133
+dl_copy_invariant_19_2.smt2                    unkno/24533  unkno/24434
+dl_remove_loop_invariant_35_5.smt2             unkno/8218  unkno/8218
+smtlib.663965.smt2                             unkno/63683  unkno/115835
+uf.704291.smt2                                 unkno/25030  unkno/26836
+uf.813308.smt2                                 unkno/24533  unkno/24634
+uf.850780.smt2                                 unkno/25836  unkno/26535
+uf.573210.smt2                                 unkno/24241  unkno/24334
+uf.863296.smt2                                 unkno/22043  unkno/19930
+uf.1065126.smt2                                unkno/24133  unkno/24132
+uf.1158058.smt2                                unkno/24135  unkno/24234
+uf.1198393.smt2                                unkno/24133  unkno/24133
+uf.974621.smt2                                 unkno/25936  unkno/25336
+smtlib.1116374.smt2                            unkno/24133  unkno/24133
+uf.834137.smt2                                 unkno/8015  unkno/9718
+uf.966336.smt2                                 unkno/24130  unkno/24132
+smtlib.678332.smt2                             unkno/5413  unkno/6014
+smtlib.1098821.smt2                            unkno/24731  unkno/24233
+uf.1008626.smt2                                unkno/26235  unkno/28435
