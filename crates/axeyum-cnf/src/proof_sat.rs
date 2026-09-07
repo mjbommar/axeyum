@@ -26,11 +26,16 @@ use std::time::Duration;
 use crate::drat::{DratSink, DratStep, ProofSinkError, VecProofSink};
 use crate::{CnfAssignment, CnfFormula, CnfLit, CnfVar};
 
-pub(crate) mod theory;
+pub mod theory;
+
+/// The ADR-1704 two-stream artifact a theory-driven refutation produces.
+pub mod refutation;
 
 use theory::{
     ExplanationId, FinalCheckOutcome, NativeTheory, NullTheory, PropagationQueue, TheoryExplanation,
 };
+
+pub use refutation::{TheoryRefutation, TheoryRefutationCheck, TheoryRefutationError};
 
 /// Default maximum conflicts before the proof-producing core gives up.
 pub const DEFAULT_PROOF_SAT_CONFLICT_LIMIT: usize = 2_000_000;
@@ -48,6 +53,22 @@ pub const DEFAULT_PROGRESS_CONFLICT_INTERVAL: usize = 5_000;
 /// conflict cadence (not a per-decision clock read) keeps the deadline test
 /// deterministic w.r.t. the search and cheap.
 const DEADLINE_CHECK_INTERVAL: usize = 1_024;
+
+/// Defense-in-depth ceiling on search-loop iterations **when a theory is
+/// attached**, ported from `CdclT`'s `DEFAULT_STEP_BUDGET`.
+///
+/// The Boolean half of this core cannot spin: every iteration either conflicts
+/// (bounded by `max_conflicts`) or assigns a variable, and both budgets are
+/// finite. A *theory* can. The theories this core will drive are incomplete and
+/// non-monotone -- `StringTheory` re-runs its refuter per assert and may report
+/// at assert `k` a conflict it missed at `k-1` -- and a theory that registers an
+/// atom or propagates a literal on every round would otherwise loop with no
+/// conflict to count. Exhausting this budget is *sound*: the search abandons
+/// with the undecided [`SearchOutcome::Interrupted`], never a verdict.
+///
+/// Compiled out entirely for [`NullTheory`] (`HAS_THEORY == false`), so no
+/// shipping SAT path pays for it or can be stopped by it.
+const THEORY_STEP_BUDGET: usize = 16_000_000;
 
 /// VSIDS activity decay: each conflict `var_inc` is divided by this, so older
 /// activity bumps decay geometrically relative to fresh ones (the `MiniSat`
@@ -356,6 +377,79 @@ pub fn solve_with_drat_proof_streaming_with_progress(
         .solve(deadline, max_conflicts)
 }
 
+/// Outcome of [`solve_with_theory_and_drat_proof`] -- the CDCL(T) counterpart
+/// of [`ProofSolveOutcome`].
+///
+/// The one difference is `Unsat`: a refutation reached with a theory attached
+/// is a [`TheoryRefutation`], not a bare `Vec<DratStep>`, because a DRAT stream
+/// on its own does not say which formula it refutes and a CDCL(T) stream
+/// refutes `cnf ++ lemmas` (ADR-1704). A run in which the theory contributed
+/// nothing still comes back this way, with `theory_lemma_count() == 0`, so the
+/// count is never absent and never zero-by-omission.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum TheoryProofOutcome {
+    /// Satisfiable: a total assignment the Boolean side and the theory's
+    /// `final_check` both accepted.
+    Sat(CnfAssignment),
+    /// Unsatisfiable modulo the enumerated theory lemmas, with the two-stream
+    /// artifact ADR-1704 requires.
+    Unsat(TheoryRefutation),
+    /// The conflict budget was exhausted before a result was reached.
+    ResourceOut,
+    /// Undecided: the deadline passed, the theory step budget was exhausted, or
+    /// the theory could not substantiate an answer it gave (an unresolvable
+    /// explanation handle, an empty conflict core). Never a verdict.
+    Interrupted,
+}
+
+/// Solves `formula` with `theory` attached, producing the ADR-1704 two-stream
+/// artifact on `unsat`.
+///
+/// This is the CDCL(T) entry point: the same search, the same clause database,
+/// the same 1-UIP analysis and the same DRAT emission as
+/// [`solve_with_drat_proof_with_limits`], with the theory consulted at a
+/// Boolean propagation fixpoint (`assert`, `propagate_into`, `take_new_atoms`)
+/// and at a total assignment (`final_check`).
+///
+/// **`theory` is borrowed, not consumed**, so the caller reads its state back
+/// afterwards to build a model -- the reason [`theory::NativeTheory`] is
+/// implemented for `&mut T`.
+///
+/// # What `unsat` means here
+///
+/// Every clause that entered the database from the theory is in
+/// [`TheoryRefutation::lemmas`] and in [`TheoryRefutation::extended`], and the
+/// emitted stream is a DRAT proof of that extended formula -- **not** of
+/// `formula`. Call [`TheoryRefutation::check`] to have `check_drat` say so.
+/// With a lemma-free run the artifact is a plain propositional refutation and
+/// checks `Verified`.
+pub fn solve_with_theory_and_drat_proof<T: NativeTheory>(
+    formula: &CnfFormula,
+    theory: &mut T,
+    deadline: Option<Instant>,
+    max_conflicts: usize,
+) -> TheoryProofOutcome {
+    let mut sink = VecProofSink::new();
+    let mut cdcl = Cdcl::new_with_theory(formula, &mut sink, theory);
+    let outcome = cdcl.run(&[], deadline, max_conflicts);
+    let lemmas = core::mem::take(&mut cdcl.theory_lemmas);
+    drop(cdcl);
+    match outcome {
+        Ok(SearchOutcome::Sat(model)) => TheoryProofOutcome::Sat(model),
+        Ok(SearchOutcome::Unsat) => TheoryProofOutcome::Unsat(
+            TheoryRefutation::from_cnf_and_lemmas(formula.clone(), lemmas, sink.into_steps()),
+        ),
+        Ok(SearchOutcome::ResourceOut) => TheoryProofOutcome::ResourceOut,
+        // `UnsatUnderAssumptions` is unreachable with no assumptions, and
+        // `VecProofSink` is infallible so `Err` is too. Both fold into the
+        // *undecided* outcome rather than panicking or guessing: an impossible
+        // branch must never be able to produce a wrong `sat`/`unsat`.
+        Ok(SearchOutcome::Interrupted | SearchOutcome::UnsatUnderAssumptions(_)) | Err(_) => {
+            TheoryProofOutcome::Interrupted
+        }
+    }
+}
+
 /// The internal result of one CDCL search. Distinct from the public
 /// [`StreamingProofOutcome`] in exactly one respect: it can report
 /// *unsatisfiable under the given assumptions*, which is not a refutation of
@@ -398,9 +492,16 @@ struct Watch {
 enum TheoryRound {
     /// The theory added nothing: carry on to the restart check and the decision.
     Fixpoint,
-    /// The theory enqueued at least one literal; re-run Boolean propagation.
+    /// The theory enqueued at least one literal, or registered a new atom;
+    /// re-run Boolean propagation before deciding anything else.
     Propagated,
-    /// The search must stop with this outcome (always *undecided* today).
+    /// The theory refuted the current assignment. The payload is the conflict
+    /// clause: every literal false under the current assignment (the
+    /// convention in [`theory`]). The driver installs it as an ADR-1704 lemma
+    /// and analyses it like any other conflict.
+    Conflict(Vec<CnfLit>),
+    /// The search must stop with this outcome (always *undecided*: a theory
+    /// that cannot explain its own handle, or a conflict with an empty core).
     Stop(SearchOutcome),
 }
 
@@ -763,6 +864,9 @@ struct Cdcl<'progress, S: DratSink, T: NativeTheory = NullTheory> {
     /// search and cleared between fixpoint iterations, so its allocation is
     /// paid once instead of per `propagate` call.
     theory_queue: PropagationQueue,
+    /// Search-loop iterations taken while a theory is attached, counted against
+    /// [`THEORY_STEP_BUDGET`]. Never incremented for [`NullTheory`].
+    theory_steps: usize,
 }
 
 /// Sentinel in [`Cdcl::heap_pos`] marking a variable that is not currently in
@@ -876,6 +980,7 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
             theory_qhead: 0,
             theory_lemmas: Vec::new(),
             theory_queue: PropagationQueue::new(),
+            theory_steps: 0,
         };
         // Seed the order heap with every variable that occurs in a clause.
         // Unused variables default false in a returned total model and must not
@@ -1029,6 +1134,7 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
         self.trail_lim.clear();
         self.qhead = 0;
         self.conflicts = 0;
+        self.theory_steps = 0;
         self.conflicts_since_restart = 0;
         self.restart_count = 1;
         self.best_trail_len = 0;
@@ -1468,82 +1574,34 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
         max_conflicts: usize,
     ) -> Result<SearchOutcome, ProofSinkError> {
         loop {
-            if let Some(conflict) = self.propagate() {
-                if self.decision_level() == 0 {
-                    self.record_proof_step(false, &[]);
-                    self.sink.add_clause(&[])?;
+            // Theory-only termination guard (see `THEORY_STEP_BUDGET`) and the
+            // theory-only clock. Both are behind `HAS_THEORY`, so for
+            // `NullTheory` the whole block is dropped at monomorphization and
+            // the shipping SAT trajectory -- including which conflict the clock
+            // is read on -- is byte-identical to before.
+            if T::HAS_THEORY {
+                self.theory_steps += 1;
+                if self.theory_steps > THEORY_STEP_BUDGET {
                     self.report_progress();
-                    return Ok(SearchOutcome::Unsat);
+                    return Ok(SearchOutcome::Interrupted);
                 }
-                self.conflicts += 1;
-                if self.conflicts > max_conflicts {
-                    self.report_progress();
-                    return Ok(SearchOutcome::ResourceOut);
-                }
-                // Deterministic deadline cadence: only read the clock once every
-                // `DEADLINE_CHECK_INTERVAL` conflicts. On expiry, abandon the
-                // search with an *undecided* verdict (never sat/unsat by timeout).
+                // The Boolean core reads the clock on a conflict cadence, which
+                // a theory that propagates without ever conflicting never
+                // reaches. Read it on an iteration cadence too, at the same
+                // interval, so a CDCL(T) search is deadline-bounded on every
+                // path and not only on the conflicting one.
                 if let Some(deadline) = deadline
-                    && self.conflicts.is_multiple_of(DEADLINE_CHECK_INTERVAL)
+                    && self.theory_steps.is_multiple_of(DEADLINE_CHECK_INTERVAL)
                     && Instant::now() >= deadline
                 {
                     self.report_progress();
                     return Ok(SearchOutcome::Interrupted);
                 }
-                let (learned, backjump, lbd) = self.analyze(conflict);
-                // Update the Glucose EMA restart state from this conflict — the glue
-                // (LBD) averages and the blocking trail average, sampled at the
-                // conflict trail (before the backjump below). Only when the EMA schedule
-                // is active (the default is Luby; see `use_ema_restart`), so the
-                // averages cost nothing on the default path.
-                if self.use_ema_restart {
-                    self.update_restart_emas(lbd);
+            }
+            if let Some(conflict) = self.propagate() {
+                if let Some(outcome) = self.handle_conflict(conflict, deadline, max_conflicts)? {
+                    return Ok(outcome);
                 }
-                self.record_proof_step(false, &learned);
-                self.sink.add_clause(&learned)?;
-                if learned.is_empty() {
-                    self.report_progress();
-                    return Ok(SearchOutcome::Unsat);
-                }
-                let asserting = learned[0];
-                let clause_id = self.alloc_clause(&learned);
-                if learned.len() >= 2 {
-                    self.watches[lit_code(learned[0])].push(Watch {
-                        clause: clause_id,
-                        blocker: learned[1],
-                    });
-                    self.watches[lit_code(learned[1])].push(Watch {
-                        clause: clause_id,
-                        blocker: learned[0],
-                    });
-                }
-                // Register the new learned clause's deletion metadata.
-                self.lbd.push(lbd);
-                self.cla_activity.push(0.0);
-                self.deleted.push(false);
-                self.learned.push(true);
-                self.learned_live += 1;
-                self.bump_clause(clause_id);
-                self.backtrack_to(backjump);
-                self.enqueue(asserting, Reason::clause(clause_id));
-                self.conflicts_since_restart += 1;
-                self.decay();
-                self.decay_clause();
-                // Learned-clause-database reduction (Glucose/MiniSat schedule):
-                // when the live learned-clause count exceeds the growing budget,
-                // delete the worst half (sound: see `reduce_db`). Must run at a
-                // point where no decisions are pending so the trail/reasons are
-                // consistent; here we are immediately after a backjump+enqueue
-                // and before propagation, which is safe (locked-clause check
-                // reads the current trail).
-                if self.learned_live > self.reduce_budget() {
-                    self.reduce_db()?;
-                    self.reductions += 1;
-                }
-                // Observability hook (see `ProofSearchProgress`): a no-op cadence
-                // check when no sink is installed. Placed after all per-conflict
-                // bookkeeping so a fired snapshot reflects this conflict fully.
-                self.maybe_report_progress();
             } else {
                 // Boolean propagation has reached a fixpoint with no conflict —
                 // the CDCL(T) point at which the theory is consulted (ADR-1701
@@ -1557,6 +1615,19 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
                     TheoryRound::Stop(outcome) => {
                         self.report_progress();
                         return Ok(outcome);
+                    }
+                    // A theory conflict: install the lemma as an ADR-1704
+                    // input clause, backjump so it is conflicting at the
+                    // current level, and hand it to the ordinary 1-UIP path.
+                    TheoryRound::Conflict(core) => {
+                        let Some(cid) = self.stage_theory_conflict(core) else {
+                            self.report_progress();
+                            return Ok(SearchOutcome::Interrupted);
+                        };
+                        if let Some(outcome) = self.handle_conflict(cid, deadline, max_conflicts)? {
+                            return Ok(outcome);
+                        }
+                        continue;
                     }
                     // The theory put literals on the trail: hand them to
                     // Boolean propagation before deciding anything else, so a
@@ -1642,18 +1713,315 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
                         FinalCheckOutcome::Sat
                     } {
                         FinalCheckOutcome::Sat => {}
-                        // A theory conflict here needs a lemma clause the DRAT
-                        // proof cannot justify, and `Unknown` is undecided by
-                        // definition. Both stop the search without a verdict.
-                        FinalCheckOutcome::Conflict(_) | FinalCheckOutcome::Unknown => {
+                        // `Unknown` is undecided by definition: the theory
+                        // could not complete its check, so neither can we.
+                        FinalCheckOutcome::Unknown => {
                             self.report_progress();
                             return Ok(SearchOutcome::Interrupted);
+                        }
+                        // A complete check looks at the whole assignment, so
+                        // its core is NOT required to name a current-level
+                        // literal. `stage_theory_conflict` backjumps to the
+                        // highest level the core names before analysis, or
+                        // 1-UIP's path counter underflows (ADR-1701).
+                        FinalCheckOutcome::Conflict(explanation) => {
+                            let Some(core) = self.materialize_explanation(explanation) else {
+                                self.report_progress();
+                                return Ok(SearchOutcome::Interrupted);
+                            };
+                            let Some(cid) = self.stage_theory_conflict(core) else {
+                                self.report_progress();
+                                return Ok(SearchOutcome::Interrupted);
+                            };
+                            if let Some(outcome) =
+                                self.handle_conflict(cid, deadline, max_conflicts)?
+                            {
+                                return Ok(outcome);
+                            }
+                            continue;
                         }
                     }
                     let values = self.assign.iter().map(|v| v.unwrap_or(false)).collect();
                     self.report_progress();
                     return Ok(SearchOutcome::Sat(CnfAssignment::new(values)));
                 }
+            }
+        }
+    }
+
+    /// The conflict half of [`Cdcl::search_loop`]: analyse `conflict`, emit the
+    /// learned clause, backjump and enqueue the asserting literal.
+    ///
+    /// Returns `Some(outcome)` when the search is over (a refutation, an
+    /// exhausted budget, an expired deadline) and `None` to carry on. Split out
+    /// of the loop so a **theory** conflict reaches exactly the same code: an
+    /// installed theory lemma is a clause id like any other by the time it gets
+    /// here, and there is no second learning path that could drift from this
+    /// one.
+    fn handle_conflict(
+        &mut self,
+        conflict: CRef,
+        deadline: Option<Instant>,
+        max_conflicts: usize,
+    ) -> Result<Option<SearchOutcome>, ProofSinkError> {
+        if self.decision_level() == 0 {
+            // The empty clause must be RUP over `cnf ++ lemmas`, and it is only
+            // if every level-zero implication the checker has to replay is
+            // justified by a clause the artifact carries. A theory implication
+            // whose explanation is still a handle is not: it justifies a trail
+            // literal with nothing in the database behind it. Materialise those
+            // before emitting, or decline (never emit an empty clause we cannot
+            // stand behind).
+            if T::HAS_THEORY && !self.materialize_trail_theory_reasons() {
+                self.report_progress();
+                return Ok(Some(SearchOutcome::Interrupted));
+            }
+            self.record_proof_step(false, &[]);
+            self.sink.add_clause(&[])?;
+            self.report_progress();
+            return Ok(Some(SearchOutcome::Unsat));
+        }
+        self.conflicts += 1;
+        if self.conflicts > max_conflicts {
+            self.report_progress();
+            return Ok(Some(SearchOutcome::ResourceOut));
+        }
+        // Deterministic deadline cadence: only read the clock once every
+        // `DEADLINE_CHECK_INTERVAL` conflicts. On expiry, abandon the
+        // search with an *undecided* verdict (never sat/unsat by timeout).
+        if let Some(deadline) = deadline
+            && self.conflicts.is_multiple_of(DEADLINE_CHECK_INTERVAL)
+            && Instant::now() >= deadline
+        {
+            self.report_progress();
+            return Ok(Some(SearchOutcome::Interrupted));
+        }
+        let (learned, backjump, lbd) = self.analyze(conflict);
+        // Update the Glucose EMA restart state from this conflict -- the glue
+        // (LBD) averages and the blocking trail average, sampled at the
+        // conflict trail (before the backjump below). Only when the EMA schedule
+        // is active (the default is Luby; see `use_ema_restart`), so the
+        // averages cost nothing on the default path.
+        if self.use_ema_restart {
+            self.update_restart_emas(lbd);
+        }
+        self.record_proof_step(false, &learned);
+        self.sink.add_clause(&learned)?;
+        if learned.is_empty() {
+            self.report_progress();
+            return Ok(Some(SearchOutcome::Unsat));
+        }
+        let asserting = learned[0];
+        let clause_id = self.alloc_clause(&learned);
+        if learned.len() >= 2 {
+            self.watches[lit_code(learned[0])].push(Watch {
+                clause: clause_id,
+                blocker: learned[1],
+            });
+            self.watches[lit_code(learned[1])].push(Watch {
+                clause: clause_id,
+                blocker: learned[0],
+            });
+        }
+        // Register the new learned clause's deletion metadata.
+        self.lbd.push(lbd);
+        self.cla_activity.push(0.0);
+        self.deleted.push(false);
+        self.learned.push(true);
+        self.learned_live += 1;
+        self.bump_clause(clause_id);
+        self.backtrack_to(backjump);
+        self.enqueue(asserting, Reason::clause(clause_id));
+        self.conflicts_since_restart += 1;
+        self.decay();
+        self.decay_clause();
+        // Learned-clause-database reduction (Glucose/MiniSat schedule):
+        // when the live learned-clause count exceeds the growing budget,
+        // delete the worst half (sound: see `reduce_db`). Must run at a
+        // point where no decisions are pending so the trail/reasons are
+        // consistent; here we are immediately after a backjump+enqueue
+        // and before propagation, which is safe (locked-clause check
+        // reads the current trail).
+        if self.learned_live > self.reduce_budget() {
+            self.reduce_db()?;
+            self.reductions += 1;
+        }
+        // Observability hook (see `ProofSearchProgress`): a no-op cadence
+        // check when no sink is installed. Placed after all per-conflict
+        // bookkeeping so a fired snapshot reflects this conflict fully.
+        self.maybe_report_progress();
+        Ok(None)
+    }
+
+    /// Resolves a [`TheoryExplanation`] into the clause it stands for, asking
+    /// the theory only when the handle is lazy.
+    ///
+    /// `None` means the theory could not explain a handle it issued. That is a
+    /// theory bug and it is answered with the undecided outcome, never by
+    /// treating a missing explanation as an empty clause (which would be a
+    /// wrong `unsat`).
+    #[cold]
+    #[inline(never)]
+    fn materialize_explanation(&mut self, explanation: TheoryExplanation) -> Option<Vec<CnfLit>> {
+        match explanation {
+            TheoryExplanation::Eager(lits) => Some(lits),
+            TheoryExplanation::Lazy(handle) => self.theory.explain(handle),
+        }
+    }
+
+    /// Prepares a theory conflict clause for 1-UIP analysis: install it as an
+    /// ADR-1704 lemma and backjump until it is conflicting at the current
+    /// decision level. Returns its [`CRef`], or `None` to decline.
+    ///
+    /// It declines -- soundly, with the undecided outcome -- in exactly two
+    /// cases, both of which are theory-contract violations rather than
+    /// verdicts:
+    ///
+    /// - an **empty** core names nothing to learn from; treating it as the
+    ///   empty clause would be a wrong `unsat` on the theory's say-so with no
+    ///   clause in the artifact to show for it. `CdclT` declines the same case
+    ///   for the same reason.
+    /// - a core naming a literal that is not currently **false**. The clause
+    ///   would not be conflicting, so `analyze` would resolve against a
+    ///   non-antecedent and its path counter would underflow.
+    ///
+    /// On success the clause is an *input* clause of the extended formula
+    /// (`learned[cid] == false`), so `reduce_db` can never delete it, and it is
+    /// recorded in [`Cdcl::theory_lemmas`], so the artifact's lemma count moves
+    /// with it.
+    #[cold]
+    #[inline(never)]
+    fn stage_theory_conflict(&mut self, core: Vec<CnfLit>) -> Option<CRef> {
+        let mut clause: Vec<CnfLit> = Vec::with_capacity(core.len());
+        for lit in core {
+            if clause.contains(&lit) {
+                continue;
+            }
+            if self.value(lit) != Some(false) {
+                return None;
+            }
+            clause.push(lit);
+        }
+        if clause.is_empty() {
+            return None;
+        }
+        // Order the two highest-level literals into slots 0 and 1: the watch
+        // placement that stays correct for a conflicting clause added under a
+        // partial assignment, since a backtrack that unassigns either watched
+        // literal unassigns it at or above the clause's own conflict level.
+        let mut best = 0;
+        for k in 1..clause.len() {
+            if self.level[clause[k].var().index()] > self.level[clause[best].var().index()] {
+                best = k;
+            }
+        }
+        clause.swap(0, best);
+        if clause.len() >= 2 {
+            let mut second = 1;
+            for k in 2..clause.len() {
+                if self.level[clause[k].var().index()] > self.level[clause[second].var().index()] {
+                    second = k;
+                }
+            }
+            clause.swap(1, second);
+        }
+        let conflict_level = self.level[clause[0].var().index()];
+        // A complete check's core need not name a current-level literal, so
+        // come back up to the deepest level it does name before analysing it
+        // (ADR-1701). Every literal stays false: they all sit at or below this
+        // level.
+        if conflict_level < self.decision_level() {
+            self.backtrack_to(conflict_level);
+        }
+        Some(self.install_theory_lemma_clause(&clause))
+    }
+
+    /// Registers `clause` in the arena as an ADR-1704 theory lemma: an **input**
+    /// clause (`learned[cid] == false`, so never a `reduce_db` candidate),
+    /// watched on slots 0 and 1, and appended to [`Cdcl::theory_lemmas`].
+    ///
+    /// Nothing is emitted to the DRAT sink: a lemma is an input clause of the
+    /// extended formula, not a derived step. Emitting it would be exactly the
+    /// unlabelled learned clause ADR-1704 section 5 forbids.
+    ///
+    /// The caller owns slot placement -- [`Cdcl::install_theory_lemma`] puts
+    /// the implied literal first, [`Cdcl::stage_theory_conflict`] puts the two
+    /// highest-level literals first -- because the two cases have different
+    /// invariants and folding them together would hide that.
+    fn install_theory_lemma_clause(&mut self, clause: &[CnfLit]) -> CRef {
+        let cid = self.alloc_clause(clause);
+        self.lbd.push(0);
+        self.cla_activity.push(0.0);
+        self.deleted.push(false);
+        // NOT `true`: an input clause, never a `reduce_db` candidate.
+        self.learned.push(false);
+        if clause.len() >= 2 {
+            self.watches[lit_code(clause[0])].push(Watch {
+                clause: cid,
+                blocker: clause[1],
+            });
+            self.watches[lit_code(clause[1])].push(Watch {
+                clause: cid,
+                blocker: clause[0],
+            });
+        }
+        self.theory_lemmas.push(clause.to_vec());
+        cid
+    }
+
+    /// Resolves every outstanding lazy theory reason on the trail into an
+    /// installed input clause. Returns `false` when the theory cannot explain a
+    /// handle it issued.
+    ///
+    /// Called once, immediately before the empty clause is emitted at decision
+    /// level zero. Its job is the artifact's, not the search's: `check_drat`
+    /// replays unit propagation over `cnf ++ lemmas`, and a trail literal whose
+    /// only justification is a handle the theory still holds is invisible to
+    /// that replay -- so without this the emitted empty clause could fail to be
+    /// RUP through no fault of the search.
+    #[cold]
+    #[inline(never)]
+    fn materialize_trail_theory_reasons(&mut self) -> bool {
+        for index in 0..self.trail.len() {
+            let var = self.trail[index];
+            let Some(handle) = self.reason[var].as_theory() else {
+                continue;
+            };
+            let implied = self.true_literal(var);
+            let Some(lits) = self.theory.explain(handle) else {
+                return false;
+            };
+            let cid = self.install_theory_lemma(implied, &lits);
+            self.reason[var] = Reason::clause(cid);
+        }
+        true
+    }
+
+    /// Admits `count` theory atoms registered mid-search (ADR-1701's
+    /// `take_new_atoms`), as `count` fresh SAT variables appended after every
+    /// existing one.
+    ///
+    /// The atom-to-variable convention is the one the whole module uses:
+    /// [`NativeTheory::assert`]'s `var` **is** the SAT variable index, and new
+    /// atoms take the next consecutive indices, so a count is the whole
+    /// registration signal and there is no side table to keep aligned.
+    ///
+    /// Called only from [`Cdcl::theory_round_body`], which runs at a Boolean
+    /// propagation fixpoint: nothing is pending, the trail is consistent, and
+    /// the new variables are unassigned at level zero with no reason -- the
+    /// state every other unassigned variable is in. They are marked branchable
+    /// and inserted into the order heap, so the next `pick_branch` can reach
+    /// them; without that a registered atom would never be decided and the
+    /// search would report `sat` on an assignment that does not mention it.
+    #[cold]
+    #[inline(never)]
+    fn register_theory_atoms(&mut self, count: usize) {
+        let base = self.assign.len();
+        self.ensure_vars(base + count);
+        for var in base..base + count {
+            self.branchable[var] = true;
+            if !self.heap_contains(var) {
+                self.heap_insert(var);
             }
         }
     }
@@ -2367,9 +2735,8 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
     /// it to propagate into the driver-owned queue, and collects any atoms it
     /// registered. Returns `Some(outcome)` when the search must stop.
     ///
-    /// **Theory *propagations* are acted on; theory *conflicts* and dynamic
-    /// atoms are still declined** with the undecided outcome
-    /// [`SearchOutcome::Interrupted`].
+    /// Theory propagations, theory conflicts and dynamic atom registration are
+    /// all acted on (plan slice S7).
     ///
     /// A propagation is enqueued with a [`Reason`]: `Lazy` becomes
     /// [`Reason::theory`], resolved only if conflict analysis walks past it;
@@ -2377,10 +2744,18 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
     /// justifying clause enters the database as an ADR-1704 *lemma* -- an input
     /// clause recorded in [`Cdcl::theory_lemmas`] -- so the emitted Boolean
     /// stream is a DRAT proof of `cnf ++ theory_lemmas` and never of `cnf`
-    /// alone. A conflict (from `assert`, from a propagation onto a false
-    /// literal, or from `final_check`) additionally needs the conflict-lemma
-    /// machinery and the two-stream artifact plumbing, which is S7; those are
-    /// recognised and declined rather than guessed.
+    /// alone.
+    ///
+    /// A conflict -- from `assert`, or from a propagation onto a literal the
+    /// Boolean side has already falsified -- comes back as
+    /// [`TheoryRound::Conflict`] carrying the conflict clause, which the caller
+    /// installs and analyses exactly like a Boolean one. A conflict the theory
+    /// cannot substantiate (an empty core, an unresolvable handle) is declined
+    /// with the undecided [`SearchOutcome::Interrupted`], never guessed.
+    ///
+    /// Atoms registered mid-search become fresh SAT variables here, at the one
+    /// point in the loop where the trail is at a propagation fixpoint (see
+    /// [`Cdcl::register_theory_atoms`]).
     ///
     /// [`NullTheory`] produces none of these, so this returns
     /// [`TheoryRound::Fixpoint`] on every shipping path.
@@ -2425,14 +2800,16 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
             let var = self.trail[self.theory_qhead];
             self.theory_qhead += 1;
             let value = self.assign[var] == Some(true);
-            if self.theory.assert(var, value).is_err() {
-                return TheoryRound::Stop(SearchOutcome::Interrupted);
+            if let Err(core) = self.theory.assert(var, value) {
+                // The conflict clause arrives already materialised and at the
+                // current decision level, so it goes straight to the caller.
+                return TheoryRound::Conflict(core);
             }
         }
         self.theory_queue.clear();
         self.theory.propagate_into(&mut self.theory_queue);
         let mut propagated = false;
-        let mut theory_conflict = false;
+        let mut conflict: Option<TheoryExplanation> = None;
         // Taken out of the driver-owned queue so the enqueue loop below can
         // hold `&mut self`; the allocation goes straight back afterwards, so
         // the queue is still paid for once per search and not once per round.
@@ -2444,9 +2821,12 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
                 // lemma is installed for an implication the CNF already has.
                 Some(true) => {}
                 // The theory implies a literal the Boolean side has already
-                // falsified: a theory conflict in propagation clothing. S7.
+                // falsified: a theory conflict in propagation clothing. The
+                // reason clause `lit \/ ~antecedents` has EVERY literal false
+                // here -- `lit` included -- so it is already the conflict
+                // clause and needs no negation.
                 Some(false) => {
-                    theory_conflict = true;
+                    conflict = Some(queued.entries()[index].1.clone());
                     break;
                 }
                 None => {
@@ -2467,11 +2847,21 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
             }
         }
         self.theory_queue = queued;
-        if theory_conflict {
-            return TheoryRound::Stop(SearchOutcome::Interrupted);
+        if let Some(explanation) = conflict {
+            return match self.materialize_explanation(explanation) {
+                Some(core) => TheoryRound::Conflict(core),
+                // A theory that cannot explain the propagation it just made is
+                // a theory bug. Undecided, never a verdict.
+                None => TheoryRound::Stop(SearchOutcome::Interrupted),
+            };
         }
-        if self.theory.take_new_atoms() != 0 {
-            return TheoryRound::Stop(SearchOutcome::Interrupted);
+        let new_atoms = self.theory.take_new_atoms();
+        if new_atoms != 0 {
+            self.register_theory_atoms(new_atoms);
+            // Report progress so the caller re-enters propagation before
+            // deciding: a registered atom may be constrained by a lemma the
+            // theory installs on the very next round.
+            return TheoryRound::Propagated;
         }
         if propagated {
             TheoryRound::Propagated
@@ -2513,9 +2903,10 @@ mod tests {
 
     use super::{
         Cdcl, DEFAULT_PROOF_SAT_CONFLICT_LIMIT, Instant, ProofSearchProgress, ProofSolveOutcome,
-        Reason, StreamingProofOutcome, Watch, lit_code, solve_with_drat_proof,
+        Reason, StreamingProofOutcome, TheoryProofOutcome, Watch, lit_code, solve_with_drat_proof,
         solve_with_drat_proof_streaming, solve_with_drat_proof_with_limits,
         solve_with_drat_proof_with_limits_and_progress, solve_with_drat_proof_within,
+        solve_with_theory_and_drat_proof,
     };
     use crate::{
         CnfClause, CnfFormula, CnfLit, CnfVar, DratSink, ProofSinkError, TextProofSink,
@@ -3950,7 +4341,8 @@ mod tests {
 
         use super::{
             Cdcl, DEFAULT_PROOF_SAT_CONFLICT_LIMIT, ProofSolveOutcome, StreamingProofOutcome,
-            VecProofSink, formula, pigeonhole, solve_with_drat_proof,
+            TheoryProofOutcome, VecProofSink, formula, pigeonhole, solve_with_drat_proof,
+            solve_with_theory_and_drat_proof,
         };
         use crate::CnfLit;
         use crate::proof_sat::SearchOutcome;
@@ -4063,9 +4455,12 @@ mod tests {
             assert!(counts.asserts > 0, "assert hook never reached: {counts:?}");
         }
 
-        /// A theory that refuses at `final_check` must stop the search with the
-        /// **undecided** outcome — never `sat`. This is the guard that a
-        /// `final_check` answer is actually read rather than discarded.
+        /// A theory that refuses at `final_check` and then cannot explain the
+        /// handle it issued must stop the search with the **undecided**
+        /// outcome — never `sat`, and never `unsat` either. This is the guard
+        /// that a `final_check` answer is read rather than discarded, and that
+        /// an unresolvable explanation is not silently treated as an empty
+        /// core (which would be a wrong `unsat`).
         struct RefusingFinalCheck;
         impl NativeTheory for RefusingFinalCheck {
             fn assert(&mut self, _var: usize, _value: bool) -> Result<(), Vec<CnfLit>> {
@@ -4080,13 +4475,13 @@ mod tests {
         }
 
         #[test]
-        fn a_final_check_conflict_never_becomes_sat() {
+        fn a_final_check_conflict_it_cannot_explain_never_becomes_a_verdict() {
             let f = formula(4, &[&[1, 2], &[-1, 3], &[-2, -3], &[3, 4]]);
             let (outcome, steps) = solve_with(&f, RefusingFinalCheck);
             assert_eq!(
                 outcome,
                 StreamingProofOutcome::Interrupted,
-                "a theory conflict at a total assignment is undecided, never sat"
+                "an unexplainable theory conflict is undecided, never sat or unsat"
             );
             assert!(
                 steps.is_empty(),
@@ -4094,8 +4489,11 @@ mod tests {
             );
         }
 
-        /// A theory that conflicts on the first assertion must likewise stop
-        /// the search undecided, and must not have emitted an empty clause.
+        /// A theory that conflicts on the first assertion with an **empty**
+        /// core must stop the search undecided, and must not have emitted an
+        /// empty clause. `¬⊤` names nothing to learn from, so acting on it
+        /// would be a wrong `unsat` on the theory's say-so with no clause in
+        /// the artifact behind it (see `Cdcl::stage_theory_conflict`).
         struct ConflictingAssert;
         impl NativeTheory for ConflictingAssert {
             fn assert(&mut self, _var: usize, _value: bool) -> Result<(), Vec<CnfLit>> {
@@ -4107,27 +4505,29 @@ mod tests {
         }
 
         #[test]
-        fn an_assert_conflict_never_becomes_unsat() {
+        fn an_empty_assert_conflict_core_never_becomes_unsat() {
             let f = pigeonhole(4);
             let (outcome, steps) = solve_with(&f, ConflictingAssert);
             assert_eq!(
                 outcome,
                 StreamingProofOutcome::Interrupted,
-                "a theory conflict is undecided in this spike, never a refutation"
+                "an empty conflict core is undecided, never a refutation"
             );
             assert!(
                 steps.is_empty(),
-                "a theory conflict must not emit the empty clause: {steps:?}"
+                "a declined theory conflict must not emit the empty clause: {steps:?}"
             );
         }
 
         /// A theory that propagates a literal the Boolean side has already
-        /// **falsified** is a theory conflict wearing a propagation's clothes.
-        /// Acting on it needs the conflict-lemma half of ADR-1704's two-stream
-        /// artifact, which is S7; it is recognised and declined here, never
-        /// ignored -- ignoring a sound theory propagation would be merely
-        /// incomplete, but ignoring a theory *conflict* would be unsound, and
-        /// both travel this code path.
+        /// **falsified** is a theory conflict wearing a propagation's clothes,
+        /// and it must be acted on: ignoring a sound theory propagation would
+        /// be merely incomplete, but ignoring a theory *conflict* would be
+        /// unsound, and both travel this code path.
+        ///
+        /// The reason clause it hands back, `[~x1]`, is already the conflict
+        /// clause -- every literal in it is false, `~x1` included -- which is
+        /// the whole reason the module carries explanations in clause form.
         struct FalsifyingTheory;
         impl NativeTheory for FalsifyingTheory {
             fn assert(&mut self, _var: usize, _value: bool) -> Result<(), Vec<CnfLit>> {
@@ -4136,8 +4536,24 @@ mod tests {
             fn push(&mut self) {}
             fn pop(&mut self) {}
             fn propagate_into(&mut self, queue: &mut PropagationQueue) {
-                // `unit_contradiction`'s var 0 is fixed TRUE at level zero, so
+                // Var 0 is fixed TRUE at level zero by the unit clause, so
                 // propagating its negation is always a conflict.
+                let not_x1 = crate::CnfLit::positive(crate::CnfVar::new(0).unwrap()).negated();
+                queue.push_eager(not_x1, vec![not_x1]);
+            }
+        }
+
+        /// The same theory with the explanation withheld: the conflict is
+        /// recognised, cannot be substantiated, and is **declined** rather than
+        /// guessed.
+        struct UnexplainedFalsifyingTheory;
+        impl NativeTheory for UnexplainedFalsifyingTheory {
+            fn assert(&mut self, _var: usize, _value: bool) -> Result<(), Vec<CnfLit>> {
+                Ok(())
+            }
+            fn push(&mut self) {}
+            fn pop(&mut self) {}
+            fn propagate_into(&mut self, queue: &mut PropagationQueue) {
                 queue.push_lazy(
                     crate::CnfLit::positive(crate::CnfVar::new(0).unwrap()).negated(),
                     ExplanationId(1),
@@ -4146,40 +4562,133 @@ mod tests {
         }
 
         #[test]
-        fn a_theory_propagation_onto_a_falsified_literal_is_declined_not_ignored() {
+        fn a_theory_propagation_onto_a_falsified_literal_refutes_modulo_its_lemma() {
             // (1) & (1 | 2): var 0 is true at level zero and the formula is
-            // satisfiable, so only the theory's propagation can stop the search.
+            // satisfiable, so only the theory can close it.
             let f = formula(2, &[&[1], &[1, 2]]);
-            let (outcome, steps) = solve_with(&f, FalsifyingTheory);
+            assert!(
+                matches!(solve_with_drat_proof(&f), ProofSolveOutcome::Sat(_)),
+                "fixture must be Boolean-satisfiable, or the test proves nothing"
+            );
+            let (outcome, steps, lemmas) = solve_with_lemmas(&f, FalsifyingTheory);
+            assert_eq!(outcome, SearchOutcome::Unsat);
+            assert_eq!(lemmas.len(), 1, "one enumerated lemma: {lemmas:?}");
+            let extended = extended_formula(&f, &lemmas);
+            assert_eq!(
+                crate::check_drat(&extended, &steps),
+                Ok(true),
+                "the stream refutes cnf ++ lemmas"
+            );
+            assert_ne!(
+                crate::check_drat(&f, &steps),
+                Ok(true),
+                "and must NOT refute the bare CNF"
+            );
+        }
+
+        #[test]
+        fn an_unexplained_falsifying_propagation_is_declined_not_guessed() {
+            let f = formula(2, &[&[1], &[1, 2]]);
+            let (outcome, steps) = solve_with(&f, UnexplainedFalsifyingTheory);
             assert_eq!(
                 outcome,
                 StreamingProofOutcome::Interrupted,
-                "a theory conflict is undecided today, never a refutation"
+                "a conflict the theory cannot explain is undecided"
             );
             assert!(steps.is_empty(), "no proof step may be emitted: {steps:?}");
         }
 
-        /// A theory that registers an atom mid-search is likewise recognised
-        /// and declined (the variable-table/order-heap ordering contract is S7).
-        struct AtomRegisteringTheory;
+        /// A theory that registers one atom mid-search and then constrains it.
+        ///
+        /// It polls `take_new_atoms` exactly once with a nonzero count -- a
+        /// theory that answered `1` forever would grow the variable table
+        /// without bound, which is what `THEORY_STEP_BUDGET` exists to stop and
+        /// is not what a real theory does.
+        struct AtomRegisteringTheory {
+            registered: bool,
+            /// The new variable's index, learned from the first `assert` that
+            /// mentions it (the driver appends it after every existing var).
+            values: Vec<Option<bool>>,
+            trail: Vec<usize>,
+            marks: Vec<usize>,
+        }
+
+        impl AtomRegisteringTheory {
+            fn new(vars: usize) -> Self {
+                Self {
+                    registered: false,
+                    values: vec![None; vars + 1],
+                    trail: Vec::new(),
+                    marks: Vec::new(),
+                }
+            }
+        }
+
         impl NativeTheory for AtomRegisteringTheory {
-            fn assert(&mut self, _var: usize, _value: bool) -> Result<(), Vec<CnfLit>> {
+            fn assert(&mut self, var: usize, value: bool) -> Result<(), Vec<CnfLit>> {
+                self.values[var] = Some(value);
+                self.trail.push(var);
                 Ok(())
             }
-            fn push(&mut self) {}
-            fn pop(&mut self) {}
+            fn push(&mut self) {
+                self.marks.push(self.trail.len());
+            }
+            fn pop(&mut self) {
+                let bound = self.marks.pop().unwrap_or(0);
+                while self.trail.len() > bound {
+                    let var = self.trail.pop().expect("trail above its own mark");
+                    self.values[var] = None;
+                }
+            }
             fn propagate_into(&mut self, _queue: &mut PropagationQueue) {}
             fn take_new_atoms(&mut self) -> usize {
-                1
+                if self.registered {
+                    0
+                } else {
+                    self.registered = true;
+                    1
+                }
+            }
+            fn final_check(&mut self) -> FinalCheckOutcome {
+                // The registered atom (the last variable) must be TRUE. The
+                // clause `[v]` is false exactly when it is not.
+                let new_var = self.values.len() - 1;
+                if self.values[new_var] == Some(false) {
+                    let v = crate::CnfLit::positive(crate::CnfVar::new(new_var).unwrap());
+                    return FinalCheckOutcome::Conflict(TheoryExplanation::Eager(vec![v]));
+                }
+                FinalCheckOutcome::Sat
             }
         }
 
         #[test]
-        fn a_dynamic_atom_registration_is_declined_not_ignored() {
-            let f = pigeonhole(4);
-            let (outcome, steps) = solve_with(&f, AtomRegisteringTheory);
-            assert_eq!(outcome, StreamingProofOutcome::Interrupted);
-            assert!(steps.is_empty(), "no proof step may be emitted: {steps:?}");
+        fn an_atom_registered_mid_search_is_decided_and_constrained() {
+            // Two Boolean variables; the theory adds a third and requires it.
+            let f = formula(2, &[&[1, 2]]);
+            let mut theory = AtomRegisteringTheory::new(2);
+            let outcome = solve_with_theory_and_drat_proof(
+                &f,
+                &mut theory,
+                None,
+                DEFAULT_PROOF_SAT_CONFLICT_LIMIT,
+            );
+            let TheoryProofOutcome::Sat(model) = outcome else {
+                panic!("the extended problem is satisfiable; got {outcome:?}");
+            };
+            assert_eq!(
+                model.values().len(),
+                3,
+                "the registered atom is a real variable and appears in the model"
+            );
+            assert!(
+                model.values()[2],
+                "the theory's final check forces the registered atom true"
+            );
+            assert_eq!(
+                theory.values[2],
+                Some(true),
+                "and the theory was told about it"
+            );
         }
 
         // ------------------------------------------------------------------
@@ -4438,6 +4947,239 @@ mod tests {
                 "one resolution for one lemma; the handle is not re-resolved"
             );
             assert_eq!(cdcl.theory_lemmas.len(), cdcl.theory.explains);
+        }
+
+        // ------------------------------------------------------------------
+        // Theory CONFLICTS (S7): from `assert`, and from `final_check`.
+        // ------------------------------------------------------------------
+
+        /// A theory that refuses the combination `x1 & x2`, reporting the
+        /// conflict clause `(~x1 | ~x2)` the moment its second assertion
+        /// arrives.
+        struct MutexTheory;
+        impl NativeTheory for MutexTheory {
+            fn assert(&mut self, var: usize, value: bool) -> Result<(), Vec<CnfLit>> {
+                let _ = (var, value);
+                let x1 = crate::CnfLit::positive(crate::CnfVar::new(0).unwrap());
+                let x2 = crate::CnfLit::positive(crate::CnfVar::new(1).unwrap());
+                if var == 1 && value {
+                    return Err(vec![x1.negated(), x2.negated()]);
+                }
+                Ok(())
+            }
+            fn push(&mut self) {}
+            fn pop(&mut self) {}
+            fn propagate_into(&mut self, _queue: &mut PropagationQueue) {}
+        }
+
+        /// An `assert` conflict closes the search, and the artifact says what
+        /// it assumed. The CNF asserts both atoms, so it is propositionally
+        /// satisfiable and the refutation is entirely the theory's.
+        #[test]
+        fn an_assert_conflict_refutes_modulo_its_enumerated_lemma() {
+            let f = formula(2, &[&[1], &[2]]);
+            assert!(
+                matches!(solve_with_drat_proof(&f), ProofSolveOutcome::Sat(_)),
+                "fixture must be Boolean-satisfiable, or the test proves nothing"
+            );
+            let (outcome, steps, lemmas) = solve_with_lemmas(&f, MutexTheory);
+            assert_eq!(outcome, SearchOutcome::Unsat);
+            assert_eq!(lemmas.len(), 1, "one enumerated lemma: {lemmas:?}");
+            let mut sorted = lemmas[0].clone();
+            sorted.sort_by_key(|l| (l.var().index(), l.is_negated()));
+            assert_eq!(
+                sorted,
+                vec![
+                    crate::CnfLit::positive(crate::CnfVar::new(0).unwrap()).negated(),
+                    crate::CnfLit::positive(crate::CnfVar::new(1).unwrap()).negated(),
+                ],
+                "the lemma is the clause the theory handed back"
+            );
+            let extended = extended_formula(&f, &lemmas);
+            assert_eq!(crate::check_drat(&extended, &steps), Ok(true));
+            assert_ne!(
+                crate::check_drat(&f, &steps),
+                Ok(true),
+                "the same stream must NOT refute the bare CNF"
+            );
+        }
+
+        /// A theory that rejects **every** total assignment, handing back the
+        /// negation of the assignment it was shown. Refuting a satisfiable CNF
+        /// this way forces the driver to enumerate, learn and backjump through
+        /// the `final_check` conflict path rather than through `assert`.
+        struct EnumeratingRefuter {
+            values: Vec<Option<bool>>,
+            trail: Vec<usize>,
+            marks: Vec<usize>,
+            final_checks: usize,
+        }
+
+        impl EnumeratingRefuter {
+            fn new(vars: usize) -> Self {
+                Self {
+                    values: vec![None; vars],
+                    trail: Vec::new(),
+                    marks: Vec::new(),
+                    final_checks: 0,
+                }
+            }
+        }
+
+        impl NativeTheory for EnumeratingRefuter {
+            fn assert(&mut self, var: usize, value: bool) -> Result<(), Vec<CnfLit>> {
+                self.values[var] = Some(value);
+                self.trail.push(var);
+                Ok(())
+            }
+            fn push(&mut self) {
+                self.marks.push(self.trail.len());
+            }
+            fn pop(&mut self) {
+                let bound = self.marks.pop().unwrap_or(0);
+                while self.trail.len() > bound {
+                    let var = self.trail.pop().expect("trail above its own mark");
+                    self.values[var] = None;
+                }
+            }
+            fn propagate_into(&mut self, _queue: &mut PropagationQueue) {}
+            fn final_check(&mut self) -> FinalCheckOutcome {
+                self.final_checks += 1;
+                let mut clause = Vec::new();
+                for (var, value) in self.values.iter().enumerate() {
+                    let Some(value) = *value else { continue };
+                    let positive = crate::CnfLit::positive(crate::CnfVar::new(var).unwrap());
+                    // The literal that is FALSE under this assignment.
+                    clause.push(if value { positive.negated() } else { positive });
+                }
+                FinalCheckOutcome::Conflict(TheoryExplanation::Eager(clause))
+            }
+        }
+
+        /// The `final_check` conflict path: a satisfiable CNF is refuted by a
+        /// theory that rejects every model, and the resulting stream checks
+        /// over `cnf ++ lemmas` and only over it.
+        #[test]
+        fn final_check_conflicts_refute_modulo_their_enumerated_lemmas() {
+            let f = formula(3, &[&[1, 2], &[-1, 3]]);
+            assert!(
+                matches!(solve_with_drat_proof(&f), ProofSolveOutcome::Sat(_)),
+                "fixture must be Boolean-satisfiable, or the test proves nothing"
+            );
+            let (outcome, steps, lemmas) = solve_with_lemmas(&f, EnumeratingRefuter::new(3));
+            assert_eq!(
+                outcome,
+                SearchOutcome::Unsat,
+                "a theory that rejects every model refutes the query"
+            );
+            assert!(
+                !lemmas.is_empty(),
+                "every final-check conflict is an enumerated lemma"
+            );
+            let extended = extended_formula(&f, &lemmas);
+            assert_eq!(
+                crate::check_drat(&extended, &steps),
+                Ok(true),
+                "the stream refutes cnf ++ lemmas"
+            );
+            assert_ne!(
+                crate::check_drat(&f, &steps),
+                Ok(true),
+                "and must NOT refute the bare CNF"
+            );
+        }
+
+        /// ADR-1704 prohibition 1, enforced where it CAN be: every clause that
+        /// entered the database from the theory is enumerated in the lemma
+        /// stream.
+        ///
+        /// The count is read off the **arena** — input clauses (`learned[cid]
+        /// == false`) beyond the ones the formula supplied — and not off the
+        /// list, so a future lemma installer that forgot to record itself would
+        /// fail here rather than quietly shrink the artifact's assumption
+        /// count. That is the half of failure mode 4 no propositional checker
+        /// can see: a clause carries no provenance once it is in a CNF.
+        #[test]
+        fn every_theory_origin_clause_is_enumerated() {
+            let f = formula(3, &[&[1, 2], &[-1, 3]]);
+            let mut sink = VecProofSink::new();
+            let mut cdcl = Cdcl::new_with_theory(&f, &mut sink, EnumeratingRefuter::new(3));
+            let outcome = cdcl
+                .run(&[], None, DEFAULT_PROOF_SAT_CONFLICT_LIMIT)
+                .expect("VecProofSink never fails");
+            assert_eq!(outcome, SearchOutcome::Unsat);
+            let input_clauses_in_arena = cdcl.learned.iter().filter(|l| !**l).count();
+            assert_eq!(
+                input_clauses_in_arena - f.clauses().len(),
+                cdcl.theory_lemmas.len(),
+                "every non-learned clause past the formula's own is an enumerated lemma"
+            );
+            assert!(
+                !cdcl.theory_lemmas.is_empty(),
+                "the fixture must actually install lemmas, or this measures nothing"
+            );
+        }
+
+        /// The same run through the public entry point: the artifact is
+        /// assembled, its lemma count is the subtraction, and `check()` grades
+        /// it `CheckedModuloLemmas` -- never `Verified`.
+        #[test]
+        fn the_public_entry_point_reports_a_refutation_modulo_counted_lemmas() {
+            let f = formula(3, &[&[1, 2], &[-1, 3]]);
+            let mut theory = EnumeratingRefuter::new(3);
+            let outcome = solve_with_theory_and_drat_proof(
+                &f,
+                &mut theory,
+                None,
+                DEFAULT_PROOF_SAT_CONFLICT_LIMIT,
+            );
+            let TheoryProofOutcome::Unsat(artifact) = outcome else {
+                panic!("the theory refutes every model; got {outcome:?}");
+            };
+            let count = artifact.theory_lemma_count();
+            assert!(count > 0, "a CDCL(T) refutation assumed something");
+            assert_eq!(
+                count,
+                artifact.lemmas().len(),
+                "the count is |extended| - |cnf|, and it agrees with the list"
+            );
+            assert_eq!(
+                artifact.check(),
+                crate::TheoryRefutationCheck::CheckedModuloLemmas { lemmas: count },
+                "an undischarged lemma is never graded `Verified`"
+            );
+            assert!(
+                theory.final_checks > 0,
+                "the theory really was consulted at total assignments"
+            );
+        }
+
+        /// The control: the identical entry point over a propositionally
+        /// unsatisfiable formula, with a theory that never says anything,
+        /// produces a **lemma-free** artifact that grades `Verified`. Without
+        /// it, `CheckedModuloLemmas` above could be what this route always
+        /// returns.
+        #[test]
+        fn a_theory_that_contributes_nothing_yields_a_verified_lemma_free_artifact() {
+            let f = pigeonhole(4);
+            let counts = Rc::new(RefCell::new(HookCounts::default()));
+            let mut theory = CountingTheory(Rc::clone(&counts));
+            let outcome = solve_with_theory_and_drat_proof(
+                &f,
+                &mut theory,
+                None,
+                DEFAULT_PROOF_SAT_CONFLICT_LIMIT,
+            );
+            let TheoryProofOutcome::Unsat(artifact) = outcome else {
+                panic!("pigeonhole(4) is unsat; got {outcome:?}");
+            };
+            assert_eq!(artifact.theory_lemma_count(), 0);
+            assert_eq!(artifact.check(), crate::TheoryRefutationCheck::Verified);
+            assert!(
+                counts.borrow().asserts > 0,
+                "the theory was attached and driven: {:?}",
+                counts.borrow()
+            );
         }
     }
 }

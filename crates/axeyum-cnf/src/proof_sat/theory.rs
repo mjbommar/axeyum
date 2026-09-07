@@ -19,29 +19,31 @@
 //! and whose [`NativeTheory::HAS_THEORY`] is `false`, so the search
 //! trajectory, the DRAT stream and every verdict are unchanged.
 //!
-//! # What this spike does NOT do
+//! # The literal convention: every explanation is a CLAUSE
 //!
-//! - It does not implement conflict-driven theory learning. A theory conflict
-//!   or a theory propagation reaches the search and is answered by abandoning
-//!   it with the *undecided* outcome `SearchOutcome::Interrupted`. That is
-//!   deliberate: a theory lemma is **not** RUP against the CNF, so admitting
-//!   one into the learned-clause database would silently invalidate the DRAT
-//!   proof this core emits. The proof contract under theory lemmas is the
-//!   first thing slice 2 proper has to decide (see the design memo,
-//!   `docs/plan/adr-1701-slice-2-design-2026-09-05.md`).
-//! - It does not change the reason representation. `reason[v]` is still
-//!   `Option<CRef>`, so a lazily-explained theory implication has nowhere to
-//!   live yet; the cost of widening it to an enum is unmeasured here.
-
-// The module is deliberately the WHOLE slice-2 shape, mirroring
-// `TheorySolver` method for method, while the spike's search consumes only the
-// part it can act on without touching the DRAT contract (see the module header).
-// The unused half -- `TheoryExplanation::Eager`, `FinalCheckOutcome::Unknown`,
-// and the queue's read side -- is what a real theory writes and what slice 2
-// proper reads, and deleting it now would make the memo describe an interface
-// that is not in the tree. Scoped to this module so dead code anywhere else in
-// the core is still a warning.
-#![allow(dead_code)]
+//! Every literal list this trait passes to the driver -- an [`Self::assert`]
+//! conflict, a [`Self::final_check`] conflict, and an [`Self::explain`]
+//! answer -- is **the clause itself**, not the asserted literals whose
+//! conjunction is refuted. So a conflict `a & b` is reported as
+//! `[~a, ~b]`, with every literal FALSE under the current assignment, and a
+//! propagation reason for `p` is reported as `[p, ~a, ~b]`, with `p` the
+//! implied literal and the rest false.
+//!
+//! That is deliberately the opposite of `axeyum_solver::euf_egraph`'s
+//! `TheorySolver`, whose channel carries the asserted literals and whose
+//! driver negates them; the adapter written on the solver side does the
+//! negation once, at the boundary. Here the clause form is what the driver
+//! installs, so carrying anything else would mean negating on the hot path.
+//!
+//! # What this module does NOT do
+//!
+//! It carries no per-lemma theory certificate. Under
+//! [ADR-1704] a lemma the theory cannot discharge is legal and is *counted*
+//! (`theory_lemmas_unchecked`); a lemma that is not enumerated at all is not.
+//! Every clause that enters the database from a theory is recorded in the
+//! artifact, which is what makes the count a subtraction rather than a claim.
+//!
+//! [ADR-1704]: ../../../../docs/research/09-decisions/adr-1704-cdclt-unsat-is-two-streams-a-boolean-refutation-over-cnf-plus-enumerated-theory-lemmas.md
 
 use crate::CnfLit;
 
@@ -68,8 +70,9 @@ pub enum TheoryExplanation {
 pub enum FinalCheckOutcome {
     /// The total assignment is theory-consistent.
     Sat,
-    /// The total assignment is theory-inconsistent; `!AND core` is a valid
-    /// theory lemma.
+    /// The total assignment is theory-inconsistent. The payload is the
+    /// **conflict clause** (see the module header): every literal false under
+    /// the current assignment, and the clause itself a valid theory lemma.
     Conflict(TheoryExplanation),
     /// The check could not be completed. Never a verdict.
     Unknown,
@@ -92,7 +95,9 @@ impl PropagationQueue {
         Self::default()
     }
 
-    /// Enqueues `lit` with an already-materialised explanation.
+    /// Enqueues `lit` with an already-materialised explanation. `reason` is
+    /// the **clause** `lit` together with one false literal per antecedent
+    /// (see the module header).
     pub fn push_eager(&mut self, lit: CnfLit, reason: Vec<CnfLit>) {
         self.items.push((lit, TheoryExplanation::Eager(reason)));
     }
@@ -143,8 +148,12 @@ pub trait NativeTheory {
     ///
     /// # Errors
     ///
-    /// Returns the conflicting literals when the assertion makes the theory
-    /// state inconsistent.
+    /// Returns the **conflict clause** when the assertion makes the theory
+    /// state inconsistent: the negation of the refuted conjunction, so every
+    /// literal in it is false under the current assignment (see the module
+    /// header's convention note). An empty clause is not a refutation the
+    /// driver will act on -- it names nothing to learn from, and the search
+    /// degrades to the undecided outcome rather than reporting `unsat`.
     fn assert(&mut self, var: usize, value: bool) -> Result<(), Vec<CnfLit>>;
 
     /// Saves a backtrack point aligned with a SAT decision level.
@@ -161,8 +170,10 @@ pub trait NativeTheory {
         FinalCheckOutcome::Sat
     }
 
-    /// Resolves a deferred explanation handle. `None` is a theory bug, never a
-    /// verdict.
+    /// Resolves a deferred explanation handle into the **clause** it stands
+    /// for: the implied literal (for a propagation) or nothing else (for a
+    /// conflict), plus one false literal per antecedent. `None` is a theory
+    /// bug, never a verdict.
     fn explain(&mut self, handle: ExplanationId) -> Option<Vec<CnfLit>> {
         let _ = handle;
         None
@@ -211,5 +222,50 @@ impl NativeTheory for NullTheory {
     #[inline]
     fn take_new_atoms(&mut self) -> usize {
         0
+    }
+}
+
+/// A theory reached through a mutable borrow is the same theory.
+///
+/// This is what lets a caller keep ownership of its theory across a solve —
+/// [`super::Cdcl`] owns its `T`, so the entry point passes `&mut theory` and
+/// reads the theory's state back afterwards to build a model. Without it every
+/// caller would have to hand the theory over and get it back by value.
+impl<T: NativeTheory + ?Sized> NativeTheory for &mut T {
+    const HAS_THEORY: bool = T::HAS_THEORY;
+
+    #[inline]
+    fn assert(&mut self, var: usize, value: bool) -> Result<(), Vec<CnfLit>> {
+        (**self).assert(var, value)
+    }
+
+    #[inline]
+    fn push(&mut self) {
+        (**self).push();
+    }
+
+    #[inline]
+    fn pop(&mut self) {
+        (**self).pop();
+    }
+
+    #[inline]
+    fn propagate_into(&mut self, queue: &mut PropagationQueue) {
+        (**self).propagate_into(queue);
+    }
+
+    #[inline]
+    fn final_check(&mut self) -> FinalCheckOutcome {
+        (**self).final_check()
+    }
+
+    #[inline]
+    fn explain(&mut self, handle: ExplanationId) -> Option<Vec<CnfLit>> {
+        (**self).explain(handle)
+    }
+
+    #[inline]
+    fn take_new_atoms(&mut self) -> usize {
+        (**self).take_new_atoms()
     }
 }
