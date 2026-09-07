@@ -138,6 +138,17 @@ fn run() -> ExitCode {
     let _ = build_creal_prelude(&mut kernel).expect("CReal prelude must build");
     let _ = build_complex_prelude(&mut kernel).expect("Complex prelude must build");
     let _ = build_cpoint_prelude(&mut kernel).expect("CPoint prelude must build");
+    // Coverage before rows: this builds nat, list (+ bridge and Perm), int,
+    // rat, logic, string, characterization, creal, complex and cpoint -- ten of
+    // the crate's 31 prelude builders. It is blind to every `fo_*` module, to
+    // ipc, metric, metric_prod, intspace, rn, geo and top, so an absent name
+    // here is not an absent name in the kernel. `shape_search` builds all 31.
+    eprintln!(
+        "coverage: groups=[nat,list,integer,rat,logic,string,characterization,\
+creal,complex,cpoint] declarations={} blind=[fo_*,ipc,metric,metric_prod,\
+intspace,rn,geo,top]",
+        kernel.environment().len()
+    );
 
     // Collect first, then sort by rendered name: environment iteration order is
     // an interning artifact and this output is meant to be diffable.

@@ -49,10 +49,11 @@ use std::process::ExitCode;
 
 use axeyum_lean_kernel::{
     Declaration, Kernel, build_arith_prelude, build_characterization, build_complex_prelude,
-    build_cpoint_prelude, build_creal_prelude, build_geo_prelude, build_int_prelude,
-    build_intspace_prelude, build_ipc_soundness_prelude, build_list_nat_bridge, build_list_perm,
-    build_logic_prelude, build_metric_prelude, build_nat_prelude, build_rat_prelude,
-    build_rn_prelude, build_string_prelude,
+    build_cpoint_prelude, build_creal_prelude, build_fo_order_prelude, build_fo_soundness_prelude,
+    build_fo_substitution_prelude, build_geo_prelude, build_int_prelude, build_intspace_prelude,
+    build_ipc_eval_prelude, build_ipc_soundness_prelude, build_list_nat_bridge, build_list_perm,
+    build_logic_prelude, build_metric_prelude, build_metric_prod_prelude, build_nat_prelude,
+    build_rat_prelude, build_rn_prelude, build_string_prelude, build_top_frame_prelude,
 };
 
 fn kind(declaration: &Declaration) -> &'static str {
@@ -324,6 +325,66 @@ fn run() -> ExitCode {
         emit("ipc", &ipc);
     }
 
+    // `IPC.eval` sits BESIDE `provable` on top of `heyting`, so the soundness
+    // build above does not reach it, and no builder here is idempotent inside
+    // one kernel except the seven that register a `PreludeKey` -- hence one
+    // fresh kernel per row (ADR-1672).
+    let mut ipc_eval = Kernel::new();
+    let _ = build_ipc_eval_prelude(&mut ipc_eval).expect("IPC eval prelude must build");
+    if unfiltered {
+        emit("ipc_eval", &ipc_eval);
+    }
+
+    // The first-order-logic package, three incomparable leaves reaching all
+    // eleven `fo_*` builders:
+    //   order -> robinson -> roundtrip -> decode -> numbering -> code -> syntax
+    //   soundness -> provable -> semantics -> syntax
+    //   substitution -> semantics
+    //
+    // THIS OMISSION DID NOT MERELY FAIL TO FIND THINGS; IT MANUFACTURED
+    // FINDINGS IN A GATE BUILT ON TOP OF IT. `scripts/check-trust-closure.py`
+    // reads this example's admitted environment, and on 2026-09-06 it was RED
+    // with 21 SUBJECT-ABSENT rows: 16 `FO.*`, 4 `Top.*`, 1 `Metric.*` --
+    // exactly the namespaces this file did not build. Every one of those
+    // subjects exists, proved, in the tree. A projection tool with partial
+    // coverage is not a weaker oracle, it is a source of false positives
+    // downstream.
+    let mut fo_order = Kernel::new();
+    let _ = build_fo_order_prelude(&mut fo_order).expect("FO order prelude must build");
+    if unfiltered {
+        emit("fo_order", &fo_order);
+    }
+
+    let mut fo_soundness = Kernel::new();
+    let _ = build_fo_soundness_prelude(&mut fo_soundness).expect("FO soundness prelude must build");
+    if unfiltered {
+        emit("fo_soundness", &fo_soundness);
+    }
+
+    let mut fo_substitution = Kernel::new();
+    let _ = build_fo_substitution_prelude(&mut fo_substitution)
+        .expect("FO substitution prelude must build");
+    if unfiltered {
+        emit("fo_substitution", &fo_substitution);
+    }
+
+    // `Metric.prod*` sits on top of `metric` and is reached by nothing else
+    // here; before 2026-09-06 `build_metric_prod_prelude` was called only by
+    // its own tests and its own inventory example.
+    let mut metric_prod = Kernel::new();
+    let _ = build_metric_prod_prelude(&mut metric_prod).expect("Metric.prod prelude must build");
+    if unfiltered {
+        emit("metric_prod", &metric_prod);
+    }
+
+    // `Top.*` (ADR-1643, the pointfree topological carrier) sits on `creal`
+    // and is a SIBLING of `metric`, not a consumer of it.
+    let mut top = Kernel::new();
+    let _ = build_top_frame_prelude(&mut top).expect("Top.Frame prelude must build");
+    if unfiltered {
+        emit("top", &top);
+    }
+
     let Some(target) = require_declaration else {
         return ExitCode::SUCCESS;
     };
@@ -352,6 +413,12 @@ fn run() -> ExitCode {
         ("rn", &rn),
         ("geo", &geo),
         ("ipc", &ipc),
+        ("ipc_eval", &ipc_eval),
+        ("fo_order", &fo_order),
+        ("fo_soundness", &fo_soundness),
+        ("fo_substitution", &fo_substitution),
+        ("metric_prod", &metric_prod),
+        ("top", &top),
     ]
     .into_iter()
     .filter_map(|(label, kernel)| check_declaration(label, kernel, &target))

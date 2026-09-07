@@ -73,6 +73,14 @@ fn main() -> ExitCode {
 
     let mut kernel = Kernel::new();
     let _ = build_nat_prelude(&mut kernel).expect("Nat prelude must build");
+    // This instrument builds ONE prelude. Say so before printing rows: an
+    // absent name here is absent FROM NAT, and says nothing about the other 30
+    // prelude builders in this crate. Use `shape_search`, which builds them
+    // all, for a whole-kernel question.
+    eprintln!(
+        "coverage: groups=[nat] declarations={}",
+        kernel.environment().len()
+    );
 
     let mut rows: Vec<(String, usize, String)> = kernel
         .environment()
