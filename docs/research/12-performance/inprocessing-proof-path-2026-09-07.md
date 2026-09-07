@@ -243,3 +243,203 @@ proof is rejected.
 
 That number is asserted with a floor, because a run in which no corruption
 produced a wrong verdict would have passed while checking nothing.
+
+## 5. The measurement: the hypothesis survives, and it was under-predicted
+
+Host s5 (AMD Ryzen 7 7840HS, 16 threads, 27 GB), idle, `taskset -c 0-7`, load
+0.87 before and 1.03 after — the sweep was the only load. Binary
+`ef8a80a3692329e0cbb82b40eece8b9da08d24e760075479df15b83fea17b6cc`, one build
+for every arm, so no A/B can be confounded by a stale binary. Fixed
+20,000-conflict budget, four arms (`off` / `subsume` / `bve` / `preprocess` =
+subsume+BVE), two repeats with the arm order rotated per repeat, 64 cells, **0
+failures**. The counters were bit-identical across repeats on every cell (the
+driver checks and would have printed `NON-DETERMINISTIC`); the worst wall-time
+spread across repeats was **1.025x**, so on this run the machine was quieter
+than the ±20% the brief warns about. Figures below take the faster repeat.
+
+### Propagations per conflict
+
+| file | vars | `off` | `subsume` | `bve` | `preprocess` |
+|---|---:|---:|---:|---:|---:|
+| `mobiledevice_…twocond` | 31,482 | 734.5 | 914.9 | 435.3 | 589.9 |
+| `string1x8.4` | 40,548 | 840.6 | 738.4 | 372.3 | 401.8 |
+| `mobiledevice_…paired` | 58,380 | 966.1 | 953.6 | 411.6 | 355.8 |
+| `compose.s2` | 106,588 | 1,828.1 | 1,713.9 | 896.9 | 1,060.9 |
+| `videoconf_full` | 141,923 | 1,751.7 | 1,832.9 | 746.6 | 564.1 |
+| `string4x8.8` | 256,789 | 2,435.5 | 1,792.1 | 829.6 | 913.6 |
+| `compose.s3` | 473,949 | 4,271.9 | 4,961.5 | 2,460.7 | 2,562.6 |
+| `string4x16.4` | 3,098,002 | 11,055.4 | 8,989.8 | 4,681.4 | 4,424.7 |
+
+As a ratio to `off`, over the **six instances where every arm exhausts the
+budget** (so all four arms analysed the same 20,000 conflicts and the ratio is
+not confounded by one arm searching further):
+
+| | `subsume` | `bve` | `preprocess` |
+|---|---:|---:|---:|
+| **median propagations/conflict vs `off`** | **0.933** | **0.426** | **0.388** |
+| median over all eight | 0.962 | 0.435 | 0.439 |
+| median conflicts/second vs `off` | 1.051 | **1.875** | **1.958** |
+| median propagations/second vs `off` | 0.990 | **0.864** | 0.874 |
+
+**The hypothesis holds, and E2 under-predicted it.** I predicted a 20–40% fall
+in propagations per conflict and wrote that above 60% would say the in-search
+half is not needed for most of the win. Measured: **57–61%**, at the top of
+that band and past the point I nominated as surprising. Set against the
+2.56x median deficit the boolean-core lane measured on the same eight files on
+the same host, `2.56 × 0.426 = 1.09` — on this metric, one-shot BVE closes
+essentially the whole gap to Kissat. The inprocessing hypothesis is the one that
+survived contact with a measurement, after restart frequency and per-conflict
+allocation did not.
+
+**E1 was right about which pass, and by a wide margin.** Subsumption alone moves
+the median 7% and makes it *worse* on three of eight files. Every bit of the
+effect is BVE — the only pass that removes variables. `preprocess` (subsume then
+BVE) is not reliably better than BVE alone: better on four files, worse on four.
+
+**A mechanism the numbers volunteer, which I had not predicted.** Propagations
+per *second* falls 13% under BVE. The reduced formula has **28% fewer clauses
+but 18–21% more literal occurrences** (`cl_after/before ≈ 0.72`,
+`lit_after/before ≈ 1.19`, uniform across all eight files): resolvents are
+longer than the clauses they replace. So each propagation walks longer clauses
+and costs more, and the 2.3x reduction in propagation *volume* is partly given
+back as a 1.15x increase in propagation *cost*. Conflicts per second — the
+product — still nearly doubles (1.88x). This is worth naming because it is the
+same decomposition the boolean-core lane introduced, now cutting the other way:
+a change aimed at volume moved rate too, in the opposite direction.
+
+### What it costs, and where the trade turns
+
+The other half of the result, and it is not favourable at this budget:
+
+| file | `off` total | `bve` inprocess | `bve` search | `bve` total |
+|---|---:|---:|---:|---:|
+| `mobiledevice_…twocond` | 0.35 s | 1.23 s | 0.41 s | 1.64 s |
+| `string1x8.4` | 0.96 | 2.39 | 0.54 | 2.93 |
+| `compose.s2` | 2.74 | 3.59 | 1.52 | 5.11 |
+| `videoconf_full` | 2.78 | 6.98 | 1.24 | 8.22 |
+| `string4x8.8` | 4.24 | 12.26 | 1.43 | 13.69 |
+| `compose.s3` | 9.75 | 20.67 | 5.40 | 26.07 |
+| `string4x16.4` | 35.39 | 88.29 | 17.57 | 105.86 |
+
+At a 20,000-conflict budget BVE loses on wall time on every file, by up to 3x,
+because the pass costs 1.2–88 s against a search of 0.35–35 s. **That is a
+statement about the budget, not about the pass.** The honest form is the
+break-even: at what search length does the higher conflict rate repay the
+one-time cost? `cost / (1/c_off − 1/c_bve)`:
+
+| file | break-even conflicts | = seconds of unreduced search |
+|---|---:|---:|
+| `mobiledevice_…paired` | 73,366 | 4.6 s |
+| `compose.s2` | 59,333 | 8.1 s |
+| `videoconf_full` | 92,029 | 12.7 s |
+| `string1x8.4` | 114,670 | 5.5 s |
+| `string4x8.8` | 88,173 | 18.6 s |
+| `compose.s3` | 95,995 | 46.6 s |
+| `string4x16.4` | 100,846 | 176.9 s |
+| `mobiledevice_…twocond` | 130,897 | 5.2 s |
+
+**Strikingly flat in conflicts: 59k–131k on every file, median ~92k.** Both the
+pass's cost and the search's rate scale with formula size, and they scale
+together, so the break-even lands in the same place across a 100x range of
+instance size. The 20,000-conflict budget this sweep used is a factor of ~4.6
+below it — which is why the wall-time column looks bad and why it should not be
+read as the verdict on the pass.
+
+In seconds it is not flat at all, because the unreduced conflict rate is not:
+4.6 s on a 58k-variable instance, 177 s on the 3.1M-variable one. Set against
+the gate-b public-slice budget of 20 s, BVE is at or past break-even on the
+small and middle instances and nowhere near it on the largest.
+
+**Decided counts at the 20,000-conflict budget: `off` 1 of 8, `subsume` 1,
+`bve` 1, `preprocess` 2 of 8** (`preprocess` additionally decides `compose.s2`
+`sat`). One instance is not a result; it is reported because the brief asks for
+it and because a budget this far below break-even is not where a decided-count
+difference would show up.
+
+### The certificate: E4 was right and the magnitude is worse than "large"
+
+| file | `off` proof steps | `bve` prefix steps | `bve` total |
+|---|---:|---:|---:|
+| `mobiledevice_…twocond` | 14,271 | 340,166 | 362,928 |
+| `compose.s2` | 35,558 | 1,240,294 | 1,275,553 |
+| `string4x8.8` | 36,310 | 3,005,783 | 3,041,202 |
+| `string4x16.4` | 36,474 | **37,702,624** | 37,737,995 |
+
+The search emits ~36,000 steps at a 20,000-conflict budget regardless of
+instance size (1.8 steps per conflict, as the boolean-core lane measured). The
+BVE prefix is proportional to the *formula*, so on the largest instance it is
+**1,034x the search's proof**. Two consequences:
+
+* The in-RAM `VecProofSink` is not viable for a BVE prefix at this scale — 37.7 M
+  steps is the shape that OOM-killed a run at 27.6 GiB before. The streaming
+  sink (ADR-0381) is not an option here, it is the only option. `inprocess_into`
+  drains to the sink one pass at a time for the same reason, but one pass's
+  derivation is still the whole prefix.
+* Subsumption's prefix is three orders of magnitude smaller (92,232 steps on the
+  same file) because it only deletes. Which is the earlier asymmetry again, now
+  in bytes rather than in soundness: the pass that derives nothing costs the
+  certificate nothing.
+
+### The proof still checks, at a scale beyond the unit corpus
+
+The eight `p4dfa` instances are the wrong fixture for this: **none of them is
+decided `unsat` within the budget**, and a sweep over the whole ≤25 MB slice
+found no `p4dfa` instance the native core refutes at 20,000 conflicts, so there
+is no `p4dfa` proof to check. Recorded as a limitation, not worked around.
+
+A near-threshold random 3-SAT instance (240 variables, 1,056 clauses, seed 11)
+is refuted and gives a real proof at scale, on s4:
+
+| arm | verdict | proof steps | `check_drat_backward` | `check_drat` (forward) |
+|---|---|---:|---:|---:|
+| `off` | unsat | 203,528 | 0.87 s → `Ok(true)` | 200.85 s → `Ok(true)` |
+| `preprocess` | unsat | 194,428 | 0.98 s → `Ok(true)` | 193.71 s → `Ok(true)` |
+
+Both check against the **original** formula. Two things worth keeping:
+
+* **Forward checking is 231x and 199x slower than backward here** — far past the
+  26x the boolean-core lane measured on its 757-step pigeonhole fixture, and in
+  the same direction. Forward `check_drat` is quadratic-ish in the proof length
+  and is not the route for a corpus-scale certificate; the integration suite uses
+  it deliberately because on 19 tiny fixtures the stricter, simpler checker is
+  the right one.
+* E4 predicted checking would get *more* expensive with inprocessing on. On this
+  instance it did not — the proof is 4% shorter and both routes are within a few
+  percent. The prediction was about the deferred-deletion design I did not end
+  up building (deletions are emitted in place, per pass), so it was answering a
+  question about a version of the code that does not exist.
+
+## 6. What this lane did not do
+
+- **In-search inprocessing.** Everything above is *pre*-processing: one pass
+  before the search starts. Kissat's `probe` schedule also runs while the search
+  is running, over a clause database already full of learned clauses, and that
+  half is **not run here — not ruled out**. It needs `Cdcl` to rebuild its
+  arena, headers and watch lists at level zero while preserving VSIDS activity
+  and saved phases, which is a real change to the search loop rather than a
+  wrapper around it. The measured break-even of ~92k conflicts is the number
+  that makes it interesting: a schedule that re-reduces every ~100k conflicts is
+  paying roughly what a single pre-pass pays, for a formula that keeps shrinking.
+- **Flipping any default.** `InprocessOptions::OFF` remains the default on every
+  entry point. At the budgets measured here inprocessing loses on wall time, and
+  turning it on by default would be choosing a number this sweep did not
+  measure. The break-even table is what a scheduling decision should be built
+  on, and building it is the next slice, not this one.
+- **The solver-level gap from section 1.** `sat_bv_backend` still checks its
+  `unsat` proof against the *reduced* formula (`sat_bv_backend.rs:297`,
+  `ensure_unsat_proof_checked`), so with `cnf_inprocessing` on the BVE link is
+  trusted rather than checked. Not unsound — BVE preserves equisatisfiability,
+  so the chain holds — but the checkable artifact covers one link of it, which is
+  exactly the shape [ADR-1721](../09-decisions/adr-1721-a-preprocessing-step-owes-one-of-three-obligations-chosen-by-the-direction-it-can-break.md)
+  names. The machinery to close it now exists (`solve_with_drat_proof_inprocessed`
+  against the pre-inprocessing formula); the obstacle is that the backend also
+  `compact()`s, which renumbers variables and so breaks the correspondence
+  between the emitted prefix and the formula the search ran on. Left as the named
+  follow-up rather than attempted, because it is a second crate with its own
+  golden pins.
+- **CaDiCaL, and Kissat re-run under this change.** The comparison here is
+  against the boolean-core lane's Kissat figures on the same eight files and the
+  same host, not against a fresh Kissat run. Kissat was not re-run.
+- **Memory.** Every number here is time or a count. The 37.7 M-step prefix was
+  produced under a 20 GB ceiling and did not hit it, which is the only memory
+  fact this sweep establishes.
