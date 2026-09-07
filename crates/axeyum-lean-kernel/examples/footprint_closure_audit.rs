@@ -507,6 +507,21 @@ fn main() -> ExitCode {
         .any(|a| a == "--include-constructed");
     let groups = build_groups(include_constructed);
 
+    // Coverage FIRST, before any row. An empty or short result from a tool that
+    // was never pointed at your subject is indistinguishable from a strong
+    // negative, and this audit builds SIX of the crate's 31 prelude builders by
+    // default (nine with --include-constructed). Derived from `groups`, so it
+    // cannot drift from what was actually built.
+    println!(
+        "coverage: groups=[{}] constructed={}",
+        groups
+            .iter()
+            .map(|(label, _)| *label)
+            .collect::<Vec<_>>()
+            .join(","),
+        include_constructed
+    );
+
     // theorem name -> (narrow trusted names, widened trusted names), first
     // occurrence across preludes (preludes nest, so a theorem present in
     // several groups is recorded once).

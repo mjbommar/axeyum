@@ -271,6 +271,22 @@ fn main() -> ExitCode {
 
     let groups = build_groups(args.include_constructed);
 
+    // Coverage FIRST, before any row or total. This tool builds 13 of the
+    // crate's 31 prelude builders (16 with --include-constructed) and is blind
+    // to every `fo_*` module, to `ipc_eval`, `metric`, `metric_prod`,
+    // `intspace`, `rn`, `geo` and `top_frame`. An absent theorem here is absent
+    // FROM THESE GROUPS; `shape_search` is the instrument that builds all 31.
+    // Derived from `groups`, so it cannot drift from what was actually built.
+    eprintln!(
+        "coverage: groups=[{}] constructed={}",
+        groups
+            .iter()
+            .map(|(label, _)| *label)
+            .collect::<Vec<_>>()
+            .join(","),
+        args.include_constructed
+    );
+
     // `prelude<TAB>theorem<TAB>axiom-count<TAB>axioms`. Every (prelude, theorem)
     // pair, so the rows say where each theorem is visible; the DISTINCT count
     // below is the one that means "how much library exists".
