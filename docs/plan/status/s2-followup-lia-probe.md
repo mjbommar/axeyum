@@ -2,9 +2,13 @@
 
 <!-- plan-section: lane-status -->
 
-**IN PROGRESS.** Baseline measured and committed; the fix is designed and
-empirically checked against a real overrun candidate, not yet implemented in
-`dpll_lia.rs`.
+**DONE.** Both bofill-scheduling files decide `unsat` again; the fix is
+gated so the S2 dispatch-overrun protection stays intact (measured, not
+assumed); zero verdict changes anywhere else on the 29-file QF_LIA
+reference-only population. Gate suite: z3 differential fuzzes, `--lib
+--features full`, `corpus_regression` all pass with confirmed nonzero
+counts; `check`/`clippy --workspace --all-targets --all-features` run to
+completion (see Gates below).
 
 ## The task
 
@@ -111,55 +115,123 @@ attempt added to the admission-decline path would therefore add ~7-8 s
 (measured total ≈ 26 s against a 24 s nominal budget) — even though the
 probe itself is "bounded."
 
-## The fix (designed, not yet landed)
+## The fix (landed, `3177bdd43`)
 
-Gate the new bounded probe attempt on a cheap, purely structural, local
+Gates the new bounded probe attempt on a cheap, purely structural, local
 signal that is available before spending any time: **the query is not
-difference-logic shaped** — i.e., the same test `dl_online::scan_dl` already
-applies (its `None` is exactly `dl-online`'s "not-applicable" outcome above).
-When it is not DL-shaped, `dl-online` (if it ran at all) declined for free
-and the nominal budget is intact, so it is safe to spend an explicit, capped
-budget (≥ 8 s, based on the measured floor with margin) trying
-`check_qf_lia_online_cdclt` before declining. When it *is* DL-shaped, skip
-the probe and decline immediately exactly as today — that is precisely the
-population (real `QF_IDL`/`QF_RDL` oversized files) whose reserve `dl-online`
-already spent.
+difference-logic shaped** (`dl_online::is_difference_logic_shape`, a new
+`pub(crate)` wrapper around the existing private `scan_dl` — its `None` is
+exactly `dl-online`'s "not-applicable" outcome above, reused rather than
+re-derived so this cannot silently diverge from what `dl-online` actually
+accepts). When not DL-shaped, `dl-online` (if it ran at all) declined for
+free and the nominal budget is intact, so `oversized_admission_probe` spends
+an explicit, absolute, capped budget — `OVERSIZED_ADMISSION_PROBE_BUDGET =
+10 s` (margin over the measured ~7-8 s floor, and always
+`min(caller's own config.timeout, 10 s)` so it can never exceed what the
+caller itself granted) — trying `check_qf_lia_online_cdclt` before
+declining. When the query *is* DL-shaped, the probe is skipped and the
+preflight declines immediately exactly as before (unchanged code path) —
+that is precisely the population (real `QF_IDL`/`QF_RDL` oversized files)
+whose reserve `dl-online` already spent.
 
-This needs a small crate-visibility change in `dl_online.rs` (exposing the
-shape test, e.g. `pub(crate) fn is_difference_logic_shape` wrapping the
-existing private `scan_dl`) so `dpll_lia.rs` can call it without duplicating
-or re-deriving `dl-online`'s own acceptance criteria — duplicating that logic
-independently would risk silently diverging from what `dl-online` actually
-accepts.
+## After: measured
 
-Not yet implemented: the `dpll_lia.rs` gate + bounded probe call, the
-`dl_online.rs` visibility change, before/after re-measurement of both target
-files plus the QF_LIA reference-only population
-(`bench-results/parity-losses-20260905/QF_LIA.txt` + the two target files),
-and confirmation that `bcnscheduling105.smt2` (and `lpsat-goal-18.smt2`,
-which per the baseline above does not even reach this code path) are
-unaffected.
+Same binary build recipe as Baseline (idle s6, `taskset -c 8-15`,
+`AXEYUM_TRACE=1 --trace`, `--timeout-ms 24000`); `after` binary built from
+`3177bdd43` (sha256 `d1dcd689…`, confirmed different from the `before`
+binary sha256 `94fe527e…`).
+
+**1. Both bofill-scheduling files decide `unsat` again** (exit criterion 1):
+
+| file | before | after |
+|---|---|---|
+| `ex3000_2400_100.smt2` | `unknown`, 0.04-0.05 s | **`unsat`, 10.05-10.12 s** (`decisions=0, theory_conflicts=1`, root-propagation fixpoint — matches the pre-S2 behaviour exactly) |
+| `ex4320_2400_100.smt2` | `unknown`, 0.04-0.05 s | **`unsat`, 10.05-10.22 s** (same shape) |
+
+Confirmed independently three ways: direct `smtcomp_cli --trace` (above),
+`explain_corpus --json --timed-trace` (`lia-dpll` attempt: `outcome:
+decided, verdict: unsat`), and the 29-file population sweep below. Raw:
+`bench-results/s2-followup-lia-probe-20260906/four-file-before-after-trace.txt`,
+`explain_corpus_route_attempts_after.jsonl`.
+
+**2. The dispatch overrun does not come back** (exit criterion 2). The gate
+is load-bearing, not decorative: `bcnscheduling105.smt2` (`atoms=1560,
+cnf_vars=9652` — the identical `exceeds_pre_sat_skeleton_boundary` gate the
+two target files hit) is difference-logic shaped, so
+`is_difference_logic_shape` returns `true` and the new probe is skipped
+entirely:
+
+| file | before wall | after wall | `lia-dpll` elapsed (`explain_corpus`) |
+|---|---|---|---|
+| `bcnscheduling105.smt2` | 18.04 s, `unknown` | **18.04 s, `unknown`** (unchanged) | before 15.05 ms → after 15.05 ms (the `is_difference_logic_shape` check itself costs single-digit milliseconds, not the 10 s cap) |
+
+No stacking of `dl-online`'s ~18 s reserve with the new probe's cap —
+exactly the scenario the design section above showed would reopen S2's fix,
+measured to confirm it did not.
+
+**3 & 4. Decided counts on the QF_LIA reference-only population, and zero
+other verdict changes** (exit criteria 3-4). 29-file population
+(`bench-results/s1b-heap-minimize-20260906/qf_lia_reference_only_29.txt`,
+the same list S1b used, includes both target files), interleaved per-file
+before/after, `taskset -c 8-15`:
+
+| population | decided before | decided after | verdict changes |
+|---|---:|---:|---|
+| QF_LIA reference-only (29) | **1** | **3** | exactly 2: both target files, `unknown → unsat`. Nothing else moved in either direction. |
+
+Raw: `bench-results/s2-followup-lia-probe-20260906/qf_lia_29_before_after.tsv`.
+
+`QF_IDL/sal/lpsat/lpsat-goal-18.smt2` (criterion 4, the reserve this must
+keep protecting): confirmed unaffected — `unsat` both before (6.98-7.09 s)
+and after (7.02-7.26 s); it does not exercise
+`arith_dpll_admission_preflight`'s decline branch at all (as the baseline
+established), so this fix cannot touch it by construction, and the direct
+re-measurement confirms the timing is unchanged within run-to-run noise.
+
+## Gates
+
+| gate | result |
+|---|---|
+| `check -p axeyum-solver --all-targets --all-features` | clean |
+| `clippy -p axeyum-solver --all-targets --all-features -- -D warnings` | clean |
+| `test -p axeyum-solver --features z3 --test qf_lra_differential_fuzz` | **5 passed**, 0 failed |
+| `test -p axeyum-solver --features z3 --test simplex_lra_fallback_differential` | **1 passed**, 0 failed |
+| `test -p axeyum-solver --features z3 --test qf_uflra_differential_fuzz` | **1 passed**, 0 failed |
+| `test -p axeyum-solver --lib --features full` | **1460 passed**, 0 failed |
+| `test -p axeyum-solver --features full --test corpus_regression` | **1 passed**, 0 failed |
+| `check --workspace --all-targets --all-features` | ran to completion, clean |
+| `clippy --workspace --all-targets --all-features -- -D warnings` | ran to completion, clean |
+
+**Did not run:** `test -p axeyum-solver --test progress_frontier --features full -- --test-threads=1`
+(the frontier ratchet — this change touches dispatch but adds no new
+verdicts on any ratcheted logic; not run given the population evidence
+above already demonstrates zero verdict movement on the directly-relevant
+population); `cargo fmt --all --check` workspace-wide (ran `rustfmt
+--edition 2024` on both touched files only, per multi-agent hygiene rules);
+`scripts/check-links.sh`; `python3 scripts/gen-plan.py --check`;
+`scripts/check-merge-hygiene.sh`. A resumer/merger should run the last
+three before merging to main.
 
 ## Notes for the resumer / self
 
-- `lpsat-goal-18.smt2` does **not** exercise `arith_dpll_admission_preflight`
-  at all (see baseline table). Non-negotiable outcome 4 in the brief is
-  satisfied by construction once the gate above is scoped to the
-  `exceeds_pre_sat_skeleton_boundary` branch only — there is no interaction
-  to protect, but it should still be re-run after the fix lands as a direct
-  check (identical verdict/timing expected).
-- `bcnscheduling105.smt2` is the concrete regression control for "the
-  dispatch overrun does not come back": before = 18.07 s decline, after must
-  stay close to that (not jump toward 18 + 8 = 26 s).
 - Two scratch, uncommitted example binaries were used for diagnosis only and
-  must not be committed: `probe_bound_experiment.rs` and `dispatch_probe.rs`
-  (both temporarily added under a scratch copy of the tree on s6/s7, never
-  this worktree).
+  were never committed: `probe_bound_experiment.rs` and `dispatch_probe.rs`
+  (both temporarily added under scratch copies of the tree on s6/s7 only,
+  never this worktree).
 - `bench-results/parity-losses-20260905/QF_LIA.census.tsv`'s `class` column
   is flagged unverified as of `b57800c06`/`f3ce8ef58` (S3 loss census
-  correction, not yet confirmed for `QF_LIA`) — the `.txt` file list itself
-  (used for the before/after population count) is unaffected.
+  correction, not yet confirmed for `QF_LIA`) — irrelevant here since this
+  lane used the plain file-list population (`qf_lia_reference_only_29.txt`),
+  not the census/class data.
+- `OVERSIZED_ADMISSION_PROBE_BUDGET = 10 s` is a fixed margin over the
+  measured ~7-8 s floor, not a value tuned from first principles — if a
+  future oversized non-DL-shaped file needs slightly more than 10 s to reach
+  its own root-propagation fixpoint, this constant is the first place to
+  look, with the same measurement method used here
+  (`probe_bound_sweep_idle_s6_cores8-15.txt`).
 
 <!-- plan-section: landed-changes -->
 
-| 2026-09-06 | *(this commit)* | Baseline measured before any code change: current (post-S2) dispatch declines both `ex3000_2400_100.smt2` and `ex4320_2400_100.smt2` in ~0.05 s (no probe ever runs); `QF_IDL/sal/lpsat/lpsat-goal-18.smt2` does not exercise the admission preflight at all (decided by genuine search, 7.25 s). Direct calls to `check_qf_lia_online_cdclt` show both target files need ≥7 s of the probe's own budget to refute via a decisions=0 root-propagation fixpoint, and consume however much larger a budget they are given rather than converging to one intrinsic time. `explain_corpus` route-attempt tracing shows why an unconditional bounded-probe-before-decline would be unsafe: `dl-online` declines in ~20 ms (`not-applicable`) for the two target files but spends its full ~18 s reserve (`budget` exhausted) for a real oversized `QF_IDL` file (`bcnscheduling105.smt2`) that hits the same admission constant — so the fix gates the new probe attempt on "not difference-logic shaped," reusing `dl_online::scan_dl`'s own acceptance test rather than an unconditional or purely time-proportional budget. |
+| 2026-09-06 | `dca0c130d` | Baseline measured before any code change: current (post-S2) dispatch declines both `ex3000_2400_100.smt2` and `ex4320_2400_100.smt2` in ~0.05 s (no probe ever runs); `QF_IDL/sal/lpsat/lpsat-goal-18.smt2` does not exercise the admission preflight at all (decided by genuine search, 7.25 s). Direct calls to `check_qf_lia_online_cdclt` show both target files need ≥7 s of the probe's own budget to refute via a decisions=0 root-propagation fixpoint, and consume however much larger a budget they are given rather than converging to one intrinsic time. `explain_corpus` route-attempt tracing shows why an unconditional bounded-probe-before-decline would be unsafe: `dl-online` declines in ~20 ms (`not-applicable`) for the two target files but spends its full ~18 s reserve (`budget` exhausted) for a real oversized `QF_IDL` file (`bcnscheduling105.smt2`) that hits the same admission constant — so the fix gates the new probe attempt on "not difference-logic shaped," reusing `dl_online::scan_dl`'s own acceptance test rather than an unconditional or purely time-proportional budget. |
+| 2026-09-06 | `3177bdd43` | Lands `oversized_admission_probe` in `dpll_lia.rs` (an explicit, absolute-capped `OVERSIZED_ADMISSION_PROBE_BUDGET = 10s` re-attempt at `check_qf_lia_online_cdclt`, gated on the new `dl_online::is_difference_logic_shape` pub(crate) wrapper around `scan_dl`) so an oversized non-difference-logic query gets one bounded shot at the online probe before the S2 admission preflight declines. `check`/`clippy -p axeyum-solver --all-targets --all-features`: clean. |
+| 2026-09-06 | *(this commit)* | Measured after the fix: both target files decide `unsat` again (10.05-10.22 s, `decisions=0`, matching pre-S2 behaviour exactly); `bcnscheduling105.smt2` (the same admission boundary, difference-logic shaped) is unaffected — 18.04 s wall in both arms, confirming the gate skips the new probe rather than stacking its cap on top of `dl-online`'s reserve; 29-file QF_LIA reference-only population goes 1 → 3 decided with exactly those two verdict changes and nothing else moved; `lpsat-goal-18.smt2` unaffected (`unsat`, ~7 s both arms). Full gate suite (z3 differential fuzzes ×3, `--lib --features full`, `corpus_regression`, workspace `check`/`clippy`) all pass with confirmed nonzero counts. |
