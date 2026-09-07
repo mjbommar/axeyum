@@ -140,10 +140,10 @@ declaration, with a positive control of the same kind.
 
 **The technique that works: search for the STEP, not the NAME -- and there is
 now a tool for it (ADR-0608).** `examples/shape_search.rs` indexes **every**
-declaration kind by conclusion head, per-hypothesis head and type constants
-(1,838 declarations, ~13-21 s), and **fails on absence** with exit 1, printing
-a same-kind positive control; exit 3 means *unanswerable*, deliberately
-distinct. The canonical miss returns exactly one row from shape alone:
+declaration kind by conclusion head, per-hypothesis head and type constants,
+and **fails on absence** with exit 1, printing a same-kind positive control;
+exit 3 means *unanswerable*, deliberately distinct. The canonical miss returns
+exactly one row from shape alone:
 
     cargo run --release -p axeyum-lean-kernel --example shape_search -- \
       --include-constructed --concl CReal.Equiv \
@@ -152,6 +152,49 @@ distinct. The canonical miss returns exactly one row from shape alone:
 Failing that, grep for the shape of the intermediate you need -- an index
 computation, a case split, a direction of transport -- across the whole crate,
 not for what you would have called the finished lemma.
+
+**IT NOW BUILDS ALL 31 PRELUDE BUILDERS, AND UNTIL 2026-09-06 IT BUILT 17
+(ADR-1672).** If you read an ABSENT verdict from this tool before that date, it
+may have been an artefact of the index rather than the tree. It was blind to
+every `fo_*` module -- `--ns FO` returned nothing against a 4,839-row dump
+while 141 `FO.*` declarations sat in the kernel -- and to `metric_prod`
+(`Metric.prod*`), the list prelude, and `ipc_eval`. Its own internal
+cross-check passed the whole time, because both halves of it were hand-written
+and omitted the same builders.
+
+What to check now, in this order:
+
+* **`--list-groups`** prints the group table with the reason each group is its
+  own row, and does NOT build the index, so it is instant. Run it first when
+  you are deciding whether an ABSENT verdict is about the kernel or about the
+  tool.
+* **the `coverage:` line** names every group actually indexed, and the
+  **`timing:` line** beside it gives per-group build seconds.
+* **`--include-constructed`** is still required for `creal`, `complex`,
+  `cpoint`, `metric`, `metric_prod`, `intspace`, `rn`, `geo`, `top` and
+  `creal_model`. Without it a `CReal` name is **unanswerable** (exit 3), not
+  absent. The default index carries `logic`, `nat`, `axreal`, `integer`, `rat`,
+  `ipc`, `ipc_eval`, the three `fo_*` leaves, `characterization`, `list`,
+  `int_model`, `rat_model` and `string`.
+* the cost of that completeness is real and paid on every query: the default
+  index roughly tripled (measured interleaved on one box, 19-27 s before,
+  52-58 s after, load 17-30 throughout). The constructed index went 167 s to
+  236 s.
+
+Two gates hold this, in `crates/axeyum-lean-kernel/tests/shape_search_index_coverage.rs`:
+one over `pub fn build_*_prelude`, one over the exported builders that are NOT
+`*_prelude` -- because `List.Perm` is declared by `build_list_perm` over
+`build_list_nat_bridge`, and a census restricted to `*_prelude` would have
+certified that covered.
+
+**The sibling instruments are NOT all this complete, and most do not say so.**
+`scripts/audit-kernel-tool-prelude-coverage.py` prints tool x preludes-built
+for all 45 examples that build one. `kernel_declaration_projection` builds 17,
+`prelude_theorem_inventory` 13, `theorem_dependency_inventory` 10,
+`footprint_closure_audit` 9 (6 by default). Four instruments plus
+`nat_theorem_inventory` now print a `coverage:` line; thirteen that build three
+or more preludes still do not, held by a two-sided ratchet in that script. An
+empty result from one of those thirteen is not a strong negative.
 
 **DO NOT ASSEMBLE THAT QUERY BY HAND. `just brief <target…>` DOES IT FOR
 YOU, AND THIS SECTION NEVER SAID SO.** `scripts/brief-step0.py` derives the
