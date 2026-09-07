@@ -186,6 +186,30 @@ pub struct TheoryEngineCounters {
     pub simplex_rows: u64,
     /// Columns of the theory's dense tableau (problem variables + rows).
     pub simplex_columns: u64,
+    /// Conflicts the theory found in its **cheap partial check** at `assert`
+    /// time, before the complete decision (ADR-1701). Under the deferred split
+    /// this is the only thing that prunes the Boolean search between two total
+    /// assignments other than Boolean propagation, so a near-zero value is a
+    /// direct explanation of a high `final_check` call count rather than an
+    /// inference about one.
+    pub assert_partial_conflicts: u64,
+    /// Complete checks (`final_check`) that answered `Conflict`. With the
+    /// driver's `final_checks` this splits "the search reached a total
+    /// assignment and the theory accepted it" from "…and refuted it".
+    pub final_check_conflicts: u64,
+    /// Literals summed over those cores. `final_check_core_literals /
+    /// final_check_conflicts` is the mean refutation width — the figure that
+    /// says whether a learned theory lemma excludes a large region or close to
+    /// one assignment.
+    pub final_check_core_literals: u64,
+    /// Complete-check refutations whose Farkas multipliers named **no** row, so
+    /// the core widened to the entire currently-asserted set (sound, maximally
+    /// coarse). A nonzero value is a weak-lemma source that costs nothing to
+    /// find and would otherwise be invisible inside the mean above.
+    pub final_check_core_widenings: u64,
+    /// Live constraint rows summed over every complete check — the denominator
+    /// the mean core width is a fraction of.
+    pub final_check_live_rows: u64,
 }
 
 /// An opaque, theory-owned handle to an explanation the theory has **not**

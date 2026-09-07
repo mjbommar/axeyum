@@ -421,6 +421,17 @@ pub struct LraTheory {
     /// Diagnostic only (S4) — the counter that answers "does `propagate` return
     /// anything for `LraTheory`?" with a number instead of a reading.
     propagations_offered: u64,
+    /// Conflicts [`Self::install_bounds`] found — the cheap partial check at
+    /// `assert` time. Diagnostic only.
+    assert_partial_conflicts: u64,
+    /// Complete checks that answered `Conflict`, the literals summed over their
+    /// cores, how many of those cores came from the `rows_to_core` widening
+    /// fallback, and the live rows summed over every complete check.
+    /// Diagnostic only; see [`TheoryEngineCounters`].
+    final_check_conflicts: u64,
+    final_check_core_literals: u64,
+    final_check_core_widenings: u64,
+    final_check_live_rows: u64,
 }
 
 /// A bound on one linear form, currently asserted, with the atom that imposed
@@ -529,6 +540,11 @@ impl LraTheory {
             bound_upper: vec![None; forms],
             bound_log: Vec::new(),
             propagations_offered: 0,
+            assert_partial_conflicts: 0,
+            final_check_conflicts: 0,
+            final_check_core_literals: 0,
+            final_check_core_widenings: 0,
+            final_check_live_rows: 0,
         })
     }
 
@@ -649,6 +665,9 @@ impl LraTheory {
             }
             if conflict.is_none() {
                 conflict = self.bound_crossing(form);
+                if conflict.is_some() {
+                    self.assert_partial_conflicts += 1;
+                }
             }
         }
         conflict
@@ -816,6 +835,11 @@ impl LraTheory {
             propagations: self.propagations_offered,
             simplex_rows: engine.inner.rows() as u64,
             simplex_columns: engine.inner.columns(),
+            assert_partial_conflicts: self.assert_partial_conflicts,
+            final_check_conflicts: self.final_check_conflicts,
+            final_check_core_literals: self.final_check_core_literals,
+            final_check_core_widenings: self.final_check_core_widenings,
+            final_check_live_rows: self.final_check_live_rows,
         })
     }
 
@@ -862,7 +886,7 @@ impl LraTheory {
 
     /// Maps a set of live row indices (a Farkas-participating constraint subset)
     /// back to the distinct asserted atom literals behind them: the conflict core.
-    fn rows_to_core(&self, rows: &[usize]) -> Vec<TheoryLit> {
+    fn rows_to_core(&mut self, rows: &[usize]) -> Vec<TheoryLit> {
         let mut seen: BTreeSet<usize> = BTreeSet::new();
         let mut core = Vec::new();
         for &row in rows {
@@ -881,6 +905,7 @@ impl LraTheory {
         // a genuine refutation), fall back to the full set of currently-asserted
         // atoms — a sound, if coarse, conflict.
         if core.is_empty() {
+            self.final_check_core_widenings += 1;
             for &atom in &self.assigned_log {
                 if let Some(value) = self.assigned[atom] {
                     core.push(TheoryLit { atom, value });
@@ -1146,6 +1171,7 @@ impl TheorySolver for LraTheory {
         if !self.deferred_final_check {
             return FinalCheckOutcome::Sat;
         }
+        self.final_check_live_rows += self.live.len() as u64;
         match self.feasibility() {
             Feasibility::Sat | Feasibility::Unknown => FinalCheckOutcome::Sat,
             Feasibility::Unsat(rows) => {
@@ -1153,6 +1179,8 @@ impl TheorySolver for LraTheory {
                 if core.is_empty() {
                     return FinalCheckOutcome::Sat;
                 }
+                self.final_check_conflicts += 1;
+                self.final_check_core_literals += core.len() as u64;
                 FinalCheckOutcome::Conflict(TheoryExplanation::Eager(core))
             }
         }
@@ -3636,6 +3664,11 @@ fn run_online_diag(arena: &TermArena, assertions: &[TermId]) -> Option<OnlineDia
         bound_upper: vec![None; forms],
         bound_log: Vec::new(),
         propagations_offered: 0,
+        assert_partial_conflicts: 0,
+        final_check_conflicts: 0,
+        final_check_core_literals: 0,
+        final_check_core_widenings: 0,
+        final_check_live_rows: 0,
     };
     let mut solver = Dpll::new(enc.var_count, atom_count, clauses);
     let _ = solver.solve(&mut theory);
@@ -4653,6 +4686,11 @@ mod tests {
             bound_upper: vec![None; forms],
             bound_log: Vec::new(),
             propagations_offered: 0,
+            assert_partial_conflicts: 0,
+            final_check_conflicts: 0,
+            final_check_core_literals: 0,
+            final_check_core_widenings: 0,
+            final_check_live_rows: 0,
         };
         let solver = Dpll::new(enc.var_count, atom_count, clauses);
         (solver, theory)

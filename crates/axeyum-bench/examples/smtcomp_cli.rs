@@ -229,7 +229,9 @@ fn theory_layer_report_line(
          learned_clauses={} learned_literals={} learned_literals_premin={} \
          simplex_pivots={} simplex_checks={} simplex_cold_restarts={} \
          bound_retractions={} bound_assertions={} propagations_offered={} \
-         simplex_rows={} simplex_columns={}",
+         simplex_rows={} simplex_columns={} assert_partial_conflicts={} \
+         final_check_conflicts={} final_check_core_literals={} \
+         final_check_core_widenings={} final_check_live_rows={}",
         stats.boolean_propagate.as_millis(),
         stats.theory_assert.as_millis(),
         stats.theory_propagate.as_millis(),
@@ -253,6 +255,11 @@ fn theory_layer_report_line(
         optional(stats.theory_propagations_offered),
         optional(stats.simplex_rows),
         optional(stats.simplex_columns),
+        optional(stats.assert_partial_conflicts),
+        optional(stats.final_check_conflicts),
+        optional(stats.final_check_core_literals),
+        optional(stats.final_check_core_widenings),
+        optional(stats.final_check_live_rows),
     )
 }
 
