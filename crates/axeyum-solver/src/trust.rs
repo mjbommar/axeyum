@@ -30,6 +30,29 @@ pub enum TrustId {
     Tseitin,
     /// CNF UNSAT from the CDCL core (DRAT-checked).
     SatRefutation,
+    /// CNF UNSAT from the CDCL(T) core **modulo N enumerated theory lemmas**
+    /// (ADR-1704).
+    ///
+    /// The Boolean half is exactly as checked as [`SatRefutation`]: the same
+    /// DRAT/LRAT stream through the same unchanged `check_drat`/`check_lrat`.
+    /// What is different is the formula it refutes — the CNF *extended by the
+    /// theory lemmas as input clauses* — so the statement established is
+    /// strictly weaker, and each lemma is an obligation the theory owes.
+    ///
+    /// This id exists rather than reusing [`SatRefutation`] because that id's
+    /// meaning is a refutation of the CNF. One id cannot carry both without the
+    /// ledger becoming unreadable at the only place it is load-bearing, and
+    /// ADR-1704 section 5 states the prohibition as an outcome:
+    /// `theory_lemmas > 0` and [`SatRefutation`] must never co-occur.
+    /// [`theory_refutation_trust_step`] is where that is enforced.
+    ///
+    /// `is_certified` is `false` and stays `false` until the per-lemma
+    /// discharge is wired for every theory that can produce one. The number to
+    /// watch is not this bit but the artifact's own
+    /// `theory_lemmas_unchecked`, which no producer can move.
+    ///
+    /// [`SatRefutation`]: TrustId::SatRefutation
+    SatRefutationModuloTheory,
     /// Arrays → BV by read-over-write + Ackermann (ADR-0010). The
     /// **eager-elimination** UNSAT sub-case (`check_with_array_elimination`: every
     /// `select` over an array variable replaced by a fresh var after read-over-write,
@@ -125,6 +148,7 @@ pub const ALL_TRUST_IDS: &[TrustId] = &[
     TrustId::BitBlast,
     TrustId::Tseitin,
     TrustId::SatRefutation,
+    TrustId::SatRefutationModuloTheory,
     TrustId::ArrayElim,
     TrustId::Ackermann,
     TrustId::IntBlast,
@@ -146,6 +170,7 @@ impl TrustId {
             TrustId::BitBlast => "bit-blast",
             TrustId::Tseitin => "tseitin",
             TrustId::SatRefutation => "sat-refutation",
+            TrustId::SatRefutationModuloTheory => "sat-refutation-modulo-theory",
             TrustId::ArrayElim => "array-elim",
             TrustId::Ackermann => "ackermann",
             TrustId::IntBlast => "int-blast",
@@ -167,6 +192,9 @@ impl TrustId {
             TrustId::BitBlast => "term \u{2192} AIG bit-blasting",
             TrustId::Tseitin => "AIG \u{2192} CNF Tseitin encoding",
             TrustId::SatRefutation => "CNF UNSAT from the CDCL core",
+            TrustId::SatRefutationModuloTheory => {
+                "CNF UNSAT from the CDCL(T) core modulo N enumerated theory lemmas"
+            }
             TrustId::ArrayElim => "arrays \u{2192} BV (read-over-write + Ackermann)",
             TrustId::Ackermann => {
                 "uninterpreted functions \u{2192} fresh vars + functional consistency"
@@ -191,6 +219,13 @@ impl TrustId {
         match self {
             TrustId::TermLevelEnum | TrustId::Farkas | TrustId::Sos | TrustId::Diophantine => 10,
             TrustId::Tseitin | TrustId::SatRefutation | TrustId::LraDpll => 9,
+            // The Boolean half is machine-checked and every assumption is
+            // enumerated in the artifact, so a reviewer can see and later
+            // discharge exactly what is trusted -- the same posture as the
+            // eager-elimination reductions below, and not the search-only
+            // opacity of `XorGaussian`. It is not 9: an undischarged lemma is
+            // a wrong `unsat` with no recovery if the theory is wrong.
+            TrustId::SatRefutationModuloTheory => 4,
             TrustId::BitBlast => 8,
             TrustId::Fpa2Bv => 5,
             TrustId::ArrayElim | TrustId::Ackermann | TrustId::DatatypeElim => 4,
@@ -291,7 +326,8 @@ impl TrustId {
             | TrustId::LraDpll
             | TrustId::Sos
             | TrustId::Diophantine => true,
-            TrustId::ArrayElim
+            TrustId::SatRefutationModuloTheory
+            | TrustId::ArrayElim
             | TrustId::Ackermann
             | TrustId::IntBlast
             | TrustId::DatatypeElim
@@ -306,6 +342,7 @@ impl TrustId {
         match self {
             TrustId::BitBlast | TrustId::Tseitin => "ADR-0006",
             TrustId::SatRefutation => "ADR-0012",
+            TrustId::SatRefutationModuloTheory => "ADR-1704",
             TrustId::ArrayElim => "ADR-0010",
             TrustId::Ackermann => "ADR-0013",
             TrustId::IntBlast => "ADR-0014",
@@ -384,4 +421,137 @@ pub fn trust_ledger_markdown() -> String {
         );
     }
     out
+}
+
+/// The trust step a CDCL(T) refutation grades at, **read off the artifact**
+/// (ADR-1704 section 3).
+///
+/// This is the one place the ADR's prohibition 2 is decided, so it is written
+/// as a function rather than left to each caller: a refutation that assumed
+/// nothing grades at [`TrustId::SatRefutation`] and is certified when the
+/// checker verified it; a refutation that assumed anything grades at
+/// [`TrustId::SatRefutationModuloTheory`] and is **never** certified, because
+/// no per-lemma discharge is wired yet. `theory_lemma_count` is itself a
+/// subtraction on the artifact (`|extended| - |cnf|`), so nothing a producer
+/// writes can move this.
+///
+/// ```
+/// use axeyum_cnf::{CnfClause, CnfFormula, CnfLit, CnfVar, DratStep, TheoryRefutation};
+/// use axeyum_solver::trust::{TrustId, theory_refutation_trust_step};
+///
+/// let mut cnf = CnfFormula::new(1);
+/// let x = CnfLit::positive(CnfVar::new(0).unwrap());
+/// cnf.add_clause(CnfClause::new(vec![x])).unwrap();
+/// cnf.add_clause(CnfClause::new(vec![x.negated()])).unwrap();
+/// let artifact =
+///     TheoryRefutation::from_cnf_and_lemmas(cnf, Vec::new(), vec![DratStep::Add(Vec::new())]);
+/// let step = theory_refutation_trust_step(&artifact);
+/// assert_eq!(step.id, TrustId::SatRefutation);
+/// assert!(step.certified);
+/// ```
+#[must_use]
+pub fn theory_refutation_trust_step(refutation: &axeyum_cnf::TheoryRefutation) -> TrustStep {
+    use axeyum_cnf::TheoryRefutationCheck;
+
+    let check = refutation.check();
+    if refutation.theory_lemma_count() == 0 {
+        return TrustStep {
+            id: TrustId::SatRefutation,
+            certified: matches!(check, TheoryRefutationCheck::Verified),
+        };
+    }
+    TrustStep {
+        id: TrustId::SatRefutationModuloTheory,
+        // Never `true`: `CheckedModuloLemmas` is the *undischarged* grade, and
+        // a `Failed` artifact is certified by nothing at all.
+        certified: false,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{ALL_TRUST_IDS, TrustId, theory_refutation_trust_step};
+    use axeyum_cnf::{CnfClause, CnfFormula, CnfLit, CnfVar, DratStep, TheoryRefutation};
+
+    fn lit(value: i64) -> CnfLit {
+        let var = CnfVar::new(usize::try_from(value.unsigned_abs() - 1).unwrap()).unwrap();
+        if value < 0 {
+            CnfLit::positive(var).negated()
+        } else {
+            CnfLit::positive(var)
+        }
+    }
+
+    fn formula(variable_count: usize, clauses: &[&[i64]]) -> CnfFormula {
+        let mut f = CnfFormula::new(variable_count);
+        for clause in clauses {
+            f.add_clause(CnfClause::new(clause.iter().copied().map(lit).collect()))
+                .unwrap();
+        }
+        f
+    }
+
+    /// ADR-1704 section 5, prohibition 2, as an executable assertion: a
+    /// refutation that assumed a theory lemma is never graded at the pure
+    /// propositional id, whatever the checker said about its Boolean half.
+    #[test]
+    fn a_refutation_modulo_a_lemma_never_grades_at_sat_refutation() {
+        // (x1) & (x2) & (x3), refuted only by the difference-logic lemma.
+        let cnf = formula(3, &[&[1], &[2], &[3]]);
+        let artifact = TheoryRefutation::from_cnf_and_lemmas(
+            cnf,
+            vec![vec![lit(-1), lit(-2), lit(-3)]],
+            vec![DratStep::Add(Vec::new())],
+        );
+        assert_eq!(artifact.theory_lemma_count(), 1);
+        let step = theory_refutation_trust_step(&artifact);
+        assert_eq!(step.id, TrustId::SatRefutationModuloTheory);
+        assert_ne!(step.id, TrustId::SatRefutation);
+        assert!(
+            !step.certified,
+            "an undischarged lemma is never a certified step"
+        );
+    }
+
+    /// The control, so the test above is not just "this function always
+    /// returns the modulo id": the same route over a lemma-free artifact does
+    /// grade at `SatRefutation`, certified.
+    #[test]
+    fn a_lemma_free_refutation_grades_at_sat_refutation_certified() {
+        let cnf = formula(1, &[&[1], &[-1]]);
+        let artifact =
+            TheoryRefutation::from_cnf_and_lemmas(cnf, Vec::new(), vec![DratStep::Add(Vec::new())]);
+        let step = theory_refutation_trust_step(&artifact);
+        assert_eq!(step.id, TrustId::SatRefutation);
+        assert!(step.certified);
+    }
+
+    /// A lemma-free artifact whose Boolean stream does NOT check is graded at
+    /// `SatRefutation` **uncertified** rather than silently certified -- the
+    /// `certified` flag reports this run, not the id's ledger status.
+    #[test]
+    fn a_lemma_free_artifact_that_fails_its_check_is_not_certified() {
+        let cnf = formula(2, &[&[1], &[-1, 2]]);
+        let artifact = TheoryRefutation::from_cnf_and_lemmas(
+            cnf,
+            Vec::new(),
+            vec![DratStep::Add(vec![lit(2)])],
+        );
+        let step = theory_refutation_trust_step(&artifact);
+        assert_eq!(step.id, TrustId::SatRefutation);
+        assert!(!step.certified);
+    }
+
+    /// The new id is in the canonical iteration order exactly once, so the
+    /// rendered ledger cannot omit or duplicate it.
+    #[test]
+    fn the_modulo_theory_id_is_listed_once() {
+        assert_eq!(
+            ALL_TRUST_IDS
+                .iter()
+                .filter(|id| **id == TrustId::SatRefutationModuloTheory)
+                .count(),
+            1
+        );
+    }
 }
