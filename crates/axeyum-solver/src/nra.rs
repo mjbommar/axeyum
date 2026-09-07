@@ -84,50 +84,142 @@ const MAX_REFINE_ROUNDS: usize = 12;
 /// `unknown` (each level halves one variable's interval).
 const MAX_BNB_DEPTH: usize = 6;
 
-/// Deterministic admission bound on **distinct-operand cross-products** — genuine
-/// products `a·b` with `a ≠ b`. Each cross-product contributes the dense
-/// disjunctive monotonicity/sign/zero lemma set (≈14 clauses) *and* couples to the
-/// others through the sum-of-squares lemmas, so a handful of them produce a hard
-/// Boolean+arithmetic combination the DPLL(T)/exact-rational LRA relaxation chokes
-/// on — exhausting memory *inside a single solve call* (so neither the per-round
-/// nor the per-node wall-clock check can intercept it). This is measured: the
-/// 3-variable case `a²+b²+c² ⋈ ab+bc+ca` (three cross-products `ab`, `bc`, `ca`)
-/// blows up the relaxation **whether or not the variables are bounded** — bounds do
-/// *not* tame it (`McCormick` adds yet more lemmas). Above this bound we therefore
-/// refuse with a deterministic `Unknown` rather than risk an OOM, upholding the
-/// standing rule "graceful `unknown`, never OOM/crash."
+/// The **legacy** admission bound on distinct-operand cross-products: the count at
+/// or below which this engine behaves exactly as it did before ADR-1751.
 ///
-/// The bound counts **only** cross-products: squares (`a == b`, which skip the
-/// monotonicity lemmas and the SOS coupling) are cheap and never counted — the
-/// square-only multi-variable cases (e.g. `x²+y²+z²+1 = 0`) stay decidable. The
-/// value `2` is the documented boundary between the working 2-variable SOS frontier
-/// (`a²+b² < 2ab`, one cross-product `ab`) and the blowing-up 3-variable case (three
-/// cross-products). Multi-variable SOS / Cauchy–Schwarz over more cross-products is
-/// gated on a future principled engine (nlsat/CAD or an exact-rational work budget).
-const MAX_CROSS_PRODUCTS: usize = 2;
+/// It is no longer a gate — [`admission_fits_consumer`] is (see below) — but it is
+/// still a real boundary, and keeping it named is what makes the non-regression
+/// argument checkable rather than empirical. Everything at or below `2` takes the
+/// identical code path it always did: the full lemma set, the `McCormick`
+/// envelopes, the sum-of-squares coupling and the caller's whole deadline. No file
+/// this engine decides today through the abstraction can change verdict, because
+/// no such file is above this line.
+///
+/// # What the old bound of 2 actually protected — measured, not inherited
+///
+/// It was introduced by `9a8b09220` (2026-06-19) as an **OOM guard**: the commit
+/// records that ≥3 cross-products drove the DPLL(T)/exact-rational relaxation to
+/// exhaust memory *inside a single solve call*, with the bounded variant aborting
+/// at a 64 GiB cap. Re-measured 2026-09-07 on the 62 QF_NRA parity files the
+/// 2026-09-06 loss census attributes to this bound (one binary, arms differing
+/// only in an env override, 24 s / 8 GiB, `taskset -c 0-7` on an idle s6):
+///
+/// - **Zero memory aborts.** Every one of the 124 runs exited 0. Peak RSS over the
+///   whole population was 3,315 MiB with the bound on and 3,316 MiB with it lifted
+///   — a 1 MiB difference against an 8 GiB cap.
+/// - **It protects wall time, not memory.** Lifting it cost +502 s over 62 files
+///   (583 s → 1,085 s) and bought 2 new `sat` results, both agreeing with cvc5.
+/// - **On more than half the population it protects nothing at all.** 28 of the 62
+///   files are unaffected by lifting it: the abstraction they produce is refused
+///   immediately by [`crate::lra_theory::MAX_ONLINE_LRA_ATOMS`] one layer down, in
+///   the same time and the same memory. The 2026-06 blowup mechanism (the
+///   refinement loop chasing an escalating witness through the exact-rational
+///   simplex) also has an independent guard now — [`too_large_to_refine`], and
+///   overflow-safe `Rational` (`7a323853e`) — neither of which existed when the
+///   count bound was written.
+///
+/// Full record: `docs/research/12-performance/nra-admission-bound-2026-09-07.md`.
+const LEGACY_ADMISSION_CROSS_PRODUCTS: usize = 2;
 
-/// The admission bound actually applied, read once from
-/// `AXEYUM_NRA_MAX_CROSS_PRODUCTS` and otherwise [`MAX_CROSS_PRODUCTS`].
+/// The share of the caller's **remaining** deadline that the relaxation may spend
+/// on a query admitted *above* [`LEGACY_ADMISSION_CROSS_PRODUCTS`].
 ///
-/// This exists so the bound can be *measured* rather than argued about: the
-/// question "what does this bound protect — time, memory, or soundness?" is only
-/// answerable by running the same binary with the cap at 2 and at a larger value
-/// over the same population. Read once into a `OnceLock` so the value is fixed for
-/// the process (determinism is a public API promise: the bound cannot change
-/// between two solves in one run), and `usize::MAX` is spelled `unbounded`.
+/// Today such a query is declined outright and receives **zero** relaxation time,
+/// so any positive share is strictly more search than it gets now — this bound can
+/// only add decisions, never remove one. It exists because `unknown` is a
+/// fall-through for two callers, not a terminal answer:
+/// [`crate::int_real_relax`] relaxes a QF_NIA query into this engine and tries
+/// other integer routes on `unknown`, and `dispatch_uf_nra` does the same for
+/// UF+NRA. A newly-admitted query that consumed the whole budget would starve
+/// those routes of the time they have today.
 ///
-/// It is an A/B lever, not a supported knob: the shipped default is
-/// [`MAX_CROSS_PRODUCTS`], and `scripts/parity-run.sh` records any `AXEYUM_*`
-/// lever it sees in the ledger entry, so a swept number can never be mistaken for
-/// a default-configuration one.
-fn max_cross_products() -> usize {
+/// The value is set from the measurement, not chosen: the two new `sat` results on
+/// the 62-file population were found 4.4 s and 1.0 s into the relaxation, so half
+/// of a 24 s protocol budget (~11 s after the upstream routes) leaves the larger of
+/// them 2.5× headroom while capping the worst-case starvation at half.
+const RELAXATION_DEADLINE_SHARE_ABOVE_LEGACY: u32 = 2;
+
+/// Per-triple allowance for the `McCormick` envelope atoms that
+/// [`solve_relaxation`] adds per branch-and-bound node, which the pre-solve atom
+/// count cannot see. Four inequalities per product (`mccormick_lemmas`), each a
+/// fresh atom, reserved as headroom so admission does not hand the consumer a
+/// system that only fits before the search starts.
+const MCCORMICK_ATOMS_PER_TRIPLE: usize = 4;
+
+/// Whether the abstraction is small enough for the engine that will consume it.
+///
+/// **This replaces a count with the consumer's own capacity.** The old gate was a
+/// cross-product count of `2`; the engine downstream —
+/// [`crate::lra_theory::check_qf_lra_online_cdclt`], which
+/// [`check_with_lra_dpll_within`] tries first and whose `ResourceLimit` decline is
+/// terminal — meters the same query in **distinct linear-real atoms** and refuses
+/// above [`crate::lra_theory::MAX_ONLINE_LRA_ATOMS`]. The two numbers were 15×
+/// apart and in different units, so the tighter one was refusing work the engine
+/// could have taken.
+///
+/// The conversion between them is not a constant, which is why this counts atoms
+/// instead of scaling the cross-product count: measured across four census files
+/// the atoms-per-cross-product ratio spans 13.1 to 30.3 (2,562 atoms at 96
+/// cross-products, 10,620 at 396, 8,356 at 638, 23,385 at 771). Any single
+/// conversion factor is wrong by up to 2.3× on real input. Counting the atoms of
+/// the system actually built costs one linear walk over terms that are already
+/// constructed — the sign/zero and threshold-1 lemmas in `system` are built on the
+/// decline path today regardless.
+///
+/// Returns the projected atom count alongside the verdict so the decline message
+/// can name the number it refused on.
+fn admission_fits_consumer(arena: &TermArena, system: &[TermId], triples: usize) -> (bool, usize) {
+    let mut atoms: Vec<TermId> = Vec::new();
+    let mut seen = std::collections::HashSet::new();
+    for &t in system {
+        crate::lra_online::collect_lra_atoms(arena, t, &mut atoms, &mut seen);
+    }
+    let projected = atoms
+        .len()
+        .saturating_add(triples.saturating_mul(MCCORMICK_ATOMS_PER_TRIPLE));
+    (
+        projected <= crate::lra_theory::MAX_ONLINE_LRA_ATOMS,
+        projected,
+    )
+}
+
+/// The admission policy in force, read once from `AXEYUM_NRA_ADMISSION`.
+///
+/// `capacity` (the default, ADR-1751) admits while the abstraction fits the
+/// consuming engine's atom ceiling. `legacy` restores the pre-ADR-1751 gate — a
+/// hard cross-product count of [`LEGACY_ADMISSION_CROSS_PRODUCTS`] — so the two
+/// policies can be A/B'd in one binary and a regression can be attributed without
+/// rebuilding. An integer value is read as a hard cross-product bound, which is
+/// what the 2026-09-07 sweep used to establish what the old bound protected.
+///
+/// Read once into a `OnceLock`: determinism is a public API promise, so the policy
+/// cannot change between two solves in one process. `scripts/parity-run.sh` records
+/// any `AXEYUM_*` lever it sees in the ledger entry, so a swept number can never be
+/// mistaken for a default-configuration one.
+fn admission_policy() -> AdmissionPolicy {
     use std::sync::OnceLock;
-    static BOUND: OnceLock<usize> = OnceLock::new();
-    *BOUND.get_or_init(|| match std::env::var("AXEYUM_NRA_MAX_CROSS_PRODUCTS") {
-        Ok(v) if v.trim() == "unbounded" => usize::MAX,
-        Ok(v) => v.trim().parse::<usize>().unwrap_or(MAX_CROSS_PRODUCTS),
-        Err(_) => MAX_CROSS_PRODUCTS,
+    static POLICY: OnceLock<AdmissionPolicy> = OnceLock::new();
+    *POLICY.get_or_init(|| match std::env::var("AXEYUM_NRA_ADMISSION") {
+        Ok(v) if v.trim() == "legacy" => {
+            AdmissionPolicy::HardCount(LEGACY_ADMISSION_CROSS_PRODUCTS)
+        }
+        Ok(v) if v.trim() == "unbounded" => AdmissionPolicy::HardCount(usize::MAX),
+        Ok(v) => v
+            .trim()
+            .parse::<usize>()
+            .map_or(AdmissionPolicy::Capacity, AdmissionPolicy::HardCount),
+        Err(_) => AdmissionPolicy::Capacity,
     })
+}
+
+/// See [`admission_policy`].
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum AdmissionPolicy {
+    /// Admit while the abstraction fits the consuming engine's atom ceiling.
+    Capacity,
+    /// Admit at most this many distinct-operand cross-products (the pre-ADR-1751
+    /// gate, and the measurement lever).
+    HardCount(usize),
 }
 
 type Bounds = HashMap<TermId, (axeyum_ir::Rational, axeyum_ir::Rational)>;
@@ -337,13 +429,13 @@ fn check_with_nra_impl(
         return Ok(CheckResult::Unsat);
     }
 
-    // Deterministic memory guard (graceful `unknown`, never OOM): refuse instances
-    // with too many distinct-operand cross-products *before* building the dense
-    // product lemmas or entering the relaxation. These products carry the disjunctive
-    // monotonicity lemmas and the sum-of-squares coupling that drive the DPLL(T)/LRA
-    // relaxation to OOM inside a single solve call — bounded or not (see
-    // `MAX_CROSS_PRODUCTS`). Squares are cheap and excluded, so square-only
-    // multi-variable instances stay decidable.
+    // Admission (ADR-1751). Distinct-operand cross-products are what carry the
+    // disjunctive monotonicity lemmas and the sum-of-squares coupling, so the count
+    // still decides WHICH path a query takes: at or below
+    // `LEGACY_ADMISSION_CROSS_PRODUCTS` it goes straight into the full relaxation
+    // exactly as before, and above it the cheap sign/threshold-1 refutations run
+    // first and then `admission_fits_consumer` decides. Squares are cheap and
+    // excluded, so square-only multi-variable instances stay on the direct path.
     // Count cross-products from the NORMALIZED polynomials of the assertions when
     // they are representable as multivariate polynomial comparisons (like monomials
     // collected, zero-coefficient and cancelling monomials dropped). This corrects
@@ -355,8 +447,12 @@ fn check_with_nra_impl(
     // for shapes the normalizer cannot represent (so the gate never weakens there).
     let cross_products = crate::nra_real_root::normalized_cross_product_count(arena, assertions)
         .unwrap_or_else(|| triples.iter().filter(|&&(pa, pb, _)| pa != pb).count());
-    let admission_bound = max_cross_products();
-    if cross_products > admission_bound {
+    // The deadline the relaxation below is allowed to spend. A query at or below
+    // the legacy bound keeps the caller's whole budget (byte-identical behaviour);
+    // one admitted above it gets a bounded share, since `unknown` is a fall-through
+    // for the QF_NIA and UF+NRA callers — see `RELAXATION_DEADLINE_SHARE_ABOVE_LEGACY`.
+    let mut deadline = deadline;
+    if cross_products > LEGACY_ADMISSION_CROSS_PRODUCTS {
         // Before declining, try a CHEAP sign/zero refutation. The sign and zero
         // lemmas for each `r = a·b` are small disjunctive *linear* implications
         // (`¬p ∨ q`, a handful per product) with **no** McCormick envelopes and
@@ -422,14 +518,66 @@ fn check_with_nra_impl(
         {
             return Ok(CheckResult::Unsat);
         }
-        return Ok(CheckResult::Unknown(UnknownReason {
-            kind: UnknownKind::ResourceLimit,
-            detail: format!(
-                "nonlinear abstraction: {cross_products} cross-products exceed the deterministic \
-                 admission bound of {admission_bound} (the multi-variable nonlinear case can OOM \
-                 the relaxation; this needs a nlsat/CAD engine)"
+
+        // ADMISSION (ADR-1751). The two refutations above are unchanged and ran
+        // FIRST, deliberately: they are what this engine decides today on capped
+        // queries, and running them before the heavier relaxation is what makes
+        // "no currently-decided file can regress" a structural argument rather
+        // than an empirical one. Only after they decline does the new policy get
+        // a say, and its only possible effect is to turn an `unknown` into a
+        // decision.
+        //
+        // `mono_base` is exactly `base` + the product lemmas (sign/zero plus
+        // threshold-1) — the system the relaxation is about to extend — so the
+        // atom count below measures the real thing at no extra construction cost.
+        // The SOS lemmas add at most two atoms per cross-product on top; they are
+        // included in the allowance rather than built here so a refused query
+        // still never builds them.
+        //
+        // The atom walk is skipped entirely under `HardCount`, so the A/B lever's
+        // legacy arm costs exactly what the pre-ADR-1751 engine cost.
+        let (admitted, projected_atoms) = match admission_policy() {
+            AdmissionPolicy::Capacity => admission_fits_consumer(
+                arena,
+                &mono_base,
+                triples.len() + cross_products, // McCormick per triple + SOS pair atoms
             ),
-        }));
+            AdmissionPolicy::HardCount(n) => (cross_products <= n, 0),
+        };
+        if !admitted {
+            // Name the number the refusal was actually made on, so a trace can
+            // never attribute a decline to a bound that did not decide it — the
+            // failure this lane found in the 2026-09-06 census, where every one
+            // of 62 files was attributed to a cross-product bound that on 28 of
+            // them was not the binding constraint.
+            let detail = match admission_policy() {
+                AdmissionPolicy::Capacity => format!(
+                    "nonlinear abstraction: {cross_products} cross-products project to \
+                     {projected_atoms} linear-real atoms, past the consuming engine's capacity \
+                     of {} (this needs a nlsat/CAD engine)",
+                    crate::lra_theory::MAX_ONLINE_LRA_ATOMS
+                ),
+                AdmissionPolicy::HardCount(n) => format!(
+                    "nonlinear abstraction: {cross_products} cross-products exceed the \
+                     hard admission count of {n} (AXEYUM_NRA_ADMISSION)"
+                ),
+            };
+            return Ok(CheckResult::Unknown(UnknownReason {
+                kind: UnknownKind::ResourceLimit,
+                detail,
+            }));
+        }
+        // Admitted above the legacy bound: bound the relaxation's share of the
+        // caller's remaining budget so a query that used to decline in under a
+        // second cannot consume a fall-through caller's whole deadline.
+        deadline = earliest_deadline(
+            deadline,
+            Instant::now().checked_add(
+                deadline.map_or(Duration::MAX, |d| {
+                    d.saturating_duration_since(Instant::now())
+                }) / RELAXATION_DEADLINE_SHARE_ABOVE_LEGACY,
+            ),
+        );
     }
 
     // Add the sign/zero product lemmas (valid for `r = a·b`) to `base`. McCormick

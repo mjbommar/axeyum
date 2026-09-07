@@ -92,7 +92,7 @@ use crate::model::Model;
 /// So the ceiling is a *normalization* budget now, not a feasibility one. Lifting
 /// it is a real ratchet, but it needs the atom-normalization memory addressed
 /// first — not this cap edited.
-const MAX_ONLINE_LRA_ATOMS: usize = 1_024;
+pub(crate) const MAX_ONLINE_LRA_ATOMS: usize = 1_024;
 
 /// Adapts the validated online [`LraTheory`] to the generic [`CdclT`] driver's
 /// **trigger-literal precondition**.
