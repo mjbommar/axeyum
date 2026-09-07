@@ -41,11 +41,14 @@ all 32 are 0.02–16.3 s, median 3.2 s.
 Coverage check: the traced stages account for **679.7 s of the 688.0 s** of
 total wall (98.8%), so nothing rests on an unmeasured remainder.
 
-## Finding 0 — the population is 100% refutation, and that alone kills the
-## finite-model-finding hypothesis
+## Finding 0 — the population is 100% refutation, which alone kills the finite-model-finding hypothesis
 
 From `bench-results/parity-details/UF.tsv` at the parity run above, the 200-file
-division splits nine ways:
+division splits nine ways. (That file is `.gitignore`d — it is the parity
+harness's own per-file output. The two lists derived from it here **are**
+committed: `bench-results/parity-losses-20260905/UF.txt`, the 32, and
+`bench-results/parity-losses-20260906/UF.axeyum-only24.txt`, the 24; the 32 were
+re-derived from the TSV and are byte-identical to the committed list.)
 
 | axeyum | cvc5 | declared | files |
 |---|---|---|---:|
@@ -69,8 +72,7 @@ division has no sat/sat cell at all.** Every satisfiable UF file this division
 decides, only we decide. Our UF strength is model finding; our UF weakness is
 refutation, and they are the same fact seen from two sides.
 
-## Finding 1 — the cause: 50.4% of the loss population's wall is spent in the
-## finite-model finder we already ship
+## Finding 1 — the cause: 50.4% of the loss population's wall is spent in the finite-model finder we already ship
 
 Summed over the 32 files (688.0 s of wall in total):
 
