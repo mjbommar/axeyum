@@ -91,8 +91,16 @@ copy killed **exactly one** test
 (`a_chain_past_the_consumer_capacity_declines_naming_atoms_not_a_count`), 36
 passed; source restored and re-verified.
 
-Full record:
+Raw per-file data for both sweeps is committed beside the census
+(`bench-results/parity-losses-20260906/QF_NRA.admission-ab62.tsv` and
+`…-ab200.tsv`); `exit` is a column, not an inference, and it is `0` on all 524
+runs. Full record:
 [`docs/research/12-performance/nra-admission-bound-2026-09-07.md`](../../research/12-performance/nra-admission-bound-2026-09-07.md).
+
+**`gen-plan.py --check` is red on this branch, by instruction.** The lane brief
+forbids running the generator or editing `PLAN.md`; the only drift is this
+lane's own block (104 added lines, 0 removed, verified by regenerating into a
+scratch copy and restoring). Folding it in is the coordinator's step.
 
 ## Landed changes
 
@@ -104,4 +112,5 @@ Full record:
 | 2026-09-07 | Admission is the consuming engine's capacity, not a cross-product count (ADR-1751) | `07b8da6ca` |
 | 2026-09-07 | ADR-1751, the Q2/Q3 measurements, and three admission tests incl. the mutation-checked gate guard | `a322d1149` |
 | 2026-09-07 | Backtick logic names in the new doc comments (workspace clippy) | `f27b1dbd1` |
-| 2026-09-07 | The 200-file confirming run, the census correction block, the family-doc follow-up, and the capability entry's measured boundary | (this commit) |
+| 2026-09-07 | The 200-file confirming run, the census correction block, the family-doc follow-up, and the capability entry's measured boundary | `0857e419c` |
+| 2026-09-07 | Merge of local `main` (ADR index regenerated to resolve); post-merge workspace `check` and `clippy -D warnings` both green | `1c078316b` |
