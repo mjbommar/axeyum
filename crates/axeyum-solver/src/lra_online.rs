@@ -1552,15 +1552,34 @@ const MAX_LRA_CACHED_COEFFICIENTS: usize = 262_144;
 
 /// Resident bytes one retained linear-form coefficient costs (ADR-1752).
 ///
-/// A coefficient lives in a `BTreeMap<usize, Rational>` entry (8 + 32 bytes of
-/// payload, plus the B-tree's own per-entry share) and is copied again into the
-/// `assign_forms` key and into the sparse tableau row, so the resident cost of
-/// one *semantic* coefficient is several times its payload. This is the
-/// **measured** conversion, calibrated the way
-/// [`crate::memory_budget::ENCODING_BYTES_PER_CLAUSE`] is: peak RSS observed on
-/// real high-atom `QF_LRA` benchmarks, divided by the coefficient count the
-/// builder charged itself for on the same run. See
-/// `docs/research/12-performance/lra-theory-side-2026-09-07.md`.
+/// # Where this number comes from, and what it is NOT
+///
+/// It is a **structural accounting**, not a division of a measured peak RSS by a
+/// coefficient count — and the distinction matters, because a peak RSS on a real
+/// benchmark is dominated by things that are not this: measured on `s7`,
+/// `QF_LRA/sc/sc-11.base.cvc.smt2` is already at **617 MiB resident at backend
+/// entry**, before the LRA route runs at all. Dividing that by a coefficient
+/// count would produce a confident number about the wrong thing.
+///
+/// One *semantic* coefficient is stored four times over:
+///
+/// | where | bytes |
+/// |---|---:|
+/// | `LinExpr::coeffs`, a `BTreeMap<usize, Rational>` entry (8 + 32 payload, over a node that is typically ~2/3 occupied) | ~75 |
+/// | the `assign_forms` canonical key, `(usize, i128, i128)` | 40 |
+/// | that key again, stored inside the form map | 40 |
+/// | the sparse tableau row, `(usize, Rational)` | 40 |
+///
+/// ≈ 195 bytes, rounded up to 224 for the allocator's own per-allocation share
+/// and for the `Vec` headers the table above charges nothing for. A budget wants
+/// to be **conservative** — over-estimating the cost refuses a query that would
+/// have fitted, which is a lost decide, while under-estimating it admits one that
+/// will not, which is an abort — so the rounding is deliberately in the
+/// over-estimating direction.
+///
+/// The corpus observations that bound this from above, and the reason none of
+/// them can calibrate it directly, are in
+/// `docs/research/12-performance/lra-theory-side-2026-09-07-log.md`.
 pub(crate) const BYTES_PER_LRA_COEFFICIENT: usize = 224;
 
 /// Resident bytes one dense simplex tableau cell costs: a [`Rational`] is two

@@ -78,3 +78,81 @@ the change rather than of the search.
 | `spider_benchmarks/no_op_accs` | unknown 24102 | **unsat 19229** | — | — |
 
 **Decided: base 7/33, cand 8/33.** The c2 row is completed in section 5.
+
+## 3. The atom-cap census class, re-measured after ADR-1752
+
+All 22 files of the 33-file population that printed **no** `; theory-layer` line
+at baseline, re-run on the final binary at `--memory-limit-mb 8192 --trace`, with
+peak RSS from `/usr/bin/time -f %M`. The `give-up` column is the
+`UnknownReason` the binary used to discard.
+
+| file | verdict | ms | peak RSS (MiB) | give-up kind |
+|---|---|---:|---:|---|
+| `sal/carpark/Carpark2-ausgabe-8` | unknown | 24234 | 915 | Timeout |
+| `sal/gasburner/gasburner-prop3-12` | unknown | 24073 | 498 | Timeout |
+| `sal/gasburner/gasburner-prop3-9` | unknown | 24233 | 398 | Timeout |
+| `sal/pursuit/pursuit-safety-16` | unknown | 24473 | **3392** | Timeout |
+| `sal/pursuit/pursuit-safety-5` | unknown | 24083 | 678 | Timeout |
+| `sal/tgc/tgc_io-nosafe-4` | unknown | 24243 | 657 | Timeout |
+| `sal/tgc/tgc_io-safe-20` | unknown | 24618 | **8699** | Timeout |
+| `sc/sc-5.base.cvc` | unknown | 24067 | 291 | Timeout |
+| `sc/sc-7.base.cvc` | unknown | 24100 | 378 | Timeout |
+| `sc/sc-9.base.cvc` | unknown | 24099 | 547 | Timeout |
+| `sc/sc-11.base.cvc` | unknown | 24259 | 747 | Timeout |
+| `sc/sc-13.base.cvc` | unknown | 24270 | 977 | Timeout |
+| `sc/sc-15.base.cvc` | unknown | 24408 | 1239 | Timeout |
+| `sc/sc-17.base.cvc` | unknown | 24482 | 1529 | Timeout |
+| `sc/sc-19.base.cvc` | unknown | 24560 | 1850 | Timeout |
+| `sc/sc-21.base.cvc` | unknown | 24565 | 2202 | Timeout |
+| `sc/sc-23.base.cvc` | unknown | 24345 | 2584 | Timeout |
+| `sc/sc-25.base.cvc` | unknown | 24883 | **2996** | Timeout |
+| `spider_benchmarks/frame_prop` | **unsat** | 6770 | 204 | — |
+| `spider_benchmarks/fs_not_sc_seen` | **unsat** | 4737 | 201 | — |
+| `spider_benchmarks/no_op_accs` | **unsat** | 19904 | 674 | — |
+| `spider_benchmarks/reint_to_least` | unknown | 24238 | 771 | Timeout |
+
+**Peak RSS: min 201 MiB, median 759 MiB, max 8 699 MiB across 22 files.**
+
+Three readings, and the first is the one that matters for the census:
+
+1. **Not one of these 22 files is refused by the memory budget.** Every give-up
+   is `kind=Timeout`. The census class the plan calls "23 admission declines at
+   the 1,024-atom cap" is, once the cap is a budget, **23 search timeouts**. The
+   division's loss census is not a two-way split; it is one class with a
+   misattributed subset.
+2. **The memory these files use is not the LRA theory's.**
+   `QF_LRA/sc/sc-11.base.cvc.smt2` reports `resident set 617 MiB … at backend
+   entry` under a 400 MiB limit — before the LRA route runs at all. Whatever
+   holds 617 MiB there is upstream of everything the atom cap was guarding.
+3. **One file of 22 genuinely exceeds 8 GiB.** `sal/tgc/tgc_io-safe-20.smt2`
+   peaks at 8 699 MiB, which is why it reads `crash-or-oom` at ~5.5 s under the
+   population sweep's `ulimit -v 8 GiB` in **both** arms. That is a real memory
+   defect, and it is *not* an LRA-construction one either.
+
+### Why `BYTES_PER_LRA_COEFFICIENT` is not calibrated from these numbers
+
+The obvious calibration — peak RSS divided by the coefficient count the builder
+charged itself for — is unavailable, and reading (2) above is why: the peak is
+dominated by allocations that are not coefficients, so the quotient would be a
+confident number about the wrong thing. The constant is therefore a **structural
+accounting** of the four places one semantic coefficient is stored (the
+`BTreeMap` entry, the `assign_forms` key, that key again inside the form map, and
+the sparse tableau row), summed at ~195 bytes and rounded up to 224. The rounding
+direction is chosen deliberately: over-estimating refuses a query that would have
+fitted (one lost decide), under-estimating admits one that will not (an abort).
+
+### For a sibling division
+
+The transferable form of this result, since `MAX_ONLINE_LRA_ATOMS` is also the
+gate behind 62 QF_NRA losses:
+
+- The shipping budget is **640 MiB** per online-LRA construction — 128 MiB of it
+  the dense tableau's own ceiling, 512 MiB of coefficients, i.e. **2 396 745
+  coefficients** at 224 bytes each. `SolverConfig::memory_limit_mb` overrides it,
+  and `smtcomp_cli --memory-limit-mb N` exposes that.
+- At the atom counts this class carries (>1 024, up to ~1 500), the budget
+  refused **0 of 22** files. Admission is not what is losing them.
+- The risk that remains is the **process** peak, not the construction: 201 MiB to
+  8.7 GiB, median 759 MiB, one file over 8 GiB. A QF_NRA query reaching this
+  route with 23 385 atoms should be expected to be admitted; what it should be
+  watched for is process RSS, and the number to watch it against is the one above.

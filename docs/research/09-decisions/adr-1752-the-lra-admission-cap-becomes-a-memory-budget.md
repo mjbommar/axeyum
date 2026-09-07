@@ -111,13 +111,17 @@ exactly the QF_NRA cross-product shape — is now admitted on its actual cost.
   halves of the footprint against each other in **both** directions, so the
   tableau cap and the coefficient budget cannot silently drift until one of them
   stops binding. That drift is the exact mechanism that made this ADR necessary.
-- `BYTES_PER_LRA_COEFFICIENT` is a measured conversion, in the same role as
-  `memory_budget::ENCODING_BYTES_PER_CLAUSE`. It is a *conservative* per-unit
-  cost, not an exact allocator accounting, and this ADR does not claim otherwise
-  — the honest bound on the pure-Rust path still stops where
-  `crates/axeyum-solver/src/memory_budget.rs` says it stops, at the absence of a
-  `#[global_allocator]` hook (which `unsafe_code` being denied workspace-wide
-  makes an ADR-sized decision of its own).
+- `BYTES_PER_LRA_COEFFICIENT` is a **structural accounting** — the four places
+  one semantic coefficient is stored, summed, rounded up — and deliberately not a
+  measured peak RSS divided by a coefficient count. That division was attempted
+  and abandoned: `QF_LRA/sc/sc-11.base.cvc.smt2` is at **617 MiB resident at
+  backend entry**, before the LRA route runs at all, so a peak-RSS quotient would
+  be a confident number about the wrong thing. The rounding is deliberately in
+  the over-estimating direction, because over-estimating refuses a query that
+  would have fitted (a lost decide) while under-estimating admits one that will
+  not (an abort). The honest bound on the pure-Rust path still stops exactly
+  where `crates/axeyum-solver/src/memory_budget.rs` says it stops, at the absence
+  of a `#[global_allocator]` hook.
 - **Not claimed:** that lifting the cap decides more files. Admission is
   necessary, not sufficient — the earlier sweep found that raising the count to
   16,384 changed no verdict, and nothing here contradicts that. What changed is
