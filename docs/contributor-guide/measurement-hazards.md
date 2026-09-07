@@ -508,6 +508,17 @@ the conclusion as "the wrapper returned at N s", never "the job did not finish".
 A second orphan the same night: a `python3 -` heredoc with an infinite loop whose
 shell had been killed three hours earlier, still at 99% CPU.
 
+**And the case that survives your cleanup: a waiter started over `ssh` is a
+process on the REMOTE host.** Cancelling the local background task that launched
+it kills your end of the pipe, not the loop on the other side. Four
+self-matching waiters cancelled locally one night were found the next morning
+still running on the compute host, the oldest at 11.7 hours. Sweep the remote
+hosts too, not just the box you are typing on:
+
+```sh
+for h in s5 s6 s7; do ssh $h 'ps -eo cmd | grep -c "[w]hile pgrep\|[u]ntil ! pgrep"'; done
+```
+
 **The orphan signature, worth sweeping for at the end of any session that reaped
 a worktree:**
 
