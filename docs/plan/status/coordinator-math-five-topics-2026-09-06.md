@@ -1,5 +1,7 @@
 # coordinator-math — the five topics of 2026-09-06
 
+<!-- plan-section: lane-status -->
+
 Status: **all five landed and pushed** (origin `fcc988900`, 126 commits).
 ADRs 1672–1679. Detail, corrections and process notes:
 [notes/coordinator-math-five-topics-2026-09-06.md](../notes/coordinator-math-five-topics-2026-09-06.md).
