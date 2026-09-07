@@ -1,9 +1,9 @@
 # Project-wide plan sections
 
 The hand-authored parts of [`PLAN.md`](../../../PLAN.md) that are **not** any
-one lane's: the header, Status, the ordered A1–A11 queue, Workstream state, the
-resume protocol, the planning rules, the detail map, and the consolidation
-record. They are emitted verbatim, in filename order, joined by one blank line.
+one lane's: the header, Status, the ordered A1–A11 queue, the families and
+divisions map, Workstream state, the resume protocol, the planning rules, the
+detail map, and the consolidation record. They are emitted verbatim, in filename order, joined by one blank line.
 
 Per-lane state lives in [`../status/`](../status/README.md) instead. Regenerate
 with `python3 scripts/gen-plan.py`; `--check` is a gate.

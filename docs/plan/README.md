@@ -31,6 +31,7 @@ was observed; neither overrides root `PLAN.md`.
 | Trusted and independently checked boundaries | [Trust ledger](../research/08-planning/trust-ledger.md) |
 | Benchmark and parity results | [`bench-results/`](../../bench-results/README.md) |
 | Accepted architecture decisions | [ADR index](../research/09-decisions/README.md) |
+| Any SAT/SMT family or division: state, cause, lever, exit criterion | [Families and divisions](families/README.md) |
 | Full-library SMT-COMP workflow | [SMT-COMP workstream](smtcomp-full-library-workstream/README.md) |
 | Parallel lane briefs and ownership | [Agent program](agent-program-2026-07-28/README.md) |
 | Lean implementation program | [Lean system implementation plan](lean-system-implementation-plan-2026-07-21.md) |
