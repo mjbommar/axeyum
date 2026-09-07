@@ -2136,7 +2136,12 @@ const LEAN_MODULE_THEOREM: &str = "axeyum_refutation";
 /// [`render_ctx_module_named_by_footprint`]. An emitter cannot choose it, so a
 /// future route that starts minting cannot inherit the honest name by writing
 /// the same three lines.
-const LEAN_MODULE_ATTESTED_THEOREM: &str = "axeyum_refutation_attested";
+/// The name is deliberately **not** an extension of [`LEAN_MODULE_THEOREM`]:
+/// several consumers here grep a module or a `#print axioms` transcript with a
+/// bare `contains("axeyum_refutation")`, and a `_attested` suffix would leave
+/// every one of them conflating exactly as before. `assert_names_are_not_
+/// substrings_of_each_other` in `sos_fallback_labelling_tests` pins that.
+const LEAN_MODULE_ATTESTED_THEOREM: &str = "axeyum_attested_refutation";
 
 /// Render the [`ReconstructCtx`]'s kernel state as a self-contained Lean module
 /// proving `proof : False` (the shared closing step of the non-LRA branches).
@@ -3963,7 +3968,7 @@ mod sos_fallback_labelling_tests {
 
     use super::arithmetic::ordered_ring::{minted_axioms_of, refutation_axiom_footprint};
     use super::{
-        LEAN_MODULE_THEOREM, LeanModuleContent, LraReconstructCtx,
+        LEAN_MODULE_ATTESTED_THEOREM, LEAN_MODULE_THEOREM, LeanModuleContent, LraReconstructCtx,
         reconstruct_sos_certificate_wrapper_to_lean_module, reconstruct_sos_proof,
         reconstruct_sos_to_lean_module,
     };
@@ -4054,15 +4059,41 @@ mod sos_fallback_labelling_tests {
         let attested = reconstruct_sos_certificate_wrapper_to_lean_module(&arena, &[goal])
             .expect("the certificate wrapper renders for a query it certifies");
         assert!(
-            !attested.contains(&format!("theorem {LEAN_MODULE_THEOREM} ")),
+            !attested.contains(LEAN_MODULE_THEOREM),
             "the axiom-carrying fallback renders under the honest route's \
              theorem name, so every counter keyed on that name conflates the two \
              populations"
         );
         assert!(
+            attested.contains(&format!("theorem {LEAN_MODULE_ATTESTED_THEOREM} ")),
+            "the fallback dropped the honest name without taking one of its own, \
+             which leaves a consumer with nothing to key on"
+        );
+        assert!(
             LeanModuleContent::of_module_source(&attested).is_structural_attestation(),
             "the axiom-carrying fallback does not declare itself, so \
              `prove_unsat_to_lean_theory_module` hands it back as a proof"
+        );
+    }
+
+    /// The attested name must not be findable by a grep for the honest one.
+    ///
+    /// Several consumers -- `probe_selected_evidence_lean`,
+    /// `assert_structural_shape`, the real-Lean `#print axioms` transcript check
+    /// -- test with a bare `contains("axeyum_refutation")`. A `_attested` suffix
+    /// would satisfy every assertion above while leaving all of them conflating,
+    /// so the separation is a property of the two strings and is checked as one.
+    #[test]
+    fn assert_names_are_not_substrings_of_each_other() {
+        assert!(
+            !LEAN_MODULE_ATTESTED_THEOREM.contains(LEAN_MODULE_THEOREM),
+            "`{LEAN_MODULE_ATTESTED_THEOREM}` still answers a grep for \
+             `{LEAN_MODULE_THEOREM}`"
+        );
+        assert!(
+            !LEAN_MODULE_THEOREM.contains(LEAN_MODULE_ATTESTED_THEOREM),
+            "`{LEAN_MODULE_THEOREM}` still answers a grep for \
+             `{LEAN_MODULE_ATTESTED_THEOREM}`"
         );
     }
 
