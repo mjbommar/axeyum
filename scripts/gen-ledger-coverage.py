@@ -132,6 +132,7 @@ from typing import Any
 ROOT = Path(__file__).resolve().parent.parent
 FACTS_DIR = ROOT / "artifacts" / "facts"
 OUTPUT = ROOT / "artifacts" / "ledger-coverage.json"
+BASELINE = ROOT / "artifacts" / "ledger-coverage-baseline.json"
 
 INVENTORY_COMMAND = (
     "cargo run --quiet --release -p axeyum-lean-kernel "
@@ -209,6 +210,19 @@ NAMESPACE_TO_PRELUDE = {
     "Int": "integer",
     "Rat": "rat",
     "AxReal": "axreal",
+    # The `characterization` prelude's algebraic/categorical namespaces.
+    # Added 2026-09-06: these preludes post-date the map, and every name in
+    # them was silently bucketing to `logic` (below), which is the documented
+    # fall-through for an unrecognised head. Measured on the tree of that
+    # date, that put 151 theorems (115 `AlgS`, 21 `CatS`, 15 `Alg`) into
+    # `logic`, reporting it as 206 theorems when it owns 55. The
+    # misclassification is invisible in the OVERALL counts -- the denominator
+    # is a set of names and does not care which bucket prints them -- which
+    # is exactly why it survived: nothing that anyone reads went wrong.
+    "Alg": "characterization",
+    "AlgS": "characterization",
+    "CatS": "characterization",
+    "List": "list",
 }
 
 
@@ -391,7 +405,7 @@ def build_document(footprints: dict[str, int], join_result: JoinResult) -> dict[
             "unregistered": sorted(bucket["unregistered"]),
         }
 
-    registered_names = sorted(n for n in footprints if n in join_result.registered)
+    registered_names = registered_names_in_denominator(footprints, join_result)
     curated_names = sorted(n for n in footprints if n in join_result.curated)
     unregistered_names = sorted(n for n in footprints if n not in join_result.registered)
 
@@ -453,6 +467,84 @@ def build_document(footprints: dict[str, int], join_result: JoinResult) -> dict[
     return document
 
 
+BASELINE_SCHEMA_VERSION = 1
+
+
+def registered_names_in_denominator(
+    footprints: dict[str, int], join_result: JoinResult
+) -> list[str]:
+    """The theorem names a fact registers AND the kernel actually declares.
+
+    The intersection is the whole point and is not an implementation detail.
+    `join_result.registered` is keyed by whatever name a fact NAMED, which
+    includes names no kernel theorem carries -- a `Definition`'s subject, a
+    renamed declaration, a typo (77 such on this tree, reported as
+    `registered_kernel_theorems_not_in_denominator`). Intersecting with
+    `footprints` is what makes this number un-gameable: writing a fact that
+    names nothing, or names something the kernel does not declare, cannot
+    move it. See `--ratchet`.
+    """
+    return sorted(name for name in footprints if name in join_result.registered)
+
+
+def load_baseline() -> set[str]:
+    if not BASELINE.is_file():
+        raise CoverageError(
+            f"{display(BASELINE)} does not exist -- the ratchet has no "
+            "baseline to compare against. Create it with "
+            "`python3 scripts/gen-ledger-coverage.py --write-baseline`."
+        )
+    try:
+        document = json.loads(BASELINE.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise CoverageError(f"{display(BASELINE)}: not valid JSON: {exc}") from exc
+    version = document.get("schema_version")
+    if version != BASELINE_SCHEMA_VERSION:
+        raise CoverageError(
+            f"{display(BASELINE)}: schema_version {version!r}, expected "
+            f"{BASELINE_SCHEMA_VERSION}"
+        )
+    names = document.get("registered")
+    if not isinstance(names, list) or not names:
+        raise CoverageError(
+            f"{display(BASELINE)}: `registered` must be a non-empty list of "
+            "theorem names. An empty baseline is a ratchet that cannot fail."
+        )
+    return set(names)
+
+
+def ratchet_lost(baseline_names: set[str], registered_now: set[str]) -> list[str]:
+    """Baselined theorem names no longer registered by any fact.
+
+    Deliberately ONE-SIDED. Coverage going UP is not a finding and must not
+    fail a gate -- otherwise every lane that registers a fact has to also
+    raise the baseline in the same commit, and the pressure is then to lower
+    the baseline rather than to keep the fact. Only names LOST are reported.
+    """
+    return sorted(baseline_names - registered_now)
+
+
+def render_baseline(names: list[str]) -> str:
+    document = {
+        "schema_version": BASELINE_SCHEMA_VERSION,
+        "generated_by": "scripts/gen-ledger-coverage.py --write-baseline",
+        "rule": (
+            "Every name listed here is a kernel Declaration::Theorem that the "
+            "fact ledger registered at the time this file was written. "
+            "`--ratchet` fails when any of them is no longer registered. The "
+            "population is the INTERSECTION of the kernel's theorem inventory "
+            "with the names facts claim, so a fact that names nothing -- or "
+            "names a declaration the kernel does not carry -- cannot add a "
+            "name here and cannot satisfy the ratchet. Raise the baseline "
+            "deliberately with --write-baseline; never lower it to make a "
+            "gate go green."
+        ),
+        "registered_count": len(names),
+        "registered": names,
+    }
+    return json.dumps(document, indent=2, ensure_ascii=False, sort_keys=False) + "\n"
+
+
 def render(document: dict[str, Any]) -> str:
     return json.dumps(document, indent=2, ensure_ascii=False, sort_keys=False) + "\n"
 
@@ -470,6 +562,24 @@ def main() -> int:
         "--check",
         action="store_true",
         help="fail when the committed artifact differs from a fresh generation",
+    )
+    parser.add_argument(
+        "--ratchet",
+        action="store_true",
+        help=(
+            "fail when a theorem name listed in "
+            "artifacts/ledger-coverage-baseline.json is no longer registered "
+            "by any fact"
+        ),
+    )
+    parser.add_argument(
+        "--write-baseline",
+        action="store_true",
+        help=(
+            "rewrite artifacts/ledger-coverage-baseline.json to the currently "
+            "registered names -- a deliberate raise, never a way to clear a "
+            "red --ratchet"
+        ),
     )
     parser.add_argument(
         "--theorem-tsv",
@@ -493,9 +603,41 @@ def main() -> int:
         join_result = join(facts)
         document = build_document(footprints, join_result)
         rendered = render(document)
+        registered_now = set(registered_names_in_denominator(footprints, join_result))
+        baseline_names = load_baseline() if args.ratchet else None
     except CoverageError as error:
         print(f"gen-ledger-coverage: ERROR: {error}", file=sys.stderr)
         return 1
+
+    if args.write_baseline:
+        BASELINE.write_text(
+            render_baseline(sorted(registered_now)), encoding="utf-8"
+        )
+        print(
+            f"LEDGER-RATCHET|wrote={display(BASELINE)}|"
+            f"registered={len(registered_now)}"
+        )
+        return 0
+
+    if baseline_names is not None:
+        lost = ratchet_lost(baseline_names, registered_now)
+        print(
+            "LEDGER-RATCHET|"
+            f"baseline={len(baseline_names)}|"
+            f"registered={len(registered_now)}|"
+            f"lost={len(lost)}"
+        )
+        if lost:
+            print(
+                "gen-ledger-coverage: ERROR: "
+                f"{len(lost)} theorem(s) in {display(BASELINE)} are no longer "
+                "registered by any fact. Coverage may not go backwards; "
+                "restore the fact(s) rather than lowering the baseline:",
+                file=sys.stderr,
+            )
+            for name in lost:
+                print(f"  {name}", file=sys.stderr)
+            return 1
 
     if args.check:
         current = OUTPUT.read_text(encoding="utf-8") if OUTPUT.is_file() else None
@@ -508,7 +650,7 @@ def main() -> int:
                 file=sys.stderr,
             )
             return 1
-    else:
+    elif not args.ratchet:
         OUTPUT.write_text(rendered, encoding="utf-8")
 
     overall = document["counts"]["overall"]

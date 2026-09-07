@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import importlib.util
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -318,6 +319,208 @@ class BuildDocumentTests(unittest.TestCase):
         self.assertEqual(doc_after["counts"]["overall"]["registered"], 2)
         self.assertEqual(doc_before["counts"]["overall"]["curated"], 1)
         self.assertEqual(doc_after["counts"]["overall"]["curated"], 2)
+
+
+class PreludeBucketingForLaterPreludesTests(unittest.TestCase):
+    """The `characterization` and `list` preludes post-date `prelude_of`'s map.
+
+    Every name in them fell through to `logic` -- the documented catch-all --
+    which is a silent misclassification of exactly the kind CLAUDE.md's "a
+    stable number can be stably wrong" entry describes: the OVERALL counts
+    are a set of names and do not care which bucket prints them, so nothing a
+    reader looks at went visibly wrong while `logic` was reported at 206
+    theorems for the 55 it owns.
+    """
+
+    def test_algs_namespace_is_characterization_not_logic(self) -> None:
+        self.assertEqual(MODULE.prelude_of("AlgS.add_left_cancel"), "characterization")
+
+    def test_alg_namespace_is_characterization_not_logic(self) -> None:
+        self.assertEqual(MODULE.prelude_of("Alg.mul_left_cancel"), "characterization")
+
+    def test_cats_namespace_is_characterization_not_logic(self) -> None:
+        self.assertEqual(MODULE.prelude_of("CatS.id_comp"), "characterization")
+
+    def test_list_namespace_is_its_own_prelude(self) -> None:
+        self.assertEqual(MODULE.prelude_of("List.append_nil"), "list")
+
+    def test_core_structural_names_still_bucket_to_logic(self) -> None:
+        # Positive control for the negatives above: `Acc`, `Decidable` and the
+        # bare logic names are genuinely the `logic` prelude's and must NOT
+        # have been swept into the new buckets.
+        for name in ("Acc.inv", "Decidable.em", "Sigma.mk_eq", "mt"):
+            self.assertEqual(MODULE.prelude_of(name), "logic", name)
+
+
+class RegisteredNamesInDenominatorTests(unittest.TestCase):
+    """The anti-gaming property the ratchet rests on.
+
+    `join.registered` is keyed by whatever a fact NAMED. The ratchet's
+    population is that set INTERSECTED with the kernel's own inventory, so a
+    fact naming a declaration the kernel does not carry cannot enlarge it.
+    Without the intersection the ratchet would be satisfiable by writing
+    facts about theorems that do not exist.
+    """
+
+    def test_a_fact_naming_a_theorem_the_kernel_lacks_adds_no_name(self) -> None:
+        footprints = {"Nat.add_comm": 0}
+        facts = {
+            "F:real": fact(
+                "F:real",
+                formal={"language": "lean4", "kernel_theorem": "Nat.add_comm"},
+            ),
+            "F:fake": fact(
+                "F:fake",
+                formal={"language": "lean4", "kernel_theorem": "Nat.no_such_theorem"},
+            ),
+        }
+        result = MODULE.join(facts)
+        # The fact resolved -- it is not silently dropped, it is just not in
+        # the denominator. Positive control that the fixture is live.
+        self.assertIn("Nat.no_such_theorem", result.registered)
+        self.assertEqual(
+            MODULE.registered_names_in_denominator(footprints, result),
+            ["Nat.add_comm"],
+        )
+
+    def test_an_unresolved_fact_adds_no_name(self) -> None:
+        footprints = {"Nat.add_comm": 0}
+        facts = {
+            "F:none": fact(
+                "F:none",
+                formal={"language": "cas-term", "statement": "no name here"},
+                evidence=[],
+            )
+        }
+        result = MODULE.join(facts)
+        self.assertEqual(result.unresolved, ["F:none"])
+        self.assertEqual(MODULE.registered_names_in_denominator(footprints, result), [])
+
+
+class RatchetLostTests(unittest.TestCase):
+    def test_a_baselined_name_no_longer_registered_is_reported(self) -> None:
+        self.assertEqual(
+            MODULE.ratchet_lost({"Nat.add_comm", "Nat.mul_comm"}, {"Nat.mul_comm"}),
+            ["Nat.add_comm"],
+        )
+
+    def test_nothing_lost_is_the_empty_list(self) -> None:
+        self.assertEqual(
+            MODULE.ratchet_lost({"Nat.mul_comm"}, {"Nat.mul_comm", "Nat.add_comm"}),
+            [],
+        )
+
+    def test_coverage_going_up_is_not_a_finding(self) -> None:
+        # One-sided by design: a lane that registers a new fact must not be
+        # forced to raise the baseline in the same commit, or the pressure
+        # becomes to lower the baseline rather than to keep the fact.
+        self.assertEqual(MODULE.ratchet_lost(set(), {"Nat.add_comm"}), [])
+
+
+class LoadBaselineTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self._saved = MODULE.BASELINE
+
+    def tearDown(self) -> None:
+        MODULE.BASELINE = self._saved
+
+    def _write(self, tmp, payload: str) -> None:
+        path = tmp / "ledger-coverage-baseline.json"
+        path.write_text(payload, encoding="utf-8")
+        MODULE.BASELINE = path
+
+    def test_reads_the_registered_names(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            self._write(Path(raw), '{"schema_version": 1, "registered": ["Nat.add_comm"]}')
+            self.assertEqual(MODULE.load_baseline(), {"Nat.add_comm"})
+
+    def test_an_empty_registered_list_is_an_error_not_a_ratchet_that_cannot_fail(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            self._write(Path(raw), '{"schema_version": 1, "registered": []}')
+            with self.assertRaises(MODULE.CoverageError):
+                MODULE.load_baseline()
+
+    def test_a_missing_baseline_is_an_error_not_a_silent_pass(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            MODULE.BASELINE = Path(raw) / "does-not-exist.json"
+            with self.assertRaises(MODULE.CoverageError):
+                MODULE.load_baseline()
+
+    def test_a_wrong_schema_version_is_an_error(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            self._write(Path(raw), '{"schema_version": 99, "registered": ["Nat.add_comm"]}')
+            with self.assertRaises(MODULE.CoverageError):
+                MODULE.load_baseline()
+
+
+class RatchetExitStatusTests(unittest.TestCase):
+    """End to end through `main()`: the EXIT STATUS must depend on the finding.
+
+    Everything above tests a pure function. This is the one that would catch
+    a `ratchet_lost` that computes the right answer and then returns 0
+    anyway -- the shape CLAUDE.md calls a checker that cannot fail.
+    """
+
+    FACT = (
+        '{"schema_version": 1, "id": "F:x", "title": "t", "statement": "s",'
+        ' "formal": {"language": "lean4", "statement": "theorem Nat.add_comm : X",'
+        ' "fragment": "Nat", "kernel_theorem": "Nat.add_comm"},'
+        ' "epistemic_status": "proved", "proof_route": "kernel-lean",'
+        ' "axiom_footprint": [], "depends_on": [], "evidence": [],'
+        ' "provenance": {"date": "2026-09-06"}}'
+    )
+    TSV = "nat\tNat.add_comm\t0\t\nnat\tNat.mul_comm\t0\t\n"
+
+    def _run(self, facts_json, baseline: str) -> int:
+        with tempfile.TemporaryDirectory() as raw:
+            tmp = Path(raw)
+            facts_dir = tmp / "facts"
+            facts_dir.mkdir()
+            if facts_json is not None:
+                (facts_dir / "F-x.json").write_text(facts_json, encoding="utf-8")
+            tsv = tmp / "inv.tsv"
+            tsv.write_text(self.TSV, encoding="utf-8")
+            base = tmp / "baseline.json"
+            base.write_text(baseline, encoding="utf-8")
+            saved = (MODULE.FACTS_DIR, MODULE.BASELINE, MODULE.OUTPUT, sys.argv)
+            MODULE.FACTS_DIR = facts_dir
+            MODULE.BASELINE = base
+            MODULE.OUTPUT = tmp / "out.json"
+            sys.argv = [
+                "gen-ledger-coverage.py",
+                "--ratchet",
+                "--theorem-tsv",
+                str(tsv),
+            ]
+            try:
+                return MODULE.main()
+            finally:
+                (
+                    MODULE.FACTS_DIR,
+                    MODULE.BASELINE,
+                    MODULE.OUTPUT,
+                    sys.argv,
+                ) = saved
+
+    def test_exits_zero_when_the_baselined_name_is_still_registered(self) -> None:
+        rc = self._run(self.FACT, '{"schema_version": 1, "registered": ["Nat.add_comm"]}')
+        self.assertEqual(rc, 0)
+
+    def test_exits_one_when_the_fact_registering_a_baselined_name_is_gone(self) -> None:
+        rc = self._run(None, '{"schema_version": 1, "registered": ["Nat.add_comm"]}')
+        self.assertEqual(rc, 1)
+
+    def test_a_fact_naming_a_theorem_outside_the_denominator_does_not_clear_a_loss(
+        self,
+    ) -> None:
+        # The gaming attempt, end to end: the ledger contains a fact, but it
+        # names a theorem the kernel does not declare, so the baselined
+        # `Nat.add_comm` is still lost and the gate must still be red.
+        ghost = self.FACT.replace("Nat.add_comm", "Nat.ghost_theorem")
+        rc = self._run(ghost, '{"schema_version": 1, "registered": ["Nat.add_comm"]}')
+        self.assertEqual(rc, 1)
 
 
 if __name__ == "__main__":

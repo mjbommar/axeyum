@@ -1,0 +1,111 @@
+{
+  "schema_version": 1,
+  "id": "F:cas-enclosure-layer-certified-real-number-enclosures",
+  "title": "the CAS enclosure layer computes proof-carrying rational enclosures of real constants and definite integrals",
+  "statement": "For each expression in the certified head set -- the field operations and integer powers (exact), sqrt, root_q, exp, ln, atan, sin, cos, pi, erf, Gamma, the Bessel functions J_n, Euler's gamma, the exponential and trigonometric integrals Si, Ci, Ei, li, Shi, Chi, the Fresnel integrals S and C, the inverse circular and hyperbolic functions, the symbolic power x^y, and definite integrals by certified quadrature -- `enclose` returns a closed interval with exact BigRational endpoints containing the true real value, of width at most 2^(-precision), together with one evidence Step per node of the expression tree recording (head, inputs, truncation order, remainder bound). `Enclosure::verify` re-derives every step from (head, inputs, order) alone and accepts only if all eight of its guards hold: step count, head match, input match, remainder not understated, order large enough for the claimed precision, containment, final width, and root output. Multivariate root enclosure additionally uses the Krawczyk operator K(X) = m - Y F(m) + (I - Y J(X))(X - m), where K(X) contained in the interior of X gives existence AND uniqueness of a zero in X. Outside the certified head set, past the series magnitude limit, or on a domain error, the layer DECLINES with a reason rather than returning an uncertified number.",
+  "formal": {
+    "language": "certificate-spec",
+    "statement": "{\"contract\":\"f(X) contains { f(x) : x in X }\",\"endpoint_arithmetic\":\"exact BigRational; no f64 below the interface\",\"format\":\"axeyum-cas-enclosure-step-certificate\",\"on_uncertified_input\":\"decline with a reason, never an uncertified number\",\"root_enclosure\":\"Krawczyk K(X) = m - Y*F(m) + (I - Y*J(X))*(X - m)\",\"verify_guards\":[\"step-count\",\"head-match\",\"input-match\",\"remainder-not-understated\",\"order-sufficient\",\"containment\",\"final-width\",\"root-output\"],\"version\":1,\"width_bound\":\"2^(-precision)\"}",
+    "fragment": "certified-real-arithmetic",
+    "free_symbols": [
+      "precision",
+      "expr",
+      "bindings"
+    ],
+    "kernel_theorem": null
+  },
+  "epistemic_status": "computed",
+  "external_status": "proved",
+  "depends_on": [],
+  "proof_route": "cas-certificate",
+  "axiom_footprint": [
+    "cas.exact-rational-interval-arithmetic",
+    "cas.series-truncation-remainder-bounds-as-implemented: each certified head's remainder bound is this implementation's own derivation, re-checked by the verifier against the same formula rather than against an independent one",
+    "cas.krawczyk-operator-existence-and-uniqueness-as-implemented",
+    "oeis-decimal-expansions-as-published: the replication rows compare against published truncations, not against an independently re-derived expansion",
+    "cas.verifier-shares-the-crate-with-the-producer: the certificate checker re-derives every step from the recorded (head, inputs, order) and trusts no recorded number, but it lives in the same crate as the search that produced the certificate, so under ADR-0601 SS1 this is `cas-internal` evidence and NOT reconstruction through the one trust anchor (Kernel::add_declaration). That is why this fact is `computed` and not `proved`."
+  ],
+  "evidence": [
+    {
+      "id": "cas-enclosure-forgery-rejection-suite",
+      "kind": "witness-replay",
+      "supports": "that Enclosure::verify's eight guards each reject a certificate forged on exactly that axis, so the verifier is not a checker that cannot fail",
+      "check_status": "checked",
+      "checkers": [
+        "forged_missing_step_is_refused (guard 1, step count)",
+        "forged_head_is_refused (guard 2, head match)",
+        "forged_step_input_is_refused (guard 3, a forger feeding a step a narrower operand than the tree supplies)",
+        "forged_understated_remainder_is_refused (guard 4)",
+        "forged_too_small_order_is_refused (guard 5)",
+        "forged_shifted_interval_is_refused (guard 6, containment)",
+        "forged_too_wide_interval_for_the_claimed_precision_is_refused (guard 7)",
+        "forged_final_interval_detached_from_the_evidence_is_refused (guard 8)",
+        "a_forged_order_on_an_erf_step_is_refused and a_forged_gamma_output_is_refused (the same guards on special-function heads)",
+        "forged_root_endpoint_sign_is_refused, forged_root_without_a_sign_change_is_refused, forged_root_outside_the_isolating_interval_is_refused (the root-certificate guards)"
+      ],
+      "checker_command": "cargo test -p axeyum-cas --lib enclosure::tests",
+      "artifact": "crates/axeyum-cas/src/enclosure.rs",
+      "checker_seconds": 8,
+      "notes": "62 tests. The forgery tests are the load-bearing half: a verifier that accepted a forged remainder bound would make every enclosure in this layer decorative."
+    },
+    {
+      "id": "cas-enclosure-published-value-replication",
+      "kind": "published-value-replication",
+      "supports": "that the certified enclosures bracket the published decimal expansions of the constants they name, so the layer computes the intended quantity and not merely a self-consistent one",
+      "check_status": "checked",
+      "checkers": [
+        "pi against OEIS A000796, e against A001113, ln 2 against A002162, sqrt 2 against A002193, each to a 30-decimal truncation",
+        "2^(1/3) against A002580, erf(1) against A248266, Gamma(1/2) = sqrt(pi) against A002161, Gamma(1/3) against A073005",
+        "Euler's gamma against A001620, Si(1) against A099281, Ci(1) against A099284, Ei(1) against A091725, li(2) against A069284, and the Bessel values J_0(1), J_1(1)",
+        "the_gaussian_integral_meets_its_cited_digits (the certified-quadrature route, a different code path from the series heads)"
+      ],
+      "checker_command": "cargo test -p axeyum-cas --lib enclosure::tests",
+      "artifact": "crates/axeyum-cas/src/enclosure.rs",
+      "checker_seconds": 8,
+      "notes": "A replication against a published expansion is an independence check on the SEMANTICS (does this compute pi?) that the forgery suite cannot give, since the forgery suite would pass equally on a layer that certified enclosures of the wrong constant."
+    },
+    {
+      "id": "cas-enclosure-decline-behaviour",
+      "kind": "witness-replay",
+      "supports": "that the layer declines rather than approximating when it leaves its certified set -- the property that makes a returned enclosure meaningful",
+      "check_status": "checked",
+      "checkers": [
+        "an_uncertified_head_declines_rather_than_approximating",
+        "a_wide_binding_box_declines_rather_than_reporting_a_false_width",
+        "ln_of_a_non_positive_interval_declines_as_a_domain_error",
+        "gamma_of_a_non_positive_interval_declines_as_a_domain_error"
+      ],
+      "checker_command": "cargo test -p axeyum-cas --lib enclosure_special::tests",
+      "artifact": "crates/axeyum-cas/src/enclosure_special.rs",
+      "checker_seconds": 8,
+      "notes": "30 tests, covering the Krawczyk system route and its declines (non-square system, singular Jacobian, multiple root)."
+    },
+    {
+      "id": "cas-enclosure-certified-integral",
+      "kind": "witness-replay",
+      "supports": "that definite integrals are enclosed by quadrature whose certificate records the partition, so the bound is replayable rather than asserted",
+      "check_status": "checked",
+      "checkers": [
+        "enclosure_integral::tests (Simpson and box quadrature, certificate records the partition)"
+      ],
+      "checker_command": "cargo test -p axeyum-cas --lib enclosure_integral::tests",
+      "artifact": "crates/axeyum-cas/src/enclosure_integral.rs",
+      "checker_seconds": 3,
+      "notes": "44 tests."
+    }
+  ],
+  "provenance": {
+    "date": "2026-09-06",
+    "established_by": "lane ledger-coverage (ADR-1674): registered from the existing axeyum-cas implementation and its own certificate verifiers; no new mathematics was produced by this lane",
+    "source": "crates/axeyum-cas/src/enclosure.rs, enclosure_integral.rs, enclosure_special.rs (7,759 lines together)",
+    "prior_art": [
+      {
+        "who": "R. E. Moore; and the modern rigorous-numerics tradition (Tucker, Rump)",
+        "what": "interval arithmetic and validated numerics; the Krawczyk operator for verified root existence and uniqueness",
+        "where": "Moore, Interval Analysis (1966); Krawczyk, Computing 4 (1969); Tucker, Validated Numerics (2011)",
+        "attribution": "standard textbook attribution; this lane did not consult the primary sources"
+      }
+    ]
+  },
+  "notes": "Registered by ADR-1674 as one of four bodies of real work the ledger had no row for at all. `epistemic_status` is `computed`, NOT `proved`, and that is the point of the row: every checker here is `cargo test -p axeyum-cas`, so scripts/validate-facts.py classifies the evidence `cas-internal`, and under ADR-0601 SS1 the CAS is a producer of candidates, never of trust. The layer is real, its verifier is adversarially tested, and it has still not been reconstructed through Kernel::add_declaration. Whoever builds that bridge should amend this row rather than add a second one."
+}

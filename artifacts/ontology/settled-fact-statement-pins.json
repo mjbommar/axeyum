@@ -1292,10 +1292,22 @@
       "prose_sha256": "742c6a88584d2e4cfe5c38e172e5306eac4970ce8d024101371029ac9c8ffec1"
     },
     {
+      "fact_id": "F:cas-character-tables-verified-over-cyclotomic-fields",
+      "language": "certificate-spec",
+      "statement_sha256": "0bccbeb473fdb022c603ca80ad7593ddc03cf71de662c532e405724734a222fe",
+      "prose_sha256": "203546ed6ffa93260842bb16c9aa1d9516c324e294b960ac7847515a1d516d60"
+    },
+    {
       "fact_id": "F:cas-difference-of-squares-free-x-kernel-checked",
       "language": "cas-term",
       "statement_sha256": "b65403ba5bb5c479bf66163b71352ac2fdfd0d879d9701039bc5b0a83dbfbeef",
       "prose_sha256": "b104b1bab0f7791126e7ea788e3df2de7ee14abe80a9dcd724d768815bd9ffa2"
+    },
+    {
+      "fact_id": "F:cas-enclosure-layer-certified-real-number-enclosures",
+      "language": "certificate-spec",
+      "statement_sha256": "e1f5faf8148fb79cc6ed8b3dfefb209e8d88dad6967389404ecef4bba30d6772",
+      "prose_sha256": "9e422af6fdde0252729ad3ff0cb26463c2d3b40d84c03f2dfe9fb0e9b8540cad"
     },
     {
       "fact_id": "F:cas-evt-endpoint-exclusion-cubic-kernel-checked",
@@ -1374,6 +1386,12 @@
       "language": "cas-term",
       "statement_sha256": "30a8abf57d42ace09fe67e757b7eb8b803540f87ff29c46907cd5955e72da3e8",
       "prose_sha256": "47c1024de0dc5fda28ba596f33165028cee45a422e4353d3c6add9c8dbdff3ac"
+    },
+    {
+      "fact_id": "F:cas-matrix-groups-orders-and-isomorphisms",
+      "language": "certificate-spec",
+      "statement_sha256": "530f9c65e141c20e9d981887d11d67ea9162c152039ee5f690bb7ce51c003f67",
+      "prose_sha256": "e8f74bfed392da0a3c0da3f3d5925582e98afab251994991aeb3d18daf862c65"
     },
     {
       "fact_id": "F:cas-mvt-cubic-witness-sqrt3",
@@ -8244,6 +8262,18 @@
       "prose_sha256": "f31a2b2c3a43c85dd2e748f542802cb0b1087104b1543f29c42d60c904cb817d"
     },
     {
+      "fact_id": "F:geometry-conic-polar-is-tangent",
+      "language": "smtlib2",
+      "statement_sha256": "8c665877286b8a8429d94969e8b2fe9b21360361355e93d486b4c60aa6f94447",
+      "prose_sha256": "51cbb024163ff2d8bc1c0d74eb66ec442d60380756d3ee4fc7cd6c50296e3fc3"
+    },
+    {
+      "fact_id": "F:geometry-desargues-affine-perspective",
+      "language": "smtlib2",
+      "statement_sha256": "d9d642f57ff8a15f63d7a5b606a46997f53924dcf3f46c1c1b979a448569586d",
+      "prose_sha256": "51d312709983390f5fa08615cd620985c6bd4bb84d7ab32a9df28cdd14b1682f"
+    },
+    {
       "fact_id": "F:geometry-euler-line",
       "language": "smtlib2",
       "statement_sha256": "8aab26260dc41d8bd5d50ba9031ab156e82c10ac158119260beeb944cb1c5ed5",
@@ -8328,6 +8358,12 @@
       "prose_sha256": "fbb6cd4197d1df2c86a7ec6712a1b08d1be26b0e2b8833fe09b97f3d7391fdac"
     },
     {
+      "fact_id": "F:geometry-pascal-parabola-hexagon",
+      "language": "smtlib2",
+      "statement_sha256": "eb9e5b72061e1ee4d5d0a3224bb921167f04cbee44547ef87b6f8c3c1c205703",
+      "prose_sha256": "faf26e91c54b271c742508525216596a110464910da1b3b89b60c2c8dc181783"
+    },
+    {
       "fact_id": "F:geometry-rhombus-cofactor-identity-kernel-checked",
       "language": "cas-term",
       "statement_sha256": "bea83337076c43e186f904e90639ef646eb80bf5e37979c4d144a1b4384b47af",
@@ -8376,6 +8412,18 @@
           "kernel_theorem": "CPoint.stewart"
         }
       ]
+    },
+    {
+      "fact_id": "F:geometry-tetrahedron-medians-concurrent",
+      "language": "smtlib2",
+      "statement_sha256": "2a395a6d973d043b88b2ac488935909cd543b6d77e6dc7d953a9128a86900915",
+      "prose_sha256": "0ecb6b3f1bc8e1c466c89654132cb212599dd59db3cc054e03ae77c408d54117"
+    },
+    {
+      "fact_id": "F:geometry-tetrahedron-perpendicular-bisectors-concurrent",
+      "language": "smtlib2",
+      "statement_sha256": "1af414e75e506b10202bdbf2eadfee4d50690a2c4b9c7d84146d50e6f33ca5a2",
+      "prose_sha256": "7e71e84dada69974b405ad3836adde02f515af0ced36724ffa55c0d98e0ea9f1"
     },
     {
       "fact_id": "F:geometry-thales-cofactor-identity-kernel-checked",

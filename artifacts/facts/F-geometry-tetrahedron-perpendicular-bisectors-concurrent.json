@@ -1,0 +1,69 @@
+{
+  "schema_version": 1,
+  "id": "F:geometry-tetrahedron-perpendicular-bisectors-concurrent",
+  "title": "the perpendicular bisector planes of a tetrahedron's edges are concurrent",
+  "statement": "Let A, B, C, D and P be points of Euclidean 3-space. If P is equidistant from A and B, from B and C, and from C and D, then P is equidistant from A and C, from B and D, and from A and D -- so all six perpendicular-bisector planes of the tetrahedron ABCD's edges pass through P. NO non-degeneracy condition is required: each conclusion is a telescoping sum of the hypotheses (`P eq A,C` = `P eq A,B` + `P eq B,C`, `P eq B,D` = `P eq B,C` + `P eq C,D`, `P eq A,D` = the sum of all three), valid for ANY five points. The tetrahedron must be non-degenerate for such a P to EXIST and be unique -- that is the standard side condition on the circumcentre -- but existence is a different claim and this fact does not make it. This is the solid-geometry analogue of F:geometry-orthocentre-altitudes-concurrent, and it is unconditional for the same reason.",
+  "formal": {
+    "language": "smtlib2",
+    "statement": "(assert (forall ((ax Real) (ay Real) (az Real) (bx Real) (by Real) (bz Real) (cx Real) (cy Real) (cz Real) (dx Real) (dy Real) (dz Real) (px Real) (py Real) (pz Real))\n  (=> (and (= (+ (* ax ax) (* ay ay) (* az az) (* 2.0 bx px) (* 2.0 by py) (* 2.0 bz pz)) (+ (* 2.0 ax px) (* 2.0 ay py) (* 2.0 az pz) (* bx bx) (* by by) (* bz bz)))\n           (= (+ (* bx bx) (* by by) (* bz bz) (* 2.0 cx px) (* 2.0 cy py) (* 2.0 cz pz)) (+ (* 2.0 bx px) (* 2.0 by py) (* 2.0 bz pz) (* cx cx) (* cy cy) (* cz cz)))\n           (= (+ (* cx cx) (* cy cy) (* cz cz) (* 2.0 dx px) (* 2.0 dy py) (* 2.0 dz pz)) (+ (* 2.0 cx px) (* 2.0 cy py) (* 2.0 cz pz) (* dx dx) (* dy dy) (* dz dz))))\n      (and (= (+ (* ax ax) (* ay ay) (* az az) (* 2.0 cx px) (* 2.0 cy py) (* 2.0 cz pz)) (+ (* 2.0 ax px) (* 2.0 ay py) (* 2.0 az pz) (* cx cx) (* cy cy) (* cz cz)))\n           (= (+ (* bx bx) (* by by) (* bz bz) (* 2.0 dx px) (* 2.0 dy py) (* 2.0 dz pz)) (+ (* 2.0 bx px) (* 2.0 by py) (* 2.0 bz pz) (* dx dx) (* dy dy) (* dz dz)))\n           (= (+ (* ax ax) (* ay ay) (* az az) (* 2.0 dx px) (* 2.0 dy py) (* 2.0 dz pz)) (+ (* 2.0 ax px) (* 2.0 ay py) (* 2.0 az pz) (* dx dx) (* dy dy) (* dz dz)))))))",
+    "fragment": "NRA",
+    "free_symbols": [
+      "ax",
+      "ay",
+      "az",
+      "bx",
+      "by",
+      "bz",
+      "cx",
+      "cy",
+      "cz",
+      "dx",
+      "dy",
+      "dz",
+      "px",
+      "py",
+      "pz"
+    ]
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "depends_on": [],
+  "proof_route": "cas-certificate",
+  "axiom_footprint": [
+    "cas.exact-rational-polynomial-normal-form",
+    "geometry.cartesian-coordinatisation-of-euclidean-3-space",
+    "geometry.characteristic-zero-specialisation"
+  ],
+  "evidence": [
+    {
+      "id": "geometry-certificate-tetrahedron-perpendicular-bisectors-concurrent",
+      "kind": "witness-replay",
+      "supports": "the cofactor certificate, re-checked from the committed artifact by a checker that shares no code with the search that produced it",
+      "check_status": "checked",
+      "checkers": [
+        "geometry_check::check_certificate shape pass (the generator list must be exactly the three stated equidistance hypotheses, with no undeclared saturation -- this certificate declares none, so all three conclusions are asserted to lie in the PLAIN hypothesis ideal)",
+        "geometry_check::check_certificate symbolic pass (the identity target = sum of cofactor times generator expanded with MvPoly add/mul alone -- no Groebner machinery, no monomial order, no S-polynomials -- run once per conclusion, so all three are expanded independently)",
+        "geometry_check::check_certificate numeric pass (each identity re-evaluated at 24 deterministic integer points through MvPoly::evaluate, a different code path from the symbolic expansion)",
+        "geometry_check::check_certificate configuration pass (A=(0,0,0), B=(4,0,0), C=(0,4,0), D=(0,0,4) with circumcentre P=(2,2,2) replayed at exact rationals: all three hypotheses vanish and all three conclusions do)"
+      ],
+      "checker_command": "cargo test -p axeyum-cas --test geometry_certificate_artifacts",
+      "artifact": "artifacts/geometry-certificates/tetrahedron-perpendicular-bisectors-concurrent.json",
+      "notes": "Every cofactor is the constant 1: `P eq A,C` uses generators 0 and 1, `P eq B,D` uses 1 and 2, and `P eq A,D` uses all three, for 2 + 2 + 3 = 7 cofactor terms across the whole certificate. That is the same shape as the plane's orthocentre certificate, whose cofactors are all the constant -1, and it is the sharpest form the claim can take: the concurrency of the six bisector planes -- the theorem whose textbook statement always carries `for a tetrahedron` -- is, in the universally quantified incidence form, an unconditional linear identity between the equidistance polynomials.",
+      "measurement": "3 hypothesis generators, 0 saturations, 3 conclusions, 15 coordinates; the conclusions use 2, 2 and 3 generators respectively, all cofactors the constant 1, 7 cofactor terms in total, cofactor degree 0. 1 generic witness, 0 degenerate witnesses -- the count a certificate with no used condition must have."
+    }
+  ],
+  "provenance": {
+    "date": "2026-09-06",
+    "established_by": "lane geometry: axeyum_cas::geometry_certify (untrusted cofactor-tracked search) + axeyum_cas::geometry_check (independent re-derivation); this ledger row transcribes the committed certificate",
+    "source": "classical; coordinatised in Euclidean 3-space by the certificate's lane",
+    "prior_art": [
+      {
+        "who": "classical solid geometry; the circumsphere of a non-degenerate tetrahedron is standard, and the concurrency of the six bisector planes is the statement underlying it",
+        "what": "the six perpendicular bisector planes of a tetrahedron's edges meet in a point, the circumcentre",
+        "where": "standard; see e.g. Altshiller-Court, Modern Pure Solid Geometry (2nd ed., 1964), chapter 4",
+        "attribution": "standard textbook attribution; this lane did not consult the primary source"
+      }
+    ]
+  },
+  "notes": "Established on the `cas-certificate` route, in the geometry family, and filed as a plain fact rather than a kernel-reconstructed one: no kernel bridge exists for this certificate, so every evidence row's checker terminates in the CAS's own normal form and the fact classifies as `cas-internal` under ADR-0601 SS2. That is why it carries no `cas_substance` block -- that block is required on, and only on, a kernel-reconstructed fact. The coordinatisation entry in the axiom footprint is `geometry.cartesian-coordinatisation-of-euclidean-3-space` and NOT the plane entry the rest of the geometry family carries: this is solid geometry, the certificate's 15 coordinates are five points of 3-space, and reusing the plane entry would have made the footprint say something false about what was coordinatised. Read this fact together with the one it is easiest to confuse it with: `the bisector planes are concurrent` in the incidence form proved here is UNCONDITIONAL, whereas `a circumcentre exists and is unique` would not be. The SMT-LIB transcription above was not written by hand: it is rendered term by term from the certificate's own polynomials, with each atom written as `positive part = negated negative part` so that no coefficient carries a sign, and it is re-checked by `scripts/check-geometry-fact-transcription.py`, which splits the antecedent into conjuncts, matches them positionally against the certificate's hypotheses and then its saturations, matches the consequents against its conclusions, and requires a constant nonzero ratio at 400 random rational configurations. Every ratio here is exactly 1, which is what a mechanical rendering rather than a retyping buys."
+}

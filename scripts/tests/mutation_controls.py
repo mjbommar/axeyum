@@ -4008,81 +4008,6 @@ SUITES["import-backlog-classification"] = (
     ],
 )
 
-SUITES["ledger-coverage"] = (
-    "scripts/gen-ledger-coverage.py",
-    "scripts.tests.test_gen_ledger_coverage",
-    [
-        # F:real-lattice-is-constructed-axiom-free's literal "TODO: the
-        # formal statement..." placeholder otherwise parses as a declared
-        # name "TODO" -- a checker-that-cannot-fail shape one layer removed
-        # (a placeholder read as real data). Kills exactly
-        # `test_placeholder_todo_statement_is_not_treated_as_a_declared_name`.
-        (
-            "placeholder ALL-CAPS statement heads are not declared names",
-            "        if match and not match.group(1).isupper():",
-            "        if match:",
-        ),
-        # An explicit `kernel_theorem: null` means "no single subject" and
-        # must stop resolution rather than fall through to the
-        # statement/checker_command tiers -- the exact collision
-        # (`F:complex-mul-assoc` / `F:complex-ring-constructed-axiom-free`
-        # both extracting `Complex.mul_assoc`) this field exists to prevent.
-        # Kills exactly
-        # `test_explicit_field_null_means_no_single_subject_and_does_not_fall_through`.
-        (
-            "an explicit null kernel_theorem stops resolution, not falsy-skipped",
-            '    if "kernel_theorem" in formal:',
-            '    if formal.get("kernel_theorem"):',
-        ),
-        # `axeyum.string.2.*` names carry no capitalised namespace segment,
-        # so without this case-first check `"axeyum".split(...)` would match
-        # nothing in NAMESPACE_TO_PRELUDE and silently misfile every string-
-        # prelude theorem under `logic`. Kills exactly
-        # `test_string_prelude_has_no_capitalised_namespace`.
-        (
-            "string-prelude names are recognised before the namespace split",
-            '    if name.startswith("axeyum.string."):',
-            "    if False:",
-        ),
-        # A theorem name printed with two different footprint sizes across
-        # nested prelude groups means the inventory tool's own output is
-        # internally inconsistent -- silently picking the last one would
-        # hide that rather than fail the gate. Kills exactly
-        # `test_disagreeing_footprint_sizes_for_the_same_name_is_an_error`.
-        (
-            "disagreeing footprint sizes for one theorem name is an error",
-            "        if previous is not None and previous != size:",
-            "        if False:",
-        ),
-        # Zero inventory rows must be a hard error, not an empty (and
-        # therefore vacuously "fully covered") denominator -- the debug-
-        # build SIGABRT / missing --include-constructed trap CLAUDE.md
-        # documents. Kills exactly
-        # `test_zero_rows_is_an_error_not_a_silent_empty_denominator`.
-        (
-            "an empty theorem inventory is an error, not a silent zero",
-            "    if not footprints:",
-            "    if False:",
-        ),
-        # Only `proof_route == kernel-lean` facts are joined -- an
-        # `smt-term-level` or `open` fact makes no claim this kernel's own
-        # environment could corroborate. Kills exactly
-        # `test_non_kernel_route_facts_are_not_joined`.
-        (
-            "only kernel-lean facts are joined against the kernel inventory",
-            '        if fact.get("proof_route") not in KERNEL_ROUTES:',
-            "        if False:",
-        ),
-        # Only `proved`/`computed` facts are joined -- an `open` fact
-        # establishes nothing yet. Kills exactly
-        # `test_open_facts_are_not_joined`.
-        (
-            "only established (proved/computed) facts are joined",
-            '        if fact.get("epistemic_status") not in OURS_ESTABLISHED:',
-            "        if False:",
-        ),
-    ],
-)
 
 # --------------------------------------------------------------------------
 # `kernel-facts` -- the BULK-GENERATION suite, where the stakes are inverted.
@@ -4335,10 +4260,93 @@ SUITES["autogenesis-authored-declaration-driver"] = (
 # explicitly, so a future author cannot repeat the vacuity trap.
 # --------------------------------------------------------------------------
 
+# --------------------------------------------------------------------------
+# `ledger-coverage` -- ONE suite. There were TWO `SUITES["ledger-coverage"]`
+# assignments in this file (2026-09-06), 300 lines apart; the second
+# silently replaced the first, so its seven guards had never run. Both
+# halves are merged below. The shape is the additive-merge hazard
+# CLAUDE.md warns about, one level up from source: `scripts/lane-merge-
+# additive.py` keeps both sides of a Rust file, and for a dict assignment
+# "keeping both sides" parses fine and discards one.
+#
+# The suite covers three things: the join (which fact is about which
+# theorem), the curated/registered split, and -- since ADR-1674 -- the
+# `--ratchet` gate.
+# --------------------------------------------------------------------------
+
 SUITES["ledger-coverage"] = (
     "scripts/gen-ledger-coverage.py",
     Unittest("scripts.tests.test_gen_ledger_coverage"),
     [
+        # F:real-lattice-is-constructed-axiom-free's literal "TODO: the
+        # formal statement..." placeholder otherwise parses as a declared
+        # name "TODO" -- a checker-that-cannot-fail shape one layer removed
+        # (a placeholder read as real data). Kills exactly
+        # `test_placeholder_todo_statement_is_not_treated_as_a_declared_name`.
+        (
+            "placeholder ALL-CAPS statement heads are not declared names",
+            "        if match and not match.group(1).isupper():",
+            "        if match:",
+        ),
+        # An explicit `kernel_theorem: null` means "no single subject" and
+        # must stop resolution rather than fall through to the
+        # statement/checker_command tiers -- the exact collision
+        # (`F:complex-mul-assoc` / `F:complex-ring-constructed-axiom-free`
+        # both extracting `Complex.mul_assoc`) this field exists to prevent.
+        # Kills exactly
+        # `test_explicit_field_null_means_no_single_subject_and_does_not_fall_through`.
+        (
+            "an explicit null kernel_theorem stops resolution, not falsy-skipped",
+            '    if "kernel_theorem" in formal:',
+            '    if formal.get("kernel_theorem"):',
+        ),
+        # `axeyum.string.2.*` names carry no capitalised namespace segment,
+        # so without this case-first check `"axeyum".split(...)` would match
+        # nothing in NAMESPACE_TO_PRELUDE and silently misfile every string-
+        # prelude theorem under `logic`. Kills exactly
+        # `test_string_prelude_has_no_capitalised_namespace`.
+        (
+            "string-prelude names are recognised before the namespace split",
+            '    if name.startswith("axeyum.string."):',
+            "    if False:",
+        ),
+        # A theorem name printed with two different footprint sizes across
+        # nested prelude groups means the inventory tool's own output is
+        # internally inconsistent -- silently picking the last one would
+        # hide that rather than fail the gate. Kills exactly
+        # `test_disagreeing_footprint_sizes_for_the_same_name_is_an_error`.
+        (
+            "disagreeing footprint sizes for one theorem name is an error",
+            "        if previous is not None and previous != size:",
+            "        if False:",
+        ),
+        # Zero inventory rows must be a hard error, not an empty (and
+        # therefore vacuously "fully covered") denominator -- the debug-
+        # build SIGABRT / missing --include-constructed trap CLAUDE.md
+        # documents. Kills exactly
+        # `test_zero_rows_is_an_error_not_a_silent_empty_denominator`.
+        (
+            "an empty theorem inventory is an error, not a silent zero",
+            "    if not footprints:",
+            "    if False:",
+        ),
+        # Only `proof_route == kernel-lean` facts are joined -- an
+        # `smt-term-level` or `open` fact makes no claim this kernel's own
+        # environment could corroborate. Kills exactly
+        # `test_non_kernel_route_facts_are_not_joined`.
+        (
+            "only kernel-lean facts are joined against the kernel inventory",
+            '        if fact.get("proof_route") not in KERNEL_ROUTES:',
+            "        if False:",
+        ),
+        # Only `proved`/`computed` facts are joined -- an `open` fact
+        # establishes nothing yet. Kills exactly
+        # `test_open_facts_are_not_joined`.
+        (
+            "only established (proved/computed) facts are joined",
+            '        if fact.get("epistemic_status") not in OURS_ESTABLISHED:',
+            "        if False:",
+        ),
         (
             "is_curated returns false for generated-unreviewed provenance",
             '    curation = provenance.get("curation")\n    # If curation field is missing or not "generated-unreviewed", it\'s curated\n    return curation != "generated-unreviewed"',
@@ -4358,6 +4366,65 @@ SUITES["ledger-coverage"] = (
             "curated counter is reported in build_document",
             '"curated": len(curated_names),',
             '"curated": 0,',
+        ),
+        # ------------------------------------------------------------------
+        # ADR-1674 -- the `--ratchet` gate. `--check` alone only proves the
+        # committed artifact matches a fresh generation, which a regeneration
+        # satisfies however far coverage has fallen.
+        # ------------------------------------------------------------------
+        # The ratchet's population is the INTERSECTION of the kernel's own
+        # theorem inventory with the names facts claim. Dropping the
+        # intersection would let a fact naming a declaration the kernel does
+        # not carry enlarge the covered set -- a ratchet satisfiable by
+        # writing facts about theorems that do not exist. Kills exactly
+        # `test_a_fact_naming_a_theorem_the_kernel_lacks_adds_no_name`.
+        (
+            "the registered population is intersected with the kernel inventory",
+            "    return sorted(name for name in footprints if name in join_result.registered)",
+            "    return sorted(join_result.registered)",
+        ),
+        # The ratchet must actually compute the lost set. Returning nothing is
+        # the canonical checker-that-cannot-fail. Kills exactly
+        # `test_a_baselined_name_no_longer_registered_is_reported`.
+        (
+            "ratchet_lost reports baselined names that are no longer registered",
+            "    return sorted(baseline_names - registered_now)",
+            "    return []",
+        ),
+        # The EXIT STATUS must depend on the finding: computing `lost`
+        # correctly and then returning 0 is the same defect one layer down.
+        # Kills exactly
+        # `test_exits_one_when_the_fact_registering_a_baselined_name_is_gone`.
+        (
+            "a lost baselined theorem makes the gate exit non-zero",
+            "        if lost:",
+            "        if False:",
+        ),
+        # An empty `registered` list in the baseline is a ratchet that cannot
+        # fail -- nothing can be lost from the empty set. Kills exactly
+        # `test_an_empty_registered_list_is_an_error_not_a_ratchet_that_cannot_fail`.
+        (
+            "an empty baseline is refused rather than silently passing",
+            "    if not isinstance(names, list) or not names:",
+            "    if not isinstance(names, list):",
+        ),
+        # A missing baseline file must be an error, not an absent-therefore-
+        # green gate. Kills exactly
+        # `test_a_missing_baseline_is_an_error_not_a_silent_pass`.
+        (
+            "a missing baseline file is an error, not an absent-therefore-green gate",
+            "    if not BASELINE.is_file():",
+            "    if False:",
+        ),
+        # `characterization` and `list` post-date `prelude_of`'s map; without
+        # their cases all 151 of their theorems fall through to the `logic`
+        # catch-all. Kills exactly
+        # `test_algs_namespace_is_characterization_not_logic` (and its three
+        # namespace siblings -- one map, one behaviour).
+        (
+            "the characterization/list namespaces are not swept into logic",
+            '    "Alg": "characterization",\n    "AlgS": "characterization",\n    "CatS": "characterization",\n    "List": "list",',
+            "",
         ),
     ],
 )

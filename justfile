@@ -1675,7 +1675,11 @@ generated-trackers:
     # registered names had never been measured. Permanent gate, not a
     # one-off count. docs/autogenesis/297-ledger-coverage-gate.md.
     python3 -m unittest scripts.tests.test_gen_ledger_coverage
-    python3 scripts/gen-ledger-coverage.py --check
+    # `--ratchet` (ADR-1674): the committed baseline lists every kernel
+    # theorem a fact registers. Losing one fails the gate. `--check`
+    # alone only proves the artifact matches a fresh generation, which a
+    # regeneration silently satisfies however far coverage has fallen.
+    python3 scripts/gen-ledger-coverage.py --check --ratchet
     # The generated half of that ledger: `--audit` keeps every mechanically
     # written fact distinguishable from a curated one and refuses any whose
     # checker_command cannot fail.

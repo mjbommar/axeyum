@@ -1527,7 +1527,7 @@ step import-backlog python3 scripts/gen-import-backlog.py --check
 # rather than one-off: fails when a kernel theorem lands unregistered and
 # the artifact is not regenerated to match. docs/autogenesis/297-ledger-coverage-gate.md.
 step ledger-coverage-tests python3 -m unittest scripts.tests.test_gen_ledger_coverage
-step ledger-coverage python3 scripts/gen-ledger-coverage.py --check
+step ledger-coverage python3 scripts/gen-ledger-coverage.py --check --ratchet
 # The generated half of that ledger. `gen-kernel-facts.py` writes facts
 # mechanically for already-proved kernel theorems, and bulk generation is
 # exactly how the "checker that cannot fail" defect gets manufactured at

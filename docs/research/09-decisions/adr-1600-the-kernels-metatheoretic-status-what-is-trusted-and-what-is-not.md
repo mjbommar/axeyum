@@ -23,8 +23,28 @@ Related: [ADR-0517](adr-0517-lean-has-two-checkers-and-the-kernel-is-the-one-we-
 
 ## Context
 
-`python3 scripts/validate-facts.py` reports 2,487 proved facts with an empty
-`axiom_footprint` on every one of them. Reviewer 10 (logic and foundations)
+`python3 scripts/validate-facts.py` reports, in its own words and on its own
+last-run output, `2584 axiom-free on kernel-lean (not comparable across
+routes)`. Read the whole shape, not the headline: of **2,687** proved facts,
+**2,584** carry an empty `axiom_footprint` and every one of those is on the
+`kernel-lean` route. The remaining 103 divide cleanly. 101 of them are on
+routes where an empty footprint is not available at all — `AXIOM_FREE_CAPABLE`
+in `scripts/validate-facts.py` is the single-element set `{kernel-lean}`, and
+the validator *fails* a `[]` on `cas-certificate`, `smt-term-level`,
+`smt-clausal`, `search-certificate` or `imported-kernel-lean`. The other **2**
+are genuine `kernel-lean` exceptions and are named, not rounded away:
+`F:schedule-critical-chain-infeasible` (26 entries: the `AxReal` interface and
+the LRA reconstruction's own hypothesis constants) and
+`F:nra-refutations-reconstruct-over-constructed-reals` (2 entries:
+`creal-prelude.constructed-carrier`, `axeyum-lean-kernel.type-checker`).
+
+An earlier revision of this paragraph said "2,487 proved facts with an empty
+`axiom_footprint` on every one of them". The count was stale and the *shape*
+was wrong: "on every one of them" is a universal over the ledger that the
+ledger has never satisfied, because three of the six proof routes structurally
+cannot report `[]`. Measured 2026-09-06 (ADR-1674).
+
+Reviewer 10 (logic and foundations)
 and reviewer 12 (the chair) both name the same gap independently
 (`docs/math-department/10-logic-and-foundations.md`,
 `docs/math-department/12-the-chair.md`, convergence C6 on
@@ -193,7 +213,8 @@ core rather than asserting it:**
   consequences *from EM as a discharged hypothesis*, never from an axiom.
 
 This is the design choice reviewer 12 (the chair) names as "the metric and
-the limitation are the same fact": the empty footprint on 2,487 facts is a
+the limitation are the same fact": the empty footprint on the 2,584
+`kernel-lean` facts that carry one is a
 direct consequence of not having `Quot.sound`/`funext`/`propext`/choice
 available at all, which is also exactly what blocks abstract algebra,
 category theory, and the algebraic half of geometry (W0-1, not this ADR's

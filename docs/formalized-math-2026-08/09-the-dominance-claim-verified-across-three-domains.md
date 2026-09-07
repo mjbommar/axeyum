@@ -478,10 +478,19 @@ The five risks, from `docs/plan/trusted-library-safety-roadmap-2026-08-30.md`:
 An empty axiom footprint addresses only part of risks 4 and 5. It is silent on
 1, 2 and 3 entirely.
 
-**The replacement for "axiom-free", in the two lines a referee can check:**
+**The replacement for "axiom-free", in the form a referee can check in one
+command** (`python3 scripts/validate-facts.py`, whose `routes:` line prints
+the count and the route together)**:**
 
-> Every settled fact's admitted term has been walked to closure and contains no
-> `Axiom`, `Opaque` or `Quotient` — that is risks 4 and 5 only, and only the
+> 2,584 of the 2,687 proved facts have had their admitted term walked to
+> closure, and those closures contain no `Axiom`, `Opaque` or `Quotient`. All
+> 2,584 are on the `kernel-lean` route, which is the only route that can make
+> the claim: `validate-facts.py` *rejects* an empty footprint on the other
+> five. Of the 103 remaining, 101 are on those five routes and 2 are
+> `kernel-lean` exceptions —
+> `F:schedule-critical-chain-infeasible` and
+> `F:nra-refutations-reconstruct-over-constructed-reals`. Even for the 2,584,
+> that is risks 4 and 5 only, and only the
 > closure half of them. It is **not** evidence that the type says what we meant
 > (risk 2, bound by a statement pin, which catches drift after pinning and not
 > a wrong statement at pinning time), nor that the hypotheses are satisfiable
