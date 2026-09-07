@@ -526,7 +526,16 @@ impl SolverBackend for SatBvBackend {
         assertions: &[TermId],
         config: &SolverConfig,
     ) -> Result<CheckResult, SolverError> {
-        self.check_with_replay(arena, assertions, None, config)
+        let result = self.check_with_replay(arena, assertions, None, config);
+        // Single publish point for `BvLayerStats` collection (see
+        // `crate::layers::publish_bv_layer_stats`): a no-op unless a
+        // `BvLayerStatsGuard` is active on this thread, and reads only the
+        // `SolveStats` this check already computed — no new work on the
+        // default (uncollected) path.
+        if let Some(stats) = &self.stats {
+            crate::layers::publish_bv_layer_stats(stats);
+        }
+        result
     }
 
     fn check_query(
@@ -537,7 +546,11 @@ impl SolverBackend for SatBvBackend {
     ) -> Result<CheckResult, SolverError> {
         let plan = query.plan_full(arena);
         let assertions = plan.solver_terms().collect::<Vec<_>>();
-        self.check_with_replay(arena, &assertions, Some(&plan), config)
+        let result = self.check_with_replay(arena, &assertions, Some(&plan), config);
+        if let Some(stats) = &self.stats {
+            crate::layers::publish_bv_layer_stats(stats);
+        }
+        result
     }
 
     fn last_stats(&self) -> Option<&SolveStats> {
@@ -1589,6 +1602,20 @@ fn handle_sat_result(
 ) -> Result<CheckResult, SolverError> {
     match sat_result {
         SatResult::Sat(cnf_assignment) => {
+            // Two separately-timed sub-stages, split from one `lift_start`
+            // measurement that used to cover both (found while wiring
+            // `BvLayerStats` to a CLI flag, docs/research/12-performance/
+            // instrument-coverage-2026-09-07.md: `stats.model_lift` was
+            // stamped AFTER `replay_model` returned, so the field named "lift"
+            // silently included the replay-check cost too). `lift_elapsed`
+            // covers only assignment extraction/completion (AIG values ->
+            // lowering assignment -> `complete_model`); `replay_elapsed`
+            // covers only the soundness-gate replay below. Neither is
+            // recorded on the unverifiable-replay early return (unchanged
+            // from the pre-split behaviour: `stats.model_lift` stayed
+            // `Duration::ZERO` on that path too), so this is a pure
+            // additional-measurement change with no effect on control flow
+            // or the returned `CheckResult`.
             let lift_start = Instant::now();
             let aig_values = encoding
                 .aig_node_values_from_assignment(lowering.aig(), &cnf_assignment)
@@ -1597,15 +1624,20 @@ fn handle_sat_result(
                 .assignment_from_aig_values(&aig_values)
                 .map_err(map_lower_error)?;
             let model = complete_model(arena, &assignment);
+            let lift_elapsed = lift_start.elapsed();
             // Replay is the soundness gate: a sat model is accepted only if it
             // satisfies the original query. If replay can't *evaluate* (e.g. an
             // arithmetic overflow in the trust-anchor evaluator), we cannot
             // confirm the model — the sound answer is a graceful `Unknown`, never
             // an accepted (unverified) sat and never a crash.
-            if let Some(reason) = replay_model(arena, assertions, replay_plan, &model)? {
+            let replay_start = Instant::now();
+            let replay_outcome = replay_model(arena, assertions, replay_plan, &model)?;
+            let replay_elapsed = replay_start.elapsed();
+            if let Some(reason) = replay_outcome {
                 return Ok(CheckResult::Unknown(reason));
             }
-            stats.model_lift = lift_start.elapsed();
+            stats.model_lift = lift_elapsed;
+            push_duration_ms(stats, "model_replay_ms", replay_elapsed);
             Ok(CheckResult::Sat(model))
         }
         SatResult::Unsat(_) => Ok(CheckResult::Unsat),
