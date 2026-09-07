@@ -31,6 +31,17 @@
 //! and their variables re-queued. A size-scaled resolution budget bounds the worst
 //! case. Occurrence lists are transient and rebuilt per call (correctness-first);
 //! per-literal incremental count maintenance is a later refinement.
+//!
+//! # `DRAT` accounting
+//!
+//! [`eliminate_variables`] / [`eliminate_variables_within`] emit nothing.
+//! `eliminate_variables_within_recorded` (crate-internal, and what
+//! [`crate::inprocess`] calls) records a `DRAT` derivation of every change, so
+//! the prefix re-verifies against the original formula with
+//! [`crate::check_drat`]. Every added clause is plain `RUP` despite the pass
+//! being only equisatisfiable: the `unsat` direction is ordinary resolution, and
+//! the `sat` direction is carried by [`Reconstruction`], which is not something
+//! a `DRAT` proof is asked to express.
 
 use std::collections::VecDeque;
 
@@ -42,7 +53,7 @@ use std::time::Instant;
 use web_time::Instant;
 
 use crate::simplify::NormClause;
-use crate::{CnfClause, CnfFormula, CnfLit, CnfVar};
+use crate::{CnfClause, CnfFormula, CnfLit, CnfVar, DratStep};
 
 /// Tuning knobs for bounded variable elimination.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -62,14 +73,21 @@ pub struct BveOptions {
     pub max_rounds: usize,
 }
 
+impl BveOptions {
+    /// The shipping defaults, as an associated `const` so `const fn`
+    /// constructors elsewhere (notably [`crate::InprocessOptions::OFF`]) can
+    /// name them. [`Default`] delegates here, so there is one definition.
+    pub const DEFAULT: Self = Self {
+        clause_size_limit: 100,
+        growth: 0,
+        occurrence_limit: 100,
+        max_rounds: 4,
+    };
+}
+
 impl Default for BveOptions {
     fn default() -> Self {
-        Self {
-            clause_size_limit: 100,
-            growth: 0,
-            occurrence_limit: 100,
-            max_rounds: 4,
-        }
+        Self::DEFAULT
     }
 }
 
@@ -209,7 +227,13 @@ impl Eliminator {
     /// Attempts to eliminate `x` by bounded resolution. Returns whether it was
     /// eliminated; on success it has rewritten clauses/occ lists and re-queued the
     /// affected neighbour variables.
-    fn try_eliminate(&mut self, x: usize, opts: BveOptions, stats: &mut BveStats) -> bool {
+    fn try_eliminate(
+        &mut self,
+        x: usize,
+        opts: BveOptions,
+        stats: &mut BveStats,
+        proof: Option<&mut Vec<DratStep>>,
+    ) -> bool {
         let pos_lit = CnfLit::positive(CnfVar::new(x).expect("var index in range"));
         let neg_lit = pos_lit.negated();
         let pos_ids = self.live_ids(pos_lit);
@@ -277,6 +301,28 @@ impl Eliminator {
             }
         }
 
+        // `DRAT` for this elimination, in the only order that verifies: every
+        // resolvent is `Add`ed while BOTH its parents are still in the checker's
+        // active set (a resolvent `R = (C \ {x}) ∪ (D \ {¬x})` is `RUP` in two
+        // propagations — negate `R`, `C` becomes unit on `x`, and `D` is then
+        // falsified), and only then are the pivot clauses deleted. Emitting the
+        // deletions first would remove the parents that justify every resolvent
+        // derived from them.
+        //
+        // Deletion is what makes BVE *equisatisfiable* rather than
+        // model-preserving, and it is also the half `DRAT` charges nothing for:
+        // a deletion only weakens the active set, so it can make a later step
+        // harder to verify but can never admit a wrong one. The model direction
+        // is carried by [`Reconstruction`], not by the proof.
+        if let Some(p) = proof {
+            for r in &resolvents {
+                p.push(DratStep::Add(r.clone()));
+            }
+            for lits in pos_clauses.iter().chain(neg_clauses.iter()) {
+                p.push(DratStep::Delete(lits.clone()));
+            }
+        }
+
         self.records.push(ElimRecord {
             var: x,
             pos_clauses,
@@ -335,6 +381,35 @@ pub fn eliminate_variables_within(
     opts: BveOptions,
     deadline: Option<Instant>,
 ) -> BveOutcome {
+    eliminate_variables_within_recorded(formula, opts, deadline, None)
+}
+
+/// Like [`eliminate_variables_within`], but records a `DRAT` derivation of every
+/// change into `proof`, in the order the pass made it.
+///
+/// # What is emitted
+///
+/// * **Normalization prelude**, identical in shape to [`crate::simplify`]'s and
+///   [`crate::vivify`]'s: `Delete(original)` for an input tautology, and
+///   `Add(deduped)` + `Delete(original)` for a clause whose literals
+///   deduplicate. It exists because a `DRAT` checker propagates a clause's
+///   literals verbatim, so `(b ∨ b)` is not a unit to it while our normalized
+///   `(b)` is.
+/// * **Per elimination**, all `Add(resolvent)` first, then `Delete` of every
+///   clause that contained the pivot. See the inline comment at the emission
+///   site for why that order is the only one that verifies.
+///
+/// Every emitted `Add` is plain `RUP` — no `RAT` step and no extension
+/// variable — even though BVE is the one pass here that is merely
+/// *equisatisfiable*. The model direction is carried by the returned
+/// [`Reconstruction`]; the proof only has to justify the `unsat` direction, and
+/// for that the resolvents are ordinary resolution steps.
+pub(crate) fn eliminate_variables_within_recorded(
+    formula: &CnfFormula,
+    opts: BveOptions,
+    deadline: Option<Instant>,
+    mut proof: Option<&mut Vec<DratStep>>,
+) -> BveOutcome {
     let nvars = formula.variable_count();
     let mut stats = BveStats::default();
 
@@ -343,7 +418,20 @@ pub fn eliminate_variables_within(
     let clauses: Vec<Option<Vec<CnfLit>>> = formula
         .clauses()
         .iter()
-        .filter_map(|c| NormClause::from_clause(c).map(|nc| Some(nc.lits)))
+        .filter_map(|c| {
+            let normalized = NormClause::from_clause(c);
+            if let Some(p) = proof.as_deref_mut() {
+                match &normalized {
+                    Some(nc) if nc.lits.len() != c.lits().len() => {
+                        p.push(DratStep::Add(nc.lits.clone()));
+                        p.push(DratStep::Delete(c.lits().to_vec()));
+                    }
+                    Some(_) => {}
+                    None => p.push(DratStep::Delete(c.lits().to_vec())),
+                }
+            }
+            normalized.map(|nc| Some(nc.lits))
+        })
         .collect();
 
     // Full literal occurrence lists.
@@ -394,7 +482,7 @@ pub fn eliminate_variables_within(
         if deadline.is_some_and(|dl| Instant::now() >= dl) {
             break; // out of time: keep the partial (equisatisfiable) result
         }
-        if elim.try_eliminate(x, opts, &mut stats) {
+        if elim.try_eliminate(x, opts, &mut stats, proof.as_deref_mut()) {
             elim.eliminated[x] = true;
             eliminated_any = true;
         }
