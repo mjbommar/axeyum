@@ -65,7 +65,18 @@ the <=25 MB slice is decided `unsat` at 20,000 conflicts, so the corpus-scale
 proof check ran on a near-threshold random 3-SAT instead (backward checking 231x
 faster than forward over 203,528 steps).
 
+**Attribution note for whoever merges this.** The first five commits of this
+lane are stamped `Agent: retire-generic-1`, not `inprocessing-proof-path`. The
+shell running `lane-commit.sh` had no `AXEYUM_AGENT` (it does not survive
+between tool invocations here), so `hooks/commit-msg` took its repo-local
+fallback — which git worktrees **share**, so it carried another lane's name.
+This is the exact incident the hook's own comment records (38 commits over four
+days from at least four lanes). The five are `f8b9927d1`, `f7321fcc0`,
+`8f24e7f23`, `40fe71b3d`, `3ba12a718`; no history was rewritten to correct them.
+
 <!-- plan-section: landed-changes -->
 
+| 2026-09-07 | `3ba12a718` | A deletion names a literal MULTISET: `check_drat` and `check_drat_backward` disagreed on an inprocessed proof because all three deletion lookups matched only the literal SET, and the normalization prelude puts `(b)` and `(b OR b)` live at the same moment. Fixed in `drat.rs`, `drat_backward.rs` and `lrat.rs`; a completeness fix, mutation-controlled. |
+| 2026-09-07 | `8f24e7f23` | The measurement (ADR-1750) plus `examples/inprocess_profile.rs` and `examples/inprocess_proof_check.rs`. |
 | 2026-09-07 | `f7321fcc0` | `axeyum_cnf::inprocess` + `solve_with_drat_proof_inprocessed`: the passes now say what they did. `simplify`/`bve` gained recorders threaded through their fixpoint loops (a diff of input against output has no ordering guaranteed to verify). `tests/inprocess_proof_path.rs`, 8 tests over 19 instances x 6 arms. |
 | 2026-09-07 | `f8b9927d1` | Lane opened: five expectations pre-registered, plus the correction that `sat_bv_backend` already runs these passes — off by default, as preprocessing, with the certificate covering only the reduced formula. |
