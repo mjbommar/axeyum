@@ -224,6 +224,11 @@ impl TheorySolver for CdcltLraTheory {
 /// Never returns `Err` in this slice (every give-up is a conservative
 /// [`CheckResult::Unknown`]); the [`SolverError`] return type matches the sibling
 /// [`crate::lra_online::check_qf_lra_online`] for interchange.
+// Linear route driver: atom collection, the ADR-1752 admission screen, Tseitin
+// encoding, theory construction, the search, and model replay. Splitting it
+// would hide the ORDER those stages run in, which is the thing a reader of this
+// function needs.
+#[allow(clippy::too_many_lines)]
 pub fn check_qf_lra_online_cdclt(
     arena: &TermArena,
     assertions: &[TermId],
@@ -280,6 +285,23 @@ pub fn check_qf_lra_online_cdclt(
         .and_then(|mb| usize::try_from(mb).ok())
         .and_then(|mb| mb.checked_mul(1024 * 1024))
         .unwrap_or(DEFAULT_ONLINE_LRA_BUDGET_BYTES);
+    // ADR-1752's outer, conservative admission screen. At the default budget this
+    // is byte-identical to the `MAX_ONLINE_LRA_ATOMS = 1_024` count it replaces;
+    // what changed is that it MOVES with the budget and says its numbers. See
+    // `lra_online::BYTES_PER_ADMITTED_ATOM` for the three cost models that were
+    // built, measured and falsified before settling for a screen.
+    let admitted_atoms = budget_bytes / crate::lra_online::BYTES_PER_ADMITTED_ATOM;
+    if atom_terms.len() > admitted_atoms {
+        return Ok(CheckResult::Unknown(UnknownReason {
+            kind: UnknownKind::ResourceLimit,
+            detail: format!(
+                "online CDCL(T) LRA admission screen: {} atoms exceeds the {admitted_atoms} \
+                 a {} MiB budget admits (raise SolverConfig::memory_limit_mb)",
+                atom_terms.len(),
+                budget_bytes / (1024 * 1024),
+            ),
+        }));
+    }
     let mut theory = match CdcltLraTheory::new(arena, &atom_terms, deadline, budget_bytes) {
         Ok(theory) => theory,
         Err(LraTheoryBuildStop::Deadline) => {
@@ -415,14 +437,37 @@ mod tests {
             let x = rvar(&mut arena, &format!("x{index}"));
             assertions.push(arena.real_ge(x, zero).expect("x>=0"));
         }
-        let result = check_qf_lra_online_cdclt(&arena, &assertions, &SolverConfig::default())
-            .expect("result");
+        // At the DEFAULT budget the screen still refuses this — deliberately, and
+        // byte-identically to the `MAX_ONLINE_LRA_ATOMS = 1_024` it replaces, so
+        // the shipped build's admission behaviour cannot have regressed.
+        let CheckResult::Unknown(default_reason) =
+            check_qf_lra_online_cdclt(&arena, &assertions, &SolverConfig::default())
+                .expect("result")
+        else {
+            panic!("1,025 atoms must still be refused at the default budget");
+        };
+        assert_eq!(default_reason.kind, UnknownKind::ResourceLimit);
+        assert!(
+            default_reason.detail.contains("admission screen"),
+            "the refusal must name the screen and its numbers: {}",
+            default_reason.detail
+        );
+        assert!(
+            default_reason
+                .detail
+                .contains("raise SolverConfig::memory_limit_mb"),
+            "the refusal must say what to DO about it: {}",
+            default_reason.detail
+        );
+
+        // And this is the whole point of ADR-1752: the gate MOVES. Before it,
+        // no amount of memory bought a single atom past 1,024.
+        let generous = SolverConfig::default().with_memory_limit_mb(4096);
+        let result = check_qf_lra_online_cdclt(&arena, &assertions, &generous).expect("result");
         if let CheckResult::Unknown(reason) = &result {
-            assert_ne!(
-                reason.kind,
-                UnknownKind::ResourceLimit,
-                "1,025 single-variable atoms cost ~1,025 coefficients and must not be \
-                 refused on memory: {}",
+            assert!(
+                !reason.detail.contains("admission screen"),
+                "a 4 GiB budget must admit 1,025 atoms: {}",
                 reason.detail
             );
         }
@@ -447,37 +492,39 @@ mod tests {
             sum = arena.real_add(sum, x).expect("chain");
             assertions.push(arena.real_ge(sum, zero).expect("sum>=0"));
         }
-        let config = SolverConfig::default().with_memory_limit_mb(1);
-        let CheckResult::Unknown(reason) =
-            check_qf_lra_online_cdclt(&arena, &assertions, &config).expect("result")
+        // Driven at the THEORY constructor rather than through the route,
+        // deliberately: the route's outer admission screen (a plain atom count,
+        // see `lra_online::BYTES_PER_ADMITTED_ATOM`) fires first at any budget
+        // small enough to starve the coefficient ceiling, so going through the
+        // front door here would test the screen twice and this ceiling never.
+        let stop = LraTheory::try_new_with_budget(&arena, &assertions, None, 1024 * 1024)
+            .err()
+            .expect("a construction over a 1 MiB budget must decline");
+        let LraTheoryBuildStop::MemoryBudget {
+            estimated_bytes,
+            budget_bytes,
+            atoms,
+            ..
+        } = stop
         else {
-            panic!("a construction over a 1 MiB budget must decline");
+            panic!("the refusal must be the memory budget, not {stop:?}");
         };
-        assert_eq!(reason.kind, UnknownKind::ResourceLimit);
         assert!(
-            reason.detail.contains("memory budget exceeded"),
-            "the refusal must name the budget, not an intermediate ceiling: {}",
-            reason.detail
+            estimated_bytes > budget_bytes,
+            "the refusal must report a projection that exceeds the budget: \
+             {estimated_bytes} vs {budget_bytes}"
         );
-        for expected in ["projected", "budget 1 MiB", "atoms over", "variables"] {
-            assert!(
-                reason.detail.contains(expected),
-                "the refusal must contain {expected:?}: {}",
-                reason.detail
-            );
-        }
+        assert!(
+            atoms > 0,
+            "the refusal must say at what atom count it stopped"
+        );
 
-        // The SAME query under a generous budget must not take this path — else
-        // the refusal above is a blanket one and pins nothing.
-        let generous = SolverConfig::default().with_memory_limit_mb(4096);
-        let under = check_qf_lra_online_cdclt(&arena, &assertions, &generous).expect("result");
-        if let CheckResult::Unknown(reason) = &under {
-            assert!(
-                !reason.detail.contains("memory budget exceeded"),
-                "the same query must fit a 4 GiB budget: {}",
-                reason.detail
-            );
-        }
+        // The SAME query under a generous budget must be BUILT — else the
+        // refusal above is a blanket one and pins nothing.
+        assert!(
+            LraTheory::try_new_with_budget(&arena, &assertions, None, 4096 * 1024 * 1024).is_ok(),
+            "the same query must fit a 4 GiB budget"
+        );
     }
 
     /// The wrapper must always fold the just-asserted (current-level) literal into a

@@ -421,6 +421,11 @@ pub struct LraTheory {
     /// Diagnostic only (S4) — the counter that answers "does `propagate` return
     /// anything for `LraTheory`?" with a number instead of a reading.
     propagations_offered: u64,
+    /// The memory budget this construction was admitted under (ADR-1752), kept
+    /// so the **Fourier–Motzkin fallback** can be bounded in bytes at the point
+    /// it allocates. See [`solve`] for why an admission-time projection cannot
+    /// do that job.
+    budget_bytes: usize,
     /// The order atoms [`Self::propagate_bounds`] can ever emit: those at least
     /// one of whose two polarity forms is **also** bounded by some *other*
     /// atom. See [`propagatable_atoms`] for why restricting the scan to this
@@ -566,18 +571,6 @@ impl LraTheory {
         // overflowed right-hand side) and the cheap bound check must keep
         // working when it does.
         let forms = assign_forms(&mut atoms);
-        // The most constraints that can be live at once: an order atom's two
-        // polarities are mutually exclusive so it contributes ONE, an equality
-        // atom asserted true contributes both of its halves. This is the `n` that
-        // prices the Fourier–Motzkin fallback's entry allocation below.
-        let live_max: usize = atoms
-            .iter()
-            .map(|kind| match kind {
-                AtomKind::Order { .. } => 1,
-                AtomKind::Equality { .. } => 2,
-                AtomKind::Unsupported => 0,
-            })
-            .sum();
         let simplex = build_simplex_engine(&mut atoms, nvars).map(RefCell::new);
         // ADR-1752, and this is the half the atom count was ACCIDENTALLY doing.
         //
@@ -597,31 +590,6 @@ impl LraTheory {
         // caller nothing. A tableau that merely OVERFLOWED (rather than being too
         // big) still keeps the fallback, because that is a small system and
         // Fourier-Motzkin is a real engine there.
-        //
-        // The bound is on **Fourier–Motzkin's entry cost**, which is where the
-        // bytes actually are. `solve` gives every input constraint a
-        // `mult: unit_vec(n, i)` multiplier vector of length `n`, so merely
-        // *entering* the fallback allocates `n² × size_of::<Rational>()` before
-        // one variable has been eliminated. `MAX_FM_CONSTRAINTS` caps the count
-        // produced by one elimination STEP and says nothing about this.
-        //
-        // Refusing on the tableau size instead was tried and measured wrong in
-        // the other direction: it also refused `QF_LRA/TM/p5-driverlogNumeric_s9`,
-        // which Fourier–Motzkin decides `unsat` in 289 ms at low memory. The
-        // fallback is a real engine on a small system; what it is not is a
-        // bounded one on a large one, and the size that matters is the live
-        // constraint count, not the tableau's.
-        let fm_entry_bytes = live_max
-            .saturating_mul(live_max)
-            .saturating_mul(std::mem::size_of::<Rational>());
-        if simplex.is_none() && fm_entry_bytes > budget_bytes {
-            return Err(LraTheoryBuildStop::MemoryBudget {
-                estimated_bytes: fm_entry_bytes,
-                budget_bytes,
-                atoms: atom_terms.len(),
-                vars: nvars,
-            });
-        }
         // Order-preserving scan filter for `propagate_bounds`; see the field docs.
         let propagatable = propagatable_atoms(&atoms, forms);
         Ok(Self {
@@ -638,6 +606,7 @@ impl LraTheory {
             bound_lower: vec![None; forms],
             bound_upper: vec![None; forms],
             bound_log: Vec::new(),
+            budget_bytes,
             propagatable,
             propagations_offered: 0,
             assert_partial_conflicts: 0,
@@ -992,7 +961,7 @@ impl LraTheory {
             // refutation from a partial view.
             return Feasibility::Unknown;
         }
-        solve(&self.live, self.nvars, self.deadline)
+        solve(&self.live, self.nvars, self.deadline, self.budget_bytes)
     }
 
     /// Maps a set of live row indices (a Farkas-participating constraint subset)
@@ -1085,7 +1054,7 @@ impl LraTheory {
                     simplex::Status::Infeasible(_) | simplex::Status::Unknown => return None,
                 }
             }
-            None => solve_values(&self.live, self.nvars, self.deadline)?,
+            None => solve_values(&self.live, self.nvars, self.deadline, self.budget_bytes)?,
         };
         let mut model = Model::new();
         for (index, &symbol) in builder_vars.iter().enumerate() {
@@ -1185,7 +1154,7 @@ impl LraTheory {
         }
         let mut probe = self.live.clone();
         probe.push(tag(probe_constraint, atom));
-        match solve(&probe, self.nvars, self.deadline) {
+        match solve(&probe, self.nvars, self.deadline, self.budget_bytes) {
             Feasibility::Unsat(rows) => self.probe_core(&probe, &rows, atom),
             Feasibility::Sat | Feasibility::Unknown => None,
         }
@@ -1637,6 +1606,42 @@ const MAX_LRA_CACHED_COEFFICIENTS: usize = 262_144;
 /// `docs/research/12-performance/lra-theory-side-2026-09-07-log.md`.
 pub(crate) const BYTES_PER_LRA_COEFFICIENT: usize = 224;
 
+/// Bytes of budget one admitted atom is conservatively charged at ADMISSION
+/// (ADR-1752), before anything about the query is known but its atom count.
+///
+/// # This is a SCREEN, and it is deliberately not a cost model
+///
+/// Three cost models were built and each was falsified by the corpus within one
+/// lane:
+///
+/// 1. the retained-coefficient budget — passed
+///    `QF_LRA/2017-Heizmann-…/_sanfoundry_10_ground.i_6_3_3.bpl_13.smt2`, which
+///    then aborted at **7.8 GB**, because those bytes are not coefficients;
+/// 2. a dense-tableau projection — caught that file but also refused
+///    `QF_LRA/TM/p5-driverlogNumeric_s9.smt2`, which the Fourier–Motzkin
+///    fallback decides `unsat` in 0.18 s at 41 MB;
+/// 3. Fourier–Motzkin's own entry and per-step allocations, bounded in bytes at
+///    the point they are made — correct as far as it goes, and it still did not
+///    stop `QF_LRA/miplib/danoint-266.smt2` (7.8 GB, 11 s, previously a 0.04 s
+///    decline at 15 MB). Whatever holds those bytes is somewhere this lane did
+///    not find, and `crates/axeyum-solver/src/memory_budget.rs` says why a
+///    faithful answer is ADR-sized: there is no `#[global_allocator]` hook, so
+///    nothing here can attribute an allocation it did not make itself.
+///
+/// So the atom count survives as the **outer, conservative** gate, and this
+/// constant is chosen for exactly one property: at
+/// [`DEFAULT_ONLINE_LRA_BUDGET_BYTES`] it reproduces the previously shipped
+/// `MAX_ONLINE_LRA_ATOMS = 1_024` **exactly**, so the default build's admission
+/// behaviour is byte-identical and the change cannot regress it. What ADR-1752
+/// buys is not a looser gate: it is that the gate now MOVES with
+/// `SolverConfig::memory_limit_mb`, and that a refusal states its numbers. A
+/// caller that can afford 8 GiB gets 13 107 atoms by asking, where before no
+/// amount of memory bought a single atom past 1 024.
+///
+/// Replacing this with a real cost model is the open work, and the thing it
+/// needs first is an answer to "where do `danoint-266`'s 7.8 GB go".
+pub(crate) const BYTES_PER_ADMITTED_ATOM: usize = DEFAULT_ONLINE_LRA_BUDGET_BYTES / 1_024;
+
 /// Resident bytes one dense simplex tableau cell costs: a [`Rational`] is two
 /// `i128`s and the tableau is `Vec<Vec<Rational>>`, so the per-cell share of the
 /// row vectors' own headers is negligible beside the 32-byte payload.
@@ -1802,10 +1807,21 @@ impl AtomBuilder {
     }
 
     /// The projected resident footprint of what has been built so far
-    /// (ADR-1752).
+    /// (ADR-1752): the coefficients held, **plus** the dense tableau's own
+    /// ceiling, which [`NormalizationLimits::for_budget`] already spent out of
+    /// the budget and which is alive at the same time.
+    ///
+    /// Including it is what makes the reported number honest at small budgets:
+    /// without it, a budget under the tableau's own 128 MiB derives a
+    /// zero-coefficient ceiling and then refuses with "projected 0 MiB > budget
+    /// 1 MiB", which is true of nothing.
     fn estimated_bytes(&self) -> usize {
-        self.resident_coefficients()
-            .saturating_mul(BYTES_PER_LRA_COEFFICIENT)
+        simplex::MAX_TABLEAU_CELLS
+            .saturating_mul(BYTES_PER_TABLEAU_CELL)
+            .saturating_add(
+                self.resident_coefficients()
+                    .saturating_mul(BYTES_PER_LRA_COEFFICIENT),
+            )
     }
 
     /// The stop a ceiling breach reports. Every one of these ceilings is now
@@ -2055,8 +2071,36 @@ fn add_vec(a: &[Rational], b: &[Rational]) -> Option<Vec<Rational>> {
 /// multiplier is nonzero. Multipliers are seeded as unit vectors over the input
 /// rows and accumulated through elimination, so a residual infeasible constant
 /// constraint names the rows behind it.
-fn solve(constraints: &[Constraint], nvars: usize, deadline: Option<Instant>) -> Feasibility {
+fn solve(
+    constraints: &[Constraint],
+    nvars: usize,
+    deadline: Option<Instant>,
+    budget_bytes: usize,
+) -> Feasibility {
     let n = constraints.len();
+    // ADR-1752. Fourier–Motzkin is the fallback when the dense tableau does not
+    // fit, and it is the one engine here with no memory bound of its own:
+    // `MAX_FM_CONSTRAINTS` caps how many constraints ONE elimination step may
+    // produce and says nothing about the bytes behind them, because every
+    // constraint carries a length-`n` multiplier vector. Entering costs
+    // `n^2 x size_of::<Rational>()` before a variable is eliminated.
+    //
+    // Bounding this at ADMISSION was tried twice and is not possible: a
+    // projection tight enough to stop `QF_LRA/miplib/danoint-266.smt2` (which
+    // aborted at 7.8 GB) also refuses `QF_LRA/TM/p5-driverlogNumeric_s9.smt2`
+    // (which the fallback decides `unsat` in 0.17 s), because how far one
+    // elimination step actually expands is a property of the data, not of the
+    // atom or variable count. So the bound lives where the allocation is.
+    //
+    // `Unknown` here is what the caller already handles for an overflow or a
+    // step-count breach: "feasible, don't know", gated by the model replay. It
+    // is never a wrong verdict.
+    if n.saturating_mul(n)
+        .saturating_mul(std::mem::size_of::<Rational>())
+        > budget_bytes
+    {
+        return Feasibility::Unknown;
+    }
     let mut current: Vec<Constraint> = Vec::with_capacity(n);
     for (i, c) in constraints.iter().enumerate() {
         if i % 64 == 0 && past_deadline(deadline) {
@@ -2076,7 +2120,7 @@ fn solve(constraints: &[Constraint], nvars: usize, deadline: Option<Instant>) ->
         if past_deadline(deadline) {
             return Feasibility::Unknown;
         }
-        match eliminate(&current, v, deadline) {
+        match eliminate(&current, v, deadline, budget_bytes) {
             Some(next) => current = next,
             None => return Feasibility::Unknown,
         }
@@ -2106,6 +2150,7 @@ fn solve_values(
     constraints: &[Constraint],
     nvars: usize,
     deadline: Option<Instant>,
+    budget_bytes: usize,
 ) -> Option<Vec<Rational>> {
     let mut saved: Vec<(usize, Vec<Constraint>)> = Vec::with_capacity(nvars);
     let mut current: Vec<Constraint> = Vec::with_capacity(constraints.len());
@@ -2120,7 +2165,7 @@ fn solve_values(
             return None;
         }
         saved.push((v, current.clone()));
-        current = eliminate(&current, v, deadline)?;
+        current = eliminate(&current, v, deadline, budget_bytes)?;
     }
     for (i, c) in current.iter().enumerate() {
         if i % 64 == 0 && past_deadline(deadline) {
@@ -2146,7 +2191,24 @@ fn eliminate(
     system: &[Constraint],
     v: usize,
     deadline: Option<Instant>,
+    budget_bytes: usize,
 ) -> Option<Vec<Constraint>> {
+    // Checked BEFORE the partition loop below, which CLONES a constraint — with
+    // its length-`n` multiplier vector — for every row that does not mention `v`.
+    // Placing this after that loop (the first attempt) leaves the allocation
+    // already made: `current` grows to `MAX_FM_CONSTRAINTS` after one step while
+    // the multiplier vectors keep the ORIGINAL system's length, so the input to
+    // the NEXT step is 20 000 x n x 32 bytes — gigabytes at a few thousand rows,
+    // and the measured 7.8 GB abort on `QF_LRA/miplib/danoint-266.smt2`.
+    let mult_len = system.first().map_or(0, |c| c.mult.len());
+    if system
+        .len()
+        .saturating_mul(mult_len)
+        .saturating_mul(std::mem::size_of::<Rational>())
+        > budget_bytes
+    {
+        return None;
+    }
     let mut out = Vec::new();
     let mut pos = Vec::new();
     let mut neg = Vec::new();
@@ -2166,11 +2228,20 @@ fn eliminate(
             }
         }
     }
-    if out
+    let produced = out
         .len()
-        .saturating_add(pos.len().saturating_mul(neg.len()))
-        > MAX_FM_CONSTRAINTS
-    {
+        .saturating_add(pos.len().saturating_mul(neg.len()));
+    // Two ceilings, and the second is the one that was missing (ADR-1752). The
+    // COUNT ceiling has always been here; the BYTES behind that count had no
+    // bound at all, because each produced constraint carries a multiplier vector
+    // as long as the original system. At the shipped 20 000-constraint ceiling
+    // and a few thousand input rows that is gigabytes for a single step — the
+    // measured 7.8 GB abort on `QF_LRA/miplib/danoint-266.smt2`, whose trace
+    // showed `simplex_rows=n/a` and `final_checks=1`, i.e. one call to this.
+    let step_bytes = produced
+        .saturating_mul(mult_len)
+        .saturating_mul(std::mem::size_of::<Rational>());
+    if produced > MAX_FM_CONSTRAINTS || step_bytes > budget_bytes {
         return None;
     }
     // Combine each positive-coefficient bound with each negative-coefficient
@@ -4000,6 +4071,7 @@ fn run_online_diag(arena: &TermArena, assertions: &[TermId]) -> Option<OnlineDia
         bound_lower: vec![None; forms],
         bound_upper: vec![None; forms],
         bound_log: Vec::new(),
+        budget_bytes: DEFAULT_ONLINE_LRA_BUDGET_BYTES,
         propagatable,
         propagations_offered: 0,
         assert_partial_conflicts: 0,
@@ -4225,84 +4297,107 @@ mod tests {
         );
     }
 
-    /// **This is the test the Fourier–Motzkin refusal is pinned by**, and it
-    /// exists because removing the atom cap without it was measured as a
-    /// regression, not predicted as one.
+    /// **This is the test the Fourier–Motzkin memory bound is pinned by**, and
+    /// it exists because two admission-time projections were shipped and both
+    /// were measured wrong, in opposite directions.
     ///
-    /// When the dense tableau does not fit, `LraTheory` falls back to
-    /// Fourier–Motzkin, whose *entry* cost is `n² × size_of::<Rational>()` in
-    /// the `mult` multiplier vectors alone, before one variable is eliminated.
-    /// `MAX_FM_CONSTRAINTS` caps what one elimination STEP produces and says
-    /// nothing about that. The flat `MAX_ONLINE_LRA_ATOMS` capped atoms, which
-    /// capped `n`, which kept the fallback away from large systems — a
-    /// protection its own doc never mentioned. Removing the cap on the strength
-    /// of that doc took
-    /// `QF_LRA/2017-Heizmann-…/_sanfoundry_10_ground.i_6_3_3.bpl_13.smt2` from a
-    /// 0.82 s decline at 121 MB to a **7.7 GB abort**, and the coefficient budget
-    /// could not see it because those bytes are not coefficients.
+    /// When the dense tableau does not fit, feasibility falls back to
+    /// Fourier–Motzkin, which is the one engine here with no memory bound of its
+    /// own. `MAX_FM_CONSTRAINTS` caps how many constraints ONE elimination step
+    /// may produce and says nothing about the bytes behind them, because every
+    /// produced constraint carries a multiplier vector as long as the original
+    /// system. The flat `MAX_ONLINE_LRA_ATOMS` capped atoms, which capped that
+    /// length, which kept the fallback away from large systems — a protection its
+    /// own doc never mentioned.
     ///
-    /// So this drives a system whose Fourier–Motzkin entry cost provably exceeds
-    /// the budget and requires a refusal rather than a fallback — and requires,
-    /// in the same test, that a system which FITS is still built on the simplex,
-    /// so the refusal cannot be a blanket one. Refusing on the *tableau* size
-    /// instead was tried and measured wrong in the other direction: it also
-    /// refused `QF_LRA/TM/p5-driverlogNumeric_s9`, which Fourier–Motzkin decides
-    /// `unsat` in 289 ms at low memory.
+    /// Removing the cap and projecting instead was tried twice:
+    ///
+    /// - on the **tableau** size, which also refused
+    ///   `QF_LRA/TM/p5-driverlogNumeric_s9.smt2`, decided `unsat` by the fallback
+    ///   in 0.17 s at 33 MB;
+    /// - on Fourier–Motzkin's **entry** cost (`n²`), which
+    ///   `QF_LRA/miplib/danoint-266.smt2` passed and then aborted at **7.8 GB
+    ///   after 11 s**, having previously declined in 0.04 s at 15 MB.
+    ///
+    /// Neither can work, and the reason is not that the constant was mistuned:
+    /// how far one elimination step actually expands is a property of the data,
+    /// not of the atom or variable count. So the bound lives where the allocation
+    /// is, and this test drives it there — a system that must decline, and a
+    /// system that must still be DECIDED, through the same fallback.
     #[test]
-    fn a_system_too_large_for_the_tableau_is_refused_not_handed_to_fourier_motzkin() {
-        /// `count` atoms `x_i + x_{i+1} <= i`, each over two fresh-ish variables:
-        /// one tableau row per atom and `count` variables, so the dense tableau is
-        /// `count x 2*count` cells and crosses `MAX_TABLEAU_CELLS` at a `count`
-        /// this test can actually build.
-        fn chain(count: usize) -> (TermArena, Vec<TermId>) {
-            let mut arena = TermArena::new();
-            let vars: Vec<TermId> = (0..=count)
-                .map(|i| rvar(&mut arena, &format!("x{i}")))
-                .collect();
-            let atoms = (0..count)
-                .map(|i| {
-                    let sum = arena.real_add(vars[i], vars[i + 1]).expect("sum");
-                    let rhs = rconst(&mut arena, i128::try_from(i).expect("small"));
-                    arena.real_le(sum, rhs).expect("atom")
-                })
-                .collect();
-            (arena, atoms)
+    fn the_fourier_motzkin_fallback_declines_on_bytes_instead_of_allocating() {
+        // `count` constraints `x_i + x_{i+1} <= i` over `count + 1` variables,
+        // handed to the fallback directly: the guard under test is inside
+        // `solve`/`eliminate`, and driving it through a whole `LraTheory` would
+        // only re-test the admission path this replaced.
+        let count = 96usize;
+        let nvars = count + 1;
+        let mut system: Vec<Constraint> = Vec::with_capacity(count);
+        for i in 0..count {
+            let mut coeffs = BTreeMap::new();
+            coeffs.insert(i, Rational::integer(1));
+            coeffs.insert(i + 1, Rational::integer(1));
+            system.push(Constraint {
+                expr: LinExpr {
+                    coeffs,
+                    constant: Rational::integer(-i128::try_from(i).expect("small")),
+                },
+                strict: false,
+                mult: Vec::new(),
+                atom: i,
+                row: None,
+                form: None,
+            });
         }
 
-        // Two conditions have to hold at once for the guard to be exercised:
-        // the dense tableau must NOT fit (else the simplex is used and the
-        // fallback is never reached), and Fourier–Motzkin's entry allocation —
-        // `n^2 x size_of::<Rational>()` for `n` live constraints — must exceed
-        // the budget. The second is the binding one at this size.
-        let over = (DEFAULT_ONLINE_LRA_BUDGET_BYTES / size_of::<Rational>()).isqrt() + 64;
-        let (arena, atoms) = chain(over);
-        let stop =
-            LraTheory::try_new_with_budget(&arena, &atoms, None, DEFAULT_ONLINE_LRA_BUDGET_BYTES)
-                .err()
-                .expect("a system past the tableau cap must be refused");
-        let LraTheoryBuildStop::MemoryBudget {
-            estimated_bytes,
-            budget_bytes,
-            ..
-        } = stop
-        else {
-            panic!("the refusal must be the memory budget, not {stop:?}");
-        };
+        // Generous: the fallback must DECIDE it. `x_i + x_{i+1} <= i` over
+        // unbounded reals is satisfiable, so a decline here would mean the guard
+        // is a blanket one and the test below pins nothing.
         assert!(
-            estimated_bytes > budget_bytes,
-            "the refusal must report a projection that actually exceeds the budget: \
-             {estimated_bytes} vs {budget_bytes}"
+            matches!(
+                solve(&system, nvars, None, DEFAULT_ONLINE_LRA_BUDGET_BYTES),
+                Feasibility::Sat
+            ),
+            "the shipped budget must DECIDE the system the starved run declines"
         );
 
-        // A system comfortably UNDER the cap must still be built on the simplex —
-        // else the guard above is a blanket refusal and pins nothing.
-        let (arena, atoms) = chain(64);
-        let theory =
-            LraTheory::try_new_with_budget(&arena, &atoms, None, DEFAULT_ONLINE_LRA_BUDGET_BYTES)
-                .expect("a small system must still be admitted");
+        // Starved past the ENTRY allocation (`n^2 x size_of::<Rational>()`,
+        // ~295 KB here): a decline, never an allocation.
+        let entry_bytes = count * count * size_of::<Rational>();
         assert!(
-            theory.uses_simplex(),
-            "a small system must reach the warm simplex, not the fallback"
+            matches!(
+                solve(&system, nvars, None, entry_bytes / 2),
+                Feasibility::Unknown
+            ),
+            "a fallback that cannot fit its entry multipliers must decline"
+        );
+
+        // Starved past ONE ELIMINATION STEP but not past entry — the ceiling
+        // that was missing, and the one `MAX_FM_CONSTRAINTS` does not provide.
+        // `eliminate` is called directly so the step is the only thing measured.
+        let seeded: Vec<Constraint> = system
+            .iter()
+            .enumerate()
+            .map(|(i, c)| Constraint {
+                mult: unit_vec(count, i),
+                ..c.clone()
+            })
+            .collect();
+        let step = eliminate(&seeded, 0, None, DEFAULT_ONLINE_LRA_BUDGET_BYTES)
+            .expect("one step fits the shipped budget");
+        let step_bytes = step.len() * count * size_of::<Rational>();
+        assert!(
+            step_bytes > 0,
+            "the step must produce something, else the ceiling below is vacuous"
+        );
+        assert!(
+            eliminate(&seeded, 0, None, step_bytes / 2).is_none(),
+            "an elimination step whose multiplier vectors do not fit the budget \
+             must decline rather than allocate them"
+        );
+        assert!(
+            step.len() <= MAX_FM_CONSTRAINTS,
+            "the pre-existing COUNT ceiling is untouched"
         );
     }
 
@@ -5286,6 +5381,7 @@ mod tests {
             bound_lower: vec![None; forms],
             bound_upper: vec![None; forms],
             bound_log: Vec::new(),
+            budget_bytes: DEFAULT_ONLINE_LRA_BUDGET_BYTES,
             propagatable,
             propagations_offered: 0,
             assert_partial_conflicts: 0,
