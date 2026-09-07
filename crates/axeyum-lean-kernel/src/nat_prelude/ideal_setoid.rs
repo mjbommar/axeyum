@@ -1027,6 +1027,7 @@ fn ex_elim(
 // ---------------------------------------------------------------------------
 
 /// `AlgS.Ideal.bot_isIdeal : forall R, IsIdeal R (AlgS.Ideal.bot R)`.
+#[allow(clippy::too_many_arguments)]
 fn declare_bot_is_ideal(
     k: &mut Kernel,
     lg: &LogicPrelude,
@@ -2180,7 +2181,14 @@ fn declare_quotient_equiv(
 // ---------------------------------------------------------------------------
 
 /// Every name `AlgS.Ideal.*` introduces, in declaration order.
+///
+/// `#[allow(dead_code)]` for the reason `FieldNames` carries it: these names
+/// are deliberately NOT threaded into `NatPrelude` (see the wiring comment in
+/// `nat_prelude.rs`), so a consumer re-derives them from the interned `AlgS`
+/// root -- which dead-code analysis cannot see. The walking helpers below are
+/// `#[cfg(test)]` for the same reason `FieldNames::all` is.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[allow(dead_code)]
 pub struct IdealNames {
     // Nine generic `AlgS.CommRing` lemmas.
     pub zero_add: NameId,
@@ -2219,6 +2227,7 @@ pub struct IdealNames {
     pub quotient_equiv: NameId,
 }
 
+#[cfg(test)]
 impl IdealNames {
     /// Every declaration this module introduces, derived from the struct's
     /// own fields — the population the sweeps in `ideal_setoid_tests` run
@@ -2416,13 +2425,14 @@ mod ideal_setoid_tests {
     use crate::build_logic_prelude;
     use crate::nat_prelude::structures as algeq;
     use crate::nat_prelude::structures_setoid::{
-        StructuresSRecordNames, declare_structures_s_all, declare_structures_s_extra,
-        intern_structures_s_names,
+        StructuresSExtraNames, StructuresSRecordNames, declare_structures_s_all,
+        declare_structures_s_extra, intern_structures_s_names,
     };
 
     struct Fixture {
         lg: LogicPrelude,
         st: StructuresSRecordNames,
+        extra: StructuresSExtraNames,
         deps: IdealDeps,
         id: IdealNames,
     }
@@ -2449,7 +2459,13 @@ mod ideal_setoid_tests {
         };
         let id = declare_ideal_setoid(k, &lg, l1, &st.comm_ring, deps, p.algs)
             .expect("the ideal layer and the quotient ring must admit");
-        Fixture { lg, st, deps, id }
+        Fixture {
+            lg,
+            st,
+            extra,
+            deps,
+            id,
+        }
     }
 
     #[test]
@@ -2896,6 +2912,55 @@ mod ideal_setoid_tests {
             theorem(&mut k, ns, "negative", ty, bad).is_err(),
             "the kernel accepted the principal ideal's proof as a proof about \
              the ZERO ideal"
+        );
+    }
+
+    /// **Deliverable 3's obstruction, measured rather than asserted.** The
+    /// brief asked whether the first isomorphism theorem in RING form
+    /// (`R/ker f ≅ im f`) is within reach from `AlgS.Hom.firstIso`'s shape by
+    /// transport. It is not, and the reason is readable off the two types:
+    /// `firstIso` (and `firstIsoClassical`) quantify over `AlgS.Group`
+    /// ONLY -- one operation, one `fMul` -- while a ring quotient is an
+    /// `AlgS.CommRing`. There is no coercion between the two records in this
+    /// kernel, so the ring form is a new binder stack, not a transport.
+    ///
+    /// The positive control is in the same invocation: `AlgS.Ideal.quotient`
+    /// DOES mention `AlgS.CommRing`, so a rendering that had simply stopped
+    /// working could not make this test pass.
+    #[test]
+    fn the_group_first_isomorphism_theorem_says_nothing_about_rings() {
+        let mut k = Kernel::new();
+        let f = build(&mut k);
+        for (name, label) in [
+            (f.extra.hom_first_iso, "AlgS.Hom.firstIso"),
+            (f.extra.hom_quotient, "AlgS.Hom.quotient"),
+        ] {
+            let decl = k
+                .environment()
+                .get(name)
+                .expect("the group-level first isomorphism layer must exist")
+                .clone();
+            let rendered = k.render_lean(decl.ty());
+            assert!(
+                rendered.contains("AlgS.Group"),
+                "{label} must be stated over AlgS.Group"
+            );
+            assert!(
+                !rendered.contains("AlgS.CommRing"),
+                "{label} mentions AlgS.CommRing -- the ring form may now be a \
+                 transport after all, and this lane's recorded obstruction is \
+                 stale: {rendered}"
+            );
+        }
+        // Positive control, same invocation.
+        let q = k
+            .environment()
+            .get(f.id.quotient)
+            .expect("the ideal quotient must exist")
+            .clone();
+        assert!(
+            k.render_lean(q.ty()).contains("AlgS.CommRing"),
+            "positive control: AlgS.Ideal.quotient must mention AlgS.CommRing"
         );
     }
 
