@@ -2216,6 +2216,20 @@ fn ctx_refutation_axiom_footprint(
 ///   [`LeanModuleContent::of_module_source`] classifies it and
 ///   [`prove_unsat_to_lean_theory_module`] declines it.
 ///
+/// **Scoped to the SOS attestation on purpose; not a general classifier.**
+/// `minted_axioms_of` is calibrated for the LRA naming scheme, where a query's
+/// own assumption is `axeyum.reconstruct.<route>.hyp._<n>` — `is_query_local`
+/// requires that route segment. A plain [`ReconstructCtx`] names every
+/// hypothesis `axeyum.reconstruct.hyp._<n>` with no route, so **every**
+/// `ReconstructCtx`-built refutation reports a non-empty minted set, honest
+/// `QF_BV` and `QF_UF` reconstructions included. Measured 2026-09-06 by mutant
+/// MD, which moved the wrapper's opaque proposition from `prop._n` to
+/// `hyp._n` expecting the guard to fall through and found it did not.
+///
+/// So do not reach for this from another route without recalibrating
+/// `is_query_local` first: applied to `QF_BV` today it would rename a module
+/// that has earned the honest name.
+///
 /// The minted names are written into the banner as well, so a reader sees WHICH
 /// assumption bought the `False` without re-deriving the footprint.
 ///
@@ -3423,6 +3437,25 @@ fn reconstruct_sos_certificate_wrapper_to_lean_module(
     arena: &TermArena,
     assertions: &[TermId],
 ) -> Result<String, ReconstructError> {
+    sos_certificate_attestation_module(arena, assertions).map(|(source, _minted)| source)
+}
+
+/// [`reconstruct_sos_certificate_wrapper_to_lean_module`], also returning the
+/// **minted entries of the refutation's axiom footprint** — the kernel's own
+/// answer to "what did this route assume that the query did not give it".
+///
+/// Split out so the guard's tests can assert on the measurement rather than on
+/// the module text. A fixture that greps the rendered source for an
+/// `axeyum.reconstruct.prop.` line is keyed on a NAME, and mutant MD showed
+/// that is the assertion a rename silently walks past.
+///
+/// # Errors
+///
+/// As [`reconstruct_sos_certificate_wrapper_to_lean_module`].
+fn sos_certificate_attestation_module(
+    arena: &TermArena,
+    assertions: &[TermId],
+) -> Result<(String, Vec<String>), ReconstructError> {
     let cert =
         crate::nra_real_root::sos_refute_with_certificate(arena, assertions).ok_or_else(|| {
             ReconstructError::MalformedStep {
@@ -3445,7 +3478,10 @@ fn reconstruct_sos_certificate_wrapper_to_lean_module(
     let refuter = fresh_axiom(&mut ctx, refuter_prop, "sos_certificate")?;
     let proof = ctx.kernel.app(refuter, asserted);
     require_infers_false(&mut ctx, proof)?;
-    render_ctx_module_named_by_footprint(&mut ctx, proof, "sos_certificate")
+    let footprint = ctx_refutation_axiom_footprint(&mut ctx, proof)?;
+    let minted = arithmetic::ordered_ring::minted_axioms_of(&footprint);
+    let source = render_ctx_module_named_by_footprint(&mut ctx, proof, "sos_certificate")?;
+    Ok((source, minted))
 }
 
 /// Reconstruct a **complete** EUF `unsat` Alethe proof into a Lean proof term of
@@ -3970,7 +4006,7 @@ mod sos_fallback_labelling_tests {
     use super::{
         LEAN_MODULE_ATTESTED_THEOREM, LEAN_MODULE_THEOREM, LeanModuleContent, LraReconstructCtx,
         reconstruct_sos_certificate_wrapper_to_lean_module, reconstruct_sos_proof,
-        reconstruct_sos_to_lean_module,
+        reconstruct_sos_to_lean_module, sos_certificate_attestation_module,
     };
 
     /// `x*x < 0` — the trivial single square. Both routes accept it, which is
@@ -4022,14 +4058,15 @@ mod sos_fallback_labelling_tests {
             "the honest SOS refutation minted an assumption: {honest_minted:?}"
         );
 
-        // The fallback's module declares its assumptions in its own text; the
-        // opaque proposition it invents is the one no honest route needs.
-        let attested = reconstruct_sos_certificate_wrapper_to_lean_module(&arena, &[goal])
+        // The fallback's own footprint, as the kernel computes it. Asserted on
+        // the returned Vec rather than on a grep of the rendered module: a name
+        // grep is what mutant MD walked past.
+        let (_source, minted) = sos_certificate_attestation_module(&arena, &[goal])
             .expect("the certificate wrapper renders for a query it certifies");
         assert!(
-            attested.contains("axeyum.reconstruct.prop."),
-            "the fallback stopped minting an opaque proposition, so this test no \
-             longer measures the difference it was written for"
+            !minted.is_empty(),
+            "the fallback's refutation reports no minted assumption, so the \
+             footprint no longer separates it from an honest reconstruction"
         );
     }
 
