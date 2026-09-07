@@ -101,8 +101,11 @@ in the block above):
 | solver and CAS fragments | ~60 | 0 | QF_BV, QF_FP, QF_LRA, NRA, UF, hypergeometric summation |
 
 Totals: **2,687 proved, 267 open, 4 refuted, 3 conjectured, 2 computed.**
-Every proved row carries an axiom footprint read from
-`Kernel::axiom_footprint`, and the headline is that the footprint is empty.
+Every proved row carries an `axiom_footprint` read from
+`Kernel::axiom_footprint`. The headline, stated precisely (ADR-1674): 2,584 of the 2,687 proved facts carry an empty `axiom_footprint`, all of
+them on the `kernel-lean` route — the only route that can make the claim, since
+`validate-facts.py` rejects an empty footprint on the other five. Of the 103
+remaining, 101 are on those five routes and 2 are `kernel-lean` exceptions.
 
 ## The constraint that shapes almost every verdict
 

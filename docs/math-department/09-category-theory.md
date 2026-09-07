@@ -20,7 +20,9 @@ Last measured: 2026-09-06 at `5fa2e3feb` (kernel index `declarations=3311`)
 > [AUDIT-2026-09-04.md](AUDIT-2026-09-04.md) for the evidence. Across the
 > twelve files, 11 of 76 absence claims were false and 12 more overstated the
 > gap; the cause is that the ledger characterises only 38% of its proved facts
-> and does not cover 430 kernel theorems at all (ADR-1605). **Re-measured
+> and does not cover 430 kernel theorems at all (ADR-1605) — **that 430 is not
+> reproducible by its own method and is retired; the measured figure is 721 of
+> 3,079 registered theorem names uncovered, ADR-1674**. **Re-measured
 > 2026-09-06**: the absence claims in *this* file are now stale in the other
 > direction — the four things it said were missing landed on 09-04 and 09-05.
 

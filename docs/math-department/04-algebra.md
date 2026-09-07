@@ -302,10 +302,11 @@ The case against:
   2026-09-06 evening: the per-fact footprint IS a structured top-level field,
   `axiom_footprint`, on every one of the 2,687 proved facts, and
   `validate-facts.py` gates on it; the chair's re-reading scanned it and found
-  **2,584 of the 2,586 `kernel-lean` facts empty** — a 0.08% gap, which is the
-  comparable form; the cross-route "2,584 of 2,687" mixes in 101 facts on the
-  CAS, search and SMT routes, and `validate-facts.py` marks that reading "not
-  comparable across routes". So "empty across all proved facts" is false as worded and
+  **2,584 of the 2,687 proved facts empty, all of them on the `kernel-lean`
+  route** — the only route that can make the claim, since the validator rejects
+  an empty footprint on the other five. Of the 103 remaining, 101 are on those
+  five routes and 2 are named `kernel-lean` exceptions, so "all `kernel-lean`
+  facts are axiom-free" is false by exactly two (ADR-1674). So "empty across all proved facts" is false as worded and
   checkable in one pass; the earlier sentence here said the opposite.)
 - The setoid route demonstrably works. ℝ, ℂ, and the `AlgS` spine are proof
   that a large development can be carried without quotients, and that is
