@@ -231,17 +231,20 @@ three needs a fresh design decision first.
 ## How to re-measure
 
 
-**Standing caveat on every ABSENT claim in this file (added 2026-09-06).**
-The retrieval index these measurements used builds 22 of the kernel's 31
-prelude builders. It indexes **no** `FO.*` declaration, **no** `Metric.prod*`,
-and no list prelude, so an ABSENT verdict in those three areas is a statement
-about the instrument, not about the library. The same gap makes
-`check-trust-closure.py` report 21 facts as having absent subjects when their
-subjects exist. A partial-coverage tool does not merely fail to find things;
-it produces false positives in every gate built on it. Absence claims here
-outside those three areas are unaffected, and each was paired with a positive
-control in the same invocation. Re-measure once ADR-1672's derived-coverage
-gate has landed.
+**Caveat on every ABSENT claim in this file, and its expiry (2026-09-06).**
+These measurements were taken with a retrieval index that built 17 of the
+kernel's 31 prelude builders and indexed no `FO.*`, no `Metric.prod*` and no
+list prelude, so an ABSENT verdict in those three areas was a statement about
+the instrument. **That gap is now closed** (`a4848a970`, ADR-1672): coverage is
+31 of 31, the group list is derived from one table, and a census test fails
+when the table and the builder inventory diverge. The same gap had been
+manufacturing findings downstream — `check-trust-closure.py` reported 21
+facts as having absent subjects that exist and are proved; building the
+missing preludes took that to 0. **Any ABSENT claim in this file that touches
+first-order logic, the product metric or lists predates the fix and should be
+re-measured before it is quoted.** Claims outside those three areas were
+unaffected and each was paired with a positive control in the same
+invocation.
 The old recipe grepped the kernel *source* for eleven words and read a zero as
 absence. It no longer discriminates: `measure` returns 191 files (mostly the
 word "measured"), `hilbert` returns 1 (prose about Hilbert's incidence axioms
