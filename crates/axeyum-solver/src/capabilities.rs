@@ -958,10 +958,20 @@ pub const CAPABILITIES: &[Capability] = &[
         feature: "nonlinear real: a complete cylindrical-decomposition decision side \
                   (single-variable real-algebraic + degree-2 SOS/PSD + coupled-equality \
                   resultant grid + strict and non-strict CAD, ANY dimension, rational OR \
-                  algebraic coordinates) over a linear-abstraction/McCormick fallback; \
-                  sound-incomplete only on the hard coupled/high-degree tail",
+                  algebraic coordinates) over a linear-abstraction/McCormick fallback \
+                  whose admission is sized to the CONSUMING engine's distinct-LRA-atom \
+                  capacity (ADR-1751), not to a cross-product count; sound-incomplete \
+                  only on the hard coupled/high-degree tail",
         assurance: Assurance::SoundIncomplete,
-        evidence: "irrational witnesses as Value::RealAlgebraic (x*x=2 → Sat √2); every \
+        evidence: "the incompleteness boundary is MEASURED, not asserted: on the committed \
+                   200-file QF_NRA parity list the shipped configuration decides 112 \
+                   (47+2 sat, 63 unsat) against cvc5's 186, with ZERO disagreements; the \
+                   62 files the 2026-09-06 loss census charged to the old cross-product \
+                   admission bound were re-run with it lifted and gave 0 memory aborts in \
+                   124 runs, peak RSS 3315 vs 3316 MiB against an 8 GiB cap, and 2 new \
+                   sat -- so 60 of the 62 are a CAPABILITY gap (nlsat/CAD), not an \
+                   admission-policy one. \
+                   irrational witnesses as Value::RealAlgebraic (x*x=2 → Sat √2); every \
                    SAT replay-checked (sign_at / exact field-arithmetic eval), every CAD \
                    UNSAT exhaustive-or-decline; differentially VALIDATED DISAGREE=0 vs Z3 \
                    over the NRA fuzz (which found+fixed real wrong-unsats); degree-2 SOS \

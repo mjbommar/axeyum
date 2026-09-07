@@ -289,3 +289,130 @@ sorted delta table by eye. Computed with the stated rule (`|Δt| ≤ 0.2 s`) it 
 **25**. The figure appears as 28 in the message of commit `07b8da6ca`, which is
 history and stays as written; 25 is the number, and it is what the source
 comments, the ADR and this table now carry.
+
+## The slice, and the confirming measurement
+
+ADR-1751: admission is the consuming engine's **distinct-LRA-atom capacity**,
+not a cross-product count. Implementation in `07b8da6ca`; the shape and the
+reasoning are in the ADR, not repeated here.
+
+### Non-regression and gain, on the full committed list
+
+`bench-results/parity-lists/QF_NRA.txt` (200 files, sha256 `d645dd907edd`), the
+same protocol, one binary
+(`c2d7635815d5bd75bd7a589424a35f258b4db77d50aaece1d9781e8e8e3c4360` — different
+from the diagnostic binary above, confirmed by sha256), arms interleaved per
+file, s6, load 2.40 before and 2.11 after (the ambient load is one long-running
+13% bash, checked in `ps`; both arms carry it equally).
+
+| | arm A (`AXEYUM_NRA_ADMISSION=legacy`) | arm B (shipped default) |
+|---|---|---|
+| sat | 47 | **49** |
+| unsat | 63 | 63 |
+| **decided** | **110/200** | **112/200** |
+| verdict regressions | — | **0** |
+| disagreements | — | **0** |
+| nonzero exit (memory abort / crash) | 0 | **0** |
+| total wall | 1,006.0 s | 1,373.5 s (+367.5) |
+| max peak RSS over the population | 6,817 MiB | 6,817 MiB |
+
+**Arm A reproduces the recorded ledger row exactly** — 110/200, the number in
+`bench-results/PARITY.md`'s `## QF_NRA — 2026-09-07T01:33:46Z` entry. That is
+the control that makes arm B's 112 comparable: the legacy lever is not an
+approximation of the old engine, it reproduces its score on this list.
+
+Only two files changed, both `unsolved → sat`, and the change is one-directional
+by construction (§2/§3 of the ADR). The deadline share is doing its job: the
+same admissions cost +502 s unbounded on 62 files and +367 s here across all
+200.
+
+### The two new results, checked three ways
+
+`20200911-Pine/1599121863243316000.smt2` and `.../1599122159626470000.smt2`,
+both declared `:status unknown` in the file (so no declared-status conflict is
+possible either way):
+
+1. **cvc5 agrees.** Run directly, `--tlimit=24000`, same host: `sat` and `sat`.
+2. **The model replays.** `AXEYUM_EVIDENCE=1 … --evidence` reports
+   `evidence kind=sat-model certified=1 recheck=na arena=ok` on both — the
+   lifted model re-evaluated against the original assertions through the ground
+   evaluator. This is not an extra check bolted on for the report:
+   `check_with_nra`'s outer guard replays every `sat` unconditionally, which is
+   why opening admission cannot produce a wrong `sat` however far it is opened.
+3. **Zero disagreements across all 400 runs** on the 200-file list, in either
+   arm.
+
+### Gates
+
+Run on s6 (cores 8-15 while the sweep held 0-7, then 0-7 once it finished) and
+on s4 for the `z3`-gated ones, since s6 has no `libz3-dev`. Every count is
+nonzero and was read off the run, not assumed:
+
+| gate | result |
+|---|---|
+| `cargo check --workspace --all-targets --all-features` | ok |
+| `cargo clippy --workspace --all-targets --all-features -- -D warnings` | ok (after fixing three `doc_markdown` hits; the lib-only run did not reach the one in `tests/nra.rs`) |
+| `-p axeyum-solver --lib --features full` | **1475 passed**, 0 failed |
+| `--features full --test corpus_regression` | 1 passed |
+| `--features full --test nra` | **37 passed** (34 existing + 3 new) |
+| `--features full --test nra_real_root / nra_no_hang / nra_census_levers / cas_ideal_route` | 86 / 3 / 8 / 36 passed |
+| `--features z3 --test qf_lra_differential_fuzz` | 5 passed |
+| `--features z3 --test simplex_lra_fallback_differential` | 1 passed |
+| `--features z3 --test qf_uflra_differential_fuzz` | 1 passed |
+| `--features z3 --test nra_differential_fuzz` | 3 passed (675 s) |
+| `--features z3 --test qf_ufnra_differential_fuzz` | 1 passed |
+| `--features z3 --test nia_differential_fuzz` | 1 passed |
+| `--test progress_frontier --features full -- --test-threads=1` | 12 passed, no REGRESSION |
+
+The three NRA/NIA differential fuzzes are the ones that matter here — they are
+the only checks that compare our verdicts against an independent solver on
+exactly the fragment this change opens up.
+
+### Mutation control
+
+`a_chain_past_the_consumer_capacity_declines_naming_atoms_not_a_count` is the
+guard on the gate, so the gate was mutated and the suite re-run in the lane's
+own scratch copy on s6 (never in the shared worktree): `if !admitted {` →
+`if false && !admitted {`. **Exactly one test died** — that one — 36 passed.
+Source restored and verified by re-grep before continuing.
+
+The first draft of that test did **not** discriminate, and the reason is worth
+keeping: it used `Σ vᵢvᵢ₊₁ + v₀/vₙ > 1`, and `sat_witness_probe` answered `sat`
+at the all-ones point before admission was ever consulted. The threshold is now
+`< −10⁶`, which no point of that probe's grid (`0, ±1, ±2, ±3`) can reach. This
+is the same trap that made the lane's first synthetic control useless (see Q1):
+a query that never reaches `check_nonlinear_abstraction` measures nothing about
+it, and looks exactly like a query that reaches it and is unaffected.
+
+## What this did not do
+
+- **60 of the 62 census files are still lost.** They are admitted now and the
+  relaxation does not close them. That is a capability gap — the decline text's
+  own long-standing advice, "this needs a nlsat/CAD engine", is still the right
+  answer for them — and this lane's contribution there is to have made the
+  attribution honest: 25 were never gated by admission at all, and 35 more are
+  not gated by it any more.
+- **`MAX_ONLINE_LRA_ATOMS` was not touched.** It is now the binding constraint
+  for the large-count files, and its own doc records the sweep that says lifting
+  it needs the atom-normalization memory addressed first. That is the next
+  bound to attack on this route, and it is a different lane's shape of work.
+- **QF_NIA was not re-measured.** The deadline share (ADR-1751 §4) exists
+  precisely to protect the fall-through callers, and it is argued from the
+  structure plus the measured times-to-decide, not from a QF_NIA sweep. A
+  QF_NIA parity run would close that; it did not run here.
+
+## The raw data
+
+Both sweeps are committed beside the census they correct:
+
+- `bench-results/parity-losses-20260906/QF_NRA.admission-ab62.tsv` — the
+  diagnostic A/B (legacy vs unbounded) over the 62 census files, binary
+  `e115759a741e55f0…`.
+- `bench-results/parity-losses-20260906/QF_NRA.admission-ab200.tsv` — the
+  confirming A/B (legacy vs shipped default) over the committed 200-file list,
+  binary `c2d7635815d5bd75…`.
+
+Each file's header carries the binary's sha256, the arm definitions, and the
+host load before and after. Columns: `file, arm, verdict, exit, elapsed_s,
+peak_rss_kib`. `exit` is recorded raw so a memory abort (the thing the bound
+claimed to prevent) is a column, not an inference — it is `0` on all 524 runs.

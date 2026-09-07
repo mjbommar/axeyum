@@ -113,3 +113,46 @@ slice; the ratio (59.1%) is reported as-is.
 - Loss census: `bench-results/parity-losses-20260906/README.md`,
   `bench-results/parity-losses-20260906/QF_NRA.census.tsv`
 - Lane status: `docs/plan/status/qf-nra-entry.md`
+
+## Follow-up: the dominant cause was acted on (lane `nra-admission-bound`, 2026-09-07)
+
+The `nra-cross-product-admission-bound` class above (62 files, 80.5%) was the
+brief for a capability slice. Its outcome corrects part of this document.
+
+**What the bound protected, measured.** It was introduced (`9a8b09220`) as an
+OOM guard. Re-run on the 62 files with the bound lifted, same 24 s / 8 GiB
+protocol: **zero memory aborts in 124 runs**, peak RSS 3,315 MiB vs 3,316 MiB
+against an 8 GiB cap. It protected **wall time**, not memory — and on **25 of
+the 62 it protected nothing**, those files being refused one layer down by
+`lra_theory::MAX_ONLINE_LRA_ATOMS` in the same time and the same memory. The
+census read the declining route's message, which named the first gate in a chain
+rather than the one that refused; correction block in
+`bench-results/parity-losses-20260906/README.md`.
+
+**The slice.** [ADR-1751](../../../research/09-decisions/adr-1751-nra-admission-is-the-consumers-capacity.md):
+admission is now the consuming engine's distinct-LRA-atom capacity rather than a
+cross-product count of 2, with the pre-ADR behaviour preserved byte-identically
+at or below the old line and a bounded deadline share above it.
+
+**Measured effect on this list** (`QF_NRA.txt`, 200 files, sha256
+`d645dd907edd`, one binary `c2d7635815d5`, arms interleaved, s6):
+
+| | legacy | shipped default |
+|---|---:|---:|
+| decided | 110/200 | **112/200** |
+| verdict regressions | — | 0 |
+| disagreements | — | 0 |
+| memory aborts in 400 runs | 0 | 0 |
+
+The legacy arm reproduces this document's ledger row exactly (110/200), which is
+what makes 112 comparable. Both new results are `sat`, both agree with cvc5 run
+directly, and both carry `evidence kind=sat-model certified=1`.
+
+**What remains.** 60 of the 62 are still lost, and they are now a **capability**
+gap rather than an admission-policy one: 35 are admitted and the
+linear-abstraction relaxation does not close them, 25 are refused by the atom
+capacity. The decline text's own answer — "this needs a nlsat/CAD engine" — is
+still the right one for them, and `MAX_ONLINE_LRA_ATOMS` is the next bound on
+this route (its own doc records that lifting it needs the atom-normalization
+memory addressed first). Full record:
+[`docs/research/12-performance/nra-admission-bound-2026-09-07.md`](../../../research/12-performance/nra-admission-bound-2026-09-07.md).

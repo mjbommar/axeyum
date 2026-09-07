@@ -114,3 +114,47 @@ which the single-variable real-root route does not apply (multivariate), and
 one `meti-tarski` file carrying an integer literal outside the i128
 reference range (`wide-int-admission`, ADR-1702 slice 2 — an already-named,
 separately tracked gap, not new).
+
+## Correction, 2026-09-07: the dominant class names the wrong gate on 25 rows
+
+Added by lane `nra-admission-bound`, which was dispatched to act on this
+census's headline finding. The population and the method above stand; the
+**attribution of the dominant class does not**, for a reason this census could
+not have seen from the outside.
+
+`nra-cross-product-admission-bound` was derived, correctly, from the declining
+route's own message. That message named a gate that on **25 of the 62 rows was
+not the binding constraint**. Measured (one binary, arms differing only in
+`AXEYUM_NRA_MAX_CROSS_PRODUCTS` — the diagnostic lever of commit `41e5ff267`,
+since superseded by `AXEYUM_NRA_ADMISSION` — the same 24 s / 8 GiB protocol,
+`taskset -c 0-7`, arms interleaved, on s6):
+
+- With the cross-product bound lifted, 25 of the 62 files cost **≤ 0.2 s** extra
+  — no additional search happened at all. Their abstraction is refused one layer
+  down by `lra_theory::MAX_ONLINE_LRA_ATOMS`, in the same time and the same
+  memory. On `mbo_E1.smt2` the decline text simply changes from "771
+  cross-products exceed the deterministic admission bound of 2" to "online
+  CDCL(T) LRA atom cap exceeded (23385 > 1024)", at 0.83 s and 101 MB either
+  way.
+- 35 more are admitted by the new policy and still not decided by the
+  relaxation — a **capability** gap (nlsat/CAD), not an admission-policy one.
+- 2 are decided (both `sat`, both agreeing with cvc5).
+
+The corrected reading of the 62: **25 never gated by that bound, 35 gated but
+not decidable by the route behind it, 2 recovered.**
+
+The lesson is not that the method was wrong — it read the best signal
+available. It is that **a decline message is a claim, and a route that names the
+first gate in a chain rather than the one that actually refused makes every
+census built on it wrong in the same direction.** The engine now names the
+number the refusal was made on (ADR-1751 §5), so a future census on this route
+does not inherit this defect.
+
+Also re-measured, since this census's class name asserted it: the bound was
+introduced as an OOM guard, and it is not one any more. **Zero memory aborts in
+124 runs**, peak RSS across the population 3,315 MiB with the bound on and 3,316
+MiB with it lifted, against an 8 GiB cap. It protected wall time.
+
+Full record:
+[`docs/research/12-performance/nra-admission-bound-2026-09-07.md`](../../docs/research/12-performance/nra-admission-bound-2026-09-07.md)
+and [ADR-1751](../../docs/research/09-decisions/adr-1751-nra-admission-is-the-consumers-capacity.md).
