@@ -79,8 +79,9 @@ not a broken detector.
 **What did not run:** the same probe over `corpus/public-curated` (100
 `Real`-sorted files of 903) and over `corpus/` as a whole (142 `Real`-sorted
 files of 1,329). Both were started and both produced **no output at all** —
-the whole-tree run was killed at its 50-minute timeout, and the
-`public-curated` run had printed nothing after 10 minutes. The cost is in
+the whole-tree run was killed at its 50-minute timeout (exit 143), and the
+`public-curated` run exited 124 at a 900-second timeout with **zero lines**
+written. The cost is in
 `scan_proof_fragment`, which runs refuters, and in the reconstruction itself:
 one SOS module over the constructed reals is 2 MB and the four-test fixture
 takes ~290 s in debug. Some file early in sort order — the run is sorted, so

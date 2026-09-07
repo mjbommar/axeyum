@@ -17,7 +17,8 @@ them adversarial, with a four-mutant table.
 committed corpora is unmeasured. One slice completed
 (`corpus/public-curated/synthetic/QF_NRA`: 10 SOS queries, 0 fallbacks, with a
 forced-fallback positive control reporting 10 of 10); the `corpus/public-curated`
-and whole-`corpus/` runs each produced no output before their timeout. Because
+run (exit 124 at 900 s) and the whole-`corpus/` run (exit 143 at 3000 s)
+each produced zero lines of output. Because
 of that, the question of deleting the fallback outright is left open in the ADR
 rather than decided. A follow-up lane should give the probe a per-file deadline.
 
@@ -79,6 +80,26 @@ Two consequences, both recorded in the ADR and in the helper's doc comment:
   point is that names are not the authority. The wrapper is now split
   (`sos_certificate_attestation_module`) so the minted footprint is returned
   beside the module and the fixture asserts on the `Vec`.
+
+## Gates
+
+| Gate | Count | Exit |
+| --- | --- | --- |
+| `cargo test -p axeyum-solver --features full --lib -- --test-threads=4` | **1464 passed**, 0 failed | 0 |
+| `cargo test -p axeyum-solver --features full --lib sos_fallback_labelling_tests` | **4 passed**, 0 failed, 233 s | 0 |
+| `cargo test -p axeyum-solver --features full --test corpus_regression` | **1 passed**, 0 failed | 0 |
+| `cargo clippy -p axeyum-solver --all-targets --features full -- -D warnings` | — | 0 |
+| `cargo check --workspace --all-targets` | — | 0 |
+| `cargo fmt --all --check` | — | 0 |
+| `./scripts/check-links.sh` | "all links ok" | 0 |
+| `python3 scripts/gen-adr-index.py` | rows=884, 1673 not duplicated | 0 |
+
+The bare `--lib` sweep without `--test-threads` was killed at the
+`cargo-serialized` memory ceiling (exit 143) twice before the capped run
+succeeded; that is the ceiling firing, not a failure.
+
+Not run: the z3 differential fuzzes (no arithmetic touched), the frontier
+ratchet, `just check` / `check.sh`, and the real-`lean` cross-check.
 
 ## Consumer audit
 
