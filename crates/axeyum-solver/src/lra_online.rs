@@ -566,7 +566,41 @@ impl LraTheory {
         // overflowed right-hand side) and the cheap bound check must keep
         // working when it does.
         let forms = assign_forms(&mut atoms);
-        let simplex = build_simplex_engine(&mut atoms, nvars).map(RefCell::new);
+        let mut dense_cells = 0usize;
+        let simplex = build_simplex_engine(&mut atoms, nvars, &mut dense_cells).map(RefCell::new);
+        // ADR-1752, and this is the half the atom count was ACCIDENTALLY doing.
+        //
+        // When the dense tableau does not fit, `LraTheory` silently falls back to
+        // Fourier-Motzkin — which is doubly exponential in the variable count and
+        // carries NO memory bound at all. The flat atom cap capped atoms, which
+        // capped rows, which kept that fallback away from large systems; its doc
+        // said "normalization" and never mentioned this, so removing the cap on
+        // the strength of that doc let `_sanfoundry_10_ground.i_6_3_3.bpl_13.smt2`
+        // go from a 0.82 s decline at 121 MB to a **7.7 GB abort** — measured, and
+        // the budget could not see it because the bytes are not coefficients.
+        //
+        // So a system whose tableau exceeds the budget's tableau share is refused
+        // rather than handed to an unbounded engine. Refusing yields
+        // `Unknown(ResourceLimit)`, which is always a permitted verdict; running
+        // Fourier-Motzkin on a system this size yields an abort, which leaves the
+        // caller nothing. A tableau that merely OVERFLOWED (rather than being too
+        // big) still keeps the fallback, because that is a small system and
+        // Fourier-Motzkin is a real engine there.
+        //
+        // The condition is the SIZE decline specifically, not "the projection
+        // exceeds the whole budget": the tableau's own share is 128 MiB while the
+        // construction budget is 640 MiB, so between them lies a band in which the
+        // simplex refuses and a byte comparison against the whole budget would
+        // not — which is exactly the band Fourier–Motzkin would run in. There is
+        // no budget under which an unbounded engine on a system this size is safe.
+        if simplex.is_none() && dense_cells > simplex::MAX_TABLEAU_CELLS {
+            return Err(LraTheoryBuildStop::MemoryBudget {
+                estimated_bytes: dense_cells.saturating_mul(BYTES_PER_TABLEAU_CELL),
+                budget_bytes: simplex::MAX_TABLEAU_CELLS.saturating_mul(BYTES_PER_TABLEAU_CELL),
+                atoms: atom_terms.len(),
+                vars: nvars,
+            });
+        }
         // Order-preserving scan filter for `propagate_bounds`; see the field docs.
         let propagatable = propagatable_atoms(&atoms, forms);
         Ok(Self {
@@ -1431,7 +1465,11 @@ fn assign_forms(atoms: &mut [AtomKind]) -> usize {
 /// Returns `None` — leaving the theory on Fourier–Motzkin, unchanged — when a
 /// template's right-hand side overflows `i128` or the dense tableau would exceed
 /// [`simplex::MAX_TABLEAU_CELLS`]. Both declines are structural and deterministic.
-fn build_simplex_engine(atoms: &mut [AtomKind], nvars: usize) -> Option<SimplexEngine> {
+fn build_simplex_engine(
+    atoms: &mut [AtomKind],
+    nvars: usize,
+    dense_cells: &mut usize,
+) -> Option<SimplexEngine> {
     /// Opens a fresh row for `c` and records the **upper** bound asserting it
     /// imposes: `expr {<,≤} 0` with `expr = Σ aⱼ·xⱼ + k` is the row `Σ aⱼ·xⱼ {<,≤} −k`.
     fn open_row(
@@ -1500,6 +1538,12 @@ fn build_simplex_engine(atoms: &mut [AtomKind], nvars: usize) -> Option<SimplexE
     if rows_sparse.is_empty() {
         return None;
     }
+    // The dense tableau this system needs, recorded BEFORE the engine is asked
+    // for it, so a decline can be reported in bytes rather than as a bare
+    // `None`. `simplex::Incremental::new` charges `rows x (nvars + rows)` cells.
+    *dense_cells = rows_sparse
+        .len()
+        .saturating_mul(nvars.saturating_add(rows_sparse.len()));
     let inner = simplex::Incremental::new(nvars, rows_sparse)?;
     debug_assert_eq!(inner.rows(), row_atom.len());
     let row_bounded = vec![false; row_atom.len()];
@@ -3928,7 +3972,7 @@ fn run_online_diag(arena: &TermArena, assertions: &[TermId]) -> Option<OnlineDia
     let nvars = builder.vars.len();
     let mut atoms = atoms;
     let forms = assign_forms(&mut atoms);
-    let simplex = build_simplex_engine(&mut atoms, nvars).map(RefCell::new);
+    let simplex = build_simplex_engine(&mut atoms, nvars, &mut 0).map(RefCell::new);
     // Order-preserving scan filter for `propagate_bounds`; see the field docs.
     let propagatable = propagatable_atoms(&atoms, forms);
     let mut theory = LraTheory {
@@ -4167,6 +4211,79 @@ mod tests {
                 value: true
             }],
             "the reason is the single asserted atom holding the bound"
+        );
+    }
+
+    /// **This is the test the Fourier–Motzkin refusal is pinned by**, and it
+    /// exists because removing the atom cap without it was measured as a
+    /// regression, not predicted as one.
+    ///
+    /// When the dense tableau does not fit, `LraTheory` falls back to
+    /// Fourier–Motzkin, which is doubly exponential in the variable count and
+    /// carries **no memory bound**. The flat `MAX_ONLINE_LRA_ATOMS` capped atoms,
+    /// which capped rows, which kept that fallback away from large systems — a
+    /// protection its own doc never mentioned. Removing the cap on the strength
+    /// of that doc took
+    /// `QF_LRA/2017-Heizmann-…/_sanfoundry_10_ground.i_6_3_3.bpl_13.smt2` from a
+    /// 0.82 s decline at 121 MB to a **7.7 GB abort**, and the coefficient budget
+    /// could not see it because those bytes are not coefficients.
+    ///
+    /// So this drives a system whose tableau provably exceeds
+    /// [`simplex::MAX_TABLEAU_CELLS`] and requires a refusal rather than a
+    /// fallback — and requires, in the same test, that a system which FITS is
+    /// still built, so the refusal cannot be a blanket one.
+    #[test]
+    fn a_system_too_large_for_the_tableau_is_refused_not_handed_to_fourier_motzkin() {
+        /// `count` atoms `x_i + x_{i+1} <= i`, each over two fresh-ish variables:
+        /// one tableau row per atom and `count` variables, so the dense tableau is
+        /// `count x 2*count` cells and crosses `MAX_TABLEAU_CELLS` at a `count`
+        /// this test can actually build.
+        fn chain(count: usize) -> (TermArena, Vec<TermId>) {
+            let mut arena = TermArena::new();
+            let vars: Vec<TermId> = (0..=count)
+                .map(|i| rvar(&mut arena, &format!("x{i}")))
+                .collect();
+            let atoms = (0..count)
+                .map(|i| {
+                    let sum = arena.real_add(vars[i], vars[i + 1]).expect("sum");
+                    let rhs = rconst(&mut arena, i128::try_from(i).expect("small"));
+                    arena.real_le(sum, rhs).expect("atom")
+                })
+                .collect();
+            (arena, atoms)
+        }
+
+        // `count x (count + count)` cells must exceed the cap, so
+        // `count > sqrt(MAX_TABLEAU_CELLS / 2)`.
+        let over = (simplex::MAX_TABLEAU_CELLS / 2).isqrt() + 64;
+        let (arena, atoms) = chain(over);
+        let stop =
+            LraTheory::try_new_with_budget(&arena, &atoms, None, DEFAULT_ONLINE_LRA_BUDGET_BYTES)
+                .err()
+                .expect("a system past the tableau cap must be refused");
+        let LraTheoryBuildStop::MemoryBudget {
+            estimated_bytes,
+            budget_bytes,
+            ..
+        } = stop
+        else {
+            panic!("the refusal must be the memory budget, not {stop:?}");
+        };
+        assert!(
+            estimated_bytes > budget_bytes,
+            "the refusal must report a projection that actually exceeds the budget: \
+             {estimated_bytes} vs {budget_bytes}"
+        );
+
+        // A system comfortably UNDER the cap must still be built on the simplex —
+        // else the guard above is a blanket refusal and pins nothing.
+        let (arena, atoms) = chain(64);
+        let theory =
+            LraTheory::try_new_with_budget(&arena, &atoms, None, DEFAULT_ONLINE_LRA_BUDGET_BYTES)
+                .expect("a small system must still be admitted");
+        assert!(
+            theory.uses_simplex(),
+            "a small system must reach the warm simplex, not the fallback"
         );
     }
 
@@ -5133,7 +5250,7 @@ mod tests {
         let nvars = builder.vars.len();
         let mut atoms = atoms;
         let forms = assign_forms(&mut atoms);
-        let simplex = build_simplex_engine(&mut atoms, nvars).map(RefCell::new);
+        let simplex = build_simplex_engine(&mut atoms, nvars, &mut 0).map(RefCell::new);
         // Order-preserving scan filter for `propagate_bounds`; see the field docs.
         let propagatable = propagatable_atoms(&atoms, forms);
         let theory = LraTheory {
