@@ -143,6 +143,81 @@ session says "clean"; two green branches can fail `clippy -D warnings` on
 merge through a size-threshold lint, so the post-merge gate is check plus
 clippy on every crate either branch touched.
 
+### 2026-09-07, day: the three highest-value items, all merged
+
+Three lanes, from the survey's ranked list plus the previous night's findings.
+All merged and verified; the fully merged tree is green on merge hygiene, links,
+fmt, both generated files, workspace `check --all-targets --all-features`,
+workspace `clippy -D warnings`, and the arithmetic differential fuzzes.
+
+| Lane | Merge | Outcome |
+|---|---|---|
+| int-divmod-witness | `55aa201b8` | ADR-1730; a witness that catches a wrong `unsat` **all 30 existing tests accept** |
+| second-reference | `30c28fca4` | ADR-1732; our gap in two divisions was roughly **double** what the board said |
+| s7b-engine-unification | `65f8c1c2b` | a shipping route emits the ADR-1704 artifact; a wrong-`unsat` shape no fixture could see |
+
+**1. The preprocessing cap is a RELAXATION, so the exposure is `sat`, not
+`unsat`.** The lane was told to establish the direction from the semantics before
+writing code, and did: crossing `MAX_CONGRUENCE_GROUPS = 48` deletes conjuncts,
+so the model set only grows, `unsat` transfers at every size, and it is `sat`
+that degrades. The source comment was right. That direction is **live** —
+`dispatch_int_linear_refuters` returns `Sat(model)` as the answer, not only
+refutations.
+
+The witness earned its place: mutating the Euclidean bound `|c| - 1` to `c - 1`
+makes `solve` return `Unsat` on the satisfiable `mod(x, -3) = 2` **at the front
+door**, and all 30 pre-existing tests over this pass accept it, because there was
+no artifact to reject it and the default gate has no negative-divisor coverage.
+Three pre-existing defects fell out on the way, including `HashMap` iteration
+making fresh symbol names depend on per-process hash seeding — **determinism is
+a public API promise here and that broke it.**
+
+**2. "Parity" was measured against a solver that is not the frontier.** Same
+committed lists, only the reference changes, zero disagreements:
+
+| division | vs cvc5 | vs 2nd reference | reference |
+|---|---|---|---|
+| QF_RDL | 92.2% | **82.9%** | Yices 2.7.0 |
+| QF_LRA | 64.1% | **53.6%** | Yices 2.7.0 |
+| QF_UF | 98.0% | 98.0% | Yices 2.7.0 |
+| QF_UFLIA | 67.8% | 67.6% | SMTInterpol |
+
+Our counts barely move; the reference does. **The correction is
+division-specific, not a blanket discount** — two divisions roughly double, two
+do not move, so a uniform adjustment would be wrong in both directions. QF_LRA
+is the one that matters: the real gap is **84 files, not 52**, and that is the
+division the engine work targets. And one **disconfirming** result, reported as
+measured: SMTInterpol leads QF_UFLIA on the full corpus but solves only 2 more
+files than cvc5 on our sample.
+
+**3. The certificate is real on one route, and the swap is not a speed win.**
+`dl_online` runs the native core and attaches `SatRefutationModuloTheory` where
+`trusted_steps` was empty. QF_IDL population 27/50 -> **31/50**, PAR-2 -12.9%,
+zero verdict contradictions.
+
+**But this plan's premise for S7 was wrong, and so was the coordinator's.**
+`cdclt_solve_php_6_7` is 2.4956 ms against `proof_sat_solve_php_6_7`'s 2.5806 ms
+— `CdclT` is **3.4% faster**, because S1 and S1b already closed the
+Boolean-search gap. Yet the same swap decides 4 more files. **Stop pricing S7 as
+a performance win**; what it buys is proof output and deleting a duplicate
+engine. Where the population gain actually comes from is an unmade measurement.
+
+A differential of 4,000 instances found two real defects, one a wrong-`unsat`
+shape **invisible to every existing fixture** because they all materialise their
+own clauses. And the lane's own first fixture did not reproduce its own defect —
+the mutation control caught that.
+
+**Corrections to S7a's scoping**, needed by the next brief: the adapter cannot be
+a blanket impl (orphan rule), and the incremental protocol has **one** client
+(`ufbv_online`), not ten, so it was never a prerequisite for the other seven
+routes.
+
+**Next.** Six of seven one-shot routes still run `CdclT`, each a small diff but
+each needing its own measurement because a model change can cost a verdict. The
+trust step is not observable at corpus scale (`smtcomp_cli --evidence` does not
+print `trusted_steps`, and four things parse that line). OpenSMT and QiuQi were
+not obtained, so QF_LIA and QF_UFLRA remain single-reference.
+
 ### 2026-09-07, overnight: six lanes dispatched against the families tree, all merged and pushed
 
 Every lane below is on `origin/main` at `fcc988900`. Each was verified after
