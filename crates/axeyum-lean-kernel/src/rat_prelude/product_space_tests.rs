@@ -61,7 +61,10 @@ fn literal(d: &mut IntDev<'_>, p: RatPrelude, k: u32) -> ExprId {
 /// The rational `num / den`, as `Rat.natDivSucc num (den - 1)`. `den` must be
 /// positive.
 fn frac(d: &mut IntDev<'_>, p: RatPrelude, num: u32, den: u32) -> ExprId {
-    assert!(den > 0, "natDivSucc encodes den - 1, so den must be positive");
+    assert!(
+        den > 0,
+        "natDivSucc encodes den - 1, so den must be positive"
+    );
     let numerator = d.num(num);
     let index = d.num(den - 1);
     d.const_app(p.nat_div_succ, &[numerator, index])
@@ -173,12 +176,7 @@ fn prod_weight_multiplies_the_marginals_read_at_the_point() {
     let pp = asymmetric_marginals(&mut d, p);
 
     // The marginals really are what the module docs claim.
-    for &(i, j, expected) in &[
-        (0_u32, 0_u32, 1_u32),
-        (0, 1, 2),
-        (1, 0, 3),
-        (1, 1, 4),
-    ] {
+    for &(i, j, expected) in &[(0_u32, 0_u32, 1_u32), (0, 1, 2), (1, 0, 3), (1, 1, 4)] {
         let i_t = d.num(i);
         let j_t = d.num(j);
         let value = d.apply(pp, &[i_t, j_t]);

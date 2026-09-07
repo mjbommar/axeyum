@@ -97,6 +97,9 @@ mod pow_bridge;
 mod probability;
 pub mod probability_s;
 mod product;
+/// ADR-1677: the k-fold product probability space at ℚ, built on the
+/// function-space aggregate `Rat.sumMaps`.
+pub mod product_space;
 mod psatz_inequalities;
 mod rank;
 mod rank_bridge;
@@ -104,9 +107,6 @@ mod scaling;
 mod statements;
 mod sum;
 mod sum_maps;
-/// ADR-1677: the k-fold product probability space at ℚ, built on the
-/// function-space aggregate `Rat.sumMaps`.
-pub mod product_space;
 mod taylor;
 mod vector;
 /// ADR-1627 / roadmap W3-2: ℚ as a vector space over itself, and the

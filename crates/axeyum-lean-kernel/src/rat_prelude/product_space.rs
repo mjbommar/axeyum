@@ -579,7 +579,8 @@ fn declare_prod_range_sum_range_expand(
                 &[mid_summand, pulled_summand, n, per_k_pull],
             );
             let s3 = d.lemma(p.sum_range_mul_right, &[c0, tail_maps, n]);
-            let (_, rhs_to_t2) = rchain(d, rhs_full, &[(mid_full, s1), (pulled_full, s2), (t2, s3)]);
+            let (_, rhs_to_t2) =
+                rchain(d, rhs_full, &[(mid_full, s1), (pulled_full, s2), (t2, s3)]);
             let h3 = rsymm(d, rhs_full, t2, rhs_to_t2);
 
             let (_, chained) = rchain(d, start, &[(t1, h1), (t2, h2), (rhs_full, h3)]);
@@ -942,7 +943,9 @@ fn declare_k_independent(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), Kernel
     let ty = {
         let over_w = d.arrow(fam, prop);
         let over_pp = d.arrow(cty, over_w);
-        let over_n = d.kernel().pi(anon, nat, over_pp, crate::BinderInfo::Default);
+        let over_n = d
+            .kernel()
+            .pi(anon, nat, over_pp, crate::BinderInfo::Default);
         d.kernel().pi(anon, nat, over_n, crate::BinderInfo::Default)
     };
     d.kernel().add_declaration(Declaration::Definition {
@@ -975,10 +978,7 @@ fn declare_k_independent(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), Kernel
 /// The probabilistic reading is what the hypothesis-free statement BUYS —
 /// `prodWeight P m` being a distribution is [`declare_prod_weight_sum_maps_one`]
 /// and is not needed to factor an expectation.
-fn declare_k_independent_prod_weight(
-    d: &mut IntDev<'_>,
-    p: RatPrelude,
-) -> Result<(), KernelError> {
+fn declare_k_independent_prod_weight(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError> {
     let nat = d.nat_ty();
     let map_t = map_ty(d);
     let cty = coef_ty(d);
