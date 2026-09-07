@@ -2,10 +2,11 @@
 
 <!-- plan-section: lane-status -->
 
-Status: **in progress.** Population framing measured and committed; the
-per-file front-door trace is running.
+Status: **complete.** Cause measured, the obvious lever built and refuted,
+two levers recommended with scoring populations and exit criteria.
 
-Plan anchor: `docs/plan/families/smt-quantified/uf.md` (Cause: unknown).
+Plan anchor: `docs/plan/families/smt-quantified/uf.md` (its Cause and Lever
+sections are updated by this lane).
 Predecessors: the [S3 census](../../research/11-design-review/2026-09-05-parity-loss-census.md)
 (class refuted) and [S11a](s11a-uf-ackermann-cap.md) (which refuted it).
 
@@ -57,13 +58,45 @@ From `bench-results/parity-details/UF.tsv` at parity run 2026-09-06T22:35:13Z
   Fundamental_Theorem_Algebra, Hoare, Arrow_Order, TypeSafe, coinductive_list
   all appear on both sides — so the split is by satisfiability, not by source.
 
-## What is still running
+## Finding 2 — the cause, and the lever test that refuted the obvious one
 
-The per-file qtrace census of the 32 (class, budget-spending stage, dominant
-stage, wall, evidence line) → `bench-results/parity-losses-20260906/UF.front-door.census.tsv`.
+Full note:
+[the front-door census](../../research/11-design-review/2026-09-06-uf-front-door-census.md).
+Per-file artifacts in `bench-results/parity-losses-20260906/`.
+
+- **50.4% of the loss population's wall (347.0 s of 688.0 s) is spent in the
+  pure-UF finite-model finder**, on 32 files every one of which is `unsat`. A
+  finite-model rung is the budget-dominant stage on 16 of the 32.
+- **25 of 32 saturate `MAX_GROUND_TERMS = 8192`**; the 7 `search-timeout` files
+  spend 3.1–21.2 s inside the untraced cap-hit refutation check at
+  `qinst_egraph.rs:1341`.
+- **11 of 32 return with 5–19 s of the 24 s budget unspent**, all of them
+  `route-decline(residual-quantifier)`: out of routes, not out of time.
+  **6 overshoot**, one to 62 866 ms.
+- **The reallocation lever was built and refuted**: probe budget `t/2` → `t/16`
+  decides 0 of the 32 and costs 1 of the 24 axeyum-only wins.
+- **The 24 wins are the finite-model finder and nothing else**: gated off, 22 of
+  24 become `unknown`. 21 of 24 decide in 1.1 s or less.
+
+## Gates and what did not run
+
+- `./scripts/check-links.sh` — all links ok.
+- No Rust in the tree was changed by this lane. The two measurement patches
+  (`bench-results/parity-losses-20260906/measurement-patch-*.py`) are applied to
+  a throwaway snapshot only, and are committed so the A/B is reproducible.
+  Cross-check that they are inert when ungated: the s6 patched binary with no
+  env set and the s7 unpatched binary agree on verdict **and** detail for 32 of
+  32.
+- **Did not run:** the full 200-file `bench-results/parity-lists/UF.txt` sweep;
+  any workspace cargo gate (no compiled code changed); the `MAX_GROUND_TERMS`
+  A/B; instrumentation of which chains overflow `CHAIN_INSTANCE_CAP`.
 
 ## Landed changes
 
 | Commit | What |
 |---|---|
-| (this) | Lane status, method, and the population framing |
+| `2da495b0b` | Lane status, method, and the population framing |
+| `ea61aeb80` | First ten files classified through the front door |
+| `5483ceb12` | All 32 classified; the 50.4% finite-model finding |
+| `a9aa0c557` | The 24 axeyum-only wins A/B; the finder is their sole producer |
+| (this) | The loss A/B, the design-review note, and `uf.md`'s Cause and Lever |
