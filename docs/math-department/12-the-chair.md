@@ -29,6 +29,11 @@ Last measured: 2026-09-06 at `0473d3ce8`
 > (18.0%)**. Three numbers, three denominators, one direction: **the gap grew
 > while the ledger grew.** Do not quote 430 again.
 
+> **Retired 2026-09-06 (ADR-1674):** the 430 is not reproducible by its own
+> method - three later readings give 599, 620, 721 and 973 on three different
+> denominators. The measured, gated figure is **721 of 3,079 registered
+> kernel theorem names uncovered**, ratcheted by `gen-ledger-coverage`.
+
 ## The persona
 
 Does not do the mathematics. Reads the report, asks what is being claimed, and

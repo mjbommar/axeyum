@@ -19,6 +19,11 @@ Last measured: 2026-09-06 at `2104b55f7`
 > declarations that do not exist**, one of them for a theorem that is not
 > proved at all. Corrections marked **[NAME]**.
 
+> **Retired 2026-09-06 (ADR-1674):** the 430 is not reproducible by its own
+> method - three later readings give 599, 620, 721 and 973 on three different
+> denominators. The measured, gated figure is **721 of 3,079 registered
+> kernel theorem names uncovered**, ratcheted by `gen-ledger-coverage`.
+
 ## The persona
 
 Works on primes, congruences, Diophantine equations, and L-functions. Values

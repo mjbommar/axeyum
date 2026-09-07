@@ -26,6 +26,11 @@ Last measured: 2026-09-06 at `5fa2e3feb` (kernel index `declarations=3311`)
 > 2026-09-06**: the absence claims in *this* file are now stale in the other
 > direction — the four things it said were missing landed on 09-04 and 09-05.
 
+> **Retired 2026-09-06 (ADR-1674):** the 430 is not reproducible by its own
+> method - three later readings give 599, 620, 721 and 973 on three different
+> denominators. The measured, gated figure is **721 of 3,079 registered
+> kernel theorem names uncovered**, ratcheted by `gen-ledger-coverage`.
+
 ## The persona
 
 Believes that mathematical objects are determined by their maps, that a

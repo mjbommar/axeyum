@@ -20,6 +20,11 @@ Last measured: 2026-09-06 at `d38d49fce`
 > theorems at all (ADR-1605). **This file was re-measured again on 2026-09-06**
 > and six more of its rows were false by then — see the last progress-log row.
 
+> **Retired 2026-09-06 (ADR-1674):** the 430 is not reproducible by its own
+> method - three later readings give 599, 620, 721 and 973 on three different
+> denominators. The measured, gated figure is **721 of 3,079 registered
+> kernel theorem names uncovered**, ratcheted by `gen-ledger-coverage`.
+
 ## The persona
 
 Works with Lebesgue integration, Banach and Hilbert spaces, and the

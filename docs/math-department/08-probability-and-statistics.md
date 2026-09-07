@@ -28,6 +28,11 @@ pointed at your subject is indistinguishable from a strong negative.
 > the ledger characterises only 38% of its proved facts and does not cover 430
 > kernel theorems at all (ADR-1605).
 
+> **Retired 2026-09-06 (ADR-1674):** the 430 is not reproducible by its own
+> method - three later readings give 599, 620, 721 and 973 on three different
+> denominators. The measured, gated figure is **721 of 3,079 registered
+> kernel theorem names uncovered**, ratcheted by `gen-ledger-coverage`.
+
 ## The persona
 
 Works with measure-theoretic probability: probability spaces, random variables

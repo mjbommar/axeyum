@@ -26,6 +26,11 @@ Last measured: 2026-09-06 at `5fa2e3feb`
 > `Nat.multichoose` were all on `main` before that audit ran and were listed
 > as absent anyway. Each correction is marked **[RE-MEASURED]** below.
 
+> **Retired 2026-09-06 (ADR-1674):** the 430 is not reproducible by its own
+> method - three later readings give 599, 620, 721 and 973 on three different
+> denominators. The measured, gated figure is **721 of 3,079 registered
+> kernel theorem names uncovered**, ratcheted by `gen-ledger-coverage`.
+
 ## The persona
 
 Counts things, bounds things, and finds structure in large enough

@@ -271,7 +271,9 @@ The cause is measured and is bigger than these files. Of 2,493 proved facts,
 **1,553 (62.3%) carry no characterisation of their own** — 1,054 with the fact
 generator's `[generated]` title, plus a class nobody had counted, 499 titled
 only "Mathlib v4.30 source proposition `<Name>`". And the ledger does not
-cover the kernel at all for **430 theorems and 762 of 789 definitions**,
+cover the kernel at all for **430 theorems and 762 of 789 definitions**
+(that 430 is retired as unreproducible - the measured figure is 721 of 3,079,
+ADR-1674),
 including `AlgS.Hom.firstIso`, the headline result of reviewer 04. So the
 ledger answers *is X proved?* and cannot answer *what do we have?*
 [ADR-1605](../research/09-decisions/adr-1605-the-ledger-cannot-tell-uncharacterised-from-absent.md)

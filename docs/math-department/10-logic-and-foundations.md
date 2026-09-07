@@ -24,6 +24,11 @@ Last measured: 2026-09-06 at `1de0edfc6`
 > **973** with no fact naming them as its `kernel_declaration`, out of 3,319.
 > Neither number is the audit's, and both are larger than the audit's.
 
+> **Retired 2026-09-06 (ADR-1674):** the 430 is not reproducible by its own
+> method - three later readings give 599, 620, 721 and 973 on three different
+> denominators. The measured, gated figure is **721 of 3,079 registered
+> kernel theorem names uncovered**, ratcheted by `gen-ledger-coverage`.
+
 ## The persona
 
 Cares about which axioms a theorem needs, what a proof system can and cannot
