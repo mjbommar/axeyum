@@ -28,9 +28,12 @@
 //! * **The call graph** — for each builder, the other builders named inside
 //!   that builder's own function body. Body only, so a builder a *test* module
 //!   happens to call never counts as coverage.
-//! * **The example's reach** — every `build_*_prelude(` call site in
-//!   `examples/shape_search.rs`, with `//` comment lines stripped so that a
-//!   builder merely *discussed* in prose is not mistaken for one that is built.
+//! * **The example's reach** — a walk that STARTS at the `build:` fields of
+//!   the example's `GROUPS` table and follows local functions, with `//`
+//!   comment lines stripped. Not "every call site in the file": a helper the
+//!   table no longer names is dead code that still contains the call, and
+//!   scanning the whole file let two deleted `Group` rows pass green (measured
+//!   as surviving mutants M1/M2 on 2026-09-06).
 //!
 //! A builder is covered when it is reachable from a direct call site through
 //! that call graph. Anything else must appear in `DELIBERATELY_UNINDEXED` with
@@ -166,11 +169,84 @@ fn call_graph(defs: &BTreeMap<String, PathBuf>) -> BTreeMap<String, BTreeSet<Str
         .collect()
 }
 
-/// The builders `examples/shape_search.rs` calls directly.
+/// The body of a top-level `fn <name>` in `text`.
+///
+/// Same column-0 convention as [`builder_body`].
+fn local_fn_body(text: &str, name: &str) -> Option<String> {
+    let head = format!("fn {name}(");
+    let mut body = String::new();
+    let mut inside = false;
+    for line in text.lines() {
+        if !inside {
+            if line.starts_with(&head) {
+                inside = true;
+            }
+            continue;
+        }
+        if line == "}" {
+            break;
+        }
+        body.push_str(line);
+        body.push('\n');
+    }
+    inside.then_some(body)
+}
+
+/// Every top-level `fn` name in `text`.
+fn local_fn_names(text: &str) -> BTreeSet<String> {
+    text.lines()
+        .filter_map(|line| line.strip_prefix("fn "))
+        .filter_map(|rest| rest.split(['(', '<']).next())
+        .map(str::to_owned)
+        .collect()
+}
+
+/// The builders `examples/shape_search.rs` calls FROM ITS GROUPS TABLE.
+///
+/// Not "calls anywhere in the file". A `Group` row is what makes a builder
+/// run; a helper the table no longer names is dead code that still contains
+/// the call. Scanning the whole file therefore made this census satisfiable by
+/// a leftover function — verified as a surviving mutant on 2026-09-06: deleting
+/// the `metric_prod` and `fo_substitution` rows left every test GREEN, because
+/// `fn build_metric_prod` was still in the file. The walk starts at the
+/// `build:` fields and follows local functions, so only builders the table can
+/// actually reach are counted.
 fn shape_search_direct(authority: &BTreeSet<String>) -> BTreeSet<String> {
     let path = manifest_dir().join("examples/shape_search.rs");
     let text = std::fs::read_to_string(&path).expect("shape_search.rs is readable");
-    builders_called(&text, authority)
+    let stripped = strip_line_comments(&text);
+
+    let entries: Vec<String> = stripped
+        .lines()
+        .filter_map(|line| line.trim().strip_prefix("build: "))
+        .map(|rest| rest.trim_end_matches(',').trim().to_owned())
+        .collect();
+    assert!(
+        !entries.is_empty(),
+        "no `build:` field was found in examples/shape_search.rs, so the walk \
+         below starts nowhere and every gate in this file would pass \
+         vacuously"
+    );
+
+    let locals = local_fn_names(&stripped);
+    let mut seen: BTreeSet<String> = BTreeSet::new();
+    let mut called: BTreeSet<String> = BTreeSet::new();
+    let mut stack = entries;
+    while let Some(name) = stack.pop() {
+        if !seen.insert(name.clone()) {
+            continue;
+        }
+        let Some(body) = local_fn_body(&stripped, &name) else {
+            continue;
+        };
+        called.extend(builders_called(&body, authority));
+        for local in &locals {
+            if body.contains(&format!("{local}(")) {
+                stack.push(local.clone());
+            }
+        }
+    }
+    called
 }
 
 /// Everything reachable from `direct` through the call graph.
@@ -206,8 +282,9 @@ fn shape_search_reach() -> (BTreeSet<String>, BTreeSet<String>) {
     let direct = shape_search_direct(&authority);
     assert!(
         !direct.is_empty(),
-        "the call-site scan of examples/shape_search.rs found no builder at \
-         all, so neither gate below could fail no matter what the example built"
+        "the GROUPS-table walk over examples/shape_search.rs found no builder \
+         at all, so neither gate below could fail no matter what the example \
+         built"
     );
     let covered = reachable(&direct, &graph);
     (direct, covered)
