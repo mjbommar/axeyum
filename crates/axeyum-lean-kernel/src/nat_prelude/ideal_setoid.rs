@@ -97,6 +97,11 @@ const HW_FV: u64 = 29_031;
 const W2_FV: u64 = 29_032;
 const HW2_FV: u64 = 29_033;
 const MOT_FV: u64 = 29_040;
+/// The principal ideal's GENERATOR. Deliberately outside the range
+/// [`five_stmts`] binds (`A_FV`/`B_FV`/`X_FV`/`H1_FV`/`H2_FV`): the generator
+/// stays free while a conjunct's own binders are abstracted around it, so
+/// sharing one id makes the statement's `pi_over` swallow the generator.
+const G_FV: u64 = 29_050;
 
 fn t_app(k: &mut Kernel, f: ExprId, xs: &[ExprId]) -> ExprId {
     let mut e = f;
@@ -1195,7 +1200,7 @@ fn declare_principal_is_ideal(
     ns: NameId,
 ) -> Result<NameId, KernelError> {
     let c = rctx(k, cr);
-    let g = k.fvar(A_FV);
+    let g = k.fvar(G_FV);
     let prin = {
         let t = k.const_(principal, vec![]);
         app2(k, t, c.r, g)
@@ -1396,10 +1401,10 @@ fn declare_principal_is_ideal(
 
     let proofs = [p_respects, p_mem_zero, p_closed_add, p_closed_neg, p_absorb];
     let value = intro_and(k, lg, &props, &proofs);
-    let value = lam_over(k, A_FV, c.carrier, value);
+    let value = lam_over(k, G_FV, c.carrier, value);
     let value = close_r(k, &c, value, true);
     let ty = is_ideal_at(k, &c, is_ideal, prin);
-    let ty = pi_over(k, A_FV, c.carrier, ty);
+    let ty = pi_over(k, G_FV, c.carrier, ty);
     let ty = close_r(k, &c, ty, false);
     theorem(k, ns, "principal_isIdeal", ty, value)
 }
@@ -2256,13 +2261,14 @@ impl IdealNames {
     }
 
     /// The ones that are `Definition`s; the rest are checked `Theorem`s.
-    pub fn definition_names(&self) -> [NameId; 5] {
+    pub fn definition_names(&self) -> [NameId; 6] {
         [
             self.is_ideal,
             self.bot,
             self.top,
             self.principal,
             self.quot_equiv,
+            self.quotient,
         ]
     }
 }
@@ -2398,4 +2404,611 @@ pub(crate) fn declare_ideal_setoid(
         quotient,
         quotient_equiv,
     })
+}
+
+// ---------------------------------------------------------------------------
+// Tests. Every assertion reads the KERNEL, never the source text.
+// ---------------------------------------------------------------------------
+
+#[cfg(test)]
+mod ideal_setoid_tests {
+    use super::*;
+    use crate::build_logic_prelude;
+    use crate::nat_prelude::structures as algeq;
+    use crate::nat_prelude::structures_setoid::{
+        StructuresSRecordNames, declare_structures_s_all, declare_structures_s_extra,
+        intern_structures_s_names,
+    };
+
+    struct Fixture {
+        lg: LogicPrelude,
+        st: StructuresSRecordNames,
+        deps: IdealDeps,
+        id: IdealNames,
+    }
+
+    /// Build only what `AlgS.Ideal.*` needs: the logic prelude, the `Alg.*`
+    /// spine (the `AlgS` extras project through it), the `AlgS.*` spine, its
+    /// extras, and then the ideal layer. Much cheaper than the whole nat
+    /// prelude, and it fails at the FIRST bad declaration.
+    fn build(k: &mut Kernel) -> Fixture {
+        let lg = build_logic_prelude(k).expect("logic prelude must build");
+        let l0 = k.level_zero();
+        let l1 = k.level_succ(l0);
+        let alg_p = algeq::intern_structures_names(k);
+        let alg_st = algeq::declare_structures_all(k, &alg_p, &lg).expect("Alg spine builds");
+        let p = intern_structures_s_names(k);
+        let st = declare_structures_s_all(k, &p, &lg).expect("AlgS spine builds");
+        let extra = declare_structures_s_extra(k, &lg, &p, &st, &alg_p, &alg_st)
+            .expect("AlgS extras must admit");
+        let deps = IdealDeps {
+            comm_ring_to_ring_s: extra.comm_ring_to_ring_s,
+            mul_zero: extra.mul_zero,
+            mul_neg_one: extra.mul_neg_one,
+            neg_neg: extra.neg_neg,
+        };
+        let id = declare_ideal_setoid(k, &lg, l1, &st.comm_ring, deps, p.algs)
+            .expect("the ideal layer and the quotient ring must admit");
+        Fixture { lg, st, deps, id }
+    }
+
+    #[test]
+    fn the_ideal_layer_admits_by_the_setoid_route() {
+        let mut k = Kernel::new();
+        let f = build(&mut k);
+        let names = f.id.owned_names();
+        assert_eq!(names.len(), 31, "the owned population must be the real one");
+        for name in names {
+            assert!(
+                k.environment().get(name).is_some(),
+                "declaration missing from the environment"
+            );
+        }
+    }
+
+    /// **The headline claim**, read from `Kernel::axiom_footprint` — never
+    /// from source text or a doc.
+    #[test]
+    fn the_ideal_layer_is_axiom_free() {
+        let mut k = Kernel::new();
+        let f = build(&mut k);
+        for name in f.id.owned_names() {
+            let footprint = k.axiom_footprint(name);
+            assert!(
+                footprint.is_empty(),
+                "{} must have an empty axiom footprint, found {:?}",
+                k.display_name(name),
+                footprint
+                    .iter()
+                    .map(|n| k.display_name(*n).to_string())
+                    .collect::<Vec<_>>()
+            );
+        }
+    }
+
+    /// The declaration KINDS, derived from the struct rather than a literal
+    /// list: exactly the five names `definition_names` calls out are
+    /// `Definition`s, and every other owned name is a checked `Theorem`.
+    #[test]
+    fn exactly_the_six_definitions_are_definitions_and_the_rest_are_checked_theorems() {
+        let mut k = Kernel::new();
+        let f = build(&mut k);
+        let defs: std::collections::BTreeSet<NameId> =
+            f.id.definition_names().into_iter().collect();
+        let mut def_seen = 0usize;
+        let mut thm_seen = 0usize;
+        for name in f.id.owned_names() {
+            let d = k
+                .environment()
+                .get(name)
+                .expect("declaration must exist")
+                .clone();
+            if defs.contains(&name) {
+                assert!(
+                    matches!(d, Declaration::Definition { .. }),
+                    "{} must be a Definition",
+                    k.display_name(name)
+                );
+                def_seen += 1;
+            } else {
+                assert!(
+                    matches!(d, Declaration::Theorem { .. }),
+                    "{} must be a checked Theorem",
+                    k.display_name(name)
+                );
+                thm_seen += 1;
+            }
+        }
+        assert_eq!(def_seen, 6, "six definitions");
+        assert_eq!(thm_seen, 25, "twenty-five checked theorems");
+    }
+
+    /// Every declaration's type renders, and every one is stated over an
+    /// ABSTRACT `AlgS.CommRing`. Printed so a referee can read the
+    /// statements out of the suite.
+    #[test]
+    fn the_ideal_types_render_over_an_abstract_comm_ring() {
+        let mut k = Kernel::new();
+        let f = build(&mut k);
+        let mut mentions = 0usize;
+        for name in f.id.owned_names() {
+            let decl = k
+                .environment()
+                .get(name)
+                .expect("declaration must exist")
+                .clone();
+            let rendered = k.render_lean(decl.ty());
+            println!("{} : {rendered}", k.display_name(name));
+            if rendered.contains("AlgS.CommRing") {
+                mentions += 1;
+            }
+        }
+        assert_eq!(
+            mentions, 31,
+            "every declaration must be stated over an abstract AlgS.CommRing"
+        );
+    }
+
+    /// `AlgS.Ideal.quotient` really is an `AlgS.CommRing`-valued
+    /// `Definition`, and its `carrier` field reduces to `R`'s own — the
+    /// point of the setoid route.
+    #[test]
+    fn the_quotient_is_a_comm_ring_on_the_same_carrier() {
+        use idx::comm_ring::CARRIER;
+        let mut k = Kernel::new();
+        let f = build(&mut k);
+        let decl = k
+            .environment()
+            .get(f.id.quotient)
+            .expect("quotient must exist")
+            .clone();
+        assert!(
+            matches!(decl, Declaration::Definition { .. }),
+            "the quotient must be a Definition producing an AlgS.CommRing"
+        );
+        let rendered = k.render_lean(decl.ty());
+        assert!(
+            rendered.trim_end_matches(')').ends_with("AlgS.CommRing"),
+            "quotient's result type must be AlgS.CommRing, got {rendered}"
+        );
+
+        // `(quotient R I hI).carrier` is `def_eq` to `R.carrier`.
+        let c = rctx(&mut k, &f.st.comm_ring);
+        let i = k.fvar(I_FV);
+        let hi = k.fvar(HI_FV);
+        let quot = {
+            let t = k.const_(f.id.quotient, vec![]);
+            t_app(&mut k, t, &[c.r, i, hi])
+        };
+        let q_carrier = sel(&mut k, &f.st.comm_ring, CARRIER, quot);
+        assert!(
+            k.def_eq(q_carrier, c.carrier),
+            "the quotient must live on the SAME carrier"
+        );
+    }
+
+    // -- the mutation table -------------------------------------------------
+
+    /// Rebuild `IsIdeal` with a chosen conjunct DROPPED, under a fresh name,
+    /// and report whether the kernel still accepts `quotMulCongr`'s and
+    /// `quotSymm`'s proof terms against the weakened accessors.
+    ///
+    /// Returns `(mul_congr_admits, symm_admits)`.
+    fn mutant_without(k: &mut Kernel, f: &Fixture, drop_idx: usize, tag: &str) -> (bool, bool) {
+        let c = rctx(k, &f.st.comm_ring);
+        let i = k.fvar(I_FV);
+        let props = five_stmts(k, &c, i);
+        // The four surviving conjuncts, in order.
+        let kept: Vec<ExprId> = props
+            .iter()
+            .enumerate()
+            .filter(|(n, _)| *n != drop_idx)
+            .map(|(_, p)| *p)
+            .collect();
+        let and_c = k.const_(f.lg.and, vec![]);
+        let mut body = kept[3];
+        for p in kept[..3].iter().rev() {
+            body = app2(k, and_c, *p, body);
+        }
+        let value = close_ri(k, &c, body, true);
+        let l0 = k.level_zero();
+        let prop = k.sort(l0);
+        let ty = arrow(k, c.pred_ty, prop);
+        let ty = close_r(k, &c, ty, false);
+        let anon = k.anon();
+        let ns = k.name_str(anon, tag);
+        let weak = definition(k, ns, "IsIdealMutant", ty, value)
+            .expect("the weakened predicate itself must admit -- it is a smaller conjunction");
+
+        // Accessors off the WEAKENED predicate. Only the four kept conjuncts
+        // are reachable; asking for the dropped one is the whole point.
+        let mut acc_names = [None; N_CONJ];
+        let mut slot = 0usize;
+        for (n, name) in [
+            (0usize, "respects"),
+            (1, "mem_zero"),
+            (2, "closedAdd"),
+            (3, "closedNeg"),
+            (4, "absorb"),
+        ] {
+            if n == drop_idx {
+                continue;
+            }
+            let a = mutant_accessor(k, f, weak, &kept, slot, name, ns);
+            acc_names[n] = a;
+            slot += 1;
+        }
+
+        // If the dropped conjunct has no accessor, the proofs that need it
+        // cannot even be assembled -- which is the finding. Substitute the
+        // `respects` accessor's name so the call still type-checks in Rust
+        // and the KERNEL is the thing that refuses.
+        let sub = acc_names[0].expect("respects always survives here");
+        let acc = AccNames {
+            respects: acc_names[0].unwrap_or(sub),
+            mem_zero: acc_names[1].unwrap_or(sub),
+            closed_add: acc_names[2].unwrap_or(sub),
+            closed_neg: acc_names[3].unwrap_or(sub),
+            absorb: acc_names[4].unwrap_or(sub),
+        };
+
+        let mul = declare_quot_mul_congr(
+            k,
+            &f.st.comm_ring,
+            weak,
+            acc,
+            f.id.add_regroup,
+            f.id.neg_add_l,
+            f.id.zero_add,
+            f.id.mul_neg_r,
+            ns,
+        );
+        let symm = declare_quot_symm(
+            k,
+            &f.st.comm_ring,
+            &f.deps,
+            weak,
+            acc,
+            f.id.neg_add_dist,
+            ns,
+        );
+        (mul.is_ok(), symm.is_ok())
+    }
+
+    fn mutant_accessor(
+        k: &mut Kernel,
+        f: &Fixture,
+        weak: NameId,
+        kept: &[ExprId],
+        which: usize,
+        suffix: &str,
+        ns: NameId,
+    ) -> Option<NameId> {
+        let c = rctx(k, &f.st.comm_ring);
+        let i = k.fvar(I_FV);
+        let hyp_ty = {
+            let t = k.const_(weak, vec![]);
+            app2(k, t, c.r, i)
+        };
+        let h = k.fvar(HI_FV);
+        // `And.left`/`And.right` chain over the FOUR kept conjuncts.
+        let and_c = k.const_(f.lg.and, vec![]);
+        let mut tails = vec![kept[3]];
+        for p in kept[..3].iter().rev() {
+            let last = *tails.last().expect("non-empty");
+            tails.push(app2(k, and_c, *p, last));
+        }
+        tails.reverse();
+        let mut cur = h;
+        for (n, prop) in kept.iter().enumerate().take(which) {
+            let and_right = k.const_(f.lg.and_right, vec![]);
+            cur = t_app(k, and_right, &[*prop, tails[n + 1], cur]);
+        }
+        let proof = if which == 3 {
+            cur
+        } else {
+            let and_left = k.const_(f.lg.and_left, vec![]);
+            t_app(k, and_left, &[kept[which], tails[which + 1], cur])
+        };
+        let value = close_rih(k, &c, hyp_ty, proof, true);
+        let ty = close_rih(k, &c, hyp_ty, kept[which], false);
+        theorem(k, ns, suffix, ty, value).ok()
+    }
+
+    /// **Mutant 1 (the absorbing law).** Drop `absorb` from `IsIdeal` and
+    /// the quotient's MULTIPLICATIVE congruence must become unprovable —
+    /// while `equivSymm`, which does not use it, must still go through. The
+    /// second half is the positive control: without it a mutant that broke
+    /// everything (including the harness) would look like a pass.
+    #[test]
+    fn dropping_the_absorbing_law_kills_the_quotients_multiplicative_congruence() {
+        let mut k = Kernel::new();
+        let f = build(&mut k);
+        let (mul_ok, symm_ok) = mutant_without(&mut k, &f, 4, "AbsorbDropped");
+        assert!(
+            !mul_ok,
+            "with `absorb` dropped the kernel still admitted quotMulCongr -- \
+             the absorbing law is then not load-bearing and `IsIdeal` is \
+             carrying a field nothing needs"
+        );
+        assert!(
+            symm_ok,
+            "positive control: `equivSymm` does not use `absorb` and must \
+             still admit; if it fails the mutant broke the harness, not the \
+             mathematics"
+        );
+    }
+
+    /// **Mutant 1's mirror.** Drop `closedNeg` instead: now `equivSymm` must
+    /// fail and `mulCongr` must still succeed. The two mutants together show
+    /// the two conjuncts are load-bearing in DISJOINT places, which is the
+    /// reason `closedNeg` is an explicit conjunct rather than derived from
+    /// `absorb`.
+    #[test]
+    fn dropping_closed_neg_kills_symmetry_and_leaves_multiplicative_congruence() {
+        let mut k = Kernel::new();
+        let f = build(&mut k);
+        let (mul_ok, symm_ok) = mutant_without(&mut k, &f, 3, "ClosedNegDropped");
+        assert!(
+            !symm_ok,
+            "with `closedNeg` dropped the kernel still admitted quotSymm"
+        );
+        assert!(
+            mul_ok,
+            "positive control: `mulCongr` does not use `closedNeg` and must \
+             still admit"
+        );
+    }
+
+    /// **Mutant 2 (the symmetry step reversed).** `quotSymm`'s chain ends
+    /// with `R.addComm (-x) y : (-x) + y ~ y + (-x)`. Reverse that step —
+    /// use `R.addComm y (-x)`, which proves the equivalence the OTHER way
+    /// round — and the kernel must refuse the assembled proof. Paired in the
+    /// same invocation with the unreversed build, which must succeed.
+    #[test]
+    fn reversing_the_symmetry_steps_last_leg_is_refused() {
+        let mut k = Kernel::new();
+        let f = build(&mut k);
+        let c = rctx(&mut k, &f.st.comm_ring);
+        let i = k.fvar(I_FV);
+        let hi_ty = is_ideal_at(&mut k, &c, f.id.is_ideal, i);
+        let hi = k.fvar(HI_FV);
+        let x = k.fvar(X_FV);
+        let y = k.fvar(Y_FV);
+        let h = k.fvar(H1_FV);
+
+        let ny = c.ng(&mut k, y);
+        let nx = c.ng(&mut k, x);
+        let diff = c.pl(&mut k, x, ny);
+        let ndiff = c.ng(&mut k, diff);
+        let nny = c.ng(&mut k, ny);
+        let mid = c.pl(&mut k, nx, nny);
+        let mid2 = c.pl(&mut k, nx, y);
+        let goal = c.pl(&mut k, y, nx);
+
+        // Both variants share everything up to the last leg.
+        let build_variant = |k: &mut Kernel, reversed: bool| -> ExprId {
+            let mut ch = Chain::start(k, &c, ndiff);
+            let nad = {
+                let t = k.const_(f.id.neg_add_dist, vec![]);
+                t_app(k, t, &[c.r, x, ny])
+            };
+            ch.step(k, &c, mid, nad);
+            let nn = at_ring(k, &c, &f.deps, f.deps.neg_neg);
+            let nn_y = k.app(nn, y);
+            let rnx = c.rf(k, nx);
+            let s2 = c.addc(k, nx, nx, nny, y, rnx, nn_y);
+            ch.step(k, &c, mid2, s2);
+            let s3 = if reversed {
+                t_app(k, c.add_comm, &[y, nx])
+            } else {
+                t_app(k, c.add_comm, &[nx, y])
+            };
+            ch.step(k, &c, goal, s3);
+
+            let closed_neg = acc_at(k, &c, f.id.closed_neg, i, hi);
+            let neg_h = t_app(k, closed_neg, &[diff, h]);
+            let respects = acc_at(k, &c, f.id.respects, i, hi);
+            let body = t_app(k, respects, &[ndiff, goal, ch.p, neg_h]);
+            let hyp = k.app(i, diff);
+            let v = lam_over(k, H1_FV, hyp, body);
+            let v = lam_over(k, Y_FV, c.carrier, v);
+            let v = lam_over(k, X_FV, c.carrier, v);
+            close_rih(k, &c, hi_ty, v, true)
+        };
+
+        let hyp = k.app(i, diff);
+        let concl = k.app(i, goal);
+        let ty = pi_over(&mut k, H1_FV, hyp, concl);
+        let ty = pi_over(&mut k, Y_FV, c.carrier, ty);
+        let ty = pi_over(&mut k, X_FV, c.carrier, ty);
+        let ty = close_rih(&mut k, &c, hi_ty, ty, false);
+
+        let good = build_variant(&mut k, false);
+        let anon = k.anon();
+        let ns = k.name_str(anon, "SymmMutant");
+        let ok = theorem(&mut k, ns, "unreversed", ty, good);
+        assert!(
+            ok.is_ok(),
+            "positive control in the SAME invocation: the unreversed chain \
+             must admit, got {ok:?}"
+        );
+
+        let bad = build_variant(&mut k, true);
+        let bad_res = theorem(&mut k, ns, "reversed", ty, bad);
+        assert!(
+            bad_res.is_err(),
+            "the kernel admitted a symmetry chain whose last leg proves the \
+             equivalence the wrong way round"
+        );
+    }
+
+    /// A kernel REJECTION control that is not about a mutant of our own
+    /// making: `principal_isIdeal`'s proof term is not a proof that the ZERO
+    /// ideal is an ideal, and the kernel says so. Paired with the positive:
+    /// `bot_isIdeal`'s own term IS accepted at the same statement.
+    #[test]
+    fn the_principal_ideals_proof_is_not_a_proof_about_the_zero_ideal() {
+        let mut k = Kernel::new();
+        let f = build(&mut k);
+        let c = rctx(&mut k, &f.st.comm_ring);
+        let bot_r = {
+            let t = k.const_(f.id.bot, vec![]);
+            k.app(t, c.r)
+        };
+        let ty = is_ideal_at(&mut k, &c, f.id.is_ideal, bot_r);
+        let ty = close_r(&mut k, &c, ty, false);
+
+        let anon = k.anon();
+        let ns = k.name_str(anon, "BotControl");
+
+        // Positive: `bot_isIdeal`'s own value at that statement.
+        let good = {
+            let d = k
+                .environment()
+                .get(f.id.bot_is_ideal)
+                .expect("bot_isIdeal must exist")
+                .clone();
+            match d {
+                Declaration::Theorem { value, .. } => value,
+                _ => panic!("bot_isIdeal must be a Theorem"),
+            }
+        };
+        assert!(
+            theorem(&mut k, ns, "positive", ty, good).is_ok(),
+            "positive control: bot_isIdeal's own proof term must be accepted \
+             at its own statement"
+        );
+
+        // Negative: `principal_isIdeal`'s value at the same statement.
+        let bad = {
+            let d = k
+                .environment()
+                .get(f.id.principal_is_ideal)
+                .expect("principal_isIdeal must exist")
+                .clone();
+            match d {
+                Declaration::Theorem { value, .. } => value,
+                _ => panic!("principal_isIdeal must be a Theorem"),
+            }
+        };
+        assert!(
+            theorem(&mut k, ns, "negative", ty, bad).is_err(),
+            "the kernel accepted the principal ideal's proof as a proof about \
+             the ZERO ideal"
+        );
+    }
+
+    // -- the evaluation test ------------------------------------------------
+
+    /// **Evaluation test at concrete, small, discriminating arguments.** The
+    /// type-checker cannot tell a `Definition` computes the wrong value, so
+    /// `AlgS.Ideal.principal` is instantiated at the integers through
+    /// `AlgS.CommRing.ofAlg(Int.commRing)` and its value is READ BACK by
+    /// reduction:
+    ///
+    /// - `AlgS.Ideal.principal R 2 4` unfolds to exactly
+    ///   `Exists Int (fun r => R.equiv 4 (R.mul r 2))`;
+    /// - the membership `4 ∈ (2)` is PROVED by supplying the witness `2` and
+    ///   `Eq.refl 4`, which type-checks only because `Int.mul 2 2` reduces to
+    ///   `4`;
+    /// - the discriminating half, in the SAME invocation: the same term with
+    ///   witness `1` is NOT a proof, because `1 * 2` is `2`. A `principal`
+    ///   that ignored either argument would accept it.
+    ///
+    /// Magnitudes are 1, 2 and 4 deliberately: every `Nat` numeral
+    /// underneath is unary.
+    #[test]
+    fn the_principal_ideal_of_two_contains_four_at_the_integers() {
+        use crate::rat_prelude::build_rat_prelude;
+        use idx::comm_ring::{CARRIER, EQUIV, MUL};
+        let mut k = Kernel::new();
+        let rp = build_rat_prelude(&mut k).expect("rat prelude must build");
+        let np = rp.int.nat;
+        let extra = np.structures_s_extra;
+        let cr = np.structures_s.comm_ring;
+
+        let int_comm_ring = k.const_(rp.algebra.int_comm_ring, vec![]);
+        let ofalg = k.const_(extra.comm_ring_ofalg, vec![]);
+        let r = k.app(ofalg, int_comm_ring);
+
+        let one = int_lit(&mut k, &rp, 1);
+        let two = int_lit(&mut k, &rp, 2);
+        let four = int_lit(&mut k, &rp, 4);
+
+        // `AlgS.Ideal.principal` resolved by NAME off the `AlgS` root -- the
+        // ideal layer is built by `build_nat_prelude`, so it is already in
+        // this environment; nothing is threaded through `NatPrelude`.
+        let algs = np.structures_s_names.algs;
+        let ideal_ns = k.name_str(algs, "Ideal");
+        let principal = k.name_str(ideal_ns, "principal");
+        assert!(
+            k.environment().get(principal).is_some(),
+            "AlgS.Ideal.principal must be live in the rat prelude's environment"
+        );
+        let prin_c = k.const_(principal, vec![]);
+        let member = t_app(&mut k, prin_c, &[r, two, four]);
+
+        // The shape `principal` MUST unfold to, rebuilt from `R`'s own
+        // selectors rather than assumed.
+        let carrier = sel(&mut k, &cr, CARRIER, r);
+        let equiv_sel = sel(&mut k, &cr, EQUIV, r);
+        let mul_sel = sel(&mut k, &cr, MUL, r);
+        let pred = {
+            let w = k.fvar(W_FV);
+            let w2 = app2(&mut k, mul_sel, w, two);
+            let body = app2(&mut k, equiv_sel, four, w2);
+            lam_over(&mut k, W_FV, carrier, body)
+        };
+        let l0 = k.level_zero();
+        let l1 = k.level_succ(l0);
+        let expected = {
+            let ex = k.const_(rp.int.logic.exists_, vec![l1]);
+            t_app(&mut k, ex, &[carrier, pred])
+        };
+        assert!(
+            k.def_eq(member, expected),
+            "`AlgS.Ideal.principal R 2 4` must unfold to \
+             `Exists R.carrier (fun r => R.equiv 4 (R.mul r 2))`"
+        );
+
+        // The membership proof: witness 2, and `Eq.refl 4` -- which only
+        // type-checks because `Int.mul 2 2` REDUCES to `4`.
+        let int_ty = k.const_(rp.int.z, vec![]);
+        let refl = k.const_(rp.int.logic.eq_refl, vec![l1]);
+        let proof = t_app(&mut k, refl, &[int_ty, four]);
+        let ex_intro_c = k.const_(rp.int.logic.exists_intro, vec![l1]);
+        let good = t_app(&mut k, ex_intro_c, &[carrier, pred, two, proof]);
+        let inferred = k
+            .infer(good)
+            .expect("`Exists.intro 2 (Eq.refl 4)` must infer a type");
+        assert!(
+            k.def_eq(inferred, member),
+            "witness 2 must prove that 4 lies in the ideal generated by 2"
+        );
+
+        // Discriminating negative, same invocation: witness 1 does not work,
+        // because `1 * 2` is `2` and not `4`.
+        let bad = t_app(&mut k, ex_intro_c, &[carrier, pred, one, proof]);
+        let bad_ok = match k.infer(bad) {
+            Err(_) => false,
+            Ok(t) => k.def_eq(t, member),
+        };
+        assert!(
+            !bad_ok,
+            "witness 1 must NOT prove 4 is in the ideal generated by 2 -- a \
+             `principal` that ignored its generator would accept it"
+        );
+    }
+
+    /// Small non-negative integer literal: `Int.ofNat (Nat.succ^n Nat.zero)`.
+    fn int_lit(k: &mut Kernel, rp: &crate::rat_prelude::RatPrelude, n: u32) -> ExprId {
+        let mut nat = k.const_(rp.int.nat.zero, vec![]);
+        let succ = k.const_(rp.int.nat.succ, vec![]);
+        for _ in 0..n {
+            nat = k.app(succ, nat);
+        }
+        let of_nat = k.const_(rp.int.of_nat, vec![]);
+        k.app(of_nat, nat)
+    }
 }
