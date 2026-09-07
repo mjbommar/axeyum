@@ -97,6 +97,9 @@ mod pow_bridge;
 mod probability;
 pub mod probability_s;
 mod product;
+/// ADR-1677: the k-fold product probability space at ℚ, built on the
+/// function-space aggregate `Rat.sumMaps`.
+pub mod product_space;
 mod psatz_inequalities;
 mod rank;
 mod rank_bridge;
@@ -123,6 +126,7 @@ use fourth_moment::FourthMomentNames;
 use ordered_ring_ext::OrderedRingExtNames;
 use ordered_ring_ext_s::OrderedRingExtSNames;
 use probability_s::ProbSNames;
+use product_space::ProductSpaceNames;
 use vector_space_instance::RatVectorSpaceNames;
 
 /// The interned names produced by [`build_rat_prelude`]: the field constants,
@@ -3230,6 +3234,14 @@ pub struct RatPrelude {
     /// peeling lemmas the fourth-moment expansion runs on, the fourth central
     /// moment of a sum, and the `1/m²` tail. See [`fourth_moment`].
     pub fourth_moment: FourthMomentNames,
+
+    /// ADR-1677: **the k-fold product probability space**. `Rat.prodWeight`
+    /// over the function-space index set `Rat.sumMaps m n` (ADR-1543), its
+    /// normalisation, `Rat.expectationMaps`, and the k-fold independence
+    /// statement `Rat.KIndependent` together with the witness
+    /// `Rat.kIndependent_prodWeight` that keeps it from being an
+    /// undischargeable hypothesis. See [`product_space`].
+    pub product_space: ProductSpaceNames,
 }
 
 impl RatPrelude {
@@ -3796,6 +3808,7 @@ fn intern_names(kernel: &mut Kernel, int: IntPrelude) -> RatPrelude {
         binomial_s: binomial_s::intern_binomial_s(kernel),
         binomial_rat: binomial_rat::intern_binomial_rat(kernel),
         fourth_moment: fourth_moment::intern_fourth_moment(kernel),
+        product_space: product_space::intern_product_space(kernel),
     }
 }
 
@@ -3901,6 +3914,7 @@ pub fn build_rat_prelude(kernel: &mut Kernel) -> Result<RatPrelude, KernelError>
         binomial_s::declare_binomial_s_all(&mut d, &prelude)?;
         binomial_rat::declare_binomial_rat_all(&mut d, &prelude)?;
         fourth_moment::declare_fourth_moment_all(&mut d, &prelude)?;
+        product_space::declare_product_space_all(&mut d, prelude)?;
         // LAST, and not by preference: `psatz::rat` reads twelve `RatPrelude`
         // order/ring theorems and calls `ring::rat::prove_eq`, which reads nine
         // more. Every one of them must already be DECLARED, not merely

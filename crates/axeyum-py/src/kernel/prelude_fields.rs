@@ -2730,10 +2730,10 @@ pub(super) fn int_sub(p: &IntPrelude) -> Vec<(&'static str, Sub)> {
     ]
 }
 
-/// The `RatPrelude` field table (616 names,
+/// The `RatPrelude` field table (626 names,
 /// 0 name lists, 1 sub-packages).
 ///
-/// 106 of the names come from ADR-1512 per-module registries and
+/// 116 of the names come from ADR-1512 per-module registries and
 /// carry a dotted field name (`pi.pi_le_four`); the rest are flat
 /// fields on `RatPrelude` itself.
 #[must_use]
@@ -3596,6 +3596,40 @@ pub(super) fn rat(p: &RatPrelude) -> Fields {
             (
                 "fourth_moment.fourth_moment_tail_sum_vars",
                 p.fourth_moment.fourth_moment_tail_sum_vars,
+            ),
+            (
+                "product_space.prod_range_one",
+                p.product_space.prod_range_one,
+            ),
+            (
+                "product_space.prod_range_mul",
+                p.product_space.prod_range_mul,
+            ),
+            (
+                "product_space.prod_range_sum_range_expand",
+                p.product_space.prod_range_sum_range_expand,
+            ),
+            ("product_space.prod_weight", p.product_space.prod_weight),
+            (
+                "product_space.prod_weight_nonneg",
+                p.product_space.prod_weight_nonneg,
+            ),
+            (
+                "product_space.prod_weight_sum_maps_one",
+                p.product_space.prod_weight_sum_maps_one,
+            ),
+            (
+                "product_space.expectation_maps",
+                p.product_space.expectation_maps,
+            ),
+            ("product_space.k_independent", p.product_space.k_independent),
+            (
+                "product_space.k_independent_prod_weight",
+                p.product_space.k_independent_prod_weight,
+            ),
+            (
+                "product_space.sum_maps_one_of_k_independent",
+                p.product_space.sum_maps_one_of_k_independent,
             ),
         ],
         lists: Vec::new(),
