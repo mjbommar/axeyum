@@ -24,7 +24,10 @@ were settled before touching it:
   so opening the bound cannot produce a wrong verdict — only cost memory or
   time.
 - **Not memory, measured.** 62 files, one binary, arms differing only in an env
-  override, 24 s / 8 GiB, `taskset -c 0-7`, arms interleaved, idle s6:
+  override, 24 s / 8 GiB, `taskset -c 0-7`, arms interleaved, s6 (load 1.03
+  before, 2.06 after — **not** idle: one long-running 13%-CPU `bash` was on the
+  host throughout, identified in `ps`, and both arms carry it equally because
+  they alternate per file):
   **zero memory aborts in 124 runs**, peak RSS **3,315 vs 3,316 MiB** against an
   8 GiB cap. It protects **wall time**. And on **25 of the 62 it protects
   nothing at all** — those files are refused one layer down by
