@@ -1,5 +1,38 @@
 # Parity loss census, all eleven divisions, 2026-09-05/06 (S3)
 
+> ## CORRECTION, 2026-09-06 — read this before using the `class` column
+>
+> **This census's `class` column was measured wrong on at least 67 of 70 files
+> in two divisions, and the method that produced it is retired.** Two defects,
+> both confirmed by re-measurement (lane S11a,
+> [status](../../plan/status/s11a-uf-ackermann-cap.md)):
+>
+> 1. **The class is the LAST route's message, not the route that spent the
+>    budget.** On 35 QF_UF files `euf-online` is entered first and consumes
+>    23.5 s of a 24 s budget; the eager-Ackermann decline that named the class
+>    is a 0.3–15 ms tail *after the budget is already gone*. Raising the cap
+>    that class names could have moved at most 3 files, not 70.
+> 2. **`explain_corpus` is not the front door.** It runs `check_auto_explained`
+>    on the flat assertion view rather than `solve_smtlib`, and is measured to
+>    disagree with the shipped front door on **134 of 397** committed
+>    benchmarks. All 32 UF rows are an artifact of that difference.
+>
+> Independently, S1's watched literals then moved QF_UF from 162 to 190 —
+> so this note's conclusion that "neither division has a single search-timeout
+> file; 2.1's fix lands nothing here" was **false in both halves**.
+>
+> **What is still good here:** the per-file populations (the `<DIV>.txt` lists),
+> the wall times, and the `smtcomp_cli` verdicts. **What is not:** every
+> `class` and `last_route` value, in every division, until a front-door
+> re-measurement confirms it. Divisions confirmed since: QF_IDL, QF_RDL,
+> QF_LRA and QF_UFLIA by the slices that acted on them. Divisions **not**
+> confirmed: QF_LIA, QF_ABV, QF_SLIA, QF_BV, QF_NIA.
+>
+> The general shape, worth carrying beyond this file: **a diagnostic tool with
+> partial coverage does not merely fail to find things — it manufactures
+> confident false positives in every artifact built on top of it.** The fixed
+> method is in the [parity plan](../../plan/smt-parity-plan-2026-09-05.md) §6.
+
 Status: **measurement only**. This is the S3 slice of
 [`docs/plan/smt-parity-plan-2026-09-05.md`](../../plan/smt-parity-plan-2026-09-05.md):
 every reference-only file (reference `sat`/`unsat`, axeyum `unsolved`) across
