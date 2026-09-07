@@ -61,8 +61,12 @@ division, not replacing one.
 
 ### 1.2 There is no proof-exhibition venue in SMT
 
-SMT-COMP introduced a Proof Exhibition track in 2022, ran it unranked in 2023,
-and **discontinued it**; the 2025 and 2026 rules do not contain the word.
+SMT-COMP introduced a Proof Exhibition track in 2022, ran it again unranked in
+2023, and **discontinued it in 2024** — the 2024 rules give the reason verbatim
+("we were unable to find a way of turning the proof track into a competition
+that would…"); the 2025 and 2026 rules do not contain the word.
+(One line in the [reference-solver catalog](reference-solvers-and-proof-formats.md)
+said "since 2023"; corrected 2026-09-06. The 2024 rules PDF is the authority.)
 So "we would win proof exhibition" is not a claim anyone can make. The
 available honest framings are: an entry in the **SAT Competition main track**,
 where a DRAT certificate is mandatory and a wrong one is disqualification
@@ -150,10 +154,28 @@ strictly required to enter.
 **Termination and confluence** competitions have required certification for
 years: every tool submits an uncertified and a certified configuration, and
 only answers a verified checker re-confirms score. One prover recovers 946 of
-its own 1030 answers under certification — an ~8% measured trusted-base gap,
-exactly the number our flywheel produces. The confluence competition scores
-the *checker* and the *prover* as separate categories on the same problems,
-which is the scoring model our two-axis metric implies.
+its own 1030 answers under certification, an ~8% certified gap. The confluence
+competition scores the *checker* and the *prover* as separate categories on the
+same problems, which is the scoring model our two-axis metric implies.
+
+> **Do not compare that ~8% to our axiom-footprint number** (corrected
+> 2026-09-06 after axeyum-08 caught the error; the first draft of this file
+> called it "exactly the number our flywheel produces", which is false in both
+> directions). **The two measure different things.** Theirs is answers whose
+> proof their checker *cannot check at all*. Ours is checked facts whose
+> footprint is *non-empty* — a named assumption, not an unchecked answer.
+> Counted directly from `artifacts/facts/` on 2026-09-06: **2,692 proved facts,
+> 2,584 with an empty axiom footprint, 108 with a non-empty one**; of those 108,
+> 49 are witness-replay, 24 kernel-term, 19 exhaustive-enumeration and 16
+> unsat-certificate, and the axioms they name are mostly semantic bridges
+> (`cas.exact-rational-polynomial-normal-form` 31,
+> `classical-two-valued-bool-semantics` 16,
+> `geometry.cartesian-coordinatisation-of-the-euclidean-plane` 13) rather than
+> gaps in checking. The denominator moves as lanes land, so re-count rather
+> than quoting these. **No dominance claim survives the comparison**, and the
+> repo's own rule applies: two audits that do not share a denominator cannot be
+> quoted against each other without checking the method first
+> ([evidence-and-checker-discipline](../../../contributor-guide/evidence-and-checker-discipline.md)).
 
 **HWMCC's bit-level track was independently picked as the best fit by two of
 the four agents**: input is AIGER 1.9, which `axeyum-aig` already exports; the

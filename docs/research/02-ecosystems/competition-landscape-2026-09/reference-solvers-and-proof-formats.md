@@ -689,7 +689,9 @@ and it is the only proof-exhibition setting with a live external venue.
    dev box, and produces numbers that are not comparable to anyone else's frame.
 6. **Beware the cross-year comparison.** 2025 selected 129,361 benchmarks; 2026 selected 45,905 [M].
    Solved-counts do not transfer between years.
-7. **The proof-exhibition claim needs care.** SMT-COMP has had no proof track since 2023 [C], so
+7. **The proof-exhibition claim needs care.** SMT-COMP has had no proof track since its
+   discontinuation in **2024** [C] (an earlier draft of this line said "since 2023"; the table in
+   §2.4 and the 2024 rules PDF are the authority), so
    "proof exhibition" cannot be won there. The honest framings available are: an entry in the **SAT
    Competition main track** with a DRAT proof and a verified checker; a **TCB comparison** against
    cvc5's published 10k+8k lines [C]; or a **`bv_decide`-style head-to-head** on QF_BV, where the
