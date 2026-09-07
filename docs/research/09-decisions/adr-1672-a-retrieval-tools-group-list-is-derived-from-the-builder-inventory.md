@@ -2,7 +2,7 @@
 
 Status: accepted
 Date: 2026-09-06
-Index-summary: `examples/shape_search.rs` is the instrument a lane runs to decide whether a lemma already exists, and its ABSENT verdict is what the lane acts on — but it built 17 of the crate's 31 `pub fn build_*_prelude` functions, so `--ns FO` returned nothing against a 4,839-row dump while all 141 `FO.*` declarations sat in the tree. Its own internal cross-check (declared `coverage:` groups vs. indexed groups) passed throughout, because both halves were hand-written and omitted the same builders: a check whose two sides are written by one hand at one moment cannot fail. This ADR makes the group list ONE `const GROUPS` table that is both the coverage line and the build calls, and adds an OUTSIDE gate — `tests/shape_search_index_coverage.rs` — whose subject is read from `src/` on every run, so it cannot be kept green by editing the example. `*_prelude` turned out not to be the whole builder surface: `List.Perm` comes from `build_list_perm` over `build_list_nat_bridge`, so there are two gates over disjoint denominators. Coverage after: 31/31 preludes and 9/9 exported non-prelude builders; `--ns FO` 0 → 141, `List` 15 → 31, `AxReal` 30 → 74, `Metric.prod*` 0 → 10. The cost is real and is reported, not buried: the default index went 3,340 → 3,558 declarations and roughly tripled in build time, and `shape_search` now prints a per-group `timing:` line so the next lane deciding what to gate reads a measurement. The same audit over all 45 kernel instruments is `scripts/audit-kernel-tool-prelude-coverage.py`, with a two-sided ratchet; 4 tools now declare coverage and 13 do not.
+Index-summary: A retrieval or projection tool with partial coverage does not merely fail to find things — it MANUFACTURES findings in every gate built on top of it. `examples/shape_search.rs` is the instrument a lane runs to decide whether a lemma already exists, and its ABSENT verdict is what the lane acts on — but it built 17 of the crate's 31 `pub fn build_*_prelude` functions, so `--ns FO` returned nothing against a 4,839-row dump while all 141 `FO.*` declarations sat in the tree. Its own internal cross-check (declared `coverage:` groups vs. indexed groups) passed throughout, because both halves were hand-written and omitted the same builders: a check whose two sides are written by one hand at one moment cannot fail. This ADR makes the group list ONE `const GROUPS` table that is both the coverage line and the build calls, and adds an OUTSIDE gate — `tests/shape_search_index_coverage.rs` — whose subject is read from `src/` on every run, so it cannot be kept green by editing the example. `*_prelude` turned out not to be the whole builder surface: `List.Perm` comes from `build_list_perm` over `build_list_nat_bridge`, so there are two gates over disjoint denominators. Coverage after: 31/31 preludes and 9/9 exported non-prelude builders; `--ns FO` 0 → 141, `List` 15 → 31, `AxReal` 30 → 74, `Metric.prod*` 0 → 10. The cost is real and is reported, not buried: the default index went 3,340 → 3,558 declarations and roughly tripled in build time, and `shape_search` now prints a per-group `timing:` line so the next lane deciding what to gate reads a measurement. The strongest measured result is downstream: `examples/kernel_declaration_projection.rs` had the same gap, and `scripts/check-trust-closure.py` reads its environment, so that gate was RED on main with 21 SUBJECT-ABSENT rows — 16 `FO.*`, 4 `Top.*`, 1 `Metric.*`, exactly the namespaces the example omitted, every one of them present and proved. Building them takes the gate from 23 failures to 2. The same audit over all 45 kernel instruments is `scripts/audit-kernel-tool-prelude-coverage.py`, with a two-sided ratchet.
 Index-status: accepted
 
 ## Context
@@ -116,8 +116,8 @@ load-bearing. That is not a hypothetical either: before the split, deleting one
 |---|---|---|
 | `pub fn build_*_prelude` reached | 17 / 31 | **31 / 31** |
 | exported non-prelude builders reached | 2 / 9 | **9 / 9** |
-| default `coverage:` groups | 8 | 15 |
-| `--include-constructed` groups | 16 | 25 |
+| default `coverage:` groups | 8 | 13 |
+| `--include-constructed` groups | 16 | 22 |
 | `--ns FO` | 0 (empty against a 4,839-row dump) | **141** |
 | `List` namespace | 15 | **31** (`List.Perm` resolves) |
 | `AxReal` namespace | 30 | **74** (the Int and Rat models) |
@@ -131,10 +131,15 @@ timing is not evidence):
 
 | index | before | after |
 |---|---|---|
-| default declarations | 3,340 | 3,558 |
-| default build | 26.7 s (load 16.8), 19.1 s (load 30.3) | 58.0 s (load 20.5), 52.2 s (load 29.8) |
-| constructed declarations | 4,839 | 5,091 |
-| constructed build | 167.1 s (load 25.8), 183.0 s (load 12.1) | 235.6 s (load 12.6), 303.4 s (load 21.3) |
+| default declarations | 3,340 | 3,514 |
+| default build | 26.7 s (load 16.8), 19.1 s (load 30.3) | 23.2 s (load 12.5) |
+| constructed declarations | 4,839 | 5,025 |
+| constructed build | 167.1 s (load 25.8), 183.0 s (load 12.1) | 181.4 s (load 12.5) |
+
+The `after` column for build time is measured with the three `AxReal.*Model`
+groups removed (see below); the intermediate state that carried them ran
+235.6 s (load 12.6) and 303.4 s (load 21.3), and the default index 58.0 s /
+52.2 s.
 
 The default index roughly tripled. That is the price of never again reading an
 empty answer from a tool that was not pointed at the subject, and it is paid on
@@ -178,6 +183,75 @@ not gated further.
 The rule this leaves for a future lane: **a group may go behind a flag only if
 its whole namespace root goes with it.** Read the `timing:` line, then check
 that.
+
+### Partial coverage manufactures findings; it does not only miss them
+
+This is the sharper form of the rule, and it was measured after the fact rather
+than anticipated. `examples/kernel_declaration_projection.rs` had the same gap
+as `shape_search` — it referenced 22 of the 31 builders and built neither the
+first-order package, nor `Top.Frame`, nor `Metric.prod`, nor `ipc_eval`.
+`scripts/check-trust-closure.py` runs that example to obtain an admitted
+environment, so on main that gate was RED with 21 SUBJECT-ABSENT rows:
+
+    16  FO.*        4  Top.*        1  Metric.*
+
+which is exactly the set of namespaces the example omitted. Every one of those
+subjects exists, proved, in the tree. The gate was not reporting a finding; it
+was producing one, and nothing downstream could distinguish it from a real one.
+
+Measured, same box, `python3 scripts/check-trust-closure.py`:
+
+| | before | after |
+|---|---|---|
+| declarations | 4,817 | 5,023 |
+| subjects | 2,503 | 2,524 |
+| `absent` | **21** | **0** |
+| `guard population` rejected | 21 | 0 |
+| failures | 23 | 2 |
+
+The two remaining are a different class: `guard alias_occurrence rejected=1`
+was in the baseline too, and `IDENTITY-MAP-DRIFT` is the script's deliberate
+review event — a wider environment changes the derived identity map and it
+refuses to accept that silently. Neither was auto-updated here.
+
+So the census covers that file too
+(`kernel_declaration_projection_builds_every_prelude`), over the same builder
+inventory read from `src/`. Its measure is the weaker whole-file call-site scan
+rather than the `GROUPS`-table walk, because that file has no such table; the
+test says so rather than implying it.
+
+### The three `AxReal.*Model` groups came back out
+
+Indexing them was an over-reach, and running the downstream gates rather than
+reasoning about them is what showed it. `scripts/check-shape-duplicates.py`
+went from 20 duplicate groups to **85**, of which **66** were a model law
+beside its own carrier law:
+
+    DUPLICATE  Int.lt  AxReal.IntModel.zero_lt_one
+                       Int.Characterization.zero_lt_one Int.zero_lt_one
+
+A model law is by construction a restatement of the carrier law it interprets —
+that is what a model IS — so these are not re-derivations to adjudicate, they
+are noise in the gate whose whole job is to find re-derivations. They also cost
+7.6 s + 14.4 s by default and 43.9 s under `--include-constructed`, most of the
+tripling reported above.
+
+They are now in `DELIBERATELY_UNINDEXED_NON_PRELUDE` with that measurement as
+their reason, sharing one constant so three entries cannot drift into three
+stories. Nothing a lane would search for is lost: every law they restate is
+indexed under its carrier, and `kernel_declaration_projection
+--require-declaration` answers by name across all 31 preludes.
+
+With them out, the cost regression is gone. Final, load 12.5:
+
+    default  3,514 declarations, 23.2 s   (baseline 3,340, 19.1-26.7 s)
+    timing:  logic=0.0s nat=4.0s axreal=0.0s integer=3.0s rat=9.3s ipc=0.1s
+             ipc_eval=0.1s fo_order=0.4s fo_soundness=0.2s
+             fo_substitution=0.1s characterization=0.2s list=3.4s string=2.2s
+
+The default index is back in the baseline's range while carrying 174 more
+declarations and every `FO`, `IPC` and `List` namespace. **All eleven FO
+builders cost 0.7 s.**
 
 ### The same audit, over every instrument
 
