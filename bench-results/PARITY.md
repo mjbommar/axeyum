@@ -1790,3 +1790,22 @@ all three.
 | load average (start / end) | 1.09 1.05 1.01 / 0.96 0.98 1.00 — 8 cores; a high load DEPRESSES this result |
 | per-file detail | `bench-results/parity-details/QF_RDL.tsv` |
 
+## QF_NRA — 2026-09-07T01:33:46Z
+
+| field | value |
+|---|---|
+| axeyum solved | 110/200 |
+| reference solved | 186/200 |
+| **ratio (axeyum / reference)** | **59.1%** |
+| **disagreements** | **0** |
+| soundness | SOUND |
+| both / axeyum-only / reference-only | 109 / 1 / 77 |
+| reference | `cvc5 1.3.4 [git f3b21c4 on branch HEAD]` |
+| reference options | `<none — plain invocation, NOT a competition portfolio>` |
+| axeyum options | `<none — shipped default configuration>` |
+| protocol | 24s wall, 8GiB, per-file |
+| benchmark list | `bench-results/parity-lists/QF_NRA.txt` (sha256 d645dd907edd, 200 files) |
+| solver commit | `00373a7d42` |
+| load average (start / end) | 4.39 1.99 0.75 / 1.11 1.04 1.01 — 8 cores; a high load DEPRESSES this result |
+| per-file detail | `bench-results/parity-details/QF_NRA.tsv` |
+
