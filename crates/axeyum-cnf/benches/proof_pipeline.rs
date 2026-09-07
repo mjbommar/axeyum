@@ -12,7 +12,7 @@
 //!
 //! # What this proxies, and what it does not
 //!
-//! **The real workload** is: the native core refutes a QF_BV instance, and the
+//! **The real workload** is: the native core refutes a `QF_BV` instance, and the
 //! resulting DRAT proof is turned into an LRAT certificate and checked. On the
 //! p4dfa slice those proofs run to hundreds of megabytes (the 2026-09-05
 //! search-statistics table records 332 MB of DRAT from one 60 s run), so the
@@ -80,6 +80,9 @@ fn fixture() -> (CnfFormula, Vec<DratStep>) {
     (formula, proof)
 }
 
+// The two byte counts in the closing `println!` are proof sizes in the tens of
+// kilobytes; the ratio between them is exact as `f64`.
+#[allow(clippy::cast_precision_loss)]
 fn bench_proof_pipeline(c: &mut Criterion) {
     let (formula, proof) = fixture();
     let text = write_drat(&proof);

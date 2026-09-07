@@ -254,7 +254,8 @@ Two caveats that this comparison must carry, and one correction:
 - **Different hosts.** The native numbers are s5, the Kissat numbers are s7
   (from the 2026-09-05 run). Propagations *per conflict* is host-independent, so
   the 4.9x is safe. Propagations *per second* is not, so "we are ahead on
-  throughput" is provisional until both run on one host — queued below.
+  throughput" is provisional until both run on one host — **which the next entry
+  does, and it moves the answer.**
 - **Kissat's rate is over its whole wall time**, and its own profiler puts
   48-74% of that in `search` on these files (`compose.s3`: 56.8% search, 29.5%
   probe). Correcting to search-only, Kissat's `compose.s3` propagation rate is
@@ -271,14 +272,71 @@ Two caveats that this comparison must carry, and one correction:
 
 **Where the propagation volume comes from is the open question**, and the
 restart column is the loudest candidate: we restart every 294 conflicts, Kissat
-every 18-19. A restart truncates the trail; going 15x longer between them means
+every 11-34. A restart truncates the trail; going ~15x longer between them means
 descending far deeper before each conflict, and propagation work per conflict
 scales with trail depth. That is a *schedule* — `Cdcl::should_restart`, Luby by
 default with the Glucose EMA rule implemented and switched off — not a data
 structure. The field comment on `use_ema_restart` records that the EMA schedule
 was measured "neutral-to-slightly-negative" on this very corpus, which is
 evidence against the simplest version of this explanation, and is why it is
-written here as the leading candidate rather than as the answer.
+written here as the leading candidate rather than as the answer. It is tested
+below, and it does not survive.
+
+### 2026-09-07 — same host, both engines: the throughput lead was a host artifact
+
+Kissat 4.0.4 at commit `8af8e56` — the commit both prior studies pinned — rebuilt
+on s5 from the in-tree `references/kissat` clone and run against the same eight
+DIMACS files as the native core, same `taskset -c 0-7`, same idle host, 60 s
+budget for Kissat and a 20,000-conflict budget for the native core. Load 0.56
+before, 1.00 after.
+
+The first attempt printed "kissat reported no conflicts" for all eight files: the
+driver passed `-q` alongside `-s`, and `-q` suppresses the statistics block `-s`
+exists to print. It is recorded because the driver's refusal to print a
+comparison it had not parsed is the only reason it was noticed rather than
+becoming eight rows of zeros.
+
+| file | vars | nat p/c | kis p/c | **p/c n:k** | nat p/s | kis p/s (whole run) | kis p/s (search only) | **srch p/s n:k** | kis srch% | kis restart interval |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| `mobiledevice_…twocond` | 31,482 | 735 | 827 | 0.89 | 18.3M | 14.0M | 28.4M | 0.64 | 49.4 | 11 |
+| `string1x8.4` | 40,548 | 841 | 226 | 3.72 | 17.4M | 8.5M | 13.0M | 1.34 | 65.6 | 22 |
+| `mobiledevice_…paired` | 58,380 | 966 | 1,039 | 0.93 | 15.6M | 12.3M | 25.8M | 0.60 | 47.6 | 12 |
+| `compose.s2` | 106,588 | 1,828 | 1,311 | 1.39 | 13.4M | 11.3M | 23.7M | 0.57 | 47.9 | 18 |
+| `videoconf_full` | 141,923 | 1,752 | 227 | 7.72 | 12.8M | 5.8M | 7.9M | 1.62 | 73.9 | 30 |
+| `string4x8.8` | 256,789 | 2,436 | 338 | 7.21 | 11.5M | 6.1M | 8.8M | 1.30 | 68.7 | 34 |
+| `compose.s3` | 473,949 | 4,272 | 847 | 5.04 | 8.8M | 6.2M | 10.9M | 0.80 | 56.7 | 20 |
+| `string4x16.4` | 3,098,002 | 11,055 | 15,530 | 0.71 | 6.3M | 5.6M | 11.2M | 0.56 | 50.4 | 18 |
+| **median** | | | | **2.56** | | | | **0.72** | | |
+
+Both factors are now measured on one host, and the reading changes:
+
+- **Propagation volume: we need a median 2.56x more propagation per conflict**,
+  ranging from 0.71x (we are better) to 7.72x (much worse). Unambiguous, and
+  larger than the throughput factor.
+- **Propagation throughput: comparable, and probably slightly behind.** Against
+  Kissat's whole-run rate we are ahead on every file (median 1.29x). Against its
+  search-only rate — dividing its propagations by the fraction of wall time its
+  own profiler attributes to `search` — we are at a median 0.72x, i.e. Kissat is
+  ~1.4x faster per second of search. **The truth is between these two**, because
+  the search-only correction attributes every Kissat propagation to search time
+  while some propagation happens during probing (Kissat counts its probing
+  sub-solver separately as `kitten_propagations`, but not every probing
+  propagation is necessarily excluded from the main counter). So 0.72x is a lower
+  bound on our relative rate and 1.29x an upper bound.
+
+So the earlier entry's "we are ahead on throughput" was reading the uncorrected
+figure on a different host, and it was too flattering. Corrected: **we are within
+about 1.4x of Kissat on raw propagation rate, and behind by 2.56x on how much
+propagation each conflict costs us.** The second factor is the larger one and the
+only unambiguous one, which is the part of the earlier entry that survives.
+
+Note the pattern in the table: the three files with the worst propagation-volume
+ratio (7.72, 7.21, 3.72) are exactly the three where Kissat's `search%` is
+highest (73.9, 68.7, 65.6) and its own propagations-per-conflict is lowest
+(227, 338, 226). On those files Kissat reached 259k-1.5M conflicts; a solver deep
+into a long run is working against a formula its inprocessing has already
+reduced. That is a correlation, not a mechanism, and the next entries test the
+mechanism.
 
 ### 2026-09-07 — H1 measured directly: 1.6%. It was ranked first.
 
@@ -382,3 +440,214 @@ The ratio is a property of the *literal magnitudes* — a variable index below 1
 costs one byte in the binary encoding and up to seven characters in the text one,
 so the advertised 3x assumes smaller variable indices than a bit-blasted corpus
 instance has.
+
+### 2026-09-07 — the restart hypothesis, tested and refuted
+
+The propagations-per-conflict entry above named the restart schedule as the
+leading candidate: we restart every ~294 conflicts (Luby x `LUBY_UNIT = 100`),
+Kissat every 11-34, and propagation work per conflict scales with trail depth.
+The prediction is direct — **restart more often and propagations per conflict
+should fall.**
+
+Two arms, both against the same base build, same host, same eight files, same
+20,000-conflict budget:
+
+- **`ema`** — `use_ema_restart = true`, the Glucose EMA glue rule already
+  implemented in this core and switched off by default.
+- **`luby8`** — `LUBY_UNIT` 100 → 8, which lands the mean interval at 35
+  conflicts, an 8.4x increase in restart frequency.
+
+| file | base p/c | base c/s | ema p/c | ema c/s | luby8 p/c | luby8 c/s |
+|---|---:|---:|---:|---:|---:|---:|
+| `compose.s2` | 1,828 | 7,269 | 1,566 | 8,996 | 2,142 | 5,574 |
+| `compose.s3` | 4,272 | 2,050 | 4,862 | 1,705 | 7,058 | 1,083 |
+| `mobiledevice_…paired` | 966 | 16,013 | 1,091 | 14,333 | 967 | 16,164 |
+| `mobiledevice_…twocond` | 735 | 24,572 | 822 | 21,168 | 1,023 | 17,714 |
+| `string1x8.4` | 841 | 20,953 | 779 | 21,117 | 878 | 18,238 |
+| `string4x16.4` | 11,055 | 571 | 13,920 | 449 | 9,481 | 648 |
+| `string4x8.8` | 2,436 | 4,674 | 1,539 | 7,465 | 2,114 | 5,594 |
+| `videoconf_full` | 1,752 | 7,293 | 1,697 | 6,707 | 1,810 | 6,397 |
+| **median vs base** | — | — | **1.044** | **0.907** | **1.039** | **0.874** |
+
+**Refuted.** Restarting 8.4x more often does not reduce propagations per
+conflict — the median rises 3.9% — and conflicts per second falls 12.6%. The EMA
+arm behaves the same way: 4.4% more propagation per conflict, 9.3% fewer
+conflicts per second. Neither arm improves the factor it was aimed at on the
+*median*, and both make throughput worse.
+
+Two things worth keeping from a refuted hypothesis. First, this independently
+reproduces what the `use_ema_restart` field comment already recorded from a
+different lane's measurement ("neutral-to-slightly-negative on the public p4dfa
+slice"), by a different method and on a different metric, which is a reason to
+believe both. Second, the per-file spread is large and two-directional —
+`string4x8.8` improves 37% in p/c and 60% in c/s under `ema`, `compose.s3`
+degrades 47% in c/s under `luby8` — so a schedule that adapts per instance is not
+excluded by this. What is excluded is "we restart too rarely, and that is why we
+propagate more per conflict".
+
+The candidate this leaves standing is **inprocessing**: Kissat's `probe` umbrella
+(vivification, elimination, subsumption, congruence, sweeping) shrinks the
+formula before and during search, so its propagation cascades run over a smaller
+clause database. `axeyum-cnf` has `vivify`, `simplify` and `bve` as modules, and
+`solve_with_drat_proof` runs **none of them**. That is the largest structural
+difference remaining between the two engines, and this lane did not test it —
+recorded as not run, not as ruled out. It is not the same claim the 2026-09-05
+note refuted: that note refuted "Kissat wins because it *spends its time*
+inprocessing" (its own profiler says the majority of its time is search). The
+surviving claim is that inprocessing is *cheap and changes the formula*, which is
+entirely compatible with search dominating Kissat's clock.
+
+### 2026-09-07 — control: is the propagations-per-conflict gap an artifact?
+
+The comparison above sets our first 20,000 conflicts against Kissat's whole run,
+which reaches 25,597-1,501,192 conflicts. Early CDCL conflicts have deeper trails
+because there are no learned clauses yet to cut them off, so **the gap could be
+an artifact of comparing our early phase to their steady state.** The counters
+make this cheap to check: run the same files at 5,000, 20,000, 80,000 and
+320,000 conflicts and see whether propagations per conflict falls.
+
+| file | 5k | 20k | 80k | 320k |
+|---|---:|---:|---:|---:|
+| `mobiledevice_…paired` | 1,126 | 966 | 960 | 960 |
+| `compose.s2` | 1,692 | 1,828 | 1,818 | 1,818 |
+| `string1x8.4` | 838 | 841 | 862 | 853 |
+| `videoconf_full` | 2,187 | 1,752 | 1,522 | 1,717 |
+| `string4x8.8` | 2,376 | 2,436 | 2,466 | 2,547 |
+
+**Flat.** Over a 64x range of search depth, propagations per conflict moves by at
+most ~20%, in both directions; on three of five files it is within 3%. The
+artifact is not there, and the 2.5x median gap stands as measured. (Two files
+reach their verdict before the larger budgets and simply repeat it.)
+
+This control was run because the headline claim depended on it, and it is exactly
+the kind of check that is easy to skip once a number already looks good.
+
+### 2026-09-07 — the benches, and the fixture that had to be rejected twice
+
+`benches/proof_pipeline.rs` and `benches/proof_sat_propagate.rs` landed. What
+each proxies is in its module doc; two results are worth pulling out here.
+
+**The evidence path is wildly asymmetric between its forward and backward
+engines.** On the committed pigeonhole proof (757 DRAT steps):
+
+| routine | time |
+|---|---:|
+| `check_drat` (forward) | 52.6 ms |
+| `check_drat_backward` | **2.0 ms** — 26x faster |
+| `elaborate_drat_to_lrat` (forward) | 82.4 ms |
+| `elaborate_drat_to_lrat_backward` | **2.4 ms** — 35x faster |
+| `write_drat` (text) | 100.6 µs |
+| `write_drat_binary` | **6.5 µs** — 15x faster |
+| `parse_drat_binary` | 60.3 µs |
+
+The forward/backward gap is expected in kind — backward checking only re-derives
+the clauses the refutation actually needs — but a factor of 26-35 is larger than
+"expected in kind" prepares you for, and neither routine had a bench before, so
+nobody could have said which. **This is a small fixture and the ratio will not
+hold at corpus scale**; it is recorded as a starting point for someone measuring
+the ADR-0613 certification path properly, not as a corpus number.
+
+Binary DRAT is also **15x cheaper to write**, not merely smaller — which the
+size-focused framing of the format ("~3x smaller") does not mention, and which is
+the larger of the two effects for a solver emitting a proof during search.
+
+**The fixture-shape assertion earned its place by firing twice.** The proxy bench
+asserts its own shape against the p4dfa figures rather than describing it, and it
+rejected two fixtures before accepting one:
+
+1. A single 20-bit multiplier — the natural first choice, and the shape the
+   existing `tseitin_encode` bench uses. It encodes to **770 variables**: a
+   pigeonhole-class instance wearing a bit-blasted costume. Without the
+   assertion this file would have shipped with a module doc claiming "tens of
+   thousands of Tseitin variables" over a fixture with 770.
+2. A sum-of-products with an odd target, unsatisfiable by a parity argument. The
+   reasoning was that CDCL would have to rediscover the parity through a
+   bit-blasted multiplier and would run to the budget. It is decided in **2
+   conflicts**: the low bit of a bit-blasted sum is a pure XOR chain and unit
+   propagation collapses it immediately. Reading the code would not have revealed
+   that; the assertion did, in one run.
+
+The accepted fixture is six independent bounded-factor multiplications (32-bit
+factors, 64-bit products, six 64-bit semiprimes): 23,997 variables, 100,221
+clauses, exhausts its 2,000-conflict budget on every sample, 84 ms per sample.
+
+**And it fails to match the corpus on one axis, which is itself a finding.** It
+does **128 resolutions per conflict** against the corpus's 23-39 — factorisation
+learns from far longer resolution chains than a p4dfa instance does. So this
+bench over-weights `analyze` and `lit_redundant` and under-weights `propagate`
+relative to the real workload: a conflict-analysis optimisation will look better
+here than on the corpus, and a propagation optimisation worse. That is written
+into the module doc next to the table, because a proxy whose mismatch is
+documented is usable and one whose mismatch is unknown is not.
+
+## 4. Where §1 was wrong, in one place
+
+| | pre-registered | measured |
+|---|---|---|
+| H1 `analyze`'s per-conflict `vec![false; nvars]` | ranked **#1** | **1.6%** median, 3.8% best case |
+| H2 per-resolution-step `to_vec()` | ranked #2 | not measured (see below) |
+| H3 16-byte `Watch` | ranked #3 | not measured |
+| H4 `Vec<Vec<Watch>>` pointer chase | ranked #4 | not measured |
+| H5 `compute_lbd` allocation | ranked #5 | not measured |
+| H6 DRAT logging 5-15% | — | **< 1%** |
+| restart schedule (not in §1 at all) | — | tested, **refuted** |
+| **propagations per conflict** (not in §1 at all) | — | **the actual deficit: 2.5x median, up to 7.7x** |
+
+The ranking was wrong at the top (H1), wrong at the bottom (H6, by an order of
+magnitude), and — the part that matters — **aimed at the wrong factor
+entirely**. Every one of H1-H5 is a hypothesis about the cost of a unit of
+propagation work. The measured deficit is in the *amount* of propagation work,
+which none of them touches. H2-H5 were left unmeasured deliberately once that was
+clear: they are optimisations to the factor we are already roughly competitive
+on, and measuring them would have spent the lane's remaining time on the wrong
+axis.
+
+The general shape of the error is worth naming, because it is cheap to repeat:
+**reading a hot function tells you what it costs, and says nothing about how
+often the search chooses to call it.** Every hypothesis in §1 came from reading
+`propagate` and `analyze`. The answer came from a counter that neither function
+contains.
+
+## 5. What this lane did not measure
+
+- **Inprocessing** — the surviving candidate for the propagation-volume gap, and
+  the largest structural difference between the two engines
+  (`solve_with_drat_proof` runs none of `vivify`, `simplify` or `bve`). Not run.
+- **H2-H5**, for the reason above. Not run, not ruled out; each would move a
+  factor that is currently not the deficit.
+- **CaDiCaL.** Only Kissat was rebuilt on the measurement host. Not run.
+- **Certificate cost at corpus scale.** DRAT *logging* overhead is measured on
+  real p4dfa CNF; DRAT *checking* and LRAT *elaboration* are measured only on the
+  757-step pigeonhole proof, where the clause database RUP runs against is 133
+  clauses. The corpus-scale certification cost is not measured, and the bench
+  numbers must not be extrapolated to it.
+- **Memory.** Every number here is time. The `vec` sink holds its proof in RAM
+  and that has OOM-killed a run before (27.6 GiB); nothing here measures it.
+- **Repeats.** The A/B took 3 interleaved repeats and reports minima; the
+  restart, budget-scaling and Kissat runs are single runs per cell. Load average
+  was recorded before and after every timing run and never exceeded 2.4 on an
+  idle 16-core host, but there are no variance bars.
+
+## 6. Reproducing any of this
+
+Every measurement above comes from two committed things plus a host:
+
+```sh
+# the per-conflict decomposition and the DRAT-sink arms, on one DIMACS file
+cargo run --release -p axeyum-cnf --example boolean_core_profile -- \
+    <file.cnf> <max_conflicts> [null|vec|text|binary]
+
+# the two benches
+cargo bench -p axeyum-cnf --bench proof_pipeline
+cargo bench -p axeyum-cnf --bench proof_sat_propagate
+```
+
+The p4dfa DIMACS were produced with the unmodified
+`crates/axeyum-bench/examples/dump_dimacs.rs` — the same tool gate (b) and the
+2026-09-05 search-statistics note used — from
+`/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen`.
+Kissat is 4.0.4 at commit `8af8e56`, the commit both prior studies pinned,
+rebuilt on the measurement host. The A/B and experiment drivers were session
+scratch scripts: they only shell out to already-built binaries and do no SAT work
+of their own, so they are not committed, and every number they produced is
+reproducible from the two commands above.
