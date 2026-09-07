@@ -41,7 +41,9 @@ mod solve_eqs;
 
 pub use alpha::{ALPHA_EQUIVALENCE_STEP_BUDGET, alpha_equivalent, alpha_equivalent_to_negation};
 pub use arrays::{
-    ArrayAbstraction, ArrayElimError, ArrayElimination, abstract_arrays, eliminate_arrays,
+    ArrayAbstraction, ArrayElimError, ArrayElimination, READ_OVER_WRITE_WITNESS_SAMPLES,
+    ReadOverWriteDisagreement, ReadOverWriteWitness, abstract_arrays, eliminate_arrays,
+    witness_read_over_write,
 };
 pub use canonical::{
     CanonicalizeOutcome, CanonicalizeTermsOutcome, Canonicalizer, DEFAULT_LOCAL_REWRITE_FUEL,

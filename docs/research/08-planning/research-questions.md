@@ -120,6 +120,13 @@ Out of scope:
   - Answer: the Phase 3 manifest records stable rule IDs, preconditions,
     preservation class, projection obligations, and required test routes; see
     [ADR-0005](../09-decisions/adr-0005-phase3-query-evidence-rewrite-contracts.md).
+  - Amended 2026-09-06: ADR-0005's fields cover the `sat` direction only —
+    `ModelProjection` says how a model maps back and nothing says why an `unsat`
+    of the rewritten query is an `unsat` of the original.
+    [ADR-1721](../09-decisions/adr-1721-a-preprocessing-step-owes-one-of-three-obligations-chosen-by-the-direction-it-can-break.md)
+    adds the dual obligation, chosen by what the step does to the model set
+    (replacement / relaxation / strengthening), and rules that a re-derivation
+    of the producer is not a discharge.
 - [ ] Should equality saturation be an optional optimizer?
   - Current boundary: `axeyum-egraph` is an accepted incremental congruence-
     closure/equality-bus crate, not an equality-saturation rewrite optimizer.

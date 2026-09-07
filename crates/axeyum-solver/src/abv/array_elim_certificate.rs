@@ -1,8 +1,8 @@
 //! Re-checkable eager array-elimination UNSAT evidence.
 
 use super::{
-    ArrayElimination, SolverError, SymbolId, TermArena, TermId, eliminate_arrays, map_elim_error,
-    select_congruence_lemma,
+    ArrayElimination, READ_OVER_WRITE_WITNESS_SAMPLES, SolverError, SymbolId, TermArena, TermId,
+    eliminate_arrays, map_elim_error, select_congruence_lemma, witness_read_over_write,
 };
 
 // ===========================================================================
@@ -56,6 +56,26 @@ use super::{
 // not asserted), re-bit-blasts that eliminated formula and confirms the stored
 // DIMACS is byte-identical (the DRAT refutes precisely THIS CNF), and re-runs
 // `check_drat` over the stored DIMACS/DRAT. Trusting nothing the emitter computed.
+//
+// THE TWO HALVES ARE CHECKED DIFFERENTLY, and ADR-1721 §1 says why: step 2
+// (read-over-write) is a REPLACEMENT and step 1 (Ackermann) a STRENGTHENING, so
+// they can break in different directions and owe different evidence.
+//
+//   * The strengthening half is discharged by RE-DERIVATION, and that is enough
+//     for it: rebuilding the congruence set from an independent implementation of
+//     the schema catches a SPURIOUS appended constraint, which is the only way
+//     adding constraints can turn a satisfiable formula UNSAT.
+//   * The replacement half is NOT dischargeable that way. Re-running the same
+//     `resolve_select` on the same input reproduces a wrong rewrite identically,
+//     so every subsequent comparison compares wrong to wrong — `trust.rs`'s
+//     "determinism, not faithfulness". Measured 2026-09-06: with the `Op::Store`
+//     arm's `ite` branches swapped, this `recheck` returned `Ok(true)` over a
+//     query that is genuinely satisfiable.
+//
+// That is why `recheck` step (2) is `witness_read_over_write` and not another
+// re-derivation: it interprets both sides under concrete assignments, using the
+// ground evaluator's array semantics on the originals, which never enter
+// `resolve_select`. With it wired in, the same mutation yields `Ok(false)`.
 
 /// Deterministic admission bound on the number of eager select-congruence pairs a
 /// certificate will witness, mirroring the UF eager bound in [`crate::euf`]. Above
@@ -110,18 +130,23 @@ impl ArrayElimUnsatCertificate {
     /// certificate's stored data, trusting nothing the emitter computed:
     ///
     ///  1. re-runs the deterministic [`eliminate_arrays`] on `assertions`;
-    ///  2. structurally re-derives the pairwise select-congruence set from the
+    ///  2. **witnesses that read-over-write is faithful** by interpreting the
+    ///     originals and their abstraction under sampled concrete assignments
+    ///     ([`witness_read_over_write`], ADR-1721 §7) — an INDEPENDENT
+    ///     reference, unlike steps 3-4, which re-derive;
+    ///  3. structurally re-derives the pairwise select-congruence set from the
     ///     discovered read sites and confirms the eliminated formula is *exactly*
     ///     `abstraction (read-over-write) ++ that-congruence-set` (so each appended
     ///     assertion is a VALID select-congruence consequence — the eliminated
     ///     formula is a sound relaxation, witnessed) and that the recorded pair
     ///     counts match;
-    ///  3. re-bit-blasts the re-derived eliminated formula and confirms the stored
+    ///  4. re-bit-blasts the re-derived eliminated formula and confirms the stored
     ///     DIMACS is byte-identical (the DRAT refutes precisely *this* CNF);
-    ///  4. re-runs `check_drat` (RUP/RAT) over the stored DIMACS/DRAT.
+    ///  5. re-runs `check_drat` (RUP/RAT) over the stored DIMACS/DRAT.
     ///
-    /// Returns `Ok(true)` only when all four hold. With the reduction re-derived
-    /// (2,3) and the refutation re-checked (4), `QF_BV`-UNSAT ⇒ ABV-UNSAT, so this
+    /// Returns `Ok(true)` only when all five hold. With read-over-write witnessed
+    /// (2), the reduction re-derived (3,4) and the refutation re-checked (5),
+    /// `QF_BV`-UNSAT ⇒ ABV-UNSAT, so this
     /// `Unsat` carries no residual `ArrayElim` trust for this eager sub-case. A
     /// `false`/`Err` means the certificate does not establish the `Unsat` and must
     /// not be trusted.
@@ -144,7 +169,28 @@ impl ArrayElimUnsatCertificate {
             return Ok(false);
         }
 
-        // (2) Structurally re-derive the pairwise select-congruence set and confirm
+        // (2) Witness that READ-OVER-WRITE is faithful (ADR-1721 §7). Steps 3-5
+        //      re-derive: they re-run the same producer and compare the results,
+        //      which proves determinism and not faithfulness, so a stably-wrong
+        //      `resolve_select` survives all three (measured 2026-09-06 with the
+        //      `Op::Store` arm's `ite` branches swapped). This step does not
+        //      re-run the transform. It interprets the ORIGINAL array-using
+        //      assertions with the ground evaluator's array semantics and the
+        //      abstraction with the fresh select symbols bound to what the
+        //      sampled array actually holds, and compares the values.
+        //
+        //      A DISAGREEMENT is a hard reject. An *unavailable* sample (a sort
+        //      the sampler cannot build) is NOT: it is a coverage hole, and
+        //      failing on it would decline certificates this step simply cannot
+        //      speak about. So the condition is `disagreement.is_some()`, never
+        //      `!is_faithful()`.
+        let witness =
+            witness_read_over_write(&scratch, assertions, &elim, READ_OVER_WRITE_WITNESS_SAMPLES);
+        if witness.disagreement.is_some() {
+            return Ok(false);
+        }
+
+        // (3) Structurally re-derive the pairwise select-congruence set and confirm
         //     the eliminated formula is exactly `abstraction ++ congruence`.
         let Some((rederived, per_array)) = rederive_select_congruence(&mut scratch, &elim) else {
             return Ok(false);
@@ -166,7 +212,7 @@ impl ArrayElimUnsatCertificate {
             return Ok(false);
         }
 
-        // (3) Re-bit-blast the re-derived eliminated formula and confirm the stored
+        // (4) Re-bit-blast the re-derived eliminated formula and confirm the stored
         //     DIMACS is byte-identical: the DRAT refutes precisely the CNF of the
         //     formula we just re-derived, not some unrelated CNF the emitter chose.
         let eliminated = eliminated.to_vec();
@@ -182,7 +228,7 @@ impl ArrayElimUnsatCertificate {
             | crate::proof::UnsatProofOutcome::Inconclusive => return Ok(false),
         }
 
-        // (4) Independently re-check the stored BV refutation (RUP/RAT) over the
+        // (5) Independently re-check the stored BV refutation (RUP/RAT) over the
         //     stored DIMACS/DRAT.
         self.bv_proof.recheck()
     }

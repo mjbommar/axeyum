@@ -283,6 +283,152 @@ widened return. DL already computes and discards exactly such an object for
 every conflict; that is the measurement that says the slot, not the certificate,
 is what is missing.
 
+## Prior art
+
+*Added 2026-09-06 as an addendum. It changes no part of the decision above; it
+records the published work this design coincides with, and the one place where
+the comparison puts a new constraint on future work.*
+
+The design decided above — a propositional refutation below, enumerated theory
+lemmas above, discharged separately — is the published **eDRAT** approach:
+
+> S Hitarth, Cayden Codel, Hanna Lachnitt, Bruno Dutertre. **Extending DRAT to
+> SMT.** In *Formal Methods in Computer-Aided Design (FMCAD) 2024*, pages
+> 18–28. TU Wien Academic Press. ISBN 978-3-85448-065-5.
+> DOI [10.34727/2024/isbn.978-3-85448-065-5_8](https://doi.org/10.34727/2024/isbn.978-3-85448-065-5_8)
+> (open access, CC BY 4.0).
+
+This ADR was written without it. The shape here was derived one level up in
+this tree, from `ArithDpllRefutation` / `LraDpllRefutation` (§Context item 2),
+not from the paper. So the agreements below are **convergence, not adoption**,
+and the disagreements are choices, not oversights.
+
+### What they do
+
+eDRAT is a *format*: DRAT plus SMT-LIB-shaped `(declare-sort …)` /
+`(declare-fun …)` term declarations, two new commands (`define-let` naming a
+term, `define-literal` mapping a DIMACS variable to an atom), and three clause
+prefixes — `a` for an input clause, `t` for a theory lemma, bare for a Boolean
+reasoning clause, `d` for a deletion. Their toolchain, VALIDO, checks it in two
+steps (their Algorithm 1):
+
+1. Build one CNF from the `a` clauses **and** the `t` clauses — "we treat all
+   the theory lemmas as axioms and add them to the input clauses" — and run a
+   restricted DRAT-trim over the Boolean stream, which also returns an unsat
+   core.
+2. Discharge the theory lemmas **that appear in that core**, via an *untrusted
+   elaborator* (Rust) that rediscovers a certificate per lemma, plus a
+   *validator* (Lean 4, proved sound) that checks the certificate. QF_LRA
+   elaborates to a Farkas combination found by simplex; QF_UF to a congruence
+   certificate checked by a union-find in Lean.
+
+Their measurements: eDRAT proof generation costs under 10% over proofless cvc5,
+against 2x–17x for cvc5's ALF and LFSC; checking is 3x/15x faster than
+LFSC/ALF on QF_LRA and 80x/120x on QF_UF.
+
+### Where this contract agrees with them, independently
+
+- **The two streams themselves**, and the fact that they are checked by
+  different machinery.
+- **Hoisting the lemmas into the input formula rather than teaching the
+  propositional checker about theories.** Their step 1 sentence above is this
+  ADR's §1 `extended := cnf ++ lemmas`, arrived at separately. Both designs
+  therefore reject a theory-aware DRAT dialect for the same reason: it would put
+  a decision procedure inside the trusted checker (this ADR's alternative (1)).
+- **The per-lemma discharge objects.** Farkas for LRA, a congruence chain for
+  EUF — the same two theories, the same two objects, and in both cases the
+  cheap ones to have first.
+- **Coarse granularity on purpose.** Their motivation is production overhead;
+  ours is that ADR-0613 chose a smaller checker over a faster one. Same
+  artifact, two different arguments for it.
+- **The trusted base is the validator, not the producer.** Their elaborator is
+  explicitly untrusted; here the search is untrusted by identity.
+
+### Where it differs, and why
+
+1. **We add no format and no checker arm; they added both.** eDRAT needs a
+   portable on-disk artifact a third party can consume, so it pays for new
+   syntax *and* a modified DRAT-trim. This ADR's §2 hands `check_drat` /
+   `check_lrat` an ordinary formula and changes neither by a line. The cost of
+   our choice is exactly what theirs buys: no external referee can read our
+   artifact. That is already named here as the Alethe route (alternative (1)),
+   and it stays a portability project rather than a soundness one.
+
+2. **Who computes the certificate.** eDRAT emits the lemma bare and has an
+   elaborator *rediscover* the Farkas coefficients afterwards by solving an LP.
+   This ADR requires the **producer** to carry the explanation. We chose that
+   because DL already builds and verifies a Farkas object per conflict and
+   throws it away (`dl_online.rs:1159`, `:1516`), so retaining it is plumbing,
+   while rediscovery is the inverted cost ADR-0613 was written against. Their
+   own results are evidence for our side of this: VALIDO is *slower* than the
+   ALF checker on the QF_LRA families whose lemmas run to several hundred atoms,
+   and they attribute it to their simplex recomputing the coefficients. The bill
+   for our choice lands on the producer instead, which is the axis eDRAT
+   optimized — mitigated here by making emission a per-call choice
+   (`prove_unsat`, §Consequences).
+
+3. **Which lemmas must be discharged.** eDRAT discharges only the lemmas in
+   DRAT-trim's unsat core. This ADR discharges **every listed lemma** or counts
+   it in `theory_lemmas_unchecked`; there is no core-pruning step. We are
+   strictly more conservative and strictly more expensive. See item 5.
+
+4. **A distinction our certificate carries and theirs cannot.** VALIDO returns
+   success, "DRAT Proof Check Failed", or "Theory Lemma Validation Failed"; it
+   has no way to say *checked modulo N undischarged lemmas*, because it is only
+   instantiated for theories it can fully discharge. This ADR's
+   `SatRefutationModuloTheory`, `NoCheckReason::UndischargedTheoryLemmas`, and
+   the counted `theory_lemmas_unchecked` exist precisely so a partial check
+   cannot present as a pass — which is what we need and they do not, because our
+   strings and nonlinear routes have lemmas with no checker at all.
+
+5. **RAT — the one place the comparison changes something.** eDRAT *restricts*
+   its propositional checker to RUP additions and rejects RAT, on the stated
+   ground (their §III-B, Example III.2) that adding a RAT clause can eliminate
+   Boolean models, so a formula satisfiable in `T` can become `T`-unsatisfiable
+   after a RAT addition. This contract hands the **unchanged** `check_drat`,
+   which accepts RUP *or* RAT (`crates/axeyum-cnf/src/drat.rs`, and the boundary
+   suite's mutation of `is_rat` kills two tests), the extended formula.
+
+   Read against the contract as decided, the hazard does not reach us: the
+   extended formula is **fixed before the stream is checked** (§1: `cnf`
+   followed by `lemmas`, nothing interleaved, mode 4 enforcing it), every listed
+   lemma is separately discharged or counted (§2), and the only propositional
+   claim inherited is "`cnf ∪ lemmas` is unsatisfiable" — which DRAT establishes
+   soundly with RAT included. eDRAT's hazard bites where a clause's status is
+   judged against a formula that is not the one whose unsatisfiability is
+   finally claimed, and core-pruning is exactly that situation.
+
+   **So the constraint this comparison adds, recorded here rather than
+   discovered later:** *if this route ever adopts eDRAT's core-pruning
+   optimization — discharging only the lemmas in the unsat core — then the
+   RUP-only restriction becomes load-bearing and `check_drat`'s RAT arm must be
+   disabled on that route.* The two are a package; taking the cheap half alone
+   is the unsound combination. Note that the LRAT arm of §2's composition is
+   **already** RUP-only and would be unaffected: `check_lrat` rejects a RAT
+   addition outright (`LratError::RatNotSupported`, `crates/axeyum-cnf/src/lrat.rs`,
+   ADR-0382). The agreement there is accidental and worth keeping deliberate.
+
+### Their limitation is our open hole
+
+The paper states it in its own §I and §VII: eDRAT starts from CNF, and "the
+preprocessing, simplification, and rewriting steps that SMT solvers perform to
+convert formulas to CNF are not expressible in eDRAT." They name three
+candidate bridges and commit to none — (a) emit a *separate* proof of the
+preprocessing steps only, in ALF, noting that some useful preprocessing must
+then be disabled (in cvc5, symmetry breaking is incompatible with LFSC/ALF
+proof production); (b) translation validation, seeing preprocessing as a
+compilation whose satisfiability preservation is validated per run, which they
+note may need the solver to emit hints; (c) a provably correct preprocessor,
+most effort and most benefit, with maintenance as the standing objection.
+
+That is our hole too, one layer earlier: `axeyum-rewrite` is preprocessing and
+produces no evidence. The published two-stream contract therefore covers
+CNF-to-refutation and stops. One measurement of theirs is worth carrying into
+that work: ALF and LFSC proofs *do* include preprocessing steps, and the paper
+reports the resulting size difference is "significant mostly on easy problems"
+— on hard problems resolution and theory lemmas dominate. Preprocessing
+evidence is a correctness gap, not a scale problem.
+
 ## Alternatives
 
 ### (1) One proof format with labelled theory steps — rejected for now
