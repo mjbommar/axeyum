@@ -3794,3 +3794,168 @@ mod lean_module_cap_tests {
         assert_eq!(source, ordinary);
     }
 }
+
+#[cfg(test)]
+mod sos_fallback_labelling_tests {
+    //! **The SOS route has two populations and one name.**
+    //!
+    //! `reconstruct_sos_to_lean_module_raw` runs the honest reconstructor and,
+    //! on [`ReconstructError::UnsupportedTerm`] — exactly when the honest route
+    //! cannot do the work — hands the query to
+    //! `reconstruct_sos_certificate_wrapper_to_lean_module`, which mints an
+    //! opaque `Prop` plus two axioms and closes `False` by applying one to the
+    //! other. That module contains none of the reasoning it attests to.
+    //!
+    //! These tests judge the two by the **kernel's own axiom footprint**, not by
+    //! the name printed on the module: the honest refutation assumes only the
+    //! query's own variables and hypotheses (`minted_axioms_of` empty), the
+    //! fallback's rests on an assumption it minted for itself. A surface that
+    //! cannot separate those two is a checker that cannot fail — every counter
+    //! keyed on the theorem name adds the second population to the first.
+
+    use axeyum_ir::{Rational, TermArena, TermId};
+
+    use super::arithmetic::ordered_ring::{minted_axioms_of, refutation_axiom_footprint};
+    use super::{
+        LEAN_MODULE_THEOREM, LeanModuleContent, LraReconstructCtx,
+        reconstruct_sos_certificate_wrapper_to_lean_module, reconstruct_sos_proof,
+        reconstruct_sos_to_lean_module,
+    };
+
+    /// `x*x < 0` — the trivial single square. Both routes accept it, which is
+    /// what makes it the fixture: the SAME query, reconstructed twice, once with
+    /// reasoning and once without.
+    fn single_square(arena: &mut TermArena) -> TermId {
+        let x = arena.real_var("x").unwrap();
+        let zero = arena.real_const(Rational::integer(0));
+        let square = arena.real_mul(x, x).unwrap();
+        arena.real_lt(square, zero).unwrap()
+    }
+
+    /// `(x - y)*(x - y) < 0` — a DIFFERENT query with the same certificate
+    /// shape, for the query-independence test below.
+    fn shifted_square(arena: &mut TermArena) -> TermId {
+        let x = arena.real_var("x").unwrap();
+        let y = arena.real_var("y").unwrap();
+        let zero = arena.real_const(Rational::integer(0));
+        let diff = arena.real_sub(x, y).unwrap();
+        let square = arena.real_mul(diff, diff).unwrap();
+        arena.real_lt(square, zero).unwrap()
+    }
+
+    /// **The measurement, read from the kernel.** The honest SOS refutation
+    /// assumes nothing it minted; the fallback's refutation is nothing BUT what
+    /// it minted.
+    ///
+    /// This is the anchor for the two surface tests below: without it, "the
+    /// modules differ" would be a statement about strings.
+    #[test]
+    fn the_two_sos_routes_have_different_axiom_footprints() {
+        let mut arena = TermArena::new();
+        let goal = single_square(&mut arena);
+
+        let mut ctx = LraReconstructCtx::try_new_over_constructed_reals()
+            .expect("the constructed carrier builds");
+        let proof = reconstruct_sos_proof(&mut ctx, &arena, &[goal])
+            .expect("the honest route reconstructs the single square");
+        let honest_footprint =
+            refutation_axiom_footprint(&mut ctx, proof).expect("the refutation proves False");
+        let honest_minted = minted_axioms_of(&honest_footprint);
+        assert!(
+            !honest_footprint.is_empty(),
+            "an entirely empty footprint would mean the query's own hypothesis \
+             axioms vanished, which is a broken measurement rather than a result"
+        );
+        assert!(
+            honest_minted.is_empty(),
+            "the honest SOS refutation minted an assumption: {honest_minted:?}"
+        );
+
+        // The fallback's module declares its assumptions in its own text; the
+        // opaque proposition it invents is the one no honest route needs.
+        let attested = reconstruct_sos_certificate_wrapper_to_lean_module(&arena, &[goal])
+            .expect("the certificate wrapper renders for a query it certifies");
+        assert!(
+            attested.contains("axeyum.reconstruct.prop."),
+            "the fallback stopped minting an opaque proposition, so this test no \
+             longer measures the difference it was written for"
+        );
+    }
+
+    /// **The distinction a consumer can act on.** A module whose refutation is
+    /// minted must not render under the honest route's identifier, and must
+    /// declare itself for [`LeanModuleContent::of_module_source`] — the one
+    /// machine-readable channel `prove_unsat_to_lean_theory_module` reads before
+    /// deciding whether a module may be reported as a proof.
+    #[test]
+    fn the_fallback_module_does_not_wear_the_honest_routes_name() {
+        let mut arena = TermArena::new();
+        let goal = single_square(&mut arena);
+
+        let honest = reconstruct_sos_to_lean_module(&arena, &[goal])
+            .expect("the shipped SOS route reconstructs the single square");
+        assert!(
+            honest.contains(&format!("theorem {LEAN_MODULE_THEOREM} ")),
+            "the honest route stopped using its own name; the negative below \
+             would then pass for the wrong reason"
+        );
+        assert_eq!(
+            LeanModuleContent::of_module_source(&honest),
+            LeanModuleContent::TheoryReconstruction,
+            "the honest SOS module must not be marked a structural attestation"
+        );
+
+        let attested = reconstruct_sos_certificate_wrapper_to_lean_module(&arena, &[goal])
+            .expect("the certificate wrapper renders for a query it certifies");
+        assert!(
+            !attested.contains(&format!("theorem {LEAN_MODULE_THEOREM} ")),
+            "the axiom-carrying fallback renders under the honest route's \
+             theorem name, so every counter keyed on that name conflates the two \
+             populations"
+        );
+        assert!(
+            LeanModuleContent::of_module_source(&attested).is_structural_attestation(),
+            "the axiom-carrying fallback does not declare itself, so \
+             `prove_unsat_to_lean_theory_module` hands it back as a proof"
+        );
+    }
+
+    /// **The fallback module does not depend on the query.** Two different
+    /// UNSAT queries produce byte-identical modules — the certificate the route
+    /// verified in Rust leaves no trace in the artifact.
+    ///
+    /// This is the adversarial half: the module cannot express which query it
+    /// refuted, so no amount of checking it establishes anything about either
+    /// one. The impossibility is the finding.
+    #[test]
+    fn the_fallback_module_is_the_same_bytes_for_two_different_queries() {
+        let mut arena = TermArena::new();
+        let one = single_square(&mut arena);
+        let two = shifted_square(&mut arena);
+        assert_ne!(one, two, "the two fixtures must be different queries");
+
+        let first = reconstruct_sos_certificate_wrapper_to_lean_module(&arena, &[one])
+            .expect("the certificate wrapper renders the single square");
+        let second = reconstruct_sos_certificate_wrapper_to_lean_module(&arena, &[two])
+            .expect("the certificate wrapper renders the shifted square");
+        assert_eq!(
+            first, second,
+            "the fallback module now varies with the query; if that is real \
+             content this test should be replaced, and if it is only a name it \
+             should not be"
+        );
+
+        // The honest route, on the same pair, produces DIFFERENT modules — the
+        // control that makes the equality above a property of the fallback
+        // rather than of this comparison.
+        let honest_one = reconstruct_sos_to_lean_module(&arena, &[one])
+            .expect("the honest route reconstructs the single square");
+        let honest_two = reconstruct_sos_to_lean_module(&arena, &[two])
+            .expect("the honest route reconstructs the shifted square");
+        assert_ne!(
+            honest_one, honest_two,
+            "the honest route emitted the same bytes for two different queries, \
+             so this comparison cannot tell content from a shim"
+        );
+    }
+}
