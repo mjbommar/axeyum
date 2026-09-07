@@ -48,6 +48,20 @@ whichever route ran or printed last. This is stated explicitly because the
 refuted on 67/70 files across two other divisions (`b57800c06`/`f3ce8ef58`);
 this census does not share that defect.
 
+**Second, checked, defect**: `explain_corpus` runs the flat assertion view
+(`check_auto_explained`), not `solve_smtlib` — the population above is
+front-door, but the *cause class* still comes from `explain_corpus`'s own
+execution, which could in principle diverge from the front door's route.
+This is verified, not assumed: `QF_NRA.census.tsv` carries
+`explain_corpus_flat_verdict` and `class_vs_front_door` per file. **0 of the
+72 classified rows show the flat view deciding a `sat`/`unsat` the front
+door did not** (`UNCONFIRMED-divergent` count = 0) — every classified row's
+flat verdict is `flat-unknown`, consistent with the front door's `unsolved`.
+That rules out the concrete failure mode (a class attributed from an
+execution that actually decided differently) for all 72; it does not prove
+route identity on files where both sides simply say `unknown`. The 89.6%
+figure below carries that qualifier.
+
 | `cause_class` | files | share |
 |---|---:|---:|
 | `nra-cross-product-admission-bound` | 62 | 80.5% |

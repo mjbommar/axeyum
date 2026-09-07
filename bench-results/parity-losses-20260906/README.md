@@ -14,8 +14,8 @@ awk -F'\t' 'NR>1 && $2=="unsolved" && ($3=="sat"||$3=="unsat") {print $1}' \
 ```
 
 `QF_NRA.census.tsv` (`file, axeyum_front_door, reference, declared,
-cause_class, top_route_elapsed_ms, cause_detail`) classifies every one of the
-77 rows.
+explain_corpus_flat_verdict, class_vs_front_door, cause_class,
+top_route_elapsed_ms, cause_detail`) classifies every one of the 77 rows.
 
 ## Method, stated explicitly (see the note below on why)
 
@@ -40,13 +40,50 @@ cause_class, top_route_elapsed_ms, cause_detail`) classifies every one of the
 ## Why this is stated this explicitly
 
 The 2026-09-05 S3 loss census (`bench-results/parity-losses-20260905/`,
-`docs/research/11-design-review/2026-09-05-parity-loss-census.md`) used a
-`class` column derived from the **last** route's message rather than the
-route that spent the budget, and was refuted on 67 of 70 files across QF_UF
-and UF (correction block added in `b57800c06`/`f3ce8ef58`). This census does
-not share that method — see point 2 above — so its classes do not inherit
-that defect. It is, however, a fresh measurement in its own right and
-carries no claim beyond what is stated here.
+`docs/research/11-design-review/2026-09-05-parity-loss-census.md`) had TWO
+defects: its `class` column was derived from the **last** route's message
+rather than the route that spent the budget, and it was refuted on 67 of 70
+files across QF_UF and UF (correction block added in
+`b57800c06`/`f3ce8ef58`). This census does not share the first defect — see
+point 2 above.
+
+The second defect is more subtle and applies to any census built this way,
+this one included: `explain_corpus` runs `check_auto_explained` on the
+**flat assertion view**, not `solve_smtlib` (the shipped front door) — its
+own banner says so, and it is measured to disagree with the front door on
+134 of 397 committed benchmarks elsewhere in this repo. The loss
+*population* here is front-door (point 1), but the *cause class* for each
+file still comes from `explain_corpus`'s own execution. If the flat view
+took a different route than the front door on a given file, "the route that
+spent the budget" describes an execution that is not the one that actually
+lost — the class would be correct about `explain_corpus`, not about
+`solve_smtlib`.
+
+**This is checked, not assumed**, via `explain_corpus_flat_verdict` /
+`class_vs_front_door`:
+
+- `explain_corpus_flat_verdict` records the flat view's own decision
+  (`flat-sat` / `flat-unsat` / `flat-unknown`) for every `decided`-status row,
+  `n/a` where the instrument produced no verdict at all (the same 5 rows as
+  point 3).
+- `class_vs_front_door` is `consistent` when the flat verdict is
+  `flat-unknown` (matching the front door's `unsolved` — the only value
+  possible without a live contradiction), `UNCONFIRMED-divergent` when the
+  flat view reached a `flat-sat`/`flat-unsat` decision the front door did
+  not, and `no-verdict` for the 5 instrument-failure rows.
+
+**Result: 0 of the 72 classified rows are `UNCONFIRMED-divergent`.** Every
+row that `explain_corpus` decided at all decided `flat-unknown`, so on this
+population the flat view never resolved a query the front door could not —
+there is no measured case here of the flat view reaching a *decisive* answer
+via a different path. This does not *prove* route identity (a query can
+reach `unknown` through two different internal paths), but it rules out the
+concrete failure mode this check targets — a class attributed from an
+execution that actually decided differently — for all 72 rows. The dominant
+class figures (`nra-cross-product-admission-bound` +
+`nra-refinement-incomplete` = 69/77 = 89.6%) carry that qualifier: confirmed
+against zero flat/front-door verdict divergence, not confirmed to be the
+exact front-door dispatch path on every file.
 
 ## Class breakdown
 

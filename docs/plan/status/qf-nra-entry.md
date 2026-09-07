@@ -61,6 +61,22 @@ ADR-1702 slice 2, an already-tracked separate gap).
 `docs/plan/families/smt-quantifier-free/qf-nra.md` updated from "not
 entered" to the full ledger row + Cause section.
 
+**Coordinator follow-up, closed**: the first S3 defect (last-route's-message
+classification) was already fixed in this census, but the coordinator flagged
+a second, more subtle one that applied here too: the cause CLASS still came
+from `explain_corpus`'s own execution (`check_auto_explained` on the flat
+assertion view), which can diverge from the front door's route even though
+the loss POPULATION was already front-door. Checked it directly from the
+JSON already collected: added `explain_corpus_flat_verdict` and
+`class_vs_front_door` columns to `QF_NRA.census.tsv`. **0 of the 72
+classified rows diverge** — every row `explain_corpus` decided at all
+decided `flat-unknown`, matching the front door's `unsolved`; none reached a
+`flat-sat`/`flat-unsat` the front door did not. Documented in
+`bench-results/parity-losses-20260906/README.md` and in the family doc's
+Cause section, with the honest limit stated: this rules out the concrete
+failure mode (a class attributed from a decisively-different execution), not
+route identity when both sides say `unknown`.
+
 **Known pre-existing issue, not touched (out of scope for this lane)**:
 `scripts/check-parity-docs.py` reports `docs/PROJECT-STATE.md` stale against
 `bench-results/PARITY.md` for QF_IDL/QF_LRA/QF_RDL and the division count
@@ -74,3 +90,4 @@ here; it is a global doc outside this brief's scope.
 | 2026-09-07 | qf-nra-entry | committed `bench-results/parity-lists/QF_NRA.txt` (200 files, sha256 `d645dd907edd`) |
 | 2026-09-07 | qf-nra-entry | QF_NRA parity ledger row appended: 110/200 vs cvc5 186/200, ratio 59.1%, 0 disagreements (SOUND) |
 | 2026-09-07 | qf-nra-entry | loss census committed (`bench-results/parity-losses-20260906/`), `docs/plan/families/smt-quantifier-free/qf-nra.md` updated from "not entered" to on the board |
+| 2026-09-07 | qf-nra-entry | census divergence check: `explain_corpus_flat_verdict`/`class_vs_front_door` columns added, 0/72 diverge from the front door |
