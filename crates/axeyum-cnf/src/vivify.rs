@@ -100,13 +100,20 @@ pub struct VivifyOptions {
     pub clause_size_limit: usize,
 }
 
+impl VivifyOptions {
+    /// The shipping defaults, as an associated `const` so `const fn`
+    /// constructors elsewhere (notably [`crate::InprocessOptions::OFF`]) can
+    /// name them. [`Default`] delegates here, so there is one definition.
+    pub const DEFAULT: Self = Self {
+        max_rounds: 4,
+        propagation_budget: 1 << 22,
+        clause_size_limit: 100,
+    };
+}
+
 impl Default for VivifyOptions {
     fn default() -> Self {
-        Self {
-            max_rounds: 4,
-            propagation_budget: 1 << 22,
-            clause_size_limit: 100,
-        }
+        Self::DEFAULT
     }
 }
 

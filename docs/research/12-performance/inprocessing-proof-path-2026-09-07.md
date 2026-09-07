@@ -151,3 +151,95 @@ Fixed before the numbers, so the protocol is not chosen to suit them.
 - Two runs minutes apart on this machine differ by up to ±20% on
   allocation-heavy work even at low load. Ratios and shapes are quoted, not
   figures to two significant places.
+
+## 4. The code: proof-carrying preprocessing (ADR-1750)
+
+`crates/axeyum-cnf/src/inprocess.rs` runs the enabled passes and streams their
+`DRAT` derivation to the same sink the search will write to, so the
+concatenation is one proof of the **original** formula. `simplify` and `bve`
+gained crate-internal `*_recorded` variants that emit as they mutate;
+`vivify` already emitted. `InprocessOptions::OFF` is the default and is
+bit-for-bit today's behaviour: no pass runs, no step is emitted, and the two new
+entry points reduce to the ones beside them.
+
+**E3 held.** Every step every pass emits is plain `RUP`. No `RAT` step, no
+extension variable, so nothing depends on a checker's `RAT` support or on the
+pivot-literal convention. The three emission sites are:
+
+* subsumption/tautology removal → `Delete(C)`;
+* self-subsuming resolution `C → C \ {l}` with witness `D ∋ ¬l` → `Add(C \ {l})`
+  then `Delete(C)`;
+* BVE → `Add(resolvent)` for each, then `Delete` of every pivot clause.
+
+**E5 was the right worry and the answer was to obey it, not to test around it.**
+A proof reconstructed by diffing the input and output formulas has no ordering
+guaranteed to verify, because `simplify` runs rounds to a fixpoint and a round-2
+strengthening's witness can be a clause round 1 strengthened. The recorder is
+threaded through `subsume_round` for that reason and no other.
+
+### The first negative test was inverted, and the measurement said so
+
+Pre-registered obligation 3 as "for each pass, drop one literal from a clause it
+added and require the checker to reject" — over-strengthening being the
+wrong-answer bug for every strengthening pass. First honest run:
+
+```
+pigeonhole-3-2 / bve: 11 of 12 over-strengthened mutants were ACCEPTED
+```
+
+Not a checker defect. The assertion was false, for two separate reasons, and
+only the first was foreseeable:
+
+1. On an unsatisfiable formula the prefix can drive the active set to
+   inconsistency — BVE refutes small pigeonhole outright — after which *every*
+   clause is `RUP` and a shorter one is a valid step. The mutation was producing
+   a different valid derivation, not an unjustified one.
+2. Restricting to **satisfiable** formulas, where 1 cannot happen, still left
+   6 of 25 mutants accepted. That one is about the format: `check_drat` accepts
+   `RUP` **or `RAT`**, and `RAT` is *satisfiability-preserving*, not
+   entailment-preserving, so a clause that removes models can be a legitimate
+   step. **A `DRAT` proof does not certify that each added clause was entailed.**
+
+So the test as pre-registered was an inverted negative control — the "false"
+case was true. It was replaced rather than weakened, and the replacement asks
+the question the format answers.
+
+### What the certificate does and does not depend on
+
+Splitting the prefix into its `Add` half and its `Delete` half, and corrupting
+each separately over the whole corpus, gives an asymmetry that is now asserted
+in both directions rather than assumed:
+
+| corruption | proofs built | rejected |
+|---|---:|---:|
+| **the passes stay silent about every clause they derived** (drop all `Add`s) | 38 | **38 (100%)** |
+| **the passes emit no deletions at all** (drop all `Delete`s) | 38 | **0 — every proof still valid** |
+| single-step over-strengthening (drop one literal from one `Add`) | 2,320 | 1,287 (55%) |
+
+The first row is the defect this lane exists to prevent, and it is caught every
+time, on every pass: a search running over clauses the checker was never given
+cannot verify. The second row is not a gap: deletion only shrinks the checker's
+active set and `RUP` is monotone in that set, so omitting deletions leaves a
+strict superset of what the search saw. Two consequences worth stating plainly:
+
+* **Only the clause-adding half of a pass is soundness-critical to record.** A
+  pass that reduces purely by deleting — subsumption with no strengthening — is
+  sound to run silently. It costs checking time, not correctness.
+* Which means "we preprocessed and did not say so" is a soundness bug **exactly
+  when the preprocessing derived something**, and is otherwise only a
+  performance bug. The solver-side gap from section 1 is the dangerous kind:
+  `sat_bv_backend`'s pipeline runs BVE, which derives resolvents.
+
+### The soundness obligation, asked the way DRAT answers it
+
+Since step-level entailment is not what the format carries, obligation 3 is
+carried end to end instead: corrupt the pass's **output** (over-strengthen a
+clause in the reduced formula *and* in the emitted prefix, as a buggy
+strengthening would do both), search the corrupted formula, and require that
+whenever this turns a satisfiable original into an `unsat`, the concatenated
+proof is rejected.
+
+**521 corruptions produced a wrong `unsat`. The checker rejected all 521.**
+
+That number is asserted with a floor, because a run in which no corruption
+produced a wrong verdict would have passed while checking nothing.

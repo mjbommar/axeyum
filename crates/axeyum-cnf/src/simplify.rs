@@ -37,8 +37,16 @@
 //! * Rounds repeat to a fixpoint (strengthening exposes new subsumptions); a work
 //!   budget and occurrence/size caps keep each round near-linear and bounded.
 //!
-//! It is a pure `CnfFormula → CnfFormula` transform and does not yet emit DRAT
-//! deletion steps (the proof-pipeline integration is a separate task).
+//! # `DRAT` accounting
+//!
+//! [`simplify`] / [`simplify_within`] are pure `CnfFormula → CnfFormula`
+//! transforms and emit nothing. `simplify_within_recorded` (crate-internal, and
+//! what [`crate::inprocess`] calls) additionally records a `DRAT` derivation of
+//! every change **in the order the pass made it**, so the whole prefix
+//! re-verifies against the original formula with [`crate::check_drat`]. Every
+//! added clause is plain `RUP`; nothing here needs `RAT` or an extension
+//! variable. See that function's docs for why the order — rather than a diff of
+//! the input and output formulas — is the part that has to be right.
 
 // Monotonic clock for the optional inprocessing deadline: on wasm32 the browser
 // has no `std` clock, so use `web-time`'s drop-in `Instant` (ADR-0017).
@@ -47,7 +55,7 @@ use std::time::Instant;
 #[cfg(target_arch = "wasm32")]
 use web_time::Instant;
 
-use crate::{CnfClause, CnfFormula, CnfLit};
+use crate::{CnfClause, CnfFormula, CnfLit, DratStep};
 
 /// What a [`simplify`] pass removed, for diagnostics and benchmark accounting.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -263,6 +271,7 @@ fn subsume_round(
     nvars: usize,
     marks: &mut [i8],
     deadline: Option<Instant>,
+    mut proof: Option<&mut Vec<DratStep>>,
 ) -> Option<SubsumeStats> {
     let lit_slots = 2 * nvars;
     let mut noccs = vec![0u32; lit_slots];
@@ -293,14 +302,34 @@ fn subsume_round(
         }
         match try_subsume(ci, clauses, &occs, marks, &mut checks) {
             Outcome::Subsumed => {
+                if let Some(p) = proof.as_deref_mut() {
+                    // Pure deletion. Sound unconditionally in `DRAT` — a deletion
+                    // only weakens the active set, so it can make a later step
+                    // harder to verify but never lets a wrong one through.
+                    p.push(DratStep::Delete(
+                        clauses[ci].as_ref().expect("live candidate").lits.clone(),
+                    ));
+                }
                 clauses[ci] = None;
                 stats.clauses_subsumed += 1;
             }
             Outcome::Strengthen(remove) => {
+                let before = clauses[ci].as_ref().expect("live candidate").lits.clone();
                 clauses[ci]
                     .as_mut()
                     .expect("live candidate")
                     .remove_lit(remove);
+                if let Some(p) = proof.as_deref_mut() {
+                    // `Add` FIRST, while both `C` and its witness `D` are still in
+                    // the checker's active set: `C \ {l}` is `RUP` in exactly two
+                    // propagations (negate it, `C` becomes unit on `l`, and that
+                    // falsifies `D ∋ ¬l` because `D \ {¬l} ⊆ C \ {l}`). Deleting
+                    // `C` first would remove the clause the step is derived from.
+                    p.push(DratStep::Add(
+                        clauses[ci].as_ref().expect("live candidate").lits.clone(),
+                    ));
+                    p.push(DratStep::Delete(before));
+                }
                 stats.literals_strengthened += 1;
                 // The shrunken clause is reconsidered (and reconnected) next round.
             }
@@ -338,15 +367,61 @@ pub fn simplify_within(
     formula: &CnfFormula,
     deadline: Option<Instant>,
 ) -> (CnfFormula, SubsumeStats) {
+    simplify_within_recorded(formula, deadline, None)
+}
+
+/// Like [`simplify_within`], but records a `DRAT` derivation of every change
+/// into `proof`, **in the order the pass made it**.
+///
+/// # Why derivation order, and not a diff of the two formulas
+///
+/// The pass runs rounds to a fixpoint, and a round-`n` strengthening's witness
+/// can itself be a clause round `n-1` strengthened. A proof reconstructed by
+/// comparing the input formula against the output formula therefore has no
+/// ordering that is guaranteed to verify: the witness a step needs may be a
+/// clause the reconstructed sequence only adds later, and the checker then
+/// rejects a step that describes a correct transformation. Recording as the
+/// pass mutates is the only arrangement that cannot get this wrong, which is
+/// why the recorder is threaded through the round rather than bolted on after.
+///
+/// # What is emitted
+///
+/// * **Normalization prelude.** A tautology becomes `Delete(original)`; a clause
+///   whose literals deduplicate becomes `Add(deduped)` then `Delete(original)`.
+///   This exists because a `DRAT` checker's unit propagation reads a clause's
+///   literals verbatim, so `(b ∨ b)` is not a unit to it while our normalized
+///   `(b)` is — without the prelude a later step that relies on `(b)`
+///   propagating verifies in this engine and is rejected by the checker. Same
+///   reasoning and same steps as [`crate::vivify`]'s prelude.
+/// * **Subsumption / duplicate removal.** `Delete(C)`.
+/// * **Self-subsuming resolution.** `Add(C \ {l})` then `Delete(C)`.
+///
+/// Every emitted `Add` is plain `RUP`; no step here needs `RAT` or an extension
+/// variable, so the prefix verifies against the original formula on its own.
+pub(crate) fn simplify_within_recorded(
+    formula: &CnfFormula,
+    deadline: Option<Instant>,
+    mut proof: Option<&mut Vec<DratStep>>,
+) -> (CnfFormula, SubsumeStats) {
     let nvars = formula.variable_count();
     let mut stats = SubsumeStats::default();
 
     // Normalize; drop tautologies up front (they constrain nothing).
     let mut clauses: Vec<Option<NormClause>> = Vec::with_capacity(formula.clauses().len());
     for clause in formula.clauses() {
-        match NormClause::from_clause(clause) {
-            Some(nc) => clauses.push(Some(nc)),
-            None => stats.tautologies_removed += 1,
+        if let Some(nc) = NormClause::from_clause(clause) {
+            if let Some(p) = proof.as_deref_mut()
+                && nc.lits.len() != clause.lits().len()
+            {
+                p.push(DratStep::Add(nc.lits.clone()));
+                p.push(DratStep::Delete(clause.lits().to_vec()));
+            }
+            clauses.push(Some(nc));
+        } else {
+            if let Some(p) = proof.as_deref_mut() {
+                p.push(DratStep::Delete(clause.lits().to_vec()));
+            }
+            stats.tautologies_removed += 1;
         }
     }
 
@@ -356,7 +431,13 @@ pub fn simplify_within(
         if deadline.is_some_and(|dl| Instant::now() >= dl) {
             break;
         }
-        match subsume_round(&mut clauses, nvars, &mut marks, deadline) {
+        match subsume_round(
+            &mut clauses,
+            nvars,
+            &mut marks,
+            deadline,
+            proof.as_deref_mut(),
+        ) {
             Some(round) => {
                 stats.clauses_subsumed += round.clauses_subsumed;
                 stats.literals_strengthened += round.literals_strengthened;

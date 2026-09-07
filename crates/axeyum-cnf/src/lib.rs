@@ -51,6 +51,7 @@ mod drat;
 mod drat_backward;
 mod drat_resource;
 mod gf2;
+pub mod inprocess;
 mod interpolant;
 mod lrat;
 mod proof_sat;
@@ -98,6 +99,7 @@ pub use drat_resource::{
     MemoryBudget,
 };
 pub use gf2::{Gf2Outcome, Gf2Solution, Gf2System};
+pub use inprocess::{InprocessOptions, InprocessOutcome, InprocessStats, inprocess_into};
 pub use interpolant::{
     BoolExpr, PropositionalInterpolantCertificate, propositional_interpolant,
     propositional_interpolant_certified,
@@ -112,14 +114,16 @@ pub use proof_sat::incremental::{IncrementalSolveOutcome, NativeIncrementalCdcl}
 /// The theory interface the native CDCL core drives (ADR-1701, plan slice S7).
 pub use proof_sat::theory;
 pub use proof_sat::{
-    DEFAULT_PROGRESS_CONFLICT_INTERVAL, DEFAULT_PROOF_SAT_CONFLICT_LIMIT, NativeLayerStats,
-    ProofSearchProgress, ProofSolveOutcome, SearchCounters, StreamingProofOutcome,
-    TheoryProofOutcome, TheoryRefutation, TheoryRefutationCheck, TheoryRefutationError,
-    TheorySolveOptions, TheorySolveOutcome, solve_with_drat_proof, solve_with_drat_proof_counted,
-    solve_with_drat_proof_streaming, solve_with_drat_proof_streaming_with_progress,
-    solve_with_drat_proof_with_limits, solve_with_drat_proof_with_limits_and_progress,
-    solve_with_drat_proof_within, solve_with_theory_and_drat_proof,
-    solve_with_theory_and_drat_proof_traced, solve_with_theory_and_drat_proof_with_options,
+    DEFAULT_PROGRESS_CONFLICT_INTERVAL, DEFAULT_PROOF_SAT_CONFLICT_LIMIT, InprocessedSearch,
+    NativeLayerStats, ProofSearchProgress, ProofSolveOutcome, SearchCounters,
+    StreamingProofOutcome, TheoryProofOutcome, TheoryRefutation, TheoryRefutationCheck,
+    TheoryRefutationError, TheorySolveOptions, TheorySolveOutcome, solve_with_drat_proof,
+    solve_with_drat_proof_counted, solve_with_drat_proof_counted_inprocessed,
+    solve_with_drat_proof_inprocessed, solve_with_drat_proof_streaming,
+    solve_with_drat_proof_streaming_with_progress, solve_with_drat_proof_with_limits,
+    solve_with_drat_proof_with_limits_and_progress, solve_with_drat_proof_within,
+    solve_with_theory_and_drat_proof, solve_with_theory_and_drat_proof_traced,
+    solve_with_theory_and_drat_proof_with_options,
 };
 pub use simplify::{SubsumeStats, simplify, simplify_within};
 pub use vivify::{VivifyOptions, VivifyOutcome, VivifyStats, vivify, vivify_within};
