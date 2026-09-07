@@ -32,6 +32,30 @@
 > partial coverage does not merely fail to find things — it manufactures
 > confident false positives in every artifact built on top of it.** The fixed
 > method is in the [parity plan](../../plan/smt-parity-plan-2026-09-05.md) §6.
+>
+> ### Maintaining this block, so it does not become the next frozen wrong thing
+>
+> The confirmed/not-confirmed lists above **move**, and a correction block whose
+> contents go stale is the same defect it was written to fix. So:
+>
+> - **When a slice re-measures a division through the front door**, move that
+>   division from the not-confirmed list to the confirmed list *in the same
+>   commit as the slice*. Do not batch it.
+> - **A division is "confirmed" only if a front-door measurement re-derived its
+>   classes** — not if a slice merely moved its count. A count moving is
+>   evidence the lever worked, not evidence the class was right.
+> - **Retire this whole block** when the not-confirmed list is empty AND the
+>   `class` column has been regenerated through the front door. At that point
+>   delete it rather than editing it to say "historical"; the git history keeps
+>   what happened.
+> - **This block is permanent until then.** Unlike a coverage gap, which stops
+>   producing false positives the moment coverage lands, these are frozen
+>   measurements: nothing about them improves on its own, so no expiry date
+>   applies and none should be written here.
+>
+> Known to be moving as of 2026-09-06: a UF front-door census is in flight, and
+> QF_NRA is being censused through the front door as a new division and is not
+> in either list because it is not part of this census.
 
 Status: **measurement only**. This is the S3 slice of
 [`docs/plan/smt-parity-plan-2026-09-05.md`](../../plan/smt-parity-plan-2026-09-05.md):
