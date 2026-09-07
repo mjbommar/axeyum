@@ -42,8 +42,8 @@ use axeyum_cnf::theory::{
     PropagationQueue as NativeQueue, TheoryExplanation as NativeExplanation,
 };
 use axeyum_cnf::{
-    CnfAssignment, CnfClause, CnfFormula, CnfLit, CnfVar, TheoryProofOutcome, TheoryRefutation,
-    solve_with_theory_and_drat_proof,
+    CnfAssignment, CnfClause, CnfFormula, CnfLit, CnfVar, TheoryRefutation, TheorySolveOptions,
+    TheorySolveOutcome, solve_with_theory_and_drat_proof_with_options,
 };
 
 use crate::cdclt::Lit;
@@ -82,6 +82,48 @@ pub(crate) fn take_last_theory_refutation() -> Option<TheoryRefutation> {
 /// this so a verdict it does not reach cannot inherit an older artifact.
 pub(crate) fn clear_last_theory_refutation() {
     LAST_THEORY_REFUTATION.with(|slot| *slot.borrow_mut() = None);
+}
+
+thread_local! {
+    /// Whether a native CDCL(T) solve on this thread should record its DRAT
+    /// stream, i.e. whether an `unsat` should come with the ADR-1704 artifact.
+    ///
+    /// **Off by default, and that is a measured decision, not caution.** The
+    /// stream is every learned clause of the whole search held in memory; on a
+    /// long CDCL(T) search that is gigabytes, and `CdclT` -- which emits no
+    /// proof at all -- never paid it. Recording unconditionally took the
+    /// solver's own unit sweep from 209 s to over 1,800 s. The dispatcher wants
+    /// a verdict and pays nothing; the evidence layer, the only consumer of the
+    /// artifact, asks for it through [`with_artifact_recording`].
+    static RECORD_ARTIFACTS: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+}
+
+/// How many DRAT literals a route may hold before the recording is abandoned
+/// and the refutation reports no artifact.
+///
+/// Eight million literals is on the order of 64 MB of `CnfLit` plus the `Vec`
+/// per step -- enough for every refutation the committed corpora produce
+/// through this route, and small enough that a runaway search gives up
+/// recording instead of the machine giving up. It bounds the RECORDING only:
+/// the search is unaffected either way, so no verdict depends on it.
+const PROOF_LITERAL_BUDGET: usize = 8_000_000;
+
+/// Whether the current call should record a proof.
+fn recording_artifacts() -> bool {
+    RECORD_ARTIFACTS.with(std::cell::Cell::get)
+}
+
+/// Runs `f` with artifact recording on, restoring the previous setting after —
+/// including on an unwind, since the guard is dropped either way.
+pub(crate) fn with_artifact_recording<R>(f: impl FnOnce() -> R) -> R {
+    struct Restore(bool);
+    impl Drop for Restore {
+        fn drop(&mut self) {
+            RECORD_ARTIFACTS.with(|flag| flag.set(self.0));
+        }
+    }
+    let _restore = Restore(RECORD_ARTIFACTS.with(|flag| flag.replace(true)));
+    f()
 }
 
 /// What a native CDCL(T) solve produced.
@@ -334,16 +376,36 @@ pub(crate) fn solve_native<T: TheorySolver>(
     }
     let mut adapter = NativeTheoryAdapter::new(theory, var_count, theory_atom_count);
     clear_last_theory_refutation();
-    match solve_with_theory_and_drat_proof(&formula, &mut adapter, deadline, usize::MAX) {
-        TheoryProofOutcome::Sat(assignment) => NativeSolveOutcome::Sat(NativeModel {
+    // `CdclT`'s heuristics, not the one-shot SAT path's, so moving a route onto
+    // this core is a swap of ENGINES and not also a swap of decision
+    // heuristics: `CdclT` decides `true` first and does no target rephasing.
+    // A model-based consumer can lose a verdict on a different-but-correct
+    // model, and one did (see `TheorySolveOptions`).
+    let options = TheorySolveOptions {
+        initial_phase: true,
+        target_rephase: false,
+        collect_layer_stats: false,
+        record_proof: recording_artifacts(),
+        proof_literal_budget: PROOF_LITERAL_BUDGET,
+    };
+    match solve_with_theory_and_drat_proof_with_options(
+        &formula,
+        &mut adapter,
+        deadline,
+        usize::MAX,
+        options,
+    )
+    .0
+    {
+        TheorySolveOutcome::Sat(assignment) => NativeSolveOutcome::Sat(NativeModel {
             assignment,
             occurring,
         }),
-        TheoryProofOutcome::Unsat(refutation) => {
-            LAST_THEORY_REFUTATION.with(|slot| *slot.borrow_mut() = Some(refutation));
+        TheorySolveOutcome::Unsat(refutation) => {
+            LAST_THEORY_REFUTATION.with(|slot| *slot.borrow_mut() = refutation);
             NativeSolveOutcome::Unsat
         }
-        TheoryProofOutcome::ResourceOut | TheoryProofOutcome::Interrupted => {
+        TheorySolveOutcome::ResourceOut | TheorySolveOutcome::Interrupted => {
             NativeSolveOutcome::Unknown
         }
     }

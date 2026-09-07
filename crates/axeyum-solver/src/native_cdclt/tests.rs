@@ -364,7 +364,11 @@ fn a_native_refutation_carries_a_checkable_two_stream_artifact() {
         }],
     ];
     let mut theory = CubeTheory::new(2, vec![vec![(0, true), (1, true)]], false);
-    let outcome = solve_native(2, 2, &clauses, None, &mut theory);
+    // Recording is OFF by default -- the dispatcher pays nothing for a proof it
+    // does not read -- so a test about the artifact has to ask for it exactly
+    // the way the evidence layer does.
+    let outcome =
+        super::with_artifact_recording(|| solve_native(2, 2, &clauses, None, &mut theory));
     assert!(
         matches!(outcome, NativeSolveOutcome::Unsat),
         "the theory refutes the only Boolean model: {outcome:?}"
@@ -433,4 +437,45 @@ fn the_asserted_to_clause_translation_runs_in_the_right_direction() {
     };
     assert_eq!(model.value(0), Some(true));
     assert_eq!(model.value(1), Some(true));
+}
+
+/// Recording is off by default, and a refutation reached that way publishes
+/// NOTHING.
+///
+/// The distinction is the whole reason `TheorySolveOutcome::Unsat` carries an
+/// `Option`: an absent artifact means "not recorded", while a present artifact
+/// with `theory_lemma_count() == 0` means "nothing was assumed" and is a much
+/// stronger claim. A route that read an absent artifact as the second would
+/// report an unaudited refutation as an audited one.
+#[test]
+fn an_unrecorded_refutation_publishes_no_artifact() {
+    let clauses = vec![
+        vec![Lit {
+            var: 0,
+            positive: true,
+        }],
+        vec![Lit {
+            var: 1,
+            positive: true,
+        }],
+    ];
+    let mut theory = CubeTheory::new(2, vec![vec![(0, true), (1, true)]], false);
+    let outcome = solve_native(2, 2, &clauses, None, &mut theory);
+    assert!(
+        matches!(outcome, NativeSolveOutcome::Unsat),
+        "the verdict is unaffected by whether a proof was recorded: {outcome:?}"
+    );
+    assert!(
+        super::take_last_theory_refutation().is_none(),
+        "no recording was asked for, so no artifact may appear"
+    );
+    // And the same query WITH recording does publish one, so the assertion
+    // above is about the flag and not about this fixture never producing an
+    // artifact at all.
+    let mut theory = CubeTheory::new(2, vec![vec![(0, true), (1, true)]], false);
+    let _ = super::with_artifact_recording(|| solve_native(2, 2, &clauses, None, &mut theory));
+    assert!(
+        super::take_last_theory_refutation().is_some(),
+        "recording on must publish the artifact"
+    );
 }

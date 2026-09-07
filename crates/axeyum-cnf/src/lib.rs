@@ -114,11 +114,12 @@ pub use proof_sat::theory;
 pub use proof_sat::{
     DEFAULT_PROGRESS_CONFLICT_INTERVAL, DEFAULT_PROOF_SAT_CONFLICT_LIMIT, NativeLayerStats,
     ProofSearchProgress, ProofSolveOutcome, StreamingProofOutcome, TheoryProofOutcome,
-    TheoryRefutation, TheoryRefutationCheck, TheoryRefutationError, solve_with_drat_proof,
-    solve_with_drat_proof_streaming, solve_with_drat_proof_streaming_with_progress,
-    solve_with_drat_proof_with_limits, solve_with_drat_proof_with_limits_and_progress,
-    solve_with_drat_proof_within, solve_with_theory_and_drat_proof,
-    solve_with_theory_and_drat_proof_traced,
+    TheoryRefutation, TheoryRefutationCheck, TheoryRefutationError, TheorySolveOptions,
+    TheorySolveOutcome, solve_with_drat_proof, solve_with_drat_proof_streaming,
+    solve_with_drat_proof_streaming_with_progress, solve_with_drat_proof_with_limits,
+    solve_with_drat_proof_with_limits_and_progress, solve_with_drat_proof_within,
+    solve_with_theory_and_drat_proof, solve_with_theory_and_drat_proof_traced,
+    solve_with_theory_and_drat_proof_with_options,
 };
 pub use simplify::{SubsumeStats, simplify, simplify_within};
 pub use vivify::{VivifyOptions, VivifyOutcome, VivifyStats, vivify, vivify_within};

@@ -2602,12 +2602,19 @@ fn dl_decided_report(
     if assertion_dag_within(arena, assertions, PRE_SOLVE_ALETHE_MAX_NODES) {
         return None;
     }
-    let (evidence, trusted_steps) = match crate::dl_online::try_check_qf_dl(
-        arena,
-        assertions,
-        &crate::auto::dl_probe_budget(config),
-        crate::auto::extended_dl_probe_timeout(config),
-    )? {
+    // Recording ON for this call and this call only: the artifact is EVIDENCE,
+    // so it is produced where evidence is produced. The dispatcher's own call
+    // to the same route wants a verdict and records nothing, which is what
+    // keeps the engine swap free (see `native_cdclt::with_artifact_recording`).
+    let decided = crate::native_cdclt::with_artifact_recording(|| {
+        crate::dl_online::try_check_qf_dl(
+            arena,
+            assertions,
+            &crate::auto::dl_probe_budget(config),
+            crate::auto::extended_dl_probe_timeout(config),
+        )
+    });
+    let (evidence, trusted_steps) = match decided? {
         CheckResult::Sat(model) => (Evidence::Sat(model), Vec::new()),
         // Still a bare `unsat` as far as `Evidence` goes — the Boolean-structured
         // refutation is a resolution over theory lemmas that no single Farkas

@@ -455,6 +455,79 @@ impl NativeLayerStats {
     }
 }
 
+/// Search knobs a CDCL(T) caller may need to differ from the one-shot SAT
+/// defaults (plan slice S7b).
+///
+/// The defaults ARE the one-shot SAT defaults, so
+/// [`solve_with_theory_and_drat_proof`] is unchanged and so is every
+/// `NullTheory` entry point. They exist because moving a route from
+/// `axeyum_solver::cdclt::CdclT` onto this core has to be a swap of engines and
+/// not, silently, a swap of decision heuristics: `CdclT` decides a variable
+/// TRUE first and does no target rephasing, and a model-based consumer (MBQI
+/// picks its instantiation terms out of the model it is handed) can lose a
+/// verdict when the model changes even though both models are correct.
+/// Measured: with the defaults below,
+/// `auto::tests::mbqi_one_level_fixed_retry_is_guarded_and_replays_unfixed_seed_111_shape`
+/// went `Sat` -> `Unknown` purely because a different satisfying assignment
+/// came back.
+// Three `bool` knobs plus a budget. They are named fields set individually by
+// every caller, never positional arguments, so the confusion this lint guards
+// against cannot arise; grouping them further would only add a level.
+#[allow(clippy::struct_excessive_bools)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct TheorySolveOptions {
+    /// The polarity a variable is decided at before phase saving has an
+    /// opinion. `false` is this core's own default (and `BatSat`'s);
+    /// `CdclT` uses `true`.
+    pub initial_phase: bool,
+    /// Whether a restart rephases to the deepest conflict-free assignment seen
+    /// (target rephasing). On for the one-shot SAT path; `CdclT` has no
+    /// counterpart, so a route being moved off it turns this off.
+    pub target_rephase: bool,
+    /// Whether to accumulate [`NativeLayerStats`].
+    pub collect_layer_stats: bool,
+    /// Whether to record the Boolean DRAT stream, i.e. whether an `unsat`
+    /// comes back with the ADR-1704 artifact at all.
+    ///
+    /// **Not free, and that is why it is a knob.** The stream is every learned
+    /// clause of the whole search held in memory; on a 24-second CDCL(T) search
+    /// with millions of conflicts that is gigabytes, and `CdclT` -- which emits
+    /// no proof -- never paid it. A route that only needs the verdict (the
+    /// dispatcher) turns this off and costs what it used to; the evidence layer,
+    /// which is the only consumer of the artifact, turns it on.
+    ///
+    /// With it off, `unsat` comes back as
+    /// [`TheorySolveOutcome::Unsat`]`(None)`. `None` means **not recorded** —
+    /// never "no lemma was assumed", which is what
+    /// `TheoryRefutation::theory_lemma_count() == 0` means and is a different
+    /// statement entirely.
+    pub record_proof: bool,
+    /// How many DRAT literals the recording may hold before it is abandoned and
+    /// the artifact reported ABSENT.
+    ///
+    /// Unbounded (`usize::MAX`) by default, which is what
+    /// [`solve_with_theory_and_drat_proof`] has always been. A shipping route
+    /// sets a finite one: a long CDCL(T) search learns millions of clauses, and
+    /// holding all of them turned a front-door query that used to answer in
+    /// seconds into one that did not answer at all. Overflow abandons the
+    /// RECORDING, never the search -- the sink is output-only, so the verdict
+    /// and the trajectory are the same either way, and the artifact's presence
+    /// can never become part of what was decided.
+    pub proof_literal_budget: usize,
+}
+
+impl Default for TheorySolveOptions {
+    fn default() -> Self {
+        Self {
+            initial_phase: false,
+            target_rephase: true,
+            collect_layer_stats: false,
+            record_proof: true,
+            proof_literal_budget: usize::MAX,
+        }
+    }
+}
+
 /// Outcome of [`solve_with_theory_and_drat_proof`] -- the CDCL(T) counterpart
 /// of [`ProofSolveOutcome`].
 ///
@@ -477,6 +550,29 @@ pub enum TheoryProofOutcome {
     /// Undecided: the deadline passed, the theory step budget was exhausted, or
     /// the theory could not substantiate an answer it gave (an unresolvable
     /// explanation handle, an empty conflict core). Never a verdict.
+    Interrupted,
+}
+
+/// Outcome of [`solve_with_theory_and_drat_proof_with_options`].
+///
+/// Differs from [`TheoryProofOutcome`] in exactly one respect: `Unsat` may come
+/// back without an artifact, because the caller asked for a verdict only and
+/// the search therefore recorded no DRAT stream. `None` there means **not
+/// recorded**. It never means "no theory lemma was assumed" -- that is
+/// `Some(artifact)` with `artifact.theory_lemma_count() == 0`, and a consumer
+/// that conflated the two would report an unaudited refutation as an audited
+/// one.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum TheorySolveOutcome {
+    /// Satisfiable: a total assignment the Boolean side and the theory's
+    /// `final_check` both accepted.
+    Sat(CnfAssignment),
+    /// Unsatisfiable modulo the theory, with the ADR-1704 artifact when the
+    /// proof was recorded.
+    Unsat(Option<TheoryRefutation>),
+    /// The conflict budget was exhausted before a result was reached.
+    ResourceOut,
+    /// Undecided. Never a verdict.
     Interrupted,
 }
 
@@ -507,7 +603,107 @@ pub fn solve_with_theory_and_drat_proof<T: NativeTheory>(
     deadline: Option<Instant>,
     max_conflicts: usize,
 ) -> TheoryProofOutcome {
-    solve_with_theory_and_drat_proof_impl(formula, theory, deadline, max_conflicts, false).0
+    recorded_outcome(
+        solve_with_theory_and_drat_proof_with_options(
+            formula,
+            theory,
+            deadline,
+            max_conflicts,
+            TheorySolveOptions::default(),
+        )
+        .0,
+    )
+}
+
+/// [`solve_with_theory_and_drat_proof`] with the search knobs spelled out.
+///
+/// Returns the outcome and the [`NativeLayerStats`] the run accumulated (all
+/// zero unless `options.collect_layer_stats` is set -- an unmeasured run is
+/// never a measured zero).
+pub fn solve_with_theory_and_drat_proof_with_options<T: NativeTheory>(
+    formula: &CnfFormula,
+    theory: &mut T,
+    deadline: Option<Instant>,
+    max_conflicts: usize,
+    options: TheorySolveOptions,
+) -> (TheorySolveOutcome, NativeLayerStats) {
+    solve_with_theory_and_drat_proof_impl(formula, theory, deadline, max_conflicts, options)
+}
+
+/// Where a CDCL(T) search's DRAT steps go.
+///
+/// Two states rather than a generic parameter, for the same reason
+/// `incremental::IncrementalSink` has two: the entry points above are one
+/// concrete instantiation each, and recording is a run-time choice.
+#[derive(Debug, Default)]
+enum TheorySink {
+    /// Steps are dropped. What a caller that wants only the verdict pays.
+    #[default]
+    Discard,
+    /// Steps accumulate in memory, and an `unsat` can present the ADR-1704
+    /// artifact -- unless the stream outgrows `remaining`, at which point the
+    /// recording is abandoned and the artifact is reported ABSENT.
+    Record {
+        sink: VecProofSink,
+        /// Literals still affordable. Counted in literals rather than steps
+        /// because that is what the memory is: a 200-literal learned clause is
+        /// two hundred times a unit.
+        remaining: usize,
+        /// Set once the budget is spent. From then on the sink accepts and
+        /// drops, so the SEARCH is unaffected -- the sink is output-only, and a
+        /// budget that changed the trajectory would make the artifact's
+        /// presence part of the verdict.
+        overflowed: bool,
+    },
+}
+
+impl TheorySink {
+    /// Charges `lits` against the budget, abandoning the recording (and
+    /// releasing what it holds) when it does not fit.
+    fn charge(&mut self, count: usize) -> bool {
+        let TheorySink::Record {
+            sink,
+            remaining,
+            overflowed,
+        } = self
+        else {
+            return false;
+        };
+        if *overflowed {
+            return false;
+        }
+        if count > *remaining {
+            *overflowed = true;
+            // Drop what was recorded: it is not going to be presented, and on
+            // the searches this fires for it is the largest allocation alive.
+            *sink = VecProofSink::new();
+            return false;
+        }
+        *remaining -= count;
+        true
+    }
+}
+
+impl DratSink for TheorySink {
+    fn add_clause(&mut self, lits: &[CnfLit]) -> Result<(), ProofSinkError> {
+        if !self.charge(lits.len() + 1) {
+            return Ok(());
+        }
+        match self {
+            TheorySink::Discard => Ok(()),
+            TheorySink::Record { sink, .. } => sink.add_clause(lits),
+        }
+    }
+
+    fn delete_clause(&mut self, lits: &[CnfLit]) -> Result<(), ProofSinkError> {
+        if !self.charge(lits.len() + 1) {
+            return Ok(());
+        }
+        match self {
+            TheorySink::Discard => Ok(()),
+            TheorySink::Record { sink, .. } => sink.delete_clause(lits),
+        }
+    }
 }
 
 /// [`solve_with_theory_and_drat_proof`] with the driver-side instrument on.
@@ -523,7 +719,37 @@ pub fn solve_with_theory_and_drat_proof_traced<T: NativeTheory>(
     deadline: Option<Instant>,
     max_conflicts: usize,
 ) -> (TheoryProofOutcome, NativeLayerStats) {
-    solve_with_theory_and_drat_proof_impl(formula, theory, deadline, max_conflicts, true)
+    let (outcome, stats) = solve_with_theory_and_drat_proof_impl(
+        formula,
+        theory,
+        deadline,
+        max_conflicts,
+        TheorySolveOptions {
+            collect_layer_stats: true,
+            ..TheorySolveOptions::default()
+        },
+    );
+    (recorded_outcome(outcome), stats)
+}
+
+/// Narrows a [`TheorySolveOutcome`] produced with `record_proof` ON back to
+/// [`TheoryProofOutcome`], whose `Unsat` always carries an artifact.
+///
+/// # Panics
+///
+/// Panics on an `Unsat` with no artifact, which means the caller passed
+/// `record_proof: false` to an entry point that promises one. Unreachable from
+/// the two callers, both of which set it.
+fn recorded_outcome(outcome: TheorySolveOutcome) -> TheoryProofOutcome {
+    match outcome {
+        TheorySolveOutcome::Sat(model) => TheoryProofOutcome::Sat(model),
+        TheorySolveOutcome::Unsat(Some(artifact)) => TheoryProofOutcome::Unsat(artifact),
+        TheorySolveOutcome::Unsat(None) => {
+            panic!("this entry point records the proof, so `unsat` carries an artifact")
+        }
+        TheorySolveOutcome::ResourceOut => TheoryProofOutcome::ResourceOut,
+        TheorySolveOutcome::Interrupted => TheoryProofOutcome::Interrupted,
+    }
 }
 
 fn solve_with_theory_and_drat_proof_impl<T: NativeTheory>(
@@ -531,11 +757,24 @@ fn solve_with_theory_and_drat_proof_impl<T: NativeTheory>(
     theory: &mut T,
     deadline: Option<Instant>,
     max_conflicts: usize,
-    collect_layer_stats: bool,
-) -> (TheoryProofOutcome, NativeLayerStats) {
-    let mut sink = VecProofSink::new();
+    options: TheorySolveOptions,
+) -> (TheorySolveOutcome, NativeLayerStats) {
+    let mut sink = if options.record_proof {
+        TheorySink::Record {
+            sink: VecProofSink::new(),
+            remaining: options.proof_literal_budget,
+            overflowed: false,
+        }
+    } else {
+        TheorySink::Discard
+    };
     let mut cdcl = Cdcl::new_with_theory(formula, &mut sink, theory);
-    cdcl.collect_layer_stats = collect_layer_stats;
+    cdcl.collect_layer_stats = options.collect_layer_stats;
+    cdcl.use_target_rephase = options.target_rephase;
+    if options.initial_phase {
+        cdcl.phase.fill(true);
+        cdcl.best_phase.fill(true);
+    }
     let outcome = cdcl.run(&[], deadline, max_conflicts);
     let lemmas = core::mem::take(&mut cdcl.theory_lemmas);
     let stats = cdcl.native_layer_stats();
@@ -546,21 +785,34 @@ fn solve_with_theory_and_drat_proof_impl<T: NativeTheory>(
 fn theory_proof_outcome(
     formula: &CnfFormula,
     lemmas: Vec<Vec<CnfLit>>,
-    sink: VecProofSink,
+    sink: TheorySink,
     outcome: Result<SearchOutcome, ProofSinkError>,
-) -> TheoryProofOutcome {
+) -> TheorySolveOutcome {
     match outcome {
-        Ok(SearchOutcome::Sat(model)) => TheoryProofOutcome::Sat(model),
-        Ok(SearchOutcome::Unsat) => TheoryProofOutcome::Unsat(
-            TheoryRefutation::from_cnf_and_lemmas(formula.clone(), lemmas, sink.into_steps()),
-        ),
-        Ok(SearchOutcome::ResourceOut) => TheoryProofOutcome::ResourceOut,
+        Ok(SearchOutcome::Sat(model)) => TheorySolveOutcome::Sat(model),
+        Ok(SearchOutcome::Unsat) => TheorySolveOutcome::Unsat(match sink {
+            TheorySink::Record {
+                sink,
+                overflowed: false,
+                ..
+            } => Some(TheoryRefutation::from_cnf_and_lemmas(
+                formula.clone(),
+                lemmas,
+                sink.into_steps(),
+            )),
+            // Recording was off, or the stream outgrew its budget. `None` is
+            // "not recorded", never "no lemma was assumed" -- that would be an
+            // artifact with an empty lemma list, which is a different and much
+            // stronger statement.
+            TheorySink::Discard | TheorySink::Record { .. } => None,
+        }),
+        Ok(SearchOutcome::ResourceOut) => TheorySolveOutcome::ResourceOut,
         // `UnsatUnderAssumptions` is unreachable with no assumptions, and
         // `VecProofSink` is infallible so `Err` is too. Both fold into the
         // *undecided* outcome rather than panicking or guessing: an impossible
         // branch must never be able to produce a wrong `sat`/`unsat`.
         Ok(SearchOutcome::Interrupted | SearchOutcome::UnsatUnderAssumptions(_)) | Err(_) => {
-            TheoryProofOutcome::Interrupted
+            TheorySolveOutcome::Interrupted
         }
     }
 }
@@ -5777,10 +6029,10 @@ mod layer_stats_tests {
             &mut untraced_theory,
             None,
             DEFAULT_PROOF_SAT_CONFLICT_LIMIT,
-            false,
+            super::TheorySolveOptions::default(),
         );
         assert!(
-            matches!(outcome, TheoryProofOutcome::Unsat(_)),
+            matches!(outcome, super::TheorySolveOutcome::Unsat(Some(_))),
             "{outcome:?}"
         );
         assert_eq!(
