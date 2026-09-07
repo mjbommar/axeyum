@@ -1,7 +1,7 @@
 # ADR-1721: A preprocessing step owes ONE of three obligations, chosen by the direction it can break
 
 Status: accepted
-Index-summary: What a preprocessing step owes as evidence is decided by what it does to the model set — **replacement** owes a denotation equality, **relaxation** owes nothing in the `unsat` direction, **strengthening** owes a per-constraint discharge — and an obligation is legally discharged by a certificate, by a structural check, or by the route declining to conclude in that direction. Measured correction to the family page: preprocessing is **not** evidence-free. `ArrayElimUnsatCertificate` and `AckermannUnsatCertificate` already discharge the *strengthening* half of the two eager eliminations, and they **re-derive** the replacement half, which `trust.rs:89-95` already names as proving determinism and not faithfulness. So the hole is narrower and sharper than "no evidence": the replacement obligation has no producer anywhere, the crate's one runtime semantic check (the ADR-0408 denotation guard, 4 samples, BV/Bool only) is structurally blind to it, and that check's refusal is swallowed at `auto.rs:1744` as an ordinary decline. First slice: an independent faithfulness witness for read-over-write, copying the `fpa2bv_faithfulness.rs` pattern that already caught this exact defect class.
+Index-summary: What a preprocessing step owes as evidence is decided by what it does to the model set — **replacement** owes a denotation equality, **relaxation** owes nothing in the `unsat` direction, **strengthening** owes a per-constraint discharge — and an obligation is legally discharged by a certificate, by a structural check, or by the route declining to conclude in that direction. A **decline is a discharge** (`blast_integers` already contains one); a **re-derivation is not**. Measured correction to the family page: preprocessing is not evidence-free — `ArrayElimUnsatCertificate` and `AckermannUnsatCertificate` discharge the *strengthening* half of the two eager eliminations and **re-derive** the replacement half. Measured 2026-09-06 by mutating read-over-write's `ite` branches: `ArrayElimUnsatCertificate::recheck` returns `Ok(true)` over a wrong `unsat` on a satisfiable query (3 of 8 tests died; only the new anchor exhibits the dangerous direction). New guard landed: `satisfiable_read_over_write_yields_no_certificate`, the suite's first negative anchor aimed at a wrong producer rather than a fabricated artifact. Next: generalize it into an independent faithfulness witness, copying `fpa2bv_faithfulness.rs`.
 Index-status: accepted
 Date: 2026-09-06
 
@@ -159,12 +159,32 @@ rederived` (`:154-161`), re-bit-blasts and compares DIMACS byte-for-byte
   faithfulness", stated for the transform it applies to, and it is why the
   ledger keeps `TrustId::ArrayElim` at `is_certified() == false`.
 
-  **Status of this claim.** It is derived from the four `recheck` steps and from
-  the ledger's own general statement about these certificates; the specific
-  mutation run — swap the `ite` branches at `arrays.rs:364-373` and confirm
-  `recheck` still returns `Ok(true)` over a query that is genuinely satisfiable
-  — is §7's first exit criterion and is **not** yet measured here. It is stated
-  as a derivation, not as a measurement, and §7 exists to turn it into one.
+  **Measured 2026-09-06, not derived.** The `Op::Store` arm of `resolve_select`
+  was mutated on this lane's isolated worktree to swap the `ite` branches
+  (`arena.ite(same, store_element, otherwise)` → `arena.ite(same, otherwise,
+  store_element)`), the mutation reverted afterwards and the baseline
+  re-confirmed at 8/8. Over the satisfiable fixture in §7,
+  `certify_array_elim_unsat` produced a certificate and the suite printed:
+
+  ```
+  i≠j ∧ select(store(a,i,e),j) ≠ e is SATISFIABLE, but a certificate was
+  produced (0 congruence constraints); its recheck returned Ok(true)
+  ```
+
+  **`ArrayElimUnsatCertificate::recheck` returns `Ok(true)` over a wrong
+  `unsat`.** All four of its steps pass, because all four recompute from the
+  same mutated producer. That is the claim, measured.
+
+  The mutation killed **3** of the 8 tests, and the split matters. Two —
+  `row_same_index_certificate_revalidates` and
+  `row_equal_index_certificate_revalidates` — die in the *safe* direction:
+  their fixtures are genuinely `unsat`, the swap makes them satisfiable, and
+  they fail with "expected Some(certificate)", i.e. the producer stopped
+  producing. Only the new anchor exhibits the dangerous direction, a wrong
+  `unsat` carrying a passing certificate, and it is the only one that says
+  anything about the checker. The other five, including the pre-existing
+  satisfiable anchor `sat_instance_yields_no_certificate`, survive — that
+  fixture has no `store` in it, so read-over-write never fires there.
 - **`rederive_select_congruence` consumes the producer's own `selects()`.** If
   `record_select` (`arrays.rs:494-505`) recorded a wrong `(array, index, fresh)`
   triple, both sides agree. So even the checked half is checked *relative to*
@@ -360,10 +380,17 @@ i ≠ j  ∧  select(store(a, i, e), j) ≠ e
 
 Correct read-over-write gives `ite(i=j, e, select(a,j))`, which under `i ≠ j` is
 `select(a, j)`, so the query asserts `select(a,j) ≠ e` — satisfiable. With the
-branches swapped it becomes `e`, so the query asserts `e ≠ e` — `unsat`. If
-`certify_array_elim_unsat` then produces a certificate whose `recheck` returns
-`Ok(true)`, that is a wrong `unsat` carrying a passing certificate, which is the
-finding §2 predicts and this slice must either confirm or refute.
+branches swapped it becomes `e`, so the query asserts `e ≠ e` — `unsat`. §2
+records what that run measured: a certificate is produced and `recheck` returns
+`Ok(true)`.
+
+**Landed as step 0 of this slice:**
+`satisfiable_read_over_write_yields_no_certificate` in
+`crates/axeyum-solver/tests/array_elim_unsat_proofs.rs` — the first negative
+anchor in that suite aimed at a wrong **producer** rather than at a fabricated
+or corrupted **artifact**. It is a fixture-specific guard, not the general
+witness: it catches this mutation because this fixture's satisfiability flips.
+Steps 1 and 2 below are what generalize it.
 
 The slice:
 

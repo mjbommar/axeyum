@@ -281,3 +281,52 @@ fn array_free_query_yields_no_certificate() {
         "an array-free query is not the eager array-elim fragment; no certificate"
     );
 }
+
+/// SOUNDNESS NEGATIVE, aimed at the READ-OVER-WRITE half (ADR-1721 §7).
+///
+/// Every other negative anchor in this file is aimed at the *artifact*: a
+/// fabricated or corrupted certificate, or one re-checked against the wrong
+/// formula. None is aimed at a wrong **producer**, and the existing satisfiable
+/// anchor ([`sat_instance_yields_no_certificate`]) has no `store` in it, so the
+/// read-over-write rewrite never fires there.
+///
+/// This fixture does. `i ≠ j ∧ select(store(a, i, e), j) ≠ e` is **satisfiable**:
+/// read-over-write gives `ite(i=j, e, select(a,j))`, which under `i ≠ j` is
+/// `select(a, j)`, so the query asserts `select(a,j) ≠ e` and any array with
+/// `a[j] ≠ e` is a model. The certifier must therefore return `None`.
+///
+/// It is chosen so that swapping the read-over-write `ite` branches
+/// (`crates/axeyum-rewrite/src/arrays.rs`, the `Op::Store` arm of
+/// `resolve_select`) turns it into `e ≠ e` — a **wrong `unsat`**. The panic
+/// message reports what `recheck` said about the certificate that mutation
+/// fabricates, because that is ADR-1721 §2's open question: a re-derivation
+/// checker re-runs the same producer, so it cannot see a producer bug.
+#[test]
+fn satisfiable_read_over_write_yields_no_certificate() {
+    let mut arena = TermArena::new();
+    let a = arena.array_var("a", 3, 4).unwrap();
+    let i = arena.bv_var("i", 3).unwrap();
+    let j = arena.bv_var("j", 3).unwrap();
+    let e = arena.bv_var("e", 4).unwrap();
+    let stored = arena.store(a, i, e).unwrap();
+    let read = arena.select(stored, j).unwrap();
+    let i_ne_j = {
+        let eq = arena.eq(i, j).unwrap();
+        arena.not(eq).unwrap()
+    };
+    let read_ne_e = {
+        let eq = arena.eq(read, e).unwrap();
+        arena.not(eq).unwrap()
+    };
+    let asserts = vec![i_ne_j, read_ne_e];
+
+    let cert = certify_array_elim_unsat(&arena, &asserts).unwrap();
+    if let Some(cert) = cert {
+        let rechecked = cert.recheck(&arena, &asserts);
+        panic!(
+            "i≠j ∧ select(store(a,i,e),j) ≠ e is SATISFIABLE, but a certificate was \
+             produced ({} congruence constraints); its recheck returned {rechecked:?}",
+            cert.congruence_constraint_count()
+        );
+    }
+}
