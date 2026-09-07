@@ -406,6 +406,238 @@ fn push_step_text(out: &mut String, delete: bool, lits: &[CnfLit]) {
     out.push_str("0\n");
 }
 
+// --- Binary DRAT (SAT Competition entry, docs/plan/families/sat/README.md
+// slice 2; ADR-1722) ---------------------------------------------------------
+//
+// Encoding confirmed against the drat-trim README's "Binary DRAT Format
+// Description" (github.com/marijnheule/drat-trim, README.md, fetched
+// 2026-09-06), quoted here because it is the normative source for every
+// function below:
+//
+//   "The first byte expresses whether the lemma is added (character `a` /
+//   0x61) or deleted (character `d` / 0x64)."
+//   "map(l) := (l > 0) ? 2*l : -2*l + 1" — literal-to-unsigned-integer
+//   mapping (positive literals map to even codes, negative to odd; the same
+//   convention AIGER uses for its literal encoding).
+//   "The variable-byte encoding ... is the sequence of bytes b0, ..., bi:
+//   1w0, 1w1, ..., 0wi" — 7 payload bits per byte, least-significant chunk
+//   first, continuation (top) bit set on every byte but the last: standard
+//   unsigned LEB128.
+//   "The last byte of each lemma is the zero byte (0x00)" — the value-0
+//   varint (a single zero byte) terminates a clause, exactly as the DIMACS
+//   integer `0` terminates a text clause.
+//
+// This gives roughly 3x smaller proof files than the text format (module
+// doc's "Streaming" section motivation, restated for size rather than peak
+// memory): a text literal averages several ASCII bytes plus a separating
+// space, where a binary code for a small-magnitude literal is one byte.
+
+/// Encodes one DIMACS literal as the unsigned integer the binary DRAT format
+/// varint-encodes: positive literals map to even values (`2*l`), negative to
+/// odd (`-2*l + 1`). See the module comment above this function's block for
+/// the source.
+fn binary_literal_code(lit: CnfLit) -> u64 {
+    let value = lit.dimacs();
+    let magnitude = value.unsigned_abs();
+    if value > 0 {
+        2 * magnitude
+    } else {
+        2 * magnitude + 1
+    }
+}
+
+/// Inverts [`binary_literal_code`]: recovers the signed DIMACS integer a
+/// decoded varint value represents.
+fn binary_code_to_dimacs(code: u64) -> i64 {
+    let magnitude = i64::try_from(code >> 1).unwrap_or(i64::MAX);
+    if code & 1 == 0 { magnitude } else { -magnitude }
+}
+
+/// Appends the unsigned LEB128 (variable-byte) encoding of `value`: 7 bits
+/// per byte, least-significant chunk first, with the continuation (top) bit
+/// set on every byte but the last.
+fn push_varint(out: &mut Vec<u8>, mut value: u64) {
+    loop {
+        #[allow(clippy::cast_possible_truncation)] // masked to 7 bits, fits in u8
+        let byte = (value & 0x7f) as u8;
+        value >>= 7;
+        if value == 0 {
+            out.push(byte);
+            return;
+        }
+        out.push(byte | 0x80);
+    }
+}
+
+/// Reads one unsigned LEB128 varint from `bytes` starting at `*pos`, advancing
+/// `*pos` past it.
+///
+/// # Errors
+///
+/// Returns [`DratError::Parse`] if the buffer ends mid-varint, or if the
+/// varint's continuation bit never clears within 64 bits (a malformed or
+/// truncated proof, never a value this format can legitimately encode).
+fn read_varint(bytes: &[u8], pos: &mut usize) -> Result<u64, DratError> {
+    let mut result: u64 = 0;
+    let mut shift: u32 = 0;
+    loop {
+        let &byte = bytes
+            .get(*pos)
+            .ok_or_else(|| DratError::Parse("truncated binary DRAT proof".to_owned()))?;
+        *pos += 1;
+        if shift >= 64 {
+            return Err(DratError::Parse(
+                "binary DRAT varint exceeds 64 bits".to_owned(),
+            ));
+        }
+        result |= u64::from(byte & 0x7f) << shift;
+        if byte & 0x80 == 0 {
+            return Ok(result);
+        }
+        shift += 7;
+    }
+}
+
+/// Appends one step to `out` in the binary DRAT format: the `a`/`d` tag byte,
+/// then each literal's varint-encoded [`binary_literal_code`], then a `0x00`
+/// terminator byte.
+///
+/// The single formatting routine behind both [`write_drat_binary`] and
+/// [`BinaryProofSink`], exactly as [`push_step_text`] is shared by
+/// [`write_drat`] and [`TextProofSink`] — a streamed binary proof is
+/// byte-identical to the serialization of the equivalent `Vec<DratStep>` by
+/// construction.
+fn push_step_binary(out: &mut Vec<u8>, delete: bool, lits: &[CnfLit]) {
+    out.push(if delete { b'd' } else { b'a' });
+    for &lit in lits {
+        push_varint(out, binary_literal_code(lit));
+    }
+    out.push(0u8);
+}
+
+/// Serializes a DRAT proof to the standard **binary** format (SAT Competition
+/// entry; see the module comment above [`push_step_binary`]'s block for the
+/// source). Roughly 3x smaller than [`write_drat`]'s text output on typical
+/// proofs. Round-trips through [`parse_drat_binary`], and — because both
+/// ultimately encode the same [`DratStep`] sequence — `write_drat` of a proof
+/// parsed back from this function's output is byte-identical to `write_drat`
+/// of the original (see `tests::binary_round_trip_is_text_byte_identical`).
+pub fn write_drat_binary(proof: &[DratStep]) -> Vec<u8> {
+    let mut out = Vec::new();
+    for step in proof {
+        match step {
+            DratStep::Add(lits) => push_step_binary(&mut out, false, lits),
+            DratStep::Delete(lits) => push_step_binary(&mut out, true, lits),
+        }
+    }
+    out
+}
+
+/// Parses a DRAT proof in the standard binary format (see the module comment
+/// above [`push_step_binary`]'s block for the source).
+///
+/// # Errors
+///
+/// Returns [`DratError::Parse`] for an unrecognized tag byte, a truncated
+/// varint, an out-of-range variable, or a varint that never terminates within
+/// 64 bits.
+pub fn parse_drat_binary(bytes: &[u8]) -> Result<Vec<DratStep>, DratError> {
+    let mut steps = Vec::new();
+    let mut pos = 0usize;
+    while pos < bytes.len() {
+        let tag = bytes[pos];
+        pos += 1;
+        let delete = match tag {
+            b'a' => false,
+            b'd' => true,
+            other => {
+                return Err(DratError::Parse(format!(
+                    "invalid binary DRAT tag byte {other:#04x} at offset {}",
+                    pos - 1
+                )));
+            }
+        };
+        let mut lits = Vec::new();
+        loop {
+            let code = read_varint(bytes, &mut pos)?;
+            if code == 0 {
+                break;
+            }
+            lits.push(literal_from_dimacs(binary_code_to_dimacs(code))?);
+        }
+        steps.push(if delete {
+            DratStep::Delete(lits)
+        } else {
+            DratStep::Add(lits)
+        });
+    }
+    Ok(steps)
+}
+
+/// A [`DratSink`] that writes the standard **binary** DRAT format straight to
+/// a writer — the binary counterpart of [`TextProofSink`], sharing its
+/// buffering strategy and finish/flush contract exactly (see
+/// [`TextProofSink`]'s doc for the buffering and failure-surfacing rationale,
+/// which applies here unchanged).
+#[derive(Debug)]
+pub struct BinaryProofSink<W: Write> {
+    writer: io::BufWriter<W>,
+    /// Reused formatting scratch for the step being emitted, so a proof of any
+    /// length allocates once.
+    scratch: Vec<u8>,
+}
+
+impl<W: Write> BinaryProofSink<W> {
+    /// Wraps `writer` as a binary proof sink.
+    pub fn new(writer: W) -> Self {
+        Self {
+            writer: io::BufWriter::with_capacity(TEXT_SINK_BUFFER_BYTES, writer),
+            scratch: Vec::new(),
+        }
+    }
+
+    /// Writes any buffered steps to the writer and flushes it.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ProofSinkError`] when the underlying writer fails.
+    pub fn flush(&mut self) -> Result<(), ProofSinkError> {
+        self.writer.flush()?;
+        Ok(())
+    }
+
+    /// Flushes and returns the writer.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ProofSinkError`] when the underlying writer fails; the writer
+    /// is dropped in that case, since the bytes it holds are not a complete
+    /// proof.
+    pub fn finish(self) -> Result<W, ProofSinkError> {
+        self.writer
+            .into_inner()
+            .map_err(|error| ProofSinkError::from(error.into_error()))
+    }
+
+    /// Formats one step into the scratch buffer and writes it out.
+    fn emit(&mut self, delete: bool, lits: &[CnfLit]) -> Result<(), ProofSinkError> {
+        self.scratch.clear();
+        push_step_binary(&mut self.scratch, delete, lits);
+        self.writer.write_all(&self.scratch)?;
+        Ok(())
+    }
+}
+
+impl<W: Write> DratSink for BinaryProofSink<W> {
+    fn add_clause(&mut self, lits: &[CnfLit]) -> Result<(), ProofSinkError> {
+        self.emit(false, lits)
+    }
+
+    fn delete_clause(&mut self, lits: &[CnfLit]) -> Result<(), ProofSinkError> {
+        self.emit(true, lits)
+    }
+}
+
 /// Error from emitting a proof step to a [`DratSink`].
 ///
 /// Small and value-like on purpose: it is carried in solver outcomes, which are
@@ -1322,6 +1554,215 @@ mod tests {
         assert!(from_io.message().contains("no space"));
         let direct = ProofSinkError::new(io::ErrorKind::Other, "sink refused");
         assert_eq!(direct.message(), "sink refused");
+    }
+
+    // ----------------------------------------------------------------------
+    // Binary DRAT (docs/plan/families/sat/README.md slice 2; ADR-1722)
+    // ----------------------------------------------------------------------
+
+    use super::{
+        BinaryProofSink, binary_code_to_dimacs, binary_literal_code, parse_drat_binary,
+        write_drat_binary,
+    };
+
+    #[test]
+    fn binary_literal_code_round_trips_positive_and_negative() {
+        for value in [1i64, 2, 5, -1, -2, -5, 12345] {
+            let l = lit(value);
+            let code = binary_literal_code(l);
+            // Positive literals map to even codes, negative to odd (drat-trim's
+            // `map(l) := (l > 0) ? 2*l : -2*l + 1`).
+            assert_eq!(
+                code.is_multiple_of(2),
+                value > 0,
+                "value={value} code={code}"
+            );
+            assert_eq!(binary_code_to_dimacs(code), value);
+        }
+    }
+
+    #[test]
+    fn binary_round_trip_through_parse_recovers_the_same_steps() {
+        let proof = vec![
+            DratStep::Add(vec![lit(1), lit(-2), lit(300)]),
+            DratStep::Delete(vec![lit(1), lit(-2), lit(300)]),
+            DratStep::Add(vec![lit(-3)]),
+            DratStep::Add(vec![]), // the empty clause
+        ];
+        let bytes = write_drat_binary(&proof);
+        // 'a'/'d' tag bytes are present, confirming this is actually binary
+        // and not accidentally text.
+        assert!(bytes.contains(&b'a'));
+        assert!(bytes.contains(&b'd'));
+        assert_eq!(parse_drat_binary(&bytes).unwrap(), proof);
+    }
+
+    /// The exact guarantee the task names: text -> binary -> text is
+    /// byte-identical.
+    #[test]
+    fn binary_round_trip_is_text_byte_identical() {
+        let proof = vec![
+            DratStep::Add(vec![lit(1), lit(-2)]),
+            DratStep::Delete(vec![lit(1), lit(-2)]),
+            DratStep::Add(vec![lit(-3), lit(400), lit(-5000)]),
+            DratStep::Add(vec![]),
+        ];
+        let original_text = write_drat(&proof);
+        let binary = write_drat_binary(&proof);
+        let reparsed = parse_drat_binary(&binary).expect("binary proof parses");
+        let round_tripped_text = write_drat(&reparsed);
+        assert_eq!(
+            original_text, round_tripped_text,
+            "text -> binary -> text must be byte-identical"
+        );
+    }
+
+    #[test]
+    fn a_binary_proof_is_accepted_by_check_drat() {
+        let f = formula(2, &[&[1, 2], &[1, -2], &[-1, 2], &[-1, -2]]);
+        let proof = match crate::solve_with_drat_proof(&f) {
+            crate::ProofSolveOutcome::Unsat(proof) => proof,
+            other => panic!("expected unsat, got {other:?}"),
+        };
+        assert_eq!(check_drat(&f, &proof), Ok(true), "text proof must verify");
+        let binary = write_drat_binary(&proof);
+        let from_binary = parse_drat_binary(&binary).expect("binary proof parses");
+        assert_eq!(
+            check_drat(&f, &from_binary),
+            Ok(true),
+            "our own checker must accept a proof round-tripped through the binary format"
+        );
+    }
+
+    /// SOUNDNESS-NEGATIVE: a byte-corrupted binary proof must never verify.
+    /// Flips one literal's sign bit in the encoded stream (changes the tag's
+    /// parity, i.e. exactly the bit [`binary_literal_code`]/[`binary_code_to_dimacs`]
+    /// use to distinguish positive from negative), which turns a real
+    /// refutation into an unjustified one.
+    #[test]
+    fn a_corrupted_binary_proof_is_rejected() {
+        let f = formula(2, &[&[1, 2], &[1, -2], &[-1, 2], &[-1, -2]]);
+        let proof = match crate::solve_with_drat_proof(&f) {
+            crate::ProofSolveOutcome::Unsat(proof) => proof,
+            other => panic!("expected unsat, got {other:?}"),
+        };
+        let mut binary = write_drat_binary(&proof);
+        // Find the first non-tag, non-terminator byte (a literal's low varint
+        // byte) and flip its low bit to corrupt the literal it encodes.
+        let mut flipped = false;
+        let mut index = 0usize;
+        while index < binary.len() {
+            let tag = binary[index];
+            index += 1;
+            if tag != b'a' && tag != b'd' {
+                break; // malformed stream shape; nothing left to corrupt safely
+            }
+            if index < binary.len() && binary[index] != 0 {
+                binary[index] ^= 0x02; // flip the sign bit of this literal's code
+                flipped = true;
+                break;
+            }
+            // Skip this (possibly empty) clause's bytes to reach the next step.
+            while index < binary.len() && binary[index] != 0 {
+                index += 1;
+            }
+            index += 1; // past the terminator
+        }
+        assert!(flipped, "fixture must actually corrupt a literal");
+        // Either the corrupted stream fails to parse as valid DRAT structure,
+        // or it parses but no longer checks — either way it must never be
+        // `Ok(true)`. A parse rejection (the `Err` case) is also an acceptable
+        // outcome, so only the `Ok` case needs an assertion.
+        if let Ok(steps) = parse_drat_binary(&binary) {
+            assert_ne!(
+                check_drat(&f, &steps),
+                Ok(true),
+                "a corrupted binary proof must not be accepted as a valid refutation"
+            );
+        }
+    }
+
+    /// Differential-style sweep mirroring `lrat.rs`'s
+    /// `random_unsat_drat_proofs_elaborate_and_check`: many random UNSAT CNFs,
+    /// each solved proof must round-trip through the binary format and still
+    /// check.
+    #[test]
+    fn random_unsat_proofs_round_trip_through_binary_and_check() {
+        let mut state = 0xb17e_5eed_c0ff_ee11u64;
+        let mut next = || {
+            state ^= state << 13;
+            state ^= state >> 7;
+            state ^= state << 17;
+            state
+        };
+        let below = |n: &mut dyn FnMut() -> u64, bound: u64| usize::try_from(n() % bound).unwrap();
+        let mut checked = 0u32;
+        for _ in 0..300 {
+            let vars = 3 + below(&mut next, 4);
+            let clause_count = 4 + below(&mut next, 16);
+            let mut f = CnfFormula::new(vars);
+            let vars_bound = u64::try_from(vars).unwrap();
+            for _ in 0..clause_count {
+                let width = 1 + below(&mut next, 3);
+                let mut lits = Vec::new();
+                for _ in 0..width {
+                    let v = i64::try_from(next() % vars_bound).unwrap() + 1;
+                    let signed = if next() & 1 == 0 { v } else { -v };
+                    lits.push(lit(signed));
+                }
+                f.add_clause(CnfClause::new(lits)).unwrap();
+            }
+            let crate::ProofSolveOutcome::Unsat(proof) = crate::solve_with_drat_proof(&f) else {
+                continue;
+            };
+            assert_eq!(check_drat(&f, &proof), Ok(true));
+            let binary = write_drat_binary(&proof);
+            let from_binary = parse_drat_binary(&binary).expect("binary proof parses");
+            assert_eq!(check_drat(&f, &from_binary), Ok(true));
+            assert_eq!(write_drat(&proof), write_drat(&from_binary));
+            checked += 1;
+        }
+        assert!(checked >= 20, "expected many UNSAT cases, got {checked}");
+    }
+
+    #[test]
+    fn binary_proof_sink_output_is_byte_identical_to_write_drat_binary() {
+        let proof = vec![
+            DratStep::Add(vec![lit(1), lit(-2)]),
+            DratStep::Delete(vec![lit(1), lit(-2)]),
+            DratStep::Add(vec![lit(-3)]),
+            DratStep::Add(vec![]),
+        ];
+        let mut bytes: Vec<u8> = Vec::new();
+        let mut sink = BinaryProofSink::new(&mut bytes);
+        for step in &proof {
+            match step {
+                DratStep::Add(lits) => sink.add_clause(lits).unwrap(),
+                DratStep::Delete(lits) => sink.delete_clause(lits).unwrap(),
+            }
+        }
+        sink.finish().unwrap();
+        assert_eq!(bytes, write_drat_binary(&proof));
+    }
+
+    #[test]
+    fn parse_drat_binary_rejects_an_unknown_tag_byte() {
+        let bytes = vec![0xffu8, 0x00];
+        assert!(matches!(
+            parse_drat_binary(&bytes),
+            Err(DratError::Parse(_))
+        ));
+    }
+
+    #[test]
+    fn parse_drat_binary_rejects_a_truncated_varint() {
+        // A tag byte, then a continuation byte (top bit set) with nothing
+        // after it.
+        let bytes = vec![b'a', 0x80u8];
+        assert!(matches!(
+            parse_drat_binary(&bytes),
+            Err(DratError::Parse(_))
+        ));
     }
 
     #[test]

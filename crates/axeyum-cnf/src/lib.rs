@@ -83,10 +83,10 @@ pub use compact::{CompactMap, compact};
 #[cfg(unix)]
 pub use drat::CacheDroppingWriter;
 pub use drat::{
-    DratCheckOutcome, DratCheckProgress, DratError, DratSink, DratStep, DratTextReader,
-    ProofSinkError, TextProofSink, VecProofSink, check_drat, check_drat_streaming,
+    BinaryProofSink, DratCheckOutcome, DratCheckProgress, DratError, DratSink, DratStep,
+    DratTextReader, ProofSinkError, TextProofSink, VecProofSink, check_drat, check_drat_streaming,
     check_drat_streaming_with_limits_and_progress, check_drat_with_limits_and_progress, parse_drat,
-    write_drat,
+    parse_drat_binary, write_drat, write_drat_binary,
 };
 pub use drat_backward::{
     check_drat_backward, check_drat_backward_reader, check_drat_backward_reader_within,
