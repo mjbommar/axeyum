@@ -17,8 +17,16 @@ axeyum-ir.workspace = true
 axeyum-strings.workspace = true
 
 [dev-dependencies]
+criterion.workspace = true
 serde_json = "1"
 sha2 = "0.11"
 
 [lints]
 workspace = true
+
+# Micro-benchmarks (2026-09-07, lane `bench-primitives`); `harness = false`
+# hands control to `criterion`'s own main. Inputs are committed corpus files,
+# so these are not proxies -- see each bench's module doc.
+[[bench]]
+name = "smtlib_parse"
+harness = false

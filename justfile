@@ -2723,9 +2723,23 @@ bench-criterion-axeyum-egraph:
     taskset -c 0-7 cargo bench -p axeyum-egraph --bench congruence_chain
 
 bench-criterion-axeyum-ir:
-    taskset -c 0-7 cargo bench -p axeyum-ir --bench arena_intern
+    taskset -c 0-7 cargo bench -p axeyum-ir --bench arena_intern --bench term_eval --bench value_bits
+
+# The shared-primitive benches added 2026-09-07 (lane `bench-primitives`).
+# `axeyum-bv` and `axeyum-smtlib` had NO benches before that date, despite
+# ADR-0300 measuring bit lowering plus CNF encoding at ~84% of the cold
+# pipeline. Findings, proxy status per group, the between-run variance
+# envelope, and the did-not-run list are in
+# docs/research/12-performance/bench-primitives-2026-09-07.md — read the
+# "Variance" section before quoting any of these numbers to two significant
+# figures.
+bench-criterion-axeyum-bv:
+    taskset -c 0-7 cargo bench -p axeyum-bv --bench bv_lowering
+
+bench-criterion-axeyum-smtlib:
+    taskset -c 0-7 cargo bench -p axeyum-smtlib --bench smtlib_parse
 
 # Runs every micro-benchmark above, pinned. Each per-crate recipe stays
 # independently runnable (a lane touching only one crate's hot path should
-# not have to run all six).
-bench-criterion: bench-criterion-axeyum-solver bench-criterion-axeyum-cnf bench-criterion-axeyum-aig bench-criterion-axeyum-egraph bench-criterion-axeyum-ir
+# not have to run all eight).
+bench-criterion: bench-criterion-axeyum-solver bench-criterion-axeyum-cnf bench-criterion-axeyum-aig bench-criterion-axeyum-egraph bench-criterion-axeyum-ir bench-criterion-axeyum-bv bench-criterion-axeyum-smtlib
