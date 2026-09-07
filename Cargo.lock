@@ -108,6 +108,8 @@ version = "0.1.0"
 dependencies = [
  "axeyum-aig",
  "axeyum-ir",
+ "axeyum-smtlib",
+ "criterion",
  "web-time",
 ]
 
@@ -264,6 +266,7 @@ name = "axeyum-rewrite"
 version = "0.1.0"
 dependencies = [
  "axeyum-ir",
+ "criterion",
 ]
 
 [[package]]
@@ -291,6 +294,7 @@ dependencies = [
  "axeyum-fp",
  "axeyum-ir",
  "axeyum-strings",
+ "criterion",
  "serde_json",
  "sha2",
 ]

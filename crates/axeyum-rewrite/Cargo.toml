@@ -14,5 +14,25 @@ publish = false
 [dependencies]
 axeyum-ir.workspace = true
 
+[dev-dependencies]
+criterion.workspace = true
+
 [lints]
 workspace = true
+
+# Micro-benchmarks (2026-09-07, bench-theories lane): the preprocessing routes
+# every array and integer query pays before a theory solver ever sees them —
+# see docs/research/12-performance/bench-theories-2026-09-07.md. `harness =
+# false` hands control to criterion's own main, matching the existing
+# `axeyum-solver`/`axeyum-egraph` benches.
+[[bench]]
+name = "eliminate_arrays"
+harness = false
+
+[[bench]]
+name = "eliminate_int_divmod"
+harness = false
+
+[[bench]]
+name = "int_blast_ladder"
+harness = false

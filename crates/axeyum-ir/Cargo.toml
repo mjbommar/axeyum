@@ -34,3 +34,15 @@ workspace = true
 [[bench]]
 name = "arena_intern"
 harness = false
+
+# Micro-benchmarks (2026-09-07, lane `bench-primitives`). `term_eval` measures
+# the ground evaluator, which the hard rules make mandatory on every `sat`
+# result; `value_bits` measures the LSB-first conversion helpers that the BV
+# model-lifting path calls once per symbol bit.
+[[bench]]
+name = "term_eval"
+harness = false
+
+[[bench]]
+name = "value_bits"
+harness = false

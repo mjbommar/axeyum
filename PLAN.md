@@ -137,6 +137,12 @@ now. Nothing was deleted.
 
 | Date | Commit | Result |
 |---|---|---|
+| 2026-09-07 | bench-primitives | `smtlib_parse`: `read_all` and `parse_script` over four committed files, 2.7 K to 10.5 M. Opens the lane diary under `docs/research/12-performance/`. |
+| 2026-09-07 | bench-primitives | `bv_lowering` (first benches in `axeyum-bv`) and `term_eval` + `value_bits` in `axeyum-ir`; `input_values` sweep carries a falsifiable quadratic prediction in its doc comment. |
+| 2026-09-07 | bench-primitives | Diary written up: four findings, five recorded mistakes, the ±20% between-run variance envelope, and the did-not-run list. |
+| 2026-09-07 | bench-theories | four new criterion benches for the uncovered theory-preprocessing/DL routes; `EGraph::proof_reroot_steps` diagnostic counter; diary with the `class_declarations` quadratic-resort finding (congruence closure) and the width-invariant int-blast-ladder finding |
+| 2026-09-07 | bench-divisions | Diary + status file opened, QF_IDL zero-coverage finding (`7b66ad607`) |
+| 2026-09-07 | bench-divisions | Full 12-division timing sweep, methodology correction, results committed |
 | 2026-09-07 | int-divmod-witness | `witness_int_divmod` + `IntDivModElimination` + `guard_zero_divisor_sat`: the pass reports its mode and both halves get interpreted, not re-derived; the wrong-`unsat` mutant passes 30 of 30 pre-existing tests and dies on exactly one of the new ones |
 | 2026-09-07 | int-divmod-witness | ADR-1730: the `MAX_CONGRUENCE_GROUPS` cap is a relaxation, so the direction it silently changes is `sat`, not `unsat` |
 | 2026-09-07 | qf-nra-entry | committed `bench-results/parity-lists/QF_NRA.txt` (200 files, sha256 `d645dd907edd`) |
@@ -9570,6 +9576,102 @@ Foreground, this worktree, `env -u RUST_MIN_STACK` not needed (no
 
 **PLAN.md was deliberately not regenerated** (the lane brief says not to touch
 it); the coordinator's regeneration will pick this file up.
+
+**Five bench targets across the three shared primitives, four findings, and
+five recorded mistakes** (`DONE`, bench-primitives, 2026-09-07).
+
+`axeyum-bv` and `axeyum-smtlib` had **no benches at all**; `axeyum-ir` had one.
+They now have `bv_lowering`, `smtlib_parse`, `term_eval` and `value_bits`
+beside the existing `arena_intern`. Every group names, in its own module doc,
+the real workload it stands for — or says plainly that it has not been shown to
+predict anything.
+
+The findings, with evidence in the diary
+([`docs/research/12-performance/bench-primitives-2026-09-07.md`](docs/research/12-performance/bench-primitives-2026-09-07.md)):
+
+1. **`BitLowering::input_values` is quadratic in symbol width**, predicted in
+   the bench's doc comment before the run and confirmed: `t = 16.4·w + 0.483·w²`
+   ns fits four widths within 3%. **97%** of it is one redundant call —
+   `value_to_lsb_bits` allocates a full-width `Vec<bool>` per symbol *bit* and
+   reads one bit from it. The quadratic survives the `Value::Bv` →
+   `Value::WideBv` code-path crossing, so it is the caller's loop, not a
+   conversion routine. 631 µs per replay at width 1024. **Counterweight, in the
+   same bench group:** on the committed corpus it is 11.9 µs against 577 µs of
+   lowering — 2.1%, a rounding error. Real, cheap to fix, low priority at the
+   widths the corpus contains.
+2. **SMT-LIB ingest is linear in bytes at 30–58 MB/s across four orders of
+   magnitude**, so the in-tree "58 MB takes ~54 s" figure that justifies the
+   ingest deadline is **~30x** off what these numbers predict (linear says
+   ~1.9 s). Both can be true — that file's shape, staleness, or a wider meaning
+   of "reading" — but the figure must not be quoted as a bytes-per-second rate.
+   Unsettled: the file is not in the tree.
+3. **The s-expression reader is 29–60% of ingest**, and its share tracks file
+   *shape*, not size. A faster typed parser is capped at roughly half of ingest.
+   `read_all` materializes the whole `SExpr` tree, one owned `String` per atom,
+   before the typed pass starts.
+4. `eval`'s fresh per-call `FastMap` costs **14.5–16.6%** of a replay loop.
+
+**`bv_lowering` deliberately does not compare memo representations.** ADR-0300
+preregistered exactly that `BTreeMap` → dense experiment and rejected it on a
+run-total variance gate despite a 0.922 paired bit-blast geometric mean; it
+also names microbenchmark selection among its rejected alternatives. This lane
+had drafted it as a new finding before reading the ADR (W3 in the diary).
+
+**Variance is the standing caveat**: two runs minutes apart at load < 1.5 differ
+by up to ±20% on the allocation-heavy benches, well outside criterion's
+own sub-1% intervals. Nothing here should be quoted to two significant figures;
+the findings are ratios and shapes because those survive it.
+
+Did not run, reported as such: a controlled hasher A/B (W4 — the 4.0x against
+the 2026-09-05 `arena_intern` baseline is **not** comparable, loads differ by
+an order of magnitude); the 58 MB file behind finding 2; `write_script`; what
+fraction of a whole solve model replay is; the demanded/range-demanded routes.
+
+**Your lane's block (`WIP`, bench-theories, 2026-09-07).** Scope: simplex,
+congruence closure, difference logic, the int-blast width ladder,
+`eliminate_arrays`, `eliminate_int_divmod` — see the brief and
+[docs/research/12-performance/bench-theories-2026-09-07.md](docs/research/12-performance/bench-theories-2026-09-07.md)
+for the running diary (expectations, results, and where the proxy fixtures
+were wrong).
+
+Four new criterion benches landed for the four previously-unbenched routes
+named in the brief: `eliminate_arrays`, `eliminate_int_divmod`,
+`int_blast_ladder` (all in `crates/axeyum-rewrite/benches/`), and
+`dl_negative_cycle` (`crates/axeyum-solver/benches/`, `required-features =
+["full"]`). All four build and run clean on s6.
+
+**Headline finding**: congruence closure's superlinear merge-chain cost
+(measured ~475x time for 64x chain length) is NOT the proof-forest re-root
+walk I first suspected — a new `EGraph::proof_reroot_steps` diagnostic
+counter shows that walk is exactly linear. The real cost is
+`process_pending`'s `class_declarations` handling: a full clone + full
+`sort_unstable` + `dedup` of the merged class's declaration list on every
+union that introduces a new declaration, `O(k log k)` per merge with `k`
+growing to `N`. A targeted A/B (same chain, same merge count, declarations
+kept flat instead of growing) is 72x faster at N=51,200. Not fixed in this
+lane — flagged for a follow-up slice. Also found: `blast_integers`'s per-rung
+cost is width-invariant (8/16/32/64 all ~41-42 us), so the width ladder's
+cost is dominated by rung *count*, not rung width; and this repo's corpus has
+no `QF_IDL`/`QF_RDL` file at all and no `QF_ABV` file anywhere near the
+read-count scale the array-elimination quadratic bench probes, so neither new
+headline bench could be validated against a real corpus file (recorded
+explicitly as "did not run", not silently skipped).
+
+Full detail, all numbers, and what was NOT verified (rung counts on a real
+`QF_NIA` file; DL front-door vs. engine cost split; a fix for the
+`class_declarations` defect) are in the diary linked above.
+
+Gates run and green: `cargo fmt --all --check`; `clippy -D warnings` on
+`axeyum-egraph`, `axeyum-rewrite` (`--all-targets --all-features`) and
+`axeyum-solver` (`--all-targets --all-features`, exercises the `z3` feature
+too); `cargo test -p axeyum-egraph` (35 passed); the three mandatory z3
+differential fuzzes (`qf_lra_differential_fuzz` 5 passed,
+`simplex_lra_fallback_differential` 1 passed, `qf_uflra_differential_fuzz` 1
+passed — all nonzero). Did not run the full `scripts/check.sh`/`just check`
+aggregate gate (out of budget); no solver *logic* was changed (only new bench
+files, `Cargo.toml` bench registrations, and one diagnostic-only counter in
+`axeyum-egraph` with no behavior change, confirmed by the unchanged 35/35
+`axeyum-egraph` test pass).
 
 **Status: items 1-2 of `docs/plan/status/174-pi-rung2.md`'s four-item list
 LANDED, axiom-free. Items 3-4 (the `Converges` witness and the numeric
@@ -45667,6 +45769,46 @@ crate, untouched by this lane, out of scope.
 regenerate the manifest, reconcile the fact ledger. This lane deliberately
 did not touch that file or `artifacts/autogenesis/` — it enabled a draw,
 it did not author one.
+
+**Landed (`WIP`, bench-divisions, 2026-09-07).** Reproducible per-division
+timing sample and stage breakdown for all 12 parity-board divisions
+(`bench-results/bench-divisions-2026-09-07/`), full writeup at
+[`docs/research/12-performance/bench-divisions-2026-09-07.md`](docs/research/12-performance/bench-divisions-2026-09-07.md).
+
+**Headline: only 15.6% of sampled wall clock (222.3 s of 1422.8 s, 93 files
+across 12 divisions) is accounted for by `smtcomp_cli --trace`, the only
+front-door stage instrument in this tree.** Five divisions (QF_ABV, QF_BV,
+QF_IDL, QF_RDL, QF_UFLIA) are **zero-coverage** — every sampled loss routes
+through an engine (`dl-online` difference logic, `sat-bv` bit-blast, or an
+early dispatch decline) that never touches the generic CDCL(T) driver
+`--trace` instruments, each independently consistent with that division's
+own already-documented cause. QF_LRA (71.3%) and QF_UF (69.2%) are the only
+divisions with majority coverage; both corroborate (different population,
+same direction) their existing cause docs.
+
+**Methodology correction found mid-sweep**: naively summing all seven
+`; theory-layer` duration fields gave QF_UF 130.7% traced — impossible.
+Traced to source: `theory_assert_ms` is nested inside `boolean_propagate_ms`
+(`crates/axeyum-solver/src/cdclt.rs`, `assign()` called from
+`unit_propagate()`, itself wrapped whole by the boolean-propagate timer).
+Fixed by excluding `theory_assert_ms` from the additive total (reported
+separately) and keeping the known-wrong naive sum in `aggregate.json` under
+an explicit `_DO_NOT_TRUST` key rather than deleting the evidence.
+
+**Not done**: no dispatch-level (`explain_corpus --json --timed-trace`,
+diagnostic-only) breakdown for the 5 zero-coverage divisions — that is the
+concrete next step for them, since `--trace` structurally cannot see their
+dominant routes. `BvLayerStats` (bit-blast/CNF-encode/solve/model-lift,
+already measured internally for QF_BV/QF_ABV) is not wired to any CLI flag;
+a `--bv-stats` flag on `smtcomp_cli` is the natural follow-on. Parse time,
+rewrite time, and model-replay time are untraced everywhere — no instrument
+in this tree isolates them.
+
+Build: `d51d4ef04878b40f5d00a1a6b4aed405b35cae4e`, s7, release,
+`cargo build --release -p axeyum-bench --example smtcomp_cli` (no
+`--features full` — invalid on `axeyum-bench`). Sweep ran idle
+(`/proc/loadavg` ~1.0 throughout, 16-core s7), ~24 minutes wall for all 12
+divisions.
 
 **Done (bind-extracted-subjects, 2026-08-31).** ADR-1000's five-risk audit
 measured that `theorem_of` (`scripts/check-fact-depends-derived.py`) resolves
