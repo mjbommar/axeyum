@@ -109,12 +109,15 @@ pub use lrat::{
     write_lrat,
 };
 pub use proof_sat::incremental::{IncrementalSolveOutcome, NativeIncrementalCdcl};
+/// The theory interface the native CDCL core drives (ADR-1701, plan slice S7).
+pub use proof_sat::theory;
 pub use proof_sat::{
     DEFAULT_PROGRESS_CONFLICT_INTERVAL, DEFAULT_PROOF_SAT_CONFLICT_LIMIT, ProofSearchProgress,
-    ProofSolveOutcome, StreamingProofOutcome, solve_with_drat_proof,
+    ProofSolveOutcome, StreamingProofOutcome, TheoryProofOutcome, TheoryRefutation,
+    TheoryRefutationCheck, TheoryRefutationError, solve_with_drat_proof,
     solve_with_drat_proof_streaming, solve_with_drat_proof_streaming_with_progress,
     solve_with_drat_proof_with_limits, solve_with_drat_proof_with_limits_and_progress,
-    solve_with_drat_proof_within,
+    solve_with_drat_proof_within, solve_with_theory_and_drat_proof,
 };
 pub use simplify::{SubsumeStats, simplify, simplify_within};
 pub use vivify::{VivifyOptions, VivifyOutcome, VivifyStats, vivify, vivify_within};

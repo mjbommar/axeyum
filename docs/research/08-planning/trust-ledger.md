@@ -7,13 +7,14 @@ Regenerate after changing the enum and commit the result; a golden test
 Pedantic levels mirror cvc5's `TrustId` grading: 0 = hard fail … 10 = minor.
 **certified** = an independent per-query checker re-derives the step (bit-blast miter / DRAT / Farkas / enumeration); **trust hole** = a sound reduction with no per-query certificate yet (the base Track 3 P3.5 drives to zero).
 
-Trusted base: **6** reduction(s) remain trust holes.
+Trusted base: **7** reduction(s) remain trust holes.
 
 | Reduction | Meaning | Pedantic | Status | Ref |
 |---|---|---|---|---|
 | bit-blast | term → AIG bit-blasting | 8 | certified | ADR-0006 |
 | tseitin | AIG → CNF Tseitin encoding | 9 | certified | ADR-0006 |
 | sat-refutation | CNF UNSAT from the CDCL core | 9 | certified | ADR-0012 |
+| sat-refutation-modulo-theory | CNF UNSAT from the CDCL(T) core modulo N enumerated theory lemmas | 4 | trust hole | ADR-1704 |
 | array-elim | arrays → BV (read-over-write + Ackermann) | 4 | trust hole | ADR-0010 |
 | ackermann | uninterpreted functions → fresh vars + functional consistency | 4 | trust hole | ADR-0013 |
 | int-blast | bounded integers → BV at a chosen width | 3 | trust hole | ADR-0014 |
