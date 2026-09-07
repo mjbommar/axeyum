@@ -55688,8 +55688,8 @@ merged into this lane's branch); this lane did not touch them.
 visibility change plus a carrier-scoped name map), then `Tests/` goals drawn
 from a real population rather than authored here, then the LRAT route.
 
-**Status:** deliverables 1, 3 and 4 landed; deliverable 2 landed for three of
-four capabilities. ADR-1674.
+**Status:** all four deliverables landed. Deliverable 3's optional gate is
+deliberately NOT shipped, with the measurement showing why. ADR-1674.
 
 ## The headline numbers, re-measured rather than inherited
 
@@ -55717,7 +55717,9 @@ routes)`).
 | `340040c7e` | 17 mutation guards, 33 → 50 tests, and the merge of a `SUITES["ledger-coverage"]` suite that had never run |
 | `cd94e5bb9` | the four unqualified axiom-free sentences outside `docs/math-department/`, reworded; 430 retired |
 | `2de2ae731` | three CAS-capability fact rows at `computed` |
-| (this commit) | ADR-1674 and this file |
+| `e2e17524f` | ADR-1674 and this file |
+| `918752ac7` | regenerated `PLAN.md` |
+| `fd2dbde8b` | the five geometry-certificate fact rows + four regenerated artifacts |
 
 ## Findings, in the order they matter
 
@@ -55785,6 +55787,36 @@ Suggested replacement wording is in ADR-1674 § "The headline says what it
 measures". One warning: do **not** reach for "all `kernel-lean` facts are
 axiom-free" as the safe qualified form — it is false by exactly two.
 
+## The five geometry-certificate facts
+
+`F:geometry-pascal-parabola-hexagon`, `F:geometry-desargues-affine-perspective`,
+`F:geometry-conic-polar-is-tangent`, `F:geometry-tetrahedron-medians-concurrent`,
+`F:geometry-tetrahedron-perpendicular-bisectors-concurrent` — all `proved` /
+`cas-certificate` / no `cas_substance` block, matching their ten committed
+siblings. Their SMT-LIB statements are RENDERED from the certificate JSON term
+by term rather than transcribed, so every ratio
+`check-geometry-fact-transcription.py` reports is exactly 1.
+
+The two tetrahedron rows carry
+`geometry.cartesian-coordinatisation-of-euclidean-3-space` and NOT the
+plane-coordinatisation entry their ten plane siblings use; each says why in its
+`notes`. Copying the plane entry would have been the easy wrong answer, and it
+would have put a false assumption into the footprint of the only solid geometry
+in the system.
+
+Verified independently of the lane that wrote them, including a negative
+control on a DIFFERENT fact than that lane mutated: changing one coefficient
+`4.0` → `5.0` in `F-geometry-tetrahedron-medians-concurrent` takes the
+transcription checker to exit 1 and it names the fact
+(`conclusion[0] is not a constant multiple (3/2 then 61/41)`); restoring it
+returns exit 0.
+
+**Coverage is unmoved by all eight new facts, as it should be**: `registered`
+stays 2,358 of 3,079, because these are `cas-certificate` rows and the
+ratchet's population is `kernel-lean` theorem names. The only change to
+`artifacts/ledger-coverage.json` is `facts_scanned` 2963 → 2971. Eight honest
+facts must not move a kernel coverage number, and they did not.
+
 ## What did NOT land, with the measured obstruction
 
 **A regex gate for the false wording — deliberately not shipped.** The brief
@@ -55799,19 +55831,8 @@ a genuinely false sentence, because that line contains `2,668` and "carries a
 count" was the exculpating signal. A checker that passes the false sentence and
 fails the correction is worse than no checker.
 
-**The five geometry-certificate facts** (`pascal-parabola-hexagon`,
-`desargues-affine-perspective`, `conic-polar-is-tangent`,
-`tetrahedron-medians-concurrent`,
-`tetrahedron-perpendicular-bisectors-concurrent`) were dispatched to a
-sub-agent; see the lane's final report for their disposition. They must be
-filed like their ten committed siblings — `proof_route: cas-certificate`, no
-`cas_substance` block (none has a kernel bridge, and
-`check-cas-substance.py` rejects the block on a fact that is not
-kernel-reconstructed) — and `scripts/check-geometry-fact-transcription.py`
-selects them automatically, matching SMT-LIB antecedent conjuncts positionally
-against `hypotheses` then `saturations` at 400 random configurations. The two
-tetrahedron rows are solid geometry, so the plane-coordinatisation footprint
-entry the ten siblings use is wrong for them.
+**All eight fact rows landed** — see the deliverable-2 section above and
+`fd2dbde8b`. Nothing from deliverable 2 was dropped.
 
 **Not attempted:** `fo_*`, `metric_prod` and list-prelude index coverage. The
 denominator here includes those preludes exactly to the extent
