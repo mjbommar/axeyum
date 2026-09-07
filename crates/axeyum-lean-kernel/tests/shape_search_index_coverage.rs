@@ -209,6 +209,20 @@ fn local_fn_names(text: &str) -> BTreeSet<String> {
         .collect()
 }
 
+/// The builders one example calls, as a plain whole-file call-site scan.
+///
+/// Used for `kernel_declaration_projection`, which has no `GROUPS` table: it
+/// builds each prelude into a named local and then lists those locals in a
+/// `matches` array. A whole-file scan is the weaker measure — a dead helper
+/// would satisfy it — but it is the honest one for a file shaped that way, and
+/// it is stated here rather than implied.
+fn example_direct(file: &str, authority: &BTreeSet<String>) -> BTreeSet<String> {
+    let path = manifest_dir().join("examples").join(file);
+    let text = std::fs::read_to_string(&path)
+        .unwrap_or_else(|e| panic!("{} is readable: {e}", path.display()));
+    builders_called(&text, authority)
+}
+
 /// The builders `examples/shape_search.rs` calls FROM ITS GROUPS TABLE.
 ///
 /// Not "calls anywhere in the file". A `Group` row is what makes a builder
@@ -470,6 +484,65 @@ fn shape_search_indexes_every_exported_non_prelude_builder() {
          verdict for what they declare is a confident wrong answer. Index them \
          in examples/shape_search.rs or list them in \
          DELIBERATELY_UNINDEXED_NON_PRELUDE with a MEASURED reason.",
+        missing.len(),
+        authority.len(),
+        missing
+            .iter()
+            .map(|name| name.as_str())
+            .collect::<Vec<_>>()
+            .join("\n  "),
+    );
+}
+
+/// `kernel_declaration_projection` must build every prelude too.
+///
+/// This is not tidiness. That example is what `scripts/check-trust-closure.py`
+/// runs to obtain an admitted environment, and a namespace the example does not
+/// build comes back as a subject that does not exist. Measured 2026-09-06, on
+/// main: that gate was RED with 21 SUBJECT-ABSENT rows — 16 `FO.*`, 4 `Top.*`,
+/// 1 `Metric.*` — which is exactly the set of namespaces the example omitted.
+/// Every one of those subjects is present and proved in the tree.
+///
+/// So a retrieval or projection tool with partial coverage does not merely fail
+/// to find things. It **manufactures findings** in every gate built on top of
+/// it, and those findings are indistinguishable from real ones by anything
+/// downstream. That is why this gate exists for a second file, and why its
+/// denominator is the same builder inventory read from `src/`.
+#[test]
+fn kernel_declaration_projection_builds_every_prelude() {
+    let preludes = builder_definitions();
+    let authority: BTreeSet<String> = preludes.keys().cloned().collect();
+    let defs = exported_builder_definitions();
+    let graph = call_graph(&defs);
+    let all_names: BTreeSet<String> = defs.keys().cloned().collect();
+
+    let direct = example_direct("kernel_declaration_projection.rs", &all_names);
+    assert!(
+        !direct.is_empty(),
+        "the call-site scan of examples/kernel_declaration_projection.rs found \
+         no builder at all, so this test could not fail no matter what that \
+         example built"
+    );
+    let covered = reachable(&direct, &graph);
+    let missing: Vec<&String> = authority
+        .iter()
+        .filter(|name| !covered.contains(*name))
+        .collect();
+
+    println!(
+        "kernel_declaration_projection reaches {} of {} prelude builders",
+        covered.intersection(&authority).count(),
+        authority.len()
+    );
+    println!("BLIND ({}): {}", missing.len(), join(&missing));
+
+    assert!(
+        missing.is_empty(),
+        "kernel_declaration_projection is blind to {} of the crate's {} prelude \
+         builders:\n  {}\n\
+         scripts/check-trust-closure.py reads this example's environment, so \
+         every namespace it does not build is reported as a subject that does \
+         not exist. That is a manufactured finding, not a missed one.",
         missing.len(),
         authority.len(),
         missing
