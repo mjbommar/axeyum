@@ -56,3 +56,11 @@ harness = false
 [[bench]]
 name = "tseitin_encode"
 harness = false
+
+[[bench]]
+name = "proof_pipeline"
+harness = false
+
+[[bench]]
+name = "proof_sat_propagate"
+harness = false
