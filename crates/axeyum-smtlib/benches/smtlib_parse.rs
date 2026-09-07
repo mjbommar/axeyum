@@ -39,9 +39,20 @@
 //! motivated the ingest deadline are **not in the tree** (they are fetched),
 //! so the largest committed file is a 10 MB `QF_ABV` outlier rather than a
 //! representative of the tail. The three sizes benched here (~2.7 K, ~50 K,
-//! ~1.1 M) are chosen to span the committed range and to make the *shape* of
-//! the cost curve visible; a reader wanting the tail must run the fetched
-//! corpus, not this bench.
+//! ~1.1 M, ~10.5 M) are chosen to span the committed range and to make the
+//! *shape* of the cost curve visible; a reader wanting the real tail must run
+//! the fetched corpus, not this bench.
+//!
+//! # The linearity question the largest case exists to answer
+//!
+//! `SmtError::DeadlineExceeded`'s doc records a 58 MB benchmark taking ~54 s
+//! to read - about 1 MB/s. If ingest were linear in bytes, the throughput
+//! measured on the cases below would predict that figure. The 10.5 M case is
+//! here so the two can be compared directly: it is roughly a fifth of that
+//! file, so a linear parser would spend roughly a fifth of the time. A large
+//! gap means the 54 s is driven by *shape* (nesting depth, symbol count,
+//! sharing) rather than size, and any capacity planning that extrapolates
+//! bytes-per-second from a small file is wrong.
 //!
 //! Each case is a fixed committed file — no RNG, no seed to pin.
 
@@ -76,6 +87,10 @@ const CASES: &[(&str, &str)] = &[
         "array_random3_1m",
         "corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__random3.btor.smt2",
     ),
+    (
+        "array_rw17_10m",
+        "corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/rewrite__array__rw17.btor.smt2",
+    ),
 ];
 
 /// Resolves a repo-relative corpus path from `CARGO_MANIFEST_DIR`.
@@ -88,6 +103,16 @@ fn corpus_path(relative: &str) -> PathBuf {
         .join("..")
         .join("..")
         .join(relative)
+}
+
+/// Sample count scaled to the input size, so the biggest case stays well
+/// inside the lane's five-minute-per-bench budget instead of relying on luck.
+fn sample_size_for(bytes: usize) -> usize {
+    match bytes {
+        0..=500_000 => 100,
+        500_001..=5_000_000 => 20,
+        _ => 10,
+    }
 }
 
 fn load(relative: &str) -> String {
@@ -104,11 +129,7 @@ fn bench_read_all(c: &mut Criterion) {
     let mut group = c.benchmark_group("smtlib_read_all");
     for (label, relative) in CASES {
         let source = load(relative);
-        // A megabyte file needs a smaller sample count to stay inside the
-        // lane's five-minute-per-bench budget; criterion's default 100 samples
-        // times a ~10 ms iteration is fine, but the ceiling is set explicitly
-        // rather than left to luck.
-        group.sample_size(if source.len() > 500_000 { 20 } else { 100 });
+        group.sample_size(sample_size_for(source.len()));
         group.bench_function(*label, |b| {
             b.iter(|| {
                 let exprs = read_all(&source).expect("committed corpus files read cleanly");
@@ -129,7 +150,7 @@ fn bench_parse_script(c: &mut Criterion) {
     let mut group = c.benchmark_group("smtlib_parse_script");
     for (label, relative) in CASES {
         let source = load(relative);
-        group.sample_size(if source.len() > 500_000 { 20 } else { 100 });
+        group.sample_size(sample_size_for(source.len()));
         group.bench_function(*label, |b| {
             b.iter(|| {
                 let script = parse_script(&source).expect("committed corpus files parse cleanly");
