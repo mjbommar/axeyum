@@ -1809,3 +1809,103 @@ all three.
 | load average (start / end) | 4.39 1.99 0.75 / 1.11 1.04 1.01 — 8 cores; a high load DEPRESSES this result |
 | per-file detail | `bench-results/parity-details/QF_NRA.tsv` |
 
+## QF_RDL — 2026-09-07T12:15:12Z — SECOND REFERENCE (yices2)
+
+Second reference (`PARITY_SECOND_REF=yices2`, ADR-1732). The
+`reference` row below is **yices2**, NOT cvc5 -- this entry is a
+separate, named measurement and is NOT a like-for-like replacement of this
+division's default cvc5-referenced entry elsewhere on this page. Same
+committed benchmark list, same axeyum binary, same 24s/8GiB protocol.
+
+| field | value |
+|---|---|
+| axeyum solved | 141/200 |
+| reference solved | 170/200 |
+| **ratio (axeyum / reference)** | **82.9%** |
+| **disagreements** | **0** |
+| soundness | SOUND |
+| both / axeyum-only / reference-only | 141 / 0 / 29 |
+| reference | `Yices 2.7.0` |
+| reference options | `<none — plain invocation, NOT a competition portfolio>` |
+| axeyum options | `<none — shipped default configuration>` |
+| protocol | 24s wall, 8GiB, per-file |
+| benchmark list | `bench-results/parity-lists/QF_RDL.txt` (sha256 9dc32e2c5dfb, 200 files) |
+| solver commit | `e5cafc533` |
+| load average (start / end) | 3.66 2.45 1.03 / 1.12 1.09 1.08 — 8 cores; a high load DEPRESSES this result |
+| per-file detail | `bench-results/parity-details/QF_RDL--yices2.tsv` |
+
+## QF_UF — 2026-09-07T12:23:32Z — SECOND REFERENCE (yices2)
+
+Second reference (`PARITY_SECOND_REF=yices2`, ADR-1732). The
+`reference` row below is **yices2**, NOT cvc5 -- this entry is a
+separate, named measurement and is NOT a like-for-like replacement of this
+division's default cvc5-referenced entry elsewhere on this page. Same
+committed benchmark list, same axeyum binary, same 24s/8GiB protocol.
+
+| field | value |
+|---|---|
+| axeyum solved | 196/200 |
+| reference solved | 200/200 |
+| **ratio (axeyum / reference)** | **98.0%** |
+| **disagreements** | **0** |
+| soundness | SOUND |
+| both / axeyum-only / reference-only | 196 / 0 / 4 |
+| reference | `Yices 2.7.0` |
+| reference options | `<none — plain invocation, NOT a competition portfolio>` |
+| axeyum options | `<none — shipped default configuration>` |
+| protocol | 24s wall, 8GiB, per-file |
+| benchmark list | `bench-results/parity-lists/QF_UF.txt` (sha256 55c995c01104, 200 files) |
+| solver commit | `e5cafc533` |
+| load average (start / end) | 0.80 1.01 1.06 / 1.10 1.02 1.01 — 8 cores; a high load DEPRESSES this result |
+| per-file detail | `bench-results/parity-details/QF_UF--yices2.tsv` |
+
+## QF_LRA — 2026-09-07T12:53:08Z — SECOND REFERENCE (yices2)
+
+Second reference (`PARITY_SECOND_REF=yices2`, ADR-1732). The
+`reference` row below is **yices2**, NOT cvc5 -- this entry is a
+separate, named measurement and is NOT a like-for-like replacement of this
+division's default cvc5-referenced entry elsewhere on this page. Same
+committed benchmark list, same axeyum binary, same 24s/8GiB protocol.
+
+| field | value |
+|---|---|
+| axeyum solved | 97/200 |
+| reference solved | 181/200 |
+| **ratio (axeyum / reference)** | **53.6%** |
+| **disagreements** | **0** |
+| soundness | SOUND |
+| both / axeyum-only / reference-only | 97 / 0 / 84 |
+| reference | `Yices 2.7.0` |
+| reference options | `<none — plain invocation, NOT a competition portfolio>` |
+| axeyum options | `<none — shipped default configuration>` |
+| protocol | 24s wall, 8GiB, per-file |
+| benchmark list | `bench-results/parity-lists/QF_LRA.txt` (sha256 b636239947db, 200 files) |
+| solver commit | `e5cafc533` |
+| load average (start / end) | 0.79 0.96 0.99 / 1.03 1.12 1.08 — 8 cores; a high load DEPRESSES this result |
+| per-file detail | `bench-results/parity-details/QF_LRA--yices2.tsv` |
+
+## QF_UFLIA — 2026-09-07T13:26:01Z — SECOND REFERENCE (smtinterpol)
+
+Second reference (`PARITY_SECOND_REF=smtinterpol`, ADR-1732). The
+`reference` row below is **smtinterpol**, NOT cvc5 -- this entry is a
+separate, named measurement and is NOT a like-for-like replacement of this
+division's default cvc5-referenced entry elsewhere on this page. Same
+committed benchmark list, same axeyum binary, same 24s/8GiB protocol.
+
+| field | value |
+|---|---|
+| axeyum solved | 123/200 |
+| reference solved | 182/200 |
+| **ratio (axeyum / reference)** | **67.6%** |
+| **disagreements** | **0** |
+| soundness | SOUND |
+| both / axeyum-only / reference-only | 123 / 0 / 59 |
+| reference | `SMTInterpol 2.5-1490-g1f55c1b9` |
+| reference options | `<none — plain invocation, NOT a competition portfolio>` |
+| axeyum options | `<none — shipped default configuration>` |
+| protocol | 24s wall, 8GiB, per-file |
+| benchmark list | `bench-results/parity-lists/QF_UFLIA.txt` (sha256 f88e67890fae, 200 files) |
+| solver commit | `e5cafc533` |
+| load average (start / end) | 0.95 1.10 1.08 / 1.19 1.19 1.18 — 8 cores; a high load DEPRESSES this result |
+| per-file detail | `bench-results/parity-details/QF_UFLIA--smtinterpol.tsv` |
+
