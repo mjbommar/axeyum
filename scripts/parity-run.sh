@@ -127,6 +127,45 @@ case "$division" in
     reference_bin="/usr/bin/z3" ;;
 esac
 
+# SECOND REFERENCE (ADR-1732, opt-in, off by default).
+#
+# cvc5 above is not the SMT-COMP 2026 division leader everywhere -- computed in
+# docs/research/02-ecosystems/competition-landscape-2026-09/reference-solvers-and-proof-formats.md
+# section 1.2. PARITY_SECOND_REF names a SOLVER ("yices2", "smtinterpol"), never
+# a path: the table below is the ENTIRE surface a caller can reach, and every
+# entry is a solver documented in that section to lead or tie cvc5 in that exact
+# division. There is deliberately NO free-form PARITY_REFERENCE_BIN override --
+# that would be exactly the "retargeting mid-report from the division winner to
+# an easier peer" knob this script's header already warns about, moved one
+# layer up where it would be even less visible. Extending coverage means adding
+# a cited row here, not passing a path at the call site.
+#
+# Unset (the default) reaches none of this: reference_bin stays exactly what
+# the case statement above chose, byte-for-byte the same as before this lane.
+second_ref_name="${PARITY_SECOND_REF:-}"
+if [[ -n "$second_ref_name" ]]; then
+  case "${division}:${second_ref_name}" in
+    # Yices2 2.7.0: ties cvc5 for 1st on QF_UF (1104/1104, all three tie),
+    # leads QF_RDL (216 vs cvc5's 210), and is 2nd on QF_LRA (484, behind
+    # OpenSMT's 502 -- still ahead of cvc5, which does not place in the top 3).
+    QF_UF:yices2|QF_RDL:yices2|QF_LRA:yices2)
+      reference_bin="/nas3/data/axeyum/harness/bin/yices-smt2" ;;
+    # SMTInterpol (built from ultimate-pa/smtinterpol@1f55c1b9): the actual
+    # QF_UFLIA division leader (291/300, vs cvc5 which is not in the top 2).
+    QF_UFLIA:smtinterpol)
+      reference_bin="/nas3/data/axeyum/harness/bin/smtinterpol" ;;
+    *)
+      echo "FAIL: '${second_ref_name}' is not a validated second reference for" >&2
+      echo "      division ${division}. See ADR-1732 and" >&2
+      echo "      docs/research/02-ecosystems/competition-landscape-2026-09/reference-solvers-and-proof-formats.md" >&2
+      echo "      section 1.2 -- either this division's true leader was never" >&2
+      echo "      obtained on this fleet, or '${second_ref_name}' is not ahead" >&2
+      echo "      of cvc5 there. Known pairs: QF_LRA/yices2, QF_UF/yices2," >&2
+      echo "      QF_RDL/yices2, QF_UFLIA/smtinterpol." >&2
+      exit 2 ;;
+  esac
+fi
+
 # Extra flags handed to the REFERENCE, e.g. its competition portfolio.
 #
 # The UF entries on this board were measured against PLAIN cvc5, and that
@@ -224,7 +263,13 @@ dirty=""
 git diff --quiet -- crates Cargo.toml Cargo.lock scripts \
   || dirty=" (DIRTY WORKTREE — result not reproducible)"
 list_sha="$(sha256sum "$list" | cut -c1-12)"
-reference_version="$("$reference_bin" --version 2>&1 | head -1 | tr -d '\n')"
+# SMTInterpol only recognises the single-dash `-version` -- `--version` falls
+# through to its usage banner (exit 0, so this would otherwise silently record
+# "USAGE: smtinterpol [OPTION]..." as the reference's identity in the ledger).
+case "$(basename "$reference_bin")" in
+  smtinterpol) reference_version="$("$reference_bin" -version 2>&1 | head -1 | tr -d '\n')" ;;
+  *)           reference_version="$("$reference_bin" --version 2>&1 | head -1 | tr -d '\n')" ;;
+esac
 total=$(grep -cve '^\s*$' "$list")
 # Load at start AND end. The 24s budget is WALL CLOCK on a machine shared with
 # other users, so contention silently costs files: a scored UF file decides at
@@ -331,6 +376,12 @@ run_one() {
     # making the reference look useless. Caught by smoke_reference on the very
     # first real run.
     bitwuzla)    cmd=("$bin" "--time-limit" "$((budget_s * 1000))" "$file") ;;
+    # yices-smt2's --timeout is SECONDS, like z3's -T: (NOT milliseconds).
+    yices-smt2)  cmd=("$bin" "--timeout=${b}" "$file") ;;
+    # smtinterpol's -t is MILLISECONDS, like cvc5/bitwuzla. -no-success -w keep
+    # its stdout to exactly the sat/unsat line this script's grep expects,
+    # instead of a `success` echo per command plus model/statistics noise.
+    smtinterpol) cmd=("$bin" "-no-success" "-w" "-t" "$((b * 1000))" "$file") ;;
     *)           cmd=("$bin" "$file") ;;
   esac
   # SCORED PATH — byte-identical to what every recorded baseline measured, and
@@ -464,7 +515,11 @@ smoke_reference
 # produced a lever ("28 UF files decline through the reduction path") whose 28
 # files turned out to have ZERO overlap with this scored list. Target levers from
 # the corpus that is actually scored.
-sidecar="bench-results/parity-details/${division}.tsv"
+# Suffixed with the second-reference name when one is active, so a
+# `PARITY_SECOND_REF` sweep gets its OWN sidecar and can never truncate (this
+# file is opened with `>`, below) the default cvc5 sweep's per-file detail for
+# the same division.
+sidecar="bench-results/parity-details/${division}${second_ref_name:+--${second_ref_name}}.tsv"
 mkdir -p "$(dirname "$sidecar")"
 
 # REFUSE to run two sweeps of the same division in the same worktree at once.
@@ -665,10 +720,21 @@ entry_title="## ${division} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
 if [[ "$evidence_mode" == "1" ]]; then
   entry_title+=" — EVIDENCE MODE"
 fi
+if [[ -n "$second_ref_name" ]]; then
+  entry_title+=" — SECOND REFERENCE (${second_ref_name})"
+fi
 
 {
   echo "$entry_title"
   echo
+  if [[ -n "$second_ref_name" ]]; then
+    echo "Second reference (\`PARITY_SECOND_REF=${second_ref_name}\`, ADR-1732). The"
+    echo "\`reference\` row below is **${second_ref_name}**, NOT cvc5 -- this entry is a"
+    echo "separate, named measurement and is NOT a like-for-like replacement of this"
+    echo "division's default cvc5-referenced entry elsewhere on this page. Same"
+    echo "committed benchmark list, same axeyum binary, same ${budget_s}s/${mem_gb}GiB protocol."
+    echo
+  fi
   if [[ "$evidence_mode" == "1" ]]; then
     echo "Evidence mode (\`PARITY_EVIDENCE=1\`). Every scored number above and below is"
     echo "from the SAME default-route run at the ${budget_s}s protocol budget as any other"
