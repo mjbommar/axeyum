@@ -79,6 +79,24 @@ const MAX_PRE_SAT_CNF_VARS: usize = 4_096;
 /// admit a previously excluded large skeleton.
 const MAX_MODERATE_PRE_SAT_ARITH_ATOMS: usize = 1_280;
 const MAX_MODERATE_PRE_SAT_CNF_VARS: usize = 8_192;
+/// Explicit, absolute wall-clock cap on the bounded online-probe fallback
+/// [`arith_dpll_admission_preflight`] tries for a non-difference-logic query
+/// that would otherwise decline outright on the boundary above (S2-followup,
+/// `docs/plan/status/s2-followup-lia-probe.md`).
+///
+/// **Absolute, not proportional.** The two `QF_LIA/bofill-scheduling` files
+/// this recovers refute inside [`crate::lia_theory::check_qf_lia_online_cdclt`]'s
+/// own root-propagation fixpoint (`decisions=0`) only once handed at least
+/// ~7 s — measured on an idle host, `taskset`-pinned, repeatable within
+/// ~40 ms — and, oddly, the search consumes very close to whatever larger
+/// budget it is given rather than converging on one intrinsic completion
+/// time once above that floor (7.0 s at a 7 s cap, ~30 s at a 30 s cap,
+/// `decisions=0` throughout). A *proportional* share of the caller's
+/// timeout — the shape [`online_lia_probe_config`] already uses for the
+/// non-oversized case — is therefore not "cheap" here: it costs exactly as
+/// much as whatever cap is picked, for files that also fail to decide on it.
+/// 10 s is a fixed margin over the measured ~7-8 s floor.
+const OVERSIZED_ADMISSION_PROBE_BUDGET: Duration = Duration::from_secs(10);
 /// Total literals retained in dynamically learned, unminimized theory cores.
 ///
 /// A wide core is the fail-closed fallback when deterministic minimization is
@@ -463,6 +481,12 @@ pub fn check_with_arith_dpll(
     // reserve. See [`arith_dpll_admission_preflight`] for the measured
     // defect this closes.
     if let Some(reason) = arith_dpll_admission_preflight(arena, assertions, config)? {
+        // S2-followup: a non-difference-logic oversized query still gets one
+        // bounded shot at the online probe before declining -- see
+        // [`oversized_admission_probe`] for why the gate is load-bearing.
+        if let Some(result) = oversized_admission_probe(arena, assertions, config)? {
+            return Ok(result);
+        }
         return Ok(CheckResult::Unknown(reason));
     }
     // Prefer the shared CDCL(T) spine for pure-integer arithmetic
@@ -1285,6 +1309,64 @@ fn arith_dpll_admission_preflight(
         )));
     }
     Ok(None)
+}
+
+/// S2-followup (`docs/plan/status/s2-followup-lia-probe.md`): an oversized
+/// skeleton that [`arith_dpll_admission_preflight`] would otherwise decline
+/// outright still gets one bounded shot at
+/// [`crate::lia_theory::check_qf_lia_online_cdclt`] — **but only when the
+/// query is not difference-logic shaped**
+/// ([`crate::dl_online::is_difference_logic_shape`]).
+///
+/// **Why the gate, not just a bounded budget.** A bounded budget alone is not
+/// enough to keep S2's fix intact. Measured directly against the real
+/// dispatcher (`solve_smtlib`, not this function in isolation): for a
+/// genuine oversized `QF_IDL`/`QF_RDL` query, `dispatch_difference_logic`
+/// runs *before* this function is ever reached and, because the query is
+/// difference-logic shaped by construction, spends up to its full reserved
+/// share (`dl_probe_budget`: 18 s of a 24 s caller budget in the standard
+/// case) actually searching before giving up — e.g.
+/// `QF_IDL/bcnscheduling/bcnscheduling105.smt2` (`atoms=1560,
+/// cnf_vars=9652`, the identical admission boundary as the two files this
+/// recovers) measured at 18.07 s before `dl-online` gives up and everything
+/// downstream, including this preflight, declines in single-digit
+/// milliseconds. Because [`check_with_arith_dpll`] measures its own deadline
+/// from its own entry point (unaware of what `dl-online` already spent —
+/// the same "not one shared, shrinking deadline" property the original S2
+/// fix's own docs name), an *unconditional* bounded probe here would add
+/// another ~7-10 s on top of that 18 s for exactly this population,
+/// reproducing the class of overrun S2 fixed.
+///
+/// For the two files this recovers, `dl-online` declines the *shape* check
+/// in single-digit milliseconds (`reason: not-applicable`, not `budget`) —
+/// confirmed via `explain_corpus --json --timed-trace`
+/// (`bench-results/s2-followup-lia-probe-20260906/explain_corpus_route_attempts.jsonl`)
+/// — so the caller's nominal budget is still intact by the time this
+/// function runs, and [`is_difference_logic_shape`] is exactly that same
+/// cheap, purely structural test (`crate::dl_online::scan_dl`'s own `None`),
+/// reused rather than re-derived so this cannot silently diverge from what
+/// `dl-online` actually accepts.
+///
+/// Returns `Ok(None)` whenever the probe does not decide (including when the
+/// shape gate skips it), leaving the caller to return the original decline
+/// reason unchanged.
+fn oversized_admission_probe(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    config: &SolverConfig,
+) -> Result<Option<CheckResult>, SolverError> {
+    if crate::dl_online::is_difference_logic_shape(arena, assertions) {
+        return Ok(None);
+    }
+    let mut probe_config = config.clone();
+    probe_config.timeout = Some(match config.timeout {
+        Some(caller) => caller.min(OVERSIZED_ADMISSION_PROBE_BUDGET),
+        None => OVERSIZED_ADMISSION_PROBE_BUDGET,
+    });
+    match crate::lia_theory::check_qf_lia_online_cdclt(arena, assertions, &probe_config)? {
+        result @ (CheckResult::Sat(_) | CheckResult::Unsat) => Ok(Some(result)),
+        CheckResult::Unknown(_) => Ok(None),
+    }
 }
 
 fn run_arith_dpll(
