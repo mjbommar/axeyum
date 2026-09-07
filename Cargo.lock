@@ -108,6 +108,8 @@ version = "0.1.0"
 dependencies = [
  "axeyum-aig",
  "axeyum-ir",
+ "axeyum-smtlib",
+ "criterion",
  "web-time",
 ]
 
@@ -291,6 +293,7 @@ dependencies = [
  "axeyum-fp",
  "axeyum-ir",
  "axeyum-strings",
+ "criterion",
  "serde_json",
  "sha2",
 ]
