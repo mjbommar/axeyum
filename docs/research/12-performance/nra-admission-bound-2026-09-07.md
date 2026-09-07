@@ -109,3 +109,85 @@ different route.** That is a reportable finding, not a failure of the slice.
 ## Log
 
 - 2026-09-07 — archaeology above; no code touched yet. Next: Q1.
+
+## Q1 — the answer is not the one the plan expected
+
+### The lever, and its positive control
+
+`AXEYUM_NRA_MAX_CROSS_PRODUCTS` (`41e5ff267`) overrides the bound for one
+process. Everything below is **one binary**, sha256
+`e115759a741e55f0ef1a345c8937be7fd7bea96c557435fb8bacef2baa17f2d1`, built on s6
+at lane HEAD; the arms differ only in that variable, so no code difference can
+be mistaken for a bound difference.
+
+A lever that silently did nothing would make arm B identical to arm A on every
+file and the whole A/B would read "lifting the bound changes nothing" — the
+exact false negative to rule out first. **The first control failed to
+discriminate and the second succeeded**, and both are worth recording:
+
+- A four-query synthetic battery (bounded McCormick sat, bounded McCormick
+  unsat, refinement sat, a 2-cross-product unsat) run at the default bound and
+  at bound `0` — which must decline *every* genuine cross-product — produced
+  **identical verdicts on all four**. That is not evidence the lever works, and
+  it is not evidence it does not: these shapes never reach
+  `check_nonlinear_abstraction` at all. The exact real-root / CAD / SOS routes
+  in `nra_real_root` sit *upstream* of it and decide them first.
+- The discriminating control is `explain_corpus --json --timed-trace` on a real
+  census file, which prints the declining route's own message.
+
+### The control, and the finding it produced
+
+`20161105-Sturm-MBO/mbo_E1.smt2`, 771 cross-products, both arms:
+
+| arm | `nra` route outcome | detail | elapsed |
+|---|---|---|---|
+| A (bound 2) | declined, `budget` | `nonlinear abstraction: 771 cross-products exceed the deterministic admission bound of 2 …` | 0.834 s |
+| B (unbounded) | declined, `budget` | **`online CDCL(T) LRA atom cap exceeded (23385 > 1024)`** | 0.822 s |
+
+The lever works — the message changed. And the message it changed *to* is the
+finding:
+
+> **Lifting the cross-product bound does not admit this query. It hands it to
+> the next gate, one file down, which refuses it immediately and for free.**
+
+`crates/axeyum-solver/src/lra_theory.rs`'s `MAX_ONLINE_LRA_ATOMS = 1_024` is a
+*measured* ceiling (its own doc comment records the measurement: raising it to
+16384 on the QF_LRA parity list changed **no** verdict, cost one file 24 s it
+used to decline in 0.12 s, and made a 1,492-atom file abort at the 8 GiB cap).
+`check_with_lra_dpll_within` treats a `ResourceLimit` decline from the online
+route as **terminal** — it does not fall through to the legacy mixed route — so
+an over-cap abstraction returns `unknown` at once.
+
+So on this file the cross-product bound is not protecting anything: the thing
+it was built to prevent is prevented one layer down, by a bound that was
+measured, at no cost. Same elapsed (0.834 vs 0.822 s), same peak RSS
+(101,240 vs 101,280 KiB at the front door).
+
+### Why this reframes the slice
+
+The two gates are 15× apart and unrelated in their units. At the observed
+~30 atoms per cross-product (23,385 / 771), the 1,024-atom ceiling corresponds
+to roughly **34 cross-products** — not 2. Everything between 3 and ~34 is
+refused by a constant that has no relationship to the capacity of the engine
+that would consume the query.
+
+That range is where the population lives. Of the 62 files, 53 carry a count in
+their decline message; **30 of them are at 30 cross-products or fewer**
+(5 files at 3, 5 at 4, 2 at 5, 6 at 6, 3 at 7, 2 at 8, and singletons through
+30), and 23 are far above (44 … 9,706). So the question the measurement has to
+answer is no longer "does lifting the bound OOM" — on the big files it
+demonstrably does not, because they never get in — but **"what happens to the
+30 files that would now actually enter the relaxation?"**
+
+### The 2026-06 OOM mechanism has an independent guard now
+
+The introducing commit's blowup was the *refinement* loop chasing a
+quadratically-escalating witness through the exact-rational simplex — the same
+mechanism `threshold_1_lemmas`' own doc names for squares. Two commits since
+address it directly: `7a323853e` (overflow-safe `Rational` across all engines)
+and `nra.rs`'s `too_large_to_refine` (`REFINE_BOUND = 2^31`, checked at
+`nra.rs:647` before a candidate is refined). Neither existed when the count
+bound was written. That does not retire the bound by argument — it is why the
+62-file A/B has to be run under `ulimit -v` and read for aborts, not just for
+verdicts.
+
