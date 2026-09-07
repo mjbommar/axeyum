@@ -61539,6 +61539,11 @@ Two consequences, both recorded in the ADR and in the helper's doc comment:
 | `cargo test -p axeyum-solver --features full --lib -- --test-threads=4` | **1464 passed**, 0 failed | 0 |
 | `cargo test -p axeyum-solver --features full --lib sos_fallback_labelling_tests` | **4 passed**, 0 failed, 233 s | 0 |
 | `cargo test -p axeyum-solver --features full --test corpus_regression` | **1 passed**, 0 failed | 0 |
+| `--test evidence` | **69 passed**, 0 failed | 0 |
+| `--test nra_sos` | **9 passed**, 0 failed | 0 |
+| `--test sos_evidence` | **5 passed**, 0 failed | 0 |
+| `--test sos_lean_reconstruct` | **14 passed**, 0 failed | 0 |
+| `--test lean_crosscheck` (incl. `lean_crosscheck_content_split_is_visible_and_ratcheted`) | **14 passed**, 0 failed, 1 ignored | 0 |
 | `cargo clippy -p axeyum-solver --all-targets --features full -- -D warnings` | — | 0 |
 | `cargo check --workspace --all-targets` | — | 0 |
 | `cargo fmt --all --check` | — | 0 |
