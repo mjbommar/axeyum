@@ -306,6 +306,14 @@ pub struct EGraph {
     /// Real unions since the last scope rollback, in deterministic processing
     /// order. Retained indexes consume this as an incremental class-union log.
     merge_events: Vec<MergeEvent>,
+    /// Diagnostic only (2026-09-07, bench-theories lane): total nodes visited
+    /// across every `add_proof_edge` re-root walk, summed over the e-graph's
+    /// whole life. Nothing branches on this — it exists because "is the proof
+    /// forest re-root walk actually `O(1)` amortized, or does it revisit a
+    /// growing chain" is a question a source reading answers badly and a
+    /// counter answers exactly; see
+    /// `docs/research/12-performance/bench-theories-2026-09-07.md`.
+    proof_reroot_steps: u64,
 }
 
 impl Default for EGraph {
@@ -319,6 +327,7 @@ impl Default for EGraph {
             scopes: Vec::new(),
             rollback_epoch: 0,
             merge_events: Vec::new(),
+            proof_reroot_steps: 0,
         }
     }
 }
@@ -903,6 +912,17 @@ impl EGraph {
         self.scopes.len()
     }
 
+    /// Diagnostic only (2026-09-07, bench-theories lane) — total nodes visited
+    /// across every proof-forest re-root walk ([`Self::merge`]'s
+    /// `add_proof_edge`), summed over this e-graph's whole life. A monotone
+    /// lifetime total, like `TheoryEngineCounters` in `axeyum-solver`
+    /// (`euf_egraph.rs`): `0` means "never walked", not "not measured".
+    /// Nothing in `merge`/`find`/`explain` branches on this.
+    #[must_use]
+    pub fn proof_reroot_steps(&self) -> u64 {
+        self.proof_reroot_steps
+    }
+
     /// Closes the most recent scope, reverting every mutation since its
     /// [`Self::push`]. No-op if no scope is open.
     pub fn pop(&mut self) {
@@ -1090,6 +1110,7 @@ impl EGraph {
                 self.nodes[n.index()].proof_parent,
                 self.nodes[n.index()].proof_edge,
             ));
+            self.proof_reroot_steps += 1;
             cur = self.nodes[n.index()].proof_parent;
         }
         self.trail.push(Undo::ProofRewritten { saved });

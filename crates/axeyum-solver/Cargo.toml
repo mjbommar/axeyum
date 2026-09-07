@@ -117,3 +117,12 @@ required-features = ["bench-internals"]
 name = "simplex_pivot"
 harness = false
 required-features = ["bench-internals"]
+
+# Micro-benchmark for the difference-logic route (2026-09-07, bench-theories
+# lane). Drives `check_auto` end to end rather than a private struct, so it
+# only needs `full` (the `auto`/`check_auto` dispatch surface), not
+# `bench-internals`.
+[[bench]]
+name = "dl_negative_cycle"
+harness = false
+required-features = ["full"]
