@@ -219,16 +219,19 @@ impl TrustId {
         match self {
             TrustId::TermLevelEnum | TrustId::Farkas | TrustId::Sos | TrustId::Diophantine => 10,
             TrustId::Tseitin | TrustId::SatRefutation | TrustId::LraDpll => 9,
-            // The Boolean half is machine-checked and every assumption is
-            // enumerated in the artifact, so a reviewer can see and later
-            // discharge exactly what is trusted -- the same posture as the
-            // eager-elimination reductions below, and not the search-only
-            // opacity of `XorGaussian`. It is not 9: an undischarged lemma is
-            // a wrong `unsat` with no recovery if the theory is wrong.
-            TrustId::SatRefutationModuloTheory => 4,
             TrustId::BitBlast => 8,
             TrustId::Fpa2Bv => 5,
-            TrustId::ArrayElim | TrustId::Ackermann | TrustId::DatatypeElim => 4,
+            // `SatRefutationModuloTheory` belongs here and not at 9: its
+            // Boolean half is machine-checked and every assumption is
+            // enumerated in the artifact, so a reviewer can see and later
+            // discharge exactly what is trusted -- the same posture as the
+            // eager-elimination reductions beside it, and not the search-only
+            // opacity of `XorGaussian` below. But an undischarged lemma is
+            // still a wrong `unsat` with no recovery if the theory is wrong.
+            TrustId::SatRefutationModuloTheory
+            | TrustId::ArrayElim
+            | TrustId::Ackermann
+            | TrustId::DatatypeElim => 4,
             // Search-only XOR UNSAT has no per-query certificate and a wrong
             // refutation is unsound with no recovery, so it grades low (ADR-0035).
             TrustId::IntBlast | TrustId::XorGaussian => 3,
