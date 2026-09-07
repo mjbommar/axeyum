@@ -323,10 +323,11 @@ fn prod_weight_sum_maps_one_states_and_applies_the_normalisation() {
     let n = d.num(2);
     let m = d.num(2);
     let pp = coef_lam(&mut d, &|d, _i, _j| frac(d, p, 1, 2));
-    let stated = d.lemma(
-        p.product_space.prod_weight_sum_maps_one,
-        &[n, m, pp],
-    );
+    // The binder order is `∀ n P m`, NOT `∀ n m P`: the first attempt passed
+    // `[n, m, P]` and the kernel answered `TypeMismatch { got: ExprId(3) }` --
+    // a single-digit `got` means it wanted a SORT, i.e. a `Nat` was supplied
+    // where the `Nat → Nat → Rat` family belongs.
+    let stated = d.lemma(p.product_space.prod_weight_sum_maps_one, &[n, pp, m]);
     let inferred = d
         .kernel()
         .infer(stated)
