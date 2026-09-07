@@ -167,8 +167,26 @@ its three bridges are **already shipped**:
 | `CReal.regular_of_scaled_cauchy` | that data -> `Regular (speedup (diagonal f) K)`, i.e. `CReal.mk`'s own field |
 | `CReal.converges_of_scaled_cauchy` | **names** the limit: `Converges f (CReal.mk (speedup (diagonal f) K) (regular_of_scaled_cauchy f K h))` |
 
-The third is the one that dissolves the sizing. With `Converges D L` in hand for
-a *named* `L`, ADR-1625's four lemmas are corollaries of shipped theorems:
+**The consumer count, which is the whole argument.** Grepping for term-level
+uses (`d.lemma(...)` / a `name:` field), excluding the declaring file and the
+two registries:
+
+| term former | proof consumers |
+| --- | --- |
+| `CReal.limit` / `CReal.RegularSeq` / `CReal.limit_dist` | **0** — only `creal/inventory/completeness.rs` and `creal/steps_generated.rs`, both registries |
+| `CReal.regular_of_scaled_cauchy` | `creal/trig.rs` (4), `creal/exponential.rs` (2), `creal/supremum.rs`, `creal/pi.rs` (2), `creal/integral.rs` |
+| `CReal.scaledCauchy_of_abs_diff_le` | `creal/ivt.rs`, `creal/supremum.rs` (2) |
+| `CReal.converges_of_scaled_cauchy` | `creal/supremum.rs` |
+
+`creal/supremum.rs:4946-5007` runs the exact sequence a completion needs —
+`scaledCauchy_of_abs_diff_le` → `regular_of_scaled_cauchy` → `CReal.mk` →
+`converges_of_scaled_cauchy` — for `CReal.sup_on`. **The completion is not a
+new construction pattern in this development; it is `sup_on`'s pattern at a
+different estimate.**
+
+The third bridge is the one that dissolves the sizing. With `Converges D L` in
+hand for a *named* `L`, ADR-1625's four lemmas are corollaries of shipped
+theorems:
 
 | ADR-1625 lemma | is | new work |
 | --- | --- | --- |
@@ -235,6 +253,55 @@ Everything else is record-field bookkeeping over shipped limit algebra.
 Against ADR-1625's "four lemmas plus a speedup bridge plus one undeclared
 predicate" (six units), the re-measured figure is **one new estimate**, and the
 predicate is a rename of something shipped.
+
+## What landed with this ADR
+
+`crates/axeyum-lean-kernel/src/metric_completion.rs` — a new top-level module
+on the `metric_prod.rs` pattern, so `metric.rs`, `metric/` and `metric_prod.rs`
+are untouched and the `Metric` prelude's build cost does not move. Thirteen
+declarations, zero axioms:
+
+`Metric.RegularSeq`, `Metric.regularSeq_cauchyAt`, `Metric.regularSeq_bound`,
+`Metric.CompletionSeq`, `Metric.completionSeq_carrier`, `Metric.completionVal`,
+`Metric.completionRegular`, `Metric.completionDistSeq`,
+`Metric.completionDistSeq_eval`, `Metric.embedSeq`, `Metric.embedSeq_val`,
+`Metric.embedSeq_dist`, `Metric.embedSeq_reflects`.
+
+Two things about that list are deliberate.
+
+**`Metric.embedSeq_dist` is an `Eq`, and `Metric.embedSeq_reflects` is why.**
+The embedding is an isometry at the level this slice can state it — the
+distance SEQUENCE between two embedded points is constant at `M.dist a b`. A
+merely NON-EXPANDING map would give only the one-sided
+`le (dist (f a) (f b)) (dist a b)`, and that difference is invisible in the
+statement itself. `embedSeq_reflects` (`(∀ n, dist-seq n ~ 0) → M.equiv a b`)
+is the consequence the one-sided form cannot prove, because an upper bound of
+zero on the image distance says nothing about the source. Its proof is one
+line, `M.distEquiv a b (h 0)`, because the reduction is definitional.
+
+**The accounting test differences two kernels rather than filtering on a name
+prefix.** Every name here is `Metric.*`, declared by a prelude that is not
+`metric.rs` — exactly the gap ADR-1625 recorded, where such a name falls
+between `metric_tests`'s environment sweep (whose kernel never builds this
+module) and any `starts_with` filter. Differencing
+`build_metric_prelude`'s environment against
+`build_metric_completion_prelude`'s makes the subject the kernel's own
+declaration set, and closes both directions at once.
+
+**Not landed, with the exact obstruction:** `Metric.dist_diff_le` — the
+four-point reverse triangle inequality — and therefore `Metric.completionDist`
+and the `Metric` instance. `Metric.dist_quadrilateral M a c e b` gives
+`d a b ≤ d a c + (d c e + d e b)` (checked against the declaration: its
+statement is `le (d a e) (d a b + (d b c + d c e))`, so the instance is at
+`(a, c, e, b)`); turning that into `d a b + (-(d c e)) ≤ d a c + d b e` needs
+`CReal`'s `(A + (C + B)) + (-C) ~ A + B` rearrangement. That is not a named
+lemma in `creal.rs` — `add_assoc`, `add_comm`, `add_neg` and `add_zero` are all
+there and the compound is not. The nearest existing piece is
+`Metric.CReal.subAddCancel : ∀ u v, Equiv ((u + -v) + v) u`
+(`metric/compactness.rs`), which is the same cancellation with the sign the
+other way round; the completion needs the `+(-C)` orientation and one
+associativity/commutativity shuffle to reach it. **That rearrangement is the
+whole gap; nothing after it is new.**
 
 ## Consequences
 
