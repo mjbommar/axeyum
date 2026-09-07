@@ -130,6 +130,7 @@ macro_rules! full_modules {
         mod mbp;
         mod mbqi_model_finder;
         mod nat_induction;
+        mod native_cdclt;
         mod nia_linearize;
         mod nia_square;
         mod nia_univariate_cert;

@@ -1372,6 +1372,18 @@ impl CdclT {
                             TheoryExplanation::Eager(_) => None,
                             TheoryExplanation::Lazy(handle) => Some(handle),
                         };
+                        // Recorded BEFORE the assignment, not after. `assign`
+                        // marks the variable assigned and then tells the theory,
+                        // and the theory may answer that assertion with a
+                        // conflict -- at which point this literal is on the trail
+                        // at the current level with `reason = None` (the lazy
+                        // channel stores nothing) and no handle beside it. The
+                        // conflict analysis that follows then reaches a
+                        // current-level implied literal with no reason of any
+                        // kind and trips its own assertion. Writing the handle
+                        // first closes that window; nothing reads
+                        // `deferred_reason` between here and `assign`.
+                        self.deferred_reason[var] = deferred;
                         match self.assign(
                             theory,
                             var,
@@ -1389,7 +1401,6 @@ impl CdclT {
                                 break;
                             }
                         }
-                        self.deferred_reason[var] = deferred;
                         self.theory_propagations += 1;
                         progress = true;
                     }
@@ -3950,5 +3961,140 @@ mod adr1701_tests {
             theory.asserts
         );
         assert_eq!(solver.value(1), Some(false));
+    }
+}
+
+/// The window between assigning a lazily-propagated literal and recording its
+/// handle (plan slice S7b).
+///
+/// Found by the S7b engine differential, which ran this driver and the native
+/// core over the same random CDCL(T) instances: the *first* thing it produced
+/// was a panic in this file, not a disagreement.
+#[cfg(test)]
+mod lazy_propagation_conflict_tests {
+    use super::{CdclT, Outcome};
+    use crate::euf_egraph::{
+        ExplanationId, FinalCheckOutcome, PropagationQueue, TheoryLit, TheoryProp, TheorySolver,
+    };
+
+    /// A theory that propagates `x1` with a **deferred** reason and then
+    /// refuses the very assertion its own propagation caused.
+    ///
+    /// Both halves are legal and both are exercised by real theories: the lazy
+    /// channel is ADR-1701's, and refusing an assertion is what `assert` is
+    /// for. Taken together they hit the one ordering in `theory_propagate`
+    /// where a literal reached the trail before its handle was written down.
+    struct ConflictOnItsOwnPropagation {
+        x0: Option<bool>,
+        marks: Vec<usize>,
+        trail: Vec<usize>,
+        values: Vec<Option<bool>>,
+    }
+
+    impl ConflictOnItsOwnPropagation {
+        fn new() -> Self {
+            Self {
+                x0: None,
+                marks: Vec::new(),
+                trail: Vec::new(),
+                values: vec![None; 2],
+            }
+        }
+    }
+
+    impl TheorySolver for ConflictOnItsOwnPropagation {
+        fn assert(&mut self, atom: usize, value: bool) -> Result<(), Vec<TheoryLit>> {
+            self.values[atom] = Some(value);
+            self.trail.push(atom);
+            if atom == 0 {
+                self.x0 = Some(value);
+            }
+            // `x0 & x1` is refuted, and `x1` is exactly what this theory
+            // propagates below -- so the conflict arrives from inside the
+            // assertion the driver makes on the theory's own say-so.
+            if self.values[0] == Some(true) && self.values[1] == Some(true) {
+                return Err(vec![
+                    TheoryLit {
+                        atom: 0,
+                        value: true,
+                    },
+                    TheoryLit {
+                        atom: 1,
+                        value: true,
+                    },
+                ]);
+            }
+            Ok(())
+        }
+
+        fn push(&mut self) {
+            self.marks.push(self.trail.len());
+        }
+
+        fn pop(&mut self) {
+            let mark = self.marks.pop().unwrap_or(0);
+            while self.trail.len() > mark {
+                let atom = self.trail.pop().expect("trail above mark");
+                self.values[atom] = None;
+            }
+            self.x0 = self.values[0];
+        }
+
+        fn propagate(&self) -> Vec<TheoryProp> {
+            Vec::new()
+        }
+
+        fn propagate_into(&mut self, queue: &mut PropagationQueue) {
+            if self.x0 == Some(true) && self.values[1].is_none() {
+                // `x0 -> x1`, reason deferred.
+                queue.push_lazy(
+                    TheoryLit {
+                        atom: 1,
+                        value: true,
+                    },
+                    ExplanationId(0),
+                );
+            }
+        }
+
+        fn explain(&mut self, handle: ExplanationId) -> Option<Vec<TheoryLit>> {
+            assert_eq!(handle, ExplanationId(0));
+            Some(vec![TheoryLit {
+                atom: 0,
+                value: true,
+            }])
+        }
+
+        fn final_check(&mut self) -> FinalCheckOutcome {
+            FinalCheckOutcome::Sat
+        }
+    }
+
+    /// The driver must return a verdict rather than trip its own
+    /// implication-graph assertion.
+    ///
+    /// **The conflict has to arrive above level zero**, and that is the whole
+    /// design of this fixture. There are NO clauses: `x0` is reached as a
+    /// DECISION (the driver's saved phase starts `true`), the theory then
+    /// propagates `x1` lazily at that same level, and its own `assert` of
+    /// `x1` conflicts. Only then does 1-UIP analysis have to walk back through
+    /// `x1` -- and before the handle was recorded ahead of the assignment,
+    /// `x1` sat on the trail at the current level with no reason clause, no
+    /// reason-clause id and no handle, so the walk panicked on "a current-level
+    /// implied literal has a reason clause".
+    ///
+    /// An earlier version of this test forced `x0` with a unit clause. That
+    /// puts the conflict at level zero, where `learn_and_backjump` returns
+    /// `Unsat` before analysis walks anything: it passed with the defect
+    /// reinstated, which is how it was caught. The mutation control is the test
+    /// of the test.
+    ///
+    /// The verdict is `Sat`: with `x0` false the theory propagates nothing and
+    /// `x1` is free. What was broken was reaching any verdict at all.
+    #[test]
+    fn a_lazy_propagation_that_conflicts_on_its_own_assert_still_decides() {
+        let mut theory = ConflictOnItsOwnPropagation::new();
+        let mut solver = CdclT::new(2, 2, Vec::new(), None);
+        assert_eq!(solver.solve(&mut theory), Outcome::Sat);
     }
 }

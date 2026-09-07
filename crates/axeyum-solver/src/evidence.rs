@@ -2602,17 +2602,45 @@ fn dl_decided_report(
     if assertion_dag_within(arena, assertions, PRE_SOLVE_ALETHE_MAX_NODES) {
         return None;
     }
-    let evidence = match crate::dl_online::try_check_qf_dl(
-        arena,
-        assertions,
-        &crate::auto::dl_probe_budget(config),
-        crate::auto::extended_dl_probe_timeout(config),
-    )? {
-        CheckResult::Sat(model) => Evidence::Sat(model),
-        // Correct, and honestly recorded as uncertified: the Boolean-structured
+    // Recording ON for this call and this call only: the artifact is EVIDENCE,
+    // so it is produced where evidence is produced. The dispatcher's own call
+    // to the same route wants a verdict and records nothing, which is what
+    // keeps the engine swap free (see `native_cdclt::with_artifact_recording`).
+    let decided = crate::native_cdclt::with_artifact_recording(|| {
+        crate::dl_online::try_check_qf_dl(
+            arena,
+            assertions,
+            &crate::auto::dl_probe_budget(config),
+            crate::auto::extended_dl_probe_timeout(config),
+        )
+    });
+    let (evidence, trusted_steps) = match decided? {
+        CheckResult::Sat(model) => (Evidence::Sat(model), Vec::new()),
+        // Still a bare `unsat` as far as `Evidence` goes — the Boolean-structured
         // refutation is a resolution over theory lemmas that no single Farkas
-        // combination expresses (see `dl_conjunctive_farkas_report`).
-        CheckResult::Unsat => Evidence::Unsat(None),
+        // combination expresses (see `dl_conjunctive_farkas_report`). What is no
+        // longer bare is the TRUST accounting.
+        //
+        // Since plan slice S7b this route runs the native proof-producing core
+        // (`crate::native_cdclt`), so a refutation comes with the ADR-1704
+        // two-stream artifact: the CNF, the enumerated theory lemmas, and a DRAT
+        // proof of `cnf ++ lemmas` that the unchanged `check_drat` replays.
+        // `theory_refutation_trust_step` reads the grade off that artifact — a
+        // lemma-free refutation is `SatRefutation` and certified, a
+        // lemma-bearing one is `SatRefutationModuloTheory` and never certified —
+        // and the lemma count it branches on is `|extended| - |cnf|`, a
+        // subtraction on the artifact rather than a number a producer wrote.
+        //
+        // Before this the report carried NO trusted step at all, so the theory
+        // reasoning behind the verdict was trusted and *uncounted*. An empty
+        // slot is the one reading a ledger must never allow.
+        CheckResult::Unsat => {
+            let steps = crate::native_cdclt::take_last_theory_refutation()
+                .as_ref()
+                .map(|artifact| vec![crate::trust::theory_refutation_trust_step(artifact)])
+                .unwrap_or_default();
+            (Evidence::Unsat(None), steps)
+        }
         CheckResult::Unknown(_) => return None,
     };
     Some(EvidenceReport {
@@ -2621,7 +2649,7 @@ fn dl_decided_report(
             backend: "dl-online".to_owned(),
             ..provenance.clone()
         },
-        trusted_steps: Vec::new(),
+        trusted_steps,
     })
 }
 
