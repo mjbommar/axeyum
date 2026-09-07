@@ -456,6 +456,15 @@ fn fold_interpolant(
                     last_empty = Some(*id);
                 }
             }
+            // McMillan interpolation for a RAT step would need a separate,
+            // pivot-aware combination rule (RUP resolution is not enough to
+            // fold a resolution-candidate justification into one partial
+            // interpolant); out of scope here. Since `elaborate_drat_to_lrat`
+            // tries RUP first and only falls back to RAT when a clause is not
+            // RUP, this declines the WHOLE interpolation route on the rare
+            // input that needs it, rather than silently computing a wrong
+            // interpolant.
+            LratStep::AddRat { .. } => return None,
         }
     }
 

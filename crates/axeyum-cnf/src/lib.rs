@@ -104,7 +104,7 @@ pub use interpolant::{
 };
 pub use lrat::{
     LratCertifyOutcome, LratDecline, LratElaborateOutcome, LratElaborateProgress, LratError,
-    LratStep, certify_unsat_via_lrat, check_lrat, elaborate_drat_to_lrat,
+    LratStep, RatCandidate, certify_unsat_via_lrat, check_lrat, elaborate_drat_to_lrat,
     elaborate_drat_to_lrat_backward, elaborate_drat_to_lrat_with_limits_and_progress, parse_lrat,
     write_lrat,
 };

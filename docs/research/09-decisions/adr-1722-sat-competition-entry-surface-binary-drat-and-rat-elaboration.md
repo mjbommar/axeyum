@@ -58,13 +58,21 @@ independently tested, in one lane (`sat-entry-surface`):
    and written as unsigned LEB128 varints (7 bits/byte, low chunk first,
    continuation bit on every byte but the last), and a `0x00` terminator byte
    per clause.
-3. **RAT elaboration in the DRAT→LRAT elaborator** (`lrat.rs`), keeping the
-   existing RUP-only path's behavior and output unchanged for every input it
-   already handled. A RAT addition elaborates to an `LratStep` sequence whose
-   hints justify it via the resolution-candidate scan on the pivot literal,
-   verified against `check_lrat` exactly as a RUP hint chain is. (Landed in a
-   follow-up commit in this same lane; see the lane status file for the exact
-   SHA and the RAT-but-not-RUP fixture that pins it.)
+3. **RAT elaboration in the *forward* DRAT→LRAT elaborator** (`lrat.rs`),
+   keeping the existing RUP-only path's behavior and output unchanged for
+   every input it already handled (`elaborate_addition` tries `rup_hints`
+   first, byte-identically to the old code, before ever falling back to
+   RAT). A RAT addition elaborates to the new `LratStep::AddRat { id,
+   clause, pivot, candidates: Vec<RatCandidate> }`, whose hints justify it
+   via the resolution-candidate scan on the pivot literal, verified against
+   `check_lrat` exactly as a RUP hint chain is — `check_lrat` enumerates the
+   active set itself to require a candidate for every clause containing
+   `¬pivot`, so a `candidates` list that drops one is rejected, not trusted.
+   The *backward*, core-first elaborator
+   (`elaborate_drat_to_lrat_backward`/`certify_unsat_via_lrat`, ADR-0382)
+   still declines a RAT core lemma; that engine's own chain recovery was not
+   extended here (doc comments updated to say this is now an engine gap, not
+   a format one).
 
 ## Evidence
 
@@ -86,13 +94,29 @@ independently tested, in one lane (`sat-entry-surface`):
   (`cargo run --example sat_competition_cli -- sat.cnf sat.proof` /
   `unsat.cnf unsat.proof`) to confirm the literal stdout bytes and exit codes,
   not only the unit tests calling `run` in-process.
-- RAT elaboration: landed in a follow-up commit in this lane (not yet landed
-  as of this ADR's first commit — see `docs/plan/status/1722-sat-entry-surface.md`
-  for status and the SHA once it lands). The plan: a positive control on a
-  RAT-but-not-RUP fixture that the old code rejects and the new code
-  elaborates, with the result accepted by `check_lrat`; a differential sweep
-  confirming every input the RUP-only path already elaborated still
-  elaborates identically (no behavior change on the RUP path).
+- RAT elaboration: two isolated positive fixtures, both computed from
+  `rup_hints`/`solve_with_drat_proof` rather than asserted.
+  `lrat::tests::a_rat_but_not_rup_clause_is_rejected_by_rup_only_checking_but_elaborates_as_rat`
+  confirms `rup_hints` returns `None` for `F=[(1,2)]`, clause `(1)` (which is
+  what the old RUP-only elaborator's rejection reduces to), then confirms
+  `elaborate_drat_to_lrat` now succeeds with a zero-candidate `AddRat` step
+  accepted by `check_lrat`.
+  `lrat::tests::a_rat_clause_with_a_real_resolution_candidate_elaborates_and_checks`
+  repeats this with a genuine non-trivial resolution candidate and a text
+  round-trip. Three soundness-negative tests directly attack
+  `verify_rat_addition`: a missing required candidate
+  (`check_lrat_rejects_a_rat_step_missing_a_required_candidate`), a
+  candidate with a wrong hint chain against a non-tautological resolvent, so
+  the hints are actually consulted rather than short-circuited
+  (`check_lrat_rejects_a_rat_step_with_a_wrong_candidate_hint_chain`), and a
+  pivot not in the clause
+  (`check_lrat_rejects_a_rat_step_whose_pivot_is_not_in_the_clause`) — all
+  three rejected. Not landed: a hand-verified end-to-end mixed RAT+RUP
+  refutation reaching `check_lrat`'s `Ok(true)` via a genuine empty clause;
+  two attempted fixtures for this did not pan out in this lane's time
+  budget and are recorded as a follow-up in the lane status file, not as a
+  gap in the required proof obligation (which the isolated-step tests above
+  satisfy directly).
 
 ## Alternatives
 

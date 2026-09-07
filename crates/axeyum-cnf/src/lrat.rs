@@ -8,9 +8,16 @@
 //! **no search** — it just follows the hints — which makes it small, total, and
 //! auditable. This is the trusted component that discharges `unsat`.
 //!
-//! This slice supports **RUP-only** proofs (positive hints). RAT additions
-//! (negative hints) are out of scope, both in the checker and the elaborator;
-//! an elaborator input that would require RAT is rejected.
+//! [`check_lrat`] and [`elaborate_drat_to_lrat`] (and its bounded/progress
+//! counterpart) support both RUP additions ([`LratStep::Add`], positive
+//! hints) and RAT additions ([`LratStep::AddRat`], a pivot literal plus one
+//! resolution-candidate hint block per active clause containing its
+//! negation — docs/plan/families/sat/README.md slice 3, ADR-1722). The
+//! *backward*, core-first elaborator
+//! ([`elaborate_drat_to_lrat_backward`]/[`certify_unsat_via_lrat`], ADR-0382)
+//! still declines a RAT core lemma rather than elaborating it — a narrower,
+//! not-yet-implemented boundary in that specific engine, not a format
+//! limitation.
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::time::Duration;
@@ -39,11 +46,46 @@ pub enum LratStep {
         /// conflicting clause.
         hints: Vec<u64>,
     },
+    /// Add clause `id`, justified by RAT (resolution asymmetric tautology) on
+    /// `pivot` — a literal of `clause` (docs/plan/families/sat/README.md
+    /// slice 3; ADR-1722). Verified by [`check_lrat`] with **no search**,
+    /// exactly like [`LratStep::Add`]: for every clause active at check time
+    /// that contains `¬pivot`, `candidates` must name it and supply the RUP
+    /// hints for the resolvent `clause ∪ (that clause \ {¬pivot})`. The
+    /// checker enumerates its own active set to find every clause containing
+    /// `¬pivot` — a `candidates` list that omits one is rejected, not merely
+    /// under-justified, because the omitted clause is exactly the missing
+    /// half of the RAT definition.
+    AddRat {
+        /// Numeric id of the new clause.
+        id: u64,
+        /// The clause literals.
+        clause: Vec<CnfLit>,
+        /// The literal `clause` is RAT on. A literal of `clause` (checked),
+        /// conventionally its first.
+        pivot: CnfLit,
+        /// One entry for every clause active at elaboration/check time that
+        /// contains `¬pivot`, naming that clause's id and the RUP hints for
+        /// its resolvent with `clause`.
+        candidates: Vec<RatCandidate>,
+    },
     /// Delete the clauses with these ids from the active set.
     Delete {
         /// Clause ids to remove.
         ids: Vec<u64>,
     },
+}
+
+/// One resolution candidate of an [`LratStep::AddRat`] step: the id of an
+/// active clause containing the RAT step's negated pivot, and the RUP hints
+/// for the resolvent of that clause with the RAT clause.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RatCandidate {
+    /// Id of the active clause this candidate resolves against.
+    pub clause_id: u64,
+    /// RUP hints for the resolvent, in unit-propagation order, ending with
+    /// the conflicting clause (or empty when the resolvent is a tautology).
+    pub hints: Vec<u64>,
 }
 
 /// Error from LRAT checking, elaboration, or parsing.
@@ -74,10 +116,14 @@ pub enum LratError {
         /// Zero-based index of the failing DRAT step.
         step: usize,
     },
-    /// A DRAT step the refutation depends on is RAT rather than RUP, and
-    /// [`LratStep`] has no room for the pivot and negative hint blocks a RAT
-    /// addition needs (ADR-0382). The proof is fine; this elaborator cannot
-    /// express it.
+    /// A DRAT step the refutation depends on is RAT rather than RUP, and the
+    /// *backward*, core-first elaborator ([`elaborate_drat_to_lrat_backward`],
+    /// ADR-0382) does not populate [`LratStep::AddRat`] — a scoped gap in that
+    /// specific engine, not a format limitation: [`LratStep`] has carried a
+    /// RAT variant since docs/plan/families/sat/README.md slice 3 (ADR-1722),
+    /// and the *forward* elaborator ([`elaborate_drat_to_lrat`]) emits it. The
+    /// proof is fine; this particular elaborator does not (yet) recover a RAT
+    /// core lemma's hints from the backward walk.
     RatNotSupported {
         /// Zero-based index of the RAT step.
         step: usize,
@@ -179,28 +225,25 @@ fn assign_clause_false(clause: &[CnfLit], assign: &mut BTreeMap<usize, bool>) ->
     true
 }
 
-/// Verifies one addition by following its hint chain (no search).
-///
-/// Assigns every literal of `clause` false, then walks `hints` left-to-right:
-/// every hint but the last must be unit (propagate its lone literal false), and
-/// the last must be falsified (a conflict). Any deviation is a rejection.
-fn verify_addition(
+/// Verifies that `clause_like` is refuted by following `hints` left-to-right
+/// (no search): every hint but the last must be unit (propagate its lone
+/// literal false), and the last must be falsified (a conflict). Any deviation
+/// is a rejection. Shared by [`verify_addition`] (over the addition's own
+/// clause) and [`verify_rat_addition`] (over each resolution candidate's
+/// resolvent), so the two RAT/RUP checking routes cannot silently diverge on
+/// what "the hints follow to a conflict" means.
+fn follow_hint_chain(
     active: &BTreeMap<u64, Vec<CnfLit>>,
     id: u64,
-    clause: &[CnfLit],
+    assign: &mut BTreeMap<usize, bool>,
     hints: &[u64],
 ) -> Result<(), LratError> {
-    let mut assign: BTreeMap<usize, bool> = BTreeMap::new();
-    if !assign_clause_false(clause, &mut assign) {
-        // Tautological clause: its negation is contradictory, trivially RUP.
-        return Ok(());
-    }
     for (position, &hint_id) in hints.iter().enumerate() {
         let hinted = active
             .get(&hint_id)
             .ok_or(LratError::UnknownClause { id: hint_id })?;
         let is_last = position + 1 == hints.len();
-        match classify(hinted, &assign) {
+        match classify(hinted, assign) {
             ClauseStatus::Conflict => {
                 if is_last {
                     return Ok(());
@@ -225,6 +268,100 @@ fn verify_addition(
     }
     // The chain ended without reaching a conflict (e.g. empty hints).
     Err(LratError::StepNotVerified { id })
+}
+
+/// Assigns every literal of `clause_like` false, then verifies it is refuted
+/// by `hints` via [`follow_hint_chain`]. Returns `Ok(())` immediately for a
+/// tautological `clause_like` (its negation is contradictory, trivially
+/// refuted with no hints needed) — shared logic between a RUP addition's own
+/// clause and one RAT candidate's resolvent, since both are "is this clause
+/// refuted, possibly for the trivial reason of being a tautology" checks.
+fn verify_hint_chain(
+    active: &BTreeMap<u64, Vec<CnfLit>>,
+    id: u64,
+    clause_like: &[CnfLit],
+    hints: &[u64],
+) -> Result<(), LratError> {
+    let mut assign: BTreeMap<usize, bool> = BTreeMap::new();
+    if !assign_clause_false(clause_like, &mut assign) {
+        return Ok(());
+    }
+    follow_hint_chain(active, id, &mut assign, hints)
+}
+
+/// Verifies one RUP addition by following its hint chain (no search).
+///
+/// Assigns every literal of `clause` false, then walks `hints` left-to-right:
+/// every hint but the last must be unit (propagate its lone literal false), and
+/// the last must be falsified (a conflict). Any deviation is a rejection.
+fn verify_addition(
+    active: &BTreeMap<u64, Vec<CnfLit>>,
+    id: u64,
+    clause: &[CnfLit],
+    hints: &[u64],
+) -> Result<(), LratError> {
+    verify_hint_chain(active, id, clause, hints)
+}
+
+/// Verifies one RAT addition (docs/plan/families/sat/README.md slice 3;
+/// ADR-1722): `clause` must be refuted directly if it is a tautology, and
+/// otherwise every clause **currently active** that contains `¬pivot` must
+/// have a matching entry in `candidates` whose hints refute the resolvent of
+/// that clause with `clause`.
+///
+/// The exhaustiveness is enforced by the checker itself, not trusted from the
+/// proof: this function scans `active` for every clause containing `¬pivot`
+/// and rejects if any such clause has no candidate naming it — a `candidates`
+/// list that quietly dropped one would otherwise let a step through that is
+/// not actually RAT.
+///
+/// # Errors
+///
+/// Returns [`LratError::BadHint`] if `pivot` is not a literal of `clause`,
+/// [`LratError::StepNotVerified`] if some active clause containing `¬pivot`
+/// has no matching candidate or its resolvent does not refute, or whatever
+/// [`follow_hint_chain`] returns for a malformed candidate hint chain.
+fn verify_rat_addition(
+    active: &BTreeMap<u64, Vec<CnfLit>>,
+    id: u64,
+    clause: &[CnfLit],
+    pivot: CnfLit,
+    candidates: &[RatCandidate],
+) -> Result<(), LratError> {
+    if !clause.contains(&pivot) {
+        return Err(LratError::BadHint { id });
+    }
+    let mut probe: BTreeMap<usize, bool> = BTreeMap::new();
+    if !assign_clause_false(clause, &mut probe) {
+        // Tautological clause: trivially refuted, no candidates needed.
+        return Ok(());
+    }
+    let mut hints_by_id: BTreeMap<u64, &[u64]> = BTreeMap::new();
+    for candidate in candidates {
+        hints_by_id.insert(candidate.clause_id, candidate.hints.as_slice());
+    }
+    let pivot_var = pivot.var().index();
+    for (&candidate_id, d) in active {
+        let has_neg_pivot = d
+            .iter()
+            .any(|l| l.var().index() == pivot_var && l.is_negated() != pivot.is_negated());
+        if !has_neg_pivot {
+            continue;
+        }
+        let Some(hints) = hints_by_id.get(&candidate_id).copied() else {
+            // A required resolution candidate has no matching hints: not RAT.
+            return Err(LratError::StepNotVerified { id });
+        };
+        let mut resolvent = clause.to_vec();
+        for &l in d {
+            let is_neg_pivot = l.var().index() == pivot_var && l.is_negated() != pivot.is_negated();
+            if !is_neg_pivot {
+                resolvent.push(l);
+            }
+        }
+        verify_hint_chain(active, id, &resolvent, hints)?;
+    }
+    Ok(())
 }
 
 /// Verifies `proof` against `formula`.
@@ -263,16 +400,35 @@ pub fn check_lrat(formula: &CnfFormula, proof: &[LratStep]) -> Result<bool, Lrat
                 }
                 active.insert(*id, clause.clone());
             }
+            LratStep::AddRat {
+                id,
+                clause,
+                pivot,
+                candidates,
+            } => {
+                verify_rat_addition(&active, *id, clause, *pivot, candidates)?;
+                if clause.is_empty() {
+                    derived_empty = true;
+                }
+                active.insert(*id, clause.clone());
+            }
         }
     }
     Ok(derived_empty)
 }
 
-/// Serializes an LRAT proof to the standard textual format.
+/// Serializes an LRAT proof to the standard textual format, extended with an
+/// internal `r`-marked form for [`LratStep::AddRat`] (docs/plan/families/sat/README.md
+/// slice 3; ADR-1722 — this workspace's own extension, not a claim of
+/// interop with an external LRAT/LSR reader).
 ///
-/// An addition is `<id> <lit ...> 0 <hintid ...> 0`; a deletion is
-/// `<id> d <delid ...> 0`, where the leading id is a running step id. The
-/// output round-trips through [`parse_lrat`].
+/// A RUP addition is `<id> <lit ...> 0 <hintid ...> 0`; a deletion is
+/// `<id> d <delid ...> 0`, where the leading id is a running step id. A RAT
+/// addition is `<id> <lit ...> 0 r <pivot> [-<candidate-id> <hintid ...>]... 0`
+/// — the literal token `r` (never a valid hint id) marks the switch to RAT
+/// form, `<pivot>` is a DIMACS literal, and each `-<candidate-id>` opens a
+/// block of that candidate's positive hints running until the next `-...` or
+/// the final `0`. The output round-trips through [`parse_lrat`].
 pub fn write_lrat(proof: &[LratStep]) -> String {
     let mut out = String::new();
     // The deletion line carries a leading step id. LRAT conventionally reuses
@@ -296,6 +452,33 @@ pub fn write_lrat(proof: &[LratStep]) -> String {
                 }
                 out.push_str("0\n");
             }
+            LratStep::AddRat {
+                id,
+                clause,
+                pivot,
+                candidates,
+            } => {
+                step_id = *id;
+                out.push_str(&id.to_string());
+                out.push(' ');
+                for lit in clause {
+                    out.push_str(&lit.dimacs().to_string());
+                    out.push(' ');
+                }
+                out.push_str("0 r ");
+                out.push_str(&pivot.dimacs().to_string());
+                out.push(' ');
+                for candidate in candidates {
+                    out.push('-');
+                    out.push_str(&candidate.clause_id.to_string());
+                    out.push(' ');
+                    for hint in &candidate.hints {
+                        out.push_str(&hint.to_string());
+                        out.push(' ');
+                    }
+                }
+                out.push_str("0\n");
+            }
             LratStep::Delete { ids } => {
                 out.push_str(&step_id.to_string());
                 out.push_str(" d ");
@@ -310,12 +493,72 @@ pub fn write_lrat(proof: &[LratStep]) -> String {
     out
 }
 
-/// Parses an LRAT proof in the standard textual format.
+/// Parses the tail of an `r`-marked RAT addition line, starting right after
+/// the `r` token: `<pivot> [-<candidate-id> <hintid ...>]... 0`. Split out of
+/// [`parse_lrat`] purely to keep that function under clippy's line-count
+/// lint; the grammar itself is documented on [`write_lrat`].
+fn parse_rat_tail<'a>(
+    id: u64,
+    clause: Vec<CnfLit>,
+    mut iter: impl Iterator<Item = &'a str>,
+) -> Result<LratStep, LratError> {
+    let pivot_token = iter
+        .next()
+        .ok_or_else(|| LratError::Parse(format!("LRAT RAT addition {id} missing pivot literal")))?;
+    let pivot_value: i64 = pivot_token
+        .parse()
+        .map_err(|_| LratError::Parse(format!("invalid pivot literal `{pivot_token}`")))?;
+    let pivot =
+        literal_from_dimacs(pivot_value).map_err(|error| LratError::Parse(error.to_string()))?;
+
+    let mut candidates: Vec<RatCandidate> = Vec::new();
+    let mut saw_terminator = false;
+    for token in iter {
+        if let Some(negated) = token.strip_prefix('-') {
+            let clause_id: u64 = negated
+                .parse()
+                .map_err(|_| LratError::Parse(format!("invalid RAT candidate id `{token}`")))?;
+            candidates.push(RatCandidate {
+                clause_id,
+                hints: Vec::new(),
+            });
+            continue;
+        }
+        let value: u64 = token
+            .parse()
+            .map_err(|_| LratError::Parse(format!("invalid hint id `{token}`")))?;
+        if value == 0 {
+            saw_terminator = true;
+            break;
+        }
+        let Some(current) = candidates.last_mut() else {
+            return Err(LratError::Parse(format!(
+                "LRAT RAT addition {id} has a hint before any candidate `-id`"
+            )));
+        };
+        current.hints.push(value);
+    }
+    if !saw_terminator {
+        return Err(LratError::Parse(format!(
+            "LRAT RAT addition {id} missing terminator 0"
+        )));
+    }
+    Ok(LratStep::AddRat {
+        id,
+        clause,
+        pivot,
+        candidates,
+    })
+}
+
+/// Parses an LRAT proof in the textual format [`write_lrat`] documents,
+/// including its `r`-marked RAT extension.
 ///
 /// Each non-comment line begins with a step id. A `d` after the id marks a
-/// deletion line (`<id> d <delid ...> 0`); otherwise it is an addition
-/// (`<id> <lit ...> 0 <hintid ...> 0`). The leading id of a deletion line is
-/// ignored.
+/// deletion line (`<id> d <delid ...> 0`); an `r` immediately after the
+/// clause's `0` terminator marks a RAT addition; otherwise it is a RUP
+/// addition (`<id> <lit ...> 0 <hintid ...> 0`). The leading id of a deletion
+/// line is ignored.
 ///
 /// # Errors
 ///
@@ -352,10 +595,10 @@ pub fn parse_lrat(text: &str) -> Result<Vec<LratStep>, LratError> {
             continue;
         }
 
-        // Addition: literals up to the first `0`, then hints up to the second
-        // `0`.
+        // Addition: literals up to the first `0`, then either an `r`-marked
+        // RAT tail or plain hints up to the second `0`.
         let mut clause = Vec::new();
-        let mut iter = rest.iter();
+        let mut iter = rest.iter().copied().peekable();
         let mut saw_clause_terminator = false;
         for token in iter.by_ref() {
             let value: i64 = token
@@ -374,6 +617,13 @@ pub fn parse_lrat(text: &str) -> Result<Vec<LratStep>, LratError> {
                 "LRAT addition {id} missing clause terminator 0"
             )));
         }
+
+        if iter.peek() == Some(&"r") {
+            iter.next();
+            steps.push(parse_rat_tail(id, clause, iter)?);
+            continue;
+        }
+
         let mut hints = Vec::new();
         let mut saw_hint_terminator = false;
         for token in iter {
@@ -480,18 +730,87 @@ fn rup_hints(active: &BTreeMap<u64, Vec<CnfLit>>, clause: &[CnfLit]) -> Option<V
     }
 }
 
-/// Elaborates a RUP-only DRAT proof into an LRAT proof with explicit hints.
+/// Elaborates one DRAT addition against `active` at id `id`.
 ///
-/// The formula's clauses take ids `1..=n`; new clauses take ids from `n+1`.
-/// Each [`DratStep::Add`] is re-checked by reverse unit propagation, recording
-/// the antecedent ids in propagation order; the resulting [`LratStep`] sequence
-/// is guaranteed to pass [`check_lrat`]. Each [`DratStep::Delete`] maps to a
-/// deletion of the matching active id.
+/// Tries RUP first via [`rup_hints`] — **byte-for-byte the same computation
+/// this function used to be**, so every input that elaborated via RUP before
+/// docs/plan/families/sat/README.md slice 3 (ADR-1722) elaborates identically
+/// now. When the clause is not RUP, falls back to RAT on its first literal
+/// (the "resolution-candidate scan"): for every clause active right now that
+/// contains the pivot's negation, the resolvent of that clause with `clause`
+/// must itself be RUP, mirroring [`crate::drat::is_rat`] at the DRAT layer —
+/// but recording each resolvent's hints instead of merely testing acceptance,
+/// which is what [`RatCandidate`] carries.
+///
+/// Shared by [`elaborate_drat_to_lrat`] and
+/// [`elaborate_drat_to_lrat_with_limits_and_progress`] so the two engines
+/// cannot compute different hints for the same input.
 ///
 /// # Errors
 ///
-/// Returns [`LratError::StepNotVerified`] when an addition is not RUP (RAT
-/// elaboration is out of scope for this slice).
+/// Returns [`LratError::StepNotVerified`] when `clause` is neither RUP nor
+/// RAT. An empty clause with no RUP justification has no first literal and so
+/// is never RAT either — matching [`crate::drat::is_rat`]'s own guard, since
+/// a genuine final empty-clause step is always RUP in every proof this
+/// workspace's own CDCL core produces.
+fn elaborate_addition(
+    active: &BTreeMap<u64, Vec<CnfLit>>,
+    id: u64,
+    clause: &[CnfLit],
+) -> Result<LratStep, LratError> {
+    if let Some(hints) = rup_hints(active, clause) {
+        return Ok(LratStep::Add {
+            id,
+            clause: clause.to_vec(),
+            hints,
+        });
+    }
+    let Some(&pivot) = clause.first() else {
+        return Err(LratError::StepNotVerified { id });
+    };
+    let pivot_var = pivot.var().index();
+    let mut candidates = Vec::new();
+    for (&candidate_id, d) in active {
+        let has_neg_pivot = d
+            .iter()
+            .any(|l| l.var().index() == pivot_var && l.is_negated() != pivot.is_negated());
+        if !has_neg_pivot {
+            continue;
+        }
+        let mut resolvent = clause.to_vec();
+        for &l in d {
+            let is_neg_pivot = l.var().index() == pivot_var && l.is_negated() != pivot.is_negated();
+            if !is_neg_pivot {
+                resolvent.push(l);
+            }
+        }
+        let hints = rup_hints(active, &resolvent).ok_or(LratError::StepNotVerified { id })?;
+        candidates.push(RatCandidate {
+            clause_id: candidate_id,
+            hints,
+        });
+    }
+    Ok(LratStep::AddRat {
+        id,
+        clause: clause.to_vec(),
+        pivot,
+        candidates,
+    })
+}
+
+/// Elaborates a DRAT proof into an LRAT proof with explicit hints (RUP and,
+/// since docs/plan/families/sat/README.md slice 3 / ADR-1722, RAT).
+///
+/// The formula's clauses take ids `1..=n`; new clauses take ids from `n+1`.
+/// Each [`DratStep::Add`] is re-checked, recording the antecedent ids (see
+/// [`elaborate_addition`]); the resulting [`LratStep`] sequence is guaranteed
+/// to pass [`check_lrat`]. Each [`DratStep::Delete`] maps to a deletion of the
+/// matching active id.
+///
+/// # Errors
+///
+/// Returns [`LratError::StepNotVerified`] when an addition is neither RUP nor
+/// RAT.
 pub fn elaborate_drat_to_lrat(
     formula: &CnfFormula,
     drat: &[DratStep],
@@ -510,14 +829,9 @@ pub fn elaborate_drat_to_lrat(
     for step in drat {
         match step {
             DratStep::Add(clause) => {
-                let hints =
-                    rup_hints(&active, clause).ok_or(LratError::StepNotVerified { id: next_id })?;
-                out.push(LratStep::Add {
-                    id: next_id,
-                    clause: clause.clone(),
-                    hints,
-                });
+                let lrat_step = elaborate_addition(&active, next_id, clause)?;
                 active.insert(next_id, clause.clone());
+                out.push(lrat_step);
                 next_id += 1;
             }
             DratStep::Delete(clause) => {
@@ -536,13 +850,14 @@ pub fn elaborate_drat_to_lrat(
 // Same motivation and design as the checking-side hooks in `crate::drat`
 // (`DratCheckProgress` / `check_drat_with_limits_and_progress`), and the
 // search-side ones in `crate::proof_sat` (`ProofSearchProgress`): elaboration
-// re-derives every addition's RUP hints by the same rescan-to-fixpoint
-// propagation `check_drat` uses (see `elaborate_drat_to_lrat`'s doc), so on a
-// large proof it is at least as expensive as checking and had exactly the same
-// blind spot — no deadline, no step budget, no progress. [`elaborate_drat_to_lrat`]
-// above is UNTOUCHED: the bounded engine below reuses the same `rup_hints` /
-// `find_active_id` free functions and the same per-step logic, so a difference
-// in behaviour between the two would be a diff in this file, not a hidden
+// re-derives every addition's hints (RUP via the same rescan-to-fixpoint
+// propagation `check_drat` uses, RAT via the resolution-candidate scan on top
+// of it — see `elaborate_drat_to_lrat`'s doc), so on a large proof it is at
+// least as expensive as checking and had exactly the same blind spot — no
+// deadline, no step budget, no progress. The bounded engine below shares
+// [`elaborate_drat_to_lrat`]'s per-step logic exactly, through the same
+// `elaborate_addition` / `find_active_id` free functions, so a difference in
+// behaviour between the two would be a diff in this file, not a hidden
 // divergence.
 
 /// How many processed steps elapse between wall-clock deadline reads. Smaller
@@ -623,7 +938,8 @@ fn report_lrat_elaborate_progress(
 /// by a `progress` sink polled every `progress_interval` processed steps (and
 /// once more at the end, whichever way the run finishes).
 ///
-/// This reuses the private `rup_hints` and `find_active_id` exactly as
+/// This reuses the private `elaborate_addition` (RUP via `rup_hints`, RAT via
+/// the resolution-candidate scan) and `find_active_id` exactly as
 /// [`elaborate_drat_to_lrat`] does — the same hint-recovery logic, called the
 /// same way — so installing a deadline, a step budget, or a progress sink
 /// cannot change what hints are computed, only whether/when the run gives up
@@ -632,8 +948,7 @@ fn report_lrat_elaborate_progress(
 /// # Errors
 ///
 /// Returns [`LratError::StepNotVerified`] when an addition reached before a
-/// bound fires is not RUP (RAT elaboration remains out of scope, exactly as in
-/// [`elaborate_drat_to_lrat`]), or the same [`LratError::Parse`] this function's
+/// bound fires is neither RUP nor RAT, or the same [`LratError::Parse`] this function's
 /// unbounded counterpart can return for an id overflow.
 pub fn elaborate_drat_to_lrat_with_limits_and_progress(
     formula: &CnfFormula,
@@ -688,14 +1003,9 @@ pub fn elaborate_drat_to_lrat_with_limits_and_progress(
         }
         match step {
             DratStep::Add(clause) => {
-                let hints =
-                    rup_hints(&active, clause).ok_or(LratError::StepNotVerified { id: next_id })?;
-                out.push(LratStep::Add {
-                    id: next_id,
-                    clause: clause.clone(),
-                    hints,
-                });
+                let lrat_step = elaborate_addition(&active, next_id, clause)?;
                 active.insert(next_id, clause.clone());
+                out.push(lrat_step);
                 next_id += 1;
             }
             DratStep::Delete(clause) => {
@@ -744,13 +1054,17 @@ pub fn elaborate_drat_to_lrat_with_limits_and_progress(
 ///   for a hint-checked proof — a RUP step names its antecedents, so extra
 ///   clauses cannot invalidate it — and it keeps the emitted ids independent of
 ///   the input's deletion structure. The cost is memory in [`check_lrat`].
-/// - **RAT is refused, not approximated.** [`LratStep`] carries a flat list of
-///   positive hints, which cannot express a RAT addition's pivot and per-
-///   candidate hint blocks. A core lemma that is RAT rather than RUP produces
-///   [`LratError::RatNotSupported`], naming the step. Proofs from this
-///   workspace's own CDCL core are RUP-only, so this is a boundary rather than
-///   a limitation in practice — but it is a hard boundary, because the
-///   alternative is emitting a hint chain that does not justify its clause.
+/// - **RAT is refused, not approximated.** This engine's backward,
+///   watched-literal chain recovery does not (yet) populate
+///   [`LratStep::AddRat`] — [`LratStep`] itself has room for a RAT addition's
+///   pivot and per-candidate hint blocks since docs/plan/families/sat/README.md
+///   slice 3 (ADR-1722), and [`elaborate_drat_to_lrat`] (the forward,
+///   rescan-based elaborator) does emit it. A core lemma that is RAT rather
+///   than RUP here produces [`LratError::RatNotSupported`], naming the step.
+///   Proofs from this workspace's own CDCL core are RUP-only, so this is a
+///   boundary rather than a limitation in practice — but it is a hard
+///   boundary, because the alternative is emitting a hint chain that does not
+///   justify its clause.
 ///
 /// A proof with no empty-clause addition elaborates to the empty LRAT proof, on
 /// which [`check_lrat`] reports `Ok(false)` — the same verdict
@@ -791,8 +1105,11 @@ pub enum LratCertifyOutcome {
 /// Why [`certify_unsat_via_lrat`] declined.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum LratDecline {
-    /// A core lemma is a RAT addition, which [`LratStep`] cannot express
-    /// (ADR-0382). The proof may be perfectly good; this format cannot hint it.
+    /// A core lemma is a RAT addition, which the *backward* engine behind
+    /// [`certify_unsat_via_lrat`] does not (yet) recover hints for (ADR-0382;
+    /// see [`LratError::RatNotSupported`] for why this is an engine gap, not
+    /// a format one). The proof may be perfectly good; this route cannot hint
+    /// it.
     RatStep {
         /// Zero-based index of the RAT step.
         step: usize,
@@ -1037,6 +1354,172 @@ mod tests {
             hints: vec![1, 2],
         }];
         assert_eq!(check_lrat(&f, &proof), Ok(false));
+    }
+
+    // ----------------------------------------------------------------------
+    // RAT elaboration (docs/plan/families/sat/README.md slice 3; ADR-1722)
+    // ----------------------------------------------------------------------
+
+    use super::RatCandidate;
+
+    #[test]
+    fn a_rat_but_not_rup_clause_is_rejected_by_rup_only_checking_but_elaborates_as_rat() {
+        // F = [(1, 2)]. Clause (1) is RAT on pivot 1 (no active clause
+        // contains ¬1, so the resolution-candidate scan is trivially empty)
+        // but is NOT RUP: assigning 1 false leaves the sole clause unit on 2,
+        // never a conflict.
+        let f = formula(2, &[&[1, 2]]);
+        let active: BTreeMap<u64, Vec<CnfLit>> = BTreeMap::from([(1, vec![lit(1), lit(2)])]);
+        assert_eq!(
+            rup_hints(&active, &[lit(1)]),
+            None,
+            "fixture must genuinely not be RUP — this is what the RUP-only \
+             elaborator that existed before this slice would reject"
+        );
+
+        let drat = vec![crate::DratStep::Add(vec![lit(1)])];
+        let lrat = elaborate_drat_to_lrat(&f, &drat).expect("a RAT clause must now elaborate");
+        assert_eq!(
+            lrat,
+            vec![LratStep::AddRat {
+                id: 2,
+                clause: vec![lit(1)],
+                pivot: lit(1),
+                candidates: Vec::new(),
+            }],
+            "zero candidates, since no active clause contains ¬1"
+        );
+        // The step verifies (it is genuinely RAT), but the clause is not
+        // empty, so UNSAT is not established.
+        assert_eq!(check_lrat(&f, &lrat), Ok(false));
+    }
+
+    #[test]
+    fn a_rat_clause_with_a_real_resolution_candidate_elaborates_and_checks() {
+        // F = [(-2, -3)]. Clause (2, 3) is RAT on pivot 2: the only active
+        // clause containing ¬2 is (-2, -3), and the resolvent
+        // (2,3) ∪ ((-2,-3) \ {-2}) = (2, 3, -3) is a tautology, hence
+        // trivially RUP. But (2, 3) is not RUP directly: assigning 2,3 both
+        // false satisfies (-2,-3) immediately (via -2), so no propagation
+        // ever fires and no conflict is reached.
+        let f = formula(3, &[&[-2, -3]]);
+        let active: BTreeMap<u64, Vec<CnfLit>> = BTreeMap::from([(1, vec![lit(-2), lit(-3)])]);
+        assert_eq!(
+            rup_hints(&active, &[lit(2), lit(3)]),
+            None,
+            "fixture must genuinely not be RUP"
+        );
+
+        let drat = vec![crate::DratStep::Add(vec![lit(2), lit(3)])];
+        let lrat = elaborate_drat_to_lrat(&f, &drat).expect("a RAT clause must elaborate");
+        assert_eq!(
+            lrat,
+            vec![LratStep::AddRat {
+                id: 2,
+                clause: vec![lit(2), lit(3)],
+                pivot: lit(2),
+                candidates: vec![RatCandidate {
+                    clause_id: 1,
+                    hints: Vec::new(), // the tautological resolvent needs none
+                }],
+            }]
+        );
+        assert_eq!(check_lrat(&f, &lrat), Ok(false));
+        // Round-trips through text.
+        let reparsed = parse_lrat(&write_lrat(&lrat)).expect("RAT step round-trips as text");
+        assert_eq!(reparsed, lrat);
+        assert_eq!(check_lrat(&f, &reparsed), Ok(false));
+    }
+
+    /// SOUNDNESS-NEGATIVE: the checker must enumerate active clauses
+    /// containing `¬pivot` ITSELF, not merely trust whatever `candidates`
+    /// lists. Dropping a genuine candidate must be rejected even though every
+    /// listed candidate (there are none left) is trivially "satisfied".
+    #[test]
+    fn check_lrat_rejects_a_rat_step_missing_a_required_candidate() {
+        let f = formula(3, &[&[-2, -3]]);
+        let honest = LratStep::AddRat {
+            id: 2,
+            clause: vec![lit(2), lit(3)],
+            pivot: lit(2),
+            candidates: vec![RatCandidate {
+                clause_id: 1,
+                hints: Vec::new(),
+            }],
+        };
+        assert_eq!(
+            check_lrat(&f, std::slice::from_ref(&honest)),
+            Ok(false),
+            "positive control: the honest candidate list must verify"
+        );
+        let dishonest = LratStep::AddRat {
+            id: 2,
+            clause: vec![lit(2), lit(3)],
+            pivot: lit(2),
+            candidates: Vec::new(), // drops the one real candidate
+        };
+        assert!(
+            matches!(
+                check_lrat(&f, &[dishonest]),
+                Err(LratError::StepNotVerified { .. })
+            ),
+            "a RAT step missing a required resolution candidate must be rejected"
+        );
+    }
+
+    /// SOUNDNESS-NEGATIVE: a candidate whose hints do not actually refute its
+    /// resolvent must be rejected, not accepted on the strength of the
+    /// clause's own pivot membership.
+    ///
+    /// Needs a candidate whose resolvent is NOT a bare tautology (a
+    /// tautological resolvent is refuted before hints are even consulted, so
+    /// a wrong hint chain there would prove nothing): `F = [(-2,-4), (-4,3)]`
+    /// makes `(2,3)` RAT on pivot 2 via candidate `c1=(-2,-4)`, whose
+    /// resolvent `(2,3,-4)` genuinely needs `c2=(-4,3)`'s hint (id 2) to
+    /// reach a conflict — see
+    /// `a_full_refutation_routes_through_a_rat_step_and_checks_unsat`'s doc
+    /// for the same derivation used at larger scale.
+    #[test]
+    fn check_lrat_rejects_a_rat_step_with_a_wrong_candidate_hint_chain() {
+        let f = formula(4, &[&[-2, -4], &[-4, 3]]);
+        let honest = LratStep::AddRat {
+            id: 3,
+            clause: vec![lit(2), lit(3)],
+            pivot: lit(2),
+            candidates: vec![RatCandidate {
+                clause_id: 1,
+                hints: vec![2], // c2 conflicts directly under the resolvent's assign
+            }],
+        };
+        assert_eq!(
+            check_lrat(&f, std::slice::from_ref(&honest)),
+            Ok(false),
+            "positive control: the honest hint chain must verify"
+        );
+        let bogus = LratStep::AddRat {
+            id: 3,
+            clause: vec![lit(2), lit(3)],
+            pivot: lit(2),
+            candidates: vec![RatCandidate {
+                clause_id: 1,
+                hints: vec![1], // c1 is trivially satisfied here, never a conflict
+            }],
+        };
+        assert!(check_lrat(&f, &[bogus]).is_err());
+    }
+
+    /// SOUNDNESS-NEGATIVE: a pivot that is not actually a literal of the
+    /// clause must be rejected — the checker must not trust it blindly.
+    #[test]
+    fn check_lrat_rejects_a_rat_step_whose_pivot_is_not_in_the_clause() {
+        let f = formula(3, &[&[-2, -3]]);
+        let bogus = LratStep::AddRat {
+            id: 2,
+            clause: vec![lit(2), lit(3)],
+            pivot: lit(5), // not a literal of the clause
+            candidates: Vec::new(),
+        };
+        assert_eq!(check_lrat(&f, &[bogus]), Err(LratError::BadHint { id: 2 }));
     }
 
     #[test]
