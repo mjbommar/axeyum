@@ -2111,7 +2111,32 @@ pub fn prove_unsat_to_lean(
 }
 
 /// The theorem name used for the exported refutation in a rendered Lean module.
+///
+/// **Reserved for a refutation the query paid for.** A module earns this name by
+/// its axiom footprint, not by which function rendered it: see
+/// [`render_ctx_module_named_by_footprint`], which reads
+/// [`Kernel::axiom_footprint`](axeyum_lean_kernel::Kernel) and hands out
+/// [`LEAN_MODULE_ATTESTED_THEOREM`] instead when the refutation rests on an
+/// assumption the reconstruction minted for itself.
 const LEAN_MODULE_THEOREM: &str = "axeyum_refutation";
+
+/// The theorem name a module carries when the refutation it exports rests on an
+/// assumption the reconstruction **minted**, rather than on the query's own
+/// variables and hypotheses.
+///
+/// Not a second spelling of the same thing. Until 2026-09-06 the SOS route's
+/// `UnsupportedTerm` fallback -- which mints an opaque `Prop`, its negation, and
+/// closes `False` by applying one to the other -- rendered under
+/// [`LEAN_MODULE_THEOREM`], so every counter or checker keyed on that name added
+/// the attested population to the reconstructed one and could not fail. The
+/// minted axioms were visible in the module text all along; what was not
+/// distinguishable was the identifier a consumer greps for.
+///
+/// Which name a module gets is **derived** from the kernel's footprint by
+/// [`render_ctx_module_named_by_footprint`]. An emitter cannot choose it, so a
+/// future route that starts minting cannot inherit the honest name by writing
+/// the same three lines.
+const LEAN_MODULE_ATTESTED_THEOREM: &str = "axeyum_refutation_attested";
 
 /// Render the [`ReconstructCtx`]'s kernel state as a self-contained Lean module
 /// proving `proof : False` (the shared closing step of the non-LRA branches).
@@ -2122,6 +2147,99 @@ fn render_ctx_module(ctx: &mut ReconstructCtx, proof: ExprId) -> String {
     };
     ctx.kernel()
         .render_lean_module_compact(LEAN_MODULE_THEOREM, false_, proof)
+}
+
+/// The **axiom footprint** of a [`ReconstructCtx`]-built refutation, as the
+/// kernel computes it.
+///
+/// The [`LraReconstructCtx`] counterpart is
+/// [`arithmetic::ordered_ring::refutation_axiom_footprint`]; this is the same
+/// measurement for the routes that build over the plain logical prelude. Read
+/// from the kernel and not from the rendered module: the writer renders
+/// inductives as `axiom` too, so counting `axiom ` lines over-reports by dozens
+/// and would make the guard below depend on a printer.
+///
+/// The probe theorem is declared under a fresh `axeyum.reconstruct.*` name and
+/// is not reachable from `proof`, and the module writer emits
+/// `reachable_decl_order(&[goal, proof])` only, so measuring does not change
+/// what is rendered.
+///
+/// # Errors
+///
+/// [`ReconstructError::KernelRejected`] if `proof` is not a proof of `False`.
+fn ctx_refutation_axiom_footprint(
+    ctx: &mut ReconstructCtx,
+    proof: ExprId,
+) -> Result<Vec<String>, ReconstructError> {
+    let false_ = {
+        let n = ctx.prelude().false_;
+        ctx.kernel_mut().const_(n, vec![])
+    };
+    let name = ctx.fresh_name("footprint_probe");
+    ctx.kernel_mut()
+        .add_declaration(Declaration::Theorem {
+            name,
+            uparams: vec![],
+            ty: false_,
+            value: proof,
+        })
+        .map_err(|e| ReconstructError::KernelRejected {
+            rule: "ctx_refutation_axiom_footprint".to_owned(),
+            detail: format!("the refutation is not a proof of False: {e:?}"),
+        })?;
+    let kernel = ctx.kernel();
+    Ok(kernel
+        .axiom_footprint(name)
+        .into_iter()
+        .map(|n| kernel.display_name(n).to_string())
+        .collect())
+}
+
+/// Render a [`ReconstructCtx`] module under a theorem name **derived from the
+/// proof's axiom footprint**, and label it when that footprint contains an
+/// assumption the reconstruction minted.
+///
+/// This is the durable form of the guard. Keying a counter or a checker on the
+/// rendered theorem name is the "trusted surface read off a rendered name"
+/// failure this repository keeps paying for; keying the NAME on the footprint
+/// inverts it, so the surface every consumer already greps becomes a faithful
+/// projection of what the kernel says the module assumes.
+///
+/// - `minted_axioms_of` empty ⇒ [`LEAN_MODULE_THEOREM`], unchanged bytes.
+/// - otherwise ⇒ [`LEAN_MODULE_ATTESTED_THEOREM`], plus the shared
+///   [`STRUCTURAL_ATTESTATION_MARKER`] banner, so
+///   [`LeanModuleContent::of_module_source`] classifies it and
+///   [`prove_unsat_to_lean_theory_module`] declines it.
+///
+/// The minted names are written into the banner as well, so a reader sees WHICH
+/// assumption bought the `False` without re-deriving the footprint.
+///
+/// # Errors
+///
+/// [`ReconstructError::KernelRejected`] if `proof` is not a proof of `False`.
+fn render_ctx_module_named_by_footprint(
+    ctx: &mut ReconstructCtx,
+    proof: ExprId,
+    refuter_role: &str,
+) -> Result<String, ReconstructError> {
+    let footprint = ctx_refutation_axiom_footprint(ctx, proof)?;
+    let minted = arithmetic::ordered_ring::minted_axioms_of(&footprint);
+    if minted.is_empty() {
+        return Ok(render_ctx_module(ctx, proof));
+    }
+    let false_ = {
+        let n = ctx.prelude().false_;
+        ctx.kernel_mut().const_(n, vec![])
+    };
+    let body = ctx
+        .kernel()
+        .render_lean_module_compact(LEAN_MODULE_ATTESTED_THEOREM, false_, proof);
+    Ok(format!(
+        "{banner}\n-- minted assumptions ({n}): {names}\n{body}",
+        banner = direct::structural_attestation_banner(refuter_role),
+        n = minted.len(),
+        names = minted.join(", "),
+    ))
 }
 
 /// Gate a [`LraReconstructCtx`]-built `proof : False` through the kernel
@@ -3268,6 +3386,34 @@ fn reconstruct_sos_to_lean_module_raw(
     }
 }
 
+/// The SOS route's **fallback**: the query carries a self-checking SOS
+/// certificate, but the honest reconstructor declined its shape, so this renders
+/// an attestation instead of a proof.
+///
+/// What it emits is an opaque `Prop`, an axiom asserting it, an axiom refuting
+/// it, and the application that closes `False`. **The module contains none of
+/// the reasoning it attests to** -- it is byte-identical for two different
+/// queries (`sos_fallback_labelling_tests`), so kernel-checking it establishes
+/// nothing about either. The evidence for such a refutation is the Rust
+/// `SosCertificate` re-verified above, never this term.
+///
+/// It therefore renders through [`render_ctx_module_named_by_footprint`], which
+/// reads the kernel's footprint and gives it
+/// [`LEAN_MODULE_ATTESTED_THEOREM`] plus the shared
+/// [`STRUCTURAL_ATTESTATION_MARKER`] banner. Two consequences a caller should
+/// expect: [`prove_unsat_to_lean_theory_module`] now declines it, and
+/// [`prove_unsat_to_lean_module`] returns
+/// [`ReconstructError::ModuleContentMismatch`] for it, because
+/// [`ProofFragment::Sos`] declares itself a
+/// [`LeanModuleContent::TheoryReconstruction`] and this module is not one. That
+/// is the honest answer -- "there is no Lean proof of this query" -- rather than
+/// a shim wearing the honest route's name.
+///
+/// # Errors
+///
+/// [`ReconstructError::MalformedStep`] when the query carries no SOS certificate
+/// or the certificate does not re-verify; [`ReconstructError::KernelRejected`]
+/// when the assembled term does not infer to `False`.
 fn reconstruct_sos_certificate_wrapper_to_lean_module(
     arena: &TermArena,
     assertions: &[TermId],
@@ -3294,7 +3440,7 @@ fn reconstruct_sos_certificate_wrapper_to_lean_module(
     let refuter = fresh_axiom(&mut ctx, refuter_prop, "sos_certificate")?;
     let proof = ctx.kernel.app(refuter, asserted);
     require_infers_false(&mut ctx, proof)?;
-    Ok(render_ctx_module(&mut ctx, proof))
+    render_ctx_module_named_by_footprint(&mut ctx, proof, "sos_certificate")
 }
 
 /// Reconstruct a **complete** EUF `unsat` Alethe proof into a Lean proof term of
