@@ -51,8 +51,8 @@
 //!
 //! The default index covers `logic`, `nat`, `axreal`, `integer`, `rat`, `ipc`,
 //! `ipc_eval`, `fo_order`, `fo_soundness`, `fo_substitution`,
-//! `characterization`, `list`, `int_model`, `rat_model` and `string`. `--include-constructed` adds
-//! `creal_model`, `creal`, `complex`, `cpoint`, `metric`, `metric_prod`,
+//! `characterization`, `list` and `string`. `--include-constructed` adds
+//! `creal`, `complex`, `cpoint`, `metric`, `metric_prod`,
 //! `intspace`, `rn`, `geo` and `top`, which cost real kernel type-checking. Querying a `CReal`
 //! name without it is **unanswerable**, not absent. Every run prints the groups
 //! it covered and a per-kind census before any verdict; `--list-groups` prints
@@ -113,11 +113,10 @@ use axeyum_lean_kernel::shape_index::{
 };
 use axeyum_lean_kernel::{
     Kernel, build_arith_prelude, build_characterization, build_complex_prelude,
-    build_cpoint_prelude, build_creal_model_of_arith, build_creal_prelude, build_fo_order_prelude,
-    build_fo_soundness_prelude, build_fo_substitution_prelude, build_geo_prelude,
-    build_int_model_of_arith, build_int_prelude, build_intspace_prelude, build_ipc_eval_prelude,
-    build_ipc_soundness_prelude, build_list_nat_bridge, build_list_perm, build_logic_prelude,
-    build_metric_prelude, build_metric_prod_prelude, build_nat_prelude, build_rat_model_of_arith,
+    build_cpoint_prelude, build_creal_prelude, build_fo_order_prelude, build_fo_soundness_prelude,
+    build_fo_substitution_prelude, build_geo_prelude, build_int_prelude, build_intspace_prelude,
+    build_ipc_eval_prelude, build_ipc_soundness_prelude, build_list_nat_bridge, build_list_perm,
+    build_logic_prelude, build_metric_prelude, build_metric_prod_prelude, build_nat_prelude,
     build_rat_prelude, build_rn_prelude, build_string_length_append, build_string_prelude,
     build_string_substr_arithmetic, build_top_frame_prelude, on_a_deep_stack,
 };
@@ -142,8 +141,8 @@ shape_search — retrieve a declaration by the SHAPE of its type, not its name.
   --like <Name>            same hypothesis-head multiset and conclusion head
                            as this existing declaration
 
-  --include-constructed    also build creal_model, creal, complex, cpoint,
-                           metric, metric_prod, intspace, rn, geo and top
+  --include-constructed    also build creal, complex, cpoint, metric,
+                           metric_prod, intspace, rn, geo and top
   --index-values           also read every declaration's checked value
   --duplicates             report declarations stating the same proposition
   --list-groups            print the group table (name, flag, reason) and stop
@@ -362,23 +361,6 @@ fn build_string(kernel: &mut Kernel) {
         .expect("Str.substr_append_split must build");
 }
 
-// The three interpretations of the AXIOMATIZED ordered field `AxReal` in a
-// constructed carrier (`AxReal.IntModel`, `AxReal.RatModel`,
-// `AxReal.CRealModel`). Each declares its own laws, and each needs its own
-// kernel: two models in one kernel both build `arith` and the second collides.
-
-fn build_int_model(kernel: &mut Kernel) {
-    let _ = build_int_model_of_arith(kernel).expect("AxReal.IntModel must build");
-}
-
-fn build_rat_model(kernel: &mut Kernel) {
-    let _ = build_rat_model_of_arith(kernel).expect("AxReal.RatModel must build");
-}
-
-fn build_creal_model(kernel: &mut Kernel) {
-    let _ = build_creal_model_of_arith(kernel).expect("AxReal.CRealModel must build");
-}
-
 fn build_creal(kernel: &mut Kernel) {
     let _ = build_creal_prelude(kernel).expect("CReal prelude must build");
 }
@@ -511,31 +493,11 @@ const GROUPS: &[Group] = &[
               no other group reaches it",
     },
     Group {
-        name: "int_model",
-        constructed: false,
-        build: build_int_model,
-        why: "AxReal.IntModel: Int read as a model of the axiomatized ordered \
-              field; declares its own laws and is reached by nothing else",
-    },
-    Group {
-        name: "rat_model",
-        constructed: false,
-        build: build_rat_model,
-        why: "AxReal.RatModel, the same for Rat",
-    },
-    Group {
         name: "string",
         constructed: false,
         build: build_string,
         why: "String over a two-symbol alphabet, plus Str.length_append and \
               Str.substr_append_split; needs the logic handle passed in",
-    },
-    Group {
-        name: "creal_model",
-        constructed: true,
-        build: build_creal_model,
-        why: "AxReal.CRealModel: the constructed reals read as a model of \
-              AxReal; constructed because it builds all of creal",
     },
     Group {
         name: "creal",

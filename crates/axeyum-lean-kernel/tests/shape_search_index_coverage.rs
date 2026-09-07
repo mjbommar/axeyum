@@ -384,7 +384,17 @@ fn shape_search_indexes_every_prelude_builder() {
 /// Builders that are not `*_prelude` and that the index deliberately skips.
 ///
 /// Same contract as `DELIBERATELY_UNINDEXED`: `(builder, measured reason)`.
-const DELIBERATELY_UNINDEXED_NON_PRELUDE: &[(&str, &str)] = &[];
+const DELIBERATELY_UNINDEXED_NON_PRELUDE: &[(&str, &str)] = &[
+    ("build_int_model_of_arith", REASON_MODEL),
+    ("build_rat_model_of_arith", REASON_MODEL),
+    ("build_creal_model_of_arith", REASON_MODEL),
+];
+
+/// Why the three `AxReal.*Model` builders are not indexed.
+///
+/// A measurement, not a preference — the shared text is one constant so
+/// the three entries cannot drift into three different stories.
+const REASON_MODEL: &str = "the AxReal.*Model laws are BY CONSTRUCTION restatements of the carrier laws they interpret, and indexing them made shape_search report 85 duplicate shape groups where 19 exist, 66 of them a model law beside its own carrier law -- measured 2026-09-06, and it turned scripts/check-shape-duplicates.py red. Their content is not lost: every law they restate is indexed under its carrier, and kernel_declaration_projection --require-declaration answers by name across all 31 preludes. They also cost 7.6s + 14.4s (int, rat) and 43.9s (creal, the single most expensive group) per index build. See ADR-1672.";
 
 /// Every `pub fn build_*` under `src/` that `src/lib.rs` also names, mapped to
 /// the file that owns it.
