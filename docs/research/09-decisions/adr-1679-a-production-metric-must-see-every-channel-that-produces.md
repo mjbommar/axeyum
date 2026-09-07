@@ -219,19 +219,25 @@ are weaker-sounding and stronger.
 
 ## External precedent
 
-Reported by the coordinator from a landscape survey landing separately under
-`docs/research/02-ecosystems/` (not yet in this worktree; the two points below
-are recorded as received and should be re-checked against that document).
+From the [competition landscape survey](../02-ecosystems/competition-landscape-2026-09/README.md) §1.7, which landed on
+`main` while this lane ran. Both points below were re-checked against that
+document rather than taken from the handoff.
 
 The termination and confluence competitions have required certification for
-years and score the **checker separately from the prover**. That is direct
-precedent for §2's refusal to collapse this into one figure: what the system
-established, and what checking it covers, are different measurements and a
-single number hides whichever is weaker. It also supports §4 — a per-fact
+years: every tool submits an uncertified and a certified configuration, and only
+answers a verified checker re-confirms score. The confluence competition scores
+the **checker and the prover as separate categories on the same problems**. That
+is direct precedent for §2's refusal to collapse this into one figure: what the
+system established, and what checking it covers, are different measurements, and
+a single number hides whichever is weaker. It also supports §4 — a per-fact
 producer field is the join key that lets the two be scored apart.
 
-The measured trusted-base gap for one prover in that world is about **8% of its
-own answers**, the same shape as our axiom-footprint figure. Ours must be quoted
+The measured trusted-base gap for one prover in that world is **946 of 1,030 own
+answers recovered under certification, a ~8.2% gap** — the same KIND of
+measurement as our axiom-footprint figure, though **not the same magnitude**.
+The survey's §1.7 calls ~8% "exactly the number our flywheel produces"; that
+comparison is too generous to us in one direction and mis-scaled in the other,
+and the correction matters more than the flattery. Ours must be quoted
 with its denominator, because the two available denominators differ by an order
 of magnitude and only one of them is meaningful: `validate-facts.py` reports
 **2,584 axiom-free on `kernel-lean`, of 2,586 on that route** — a 0.08% gap —
@@ -241,10 +247,13 @@ achievable on the SMT or CAS routes at all. The cross-route reading, 2,584 of
 quotes; it is arithmetically correct and mixes trust bases the schema exists to
 keep apart. Quote the route-scoped figure, and say which route. Worth putting
 beside the external number so ours reads as a normal engineering measurement
-rather than an embarrassment. Note also that SMT-COMP
-has had **no proof-exhibition track since 2023**, so there is no comparable
-external pressure on that side, and our proof-carrying claim there is
-uncontested rather than merely leading.
+rather than an embarrassment. Note also that SMT-COMP's Proof
+Exhibition track ran in 2022 and 2023 and was **discontinued in 2024** (the 2025
+results index lists five tracks and no proof track). The handoff to this lane
+said "since 2023", which is a year early — the 2023 edition still ran it, with a
+reduced cap. So there has been no proof-exhibition pressure in SMT-COMP since
+2024, and our proof-carrying claim there is uncontested rather than merely
+leading.
 
 ## Evidence
 
