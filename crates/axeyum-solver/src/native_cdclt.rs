@@ -72,16 +72,60 @@ thread_local! {
         const { RefCell::new(None) };
 }
 
+thread_local! {
+    /// How many native CDCL(T) refutations have happened on this thread since
+    /// the last [`reset_theory_refutation_channel`].
+    ///
+    /// **The channel publishes the LAST refutation, so more than one makes it
+    /// ambiguous.** A route calls `solve_native` once and returns its verdict,
+    /// but `crate::auto` does not: `check_auto` enumerates case-split branches
+    /// (`auto.rs:1298`, `auto.rs:1458`) and reports `unsat` only when EVERY
+    /// branch was refuted, discarding each branch's `CheckResult::Unsat` on the
+    /// way. The artifact left in the slot then refutes the last branch, not the
+    /// query, and attaching it to the query's `unsat` would be a fabricated
+    /// claim -- the exact shape this repository's evidence discipline exists to
+    /// prevent.
+    ///
+    /// So the counter is not a statistic. It is the guard:
+    /// [`take_last_theory_refutation`] hands back an artifact only when exactly
+    /// one refutation happened, and declines otherwise. Under-reporting (no
+    /// trust step) is safe; over-reporting is not.
+    static THEORY_REFUTATIONS: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
+}
+
 /// Removes and returns the artifact of the last native CDCL(T) refutation on
 /// this thread, leaving the slot empty.
+///
+/// Returns `None` -- even with an artifact present -- when more than one
+/// refutation has happened since the channel was reset, because the slot then
+/// names the last of several sub-solves and not the caller's query. See
+/// [`THEORY_REFUTATIONS`].
 pub(crate) fn take_last_theory_refutation() -> Option<TheoryRefutation> {
-    LAST_THEORY_REFUTATION.with(|slot| slot.borrow_mut().take())
+    let artifact = LAST_THEORY_REFUTATION.with(|slot| slot.borrow_mut().take());
+    if THEORY_REFUTATIONS.with(std::cell::Cell::get) == 1 {
+        artifact
+    } else {
+        None
+    }
 }
 
 /// Clears the slot without reading it. A route that is about to solve calls
 /// this so a verdict it does not reach cannot inherit an older artifact.
 pub(crate) fn clear_last_theory_refutation() {
     LAST_THEORY_REFUTATION.with(|slot| *slot.borrow_mut() = None);
+}
+
+/// Clears the slot **and** the refutation counter, so the next
+/// [`take_last_theory_refutation`] speaks about this solve alone.
+///
+/// A route clears only the slot ([`clear_last_theory_refutation`], which
+/// `solve_native` calls on entry). A caller that spans a whole DISPATCH -- the
+/// evidence layer around `crate::auto::solve` -- resets the counter too, which
+/// is what makes "exactly one refutation" mean "exactly one inside this
+/// dispatch".
+pub(crate) fn reset_theory_refutation_channel() {
+    clear_last_theory_refutation();
+    THEORY_REFUTATIONS.with(|count| count.set(0));
 }
 
 thread_local! {
@@ -424,6 +468,11 @@ pub(crate) fn solve_native<T: TheorySolver>(
             occurring,
         }),
         TheorySolveOutcome::Unsat(refutation) => {
+            // Counted whether or not an artifact was recorded: the guard is
+            // about how many refutations HAPPENED, and a recording-off solve
+            // that refuted a case-split branch makes the next one ambiguous
+            // just the same.
+            THEORY_REFUTATIONS.with(|count| count.set(count.get().saturating_add(1)));
             LAST_THEORY_REFUTATION.with(|slot| *slot.borrow_mut() = refutation);
             NativeSolveOutcome::Unsat
         }

@@ -59,9 +59,18 @@ IMPORTED_CANDIDATE_FAMILY_CHECKER = (
     ROOT / "scripts/check-autogenesis-nat-modeq-remainder-operation.py"
 )
 COMMIT_RE = re.compile(r"^[0-9a-f]{40}$")
+# NAMED groups, and `trusted=` is OPTIONAL. The CLI grew a `trusted=` field
+# between `certified=` and `recheck=` (the ledger a decision arrives with was
+# invisible from a sweep). This regex was anchored at BOTH ends and required
+# `certified=` to be immediately followed by `recheck=`, so ANY placement of a
+# new field broke it -- appending after `ms=` would have hit the `$` just the
+# same. Optional rather than required, so a transcript recorded before the field
+# existed still parses; named rather than positional, so the next field cannot
+# silently renumber `arena` into `ms`.
 EVIDENCE_RE = re.compile(
-    r"^;\s*evidence\s+kind=(\S+)\s+certified=(\S+)\s+"
-    r"recheck=(\S+)\s+arena=(\S+)\s+ms=(\d+)\s*$",
+    r"^;\s*evidence\s+kind=(?P<kind>\S+)\s+certified=(?P<certified>\S+)\s+"
+    r"(?:trusted=(?P<trusted>\S+)\s+)?"
+    r"recheck=(?P<recheck>\S+)\s+arena=(?P<arena>\S+)\s+ms=(?P<ms>\d+)\s*$",
     re.MULTILINE,
 )
 
@@ -838,12 +847,16 @@ def parse_observation(stdout: str) -> dict[str, Any]:
     if not lines:
         raise ExecutionError("executor produced no verdict")
     match = matches[0]
+    # The observation dict is DELIBERATELY unchanged by the new field: it is
+    # digested into a receipt, so a new key here would restate every committed
+    # receipt's hash. The regex tolerates `trusted=`; the receipt does not learn
+    # about it.
     return {
         "verdict": lines[-1],
-        "evidence_label": match.group(1),
-        "certified": match.group(2) == "1",
-        "recheck": match.group(3),
-        "arena": match.group(4),
+        "evidence_label": match.group("kind"),
+        "certified": match.group("certified") == "1",
+        "recheck": match.group("recheck"),
+        "arena": match.group("arena"),
     }
 
 

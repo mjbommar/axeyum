@@ -2606,6 +2606,12 @@ fn dl_decided_report(
     // so it is produced where evidence is produced. The dispatcher's own call
     // to the same route wants a verdict and records nothing, which is what
     // keeps the engine swap free (see `native_cdclt::with_artifact_recording`).
+    //
+    // The channel is reset first so "exactly one refutation" is counted over
+    // THIS call. Without it the counter is whatever earlier queries on this
+    // thread left behind, and the ambiguity guard would decline an artifact
+    // this route genuinely produced.
+    crate::native_cdclt::reset_theory_refutation_channel();
     let decided = crate::native_cdclt::with_artifact_recording(|| {
         crate::dl_online::try_check_qf_dl(
             arena,
@@ -2634,13 +2640,7 @@ fn dl_decided_report(
         // Before this the report carried NO trusted step at all, so the theory
         // reasoning behind the verdict was trusted and *uncounted*. An empty
         // slot is the one reading a ledger must never allow.
-        CheckResult::Unsat => {
-            let steps = crate::native_cdclt::take_last_theory_refutation()
-                .as_ref()
-                .map(|artifact| vec![crate::trust::theory_refutation_trust_step(artifact)])
-                .unwrap_or_default();
-            (Evidence::Unsat(None), steps)
-        }
+        CheckResult::Unsat => (Evidence::Unsat(None), theory_refutation_steps()),
         CheckResult::Unknown(_) => return None,
     };
     Some(EvidenceReport {
@@ -2651,6 +2651,33 @@ fn dl_decided_report(
         },
         trusted_steps,
     })
+}
+
+/// The ADR-1704 trust step of the CDCL(T) refutation this dispatch produced, or
+/// no step at all.
+///
+/// **The grade is read off the artifact, never asserted here.**
+/// [`crate::trust::theory_refutation_trust_step`] branches on
+/// `|extended| - |cnf|`: a lemma-free refutation is `SatRefutation` and
+/// certified when the Boolean stream checks, a lemma-bearing one is
+/// `SatRefutationModuloTheory` and never certified. Nothing a producer writes
+/// can move that, which is the point of ADR-1704 section 3.
+///
+/// Empty in three cases, all of them honest absences rather than failures:
+///
+///  * the route that decided did not run the native core (`uflra_online`,
+///    `uflia_online`, `ufbv_online`, and every non-CDCL(T) route), so there is
+///    no artifact;
+///  * the recording outgrew its literal budget and was abandoned; or
+///  * more than one native refutation happened inside this dispatch, so the
+///    published artifact names a case-split branch rather than the query --
+///    see `native_cdclt::THEORY_REFUTATIONS`. An empty ledger slot is bad; a
+///    slot filled with another query's refutation is worse.
+fn theory_refutation_steps() -> Vec<TrustStep> {
+    crate::native_cdclt::take_last_theory_refutation()
+        .as_ref()
+        .map(|artifact| vec![crate::trust::theory_refutation_trust_step(artifact)])
+        .unwrap_or_default()
 }
 
 fn residue_evidence(arena: &TermArena, assertions: &[TermId]) -> Option<Evidence> {
@@ -3662,7 +3689,20 @@ pub fn produce_evidence(
     if let Some(report) = produce_arith_dpll_evidence(arena, assertions, config)? {
         return Ok(report);
     }
-    let (evidence, trusted_steps) = match solve(arena, assertions, config)? {
+    // ADR-1704, the dispatcher half. Four theory routes now run the native
+    // proof-producing core, so a refutation from any of them CAN present the
+    // two-stream artifact -- but only if someone asked for the recording, which
+    // is off by default because the dispatcher pays for a proof it does not
+    // read. The evidence layer is the consumer, so it asks here, once, around
+    // the whole dispatch, and resets the refutation channel so the ambiguity
+    // guard counts refutations inside THIS dispatch and no other.
+    //
+    // Recording is bounded (`native_cdclt::PROOF_LITERAL_BUDGET`): a runaway
+    // search abandons the recording and reports no artifact rather than the
+    // machine giving up. Abandoning is output-only and never moves a verdict.
+    crate::native_cdclt::reset_theory_refutation_channel();
+    let decided = crate::native_cdclt::with_artifact_recording(|| solve(arena, assertions, config));
+    let (evidence, trusted_steps) = match decided? {
         CheckResult::Sat(model) => (Evidence::Sat(model), Vec::new()),
         CheckResult::Unsat => {
             // Prefer a check_alethe-validated, ZERO-TRUST-HOLE Alethe refutation when
@@ -3771,10 +3811,18 @@ pub fn produce_evidence(
                 // evidence budget, keep the front door timely: return the decided
                 // bare `unsat` and let unbudgeted/offline callers request the
                 // reduction proof path.
-                (Evidence::Unsat(None), Vec::new())
+                (Evidence::Unsat(None), theory_refutation_steps())
             } else {
                 let (cert, steps) =
                     reduction_unsat_certificate(arena, assertions, evidence_deadline);
+                let steps = if cert.is_none() && steps.is_empty() {
+                    // Still a bare `unsat`, which is exactly the empty ledger
+                    // slot ADR-1704 exists to fill. A reduction certificate,
+                    // when there is one, already names what it trusted.
+                    theory_refutation_steps()
+                } else {
+                    steps
+                };
                 (Evidence::Unsat(cert), steps)
             }
         }
