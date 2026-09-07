@@ -2111,7 +2111,37 @@ pub fn prove_unsat_to_lean(
 }
 
 /// The theorem name used for the exported refutation in a rendered Lean module.
+///
+/// **Reserved for a refutation the query paid for.** A module earns this name by
+/// its axiom footprint, not by which function rendered it: see
+/// [`render_ctx_module_named_by_footprint`], which reads
+/// [`Kernel::axiom_footprint`](axeyum_lean_kernel::Kernel) and hands out
+/// [`LEAN_MODULE_ATTESTED_THEOREM`] instead when the refutation rests on an
+/// assumption the reconstruction minted for itself.
 const LEAN_MODULE_THEOREM: &str = "axeyum_refutation";
+
+/// The theorem name a module carries when the refutation it exports rests on an
+/// assumption the reconstruction **minted**, rather than on the query's own
+/// variables and hypotheses.
+///
+/// Not a second spelling of the same thing. Until 2026-09-06 the SOS route's
+/// `UnsupportedTerm` fallback -- which mints an opaque `Prop`, its negation, and
+/// closes `False` by applying one to the other -- rendered under
+/// [`LEAN_MODULE_THEOREM`], so every counter or checker keyed on that name added
+/// the attested population to the reconstructed one and could not fail. The
+/// minted axioms were visible in the module text all along; what was not
+/// distinguishable was the identifier a consumer greps for.
+///
+/// Which name a module gets is **derived** from the kernel's footprint by
+/// [`render_ctx_module_named_by_footprint`]. An emitter cannot choose it, so a
+/// future route that starts minting cannot inherit the honest name by writing
+/// the same three lines.
+/// The name is deliberately **not** an extension of [`LEAN_MODULE_THEOREM`]:
+/// several consumers here grep a module or a `#print axioms` transcript with a
+/// bare `contains("axeyum_refutation")`, and a `_attested` suffix would leave
+/// every one of them conflating exactly as before. `assert_names_are_not_
+/// substrings_of_each_other` in `sos_fallback_labelling_tests` pins that.
+const LEAN_MODULE_ATTESTED_THEOREM: &str = "axeyum_attested_refutation";
 
 /// Render the [`ReconstructCtx`]'s kernel state as a self-contained Lean module
 /// proving `proof : False` (the shared closing step of the non-LRA branches).
@@ -2122,6 +2152,113 @@ fn render_ctx_module(ctx: &mut ReconstructCtx, proof: ExprId) -> String {
     };
     ctx.kernel()
         .render_lean_module_compact(LEAN_MODULE_THEOREM, false_, proof)
+}
+
+/// The **axiom footprint** of a [`ReconstructCtx`]-built refutation, as the
+/// kernel computes it.
+///
+/// The [`LraReconstructCtx`] counterpart is
+/// [`arithmetic::ordered_ring::refutation_axiom_footprint`]; this is the same
+/// measurement for the routes that build over the plain logical prelude. Read
+/// from the kernel and not from the rendered module: the writer renders
+/// inductives as `axiom` too, so counting `axiom ` lines over-reports by dozens
+/// and would make the guard below depend on a printer.
+///
+/// The probe theorem is declared under a fresh `axeyum.reconstruct.*` name and
+/// is not reachable from `proof`, and the module writer emits
+/// `reachable_decl_order(&[goal, proof])` only, so measuring does not change
+/// what is rendered.
+///
+/// # Errors
+///
+/// [`ReconstructError::KernelRejected`] if `proof` is not a proof of `False`.
+fn ctx_refutation_axiom_footprint(
+    ctx: &mut ReconstructCtx,
+    proof: ExprId,
+) -> Result<Vec<String>, ReconstructError> {
+    let false_ = {
+        let n = ctx.prelude().false_;
+        ctx.kernel_mut().const_(n, vec![])
+    };
+    let name = ctx.fresh_name("footprint_probe");
+    ctx.kernel_mut()
+        .add_declaration(Declaration::Theorem {
+            name,
+            uparams: vec![],
+            ty: false_,
+            value: proof,
+        })
+        .map_err(|e| ReconstructError::KernelRejected {
+            rule: "ctx_refutation_axiom_footprint".to_owned(),
+            detail: format!("the refutation is not a proof of False: {e:?}"),
+        })?;
+    let kernel = ctx.kernel();
+    Ok(kernel
+        .axiom_footprint(name)
+        .into_iter()
+        .map(|n| kernel.display_name(n).to_string())
+        .collect())
+}
+
+/// Render a [`ReconstructCtx`] module under a theorem name **derived from the
+/// proof's axiom footprint**, and label it when that footprint contains an
+/// assumption the reconstruction minted.
+///
+/// This is the durable form of the guard. Keying a counter or a checker on the
+/// rendered theorem name is the "trusted surface read off a rendered name"
+/// failure this repository keeps paying for; keying the NAME on the footprint
+/// inverts it, so the surface every consumer already greps becomes a faithful
+/// projection of what the kernel says the module assumes.
+///
+/// - `minted_axioms_of` empty ⇒ [`LEAN_MODULE_THEOREM`], unchanged bytes.
+/// - otherwise ⇒ [`LEAN_MODULE_ATTESTED_THEOREM`], plus the shared
+///   [`STRUCTURAL_ATTESTATION_MARKER`] banner, so
+///   [`LeanModuleContent::of_module_source`] classifies it and
+///   [`prove_unsat_to_lean_theory_module`] declines it.
+///
+/// **Scoped to the SOS attestation on purpose; not a general classifier.**
+/// `minted_axioms_of` is calibrated for the LRA naming scheme, where a query's
+/// own assumption is `axeyum.reconstruct.<route>.hyp._<n>` — `is_query_local`
+/// requires that route segment. A plain [`ReconstructCtx`] names every
+/// hypothesis `axeyum.reconstruct.hyp._<n>` with no route, so **every**
+/// `ReconstructCtx`-built refutation reports a non-empty minted set, honest
+/// `QF_BV` and `QF_UF` reconstructions included. Measured 2026-09-06 by mutant
+/// MD, which moved the wrapper's opaque proposition from `prop._n` to
+/// `hyp._n` expecting the guard to fall through and found it did not.
+///
+/// So do not reach for this from another route without recalibrating
+/// `is_query_local` first: applied to `QF_BV` today it would rename a module
+/// that has earned the honest name.
+///
+/// The minted names are written into the banner as well, so a reader sees WHICH
+/// assumption bought the `False` without re-deriving the footprint.
+///
+/// # Errors
+///
+/// [`ReconstructError::KernelRejected`] if `proof` is not a proof of `False`.
+fn render_ctx_module_named_by_footprint(
+    ctx: &mut ReconstructCtx,
+    proof: ExprId,
+    refuter_role: &str,
+) -> Result<String, ReconstructError> {
+    let footprint = ctx_refutation_axiom_footprint(ctx, proof)?;
+    let minted = arithmetic::ordered_ring::minted_axioms_of(&footprint);
+    if minted.is_empty() {
+        return Ok(render_ctx_module(ctx, proof));
+    }
+    let false_ = {
+        let n = ctx.prelude().false_;
+        ctx.kernel_mut().const_(n, vec![])
+    };
+    let body = ctx
+        .kernel()
+        .render_lean_module_compact(LEAN_MODULE_ATTESTED_THEOREM, false_, proof);
+    Ok(format!(
+        "{banner}\n-- minted assumptions ({n}): {names}\n{body}",
+        banner = direct::structural_attestation_banner(refuter_role),
+        n = minted.len(),
+        names = minted.join(", "),
+    ))
 }
 
 /// Gate a [`LraReconstructCtx`]-built `proof : False` through the kernel
@@ -3268,10 +3405,57 @@ fn reconstruct_sos_to_lean_module_raw(
     }
 }
 
+/// The SOS route's **fallback**: the query carries a self-checking SOS
+/// certificate, but the honest reconstructor declined its shape, so this renders
+/// an attestation instead of a proof.
+///
+/// What it emits is an opaque `Prop`, an axiom asserting it, an axiom refuting
+/// it, and the application that closes `False`. **The module contains none of
+/// the reasoning it attests to** -- it is byte-identical for two different
+/// queries (`sos_fallback_labelling_tests`), so kernel-checking it establishes
+/// nothing about either. The evidence for such a refutation is the Rust
+/// `SosCertificate` re-verified above, never this term.
+///
+/// It therefore renders through [`render_ctx_module_named_by_footprint`], which
+/// reads the kernel's footprint and gives it
+/// [`LEAN_MODULE_ATTESTED_THEOREM`] plus the shared
+/// [`STRUCTURAL_ATTESTATION_MARKER`] banner. Two consequences a caller should
+/// expect: [`prove_unsat_to_lean_theory_module`] now declines it, and
+/// [`prove_unsat_to_lean_module`] returns
+/// [`ReconstructError::ModuleContentMismatch`] for it, because
+/// [`ProofFragment::Sos`] declares itself a
+/// [`LeanModuleContent::TheoryReconstruction`] and this module is not one. That
+/// is the honest answer -- "there is no Lean proof of this query" -- rather than
+/// a shim wearing the honest route's name.
+///
+/// # Errors
+///
+/// [`ReconstructError::MalformedStep`] when the query carries no SOS certificate
+/// or the certificate does not re-verify; [`ReconstructError::KernelRejected`]
+/// when the assembled term does not infer to `False`.
 fn reconstruct_sos_certificate_wrapper_to_lean_module(
     arena: &TermArena,
     assertions: &[TermId],
 ) -> Result<String, ReconstructError> {
+    sos_certificate_attestation_module(arena, assertions).map(|(source, _minted)| source)
+}
+
+/// [`reconstruct_sos_certificate_wrapper_to_lean_module`], also returning the
+/// **minted entries of the refutation's axiom footprint** — the kernel's own
+/// answer to "what did this route assume that the query did not give it".
+///
+/// Split out so the guard's tests can assert on the measurement rather than on
+/// the module text. A fixture that greps the rendered source for an
+/// `axeyum.reconstruct.prop.` line is keyed on a NAME, and mutant MD showed
+/// that is the assertion a rename silently walks past.
+///
+/// # Errors
+///
+/// As [`reconstruct_sos_certificate_wrapper_to_lean_module`].
+fn sos_certificate_attestation_module(
+    arena: &TermArena,
+    assertions: &[TermId],
+) -> Result<(String, Vec<String>), ReconstructError> {
     let cert =
         crate::nra_real_root::sos_refute_with_certificate(arena, assertions).ok_or_else(|| {
             ReconstructError::MalformedStep {
@@ -3294,7 +3478,10 @@ fn reconstruct_sos_certificate_wrapper_to_lean_module(
     let refuter = fresh_axiom(&mut ctx, refuter_prop, "sos_certificate")?;
     let proof = ctx.kernel.app(refuter, asserted);
     require_infers_false(&mut ctx, proof)?;
-    Ok(render_ctx_module(&mut ctx, proof))
+    let footprint = ctx_refutation_axiom_footprint(&mut ctx, proof)?;
+    let minted = arithmetic::ordered_ring::minted_axioms_of(&footprint);
+    let source = render_ctx_module_named_by_footprint(&mut ctx, proof, "sos_certificate")?;
+    Ok((source, minted))
 }
 
 /// Reconstruct a **complete** EUF `unsat` Alethe proof into a Lean proof term of
@@ -3792,5 +3979,197 @@ mod lean_module_cap_tests {
         let ordinary = "theorem refute : False := by exact absurd h1 h2".to_owned();
         let (_, source) = bounded(ProofFragment::Lra, ordinary.clone()).expect("accepted");
         assert_eq!(source, ordinary);
+    }
+}
+
+#[cfg(test)]
+mod sos_fallback_labelling_tests {
+    //! **The SOS route has two populations and one name.**
+    //!
+    //! `reconstruct_sos_to_lean_module_raw` runs the honest reconstructor and,
+    //! on [`ReconstructError::UnsupportedTerm`] — exactly when the honest route
+    //! cannot do the work — hands the query to
+    //! `reconstruct_sos_certificate_wrapper_to_lean_module`, which mints an
+    //! opaque `Prop` plus two axioms and closes `False` by applying one to the
+    //! other. That module contains none of the reasoning it attests to.
+    //!
+    //! These tests judge the two by the **kernel's own axiom footprint**, not by
+    //! the name printed on the module: the honest refutation assumes only the
+    //! query's own variables and hypotheses (`minted_axioms_of` empty), the
+    //! fallback's rests on an assumption it minted for itself. A surface that
+    //! cannot separate those two is a checker that cannot fail — every counter
+    //! keyed on the theorem name adds the second population to the first.
+
+    use axeyum_ir::{Rational, TermArena, TermId};
+
+    use super::arithmetic::ordered_ring::{minted_axioms_of, refutation_axiom_footprint};
+    use super::{
+        LEAN_MODULE_ATTESTED_THEOREM, LEAN_MODULE_THEOREM, LeanModuleContent, LraReconstructCtx,
+        reconstruct_sos_certificate_wrapper_to_lean_module, reconstruct_sos_proof,
+        reconstruct_sos_to_lean_module, sos_certificate_attestation_module,
+    };
+
+    /// `x*x < 0` — the trivial single square. Both routes accept it, which is
+    /// what makes it the fixture: the SAME query, reconstructed twice, once with
+    /// reasoning and once without.
+    fn single_square(arena: &mut TermArena) -> TermId {
+        let x = arena.real_var("x").unwrap();
+        let zero = arena.real_const(Rational::integer(0));
+        let square = arena.real_mul(x, x).unwrap();
+        arena.real_lt(square, zero).unwrap()
+    }
+
+    /// `(x - y)*(x - y) < 0` — a DIFFERENT query with the same certificate
+    /// shape, for the query-independence test below.
+    fn shifted_square(arena: &mut TermArena) -> TermId {
+        let x = arena.real_var("x").unwrap();
+        let y = arena.real_var("y").unwrap();
+        let zero = arena.real_const(Rational::integer(0));
+        let diff = arena.real_sub(x, y).unwrap();
+        let square = arena.real_mul(diff, diff).unwrap();
+        arena.real_lt(square, zero).unwrap()
+    }
+
+    /// **The measurement, read from the kernel.** The honest SOS refutation
+    /// assumes nothing it minted; the fallback's refutation is nothing BUT what
+    /// it minted.
+    ///
+    /// This is the anchor for the two surface tests below: without it, "the
+    /// modules differ" would be a statement about strings.
+    #[test]
+    fn the_two_sos_routes_have_different_axiom_footprints() {
+        let mut arena = TermArena::new();
+        let goal = single_square(&mut arena);
+
+        let mut ctx = LraReconstructCtx::try_new_over_constructed_reals()
+            .expect("the constructed carrier builds");
+        let proof = reconstruct_sos_proof(&mut ctx, &arena, &[goal])
+            .expect("the honest route reconstructs the single square");
+        let honest_footprint =
+            refutation_axiom_footprint(&mut ctx, proof).expect("the refutation proves False");
+        let honest_minted = minted_axioms_of(&honest_footprint);
+        assert!(
+            !honest_footprint.is_empty(),
+            "an entirely empty footprint would mean the query's own hypothesis \
+             axioms vanished, which is a broken measurement rather than a result"
+        );
+        assert!(
+            honest_minted.is_empty(),
+            "the honest SOS refutation minted an assumption: {honest_minted:?}"
+        );
+
+        // The fallback's own footprint, as the kernel computes it. Asserted on
+        // the returned Vec rather than on a grep of the rendered module: a name
+        // grep is what mutant MD walked past.
+        let (_source, minted) = sos_certificate_attestation_module(&arena, &[goal])
+            .expect("the certificate wrapper renders for a query it certifies");
+        assert!(
+            !minted.is_empty(),
+            "the fallback's refutation reports no minted assumption, so the \
+             footprint no longer separates it from an honest reconstruction"
+        );
+    }
+
+    /// **The distinction a consumer can act on.** A module whose refutation is
+    /// minted must not render under the honest route's identifier, and must
+    /// declare itself for [`LeanModuleContent::of_module_source`] — the one
+    /// machine-readable channel `prove_unsat_to_lean_theory_module` reads before
+    /// deciding whether a module may be reported as a proof.
+    #[test]
+    fn the_fallback_module_does_not_wear_the_honest_routes_name() {
+        let mut arena = TermArena::new();
+        let goal = single_square(&mut arena);
+
+        let honest = reconstruct_sos_to_lean_module(&arena, &[goal])
+            .expect("the shipped SOS route reconstructs the single square");
+        assert!(
+            honest.contains(&format!("theorem {LEAN_MODULE_THEOREM} ")),
+            "the honest route stopped using its own name; the negative below \
+             would then pass for the wrong reason"
+        );
+        assert_eq!(
+            LeanModuleContent::of_module_source(&honest),
+            LeanModuleContent::TheoryReconstruction,
+            "the honest SOS module must not be marked a structural attestation"
+        );
+
+        let attested = reconstruct_sos_certificate_wrapper_to_lean_module(&arena, &[goal])
+            .expect("the certificate wrapper renders for a query it certifies");
+        assert!(
+            !attested.contains(LEAN_MODULE_THEOREM),
+            "the axiom-carrying fallback renders under the honest route's \
+             theorem name, so every counter keyed on that name conflates the two \
+             populations"
+        );
+        assert!(
+            attested.contains(&format!("theorem {LEAN_MODULE_ATTESTED_THEOREM} ")),
+            "the fallback dropped the honest name without taking one of its own, \
+             which leaves a consumer with nothing to key on"
+        );
+        assert!(
+            LeanModuleContent::of_module_source(&attested).is_structural_attestation(),
+            "the axiom-carrying fallback does not declare itself, so \
+             `prove_unsat_to_lean_theory_module` hands it back as a proof"
+        );
+    }
+
+    /// The attested name must not be findable by a grep for the honest one.
+    ///
+    /// Several consumers -- `probe_selected_evidence_lean`,
+    /// `assert_structural_shape`, the real-Lean `#print axioms` transcript check
+    /// -- test with a bare `contains("axeyum_refutation")`. A `_attested` suffix
+    /// would satisfy every assertion above while leaving all of them conflating,
+    /// so the separation is a property of the two strings and is checked as one.
+    #[test]
+    fn assert_names_are_not_substrings_of_each_other() {
+        assert!(
+            !LEAN_MODULE_ATTESTED_THEOREM.contains(LEAN_MODULE_THEOREM),
+            "`{LEAN_MODULE_ATTESTED_THEOREM}` still answers a grep for \
+             `{LEAN_MODULE_THEOREM}`"
+        );
+        assert!(
+            !LEAN_MODULE_THEOREM.contains(LEAN_MODULE_ATTESTED_THEOREM),
+            "`{LEAN_MODULE_THEOREM}` still answers a grep for \
+             `{LEAN_MODULE_ATTESTED_THEOREM}`"
+        );
+    }
+
+    /// **The fallback module does not depend on the query.** Two different
+    /// UNSAT queries produce byte-identical modules — the certificate the route
+    /// verified in Rust leaves no trace in the artifact.
+    ///
+    /// This is the adversarial half: the module cannot express which query it
+    /// refuted, so no amount of checking it establishes anything about either
+    /// one. The impossibility is the finding.
+    #[test]
+    fn the_fallback_module_is_the_same_bytes_for_two_different_queries() {
+        let mut arena = TermArena::new();
+        let one = single_square(&mut arena);
+        let two = shifted_square(&mut arena);
+        assert_ne!(one, two, "the two fixtures must be different queries");
+
+        let first = reconstruct_sos_certificate_wrapper_to_lean_module(&arena, &[one])
+            .expect("the certificate wrapper renders the single square");
+        let second = reconstruct_sos_certificate_wrapper_to_lean_module(&arena, &[two])
+            .expect("the certificate wrapper renders the shifted square");
+        assert_eq!(
+            first, second,
+            "the fallback module now varies with the query; if that is real \
+             content this test should be replaced, and if it is only a name it \
+             should not be"
+        );
+
+        // The honest route, on the same pair, produces DIFFERENT modules — the
+        // control that makes the equality above a property of the fallback
+        // rather than of this comparison.
+        let honest_one = reconstruct_sos_to_lean_module(&arena, &[one])
+            .expect("the honest route reconstructs the single square");
+        let honest_two = reconstruct_sos_to_lean_module(&arena, &[two])
+            .expect("the honest route reconstructs the shifted square");
+        assert_ne!(
+            honest_one, honest_two,
+            "the honest route emitted the same bytes for two different queries, \
+             so this comparison cannot tell content from a shim"
+        );
     }
 }
