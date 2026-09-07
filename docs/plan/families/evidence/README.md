@@ -72,6 +72,39 @@ datatypes entirely. The live choices are the native format of the current
 reference checker and Alethe for interoperability, the latter carrying a
 maintenance cost because its specification describes itself as evolving.
 
+## Open defects in this family, found 2026-09-06 and not yet fixed
+
+Both were found by the math-department's reconstruct lane while it changed how
+the sum-of-squares attestation renders, and both are in `axeyum-solver`. **They
+are reported here as that lane measured them; this coordinator confirmed the
+shape in the source but has NOT re-run either.** Treat the sizes as claims until
+someone does.
+
+1. **A producer's doc comment promises more than the producer delivers.**
+   `evidence::produce_nra_sos_evidence` stores the Lean module with no content
+   gate, under a doc comment describing a kernel-checked proof. For a fallback
+   query that description is false. A doc comment is not a gate, and a producer
+   that stores whatever it is handed cannot be relied on by a consumer reading
+   the comment. Fix is a content gate, or a comment that says what actually
+   happens.
+
+2. **Two fixtures are named for coverage they do not provide.**
+   `tests/evidence.rs::qf_nra_sos_certificate_wrapper_carries_lean_module` and
+   `tests/lean_crosscheck.rs::qf_nra_sos_certificate_audit_rows_check_in_real_lean`
+   are named for the wrapper path but measured to take the honest route. The
+   first asserts only that a Lean module exists and carries no `sorryAx`; if the
+   wrapper path broke, it would still pass. **A test whose name claims a case it
+   does not exercise is worse than no test**, because it makes the case look
+   covered. Fix is either a fixture that actually reaches the wrapper, or names
+   that match what runs — and the durable form ties the two together by
+   asserting the rendered module name, so the name cannot drift from the route
+   again.
+
+Related context: the attestation now renders as `axeyum_attested_refutation`
+when its axiom footprint is non-empty, derived from the footprint rather than
+chosen, so an honest reconstruction's bytes are unchanged. That change is what
+made the misnaming visible.
+
 ## Next actions
 
 1. Cite the prior art in ADR-1704 and record the comparison.
