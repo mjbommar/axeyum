@@ -57,8 +57,25 @@ along; what was not distinguishable was the identifier a consumer greps for.
 
 ### How often the fallback fires
 
-**Partial. The whole-corpus census did not run**; what follows is the one
-slice that completed, and the rest is an open question rather than a zero.
+**Partial. The whole-corpus census produced no result**; what follows is the
+one slice that completed, and the rest is an open question rather than a zero.
+
+**Correction, 2026-09-06 23:10.** This section originally said the census
+"did not run", citing `exit 124` at 900 s and `exit 143` at 3000 s as
+timeouts. That reason was wrong. The `timeout` wrapper returned, but the
+probe process did **not** die: it was still running 9,306 seconds later at
+99% of a core, orphaned to `ppid 1` with its `cwd` pointing at the lane
+worktree after that worktree was removed, so nothing could ever read its
+output. A peer session found it while checking whether an unrelated process
+was alive. It was killed by explicit pid at 23:10.
+
+Two consequences. The conclusion stands — we still do not know the
+frequency, and deleting the fallback stays open — but the stated reason was
+wrong, and a wrong reason invites the wrong retry: a longer timeout would
+have changed nothing. And for ~2.5 hours it consumed a full core on the
+shared dev host, so any load-sensitive timing taken there tonight is
+suspect. A census lane needs a per-file deadline and a process it reaps,
+not a longer overall budget.
 
 The probe is a throwaway example that walks a directory, keeps every `.smt2`
 file declaring a `Real` sort (only those can carry an SOS certificate), and
