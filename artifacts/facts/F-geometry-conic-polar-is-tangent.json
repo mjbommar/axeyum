@@ -1,0 +1,67 @@
+{
+  "schema_version": 1,
+  "id": "F:geometry-conic-polar-is-tangent",
+  "title": "the polar line of a point on a conic is the tangent line there",
+  "statement": "Let Q be a general conic, homogenized to the quadratic form a X^2 + b XY + c Y^2 + d XW + e YW + f W^2, let P0 be a point on it, and let D be a point on the polar line of P0 with respect to Q. Then, writing the conic's value along the line through P0 in direction D as a function of the parameter t, Q(P0 + t*D) = t^2 * Q(D) identically: the value has (at least) a double zero at t=0, which is the algebraic meaning of tangency at P0. NO non-degeneracy condition is required -- not on the conic, which may be singular or even identically zero, and not on the point. The identity is the polarization identity Q(u+v) = Q(u) + 2*B(u,v) + Q(v) with the two hypotheses substituted in, cofactors 1 and 2t: a direct substitution, not a search.",
+  "formal": {
+    "language": "smtlib2",
+    "statement": "(assert (forall ((dw Real) (dx Real) (dy Real) (p0w Real) (p0x Real) (p0y Real) (qa Real) (qb Real) (qc Real) (qdd Real) (qee Real) (qff Real) (t Real))\n  (=> (and (= (+ (* p0w p0x qdd) (* p0w p0y qee) (* p0w p0w qff) (* p0x p0y qb) (* p0x p0x qa) (* p0y p0y qc)) 0.0)\n           (= (+ (* dw p0w qff) (* (/ 1.0 2.0) dw p0x qdd) (* (/ 1.0 2.0) dw p0y qee) (* (/ 1.0 2.0) dx p0w qdd) (* dx p0x qa) (* (/ 1.0 2.0) dx p0y qb) (* (/ 1.0 2.0) dy p0w qee) (* (/ 1.0 2.0) dy p0x qb) (* dy p0y qc)) 0.0))\n      (= (+ (* 2.0 dw p0w qff t) (* dw p0x qdd t) (* dw p0y qee t) (* dx p0w qdd t) (* 2.0 dx p0x qa t) (* dx p0y qb t) (* dy p0w qee t) (* dy p0x qb t) (* 2.0 dy p0y qc t) (* p0w p0x qdd) (* p0w p0y qee) (* p0w p0w qff) (* p0x p0y qb) (* p0x p0x qa) (* p0y p0y qc)) 0.0))))",
+    "fragment": "NRA",
+    "free_symbols": [
+      "dw",
+      "dx",
+      "dy",
+      "p0w",
+      "p0x",
+      "p0y",
+      "qa",
+      "qb",
+      "qc",
+      "qdd",
+      "qee",
+      "qff",
+      "t"
+    ]
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "depends_on": [],
+  "proof_route": "cas-certificate",
+  "axiom_footprint": [
+    "cas.exact-rational-polynomial-normal-form",
+    "geometry.cartesian-coordinatisation-of-the-euclidean-plane",
+    "geometry.characteristic-zero-specialisation"
+  ],
+  "evidence": [
+    {
+      "id": "geometry-certificate-conic-polar-is-tangent",
+      "kind": "witness-replay",
+      "supports": "the cofactor certificate, re-checked from the committed artifact by a checker that shares no code with the search that produced it",
+      "check_status": "checked",
+      "checkers": [
+        "geometry_check::check_certificate shape pass (the generator list must be exactly the two stated hypotheses -- P0 on the conic, and D on the polar of P0 -- with no undeclared saturation)",
+        "geometry_check::check_certificate symbolic pass (the identity target = sum of cofactor times generator expanded with MvPoly add/mul alone -- no Groebner machinery, no monomial order, no S-polynomials)",
+        "geometry_check::check_certificate numeric pass (the same identity re-evaluated at 24 deterministic integer points through MvPoly::evaluate, a different code path from the symbolic expansion)",
+        "geometry_check::check_certificate configuration pass (the unit circle X^2 + Y^2 - W^2 = 0 with P0 = (1:0:1) on it, D = (0:1:0) on its polar -- the vertical tangent X = W -- and t = 2, replayed at exact rationals)"
+      ],
+      "checker_command": "cargo test -p axeyum-cas --test geometry_certificate_artifacts",
+      "artifact": "artifacts/geometry-certificates/conic-polar-is-tangent.json",
+      "notes": "This is the smallest certificate in the geometry corpus and the only one whose cofactors were not searched for at all: they are the constant 1 on the conic hypothesis and 2t on the polar hypothesis, two cofactor terms in total. It is worth having in the ledger for exactly that reason -- it is the boundary case for the tamper controls, since a certificate this small has nowhere for an error to hide, and `cofactors_from_a_neighbouring_certificate_are_rejected` needs a corpus that spans this range of sizes. The six conic coefficients are free variables rather than a fixed conic, so the statement is about EVERY conic, including the degenerate ones.",
+      "measurement": "2 hypothesis generators, 0 saturations, 1 conclusion, 13 coordinates; the conclusion's certificate uses both generators with nonzero cofactors, 2 cofactor terms in total (the constants 1 and 2, the latter multiplying t), cofactor degree at most 1. 1 generic witness, 0 degenerate witnesses -- the count a certificate with no used condition must have."
+    }
+  ],
+  "provenance": {
+    "date": "2026-09-06",
+    "established_by": "lane geometry: axeyum_cas::geometry_certify (the cofactors here are written down by the polarization identity rather than searched for) + axeyum_cas::geometry_check (independent re-derivation); this ledger row transcribes the committed certificate",
+    "source": "classical; coordinatised in homogeneous coordinates over a general quadratic form by the certificate's lane",
+    "prior_art": [
+      {
+        "who": "classical projective geometry; pole and polar are usually credited to Apollonius in the case of the circle and to Poncelet and Gergonne in general",
+        "what": "the polar of a point lying on a conic is the tangent to the conic at that point",
+        "where": "standard; see e.g. Coxeter, Projective Geometry (2nd ed., 1974), chapter 6",
+        "attribution": "standard textbook attribution; this lane did not consult the primary source"
+      }
+    ]
+  },
+  "notes": "Established on the `cas-certificate` route, in the geometry family, and filed as a plain fact rather than a kernel-reconstructed one: no kernel bridge exists for this certificate, so every evidence row's checker terminates in the CAS's own normal form and the fact classifies as `cas-internal` under ADR-0601 SS2. That is why it carries no `cas_substance` block -- that block is required on, and only on, a kernel-reconstructed fact. Note what the statement does and does not say: it says the parametrised conic value has a double root at t = 0, which is tangency read algebraically. It does NOT say the polar line meets the conic only at P0, which is false for a degenerate conic, and it does not assert that the polar line is well defined as a line, which needs the gradient at P0 to be nonzero. Those are separate statements and this fact makes neither. The SMT-LIB transcription above was not written by hand: it is rendered term by term from the certificate's own polynomials, with each atom written as `positive part = negated negative part` so that no coefficient carries a sign, and it is re-checked by `scripts/check-geometry-fact-transcription.py`, which splits the antecedent into conjuncts, matches them positionally against the certificate's hypotheses and then its saturations, matches the consequents against its conclusions, and requires a constant nonzero ratio at 400 random rational configurations. Every ratio here is exactly 1, which is what a mechanical rendering rather than a retyping buys."
+}

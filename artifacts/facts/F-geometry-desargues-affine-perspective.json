@@ -1,0 +1,93 @@
+{
+  "schema_version": 1,
+  "id": "F:geometry-desargues-affine-perspective",
+  "title": "Desargues' theorem in the affine plane: perspective from a point implies perspective from a line",
+  "statement": "Let O, A, B, C be points of the affine plane and let A' = O + la*(A-O), B' = O + lb*(B-O), C' = O + lc*(C-O), so that the triangles ABC and A'B'C' are in perspective from O by construction (A' ranges over every finite point of the line OA). Let X lie on BC and on B'C', Y on CA and on C'A', and Z on AB and on A'B'. If BC is not parallel to B'C', CA is not parallel to C'A' and AB is not parallel to A'B', then X, Y and Z are collinear. This is the AFFINE reading: the centre, the six vertices and the three intersection points are all finite. The projective statement, where any of them may lie on the line at infinity, is a different statement and is neither certified nor claimed here. All three conditions are used and the set of them is minimal ABSOLUTELY, not budget-relatively: each of the seven proper subsets is refuted by a committed configuration that satisfies every hypothesis, keeps the subset's conditions nonzero, and falsifies the conclusion.",
+  "formal": {
+    "language": "smtlib2",
+    "statement": "(assert (forall ((ax Real) (ay Real) (bx Real) (by Real) (cx Real) (cy Real) (la Real) (lb Real) (lc Real) (ox Real) (oy Real) (xx Real) (xy Real) (yx Real) (yy Real) (zx Real) (zy Real))\n  (=> (and (= (+ (* bx cy) (* by xx) (* cx xy)) (+ (* bx xy) (* by cx) (* cy xx)))\n           (= (+ (* bx cy lb lc) (* bx lb oy) (* by lb lc ox) (* by lb xx) (* cx lb lc oy) (* cx lc xy) (* cy lc ox) (* lb ox xy) (* lc oy xx)) (+ (* bx lb lc oy) (* bx lb xy) (* by cx lb lc) (* by lb ox) (* cx lc oy) (* cy lb lc ox) (* cy lc xx) (* lb oy xx) (* lc ox xy)))\n           (= (+ (* ax yy) (* ay cx) (* cy yx)) (+ (* ax cy) (* ay yx) (* cx yy)))\n           (= (+ (* ax la lc oy) (* ax la yy) (* ay cx la lc) (* ay la ox) (* cx lc oy) (* cy la lc ox) (* cy lc yx) (* la oy yx) (* lc ox yy)) (+ (* ax cy la lc) (* ax la oy) (* ay la lc ox) (* ay la yx) (* cx la lc oy) (* cx lc yy) (* cy lc ox) (* la ox yy) (* lc oy yx)))\n           (= (+ (* ax by) (* ay zx) (* bx zy)) (+ (* ax zy) (* ay bx) (* by zx)))\n           (= (+ (* ax by la lb) (* ax la oy) (* ay la lb ox) (* ay la zx) (* bx la lb oy) (* bx lb zy) (* by lb ox) (* la ox zy) (* lb oy zx)) (+ (* ax la lb oy) (* ax la zy) (* ay bx la lb) (* ay la ox) (* bx lb oy) (* by la lb ox) (* by lb zx) (* la oy zx) (* lb ox zy)))\n           (not (= (+ (* bx cy lb) (* bx lc oy) (* by cx lc) (* by lb ox) (* cx lb oy) (* cy lc ox)) (+ (* bx cy lc) (* bx lb oy) (* by cx lb) (* by lc ox) (* cx lc oy) (* cy lb ox))))\n           (not (= (+ (* ax cy la) (* ax lc oy) (* ay cx lc) (* ay la ox) (* cx la oy) (* cy lc ox)) (+ (* ax cy lc) (* ax la oy) (* ay cx la) (* ay lc ox) (* cx lc oy) (* cy la ox))))\n           (not (= (+ (* ax by la) (* ax lb oy) (* ay bx lb) (* ay la ox) (* bx la oy) (* by lb ox)) (+ (* ax by lb) (* ax la oy) (* ay bx la) (* ay lb ox) (* bx lb oy) (* by la ox)))))\n      (= (+ (* xx yy) (* xy zx) (* yx zy)) (+ (* xx zy) (* xy yx) (* yy zx))))))",
+    "fragment": "NRA",
+    "free_symbols": [
+      "ax",
+      "ay",
+      "bx",
+      "by",
+      "cx",
+      "cy",
+      "la",
+      "lb",
+      "lc",
+      "ox",
+      "oy",
+      "xx",
+      "xy",
+      "yx",
+      "yy",
+      "zx",
+      "zy"
+    ]
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "depends_on": [],
+  "proof_route": "cas-certificate",
+  "axiom_footprint": [
+    "cas.exact-rational-polynomial-normal-form",
+    "geometry.cartesian-coordinatisation-of-the-euclidean-plane",
+    "geometry.characteristic-zero-specialisation",
+    "geometry.rabinowitsch-inverse-specialisation",
+    "geometry.nondegeneracy.bc-meets-b2c2",
+    "geometry.nondegeneracy.ca-meets-c2a2",
+    "geometry.nondegeneracy.ab-meets-a2b2"
+  ],
+  "evidence": [
+    {
+      "id": "geometry-certificate-desargues-affine-perspective",
+      "kind": "witness-replay",
+      "supports": "the saturated cofactor certificate over THREE non-degeneracy conditions, re-checked from the committed artifact by a checker that shares no code with the search that produced it",
+      "check_status": "checked",
+      "checkers": [
+        "geometry_check::check_certificate shape pass (each saturation generator is REBUILT here as `condition * Zinv_i - 1` from the condition polynomial the file declares, and compared with the generator the cofactors are taken against; the six hypothesis generators are compared against the stated hypotheses unchanged, which is what stops a solved-form substitution from being passed off as a proof of the original statement)",
+        "geometry_check::check_certificate symbolic pass (the identity target = sum of cofactor times generator expanded with MvPoly add/mul alone -- no Groebner machinery, no monomial order, no S-polynomials)",
+        "geometry_check::check_certificate numeric pass (the same identity re-evaluated at 24 deterministic integer points through MvPoly::evaluate, a different code path from the symbolic expansion)",
+        "geometry_check::check_certificate usage pass (each of the three saturation generators must carry a NONZERO cofactor, or the certificate would be advertising a weaker theorem than it proved)",
+        "geometry_check::check_certificate degenerate-witness pass (one committed counterexample per condition, each replayed at exact rationals: all six hypotheses vanish, the named condition polynomial vanishes, and the conclusion does NOT)",
+        "geometry_check::check_certificate configuration pass (O=(0,0), A=(1,0), B=(0,1), C=(2,3) with la=2, lb=3, lc=4, so X=(-16,-15), Y=(-1,-6), Z=(4,-3) replayed: hypotheses vanish, no condition vanishes, the conclusion does)"
+      ],
+      "checker_command": "cargo test -p axeyum-cas --test geometry_certificate_artifacts",
+      "artifact": "artifacts/geometry-certificates/desargues-affine-perspective.json",
+      "notes": "The three conditions enter only through the Rabinowitsch generators `condition_i * Zinv_i - 1`; specialising Zinv_i := 1/condition_i is legitimate exactly when that pair of corresponding sides is not parallel. Each degenerate witness puts the centre O on one collapsing side line with the two ratios along it equal, so that side and its image are the SAME line: the intersection point is then free along that line rather than lost, which is why the configuration still satisfies every incidence hypothesis while breaking collinearity. Every tamper control in the cited suite runs against this certificate too -- a cofactor edited by one, a conclusion edited by one, a swapped non-degeneracy condition, cofactors donated by a neighbouring certificate, a deleted counterexample, and a counterexample that sits on the locus without falsifying anything are each rejected.",
+      "measurement": "6 hypothesis generators, 3 saturations, 1 conclusion, 17 coordinates, 9 generators in all; the conclusion's certificate uses all 9 with nonzero cofactors, 7,818 cofactor terms in total, cofactor degree at most 13, integer coefficients in [-8, 8]. 3 degenerate witnesses (one per condition) and 1 generic witness."
+    },
+    {
+      "id": "geometry-condition-minimality-desargues-affine-perspective",
+      "kind": "witness-replay",
+      "supports": "that the three non-degeneracy conditions this certificate consumes form a set that is minimal ABSOLUTELY rather than budget-relative (ADR-0455)",
+      "check_status": "checked",
+      "checkers": [
+        "`every_used_condition_set_is_minimal_absolutely` replays, for every PROPER subset S of the conditions this certificate uses, a committed configuration that satisfies every hypothesis, keeps every condition in S nonzero, and FALSIFIES a conclusion -- which refutes membership in the saturated ideal of S outright, since a member would have to vanish at every common zero of those generators",
+        "the same configurations are independently replayed by geometry_check::check_certificate's degenerate-witness pass, from the artifact, by code that knows nothing about minimality",
+        "`a_counterexample_on_the_locus_that_falsifies_nothing_is_rejected` confirms each counterexample does more than sit on the degeneracy locus, and asserts full coverage of every certificate's coordinatisation so this theorem cannot silently opt out of that control"
+      ],
+      "checker_command": "cargo test -p axeyum-cas --test geometry_certificate_artifacts",
+      "artifact": "artifacts/geometry-certificates/desargues-affine-perspective.json",
+      "notes": "This is the corpus's first three-condition certificate to be checked this way, so it is the case that exercises the subset enumeration rather than merely satisfying it: a one-condition certificate has exactly one proper subset (the empty one), while this theorem has seven, and each must be refuted by a committed configuration. Refuting the singletons and the pairs is the part that a budget-relative claim cannot deliver, because a subset can fail a bounded-degree search for reasons that have nothing to do with the theorem.",
+      "measurement": "7 proper subsets of the 3-element condition set, all 7 refuted, 0 undecided -- from 3 committed counterexamples, since a configuration that annihilates one condition also annihilates every subset not containing it."
+    }
+  ],
+  "provenance": {
+    "date": "2026-09-06",
+    "established_by": "lane geometry: axeyum_cas::geometry_certify (untrusted cofactor-tracked search over the Rabinowitsch saturation) + axeyum_cas::geometry_check (independent re-derivation); this ledger row transcribes the committed certificate",
+    "source": "classical; coordinatised in the affine plane, with the second triangle parametrised by three ratios along the lines through the centre, by the certificate's lane",
+    "prior_art": [
+      {
+        "who": "Girard Desargues",
+        "what": "two triangles in perspective from a point are in perspective from a line",
+        "where": "published by Abraham Bosse, Maniere universelle de M. Desargues pour pratiquer la perspective (1648), as a proposition attributed to Desargues",
+        "year": 1648,
+        "attribution": "standard historical attribution; this lane did not consult the primary source"
+      }
+    ]
+  },
+  "notes": "Established on the `cas-certificate` route, in the geometry family, and filed as a plain fact rather than a kernel-reconstructed one: no kernel bridge exists for this certificate, so every evidence row's checker terminates in the CAS's own normal form and the fact classifies as `cas-internal` under ADR-0601 SS2. That is why it carries no `cas_substance` block -- that block is required on, and only on, a kernel-reconstructed fact. The three `geometry.nondegeneracy.*` entries are listed in the axiom footprint even though they also appear as hypotheses of `formal.statement`, deliberately: the footprint is the field a reader scans to see what a proof rests on, and a side condition invisible there is precisely how a mechanised geometry proof comes to be quoted as unconditional. Read this fact together with F:geometry-pappus-hexagon, whose three inviting conditions turned out to be individually redundant; here they are not, and the difference is decided by committed counterexamples rather than by how hard the search tried. The SMT-LIB transcription above was not written by hand: it is rendered term by term from the certificate's own polynomials, with each atom written as `positive part = negated negative part` so that no coefficient carries a sign, and it is re-checked by `scripts/check-geometry-fact-transcription.py`, which splits the antecedent into conjuncts, matches them positionally against the certificate's hypotheses and then its saturations, matches the consequents against its conclusions, and requires a constant nonzero ratio at 400 random rational configurations. Every ratio here is exactly 1, which is what a mechanical rendering rather than a retyping buys."
+}

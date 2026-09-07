@@ -1627,7 +1627,7 @@
     "Top.ball_separated"
   ],
   "join": {
-    "facts_scanned": 2963,
+    "facts_scanned": 2971,
     "kernel_route_established_facts": 2586,
     "resolved_via_kernel_theorem_field": 2455,
     "resolved_via_statement_name": 45,
