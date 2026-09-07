@@ -1,7 +1,7 @@
 # ADR-1721: A preprocessing step owes ONE of three obligations, chosen by the direction it can break
 
 Status: accepted
-Index-summary: What a preprocessing step owes as evidence is decided by what it does to the model set — **replacement** owes a denotation equality, **relaxation** owes nothing in the `unsat` direction, **strengthening** owes a per-constraint discharge — and an obligation is legally discharged by a certificate, by a structural check, or by the route declining to conclude in that direction. A **decline is a discharge** (`blast_integers` already contains one); a **re-derivation is not**. Measured correction to the family page: preprocessing is not evidence-free — `ArrayElimUnsatCertificate` and `AckermannUnsatCertificate` discharge the *strengthening* half of the two eager eliminations and **re-derive** the replacement half. Measured 2026-09-06 by mutating read-over-write's `ite` branches: `ArrayElimUnsatCertificate::recheck` returns `Ok(true)` over a wrong `unsat` on a satisfiable query (3 of 8 tests died; only the new anchor exhibits the dangerous direction). New guard landed: `satisfiable_read_over_write_yields_no_certificate`, the suite's first negative anchor aimed at a wrong producer rather than a fabricated artifact. Next: generalize it into an independent faithfulness witness, copying `fpa2bv_faithfulness.rs`.
+Index-summary: What a preprocessing step owes as evidence is decided by what it does to the model set — **replacement** owes a denotation equality, **relaxation** owes nothing in the `unsat` direction, **strengthening** owes a per-constraint discharge — and an obligation is legally discharged by a certificate, by a structural check, or by the route declining to conclude in that direction. A **decline is a discharge** (`blast_integers` already contains one); a **re-derivation is not**. Corrects the family page: preprocessing is not evidence-free — `ArrayElimUnsatCertificate` and `AckermannUnsatCertificate` discharge the *strengthening* half of the two eager eliminations and **re-derive** the replacement half. Measured 2026-09-06 by swapping read-over-write's `ite` branches: `recheck` returned `Ok(true)` over a wrong `unsat` on a satisfiable query. The slice is landed and closes it — `witness_read_over_write` interprets both sides under sampled concrete assignments instead of re-running the transform, `recheck` calls it as step 2 of five, and the same mutation now yields `Ok(false)` while killing exactly one of the witness suite's four tests. `TrustId::ArrayElim` stays uncertified: the witness is sampled, so it is evidence, not proof.
 Index-status: accepted
 Date: 2026-09-06
 
@@ -171,9 +171,11 @@ rederived` (`:154-161`), re-bit-blasts and compares DIMACS byte-for-byte
   produced (0 congruence constraints); its recheck returned Ok(true)
   ```
 
-  **`ArrayElimUnsatCertificate::recheck` returns `Ok(true)` over a wrong
-  `unsat`.** All four of its steps pass, because all four recompute from the
-  same mutated producer. That is the claim, measured.
+  **`ArrayElimUnsatCertificate::recheck` returned `Ok(true)` over a wrong
+  `unsat`.** All four of its steps passed, because all four recomputed from the
+  same mutated producer. That is the claim, measured — and §7 then closed it:
+  with the faithfulness witness wired in as a fifth step, the same mutation
+  yields `recheck returned Ok(false)`.
 
   The mutation killed **3** of the 8 tests, and the split matters. Two —
   `row_same_index_certificate_revalidates` and
@@ -392,32 +394,59 @@ or corrupted **artifact**. It is a fixture-specific guard, not the general
 witness: it catches this mutation because this fixture's satisfiability flips.
 Steps 1 and 2 below are what generalize it.
 
-The slice:
+**The slice is landed.** All three steps:
 
-1. `check_read_over_write_faithful(arena, assertions, &elim, samples) -> bool`.
-   For each sampled assignment: give every array symbol a concrete finite map
-   (the evaluator already has array values, ADR-0010), give every other free
-   symbol a value, then derive each fresh select symbol's value as
-   `a^M[idx^M]` from `elim.selects()` — the exact model extension the
-   certificate header argues abstractly — and require
-   `⟦original assertion⟧ = ⟦abstraction assertion⟧` for every assertion.
-   The reference is the ground evaluator on the **original** array term, which
-   is independent of `resolve_select`.
-2. Call it from `ArrayElimUnsatCertificate::recheck` as a step (1b), so the
-   existing artifact's replacement half stops being re-derived.
-3. **Mutation control:** swap the read-over-write `ite` branches on a snapshot
-   (never the shared worktree) and require that exactly one test dies — the new
-   faithfulness test — while the existing
-   `crates/axeyum-solver/tests/array_elim_unsat_proofs.rs` suite, whose
-   soundness-negative anchors today cover a fabricated certificate but not a
-   wrong producer, is unaffected. Whichever way that run comes out is the
-   finding, and it settles §2's derivation.
+1. `witness_read_over_write(arena, assertions, elim, samples)`
+   (`crates/axeyum-rewrite/src/arrays.rs`). For each sampled assignment it gives
+   every array symbol a concrete `ArrayValue` map (the evaluator already has
+   array values, ADR-0010), gives every other symbol a value, derives each fresh
+   select symbol's value as `a^M[idx^M]` from `elim.selects()` — the exact model
+   extension the certificate's own header argues abstractly — and requires
+   `⟦assertions[k]⟧ = ⟦elim.abstraction()[k]⟧`. The reference is the ground
+   evaluator on the **original** array term, which never enters
+   `resolve_select`. `ReadOverWriteWitness` reports `compared` and
+   `unavailable` separately, and `is_faithful()` is `false` when
+   `compared == 0`: a witness that examined nothing has not witnessed anything.
+   Eight samples, sample 0 the all-zero corner and sample 1 the all-ones corner,
+   the rest `SplitMix64`-seeded, so the sequence is deterministic (a public API
+   promise) and pinned by a test.
+
+2. `ArrayElimUnsatCertificate::recheck` calls it as step 2 of five. **A
+   disagreement is a hard reject; an `unavailable` sample is not** — failing on
+   coverage would decline certificates over sorts the sampler cannot speak
+   about, which is the `denotation_unavailable` discipline again.
+
+3. **Mutation control, run on this lane's isolated worktree and reverted.**
+   Swapping the read-over-write `ite` branches kills **exactly one** of the four
+   tests in `crates/axeyum-rewrite/tests/read_over_write_witness.rs` —
+   `witness_accepts_the_shipped_read_over_write`, reporting
+   `ReadOverWriteDisagreement { sample: 2, assertion: 1, original: Bool(true),
+   abstracted: Bool(false) }`. The other three, including the negative control
+   that proves `Disagreed` is reachable at all and the vacuity control that
+   proves an empty witness is not a pass, survive.
+
+   **End to end, on the same mutation:** the certificate suite's
+   `satisfiable_read_over_write_yields_no_certificate` reported
+   `recheck returned Ok(true)` before step 2 was wired in and
+   `recheck returned Ok(false)` after. The artifact that used to accept a wrong
+   `unsat` now rejects it.
 
 Why this and not something bigger: it upgrades an artifact that already exists
 and is already in the trust ledger, it closes the half §2 measures as open, it
 needs no new semantics, and its negative control is a wrong rewrite over a
 **satisfiable** query — so the test fails because the certificate is wrong, not
 merely because it is absent.
+
+**What the slice does not do.** The witness is sampled, so like the ADR-0408
+denotation guard it is evidence and not proof, and §6 item 2 applies to it
+verbatim: it may record "witnessed at N samples, M unavailable" and must not
+record "read-over-write is faithful". `TrustId::ArrayElim` therefore stays
+`is_certified() == false`; what changed is that its `recheck` now has a step
+that a wrong producer cannot pass. The witness is also **not** wired into
+`certify_array_elim_unsat`: making the emitter refuse would fail closed on the
+artifact while leaving the wrong verdict in place, and it would hide the
+mutation from the very test that measures it. The checker is where the failure
+must surface.
 
 The second slice, when this lands, is `eliminate_int_divmod`'s missing metadata
 (§4), because it is the only `unsat`-feeding transform with no artifact of any

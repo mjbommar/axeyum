@@ -573,6 +573,289 @@ fn contains_array(arena: &TermArena, term: TermId) -> bool {
     false
 }
 
+// ===========================================================================
+// Read-over-write faithfulness witness (ADR-1721 section 7)
+// ===========================================================================
+//
+// `ArrayElimUnsatCertificate::recheck` re-derives the eager elimination and
+// compares it to itself. That is a genuine discharge for the Ackermann half --
+// the appended congruence set is rebuilt by an independent implementation of one
+// schema, so a *spurious* extra constraint is caught -- but it says nothing
+// about read-over-write, which is recomputed by the same `resolve_select` on the
+// same input. Measured 2026-09-06: with the `Op::Store` arm's `ite` branches
+// swapped, `recheck` returns `Ok(true)` over a query that is genuinely
+// satisfiable.
+//
+// This witness is the independent reference that closes it, in the shape
+// `crates/axeyum-fp/tests/fpa2bv_faithfulness.rs` already proved on the same
+// defect class: rather than re-running the transform, it interprets BOTH sides
+// under one concrete assignment and compares the values. Arrays get real
+// [`ArrayValue`] maps, each abstracted select symbol is bound to the element the
+// sampled array actually holds at the evaluated index -- the exact model
+// extension the elimination's soundness argument assumes -- and the original
+// assertion is evaluated by the ground evaluator's array semantics, which do not
+// go through `resolve_select` at all.
+//
+// A disagreement is a hard finding. A sample that cannot be built or evaluated
+// is counted as *unavailable*, never silently treated as agreement: the same
+// honest-hole discipline `PreconditionAudit::denotation_unavailable` uses.
+
+/// Number of sampled assignments [`witness_read_over_write`] is normally given.
+///
+/// Sample 0 is the all-zero corner and sample 1 the all-ones corner; the rest
+/// are seeded pseudorandom, so the sequence is deterministic (a public API
+/// promise) and reproducible across runs and hosts.
+pub const READ_OVER_WRITE_WITNESS_SAMPLES: usize = 8;
+
+/// Number of overriding entries written into each sampled array value.
+///
+/// A constant array would make read-over-write's two branches agree whenever the
+/// stored element happened to match the default, so the sampled arrays must
+/// actually vary across indices for the witness to have teeth.
+const SAMPLED_ARRAY_ENTRIES: usize = 4;
+
+/// A disagreement between an original assertion and its post-read-over-write
+/// abstraction under one concrete assignment: the elimination is **not**
+/// faithful, so any `unsat` derived through it is unsound.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ReadOverWriteDisagreement {
+    /// Index of the sampled assignment.
+    pub sample: usize,
+    /// Index of the assertion, into the caller's `assertions` slice.
+    pub assertion: usize,
+    /// Value of the original, array-using assertion.
+    pub original: Value,
+    /// Value of the rewritten abstraction of that assertion.
+    pub abstracted: Value,
+}
+
+/// Outcome of the read-over-write faithfulness witness.
+///
+/// `compared` and `unavailable` partition the `(sample, assertion)` pairs the
+/// witness attempted, so a caller can report coverage instead of assuming it.
+/// `compared == 0` is **not** a pass and [`Self::is_faithful`] does not treat it
+/// as one.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ReadOverWriteWitness {
+    /// `(sample, assertion)` pairs where both sides evaluated and agreed.
+    pub compared: usize,
+    /// `(sample, assertion)` pairs skipped: a sort the sampler cannot build, or
+    /// an evaluator refusal. A coverage hole, not a pass.
+    pub unavailable: usize,
+    /// The first disagreement found, if any. Its presence is a soundness alarm.
+    pub disagreement: Option<ReadOverWriteDisagreement>,
+}
+
+impl ReadOverWriteWitness {
+    /// `true` only when at least one pair was compared and none disagreed.
+    ///
+    /// Deliberately `false` for an all-`unavailable` run: a witness that
+    /// examined nothing has not witnessed anything.
+    #[must_use]
+    pub fn is_faithful(&self) -> bool {
+        self.disagreement.is_none() && self.compared > 0
+    }
+}
+
+/// Witnesses that `elim`'s read-over-write step is faithful to array semantics,
+/// by evaluating the original assertions and their abstractions under the same
+/// concrete assignments.
+///
+/// `arena` must be the arena the elimination ran on -- the fresh select symbols
+/// live there -- and `assertions` the ORIGINAL, array-using assertions it was
+/// given, the same pair [`eliminate_arrays`] was called with. For each sample
+/// the witness binds every symbol, overrides each abstracted select symbol with
+/// the element the sampled array actually holds at the evaluated index, and
+/// compares `assertions[k]` against `elim.abstraction()[k]`.
+///
+/// The comparison is against [`ArrayElimination::abstraction`], not
+/// [`ArrayElimination::assertions`]: the Ackermann constraints are a separate
+/// obligation with its own discharge, and every sampled assignment satisfies
+/// them by construction anyway, since the fresh symbols are read out of a
+/// genuine function.
+///
+/// Returns `compared == 0` with no disagreement when `elim` eliminated no
+/// arrays, or when `assertions` and the abstraction have different lengths.
+/// Both are "nothing to witness" rather than a pass, and
+/// [`ReadOverWriteWitness::is_faithful`] reports them as such.
+#[must_use]
+pub fn witness_read_over_write(
+    arena: &TermArena,
+    assertions: &[TermId],
+    elim: &ArrayElimination,
+    samples: usize,
+) -> ReadOverWriteWitness {
+    let mut witness = ReadOverWriteWitness {
+        compared: 0,
+        unavailable: 0,
+        disagreement: None,
+    };
+    let abstraction = elim.abstraction();
+    if !elim.had_arrays() || abstraction.len() != assertions.len() {
+        return witness;
+    }
+    let selects = elim.selects();
+
+    for sample in 0..samples {
+        let Some(mut assignment) = sample_assignment(arena, sample) else {
+            witness.unavailable += assertions.len();
+            continue;
+        };
+        if !bind_select_symbols(arena, &selects, &mut assignment) {
+            witness.unavailable += assertions.len();
+            continue;
+        }
+        for (index, (&original, &abstracted)) in
+            assertions.iter().zip(abstraction.iter()).enumerate()
+        {
+            let (Ok(lhs), Ok(rhs)) = (
+                eval(arena, original, &assignment),
+                eval(arena, abstracted, &assignment),
+            ) else {
+                witness.unavailable += 1;
+                continue;
+            };
+            witness.compared += 1;
+            if lhs != rhs && witness.disagreement.is_none() {
+                witness.disagreement = Some(ReadOverWriteDisagreement {
+                    sample,
+                    assertion: index,
+                    original: lhs,
+                    abstracted: rhs,
+                });
+            }
+        }
+    }
+    witness
+}
+
+/// Builds one sampled assignment over every symbol in `arena`, or `None` if any
+/// symbol has a sort this witness cannot sample.
+///
+/// The abstracted select symbols are `BitVec`, so they get a sampled placeholder
+/// here and are overwritten by [`bind_select_symbols`]. Overwriting is
+/// deliberate: a select whose index term fails to evaluate must leave the whole
+/// sample *unavailable* rather than silently keep an unrelated sampled value.
+fn sample_assignment(arena: &TermArena, sample: usize) -> Option<Assignment> {
+    let mut assignment = Assignment::new();
+    let mut counter = 0u64;
+    for (symbol, _name, sort) in arena.symbols() {
+        counter += 1;
+        let seed = mix(sample as u64, counter);
+        let value = match sort {
+            Sort::Bool => Value::Bool(sample_bit(sample, seed)),
+            Sort::BitVec(width) if width <= 128 => Value::Bv {
+                width,
+                value: sample_bits(sample, seed, width),
+            },
+            Sort::Array { .. } => {
+                let (index_width, element_width) = sort.array_widths()?;
+                if index_width > 128 || element_width > 128 {
+                    return None;
+                }
+                Value::Array(sample_array(sample, seed, index_width, element_width))
+            }
+            _ => return None,
+        };
+        assignment.set(symbol, value);
+    }
+    Some(assignment)
+}
+
+/// Binds each abstracted select symbol to the element the sampled array holds at
+/// the evaluated index.
+///
+/// An index term may itself contain abstracted selects -- a read whose index is
+/// another read -- so this iterates to a fixpoint rather than assuming discovery
+/// order is topological. Returns `false` when selects remain unresolved and no
+/// progress is left, which makes the whole sample *unavailable*.
+fn bind_select_symbols(
+    arena: &TermArena,
+    selects: &[(SymbolId, TermId, SymbolId)],
+    assignment: &mut Assignment,
+) -> bool {
+    let mut pending: Vec<usize> = (0..selects.len()).collect();
+    while !pending.is_empty() {
+        let mut progressed = false;
+        let mut still_pending = Vec::with_capacity(pending.len());
+        for &position in &pending {
+            let (array, index_term, fresh) = selects[position];
+            let Ok(Value::Bv { value: index, .. }) = eval(arena, index_term, assignment) else {
+                still_pending.push(position);
+                continue;
+            };
+            let Some(Value::Array(map)) = assignment.get(array) else {
+                return false;
+            };
+            assignment.set(
+                fresh,
+                Value::Bv {
+                    width: map.element_width(),
+                    value: map.select(index),
+                },
+            );
+            progressed = true;
+        }
+        if !progressed {
+            return false;
+        }
+        pending = still_pending;
+    }
+    true
+}
+
+/// A sampled array: a constant base plus [`SAMPLED_ARRAY_ENTRIES`] overriding
+/// entries, so the map is not constant and read-over-write's two branches are
+/// distinguishable.
+fn sample_array(sample: usize, seed: u64, index_width: u32, element_width: u32) -> ArrayValue {
+    let mut map = ArrayValue::constant(
+        index_width,
+        element_width,
+        sample_bits(sample, seed, element_width),
+    );
+    for entry in 0..SAMPLED_ARRAY_ENTRIES {
+        let entry_seed = mix(seed, entry as u64 + 1);
+        let index = sample_bits(sample, entry_seed, index_width);
+        let element = sample_bits(sample, mix(entry_seed, 0x5eed), element_width);
+        map = map.store(index, element);
+    }
+    map
+}
+
+/// Sample 0 is the all-zero corner, sample 1 the all-ones corner, the rest are
+/// seeded pseudorandom.
+fn sample_bits(sample: usize, seed: u64, width: u32) -> u128 {
+    let mask = if width >= 128 {
+        u128::MAX
+    } else {
+        (1u128 << width) - 1
+    };
+    match sample {
+        0 => 0,
+        1 => mask,
+        _ => ((u128::from(mix(seed, 1)) << 64) | u128::from(mix(seed, 2))) & mask,
+    }
+}
+
+fn sample_bit(sample: usize, seed: u64) -> bool {
+    match sample {
+        0 => false,
+        1 => true,
+        _ => mix(seed, 3) & 1 == 1,
+    }
+}
+
+/// `SplitMix64`, so the sample sequence is deterministic and host-independent.
+fn mix(a: u64, b: u64) -> u64 {
+    let mut z = a
+        .wrapping_mul(0x9e37_79b9_7f4a_7c15)
+        .wrapping_add(b)
+        .wrapping_add(0x9e37_79b9_7f4a_7c15);
+    z = (z ^ (z >> 30)).wrapping_mul(0xbf58_476d_1ce4_e5b9);
+    z = (z ^ (z >> 27)).wrapping_mul(0x94d0_49bb_1331_11eb);
+    z ^ (z >> 31)
+}
+
 #[cfg(test)]
 mod tests {
     use super::{ArrayElimError, abstract_arrays, contains_array, eliminate_arrays};

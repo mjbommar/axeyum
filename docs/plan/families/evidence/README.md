@@ -104,16 +104,23 @@ maintenance cost because its specification describes itself as evolving.
    2026-09-06.
 2. S7 — emit the two-stream artifact from one theory route, gaining the checked
    Boolean half.
-3. Fill one preprocessing obligation end to end. **Not canonicalization** —
-   ADR-1721 §6 measures why: `RuleApplication` carries `before`/`after` but no
-   position or order, so a checker can verify every step and still not verify
-   that they compose to the output. The named slice is an independent
-   faithfulness witness for read-over-write, copying
-   `crates/axeyum-fp/tests/fpa2bv_faithfulness.rs`, the pattern that already
-   caught this defect class.
-4. `eliminate_int_divmod` — the only `unsat`-feeding transform with no artifact
+3. ~~Fill one preprocessing obligation end to end.~~ Done 2026-09-06
+   (ADR-1721 §7). **Not canonicalization** — §6 measures why: `RuleApplication`
+   carries `before`/`after` but no position or order, so a checker can verify
+   every step and still not verify that they compose to the output. What landed
+   is an independent faithfulness witness for read-over-write
+   (`witness_read_over_write`), in the shape of
+   `crates/axeyum-fp/tests/fpa2bv_faithfulness.rs`. Before it,
+   `ArrayElimUnsatCertificate::recheck` returned `Ok(true)` over a wrong `unsat`
+   from a mutated read-over-write; after, `Ok(false)`. It is sampled, so
+   `TrustId::ArrayElim` stays uncertified — evidence, not proof.
+4. The same witness for `eliminate_functions`, whose replacement half is
+   re-derived exactly as arrays' was.
+5. `eliminate_int_divmod` — the only `unsat`-feeding transform with no artifact
    of any kind (a bare `Vec<TermId>`) and a soundness-mode change at
    `MAX_CONGRUENCE_GROUPS = 48` that is not reported to the caller.
+6. Retain the ADR-0408 denotation guard's verdict past the pass, and stop
+   `auto.rs:1744` swallowing its refusal as an ordinary decline.
 
 ## Owning documents
 

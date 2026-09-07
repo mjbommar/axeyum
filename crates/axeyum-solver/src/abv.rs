@@ -15,7 +15,10 @@ use axeyum_ir::{
     ArraySortKey, ArrayValue, Assignment, FuncValue, GenericArrayValue, Op, Sort, SymbolId,
     TermArena, TermId, TermNode, Value, eval, well_founded_default,
 };
-use axeyum_rewrite::{ArrayElimError, ArrayElimination, eliminate_arrays};
+use axeyum_rewrite::{
+    ArrayElimError, ArrayElimination, READ_OVER_WRITE_WITNESS_SAMPLES, eliminate_arrays,
+    witness_read_over_write,
+};
 
 use crate::backend::{
     Capabilities, CheckResult, SolverBackend, SolverConfig, SolverError, UnknownKind, UnknownReason,
