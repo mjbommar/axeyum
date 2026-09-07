@@ -463,3 +463,81 @@ produces, which only measures the pinned `taskset` invocation after the
 build already finished.
 
 
+
+## Watching a background job: three signals that are not what they look like
+
+Measured 2026-09-06/07, when a single overnight session produced nine broken
+waiters across three lanes plus the coordinator's own monitor, and two orphaned
+processes burning a core each for hours. All three are the same mistake.
+
+### `pgrep -f 'X'` inside a command whose own line contains X matches itself
+
+```sh
+# WRONG — never exits. The bash -c command line contains the pattern.
+bash -c "while pgrep -f 'scripts/parity-run.sh QF_NRA' >/dev/null; do sleep 15; done"
+# WRONG — same bug inverted; `until ! pgrep` never becomes true.
+bash -c "until ! pgrep -f 'cargo build -p axeyum-bench'; do sleep 5; done"
+```
+
+The watcher matches itself, so the condition never changes and the job it is
+watching can finish, or die, with the watcher still reporting RUNNING. One such
+waiter spun for four minutes past a build that had already finished; two others
+spun past a completed parity sweep whose ledger entry was already written.
+
+**Do:** watch the ARTIFACT, not the process — a row count, a file appearing, a
+marker line. It is what you actually care about and it cannot self-match. If you
+must match a process, bracket the first character: `pgrep -f "[s]cripts/..."`.
+
+This also bites `ps -ef | grep foo` interactively: the grep matches its own
+command line. Use `ps -eo cmd | grep "[f]oo"`.
+
+### `timeout N cmd` exiting 124 means the TIMER fired, not that the work stopped
+
+The child can outlive the wrapper. A frequency census here was reported by its
+lane as "exit 124 at 900 s, zero lines" and published as "did not run"; the
+process was found **2.5 hours later** still at 99% of a core, orphaned, in a
+worktree that had since been deleted, so nothing could ever read its output. The
+published *reason* was wrong even though the conclusion happened to survive.
+
+**Do:** after a timeout fires, confirm the child is gone before concluding
+anything. Use `timeout -k 5 N` so a survivor gets SIGKILL, and still check. Word
+the conclusion as "the wrapper returned at N s", never "the job did not finish".
+
+### Killing a shell does not kill what it spawned
+
+A second orphan the same night: a `python3 -` heredoc with an infinite loop whose
+shell had been killed three hours earlier, still at 99% CPU.
+
+**And the case that survives your cleanup: a waiter started over `ssh` is a
+process on the REMOTE host.** Cancelling the local background task that launched
+it kills your end of the pipe, not the loop on the other side. Four
+self-matching waiters cancelled locally one night were found the next morning
+still running on the compute host, the oldest at 11.7 hours. Sweep the remote
+hosts too, not just the box you are typing on:
+
+```sh
+for h in s5 s6 s7; do ssh $h 'ps -eo cmd | grep -c "[w]hile pgrep\|[u]ntil ! pgrep"'; done
+```
+
+**The orphan signature, worth sweeping for at the end of any session that reaped
+a worktree:**
+
+```sh
+ps -eo pid,ppid,etimes,%cpu,cmd --sort=-%cpu | awk '$2==1 && $4>10'
+readlink /proc/<pid>/cwd     # "(deleted)" is the tell
+```
+
+Orphans tax every load-sensitive number taken on the host, so a timing result
+gathered while one is running is not comparable to one gathered after.
+
+### The one sentence behind all three
+
+**A statement of intention is not an observation of outcome.** A process's
+command line says what it *will* do; its child says what it *is doing*. A
+timeout's exit code says the timer fired. A killed shell says the shell died.
+In one session the same error also appeared as a gate reporting ABSENT from an
+environment that omitted nine of thirty-one preludes, a test named for a case
+its fixture did not exercise, and a reviewer's confident absence claim resting
+on an instrument with a coverage gap. Six surfaces, one mistake: for any signal
+you are about to act on, name the observation that would distinguish intention
+from outcome, and go get it.

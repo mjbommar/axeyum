@@ -4519,7 +4519,13 @@ fn bv2nat_bound_certificate(
     // refuter in `auto`); emit the `lia_generic` cert over it. `prove_lia_unsat_alethe`
     // self-validates and internally re-runs `check_with_lia_simplex`, so a non-`unsat`
     // abstraction (or one outside the LIA fragment) yields `None`.
-    let linear = axeyum_rewrite::eliminate_int_divmod(&mut scratch, &relaxed).ok()?;
+    // Only the `unsat` direction is taken from this elimination (the Alethe LIA
+    // refutation below), and every mode of the pass is a relaxation, so `unsat`
+    // transfers at any zero-divisor group count (ADR-1730). No congruence guard
+    // is needed here; one WOULD be if this route ever reported `sat`.
+    let linear = axeyum_rewrite::eliminate_int_divmod(&mut scratch, &relaxed)
+        .ok()?
+        .into_assertions();
     let proof = crate::prove_lia_unsat_alethe(&scratch, &linear)?;
     if !matches!(crate::check_alethe_lra(&proof), Ok(true)) {
         return None;
