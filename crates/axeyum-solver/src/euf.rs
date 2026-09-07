@@ -14,8 +14,8 @@ use axeyum_ir::{
     Assignment, FuncId, Op, Sort, SymbolId, TermArena, TermId, TermNode, TermStats, Value, eval,
 };
 use axeyum_rewrite::{
-    FuncElimError, FunctionAbstraction, FunctionElimination, abstract_functions,
-    eliminate_functions,
+    FUNCTION_ABSTRACTION_WITNESS_SAMPLES, FuncElimError, FunctionAbstraction, FunctionElimination,
+    abstract_functions, eliminate_functions, witness_function_abstraction,
 };
 
 use crate::backend::{
@@ -1882,17 +1882,23 @@ impl AckermannUnsatCertificate {
     /// data, trusting nothing the emitter computed:
     ///
     ///  1. re-runs the deterministic [`eliminate_functions`] on `assertions`;
-    ///  2. structurally re-derives the pairwise congruence set from the discovered
+    ///  2. **witnesses that the function abstraction is faithful** by
+    ///     interpreting the originals and their abstraction under sampled
+    ///     concrete assignments
+    ///     ([`witness_function_abstraction`], ADR-1721 §7) — an INDEPENDENT
+    ///     reference, unlike steps 3-5, which re-derive;
+    ///  3. structurally re-derives the pairwise congruence set from the discovered
     ///     application pairs and confirms the eliminated formula is *exactly*
     ///     `rewritten-originals ++ that-congruence-set` (so each appended assertion
     ///     is a VALID UF congruence consequence — the eliminated formula is a sound
     ///     relaxation, witnessed) and that the recorded pair counts match;
-    ///  3. re-bit-blasts the re-derived eliminated formula and confirms the stored
+    ///  4. re-bit-blasts the re-derived eliminated formula and confirms the stored
     ///     DIMACS is byte-identical (the DRAT refutes precisely *this* CNF);
-    ///  4. re-runs `check_drat` (RUP/RAT) over the stored DIMACS/DRAT.
+    ///  5. re-runs `check_drat` (RUP/RAT) over the stored DIMACS/DRAT.
     ///
-    /// Returns `Ok(true)` only when all four hold. With the reduction re-derived
-    /// (2,3) and the refutation re-checked (4), `QF_BV`-UNSAT ⇒ UF-UNSAT, so this
+    /// Returns `Ok(true)` only when all five hold. With the abstraction witnessed
+    /// (2), the reduction re-derived (3,4) and the refutation re-checked (5),
+    /// `QF_BV`-UNSAT ⇒ UF-UNSAT, so this
     /// `Unsat` carries no residual `Ackermann` trust. A `false`/`Err` means the
     /// certificate does not establish the `Unsat` and must not be trusted.
     ///
@@ -1914,7 +1920,49 @@ impl AckermannUnsatCertificate {
             return Ok(false);
         }
 
-        // (2) Structurally re-derive the pairwise congruence set and confirm the
+        // (2) Witness that the ABSTRACTION is faithful (ADR-1721 §7). Steps 3-5
+        //     re-derive: they re-run the same producer and compare the results,
+        //     which proves determinism and not faithfulness, so a stably-wrong
+        //     abstraction survives all three -- `trust.rs` names this in its own
+        //     words against a real shipped wrong-`unsat`. This step does not
+        //     re-run the transform. It interprets the ORIGINAL, function-applying
+        //     assertions with the ground evaluator's `Op::Apply` semantics over a
+        //     genuine `FuncValue`, and the abstraction with each fresh symbol
+        //     bound to what that same interpretation returns at the application's
+        //     evaluated arguments, and compares the values.
+        //
+        //     A DISAGREEMENT is a hard reject, and so is an UNNAMED
+        //     APPLICATION. The second is not decoration: measured here on
+        //     2026-09-07, with `eliminate_functions` mutated so every
+        //     application of one function shares one fresh symbol, the
+        //     SATISFIABLE `f(a) = 1 ∧ f(b) = 2` becomes a wrong `unsat` and this
+        //     `recheck` returned `Ok(true)` over it with the value comparison
+        //     ALREADY in place -- the two sides are compared as Booleans, and
+        //     `f(b) = 2` and `f(a) = 2` are both simply `false` at almost every
+        //     sample. Agreement on `false` is not agreement. The structural
+        //     count does not depend on luck: a merged or dropped application
+        //     leaves an original `Op::Apply` with no entry at its arguments.
+        //
+        //     An *unavailable* sample (a sort the sampler cannot build -- this
+        //     witness covers `Bool` and `BitVec` up to 128 bits, which is what
+        //     `QF_UFBV` produces) is NOT a reject: it is a coverage hole, and
+        //     failing on it would decline certificates this step simply cannot
+        //     speak about. So the condition names the two findings rather than
+        //     using `!is_faithful()`, which also fires on `compared == 0`.
+        //
+        //     Sampled, so `TrustId::Ackermann` stays uncertified: evidence, not
+        //     proof.
+        let witness = witness_function_abstraction(
+            &scratch,
+            assertions,
+            &elim,
+            FUNCTION_ABSTRACTION_WITNESS_SAMPLES,
+        );
+        if witness.disagreement.is_some() || witness.unnamed_applications > 0 {
+            return Ok(false);
+        }
+
+        // (3) Structurally re-derive the pairwise congruence set and confirm the
         //     eliminated formula is exactly `abstraction ++ congruence`.
         let Some((rederived, per_func)) = rederive_congruence(&mut scratch, &elim) else {
             return Ok(false);
@@ -1939,7 +1987,7 @@ impl AckermannUnsatCertificate {
             return Ok(false);
         }
 
-        // (3) Re-bit-blast the re-derived eliminated formula and confirm the stored
+        // (4) Re-bit-blast the re-derived eliminated formula and confirm the stored
         //     DIMACS is byte-identical: the DRAT refutes precisely the CNF of the
         //     formula we just re-derived, not some unrelated CNF the emitter chose.
         let eliminated = eliminated.to_vec();
@@ -1955,7 +2003,7 @@ impl AckermannUnsatCertificate {
             | crate::proof::UnsatProofOutcome::Inconclusive => return Ok(false),
         }
 
-        // (4) Independently re-check the stored BV refutation (RUP/RAT) over the
+        // (5) Independently re-check the stored BV refutation (RUP/RAT) over the
         //     stored DIMACS/DRAT.
         self.bv_proof.recheck()
     }
