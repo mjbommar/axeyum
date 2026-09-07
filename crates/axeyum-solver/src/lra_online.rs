@@ -473,6 +473,17 @@ struct BoundUndo {
 pub(crate) enum LraTheoryBuildStop {
     Deadline,
     ResourceLimit,
+    /// The construction's projected resident footprint exceeded its memory
+    /// budget (ADR-1752). Carries the numbers so the refusal can state them:
+    /// what it would have cost, what it was allowed, and the shape it got there
+    /// with. A refusal that only says "too big" is what the flat atom cap gave,
+    /// and it is why nobody could tell whether the cap was still load-bearing.
+    MemoryBudget {
+        estimated_bytes: usize,
+        budget_bytes: usize,
+        atoms: usize,
+        vars: usize,
+    },
 }
 
 impl LraTheory {
@@ -515,7 +526,26 @@ impl LraTheory {
         atom_terms: &[TermId],
         deadline: Option<Instant>,
     ) -> Result<Self, LraTheoryBuildStop> {
-        let mut builder = AtomBuilder::with_deadline(deadline);
+        Self::try_new_with_budget(arena, atom_terms, deadline, DEFAULT_ONLINE_LRA_BUDGET_BYTES)
+    }
+
+    /// The same construction under an explicit memory budget in bytes
+    /// (ADR-1752). This is what replaced the flat `MAX_ONLINE_LRA_ATOMS = 1_024`
+    /// admission cap: a count is the wrong currency, because the footprint is
+    /// `atoms x variables-per-atom` and the count refused a wide-and-shallow
+    /// query as readily as a narrow-and-deep one.
+    ///
+    /// The budget is enforced **incrementally**, from the builder's own
+    /// deterministic coefficient counters, so the answer does not depend on
+    /// machine speed or on what else the host is doing, and a query that is
+    /// genuinely cheap is admitted however many atoms it has.
+    pub(crate) fn try_new_with_budget(
+        arena: &TermArena,
+        atom_terms: &[TermId],
+        deadline: Option<Instant>,
+        budget_bytes: usize,
+    ) -> Result<Self, LraTheoryBuildStop> {
+        let mut builder = AtomBuilder::with_deadline(deadline, budget_bytes);
         let mut atoms = Vec::with_capacity(atom_terms.len());
         for &term in atom_terms {
             if past_deadline(deadline) {
@@ -1520,11 +1550,53 @@ const MAX_LRA_NORMALIZATION_NODES: usize = 1_000_000;
 const MAX_LRA_COEFFICIENT_WORK: usize = 4_000_000;
 const MAX_LRA_CACHED_COEFFICIENTS: usize = 262_144;
 
+/// Resident bytes one retained linear-form coefficient costs (ADR-1752).
+///
+/// A coefficient lives in a `BTreeMap<usize, Rational>` entry (8 + 32 bytes of
+/// payload, plus the B-tree's own per-entry share) and is copied again into the
+/// `assign_forms` key and into the sparse tableau row, so the resident cost of
+/// one *semantic* coefficient is several times its payload. This is the
+/// **measured** conversion, calibrated the way
+/// [`crate::memory_budget::ENCODING_BYTES_PER_CLAUSE`] is: peak RSS observed on
+/// real high-atom `QF_LRA` benchmarks, divided by the coefficient count the
+/// builder charged itself for on the same run. See
+/// `docs/research/12-performance/lra-theory-side-2026-09-07.md`.
+pub(crate) const BYTES_PER_LRA_COEFFICIENT: usize = 224;
+
+/// Resident bytes one dense simplex tableau cell costs: a [`Rational`] is two
+/// `i128`s and the tableau is `Vec<Vec<Rational>>`, so the per-cell share of the
+/// row vectors' own headers is negligible beside the 32-byte payload.
+pub(crate) const BYTES_PER_TABLEAU_CELL: usize = 32;
+
+/// Default memory budget for **one** online CDCL(T) LRA construction
+/// (ADR-1752), overridden by `SolverConfig::memory_limit_mb` when that is set.
+///
+/// This replaces the flat `MAX_ONLINE_LRA_ATOMS = 1_024` admission cap. A count
+/// is the wrong currency: 23,385 atoms over few variables cost less than 1,492
+/// atoms over 700, and the count refused both identically.
+///
+/// # Why this number
+///
+/// It is chosen so the ceilings [`NormalizationLimits::for_budget`] derives sit
+/// **close to the ones already in force**, because this change is meant to be
+/// one of currency and reporting rather than a loosening. 640 MiB less the
+/// tableau's own 128 MiB leaves 512 MiB of coefficients, i.e. 2 396 745 of them
+/// at [`BYTES_PER_LRA_COEFFICIENT`], hence a `coefficient_work` ceiling of
+/// 4 793 490 against the 4 000 000 the flat constant carried — 20% looser, on
+/// the axis where the loosening buys the wide-and-shallow queries the atom count
+/// refused. The memo ceiling moves much further (1 198 372 against 262 144),
+/// which is the point: the memo is what the cap's own doc named as the cost, and
+/// 262 144 was never derived from a byte figure at all.
+pub(crate) const DEFAULT_ONLINE_LRA_BUDGET_BYTES: usize = 640 * 1_024 * 1_024;
+
 #[derive(Clone, Copy)]
 struct NormalizationLimits {
     nodes: usize,
     coefficient_work: usize,
     cached_coefficients: usize,
+    /// The budget the two coefficient ceilings above were derived from, kept so
+    /// a refusal can report the number rather than the derived ceiling.
+    budget_bytes: usize,
 }
 
 impl Default for NormalizationLimits {
@@ -1533,6 +1605,37 @@ impl Default for NormalizationLimits {
             nodes: MAX_LRA_NORMALIZATION_NODES,
             coefficient_work: MAX_LRA_COEFFICIENT_WORK,
             cached_coefficients: MAX_LRA_CACHED_COEFFICIENTS,
+            budget_bytes: DEFAULT_ONLINE_LRA_BUDGET_BYTES,
+        }
+    }
+}
+
+impl NormalizationLimits {
+    /// The ceilings a `budget_bytes` memory budget implies (ADR-1752).
+    ///
+    /// `nodes` is a *work* bound, not a memory one — a term graph can be walked
+    /// without retaining anything — so it is unchanged. The two coefficient
+    /// ceilings are memory bounds and become the budget divided by the measured
+    /// per-coefficient cost; the retained set and the memo are charged against
+    /// the same budget because they are alive at the same time, so each gets
+    /// half.
+    fn for_budget(budget_bytes: usize) -> Self {
+        // The dense tableau is built from the same construction and is alive at
+        // the same time, so its own ceiling is spent out of this budget before
+        // anything is left for coefficients. Accounting for it here is what
+        // stops the two halves drifting apart until one of them stops binding —
+        // the exact failure that let the atom cap outlive its own measurement.
+        let tableau = simplex::MAX_TABLEAU_CELLS.saturating_mul(BYTES_PER_TABLEAU_CELL);
+        let coefficients = budget_bytes.saturating_sub(tableau) / BYTES_PER_LRA_COEFFICIENT;
+        Self {
+            nodes: MAX_LRA_NORMALIZATION_NODES,
+            // `coefficient_work` is charged at `2 x (|left| + |right|)` per atom
+            // while roughly `|left| + |right|` coefficients are RETAINED, so the
+            // work ceiling that corresponds to `n` retained coefficients is `2n`;
+            // the memo holds a further share of the same budget.
+            coefficient_work: coefficients.saturating_mul(2),
+            cached_coefficients: coefficients / 2,
+            budget_bytes,
         }
     }
 }
@@ -1546,14 +1649,19 @@ struct AtomBuilder {
     node_visits: usize,
     coefficient_work: usize,
     cached_coefficients: usize,
+    /// Atoms handed to [`Self::build`] so far, so a budget refusal can say at
+    /// what atom count the projection crossed the line — the number a caller
+    /// (or a sibling division) needs in order to act on the refusal.
+    atoms_built: usize,
     stop: Option<LraTheoryBuildStop>,
     limits: NormalizationLimits,
 }
 
 impl AtomBuilder {
-    fn with_deadline(deadline: Option<Instant>) -> Self {
+    fn with_deadline(deadline: Option<Instant>, budget_bytes: usize) -> Self {
         Self {
             deadline,
+            limits: NormalizationLimits::for_budget(budget_bytes),
             ..Self::default()
         }
     }
@@ -1589,6 +1697,9 @@ impl AtomBuilder {
     fn charge_node(&mut self) -> bool {
         self.node_visits = self.node_visits.saturating_add(1);
         if self.node_visits > self.limits.nodes {
+            // A *work* ceiling, not a memory one — it stays `ResourceLimit` so a
+            // reader can tell "this term graph is too big to walk" apart from
+            // "this construction would not fit in its budget".
             self.stop = Some(LraTheoryBuildStop::ResourceLimit);
             false
         } else {
@@ -1599,16 +1710,46 @@ impl AtomBuilder {
     fn charge_coefficients(&mut self, count: usize) -> bool {
         self.coefficient_work = self.coefficient_work.saturating_add(count);
         if self.coefficient_work > self.limits.coefficient_work {
-            self.stop = Some(LraTheoryBuildStop::ResourceLimit);
+            self.stop = Some(self.budget_stop());
             false
         } else {
             true
         }
     }
 
+    /// The coefficients this construction is holding resident: the ones charged
+    /// into the built atoms plus the ones the linearization memo is keeping.
+    ///
+    /// `coefficient_work` is charged at `2 x (|left| + |right|)` per atom while
+    /// roughly `|left| + |right|` end up retained, hence the halving — the same
+    /// relation [`NormalizationLimits::for_budget`] inverts.
+    fn resident_coefficients(&self) -> usize {
+        (self.coefficient_work / 2).saturating_add(self.cached_coefficients)
+    }
+
+    /// The projected resident footprint of what has been built so far
+    /// (ADR-1752).
+    fn estimated_bytes(&self) -> usize {
+        self.resident_coefficients()
+            .saturating_mul(BYTES_PER_LRA_COEFFICIENT)
+    }
+
+    /// The stop a ceiling breach reports. Every one of these ceilings is now
+    /// *derived from* the byte budget, so the refusal states the budget and the
+    /// projection rather than the intermediate constant nobody can act on.
+    fn budget_stop(&self) -> LraTheoryBuildStop {
+        LraTheoryBuildStop::MemoryBudget {
+            estimated_bytes: self.estimated_bytes(),
+            budget_bytes: self.limits.budget_bytes,
+            atoms: self.atoms_built,
+            vars: self.vars.len(),
+        }
+    }
+
     /// Parses one atom term into its [`AtomKind`]. Any overflow or non-LRA shape
     /// yields [`AtomKind::Unsupported`] (a registered no-op), never a panic.
     fn build(&mut self, arena: &TermArena, term: TermId) -> AtomKind {
+        self.atoms_built += 1;
         if !self.check_deadline() {
             return AtomKind::Unsupported;
         }
@@ -3633,7 +3774,24 @@ pub fn check_qf_lra_online(
         Err(LraTheoryBuildStop::ResourceLimit) => {
             return Ok(CheckResult::Unknown(UnknownReason {
                 kind: UnknownKind::ResourceLimit,
-                detail: "online LRA normalization node/coefficient ceiling exceeded".to_owned(),
+                detail: "online LRA normalization node ceiling exceeded".to_owned(),
+            }));
+        }
+        // ADR-1752: the same refusal the CDCL(T) route gives, with the numbers.
+        Err(LraTheoryBuildStop::MemoryBudget {
+            estimated_bytes,
+            budget_bytes,
+            atoms,
+            vars,
+        }) => {
+            return Ok(CheckResult::Unknown(UnknownReason {
+                kind: UnknownKind::ResourceLimit,
+                detail: format!(
+                    "online LRA memory budget exceeded: projected {} MiB > budget {} MiB \
+                     at {atoms} atoms over {vars} variables",
+                    estimated_bytes / (1024 * 1024),
+                    budget_bytes / (1024 * 1024),
+                ),
             }));
         }
     };
@@ -3859,13 +4017,23 @@ mod tests {
             nodes: 64,
             coefficient_work: 8,
             cached_coefficients: 64,
+            budget_bytes: 8 * BYTES_PER_LRA_COEFFICIENT,
         };
         let mut exhausted = AtomBuilder::with_limits(None, limits);
         assert!(matches!(
             exhausted.build(&arena, atom),
             AtomKind::Unsupported
         ));
-        assert_eq!(exhausted.stop, Some(LraTheoryBuildStop::ResourceLimit));
+        // ADR-1752: a coefficient ceiling is a MEMORY ceiling now, so its stop
+        // carries the numbers rather than being an opaque `ResourceLimit`.
+        assert!(
+            matches!(
+                exhausted.stop,
+                Some(LraTheoryBuildStop::MemoryBudget { .. })
+            ),
+            "coefficient exhaustion reports the budget: {:?}",
+            exhausted.stop
+        );
 
         let limits = NormalizationLimits {
             coefficient_work: 32,
@@ -3983,6 +4151,30 @@ mod tests {
         );
     }
 
+    /// ADR-1752: the two halves of the construction's footprint must stay
+    /// commensurable. The coefficient ceilings are *derived from* the byte
+    /// budget, but the dense tableau's own cap is a separate constant, so
+    /// nothing stops the two drifting apart until one of them silently stops
+    /// binding. This pins the relation in both directions.
+    #[test]
+    fn the_tableau_cap_and_the_construction_budget_stay_commensurable() {
+        let tableau_bytes = simplex::MAX_TABLEAU_CELLS * BYTES_PER_TABLEAU_CELL;
+        assert!(
+            tableau_bytes < DEFAULT_ONLINE_LRA_BUDGET_BYTES,
+            "the tableau alone ({} MiB) must fit inside the construction budget \
+             ({} MiB), else the budget can never be the binding constraint",
+            tableau_bytes / (1024 * 1024),
+            DEFAULT_ONLINE_LRA_BUDGET_BYTES / (1024 * 1024),
+        );
+        assert!(
+            tableau_bytes * 8 > DEFAULT_ONLINE_LRA_BUDGET_BYTES,
+            "the tableau ({} MiB) must be a MATERIAL share of the budget ({} MiB); \
+             a budget many times the tableau cap is not accounting for it at all",
+            tableau_bytes / (1024 * 1024),
+            DEFAULT_ONLINE_LRA_BUDGET_BYTES / (1024 * 1024),
+        );
+    }
+
     /// **This is the test the `propagatable` scan filter is mutation-checked
     /// against.** Restricting `propagate_bounds` to atoms sharing a form is a
     /// claim of EXACT output equivalence, not of a good approximation, so the
@@ -3996,6 +4188,9 @@ mod tests {
     /// them, and dropping them must change nothing). A filter that kept
     /// everything would pass; a filter that dropped a *shared* atom must fail
     /// here.
+    // The control re-derives the full scan body verbatim, which is what makes it
+    // a control; splitting it would let the two drift.
+    #[allow(clippy::too_many_lines, clippy::items_after_statements)]
     #[test]
     fn the_scan_filter_offers_exactly_what_a_full_scan_would() {
         let mut arena = TermArena::new();

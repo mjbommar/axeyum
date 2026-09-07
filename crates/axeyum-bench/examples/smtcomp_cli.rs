@@ -549,6 +549,12 @@ fn evidence_report_line(
 struct CliArgs {
     path: Option<String>,
     timeout_ms: Option<u64>,
+    /// `SolverConfig::memory_limit_mb`. Off by default, exactly like every other
+    /// lever here, so `scripts/parity-run.sh`'s invocation stays the shipped
+    /// configuration. It exists because ADR-1752 made that field the online LRA
+    /// construction budget, and a budget nobody can set from the command line
+    /// cannot be calibrated or reproduced.
+    memory_limit_mb: Option<u64>,
     evidence_mode: bool,
     progress_mode: bool,
     trace_mode: bool,
@@ -560,6 +566,9 @@ fn parse_cli_args() -> CliArgs {
         timeout_ms: std::env::var("AXEYUM_TIMEOUT_MS")
             .ok()
             .and_then(|v| v.parse().ok()),
+        memory_limit_mb: std::env::var("AXEYUM_MEMORY_LIMIT_MB")
+            .ok()
+            .and_then(|v| v.parse().ok()),
         evidence_mode: std::env::var("AXEYUM_EVIDENCE").is_ok_and(|v| v == "1"),
         progress_mode: std::env::var("AXEYUM_PROOF_PROGRESS").is_ok_and(|v| v == "1"),
         trace_mode: std::env::var("AXEYUM_TRACE").is_ok_and(|v| v == "1"),
@@ -569,6 +578,9 @@ fn parse_cli_args() -> CliArgs {
         match arg.as_str() {
             "--timeout-ms" => {
                 args.timeout_ms = rest.next().and_then(|v| v.parse().ok());
+            }
+            "--memory-limit-mb" => {
+                args.memory_limit_mb = rest.next().and_then(|v| v.parse().ok());
             }
             "--evidence" => args.evidence_mode = true,
             "--progress" => args.progress_mode = true,
@@ -591,13 +603,14 @@ fn main() -> ExitCode {
     let CliArgs {
         path,
         timeout_ms,
+        memory_limit_mb,
         evidence_mode,
         progress_mode,
         trace_mode,
     } = parse_cli_args();
 
     let Some(path) = path else {
-        eprintln!("usage: smtcomp_cli <benchmark.smt2> [--timeout-ms N]");
+        eprintln!("usage: smtcomp_cli <benchmark.smt2> [--timeout-ms N] [--memory-limit-mb N]");
         return ExitCode::from(2);
     };
 
@@ -612,6 +625,9 @@ fn main() -> ExitCode {
     let mut config = SolverConfig::new();
     if let Some(ms) = timeout_ms {
         config = config.with_timeout(Duration::from_millis(ms));
+    }
+    if let Some(mb) = memory_limit_mb {
+        config = config.with_memory_limit_mb(mb);
     }
 
     // A/B levers for head-to-head probing, OFF unless explicitly asked for, so
@@ -697,11 +713,24 @@ fn main() -> ExitCode {
         let _guard = trace_mode.then(TheoryLayerStatsGuard::enable);
         // A parse or solver error is reported as `unknown` — never a wrong
         // verdict, and never a crash that the harness would read as an abort.
+        let mut give_up: Option<String> = None;
         let verdict = match solve_smtlib(&input, &config) {
             Ok(outcome) => match outcome.result {
                 CheckResult::Sat(_) => "sat",
                 CheckResult::Unsat => "unsat",
-                CheckResult::Unknown(_) => "unknown",
+                CheckResult::Unknown(reason) => {
+                    // An `unknown` carries a first-class reason and this binary
+                    // threw it away, so a resource refusal was indistinguishable
+                    // from a search timeout in every recorded run. ADR-1752's
+                    // budget refusal states its numbers in exactly this field.
+                    if trace_mode {
+                        give_up = Some(format!(
+                            "; give-up kind={:?} detail={}",
+                            reason.kind, reason.detail
+                        ));
+                    }
+                    "unknown"
+                }
             },
             Err(_) => "unknown",
         };
@@ -710,6 +739,11 @@ fn main() -> ExitCode {
             .flatten()
             .as_ref()
             .map(theory_layer_report_line);
+        let trace_line = match (trace_line, give_up) {
+            (Some(t), Some(g)) => Some(format!("{g}\n{t}")),
+            (Some(t), None) => Some(t),
+            (None, g) => g,
+        };
         (verdict, None, trace_line)
     };
 

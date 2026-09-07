@@ -74,25 +74,38 @@ use crate::euf_egraph::{
 use crate::lra_online::{Encoder, Lit, LraTheory, LraTheoryBuildStop, collect_lra_atoms, replays};
 use crate::model::Model;
 
-/// Distinct-atom ceiling for the online route, applied **before** atom
-/// normalization. Larger formulas return a first-class resource-limit result.
+/// The **memory budget** one online CDCL(T) LRA construction is allowed
+/// (ADR-1752), in bytes. Used when `SolverConfig::memory_limit_mb` is unset;
+/// when it is set, that is the budget.
 ///
-/// # Why this stayed at 1024 after the simplex rewiring
+/// # What this replaced, and why the count had to go
 ///
-/// [`LraTheory`] now decides feasibility on the warm simplex, not Fourier–Motzkin,
-/// so the *feasibility* argument for this cap is gone — and raising it was
-/// measured, not assumed. On the committed 200-file `QF_LRA` parity list, 64 files
-/// carry more than 1024 atoms; raising the cap to 16384 changed the verdict on
-/// **none** of them, cost one file 24s of budget it used to decline in 0.12s, and
-/// made `QF_LRA/sc/sc-39.base.cvc.smt2` (1492 atoms) abort at the 8 GiB memory cap
-/// — the cost there is `AtomBuilder` normalization (a dense `LinExpr` per atom
-/// polarity over ~700 variables), which the simplex rewiring does not touch. A
-/// decline at least leaves budget for another route; an abort leaves nothing.
+/// This was `MAX_ONLINE_LRA_ATOMS = 1_024`, a flat ceiling on the distinct-atom
+/// count applied *before* normalization. It accounted for 23 of the 54 censused
+/// `QF_LRA` losses and, per the `QF_NRA` lane's 2026-09-07 A/B, is the real gate
+/// behind 62 `QF_NRA` losses as well — those queries reach it with 23,385 atoms
+/// after the cross-product bound above it is lifted.
 ///
-/// So the ceiling is a *normalization* budget now, not a feasibility one. Lifting
-/// it is a real ratchet, but it needs the atom-normalization memory addressed
-/// first — not this cap edited.
-const MAX_ONLINE_LRA_ATOMS: usize = 1_024;
+/// A count is the wrong currency. The construction's footprint is
+/// `atoms x coefficients-per-atom`, so 23,385 atoms over a handful of variables
+/// cost less than 1,492 atoms over 700 — and the count refused both identically.
+/// The budget below is charged in the currency the cost is actually in, from the
+/// builder's own deterministic coefficient counters, so it is machine-independent
+/// and admits a wide-and-shallow query however many atoms it carries.
+///
+/// # The measurement, including the part that was stale
+///
+/// The count's own doc recorded that raising it to 16,384 made
+/// `QF_LRA/sc/sc-39.base.cvc.smt2` (1,492 atoms) abort at the 8 GiB memory cap,
+/// and named `AtomBuilder` normalization as the cost. That measurement was taken
+/// on 2026-08-03 (`e62086742`). The bound that caps exactly that cost —
+/// `MAX_LRA_CACHED_COEFFICIENTS`, on the linearization memo — landed on
+/// 2026-08-06 (`96ff85930`), **three days later**. So the number the cap rested
+/// on described a tree in which the thing it was protecting against was
+/// unbounded, and it was never re-taken. The re-measurement is in
+/// `docs/research/12-performance/lra-theory-side-2026-09-07.md`.
+pub(crate) const DEFAULT_ONLINE_LRA_BUDGET_BYTES: usize =
+    crate::lra_online::DEFAULT_ONLINE_LRA_BUDGET_BYTES;
 
 /// Adapts the validated online [`LraTheory`] to the generic [`CdclT`] driver's
 /// **trigger-literal precondition**.
@@ -125,13 +138,14 @@ impl CdcltLraTheory {
         arena: &TermArena,
         atom_terms: &[TermId],
         deadline: Option<Instant>,
+        budget_bytes: usize,
     ) -> Result<Self, LraTheoryBuildStop> {
         Ok(Self {
             // ADR-1701: this adapter is driven by `CdclT`, which calls
             // `final_check` at every total Boolean assignment, so the wrapped
             // theory may keep only the cheap bound check on `assert` and run
             // the complete simplex decision once per candidate model.
-            inner: LraTheory::try_new_with_deadline(arena, atom_terms, deadline)?
+            inner: LraTheory::try_new_with_budget(arena, atom_terms, deadline, budget_bytes)?
                 .with_deferred_final_check(),
         })
     }
@@ -223,15 +237,6 @@ pub fn check_qf_lra_online_cdclt(
     for &a in assertions {
         collect_lra_atoms(arena, a, &mut atom_terms, &mut seen);
     }
-    if atom_terms.len() > MAX_ONLINE_LRA_ATOMS {
-        return Ok(CheckResult::Unknown(UnknownReason {
-            kind: UnknownKind::ResourceLimit,
-            detail: format!(
-                "online CDCL(T) LRA atom cap exceeded ({} > {MAX_ONLINE_LRA_ATOMS})",
-                atom_terms.len()
-            ),
-        }));
-    }
     if atom_terms.is_empty() {
         return Ok(CheckResult::Unknown(unknown(
             "no linear-real atoms for the online CDCL(T) LRA path",
@@ -268,7 +273,14 @@ pub fn check_qf_lra_online_cdclt(
         .collect();
 
     let atom_count = atom_terms.len();
-    let mut theory = match CdcltLraTheory::new(arena, &atom_terms, deadline) {
+    // ADR-1752: the budget is the caller's memory limit when it set one, and the
+    // measured default otherwise. Nothing here caps the ATOM COUNT any more.
+    let budget_bytes = config
+        .memory_limit_mb
+        .and_then(|mb| usize::try_from(mb).ok())
+        .and_then(|mb| mb.checked_mul(1024 * 1024))
+        .unwrap_or(DEFAULT_ONLINE_LRA_BUDGET_BYTES);
+    let mut theory = match CdcltLraTheory::new(arena, &atom_terms, deadline, budget_bytes) {
         Ok(theory) => theory,
         Err(LraTheoryBuildStop::Deadline) => {
             return Ok(CheckResult::Unknown(UnknownReason {
@@ -280,8 +292,27 @@ pub fn check_qf_lra_online_cdclt(
         Err(LraTheoryBuildStop::ResourceLimit) => {
             return Ok(CheckResult::Unknown(UnknownReason {
                 kind: UnknownKind::ResourceLimit,
-                detail: "online CDCL(T) LRA normalization node/coefficient ceiling exceeded"
-                    .to_owned(),
+                detail: "online CDCL(T) LRA normalization node ceiling exceeded".to_owned(),
+            }));
+        }
+        // ADR-1752: a memory refusal states what it would have cost, what it was
+        // allowed, and the shape it got there with. The flat atom cap said only
+        // "1,493 > 1,024", which is why nobody could tell for a month whether it
+        // was still load-bearing.
+        Err(LraTheoryBuildStop::MemoryBudget {
+            estimated_bytes,
+            budget_bytes,
+            atoms,
+            vars,
+        }) => {
+            return Ok(CheckResult::Unknown(UnknownReason {
+                kind: UnknownKind::ResourceLimit,
+                detail: format!(
+                    "online CDCL(T) LRA memory budget exceeded: projected {} MiB > budget {} MiB \
+                     at {atoms} atoms over {vars} variables",
+                    estimated_bytes / (1024 * 1024),
+                    budget_bytes / (1024 * 1024),
+                ),
             }));
         }
     };
@@ -363,65 +394,88 @@ mod tests {
         arena.real_const(Rational::integer(n))
     }
 
+    /// **This is the test the ADR-1752 budget is pinned by, and it is the exact
+    /// inversion of the two tests it replaces.**
+    ///
+    /// 1,025 atoms of the form `xᵢ >= 0`, each over its own variable, is
+    /// *wide and shallow*: one coefficient per atom, so the whole construction
+    /// costs about 1,025 coefficients. The flat `MAX_ONLINE_LRA_ATOMS = 1_024`
+    /// count refused it — and refused it identically to a query of the same
+    /// atom count over 700 shared variables, which costs ~700x more. The budget
+    /// is charged in coefficients, so this one is admitted.
+    ///
+    /// The assertion is on the REASON, not on the verdict: what changed is that
+    /// the route is allowed to run, not that this particular query is decided.
     #[test]
-    fn oversized_atom_set_declines_before_online_theory_construction() {
+    fn a_wide_shallow_atom_set_is_admitted_where_the_count_cap_refused_it() {
         let mut arena = TermArena::new();
         let zero = rconst(&mut arena, 0);
-        let mut assertions = Vec::with_capacity(MAX_ONLINE_LRA_ATOMS + 1);
-        for index in 0..=MAX_ONLINE_LRA_ATOMS {
+        let mut assertions = Vec::with_capacity(1_025);
+        for index in 0..1_025 {
             let x = rvar(&mut arena, &format!("x{index}"));
             assertions.push(arena.real_ge(x, zero).expect("x>=0"));
         }
-
-        let CheckResult::Unknown(reason) =
-            check_qf_lra_online_cdclt(&arena, &assertions, &SolverConfig::default())
-                .expect("result")
-        else {
-            panic!("oversized generic LRA query must decline");
-        };
-        assert_eq!(reason.kind, UnknownKind::ResourceLimit);
-        assert!(reason.detail.contains("atom cap exceeded"));
-    }
-
-    /// The cap is a **normalization** budget, not a feasibility one: the warm
-    /// simplex is the engine now, but atom normalization still costs a dense
-    /// `LinExpr` per atom polarity, and raising the ceiling was measured to buy
-    /// nothing and to cost one corpus file an 8 GiB abort. This pins the decline so
-    /// a future raise has to be a deliberate, re-measured change — see the
-    /// [`MAX_ONLINE_LRA_ATOMS`] docs for the numbers.
-    #[test]
-    fn atoms_over_the_cap_decline_fast_rather_than_normalize() {
-        let mut arena = TermArena::new();
-        let zero = rconst(&mut arena, 0);
-        let mut assertions = Vec::with_capacity(MAX_ONLINE_LRA_ATOMS + 1);
-        for index in 0..=MAX_ONLINE_LRA_ATOMS {
-            let x = rvar(&mut arena, &format!("x{index}"));
-            assertions.push(arena.real_ge(x, zero).expect("x>=0"));
-        }
-        let CheckResult::Unknown(reason) =
-            check_qf_lra_online_cdclt(&arena, &assertions, &SolverConfig::default())
-                .expect("result")
-        else {
-            panic!("an over-cap query must decline");
-        };
-        assert_eq!(reason.kind, UnknownKind::ResourceLimit);
-
-        // Just UNDER the cap the route runs — the decline must be the cap, not a
-        // blanket refusal that would make the whole online LRA route inert.
-        let mut arena = TermArena::new();
-        let zero = rconst(&mut arena, 0);
-        let mut assertions = Vec::new();
-        for index in 0..MAX_ONLINE_LRA_ATOMS {
-            let x = rvar(&mut arena, &format!("x{index}"));
-            assertions.push(arena.real_ge(x, zero).expect("x>=0"));
-        }
-        let under = check_qf_lra_online_cdclt(&arena, &assertions, &SolverConfig::default())
+        let result = check_qf_lra_online_cdclt(&arena, &assertions, &SolverConfig::default())
             .expect("result");
-        if let CheckResult::Unknown(reason) = &under {
+        if let CheckResult::Unknown(reason) = &result {
             assert_ne!(
                 reason.kind,
                 UnknownKind::ResourceLimit,
-                "a query one atom under the cap must not hit the cap"
+                "1,025 single-variable atoms cost ~1,025 coefficients and must not be \
+                 refused on memory: {}",
+                reason.detail
+            );
+        }
+    }
+
+    /// **This is the test the budget's refusal path is pinned by.** A budget
+    /// that can never refuse is not a budget, so this drives the route with a
+    /// deliberately tiny `memory_limit_mb` and requires both that it refuses and
+    /// that the refusal *states the numbers* — which is the whole complaint
+    /// against the constant it replaces, whose message was "1493 > 1024" and
+    /// left nobody able to tell whether it was still load-bearing.
+    #[test]
+    fn a_construction_over_its_memory_budget_refuses_and_names_the_numbers() {
+        let mut arena = TermArena::new();
+        let zero = rconst(&mut arena, 0);
+        // Wide AND deep: each atom sums a fresh variable onto a growing chain, so
+        // the coefficient count is quadratic in the atom count.
+        let mut sum = rconst(&mut arena, 1);
+        let mut assertions = Vec::new();
+        for index in 0..400 {
+            let x = rvar(&mut arena, &format!("x{index}"));
+            sum = arena.real_add(sum, x).expect("chain");
+            assertions.push(arena.real_ge(sum, zero).expect("sum>=0"));
+        }
+        let config = SolverConfig::default().with_memory_limit_mb(1);
+        let CheckResult::Unknown(reason) =
+            check_qf_lra_online_cdclt(&arena, &assertions, &config).expect("result")
+        else {
+            panic!("a construction over a 1 MiB budget must decline");
+        };
+        assert_eq!(reason.kind, UnknownKind::ResourceLimit);
+        assert!(
+            reason.detail.contains("memory budget exceeded"),
+            "the refusal must name the budget, not an intermediate ceiling: {}",
+            reason.detail
+        );
+        for expected in ["projected", "budget 1 MiB", "atoms over", "variables"] {
+            assert!(
+                reason.detail.contains(expected),
+                "the refusal must contain {expected:?}: {}",
+                reason.detail
+            );
+        }
+
+        // The SAME query under a generous budget must not take this path — else
+        // the refusal above is a blanket one and pins nothing.
+        let generous = SolverConfig::default().with_memory_limit_mb(4096);
+        let under = check_qf_lra_online_cdclt(&arena, &assertions, &generous).expect("result");
+        if let CheckResult::Unknown(reason) = &under {
+            assert!(
+                !reason.detail.contains("memory budget exceeded"),
+                "the same query must fit a 4 GiB budget: {}",
+                reason.detail
             );
         }
     }
@@ -437,7 +491,9 @@ mod tests {
         let lt = arena.real_lt(x, zero).expect("x<0");
         let gt = arena.real_gt(x, zero).expect("x>0");
 
-        let mut theory = CdcltLraTheory::new(&arena, &[lt, gt], None).expect("unbounded theory");
+        let mut theory =
+            CdcltLraTheory::new(&arena, &[lt, gt], None, DEFAULT_ONLINE_LRA_BUDGET_BYTES)
+                .expect("unbounded theory");
         assert!(theory.assert(0, true).is_ok());
         let core = theory.assert(1, true).expect_err("real-infeasible");
         assert!(
@@ -455,7 +511,9 @@ mod tests {
         let lt = arena.real_lt(x, zero).expect("x<0");
         let gt = arena.real_gt(x, zero).expect("x>0");
 
-        let mut theory = CdcltLraTheory::new(&arena, &[lt, gt], None).expect("unbounded theory");
+        let mut theory =
+            CdcltLraTheory::new(&arena, &[lt, gt], None, DEFAULT_ONLINE_LRA_BUDGET_BYTES)
+                .expect("unbounded theory");
         assert!(theory.assert(0, true).is_ok());
         let core = theory.assert(1, true).expect_err("infeasible");
         let occurrences = core.iter().filter(|l| l.atom == 1).count();
@@ -476,8 +534,13 @@ mod tests {
         let ge_one = arena.real_ge(x, one).expect("x>=1");
         let gt_zero = arena.real_gt(x, zero).expect("x>0");
 
-        let mut theory =
-            CdcltLraTheory::new(&arena, &[ge_one, gt_zero], None).expect("unbounded theory");
+        let mut theory = CdcltLraTheory::new(
+            &arena,
+            &[ge_one, gt_zero],
+            None,
+            DEFAULT_ONLINE_LRA_BUDGET_BYTES,
+        )
+        .expect("unbounded theory");
         theory.assert(0, true).expect("x>=1 feasible");
         let props = theory.propagate();
         assert!(
@@ -680,7 +743,8 @@ mod tests {
                 .collect();
             let atom_count = atom_terms.len();
             let mut theory =
-                CdcltLraTheory::new(&arena, &atom_terms, None).expect("unbounded theory");
+                CdcltLraTheory::new(&arena, &atom_terms, None, DEFAULT_ONLINE_LRA_BUDGET_BYTES)
+                    .expect("unbounded theory");
             let mut solver = CdclT::new(enc.var_count, atom_count, driver_clauses, None)
                 .with_step_budget(50_000);
             let outcome = solver.solve(&mut theory);
@@ -751,7 +815,9 @@ mod tests {
             })
             .collect();
         let atom_count = atom_terms.len();
-        let mut theory = CdcltLraTheory::new(&arena, &atom_terms, None).expect("unbounded theory");
+        let mut theory =
+            CdcltLraTheory::new(&arena, &atom_terms, None, DEFAULT_ONLINE_LRA_BUDGET_BYTES)
+                .expect("unbounded theory");
         let mut solver = CdclT::new(enc.var_count, atom_count, driver_clauses, None);
 
         assert_eq!(solver.solve(&mut theory), Outcome::Sat);

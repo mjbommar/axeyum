@@ -957,53 +957,55 @@ impl core::fmt::Debug for Rational {
     }
 }
 
-/// Greatest common divisor of two unsigned magnitudes (Stein's binary GCD).
+/// Greatest common divisor of two unsigned magnitudes: Euclid, run at `u64` as
+/// soon as both operands fit.
 ///
-/// # Why not Euclid
+/// # The measurement this shape comes from, including the attempt that lost
 ///
-/// This was `while b != 0 { (a, b) = (b, a % b) }`, and on this target `%` at
-/// `u128` is not an instruction: x86-64 has no 128-bit divide, so every
-/// iteration is a `__udivti3` library call. Stein's algorithm reaches the same
-/// answer with `trailing_zeros`, shifts, compares and subtractions — all
-/// single-cycle on 128-bit pairs — at the cost of more iterations that are each
-/// far cheaper.
+/// `gcd` is the whole cost of exact rational arithmetic here — one `small_mul`
+/// calls it three times (two cross-cancellations plus the normalization in
+/// [`small_new`]) and one `small_add` twice — and the `QF_LRA` simplex spends
+/// essentially all of its time in those two operations.
 ///
-/// This is not a general micro-optimisation: `gcd` is the whole cost of exact
-/// rational arithmetic here. One `small_mul` calls it three times (two
-/// cross-cancellations plus the normalization inside [`small_new`]) and one
-/// `small_add` twice, and the exact-rational simplex under `QF_LRA` spends
-/// essentially all of its time in those two operations — measured on
-/// `QF_LRA/2019-ezsmt/blending/1.smt2`, 93% of the solve is
-/// `TheorySolver::final_check`, which is a pivot loop over a 350 × 425 dense
-/// tableau of these.
+/// The obvious fix looked like **Stein's binary GCD**, on the reasoning that
+/// x86-64 has no 128-bit divide so every `u128 %` is a `__udivti3` call while
+/// Stein needs only shifts, compares and subtractions. That was tried first and
+/// **measured 1.77x slower**: on `QF_LRA/2019-ezsmt/blending/1.smt2`,
+/// `theory_final_check_ms` went 6 396 -> 11 335 with every other counter
+/// byte-identical (20 732 checks, 46 618 pivots, 216 280 bound retractions), so
+/// the difference was arithmetic alone. The reason is the operand *shape*: the
+/// cross-cancellations are `gcd(numerator, denominator)` with a large numerator
+/// and a small denominator, which Euclid settles in one or two divisions and
+/// Stein pays for in one shift-subtract iteration per bit.
 ///
-/// Bit-for-bit identical to the Euclid form on every input, including the zero
-/// cases (`gcd(0, b) = b`, `gcd(a, 0) = a`, `gcd(0, 0) = 0`); the differential
-/// test `stein_gcd_matches_euclid` re-derives Euclid independently and compares.
+/// So the win is not a different algorithm but a **narrower one**: keep Euclid,
+/// and step down to `u64` — where `%` really is a single instruction — as soon
+/// as both operands fit, which for this workload is almost immediately.
+/// Bit-for-bit identical to the plain `u128` form on every input, including the
+/// zero cases; `gcd_matches_the_plain_u128_euclid` re-derives Euclid
+/// independently and compares.
 #[inline]
 fn gcd(mut a: u128, mut b: u128) -> u128 {
-    if a == 0 {
-        return b;
+    const NARROW: u128 = u64::MAX as u128;
+    // Wide phase: 128-bit steps only while an operand is genuinely wide. Each
+    // step at least halves the larger operand's magnitude, so this exits fast.
+    while b != 0 && (a > NARROW || b > NARROW) {
+        let t = a % b;
+        a = b;
+        b = t;
     }
     if b == 0 {
         return a;
     }
-    // `2^shift` is the power of two both share; divide it out and restore it at
-    // the end. Both are nonzero here, so `trailing_zeros` is well-defined.
-    let shift = (a | b).trailing_zeros();
-    a >>= a.trailing_zeros();
-    loop {
-        b >>= b.trailing_zeros();
-        // Both odd now; the difference of two odd numbers is even, so the next
-        // iteration's `trailing_zeros` makes real progress.
-        if a > b {
-            core::mem::swap(&mut a, &mut b);
-        }
-        b -= a;
-        if b == 0 {
-            return a << shift;
-        }
+    // Both fit `u64` now, so the rest runs on hardware division.
+    #[allow(clippy::cast_possible_truncation)] // Guarded by the loop condition above.
+    let (mut narrow_a, mut narrow_b) = (a as u64, b as u64);
+    while narrow_b != 0 {
+        let remainder = narrow_a % narrow_b;
+        narrow_a = narrow_b;
+        narrow_b = remainder;
     }
+    u128::from(narrow_a)
 }
 
 #[cfg(test)]
@@ -1064,12 +1066,12 @@ mod tests {
         a
     }
 
-    /// **This is the test the binary-GCD rewrite is mutation-checked against.**
-    /// Break one line of `gcd` (drop the `shift` restore, swap `a > b` for
-    /// `a < b`, remove either zero guard) and this must fail.
+    /// **This is the test the narrowed `gcd` is mutation-checked against.**
+    /// Break one line of `gcd` (drop the `b == 0` early return, narrow before
+    /// both operands fit, swap the assignment order) and this must fail.
     #[allow(clippy::cast_possible_truncation)] // A full-range draw; the truncation is the sample.
     #[test]
-    fn stein_gcd_matches_euclid() {
+    fn gcd_matches_the_plain_u128_euclid() {
         // Every boundary the zero/one guards and the shift restore turn on.
         let fixed: &[(u128, u128)] = &[
             (0, 0),
