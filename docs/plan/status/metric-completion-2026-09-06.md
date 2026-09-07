@@ -1,5 +1,7 @@
 # Lane `metric-completion` — 2026-09-06
 
+<!-- plan-section: lane-status -->
+
 Topic 4, carrier 1: the metric completion. ADR number **1678**.
 
 ## Status
@@ -46,6 +48,42 @@ The accounting test derives its subject by **differencing two kernels** (one
 with `build_metric_prelude` alone, one with `build_metric_completion_prelude`)
 rather than by a name-prefix filter — the gap ADR-1625 recorded for
 `Metric.*` names declared outside `metric.rs`.
+
+### The mutation table, RUN
+
+Both mutants were applied to the SOURCE and the suite run against them.
+
+| mutant | kernel | tests | what died |
+| --- | --- | --- | --- |
+| M1 — modulus dropped from the carrier (`Metric.Cauchy` for `CauchyAt _ 1`) | **REFUSED** at the first declaration (`DeclarationValueMismatch` on `Metric.regularSeq_cauchyAt`) | 0 passed, 11 failed | everything, because the prelude does not build |
+| M2 — isometry weakened to a non-expanding bound (`Eq` → `CReal.le`) | **ADMITTED** | 11 passed, 1 failed | `embed_seq_dist_is_an_equation_not_a_bound` — exactly one |
+
+M2 is the finding worth carrying. Before the guard was written it passed
+**11 of 11**: the prelude built, every declaration was present and axiom-free,
+and even `a_non_expanding_bound_cannot_reflect_equivalence` stayed green,
+because that test re-derives the discrimination inline and never mentions the
+shipped declaration. The guard that kills it consumes
+`Metric.embedSeq_dist` as the argument of `Eq.symm`, which only an equation can
+be. **A test that re-derives a distinction proves the distinction exists; only
+a test that consumes the declaration proves the declaration carries it.**
+
+### Gates run
+
+| gate | count | exit |
+| --- | --- | --- |
+| `cargo test -p axeyum-lean-kernel --release --lib -- metric_completion --test-threads=2` | **12** tests, 12 passed | 0 |
+| `cargo check --workspace --all-targets` (via `cargo-serialized.sh`) | — | 0 |
+| `cargo fmt --all --check` | 0 diff lines | 0 |
+| `scripts/check-links.sh` | all links ok | 0 |
+| `scripts/check-merge-hygiene.sh` | PASS | 0 |
+| `python3 scripts/gen-adr-index.py --check` | rows=884 | 0 |
+| `python3 scripts/gen-py-prelude-fields.py --check` | total=3798, OK | 0 |
+
+The default `--test-threads` OOMs: two runs died at **exit 143** (the
+`cargo-serialized.sh` memory ceiling) with eleven parallel `Metric` prelude
+builds at 10.2 GB RSS. The first of those printed `running 10 tests` and then
+nothing, and piping it through `tail` reported exit 0 — `tail`'s. Use
+`--test-threads=2` on this suite.
 
 ## Next
 
