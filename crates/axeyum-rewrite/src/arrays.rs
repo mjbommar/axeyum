@@ -19,6 +19,7 @@ use std::collections::HashMap;
 
 use axeyum_ir::{
     ArrayValue, Assignment, IrError, Op, Sort, SymbolId, TermArena, TermId, TermNode, Value, eval,
+    eval_with_memo,
 };
 
 use crate::canonical::build_app;
@@ -705,12 +706,20 @@ pub fn witness_read_over_write(
             witness.unavailable += assertions.len();
             continue;
         }
+        // One memo per sample, shared across BOTH sides and every assertion.
+        // The assignment is fixed within a sample, so a subterm's value is too,
+        // and the two sides share most of their structure (the abstraction is the
+        // originals with `select`s replaced). A memo per `eval` call would re-walk
+        // that shared structure `2 * assertions.len()` times per sample, which on
+        // a large `QF_ABV` query is the difference between a witness worth running
+        // inside `recheck` and one that is not.
+        let mut memo: HashMap<TermId, Value> = HashMap::new();
         for (index, (&original, &abstracted)) in
             assertions.iter().zip(abstraction.iter()).enumerate()
         {
             let (Ok(lhs), Ok(rhs)) = (
-                eval(arena, original, &assignment),
-                eval(arena, abstracted, &assignment),
+                eval_with_memo(arena, original, &assignment, &mut memo),
+                eval_with_memo(arena, abstracted, &assignment, &mut memo),
             ) else {
                 witness.unavailable += 1;
                 continue;

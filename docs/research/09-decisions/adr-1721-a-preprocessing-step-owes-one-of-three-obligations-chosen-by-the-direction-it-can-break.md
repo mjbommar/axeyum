@@ -360,7 +360,7 @@ Three, each a distinction the producer makes and the artifact cannot carry:
    than urgent, but it is a distinction the producer makes and the artifact
    loses.
 
-### 7. The smallest end-to-end slice, named concretely
+### 7. The smallest end-to-end slice — named, and landed
 
 **An independent faithfulness witness for read-over-write**, copying the pattern
 this repository has already proved on the same defect class.
@@ -576,6 +576,9 @@ ADR-1704 answered it: the producer carries what it already has, and
   subtraction shape and three passes already implement it.
 - The residual becomes a number that goes down
   (`added_constraints_unchecked`), visible per query.
+- `eliminate_functions` gets its witness almost for free: its shape is identical
+  (`functions.rs:389-390` snapshots and extends exactly as arrays does), so the
+  second application of §7 is a port, not a design.
 
 **Harder.**
 

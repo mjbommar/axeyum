@@ -38,6 +38,15 @@ calls it as step 2 of five; the same mutation yields `Ok(false)` and kills
 exactly one of the witness suite's four tests. It is sampled, so
 `TrustId::ArrayElim` stays uncertified — evidence, not proof.
 
+Gates: `cargo test -p axeyum-solver --lib --features full` — **1460 passed, 0
+failed** (nonzero count confirmed, 1106 s); the array-elim certificate suite at
+8; the new witness suite at 4; workspace clippy `-D warnings`, workspace
+`check --all-targets --all-features` and `cargo fmt --all --check` clean;
+`check-links.sh` ok. NOT run: the workspace test sweep and `just check`.
+`check-merge-hygiene.sh` fails only on `gen-plan.py --check`, because this lane
+added a status file and was told not to regenerate `PLAN.md` — the
+coordinator's regeneration clears it.
+
 Next for whoever picks this up: the same witness for `eliminate_functions`
 (identical shape); `eliminate_int_divmod`, the only `unsat`-feeding transform
 with no artifact of any kind and an unreported soundness-mode change at
