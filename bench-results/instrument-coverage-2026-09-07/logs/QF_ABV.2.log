@@ -1,0 +1,2 @@
+; theory-layer unavailable: watchdog fired before the worker thread returned (no CDCL(T) search on this query completed before the deadline)
+unknown

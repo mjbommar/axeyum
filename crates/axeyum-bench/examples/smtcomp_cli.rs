@@ -159,6 +159,56 @@
 //! declined) — that instrument's opt-in timed JSON form lives in
 //! `explain_corpus --json --timed-trace`, the diagnosis tool this file's
 //! competition-interface contract (verdict-only stdout) is not shaped for.
+//!
+//! # BV-layer, front-door, and dl-online stage attribution (same `--trace`
+//! flag), 2026-09-07
+//!
+//! `bench-divisions-2026-09-07` measured `--trace` (the section above)
+//! covering only 15.6% of sampled wall clock, with five of twelve divisions
+//! (`QF_ABV`, `QF_BV`, `QF_IDL`, `QF_RDL`, `QF_UFLIA`) at **zero** coverage —
+//! their dominant routes never touch the generic CDCL(T) driver at all. Three
+//! more lines, all gated by the SAME `--trace` flag (no new CLI surface),
+//! close most of that gap:
+//!
+//! ```text
+//! ; front-door parse_ms=4
+//! ; dl-online total_ms=0
+//! ; bv-layer bit_blast_ms=2 cnf_encode_ms=6 cnf_inprocess_ms=0 solve_ms=24089 \
+//!   model_lift_ms=0 model_replay_ms=0 total_ms=24098 \
+//!   bit_demand_analysis_nested_in_bit_blast_ms=0 \
+//!   range_demand_admission_nested_in_bit_blast_ms=0 \
+//!   aig_nodes=32251 cnf_variables=12030 cnf_clauses=49146
+//! ```
+//!
+//! - `; front-door …` — cumulative SMT-LIB parse time, summed across every
+//!   string-bound-ladder rung. Always printed when `--trace` is on: every
+//!   division's front door parses at least once.
+//! - `; dl-online …` — total wall time inside the whole difference-logic
+//!   probe call (`crate::dl_online::try_check_qf_dl`), timed at its single
+//!   call site rather than broken into its own internal stages. Printed only
+//!   when the probe actually ran (`QF_BV` and similar bit-vector-only
+//!   queries never reach that dispatch branch at all) — this is `QF_IDL` /
+//!   `QF_RDL`'s ONLY stage instrument, since their dominant route is exactly
+//!   this probe and it never enters the CDCL(T) driver.
+//! - `; bv-layer …` — the pure-Rust bit-blast pipeline's own stage
+//!   breakdown (`axeyum_solver::BvLayerStats`, previously computed
+//!   internally but wired to no CLI flag). Printed only when the `sat-bv`
+//!   backend actually ran (covers `QF_BV` directly, `QF_ABV` via array
+//!   elimination's reduction to the same backend) — mutually exclusive with
+//!   `; theory-layer …` per query, since a `sat-bv` decide never runs the
+//!   CDCL(T) driver and vice versa. `total_ms` sums only the six additive
+//!   stage fields (`BvLayerStats::total`); the two `_nested_in_bit_blast_ms`
+//!   fields are sub-timings taken DURING the `bit_blast_ms` call and are
+//!   deliberately excluded from `total_ms` — summing them in would
+//!   double-count the same way `theory_assert_ms` did inside
+//!   `boolean_propagate_ms` in the section above.
+//!
+//! Same off-by-default discipline as every other lever in this file: no
+//! extra clock read unless `--trace` is set (see
+//! `axeyum_solver::BvLayerStatsGuard` / `FrontDoorStatsGuard` /
+//! `DlOnlineStatsGuard`), and none of the three can change a verdict — they
+//! only add stdout lines before it. Full measurement/methodology:
+//! docs/research/12-performance/instrument-coverage-2026-09-07.md.
 
 use std::process::ExitCode;
 use std::sync::mpsc;
@@ -166,8 +216,9 @@ use std::time::{Duration, Instant};
 
 use axeyum_solver::theories::cdclt_diagnostics::{TheoryLayerStatsGuard, last_theory_layer_stats};
 use axeyum_solver::{
-    CheckProgress, CheckResult, CheckingProgress, Evidence, EvidenceCheck, ProofProgress,
-    SolverConfig, produce_evidence_smtlib, solve_smtlib,
+    BvLayerStatsGuard, CheckProgress, CheckResult, CheckingProgress, DlOnlineStatsGuard, Evidence,
+    EvidenceCheck, FrontDoorStatsGuard, ProofProgress, SolverConfig, last_bv_layer_stats,
+    last_dl_online_stats, last_front_door_stats, produce_evidence_smtlib, solve_smtlib,
 };
 
 /// Formats one `axeyum_cnf::ProofSearchProgress` snapshot as the `;`-prefixed
@@ -256,6 +307,64 @@ fn theory_layer_report_line(
     )
 }
 
+/// Formats an [`axeyum_solver::BvLayerStats`] snapshot as the `;`-prefixed
+/// `--trace` line documented in the module header's "BV-layer stage
+/// attribution" section.
+///
+/// The five `_ms` fields plus `total_ms` are [`axeyum_solver::BvLayerStats::total`]'s
+/// own additive decomposition — non-overlapping by construction. The last two
+/// fields are DELIBERATELY excluded from `total_ms`: both are sub-timings
+/// taken *during* `bit_blast_ms`'s own lowering call (see
+/// `axeyum_solver::BvLayerStats::total`'s docs), so summing them in would
+/// double-count exactly the way `theory_assert_ms` did inside
+/// `boolean_propagate_ms` for the `; theory-layer …` line above — the
+/// `_nested_in_bit_blast_ms` suffix says so at the point a reader would
+/// otherwise be tempted to add it in.
+fn bv_layer_report_line(stats: &axeyum_solver::BvLayerStats) -> String {
+    format!(
+        "; bv-layer bit_blast_ms={} cnf_encode_ms={} cnf_inprocess_ms={} solve_ms={} \
+         model_lift_ms={} model_replay_ms={} total_ms={} \
+         bit_demand_analysis_nested_in_bit_blast_ms={} \
+         range_demand_admission_nested_in_bit_blast_ms={} \
+         aig_nodes={} cnf_variables={} cnf_clauses={}",
+        stats.bit_blast.as_millis(),
+        stats.cnf_encode.as_millis(),
+        stats.cnf_inprocess.as_millis(),
+        stats.solve.as_millis(),
+        stats.model_lift.as_millis(),
+        stats.model_replay.as_millis(),
+        stats.total().as_millis(),
+        stats.bit_demand_analysis.as_millis(),
+        stats.range_demand_admission.as_millis(),
+        stats.aig_nodes,
+        stats.cnf_variables,
+        stats.cnf_clauses,
+    )
+}
+
+/// Formats an [`axeyum_solver::FrontDoorStats`] snapshot as the `;`-prefixed
+/// `--trace` line documented in the module header. Currently one field
+/// (cumulative parse time across every string-bound-ladder rung this
+/// front-door call ran); more front-door stages land here as they are
+/// instrumented (docs/research/12-performance/instrument-coverage-2026-09-07.md).
+fn front_door_report_line(stats: &axeyum_solver::FrontDoorStats) -> String {
+    format!("; front-door parse_ms={}", stats.parse.as_millis())
+}
+
+/// Formats this thread's cumulative dl-online call time (see
+/// [`axeyum_solver::last_dl_online_stats`]) as the `;`-prefixed `--trace`
+/// line documented in the module header. Coarser than the other two lines
+/// here on purpose: `QF_IDL`/`QF_RDL`'s dominant route never enters the
+/// generic CDCL(T) driver at all (the finding that motivated instrumenting
+/// it), and this reports only the ONE number this lane's scope could safely
+/// add — total wall time inside the whole `try_check_qf_dl` call, timed at
+/// its single call site rather than broken into its own internal stages —
+/// enough to say how much of a query's wall clock went into this route, not
+/// where inside it the time went.
+fn dl_online_report_line(elapsed_ms: u128) -> String {
+    format!("; dl-online total_ms={elapsed_ms}")
+}
+
 /// S2 dispatch-overrun fix (2026-09-05,
 /// `docs/plan/smt-parity-plan-2026-09-05.md` row S2): the `; theory-layer …`
 /// line the watchdog-timeout path in `main` prints when it cannot report real
@@ -275,8 +384,24 @@ fn theory_layer_report_line(
 /// anything" (this line) apart from "collection was never enabled" (no line
 /// at all, the pre-existing and unchanged behavior of a normal, in-budget
 /// return with `trace_mode` off) without guessing.
-fn watchdog_unavailable_line(trace_mode: bool, reason: &str) -> Option<String> {
-    trace_mode.then(|| format!("; theory-layer unavailable: {reason}"))
+///
+/// Returns a `Vec` (empty when `trace_mode` is off) rather than
+/// `Option<String>` so it composes directly with the `Vec<String>` of trace
+/// lines `solve()`'s normal-return path produces (2026-09-07, when the
+/// `; bv-layer …` / `; front-door …` / `; dl-online …` lines were added
+/// alongside `; theory-layer …`) — a caller does
+/// `trace_lines.extend(watchdog_unavailable_line(..))` either way. This still
+/// reports only the theory-layer line on a watchdog timeout, not one
+/// `unavailable` marker per new instrument: every one of them has the exact
+/// same thread-local-to-the-worker-thread limitation `TheoryLayerStats` does,
+/// but multiplying near-duplicate "unavailable" lines was judged not worth
+/// the output-format churn for a diagnostic-only path; see
+/// docs/research/12-performance/instrument-coverage-2026-09-07.md.
+fn watchdog_unavailable_line(trace_mode: bool, reason: &str) -> Vec<String> {
+    trace_mode
+        .then(|| format!("; theory-layer unavailable: {reason}"))
+        .into_iter()
+        .collect()
 }
 
 /// Installs the progress sink (see the module header) on `config` when
@@ -652,11 +777,16 @@ fn main() -> ExitCode {
     // the DEFAULT path, so the default invocation `scripts/parity-run.sh` uses
     // stays byte-identical output and every recorded baseline keeps its meaning.
     //
-    // The third element is the optional `; theory-layer …` report line (see
-    // the module header's `--trace` section): `None` unless `trace_mode` is
-    // set AND a CDCL(T) route decided the query, so — like every other lever
-    // here — a default run's output is unaffected byte-for-byte.
-    let solve = move || -> (&'static str, Option<String>, Option<String>) {
+    // The third element is every `--trace` report line that applies (see the
+    // module header's "Theory-route stage attribution" and "BV-layer stage
+    // attribution" sections), in front-door/dispatch/backend order: empty
+    // unless `trace_mode` is set, so — like every other lever here — a
+    // default run's output is unaffected byte-for-byte. At most one of
+    // `; bv-layer …` / `; theory-layer …` prints per query (a `sat-bv`
+    // decide never runs the CDCL(T) driver and vice versa), but
+    // `; front-door …` and `; dl-online …` are independent stages that can
+    // coexist with either.
+    let solve = move || -> (&'static str, Option<String>, Vec<String>) {
         if evidence_mode {
             let started = Instant::now();
             // A parse or solver error is `unknown` here too — and an evidence run
@@ -668,7 +798,7 @@ fn main() -> ExitCode {
                         &report.evidence,
                         started.elapsed().as_millis(),
                     );
-                    (verdict, Some(line), None)
+                    (verdict, Some(line), Vec::new())
                 }
                 Err(_) => (
                     "unknown",
@@ -676,15 +806,19 @@ fn main() -> ExitCode {
                         "; evidence kind=unknown certified=0 recheck=na arena=na ms={}",
                         started.elapsed().as_millis()
                     )),
-                    None,
+                    Vec::new(),
                 ),
             };
         }
-        // `_guard` collects `TheoryLayerStats` for the dynamic extent of
+        // Each `_*_guard` collects its own stats for the dynamic extent of
         // `solve_smtlib` below when `--trace` is on; dropped (disarmed) right
         // after, restoring whatever this thread's setting was before. A
-        // no-op when `trace_mode` is `false` — no extra clock read.
-        let _guard = trace_mode.then(TheoryLayerStatsGuard::enable);
+        // no-op when `trace_mode` is `false` — no extra clock read, for any
+        // of the four (same convention every guard in this tree follows).
+        let _theory_guard = trace_mode.then(TheoryLayerStatsGuard::enable);
+        let _bv_guard = trace_mode.then(BvLayerStatsGuard::enable);
+        let _dl_guard = trace_mode.then(DlOnlineStatsGuard::enable);
+        let _front_door_guard = trace_mode.then(FrontDoorStatsGuard::enable);
         // A parse or solver error is reported as `unknown` — never a wrong
         // verdict, and never a crash that the harness would read as an abort.
         let verdict = match solve_smtlib(&input, &config) {
@@ -695,18 +829,39 @@ fn main() -> ExitCode {
             },
             Err(_) => "unknown",
         };
-        let trace_line = trace_mode
-            .then(last_theory_layer_stats)
-            .flatten()
-            .as_ref()
-            .map(theory_layer_report_line);
-        (verdict, None, trace_line)
+        let mut trace_lines = Vec::new();
+        if trace_mode {
+            // Parse always runs exactly once (or more, on a string-bound
+            // ladder rung) per front-door call, so this line is unconditional
+            // — unlike `; bv-layer …`/`; theory-layer …` (only the ONE
+            // backend a query actually dispatched to ran) it is never
+            // legitimately absent when `--trace` is on.
+            trace_lines.push(front_door_report_line(&last_front_door_stats()));
+            // `dispatch_difference_logic` runs on every numeric-featured
+            // query ahead of the linear-arithmetic chain (probing whether the
+            // query is difference-shaped), but NOT on e.g. a `QF_BV` query,
+            // which never reaches that dispatch branch at all — the call
+            // count (see `axeyum_solver::last_dl_online_stats`'s docs) is
+            // what distinguishes that absence from "ran and cost nothing
+            // measurable" (`total_ms=0`), which a bare duration cannot.
+            let (dl_online_elapsed, dl_online_calls) = last_dl_online_stats();
+            if dl_online_calls > 0 {
+                trace_lines.push(dl_online_report_line(dl_online_elapsed.as_millis()));
+            }
+            if let Some(stats) = last_bv_layer_stats() {
+                trace_lines.push(bv_layer_report_line(&stats));
+            }
+            if let Some(stats) = last_theory_layer_stats() {
+                trace_lines.push(theory_layer_report_line(&stats));
+            }
+        }
+        (verdict, None, trace_lines)
     };
 
     let Some(ms) = timeout_ms else {
         // No wall clock configured: nothing to enforce, so stay on the main
         // thread (its stack is the largest one available).
-        let (verdict, evidence, trace_line) = solve();
+        let (verdict, evidence, trace_lines) = solve();
         // Progress lines come FIRST: they describe the search that already
         // finished producing `verdict`/`evidence`, so printing them after
         // either would be out of order. Still strictly before the evidence
@@ -722,7 +877,7 @@ fn main() -> ExitCode {
         for event in check_progress_rx.try_iter() {
             println!("{}", checking_report_line(&event));
         }
-        if let Some(line) = trace_line {
+        for line in &trace_lines {
             println!("{line}");
         }
         if let Some(line) = evidence {
@@ -755,7 +910,7 @@ fn main() -> ExitCode {
     // `; theory-layer unavailable: <reason>` line when `--trace` is set, so a
     // trace is never silently empty — a caller can tell "no stats yet" apart
     // from "collection was never enabled" without guessing.
-    let (verdict, evidence, trace_line) = match worker {
+    let (verdict, evidence, trace_lines) = match worker {
         Ok(_) => match rx.recv_timeout(Duration::from_millis(ms) + WATCHDOG_GRACE) {
             Ok(outcome) => outcome,
             Err(_) => (
@@ -788,7 +943,7 @@ fn main() -> ExitCode {
     for event in check_progress_rx.try_iter() {
         println!("{}", checking_report_line(&event));
     }
-    if let Some(line) = trace_line {
+    for line in &trace_lines {
         println!("{line}");
     }
     if let Some(line) = evidence {
@@ -806,18 +961,23 @@ mod tests {
     use super::*;
 
     #[test]
-    fn watchdog_unavailable_line_is_none_off_trace_and_some_on_trace() {
+    fn watchdog_unavailable_line_is_empty_off_trace_and_one_line_on_trace() {
         assert_eq!(
             watchdog_unavailable_line(false, "anything"),
-            None,
+            Vec::<String>::new(),
             "a default (non-trace) run's output must stay byte-identical"
         );
-        let line = watchdog_unavailable_line(
+        let lines = watchdog_unavailable_line(
             true,
             "watchdog fired before the worker thread returned (no CDCL(T) search on this \
              query completed before the deadline)",
-        )
-        .expect("trace_mode=true must always yield a line, never nothing");
+        );
+        assert_eq!(
+            lines.len(),
+            1,
+            "trace_mode=true must always yield exactly one line, never nothing: got {lines:?}"
+        );
+        let line = &lines[0];
         assert!(
             line.starts_with("; theory-layer unavailable: "),
             "got: {line}"
@@ -837,13 +997,13 @@ mod tests {
     /// returns `Err`, which is exactly what this reproduces.
     #[test]
     fn a_worker_that_outlives_the_deadline_still_yields_a_theory_layer_line() {
-        let (tx, rx) = std::sync::mpsc::channel::<(&'static str, Option<String>, Option<String>)>();
+        let (tx, rx) = std::sync::mpsc::channel::<(&'static str, Option<String>, Vec<String>)>();
         let _worker = std::thread::spawn(move || {
             std::thread::sleep(Duration::from_secs(2));
-            let _ = tx.send(("unknown", None, None));
+            let _ = tx.send(("unknown", None, Vec::new()));
         });
         let trace_mode = true;
-        let (verdict, _evidence, trace_line) = match rx.recv_timeout(Duration::from_millis(10)) {
+        let (verdict, _evidence, trace_lines) = match rx.recv_timeout(Duration::from_millis(10)) {
             Ok(outcome) => outcome,
             Err(_) => (
                 "unknown",
@@ -856,7 +1016,15 @@ mod tests {
             ),
         };
         assert_eq!(verdict, "unknown");
-        let line = trace_line.expect("a timed-out solve with --trace must still print a line");
-        assert!(line.starts_with("; theory-layer"), "got: {line}");
+        assert_eq!(
+            trace_lines.len(),
+            1,
+            "a timed-out solve with --trace must still print exactly one line: got {trace_lines:?}"
+        );
+        assert!(
+            trace_lines[0].starts_with("; theory-layer"),
+            "got: {}",
+            trace_lines[0]
+        );
     }
 }

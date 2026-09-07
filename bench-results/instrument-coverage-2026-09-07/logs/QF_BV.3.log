@@ -1,0 +1,4 @@
+; front-door parse_ms=75
+; dl-online total_ms=1
+; bv-layer bit_blast_ms=230 cnf_encode_ms=531 cnf_inprocess_ms=0 solve_ms=22662 model_lift_ms=0 model_replay_ms=0 total_ms=23424 bit_demand_analysis_nested_in_bit_blast_ms=0 range_demand_admission_nested_in_bit_blast_ms=0 aig_nodes=631681 cnf_variables=277149 cnf_clauses=936326
+unknown

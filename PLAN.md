@@ -146,6 +146,10 @@ now. Nothing was deleted.
 | 2026-09-07 | `cf7f6ade8` | Lane opened: diary with six pre-registered hypotheses, ranked before any measurement. |
 | 2026-09-07 | bench-divisions | Diary + status file opened, QF_IDL zero-coverage finding (`7b66ad607`) |
 | 2026-09-07 | bench-divisions | Full 12-division timing sweep, methodology correction, results committed |
+| 2026-09-07 | `3ba12a718` | A deletion names a literal MULTISET: `check_drat` and `check_drat_backward` disagreed on an inprocessed proof because all three deletion lookups matched only the literal SET, and the normalization prelude puts `(b)` and `(b OR b)` live at the same moment. Fixed in `drat.rs`, `drat_backward.rs` and `lrat.rs`; a completeness fix, mutation-controlled. |
+| 2026-09-07 | `8f24e7f23` | The measurement (ADR-1750) plus `examples/inprocess_profile.rs` and `examples/inprocess_proof_check.rs`. |
+| 2026-09-07 | `f7321fcc0` | `axeyum_cnf::inprocess` + `solve_with_drat_proof_inprocessed`: the passes now say what they did. `simplify`/`bve` gained recorders threaded through their fixpoint loops (a diff of input against output has no ordering guaranteed to verify). `tests/inprocess_proof_path.rs`, 8 tests over 19 instances x 6 arms. |
+| 2026-09-07 | `f8b9927d1` | Lane opened: five expectations pre-registered, plus the correction that `sat_bv_backend` already runs these passes — off by default, as preprocessing, with the certificate covering only the reduced formula. |
 | 2026-09-07 | int-divmod-witness | `witness_int_divmod` + `IntDivModElimination` + `guard_zero_divisor_sat`: the pass reports its mode and both halves get interpreted, not re-derived; the wrong-`unsat` mutant passes 30 of 30 pre-existing tests and dies on exactly one of the new ones |
 | 2026-09-07 | int-divmod-witness | ADR-1730: the `MAX_CONGRUENCE_GROUPS` cap is a relaxation, so the direction it silently changes is `sat`, not `unsat` |
 | 2026-09-07 | qf-nra-entry | committed `bench-results/parity-lists/QF_NRA.txt` (200 files, sha256 `d645dd907edd`) |
@@ -52642,6 +52646,152 @@ Before this lane: 16 of the 17 at-threshold instruments declared nothing. Now
 * `python3 scripts/validate-facts.py` and `just foundational-resources`.
   Not run.
 * No push. No merge to `main`.
+
+**`WIP`, inprocessing-proof-path, 2026-09-07.** The one hypothesis the
+[boolean-core lane](docs/plan/status/bench-boolean-core.md) left standing for the measured
+propagations-per-conflict gap is **confirmed, and it was under-predicted**.
+[ADR-1750](docs/research/09-decisions/adr-1750-a-reducing-pass-must-record-what-it-derived-not-what-it-deleted.md);
+working record, including where the pre-registered expectations were wrong:
+[`docs/research/12-performance/inprocessing-proof-path-2026-09-07.md`](docs/research/12-performance/inprocessing-proof-path-2026-09-07.md).
+
+**The measurement.** s5 idle, one binary (sha256 pinned), 20,000-conflict
+budget, arms interleaved, 64 cells, 0 failures, counters bit-identical across
+repeats, worst wall-time spread 1.025x. Over the six p4dfa instances where every
+arm exhausts the budget, **BVE cuts propagations per conflict to a median
+0.426** and **conflicts per second to 1.875x**. Against the 2.56x median deficit
+measured on the same eight files on the same host, `2.56 x 0.426 = 1.09` — on
+this metric one-shot BVE closes essentially the whole gap to Kissat. Subsumption
+alone moves the median 7% and is worse on three of eight files; the effect is
+entirely BVE, the only pass that removes variables. Unpredicted mechanism: the
+reduced formula has 24-28% fewer clauses but **17-21% more literal occurrences**, so
+propagations per *second* falls 13% — a change aimed at volume moved rate the
+other way.
+
+**The cost, as a break-even rather than a wall time.** At this budget BVE loses
+on total time on every file (1.2-88 s of pass against a 0.35-35 s search). The
+break-even is **59k-131k conflicts, median ~92k, on every file across a 100x
+range of instance size** — 4.6 s of unreduced search on the smallest instance,
+177 s on the largest. The sweep ran ~4.6x below it, which is why the default
+stays `OFF`: turning it on is a scheduling decision to be made against that
+table and a real solve budget.
+
+**The certificate survives it.** `axeyum_cnf::inprocess` streams each pass's
+DRAT into the same sink the search writes to, so the concatenation is one proof
+of the **original** formula. Every step is plain RUP — no RAT, no extension
+variable — including BVE's. Measured obligation: **only the clause-adding half of
+a pass is soundness-critical to record.** Making the passes silent about every
+clause they derived is rejected 38 of 38 times; dropping every deletion leaves
+all 38 proofs valid, because deletion only shrinks the checker's active set. The
+pre-registered negative test ("over-strengthening must be rejected") was
+**inverted** and the first run said so — `check_drat` accepts RAT, which is
+satisfiability-preserving, so a DRAT proof does not certify that an added clause
+was entailed. Replaced with the end-to-end form: 521 corrupted passes produced a
+wrong `unsat` and the checker rejected all 521.
+
+**A checker bug the inprocessed proof found.** Pointing `check_drat_backward` at
+the same proofs — because six of the suite's tests reach their verdict through
+one `check_drat` call — produced a disagreement on the first run: forward
+accepts, backward rejects at step 41. `drat_backward.rs` said which of several
+set-equal live clauses a deletion removes is "immaterial"; that is false for the
+pair every normalization prelude creates on purpose, since `(b)` is a unit to a
+verbatim propagator and `(b ∨ b)` is not. All three deletion lookups
+(`drat.rs`, `drat_backward.rs`, `lrat.rs`) now prefer the **multiset** match.
+A completeness fix, never an unsound acceptance; mutation control kills exactly
+one test per reverted half.
+
+**Not run, not ruled out.** *In-search* inprocessing — everything here is one
+pre-pass. It needs `Cdcl` to rebuild arena/headers/watches at level zero while
+preserving VSIDS activity and phases; the ~92k break-even is what makes it
+interesting. Also open: `sat_bv_backend` still checks its `unsat` against the
+*reduced* formula (`sat_bv_backend.rs:297`), so with `cnf_inprocessing` on the
+BVE link is trusted rather than checked — the machinery to close it now exists,
+the obstacle is that backend's `compact()` renumbering. And no p4dfa instance in
+the <=25 MB slice is decided `unsat` at 20,000 conflicts, so the corpus-scale
+proof check ran on a near-threshold random 3-SAT instead (backward checking 231x
+faster than forward over 203,528 steps).
+
+**Attribution note for whoever merges this.** The first five commits of this
+lane are stamped `Agent: retire-generic-1`, not `inprocessing-proof-path`. The
+shell running `lane-commit.sh` had no `AXEYUM_AGENT` (it does not survive
+between tool invocations here), so `hooks/commit-msg` took its repo-local
+fallback — which git worktrees **share**, so it carried another lane's name.
+This is the exact incident the hook's own comment records (38 commits over four
+days from at least four lanes). The five are `f8b9927d1`, `f7321fcc0`,
+`8f24e7f23`, `40fe71b3d`, `3ba12a718`; no history was rewritten to correct them.
+
+**Landed (`WIP`, instrument-coverage, 2026-09-07).** Follow-on to
+`bench-divisions` (`docs/research/12-performance/bench-divisions-2026-09-07.md`),
+which measured `smtcomp_cli --trace` covering only 15.6% of sampled wall
+clock across 12 divisions, with QF_ABV/QF_BV/QF_IDL/QF_RDL/QF_UFLIA at
+**0.0%**. Full writeup:
+[`docs/research/12-performance/instrument-coverage-2026-09-07.md`](docs/research/12-performance/instrument-coverage-2026-09-07.md).
+
+**Four new opt-in, off-by-default, thread-local instruments, all wired to
+the existing `--trace`/`AXEYUM_TRACE=1` flag (no new CLI surface):**
+
+1. `BvLayerStatsGuard` / `last_bv_layer_stats()` — publishes the `sat-bv`
+   backend's already-computed `BvLayerStats` (bit-blast/CNF-encode/CNF-inprocess/
+   solve/model-lift/model-replay), which existed but was wired to no CLI
+   flag. Covers QF_BV directly, QF_ABV via array elimination's reduction to
+   the same backend.
+2. `FrontDoorStatsGuard` / `last_front_door_stats()` — cumulative parse time
+   at the SMT-LIB front door's single parse call site. Universal (every
+   division's front door parses).
+3. `DlOnlineStatsGuard` / `last_dl_online_stats()` — total wall time inside
+   the whole `dl-online` difference-logic probe call, timed at its single
+   call site. Covers QF_IDL and QF_RDL, whose dominant route never enters
+   the generic CDCL(T) driver at all.
+4. A methodology fix found while wiring (1): `sat_bv_backend.rs`'s
+   `model_lift` timer was stamped AFTER the soundness-gate replay call
+   returned, silently including replay-check cost in a field named "lift."
+   Split into separately-timed `model_lift` / `model_replay`.
+
+**Non-additivity guard**: `bench-results/instrument-coverage-2026-09-07/scripts/aggregate.py`
+asserts per-file `traced_ms <= wall_ms * 1.15` and exits 1 (not a warning) on
+violation; `test_aggregate_guard.py` mutation-checks the guard itself
+(a synthetic impossible-sum fixture must fail it, an honest one must pass).
+
+**Coverage before/after — the exit criterion**: **15.6% -> 38.1%** (222.3s
+-> 555.7s traced of 1422.8s -> 1457.8s sampled wall clock, same 93-file
+sample across the same 12 divisions, re-run on s4 with
+`bench-results/instrument-coverage-2026-09-07/scripts/{sweep.sh,aggregate.py}`).
+**Non-additivity guard: 0 violations across all 93 files** (max single-file
+fraction observed: 99.6%). Four of the five previously-zero-coverage
+divisions now have real coverage: QF_BV 0.0%->80.5%, QF_IDL 0.0%->96.2%,
+QF_RDL 0.0%->48.2%, QF_ABV 0.0%->11.2%; QF_UFLIA only reaches 10.7%
+(parse-only — its population resolves via dispatch-decline, the one gap
+this lane did not close). Full per-division table and the small
+run-to-run host-contention caveat (QF_LRA/UF): diary's "Re-run: coverage
+after" section.
+
+**"Which gate bound the query" vs. "which gate printed last" (the QF_NRA
+finding)**: honestly, this lane's four instruments do NOT close that gap —
+they answer "how much wall clock did stage X cost," one level of
+granularity above "which of several admission checks inside a stage's
+dispatch declined the query." The tool that WOULD answer it already exists
+(`crate::route_trace::RouteTrace`, which records the full ordered sequence
+of dispatch attempts and each one's decline reason, not just the last
+message printed) but is reachable only through `check_auto_explained`, a
+function `solve_smtlib` does not call and which CLAUDE.md's Gotchas already
+document diverging from the shipped front door on 134/397 benchmarks.
+Making that safe to wire into `--trace` is the concrete next step this
+finding sharpens — see the diary's "Does this instrument …" section.
+
+**Not done** (see the diary's "What remains untraced" section for why):
+generic (non-`sat-bv`) rewrite/preprocessing timing (no single funnel point
+across ~7 call sites); generic (non-`sat-bv`) model-replay timing at the
+other ~6 call sites; dispatch-decline / admission-decline timing for the
+QF_UFLIA class and the QF_NRA-class misattribution above (the existing
+`RouteTrace` instrument is reachable only through a function `solve_smtlib`
+does not call, and CLAUDE.md's Gotchas already document that alternate
+entry point diverging from the shipped front door on 134/397 benchmarks —
+wiring it into `--trace` without first resolving that divergence was
+judged out of this lane's scope).
+
+**Gates run**: `cargo clippy --workspace --all-targets --all-features -- -D
+warnings` clean; `cargo test -p axeyum-solver --lib --features full` — 1475
+passed, 0 failed; `cargo test -p axeyum-solver --features full --test
+corpus_regression` — 1 passed, 0 failed.
 
 **Lane block (`WIP`, int-divmod-witness, 2026-09-07).** ADR-1721 §4 named
 `eliminate_int_divmod` the sharpest remaining preprocessing gap and left the

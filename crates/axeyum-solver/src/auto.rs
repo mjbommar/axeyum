@@ -3446,12 +3446,26 @@ fn dispatch_difference_logic(
     config: &SolverConfig,
     rec: &mut Recorder<'_>,
 ) -> Option<CheckResult> {
-    match crate::dl_online::try_check_qf_dl(
+    // Stage timing for the `--trace` `; dl-online …` line (opt-in — see
+    // `crate::dl_online::DlOnlineStatsGuard`): the whole call is timed from
+    // this single choke point rather than inside `try_check_qf_dl` itself,
+    // so every one of its several early-return paths (a `?` on `scan_dl`, a
+    // budget-exhausted `Some(timeout_result(..))`, …) is covered without
+    // touching them individually. `QF_IDL`/`QF_RDL` route here as their
+    // dominant engine and never enter the generic CDCL(T) driver at all
+    // (docs/research/12-performance/bench-divisions-2026-09-07.md,
+    // "First finding"), so this is currently their only stage instrument.
+    let dl_start = crate::dl_online::dl_online_stats_collecting().then(Instant::now);
+    let dl_result = crate::dl_online::try_check_qf_dl(
         arena,
         assertions,
         &dl_probe_budget(config),
         extended_dl_probe_timeout(config),
-    ) {
+    );
+    if let Some(start) = dl_start {
+        crate::dl_online::record_dl_online_time(start.elapsed());
+    }
+    match dl_result {
         Some(result) => {
             with_recorder(rec, |t| t.record_result("dl-online", &result));
             match &result {

@@ -899,7 +899,7 @@ pub use incremental::{
     AssumptionOutcome, IncrementalBvSolver, IncrementalBvStats, IncrementalModelLiftStats,
     IncrementalSolver, ReplayCheckedSatCachePolicy, ReplayCheckedSatCacheStats,
 };
-pub use layers::BvLayerStats;
+pub use layers::{BvLayerStats, BvLayerStatsGuard, last_bv_layer_stats};
 pub use model::Model;
 #[doc(hidden)]
 pub use proof::{
@@ -1054,6 +1054,8 @@ macro_rules! full_exports {
         pub use datatype_native::check_with_datatype_native;
         #[doc(hidden)]
         pub use distinct::distinct;
+        #[doc(hidden)]
+        pub use dl_online::{DlOnlineStatsGuard, last_dl_online_stats};
         #[doc(hidden)]
         pub use dpll_lia::{
             ArithDpllOutcome, ArithDpllRefutation, ArithLemmaLiteral, certify_arith_dpll_unsat,
@@ -1373,7 +1375,8 @@ macro_rules! full_exports {
         pub use skolem_alethe::{SkolemCert, SkolemRecord, prove_skolem_unsat_alethe};
         #[doc(hidden)]
         pub use smtlib::{
-            SmtLibModel, SmtLibOutcome, confirm_bounded_string_verdict, decide_word_only_script,
+            FrontDoorStats, FrontDoorStatsGuard, SmtLibModel, SmtLibOutcome,
+            confirm_bounded_string_verdict, decide_word_only_script, last_front_door_stats,
             length_lia_verdict, lex_order_verdict, membership_unsat_certificate,
             membership_unsat_lean_module, membership_verdict, online_string_verdict,
             optimize_smtlib, optimize_smtlib_lexicographic, solve_smtlib,

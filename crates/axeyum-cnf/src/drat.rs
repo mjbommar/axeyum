@@ -1108,10 +1108,43 @@ pub(crate) fn literal_from_dimacs(value: i64) -> Result<CnfLit, DratError> {
 
 /// Finds the index of a clause in `active` equal as a set to `clause`.
 fn position_of(active: &[Vec<CnfLit>], clause: &[CnfLit]) -> Option<usize> {
+    // Prefer the live clause whose literal MULTISET the deletion names, falling
+    // back to any clause with the same literal set. The two differ only for a
+    // clause with a repeated literal, and there the choice is not cosmetic: RUP
+    // propagation reads literals verbatim, so `(b)` is a unit to this checker
+    // and `(b ∨ b)` is not, and deleting the wrong one of a live pair decides
+    // whether a later step can propagate. Such a pair is put there on purpose by
+    // every inprocessing pass's normalization prelude (`Add(deduped)` then
+    // `Delete(original)`), which exists for exactly the same reason.
+    //
+    // This checker's insertion-order scan already happened to pick the original,
+    // which is the right one; `check_drat_backward` took the most recent match
+    // and picked the deduped one, so the two disagreed on a real proof (see
+    // `crate::drat_backward::record_multiset_equals`). Making the preference
+    // explicit in both is what makes the agreement a property rather than a
+    // coincidence of scan direction.
+    let exact = sorted_multiset(clause);
+    if let Some(position) = active
+        .iter()
+        .position(|candidate| sorted_multiset(candidate) == exact)
+    {
+        return Some(position);
+    }
     let target = sorted(clause);
     active
         .iter()
         .position(|candidate| sorted(candidate) == target)
+}
+
+/// A clause's literals as a sorted multiset (repeats kept), for the deletion
+/// preference in [`position_of`]. The sibling of [`sorted`], which deduplicates.
+pub(crate) fn sorted_multiset(clause: &[CnfLit]) -> Vec<(usize, bool)> {
+    let mut key: Vec<(usize, bool)> = clause
+        .iter()
+        .map(|lit| (lit.var().index(), lit.is_negated()))
+        .collect();
+    key.sort_unstable();
+    key
 }
 
 pub(crate) fn sorted(clause: &[CnfLit]) -> Vec<(usize, bool)> {

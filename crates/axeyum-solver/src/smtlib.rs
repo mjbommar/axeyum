@@ -1833,6 +1833,92 @@ fn smtlib_single_query(script: &Script) -> Result<SmtLibSingleQuery, SolverError
     })
 }
 
+std::thread_local! {
+    /// Whether front-door stage timing (currently: parse) is being collected
+    /// on this thread. See [`FrontDoorStatsGuard`].
+    static COLLECT_FRONT_DOOR_STATS: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+    /// Cumulative parse wall time for the current front-door call, across
+    /// every [`solve_smtlib_at_string_bound`] invocation on this thread since
+    /// the active [`FrontDoorStatsGuard`] was created (the string-bound
+    /// ladder can call it more than once per `solve_smtlib`/
+    /// `solve_smtlib_with_model` call).
+    static PARSE_TIME_ACCUM: std::cell::Cell<Duration> =
+        const { std::cell::Cell::new(Duration::ZERO) };
+}
+
+/// Whether front-door stage timing is currently enabled on this thread.
+fn front_door_stats_collecting() -> bool {
+    COLLECT_FRONT_DOOR_STATS.with(std::cell::Cell::get)
+}
+
+/// Adds `elapsed` to this thread's cumulative parse-time accumulator. Only
+/// called from a site already gated on [`front_door_stats_collecting`]
+/// returning `true` (see the call site in [`solve_smtlib_at_string_bound`]),
+/// so this itself does not re-check the flag.
+fn record_parse_time(elapsed: Duration) {
+    PARSE_TIME_ACCUM.with(|c| c.set(c.get() + elapsed));
+}
+
+/// Enables front-door stage timing (currently just cumulative parse time; see
+/// [`FrontDoorStats`]) for every [`solve_smtlib`]/[`solve_smtlib_with_model`]
+/// call on this thread for the lifetime of the returned guard, restoring the
+/// previous setting on drop. Resets the accumulator to zero on `enable()`, so
+/// each guard's lifetime reports only what happened while it was live — same
+/// convention as `cdclt::TheoryLayerStatsGuard` /
+/// `layers::BvLayerStatsGuard`, the two other opt-in, off-by-default,
+/// thread-local diagnostics `--trace` composes.
+pub struct FrontDoorStatsGuard(bool);
+
+impl FrontDoorStatsGuard {
+    /// Enables collection for the lifetime of the returned guard.
+    #[must_use]
+    pub fn enable() -> Self {
+        let previous = COLLECT_FRONT_DOOR_STATS.with(|c| c.replace(true));
+        PARSE_TIME_ACCUM.with(|c| c.set(Duration::ZERO));
+        FrontDoorStatsGuard(previous)
+    }
+}
+
+impl Drop for FrontDoorStatsGuard {
+    fn drop(&mut self) {
+        COLLECT_FRONT_DOOR_STATS.with(|c| c.set(self.0));
+    }
+}
+
+/// Front-door stage timing collected while a [`FrontDoorStatsGuard`] was
+/// active. Currently one field; the type exists (rather than a bare
+/// `Duration`) so a later stage (e.g. a distinct rewrite/preprocess timer)
+/// can be added without changing every caller's shape.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[non_exhaustive]
+pub struct FrontDoorStats {
+    /// Cumulative wall time inside `axeyum_smtlib::parse_script_with_string_bound_within`
+    /// for the most recent front-door call on this thread, summed across
+    /// every string-bound-ladder rung that ran.
+    pub parse: Duration,
+}
+
+/// The [`FrontDoorStats`] accumulated on this thread since the active
+/// [`FrontDoorStatsGuard`] (or the most recently dropped one) was created.
+/// Reading is independent of whether the guard is still live — the intended
+/// use is to read this right after a guarded `solve_smtlib` call returns and
+/// the guard has already dropped, exactly like
+/// `cdclt::last_theory_layer_stats`.
+///
+/// This has no `None` case: unlike `last_theory_layer_stats` (which reports
+/// `None` when no `CdclT` search ran at all — a real, common outcome, e.g.
+/// `sat-bv` decided the query), parse runs on literally every front-door
+/// call, so `Duration::ZERO` here always means "collection was never enabled
+/// on this thread" rather than "the stage did not run". Callers gate on
+/// whether they enabled a [`FrontDoorStatsGuard`] in the first place, the
+/// same way `smtcomp_cli`'s `trace_mode` gates every other opt-in lever.
+#[must_use]
+pub fn last_front_door_stats() -> FrontDoorStats {
+    FrontDoorStats {
+        parse: PARSE_TIME_ACCUM.with(std::cell::Cell::get),
+    }
+}
+
 /// Parses an SMT-LIB 2 script and decides it — the text front door.
 ///
 /// For a script with zero or one `check-sat`/`check-sat-assuming`, the active
@@ -2001,11 +2087,31 @@ fn solve_smtlib_at_string_bound(
     let parse_deadline = config
         .timeout
         .and_then(|t| std::time::Instant::now().checked_add(t));
-    let mut script = match axeyum_smtlib::parse_script_with_string_bound_within(
-        input,
-        string_bound,
-        parse_deadline,
-    ) {
+    // Front-door stage timing (`--trace`'s `; front-door …` line, opt-in —
+    // see `FrontDoorStatsGuard`): parse is a stage every division pays and no
+    // instrument in this tree measured before 2026-09-07
+    // (docs/research/12-performance/instrument-coverage-2026-09-07.md). Off
+    // by default: `front_door_stats_collecting()` is a single thread-local
+    // `Cell<bool>` read, and the clock itself is read only when it returns
+    // `true` (the `.then(Instant::now)` below), so the default (uncollected)
+    // path adds no clock read at all — same convention as
+    // `cdclt::TheoryLayerStatsGuard`.
+    //
+    // Timed around the whole match (not just the `Ok` arm) because a
+    // `DeadlineExceeded`/`ResourceLimit` decline still spent this wall time
+    // parsing before giving up — excluding it would understate parse cost on
+    // exactly the files where it dominates. Accumulated (not overwritten)
+    // because this function may run more than once per front-door call (the
+    // string-bound ladder re-parses at wider rungs;
+    // `apply_string_bound_ladder`), and every rung's parse cost is real cost
+    // paid on this thread for this one `solve_smtlib` call.
+    let parse_start = front_door_stats_collecting().then(std::time::Instant::now);
+    let parse_result =
+        axeyum_smtlib::parse_script_with_string_bound_within(input, string_bound, parse_deadline);
+    if let Some(start) = parse_start {
+        record_parse_time(start.elapsed());
+    }
+    let mut script = match parse_result {
         Ok(script) => script,
         // A resource limit is NOT an error: report the first-class `unknown` the
         // hard rule requires, carrying the phase that ran out so a profile can

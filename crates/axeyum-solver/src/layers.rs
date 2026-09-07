@@ -28,8 +28,24 @@ pub struct BvLayerStats {
     pub cnf_inprocess: Duration,
     /// Time inside the SAT adapter.
     pub solve: Duration,
-    /// Time lifting a satisfying assignment into an Axeyum model.
+    /// Time lifting a satisfying assignment into an Axeyum model (AIG
+    /// values -> lowering assignment -> `complete_model`) — NOT including
+    /// [`Self::model_replay`], which is timed separately (see that field's
+    /// docs for why this split exists).
     pub model_lift: Duration,
+    /// Time replaying the accepted model against the original assertions
+    /// (the soundness gate every `sat` from this backend passes before it is
+    /// returned). `Duration::ZERO` when the check did not decide `Sat` (no
+    /// replay to time), matching [`Self::model_lift`]'s convention. Split out
+    /// of `model_lift` 2026-09-07 (docs/research/12-performance/
+    /// instrument-coverage-2026-09-07.md): before the split, `model_lift`'s
+    /// `Instant` was read AFTER the replay call returned, so a field named
+    /// "lift" silently included the replay-check cost too. `Duration::ZERO`
+    /// also for a `SolveStats` produced before this field existed (an older
+    /// serialized snapshot, or a future backend that never sets
+    /// `model_replay_ms`) — [`Self::from_solve_stats`] defaults an absent
+    /// counter to zero, same as every other optional field here.
+    pub model_replay: Duration,
     /// Symbolic AIG inputs (bit-level free variables).
     pub aig_inputs: u64,
     /// AIG nodes after lowering.
@@ -209,6 +225,7 @@ impl BvLayerStats {
             cnf_inprocess: lookup(stats, "inprocess_ms").map_or(Duration::ZERO, ms_to_duration),
             solve: stats.solve,
             model_lift: stats.model_lift,
+            model_replay: lookup(stats, "model_replay_ms").map_or(Duration::ZERO, ms_to_duration),
             aig_inputs: lookup(stats, "aig_inputs").map_or(0, count_to_u64),
             aig_nodes: count_to_u64(aig_nodes),
             aig_and_requests: lookup(stats, "aig_and_requests").map_or(0, count_to_u64),
@@ -370,8 +387,25 @@ impl BvLayerStats {
     }
 
     /// Total wall-clock time across all pipeline stages.
+    ///
+    /// Deliberately the six top-level stage fields ONLY —
+    /// [`Self::bit_demand_analysis`] and `range_demand_admission` are
+    /// documented as nested inside [`Self::bit_blast`] (they are sub-timings
+    /// taken *during* the same lowering call `bit_blast` wraps), so adding
+    /// them here would double-count exactly the way `theory_assert_ms` did
+    /// inside `boolean_propagate_ms` for the generic CDCL(T) driver (see
+    /// `crate::theories::cdclt_diagnostics::TheoryLayerStats` and
+    /// docs/research/12-performance/bench-divisions-2026-09-07.md's
+    /// "Methodology correction"). This total is the non-double-counting
+    /// answer; a caller that also wants the nested breakdown reads
+    /// [`Self::bit_demand_analysis`] separately, never summed in.
     pub fn total(&self) -> Duration {
-        self.bit_blast + self.cnf_encode + self.cnf_inprocess + self.solve + self.model_lift
+        self.bit_blast
+            + self.cnf_encode
+            + self.cnf_inprocess
+            + self.solve
+            + self.model_lift
+            + self.model_replay
     }
 
     /// Clauses per CNF variable, a coarse encoding-density indicator
@@ -382,6 +416,83 @@ impl BvLayerStats {
         } else {
             u64_to_f64(self.cnf_clauses) / u64_to_f64(self.cnf_variables)
         }
+    }
+}
+
+std::thread_local! {
+    /// Whether the *next* [`SatBvBackend`](crate::sat_bv_backend::SatBvBackend)
+    /// check on this thread should publish its [`BvLayerStats`] to
+    /// [`LAST_BV_LAYER_STATS`]. Scoped as a thread-local opt-in flag for the
+    /// same reason `cdclt::COLLECT_LAYER_STATS` is: one knob at the top of a
+    /// solve, read at the single publish point in `SatBvBackend`'s
+    /// `SolverBackend::check`/`check_query`, rather than a parameter threaded
+    /// through the ~10 internal `SatBvBackend::new()` call sites.
+    ///
+    /// Off by default costs nothing extra: the underlying `SolveStats`
+    /// durations this reads (`bit_blast_ms`, `cnf_encode_ms`, `solve`,
+    /// `model_lift`, `model_replay_ms`, …) are computed UNCONDITIONALLY by
+    /// `SatBvBackend` regardless of this flag — they are ordinary `Instant`
+    /// reads already on the hot path, not new clock reads this flag adds.
+    /// What the flag gates is only the `Option<BvLayerStats>` clone into the
+    /// thread-local below, which is skipped entirely when collection is off.
+    static COLLECT_BV_LAYER_STATS: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+    /// The [`BvLayerStats`] published by the most recently completed
+    /// `SatBvBackend` check on this thread while collection was enabled.
+    /// `None` until collection has been enabled and a `sat-bv` check has
+    /// completed. "Last call wins": a solve that constructs `SatBvBackend`
+    /// more than once (e.g. a shared-guard split, a CEGAR abstraction loop)
+    /// leaves the FINAL check's stats here, matching
+    /// `cdclt::LAST_THEORY_LAYER_STATS`'s same convention for a solve that
+    /// runs more than one `CdclT` search.
+    static LAST_BV_LAYER_STATS: std::cell::Cell<Option<BvLayerStats>> =
+        const { std::cell::Cell::new(None) };
+}
+
+/// Enables [`BvLayerStats`] collection for every `SatBvBackend` check run on
+/// this thread for the lifetime of the returned guard, restoring the
+/// previous setting on drop (so nested/recursive solves compose correctly).
+/// Off by default: constructing no guard means no extra work beyond what
+/// `SatBvBackend` already computes unconditionally (see
+/// [`COLLECT_BV_LAYER_STATS`]'s docs).
+///
+/// ```ignore
+/// let _guard = axeyum_solver::BvLayerStatsGuard::enable();
+/// let _ = axeyum_solver::solve_smtlib(text, &config);
+/// let stats = axeyum_solver::last_bv_layer_stats(); // Some(..) if `sat-bv` ran
+/// ```
+pub struct BvLayerStatsGuard(bool);
+
+impl BvLayerStatsGuard {
+    /// Enables collection for the lifetime of the returned guard.
+    #[must_use]
+    pub fn enable() -> Self {
+        BvLayerStatsGuard(COLLECT_BV_LAYER_STATS.with(|c| c.replace(true)))
+    }
+}
+
+impl Drop for BvLayerStatsGuard {
+    fn drop(&mut self) {
+        COLLECT_BV_LAYER_STATS.with(|c| c.set(self.0));
+    }
+}
+
+/// The [`BvLayerStats`] published by the most recently completed `sat-bv`
+/// check on this thread while a [`BvLayerStatsGuard`] was active. `None` if
+/// collection was never enabled, or no `SatBvBackend` check has completed yet
+/// on this thread.
+#[must_use]
+pub fn last_bv_layer_stats() -> Option<BvLayerStats> {
+    LAST_BV_LAYER_STATS.with(std::cell::Cell::get)
+}
+
+/// Publishes `stats` (if `sat-bv`-shaped) to [`LAST_BV_LAYER_STATS`] when
+/// collection is enabled on this thread; a silent no-op otherwise. Called
+/// from `SatBvBackend`'s `SolverBackend::check`/`check_query` after every
+/// check, so this is the single publish point regardless of which of
+/// `SatBvBackend`'s many internal construction sites ran.
+pub(crate) fn publish_bv_layer_stats(stats: &SolveStats) {
+    if COLLECT_BV_LAYER_STATS.with(std::cell::Cell::get) {
+        LAST_BV_LAYER_STATS.with(|c| c.set(BvLayerStats::from_solve_stats(stats)));
     }
 }
 

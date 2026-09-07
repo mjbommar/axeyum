@@ -29,7 +29,7 @@ use std::time::Instant;
 #[cfg(target_arch = "wasm32")]
 use web_time::Instant;
 
-use crate::drat::{DratStep, literal_from_dimacs, sorted};
+use crate::drat::{DratStep, literal_from_dimacs, sorted, sorted_multiset};
 use crate::{CnfFormula, CnfLit};
 
 /// One step of an LRAT proof.
@@ -1210,8 +1210,29 @@ pub fn certify_unsat_via_lrat(formula: &CnfFormula, drat: &[DratStep]) -> LratCe
     }
 }
 
-/// Finds the active id whose clause equals `clause` as a set.
+/// Finds the active id whose clause the deletion names.
+///
+/// Prefers a clause whose literal **multiset** matches, falling back to any set
+/// match. The two differ only for a clause with a repeated literal, and there
+/// the choice decides whether later steps can propagate — `(b)` is a unit to a
+/// verbatim propagator and `(b ∨ b)` is not, so a live pair of the two is not
+/// interchangeable. Such a pair is created deliberately by every inprocessing
+/// pass's normalization prelude; see
+/// [`crate::drat_backward::record_multiset_equals`] for the measured
+/// forward/backward disagreement that established it.
+///
+/// The `BTreeMap` scan already reached the lowest id first, which for that
+/// prelude is the original clause and therefore the right one. Making the
+/// preference explicit keeps that a property of the lookup rather than of the
+/// id ordering.
 fn find_active_id(active: &BTreeMap<u64, Vec<CnfLit>>, clause: &[CnfLit]) -> Option<u64> {
+    let exact = sorted_multiset(clause);
+    if let Some((&id, _)) = active
+        .iter()
+        .find(|(_, candidate)| sorted_multiset(candidate) == exact)
+    {
+        return Some(id);
+    }
     let target = sorted(clause);
     active
         .iter()

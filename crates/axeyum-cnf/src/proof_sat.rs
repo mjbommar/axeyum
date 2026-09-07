@@ -24,6 +24,7 @@ use web_time::Instant;
 use std::time::Duration;
 
 use crate::drat::{DratSink, DratStep, ProofSinkError, VecProofSink};
+use crate::inprocess::{InprocessOptions, InprocessStats, inprocess_into};
 use crate::{CnfAssignment, CnfFormula, CnfLit, CnfVar};
 
 pub mod theory;
@@ -418,6 +419,132 @@ pub fn solve_with_drat_proof_counted(
     sink: &mut impl DratSink,
 ) -> (StreamingProofOutcome, SearchCounters) {
     Cdcl::new(formula, sink).solve_counted(deadline, max_conflicts)
+}
+
+/// A search that ran over an inprocessed formula: the verdict, the search
+/// counters, and what the reducing passes did.
+///
+/// Returned as a struct rather than a tuple because the third member is the one
+/// a reader is most likely to skip, and it is the one that says whether the
+/// verdict came from the formula the caller handed in or from a reduction of
+/// it.
+#[derive(Debug, Clone, PartialEq)]
+pub struct InprocessedSearch {
+    /// The verdict. A `Sat` model has already been lifted back through the
+    /// reduction, so it is over the **caller's** variables and satisfies the
+    /// **caller's** formula — nothing downstream needs to know a reduction
+    /// happened.
+    pub outcome: StreamingProofOutcome,
+    /// Search counters, zero unless the counted entry point was used. These are
+    /// counted over the **reduced** formula, which is the point: the hypothesis
+    /// under test is that a smaller formula costs fewer propagations per
+    /// conflict.
+    pub counters: SearchCounters,
+    /// What the reducing passes did, including how many `DRAT` steps they cost.
+    pub inprocess: InprocessStats,
+}
+
+/// Solves `formula` with the proof-producing CDCL core after running the
+/// reducing passes `options` enables, streaming **one** `DRAT` proof of the
+/// **original** `formula` to `sink` — the passes' derivation first, then the
+/// search's own steps (ADR-1750).
+///
+/// This is the entry point behind the propagation-volume experiment described in
+/// [`crate::inprocess`]: the search's [`SearchCounters`] are measured over the
+/// reduced formula, so `propagations / conflicts` is directly comparable against
+/// the same call with [`InprocessOptions::OFF`].
+///
+/// # What the certificate covers
+///
+/// The concatenated stream verifies against the formula the caller passed in,
+/// not against the reduced one. That is the whole point of routing inprocessing
+/// through here rather than doing it in the caller: a solver that preprocesses
+/// and then emits a proof of the preprocessed formula has quietly narrowed what
+/// its certificate certifies, and nothing in the pipeline announces it.
+///
+/// # What is unchanged
+///
+/// With [`InprocessOptions::OFF`] (the default) no pass runs, no step is
+/// emitted, and this is [`solve_with_drat_proof_streaming`] exactly — same
+/// trajectory, same verdict, same bytes.
+///
+/// # `sat`
+///
+/// The model is lifted back through the reduction before it is returned, so it
+/// is over the caller's variables and satisfies the caller's formula. Only BVE
+/// makes that lift non-trivial; subsumption and vivification are
+/// model-preserving.
+pub fn solve_with_drat_proof_counted_inprocessed(
+    formula: &CnfFormula,
+    deadline: Option<Instant>,
+    max_conflicts: usize,
+    sink: &mut impl DratSink,
+    options: InprocessOptions,
+) -> InprocessedSearch {
+    let reduced = match inprocess_into(formula, options, deadline, sink) {
+        Ok(reduced) => reduced,
+        // The sink refused a prefix step. No search runs and no verdict is
+        // reported: a reduction whose derivation could not be recorded is not
+        // something a later refutation may be built on. Same undecided contract
+        // as `StreamingProofOutcome::SinkFailed` everywhere else.
+        Err(error) => {
+            return InprocessedSearch {
+                outcome: StreamingProofOutcome::SinkFailed(error),
+                counters: SearchCounters::default(),
+                inprocess: InprocessStats::default(),
+            };
+        }
+    };
+    let (outcome, counters) =
+        Cdcl::new(&reduced.formula, sink).solve_counted(deadline, max_conflicts);
+    let outcome = match outcome {
+        StreamingProofOutcome::Sat(model) => StreamingProofOutcome::Sat(CnfAssignment::new(
+            reduced.reconstruction.extend(model.values()),
+        )),
+        other => other,
+    };
+    InprocessedSearch {
+        outcome,
+        counters,
+        inprocess: reduced.stats,
+    }
+}
+
+/// Like [`solve_with_drat_proof_counted_inprocessed`] but without the counters
+/// (nothing in the search increments them), and returning the proof as a `Vec`
+/// the way [`solve_with_drat_proof`] does.
+///
+/// The returned proof is a proof of `formula`, inprocessing prefix included.
+pub fn solve_with_drat_proof_inprocessed(
+    formula: &CnfFormula,
+    deadline: Option<Instant>,
+    max_conflicts: usize,
+    options: InprocessOptions,
+) -> ProofSolveOutcome {
+    let mut sink = VecProofSink::new();
+    let search = {
+        // `VecProofSink` is infallible, so the `else` is unreachable; it maps to
+        // the undecided verdict rather than panicking, so an impossible branch
+        // can never become a wrong `sat`/`unsat` and never aborts a caller.
+        let Ok(reduced) = inprocess_into(formula, options, deadline, &mut sink) else {
+            return ProofSolveOutcome::Interrupted;
+        };
+        let outcome = Cdcl::new(&reduced.formula, &mut sink).solve(deadline, max_conflicts);
+        match outcome {
+            StreamingProofOutcome::Sat(model) => StreamingProofOutcome::Sat(CnfAssignment::new(
+                reduced.reconstruction.extend(model.values()),
+            )),
+            other => other,
+        }
+    };
+    match search {
+        StreamingProofOutcome::Sat(model) => ProofSolveOutcome::Sat(model),
+        StreamingProofOutcome::Unsat => ProofSolveOutcome::Unsat(sink.into_steps()),
+        StreamingProofOutcome::ResourceOut => ProofSolveOutcome::ResourceOut,
+        StreamingProofOutcome::Interrupted | StreamingProofOutcome::SinkFailed(_) => {
+            ProofSolveOutcome::Interrupted
+        }
+    }
 }
 
 /// Solves `formula` with the proof-producing CDCL core, **streaming** the DRAT

@@ -292,6 +292,7 @@ impl RecordSlot {
         arena: &[StoredCode],
         records: &[ClauseRecord],
         key: &[StoredCode],
+        exact: &[StoredCode],
         scratch: &mut Vec<StoredCode>,
     ) -> usize {
         match self {
@@ -306,9 +307,20 @@ impl RecordSlot {
                 }
             }
             RecordSlot::Many(candidates) => {
+                // Prefer a clause whose literal MULTISET matches the deletion,
+                // falling back to any set match. Which of several set-equal
+                // clauses is removed is immaterial only while they are also
+                // multiset-equal -- see `record_multiset_equals`.
                 let found = candidates
                     .iter()
-                    .rposition(|&record| record_key_equals(arena, &records[record], key, scratch));
+                    .rposition(|&record| {
+                        record_multiset_equals(arena, &records[record], exact, scratch)
+                    })
+                    .or_else(|| {
+                        candidates.iter().rposition(|&record| {
+                            record_key_equals(arena, &records[record], key, scratch)
+                        })
+                    });
                 match found {
                     Some(position) => candidates.remove(position),
                     None => NO_CLAUSE,
@@ -323,6 +335,42 @@ impl RecordSlot {
             _ => 0,
         }
     }
+}
+
+/// Does `record`'s literal **multiset** equal `exact` (sorted, not deduplicated)?
+///
+/// The distinction from [`record_key_equals`] matters in exactly one situation,
+/// and it took a disagreement between this checker and [`crate::check_drat`] to
+/// find it. A clause with a repeated literal — `(b ∨ b)` — has the same literal
+/// *set* as `(b)` and a different *multiset*, and a checker's unit propagation
+/// reads literals verbatim: `(b)` is a unit to it and `(b ∨ b)` is not. So when
+/// both are live and a deletion matches either, **which one is removed decides
+/// whether later steps can propagate**, and this module's comment saying the
+/// choice is immaterial was true only for clauses without repeats.
+///
+/// The pair arises for real: every inprocessing pass emits a normalization
+/// prelude (`Add(deduped)` then `Delete(original)`) precisely because the
+/// checker propagates literals verbatim, and that prelude puts a set-equal,
+/// multiset-different pair in the active set on purpose. `check_drat` scans
+/// insertion order and happened to remove the original; this checker takes the
+/// most recent match and removed the deduped one, leaving a clause that would
+/// not propagate. Forward accepted the proof and backward rejected it
+/// (`tests/inprocess_proof_path.rs`, and the pinned pair in this module's tests).
+///
+/// Preferring the multiset match is a *completeness* fix, not a soundness one:
+/// both choices leave a logically identical clause set, and the one this now
+/// keeps is the one that propagates more, so nothing that was rejected for a
+/// good reason becomes accepted.
+fn record_multiset_equals(
+    arena: &[StoredCode],
+    record: &ClauseRecord,
+    exact: &[StoredCode],
+    scratch: &mut Vec<StoredCode>,
+) -> bool {
+    scratch.clear();
+    scratch.extend_from_slice(&arena[record.span()]);
+    scratch.sort_unstable();
+    scratch.as_slice() == exact
 }
 
 /// Does `record`'s literal set equal `key` (which is sorted and deduplicated)?
@@ -400,8 +448,11 @@ struct PlanBuilder {
     /// Live clauses by the hash of their literal set. Only ever looked up, never
     /// iterated, so no output of this module depends on hash order.
     live: HashMap<u64, RecordSlot, BuildHasherDefault<KeyHasher>>,
-    /// Scratch for the key being looked up.
+    /// Scratch for the key being looked up (sorted and deduplicated).
     key: Vec<StoredCode>,
+    /// Scratch for the same key with repeats kept, so a deletion can prefer the
+    /// live clause whose literal multiset it literally names.
+    exact: Vec<StoredCode>,
     /// Scratch for a candidate's key during exact comparison.
     candidate: Vec<StoredCode>,
     /// A count that did not fit its stored width, recorded rather than panicked
@@ -431,6 +482,7 @@ impl PlanBuilder {
             },
             live: HashMap::default(),
             key: Vec::new(),
+            exact: Vec::new(),
             candidate: Vec::new(),
             overflow: None,
             root: None,
@@ -481,14 +533,18 @@ impl PlanBuilder {
             }
             DratStep::Delete(lits) => {
                 self.shape_total_literals += lits.len() as u64;
-                // Which of several identical live clauses is removed is
-                // immaterial — they have the same literal set, and a clause's
-                // stored literal order affects nothing but its own RAT pivot,
-                // which a database clause never supplies.
-                self.key.clear();
-                self.key
+                // Two keys, because which of several set-equal live clauses is
+                // removed is immaterial only while they are also multiset-equal:
+                // `exact` (sorted, repeats kept) picks the clause the deletion
+                // literally names, `key` (sorted and deduplicated) is the
+                // lookup and the fallback. See `record_multiset_equals` for the
+                // measured disagreement that put this here.
+                self.exact.clear();
+                self.exact
                     .extend(lits.iter().copied().map(|lit| narrow(code_of(lit))));
-                self.key.sort_unstable();
+                self.exact.sort_unstable();
+                self.key.clear();
+                self.key.extend_from_slice(&self.exact);
                 self.key.dedup();
                 let hash = hash_key(&self.key);
                 // Disjoint field borrows: the slot is mutated while the arena
@@ -497,12 +553,15 @@ impl PlanBuilder {
                     plan,
                     live,
                     key,
+                    exact,
                     candidate,
                     overflow,
                     ..
                 } = self;
                 let record = match live.get_mut(&hash) {
-                    Some(slot) => slot.pop_matching(&plan.arena, &plan.records, key, candidate),
+                    Some(slot) => {
+                        slot.pop_matching(&plan.arena, &plan.records, key, exact, candidate)
+                    }
                     None => NO_CLAUSE,
                 };
                 if record != NO_CLAUSE {
@@ -2075,6 +2134,54 @@ mod tests {
         for (name, f, proof, expected) in cases {
             assert_eq!(agree(&f, &proof), expected, "case `{name}`");
         }
+    }
+
+    /// **Deleting one of two set-equal but multiset-different live clauses.**
+    ///
+    /// The pattern every inprocessing pass's normalization prelude creates:
+    /// `Add(b)` then `Delete(b ∨ b)`, both live at the moment of the deletion
+    /// and indistinguishable to a set-keyed lookup. They are not
+    /// interchangeable — RUP propagation reads literals verbatim, so `(b)` is a
+    /// unit and `(b ∨ b)` is not — and a checker that removes the wrong one
+    /// leaves a clause that cannot propagate, rejecting a valid proof.
+    ///
+    /// This checker did exactly that (its own comment said the choice was
+    /// immaterial) while `check_drat` happened to remove the right one, so the
+    /// two disagreed on a real inprocessed proof. `agree` asserts they now both
+    /// accept it; the interesting half is `Ok(true)`, because a checker that
+    /// removed the deduped copy would return `Err(StepNotVerified)` on the last
+    /// step.
+    #[test]
+    fn a_deletion_prefers_the_clause_whose_multiset_it_names() {
+        // (1 ∨ 1) ∧ (¬1 ∨ 2) ∧ (¬1 ∨ ¬2), unsatisfiable. Deliberately WITHOUT a
+        // unit clause of its own: nothing propagates here until `(1)` is added,
+        // so the proof below genuinely depends on `(1)` being live.
+        let f = formula(2, &[&[1, 1], &[-1, 2], &[-1, -2]]);
+        let proof = vec![
+            // RUP: assigning 1 false falsifies both literals of `(1 ∨ 1)`.
+            DratStep::Add(vec![lit(1)]),
+            // Names the ORIGINAL. If the deduped `(1)` is removed instead, the
+            // only clause on variable 1 is `(1 ∨ 1)`, which has two unassigned
+            // literal OCCURRENCES and so is not a unit to this propagator --
+            // nothing propagates, and the empty clause below stops being RUP.
+            DratStep::Delete(vec![lit(1), lit(1)]),
+            DratStep::Add(vec![]),
+        ];
+        assert_eq!(agree(&f, &proof), Ok(true));
+
+        // The control that makes the assertion above mean something: delete the
+        // DEDUPED clause instead and the empty clause is genuinely not
+        // derivable, so both checkers must refuse. Without this, a checker that
+        // ignored deletions entirely would pass the first half.
+        let blind = vec![
+            DratStep::Add(vec![lit(1)]),
+            DratStep::Delete(vec![lit(1)]),
+            DratStep::Add(vec![]),
+        ];
+        assert!(
+            matches!(agree(&f, &blind), Err(DratError::StepNotVerified { .. })),
+            "deleting the deduped clause must leave the empty clause underivable"
+        );
     }
 
     #[test]
