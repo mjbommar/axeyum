@@ -599,7 +599,7 @@ const GROUPS: &[Group] = &[
 /// and `cpoint` too; [`ShapeIndex::insert`] merges the group sets rather than
 /// duplicating the row. The process-wide prelude cache (ADR-0464) makes the
 /// repeated `CReal` builds a clone rather than a re-check.
-fn build_index(include_constructed: bool, index_values: bool) -> ShapeIndex {
+fn build_index(include_constructed: bool, index_values: bool) -> (ShapeIndex, String) {
     let selected: Vec<&Group> = GROUPS
         .iter()
         .filter(|group| include_constructed || !group.constructed)
@@ -611,10 +611,18 @@ fn build_index(include_constructed: bool, index_values: bool) -> ShapeIndex {
             .collect::<Vec<_>>(),
         index_values,
     );
+    // Per-group wall time, printed with the coverage line. Adding a group is
+    // never free -- the default index went from 8 groups to 15 on 2026-09-06
+    // and its build time roughly tripled -- and a future lane deciding what to
+    // put behind `--include-constructed` should be reading a measurement, not
+    // guessing from the prelude's reputation.
+    let mut timing: Vec<(&'static str, f64)> = Vec::with_capacity(selected.len());
     for group in &selected {
+        let started = std::time::Instant::now();
         let mut kernel = Kernel::new();
         (group.build)(&mut kernel);
         index_kernel(&kernel, group.name, &mut index, index_values);
+        timing.push((group.name, started.elapsed().as_secs_f64()));
     }
 
     index.finish();
@@ -640,7 +648,12 @@ fn build_index(include_constructed: bool, index_values: bool) -> ShapeIndex {
         indexed.difference(&declared).collect::<Vec<_>>(),
     );
 
-    index
+    let timing_line = timing
+        .iter()
+        .map(|(name, secs)| format!("{name}={secs:.1}s"))
+        .collect::<Vec<_>>()
+        .join(" ");
+    (index, timing_line)
 }
 
 // The reporting arms are deliberately inline: each verdict prints its own
@@ -698,7 +711,7 @@ fn execute() -> ExitCode {
     }
 
     let started = std::time::Instant::now();
-    let index = build_index(args.include_constructed, args.index_values);
+    let (index, timing_line) = build_index(args.include_constructed, args.index_values);
     let elapsed = started.elapsed();
 
     // Coverage FIRST, before any verdict: an empty answer from a tool that was
@@ -711,6 +724,7 @@ fn execute() -> ExitCode {
         index.values_indexed(),
         elapsed.as_secs_f64()
     );
+    println!("timing: {timing_line}");
     let census = index.kind_census();
     let census_line: Vec<String> = DeclKind::all()
         .iter()

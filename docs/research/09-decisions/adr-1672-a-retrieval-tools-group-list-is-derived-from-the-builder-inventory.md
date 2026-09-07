@@ -2,7 +2,7 @@
 
 Status: accepted
 Date: 2026-09-06
-Index-summary: `examples/shape_search.rs` is the instrument a lane runs to decide whether a lemma already exists, and its ABSENT verdict is what the lane acts on — but it built 17 of the crate's 31 `pub fn build_*_prelude` functions, so `--ns FO` returned nothing against a 4,839-row dump while all 141 `FO.*` declarations sat in the tree. Its own internal cross-check (declared `coverage:` groups vs. indexed groups) passed throughout, because both halves were hand-written and omitted the same builders: a check whose two sides are written by one hand at one moment cannot fail. This ADR makes the group list ONE `const GROUPS` table that is both the coverage line and the build calls, and adds an OUTSIDE gate — `tests/shape_search_index_coverage.rs` — whose subject is read from `src/` on every run, so it cannot be kept green by editing the example. `*_prelude` turned out not to be the whole builder surface: `List.Perm` comes from `build_list_perm` over `build_list_nat_bridge`, so there are two gates over disjoint denominators. Coverage after: 31/31 preludes and 9/9 exported non-prelude builders; `--ns FO` 0 → 141, `List` 15 → 31, `AxReal` 30 → 74, `Metric.prod*` 0 → 18. The cost is real and is reported, not buried: the default index went 3,340 → 3,558 declarations and roughly tripled in build time, and `shape_search` now prints a per-group `timing:` line so the next lane deciding what to gate reads a measurement. The same audit over all 45 kernel instruments is `scripts/audit-kernel-tool-prelude-coverage.py`, with a two-sided ratchet; 4 tools now declare coverage and 13 do not.
+Index-summary: `examples/shape_search.rs` is the instrument a lane runs to decide whether a lemma already exists, and its ABSENT verdict is what the lane acts on — but it built 17 of the crate's 31 `pub fn build_*_prelude` functions, so `--ns FO` returned nothing against a 4,839-row dump while all 141 `FO.*` declarations sat in the tree. Its own internal cross-check (declared `coverage:` groups vs. indexed groups) passed throughout, because both halves were hand-written and omitted the same builders: a check whose two sides are written by one hand at one moment cannot fail. This ADR makes the group list ONE `const GROUPS` table that is both the coverage line and the build calls, and adds an OUTSIDE gate — `tests/shape_search_index_coverage.rs` — whose subject is read from `src/` on every run, so it cannot be kept green by editing the example. `*_prelude` turned out not to be the whole builder surface: `List.Perm` comes from `build_list_perm` over `build_list_nat_bridge`, so there are two gates over disjoint denominators. Coverage after: 31/31 preludes and 9/9 exported non-prelude builders; `--ns FO` 0 → 141, `List` 15 → 31, `AxReal` 30 → 74, `Metric.prod*` 0 → 10. The cost is real and is reported, not buried: the default index went 3,340 → 3,558 declarations and roughly tripled in build time, and `shape_search` now prints a per-group `timing:` line so the next lane deciding what to gate reads a measurement. The same audit over all 45 kernel instruments is `scripts/audit-kernel-tool-prelude-coverage.py`, with a two-sided ratchet; 4 tools now declare coverage and 13 do not.
 Index-status: accepted
 
 ## Context
@@ -121,7 +121,7 @@ load-bearing. That is not a hypothetical either: before the split, deleting one
 | `--ns FO` | 0 (empty against a 4,839-row dump) | **141** |
 | `List` namespace | 15 | **31** (`List.Perm` resolves) |
 | `AxReal` namespace | 30 | **74** (the Int and Rat models) |
-| `Metric.prod*` | 0 | **18** |
+| `--name-contains Metric.prod` | 0 (ABSENT, exit 0 under `--expect-absent`) | **10** |
 
 ### Cost, measured and reported rather than buried
 
@@ -134,7 +134,7 @@ timing is not evidence):
 | default declarations | 3,340 | 3,558 |
 | default build | 26.7 s (load 16.8), 19.1 s (load 30.3) | 58.0 s (load 20.5), 52.2 s (load 29.8) |
 | constructed declarations | 4,839 | 5,091 |
-| constructed build | 167.1 s (load 25.8) | 235.6 s (load 12.6) |
+| constructed build | 167.1 s (load 25.8), 183.0 s (load 12.1) | 235.6 s (load 12.6), 303.4 s (load 21.3) |
 
 The default index roughly tripled. That is the price of never again reading an
 empty answer from a tool that was not pointed at the subject, and it is paid on
@@ -144,11 +144,40 @@ and `--list-groups` answers "what could this tool ever have seen?" **without**
 building the index at all — a reader deciding whether an ABSENT verdict is
 trustworthy is not charged a minute to find out.
 
-No group was put behind a flag on cost grounds: the expensive ones
-(`creal`, `complex`, `cpoint`, `metric`, `metric_prod`, `intspace`, `rn`,
-`geo`, `top`, `creal_model`) were already behind `--include-constructed`, and
-the new default groups are cheap relative to the FO chains that dominate them.
-The `timing:` line is what a future lane should read before revisiting that.
+The `timing:` line says where the money goes, and it contradicts the obvious
+guess. Measured, default index (load 17.8 → 15.4, 53.1 s total):
+
+    logic=0.0s nat=4.8s axreal=0.0s integer=3.2s rat=13.1s ipc=0.2s
+    ipc_eval=0.1s fo_order=0.8s fo_soundness=0.4s fo_substitution=0.3s
+    characterization=0.3s list=5.2s int_model=7.6s rat_model=14.4s string=2.3s
+
+The **FO groups, the largest blind spot, are the cheapest thing added**: 1.5 s
+for all three leaves and all eleven builders. What actually tripled the default
+index is `int_model` (7.6 s) and `rat_model` (14.4 s) — each rebuilds `arith`
+plus its carrier from scratch — with `list` (5.2 s) third.
+
+And constructed (load 13.4 → 13.1, 232.3 s total):
+
+    … creal_model=43.9s creal=36.7s complex=4.2s cpoint=14.9s metric=12.5s
+    metric_prod=18.9s intspace=24.5s rn=21.7s geo=23.5s top=2.4s
+
+**No group was put behind a flag on cost grounds, and the two 22-second models
+are the deliberate case.** The `--include-constructed` design is safe only
+because an unbuilt group's namespace is absent ENTIRELY, so a query for it
+comes back `UNANSWERABLE` (exit 3) rather than ABSENT. That property does not
+hold for the models: they declare into `AxReal.IntModel` and `AxReal.RatModel`,
+and `namespace_root` is the first segment, so `AxReal` is present in the index
+either way. A gated model group would therefore produce a confident, wrong
+ABSENT for `AxReal.IntModel.add_comm` — exactly the defect this ADR exists to
+close, reintroduced by the fix for its cost. `creal_model` (43.9 s, the single
+most expensive group) has the same shape and is behind
+`--include-constructed` only because it transitively builds all of `creal`,
+which is already gated; the same hazard applies to it and is the reason it is
+not gated further.
+
+The rule this leaves for a future lane: **a group may go behind a flag only if
+its whole namespace root goes with it.** Read the `timing:` line, then check
+that.
 
 ### The same audit, over every instrument
 

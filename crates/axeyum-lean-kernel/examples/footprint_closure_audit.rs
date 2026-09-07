@@ -501,6 +501,9 @@ fn audit_theorem(
     }
 }
 
+// Same reason as `prelude_theorem_inventory`: the coverage line and the
+// per-prelude verdicts belong beside each other.
+#[allow(clippy::too_many_lines)]
 fn main() -> ExitCode {
     let include_constructed = std::env::args()
         .skip(1)

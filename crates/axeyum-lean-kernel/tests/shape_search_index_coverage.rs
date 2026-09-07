@@ -62,7 +62,8 @@ fn manifest_dir() -> PathBuf {
 /// Every `.rs` file under `src/`, excluding the out-of-line test modules
 /// (`*_tests.rs`, declared `#[cfg(test)] mod …_tests;`).
 fn source_files(dir: &Path, out: &mut Vec<PathBuf>) {
-    let entries = std::fs::read_dir(dir).unwrap_or_else(|e| panic!("read_dir {dir:?}: {e}"));
+    let entries =
+        std::fs::read_dir(dir).unwrap_or_else(|e| panic!("read_dir {}: {e}", dir.display()));
     for entry in entries {
         let path = entry.expect("dir entry").path();
         if path.is_dir() {
@@ -157,8 +158,9 @@ fn builder_body(file: &Path, builder: &str) -> String {
     assert!(
         inside,
         "builder {builder} was found by the definition scan but its body could \
-         not be located in {file:?}; the definition scan and the body scan \
-         disagree, which makes every coverage verdict below meaningless"
+         not be located in {}; the definition scan and the body scan disagree, \
+         which makes every coverage verdict below meaningless",
+        file.display()
     );
     body
 }

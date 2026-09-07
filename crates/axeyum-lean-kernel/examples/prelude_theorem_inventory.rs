@@ -260,6 +260,10 @@ fn build_groups(include_constructed: bool) -> Vec<(&'static str, Vec<Row>)> {
     groups
 }
 
+// The coverage line, the row loop and the three assertions each carry their
+// own positive control, and splitting them into helpers is how a control gets
+// separated from the verdict it guards.
+#[allow(clippy::too_many_lines)]
 fn main() -> ExitCode {
     let args = match parse_args() {
         Ok(args) => args,
