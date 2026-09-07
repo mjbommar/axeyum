@@ -106,6 +106,30 @@ const MAX_BNB_DEPTH: usize = 6;
 /// gated on a future principled engine (nlsat/CAD or an exact-rational work budget).
 const MAX_CROSS_PRODUCTS: usize = 2;
 
+/// The admission bound actually applied, read once from
+/// `AXEYUM_NRA_MAX_CROSS_PRODUCTS` and otherwise [`MAX_CROSS_PRODUCTS`].
+///
+/// This exists so the bound can be *measured* rather than argued about: the
+/// question "what does this bound protect — time, memory, or soundness?" is only
+/// answerable by running the same binary with the cap at 2 and at a larger value
+/// over the same population. Read once into a `OnceLock` so the value is fixed for
+/// the process (determinism is a public API promise: the bound cannot change
+/// between two solves in one run), and `usize::MAX` is spelled `unbounded`.
+///
+/// It is an A/B lever, not a supported knob: the shipped default is
+/// [`MAX_CROSS_PRODUCTS`], and `scripts/parity-run.sh` records any `AXEYUM_*`
+/// lever it sees in the ledger entry, so a swept number can never be mistaken for
+/// a default-configuration one.
+fn max_cross_products() -> usize {
+    use std::sync::OnceLock;
+    static BOUND: OnceLock<usize> = OnceLock::new();
+    *BOUND.get_or_init(|| match std::env::var("AXEYUM_NRA_MAX_CROSS_PRODUCTS") {
+        Ok(v) if v.trim() == "unbounded" => usize::MAX,
+        Ok(v) => v.trim().parse::<usize>().unwrap_or(MAX_CROSS_PRODUCTS),
+        Err(_) => MAX_CROSS_PRODUCTS,
+    })
+}
+
 type Bounds = HashMap<TermId, (axeyum_ir::Rational, axeyum_ir::Rational)>;
 
 /// One eliminated real division: `(dividend, divisor, result-var)` — the fresh
@@ -331,7 +355,8 @@ fn check_with_nra_impl(
     // for shapes the normalizer cannot represent (so the gate never weakens there).
     let cross_products = crate::nra_real_root::normalized_cross_product_count(arena, assertions)
         .unwrap_or_else(|| triples.iter().filter(|&&(pa, pb, _)| pa != pb).count());
-    if cross_products > MAX_CROSS_PRODUCTS {
+    let admission_bound = max_cross_products();
+    if cross_products > admission_bound {
         // Before declining, try a CHEAP sign/zero refutation. The sign and zero
         // lemmas for each `r = a·b` are small disjunctive *linear* implications
         // (`¬p ∨ q`, a handful per product) with **no** McCormick envelopes and
@@ -401,7 +426,7 @@ fn check_with_nra_impl(
             kind: UnknownKind::ResourceLimit,
             detail: format!(
                 "nonlinear abstraction: {cross_products} cross-products exceed the deterministic \
-                 admission bound of {MAX_CROSS_PRODUCTS} (the multi-variable nonlinear case can OOM \
+                 admission bound of {admission_bound} (the multi-variable nonlinear case can OOM \
                  the relaxation; this needs a nlsat/CAD engine)"
             ),
         }));
