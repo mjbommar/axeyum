@@ -109,10 +109,11 @@ const MAX_BNB_DEPTH: usize = 6;
 ///   — a 1 MiB difference against an 8 GiB cap.
 /// - **It protects wall time, not memory.** Lifting it cost +502 s over 62 files
 ///   (583 s → 1,085 s) and bought 2 new `sat` results, both agreeing with cvc5.
-/// - **On more than half the population it protects nothing at all.** 28 of the 62
-///   files are unaffected by lifting it: the abstraction they produce is refused
-///   immediately by [`crate::lra_theory::MAX_ONLINE_LRA_ATOMS`] one layer down, in
-///   the same time and the same memory. The 2026-06 blowup mechanism (the
+/// - **On 25 of the 62 it protects nothing at all.** Those files cost no more than
+///   0.2 s extra with the bound lifted — no additional search happened, because the
+///   abstraction they produce is refused immediately by
+///   [`crate::lra_theory::MAX_ONLINE_LRA_ATOMS`] one layer down, in the same time
+///   and the same memory. The 2026-06 blowup mechanism (the
 ///   refinement loop chasing an escalating witness through the exact-rational
 ///   simplex) also has an independent guard now — [`too_large_to_refine`], and
 ///   overflow-safe `Rational` (`7a323853e`) — neither of which existed when the

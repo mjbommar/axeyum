@@ -873,3 +873,126 @@ fn anchored_equality_pins_out_of_range_inequality_is_unsat() {
         "the only candidate √2 fails the inequality ⇒ unsat, got {r:?}"
     );
 }
+
+// ---------------------------------------------------------------------------
+// Admission: the consuming engine's capacity, not a cross-product count
+// (ADR-1751). See docs/research/12-performance/nra-admission-bound-2026-09-07.md
+// ---------------------------------------------------------------------------
+
+/// A chain of `n` distinct-operand products `v₀·v₁ + v₁·v₂ + … ⋈ 0`, i.e. `n`
+/// cross-products over `n+1` unconstrained real variables. Used to drive the
+/// admission gate from either side by varying `n` alone.
+fn cross_product_chain(n: usize) -> (TermArena, Vec<axeyum_ir::TermId>) {
+    let mut a = TermArena::new();
+    let vars: Vec<_> = (0..=n).map(|i| real(&mut a, &format!("v{i}"))).collect();
+    let mut sum = a.real_mul(vars[0], vars[1]).unwrap();
+    for i in 1..n {
+        let p = a.real_mul(vars[i], vars[i + 1]).unwrap();
+        sum = a.real_add(sum, p).unwrap();
+    }
+    // A division keeps the query off the exact polynomial deciders upstream, so
+    // it actually reaches `check_nonlinear_abstraction` — the routine under test.
+    let d = a.real_div(vars[0], vars[n]).unwrap();
+    let lhs = a.real_add(sum, d).unwrap();
+    let one = a.real_const(Rational::integer(1));
+    let atom = a.real_gt(lhs, one).unwrap();
+    (a, vec![atom])
+}
+
+/// The gate still refuses what it must. A 200-link chain projects far past the
+/// consuming engine's atom ceiling, and the decline **names the number it
+/// refused on** — the atom count and the capacity, not a cross-product count.
+///
+/// That last part is the point, not decoration. The 2026-09-06 QF_NRA loss
+/// census attributed 62 of 77 losses to a cross-product bound that, on 25 of
+/// them, was measurably not the binding constraint: the abstraction was refused
+/// one layer down by the LRA atom cap in the same time and the same memory. A
+/// decline message that names a bound which did not decide it is how a census
+/// gets 28 files wrong.
+///
+/// Mutation-checked: deleting the `if !admitted { return … }` guard in
+/// `check_nonlinear_abstraction` kills exactly this test.
+#[test]
+fn a_chain_past_the_consumer_capacity_declines_naming_atoms_not_a_count() {
+    let (mut a, assertions) = cross_product_chain(200);
+    let cfg = SolverConfig {
+        timeout: Some(std::time::Duration::from_secs(20)),
+        ..SolverConfig::default()
+    };
+    let r = check_with_nra(&mut a, &assertions, &cfg).unwrap();
+    let CheckResult::Unknown(reason) = r else {
+        panic!("a 200-cross-product chain must decline, got {r:?}");
+    };
+    assert!(
+        reason.detail.contains("linear-real atoms")
+            && reason.detail.contains("consuming engine's capacity"),
+        "the decline must name the atom count it refused on and the capacity it \
+         was measured against; got {:?}",
+        reason.detail
+    );
+}
+
+/// The gate admits what it should. Three cross-products — one more than the
+/// pre-ADR-1751 hard count, and the exact size the old bound was written to
+/// refuse — now reach the relaxation instead of being turned away by a number
+/// with no relationship to the engine that would consume them.
+///
+/// The assertion is on the DECLINE TEXT, not on the verdict: whether this
+/// particular query is decided is the relaxation's business and may change, but
+/// it must never again be refused for exceeding a cross-product count.
+#[test]
+fn three_cross_products_are_no_longer_refused_by_a_count() {
+    let (mut a, assertions) = cross_product_chain(3);
+    let cfg = SolverConfig {
+        timeout: Some(std::time::Duration::from_secs(20)),
+        ..SolverConfig::default()
+    };
+    let r = check_with_nra(&mut a, &assertions, &cfg).unwrap();
+    if let CheckResult::Unknown(reason) = &r {
+        assert!(
+            !reason.detail.contains("cross-products exceed"),
+            "3 cross-products must not be refused by a count any more; got {:?}",
+            reason.detail
+        );
+    }
+    // Soundness is independent of admission, and stays checked: the chain
+    // `v₀v₁+v₁v₂+v₂v₃ + v₀/v₃ > 1` is satisfiable (v₀=v₁=2, v₂=v₃=1 gives
+    // 4+2+1+2 = 9 > 1), so an `Unsat` here would be a wrong verdict.
+    assert!(
+        !matches!(r, CheckResult::Unsat),
+        "the chain is satisfiable (v₀=v₁=2, v₂=v₃=1 ⇒ 9 > 1); never Unsat, got {r:?}"
+    );
+    // Any `Sat` must replay against the ORIGINAL assertions through the
+    // independent ground evaluator — the guard in `check_with_nra` that makes
+    // admission unable to produce a wrong `sat` however far it is opened.
+    if let CheckResult::Sat(model) = &r {
+        let asg = model.to_assignment();
+        assert!(
+            matches!(eval(&a, assertions[0], &asg), Ok(Value::Bool(true))),
+            "an admitted `sat` must replay true against the original; got {r:?}"
+        );
+    }
+}
+
+/// Selectivity in the other direction: the *legacy* line still exists and still
+/// means something. At or below two cross-products the engine takes the identical
+/// path it always did — the full lemma set and the caller's whole deadline — so
+/// the one-cross-product SOS frontier stays decided. Pinned here so a future edit
+/// to the admission block cannot quietly move the byte-identical boundary.
+#[test]
+fn the_two_cross_product_frontier_is_untouched_by_the_new_admission() {
+    let mut a = TermArena::new();
+    let x = real(&mut a, "x");
+    let y = real(&mut a, "y");
+    let xx = a.real_mul(x, x).unwrap();
+    let yy = a.real_mul(y, y).unwrap();
+    let xy = a.real_mul(x, y).unwrap();
+    let sum = a.real_add(xx, yy).unwrap();
+    let two_xy = a.real_add(xy, xy).unwrap();
+    let lt = a.real_lt(sum, two_xy).unwrap(); // x² + y² < 2xy — unsat
+    let r = check_with_nra(&mut a, &[lt], &SolverConfig::default()).unwrap();
+    assert!(
+        matches!(r, CheckResult::Unsat),
+        "x²+y² < 2xy is unsat ((x−y)² ≥ 0); got {r:?}"
+    );
+}

@@ -191,3 +191,101 @@ bound was written. That does not retire the bound by argument — it is why the
 62-file A/B has to be run under `ulimit -v` and read for aborts, not just for
 verdicts.
 
+
+## Q2 — what the bound costs, on the 62 files it is charged with
+
+Front door (`smtcomp_cli` = `solve_smtlib`), 24 s / 8 GiB via `scripts/mem-run.sh`,
+`taskset -c 0-7`, arms interleaved per file, one binary
+(`e115759a741e55f0`), s6. Load 1.03 before, 2.06 after (the only other load on
+the host was one long-running 13% bash, checked in `ps`, not another lane's
+cargo). 62 files × 2 arms = 124 runs.
+
+| | arm A (bound 2) | arm B (unbounded) |
+|---|---|---|
+| sat | 0 | **2** |
+| unsat | 0 | 0 |
+| unsolved | 62 | 60 |
+| disagreements with cvc5 | 0 | **0** |
+| nonzero exit (memory abort / crash) | 0 | **0** |
+| total wall | 583.2 s | 1,085.2 s (**+502.1**) |
+| max peak RSS over the population | 3,315 MiB | 3,316 MiB |
+| largest single-file RSS increase | — | +967 MiB |
+
+**The bound protects wall time. It does not protect memory.** Not one of the 124
+runs hit the 8 GiB address-space cap, and the population's peak RSS moved by
+1 MiB. The 2026-06 rationale — "OOM-killed the host", "SIGABRT'd at the 64 GiB
+cap" — no longer describes this code; `too_large_to_refine` and overflow-safe
+`Rational` landed in between, and the online CDCL(T) route now refuses an
+oversized abstraction before it can allocate.
+
+Both new decides are `sat` and both agree with cvc5:
+`20200911-Pine/1599121863243316000.smt2` (1.22 s → 5.60 s) and
+`.../1599122159626470000.smt2` (1.24 s → 2.24 s). A third file from the same
+family and the same cross-product count (`1599122164633784000.smt2`) was
+admitted and burned the full budget — so the count does not even predict which
+members of one family are reachable.
+
+### Where the population actually sits
+
+Splitting the 62 by what lifting the bound did to them (`|Δt| ≤ 0.2 s` means no
+additional search happened at all):
+
+| | files | what it means |
+|---|---:|---|
+| never gated by the bound | **25** | the abstraction is refused one layer down by `MAX_ONLINE_LRA_ATOMS`, same time, same memory |
+| admitted, still undecided | **35** | the relaxation runs and does not close them — a capability gap, not an admission one |
+| admitted and decided | **2** | the whole measured gain |
+
+So the census's "62 files, one cause" is an over-attribution by construction:
+on 25 of them the cross-product bound was the *message*, not the constraint.
+That is not a defect in the census's method — it read the declining route's own
+text, which is the best available signal — it is a defect in the message, and
+the fix belongs in the engine (see the decline text in ADR-1751 §5).
+
+### Q3 — the count is not the right instrument
+
+Cost against threshold, computed from the same run (a threshold of *n* admits
+every file whose census count is ≤ *n*):
+
+| threshold | files admitted (of the 53 with a count) | added wall | new decides |
+|---:|---:|---:|---:|
+| 2 (today) | 0 | +0.0 s | 0 |
+| 6 | 18 | +183.5 s | **2** |
+| 10 | 25 | +283.4 s | 2 |
+| 20 | 30 | +387.2 s | 2 |
+| 34 | 34 | +468.9 s | 2 |
+| 100 | 37 | +503.0 s | 2 |
+
+Every threshold from 6 upward buys the *same* two decides while cost grows
+monotonically. Picking a number off that curve would be fitting a constant to
+two data points, and it would still leave the producer metering in a unit its
+consumer does not use.
+
+The conversion between the units is not a constant either. Measured by running
+arm B on the large-count files and reading the atom count out of the LRA cap's
+own message:
+
+| cross-products | atoms | atoms per cross-product |
+|---:|---:|---:|
+| 96 | 2,562 | 26.7 |
+| 396 | 10,620 | 26.8 |
+| 638 | 8,356 | 13.1 |
+| 771 | 23,385 | 30.3 |
+
+A 2.3× spread. Any single conversion factor is wrong by that much on real
+input, which is why the decision (ADR-1751) **counts** the atoms of the system
+about to be handed over rather than scaling the cross-product count.
+
+Only 4 of the 19 large-count files reported an atom count; the other 15 declined
+through a different route under `explain_corpus`'s flat view or ran out its
+external bound before printing one. Four points is a thin population and the
+2.3× spread is what it establishes — that no single factor is safe — not a
+precise ratio.
+
+### A correction to this document's own earlier draft
+
+The first pass at this section said "28 of the 62" were never gated, read off a
+sorted delta table by eye. Computed with the stated rule (`|Δt| ≤ 0.2 s`) it is
+**25**. The figure appears as 28 in the message of commit `07b8da6ca`, which is
+history and stays as written; 25 is the number, and it is what the source
+comments, the ADR and this table now carry.
