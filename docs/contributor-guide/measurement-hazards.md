@@ -196,6 +196,78 @@ the same day. `/proc/<pid>/fd` tells you what a mystery process is writing to,
 which is how this one was identified as a session task rather than a user's
 job.
 
+### 2026-09-06: three more, and `timeout` returning is not the child dying
+
+Three orphans in one evening on this box, from three different causes, found
+only because a peer session swept for the signature above:
+
+- A corpus census run as `timeout 900 ./probe corpus` returned `exit 124`; the
+  lane reported "the census did not run — two timeouts". **The wrapper
+  returned; the probe did not die.** It was found **9,306 s later at 99% of a
+  core**, `ppid 1`, `cwd` pointing at a lane worktree that had since been
+  removed, so nothing could ever read its output. `124`/`143` describe the
+  TIMER, not the child.
+- A `python3 -` heredoc with an infinite loop: its shell was killed when it
+  hung, the child was never checked, and it span for **three hours**.
+- A detached `check-kernel-suites.sh` diagnostic, kept running after the
+  question was answered another way, competing with a live push for the
+  build lock.
+
+**A wrong reason invites the wrong retry.** "It timed out" says "use a longer
+timeout", which here would have changed nothing; the fix is a per-file deadline
+and a reaped process. Correct a published conclusion's REASON even when the
+conclusion survives — nothing about the outcome will prompt anyone to
+re-examine it.
+
+**Reaping a lane worktree does not reap the lane's processes.** Check for
+survivors before `git worktree remove --force`, and sweep at the end of any
+session that reaped one.
+
+
+## Six surfaces that report an intention, not an outcome
+
+Worked out across one evening in which every one of these bit, several twice.
+Each says something true, and none of them is an observation of the thing you
+actually care about:
+
+| the surface | what it actually says | the cheap observation |
+|---|---|---|
+| a parent's command line | what it WILL do | read the child process |
+| a `timeout` exit 124/143 | the timer fired | check the child is gone |
+| a killed shell | the shell died | sweep for `ppid==1` orphans |
+| a gate's `ABSENT` | its environment lacked it | check the tool's COVERAGE |
+| a test's name | what someone intended to cover | read what it ASSERTS |
+| a confident absence claim | what an instrument reported | check the instrument |
+
+Worked examples from that evening, all measured:
+
+- A process whose command line ended in `lane-push.sh` was reported as a second
+  push about to collide with a running one. Its child was
+  `timeout 1800 check-kernel-suites.sh` — it was the running one, past its wait
+  loop.
+- `check-trust-closure.py` was red with 21 `SUBJECT-ABSENT` rows. Every subject
+  existed and was proved; the projection example it reads built 22 of the
+  crate's 32 preludes, and the missing 21 were exactly `FO.*`, `Top.*` and
+  `Metric.*`. **A partial-coverage tool does not merely fail to find things; it
+  manufactures findings in every gate built above it.**
+- A fixture named `..._wrapper_carries_lean_module` took the honest route, and
+  asserted only that a module existed. It would have stayed green if the
+  wrapper broke. A rename does not fix that; asserting the rendered identifier
+  does, so the name cannot drift from the route a second time.
+- A metric mutant weakening an isometry to a bound was ADMITTED and passed 11
+  of 11 tests, including the one written for that case, because that test
+  re-derived the distinction inline. **A test that re-derives a distinction
+  proves the distinction exists; only a test that consumes the declaration
+  proves the declaration carries it.**
+
+**The fix is always the same shape: name the observation that would distinguish
+intention from outcome, then go get it.** It is usually one command.
+
+This also describes the best findings, not only the mistakes — they come from
+declining to accept an intention. That a finite-model finder spends half a
+budget on a population that is 100% refutation cannot be inferred from what that
+code intends to do.
+
 
 ## `command -v lean` returns nothing on a host that has Lean
 
