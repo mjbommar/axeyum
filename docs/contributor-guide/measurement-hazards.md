@@ -274,6 +274,36 @@ that it ran. (`nat_axiom_inventory` now covers `nat`/`logic` and the full
 trusted surface — `Axiom` alone is not it, since `Opaque` has no proof body and
 `Quotient` admits `Quot.sound`.)
 
+**This is the crate's default state, not an anecdote: measured 2026-09-06, 45
+examples in `axeyum-lean-kernel` build at least one prelude, 17 build three or
+more, and exactly ONE of those said which.** It was not even the retrieval tool
+that was safe: `shape_search` built 17 of the crate's 31 `pub fn
+build_*_prelude` functions and returned nothing for `--ns FO` against a
+4,839-row dump, while 141 `FO.*` declarations sat in the kernel. Its own
+internal cross-check passed throughout, because both halves of it were
+hand-written and omitted the same builders — **a check whose two sides are
+written by one hand at one moment cannot fail.**
+
+Three things to do before reading any kernel instrument's empty result as a
+finding:
+
+* `python3 scripts/audit-kernel-tool-prelude-coverage.py` prints tool ×
+  preludes-built for every example, and `--blind` adds what each one misses.
+  `kernel_declaration_projection` builds 17 of 31, `prelude_theorem_inventory`
+  13, `theorem_dependency_inventory` 10, `footprint_closure_audit` 9 (6 by
+  default). Thirteen instruments building three or more preludes still print no
+  coverage line; a two-sided ratchet in that script holds the number.
+* `shape_search --list-groups` answers the same question for the retrieval tool
+  itself, WITHOUT building the index (instant), and gives the reason each group
+  is its own row. `shape_search` now covers all 31 prelude builders and all 9
+  exported non-prelude builders; its `coverage:` and `timing:` lines are
+  derived from one table, gated from outside by
+  `crates/axeyum-lean-kernel/tests/shape_search_index_coverage.rs`.
+* remember `--include-constructed`. Without it a `CReal`/`Metric`/`Top` name is
+  **unanswerable** (exit 3), which is deliberately not the same as absent.
+
+ADR-1672.
+
 ## `prelude_theorem_inventory` must be run `--release`
 
 **`prelude_theorem_inventory` MUST BE RUN `--release`. In debug it SIGABRTs,

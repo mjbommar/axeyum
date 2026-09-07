@@ -260,6 +260,10 @@ fn build_groups(include_constructed: bool) -> Vec<(&'static str, Vec<Row>)> {
     groups
 }
 
+// The coverage line, the row loop and the three assertions each carry their
+// own positive control, and splitting them into helpers is how a control gets
+// separated from the verdict it guards.
+#[allow(clippy::too_many_lines)]
 fn main() -> ExitCode {
     let args = match parse_args() {
         Ok(args) => args,
@@ -270,6 +274,22 @@ fn main() -> ExitCode {
     };
 
     let groups = build_groups(args.include_constructed);
+
+    // Coverage FIRST, before any row or total. This tool builds 13 of the
+    // crate's 31 prelude builders (16 with --include-constructed) and is blind
+    // to every `fo_*` module, to `ipc_eval`, `metric`, `metric_prod`,
+    // `intspace`, `rn`, `geo` and `top_frame`. An absent theorem here is absent
+    // FROM THESE GROUPS; `shape_search` is the instrument that builds all 31.
+    // Derived from `groups`, so it cannot drift from what was actually built.
+    eprintln!(
+        "coverage: groups=[{}] constructed={}",
+        groups
+            .iter()
+            .map(|(label, _)| *label)
+            .collect::<Vec<_>>()
+            .join(","),
+        args.include_constructed
+    );
 
     // `prelude<TAB>theorem<TAB>axiom-count<TAB>axioms`. Every (prelude, theorem)
     // pair, so the rows say where each theorem is visible; the DISTINCT count
