@@ -162,6 +162,12 @@ impl Default for Rational {
 /// error, not an overflow).
 #[inline]
 fn small_new(num: i128, den: i128) -> Option<Rational> {
+    // An integer is already in lowest terms: `gcd(|num|, 1) == 1`, so the whole
+    // body below is the identity. This is the shape most tableau cells hold
+    // before fill-in, and it is on the return path of every `small_add`.
+    if den == 1 {
+        return Some(Rational { num, den });
+    }
     let mut num = num;
     let mut den = den;
     if den < 0 {
@@ -185,6 +191,17 @@ fn small_new(num: i128, den: i128) -> Option<Rational> {
 /// `i128` overflow. See [`Rational::checked_add`] for why the LCM form matters.
 #[inline]
 fn small_add(lhs_num: i128, lhs_den: i128, rhs_num: i128, rhs_den: i128) -> Option<Rational> {
+    // Both integers: the general body below computes `common = 1`, both scales
+    // `1`, `num = lhs + rhs`, `den = 1`, and normalizes a fraction that is
+    // already normal — two `gcd` calls for the identity. Bit-for-bit the same
+    // result, including the overflow decision (`checked_add` is exactly what the
+    // general path reaches).
+    if lhs_den == 1 && rhs_den == 1 {
+        return Some(Rational {
+            num: lhs_num.checked_add(rhs_num)?,
+            den: 1,
+        });
+    }
     // Both operands are in lowest terms with positive denominators.
     let common = gcd(lhs_den.unsigned_abs(), rhs_den.unsigned_abs());
     #[allow(clippy::cast_possible_wrap)]
@@ -205,6 +222,21 @@ fn small_add(lhs_num: i128, lhs_den: i128, rhs_num: i128, rhs_den: i128) -> Opti
 #[inline]
 fn small_mul(lhs_num: i128, lhs_den: i128, rhs_num: i128, rhs_den: i128) -> Option<Rational> {
     let negative = (lhs_num < 0) != (rhs_num < 0);
+    // Both integers: both cross-cancellations are `gcd(x, 1) == 1` and the
+    // normalization is the identity. The magnitude arithmetic below is kept
+    // verbatim rather than replaced by a signed `checked_mul`, because the two
+    // DISAGREE at exactly one product (`-2^127`, which fits `i128` but whose
+    // magnitude does not fit `i128`) and this path must decline exactly where
+    // the general one does — a newly-succeeding multiplication would change the
+    // search trajectory, not just its speed.
+    if lhs_den == 1 && rhs_den == 1 {
+        let num = lhs_num.unsigned_abs().checked_mul(rhs_num.unsigned_abs())?;
+        let num = i128::try_from(num).ok()?;
+        return Some(Rational {
+            num: if negative { num.checked_neg()? } else { num },
+            den: 1,
+        });
+    }
     let mut a = lhs_num.unsigned_abs();
     let mut b = lhs_den.unsigned_abs();
     let mut c = rhs_num.unsigned_abs();
@@ -925,15 +957,55 @@ impl core::fmt::Debug for Rational {
     }
 }
 
-/// Greatest common divisor of two unsigned magnitudes (Euclid).
+/// Greatest common divisor of two unsigned magnitudes: Euclid, run at `u64` as
+/// soon as both operands fit.
+///
+/// # The measurement this shape comes from, including the attempt that lost
+///
+/// `gcd` is the whole cost of exact rational arithmetic here — one `small_mul`
+/// calls it three times (two cross-cancellations plus the normalization in
+/// [`small_new`]) and one `small_add` twice — and the `QF_LRA` simplex spends
+/// essentially all of its time in those two operations.
+///
+/// The obvious fix looked like **Stein's binary GCD**, on the reasoning that
+/// x86-64 has no 128-bit divide so every `u128 %` is a `__udivti3` call while
+/// Stein needs only shifts, compares and subtractions. That was tried first and
+/// **measured 1.77x slower**: on `QF_LRA/2019-ezsmt/blending/1.smt2`,
+/// `theory_final_check_ms` went 6 396 -> 11 335 with every other counter
+/// byte-identical (20 732 checks, 46 618 pivots, 216 280 bound retractions), so
+/// the difference was arithmetic alone. The reason is the operand *shape*: the
+/// cross-cancellations are `gcd(numerator, denominator)` with a large numerator
+/// and a small denominator, which Euclid settles in one or two divisions and
+/// Stein pays for in one shift-subtract iteration per bit.
+///
+/// So the win is not a different algorithm but a **narrower one**: keep Euclid,
+/// and step down to `u64` — where `%` really is a single instruction — as soon
+/// as both operands fit, which for this workload is almost immediately.
+/// Bit-for-bit identical to the plain `u128` form on every input, including the
+/// zero cases; `gcd_matches_the_plain_u128_euclid` re-derives Euclid
+/// independently and compares.
 #[inline]
 fn gcd(mut a: u128, mut b: u128) -> u128 {
-    while b != 0 {
+    const NARROW: u128 = u64::MAX as u128;
+    // Wide phase: 128-bit steps only while an operand is genuinely wide. Each
+    // step at least halves the larger operand's magnitude, so this exits fast.
+    while b != 0 && (a > NARROW || b > NARROW) {
         let t = a % b;
         a = b;
         b = t;
     }
-    a
+    if b == 0 {
+        return a;
+    }
+    // Both fit `u64` now, so the rest runs on hardware division.
+    #[allow(clippy::cast_possible_truncation)] // Guarded by the loop condition above.
+    let (mut narrow_a, mut narrow_b) = (a as u64, b as u64);
+    while narrow_b != 0 {
+        let remainder = narrow_a % narrow_b;
+        narrow_a = narrow_b;
+        narrow_b = remainder;
+    }
+    u128::from(narrow_a)
 }
 
 #[cfg(test)]
@@ -956,6 +1028,200 @@ mod tests {
         let mut hasher = std::collections::hash_map::DefaultHasher::new();
         value.hash(&mut hasher);
         hasher.finish()
+    }
+
+    /// A deterministic linear-congruential PRNG (MMIX constants) — the house
+    /// convention; no clock, no entropy, fully reproducible.
+    struct Lcg(u64);
+
+    impl Lcg {
+        fn next(&mut self) -> u64 {
+            self.0 = self
+                .0
+                .wrapping_mul(6_364_136_223_846_793_005)
+                .wrapping_add(1_442_695_040_888_963_407);
+            self.0
+        }
+
+        /// A magnitude spread across the whole `u128` range rather than clustered
+        /// at 64 bits: the interesting inputs for a 128-bit gcd are the ones
+        /// whose operands differ in bit length by a lot.
+        #[allow(clippy::cast_possible_truncation)]
+        fn magnitude(&mut self) -> u128 {
+            let bits = (self.next() % 128) as u32;
+            let raw = (u128::from(self.next()) << 64) | u128::from(self.next());
+            if bits == 0 { 0 } else { raw >> (128 - bits) }
+        }
+    }
+
+    /// Euclid, re-derived here so the differential does not read the
+    /// implementation it is checking. This is the exact body `gcd` had before it
+    /// became Stein's algorithm.
+    fn euclid(mut a: u128, mut b: u128) -> u128 {
+        while b != 0 {
+            let t = a % b;
+            a = b;
+            b = t;
+        }
+        a
+    }
+
+    /// **This is the test the narrowed `gcd` is mutation-checked against.**
+    /// Break one line of `gcd` (drop the `b == 0` early return, narrow before
+    /// both operands fit, swap the assignment order) and this must fail.
+    #[allow(clippy::cast_possible_truncation)] // A full-range draw; the truncation is the sample.
+    #[test]
+    fn gcd_matches_the_plain_u128_euclid() {
+        // Every boundary the zero/one guards and the shift restore turn on.
+        let fixed: &[(u128, u128)] = &[
+            (0, 0),
+            (0, 1),
+            (1, 0),
+            (1, 1),
+            (0, u128::MAX),
+            (u128::MAX, 0),
+            (u128::MAX, u128::MAX),
+            (1, u128::MAX),
+            (1 << 127, 1 << 127),
+            (1 << 127, 3),
+            (6, 4),
+            (12, 18),
+            (1 << 100, 1 << 60),
+            (u128::MAX, (1 << 127) - 1),
+        ];
+        for &(a, b) in fixed {
+            assert_eq!(super::gcd(a, b), euclid(a, b), "gcd({a}, {b})");
+        }
+        let mut rng = Lcg(0x5eed_1752);
+        for _ in 0..20_000 {
+            let a = rng.magnitude();
+            let b = rng.magnitude();
+            assert_eq!(super::gcd(a, b), euclid(a, b), "gcd({a}, {b})");
+            // Also with a shared factor forced in, which is the case Stein's
+            // `shift` restore exists for and a random pair rarely produces.
+            let g = 1u128 << (rng.next() % 40) as u32;
+            // Shifted down first so the shared factor cannot overflow: both
+            // operands are then below `2^80` and `g` below `2^40`.
+            let (a, b) = ((a >> 48) * g, (b >> 48) * g);
+            assert_eq!(super::gcd(a, b), euclid(a, b), "gcd({a}, {b}) shared");
+        }
+    }
+
+    /// **This is the test the `den == 1` fast paths are mutation-checked
+    /// against.** The claim they rest on is not "the answer is close" but
+    /// "bit-for-bit identical, INCLUDING which inputs decline" — a fast path
+    /// that succeeds where the general one returns `None` changes the search
+    /// trajectory rather than only its speed. So this drives `checked_add`,
+    /// `checked_sub` and `checked_mul` over integer operands spanning the whole
+    /// `i128` range (so overflow is reached often) and compares against the
+    /// general body, re-derived here without the fast paths.
+    // Wrapping and truncating casts are the SAMPLE here (a full-range draw) and
+    // the test-local re-derivation of the general body copies it verbatim.
+    #[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
+    #[test]
+    fn integer_fast_paths_match_the_general_body() {
+        fn general_add(lhs: i128, rhs: i128) -> Option<(i128, i128)> {
+            // `small_add(lhs, 1, rhs, 1)` with the fast path removed.
+            let common = euclid(1, 1) as i128;
+            let lhs_scale = 1i128 / common;
+            let rhs_scale = 1i128 / common;
+            let num = lhs
+                .checked_mul(rhs_scale)?
+                .checked_add(rhs.checked_mul(lhs_scale)?)?;
+            let den = lhs_scale.checked_mul(1)?;
+            general_new(num, den)
+        }
+        fn general_mul(lhs: i128, rhs: i128) -> Option<(i128, i128)> {
+            // `small_mul(lhs, 1, rhs, 1)` with the fast path removed.
+            let negative = (lhs < 0) != (rhs < 0);
+            let a = lhs.unsigned_abs();
+            let c = rhs.unsigned_abs();
+            let num = a.checked_mul(c)?;
+            let num = i128::try_from(num).ok()?;
+            general_new(if negative { num.checked_neg()? } else { num }, 1)
+        }
+        fn general_new(num: i128, den: i128) -> Option<(i128, i128)> {
+            // `small_new` with the fast path removed.
+            let (mut num, mut den) = (num, den);
+            if den < 0 {
+                num = num.checked_neg()?;
+                den = den.checked_neg()?;
+            }
+            let g = euclid(num.unsigned_abs(), den.unsigned_abs());
+            if g > 1 {
+                let g = g as i128;
+                num /= g;
+                den /= g;
+            }
+            Some((num, den))
+        }
+        fn parts(value: Option<Rational>) -> Option<(i128, i128)> {
+            value.map(|v| (v.numerator(), v.denominator()))
+        }
+
+        // The products where a signed `checked_mul` and the magnitude form
+        // DISAGREE — |lhs·rhs| == 2^127, which fits `i128` only as the negative
+        // extreme. A random draw reaches these with probability ~0, so they are
+        // named: without them a fast path that succeeds where the general body
+        // declines passes this test.
+        for &(lhs, rhs) in &[
+            (i128::MIN, 1i128),
+            (1i128, i128::MIN),
+            (i128::MIN / 2, 2i128),
+            (2i128, i128::MIN / 2),
+            (-1i128, i128::MIN),
+            (i128::MIN, -1i128),
+        ] {
+            let (a, b) = (Rational::integer(lhs), Rational::integer(rhs));
+            assert_eq!(
+                parts(a.checked_mul(b)),
+                general_mul(lhs, rhs),
+                "boundary lhs={lhs} rhs={rhs}"
+            );
+        }
+
+        let mut rng = Lcg(0x5eed_1753);
+        let mut declines = 0usize;
+        let mut successes = 0usize;
+        for i in 0..40_000 {
+            // A mix of small integers (where nothing overflows) and huge ones
+            // (where the boundary is), plus the two extremes every iteration.
+            let (lhs, rhs) = match i % 4 {
+                0 => (i128::from(rng.next() as i64), i128::from(rng.next() as i64)),
+                1 => (
+                    ((i128::from(rng.next()) << 64) | i128::from(rng.next()))
+                        .wrapping_sub(i128::MIN),
+                    ((i128::from(rng.next()) << 64) | i128::from(rng.next()))
+                        .wrapping_sub(i128::MIN),
+                ),
+                2 => (i128::MIN, i128::from(rng.next() % 8)),
+                _ => (i128::MAX, -i128::from(rng.next() % 8)),
+            };
+            let (a, b) = (Rational::integer(lhs), Rational::integer(rhs));
+            for (got, want) in [
+                (parts(a.checked_add(b)), general_add(lhs, rhs)),
+                (
+                    parts(a.checked_sub(b)),
+                    rhs.checked_neg().and_then(|n| general_add(lhs, n)),
+                ),
+                (parts(a.checked_mul(b)), general_mul(lhs, rhs)),
+            ] {
+                assert_eq!(got, want, "lhs={lhs} rhs={rhs}");
+                if want.is_none() {
+                    declines += 1;
+                } else {
+                    successes += 1;
+                }
+            }
+        }
+        // A comparison that never reaches the overflow boundary would pass with
+        // the fast paths wrong in exactly the way that matters, so require both
+        // populations to be non-trivially large.
+        assert!(declines > 1_000, "too few declines exercised: {declines}");
+        assert!(
+            successes > 1_000,
+            "too few successes exercised: {successes}"
+        );
     }
 
     #[test]

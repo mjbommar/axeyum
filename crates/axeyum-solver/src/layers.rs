@@ -620,6 +620,34 @@ pub struct TheoryLayerStats {
     pub simplex_rows: Option<u64>,
     /// Columns of that tableau. With `simplex_rows` this prices one pivot.
     pub simplex_columns: Option<u64>,
+    /// Conflicts the theory found in its **cheap partial check** at `assert`
+    /// time, before the complete decision. Under the ADR-1701 deferred split
+    /// this and Boolean propagation are the only things that prune the search
+    /// between two total assignments, so it is the counter that says whether a
+    /// high `final_checks` has anything standing in its way.
+    pub assert_partial_conflicts: Option<u64>,
+    /// `final_check` calls that answered `Conflict`. `final_checks -
+    /// final_check_conflicts` is how often the search reached a total
+    /// assignment the theory *accepted* (or could not decide).
+    pub final_check_conflicts: Option<u64>,
+    /// Literals summed over those cores; divided by `final_check_conflicts`
+    /// this is the mean refutation width, the figure that says whether a theory
+    /// lemma excludes a region or close to one assignment.
+    pub final_check_core_literals: Option<u64>,
+    /// Complete-check refutations whose Farkas multipliers named no row, so the
+    /// core widened to the whole asserted set — sound, maximally coarse.
+    pub final_check_core_widenings: Option<u64>,
+    /// Live constraint rows summed over every complete check: the denominator
+    /// the mean core width is a fraction of.
+    pub final_check_live_rows: Option<u64>,
+    /// Propagation calls the driving theory served, and the atoms those calls
+    /// examined. `bound_scan_atoms / bound_scan_calls` prices one propagation
+    /// call in work rather than in wall time, which is what distinguishes a
+    /// propagation that is expensive because it derives a lot from one that is
+    /// expensive because it looks at everything and derives nothing.
+    pub bound_scan_calls: Option<u64>,
+    /// Atoms those calls examined; see `bound_scan_calls`.
+    pub bound_scan_atoms: Option<u64>,
 }
 
 impl TheoryLayerStats {

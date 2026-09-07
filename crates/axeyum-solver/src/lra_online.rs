@@ -421,6 +421,34 @@ pub struct LraTheory {
     /// Diagnostic only (S4) — the counter that answers "does `propagate` return
     /// anything for `LraTheory`?" with a number instead of a reading.
     propagations_offered: u64,
+    /// The memory budget this construction was admitted under (ADR-1752), kept
+    /// so the **Fourier–Motzkin fallback** can be bounded in bytes at the point
+    /// it allocates. See [`solve`] for why an admission-time projection cannot
+    /// do that job.
+    budget_bytes: usize,
+    /// The order atoms [`Self::propagate_bounds`] can ever emit: those at least
+    /// one of whose two polarity forms is **also** bounded by some *other*
+    /// atom. See [`propagatable_atoms`] for why restricting the scan to this
+    /// list is exactly output-preserving rather than an approximation, and for
+    /// the measurement it exists for (75% of a 24 s budget spent scanning, zero
+    /// literals offered).
+    propagatable: Vec<usize>,
+    /// Conflicts [`Self::install_bounds`] found — the cheap partial check at
+    /// `assert` time. Diagnostic only.
+    assert_partial_conflicts: u64,
+    /// [`Self::propagate_bounds`] calls, and the atoms they examined, summed
+    /// over this theory's life. Clock-free, so a scan cost is readable as a
+    /// count rather than inferred from a wall time a busy host moves.
+    bound_scan_calls: u64,
+    bound_scan_atoms: u64,
+    /// Complete checks that answered `Conflict`, the literals summed over their
+    /// cores, how many of those cores came from the `rows_to_core` widening
+    /// fallback, and the live rows summed over every complete check.
+    /// Diagnostic only; see [`TheoryEngineCounters`].
+    final_check_conflicts: u64,
+    final_check_core_literals: u64,
+    final_check_core_widenings: u64,
+    final_check_live_rows: u64,
 }
 
 /// A bound on one linear form, currently asserted, with the atom that imposed
@@ -450,6 +478,17 @@ struct BoundUndo {
 pub(crate) enum LraTheoryBuildStop {
     Deadline,
     ResourceLimit,
+    /// The construction's projected resident footprint exceeded its memory
+    /// budget (ADR-1752). Carries the numbers so the refusal can state them:
+    /// what it would have cost, what it was allowed, and the shape it got there
+    /// with. A refusal that only says "too big" is what the flat atom cap gave,
+    /// and it is why nobody could tell whether the cap was still load-bearing.
+    MemoryBudget {
+        estimated_bytes: usize,
+        budget_bytes: usize,
+        atoms: usize,
+        vars: usize,
+    },
 }
 
 impl LraTheory {
@@ -492,7 +531,26 @@ impl LraTheory {
         atom_terms: &[TermId],
         deadline: Option<Instant>,
     ) -> Result<Self, LraTheoryBuildStop> {
-        let mut builder = AtomBuilder::with_deadline(deadline);
+        Self::try_new_with_budget(arena, atom_terms, deadline, DEFAULT_ONLINE_LRA_BUDGET_BYTES)
+    }
+
+    /// The same construction under an explicit memory budget in bytes
+    /// (ADR-1752). This is what replaced the flat `MAX_ONLINE_LRA_ATOMS = 1_024`
+    /// admission cap: a count is the wrong currency, because the footprint is
+    /// `atoms x variables-per-atom` and the count refused a wide-and-shallow
+    /// query as readily as a narrow-and-deep one.
+    ///
+    /// The budget is enforced **incrementally**, from the builder's own
+    /// deterministic coefficient counters, so the answer does not depend on
+    /// machine speed or on what else the host is doing, and a query that is
+    /// genuinely cheap is admitted however many atoms it has.
+    pub(crate) fn try_new_with_budget(
+        arena: &TermArena,
+        atom_terms: &[TermId],
+        deadline: Option<Instant>,
+        budget_bytes: usize,
+    ) -> Result<Self, LraTheoryBuildStop> {
+        let mut builder = AtomBuilder::with_deadline(deadline, budget_bytes);
         let mut atoms = Vec::with_capacity(atom_terms.len());
         for &term in atom_terms {
             if past_deadline(deadline) {
@@ -514,6 +572,26 @@ impl LraTheory {
         // working when it does.
         let forms = assign_forms(&mut atoms);
         let simplex = build_simplex_engine(&mut atoms, nvars).map(RefCell::new);
+        // ADR-1752, and this is the half the atom count was ACCIDENTALLY doing.
+        //
+        // When the dense tableau does not fit, `LraTheory` silently falls back to
+        // Fourier-Motzkin — which is doubly exponential in the variable count and
+        // carries NO memory bound at all. The flat atom cap capped atoms, which
+        // capped rows, which kept that fallback away from large systems; its doc
+        // said "normalization" and never mentioned this, so removing the cap on
+        // the strength of that doc let `_sanfoundry_10_ground.i_6_3_3.bpl_13.smt2`
+        // go from a 0.82 s decline at 121 MB to a **7.7 GB abort** — measured, and
+        // the budget could not see it because the bytes are not coefficients.
+        //
+        // So a system whose tableau exceeds the budget's tableau share is refused
+        // rather than handed to an unbounded engine. Refusing yields
+        // `Unknown(ResourceLimit)`, which is always a permitted verdict; running
+        // Fourier-Motzkin on a system this size yields an abort, which leaves the
+        // caller nothing. A tableau that merely OVERFLOWED (rather than being too
+        // big) still keeps the fallback, because that is a small system and
+        // Fourier-Motzkin is a real engine there.
+        // Order-preserving scan filter for `propagate_bounds`; see the field docs.
+        let propagatable = propagatable_atoms(&atoms, forms);
         Ok(Self {
             atoms,
             nvars,
@@ -528,7 +606,16 @@ impl LraTheory {
             bound_lower: vec![None; forms],
             bound_upper: vec![None; forms],
             bound_log: Vec::new(),
+            budget_bytes,
+            propagatable,
             propagations_offered: 0,
+            assert_partial_conflicts: 0,
+            bound_scan_calls: 0,
+            bound_scan_atoms: 0,
+            final_check_conflicts: 0,
+            final_check_core_literals: 0,
+            final_check_core_widenings: 0,
+            final_check_live_rows: 0,
         })
     }
 
@@ -649,6 +736,9 @@ impl LraTheory {
             }
             if conflict.is_none() {
                 conflict = self.bound_crossing(form);
+                if conflict.is_some() {
+                    self.assert_partial_conflicts += 1;
+                }
             }
         }
         conflict
@@ -725,10 +815,17 @@ impl LraTheory {
     /// latency of one call without bounding what the fixpoint derives.
     fn propagate_bounds(&mut self, queue: &mut PropagationQueue) {
         let mut emitted = 0usize;
-        for atom in 0..self.atoms.len() {
+        self.bound_scan_calls += 1;
+        // `propagatable` is the ascending subsequence of atom indices that can
+        // emit at all (see [`propagatable_atoms`]), so this visits the same
+        // atoms in the same order as the full `0..atoms.len()` scan it replaces,
+        // minus ones the `held.atom == atom` guard would have rejected anyway.
+        for index in 0..self.propagatable.len() {
+            let atom = self.propagatable[index];
             if past_deadline(self.deadline) || emitted >= MAX_BOUND_PROPAGATIONS_PER_CALL {
                 return;
             }
+            self.bound_scan_atoms += 1;
             if self.assigned.get(atom).copied().flatten().is_some() {
                 continue;
             }
@@ -816,6 +913,13 @@ impl LraTheory {
             propagations: self.propagations_offered,
             simplex_rows: engine.inner.rows() as u64,
             simplex_columns: engine.inner.columns(),
+            assert_partial_conflicts: self.assert_partial_conflicts,
+            final_check_conflicts: self.final_check_conflicts,
+            final_check_core_literals: self.final_check_core_literals,
+            final_check_core_widenings: self.final_check_core_widenings,
+            final_check_live_rows: self.final_check_live_rows,
+            bound_scan_calls: self.bound_scan_calls,
+            bound_scan_atoms: self.bound_scan_atoms,
         })
     }
 
@@ -857,12 +961,12 @@ impl LraTheory {
             // refutation from a partial view.
             return Feasibility::Unknown;
         }
-        solve(&self.live, self.nvars, self.deadline)
+        solve(&self.live, self.nvars, self.deadline, self.budget_bytes)
     }
 
     /// Maps a set of live row indices (a Farkas-participating constraint subset)
     /// back to the distinct asserted atom literals behind them: the conflict core.
-    fn rows_to_core(&self, rows: &[usize]) -> Vec<TheoryLit> {
+    fn rows_to_core(&mut self, rows: &[usize]) -> Vec<TheoryLit> {
         let mut seen: BTreeSet<usize> = BTreeSet::new();
         let mut core = Vec::new();
         for &row in rows {
@@ -881,6 +985,7 @@ impl LraTheory {
         // a genuine refutation), fall back to the full set of currently-asserted
         // atoms — a sound, if coarse, conflict.
         if core.is_empty() {
+            self.final_check_core_widenings += 1;
             for &atom in &self.assigned_log {
                 if let Some(value) = self.assigned[atom] {
                     core.push(TheoryLit { atom, value });
@@ -949,7 +1054,7 @@ impl LraTheory {
                     simplex::Status::Infeasible(_) | simplex::Status::Unknown => return None,
                 }
             }
-            None => solve_values(&self.live, self.nvars, self.deadline)?,
+            None => solve_values(&self.live, self.nvars, self.deadline, self.budget_bytes)?,
         };
         let mut model = Model::new();
         for (index, &symbol) in builder_vars.iter().enumerate() {
@@ -1049,7 +1154,7 @@ impl LraTheory {
         }
         let mut probe = self.live.clone();
         probe.push(tag(probe_constraint, atom));
-        match solve(&probe, self.nvars, self.deadline) {
+        match solve(&probe, self.nvars, self.deadline, self.budget_bytes) {
             Feasibility::Unsat(rows) => self.probe_core(&probe, &rows, atom),
             Feasibility::Sat | Feasibility::Unknown => None,
         }
@@ -1146,6 +1251,7 @@ impl TheorySolver for LraTheory {
         if !self.deferred_final_check {
             return FinalCheckOutcome::Sat;
         }
+        self.final_check_live_rows += self.live.len() as u64;
         match self.feasibility() {
             Feasibility::Sat | Feasibility::Unknown => FinalCheckOutcome::Sat,
             Feasibility::Unsat(rows) => {
@@ -1153,6 +1259,8 @@ impl TheorySolver for LraTheory {
                 if core.is_empty() {
                     return FinalCheckOutcome::Sat;
                 }
+                self.final_check_conflicts += 1;
+                self.final_check_core_literals += core.len() as u64;
                 FinalCheckOutcome::Conflict(TheoryExplanation::Eager(core))
             }
         }
@@ -1175,6 +1283,83 @@ impl TheorySolver for LraTheory {
     fn engine_counters(&self) -> Option<TheoryEngineCounters> {
         LraTheory::engine_counters(self)
     }
+}
+
+/// The order atoms [`LraTheory::propagate_bounds`] can ever emit: those sharing
+/// at least one polarity **form** with some *other* registered atom.
+///
+/// # Why this is exact, not a heuristic
+///
+/// `propagate_bounds` emits an atom only when the tightest currently-asserted
+/// bound on one of that atom's two forms entails the atom's own threshold, and
+/// it explains the emission by the atom that **imposed** that bound. A bound on
+/// form `f` can only ever be installed from a live constraint whose template
+/// carries `f`, i.e. by an atom that touches `f`. So if `f` is touched by one
+/// atom alone, the only bound `f` can ever hold was imposed by that atom — and
+/// the emission is then refused by the existing `held.atom == atom` guard.
+/// Dropping such an atom from the scan therefore removes iterations that
+/// provably emit nothing, in the same order, rather than trading completeness
+/// for speed.
+///
+/// # The number this exists for
+///
+/// Measured on `QF_LRA/miplib/pp08a-1000.smt2` at a 24 s budget:
+/// `theory_propagate` was **18.05 s of 24.03 s (75%)** and
+/// `propagations_offered` was **0**. The scan visits every registered atom at
+/// both polarities on every propagation call, and that file takes 1.9 M
+/// decisions — so the loop overhead alone, not the rational comparison it
+/// guards, spent three quarters of the budget producing nothing.
+fn propagatable_atoms(atoms: &[AtomKind], forms: usize) -> Vec<usize> {
+    /// Every form a registered atom's constraint templates bound.
+    fn atom_forms(atom: &AtomKind, out: &mut Vec<usize>) {
+        out.clear();
+        let constraints: [&Constraint; 2] = match atom {
+            AtomKind::Order {
+                when_true,
+                when_false,
+            } => [when_true, when_false],
+            AtomKind::Equality { when_true } => [&when_true[0], &when_true[1]],
+            AtomKind::Unsupported => return,
+        };
+        for c in constraints {
+            if let Some((form, _, _)) = c.form {
+                out.push(form);
+            }
+        }
+    }
+
+    // `owner[f]` is the single atom seen touching form `f` so far; `shared[f]`
+    // records that a second, DIFFERENT atom also touches it. An equality atom
+    // contributes two templates of its own, which must not make its form look
+    // shared — hence the comparison against the stored owner rather than a count.
+    let mut owner: Vec<Option<usize>> = vec![None; forms];
+    let mut shared: Vec<bool> = vec![false; forms];
+    let mut scratch = Vec::with_capacity(2);
+    for (index, atom) in atoms.iter().enumerate() {
+        atom_forms(atom, &mut scratch);
+        for &form in &scratch {
+            match owner[form] {
+                None => owner[form] = Some(index),
+                Some(first) if first != index => shared[form] = true,
+                Some(_) => {}
+            }
+        }
+    }
+
+    // Only `Order` atoms are propagation TARGETS (the scan skips every other
+    // kind), but any kind can be the atom that HOLDS the entailing bound, which
+    // is why `shared` above is computed over all of them.
+    let mut out = Vec::new();
+    for (index, atom) in atoms.iter().enumerate() {
+        if !matches!(atom, AtomKind::Order { .. }) {
+            continue;
+        }
+        atom_forms(atom, &mut scratch);
+        if scratch.iter().any(|&form| shared[form]) {
+            out.push(index);
+        }
+    }
+    out
 }
 
 /// Assigns every constraint template of every registered atom the **linear form**
@@ -1389,11 +1574,108 @@ const MAX_LRA_NORMALIZATION_NODES: usize = 1_000_000;
 const MAX_LRA_COEFFICIENT_WORK: usize = 4_000_000;
 const MAX_LRA_CACHED_COEFFICIENTS: usize = 262_144;
 
+/// Resident bytes one retained linear-form coefficient costs (ADR-1752).
+///
+/// # Where this number comes from, and what it is NOT
+///
+/// It is a **structural accounting**, not a division of a measured peak RSS by a
+/// coefficient count — and the distinction matters, because a peak RSS on a real
+/// benchmark is dominated by things that are not this: measured on `s7`,
+/// `QF_LRA/sc/sc-11.base.cvc.smt2` is already at **617 MiB resident at backend
+/// entry**, before the LRA route runs at all. Dividing that by a coefficient
+/// count would produce a confident number about the wrong thing.
+///
+/// One *semantic* coefficient is stored four times over:
+///
+/// | where | bytes |
+/// |---|---:|
+/// | `LinExpr::coeffs`, a `BTreeMap<usize, Rational>` entry (8 + 32 payload, over a node that is typically ~2/3 occupied) | ~75 |
+/// | the `assign_forms` canonical key, `(usize, i128, i128)` | 40 |
+/// | that key again, stored inside the form map | 40 |
+/// | the sparse tableau row, `(usize, Rational)` | 40 |
+///
+/// ≈ 195 bytes, rounded up to 224 for the allocator's own per-allocation share
+/// and for the `Vec` headers the table above charges nothing for. A budget wants
+/// to be **conservative** — over-estimating the cost refuses a query that would
+/// have fitted, which is a lost decide, while under-estimating it admits one that
+/// will not, which is an abort — so the rounding is deliberately in the
+/// over-estimating direction.
+///
+/// The corpus observations that bound this from above, and the reason none of
+/// them can calibrate it directly, are in
+/// `docs/research/12-performance/lra-theory-side-2026-09-07-log.md`.
+pub(crate) const BYTES_PER_LRA_COEFFICIENT: usize = 224;
+
+/// Bytes of budget one admitted atom is conservatively charged at ADMISSION
+/// (ADR-1752), before anything about the query is known but its atom count.
+///
+/// # This is a SCREEN, and it is deliberately not a cost model
+///
+/// Three cost models were built and each was falsified by the corpus within one
+/// lane:
+///
+/// 1. the retained-coefficient budget — passed
+///    `QF_LRA/2017-Heizmann-…/_sanfoundry_10_ground.i_6_3_3.bpl_13.smt2`, which
+///    then aborted at **7.8 GB**, because those bytes are not coefficients;
+/// 2. a dense-tableau projection — caught that file but also refused
+///    `QF_LRA/TM/p5-driverlogNumeric_s9.smt2`, which the Fourier–Motzkin
+///    fallback decides `unsat` in 0.18 s at 41 MB;
+/// 3. Fourier–Motzkin's own entry and per-step allocations, bounded in bytes at
+///    the point they are made — correct as far as it goes, and it still did not
+///    stop `QF_LRA/miplib/danoint-266.smt2` (7.8 GB, 11 s, previously a 0.04 s
+///    decline at 15 MB). Whatever holds those bytes is somewhere this lane did
+///    not find, and `crates/axeyum-solver/src/memory_budget.rs` says why a
+///    faithful answer is ADR-sized: there is no `#[global_allocator]` hook, so
+///    nothing here can attribute an allocation it did not make itself.
+///
+/// So the atom count survives as the **outer, conservative** gate, and this
+/// constant is chosen for exactly one property: at
+/// [`DEFAULT_ONLINE_LRA_BUDGET_BYTES`] it reproduces the previously shipped
+/// `MAX_ONLINE_LRA_ATOMS = 1_024` **exactly**, so the default build's admission
+/// behaviour is byte-identical and the change cannot regress it. What ADR-1752
+/// buys is not a looser gate: it is that the gate now MOVES with
+/// `SolverConfig::memory_limit_mb`, and that a refusal states its numbers. A
+/// caller that can afford 8 GiB gets 13 107 atoms by asking, where before no
+/// amount of memory bought a single atom past 1 024.
+///
+/// Replacing this with a real cost model is the open work, and the thing it
+/// needs first is an answer to "where do `danoint-266`'s 7.8 GB go".
+pub(crate) const BYTES_PER_ADMITTED_ATOM: usize = DEFAULT_ONLINE_LRA_BUDGET_BYTES / 1_024;
+
+/// Resident bytes one dense simplex tableau cell costs: a [`Rational`] is two
+/// `i128`s and the tableau is `Vec<Vec<Rational>>`, so the per-cell share of the
+/// row vectors' own headers is negligible beside the 32-byte payload.
+pub(crate) const BYTES_PER_TABLEAU_CELL: usize = 32;
+
+/// Default memory budget for **one** online CDCL(T) LRA construction
+/// (ADR-1752), overridden by `SolverConfig::memory_limit_mb` when that is set.
+///
+/// This replaces the flat `MAX_ONLINE_LRA_ATOMS = 1_024` admission cap. A count
+/// is the wrong currency: 23,385 atoms over few variables cost less than 1,492
+/// atoms over 700, and the count refused both identically.
+///
+/// # Why this number
+///
+/// It is chosen so the ceilings [`NormalizationLimits::for_budget`] derives sit
+/// **close to the ones already in force**, because this change is meant to be
+/// one of currency and reporting rather than a loosening. 640 MiB less the
+/// tableau's own 128 MiB leaves 512 MiB of coefficients, i.e. 2 396 745 of them
+/// at [`BYTES_PER_LRA_COEFFICIENT`], hence a `coefficient_work` ceiling of
+/// 4 793 490 against the 4 000 000 the flat constant carried — 20% looser, on
+/// the axis where the loosening buys the wide-and-shallow queries the atom count
+/// refused. The memo ceiling moves much further (1 198 372 against 262 144),
+/// which is the point: the memo is what the cap's own doc named as the cost, and
+/// 262 144 was never derived from a byte figure at all.
+pub(crate) const DEFAULT_ONLINE_LRA_BUDGET_BYTES: usize = 640 * 1_024 * 1_024;
+
 #[derive(Clone, Copy)]
 struct NormalizationLimits {
     nodes: usize,
     coefficient_work: usize,
     cached_coefficients: usize,
+    /// The budget the two coefficient ceilings above were derived from, kept so
+    /// a refusal can report the number rather than the derived ceiling.
+    budget_bytes: usize,
 }
 
 impl Default for NormalizationLimits {
@@ -1402,6 +1684,37 @@ impl Default for NormalizationLimits {
             nodes: MAX_LRA_NORMALIZATION_NODES,
             coefficient_work: MAX_LRA_COEFFICIENT_WORK,
             cached_coefficients: MAX_LRA_CACHED_COEFFICIENTS,
+            budget_bytes: DEFAULT_ONLINE_LRA_BUDGET_BYTES,
+        }
+    }
+}
+
+impl NormalizationLimits {
+    /// The ceilings a `budget_bytes` memory budget implies (ADR-1752).
+    ///
+    /// `nodes` is a *work* bound, not a memory one — a term graph can be walked
+    /// without retaining anything — so it is unchanged. The two coefficient
+    /// ceilings are memory bounds and become the budget divided by the measured
+    /// per-coefficient cost; the retained set and the memo are charged against
+    /// the same budget because they are alive at the same time, so each gets
+    /// half.
+    fn for_budget(budget_bytes: usize) -> Self {
+        // The dense tableau is built from the same construction and is alive at
+        // the same time, so its own ceiling is spent out of this budget before
+        // anything is left for coefficients. Accounting for it here is what
+        // stops the two halves drifting apart until one of them stops binding —
+        // the exact failure that let the atom cap outlive its own measurement.
+        let tableau = simplex::MAX_TABLEAU_CELLS.saturating_mul(BYTES_PER_TABLEAU_CELL);
+        let coefficients = budget_bytes.saturating_sub(tableau) / BYTES_PER_LRA_COEFFICIENT;
+        Self {
+            nodes: MAX_LRA_NORMALIZATION_NODES,
+            // `coefficient_work` is charged at `2 x (|left| + |right|)` per atom
+            // while roughly `|left| + |right|` coefficients are RETAINED, so the
+            // work ceiling that corresponds to `n` retained coefficients is `2n`;
+            // the memo holds a further share of the same budget.
+            coefficient_work: coefficients.saturating_mul(2),
+            cached_coefficients: coefficients / 2,
+            budget_bytes,
         }
     }
 }
@@ -1415,14 +1728,19 @@ struct AtomBuilder {
     node_visits: usize,
     coefficient_work: usize,
     cached_coefficients: usize,
+    /// Atoms handed to [`Self::build`] so far, so a budget refusal can say at
+    /// what atom count the projection crossed the line — the number a caller
+    /// (or a sibling division) needs in order to act on the refusal.
+    atoms_built: usize,
     stop: Option<LraTheoryBuildStop>,
     limits: NormalizationLimits,
 }
 
 impl AtomBuilder {
-    fn with_deadline(deadline: Option<Instant>) -> Self {
+    fn with_deadline(deadline: Option<Instant>, budget_bytes: usize) -> Self {
         Self {
             deadline,
+            limits: NormalizationLimits::for_budget(budget_bytes),
             ..Self::default()
         }
     }
@@ -1458,6 +1776,9 @@ impl AtomBuilder {
     fn charge_node(&mut self) -> bool {
         self.node_visits = self.node_visits.saturating_add(1);
         if self.node_visits > self.limits.nodes {
+            // A *work* ceiling, not a memory one — it stays `ResourceLimit` so a
+            // reader can tell "this term graph is too big to walk" apart from
+            // "this construction would not fit in its budget".
             self.stop = Some(LraTheoryBuildStop::ResourceLimit);
             false
         } else {
@@ -1468,16 +1789,57 @@ impl AtomBuilder {
     fn charge_coefficients(&mut self, count: usize) -> bool {
         self.coefficient_work = self.coefficient_work.saturating_add(count);
         if self.coefficient_work > self.limits.coefficient_work {
-            self.stop = Some(LraTheoryBuildStop::ResourceLimit);
+            self.stop = Some(self.budget_stop());
             false
         } else {
             true
         }
     }
 
+    /// The coefficients this construction is holding resident: the ones charged
+    /// into the built atoms plus the ones the linearization memo is keeping.
+    ///
+    /// `coefficient_work` is charged at `2 x (|left| + |right|)` per atom while
+    /// roughly `|left| + |right|` end up retained, hence the halving — the same
+    /// relation [`NormalizationLimits::for_budget`] inverts.
+    fn resident_coefficients(&self) -> usize {
+        (self.coefficient_work / 2).saturating_add(self.cached_coefficients)
+    }
+
+    /// The projected resident footprint of what has been built so far
+    /// (ADR-1752): the coefficients held, **plus** the dense tableau's own
+    /// ceiling, which [`NormalizationLimits::for_budget`] already spent out of
+    /// the budget and which is alive at the same time.
+    ///
+    /// Including it is what makes the reported number honest at small budgets:
+    /// without it, a budget under the tableau's own 128 MiB derives a
+    /// zero-coefficient ceiling and then refuses with "projected 0 MiB > budget
+    /// 1 MiB", which is true of nothing.
+    fn estimated_bytes(&self) -> usize {
+        simplex::MAX_TABLEAU_CELLS
+            .saturating_mul(BYTES_PER_TABLEAU_CELL)
+            .saturating_add(
+                self.resident_coefficients()
+                    .saturating_mul(BYTES_PER_LRA_COEFFICIENT),
+            )
+    }
+
+    /// The stop a ceiling breach reports. Every one of these ceilings is now
+    /// *derived from* the byte budget, so the refusal states the budget and the
+    /// projection rather than the intermediate constant nobody can act on.
+    fn budget_stop(&self) -> LraTheoryBuildStop {
+        LraTheoryBuildStop::MemoryBudget {
+            estimated_bytes: self.estimated_bytes(),
+            budget_bytes: self.limits.budget_bytes,
+            atoms: self.atoms_built,
+            vars: self.vars.len(),
+        }
+    }
+
     /// Parses one atom term into its [`AtomKind`]. Any overflow or non-LRA shape
     /// yields [`AtomKind::Unsupported`] (a registered no-op), never a panic.
     fn build(&mut self, arena: &TermArena, term: TermId) -> AtomKind {
+        self.atoms_built += 1;
         if !self.check_deadline() {
             return AtomKind::Unsupported;
         }
@@ -1709,8 +2071,36 @@ fn add_vec(a: &[Rational], b: &[Rational]) -> Option<Vec<Rational>> {
 /// multiplier is nonzero. Multipliers are seeded as unit vectors over the input
 /// rows and accumulated through elimination, so a residual infeasible constant
 /// constraint names the rows behind it.
-fn solve(constraints: &[Constraint], nvars: usize, deadline: Option<Instant>) -> Feasibility {
+fn solve(
+    constraints: &[Constraint],
+    nvars: usize,
+    deadline: Option<Instant>,
+    budget_bytes: usize,
+) -> Feasibility {
     let n = constraints.len();
+    // ADR-1752. Fourier–Motzkin is the fallback when the dense tableau does not
+    // fit, and it is the one engine here with no memory bound of its own:
+    // `MAX_FM_CONSTRAINTS` caps how many constraints ONE elimination step may
+    // produce and says nothing about the bytes behind them, because every
+    // constraint carries a length-`n` multiplier vector. Entering costs
+    // `n^2 x size_of::<Rational>()` before a variable is eliminated.
+    //
+    // Bounding this at ADMISSION was tried twice and is not possible: a
+    // projection tight enough to stop `QF_LRA/miplib/danoint-266.smt2` (which
+    // aborted at 7.8 GB) also refuses `QF_LRA/TM/p5-driverlogNumeric_s9.smt2`
+    // (which the fallback decides `unsat` in 0.17 s), because how far one
+    // elimination step actually expands is a property of the data, not of the
+    // atom or variable count. So the bound lives where the allocation is.
+    //
+    // `Unknown` here is what the caller already handles for an overflow or a
+    // step-count breach: "feasible, don't know", gated by the model replay. It
+    // is never a wrong verdict.
+    if n.saturating_mul(n)
+        .saturating_mul(std::mem::size_of::<Rational>())
+        > budget_bytes
+    {
+        return Feasibility::Unknown;
+    }
     let mut current: Vec<Constraint> = Vec::with_capacity(n);
     for (i, c) in constraints.iter().enumerate() {
         if i % 64 == 0 && past_deadline(deadline) {
@@ -1730,7 +2120,7 @@ fn solve(constraints: &[Constraint], nvars: usize, deadline: Option<Instant>) ->
         if past_deadline(deadline) {
             return Feasibility::Unknown;
         }
-        match eliminate(&current, v, deadline) {
+        match eliminate(&current, v, deadline, budget_bytes) {
             Some(next) => current = next,
             None => return Feasibility::Unknown,
         }
@@ -1760,6 +2150,7 @@ fn solve_values(
     constraints: &[Constraint],
     nvars: usize,
     deadline: Option<Instant>,
+    budget_bytes: usize,
 ) -> Option<Vec<Rational>> {
     let mut saved: Vec<(usize, Vec<Constraint>)> = Vec::with_capacity(nvars);
     let mut current: Vec<Constraint> = Vec::with_capacity(constraints.len());
@@ -1774,7 +2165,7 @@ fn solve_values(
             return None;
         }
         saved.push((v, current.clone()));
-        current = eliminate(&current, v, deadline)?;
+        current = eliminate(&current, v, deadline, budget_bytes)?;
     }
     for (i, c) in current.iter().enumerate() {
         if i % 64 == 0 && past_deadline(deadline) {
@@ -1800,7 +2191,24 @@ fn eliminate(
     system: &[Constraint],
     v: usize,
     deadline: Option<Instant>,
+    budget_bytes: usize,
 ) -> Option<Vec<Constraint>> {
+    // Checked BEFORE the partition loop below, which CLONES a constraint — with
+    // its length-`n` multiplier vector — for every row that does not mention `v`.
+    // Placing this after that loop (the first attempt) leaves the allocation
+    // already made: `current` grows to `MAX_FM_CONSTRAINTS` after one step while
+    // the multiplier vectors keep the ORIGINAL system's length, so the input to
+    // the NEXT step is 20 000 x n x 32 bytes — gigabytes at a few thousand rows,
+    // and the measured 7.8 GB abort on `QF_LRA/miplib/danoint-266.smt2`.
+    let mult_len = system.first().map_or(0, |c| c.mult.len());
+    if system
+        .len()
+        .saturating_mul(mult_len)
+        .saturating_mul(std::mem::size_of::<Rational>())
+        > budget_bytes
+    {
+        return None;
+    }
     let mut out = Vec::new();
     let mut pos = Vec::new();
     let mut neg = Vec::new();
@@ -1820,11 +2228,20 @@ fn eliminate(
             }
         }
     }
-    if out
+    let produced = out
         .len()
-        .saturating_add(pos.len().saturating_mul(neg.len()))
-        > MAX_FM_CONSTRAINTS
-    {
+        .saturating_add(pos.len().saturating_mul(neg.len()));
+    // Two ceilings, and the second is the one that was missing (ADR-1752). The
+    // COUNT ceiling has always been here; the BYTES behind that count had no
+    // bound at all, because each produced constraint carries a multiplier vector
+    // as long as the original system. At the shipped 20 000-constraint ceiling
+    // and a few thousand input rows that is gigabytes for a single step — the
+    // measured 7.8 GB abort on `QF_LRA/miplib/danoint-266.smt2`, whose trace
+    // showed `simplex_rows=n/a` and `final_checks=1`, i.e. one call to this.
+    let step_bytes = produced
+        .saturating_mul(mult_len)
+        .saturating_mul(std::mem::size_of::<Rational>());
+    if produced > MAX_FM_CONSTRAINTS || step_bytes > budget_bytes {
         return None;
     }
     // Combine each positive-coefficient bound with each negative-coefficient
@@ -3502,7 +3919,24 @@ pub fn check_qf_lra_online(
         Err(LraTheoryBuildStop::ResourceLimit) => {
             return Ok(CheckResult::Unknown(UnknownReason {
                 kind: UnknownKind::ResourceLimit,
-                detail: "online LRA normalization node/coefficient ceiling exceeded".to_owned(),
+                detail: "online LRA normalization node ceiling exceeded".to_owned(),
+            }));
+        }
+        // ADR-1752: the same refusal the CDCL(T) route gives, with the numbers.
+        Err(LraTheoryBuildStop::MemoryBudget {
+            estimated_bytes,
+            budget_bytes,
+            atoms,
+            vars,
+        }) => {
+            return Ok(CheckResult::Unknown(UnknownReason {
+                kind: UnknownKind::ResourceLimit,
+                detail: format!(
+                    "online LRA memory budget exceeded: projected {} MiB > budget {} MiB \
+                     at {atoms} atoms over {vars} variables",
+                    estimated_bytes / (1024 * 1024),
+                    budget_bytes / (1024 * 1024),
+                ),
             }));
         }
     };
@@ -3621,6 +4055,8 @@ fn run_online_diag(arena: &TermArena, assertions: &[TermId]) -> Option<OnlineDia
     let mut atoms = atoms;
     let forms = assign_forms(&mut atoms);
     let simplex = build_simplex_engine(&mut atoms, nvars).map(RefCell::new);
+    // Order-preserving scan filter for `propagate_bounds`; see the field docs.
+    let propagatable = propagatable_atoms(&atoms, forms);
     let mut theory = LraTheory {
         atoms,
         nvars,
@@ -3635,7 +4071,16 @@ fn run_online_diag(arena: &TermArena, assertions: &[TermId]) -> Option<OnlineDia
         bound_lower: vec![None; forms],
         bound_upper: vec![None; forms],
         bound_log: Vec::new(),
+        budget_bytes: DEFAULT_ONLINE_LRA_BUDGET_BYTES,
+        propagatable,
         propagations_offered: 0,
+        assert_partial_conflicts: 0,
+        bound_scan_calls: 0,
+        bound_scan_atoms: 0,
+        final_check_conflicts: 0,
+        final_check_core_literals: 0,
+        final_check_core_widenings: 0,
+        final_check_live_rows: 0,
     };
     let mut solver = Dpll::new(enc.var_count, atom_count, clauses);
     let _ = solver.solve(&mut theory);
@@ -3718,13 +4163,23 @@ mod tests {
             nodes: 64,
             coefficient_work: 8,
             cached_coefficients: 64,
+            budget_bytes: 8 * BYTES_PER_LRA_COEFFICIENT,
         };
         let mut exhausted = AtomBuilder::with_limits(None, limits);
         assert!(matches!(
             exhausted.build(&arena, atom),
             AtomKind::Unsupported
         ));
-        assert_eq!(exhausted.stop, Some(LraTheoryBuildStop::ResourceLimit));
+        // ADR-1752: a coefficient ceiling is a MEMORY ceiling now, so its stop
+        // carries the numbers rather than being an opaque `ResourceLimit`.
+        assert!(
+            matches!(
+                exhausted.stop,
+                Some(LraTheoryBuildStop::MemoryBudget { .. })
+            ),
+            "coefficient exhaustion reports the budget: {:?}",
+            exhausted.stop
+        );
 
         let limits = NormalizationLimits {
             coefficient_work: 32,
@@ -3839,6 +4294,278 @@ mod tests {
                 value: true
             }],
             "the reason is the single asserted atom holding the bound"
+        );
+    }
+
+    /// **This is the test the Fourier–Motzkin memory bound is pinned by**, and
+    /// it exists because two admission-time projections were shipped and both
+    /// were measured wrong, in opposite directions.
+    ///
+    /// When the dense tableau does not fit, feasibility falls back to
+    /// Fourier–Motzkin, which is the one engine here with no memory bound of its
+    /// own. `MAX_FM_CONSTRAINTS` caps how many constraints ONE elimination step
+    /// may produce and says nothing about the bytes behind them, because every
+    /// produced constraint carries a multiplier vector as long as the original
+    /// system. The flat `MAX_ONLINE_LRA_ATOMS` capped atoms, which capped that
+    /// length, which kept the fallback away from large systems — a protection its
+    /// own doc never mentioned.
+    ///
+    /// Removing the cap and projecting instead was tried twice:
+    ///
+    /// - on the **tableau** size, which also refused
+    ///   `QF_LRA/TM/p5-driverlogNumeric_s9.smt2`, decided `unsat` by the fallback
+    ///   in 0.17 s at 33 MB;
+    /// - on Fourier–Motzkin's **entry** cost (`n²`), which
+    ///   `QF_LRA/miplib/danoint-266.smt2` passed and then aborted at **7.8 GB
+    ///   after 11 s**, having previously declined in 0.04 s at 15 MB.
+    ///
+    /// Neither can work, and the reason is not that the constant was mistuned:
+    /// how far one elimination step actually expands is a property of the data,
+    /// not of the atom or variable count. So the bound lives where the allocation
+    /// is, and this test drives it there — a system that must decline, and a
+    /// system that must still be DECIDED, through the same fallback.
+    #[test]
+    fn the_fourier_motzkin_fallback_declines_on_bytes_instead_of_allocating() {
+        // `count` constraints `x_i + x_{i+1} <= i` over `count + 1` variables,
+        // handed to the fallback directly: the guard under test is inside
+        // `solve`/`eliminate`, and driving it through a whole `LraTheory` would
+        // only re-test the admission path this replaced.
+        let count = 96usize;
+        let nvars = count + 1;
+        let mut system: Vec<Constraint> = Vec::with_capacity(count);
+        for i in 0..count {
+            let mut coeffs = BTreeMap::new();
+            coeffs.insert(i, Rational::integer(1));
+            coeffs.insert(i + 1, Rational::integer(1));
+            system.push(Constraint {
+                expr: LinExpr {
+                    coeffs,
+                    constant: Rational::integer(-i128::try_from(i).expect("small")),
+                },
+                strict: false,
+                mult: Vec::new(),
+                atom: i,
+                row: None,
+                form: None,
+            });
+        }
+
+        // Generous: the fallback must DECIDE it. `x_i + x_{i+1} <= i` over
+        // unbounded reals is satisfiable, so a decline here would mean the guard
+        // is a blanket one and the test below pins nothing.
+        assert!(
+            matches!(
+                solve(&system, nvars, None, DEFAULT_ONLINE_LRA_BUDGET_BYTES),
+                Feasibility::Sat
+            ),
+            "the shipped budget must DECIDE the system the starved run declines"
+        );
+
+        // Starved past the ENTRY allocation (`n^2 x size_of::<Rational>()`,
+        // ~295 KB here): a decline, never an allocation.
+        let entry_bytes = count * count * size_of::<Rational>();
+        assert!(
+            matches!(
+                solve(&system, nvars, None, entry_bytes / 2),
+                Feasibility::Unknown
+            ),
+            "a fallback that cannot fit its entry multipliers must decline"
+        );
+
+        // Starved past ONE ELIMINATION STEP but not past entry — the ceiling
+        // that was missing, and the one `MAX_FM_CONSTRAINTS` does not provide.
+        // `eliminate` is called directly so the step is the only thing measured.
+        let seeded: Vec<Constraint> = system
+            .iter()
+            .enumerate()
+            .map(|(i, c)| Constraint {
+                mult: unit_vec(count, i),
+                ..c.clone()
+            })
+            .collect();
+        let step = eliminate(&seeded, 0, None, DEFAULT_ONLINE_LRA_BUDGET_BYTES)
+            .expect("one step fits the shipped budget");
+        let step_bytes = step.len() * count * size_of::<Rational>();
+        assert!(
+            step_bytes > 0,
+            "the step must produce something, else the ceiling below is vacuous"
+        );
+        assert!(
+            eliminate(&seeded, 0, None, step_bytes / 2).is_none(),
+            "an elimination step whose multiplier vectors do not fit the budget \
+             must decline rather than allocate them"
+        );
+        assert!(
+            step.len() <= MAX_FM_CONSTRAINTS,
+            "the pre-existing COUNT ceiling is untouched"
+        );
+    }
+
+    /// ADR-1752: the two halves of the construction's footprint must stay
+    /// commensurable. The coefficient ceilings are *derived from* the byte
+    /// budget, but the dense tableau's own cap is a separate constant, so
+    /// nothing stops the two drifting apart until one of them silently stops
+    /// binding. This pins the relation in both directions.
+    #[test]
+    fn the_tableau_cap_and_the_construction_budget_stay_commensurable() {
+        let tableau_bytes = simplex::MAX_TABLEAU_CELLS * BYTES_PER_TABLEAU_CELL;
+        assert!(
+            tableau_bytes < DEFAULT_ONLINE_LRA_BUDGET_BYTES,
+            "the tableau alone ({} MiB) must fit inside the construction budget \
+             ({} MiB), else the budget can never be the binding constraint",
+            tableau_bytes / (1024 * 1024),
+            DEFAULT_ONLINE_LRA_BUDGET_BYTES / (1024 * 1024),
+        );
+        assert!(
+            tableau_bytes * 8 > DEFAULT_ONLINE_LRA_BUDGET_BYTES,
+            "the tableau ({} MiB) must be a MATERIAL share of the budget ({} MiB); \
+             a budget many times the tableau cap is not accounting for it at all",
+            tableau_bytes / (1024 * 1024),
+            DEFAULT_ONLINE_LRA_BUDGET_BYTES / (1024 * 1024),
+        );
+    }
+
+    /// **This is the test the `propagatable` scan filter is mutation-checked
+    /// against.** Restricting `propagate_bounds` to atoms sharing a form is a
+    /// claim of EXACT output equivalence, not of a good approximation, so the
+    /// control re-derives what the full `0..atoms.len()` scan would offer and
+    /// requires the two to agree literal for literal, reason for reason, in the
+    /// same order.
+    ///
+    /// The fixture deliberately mixes both populations: three atoms on one
+    /// shared form (so the filter must keep them and the propagator must still
+    /// fire) and three on forms nothing else touches (so the filter must drop
+    /// them, and dropping them must change nothing). A filter that kept
+    /// everything would pass; a filter that dropped a *shared* atom must fail
+    /// here.
+    // The control re-derives the full scan body verbatim, which is what makes it
+    // a control; splitting it would let the two drift.
+    #[allow(clippy::too_many_lines, clippy::items_after_statements)]
+    #[test]
+    fn the_scan_filter_offers_exactly_what_a_full_scan_would() {
+        let mut arena = TermArena::new();
+        let x = rvar(&mut arena, "x");
+        let y = rvar(&mut arena, "y");
+        let z = rvar(&mut arena, "z");
+        let w = rvar(&mut arena, "w");
+        let two = rconst(&mut arena, 2);
+        let sum = arena.real_add(x, y).expect("x+y");
+        let two_x = arena.real_mul(two, x).expect("2x");
+        let two_y = arena.real_mul(two, y).expect("2y");
+        let double = arena.real_add(two_x, two_y).expect("2x+2y");
+        let three = rconst(&mut arena, 3);
+        let eight = rconst(&mut arena, 8);
+        let four = rconst(&mut arena, 4);
+        let one = rconst(&mut arena, 1);
+        let seven = rconst(&mut arena, 7);
+        let nine = rconst(&mut arena, 9);
+        let zw = arena.real_add(z, w).expect("z+w");
+        // Shared form (x + y up to positive scaling): atoms 0, 1, 2.
+        let a0 = arena.real_le(sum, three).expect("x+y<=3");
+        let a1 = arena.real_le(double, eight).expect("2x+2y<=8");
+        let a2 = arena.real_le(double, four).expect("2x+2y<=4");
+        // Forms nobody else touches: atoms 3, 4, 5.
+        let a3 = arena.real_le(z, one).expect("z<=1");
+        let a4 = arena.real_le(w, seven).expect("w<=7");
+        let a5 = arena.real_le(zw, nine).expect("z+w<=9");
+        let atoms = [a0, a1, a2, a3, a4, a5];
+
+        // The full scan, re-derived here: the body `propagate_bounds` had before
+        // the filter, over EVERY registered atom index.
+        fn full_scan(theory: &LraTheory) -> Vec<(TheoryLit, Vec<TheoryLit>)> {
+            let mut out = Vec::new();
+            for atom in 0..theory.atoms.len() {
+                if theory.assigned.get(atom).copied().flatten().is_some() {
+                    continue;
+                }
+                let AtomKind::Order {
+                    when_true,
+                    when_false,
+                } = &theory.atoms[atom]
+                else {
+                    continue;
+                };
+                for (constraint, value) in [(when_true, true), (when_false, false)] {
+                    let Some((form, upper, bound, strict)) = LraTheory::form_bound(constraint)
+                    else {
+                        continue;
+                    };
+                    let held = if upper {
+                        theory.bound_upper[form].as_ref()
+                    } else {
+                        theory.bound_lower[form].as_ref()
+                    };
+                    let Some(held) = held else { continue };
+                    let Some(ordering) = held.value.checked_cmp(&bound) else {
+                        continue;
+                    };
+                    let entailed = if upper {
+                        ordering == Ordering::Less
+                            || (ordering == Ordering::Equal && (held.strict || !strict))
+                    } else {
+                        ordering == Ordering::Greater
+                            || (ordering == Ordering::Equal && (held.strict || !strict))
+                    };
+                    if !entailed {
+                        continue;
+                    }
+                    let Some(reason_value) = theory.assigned.get(held.atom).copied().flatten()
+                    else {
+                        continue;
+                    };
+                    if held.atom == atom {
+                        continue;
+                    }
+                    out.push((
+                        TheoryLit { atom, value },
+                        vec![TheoryLit {
+                            atom: held.atom,
+                            value: reason_value,
+                        }],
+                    ));
+                    break;
+                }
+            }
+            out
+        }
+
+        // Every single-atom assertion, so the comparison covers a bound on the
+        // shared form, a bound on a solitary form, and both polarities.
+        let mut compared = 0usize;
+        let mut nonempty = 0usize;
+        for atom in 0..atoms.len() {
+            for value in [true, false] {
+                let mut theory = LraTheory::new(&arena, &atoms).with_deferred_final_check();
+                if theory.assert(atom, value).is_err() {
+                    continue;
+                }
+                let want = full_scan(&theory);
+                let mut queue = PropagationQueue::default();
+                theory.propagate_into(&mut queue);
+                let got: Vec<(TheoryLit, Vec<TheoryLit>)> = queue
+                    .entries()
+                    .iter()
+                    .map(|(lit, reason)| {
+                        let TheoryExplanation::Eager(lits) = reason else {
+                            panic!("the bound propagator materialises its reason");
+                        };
+                        (*lit, lits.clone())
+                    })
+                    .collect();
+                assert_eq!(got, want, "asserting atom {atom} = {value}");
+                compared += 1;
+                if !want.is_empty() {
+                    nonempty += 1;
+                }
+            }
+        }
+        // A comparison where the reference never emits anything would pass with
+        // the propagator deleted, so require that some assertion really did
+        // propagate — this is the guard against a vacuous control.
+        assert!(compared >= 8, "too few assertions compared: {compared}");
+        assert!(
+            nonempty >= 1,
+            "the reference scan never emitted, so the comparison is vacuous"
         );
     }
 
@@ -4638,6 +5365,8 @@ mod tests {
         let mut atoms = atoms;
         let forms = assign_forms(&mut atoms);
         let simplex = build_simplex_engine(&mut atoms, nvars).map(RefCell::new);
+        // Order-preserving scan filter for `propagate_bounds`; see the field docs.
+        let propagatable = propagatable_atoms(&atoms, forms);
         let theory = LraTheory {
             atoms,
             nvars,
@@ -4652,7 +5381,16 @@ mod tests {
             bound_lower: vec![None; forms],
             bound_upper: vec![None; forms],
             bound_log: Vec::new(),
+            budget_bytes: DEFAULT_ONLINE_LRA_BUDGET_BYTES,
+            propagatable,
             propagations_offered: 0,
+            assert_partial_conflicts: 0,
+            bound_scan_calls: 0,
+            bound_scan_atoms: 0,
+            final_check_conflicts: 0,
+            final_check_core_literals: 0,
+            final_check_core_widenings: 0,
+            final_check_live_rows: 0,
         };
         let solver = Dpll::new(enc.var_count, atom_count, clauses);
         (solver, theory)

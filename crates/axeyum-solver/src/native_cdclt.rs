@@ -535,6 +535,9 @@ fn theory_layer_stats(
         theory_propagations_offered: engine.map(|e| e.propagations),
         simplex_rows: engine.map(|e| e.simplex_rows),
         simplex_columns: engine.map(|e| e.simplex_columns),
+        // The LRA lane (ADR-1752) added counters this constructor does not
+        // measure; they stay at their Default rather than being invented here.
+        ..Default::default()
     }
 }
 

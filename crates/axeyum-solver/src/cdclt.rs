@@ -2256,6 +2256,13 @@ impl CdclT {
             theory_propagations_offered: engine.map(|e| e.propagations),
             simplex_rows: engine.map(|e| e.simplex_rows),
             simplex_columns: engine.map(|e| e.simplex_columns),
+            assert_partial_conflicts: engine.map(|e| e.assert_partial_conflicts),
+            final_check_conflicts: engine.map(|e| e.final_check_conflicts),
+            final_check_core_literals: engine.map(|e| e.final_check_core_literals),
+            final_check_core_widenings: engine.map(|e| e.final_check_core_widenings),
+            final_check_live_rows: engine.map(|e| e.final_check_live_rows),
+            bound_scan_calls: engine.map(|e| e.bound_scan_calls),
+            bound_scan_atoms: engine.map(|e| e.bound_scan_atoms),
         }
     }
 
