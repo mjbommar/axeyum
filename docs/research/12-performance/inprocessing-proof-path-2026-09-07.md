@@ -297,9 +297,9 @@ effect is BVE — the only pass that removes variables. `preprocess` (subsume th
 BVE) is not reliably better than BVE alone: better on four files, worse on four.
 
 **A mechanism the numbers volunteer, which I had not predicted.** Propagations
-per *second* falls 13% under BVE. The reduced formula has **28% fewer clauses
-but 18–21% more literal occurrences** (`cl_after/before ≈ 0.72`,
-`lit_after/before ≈ 1.19`, uniform across all eight files): resolvents are
+per *second* falls 13% under BVE. The reduced formula has **24–28% fewer clauses
+but 17–21% more literal occurrences** (`cl_after/before` 0.716–0.757,
+`lit_after/before` 1.170–1.207, uniform across all eight files): resolvents are
 longer than the clauses they replace. So each propagation walks longer clauses
 and costs more, and the 2.3x reduction in propagation *volume* is partly given
 back as a 1.15x increase in propagation *cost*. Conflicts per second — the

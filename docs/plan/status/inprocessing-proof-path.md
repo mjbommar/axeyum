@@ -18,7 +18,7 @@ measured on the same eight files on the same host, `2.56 x 0.426 = 1.09` — on
 this metric one-shot BVE closes essentially the whole gap to Kissat. Subsumption
 alone moves the median 7% and is worse on three of eight files; the effect is
 entirely BVE, the only pass that removes variables. Unpredicted mechanism: the
-reduced formula has 28% fewer clauses but **18-21% more literal occurrences**, so
+reduced formula has 24-28% fewer clauses but **17-21% more literal occurrences**, so
 propagations per *second* falls 13% — a change aimed at volume moved rate the
 other way.
 

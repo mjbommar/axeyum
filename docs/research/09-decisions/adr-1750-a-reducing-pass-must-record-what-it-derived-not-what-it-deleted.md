@@ -2,7 +2,7 @@
 
 Status: accepted
 Date: 2026-09-07
-Index-summary: The proof-producing SAT core may now run `simplify`/`vivify`/`bve` before search and still emit ONE DRAT proof of the original formula (`axeyum_cnf::inprocess`, `solve_with_drat_proof_inprocessed`). Measured obligation: of the two halves of what a pass emits, only the `Add` half is soundness-critical — making the passes silent about every clause they derived is rejected 38 of 38 times, while dropping every `Delete` leaves all 38 proofs valid, because deletion only shrinks the checker's active set and RUP is monotone in it. Also measured: a DRAT prefix does NOT certify that an added clause was entailed (`check_drat` accepts RAT, which is satisfiability-preserving), so the soundness obligation is carried end to end — 521 corrupted passes produced a wrong `unsat` and the checker rejected all 521. Default stays OFF: BVE cuts propagations per conflict by a median 57% and doubles conflicts per second, but costs 1.2-88 s against a break-even of ~92k conflicts.
+Index-summary: The proof-producing SAT core may now run `simplify`/`vivify`/`bve` before search and still emit ONE DRAT proof of the original formula (`axeyum_cnf::inprocess`, `solve_with_drat_proof_inprocessed`). Measured obligation: of the two halves of what a pass emits, only the `Add` half is soundness-critical — making the passes silent about every clause they derived is rejected 38 of 38 times, while dropping every `Delete` leaves all 38 proofs valid, because deletion only shrinks the checker's active set and RUP is monotone in it. Also measured: a DRAT prefix does NOT certify that an added clause was entailed (`check_drat` accepts RAT, which is satisfiability-preserving), so the soundness obligation is carried end to end — 521 corrupted passes produced a wrong `unsat` and the checker rejected all 521. Default stays OFF: BVE cuts propagations per conflict to a median 0.426 and raises conflicts per second 1.875x, closing essentially the whole measured 2.56x gap to Kissat, but costs 1.2-88 s against a break-even of 59k-131k conflicts (median ~92k, flat across a 100x range of instance size).
 Index-status: accepted
 
 ## Context
@@ -145,8 +145,8 @@ measured gap to Kissat. Subsumption alone moves the median 7% and is *worse* on
 three of eight files — the effect is entirely BVE, the only pass that removes
 variables.
 
-**A mechanism the numbers volunteered.** The reduced formula has 28% fewer
-clauses but **18-21% more literal occurrences**, uniformly: resolvents are longer
+**A mechanism the numbers volunteered.** The reduced formula has 24-28% fewer
+clauses but **17-21% more literal occurrences**, uniformly: resolvents are longer
 than the clauses they replace. So propagations/second falls 13% — a change aimed
 at propagation *volume* moved propagation *rate* in the opposite direction, and
 the product still nearly doubles.
