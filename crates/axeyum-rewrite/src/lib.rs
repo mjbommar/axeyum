@@ -58,7 +58,10 @@ pub use functions::{
     eliminate_functions,
 };
 pub use int_blast::{IntBlastError, IntBlasting, MAX_INT_BLAST_WIDTH, blast_integers};
-pub use int_divmod::eliminate_int_divmod;
+pub use int_divmod::{
+    INT_DIVMOD_WITNESS_SAMPLES, IntDivModElimination, IntDivModFinding, IntDivModWitness,
+    MAX_CONGRUENCE_GROUPS, ZeroDivisorCongruence, eliminate_int_divmod, witness_int_divmod,
+};
 pub use lower_bv::lower_derived_bv;
 pub use propagate_values::{ValuePropagation, propagate_values};
 pub use quantifiers::{

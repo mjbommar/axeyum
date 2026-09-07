@@ -2452,8 +2452,11 @@ fn refute_bv2nat_out_of_range(
     else {
         return Ok(false);
     };
+    // Only `unsat` is taken from this route, and every mode of the elimination is a
+    // relaxation, so `unsat` transfers at any zero-divisor group count (ADR-1730).
     let lin = axeyum_rewrite::eliminate_int_divmod(&mut scratch, &relaxed)
-        .map_err(|e| SolverError::Backend(e.to_string()))?;
+        .map_err(|e| SolverError::Backend(e.to_string()))?
+        .into_assertions();
     Ok(
         crate::lia_gcd::prove_lia_unsat_by_diophantine(&scratch, &lin)
             || matches!(
@@ -2469,6 +2472,40 @@ fn refute_bv2nat_out_of_range(
                 Ok(CheckResult::Unsat)
             ),
     )
+}
+
+/// Declines a `sat` that came out of a zero-divisor relaxation the elimination did
+/// not congruence-close (ADR-1730).
+///
+/// `eliminate_int_divmod` maps each `div a 0` / `mod a 0` group to a fresh
+/// unconstrained variable — SMT-LIB leaves the value underspecified — and ties the
+/// groups together with pairwise congruence lemmas so that a satisfying assignment
+/// induces a genuine total `div(·, 0)`. Above `MAX_CONGRUENCE_GROUPS` those lemmas
+/// are skipped. Dropping conjuncts only ENLARGES the model set, so `unsat` and
+/// `unknown` pass through untouched at every group count; a `sat`, however, may
+/// give two provably-equal dividends different free values, which no total function
+/// can produce. That is a wrong `sat`, so it becomes a first-class `unknown` whose
+/// detail names the group count and the bound.
+fn guard_zero_divisor_sat(
+    result: CheckResult,
+    congruence: axeyum_rewrite::ZeroDivisorCongruence,
+) -> CheckResult {
+    if congruence.sat_transfers() {
+        return result;
+    }
+    match result {
+        CheckResult::Sat(_) => CheckResult::Unknown(UnknownReason {
+            kind: UnknownKind::Incomplete,
+            detail: format!(
+                "int div/mod-by-zero relaxation was not congruence-closed \
+                 ({} distinct zero-divisor dividends exceeds the {} bound), so a \
+                 `sat` of the relaxation need not be a model of the original",
+                congruence.groups(),
+                axeyum_rewrite::MAX_CONGRUENCE_GROUPS,
+            ),
+        }),
+        other => other,
+    }
 }
 
 /// The exact integer linear-refuter chain (bv2nat-range → Diophantine →
@@ -2494,8 +2531,18 @@ fn dispatch_int_linear_refuters(
     // `div`/`mod`-by-constant and `abs` are first eliminated into exact linear
     // constraints (equisatisfiable), so the *complete* simplex/DPLL path decides
     // them for both `sat` and `unsat` — not just the sat-only bit-blaster.
-    let lin = axeyum_rewrite::eliminate_int_divmod(arena, assertions)
+    let elim = axeyum_rewrite::eliminate_int_divmod(arena, assertions)
         .map_err(|e| SolverError::Backend(e.to_string()))?;
+    // ADR-1730. Above `MAX_CONGRUENCE_GROUPS` the zero-divisor Ackermann lemmas are
+    // NOT emitted, and the mode used to be invisible here. It is a relaxation, so
+    // `unsat` transfers at every group count — but this route does not only refute:
+    // the simplex and DPLL verdicts below are returned as the answer for the
+    // ORIGINAL query, `Sat` included, and a `sat` of a relaxation that is not
+    // congruence-closed need not be a model of the original. `guard_zero_divisor_sat`
+    // turns exactly that case into a first-class `unknown` naming the group count.
+    // A decline is a legal discharge (ADR-1721); a silent `sat` is not.
+    let congruence = elim.congruence();
+    let lin = elim.into_assertions();
     // Diophantine system refutation: integer (fraction-free) row reduction of the
     // *system* of top-level integer equalities — a sound refutation that decides
     // even *unbounded* systems the simplex/B&B cannot terminate on.
@@ -2512,6 +2559,7 @@ fn dispatch_int_linear_refuters(
         config.timeout.and_then(|t| Instant::now().checked_add(t)),
     ) {
         Ok(result) => {
+            let result = guard_zero_divisor_sat(result, congruence);
             with_recorder(rec, |t| t.record_result("lia-simplex", &result));
             return Ok(Some(result));
         }
@@ -2542,6 +2590,7 @@ fn dispatch_int_linear_refuters(
     }
     match check_with_lia_dpll(arena, &lin, config) {
         Ok(mut result) => {
+            result = guard_zero_divisor_sat(result, congruence);
             if let CheckResult::Unknown(reason) = &result
                 && features.has_function
                 && is_budget_unknown_kind(reason.kind)

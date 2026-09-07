@@ -1126,7 +1126,13 @@ pub(crate) fn check_with_nia(
     };
 
     // 1. Eliminate constant-divisor div/mod + abs exactly (equisatisfiable).
-    let lin = axeyum_rewrite::eliminate_int_divmod(arena, &base).map_err(err)?;
+    // The zero-divisor congruence mode (ADR-1730) needs no guard on this route:
+    // its `unsat` transfers in every mode, and its `sat` is already gated by
+    // `replay_sat` against the ORIGINAL assertions, which a model that violates
+    // `div`/`mod` functionality cannot pass.
+    let lin = axeyum_rewrite::eliminate_int_divmod(arena, &base)
+        .map_err(err)?
+        .into_assertions();
     // 2. Eliminate variable-divisor div/mod (guarded Euclidean + self-division).
     let after_divmod = eliminate_variable_divmod(arena, &lin, &mut counter)?;
     let had_var_divmod = after_divmod.is_some();
