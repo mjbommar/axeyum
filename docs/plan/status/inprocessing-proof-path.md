@@ -43,6 +43,17 @@ satisfiability-preserving, so a DRAT proof does not certify that an added clause
 was entailed. Replaced with the end-to-end form: 521 corrupted passes produced a
 wrong `unsat` and the checker rejected all 521.
 
+**A checker bug the inprocessed proof found.** Pointing `check_drat_backward` at
+the same proofs — because six of the suite's tests reach their verdict through
+one `check_drat` call — produced a disagreement on the first run: forward
+accepts, backward rejects at step 41. `drat_backward.rs` said which of several
+set-equal live clauses a deletion removes is "immaterial"; that is false for the
+pair every normalization prelude creates on purpose, since `(b)` is a unit to a
+verbatim propagator and `(b ∨ b)` is not. All three deletion lookups
+(`drat.rs`, `drat_backward.rs`, `lrat.rs`) now prefer the **multiset** match.
+A completeness fix, never an unsound acceptance; mutation control kills exactly
+one test per reverted half.
+
 **Not run, not ruled out.** *In-search* inprocessing — everything here is one
 pre-pass. It needs `Cdcl` to rebuild arena/headers/watches at level zero while
 preserving VSIDS activity and phases; the ~92k break-even is what makes it

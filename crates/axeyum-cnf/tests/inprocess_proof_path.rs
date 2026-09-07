@@ -21,8 +21,9 @@
 
 use axeyum_cnf::{
     CnfAssignment, CnfClause, CnfFormula, CnfLit, CnfVar, DratStep, InprocessOptions,
-    ProofSolveOutcome, SatResult, VecProofSink, check_drat, inprocess_into,
-    solve_with_drat_proof_inprocessed, solve_with_drat_proof_with_limits, solve_with_native_core,
+    ProofSolveOutcome, SatResult, VecProofSink, check_drat, check_drat_backward, check_lrat,
+    elaborate_drat_to_lrat, inprocess_into, solve_with_drat_proof_inprocessed,
+    solve_with_drat_proof_with_limits, solve_with_native_core,
 };
 
 /// Conflict budget for every solve here. Generous relative to the fixtures (all
@@ -693,6 +694,62 @@ fn drop_one_literal_from_add(prefix: &[DratStep], target: usize) -> Option<Vec<D
     Some(out)
 }
 
+/// **A second, independent checker sees the same thing.**
+///
+/// Six of the tests above reach their verdict through one call to
+/// [`check_drat`]. That is the shape `CLAUDE.md` warns about — a suite whose
+/// guards all reject through a single shared check is a suite with one guard —
+/// and it is only half-mitigated by the tests differing in *what* they feed the
+/// checker. So the backward checker, a different algorithm over the same bytes
+/// (it re-derives only the steps the refutation needs, rather than replaying
+/// every step forward against a growing active set), is required to agree on
+/// every proof this path produces, in both directions:
+///
+/// * a proof the forward checker accepts, the backward checker accepts;
+/// * a proof made unverifiable by silencing the passes' derivations, both
+///   reject.
+///
+/// A `check_drat` that accepted everything would make the other tests vacuous
+/// and would fail here.
+#[test]
+fn the_backward_checker_agrees_on_every_proof_and_every_corruption() {
+    let mut agreed = 0usize;
+    let mut corruptions = 0usize;
+    for (arm, options) in adding_option_sets() {
+        for (name, f) in corpus() {
+            let Some((prefix, search)) = split_proof(&f, options) else {
+                continue;
+            };
+            let mut full = prefix.clone();
+            full.extend(search.iter().cloned());
+            assert_eq!(
+                check_drat_backward(&f, &full),
+                Ok(true),
+                "{name} / {arm}: forward accepts this proof and backward does not"
+            );
+            agreed += 1;
+
+            if !prefix.iter().any(is_add) {
+                continue;
+            }
+            let mut silent: Vec<DratStep> = prefix.iter().filter(|s| !is_add(s)).cloned().collect();
+            silent.extend(search.iter().cloned());
+            assert_ne!(
+                check_drat_backward(&f, &silent),
+                Ok(true),
+                "{name} / {arm}: backward ACCEPTED a proof whose passes were silent \
+                 about every clause they derived"
+            );
+            corruptions += 1;
+        }
+    }
+    assert!(agreed >= 20, "too few proofs cross-checked ({agreed})");
+    assert!(
+        corruptions >= 20,
+        "too few corruptions cross-checked ({corruptions})"
+    );
+}
+
 /// The reduced formula is not merely equisatisfiable in the abstract: solving it
 /// with a route that has nothing to do with the proof path agrees with the
 /// baseline too. An independent second opinion on obligation 1, so a shared bug
@@ -722,4 +779,40 @@ fn the_reduced_formula_agrees_with_an_independent_route() {
             }
         }
     }
+}
+
+/// **The inprocessed proof survives the rest of the evidence pipeline, not just
+/// the checker.**
+///
+/// A certificate that verifies but cannot be elaborated stops at the crate
+/// boundary: `elaborate_drat_to_lrat` is what turns a DRAT stream into the
+/// hint-carrying form the Lean/Alethe route consumes, and it resolves deletions
+/// through its own clause lookup. That lookup has the same set-versus-multiset
+/// choice the two checkers disagreed on, and the normalization prelude puts a
+/// live set-equal, multiset-different pair in front of it on every instance with
+/// a repeated literal. So it is exercised here rather than assumed.
+#[test]
+fn every_inprocessed_proof_still_elaborates_to_checkable_lrat() {
+    let mut elaborated = 0usize;
+    for (name, f) in corpus() {
+        for (arm, options) in option_sets() {
+            let ProofSolveOutcome::Unsat(proof) =
+                solve_with_drat_proof_inprocessed(&f, None, CONFLICT_BUDGET, options)
+            else {
+                continue;
+            };
+            let steps = elaborate_drat_to_lrat(&f, &proof)
+                .unwrap_or_else(|e| panic!("{name} / {arm}: elaboration failed: {e:?}"));
+            assert_eq!(
+                check_lrat(&f, &steps),
+                Ok(true),
+                "{name} / {arm}: elaborated LRAT does not check"
+            );
+            elaborated += 1;
+        }
+    }
+    assert_eq!(
+        elaborated, 54,
+        "the number of elaborated refutations moved; recount before adjusting"
+    );
 }

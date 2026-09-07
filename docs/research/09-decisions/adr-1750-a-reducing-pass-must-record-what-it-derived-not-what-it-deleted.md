@@ -2,7 +2,7 @@
 
 Status: accepted
 Date: 2026-09-07
-Index-summary: The proof-producing SAT core may now run `simplify`/`vivify`/`bve` before search and still emit ONE DRAT proof of the original formula (`axeyum_cnf::inprocess`, `solve_with_drat_proof_inprocessed`). Measured obligation: of the two halves of what a pass emits, only the `Add` half is soundness-critical — making the passes silent about every clause they derived is rejected 38 of 38 times, while dropping every `Delete` leaves all 38 proofs valid, because deletion only shrinks the checker's active set and RUP is monotone in it. Also measured: a DRAT prefix does NOT certify that an added clause was entailed (`check_drat` accepts RAT, which is satisfiability-preserving), so the soundness obligation is carried end to end — 521 corrupted passes produced a wrong `unsat` and the checker rejected all 521. Default stays OFF: BVE cuts propagations per conflict to a median 0.426 and raises conflicts per second 1.875x, closing essentially the whole measured 2.56x gap to Kissat, but costs 1.2-88 s against a break-even of 59k-131k conflicts (median ~92k, flat across a 100x range of instance size).
+Index-summary: The proof-producing SAT core may now run `simplify`/`vivify`/`bve` before search and still emit ONE DRAT proof of the original formula (`axeyum_cnf::inprocess`, `solve_with_drat_proof_inprocessed`). Measured obligation: of the two halves of what a pass emits, only the `Add` half is soundness-critical — making the passes silent about every clause they derived is rejected 38 of 38 times, while dropping every `Delete` leaves all 38 proofs valid, because deletion only shrinks the checker's active set and RUP is monotone in it. Also measured: a DRAT prefix does NOT certify that an added clause was entailed (`check_drat` accepts RAT, which is satisfiability-preserving), so the soundness obligation is carried end to end — 521 corrupted passes produced a wrong `unsat` and the checker rejected all 521. Pointing a second checker at the path found a real bug: `check_drat` and `check_drat_backward` disagreed, because a deletion names a literal MULTISET and all three lookups matched only the set — `(b)` and `(b ∨ b)` are set-equal, and only one of them propagates. Default stays OFF: BVE cuts propagations per conflict to a median 0.426 and raises conflicts per second 1.875x, closing essentially the whole measured 2.56x gap to Kissat, but costs 1.2-88 s against a break-even of 59k-131k conflicts (median ~92k, flat across a 100x range of instance size).
 Index-status: accepted
 
 ## Context
@@ -91,8 +91,44 @@ checked property and not a remark. It also decides where the cost is: on the
 3.1M-variable `p4dfa` instance BVE's prefix is 37.7 M steps and subsumption's is
 92 k, three orders of magnitude apart for the same reason.
 
-**5. The default stays `OFF`, and the number a scheduling decision needs is the
+**5. A deletion names a literal MULTISET, not a literal set.** All three
+deletion lookups — `position_of` (`drat.rs`), `RecordSlot::pop_matching`
+(`drat_backward.rs`) and `find_active_id` (`lrat.rs`) — now prefer the live
+clause whose literal multiset the deletion names, falling back to any set match.
+This is forced by decision 3: the normalization prelude puts `(b)` and `(b ∨ b)`
+live in the active set at the same moment on purpose, they are set-equal and
+multiset-different, and a checker's unit propagation counts literal
+*occurrences* — so `(b)` is a unit to it and `(b ∨ b)` is not, and **which copy
+a deletion removes decides whether later steps can propagate**. See
+"A checker bug the inprocessed proof found" below.
+
+**6. The default stays `OFF`, and the number a scheduling decision needs is the
 break-even, not the wall time at one budget.** See Consequences.
+
+## A checker bug the inprocessed proof found
+
+`check_drat` and `check_drat_backward` **disagreed** on a real inprocessed
+proof — forward `Ok(true)`, backward `Err(StepNotVerified { step: 41 })` — the
+first time a second checker was pointed at this path. The cause is a comment in
+`drat_backward.rs` asserting the opposite of decision 5: *"which of several
+identical live clauses is removed is immaterial — they have the same literal
+set"*. True for every clause without a repeated literal; false for the pair this
+pipeline manufactures deliberately. `check_drat` scans insertion order and
+removed the original (right, but by luck of scan direction); the backward checker
+takes the most recent match and removed the deduped clause, leaving one that
+cannot propagate, and rejected a valid proof.
+
+The bug direction is **rejection of valid proofs**, never unsound acceptance, and
+the fix is a completeness fix: both candidates are logically the same clause, and
+the one now kept is the one that propagates more, so nothing rejected for a good
+reason becomes accepted. It matters because the backward route is the usable one
+at scale (231x faster than forward here) and because `find_active_id` sits on the
+path to Lean/Alethe — a certificate that verifies but cannot elaborate stops at
+the crate boundary.
+
+Mutation control on a scratch copy, one revert at a time: reverting the backward
+half kills exactly one test, reverting the forward half kills exactly the same
+one, and the unmutated control passes 86.
 
 ## What a DRAT prefix does not carry, and how the negative test had to change
 
@@ -186,6 +222,8 @@ than forward `check_drat` (0.87 s vs 200.85 s over 203,528 steps), well past the
   link, which is exactly the shape ADR-1721 names. The machinery now exists; the
   obstacle is that the backend also `compact()`s, which renumbers variables and
   breaks the correspondence between prefix and searched formula.
-- No `p4dfa` instance in the ≤25 MB slice is decided `unsat` by the native core
-  at 20,000 conflicts, so the end-to-end proof check at that corpus's scale could
-  not be run on that corpus.
+- Of the 113 files in the local `p4dfa` slice, 53 are ≤25 MB and were censused
+  at a 20,000-conflict budget: 3 `sat`, 50 budget-exhausted, **0 `unsat`, 0
+  timeouts**. So there is no `p4dfa` refutation to check at that corpus's scale,
+  and the corpus-scale proof check ran on a near-threshold random 3-SAT instead.
+  The 60 files above the size cut were not examined.

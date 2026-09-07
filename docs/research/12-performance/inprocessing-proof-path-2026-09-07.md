@@ -383,9 +383,18 @@ BVE prefix is proportional to the *formula*, so on the largest instance it is
 ### The proof still checks, at a scale beyond the unit corpus
 
 The eight `p4dfa` instances are the wrong fixture for this: **none of them is
-decided `unsat` within the budget**, and a sweep over the whole ≤25 MB slice
-found no `p4dfa` instance the native core refutes at 20,000 conflicts, so there
-is no `p4dfa` proof to check. Recorded as a limitation, not worked around.
+decided `unsat` within the budget**, so there is no proof to check. A census over
+the wider slice says the same and says how far it looked, because "the search
+found nothing" and "the search did not finish" print identically and only one of
+them is a negative result:
+
+> Of the 113 files in the local `p4dfa` slice, **60 were skipped for size
+> (>25 MB) and 53 examined** at a 20,000-conflict budget. Verdicts: **3 `sat`,
+> 50 budget-exhausted, 0 `unsat`, and 0 timeouts** against a 120 s per-file
+> guard. So the zero is a real zero over the 53 examined and says nothing at all
+> about the 60 that were not.
+
+Recorded as a limitation, not worked around.
 
 A near-threshold random 3-SAT instance (240 variables, 1,056 clauses, seed 11)
 is refuted and gives a real proof at scale, on s4:
@@ -443,3 +452,86 @@ Both check against the **original** formula. Two things worth keeping:
 - **Memory.** Every number here is time or a count. The 37.7 M-step prefix was
   produced under a 20 GB ceiling and did not hit it, which is the only memory
   fact this sweep establishes.
+
+## 7. A checker bug the inprocessed proof found
+
+Added late: a second checker over the same proofs, because six of the tests in
+`tests/inprocess_proof_path.rs` reach their verdict through one call to
+`check_drat`, and a suite whose guards all reject through a single shared check
+is a suite with one guard. `check_drat_backward` is a different algorithm over
+the same bytes, so requiring it to agree turns "the proof checks" from a claim
+about one implementation into a claim about the proof.
+
+**It disagreed on the first run.**
+
+```
+random-k3-v24-c102-s7 / subsume: forward accepts this proof and backward does not
+  left: Err(StepNotVerified { step: 41 })   right: Ok(true)
+```
+
+Bisected: the prefix alone verifies in both, the search's stream alone verifies
+against the reduced formula in both, and only the concatenation splits them. The
+cause is in `drat_backward.rs`, in a comment that says the opposite:
+
+> // Which of several identical live clauses is removed is
+> // immaterial — they have the same literal set, and a clause's
+> // stored literal order affects nothing but its own RAT pivot,
+> // which a database clause never supplies.
+
+**That is true for every clause without a repeated literal, and false for the
+one case this pipeline manufactures on purpose.** `(b ∨ b)` and `(b)` have the
+same literal *set* and different *multisets*, and a `DRAT` checker's unit
+propagation counts literal **occurrences**: `(b)` is a unit to it and `(b ∨ b)`
+is not. The normalization prelude every inprocessing pass emits —
+`Add(deduped)` then `Delete(original)` — deliberately puts exactly that pair
+live in the active set at the moment of the deletion, and it exists *because*
+the checker propagates literals verbatim. So which copy the deletion removes
+decides whether later steps can propagate:
+
+* `check_drat` scans `active` in insertion order and removed the original, which
+  is the right one — by luck of scan direction, not by design;
+* `check_drat_backward` takes the most recent match (`rposition`) and removed the
+  deduped clause, leaving `(b ∨ b)` — which cannot propagate — and rejecting a
+  valid proof.
+
+**Direction of the bug: it rejects valid proofs.** No unsound acceptance is
+possible from it, and both choices leave a logically identical clause set. But a
+checker that refuses the certificates this path produces is not usable for them,
+and the fast route is the backward one (231x faster at scale, measured above).
+
+### The fix, and why it is a completeness fix and not a soundness one
+
+All three deletion lookups now **prefer the live clause whose literal multiset
+the deletion names, falling back to any set match**: `position_of` in `drat.rs`,
+`RecordSlot::pop_matching` in `drat_backward.rs`, and `find_active_id` in
+`lrat.rs` (which had the same latent choice, and which the certificate travels
+through on the way to Lean/Alethe — an inprocessed proof that verifies but
+cannot elaborate stops at the crate boundary). The two keys differ only for a
+clause with a repeated literal, so no existing proof's behaviour moves.
+
+Sound because both candidates are logically the same clause, and the one now
+kept is the one that propagates *more*: nothing rejected for a good reason
+becomes accepted. Making the preference explicit in all three is what turns the
+forward checker's correct answer from a coincidence of scan direction into a
+property.
+
+**Mutation control**, on a copy under `/data0`, one revert at a time:
+
+| reverted | test result | killed |
+|---|---|---|
+| nothing (control) | 86 passed | — |
+| backward loses the preference | 85 passed, 1 failed | `a_deletion_prefers_the_clause_whose_multiset_it_names` |
+| forward loses the preference | 85 passed, 1 failed | the same one |
+
+Exactly one test dies for each half, which is the rule this repository applies
+to any change to a checker.
+
+The pinned fixture had to be built twice. The first was
+`(1∨1) ∧ (¬1∨2) ∧ (¬2)`, and its "control" half — delete the deduped clause
+instead and the empty clause must become underivable — **failed, because that
+formula refutes on its own**: `(¬2)` is a unit, it propagates `¬1` through
+`(¬1∨2)`, and `(1∨1)` is then falsified with no need for `(1)` at all. The
+accepted fixture is `(1∨1) ∧ (¬1∨2) ∧ (¬1∨¬2)`, which contains no unit clause,
+so nothing propagates until `(1)` is added and the proof genuinely depends on
+the right clause surviving. A negative control that cannot fail is the failure
+mode this file has already hit once (§4), and it very nearly happened again.
