@@ -146,12 +146,21 @@ now. Nothing was deleted.
 | 2026-09-07 | `cf7f6ade8` | Lane opened: diary with six pre-registered hypotheses, ranked before any measurement. |
 | 2026-09-07 | bench-divisions | Diary + status file opened, QF_IDL zero-coverage finding (`7b66ad607`) |
 | 2026-09-07 | bench-divisions | Full 12-division timing sweep, methodology correction, results committed |
+| 2026-09-07 | `ea85c9813` | `euf_egraph`, `lra_theory` and `lia_theory` run the native proof-producing core instead of `CdclT` (S7b step 4), so their refutations can carry the ADR-1704 artifact. The swap immediately cost a give-up REASON, which the existing suite caught: without `CdclT`'s top-of-loop `timed_out()` check the native core propagated `x > 0 & x < 1` at a zero budget, ran a `final_check` the theory had no budget to answer, and returned `Sat` — `lia_theory` then reported `Unknown { kind: Incomplete }` where `CdclT` reported `Unknown { kind: Timeout }`, and `dpll_lia::check_with_arith_dpll` branches on that kind. `solve_native` now makes the eager check itself, with a test whose control shows the fixture is refuted without the deadline. |
+| 2026-09-07 | `1777d7a8e` | `string_theory` joins them; `SatModelCtx::solver` moves from `&CdclT` to `&NativeModel`. Counts attributed by pairing each `Running tests/<file>` line with its own result — cargo runs test binaries alphabetically, not in flag order, and a first pass at the message had two suites' counts swapped. |
+| 2026-09-07 | `a945efdd7` | The trust step reaches the front door, and the ledger is readable from a sweep. `produce_evidence` records around its whole dispatch; the ambiguity guard declines when more than one native refutation happened, because `auto::check_auto` enumerates case-split branches and discards each one's `Unsat` (relaxing `== 1` killed exactly one test). `smtcomp_cli --evidence` gains `trusted=`, whose position is FORCED: `execute-autogenesis-operation.py`'s regex was anchored at both ends and required `certified=` immediately before `recheck=`, so every placement broke it. Also measured: small queries never reach the bare arm — QF_UF transitivity gets `unsat-alethe`, a UF pigeonhole `unsat-bool-euf-exhaustive` — so this is a large-query metric. |
+| 2026-09-07 | `7da79642f` | `witness_function_abstraction` ports ADR-1721 §7 onto `eliminate_functions`, wired into `AckermannUnsatCertificate::recheck` as step 2. **The straight port did not catch the defect it exists for.** With the elimination mutated so every application of one function shares one fresh symbol, the satisfiable `f(a) = 1 & f(b) = 2` becomes a wrong `unsat` and `recheck` still returned `Ok(true)` — the two sides are compared as BOOLEANS and both are simply `false` at almost every sample. The witness therefore carries a structural count, `unnamed_applications`; with it, `recheck` returns `Ok(false)`. Mutation controls: never incrementing that count kills exactly one test; never recording a value disagreement kills three. |
 | 2026-09-07 | `3ba12a718` | A deletion names a literal MULTISET: `check_drat` and `check_drat_backward` disagreed on an inprocessed proof because all three deletion lookups matched only the literal SET, and the normalization prelude puts `(b)` and `(b OR b)` live at the same moment. Fixed in `drat.rs`, `drat_backward.rs` and `lrat.rs`; a completeness fix, mutation-controlled. |
 | 2026-09-07 | `8f24e7f23` | The measurement (ADR-1750) plus `examples/inprocess_profile.rs` and `examples/inprocess_proof_check.rs`. |
 | 2026-09-07 | `f7321fcc0` | `axeyum_cnf::inprocess` + `solve_with_drat_proof_inprocessed`: the passes now say what they did. `simplify`/`bve` gained recorders threaded through their fixpoint loops (a diff of input against output has no ordering guaranteed to verify). `tests/inprocess_proof_path.rs`, 8 tests over 19 instances x 6 arms. |
 | 2026-09-07 | `f8b9927d1` | Lane opened: five expectations pre-registered, plus the correction that `sat_bv_backend` already runs these passes — off by default, as preprocessing, with the certificate covering only the reduced formula. |
 | 2026-09-07 | int-divmod-witness | `witness_int_divmod` + `IntDivModElimination` + `guard_zero_divisor_sat`: the pass reports its mode and both halves get interpreted, not re-derived; the wrong-`unsat` mutant passes 30 of 30 pre-existing tests and dies on exactly one of the new ones |
 | 2026-09-07 | int-divmod-witness | ADR-1730: the `MAX_CONGRUENCE_GROUPS` cap is a relaxation, so the direction it silently changes is `sat`, not `unsat` |
+| 2026-09-07 | lra-theory-side | `ad2b40370` — three cost models, three corpus refutations, recorded with file names and numbers; the atom count returns as a budget-relative screen calibrated to reproduce `1_024` exactly at the default budget, so the shipped build cannot regress. |
+| 2026-09-07 | lra-theory-side | `6a37b934d`, `c615e835b` — the Fourier–Motzkin fallback bounded in bytes at its entry and per elimination step, the latter checked BEFORE the loop that clones a length-`n` multiplier vector per row. `MAX_FM_CONSTRAINTS` capped a count whose bytes were unbounded. |
+| 2026-09-07 | lra-theory-side | `4acb9332f` — ADR-1752's budget machinery: ceilings derived from bytes, `SolverConfig::memory_limit_mb` as the override, refusals that state their numbers. Also replaces the previous commit's Stein GCD (measured **1.77x slower**) with Euclid narrowed to `u64`, and gives `smtcomp_cli` `--memory-limit-mb` plus a give-up line. |
+| 2026-09-07 | lra-theory-side | `aa6847be0` — `propagatable`, an output-equivalent scan filter for `propagate_bounds` (the scan was 75% of a 24 s budget on `miplib/pp08a-1000` for zero literals), mutation-checked in both directions. |
+| 2026-09-07 | lra-theory-side | `a56c43639` — five engine counters splitting the `final_check` call count by outcome, core width, widening fallback and live rows, plus the assert-time partial check. No behaviour change; this is what falsified the census. |
 | 2026-09-07 | qf-nra-entry | committed `bench-results/parity-lists/QF_NRA.txt` (200 files, sha256 `d645dd907edd`) |
 | 2026-09-07 | qf-nra-entry | QF_NRA parity ledger row appended: 110/200 vs cvc5 186/200, ratio 59.1%, 0 disagreements (SOUND) |
 | 2026-09-07 | qf-nra-entry | loss census committed (`bench-results/parity-losses-20260906/`), `docs/plan/families/smt-quantifier-free/qf-nra.md` updated from "not entered" to on the board |
@@ -46337,6 +46346,63 @@ else in `category_setoid.rs` or `groups.rs` was edited, so an additive merge
 with a concurrent `CatS.*` lane is a one-line reconciliation at each of those
 two sites.
 
+**What this lane is for.** The certificate chain
+([family page](docs/plan/families/evidence/README.md)) was whole at every stage except
+two: CDCL(T) theory reasoning, where ADR-1704 defines a two-stream artifact that
+until 2026-09-07 exactly ONE route emitted, and preprocessing, where the
+`recheck` of array elimination and Ackermann **re-derives** rather than
+interprets — which `trust.rs` names in its own words as proving "determinism,
+not faithfulness", against a real shipped wrong-`unsat`.
+
+**Where it stands after this lane.**
+
+- **Five theory routes run the proof-producing core**: `dl_online` (S7b) plus
+  `euf_egraph`, `lra_theory`, `lia_theory` and `string_theory`. Three do not,
+  each for a named reason (below).
+- **The front door attaches the step.** `produce_evidence` records the artifact
+  around its whole dispatch and attaches `SatRefutation` /
+  `SatRefutationModuloTheory` on the bare-`unsat` arms, behind an ambiguity
+  guard that declines rather than publish a case-split branch's refutation as
+  the query's.
+- **The number is readable from a sweep.** `smtcomp_cli --evidence` prints
+  `trusted=<n>[:<label>[+],…]`. Measured on the committed parity lists (first 40
+  files, 8 s, release, `taskset -c 0-7`, zero verdicts contradicting
+  `declared`): QF_IDL 3 of 3 refutations carry a step, 2 of them ADR-1704;
+  QF_LIA 4 of 4 (pre-existing `farkas+`, newly visible); QF_UF 1 of 16;
+  QF_LRA decided nothing at that budget.
+- **The preprocessing witness is ported** to `eliminate_functions`, and porting
+  it produced a finding that changed its design (below).
+
+**What this lane did NOT reach**, stated as claims a resumer can check:
+
+- `uflra_online` and `uflia_online` are still on `CdclT`. Both read
+  `CdclT::theory_propagations()` as a diagnostic out-param; on the native core
+  that counter is behind `TheorySolveOptions::collect_layer_stats`, which turns
+  on per-call clock reads, so it is its own change with its own measurement.
+- `ufbv_online` is still on `CdclT`: it is the single client of the incremental
+  protocol, which has no port (S7a step 3).
+- **QF_UF's fifteen uncounted refutations.** They arrive as
+  `unsat-bool-euf-online`, whose evidence producer attaches no trusted step at
+  all, so they never reach the arm that reads the artifact channel. Moving a
+  route is necessary and not sufficient; the fix is an attach in
+  `check_bool_euf_online_evidence`. This is the highest-value next slice.
+- **The cost of dispatcher-wide recording was not priced.** Recording is on for
+  every `produce_evidence` call now, bounded by the 8M-literal budget. The
+  sweeps above ran without complaint at an 8 s budget, but no before/after
+  timing A/B was taken. Report as "not measured", not as "free".
+- `scripts/tests/test_execute_autogenesis_operation.py` was not run as a suite:
+  all 15 of its tests error in `setUp` in this worktree ("frontier is stale or
+  does not match the authoritative ledger"), before and after this lane. The
+  regex change was verified directly instead.
+
+**Standing constraints, all held.** Zero verdict changes, checked per route. A
+refutation modulo N theory lemmas is graded `SatRefutationModuloTheory` and
+never `SatRefutation`. The lemma count is a subtraction on the artifact.
+`check_drat` is unchanged. Sampled evidence stays uncertified.
+
+Diary: [`docs/research/12-performance/certificate-chain-2026-09-07.md`](docs/research/12-performance/certificate-chain-2026-09-07.md).
+Backing data: [`bench-results/certificate-chain-20260907/`](bench-results/certificate-chain-20260907/README.md).
+
 **The primorial and the sharp odd central binomial bound landed; Chebyshev's
 lower bound in the counting form did NOT, and the obstruction is a blind
 evaluation population rather than mathematics** (`WIP`, chebyshev-pi,
@@ -56920,6 +56986,65 @@ Not attempted: general-`n` determinant, invertibility, or `Ax=b` solvability
 (remain open, `docs/curriculum/graded-statement-families-number-theory-and-linear-algebra.md`
 LA-1/LA-2/LA-3). A Mathlib reader would correctly say this lane covers one
 fixed dimension (`n = 2`) of invertibility, not general linear algebra.
+
+**`WIP`, lra-theory-side, 2026-09-07.** QF_LRA is 84 files behind the real
+frontier after [ADR-1732](docs/research/09-decisions/adr-1732-second-reference-per-division-not-a-replacement.md)
+(Yices 181, cvc5 145, ours 97). This lane took the theory side. Full record,
+including four hypotheses that were wrong and two plan premises that were false:
+[the diary](docs/research/12-performance/lra-theory-side-2026-09-07.md) and
+[the measurement log](docs/research/12-performance/lra-theory-side-2026-09-07-log.md).
+
+**Measured: 97 → 98 of 200 and 7 → 8 of 33, zero losses, zero sat/unsat flips**,
+with the commonly-decided files at 0.89x. The gain is
+`spider_benchmarks/no_op_accs.base.smt2` (unknown → unsat).
+
+**The census is wrong in two places, and counters found both before any change.**
+
+*The 84% figure is not the population.* `final_check` is 93% of wall on
+`blending/1` and 71% on the biggest Heizmann file, but **14%** on
+`miplib/pp08a-1000`, where **`theory_propagate` was 18.05 s of a 24.03 s budget
+(75%) while offering zero literals**. And the whole `clock_synchro` family spends
+**0.2–2%** of its budget inside the CDCL(T) driver at all — 51 ms of traced
+stages against 24,266 ms of wall. Something outside the search owns those files'
+time: a **third census class nobody has looked at**.
+
+*The "23 admission declines" are not admission declines.* Re-run at a generous
+budget, all 22 no-trace files in the population report `kind=Timeout`; the
+memory budget refuses none of them. Peak RSS across that class is 201 MiB to
+8.7 GiB, median 759 MiB — and it is not the theory's: `sc-11` is at **617 MiB
+resident at backend entry**, before the LRA route runs.
+
+**Landed.** An output-equivalent scan filter for `propagate_bounds`
+(mutation-checked in both directions); `gcd` narrowed to `u64` plus integer fast
+paths; the Fourier–Motzkin fallback bounded in bytes for the first time
+([ADR-1752](docs/research/09-decisions/adr-1752-the-lra-admission-cap-becomes-budget-relative.md));
+the atom count made **budget-relative** and reportable; `smtcomp_cli
+--memory-limit-mb` and a `; give-up kind=… detail=…` line, because the binary
+discarded `UnknownReason` entirely and a resource refusal was indistinguishable
+from a timeout in every recorded run.
+
+**The honest limit of the cap work.** Deleting the count outright was attempted
+with three different cost models and the corpus refuted all three — retained
+coefficients (7.8 GB abort), the dense tableau (refused a file the fallback
+decides in 0.18 s), and Fourier–Motzkin's own allocations bounded in place
+(still 7.8 GB on `miplib/danoint-266`). With no `#[global_allocator]` hook
+nothing here can attribute an allocation it did not make. So the count survives
+as a conservative screen calibrated to reproduce `1_024` **exactly** at the
+default budget — the shipped build cannot regress — while now moving with
+`SolverConfig::memory_limit_mb`.
+
+**For the QF_NRA lane**, whose 62 losses sit behind the same cap: the knob now
+works. `--memory-limit-mb 8192` admits 13,107 atoms where no amount of memory
+previously bought one past 1,024, and a refusal names the count, the budget and
+the remedy. What to watch is the **process** peak, not the construction: the
+numbers above, plus one file over 8 GiB. Do not expect admission alone to decide
+files — on this division it decided none.
+
+**Next, in order.** (1) The `clock_synchro` third class — 99.8% of a budget
+outside the instrumented search, unexplained. (2) Where `miplib/danoint-266`'s
+7.8 GB goes; that answer is what a real cost model needs. (3)
+`miplib/pp08a-1000`: 30,443 refutations at a 138-literal mean core width over
+527 live rows, i.e. lemmas that each exclude close to one assignment.
 
 Status: LANDED — LUB's ADR-0603 row 2 is a kernel-checked theorem, axiom-free.
 
