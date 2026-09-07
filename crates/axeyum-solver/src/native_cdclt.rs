@@ -72,16 +72,60 @@ thread_local! {
         const { RefCell::new(None) };
 }
 
+thread_local! {
+    /// How many native CDCL(T) refutations have happened on this thread since
+    /// the last [`reset_theory_refutation_channel`].
+    ///
+    /// **The channel publishes the LAST refutation, so more than one makes it
+    /// ambiguous.** A route calls `solve_native` once and returns its verdict,
+    /// but `crate::auto` does not: `check_auto` enumerates case-split branches
+    /// (`auto.rs:1298`, `auto.rs:1458`) and reports `unsat` only when EVERY
+    /// branch was refuted, discarding each branch's `CheckResult::Unsat` on the
+    /// way. The artifact left in the slot then refutes the last branch, not the
+    /// query, and attaching it to the query's `unsat` would be a fabricated
+    /// claim -- the exact shape this repository's evidence discipline exists to
+    /// prevent.
+    ///
+    /// So the counter is not a statistic. It is the guard:
+    /// [`take_last_theory_refutation`] hands back an artifact only when exactly
+    /// one refutation happened, and declines otherwise. Under-reporting (no
+    /// trust step) is safe; over-reporting is not.
+    static THEORY_REFUTATIONS: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
+}
+
 /// Removes and returns the artifact of the last native CDCL(T) refutation on
 /// this thread, leaving the slot empty.
+///
+/// Returns `None` -- even with an artifact present -- when more than one
+/// refutation has happened since the channel was reset, because the slot then
+/// names the last of several sub-solves and not the caller's query. See
+/// [`THEORY_REFUTATIONS`].
 pub(crate) fn take_last_theory_refutation() -> Option<TheoryRefutation> {
-    LAST_THEORY_REFUTATION.with(|slot| slot.borrow_mut().take())
+    let artifact = LAST_THEORY_REFUTATION.with(|slot| slot.borrow_mut().take());
+    if THEORY_REFUTATIONS.with(std::cell::Cell::get) == 1 {
+        artifact
+    } else {
+        None
+    }
 }
 
 /// Clears the slot without reading it. A route that is about to solve calls
 /// this so a verdict it does not reach cannot inherit an older artifact.
 pub(crate) fn clear_last_theory_refutation() {
     LAST_THEORY_REFUTATION.with(|slot| *slot.borrow_mut() = None);
+}
+
+/// Clears the slot **and** the refutation counter, so the next
+/// [`take_last_theory_refutation`] speaks about this solve alone.
+///
+/// A route clears only the slot ([`clear_last_theory_refutation`], which
+/// `solve_native` calls on entry). A caller that spans a whole DISPATCH -- the
+/// evidence layer around `crate::auto::solve` -- resets the counter too, which
+/// is what makes "exactly one refutation" mean "exactly one inside this
+/// dispatch".
+pub(crate) fn reset_theory_refutation_channel() {
+    clear_last_theory_refutation();
+    THEORY_REFUTATIONS.with(|count| count.set(0));
 }
 
 thread_local! {
@@ -360,6 +404,20 @@ pub(crate) fn solve_native<T: TheorySolver>(
     deadline: Option<Instant>,
     theory: &mut T,
 ) -> NativeSolveOutcome {
+    // `CdclT::solve_inner` tests its deadline at the TOP of the main loop, so an
+    // already-exhausted budget returns `Outcome::Unknown` having propagated
+    // nothing. The native core checks less eagerly, and the difference is
+    // observable: measured on `x > 0 & x < 1` with a zero timeout, the core
+    // propagated both units, ran a `final_check` the theory had no budget to
+    // answer, and returned `Sat`, which `lia_theory` then turned into
+    // `Unknown(Incomplete, "model did not replay")` instead of
+    // `Unknown(Timeout)` -- a different Unknown KIND, which
+    // `dpll_lia::check_with_arith_dpll` branches on. Restoring the eager check
+    // here keeps the engine swap a swap: the whole point is that no verdict and
+    // no give-up reason moves.
+    if deadline.is_some_and(|at| Instant::now() >= at) {
+        return NativeSolveOutcome::Unknown;
+    }
     let mut formula = CnfFormula::new(var_count);
     let mut occurring = vec![false; var_count];
     for clause in clauses {
@@ -389,33 +447,94 @@ pub(crate) fn solve_native<T: TheorySolver>(
     // heuristics: `CdclT` decides `true` first and does no target rephasing.
     // A model-based consumer can lose a verdict on a different-but-correct
     // model, and one did (see `TheorySolveOptions`).
+    // `--trace` is a second consumer behind the same guard `CdclT` reads, and it
+    // has to be honoured HERE rather than at construction because on this core
+    // collection is a `TheorySolveOptions` field. A route moved onto this engine
+    // otherwise stops answering `--trace` silently -- which is what
+    // `lra_theory::tests::theory_layer_stats_are_populated_on_a_theory_conflict`
+    // caught the moment `lra_theory` moved. Off unless asked: the timing hooks
+    // are per-call clock reads.
+    let collect_layer_stats = crate::cdclt::layer_stats_enabled();
     let options = TheorySolveOptions {
         initial_phase: true,
         target_rephase: false,
-        collect_layer_stats: false,
+        collect_layer_stats,
         record_proof: recording_artifacts(),
         proof_literal_budget: PROOF_LITERAL_BUDGET,
     };
-    match solve_with_theory_and_drat_proof_with_options(
+    let (outcome, native_stats) = solve_with_theory_and_drat_proof_with_options(
         &formula,
         &mut adapter,
         deadline,
         usize::MAX,
         options,
-    )
-    .0
-    {
+    );
+    if collect_layer_stats {
+        // The engine counters come from the THEORY, exactly as
+        // `CdclT::theory_layer_stats` takes them, so an LRA route keeps
+        // reporting simplex pivots through this engine too.
+        crate::cdclt::publish_theory_layer_stats(&theory_layer_stats(
+            &native_stats,
+            adapter.theory.engine_counters(),
+        ));
+    }
+    match outcome {
         TheorySolveOutcome::Sat(assignment) => NativeSolveOutcome::Sat(NativeModel {
             assignment,
             occurring,
         }),
         TheorySolveOutcome::Unsat(refutation) => {
+            // Counted whether or not an artifact was recorded: the guard is
+            // about how many refutations HAPPENED, and a recording-off solve
+            // that refuted a case-split branch makes the next one ambiguous
+            // just the same.
+            THEORY_REFUTATIONS.with(|count| count.set(count.get().saturating_add(1)));
             LAST_THEORY_REFUTATION.with(|slot| *slot.borrow_mut() = refutation);
             NativeSolveOutcome::Unsat
         }
         TheorySolveOutcome::ResourceOut | TheorySolveOutcome::Interrupted => {
             NativeSolveOutcome::Unknown
         }
+    }
+}
+
+/// Lifts the native core's [`axeyum_cnf::NativeLayerStats`] into the
+/// [`TheoryLayerStats`] `--trace` already prints, so one channel means the same
+/// thing whichever engine ran.
+///
+/// The fifteen driver-side fields are a field-for-field port (S7b landed them at
+/// the same increment sites in the native core); the engine-side fields come
+/// from the theory's own `engine_counters`, which is where `CdclT` gets them
+/// too. `None` there means "this theory keeps no feasibility engine", never
+/// "zero".
+fn theory_layer_stats(
+    native: &axeyum_cnf::NativeLayerStats,
+    engine: Option<crate::euf_egraph::TheoryEngineCounters>,
+) -> crate::layers::TheoryLayerStats {
+    crate::layers::TheoryLayerStats {
+        boolean_propagate: native.boolean_propagate,
+        theory_assert: native.theory_assert,
+        theory_propagate: native.theory_propagate,
+        theory_push_pop: native.theory_push_pop,
+        conflict_analysis: native.conflict_analysis,
+        theory_final_check: native.theory_final_check,
+        theory_explain: native.theory_explain,
+        final_checks: native.final_checks,
+        theory_conflicts: native.theory_conflicts,
+        theory_propagations: native.theory_propagations,
+        decisions: native.decisions,
+        learned_clauses: native.learned_clauses,
+        learned_literals: native.learned_literals,
+        learned_literals_before_minimization: native.learned_literals_before_minimization,
+        restarts: native.restarts,
+        simplex_pivots: engine.map(|e| e.simplex_pivots),
+        simplex_checks: engine.map(|e| e.simplex_checks),
+        simplex_cold_restarts: engine.map(|e| e.simplex_cold_restarts),
+        bound_retractions: engine.map(|e| e.bound_retractions),
+        bound_assertions: engine.map(|e| e.bound_assertions),
+        theory_propagations_offered: engine.map(|e| e.propagations),
+        simplex_rows: engine.map(|e| e.simplex_rows),
+        simplex_columns: engine.map(|e| e.simplex_columns),
     }
 }
 

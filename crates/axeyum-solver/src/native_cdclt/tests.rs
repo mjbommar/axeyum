@@ -479,10 +479,155 @@ fn an_unrecorded_refutation_publishes_no_artifact() {
     // And the same query WITH recording does publish one, so the assertion
     // above is about the flag and not about this fixture never producing an
     // artifact at all.
+    //
+    // The reset is required, not decoration: the channel declines when MORE
+    // THAN ONE refutation has happened since the last reset (see
+    // `two_refutations_in_one_dispatch_publish_nothing`), and the solve above
+    // already spent one. A real caller resets once per dispatch; this test is
+    // two dispatches in one function.
+    super::reset_theory_refutation_channel();
     let mut theory = CubeTheory::new(2, vec![vec![(0, true), (1, true)]], false);
     let _ = super::with_artifact_recording(|| solve_native(2, 2, &clauses, None, &mut theory));
     assert!(
         super::take_last_theory_refutation().is_some(),
         "recording on must publish the artifact"
+    );
+}
+
+/// An already-exhausted deadline must be `Unknown` **before** anything is
+/// propagated, exactly as `CdclT::solve_inner`'s top-of-loop `timed_out()` check
+/// makes it.
+///
+/// This is not a stylistic parity. Measured while moving `lia_theory` onto this
+/// core: without the eager check the core propagated the two units of
+/// `x > 0 & x < 1`, ran a `final_check` the zero-budget theory could not answer,
+/// and returned `Sat`. `lia_theory` then failed to build a model and reported
+/// `Unknown { kind: Incomplete }` where `CdclT` reported
+/// `Unknown { kind: Timeout }` — and `dpll_lia::check_with_arith_dpll` BRANCHES
+/// on that kind, so the give-up reason moved even though no verdict did. The
+/// engine swap is only a swap if neither moves.
+///
+/// The fixture is Boolean-satisfiable and theory-refuted, so every other outcome
+/// is reachable: without the check this returns `Unsat`, which is what makes the
+/// assertion discriminating rather than vacuous.
+#[test]
+fn an_exhausted_deadline_is_unknown_before_any_propagation() {
+    let clauses = vec![
+        vec![Lit {
+            var: 0,
+            positive: true,
+        }],
+        vec![Lit {
+            var: 1,
+            positive: true,
+        }],
+    ];
+    let mut theory = CubeTheory::new(2, vec![vec![(0, true), (1, true)]], false);
+    let past = std::time::Instant::now()
+        .checked_sub(std::time::Duration::from_secs(1))
+        .expect("the process clock is at least a second past its epoch");
+    let outcome = solve_native(2, 2, &clauses, Some(past), &mut theory);
+    assert!(
+        matches!(outcome, NativeSolveOutcome::Unknown),
+        "an exhausted budget must not reach the search: {outcome:?}"
+    );
+    assert!(
+        super::take_last_theory_refutation().is_none(),
+        "nothing ran, so nothing may be published as this query's refutation"
+    );
+
+    // The control: the SAME fixture with no deadline is refuted, so the
+    // assertion above is about the deadline and not about a theory that cannot
+    // decide anything.
+    let mut theory = CubeTheory::new(2, vec![vec![(0, true), (1, true)]], false);
+    assert!(
+        matches!(
+            solve_native(2, 2, &clauses, None, &mut theory),
+            NativeSolveOutcome::Unsat
+        ),
+        "control: without a deadline this fixture is refuted"
+    );
+}
+
+/// TWO refutations inside one dispatch make the published artifact ambiguous,
+/// and the channel must then hand back NOTHING.
+///
+/// The slot holds the LAST refutation. A route calls `solve_native` once, but
+/// `crate::auto::check_auto` does not: it enumerates case-split branches and
+/// reports `unsat` only when every branch was refuted, discarding each branch's
+/// own `CheckResult::Unsat` on the way (`auto.rs:1298`, `auto.rs:1458`). The
+/// artifact left behind then refutes the last branch, not the query. Attaching
+/// it would be a fabricated claim, so the guard declines instead.
+///
+/// The first assertion is the CONTROL: after exactly one refutation the same
+/// channel does hand the artifact over, so the second assertion is about the
+/// count and not about a channel that never publishes.
+#[test]
+fn two_refutations_in_one_dispatch_publish_nothing() {
+    let clauses = vec![
+        vec![Lit {
+            var: 0,
+            positive: true,
+        }],
+        vec![Lit {
+            var: 1,
+            positive: true,
+        }],
+    ];
+    let cube = vec![vec![(0, true), (1, true)]];
+
+    super::reset_theory_refutation_channel();
+    let mut theory = CubeTheory::new(2, cube.clone(), false);
+    let _ = super::with_artifact_recording(|| solve_native(2, 2, &clauses, None, &mut theory));
+    assert!(
+        super::take_last_theory_refutation().is_some(),
+        "control: one refutation publishes its artifact"
+    );
+
+    super::reset_theory_refutation_channel();
+    for _ in 0..2 {
+        let mut theory = CubeTheory::new(2, cube.clone(), false);
+        let outcome =
+            super::with_artifact_recording(|| solve_native(2, 2, &clauses, None, &mut theory));
+        assert!(
+            matches!(outcome, NativeSolveOutcome::Unsat),
+            "both sub-solves must refute for this fixture to test ambiguity"
+        );
+    }
+    assert!(
+        super::take_last_theory_refutation().is_none(),
+        "two refutations: the slot names the last sub-solve, not the query"
+    );
+}
+
+/// The reset is what scopes the count to one dispatch: without it the counter
+/// carries an earlier query's refutations and the guard declines an artifact
+/// this dispatch genuinely produced.
+#[test]
+fn the_channel_reset_scopes_the_count_to_one_dispatch() {
+    let clauses = vec![
+        vec![Lit {
+            var: 0,
+            positive: true,
+        }],
+        vec![Lit {
+            var: 1,
+            positive: true,
+        }],
+    ];
+    let cube = vec![vec![(0, true), (1, true)]];
+
+    // An earlier query on this thread refutes, and its artifact is never taken.
+    super::reset_theory_refutation_channel();
+    let mut theory = CubeTheory::new(2, cube.clone(), false);
+    let _ = super::with_artifact_recording(|| solve_native(2, 2, &clauses, None, &mut theory));
+
+    // The next dispatch resets, so its own single refutation is unambiguous.
+    super::reset_theory_refutation_channel();
+    let mut theory = CubeTheory::new(2, cube, false);
+    let _ = super::with_artifact_recording(|| solve_native(2, 2, &clauses, None, &mut theory));
+    assert!(
+        super::take_last_theory_refutation().is_some(),
+        "a reset dispatch is not charged for the previous query's refutation"
     );
 }

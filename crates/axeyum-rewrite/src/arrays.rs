@@ -745,7 +745,7 @@ pub fn witness_read_over_write(
 /// here and are overwritten by [`bind_select_symbols`]. Overwriting is
 /// deliberate: a select whose index term fails to evaluate must leave the whole
 /// sample *unavailable* rather than silently keep an unrelated sampled value.
-fn sample_assignment(arena: &TermArena, sample: usize) -> Option<Assignment> {
+pub(crate) fn sample_assignment(arena: &TermArena, sample: usize) -> Option<Assignment> {
     let mut assignment = Assignment::new();
     let mut counter = 0u64;
     for (symbol, _name, sort) in arena.symbols() {
@@ -833,7 +833,7 @@ fn sample_array(sample: usize, seed: u64, index_width: u32, element_width: u32) 
 
 /// Sample 0 is the all-zero corner, sample 1 the all-ones corner, the rest are
 /// seeded pseudorandom.
-fn sample_bits(sample: usize, seed: u64, width: u32) -> u128 {
+pub(crate) fn sample_bits(sample: usize, seed: u64, width: u32) -> u128 {
     let mask = if width >= 128 {
         u128::MAX
     } else {
@@ -846,7 +846,7 @@ fn sample_bits(sample: usize, seed: u64, width: u32) -> u128 {
     }
 }
 
-fn sample_bit(sample: usize, seed: u64) -> bool {
+pub(crate) fn sample_bit(sample: usize, seed: u64) -> bool {
     match sample {
         0 => false,
         1 => true,
@@ -855,7 +855,7 @@ fn sample_bit(sample: usize, seed: u64) -> bool {
 }
 
 /// `SplitMix64`, so the sample sequence is deterministic and host-independent.
-fn mix(a: u64, b: u64) -> u64 {
+pub(crate) fn mix(a: u64, b: u64) -> u64 {
     let mut z = a
         .wrapping_mul(0x9e37_79b9_7f4a_7c15)
         .wrapping_add(b)

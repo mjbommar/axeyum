@@ -866,3 +866,360 @@ mod tests {
         projected
     }
 }
+
+// ---------------------------------------------------------------------------
+// The Ackermann-replacement faithfulness witness (ADR-1721 §7, ported).
+// ---------------------------------------------------------------------------
+//
+// `eliminate_functions` does two things and they owe different evidence, in
+// exactly the split `eliminate_arrays` has. The **congruence** half only ADDS
+// constraints, so it can break `unsat` alone, and
+// `AckermannUnsatCertificate::recheck` discharges it by rebuilding the pairwise
+// set from an independent implementation of the schema. The **abstraction**
+// half -- every application `f(a…)` replaced by a fresh result-sort symbol --
+// is a REPLACEMENT, so it can break both directions, and `recheck` only
+// re-derives it: it re-runs the same producer on the same input and compares.
+// `trust.rs` says what that is worth in its own words -- it "proves
+// *determinism* but not *faithfulness*; a stably-wrong circuit … survives
+// re-derivation" -- against a real shipped wrong-`unsat`.
+//
+// This witness is the independent reference, in the shape
+// [`crate::witness_read_over_write`] already proved on arrays and
+// `crates/axeyum-fp/tests/fpa2bv_faithfulness.rs` before it: it does NOT re-run
+// the transform. It interprets both sides under one concrete assignment, with
+// each function given a genuine [`FuncValue`] interpretation and each fresh
+// application symbol bound to what that interpretation returns at the
+// application's evaluated arguments -- the exact model extension the
+// abstraction's soundness argument assumes -- and compares the values. The
+// original assertion is evaluated by the ground evaluator's `Op::Apply` arm,
+// which never goes through this module's rewriting at all.
+//
+// A disagreement is a hard finding. A sample that cannot be built or evaluated
+// is counted as *unavailable*, never silently treated as agreement.
+
+/// Number of sampled assignments [`witness_function_abstraction`] is normally
+/// given.
+///
+/// Sample 0 is the all-zero corner and sample 1 the all-ones corner; the rest
+/// are seeded pseudorandom, so the sequence is deterministic (a public API
+/// promise) and reproducible across runs and hosts.
+///
+/// **The two corner samples cannot discriminate on their own**: at sample 0
+/// every function returns zero at every key, so an abstraction that confused
+/// two applications of the same function would still agree. The pseudorandom
+/// samples are what give the witness teeth, which is why the default is more
+/// than two.
+pub const FUNCTION_ABSTRACTION_WITNESS_SAMPLES: usize = 8;
+
+/// A disagreement between an original assertion and its post-abstraction form
+/// under one concrete assignment: the Ackermann abstraction is **not** faithful,
+/// so any `unsat` derived through it is unsound.
+#[derive(Debug, Clone, PartialEq)]
+pub struct FunctionAbstractionDisagreement {
+    /// Index of the sampled assignment.
+    pub sample: usize,
+    /// Index of the assertion, into the caller's `assertions` slice.
+    pub assertion: usize,
+    /// Value of the original, function-applying assertion.
+    pub original: Value,
+    /// Value of the rewritten abstraction of that assertion.
+    pub abstracted: Value,
+}
+
+/// Outcome of the Ackermann-abstraction faithfulness witness.
+///
+/// `compared` and `unavailable` partition the `(sample, assertion)` pairs the
+/// witness attempted, so a caller can report coverage instead of assuming it.
+/// `compared == 0` is **not** a pass and [`Self::is_faithful`] does not treat it
+/// as one.
+#[derive(Debug, Clone, PartialEq)]
+pub struct FunctionAbstractionWitness {
+    /// `(sample, assertion)` pairs where both sides evaluated and agreed.
+    pub compared: usize,
+    /// `(sample, assertion)` pairs skipped: a sort the sampler cannot build, an
+    /// application whose arguments never resolved, or an evaluator refusal. A
+    /// coverage hole, not a pass.
+    pub unavailable: usize,
+    /// The first disagreement found, if any. Its presence is a soundness alarm.
+    pub disagreement: Option<FunctionAbstractionDisagreement>,
+    /// `(sample, application)` pairs where an `Op::Apply` subterm of the
+    /// ORIGINAL assertions had no entry in the interpretation the abstraction's
+    /// own application list built at that sample's argument values.
+    ///
+    /// **This is the count the value comparison cannot make**, and it exists
+    /// because the value comparison was measured to miss the defect it matters
+    /// most for. Mutating `eliminate_functions` so that every application of one
+    /// function shares one fresh symbol turns the SATISFIABLE
+    /// `f(a) = 1 ∧ f(b) = 2` into a wrong `unsat`, and
+    /// `AckermannUnsatCertificate::recheck` returned `Ok(true)` over it *with
+    /// the value comparison already in place* — because the two sides are
+    /// compared as BOOLEANS, and `f(b) = 2` and `f(a) = 2` are both simply
+    /// `false` at almost every sample. Agreement on `false` is not agreement.
+    ///
+    /// A merged or dropped application leaves an original `Op::Apply` with no
+    /// entry at its arguments, which is structural rather than probabilistic.
+    /// Non-zero is a soundness alarm.
+    pub unnamed_applications: usize,
+}
+
+impl FunctionAbstractionWitness {
+    /// `true` only when at least one pair was compared, none disagreed, and
+    /// every original application was named by the abstraction.
+    ///
+    /// Deliberately `false` for an all-`unavailable` run: a witness that
+    /// examined nothing has not witnessed anything.
+    #[must_use]
+    pub fn is_faithful(&self) -> bool {
+        self.disagreement.is_none() && self.unnamed_applications == 0 && self.compared > 0
+    }
+}
+
+/// Witnesses that `elim`'s function-abstraction step is faithful to
+/// uninterpreted-function semantics, by evaluating the original assertions and
+/// their abstractions under the same concrete assignments.
+///
+/// `arena` must be the arena the elimination ran on -- the fresh application
+/// symbols live there -- and `assertions` the ORIGINAL, function-applying
+/// assertions it was given, the same pair [`eliminate_functions`] was called
+/// with. For each sample the witness binds every symbol, builds one
+/// [`FuncValue`] per uninterpreted function from the applications' evaluated
+/// arguments, binds each fresh symbol to that function's value there, and
+/// compares `assertions[k]` against `elim.abstraction()[k]`.
+///
+/// The comparison is against [`FunctionElimination::abstraction`], not
+/// [`FunctionElimination::assertions`]: the congruence constraints are a
+/// separate obligation with its own discharge, and every sampled assignment
+/// satisfies them by construction anyway, since the fresh symbols are read out
+/// of a genuine function.
+///
+/// Returns `compared == 0` with no disagreement when `elim` eliminated no
+/// functions, or when `assertions` and the abstraction have different lengths.
+/// Both are "nothing to witness" rather than a pass, and
+/// [`FunctionAbstractionWitness::is_faithful`] reports them as such.
+#[must_use]
+pub fn witness_function_abstraction(
+    arena: &TermArena,
+    assertions: &[TermId],
+    elim: &FunctionElimination,
+    samples: usize,
+) -> FunctionAbstractionWitness {
+    let mut witness = FunctionAbstractionWitness {
+        compared: 0,
+        unavailable: 0,
+        disagreement: None,
+        unnamed_applications: 0,
+    };
+    let abstraction = elim.abstraction();
+    if !elim.had_functions() || abstraction.len() != assertions.len() {
+        return witness;
+    }
+    let seeds = function_seeds(arena);
+    // Collected once: every `Op::Apply` subterm of the ORIGINAL assertions,
+    // which is the population the abstraction is supposed to have named.
+    let original_applications = collect_applications(arena, assertions);
+
+    for sample in 0..samples {
+        let Some(mut assignment) = crate::arrays::sample_assignment(arena, sample) else {
+            witness.unavailable += assertions.len();
+            continue;
+        };
+        let Some(tables) = bind_application_symbols(arena, elim, &seeds, sample, &mut assignment)
+        else {
+            witness.unavailable += assertions.len();
+            continue;
+        };
+        // Every original application must be NAMED by the abstraction at this
+        // sample's argument values. See `unnamed_applications` for the measured
+        // defect this catches and the value comparison does not.
+        for &(func, ref args) in &original_applications {
+            let mut values = Vec::with_capacity(args.len());
+            let mut resolved = true;
+            for &arg in args {
+                let Ok(value) = eval(arena, arg, &assignment) else {
+                    resolved = false;
+                    break;
+                };
+                values.push(value);
+            }
+            if !resolved {
+                witness.unavailable += 1;
+                continue;
+            }
+            let named = tables
+                .get(&func)
+                .is_some_and(|table| table.iter().any(|(key, _)| *key == values));
+            if !named {
+                witness.unnamed_applications += 1;
+            }
+        }
+        // One memo per sample, shared across BOTH sides and every assertion:
+        // the assignment is fixed within a sample, and the two sides share most
+        // of their structure (the abstraction is the originals with
+        // applications replaced). Built only after every binding is in place --
+        // a memo carried through the fixpoint below would cache values computed
+        // against a partial assignment.
+        let mut memo: HashMap<TermId, Value> = HashMap::new();
+        for (index, (&original, &abstracted)) in
+            assertions.iter().zip(abstraction.iter()).enumerate()
+        {
+            let (Ok(lhs), Ok(rhs)) = (
+                axeyum_ir::eval_with_memo(arena, original, &assignment, &mut memo),
+                axeyum_ir::eval_with_memo(arena, abstracted, &assignment, &mut memo),
+            ) else {
+                witness.unavailable += 1;
+                continue;
+            };
+            witness.compared += 1;
+            if lhs != rhs && witness.disagreement.is_none() {
+                witness.disagreement = Some(FunctionAbstractionDisagreement {
+                    sample,
+                    assertion: index,
+                    original: lhs,
+                    abstracted: rhs,
+                });
+            }
+        }
+    }
+    witness
+}
+
+/// A stable per-function seed, taken from the arena's own declaration order
+/// (which is a determinism promise) rather than from anything `FuncId` exposes.
+fn function_seeds(arena: &TermArena) -> BTreeMap<FuncId, u64> {
+    arena
+        .functions()
+        .enumerate()
+        .map(|(index, (func, _, _, _))| (func, index as u64 + 1))
+        .collect()
+}
+
+/// Builds one [`FuncValue`] per uninterpreted function and binds every fresh
+/// application symbol to that function's value at the application's evaluated
+/// arguments.
+///
+/// An application's arguments may themselves contain abstracted applications --
+/// `f(g(x))` -- so this iterates to a fixpoint rather than assuming discovery
+/// order is topological. Returns `false` when applications remain unresolved
+/// and no progress is left, or when a sort cannot be sampled, which makes the
+/// whole sample *unavailable*.
+///
+/// **The table is keyed by argument VALUES, not by application index.** That is
+/// what makes the extension a function: two applications of the same `f` whose
+/// arguments evaluate equal get the same result, so the sampled assignment
+/// satisfies the congruence constraints by construction and the witness is
+/// about the abstraction alone.
+type ApplicationTables = BTreeMap<FuncId, Vec<(Vec<Value>, Value)>>;
+
+fn bind_application_symbols(
+    arena: &TermArena,
+    elim: &FunctionElimination,
+    seeds: &BTreeMap<FuncId, u64>,
+    sample: usize,
+    assignment: &mut Assignment,
+) -> Option<ApplicationTables> {
+    let applications = elim.applications();
+    let mut tables: ApplicationTables = BTreeMap::new();
+
+    let mut pending: Vec<usize> = (0..applications.len()).collect();
+    while !pending.is_empty() {
+        let mut progressed = false;
+        let mut still_pending = Vec::with_capacity(pending.len());
+        for &position in &pending {
+            let (func, args, fresh) = applications[position];
+            // No memo here: the assignment grows as bindings are added, so a
+            // cached value could predate the binding it depends on.
+            let mut values = Vec::with_capacity(args.len());
+            let mut resolved = true;
+            for &arg in args {
+                let Ok(value) = eval(arena, arg, assignment) else {
+                    resolved = false;
+                    break;
+                };
+                values.push(value);
+            }
+            if !resolved {
+                still_pending.push(position);
+                continue;
+            }
+            let (_, _, result_sort) = arena.function(func);
+            let seed_base = seeds.get(&func).copied().unwrap_or(1);
+            let table = tables.entry(func).or_default();
+            let result = if let Some((_, existing)) = table.iter().find(|(key, _)| *key == values) {
+                existing.clone()
+            } else {
+                let seed = crate::arrays::mix(seed_base, table.len() as u64 + 1);
+                let value = sample_value_of_sort(result_sort, sample, seed)?;
+                table.push((values.clone(), value.clone()));
+                value
+            };
+            assignment.set(fresh, result);
+            progressed = true;
+        }
+        if !still_pending.is_empty() && !progressed {
+            return None;
+        }
+        pending = still_pending;
+    }
+
+    // Publish each table as a real interpretation, so the ORIGINAL assertions'
+    // `Op::Apply` nodes evaluate to the same values the fresh symbols carry.
+    for (func, points) in &tables {
+        let func = *func;
+        let (_, params, result_sort) = arena.function(func);
+        let params: Vec<Sort> = params.to_vec();
+        let default = sample_value_of_sort(result_sort, sample, crate::arrays::mix(0, 0))?;
+        let mut interpretation = if FuncValue::uses_value_storage_for(&params, result_sort) {
+            FuncValue::constant_value(params, result_sort, default)
+        } else {
+            FuncValue::constant(params, result_sort, default.scalar_code())
+        };
+        for (key, value) in points {
+            interpretation = if interpretation.uses_value_storage() {
+                interpretation.define_value(key, value.clone())
+            } else {
+                let coded: Vec<u128> = key.iter().map(Value::scalar_code).collect();
+                interpretation.define(&coded, value.scalar_code())
+            };
+        }
+        assignment.set_function(func, interpretation);
+    }
+    Some(tables)
+}
+
+/// Every `Op::Apply` subterm reachable from `assertions`, as
+/// `(function, argument terms)`, deduplicated by term id and visited in a
+/// deterministic order.
+fn collect_applications(arena: &TermArena, assertions: &[TermId]) -> Vec<(FuncId, Vec<TermId>)> {
+    let mut seen: BTreeSet<TermId> = BTreeSet::new();
+    let mut found = Vec::new();
+    let mut stack: Vec<TermId> = assertions.iter().rev().copied().collect();
+    while let Some(term) = stack.pop() {
+        if !seen.insert(term) {
+            continue;
+        }
+        if let TermNode::App { op, args } = arena.node(term) {
+            if let Op::Apply(func) = op {
+                found.push((*func, args.to_vec()));
+            }
+            stack.extend(args.iter().copied());
+        }
+    }
+    found
+}
+
+/// A sampled value of `sort`, or `None` for a sort this witness cannot build.
+///
+/// Deliberately narrow: `Bool` and `BitVec` up to 128 bits are what
+/// `eliminate_functions`' shipping consumer (`QF_UFBV`) produces. Anything else
+/// makes the sample *unavailable*, which is a reported coverage hole rather
+/// than a silent pass.
+fn sample_value_of_sort(sort: Sort, sample: usize, seed: u64) -> Option<Value> {
+    match sort {
+        Sort::Bool => Some(Value::Bool(crate::arrays::sample_bit(sample, seed))),
+        Sort::BitVec(width) if width <= 128 => Some(Value::Bv {
+            width,
+            value: crate::arrays::sample_bits(sample, seed, width),
+        }),
+        _ => None,
+    }
+}

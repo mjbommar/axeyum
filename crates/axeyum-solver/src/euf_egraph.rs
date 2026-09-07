@@ -32,8 +32,9 @@ use axeyum_ir::{
 use axeyum_rewrite::replace_subterms;
 
 use crate::backend::{CheckResult, SolverBackend, SolverConfig};
-use crate::cdclt::{CdclT, Lit as CdcltLit, Outcome};
+use crate::cdclt::Lit as CdcltLit;
 use crate::model::Model;
+use crate::native_cdclt::NativeSolveOutcome;
 use crate::sat_bv_backend::SatBvBackend;
 
 /// A congruence conflict proving the assertions UNSAT: the subset of original
@@ -835,13 +836,27 @@ pub fn check_qf_uf_online_cdclt(
     let eq_count = atom_terms.len();
     let deadline = config.timeout.and_then(|t| Instant::now().checked_add(t));
     let mut theory = EufTheory::new(arena, &atom_terms).with_deadline(deadline);
-    let mut solver = CdclT::new(enc.var_count, eq_count, driver_clauses, deadline);
-    match solver.solve(&mut theory) {
-        Outcome::Unsat => CheckResult::Unsat,
-        Outcome::Unknown => {
+    // The NATIVE proof-producing core, not `CdclT` (plan slice S7b step 4, this
+    // lane). Same watch scheme, same order heap, same clause minimizer -- S1 and
+    // S1b ported all three into `CdclT` verbatim so this is a swap and not a
+    // reconciliation -- and, unlike `CdclT`, it emits a DRAT stream and
+    // enumerates every clause the theory contributed. So a refutation from this
+    // route can arrive at the evidence layer as the ADR-1704 two-stream artifact
+    // instead of a bare `unsat` whose theory reasoning is trusted and uncounted.
+    // See `crate::native_cdclt`.
+    let solved = crate::native_cdclt::solve_native(
+        enc.var_count,
+        eq_count,
+        &driver_clauses,
+        deadline,
+        &mut theory,
+    );
+    match solved {
+        NativeSolveOutcome::Unsat => CheckResult::Unsat,
+        NativeSolveOutcome::Unknown => {
             CheckResult::Unknown(unknown("timeout in the online CDCL(T) QF_UF driver"))
         }
-        Outcome::Sat => {
+        NativeSolveOutcome::Sat(assignment) => {
             let Some(mut model) = theory.model(arena) else {
                 return CheckResult::Unknown(unknown(
                     "online CDCL(T) e-graph model did not replay (base-sort semantics outside congruence)",
@@ -858,7 +873,7 @@ pub fn check_qf_uf_online_cdclt(
                 if let TermNode::Symbol(sym) = arena.node(term)
                     && arena.sort_of(term) == Sort::Bool
                     && model.get(*sym).is_none()
-                    && let Some(value) = solver.value(var)
+                    && let Some(value) = assignment.value(var)
                 {
                     model.set(*sym, Value::Bool(value));
                 }

@@ -24,7 +24,7 @@
 //! [`axeyum_solver::solve_smtlib`] and prints ONE extra line before the verdict:
 //!
 //! ```text
-//! ; evidence kind=unsat-drat certified=1 recheck=ok arena=ok ms=412
+//! ; evidence kind=unsat-drat certified=1 trusted=2:bit-blast+,tseitin+ recheck=ok arena=ok ms=412
 //! ```
 //!
 //! The line starts with `;` (the SMT-LIB comment character) and can never match
@@ -217,8 +217,9 @@ use std::time::{Duration, Instant};
 use axeyum_solver::theories::cdclt_diagnostics::{TheoryLayerStatsGuard, last_theory_layer_stats};
 use axeyum_solver::{
     BvLayerStatsGuard, CheckProgress, CheckResult, CheckingProgress, DlOnlineStatsGuard, Evidence,
-    EvidenceCheck, FrontDoorStatsGuard, ProofProgress, SolverConfig, last_bv_layer_stats,
-    last_dl_online_stats, last_front_door_stats, produce_evidence_smtlib, solve_smtlib,
+    EvidenceCheck, EvidenceReport, FrontDoorStatsGuard, ProofProgress, SolverConfig,
+    last_bv_layer_stats, last_dl_online_stats, last_front_door_stats, produce_evidence_smtlib,
+    solve_smtlib,
 };
 
 /// Formats one `axeyum_cnf::ProofSearchProgress` snapshot as the `;`-prefixed
@@ -592,9 +593,10 @@ const WORKER_STACK_BYTES: usize = 512 * 1024 * 1024;
 ///   re-enumeration, a certificate that will not re-read). Never a success.
 fn evidence_report_line(
     input: &str,
-    evidence: &Evidence,
+    report: &EvidenceReport,
     elapsed_ms: u128,
 ) -> (&'static str, String) {
+    let evidence = &report.evidence;
     let verdict = match evidence {
         Evidence::Sat(_) => "sat",
         Evidence::Unknown(_) => "unknown",
@@ -652,10 +654,47 @@ fn evidence_report_line(
     (
         verdict,
         format!(
-            "; evidence kind={} certified={certified} recheck={recheck} arena={arena} ms={elapsed_ms}",
-            evidence.kind_label()
+            "; evidence kind={} certified={certified} trusted={} recheck={recheck} arena={arena} ms={elapsed_ms}",
+            evidence.kind_label(),
+            trusted_field(&report.trusted_steps)
         ),
     )
+}
+
+/// The `trusted=` field: how many reductions this result depended on, and which.
+///
+/// **Why it exists.** The ledger a decision arrives with was invisible from a
+/// sweep. This line printed `kind=`, `certified=`, `recheck=` and `arena=`, and
+/// [`EvidenceReport::trusted_steps`] — the list of reductions the result leaned
+/// on and whether THIS run certified each — appeared nowhere, so
+/// "how many refutations carry an ADR-1704 theory step" could only be asserted
+/// per query from a test, never counted across a division. A metric that cannot
+/// be read at corpus scale is not a metric.
+///
+/// **Where it goes, and why not at the end.** Between `certified=` and
+/// `recheck=`. `scripts/execute-autogenesis-operation.py` parses this line with
+/// an ANCHORED regex, `recheck=(\S+)\s+arena=(\S+)\s+ms=(\d+)\s*$`, so a
+/// field appended after `ms=` stops that parser dead; the shell consumers
+/// (`parity-run.sh`, `check-evidence-portability.sh`) use greedy
+/// `.*<key>=\([^ ]*\)` seds, which are unaffected wherever it goes. One
+/// position satisfies all three.
+///
+/// **Format.** `trusted=0` when nothing was leaned on, otherwise
+/// `trusted=<n>:<label>[+][,<label>[+]]` with the labels in the report's own
+/// order and `+` marking a step this run certified. One whitespace-free token,
+/// so every `[^ ]*` extraction keeps working.
+fn trusted_field(steps: &[axeyum_solver::trust::TrustStep]) -> String {
+    if steps.is_empty() {
+        return "0".to_owned();
+    }
+    let names: Vec<String> = steps
+        .iter()
+        .map(|step| {
+            let mark = if step.certified { "+" } else { "" };
+            format!("{}{mark}", step.id.label())
+        })
+        .collect();
+    format!("{}:{}", steps.len(), names.join(","))
 }
 
 /// Parsed command-line/env-var configuration: which file to solve, and every
@@ -793,17 +832,14 @@ fn main() -> ExitCode {
             // that errors must not be silently scored as an uncertified decide.
             return match produce_evidence_smtlib(&input, &config) {
                 Ok(report) => {
-                    let (verdict, line) = evidence_report_line(
-                        &input,
-                        &report.evidence,
-                        started.elapsed().as_millis(),
-                    );
+                    let (verdict, line) =
+                        evidence_report_line(&input, &report, started.elapsed().as_millis());
                     (verdict, Some(line), Vec::new())
                 }
                 Err(_) => (
                     "unknown",
                     Some(format!(
-                        "; evidence kind=unknown certified=0 recheck=na arena=na ms={}",
+                        "; evidence kind=unknown certified=0 trusted=0 recheck=na arena=na ms={}",
                         started.elapsed().as_millis()
                     )),
                     Vec::new(),

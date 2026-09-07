@@ -233,6 +233,36 @@ class OperationExecutionTests(unittest.TestCase):
         with self.assertRaisesRegex(execution.ExecutionError, "observed 2"):
             execution.parse_observation(line + line + "unsat\n")
 
+    def test_parser_reads_the_line_with_and_without_the_trusted_field(self) -> None:
+        # The CLI now prints `trusted=` between `certified=` and `recheck=`.
+        # The regex was anchored at both ends, so this is the check that adding
+        # the field did not blind this consumer -- and the second half is the
+        # check that a transcript recorded BEFORE the field still parses.
+        with_trusted = (
+            "; evidence kind=unsat-term-level certified=1 "
+            "trusted=2:sat-refutation-modulo-theory,farkas+ "
+            "recheck=na arena=ok ms=7\nunsat\n"
+        )
+        parsed = execution.parse_observation(with_trusted)
+        self.assertEqual(parsed["evidence_label"], "unsat-term-level")
+        self.assertTrue(parsed["certified"])
+        self.assertEqual(parsed["recheck"], "na")
+        self.assertEqual(parsed["arena"], "ok")
+        self.assertEqual(parsed["verdict"], "unsat")
+        # The observation dict is what gets digested into a receipt, so it must
+        # NOT have grown a key. A new key would restate every committed
+        # receipt's hash.
+        self.assertEqual(
+            sorted(parsed),
+            ["arena", "certified", "evidence_label", "recheck", "verdict"],
+        )
+
+        without_trusted = (
+            "; evidence kind=unsat-term-level certified=1 "
+            "recheck=na arena=ok ms=7\nunsat\n"
+        )
+        self.assertEqual(execution.parse_observation(without_trusted), parsed)
+
     def test_rehashed_mutation_is_still_stale(self) -> None:
         expected = self.receipt()
         changed = copy.deepcopy(expected)

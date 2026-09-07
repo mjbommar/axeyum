@@ -65,7 +65,8 @@ use std::time::Instant;
 use axeyum_ir::{Sort, TermArena, TermId, TermNode, Value};
 
 use crate::backend::{CheckResult, SolverConfig, SolverError, UnknownKind, UnknownReason};
-use crate::cdclt::{CdclT, Lit as CdcltLit, Outcome};
+use crate::cdclt::Lit as CdcltLit;
+use crate::native_cdclt::{NativeModel, NativeSolveOutcome};
 use crate::euf_egraph::{TheoryLit, TheoryProp, TheorySolver};
 use crate::lia_online::{Encoder, LiaTheory, collect_lia_atoms, replays_integer};
 use crate::lra_online::Lit;
@@ -208,14 +209,27 @@ pub fn check_qf_lia_online_cdclt(
     let atom_count = atom_terms.len();
     let deadline = config.timeout.and_then(|t| Instant::now().checked_add(t));
     let mut theory = CdcltLiaTheory::new(arena, &atom_terms, deadline);
-    let mut solver = CdclT::new(enc.var_count, atom_count, driver_clauses, deadline);
-    match solver.solve(&mut theory) {
-        Outcome::Unsat => Ok(CheckResult::Unsat),
-        Outcome::Unknown => Ok(CheckResult::Unknown(UnknownReason {
+    // The NATIVE proof-producing core, not `CdclT` (plan slice S7b step 4, this
+    // lane). Same watch scheme, same order heap, same clause minimizer -- S1 and
+    // S1b ported all three into `CdclT` verbatim so this is a swap and not a
+    // reconciliation -- and, unlike `CdclT`, it emits a DRAT stream and
+    // enumerates every clause the theory contributed, so a refutation can reach
+    // the evidence layer as the ADR-1704 two-stream artifact instead of a bare
+    // `unsat` whose theory reasoning is trusted and uncounted.
+    let solved = crate::native_cdclt::solve_native(
+        enc.var_count,
+        atom_count,
+        &driver_clauses,
+        deadline,
+        &mut theory,
+    );
+    match solved {
+        NativeSolveOutcome::Unsat => Ok(CheckResult::Unsat),
+        NativeSolveOutcome::Unknown => Ok(CheckResult::Unknown(UnknownReason {
             kind: UnknownKind::Timeout,
             detail: "timeout in the online CDCL(T) LIA driver".to_owned(),
         })),
-        Outcome::Sat => {
+        NativeSolveOutcome::Sat(assignment) => {
             // Reconstruct an integer model from the live atoms (via the trusted
             // offline decider), inject Boolean skeleton leaves from the driver trail,
             // and replay against the originals — the soundness gate.
@@ -224,7 +238,7 @@ pub fn check_qf_lia_online_cdclt(
                     "online CDCL(T) LIA model did not replay (arithmetic outside the incremental engine)",
                 )));
             };
-            add_boolean_leaf_values(arena, &enc, atom_count, &solver, &mut model);
+            add_boolean_leaf_values(arena, &enc, atom_count, &assignment, &mut model);
             if replays_integer(arena, assertions, &model) {
                 Ok(CheckResult::Sat(model))
             } else {
@@ -245,7 +259,7 @@ fn add_boolean_leaf_values(
     arena: &TermArena,
     enc: &Encoder,
     atom_count: usize,
-    solver: &CdclT,
+    solver: &NativeModel,
     model: &mut Model,
 ) {
     let mut term_vars: Vec<(TermId, usize)> = enc.term_var.iter().map(|(&t, &v)| (t, v)).collect();
@@ -274,6 +288,7 @@ fn unknown(detail: &str) -> UnknownReason {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::cdclt::{CdclT, Outcome};
     use crate::lra::check_with_lia_simplex;
 
     fn ivar(arena: &mut TermArena, name: &str) -> TermId {

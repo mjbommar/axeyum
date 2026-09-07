@@ -77,11 +77,12 @@ use axeyum_strings::{
 };
 
 use crate::backend::{CheckResult, SolverConfig, UnknownKind, UnknownReason};
-use crate::cdclt::{CdclT, Lit as CdcltLit, Outcome};
+use crate::cdclt::Lit as CdcltLit;
 use crate::euf_egraph::{
     Encoder, Lit, TheoryLit, TheoryProp, TheorySolver, collect_eq_atoms, replays,
 };
 use crate::model::Model;
+use crate::native_cdclt::{NativeModel, NativeSolveOutcome};
 
 /// The branch-node budget the per-assert refuter and the final word search spend.
 /// Generous: the T-B.3 fixpoint prunes hard and the search additionally honors an
@@ -1058,21 +1059,32 @@ pub fn check_qf_s_online_cdclt_with_memberships(
 
     let deadline = config.timeout.and_then(|t| Instant::now().checked_add(t));
     let budget = word_budget(config);
-    let mut solver = CdclT::new(var_count, eq_count, driver_clauses, deadline);
     let mut theory = StringTheory::new(arena, atom_kinds, budget.clone());
-    let outcome = solver.solve(&mut theory);
+    // The NATIVE proof-producing core, not `CdclT` (plan slice S7b step 4, this
+    // lane). Same watch scheme, same order heap, same clause minimizer, and --
+    // unlike `CdclT` -- it emits a DRAT stream and enumerates every clause the
+    // theory contributed, so a refutation can reach the evidence layer as the
+    // ADR-1704 two-stream artifact instead of a bare `unsat` whose theory
+    // reasoning is trusted and uncounted. See `crate::native_cdclt`.
+    let outcome = crate::native_cdclt::solve_native(
+        var_count,
+        eq_count,
+        &driver_clauses,
+        deadline,
+        &mut theory,
+    );
 
     match outcome {
-        Outcome::Unsat => {
+        NativeSolveOutcome::Unsat => {
             // Soundness telemetry: no conflict was ever fabricated without a
             // certified refutation behind it.
             theory.assert_conflicts_certified();
             CheckResult::Unsat
         }
-        Outcome::Unknown => {
+        NativeSolveOutcome::Unknown => {
             CheckResult::Unknown(unknown("timeout in the online CDCL(T) string driver"))
         }
-        Outcome::Sat => {
+        NativeSolveOutcome::Sat(assignment) => {
             // The driver reached a total, theory-consistent assignment. The refuters
             // are incomplete, so "no conflict" is not a model — assemble a concrete,
             // replay-checked model over the asserted word + membership set, then
@@ -1094,7 +1106,7 @@ pub fn check_qf_s_online_cdclt_with_memberships(
                 memberships,
                 mem_proxy_syms: &mem_proxy_syms,
                 term_vars: &term_vars,
-                solver: &solver,
+                solver: &assignment,
             };
             string_sat_model(arena, &ctx)
         }
@@ -1114,7 +1126,7 @@ struct SatModelCtx<'a> {
     memberships: &'a [(TermId, SymbolId, Regex)],
     mem_proxy_syms: &'a HashSet<SymbolId>,
     term_vars: &'a [(TermId, usize)],
-    solver: &'a CdclT,
+    solver: &'a NativeModel,
 }
 
 /// Assembles and replay-checks a `sat` model on a theory-consistent branch:
@@ -1875,6 +1887,7 @@ pub fn check_qf_slia_length(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::cdclt::{CdclT, Outcome};
 
     fn seq_sort() -> Sort {
         Sort::Seq(ArraySortKey::BitVec(8))

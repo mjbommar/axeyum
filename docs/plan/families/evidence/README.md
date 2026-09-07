@@ -12,7 +12,7 @@ empty, and nothing on the board would show it.
 | Preprocessing / rewriting | **half** | corrected 2026-09-06 — see below |
 | Bit-blasting to CNF | yes | replay maps are retained by hard rule |
 | Propositional search | **yes** | DRAT by construction, checked by our own DRAT and LRAT checkers |
-| Theory reasoning (CDCL(T)) | **contract only** | ADR-1704 defines it; nothing emits it yet |
+| Theory reasoning (CDCL(T)) | **partly** | corrected 2026-09-07 — five routes emit, the front door attaches, and the number is readable from a sweep |
 | Model lifting (`sat`) | yes | every `sat` replays against the original term |
 
 ## The open hole: preprocessing — narrower and sharper than this page said
@@ -52,14 +52,42 @@ and a proof-granularity flag to manage it, which says a from-scratch producer
 loses coverage on rewrite steps before anywhere else. Design the manifest for
 that rather than discovering it.
 
-## The theory half: contract landed, producer not
+## The theory half: five routes emit, and the number is now readable
 
 ADR-1704 adopted the two-stream design — a propositional refutation checked
 over the CNF extended by the enumerated theory lemmas, with the lemma count
 read off the artifact and a distinct trust level for a refutation modulo N
-lemmas. The boundary is pinned by tests. **No route emits it**, so today every
-CDCL(T) `unsat` carries no checked artifact. S7 is where that changes, and S7
-gains a checked Boolean half on day one.
+lemmas. The boundary is pinned by tests.
+
+**Corrected 2026-09-07.** This section used to say no route emits it. Five now
+run the proof-producing core: `dl_online` (S7b), plus `euf_egraph`,
+`lra_theory`, `lia_theory` and `string_theory`. `produce_evidence` attaches the
+step on its bare-`unsat` arms, and `smtcomp_cli --evidence` prints
+`trusted=<n>[:<label>[+],…]` so the ledger can be counted across a division
+instead of asserted per query from a test.
+
+Measured the same day, first 40 files of each committed parity list, 8 s
+budget, release binary, `taskset -c 0-7`, zero verdicts contradicting
+`declared`:
+
+| division | `unsat` | carrying a trust step | of those, ADR-1704 |
+|---|---:|---:|---:|
+| QF_IDL | 3 | **3** | **2** (`sat-refutation-modulo-theory`; the third is a lemma-free `sat-refutation`, certified) |
+| QF_LIA | 4 | 4 | 0 — pre-existing `farkas+`, newly VISIBLE rather than newly produced |
+| QF_UF | 16 | 1 | 0 |
+| QF_LRA | 0 | 0 | 0 — nothing decided at this budget; not a certificate statement |
+
+**QF_UF is the standing gap and the next slice.** Fifteen of its sixteen
+refutations arrive as `unsat-bool-euf-online`, whose evidence producer attaches
+no trusted step at all, so moving `euf_egraph` onto the proof-producing core
+does not surface: those refutations never reach the arm that reads the artifact
+channel. Moving a route is necessary and is not sufficient — every producer
+that can answer `unsat` ahead of the fallback needs its own attach.
+
+Three routes are still on `CdclT`: `uflra_online` and `uflia_online` (both read
+`CdclT::theory_propagations()`, which on the native core lives behind
+`TheorySolveOptions::collect_layer_stats`) and `ufbv_online` (the one client of
+the unported incremental protocol).
 
 Per-lemma checkability, read from the code rather than from prose: linear real
 arithmetic has an exact-rational Farkas verifier; difference logic already
@@ -135,8 +163,9 @@ made the misnaming visible.
 
 1. ~~Cite the prior art in ADR-1704 and record the comparison.~~ Done
    2026-09-06.
-2. S7 — emit the two-stream artifact from one theory route, gaining the checked
-   Boolean half.
+2. ~~S7 — emit the two-stream artifact from one theory route.~~ Done: five
+   routes emit and the front door attaches (2026-09-07, and see the section
+   above for the measured per-division numbers).
 3. ~~Fill one preprocessing obligation end to end.~~ Done 2026-09-06
    (ADR-1721 §7). **Not canonicalization** — §6 measures why: `RuleApplication`
    carries `before`/`after` but no position or order, so a checker can verify
@@ -147,12 +176,29 @@ made the misnaming visible.
    `ArrayElimUnsatCertificate::recheck` returned `Ok(true)` over a wrong `unsat`
    from a mutated read-over-write; after, `Ok(false)`. It is sampled, so
    `TrustId::ArrayElim` stays uncertified — evidence, not proof.
-4. The same witness for `eliminate_functions`, whose replacement half is
-   re-derived exactly as arrays' was.
-5. `eliminate_int_divmod` — the only `unsat`-feeding transform with no artifact
-   of any kind (a bare `Vec<TermId>`) and a soundness-mode change at
-   `MAX_CONGRUENCE_GROUPS = 48` that is not reported to the caller.
-6. Retain the ADR-0408 denotation guard's verdict past the pass, and stop
+4. ~~The same witness for `eliminate_functions`.~~ Done 2026-09-07
+   (`witness_function_abstraction`, wired into
+   `AckermannUnsatCertificate::recheck` as step 2). **A straight port of the
+   array witness did NOT catch the defect it exists for**, and the finding
+   changed the design: with `eliminate_functions` mutated so every application
+   of one function shares one fresh symbol, the satisfiable
+   `f(a) = 1 ∧ f(b) = 2` becomes a wrong `unsat` and `recheck` still returned
+   `Ok(true)` — because the two sides are compared as BOOLEANS, and
+   `f(b) = 2` and `f(a) = 2` are both simply `false` at almost every sample.
+   Agreement on `false` is not agreement. The witness therefore carries a
+   second, STRUCTURAL count (`unnamed_applications`): every `Op::Apply` subterm
+   of the originals must have an entry in the abstraction's own application
+   table at that sample's argument values, which a merged or dropped
+   application cannot satisfy. With it, `recheck` returns `Ok(false)`.
+   **Read this before porting the witness anywhere else** — the array
+   witness's success on its own mutation was partly luck about which defect
+   happened to move a Boolean. Sampled, so `TrustId::Ackermann` stays
+   uncertified.
+5. **Attach the trust step in `check_bool_euf_online_evidence`.** Fifteen of
+   sixteen QF_UF refutations carry no step for this reason alone.
+6. `eliminate_int_divmod` — landed 2026-09-06; its `MAX_CONGRUENCE_GROUPS = 48`
+   soundness-mode change is still not reported to the caller.
+7. Retain the ADR-0408 denotation guard's verdict past the pass, and stop
    `auto.rs:1744` swallowing its refusal as an ordinary decline.
 
 ## Owning documents
