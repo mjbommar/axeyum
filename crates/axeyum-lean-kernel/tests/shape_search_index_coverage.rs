@@ -36,8 +36,14 @@
 //!   as surviving mutants M1/M2 on 2026-09-06).
 //!
 //! A builder is covered when it is reachable from a direct call site through
-//! that call graph. Anything else must appear in `DELIBERATELY_UNINDEXED` with
-//! a measured reason, or this test fails and prints both sides.
+//! that call graph. Anything else must appear in one of the two allowlists with
+//! a measured reason, or the gate fails and prints both sides.
+//!
+//! There are two gates, over DISJOINT denominators: `*_prelude` builders, and
+//! exported builders that are not `*_prelude`. Disjoint because two gates
+//! sharing a denominator both die to one deletion, and a guard set whose
+//! members all fail through the same finding cannot tell you which guard is
+//! load-bearing.
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
@@ -400,38 +406,49 @@ fn exported_builder_definitions() -> BTreeMap<String, PathBuf> {
     defs
 }
 
-/// The wider gate: the same reachability question over every EXPORTED builder,
-/// `*_prelude` or not.
+/// The second gate: the same reachability question over every exported builder
+/// that is NOT a `*_prelude`.
+///
+/// Disjoint from the gate above on purpose. Two gates sharing a denominator
+/// both die to one deletion, and a guard set where every member fails through
+/// the same finding tells you nothing about which guard is load-bearing —
+/// measured here as M1/M2 killing two tests apiece before this split. With
+/// disjoint denominators, removing a prelude row kills exactly the prelude
+/// gate and removing `build_list_perm` kills exactly this one.
 #[test]
-fn shape_search_indexes_every_exported_builder() {
-    let defs = exported_builder_definitions();
-    let authority: BTreeSet<String> = defs.keys().cloned().collect();
+fn shape_search_indexes_every_exported_non_prelude_builder() {
     let preludes = builder_definitions();
+    let mut defs = exported_builder_definitions();
+    let exported_total = defs.len();
+    defs.retain(|name, _| !preludes.contains_key(name));
+    let authority: BTreeSet<String> = defs.keys().cloned().collect();
     assert!(
-        authority.len() > preludes.len(),
-        "the exported-builder scan found {} builders and the prelude scan found \
-         {}; the wider scan is not wider, so it is measuring the same thing \
-         twice and cannot catch what the narrow one misses (positive control: \
-         40 exported vs. 31 prelude builders on 2026-09-06)",
-        authority.len(),
-        preludes.len()
+        exported_total > preludes.len() && !authority.is_empty(),
+        "the exported-builder scan found {exported_total} builders and the \
+         prelude scan found {}, leaving {} for this gate; if that remainder is \
+         empty the gate is measuring nothing and cannot catch what the prelude \
+         gate misses (positive control: 40 exported, 31 prelude, 9 non-prelude \
+         on 2026-09-06)",
+        preludes.len(),
+        authority.len()
     );
 
-    let (direct, covered) = shape_search_reach();
+    let (all_direct, covered) = shape_search_reach();
+    let direct: BTreeSet<String> = all_direct.intersection(&authority).cloned().collect();
 
-    let allowed: BTreeSet<String> = DELIBERATELY_UNINDEXED
+    let allowed: BTreeSet<String> = DELIBERATELY_UNINDEXED_NON_PRELUDE
         .iter()
-        .chain(DELIBERATELY_UNINDEXED_NON_PRELUDE)
         .map(|(name, _)| (*name).to_owned())
         .collect();
     let missing: Vec<&String> = authority
         .iter()
         .filter(|name| !covered.contains(*name) && !allowed.contains(*name))
         .collect();
-    let transitive: Vec<&String> = covered.difference(&direct).collect();
+    let reached: BTreeSet<String> = covered.intersection(&authority).cloned().collect();
+    let transitive: Vec<&String> = reached.difference(&direct).collect();
 
     println!(
-        "exported authority ({}): {}",
+        "non-prelude authority ({}): {}",
         authority.len(),
         join(&authority)
     );
@@ -445,7 +462,8 @@ fn shape_search_indexes_every_exported_builder() {
 
     assert!(
         missing.is_empty(),
-        "shape_search is blind to {} of the crate's {} EXPORTED builders:\n  {}\n\
+        "shape_search is blind to {} of the crate's {} exported NON-PRELUDE \
+         builders:\n  {}\n\
          These declare into the kernel like any prelude does, so an ABSENT \
          verdict for what they declare is a confident wrong answer. Index them \
          in examples/shape_search.rs or list them in \
