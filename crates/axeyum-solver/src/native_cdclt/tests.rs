@@ -486,3 +486,56 @@ fn an_unrecorded_refutation_publishes_no_artifact() {
         "recording on must publish the artifact"
     );
 }
+
+/// An already-exhausted deadline must be `Unknown` **before** anything is
+/// propagated, exactly as `CdclT::solve_inner`'s top-of-loop `timed_out()` check
+/// makes it.
+///
+/// This is not a stylistic parity. Measured while moving `lia_theory` onto this
+/// core: without the eager check the core propagated the two units of
+/// `x > 0 & x < 1`, ran a `final_check` the zero-budget theory could not answer,
+/// and returned `Sat`. `lia_theory` then failed to build a model and reported
+/// `Unknown { kind: Incomplete }` where `CdclT` reported
+/// `Unknown { kind: Timeout }` — and `dpll_lia::check_with_arith_dpll` BRANCHES
+/// on that kind, so the give-up reason moved even though no verdict did. The
+/// engine swap is only a swap if neither moves.
+///
+/// The fixture is Boolean-satisfiable and theory-refuted, so every other outcome
+/// is reachable: without the check this returns `Unsat`, which is what makes the
+/// assertion discriminating rather than vacuous.
+#[test]
+fn an_exhausted_deadline_is_unknown_before_any_propagation() {
+    let clauses = vec![
+        vec![Lit {
+            var: 0,
+            positive: true,
+        }],
+        vec![Lit {
+            var: 1,
+            positive: true,
+        }],
+    ];
+    let mut theory = CubeTheory::new(2, vec![vec![(0, true), (1, true)]], false);
+    let past = std::time::Instant::now() - std::time::Duration::from_secs(1);
+    let outcome = solve_native(2, 2, &clauses, Some(past), &mut theory);
+    assert!(
+        matches!(outcome, NativeSolveOutcome::Unknown),
+        "an exhausted budget must not reach the search: {outcome:?}"
+    );
+    assert!(
+        super::take_last_theory_refutation().is_none(),
+        "nothing ran, so nothing may be published as this query's refutation"
+    );
+
+    // The control: the SAME fixture with no deadline is refuted, so the
+    // assertion above is about the deadline and not about a theory that cannot
+    // decide anything.
+    let mut theory = CubeTheory::new(2, vec![vec![(0, true), (1, true)]], false);
+    assert!(
+        matches!(
+            solve_native(2, 2, &clauses, None, &mut theory),
+            NativeSolveOutcome::Unsat
+        ),
+        "control: without a deadline this fixture is refuted"
+    );
+}

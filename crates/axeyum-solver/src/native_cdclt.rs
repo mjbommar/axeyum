@@ -360,6 +360,20 @@ pub(crate) fn solve_native<T: TheorySolver>(
     deadline: Option<Instant>,
     theory: &mut T,
 ) -> NativeSolveOutcome {
+    // `CdclT::solve_inner` tests its deadline at the TOP of the main loop, so an
+    // already-exhausted budget returns `Outcome::Unknown` having propagated
+    // nothing. The native core checks less eagerly, and the difference is
+    // observable: measured on `x > 0 & x < 1` with a zero timeout, the core
+    // propagated both units, ran a `final_check` the theory had no budget to
+    // answer, and returned `Sat`, which `lia_theory` then turned into
+    // `Unknown(Incomplete, "model did not replay")` instead of
+    // `Unknown(Timeout)` -- a different Unknown KIND, which
+    // `dpll_lia::check_with_arith_dpll` branches on. Restoring the eager check
+    // here keeps the engine swap a swap: the whole point is that no verdict and
+    // no give-up reason moves.
+    if deadline.is_some_and(|at| Instant::now() >= at) {
+        return NativeSolveOutcome::Unknown;
+    }
     let mut formula = CnfFormula::new(var_count);
     let mut occurring = vec![false; var_count];
     for clause in clauses {
