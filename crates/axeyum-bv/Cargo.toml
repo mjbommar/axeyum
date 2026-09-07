@@ -18,5 +18,21 @@ axeyum-ir.workspace = true
 # lowering on the same portable monotonic clock as the CNF/solver layers.
 web-time.workspace = true
 
+[dev-dependencies]
+# Bench-only: the `lower_terms_corpus` case lowers a committed SMT-LIB
+# benchmark's real assertions rather than a synthetic term. `axeyum-smtlib`
+# depends on `axeyum-ir`/`axeyum-fp`/`axeyum-strings` and NOT on `axeyum-bv`,
+# so this is a leaf dev-dependency, not a cycle.
+axeyum-smtlib = { path = "../axeyum-smtlib" }
+criterion.workspace = true
+
 [lints]
 workspace = true
+
+# Micro-benchmarks (2026-09-07, lane `bench-primitives`); `harness = false`
+# hands control to `criterion`'s own main. This crate had no benches at all
+# before that date, despite ADR-0300 measuring bit lowering plus CNF encoding
+# at ~84% of the cold pipeline.
+[[bench]]
+name = "bv_lowering"
+harness = false
