@@ -2283,6 +2283,30 @@ pub static GOVERNED_FILES: &[&str] = &[
     "crates/axeyum-solver/src/simplex.rs",
 ];
 
+/// Admission-class bounds that cross with no signal and which this crate
+/// **cannot** instrument, each with the structural reason.
+///
+/// A silent crossing that nothing records is the failure this registry keeps
+/// rediscovering: the population riding on such a bound is unmeasurable by
+/// construction, so a stale bound nobody hits is indistinguishable from a stale
+/// bound carrying fifty files. `every_silent_admission_bound_is_instrumented`
+/// therefore requires a [`note_crossed`] call site for every one of them, and
+/// this is the escape hatch — deliberately narrow, because an escape hatch that
+/// can excuse anything turns the check into decoration.
+///
+/// It is narrow in a way a reviewer can check mechanically:
+/// `uninstrumentable_bounds_are_outside_this_crate` fails if a line here names
+/// a bound in `axeyum-solver`, so nothing reachable from
+/// [`note_crossed`] can be excused. Only a genuine crate-boundary problem
+/// qualifies, and the fix for one is to move the recorder, not to add a line.
+pub static SILENT_UNINSTRUMENTED: &[(&str, &str)] = &[(
+    "crates/axeyum-rewrite/src/quantifiers.rs::CHAIN_INSTANCE_CAP",
+    "`note_crossed` lives in `axeyum-solver`, which depends on `axeyum-rewrite` \
+     and not the other way round, so the rewrite crate cannot call it. Making \
+     this gate attributable needs the recorder in a crate below both — a \
+     refactor with its own ADR, not a line in this table.",
+)];
+
 /// Constants in a [`GOVERNED_FILES`] file that are deliberately NOT governing
 /// values, each with the reason.
 ///
@@ -2904,6 +2928,124 @@ mod tests {
             "expected the instrumented gates to be found; the scan saw {sites} \
              call site(s), so it is passing vacuously"
         );
+    }
+
+    /// Every key passed to one recorder, read from this crate's own sources.
+    ///
+    /// Shared by the coverage guard below. Deliberately a second reader of the
+    /// same text rather than a list: a coverage test whose population is typed
+    /// by hand measures the maintainer's memory, and this one exists precisely
+    /// because eleven of twelve silent gates were unattributable without anyone
+    /// noticing.
+    fn recorded_keys(recorder: &str) -> BTreeSet<String> {
+        let src_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("src");
+        let mut keys = BTreeSet::new();
+        let mut stack = vec![src_dir];
+        while let Some(dir) = stack.pop() {
+            for entry in std::fs::read_dir(&dir).expect("read src dir") {
+                let path = entry.expect("dir entry").path();
+                if path.is_dir() {
+                    stack.push(path);
+                    continue;
+                }
+                if path.extension().is_none_or(|e| e != "rs") {
+                    continue;
+                }
+                // This file quotes the recorder's own name in its doc comments
+                // and in this scanner, so including it would report fragments
+                // of Rust as recorded keys.
+                if path.file_name().is_some_and(|f| f == "config_registry.rs") {
+                    continue;
+                }
+                let text = std::fs::read_to_string(&path).expect("read source");
+                let mut rest = text.as_str();
+                while let Some(at) = rest.find(recorder) {
+                    rest = &rest[at + recorder.len()..];
+                    let Some(open) = rest.find('"') else { break };
+                    if !rest[..open].chars().all(char::is_whitespace) {
+                        continue;
+                    }
+                    let after = &rest[open + 1..];
+                    let Some(close) = after.find('"') else { break };
+                    keys.insert(after[..close].to_string());
+                    rest = &after[close..];
+                }
+            }
+        }
+        keys
+    }
+
+    /// Every admission-class bound that crosses with **no signal** must have a
+    /// [`note_crossed`] call site, or be named in [`SILENT_UNINSTRUMENTED`].
+    ///
+    /// This is the ratchet on the gap the registry's own enumeration measured:
+    /// twelve entries changed behaviour with no branch a caller could observe,
+    /// and eleven of them recorded nothing at all, so "how many files did this
+    /// bound cost us?" was unanswerable by construction. The population is
+    /// derived from [`REGISTRY`] rather than written down, so a lane adding a
+    /// silent bound inherits the requirement instead of being trusted to
+    /// remember it.
+    #[test]
+    fn every_silent_admission_bound_is_instrumented() {
+        let crossed = recorded_keys("note_crossed(");
+        let excused: BTreeSet<&str> = SILENT_UNINSTRUMENTED.iter().map(|(k, _)| *k).collect();
+        let mut population = 0usize;
+        let mut unattributable = Vec::new();
+        for e in REGISTRY {
+            let admission = matches!(
+                e.on_exceed,
+                OnExceed::RefuseUnknown | OnExceed::DeclineRoute
+            ) || (e.on_exceed == OnExceed::Relax && e.signal == Signal::None);
+            if !admission || e.signal != Signal::None {
+                continue;
+            }
+            population += 1;
+            let key = e.key();
+            if !crossed.contains(&key) && !excused.contains(key.as_str()) {
+                unattributable.push(key);
+            }
+        }
+        // A population of zero would make this pass while measuring nothing —
+        // the failure mode this repository has been bitten by most often.
+        assert!(
+            population >= 12,
+            "the silent admission-class population is {population}; this check is passing vacuously"
+        );
+        assert!(
+            unattributable.is_empty(),
+            "admission-class bounds that cross with no signal and record no crossing, so a run \
+             that lost a decision to one cannot say so: {unattributable:#?}\nWire \
+             `config_registry::note_crossed(key, observed, bound)` at the gate, or add a line to \
+             SILENT_UNINSTRUMENTED saying why this crate cannot."
+        );
+    }
+
+    /// [`SILENT_UNINSTRUMENTED`] may only excuse a bound this crate genuinely
+    /// cannot reach.
+    ///
+    /// Without this the escape hatch above excuses anything, and a coverage
+    /// check that can be satisfied by editing its own exemption list is not a
+    /// check. A bound defined in `axeyum-solver` is reachable from
+    /// [`note_crossed`] by construction, so naming one here is always wrong.
+    #[test]
+    fn uninstrumentable_bounds_are_outside_this_crate() {
+        let registered: BTreeSet<String> = REGISTRY.iter().map(ConfigEntry::key).collect();
+        for (key, reason) in SILENT_UNINSTRUMENTED {
+            assert!(
+                registered.contains(*key),
+                "{key} is excused from instrumentation but is not a registered key"
+            );
+            assert!(
+                !key.starts_with("crates/axeyum-solver/"),
+                "{key} is in this crate, so `note_crossed` can reach it; wire the gate \
+                 instead of excusing it"
+            );
+            assert!(
+                !reason.is_empty(),
+                "{key} is excused with no reason, which is an omission wearing a judgement's \
+                 clothes"
+            );
+        }
     }
 
     /// An instrumented gate really does record its key when the guard is on,

@@ -8565,15 +8565,27 @@ fn relax_coercions(
             let operand = args[0];
             if let (Some(lo), Some(hi)) = int_bounds(arena, assertions, operand)
                 && hi >= lo
-                && hi - lo <= MAX_COERCION_LINK
             {
-                for v in lo..=hi {
-                    let iv = arena.int_const(v);
-                    let rv = arena.real_const(axeyum_ir::Rational::integer(v));
-                    let i_eq = arena.eq(operand, iv).map_err(err)?;
-                    let r_eq = arena.eq(fresh, rv).map_err(err)?;
-                    let n = arena.not(i_eq).map_err(err)?;
-                    links.push(arena.or(n, r_eq).map_err(err)?); // (i=v) → (r=v)
+                // Split out of the let-chain so the *refusal* has a body. Above
+                // the link width the coercion is left unlinked and the query is
+                // handed on with a weaker encoding — a mode change with no
+                // branch a caller can observe, which is exactly the population
+                // `note_crossed` exists for.
+                if hi - lo > MAX_COERCION_LINK {
+                    crate::config_registry::note_crossed(
+                        "crates/axeyum-solver/src/auto.rs::MAX_COERCION_LINK",
+                        u64::try_from(hi - lo).unwrap_or(u64::MAX),
+                        u64::try_from(MAX_COERCION_LINK).unwrap_or(u64::MAX),
+                    );
+                } else {
+                    for v in lo..=hi {
+                        let iv = arena.int_const(v);
+                        let rv = arena.real_const(axeyum_ir::Rational::integer(v));
+                        let i_eq = arena.eq(operand, iv).map_err(err)?;
+                        let r_eq = arena.eq(fresh, rv).map_err(err)?;
+                        let n = arena.not(i_eq).map_err(err)?;
+                        links.push(arena.or(n, r_eq).map_err(err)?); // (i=v) → (r=v)
+                    }
                 }
             }
         }
