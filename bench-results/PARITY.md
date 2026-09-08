@@ -1909,3 +1909,60 @@ committed benchmark list, same axeyum binary, same 24s/8GiB protocol.
 | load average (start / end) | 0.95 1.10 1.08 / 1.19 1.19 1.18 — 8 cores; a high load DEPRESSES this result |
 | per-file detail | `bench-results/parity-details/QF_UFLIA--smtinterpol.tsv` |
 
+
+## QF_UFLIA — 2026-09-08T20:27:12Z
+
+| field | value |
+|---|---|
+| axeyum solved | 129/200 |
+| reference solved | 180/200 |
+| **ratio (axeyum / reference)** | **71.7%** |
+| **disagreements** | **0** |
+| soundness | SOUND |
+| both / axeyum-only / reference-only | 129 / 0 / 51 |
+| reference | `cvc5 1.3.4 [git f3b21c4 on branch HEAD]` |
+| reference options | `<none — plain invocation, NOT a competition portfolio>` |
+| axeyum options | `<none — shipped default configuration>` |
+| protocol | 24s wall, 8GiB, per-file |
+| benchmark list | `bench-results/parity-lists/QF_UFLIA.txt` (sha256 f88e67890fae, 200 files) |
+| solver commit | `f24c61f91c` |
+| load average (start / end) | 1.93 2.79 1.86 / 1.05 1.02 1.05 — 16 cores; a high load DEPRESSES this result |
+| per-file detail | `bench-results/parity-details/QF_UFLIA.tsv` |
+
+## QF_LIA — 2026-09-08T20:50:09Z
+
+| field | value |
+|---|---|
+| axeyum solved | 119/200 |
+| reference solved | 139/200 |
+| **ratio (axeyum / reference)** | **85.6%** |
+| **disagreements** | **0** |
+| soundness | SOUND |
+| both / axeyum-only / reference-only | 117 / 2 / 22 |
+| reference | `cvc5 1.3.4 [git f3b21c4 on branch HEAD]` |
+| reference options | `<none — plain invocation, NOT a competition portfolio>` |
+| axeyum options | `<none — shipped default configuration>` |
+| protocol | 24s wall, 8GiB, per-file |
+| benchmark list | `bench-results/parity-lists/QF_LIA.txt` (sha256 9ede4b69b2ec, 200 files) |
+| solver commit | `f24c61f91c` |
+| load average (start / end) | 2.43 3.52 1.87 / 1.53 1.14 1.04 — 16 cores; a high load DEPRESSES this result |
+| per-file detail | `bench-results/parity-details/QF_LIA.tsv` |
+
+## QF_LRA — 2026-09-08T20:39:02Z
+
+| field | value |
+|---|---|
+| axeyum solved | 97/200 |
+| reference solved | 145/200 |
+| **ratio (axeyum / reference)** | **66.9%** |
+| **disagreements** | **0** |
+| soundness | SOUND |
+| both / axeyum-only / reference-only | 96 / 1 / 49 |
+| reference | `cvc5 1.3.4 [git f3b21c4 on branch HEAD]` |
+| reference options | `<none — plain invocation, NOT a competition portfolio>` |
+| axeyum options | `<none — shipped default configuration>` |
+| protocol | 24s wall, 8GiB, per-file |
+| benchmark list | `bench-results/parity-lists/QF_LRA.txt` (sha256 b636239947db, 200 files) |
+| solver commit | `f24c61f91` |
+| load average (start / end) | 3.28 4.87 2.40 / 1.23 1.10 1.13 — 16 cores; a high load DEPRESSES this result |
+| per-file detail | `bench-results/parity-details/QF_LRA.tsv` |
