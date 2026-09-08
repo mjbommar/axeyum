@@ -1,0 +1,821 @@
+[
+ {
+  "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LIA/20180326-Bromberger/more_slacked/CAV_2009_benchmarks/smt/30-vars/v30_problem_2__023.smt2.slack.smt2",
+  "main_verdict": "unknown",
+  "lane_off_verdict": "unknown",
+  "main_offline_calls": "1",
+  "lane_offline_calls": "1",
+  "lane_warm_checks": "0",
+  "lane_warm_group": "not-reached"
+ },
+ {
+  "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LIA/2019-cmodelsdiff/stillLive/0006-still_live-11-1.smt2",
+  "main_verdict": "sat",
+  "lane_off_verdict": "sat",
+  "main_offline_calls": "0",
+  "lane_offline_calls": "0",
+  "lane_warm_checks": "0",
+  "lane_warm_group": "not-reached"
+ },
+ {
+  "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LIA/2019-ezsmt/incrementalScheduling/182-incremental_scheduling-17280-0.smt2",
+  "main_verdict": "unknown",
+  "lane_off_verdict": "unknown",
+  "main_offline_calls": "2607",
+  "lane_offline_calls": "2608",
+  "lane_warm_checks": "0",
+  "lane_warm_group": "not-reached"
+ },
+ {
+  "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LIA/20210219-Dartagnan/ReachSafety-Loops/apache-get-tag-O0.smt2",
+  "main_verdict": "unknown",
+  "lane_off_verdict": "unknown",
+  "main_offline_calls": "0",
+  "lane_offline_calls": "0",
+  "lane_warm_checks": "0",
+  "lane_warm_group": "not-reached"
+ },
+ {
+  "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LIA/20210219-Dartagnan/ReachSafety-Loops/jm2006_variant-O0.smt2",
+  "main_verdict": "unknown",
+  "lane_off_verdict": "unknown",
+  "main_offline_calls": "0",
+  "lane_offline_calls": "0",
+  "lane_warm_checks": "0",
+  "lane_warm_group": "not-reached"
+ },
+ {
+  "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LIA/20220307-SMPT/BART-PT-020/RF-13.smt2",
+  "main_verdict": "sat",
+  "lane_off_verdict": "sat",
+  "main_offline_calls": "22508",
+  "lane_offline_calls": "22486",
+  "lane_warm_checks": "0",
+  "lane_warm_group": "not-reached"
+ },
+ {
+  "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LIA/20220307-SMPT/FamilyReunion-PT-L00400M0040C020P020G001/RC-07.smt2",
+  "main_verdict": "unknown",
+  "lane_off_verdict": "unknown",
+  "main_offline_calls": "25601",
+  "lane_offline_calls": "25601",
+  "lane_warm_checks": "0",
+  "lane_warm_group": "not-reached"
+ },
+ {
+  "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LIA/20220307-SMPT/RwMutex-PT-r0010w0500/RC-09.smt2",
+  "main_verdict": "unknown",
+  "lane_off_verdict": "unknown",
+  "main_offline_calls": "0",
+  "lane_offline_calls": "0",
+  "lane_warm_checks": "0",
+  "lane_warm_group": "not-reached"
+ },
+ {
+  "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LIA/20220307-SMPT/RwMutex-PT-r0010w2000/RC-11.smt2",
+  "main_verdict": "unknown",
+  "lane_off_verdict": "unknown",
+  "main_offline_calls": "0",
+  "lane_offline_calls": "0",
+  "lane_warm_checks": "0",
+  "lane_warm_group": "not-reached"
+ },
+ {
+  "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LIA/20220307-SMPT/RwMutex-PT-r1000w0010/RC-15.smt2",
+  "main_verdict": "unknown",
+  "lane_off_verdict": "unknown",
+  "main_offline_calls": "0",
+  "lane_offline_calls": "0",
+  "lane_warm_checks": "0",
+  "lane_warm_group": "not-reached"
+ },
+ {
+  "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LIA/CAV_2009_benchmarks/coef-size/smt/size-100/problem__006.smt2",
+  "main_verdict": "unknown",
+  "lane_off_verdict": "unknown",
+  "main_offline_calls": "21",
+  "lane_offline_calls": "21",
+  "lane_warm_checks": "0",
+  "lane_warm_group": "not-reached"
+ },
+ {
+  "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LIA/CAV_2009_benchmarks/smt/25-vars/problem_2__034.smt2",
+  "main_verdict": "unknown",
+  "lane_off_verdict": "unknown",
+  "main_offline_calls": "1",
+  "lane_offline_calls": "1",
+  "lane_warm_checks": "0",
+  "lane_warm_group": "not-reached"
+ },
+ {
+  "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LIA/CAV_2009_benchmarks/smt/35-vars/problem_2__026.smt2",
+  "main_verdict": "unknown",
+  "lane_off_verdict": "unknown",
+  "main_offline_calls": "1",
+  "lane_offline_calls": "1",
+  "lane_warm_checks": "0",
+  "lane_warm_group": "not-reached"
+ },
+ {
+  "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LIA/bofill-scheduling/SMT_random_LIA/ex13800_2600_100.smt2",
+  "main_verdict": "unknown",
+  "lane_off_verdict": "unknown",
+  "main_offline_calls": "10993",
+  "lane_offline_calls": "10993",
+  "lane_warm_checks": "0",
+  "lane_warm_group": "not-reached"
+ },
+ {
+  "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LIA/bofill-scheduling/SMT_random_LIA/ex20400_2600_100.smt2",
+  "main_verdict": "unknown",
+  "lane_off_verdict": "unknown",
+  "main_offline_calls": "10995",
+  "lane_offline_calls": "10994",
+  "lane_warm_checks": "0",
+  "lane_warm_group": "not-reached"
+ },
+ {
+  "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LIA/bofill-scheduling/SMT_random_LIA/ex27000_2600_100.smt2",
+  "main_verdict": "unknown",
+  "lane_off_verdict": "unknown",
+  "main_offline_calls": "10994",
+  "lane_offline_calls": "10991",
+  "lane_warm_checks": "0",
+  "lane_warm_group": "not-reached"
+ },
+ {
+  "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LIA/bofill-scheduling/SMT_random_LIA/ex8500_2600_100.smt2",
+  "main_verdict": "unknown",
+  "lane_off_verdict": "unknown",
+  "main_offline_calls": "10980",
+  "lane_offline_calls": "10992",
+  "lane_warm_checks": "0",
+  "lane_warm_group": "not-reached"
+ },
+ {
+  "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LIA/bofill-scheduling/SMT_real_LIA/ex5640_2400_100.smt2",
+  "main_verdict": "unknown",
+  "lane_off_verdict": "unknown",
+  "main_offline_calls": "8030",
+  "lane_offline_calls": "8034",
+  "lane_warm_checks": "0",
+  "lane_warm_group": "not-reached"
+ },
+ {
+  "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LIA/bofill-scheduling/SMT_real_LIA/ex6960_2400_100.smt2",
+  "main_verdict": "unknown",
+  "lane_off_verdict": "unknown",
+  "main_offline_calls": "8032",
+  "lane_offline_calls": "8038",
+  "lane_warm_checks": "0",
+  "lane_warm_group": "not-reached"
+ },
+ {
+  "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LIA/bofill-scheduling/SMT_real_LIA/ex8280_2400_100.smt2",
+  "main_verdict": "unknown",
+  "lane_off_verdict": "unknown",
+  "main_offline_calls": "8021",
+  "lane_offline_calls": "8035",
+  "lane_warm_checks": "0",
+  "lane_warm_group": "not-reached"
+ },
+ {
+  "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LIA/bofill-scheduling/SMT_real_LIA/ex9600_2400_100.smt2",
+  "main_verdict": "unknown",
+  "lane_off_verdict": "unknown",
+  "main_offline_calls": "8040",
+  "lane_offline_calls": "8041",
+  "lane_warm_checks": "0",
+  "lane_warm_group": "not-reached"
+ },
+ {
+  "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LIA/convert/convert-jpg2gif-query-1423.smt2",
+  "main_verdict": "unknown",
+  "lane_off_verdict": "unknown",
+  "main_offline_calls": "7129",
+  "lane_offline_calls": "7129",
+  "lane_warm_checks": "0",
+  "lane_warm_group": "not-reached"
+ },
+ {
+  "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LIA/mathsat/FISCHER10-13-fair.smt2",
+  "main_verdict": "unknown",
+  "lane_off_verdict": "unknown",
+  "main_offline_calls": "20711",
+  "lane_offline_calls": "20699",
+  "lane_warm_checks": "0",
+  "lane_warm_group": "not-reached"
+ },
+ {
+  "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LIA/nec-smt/med/checkpass_pwd/prp-0-19.smt2",
+  "main_verdict": "unknown",
+  "lane_off_verdict": "unknown",
+  "main_offline_calls": "9340",
+  "lane_offline_calls": "9340",
+  "lane_warm_checks": "0",
+  "lane_warm_group": "not-reached"
+ },
+ {
+  "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LIA/nec-smt/med/checkpass_pwd/prp-8-22.smt2",
+  "main_verdict": "unknown",
+  "lane_off_verdict": "unknown",
+  "main_offline_calls": "0",
+  "lane_offline_calls": "0",
+  "lane_warm_checks": "0",
+  "lane_warm_group": "not-reached"
+ },
+ {
+  "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LIA/nec-smt/small/print_file/prp-0-47.smt2",
+  "main_verdict": "unknown",
+  "lane_off_verdict": "unknown",
+  "main_offline_calls": "0",
+  "lane_offline_calls": "0",
+  "lane_warm_checks": "0",
+  "lane_warm_group": "not-reached"
+ },
+ {
+  "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LIA/rings/ring_2exp8_4vars_1ite_unsat.smt2",
+  "main_verdict": "unknown",
+  "lane_off_verdict": "unknown",
+  "main_offline_calls": "249",
+  "lane_offline_calls": "249",
+  "lane_warm_checks": "0",
+  "lane_warm_group": "not-reached"
+ },
+ {
+  "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/20230314-Jaroslav-Bendik-Certora/3106_1c933134166dbad31f79_41_QF_UFLIA.smt2",
+  "main_verdict": "unknown",
+  "lane_off_verdict": "unknown",
+  "main_offline_calls": "0",
+  "lane_offline_calls": "0",
+  "lane_warm_checks": "0",
+  "lane_warm_group": "not-reached"
+ },
+ {
+  "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/20230314-Jaroslav-Bendik-Certora/44289_e5a2e5c780236919ee6a_18_QF_UFLIA.smt2",
+  "main_verdict": "unknown",
+  "lane_off_verdict": "unknown",
+  "main_offline_calls": "0",
+  "lane_offline_calls": "0",
+  "lane_warm_checks": "0",
+  "lane_warm_group": "not-reached"
+ },
+ {
+  "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/20230314-Jaroslav-Bendik-Certora/63058_64ab9a7ef7b6c3492507_22_QF_UFLIA.smt2",
+  "main_verdict": "unknown",
+  "lane_off_verdict": "unknown",
+  "main_offline_calls": "0",
+  "lane_offline_calls": "0",
+  "lane_warm_checks": "0",
+  "lane_warm_group": "not-reached"
+ },
+ {
+  "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/20230314-Jaroslav-Bendik-Certora/63058_aa742630eef64f949de269382c1f9035_25_UFLIA.smt2",
+  "main_verdict": "unknown",
+  "lane_off_verdict": "unknown",
+  "main_offline_calls": "0",
+  "lane_offline_calls": "0",
+  "lane_warm_checks": "0",
+  "lane_warm_group": "not-reached"
+ },
+ {
+  "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/20230314-Jaroslav-Bendik-Certora/65782_cd31513fdcd15701933b_7_QF_UFLIA.smt2",
+  "main_verdict": "unknown",
+  "lane_off_verdict": "unknown",
+  "main_offline_calls": "0",
+  "lane_offline_calls": "0",
+  "lane_warm_checks": "0",
+  "lane_warm_group": "not-reached"
+ },
+ {
+  "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/20230314-Jaroslav-Bendik-Certora/72771_f9d228efc97cf1458e38_64_QF_UFLIA.smt2",
+  "main_verdict": "unknown",
+  "lane_off_verdict": "unknown",
+  "main_offline_calls": "0",
+  "lane_offline_calls": "0",
+  "lane_warm_checks": "0",
+  "lane_warm_group": "not-reached"
+ },
+ {
+  "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/EufLaArithmetic/hard/hard12.smt2",
+  "main_verdict": "unknown",
+  "lane_off_verdict": "unknown",
+  "main_offline_calls": "3074",
+  "lane_offline_calls": "3081",
+  "lane_warm_checks": "0",
+  "lane_warm_group": "not-reached"
+ },
+ {
+  "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/EufLaArithmetic/hard/hard15.smt2",
+  "main_verdict": "unknown",
+  "lane_off_verdict": "unknown",
+  "main_offline_calls": "3523",
+  "lane_offline_calls": "3523",
+  "lane_warm_checks": "0",
+  "lane_warm_group": "not-reached"
+ },
+ {
+  "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/EufLaArithmetic/hard/hard18.smt2",
+  "main_verdict": "unknown",
+  "lane_off_verdict": "unknown",
+  "main_offline_calls": "3190",
+  "lane_offline_calls": "3405",
+  "lane_warm_checks": "0",
+  "lane_warm_group": "not-reached"
+ },
+ {
+  "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/EufLaArithmetic/medium/medium10.smt2",
+  "main_verdict": "unknown",
+  "lane_off_verdict": "unknown",
+  "main_offline_calls": "3980",
+  "lane_offline_calls": "4308",
+  "lane_warm_checks": "0",
+  "lane_warm_group": "not-reached"
+ },
+ {
+  "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/EufLaArithmetic/medium/medium13.smt2",
+  "main_verdict": "unknown",
+  "lane_off_verdict": "unknown",
+  "main_offline_calls": "3911",
+  "lane_offline_calls": "3907",
+  "lane_warm_checks": "0",
+  "lane_warm_group": "not-reached"
+ },
+ {
+  "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/EufLaArithmetic/medium/medium16.smt2",
+  "main_verdict": "unknown",
+  "lane_off_verdict": "unknown",
+  "main_offline_calls": "3573",
+  "lane_offline_calls": "3572",
+  "lane_warm_checks": "0",
+  "lane_warm_group": "not-reached"
+ },
+ {
+  "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/EufLaArithmetic/medium/medium19.smt2",
+  "main_verdict": "unknown",
+  "lane_off_verdict": "unknown",
+  "main_offline_calls": "3510",
+  "lane_offline_calls": "3539",
+  "lane_warm_checks": "0",
+  "lane_warm_group": "not-reached"
+ },
+ {
+  "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/EufLaArithmetic/medium/medium9.smt2",
+  "main_verdict": "unknown",
+  "lane_off_verdict": "unknown",
+  "main_offline_calls": "4639",
+  "lane_offline_calls": "4635",
+  "lane_warm_checks": "0",
+  "lane_warm_group": "not-reached"
+ },
+ {
+  "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_sat_04_11.smt2",
+  "main_verdict": "sat",
+  "lane_off_verdict": "sat",
+  "main_offline_calls": "2980",
+  "lane_offline_calls": "2971",
+  "lane_warm_checks": "0",
+  "lane_warm_group": "not-reached"
+ },
+ {
+  "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_sat_04_14.smt2",
+  "main_verdict": "sat",
+  "lane_off_verdict": "sat",
+  "main_offline_calls": "2665",
+  "lane_offline_calls": "2668",
+  "lane_warm_checks": "0",
+  "lane_warm_group": "not-reached"
+ },
+ {
+  "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_sat_04_17.smt2",
+  "main_verdict": "sat",
+  "lane_off_verdict": "sat",
+  "main_offline_calls": "3263",
+  "lane_offline_calls": "3268",
+  "lane_warm_checks": "0",
+  "lane_warm_group": "not-reached"
+ },
+ {
+  "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_sat_05_05.smt2",
+  "main_verdict": "sat",
+  "lane_off_verdict": "sat",
+  "main_offline_calls": "3618",
+  "lane_offline_calls": "3604",
+  "lane_warm_checks": "0",
+  "lane_warm_group": "not-reached"
+ },
+ {
+  "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_sat_05_08.smt2",
+  "main_verdict": "sat",
+  "lane_off_verdict": "sat",
+  "main_offline_calls": "2797",
+  "lane_offline_calls": "2788",
+  "lane_warm_checks": "0",
+  "lane_warm_group": "not-reached"
+ },
+ {
+  "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_sat_05_11.smt2",
+  "main_verdict": "sat",
+  "lane_off_verdict": "sat",
+  "main_offline_calls": "2616",
+  "lane_offline_calls": "2650",
+  "lane_warm_checks": "0",
+  "lane_warm_group": "not-reached"
+ },
+ {
+  "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_sat_05_17.smt2",
+  "main_verdict": "unknown",
+  "lane_off_verdict": "unknown",
+  "main_offline_calls": "4639",
+  "lane_offline_calls": "4697",
+  "lane_warm_checks": "0",
+  "lane_warm_group": "not-reached"
+ },
+ {
+  "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_sat_05_20.smt2",
+  "main_verdict": "unknown",
+  "lane_off_verdict": "unknown",
+  "main_offline_calls": "5165",
+  "lane_offline_calls": "5165",
+  "lane_warm_checks": "0",
+  "lane_warm_group": "not-reached"
+ },
+ {
+  "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_sat_06_05.smt2",
+  "main_verdict": "sat",
+  "lane_off_verdict": "sat",
+  "main_offline_calls": "3107",
+  "lane_offline_calls": "3108",
+  "lane_warm_checks": "0",
+  "lane_warm_group": "not-reached"
+ },
+ {
+  "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_sat_06_08.smt2",
+  "main_verdict": "sat",
+  "lane_off_verdict": "sat",
+  "main_offline_calls": "2815",
+  "lane_offline_calls": "2831",
+  "lane_warm_checks": "0",
+  "lane_warm_group": "not-reached"
+ },
+ {
+  "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_sat_06_11.smt2",
+  "main_verdict": "unknown",
+  "lane_off_verdict": "unknown",
+  "main_offline_calls": "4661",
+  "lane_offline_calls": "4717",
+  "lane_warm_checks": "0",
+  "lane_warm_group": "not-reached"
+ },
+ {
+  "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_sat_06_14.smt2",
+  "main_verdict": "unknown",
+  "lane_off_verdict": "unknown",
+  "main_offline_calls": "5224",
+  "lane_offline_calls": "5323",
+  "lane_warm_checks": "0",
+  "lane_warm_group": "not-reached"
+ },
+ {
+  "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_sat_06_17.smt2",
+  "main_verdict": "unknown",
+  "lane_off_verdict": "unknown",
+  "main_offline_calls": "5993",
+  "lane_offline_calls": "5997",
+  "lane_warm_checks": "0",
+  "lane_warm_group": "not-reached"
+ },
+ {
+  "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_sat_06_20.smt2",
+  "main_verdict": "unknown",
+  "lane_off_verdict": "unknown",
+  "main_offline_calls": "6764",
+  "lane_offline_calls": "6765",
+  "lane_warm_checks": "0",
+  "lane_warm_group": "not-reached"
+ },
+ {
+  "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_sat_07_05.smt2",
+  "main_verdict": "sat",
+  "lane_off_verdict": "sat",
+  "main_offline_calls": "4005",
+  "lane_offline_calls": "3996",
+  "lane_warm_checks": "0",
+  "lane_warm_group": "not-reached"
+ },
+ {
+  "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_sat_07_08.smt2",
+  "main_verdict": "unknown",
+  "lane_off_verdict": "unknown",
+  "main_offline_calls": "4774",
+  "lane_offline_calls": "4775",
+  "lane_warm_checks": "0",
+  "lane_warm_group": "not-reached"
+ },
+ {
+  "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_sat_07_11.smt2",
+  "main_verdict": "unknown",
+  "lane_off_verdict": "unknown",
+  "main_offline_calls": "5626",
+  "lane_offline_calls": "5630",
+  "lane_warm_checks": "0",
+  "lane_warm_group": "not-reached"
+ },
+ {
+  "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_sat_07_14.smt2",
+  "main_verdict": "unknown",
+  "lane_off_verdict": "unknown",
+  "main_offline_calls": "6642",
+  "lane_offline_calls": "6643",
+  "lane_warm_checks": "0",
+  "lane_warm_group": "not-reached"
+ },
+ {
+  "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_sat_07_17.smt2",
+  "main_verdict": "unknown",
+  "lane_off_verdict": "unknown",
+  "main_offline_calls": "7699",
+  "lane_offline_calls": "7702",
+  "lane_warm_checks": "0",
+  "lane_warm_group": "not-reached"
+ },
+ {
+  "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_sat_07_20.smt2",
+  "main_verdict": "unknown",
+  "lane_off_verdict": "unknown",
+  "main_offline_calls": "8872",
+  "lane_offline_calls": "8872",
+  "lane_warm_checks": "0",
+  "lane_warm_group": "not-reached"
+ },
+ {
+  "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_sat_08_05.smt2",
+  "main_verdict": "unknown",
+  "lane_off_verdict": "unknown",
+  "main_offline_calls": "4177",
+  "lane_offline_calls": "4280",
+  "lane_warm_checks": "0",
+  "lane_warm_group": "not-reached"
+ },
+ {
+  "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_sat_08_08.smt2",
+  "main_verdict": "unknown",
+  "lane_off_verdict": "unknown",
+  "main_offline_calls": "5537",
+  "lane_offline_calls": "5535",
+  "lane_warm_checks": "0",
+  "lane_warm_group": "not-reached"
+ },
+ {
+  "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_sat_08_11.smt2",
+  "main_verdict": "unknown",
+  "lane_off_verdict": "unknown",
+  "main_offline_calls": "6822",
+  "lane_offline_calls": "6825",
+  "lane_warm_checks": "0",
+  "lane_warm_group": "not-reached"
+ },
+ {
+  "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_sat_08_14.smt2",
+  "main_verdict": "unknown",
+  "lane_off_verdict": "unknown",
+  "main_offline_calls": "8336",
+  "lane_offline_calls": "8336",
+  "lane_warm_checks": "0",
+  "lane_warm_group": "not-reached"
+ },
+ {
+  "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_sat_08_17.smt2",
+  "main_verdict": "unknown",
+  "lane_off_verdict": "unknown",
+  "main_offline_calls": "9897",
+  "lane_offline_calls": "9897",
+  "lane_warm_checks": "0",
+  "lane_warm_group": "not-reached"
+ },
+ {
+  "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_sat_08_20.smt2",
+  "main_verdict": "unknown",
+  "lane_off_verdict": "unknown",
+  "main_offline_calls": "11455",
+  "lane_offline_calls": "11457",
+  "lane_warm_checks": "0",
+  "lane_warm_group": "not-reached"
+ },
+ {
+  "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_sat_09_05.smt2",
+  "main_verdict": "unknown",
+  "lane_off_verdict": "unknown",
+  "main_offline_calls": "4923",
+  "lane_offline_calls": "4922",
+  "lane_warm_checks": "0",
+  "lane_warm_group": "not-reached"
+ },
+ {
+  "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_sat_09_08.smt2",
+  "main_verdict": "unknown",
+  "lane_off_verdict": "unknown",
+  "main_offline_calls": "6470",
+  "lane_offline_calls": "6521",
+  "lane_warm_checks": "0",
+  "lane_warm_group": "not-reached"
+ },
+ {
+  "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_sat_09_11.smt2",
+  "main_verdict": "unknown",
+  "lane_off_verdict": "unknown",
+  "main_offline_calls": "8365",
+  "lane_offline_calls": "8365",
+  "lane_warm_checks": "0",
+  "lane_warm_group": "not-reached"
+ },
+ {
+  "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_sat_09_14.smt2",
+  "main_verdict": "unknown",
+  "lane_off_verdict": "unknown",
+  "main_offline_calls": "10366",
+  "lane_offline_calls": "10366",
+  "lane_warm_checks": "0",
+  "lane_warm_group": "not-reached"
+ },
+ {
+  "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_sat_09_17.smt2",
+  "main_verdict": "unknown",
+  "lane_off_verdict": "unknown",
+  "main_offline_calls": "12408",
+  "lane_offline_calls": "12408",
+  "lane_warm_checks": "0",
+  "lane_warm_group": "not-reached"
+ },
+ {
+  "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_sat_09_20.smt2",
+  "main_verdict": "unknown",
+  "lane_off_verdict": "unknown",
+  "main_offline_calls": "14452",
+  "lane_offline_calls": "14452",
+  "lane_warm_checks": "0",
+  "lane_warm_group": "not-reached"
+ },
+ {
+  "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_sat_10_05.smt2",
+  "main_verdict": "unknown",
+  "lane_off_verdict": "unknown",
+  "main_offline_calls": "5588",
+  "lane_offline_calls": "5587",
+  "lane_warm_checks": "0",
+  "lane_warm_group": "not-reached"
+ },
+ {
+  "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_sat_10_08.smt2",
+  "main_verdict": "unknown",
+  "lane_off_verdict": "unknown",
+  "main_offline_calls": "7706",
+  "lane_offline_calls": "7757",
+  "lane_warm_checks": "0",
+  "lane_warm_group": "not-reached"
+ },
+ {
+  "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_sat_10_11.smt2",
+  "main_verdict": "unknown",
+  "lane_off_verdict": "unknown",
+  "main_offline_calls": "10186",
+  "lane_offline_calls": "10187",
+  "lane_warm_checks": "0",
+  "lane_warm_group": "not-reached"
+ },
+ {
+  "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_sat_10_14.smt2",
+  "main_verdict": "unknown",
+  "lane_off_verdict": "unknown",
+  "main_offline_calls": "12708",
+  "lane_offline_calls": "12706",
+  "lane_warm_checks": "0",
+  "lane_warm_group": "not-reached"
+ },
+ {
+  "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_sat_10_17.smt2",
+  "main_verdict": "unknown",
+  "lane_off_verdict": "unknown",
+  "main_offline_calls": "15283",
+  "lane_offline_calls": "15282",
+  "lane_warm_checks": "0",
+  "lane_warm_group": "not-reached"
+ },
+ {
+  "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_sat_10_20.smt2",
+  "main_verdict": "unknown",
+  "lane_off_verdict": "unknown",
+  "main_offline_calls": "17864",
+  "lane_offline_calls": "17864",
+  "lane_warm_checks": "0",
+  "lane_warm_group": "not-reached"
+ },
+ {
+  "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_uns_04_14.smt2",
+  "main_verdict": "unknown",
+  "lane_off_verdict": "unknown",
+  "main_offline_calls": "3940",
+  "lane_offline_calls": "3940",
+  "lane_warm_checks": "0",
+  "lane_warm_group": "not-reached"
+ },
+ {
+  "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_uns_05_08.smt2",
+  "main_verdict": "unknown",
+  "lane_off_verdict": "unknown",
+  "main_offline_calls": "4937",
+  "lane_offline_calls": "5022",
+  "lane_warm_checks": "0",
+  "lane_warm_group": "not-reached"
+ },
+ {
+  "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_uns_05_11.smt2",
+  "main_verdict": "unknown",
+  "lane_off_verdict": "unknown",
+  "main_offline_calls": "4425",
+  "lane_offline_calls": "4604",
+  "lane_warm_checks": "0",
+  "lane_warm_group": "not-reached"
+ },
+ {
+  "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/wisas/xs_19_29.smt2",
+  "main_verdict": "unknown",
+  "lane_off_verdict": "unknown",
+  "main_offline_calls": "30057",
+  "lane_offline_calls": "29810",
+  "lane_warm_checks": "0",
+  "lane_warm_group": "not-reached"
+ },
+ {
+  "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/wisas/xs_24_34.smt2",
+  "main_verdict": "unknown",
+  "lane_off_verdict": "unknown",
+  "main_offline_calls": "33534",
+  "lane_offline_calls": "33560",
+  "lane_warm_checks": "0",
+  "lane_warm_group": "not-reached"
+ },
+ {
+  "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/wisas/xs_25_35.smt2",
+  "main_verdict": "unknown",
+  "lane_off_verdict": "unknown",
+  "main_offline_calls": "34439",
+  "lane_offline_calls": "34424",
+  "lane_warm_checks": "0",
+  "lane_warm_group": "not-reached"
+ },
+ {
+  "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LIA/20180326-Bromberger/more_slacked/CAV_2009_benchmarks/coef-size/smt/size-10/c10_problem__001.smt2.slack.smt2",
+  "main_verdict": "sat",
+  "lane_off_verdict": "sat",
+  "main_offline_calls": "1",
+  "lane_offline_calls": "1",
+  "lane_warm_checks": "0",
+  "lane_warm_group": "not-reached"
+ },
+ {
+  "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LIA/20180326-Bromberger/more_slacked/CAV_2009_benchmarks/smt/10-vars/v10_problem_2__016.smt2.slack.smt2",
+  "main_verdict": "unsat",
+  "lane_off_verdict": "unsat",
+  "main_offline_calls": "1",
+  "lane_offline_calls": "1",
+  "lane_warm_checks": "0",
+  "lane_warm_group": "not-reached"
+ },
+ {
+  "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LIA/20180326-Bromberger/more_slacked/CAV_2009_benchmarks/smt/15-vars/v15_problem_2__015.smt2.slack.smt2",
+  "main_verdict": "sat",
+  "lane_off_verdict": "sat",
+  "main_offline_calls": "1",
+  "lane_offline_calls": "1",
+  "lane_warm_checks": "0",
+  "lane_warm_group": "not-reached"
+ },
+ {
+  "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/20230314-Jaroslav-Bendik-Certora/11775_ad46e5b8db4748c51973_42_QF_UFLIA.smt2",
+  "main_verdict": "unknown",
+  "lane_off_verdict": "unknown",
+  "main_offline_calls": "0",
+  "lane_offline_calls": "0",
+  "lane_warm_checks": "0",
+  "lane_warm_group": "not-reached"
+ },
+ {
+  "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/20230314-Jaroslav-Bendik-Certora/17512_5c1021b0faa6b6e1791b_20_QF_UFLIA.smt2",
+  "main_verdict": "unknown",
+  "lane_off_verdict": "unknown",
+  "main_offline_calls": "0",
+  "lane_offline_calls": "0",
+  "lane_warm_checks": "0",
+  "lane_warm_group": "not-reached"
+ },
+ {
+  "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/20230314-Jaroslav-Bendik-Certora/25959_5dee2e2f6ef44465a2bea4b085818948_66_QF_UFLIA.smt2",
+  "main_verdict": "unknown",
+  "lane_off_verdict": "unknown",
+  "main_offline_calls": "0",
+  "lane_offline_calls": "0",
+  "lane_warm_checks": "0",
+  "lane_warm_group": "not-reached"
+ }
+]

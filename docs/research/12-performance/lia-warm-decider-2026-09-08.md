@@ -157,11 +157,11 @@ affected in the same way — they are counts of what the filter answered, not a
 ratio against the cold path — but they were taken on the same pre-merge binary
 and are labelled as such.
 
-"Result 4" re-runs the whole thing post-merge on an idle host. Where the two
-disagree, Result 4 is the one about the code that ships. The pre-merge numbers
-are kept rather than overwritten because the decision to keep the rational
-filter was made on them, and a decision should be checkable against the evidence
-that was actually in front of it.
+"Result 4" re-runs the whole thing post-merge on an idle host, and **it does
+disagree**: warming's x1.79 becomes x1.00. The pre-merge numbers are kept rather
+than overwritten because the decision to keep the rational filter was made on
+them, and a decision should be checkable against the evidence that was actually
+in front of it — but for what warming is worth, read Result 4 and not these.
 
 ## Result 1 (PRE-MERGE, binary `ca7717c5e`): the rational filter stays. The premise was wrong.
 
@@ -207,7 +207,7 @@ renamed `WARM_NO_FILTER` and documented as a diagnostic. A test pins the
 reverted default, because a default that was already once wrong is one edit from
 being wrong again.
 
-## Result 2 (PRE-MERGE, binary `ca7717c5e`): what warming bought
+## Result 2 (PRE-MERGE, binary `ca7717c5e`, SUPERSEDED by Result 4): what warming bought
 
 With the filter held fixed on both arms (`filter` vs `off`, so warming is the
 only difference):
@@ -271,6 +271,98 @@ with total x1.67 and max x4.77. The gain is concentrated, not spread: `RF-13`
 x4.77, `xs_24_34` x4.21, `xs_19_29` x1.76, and most files unchanged because
 another route owns their budget. Reporting the median alone would understate it
 and the total alone would overstate how broadly it applies; both are above.
+
+## Result 4 (POST-MERGE, the one about the code that ships): warming buys ~0% here, and the counters say why
+
+The whole 85-file loss population, 24 s budget, three arms from one binary,
+alternating order, on **idle s5** (load 1.0, one solve at a time) at
+`39c493ba5`. This supersedes Results 1-3 wherever they disagree.
+
+| arm | offline decisions | live-set decisions | filter answered / refuted | verdicts |
+| --- | --- | --- | --- | --- |
+| `off` (cold, filter on) | 591,180 (x1.00) | 772,658 (x1.00) | 181,478 / **46,193** | 17 sat, 68 unknown |
+| `warm` (shipped default) | 594,072 (**x1.00**) | 775,544 (x1.00) | 181,472 / 46,193 | 17 sat, 68 unknown |
+| `nofilter` (diagnostic) | 981,519 (x1.66) | 981,519 (x1.27) | 0 / 0, **140,510 skipped** | 17 sat, 68 unknown |
+
+**Warming the offline decider buys essentially nothing on this population, and
+the pre-merge x1.79 does not survive.** Two things account for the difference,
+and both are checkable from the counters rather than argued:
+
+1. **The x1.79 was the arena clone, and main removed it independently.** The
+   pre-merge `off` arm still cloned the whole `TermArena` per feasibility check
+   — main's `c557cbe6d` measures that at 10-49% of the binding route's budget.
+   My warm path skipped it as a side effect. Once main removed it from the cold
+   path too, the ratio went to 1.00. The lane that measured the clone got the
+   win; this lane's warming is not what produced it.
+
+2. **The caller I warmed is 9.7% of the offline decider's entries here.** The
+   warm decider serves `LiaTheory::feasibility` and its core minimisation.
+   Across the 71 engaged files, `warm_checks` is 57,402 of 594,072
+   `offline_calls`. The per-file table (`merge1-24s.attribution.txt`) shows the
+   share is 0-24% on all but one file — `xs_19_29.smt2` at 82.5%. On the
+   `hash_*` family, which is 40 of the 85 files, the online theory is entered
+   but every live set is answered by the rational filter, so the warm decider
+   sees almost none of them; the thousands of offline entries per file come from
+   the front door's own `lia-simplex` route and `dpll_lia`'s inner oracle, which
+   the warm path does not touch at all.
+
+   The chain is visible in one file's counters
+   (`182-incremental_scheduling-17280-0`): `feasibility_checks = 634`,
+   `filter_integral = 446`, `filter_inconclusive = 188`, `warm_checks = 188`,
+   `offline_calls = 3,127`. Every check the filter did not answer went to the
+   warm decider, and that was 6% of the file's offline entries.
+
+Warming did not make anything *worse*: the warm arm ran 0.5% more offline
+decisions than the cold arm, no file changed verdict, and no two arms disagreed
+on a decided file.
+
+### What the warm cache itself did, on the calls it served
+
+99.1% of the live literal set reused per check, **0.7% of the constraints
+rebuilt**, 93.7% literal-cache hit rate, 72.1% of checks continuing from the
+previous assembly. The mechanism works as designed; it is attached to 9.7% of
+the work.
+
+### The filter result is unchanged and stronger
+
+At 24 s over the full population the `off` arm's filter answered 181,478 live
+sets and **refuted 46,193**. Turning it off pushes 140,510 live sets onto the
+offline decider (`filter_skipped`), which is why the `nofilter` arm's
+`offline_calls` is 1.66x and its total live-set decisions are only 1.27x. The
+decision to keep it stands on a larger population than the one it was made on.
+
+### So what should happen next
+
+Not "warm the decider harder". The measurement says the decider is entered from
+somewhere else on this population, so the next move is to point the same warm
+decider at `dpll_lia`'s inner oracle and the front-door `lia-simplex` route —
+where the other 90% of the entries are — or to establish that those callers do
+not have a stable trail to warm against, which would be the real finding. The
+counters to watch are `warm_checks` against `offline_calls`; on this population
+that ratio is 0.097, and any warming work should be expected to move it before
+it is expected to move a verdict.
+
+## Result 5: `AXEYUM_LIA_WARM=off` is the pre-existing path, checked as two binaries
+
+The A/B rests on `LiaWarmPolicy::OFF` reproducing what shipped before. That is
+argued three ways in the code — it builds no warm decider, it leaves the filter
+on, and `verify-extraction.py` shows the offline decider is token-identical to
+main's — and none of those is the same as running it.
+
+So: pristine `origin/main` at `77d798701` and this lane at `1a01d335d`, two
+release binaries on idle **s7**, over the 85 loss files plus the first three of
+each parity list (91 total), 8 s budget.
+
+* **0 verdict mismatches**, over 91 files of which 14 were decided by at least
+  one arm. A run where nothing was decided would prove nothing, which is why the
+  decided count is stated and the checker returns non-zero if it is zero.
+* **0 runs in which the lane's `off` arm entered the warm decider** —
+  `warm_checks = 0` on every one. The policy is inert, not merely
+  behaviour-preserving.
+
+Counters are deliberately NOT required to match: main's binary has no warm group
+at all and the lane's `off` arm reports it `not-reached`, which is the correct
+different answer rather than a discrepancy.
 
 ## What is warm and what is still cold
 

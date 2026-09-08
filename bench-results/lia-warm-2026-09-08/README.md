@@ -22,7 +22,12 @@ Raw data behind
 | `stage2-24s.json` | the 29 engaged files at the 24,000 ms parity budget. |
 | `stage2-24s.{summary,perfile}.txt` | the same two views for stage 2. |
 | `xs2434-repeat.json` | `xs_24_34.smt2` alone, three repetitions per arm. Stage 2 showed it `unknown` in two arms and `sat` in a third, which would read as a coverage change; the repeat is `sat` in every arm every time, and in the arm that "won" the warm decider recorded ZERO checks. A host artefact, recorded rather than quoted. |
-| `engaged.txt` | the 29 of 85 loss files where the online `LIA` theory is actually entered. |
+| `engaged.txt` | the 29 of 85 loss files where the online `LIA` theory is actually entered (pre-merge, 8 s). |
+| `merge1-24s.json` | **the result that supersedes the rest**: the whole 85-file population at 24 s, three arms, on idle s5 at `39c493ba5`. |
+| `merge1-24s.summary.txt` | `score.py` output for it. |
+| `merge1-24s.attribution.txt` | `attribute.py` output: where the offline decider's entries actually come from. This is the file that explains the flat ratio — the warm decider serves 9.7% of them. |
+| `attribute.py` | the attribution. Written because `offline_calls` is a denominator the warm path can only touch a tenth of, and a ratio over a denominator the change cannot move is not a measurement of the change. |
+| `off-equivalence.{py,json}` | pristine `origin/main` vs this lane with `AXEYUM_LIA_WARM=off`, two binaries, 91 files: 0 verdict mismatches, 0 runs where the `off` arm entered the warm decider. Returns non-zero if nothing was decided, so it cannot pass vacuously. |
 
 ## Reading the numbers
 

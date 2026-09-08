@@ -1,0 +1,84 @@
+file                                      off.offline warm.offline  warm.checks  warm share  off.feas warm.feas
+----------------------------------------------------------------------------------------------------------------
+v30_problem_2__023.smt2.slack.smt2                  1            1            0       0.0%         0         0
+182-incremental_scheduling-17280-0.smt2          3127         3127          188       6.0%       635       634
+RF-13.smt2                                      24652        25919         6224      24.0%      4957      6224
+RC-07.smt2                                      30948        32543         6875      21.1%      5280      6876
+problem__006.smt2                                  21           21            0       0.0%         0         0
+problem_2__034.smt2                                 1            1            0       0.0%         0         0
+problem_2__026.smt2                                 1            1            0       0.0%         0         0
+ex13800_2600_100.smt2                           11146        11150         1592      14.3%      1588      1592
+ex20400_2600_100.smt2                           11148        11154         1594      14.3%      1590      1594
+ex27000_2600_100.smt2                           11149        11152         1594      14.3%      1591      1594
+ex8500_2600_100.smt2                            11126        11130         1570      14.1%      1568      1570
+ex5640_2400_100.smt2                             8161         8163         1268      15.5%      1268      1268
+ex6960_2400_100.smt2                             8148         8148         1268      15.6%      1268      1268
+ex8280_2400_100.smt2                             8137         8137         1268      15.6%      1268      1268
+ex9600_2400_100.smt2                             8132         8132         1268      15.6%      1268      1268
+convert-jpg2gif-query-1423.smt2                  7309         7309          738      10.1%       738       738
+FISCHER10-13-fair.smt2                          20480        20480            0       0.0%      1121      1111
+prp-0-19.smt2                                    9581         9582            0       0.0%      2357      2361
+ring_2exp8_4vars_1ite_unsat.smt2                  249          249            0       0.0%         0         0
+hard12.smt2                                      5121         5120            0       0.0%         0         0
+hard15.smt2                                      5120         5120            0       0.0%         0         0
+hard18.smt2                                      5120         5122            0       0.0%         0         0
+medium10.smt2                                   10240        10240            0       0.0%         0         0
+medium13.smt2                                    7168         7168            0       0.0%         0         0
+medium16.smt2                                    5120         5120            0       0.0%         0         0
+medium19.smt2                                    4098         4098            0       0.0%         0         0
+medium9.smt2                                    10242        10240            0       0.0%         0         0
+hash_sat_04_11.smt2                              5577         5574           70       1.3%      1571      1571
+hash_sat_04_14.smt2                              4550         4535           88       1.9%      1895      1895
+hash_sat_04_17.smt2                              5222         5238          106       2.0%      2532      2532
+hash_sat_05_05.smt2                              7785         7815            0       0.0%      1430      1430
+hash_sat_05_08.smt2                              4991         4994            0       0.0%      1850      1850
+hash_sat_05_11.smt2                              4191         4200            0       0.0%      2400      2400
+hash_sat_05_17.smt2                              4864         4864            0       0.0%         0         0
+hash_sat_05_20.smt2                              6144         6144            0       0.0%         0         0
+hash_sat_06_05.smt2                              5422         5387           60       1.1%      2297      2297
+hash_sat_06_08.smt2                              4305         4337           90       2.1%      3422      3422
+hash_sat_06_11.smt2                              6148         6144            0       0.0%         0         0
+hash_sat_06_14.smt2                              6148         6146            0       0.0%         0         0
+hash_sat_06_17.smt2                              6148         6144            0       0.0%         0         0
+hash_sat_06_20.smt2                              7170         7172            0       0.0%         0         0
+hash_sat_07_05.smt2                              5760         5735         1113      19.4%      3623      3623
+hash_sat_07_08.smt2                              6146         6144            0       0.0%         0         0
+hash_sat_07_11.smt2                              6146         6144            0       0.0%         0         0
+hash_sat_07_14.smt2                              7170         7172            0       0.0%         0         0
+hash_sat_07_17.smt2                              8196         8192            0       0.0%         0         0
+hash_sat_07_20.smt2                              9218         9220            0       0.0%         0         0
+hash_sat_08_05.smt2                              6146         6146            0       0.0%    112270    112270
+hash_sat_08_08.smt2                              6146         6148            0       0.0%         0         0
+hash_sat_08_11.smt2                              7172         7168            0       0.0%         0         0
+hash_sat_08_14.smt2                              8194         8194            0       0.0%         0         0
+hash_sat_08_17.smt2                             10242        10240            0       0.0%         0         0
+hash_sat_08_20.smt2                             11266        11266            0       0.0%         0         0
+hash_sat_09_05.smt2                              6148         6148            0       0.0%         0         0
+hash_sat_09_08.smt2                              7170         7168            0       0.0%         0         0
+hash_sat_09_11.smt2                              8196         8196            0       0.0%         0         0
+hash_sat_09_14.smt2                             10242        10242            0       0.0%         0         0
+hash_sat_09_17.smt2                             12290        12292            0       0.0%         0         0
+hash_sat_09_20.smt2                             14336        14338            0       0.0%         0         0
+hash_sat_10_05.smt2                              6144         6144            0       0.0%         0         0
+hash_sat_10_08.smt2                              8196         8196            0       0.0%         0         0
+hash_sat_10_11.smt2                             10244        10242            0       0.0%         0         0
+hash_sat_10_14.smt2                             12290        12292            0       0.0%         0         0
+hash_sat_10_17.smt2                             15364        15364            0       0.0%         0         0
+hash_sat_10_20.smt2                             17408        17412            0       0.0%         0         0
+hash_uns_04_14.smt2                              6144         6147            0       0.0%      6394      6394
+hash_uns_05_08.smt2                              8194         8194            0       0.0%     40633     40633
+hash_uns_05_11.smt2                              7170         7170            0       0.0%     41087     41087
+xs_19_29.smt2                                   36864        36866        30428      82.5%      9568      9568
+xs_24_34.smt2                                    4482         4484            0       0.0%         0         0
+xs_25_35.smt2                                    4085         4087            0       0.0%         0         0
+
+offline calls, cold arm : 591180
+offline calls, warm arm : 594072
+of which WARM           : 57402 (9.7%)
+files where the warm decider serves >50% of offline entries: 1
+
+The warm decider is wired to `LiaTheory::feasibility` and its core
+minimisation. Everything else that enters `lia_simplex_capped` — the front
+door's own `lia-simplex` route and `dpll_lia`'s inner oracle — is untouched
+by it, and a flat `offline_calls` total says nothing about warming unless
+the warm share is large.
