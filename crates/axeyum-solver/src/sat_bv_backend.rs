@@ -2650,6 +2650,15 @@ mod tests {
         formula(n, &refs)
     }
 
+    /// `push_count` stores work totals as `f64`, so a test comparing against
+    /// one has to make the same conversion. Named rather than an inline `as`
+    /// so the lossy cast is admitted once, next to the reason it is harmless:
+    /// these values are well under 2^53.
+    #[allow(clippy::cast_precision_loss)]
+    fn u64_as_f64(value: u64) -> f64 {
+        value as f64
+    }
+
     fn stat(stats: &SolveStats, name: &str) -> Option<f64> {
         stats
             .backend
@@ -3227,9 +3236,9 @@ mod tests {
         let budget = bve_admission(&f, None, &mut stats).expect("no deadline must admit");
         let setup = (literal_occurrences(&f) + 2 * f.variable_count()) as u64;
         assert_eq!(budget, setup * BVE_BUDGET_SETUP_MULTIPLE);
-        assert!(BVE_BUDGET_SETUP_MULTIPLE >= BVE_MIN_RECOVERY_MULTIPLE);
+        const { assert!(BVE_BUDGET_SETUP_MULTIPLE >= BVE_MIN_RECOVERY_MULTIPLE) };
         assert_eq!(stat(&stats, "bve_admitted"), Some(1.0));
-        assert_eq!(stat(&stats, "bve_setup_work"), Some(setup as f64));
+        assert_eq!(stat(&stats, "bve_setup_work"), Some(u64_as_f64(setup)));
     }
 
     /// The gate fires when the remaining slice cannot recover the setup cost.
@@ -3243,7 +3252,9 @@ mod tests {
     #[test]
     fn a_spent_slice_delays_bve_instead_of_paying_for_setup_it_cannot_use() {
         let f = wide_formula(500);
-        let already_gone = Instant::now() - Duration::from_secs(1);
+        let already_gone = Instant::now()
+            .checked_sub(Duration::from_secs(1))
+            .expect("the process has been up for at least a second");
         let mut stats = SolveStats::default();
         assert!(
             bve_admission(&f, Some(already_gone), &mut stats).is_none(),
@@ -3253,7 +3264,7 @@ mod tests {
         let setup = (literal_occurrences(&f) + 2 * f.variable_count()) as u64;
         assert_eq!(
             stat(&stats, "bve_admission_threshold"),
-            Some((setup * BVE_MIN_RECOVERY_MULTIPLE) as f64)
+            Some(u64_as_f64(setup * BVE_MIN_RECOVERY_MULTIPLE))
         );
         assert_eq!(stat(&stats, "bve_admission_accrued"), Some(0.0));
     }

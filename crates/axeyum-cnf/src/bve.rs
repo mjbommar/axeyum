@@ -904,23 +904,50 @@ mod tests {
     /// A formula with many independently eliminable definition gates: `k` copies
     /// of `(¬x∨a)(¬x∨b)(x∨¬a∨¬b)`, chained so eliminating one re-queues the
     /// next. Big enough that BVE spends real occurrence-list work on it.
-    fn gate_chain(k: usize) -> CnfFormula {
-        let nvars = 3 * k + 1;
-        let mut f = CnfFormula::new(nvars);
-        for i in 0..k {
-            let x = 3 * i;
-            let a = 3 * i + 1;
-            let b = 3 * i + 2;
-            f.add_clause(CnfClause::new(vec![n(x), p(a)])).unwrap();
-            f.add_clause(CnfClause::new(vec![n(x), p(b)])).unwrap();
-            f.add_clause(CnfClause::new(vec![p(x), n(a), n(b)]))
+    fn gate_chain(gates: usize) -> CnfFormula {
+        let mut formula = CnfFormula::new(3 * gates + 1);
+        for i in 0..gates {
+            let gate = 3 * i;
+            let left = 3 * i + 1;
+            let right = 3 * i + 2;
+            formula
+                .add_clause(CnfClause::new(vec![n(gate), p(left)]))
+                .unwrap();
+            formula
+                .add_clause(CnfClause::new(vec![n(gate), p(right)]))
+                .unwrap();
+            formula
+                .add_clause(CnfClause::new(vec![p(gate), n(left), n(right)]))
                 .unwrap();
             // Tie consecutive gates together so the touched queue keeps moving.
-            f.add_clause(CnfClause::new(vec![n(a), p(3 * (i + 1))]))
+            formula
+                .add_clause(CnfClause::new(vec![n(left), p(3 * (i + 1))]))
                 .unwrap();
         }
-        f
+        formula
     }
+
+    /// Three hub variables, each with `copies` positive and `copies` negative
+    /// occurrences, so every one of them is rejected by `occurrence_limit`
+    /// (100) after `live_ids` has walked both lists and before any resolvent is
+    /// merged. Post-setup work on this formula is occurrence scanning and
+    /// nothing else, which is what makes the two tests using it exact.
+    fn hub_formula(copies: usize) -> CnfFormula {
+        let mut formula = CnfFormula::new(3);
+        for _ in 0..copies {
+            formula
+                .add_clause(CnfClause::new(vec![p(0), p(1), p(2)]))
+                .unwrap();
+            formula
+                .add_clause(CnfClause::new(vec![n(0), n(1), n(2)]))
+                .unwrap();
+        }
+        formula
+    }
+
+    /// Hub copies per polarity. Comfortably above `occurrence_limit` (100), so
+    /// a change to that default cannot silently make the hub tests vacuous.
+    const HUB_COPIES: usize = 150;
 
     /// The meter is not a restatement of the resolution cap.
     ///
@@ -1023,14 +1050,7 @@ mod tests {
     /// it, and the mutation survives. Measured — it did.
     #[test]
     fn the_occurrence_scan_is_charged_even_when_the_variable_is_rejected() {
-        const COPIES: usize = 150;
-        let mut f = CnfFormula::new(3);
-        for _ in 0..COPIES {
-            f.add_clause(CnfClause::new(vec![p(0), p(1), p(2)]))
-                .unwrap();
-            f.add_clause(CnfClause::new(vec![n(0), n(1), n(2)]))
-                .unwrap();
-        }
+        let f = hub_formula(HUB_COPIES);
         let out = eliminate_variables(&f, BveOptions::default());
 
         // Positive control on the fixture's premise: every variable really was
@@ -1045,7 +1065,7 @@ mod tests {
         let literals: usize = f.clauses().iter().map(|c| c.lits().len()).sum();
         let setup = (literals + 2 * f.variable_count()) as u64;
         // Three variables, each scanning a 150-entry list per polarity.
-        let scans = 3 * 2 * COPIES as u64;
+        let scans = 3 * 2 * HUB_COPIES as u64;
         assert_eq!(
             out.stats.work_spent,
             setup + scans,
@@ -1078,14 +1098,7 @@ mod tests {
         // Nothing eliminated: the whole post-setup spend was waste, and the
         // reading is the setup floor. Reuses the hub fixture, whose premise
         // (every candidate rejected) is asserted in its own test.
-        const COPIES: usize = 150;
-        let mut hubs = CnfFormula::new(3);
-        for _ in 0..COPIES {
-            hubs.add_clause(CnfClause::new(vec![p(0), p(1), p(2)]))
-                .unwrap();
-            hubs.add_clause(CnfClause::new(vec![n(0), n(1), n(2)]))
-                .unwrap();
-        }
+        let hubs = hub_formula(HUB_COPIES);
         let none = eliminate_variables(&hubs, BveOptions::default());
         assert_eq!(none.stats.variables_eliminated, 0);
         let hub_literals: usize = hubs.clauses().iter().map(|c| c.lits().len()).sum();
