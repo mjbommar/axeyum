@@ -1,0 +1,29 @@
+=== MUTANT no-tightening
+test lra::warm::tests::a_retracted_literal_leaves_no_trace_in_the_next_verdict ... ok
+test lra::warm::tests::an_unregistered_literal_key_is_an_error_not_an_omission ... ok
+test lra::warm::tests::policy_off_rebuilds_every_check ... ok
+test lra::warm::tests::warm_assembles_the_same_system_the_cold_path_builds ... FAILED
+test lra::warm::tests::unarmed_counters_read_none_not_zero ... ok
+test lra::warm::tests::warm_counters_attribute_every_check ... ok
+test lra::warm::tests::warm_verdicts_survive_arbitrary_retraction_sequences ... FAILED
+test lia_online::tests::dropping_the_rational_filter_does_not_change_a_verdict ... ok
+test lia_online::tests::warm_theory_answers_exactly_what_a_cold_theory_answers has been running for over 60 seconds
+test lra::warm::tests::warm_verdicts_agree_with_the_cold_offline_decider has been running for over 60 seconds
+ARM_EXIT=124
+=== MUTANT sorted-columns
+test lra::warm::tests::an_unregistered_literal_key_is_an_error_not_an_omission ... ok
+test lra::warm::tests::a_retracted_literal_leaves_no_trace_in_the_next_verdict ... ok
+test lra::warm::tests::unarmed_counters_read_none_not_zero ... ok
+test lra::warm::tests::policy_off_rebuilds_every_check ... ok
+test lra::warm::tests::warm_counters_attribute_every_check ... ok
+test lra::warm::tests::warm_assembles_the_same_system_the_cold_path_builds ... FAILED
+test lra::warm::tests::warm_verdicts_survive_arbitrary_retraction_sequences ... FAILED
+test lra::warm::tests::warm_verdicts_agree_with_the_cold_offline_decider ... ok
+test lia_online::tests::dropping_the_rational_filter_does_not_change_a_verdict ... ok
+test lia_online::tests::warm_theory_answers_exactly_what_a_cold_theory_answers ... ok
+thread 'lra::warm::tests::warm_assembles_the_same_system_the_cold_path_builds' (3331857) panicked at crates/axeyum-solver/src/lra/warm/tests.rs:176:13:
+thread 'lra::warm::tests::warm_verdicts_survive_arbitrary_retraction_sequences' (3331861) panicked at crates/axeyum-solver/src/lra/warm/tests.rs:353:13:
+test result: FAILED. 8 passed; 2 failed; 0 ignored; 0 measured; 1511 filtered out; finished in 0.08s
+error: test failed, to rerun pass `-p axeyum-solver --lib`
+ARM_EXIT=101
+=== done

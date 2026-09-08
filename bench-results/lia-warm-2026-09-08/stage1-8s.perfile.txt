@@ -1,0 +1,36 @@
+file                                            off.off    off.flt filter.off filter.flt   warm.off   warm.flt
+--------------------------------------------------------------------------------------------------------------
+182-incremental_scheduling-17280-0.smt2               9        413         21        415        447          0  | warm-cache offline x 2.33
+RF-13.smt2                                          456          0       3245          0       3314          0  | warm-cache offline x 7.12
+ex13800_2600_100.smt2                               353          0       1453          0       1468          0  | warm-cache offline x 4.12
+ex20400_2600_100.smt2                               430          0       1469          0       1476          0  | warm-cache offline x 3.42
+ex27000_2600_100.smt2                               988          0       1474          0       1473          0  | warm-cache offline x 1.49
+ex8500_2600_100.smt2                                937          0       1471          0       1473          0  | warm-cache offline x 1.57
+ex5640_2400_100.smt2                                719          0       1177          0       1181          0  | warm-cache offline x 1.64
+ex6960_2400_100.smt2                               1070          0       1171          0       1166          0  | warm-cache offline x 1.09
+ex8280_2400_100.smt2                                810          0       1189          0       1125          0  | warm-cache offline x 1.47
+ex9600_2400_100.smt2                               1044          0       1194          0       1184          0  | warm-cache offline x 1.14
+convert-jpg2gif-query-1423.smt2                     516          0        546          0        566          0  | warm-cache offline x 1.06
+FISCHER10-13-fair.smt2                                0        222          0        297        310          0  | warm-cache offline x 0.00
+prp-0-19.smt2                                         0        267          0        112        119          0  | warm-cache offline x 0.00
+hash_sat_04_11.smt2                                  70       1495         70       1495        657          0  | warm-cache offline x 1.00
+hash_sat_04_14.smt2                                  88       1801         88       1801       1286          0  | warm-cache offline x 1.00
+hash_sat_04_17.smt2                                 106       2420        106       2420       1754          0  | warm-cache offline x 1.00
+hash_sat_05_05.smt2                                   0       1420          0       1420       2372          0  | warm-cache offline x 0.00
+hash_sat_05_08.smt2                                   0       1840          0       1840       3003          0  | warm-cache offline x 0.00
+hash_sat_05_11.smt2                                   0       2390          0       2390        968          0  | warm-cache offline x 0.00
+hash_sat_06_05.smt2                                  60       2222         60       2222       1838          0  | warm-cache offline x 1.00
+hash_sat_06_08.smt2                                  90       3317         90       3317       1844          0  | warm-cache offline x 1.00
+hash_sat_07_05.smt2                                1113       2489       1113       2489       4539          0  | warm-cache offline x 1.00
+hash_sat_08_05.smt2                                   0      14735          0      12348      17322          0  | warm-cache offline x 0.00
+hash_uns_04_14.smt2                                   0       6388          0       6388       4054          0  | warm-cache offline x 0.00
+hash_uns_05_08.smt2                                   0      18741          0      14887       2109          0  | warm-cache offline x 0.00
+hash_uns_05_11.smt2                                   0      15455          0      15397       1842          0  | warm-cache offline x 0.00
+xs_19_29.smt2                                      1160       1070       1286       1084       2297          0  | warm-cache offline x 1.11
+xs_24_34.smt2                                      1382       1491       2789       1876       4560          0  | warm-cache offline x 2.02
+xs_25_35.smt2                                      1423       1587       2896       1972       4360          0  | warm-cache offline x 2.04
+
+columns: <arm>.off = theory_offline_checks, <arm>.flt = theory_filter_answers
+warm-vs-cold offline throughput (filter arm / off arm), per file: median x1.31, min x1.00, max x7.12, n=20
+  files where warming made the offline path SLOWER (< x0.98): 0
+end-to-end live-set decisions (filter arm / off arm), per file: median x1.03, n=29

@@ -1,0 +1,67 @@
+=== BASELINE (unmutated)
+test lra::warm::tests::an_unregistered_literal_key_is_an_error_not_an_omission ... ok
+test lra::warm::tests::a_retracted_literal_leaves_no_trace_in_the_next_verdict ... ok
+test lra::warm::tests::unarmed_counters_read_none_not_zero ... ok
+test lra::warm::tests::policy_off_rebuilds_every_check ... ok
+test lra::warm::tests::warm_counters_attribute_every_check ... ok
+test lia_online::tests::dropping_the_rational_filter_does_not_change_a_verdict ... ok
+test lra::warm::tests::warm_assembles_the_same_system_the_cold_path_builds ... ok
+test lra::warm::tests::warm_verdicts_agree_with_the_cold_offline_decider ... ok
+test lia_online::tests::warm_theory_answers_exactly_what_a_cold_theory_answers ... ok
+test lra::warm::tests::warm_verdicts_survive_arbitrary_retraction_sequences ... ok
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 1511 filtered out; finished in 0.10s
+=== MUTANT stale-columns
+test lra::warm::tests::an_unregistered_literal_key_is_an_error_not_an_omission ... ok
+test lra::warm::tests::policy_off_rebuilds_every_check ... ok
+test lra::warm::tests::a_retracted_literal_leaves_no_trace_in_the_next_verdict ... FAILED
+test lra::warm::tests::unarmed_counters_read_none_not_zero ... ok
+test lra::warm::tests::warm_assembles_the_same_system_the_cold_path_builds ... FAILED
+test lra::warm::tests::warm_counters_attribute_every_check ... ok
+test lia_online::tests::warm_theory_answers_exactly_what_a_cold_theory_answers ... FAILED
+test lra::warm::tests::warm_verdicts_survive_arbitrary_retraction_sequences ... FAILED
+test lra::warm::tests::warm_verdicts_agree_with_the_cold_offline_decider ... FAILED
+test lia_online::tests::dropping_the_rational_filter_does_not_change_a_verdict ... ok
+thread 'lra::warm::tests::a_retracted_literal_leaves_no_trace_in_the_next_verdict' (3241255) panicked at crates/axeyum-solver/src/lra/warm/tests.rs:283:56:
+thread 'lra::warm::tests::warm_assembles_the_same_system_the_cold_path_builds' (3241259) panicked at crates/axeyum-solver/src/lra/warm/tests.rs:176:13:
+thread 'lia_online::tests::warm_theory_answers_exactly_what_a_cold_theory_answers' (3241254) panicked at crates/axeyum-solver/src/lia_online.rs:3281:17:
+thread 'lra::warm::tests::warm_verdicts_survive_arbitrary_retraction_sequences' (3241263) panicked at crates/axeyum-solver/src/lra/warm/tests.rs:351:13:
+thread 'lra::warm::tests::warm_verdicts_agree_with_the_cold_offline_decider' (3241262) panicked at crates/axeyum-solver/src/lra/warm/tests.rs:226:22:
+test result: FAILED. 5 passed; 5 failed; 0 ignored; 0 measured; 1511 filtered out; finished in 0.03s
+error: test failed, to rerun pass `-p axeyum-solver --lib`
+=== MUTANT unchecked-prefix
+test lra::warm::tests::an_unregistered_literal_key_is_an_error_not_an_omission ... ok
+test lra::warm::tests::a_retracted_literal_leaves_no_trace_in_the_next_verdict ... FAILED
+test lra::warm::tests::policy_off_rebuilds_every_check ... ok
+test lra::warm::tests::unarmed_counters_read_none_not_zero ... ok
+test lra::warm::tests::warm_assembles_the_same_system_the_cold_path_builds ... FAILED
+test lra::warm::tests::warm_counters_attribute_every_check ... ok
+test lra::warm::tests::warm_verdicts_survive_arbitrary_retraction_sequences ... FAILED
+test lra::warm::tests::warm_verdicts_agree_with_the_cold_offline_decider ... FAILED
+test lia_online::tests::warm_theory_answers_exactly_what_a_cold_theory_answers ... FAILED
+test lia_online::tests::dropping_the_rational_filter_does_not_change_a_verdict ... ok
+thread 'lra::warm::tests::a_retracted_literal_leaves_no_trace_in_the_next_verdict' (3242207) panicked at crates/axeyum-solver/src/lra/warm/tests.rs:283:56:
+thread 'lra::warm::tests::warm_assembles_the_same_system_the_cold_path_builds' (3242212) panicked at crates/axeyum-solver/src/lra/warm/tests.rs:176:13:
+thread 'lra::warm::tests::warm_verdicts_survive_arbitrary_retraction_sequences' (3242215) panicked at crates/axeyum-solver/src/lra/warm/tests.rs:351:13:
+thread 'lra::warm::tests::warm_verdicts_agree_with_the_cold_offline_decider' (3242214) panicked at crates/axeyum-solver/src/lra/warm/tests.rs:226:22:
+thread 'lia_online::tests::warm_theory_answers_exactly_what_a_cold_theory_answers' (3242206) panicked at crates/axeyum-solver/src/lia_online.rs:3281:17:
+test result: FAILED. 5 passed; 5 failed; 0 ignored; 0 measured; 1511 filtered out; finished in 0.03s
+error: test failed, to rerun pass `-p axeyum-solver --lib`
+=== MUTANT stale-constraints
+test lra::warm::tests::an_unregistered_literal_key_is_an_error_not_an_omission ... ok
+test lra::warm::tests::a_retracted_literal_leaves_no_trace_in_the_next_verdict ... FAILED
+test lra::warm::tests::unarmed_counters_read_none_not_zero ... ok
+test lra::warm::tests::policy_off_rebuilds_every_check ... ok
+test lra::warm::tests::warm_assembles_the_same_system_the_cold_path_builds ... FAILED
+test lra::warm::tests::warm_counters_attribute_every_check ... ok
+test lra::warm::tests::warm_verdicts_agree_with_the_cold_offline_decider ... FAILED
+test lra::warm::tests::warm_verdicts_survive_arbitrary_retraction_sequences ... FAILED
+test lia_online::tests::warm_theory_answers_exactly_what_a_cold_theory_answers ... FAILED
+test lia_online::tests::dropping_the_rational_filter_does_not_change_a_verdict ... ok
+thread 'lra::warm::tests::a_retracted_literal_leaves_no_trace_in_the_next_verdict' (3242806) panicked at crates/axeyum-solver/src/lra/warm/tests.rs:284:5:
+thread 'lra::warm::tests::warm_assembles_the_same_system_the_cold_path_builds' (3242811) panicked at crates/axeyum-solver/src/lra/warm/tests.rs:176:13:
+thread 'lra::warm::tests::warm_verdicts_agree_with_the_cold_offline_decider' (3242813) panicked at crates/axeyum-solver/src/lra/warm/tests.rs:226:22:
+thread 'lra::warm::tests::warm_verdicts_survive_arbitrary_retraction_sequences' (3242814) panicked at crates/axeyum-solver/src/lra/warm/tests.rs:353:13:
+thread 'lia_online::tests::warm_theory_answers_exactly_what_a_cold_theory_answers' (3242805) panicked at crates/axeyum-solver/src/lia_online.rs:3281:17:
+test result: FAILED. 5 passed; 5 failed; 0 ignored; 0 measured; 1511 filtered out; finished in 0.03s
+error: test failed, to rerun pass `-p axeyum-solver --lib`
+=== MUTANT no-tightening
