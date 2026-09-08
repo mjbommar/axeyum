@@ -905,7 +905,7 @@ pub use incremental::{
     AssumptionOutcome, IncrementalBvSolver, IncrementalBvStats, IncrementalModelLiftStats,
     IncrementalSolver, ReplayCheckedSatCachePolicy, ReplayCheckedSatCacheStats,
 };
-pub use layers::{BvLayerStats, BvLayerStatsGuard, last_bv_layer_stats};
+pub use layers::{BvLayerStats, BvLayerStatsGuard, last_bv_backend_counters, last_bv_layer_stats};
 pub use model::Model;
 #[doc(hidden)]
 pub use proof::{

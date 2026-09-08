@@ -1128,6 +1128,19 @@ fn maybe_inprocess(
     // solve deadline.
     let start = Instant::now();
     let inprocess_deadline = deadline.map(|dl| start + dl.saturating_duration_since(start) / 2);
+    // Record the SLICE the passes were granted, not just what they spent. Without
+    // it, a pass that took 3.0 s is indistinguishable between "that is what the
+    // pass costs" and "that is where the clock cut it off" — the two call for
+    // opposite work, and only the pair (spend, budget) separates them. Absent
+    // when there is no solve deadline, so the key's presence also says whether a
+    // truncation was even possible.
+    if let Some(dl) = inprocess_deadline {
+        push_duration_ms(
+            stats,
+            "inprocess_budget_ms",
+            dl.saturating_duration_since(start),
+        );
+    }
     let out = inprocess(config, formula, inprocess_deadline, stats);
     let elapsed = start.elapsed();
     stats.translate += elapsed;
@@ -1200,6 +1213,12 @@ fn maybe_vivify(
 /// pairs the reduced formula with a reconstruction stack. All passes stop
 /// scheduling new work once `deadline` passes. Vivification runs only when
 /// `config.cnf_vivify` is set.
+// Grew past the 100-line lint when per-stage timing and the shape counters were
+// added. Splitting it would put each stage's `Instant` in a different function
+// from the stage it times, which is exactly the arrangement that let
+// `model_lift` silently include the replay cost (see `BvLayerStats::model_replay`).
+// The clock reads stay next to the work they measure.
+#[allow(clippy::too_many_lines)]
 fn inprocess(
     config: &SolverConfig,
     formula: &CnfFormula,
@@ -1215,6 +1234,21 @@ fn inprocess(
     // is *not* trusted as a certificate here (no XOR proof emitter yet); that
     // formula is left unchanged for the checked SAT solve to refute independently.
     // Capped separately because Gaussian carries no internal deadline yet.
+    //
+    // STAGE ATTRIBUTION. Every stage below is timed separately and each records
+    // whether the shared inprocessing deadline had already expired when it
+    // returned. `inprocess_ms` alone attributes the whole spend to "inprocessing",
+    // which is the same mistake as attributing a solve to the last route that
+    // ran: the stage that consumed the time and the stage that was running when
+    // the clock ran out are different questions, and a scheduling decision needs
+    // both. The residual `inprocess_ms - sum(stage_ms)` is the formula copying
+    // between stages, which is not free at these sizes.
+    let inprocess_literals_before = literal_occurrences(formula);
+    stats.backend.push((
+        "inprocess_literals_before".to_owned(),
+        usize_to_f64(inprocess_literals_before),
+    ));
+    let xor_start = Instant::now();
     let xor_base: Option<CnfFormula> = if formula.clauses().len() <= XOR_PROPAGATE_MAX_CLAUSES {
         match xor_propagate(formula) {
             XorPropagation::Propagated {
@@ -1246,15 +1280,27 @@ fn inprocess(
             .push(("xor_propagate_skipped_size".to_owned(), 1.0));
         None
     };
+    push_duration_ms(stats, "xor_propagate_ms", xor_start.elapsed());
     let base: &CnfFormula = xor_base.as_ref().unwrap_or(formula);
 
+    let subsume_start = Instant::now();
     let (simplified, subsume) = simplify_within(base, deadline);
+    push_duration_ms(stats, "subsume_ms", subsume_start.elapsed());
+    push_deadline_expired(stats, "subsume_deadline_expired", deadline);
     // Optional clause vivification between subsumption and BVE. Vivify is
     // model-preserving (same satisfying assignments, same `variable_count`, no
     // reconstruction trail), so its output feeds BVE in place of `simplified` and
     // the model-lift stack is unchanged. See `maybe_vivify`.
+    let vivify_start = Instant::now();
     let vivified = maybe_vivify(config, &simplified, deadline, stats);
+    if config.cnf_vivify {
+        push_duration_ms(stats, "vivify_ms", vivify_start.elapsed());
+        push_deadline_expired(stats, "vivify_deadline_expired", deadline);
+    }
+    let bve_start = Instant::now();
     let bve = eliminate_variables_within(&vivified, BveOptions::default(), deadline);
+    push_duration_ms(stats, "bve_ms", bve_start.elapsed());
+    push_deadline_expired(stats, "bve_deadline_expired", deadline);
 
     stats.backend.push(("cnf_inprocessing".to_owned(), 1.0));
     stats.backend.push((
@@ -1288,8 +1334,14 @@ fn inprocess(
     // set — it cannot change sat/unsat — and a compacted `sat` model is lifted
     // back up by `compaction.expand` before the BVE `reconstruction.extend`.
     let bve_variable_count = bve.formula.variable_count();
+    let compact_start = Instant::now();
     let (compacted, compaction) = compact(&bve.formula);
+    push_duration_ms(stats, "compact_ms", compact_start.elapsed());
     let compacted_variable_count = compacted.variable_count();
+    stats.backend.push((
+        "inprocess_literals_after".to_owned(),
+        usize_to_f64(literal_occurrences(&compacted)),
+    ));
 
     stats.backend.push((
         "cnf_compaction_variables_before".to_owned(),
@@ -2101,6 +2153,38 @@ fn push_duration_ms(stats: &mut SolveStats, name: &str, duration: Duration) {
     stats
         .backend
         .push((name.to_owned(), duration.as_secs_f64() * 1000.0));
+}
+
+/// Records whether `deadline` had **already expired** at the moment the calling
+/// stage returned.
+///
+/// This is the direct discriminator between "the pass is expensive" and "the
+/// clock cut the pass off after it paid its setup cost": paired with the stage's
+/// own `*_ms` and with `inprocess_budget_ms`, a stage that spent its whole slice
+/// and returns with the deadline expired was truncated, while one that spent a
+/// fraction of the slice and returns with time left ran to its own fixpoint.
+///
+/// The key is absent when there is no deadline at all, so a missing key means
+/// "truncation was impossible here", not "did not happen". It is deliberately
+/// checked at the stage boundary rather than inside each pass: the passes'
+/// internal break sites conflate an expired deadline with an exhausted work
+/// budget, and this observable does not.
+fn push_deadline_expired(stats: &mut SolveStats, name: &str, deadline: Option<Instant>) {
+    if let Some(dl) = deadline {
+        let expired = Instant::now() >= dl;
+        stats
+            .backend
+            .push((name.to_owned(), if expired { 1.0 } else { 0.0 }));
+    }
+}
+
+/// Total literal occurrences in `formula` — the size the SAT core's propagation
+/// actually walks, which clause and variable counts do not capture. BVE removes
+/// clauses while *adding* literal occurrences (resolvents are longer than the
+/// clauses they replace), so a reduction reported only in clauses can hide a
+/// growth in the quantity that costs propagation time.
+fn literal_occurrences(formula: &CnfFormula) -> usize {
+    formula.clauses().iter().map(|c| c.lits().len()).sum()
 }
 
 #[allow(clippy::cast_precision_loss)]

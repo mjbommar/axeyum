@@ -1,0 +1,2 @@
+pass-sweep mode=conflicts budget=20000 arms=off subsume bve preprocess cpus=6 load_start=1.82 2.31 2.31
+pass-sweep expected=44 rows=44 files=11 load_end=15.98 11.69 6.50
