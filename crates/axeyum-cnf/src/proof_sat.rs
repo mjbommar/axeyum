@@ -23,7 +23,7 @@ use web_time::Instant;
 
 use std::time::Duration;
 
-use crate::clause_db_policy::{ClauseDbPolicy, KeepReason, MAX_USED, Tier};
+use crate::clause_db_policy::{ClauseDbPolicy, KeepReason, Tier};
 use crate::drat::{DratSink, DratStep, ProofSinkError, VecProofSink};
 use crate::inprocess::{InprocessOptions, InprocessStats, inprocess_into};
 use crate::phase_policy::{PhasePolicy, RephaseAction};
@@ -86,14 +86,6 @@ const VSIDS_RESCALE_LIMIT: f64 = 1e100;
 /// length.
 const LUBY_UNIT: usize = 100;
 
-/// Number of learned clauses tolerated before the first `reduce_db`
-/// (MiniSat/Glucose geometric schedule, scaled down for our smaller working
-/// instances so reduction actually triggers on real corpora).
-const REDUCE_FIRST: usize = 2_000;
-/// Additive growth of the learned-clause budget after each `reduce_db`. The
-/// budget is `REDUCE_FIRST + REDUCE_INC * reductions`, so reductions become
-/// less frequent over time (the standard schedule shape).
-const REDUCE_INC: usize = 300;
 /// Clause-activity decay: each conflict the clause bump increment grows by
 /// `1/CLAUSE_DECAY`, so older clause bumps decay relative to fresh ones.
 const CLAUSE_DECAY: f64 = 0.999;
@@ -1683,6 +1675,11 @@ struct Cdcl<'progress, S: DratSink, T: NativeTheory = NullTheory> {
     /// scan per [`ClauseDbPolicy::empty_round_backoff`] conflicts and is
     /// counted in [`SearchCounters::reduce_empty_rounds`].
     reduce_backoff_until: u64,
+    /// Conflict count at which the next `reduce_db` is due under the
+    /// conflict-interval schedule. Unused (and zero) under the
+    /// learned-clause-budget schedule, which reads the database size instead.
+    /// See [`crate::clause_db_policy::ReduceSchedule`].
+    next_reduce_conflicts: u64,
     /// Number of live (non-deleted) learned clauses. Drives the reduce trigger.
     learned_live: usize,
     /// VSIDS order heap: a binary max-heap of variable indices keyed by
@@ -1899,6 +1896,7 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
             reductions: 0,
             db_policy: SearchPolicies::default().clause_db,
             reduce_backoff_until: 0,
+            next_reduce_conflicts: 0,
             learned_live: 0,
             heap: Vec::with_capacity(n),
             heap_pos: vec![HEAP_ABSENT; n],
@@ -2095,6 +2093,7 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
         self.target_trail_len = 0;
         self.phase_policy.reset();
         self.reduce_backoff_until = 0;
+        self.next_reduce_conflicts = self.db_policy.next_reduce_limit(0, 0);
         for var in 0..self.branchable.len() {
             if self.branchable[var] && !self.heap_contains(var) {
                 self.heap_insert(var);
@@ -2107,6 +2106,7 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
     fn set_policies(&mut self, policies: &SearchPolicies) {
         self.db_policy = policies.clause_db.clone();
         self.phase_policy = policies.phase.clone();
+        self.next_reduce_conflicts = self.db_policy.next_reduce_limit(0, 0);
     }
 
     /// Installs a progress callback, polled every `interval` conflicts (and
@@ -2956,7 +2956,7 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
         // A freshly learned clause starts with a full lifetime budget: it was
         // just derived from the current conflict, so it is by construction
         // "used" this round.
-        self.used.push(MAX_USED);
+        self.used.push(self.db_policy.max_used);
         self.deleted.push(false);
         self.learned.push(true);
         self.learned_live += 1;
@@ -2973,11 +2973,20 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
         // consistent; here we are immediately after a backjump+enqueue
         // and before propagation, which is safe (locked-clause check
         // reads the current trail).
-        if self.learned_live > self.reduce_budget()
-            && (self.conflicts as u64) >= self.reduce_backoff_until
+        let conflicts = self.conflicts as u64;
+        if conflicts >= self.reduce_backoff_until
+            && self.db_policy.reduce_due(
+                self.learned_live,
+                conflicts,
+                self.reductions as u64,
+                self.next_reduce_conflicts,
+            )
         {
             self.reduce_db()?;
             self.reductions += 1;
+            self.next_reduce_conflicts = self
+                .db_policy
+                .next_reduce_limit(conflicts, self.reductions as u64);
         }
         // Observability hook (see `ProofSearchProgress`): a no-op cadence
         // check when no sink is installed. Placed after all per-conflict
@@ -3825,7 +3834,7 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
         #[allow(clippy::cast_possible_truncation)]
         self.db_policy
             .on_clause_used(self.lbd[cid].min(u32::MAX as usize) as u32);
-        self.used[cid] = MAX_USED;
+        self.used[cid] = self.db_policy.max_used;
         if self.count_search {
             self.counters.clause_used_marks += 1;
         }
@@ -3852,12 +3861,6 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
     /// trick, mirrored for clauses).
     fn decay_clause(&mut self) {
         self.cla_inc /= CLAUSE_DECAY;
-    }
-
-    /// The learned-clause budget for the current reduction round (geometric
-    /// schedule: grows by `REDUCE_INC` after each reduction).
-    fn reduce_budget(&self) -> usize {
-        REDUCE_FIRST + REDUCE_INC * self.reductions
     }
 
     /// Is learned clause `cid` currently the reason (antecedent) for an assigned

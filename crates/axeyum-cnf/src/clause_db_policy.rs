@@ -65,9 +65,11 @@
 /// round. Both references use 31 (a 5-bit field).
 pub const MAX_USED: u8 = 31;
 
-/// The `used` value a tier2 clause must still carry to survive a round: it was
-/// set to [`MAX_USED`] by a resolution and decremented exactly once by the
-/// current round. This is the "one round of grace" boundary.
+/// The `used` value a tier2 clause must still carry to survive a round when
+/// [`ClauseDbPolicy::max_used`] is the reference [`MAX_USED`]: it was set by a
+/// resolution and decremented exactly once by the current round. This is the
+/// "one round of grace" boundary. A policy with a different `max_used` derives
+/// its own grace value from that field.
 pub const TIER2_GRACE_USED: u8 = MAX_USED - 1;
 
 /// Largest glue tracked in the used-glue histogram. Clauses above this are
@@ -159,6 +161,44 @@ pub enum DeleteFraction {
         low_permille: u32,
         /// Asymptotic share, per mille.
         high_permille: u32,
+    },
+}
+
+/// When a reduce round fires.
+///
+/// This is not an independent knob: the trigger and the keep rule interact, and
+/// picking them separately is how the first tier implementation here lost 2x in
+/// throughput while winning 20% in conflicts.
+///
+/// The tier rule's protection is "used since the *previous round*", so its
+/// selectivity is a function of how far apart rounds are. Pair it with a
+/// database-size trigger and the two fight: protection keeps the database above
+/// the size threshold, which fires the next round sooner, which shortens the
+/// window, which protects more. Measured on `vdw-2-3-11`, the size trigger fired
+/// 126 rounds under the tier rule against 76 under the legacy rule, on a run
+/// that analysed *fewer* conflicts — and each round rebuilds every watch list.
+/// A conflict-interval trigger breaks the loop because the window does not
+/// depend on what the last round kept.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ReduceSchedule {
+    /// Reduce when the live learned-clause count exceeds `first + inc * rounds`.
+    /// The pre-2026-09 trigger (a `MiniSat`/Glucose database-size budget), kept
+    /// selectable for A/B measurement.
+    LearnedBudget {
+        /// Clauses tolerated before the first round.
+        first: usize,
+        /// Additive growth of the budget after each round.
+        inc: usize,
+    },
+    /// Reduce `init` conflicts after the search starts and `interval *
+    /// sqrt(rounds)` conflicts after each round — the reference schedule, so
+    /// rounds get further apart as the search goes on. Default, with `init` and
+    /// `interval` both 1000 (Kissat's `reduceinit` / `reduceint`).
+    ConflictInterval {
+        /// Conflicts before the first round.
+        init: u64,
+        /// Scale of the inter-round interval.
+        interval: u64,
     },
 }
 
@@ -354,10 +394,28 @@ pub struct ClauseDbPolicy {
     pub rank_key: RankKey,
     /// What share of candidates a round deletes.
     pub fraction: DeleteFraction,
+    /// When a round fires. Coupled to `keep_rule`; see [`ReduceSchedule`].
+    pub schedule: ReduceSchedule,
     /// Clauses at or below this length are never candidates. Default 2: neither
     /// reference deletes binary clauses, and our watch scheme relies on binaries
     /// staying resident.
     pub min_deletable_len: usize,
+    /// Value written into a clause's lifetime counter when it is learned or
+    /// resolved. Since the counter is decremented once per reduce round, this is
+    /// **how many reduce rounds a tier1 clause survives after its last use**.
+    ///
+    /// [`MAX_USED`] (31) is the reference value and is deliberately generous.
+    /// It is exposed because it is the single knob that trades search quality
+    /// against database size, and the trade lands differently for us than for
+    /// the references: they run vivification, subsumption and variable
+    /// elimination that shrink the database between rounds, and they special-case
+    /// binary clauses out of the watch lists. We do neither, so a database the
+    /// reference tolerates costs us proportionally more watch traffic. Measured
+    /// on `vdw-2-3-11`: at 31 the tier policy holds 2.4x the live learned
+    /// clauses and examines 2x the watch entries per conflict.
+    ///
+    /// Must be at least 1; 1 means "survives only the round it was used in".
+    pub max_used: u8,
     /// Whether to recompute a clause's glue when it is resolved and lower it if
     /// the new value is smaller (promotion). Never raises glue: there is no
     /// demotion in either reference, because a clause that was once
@@ -390,6 +448,11 @@ impl ClauseDbPolicy {
                 low_permille: 500,
                 high_permille: 900,
             },
+            schedule: ReduceSchedule::ConflictInterval {
+                init: 1_000,
+                interval: 1_000,
+            },
+            max_used: MAX_USED,
             min_deletable_len: 2,
             promote_on_use: true,
             empty_round_backoff: 300,
@@ -406,6 +469,11 @@ impl ClauseDbPolicy {
             keep_rule: KeepRule::GluePermanent { glue_limit: 2 },
             rank_key: RankKey::Activity,
             fraction: DeleteFraction::Fixed { permille: 500 },
+            schedule: ReduceSchedule::LearnedBudget {
+                first: 2_000,
+                inc: 300,
+            },
+            max_used: MAX_USED,
             min_deletable_len: 2,
             promote_on_use: false,
             empty_round_backoff: 300,
@@ -437,8 +505,8 @@ impl ClauseDbPolicy {
     ///
     /// `used_before` is the counter's value *before* this round's decrement, so
     /// `used_before > 0` means "resolved since the previous round" and
-    /// `used_before >= TIER2_GRACE_USED` means "resolved since the previous
-    /// round and not yet decremented past its grace".
+    /// `used_before >= max_used - 1` means "resolved since the previous round
+    /// and not yet decremented past its grace".
     #[must_use]
     pub fn classify(&self, glue: u32, size: usize, used_before: u8, locked: bool) -> KeepReason {
         if locked {
@@ -457,9 +525,17 @@ impl ClauseDbPolicy {
             }
             KeepRule::Tiers => {
                 let (tier1, tier2) = self.tiers.limits();
+                // `used_before` is the value BEFORE this round's decrement, so
+                // `> 0` means "used within the last `max_used` rounds" and
+                // `>= max_used - 1` means "used since the previous round".
+                // Floored at 1: with `max_used == 1` a grace of 0 would make
+                // `used_before >= grace` vacuously true and tier2 would keep the
+                // entire database. Measured: that grew the live learned set 2.7x
+                // beyond even the reference setting.
+                let grace = self.max_used.saturating_sub(1).max(1);
                 if glue <= tier1 && used_before > 0 {
                     KeepReason::Tier1Used
-                } else if glue <= tier2 && used_before >= TIER2_GRACE_USED {
+                } else if glue <= tier2 && used_before >= grace {
                     KeepReason::Tier2Recent
                 } else {
                     KeepReason::Candidate
@@ -490,6 +566,51 @@ impl ClauseDbPolicy {
                 // bit pattern orders exactly as the value does.
                 debug_assert!(activity >= 0.0 && activity.is_finite());
                 activity.to_bits()
+            }
+        }
+    }
+
+    /// Is a reduce round due?
+    ///
+    /// `rounds` is how many have already run; `next_conflict_limit` is the value
+    /// [`ClauseDbPolicy::next_reduce_limit`] returned after the last one (0
+    /// before any). Under [`ReduceSchedule::LearnedBudget`] the conflict count
+    /// is ignored; under [`ReduceSchedule::ConflictInterval`] the database size
+    /// is.
+    #[must_use]
+    pub fn reduce_due(
+        &self,
+        learned_live: usize,
+        conflicts: u64,
+        rounds: u64,
+        next_conflict_limit: u64,
+    ) -> bool {
+        match self.schedule {
+            ReduceSchedule::LearnedBudget { first, inc } => {
+                #[allow(clippy::cast_possible_truncation)]
+                let budget = first.saturating_add(inc.saturating_mul(rounds as usize));
+                learned_live > budget
+            }
+            ReduceSchedule::ConflictInterval { .. } => conflicts >= next_conflict_limit,
+        }
+    }
+
+    /// The conflict count at which the next round is due, given that `rounds`
+    /// have now run. Meaningless (and zero) under
+    /// [`ReduceSchedule::LearnedBudget`].
+    #[must_use]
+    pub fn next_reduce_limit(&self, conflicts: u64, rounds: u64) -> u64 {
+        match self.schedule {
+            ReduceSchedule::LearnedBudget { .. } => 0,
+            ReduceSchedule::ConflictInterval { init, interval } => {
+                if rounds == 0 {
+                    return conflicts.saturating_add(init);
+                }
+                #[allow(clippy::cast_precision_loss)]
+                let scaled = (interval as f64) * (rounds as f64).sqrt();
+                #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+                let delta = (scaled as u64).max(1);
+                conflicts.saturating_add(delta)
             }
         }
     }
@@ -663,6 +784,64 @@ mod tests {
     }
 
     #[test]
+    fn a_max_used_of_one_does_not_make_tier2_keep_everything() {
+        // Degenerate case found by measurement, not by reading: with
+        // `max_used == 1` the grace threshold `max_used - 1` is 0, and
+        // `used_before >= 0` is vacuously true, so tier2 would keep the whole
+        // database. On `vdw-2-3-11` that grew the live learned set to 86,528
+        // clauses against 31,864 at the reference setting -- the opposite of
+        // what shortening the lifetime is supposed to do.
+        let mut policy = ClauseDbPolicy::tiered();
+        policy.max_used = 1;
+        for _ in 0..50 {
+            policy.on_clause_used(2);
+        }
+        for _ in 0..50 {
+            policy.on_clause_used(8);
+        }
+        policy.tiers.recompute();
+        assert_eq!(policy.tiers.limits(), (2, 8));
+        assert_eq!(
+            policy.classify(5, 10, 0, false),
+            KeepReason::Candidate,
+            "a cold tier2 clause must be a candidate at every `max_used`"
+        );
+        assert_eq!(
+            policy.classify(5, 10, 1, false),
+            KeepReason::Tier2Recent,
+            "and a clause used since the last round must still be kept"
+        );
+    }
+
+    #[test]
+    fn max_used_sets_how_many_rounds_a_tier1_clause_survives() {
+        // The knob's whole meaning: a tier1 clause is kept while its counter is
+        // nonzero, and the counter starts at `max_used` and drops once a round.
+        for max_used in [1u8, 4, 31] {
+            let mut policy = ClauseDbPolicy::tiered();
+            policy.max_used = max_used;
+            for _ in 0..100 {
+                policy.on_clause_used(3);
+            }
+            policy.tiers.recompute();
+            let mut used = max_used;
+            let mut survived = 0;
+            // Simulate rounds with no further use: decrement, then classify on
+            // the PRE-decrement value, exactly as `reduce_db` does.
+            while policy.classify(3, 10, used, false) != KeepReason::Candidate {
+                survived += 1;
+                used = used.saturating_sub(1);
+                assert!(survived <= 64, "tier1 clause never became a candidate");
+            }
+            assert_eq!(
+                survived,
+                u32::from(max_used),
+                "max_used={max_used} should buy exactly that many rounds"
+            );
+        }
+    }
+
+    #[test]
     fn tier3_is_always_a_candidate_however_recently_used() {
         let mut policy = ClauseDbPolicy::tiered();
         for _ in 0..100 {
@@ -720,6 +899,51 @@ mod tests {
         assert!(policy.rank(1, 1, 0.0) < policy.rank(1, 1, 1e-30));
         assert!(policy.rank(1, 1, 1e-30) < policy.rank(1, 1, 1.0));
         assert!(policy.rank(1, 1, 1.0) < policy.rank(1, 1, 1e19));
+    }
+
+    #[test]
+    fn the_conflict_interval_schedule_spreads_rounds_out() {
+        let policy = ClauseDbPolicy::tiered();
+        // First round at `init`, then `interval * sqrt(rounds)` past each.
+        assert_eq!(policy.next_reduce_limit(0, 0), 1_000);
+        assert_eq!(policy.next_reduce_limit(1_000, 1), 2_000);
+        assert_eq!(policy.next_reduce_limit(2_000, 4), 4_000);
+        assert_eq!(policy.next_reduce_limit(10_000, 100), 20_000);
+        // And it does not read the database size at all -- which is the whole
+        // point, because the tier rule's selectivity depends on how far apart
+        // rounds are, so a size-driven trigger feeds back on itself.
+        assert!(policy.reduce_due(0, 1_000, 0, 1_000));
+        assert!(!policy.reduce_due(usize::MAX, 999, 0, 1_000));
+    }
+
+    #[test]
+    fn the_learned_budget_schedule_reads_the_database_and_not_the_clock() {
+        let policy = ClauseDbPolicy::legacy();
+        assert_eq!(
+            policy.next_reduce_limit(12_345, 7),
+            0,
+            "the budget schedule has no conflict limit to report"
+        );
+        assert!(
+            !policy.reduce_due(2_000, u64::MAX, 0, 0),
+            "2000 is not > 2000"
+        );
+        assert!(policy.reduce_due(2_001, 0, 0, 0));
+        // The budget grows by `inc` per round.
+        assert!(!policy.reduce_due(2_300, 0, 1, 0));
+        assert!(policy.reduce_due(2_301, 0, 1, 0));
+    }
+
+    #[test]
+    fn the_two_schedules_disagree_on_the_same_state() {
+        // A discriminating state: a large database very early in the search.
+        // The budget schedule fires; the interval schedule does not. If both
+        // gave the same answer the selector would be decoration.
+        let interval = ClauseDbPolicy::tiered();
+        let budget = ClauseDbPolicy::legacy();
+        let (live, conflicts, rounds) = (50_000usize, 10u64, 0u64);
+        assert!(budget.reduce_due(live, conflicts, rounds, 0));
+        assert!(!interval.reduce_due(live, conflicts, rounds, 1_000));
     }
 
     #[test]
