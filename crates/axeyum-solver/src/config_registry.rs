@@ -234,12 +234,14 @@ const fn dated(
     }
 }
 
-/// A dependency on a whole file.
-const fn file(path: &'static str) -> Dependency {
-    Dependency { path, symbol: None }
-}
-
 /// A dependency on one symbol within a file.
+///
+/// The only constructor: every dependency in this registry is symbol-scoped.
+/// A whole-file dependency ([`Dependency::symbol`] `None`) is representable and
+/// the checker handles it, but no entry needs one, and a whole-file `git log`
+/// on a 9,000-line dispatcher would report a change every day for reasons
+/// unrelated to any single bound — so the constructor is deliberately absent
+/// rather than available and untested.
 const fn sym(path: &'static str, symbol: &'static str) -> Dependency {
     Dependency {
         path,
@@ -2465,6 +2467,124 @@ mod tests {
             "constants in governed files with neither a REGISTRY entry nor an EXEMPT reason: \
              {unclassified:#?}\nAdd an entry describing what it governs, or an EXEMPT line \
              saying why it is not a governing value."
+        );
+    }
+
+    /// Every key any `note_consulted` call site passes must be a registered
+    /// key.
+    ///
+    /// The keys are `&'static str` rather than typed handles, so a typo would
+    /// otherwise become a line of `--trace` output that traces to nothing. This
+    /// derives its population by scanning the crate's own sources for the call,
+    /// so it measures the call sites that exist rather than a list someone
+    /// remembered to update — and it fails equally on a call site added without
+    /// an entry and on an entry renamed without its call site.
+    #[test]
+    fn consulted_keys_are_registered() {
+        let src_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("src");
+        let keys: BTreeSet<String> = REGISTRY.iter().map(ConfigEntry::key).collect();
+        let mut sites = 0usize;
+        let mut bad = Vec::new();
+        let mut stack = vec![src_dir];
+        while let Some(dir) = stack.pop() {
+            for entry in std::fs::read_dir(&dir).expect("read src dir") {
+                let path = entry.expect("dir entry").path();
+                if path.is_dir() {
+                    stack.push(path);
+                    continue;
+                }
+                if path.extension().is_none_or(|e| e != "rs") {
+                    continue;
+                }
+                // Skip this file. It DEFINES `note_consulted` and this very
+                // scanner quotes the call in its own source, so including it
+                // makes the test match its own string literals and report two
+                // fragments of Rust as unregistered keys. That is the second
+                // self-reference bug in this module — the first was
+                // `registry_len_matches_its_own_source` counting its own
+                // needle — and both produced confident, plausible, wrong
+                // failure messages about the table.
+                if path.file_name().is_some_and(|f| f == "config_registry.rs") {
+                    continue;
+                }
+                let text = std::fs::read_to_string(&path).expect("read source");
+                // Match `note_consulted(` followed by a string literal, across
+                // the line break rustfmt inserts for a long key.
+                let mut rest = text.as_str();
+                while let Some(at) = rest.find("note_consulted(") {
+                    rest = &rest[at + "note_consulted(".len()..];
+                    let Some(open) = rest.find('"') else { break };
+                    // Only a whitespace run may separate the paren from the
+                    // literal; anything else is a call passing a variable,
+                    // which this test cannot check and does not claim to.
+                    if !rest[..open].chars().all(char::is_whitespace) {
+                        continue;
+                    }
+                    let after = &rest[open + 1..];
+                    let Some(close) = after.find('"') else { break };
+                    let key = &after[..close];
+                    sites += 1;
+                    if !keys.contains(key) {
+                        bad.push(format!("{}: {key}", path.display()));
+                    }
+                    rest = &after[close..];
+                }
+            }
+        }
+        assert!(
+            bad.is_empty(),
+            "note_consulted keys that are not registered: {bad:#?}"
+        );
+        // A scan that found nothing would pass vacuously, which is the failure
+        // mode this repository has been bitten by most often.
+        assert!(
+            sites >= 4,
+            "expected the instrumented gates to be found; the scan saw {sites} \
+             call site(s), so it is passing vacuously"
+        );
+    }
+
+    /// An instrumented gate really does record its key when the guard is on,
+    /// end to end through the real code path.
+    ///
+    /// `recording_is_opt_in_and_restores` calls [`note_consulted`] directly, so
+    /// it proves the mechanism and NOT the wiring. This drives a real
+    /// `simplex::Incremental::new`, which is one of the four instrumented
+    /// sites. Written because a hand check of `--trace` over the micro and
+    /// regression corpora printed no `consulted=` field on any of 155 files —
+    /// those queries are all decided before reaching an instrumented gate — and
+    /// an instrument nothing has been shown to reach is indistinguishable from
+    /// one that does not work.
+    #[test]
+    fn an_instrumented_gate_records_through_the_real_path() {
+        let key = "crates/axeyum-solver/src/simplex.rs::MAX_TABLEAU_CELLS";
+        assert!(
+            REGISTRY.iter().any(|e| e.key() == key),
+            "the key this test asserts is not registered"
+        );
+        {
+            let _g = ConfigTraceGuard::enable();
+            // A tiny, admissible system: the point is that the gate is
+            // consulted, not that it refuses.
+            let _ = crate::simplex::Incremental::new(1, vec![]);
+            assert!(
+                consulted().contains(&key),
+                "simplex::Incremental::new did not record its bound; consulted = {:?}",
+                consulted()
+            );
+        }
+        // And the same call adds nothing once the guard is gone. The set is
+        // NOT empty here, deliberately: it is cleared when a guard is enabled,
+        // not when one is dropped, so a caller can read it after the solve it
+        // was measuring. What must hold is that an unguarded call does not
+        // grow it.
+        let before = consulted();
+        let _ = crate::simplex::Incremental::new(1, vec![]);
+        let _ = crate::simplex::Incremental::new(2, vec![]);
+        assert_eq!(
+            consulted(),
+            before,
+            "an unguarded call changed the consulted set"
         );
     }
 
