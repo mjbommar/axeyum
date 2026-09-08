@@ -631,3 +631,133 @@ fn the_channel_reset_scopes_the_count_to_one_dispatch() {
         "a reset dispatch is not charged for the previous query's refutation"
     );
 }
+
+/// Every field of [`crate::euf_egraph::TheoryEngineCounters`] must reach the
+/// `--trace` line, and this test derives that field list from the struct rather
+/// than from a literal.
+///
+/// # Why the destructuring, and why it is the whole point
+///
+/// The defect this pins was not a wrong number — it was seven fields silently
+/// left at `Default` (so reported as `n/a`, "not measured") by
+/// [`super::theory_layer_stats`], while their values sat in the `engine`
+/// argument it was handed. Because the constructor ended in
+/// `..Default::default()`, adding a counter and forgetting to forward it
+/// compiled cleanly and printed `n/a` forever. That is worse than printing
+/// nothing: a reader who had a real number for the counter on the previous
+/// driver reads `n/a` as a stale tool rather than as a dropped field.
+///
+/// The exhaustive `let TheoryEngineCounters { … }` pattern below carries **no**
+/// `..` rest, so the compiler refuses this test the moment a field is added.
+/// That makes the field list the struct's, not the maintainer's memory of it —
+/// the only form of "every X" this language can enforce.
+///
+/// Each field gets a **distinct** value, so a forward that copies the wrong
+/// source field fails as loudly as one that copies nothing.
+#[test]
+fn every_engine_counter_reaches_the_trace_line() {
+    let counters = crate::euf_egraph::TheoryEngineCounters {
+        simplex_pivots: 1,
+        simplex_checks: 2,
+        simplex_cold_restarts: 3,
+        bound_retractions: 4,
+        bound_assertions: 5,
+        propagations: 6,
+        simplex_rows: 7,
+        simplex_columns: 8,
+        assert_partial_conflicts: 9,
+        final_check_conflicts: 10,
+        final_check_core_literals: 11,
+        final_check_core_widenings: 12,
+        final_check_live_rows: 13,
+        bound_scan_calls: 14,
+        bound_scan_atoms: 15,
+    };
+    // No `..` rest — adding a counter breaks this line, which is the guard.
+    let crate::euf_egraph::TheoryEngineCounters {
+        simplex_pivots,
+        simplex_checks,
+        simplex_cold_restarts,
+        bound_retractions,
+        bound_assertions,
+        propagations,
+        simplex_rows,
+        simplex_columns,
+        assert_partial_conflicts,
+        final_check_conflicts,
+        final_check_core_literals,
+        final_check_core_widenings,
+        final_check_live_rows,
+        bound_scan_calls,
+        bound_scan_atoms,
+    } = counters;
+
+    let stats = super::theory_layer_stats(&axeyum_cnf::NativeLayerStats::default(), Some(counters));
+
+    let observed: [(&str, Option<u64>, u64); 15] = [
+        ("simplex_pivots", stats.simplex_pivots, simplex_pivots),
+        ("simplex_checks", stats.simplex_checks, simplex_checks),
+        (
+            "simplex_cold_restarts",
+            stats.simplex_cold_restarts,
+            simplex_cold_restarts,
+        ),
+        (
+            "bound_retractions",
+            stats.bound_retractions,
+            bound_retractions,
+        ),
+        ("bound_assertions", stats.bound_assertions, bound_assertions),
+        (
+            "theory_propagations_offered",
+            stats.theory_propagations_offered,
+            propagations,
+        ),
+        ("simplex_rows", stats.simplex_rows, simplex_rows),
+        ("simplex_columns", stats.simplex_columns, simplex_columns),
+        (
+            "assert_partial_conflicts",
+            stats.assert_partial_conflicts,
+            assert_partial_conflicts,
+        ),
+        (
+            "final_check_conflicts",
+            stats.final_check_conflicts,
+            final_check_conflicts,
+        ),
+        (
+            "final_check_core_literals",
+            stats.final_check_core_literals,
+            final_check_core_literals,
+        ),
+        (
+            "final_check_core_widenings",
+            stats.final_check_core_widenings,
+            final_check_core_widenings,
+        ),
+        (
+            "final_check_live_rows",
+            stats.final_check_live_rows,
+            final_check_live_rows,
+        ),
+        ("bound_scan_calls", stats.bound_scan_calls, bound_scan_calls),
+        ("bound_scan_atoms", stats.bound_scan_atoms, bound_scan_atoms),
+    ];
+    for (name, got, want) in observed {
+        assert_eq!(
+            got,
+            Some(want),
+            "`{name}` did not reach the trace line; `n/a` there reads as \
+             'not measured' about a counter the engine measured"
+        );
+    }
+
+    // The other half of the contract: a theory with no feasibility engine must
+    // still report `None` (rendered `n/a`) and never a manufactured zero.
+    let none = super::theory_layer_stats(&axeyum_cnf::NativeLayerStats::default(), None);
+    assert_eq!(
+        none.final_check_core_widenings, None,
+        "absent engine must read `n/a`, not `0`"
+    );
+    assert_eq!(none.simplex_pivots, None, "absent engine must read `n/a`");
+}

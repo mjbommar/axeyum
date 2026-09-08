@@ -535,9 +535,28 @@ fn theory_layer_stats(
         theory_propagations_offered: engine.map(|e| e.propagations),
         simplex_rows: engine.map(|e| e.simplex_rows),
         simplex_columns: engine.map(|e| e.simplex_columns),
-        // The LRA lane (ADR-1752) added counters this constructor does not
-        // measure; they stay at their Default rather than being invented here.
-        ..Default::default()
+        // The seven counters below were previously left at `Default` here with a
+        // comment saying this constructor "does not measure" them. That was
+        // wrong in a way that mattered: they are not driver-side fields at all —
+        // every one of them is already carried in the `engine` argument above,
+        // filled by `LraTheory::engine_counters`. The constructor was dropping
+        // values it held in hand.
+        //
+        // Why it was expensive: `lra_theory.rs` switched the shipped QF_LRA
+        // route from `CdclT` to this native core (ea85c9813, 2026-09-07), so
+        // from that commit onward `--trace` printed `final_check_core_widenings=n/a`
+        // on *every* QF_LRA file. `n/a` is honest — it says "not measured", not
+        // "zero" — but the counter is the pre-registered decision input for
+        // whether the Farkas decline paths (`simplex.rs:801-805`, `:823-827`)
+        // are the cheap large win, and an absent number reads as a settled one
+        // to anybody who measured it on the old route.
+        assert_partial_conflicts: engine.map(|e| e.assert_partial_conflicts),
+        final_check_conflicts: engine.map(|e| e.final_check_conflicts),
+        final_check_core_literals: engine.map(|e| e.final_check_core_literals),
+        final_check_core_widenings: engine.map(|e| e.final_check_core_widenings),
+        final_check_live_rows: engine.map(|e| e.final_check_live_rows),
+        bound_scan_calls: engine.map(|e| e.bound_scan_calls),
+        bound_scan_atoms: engine.map(|e| e.bound_scan_atoms),
     }
 }
 
