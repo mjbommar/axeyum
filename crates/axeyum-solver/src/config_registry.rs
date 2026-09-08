@@ -1558,6 +1558,29 @@ pub static REGISTRY: &[ConfigEntry] = &[
         note: "`if count >= MAX .. { return Ok(count) }` — silent truncation of the seeding loop, one line of doc.",
     },
     ConfigEntry {
+        name: "DEFAULT_MAX_CACHED_LIA_LITERALS",
+        module: "crates/axeyum-solver/src/lra/warm.rs",
+        value: "1 << 16",
+        unit: "cached literals (two per registered LIA atom)",
+        protects: Protects::Memory,
+        on_exceed: OnExceed::DeclineRoute,
+        signal: Signal::None,
+        guarded_by: "Crossing it makes the warm decider collect a literal per check instead of \
+                     caching it -- the cold path's behaviour, which is sound by construction. \
+                     `LiaWarmCounters::literal_cache_evicted` records that it fired.",
+        env_override: Some("AXEYUM_LIA_WARM"),
+        justification: undated("doc comment"),
+        note: "Registered because `AXEYUM_LIA_WARM` governs which offline QF_LIA path runs, and an \
+               A/B whose arms are not in the run's own output is not reproducible from it. The cap \
+               itself is a runaway-memory backstop, not a tuning knob: the population is one \
+               query's atom set, and the online LIA theory is only built below its own admission \
+               bound, so it is not expected to fire on any query that theory accepts. The env \
+               variable does not select this VALUE -- it selects the whole `LiaWarmPolicy` \
+               (`off` = the pre-warm cold path, `filter` = warm with the rational filter kept, \
+               unset = warm) -- which is why it is attached to the only registered constant the \
+               policy carries.",
+    },
+    ConfigEntry {
         name: "BYTES_PER_ADMITTED_ATOM",
         module: "crates/axeyum-solver/src/lra_online.rs",
         value: "DEFAULT_ONLINE_LRA_BUDGET_BYTES / 1_024",
