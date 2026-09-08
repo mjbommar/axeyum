@@ -10,7 +10,7 @@ bool-gate, and the thread-local guard pattern from
 `axeyum_solver::smtlib::FrontDoorStatsGuard`). Full record, including the
 orphaned `proof_reroot_steps` counter this lane found (landed, unread, no
 test) and the bounded-not-settled result on the "58 MB / ~54 s" ingest
-figure: [the diary](../research/12-performance/foundation-counters-2026-09-07.md).
+figure: [the diary](../../research/12-performance/foundation-counters-2026-09-07.md).
 
 **egraph:** `EGraphCounters` (merges/finds/process_pending's declaration-set
 copy-sort-dedup work — the operation a sibling lane measured at 72x at
