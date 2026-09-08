@@ -1,0 +1,11 @@
+/data0/measure-inproc-cost/cnf/04_simple_processors_008_006_0004.cnf
+/data0/measure-inproc-cost/cnf/05_tsp_rand_70_300_1155482584_12.lp.cnf
+/data0/measure-inproc-cost/cnf/06_predicate_851.cnf
+/data0/measure-inproc-cost/cnf/07_counterexample.dump.ia32_Mul_base_disp--Add32.load32.Mul32.Mulh_u32.0005.cnf
+/data0/measure-inproc-cost/cnf/08_ext_con_028_008_0064.cnf
+/data0/measure-inproc-cost/cnf/09_vlsat3_a85.cnf
+/data0/measure-inproc-cost/cnf/10_ext_con_008_001_0064.cnf
+/data0/measure-inproc-cost/cnf/12_dualexecution.t1.i15.8e78387b.cnf
+/data0/measure-inproc-cost/cnf/13_gryzzles.30.lp.cnf
+/data0/measure-inproc-cost/cnf/14_bench_12354.cnf
+/data0/measure-inproc-cost/cnf/15_lfsr_002_127_112.cnf

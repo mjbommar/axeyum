@@ -73,6 +73,15 @@ done <"$list"
 
 rows=$(grep -c '"arm"' "$out")
 echo "pass-sweep expected=$expected rows=$rows files=$file_index load_end=$(cut -d' ' -f1-3 /proc/loadavg)" >&2
+# An EMPTY population passes a rows==expected check, because 0 == 0. That is a
+# guard that cannot fail in the one case where the output is most misleading: a
+# report over zero rows prints "no difference between the arms". Measured here —
+# this sweep was launched against a list that did not exist yet, printed
+# `files=0`, and exited 0. So the population size is asserted separately.
+if (( file_index == 0 )); then
+  echo "FAIL: no readable DIMACS files in $list — this measured nothing" >&2
+  exit 1
+fi
 if [[ "$rows" != "$expected" ]]; then
   echo "FAIL: $rows rows for $expected expected runs" >&2
   exit 1

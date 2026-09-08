@@ -86,6 +86,13 @@ done <"$list"
 
 rows=$(grep -c '"verdict"' "$out")
 echo "sweep arm=$arm measured=$attempted rows=$rows load_end=$(cut -d' ' -f1-3 /proc/loadavg)" >&2
+# An empty list passes `rows == attempted`, because 0 == 0 — and a report over
+# zero rows reads as "the arms are identical", which is the most misleading
+# thing this could print. Assert the population separately from its coverage.
+if (( attempted == 0 )); then
+  echo "FAIL: $list contained no benchmark paths — this measured nothing" >&2
+  exit 1
+fi
 # A row per attempted file, or the run is not a measurement of this list.
 if [[ "$rows" != "$attempted" ]]; then
   echo "FAIL: $rows rows for $attempted attempted files — output is incomplete" >&2
