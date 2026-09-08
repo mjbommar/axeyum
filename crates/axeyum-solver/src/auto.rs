@@ -1123,6 +1123,23 @@ pub fn check_auto(
     // recursed the most.
     //
     // With the guard off this is one thread-local `Cell<bool>` read.
+    //
+    // MEASURED DIVERGENCE, repaired here rather than inherited.
+    // `check_auto_explained` does NOT run `memory_budget_decline` at entry; only
+    // `check_auto` does. So a query under a memory budget that `check_auto`
+    // declines at the door would, if delegated naively, run the whole dispatch
+    // instead — a real verdict change, on exactly the axis `smtcomp_cli`'s
+    // `--memory-limit-mb` exercises. The entry guard therefore runs BEFORE the
+    // delegation and both paths return the same decline.
+    //
+    // This is a pre-existing gap in the two functions' contract, not one this
+    // lane introduced: the differential corpus in `tests/route_trace.rs` never
+    // sets `memory_limit_mb`, so it passes vacuously on this axis.
+    // `route_attribution_is_verdict_identical_under_a_memory_budget` in
+    // `tests/route_attribution.rs` pins the repaired behaviour.
+    if let Some(decline) = memory_budget_decline(config, "check_auto entry") {
+        return Ok(decline);
+    }
     if let Some(attributed) = route_trace::with_outermost_dispatch(|outermost| {
         if !outermost {
             return None;
@@ -1142,10 +1159,10 @@ pub fn check_auto(
     // pinned by `tests/route_trace.rs`).
     // The caller's budget is a WALL-CLOCK deadline for the whole call, not a fresh
     // allowance per fallback rung (see `fallback_deadline`).
+    // (The `memory_budget_decline` entry guard that used to sit here now runs
+    // ABOVE the attribution branch, so BOTH paths are gated by it rather than
+    // only this one — see the comment there.)
     let deadline = fallback_deadline(config);
-    if let Some(decline) = memory_budget_decline(config, "check_auto entry") {
-        return Ok(decline);
-    }
     let result = check_auto_with_recorder(arena, assertions, config, &mut None)?;
     if matches!(result, CheckResult::Unknown(_)) {
         // Integer-algebraic identity refutation (QF_NIA): cheap, exact, unsat-only.

@@ -84,6 +84,16 @@ def read_trail(log_path):
         return None
 
 
+# Work every arm of a portfolio would have to do anyway, so it is NOT
+# recoverable by running the routes in parallel. `fd:parse` turns the file into
+# a term arena and `probe` classifies the fragment; both are prerequisites of
+# every route, not competitors to any of them. Counting them as recoverable was
+# a real error in the first draft of this script -- it inflated QF_SLIA's
+# recoverable share -- and it is called out here rather than silently fixed
+# because the corrected number is the one the portfolio decision rests on.
+SHARED_PREAMBLE_ROUTES = frozenset({"fd:parse", "probe"})
+
+
 def analyse_trail(trail):
     """Per-file route facts derived from one trail.
 
@@ -91,13 +101,15 @@ def analyse_trail(trail):
       decided_index      index of the LAST `decided` attempt, or None
       decided_route      its route label, or None
       total_ns           summed elapsed over every attempt
-      prefix_ns          elapsed summed over attempts BEFORE the deciding one
-                         (the sequential-only cost a portfolio does not pay)
+      preamble_ns        elapsed in shared preamble stages (parse, probe) --
+                         paid by every arm of a portfolio, NOT recoverable
+      prefix_ns          elapsed in COMPETING routes that declined before the
+                         winner -- the sequential-only cost a portfolio does
+                         not pay
       winner_ns          the deciding attempt's own elapsed
       bound_route        the single most expensive attempt's route
       bound_ns           its elapsed
       last_route         the final attempt's route
-      routes             every route label that appeared
     """
     attempts = trail.get("attempts", [])
     if not attempts:
@@ -114,11 +126,18 @@ def analyse_trail(trail):
     # `RouteTrace::bound_by`, whose `max_by_key` returns the last maximum.
     bound_index = max(range(len(elapsed)), key=lambda i: (elapsed[i], i))
 
+    preamble_ns = sum(e for e, r in zip(elapsed, routes)
+                      if r in SHARED_PREAMBLE_ROUTES)
+    upto = decided_index if decided_index is not None else len(attempts)
+    prefix_ns = sum(e for e, r in zip(elapsed[:upto], routes[:upto])
+                    if r not in SHARED_PREAMBLE_ROUTES)
+
     return {
         "decided_index": decided_index,
         "decided_route": routes[decided_index] if decided_index is not None else None,
         "total_ns": sum(elapsed),
-        "prefix_ns": sum(elapsed[:decided_index]) if decided_index is not None else sum(elapsed),
+        "preamble_ns": preamble_ns,
+        "prefix_ns": prefix_ns,
         "winner_ns": elapsed[decided_index] if decided_index is not None else 0,
         "bound_route": routes[bound_index],
         "bound_ns": elapsed[bound_index],
@@ -152,7 +171,7 @@ def main():
         "files": 0, "decided": 0, "unsolved": 0,
         "deciding_routes": Counter(), "binding_routes": Counter(),
         "bound_differs_from_last": 0,
-        "prefix_ns": 0, "total_ns": 0, "winner_ns": 0,
+        "prefix_ns": 0, "preamble_ns": 0, "total_ns": 0, "winner_ns": 0,
     })
 
     deciding_overall = Counter()
@@ -161,6 +180,7 @@ def main():
     decided_with_trail = 0
     unsolved_with_trail = 0
     grand_prefix_ns = 0
+    grand_preamble_ns = 0
     grand_total_ns = 0
     grand_winner_ns = 0
     no_trail = 0
@@ -193,9 +213,10 @@ def main():
                 f"{wall_ms}ms * {ALLOWED_SLOP}")
         # GUARD 2: the declined prefix is a subset of the trail; >100% is
         # impossible by construction.
-        if a["prefix_ns"] > a["total_ns"]:
+        if a["prefix_ns"] + a["preamble_ns"] + a["winner_ns"] > a["total_ns"]:
             violations.append(
-                f"{r['file']}: declined prefix {a['prefix_ns']} exceeds trail "
+                f"{r['file']}: prefix {a['prefix_ns']} + preamble "
+                f"{a['preamble_ns']} + winner {a['winner_ns']} exceeds trail "
                 f"total {a['total_ns']}")
 
         decided = verdict in ("sat", "unsat")
@@ -216,9 +237,11 @@ def main():
                 # first real route sits at index 2.
                 winner_not_first += 1
             grand_prefix_ns += a["prefix_ns"]
+            grand_preamble_ns += a["preamble_ns"]
             grand_winner_ns += a["winner_ns"]
             grand_total_ns += a["total_ns"]
             d["prefix_ns"] += a["prefix_ns"]
+            d["preamble_ns"] += a["preamble_ns"]
             d["winner_ns"] += a["winner_ns"]
             d["total_ns"] += a["total_ns"]
         else:
@@ -256,14 +279,25 @@ def main():
             "decided_files": decided_with_trail,
             "winner_was_not_the_first_route_tried": winner_not_first,
             "trail_total_ms": grand_total_ns / 1e6,
+            "shared_preamble_ms": grand_preamble_ns / 1e6,
             "declined_prefix_ms": grand_prefix_ns / 1e6,
             "winning_route_ms": grand_winner_ns / 1e6,
             "recoverable_share": (grand_prefix_ns / grand_total_ns) if grand_total_ns else None,
             "recoverable_share_meaning": "fraction of in-dispatch wall time on "
-                                         "DECIDED files spent in routes that "
-                                         "declined before the winner. A parallel "
-                                         "portfolio does not spend this. EXACT, "
-                                         "not a bound.",
+                                         "DECIDED files spent in COMPETING routes "
+                                         "that declined before the winner. A "
+                                         "parallel portfolio does not spend this. "
+                                         "EXACT, not a bound. Shared preamble "
+                                         "(parse, fragment probe) is EXCLUDED: "
+                                         "every arm of a portfolio pays it, so "
+                                         "counting it as recoverable overstates "
+                                         "the prize.",
+            "portfolio_projected_ms": (grand_preamble_ns + grand_winner_ns) / 1e6,
+            "portfolio_projected_meaning": "what these same decided files would "
+                                           "cost if every route ran concurrently "
+                                           "and the winner were not queued behind "
+                                           "the losers: shared preamble plus the "
+                                           "winning route's own time.",
             "diversity_caveat": "the deciding-route distribution is an UPPER "
                                 "bound on route diversity: a later route that "
                                 "never ran might also have decided the file.",
@@ -277,6 +311,8 @@ def main():
                 "binding_routes_on_losses": dict(d["binding_routes"].most_common()),
                 "bound_differs_from_last": d["bound_differs_from_last"],
                 "recoverable_share": (d["prefix_ns"] / d["total_ns"]) if d["total_ns"] else None,
+                "trail_total_ms": d["total_ns"] / 1e6,
+                "portfolio_projected_ms": (d["preamble_ns"] + d["winner_ns"]) / 1e6,
             }
             for div, d in sorted(per_division.items())
         },

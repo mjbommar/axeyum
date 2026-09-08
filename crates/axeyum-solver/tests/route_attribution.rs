@@ -142,6 +142,59 @@ fn attribution_does_not_change_any_verdict() {
     eprintln!("verdict invariance: {checked} files, 0 mismatches");
 }
 
+/// Verdict invariance on the axis the corpus sweep passes over vacuously.
+///
+/// `check_auto` runs a `memory_budget_decline` guard at entry;
+/// `check_auto_explained` does not. That is a pre-existing gap in the two
+/// functions' contract — the differential corpus in `tests/route_trace.rs`
+/// never sets `memory_limit_mb`, so it passes on this axis without testing it
+/// — and it would have become a real verdict change the moment attribution
+/// delegated to the explained path. `check_auto` now runs the guard ahead of
+/// the delegation so both paths are gated by it. This pins that.
+///
+/// The positive control matters as much as the comparison: a memory budget so
+/// large that nothing declines would make this test agree trivially and prove
+/// nothing.
+#[test]
+fn route_attribution_is_verdict_identical_under_a_memory_budget() {
+    let text = "(set-logic QF_BV)\n(declare-const x (_ BitVec 32))\n\
+                (declare-const y (_ BitVec 32))\n\
+                (assert (= (bvmul x y) (_ bv1 32)))\n\
+                (assert (bvult x y))\n(check-sat)\n";
+    let tight = SolverConfig {
+        timeout: Some(BUDGET),
+        memory_limit_mb: Some(1),
+        ..SolverConfig::default()
+    };
+
+    let plain = tag(&solve_smtlib(text, &tight));
+    let attributed = {
+        let _g = RouteAttributionGuard::enable();
+        tag(&solve_smtlib(text, &tight))
+    };
+    assert_eq!(
+        plain, attributed,
+        "a 1 MiB memory budget produced different verdicts with attribution \
+         off ({plain}) and on ({attributed})"
+    );
+
+    // POSITIVE CONTROL: the same query without the budget must not error, and
+    // the budgeted run must either have declined or agreed with it. Without
+    // this, a query that returns `unknown` for an unrelated reason would make
+    // the comparison above agree for the wrong reason.
+    let unbudgeted = tag(&solve_smtlib(text, &config()));
+    assert_ne!(
+        unbudgeted, "error",
+        "the control query must not error; it is meant to be decidable"
+    );
+    assert!(
+        plain == "unknown" || unbudgeted == plain,
+        "the tight budget neither declined ({plain}) nor matched the \
+         unbudgeted verdict ({unbudgeted}) — this fixture is not exercising \
+         the memory-budget path it exists to test"
+    );
+}
+
 /// The anti-vacuity guard. "No verdict changed" is satisfied perfectly by an
 /// instrument that records nothing at all, so the invariance test above cannot
 /// detect a collector that silently went dead. This one fails if it does.

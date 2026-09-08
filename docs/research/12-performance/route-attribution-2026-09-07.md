@@ -89,6 +89,36 @@ decided `unsat`). `decided_by` correctly names the last one. This is the case
 that justifies "last decided" over "first decided", and it was found by an
 assertion of mine being wrong, not by the code being wrong.
 
+## A divergence this work surfaced: the memory-budget entry guard
+
+Delegating to `check_auto_explained` rests on the two functions being verdict-
+identical. Checking that claim rather than assuming it found that they are
+**not**, on one axis:
+
+`check_auto` runs `memory_budget_decline(config, "check_auto entry")` before
+dispatching. `check_auto_explained` does not. So a query under a memory budget
+that `check_auto` declines at the door would, under naive delegation, run the
+whole dispatch instead — a real verdict change on exactly the axis
+`smtcomp_cli --memory-limit-mb` exercises.
+
+This is **pre-existing**, not introduced here. `tests/route_trace.rs` claims
+verdict invariance between the two functions, but its differential corpus never
+sets `memory_limit_mb`, so it passes on this axis without testing it — a gate
+green for the reason a gate is green when it does not look.
+
+Repaired by running the entry guard in `check_auto` **ahead of** the attribution
+branch, so both paths are gated by it, and pinned by
+`route_attribution_is_verdict_identical_under_a_memory_budget`, which carries a
+positive control so a budget too large to decline cannot make it agree
+trivially. `check_auto_explained` itself is left alone: making it carry the
+guard would change `explain_corpus`'s behaviour under memory limits, which is a
+separate decision with its own consumers.
+
+The general lesson is the one CLAUDE.md already states, met head on: an
+inherited invariant is a claim, and the corpus that pins it may be silent on the
+axis you are about to use it for. Check which axes the pinning population
+actually varies.
+
 ## Gate
 
 `crates/axeyum-solver/tests/route_attribution.rs`, over the committed 152-file

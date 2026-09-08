@@ -133,15 +133,35 @@ def main():
         else:
             rep = json.loads(out)
             vb = rep["virtual_best_over_our_own_routes"]
-            # prefix = 5 + 1 + 94 = 100ms of 150ms total.
+            # The fixture's trail is 5ms fd:parse + 1ms probe + 94ms declined
+            # dl-online + 50ms winning lia-simplex = 150ms.
+            #
+            # Only the 94ms dl-online decline is RECOVERABLE. The 6ms of parse
+            # and probe are shared preamble that every arm of a portfolio pays,
+            # so they must NOT be counted -- the first draft of aggregate.py did
+            # count them, and this assertion is what pins the correction.
             got = vb["recoverable_share"]
-            want = 100.0 / 150.0
+            want = 94.0 / 150.0
             if abs(got - want) > 1e-9:
                 failures.append(
-                    f"recoverable_share = {got}, expected {want} "
-                    f"(100ms declined prefix of a 150ms trail)")
+                    f"recoverable_share = {got}, expected {want} (94ms of "
+                    f"COMPETING declines in a 150ms trail; the 6ms of shared "
+                    f"parse+probe preamble is not recoverable)")
             else:
                 print(f"  ok  recoverable_share = {got:.4f} as computed by hand")
+            if abs(vb["shared_preamble_ms"] - 6.0) > 1e-6:
+                failures.append(
+                    f"shared_preamble_ms = {vb['shared_preamble_ms']}, "
+                    f"expected 6.0 (5ms parse + 1ms probe)")
+            else:
+                print("  ok  shared_preamble_ms = 6.0 (parse + probe)")
+            # A portfolio pays preamble + winner only: 6 + 50 = 56ms of 150ms.
+            if abs(vb["portfolio_projected_ms"] - 56.0) > 1e-6:
+                failures.append(
+                    f"portfolio_projected_ms = {vb['portfolio_projected_ms']}, "
+                    f"expected 56.0 (6ms preamble + 50ms winner)")
+            else:
+                print("  ok  portfolio_projected_ms = 56.0 (preamble + winner)")
             if vb["winner_was_not_the_first_route_tried"] != 1:
                 failures.append(
                     "winner_was_not_the_first_route_tried should be 1: the "
