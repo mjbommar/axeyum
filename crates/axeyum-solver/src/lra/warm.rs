@@ -900,7 +900,9 @@ impl WarmLiaDecider {
         let vars_before = self.collector.vars.len();
         let columns_before = self.collector.next_var;
         let opaque_before = self.collector.opaque_var_index.len();
-        let completed = self.collector.collect_within(arena, term, false, deadline)?;
+        let completed = self
+            .collector
+            .collect_within(arena, term, false, deadline)?;
         if !completed {
             self.collector.constraints.clear();
             self.collector.touch_log.clear();
@@ -939,6 +941,27 @@ impl WarmLiaDecider {
         }
         self.cached_literals += 1;
         self.cache[key] = Some(entry);
+    }
+
+    /// The system currently assembled, in the shape [`super::cold_int_system`]
+    /// returns — so a test can compare the two structurally rather than settling
+    /// for verdict agreement between two independently sound engines.
+    #[cfg(test)]
+    pub(crate) fn assembled_system(&self) -> super::ColdIntSystem {
+        super::ColdIntSystem {
+            constraints: self.assembly.constraints.clone(),
+            nvars: self.assembly.local_to_global.len(),
+            has_opaque_vars: self.assembly.has_opaque(),
+            trivially_unsat: self.assembly.trivially_unsat(),
+            overflow: self.assembly.overflow(),
+        }
+    }
+
+    /// How many literals the current assembly holds. Test-only: the delta
+    /// counters are per-thread and a unit test needs the per-decider figure.
+    #[cfg(test)]
+    pub(crate) fn assembled_literals(&self) -> usize {
+        self.assembly.keys.len()
     }
 
     /// Grows the global column tables to cover the columns the last collection

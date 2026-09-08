@@ -596,7 +596,7 @@ fn add_vec(a: &[Rational], b: &[Rational]) -> Option<Vec<Rational>> {
 
 /// A linear expression `sum coeff_i * x_i + constant` over real variables
 /// (indexed densely).
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 struct LinExpr {
     coeffs: BTreeMap<usize, Rational>,
     constant: Rational,
@@ -677,7 +677,7 @@ impl LinExpr {
 /// constraints carry a unit vector; Fourier–Motzkin accumulates `mult` so any
 /// derived contradiction names its Farkas multipliers. The collector leaves
 /// `mult` empty; [`decide`] fills it in once the constraint count is known.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 struct Constraint {
     expr: LinExpr,
     strict: bool,
@@ -1427,6 +1427,49 @@ fn decide_int_constraints(
         let mut budget = node_cap;
         lia_branch_and_bound(constraints, nvars, &mut budget, deadline)
     }
+}
+
+/// The collected, tightened system the cold path would hand the engines for
+/// `assertions` — the exact intermediate the warm decider claims to reproduce.
+///
+/// Test-only, and deliberately *not* the verdict: two sound engines agreeing on a
+/// verdict says nothing about whether the warm path built the same system, and
+/// building a different one is a silent coverage change (see [`warm`]).
+#[cfg(test)]
+pub(crate) fn cold_int_system(
+    arena: &TermArena,
+    assertions: &[TermId],
+    allow_opaque_apps: bool,
+) -> Result<ColdIntSystem, SolverError> {
+    let mut ctx = IntCollector::new(allow_opaque_apps);
+    for (index, &assertion) in assertions.iter().enumerate() {
+        ctx.current_origin = index;
+        ctx.collect(arena, assertion, false)?;
+    }
+    let nvars = ctx.variable_count();
+    let has_opaque_vars = ctx.has_opaque_vars();
+    let trivially_unsat = ctx.trivially_unsat;
+    let overflow = ctx.overflow;
+    let mut constraints = ctx.constraints;
+    tighten_int_constraints(&mut constraints);
+    Ok(ColdIntSystem {
+        constraints,
+        nvars,
+        has_opaque_vars,
+        trivially_unsat,
+        overflow,
+    })
+}
+
+/// What [`cold_int_system`] returns.
+#[cfg(test)]
+#[derive(Debug, PartialEq, Eq)]
+pub(crate) struct ColdIntSystem {
+    pub(crate) constraints: Vec<Constraint>,
+    pub(crate) nvars: usize,
+    pub(crate) has_opaque_vars: bool,
+    pub(crate) trivially_unsat: bool,
+    pub(crate) overflow: bool,
 }
 
 /// [`lia_simplex_with_options`] with the branch-and-bound node budget supplied
@@ -2212,8 +2255,7 @@ fn unsupported_lia(what: &str) -> SolverError {
 /// same dense `Constraint`/`LinExpr` form the simplex consumes. Mirrors the LRA
 /// [`Collector`] for the integer operator set; the LRA collector is left
 /// untouched.
-#[derive(Default)]
-#[derive(Debug)]
+#[derive(Default, Debug)]
 struct IntCollector {
     var_index: BTreeMap<SymbolId, usize>,
     opaque_var_index: BTreeMap<TermId, usize>,

@@ -718,7 +718,12 @@ impl LiaTheory {
     }
 
     fn new_with_options(arena: &TermArena, atom_terms: &[TermId], allow_opaque_apps: bool) -> Self {
-        Self::new_with_policy(arena, atom_terms, allow_opaque_apps, ambient_lia_warm_policy())
+        Self::new_with_policy(
+            arena,
+            atom_terms,
+            allow_opaque_apps,
+            ambient_lia_warm_policy(),
+        )
     }
 
     /// [`Self::new_with_options`] with the warm policy supplied rather than taken
@@ -1084,11 +1089,7 @@ impl LiaTheory {
         // Fall back to the full set if minimization somehow emptied the core
         // (should not happen for a genuine refutation) — a sound, if coarse,
         // conflict.
-        if core.is_empty() {
-            lits.to_vec()
-        } else {
-            core
-        }
+        if core.is_empty() { lits.to_vec() } else { core }
     }
 
     fn check_terms(&self, arena: &TermArena, terms: &[TermId]) -> Result<CheckResult, SolverError> {
@@ -3158,6 +3159,226 @@ mod tests {
                 "warm and cold engines disagree on {assignment:?}"
             );
         }
+    }
+
+    // --- the warm offline decider --------------------------------------------
+
+    /// The cold offline path with the rational filter ALSO off.
+    ///
+    /// The A/B baseline [`LiaWarmPolicy::OFF`] keeps the filter, and the filter
+    /// names its own (sound, but different) conflict core — so comparing cores
+    /// against it would measure the filter, not the warm decider. This isolates
+    /// the one question these tests are about.
+    const COLD_NO_FILTER: LiaWarmPolicy = LiaWarmPolicy {
+        warm: false,
+        reuse_polarity_terms: false,
+        rational_filter: false,
+        max_cached_literals: 0,
+    };
+
+    /// A stable tag plus the conflict core, for comparing two theories' answers.
+    fn feasibility_answer(theory: &LiaTheory) -> (&'static str, Vec<(usize, bool)>) {
+        match theory.feasibility() {
+            Feasibility::Sat => ("sat", Vec::new()),
+            Feasibility::Unknown => ("unknown", Vec::new()),
+            Feasibility::Unsat(core) => {
+                let mut core: Vec<(usize, bool)> = core.iter().map(|l| (l.atom, l.value)).collect();
+                core.sort_unstable();
+                ("unsat", core)
+            }
+        }
+    }
+
+    /// The warm theory must answer exactly what a cold theory answers on the same
+    /// live set — verdict AND conflict core — across random push/assert/pop
+    /// sequences.
+    ///
+    /// This is the staleness test at the level the solver actually uses: the warm
+    /// theory reaches each live set through a trail, the cold one is built fresh
+    /// for it, and any constraint or column the warm path failed to retract shows
+    /// up here as a disagreement. The core is compared as well as the verdict
+    /// because [`LiaTheory::warm_minimize_core`] is a second implementation of
+    /// [`minimize_core`], and a core that is merely *sound* is still a different
+    /// lemma for the `DPLL` driver to learn.
+    #[test]
+    fn warm_theory_answers_exactly_what_a_cold_theory_answers() {
+        let mut seed: u64 = 0x77a2_1a17_2026_0908;
+        let mut next = move || {
+            seed ^= seed << 13;
+            seed ^= seed >> 7;
+            seed ^= seed << 17;
+            seed
+        };
+        let mut compared = 0usize;
+        let mut unsat_answers = 0usize;
+        let mut pops = 0usize;
+
+        for _ in 0..150 {
+            let mut arena = TermArena::new();
+            let vars: Vec<TermId> = (0..3).map(|i| ivar(&mut arena, &format!("t{i}"))).collect();
+            let mut atoms = Vec::new();
+            for _ in 0..5 {
+                let a = vars[(next() % 3) as usize];
+                let b = vars[(next() % 3) as usize];
+                let k = iconst(&mut arena, i128::from(next() % 9) - 4);
+                let Ok(lhs) = arena.int_add(a, k) else {
+                    continue;
+                };
+                let built = match next() % 5 {
+                    0 => arena.int_lt(lhs, b),
+                    1 => arena.int_le(lhs, b),
+                    2 => arena.int_gt(lhs, b),
+                    3 => arena.int_ge(lhs, b),
+                    _ => arena.eq(lhs, b),
+                };
+                if let Ok(atom) = built {
+                    atoms.push(atom);
+                }
+            }
+            if atoms.is_empty() {
+                continue;
+            }
+
+            let mut warm = LiaTheory::new_with_policy(&arena, &atoms, false, LiaWarmPolicy::WARM);
+            assert!(
+                warm.warm.is_some(),
+                "the warm theory must actually have a warm decider, or this test is inert"
+            );
+            let mut assignment: Vec<(usize, bool)> = Vec::new();
+            for _ in 0..10 {
+                if next() % 3 == 0 && !assignment.is_empty() {
+                    warm.pop();
+                    assignment.truncate(assignment.len().saturating_sub(1));
+                    pops += 1;
+                } else {
+                    let atom = usize::try_from(next() % 64).expect("small") % atoms.len();
+                    if warm.assigned[atom].is_some() {
+                        continue;
+                    }
+                    let value = next() % 2 == 0;
+                    warm.push();
+                    warm.assigned[atom] = Some(value);
+                    warm.assigned_log.push(atom);
+                    assignment.push((atom, value));
+                }
+                if assignment.is_empty() {
+                    continue;
+                }
+
+                // A cold theory built fresh for exactly this live set.
+                let mut cold = LiaTheory::new_with_policy(&arena, &atoms, false, COLD_NO_FILTER);
+                assert!(
+                    cold.warm.is_none(),
+                    "the cold arm must have no warm decider"
+                );
+                for &(atom, value) in &assignment {
+                    cold.assigned[atom] = Some(value);
+                    cold.assigned_log.push(atom);
+                }
+
+                let warm_answer = feasibility_answer(&warm);
+                let cold_answer = feasibility_answer(&cold);
+                assert_eq!(
+                    warm_answer, cold_answer,
+                    "warm and cold theories disagree on {assignment:?}"
+                );
+                if warm_answer.0 == "unsat" {
+                    unsat_answers += 1;
+                }
+                compared += 1;
+            }
+        }
+
+        // The comparison has to have run, seen retractions, and reached the
+        // verdict whose core the warm path re-implements.
+        assert!(compared >= 300, "only {compared} live sets compared");
+        assert!(pops >= 50, "only {pops} retractions exercised");
+        assert!(
+            unsat_answers >= 30,
+            "only {unsat_answers} unsat answers — the conflict-core comparison is near-vacuous"
+        );
+    }
+
+    /// Turning the rational filter off must not change a verdict.
+    ///
+    /// The filter is a sound *front end*: it refutes only rational-infeasible
+    /// systems and confirms only integral points, so removing it can change which
+    /// core is named and how long a check takes, never whether the live set is
+    /// feasible. That is the argument; this is the check on it, since the whole
+    /// case for switching it off rests on it being free to remove.
+    #[test]
+    fn dropping_the_rational_filter_does_not_change_a_verdict() {
+        let mut seed: u64 = 0xf117_e2ed_2026_0908;
+        let mut next = move || {
+            seed ^= seed << 13;
+            seed ^= seed >> 7;
+            seed ^= seed << 17;
+            seed
+        };
+        let mut compared = 0usize;
+        let mut unsat_answers = 0usize;
+
+        for _ in 0..200 {
+            let mut arena = TermArena::new();
+            let vars: Vec<TermId> = (0..3).map(|i| ivar(&mut arena, &format!("f{i}"))).collect();
+            let mut atoms = Vec::new();
+            for _ in 0..4 {
+                let a = vars[(next() % 3) as usize];
+                let b = vars[(next() % 3) as usize];
+                let scale = iconst(&mut arena, 1 + i128::from(next() % 3));
+                let k = iconst(&mut arena, i128::from(next() % 11) - 5);
+                let Ok(sa) = arena.int_mul(scale, a) else {
+                    continue;
+                };
+                let Ok(lhs) = arena.int_add(sa, k) else {
+                    continue;
+                };
+                let built = match next() % 5 {
+                    0 => arena.int_lt(lhs, b),
+                    1 => arena.int_le(lhs, b),
+                    2 => arena.int_gt(lhs, b),
+                    3 => arena.int_ge(lhs, b),
+                    _ => arena.eq(lhs, b),
+                };
+                if let Ok(atom) = built {
+                    atoms.push(atom);
+                }
+            }
+            if atoms.is_empty() {
+                continue;
+            }
+
+            let mut with = LiaTheory::new_with_policy(&arena, &atoms, false, COLD_NO_FILTER);
+            with.warm_policy.rational_filter = true;
+            assert!(
+                with.uses_simplex(),
+                "the filter arm must have a filter, or this test is inert"
+            );
+            let mut without = LiaTheory::new_with_policy(&arena, &atoms, false, COLD_NO_FILTER);
+            for atom in 0..atoms.len() {
+                let value = next() % 2 == 0;
+                for theory in [&mut with, &mut without] {
+                    theory.assigned[atom] = Some(value);
+                    theory.assigned_log.push(atom);
+                }
+            }
+            let with_answer = feasibility_answer(&with).0;
+            let without_answer = feasibility_answer(&without).0;
+            assert_eq!(
+                with_answer, without_answer,
+                "the rational filter changed a verdict on {atoms:?}"
+            );
+            if with_answer == "unsat" {
+                unsat_answers += 1;
+            }
+            compared += 1;
+        }
+
+        assert!(compared >= 150, "only {compared} live sets compared");
+        assert!(
+            unsat_answers >= 20,
+            "only {unsat_answers} unsat answers — the comparison is near-vacuous"
+        );
     }
 
     /// A propagation the filter emits must be a genuine entailment: asserting its
