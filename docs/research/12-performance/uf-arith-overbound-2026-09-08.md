@@ -344,6 +344,14 @@ will otherwise re-derive them:
 The measured reason not to act on them in this lane is in §2: on the QF_UFLIA
 losses the budget is consumed before any of that code is reached.
 
+**No CPU profile backs the next paragraph, and the reason is worth recording:**
+this host runs `kernel.perf_event_paranoid = 4`, so `perf record` collects
+nothing — it exits 0 and writes a zero-sized `perf.data`, and `perf report`
+answers `zero-sized data … nothing to do`. A run that "succeeded" and measured
+nothing is exactly the shape this repository keeps being caught by, so it is
+named here rather than quietly dropped. What follows is read off the CEGAR's
+own counters, not off a profile.
+
 **A separate quadratic, which IS on the hot path**, and which this lane
 observed rather than fixed: the lazy CEGAR itself rescans every application
 pair every round. On `hard12.smt2` its own summary reports
@@ -351,3 +359,9 @@ pair every round. On `hard12.smt2` its own summary reports
 all-pairs loop over `groups` in `check_with_function_consistency`, re-run per
 round. That is the same "work proportional to the state, not the delta" shape
 the survey names in the EUF driver, in the code that actually runs here.
+
+Its magnitude is **not** established. 1.15 M pair checks over 24 s is small
+unless each check is expensive, and the same file's LIA sub-solver reports
+`solve_calls=79, total_rounds=823` — repeated from-scratch arithmetic solving,
+which is the companion survey's finding #2. Which of the two dominates is an
+unmade measurement, and this lane does not claim it either way.
