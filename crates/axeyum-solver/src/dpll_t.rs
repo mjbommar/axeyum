@@ -44,6 +44,7 @@ use web_time::Instant;
 
 use crate::backend::{CheckResult, SolverConfig, SolverError, UnknownKind, UnknownReason};
 use crate::combined::check_with_all_theories;
+use crate::lazy_smt_counters::{LazySmtLoop, RoundOutcome};
 use crate::lia::DEFAULT_INT_WIDTH;
 use crate::lra::{check_with_lra, check_with_lra_within, lra_farkas_certificate};
 use crate::model::Model;
@@ -142,6 +143,11 @@ pub fn check_with_lra_dpll_within(
 
     let mut backend = SatBvBackend::new();
     let mut blocking: Vec<TermId> = Vec::new();
+    // The route trail labels this whole function `nra` and reports its share of
+    // the budget; nothing said how that time divides between the two halves of
+    // a round, or how many rounds there were. On the 22 `QF_LRA` files that
+    // print no theory-layer line, this loop is where the budget goes.
+    crate::lazy_smt_counters::record_entry(LazySmtLoop::Lra, ctx.atoms.len() as u64);
 
     for _ in 0..MAX_ROUNDS {
         // Wall-clock bound: the per-round SAT+theory work grows as blocking
@@ -160,13 +166,30 @@ pub fn check_with_lra_dpll_within(
         //    coupling is propositional and this loop is a complete combination.
         let mut sat_assertions = skeleton.clone();
         sat_assertions.extend(blocking.iter().copied());
-        let propositional = match check_with_all_theories(
+        // Clocked only when counting is armed: `--trace` off is one
+        // thread-local `bool` read, and a round already contains a whole
+        // `sat-bv` check, so four clock reads per round cannot perturb it.
+        let skeleton_started = crate::lazy_smt_counters::enabled().then(Instant::now);
+        let skeleton_result = check_with_all_theories(
             &mut backend,
             arena,
             &sat_assertions,
             DEFAULT_INT_WIDTH,
             &fallback_config,
-        )? {
+        );
+        if let Some(started) = skeleton_started {
+            let outcome = match &skeleton_result {
+                Ok(CheckResult::Sat(_)) => RoundOutcome::Sat,
+                Ok(CheckResult::Unsat) => RoundOutcome::Unsat,
+                // A backend error is counted with `unknown`: both end the loop,
+                // and inventing a fourth token for a case the loop does not
+                // distinguish would put a distinction in the line that the
+                // producer does not make.
+                Ok(CheckResult::Unknown(_)) | Err(_) => RoundOutcome::Unknown,
+            };
+            crate::lazy_smt_counters::record_skeleton(LazySmtLoop::Lra, started.elapsed(), outcome);
+        }
+        let propositional = match skeleton_result? {
             CheckResult::Sat(model) => model,
             CheckResult::Unsat => return Ok(CheckResult::Unsat),
             CheckResult::Unknown(reason) => return Ok(CheckResult::Unknown(reason)),
@@ -188,7 +211,17 @@ pub fn check_with_lra_dpll_within(
             });
         }
 
-        match check_with_lra_within(arena, &theory_lits, deadline)? {
+        let theory_started = crate::lazy_smt_counters::enabled().then(Instant::now);
+        let theory_result = check_with_lra_within(arena, &theory_lits, deadline);
+        if let Some(started) = theory_started {
+            let outcome = match &theory_result {
+                Ok(CheckResult::Sat(_)) => RoundOutcome::Sat,
+                Ok(CheckResult::Unsat) => RoundOutcome::Unsat,
+                Ok(CheckResult::Unknown(_)) | Err(_) => RoundOutcome::Unknown,
+            };
+            crate::lazy_smt_counters::record_theory(started.elapsed(), outcome);
+        }
+        match theory_result? {
             CheckResult::Sat(theory_model) => {
                 return finish_sat(arena, assertions, &ctx, &propositional, &theory_model);
             }
@@ -201,6 +234,7 @@ pub fn check_with_lra_dpll_within(
                 // certificate atoms are all in `ctx.atoms` order, so multiplier
                 // index `i` is `assignment[i]`.
                 let core = conflict_core(arena, &theory_lits, &assignment)?;
+                crate::lazy_smt_counters::record_blocking(core.len() as u64);
                 blocking.push(block_clause(arena, &core)?);
             }
             CheckResult::Unknown(reason) => return Ok(CheckResult::Unknown(reason)),
@@ -252,6 +286,7 @@ pub fn check_with_nra_dpll_within(
     }
     let mut backend = SatBvBackend::new();
     let mut blocking: Vec<TermId> = Vec::new();
+    crate::lazy_smt_counters::record_entry(LazySmtLoop::Nra, ctx.atoms.len() as u64);
 
     for _ in 0..MAX_ROUNDS {
         if past_deadline(deadline) {
@@ -272,13 +307,23 @@ pub fn check_with_nra_dpll_within(
             }
             c
         };
-        let propositional = match check_with_all_theories(
+        let skeleton_started = crate::lazy_smt_counters::enabled().then(Instant::now);
+        let skeleton_result = check_with_all_theories(
             &mut backend,
             arena,
             &sat_assertions,
             DEFAULT_INT_WIDTH,
             &round_config,
-        )? {
+        );
+        if let Some(started) = skeleton_started {
+            let outcome = match &skeleton_result {
+                Ok(CheckResult::Sat(_)) => RoundOutcome::Sat,
+                Ok(CheckResult::Unsat) => RoundOutcome::Unsat,
+                Ok(CheckResult::Unknown(_)) | Err(_) => RoundOutcome::Unknown,
+            };
+            crate::lazy_smt_counters::record_skeleton(LazySmtLoop::Nra, started.elapsed(), outcome);
+        }
+        let propositional = match skeleton_result? {
             CheckResult::Sat(model) => model,
             CheckResult::Unsat => return Ok(CheckResult::Unsat),
             CheckResult::Unknown(reason) => return Ok(CheckResult::Unknown(reason)),
@@ -297,11 +342,25 @@ pub fn check_with_nra_dpll_within(
                 arena.not(atom.term)?
             });
         }
-        match crate::nra_real_root::decide_real_poly_constraint(arena, &theory_lits, deadline)? {
+        let theory_started = crate::lazy_smt_counters::enabled().then(Instant::now);
+        let theory_result =
+            crate::nra_real_root::decide_real_poly_constraint(arena, &theory_lits, deadline);
+        if let Some(started) = theory_started {
+            let outcome = match &theory_result {
+                Ok(Some(CheckResult::Sat(_))) => RoundOutcome::Sat,
+                Ok(Some(CheckResult::Unsat)) => RoundOutcome::Unsat,
+                // `None` is "the CAD declined this cube", which ends the loop
+                // exactly as an `unknown` does.
+                Ok(Some(CheckResult::Unknown(_)) | None) | Err(_) => RoundOutcome::Unknown,
+            };
+            crate::lazy_smt_counters::record_theory(started.elapsed(), outcome);
+        }
+        match theory_result? {
             Some(CheckResult::Sat(theory_model)) => {
                 return finish_sat(arena, assertions, &ctx, &propositional, &theory_model);
             }
             Some(CheckResult::Unsat) => {
+                crate::lazy_smt_counters::record_blocking(assignment.len() as u64);
                 blocking.push(block_clause(arena, &assignment)?);
             }
             Some(CheckResult::Unknown(reason)) => return Ok(CheckResult::Unknown(reason)),

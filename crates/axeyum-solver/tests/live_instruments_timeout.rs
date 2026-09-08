@@ -353,3 +353,51 @@ fn a_bv_check_killed_mid_pipeline_reports_the_stage_it_was_in() {
         );
     }
 }
+
+/// A partial route reading says how much of the budget NO attempt accounts for.
+///
+/// `bound_by` maximises over recorded attempts, and an attempt is recorded when
+/// it finishes — so on a query killed mid-route the route consuming the budget
+/// has contributed nothing to that maximum. Measured 2026-09-08 on the one
+/// `QF_LRA` blind file that took the watchdog path, `bound_by=dl-online
+/// bound_ms=20 total_ms=26` on a 25,241 ms run: correct fields, wrong
+/// conclusion. `open_segment` is the 25,215 ms that was missing.
+#[test]
+fn a_partial_route_reading_carries_the_segment_no_attempt_accounts_for() {
+    let board = LiveInstruments::new();
+    let route = {
+        let board = Arc::clone(&board);
+        sample_while_running(pigeonhole_lia(11), &board.clone(), "a route", move || {
+            board
+                .sample::<axeyum_solver::RouteTrace>(instrument::ROUTE)
+                .filter(|r| !r.value.is_empty())
+        })
+    };
+    assert_eq!(route.sampled, Sampled::InFlight);
+    // The reading is taken while a route is running, so time has passed since
+    // the last attempt was RECORDED. A zero here would mean the trace thinks
+    // every microsecond is attributed, which is the false statement this field
+    // exists to prevent.
+    let open = route.value.open_segment();
+    assert!(
+        open > Duration::ZERO,
+        "a trace sampled mid-route has an open segment: {open:?}"
+    );
+    // It names the boundary the open segment started at — the route that most
+    // recently RETURNED, which is all the instrument honestly knows. It is
+    // deliberately not "the route that is running": a trace learns a route's
+    // name on the way out.
+    assert!(
+        route.value.last_recorded_route().is_some(),
+        "a non-empty trace has a last recorded route"
+    );
+    // And on this fixture the open segment really does dominate, which is the
+    // case that makes `bound_by` the wrong field to quote.
+    assert!(
+        open > route.value.total_elapsed(),
+        "the solve has been inside one route far longer than every recorded \
+         attempt combined, so `bound_by` is not the answer here: open {open:?} \
+         vs attributed {:?}",
+        route.value.total_elapsed()
+    );
+}

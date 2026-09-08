@@ -112,6 +112,14 @@ pub mod instrument {
     /// than mirrored through a handle, because the decision point is reached a
     /// handful of times per query, never in a loop.
     pub const UF_OVERBOUND: &str = "uf-overbound";
+    /// `crate::LazySmtCounters` as of the last completed lazy-SMT query, i.e.
+    /// when the `LazySmtCountersGuard` was dropped.
+    pub const LAZY_SMT: &str = "lazy-smt";
+    /// The `crate::lazy_smt_counters::LazySmtCountersMirror` a running
+    /// abstraction/refinement loop flushes to at the end of every round.
+    /// Sampled through `crate::live_lazy_smt_counters`, which orders it against
+    /// [`LAZY_SMT`].
+    pub const LAZY_SMT_MIRROR: &str = "lazy-smt-mirror";
 }
 
 /// Whether a reading is an instrument's finished answer or a state the run

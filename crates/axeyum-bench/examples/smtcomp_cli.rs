@@ -308,12 +308,13 @@ use axeyum_solver::theories::cdclt_diagnostics::{TheoryLayerStatsGuard, last_the
 use axeyum_solver::{
     BvLayerStatsGuard, CheckProgress, CheckResult, CheckingProgress, ConfigTraceGuard,
     DlOnlineStatsGuard, Evidence, EvidenceCheck, EvidenceReport, FrontDoorStats,
-    FrontDoorStatsGuard, LiaCountersGuard, LiveInstruments, ProofProgress, RouteAttributionGuard,
-    RouteTrace, Sampled, SolverConfig, UfArithOverboundStats, UfArithOverboundStatsGuard,
-    config_trace_line, install_live_instruments, instrument, last_bv_layer_stats,
-    last_dl_online_stats, last_front_door_stats, last_lia_counters, last_route_attribution,
-    last_uf_arith_overbound_stats, live_bv_layer_stats, live_config_trace_line, live_lia_counters,
-    live_theory_layer_stats, produce_evidence_smtlib, solve_smtlib,
+    FrontDoorStatsGuard, LazySmtCountersGuard, LiaCountersGuard, LiveInstruments, ProofProgress,
+    RouteAttributionGuard, RouteTrace, Sampled, SolverConfig, UfArithOverboundStats,
+    UfArithOverboundStatsGuard, config_trace_line, install_live_instruments, instrument,
+    last_bv_layer_stats, last_dl_online_stats, last_front_door_stats, last_lazy_smt_counters,
+    last_lia_counters, last_route_attribution, last_uf_arith_overbound_stats, live_bv_layer_stats,
+    live_config_trace_line, live_lazy_smt_counters, live_lia_counters, live_theory_layer_stats,
+    produce_evidence_smtlib, solve_smtlib,
 };
 
 /// Formats one `axeyum_cnf::ProofSearchProgress` snapshot as the `;`-prefixed
@@ -845,11 +846,43 @@ fn watchdog_trace_lines(trace_mode: bool, board: &LiveInstruments, reason: &str)
         lines.push(partial_line(&lia_counters_report_line(&lia.value)));
         note("lia", lia.sampled);
     }
+    // The lazy-SMT refinement loops. Flushed at the END of a round, so the round
+    // that was running when the kill landed is by construction absent from these
+    // numbers — and it is usually the longest one, since each round's
+    // propositional solve carries every blocking clause learned so far. Every
+    // counter here is therefore a strict lower bound even by the standards of a
+    // partial reading.
+    if let Some(lazy) = live_lazy_smt_counters(board) {
+        lines.push(partial_line(&lazy.value.trace_line()));
+        note("lazy-smt", lazy.sampled);
+    }
     match board.sample::<RouteTrace>(instrument::ROUTE) {
         Some(route) if !route.value.is_empty() => {
             for line in route_attribution_report_lines(&route.value) {
                 lines.push(partial_line(&line));
             }
+            // The segment no attempt accounts for, WITHOUT which the partial
+            // route line is quietly misleading. `bound_by` maximises over
+            // recorded attempts, and an attempt is recorded when it finishes —
+            // so on a killed run the route eating the budget contributed
+            // nothing to that comparison. Measured 2026-09-08 on the one
+            // `QF_LRA` blind file that took this path: `bound_by=dl-online
+            // bound_ms=20 total_ms=26` on a 25,241 ms run. Every field correct,
+            // every conclusion wrong. This line carries the missing time and
+            // says outright when `bound_by` is not the answer.
+            let open = route.value.open_segment();
+            let attributed = route.value.total_elapsed();
+            let verdict = if open > attributed {
+                "bound_by is NOT the answer: most of the budget is in the open segment"
+            } else {
+                "bound_by covers the accounted majority"
+            };
+            lines.push(format!(
+                "; partial route-open ms={} after={} attributed_ms={} note: {verdict}",
+                open.as_millis(),
+                route.value.last_recorded_route().unwrap_or("none"),
+                attributed.as_millis(),
+            ));
             note("route", route.sampled);
         }
         _ => lines.push(format!("; route unavailable: {reason}")),
@@ -1359,11 +1392,15 @@ fn main() -> ExitCode {
         // Each `_*_guard` collects its own stats for the dynamic extent of
         // `solve_smtlib` below when `--trace` is on; dropped (disarmed) right
         // after, restoring whatever this thread's setting was before. A
-        // no-op when `trace_mode` is `false` — no extra clock read, for any
-        // of the six (same convention every guard in this tree follows). The
-        // count is stated because it has been stale twice: ADR-1760's route
-        // guard and ADR-1762's config guard landed on the same day, each from a
-        // lane that read "four" and left it.
+        // no-op when `trace_mode` is `false` — no extra clock read, for any of
+        // them (same convention every guard in this tree follows).
+        //
+        // No count is stated. One was, and it went stale three times: it read
+        // "four" when ADR-1760's route guard and ADR-1762's config guard landed
+        // on the same day, and it still read "six" after the UF-overbound, LIA
+        // and lazy-SMT guards were added below. A number in prose beside a list
+        // is a second copy of the list that nothing checks, so the list is now
+        // the only copy.
         let _theory_guard = trace_mode.then(TheoryLayerStatsGuard::enable);
         let _bv_guard = trace_mode.then(BvLayerStatsGuard::enable);
         let _dl_guard = trace_mode.then(DlOnlineStatsGuard::enable);
@@ -1385,6 +1422,14 @@ fn main() -> ExitCode {
         // `lia-simplex` decider is not a `TheorySolver`, so neither could ever
         // appear on the `; theory-layer` line.
         let _lia_guard = trace_mode.then(LiaCountersGuard::enable);
+        // The abstraction/refinement loops in `axeyum_solver::dpll_t`, which is
+        // what the route trail's `bound_by=nra` actually names. Measured
+        // 2026-09-08: on the 22 `QF_LRA` files that print no theory-layer line
+        // this route consumes ~99% of the budget, and until this guard existed
+        // the route LABEL was the entire answer — a label cannot say whether
+        // the time went to four enormous refinement rounds or forty thousand
+        // small ones, and those have opposite remedies.
+        let _lazy_smt_guard = trace_mode.then(LazySmtCountersGuard::enable);
         // A parse or solver error is reported as `unknown` — never a wrong
         // verdict, and never a crash that the harness would read as an abort.
         let mut give_up: Option<String> = None;
@@ -1452,6 +1497,14 @@ fn main() -> ExitCode {
             // routes did nothing" and must not print as a row of zeros.
             if let Some(counters) = last_lia_counters() {
                 trace_lines.push(lia_counters_report_line(&counters));
+            }
+            // Only when a snapshot exists, for the same reason: `None` means the
+            // guard was never armed, which is not "the loops did nothing". The
+            // line's own `reading=` token then separates "never entered" from
+            // "entered and bailed before completing a round" from a
+            // measurement, so a reader never has to guess what a zero means.
+            if let Some(counters) = last_lazy_smt_counters() {
+                trace_lines.push(counters.trace_line());
             }
             // Route attribution (ADR-1760) LAST, so a reader who scans to the
             // end of the `;` block finds the one line that names which route

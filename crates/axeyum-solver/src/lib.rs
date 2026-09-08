@@ -50,6 +50,7 @@ mod config_registry;
 mod error;
 mod incremental;
 mod layers;
+mod lazy_smt_counters;
 pub mod live_instruments;
 mod memory_budget;
 mod model;
@@ -911,6 +912,10 @@ pub use incremental::{
 pub use layers::{
     BvLayerStats, BvLayerStatsGuard, BvStage, BvStageMirror, LiveBvReading,
     last_bv_backend_counters, last_bv_layer_stats, live_bv_layer_stats,
+};
+pub use lazy_smt_counters::{
+    LazySmtCounters, LazySmtCountersGuard, LazySmtCountersMirror, LazySmtLoop, LazySmtReading,
+    last_lazy_smt_counters, live_lazy_smt_counters,
 };
 pub use live_instruments::{
     LiveInstruments, LiveInstrumentsGuard, LiveSample, Sampled,
