@@ -260,9 +260,10 @@ use axeyum_solver::theories::cdclt_diagnostics::{TheoryLayerStatsGuard, last_the
 use axeyum_solver::{
     BvLayerStatsGuard, CheckProgress, CheckResult, CheckingProgress, ConfigTraceGuard,
     DlOnlineStatsGuard, Evidence, EvidenceCheck, EvidenceReport, FrontDoorStatsGuard,
-    ProofProgress, RouteAttributionGuard, SolverConfig, UfArithOverboundStatsGuard,
-    config_trace_line, last_bv_layer_stats, last_dl_online_stats, last_front_door_stats,
-    last_route_attribution, last_uf_arith_overbound_stats, produce_evidence_smtlib, solve_smtlib,
+    LiaWarmStatsGuard, ProofProgress, RouteAttributionGuard, SolverConfig,
+    UfArithOverboundStatsGuard, config_trace_line, last_bv_layer_stats, last_dl_online_stats,
+    last_front_door_stats, last_lia_warm_stats, last_route_attribution,
+    last_uf_arith_overbound_stats, produce_evidence_smtlib, solve_smtlib,
 };
 
 /// Formats one `axeyum_cnf::ProofSearchProgress` snapshot as the `;`-prefixed
@@ -1022,6 +1023,12 @@ fn main() -> ExitCode {
         // with nothing after it is invisible in a verdict and nearly invisible
         // in a trail; `terminal_unknown` names it outright.
         let _uf_overbound_guard = trace_mode.then(UfArithOverboundStatsGuard::enable);
+        // The eighth guard on the same flag: the warm offline `QF_LIA` decider.
+        // Whether a check continued from the previous system or rebuilt it, and
+        // why — the only way to tell a warm cache that is working from one that
+        // silently rebuilds on every call, since the two have identical verdicts
+        // and identical call counts.
+        let _lia_warm_guard = trace_mode.then(LiaWarmStatsGuard::enable);
         // A parse or solver error is reported as `unknown` — never a wrong
         // verdict, and never a crash that the harness would read as an abort.
         let mut give_up: Option<String> = None;
@@ -1083,6 +1090,17 @@ fn main() -> ExitCode {
             let uf_overbound = last_uf_arith_overbound_stats();
             if uf_overbound.engaged > 0 {
                 trace_lines.push(uf_overbound.trace_line());
+            }
+            // `None` means the guard was never armed on the worker thread, which
+            // is a different statement from every counter being zero — so the
+            // line says which, rather than printing zeros that read as a
+            // measurement. `checks=0` with the line present is "the warm decider
+            // was never entered on this query".
+            match last_lia_warm_stats() {
+                Some(stats) => trace_lines.push(format!("; lia-warm {}", stats.summary())),
+                None => {
+                    trace_lines.push("; lia-warm warm=not-collected (guard never armed)".to_owned())
+                }
             }
             // Route attribution (ADR-1760) LAST, so a reader who scans to the
             // end of the `;` block finds the one line that names which route

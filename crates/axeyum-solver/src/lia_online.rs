@@ -77,7 +77,10 @@ use crate::backend::{CheckResult, SolverConfig, SolverError, UnknownKind, Unknow
 use crate::euf_egraph::{TheoryLit, TheoryProp, TheorySolver};
 #[cfg(test)]
 use crate::lra::check_with_lia_simplex;
-use crate::lra::warm::{LiaWarmPolicy, WarmLiaDecider, ambient_lia_warm_policy};
+use crate::lra::warm::{
+    LiaWarmPolicy, WarmLiaDecider, ambient_lia_warm_policy, record_theory_filter_answer,
+    record_theory_offline_check,
+};
 use crate::lra::{
     LpRelaxation, check_with_lia_opaque_apps_within, check_with_lia_simplex_within,
     lia_bnb_node_cap, lp_relaxation_feasibility, lp_relaxation_feasibility_opaque_apps,
@@ -981,11 +984,18 @@ impl LiaTheory {
         // it off and `LiaWarmPolicy::WARM_WITH_FILTER` keeps it.
         if self.warm_policy.rational_filter {
             match self.rational_filter() {
-                RationalFilter::Refuted(core) => return Feasibility::Unsat(core),
-                RationalFilter::IntegralPoint => return Feasibility::Sat,
+                RationalFilter::Refuted(core) => {
+                    record_theory_filter_answer(true);
+                    return Feasibility::Unsat(core);
+                }
+                RationalFilter::IntegralPoint => {
+                    record_theory_filter_answer(false);
+                    return Feasibility::Sat;
+                }
                 RationalFilter::Inconclusive => {}
             }
         }
+        record_theory_offline_check(self.warm.is_none());
         if self.warm.is_some() {
             return self.warm_feasibility(&lits, minimize);
         }

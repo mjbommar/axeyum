@@ -329,6 +329,48 @@ pub struct LiaWarmCounters {
     /// Checks that ended in a [`SolverError`] — input outside the conjunctive
     /// linear-integer fragment, or a replay failure.
     pub verdict_error: u64,
+    /// Offline conjunctive decisions the online `LIA` theory asked for, counted
+    /// on **both** arms — warm and cold.
+    ///
+    /// This is the field an A/B is scored on, and it is separate from
+    /// [`Self::checks`] for a reason: `checks` only moves on the warm arm, so
+    /// comparing it across arms would compare a number against zero. The loss
+    /// population is budget-bound — nearly every file spends its whole timeout in
+    /// either arm — so wall time cannot be the measure; how many decisions the
+    /// lazy loop got through in the same budget can.
+    pub theory_offline_checks: u64,
+    /// Of [`Self::theory_offline_checks`], those that took the cold path (a fresh
+    /// collector walk and a fresh tightening pass).
+    pub theory_cold_checks: u64,
+    /// Offline decisions the online theory did NOT have to make because the warm
+    /// rational filter answered first. Counted on both arms, so the filter's
+    /// contribution is visible where it is switched off as well as where it is on.
+    pub theory_filter_answers: u64,
+    /// Of [`Self::theory_filter_answers`], those that were **refutations**. The
+    /// number the case for gating the filter rests on.
+    pub theory_filter_refuted: u64,
+}
+
+/// Records one offline conjunctive decision the online `LIA` theory asked for.
+/// See [`LiaWarmCounters::theory_offline_checks`].
+pub fn record_theory_offline_check(cold: bool) {
+    record(|c| {
+        c.theory_offline_checks += 1;
+        if cold {
+            c.theory_cold_checks += 1;
+        }
+    });
+}
+
+/// Records one live set the warm rational filter answered outright.
+/// See [`LiaWarmCounters::theory_filter_answers`].
+pub fn record_theory_filter_answer(refuted: bool) {
+    record(|c| {
+        c.theory_filter_answers += 1;
+        if refuted {
+            c.theory_filter_refuted += 1;
+        }
+    });
 }
 
 impl LiaWarmCounters {
@@ -345,7 +387,8 @@ impl LiaWarmCounters {
             "warm=measured checks={} warm_updates={} rebuilds={} delta_added={} \
              delta_removed={} delta_kept={} literal_collections={} literal_cache_hits={} \
              literal_cache_evicted={} constraints_copied={} constraints_live={} \
-             columns_live={} unsat={} sat={} unknown={} error={}",
+             columns_live={} unsat={} sat={} unknown={} error={} theory_offline_checks={} \
+             theory_cold_checks={} theory_filter_answers={} theory_filter_refuted={}",
             self.checks,
             self.warm_updates,
             self.rebuilds,
@@ -362,6 +405,10 @@ impl LiaWarmCounters {
             self.verdict_sat,
             self.verdict_unknown,
             self.verdict_error,
+            self.theory_offline_checks,
+            self.theory_cold_checks,
+            self.theory_filter_answers,
+            self.theory_filter_refuted,
         );
         for reason in AssemblyReason::all() {
             out.push_str(&format!(
