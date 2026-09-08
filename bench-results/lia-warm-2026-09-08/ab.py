@@ -32,11 +32,18 @@ import time
 # with every counter missing -- which is why this also records WHICH line it
 # read, so a partial reading is never averaged with a complete one.
 LIA_LINE = re.compile(r"^; (partial )?lia (.*)$", re.M)
+# `; lia unavailable: <reason>` shares that prefix and carries no `k=v` fields.
+# Matching it and returning an empty dict labelled "complete" records an ABSENT
+# instrument as one that measured nothing, which is the distinction the line
+# exists to preserve.
+LIA_UNAVAILABLE = re.compile(r"^; (partial )?lia unavailable:", re.M)
 VERDICTS = {"sat", "unsat", "unknown"}
 
 
 def parse_counters(text: str) -> tuple[dict[str, str], str]:
     """The `; lia` counters, and whether the reading was complete or partial."""
+    if LIA_UNAVAILABLE.search(text):
+        return {}, "unavailable"
     m = LIA_LINE.search(text)
     if not m:
         return {}, "absent"
@@ -45,6 +52,9 @@ def parse_counters(text: str) -> tuple[dict[str, str], str]:
         if "=" in field:
             k, v = field.split("=", 1)
             out[k] = v
+    if not out:
+        # A `; lia` line with no fields is not a reading of zero.
+        return {}, "unparsed"
     return out, "partial" if m.group(1) else "complete"
 
 

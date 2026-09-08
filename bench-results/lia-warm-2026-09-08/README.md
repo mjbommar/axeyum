@@ -11,6 +11,8 @@ Raw data behind
 | `score.py` | the scorer. Reports verdict changes first, excludes files the online theory never entered from the throughput figures (and says how many), and refuses to average a decided-verdict disagreement into a timing number. |
 | `perfile.py` | every row, because a summary that cannot be checked against its own rows is a claim. |
 | `mutate.py` | the five staleness/drift mutations applied to the warm decider, one at a time, in a `lane-snapshot.sh` scratch tree. |
+| `verify-extraction.py` | the mechanical check on the merge's soundness-critical half: inlining `decide_int_constraints` back into `lia_simplex_capped` must reproduce `origin/main`'s function token for token. A one-shot check against `d0e06e8f9`; re-run it if that resolution is ever revisited. Reported IDENTICAL. |
+| `mutation-results-merged.txt` | the whole battery re-run against the merged tree. `no-tightening`'s anchor named a function the merge renamed, so it matched zero places — the driver reported ANCHOR MISS rather than a pass, which is the only reason that was caught. |
 | `mutation-run.sh` | the driver: every mutant under an external wall bound, because `no-tightening` does not fail — it grinds, and "the suite never returned" is a different kind of kill, not a pass. |
 | `mutation-results.txt` | first pass, baseline plus three mutants. |
 | `mutation-results-2.txt` | the remaining two from that pass. |

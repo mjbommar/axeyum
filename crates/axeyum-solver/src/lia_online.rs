@@ -1117,7 +1117,8 @@ impl LiaTheory {
     /// from the term graph.
     ///
     /// Dropping a literal from the *middle* of the live list breaks the trail's
-    /// prefix property, so every probe here is an `AssemblyReason::Diverged` —
+    /// prefix property, so every probe here is a
+    /// [`crate::lia_counters::WarmAssembly::Diverged`] —
     /// which is exactly why that reason is counted separately. It is still not a
     /// cold start: the per-literal collection cache survives, so a probe pays for
     /// re-assembling a suffix and nothing else.
