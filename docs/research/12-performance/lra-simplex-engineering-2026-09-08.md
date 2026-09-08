@@ -23,7 +23,8 @@ below with their numbers.
 | Do the `farkas` decline paths fire on the files we lose? | **No. Zero times, against 247,991 verified certificates.** The cheapest candidate fix is worth nothing here. |
 | Was that measurable when the lane started? | **No** — the counter had read `n/a` on every QF_LRA file since 2026-09-07, and `n/a` looked like a stale tool rather than a dropped field. |
 | Is the tableau dense enough to justify a sparse representation? | **It is 1.4% dense** — but the pivot's *operation count* was already sparse. What was dense was the scanning and the allocation, which are fixed without changing the representation. |
-| Does the fill-in pivot rule help? | **Yes, and it is the whole win.** 3.45x fewer cells written per pivot; two files move `unknown` → `unsat`. |
+| Does the fill-in pivot rule help? | **Narrowly, and not the way it was pitched.** +1 file decided on the 200-file parity list with 0 losses — but aggregate wall on commonly-decided files is **0.999x**, and one decided file is **10x slower**. The 3.45x per-pivot cost reduction is real and is not a speedup. |
+| What actually helped unambiguously? | The two dense costs *around* the pivot — the `O(columns)` scans and the 27 KB of allocation per pivot. Both removed with **byte-identical counters**, so they cannot change a verdict. |
 
 ---
 
@@ -106,7 +107,7 @@ and is the next thing worth doing on this division.
 
 ---
 
-## 2. The pivot rule (candidate B) — the whole win
+## 2. The pivot rule (candidate B) — real per-pivot, narrow in verdicts
 
 We used Bland's rule unconditionally for the entering variable. It terminates
 and it pivots badly: it is indifferent to how much fill-in the pivot creates,
@@ -140,9 +141,14 @@ call.
 | mean tableau nonzeros | 2,354 | 2,097 |
 
 The mechanism is measured, not argued. The rule cuts the pivot's real work
-**3.45x**, pays for it with more entering-scan cells (an index read against an
-exact-rational multiply-add), and buys 11.7x more final checks in a third of the
-time.
+**3.45x** on this file, pays for it with more entering-scan cells (an index read
+against an exact-rational multiply-add), and buys 11.7x more final checks in a
+third of the time.
+
+Read that as a statement about **this file**. The same table on
+`blending/24` shows cells-per-pivot 1,569 vs 1,561 — no per-pivot benefit at all
+— and the search 11.8x longer. The division-level numbers are below and they are
+much flatter than this one file suggests.
 
 **Note what it does not do.** Mean fill-in barely moves — 2,354 → 2,097, 11%.
 The win is *not* a sparser tableau; it is picking a pivot row that is short **at
@@ -151,24 +157,96 @@ conclusion it does, and it would have been invisible without the fill-in
 counter: the obvious story ("the fill-in rule reduces fill-in") is 11% true and
 the actual mechanism is 3.45x.
 
-### Miss population, 33 files
+`bland_fallbacks` was **1** across the whole 33-file miss population — the
+terminating fallback is live but rare, which is what a guard should look like.
+
+### Verdicts: the committed 200-file parity list
+
+Both arms, one binary, 24 s / 8 GiB. The arms ran concurrently on opposite core
+halves — the previous lane's documented departure for a **verdict** comparison,
+which is what a no-regression check is — and every file near the boundary was
+re-run individually afterwards.
 
 | | Bland | MinimiseFillIn |
 |---|---:|---:|
-| decided | 6 | **8** |
-| gains | — | 2 |
+| decided | 96 | **98** |
 | **losses** | — | **0** |
 | **sat/unsat flips** | — | **0** |
 
-Gains: `2019-ezsmt/blending/1` and `blending/5`, both unknown → **unsat**.
+Re-run individually, one file at a time, the two sweep "gains" are not equal:
 
-`bland_fallbacks` was **1** across the whole population — the terminating
-fallback is live but rare, which is what a guard should look like.
+- `2019-ezsmt/blending/1` — **real**: unknown at 24 s under Bland, **unsat in
+  6.7 s** under the fill-in rule, reproduced.
+- `spider_benchmarks/no_op_accs` — **not real**: it decides `unsat` in *both*
+  arms at ~20.7 s when run alone. It is a 20.7 s file under a 24 s budget, and
+  the sweep caught it on the wrong side of the line once. Counted as a gain by
+  the sweep, it is a boundary artifact.
 
-One honest negative: on `miplib/pp08a-1000` cells-per-pivot went the wrong way
-(4,135 → 4,388) and mean nonzeros rose (7,010 → 7,761). That file is the one the
+So the honest count is **+1 decided, 0 lost, 0 flipped.**
+
+### Wall time: the honest part, and it is flat
+
+96 files both arms decide, timed one arm at a time and one file at a time:
+
+| | total wall |
+|---|---:|
+| Bland | 47,417 ms |
+| MinimiseFillIn | 47,370 ms |
+| **ratio** | **0.999** |
+
+Only 20 of those 96 exceed 20 ms; below that the number is process startup, not
+the search. Of the 20: **4 faster by more than 5%, 3 slower by more than 5%, 13
+within 5%.**
+
+| | file | Bland | fill-in |
+|---|---|---:|---:|
+| best | `2019-ezsmt/blending/5` | 8,085 ms | 5,052 ms (0.63x) |
+| **worst** | **`2019-ezsmt/blending/24`** | **306 ms** | **3,105 ms (10.1x)** |
+
+### Why `blending/24` regresses, which is the finding under the finding
+
+The obvious explanations are both wrong, and the counters say so:
+
+| | Bland | fill-in |
+|---|---:|---:|
+| cells per pivot | 1,569 | 1,561 |
+| mean core width (literals) | 45.8 | 46.0 |
+| `final_checks` | 863 | **10,223** |
+| `simplex_pivots` | 1,931 | 18,790 |
+
+Per-pivot cost is **identical** on this file, so the rule bought nothing; and
+mean conflict-core width is **identical**, so it is not that the new bases yield
+wider, weaker lemmas. The search simply takes 11.8x more final checks. Sweeping
+`bland_threshold` over 0, 1, 10, 100 and 1000 moves it between 3.1 s and 4.6 s
+and never back toward 0.3 s, so the terminating fallback is not the lever
+either.
+
+The conclusion this forces is worth stating plainly, because it is not how the
+change was pitched: **an entering rule is a search-trajectory change, not only a
+cost change, and its effect on the trajectory is uncorrelated with both of the
+quantities one would use to predict it.** Different refutations of the same
+width prune differently. On `blending/1` the new trajectory is enormously
+better; on `blending/24` it is much worse; across 200 files the wall time
+cancels and the decided count goes up by one.
+
+Also honest: on `miplib/pp08a-1000` cells-per-pivot went the wrong way
+(4,135 → 4,388) and mean nonzeros rose (7,010 → 7,761). That is the file the
 previous lane found spends 75% of its budget in theory *propagation* offering
 zero literals; the pivot rule is not its problem and did not become one.
+
+### So should it be the default?
+
+It is, on this reasoning: the division is scored on **files decided**, that went
+up by one with zero losses and zero flips, and the mechanism behind it is real
+where it applies. But the case is narrower than the per-pivot numbers suggest on
+their own, and anyone weighing it differently changes one line —
+`Incremental::new` calls `configured_policy()`, whose default is
+`PivotPolicy::new()`; `PivotPolicy::bland()` restores the previous behaviour
+exactly, and `AXEYUM_SIMPLEX_PIVOT=bland` does it without a rebuild.
+
+**What this does not license** is quoting "3.45x fewer cells per pivot" as a
+speedup. It is a true statement about one file's pivots and a false one about
+the division.
 
 ---
 
@@ -229,10 +307,20 @@ trace line, so it is a measurement away from being costed.
 
 ## 4. Cumulative
 
-`QF_LRA/2019-ezsmt/blending/1.smt2`: **unknown at 24 s → unsat in 5.1 s.**
+| | result |
+|---|---|
+| 200-file parity list | 96 → **98** decided in sweep; **+1** confirmed individually, **0 losses, 0 flips** |
+| wall on 96 commonly-decided | 47,417 → 47,370 ms (**0.999x**) |
+| `blending/1` | unknown at 24 s → **unsat in 6.7 s** |
+| `blending/24` | 306 ms → 3,105 ms, same verdict (**the cost**) |
 
-Across three commits, with every arm run from one binary under the
-`AXEYUM_SIMPLEX_PIVOT` lever so no comparison is confounded by a rebuild.
+The two cost changes (§3) are separable from the rule and are not ambiguous:
+they were verified by **byte-identical counters** across the change, so they
+cannot alter a verdict, and both arms above carry them. The rule is the part
+that trades one file against another.
+
+Every arm was run from one binary under the `AXEYUM_SIMPLEX_PIVOT` lever, so no
+comparison is confounded by a rebuild.
 
 ## 5. What was built, and where the knobs are
 
