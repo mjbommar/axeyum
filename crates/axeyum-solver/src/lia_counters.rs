@@ -574,6 +574,23 @@ impl LiaCountersGuard {
             );
             mirror
         });
+        if let Some(mirror) = mirror.as_ref() {
+            // Seed the mirror with the freshly zeroed, policy-tagged snapshot.
+            //
+            // Without this a watchdog kill on a query that never reached the
+            // integer routes prints NO `; lia` line, while the same query on the
+            // completed path prints `offline=not-reached …`. Same fact, one form
+            // stated and one form silent — and this instrument exists precisely
+            // to keep "not reached" from reading as "zero" or as "we could not
+            // see". Measured 2026-09-08: every one of the 5 `QF_LRA` files that
+            // took the watchdog path was silent this way.
+            //
+            // Safe only because `record` also flushes at its FIRST recording:
+            // the seed is overwritten the moment anything happens, so it can
+            // never masquerade as a current reading of a query that has since
+            // done work.
+            mirror.store(&LIA_COUNTERS.with(Cell::get));
+        }
         LIA_MIRROR.with(|c| *c.borrow_mut() = mirror);
         LiaCountersGuard(previous)
     }

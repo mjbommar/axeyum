@@ -146,6 +146,19 @@ pub struct LazySmtCounters {
     /// Cubes the theory could not decide, which ends the loop.
     pub theory_unknown: u64,
 
+    /// Time building the blocking clause a refuted cube contributes: the Farkas
+    /// core extraction plus the clause construction, summed over rounds.
+    ///
+    /// Its own field because it is its own decider. `conflict_core` re-solves
+    /// the refuted conjunction to obtain the Farkas multipliers that name the
+    /// infeasible core — a second LP per round, on top of the one
+    /// [`Self::theory_check`] already timed. Measured 2026-09-08 on the 22
+    /// `QF_LRA` files bound by this route, `skeleton_solve + theory_check`
+    /// accounted for only about half of the route's wall clock, and the
+    /// remainder scaled with the ROUND count rather than with anything else —
+    /// which is what pointed here. An accounting that leaves half the budget
+    /// unattributed invites the next reader to guess.
+    pub core_extraction: Duration,
     /// Blocking clauses learned, i.e. the size of the set that grows the
     /// propositional solve from round to round.
     pub blocking_clauses: u64,
@@ -188,7 +201,7 @@ impl LazySmtCounters {
     /// exactly the case where that difference is the answer.
     #[must_use]
     pub fn accounted(&self) -> Duration {
-        self.skeleton_solve + self.theory_check
+        self.skeleton_solve + self.theory_check + self.core_extraction
     }
 
     /// One `;`-prefixed `--trace` line, in the `key=value` shape every other
@@ -202,7 +215,8 @@ impl LazySmtCounters {
             "; lazy-smt reading={} lra_entries={} lra_rounds={} nra_entries={} nra_rounds={} \
              skeleton_ms={} skeleton_sat={} skeleton_unsat={} skeleton_unknown={} \
              theory_ms={} theory_sat={} theory_unsat={} theory_unknown={} \
-             blocking_clauses={} blocking_literals={} atoms={} accounted_ms={}",
+             core_ms={} blocking_clauses={} blocking_literals={} atoms={} \
+             accounted_ms={}",
             self.reading().label(),
             self.lra_entries,
             self.lra_rounds,
@@ -216,6 +230,7 @@ impl LazySmtCounters {
             self.theory_sat,
             self.theory_unsat,
             self.theory_unknown,
+            self.core_extraction.as_millis(),
             self.blocking_clauses,
             self.blocking_literals,
             self.atoms,
@@ -265,6 +280,7 @@ const fn zero_counters() -> LazySmtCounters {
         theory_sat: 0,
         theory_unsat: 0,
         theory_unknown: 0,
+        core_extraction: Duration::ZERO,
         blocking_clauses: 0,
         blocking_literals: 0,
         atoms: 0,
@@ -365,6 +381,14 @@ impl LazySmtCountersGuard {
             );
             mirror
         });
+        if let Some(mirror) = mirror.as_ref() {
+            // Seed the mirror with the zeroed snapshot, whose `reading()` is
+            // `NotReached`. A watchdog kill on a query that never reached this
+            // route then SAYS so, instead of being silent in a way that a reader
+            // has to tell apart from a broken instrument. Safe because
+            // `record_entry` and every round flush over it immediately.
+            mirror.store(COUNTERS.with(Cell::get));
+        }
         MIRROR.with(|c| *c.borrow_mut() = mirror);
         LazySmtCountersGuard(previous)
     }
@@ -483,11 +507,13 @@ pub(crate) fn record_theory(elapsed: Duration, outcome: RoundOutcome) {
 }
 
 /// One blocking clause learned, with its literal count.
-pub(crate) fn record_blocking(literals: u64) {
+pub(crate) fn record_blocking(literals: u64, elapsed: Duration) {
     record(|c| {
         c.blocking_clauses = c.blocking_clauses.saturating_add(1);
         c.blocking_literals = c.blocking_literals.saturating_add(literals);
+        c.core_extraction += elapsed;
     });
+    flush();
 }
 
 /// Flushes the counters onto the cross-thread mirror, when one is installed.
@@ -574,11 +600,15 @@ mod tests {
             RoundOutcome::Sat,
         );
         record_theory(Duration::from_millis(3), RoundOutcome::Unsat);
-        record_blocking(5);
+        record_blocking(5, Duration::from_millis(9));
         let c = last_lazy_smt_counters().expect("armed");
         assert_eq!(c.skeleton_solve, Duration::from_millis(30));
         assert_eq!(c.theory_check, Duration::from_millis(3));
-        assert_eq!(c.accounted(), Duration::from_millis(33));
+        assert_eq!(c.core_extraction, Duration::from_millis(9));
+        // All three halves, not two: the core extraction is a SECOND LP per
+        // round, and leaving it out of `accounted` was what made half the
+        // route's wall clock unattributable.
+        assert_eq!(c.accounted(), Duration::from_millis(42));
         assert_eq!(c.skeleton_sat, 1);
         assert_eq!(c.theory_unsat, 1);
         assert_eq!(c.blocking_clauses, 1);
@@ -592,13 +622,29 @@ mod tests {
         let board = LiveInstruments::new();
         let _live = install(&board);
         let guard = LazySmtCountersGuard::enable();
-        assert!(
-            live_lazy_smt_counters(&board).is_none(),
-            "arming publishes no reading: an absent one must stay \
-             distinguishable from a recorded zero"
+        // Arming SEEDS the board with the zeroed snapshot, whose reading is
+        // `NotReached`. That is deliberate and it is what this assertion pins:
+        // a watchdog kill on a query that never reached this route must SAY so,
+        // rather than print nothing and leave a reader to tell "never reached"
+        // apart from "the instrument is broken" by absence alone.
+        let seeded = live_lazy_smt_counters(&board).expect("arming seeds the board");
+        assert_eq!(seeded.sampled, Sampled::InFlight);
+        assert_eq!(
+            seeded.value.reading(),
+            crate::lazy_smt_counters::LazySmtReading::NotReached,
+            "the seed says the route was not reached, not that it cost zero"
         );
 
         record_entry(LazySmtLoop::Nra, 9);
+        assert_eq!(
+            live_lazy_smt_counters(&board)
+                .expect("entry flushes")
+                .value
+                .reading(),
+            crate::lazy_smt_counters::LazySmtReading::EnteredNoRounds,
+            "the seed is overwritten the moment anything happens, so it can \
+             never masquerade as a current reading"
+        );
         record_skeleton(
             LazySmtLoop::Nra,
             Duration::from_millis(11),
@@ -607,6 +653,7 @@ mod tests {
 
         let live = live_lazy_smt_counters(&board).expect("the round flushed");
         assert_eq!(live.sampled, Sampled::InFlight);
+        assert_eq!(live.value.reading(), LazySmtReading::Measured);
         assert_eq!(live.value.nra_rounds, 1);
         assert_eq!(live.value.skeleton_solve, Duration::from_millis(11));
 

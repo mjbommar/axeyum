@@ -33,6 +33,7 @@
 //! SAT case split.
 
 use std::collections::HashMap;
+use std::time::Duration;
 
 use axeyum_ir::{Assignment, Op, Sort, SymbolId, TermArena, TermId, TermNode, Value, eval};
 
@@ -233,9 +234,20 @@ pub fn check_with_lra_dpll_within(
                 // core, not just this one). `theory_lits`, `assignment`, and the
                 // certificate atoms are all in `ctx.atoms` order, so multiplier
                 // index `i` is `assignment[i]`.
+                // Timed as its own stage: `conflict_core` re-solves the
+                // refuted conjunction for its Farkas multipliers, so this is a
+                // SECOND LP per round on top of the one the theory check above
+                // already paid for. Folding it into either neighbour would hide
+                // a cost centre that the 2026-09-08 measurement found holding
+                // about half of this route's wall clock.
+                let core_started = crate::lazy_smt_counters::enabled().then(Instant::now);
                 let core = conflict_core(arena, &theory_lits, &assignment)?;
-                crate::lazy_smt_counters::record_blocking(core.len() as u64);
-                blocking.push(block_clause(arena, &core)?);
+                let clause = block_clause(arena, &core)?;
+                crate::lazy_smt_counters::record_blocking(
+                    core.len() as u64,
+                    core_started.map_or(Duration::ZERO, |s| s.elapsed()),
+                );
+                blocking.push(clause);
             }
             CheckResult::Unknown(reason) => return Ok(CheckResult::Unknown(reason)),
         }
@@ -360,8 +372,17 @@ pub fn check_with_nra_dpll_within(
                 return finish_sat(arena, assertions, &ctx, &propositional, &theory_model);
             }
             Some(CheckResult::Unsat) => {
-                crate::lazy_smt_counters::record_blocking(assignment.len() as u64);
-                blocking.push(block_clause(arena, &assignment)?);
+                // The nonlinear loop blocks the whole cube rather than a Farkas
+                // core, so there is no second solve here — but it is timed the
+                // same way, because "this stage is free on this loop" is a
+                // measurement worth being able to read rather than assume.
+                let core_started = crate::lazy_smt_counters::enabled().then(Instant::now);
+                let clause = block_clause(arena, &assignment)?;
+                crate::lazy_smt_counters::record_blocking(
+                    assignment.len() as u64,
+                    core_started.map_or(Duration::ZERO, |s| s.elapsed()),
+                );
+                blocking.push(clause);
             }
             Some(CheckResult::Unknown(reason)) => return Ok(CheckResult::Unknown(reason)),
             None => {

@@ -282,8 +282,19 @@ fn a_watchdog_kill_still_reports_partial_integer_route_counters() {
         sample_while_running(
             pigeonhole_lia(11),
             &board.clone(),
-            "an integer-route",
-            move || live_lia_counters(&board),
+            "a MEASURED integer-route",
+            move || {
+                // Filtered on `Measured`, not merely on `Some`. Arming the
+                // guard SEEDS the board with a zeroed `not-reached` snapshot so
+                // that a killed query which never reached the integer routes
+                // says so rather than printing nothing — which means an
+                // unfiltered poll is satisfied instantly by the seed, and this
+                // test would pass with the recording cadence deleted. It did,
+                // the moment the seed landed.
+                live_lia_counters(&board).filter(|s| {
+                    s.value.group_reading(LiaCounterGroup::Offline) == GroupReading::Measured
+                })
+            },
         )
     };
     assert_eq!(
