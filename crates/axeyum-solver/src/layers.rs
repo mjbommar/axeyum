@@ -493,7 +493,36 @@ pub fn last_bv_layer_stats() -> Option<BvLayerStats> {
 pub(crate) fn publish_bv_layer_stats(stats: &SolveStats) {
     if COLLECT_BV_LAYER_STATS.with(std::cell::Cell::get) {
         LAST_BV_LAYER_STATS.with(|c| c.set(BvLayerStats::from_solve_stats(stats)));
+        LAST_BV_BACKEND_COUNTERS.with(|c| *c.borrow_mut() = stats.backend.clone());
     }
+}
+
+thread_local! {
+    /// The raw `SolveStats::backend` key/value pairs from the last published
+    /// `sat-bv` check on this thread.
+    ///
+    /// [`BvLayerStats`] is a **projection**: it names the counters a stable
+    /// report line prints, so a counter added for a measurement is invisible
+    /// through it until someone adds a typed field, and a measurement lane then
+    /// either edits the pinned typed-layer surface or guesses. This carries the
+    /// pairs verbatim instead, so a probe binary can read a counter the typed
+    /// view has never heard of. It is written under the SAME guard as
+    /// [`LAST_BV_LAYER_STATS`], so a default run pays nothing and allocates
+    /// nothing extra.
+    static LAST_BV_BACKEND_COUNTERS: std::cell::RefCell<Vec<(String, f64)>> =
+        const { std::cell::RefCell::new(Vec::new()) };
+}
+
+/// The raw backend counters from the last `sat-bv` check on this thread, in the
+/// order the backend pushed them.
+///
+/// Empty unless a [`BvLayerStatsGuard`] was armed for the check. Unlike
+/// [`last_bv_layer_stats`] this is not a fixed schema — it is whatever the
+/// backend recorded — so a reader must treat a missing key as "this run did not
+/// record it", which is not the same as a zero.
+#[must_use]
+pub fn last_bv_backend_counters() -> Vec<(String, f64)> {
+    LAST_BV_BACKEND_COUNTERS.with(|c| c.borrow().clone())
 }
 
 fn lookup(stats: &SolveStats, key: &str) -> Option<f64> {
