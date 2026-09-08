@@ -9164,31 +9164,40 @@ mod tests {
     /// the joint size admission boundary
     /// (`dpll_lia::exceeds_pre_sat_skeleton_boundary`) — a constant the
     /// abstraction's own atom/CNF-variable counts already answer. This builds
-    /// a disjunction that crosses BOTH dimensions of that boundary at once
-    /// (1,300 distinct integer atoms past the 1,280-atom moderate envelope,
-    /// padded with 2,900 plain Boolean disjuncts so the combined ~4,200-term
-    /// skeleton is also past the 4,096-CNF-var base trigger — see the
-    /// construction comment below for why the two counts come from
-    /// different term kinds) combined disjunctively so `lia-simplex` above
-    /// it declines as `Unsupported` rather than deciding the conjunctive
-    /// system directly, and asserts the decline stays far below the reserve
-    /// it used to spend unconditionally.
+    /// a disjunction that crosses the boundary, combined disjunctively so
+    /// `lia-simplex` above it declines as `Unsupported` rather than deciding
+    /// the conjunctive system directly, and asserts the decline stays far
+    /// below the reserve it used to spend unconditionally.
+    ///
+    /// **The fixture moved on 2026-09-08 and it had to.** It used to cross on
+    /// the ATOM dimension (1,300 integer atoms past a 1,280-atom envelope). The
+    /// envelope was re-derived against the native CDCL core and is now 10,240
+    /// atoms / 16,384 CNF variables, so this query became admissible and the
+    /// test failed with `Sat` — correctly: it is a satisfiable disjunction, and
+    /// the solver now decides it. Crossing on ATOMS instead would need >10,240
+    /// distinct arithmetic atoms, and `ArithAbstractor::abstract_term` dedups
+    /// each new atom against every prior one with a linear scan, so that is
+    /// >100M comparisons in a debug build. So the fixture now crosses on the
+    /// CNF-VARIABLE dimension, which the envelope's `||` makes sufficient and
+    /// which plain Boolean padding reaches linearly.
     #[test]
     fn oversized_lia_dpll_admission_declines_before_spending_the_online_probe_reserve() {
         // Two SEPARATE dimensions, deliberately kept SMALL on the expensive one:
         // `ArithAbstractor::abstract_term` dedups each new theory atom against
         // every prior one with a linear scan (`dpll_lia.rs`'s
-        // `self.atoms.iter().any(...)`, pre-existing, not part of this fix), so
-        // N distinct arithmetic atoms cost O(N²) to build. `INT_ATOMS` alone
-        // already exceeds `MAX_MODERATE_PRE_SAT_ARITH_ATOMS` (1,280), so the
-        // O(N²) dedup only ever runs over ~1,300 atoms (~1.7M comparisons, not
-        // 9,000² = 81M). `BOOL_PAD` inflates the CNF-variable count past
-        // `MAX_MODERATE_PRE_SAT_CNF_VARS` (8,192) via plain Boolean skeleton
-        // variables instead, which carry none of that dedup cost (see the
-        // 20,000-variable `abstractor_scales_linearly_on_a_wide_boolean_disjunction`
-        // test above).
+        // `self.atoms.iter().any(...)`, pre-existing), so N distinct arithmetic
+        // atoms cost O(N²) to build. `INT_ATOMS` is therefore only just past
+        // `MAX_PRE_SAT_ARITH_ATOMS` (1,024) — enough for the base trigger's
+        // atom half, and ~1.7M comparisons rather than the >100M that clearing
+        // the 10,240-atom envelope on this dimension would cost. `BOOL_PAD`
+        // does the rest: plain Boolean skeleton variables carry none of that
+        // dedup cost (see the 20,000-variable
+        // `abstractor_scales_linearly_on_a_wide_boolean_disjunction` test
+        // above) and push the CNF-variable count past
+        // `MAX_MODERATE_PRE_SAT_CNF_VARS` (16,384), which the envelope's `||`
+        // makes sufficient on its own.
         const INT_ATOMS: usize = 1_300;
-        const BOOL_PAD: usize = 2_900;
+        const BOOL_PAD: usize = 12_000;
         let mut arena = TermArena::new();
         let zero = arena.int_const(0);
         let mut atoms = Vec::with_capacity(INT_ATOMS + BOOL_PAD);

@@ -66,7 +66,7 @@
 //! `Cell<bool>` and returns: nothing is allocated and no clock is read.
 
 use std::cell::{Cell, RefCell};
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 use std::fmt::Write as _;
 
 /// What a bound is defending. Derived from what the **code** does when the
@@ -143,6 +143,68 @@ pub struct Dependency {
     pub symbol: Option<&'static str>,
 }
 
+/// A concrete, resolvable thing an entry's justification **names**, whose
+/// disappearance falsifies that justification even though no dependency's
+/// history changed.
+///
+/// [`Dependency`] and `Basis` answer two different questions, and the
+/// difference is the reason this type exists:
+///
+/// - `rests_on` asks *did the code this was measured against **change**?* —
+///   a `git log -G<symbol>` question, which needs history and a date.
+/// - `basis` asks *does the thing this reasoning **names** still exist?* — a
+///   question about the tree as it is now, which needs neither.
+///
+/// The second question is the one that went unasked for a month.
+/// `dpll_lia::MAX_PRE_SAT_ARITH_ATOMS` was justified, in prose, by "`BatSat`
+/// allocate\[d\] past an 8 GiB process ceiling … before its cooperative
+/// deadline poll" (`d599b682f`, 2026-08-08). ADR-1703 (`317be80fe`,
+/// 2026-09-05) took BatSat off every shipping path and re-based
+/// `IncrementalSat` — the exact object the bound protects — onto
+/// `NativeIncrementalCdcl`. Not one line of `dpll_lia.rs` changed, so no
+/// `rests_on` dependency could have fired; the justification simply stopped
+/// describing anything. A `Basis::LiveSymbol` naming `batsat` inside
+/// `crates/axeyum-cnf/src/lib.rs` would have gone red the day the ADR landed.
+///
+/// Each variant is checked by `scripts/check-admission-limit-basis.py`, which
+/// exits 1 when any basis is gone.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum Basis {
+    /// An identifier the reasoning names, which must still occur in `in_path`.
+    ///
+    /// `in_path` is deliberately a **specific file or directory**, not the
+    /// workspace: "BatSat exists somewhere in the tree" stays true forever
+    /// behind an optional dev-dependency, while "BatSat is what
+    /// `crates/axeyum-cnf/src/lib.rs`'s warm solver uses" is exactly the claim
+    /// the bound rested on and exactly the claim that became false.
+    LiveSymbol {
+        /// The identifier as written at the site the reasoning points at.
+        ident: &'static str,
+        /// Repository-relative file or directory that must still contain it.
+        in_path: &'static str,
+    },
+    /// A commit the reasoning cites, which must still exist and whose subject
+    /// must still contain `subject_contains`.
+    ///
+    /// A rebased, amended or dropped commit turns a cited measurement into an
+    /// unverifiable one, and a short sha silently resolving to a *different*
+    /// commit is worse than a missing one.
+    CommitSubject {
+        /// The commit as cited, short or full.
+        sha: &'static str,
+        /// Text that must still appear in that commit's subject line.
+        subject_contains: &'static str,
+    },
+    /// An ADR the bound implements, which must still exist and must not have
+    /// been superseded, rejected or withdrawn.
+    ///
+    /// A bound whose deciding ADR was overturned is not automatically wrong,
+    /// but it is automatically unjustified, and that is what this reports.
+    AdrLive(&'static str),
+    /// A document the measurement is written up in, which must still exist.
+    DocPath(&'static str),
+}
+
 /// Where a bound's reasoning is written down, and when it was last measured.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Justification {
@@ -158,6 +220,15 @@ pub struct Justification {
     /// `measured_on` makes the justification stale, which
     /// `scripts/check-config-registry-staleness.py` reports.
     pub rests_on: &'static [Dependency],
+    /// What the justification **names**, and what must therefore still exist
+    /// for it to mean anything. Checked by
+    /// `scripts/check-admission-limit-basis.py`; see [`Basis`] for why this is
+    /// a different question from `rests_on`.
+    ///
+    /// Every dated entry carries at least one, enforced by
+    /// `dated_justifications_declare_a_basis`. An undated entry carries none:
+    /// there is no measurement for a basis to support.
+    pub basis: &'static [Basis],
 }
 
 /// One governing value.
@@ -216,22 +287,53 @@ const fn undated(location: &'static str) -> Justification {
         measured_on: None,
         measured_at_commit: None,
         rests_on: &[],
+        basis: &[],
     }
 }
 
-/// A justification with a measurement date and the things that measurement
-/// rests on.
+/// A justification with a measurement date, the things that measurement rests
+/// on, and the things it names.
+///
+/// `basis` is a required parameter rather than an optional field for the reason
+/// the whole registry exists: a field that can be omitted is omitted. Every
+/// dated entry states what its reasoning points at, and
+/// `scripts/check-admission-limit-basis.py` asks whether that still exists.
 const fn dated(
     location: &'static str,
     measured_on: &'static str,
     measured_at_commit: Option<&'static str>,
     rests_on: &'static [Dependency],
+    basis: &'static [Basis],
 ) -> Justification {
     Justification {
         location,
         measured_on: Some(measured_on),
         measured_at_commit,
         rests_on,
+        basis,
+    }
+}
+
+/// The ADR a bound implements must still be live (not superseded or rejected).
+const fn adr(id: &'static str) -> Basis {
+    Basis::AdrLive(id)
+}
+
+/// The document a measurement is written up in must still exist.
+const fn doc(path: &'static str) -> Basis {
+    Basis::DocPath(path)
+}
+
+/// An identifier the reasoning names must still occur at the site it points at.
+const fn live(ident: &'static str, in_path: &'static str) -> Basis {
+    Basis::LiveSymbol { ident, in_path }
+}
+
+/// A cited commit must still exist and still say what it was cited for saying.
+const fn commit(sha: &'static str, subject_contains: &'static str) -> Basis {
+    Basis::CommitSubject {
+        sha,
+        subject_contains,
     }
 }
 
@@ -281,6 +383,7 @@ pub static REGISTRY: &[ConfigEntry] = &[
                 "crates/axeyum-cnf/src/cube.rs",
                 "DEFAULT_COVERING_CONFLICT_LIMIT",
             )],
+            &[adr("ADR-0543")],
         ),
         note: "Budget for the covering-formula proof step, which is small by construction.",
     },
@@ -302,6 +405,7 @@ pub static REGISTRY: &[ConfigEntry] = &[
                 "crates/axeyum-cnf/src/cube.rs",
                 "DEFAULT_CUBE_CONFLICT_LIMIT",
             )],
+            &[adr("ADR-0543")],
         ),
         note: "Deliberately small: a cube that does not close within it is the signal that it needs re-splitting, not that the search failed.",
     },
@@ -466,6 +570,7 @@ pub static REGISTRY: &[ConfigEntry] = &[
                 "crates/axeyum-rewrite/src/int_divmod.rs",
                 "MAX_CONGRUENCE_GROUPS",
             )],
+            &[adr("ADR-1730")],
         ),
         note: "THE SIGNALLED TWIN. Crossing it is reported as `ZeroDivisorCongruence::Omitted` and `auto::guard_zero_divisor_sat` turns the resulting `sat` into `unknown`. Same name and same value as `nia_linearize::MAX_CONGRUENCE_GROUPS`, which signals nothing — see that entry.",
     },
@@ -721,6 +826,7 @@ pub static REGISTRY: &[ConfigEntry] = &[
                 "crates/axeyum-solver/src/auto.rs",
                 "MAX_MBQI_FREE_INT_SYMBOLS",
             )],
+            &[adr("ADR-0360")],
         ),
         note: "Gates the free-int model completion tried ahead of ordinary MBQI.",
     },
@@ -742,6 +848,7 @@ pub static REGISTRY: &[ConfigEntry] = &[
                 "crates/axeyum-solver/src/auto.rs",
                 "MAX_MBQI_FREE_INT_TUPLES",
             )],
+            &[adr("ADR-0360")],
         ),
         note: "Bounds the exhaustive search over the free-int value pools.",
     },
@@ -763,6 +870,7 @@ pub static REGISTRY: &[ConfigEntry] = &[
                 "crates/axeyum-solver/src/auto.rs",
                 "MAX_MBQI_FREE_INT_VALUES",
             )],
+            &[adr("ADR-0360")],
         ),
         note: "Per-symbol value pool size for ADR-0360 completion.",
     },
@@ -797,6 +905,7 @@ pub static REGISTRY: &[ConfigEntry] = &[
                 "crates/axeyum-solver/src/auto.rs",
                 "MAX_MBQI_PROFILE_COMPLETION_INSTANCES",
             )],
+            &[adr("ADR-0364")],
         ),
         note: "Companion to the rounds cap; this one does branch explicitly where the rounds cap does not.",
     },
@@ -818,6 +927,7 @@ pub static REGISTRY: &[ConfigEntry] = &[
                 "crates/axeyum-solver/src/auto.rs",
                 "MAX_MBQI_PROFILE_COMPLETION_ROUNDS",
             )],
+            &[adr("ADR-0364")],
         ),
         note: "`for _ in 0..32` with no exceeded-signal at the loop site.",
     },
@@ -1071,28 +1181,62 @@ pub static REGISTRY: &[ConfigEntry] = &[
     ConfigEntry {
         name: "MAX_MODERATE_PRE_SAT_ARITH_ATOMS",
         module: "crates/axeyum-solver/src/dpll_lia.rs",
-        value: "1_280",
+        value: "10_240",
         unit: "arithmetic atoms",
         protects: Protects::Memory,
         on_exceed: OnExceed::RefuseUnknown,
         signal: Signal::ToCaller,
         guarded_by: "",
         env_override: None,
-        justification: undated("doc comment"),
-        note: "An exception rectangle carved out of the pre-SAT trigger, so a moderate query is admitted rather than refused. Names `windowreal-no_t_deadlock-17.smt2` at 0.10-0.20 s / 18 MiB, undated.",
+        justification: dated(
+            "docs/research/12-performance/admission-limit-basis-2026-09-08.md",
+            "2026-09-08",
+            Some("317be80fe"),
+            &[
+                sym(
+                    "crates/axeyum-solver/src/dpll_lia.rs",
+                    "MAX_MODERATE_PRE_SAT_ARITH_ATOMS",
+                ),
+                sym("crates/axeyum-cnf/src/lib.rs", "IncrementalSat"),
+            ],
+            &[
+                adr("ADR-1703"),
+                live("NativeIncrementalCdcl", "crates/axeyum-cnf/src/lib.rs"),
+                commit("317be80fe", "the native CDCL core is the SAT engine"),
+                doc("docs/research/12-performance/admission-limit-basis-2026-09-08.md"),
+            ],
+        ),
+        note: "THE ENVELOPE THAT ACTUALLY DECIDES ADMISSION; the pre-SAT trigger alone refuses nothing. Widened 1_280 -> 10_240 on 2026-09-08 by re-derivation against the native CDCL core: at 9,846 atoms the whole process peaks at 71 MiB, 1/115th of the 8 GiB ceiling the old BatSat-era justification cited, and 3 of 10 QF_LIA files it was refusing are decided when it is raised. Set to the largest point MEASURED safe, not extrapolated beyond it.",
     },
     ConfigEntry {
         name: "MAX_MODERATE_PRE_SAT_CNF_VARS",
         module: "crates/axeyum-solver/src/dpll_lia.rs",
-        value: "8_192",
+        value: "16_384",
         unit: "CNF variables",
         protects: Protects::Memory,
         on_exceed: OnExceed::RefuseUnknown,
         signal: Signal::ToCaller,
         guarded_by: "",
         env_override: None,
-        justification: undated("doc comment"),
-        note: "Joint partner to the moderate atom bound; both must hold.",
+        justification: dated(
+            "docs/research/12-performance/admission-limit-basis-2026-09-08.md",
+            "2026-09-08",
+            Some("317be80fe"),
+            &[
+                sym(
+                    "crates/axeyum-solver/src/dpll_lia.rs",
+                    "MAX_MODERATE_PRE_SAT_CNF_VARS",
+                ),
+                sym("crates/axeyum-cnf/src/lib.rs", "IncrementalSat"),
+            ],
+            &[
+                adr("ADR-1703"),
+                live("NativeIncrementalCdcl", "crates/axeyum-cnf/src/lib.rs"),
+                commit("317be80fe", "the native CDCL core is the SAT engine"),
+                doc("docs/research/12-performance/admission-limit-basis-2026-09-08.md"),
+            ],
+        ),
+        note: "Joint partner to the moderate atom bound; both must hold. Widened 8_192 -> 16_384 with it on 2026-09-08. A query at 31,944 CNF variables still declines: that is 1.9x the measured region in a dimension nobody has measured above.",
     },
     ConfigEntry {
         name: "MAX_PRE_SAT_ARITH_ATOMS",
@@ -1104,8 +1248,25 @@ pub static REGISTRY: &[ConfigEntry] = &[
         signal: Signal::ToCaller,
         guarded_by: "",
         env_override: None,
-        justification: undated("doc comment"),
-        note: "Joint (AND'ed with the CNF-variable bound) admission boundary before the first SAT round. Guards a measured abort on `pursuit-safety-16.smt2` at an 8 GiB ceiling — file named, DATE ABSENT.",
+        justification: dated(
+            "docs/research/12-performance/admission-limit-basis-2026-09-08.md",
+            "2026-09-08",
+            Some("317be80fe"),
+            &[
+                sym(
+                    "crates/axeyum-solver/src/dpll_lia.rs",
+                    "MAX_PRE_SAT_ARITH_ATOMS",
+                ),
+                sym("crates/axeyum-cnf/src/lib.rs", "IncrementalSat"),
+            ],
+            &[
+                adr("ADR-1703"),
+                live("NativeIncrementalCdcl", "crates/axeyum-cnf/src/lib.rs"),
+                commit("317be80fe", "the native CDCL core is the SAT engine"),
+                doc("docs/research/12-performance/admission-limit-basis-2026-09-08.md"),
+            ],
+        ),
+        note: "A FLOOR, not the decision: a query crossing it is still admitted inside the moderate envelope, so nothing is refused on this number alone, and it has not moved. Its 2026-08-08 justification blamed BatSat's allocator on `pursuit-safety-16.smt2`; ADR-1703 took BatSat off this path on 2026-09-05, `IncrementalBatSat` occurs nowhere in `crates/`, and the cited file is QF_LRA and does not reach this gate. The founding case for `scripts/check-admission-limit-basis.py`.",
     },
     ConfigEntry {
         name: "MAX_PRE_SAT_CNF_VARS",
@@ -1117,8 +1278,25 @@ pub static REGISTRY: &[ConfigEntry] = &[
         signal: Signal::ToCaller,
         guarded_by: "",
         env_override: None,
-        justification: undated("doc comment"),
-        note: "Joint partner to the pre-SAT atom bound.",
+        justification: dated(
+            "docs/research/12-performance/admission-limit-basis-2026-09-08.md",
+            "2026-09-08",
+            Some("317be80fe"),
+            &[
+                sym(
+                    "crates/axeyum-solver/src/dpll_lia.rs",
+                    "MAX_PRE_SAT_CNF_VARS",
+                ),
+                sym("crates/axeyum-cnf/src/lib.rs", "IncrementalSat"),
+            ],
+            &[
+                adr("ADR-1703"),
+                live("NativeIncrementalCdcl", "crates/axeyum-cnf/src/lib.rs"),
+                commit("317be80fe", "the native CDCL core is the SAT engine"),
+                doc("docs/research/12-performance/admission-limit-basis-2026-09-08.md"),
+            ],
+        ),
+        note: "Joint partner to the pre-SAT atom bound; a floor, not the decision.",
     },
     ConfigEntry {
         name: "MAX_TWO_EDGE_DIFF_EDGES",
@@ -1151,6 +1329,7 @@ pub static REGISTRY: &[ConfigEntry] = &[
                 "crates/axeyum-solver/src/dpll_lia.rs",
                 "MINIMIZATION_ORACLE_CALL_BUDGET",
             )],
+            &[doc("docs/research/05-algorithms/")],
         ),
         note: "Counted in oracle calls rather than wall clock DELIBERATELY, so the bound is deterministic. Derived from another registered constant, so it moves when that one does.",
     },
@@ -1185,6 +1364,20 @@ pub static REGISTRY: &[ConfigEntry] = &[
                 "crates/axeyum-solver/src/dpll_lia.rs",
                 "WIDE_THEORY_CORE_ATOMS",
             )],
+            // The 2026-08-21 note's whole content is that this constant STOPPED
+            // deciding whether minimization is attempted and became pure
+            // accounting against the wide-core budget. Both halves of that
+            // sentence must still name something.
+            &[
+                live(
+                    "MAX_DYNAMIC_LARGE_CORE_LITERALS",
+                    "crates/axeyum-solver/src/dpll_lia.rs",
+                ),
+                live(
+                    "MINIMIZATION_ORACLE_CALL_BUDGET",
+                    "crates/axeyum-solver/src/dpll_lia.rs",
+                ),
+            ],
         ),
         note: "ACCOUNTING, NOT ADMISSION. Until 2026-08-21 the same constant was an admission width-gate; the doc records why that was the wrong direction. It now only decides whether a retained core counts against `MAX_DYNAMIC_LARGE_CORE_LITERALS`. Registered because a reader who greps the name will otherwise assume the old contract.",
     },
@@ -1205,6 +1398,9 @@ pub static REGISTRY: &[ConfigEntry] = &[
             &[sym(
                 "crates/axeyum-solver/src/euf.rs",
                 "DECLARED_SORT_CEGAR_PAIRS_TERMINAL_RUNG",
+            )],
+            &[doc(
+                "docs/research/11-design-review/2026-09-06-s11a-uf-ackermann-measured.md",
             )],
         ),
         note: "The same gate as `MAX_ENCODED_DECLARED_SORT_CEGAR_PAIRS`, 256x looser because as the ladder's terminal rung there is no downstream search left to starve. Here the number bounds MEMORY (the O(pairs) preseed scan), not time, which the shared deadline already bounds.",
@@ -1324,6 +1520,7 @@ pub static REGISTRY: &[ConfigEntry] = &[
                     "MAX_ONLINE_LRA_ATOMS",
                 ),
             ],
+            &[adr("ADR-1752")],
         ),
         note: "A SCREEN, explicitly not a cost model — the doc names three replacement cost models the corpus falsified. Calibrated so the default budget reproduces the flat 1,024-atom cap byte-identically, which is why its definition divides by exactly that number.",
     },
@@ -1345,6 +1542,7 @@ pub static REGISTRY: &[ConfigEntry] = &[
                 "crates/axeyum-solver/src/lra_online.rs",
                 "BYTES_PER_LRA_COEFFICIENT",
             )],
+            &[adr("ADR-1752")],
         ),
         note: "Structural byte accounting, NOT an RSS measurement — the doc says so explicitly. Feeds `NormalizationLimits::for_budget`'s derived ceilings.",
     },
@@ -1366,6 +1564,7 @@ pub static REGISTRY: &[ConfigEntry] = &[
                 "crates/axeyum-solver/src/lra_online.rs",
                 "BYTES_PER_TABLEAU_CELL",
             )],
+            &[adr("ADR-1752")],
         ),
         note: "Two `i128`s. Subtracted from the budget before coefficients get their share.",
     },
@@ -1393,6 +1592,7 @@ pub static REGISTRY: &[ConfigEntry] = &[
                     "MAX_ONLINE_LRA_ATOMS",
                 ),
             ],
+            &[adr("ADR-1752")],
         ),
         note: "THE REPLACEMENT for the stale flat atom cap. Used when `SolverConfig::memory_limit_mb` is unset; when it is set, that is the budget instead — so this is the first bound in the registry that MOVES with a caller-supplied resource limit rather than being fixed at compile time.",
     },
@@ -1466,6 +1666,7 @@ pub static REGISTRY: &[ConfigEntry] = &[
                 "crates/axeyum-solver/src/lra_online.rs",
                 "MAX_FM_CONSTRAINTS",
             )],
+            &[adr("ADR-1752")],
         ),
         note: "A COUNT that said nothing about the bytes behind it — the doc names the 7.8 GB abort on `danoint-266.smt2` it failed to catch. ADR-1752 added a byte gate ALONGSIDE it rather than replacing it, so the Fourier-Motzkin fallback now has two ceilings in two units, deliberately.",
     },
@@ -1487,6 +1688,10 @@ pub static REGISTRY: &[ConfigEntry] = &[
                 "crates/axeyum-solver/src/lra_online.rs",
                 "MAX_LRA_CACHED_COEFFICIENTS",
             )],
+            &[
+                adr("ADR-1752"),
+                commit("96ff85930", "Enforce shared arithmetic resource bounds"),
+            ],
         ),
         note: "THE CONSTANT AT THE CENTRE OF THIS REGISTRY'S REASON TO EXIST. It bounds the linearization memo — the exact cost `MAX_ONLINE_LRA_ATOMS`'s 2026-08-03 measurement blamed for an 8 GiB abort. It landed 2026-08-06 (`96ff85930`), three days AFTER that measurement, which was never re-taken. Overridden per-budget by `for_budget`.",
     },
@@ -1508,6 +1713,7 @@ pub static REGISTRY: &[ConfigEntry] = &[
                 "crates/axeyum-solver/src/lra_online.rs",
                 "MAX_LRA_COEFFICIENT_WORK",
             )],
+            &[adr("ADR-1752")],
         ),
         note: "Caps quadratic coefficient blow-up during normalization. This is the default; `for_budget` overrides it per budget, so the compiled literal is not the number a run uses.",
     },
@@ -1607,6 +1813,7 @@ pub static REGISTRY: &[ConfigEntry] = &[
                 "crates/axeyum-solver/src/lra_theory.rs",
                 "DEFAULT_ONLINE_LRA_BUDGET_BYTES",
             )],
+            &[adr("ADR-1752")],
         ),
         note: "A re-export, not a second number. Registered so a reader who greps this file sees where the value actually lives.",
     },
@@ -1638,6 +1845,10 @@ pub static REGISTRY: &[ConfigEntry] = &[
                     "DEFAULT_ONLINE_LRA_BUDGET_BYTES",
                 ),
             ],
+            &[
+                adr("ADR-1752"),
+                commit("e62086742", "the online theory decides on"),
+            ],
         ),
         note: "THE WORKED EXAMPLE. It is no longer the LRA route's own admission gate (ADR-1752 replaced that with a byte budget) but it IS still live as the atom ceiling `nra.rs` projects against (ADR-1751), and the byte budget is calibrated to reproduce it exactly at the default. Its `rests_on` names `MAX_LRA_CACHED_COEFFICIENTS` — the dependency whose absence let a 2026-08-03 measurement stand for thirteen months after the 2026-08-06 commit that falsified it.",
     },
@@ -1659,6 +1870,21 @@ pub static REGISTRY: &[ConfigEntry] = &[
                 "crates/axeyum-solver/src/memory_budget.rs",
                 "ENCODING_BYTES_PER_CLAUSE",
             )],
+            // What makes this the best-justified entry is not the doc table but
+            // the SHIPPED RE-MEASUREMENT TEST: the number can be re-taken rather
+            // than re-argued. If that test is deleted the justification loses
+            // exactly the property this note credits it with, so the test is the
+            // basis, alongside the conversion site the byte budget flows into.
+            &[
+                live(
+                    "clause_ceiling",
+                    "crates/axeyum-solver/src/memory_budget.rs",
+                ),
+                live(
+                    "a_budget_smaller_than_the_encoding_declines_as_a_memory_limit",
+                    "crates/axeyum-solver/tests/memory_budget.rs",
+                ),
+            ],
         ),
         note: "THE BEST-JUSTIFIED ENTRY IN THIS REGISTRY, and the model for the rest: the doc carries a table of measured peaks over `bvmul` commutativity miters, names the host, gives the date, AND ships a re-measurement test (`crates/axeyum-solver/tests/memory_budget.rs`) so the number can be re-taken rather than re-argued. Converts a byte budget into `clause_ceiling()`.",
     },
@@ -1842,6 +2068,10 @@ pub static REGISTRY: &[ConfigEntry] = &[
                     "MAX_ONLINE_LRA_ATOMS",
                 ),
             ],
+            &[
+                adr("ADR-1751"),
+                commit("9a8b09220", "deterministic cross-product admission bound —"),
+            ],
         ),
         note: "THE UNIT-MISMATCH ENTRY, now retired from its gate role. It metered CROSS-PRODUCTS while the consuming engine meters ATOMS and refuses above 1,024 — two gates on one resource, 15x apart, in units with no constant conversion (the measured atoms-per-cross-product ratio spans 13.1 to 30.3 across four census files, so any single factor is wrong by up to 2.3x). ADR-1751 replaced it with `admission_fits_consumer`, which counts the consumer's own unit. The constant survives ONLY as the non-regression marker and as the `AXEYUM_NRA_ADMISSION=legacy` A/B lever. Lifting it cost +502 s over 62 files and bought 2 new `sat`; on 25 of those 62 it protects nothing at all.",
     },
@@ -1895,6 +2125,7 @@ pub static REGISTRY: &[ConfigEntry] = &[
                     "MAX_ONLINE_LRA_ATOMS",
                 ),
             ],
+            &[adr("ADR-1751")],
         ),
         note: "Headroom reserved in the admission projection for envelope atoms added per branch-and-bound node, which a pre-solve atom count cannot see. Four inequalities per product, so admission does not hand the consumer a system that only fits before the search starts.",
     },
@@ -1916,6 +2147,7 @@ pub static REGISTRY: &[ConfigEntry] = &[
                 "crates/axeyum-solver/src/nra.rs",
                 "RELAXATION_DEADLINE_SHARE_ABOVE_LEGACY",
             )],
+            &[adr("ADR-1751")],
         ),
         note: "SET FROM THE MEASUREMENT, NOT CHOSEN: the two new `sat` results were found 4.4 s and 1.0 s into the relaxation, so half of a 24 s budget leaves the larger 2.5x headroom while capping worst-case starvation of the `int_real_relax` and `dispatch_uf_nra` callers at half.",
     },
@@ -2090,6 +2322,14 @@ std::thread_local! {
     /// depends on per-process hash seeding.
     static CONSULTED: RefCell<BTreeSet<&'static str>> =
         const { RefCell::new(BTreeSet::new()) };
+    /// Bounds actually CROSSED on this thread while recording was enabled, with
+    /// the observed quantity and the bound it crossed.
+    ///
+    /// A `BTreeMap` for the same reason `CONSULTED` is a `BTreeSet`: this
+    /// reaches a run's output and the determinism promise forbids an order that
+    /// depends on hash seeding.
+    static CROSSED: RefCell<BTreeMap<&'static str, (u64, u64)>> =
+        const { RefCell::new(BTreeMap::new()) };
 }
 
 /// Enables configuration recording for the lifetime of the returned guard,
@@ -2113,6 +2353,7 @@ impl ConfigTraceGuard {
     #[must_use]
     pub fn enable() -> Self {
         CONSULTED.with(|c| c.borrow_mut().clear());
+        CROSSED.with(|c| c.borrow_mut().clear());
         ConfigTraceGuard(RECORD_CONFIG.with(|c| c.replace(true)))
     }
 }
@@ -2144,6 +2385,47 @@ pub fn note_consulted(key: &'static str) {
 #[must_use]
 pub fn consulted() -> Vec<&'static str> {
     CONSULTED.with(|c| c.borrow().iter().copied().collect())
+}
+
+/// Records that a governing value was **crossed**, when recording is on.
+///
+/// [`note_consulted`] says a bound was looked at. This says it *bit*, and with
+/// what numbers — which is the difference between a run that can be traced and
+/// one that cannot. The registry's own enumeration found **12 admission-class
+/// entries whose crossing produces no branch a caller can observe**, and for
+/// those, "how many files did this bound cost us?" is unmeasurable by
+/// construction: the population riding on a silent gate cannot be counted, so a
+/// stale bound nobody hits looks exactly like a stale bound carrying fifty
+/// files. That is why this is a separate call and not a field on
+/// [`ConfigEntry`].
+///
+/// `observed` and `bound` are in the entry's own [`ConfigEntry::unit`], stated
+/// in the same currency the code compared — never normalized here, because two
+/// gates metering one resource in different units is a defect this registry
+/// exists to make visible, not to launder.
+///
+/// Off by default this is one thread-local `Cell<bool>` read and a return: no
+/// allocation, no clock, and nothing that can change a verdict. Only the
+/// **first** crossing of a key is kept, so a bound crossed in a loop cannot
+/// make the trace line grow without limit, and the recorded numbers are the
+/// ones from the crossing that first changed the route.
+pub fn note_crossed(key: &'static str, observed: u64, bound: u64) {
+    if !RECORD_CONFIG.with(Cell::get) {
+        return;
+    }
+    CONSULTED.with(|c| {
+        c.borrow_mut().insert(key);
+    });
+    CROSSED.with(|c| {
+        c.borrow_mut().entry(key).or_insert((observed, bound));
+    });
+}
+
+/// The bounds crossed on this thread since the active guard was constructed, as
+/// `(key, observed, bound)`, sorted by key.
+#[must_use]
+pub fn crossings() -> Vec<(&'static str, u64, u64)> {
+    CROSSED.with(|c| c.borrow().iter().map(|(k, (o, b))| (*k, *o, *b)).collect())
 }
 
 /// Environment overrides in force for this process, as `(variable, value)`,
@@ -2235,6 +2517,17 @@ pub fn config_trace_line() -> String {
         for key in consulted {
             s.push(' ');
             s.push_str(key);
+        }
+    }
+    // Crossings come AFTER consultations and carry their numbers, so a reader
+    // can tell "this bound was looked at" from "this bound decided the route,
+    // at 1560 against 1024". A silent decline that leaves no such line is the
+    // defect; a run that prints one is attributable.
+    let crossed = crossings();
+    if !crossed.is_empty() {
+        let _ = write!(s, " crossed={}", crossed.len());
+        for (key, observed, bound) in crossed {
+            let _ = write!(s, " {key}={observed}/{bound}");
         }
     }
     s
@@ -2510,37 +2803,43 @@ mod tests {
                     continue;
                 }
                 let text = std::fs::read_to_string(&path).expect("read source");
-                // Match `note_consulted(` followed by a string literal, across
-                // the line break rustfmt inserts for a long key.
-                let mut rest = text.as_str();
-                while let Some(at) = rest.find("note_consulted(") {
-                    rest = &rest[at + "note_consulted(".len()..];
-                    let Some(open) = rest.find('"') else { break };
-                    // Only a whitespace run may separate the paren from the
-                    // literal; anything else is a call passing a variable,
-                    // which this test cannot check and does not claim to.
-                    if !rest[..open].chars().all(char::is_whitespace) {
-                        continue;
+                // Match `note_consulted(` / `note_crossed(` followed by a string
+                // literal, across the line break rustfmt inserts for a long key.
+                // BOTH recorders are scanned: a crossing key is exactly as able
+                // to be a typo as a consultation key, and a crossing recorded
+                // under an unregistered key is worse — it is a trace line
+                // nobody can resolve back to a bound.
+                for recorder in ["note_consulted(", "note_crossed("] {
+                    let mut rest = text.as_str();
+                    while let Some(at) = rest.find(recorder) {
+                        rest = &rest[at + recorder.len()..];
+                        let Some(open) = rest.find('"') else { break };
+                        // Only a whitespace run may separate the paren from the
+                        // literal; anything else is a call passing a variable,
+                        // which this test cannot check and does not claim to.
+                        if !rest[..open].chars().all(char::is_whitespace) {
+                            continue;
+                        }
+                        let after = &rest[open + 1..];
+                        let Some(close) = after.find('"') else { break };
+                        let key = &after[..close];
+                        sites += 1;
+                        if !keys.contains(key) {
+                            bad.push(format!("{}: {key}", path.display()));
+                        }
+                        rest = &after[close..];
                     }
-                    let after = &rest[open + 1..];
-                    let Some(close) = after.find('"') else { break };
-                    let key = &after[..close];
-                    sites += 1;
-                    if !keys.contains(key) {
-                        bad.push(format!("{}: {key}", path.display()));
-                    }
-                    rest = &after[close..];
                 }
             }
         }
         assert!(
             bad.is_empty(),
-            "note_consulted keys that are not registered: {bad:#?}"
+            "note_consulted / note_crossed keys that are not registered: {bad:#?}"
         );
         // A scan that found nothing would pass vacuously, which is the failure
         // mode this repository has been bitten by most often.
         assert!(
-            sites >= 4,
+            sites >= 6,
             "expected the instrumented gates to be found; the scan saw {sites} \
              call site(s), so it is passing vacuously"
         );
@@ -2680,6 +2979,81 @@ mod tests {
                     e.key(),
                     dep.path
                 );
+            }
+        }
+    }
+
+    /// Every dated entry must name at least one [`Basis`], and every basis must
+    /// be well formed enough for `scripts/check-admission-limit-basis.py` to
+    /// resolve it.
+    ///
+    /// This is the coverage half of the basis contract; the script is the
+    /// liveness half. Neither substitutes for the other: a registry where the
+    /// script passes because nothing declares a basis would be exactly the
+    /// state that let `MAX_PRE_SAT_ARITH_ATOMS` cite a retired allocator for a
+    /// month.
+    ///
+    /// The undated direction is asserted too, and for the same reason the
+    /// `rests_on` version of it is: a basis with no measurement to support has
+    /// nothing to be the basis *of*.
+    #[test]
+    fn dated_justifications_declare_a_basis() {
+        let root = repo_root();
+        for e in REGISTRY {
+            if e.justification.measured_on.is_none() {
+                assert!(
+                    e.justification.basis.is_empty(),
+                    "{} declares a basis but has no measurement for it to support",
+                    e.key()
+                );
+                continue;
+            }
+            assert!(
+                !e.justification.basis.is_empty(),
+                "{} is dated but names no basis, so nothing it rests on can be \
+                 shown to have disappeared",
+                e.key()
+            );
+            for b in e.justification.basis {
+                match b {
+                    Basis::LiveSymbol { ident, in_path } => {
+                        assert!(!ident.is_empty(), "{}: empty basis identifier", e.key());
+                        assert!(
+                            root.join(in_path).exists(),
+                            "{} names basis symbol {ident} in {in_path}, which does not exist",
+                            e.key()
+                        );
+                    }
+                    Basis::CommitSubject {
+                        sha,
+                        subject_contains,
+                    } => {
+                        assert!(
+                            sha.len() >= 7 && sha.chars().all(|c| c.is_ascii_hexdigit()),
+                            "{}: {sha} is not a commit id",
+                            e.key()
+                        );
+                        assert!(
+                            !subject_contains.is_empty(),
+                            "{}: a commit basis that requires nothing of the subject cannot fail",
+                            e.key()
+                        );
+                    }
+                    Basis::AdrLive(id) => {
+                        assert!(
+                            id.starts_with("ADR-") && id.len() > 4,
+                            "{}: {id} is not an ADR id",
+                            e.key()
+                        );
+                    }
+                    Basis::DocPath(p) => {
+                        assert!(
+                            root.join(p).exists(),
+                            "{} names document basis {p}, which does not exist",
+                            e.key()
+                        );
+                    }
+                }
             }
         }
     }

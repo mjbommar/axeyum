@@ -61,24 +61,91 @@ const MAX_DYNAMIC_AFFINE_BOUND_CONFLICT_BATCH: usize = 1;
 /// Joint pre-SAT admission boundary for very large arithmetic skeletons.
 ///
 /// Neither dimension alone is sufficient evidence of risk: Axeyum handles
-/// large flat atom sets and large mostly-Boolean skeletons elsewhere.  The SAL
-/// `pursuit-safety-16.smt2` combination (1,447 arithmetic atoms and 4,733 CNF
-/// variables) made `BatSat` allocate past an 8 GiB process ceiling on its third
-/// solve with only two learned clauses, before its cooperative deadline poll.
-/// Decline only when both stable, pre-solve counts cross the measured boundary.
+/// large flat atom sets and large mostly-Boolean skeletons elsewhere. Decline
+/// only when both stable, pre-solve counts cross the boundary.
+///
+/// **This is a floor, not the decision.** A query crossing it is still admitted
+/// if it lies inside the measured-safe envelope below, so these two numbers
+/// have not moved and do not need to: nothing is refused on them alone.
+///
+/// # The justification this replaces, and why it had to be replaced
+///
+/// From 2026-08-08 (`d599b682f`) to 2026-09-08 this pair was justified by:
+/// "the SAL `pursuit-safety-16.smt2` combination (1,447 arithmetic atoms and
+/// 4,733 CNF variables) made `BatSat` allocate past an 8 GiB process ceiling on
+/// its third solve with only two learned clauses, before its cooperative
+/// deadline poll."
+///
+/// **`BatSat` is not on this path.** ADR-1703 (`317be80fe`, 2026-09-05) made
+/// the native CDCL core the SAT engine everywhere; [`BoolSkeletonSolver::sat`]
+/// is an `IncrementalSat`, which is now a `NativeIncrementalCdcl`, and the
+/// field the justification blames — `IncrementalBatSat` — occurs nowhere in
+/// `crates/`. Not one line of this file changed on 2026-09-05, so nothing
+/// could have reported it: the measurement simply stopped describing anything,
+/// and stood for 28 more days. That is the failure mode
+/// `scripts/check-admission-limit-basis.py` now catches, and this constant is
+/// its founding case.
 const MAX_PRE_SAT_ARITH_ATOMS: usize = 1_024;
 const MAX_PRE_SAT_CNF_VARS: usize = 4_096;
-/// Additional measured-safe rectangle above the joint pre-SAT trigger.
+/// Measured-safe envelope above the joint pre-SAT trigger. **This** is what
+/// decides admission; crossing the trigger alone refuses nothing.
 ///
-/// The historical `QF_LRA` monotonicity control
-/// `windowreal-no_t_deadlock-17.smt2` has 1,217 arithmetic atoms and 6,526 CNF
-/// variables and closes UNSAT in 0.10--0.20 seconds below 18 MiB peak RSS. The
-/// original allocation-abort controls have at least 1,411 atoms, while the
-/// nearest low-atom census decline outside this rectangle has 31,944 CNF
-/// variables. Keep the exception conjunctive so neither dimension alone can
-/// admit a previously excluded large skeleton.
-const MAX_MODERATE_PRE_SAT_ARITH_ATOMS: usize = 1_280;
-const MAX_MODERATE_PRE_SAT_CNF_VARS: usize = 8_192;
+/// # Re-derived 2026-09-08 against the native CDCL core
+///
+/// Method: every QF_LIA reference-only loss file that declines here
+/// (`bench-results/parity-losses-20260905/QF_LIA.txt`, 10 of the 26 remaining)
+/// run through `smtcomp_cli --timeout-ms 24000` in release, `taskset -c 0-7`,
+/// each inside a `systemd-run --scope -p MemoryMax=8G -p MemorySwapMax=0`
+/// confinement — the same 8 GiB ceiling the old justification cites — with this
+/// envelope at its committed value and again at `usize::MAX`, the two arms run
+/// back to back on each file so host load drifts across the pair rather than
+/// across the arms. Shared dev box, load average 16-31; **peak RSS and verdicts
+/// are the load-robust quantities and are what this bound rests on.**
+///
+/// | atoms / CNF vars | admitted (peak RSS) | refused (peak RSS) |
+/// | --- | --- | --- |
+/// | 9,846 / 12,155 (`BART-PT-020/RF-13`) | **sat**, 71.3 MiB | unknown, 72.5 MiB |
+/// | 2,850 / 6,533 (`bofill ex8280`, `ex9600`) | **sat**, 37.6 MiB | unknown, 37.4 MiB |
+/// | 3,992 / 9,205 (`bofill ex13800` + 3) | unknown, 41.5 MiB | unknown, 42.0 MiB |
+/// | 3,076 / 6,365 (`convert-jpg2gif-1423`) | unknown, 35.9 MiB | unknown, 35.8 MiB |
+///
+/// **Three of the ten refusals are decided when the envelope is removed, and
+/// peak RSS moves by at most 0.5 % in either direction on every file.** At
+/// 9,846 atoms — 7.7x the old envelope — the whole process peaks at 71 MiB,
+/// which is 1/115th of the ceiling this bound cites. There is no measured
+/// memory risk anywhere in the region it was refusing.
+///
+/// The cited control refutes it a second way: `pursuit-safety-16.smt2` is
+/// `QF_LRA`, does **not** reach this gate through the shipped front door
+/// (measured: no boundary decline in either arm), and peaks at 3.47 GiB
+/// identically with the envelope raised or not. The bound does not protect the
+/// case it names.
+///
+/// So the envelope is set to the largest point measured safe, rounded up to the
+/// next power of two in each dimension, and **not extrapolated beyond it**:
+/// above this, nobody has measured, and unmeasured is not the same as safe.
+/// Keep the exception conjunctive so neither dimension alone can admit a
+/// previously excluded large skeleton.
+///
+/// # What this costs, stated plainly
+///
+/// The seven files that stay `unknown` now spend the caller's whole budget
+/// (~24 s) instead of stopping at [`OVERSIZED_ADMISSION_PROBE_BUDGET`] (~10 s).
+/// Under PAR-2 an `unknown` scores the same either way and each file has its own
+/// budget, so the three recovered decisions are a straight gain; the cost is
+/// wall-clock on a sweep, not score. Recorded here rather than left for someone
+/// to rediscover.
+///
+/// # What is still owed
+///
+/// A rectangle in (atoms, CNF vars) is the wrong shape for a memory bound at
+/// all — ADR-1752 already replaced exactly this pattern in `lra_online`
+/// (`MAX_ONLINE_LRA_ATOMS`, a flat atom cap) with a byte budget and measured
+/// per-atom costs. Doing the same here is the real fix and needs an ADR; this
+/// is a re-derivation of the existing shape against the engine that actually
+/// runs, not a redesign.
+const MAX_MODERATE_PRE_SAT_ARITH_ATOMS: usize = 10_240;
+const MAX_MODERATE_PRE_SAT_CNF_VARS: usize = 16_384;
 /// Explicit, absolute wall-clock cap on the bounded online-probe fallback
 /// [`arith_dpll_admission_preflight`] tries for a non-difference-logic query
 /// that would otherwise decline outright on the boundary above (S2-followup,
@@ -1227,7 +1294,27 @@ fn exceeds_pre_sat_skeleton_boundary(atoms: usize, cnf_vars: usize) -> bool {
     let crosses_base_trigger = atoms > MAX_PRE_SAT_ARITH_ATOMS && cnf_vars > MAX_PRE_SAT_CNF_VARS;
     let outside_moderate_envelope =
         atoms > MAX_MODERATE_PRE_SAT_ARITH_ATOMS || cnf_vars > MAX_MODERATE_PRE_SAT_CNF_VARS;
-    crosses_base_trigger && outside_moderate_envelope
+    let exceeds = crosses_base_trigger && outside_moderate_envelope;
+    // Attribution, not decoration: the `UnknownReason` this feeds already names
+    // the boundary, but only on the path that RETURNS it. A `--trace` run needs
+    // the crossing recorded where it is DECIDED, so a query that crosses here
+    // and is then rescued by `oversized_admission_probe` still shows which
+    // bound it crossed and by how much. Off by default this is one
+    // thread-local `Cell<bool>` read; no clock, no allocation, no verdict
+    // change.
+    if exceeds {
+        crate::config_registry::note_crossed(
+            "crates/axeyum-solver/src/dpll_lia.rs::MAX_PRE_SAT_ARITH_ATOMS",
+            atoms as u64,
+            MAX_PRE_SAT_ARITH_ATOMS as u64,
+        );
+        crate::config_registry::note_crossed(
+            "crates/axeyum-solver/src/dpll_lia.rs::MAX_PRE_SAT_CNF_VARS",
+            cnf_vars as u64,
+            MAX_PRE_SAT_CNF_VARS as u64,
+        );
+    }
+    exceeds
 }
 
 /// Builds the `ResourceLimit` decline for [`exceeds_pre_sat_skeleton_boundary`],
@@ -2858,7 +2945,9 @@ fn theory_model(
 /// same Boolean skeleton. Re-lowering that pure-Boolean formula through the
 /// general BV backend every round spends most of the budget on Bool→AIG→CNF
 /// rebuilding once the learned clause set grows. This small encoder builds a
-/// Tseitin CNF for the skeleton once, keeps `BatSat` warm, and adds each learned
+/// Tseitin CNF for the skeleton once, keeps the warm [`IncrementalSat`] — the
+/// native CDCL core since ADR-1703, `BatSat` before it — warm across rounds, and
+/// adds each learned
 /// theory clause incrementally. SAT candidates still flow through
 /// `finish_sat`, which reconstructs arithmetic models and replays the original
 /// assertions before returning `sat`.
@@ -4956,10 +5045,107 @@ mod tests {
             MAX_PRE_SAT_ARITH_ATOMS + 1,
             MAX_MODERATE_PRE_SAT_CNF_VARS + 1,
         ));
+        // The `QF_LRA` monotonicity control `windowreal-no_t_deadlock-17.smt2`.
         assert!(!exceeds_pre_sat_skeleton_boundary(1_217, 6_526));
-        assert!(exceeds_pre_sat_skeleton_boundary(1_447, 4_733));
-        assert!(exceeds_pre_sat_skeleton_boundary(1_411, 6_774));
+        // Still refused: 31,944 CNF variables is 1.9x the measured envelope in
+        // a dimension nobody has measured above. This is the assertion that
+        // makes the envelope a bound rather than a formality.
         assert!(exceeds_pre_sat_skeleton_boundary(1_084, 31_944));
+
+        // ADMITTED SINCE 2026-09-08, and these two assertions were INVERTED by
+        // the re-derivation above. They are the historical `BatSat`
+        // allocation-abort controls -- `pursuit-safety-16.smt2` (1,447 / 4,733)
+        // and the 1,411-atom case -- and their failure mode was BatSat's
+        // allocator, which ADR-1703 took off this path. Measured against the
+        // native core at 2.0x to 6.8x these atom counts, peak RSS is 37-71 MiB;
+        // no envelope can admit that measured-safe region and still exclude
+        // these strictly smaller skeletons, so inverting them is the consistent
+        // conclusion rather than a convenience.
+        assert!(!exceeds_pre_sat_skeleton_boundary(1_447, 4_733));
+        assert!(!exceeds_pre_sat_skeleton_boundary(1_411, 6_774));
+
+        // The four measured-safe points the 2026-09-08 re-derivation rests on.
+        // Written as the counts actually observed, so this test fails if the
+        // envelope is ever narrowed back under them without re-measuring.
+        for (atoms, cnf_vars) in [
+            (9_846, 12_155),
+            (3_992, 9_205),
+            (3_076, 6_365),
+            (2_850, 6_533),
+        ] {
+            assert!(
+                !exceeds_pre_sat_skeleton_boundary(atoms, cnf_vars),
+                "measured safe at {atoms} atoms / {cnf_vars} CNF vars \
+                 (peak RSS 35-72 MiB against an 8 GiB ceiling), so it must be admitted"
+            );
+        }
+    }
+
+    /// Crossing the rectangle must be ATTRIBUTABLE, not merely fatal.
+    ///
+    /// The decline already carried an `UnknownReason` naming the boundary, but
+    /// only on the path that RETURNS it — a query that crosses here and is then
+    /// rescued by `oversized_admission_probe` left no record at all, so "how
+    /// many files did this bound cost us?" could not be answered from a run's
+    /// own output. This drives the REAL decision function, not `note_crossed`
+    /// directly, so it fails if the wiring is removed rather than only if the
+    /// mechanism breaks.
+    #[test]
+    fn crossing_the_pre_sat_rectangle_is_recorded_with_its_numbers() {
+        // A pair that genuinely crosses the 2026-09-08 envelope: 31,944 CNF
+        // variables is 1.9x it. The pre-2026-09-08 draft of this test used
+        // (1_447, 4_733) -- the historical BatSat control -- which the
+        // re-derivation admits, so it asserted a crossing that no longer
+        // happens and died the moment the envelope moved. That is the test
+        // working, and the replacement is a pair the boundary test above
+        // independently asserts still declines.
+        let atoms = 1_084;
+        let cnf_vars = 31_944;
+
+        // The opt-in half FIRST, on this test's own fresh thread: the recorder
+        // is a thread-local, so an empty start is a real precondition and not
+        // an assumption. Ordering matters -- checking it AFTER a guard would
+        // pass vacuously, because a guard clears on `enable` rather than on
+        // drop and the set it captured is still readable afterwards.
+        assert!(
+            crate::config_registry::crossings().is_empty(),
+            "this thread must start with nothing recorded"
+        );
+        assert!(exceeds_pre_sat_skeleton_boundary(atoms, cnf_vars));
+        assert!(
+            crate::config_registry::crossings().is_empty(),
+            "recording must be opt-in: a crossing outside a guard recorded anyway"
+        );
+
+        let (crossed, admitted) = {
+            let _g = crate::config_registry::ConfigTraceGuard::enable();
+            assert!(exceeds_pre_sat_skeleton_boundary(atoms, cnf_vars));
+            let crossed = crate::config_registry::crossings();
+            // A query INSIDE the envelope must record nothing, or the field
+            // says "was consulted" and not "decided the route".
+            let _ = exceeds_pre_sat_skeleton_boundary(8, 8);
+            (crossed, crate::config_registry::crossings())
+        };
+        assert_eq!(
+            crossed,
+            vec![
+                (
+                    "crates/axeyum-solver/src/dpll_lia.rs::MAX_PRE_SAT_ARITH_ATOMS",
+                    atoms as u64,
+                    MAX_PRE_SAT_ARITH_ATOMS as u64,
+                ),
+                (
+                    "crates/axeyum-solver/src/dpll_lia.rs::MAX_PRE_SAT_CNF_VARS",
+                    cnf_vars as u64,
+                    MAX_PRE_SAT_CNF_VARS as u64,
+                ),
+            ],
+            "the crossing must name both dimensions with the observed counts"
+        );
+        assert_eq!(
+            admitted, crossed,
+            "an admitted skeleton must add no crossing"
+        );
     }
 
     #[test]

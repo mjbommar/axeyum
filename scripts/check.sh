@@ -1569,6 +1569,23 @@ step merge-hygiene ./scripts/check-merge-hygiene.sh
 # script against a throwaway git tree via `AXEYUM_MERGE_HYGIENE_ROOT`; every
 # guard is mutation-verified (`mutation_controls.py merge-hygiene`).
 step merge-hygiene-controls python3 -m unittest scripts.tests.test_check_merge_hygiene
+# The configuration surface's two dating checks, ~2s each, plus their controls.
+# Neither was run by anything when it landed (ADR-1762 left the wiring to the
+# lanes owning these gates), and `check-control-registration.sh` was ALREADY RED
+# on the staleness control for that reason.
+#
+# The two ask DIFFERENT questions and neither subsumes the other:
+#   staleness  -- did the code an entry `rests_on` CHANGE after its measurement?
+#                 (needs history and a date)
+#   basis      -- does the thing an entry's justification NAMES still EXIST?
+#                 (needs only the tree as it is now)
+# `dpll_lia::MAX_PRE_SAT_ARITH_ATOMS` cited BatSat's allocator for 28 days after
+# ADR-1703 retired it, with not one line of `dpll_lia.rs` changed -- invisible to
+# the first question, caught by the second.
+step config-registry-staleness python3 scripts/check-config-registry-staleness.py
+step config-registry-staleness-controls ./scripts/tests/test-config-registry-staleness-control.sh
+step admission-limit-basis python3 scripts/check-admission-limit-basis.py
+step admission-limit-basis-controls ./scripts/tests/test-admission-limit-basis-control.sh
 step plan-authority python3 scripts/check-plan-authority.py
 step links         ./scripts/check-links.sh
 # ADR numbers are a shared append point ACROSS CHECKOUTS, which `adr-index`
