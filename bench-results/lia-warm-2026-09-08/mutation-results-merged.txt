@@ -1,102 +1,106 @@
 === BASELINE (unmutated)
 test lra::warm::tests::a_retracted_literal_leaves_no_trace_in_the_next_verdict ... ok
 test lra::warm::tests::a_warm_check_is_still_an_offline_call ... ok
+test lra::warm::tests::an_evicted_literal_cache_changes_nothing_but_the_work ... ok
 test lra::warm::tests::an_unregistered_literal_key_is_an_error_not_an_omission ... ok
 test lra::warm::tests::policy_off_rebuilds_every_check ... ok
 test lra::warm::tests::the_default_policy_keeps_the_rational_filter ... ok
 test lra::warm::tests::the_warm_group_can_be_switched_off_without_silencing_the_offline_one ... ok
 test lia_online::tests::dropping_the_rational_filter_does_not_change_a_verdict ... ok
 test lra::warm::tests::warm_counters_attribute_every_check ... ok
-test lra::warm::tests::warm_assembles_the_same_system_the_cold_path_builds ... ok
-test lia_online::tests::warm_theory_answers_exactly_what_a_cold_theory_answers ... ok
 test lia_online::tests::the_shipped_warm_theory_answers_exactly_what_a_cold_theory_answers ... ok
+test lia_online::tests::warm_theory_answers_exactly_what_a_cold_theory_answers ... ok
+test lra::warm::tests::warm_assembles_the_same_system_the_cold_path_builds ... ok
 test lra::warm::tests::warm_verdicts_agree_with_the_cold_offline_decider ... ok
 test lra::warm::tests::warm_verdicts_survive_arbitrary_retraction_sequences ... ok
-test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 1548 filtered out; finished in 0.12s
+test result: ok. 14 passed; 0 failed; 0 ignored; 0 measured; 1563 filtered out; finished in 0.12s
 ARM_EXIT=0
 === MUTANT stale-columns
 test lra::warm::tests::a_retracted_literal_leaves_no_trace_in_the_next_verdict ... FAILED
-test lra::warm::tests::a_warm_check_is_still_an_offline_call ... ok
 test lia_online::tests::warm_theory_answers_exactly_what_a_cold_theory_answers ... FAILED
+test lra::warm::tests::a_warm_check_is_still_an_offline_call ... ok
 test lra::warm::tests::an_unregistered_literal_key_is_an_error_not_an_omission ... ok
-test lra::warm::tests::the_default_policy_keeps_the_rational_filter ... ok
-test lia_online::tests::the_shipped_warm_theory_answers_exactly_what_a_cold_theory_answers ... FAILED
 test lra::warm::tests::policy_off_rebuilds_every_check ... ok
+test lra::warm::tests::the_default_policy_keeps_the_rational_filter ... ok
 test lra::warm::tests::the_warm_group_can_be_switched_off_without_silencing_the_offline_one ... ok
 test lra::warm::tests::warm_assembles_the_same_system_the_cold_path_builds ... FAILED
-test lra::warm::tests::warm_verdicts_survive_arbitrary_retraction_sequences ... FAILED
+test lra::warm::tests::an_evicted_literal_cache_changes_nothing_but_the_work ... FAILED
 test lra::warm::tests::warm_counters_attribute_every_check ... ok
+test lra::warm::tests::warm_verdicts_survive_arbitrary_retraction_sequences ... FAILED
+test lia_online::tests::the_shipped_warm_theory_answers_exactly_what_a_cold_theory_answers ... FAILED
 test lra::warm::tests::warm_verdicts_agree_with_the_cold_offline_decider ... FAILED
 test lia_online::tests::dropping_the_rational_filter_does_not_change_a_verdict ... ok
-test result: FAILED. 7 passed; 6 failed; 0 ignored; 0 measured; 1548 filtered out; finished in 0.03s
+test result: FAILED. 7 passed; 7 failed; 0 ignored; 0 measured; 1563 filtered out; finished in 0.04s
 error: test failed, to rerun pass `-p axeyum-solver --lib`
 ARM_EXIT=101
 === MUTANT unchecked-prefix
 test lra::warm::tests::a_retracted_literal_leaves_no_trace_in_the_next_verdict ... FAILED
 test lra::warm::tests::a_warm_check_is_still_an_offline_call ... ok
-test lra::warm::tests::an_unregistered_literal_key_is_an_error_not_an_omission ... ok
 test lia_online::tests::warm_theory_answers_exactly_what_a_cold_theory_answers ... FAILED
-test lra::warm::tests::the_default_policy_keeps_the_rational_filter ... ok
+test lra::warm::tests::an_unregistered_literal_key_is_an_error_not_an_omission ... ok
 test lra::warm::tests::policy_off_rebuilds_every_check ... ok
+test lra::warm::tests::the_default_policy_keeps_the_rational_filter ... ok
 test lra::warm::tests::the_warm_group_can_be_switched_off_without_silencing_the_offline_one ... ok
 test lra::warm::tests::warm_assembles_the_same_system_the_cold_path_builds ... FAILED
-test lra::warm::tests::warm_counters_attribute_every_check ... ok
-test lra::warm::tests::warm_verdicts_agree_with_the_cold_offline_decider ... FAILED
-test lra::warm::tests::warm_verdicts_survive_arbitrary_retraction_sequences ... FAILED
 test lia_online::tests::the_shipped_warm_theory_answers_exactly_what_a_cold_theory_answers ... FAILED
+test lra::warm::tests::warm_counters_attribute_every_check ... ok
+test lra::warm::tests::warm_verdicts_survive_arbitrary_retraction_sequences ... FAILED
+test lra::warm::tests::warm_verdicts_agree_with_the_cold_offline_decider ... FAILED
+test lra::warm::tests::an_evicted_literal_cache_changes_nothing_but_the_work ... ok
 test lia_online::tests::dropping_the_rational_filter_does_not_change_a_verdict ... ok
-test result: FAILED. 7 passed; 6 failed; 0 ignored; 0 measured; 1548 filtered out; finished in 0.03s
+test result: FAILED. 8 passed; 6 failed; 0 ignored; 0 measured; 1563 filtered out; finished in 0.03s
 error: test failed, to rerun pass `-p axeyum-solver --lib`
 ARM_EXIT=101
 === MUTANT stale-constraints
 test lra::warm::tests::a_retracted_literal_leaves_no_trace_in_the_next_verdict ... FAILED
 test lra::warm::tests::a_warm_check_is_still_an_offline_call ... ok
-test lra::warm::tests::an_unregistered_literal_key_is_an_error_not_an_omission ... ok
 test lia_online::tests::warm_theory_answers_exactly_what_a_cold_theory_answers ... FAILED
-test lra::warm::tests::the_default_policy_keeps_the_rational_filter ... ok
+test lra::warm::tests::an_unregistered_literal_key_is_an_error_not_an_omission ... ok
 test lra::warm::tests::policy_off_rebuilds_every_check ... ok
+test lra::warm::tests::the_default_policy_keeps_the_rational_filter ... ok
 test lra::warm::tests::the_warm_group_can_be_switched_off_without_silencing_the_offline_one ... ok
 test lra::warm::tests::warm_assembles_the_same_system_the_cold_path_builds ... FAILED
 test lra::warm::tests::warm_counters_attribute_every_check ... ok
 test lra::warm::tests::warm_verdicts_agree_with_the_cold_offline_decider ... FAILED
 test lra::warm::tests::warm_verdicts_survive_arbitrary_retraction_sequences ... FAILED
 test lia_online::tests::the_shipped_warm_theory_answers_exactly_what_a_cold_theory_answers ... FAILED
+test lra::warm::tests::an_evicted_literal_cache_changes_nothing_but_the_work ... ok
 test lia_online::tests::dropping_the_rational_filter_does_not_change_a_verdict ... ok
-test result: FAILED. 7 passed; 6 failed; 0 ignored; 0 measured; 1548 filtered out; finished in 0.03s
+test result: FAILED. 8 passed; 6 failed; 0 ignored; 0 measured; 1563 filtered out; finished in 0.04s
 error: test failed, to rerun pass `-p axeyum-solver --lib`
 ARM_EXIT=101
-=== no-tightening: ANCHOR MISS
-=== MUTANT sorted-columns
+=== MUTANT no-tightening
 test lra::warm::tests::a_retracted_literal_leaves_no_trace_in_the_next_verdict ... ok
 test lra::warm::tests::a_warm_check_is_still_an_offline_call ... ok
+test lia_online::tests::dropping_the_rational_filter_does_not_change_a_verdict ... ok
 test lra::warm::tests::an_unregistered_literal_key_is_an_error_not_an_omission ... ok
-test lra::warm::tests::policy_off_rebuilds_every_check ... ok
+test lra::warm::tests::an_evicted_literal_cache_changes_nothing_but_the_work ... ok
 test lra::warm::tests::the_default_policy_keeps_the_rational_filter ... ok
+test lra::warm::tests::policy_off_rebuilds_every_check ... ok
 test lra::warm::tests::the_warm_group_can_be_switched_off_without_silencing_the_offline_one ... ok
 test lra::warm::tests::warm_assembles_the_same_system_the_cold_path_builds ... FAILED
 test lra::warm::tests::warm_counters_attribute_every_check ... ok
-test lia_online::tests::dropping_the_rational_filter_does_not_change_a_verdict ... ok
-test lra::warm::tests::warm_verdicts_survive_arbitrary_retraction_sequences ... FAILED
-test lia_online::tests::warm_theory_answers_exactly_what_a_cold_theory_answers ... ok
-test lra::warm::tests::warm_verdicts_agree_with_the_cold_offline_decider ... ok
-test lia_online::tests::the_shipped_warm_theory_answers_exactly_what_a_cold_theory_answers ... ok
-test result: FAILED. 11 passed; 2 failed; 0 ignored; 0 measured; 1548 filtered out; finished in 0.07s
-error: test failed, to rerun pass `-p axeyum-solver --lib`
-ARM_EXIT=101
-=== done
-=== MUTANT no-tightening (merged code)
-test lra::warm::tests::a_retracted_literal_leaves_no_trace_in_the_next_verdict ... ok
-test lra::warm::tests::a_warm_check_is_still_an_offline_call ... ok
-test lra::warm::tests::an_unregistered_literal_key_is_an_error_not_an_omission ... ok
-test lra::warm::tests::policy_off_rebuilds_every_check ... ok
-test lra::warm::tests::the_default_policy_keeps_the_rational_filter ... ok
-test lra::warm::tests::the_warm_group_can_be_switched_off_without_silencing_the_offline_one ... ok
-test lra::warm::tests::warm_assembles_the_same_system_the_cold_path_builds ... FAILED
-test lra::warm::tests::warm_counters_attribute_every_check ... ok
-test lia_online::tests::dropping_the_rational_filter_does_not_change_a_verdict ... ok
 test lra::warm::tests::warm_verdicts_survive_arbitrary_retraction_sequences ... FAILED
 test lia_online::tests::the_shipped_warm_theory_answers_exactly_what_a_cold_theory_answers ... ok
 test lia_online::tests::warm_theory_answers_exactly_what_a_cold_theory_answers has been running for over 60 seconds
 test lra::warm::tests::warm_verdicts_agree_with_the_cold_offline_decider has been running for over 60 seconds
 ARM_EXIT=124
-=== restored
+=== MUTANT sorted-columns
+test lra::warm::tests::a_retracted_literal_leaves_no_trace_in_the_next_verdict ... ok
+test lra::warm::tests::a_warm_check_is_still_an_offline_call ... ok
+test lra::warm::tests::an_evicted_literal_cache_changes_nothing_but_the_work ... ok
+test lra::warm::tests::an_unregistered_literal_key_is_an_error_not_an_omission ... ok
+test lra::warm::tests::policy_off_rebuilds_every_check ... ok
+test lra::warm::tests::the_default_policy_keeps_the_rational_filter ... ok
+test lra::warm::tests::the_warm_group_can_be_switched_off_without_silencing_the_offline_one ... ok
+test lra::warm::tests::warm_assembles_the_same_system_the_cold_path_builds ... FAILED
+test lra::warm::tests::warm_counters_attribute_every_check ... ok
+test lia_online::tests::dropping_the_rational_filter_does_not_change_a_verdict ... ok
+test lra::warm::tests::warm_verdicts_survive_arbitrary_retraction_sequences ... FAILED
+test lia_online::tests::the_shipped_warm_theory_answers_exactly_what_a_cold_theory_answers ... ok
+test lia_online::tests::warm_theory_answers_exactly_what_a_cold_theory_answers ... ok
+test lra::warm::tests::warm_verdicts_agree_with_the_cold_offline_decider ... ok
+test result: FAILED. 12 passed; 2 failed; 0 ignored; 0 measured; 1563 filtered out; finished in 0.08s
+error: test failed, to rerun pass `-p axeyum-solver --lib`
+ARM_EXIT=101
+=== done
