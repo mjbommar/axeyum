@@ -1,0 +1,108 @@
+#!/usr/bin/env bash
+# Runs `smtcomp_cli --trace-json` over a committed parity list and appends every
+# run's span log to one JSON Lines file.
+#
+# One file at a time, deliberately. The point of a span log is per-stage timing,
+# and a host running sixteen solves at once measures the memory bus. A sweep
+# that finishes four times faster and cannot be compared against the next one is
+# not a saving.
+#
+# Usage:
+#   scripts/span-log-sweep.sh <division> <out.jsonl> [limit] [timeout-ms]
+#
+# Environment:
+#   AXEYUM_SPAN_BIN   the binary (default target/release/examples/smtcomp_cli)
+#   AXEYUM_SPAN_LIST  the file list (default bench-results/parity-lists/<div>.txt)
+#
+# The host and the solver commit are stamped into every run header, because a
+# span log that does not say which machine and which build produced it cannot be
+# compared with the next one and will be anyway.
+set -euo pipefail
+
+division="${1:?usage: span-log-sweep.sh <division> <out.jsonl> [limit] [timeout-ms]}"
+out="${2:?usage: span-log-sweep.sh <division> <out.jsonl> [limit] [timeout-ms]}"
+limit="${3:-60}"
+timeout_ms="${4:-24000}"
+
+repo="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+bin="${AXEYUM_SPAN_BIN:-$repo/target/release/examples/smtcomp_cli}"
+list="${AXEYUM_SPAN_LIST:-$repo/bench-results/parity-lists/$division.txt}"
+
+[ -x "$bin" ] || { echo "no binary at $bin" >&2; exit 2; }
+[ -r "$list" ] || { echo "no list at $list" >&2; exit 2; }
+
+# Both are OVERRIDABLE, and the git read is allowed to fail. A sweep is
+# routinely run from a directory that is not the checkout -- a copied binary on
+# an idle host is the whole point -- and under `set -e` an unguarded
+# `git rev-parse` there kills the sweep before the first file, which is exactly
+# what happened on the first attempt: two hosts reported ALL-DONE in one second
+# with no runs.
+AXEYUM_TRACE_HOST="${AXEYUM_TRACE_HOST:-$(hostname -s)}"
+AXEYUM_TRACE_COMMIT="${AXEYUM_TRACE_COMMIT:-$(git -C "$repo" rev-parse --short HEAD 2>/dev/null || echo unknown)}"
+export AXEYUM_TRACE_HOST AXEYUM_TRACE_COMMIT
+
+# Truncate once, here, rather than in the binary: the binary APPENDS so that a
+# whole sweep lands in one file, which means exactly one place may clear it.
+: > "$out"
+
+count=0
+while IFS= read -r file; do
+  [ -n "$file" ] || continue
+  [ "$count" -lt "$limit" ] || break
+  count=$((count + 1))
+  if [ ! -r "$file" ]; then
+    echo "missing: $file" >&2
+    continue
+  fi
+  # The outer `timeout` is a backstop for a process the internal watchdog cannot
+  # reach (an abort inside ingest, say). It is generous relative to the internal
+  # budget on purpose: if it ever fires it means the internal watchdog did not,
+  # and that is a finding, not a run to quietly discard.
+  outer=$(( (timeout_ms / 1000) + 30 ))
+  status=0
+  timeout -k 5 "${outer}s" "$bin" "$file" \
+    --timeout-ms "$timeout_ms" \
+    --memory-limit-mb 8192 \
+    --trace-json "$out" >/dev/null 2>&1 || status=$?
+  if [ "$status" -ne 0 ]; then
+    # The process never got to write a span log, so nothing about this file
+    # would reach the log at all -- and a file MISSING from a sweep is read
+    # downstream as a file that was not swept. Measured 2026-09-08: three
+    # QF_LRA files were killed by the KERNEL at 26 GB RSS in 18 s, under a
+    # `--memory-limit-mb 8192` that did not bind, and each simply vanished from
+    # the output. So the harness writes the row the binary could not.
+    #
+    # `wall_ns` is null rather than the outer budget: the run was killed from
+    # outside and its own clock was never read, so any number here would be
+    # invented. Exit 137 is SIGKILL, which on this host has meant the OOM killer
+    # every time it has been seen.
+    python3 - "$file" "$division" "$status" "$AXEYUM_TRACE_HOST" "$AXEYUM_TRACE_COMMIT" \
+      "$timeout_ms" >> "$out" <<'PYEOF'
+import json, sys
+path, division, status, host, commit, timeout_ms = sys.argv[1:7]
+print(json.dumps({
+    "kind": "run",
+    "schema_version": 1,
+    "file": path,
+    "division": division,
+    "verdict": "no-log",
+    "wall_ns": None,
+    "budget_ns": int(timeout_ms) * 1_000_000,
+    "termination": "harness-kill",
+    "host": host,
+    "solver_commit": commit,
+    "config": None,
+    "instrumented": False,
+    "instruments": [],
+    "work_unit": None,
+    "work": None,
+    "time_basis": "none",
+    "spans": 0,
+    "harness_exit": int(status),
+}, separators=(",", ":")))
+PYEOF
+    echo "harness-kill exit=$status: $file" >&2
+  fi
+done < "$list"
+
+echo "$division: $count files -> $out ($(wc -l < "$out") span rows)" >&2

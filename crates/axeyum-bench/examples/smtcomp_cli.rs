@@ -300,6 +300,33 @@
 //! Same off-by-default discipline: with no `--trace` no board is installed and
 //! every mirror site is one thread-local `bool` read.
 
+//! # The span log (`AXEYUM_TRACE_JSON=<path>` / `--trace-json <path>`), OFF by default
+//!
+//! Writes one solve to `<path>` as JSON Lines — a run header, then one object
+//! per span — for a consumer that wants the structure rather than the prose.
+//! See [`axeyum_solver::span_log`] for the format and the rules it enforces;
+//! the short version is that a solve is a LADDER of alternatives with real
+//! nesting inside each rung and collapsed refinement loops under that, so it is
+//! emitted as flat rows with an `edge_type` and never as a call tree.
+//!
+//! It arms exactly the instruments `--trace` arms and nothing else. Without
+//! `--trace` the human `;` lines stay suppressed; with both, the set of `;`
+//! lines is unchanged, so no existing consumer of this binary's stdout sees a
+//! difference. The log NEVER goes to stdout: the competition interface promises
+//! the verdict is the last line.
+//!
+//! The file is opened for APPEND, so a whole sweep lands in one log and exactly
+//! one place (the sweep script) may clear it.
+//!
+//! Two environment variables are read only for the run header, because the
+//! binary cannot know either: `AXEYUM_TRACE_HOST` and `AXEYUM_TRACE_COMMIT`. A
+//! host name read from the machine says which box ran it but not which
+//! checkout, and a commit baked in at build time would be wrong for a binary
+//! copied to another host — which is how this is used. Absent, both are `null`.
+//!
+//! `scripts/span-log-sweep.sh` runs a committed parity list through it one file
+//! at a time and stamps both.
+
 use std::process::ExitCode;
 use std::sync::{Arc, mpsc};
 use std::time::{Duration, Instant};
@@ -309,14 +336,18 @@ use axeyum_solver::{
     AbvStats, AbvStatsGuard, BvLayerStatsGuard, CheckProgress, CheckResult, CheckingProgress,
     ConfigTraceGuard, DlOnlineStatsGuard, Evidence, EvidenceCheck, EvidenceReport, FrontDoorStats,
     FrontDoorStatsGuard, LazySmtCountersGuard, LiaCountersGuard, LiveInstruments, ProofProgress,
-    RouteAttributionGuard, RouteTrace, Sampled, SolverConfig, UfArithOverboundStats,
-    UfArithOverboundStatsGuard, config_trace_line, install_live_instruments, instrument,
-    last_abv_stats, last_bv_layer_stats, last_dl_online_stats, last_front_door_stats,
-    last_lazy_smt_counters, last_lia_counters, last_route_attribution,
-    last_uf_arith_overbound_stats, live_bv_layer_stats, live_config_trace_line,
-    live_lazy_smt_counters, live_lia_counters, live_theory_layer_stats, produce_evidence_smtlib,
-    solve_smtlib,
+    RouteAttributionGuard, RouteTrace, Sampled, SolverConfig, SpanLog, SpanLogInputs, Termination,
+    UfArithOverboundStats, UfArithOverboundStatsGuard, config_trace_line, division_from_path,
+    install_live_instruments, instrument, last_abv_stats, last_bv_layer_stats,
+    last_dl_online_stats, last_front_door_stats, last_lazy_smt_counters, last_lia_counters,
+    last_route_attribution, last_uf_arith_overbound_stats, live_bv_layer_stats,
+    live_config_trace_line, live_lazy_smt_counters, live_lia_counters, live_theory_layer_stats,
+    produce_evidence_smtlib, solve_smtlib,
 };
+// `Reading` under its own name: `axeyum_solver` also exports a `GroupReading`
+// and this file already uses a local `reading` helper, so the import is
+// disambiguated at the boundary rather than at each of its eight use sites.
+use axeyum_solver::Reading as SpanReading;
 
 /// Formats one `axeyum_cnf::ProofSearchProgress` snapshot as the `;`-prefixed
 /// progress line documented in the module header. `;` is the SMT-LIB comment
@@ -957,6 +988,163 @@ fn watchdog_trace_lines(trace_mode: bool, board: &LiveInstruments, reason: &str)
     lines
 }
 
+/// The span log to write, or a one-line header saying nothing was instrumented.
+///
+/// The `--evidence` path returns before any instrument guard is armed, so it
+/// produces no spans. An EMPTY file for that run would be read downstream as
+/// "this file took no time", which is the exact absence-as-zero this format
+/// exists to refuse — so the run header is written with `instrumented: false`
+/// and the gallery draws it as unmeasured.
+fn span_log_or_uninstrumented(lines: Vec<String>, path: &str, verdict: &str) -> Vec<String> {
+    if !lines.is_empty() {
+        return lines;
+    }
+    SpanLog::build(&SpanLogInputs {
+        file: path,
+        division: division_from_path(path),
+        verdict,
+        ..SpanLogInputs::default()
+    })
+    .to_jsonl()
+}
+
+/// Writes the span log to `path`, appending. Returns whether anything was
+/// written.
+///
+/// # Why an APPEND and why a failure is loud
+///
+/// A sweep runs one process per file and points every one of them at the same
+/// log, so a truncating open would leave a 1,700-file sweep holding its last
+/// file. And a log that silently fails to write is the shape of defect this
+/// whole format exists to refuse: a consumer would read the missing file as
+/// "not instrumented" when it was in fact measured and dropped. A write failure
+/// goes to stderr, never to stdout, where it cannot disturb the verdict.
+fn write_span_log(path: &str, lines: &[String]) {
+    use std::io::Write as _;
+    let opened = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(path);
+    match opened {
+        Ok(mut file) => {
+            let mut body = String::new();
+            for line in lines {
+                body.push_str(line);
+                body.push('\n');
+            }
+            if let Err(e) = file.write_all(body.as_bytes()) {
+                eprintln!("span-log write failed for {path}: {e}");
+            }
+        }
+        Err(e) => eprintln!("span-log open failed for {path}: {e}"),
+    }
+}
+
+/// The run-level facts a span log needs that no instrument carries.
+///
+/// A struct rather than six positional arguments because five of them are
+/// `Option<&str>`/`u64` and a transposed pair would compile.
+struct SpanRunFacts<'a> {
+    file: &'a str,
+    wall_ns: u64,
+    budget_ns: Option<u64>,
+    host: Option<&'a str>,
+    commit: Option<&'a str>,
+    termination: Termination,
+}
+
+/// The span log a watchdog kill writes: whatever the instruments mirrored onto
+/// `board` before the kill, every one of them marked with the provenance the
+/// board recorded.
+///
+/// # Why this is a second builder and not the worker's
+///
+/// The worker's builder reads thread-local snapshots, which on a killed run do
+/// not exist — that is the defect `axeyum_solver::live_instruments` was added
+/// for. This one reads the shared board, so every reading it produces is
+/// `in-flight` unless the instrument published at a stage boundary before the
+/// kill, and each span it emits carries `complete: false` accordingly.
+///
+/// The **open segment** is the reason this path matters at all. `bound_by`
+/// maximises over recorded attempts and an attempt is recorded when it
+/// finishes, so on a killed run the route consuming the budget contributed
+/// nothing to that comparison; the open span carries the unaccounted time and
+/// closes at `null`.
+fn watchdog_span_lines(
+    want: bool,
+    board: &LiveInstruments,
+    facts: &SpanRunFacts<'_>,
+) -> Vec<String> {
+    if !want {
+        return Vec::new();
+    }
+    let route = board.sample::<RouteTrace>(instrument::ROUTE);
+    let open_segment_ns = route
+        .as_ref()
+        .filter(|r| !r.value.is_empty())
+        .map(|r| u64::try_from(r.value.open_segment().as_nanos()).unwrap_or(u64::MAX));
+    let bv = live_bv_layer_stats(board);
+    let bv_stage = bv.as_ref().and_then(|b| {
+        b.value.stage.map(|stage| {
+            (
+                stage.name(),
+                stage.pending().iter().map(|s| s.name()).collect::<Vec<_>>(),
+            )
+        })
+    });
+    let log = SpanLog::build(&SpanLogInputs {
+        file: facts.file,
+        division: division_from_path(facts.file),
+        verdict: "unknown",
+        wall_ns: facts.wall_ns,
+        budget_ns: facts.budget_ns,
+        termination: facts.termination,
+        host: facts.host,
+        solver_commit: facts.commit,
+        config_line: live_config_trace_line(board).map(|c| SpanReading {
+            value: c.value,
+            sampled: c.sampled,
+        }),
+        route: route.map(|r| SpanReading {
+            value: r.value,
+            sampled: r.sampled,
+        }),
+        open_segment_ns,
+        front_door_parse: board
+            .sample::<FrontDoorStats>(instrument::FRONT_DOOR)
+            .map(|f| SpanReading {
+                value: f.value.parse,
+                sampled: f.sampled,
+            }),
+        dl_online: board
+            .sample::<(Duration, u64)>(instrument::DL_ONLINE)
+            .map(|d| SpanReading {
+                value: d.value,
+                sampled: d.sampled,
+            }),
+        bv: bv.as_ref().and_then(|b| {
+            b.value.stats.map(|stats| SpanReading {
+                value: stats,
+                sampled: b.sampled,
+            })
+        }),
+        bv_stage,
+        theory: live_theory_layer_stats(board).map(|t| SpanReading {
+            value: t.value,
+            sampled: t.sampled,
+        }),
+        lazy: live_lazy_smt_counters(board).map(|l| SpanReading {
+            value: l.value,
+            sampled: l.sampled,
+        }),
+        lia: live_lia_counters(board).map(|l| SpanReading {
+            value: l.value,
+            sampled: l.sampled,
+        }),
+    });
+    log.to_jsonl()
+}
+
 /// Installs the progress sink (see the module header) on `config` when
 /// `progress_mode` is set, returning the (possibly updated) config alongside
 /// the receiver end. `progress_rx` outlives the `solve` closure built from the
@@ -1264,6 +1452,11 @@ struct CliArgs {
     evidence_mode: bool,
     progress_mode: bool,
     trace_mode: bool,
+    /// Where to write the machine-readable span log (`--trace-json PATH`), if
+    /// anywhere. NEVER stdout: the competition interface promises the verdict is
+    /// the last line, and a JSON stream on the same channel would be a second
+    /// consumer's problem forever.
+    trace_json: Option<String>,
 }
 
 fn parse_cli_args() -> CliArgs {
@@ -1278,6 +1471,9 @@ fn parse_cli_args() -> CliArgs {
         evidence_mode: std::env::var("AXEYUM_EVIDENCE").is_ok_and(|v| v == "1"),
         progress_mode: std::env::var("AXEYUM_PROOF_PROGRESS").is_ok_and(|v| v == "1"),
         trace_mode: std::env::var("AXEYUM_TRACE").is_ok_and(|v| v == "1"),
+        trace_json: std::env::var("AXEYUM_TRACE_JSON")
+            .ok()
+            .filter(|v| !v.is_empty()),
     };
     let mut rest = std::env::args().skip(1);
     while let Some(arg) = rest.next() {
@@ -1291,6 +1487,9 @@ fn parse_cli_args() -> CliArgs {
             "--evidence" => args.evidence_mode = true,
             "--progress" => args.progress_mode = true,
             "--trace" => args.trace_mode = true,
+            "--trace-json" => {
+                args.trace_json = rest.next();
+            }
             other if other.starts_with("--") => {
                 // Ignore unknown flags: the competition passes only the file.
             }
@@ -1313,7 +1512,14 @@ fn main() -> ExitCode {
         evidence_mode,
         progress_mode,
         trace_mode,
+        trace_json,
     } = parse_cli_args();
+
+    // `--trace-json` arms the same instruments `--trace` does, and nothing else:
+    // the human `;` lines still print if and only if `--trace` was passed, so a
+    // consumer of the existing output sees byte-identical text either way.
+    let instruments_on = trace_mode || trace_json.is_some();
+    let run_started = Instant::now();
 
     let Some(path) = path else {
         eprintln!("usage: smtcomp_cli <benchmark.smt2> [--timeout-ms N] [--memory-limit-mb N]");
@@ -1414,13 +1620,28 @@ fn main() -> ExitCode {
     // happen on the thread that will do the publishing.
     let board = LiveInstruments::new();
     let worker_board = Arc::clone(&board);
-    let solve = move || -> (&'static str, Option<String>, Vec<String>) {
+    // Captured for the span log the worker builds on its own thread, where the
+    // thread-local instrument snapshots are the COMPLETE ones. The watchdog path
+    // cannot use them (that is the whole reason the shared board exists) and
+    // builds its own from the board instead.
+    let want_span_log = trace_json.is_some();
+    let span_file = path.clone();
+    let budget_ns_for_log = timeout_ms.map(|ms| ms.saturating_mul(1_000_000));
+    // Set by the sweep script, because the binary cannot know either: a host
+    // name read from `gethostname` says which machine ran it but not which
+    // checkout, and a commit baked in at build time would be wrong for a binary
+    // copied between hosts. Absent is `null`, never a guess.
+    let host_for_log = std::env::var("AXEYUM_TRACE_HOST").ok();
+    let commit_for_log = std::env::var("AXEYUM_TRACE_COMMIT").ok();
+    let worker_host = host_for_log.clone();
+    let worker_commit = commit_for_log.clone();
+    let solve = move || -> (&'static str, Option<String>, Vec<String>, Vec<String>) {
         // The seventh lever on the same `--trace` flag, and the only one that
         // is not itself an instrument: it gives the other six somewhere to
         // publish that is not this thread's thread-local storage. Off without
         // `--trace`, so a default run installs nothing and every publish site
         // returns on one `bool` read.
-        let _live_board = trace_mode.then(|| install_live_instruments(&worker_board));
+        let _live_board = instruments_on.then(|| install_live_instruments(&worker_board));
         if evidence_mode {
             let started = Instant::now();
             // A parse or solver error is `unknown` here too — and an evidence run
@@ -1429,7 +1650,11 @@ fn main() -> ExitCode {
                 Ok(report) => {
                     let (verdict, line) =
                         evidence_report_line(&input, &report, started.elapsed().as_millis());
-                    (verdict, Some(line), Vec::new())
+                    // No span log: the evidence path returns before any
+                    // instrument guard is armed, so there is nothing to report
+                    // and `main` writes a header saying exactly that rather
+                    // than an empty file a reader would score as zero work.
+                    (verdict, Some(line), Vec::new(), Vec::new())
                 }
                 Err(_) => (
                     "unknown",
@@ -1437,6 +1662,7 @@ fn main() -> ExitCode {
                         "; evidence kind=unknown certified=0 trusted=0 recheck=na arena=na ms={}",
                         started.elapsed().as_millis()
                     )),
+                    Vec::new(),
                     Vec::new(),
                 ),
             };
@@ -1453,33 +1679,33 @@ fn main() -> ExitCode {
         // and lazy-SMT guards were added below. A number in prose beside a list
         // is a second copy of the list that nothing checks, so the list is now
         // the only copy.
-        let _theory_guard = trace_mode.then(TheoryLayerStatsGuard::enable);
-        let _bv_guard = trace_mode.then(BvLayerStatsGuard::enable);
-        let _dl_guard = trace_mode.then(DlOnlineStatsGuard::enable);
-        let _front_door_guard = trace_mode.then(FrontDoorStatsGuard::enable);
+        let _theory_guard = instruments_on.then(TheoryLayerStatsGuard::enable);
+        let _bv_guard = instruments_on.then(BvLayerStatsGuard::enable);
+        let _dl_guard = instruments_on.then(DlOnlineStatsGuard::enable);
+        let _front_door_guard = instruments_on.then(FrontDoorStatsGuard::enable);
         // ADR-1760. Which route decided the file, and which route consumed the
         // budget.
-        let _route_guard = trace_mode.then(RouteAttributionGuard::enable);
+        let _route_guard = instruments_on.then(RouteAttributionGuard::enable);
         // ADR-1762. The sixth guard on the same flag: which governing values
         // this run consulted, and which environment overrides were in force.
-        let _config_guard = trace_mode.then(ConfigTraceGuard::enable);
+        let _config_guard = instruments_on.then(ConfigTraceGuard::enable);
         // The seventh guard on the same flag: what the over-bound UF+arithmetic
         // decision point did. A route that declines and hands back `Unknown`
         // with nothing after it is invisible in a verdict and nearly invisible
         // in a trail; `terminal_unknown` names it outright.
-        let _uf_overbound_guard = trace_mode.then(UfArithOverboundStatsGuard::enable);
+        let _uf_overbound_guard = instruments_on.then(UfArithOverboundStatsGuard::enable);
         // The eighth: the integer-arithmetic routes' own counters. `QF_LIA` and
         // `QF_UFLIA` produced no engine figure at all before this — the online
         // integer theory implements no `engine_counters`, and the offline
         // `lia-simplex` decider is not a `TheorySolver`, so neither could ever
         // appear on the `; theory-layer` line.
-        let _lia_guard = trace_mode.then(LiaCountersGuard::enable);
+        let _lia_guard = instruments_on.then(LiaCountersGuard::enable);
         // The ninth: the `QF_ABV` array routes' own counters. The route that
         // spends a lost array file's budget is the one that does not return, so
         // the route trail — which records on return — cannot name it; these
         // counters are recorded on ENTRY and mirrored onto the live board, so a
         // watchdog kill still reports which array route was running.
-        let _abv_guard = trace_mode.then(AbvStatsGuard::enable);
+        let _abv_guard = instruments_on.then(AbvStatsGuard::enable);
         // The abstraction/refinement loops in `axeyum_solver::dpll_t`, which is
         // what the route trail's `bound_by=nra` actually names. Measured
         // 2026-09-08: on the 22 `QF_LRA` files that print no theory-layer line
@@ -1487,7 +1713,7 @@ fn main() -> ExitCode {
         // the route LABEL was the entire answer — a label cannot say whether
         // the time went to four enormous refinement rounds or forty thousand
         // small ones, and those have opposite remedies.
-        let _lazy_smt_guard = trace_mode.then(LazySmtCountersGuard::enable);
+        let _lazy_smt_guard = instruments_on.then(LazySmtCountersGuard::enable);
         // A parse or solver error is reported as `unknown` — never a wrong
         // verdict, and never a crash that the harness would read as an abort.
         let mut give_up: Option<String> = None;
@@ -1584,13 +1810,46 @@ fn main() -> ExitCode {
         if let Some(g) = give_up {
             trace_lines.insert(0, g);
         }
-        (verdict, None, trace_lines)
+        // The span log (`--trace-json`), built here rather than in `main` for
+        // the same reason the `; …` lines are: every reading below is a
+        // thread-local snapshot of the thread that ran the stage, and on this
+        // path those snapshots are COMPLETE. Reading them a second time is free
+        // — each accessor copies an already-published snapshot — so the human
+        // block above stays byte-identical and this one cannot perturb it.
+        let span_lines = if want_span_log {
+            let log = SpanLog::build(&SpanLogInputs {
+                file: &span_file,
+                division: division_from_path(&span_file),
+                verdict,
+                wall_ns: u64::try_from(run_started.elapsed().as_nanos()).unwrap_or(u64::MAX),
+                budget_ns: budget_ns_for_log,
+                termination: Termination::Returned,
+                host: worker_host.as_deref(),
+                solver_commit: worker_commit.as_deref(),
+                config_line: Some(SpanReading::complete(config_trace_line())),
+                route: Some(SpanReading::complete(last_route_attribution())),
+                // A run that returned has no open segment worth reporting: the
+                // time since the last recorded attempt is this reporting code.
+                open_segment_ns: None,
+                front_door_parse: Some(SpanReading::complete(last_front_door_stats().parse)),
+                dl_online: Some(SpanReading::complete(last_dl_online_stats())),
+                bv: last_bv_layer_stats().map(SpanReading::complete),
+                bv_stage: None,
+                theory: last_theory_layer_stats().map(SpanReading::complete),
+                lazy: last_lazy_smt_counters().map(SpanReading::complete),
+                lia: last_lia_counters().map(SpanReading::complete),
+            });
+            log.to_jsonl()
+        } else {
+            Vec::new()
+        };
+        (verdict, None, trace_lines, span_lines)
     };
 
     let Some(ms) = timeout_ms else {
         // No wall clock configured: nothing to enforce, so stay on the main
         // thread (its stack is the largest one available).
-        let (verdict, evidence, trace_lines) = solve();
+        let (verdict, evidence, trace_lines, span_lines) = solve();
         // Progress lines come FIRST: they describe the search that already
         // finished producing `verdict`/`evidence`, so printing them after
         // either would be out of order. Still strictly before the evidence
@@ -1613,6 +1872,12 @@ fn main() -> ExitCode {
             println!("{line}");
         }
         println!("{verdict}");
+        if let Some(target) = &trace_json {
+            write_span_log(
+                target,
+                &span_log_or_uninstrumented(span_lines, &path, verdict),
+            );
+        }
         return ExitCode::SUCCESS;
     };
 
@@ -1642,7 +1907,7 @@ fn main() -> ExitCode {
     // `watchdog_trace_lines` reports the counters the instruments mirrored
     // before the kill, under a `; partial …` token that cannot be mistaken for
     // a completed line.
-    let (verdict, evidence, trace_lines) = match worker {
+    let (verdict, evidence, trace_lines, span_lines) = match worker {
         Ok(_) => match rx.recv_timeout(Duration::from_millis(ms) + WATCHDOG_GRACE) {
             Ok(outcome) => outcome,
             Err(_) => (
@@ -1652,6 +1917,19 @@ fn main() -> ExitCode {
                     trace_mode,
                     &board,
                     "watchdog fired before the worker thread returned",
+                ),
+                watchdog_span_lines(
+                    want_span_log,
+                    &board,
+                    &SpanRunFacts {
+                        file: &path,
+                        wall_ns: u64::try_from(run_started.elapsed().as_nanos())
+                            .unwrap_or(u64::MAX),
+                        budget_ns: budget_ns_for_log,
+                        host: host_for_log.as_deref(),
+                        commit: commit_for_log.as_deref(),
+                        termination: Termination::WatchdogKill,
+                    },
                 ),
             ),
         },
@@ -1664,6 +1942,18 @@ fn main() -> ExitCode {
                 trace_mode,
                 &board,
                 "failed to spawn the solver worker thread",
+            ),
+            watchdog_span_lines(
+                want_span_log,
+                &board,
+                &SpanRunFacts {
+                    file: &path,
+                    wall_ns: u64::try_from(run_started.elapsed().as_nanos()).unwrap_or(u64::MAX),
+                    budget_ns: budget_ns_for_log,
+                    host: host_for_log.as_deref(),
+                    commit: commit_for_log.as_deref(),
+                    termination: Termination::WorkerSpawnFailed,
+                },
             ),
         ),
     };
@@ -1686,6 +1976,12 @@ fn main() -> ExitCode {
         println!("{line}");
     }
     println!("{verdict}");
+    if let Some(target) = &trace_json {
+        write_span_log(
+            target,
+            &span_log_or_uninstrumented(span_lines, &path, verdict),
+        );
+    }
     // The worker may still be inside ingest; the verdict is already printed and
     // correct, so exit rather than block on a thread that has no deadline.
     std::io::Write::flush(&mut std::io::stdout()).ok();
@@ -1777,11 +2073,17 @@ mod tests {
             ),
         };
         assert_eq!(verdict, "unknown");
-        assert_eq!(
-            trace_lines.len(),
-            2,
-            "a timed-out solve with --trace must still print both unavailable \
-             lines, never nothing: got {trace_lines:?}"
+        // The COUNT is deliberately not pinned here. It was, at 2, and this
+        // test was red on `main` from the day the `; lia unavailable` line
+        // landed until 2026-09-08: a literal beside a list is a second copy of
+        // the list that nothing keeps in step, and the sibling test above
+        // already pins the exact set. What this test is for is the `Err` arm
+        // being wired to the builder at all, so it asserts non-emptiness and
+        // that each instrument is named.
+        assert!(
+            !trace_lines.is_empty(),
+            "a timed-out solve with --trace must print the unavailable lines, \
+             never nothing: got {trace_lines:?}"
         );
         assert!(
             trace_lines[0].starts_with("; theory-layer"),
@@ -1796,6 +2098,12 @@ mod tests {
             trace_lines[1].starts_with("; route unavailable"),
             "got: {}",
             trace_lines[1]
+        );
+        assert!(
+            trace_lines
+                .iter()
+                .any(|l| l.starts_with("; lia unavailable")),
+            "got: {trace_lines:?}"
         );
     }
 
