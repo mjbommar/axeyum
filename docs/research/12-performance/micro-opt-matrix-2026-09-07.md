@@ -534,3 +534,59 @@ either** (cross-host geomean 0.958 for `v3` against 0.960 for `base`), so the
 `target-cpu` null result is not an AMD artefact — it holds on both
 microarchitectures in the fleet. `opt-level 2` is if anything a slightly worse
 choice on Alder Lake (8.8% against 5.8%).
+
+### 2026-09-07 — gates
+
+After merging local `main` (which brought the `config-registry` and
+`foundation-counters` lanes in under this one), with the new GF(2) bench in
+place:
+
+```
+cargo clippy --workspace --all-targets --all-features -- -D warnings   exit 0
+cargo check  --workspace --all-targets --all-features                  exit 0
+cargo test -p axeyum-cnf --bench xor_matrix_gauss                      exit 0
+```
+
+Zero `error` and zero `warning` lines in either gate's output. The third is run
+because a `[[bench]]` target's `test` flag defaults to true, so `cargo test`
+executes the bench binary once per benchmark — a new bench that is slow under
+`--test` becomes every lane's problem, and this repository has the precedent
+(an expensive corpus entry turning a sweep into an hour-long hang). All four
+groups report `Success` and the whole target runs in seconds.
+
+**No profile change was made**, so the "any profile change must keep `cargo
+test` green" condition has nothing to apply to: the recommendation below is to
+leave the profile exactly as it is, and the only tracked change from this lane
+is one new bench file plus its manifest entry.
+
+### 2026-09-07 — a 17-minute sweep that recorded nothing and exited 0
+
+Recorded because it is precisely the failure class this repository's gotchas
+section is about, committed by the lane whose whole job is measurement
+discipline.
+
+The criterion driver ran eleven cells x three repeats of the GF(2) bench —
+seventeen minutes of real work, every arm executed, every per-run line printed
+to the log — and wrote **zero rows** to its output file. It exited 0. The
+harness's own "wrote N rows" line said `wrote 0 rows`, and that line was in the
+script from the start; nobody read it until the file was checked.
+
+Cause: criterion writes its estimates to `<cwd>/target/criterion`, and the
+collector globbed `<cwd>/criterion`. An empty glob is not an error, so the
+per-(cell, id) result dict was simply empty and the writer wrote nothing.
+
+Two lessons, both already in CLAUDE.md and both re-learned the hard way:
+
+- **An empty result from a tool that was never pointed at your subject is
+  indistinguishable from a strong negative.** Had the sweep been over a
+  no-effect axis, "no rows" and "no difference" would have looked the same in
+  the summary I was about to write.
+- **Confirm a nonzero count.** The fix was verified by a two-cell one-repeat
+  smoke run that had to print a nonzero row count before the long sweep was
+  restarted (`wrote 8 rows` — 2 cells x 4 benchmark ids).
+
+The same bug was present in the derived `axeyum-solver` runner, which was
+therefore also killed and restarted rather than left to produce a second empty
+file. Criterion keeps the last two runs per benchmark id on disk (`new/` and
+`base/`), so `harvest-criterion.py` recovered 88 estimates from the wasted
+sweep — kept as a fallback, and labelled min-of-two wherever it is used.
