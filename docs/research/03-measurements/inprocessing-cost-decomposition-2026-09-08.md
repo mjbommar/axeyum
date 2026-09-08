@@ -14,8 +14,9 @@ which is the part that changes what to do next.
 too much" is not one phenomenon. It is two, with different fixes, and the
 aggregate ratio that was handed to me averaged them together:
 
-* On **179 of 195 files** the passes run to their own fixpoint and cost a median
-  of **28 ms**. That is not a cost problem at all.
+* On **179 of the 195 files** that ran inprocessing the passes reach their own
+  fixpoint inside the slice. Across all 195 the **median** spend is **28 ms**
+  (115 files are under 100 ms). That is not a cost problem at all.
 * On **16 files (8%)** bounded variable elimination spends its **entire granted
   slice** — 11.9 s of a 12.0 s budget — and is then cut off unfinished. Those 16
   files account for **189 s of the 342 s total inprocessing spend across the
@@ -52,9 +53,12 @@ This lane adds four things ADR-1750 does not have.
    off by the clock. `inprocess_ms` alone attributes everything to
    "inprocessing", which is the same error as attributing a solve to the last
    route that ran.
-3. **Setup versus work.** Each pass is run a second time on its own output; the
-   second run rebuilds the same occurrence lists and finds nothing, so its time
-   is the cost the pass pays whether or not it finds anything.
+3. **Setup versus work.** Each pass is run a second time on its own output. It
+   rebuilds the same occurrence lists, so its time approximates the cost the
+   pass pays for existing — approximates, because a pass that has not reached a
+   fixpoint does real work on the re-run, and the tool prints the re-run's own
+   reduction counters so a reader can tell which case they are looking at
+   (§4 shows both).
 4. **The wall-clock conversion**, which is what a 24 s budget is actually
    denominated in.
 
@@ -154,10 +158,16 @@ thresholding each file's recorded wall time from the 24 s run.
 | inproc | 124 | 144 | 156 | 172 | **188** |
 | inproc-vivify | 133 | 152 | 161 | 176 | **188** |
 
-**The crossover is between 12 s and 24 s.** At 12 s inprocessing is 12 files
-behind; at 24 s it is 2 ahead. The handed-down "~5x the 24-second budget"
-break-even is not what this corpus shows: on the shipped path, at the
-competition budget, inprocessing is already slightly ahead on decided count.
+**The crossover is between 12 s and 24 s — and the sub-24 s columns understate
+the `on` arms (see below), so it is at or below that band.** The handed-down
+"~5x the 24-second budget" break-even is not what this corpus shows: on the
+shipped path, at the competition budget, inprocessing is already slightly ahead
+on decided count.
+
+That "slightly" is doing real work, and §5's variance result cuts it further:
+the gain is one file, and that file decides in only 1 of 5 repeats under load.
+**The defensible statement is that inprocessing is at parity on decided count at
+24 s and behind on PAR-2 — not that it wins.**
 
 Two corrections that make the headline smaller and more honest:
 
@@ -199,9 +209,20 @@ the budget except when it stops) and a **lower bound for the `on` arms**. The
 true crossover is therefore at or below the 12–24 s band, not above it — which
 moves the answer further from the handed-down 120 s, not closer.
 
-Measured rather than left as an argument: a real 12 s sweep over the 28-file
-population where the derivation can differ (see §6) — RUNNING at the time of
-writing.
+Measured rather than left as an argument. A real 12 s sweep over the population
+where the derivation can differ (§6), first six files:
+
+| file | 24 s run: wall / slice / spend | real 12 s run: wall / slice / spend | verdict at 12 s |
+|---|---|---|---|
+| `bench_12354` | 12,767 / 11,801 / 12,011 | **9,056** / 5,443 / 5,919 | **sat — solved** |
+| `vlsat3_a85` | — | 12,136 / 5,971 / 5,988 (truncated) | unknown |
+| `predicate_851` | — | 12,134 / 5,945 / 862 | unknown |
+
+`bench_12354` is the case in point: the derived 12 s column scored it **not
+solved** because it took 12,767 ms at a 24 s budget, and at a real 12 s budget
+it decides `sat` at **9,056 ms**. The slice halved from 11,801 ms to 5,443 ms
+and the file came in under budget. The derivation was wrong about it, in the
+direction stated.
 
 ---
 
@@ -353,6 +374,40 @@ This is the most actionable finding in the lane, and it was invisible to every
 aggregate: `inprocess_ms` says vivification made things faster, and only the
 per-stage split says *why*.
 
+### The variance test: truncation is deterministic, but the boundary is a coin flip
+
+Five identical repeats per file, both arms, over the boundary population, run at
+host load **16–40** (other lanes; the "quiet" half of this comparison was never
+available — see §6). Complete groups so far:
+
+| arm | groups | median max/min wall | worst |
+|---|---:|---:|---:|
+| inproc | 6 | **1.04x** | 1.10x |
+| off | 6 | **1.01x** | 1.56x |
+
+Three findings, and they answer (A)-versus-(B) as a pair rather than a choice.
+
+* **Truncation never flipped.** On every file where the flag was reported, BVE
+  was either always cut off or never was — zero disagreements between runs that
+  both reported it. So the truncation in §5 is **deterministic saturation, not a
+  race the clock sometimes wins**. Hypothesis (B) is real as a *budget
+  dependence* — the pass's cost is set by the slice, and the real 12 s sweep
+  above shows the same file spending 5.9 s instead of 12.0 s when the slice
+  halves — and it is **not** real as run-to-run variance.
+* **Wall-time spread is small even at load 40**: 1.01–1.10x median. The
+  wall-clock cutoff is not producing the instability (B) predicted.
+* **But verdicts do flip at the boundary, on both arms.** Two of twelve groups
+  changed answer across identical repeats: `ext_con_008_001_0064` on `off`
+  (4× unknown, 1× unsat, walls 23,725–24,223 ms against a 24 s budget) and
+  `simple_processors_008_006_0004` on `inproc`. That is a property of deciding
+  *at* the budget, not of inprocessing.
+
+The last one carries a caveat against this lane's own headline. **The single
+file inprocessing genuinely gains at 24 s is itself load-fragile**: on the quiet
+run `simple_processors_008_006_0004` decides `unsat` at 13,798 ms, and under
+load 22–30 it decides in only **1 of 5** repeats. A one-file gain measured once
+on a quiet box is not a result to build on.
+
 ---
 
 ## 5b. Does ADR-1750 reproduce? The per-conflict result yes; the break-even not always
@@ -435,13 +490,22 @@ Stated as "did not run" rather than estimated.
 * **Per-pass CNF sweep, conflict-budgeted.** DONE — §5b.
 * **Per-pass CNF sweep, wall-clock-budgeted** (`pass-wall-24s.jsonl`, adds the
   setup/work split per file). RUNNING.
-* **The variance test, under load.** RUNNING (5 identical repeats × 19 boundary
-  files × 2 arms, at load ~16–20).
-* **The variance test, on a quiet host.** NOT RUN. The box has been at load
-  16–20 from other lanes since the 24 s sweep finished, and the quiet arm of
-  that comparison is the half I do not control.
+* **The variance test, under load.** PARTIAL — 6 complete groups per arm of 19
+  (the driver runs a file's five repeats back to back, so every group present is
+  complete and the partial is a prefix of *files*, not of repeats). Reported in
+  §5. Still running.
+* **The variance test, on a quiet host.** NOT RUN. Other lanes took the box to
+  load 16–40 shortly after the 24 s sweep finished and it never came back down;
+  the quiet half of that comparison is the half I do not control. **So the
+  measured spread is an upper bound** — a quiet host cannot be noisier — which
+  is the useful direction, but the load-versus-quiet contrast itself was not
+  made.
 * **A quiet re-run of the conflict-budget sweep.** NOT RUN — owed, per the
   caveat in §5b.
+* **A mutation control on the `sat` reconstruction path.** NOT RUN. §7 rests on
+  the code path plus a corpus-scale argument, not on a deliberately broken
+  `reconstruct_sat_result`. Doing it properly needs a rebuild, and the box was
+  saturated.
 * **Proof-checking cost with inprocessing on.** NOT RUN. ADR-1750 measured it
   (231x backward vs forward) and nothing here re-tests it.
 * **`prove_unsat` mode.** NOT RUN. Every sweep above is the default
@@ -498,6 +562,15 @@ arm, 173 cross-checked against the benchmark's declared `:status`, zero
 disagreements, and zero cross-arm verdict conflicts.** Inprocessing decided
 strictly *more* than the baseline, which is the opposite of the signature a
 broken reconstruction would leave.
+
+That second paragraph is the live negative control, and it is worth being
+explicit about why: a broken reconstruction cannot produce this data. It would
+fail replay, return `Unknown`, and show up as the inprocessing arms **losing**
+decided files. They lost none. What this does *not* establish is that the
+replay guard would catch a reconstruction bug that produces a *different but
+still satisfying* model — no such bug is possible to distinguish this way, and
+a deliberate mutation of `reconstruct_sat_result` is the test for it. **That
+mutation was not run** (§6).
 
 **What is genuinely unresolved is the `unsat` certificate, not the `sat` model.**
 ADR-1750 states it plainly: with `cnf_inprocessing` on, `sat_bv_backend` checks
