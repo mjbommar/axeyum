@@ -64,3 +64,11 @@ harness = false
 [[bench]]
 name = "proof_sat_propagate"
 harness = false
+
+# Gaussian elimination / watched-row propagation over GF(2). Added by the
+# micro-opt-matrix lane as the POSITIVE CONTROL for the `target-cpu` axis: the
+# CDCL core contains no bit-counting at all, so the crate's `count_ones` /
+# `trailing_zeros` sites are all on this route and had no bench.
+[[bench]]
+name = "xor_matrix_gauss"
+harness = false
