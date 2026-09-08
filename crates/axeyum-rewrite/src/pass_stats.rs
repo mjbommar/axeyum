@@ -1,7 +1,8 @@
 //! Opt-in, clock-free term-size diagnostics for the rewrite passes every
 //! query pays before a theory solver ever sees the result: canonicalization,
 //! [`crate::eliminate_arrays`], [`crate::eliminate_functions`],
-//! [`crate::eliminate_int_divmod`], and [`crate::blast_integers`].
+//! [`crate::eliminate_int_divmod`], [`crate::blast_integers`], and
+//! [`crate::elim_unconstrained`].
 //!
 //! Each of those passes already returns a result type richer than a bare
 //! `Vec<TermId>` (ADR-1721 / ADR-1730) with its own eliminated-construct and
@@ -28,6 +29,7 @@ use axeyum_ir::{TermArena, TermId, TermStats};
 use crate::RewriteRuleId;
 use crate::arrays::{ArrayElimError, ArrayElimination};
 use crate::canonical::{CanonicalizeTermsOutcome, RewriteError, RewriteReport};
+use crate::elim_unconstrained::UnconstrainedElimination;
 use crate::functions::{FuncElimError, FunctionElimination};
 use crate::int_blast::{IntBlastError, IntBlasting};
 use crate::int_divmod::IntDivModElimination;
@@ -184,10 +186,62 @@ pub fn blast_integers_with_stats(
     Ok((blasting, PassSizeDelta { before, after }))
 }
 
+/// [`crate::elim_unconstrained`], additionally reporting the term-size
+/// footprint before and after.
+///
+/// The elimination's own [`crate::ElimUnconstrainedStats`] already carries the
+/// per-rule firing counts and round count; this adds the one number none of the
+/// passes reports for itself — the shared DAG size on each side, which is what
+/// answers "did peeling those layers shrink what the bit-blaster sees, or did a
+/// compound replacement grow it".
+///
+/// # Errors
+///
+/// Returns whatever [`crate::elim_unconstrained`] returns.
+pub fn elim_unconstrained_with_stats(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+) -> Result<(UnconstrainedElimination, PassSizeDelta), IrError> {
+    let before = PassSize::of(arena, assertions);
+    let elimination = crate::elim_unconstrained::elim_unconstrained(arena, assertions)?;
+    let after = PassSize::of(arena, elimination.assertions());
+    Ok((elimination, PassSizeDelta { before, after }))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use axeyum_ir::TermArena;
+
+    #[test]
+    fn elim_unconstrained_with_stats_matches_unwrapped_and_shrinks_the_dag() {
+        // `(= (bvadd (bvneg x) 5) 200)`: both invertible layers peel, so the
+        // reduced problem is strictly smaller than the original.
+        let mut arena = TermArena::new();
+        let x = arena.bv_var("x", 8).unwrap();
+        let negx = arena.bv_neg(x).unwrap();
+        let five = arena.bv_const(8, 5).unwrap();
+        let sum = arena.bv_add(negx, five).unwrap();
+        let target = arena.bv_const(8, 200).unwrap();
+        let assertion = arena.eq(sum, target).unwrap();
+
+        let mut arena_unwrapped = arena.clone();
+        let direct = crate::elim_unconstrained(&mut arena_unwrapped, &[assertion]).unwrap();
+
+        let (wrapped, delta) = elim_unconstrained_with_stats(&mut arena, &[assertion]).unwrap();
+        assert_eq!(
+            wrapped.assertions(),
+            direct.assertions(),
+            "the stats wrapper must not change elim_unconstrained's own output"
+        );
+        assert_eq!(wrapped.eliminated(), direct.eliminated());
+        assert!(wrapped.eliminated() >= 2);
+        assert!(
+            delta.after.dag_nodes < delta.before.dag_nodes,
+            "peeling invertible layers must shrink the shared DAG: {delta:?}"
+        );
+        assert!(delta.dag_node_delta() < 0);
+    }
 
     #[test]
     fn canonicalize_with_stats_matches_unwrapped_and_reports_growth_or_shrinkage() {
