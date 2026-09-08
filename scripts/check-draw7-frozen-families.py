@@ -88,10 +88,32 @@ def main() -> int:
                     help="git ref holding the pre-draw manifest")
     args = ap.parse_args()
 
-    blob = subprocess.run(
+    # `check=True` here turned a legitimately ABSENT manifest into a Python
+    # traceback, and this script runs inside the pre-push battery -- so a ref
+    # that simply predates the manifest killed the whole push with a
+    # `CalledProcessError` rather than a finding. Measured 2026-09-08: the hook
+    # invokes `--before origin/main`, and `origin/main` at d51d4ef04 does not
+    # carry `artifacts/autogenesis/nursery-v2-extension.json`, so EVERY push
+    # crashed here regardless of what it contained.
+    #
+    # The distinction the exit codes now carry, which the crash destroyed:
+    #   2 = NO BASELINE at that ref -- nothing to compare, nothing asserted
+    #   1 = a real frozen-family violation
+    #   0 = compared, clean
+    # A checker that cannot tell "nothing to compare against" from "the
+    # invariant is broken" reports neither.
+    shown = subprocess.run(
         ["git", "-C", str(ROOT), "show", f"{args.before}:{MANIFEST}"],
-        capture_output=True, text=True, check=True).stdout
-    before = partitions(blob)
+        capture_output=True, text=True, check=False)
+    if shown.returncode != 0:
+        print(
+            f"DRAW7_FROZEN|NO-BASELINE|ref={args.before} lacks {MANIFEST}; "
+            "nothing was compared and no frozen-family claim is made "
+            f"(git said: {shown.stderr.strip().splitlines()[0] if shown.stderr.strip() else 'no such path'})",
+            file=sys.stderr,
+        )
+        return 2
+    before = partitions(shown.stdout)
     after = partitions((ROOT / MANIFEST).read_text())
 
     licensed = licensed_moves((ROOT / POLICY).read_text())
