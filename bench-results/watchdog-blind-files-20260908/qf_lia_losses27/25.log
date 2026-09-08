@@ -1,0 +1,8 @@
+; partial at=watchdog-kill recovered=5 sampled=config:in-flight,front-door:complete,lia:in-flight,lazy-smt:in-flight,route:in-flight reason: watchdog fired before the worker thread returned
+; partial config digest=8b689de6256e9e11 entries=114 dated=29
+; partial front-door parse_ms=4
+; theory-layer unavailable: watchdog fired before the worker thread returned
+; partial lia offline=not-reached offline_calls=0 offline_constraints=0 offline_early_exits=0 tightened=0 gomory_calls=0 gomory_decided=0 gomory_rounds=0 gomory_cuts=0 gomory_pivots=0 gomory_rows=0 gomory_columns=0 bnb_roots=0 bnb_nodes=0 bnb_budget_exhausted=0 simplex_solves=0 simplex_pivots=0 simplex_rows=0 simplex_columns=0 simplex_declines=0 lp_relaxations=0 theory=not-reached theory_asserts=0 feasibility_checks=0 arena_clones=0 arena_clone_nodes=0 live_literals=0 filter_refuted=0 filter_integral=0 filter_inconclusive=0 core_minimizations=0 core_minimization_probes=0 propagation=not-reached propagate_calls=0 propagate_atoms=0 propagate_probes=0 propagations_offered=0
+; partial lazy-smt reading=not-reached lra_entries=0 lra_rounds=0 nra_entries=0 nra_rounds=0 skeleton_ms=0 skeleton_sat=0 skeleton_unsat=0 skeleton_unknown=0 theory_ms=0 theory_sat=0 theory_unsat=0 theory_unknown=0 core_ms=0 blocking_clauses=0 blocking_literals=0 atoms=0 accounted_ms=0
+; partial route decided_by=none bound_by=fd:parse last=probe bound_ms=4 total_ms=5 attempts=2
+; partial route-open ms=24993 after=probe attributed_ms=5 note: bound_by is NOT the answer: most of the budget is in the open segment

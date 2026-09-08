@@ -7,6 +7,7 @@
 //! remains explicit rather than falling through to an oracle.
 
 use std::collections::{BTreeMap, BTreeSet};
+use std::sync::Arc;
 use std::time::Duration;
 
 // Monotonic clock: on wasm32 the browser has no `std` clock, so use `web-time`'s
@@ -30,7 +31,7 @@ use axeyum_cnf::{
     EncodedLit, ProofCoverage, ProofSolveOutcome, Reconstruction, ReducedReason, ReductionLink,
     SatProofStatus, SatResult, SatUnknownReason, SatUnsatEvidence, SubsumeOptions, SubsumeStats,
     VivifyOptions, XorCdclResult, XorPropagation, check_drat, compact, eliminate_variables_within,
-    eliminate_variables_within_recorded, extract_xors, simplify_with_options, simplify_within,
+    eliminate_variables_within_recorded, extract_xors, simplify_with_options,
     simplify_within_recorded, solve_with_drat_proof, solve_with_drat_proof_with_limits,
     solve_with_xor_cdcl, tseitin_encode, tseitin_encode_profiled_with_origins, vivify_within,
     write_drat, xor_gauss_drat_refutation, xor_propagate,
@@ -152,6 +153,36 @@ impl SatBvBackend {
             ..SolveStats::default()
         };
 
+        // The cross-thread stage mirror (`crate::layers::BvStageMirror`).
+        // `publish_bv_layer_stats` fires only when this check RETURNS, so
+        // without this a check killed by a wall-clock watchdog published
+        // nothing at all — and a `sat-bv` file we lose is by definition a check
+        // that did not return. Both decisions are taken HERE, once: with
+        // collection off (the default) or no board installed (every run without
+        // `--trace`) this is two thread-local `bool` reads and no allocation,
+        // and every `enter_stage!` below is a `None` test.
+        let stage_mirror = (crate::layers::bv_layer_stats_enabled()
+            && crate::live_instruments::installed())
+        .then(|| {
+            let mirror = Arc::new(crate::layers::BvStageMirror::default());
+            crate::live_instruments::publish_live(
+                crate::live_instruments::instrument::BV_LAYER_MIRROR,
+                Arc::clone(&mirror),
+                // A handle, never a snapshot: this check writes through it at
+                // every stage boundary for as long as it runs.
+                crate::live_instruments::Sampled::InFlight,
+            );
+            mirror
+        });
+        macro_rules! enter_stage {
+            ($stage:expr) => {
+                if let Some(mirror) = &stage_mirror {
+                    mirror.enter($stage, &stats);
+                }
+            };
+        }
+
+        enter_stage!(crate::layers::BvStage::BitBlast);
         let bit_blast_start = Instant::now();
         let lowering_result = match config.bit_lowering_mode {
             BitLoweringMode::RangeSliced(policy) => {
@@ -200,6 +231,15 @@ impl SatBvBackend {
             .iter()
             .map(|root| root.bits()[0])
             .collect::<Vec<_>>();
+        // No stage timings are attached to this boundary on purpose.
+        // `BvLayerStats` is identified as `sat-bv`-shaped by `aig_nodes` /
+        // `cnf_variables`, which `record_encoding_stats` publishes only AFTER
+        // the CNF encoding — so a reading taken at or before here lifts to
+        // `None` whatever is in `stats`, and the STAGE is the entire answer.
+        // That is the honest reading: "killed while encoding", with no numbers,
+        // rather than a row of zeros a consumer would read as measured stage
+        // costs.
+        enter_stage!(crate::layers::BvStage::CnfEncode);
         let cnf_start = Instant::now();
         let (encoding, duplicate_origins) = if config.profile_cnf_construction {
             let (encoding, origins) = tseitin_encode_profiled_with_origins(lowering.aig(), &roots)
@@ -243,6 +283,10 @@ impl SatBvBackend {
         // so on a formula it cannot usefully reduce it spends only that slice and
         // never starves the SAT solve — capping the downside while still capturing
         // the big reductions it does find.
+        // From here on `stats` carries `aig_nodes` / `cnf_variables`, so a
+        // reading taken at this boundary or later lifts to a real
+        // `BvLayerStats` whose reached-stage fields are measurements.
+        enter_stage!(crate::layers::BvStage::CnfInprocess);
         let inprocessed = maybe_inprocess(config, encoding.formula(), deadline, &mut stats);
         let solve_formula: &CnfFormula = inprocessed
             .as_ref()
@@ -262,6 +306,7 @@ impl SatBvBackend {
             }));
         }
 
+        enter_stage!(crate::layers::BvStage::SatSearch);
         let solve_start = Instant::now();
         // Primary SAT search: the deadline-bounded native CDCL core, on every
         // path (ADR-1703). Its result feeds the reconstruction + replay below
@@ -319,6 +364,14 @@ impl SatBvBackend {
         // `compaction.expand` (→ BVE-reduced width) then `reconstruction.extend`.
         let sat_result = reconstruct_sat_result(sat_result, inprocessed.as_ref());
 
+        // One boundary for both remaining stages: `handle_sat_result` lifts the
+        // model and replays it inside a single call, and splitting the mirror
+        // finer would need either a callback into it or a second lock on the
+        // replay path. `ModelLift` is therefore the last stage this mirror can
+        // name, and a kill during the replay reads as one during the lift —
+        // stated here rather than left for a reader to infer from a stage
+        // stream that never mentions `model_replay`.
+        enter_stage!(crate::layers::BvStage::ModelLift);
         let result = handle_sat_result(
             arena,
             assertions,

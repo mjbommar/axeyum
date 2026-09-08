@@ -50,6 +50,7 @@ mod config_registry;
 mod error;
 mod incremental;
 mod layers;
+mod lazy_smt_counters;
 pub mod live_instruments;
 mod memory_budget;
 mod model;
@@ -899,15 +900,23 @@ pub use backend::{
     SolverBackend, SolverConfig, SolverError, UnknownKind, UnknownReason,
 };
 pub use config_registry::{
-    Basis, ConfigEntry, ConfigTraceGuard, Dependency, EXEMPT, GOVERNED_FILES, Justification,
-    OnExceed, Protects, REGISTRY, Signal, active_env_overrides, config_trace_line, consulted,
-    crossings, dated_count, digest, note_consulted, note_crossed,
+    Basis, ConfigEntry, ConfigTraceGuard, ConfigTraceMirror, Dependency, EXEMPT, GOVERNED_FILES,
+    Justification, OnExceed, Protects, REGISTRY, Signal, active_env_overrides, config_trace_line,
+    consulted, crossings, dated_count, digest, live_config_trace_line, note_consulted,
+    note_crossed,
 };
 pub use incremental::{
     AssumptionOutcome, IncrementalBvSolver, IncrementalBvStats, IncrementalModelLiftStats,
     IncrementalSolver, ReplayCheckedSatCachePolicy, ReplayCheckedSatCacheStats,
 };
-pub use layers::{BvLayerStats, BvLayerStatsGuard, last_bv_backend_counters, last_bv_layer_stats};
+pub use layers::{
+    BvLayerStats, BvLayerStatsGuard, BvStage, BvStageMirror, LiveBvReading,
+    last_bv_backend_counters, last_bv_layer_stats, live_bv_layer_stats,
+};
+pub use lazy_smt_counters::{
+    LazySmtCounters, LazySmtCountersGuard, LazySmtCountersMirror, LazySmtLoop, LazySmtReading,
+    last_lazy_smt_counters, live_lazy_smt_counters,
+};
 pub use live_instruments::{
     LiveInstruments, LiveInstrumentsGuard, LiveSample, Sampled,
     install as install_live_instruments, instrument, publish_live,
@@ -1158,7 +1167,7 @@ macro_rules! full_exports {
         #[doc(hidden)]
         pub use lia_counters::{
             GroupReading, LiaCounterGroup, LiaCounterPolicy, LiaCounterPolicyBits, LiaCounters,
-            LiaCountersGuard, last_lia_counters,
+            LiaCountersGuard, LiaCountersMirror, last_lia_counters, live_lia_counters,
         };
         #[doc(hidden)]
         pub use lia_gcd::{
