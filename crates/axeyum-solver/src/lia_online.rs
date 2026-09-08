@@ -975,13 +975,15 @@ impl LiaTheory {
         // The warm rational filter first: it refutes with a small Farkas core, or
         // confirms with an integral witness, without touching the offline decider.
         //
-        // Policy-gated since 2026-09-08. On the `QF_LIA`/`QF_UFLIA` files this
-        // solver LOSES, the filter was measured to refute nothing at all while
-        // running ahead of every single check — so on exactly the population the
-        // work is aimed at, it is a pass that costs and never pays. It still
-        // earns its place on populations where it *does* refute, which is why
-        // this is a policy field and not a deletion; `LiaWarmPolicy::WARM` turns
-        // it off and `LiaWarmPolicy::WARM_WITH_FILTER` keeps it.
+        // Policy-gated since 2026-09-08, and left ON — the hypothesis that
+        // motivated the gate was refuted by measuring it. The brief was that the
+        // filter refutes nothing on the loss population. Over the 29
+        // `QF_LIA`/`QF_UFLIA` losses where this theory is actually entered it
+        // answered 79,763 live sets and refuted 20,102, and on twelve of them the
+        // offline decider below is never reached at all. Switching it off costs
+        // 24% of the live-set decisions the lazy loop gets through in the same
+        // budget. `LiaWarmPolicy::WARM_NO_FILTER` is the arm that isolates
+        // warming from the filter, not a configuration to ship.
         if self.warm_policy.rational_filter {
             match self.rational_filter() {
                 RationalFilter::Refuted(core) => {
@@ -3210,9 +3212,18 @@ mod tests {
     /// because [`LiaTheory::warm_minimize_core`] is a second implementation of
     /// [`minimize_core`], and a core that is merely *sound* is still a different
     /// lemma for the `DPLL` driver to learn.
-    #[test]
-    fn warm_theory_answers_exactly_what_a_cold_theory_answers() {
-        let mut seed: u64 = 0x77a2_1a17_2026_0908;
+    ///
+    /// Run under BOTH filter settings, with the two arms always agreeing on that
+    /// setting. Comparing a filtered warm theory against an unfiltered cold one
+    /// would measure the filter — it names its own Farkas core, which is sound
+    /// and different — and the disagreement would look like a stale cache.
+    fn warm_and_cold_theories_agree(
+        warm_policy: LiaWarmPolicy,
+        cold_policy: LiaWarmPolicy,
+        compare_cores: bool,
+        seed: u64,
+    ) {
+        let mut seed = seed;
         let mut next = move || {
             seed ^= seed << 13;
             seed ^= seed >> 7;
@@ -3249,7 +3260,7 @@ mod tests {
                 continue;
             }
 
-            let mut warm = LiaTheory::new_with_policy(&arena, &atoms, false, LiaWarmPolicy::WARM);
+            let mut warm = LiaTheory::new_with_policy(&arena, &atoms, false, warm_policy);
             assert!(
                 warm.warm.is_some(),
                 "the warm theory must actually have a warm decider, or this test is inert"
@@ -3276,7 +3287,7 @@ mod tests {
                 }
 
                 // A cold theory built fresh for exactly this live set.
-                let mut cold = LiaTheory::new_with_policy(&arena, &atoms, false, COLD_NO_FILTER);
+                let mut cold = LiaTheory::new_with_policy(&arena, &atoms, false, cold_policy);
                 assert!(
                     cold.warm.is_none(),
                     "the cold arm must have no warm decider"
@@ -3289,11 +3300,31 @@ mod tests {
                 let warm_answer = feasibility_answer(&warm);
                 let cold_answer = feasibility_answer(&cold);
                 assert_eq!(
-                    warm_answer, cold_answer,
+                    warm_answer.0, cold_answer.0,
                     "warm and cold theories disagree on {assignment:?}"
                 );
+                if compare_cores {
+                    assert_eq!(
+                        warm_answer.1, cold_answer.1,
+                        "warm and cold conflict cores differ on {assignment:?}"
+                    );
+                }
                 if warm_answer.0 == "unsat" {
                     unsat_answers += 1;
+                    // Whether or not the two cores are compared, the warm one
+                    // must be a genuine refutation. Without this the arm that
+                    // cannot compare cores would check nothing about them.
+                    let core: Vec<TheoryLit> = warm_answer
+                        .1
+                        .iter()
+                        .map(|&(atom, value)| TheoryLit { atom, value })
+                        .collect();
+                    let (core_arena, core_terms) = warm.terms_for(&core).expect("core terms build");
+                    assert_eq!(
+                        check_with_lia_simplex(&core_arena, &core_terms).ok(),
+                        Some(CheckResult::Unsat),
+                        "the warm theory named a conflict core that is not unsat: {core:?}"
+                    );
                 }
                 compared += 1;
             }
@@ -3306,6 +3337,43 @@ mod tests {
         assert!(
             unsat_answers >= 30,
             "only {unsat_answers} unsat answers — the conflict-core comparison is near-vacuous"
+        );
+    }
+
+    /// [`warm_and_cold_theories_agree`] with the rational filter OFF on both
+    /// arms: warming is then the ONLY difference between them.
+    #[test]
+    fn warm_theory_answers_exactly_what_a_cold_theory_answers() {
+        warm_and_cold_theories_agree(
+            LiaWarmPolicy::WARM_NO_FILTER,
+            COLD_NO_FILTER,
+            true,
+            0x77a2_1a17_2026_0908,
+        );
+    }
+
+    /// [`warm_and_cold_theories_agree`] in the SHIPPED configuration: the filter
+    /// on, on both arms. Without this the default would be the one configuration
+    /// with no differential behind it.
+    ///
+    /// **Verdicts only, and the core checked for soundness rather than for
+    /// equality.** That is not a weaker test hiding a defect, it is the only
+    /// statement that is true: when the filter refutes, the core is the Farkas
+    /// support of the incremental tableau's final basis, and a theory that
+    /// reached this live set by walking a trail is at a different basis from one
+    /// built fresh for it. Both supports are genuine refutations; they are not
+    /// the same set. That is a pre-existing property of the filter — the older
+    /// `warm_filter_matches_a_cold_theory_on_the_same_live_set` compares only
+    /// its verdict string for the same reason — and demanding core equality here
+    /// would be asserting something false and then weakening the WARM_NO_FILTER
+    /// arm, where the core really is this lane's to get right, to make it pass.
+    #[test]
+    fn the_shipped_warm_theory_answers_exactly_what_a_cold_theory_answers() {
+        warm_and_cold_theories_agree(
+            LiaWarmPolicy::WARM,
+            LiaWarmPolicy::OFF,
+            false,
+            0x5417_9ed0_2026_0908,
         );
     }
 

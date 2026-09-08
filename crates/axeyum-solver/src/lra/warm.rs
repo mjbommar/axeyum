@@ -130,9 +130,19 @@ pub struct LiaWarmPolicy {
     pub reuse_polarity_terms: bool,
     /// Run the warm rational filter in front of the offline decider.
     ///
-    /// On the `QF_LIA`/`QF_UFLIA` loss population the filter was measured to
-    /// refute nothing while running ahead of every check. `false` skips it; see
-    /// [`crate::lia_online`] for what it costs and what it is still good for.
+    /// **Left ON by default, against the hypothesis this module started from.**
+    /// The brief was that the filter refutes nothing on the loss population and
+    /// should be deleted. Measured on the 29 `QF_LIA`/`QF_UFLIA` losses where the
+    /// online theory is actually entered (2026-09-08, 8 s budget, the A/B in
+    /// `docs/research/12-performance/lia-warm-decider-2026-09-08.md`), it
+    /// answered 79,763 live sets and **refuted 20,102** of them. Switching it off
+    /// pushes all of that onto the offline decider and costs 24% of the live-set
+    /// decisions the lazy loop gets through in the same budget — a loss, not a
+    /// saving.
+    ///
+    /// `false` skips it. That arm exists to isolate warming's contribution from
+    /// the filter's, which is the only way either number means anything; it is
+    /// not a recommended configuration.
     pub rational_filter: bool,
     /// Upper bound on the number of distinct literals whose collection is cached.
     ///
@@ -152,12 +162,12 @@ pub struct LiaWarmPolicy {
 pub const DEFAULT_MAX_CACHED_LIA_LITERALS: usize = 1 << 16;
 
 impl LiaWarmPolicy {
-    /// Warming on, arena cloning off, rational filter off: the configuration
-    /// this module was built to evaluate.
+    /// Warming on, per-check arena cloning off, rational filter kept: the
+    /// measured-best configuration and the default.
     pub const WARM: Self = Self {
         warm: true,
         reuse_polarity_terms: true,
-        rational_filter: false,
+        rational_filter: true,
         max_cached_literals: DEFAULT_MAX_CACHED_LIA_LITERALS,
     };
 
@@ -169,10 +179,15 @@ impl LiaWarmPolicy {
         max_cached_literals: 0,
     };
 
-    /// Warming on with the rational filter kept, for isolating the filter's
-    /// contribution from warming's.
-    pub const WARM_WITH_FILTER: Self = Self {
-        rational_filter: true,
+    /// Warming on with the rational filter switched off, for isolating the
+    /// filter's contribution from warming's.
+    ///
+    /// A diagnostic arm, not a recommended configuration: on the loss population
+    /// it decides 24% FEWER live sets in the same budget than [`Self::WARM`],
+    /// because every live set the filter would have answered cheaply goes to the
+    /// offline decider instead.
+    pub const WARM_NO_FILTER: Self = Self {
+        rational_filter: false,
         ..Self::WARM
     };
 
@@ -193,8 +208,8 @@ impl Default for LiaWarmPolicy {
 ///
 /// Read once per process from `AXEYUM_LIA_WARM`:
 ///
-/// * `off` or `0` — [`LiaWarmPolicy::OFF`], the cold path;
-/// * `filter` — [`LiaWarmPolicy::WARM_WITH_FILTER`];
+/// * `off` or `0` — [`LiaWarmPolicy::OFF`], the pre-warm cold path;
+/// * `nofilter` — [`LiaWarmPolicy::WARM_NO_FILTER`];
 /// * anything else, or unset — [`LiaWarmPolicy::WARM`].
 ///
 /// An override rather than a rebuild, so that both arms of a measurement come
@@ -204,7 +219,7 @@ pub fn ambient_lia_warm_policy() -> LiaWarmPolicy {
     static POLICY: std::sync::OnceLock<LiaWarmPolicy> = std::sync::OnceLock::new();
     *POLICY.get_or_init(|| match std::env::var("AXEYUM_LIA_WARM") {
         Ok(value) if value.eq_ignore_ascii_case("off") || value == "0" => LiaWarmPolicy::OFF,
-        Ok(value) if value.eq_ignore_ascii_case("filter") => LiaWarmPolicy::WARM_WITH_FILTER,
+        Ok(value) if value.eq_ignore_ascii_case("nofilter") => LiaWarmPolicy::WARM_NO_FILTER,
         _ => LiaWarmPolicy::WARM,
     })
 }

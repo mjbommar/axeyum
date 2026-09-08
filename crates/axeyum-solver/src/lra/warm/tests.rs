@@ -536,6 +536,39 @@ fn the_process_collector_sees_another_thread_and_the_thread_local_one_does_not()
     );
 }
 
+/// The shipped default keeps the warm rational filter.
+///
+/// This test exists because the default was originally the other way, on the
+/// brief's hypothesis that the filter refutes nothing on the loss population,
+/// and the measurement refuted that: over the 29 `QF_LIA`/`QF_UFLIA` losses
+/// where the online theory is entered it answered 79,763 live sets and refuted
+/// 20,102, and switching it off cost 24% of the live-set decisions the lazy loop
+/// got through in the same budget
+/// (`docs/research/12-performance/lia-warm-decider-2026-09-08.md`). A reverted
+/// default with nothing pinning it is one edit away from silently reverting
+/// again.
+#[test]
+fn the_default_policy_keeps_the_rational_filter() {
+    assert!(
+        LiaWarmPolicy::default().rational_filter,
+        "the default policy must keep the rational filter -- see the A/B"
+    );
+    assert!(LiaWarmPolicy::WARM.rational_filter);
+    assert!(
+        !LiaWarmPolicy::WARM_NO_FILTER.rational_filter,
+        "the diagnostic arm must actually turn the filter off, or it isolates nothing"
+    );
+    assert!(
+        LiaWarmPolicy::OFF.rational_filter,
+        "the A/B baseline is the PRE-warm path, which had the filter on"
+    );
+    assert!(
+        LiaWarmPolicy::OFF.is_cold(),
+        "the baseline arm must reproduce the pre-existing behaviour in every field"
+    );
+    assert!(!LiaWarmPolicy::WARM.is_cold());
+}
+
 /// A key the decider has no term for is a contract violation, and it must fail
 /// closed. Silently treating it as contributing nothing would drop a live
 /// literal from the conjunction — a weaker system, which is how a warm path
