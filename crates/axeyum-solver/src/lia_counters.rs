@@ -178,6 +178,23 @@ pub struct LiaCounters {
     pub gomory_rounds: u64,
     /// Cut rows appended to the Gomory tableau, summed over `gomory_calls`.
     pub gomory_cuts: u64,
+    /// Pivots performed inside the Gomory tableau's own LP, summed over
+    /// `gomory_calls`.
+    ///
+    /// This is a **separate engine** from `simplex_pivots`: the cut engine
+    /// builds its own classical integer standard form (see the soundness note
+    /// above `lia_gomory_cuts` in `lra.rs`) and pivots it with its own dense
+    /// Gauss–Jordan routine. Counting only `simplex_pivots` was actively
+    /// misleading — on `BART-PT-020/RF-13.smt2` it reported `0` against 10,102
+    /// Gomory calls, which reads as "no pivoting happened".
+    pub gomory_pivots: u64,
+    /// Rows of the Gomory standard-form tableau as built, summed over
+    /// `gomory_calls`. With `gomory_columns` this prices one `gomory_pivots`
+    /// the way `simplex_rows`/`simplex_columns` price one `simplex_pivots`.
+    pub gomory_rows: u64,
+    /// Columns of the Gomory standard-form tableau as built (two per original
+    /// variable plus one slack per row), summed over `gomory_calls`.
+    pub gomory_columns: u64,
 
     /// Top-level entries to branch-and-bound. **The branch-and-bound entry
     /// counter**; `bnb_nodes` is only readable against it.
@@ -378,6 +395,9 @@ const fn none_counters() -> LiaCounters {
         gomory_decided: 0,
         gomory_rounds: 0,
         gomory_cuts: 0,
+        gomory_pivots: 0,
+        gomory_rows: 0,
+        gomory_columns: 0,
         bnb_roots: 0,
         bnb_nodes: 0,
         bnb_budget_exhausted: 0,
@@ -511,9 +531,22 @@ pub(crate) fn record_tightened(count: u64) {
     });
 }
 
-/// One Gomory engine run: whether it decided, and how many rounds and cut rows
-/// it used.
-pub(crate) fn record_gomory(decided: bool, rounds: u64, cuts: u64) {
+/// One Gomory engine run that got as far as building a tableau: whether it
+/// decided, and the rounds, cuts, pivots and tableau shape it used.
+///
+/// `rows`/`columns` are the tableau **as built**, before cuts, which is the
+/// shape `pivots` is priced against for the first round; later rounds pivot a
+/// tableau `cuts` rows taller. That approximation is stated here rather than
+/// hidden: an exact per-round shape would need a per-round record call in the
+/// loop this deliberately keeps free of them.
+pub(crate) fn record_gomory_work(
+    decided: bool,
+    rounds: u64,
+    cuts: u64,
+    pivots: u64,
+    rows: u64,
+    columns: u64,
+) {
     record(LiaCounterGroup::Offline, |c| {
         c.gomory_calls = c.gomory_calls.saturating_add(1);
         if decided {
@@ -521,6 +554,9 @@ pub(crate) fn record_gomory(decided: bool, rounds: u64, cuts: u64) {
         }
         c.gomory_rounds = c.gomory_rounds.saturating_add(rounds);
         c.gomory_cuts = c.gomory_cuts.saturating_add(cuts);
+        c.gomory_pivots = c.gomory_pivots.saturating_add(pivots);
+        c.gomory_rows = c.gomory_rows.saturating_add(rows);
+        c.gomory_columns = c.gomory_columns.saturating_add(columns);
     });
 }
 

@@ -440,6 +440,7 @@ fn lia_counters_report_line(counters: &axeyum_solver::LiaCounters) -> String {
     format!(
         "; lia offline={} offline_calls={} offline_constraints={} offline_early_exits={} \
          tightened={} gomory_calls={} gomory_decided={} gomory_rounds={} gomory_cuts={} \
+         gomory_pivots={} gomory_rows={} gomory_columns={} \
          bnb_roots={} bnb_nodes={} bnb_budget_exhausted={} simplex_solves={} simplex_pivots={} \
          simplex_rows={} simplex_columns={} simplex_declines={} lp_relaxations={} \
          theory={} theory_asserts={} feasibility_checks={} arena_clones={} arena_clone_nodes={} \
@@ -456,6 +457,9 @@ fn lia_counters_report_line(counters: &axeyum_solver::LiaCounters) -> String {
         counters.gomory_decided,
         counters.gomory_rounds,
         counters.gomory_cuts,
+        counters.gomory_pivots,
+        counters.gomory_rows,
+        counters.gomory_columns,
         counters.bnb_roots,
         counters.bnb_nodes,
         counters.bnb_budget_exhausted,
@@ -589,6 +593,13 @@ fn watchdog_unavailable_line(trace_mode: bool, reason: &str) -> Vec<String> {
     vec![
         format!("; theory-layer unavailable: {reason}"),
         format!("; route unavailable: {reason}"),
+        // The integer-route counters are thread-local to the worker for the
+        // same reason, so they are unreadable on exactly this path. Measured
+        // 2026-09-08: 10 of the 27 committed `QF_LIA` losses take it, which is
+        // the hardest 37% of the population — the part any aggregate most needs
+        // to be able to COUNT rather than silently drop. Without this line the
+        // absence is indistinguishable from a run that never armed the guard.
+        format!("; lia unavailable: {reason}"),
     ]
 }
 
@@ -1264,7 +1275,7 @@ mod tests {
         );
         assert_eq!(
             lines.len(),
-            2,
+            3,
             "trace_mode=true must always yield a line, never nothing: got {lines:?}"
         );
         assert!(
@@ -1281,6 +1292,14 @@ mod tests {
             lines[1].starts_with("; route unavailable: "),
             "got: {}",
             lines[1]
+        );
+        // Same argument, same population: 10 of the 27 committed `QF_LIA`
+        // losses take this path, so a `; lia` aggregate that could not count
+        // them would be reporting on the 63% that finished.
+        assert!(
+            lines[2].starts_with("; lia unavailable: "),
+            "got: {}",
+            lines[2]
         );
         for line in &lines {
             assert!(line.contains("watchdog fired"), "got: {line}");

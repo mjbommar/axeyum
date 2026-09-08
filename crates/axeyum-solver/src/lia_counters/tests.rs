@@ -145,14 +145,25 @@ fn every_group_is_incremented_by_a_real_online_query() {
          with a buildable tableau, and reported nothing: {counters:?}"
     );
     assert!(
-        counters.arena_clones > 0 && counters.arena_clone_nodes > 0,
-        "the theory rebuilds live terms from a cloned arena but reported no \
-         clone: {counters:?}"
+        counters.gomory_rows > 0 && counters.gomory_columns > 0,
+        "a built Gomory tableau has a shape, and `gomory_pivots` is unreadable \
+         without it: {counters:?}"
     );
     assert!(
         counters.theory_feasibility_checks > 0,
         "asserts happened but no feasibility check was counted: {counters:?}"
     );
+    // The clone counter is kept, and what it must now report is ZERO on the
+    // feasibility path: every polarity term is pre-built at construction, so a
+    // check assembles its conjunction against `&self.arena`. Before that, the
+    // committed 27-file `QF_LIA` loss list copied 352 million term nodes
+    // through here. A nonzero value means a clone came back — which is the
+    // regression, not the measurement failing.
+    assert_eq!(
+        counters.arena_clones, 0,
+        "the feasibility path must not clone the arena: {counters:?}"
+    );
+    assert_eq!(counters.arena_clone_nodes, 0, "{counters:?}");
     assert!(
         counters.filter_refuted + counters.filter_integral + counters.filter_inconclusive > 0,
         "every feasibility check over a non-empty live set consults the warm \
@@ -204,6 +215,61 @@ fn the_offline_decider_reports_which_engine_ran() {
             "every branch-and-bound run explores at least its root node: {counters:?}"
         );
     }
+}
+
+#[test]
+fn the_clone_counter_still_fires_on_the_path_that_still_clones() {
+    // Paired with `every_group_is_incremented_by_a_real_online_query`, which
+    // now requires `arena_clones == 0` on the feasibility path. That assertion
+    // alone would go on passing if `record_arena_clone` were deleted outright,
+    // so the counter needs a live positive control: one call through the
+    // owned-arena builder that the equality-branch probe still needs, and the
+    // node total must be the arena's real size, not a placeholder.
+    let mut arena = TermArena::new();
+    let x = ivar(&mut arena, "x");
+    let zero = iconst(&mut arena, 0);
+    let atom = arena.int_lt(zero, x).expect("0 < x");
+    let mut theory = crate::lia_online::LiaTheory::new(&arena, &[atom]);
+    crate::euf_egraph::TheorySolver::assert(&mut theory, 0, false)
+        .expect("`x <= 0` alone is feasible");
+
+    let guard = LiaCountersGuard::enable();
+    let (cloned, terms) = theory
+        .terms_for(&theory.live_literals())
+        .expect("terms build");
+    drop(guard);
+    assert_eq!(terms.len(), 1);
+
+    let counters = last_lia_counters().expect("armed");
+    assert_eq!(counters.arena_clones, 1, "{counters:?}");
+    assert_eq!(
+        counters.arena_clone_nodes,
+        cloned.len() as u64,
+        "the node total must be the arena's real size: {counters:?}"
+    );
+}
+
+#[test]
+fn the_cut_engines_own_pivots_are_counted_separately_from_the_simplexs() {
+    // The counter this test exists for was MISSING when the instrumentation
+    // first landed, and its absence was not neutral. On
+    // `BART-PT-020/RF-13.smt2` the sweep reported `simplex_pivots=0` against
+    // 10,102 Gomory calls — which reads as "no pivoting happened" when in fact
+    // every pivot had moved into the cut engine, where nothing was watching.
+    // A conjunction whose standard form is infeasible at the origin forces at
+    // least one Gomory pivot; `simplex_pivots` stays a separate number.
+    let (arena, assertions) = conjunctive_query();
+    let guard = LiaCountersGuard::enable();
+    let verdict = crate::lra::check_with_lia_simplex(&arena, &assertions).expect("decided");
+    drop(guard);
+    assert!(matches!(verdict, CheckResult::Sat(_)), "got {verdict:?}");
+
+    let counters = last_lia_counters().expect("armed");
+    assert!(
+        counters.gomory_pivots > 0,
+        "the cut engine reached a feasible vertex from an origin its own \
+         constraints exclude, so it pivoted: {counters:?}"
+    );
 }
 
 #[test]

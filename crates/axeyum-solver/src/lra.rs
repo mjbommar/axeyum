@@ -1913,7 +1913,7 @@ enum GomoryLp {
 /// in standard form), `Decline` on overflow or the iteration backstop.
 ///
 /// All structural variables are `>= 0`; a feasible vertex has every `rhs[i] >= 0`.
-fn gomory_solve_lp(t: &mut GomoryTableau) -> GomoryLp {
+fn gomory_solve_lp(t: &mut GomoryTableau, pivots: &mut u64) -> GomoryLp {
     let nrows = t.body.len();
     let ncols = t.nonbasic.len();
     // Generous deterministic backstop; Bland's rule (smallest-index choice)
@@ -1950,6 +1950,7 @@ fn gomory_solve_lp(t: &mut GomoryTableau) -> GomoryLp {
             // x_basic >= 0. The standard-form system is infeasible.
             return GomoryLp::Infeasible;
         };
+        *pivots += 1;
         if gomory_pivot(t, li, ej).is_none() {
             return GomoryLp::Decline;
         }
@@ -2128,33 +2129,74 @@ fn lia_gomory_cuts(
     nvars: usize,
     deadline: Option<Instant>,
 ) -> Option<LiaBnb> {
-    // Rounds and cuts are accumulated locally and recorded once, on every exit,
-    // so counting is invisible to the search. `record_gomory` is deliberately
-    // NOT called on the two pre-tableau declines below: a call that never built
-    // a tableau ran no rounds, and counting it would put a structural zero into
-    // `gomory_rounds / gomory_calls`.
+    // Work is accumulated in a local and recorded ONCE, after the inner
+    // function returns, so counting adds nothing to the pivot loop and no exit
+    // path can forget to report. A call that never builds a tableau is not
+    // recorded at all: it ran no rounds, and counting it would put a structural
+    // zero into `gomory_rounds / gomory_calls`.
+    let mut work = GomoryWork::default();
+    let outcome = lia_gomory_cuts_counting(constraints, nvars, deadline, &mut work);
+    if work.built {
+        lia_counters::record_gomory_work(
+            outcome.is_some(),
+            work.rounds,
+            work.cuts,
+            work.pivots,
+            work.rows,
+            work.columns,
+        );
+    }
+    outcome
+}
+
+/// What one [`lia_gomory_cuts`] call did, for [`crate::lia_counters`].
+///
+/// `gomory_pivots` is the counter that was missing when this instrumentation
+/// first landed, and its absence was actively misleading: on
+/// `BART-PT-020/RF-13.smt2` the sweep reported `simplex_pivots=0` against
+/// 10,102 Gomory calls, which reads as "no pivoting happened" when in fact
+/// every pivot had moved into this engine, where nothing was watching. A
+/// counter that is silent about the engine actually doing the work is the
+/// confident zero in its most expensive form.
+#[derive(Default)]
+struct GomoryWork {
+    /// Whether a tableau was built at all. False means this call is not a
+    /// `gomory_call` — see [`lia_gomory_cuts`].
+    built: bool,
+    /// Cut-and-re-solve rounds entered.
+    rounds: u64,
+    /// Cut rows appended.
+    cuts: u64,
+    /// Pivots performed inside `gomory_solve_lp`, summed over rounds.
+    pivots: u64,
+    /// Rows of the standard-form tableau as built (before cuts).
+    rows: u64,
+    /// Columns of the standard-form tableau as built (before cuts).
+    columns: u64,
+}
+
+fn lia_gomory_cuts_counting(
+    constraints: &[Constraint],
+    nvars: usize,
+    deadline: Option<Instant>,
+    work: &mut GomoryWork,
+) -> Option<LiaBnb> {
     if past_deadline(deadline) {
         return None;
     }
     let mut t = build_gomory_tableau(constraints, nvars)?;
-    let mut rounds = 0u64;
-    let mut cuts = 0u64;
+    work.built = true;
+    work.rows = t.body.len() as u64;
+    work.columns = t.nonbasic.len() as u64;
 
     for _round in 0..MAX_GOMORY_ROUNDS {
         if past_deadline(deadline) {
-            lia_counters::record_gomory(false, rounds, cuts);
             return None;
         }
-        rounds += 1;
-        match gomory_solve_lp(&mut t) {
-            GomoryLp::Infeasible => {
-                lia_counters::record_gomory(true, rounds, cuts);
-                return Some(LiaBnb::Unsat);
-            }
-            GomoryLp::Decline => {
-                lia_counters::record_gomory(false, rounds, cuts);
-                return None;
-            }
+        work.rounds += 1;
+        match gomory_solve_lp(&mut t, &mut work.pivots) {
+            GomoryLp::Infeasible => return Some(LiaBnb::Unsat),
+            GomoryLp::Decline => return None,
             GomoryLp::Feasible => {}
         }
         // Find a basic, integer-constrained variable whose value is fractional.
@@ -2172,19 +2214,12 @@ fn lia_gomory_cuts(
             // No fractional integer-constrained basic ⇒ the structural variables
             // are all integers; reconstruct the original `x_i = p_i - n_i` and
             // return it for replay. (Cut slacks may be fractional; irrelevant.)
-            let decided = gomory_reconstruct(&t, nvars).map(LiaBnb::Sat);
-            lia_counters::record_gomory(decided.is_some(), rounds, cuts);
-            return decided;
+            return gomory_reconstruct(&t, nvars).map(LiaBnb::Sat);
         };
-        let Some(()) = add_gomory_cut(&mut t, li) else {
-            lia_counters::record_gomory(false, rounds, cuts);
-            return None;
-        };
-        cuts += 1;
+        add_gomory_cut(&mut t, li)?;
+        work.cuts += 1;
     }
-    // Round bound hit ⇒ decline (never loop, never a wrong verdict).
-    lia_counters::record_gomory(false, rounds, cuts);
-    None
+    None // round bound hit ⇒ decline (never loop, never a wrong verdict).
 }
 
 /// Reads the integer values of the original variables `x_i = p_i - n_i` out of a

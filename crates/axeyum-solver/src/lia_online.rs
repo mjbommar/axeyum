@@ -136,10 +136,21 @@ pub struct LiaTheory {
     /// Backtrack trail: per [`push`](TheorySolver::push), the `assigned_log`
     /// length to restore on the matching [`pop`](TheorySolver::pop).
     trail: Vec<usize>,
-    /// Cloneable copy of the arena, so feasibility can reconstruct live terms
-    /// (the offline decider needs an arena; building polarity-applied
-    /// `BoolNot`/conjunction terms can grow it, hence an owned clone).
+    /// The theory's own arena: a copy of the caller's taken once at
+    /// construction, extended once with every registered atom's negation (see
+    /// `neg_terms`). Owned because the offline decider needs an arena to walk
+    /// and this one must outlive the caller's borrow.
     arena: TermArena,
+    /// Per registered atom: the `BoolNot` of its term, pre-built in `arena` at
+    /// construction. `None` for an atom that never appears at negative polarity
+    /// in a live set, or whose negation overflowed the arena.
+    ///
+    /// This is the whole of the incremental change: with the negations already
+    /// present, assembling the live conjunction is a lookup per literal against
+    /// a shared `&self.arena`, instead of a full `TermArena` clone per
+    /// feasibility check. The work stops being proportional to the *state* (the
+    /// arena) and becomes proportional to the *delta* (the live literals).
+    neg_terms: Vec<Option<TermId>>,
     /// If set, [`TheorySolver::assert`] records assignments without re-solving the
     /// whole live conjunction. The next [`TheorySolver::propagate`] call performs
     /// one feasibility check and reports an infeasible core as a conflict
@@ -701,13 +712,38 @@ impl LiaTheory {
                 Some((rows, engine)) => (rows, Some(RefCell::new(engine))),
                 None => (vec![AtomRow::None; count], None),
             };
+        // Build every atom's negation ONCE, here, in the theory's own arena.
+        //
+        // This is what makes the per-check arena clone unnecessary: the clone
+        // existed only because `live_terms` had to *add* a `BoolNot` node for a
+        // false-polarity literal, and a `&self` method cannot grow `self.arena`.
+        // Interning makes this idempotent and bounded — at most one new node per
+        // registered atom, once, against a clone of the whole arena on every
+        // feasibility check. Measured on the committed 27-file `QF_LIA` loss
+        // list before this existed: 13,270 clones copying 352 million term
+        // nodes, 17-54% of the binding route's whole budget.
+        //
+        // `None` for an atom whose negation would overflow the arena, which
+        // reproduces the old `arena.not(atom).ok()?` exactly: the check degrades
+        // to `Unknown`, never to a verdict.
+        let mut owned = arena.clone();
+        let neg_terms: Vec<Option<TermId>> = atom_terms
+            .iter()
+            .zip(&kinds)
+            .map(|(&term, kind)| match kind {
+                AtomKind::Order | AtomKind::Equality => owned.not(term).ok(),
+                // Never appears at negative polarity in a live set.
+                AtomKind::Unsupported => None,
+            })
+            .collect();
         Self {
             atom_terms: atom_terms.to_vec(),
             kinds,
             assigned: vec![None; count],
             assigned_log: Vec::new(),
             trail: Vec::new(),
-            arena: arena.clone(),
+            arena: owned,
+            neg_terms,
             defer_feasibility_until_propagate: false,
             skip_entailment_propagation: false,
             allow_opaque_apps,
@@ -864,20 +900,35 @@ impl LiaTheory {
     fn live_terms(&self, lits: &[TheoryLit]) -> Option<(TermArena, Vec<TermId>)> {
         // Counted here rather than at the call sites because this is where the
         // clone happens; `arena.len()` is the node count actually copied, which
-        // is the quantity an incremental integer check would stop paying.
+        // is the quantity the in-place path below stops paying.
         lia_counters::record_arena_clone(self.arena.len() as u64);
-        let mut arena = self.arena.clone();
+        let arena = self.arena.clone();
+        let terms = self.live_terms_in_place(lits)?;
+        Some((arena, terms))
+    }
+
+    /// The same per-literal polarity-applied terms as [`Self::live_terms`], but
+    /// **in the theory's own arena**, with no clone.
+    ///
+    /// Every term this needs already exists: the positive form is the
+    /// registered atom, and the negative form was built once at construction
+    /// (`neg_terms`). So a feasibility check costs one lookup per live literal
+    /// instead of a copy of the whole arena, and the offline decider is handed
+    /// `&self.arena` directly.
+    ///
+    /// `None` exactly where [`Self::live_terms`] returned `None`: a literal
+    /// whose negation could not be built. Callers degrade to `Unknown`.
+    fn live_terms_in_place(&self, lits: &[TheoryLit]) -> Option<Vec<TermId>> {
         let mut terms = Vec::with_capacity(lits.len());
         for lit in lits {
-            let atom = self.atom_terms[lit.atom];
             let term = if lit.value {
-                atom
+                self.atom_terms[lit.atom]
             } else {
-                arena.not(atom).ok()?
+                (*self.neg_terms.get(lit.atom)?)?
             };
             terms.push(term);
         }
-        Some((arena, terms))
+        Some(terms)
     }
 
     /// Re-decides integer feasibility of the currently-asserted constraint atoms
@@ -913,14 +964,14 @@ impl LiaTheory {
             }
             RationalFilter::Inconclusive => lia_counters::record_filter_inconclusive(),
         }
-        let Some((arena, terms)) = self.live_terms(&lits) else {
+        let Some(terms) = self.live_terms_in_place(&lits) else {
             return Feasibility::Unknown;
         };
-        match self.check_terms(&arena, &terms) {
+        match self.check_terms(&self.arena, &terms) {
             Ok(CheckResult::Sat(_)) => Feasibility::Sat,
             Ok(CheckResult::Unknown(_)) | Err(_) => Feasibility::Unknown,
             Ok(CheckResult::Unsat) if minimize => Feasibility::Unsat(minimize_core(
-                &arena,
+                &self.arena,
                 &lits,
                 &terms,
                 self.allow_opaque_apps,
@@ -1391,10 +1442,13 @@ impl LiaTheory {
         if let Some(p) = probe {
             lits.push(p);
         }
-        let Some((arena, terms)) = self.live_terms(&lits) else {
+        let Some(terms) = self.live_terms_in_place(&lits) else {
             return false;
         };
-        matches!(self.lp_relaxation(&arena, &terms), LpRelaxation::Infeasible)
+        matches!(
+            self.lp_relaxation(&self.arena, &terms),
+            LpRelaxation::Infeasible
+        )
     }
 
     /// Same LP-infeasibility probe as [`Self::probe_lp_infeasible`], but for one
@@ -1951,7 +2005,8 @@ fn add_boolean_leaf_values(
 /// `sat`.
 fn theory_model(theory: &LiaTheory) -> Option<Model> {
     let lits = theory.live_lits();
-    let (arena, terms) = theory.live_terms(&lits)?;
+    let terms = theory.live_terms_in_place(&lits)?;
+    let arena = &theory.arena;
     if terms.is_empty() {
         // No live constraints: any assignment works; an empty model replays
         // trivially against any free integer symbols (the evaluator treats unset
@@ -1959,7 +2014,7 @@ fn theory_model(theory: &LiaTheory) -> Option<Model> {
         // assertions are tautological at this leaf, so an empty model suffices).
         return Some(Model::new());
     }
-    match theory.check_terms(&arena, &terms) {
+    match theory.check_terms(arena, &terms) {
         Ok(CheckResult::Sat(model)) => Some(model),
         _ => None,
     }
