@@ -1,0 +1,988 @@
+//! A **warm** front end for the offline conjunctive `QF_LIA` decider.
+//!
+//! # The shape this fixes
+//!
+//! [`super::lia_simplex_capped`] is a pure function of an assertion list: every
+//! entry builds a fresh `IntCollector`, walks every assertion's term graph,
+//! linearizes it into exact rationals, integer-tightens the whole constraint set,
+//! and only then hands the system to the Gomory cut round and branch-and-bound.
+//!
+//! Its dominant caller does not have a fresh problem each time. The lazy-SMT
+//! loops ([`crate::lia_online::LiaTheory`], and through it the `QF_UFLIA`
+//! combination) drive it from a `DPLL` **trail**: each call's literal list differs
+//! from the previous one by an appended suffix, a popped suffix, or both. On the
+//! `QF_LIA`/`QF_UFLIA` files this solver loses, that adds up to hundreds of
+//! thousands of entries per file, every one of which redoes the collection and
+//! the tightening for a system it had already built.
+//!
+//! This module keeps that work. It is *not* a memo table on verdicts (a verdict
+//! cache would be a soundness liability with nothing to gain — the systems
+//! genuinely differ from call to call); it caches the two stages whose result is
+//! a **function of one literal alone**:
+//!
+//! * collection — the term walk and linearization of one polarity-applied atom;
+//! * tightening — the gcd-aware strict-to-non-strict rewrite, which
+//!   [`super::tighten_int_constraints`] applies constraint by constraint.
+//!
+//! and it keeps the assembled system across calls, updating it by the trail
+//! delta rather than rebuilding it.
+//!
+//! # Why the answers are the SAME answers, not merely sound ones
+//!
+//! It would be easy to build a warm decider that is sound but decides a
+//! different set of cases: both engines below are sound on any input, so a warm
+//! path that permuted columns or carried spare ones could never return a wrong
+//! `sat`/`unsat` — it would just answer `unknown` somewhere the cold path
+//! answers, or the reverse, and no test would say so. That is a coverage change
+//! disguised as a performance change.
+//!
+//! So this decider reproduces the cold path's system **exactly**, column
+//! numbering included:
+//!
+//! * The persistent collector assigns each symbol a stable *global* column. That
+//!   numbering is NOT what the cold path would produce for a given live list, so
+//!   it is never handed to the engines.
+//! * Each literal records the global columns it touches, in touch order (see
+//!   `IntCollector::record_touches`) — repeats included, because a column first
+//!   seen inside some other literal must still take its place in this literal's
+//!   order when that other literal is not live.
+//! * Assembly walks the live literals in order and allocates a *local* column on
+//!   first touch. The cold numbering is precisely
+//!   `dedup(concat(touch_log(l) for l in live order))`, so the local numbering
+//!   and the cold numbering agree constraint for constraint.
+//!
+//! `nvars`, the constraint order, the `origin` tags, the tightening and the
+//! engine dispatch are then identical, so the warm and cold paths are the same
+//! computation — which is what makes the differential tests below a real check
+//! rather than a check of two sound engines against each other.
+//!
+//! # What is delta-proportional and what is not
+//!
+//! A `DPLL` trail changes by a suffix, so the live literal lists across calls
+//! share a prefix; and because a local column is allocated at the *first* live
+//! literal that touches it, a shared prefix of literals has a shared prefix of
+//! local columns and a shared prefix of constraints. Assembly therefore truncates
+//! to the longest common prefix and appends the rest: the work is proportional to
+//! the delta, not to the live set.
+//!
+//! Two callers break the prefix property and are counted, not hidden:
+//! conflict-core minimization drops a literal from the *middle* of the list, and
+//! a restart replaces the list wholesale. Both fall back to rebuilding from the
+//! common prefix — still not a cold start, since the per-literal collection cache
+//! survives — and [`LiaWarmCounters::assembly_reasons`] says how often.
+//!
+//! What is NOT warmed here is the standard-form tableau or the LP itself.
+//! `build_gomory_tableau` writes a dense `m` by `2*nvars` body whose column
+//! layout is a function of `nvars`, so it changes shape whenever the live
+//! variable footprint does; and the tableau the cut round leaves behind has been
+//! pivoted away from that layout. Warm-starting it is separate work with a
+//! separate soundness argument, and this module's counters are what say whether
+//! it is worth doing.
+
+use std::cell::{Cell, RefCell};
+use std::collections::BTreeMap;
+
+// Native uses the std clock; wasm uses the `web_time` drop-in (ADR-0017).
+#[cfg(not(target_arch = "wasm32"))]
+use std::time::Instant;
+#[cfg(target_arch = "wasm32")]
+use web_time::Instant;
+
+use axeyum_ir::{SymbolId, TermArena, TermId, Value, eval};
+
+use super::{
+    Constraint, IntCollector, LiaBnb, LinExpr, decide_int_constraints, lia_bnb_undecided,
+    lia_collection_timeout, past_deadline, tighten_int_constraints,
+};
+use crate::backend::{CheckResult, SolverError, UnknownKind, UnknownReason};
+use crate::model::Model;
+
+// ---------------------------------------------------------------------------
+// Policy
+// ---------------------------------------------------------------------------
+
+/// Whether — and how — a caller warms the offline conjunctive `QF_LIA` decider.
+///
+/// A policy object rather than a compiled-in behaviour, because the only honest
+/// way to report what warming bought is to run both arms from **one binary**:
+/// two builds differ in more than the change under test, and this repository has
+/// already been burned by a prebuilt binary describing an older tree. With
+/// [`LiaWarmPolicy::OFF`] every field below is inert and the caller takes the
+/// pre-existing cold path verbatim, so an A/B is a policy flip.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct LiaWarmPolicy {
+    /// Reuse the collected, tightened constraint system across checks.
+    ///
+    /// `false` restores the cold path exactly: a fresh collector walk, a fresh
+    /// tightening pass and a fresh assembly on every call.
+    pub warm: bool,
+    /// Reuse each literal's polarity-applied term instead of cloning the whole
+    /// arena per check.
+    ///
+    /// The cold path clones the theory's arena on every feasibility check purely
+    /// so that building `(not atom)` cannot mutate it. Building those negations
+    /// **once**, at construction, removes the clone; term interning makes the
+    /// resulting ids stable, so nothing downstream can tell the difference. This
+    /// is separate from [`Self::warm`] because it is a separate cost with a
+    /// separate measurement, and one flag would conflate them.
+    pub reuse_polarity_terms: bool,
+    /// Run the warm rational filter in front of the offline decider.
+    ///
+    /// On the `QF_LIA`/`QF_UFLIA` loss population the filter was measured to
+    /// refute nothing while running ahead of every check. `false` skips it; see
+    /// [`crate::lia_online`] for what it costs and what it is still good for.
+    pub rational_filter: bool,
+    /// Upper bound on the number of distinct literals whose collection is cached.
+    ///
+    /// A cached literal costs its own constraints, and the population is the atom
+    /// set of one query, so this is a runaway-memory backstop rather than a
+    /// tuning knob. Past it, literals are collected per check as the cold path
+    /// does, and [`LiaWarmCounters::literal_cache_evicted`] records that it fired.
+    pub max_cached_literals: usize,
+}
+
+/// Backstop on cached literals; see [`LiaWarmPolicy::max_cached_literals`].
+///
+/// Two literals per registered atom, and the online `LIA` theory is only built
+/// for atom sets below its own admission bound, so this is not expected to fire
+/// on any query that theory accepts — it exists so a caller which does not share
+/// that bound cannot make this cache unbounded.
+pub const DEFAULT_MAX_CACHED_LIA_LITERALS: usize = 1 << 16;
+
+impl LiaWarmPolicy {
+    /// Warming on, arena cloning off, rational filter off: the configuration
+    /// this module was built to evaluate.
+    pub const WARM: Self = Self {
+        warm: true,
+        reuse_polarity_terms: true,
+        rational_filter: false,
+        max_cached_literals: DEFAULT_MAX_CACHED_LIA_LITERALS,
+    };
+
+    /// Everything off — the pre-existing cold path, verbatim. The A/B baseline.
+    pub const OFF: Self = Self {
+        warm: false,
+        reuse_polarity_terms: false,
+        rational_filter: true,
+        max_cached_literals: 0,
+    };
+
+    /// Warming on with the rational filter kept, for isolating the filter's
+    /// contribution from warming's.
+    pub const WARM_WITH_FILTER: Self = Self {
+        rational_filter: true,
+        ..Self::WARM
+    };
+
+    /// Whether this policy leaves every pre-existing behaviour in place.
+    #[must_use]
+    pub const fn is_cold(self) -> bool {
+        !self.warm && !self.reuse_polarity_terms && self.rational_filter
+    }
+}
+
+impl Default for LiaWarmPolicy {
+    fn default() -> Self {
+        Self::WARM
+    }
+}
+
+/// The policy in force for callers that do not choose one explicitly.
+///
+/// Read once per process from `AXEYUM_LIA_WARM`:
+///
+/// * `off` or `0` — [`LiaWarmPolicy::OFF`], the cold path;
+/// * `filter` — [`LiaWarmPolicy::WARM_WITH_FILTER`];
+/// * anything else, or unset — [`LiaWarmPolicy::WARM`].
+///
+/// An override rather than a rebuild, so that both arms of a measurement come
+/// from one binary (see [`LiaWarmPolicy`]).
+#[must_use]
+pub fn ambient_lia_warm_policy() -> LiaWarmPolicy {
+    static POLICY: std::sync::OnceLock<LiaWarmPolicy> = std::sync::OnceLock::new();
+    *POLICY.get_or_init(|| match std::env::var("AXEYUM_LIA_WARM") {
+        Ok(value) if value.eq_ignore_ascii_case("off") || value == "0" => LiaWarmPolicy::OFF,
+        Ok(value) if value.eq_ignore_ascii_case("filter") => LiaWarmPolicy::WARM_WITH_FILTER,
+        _ => LiaWarmPolicy::WARM,
+    })
+}
+
+// ---------------------------------------------------------------------------
+// Counters
+// ---------------------------------------------------------------------------
+
+/// Why one check could not simply continue from the previous check's assembled
+/// system.
+///
+/// These are named rather than summed into one `rebuilds` total because a warm
+/// cache that silently degrades to a rebuild on every call has the same call
+/// count and the same verdicts as one that is working: it reads as a
+/// disappointing performance result rather than as a bug.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AssemblyReason {
+    /// The live list is exactly the previous one — no assembly work at all.
+    Unchanged,
+    /// The live list extends the previous one: pure append, nothing discarded.
+    Extended,
+    /// The live list is a proper prefix of the previous one: a pop, with nothing
+    /// collected.
+    Shortened,
+    /// The lists share a proper prefix and then differ — a backjump that
+    /// re-asserted different literals, or conflict-core minimization dropping a
+    /// literal from the middle of the set.
+    Diverged,
+    /// Nothing was shared: the first check, a restart, or a wholesale change.
+    ColdStart,
+    /// [`LiaWarmPolicy::warm`] is off, so the system was built from scratch.
+    PolicyCold,
+}
+
+impl AssemblyReason {
+    /// A stable, lowercase name for a report.
+    #[must_use]
+    pub const fn name(self) -> &'static str {
+        match self {
+            Self::Unchanged => "unchanged",
+            Self::Extended => "extended",
+            Self::Shortened => "shortened",
+            Self::Diverged => "diverged",
+            Self::ColdStart => "cold-start",
+            Self::PolicyCold => "policy-cold",
+        }
+    }
+
+    /// Every variant, in report order.
+    #[must_use]
+    pub const fn all() -> [Self; 6] {
+        [
+            Self::Unchanged,
+            Self::Extended,
+            Self::Shortened,
+            Self::Diverged,
+            Self::ColdStart,
+            Self::PolicyCold,
+        ]
+    }
+
+    /// This reason's index into [`LiaWarmCounters::assembly_reasons`].
+    #[must_use]
+    pub const fn slot(self) -> usize {
+        match self {
+            Self::Unchanged => 0,
+            Self::Extended => 1,
+            Self::Shortened => 2,
+            Self::Diverged => 3,
+            Self::ColdStart => 4,
+            Self::PolicyCold => 5,
+        }
+    }
+}
+
+/// Clock-free counters for the warm decider.
+///
+/// Every field is a `u64`, so a `0` is indistinguishable from "never collected"
+/// — which is why [`last_lia_warm_stats`] returns an [`Option`] and why
+/// [`LiaWarmCounters::checks`] is incremented before anything else can move. A
+/// zero anywhere below with `checks > 0` is a measurement; with `checks == 0` it
+/// says the decider was never entered on this thread.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct LiaWarmCounters {
+    /// Entries into [`WarmLiaDecider::check`] — the group's entry counter.
+    pub checks: u64,
+    /// Checks whose assembled system continued from the previous one rather than
+    /// being built from nothing.
+    pub warm_updates: u64,
+    /// Checks whose assembled system was built from nothing.
+    pub rebuilds: u64,
+    /// Per-[`AssemblyReason`] check counts, indexed by [`AssemblyReason::slot`].
+    pub assembly_reasons: [u64; 6],
+    /// Literals appended to the assembled system, summed over checks.
+    pub delta_added: u64,
+    /// Literals discarded from the assembled system, summed over checks.
+    pub delta_removed: u64,
+    /// Literals kept from the previous check, summed over checks — the quantity
+    /// warming exists to avoid recomputing.
+    pub delta_kept: u64,
+    /// Literals collected from their term graph for the first time.
+    pub literal_collections: u64,
+    /// Literal lookups served from the collection cache.
+    pub literal_cache_hits: u64,
+    /// Literals not cached because [`LiaWarmPolicy::max_cached_literals`] was
+    /// reached.
+    pub literal_cache_evicted: u64,
+    /// Constraints copied into the assembled system, summed over checks. Compare
+    /// against `assembled_constraints_live` to see how much of the system a warm
+    /// update actually touched.
+    pub assembled_constraints_copied: u64,
+    /// Constraints in the assembled system at the point it was handed to the
+    /// engines, summed over checks.
+    pub assembled_constraints_live: u64,
+    /// Local columns in the assembled system when handed to the engines, summed
+    /// over checks.
+    pub assembled_columns_live: u64,
+    /// Checks that ended in `unsat`.
+    pub verdict_unsat: u64,
+    /// Checks that ended in `sat`, model replayed.
+    pub verdict_sat: u64,
+    /// Checks that ended in `unknown`.
+    pub verdict_unknown: u64,
+    /// Checks that ended in a [`SolverError`] — input outside the conjunctive
+    /// linear-integer fragment, or a replay failure.
+    pub verdict_error: u64,
+}
+
+impl LiaWarmCounters {
+    /// The check count for one assembly reason.
+    #[must_use]
+    pub const fn assembly_reason(&self, reason: AssemblyReason) -> u64 {
+        self.assembly_reasons[reason.slot()]
+    }
+
+    /// A one-line, stable rendering for a trace or a sweep log.
+    #[must_use]
+    pub fn summary(&self) -> String {
+        let mut out = format!(
+            "warm=measured checks={} warm_updates={} rebuilds={} delta_added={} \
+             delta_removed={} delta_kept={} literal_collections={} literal_cache_hits={} \
+             literal_cache_evicted={} constraints_copied={} constraints_live={} \
+             columns_live={} unsat={} sat={} unknown={} error={}",
+            self.checks,
+            self.warm_updates,
+            self.rebuilds,
+            self.delta_added,
+            self.delta_removed,
+            self.delta_kept,
+            self.literal_collections,
+            self.literal_cache_hits,
+            self.literal_cache_evicted,
+            self.assembled_constraints_copied,
+            self.assembled_constraints_live,
+            self.assembled_columns_live,
+            self.verdict_unsat,
+            self.verdict_sat,
+            self.verdict_unknown,
+            self.verdict_error,
+        );
+        for reason in AssemblyReason::all() {
+            out.push_str(&format!(
+                " assembly_{}={}",
+                reason.name(),
+                self.assembly_reason(reason)
+            ));
+        }
+        out
+    }
+}
+
+thread_local! {
+    /// Whether a [`LiaWarmStatsGuard`] is armed on this thread.
+    static COLLECT: Cell<bool> = const { Cell::new(false) };
+    /// Set once collection has ever been armed on this thread, so a reader can
+    /// tell "measured zero" from "never collected".
+    static EVER_ARMED: Cell<bool> = const { Cell::new(false) };
+    /// This thread's counters.
+    static COUNTERS: RefCell<LiaWarmCounters> = RefCell::new(LiaWarmCounters::default());
+}
+
+/// Records into this thread's counters when a [`LiaWarmStatsGuard`] is armed.
+///
+/// Off, this is one thread-local `Cell` read and a branch: no clock, no
+/// allocation, and nothing the search can observe — so no verdict can depend on
+/// whether a guard exists.
+fn record(f: impl FnOnce(&mut LiaWarmCounters)) {
+    if COLLECT.with(Cell::get) {
+        COUNTERS.with(|c| f(&mut c.borrow_mut()));
+    }
+}
+
+/// Enables warm-decider counter collection for this thread, for the guard's
+/// lifetime, and resets the counters.
+#[derive(Debug)]
+pub struct LiaWarmStatsGuard(bool);
+
+impl LiaWarmStatsGuard {
+    /// Arms collection and zeroes the counters.
+    #[must_use]
+    pub fn enable() -> Self {
+        let previous = COLLECT.with(|c| c.replace(true));
+        EVER_ARMED.with(|c| c.set(true));
+        COUNTERS.with(|c| *c.borrow_mut() = LiaWarmCounters::default());
+        LiaWarmStatsGuard(previous)
+    }
+}
+
+impl Drop for LiaWarmStatsGuard {
+    fn drop(&mut self) {
+        COLLECT.with(|c| c.set(self.0));
+    }
+}
+
+/// This thread's warm-decider counters since the active — or most recently
+/// dropped — [`LiaWarmStatsGuard`] was created.
+///
+/// `None` means collection was **never armed on this thread**, which is not the
+/// same statement as every counter being zero. That distinction is the whole
+/// reason for the [`Option`].
+#[must_use]
+pub fn last_lia_warm_stats() -> Option<LiaWarmCounters> {
+    if EVER_ARMED.with(Cell::get) {
+        Some(COUNTERS.with(|c| *c.borrow()))
+    } else {
+        None
+    }
+}
+
+// ---------------------------------------------------------------------------
+// The per-literal collection cache
+// ---------------------------------------------------------------------------
+
+/// One literal's collected, tightened contribution, in the persistent
+/// collector's **global** column space.
+#[derive(Debug, Clone)]
+struct LiteralEntry {
+    /// Tightened constraints; `origin` is stamped by assembly, not here.
+    constraints: Vec<Constraint>,
+    /// Global columns in touch order, duplicates removed but order preserved.
+    touched: Vec<usize>,
+    /// This literal is `false` on its own (a `BoolConst` at the wrong polarity).
+    trivially_unsat: bool,
+    /// Linearizing this literal overflowed `i128`.
+    overflow: bool,
+    /// This literal mentions an opaque integer `UF` application.
+    has_opaque: bool,
+}
+
+// ---------------------------------------------------------------------------
+// The assembled system
+// ---------------------------------------------------------------------------
+
+/// `global_to_local` entry for a global column with no live local column.
+const NO_LOCAL: usize = usize::MAX;
+
+/// The live system in **local** column space, plus the bookkeeping that lets a
+/// later check truncate it to a shared prefix and append the rest.
+#[derive(Debug, Default)]
+struct Assembly {
+    /// Literal keys in live order.
+    keys: Vec<usize>,
+    /// `constraints.len()` after literal `i` was appended.
+    key_constraint_end: Vec<usize>,
+    /// `local_to_global.len()` after literal `i` was appended.
+    key_column_end: Vec<usize>,
+    /// Prefix-or of `trivially_unsat` through literal `i`.
+    key_trivially_unsat: Vec<bool>,
+    /// Prefix-or of `overflow` through literal `i`.
+    key_overflow: Vec<bool>,
+    /// Prefix-or of `has_opaque` through literal `i`.
+    key_opaque: Vec<bool>,
+    /// The assembled constraints, in local column space.
+    constraints: Vec<Constraint>,
+    /// Local column `l` is global column `local_to_global[l]`.
+    local_to_global: Vec<usize>,
+    /// Inverse of `local_to_global`, sized to the global column count and
+    /// [`NO_LOCAL`] wherever the global column is not live.
+    global_to_local: Vec<usize>,
+}
+
+impl Assembly {
+    /// Drops every literal from position `keep` on, restoring the local column
+    /// numbering to what it was after literal `keep - 1`.
+    fn truncate(&mut self, keep: usize) {
+        if keep >= self.keys.len() {
+            return;
+        }
+        let columns = if keep == 0 {
+            0
+        } else {
+            self.key_column_end[keep - 1]
+        };
+        let constraints = if keep == 0 {
+            0
+        } else {
+            self.key_constraint_end[keep - 1]
+        };
+        for &global in &self.local_to_global[columns..] {
+            self.global_to_local[global] = NO_LOCAL;
+        }
+        self.local_to_global.truncate(columns);
+        self.constraints.truncate(constraints);
+        self.keys.truncate(keep);
+        self.key_constraint_end.truncate(keep);
+        self.key_column_end.truncate(keep);
+        self.key_trivially_unsat.truncate(keep);
+        self.key_overflow.truncate(keep);
+        self.key_opaque.truncate(keep);
+    }
+
+    fn clear(&mut self) {
+        self.truncate(0);
+    }
+
+    /// The local column for `global`, allocating one on its first live touch.
+    /// Allocation order is touch order, which is what makes the local numbering
+    /// equal the cold path's.
+    fn local_of(&mut self, global: usize) -> usize {
+        if global >= self.global_to_local.len() {
+            self.global_to_local.resize(global + 1, NO_LOCAL);
+        }
+        let existing = self.global_to_local[global];
+        if existing != NO_LOCAL {
+            return existing;
+        }
+        let local = self.local_to_global.len();
+        self.local_to_global.push(global);
+        self.global_to_local[global] = local;
+        local
+    }
+
+    /// Appends one cached literal at live position `origin`, returning how many
+    /// constraints were copied.
+    fn append(&mut self, key: usize, entry: &LiteralEntry, origin: usize) -> usize {
+        for &global in &entry.touched {
+            let _ = self.local_of(global);
+        }
+        let before = self.constraints.len();
+        for constraint in &entry.constraints {
+            let mut coeffs = BTreeMap::new();
+            for (&global, &coeff) in &constraint.expr.coeffs {
+                let local = self.global_to_local[global];
+                debug_assert_ne!(
+                    local, NO_LOCAL,
+                    "a cached constraint mentions a column its own literal did not touch"
+                );
+                coeffs.insert(local, coeff);
+            }
+            self.constraints.push(Constraint {
+                expr: LinExpr {
+                    coeffs,
+                    constant: constraint.expr.constant,
+                },
+                strict: constraint.strict,
+                mult: Vec::new(),
+                origin,
+            });
+        }
+        let previous = self.keys.len();
+        let trivially_unsat =
+            entry.trivially_unsat || (previous > 0 && self.key_trivially_unsat[previous - 1]);
+        let overflow = entry.overflow || (previous > 0 && self.key_overflow[previous - 1]);
+        let opaque = entry.has_opaque || (previous > 0 && self.key_opaque[previous - 1]);
+        self.keys.push(key);
+        self.key_constraint_end.push(self.constraints.len());
+        self.key_column_end.push(self.local_to_global.len());
+        self.key_trivially_unsat.push(trivially_unsat);
+        self.key_overflow.push(overflow);
+        self.key_opaque.push(opaque);
+        self.constraints.len() - before
+    }
+
+    fn trivially_unsat(&self) -> bool {
+        self.key_trivially_unsat.last().copied().unwrap_or(false)
+    }
+
+    fn overflow(&self) -> bool {
+        self.key_overflow.last().copied().unwrap_or(false)
+    }
+
+    fn has_opaque(&self) -> bool {
+        self.key_opaque.last().copied().unwrap_or(false)
+    }
+}
+
+// ---------------------------------------------------------------------------
+// The decider
+// ---------------------------------------------------------------------------
+
+/// A warm front end for the offline conjunctive `QF_LIA` decider, over a **fixed
+/// literal table**.
+///
+/// The caller assigns every literal it can ever assert a dense key and supplies
+/// the polarity-applied term for each; [`WarmLiaDecider::check`] then takes the
+/// live keys in trail order. Keys are the cache's identity, so the table must not
+/// change for the life of the decider — which matches every caller here, whose
+/// atom set is fixed when its theory is built.
+#[derive(Debug)]
+pub struct WarmLiaDecider {
+    policy: LiaWarmPolicy,
+    /// Polarity-applied term per literal key, in the caller's arena. `None` for a
+    /// key the caller never asserts a constraint for.
+    lit_terms: Vec<Option<TermId>>,
+    /// Persistent collector: the global column space and its symbol table.
+    collector: IntCollector,
+    /// Global column to symbol, for model lifting. `None` for opaque columns.
+    global_symbols: Vec<Option<SymbolId>>,
+    /// Global columns that came from an opaque `UF` application.
+    global_opaque: Vec<bool>,
+    /// Per-key collection cache.
+    cache: Vec<Option<LiteralEntry>>,
+    cached_literals: usize,
+    assembly: Assembly,
+}
+
+impl WarmLiaDecider {
+    /// Builds a decider over `lit_terms`, whose index is the literal key.
+    #[must_use]
+    pub fn new(
+        policy: LiaWarmPolicy,
+        allow_opaque_apps: bool,
+        lit_terms: Vec<Option<TermId>>,
+    ) -> Self {
+        let mut collector = IntCollector::new(allow_opaque_apps);
+        collector.record_touches = true;
+        let keys = lit_terms.len();
+        Self {
+            policy,
+            lit_terms,
+            collector,
+            global_symbols: Vec::new(),
+            global_opaque: Vec::new(),
+            cache: vec![None; keys],
+            cached_literals: 0,
+            assembly: Assembly::default(),
+        }
+    }
+
+    /// The policy this decider was built with.
+    #[must_use]
+    pub fn policy(&self) -> LiaWarmPolicy {
+        self.policy
+    }
+
+    /// The polarity-applied term for a literal key, if the caller registered one.
+    #[must_use]
+    pub fn term_of(&self, key: usize) -> Option<TermId> {
+        self.lit_terms.get(key).copied().flatten()
+    }
+
+    /// Decides the conjunction of `live` — literal keys, in trail order.
+    ///
+    /// The verdict is the offline decider's verdict on the same conjunction, and
+    /// a `sat` carries a model that has been replayed against `arena` and the
+    /// live terms: the same trust anchor `lia_simplex_capped` applies, not a
+    /// weaker one.
+    ///
+    /// # Errors
+    ///
+    /// [`SolverError::Unsupported`] for a literal outside conjunctive linear
+    /// integer arithmetic, or [`SolverError::Backend`] on a `sat` replay failure.
+    pub fn check(
+        &mut self,
+        arena: &TermArena,
+        live: &[usize],
+        node_cap: u64,
+        deadline: Option<Instant>,
+    ) -> Result<CheckResult, SolverError> {
+        record(|c| c.checks += 1);
+        let result = self.check_inner(arena, live, node_cap, deadline);
+        record(|c| match &result {
+            Ok(CheckResult::Unsat) => c.verdict_unsat += 1,
+            Ok(CheckResult::Sat(_)) => c.verdict_sat += 1,
+            Ok(CheckResult::Unknown(_)) => c.verdict_unknown += 1,
+            Err(_) => c.verdict_error += 1,
+        });
+        result
+    }
+
+    fn check_inner(
+        &mut self,
+        arena: &TermArena,
+        live: &[usize],
+        node_cap: u64,
+        deadline: Option<Instant>,
+    ) -> Result<CheckResult, SolverError> {
+        if !self.policy.warm {
+            self.assembly.clear();
+            record(|c| {
+                c.rebuilds += 1;
+                c.assembly_reasons[AssemblyReason::PolicyCold.slot()] += 1;
+            });
+        }
+        if self.assemble(arena, live, deadline)?.is_none() {
+            return Ok(lia_collection_timeout());
+        }
+        // An `i128` overflow while linearizing poisons the system; degrade to a
+        // graceful `unknown` before any constraint is interpreted, exactly as the
+        // cold path does (never a wrong verdict).
+        if self.assembly.overflow() {
+            return Ok(CheckResult::Unknown(UnknownReason {
+                kind: UnknownKind::ResourceLimit,
+                detail: "lia simplex: i128 overflow while linearizing the integer constraints"
+                    .to_owned(),
+            }));
+        }
+        if self.assembly.trivially_unsat() {
+            return Ok(CheckResult::Unsat);
+        }
+        let nvars = self.assembly.local_to_global.len();
+        let has_opaque_vars = self.assembly.has_opaque();
+        let live_constraints = self.assembly.constraints.len();
+        record(|c| {
+            c.assembled_constraints_live += live_constraints as u64;
+            c.assembled_columns_live += nvars as u64;
+        });
+        // The engines take the system by `&mut` because branch-and-bound uses it
+        // as a backtracking stack — it pushes a bound constraint, recurses and
+        // pops it on every path out. Handing them the assembly directly is what
+        // keeps a check proportional to the trail delta; the assertion below is
+        // the standing check that the stack discipline really is symmetric, so a
+        // future edit cannot silently leave a branch bound behind for the next
+        // check to inherit as part of its "shared prefix".
+        let outcome =
+            decide_int_constraints(&mut self.assembly.constraints, nvars, node_cap, deadline);
+        assert_eq!(
+            self.assembly.constraints.len(),
+            live_constraints,
+            "the offline engines left the assembled system a different length; a warm prefix \
+             must never inherit another check's branch bounds"
+        );
+        match outcome {
+            LiaBnb::Unsat => Ok(CheckResult::Unsat),
+            LiaBnb::Unknown(cause) => Ok(lia_bnb_undecided(cause, node_cap)),
+            LiaBnb::Sat(values) => {
+                if has_opaque_vars {
+                    return Ok(CheckResult::Unknown(UnknownReason {
+                        kind: UnknownKind::Incomplete,
+                        detail: "opaque integer UF abstraction is satisfiable; SAT model lifting \
+                                 is owned by the UFLIA backend"
+                            .to_owned(),
+                    }));
+                }
+                let mut model = Model::new();
+                let mut assignment = axeyum_ir::Assignment::new();
+                for (local, &global) in self.assembly.local_to_global.iter().enumerate() {
+                    let Some(symbol) = self.global_symbols[global] else {
+                        continue;
+                    };
+                    let value = values[local];
+                    debug_assert!(
+                        value.is_integer(),
+                        "branch-and-bound returned a fractional value"
+                    );
+                    model.set(symbol, Value::Int(value.numerator()));
+                    assignment.set(symbol, Value::Int(value.numerator()));
+                }
+                // The shared trust anchor: a `sat` is only a `sat` once the model
+                // satisfies the ORIGINAL terms under the ground evaluator.
+                for &key in live {
+                    let Some(term) = self.term_of(key) else {
+                        return Err(SolverError::Unsupported(format!(
+                            "QF_LIA: the warm decider has no term registered for literal key                              {key}"
+                        )));
+                    };
+                    match eval(arena, term, &assignment) {
+                        Ok(Value::Bool(true)) => {}
+                        Ok(_) => {
+                            return Err(SolverError::Backend(format!(
+                                "warm lia simplex sat model replay failed: literal term #{} not \
+                                 satisfied",
+                                term.index()
+                            )));
+                        }
+                        Err(error) => {
+                            return Err(SolverError::Backend(format!(
+                                "warm lia simplex sat model replay error on literal term #{}: \
+                                 {error}",
+                                term.index()
+                            )));
+                        }
+                    }
+                }
+                Ok(CheckResult::Sat(model))
+            }
+        }
+    }
+
+    /// Brings the assembly in line with `live`. `Ok(None)` means the deadline
+    /// passed during collection, and the caller reports a collection timeout.
+    fn assemble(
+        &mut self,
+        arena: &TermArena,
+        live: &[usize],
+        deadline: Option<Instant>,
+    ) -> Result<Option<()>, SolverError> {
+        let shared = self
+            .assembly
+            .keys
+            .iter()
+            .zip(live)
+            .take_while(|(a, b)| a == b)
+            .count();
+        let previous = self.assembly.keys.len();
+        if self.policy.warm {
+            let reason = if shared == previous && shared == live.len() {
+                AssemblyReason::Unchanged
+            } else if shared == 0 {
+                AssemblyReason::ColdStart
+            } else if shared == previous {
+                AssemblyReason::Extended
+            } else if shared == live.len() {
+                AssemblyReason::Shortened
+            } else {
+                AssemblyReason::Diverged
+            };
+            let removed = previous - shared;
+            let added = live.len() - shared;
+            record(|c| {
+                c.assembly_reasons[reason.slot()] += 1;
+                if matches!(reason, AssemblyReason::ColdStart) {
+                    c.rebuilds += 1;
+                } else {
+                    c.warm_updates += 1;
+                }
+                c.delta_kept += shared as u64;
+                c.delta_removed += removed as u64;
+                c.delta_added += added as u64;
+            });
+        } else {
+            let added = live.len();
+            record(|c| c.delta_added += added as u64);
+        }
+        self.assembly.truncate(shared);
+        for (offset, &key) in live[shared..].iter().enumerate() {
+            if past_deadline(deadline) {
+                // A partially-assembled system must never be reused as a prefix.
+                self.assembly.clear();
+                return Ok(None);
+            }
+            let entry = match self.entry(arena, key, deadline) {
+                Ok(Some(entry)) => entry,
+                Ok(None) => {
+                    self.assembly.clear();
+                    return Ok(None);
+                }
+                Err(error) => {
+                    self.assembly.clear();
+                    return Err(error);
+                }
+            };
+            let copied = self.assembly.append(key, &entry, shared + offset);
+            record(|c| c.assembled_constraints_copied += copied as u64);
+            self.stash(key, entry);
+        }
+        Ok(Some(()))
+    }
+
+    /// The cached — or freshly collected — entry for one literal key.
+    ///
+    /// Returns the entry by value so the borrow of `self.cache` ends before the
+    /// assembly is mutated; [`Self::stash`] puts it back. A clone of one
+    /// literal's constraints is the price of that, and it is bounded by the
+    /// literal, never by the live set.
+    fn entry(
+        &mut self,
+        arena: &TermArena,
+        key: usize,
+        deadline: Option<Instant>,
+    ) -> Result<Option<LiteralEntry>, SolverError> {
+        if let Some(entry) = self.cache.get(key).and_then(Option::as_ref) {
+            record(|c| c.literal_cache_hits += 1);
+            return Ok(Some(entry.clone()));
+        }
+        record(|c| c.literal_collections += 1);
+        let Some(term) = self.term_of(key) else {
+            // Fail closed. Treating a key with no term as contributing nothing
+            // would silently drop a live literal from the conjunction — a weaker
+            // system, which is how a warm path turns an `unsat` into a `sat`. The
+            // caller registers a term for every key it can assert, so this is a
+            // contract violation, not an input the decider should absorb.
+            return Err(SolverError::Unsupported(format!(
+                "QF_LIA: the warm decider has no term registered for literal key {key}"
+            )));
+        };
+        // The persistent collector keeps only its column space across literals;
+        // everything per-assertion is reset here, so one literal's collection can
+        // never read another's residue.
+        self.collector.constraints.clear();
+        self.collector.touch_log.clear();
+        self.collector.trivially_unsat = false;
+        self.collector.overflow = false;
+        self.collector.current_origin = 0;
+        let vars_before = self.collector.vars.len();
+        let columns_before = self.collector.next_var;
+        let opaque_before = self.collector.opaque_var_index.len();
+        let completed = self.collector.collect_within(arena, term, false, deadline)?;
+        if !completed {
+            self.collector.constraints.clear();
+            self.collector.touch_log.clear();
+            return Ok(None);
+        }
+        self.sync_global_tables(vars_before, columns_before, opaque_before);
+        let mut touched: Vec<usize> = Vec::with_capacity(self.collector.touch_log.len());
+        for &global in &self.collector.touch_log {
+            if !touched.contains(&global) {
+                touched.push(global);
+            }
+        }
+        let has_opaque = touched.iter().any(|&g| self.global_opaque[g]);
+        let mut constraints = std::mem::take(&mut self.collector.constraints);
+        tighten_int_constraints(&mut constraints);
+        let entry = LiteralEntry {
+            constraints,
+            touched,
+            trivially_unsat: self.collector.trivially_unsat,
+            overflow: self.collector.overflow,
+            has_opaque,
+        };
+        self.collector.touch_log.clear();
+        Ok(Some(entry))
+    }
+
+    /// Files an entry in the cache, subject to
+    /// [`LiaWarmPolicy::max_cached_literals`].
+    fn stash(&mut self, key: usize, entry: LiteralEntry) {
+        if key >= self.cache.len() || self.cache[key].is_some() {
+            return;
+        }
+        if self.cached_literals >= self.policy.max_cached_literals {
+            record(|c| c.literal_cache_evicted += 1);
+            return;
+        }
+        self.cached_literals += 1;
+        self.cache[key] = Some(entry);
+    }
+
+    /// Grows the global column tables to cover the columns the last collection
+    /// allocated.
+    ///
+    /// Columns are allocated in increasing order, and each allocation either
+    /// pushes a symbol onto `IntCollector::vars` or inserts into
+    /// `IntCollector::opaque_var_index`. So among the new columns in ascending
+    /// order, the ones that are not opaque correspond, in order, to the symbols
+    /// appended to `vars` — which is why this is `O(new columns)` and not a scan
+    /// of the whole symbol table.
+    fn sync_global_tables(
+        &mut self,
+        vars_before: usize,
+        columns_before: usize,
+        opaque_before: usize,
+    ) {
+        let total = self.collector.next_var;
+        if total == columns_before {
+            return;
+        }
+        self.global_symbols.resize(total, None);
+        self.global_opaque.resize(total, false);
+        if self.collector.opaque_var_index.len() != opaque_before {
+            for &column in self.collector.opaque_var_index.values() {
+                if column >= columns_before {
+                    self.global_opaque[column] = true;
+                }
+            }
+        }
+        let mut symbol = vars_before;
+        for column in columns_before..total {
+            if !self.global_opaque[column] {
+                self.global_symbols[column] = Some(self.collector.vars[symbol]);
+                symbol += 1;
+            }
+        }
+        debug_assert_eq!(
+            symbol,
+            self.collector.vars.len(),
+            "new columns and newly appended symbols must pair up one to one"
+        );
+    }
+}
+
+#[cfg(test)]
+mod tests;

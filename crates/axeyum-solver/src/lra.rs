@@ -33,6 +33,11 @@
 
 use std::collections::BTreeMap;
 
+/// The warm front end for the offline conjunctive `QF_LIA` decider: a per-literal
+/// collection cache plus a trail-delta-updated constraint system, driving the
+/// same engines this module already exposes.
+pub(crate) mod warm;
+
 // Native uses the std clock; wasm uses the `web_time` drop-in (ADR-0017).
 #[cfg(not(target_arch = "wasm32"))]
 use std::time::Instant;
@@ -1226,7 +1231,7 @@ fn lia_collection_timeout() -> CheckResult {
 }
 
 /// The branch-and-bound node budget for a caller with (or without) a wall clock.
-fn lia_bnb_node_cap(deadline: Option<Instant>) -> u64 {
+pub(crate) fn lia_bnb_node_cap(deadline: Option<Instant>) -> u64 {
     if deadline.is_some() {
         MAX_LIA_BNB_NODES_DEADLINED
     } else {
@@ -1332,38 +1337,17 @@ fn lia_simplex_with_options(
     lia_simplex_capped(arena, assertions, deadline, allow_opaque_apps, node_cap)
 }
 
-/// [`lia_simplex_with_options`] with the branch-and-bound node budget supplied
-/// explicitly rather than derived from `deadline.is_some()`.
-fn lia_simplex_capped(
-    arena: &TermArena,
-    assertions: &[TermId],
-    deadline: Option<Instant>,
-    allow_opaque_apps: bool,
-    node_cap: u64,
-) -> Result<CheckResult, SolverError> {
-    let mut ctx = IntCollector::new(allow_opaque_apps);
-    for (index, &assertion) in assertions.iter().enumerate() {
-        ctx.current_origin = index;
-        if !ctx.collect_within(arena, assertion, false, deadline)? {
-            return Ok(lia_collection_timeout());
-        }
-    }
-    // An `i128` overflow while linearizing poisons the collection; degrade to a
-    // graceful `unknown` before any constraint is interpreted (never a wrong
-    // verdict).
-    if ctx.overflow {
-        return Ok(CheckResult::Unknown(UnknownReason {
-            kind: UnknownKind::ResourceLimit,
-            detail: "lia simplex: i128 overflow while linearizing the integer constraints"
-                .to_owned(),
-        }));
-    }
-    if ctx.trivially_unsat {
-        return Ok(CheckResult::Unsat);
-    }
-    let nvars = ctx.variable_count();
-    let has_opaque_vars = ctx.has_opaque_vars();
-    let mut constraints = ctx.constraints;
+/// Integer-tightens a collected constraint set in place: the gcd-aware
+/// strict-to-non-strict rewrite the offline `QF_LIA` decider applies between
+/// collection and the Gomory/branch-and-bound dispatch.
+///
+/// Factored out of [`lia_simplex_capped`] so the warm decider ([`warm`]) applies
+/// the SAME rewrite to a literal it caches. Two copies of this loop would drift,
+/// and a drift here is not a slowdown: tightening decides whether the LP
+/// relaxation is exact, so a warm copy that tightened differently would answer
+/// `unknown` where the cold path answers `unsat` (or, with a rewrite that is
+/// wrong rather than merely absent, worse).
+fn tighten_int_constraints(constraints: &mut [Constraint]) {
     // Integer tightening (gcd-aware): a *strict* constraint `L + c0 < 0` whose variable
     // part `L = Σ aᵢ·xᵢ` has integral coefficients and integral constant is, over the
     // integers, equivalent to a NON-strict bound — and tightening it makes the LP
@@ -1373,7 +1357,7 @@ fn lia_simplex_capped(
     // (which reduces to `c0+1` when `g = 1`). E.g. `2x < 2y` (g=2) ⟹ `2x-2y ≤ -2` (not
     // the loose `≤ -1`), so `2x<2y ∧ 2y<2x+2` is LP-infeasible (`unsat`). Only applied
     // when `L`/`c0` are provably integral (else left strict — sound; simplex handles it).
-    for constraint in &mut constraints {
+    for constraint in constraints.iter_mut() {
         if !constraint.strict
             || !constraint.expr.constant.is_integer()
             || !constraint.expr.coeffs.values().all(|r| r.is_integer())
@@ -1407,6 +1391,21 @@ fn lia_simplex_capped(
         constraint.expr.constant = Rational::integer(new_const);
         constraint.strict = false;
     }
+}
+
+/// Runs the offline `QF_LIA` engines over an already-collected, already-tightened
+/// constraint set: the bounded Gomory cut round first, then branch-and-bound when
+/// it declines.
+///
+/// Factored out of [`lia_simplex_capped`] so the warm decider ([`warm`]) drives
+/// the identical engines in the identical order over a system it assembled
+/// incrementally, rather than growing a second dispatch that could diverge.
+fn decide_int_constraints(
+    constraints: &mut Vec<Constraint>,
+    nvars: usize,
+    node_cap: u64,
+    deadline: Option<Instant>,
+) -> LiaBnb {
     // ADDITIVE coverage (P2.4). Branch-and-bound below decides bounded systems
     // but STALLS (`Unknown`, grinding to the node budget) on LP-feasible-but-
     // integer-infeasible systems over UNBOUNDED variables (e.g. `3x = 3y + 1`-
@@ -1422,12 +1421,48 @@ fn lia_simplex_capped(
     // A Gomory `Sat` is still replayed below (the shared trust anchor): a
     // reconstruction slip can only ever cause a (rejected, alarmed) replay
     // failure, never an unsound `sat`.
-    let outcome = if let Some(decided) = lia_gomory_cuts(&constraints, nvars, deadline) {
+    if let Some(decided) = lia_gomory_cuts(constraints, nvars, deadline) {
         decided
     } else {
         let mut budget = node_cap;
-        lia_branch_and_bound(&mut constraints, nvars, &mut budget, deadline)
-    };
+        lia_branch_and_bound(constraints, nvars, &mut budget, deadline)
+    }
+}
+
+/// [`lia_simplex_with_options`] with the branch-and-bound node budget supplied
+/// explicitly rather than derived from `deadline.is_some()`.
+fn lia_simplex_capped(
+    arena: &TermArena,
+    assertions: &[TermId],
+    deadline: Option<Instant>,
+    allow_opaque_apps: bool,
+    node_cap: u64,
+) -> Result<CheckResult, SolverError> {
+    let mut ctx = IntCollector::new(allow_opaque_apps);
+    for (index, &assertion) in assertions.iter().enumerate() {
+        ctx.current_origin = index;
+        if !ctx.collect_within(arena, assertion, false, deadline)? {
+            return Ok(lia_collection_timeout());
+        }
+    }
+    // An `i128` overflow while linearizing poisons the collection; degrade to a
+    // graceful `unknown` before any constraint is interpreted (never a wrong
+    // verdict).
+    if ctx.overflow {
+        return Ok(CheckResult::Unknown(UnknownReason {
+            kind: UnknownKind::ResourceLimit,
+            detail: "lia simplex: i128 overflow while linearizing the integer constraints"
+                .to_owned(),
+        }));
+    }
+    if ctx.trivially_unsat {
+        return Ok(CheckResult::Unsat);
+    }
+    let nvars = ctx.variable_count();
+    let has_opaque_vars = ctx.has_opaque_vars();
+    let mut constraints = ctx.constraints;
+    tighten_int_constraints(&mut constraints);
+    let outcome = decide_int_constraints(&mut constraints, nvars, node_cap, deadline);
     match outcome {
         LiaBnb::Unsat => Ok(CheckResult::Unsat),
         LiaBnb::Unknown(cause) => Ok(lia_bnb_undecided(cause, node_cap)),
@@ -2178,6 +2213,7 @@ fn unsupported_lia(what: &str) -> SolverError {
 /// [`Collector`] for the integer operator set; the LRA collector is left
 /// untouched.
 #[derive(Default)]
+#[derive(Debug)]
 struct IntCollector {
     var_index: BTreeMap<SymbolId, usize>,
     opaque_var_index: BTreeMap<TermId, usize>,
@@ -2190,6 +2226,25 @@ struct IntCollector {
     /// Set on an `i128` overflow while linearizing; poisons the collection so the
     /// caller degrades to `unknown` (mirrors the LRA [`Collector`]).
     overflow: bool,
+    /// When set, every [`IntCollector::index_of`] / [`IntCollector::index_of_opaque`]
+    /// call appends its column index to [`IntCollector::touch_log`] — including a
+    /// repeat touch of a column this collector already knows.
+    ///
+    /// The warm decider ([`warm`]) needs this because it collects each literal
+    /// ONCE into a persistent collector and then re-derives, per check, the
+    /// column numbering the cold path would have produced for the live literal
+    /// list. The cold numbering is exactly
+    /// `dedup(concat(touch_log(l) for l in live order))`, which is recoverable
+    /// only if a repeat touch is recorded too: a column first seen inside an
+    /// earlier literal must still take its place in a later literal's order when
+    /// that earlier literal is not live.
+    ///
+    /// `false` on every cold-path collector, where it costs one branch per column
+    /// touch and nothing else.
+    record_touches: bool,
+    /// Column indices in touch order for the assertion currently being collected
+    /// (see [`IntCollector::record_touches`]). Never read unless recording is on.
+    touch_log: Vec<usize>,
 }
 
 impl IntCollector {
@@ -2213,23 +2268,34 @@ impl IntCollector {
 
     fn index_of(&mut self, symbol: SymbolId) -> usize {
         if let Some(&index) = self.var_index.get(&symbol) {
+            self.touch(index);
             return index;
         }
         let index = self.next_var;
         self.next_var += 1;
         self.vars.push(symbol);
         self.var_index.insert(symbol, index);
+        self.touch(index);
         index
     }
 
     fn index_of_opaque(&mut self, term: TermId) -> usize {
         if let Some(&index) = self.opaque_var_index.get(&term) {
+            self.touch(index);
             return index;
         }
         let index = self.next_var;
         self.next_var += 1;
         self.opaque_var_index.insert(term, index);
+        self.touch(index);
         index
+    }
+
+    /// Records one column touch when [`IntCollector::record_touches`] is on.
+    fn touch(&mut self, index: usize) {
+        if self.record_touches {
+            self.touch_log.push(index);
+        }
     }
 
     fn variable_count(&self) -> usize {

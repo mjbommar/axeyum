@@ -77,9 +77,10 @@ use crate::backend::{CheckResult, SolverConfig, SolverError, UnknownKind, Unknow
 use crate::euf_egraph::{TheoryLit, TheoryProp, TheorySolver};
 #[cfg(test)]
 use crate::lra::check_with_lia_simplex;
+use crate::lra::warm::{LiaWarmPolicy, WarmLiaDecider, ambient_lia_warm_policy};
 use crate::lra::{
     LpRelaxation, check_with_lia_opaque_apps_within, check_with_lia_simplex_within,
-    lp_relaxation_feasibility, lp_relaxation_feasibility_opaque_apps,
+    lia_bnb_node_cap, lp_relaxation_feasibility, lp_relaxation_feasibility_opaque_apps,
 };
 use crate::lra_online::{Dpll, Lit};
 use crate::model::Model;
@@ -171,6 +172,30 @@ pub struct LiaTheory {
     /// because a check *mutates* the tableau (it warm-starts) while
     /// [`LiaTheory::propagate`] and [`LiaTheory::feasibility`] hold only `&self`.
     simplex: Option<RefCell<IntSimplexEngine>>,
+    /// Which parts of the warm offline path this theory uses; see
+    /// [`LiaWarmPolicy`]. [`LiaWarmPolicy::OFF`] restores the pre-warm behaviour
+    /// field for field, which is what makes an A/B a policy flip rather than a
+    /// rebuild.
+    warm_policy: LiaWarmPolicy,
+    /// The polarity-applied term for literal key `2 * atom + value`, built once
+    /// at construction so a feasibility check need not clone the arena to build
+    /// `(not atom)`. `None` for a key that can never carry a live constraint (an
+    /// unsupported atom, or the false polarity of an equality). Empty when the
+    /// policy asks for neither warming nor term reuse.
+    lit_terms: Vec<Option<TermId>>,
+    /// The warm offline decider: a per-literal collection cache plus a system
+    /// updated by the trail delta. `None` under [`LiaWarmPolicy::OFF`], and the
+    /// theory then takes the cold path verbatim. `RefCell` for the same reason
+    /// [`Self::simplex`] has one — a check mutates it behind `&self`.
+    warm: Option<RefCell<WarmLiaDecider>>,
+}
+
+/// The literal key the warm decider caches under: two per registered atom.
+///
+/// Dense and stable for the life of the theory, which is what the decider's
+/// cache is indexed by.
+const fn warm_key(lit: TheoryLit) -> usize {
+    lit.atom * 2 + if lit.value { 1 } else { 0 }
 }
 
 /// Outcome of an incremental integer-feasibility check over the asserted atoms.
@@ -693,6 +718,19 @@ impl LiaTheory {
     }
 
     fn new_with_options(arena: &TermArena, atom_terms: &[TermId], allow_opaque_apps: bool) -> Self {
+        Self::new_with_policy(arena, atom_terms, allow_opaque_apps, ambient_lia_warm_policy())
+    }
+
+    /// [`Self::new_with_options`] with the warm policy supplied rather than taken
+    /// from the ambient one. The A/B, the differential tests and the staleness
+    /// test all need both arms in one process, which an ambient-only policy
+    /// cannot give them.
+    fn new_with_policy(
+        arena: &TermArena,
+        atom_terms: &[TermId],
+        allow_opaque_apps: bool,
+        warm_policy: LiaWarmPolicy,
+    ) -> Self {
         let kinds: Vec<AtomKind> = atom_terms.iter().map(|&t| classify(arena, t)).collect();
         let count = atom_terms.len();
         let (atom_rows, simplex) =
@@ -700,19 +738,42 @@ impl LiaTheory {
                 Some((rows, engine)) => (rows, Some(RefCell::new(engine))),
                 None => (vec![AtomRow::None; count], None),
             };
+        // Build the polarity terms in the OWNED arena, once. `(not atom)` is the
+        // only term a feasibility check ever needs to add, and terms are interned,
+        // so pre-building them leaves every id the theory already holds unchanged
+        // and removes the per-check clone the cold path pays for.
+        let mut owned = arena.clone();
+        let lit_terms = if warm_policy.warm || warm_policy.reuse_polarity_terms {
+            build_polarity_terms(&mut owned, atom_terms, &kinds).unwrap_or_default()
+        } else {
+            Vec::new()
+        };
+        // No polarity table means no warm decider: it would have to omit a live
+        // literal it has no term for, and an omitted constraint is a weaker
+        // conjunction, which is how a warm path turns an `unsat` into a `sat`.
+        let warm = (warm_policy.warm && !lit_terms.is_empty()).then(|| {
+            RefCell::new(WarmLiaDecider::new(
+                warm_policy,
+                allow_opaque_apps,
+                lit_terms.clone(),
+            ))
+        });
         Self {
             atom_terms: atom_terms.to_vec(),
             kinds,
             assigned: vec![None; count],
             assigned_log: Vec::new(),
             trail: Vec::new(),
-            arena: arena.clone(),
+            arena: owned,
             defer_feasibility_until_propagate: false,
             skip_entailment_propagation: false,
             allow_opaque_apps,
             deadline: None,
             atom_rows,
             simplex,
+            warm_policy,
+            lit_terms,
+            warm,
         }
     }
 
@@ -861,6 +922,15 @@ impl LiaTheory {
     /// feasibility check). `None` if a `BoolNot` build overflows the arena (never
     /// expected for well-formed atoms — degrades to `Unknown`).
     fn live_terms(&self, lits: &[TheoryLit]) -> Option<(TermArena, Vec<TermId>)> {
+        // With the polarity table prebuilt, every `(not atom)` this needs already
+        // exists in the owned arena, so nothing has to grow it.
+        if !self.lit_terms.is_empty() {
+            let terms: Option<Vec<TermId>> = lits
+                .iter()
+                .map(|&lit| self.lit_terms[warm_key(lit)])
+                .collect();
+            return terms.map(|terms| (self.arena.clone(), terms));
+        }
         let mut arena = self.arena.clone();
         let mut terms = Vec::with_capacity(lits.len());
         for lit in lits {
@@ -896,10 +966,23 @@ impl LiaTheory {
         }
         // The warm rational filter first: it refutes with a small Farkas core, or
         // confirms with an integral witness, without touching the offline decider.
-        match self.rational_filter() {
-            RationalFilter::Refuted(core) => return Feasibility::Unsat(core),
-            RationalFilter::IntegralPoint => return Feasibility::Sat,
-            RationalFilter::Inconclusive => {}
+        //
+        // Policy-gated since 2026-09-08. On the `QF_LIA`/`QF_UFLIA` files this
+        // solver LOSES, the filter was measured to refute nothing at all while
+        // running ahead of every single check — so on exactly the population the
+        // work is aimed at, it is a pass that costs and never pays. It still
+        // earns its place on populations where it *does* refute, which is why
+        // this is a policy field and not a deletion; `LiaWarmPolicy::WARM` turns
+        // it off and `LiaWarmPolicy::WARM_WITH_FILTER` keeps it.
+        if self.warm_policy.rational_filter {
+            match self.rational_filter() {
+                RationalFilter::Refuted(core) => return Feasibility::Unsat(core),
+                RationalFilter::IntegralPoint => return Feasibility::Sat,
+                RationalFilter::Inconclusive => {}
+            }
+        }
+        if self.warm.is_some() {
+            return self.warm_feasibility(&lits, minimize);
         }
         let Some((arena, terms)) = self.live_terms(&lits) else {
             return Feasibility::Unknown;
@@ -915,6 +998,96 @@ impl LiaTheory {
                 self.deadline,
             )),
             Ok(CheckResult::Unsat) => Feasibility::Unsat(lits),
+        }
+    }
+
+    /// [`Self::feasibility_with_core_minimization`]'s offline half, over the warm
+    /// decider.
+    ///
+    /// The verdict is the offline decider's verdict on the same conjunction — the
+    /// warm decider reproduces the cold path's system exactly, column numbering
+    /// included (see [`crate::lra::warm`]), so this is not a second, weaker
+    /// oracle in front of the trusted one.
+    fn warm_feasibility(&self, lits: &[TheoryLit], minimize: bool) -> Feasibility {
+        let keys: Vec<usize> = lits.iter().copied().map(warm_key).collect();
+        match self.warm_check(&keys) {
+            Ok(CheckResult::Sat(_)) => Feasibility::Sat,
+            Ok(CheckResult::Unknown(_)) | Err(_) => Feasibility::Unknown,
+            Ok(CheckResult::Unsat) if minimize => {
+                Feasibility::Unsat(self.warm_minimize_core(lits, &keys))
+            }
+            Ok(CheckResult::Unsat) => Feasibility::Unsat(lits.to_vec()),
+        }
+    }
+
+    /// One warm offline decision over the literal keys `keys`.
+    fn warm_check(&self, keys: &[usize]) -> Result<CheckResult, SolverError> {
+        let Some(cell) = &self.warm else {
+            return Ok(CheckResult::Unknown(UnknownReason {
+                kind: UnknownKind::Incomplete,
+                detail: "warm LIA decider is not built for this theory".to_owned(),
+            }));
+        };
+        if self.deadline_expired() {
+            return Ok(CheckResult::Unknown(UnknownReason {
+                kind: UnknownKind::Timeout,
+                detail: "online LIA theory check reached its deadline".to_owned(),
+            }));
+        }
+        cell.borrow_mut().check(
+            &self.arena,
+            keys,
+            lia_bnb_node_cap(self.deadline),
+            self.deadline,
+        )
+    }
+
+    /// [`minimize_core`] over the warm decider: the same greedy deletion loop,
+    /// with each probe assembled from the shared prefix rather than re-collected
+    /// from the term graph.
+    ///
+    /// Dropping a literal from the *middle* of the live list breaks the trail's
+    /// prefix property, so every probe here is an `AssemblyReason::Diverged` —
+    /// which is exactly why that reason is counted separately. It is still not a
+    /// cold start: the per-literal collection cache survives, so a probe pays for
+    /// re-assembling a suffix and nothing else.
+    fn warm_minimize_core(&self, lits: &[TheoryLit], keys: &[usize]) -> Vec<TheoryLit> {
+        // Start from the full asserted set; try removing each literal in turn.
+        // Identical control flow to [`minimize_core`], probe for probe, so the
+        // core this returns is the core that function would have returned.
+        let mut keep: Vec<bool> = vec![true; lits.len()];
+        let mut subset: Vec<usize> = Vec::with_capacity(keys.len());
+        for drop_idx in 0..lits.len() {
+            if self.deadline_expired() {
+                break;
+            }
+            keep[drop_idx] = false;
+            subset.clear();
+            subset.extend(
+                keys.iter()
+                    .zip(&keep)
+                    .filter_map(|(&key, &k)| k.then_some(key)),
+            );
+            let still_unsat = subset.len() < keys.len()
+                && matches!(self.warm_check(&subset), Ok(CheckResult::Unsat));
+            if !still_unsat {
+                // Dropping this literal lost (or could not confirm) the
+                // refutation — keep it.
+                keep[drop_idx] = true;
+            }
+        }
+        let core: Vec<TheoryLit> = lits
+            .iter()
+            .zip(&keep)
+            .filter_map(|(&lit, &k)| k.then_some(lit))
+            .collect();
+        // Fall back to the full set if minimization somehow emptied the core
+        // (should not happen for a genuine refutation) — a sound, if coarse,
+        // conflict.
+        if core.is_empty() {
+            lits.to_vec()
+        } else {
+            core
         }
     }
 
@@ -1518,6 +1691,38 @@ impl TheorySolver for LiaTheory {
     fn propagate(&self) -> Vec<TheoryProp> {
         LiaTheory::propagate(self)
     }
+}
+
+/// Builds the polarity-applied term for every literal key that can ever carry a
+/// live constraint, in `arena` (the theory's owned clone).
+///
+/// Key `2*i + 1` is atom `i` asserted true — the atom term itself. Key `2*i` is
+/// atom `i` asserted false, which only [`AtomKind::Order`] atoms contribute at
+/// (a false equality is a disequality, which the conjunctive decider cannot
+/// represent and [`LiaTheory::live_lits`] therefore drops).
+///
+/// Returns `None` if any required negation could not be built. That is
+/// fail-closed on purpose: a literal with no term is a literal the warm decider
+/// would silently omit from the system, which weakens the conjunction and could
+/// turn an `unsat` into a `sat`. Losing the warm path is the cheap failure; a
+/// missing constraint is the expensive one.
+fn build_polarity_terms(
+    arena: &mut TermArena,
+    atom_terms: &[TermId],
+    kinds: &[AtomKind],
+) -> Option<Vec<Option<TermId>>> {
+    let mut out = vec![None; atom_terms.len() * 2];
+    for (index, (&term, &kind)) in atom_terms.iter().zip(kinds).enumerate() {
+        match kind {
+            AtomKind::Unsupported => {}
+            AtomKind::Equality => out[index * 2 + 1] = Some(term),
+            AtomKind::Order => {
+                out[index * 2 + 1] = Some(term);
+                out[index * 2] = Some(arena.not(term).ok()?);
+            }
+        }
+    }
+    Some(out)
 }
 
 /// Classifies one atom term into its [`AtomKind`] for the integer theory.
