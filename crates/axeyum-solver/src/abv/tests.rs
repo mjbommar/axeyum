@@ -124,6 +124,39 @@ fn generic_array_projection_uses_majority_default() {
     assert_eq!(value.select(&Value::Int(2)), Value::Int(3));
 }
 
+/// A read site whose projected value carries the wrong sort must DECLINE, not
+/// abort the process.
+///
+/// `GenericArrayValue::constant` asserts that its default matches the element
+/// sort, so an ill-sorted entry used to reach that assert and panic the solver
+/// thread — observed on
+/// `corpus/public-curated/non-incremental/QF_AUFLIA/cvc5-regress-clean/smtlib2024__array_benchmarks__misc__pipeline-invalid.smt2`.
+/// `unknown` is a first-class result here; a panic is not.
+#[test]
+fn generic_array_projection_declines_a_wrong_sorted_element() {
+    let mut arena = TermArena::new();
+    let array = arena
+        .declare(
+            "mismatched_generic_array",
+            Sort::Array {
+                index: ArraySortKey::Int,
+                element: ArraySortKey::Int,
+            },
+        )
+        .unwrap();
+    // Positive control first: well-sorted entries still project.
+    let good = [(Value::Int(0), Value::Int(7))];
+    array_value_from_entries(&arena, array, &good).expect("well-sorted entries project");
+
+    let bad = [(Value::Int(0), Value::Bool(true))];
+    let error = array_value_from_entries(&arena, array, &bad)
+        .expect_err("a Bool read value for an Int-element array must decline");
+    assert!(
+        error.to_string().contains("element sort mismatch"),
+        "the decline must name the mismatch: {error}"
+    );
+}
+
 #[test]
 fn lazy_abv_refutes_select_congruence() {
     // select(a, i) != select(a, j) AND i = j  =>  UNSAT (a lemma is required

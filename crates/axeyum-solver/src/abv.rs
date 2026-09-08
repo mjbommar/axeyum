@@ -3256,6 +3256,20 @@ fn array_value_from_entries(
     })?;
     let mut normalized: Vec<(Value, Value)> = Vec::new();
     for (entry_index, entry_element) in entries {
+        // A read site whose projected value does not carry the array's element
+        // sort cannot build a well-sorted array, and
+        // `GenericArrayValue::constant` asserts rather than reporting: a
+        // mismatch here would abort the process instead of declining. `unknown`
+        // is a first-class result, a panic is not, so decline with the sorts
+        // named.
+        if entry_element.sort() != element.to_sort() {
+            return Err(SolverError::Backend(format!(
+                "array projection element sort mismatch: read site produced {} \
+                 for an array whose element sort is {}",
+                entry_element.sort(),
+                element.to_sort(),
+            )));
+        }
         if let Some((_, existing)) = normalized
             .iter_mut()
             .find(|(index, _)| index == entry_index)
