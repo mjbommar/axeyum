@@ -322,20 +322,93 @@ per-stage split says *why*.
 
 ---
 
+## 5b. Does ADR-1750 reproduce? The per-conflict result yes; the break-even not always
+
+ADR-1750's protocol, re-run on this tree: fixed 20,000-conflict budget, arms
+`off`/`subsume`/`bve`/`preprocess`, arm order rotated per file, over the 11
+encoding-verified parity `QF_BV` CNFs (1,300 to 277,149 variables) instead of
+the eight `p4dfa` instances. 44 rows, 11 files, none killed.
+
+### The deterministic half reproduces
+
+Median propagations per conflict against `off`, over the files where every arm
+exhausted the budget:
+
+| | `subsume` | `bve` | `preprocess` |
+|---|---:|---:|---:|
+| **this lane** (parity corpus, s4) | 1.000 | **0.496** | **0.474** |
+| ADR-1750 (`p4dfa`, s5) | 0.933 | 0.426 | 0.388 |
+
+Same ordering, same magnitude, different corpus, different host, current tree.
+These counters are deterministic at a fixed conflict budget, so host load cannot
+touch them — which is exactly why they are the half worth quoting.
+
+The qualitative claims carry too: subsumption alone does essentially nothing for
+propagation volume (1.000 here, 0.933 there), and every bit of the effect is BVE.
+
+### The break-even carries in magnitude, but it does not always exist
+
+| | value |
+|---|---|
+| BVE break-even, median (this lane) | **57,187 conflicts** |
+| BVE break-even, median (ADR-1750) | ~92,000 conflicts (range 59k–131k) |
+| BVE break-even in seconds of unreduced search (this lane) | 0.0 s to **129,583 s**, median 4.8 s |
+| ADR-1750, same quantity | 4.6 s to 176.9 s |
+
+Two differences, and the second is the substantive one.
+
+* **Magnitude agrees.** 57k against a 59k–131k range is just below it, same
+  order. Given the corpus and host differ, this is a reproduction.
+* **A break-even does not always exist here.** ADR-1750 reports one for all
+  eight of its files. On the parity corpus **BVE has none on three of eight**:
+  it is not faster per conflict than the baseline, so no amount of search
+  repays the pass. The clearest case is `vlsat3_a85` — BVE spent **15.0 s** to
+  move the conflict rate from 40,458/s to 40,463/s. `p4dfa` is the family BVE
+  was characterised on, and the characterisation does not transfer to this
+  corpus unconditionally.
+
+And ADR-1750's observation that the break-even is *flat in conflicts and not in
+seconds* is not merely confirmed but amplified: across eight files the seconds
+span **six orders of magnitude** (0.0 s to 129,583 s). That is the argument for
+denominating a scheduling decision in conflicts rather than wall time, stated
+more strongly than the original data supported.
+
+Two pass costs that no 24-second budget can ever absorb, worth naming because
+they are on the shipped corpus: BVE's pass on `bench_12354` takes **128 s**, and
+`preprocess` on the same file **155 s**.
+
+### Timing caveat on this table, and it is not small
+
+`load_start=1.82`, `load_end=15.98` — another lane began a build partway through
+the sweep, so absolute seconds drift across it. Per-file break-evens remain
+internally consistent (a file's four arms run back to back, seconds apart, and
+the rotation stops one arm always being first), but **the level is advisory and
+a quiet re-run is owed**. The propagations-per-conflict table above is
+unaffected: those counters are deterministic.
+
 ## 6. Results still running or not run
 
 Stated as "did not run" rather than estimated.
 
-* **120 s sweep (off / inproc).** RUNNING at the time of writing; results in
-  `qfbv-120s-*.jsonl`. This is the direct test of the handed-down claim and of
-  whether the 16 truncated files complete when granted a 60 s slice.
-* **Per-pass CNF sweeps.** RUNNING. `pass-conflicts-20k.jsonl` reproduces
-  ADR-1750's protocol (fixed 20,000-conflict budget, arms `off`/`subsume`/`bve`/
-  `preprocess`) on parity-corpus CNFs instead of `p4dfa`;
-  `pass-wall-24s.jsonl` adds the wall-clock verdict and the setup/work split.
-* **The variance test (5 identical repeats on the 19 boundary files).** NOT YET
-  RUN — it must run on a quiet host, and the box is currently running the two
-  sweeps above.
+* **120 s sweep.** The full 200-file version was ABANDONED after 26 files: it
+  was running at ~2 minutes per file, i.e. 6.5 h, almost all of it re-deciding
+  files that decide in 90 ms. Its prefix is kept as
+  `qfbv-120s-*-ABANDONED-PREFIX.jsonl` — a prefix of a list is not a sample of
+  it, and those rows must never be read as a 120 s result. Replaced by a
+  targeted sweep over the 28 files whose verdict *can* differ at a longer
+  budget (14 undecided by some arm, 14 more where a pass was truncated); the
+  other 172 decided inside 24 s with every pass at its own fixpoint, so a
+  longer budget and a larger slice change nothing they do. RUNNING.
+* **Per-pass CNF sweep, conflict-budgeted.** DONE — §5b.
+* **Per-pass CNF sweep, wall-clock-budgeted** (`pass-wall-24s.jsonl`, adds the
+  setup/work split per file). RUNNING.
+* **The variance test, under load.** RUNNING (5 identical repeats × 19 boundary
+  files × 2 arms, at load ~16–20).
+* **The variance test, on a quiet host.** NOT RUN. The box has been at load
+  16–20 from other lanes since the 24 s sweep finished, and the quiet arm of
+  that comparison is the half I do not control.
+* **A quiet re-run of the conflict-budget sweep.** NOT RUN — owed, per the
+  caveat in §5b.
 * **Proof-checking cost with inprocessing on.** NOT RUN. ADR-1750 measured it
   (231x backward vs forward) and nothing here re-tests it.
 * **`prove_unsat` mode.** NOT RUN. Every sweep above is the default
