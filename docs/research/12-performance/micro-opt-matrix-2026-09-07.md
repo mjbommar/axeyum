@@ -286,3 +286,90 @@ Two things this cost, recorded because both are the point of the discipline:
 - **`pkill -f "boolean_core_profile /data0"` killed the invoking shell** (exit
   144), because the pattern matched that shell's own command line. This is the
   `pgrep -f` trap CLAUDE.md names, and `pkill` has it identically.
+
+### 2026-09-07 — the matrix, on the SAT core: the default is nearly optimal, and my top-ranked prediction was backwards
+
+s7, idle Zen 4, `taskset -c 0-7`, load **0.04 before / 1.14 after** — the run was
+the only load on the box. Seven p4dfa instances, 20,000-conflict budget, eleven
+cells, **five interleaved repeats**, minimum of five reported. 385 runs.
+
+**Trajectories are identical across all eleven cells on all seven files** —
+same verdict, conflicts, decisions, propagations, restarts, reductions, watch
+visits, clause visits, watch relocations, resolutions, redundancy steps and DRAT
+byte count. The driver refuses to print a ratio otherwise. So every ratio below
+is pure throughput on one search, not two different searches.
+
+| file | vars | base | `o2` | `cgu1` | `thin` | `fat` | `fatcgu1` | `v2` | `v3` | `v3cgu1` | `v3fatcgu1` | `native` |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| `mobiledevice_…twocond` | 31,482 | 1.000 | 1.043 | 1.015 | 0.994 | 0.996 | 0.989 | 1.001 | 1.005 | 1.018 | 0.990 | 1.002 |
+| `string1x8.4` | 40,548 | 1.000 | 1.056 | 1.019 | 1.002 | 1.001 | 0.992 | 1.001 | 1.013 | 1.022 | 0.993 | 1.005 |
+| `mobiledevice_…paired` | 58,380 | 1.000 | 1.046 | 1.006 | 0.993 | 0.987 | 0.991 | 0.990 | 1.001 | 1.011 | 0.980 | 0.993 |
+| `compose.s2` | 106,588 | 1.000 | 1.069 | 1.014 | 0.996 | 0.993 | 0.986 | 1.002 | 0.999 | 1.024 | 0.988 | 1.003 |
+| `videoconf_full` | 141,923 | 1.000 | 1.057 | 1.004 | 0.993 | 0.985 | 0.968 | 1.007 | 1.011 | 1.020 | 0.980 | 1.002 |
+| `string4x8.8` | 256,789 | 1.000 | 1.057 | 1.008 | 0.994 | 0.981 | 0.972 | 0.991 | 1.006 | 1.005 | 0.976 | 1.005 |
+| `compose.s3` | 473,949 | 1.000 | 1.083 | 1.012 | 0.998 | 0.977 | 0.974 | 1.002 | 1.005 | 1.018 | 0.973 | 1.000 |
+| **geomean** | | **1.000** | **1.058** | **1.011** | **0.996** | **0.989** | **0.982** | **0.999** | **1.006** | **1.017** | **0.983** | **1.001** |
+
+(Below 1.000 is faster than the shipping default. `base` absolute times, for
+scale: 0.365 s → 10.008 s.)
+
+**The magnitudes are all inside the run-to-run spread, so the ordering is the
+evidence, not the digits.** Within-cell spread over five repeats on this idle
+host: **median 2.4%, p90 4.8%, worst 6.3%** — the sibling lane's ±20% warning
+is about allocation-heavy criterion benches; this fixed-work driver is tighter,
+but still wider than every effect in the table. What survives that is *rank*:
+
+| cell | fastest on | slowest on | mean rank (1 = fastest of 11) |
+|---|---:|---:|---:|
+| `fatcgu1` | **5 of 7** | 0 | **1.57** |
+| `v3fatcgu1` | 2 of 7 | 0 | **1.71** |
+| `fat` | 0 | 0 | 3.29 |
+| `thin` | 0 | 0 | 4.57 |
+| `base` | 0 | 0 | 5.29 |
+| `v2` | 0 | 0 | 5.57 |
+| `native` | 0 | 0 | 6.57 |
+| `v3` | 0 | 0 | 7.86 |
+| `cgu1` | 0 | 0 | 8.86 |
+| `v3cgu1` | 0 | 0 | 9.71 |
+| `o2` | 0 | **7 of 7** | **11.00** |
+
+Seven independent files agreeing on the order is a much stronger statement than
+a 1.8% mean, and it is the form the result should be quoted in.
+
+**Scorecard against §2's pre-registered predictions.**
+
+- **E1 (`target-cpu=x86-64-v3` under 3% on the SAT core): right, and then
+  some.** `v2` 0.999, `v3` 1.006, `native` 1.001 — not merely small but *not
+  positive*, and `v3` ranks **consistently worse than baseline** (mean rank 7.86
+  against 5.29). AVX2 makes this binary 6 KB larger and no faster; the plausible
+  reading is vectorising code that has nothing to vectorise, paying setup and
+  I-cache for it. `x86-64-v3` on top of the best cell (`v3fatcgu1` 0.983 vs
+  `fatcgu1` 0.982) is likewise a wash.
+- **E2 (`codegen-units = 1` the largest single-flag win): wrong, and backwards.**
+  It was my top-ranked prediction and `cgu1` alone is **1.1% SLOWER** than the
+  default, with a mean rank of 8.86 of 11 — worse than baseline on essentially
+  every file. It only helps *combined with fat LTO*: `fat` 0.989 → `fatcgu1`
+  0.982. So the reasoning (16 units lose intra-crate inlining across a
+  6,280-line hot module) was not the mechanism. One unit also means one
+  inlining and register-allocation budget over a much larger function set, and
+  rustc's per-unit heuristics evidently tune better on the split.
+- **E3 (`opt-level 2` vs `3` inside the noise floor): wrong.** `o2` is **5.8%
+  slower and the slowest cell on 7 of 7 files** — the largest single effect in
+  the entire matrix, and it is a *loss*. The most consequential build setting we
+  have is the one we already take by default.
+- **E6 (strongest cell worth 5–12%): wrong, too optimistic by 3x.** The
+  strongest cell is worth **1.8%**, for **4.6x the build time**.
+
+**Predicted ranking `cgu1 ≈ fat > thin > v3 > opt-level`; measured ranking
+`fatcgu1 > fat > thin > base > v2 > native > v3 > cgu1 > v3cgu1 > o2`.** The
+only part of the prediction that survives is that LTO helps and `target-cpu`
+does not; the two cells I ranked highest (`cgu1`) and lowest (`opt-level`) are
+respectively a small loss and by far the biggest term.
+
+The `fat` > `cgu1` result is worth one more sentence, because it is where the
+mechanism differs from the story: fat LTO's win here is **not** cross-crate
+inlining in any interesting sense — `axeyum-cnf`'s propagate/analyze loop calls
+nothing outside its own crate. It is that LTO re-optimises the whole crate graph
+as one module *and keeps rustc's unit partitioning downstream of that*, which is
+a different thing from forcing one unit up front. `cgu1` alone shows what
+forcing one unit up front costs.
