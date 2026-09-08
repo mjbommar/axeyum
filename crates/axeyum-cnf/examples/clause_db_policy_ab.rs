@@ -178,6 +178,19 @@ fn main() {
             );
             let elapsed = started.elapsed().as_secs_f64();
             black_box(&outcome);
+            // Every `sat` is replayed against the original formula before it is
+            // reported. A measurement tool that prints an unchecked `sat` can
+            // manufacture a capability win out of a soundness bug, and the whole
+            // point of an A/B is that a policy must not change the verdict --
+            // so the verdict is the one thing that gets independently checked.
+            if let StreamingProofOutcome::Sat(model) = &outcome {
+                assert_eq!(
+                    model.satisfies(&formula),
+                    Ok(true),
+                    "WRONG SAT from arm {name} on {path}: the reported model does \
+                     not satisfy the formula"
+                );
+            }
             emit(path, name, &outcome, c, elapsed, sink.deletions);
         }
     }

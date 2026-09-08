@@ -1849,6 +1849,9 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
         for literal in &arena {
             branchable[literal.var().index()] = true;
         }
+        // The shipped heuristics, taken from one place so the constructor cannot
+        // drift from `SearchPolicies::default`.
+        let policies = SearchPolicies::default();
         let mut cdcl = Self {
             sink,
             arena,
@@ -1874,7 +1877,7 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
             target_trail_len: 0,
             initial_phase: false,
             // The shipped defaults live in one place; see `SearchPolicies`.
-            phase_policy: SearchPolicies::default().phase,
+            phase_policy: policies.phase,
             use_target_rephase: true,
             conflicts_since_restart: 0,
             restart_count: 1,
@@ -1894,7 +1897,7 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
             deleted: vec![false; num_clauses],
             cla_inc: 1.0,
             reductions: 0,
-            db_policy: SearchPolicies::default().clause_db,
+            db_policy: policies.clause_db,
             reduce_backoff_until: 0,
             next_reduce_conflicts: 0,
             learned_live: 0,
