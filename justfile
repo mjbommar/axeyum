@@ -833,6 +833,17 @@ gate-controls:
     # first survivor. Ten scenarios drive the shipped script against a throwaway
     # git tree via `AXEYUM_MERGE_HYGIENE_ROOT`; every guard mutation-verified.
     python3 -m unittest scripts.tests.test_check_merge_hygiene
+    # The configuration surface's two dating checks and their controls, ~2s
+    # each. `staleness` asks whether the code an entry rests on CHANGED after
+    # its measurement; `basis` asks whether the thing its justification NAMES
+    # still EXISTS. Neither subsumes the other: `dpll_lia`'s pre-SAT rectangle
+    # cited BatSat's allocator for 28 days after ADR-1703 retired it, with no
+    # line of `dpll_lia.rs` changing -- invisible to the first, caught by the
+    # second.
+    python3 scripts/check-config-registry-staleness.py
+    scripts/tests/test-config-registry-staleness-control.sh
+    python3 scripts/check-admission-limit-basis.py
+    scripts/tests/test-admission-limit-basis-control.sh
     # The registration gate's OWN controls -- it had none, which is the joke
     # this file exists to stop being. 15 cases, each mutation-verified.
     scripts/tests/test-check-control-registration.sh

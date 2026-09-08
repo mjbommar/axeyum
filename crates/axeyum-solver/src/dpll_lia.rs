@@ -1227,7 +1227,27 @@ fn exceeds_pre_sat_skeleton_boundary(atoms: usize, cnf_vars: usize) -> bool {
     let crosses_base_trigger = atoms > MAX_PRE_SAT_ARITH_ATOMS && cnf_vars > MAX_PRE_SAT_CNF_VARS;
     let outside_moderate_envelope =
         atoms > MAX_MODERATE_PRE_SAT_ARITH_ATOMS || cnf_vars > MAX_MODERATE_PRE_SAT_CNF_VARS;
-    crosses_base_trigger && outside_moderate_envelope
+    let exceeds = crosses_base_trigger && outside_moderate_envelope;
+    // Attribution, not decoration: the `UnknownReason` this feeds already names
+    // the boundary, but only on the path that RETURNS it. A `--trace` run needs
+    // the crossing recorded where it is DECIDED, so a query that crosses here
+    // and is then rescued by `oversized_admission_probe` still shows which
+    // bound it crossed and by how much. Off by default this is one
+    // thread-local `Cell<bool>` read; no clock, no allocation, no verdict
+    // change.
+    if exceeds {
+        crate::config_registry::note_crossed(
+            "crates/axeyum-solver/src/dpll_lia.rs::MAX_PRE_SAT_ARITH_ATOMS",
+            atoms as u64,
+            MAX_PRE_SAT_ARITH_ATOMS as u64,
+        );
+        crate::config_registry::note_crossed(
+            "crates/axeyum-solver/src/dpll_lia.rs::MAX_PRE_SAT_CNF_VARS",
+            cnf_vars as u64,
+            MAX_PRE_SAT_CNF_VARS as u64,
+        );
+    }
+    exceeds
 }
 
 /// Builds the `ResourceLimit` decline for [`exceeds_pre_sat_skeleton_boundary`],
@@ -2858,7 +2878,9 @@ fn theory_model(
 /// same Boolean skeleton. Re-lowering that pure-Boolean formula through the
 /// general BV backend every round spends most of the budget on Bool→AIG→CNF
 /// rebuilding once the learned clause set grows. This small encoder builds a
-/// Tseitin CNF for the skeleton once, keeps `BatSat` warm, and adds each learned
+/// Tseitin CNF for the skeleton once, keeps the warm [`IncrementalSat`] — the
+/// native CDCL core since ADR-1703, `BatSat` before it — warm across rounds, and
+/// adds each learned
 /// theory clause incrementally. SAT candidates still flow through
 /// `finish_sat`, which reconstructs arithmetic models and replays the original
 /// assertions before returning `sat`.
@@ -4960,6 +4982,56 @@ mod tests {
         assert!(exceeds_pre_sat_skeleton_boundary(1_447, 4_733));
         assert!(exceeds_pre_sat_skeleton_boundary(1_411, 6_774));
         assert!(exceeds_pre_sat_skeleton_boundary(1_084, 31_944));
+    }
+
+    /// Crossing the rectangle must be ATTRIBUTABLE, not merely fatal.
+    ///
+    /// The decline already carried an `UnknownReason` naming the boundary, but
+    /// only on the path that RETURNS it — a query that crosses here and is then
+    /// rescued by `oversized_admission_probe` left no record at all, so "how
+    /// many files did this bound cost us?" could not be answered from a run's
+    /// own output. This drives the REAL decision function, not `note_crossed`
+    /// directly, so it fails if the wiring is removed rather than only if the
+    /// mechanism breaks.
+    #[test]
+    fn crossing_the_pre_sat_rectangle_is_recorded_with_its_numbers() {
+        let atoms = 1_447;
+        let cnf_vars = 4_733;
+        let (crossed, admitted) = {
+            let _g = crate::config_registry::ConfigTraceGuard::enable();
+            assert!(exceeds_pre_sat_skeleton_boundary(atoms, cnf_vars));
+            let crossed = crate::config_registry::crossings();
+            // A query INSIDE the envelope must record nothing, or the field
+            // says "was consulted" and not "decided the route".
+            let _ = exceeds_pre_sat_skeleton_boundary(8, 8);
+            (crossed, crate::config_registry::crossings())
+        };
+        assert_eq!(
+            crossed,
+            vec![
+                (
+                    "crates/axeyum-solver/src/dpll_lia.rs::MAX_PRE_SAT_ARITH_ATOMS",
+                    atoms as u64,
+                    MAX_PRE_SAT_ARITH_ATOMS as u64,
+                ),
+                (
+                    "crates/axeyum-solver/src/dpll_lia.rs::MAX_PRE_SAT_CNF_VARS",
+                    cnf_vars as u64,
+                    MAX_PRE_SAT_CNF_VARS as u64,
+                ),
+            ],
+            "the crossing must name both dimensions with the observed counts"
+        );
+        assert_eq!(
+            admitted, crossed,
+            "an admitted skeleton must add no crossing"
+        );
+        // ... and with no guard, nothing is recorded at all.
+        assert!(exceeds_pre_sat_skeleton_boundary(atoms, cnf_vars));
+        assert!(
+            crate::config_registry::crossings().is_empty(),
+            "recording must be opt-in: a crossing outside a guard leaks state"
+        );
     }
 
     #[test]

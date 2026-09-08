@@ -897,9 +897,9 @@ pub use backend::{
     SolverBackend, SolverConfig, SolverError, UnknownKind, UnknownReason,
 };
 pub use config_registry::{
-    ConfigEntry, ConfigTraceGuard, Dependency, EXEMPT, GOVERNED_FILES, Justification, OnExceed,
-    Protects, REGISTRY, Signal, active_env_overrides, config_trace_line, consulted, dated_count,
-    digest, note_consulted,
+    Basis, ConfigEntry, ConfigTraceGuard, Dependency, EXEMPT, GOVERNED_FILES, Justification,
+    OnExceed, Protects, REGISTRY, Signal, active_env_overrides, config_trace_line, consulted,
+    crossings, dated_count, digest, note_consulted, note_crossed,
 };
 pub use incremental::{
     AssumptionOutcome, IncrementalBvSolver, IncrementalBvStats, IncrementalModelLiftStats,
