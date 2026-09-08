@@ -214,23 +214,44 @@ renumbering after BVE) is 2,295 ms, 0.7%. So "is the cost in the pass or in
 re-encoding afterwards?" has a clean answer: **the pass**. Nothing is to be won
 by making the plumbing cheaper.
 
-### But *within* BVE, the cost is not in finding things
+### Within a pass: setup dominates exactly where the pass finds least
 
-At the CNF level, each pass is run twice — the second time on its own output,
-where it rebuilds the same occurrence lists and finds nothing. On the smoke
-instance (`bv-term-small-rw_1128`, 4,571 vars / 18,559 clauses):
+At the CNF level each pass is run twice — the second time on its own output,
+where it rebuilds the same occurrence lists and has (nearly) nothing left to
+find. The second run's time is the floor the pass pays for existing;
+`first − second` is the part that depends on there being work.
 
-| arm | first run | second run (setup floor) | setup share |
-|---|---:|---:|---:|
-| subsume | 3.9 ms | 2.4 ms | 61% |
-| vivify | 6.8 ms | 6.1 ms | 90% |
-| **bve** | **205.4 ms** | **199.9 ms** | **97%** |
+On the first smoke instance (`bv-term-small-rw_1128`, 4,571 vars) the split
+looked decisive: BVE's second run eliminated **zero** variables and still cost
+**97%** of the first run. **That does not generalise, and the wider sweep says
+so.** Median setup share over the encoding-verified files measured so far:
 
-BVE's second run eliminated **zero** variables and still cost 97% of the first
-run. Nearly all of BVE's expense is occurrence-list construction plus the
-per-variable elimination-bound evaluation — work it does whether or not any
-variable turns out to be eliminable. That is the part a schedule can amortise;
-the resolution work itself is nearly free by comparison.
+| pass | median setup share | range | what the re-run still found |
+|---|---:|---|---|
+| vivify | **92%** | 84–96% | nothing at all on any file |
+| subsume | 67% | 44–98% | 0–673 clauses |
+| **bve** | **25%** | **3–34%** | nothing at all on any file |
+| preprocess (sub+BVE) | 78% | 41–110% | up to 44,747 clauses, 15,359 vars |
+
+Three things follow, and the first corrects my own earlier reading.
+
+* **BVE's setup share is low where BVE does real work.** On `tsp_rand_70_300`
+  it eliminated 277,149 → 143,443 live variables and setup was 3% of its 35.8 s.
+  On the smoke instance it eliminated 482 of 4,571 and setup was 97%. The
+  pattern is not "BVE is all setup"; it is **the setup share is high exactly
+  where the pass finds little** — which is exactly the case where running the
+  pass at all was the mistake. That is still the lever, but the lever is
+  *admission*, not index reuse.
+* **Vivification alone is 92% setup and found nothing on any of these files**,
+  leaving the formula bit-identical (clause and literal ratios 1.000). Its
+  corpus-level benefit in §5 comes from files not in this CNF population;
+  here it is pure overhead. Both are true, of different files.
+* **A setup share above 100% is not a bug, it is the caveat firing.**
+  `preprocess`'s re-run subsumes 44,747 more clauses and eliminates 15,359 more
+  variables, so subsumption-then-BVE has *not* reached a fixpoint in one round
+  and the second run is doing real work rather than measuring a floor. Where
+  the re-run found something, the "setup share" column is an overestimate and
+  is not a setup measurement at all.
 
 ---
 
@@ -491,9 +512,11 @@ binary.
    move with host load; the cutoff that fights it is wall-clock. Those two
    disagree by exactly the amount the host varies, which is what the variance
    test (§6, not yet run) is for.
-3. **Attack BVE's setup, not its search.** 97% of BVE's cost on the smoke
-   instance is work it does before finding anything. A schedule that reduces
-   repeatedly amortises that; a faster resolution loop does not touch it.
+3. **Attack admission, not BVE's inner loop.** The setup share is high exactly
+   where the pass finds little (97% on an instance where it eliminated 11% of
+   variables, 3% on one where it eliminated 48%), so index reuse buys least on
+   the files that cost most. A cheap predictor of "will BVE find anything here"
+   is worth more than a faster BVE.
 4. **Turn vivification on if inprocessing is ever turned on.** It costs ~45 ms
    where it matters, makes the whole of inprocessing 20% cheaper, shrinks the
    formula further, and converts a pathological BVE into a trivial one on four
