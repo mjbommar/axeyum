@@ -290,8 +290,7 @@ fn try_subsume(
     'outer: for &l in &c.lits {
         for sgn in [l, l.negated()] {
             let slot = lit_index(sgn);
-            for idx in 0..occs[slot].len() {
-                let d_id = occs[slot][idx];
+            for &d_id in &occs[slot] {
                 // ONE STEP PER ENTRY EXAMINED, not per entry that survives the
                 // filters. The gap between those two is the finding: removal is
                 // lazy, so a dead id stays here forever and every later scan
@@ -367,7 +366,6 @@ fn subsume_round(
     clauses: &mut [Option<NormClause>],
     nvars: usize,
     marks: &mut [i8],
-    opts: SubsumeOptions,
     work: &mut PassWork,
     deadline: Option<Instant>,
     mut proof: Option<&mut Vec<DratStep>>,
@@ -583,7 +581,6 @@ pub(crate) fn simplify_within_recorded(
             &mut clauses,
             nvars,
             &mut marks,
-            opts,
             &mut work,
             deadline,
             proof.as_deref_mut(),
@@ -947,7 +944,6 @@ mod tests {
             &f,
             SubsumeOptions {
                 work_budget: Some(free.work_at_last_progress),
-                ..SubsumeOptions::DEFAULT
             },
             None,
         );
@@ -986,7 +982,6 @@ mod tests {
             &f,
             SubsumeOptions {
                 work_budget: Some(limit),
-                ..SubsumeOptions::DEFAULT
             },
             None,
         );

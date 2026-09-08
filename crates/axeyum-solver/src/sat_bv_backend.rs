@@ -1233,10 +1233,21 @@ const SUBSUME_BUDGET_SETUP_MULTIPLE: u64 = 200;
 /// Separate from [`BVE_STEPS_PER_MILLISECOND`] because the two passes do
 /// different things per step — subsumption's inner loop is a signature test and
 /// a marked-literal walk, BVE's is a resolvent merge — so one number for both
-/// would be a guess dressed as a shared constant. Measured as
-/// `subsume_work_spent / subsume_ms` over the parity files whose subsumption ran
-/// at least 20 ms.
-const SUBSUME_STEPS_PER_MILLISECOND: u64 = 900_000;
+/// would be a guess dressed as a shared constant, and the measurement says they
+/// differ by 3.6x.
+///
+/// Measured 2026-09-08 as `subsume_work_spent / subsume_ms` over the 81 parity
+/// files whose subsumption ran at least 20 ms: p10 86,042, **median 127,599**,
+/// p90 154,908. Against BVE's median of 460,365 — a subsumption step is the
+/// more expensive one, which is the opposite of what a shared constant would
+/// have assumed.
+///
+/// Getting it wrong is not dangerous in either direction — too high and the
+/// wall deadline truncates as it does today, too low and the pass stops early
+/// with a still model-preserving partial result — but it is the one
+/// host-dependent number in the decision, and it is confined to the branch that
+/// already depends on the host. With no deadline it is not read at all.
+const SUBSUME_STEPS_PER_MILLISECOND: u64 = 128_000;
 
 /// Whether BVE drops lazily-removed clause ids from its occurrence lists.
 ///
