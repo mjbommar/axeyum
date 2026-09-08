@@ -87,16 +87,6 @@ pub mod instrument {
     pub const DL_ONLINE: &str = "dl-online";
     /// `crate::RouteTrace` as of the last recorded route attempt.
     pub const ROUTE: &str = "route";
-    /// `crate::LiaCounters` a *running* integer route mirrors on a fixed
-    /// call cadence.
-    ///
-    /// Always sampled [`super::Sampled::InFlight`]: the mirror is written from
-    /// inside the lazy loop, never at a verdict. Its whole reason for existing
-    /// is that the loop on a lost `QF_LIA`/`QF_UFLIA` file does not reach a
-    /// verdict — measured 2026-09-08, 10 of the 27 committed `QF_LIA` losses
-    /// and every one of the six hardest `QF_UFLIA` losses printed no integer
-    /// counters at all without it.
-    pub const LIA: &str = "lia";
     /// `crate::AbvStats` as of the last `QF_ABV` array-route recording site.
     ///
     /// Always sampled [`super::Sampled::InFlight`]: the array routes publish
