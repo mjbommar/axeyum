@@ -47,6 +47,7 @@ use axeyum_rewrite::replace_subterms;
 
 use crate::backend::{CheckResult, SolverConfig, SolverError};
 use crate::dpll_lia::check_with_lia_dpll;
+use crate::lazy_smt_counters::{LazySmtLoop, RoundOutcome};
 use crate::model::Model;
 use crate::route_trace::DeclineReason;
 
@@ -1382,6 +1383,12 @@ fn solve_with_refinement(
     let debug = std::env::var_os("AXEYUM_NIA_DEBUG").is_some();
     let mut emitted: BTreeSet<TermId> = relaxed.iter().copied().collect();
     let mut round = 0usize;
+    // This loop had NO instrument until 2026-09-08, which is why the span-log
+    // sweep that went looking for it read the `nra` loop's rounds instead and
+    // reported them as this one's. `atoms` is the abstracted-product count: the
+    // number of `r = a·b` facts a round can cut off, and so the bound on how
+    // much a round of refinement can learn.
+    crate::lazy_smt_counters::record_entry(LazySmtLoop::Nia, triples.len() as u64);
     loop {
         let remaining = slice_deadline.checked_duration_since(std::time::Instant::now());
         let Some(remaining) = remaining.filter(|d| !d.is_zero()) else {
@@ -1391,7 +1398,23 @@ fn solve_with_refinement(
             return Ok(None);
         };
         let round_config = capped.clone().with_timeout(remaining);
+        // The relaxation solve is this loop's round-opening half, the exact
+        // counterpart of the other two loops' propositional skeleton solve: it
+        // is what every round runs, and it is where the round count lives.
+        let solve_started = crate::lazy_smt_counters::enabled().then(std::time::Instant::now);
         let outcome = check_with_lia_dpll(arena, &relaxed, &round_config);
+        if let Some(started) = solve_started {
+            let stage_outcome = match &outcome {
+                Ok(CheckResult::Sat(_)) => RoundOutcome::Sat,
+                Ok(CheckResult::Unsat) => RoundOutcome::Unsat,
+                Ok(CheckResult::Unknown(_)) | Err(_) => RoundOutcome::Unknown,
+            };
+            crate::lazy_smt_counters::record_skeleton(
+                LazySmtLoop::Nia,
+                started.elapsed(),
+                stage_outcome,
+            );
+        }
         if debug {
             eprintln!(
                 "[nia] round {round}: {:?} (relaxed={}, {remaining:?} left)",
@@ -1406,7 +1429,25 @@ fn solve_with_refinement(
         match outcome {
             Ok(CheckResult::Unsat) => return Ok(Some(CheckResult::Unsat)),
             Ok(CheckResult::Sat(model)) => {
-                if let Some(sat) = replay_sat(arena, assertions, &model) {
+                // The ground-evaluator replay is this loop's theory half: it is
+                // what decides whether the round's model is real, and its
+                // outcome is the round's verdict on the cube.
+                let replay_started =
+                    crate::lazy_smt_counters::enabled().then(std::time::Instant::now);
+                let replayed = replay_sat(arena, assertions, &model);
+                if let Some(started) = replay_started {
+                    crate::lazy_smt_counters::record_theory(
+                        started.elapsed(),
+                        if replayed.is_some() {
+                            RoundOutcome::Sat
+                        } else {
+                            // A spurious model is this loop's conflict: it is
+                            // what the next round's tangent lemmas cut off.
+                            RoundOutcome::Unsat
+                        },
+                    );
+                }
+                if let Some(sat) = replayed {
                     return Ok(Some(sat));
                 }
                 if !refine {
@@ -1422,8 +1463,18 @@ fn solve_with_refinement(
                     ));
                     return Ok(None);
                 }
+                let refine_started =
+                    crate::lazy_smt_counters::enabled().then(std::time::Instant::now);
                 let added =
                     refine_with_tangents(arena, triples, &model, &mut emitted, &mut relaxed)?;
+                if let Some(started) = refine_started {
+                    // Tangent lemmas are this loop's blocking clauses: each one
+                    // rules out a region of the relaxation the round has just
+                    // shown to be spurious. Counted through the same field so
+                    // "how fast is the learned set growing" reads the same way
+                    // on all three loops.
+                    crate::lazy_smt_counters::record_blocking(added as u64, started.elapsed());
+                }
                 if debug {
                     eprintln!("[nia] round {round}: refined with {added} tangent lemmas");
                 }

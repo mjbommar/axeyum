@@ -40,10 +40,15 @@
 //!   the same `unknown` to a caller and demand opposite fixes. A
 //!   [`crate::route_trace::DeclineReason::Budget`] becomes
 //!   [`Outcome::Exhausted`] and carries the **bound that bit** in `bound`.
-//! * **A loop is one span with a count.** [`SpanKind::RefinementLoop`] carries
-//!   `loop_count`; it carries `loop_hist: null` because the solver does not
-//!   record per-round timings today, and a renderer must say "distribution not
-//!   recorded" rather than draw a flat bar. See the module's *Known gaps*.
+//! * **A loop is one span per LOOP, with a count and a distribution.**
+//!   [`SpanKind::RefinementLoop`] carries `loop_count` and `loop_hist`, the
+//!   per-round wall clock in log2 millisecond buckets. A loop whose rounds were
+//!   never timed still carries `loop_hist: null` beside
+//!   `loop_hist_available: false`, and a renderer must say "distribution not
+//!   recorded" rather than draw a flat bar. There is one span per lazy-SMT loop
+//!   *entered* (`lazy-smt:lra`, `lazy-smt:nra`, `lazy-smt:nia`), because two
+//!   deciders behind one count is how a 2026-09-08 `QF_NIA` sweep came to read
+//!   the real-relaxation refuter's rounds as the nonlinear-integer route's.
 //!
 //! # What the timestamps are, and are not
 //!
@@ -57,10 +62,16 @@
 //!
 //! # Known gaps, stated in the data
 //!
-//! * **No per-round histogram.** `LazySmtCounters` totals `skeleton_solve`,
-//!   `theory_check` and `core_extraction` over all rounds; nothing records the
-//!   per-round split. `loop_hist` is `null` and `loop_hist_available` is
-//!   `false`.
+//! * **The three loop stage children are query-wide.** `skeleton_solve`,
+//!   `theory_check` and `core_extraction` are totals across every lazy-SMT
+//!   loop, so they are emitted ONCE, under the first loop span, and a reader
+//!   must not attribute them to that loop alone. The per-loop quantity that IS
+//!   attributed is `loop_hist` and the span's own `wall_ns`, both derived from
+//!   that loop's histogram.
+//! * **A round in flight is not in the histogram.** It is filed when the next
+//!   round opens or the guard drops, so a watchdog kill leaves the round that
+//!   spent the budget in `pending_round_ms` on the span's `detail` rather than
+//!   in a bucket.
 //! * **No ticks.** `axeyum_cnf::ticks` derives a machine-independent tick count
 //!   from `axeyum_cnf::SearchCounters`, but those counters are only filled by
 //!   the `count_search` search variants, which the shipping path does not use.
@@ -77,7 +88,7 @@ use core::fmt::Write as _;
 use std::time::Duration;
 
 use crate::layers::{BvLayerStats, TheoryLayerStats};
-use crate::lazy_smt_counters::LazySmtCounters;
+use crate::lazy_smt_counters::{LazySmtCounters, LazySmtLoop};
 use crate::lia_counters::LiaCounters;
 use crate::live_instruments::Sampled;
 use crate::route_trace::{DeclineReason, RouteOutcome, RouteTrace, Verdict};
@@ -313,8 +324,15 @@ struct Span {
     work_unit: Option<&'static str>,
     work: Option<u64>,
     loop_count: Option<u64>,
+    /// The per-round wall-clock distribution of a [`SpanKind::RefinementLoop`],
+    /// as log2 millisecond buckets — bucket `0` is `<1 ms`, bucket `k` is
+    /// `[2^(k-1), 2^k)` ms, the last is the tail. `None` on every other span
+    /// kind, and on a loop whose rounds were never timed.
+    loop_hist: Option<Vec<u32>>,
     /// Whether per-round timings exist for a [`SpanKind::RefinementLoop`].
-    /// Always `false` today; see the module's *Known gaps*.
+    /// True exactly when `loop_hist` is `Some`; kept as its own field because a
+    /// consumer must be able to tell "no distribution recorded" from "a
+    /// distribution that happens to be empty".
     loop_hist_available: bool,
     /// `false` when the reading behind this span was taken mid-flight, so every
     /// counter on it is a lower bound.
@@ -400,6 +418,7 @@ impl SpanLog {
             work_unit: None,
             work: None,
             loop_count: None,
+            loop_hist: None,
             loop_hist_available: false,
             complete: matches!(inputs.termination, Termination::Returned),
             time_basis: "observed",
@@ -567,9 +586,23 @@ fn span_line(s: &Span) -> String {
     push_opt_u64(&mut out, s.work);
     out.push_str(",\"loop_count\":");
     push_opt_u64(&mut out, s.loop_count);
-    // Always `null` today, beside the flag that says the absence is the
-    // solver's, not this renderer's.
-    out.push_str(",\"loop_hist\":null,\"loop_hist_available\":");
+    // `null` beside the flag that says the absence is the solver's, not this
+    // renderer's — a loop whose rounds were not timed still says so.
+    out.push_str(",\"loop_hist\":");
+    match &s.loop_hist {
+        None => out.push_str("null"),
+        Some(buckets) => {
+            out.push('[');
+            for (i, count) in buckets.iter().enumerate() {
+                if i > 0 {
+                    out.push(',');
+                }
+                let _ = write!(out, "{count}");
+            }
+            out.push(']');
+        }
+    }
+    out.push_str(",\"loop_hist_available\":");
     let _ = write!(out, "{}", s.loop_hist_available);
     let _ = write!(out, ",\"complete\":{}", s.complete);
     out.push_str(",\"time_basis\":");
@@ -643,6 +676,7 @@ fn push_ladder(
                 work_unit: None,
                 work: None,
                 loop_count: None,
+                loop_hist: None,
                 loop_hist_available: false,
                 complete,
                 time_basis: "prefix-sum",
@@ -685,6 +719,7 @@ fn push_ladder(
                 work_unit: None,
                 work: None,
                 loop_count: None,
+                loop_hist: None,
                 loop_hist_available: false,
                 complete: false,
                 time_basis: "prefix-sum",
@@ -851,6 +886,7 @@ fn push_bv_stages(
             work_unit: None,
             work: None,
             loop_count: None,
+            loop_hist: None,
             loop_hist_available: false,
             complete: false,
             time_basis: "duration-only",
@@ -933,9 +969,19 @@ fn push_theory_stages(
     }
 }
 
-/// The abstraction/refinement loop: ONE span with a round count, then the
-/// three-way split of where a round's time goes. `instruments` is taken even
-/// though only one block writes it, so every stage emitter has one signature.
+/// The abstraction/refinement loops: **one span per loop that was entered**,
+/// each carrying its own round count and per-round distribution, then the
+/// three-way split of where a round's time goes.
+///
+/// One span per loop, not one for all of them. Until 2026-09-08 this emitted a
+/// single span whose `loop_count` was `lra_rounds + nra_rounds`, and a
+/// `QF_NIA` sweep read "all 50 files enter the refinement loop, 25 for exactly
+/// one round" off it — a statement about the `nra` loop reached from the real
+/// relaxation refuter, presented as one about the nonlinear-integer route. Two
+/// deciders behind one count is how that happened.
+///
+/// `instruments` is taken even though only one block writes it, so every stage
+/// emitter has one signature.
 fn push_lazy_loop(
     spans: &mut Vec<Span>,
     next_id: &mut u64,
@@ -943,24 +989,34 @@ fn push_lazy_loop(
     ladder_ids: &[(u64, String)],
     instruments: &mut Vec<String>,
 ) {
-    if let Some(lazy) = &inputs.lazy {
-        let s = &lazy.value;
-        let rounds = s.lra_rounds.saturating_add(s.nra_rounds);
-        let entries = s.lra_entries.saturating_add(s.nra_entries);
+    let Some(lazy) = &inputs.lazy else {
+        return;
+    };
+    let s = &lazy.value;
+    if s.entries() > 0 {
+        instruments.push(format!("lazy-smt:{}", lazy.sampled.label()));
+    }
+    let mut emitted_stages = false;
+    for which in LazySmtLoop::ALL {
+        let rounds = s.rounds_of(which);
+        let entries = s.entries_of(which);
+        let hist = s.hist(which);
         if entries > 0 {
-            instruments.push(format!("lazy-smt:{}", lazy.sampled.label()));
+            let route = format!("lazy-smt:{}", which.label());
             let (parent, basis) = attach_to("lazy-smt", ladder_ids);
             let id = *next_id;
             *next_id += 1;
             let opened = span_start(spans, parent);
-            let accounted = nanos(s.skeleton_solve)
-                .saturating_add(nanos(s.theory_check))
-                .saturating_add(nanos(s.core_extraction));
+            // The loop's OWN cost, from its own histogram, not the query-wide
+            // stage totals: with three loops behind one counter set those
+            // totals are a sum over all of them and would attribute another
+            // loop's seconds to this span.
+            let accounted = nanos(hist.total());
             spans.push(Span {
                 id,
                 parent: Some(parent),
                 kind: SpanKind::RefinementLoop,
-                route: Some("lazy-smt".to_owned()),
+                route: Some(route),
                 phase: "refinement",
                 opened_ns: opened,
                 closed_ns: Some(opened.saturating_add(accounted)),
@@ -969,29 +1025,49 @@ fn push_lazy_loop(
                 verdict: None,
                 reason: None,
                 detail: Some(format!(
-                    "lra_rounds={} nra_rounds={} blocking_clauses={} blocking_literals={}",
-                    s.lra_rounds, s.nra_rounds, s.blocking_clauses, s.blocking_literals
+                    "loop={} entries={entries} rounds={rounds} filed_rounds={} \
+                     max_round_ms={} max_round_index={} pending_round_ms={}",
+                    which.label(),
+                    hist.rounds(),
+                    hist.max().as_millis(),
+                    hist.max_round(),
+                    if s.pending_loop == which.index() {
+                        s.pending_round.as_millis()
+                    } else {
+                        0
+                    },
                 )),
                 bound: None,
                 wall_ns: Some(accounted),
                 work_unit: Some("rounds"),
                 work: Some(rounds),
                 loop_count: Some(rounds),
-                loop_hist_available: false,
+                loop_hist: (!hist.is_empty()).then(|| hist.buckets().to_vec()),
+                loop_hist_available: !hist.is_empty(),
                 complete: lazy.sampled == Sampled::Complete,
                 time_basis: "duration-only",
                 parent_basis: Some(basis),
                 note: Some(
-                    "per-round timings are NOT recorded: only the totals over all rounds \
-                     exist, so a renderer must say the distribution is unavailable rather \
-                     than draw equal rounds"
+                    "loop_hist is log2 MILLISECOND buckets: index 0 is <1 ms, index k is \
+                     [2^(k-1), 2^k) ms, the last index is the tail. A round still in \
+                     flight is NOT in it -- see pending_round_ms in the detail. The three \
+                     stage children below are query-wide totals across ALL lazy loops, \
+                     not this loop's alone"
                         .to_owned(),
                 ),
             });
-            // The loop's own three-way split, so "the propositional solve
-            // grew" is distinguishable from "the second LP per round is the
-            // cost" — the two have opposite fixes and both scale with the
-            // round count.
+            // The three-way split, so "the propositional solve grew" is
+            // distinguishable from "the second LP per round is the cost" — the
+            // two have opposite fixes and both scale with the round count.
+            //
+            // Emitted ONCE, under the first loop span, because the underlying
+            // fields are query-wide sums across every lazy loop. Hanging the
+            // same seconds under each of three parents would make the tree sum
+            // to three times the query.
+            if emitted_stages {
+                continue;
+            }
+            emitted_stages = true;
             for spec in &[
                 StageSpec {
                     phase: "skeleton_solve",
@@ -1142,6 +1218,7 @@ fn push_stage(
         work_unit: spec.work_unit,
         work: spec.work,
         loop_count: None,
+        loop_hist: None,
         loop_hist_available: false,
         complete: sampled == Sampled::Complete,
         time_basis: "duration-only",
@@ -1388,14 +1465,94 @@ mod tests {
     }
 
     #[test]
-    fn a_refinement_loop_is_one_span_with_a_count_and_no_histogram() {
+    fn a_refinement_loop_is_one_span_per_loop_carrying_its_own_round_histogram() {
+        // The histogram is BUILT BY RECORDING, not typed in: a fixture that
+        // set `round_hist` by hand would pass with the recorder deleted, which
+        // is precisely the failure this test exists to catch. The two loops are
+        // given deliberately different round shapes so a span that took the
+        // wrong loop's distribution cannot pass.
+        let counters = {
+            let guard = crate::lazy_smt_counters::LazySmtCountersGuard::enable();
+            crate::lazy_smt_counters::record_entry(LazySmtLoop::Nra, 7);
+            // One enormous round.
+            crate::lazy_smt_counters::record_skeleton(
+                LazySmtLoop::Nra,
+                Duration::from_millis(1),
+                crate::lazy_smt_counters::RoundOutcome::Sat,
+            );
+            crate::lazy_smt_counters::record_theory(
+                Duration::from_millis(4_000),
+                crate::lazy_smt_counters::RoundOutcome::Unknown,
+            );
+            crate::lazy_smt_counters::record_entry(LazySmtLoop::Nia, 3);
+            // Three tiny ones.
+            for _ in 0..3 {
+                crate::lazy_smt_counters::record_skeleton(
+                    LazySmtLoop::Nia,
+                    Duration::from_micros(200),
+                    crate::lazy_smt_counters::RoundOutcome::Sat,
+                );
+            }
+            drop(guard);
+            crate::lazy_smt_counters::last_lazy_smt_counters().expect("armed")
+        };
+        let log = SpanLog::build(&SpanLogInputs {
+            file: "x.smt2",
+            verdict: "unknown",
+            lazy: Some(Reading::complete(counters)),
+            ..SpanLogInputs::default()
+        });
+        let lines = log.to_jsonl();
+        let loops: Vec<&String> = lines
+            .iter()
+            .filter(|l| l.contains("\"span_kind\":\"refinement_loop\""))
+            .collect();
+        assert_eq!(
+            loops.len(),
+            2,
+            "one span per loop ENTERED, and the lra loop was not: {loops:?}"
+        );
+        let nra = loops
+            .iter()
+            .find(|l| l.contains("\"route\":\"lazy-smt:nra\""))
+            .expect("the nra loop must be its own span");
+        let nia = loops
+            .iter()
+            .find(|l| l.contains("\"route\":\"lazy-smt:nia\""))
+            .expect("the nia loop must be its own span");
+        // 4001 ms lands in log2 bucket 12 ([2048, 4096) ms); 200 us lands in
+        // bucket 0 (<1 ms). Spelled out rather than recomputed here, so the
+        // expectation is a statement and not a restatement of the code.
+        assert!(
+            nra.contains("\"loop_count\":1") && nra.contains("\"loop_hist_available\":true"),
+            "got: {nra}"
+        );
+        assert!(
+            nra.contains("\"loop_hist\":[0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0]"),
+            "ONE round of ~4 s must sit alone in the 2048-4096 ms bucket: {nra}"
+        );
+        assert!(
+            nia.contains("\"loop_count\":3")
+                && nia.contains("\"loop_hist\":[3,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]"),
+            "THREE sub-millisecond rounds must sit in bucket 0: {nia}"
+        );
+        // The distinction the old single-span shape could not make: the two
+        // loops have different round shapes behind one `rounds()` total, and
+        // the fix each needs is the opposite of the other's.
+        assert!(
+            !nra.contains("\"loop_hist\":[3,") && !nia.contains("\"loop_hist_available\":false"),
+            "a span must carry ITS loop's distribution: nra={nra} nia={nia}"
+        );
+    }
+
+    #[test]
+    fn a_loop_whose_rounds_were_never_timed_says_the_distribution_is_absent() {
+        // The negative control for the test above, and the reason
+        // `loop_hist_available` survives as its own field: a counter snapshot
+        // with rounds but no FILED round must still refuse to draw them.
         let counters = LazySmtCounters {
             nra_entries: 1,
             nra_rounds: 513,
-            skeleton_solve: Duration::from_secs(9),
-            theory_check: Duration::from_secs(3),
-            core_extraction: Duration::from_secs(11),
-            blocking_clauses: 512,
             ..LazySmtCounters::default()
         };
         let log = SpanLog::build(&SpanLogInputs {
@@ -1408,21 +1565,12 @@ mod tests {
         let loop_span = lines
             .iter()
             .find(|l| l.contains("\"span_kind\":\"refinement_loop\""))
-            .expect("the loop must be one span");
+            .expect("the loop must still be a span");
         assert!(loop_span.contains("\"loop_count\":513"), "got: {loop_span}");
         assert!(
             loop_span.contains("\"loop_hist\":null")
                 && loop_span.contains("\"loop_hist_available\":false"),
-            "the solver does not record per-round timings and the data must say \
-             so rather than let a renderer draw equal rounds: {loop_span}"
-        );
-        assert_eq!(
-            lines
-                .iter()
-                .filter(|l| l.contains("\"span_kind\":\"refinement_loop\""))
-                .count(),
-            1,
-            "513 rounds is ONE box"
+            "513 untimed rounds must not become a drawn distribution: {loop_span}"
         );
     }
 
