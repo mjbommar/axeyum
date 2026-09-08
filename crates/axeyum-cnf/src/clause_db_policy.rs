@@ -169,6 +169,54 @@ pub enum DeleteFraction {
     },
 }
 
+/// How a reduce round restores the watch lists after tombstoning its
+/// deletions.
+///
+/// Both alternatives leave the **same set** of watches: `propagate` keeps a
+/// long clause's two watched literals at arena slots 0 and 1, and a binary
+/// clause's two literals are both watched, so re-watching "the first two
+/// literals of every live clause" re-derives exactly what was already there.
+/// What differs is the cost and the **order within each list**, and the order
+/// is visible to the search: it decides which of several unit clauses
+/// propagates first and therefore which conflict is analysed.
+///
+/// # Why the expensive one is still the default
+///
+/// [`WatchSweep::InPlace`] is the reference behaviour and is strictly cheaper,
+/// and it is **not** the default here, because measurement on this repository's
+/// corpus said the trade does not pay:
+///
+/// * The sweep is not a cost worth optimising. Measured 2026-09-08 over the
+///   committed van der Waerden / Rado instances and generated bit-blasted
+///   factorisation instances, the watch entries a reduce round touches are
+///   **0.3%–2.8% of the watch entries propagation visits** (median under 0.8%).
+///   Removing the sweep entirely would not reach 1%.
+/// * Order is not free. Over the eight corpus instances that reduce at all,
+///   `InPlace` needed **more** conflicts on seven — +1.3% to +6.3% — and fewer
+///   on one (-2.3%). There is a mechanism for it: a rebuild leaves every list
+///   in clause-id order, which puts the short input clauses ahead of the long
+///   learned ones, and it refreshes each blocker to the clause's actual other
+///   watched literal instead of whatever `propagate` last cached.
+///
+/// Seven of eight is suggestive, not conclusive (n = 8), which is exactly why
+/// this is a selectable policy with both arms measurable rather than a decision
+/// welded into the search. What is *not* in doubt is the denominator: whichever
+/// sweep wins, it is worth less than 1% of propagation.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum WatchSweep {
+    /// Clear all `2n` lists and re-push a pair per live clause, reading
+    /// `headers[cid]` and two arena cells for each. Walks the whole database
+    /// including input clauses, which are never deletable, and leaves every
+    /// list in clause-id order. The pre-2026-09 behaviour, and still the
+    /// default — see the type docs for the measurement.
+    Rebuild,
+    /// Retain in place: drop only the watches pointing at a clause this round
+    /// tombstoned. Touches no header and no arena cell, allocates nothing, and
+    /// preserves each list's existing order. The reference behaviour
+    /// (Kissat `reduce.c:161,183`).
+    InPlace,
+}
+
 /// When a reduce round fires.
 ///
 /// This is not an independent knob: the trigger and the keep rule interact, and
@@ -431,6 +479,8 @@ pub struct ClauseDbPolicy {
     /// reduce fire on every conflict and scan the whole clause list each time.
     /// Default 300, matching the learned-budget growth step.
     pub empty_round_backoff: u64,
+    /// How a reduce round restores the watch lists after its deletions.
+    pub watch_sweep: WatchSweep,
     /// The dynamic tier boundaries. State, not configuration.
     pub tiers: TierEstimator,
 }
@@ -461,6 +511,7 @@ impl ClauseDbPolicy {
             min_deletable_len: 2,
             promote_on_use: true,
             empty_round_backoff: 300,
+            watch_sweep: WatchSweep::Rebuild,
             tiers: TierEstimator::default(),
         }
     }
@@ -482,6 +533,7 @@ impl ClauseDbPolicy {
             min_deletable_len: 2,
             promote_on_use: false,
             empty_round_backoff: 300,
+            watch_sweep: WatchSweep::Rebuild,
             tiers: TierEstimator::default(),
         }
     }

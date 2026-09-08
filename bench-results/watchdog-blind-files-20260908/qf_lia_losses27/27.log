@@ -1,0 +1,7 @@
+; give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve
+; config digest=8b689de6256e9e11 entries=114 dated=29
+; front-door parse_ms=0
+; dl-online total_ms=0
+; lia offline=measured offline_calls=249 offline_constraints=1244 offline_early_exits=1 tightened=380 gomory_calls=248 gomory_decided=239 gomory_rounds=406 gomory_cuts=167 gomory_pivots=1287 gomory_rows=1244 gomory_columns=1664 bnb_roots=9 bnb_nodes=791 bnb_budget_exhausted=0 simplex_solves=792 simplex_pivots=619001 simplex_rows=125020 simplex_columns=141652 simplex_declines=0 lp_relaxations=0 theory=not-reached theory_asserts=0 feasibility_checks=0 arena_clones=0 arena_clone_nodes=0 live_literals=0 filter_refuted=0 filter_integral=0 filter_inconclusive=0 core_minimizations=0 core_minimization_probes=0 propagation=not-reached propagate_calls=0 propagate_atoms=0 propagate_probes=0 propagations_offered=0
+; lazy-smt reading=not-reached lra_entries=0 lra_rounds=0 nra_entries=0 nra_rounds=0 skeleton_ms=0 skeleton_sat=0 skeleton_unsat=0 skeleton_unknown=0 theory_ms=0 theory_sat=0 theory_unsat=0 theory_unknown=0 core_ms=0 blocking_clauses=0 blocking_literals=0 atoms=0 accounted_ms=0
+; route decided_by=none bound_by=lia-dpll last=fd:bounded-completeness-unsat bound_ms=24029 total_ms=24031 attempts=15

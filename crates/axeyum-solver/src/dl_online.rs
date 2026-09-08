@@ -484,6 +484,15 @@ impl ScanState {
         let diff = lf.checked_sub(&rf)?;
         let (head, tail, bound) = Self::difference(&diff)?;
         if self.raw.len() >= MAX_DL_ATOMS {
+            // Attribution for a decline that is otherwise indistinguishable from
+            // "not difference-shaped": both leave through this same `None`, so
+            // without this record a `--trace` run cannot say which of the two
+            // happened. Off by default: one thread-local `Cell<bool>` read.
+            crate::config_registry::note_crossed(
+                "crates/axeyum-solver/src/dl_online.rs::MAX_DL_ATOMS",
+                self.raw.len() as u64,
+                MAX_DL_ATOMS as u64,
+            );
             return None;
         }
         let index = self.raw.len();
@@ -833,7 +842,17 @@ fn scan_dl(
                     return None;
                 }
                 acc = lcm(acc, raw.bound.denominator())?;
-                if acc > MAX_SCALE || acc <= 0 {
+                if acc > MAX_SCALE {
+                    // A bare `None`, the same value this function returns for a
+                    // missed deadline, a non-difference shape and an overflow.
+                    crate::config_registry::note_crossed(
+                        "crates/axeyum-solver/src/dl_online.rs::MAX_SCALE",
+                        u64::try_from(acc).unwrap_or(u64::MAX),
+                        u64::try_from(MAX_SCALE).unwrap_or(u64::MAX),
+                    );
+                    return None;
+                }
+                if acc <= 0 {
                     return None;
                 }
             }

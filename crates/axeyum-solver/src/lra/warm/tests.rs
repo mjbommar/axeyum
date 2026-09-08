@@ -600,6 +600,66 @@ fn the_default_policy_keeps_the_rational_filter() {
     }
 }
 
+/// Crossing [`LiaWarmPolicy::max_cached_literals`] must change the WORK and
+/// nothing else.
+///
+/// This is what earns the bound's `OnExceed::SearchEvent` classification in
+/// `config_registry`. That classification keeps it out of
+/// `every_silent_admission_bound_is_instrumented`'s population, on the grounds
+/// that crossing it cannot cost a decision — and a classification that gets a
+/// bound out from under an invariant has to be checked rather than asserted.
+///
+/// So: two deciders on the same literals, one caching and one with the bound at
+/// zero so every literal is evicted, compared on the assembled SYSTEM rather
+/// than the verdict.
+#[test]
+fn an_evicted_literal_cache_changes_nothing_but_the_work() {
+    let mut rng = Rng(0xe71c_7ed0_2026_0908);
+    let mut compared = 0usize;
+    let mut evicted_total = 0u64;
+
+    for _ in 0..40 {
+        let Some(fixture) = Fixture::random(&mut rng, 3, 4) else {
+            continue;
+        };
+        let mut cached = fixture.decider(LiaWarmPolicy::WARM);
+        let mut evicting = fixture.decider(LiaWarmPolicy {
+            max_cached_literals: 0,
+            ..LiaWarmPolicy::WARM
+        });
+        let guard = LiaCountersGuard::enable();
+        for _ in 0..5 {
+            let keys = random_live(&mut rng, &fixture);
+            if keys.is_empty() {
+                continue;
+            }
+            let a = cached.check(&fixture.arena, &keys, lia_bnb_node_cap(None), None);
+            let b = evicting.check(&fixture.arena, &keys, lia_bnb_node_cap(None), None);
+            assert_eq!(
+                cached.assembled_system(),
+                evicting.assembled_system(),
+                "an evicted cache built a different system on {keys:?}"
+            );
+            assert_eq!(
+                format!("{a:?}").split('(').next(),
+                format!("{b:?}").split('(').next(),
+                "an evicted cache changed the verdict on {keys:?}"
+            );
+            compared += 1;
+        }
+        let stats = last_lia_counters().expect("armed");
+        drop(guard);
+        evicted_total += stats.warm_literal_cache_evicted;
+    }
+
+    assert!(compared >= 100, "only {compared} systems compared");
+    // The bound has to have actually fired, or this proves nothing about it.
+    assert!(
+        evicted_total > 0,
+        "the cache bound never fired, so this test says nothing about crossing it"
+    );
+}
+
 /// A key the decider has no term for is a contract violation, and it must fail
 /// closed. Silently treating it as contributing nothing would drop a live
 /// literal from the conjunction — a weaker system, which is how a warm path

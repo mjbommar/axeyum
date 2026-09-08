@@ -96,6 +96,7 @@ fn conjunctive_query() -> (TermArena, Vec<TermId>) {
 /// The one test in this file that builds a snapshot by hand — see the module
 /// doc for why that is the only way to ask this question, and for what it
 /// therefore does NOT show.
+
 #[test]
 fn every_group_is_representable_in_the_policy() {
     let groups = [

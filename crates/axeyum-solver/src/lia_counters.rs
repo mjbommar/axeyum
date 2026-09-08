@@ -49,6 +49,7 @@
 //! shape of the profile it is being used to read.
 
 use std::cell::{Cell, RefCell};
+use std::sync::{Arc, Mutex, PoisonError};
 
 /// Which groups of [`LiaCounters`] a run collects.
 ///
@@ -63,7 +64,7 @@ use std::cell::{Cell, RefCell};
 // heuristic is seeing. It is not soup: the fields are not interchangeable
 // options, they are the group enum written out, and
 // `every_group_is_representable_in_the_policy` fails if a variant is ever added
-// without one. A state machine — the lint's suggestion — would be wrong here,
+// without one. A state machine -- the lint's suggestion -- would be wrong here,
 // because the groups are independent switches, not exclusive states.
 #[allow(clippy::struct_excessive_bools)]
 pub struct LiaCounterPolicy {
@@ -78,9 +79,9 @@ pub struct LiaCounterPolicy {
     /// Collect the online theory's propagation group: propagate calls, atoms
     /// scanned, LP entailment probes and literals offered.
     pub propagation: bool,
-    /// Collect the warm offline decider's group: how each check's constraint
-    /// system was assembled, the trail delta it was updated by, and the
-    /// per-literal collection cache's hit rate.
+    /// Collect the warm offline decider's group ([`crate::lra::warm`]): how each
+    /// check's constraint system was assembled, the trail delta it was updated
+    /// by, and the per-literal collection cache's hit rate.
     ///
     /// Separate from [`Self::offline`] because it answers a different question.
     /// `offline` says how much the decider did; `warm` says how much of it was
@@ -160,7 +161,7 @@ pub enum LiaCounterGroup {
     Theory,
     /// The online theory's propagation path.
     Propagation,
-    /// The warm offline decider (`crate::lra::warm`): how each check's system
+    /// The warm offline decider ([`crate::lra::warm`]): how each check's system
     /// was assembled and what the per-literal cache saved.
     Warm,
 }
@@ -480,6 +481,111 @@ std::thread_local! {
     /// and never cleared, so a snapshot survives its guard's drop exactly the
     /// way `last_dl_online_stats` does.
     static LIA_ARMED: Cell<bool> = const { Cell::new(false) };
+    /// The cross-thread mirror, when a [`crate::live_instruments`] board was
+    /// installed at [`LiaCountersGuard::enable`] time. `None` on every ordinary
+    /// run, and the decision is taken once at guard construction rather than at
+    /// each recording site.
+    static LIA_MIRROR: RefCell<Option<Arc<LiaCountersMirror>>> = const { RefCell::new(None) };
+    /// How many recording calls have happened since the guard was constructed,
+    /// for the flush cadence. Separate from [`LIA_COUNTERS`] because it counts
+    /// recordings into groups the policy switched OFF too: otherwise a policy
+    /// collecting only propagation would flush on a different cadence than one
+    /// collecting everything, and two runs' partial readings would not be
+    /// comparable.
+    static LIA_RECORDS: Cell<u64> = const { Cell::new(0) };
+}
+
+/// How many recording calls pass between mirror flushes.
+///
+/// The same shape of choice as `cdclt`'s `LIVE_MIRROR_STEPS` and
+/// `axeyum_cnf::NativeLayerStatsMirror`'s cadence: often enough that a reading
+/// taken at an arbitrary kill is close to current, rare enough that the shared
+/// lock is never on a hot path. At 1,024, a run doing ten million recordings
+/// takes the lock under ten thousand times.
+const LIVE_MIRROR_RECORDS: u64 = 1_024;
+
+/// The cross-thread slot a **running** integer-route solve flushes its counters
+/// into.
+///
+/// # Why a mirror rather than a publish point
+///
+/// Every other instrument in this tree publishes a snapshot when its stage
+/// RETURNS. [`LiaCounters`] has no stage: the counters accumulate in a
+/// thread-local across the whole solve and are read once at the end. A query
+/// killed by a watchdog therefore published nothing at all, which made the
+/// integer routes the least visible thing in exactly the runs the `QF_LIA`
+/// losses are made of. This slot is written on a fixed recording cadence from
+/// inside whatever loop is running, which is the only reason a solve that never
+/// returns has anything to say.
+///
+/// The reading is always partial: every field is a monotone total, so a
+/// mid-flight sample is a LOWER BOUND on each of them, and a ratio of two of
+/// them is not the ratio the finished run would have reported.
+#[derive(Debug, Default)]
+pub struct LiaCountersMirror {
+    /// The most recent flush and how many flushes have happened. `None` before
+    /// the first flush, which distinguishes "this solve has not reached
+    /// [`LIVE_MIRROR_RECORDS`] recordings yet" from "this solve recorded
+    /// zeros".
+    slot: Mutex<Option<(LiaCounters, u64)>>,
+}
+
+impl LiaCountersMirror {
+    /// Stores `counters`, overwriting the previous flush and bumping the flush
+    /// count. A poisoned lock is recovered rather than propagated: telemetry
+    /// must never turn one panic into two.
+    fn store(&self, counters: &LiaCounters) {
+        let mut slot = self.slot.lock().unwrap_or_else(PoisonError::into_inner);
+        let flushes = slot.map_or(0, |(_, n)| n).saturating_add(1);
+        *slot = Some((*counters, flushes));
+    }
+
+    /// The most recent flush and the flush count, readable from any thread at
+    /// any time. `None` until the first flush.
+    #[must_use]
+    pub fn sample(&self) -> Option<(LiaCounters, u64)> {
+        *self.slot.lock().unwrap_or_else(PoisonError::into_inner)
+    }
+}
+
+/// The best [`LiaCounters`] reading `board` holds: the snapshot published when
+/// the integer-route guard was dropped, or a partial reading flushed out of a
+/// solve that is still running.
+///
+/// Ordered by publish sequence for the same reason
+/// `crate::live_theory_layer_stats` is: a mirror installed after the last
+/// completed snapshot means a solve is in flight, and its partial counters —
+/// stale though they are — are the ones a reader wants. Reversing that would
+/// report a finished solve's numbers for a query that is currently stuck
+/// somewhere else.
+///
+/// **[`LiaCounters::group_reading`] still governs every field.** A partial
+/// reading does not turn `NotCollected` or `NotReached` into a measurement; it
+/// makes a `Measured` group a lower bound. The two distinctions are
+/// independent, and a consumer has to print both.
+#[must_use]
+pub fn live_lia_counters(
+    board: &crate::live_instruments::LiveInstruments,
+) -> Option<crate::live_instruments::LiveSample<LiaCounters>> {
+    use crate::live_instruments::{LiveSample, Sampled, instrument};
+    let completed = board.sample::<LiaCounters>(instrument::LIA_COUNTERS);
+    let in_flight = board
+        .sample::<Arc<LiaCountersMirror>>(instrument::LIA_COUNTERS_MIRROR)
+        .and_then(|handle| {
+            let (counters, _flushes) = handle.value.sample()?;
+            Some(LiveSample {
+                value: counters,
+                // Always partial: flushed on a recording cadence from inside
+                // whatever loop is running, never at a verdict.
+                sampled: Sampled::InFlight,
+                sequence: handle.sequence,
+            })
+        });
+    match (completed, in_flight) {
+        (Some(done), Some(live)) if live.sequence > done.sequence => Some(live),
+        (Some(done), _) => Some(done),
+        (None, live) => live,
+    }
 }
 
 const fn none_counters() -> LiaCounters {
@@ -570,13 +676,65 @@ impl LiaCountersGuard {
             c.set(counters);
         });
         LIA_ARMED.with(|c| c.set(true));
+        LIA_RECORDS.with(|c| c.set(0));
+        // The board decision is taken HERE, once, rather than at each recording
+        // site: `record` on a run with no board must keep costing exactly what
+        // it cost before this existed. `installed()` is one thread-local `bool`
+        // read, and on a default run (no `--trace`) it is false, so neither the
+        // `Arc` nor the `Mutex` is ever constructed.
+        let mirror = crate::live_instruments::installed().then(|| {
+            let mirror = Arc::new(LiaCountersMirror::default());
+            crate::live_instruments::publish_live(
+                crate::live_instruments::instrument::LIA_COUNTERS_MIRROR,
+                Arc::clone(&mirror),
+                // A handle, never a snapshot: the solve writes through it for as
+                // long as it runs, so a watchdog reads the latest flush without
+                // the worker publishing again.
+                crate::live_instruments::Sampled::InFlight,
+            );
+            mirror
+        });
+        if let Some(mirror) = mirror.as_ref() {
+            // Seed the mirror with the freshly zeroed, policy-tagged snapshot.
+            //
+            // Without this a watchdog kill on a query that never reached the
+            // integer routes prints NO `; lia` line, while the same query on the
+            // completed path prints `offline=not-reached …`. Same fact, one form
+            // stated and one form silent — and this instrument exists precisely
+            // to keep "not reached" from reading as "zero" or as "we could not
+            // see". Measured 2026-09-08: every one of the 5 `QF_LRA` files that
+            // took the watchdog path was silent this way.
+            //
+            // Safe only because `record` also flushes at its FIRST recording:
+            // the seed is overwritten the moment anything happens, so it can
+            // never masquerade as a current reading of a query that has since
+            // done work.
+            mirror.store(&LIA_COUNTERS.with(Cell::get));
+        }
+        LIA_MIRROR.with(|c| *c.borrow_mut() = mirror);
         LiaCountersGuard(previous)
     }
 }
 
 impl Drop for LiaCountersGuard {
+    /// Restores the previous policy and publishes the finished counters.
+    ///
+    /// This is the only COMPLETE publish point the instrument has, because it
+    /// is the only moment at which the counters stop moving: they accumulate
+    /// across the whole solve rather than being lifted at a stage boundary. It
+    /// matters even for a query that later times out, because a solve can run
+    /// the integer routes to completion and then be killed in a LATER stage,
+    /// and `live_lia_counters` orders the two readings by publish sequence.
     fn drop(&mut self) {
         LIA_POLICY.with(|c| c.set(self.0));
+        if LIA_ARMED.with(Cell::get) {
+            crate::live_instruments::publish_live(
+                crate::live_instruments::instrument::LIA_COUNTERS,
+                LIA_COUNTERS.with(Cell::get),
+                crate::live_instruments::Sampled::Complete,
+            );
+        }
+        LIA_MIRROR.with(|c| *c.borrow_mut() = None);
     }
 }
 
@@ -592,122 +750,6 @@ pub fn last_lia_counters() -> Option<LiaCounters> {
     LIA_ARMED
         .with(Cell::get)
         .then(|| LIA_COUNTERS.with(Cell::get))
-}
-
-/// How many offline decider entries pass between mirror flushes.
-///
-/// A power of two so the test is a mask, and large enough that the flush is not
-/// on the hot path: measured 2026-09-08, a lost `QF_UFLIA` file reaches hundreds
-/// of thousands of offline entries inside one budget, so this leaves hundreds of
-/// flushes to sample and costs one `Mutex` acquisition per 1,024 decisions.
-const MIRROR_CADENCE: u64 = 1_024;
-
-/// The most recent [`LiaCounters`] a *running* integer route published, for a
-/// thread that is not the one running it.
-///
-/// The counters themselves are thread-local, which is right for a stage that
-/// returns; the integer routes on a lost file do not return, and the watchdog
-/// that gives up on them is on another thread. See
-/// [`crate::live_instruments`] for why that is a general problem and how the
-/// board answers it.
-#[derive(Debug, Default)]
-pub struct LiaCountersMirror {
-    /// The most recent snapshot, or `None` before the first flush.
-    slot: std::sync::Mutex<Option<LiaCounters>>,
-}
-
-impl LiaCountersMirror {
-    /// An empty mirror.
-    #[must_use]
-    pub fn new() -> Self {
-        Self::default()
-    }
-
-    /// Stores `counters`, overwriting whatever the previous flush left.
-    ///
-    /// A poisoned lock is recovered rather than propagated: this is telemetry,
-    /// and a panic in one thread must not turn a diagnostic into a second panic
-    /// in the search.
-    fn store(&self, counters: &LiaCounters) {
-        let mut slot = self
-            .slot
-            .lock()
-            .unwrap_or_else(std::sync::PoisonError::into_inner);
-        *slot = Some(*counters);
-    }
-
-    /// The most recent snapshot, or `None` before the first flush.
-    #[must_use]
-    pub fn sample(&self) -> Option<LiaCounters> {
-        *self
-            .slot
-            .lock()
-            .unwrap_or_else(std::sync::PoisonError::into_inner)
-    }
-}
-
-thread_local! {
-    /// This thread's mirror, installed by [`install_lia_mirror`].
-    static LIA_MIRROR: RefCell<Option<std::sync::Arc<LiaCountersMirror>>> =
-        const { RefCell::new(None) };
-    /// Offline entries since the last flush.
-    static LIA_MIRROR_TICKS: Cell<u64> = const { Cell::new(0) };
-}
-
-/// Installs `mirror` for this thread and publishes it to the live board, so a
-/// watchdog on another thread can sample the integer counters mid-search.
-///
-/// Idempotent per thread: a second install replaces the first.
-pub fn install_lia_mirror(mirror: std::sync::Arc<LiaCountersMirror>) {
-    crate::live_instruments::publish_live(
-        crate::live_instruments::instrument::LIA,
-        std::sync::Arc::clone(&mirror),
-        crate::live_instruments::Sampled::InFlight,
-    );
-    LIA_MIRROR.with(|c| *c.borrow_mut() = Some(mirror));
-}
-
-/// Flushes this thread's counters to its mirror every [`MIRROR_CADENCE`]
-/// offline entries.
-///
-/// Off — no mirror installed — this is one thread-local read and a branch.
-fn tick_mirror() {
-    let ticks = LIA_MIRROR_TICKS.with(|c| {
-        let next = c.get().wrapping_add(1);
-        c.set(next);
-        next
-    });
-    if !ticks.is_multiple_of(MIRROR_CADENCE) {
-        return;
-    }
-    let Some(counters) = last_lia_counters() else {
-        return;
-    };
-    LIA_MIRROR.with(|c| {
-        if let Some(mirror) = c.borrow().as_ref() {
-            mirror.store(&counters);
-        }
-    });
-}
-
-/// The integer counters a still-running search has mirrored, from any thread.
-///
-/// Returns the board's LIA mirror reading, always [`Sampled::InFlight`]: the
-/// mirror is written on a call cadence from inside the lazy loop, never at a
-/// verdict. A caller MUST label what it prints as partial — every field is a
-/// monotone lower bound, and nothing here is a rate's denominator.
-#[must_use]
-pub fn live_lia_counters(
-    board: &crate::live_instruments::LiveInstruments,
-) -> Option<crate::live_instruments::LiveSample<LiaCounters>> {
-    let handle = board
-        .sample::<std::sync::Arc<LiaCountersMirror>>(crate::live_instruments::instrument::LIA)?;
-    let value = handle.value.sample()?;
-    Some(crate::live_instruments::LiveSample {
-        value,
-        sampled: crate::live_instruments::Sampled::InFlight,
-        sequence: handle.sequence,
-    })
 }
 
 /// The active policy, or `None` when collection is off on this thread.
@@ -735,10 +777,50 @@ fn record(group: LiaCounterGroup, f: impl FnOnce(&mut LiaCounters)) {
     if !on {
         return;
     }
-    LIA_COUNTERS.with(|c| {
+    let counters = LIA_COUNTERS.with(|c| {
         let mut counters = c.get();
         f(&mut counters);
         c.set(counters);
+        counters
+    });
+    // Mirror onto the cross-thread board on a fixed cadence. This is the only
+    // point at which a solve that never returns says anything about the integer
+    // routes: everything else here is read after the guard drops. Reached only
+    // when collection is already on (the `policy()` test above returned
+    // `Some`), so a default run never gets here at all, and a `--trace` run
+    // pays one `Cell<u64>` read, an add and a modulo per recording.
+    let records = LIA_RECORDS.with(|c| {
+        let next = c.get().wrapping_add(1);
+        c.set(next);
+        next
+    });
+    // The FIRST record flushes too, not only every `LIVE_MIRROR_RECORDS`-th.
+    // Without it a query killed after fewer than 1,024 recordings mirrors
+    // nothing, and the watchdog path prints no `; lia` line at all — which is
+    // the same output as a query that never touched the integer routes. Two
+    // different facts, one token. Measured 2026-09-08 on the 27 `QF_LIA`
+    // losses: 8 took the watchdog path and 7 printed no `; lia` line, and only
+    // the flush at record 1 makes "the routes were never reached" separable
+    // from "they were reached and the cadence had not come round".
+    if records == 1 || records.is_multiple_of(LIVE_MIRROR_RECORDS) {
+        mirror_lia_counters(&counters);
+    }
+}
+
+/// Flushes `counters` onto the cross-thread mirror, when a board was installed
+/// at [`LiaCountersGuard::enable_with`] time.
+///
+/// `try_borrow` rather than `borrow` for the same reason
+/// `crate::live_instruments::publish_live` uses it: this is telemetry reached
+/// from deep inside a search, and a re-entrant flush (which no current call
+/// path produces) must drop the reading, never panic mid-solve.
+fn mirror_lia_counters(counters: &LiaCounters) {
+    LIA_MIRROR.with(|c| {
+        if let Ok(slot) = c.try_borrow()
+            && let Some(mirror) = slot.as_ref()
+        {
+            mirror.store(counters);
+        }
     });
 }
 
@@ -747,7 +829,6 @@ fn record(group: LiaCounterGroup, f: impl FnOnce(&mut LiaCounters)) {
 /// One entry to the offline conjunctive integer decider, with the number of
 /// linear constraints it collected.
 pub(crate) fn record_offline_call(constraints: u64) {
-    tick_mirror();
     record(LiaCounterGroup::Offline, |c| {
         c.offline_calls = c.offline_calls.saturating_add(1);
         c.offline_constraints = c.offline_constraints.saturating_add(constraints);

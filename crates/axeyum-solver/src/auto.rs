@@ -3030,8 +3030,19 @@ impl UfArithOverboundStatsGuard {
 }
 
 impl Drop for UfArithOverboundStatsGuard {
+    /// Restores the previous setting and publishes the finished counters.
+    ///
+    /// The only COMPLETE publish point this instrument has: like
+    /// [`crate::LiaCounters`], its fields accumulate across the whole solve
+    /// rather than being lifted at a stage boundary, so the guard's drop is the
+    /// only moment at which they stop moving.
     fn drop(&mut self) {
         COLLECT_UF_ARITH_OVERBOUND_STATS.with(|c| c.set(self.0));
+        crate::live_instruments::publish_live(
+            crate::live_instruments::instrument::UF_OVERBOUND,
+            UF_ARITH_OVERBOUND_STATS.with(std::cell::Cell::get),
+            crate::live_instruments::Sampled::Complete,
+        );
     }
 }
 
@@ -3051,11 +3062,25 @@ fn note_uf_arith_overbound(f: impl FnOnce(&mut UfArithOverboundStats)) {
     if !COLLECT_UF_ARITH_OVERBOUND_STATS.with(std::cell::Cell::get) {
         return;
     }
-    UF_ARITH_OVERBOUND_STATS.with(|c| {
+    let stats = UF_ARITH_OVERBOUND_STATS.with(|c| {
         let mut stats = c.get();
         f(&mut stats);
         c.set(stats);
+        stats
     });
+    // Mirrored on EVERY recording rather than through a handle on a cadence,
+    // because this decision point is reached a handful of times per query and
+    // never inside a loop: there is no cadence to amortize, and republishing a
+    // 28-byte `Copy` snapshot is cheaper than the `Arc` and `Mutex` a handle
+    // would need. Reached only when collection is already on, so a default run
+    // never gets here.
+    crate::live_instruments::publish_live(
+        crate::live_instruments::instrument::UF_OVERBOUND,
+        stats,
+        // Partial: the query has not returned, so the ladder below this
+        // decision point may still run and change every field but `engaged`.
+        crate::live_instruments::Sampled::InFlight,
+    );
 }
 
 /// What the over-bound UF+arithmetic decision point concluded for one query.
@@ -8565,15 +8590,27 @@ fn relax_coercions(
             let operand = args[0];
             if let (Some(lo), Some(hi)) = int_bounds(arena, assertions, operand)
                 && hi >= lo
-                && hi - lo <= MAX_COERCION_LINK
             {
-                for v in lo..=hi {
-                    let iv = arena.int_const(v);
-                    let rv = arena.real_const(axeyum_ir::Rational::integer(v));
-                    let i_eq = arena.eq(operand, iv).map_err(err)?;
-                    let r_eq = arena.eq(fresh, rv).map_err(err)?;
-                    let n = arena.not(i_eq).map_err(err)?;
-                    links.push(arena.or(n, r_eq).map_err(err)?); // (i=v) → (r=v)
+                // Split out of the let-chain so the *refusal* has a body. Above
+                // the link width the coercion is left unlinked and the query is
+                // handed on with a weaker encoding — a mode change with no
+                // branch a caller can observe, which is exactly the population
+                // `note_crossed` exists for.
+                if hi - lo > MAX_COERCION_LINK {
+                    crate::config_registry::note_crossed(
+                        "crates/axeyum-solver/src/auto.rs::MAX_COERCION_LINK",
+                        u64::try_from(hi - lo).unwrap_or(u64::MAX),
+                        u64::try_from(MAX_COERCION_LINK).unwrap_or(u64::MAX),
+                    );
+                } else {
+                    for v in lo..=hi {
+                        let iv = arena.int_const(v);
+                        let rv = arena.real_const(axeyum_ir::Rational::integer(v));
+                        let i_eq = arena.eq(operand, iv).map_err(err)?;
+                        let r_eq = arena.eq(fresh, rv).map_err(err)?;
+                        let n = arena.not(i_eq).map_err(err)?;
+                        links.push(arena.or(n, r_eq).map_err(err)?); // (i=v) → (r=v)
+                    }
                 }
             }
         }
@@ -8805,6 +8842,87 @@ impl Features {
             // through to bit-blasting).
             Sort::Bool | Sort::Seq(_) => {}
         }
+    }
+}
+
+/// The cross-thread half of the over-bound UF+arithmetic instrument.
+///
+/// Kept beside the recording site rather than in an integration suite because
+/// the property under test is exactly that `note_uf_arith_overbound` publishes:
+/// reaching this decision point from a real query needs a `QF_UFLIA` file that
+/// trips the eager Ackermann bound, which would test the dispatcher's admission
+/// arithmetic rather than the mirror.
+#[cfg(test)]
+mod uf_overbound_live_tests {
+    use super::{UfArithOverboundStats, UfArithOverboundStatsGuard, note_uf_arith_overbound};
+    use crate::live_instruments::{LiveInstruments, Sampled, install, instrument};
+
+    /// The property: a counter recorded by a query that has NOT returned is
+    /// readable from another thread, and is labelled partial.
+    ///
+    /// Before the mirror this instrument published nowhere until its guard
+    /// dropped, so a watchdog kill lost it entirely — and a nonzero
+    /// `terminal_unknown` on a division we lose is precisely the signal the
+    /// counter exists for.
+    #[test]
+    fn a_recording_reaches_the_board_before_the_guard_drops() {
+        let board = LiveInstruments::new();
+        let _live = install(&board);
+        let guard = UfArithOverboundStatsGuard::enable();
+        assert!(
+            board
+                .sample::<UfArithOverboundStats>(instrument::UF_OVERBOUND)
+                .is_none(),
+            "arming collection publishes nothing: an absent reading has to stay \
+             distinguishable from a recorded zero"
+        );
+
+        note_uf_arith_overbound(|stats| {
+            stats.engaged += 1;
+            stats.terminal_unknown += 1;
+        });
+
+        let sample = board
+            .sample::<UfArithOverboundStats>(instrument::UF_OVERBOUND)
+            .expect("the recording site mirrors onto the board");
+        assert_eq!(sample.value.engaged, 1);
+        assert_eq!(sample.value.terminal_unknown, 1);
+        assert_eq!(
+            sample.sampled,
+            Sampled::InFlight,
+            "the query has not returned, so the ladder below this decision point \
+             may still run and change every field but `engaged`"
+        );
+
+        // Dropping the guard is this instrument's only COMPLETE publish point:
+        // its fields accumulate across the whole solve rather than being lifted
+        // at a stage boundary, so that is the one moment they stop moving.
+        drop(guard);
+        let done = board
+            .sample::<UfArithOverboundStats>(instrument::UF_OVERBOUND)
+            .expect("the guard publishes on drop");
+        assert_eq!(done.sampled, Sampled::Complete);
+        assert!(
+            done.sequence > sample.sequence,
+            "the complete reading is published after the partial one, which is \
+             how a reader orders them: {done:?} vs {sample:?}"
+        );
+    }
+
+    /// Off by default: with no board installed, the recording site publishes
+    /// nothing and costs one thread-local read. A test that only ever ran WITH
+    /// a board could not tell a mirror from an unconditional publish.
+    #[test]
+    fn recording_without_a_board_publishes_nothing() {
+        let board = LiveInstruments::new();
+        let _guard = UfArithOverboundStatsGuard::enable();
+        note_uf_arith_overbound(|stats| stats.engaged += 1);
+        assert!(
+            board
+                .sample::<UfArithOverboundStats>(instrument::UF_OVERBOUND)
+                .is_none(),
+            "a board nobody installed receives nothing"
+        );
     }
 }
 

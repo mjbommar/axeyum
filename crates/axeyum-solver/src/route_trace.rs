@@ -300,6 +300,46 @@ impl RouteTrace {
         self.last = Instant::now();
     }
 
+    /// How long the segment that no attempt accounts for has been open: the
+    /// time since the most recent attempt was recorded, measured now.
+    ///
+    /// # Why a reader has to print this on a partial trace
+    ///
+    /// [`RouteTrace::bound_by`] maximises over RECORDED attempts, and an
+    /// attempt is recorded when it FINISHES. On a trace sampled while the query
+    /// is still running, the route that is actually consuming the budget has
+    /// therefore contributed nothing to the comparison — so `bound_by` names
+    /// the most expensive route that already returned, which can be a
+    /// millisecond-scale probe on a file that has been running for half a
+    /// minute. Measured 2026-09-08 on the one `QF_LRA` file in the blind
+    /// population that took the watchdog path: `bound_by=dl-online bound_ms=20
+    /// total_ms=26` on a 25,241 ms run. Every one of those numbers is correct
+    /// and the conclusion a reader draws from them is wrong.
+    ///
+    /// This is the missing 25,215 ms. When it dominates
+    /// [`RouteTrace::total_elapsed`], `bound_by` is not the answer to "where
+    /// did the budget go" and the trace cannot say what is — but it can say
+    /// that it cannot, which is the whole difference.
+    ///
+    /// On a COMPLETED trace this is the time since the final attempt returned,
+    /// which is the reporting code itself and is near zero. It is reported only
+    /// on the partial path for that reason.
+    #[must_use]
+    pub fn open_segment(&self) -> Duration {
+        Instant::now().saturating_duration_since(self.last)
+    }
+
+    /// The route recorded most recently — the one after which
+    /// [`RouteTrace::open_segment`] has been running.
+    ///
+    /// Not the route that is running: a trace only learns a route's name when
+    /// the attempt is recorded, which happens on the way out. This names the
+    /// boundary, and that is as much as the instrument honestly knows.
+    #[must_use]
+    pub fn last_recorded_route(&self) -> Option<&'static str> {
+        self.attempts.last().map(|a| a.route)
+    }
+
     /// The attempt that **decided** the query: the last recorded
     /// [`RouteOutcome::Decided`], with its index and its own elapsed time.
     /// `None` when nothing decided (the query came back `unknown`).
