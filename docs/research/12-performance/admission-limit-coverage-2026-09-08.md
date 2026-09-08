@@ -196,6 +196,78 @@ the Bellman-Ford gate" — `negative_cycle_core` returns `None` immediately abov
 said no trace could attribute the route change, which stopped being true when
 the gate was wired.
 
+## Ranking, measured: 15 files of 1,101 cross an instrumented bound
+
+Rank 4 of the previous lane's table read *"cannot be ranked: no route-attribution
+data exists for a crossing that emits no signal"*. With sixteen gates wired, part
+of it can now be measured instead of reasoned. This is the first ranking in this
+programme that came out of a run's own output.
+
+**Method.** `target/release/examples/smtcomp_cli --trace --timeout-ms 4000`,
+`taskset -c 0-7`, over 1,101 files (`corpus/regression`,
+`corpus/public-curated`, `corpus/qfbv-curated`, `corpus/micro`). 1,094 emitted a
+`; config` line; the `crossed=` field was collected per key. Shared dev box,
+other lanes active — verdicts and RSS are robust to that, wall times are not and
+are only quoted within a back-to-back pair on one file.
+
+| | files |
+|---|---:|
+| traced | 1,094 |
+| emitting a `consulted=` field (an instrumented bound was *looked at*) | 111 |
+| emitting a `crossed=` field (a bound *bit*) | **15** |
+| …of those, still decided | **11** (7 unsat, 4 sat) |
+| …of those, ending `unknown` | **4** |
+
+Per key, by files where it bit:
+
+| Bound | files | observed / bound | verdicts |
+|---|---:|---|---|
+| `dpll_lia::MAX_INITIAL_BOUND_IMPLICATION_ATOMS` | 8 | 514, 515 ×4, 586, 1222, 6504 / **512** | 4 unsat, 4 unknown |
+| `nia_linearize::MAX_SMALL_DOMAIN_WIDTH` | 7 | 24, 29, 34, 39, 41, 55, 63 / **4** | 3 unsat, 4 sat |
+| `dpll_lia::MAX_TWO_EDGE_DIFF_EDGES` | 1 | 672 / 512 | unknown |
+| `dpll_lia::MAX_PRE_SAT_ARITH_ATOMS` / `MAX_PRE_SAT_CNF_VARS` | 1 | 6504 / 1024, 20520 / 4096 | unknown |
+
+And the negative result, which is the more useful half:
+`simplex::MAX_TABLEAU_CELLS` is **consulted on 106 files and crossed on zero**.
+A bound looked at constantly that never bites is not a candidate for
+re-derivation, and before the instrumentation nothing could say that about any
+bound in this table.
+
+### `MAX_INITIAL_BOUND_IMPLICATION_ATOMS`: re-derived, and it costs nothing here
+
+Five of its eight crossings are within 15 % of the bound and **three are within
+three atoms of it** (514/512, 515/512). A bound refusing work at its own
+boundary on real files is exactly the shape the `dpll_lia` rectangle turned out
+to have, so it was re-derived rather than assumed.
+
+**Method.** All eight crossing files through the shipped front door at
+`--timeout-ms 24000`, release, `taskset -c 0-7`, with the bound at its committed
+512 and again at 16,384 — a 32x envelope — the two arms run back to back on each
+file so host load drifts across the pair rather than across the arms.
+
+| | 512 (shipped) | 16,384 |
+|---|---|---|
+| verdicts | 4 unsat, 4 unknown | **identical, file for file** |
+| worst-case peak RSS | 492 MiB (`guarded_product_factorial_bound`) | 492 MiB |
+| largest RSS increase | — | +42 % on `cli__regress4__bug337` (45.9 → 64.7 MiB) |
+| `cli__regress4__bug337` wall | 25.0 s (whole budget) | 5.9 s, still `unknown` |
+
+**No decision rides on this bound on this corpus.** That is a real result and
+the honest form of it is narrow: raising the envelope 32x recovers nothing, so
+the bound is not carrying losses here — and it also does not measurably protect
+anything at 512 rather than 16,384, since the whole process stays under 80 MiB
+in both arms. "512 is right" is not what was shown; "512 is not costing us
+files, and nothing distinguishes it from 16,384 in either direction" is.
+
+`MAX_SMALL_DOMAIN_WIDTH` needs no A/B: all seven files that cross it are decided
+anyway, at 6x to 16x the bound. The relaxation it forgoes was not needed.
+
+**What this ranking cannot say.** It covers the **16 instrumented gates of 128**.
+The other 111 emit nothing, so a file lost to one of them looks exactly like a
+file lost to search. The measurement is a lower bound over an instrumented
+subset, and the subset is 12.5 % of the population — which is the argument for
+closing the backlog rather than a substitute for it.
+
 ## The next stale limit: rank 1, and it went stale yesterday
 
 `euf::MAX_ACKERMANN_CONGRUENCE_PAIRS = 64` is rank 1 of the previous lane's
