@@ -260,9 +260,9 @@ use axeyum_solver::theories::cdclt_diagnostics::{TheoryLayerStatsGuard, last_the
 use axeyum_solver::{
     BvLayerStatsGuard, CheckProgress, CheckResult, CheckingProgress, ConfigTraceGuard,
     DlOnlineStatsGuard, Evidence, EvidenceCheck, EvidenceReport, FrontDoorStatsGuard,
-    ProofProgress, RouteAttributionGuard, SolverConfig, config_trace_line, last_bv_layer_stats,
-    last_dl_online_stats, last_front_door_stats, last_route_attribution, produce_evidence_smtlib,
-    solve_smtlib,
+    ProofProgress, RouteAttributionGuard, SolverConfig, UfArithOverboundStatsGuard,
+    config_trace_line, last_bv_layer_stats, last_dl_online_stats, last_front_door_stats,
+    last_route_attribution, last_uf_arith_overbound_stats, produce_evidence_smtlib, solve_smtlib,
 };
 
 /// Formats one `axeyum_cnf::ProofSearchProgress` snapshot as the `;`-prefixed
@@ -1002,6 +1002,11 @@ fn main() -> ExitCode {
         // ADR-1762. The sixth guard on the same flag: which governing values
         // this run consulted, and which environment overrides were in force.
         let _config_guard = trace_mode.then(ConfigTraceGuard::enable);
+        // The seventh guard on the same flag: what the over-bound UF+arithmetic
+        // decision point did. A route that declines and hands back `Unknown`
+        // with nothing after it is invisible in a verdict and nearly invisible
+        // in a trail; `terminal_unknown` names it outright.
+        let _uf_overbound_guard = trace_mode.then(UfArithOverboundStatsGuard::enable);
         // A parse or solver error is reported as `unknown` — never a wrong
         // verdict, and never a crash that the harness would read as an abort.
         let mut give_up: Option<String> = None;
@@ -1055,6 +1060,14 @@ fn main() -> ExitCode {
             }
             if let Some(stats) = last_theory_layer_stats() {
                 trace_lines.push(theory_layer_report_line(&stats));
+            }
+            // Only when the eager Ackermann bound actually fired on this query:
+            // an all-zero line on every non-UF file would be noise, and the
+            // absence of the line is itself the information "this decision point
+            // was never reached".
+            let uf_overbound = last_uf_arith_overbound_stats();
+            if uf_overbound.engaged > 0 {
+                trace_lines.push(uf_overbound.trace_line());
             }
             // Route attribution (ADR-1760) LAST, so a reader who scans to the
             // end of the `;` block finds the one line that names which route

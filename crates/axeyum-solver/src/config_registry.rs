@@ -997,6 +997,56 @@ pub static REGISTRY: &[ConfigEntry] = &[
         note: "Caps the fast-path array-refuter chain. One line of doc, no measurement.",
     },
     ConfigEntry {
+        name: "UF_ARITH_LADDER_RESERVE_SHARE",
+        module: "crates/axeyum-solver/src/auto.rs",
+        value: "4",
+        unit: "divisor of the dispatcher's remaining deadline, held back for the ladder",
+        protects: Protects::Completeness,
+        on_exceed: OnExceed::DeclineRoute,
+        signal: Signal::ToCaller,
+        guarded_by: "",
+        env_override: Some("AXEYUM_UF_ARITH_OVERBOUND"),
+        justification: dated(
+            "docs/research/12-performance/uf-arith-overbound-2026-09-08.md",
+            "2026-09-08",
+            None,
+            // The measurement is "+9 files on the QF_UFLIA loss population, and
+            // `probe` and `skip` decide the same nine". It rests on the routes
+            // BELOW the decision point being what decides them — the nine are
+            // all decided by `dispatch_uf_arith_online` — and on the CEGAR entry
+            // still being the thing that fires above the eager bound. Change
+            // either and the number stops describing this tree.
+            &[
+                sym(
+                    "crates/axeyum-solver/src/auto.rs",
+                    "dispatch_uf_arith_overbound",
+                ),
+                sym(
+                    "crates/axeyum-solver/src/auto.rs",
+                    "dispatch_uf_arith_online",
+                ),
+                sym(
+                    "crates/axeyum-solver/src/euf.rs",
+                    "try_lazy_arith_for_overbound",
+                ),
+            ],
+        ),
+        note: "The slice of the budget held back from the lazy-Ackermann CEGAR for the routes \
+               under it on an over-bound UF+arithmetic query. Before this constant existed the \
+               CEGAR took the WHOLE budget and its `Unknown` was the dispatcher's final answer, \
+               so `euf-online`, `euf-offline` and `dispatch_uf_arith_online` were unreachable \
+               above 64 congruence pairs; on the 58-file QF_UFLIA loss list that was 52 of 58 \
+               files. MEASURED, not copied: the first version halved the budget (mirroring \
+               `probe_budget`) and cost FOUR previously-decided files on the 200-file list, all \
+               needing more than half the budget (12.7 / 13.3 / 15.5 / 23.7 s), while the nine \
+               files it unblocks need 307-625 ms of ladder -- so a reserve is the right shape \
+               and a split is not. `4` clears both bounds: 18 s for the CEGAR (above three of \
+               the four) and 6 s for the ladder (about ten times 625 ms). The fourth, at 23.7 s \
+               of 24, is not recoverable by any reserve and is the named cost of the change. The env override selects the \
+               whole policy (`terminal` restores the old behaviour, `skip` removes the CEGAR), \
+               not just this divisor.",
+    },
+    ConfigEntry {
         name: "MAX_CYCLE_WALK",
         module: "crates/axeyum-solver/src/dl_online.rs",
         value: "1 << 20",
@@ -2498,7 +2548,7 @@ pub fn dated_count() -> usize {
 /// The one-line configuration summary a `--trace` run prints.
 ///
 /// Deliberately one line and digest-first: a corpus sweep's output is grepped,
-/// and a per-run dump of 113 entries would not be. The full table is available
+/// and a per-run dump of 114 entries would not be. The full table is available
 /// through [`REGISTRY`] and from `scripts/check-config-registry-staleness.py`.
 #[must_use]
 pub fn config_trace_line() -> String {

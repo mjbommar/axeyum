@@ -972,6 +972,10 @@ macro_rules! full_exports {
         pub use aufbv::check_with_arrays_and_functions;
         #[doc(hidden)]
         pub use auto::{BoundedIntBlastCertificate, certify_bounded_int_blast};
+        pub use auto::{
+            UfArithOverboundPolicy, UfArithOverboundPolicyGuard, UfArithOverboundStats,
+            UfArithOverboundStatsGuard, last_uf_arith_overbound_stats,
+        };
         pub use auto::{check_auto, check_auto_explained, solve, unsat_core};
         #[doc(hidden)]
         pub use auto::{
