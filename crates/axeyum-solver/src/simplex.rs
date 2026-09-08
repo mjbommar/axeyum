@@ -1073,62 +1073,54 @@ impl Tableau {
         //   enter = (leave - Σ_{v≠enter} a_rv·v) / a_re, i.e. rewrite the row.
         // New row (for the now-basic `enter`): coefficient of `leave` becomes 1/a_re,
         // every other nonbasic v becomes -a_rv/a_re, and `enter`'s own column 0.
-        let mut new_row = vec![Rational::zero(); self.n];
-        // Driven by the row's nonzero index: the old form scanned all `n`
-        // columns to skip the ~98.6% that are zero, and the zero test it made
-        // per column is precisely what the index already answers.
-        for k in 0..self.row_nz[r].len() {
-            let v = self.row_nz[r][k];
-            if v == enter || v == leave {
+        // Rewritten IN PLACE. The old form allocated and zero-filled a fresh
+        // `Vec<Rational>` of width `n` per pivot and dropped the previous one —
+        // 13.6 KB written and 13.6 KB freed on `blending/1` to carry about 35
+        // real values. In place is not merely cheaper, it is exact: every column
+        // outside `row_nz[r]` is zero in the old row and stays zero in the new
+        // one, so it is not a cell the rewrite has any business touching.
+        //
+        // Three facts make the in-place form correct, and the third is the one
+        // worth stating because the code would be subtly wrong without it:
+        //  - `enter` IS in `row_nz[r]` — a zero coefficient is never a usable
+        //    entering candidate, so `select_entering` cannot have returned it;
+        //  - `leave` is NOT in `row_nz[r]` — a basic variable's column is zero in
+        //    its own row, which is the tableau's defining invariant;
+        //  - `−a/a_re` is nonzero exactly when `a` is, so no OTHER cell of this
+        //    row changes zero-state. The index therefore changes by removing
+        //    `enter` and inserting `leave`, and by nothing else.
+        let old_nz: Vec<usize> = self.row_nz[r].clone();
+        for &v in &old_nz {
+            if v == enter {
                 continue;
             }
             let a = self.row[r][v];
-            new_row[v] = sub(Rational::zero(), div(a, a_re)?)?;
+            self.row[r][v] = sub(Rational::zero(), div(a, a_re)?)?;
         }
-        new_row[leave] = recip;
-        // `enter` becomes basic in row r; `leave` becomes nonbasic. The row is
-        // replaced wholesale, so its column contribution is subtracted and the
-        // new one added rather than tracked cell by cell — the counts stay exact
-        // and this stays O(columns), which the row build already was.
-        // The pivot row is replaced wholesale. Only columns that are nonzero in
-        // the OLD row or the NEW one can change state, so the union of the old
-        // index and the new row's nonzeros is the exact set to reconcile — no
-        // `O(columns)` pass.
-        // `new_row` was built from the old row's index and then given `leave` a
-        // value, so every column it can be nonzero at lies in
-        // `row_nz[r] union {leave}` — which is therefore the exact reconcile set.
-        let mut touched: Vec<usize> = self.row_nz[r].clone();
-        if let Err(at) = touched.binary_search(&leave) {
-            touched.insert(at, leave);
-        }
-        let mut fresh: Vec<usize> = Vec::with_capacity(touched.len());
-        for &v in &touched {
-            let was_zero = self.row[r][v].is_zero();
-            let now_zero = new_row[v].is_zero();
-            match (was_zero, now_zero) {
-                (true, false) => self.col_nnz[v] += 1,
-                (false, true) => self.col_nnz[v] -= 1,
-                _ => {}
+        self.row[r][enter] = Rational::zero();
+        self.col_nnz[enter] -= 1;
+        self.row[r][leave] = recip;
+        self.col_nnz[leave] += 1;
+        {
+            let nz = &mut self.row_nz[r];
+            if let Ok(at) = nz.binary_search(&enter) {
+                nz.remove(at);
+            }
+            if let Err(at) = nz.binary_search(&leave) {
+                nz.insert(at, leave);
             }
         }
-        self.row[r] = new_row;
-        for v in &touched {
-            if !self.row[r][*v].is_zero() {
-                fresh.push(*v);
-            }
-        }
-        self.row_nz[r] = fresh;
         self.basic[r] = enter;
         self.is_basic[enter] = true;
         self.is_basic[leave] = false;
 
         // Substitute `enter`'s new expression into every OTHER row.
-        // The pivot row is cloned ONCE, not per affected row — at a few thousand
-        // columns the per-row clone was the dominant cost of a pivot — and only its
-        // NONZERO columns are visited: adding `coeff · 0` is an exact multiply and
-        // add that provably cannot change the cell.
-        let base = self.row[r].clone();
+        // Only the pivot row's NONZERO columns are visited: adding `coeff · 0` is
+        // an exact multiply and add that provably cannot change the cell. The
+        // values are copied out by index — about 35 rationals — rather than by
+        // cloning the whole `n`-wide row, which was the other 13.6 KB per pivot.
         let base_nz: Vec<usize> = self.row_nz[r].clone();
+        let base_vals: Vec<Rational> = base_nz.iter().map(|&v| self.row[r][v]).collect();
         for i in 0..self.m {
             if i == r {
                 continue;
@@ -1143,8 +1135,8 @@ impl Tableau {
             self.counters.pivot_rows_combined += 1;
             self.counters.pivot_cells_written += base_nz.len() as u64;
             // row_i := row_i + coeff · new_row (eliminating `enter`'s column).
-            for &v in &base_nz {
-                let delta = mul(coeff, base[v])?;
+            for (k, &v) in base_nz.iter().enumerate() {
+                let delta = mul(coeff, base_vals[k])?;
                 let updated = add(self.row[i][v], delta)?;
                 self.set_cell(i, v, updated);
             }
