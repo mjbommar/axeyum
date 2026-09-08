@@ -6,6 +6,7 @@
 //! lowering/optimization pipeline is a first-class thing callers can measure,
 //! compare, and regression-test rather than a bag of strings.
 
+use std::sync::{Arc, Mutex, PoisonError};
 use std::time::Duration;
 
 use axeyum_bv::{BitLoweringMemoRepresentation, RangeDemandDecision};
@@ -483,6 +484,194 @@ impl Drop for BvLayerStatsGuard {
 #[must_use]
 pub fn last_bv_layer_stats() -> Option<BvLayerStats> {
     LAST_BV_LAYER_STATS.with(std::cell::Cell::get)
+}
+
+/// Whether [`BvLayerStats`] collection is armed on this thread.
+///
+/// Exposed so `SatBvBackend` can decide ONCE, at the top of a check, whether to
+/// build a [`BvStageMirror`] — rather than testing the flag at each of the six
+/// stage boundaries.
+pub(crate) fn bv_layer_stats_enabled() -> bool {
+    COLLECT_BV_LAYER_STATS.with(std::cell::Cell::get)
+}
+
+/// The `sat-bv` pipeline stage a check was inside when a reading was taken.
+///
+/// # Why a stage name and not just the numbers
+///
+/// [`BvLayerStats`] defaults an absent stage counter to `Duration::ZERO`, which
+/// is the right answer for a check that RAN a stage costing nothing and the
+/// wrong one for a check that never reached it. On a completed check the two
+/// cases coincide, so the distinction never mattered. On a check killed
+/// mid-pipeline it is the whole reading: `solve_ms=0` from a check still inside
+/// bit-blasting says nothing about the SAT search, and a consumer that read it
+/// as a measurement would conclude the search was free.
+///
+/// So a partial `sat-bv` reading always carries the stage. Every stage at or
+/// before it is REACHED and its fields are measurements (lower bounds, since
+/// the current one has not finished); every stage after it is NOT REACHED and
+/// its fields are not numbers at all.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum BvStage {
+    /// Lowering terms to the AIG.
+    BitBlast,
+    /// Encoding the AIG to CNF.
+    CnfEncode,
+    /// Optional CNF simplification before search.
+    CnfInprocess,
+    /// Inside the SAT adapter.
+    SatSearch,
+    /// Lifting a satisfying assignment into an Axeyum model.
+    ModelLift,
+    /// Replaying the accepted model against the original assertions.
+    ModelReplay,
+}
+
+impl BvStage {
+    /// The stages in pipeline order, which is the order a check enters them.
+    pub const ORDER: [BvStage; 6] = [
+        BvStage::BitBlast,
+        BvStage::CnfEncode,
+        BvStage::CnfInprocess,
+        BvStage::SatSearch,
+        BvStage::ModelLift,
+        BvStage::ModelReplay,
+    ];
+
+    /// The token a report line prints, so one spelling is used everywhere.
+    #[must_use]
+    pub fn name(self) -> &'static str {
+        match self {
+            BvStage::BitBlast => "bit_blast",
+            BvStage::CnfEncode => "cnf_encode",
+            BvStage::CnfInprocess => "cnf_inprocess",
+            BvStage::SatSearch => "solve",
+            BvStage::ModelLift => "model_lift",
+            BvStage::ModelReplay => "model_replay",
+        }
+    }
+
+    /// The stages this check had NOT entered when the reading was taken, in
+    /// pipeline order.
+    ///
+    /// Derived from [`BvStage::ORDER`] rather than written out per stage, so a
+    /// stage added to the pipeline cannot be silently absent from the answer.
+    #[must_use]
+    pub fn pending(self) -> Vec<BvStage> {
+        BvStage::ORDER
+            .into_iter()
+            .filter(|stage| *stage > self)
+            .collect()
+    }
+}
+
+/// The cross-thread slot a **running** `sat-bv` check writes its stage and its
+/// accumulated `SolveStats` into at every stage boundary.
+///
+/// # Why this exists
+///
+/// `publish_bv_layer_stats` is reached only when a check RETURNS. A check that
+/// runs past the wall clock does not return, so until this existed a `sat-bv`
+/// file killed mid-pipeline published nothing — and the `sat-bv` files we lose
+/// are, by definition, exactly the ones killed mid-pipeline.
+///
+/// Six stores per check, one per stage boundary, never inside a loop: there is
+/// no cadence to choose and nothing on a hot path. Built only when collection
+/// is armed AND a board is installed, both decided once at the top of the
+/// check.
+#[derive(Debug, Default)]
+pub struct BvStageMirror {
+    /// The stage now running and the stats accumulated before it. `None` before
+    /// the first store.
+    slot: Mutex<Option<(BvStage, SolveStats)>>,
+}
+
+impl BvStageMirror {
+    /// Records that `stage` has been entered, with the stats accumulated so
+    /// far. A poisoned lock is recovered rather than propagated: telemetry must
+    /// never turn one panic into two.
+    pub(crate) fn enter(&self, stage: BvStage, stats: &SolveStats) {
+        let mut slot = self.slot.lock().unwrap_or_else(PoisonError::into_inner);
+        *slot = Some((stage, stats.clone()));
+    }
+
+    /// The stage and stats as of the last boundary, readable from any thread at
+    /// any time.
+    #[must_use]
+    pub fn sample(&self) -> Option<(BvStage, SolveStats)> {
+        self.slot
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .clone()
+    }
+}
+
+/// One `sat-bv` reading taken from a cross-thread board.
+#[derive(Debug, Clone, PartialEq)]
+pub struct LiveBvReading {
+    /// The stage that was RUNNING when the reading was taken. `None` when the
+    /// reading came from a check that returned, in which case every stage was
+    /// reached and every field of [`Self::stats`] is a measurement.
+    ///
+    /// When this is `Some`, [`BvStage::pending`] names the stages whose fields
+    /// are NOT REACHED rather than zero.
+    pub stage: Option<BvStage>,
+    /// The lifted stage stats.
+    ///
+    /// `None` when the check was killed before CNF encoding published
+    /// `aig_nodes` / `cnf_variables`, the counters
+    /// [`BvLayerStats::from_solve_stats`] identifies a `sat-bv` run by. In that
+    /// case [`Self::stage`] is the entire reading — which is still the answer
+    /// to "where did the budget go", and is strictly more than the nothing this
+    /// path reported before.
+    pub stats: Option<BvLayerStats>,
+}
+
+/// The best `sat-bv` reading `board` holds: the snapshot a completed check
+/// published, or the stage a running check is inside.
+///
+/// Ordered by publish sequence for the same reason
+/// `crate::live_theory_layer_stats` is: a mirror installed after the last
+/// completed snapshot means a check is in flight, and its stage — stale though
+/// its numbers are — is the one a reader wants. A query runs more than one
+/// check (a shared-guard split, an array-elimination loop), so "the last check
+/// finished" and "a check is running" are both true at different moments and
+/// only the sequence tells them apart.
+#[must_use]
+pub fn live_bv_layer_stats(
+    board: &crate::live_instruments::LiveInstruments,
+) -> Option<crate::live_instruments::LiveSample<LiveBvReading>> {
+    use crate::live_instruments::{LiveSample, Sampled, instrument};
+    let completed = board
+        .sample::<BvLayerStats>(instrument::BV_LAYER)
+        .map(|done| LiveSample {
+            value: LiveBvReading {
+                stage: None,
+                stats: Some(done.value),
+            },
+            sampled: done.sampled,
+            sequence: done.sequence,
+        });
+    let in_flight = board
+        .sample::<Arc<BvStageMirror>>(instrument::BV_LAYER_MIRROR)
+        .and_then(|handle| {
+            let (stage, stats) = handle.value.sample()?;
+            Some(LiveSample {
+                value: LiveBvReading {
+                    stage: Some(stage),
+                    stats: BvLayerStats::from_solve_stats(&stats),
+                },
+                // Always partial: written when a stage is ENTERED, never when
+                // the check reaches a verdict.
+                sampled: Sampled::InFlight,
+                sequence: handle.sequence,
+            })
+        });
+    match (completed, in_flight) {
+        (Some(done), Some(live)) if live.sequence > done.sequence => Some(live),
+        (Some(done), _) => Some(done),
+        (None, live) => live,
+    }
 }
 
 /// Publishes `stats` (if `sat-bv`-shaped) to [`LAST_BV_LAYER_STATS`] when

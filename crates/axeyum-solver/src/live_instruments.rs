@@ -87,6 +87,31 @@ pub mod instrument {
     pub const DL_ONLINE: &str = "dl-online";
     /// `crate::RouteTrace` as of the last recorded route attempt.
     pub const ROUTE: &str = "route";
+    /// The `crate::layers::BvStageMirror` a *running* `sat-bv` check writes to
+    /// at every stage boundary. [`BV_LAYER`] is published only when the check
+    /// RETURNS, so a check killed inside bit-blasting or inside the SAT search
+    /// — which is every `sat-bv` file we lose — publishes nothing there.
+    /// Sampled through `crate::live_bv_layer_stats`, which resolves it against
+    /// [`BV_LAYER`] and also reports which stages had been reached.
+    pub const BV_LAYER_MIRROR: &str = "bv-layer-mirror";
+    /// The `crate::config_registry::ConfigTraceMirror` a running query's
+    /// `note_consulted` / `note_crossed` calls write to. The registry itself is
+    /// static, so only the consulted/crossed sets need a cross-thread home;
+    /// `crate::live_config_trace_line` renders the whole `; config` line from
+    /// this thread plus the static half.
+    pub const CONFIG: &str = "config";
+    /// `crate::LiaCounters` as of the last completed integer-route solve, i.e.
+    /// when the `LiaCountersGuard` was dropped.
+    pub const LIA_COUNTERS: &str = "lia-counters";
+    /// The `crate::lia_counters::LiaCountersMirror` a running integer-route
+    /// solve flushes to on a fixed record cadence. Sampled through
+    /// `crate::live_lia_counters`, which orders it against [`LIA_COUNTERS`].
+    pub const LIA_COUNTERS_MIRROR: &str = "lia-counters-mirror";
+    /// `crate::UfArithOverboundStats` as of the last recorded over-bound
+    /// UF+arithmetic dispatch decision. Republished on every decision rather
+    /// than mirrored through a handle, because the decision point is reached a
+    /// handful of times per query, never in a loop.
+    pub const UF_OVERBOUND: &str = "uf-overbound";
 }
 
 /// Whether a reading is an instrument's finished answer or a state the run

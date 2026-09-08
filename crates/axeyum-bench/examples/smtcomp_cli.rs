@@ -306,13 +306,14 @@ use std::time::{Duration, Instant};
 
 use axeyum_solver::theories::cdclt_diagnostics::{TheoryLayerStatsGuard, last_theory_layer_stats};
 use axeyum_solver::{
-    BvLayerStats, BvLayerStatsGuard, CheckProgress, CheckResult, CheckingProgress,
-    ConfigTraceGuard, DlOnlineStatsGuard, Evidence, EvidenceCheck, EvidenceReport, FrontDoorStats,
+    BvLayerStatsGuard, CheckProgress, CheckResult, CheckingProgress, ConfigTraceGuard,
+    DlOnlineStatsGuard, Evidence, EvidenceCheck, EvidenceReport, FrontDoorStats,
     FrontDoorStatsGuard, LiaCountersGuard, LiveInstruments, ProofProgress, RouteAttributionGuard,
-    RouteTrace, Sampled, SolverConfig, UfArithOverboundStatsGuard, config_trace_line,
-    install_live_instruments, instrument, last_bv_layer_stats, last_dl_online_stats,
-    last_front_door_stats, last_lia_counters, last_route_attribution,
-    last_uf_arith_overbound_stats, live_theory_layer_stats, produce_evidence_smtlib, solve_smtlib,
+    RouteTrace, Sampled, SolverConfig, UfArithOverboundStats, UfArithOverboundStatsGuard,
+    config_trace_line, install_live_instruments, instrument, last_bv_layer_stats,
+    last_dl_online_stats, last_front_door_stats, last_lia_counters, last_route_attribution,
+    last_uf_arith_overbound_stats, live_bv_layer_stats, live_config_trace_line, live_lia_counters,
+    live_theory_layer_stats, produce_evidence_smtlib, solve_smtlib,
 };
 
 /// Formats one `axeyum_cnf::ProofSearchProgress` snapshot as the `;`-prefixed
@@ -756,6 +757,16 @@ fn watchdog_trace_lines(trace_mode: bool, board: &LiveInstruments, reason: &str)
         provenance.push(format!("{name}:{}", sampled.label()));
     };
 
+    // FIRST, exactly as on the completed path: every other line has to be read
+    // against the configuration that produced it, and a partial reading is not
+    // an exception — a stage timing from a killed run still means something
+    // different under a different admission policy. `crossed=` is the field
+    // that earns its place here: it names the bound that BIT, which on a file
+    // we lose is usually the whole answer.
+    if let Some(config) = live_config_trace_line(board) {
+        lines.push(partial_line(&config.value));
+        note("config", config.sampled);
+    }
     if let Some(front_door) = board.sample::<FrontDoorStats>(instrument::FRONT_DOOR) {
         lines.push(partial_line(&front_door_report_line(&front_door.value)));
         note("front-door", front_door.sampled);
@@ -770,8 +781,42 @@ fn watchdog_trace_lines(trace_mode: bool, board: &LiveInstruments, reason: &str)
             note("dl-online", dl.sampled);
         }
     }
-    if let Some(bv) = board.sample::<BvLayerStats>(instrument::BV_LAYER) {
-        lines.push(partial_line(&bv_layer_report_line(&bv.value)));
+    if let Some(bv) = live_bv_layer_stats(board) {
+        // The STAGE line comes first and is never omitted, because it is what
+        // makes the numbers below readable. `BvLayerStats` defaults an absent
+        // stage counter to `Duration::ZERO`, which on a completed check is
+        // right and on a killed one is a lie: `solve_ms=0` from a check still
+        // inside bit-blasting says nothing about the SAT search. `pending=`
+        // names the fields that are NOT REACHED rather than measured, and
+        // `pending=none` says every stage ran.
+        if let Some(stage) = bv.value.stage {
+            let pending = stage.pending();
+            let pending = if pending.is_empty() {
+                "none".to_owned()
+            } else {
+                pending
+                    .iter()
+                    .map(|s| s.name())
+                    .collect::<Vec<_>>()
+                    .join(",")
+            };
+            lines.push(format!(
+                "; partial bv-stage in={} pending={pending}",
+                stage.name()
+            ));
+        }
+        match &bv.value.stats {
+            Some(stats) => lines.push(partial_line(&bv_layer_report_line(stats))),
+            // Killed before the CNF encoding published the counters that
+            // identify a `sat-bv` run. The stage line above is then the whole
+            // reading, and saying so is the point: an absent `; bv-layer` line
+            // next to a `; partial bv-stage in=bit_blast` one cannot be misread
+            // as a pipeline that cost nothing.
+            None => lines.push(
+                "; partial bv-layer unavailable: killed before the CNF encoding published                  aig_nodes/cnf_variables; the bv-stage line above is the whole reading"
+                    .to_owned(),
+            ),
+        }
         note("bv-layer", bv.sampled);
     }
     if let Some(theory) = live_theory_layer_stats(board) {
@@ -779,6 +824,26 @@ fn watchdog_trace_lines(trace_mode: bool, board: &LiveInstruments, reason: &str)
         note("theory-layer", theory.sampled);
     } else {
         lines.push(format!("; theory-layer unavailable: {reason}"));
+    }
+    // Only when the eager Ackermann bound actually fired, the same gate the
+    // completed path uses: an all-zero line on every non-UF file would be
+    // noise, and the absence of the line is itself the information "this
+    // decision point was never reached".
+    if let Some(uf) = board.sample::<UfArithOverboundStats>(instrument::UF_OVERBOUND)
+        && uf.value.engaged > 0
+    {
+        lines.push(partial_line(&uf.value.trace_line()));
+        note("uf-overbound", uf.sampled);
+    }
+    // The integer routes, which are what the `QF_LIA` losses are made of. Every
+    // field is a monotone total, so a partial reading is a LOWER BOUND on each
+    // of them — and the `offline=` / `theory=` / `propagation=` tokens the line
+    // already carries stay independent of that: `not-reached` on a partial
+    // reading means the group's entry site had not executed when the reading
+    // was taken, which is not the same as a lower bound of zero.
+    if let Some(lia) = live_lia_counters(board) {
+        lines.push(partial_line(&lia_counters_report_line(&lia.value)));
+        note("lia", lia.sampled);
     }
     match board.sample::<RouteTrace>(instrument::ROUTE) {
         Some(route) if !route.value.is_empty() => {

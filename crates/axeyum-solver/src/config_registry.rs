@@ -68,6 +68,7 @@
 use std::cell::{Cell, RefCell};
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt::Write as _;
+use std::sync::{Arc, Mutex, PoisonError};
 
 /// What a bound is defending. Derived from what the **code** does when the
 /// bound is crossed, never from what its comment says it is for.
@@ -2391,6 +2392,68 @@ std::thread_local! {
     /// depends on hash seeding.
     static CROSSED: RefCell<BTreeMap<&'static str, (u64, u64)>> =
         const { RefCell::new(BTreeMap::new()) };
+    /// The cross-thread mirror of [`CONSULTED`] / [`CROSSED`], when a
+    /// [`crate::live_instruments`] board was installed at
+    /// [`ConfigTraceGuard::enable`] time. `None` on every ordinary run.
+    ///
+    /// Created at guard construction rather than tested at each recording site,
+    /// so [`note_consulted`] on a run WITHOUT a board costs the same one
+    /// `Cell<bool>` read it always did.
+    static CONFIG_MIRROR: RefCell<Option<Arc<ConfigTraceMirror>>> =
+        const { RefCell::new(None) };
+}
+
+/// The cross-thread half of the `; config` line: the consulted keys and the
+/// crossed bounds a **running** query has accumulated so far.
+///
+/// # Why only these two
+///
+/// Everything else on the line — the digest, the entry count, the dated count,
+/// the environment overrides — is derived from [`REGISTRY`] and the process
+/// environment, both of which any thread can read at any time. The consulted
+/// and crossed sets were the only thread-local half, and they were therefore
+/// the reason the whole line vanished on a watchdog kill: printing the static
+/// half alone would leave `consulted=` silently absent, which reads as "nothing
+/// was consulted" rather than "we could not see".
+///
+/// # Cost
+///
+/// Written only when the set actually GROWS. A key already present is a
+/// `BTreeSet` lookup on the thread-local and a return, so a bound consulted in
+/// a loop takes the shared lock once, not once per iteration.
+#[derive(Debug, Default)]
+pub struct ConfigTraceMirror {
+    /// `(consulted keys, crossed bounds)`, behind one lock so a reader cannot
+    /// observe a crossing whose key is not yet in the consulted set.
+    state: Mutex<(BTreeSet<&'static str>, BTreeMap<&'static str, (u64, u64)>)>,
+}
+
+impl ConfigTraceMirror {
+    /// Records `key` as consulted. A poisoned lock is recovered rather than
+    /// propagated: telemetry must never turn one panic into two.
+    fn note_consulted(&self, key: &'static str) {
+        let mut state = self.state.lock().unwrap_or_else(PoisonError::into_inner);
+        state.0.insert(key);
+    }
+
+    /// Records `key` as crossed at `observed` against `bound`, keeping the
+    /// first crossing exactly as [`CROSSED`] does.
+    fn note_crossed(&self, key: &'static str, observed: u64, bound: u64) {
+        let mut state = self.state.lock().unwrap_or_else(PoisonError::into_inner);
+        state.0.insert(key);
+        state.1.entry(key).or_insert((observed, bound));
+    }
+
+    /// The consulted keys and crossed bounds accumulated so far, readable from
+    /// any thread while the worker is still running.
+    #[must_use]
+    pub fn sample(&self) -> (Vec<&'static str>, Vec<(&'static str, u64, u64)>) {
+        let state = self.state.lock().unwrap_or_else(PoisonError::into_inner);
+        (
+            state.0.iter().copied().collect(),
+            state.1.iter().map(|(k, (o, b))| (*k, *o, *b)).collect(),
+        )
+    }
 }
 
 /// Enables configuration recording for the lifetime of the returned guard,
@@ -2415,6 +2478,26 @@ impl ConfigTraceGuard {
     pub fn enable() -> Self {
         CONSULTED.with(|c| c.borrow_mut().clear());
         CROSSED.with(|c| c.borrow_mut().clear());
+        // The board decision is taken HERE, once, rather than at each recording
+        // site: `note_consulted` on a run with no board must keep costing one
+        // `Cell<bool>` read. A board installed later in the same guard's extent
+        // simply does not get a `; config` mirror, which is the same answer the
+        // instrument gave before this existed.
+        let mirror = crate::live_instruments::installed().then(|| {
+            let mirror = Arc::new(ConfigTraceMirror::default());
+            crate::live_instruments::publish_live(
+                crate::live_instruments::instrument::CONFIG,
+                Arc::clone(&mirror),
+                // A handle, never a snapshot: the query writes through it for as
+                // long as it runs, so a watchdog always reads the latest sets
+                // without the worker having to publish again. The reading is
+                // therefore always partial — a query that has not returned may
+                // still consult more bounds.
+                crate::live_instruments::Sampled::InFlight,
+            );
+            mirror
+        });
+        CONFIG_MIRROR.with(|c| *c.borrow_mut() = mirror);
         ConfigTraceGuard(RECORD_CONFIG.with(|c| c.replace(true)))
     }
 }
@@ -2422,7 +2505,26 @@ impl ConfigTraceGuard {
 impl Drop for ConfigTraceGuard {
     fn drop(&mut self) {
         RECORD_CONFIG.with(|c| c.set(self.0));
+        CONFIG_MIRROR.with(|c| *c.borrow_mut() = None);
     }
+}
+
+/// Mirrors one recording onto the cross-thread board, when a board was
+/// installed at [`ConfigTraceGuard::enable`] time.
+///
+/// Called only when the thread-local set actually grew, so a bound consulted
+/// inside a loop takes the shared lock once. `try_borrow` rather than `borrow`
+/// for the same reason `live_instruments::publish_live` uses it: a re-entrant
+/// recording (which no current call path produces) must drop the mirror write,
+/// never panic mid-solve.
+fn mirror_config(f: impl FnOnce(&ConfigTraceMirror)) {
+    CONFIG_MIRROR.with(|c| {
+        if let Ok(slot) = c.try_borrow()
+            && let Some(mirror) = slot.as_ref()
+        {
+            f(mirror);
+        }
+    });
 }
 
 /// Records that a governing value was consulted, when recording is on.
@@ -2436,9 +2538,13 @@ pub fn note_consulted(key: &'static str) {
     if !RECORD_CONFIG.with(Cell::get) {
         return;
     }
-    CONSULTED.with(|c| {
-        c.borrow_mut().insert(key);
-    });
+    // The insert's return value is the growth test: a key already present means
+    // the shared set already has it, so the cross-thread mirror below is
+    // reached once per distinct key rather than once per consultation.
+    let is_new = CONSULTED.with(|c| c.borrow_mut().insert(key));
+    if is_new {
+        mirror_config(|mirror| mirror.note_consulted(key));
+    }
 }
 
 /// The keys consulted on this thread since the active guard was constructed,
@@ -2474,12 +2580,18 @@ pub fn note_crossed(key: &'static str, observed: u64, bound: u64) {
     if !RECORD_CONFIG.with(Cell::get) {
         return;
     }
-    CONSULTED.with(|c| {
-        c.borrow_mut().insert(key);
+    let is_new_key = CONSULTED.with(|c| c.borrow_mut().insert(key));
+    // Only the FIRST crossing of a key is kept, here and in the mirror, so this
+    // is reached once per distinct key however tight the loop that crossed it.
+    let is_new_crossing = CROSSED.with(|c| {
+        let mut crossed = c.borrow_mut();
+        let before = crossed.len();
+        crossed.entry(key).or_insert((observed, bound));
+        crossed.len() != before
     });
-    CROSSED.with(|c| {
-        c.borrow_mut().entry(key).or_insert((observed, bound));
-    });
+    if is_new_key || is_new_crossing {
+        mirror_config(|mirror| mirror.note_crossed(key, observed, bound));
+    }
 }
 
 /// The bounds crossed on this thread since the active guard was constructed, as
@@ -2563,6 +2675,49 @@ pub fn dated_count() -> usize {
 /// through [`REGISTRY`] and from `scripts/check-config-registry-staleness.py`.
 #[must_use]
 pub fn config_trace_line() -> String {
+    config_trace_line_from(&consulted(), &crossings())
+}
+
+/// The best `; config` reading `board` holds, or `None` when the query never
+/// installed a mirror (which on a `--trace` run means it never got as far as
+/// constructing a [`ConfigTraceGuard`]).
+///
+/// # Why this is not just the static half
+///
+/// The digest, the entry counts and the environment overrides are readable from
+/// any thread at any time. The consulted and crossed sets are not, and printing
+/// the line without them would leave `consulted=` silently absent — which reads
+/// as "nothing was consulted", the one wrong answer this line must never give.
+/// So the whole line is either rendered from a mirror that has the sets, or not
+/// rendered at all.
+///
+/// The reading is always [`crate::live_instruments::Sampled::InFlight`]: the
+/// mirror is a handle a running query writes through, so a query that has not
+/// returned may still consult bounds this line does not name. The sets are
+/// therefore LOWER BOUNDS, exactly like every other partial reading.
+#[must_use]
+pub fn live_config_trace_line(
+    board: &crate::live_instruments::LiveInstruments,
+) -> Option<crate::live_instruments::LiveSample<String>> {
+    let handle =
+        board.sample::<Arc<ConfigTraceMirror>>(crate::live_instruments::instrument::CONFIG)?;
+    let (consulted, crossed) = handle.value.sample();
+    Some(crate::live_instruments::LiveSample {
+        value: config_trace_line_from(&consulted, &crossed),
+        sampled: crate::live_instruments::Sampled::InFlight,
+        sequence: handle.sequence,
+    })
+}
+
+/// Renders the `; config` line from an explicit consulted/crossed pair.
+///
+/// Split out of [`config_trace_line`] so the watchdog path renders the SAME
+/// bytes from the cross-thread mirror that a completed run renders from its
+/// thread-local sets — one formatter, so the two families cannot drift.
+fn config_trace_line_from(
+    consulted: &[&'static str],
+    crossed: &[(&'static str, u64, u64)],
+) -> String {
     let mut s = format!(
         "; config digest={:016x} entries={} dated={}",
         digest(),
@@ -2572,7 +2727,6 @@ pub fn config_trace_line() -> String {
     for (k, v) in active_env_overrides() {
         let _ = write!(s, " env:{k}={v}");
     }
-    let consulted = consulted();
     if !consulted.is_empty() {
         let _ = write!(s, " consulted={}", consulted.len());
         for key in consulted {
@@ -2584,7 +2738,6 @@ pub fn config_trace_line() -> String {
     // can tell "this bound was looked at" from "this bound decided the route,
     // at 1560 against 1024". A silent decline that leaves no such line is the
     // defect; a run that prints one is attributable.
-    let crossed = crossings();
     if !crossed.is_empty() {
         let _ = write!(s, " crossed={}", crossed.len());
         for (key, observed, bound) in crossed {
