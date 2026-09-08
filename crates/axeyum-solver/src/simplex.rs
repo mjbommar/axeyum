@@ -859,6 +859,15 @@ impl Tableau {
                 break RunOutcome::Unknown;
             }
             if pivots >= budget {
+                // The deadline break above yields the SAME `RunOutcome::Unknown`,
+                // and `Status::Unknown`'s own doc admits it covers "the
+                // pivot/deadline budget ran out" as one case. This is the only
+                // record that says which.
+                crate::config_registry::note_crossed(
+                    "crates/axeyum-solver/src/simplex.rs::MAX_PIVOTS",
+                    pivots,
+                    budget,
+                );
                 break RunOutcome::Unknown;
             }
             pivots += 1;

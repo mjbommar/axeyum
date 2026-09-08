@@ -2659,6 +2659,17 @@ impl RowCtx {
             return true;
         }
         note_abv(|stats| stats.row_site_cap_refusals += 1);
+        // The same refusal, in the registry's own currency. `row_site_cap_refusals`
+        // is a COUNT of refusals and this is the crossing WITH ITS NUMBERS, in
+        // the unit the entry declares, so a `--trace` run says which bound
+        // decided the route and by how much rather than only that something did.
+        // Required by `config_registry`'s coverage ratchet: this entry is
+        // `Signal::None`, so without a record it is unattributable.
+        crate::config_registry::note_crossed(
+            "crates/axeyum-solver/src/abv.rs::MAX_ROW_SITES",
+            self.sites.len() as u64,
+            MAX_ROW_SITES as u64,
+        );
         false
     }
 

@@ -316,6 +316,16 @@ fn eliminate_variable_divmod(
     crate::config_registry::note_consulted(
         "crates/axeyum-solver/src/nia_linearize.rs::MAX_CONGRUENCE_GROUPS",
     );
+    if infos.len() > MAX_CONGRUENCE_GROUPS {
+        // The `else` this gate never had. The verdict is unchanged either way;
+        // what changes is that a `--trace` run can now say the lemmas were
+        // forgone, and at what group count.
+        crate::config_registry::note_crossed(
+            "crates/axeyum-solver/src/nia_linearize.rs::MAX_CONGRUENCE_GROUPS",
+            infos.len() as u64,
+            MAX_CONGRUENCE_GROUPS as u64,
+        );
+    }
     if infos.len() <= MAX_CONGRUENCE_GROUPS {
         for first in 0..infos.len() {
             for second in (first + 1)..infos.len() {
@@ -663,6 +673,27 @@ fn harvest_const_bounds(arena: &TermArena, assertions: &[TermId]) -> BTreeMap<Te
 /// (still sound; just no envelope for that product).
 const MCCORMICK_MAX_ABS_BOUND: i128 = 1 << 20;
 
+/// Drops an endpoint whose magnitude is outside [`MCCORMICK_MAX_ABS_BOUND`],
+/// recording the crossing.
+///
+/// One function rather than the two byte-identical closures this replaced, in
+/// `mccormick_lemmas` and `derived_product_bounds`. The predicate is unchanged;
+/// what is new is that dropping an endpoint is now visible under `--trace`,
+/// where before an endpoint discarded for magnitude and an endpoint that was
+/// never entailed produced the same `None`.
+fn clamp_to_mccormick_bound(v: Option<i128>) -> Option<i128> {
+    let c = v?;
+    if c.abs() <= MCCORMICK_MAX_ABS_BOUND {
+        return Some(c);
+    }
+    crate::config_registry::note_crossed(
+        "crates/axeyum-solver/src/nia_linearize.rs::MCCORMICK_MAX_ABS_BOUND",
+        u64::try_from(c.unsigned_abs()).unwrap_or(u64::MAX),
+        u64::try_from(MCCORMICK_MAX_ABS_BOUND).unwrap_or(u64::MAX),
+    );
+    None
+}
+
 /// Largest number of abstracted products for which `McCormick` envelopes are
 /// emitted at all. Beyond this the envelope pass is skipped wholesale (sound,
 /// only less complete) so the relaxation handed to the DPLL(T) stays bounded.
@@ -697,9 +728,14 @@ fn mccormick_lemmas(
     a_bounds: ConstBounds,
     b_bounds: ConstBounds,
 ) -> Result<Vec<TermId>, SolverError> {
-    let clamp = |v: Option<i128>| v.filter(|c| c.abs() <= MCCORMICK_MAX_ABS_BOUND);
-    let (a_lo, a_hi) = (clamp(a_bounds.0), clamp(a_bounds.1));
-    let (b_lo, b_hi) = (clamp(b_bounds.0), clamp(b_bounds.1));
+    let (a_lo, a_hi) = (
+        clamp_to_mccormick_bound(a_bounds.0),
+        clamp_to_mccormick_bound(a_bounds.1),
+    );
+    let (b_lo, b_hi) = (
+        clamp_to_mccormick_bound(b_bounds.0),
+        clamp_to_mccormick_bound(b_bounds.1),
+    );
     let mut out = Vec::with_capacity(4);
     // `(coeff on b, coeff on a, r ≥ rhs?)` — see the table above.
     for &(on_b, on_a, ge) in &[
@@ -805,9 +841,8 @@ fn small_domain_lemmas(
 /// contract of this relaxation (the sign lemmas rely on the same argument). Every
 /// original model still extends to a model of the relaxation, so `unsat` transfers.
 fn derived_product_bounds(a: ConstBounds, b: ConstBounds) -> ConstBounds {
-    let guard = |v: Option<i128>| v.filter(|c| c.abs() <= MCCORMICK_MAX_ABS_BOUND);
-    let (a_lo, a_hi) = (guard(a.0), guard(a.1));
-    let (b_lo, b_hi) = (guard(b.0), guard(b.1));
+    let (a_lo, a_hi) = (clamp_to_mccormick_bound(a.0), clamp_to_mccormick_bound(a.1));
+    let (b_lo, b_hi) = (clamp_to_mccormick_bound(b.0), clamp_to_mccormick_bound(b.1));
     if let (Some(a_lo), Some(a_hi), Some(b_lo), Some(b_hi)) = (a_lo, a_hi, b_lo, b_hi) {
         // |corner| ≤ 2^40 by the guard, so the products are exact in `i128`.
         let corners = [a_lo * b_lo, a_lo * b_hi, a_hi * b_lo, a_hi * b_hi];
@@ -835,6 +870,18 @@ fn narrow_factor(
 ) -> Option<(TermId, TermId, i128, i128)> {
     let window = |bounds: ConstBounds| match bounds {
         (Some(lo), Some(hi)) if lo <= hi && hi - lo <= MAX_SMALL_DOMAIN_WIDTH => Some((lo, hi)),
+        // A factor that HAS an entailed interval and is merely too wide for the
+        // exact split. Reported in the constant's own unit (interval width);
+        // a factor with no interval at all is not a crossing and is not
+        // recorded, which is what keeps the count meaningful.
+        (Some(lo), Some(hi)) if lo <= hi => {
+            crate::config_registry::note_crossed(
+                "crates/axeyum-solver/src/nia_linearize.rs::MAX_SMALL_DOMAIN_WIDTH",
+                u64::try_from(hi - lo).unwrap_or(u64::MAX),
+                u64::try_from(MAX_SMALL_DOMAIN_WIDTH).unwrap_or(u64::MAX),
+            );
+            None
+        }
         _ => None,
     };
     match (window(a_bounds), window(b_bounds)) {
@@ -867,6 +914,25 @@ fn pow2_value_table(
     hi: i128,
 ) -> Result<Option<TermId>, SolverError> {
     // `hi - lo < N` ⟺ at most `N` cases; guards against an unbounded/huge table.
+    if hi > POW2_TABLE_MAX_EXP {
+        // Split out of the shared `||` so each disjunct can be recorded on its
+        // own. The caller does not decline a route on this: it omits the value
+        // table and keeps emitting its other axiom families, so the omission is
+        // invisible downstream -- the same shape as this file's six other
+        // silent relaxations.
+        crate::config_registry::note_crossed(
+            "crates/axeyum-solver/src/nia_linearize.rs::POW2_TABLE_MAX_EXP",
+            u64::try_from(hi).unwrap_or(u64::MAX),
+            u64::try_from(POW2_TABLE_MAX_EXP).unwrap_or(u64::MAX),
+        );
+    }
+    if lo <= hi && hi - lo >= POW2_TABLE_MAX_CASES {
+        crate::config_registry::note_crossed(
+            "crates/axeyum-solver/src/nia_linearize.rs::POW2_TABLE_MAX_CASES",
+            u64::try_from(hi - lo).unwrap_or(u64::MAX),
+            u64::try_from(POW2_TABLE_MAX_CASES).unwrap_or(u64::MAX),
+        );
+    }
     if lo > hi || hi > POW2_TABLE_MAX_EXP || hi - lo >= POW2_TABLE_MAX_CASES {
         return Ok(None);
     }
@@ -1038,6 +1104,16 @@ fn add_entailed_bound_lemmas(
     triples: &[(TermId, TermId, TermId)],
     relaxed: &mut Vec<TermId>,
 ) -> Result<(usize, usize), SolverError> {
+    if triples.len() > MAX_MCCORMICK_PRODUCTS {
+        // Distinguished from the empty case deliberately: both return `(0, 0)`,
+        // and only one of them is a bound declining to do work it could have
+        // done. Recorded before the shared return, not after it.
+        crate::config_registry::note_crossed(
+            "crates/axeyum-solver/src/nia_linearize.rs::MAX_MCCORMICK_PRODUCTS",
+            triples.len() as u64,
+            MAX_MCCORMICK_PRODUCTS as u64,
+        );
+    }
     if triples.is_empty() || triples.len() > MAX_MCCORMICK_PRODUCTS {
         return Ok((0, 0));
     }
@@ -1068,8 +1144,21 @@ fn add_entailed_bound_lemmas(
             continue; // no entailed endpoint at all ⇒ nothing valid to add
         }
         // The exact case split first — it subsumes the envelope for that product.
+        let narrow = narrow_factor(a, b, a_bounds, b_bounds);
+        // Only a product that WOULD have been split counts as a crossing: the
+        // budget being spent is not a loss unless something wanted it. Recorded
+        // here because the `&&` below simply falls through to the envelope, so
+        // a forgone exact split is otherwise indistinguishable from a product
+        // that never had a narrow factor.
+        if split_products >= MAX_SMALL_DOMAIN_PRODUCTS && narrow.is_some() {
+            crate::config_registry::note_crossed(
+                "crates/axeyum-solver/src/nia_linearize.rs::MAX_SMALL_DOMAIN_PRODUCTS",
+                split_products as u64,
+                MAX_SMALL_DOMAIN_PRODUCTS as u64,
+            );
+        }
         if split_products < MAX_SMALL_DOMAIN_PRODUCTS
-            && let Some((narrow, other, lo, hi)) = narrow_factor(a, b, a_bounds, b_bounds)
+            && let Some((narrow, other, lo, hi)) = narrow
         {
             let lemmas = small_domain_lemmas(arena, narrow, other, r, lo, hi)?;
             splits += lemmas.len();
@@ -1463,6 +1552,13 @@ fn refine_with_tangents(
             continue;
         };
         if a_val.abs() > MAX_TANGENT_ABS_VALUE || b_val.abs() > MAX_TANGENT_ABS_VALUE {
+            // Forgoing the tangent lemma for this product is invisible: the
+            // `continue` is the same control flow as "already faithful".
+            crate::config_registry::note_crossed(
+                "crates/axeyum-solver/src/nia_linearize.rs::MAX_TANGENT_ABS_VALUE",
+                u64::try_from(a_val.abs().max(b_val.abs())).unwrap_or(u64::MAX),
+                u64::try_from(MAX_TANGENT_ABS_VALUE).unwrap_or(u64::MAX),
+            );
             continue;
         }
         // Exact by the magnitude guard (|a_val·b_val| ≤ 2^80).
@@ -1835,5 +1931,128 @@ mod tests {
                 );
             }
         }
+    }
+
+    /// The three per-candidate relaxation bounds must be attributable.
+    ///
+    /// Each of them forgoes a lemma through control flow that is
+    /// indistinguishable from "there was nothing to emit": a dropped endpoint
+    /// and an absent endpoint are both `None`, and a too-wide factor and a
+    /// factor with no interval are both a `None` window. Recording the crossing
+    /// is the only thing that tells them apart, and these drive the real
+    /// functions rather than `note_crossed`.
+    #[test]
+    fn crossing_a_relaxation_bound_is_recorded_with_its_numbers() {
+        assert!(
+            crate::config_registry::crossings().is_empty(),
+            "this thread must start with nothing recorded"
+        );
+        let _ = clamp_to_mccormick_bound(Some(MCCORMICK_MAX_ABS_BOUND + 1));
+        assert!(
+            crate::config_registry::crossings().is_empty(),
+            "recording must be opt-in: a crossing outside a guard recorded anyway"
+        );
+
+        let magnitude = {
+            let _g = crate::config_registry::ConfigTraceGuard::enable();
+            assert_eq!(
+                clamp_to_mccormick_bound(Some(MCCORMICK_MAX_ABS_BOUND + 1)),
+                None
+            );
+            crate::config_registry::crossings()
+        };
+        assert_eq!(
+            magnitude,
+            vec![(
+                "crates/axeyum-solver/src/nia_linearize.rs::MCCORMICK_MAX_ABS_BOUND",
+                u64::try_from(MCCORMICK_MAX_ABS_BOUND + 1).unwrap(),
+                u64::try_from(MCCORMICK_MAX_ABS_BOUND).unwrap(),
+            )]
+        );
+
+        let (mut arena, ..) = triple();
+        let a = arena.int_var("wa").unwrap();
+        let b = arena.int_var("wb").unwrap();
+        let width = {
+            let _g = crate::config_registry::ConfigTraceGuard::enable();
+            let wide = (Some(0_i128), Some(MAX_SMALL_DOMAIN_WIDTH + 1));
+            assert_eq!(narrow_factor(a, b, wide, wide), None);
+            crate::config_registry::crossings()
+        };
+        assert_eq!(
+            width,
+            vec![(
+                "crates/axeyum-solver/src/nia_linearize.rs::MAX_SMALL_DOMAIN_WIDTH",
+                u64::try_from(MAX_SMALL_DOMAIN_WIDTH + 1).unwrap(),
+                u64::try_from(MAX_SMALL_DOMAIN_WIDTH).unwrap(),
+            )]
+        );
+
+        // The non-crossing cases, each in a FRESH guard and each asserted
+        // EMPTY. Checked inside the guard that had already recorded the key,
+        // these were vacuous: `note_crossed` keeps only the first crossing per
+        // key, so a wrongly recorded second call cannot grow the set.
+        let in_bound = {
+            let _g = crate::config_registry::ConfigTraceGuard::enable();
+            assert_eq!(
+                clamp_to_mccormick_bound(Some(MCCORMICK_MAX_ABS_BOUND)),
+                Some(MCCORMICK_MAX_ABS_BOUND)
+            );
+            assert_eq!(clamp_to_mccormick_bound(None), None);
+            crate::config_registry::crossings()
+        };
+        assert!(
+            in_bound.is_empty(),
+            "an endpoint inside the bound, or an absent one, is not a crossing; got {in_bound:?}"
+        );
+        let unbounded = {
+            let _g = crate::config_registry::ConfigTraceGuard::enable();
+            assert_eq!(narrow_factor(a, b, (None, None), (None, None)), None);
+            crate::config_registry::crossings()
+        };
+        assert!(
+            unbounded.is_empty(),
+            "a factor with no entailed interval is not a crossing; got {unbounded:?}"
+        );
+
+        // `MAX_MCCORMICK_PRODUCTS` shares its `(0, 0)` return with the empty
+        // case, which is exactly why the crossing has to be recorded before it.
+        let triples = vec![(a, b, arena.int_var("wr").unwrap()); MAX_MCCORMICK_PRODUCTS + 1];
+        let mut relaxed: Vec<TermId> = Vec::new();
+        let products = {
+            let _g = crate::config_registry::ConfigTraceGuard::enable();
+            assert_eq!(
+                add_entailed_bound_lemmas(&mut arena, &triples, &mut relaxed).unwrap(),
+                (0, 0)
+            );
+            crate::config_registry::crossings()
+        };
+        // The empty case gets its OWN guard. Sharing the one above made this
+        // negative VACUOUS: `note_crossed` keeps only the FIRST crossing of a
+        // key, so once the key is recorded the set cannot grow again whatever
+        // the empty call does, and the mutation that records the empty case as
+        // a crossing SURVIVED. A fresh guard is what makes the assertion able
+        // to fail.
+        let empty = {
+            let _g = crate::config_registry::ConfigTraceGuard::enable();
+            assert_eq!(
+                add_entailed_bound_lemmas(&mut arena, &[], &mut relaxed).unwrap(),
+                (0, 0)
+            );
+            crate::config_registry::crossings()
+        };
+        assert!(
+            empty.is_empty(),
+            "an EMPTY product set returns the same (0, 0) and must not be recorded as a \
+             crossing; got {empty:?}"
+        );
+        assert_eq!(
+            products,
+            vec![(
+                "crates/axeyum-solver/src/nia_linearize.rs::MAX_MCCORMICK_PRODUCTS",
+                (MAX_MCCORMICK_PRODUCTS + 1) as u64,
+                MAX_MCCORMICK_PRODUCTS as u64,
+            )]
+        );
     }
 }

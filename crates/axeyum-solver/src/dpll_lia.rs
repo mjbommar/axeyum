@@ -2227,12 +2227,26 @@ fn negative_cycle_core(edges: &[DifferenceEdge]) -> Option<Vec<usize>> {
         return None;
     }
     if edges.len() > MAX_TWO_EDGE_DIFF_EDGES {
+        // Both of this function's size refusals return the same bare `None` as
+        // "there is no negative cycle", so the search continues without the
+        // core and nothing downstream can tell a refusal from an absence.
+        // Recording the crossing is the only thing that distinguishes them.
+        crate::config_registry::note_crossed(
+            "crates/axeyum-solver/src/dpll_lia.rs::MAX_TWO_EDGE_DIFF_EDGES",
+            edges.len() as u64,
+            MAX_TWO_EDGE_DIFF_EDGES as u64,
+        );
         return None;
     }
     if let Some(core) = two_edge_negative_cycle_core(edges) {
         return Some(core);
     }
     if edges.len() > MAX_BELLMAN_FORD_DIFF_EDGES {
+        crate::config_registry::note_crossed(
+            "crates/axeyum-solver/src/dpll_lia.rs::MAX_BELLMAN_FORD_DIFF_EDGES",
+            edges.len() as u64,
+            MAX_BELLMAN_FORD_DIFF_EDGES as u64,
+        );
         return None;
     }
     let mut vars = BTreeMap::new();
@@ -3390,6 +3404,14 @@ fn initial_int_bound_implication_lemmas(
     ctx: &ArithAbstractor,
 ) -> Result<Vec<(TermId, Vec<ArithLemmaLiteral>)>, SolverError> {
     if ctx.atoms.len() > MAX_INITIAL_BOUND_IMPLICATION_ATOMS {
+        // An empty lemma vector is what this returns when there are no bound
+        // implications to find, so the skip and the empty result are the same
+        // value. The crossing is the only evidence the pass was declined.
+        crate::config_registry::note_crossed(
+            "crates/axeyum-solver/src/dpll_lia.rs::MAX_INITIAL_BOUND_IMPLICATION_ATOMS",
+            ctx.atoms.len() as u64,
+            MAX_INITIAL_BOUND_IMPLICATION_ATOMS as u64,
+        );
         return Ok(Vec::new());
     }
 
@@ -5117,14 +5139,10 @@ mod tests {
             "recording must be opt-in: a crossing outside a guard recorded anyway"
         );
 
-        let (crossed, admitted) = {
+        let crossed = {
             let _g = crate::config_registry::ConfigTraceGuard::enable();
             assert!(exceeds_pre_sat_skeleton_boundary(atoms, cnf_vars));
-            let crossed = crate::config_registry::crossings();
-            // A query INSIDE the envelope must record nothing, or the field
-            // says "was consulted" and not "decided the route".
-            let _ = exceeds_pre_sat_skeleton_boundary(8, 8);
-            (crossed, crate::config_registry::crossings())
+            crate::config_registry::crossings()
         };
         assert_eq!(
             crossed,
@@ -5142,9 +5160,148 @@ mod tests {
             ],
             "the crossing must name both dimensions with the observed counts"
         );
+        // A query INSIDE the envelope must record nothing, and it needs its OWN
+        // guard to say so. Read inside the guard above, this assertion was
+        // VACUOUS: `note_crossed` keeps only the first crossing of a key, so
+        // once both keys are recorded the set cannot grow whatever an admitted
+        // query does, and `admitted == crossed` held no matter what.
+        let admitted = {
+            let _g = crate::config_registry::ConfigTraceGuard::enable();
+            let _ = exceeds_pre_sat_skeleton_boundary(8, 8);
+            crate::config_registry::crossings()
+        };
+        assert!(
+            admitted.is_empty(),
+            "an admitted skeleton must record no crossing; got {admitted:?}"
+        );
+    }
+
+    /// `edges.len()` edges from the fixed source to `edges.len()` distinct
+    /// variables, all of weight zero — an acyclic system, so no cycle route can
+    /// return a core and every refusal below is a SIZE refusal.
+    fn acyclic_difference_edges(count: usize) -> Vec<DifferenceEdge> {
+        let mut arena = TermArena::new();
+        (0..count)
+            .map(|i| DifferenceEdge {
+                from: DiffVar::Zero,
+                to: DiffVar::Sym(arena.declare(&format!("v{i}"), Sort::Int).expect("declare")),
+                weight: 0,
+                atom_idx: i,
+            })
+            .collect()
+    }
+
+    /// The two core-extraction size refusals must be attributable.
+    ///
+    /// Both leave through the same bare `None` as "there is no negative cycle",
+    /// so before this the search simply continued without a core and no trace
+    /// could say a bound had decided that. Driven through the real
+    /// `negative_cycle_core`, not `note_crossed`, so removing the wiring kills
+    /// it rather than only breaking the mechanism.
+    #[test]
+    fn crossing_a_difference_core_bound_is_recorded_with_its_numbers() {
+        let over_two_edge = acyclic_difference_edges(MAX_TWO_EDGE_DIFF_EDGES + 1);
+        let over_bellman_ford = acyclic_difference_edges(MAX_BELLMAN_FORD_DIFF_EDGES + 1);
+        assert!(
+            over_bellman_ford.len() <= MAX_TWO_EDGE_DIFF_EDGES,
+            "the second fixture must pass the first gate, or it measures the first gate twice"
+        );
+
+        // Opt-in first, on this test's own thread: an empty start is a real
+        // precondition, and checking it after a guard would pass vacuously.
+        assert!(
+            crate::config_registry::crossings().is_empty(),
+            "this thread must start with nothing recorded"
+        );
+        assert!(negative_cycle_core(&over_two_edge).is_none());
+        assert!(
+            crate::config_registry::crossings().is_empty(),
+            "recording must be opt-in: a crossing outside a guard recorded anyway"
+        );
+
+        let two_edge = {
+            let _g = crate::config_registry::ConfigTraceGuard::enable();
+            assert!(negative_cycle_core(&over_two_edge).is_none());
+            crate::config_registry::crossings()
+        };
         assert_eq!(
-            admitted, crossed,
-            "an admitted skeleton must add no crossing"
+            two_edge,
+            vec![(
+                "crates/axeyum-solver/src/dpll_lia.rs::MAX_TWO_EDGE_DIFF_EDGES",
+                (MAX_TWO_EDGE_DIFF_EDGES + 1) as u64,
+                MAX_TWO_EDGE_DIFF_EDGES as u64,
+            )],
+            "the first size refusal must name itself with the observed edge count"
+        );
+
+        let bellman_ford = {
+            let _g = crate::config_registry::ConfigTraceGuard::enable();
+            assert!(negative_cycle_core(&over_bellman_ford).is_none());
+            crate::config_registry::crossings()
+        };
+        assert_eq!(
+            bellman_ford,
+            vec![(
+                "crates/axeyum-solver/src/dpll_lia.rs::MAX_BELLMAN_FORD_DIFF_EDGES",
+                (MAX_BELLMAN_FORD_DIFF_EDGES + 1) as u64,
+                MAX_BELLMAN_FORD_DIFF_EDGES as u64,
+            )],
+            "the second size refusal must name itself, and not the first"
+        );
+        // The admitted case gets its OWN guard, asserted EMPTY. Checked inside
+        // the guard above it would be vacuous: `note_crossed` keeps only the
+        // first crossing per key, so a wrongly recorded second call cannot grow
+        // a set that already holds that key.
+        let admitted = {
+            let _g = crate::config_registry::ConfigTraceGuard::enable();
+            let _ = negative_cycle_core(&acyclic_difference_edges(4));
+            crate::config_registry::crossings()
+        };
+        assert!(
+            admitted.is_empty(),
+            "an edge set inside both bounds must record no crossing; got {admitted:?}"
+        );
+    }
+
+    /// Declining the initial bound-implication pass must be attributable.
+    ///
+    /// The skip returns the same empty vector as "there were no implications to
+    /// find", so the two are indistinguishable without a record.
+    #[test]
+    fn declining_initial_bound_implications_is_recorded() {
+        let mut arena = TermArena::new();
+        let mut assertions = Vec::new();
+        for i in 0..=MAX_INITIAL_BOUND_IMPLICATION_ATOMS {
+            let v = arena.int_var(&format!("b{i}")).expect("int var");
+            let k = arena.int_const(i as i128);
+            assertions.push(arena.int_le(v, k).expect("bound atom"));
+        }
+        let mut ctx = ArithAbstractor::default();
+        for a in &assertions {
+            ctx.abstract_term(&mut arena, *a).expect("abstract");
+        }
+        assert!(
+            ctx.atoms.len() > MAX_INITIAL_BOUND_IMPLICATION_ATOMS,
+            "the fixture must actually cross the bound; it has {} atoms",
+            ctx.atoms.len()
+        );
+
+        let observed = ctx.atoms.len() as u64;
+        let crossed = {
+            let _g = crate::config_registry::ConfigTraceGuard::enable();
+            let lemmas = initial_int_bound_implication_lemmas(&mut arena, &ctx)
+                .expect("the decline is not an error");
+            assert!(lemmas.is_empty(), "the pass must be skipped, not run");
+            crate::config_registry::crossings()
+        };
+        assert_eq!(
+            crossed,
+            vec![(
+                "crates/axeyum-solver/src/dpll_lia.rs::MAX_INITIAL_BOUND_IMPLICATION_ATOMS",
+                observed,
+                MAX_INITIAL_BOUND_IMPLICATION_ATOMS as u64,
+            )],
+            "the forgone pass must name the bound and the observed atom count"
         );
     }
 
