@@ -700,3 +700,206 @@ than with the corpus.
 
 The agreement is what makes the recommendation safe to state as a negative:
 2.9% of wall time, zero additional answers, for 4.6x the build.
+
+### 2026-09-07 — the positive control fires, on one microarchitecture only
+
+`benches/xor_matrix_gauss.rs` was written to give `target-cpu` the one place in
+`axeyum-cnf` where its instructions are actually reachable. Run cleanly on both
+hosts, three interleaved repeats, min of three:
+
+`xor_matrix_rref/vars8192_rows4096` — the word-at-a-time `^=` over row bitsets,
+the arm an auto-vectorizer can widen:
+
+| cell | s4 (Alder Lake P) | s7 (Zen 4) |
+|---|---:|---:|
+| `base` | 1.000 | 1.000 |
+| `v2` | 0.981 | 0.996 |
+| `v3` | 0.976 | **0.956** |
+| `v3cgu1` | 0.991 | **0.946** |
+| `v3fatcgu1` | 0.990 | **0.937** |
+| `native` | 0.970 | **0.951** |
+| `cgu1` | 0.992 | 0.995 |
+| `fatcgu1` | 0.999 | 0.987 |
+
+**On Zen 4, AVX2 is worth 4.4–6.3% here; on Alder Lake it is worth 1–3%, inside
+the spread.** Four cells that share only the `target-cpu` flag (`v3`, `v3cgu1`,
+`v3fatcgu1`, `native`) all land at 0.937–0.956 on s7 and 0.970–0.991 on s4,
+which is the corroboration that makes a 4–6% figure believable at a within-cell
+spread of median 0.9%.
+
+Whole-bench geomeans, all four ids: s7 `v3fatcgu1` **0.946** (fastest, mean rank
+1.25 of 11), `fatcgu1` 0.964, `base` slowest at mean rank 10.0. s4
+`fatcgu1` 0.969, `v3fatcgu1` 0.972, `v3` 0.998.
+
+Two conclusions:
+
+- **The `target-cpu` null result on the CDCL core is real and not an artefact of
+  looking in the wrong place.** The control was built specifically to be the
+  right place, and where it fires it fires on code the CDCL core does not
+  contain.
+- **`target-cpu` is architecture-dependent even at the same ISA level.** The
+  same `x86-64-v3` binary earns 4–6% on Zen 4 and nothing on Alder Lake on the
+  same benchmark. A fleet-wide `target-cpu` setting would therefore be paying
+  its portability cost for a benefit that exists on some of the fleet, on one
+  code path, that the shipping SAT route does not use.
+
+### 2026-09-07 — the collector recorded stale ids, and the first check for it was keyed wrong
+
+Second measurement bug in the same driver, found by noticing that four different
+benches produced almost identical geomeans (1.06 / 0.87 / 0.97 / 0.99 / 1.06)
+and that the "cells x ids" count grew monotonically across the sweep.
+
+`collect(cell)` reads **every** estimate under a cell's criterion directory, not
+only the ids the bench that just ran produced. Criterion never deletes an old
+benchmark's directory, so each sweep re-recorded every previous sweep's ids with
+their stale values — visible in the raw rows as an `all_ns` triple of three
+identical numbers.
+
+The first duplicate check written for this **could not find it**: it keyed on
+`(bench, id, cell)` and reported "duplicate rows: 0", because the stale copies
+carry a *different* `bench`. The duplicates are on `(id, cell)`. A check whose
+key includes the field that distinguishes the good row from the bad one cannot
+detect the bad one.
+
+Fix in analysis rather than re-measurement, since the data is recoverable: the
+sweep that **first** records an id owns it. For the `axeyum-solver` file that
+rule alone is not enough — the aborted earlier solver run had already populated
+those directories — so those three benches are separated by id prefix instead,
+which is checkable against the ids each bench actually defines.
+
+Both bugs in this driver are the same shape and it is worth naming: **a glob
+that matches too much, and a check keyed on the field that hides the defect.**
+Neither produced an error; both produced a plausible table.
+
+### 2026-09-07 — the whole criterion matrix, and how little the subjects agree
+
+s4 P-cores, three interleaved repeats, min of three, ratio to `base`, ids
+attributed by first-recording sweep:
+
+| subject | `o2` | `cgu1` | `fat` | `fatcgu1` | `v3` |
+|---|---:|---:|---:|---:|---:|
+| `value_bits` (model lifting) | 1.079 | **0.783** | 1.040 | 1.017 | **1.108** |
+| `bv_lowering` | 1.073 | **0.891** | 0.940 | 0.987 | 1.057 |
+| `and_unique_table` (AIG hashing) | 0.975 | 0.925 | 0.916 | **0.897** | 0.992 |
+| `tseitin_encode` | 0.984 | 1.017 | **0.940** | 0.956 | 0.964 |
+| `congruence_chain` (egraph) | 1.041 | 0.992 | 0.980 | **0.954** | 0.998 |
+| `xor_matrix_gauss` (GF(2)) | 0.999 | 0.984 | 0.984 | **0.969** | 0.998 |
+| **SAT core** (p4dfa, from §4) | **1.058** | 1.011 | 0.989 | **0.982** | 1.006 |
+
+`axeyum-solver`, five cells, same protocol:
+
+| subject | `cgu1` | `fat` | `v3` | `v3fatcgu1` |
+|---|---:|---:|---:|---:|
+| `dl_negative_cycle` (difference logic) | 0.821 | 0.817 | **1.103** | **0.788** |
+| `cdclt_propagate` | 1.013 | 0.967 | 0.999 | 0.973 |
+| `simplex_pivot` (exact rational) | 1.054 | 1.022 | 1.006 | 1.033 |
+
+**Read down the columns, not across the rows.** No column has one sign:
+
+- `cgu1` ranges from **0.783** (`value_bits`, a 28% win) to **1.054**
+  (`simplex_pivot`, a 5% loss). Nine subjects, both signs, a 35-point spread.
+- `fat` ranges 0.817 to 1.040.
+- `o2` is a loss on five subjects and a small win on two.
+- **`v3` never wins by more than 3.6% and loses by up to 11%.** Its three real
+  losses are `value_bits` 1.108, `dl_negative_cycle` 1.103 and `bv_lowering`
+  1.057; everything else sits in 0.964–1.006, i.e. inside or barely outside the
+  spread. Its one genuine win is the GF(2) bench, and only on one of the fleet's
+  two microarchitectures.
+- **`simplex_pivot` is the subject where the shipping default is simply the
+  best cell**: base is fastest of five, and `codegen-units = 1` costs 5%. Exact
+  rational arithmetic on `num-rational` is dominated by `BigInt` allocation and
+  gcd, and nothing in the matrix reaches it.
+
+Note also that `dl_negative_cycle` (−18 to −21% from LTO) and `value_bits`
+(−22% from `cgu1`) are the two largest wins in the lane, and **both are an order
+of magnitude larger than anything on the SAT core** — which is where the
+engineering attention is. The build-flag lever is largest exactly where the time
+is not.
+
+## 5. Recommendation, with its cost
+
+**Change nothing. Do not add a `[profile.release]` override, do not set
+`RUSTFLAGS`, do not set `target-cpu`.** No ADR is proposed, because no decision
+is being taken; this section is the record so the question does not have to be
+re-opened from scratch.
+
+The case, in the order the evidence carries it:
+
+**1. The best setting is worth 2.9% on a real corpus and decides nothing more.**
+Fat LTO + `codegen-units = 1` is 1.8% on the fixed-conflict-budget matrix and
+2.9% of total wall time on the ten p4dfa files a 20 s budget decides — with the
+decided *set* byte-identical across all eight arms. The two measurements agree,
+which is what makes the negative safe to state.
+
+**2. It costs 4.6x the build time**, measured on the `axeyum-cnf` /`-ir` /`-aig`
+/`-bv` /`-egraph` subset: 17.6 s → 80.4 s cold. On the full 27-crate workspace
+the multiplier applies to every clean build, every lane's target directory, and
+every CI job. Against a fleet where `hooks/pre-push` already takes ~10 minutes
+and five concurrent lanes have twice taken a box down, that is the dominant
+term, not the 2.9%.
+
+**3. `target-cpu` additionally costs portability, for a benefit that is
+negative on average.** `x86-64-v3` is the highest level uniform across this
+fleet, and across nine subjects it is a loss on three (up to 11%), neutral on
+five, and a win on one — the GF(2) bench, on Zen 4 only. `native` cannot ship at
+all: our own benchmark protocol pins binaries by sha256 and runs the same bytes
+on several hosts, which a `native` build makes impossible.
+
+**4. A single global profile cannot be right, because the subjects disagree
+about its sign.** `codegen-units = 1` is worth **−22%** on `value_bits` and
+**+5%** on `simplex_pivot`; fat LTO is worth −18% on `dl_negative_cycle` and +8%
+on `lsb_bits_to_value`. A `[profile.release]` is one choice for 27 crates, and
+the measurements do not agree on what it should be.
+
+**5. The one setting that matters is already taken.** `opt-level = 3` over `2`
+is worth 5.8% on the SAT core (8.8% on Alder Lake) and is the slowest cell on
+7 of 7 files — the largest single effect anywhere in this matrix, and the
+default has it.
+
+**What is worth doing instead, if someone wants this lever back.** The two
+largest wins in the whole lane are `cgu1` on `value_bits` (−22%) and LTO on
+`dl_negative_cycle` (−18 to −21%), both an order of magnitude larger than
+anything on the SAT core. Both are *per-crate*, and Cargo supports
+`[profile.release.package.<crate>]`. If a future lane wants to spend build time,
+the defensible shape is a **per-package** override on the one or two crates
+where a measured double-digit win exists — not a workspace-wide profile bought
+for a 2.9% corpus effect. This lane does not propose it: `value_bits`'s win
+looks like an allocation-shape artefact (`Vec<bool>`, one byte per bit, one
+allocation per call, cost growing with width — see that bench's own module doc),
+and **fixing the data structure would be worth more than any flag and would cost
+nothing at build time.** Measure that before buying a profile.
+
+## 6. What this lane did not measure
+
+- **`cargo test` under a profile change.** No profile change was made, so the
+  condition has nothing to apply to; the gates run are in §4.
+- **Build time on the full workspace.** The 4.6x is measured on a five-crate
+  subset. The multiplier on all 27 crates, and on the push battery, is not
+  measured — it is argued from the subset and should be read that way.
+- **Binary size and memory.** Every number here is time. `fat` LTO does shrink
+  the example binary (737 KB → 579 KB) and that is recorded, but nothing here
+  measures resident memory, which is the resource that has actually OOM-killed
+  runs on this fleet.
+- **`opt-level = "s"` / `"z"`, `panic = "abort"`, `incremental`, `debug =
+  false`, `strip`, and BOLT/PGO.** Not run. PGO in particular is the setting
+  most likely to beat everything measured here on the SAT core, and it is a
+  different kind of change (a training corpus becomes a build input).
+- **The E-core half of s4.** Every s4 number is `taskset -c 0-7`, the P-cores.
+  CLAUDE.md's 1.84x E-core figure is quoted, not re-measured.
+- **AVX-512.** Zen 4 has it and Alder Lake does not, so it is outside the
+  uniform level and was never a candidate; `native` on s5/s6/s7 would enable it
+  and was measured only as `native` on s4, where it means AVX2.
+- **Whether the GF(2) route is on any real query's critical path.** The bench
+  added here supports a relative claim between two builds on a synthetic
+  fixture. It does not say how much of a real query's time is spent in Gaussian
+  elimination, and the 4–6% AVX2 win there must not be extrapolated to any
+  corpus figure.
+- **Repeat depth on the criterion subjects.** The SAT-core matrix has five
+  interleaved repeats; the criterion subjects have three, and the wall-clock
+  corpus sweep has two. The `axeyum-solver` subjects have one benchmark id each
+  after the ownership filter, so their geomeans are a single measurement, not a
+  distribution.
+- **`proof_sat_solve`, `proof_pipeline`, `arena_intern`, `term_eval`,
+  `eliminate_arrays`, `int_blast_ladder`, `smtlib_parse`.** Built for the cells
+  but not swept; the sweep was cut when the cell ordering had already repeated
+  on six subjects and the host time was better spent on the corpus arm.
