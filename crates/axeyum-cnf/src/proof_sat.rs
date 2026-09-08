@@ -21,6 +21,8 @@ use std::time::Instant;
 #[cfg(target_arch = "wasm32")]
 use web_time::Instant;
 
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::{Arc, Mutex, PoisonError};
 use std::time::Duration;
 
 use crate::clause_db_policy::{ClauseDbPolicy, KeepReason, Tier};
@@ -885,6 +887,88 @@ impl NativeLayerStats {
     }
 }
 
+/// How many theory search-loop iterations elapse between two mirror flushes
+/// (see [`NativeLayerStatsMirror`]). The same cadence as
+/// `DEADLINE_CHECK_INTERVAL`, and for the same reason: a fixed iteration count,
+/// never a clock read, so the flush cannot itself perturb the timings it is
+/// copying.
+const LAYER_STATS_MIRROR_INTERVAL: usize = 1_024;
+
+/// A slot a *running* search copies its own [`NativeLayerStats`] into on a fixed
+/// iteration cadence, so a thread that is not the search's can read partial
+/// counters from a search that has not returned.
+///
+/// # Why anything published only on the way out is the wrong shape
+///
+/// Every instrument in this workspace publishes its snapshot when its stage
+/// returns, into thread-local storage owned by the thread that ran the stage. A
+/// harness that enforces a wall clock does it from a *different* thread (see
+/// `axeyum-bench`'s `smtcomp_cli`): it gives up waiting, prints `unknown`, and
+/// exits while the worker is still inside the search. Both halves of the
+/// publish are then unreachable — the snapshot was never taken, and the thread
+/// that would own it is not the thread asking. So the runs that most need
+/// counters (the ones that time out) are exactly the runs that report none: 22
+/// of 33 lost `QF_LRA` files printed no theory-layer line at all.
+///
+/// This is the missing half. The search stores a snapshot here every
+/// [`LAYER_STATS_MIRROR_INTERVAL`] theory iterations, so a sampler on any
+/// thread reads counters that are at most that many iterations stale.
+///
+/// # What a sample means, and what it does not
+///
+/// A sample is **partial by construction**: it is the state at some iteration
+/// boundary, not at a verdict. `flushes` is what says so — it counts stores, so
+/// a consumer can tell a mirrored mid-search sample from nothing at all, and
+/// must never present a mirrored count as a completed total. Nothing here is
+/// ever a rate's denominator.
+///
+/// # Cost
+///
+/// Off unless the caller both enables [`Cdcl::collect_layer_stats`] *and*
+/// supplies a mirror; with either absent the added cost is one already-loaded
+/// `bool` test per search-loop iteration and nothing else. With both, it is one
+/// uncontended `Mutex` lock and a 15-field `Copy` store per 1,024 iterations —
+/// deliberately not an atomic per counter increment, which would put a shared
+/// write on the propagation path this instrument exists to time.
+#[derive(Debug, Default)]
+pub struct NativeLayerStatsMirror {
+    /// The most recent snapshot, or `None` before the first flush.
+    slot: Mutex<Option<NativeLayerStats>>,
+    /// Completed stores. Monotone, and readable without taking the lock.
+    flushes: AtomicU64,
+}
+
+impl NativeLayerStatsMirror {
+    /// An empty mirror: no snapshot, no flushes.
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Stores `stats`, overwriting whatever the previous flush left.
+    ///
+    /// A poisoned lock is recovered rather than propagated: this is telemetry,
+    /// and a panic in one thread must not turn a diagnostic into a second
+    /// panic in the search.
+    fn store(&self, stats: NativeLayerStats) {
+        let mut slot = self.slot.lock().unwrap_or_else(PoisonError::into_inner);
+        *slot = Some(stats);
+        drop(slot);
+        self.flushes.fetch_add(1, Ordering::Relaxed);
+    }
+
+    /// The most recent snapshot and the number of flushes that produced it, or
+    /// `None` when the search has not reached its first flush.
+    ///
+    /// Safe to call from any thread at any time, including while the search is
+    /// running and including after it has been abandoned.
+    #[must_use]
+    pub fn sample(&self) -> Option<(NativeLayerStats, u64)> {
+        let slot = self.slot.lock().unwrap_or_else(PoisonError::into_inner);
+        (*slot).map(|stats| (stats, self.flushes.load(Ordering::Relaxed)))
+    }
+}
+
 /// Search knobs a CDCL(T) caller may need to differ from the one-shot SAT
 /// defaults (plan slice S7b).
 ///
@@ -1057,7 +1141,33 @@ pub fn solve_with_theory_and_drat_proof_with_options<T: NativeTheory>(
     max_conflicts: usize,
     options: TheorySolveOptions,
 ) -> (TheorySolveOutcome, NativeLayerStats) {
-    solve_with_theory_and_drat_proof_impl(formula, theory, deadline, max_conflicts, options)
+    solve_with_theory_and_drat_proof_impl(formula, theory, deadline, max_conflicts, options, None)
+}
+
+/// [`solve_with_theory_and_drat_proof_with_options`] with a
+/// [`NativeLayerStatsMirror`] attached.
+///
+/// Identical in every observable way but one: while the search runs it copies
+/// its own counters into `mirror` every [`LAYER_STATS_MIRROR_INTERVAL`] theory
+/// iterations, so a thread that is not this one can read partial counters from
+/// a search that has not returned — the case an external watchdog creates and
+/// the case every on-the-way-out publish in this workspace misses. The returned
+/// [`NativeLayerStats`] is unchanged and remains the complete, authoritative
+/// figure; a mirrored sample is a mid-search reading and is never a substitute
+/// for it.
+///
+/// `options.collect_layer_stats` still governs: with it clear nothing is
+/// measured, so nothing is mirrored, and a caller that passes a mirror without
+/// it gets an empty mirror rather than a run of measured zeros.
+pub fn solve_with_theory_and_drat_proof_mirrored<T: NativeTheory>(
+    formula: &CnfFormula,
+    theory: &mut T,
+    deadline: Option<Instant>,
+    max_conflicts: usize,
+    options: TheorySolveOptions,
+    mirror: Option<Arc<NativeLayerStatsMirror>>,
+) -> (TheorySolveOutcome, NativeLayerStats) {
+    solve_with_theory_and_drat_proof_impl(formula, theory, deadline, max_conflicts, options, mirror)
 }
 
 /// Where a CDCL(T) search's DRAT steps go.
@@ -1158,6 +1268,7 @@ pub fn solve_with_theory_and_drat_proof_traced<T: NativeTheory>(
             collect_layer_stats: true,
             ..TheorySolveOptions::default()
         },
+        None,
     );
     (recorded_outcome(outcome), stats)
 }
@@ -1188,6 +1299,7 @@ fn solve_with_theory_and_drat_proof_impl<T: NativeTheory>(
     deadline: Option<Instant>,
     max_conflicts: usize,
     options: TheorySolveOptions,
+    mirror: Option<Arc<NativeLayerStatsMirror>>,
 ) -> (TheorySolveOutcome, NativeLayerStats) {
     let mut sink = if options.record_proof {
         TheorySink::Record {
@@ -1200,6 +1312,7 @@ fn solve_with_theory_and_drat_proof_impl<T: NativeTheory>(
     };
     let mut cdcl = Cdcl::new_with_theory(formula, &mut sink, theory);
     cdcl.collect_layer_stats = options.collect_layer_stats;
+    cdcl.layer_stats_mirror = mirror;
     cdcl.use_target_rephase = options.target_rephase;
     if options.initial_phase {
         cdcl.initial_phase = true;
@@ -1770,6 +1883,18 @@ struct Cdcl<'progress, S: DratSink, T: NativeTheory = NullTheory> {
     /// reads a clock and no counter is touched, so an unmeasured run is the
     /// search that existed before this field.
     collect_layer_stats: bool,
+    /// Where this search copies its own [`NativeLayerStats`] every
+    /// [`LAYER_STATS_MIRROR_INTERVAL`] theory iterations, so a thread other
+    /// than this one can read partial counters from a search that never
+    /// returns. `None` on every entry point that does not ask for one, which is
+    /// all of them but `axeyum_solver`'s watchdog-instrumented route; see
+    /// [`NativeLayerStatsMirror`] for why the on-the-way-out publish every
+    /// other instrument uses is unreachable from a watchdog thread.
+    ///
+    /// Read together with [`Cdcl::collect_layer_stats`]: a mirror with
+    /// collection off would flush all-zero snapshots, which is worse than no
+    /// snapshot because it reads as a measured zero.
+    layer_stats_mirror: Option<Arc<NativeLayerStatsMirror>>,
     time_boolean_propagate: Duration,
     time_theory_assert: Duration,
     time_theory_propagate: Duration,
@@ -1929,6 +2054,7 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
             theory_queue: PropagationQueue::new(),
             theory_steps: 0,
             collect_layer_stats: false,
+            layer_stats_mirror: None,
             time_boolean_propagate: Duration::ZERO,
             time_theory_assert: Duration::ZERO,
             time_theory_propagate: Duration::ZERO,
@@ -2686,6 +2812,23 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
                 {
                     self.report_progress();
                     return Ok(SearchOutcome::Interrupted);
+                }
+                // Copy the counters somewhere another thread can read them
+                // (see `NativeLayerStatsMirror`). This is the ONLY point at
+                // which a search that is killed from outside says anything at
+                // all: `native_layer_stats()` is otherwise read once, after
+                // `run` returns, which for a timed-out file never happens.
+                //
+                // Clock-free and off by default: with no mirror installed the
+                // whole block is one `Option` test on an already-hot cache
+                // line, and the modulo is not even evaluated.
+                if self.collect_layer_stats
+                    && let Some(mirror) = self.layer_stats_mirror.as_ref()
+                    && self
+                        .theory_steps
+                        .is_multiple_of(LAYER_STATS_MIRROR_INTERVAL)
+                {
+                    mirror.store(self.native_layer_stats());
                 }
             }
             let propagated_conflict = if self.collect_layer_stats {
@@ -7118,11 +7261,14 @@ mod tests {
 mod layer_stats_tests {
     use super::theory::{FinalCheckOutcome, NativeTheory, PropagationQueue};
     use super::{
-        DEFAULT_PROOF_SAT_CONFLICT_LIMIT, NativeLayerStats, NullTheory, TheoryExplanation,
-        TheoryProofOutcome, solve_with_theory_and_drat_proof,
-        solve_with_theory_and_drat_proof_impl, solve_with_theory_and_drat_proof_traced,
+        DEFAULT_PROOF_SAT_CONFLICT_LIMIT, LAYER_STATS_MIRROR_INTERVAL, NativeLayerStats,
+        NativeLayerStatsMirror, NullTheory, TheoryExplanation, TheoryProofOutcome,
+        TheorySolveOptions, TheorySolveOutcome, solve_with_theory_and_drat_proof,
+        solve_with_theory_and_drat_proof_impl, solve_with_theory_and_drat_proof_mirrored,
+        solve_with_theory_and_drat_proof_traced,
     };
     use crate::{CnfClause, CnfFormula, CnfLit, CnfVar};
+    use std::sync::Arc;
     use std::time::Duration;
 
     fn lit(value: i64) -> CnfLit {
@@ -7310,6 +7456,7 @@ mod layer_stats_tests {
             None,
             DEFAULT_PROOF_SAT_CONFLICT_LIMIT,
             super::TheorySolveOptions::default(),
+            None,
         );
         assert!(
             matches!(outcome, super::TheorySolveOutcome::Unsat(Some(_))),
@@ -7384,6 +7531,149 @@ mod layer_stats_tests {
         assert_eq!(stats.theory_push_pop, Duration::ZERO);
         assert!(stats.decisions > 0, "the Boolean side still decides");
         assert!(stats.learned_clauses > 0, "and still learns: {stats:?}");
+    }
+
+    /// A fixture whose search takes far more than [`LAYER_STATS_MIRROR_INTERVAL`]
+    /// theory iterations, so a mirror has to have been written to *during* the
+    /// search rather than at the end of one.
+    ///
+    /// Seven independent `(a | b)` clauses over fourteen variables: the CNF has
+    /// `3^7 = 2187` models and [`Refuter`] refutes each in turn, so the search
+    /// loop runs thousands of iterations no matter how the heuristics order
+    /// them. Deterministic — no wall clock anywhere in the test.
+    fn long_running_fixture() -> CnfFormula {
+        formula(
+            14,
+            &[
+                &[1, 2],
+                &[3, 4],
+                &[5, 6],
+                &[7, 8],
+                &[9, 10],
+                &[11, 12],
+                &[13, 14],
+            ],
+        )
+    }
+
+    fn traced_options() -> TheorySolveOptions {
+        TheorySolveOptions {
+            collect_layer_stats: true,
+            // The artifact is irrelevant here and holding thousands of learned
+            // clauses is the expensive part of this fixture.
+            record_proof: false,
+            ..TheorySolveOptions::default()
+        }
+    }
+
+    /// The property the mirror exists for: counters are readable from a slot
+    /// the search wrote to *while it was running*, not only from the value it
+    /// returns.
+    ///
+    /// A caller that never gets the return value — an external watchdog that
+    /// gives up on the worker thread — has nothing else. This test stands in
+    /// for that caller without racing a clock: it reads the mirror after the
+    /// search returns, but a sample can only be there because a flush happened
+    /// mid-search, which is exactly what the `flushes` count and the
+    /// strictly-smaller-than-final counters below pin.
+    #[test]
+    fn a_running_search_mirrors_partial_counters_before_it_returns() {
+        let mirror = Arc::new(NativeLayerStatsMirror::new());
+        let mut theory = Refuter::new(14);
+        let (outcome, complete) = solve_with_theory_and_drat_proof_mirrored(
+            &long_running_fixture(),
+            &mut theory,
+            None,
+            DEFAULT_PROOF_SAT_CONFLICT_LIMIT,
+            traced_options(),
+            Some(Arc::clone(&mirror)),
+        );
+        assert!(
+            matches!(outcome, TheorySolveOutcome::Unsat(_)),
+            "{outcome:?}"
+        );
+        let (partial, flushes) = mirror
+            .sample()
+            .expect("a search this long must have flushed the mirror at least once");
+        assert!(flushes > 0, "a sample exists, so a flush produced it");
+        assert!(
+            partial.decisions > 0,
+            "a mirrored sample must carry real counters, not an empty struct: {partial:?}"
+        );
+        // The mirrored reading is a MID-search state, so every monotone counter
+        // it carries is at most the completed one. Equality would mean the only
+        // flush was effectively the final state, which this fixture is sized to
+        // rule out.
+        assert!(
+            partial.decisions < complete.decisions,
+            "mirrored {partial:?} is a partial state of completed {complete:?}"
+        );
+        assert!(partial.final_checks < complete.final_checks, "{partial:?}");
+    }
+
+    /// The mirror is silent when collection is off, so a mirrored sample is
+    /// never a run of measured zeros — the same "an unmeasured run is not a
+    /// measured zero" rule the rest of this module enforces on the return
+    /// value.
+    #[test]
+    fn a_mirror_without_collection_is_never_written() {
+        let mirror = Arc::new(NativeLayerStatsMirror::new());
+        let mut theory = Refuter::new(14);
+        let _ = solve_with_theory_and_drat_proof_mirrored(
+            &long_running_fixture(),
+            &mut theory,
+            None,
+            DEFAULT_PROOF_SAT_CONFLICT_LIMIT,
+            TheorySolveOptions {
+                collect_layer_stats: false,
+                record_proof: false,
+                ..TheorySolveOptions::default()
+            },
+            Some(Arc::clone(&mirror)),
+        );
+        assert!(
+            mirror.sample().is_none(),
+            "collection was off: nothing was measured, so nothing may be reported"
+        );
+    }
+
+    /// Passing no mirror leaves the verdict and the completed counters exactly
+    /// where they were — the mirror is an output-only side channel.
+    #[test]
+    fn mirroring_changes_neither_the_verdict_nor_the_completed_counters() {
+        let mut with_theory = Refuter::new(14);
+        let (with_outcome, with_stats) = solve_with_theory_and_drat_proof_mirrored(
+            &long_running_fixture(),
+            &mut with_theory,
+            None,
+            DEFAULT_PROOF_SAT_CONFLICT_LIMIT,
+            traced_options(),
+            Some(Arc::new(NativeLayerStatsMirror::new())),
+        );
+        let mut without_theory = Refuter::new(14);
+        let (without_outcome, without_stats) = solve_with_theory_and_drat_proof_mirrored(
+            &long_running_fixture(),
+            &mut without_theory,
+            None,
+            DEFAULT_PROOF_SAT_CONFLICT_LIMIT,
+            traced_options(),
+            None,
+        );
+        assert_eq!(
+            core::mem::discriminant(&with_outcome),
+            core::mem::discriminant(&without_outcome)
+        );
+        assert_eq!(with_stats.decisions, without_stats.decisions);
+        assert_eq!(with_stats.final_checks, without_stats.final_checks);
+        assert_eq!(with_stats.learned_clauses, without_stats.learned_clauses);
+    }
+
+    /// The cadence constant is what bounds how stale a sample can be, so it is
+    /// pinned rather than left to drift: a sample is at most this many theory
+    /// iterations behind the search.
+    #[test]
+    fn the_mirror_cadence_is_the_deadline_check_cadence() {
+        assert_eq!(LAYER_STATS_MIRROR_INTERVAL, super::DEADLINE_CHECK_INTERVAL);
     }
 }
 
