@@ -3201,6 +3201,37 @@ mod tests {
         }
     }
 
+    /// A small random set of linear integer order and equality atoms over three
+    /// variables, plus the arena holding them.
+    ///
+    /// Its own function so the comparison below reads as the comparison; the
+    /// shape of the fixture is a separate decision from what is being checked
+    /// about it.
+    fn random_int_atoms(next: &mut impl FnMut() -> u64) -> (TermArena, Vec<TermId>) {
+        let mut arena = TermArena::new();
+        let vars: Vec<TermId> = (0..3).map(|i| ivar(&mut arena, &format!("t{i}"))).collect();
+        let mut atoms = Vec::new();
+        for _ in 0..5 {
+            let a = vars[(next() % 3) as usize];
+            let b = vars[(next() % 3) as usize];
+            let k = iconst(&mut arena, i128::from(next() % 9) - 4);
+            let Ok(lhs) = arena.int_add(a, k) else {
+                continue;
+            };
+            let built = match next() % 5 {
+                0 => arena.int_lt(lhs, b),
+                1 => arena.int_le(lhs, b),
+                2 => arena.int_gt(lhs, b),
+                3 => arena.int_ge(lhs, b),
+                _ => arena.eq(lhs, b),
+            };
+            if let Ok(atom) = built {
+                atoms.push(atom);
+            }
+        }
+        (arena, atoms)
+    }
+
     /// The warm theory must answer exactly what a cold theory answers on the same
     /// live set — verdict AND conflict core — across random push/assert/pop
     /// sequences.
@@ -3235,27 +3266,7 @@ mod tests {
         let mut pops = 0usize;
 
         for _ in 0..150 {
-            let mut arena = TermArena::new();
-            let vars: Vec<TermId> = (0..3).map(|i| ivar(&mut arena, &format!("t{i}"))).collect();
-            let mut atoms = Vec::new();
-            for _ in 0..5 {
-                let a = vars[(next() % 3) as usize];
-                let b = vars[(next() % 3) as usize];
-                let k = iconst(&mut arena, i128::from(next() % 9) - 4);
-                let Ok(lhs) = arena.int_add(a, k) else {
-                    continue;
-                };
-                let built = match next() % 5 {
-                    0 => arena.int_lt(lhs, b),
-                    1 => arena.int_le(lhs, b),
-                    2 => arena.int_gt(lhs, b),
-                    3 => arena.int_ge(lhs, b),
-                    _ => arena.eq(lhs, b),
-                };
-                if let Ok(atom) = built {
-                    atoms.push(atom);
-                }
-            }
+            let (arena, atoms) = random_int_atoms(&mut next);
             if atoms.is_empty() {
                 continue;
             }
@@ -3365,8 +3376,9 @@ mod tests {
     /// the same set. That is a pre-existing property of the filter — the older
     /// `warm_filter_matches_a_cold_theory_on_the_same_live_set` compares only
     /// its verdict string for the same reason — and demanding core equality here
-    /// would be asserting something false and then weakening the WARM_NO_FILTER
-    /// arm, where the core really is this lane's to get right, to make it pass.
+    /// would be asserting something false and then weakening the
+    /// [`LiaWarmPolicy::WARM_NO_FILTER`] arm, where the core really is this
+    /// lane's to get right, to make it pass.
     #[test]
     fn the_shipped_warm_theory_answers_exactly_what_a_cold_theory_answers() {
         warm_and_cold_theories_agree(

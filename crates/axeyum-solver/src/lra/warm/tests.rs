@@ -553,20 +553,21 @@ fn the_default_policy_keeps_the_rational_filter() {
         LiaWarmPolicy::default().rational_filter,
         "the default policy must keep the rational filter -- see the A/B"
     );
-    assert!(LiaWarmPolicy::WARM.rational_filter);
-    assert!(
-        !LiaWarmPolicy::WARM_NO_FILTER.rational_filter,
-        "the diagnostic arm must actually turn the filter off, or it isolates nothing"
-    );
-    assert!(
-        LiaWarmPolicy::OFF.rational_filter,
-        "the A/B baseline is the PRE-warm path, which had the filter on"
-    );
-    assert!(
-        LiaWarmPolicy::OFF.is_cold(),
-        "the baseline arm must reproduce the pre-existing behaviour in every field"
-    );
-    assert!(!LiaWarmPolicy::WARM.is_cold());
+    // The three named policies are `const`, so these are compile-time
+    // assertions -- a stronger pin than a runtime one, and clippy's own advice
+    // here. Flipping any of them stops the crate building rather than turning a
+    // test red.
+    const {
+        assert!(LiaWarmPolicy::WARM.rational_filter);
+        // The diagnostic arm must actually turn the filter off, or it isolates
+        // nothing.
+        assert!(!LiaWarmPolicy::WARM_NO_FILTER.rational_filter);
+        // The A/B baseline is the PRE-warm path, which had the filter on...
+        assert!(LiaWarmPolicy::OFF.rational_filter);
+        // ...and reproduces the pre-existing behaviour in every field.
+        assert!(LiaWarmPolicy::OFF.is_cold());
+        assert!(!LiaWarmPolicy::WARM.is_cold());
+    }
 }
 
 /// A key the decider has no term for is a contract violation, and it must fail
