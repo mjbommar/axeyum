@@ -1213,6 +1213,12 @@ fn maybe_vivify(
 /// pairs the reduced formula with a reconstruction stack. All passes stop
 /// scheduling new work once `deadline` passes. Vivification runs only when
 /// `config.cnf_vivify` is set.
+// Grew past the 100-line lint when per-stage timing and the shape counters were
+// added. Splitting it would put each stage's `Instant` in a different function
+// from the stage it times, which is exactly the arrangement that let
+// `model_lift` silently include the replay cost (see `BvLayerStats::model_replay`).
+// The clock reads stay next to the work they measure.
+#[allow(clippy::too_many_lines)]
 fn inprocess(
     config: &SolverConfig,
     formula: &CnfFormula,

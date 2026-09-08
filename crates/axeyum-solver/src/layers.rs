@@ -493,7 +493,7 @@ pub fn last_bv_layer_stats() -> Option<BvLayerStats> {
 pub(crate) fn publish_bv_layer_stats(stats: &SolveStats) {
     if COLLECT_BV_LAYER_STATS.with(std::cell::Cell::get) {
         LAST_BV_LAYER_STATS.with(|c| c.set(BvLayerStats::from_solve_stats(stats)));
-        LAST_BV_BACKEND_COUNTERS.with(|c| *c.borrow_mut() = stats.backend.clone());
+        LAST_BV_BACKEND_COUNTERS.with(|c| c.borrow_mut().clone_from(&stats.backend));
     }
 }
 

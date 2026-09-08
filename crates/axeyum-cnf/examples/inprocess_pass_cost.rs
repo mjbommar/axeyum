@@ -120,7 +120,10 @@ fn live_variables(formula: &CnfFormula) -> usize {
     seen.iter().filter(|s| **s).count()
 }
 
-#[allow(clippy::too_many_lines)]
+// The three `as f64` casts below are on counters that would need 2^53 conflicts
+// or propagations to lose a bit — the same allowance `inprocess_profile` takes
+// on the same counters, for the same reason.
+#[allow(clippy::too_many_lines, clippy::cast_precision_loss)]
 fn main() {
     let mut args = std::env::args().skip(1);
     let path = args.next().expect(
