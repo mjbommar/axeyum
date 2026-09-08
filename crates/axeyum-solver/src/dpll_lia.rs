@@ -5139,14 +5139,10 @@ mod tests {
             "recording must be opt-in: a crossing outside a guard recorded anyway"
         );
 
-        let (crossed, admitted) = {
+        let crossed = {
             let _g = crate::config_registry::ConfigTraceGuard::enable();
             assert!(exceeds_pre_sat_skeleton_boundary(atoms, cnf_vars));
-            let crossed = crate::config_registry::crossings();
-            // A query INSIDE the envelope must record nothing, or the field
-            // says "was consulted" and not "decided the route".
-            let _ = exceeds_pre_sat_skeleton_boundary(8, 8);
-            (crossed, crate::config_registry::crossings())
+            crate::config_registry::crossings()
         };
         assert_eq!(
             crossed,
@@ -5164,9 +5160,19 @@ mod tests {
             ],
             "the crossing must name both dimensions with the observed counts"
         );
-        assert_eq!(
-            admitted, crossed,
-            "an admitted skeleton must add no crossing"
+        // A query INSIDE the envelope must record nothing, and it needs its OWN
+        // guard to say so. Read inside the guard above, this assertion was
+        // VACUOUS: `note_crossed` keeps only the first crossing of a key, so
+        // once both keys are recorded the set cannot grow whatever an admitted
+        // query does, and `admitted == crossed` held no matter what.
+        let admitted = {
+            let _g = crate::config_registry::ConfigTraceGuard::enable();
+            let _ = exceeds_pre_sat_skeleton_boundary(8, 8);
+            crate::config_registry::crossings()
+        };
+        assert!(
+            admitted.is_empty(),
+            "an admitted skeleton must record no crossing; got {admitted:?}"
         );
     }
 
@@ -5228,14 +5234,10 @@ mod tests {
             "the first size refusal must name itself with the observed edge count"
         );
 
-        let (bellman_ford, admitted) = {
+        let bellman_ford = {
             let _g = crate::config_registry::ConfigTraceGuard::enable();
             assert!(negative_cycle_core(&over_bellman_ford).is_none());
-            let crossed = crate::config_registry::crossings();
-            // An edge set inside both bounds must record nothing, or the field
-            // says "was consulted" rather than "decided the route".
-            let _ = negative_cycle_core(&acyclic_difference_edges(4));
-            (crossed, crate::config_registry::crossings())
+            crate::config_registry::crossings()
         };
         assert_eq!(
             bellman_ford,
@@ -5246,9 +5248,18 @@ mod tests {
             )],
             "the second size refusal must name itself, and not the first"
         );
-        assert_eq!(
-            admitted, bellman_ford,
-            "an admitted edge set must add no crossing"
+        // The admitted case gets its OWN guard, asserted EMPTY. Checked inside
+        // the guard above it would be vacuous: `note_crossed` keeps only the
+        // first crossing per key, so a wrongly recorded second call cannot grow
+        // a set that already holds that key.
+        let admitted = {
+            let _g = crate::config_registry::ConfigTraceGuard::enable();
+            let _ = negative_cycle_core(&acyclic_difference_edges(4));
+            crate::config_registry::crossings()
+        };
+        assert!(
+            admitted.is_empty(),
+            "an edge set inside both bounds must record no crossing; got {admitted:?}"
         );
     }
 

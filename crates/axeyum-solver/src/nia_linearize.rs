@@ -1940,20 +1940,7 @@ mod tests {
                 clamp_to_mccormick_bound(Some(MCCORMICK_MAX_ABS_BOUND + 1)),
                 None
             );
-            let crossed = crate::config_registry::crossings();
-            // An endpoint inside the bound, and an absent endpoint, must both
-            // record nothing: only a DROPPED endpoint is a crossing.
-            assert_eq!(
-                clamp_to_mccormick_bound(Some(MCCORMICK_MAX_ABS_BOUND)),
-                Some(MCCORMICK_MAX_ABS_BOUND)
-            );
-            assert_eq!(clamp_to_mccormick_bound(None), None);
-            assert_eq!(
-                crossed,
-                crate::config_registry::crossings(),
-                "an in-bound or absent endpoint must add no crossing"
-            );
-            crossed
+            crate::config_registry::crossings()
         };
         assert_eq!(
             magnitude,
@@ -1971,16 +1958,7 @@ mod tests {
             let _g = crate::config_registry::ConfigTraceGuard::enable();
             let wide = (Some(0_i128), Some(MAX_SMALL_DOMAIN_WIDTH + 1));
             assert_eq!(narrow_factor(a, b, wide, wide), None);
-            let crossed = crate::config_registry::crossings();
-            // A factor with NO entailed interval is not a crossing; a factor
-            // that has one and is merely too wide is.
-            assert_eq!(narrow_factor(a, b, (None, None), (None, None)), None);
-            assert_eq!(
-                crossed,
-                crate::config_registry::crossings(),
-                "an unbounded factor must add no crossing"
-            );
-            crossed
+            crate::config_registry::crossings()
         };
         assert_eq!(
             width,
@@ -1989,6 +1967,33 @@ mod tests {
                 (MAX_SMALL_DOMAIN_WIDTH + 1) as u64,
                 MAX_SMALL_DOMAIN_WIDTH as u64,
             )]
+        );
+
+        // The non-crossing cases, each in a FRESH guard and each asserted
+        // EMPTY. Checked inside the guard that had already recorded the key,
+        // these were vacuous: `note_crossed` keeps only the first crossing per
+        // key, so a wrongly recorded second call cannot grow the set.
+        let in_bound = {
+            let _g = crate::config_registry::ConfigTraceGuard::enable();
+            assert_eq!(
+                clamp_to_mccormick_bound(Some(MCCORMICK_MAX_ABS_BOUND)),
+                Some(MCCORMICK_MAX_ABS_BOUND)
+            );
+            assert_eq!(clamp_to_mccormick_bound(None), None);
+            crate::config_registry::crossings()
+        };
+        assert!(
+            in_bound.is_empty(),
+            "an endpoint inside the bound, or an absent one, is not a crossing; got {in_bound:?}"
+        );
+        let unbounded = {
+            let _g = crate::config_registry::ConfigTraceGuard::enable();
+            assert_eq!(narrow_factor(a, b, (None, None), (None, None)), None);
+            crate::config_registry::crossings()
+        };
+        assert!(
+            unbounded.is_empty(),
+            "a factor with no entailed interval is not a crossing; got {unbounded:?}"
         );
 
         // `MAX_MCCORMICK_PRODUCTS` shares its `(0, 0)` return with the empty
@@ -2001,18 +2006,27 @@ mod tests {
                 add_entailed_bound_lemmas(&mut arena, &triples, &mut relaxed).unwrap(),
                 (0, 0)
             );
-            let crossed = crate::config_registry::crossings();
+            crate::config_registry::crossings()
+        };
+        // The empty case gets its OWN guard. Sharing the one above made this
+        // negative VACUOUS: `note_crossed` keeps only the FIRST crossing of a
+        // key, so once the key is recorded the set cannot grow again whatever
+        // the empty call does, and the mutation that records the empty case as
+        // a crossing SURVIVED. A fresh guard is what makes the assertion able
+        // to fail.
+        let empty = {
+            let _g = crate::config_registry::ConfigTraceGuard::enable();
             assert_eq!(
                 add_entailed_bound_lemmas(&mut arena, &[], &mut relaxed).unwrap(),
                 (0, 0)
             );
-            assert_eq!(
-                crossed,
-                crate::config_registry::crossings(),
-                "an EMPTY product set returns the same (0, 0) and must not be recorded as a crossing"
-            );
-            crossed
+            crate::config_registry::crossings()
         };
+        assert!(
+            empty.is_empty(),
+            "an EMPTY product set returns the same (0, 0) and must not be recorded as a \
+             crossing; got {empty:?}"
+        );
         assert_eq!(
             products,
             vec![(

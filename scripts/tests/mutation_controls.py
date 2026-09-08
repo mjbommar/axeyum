@@ -9146,6 +9146,108 @@ SUITES["wide-int-eval"] = (
 )
 
 
+# --------------------------------------------------------------------------
+# `admission-limit-attribution` — the coverage ratchet on silent declines.
+#
+# Twelve admission-class bounds cross with no branch a caller can observe.
+# Eleven recorded nothing at all, so a run that lost a decision to one could
+# not say so — which is why the loss ranking in
+# docs/research/12-performance/admission-limit-basis-2026-09-08.md has a row
+# reading `unknown`, not a number.
+#
+# Two guards, and they fail on disjoint things: one requires a `note_crossed`
+# call site for every silent bound, the other stops the exemption list excusing
+# a bound this crate can plainly reach. The second exists because a coverage
+# check satisfiable by editing its own exemption list is not a check, and that
+# is a failure a mutation of the FIRST guard's subject cannot expose.
+# --------------------------------------------------------------------------
+
+SUITES["admission-limit-attribution"] = (
+    "crates/axeyum-solver/src/config_registry.rs",
+    Cargo(
+        ("-p", "axeyum-solver", "--features", "full", "--lib", "config_registry::"),
+        "admission-limit-attribution",
+    ),
+    [
+        (
+            # The dl_online gate, chosen because it has no behavioural test of
+            # its own (MAX_DL_ATOMS is 1 << 20; no unit test can drive it), so
+            # the derived coverage guard is the ONLY thing standing behind it.
+            "a silent decline records no crossing",
+            """            crate::config_registry::note_crossed(
+                "crates/axeyum-solver/src/dl_online.rs::MAX_DL_ATOMS",
+                self.raw.len() as u64,
+                MAX_DL_ATOMS as u64,
+            );
+""",
+            "",
+            "crates/axeyum-solver/src/dl_online.rs",
+        ),
+        (
+            # ADDS a line rather than replacing one, so the first guard is
+            # untouched: `MAX_DL_ATOMS` stays wired and stays covered. Only the
+            # discipline on the exemption list is broken.
+            "the exemption list excuses a bound in this very crate",
+            """pub static SILENT_UNINSTRUMENTED: &[(&str, &str)] = &[(""",
+            """pub static SILENT_UNINSTRUMENTED: &[(&str, &str)] = &[
+    (
+        "crates/axeyum-solver/src/dl_online.rs::MAX_DL_ATOMS",
+        "excused for no reason at all",
+    ),
+    (""",
+        ),
+    ],
+)
+
+
+# --------------------------------------------------------------------------
+# `admission-crossing-numbers` — what the textual coverage guard cannot see.
+#
+# `every_silent_admission_bound_is_instrumented` reads source text, so a call
+# site that fires on the WRONG condition, or reports the wrong numbers, passes
+# it. Both mutations below leave the call site exactly where it is; both are
+# caught only by driving the real decision function.
+#
+# The second is the one that matters: `add_entailed_bound_lemmas` returns
+# `(0, 0)` both when a bound declined the work and when there was no work to
+# do. A recorder that cannot tell those apart reports "was consulted" while the
+# trace line claims "decided the route" — the exact laundering this registry
+# exists to prevent.
+# --------------------------------------------------------------------------
+
+SUITES["admission-crossing-numbers"] = (
+    "crates/axeyum-solver/src/nia_linearize.rs",
+    Cargo(
+        ("-p", "axeyum-solver", "--features", "full", "--lib", "nia_linearize::"),
+        "admission-crossing-numbers",
+    ),
+    [
+        (
+            "the crossing is recorded with a placeholder observed value",
+            "        u64::try_from(c.unsigned_abs()).unwrap_or(u64::MAX),",
+            "        0,",
+        ),
+        (
+            "an empty product set is recorded as a crossing",
+            "    if triples.len() > MAX_MCCORMICK_PRODUCTS {",
+            "    if triples.is_empty() || triples.len() > MAX_MCCORMICK_PRODUCTS {",
+        ),
+        (
+            # The boundary value itself. This is the mutation the negatives
+            # were written for, and the first draft of them SURVIVED it: they
+            # were read inside the guard that had already recorded the key, and
+            # `note_crossed` keeps only the first crossing per key, so a
+            # wrongly recorded second call could not grow the set. Each
+            # negative now runs under its own guard and asserts EMPTY.
+            "an endpoint exactly on the bound is dropped and recorded",
+            "    if c.abs() <= MCCORMICK_MAX_ABS_BOUND {",
+            "    if c.abs() < MCCORMICK_MAX_ABS_BOUND {",
+        ),
+    ],
+)
+
+
+
 if __name__ == "__main__":
     raise SystemExit(main(sys.argv))
 
