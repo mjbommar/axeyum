@@ -256,6 +256,14 @@ mod tests {
             resolutions: 900,
             analyze_mark_bytes: 100 * 256,
             redundancy_steps: 50,
+            // The clause-database policy landed 21 further counters. This
+            // fixture names only the terms the tick model reads, so a new
+            // counter cannot break it -- but note the tradeoff: an exhaustive
+            // initializer would have FORCED a decision about each new field
+            // here. That is the right default for a struct whose fields are
+            // load-bearing; it is the wrong one for a test fixture that
+            // deliberately exercises a subset.
+            ..Default::default()
         }
     }
 
