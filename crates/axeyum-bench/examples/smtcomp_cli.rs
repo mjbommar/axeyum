@@ -306,14 +306,14 @@ use std::time::{Duration, Instant};
 
 use axeyum_solver::theories::cdclt_diagnostics::{TheoryLayerStatsGuard, last_theory_layer_stats};
 use axeyum_solver::{
-    AbvStats, AbvStatsGuard, BvLayerStatsGuard, BvStage, CheckProgress, CheckResult,
-    CheckingProgress, ConfigTraceGuard, DlOnlineStatsGuard, Evidence, EvidenceCheck,
-    EvidenceReport, FrontDoorStats, FrontDoorStatsGuard, LazySmtCountersGuard, LiaCountersGuard,
-    LiveInstruments, ProofProgress, RouteAttributionGuard, RouteTrace, Sampled, SolverConfig,
-    SpanLog, SpanLogInputs, Termination, UfArithOverboundStats, UfArithOverboundStatsGuard,
-    config_trace_line, division_from_path, install_live_instruments, instrument, last_abv_stats,
-    last_bv_layer_stats, last_dl_online_stats, last_front_door_stats, last_lazy_smt_counters,
-    last_lia_counters, last_route_attribution, last_uf_arith_overbound_stats, live_bv_layer_stats,
+    AbvStats, AbvStatsGuard, BvLayerStatsGuard, CheckProgress, CheckResult, CheckingProgress,
+    ConfigTraceGuard, DlOnlineStatsGuard, Evidence, EvidenceCheck, EvidenceReport, FrontDoorStats,
+    FrontDoorStatsGuard, LazySmtCountersGuard, LiaCountersGuard, LiveInstruments, ProofProgress,
+    RouteAttributionGuard, RouteTrace, Sampled, SolverConfig, SpanLog, SpanLogInputs, Termination,
+    UfArithOverboundStats, UfArithOverboundStatsGuard, config_trace_line, division_from_path,
+    install_live_instruments, instrument, last_abv_stats, last_bv_layer_stats,
+    last_dl_online_stats, last_front_door_stats, last_lazy_smt_counters, last_lia_counters,
+    last_route_attribution, last_uf_arith_overbound_stats, live_bv_layer_stats,
     live_config_trace_line, live_lazy_smt_counters, live_lia_counters, live_theory_layer_stats,
     produce_evidence_smtlib, solve_smtlib,
 };
@@ -1086,6 +1086,10 @@ fn watchdog_span_lines(
             value: l.value,
             sampled: l.sampled,
         }),
+        lia: live_lia_counters(board).map(|l| SpanReading {
+            value: l.value,
+            sampled: l.sampled,
+        }),
     });
     log.to_jsonl()
 }
@@ -1782,6 +1786,7 @@ fn main() -> ExitCode {
                 bv_stage: None,
                 theory: last_theory_layer_stats().map(SpanReading::complete),
                 lazy: last_lazy_smt_counters().map(SpanReading::complete),
+                lia: last_lia_counters().map(SpanReading::complete),
             });
             log.to_jsonl()
         } else {

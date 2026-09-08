@@ -78,6 +78,7 @@ use std::time::Duration;
 
 use crate::layers::{BvLayerStats, TheoryLayerStats};
 use crate::lazy_smt_counters::LazySmtCounters;
+use crate::lia_counters::LiaCounters;
 use crate::live_instruments::Sampled;
 use crate::route_trace::{DeclineReason, RouteOutcome, RouteTrace, Verdict};
 
@@ -277,6 +278,15 @@ pub struct SpanLogInputs<'a> {
     pub theory: Option<Reading<TheoryLayerStats>>,
     /// Abstraction/refinement loop counters.
     pub lazy: Option<Reading<LazySmtCounters>>,
+    /// Integer-route counters.
+    ///
+    /// These produce NO stage span, and that absence is a measurement rather
+    /// than an omission: `LiaCounters` carries counts and not one duration, so
+    /// the integer routes — which is what the `QF_LIA` and `QF_UFLIA` losses
+    /// are made of — have no stage timings for an icicle to draw. They do carry
+    /// `simplex_pivots`, which is deterministic, so they can still put a file
+    /// on the work axis.
+    pub lia: Option<Reading<LiaCounters>>,
 }
 
 /// One emitted row. Built by [`SpanLog::build`]; rendered by
@@ -399,6 +409,13 @@ impl SpanLog {
 
         let mut next_id: u64 = 1;
         let ladder_ids = push_ladder(&mut spans, &mut next_id, inputs, &mut instruments);
+        // Recorded even though it emits no span: an instrument that published
+        // and produced nothing drawable is a different statement from one that
+        // never published, and the run header is the only place that
+        // distinction can live.
+        if let Some(lia) = &inputs.lia {
+            instruments.push(format!("lia:{}", lia.sampled.label()));
+        }
         push_instrument_stages(
             &mut spans,
             &mut next_id,
@@ -737,6 +754,22 @@ fn push_instrument_stages(
             );
         }
     }
+    push_bv_stages(spans, next_id, inputs, ladder_ids, instruments);
+    push_theory_stages(spans, next_id, inputs, ladder_ids, instruments);
+    push_lazy_loop(spans, next_id, inputs, ladder_ids, instruments);
+}
+
+/// The `sat-bv` pipeline's stage spans, plus the in-flight stage a killed
+/// check was inside. Its own function so the `pending` rule below stays
+/// readable: a stage `BvLayerStats` defaults to zero because it was never
+/// REACHED must not be emitted as a measured zero.
+fn push_bv_stages(
+    spans: &mut Vec<Span>,
+    next_id: &mut u64,
+    inputs: &SpanLogInputs<'_>,
+    ladder_ids: &[(u64, String)],
+    instruments: &mut Vec<String>,
+) {
     if let Some(bv) = &inputs.bv {
         instruments.push(format!("bv-layer:{}", bv.sampled.label()));
         let (parent, basis) = attach_to("sat-bv", ladder_ids);
@@ -829,6 +862,16 @@ fn push_instrument_stages(
             ),
         });
     }
+}
+
+/// The CDCL(T) driver's stage spans.
+fn push_theory_stages(
+    spans: &mut Vec<Span>,
+    next_id: &mut u64,
+    inputs: &SpanLogInputs<'_>,
+    ladder_ids: &[(u64, String)],
+    instruments: &mut Vec<String>,
+) {
     if let Some(theory) = &inputs.theory {
         instruments.push(format!("theory-layer:{}", theory.sampled.label()));
         let (parent, basis) = attach_to("cdcl-t", ladder_ids);
@@ -888,6 +931,18 @@ fn push_instrument_stages(
             );
         }
     }
+}
+
+/// The abstraction/refinement loop: ONE span with a round count, then the
+/// three-way split of where a round's time goes. `instruments` is taken even
+/// though only one block writes it, so every stage emitter has one signature.
+fn push_lazy_loop(
+    spans: &mut Vec<Span>,
+    next_id: &mut u64,
+    inputs: &SpanLogInputs<'_>,
+    ladder_ids: &[(u64, String)],
+    instruments: &mut Vec<String>,
+) {
     if let Some(lazy) = &inputs.lazy {
         let s = &lazy.value;
         let rounds = s.lra_rounds.saturating_add(s.nra_rounds);
@@ -1110,6 +1165,11 @@ fn run_work(inputs: &SpanLogInputs<'_>) -> (Option<&'static str>, Option<u64>) {
     {
         return (Some("decisions"), Some(theory.value.decisions));
     }
+    if let Some(lia) = &inputs.lia
+        && lia.value.simplex_pivots > 0
+    {
+        return (Some("simplex_pivots"), Some(lia.value.simplex_pivots));
+    }
     if let Some(lazy) = &inputs.lazy {
         let rounds = lazy.value.lra_rounds.saturating_add(lazy.value.nra_rounds);
         if rounds > 0 {
@@ -1197,6 +1257,7 @@ pub fn division_from_path(path: &str) -> Option<&str> {
 mod tests {
     use super::*;
     use crate::backend::{UnknownKind, UnknownReason};
+    use crate::lia_counters::LiaCounters;
 
     fn ladder() -> RouteTrace {
         let mut trace = RouteTrace::new();
@@ -1471,6 +1532,40 @@ mod tests {
             .expect("the attempt must be emitted");
         assert!(line.contains("\"outcome\":\"declined\""), "got: {line}");
         assert!(line.contains("\"bound\":null"), "got: {line}");
+    }
+
+    #[test]
+    fn the_integer_routes_reach_the_work_axis_with_no_stage_span() {
+        let counters = LiaCounters {
+            simplex_pivots: 41_337,
+            ..LiaCounters::default()
+        };
+        let log = SpanLog::build(&SpanLogInputs {
+            file: "x.smt2",
+            verdict: "unknown",
+            lia: Some(Reading::complete(counters)),
+            ..SpanLogInputs::default()
+        });
+        let lines = log.to_jsonl();
+        assert!(
+            lines[0].contains("\"work_unit\":\"simplex_pivots\"")
+                && lines[0].contains("\"work\":41337"),
+            "the integer routes carry a deterministic counter even with no \
+             timing: {}",
+            lines[0]
+        );
+        assert!(
+            lines[0].contains("\"lia:complete\""),
+            "an instrument that published and drew nothing is not an instrument \
+             that never published: {}",
+            lines[0]
+        );
+        // `LiaCounters` has no duration field at all, so there is nothing to
+        // draw and the log must not invent one.
+        assert!(
+            !lines.iter().any(|l| l.contains("\"route\":\"lia\"")),
+            "no stage span may be fabricated from counters with no timings"
+        );
     }
 
     #[test]

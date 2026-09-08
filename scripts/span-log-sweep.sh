@@ -31,8 +31,14 @@ list="${AXEYUM_SPAN_LIST:-$repo/bench-results/parity-lists/$division.txt}"
 [ -x "$bin" ] || { echo "no binary at $bin" >&2; exit 2; }
 [ -r "$list" ] || { echo "no list at $list" >&2; exit 2; }
 
-AXEYUM_TRACE_HOST="$(hostname -s)"
-AXEYUM_TRACE_COMMIT="$(git -C "$repo" rev-parse --short HEAD)"
+# Both are OVERRIDABLE, and the git read is allowed to fail. A sweep is
+# routinely run from a directory that is not the checkout -- a copied binary on
+# an idle host is the whole point -- and under `set -e` an unguarded
+# `git rev-parse` there kills the sweep before the first file, which is exactly
+# what happened on the first attempt: two hosts reported ALL-DONE in one second
+# with no runs.
+AXEYUM_TRACE_HOST="${AXEYUM_TRACE_HOST:-$(hostname -s)}"
+AXEYUM_TRACE_COMMIT="${AXEYUM_TRACE_COMMIT:-$(git -C "$repo" rev-parse --short HEAD 2>/dev/null || echo unknown)}"
 export AXEYUM_TRACE_HOST AXEYUM_TRACE_COMMIT
 
 # Truncate once, here, rather than in the binary: the binary APPENDS so that a
