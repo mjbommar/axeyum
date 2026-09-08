@@ -63,13 +63,15 @@ binary**. It is registered in `config_registry.rs`, so a `--trace` run's own
 ## The tests, and the proof that they can fail
 
 Five mutations, applied one at a time in a `lane-snapshot.sh` scratch tree, each
-a plausible way for a warm cache to go stale or drift. Baseline: 10 passed.
+a plausible way for a warm cache to go stale or drift. Re-run at the end against
+the code that **ships**, not the code the tests were first written against
+(`mutation-results-shipped.txt`); baseline 13 passed.
 
 | mutation | what it breaks | tests killed |
 | --- | --- | --- |
-| `stale-columns` | a retracted literal keeps its local column mapping | 5 |
-| `unchecked-prefix` | reuse `min(prev, live)` instead of the true common prefix | 5 |
-| `stale-constraints` | a retracted literal's constraints stay in the system | 5 |
+| `stale-columns` | a retracted literal keeps its local column mapping | 6 |
+| `unchecked-prefix` | reuse `min(prev, live)` instead of the true common prefix | 6 |
+| `stale-constraints` | a retracted literal's constraints stay in the system | 6 |
 | `no-tightening` | a cached literal skips the tightening pass | 2 + 2 hangs |
 | `sorted-columns` | allocate local columns in ascending global order, not touch order | **2** |
 

@@ -11,8 +11,10 @@ Raw data behind
 | `score.py` | the scorer. Reports verdict changes first, excludes files the online theory never entered from the throughput figures (and says how many), and refuses to average a decided-verdict disagreement into a timing number. |
 | `perfile.py` | every row, because a summary that cannot be checked against its own rows is a claim. |
 | `mutate.py` | the five staleness/drift mutations applied to the warm decider, one at a time, in a `lane-snapshot.sh` scratch tree. |
-| `mutation-results.txt` | baseline plus three mutants. |
-| `mutation-results-2.txt` | the remaining two, under an external wall bound, because `no-tightening` does not fail — it grinds. |
+| `mutation-run.sh` | the driver: every mutant under an external wall bound, because `no-tightening` does not fail — it grinds, and "the suite never returned" is a different kind of kill, not a pass. |
+| `mutation-results.txt` | first pass, baseline plus three mutants. |
+| `mutation-results-2.txt` | the remaining two from that pass. |
+| `mutation-results-shipped.txt` | the whole battery re-run at the end against the code that SHIPS. The tests changed after the first pass (the theory differential was parameterized over the filter setting), so the earlier result was about a tree that no longer exists. |
 | `stage1-8s.json` | every run: verdict, wall time, and the full `; lia-warm` counter set. All 85 loss files, 8,000 ms. |
 | `stage1-8s.{summary,perfile}.txt` | `score.py` and `perfile.py` output for stage 1. |
 | `stage2-24s.json` | the 29 engaged files at the 24,000 ms parity budget. |
