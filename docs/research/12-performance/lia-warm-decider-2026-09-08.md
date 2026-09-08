@@ -125,12 +125,20 @@ thread gives up before the worker returns, and a thread-local snapshot is
 unreachable from there. That is an instrument that goes blind precisely on the
 population it exists for.
 
-So there are two collectors now: `LiaWarmStatsGuard` stays thread-local (what a
-unit test wants — its numbers cannot be polluted by the harness's other
-threads), and `LiaWarmProcessStatsGuard` is process-wide relaxed atomics armed
-on the main thread. The counters are monotone and nothing reads them back into
-the search, so a live read from the watchdog path is a lower bound on the work
-done — the only number that path has ever been able to report.
+The first answer here was a process-global atomic array with its own guard.
+**It did not survive the merge, and should not have.** `origin/main` had
+answered the same problem with `LiveInstruments` — a shared board an instrument
+mirrors onto, whose every reading carries a `Sampled` label saying whether it is
+a finished answer or a state the search happened to be in. The atomics could not
+express that distinction, and a partial count that reads like a complete one is
+worse than no count.
+
+So the integer counters now mirror onto that board (`install_lia_mirror`, on a
+1,024-call cadence, following `NativeLayerStatsMirror`), the watchdog prints
+`; partial lia …`, and the warm-specific fields are a fourth group inside
+`LiaCounters` rather than a parallel struct. Verified on `hard12.smt2`, one of
+the six hardest `QF_UFLIA` losses: it printed `; lia unavailable` before and now
+reports 2,048 offline calls and the full warm group.
 
 ## The baseline moved under these numbers, and they say so
 

@@ -1609,7 +1609,7 @@ pub static REGISTRY: &[ConfigEntry] = &[
         signal: Signal::None,
         guarded_by: "Crossing it makes the warm decider collect a literal per check instead of \
                      caching it -- the cold path's behaviour, which is sound by construction. \
-                     `LiaWarmCounters::literal_cache_evicted` records that it fired.",
+                     `LiaCounters::warm_literal_cache_evicted` records that it fired.",
         env_override: Some("AXEYUM_LIA_WARM"),
         justification: undated("doc comment"),
         note: "Registered because `AXEYUM_LIA_WARM` governs which offline QF_LIA path runs, and an \
