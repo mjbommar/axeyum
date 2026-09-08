@@ -75,12 +75,21 @@ pub const ASSUMED_CACHE_LINE_BYTES: u64 = 128;
 
 /// Watch entries that fit one assumed cache line.
 ///
-/// Derived from **our** `Watch` (a clause reference plus a blocking literal),
-/// not copied from Kissat's number: their watch is a 4-byte tagged word, so
-/// they amortise over 32 and we over 8. `proof_sat.rs` carries a compile-time
-/// assertion that `Watch` really is `WATCH_BYTES` wide, so growing the watch
-/// breaks the build rather than silently re-denominating every budget
+/// Derived from **our** `Watch` (a tagged clause reference plus a blocking
+/// literal), not copied from Kissat's number: their watch is a 4-byte tagged
+/// word, so they amortise over 32 and we over 8. `proof_sat.rs` carries a
+/// compile-time assertion that `Watch` really is `WATCH_BYTES` wide, so growing
+/// the watch breaks the build rather than silently re-denominating every budget
 /// calibrated in ticks.
+///
+/// The 2026-09 binary-watch change (Kissat's `watch.h:18-42`) deliberately
+/// packed its tag into bit 0 of the clause reference rather than adding a
+/// field, precisely so this constant did **not** move: it removes clause
+/// dereferences (the `clause_deref` term measures fewer events) without
+/// changing what a tick is denominated in. Kissat's other saving — a *binary*
+/// watch being half the width of a long one, so binary-heavy lists scan denser
+/// — is not available under a fixed-stride watch array and is not claimed
+/// here.
 pub const WATCHES_PER_CACHE_LINE: u64 = ASSUMED_CACHE_LINE_BYTES / WATCH_BYTES as u64;
 
 /// The charging rules that turn [`SearchCounters`] into ticks.
@@ -269,9 +278,12 @@ mod tests {
 
     #[test]
     fn the_cache_line_constant_comes_from_our_watch_not_kissats() {
-        // Our watch is a clause reference plus a blocking literal. Kissat
-        // amortises over 32 because theirs is a 4-byte tagged word; copying
-        // their number would misprice every scan by 4x.
+        // Our watch is a tagged clause reference plus a blocking literal.
+        // Kissat amortises over 32 because theirs is a 4-byte tagged word;
+        // copying their number would misprice every scan by 4x. The binary tag
+        // rides in bit 0 of the reference, so adding it left this at 16 — the
+        // assertion is what makes that a build failure rather than a silent
+        // re-denomination of every budget in the tree.
         assert_eq!(WATCH_BYTES, 16);
         assert_eq!(WATCHES_PER_CACHE_LINE, 8);
     }
