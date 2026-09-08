@@ -33,6 +33,7 @@ use crate::auto::{solve, unsat_core};
 use crate::backend::{CheckResult, SolverConfig, SolverError, UnknownKind, UnknownReason};
 use crate::model::Model;
 use crate::optimize::{OptOutcome, maximize_bv, maximize_lia, minimize_bv, minimize_lia};
+use crate::route_trace::{front_door_stage, record_front_door_result};
 
 /// The branch-node budget the word-equation route (ADR-0053, T-B.4b) spends per
 /// front-door query. The search additionally honors an absolute deadline derived
@@ -2075,6 +2076,42 @@ fn is_string_window_decline(result: &CheckResult) -> bool {
 /// [`solve_smtlib`] at an explicit declared-string window (`string_bound`); see
 /// [`parse_script_with_string_bound`]. The default rung is byte-identical to the
 /// historical front door.
+/// Whether a front-door stage still has something to decide.
+///
+/// The post-dispatch ladder below is a sequence of *second chances*: each one
+/// may only turn an `unknown` into a verdict, never overturn a decided one. So
+/// a stage is only credited (or charged) when it ran against an `unknown` —
+/// otherwise every file's attribution would name whichever pass-through stage
+/// happened to be last in the ladder, which is precisely the "printed last"
+/// error this instrumentation exists to eliminate.
+fn front_door_undecided(result: &CheckResult) -> bool {
+    matches!(result, CheckResult::Unknown(_))
+}
+
+/// Attributes one front-door second chance (ADR-1760) and returns its result
+/// unchanged.
+///
+/// `had_work` is [`front_door_undecided`] evaluated on the stage's *input*. When
+/// it is false the stage was a pass-through and nothing is recorded. When it is
+/// true the stage's own outcome is recorded: `Decided` if it supplied the
+/// verdict, `Declined` (carrying the `Unknown` reason) if it did not — and
+/// either way the entry carries the wall time the stage spent, which is what
+/// makes `RouteTrace::bound_by` able to name the route that consumed the budget
+/// rather than the route that spoke last.
+///
+/// The result is returned by value and never inspected for a branch, so this is
+/// a pure side effect on the verdict path.
+fn record_front_door_stage(
+    stage: &'static str,
+    had_work: bool,
+    result: CheckResult,
+) -> CheckResult {
+    if had_work {
+        record_front_door_result(stage, &result);
+    }
+    result
+}
+
 fn solve_smtlib_at_string_bound(
     input: &str,
     config: &SolverConfig,
@@ -2111,6 +2148,20 @@ fn solve_smtlib_at_string_bound(
     if let Some(start) = parse_start {
         record_parse_time(start.elapsed());
     }
+    // Route attribution (ADR-1760): parse is a front-door stage that can consume
+    // the entire budget on a large script, and before this it was invisible to
+    // any "which route" question — a file lost inside ingest was attributed to
+    // whichever route printed last. Recorded on every file (not only the error
+    // arms) so the segment always exists. The `format!` is INSIDE the
+    // `attribution_collecting()` test on purpose: `record_front_door` would
+    // discard the string, but building it would still allocate on the shipping
+    // path.
+    if crate::route_trace::attribution_collecting() {
+        crate::route_trace::record_front_door(
+            crate::route_trace::front_door_stage::PARSE,
+            crate::route_trace::RouteOutcome::Probe(format!("string_bound={string_bound}")),
+        );
+    }
     let mut script = match parse_result {
         Ok(script) => script,
         // A resource limit is NOT an error: report the first-class `unknown` the
@@ -2141,9 +2192,11 @@ fn solve_smtlib_at_string_bound(
     // its empty flat assertion view.
     if script.word_only_fallback.is_some() {
         let result = decide_word_only(&mut script, config)?;
+        record_front_door_result(front_door_stage::WORD_ONLY_FALLBACK, &result);
         return Ok(SmtLibSolved::without_replay(script, result));
     }
     if let Some(result) = source_fp_prefix_monotonic_result(&script) {
+        record_front_door_result(front_door_stage::SOURCE_FP_PREFIX, &result);
         return Ok(SmtLibSolved::without_replay(script, result));
     }
     // A complete word skeleton is an exact source-level view, and the dense PyEx
@@ -2157,52 +2210,90 @@ fn solve_smtlib_at_string_bound(
     if source_string_routes_tried
         && let Some(result) = source_string_route_verdict(&mut script, config)
     {
+        record_front_door_result(front_door_stage::SOURCE_STRING, &result);
         return Ok(SmtLibSolved::without_replay(script, result));
     }
     let query = smtlib_single_query(&script)?;
     let gate = StringGate::from_script(&script);
+    // `solve` -> `check_auto` records its own per-route entries (ADR-1760), so
+    // the dispatch is attributed at route granularity, not as one opaque stage.
     let result = solve(&mut script.arena, &query.assertions, config)?;
-    let result = gate.confirm(&mut script.arena, &query.assertions, config, result)?;
-    let result = apply_source_string_semantic_unsat(&script, result);
+    let undecided = front_door_undecided(&result);
+    let result = record_front_door_stage(
+        front_door_stage::STRING_GATE,
+        undecided,
+        gate.confirm(&mut script.arena, &query.assertions, config, result)?,
+    );
+    let undecided = front_door_undecided(&result);
+    let result = record_front_door_stage(
+        front_door_stage::SOURCE_STRING_SEMANTIC_UNSAT,
+        undecided,
+        apply_source_string_semantic_unsat(&script, result),
+    );
     // Word-equation second-chance route (ADR-0053, T-B.4b): may only add `sat`
     // where the bounded path + gate left an `unknown`.
+    let undecided = front_door_undecided(&result);
     let result = if source_string_routes_tried {
         result
     } else {
-        apply_word_route(&mut script, config, result)
+        record_front_door_stage(
+            front_door_stage::WORD_ROUTE,
+            undecided,
+            apply_word_route(&mut script, config, result),
+        )
     };
     // Online CDCL(T) string route (P1.5b): the disjunction-aware second chance, run
     // strictly after the flat word route declines — decides the `or`/negated word
     // problems the conjunction side channel cannot represent. Only ever adds `sat`
     // (replay-checked) or a certified `unsat` to an `unknown`.
+    let undecided = front_door_undecided(&result);
     let result = if source_string_routes_tried {
         result
     } else {
-        apply_online_string_route(&mut script, config, result)
+        record_front_door_stage(
+            front_door_stage::ONLINE_STRING,
+            undecided,
+            apply_online_string_route(&mut script, config, result),
+        )
     };
     // Regex-membership route (P2.7 T-C.5): the `str.in_re` second chance, run
     // strictly after the word routes decline — decides unbounded membership by
     // symbolic derivatives (witness + matcher replay for `sat`, a re-checked
     // emptiness certificate for `unsat`). Only ever adds a verdict to an `unknown`.
+    let undecided = front_door_undecided(&result);
     let result = if source_string_routes_tried {
         result
     } else {
-        apply_membership_route(&mut script, config, result)
+        record_front_door_stage(
+            front_door_stage::MEMBERSHIP,
+            undecided,
+            apply_membership_route(&mut script, config, result),
+        )
     };
     // Lexicographic-order route (P2.7 T-C.6): the `str.<`/`str.<=` second chance, run
     // strictly after the word/online/membership routes decline — decides the reachable
     // lex fragment (a variable-independent constant fold or a transitivity +
     // first-character clash). Only ever adds a re-checked `unsat` to an `unknown`.
-    let result = apply_lex_order_route(&mut script, config, result);
+    let undecided = front_door_undecided(&result);
+    let result = record_front_door_stage(
+        front_door_stage::LEX_ORDER,
+        undecided,
+        apply_lex_order_route(&mut script, config, result),
+    );
     // Length↔LIA route (P2.7 Phase A): the `str.len`-coupled second chance, run
     // strictly after every string route above declines — decides `str.len`-coupled
     // rows whose `sat` witness exceeds the bounded length cap (e.g. `str.len x = 20`)
     // by linking `str.len` to LIA. Only ever adds a replay-checked `sat` to an
     // `unknown`.
+    let undecided = front_door_undecided(&result);
     let result = if source_string_routes_tried {
         result
     } else {
-        apply_length_lia_route(&mut script, config, result)
+        record_front_door_stage(
+            front_door_stage::LENGTH_LIA,
+            undecided,
+            apply_length_lia_route(&mut script, config, result),
+        )
     };
     // Bounded concrete source-witness probe: the residual small-variable string
     // formulas may be satisfiable even when every symbolic route above declines.
@@ -2210,7 +2301,14 @@ fn solve_smtlib_at_string_bound(
     // source-variable bindings, and accept SAT only after the source evaluator
     // confirms every original assertion. The finite probe never emits UNSAT; a
     // miss or a budget excess preserves the prior Unknown.
-    let result = apply_source_string_sat_problem(&script, result);
+    let undecided = front_door_undecided(&result);
+    let result = record_front_door_stage(
+        front_door_stage::SOURCE_STRING_SAT_PROBE,
+        undecided,
+        apply_source_string_sat_problem(&script, result),
+    );
+    // `bind_readable_string_values` rewrites a model's presentation; it never
+    // changes the verdict, so it is not a route and gets no attribution entry.
     let result = bind_readable_string_values(&script, result);
     // Bounded-completeness UNSAT route (P2.7, task #75): the FINAL string second
     // chance. When every prior route declined and the residual `unknown` is the
@@ -2219,7 +2317,12 @@ fn solve_smtlib_at_string_bound(
     // the query is bounded-complete (C1∧C2∧C3 — no free Int, every free String
     // length-capped ≤ MAX_LEN, every Int provably < 2^31) and upgrades it to a
     // real `unsat`. Only ever turns that specific `unknown` into `unsat`.
-    let result = apply_bounded_completeness_unsat(input, result);
+    let undecided = front_door_undecided(&result);
+    let result = record_front_door_stage(
+        front_door_stage::BOUNDED_COMPLETENESS_UNSAT,
+        undecided,
+        apply_bounded_completeness_unsat(input, result),
+    );
     // The model is taken from THIS run, not re-derived: `assertions` index
     // `script.arena`, so `check_model(&script.arena, &assertions, &model)` replays
     // exactly what was just decided. Cloned rather than moved because the verdict

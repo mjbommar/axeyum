@@ -217,9 +217,9 @@ use std::time::{Duration, Instant};
 use axeyum_solver::theories::cdclt_diagnostics::{TheoryLayerStatsGuard, last_theory_layer_stats};
 use axeyum_solver::{
     BvLayerStatsGuard, CheckProgress, CheckResult, CheckingProgress, DlOnlineStatsGuard, Evidence,
-    EvidenceCheck, EvidenceReport, FrontDoorStatsGuard, ProofProgress, SolverConfig,
-    last_bv_layer_stats, last_dl_online_stats, last_front_door_stats, produce_evidence_smtlib,
-    solve_smtlib,
+    EvidenceCheck, EvidenceReport, FrontDoorStatsGuard, ProofProgress, RouteAttributionGuard,
+    SolverConfig, last_bv_layer_stats, last_dl_online_stats, last_front_door_stats,
+    last_route_attribution, produce_evidence_smtlib, solve_smtlib,
 };
 
 /// Formats one `axeyum_cnf::ProofSearchProgress` snapshot as the `;`-prefixed
@@ -374,6 +374,53 @@ fn front_door_report_line(stats: &axeyum_solver::FrontDoorStats) -> String {
 /// where inside it the time went.
 fn dl_online_report_line(elapsed_ms: u128) -> String {
     format!("; dl-online total_ms={elapsed_ms}")
+}
+
+/// Formats this front-door call's route attribution (ADR-1760) as two
+/// `;`-prefixed `--trace` lines: a one-line summary and the full ordered trail
+/// as JSON.
+///
+/// # The two questions this answers, and why they are separate fields
+///
+/// `decided_by=` is **which route produced the verdict** — meaningful exactly
+/// when the file was decided.
+///
+/// `bound_by=` is **which route consumed the budget** — the single most
+/// expensive segment of the trail. On an undecided file this is the number that
+/// matters, and it is routinely a *different* route from the one that spoke
+/// last, which is why `last=` is reported alongside it rather than instead of
+/// it. Classifying by the last route's message has been refuted here before: a
+/// census of 403 files was wrong on 67 of 70 in two divisions, and one
+/// division's "23 admission declines" were timeouts. Both fields are printed on
+/// every file so a consumer never has to infer one from the other.
+///
+/// `bound_ms=` / `total_ms=` give the binding segment's share, so "one route ate
+/// the whole budget" is distinguishable from "the budget was spread over
+/// twenty routes that each declined cheaply" — two situations with opposite
+/// implications for a portfolio.
+fn route_attribution_report_lines(trace: &axeyum_solver::RouteTrace) -> Vec<String> {
+    if trace.is_empty() {
+        return vec!["; route unavailable: no attribution recorded".to_string()];
+    }
+    let decided = trace
+        .decided_by()
+        .map_or_else(|| "none".to_string(), |(_, a, _)| a.route.to_string());
+    let (bound, bound_ms) = trace.bound_by().map_or_else(
+        || ("none".to_string(), 0),
+        |(_, a, d)| (a.route.to_string(), d.as_millis()),
+    );
+    let last = trace
+        .last()
+        .map_or_else(|| "none".to_string(), |a| a.route.to_string());
+    vec![
+        format!(
+            "; route decided_by={decided} bound_by={bound} last={last} \
+             bound_ms={bound_ms} total_ms={} attempts={}",
+            trace.total_elapsed().as_millis(),
+            trace.attempts().len()
+        ),
+        format!("; route-trail {}", trace.to_json_with_timing()),
+    ]
 }
 
 /// S2 dispatch-overrun fix (2026-09-05,
@@ -881,6 +928,7 @@ fn main() -> ExitCode {
         let _bv_guard = trace_mode.then(BvLayerStatsGuard::enable);
         let _dl_guard = trace_mode.then(DlOnlineStatsGuard::enable);
         let _front_door_guard = trace_mode.then(FrontDoorStatsGuard::enable);
+        let _route_guard = trace_mode.then(RouteAttributionGuard::enable);
         // A parse or solver error is reported as `unknown` — never a wrong
         // verdict, and never a crash that the harness would read as an abort.
         let mut give_up: Option<String> = None;
@@ -929,6 +977,11 @@ fn main() -> ExitCode {
             if let Some(stats) = last_theory_layer_stats() {
                 trace_lines.push(theory_layer_report_line(&stats));
             }
+            // Route attribution (ADR-1760) LAST, so a reader who scans to the
+            // end of the `;` block finds the one line that names which route
+            // decided the file and which route consumed the budget -- the two
+            // questions every other line here can only be evidence for.
+            trace_lines.extend(route_attribution_report_lines(&last_route_attribution()));
         }
         // ADR-1752: the budget-relative atom cap can refuse before any stage
         // runs, and that refusal names the count, the budget and the remedy.

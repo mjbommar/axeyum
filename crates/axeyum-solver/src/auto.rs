@@ -40,6 +40,7 @@ use crate::lra::{check_with_lia_simplex_within, check_with_lra};
 use crate::model::Model;
 use crate::qinst_egraph::prove_quantified_unsat_via_egraph;
 use crate::quant_guarded_int::{expand_guarded_int_universals, skolemize_positive_existentials};
+use crate::route_trace;
 use crate::route_trace::{DeclineReason, Recorder, RouteTrace, Verdict, with_recorder};
 use crate::sat_bv_backend::SatBvBackend;
 
@@ -1106,6 +1107,34 @@ pub fn check_auto(
     assertions: &[TermId],
     config: &SolverConfig,
 ) -> Result<CheckResult, SolverError> {
+    // Front-door route attribution (ADR-1760), opt-in and OFF by default. When a
+    // `RouteAttributionGuard` is live on this thread, the OUTERMOST `check_auto`
+    // takes its result from `check_auto_explained` and publishes that call's
+    // trace into the thread-local attribution, so the shipped front door
+    // (`solve_smtlib`, as `smtcomp_cli` runs it) can say which route decided the
+    // file. It does NOT change the answer: `check_auto_explained` returning the
+    // same verdict as `check_auto` for every query is exactly the invariant
+    // `route_trace` exists to uphold and `tests/route_trace.rs` pins.
+    //
+    // Nested `check_auto` calls (a route solving a sub-query — IMC, PDR,
+    // quantifier instantiation, the refuters) take the plain path unchanged;
+    // their dispatch is internal detail of the route that made them, and
+    // publishing them would bury the top-level decision under whichever route
+    // recursed the most.
+    //
+    // With the guard off this is one thread-local `Cell<bool>` read.
+    if let Some(attributed) = route_trace::with_outermost_dispatch(|outermost| {
+        if !outermost {
+            return None;
+        }
+        Some(
+            check_auto_explained(arena, assertions, config).inspect(|(_, trace)| {
+                route_trace::absorb_dispatch_trace(trace);
+            }),
+        )
+    }) {
+        return attributed.map(|(result, _)| result);
+    }
     // Thin wrapper: the *same* dispatch as `check_auto_explained`, with no trace
     // recorder. The recorder is a pure side effect at the existing decide/decline
     // sites — it never participates in a branch condition — so this returns
