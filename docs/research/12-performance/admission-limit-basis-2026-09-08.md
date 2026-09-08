@@ -6,7 +6,7 @@
 > [admission-limit-coverage-2026-09-08.md](admission-limit-coverage-2026-09-08.md)
 > took the registry to 454 entries over 98 modules: the admission class is
 > **296**, not 70, and the population that crosses with **no signal** is
-> **128**, not 12. Every count in this document is correct about its sample and
+> **129**, not 12. Every count in this document is correct about its sample and
 > is a sample. The method, the three instances, and the `dpll_lia`
 > re-derivation are unaffected.
 

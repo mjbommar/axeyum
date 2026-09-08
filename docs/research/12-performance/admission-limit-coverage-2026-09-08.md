@@ -18,22 +18,24 @@ computed wrong, but because they described the files that had been read.
 
 | | before | after |
 |---|---:|---:|
-| registry entries | 114 | **454** |
+| registry entries | 114 | **455** |
 | distinct modules covered | 19 | **98** |
-| dated justifications | 29 | **68** |
+| dated justifications | 29 | **72** |
 | admission class | 71 | **296** |
-| …of those, dated | 23 | **39** |
-| admission-class bounds crossing with **no signal** | 12 | **128** |
-| …of those, attributable (`note_crossed` wired) | 1 | **16** |
+| …of those, dated | 23 | **42** |
+| admission-class bounds crossing with **no signal** | 12 | **129** |
+| …of those, attributable (`note_crossed` wired) | 1 | **17** |
 | …structurally unattributable from this crate | — | 1 |
 | …enumerated backlog | — | 111 |
 
 512 constants outside the governed files were examined and 340 registered;
 the rest are classified out of scope with a stated reason rather than omitted.
+One more (`sat_bv_backend::MAX_LINKED_PROOF_STEPS`) landed on main while this
+lane was in flight and was registered on merge — see below.
 
 **The row that matters is the last group.** "12 admission-class entries cross
 with no signal" was published as a property of the solver. It was a property of
-the 19 files that had been read. The real figure is **128**, and rank 4 of that
+the 19 files that had been read. The real figure is **129**, and rank 4 of that
 lane's loss ranking — *"cannot be ranked: no route-attribution data exists for a
 crossing that emits no signal"* — applies to ten times as many bounds as it
 said.
@@ -128,7 +130,7 @@ from an inventory rather than a grep.
 
 ## The backlog is a ratchet, not an exemption
 
-128 silent bounds; 16 wired this session; 1 unwireable from this crate
+129 silent bounds; 17 wired this session; 1 unwireable from this crate
 (`axeyum-rewrite::quantifiers::CHAIN_INSTANCE_CAP` — `note_crossed` lives in
 `axeyum-solver`, which depends on `axeyum-rewrite` and not the reverse); 111
 left.
@@ -151,9 +153,12 @@ not enough, so the number lives in the source where a test can hold it:
   such a bound is reachable from `note_crossed` by construction. A coverage
   check that can be satisfied by editing its own exemption list is not a check.
 
-## Sixteen gates made attributable
+## Seventeen gates made attributable
 
-Eleven of the twelve originally enumerated, plus the five reclassified below.
+Eleven of the twelve originally enumerated, plus the five reclassified below,
+plus `abv::MAX_ROW_SITES` — registered by the QF_ABV lane as `Signal::None`
+while this one was in flight, and wired on merge because the ratchet refuses to
+backlog a bound that arrives after the backlog was drawn.
 Each records the crossing in the entry's own unit, never normalized; each is one
 thread-local `Cell<bool>` read with no guard constructed; no verdict moves.
 
@@ -210,10 +215,23 @@ programme that came out of a run's own output.
 other lanes active — verdicts and RSS are robust to that, wall times are not and
 are only quoted within a back-to-back pair on one file.
 
+Run twice: once before merging `origin/main` and once after. **The crossing
+table below is identical across both runs** — same 15 files, same keys, same
+counts — which is the only reason to trust it against a tree that moved
+underneath it. Only `consulted=` shifted (111 -> 113 files), because main's
+QF_ABV work moved two files onto the simplex path.
+
+`abv::MAX_ROW_SITES`, wired on merge, crossed on **zero** of these 1,101 files.
+That is not evidence it never bites: the QF_ABV lane measured it firing on
+`brummayerbiere/fifo32ia04k08` (4,109 sites) and `wchains140se` (4,484), and
+neither is in this corpus — they live in the unextracted
+`corpus/public/QF_BV.tar.zst`. A zero here means "not in this population", not
+"never".
+
 | | files |
 |---|---:|
 | traced | 1,094 |
-| emitting a `consulted=` field (an instrumented bound was *looked at*) | 111 |
+| emitting a `consulted=` field (an instrumented bound was *looked at*) | 113 |
 | emitting a `crossed=` field (a bound *bit*) | **15** |
 | …of those, still decided | **11** (7 unsat, 4 sat) |
 | …of those, ending `unknown` | **4** |
@@ -228,7 +246,7 @@ Per key, by files where it bit:
 | `dpll_lia::MAX_PRE_SAT_ARITH_ATOMS` / `MAX_PRE_SAT_CNF_VARS` | 1 | 6504 / 1024, 20520 / 4096 | unknown |
 
 And the negative result, which is the more useful half:
-`simplex::MAX_TABLEAU_CELLS` is **consulted on 106 files and crossed on zero**.
+`simplex::MAX_TABLEAU_CELLS` is **consulted on 108 files and crossed on zero**.
 A bound looked at constantly that never bites is not a candidate for
 re-derivation, and before the instrumentation nothing could say that about any
 bound in this table.
@@ -262,10 +280,10 @@ files, and nothing distinguishes it from 16,384 in either direction" is.
 `MAX_SMALL_DOMAIN_WIDTH` needs no A/B: all seven files that cross it are decided
 anyway, at 6x to 16x the bound. The relaxation it forgoes was not needed.
 
-**What this ranking cannot say.** It covers the **16 instrumented gates of 128**.
+**What this ranking cannot say.** It covers the **17 instrumented gates of 129**.
 The other 111 emit nothing, so a file lost to one of them looks exactly like a
 file lost to search. The measurement is a lower bound over an instrumented
-subset, and the subset is 12.5 % of the population — which is the argument for
+subset, and the subset is 13 % of the population — which is the argument for
 closing the backlog rather than a substitute for it.
 
 ## The next stale limit: rank 1, and it went stale yesterday
@@ -328,13 +346,38 @@ an assertion that can fail.
   value against the source; `Signal::None` iff `guarded_by`; sorted and unique;
   every dated entry resting on a live path and naming a resolvable `Basis`; both
   Python gates green. **Not** mechanically verifiable: `protects` and
-  `on_exceed`. `quant_bool_model_sat.rs` was read independently by two of the
-  six, which gives a calibration sample of seven: **five agreed on those two
-  fields and two did not** (`Time`/`DeclineRoute` against
-  `Soundness`/`RefuseUnknown`), both resolved by hand at the call site in favour
-  of the first reading. Treat the judgement fields as ~70 % independently
-  agreed, not as a verified table. A wrong entry can only fail this module's own
+  `on_exceed`. There is a measurement rather than
+  an assurance, from two independent samples. `quant_bool_model_sat.rs` was read
+  by two of the six readers: on seven constants they agreed on those two fields
+  **five times and disagreed twice** (`Time`/`DeclineRoute` against
+  `Soundness`/`RefuseUnknown`). Separately, the QF_ABV lane registered
+  `abv::MAX_ROW_ROUNDS`, `abv::MAX_ROW_SITES` and
+  `ufbv_online::MAX_INPUT_DAG_NODES` the same day this lane did, and on merge
+  **one agreed on both fields and two did not**. Ten constants, seven
+  agreements — roughly **70 % independent agreement** on a small sample.
+
+  Every disagreement was settled by reading the call site, and in every case the
+  wrong reading was the one that had **not been measured firing**:
+  `MAX_ROW_SITES` produces an `Ok(None)` reported as an array *shape* message
+  for a *capacity* event, so `Signal::None` is right and this lane's `ToCaller`
+  was wrong; `MAX_INPUT_DAG_NODES` gates the first route every array query
+  tries and raising it abstracts a bigger DAG, so `Memory`, not `Time`. Treat
+  the judgement fields as informed opinion about the code, not as a verified
+  property of it — the calibration now also lives in `config_registry`'s module
+  doc, where a reader of the table will meet it. A wrong entry can only fail this module's own
   checks; nothing in the solver reads the registry.
+- **One more entry was registered on merge.**
+  `sat_bv_backend::MAX_LINKED_PROOF_STEPS` (8,000,000) landed on main while this
+  lane was in flight, and it is exactly the class this lane exists for: it is
+  *dated*, and its own doc says the cap clears the worst observed instance by
+  **4.06x**, not the orders of magnitude its size suggests. Crossing it does not
+  refuse — `ReductionLink::check_unsat` falls back to checking the `unsat`
+  against the REDUCED formula and tells the caller so
+  (`ProofCoverage::Reduced(ReducedReason::OverBudget { steps, budget })`), so it
+  is `Truncate`/`ToCaller`: the bound weakens what the certificate is *about*,
+  and says which. Registered rather than left as a fresh gap in a file this lane
+  claims to have swept.
+
 - **`GOVERNED_FILES` is still 19.** Registering a file's constants and *claiming
   that file is completely covered* are different promises; the second needs an
   `EXEMPT` line per out-of-scope constant, which the sweeps produced as prose and

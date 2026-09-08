@@ -6533,6 +6533,30 @@ pub static REGISTRY: &[ConfigEntry] = &[
         note: "CONFIRMED: this is the unlinked mirror the existing `axeyum-cnf/src/inprocess.rs::DEFAULT_MAX_VARIABLES` registry entry's note already names (\"Mirrors `sat_bv_backend`'s `INPROCESS_MAX_VARIABLES`; the two are not linked in code\") -- same value 4_000_000, same role (occurrence lists must fit one pass), no shared symbol. `formula.variable_count() > INPROCESS_MAX_VARIABLES` records `cnf_inprocessing_skipped_size` and skips inprocessing.",
     },
     ConfigEntry {
+        name: "MAX_LINKED_PROOF_STEPS",
+        module: "crates/axeyum-solver/src/sat_bv_backend.rs",
+        value: "8_000_000",
+        unit: "DRAT steps (reduction prefix + search)",
+        protects: Protects::Memory,
+        on_exceed: OnExceed::Truncate,
+        signal: Signal::ToCaller,
+        guarded_by: "",
+        env_override: None,
+        justification: dated(
+            "docs/research/03-measurements/inprocessed-unsat-proof-coverage-2026-09-08.md",
+            "2026-09-08",
+            None,
+            &[sym(
+                "crates/axeyum-cnf/src/reduction_link.rs",
+                "fn check_unsat",
+            )],
+            &[doc(
+                "docs/research/03-measurements/inprocessed-unsat-proof-coverage-2026-09-08.md",
+            )],
+        ),
+        note: "Crossing it does NOT refuse: `ReductionLink::check_unsat` falls back to `check_reduced`, so the `unsat` is still checked -- against the REDUCED formula rather than the original, and the caller is told which (`ProofCoverage::Reduced(ReducedReason::OverBudget { steps, budget })`, surfaced as \"the reduced formula\" in the failure detail). So the bound weakens what the certificate is ABOUT, and it says so; that is why this is `Truncate`/`ToCaller` and not `RefuseUnknown`. The measurement is the reason it is worth registering: over the 200-file QF_BV parity list the prefix was a median of 658 steps, p90 71,881 and a maximum of 1,971,102, so the cap clears the worst observed instance by 4.06x -- NOT the orders of magnitude its size suggests. Its own doc says a larger corpus can be expected to cross it, and that the intended response is to wire the streaming route rather than raise the constant.",
+    },
+    ConfigEntry {
         name: "MAX_SHARED_GUARD_SPLIT_BRANCHES",
         module: "crates/axeyum-solver/src/sat_bv_backend.rs",
         value: "16",
