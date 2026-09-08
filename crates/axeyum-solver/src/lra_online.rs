@@ -3444,6 +3444,16 @@ impl Dpll {
             // verdict — never a wrong sat/unsat. Mirrors `crate::cdclt::CdclT::solve`.
             if self.steps >= self.step_budget {
                 self.step_budget_hit = true;
+                // `step_budget_hit` is read only by tests, and this `None`
+                // becomes an `UnknownKind::Timeout` whose detail says "timeout
+                // in the online LRA driver" even when there is no deadline at
+                // all -- which is precisely the case this budget exists for.
+                // Recording the crossing is what makes the two tellable apart.
+                crate::config_registry::note_crossed(
+                    "crates/axeyum-solver/src/lra_online.rs::DEFAULT_STEP_BUDGET",
+                    self.steps as u64,
+                    self.step_budget as u64,
+                );
                 return None;
             }
             self.steps += 1;

@@ -842,7 +842,17 @@ fn scan_dl(
                     return None;
                 }
                 acc = lcm(acc, raw.bound.denominator())?;
-                if acc > MAX_SCALE || acc <= 0 {
+                if acc > MAX_SCALE {
+                    // A bare `None`, the same value this function returns for a
+                    // missed deadline, a non-difference shape and an overflow.
+                    crate::config_registry::note_crossed(
+                        "crates/axeyum-solver/src/dl_online.rs::MAX_SCALE",
+                        u64::try_from(acc).unwrap_or(u64::MAX),
+                        u64::try_from(MAX_SCALE).unwrap_or(u64::MAX),
+                    );
+                    return None;
+                }
+                if acc <= 0 {
                     return None;
                 }
             }

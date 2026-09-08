@@ -914,6 +914,25 @@ fn pow2_value_table(
     hi: i128,
 ) -> Result<Option<TermId>, SolverError> {
     // `hi - lo < N` ⟺ at most `N` cases; guards against an unbounded/huge table.
+    if hi > POW2_TABLE_MAX_EXP {
+        // Split out of the shared `||` so each disjunct can be recorded on its
+        // own. The caller does not decline a route on this: it omits the value
+        // table and keeps emitting its other axiom families, so the omission is
+        // invisible downstream -- the same shape as this file's six other
+        // silent relaxations.
+        crate::config_registry::note_crossed(
+            "crates/axeyum-solver/src/nia_linearize.rs::POW2_TABLE_MAX_EXP",
+            u64::try_from(hi).unwrap_or(u64::MAX),
+            u64::try_from(POW2_TABLE_MAX_EXP).unwrap_or(u64::MAX),
+        );
+    }
+    if lo <= hi && hi - lo >= POW2_TABLE_MAX_CASES {
+        crate::config_registry::note_crossed(
+            "crates/axeyum-solver/src/nia_linearize.rs::POW2_TABLE_MAX_CASES",
+            u64::try_from(hi - lo).unwrap_or(u64::MAX),
+            u64::try_from(POW2_TABLE_MAX_CASES).unwrap_or(u64::MAX),
+        );
+    }
     if lo > hi || hi > POW2_TABLE_MAX_EXP || hi - lo >= POW2_TABLE_MAX_CASES {
         return Ok(None);
     }
