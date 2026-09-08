@@ -308,11 +308,11 @@ use axeyum_solver::theories::cdclt_diagnostics::{TheoryLayerStatsGuard, last_the
 use axeyum_solver::{
     BvLayerStats, BvLayerStatsGuard, CheckProgress, CheckResult, CheckingProgress,
     ConfigTraceGuard, DlOnlineStatsGuard, Evidence, EvidenceCheck, EvidenceReport, FrontDoorStats,
-    FrontDoorStatsGuard, LiveInstruments, ProofProgress, RouteAttributionGuard, RouteTrace,
-    Sampled, SolverConfig, UfArithOverboundStatsGuard, config_trace_line, install_live_instruments,
-    instrument, last_bv_layer_stats, last_dl_online_stats, last_front_door_stats,
-    last_route_attribution, last_uf_arith_overbound_stats, live_theory_layer_stats,
-    produce_evidence_smtlib, solve_smtlib,
+    FrontDoorStatsGuard, LiaCountersGuard, LiveInstruments, ProofProgress, RouteAttributionGuard,
+    RouteTrace, Sampled, SolverConfig, UfArithOverboundStatsGuard, config_trace_line,
+    install_live_instruments, instrument, last_bv_layer_stats, last_dl_online_stats,
+    last_front_door_stats, last_lia_counters, last_route_attribution,
+    last_uf_arith_overbound_stats, live_theory_layer_stats, produce_evidence_smtlib, solve_smtlib,
 };
 
 /// Formats one `axeyum_cnf::ProofSearchProgress` snapshot as the `;`-prefixed
@@ -484,6 +484,75 @@ fn dl_online_report_line(elapsed_ms: u128) -> String {
     format!("; dl-online total_ms={elapsed_ms}")
 }
 
+/// Formats this query's integer-arithmetic route counters as one `;`-prefixed
+/// `--trace` line.
+///
+/// Each of the three groups is prefixed by its **reading** — `measured`,
+/// `not-reached` (collected, never entered) or `off` (excluded by policy) —
+/// because the fields are `u64` and a bare zero is otherwise three different
+/// statements wearing the same eight bytes. The line is emitted only when a
+/// snapshot exists at all; a thread that never armed the guard prints nothing
+/// rather than a row of zeros.
+fn lia_counters_report_line(counters: &axeyum_solver::LiaCounters) -> String {
+    use axeyum_solver::{GroupReading, LiaCounterGroup};
+    fn reading(counters: &axeyum_solver::LiaCounters, group: LiaCounterGroup) -> &'static str {
+        match counters.group_reading(group) {
+            GroupReading::Measured => "measured",
+            GroupReading::NotReached => "not-reached",
+            GroupReading::NotCollected => "off",
+        }
+    }
+    format!(
+        "; lia offline={} offline_calls={} offline_constraints={} offline_early_exits={} \
+         tightened={} gomory_calls={} gomory_decided={} gomory_rounds={} gomory_cuts={} \
+         gomory_pivots={} gomory_rows={} gomory_columns={} \
+         bnb_roots={} bnb_nodes={} bnb_budget_exhausted={} simplex_solves={} simplex_pivots={} \
+         simplex_rows={} simplex_columns={} simplex_declines={} lp_relaxations={} \
+         theory={} theory_asserts={} feasibility_checks={} arena_clones={} arena_clone_nodes={} \
+         live_literals={} filter_refuted={} filter_integral={} filter_inconclusive={} \
+         core_minimizations={} core_minimization_probes={} \
+         propagation={} propagate_calls={} propagate_atoms={} propagate_probes={} \
+         propagations_offered={}",
+        reading(counters, LiaCounterGroup::Offline),
+        counters.offline_calls,
+        counters.offline_constraints,
+        counters.offline_early_exits,
+        counters.tightened_constraints,
+        counters.gomory_calls,
+        counters.gomory_decided,
+        counters.gomory_rounds,
+        counters.gomory_cuts,
+        counters.gomory_pivots,
+        counters.gomory_rows,
+        counters.gomory_columns,
+        counters.bnb_roots,
+        counters.bnb_nodes,
+        counters.bnb_budget_exhausted,
+        counters.simplex_solves,
+        counters.simplex_pivots,
+        counters.simplex_rows,
+        counters.simplex_columns,
+        counters.simplex_declines,
+        counters.lp_relaxation_calls,
+        reading(counters, LiaCounterGroup::Theory),
+        counters.theory_asserts,
+        counters.theory_feasibility_checks,
+        counters.arena_clones,
+        counters.arena_clone_nodes,
+        counters.live_literals,
+        counters.filter_refuted,
+        counters.filter_integral,
+        counters.filter_inconclusive,
+        counters.core_minimizations,
+        counters.core_minimization_probes,
+        reading(counters, LiaCounterGroup::Propagation),
+        counters.propagate_calls,
+        counters.propagate_atoms_scanned,
+        counters.propagate_probes,
+        counters.propagations_offered,
+    )
+}
+
 /// Formats this front-door call's route attribution (ADR-1760) as two
 /// `;`-prefixed `--trace` lines: a one-line summary and the full ordered trail
 /// as JSON.
@@ -613,6 +682,13 @@ fn watchdog_unavailable_line(trace_mode: bool, reason: &str) -> Vec<String> {
     vec![
         format!("; theory-layer unavailable: {reason}"),
         format!("; route unavailable: {reason}"),
+        // The integer-route counters are thread-local to the worker for the
+        // same reason, so they are unreadable on exactly this path. Measured
+        // 2026-09-08: 10 of the 27 committed `QF_LIA` losses take it, which is
+        // the hardest 37% of the population — the part any aggregate most needs
+        // to be able to COUNT rather than silently drop. Without this line the
+        // absence is indistinguishable from a run that never armed the guard.
+        format!("; lia unavailable: {reason}"),
     ]
 }
 
@@ -1238,6 +1314,12 @@ fn main() -> ExitCode {
         // with nothing after it is invisible in a verdict and nearly invisible
         // in a trail; `terminal_unknown` names it outright.
         let _uf_overbound_guard = trace_mode.then(UfArithOverboundStatsGuard::enable);
+        // The eighth: the integer-arithmetic routes' own counters. `QF_LIA` and
+        // `QF_UFLIA` produced no engine figure at all before this — the online
+        // integer theory implements no `engine_counters`, and the offline
+        // `lia-simplex` decider is not a `TheorySolver`, so neither could ever
+        // appear on the `; theory-layer` line.
+        let _lia_guard = trace_mode.then(LiaCountersGuard::enable);
         // A parse or solver error is reported as `unknown` — never a wrong
         // verdict, and never a crash that the harness would read as an abort.
         let mut give_up: Option<String> = None;
@@ -1299,6 +1381,12 @@ fn main() -> ExitCode {
             let uf_overbound = last_uf_arith_overbound_stats();
             if uf_overbound.engaged > 0 {
                 trace_lines.push(uf_overbound.trace_line());
+            }
+            // Only when a snapshot exists: a `None` here means the guard was
+            // never armed on this thread, which is not the same as "the integer
+            // routes did nothing" and must not print as a row of zeros.
+            if let Some(counters) = last_lia_counters() {
+                trace_lines.push(lia_counters_report_line(&counters));
             }
             // Route attribution (ADR-1760) LAST, so a reader who scans to the
             // end of the `;` block finds the one line that names which route
@@ -1438,7 +1526,7 @@ mod tests {
         );
         assert_eq!(
             lines.len(),
-            2,
+            3,
             "trace_mode=true must always yield a line, never nothing: got {lines:?}"
         );
         assert!(
@@ -1455,6 +1543,14 @@ mod tests {
             lines[1].starts_with("; route unavailable: "),
             "got: {}",
             lines[1]
+        );
+        // Same argument, same population: 10 of the 27 committed `QF_LIA`
+        // losses take this path, so a `; lia` aggregate that could not count
+        // them would be reporting on the 63% that finished.
+        assert!(
+            lines[2].starts_with("; lia unavailable: "),
+            "got: {}",
+            lines[2]
         );
         for line in &lines {
             assert!(line.contains("watchdog fired"), "got: {line}");

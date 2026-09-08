@@ -119,6 +119,7 @@ macro_rules! full_modules {
         mod lazy_bv;
         mod lex_reconstruct;
         mod lia;
+        mod lia_counters;
         mod lia_gcd;
         mod lia_interpolant;
         mod lia_interpolant_cnf;
@@ -1153,6 +1154,11 @@ macro_rules! full_exports {
         pub use lex_reconstruct::reconstruct_lex_clash_to_lean_module;
         #[doc(hidden)]
         pub use lia::{DEFAULT_INT_WIDTH, check_with_int_blasting};
+        #[doc(hidden)]
+        pub use lia_counters::{
+            GroupReading, LiaCounterGroup, LiaCounterPolicy, LiaCounterPolicyBits, LiaCounters,
+            LiaCountersGuard, last_lia_counters,
+        };
         #[doc(hidden)]
         pub use lia_gcd::{
             DiophantineCertificate, Equality, check_diophantine_certificate,
