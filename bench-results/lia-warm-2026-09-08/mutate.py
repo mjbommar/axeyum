@@ -51,7 +51,7 @@ MUTATIONS = {
     # M4: skip the tightening a cached literal is supposed to carry.
     "no-tightening": (
         """        let mut constraints = std::mem::take(&mut self.collector.constraints);
-        tighten_int_constraints(&mut constraints);""",
+        tighten_strict_integer_constraints(&mut constraints);""",
         """        let constraints = std::mem::take(&mut self.collector.constraints);""",
     ),
     # M5: allocate local columns in ascending global order instead of touch

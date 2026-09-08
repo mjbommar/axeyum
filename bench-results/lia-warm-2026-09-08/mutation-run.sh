@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
-# The mutation battery against the code that SHIPS, not the code the tests were
-# first written against. Every mutant gets an external wall bound, because
-# `no-tightening` does not fail -- it grinds, and "the suite never returned" has
-# to be recorded as a kill of a different kind rather than confused with a pass.
+# The mutation battery against the MERGED code. The tests changed in the merge
+# (the counter tests moved to `lia_counters`, two were deleted), so the earlier
+# result describes a tree that no longer exists.
 set -u
 SNAP="$1"
 OUT="$2"

@@ -26,20 +26,26 @@ import subprocess
 import sys
 import time
 
-WARM_LINE = re.compile(r"^; lia-warm (.*)$", re.M)
+# The counters moved onto the shared `; lia` line in the 2026-09-08 merge, and
+# a solve that never returns reports them as `; partial lia` off the
+# live-instruments board. Matching only the old name silently produced a sweep
+# with every counter missing -- which is why this also records WHICH line it
+# read, so a partial reading is never averaged with a complete one.
+LIA_LINE = re.compile(r"^; (partial )?lia (.*)$", re.M)
 VERDICTS = {"sat", "unsat", "unknown"}
 
 
-def parse_counters(text: str) -> dict[str, str]:
-    m = WARM_LINE.search(text)
+def parse_counters(text: str) -> tuple[dict[str, str], str]:
+    """The `; lia` counters, and whether the reading was complete or partial."""
+    m = LIA_LINE.search(text)
     if not m:
-        return {}
+        return {}, "absent"
     out = {}
-    for field in m.group(1).split():
+    for field in m.group(2).split():
         if "=" in field:
             k, v = field.split("=", 1)
             out[k] = v
-    return out
+    return out, "partial" if m.group(1) else "complete"
 
 
 def run_one(binary: str, path: str, budget_ms: int, arm: str) -> dict:
@@ -60,14 +66,25 @@ def run_one(binary: str, path: str, budget_ms: int, arm: str) -> dict:
         )
         out = proc.stdout
     except subprocess.TimeoutExpired:
-        return {"verdict": "harness-timeout", "wall_ms": None, "counters": {}}
+        return {
+            "verdict": "harness-timeout",
+            "wall_ms": None,
+            "counters": {},
+            "reading": "absent",
+        }
     wall_ms = int((time.monotonic() - started) * 1000)
     verdict = "no-verdict"
     for line in reversed(out.strip().splitlines()):
         if line.strip() in VERDICTS:
             verdict = line.strip()
             break
-    return {"verdict": verdict, "wall_ms": wall_ms, "counters": parse_counters(out)}
+    counters, reading = parse_counters(out)
+    return {
+        "verdict": verdict,
+        "wall_ms": wall_ms,
+        "counters": counters,
+        "reading": reading,
+    }
 
 
 def main() -> int:
@@ -99,8 +116,8 @@ def main() -> int:
                 print(
                     f"[{index+1}/{len(files)}] rep{rep} {arm:6s} "
                     f"{r['verdict']:8s} {r['wall_ms']}ms "
-                    f"offline={r['counters'].get('theory_offline_checks','-')} "
-                    f"{os.path.basename(path)}",
+                    f"offline={r['counters'].get('offline_calls','-')} "
+                    f"{r['reading'][:4]} {os.path.basename(path)}",
                     flush=True,
                 )
     with open(args.out, "w") as fh:

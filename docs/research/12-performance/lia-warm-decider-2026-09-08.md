@@ -132,7 +132,28 @@ on the main thread. The counters are monotone and nothing reads them back into
 the search, so a live read from the watchdog path is a lower bound on the work
 done — the only number that path has ever been able to report.
 
-## Result 1: the rational filter stays. The premise was wrong.
+## The baseline moved under these numbers, and they say so
+
+Everything in "Result 1" and "Result 2" below was measured **before** this lane
+merged `origin/main`, at binary `ca7717c5e`. Main then landed
+`c557cbe6d`, which removes the per-check `TermArena` clone from the online
+integer theory — measured there at 10-49% of the binding route's budget, median
+about 21%.
+
+That is a change to the **`off` arm**: the cold baseline these ratios are
+against got materially faster, so the warming ratios below are an over-estimate
+of what warming adds on top of the merged tree. The filter numbers are not
+affected in the same way — they are counts of what the filter answered, not a
+ratio against the cold path — but they were taken on the same pre-merge binary
+and are labelled as such.
+
+"Result 4" re-runs the whole thing post-merge on an idle host. Where the two
+disagree, Result 4 is the one about the code that ships. The pre-merge numbers
+are kept rather than overwritten because the decision to keep the rational
+filter was made on them, and a decision should be checkable against the evidence
+that was actually in front of it.
+
+## Result 1 (PRE-MERGE, binary `ca7717c5e`): the rational filter stays. The premise was wrong.
 
 Over the 29 of 85 files where the online theory is entered:
 
@@ -176,7 +197,7 @@ renamed `WARM_NO_FILTER` and documented as a diagnostic. A test pins the
 reverted default, because a default that was already once wrong is one edit from
 being wrong again.
 
-## Result 2: what warming bought
+## Result 2 (PRE-MERGE, binary `ca7717c5e`): what warming bought
 
 With the filter held fixed on both arms (`filter` vs `off`, so warming is the
 only difference):
@@ -202,7 +223,7 @@ Per-file, the families separate cleanly:
   `off.off` is 0 on seven of them, and warming the offline path is a no-op;
 * `FISCHER10-13-fair`, `prp-0-19` — likewise filter-dominated.
 
-## Result 3: confirmation at the real 24 s budget, and the one flip that was not one
+## Result 3 (PRE-MERGE, binary `ca7717c5e`): confirmation at the real 24 s budget, and the one flip that was not one
 
 Stage 1 ran at 8 s to cover all 85 files. Stage 2 re-ran the 29 engaged files at
 the **24 s** budget the parity sweep uses, same three arms, same alternating

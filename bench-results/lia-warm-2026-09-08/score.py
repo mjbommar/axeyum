@@ -81,7 +81,14 @@ def main() -> int:
 
     # --- 2. where the theory actually ran ---------------------------------
     def decisions(r: dict) -> int:
-        return counter(r, "theory_offline_checks") + counter(r, "theory_filter_answers")
+        """Live sets the theory decided: the offline decider's entries plus the
+        ones the warm rational filter answered outright. Counting only the
+        offline half scores the filter's contribution as zero work."""
+        return (
+            counter(r, "offline_calls")
+            + counter(r, "filter_refuted")
+            + counter(r, "filter_integral")
+        )
 
     engaged = [
         p
@@ -93,6 +100,21 @@ def main() -> int:
         for p, per in by_file.items()
         if any(a in per and not has_line(per[a]) for a in arms)
     ]
+    readings = collections.Counter(r.get("reading", "absent") for r in rows)
+    print(f"\n== reading provenance == {dict(readings)}")
+    mixed = [
+        p
+        for p, per in by_file.items()
+        if len({per[a].get("reading") for a in arms if a in per}) > 1
+    ]
+    print(
+        f"  files whose arms did NOT all report the same reading kind: {len(mixed)}"
+        "  (a partial total is a lower bound; mixing one with a complete one is not a ratio)"
+    )
+    for path in mixed[:10]:
+        print(f"    ~  {os.path.basename(path)} "
+              f"{ {a: by_file[path][a].get('reading') for a in arms if a in by_file[path]} }")
+
     print("\n== population the online LIA theory was actually entered on ==")
     print(f"  {len(engaged)} of {len(by_file)} files")
     print(f"  {len(no_line)} file(s) where some arm printed no `; lia-warm` line at all")
@@ -122,31 +144,36 @@ def main() -> int:
         )
 
     print("\n== offline decisions only (the stage the warm cache serves) ==")
-    off_totals = {a: sum(counter(by_file[p][a], "theory_offline_checks") for p in engaged) for a in arms}
+    off_totals = {a: sum(counter(by_file[p][a], "offline_calls") for p in engaged) for a in arms}
     for a in arms:
         print(f"  {a:8s} total={off_totals[a]:>9d}  x{off_totals[a]/max(off_totals[base],1):.2f} vs {base}")
 
     print("\n== the rational filter, where it ran ==")
     for a in arms:
-        ans = sum(counter(by_file[p][a], "theory_filter_answers") for p in engaged)
-        ref = sum(counter(by_file[p][a], "theory_filter_refuted") for p in engaged)
-        print(f"  {a:8s} answered={ans:>9d}  refuted={ref:>9d}")
+        ref = sum(counter(by_file[p][a], "filter_refuted") for p in engaged)
+        integral = sum(counter(by_file[p][a], "filter_integral") for p in engaged)
+        inconc = sum(counter(by_file[p][a], "filter_inconclusive") for p in engaged)
+        skipped = sum(counter(by_file[p][a], "filter_skipped") for p in engaged)
+        print(
+            f"  {a:8s} answered={ref + integral:>9d}  refuted={ref:>9d}  "
+            f"integral={integral:>9d}  inconclusive={inconc:>9d}  skipped={skipped:>9d}"
+        )
 
     print("\n== warm cache behaviour (warm arms only) ==")
     for a in arms:
-        checks = sum(counter(by_file[p][a], "checks") for p in engaged)
+        checks = sum(counter(by_file[p][a], "warm_checks") for p in engaged)
         if checks == 0:
             print(f"  {a:8s} the warm decider was never entered (cold arm)")
             continue
         warm_u = sum(counter(by_file[p][a], "warm_updates") for p in engaged)
-        rebuilds = sum(counter(by_file[p][a], "rebuilds") for p in engaged)
-        kept = sum(counter(by_file[p][a], "delta_kept") for p in engaged)
-        added = sum(counter(by_file[p][a], "delta_added") for p in engaged)
-        removed = sum(counter(by_file[p][a], "delta_removed") for p in engaged)
-        copied = sum(counter(by_file[p][a], "constraints_copied") for p in engaged)
-        live = sum(counter(by_file[p][a], "constraints_live") for p in engaged)
-        coll = sum(counter(by_file[p][a], "literal_collections") for p in engaged)
-        hits = sum(counter(by_file[p][a], "literal_cache_hits") for p in engaged)
+        rebuilds = sum(counter(by_file[p][a], "warm_rebuilds") for p in engaged)
+        kept = sum(counter(by_file[p][a], "warm_delta_kept") for p in engaged)
+        added = sum(counter(by_file[p][a], "warm_delta_added") for p in engaged)
+        removed = sum(counter(by_file[p][a], "warm_delta_removed") for p in engaged)
+        copied = sum(counter(by_file[p][a], "warm_constraints_copied") for p in engaged)
+        live = sum(counter(by_file[p][a], "offline_constraints") for p in engaged)
+        coll = sum(counter(by_file[p][a], "warm_literal_collections") for p in engaged)
+        hits = sum(counter(by_file[p][a], "warm_literal_cache_hits") for p in engaged)
         print(f"  {a}:")
         print(f"    checks={checks} warm_updates={warm_u} ({100*warm_u/checks:.1f}%) rebuilds={rebuilds}")
         print(f"    literals kept={kept} added={added} removed={removed}"
@@ -158,7 +185,14 @@ def main() -> int:
         reasons = collections.Counter()
         for p in engaged:
             for k, v in by_file[p][a]["counters"].items():
-                if k.startswith("assembly_"):
+                if k.startswith("warm_") and k.split("_")[1] in {
+                    "unchanged",
+                    "extended",
+                    "shortened",
+                    "diverged",
+                    "cold",
+                    "policy",
+                }:
                     reasons[k] += int(v)
         print(f"    assembly: {dict(reasons)}")
 
