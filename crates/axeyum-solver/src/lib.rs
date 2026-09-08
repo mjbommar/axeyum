@@ -1165,13 +1165,13 @@ macro_rules! full_exports {
         #[doc(hidden)]
         pub use lia_theory::check_qf_lia_online_cdclt;
         #[doc(hidden)]
-        pub use lra::{FarkasAtom, FarkasCertificate, lra_farkas_certificate};
-        #[doc(hidden)]
         pub use lra::warm::{
             AssemblyReason, LiaWarmCounters, LiaWarmPolicy, LiaWarmProcessStatsGuard,
             LiaWarmStatsGuard, WarmLiaDecider, ambient_lia_warm_policy, last_lia_warm_stats,
             live_lia_warm_stats,
         };
+        #[doc(hidden)]
+        pub use lra::{FarkasAtom, FarkasCertificate, lra_farkas_certificate};
         #[doc(hidden)]
         pub use lra::{
             check_with_lia_simplex, check_with_lra, check_with_lra_simplex, lra_unsat_core,
