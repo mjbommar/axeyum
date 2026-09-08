@@ -26,7 +26,9 @@ cd "$ROOT" || exit 1
 LIST="$1"
 OUT="$2"
 BUDGET_S="${3:-24}"
-BIN="$ROOT/target/release/examples/smtcomp_cli"
+# Overridable so a base-vs-HEAD A/B — and the base-vs-base control that must
+# precede it — run through identical harness code rather than two copies of it.
+BIN="${AXEYUM_SWEEP_BIN:-$ROOT/target/release/examples/smtcomp_cli}"
 
 mkdir -p "$OUT"
 : >"$OUT/index.tsv"
