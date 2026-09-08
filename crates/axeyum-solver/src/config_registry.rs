@@ -1030,6 +1030,17 @@ pub static REGISTRY: &[ConfigEntry] = &[
                     "try_lazy_arith_for_overbound",
                 ),
             ],
+            // The basis names the route the nine gained files are decided BY.
+            // If `dispatch_uf_arith_online` leaves auto.rs, the reserve holds a
+            // deadline back for a ladder with no rung left, and the +9 stops
+            // describing this tree. Naming the constant or the doc would keep
+            // passing in exactly that case -- the failure the sibling lane hit
+            // in its OWN first basis, where "batsat" still occurred in prose
+            // long after the thing the bound rested on had gone.
+            &[live(
+                "dispatch_uf_arith_online",
+                "crates/axeyum-solver/src/auto.rs",
+            )],
         ),
         note: "The slice of the budget held back from the lazy-Ackermann CEGAR for the routes \
                under it on an over-bound UF+arithmetic query. Before this constant existed the \

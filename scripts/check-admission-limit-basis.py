@@ -349,6 +349,59 @@ def main() -> int:
         )
         return 2
 
+    # A basis written as a RAW STRUCT LITERAL (`Basis::LiveSymbol { .. }`)
+    # rather than through a helper is invisible to BOTH the entry parse and the
+    # cross-check below -- the cross-check counts the same four helper patterns,
+    # so it shares the blind spot it exists to close. Measured 2026-09-08: an
+    # entry added in the raw form was silently DROPPED, the totals stayed at
+    # 28 entries, and the gate reported "Every basis resolves" while the symbol
+    # it named did not exist. A tool that omits rather than refuses reports on
+    # the subset it happened to parse, not on the set.
+    #
+    # Every basis in the table goes through a helper, so a raw literal there is
+    # always a mistake. Refuse instead of skipping.
+    # The anchor MUST resolve. My first version of this guard searched for
+    # "pub const REGISTRY" while the table is `pub static REGISTRY`, so the
+    # anchor matched nothing, the scan covered no text, and the guard passed on
+    # the very input it was written to catch -- a check that finds nothing and
+    # calls that success. Renaming the table must break this loudly, not
+    # silently disable it.
+    registry_text = args.registry.read_text(encoding="utf-8")
+    table_start = registry_text.find("pub static REGISTRY")
+    if table_start < 0:
+        print(
+            "FAIL (self-check): could not find `pub static REGISTRY` in "
+            f"{args.registry}. The raw-literal scan below would cover no text "
+            "and pass vacuously, so refuse instead.",
+            file=sys.stderr,
+        )
+        return 2
+    # Bound the scan to the TABLE, not to the end of the file. Scanning to EOF
+    # matched the four arms of a `match` on Basis in code BELOW the table and
+    # reported them as undeclared bases -- a false positive that would have
+    # trained the next reader to ignore this guard. The table ends at the first
+    # line that is exactly "];" at column 0.
+    table_end_rel = registry_text[table_start:].find("\n];")
+    if table_end_rel < 0:
+        print(
+            "FAIL (self-check): found `pub static REGISTRY` but not its "
+            "closing `];`, so the raw-literal scan has no bound.",
+            file=sys.stderr,
+        )
+        return 2
+    raw_in_table = registry_text[table_start : table_start + table_end_rel].count(
+        "Basis::"
+    )
+    if raw_in_table:
+        print(
+            f"FAIL (self-check): {raw_in_table} basis/bases in the entry table "
+            f"are written as raw `Basis::` literals. Those are invisible to the "
+            f"parser AND to the cross-check, so they are checked by nothing. "
+            f"Use the helpers -- adr(), doc(), live(), commit().",
+            file=sys.stderr,
+        )
+        return 2
+
     parsed_bases = sum(len(e.bases) for e in entries)
     written_bases = count_basis_literals(args.registry)
     if parsed_bases != written_bases:
