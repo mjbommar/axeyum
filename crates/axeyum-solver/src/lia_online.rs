@@ -75,6 +75,7 @@ use axeyum_ir::{
 
 use crate::backend::{CheckResult, SolverConfig, SolverError, UnknownKind, UnknownReason};
 use crate::euf_egraph::{TheoryLit, TheoryProp, TheorySolver};
+use crate::lia_counters;
 #[cfg(test)]
 use crate::lra::check_with_lia_simplex;
 use crate::lra::{
@@ -861,6 +862,10 @@ impl LiaTheory {
     /// feasibility check). `None` if a `BoolNot` build overflows the arena (never
     /// expected for well-formed atoms — degrades to `Unknown`).
     fn live_terms(&self, lits: &[TheoryLit]) -> Option<(TermArena, Vec<TermId>)> {
+        // Counted here rather than at the call sites because this is where the
+        // clone happens; `arena.len()` is the node count actually copied, which
+        // is the quantity an incremental integer check would stop paying.
+        lia_counters::record_arena_clone(self.arena.len() as u64);
         let mut arena = self.arena.clone();
         let mut terms = Vec::with_capacity(lits.len());
         for lit in lits {
@@ -891,15 +896,22 @@ impl LiaTheory {
             return Feasibility::Unknown;
         }
         let lits = self.live_lits();
+        lia_counters::record_feasibility_check(lits.len() as u64);
         if lits.is_empty() {
             return Feasibility::Sat;
         }
         // The warm rational filter first: it refutes with a small Farkas core, or
         // confirms with an integral witness, without touching the offline decider.
         match self.rational_filter() {
-            RationalFilter::Refuted(core) => return Feasibility::Unsat(core),
-            RationalFilter::IntegralPoint => return Feasibility::Sat,
-            RationalFilter::Inconclusive => {}
+            RationalFilter::Refuted(core) => {
+                lia_counters::record_filter_refuted();
+                return Feasibility::Unsat(core);
+            }
+            RationalFilter::IntegralPoint => {
+                lia_counters::record_filter_integral();
+                return Feasibility::Sat;
+            }
+            RationalFilter::Inconclusive => lia_counters::record_filter_inconclusive(),
         }
         let Some((arena, terms)) = self.live_terms(&lits) else {
             return Feasibility::Unknown;
@@ -1206,25 +1218,36 @@ impl LiaTheory {
         }
         if self.defer_feasibility_until_propagate {
             if let Some(prop) = self.deferred_feasibility_conflict() {
+                lia_counters::record_propagate(0, 0, 1);
                 return vec![prop];
             }
             if self.skip_entailment_propagation {
+                lia_counters::record_propagate(0, 0, 0);
                 return Vec::new();
             }
         }
 
         let asserted = self.live_lits();
         let mut out = Vec::new();
+        // The scan visits every registered atom at both polarities on every
+        // call. Counted so a propagation that offers nothing is separable from a
+        // propagation that was never asked — the shape the QF_LRA lane found
+        // costing 18 s of a 24 s budget for zero literals.
+        let mut scanned = 0u64;
+        let mut probes = 0u64;
         for atom in 0..self.kinds.len() {
             if self.deadline_expired() {
+                lia_counters::record_propagate(scanned, probes, out.len() as u64);
                 return out;
             }
             if self.assigned.get(atom).copied().flatten().is_some() {
                 continue; // already decided by the search
             }
+            scanned += 1;
             match self.kinds[atom] {
                 AtomKind::Order => {
                     // Probe ¬atom (atom false): LP-infeasible ⇒ atom entailed true.
+                    probes += 1;
                     if let Some(reason) = self.probe_entails(&asserted, atom, false) {
                         out.push(TheoryProp {
                             lit: TheoryLit { atom, value: true },
@@ -1233,6 +1256,7 @@ impl LiaTheory {
                         continue;
                     }
                     // Probe atom (atom true): LP-infeasible ⇒ ¬atom entailed.
+                    probes += 1;
                     if let Some(reason) = self.probe_entails(&asserted, atom, true) {
                         out.push(TheoryProp {
                             lit: TheoryLit { atom, value: false },
@@ -1241,6 +1265,7 @@ impl LiaTheory {
                     }
                 }
                 AtomKind::Equality => {
+                    probes += 1;
                     if let Some(reason) = self.probe_equality_true(&asserted, atom) {
                         out.push(TheoryProp {
                             lit: TheoryLit { atom, value: true },
@@ -1251,6 +1276,7 @@ impl LiaTheory {
                     // `asserted ∧ eq` LP-infeasible ⇒ equality is false. This probe uses
                     // the ordinary equality-true live term, which the conjunctive LIA
                     // checker already supports.
+                    probes += 1;
                     if let Some(reason) = self.probe_entails(&asserted, atom, true) {
                         out.push(TheoryProp {
                             lit: TheoryLit { atom, value: false },
@@ -1261,6 +1287,7 @@ impl LiaTheory {
                 AtomKind::Unsupported => {}
             }
         }
+        lia_counters::record_propagate(scanned, probes, out.len() as u64);
         out
     }
 
@@ -1487,6 +1514,10 @@ impl TheorySolver for LiaTheory {
         }
         self.assigned[index] = Some(value);
         self.assigned_log.push(index);
+        // The theory group's entry counter: asserts that actually recorded an
+        // assignment, so an idempotent re-assert does not inflate the
+        // denominator every per-assert ratio is taken against.
+        lia_counters::record_theory_assert();
 
         if self.defer_feasibility_until_propagate {
             return Ok(());
@@ -1547,10 +1578,15 @@ fn minimize_core(
 ) -> Vec<TheoryLit> {
     // Start from the full asserted set; try removing each literal in turn.
     let mut keep: Vec<bool> = vec![true; lits.len()];
+    // One offline re-decision per literal actually tried. Accumulated locally
+    // and recorded once, so a deadline-truncated run reports the probes it made
+    // rather than the ones it would have made.
+    let mut probes = 0u64;
     for drop_idx in 0..lits.len() {
         if deadline.is_some_and(|d| Instant::now() >= d) {
             break;
         }
+        probes += 1;
         keep[drop_idx] = false;
         let subset: Vec<TermId> = terms
             .iter()
@@ -1565,6 +1601,7 @@ fn minimize_core(
             keep[drop_idx] = true;
         }
     }
+    lia_counters::record_core_minimization(probes);
     let core: Vec<TheoryLit> = lits
         .iter()
         .zip(&keep)
