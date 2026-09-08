@@ -1110,6 +1110,21 @@ struct Watch {
     blocker: CnfLit,
 }
 
+/// Width of one [`Watch`], as the deterministic tick model
+/// ([`crate::ticks`]) assumes it.
+///
+/// Pinned rather than computed so the tick unit cannot drift silently: budgets
+/// are calibrated in ticks, and ticks are denominated in watches per assumed
+/// cache line, so widening the watch re-denominates every budget in the tree.
+/// The assertion below turns that into a build failure instead.
+pub(crate) const WATCH_BYTES: usize = 16;
+const _: () = assert!(
+    size_of::<Watch>() == WATCH_BYTES,
+    "`Watch` changed width: `ticks::WATCHES_PER_CACHE_LINE` and every budget \
+     calibrated in ticks are denominated in it. Re-decide the constant \
+     deliberately rather than letting the unit move."
+);
+
 /// What one [`Cdcl::theory_round`] concluded.
 #[derive(Debug, Clone, PartialEq, Eq)]
 enum TheoryRound {
