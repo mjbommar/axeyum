@@ -2074,11 +2074,16 @@ SUITES["cnf-subsume-work-meter"] = (
             "                stats.clauses_subsumed += 1;",
         ),
         (
-            # The dead-entry counter is how "this pass cannot produce one" is a
-            # measurement rather than a comment.
-            "the dead-entry counter reaches the stats",
-            "    stats.dead_occurrence_entries = work.dead_entries();",
-            "    stats.dead_occurrence_entries = 0;",
+            # The counting path itself. The pass-level assignment
+            # (`stats.dead_occurrence_entries = work.dead_entries()`) is NOT
+            # listed: it is not independently distinguishable, because this pass
+            # cannot produce a nonzero value for any input, so `= 0` passes
+            # every test that could exist. That impossibility is the finding;
+            # what IS testable is that the counter fires when a dead entry is
+            # planted, which is what makes the invariant test non-vacuous.
+            "a dead occurrence entry is counted when one is reachable",
+            "                    work.charge_dead(1);",
+            "                    work.charge_dead(0);",
         ),
     ],
 )

@@ -1,0 +1,3 @@
+arm=subsume-gated harness=inproc-vivify cpu=6 bve_mult=shipped subsume_mult=50 compact=shipped
+sweep arm=inproc-vivify budget_ms=24000 cpus=6 load_start=12.25 13.91 11.29
+sweep arm=inproc-vivify measured=200 rows=200 load_end=9.82 11.33 11.22

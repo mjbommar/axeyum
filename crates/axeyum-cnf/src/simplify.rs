@@ -1035,4 +1035,98 @@ mod tests {
         assert!(!stats.work_exhausted);
         assert!(stats.work_spent > 0, "the meter must run even unbudgeted");
     }
+
+    /// The budget binds WITHIN a round, not only between rounds.
+    ///
+    /// This guard was added because its mutation **survived**: deleting the
+    /// `must_stop()` check in the candidate loop left every other test green,
+    /// since the round loop checks too and the budget still appeared to bind.
+    /// It does not: the first round always starts, so with only the round-level
+    /// check a single round overruns the budget by however much that round
+    /// costs — unbounded on a large formula, which is the entire population a
+    /// budget exists for.
+    ///
+    /// The fixture reaches its fixpoint in ONE round (no clause subsumes or
+    /// strengthens another, so `subsume_round` reports no change and the loop
+    /// stops), which makes the round-level check unable to stop anything at
+    /// all. A budget at a quarter of the unbudgeted spend must therefore be
+    /// enforced by the candidate loop or not at all.
+    #[test]
+    fn the_budget_binds_within_a_round_and_not_only_between_rounds() {
+        const NVARS: usize = 400;
+        let mut f = CnfFormula::new(NVARS);
+        for i in 0..NVARS {
+            f.add_clause(clause(&[p(i), p((i + 1) % NVARS)])).unwrap();
+        }
+        let (_, free) = simplify(&f);
+        assert_eq!(
+            free.clauses_subsumed, 0,
+            "the fixture must reach its fixpoint in one round"
+        );
+        assert_eq!(free.literals_strengthened, 0);
+
+        let limit = free.work_spent / 4;
+        assert!(limit > 0);
+        let (_, capped) = simplify_with_options(
+            &f,
+            SubsumeOptions {
+                work_budget: Some(limit),
+            },
+            None,
+        );
+        assert!(capped.work_exhausted, "the budget must have bound");
+        assert!(
+            capped.work_spent < free.work_spent / 2,
+            "a budget enforced only between rounds lets the single round run to \
+             completion: spent {} against an unbudgeted {}",
+            capped.work_spent,
+            free.work_spent
+        );
+    }
+
+    /// A dead occurrence entry IS counted when one is reachable.
+    ///
+    /// The pass cannot produce one (see
+    /// `this_pass_cannot_produce_a_dead_occurrence_entry`), which makes that
+    /// invariant test vacuous on its own: a counter hard-wired to zero would
+    /// satisfy it. This plants one directly — a connected id whose clause slot
+    /// is `None`, the state the scan's `else` branch exists for — and requires
+    /// the counter to see it.
+    ///
+    /// So the pair says both halves: the counting path works, and the pass
+    /// never exercises it. Without this one, "subsumption reports zero dead
+    /// entries" would be a statement about the instrument rather than about the
+    /// pass.
+    #[test]
+    fn a_dead_occurrence_entry_is_counted_when_one_is_reachable() {
+        let nvars = 4;
+        let live = NormClause::from_clause(&clause(&[p(0), p(1)])).expect("not a tautology");
+        let candidate = NormClause::from_clause(&clause(&[p(2), p(3)])).expect("not a tautology");
+        // Slot 0 is dead; slot 1 is the candidate being examined.
+        let clauses = vec![None, Some(candidate)];
+        let mut occs: Vec<Vec<usize>> = vec![Vec::new(); 2 * nvars];
+        // Connect the DEAD clause id on a literal the candidate carries, so the
+        // candidate's scan reaches it.
+        occs[lit_index(p(2))].push(0);
+        drop(live);
+
+        let mut marks = vec![0i8; nvars];
+        let mut checks = 0usize;
+        let mut work = PassWork::with_setup(0, None);
+        let outcome = try_subsume(1, &clauses, &occs, &mut marks, &mut checks, &mut work);
+        assert!(
+            matches!(outcome, Outcome::Keep),
+            "a dead entry must not decide anything"
+        );
+        assert_eq!(
+            work.dead_entries(),
+            1,
+            "the scan must count the entry it paid for and got nothing from"
+        );
+        assert_eq!(
+            checks, 0,
+            "and a dead entry must never reach the subsumption check"
+        );
+        assert_eq!(marks, vec![0i8; nvars], "marks must be left zeroed");
+    }
 }

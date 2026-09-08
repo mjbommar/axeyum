@@ -1,0 +1,46 @@
+population: 200 files, budget 24000 ms
+
+| arm | decided | PAR-2 | inproc s | subsume s | vivify s | bve s | subsume clock-cut | subsume work-cut | bve dead/spent |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| off | 185 | 944.4 | 0.0 | 0.0 | 0.0 | 0.0 | 0 | 0 | — |
+| base | 184 | 1125.1 | 182.7 | 77.6 | 3.4 | 97.5 | 0 | 52 | 0.002 |
+| bve-free | 186 | 1152.0 | 282.1 | 79.3 | 3.9 | 194.5 | 1 | 53 | 0.001 |
+| bve-free-compact | 185 | 1152.9 | 275.8 | 89.2 | 3.8 | 178.5 | 1 | 53 | 0.001 |
+
+cross-arm verdict conflicts: 0
+
+files that ran subsumption and recorded the counters: 141 of 200
+
+last progress, in units of the pass's own setup cost:
+  p50 131x  p75 170x  p90 179x  p95 182x  max 193x
+total spend, same units: p50 132x  p90 179x  max 194x
+spend after the last useful action: 2.2% of all subsumption work
+throughput (steps/ms, 81 files >= 20 ms): p10 86,042  median 127,599  p90 154,908
+
+| K (x setup) | files cut | sec saved | files keeping 100% |
+|---:|---:|---:|---:|
+| 10 | 127 | 72.5 s | 22 |
+| 25 | 109 | 64.9 s | 34 |
+| 50 | 98 | 52.3 s | 46 |
+| 100 | 82 | 28.5 s | 60 |
+| 200 | 0 | 0.0 s | 141 |
+| 500 | 0 | 0.0 s | 141 |
+| 1000 | 0 | 0.0 s | 141 |
+| 2000 | 0 | 0.0 s | 141 |
+| 5000 | 0 | 0.0 s | 141 |
+
+=== compaction against budgeting (BVE) ===
+dead occurrence entries, unbudgeted BVE: 96,305,989 of 94,971,266,676 steps = 0.10% of the scan
+per file: p50 0.06%  p90 0.68%  max 12.50%  (141 files)
+
+| arm | bve s | bve work steps | dead steps | vars eliminated |
+|---|---:|---:|---:|---:|
+| bve-free (neither fix) | 194.5 | 94,971,266,676 | 96,305,989 | 1,875,684 |
+| base (budget only) | 97.5 | 44,749,287,705 | 69,641,048 | 2,179,558 |
+| bve-free-compact (compaction only) | 178.5 | 94,542,807,315 | 59,624,009 | 1,849,115 |
+
+the named file:
+  off                    sat      wall   22840 ms  subsume        0 ms  bve        0 ms  subsume_work               0
+  base                   unknown  wall   25000 ms  subsume        0 ms  bve        0 ms  subsume_work               0
+  bve-free               unknown  wall   25000 ms  subsume        0 ms  bve        0 ms  subsume_work               0
+  bve-free-compact       unknown  wall   25000 ms  subsume        0 ms  bve        0 ms  subsume_work               0

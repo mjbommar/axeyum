@@ -1213,19 +1213,42 @@ const BVE_STEPS_PER_MILLISECOND: u64 = 400_000;
 /// Subsumption's budget as a multiple of its own setup cost, in the same
 /// occurrence-list-step unit BVE is budgeted in.
 ///
-/// Subsumption is the pass BVE's admission measurement could not help. On
-/// `div3.c.50` — the single file the gated inprocessing arm lost to the
-/// baseline on 2026-09-08 — subsumption spends 10.7 s of an 11.4 s inprocessing
-/// slice while BVE spends 97 ms, so no BVE budget can reach it. Its own cap
-/// counts *subsumption checks*, the candidates that survive the length and
-/// signature pre-filters, and like BVE's resolution cap it is a bound on a
-/// component rather than on the pass.
+/// # This constant is a different KIND of decision from BVE's
 ///
-/// The value is measured over the pinned 200-file `QF_BV` parity list from an
-/// unbudgeted calibration sweep, priced the same way BVE's was: each file's
-/// `subsume_work_at_last_progress` says what budget would have cost it nothing.
+/// BVE's `2000` was nearly free: 22.9 % of its work came after its last useful
+/// action, so most of what the budget declined was waste. Subsumption's is
+/// **1.5–2.2 %**, and its total spend sits between 131 x and 193 x setup across
+/// the whole 200-file parity list — a factor of 1.5, against BVE's factor of 84.
+/// The pass does work proportional to the formula and then stops.
+///
+/// So there is no free component here: every second this saves is bought by
+/// giving up subsumptions, and the constant is chosen against a solved count
+/// rather than against a waste figure. Measured 2026-09-08 over the pinned list
+/// at 24 s, all arms concurrent and pinned to distinct physical P-cores:
+///
+/// | arm | decided | PAR-2 | subsume s | bve s |
+/// |---|---:|---:|---:|---:|
+/// | inprocessing off | 184 | 926.8 | — | — |
+/// | subsumption unbudgeted | 185 | 1003.7 | 74.4 | 79.1 |
+/// | `K = 100` | 184 | 1020.5 | 37.4 | 77.8 |
+/// | **`K = 50`** | **186** | **960.5** | **29.9** | 111.1 |
+///
+/// `K = 50` is the shipped value: the best inprocessing arm measured on both
+/// counts, 44.5 s of subsumption not spent, and it **recovers `div3.c.50`** —
+/// the one file the 2026-09-08 admission lane's gated arm lost, where
+/// subsumption ate a 10.8 s slice by itself. Under this budget that file's
+/// subsumption stops at exactly `50 x setup` = 452,526,023 steps, 4.2 s, and the
+/// whole solve returns `sat` in 22.4 s.
+///
+/// **Read `K = 100` before trusting the ranking.** It is worse than doing
+/// nothing on PAR-2, which is not a monotone story, and the identical-arm
+/// spread measured between two `off` runs on this host was 1 file and 17.6
+/// PAR-2 points. The 43-point gap from unbudgeted to `K = 50` exceeds that; the
+/// one-file difference in decided counts does not. Treat the seconds as
+/// measured and the ordering of adjacent arms as provisional.
+///
 /// See `docs/research/03-measurements/subsumption-work-meter-2026-09-08.md`.
-const SUBSUME_BUDGET_SETUP_MULTIPLE: u64 = 200;
+const SUBSUME_BUDGET_SETUP_MULTIPLE: u64 = 50;
 
 /// Occurrence-list steps subsumption retires per millisecond on this host, used
 /// only to convert a remaining wall slice into the budget's unit.
@@ -1236,11 +1259,17 @@ const SUBSUME_BUDGET_SETUP_MULTIPLE: u64 = 200;
 /// would be a guess dressed as a shared constant, and the measurement says they
 /// differ by 3.6x.
 ///
-/// Measured 2026-09-08 as `subsume_work_spent / subsume_ms` over the 81 parity
-/// files whose subsumption ran at least 20 ms: p10 86,042, **median 127,599**,
-/// p90 154,908. Against BVE's median of 460,365 — a subsumption step is the
-/// more expensive one, which is the opposite of what a shared constant would
-/// have assumed.
+/// Measured 2026-09-08 as `subsume_work_spent / subsume_ms` over the parity
+/// files whose subsumption ran at least 20 ms, on two runs at different host
+/// load: p10 86,042 / 85,471, **median 127,599 / 172,489**, p90 154,908 /
+/// 220,577. The shipped value is the lower median, which is the conservative
+/// end. Against BVE's median of 460,365 — a subsumption step is the more
+/// expensive one, which is the opposite of what a shared constant would have
+/// assumed, and the reason there are two constants.
+///
+/// The spread between the two runs is the point of the caveat: this is the one
+/// quantity here that moves with host load, which is why it governs only the
+/// deadline branch.
 ///
 /// Getting it wrong is not dangerous in either direction — too high and the
 /// wall deadline truncates as it does today, too low and the pass stops early
@@ -1300,10 +1329,11 @@ fn env_compact_occurrences(default: bool) -> bool {
 /// for the same reason as [`parse_multiple_lever`].
 fn parse_compact_lever(value: Option<&str>, default: bool) -> bool {
     match value {
-        None => default,
         Some(v) if v == "1" || v.eq_ignore_ascii_case("on") => true,
         Some(v) if v == "0" || v.eq_ignore_ascii_case("off") => false,
-        Some(_) => default,
+        // Absent and unparseable both keep the shipped value: a typo must not
+        // quietly measure a different arm than the one named.
+        None | Some(_) => default,
     }
 }
 
