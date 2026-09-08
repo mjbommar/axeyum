@@ -55,7 +55,7 @@ use std::time::Instant;
 #[cfg(target_arch = "wasm32")]
 use web_time::Instant;
 
-use crate::pass_work::{PassWork, compact_dead_entries};
+use crate::pass_work::PassWork;
 use crate::{CnfClause, CnfFormula, CnfLit, DratStep};
 
 /// What a [`simplify`] pass removed, for diagnostics and benchmark accounting.
@@ -126,21 +126,18 @@ pub struct SubsumeOptions {
     /// without ever reaching it. The dominant cost is the occurrence-list scan,
     /// which the check cap does not count at all.
     pub work_budget: Option<u64>,
-    /// Drop lazily-removed clause ids from an occurrence list once at least half
-    /// of it is dead. A clause subsumed mid-round keeps its id in the list it
-    /// was connected on, and every later candidate sharing that literal
-    /// re-examines it. [`Self::work_budget`] hides that constant; this removes
-    /// it. They are different fixes and one is not a substitute for the other.
-    pub compact_occurrences: bool,
 }
 
 impl SubsumeOptions {
-    /// The shipping defaults: unbudgeted and non-compacting, i.e. exactly the
-    /// behaviour every caller had before the meter existed.
-    pub const DEFAULT: Self = Self {
-        work_budget: None,
-        compact_occurrences: false,
-    };
+    /// The shipping default: unbudgeted, i.e. exactly the behaviour every
+    /// caller had before the meter existed.
+    ///
+    /// There is deliberately no compaction knob here, unlike
+    /// `crate::bve::BveOptions`. This pass cannot produce a dead occurrence
+    /// entry to compact — see `this_pass_cannot_produce_a_dead_occurrence_entry`
+    /// and `SubsumeStats::dead_occurrence_entries`, which measures the zero
+    /// rather than asserting it in prose.
+    pub const DEFAULT: Self = Self { work_budget: None };
 }
 
 impl Default for SubsumeOptions {
@@ -271,11 +268,10 @@ enum Outcome {
 fn try_subsume(
     ci: usize,
     clauses: &[Option<NormClause>],
-    occs: &mut [Vec<usize>],
+    occs: &[Vec<usize>],
     marks: &mut [i8],
     checks: &mut usize,
     work: &mut PassWork,
-    compact: bool,
 ) -> Outcome {
     let c = clauses[ci].as_ref().expect("live candidate");
     let c_len = c.lits.len();
@@ -294,10 +290,6 @@ fn try_subsume(
     'outer: for &l in &c.lits {
         for sgn in [l, l.negated()] {
             let slot = lit_index(sgn);
-            // Live entries seen in this slot, for the compaction decision. Only
-            // meaningful when the slot is scanned to the end, which is why the
-            // early exits below leave the list alone.
-            let mut live = 0usize;
             for idx in 0..occs[slot].len() {
                 let d_id = occs[slot][idx];
                 // ONE STEP PER ENTRY EXAMINED, not per entry that survives the
@@ -311,7 +303,6 @@ fn try_subsume(
                 // must be denominated in work done, not work available.
                 work.charge(1);
                 if d_id == ci {
-                    live += 1;
                     continue;
                 }
                 let Some(d) = clauses[d_id].as_ref() else {
@@ -326,7 +317,6 @@ fn try_subsume(
                     work.charge_dead(1);
                     continue;
                 };
-                live += 1;
                 if d.lits.len() > c_len || (d.sig & !c_sig) != 0 {
                     continue;
                 }
@@ -345,9 +335,6 @@ fn try_subsume(
                     }
                     Check::No => {}
                 }
-            }
-            if compact {
-                compact_dead_entries(&mut occs[slot], live, work, |id| clauses[id].is_some());
             }
         }
     }
@@ -429,15 +416,7 @@ fn subsume_round(
         if clauses[ci].is_none() {
             continue; // subsumed earlier this round
         }
-        match try_subsume(
-            ci,
-            clauses,
-            &mut occs,
-            marks,
-            &mut checks,
-            work,
-            opts.compact_occurrences,
-        ) {
+        match try_subsume(ci, clauses, &occs, marks, &mut checks, work) {
             Outcome::Subsumed => {
                 if let Some(p) = proof.as_deref_mut() {
                     // Pure deletion. Sound unconditionally in `DRAT` — a deletion
@@ -1021,44 +1000,33 @@ mod tests {
         equivalent(&f, &out, NVARS);
     }
 
-    /// Compaction changes the COST and not the ANSWER.
+    /// **This pass cannot produce a dead occurrence entry**, so compaction has
+    /// nothing to remove here.
     ///
-    /// Unbudgeted, dropping dead ids cannot change which clauses are subsumed —
-    /// the entries removed are exactly the ones every scan already skipped — so
-    /// the two formulas must be identical while the work counters differ. That
-    /// is the whole claim compaction makes, and it is why compaction and
-    /// budgeting are not the same fix: this one removes work, the other one
-    /// declines to do it.
+    /// That is a property of the schedule, not of the fixture. Occurrence lists
+    /// are rebuilt from the live clauses at the top of every round, and the only
+    /// clause a round ever removes is the candidate it is currently examining —
+    /// which is connected on the `Keep` arm, i.e. only when it is *not* removed.
+    /// So no entry in any list can ever refer to a removed clause.
     ///
-    /// Mutation control for the `if compact` block in `try_subsume`: delete it
-    /// and the two runs spend identically, failing the strict inequality.
+    /// The claim is asserted through the counter rather than argued in a
+    /// comment, on a fixture that subsumes dozens of clauses and would show a large
+    /// count if the invariant were false. It is the negative half of the
+    /// compaction question: `crate::bve`'s lists live for the whole pass and its
+    /// eliminations kill clauses sitting in many of them, which is where the
+    /// dead-id constant actually is.
     #[test]
-    fn compaction_lowers_the_cost_without_changing_the_result() {
+    fn this_pass_cannot_produce_a_dead_occurrence_entry() {
         let f = stale_entry_fixture();
-        let (plain, plain_stats) = simplify(&f);
-        let (compacted, compact_stats) = simplify_with_options(
-            &f,
-            SubsumeOptions {
-                compact_occurrences: true,
-                ..SubsumeOptions::DEFAULT
-            },
-            None,
-        );
-        assert_eq!(
-            compacted.clauses(),
-            plain.clauses(),
-            "compaction must not change the reduced formula"
-        );
-        assert_eq!(compact_stats.clauses_subsumed, plain_stats.clauses_subsumed);
-        assert_eq!(
-            compact_stats.literals_strengthened,
-            plain_stats.literals_strengthened
-        );
+        let (_, stats) = simplify(&f);
         assert!(
-            compact_stats.work_spent < plain_stats.work_spent,
-            "compaction must remove re-scans of dead ids: {} vs {}",
-            compact_stats.work_spent,
-            plain_stats.work_spent
+            stats.clauses_subsumed >= 50,
+            "the fixture must remove many clauses mid-round: {}",
+            stats.clauses_subsumed
+        );
+        assert_eq!(
+            stats.dead_occurrence_entries, 0,
+            "a connected clause is never removed, so no scan can meet a dead id"
         );
     }
 
@@ -1068,7 +1036,6 @@ mod tests {
     #[test]
     fn the_default_options_never_stop_the_pass() {
         assert_eq!(SubsumeOptions::DEFAULT.work_budget, None);
-        assert!(!SubsumeOptions::DEFAULT.compact_occurrences);
         let (_, stats) = simplify(&stale_entry_fixture());
         assert!(!stats.work_exhausted);
         assert!(stats.work_spent > 0, "the meter must run even unbudgeted");

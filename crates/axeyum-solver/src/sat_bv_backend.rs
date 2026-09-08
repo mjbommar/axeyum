@@ -1245,13 +1245,6 @@ const SUBSUME_STEPS_PER_MILLISECOND: u64 = 900_000;
 /// `bve_dead_occurrence_entries` measures it.
 const BVE_COMPACT_OCCURRENCES: bool = false;
 
-/// Whether subsumption compacts its occurrence lists.
-///
-/// See `subsume_dead_occurrence_entries`: this pass rebuilds its lists every
-/// round and only ever removes the candidate it is currently examining, which
-/// has not been connected yet, so there is nothing to compact.
-const SUBSUME_COMPACT_OCCURRENCES: bool = false;
-
 /// Reads a measurement lever overriding one pass's budget multiple.
 ///
 /// **This exists to make the A/B arms of a corpus sweep runnable against one
@@ -1264,10 +1257,22 @@ const SUBSUME_COMPACT_OCCURRENCES: bool = false;
 /// An unparseable value is ignored rather than defaulted to something else: a
 /// typo must not quietly measure a different arm than the one named.
 fn env_override_multiple(name: &str, default: u64) -> u64 {
-    match std::env::var(name) {
-        Ok(v) if v.eq_ignore_ascii_case("off") || v == "0" => u64::MAX,
-        Ok(v) => v.parse::<u64>().map_or(default, |n| n.max(1)),
-        Err(_) => default,
+    parse_multiple_lever(std::env::var(name).ok().as_deref(), default)
+}
+
+/// The lever's parsing rules, separated from the environment read so they are
+/// testable at all.
+///
+/// A test that sets a process-wide environment variable is a gate on one shell
+/// and races every other test in a threaded suite, so the decision lives here
+/// and `env_override_multiple` is the thin read. `None` (absent) and an
+/// unparseable value both keep `default`: a typo must not quietly measure a
+/// different arm than the one named.
+fn parse_multiple_lever(value: Option<&str>, default: u64) -> u64 {
+    match value {
+        None => default,
+        Some(v) if v.eq_ignore_ascii_case("off") || v == "0" => u64::MAX,
+        Some(v) => v.parse::<u64>().map_or(default, |n| n.max(1)),
     }
 }
 
@@ -1277,9 +1282,17 @@ fn env_override_multiple(name: &str, default: u64) -> u64 {
 /// answer this lane measured — see
 /// `docs/research/03-measurements/subsumption-work-meter-2026-09-08.md`.
 fn env_compact_occurrences(default: bool) -> bool {
-    match std::env::var("AXEYUM_OCC_COMPACT") {
-        Ok(v) => v == "1" || v.eq_ignore_ascii_case("on"),
-        Err(_) => default,
+    parse_compact_lever(std::env::var("AXEYUM_OCC_COMPACT").ok().as_deref(), default)
+}
+
+/// The compaction lever's parsing rules, separated from the environment read
+/// for the same reason as [`parse_multiple_lever`].
+fn parse_compact_lever(value: Option<&str>, default: bool) -> bool {
+    match value {
+        None => default,
+        Some(v) if v == "1" || v.eq_ignore_ascii_case("on") => true,
+        Some(v) if v == "0" || v.eq_ignore_ascii_case("off") => false,
+        Some(_) => default,
     }
 }
 
@@ -1513,7 +1526,6 @@ fn run_subsume(
             formula,
             SubsumeOptions {
                 work_budget: Some(work_budget),
-                compact_occurrences: env_compact_occurrences(SUBSUME_COMPACT_OCCURRENCES),
             },
             deadline,
         ),
@@ -3579,5 +3591,134 @@ mod tests {
             zero_budget.stats.work_spent > 0,
             "a zero-budget call still pays for setup; that is why `skipped` exists"
         );
+    }
+
+    // --- Subsumption admission: the same gate, its own constants ---
+
+    /// With no deadline subsumption's budget is size-proportional and
+    /// deterministic, exactly as BVE's is.
+    ///
+    /// The `const` assertion is the statement that the shipped constants are
+    /// consistent: a `SUBSUME_BUDGET_SETUP_MULTIPLE` below the recovery
+    /// multiple would delay *every* formula in the no-deadline case and switch
+    /// subsumption off entirely, which no other test here would notice.
+    #[test]
+    fn without_a_deadline_subsumption_is_admitted_with_a_size_proportional_budget() {
+        let f = wide_formula(500);
+        let mut stats = SolveStats::default();
+        let budget = subsume_admission(&f, None, &mut stats).expect("no deadline must admit");
+        let setup = (literal_occurrences(&f) + 2 * f.variable_count()) as u64;
+        assert_eq!(budget, setup * SUBSUME_BUDGET_SETUP_MULTIPLE);
+        const { assert!(SUBSUME_BUDGET_SETUP_MULTIPLE >= BVE_MIN_RECOVERY_MULTIPLE) };
+        assert_eq!(stat(&stats, "subsume_admitted"), Some(1.0));
+        assert_eq!(stat(&stats, "subsume_setup_work"), Some(u64_as_f64(setup)));
+    }
+
+    /// The delay arm, reached for subsumption too. Without this the shared
+    /// `admit_occurrence_pass` would be exercised on one pass only, and the
+    /// second caller would be untested code claiming to reuse a tested
+    /// mechanism.
+    #[test]
+    fn a_spent_slice_delays_subsumption_as_well() {
+        let f = wide_formula(500);
+        let already_gone = Instant::now()
+            .checked_sub(Duration::from_secs(1))
+            .expect("the process has been up for at least a second");
+        let mut stats = SolveStats::default();
+        assert!(
+            subsume_admission(&f, Some(already_gone), &mut stats).is_none(),
+            "a slice with nothing left in it must not start the pass"
+        );
+        assert_eq!(stat(&stats, "subsume_admitted"), Some(0.0));
+        let setup = (literal_occurrences(&f) + 2 * f.variable_count()) as u64;
+        assert_eq!(
+            stat(&stats, "subsume_admission_threshold"),
+            Some(u64_as_f64(setup * BVE_MIN_RECOVERY_MULTIPLE))
+        );
+    }
+
+    /// The two passes are admitted by ONE policy with different constants, so
+    /// their budgets must be in the same ratio as their multiples on the same
+    /// formula. If they ever stop being, the shared function has been forked.
+    #[test]
+    fn both_passes_are_budgeted_by_the_same_policy() {
+        let f = wide_formula(500);
+        let mut a = SolveStats::default();
+        let mut b = SolveStats::default();
+        let bve = bve_admission(&f, None, &mut a).expect("admitted");
+        let subsume = subsume_admission(&f, None, &mut b).expect("admitted");
+        assert_eq!(
+            bve * SUBSUME_BUDGET_SETUP_MULTIPLE,
+            subsume * BVE_BUDGET_SETUP_MULTIPLE,
+            "one policy, two constants: {bve} and {subsume} must scale together"
+        );
+    }
+
+    /// The granted budget must reach subsumption, not merely be computed.
+    ///
+    /// The same wiring gap `the_granted_budget_reaches_the_pass` documents for
+    /// BVE, and it is a real gap rather than a hypothetical one: the mutation
+    /// is "compute the budget, then pass `SubsumeOptions::DEFAULT`", it
+    /// compiles, it produces identical verdicts, and nothing else in this crate
+    /// looks at `subsume_work_spent`. The budget under test is derived from the
+    /// unbudgeted run so the fixture cannot quietly go vacuous when the
+    /// charging rules change.
+    #[test]
+    fn the_granted_subsume_budget_reaches_the_pass() {
+        let f = wide_formula(4000);
+        let (_, unbudgeted) = run_subsume(&f, Some(u64::MAX), None);
+        let setup = (literal_occurrences(&f) + 2 * f.variable_count()) as u64;
+        assert!(
+            unbudgeted.work_spent > setup,
+            "fixture must spend past setup unbudgeted: {} vs {setup}",
+            unbudgeted.work_spent
+        );
+
+        let tight = setup + (unbudgeted.work_spent - setup) / 2;
+        let (_, budgeted) = run_subsume(&f, Some(tight), None);
+        assert!(
+            budgeted.work_exhausted,
+            "the budget must be the reason the pass stopped"
+        );
+        assert!(
+            budgeted.work_spent < unbudgeted.work_spent,
+            "a budget that is ignored spends exactly what no budget spends: {} vs {}",
+            budgeted.work_spent,
+            unbudgeted.work_spent
+        );
+
+        // And the `None` arm declines rather than running cheaply: no
+        // normalization, no occurrence lists, the formula returned verbatim.
+        let (untouched, declined) = run_subsume(&f, None, None);
+        assert_eq!(declined.work_spent, 0);
+        assert_eq!(untouched, f);
+    }
+
+    /// The measurement lever is a lever, not a default.
+    ///
+    /// The parsing rules are read from the shipped function rather than
+    /// re-derived here: a test that recomputes the decision inline passes while
+    /// the artifact is wrong, which is the failure mode this repository has
+    /// measured most often.
+    #[test]
+    fn the_measurement_levers_default_to_the_shipped_constants() {
+        assert_eq!(parse_multiple_lever(None, 1234), 1234, "absent = shipped");
+        assert_eq!(parse_multiple_lever(Some("off"), 1234), u64::MAX);
+        assert_eq!(parse_multiple_lever(Some("OFF"), 1234), u64::MAX);
+        assert_eq!(parse_multiple_lever(Some("0"), 1234), u64::MAX);
+        assert_eq!(parse_multiple_lever(Some("7"), 1234), 7);
+        assert_eq!(
+            parse_multiple_lever(Some("nonsense"), 1234),
+            1234,
+            "a typo must keep the shipped arm, not invent one"
+        );
+
+        assert!(parse_compact_lever(None, true), "absent = shipped");
+        assert!(!parse_compact_lever(None, false));
+        assert!(parse_compact_lever(Some("1"), false));
+        assert!(parse_compact_lever(Some("on"), false));
+        assert!(!parse_compact_lever(Some("0"), true));
+        assert!(!parse_compact_lever(Some("off"), true));
+        assert!(parse_compact_lever(Some("maybe"), true), "typo = shipped");
     }
 }

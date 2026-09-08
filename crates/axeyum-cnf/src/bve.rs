@@ -1159,4 +1159,82 @@ mod tests {
         assert_eq!(a.stats.work_spent, b.stats.work_spent);
         assert!(a.stats.work_spent > 0);
     }
+
+    /// BVE's occurrence lists DO go stale, and the counter says by how much.
+    ///
+    /// This is the positive half of the compaction question — subsumption's
+    /// `this_pass_cannot_produce_a_dead_occurrence_entry` is the negative half.
+    /// Here the lists live for the whole pass and an elimination kills clauses
+    /// sitting in many of them, so a later scan meets ids of clauses that are
+    /// already gone and pays for them again.
+    ///
+    /// Mutation control for `charge_dead` in `live_ids`: delete it and the
+    /// count is zero, which fails the strict inequality — and would have made
+    /// the corpus measurement of the lazy-removal constant silently read
+    /// "there is no constant".
+    #[test]
+    fn eliminations_leave_dead_ids_behind_for_later_scans_to_pay_for() {
+        let f = gate_chain(200);
+        let out = eliminate_variables(&f, BveOptions::DEFAULT);
+        assert!(
+            out.stats.variables_eliminated > 0,
+            "the fixture must eliminate"
+        );
+        assert!(
+            out.stats.dead_occurrence_entries > 0,
+            "lazy removal must leave entries for later scans to re-examine"
+        );
+        assert!(
+            out.stats.dead_occurrence_entries < out.stats.work_spent,
+            "dead entries are a subset of the spend, not an addition to it"
+        );
+    }
+
+    /// Compaction changes what the pass SPENDS and not what it DECIDES.
+    ///
+    /// Unbudgeted, dropping dead ids cannot change which variables are
+    /// eliminated — the entries removed are exactly the ones every scan already
+    /// filtered out, and `live_ids` returns the same set either way — so the
+    /// reduced formula and the elimination count must be identical. That
+    /// invariance is what makes compaction safe to enable at all, and it is the
+    /// difference between the two fixes: compaction removes work without giving
+    /// anything up, a budget declines work and gives up the progress that work
+    /// would have made.
+    ///
+    /// **The direction of the cost change is deliberately not asserted.** On
+    /// this fixture compaction costs MORE — 8,982 steps against 7,386 — because
+    /// every variable here is eliminated on its first visit, so a compacted list
+    /// is never scanned again and the rewrite (charged honestly) buys nothing.
+    /// Whether compaction pays depends on how often a variable is re-queued and
+    /// how stale its lists are by then, which is a property of real formulas and
+    /// is measured on the corpus, not decided by a fixture tuned until it agreed.
+    ///
+    /// Mutation control for the `if self.compact` block in `live_ids`: delete it
+    /// and the two runs spend identically, failing the inequality.
+    #[test]
+    fn compaction_changes_the_cost_and_not_the_result() {
+        let f = gate_chain(200);
+        let plain = eliminate_variables(&f, BveOptions::DEFAULT);
+        let compacted = eliminate_variables(
+            &f,
+            BveOptions {
+                compact_occurrences: true,
+                ..BveOptions::DEFAULT
+            },
+        );
+        assert_eq!(
+            compacted.formula.clauses(),
+            plain.formula.clauses(),
+            "unbudgeted, compaction must not change the reduced formula"
+        );
+        assert_eq!(
+            compacted.stats.variables_eliminated,
+            plain.stats.variables_eliminated
+        );
+        assert_ne!(
+            compacted.stats.work_spent, plain.stats.work_spent,
+            "compaction must be reachable and charged: {} vs {}",
+            compacted.stats.work_spent, plain.stats.work_spent
+        );
+    }
 }
