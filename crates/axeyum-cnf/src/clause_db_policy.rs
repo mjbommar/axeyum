@@ -15,20 +15,25 @@
 //! is derived from its current glue against the current boundaries, which is
 //! what makes promotion (glue dropping on re-derivation) free.
 //!
-//! - **tier1** (`glue <= tier1`): kept if it was resolved at all since the last
-//!   reduce round. Effectively permanent while it stays useful, deleted the
-//!   round after it goes cold.
-//! - **tier2** (`tier1 < glue <= tier2`): kept only if resolved *since the last
-//!   round* — i.e. its [`MAX_USED`] counter was rewritten and exactly one
-//!   decrement has happened. One round of grace, then it is a candidate.
-//! - **tier3** (`glue > tier2`): always a candidate.
+//! The lifetime signal is a small saturating counter set to
+//! [`ClauseDbPolicy::max_used`] on learn and on every resolution, and
+//! decremented once per reduce round. So the counter is *how many rounds of
+//! disuse a clause has left*, and the three rules read it at different
+//! thresholds:
 //!
-//! The lifetime signal is a small saturating counter ([`MAX_USED`] = 31) set on
-//! learn and on every resolution, decremented once per reduce round. Note what
-//! it is *not*: an exponentially-decayed activity score. An activity score
-//! decays but never expires, so a clause resolved five times ten thousand
-//! conflicts ago outranks one resolved twice last round. Neither `CaDiCaL` nor
-//! Kissat consults clause activity anywhere in `reduce`.
+//! - **tier1** (`glue <= tier1`): kept while the counter is nonzero — i.e. used
+//!   within the last `max_used` rounds. At the reference `max_used` of 31 that
+//!   is a long lease, not a one-round one; it is the knob that decides how large
+//!   the database grows.
+//! - **tier2** (`tier1 < glue <= tier2`): kept only while the counter is still
+//!   at `max_used - 1`, i.e. it was refreshed by a resolution and exactly one
+//!   decrement has happened. One round of grace, then it is a candidate.
+//! - **tier3** (`glue > tier2`): always a candidate, however recently used.
+//!
+//! Note what the counter is *not*: an exponentially-decayed activity score. An
+//! activity score decays but never expires, so a clause resolved five times ten
+//! thousand conflicts ago outranks one resolved twice last round. Neither
+//! `CaDiCaL` nor Kissat consults clause activity anywhere in `reduce`.
 //!
 //! # Dynamic boundaries
 //!

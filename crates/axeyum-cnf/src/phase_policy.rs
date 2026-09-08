@@ -40,6 +40,18 @@
 //! nothing else. It exists so the *reset* can be measured on its own, separately
 //! from the schedule that would normally accompany it.
 //!
+//! # What the reference pairs this with, and we do not
+//!
+//! Kissat updates the target and best marks **only in stable mode**
+//! (`backtrack.c:41-43`, `if (!solver->stable) return;`) and rephases **only in
+//! stable mode** (`rephase.c:34-36`, the same guard). We have no stable/focused
+//! mode switching, so a schedule enabled here runs over the whole search rather
+//! than over half of it. That is the most likely explanation for the variance
+//! measured on our corpora: on two bit-blasted SAT instances,
+//! [`PhasePolicy::releasing`] was 48% better on one and 21% worse on the other,
+//! and the full `(B I B O)` schedule was 4x worse on one of them. Treat mode
+//! switching as a prerequisite for tuning this, not as an unrelated feature.
+//!
 //! # Source
 //!
 //! `docs/research/02-ecosystems/pipeline-survey-2026-09/cdcl-core-engine.md`,
