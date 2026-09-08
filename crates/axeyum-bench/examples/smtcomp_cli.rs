@@ -300,6 +300,33 @@
 //! Same off-by-default discipline: with no `--trace` no board is installed and
 //! every mirror site is one thread-local `bool` read.
 
+//! # The span log (`AXEYUM_TRACE_JSON=<path>` / `--trace-json <path>`), OFF by default
+//!
+//! Writes one solve to `<path>` as JSON Lines — a run header, then one object
+//! per span — for a consumer that wants the structure rather than the prose.
+//! See [`axeyum_solver::span_log`] for the format and the rules it enforces;
+//! the short version is that a solve is a LADDER of alternatives with real
+//! nesting inside each rung and collapsed refinement loops under that, so it is
+//! emitted as flat rows with an `edge_type` and never as a call tree.
+//!
+//! It arms exactly the instruments `--trace` arms and nothing else. Without
+//! `--trace` the human `;` lines stay suppressed; with both, the set of `;`
+//! lines is unchanged, so no existing consumer of this binary's stdout sees a
+//! difference. The log NEVER goes to stdout: the competition interface promises
+//! the verdict is the last line.
+//!
+//! The file is opened for APPEND, so a whole sweep lands in one log and exactly
+//! one place (the sweep script) may clear it.
+//!
+//! Two environment variables are read only for the run header, because the
+//! binary cannot know either: `AXEYUM_TRACE_HOST` and `AXEYUM_TRACE_COMMIT`. A
+//! host name read from the machine says which box ran it but not which
+//! checkout, and a commit baked in at build time would be wrong for a binary
+//! copied to another host — which is how this is used. Absent, both are `null`.
+//!
+//! `scripts/span-log-sweep.sh` runs a committed parity list through it one file
+//! at a time and stamps both.
+
 use std::process::ExitCode;
 use std::sync::{Arc, mpsc};
 use std::time::{Duration, Instant};
