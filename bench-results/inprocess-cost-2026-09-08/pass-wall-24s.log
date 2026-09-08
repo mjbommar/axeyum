@@ -1,0 +1,1 @@
+pass-sweep mode=wall budget=24000 arms=off subsume vivify bve preprocess preprocess-full cpus=8 load_start=1.82 2.31 2.31

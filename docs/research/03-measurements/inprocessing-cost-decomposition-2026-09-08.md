@@ -259,12 +259,12 @@ looked decisive: BVE's second run eliminated **zero** variables and still cost
 **97%** of the first run. **That does not generalise, and the wider sweep says
 so.** Median setup share over the encoding-verified files measured so far:
 
-| pass | median setup share | range | what the re-run still found |
-|---|---:|---|---|
-| vivify | **92%** | 84–96% | nothing at all on any file |
-| subsume | 67% | 44–98% | 0–673 clauses |
-| **bve** | **25%** | **3–34%** | nothing at all on any file |
-| preprocess (sub+BVE) | 78% | 41–110% | up to 44,747 clauses, 15,359 vars |
+| pass | files | median setup share | range | what the re-run still found |
+|---|---:|---:|---|---|
+| vivify | 6 | **92%** | 83–96% | nothing at all on any file |
+| subsume | 7 | 48% | 4–98% | 0–673 clauses |
+| **bve** | 6 | **30%** | **3–104%** | nothing at all on any file |
+| preprocess (sub+BVE) | 6 | 68% | 41–110% | up to 44,747 clauses, 15,359 vars |
 
 Three things follow, and the first corrects my own earlier reading.
 
@@ -274,7 +274,8 @@ Three things follow, and the first corrects my own earlier reading.
   pattern is not "BVE is all setup"; it is **the setup share is high exactly
   where the pass finds little** — which is exactly the case where running the
   pass at all was the mistake. That is still the lever, but the lever is
-  *admission*, not index reuse.
+  *admission*, not index reuse. (Medians here are over 6–7 files per arm; the
+  sweep was stopped at 36 of 66 rows — §6.)
 * **Vivification alone is 92% setup and found nothing on any of these files**,
   leaving the formula bit-identical (clause and literal ratios 1.000). Its
   corpus-level benefit in §5 comes from files not in this CNF population;
@@ -378,29 +379,49 @@ per-stage split says *why*.
 
 Five identical repeats per file, both arms, over the boundary population, run at
 host load **16–40** (other lanes; the "quiet" half of this comparison was never
-available — see §6). Complete groups so far:
+available — see §6). The driver runs a file's five repeats back to back, so
+every group is complete or absent; the run was stopped with 8 files complete in
+both arms.
 
-| arm | groups | median max/min wall | worst |
-|---|---:|---:|---:|
-| inproc | 6 | **1.04x** | 1.10x |
-| off | 6 | **1.01x** | 1.56x |
+Compared on the **8 files where both arms have a complete 5-repeat group** — an
+unmatched comparison here is meaningless, because the slower arm completed
+fewer files and its median would be over a different, harder population:
+
+| file | `off` min–max ms | `off` max/min | `inproc` min–max ms | `inproc` max/min | BVE truncated |
+|---|---|---:|---|---:|---|
+| `bench_3388` | 0–2 | 2.00x | 0–1 | 1.00x | no |
+| `bench_3293` | 188–305 | **1.62x** | 12,314–12,365 | **1.00x** | yes |
+| `bench_12354` | 2,789–4,361 | 1.56x | 13,166–14,063 | 1.07x | yes |
+| `ext_con_008_001_0064` | 23,725–24,223 | 1.02x | 8,455–8,983 | 1.06x | no |
+| `simple_processors_008_006_0004` | 24,139–24,235 | 1.00x | 22,037–24,169 | 1.10x | no |
+| `div3.c.50` | 24,902–25,000 | 1.00x | 24,746–25,000 | 1.01x | yes |
+| `tsp_rand_70_300` | 24,230–25,000 | 1.03x | 24,544–25,000 | 1.02x | yes |
+| `148` | 24,582–25,000 | 1.02x | 24,906–25,000 | 1.00x | yes |
+| **median** | | **1.03x** | | **1.01x** | |
+| **worst** | | 2.00x | | 1.10x | |
 
 Three findings, and they answer (A)-versus-(B) as a pair rather than a choice.
 
-* **Truncation never flipped.** On every file where the flag was reported, BVE
-  was either always cut off or never was — zero disagreements between runs that
-  both reported it. So the truncation in §5 is **deterministic saturation, not a
-  race the clock sometimes wins**. Hypothesis (B) is real as a *budget
-  dependence* — the pass's cost is set by the slice, and the real 12 s sweep
-  above shows the same file spending 5.9 s instead of 12.0 s when the slice
-  halves — and it is **not** real as run-to-run variance.
-* **Wall-time spread is small even at load 40**: 1.01–1.10x median. The
-  wall-clock cutoff is not producing the instability (B) predicted.
-* **But verdicts do flip at the boundary, on both arms.** Two of twelve groups
-  changed answer across identical repeats: `ext_con_008_001_0064` on `off`
-  (4× unknown, 1× unsat, walls 23,725–24,223 ms against a 24 s budget) and
-  `simple_processors_008_006_0004` on `inproc`. That is a property of deciding
-  *at* the budget, not of inprocessing.
+* **Truncation never flipped.** Across every group, on every file where the flag
+  was reported, BVE was either always cut off or never was — **zero**
+  disagreements between runs that both reported it. So the truncation in §5 is
+  **deterministic saturation, not a race the clock sometimes wins**.
+  Hypothesis (B) is real as a *budget dependence* — the pass's cost is set by
+  the slice, and the real 12 s sweep above shows the same file spending 5.9 s
+  instead of 12.0 s when the slice halves — and it is **not** real as
+  run-to-run variance.
+* **Wall-time spread is small on both arms even at load 40**, and if anything
+  the truncating arm is the *steadier* one: `bench_3293` runs 12,314–12,365 ms
+  with inprocessing on (1.00x, truncated every time) against 188–305 ms with it
+  off (1.62x). A pass that always spends exactly its slice is perfectly
+  reproducible; that is the point. The wall-clock cutoff is not producing the
+  instability (B) predicted.
+* **But verdicts do flip at the boundary, on both arms.** Two groups changed
+  answer across identical repeats: `ext_con_008_001_0064` on `off` (4× unknown,
+  1× unsat, walls 23,725–24,223 ms against a 24 s budget) and
+  `simple_processors_008_006_0004` on `inproc` (4× unknown, 1× unsat at
+  22,037 ms). That is a property of deciding *at* the budget, not of
+  inprocessing.
 
 The last one carries a caveat against this lane's own headline. **The single
 file inprocessing genuinely gains at 24 s is itself load-fragile**: on the quiet
@@ -478,22 +499,31 @@ unaffected: those counters are deterministic.
 
 Stated as "did not run" rather than estimated.
 
-* **120 s sweep.** The full 200-file version was ABANDONED after 26 files: it
-  was running at ~2 minutes per file, i.e. 6.5 h, almost all of it re-deciding
-  files that decide in 90 ms. Its prefix is kept as
+**Every incomplete run below was stopped deliberately when other lanes took the
+host to a sustained load of 30–40 and kept it there for hours.** At that load
+these are not measurements: the numbers they would produce would be about the
+queue. Row counts are given so nothing here can be mistaken for a full sweep.
+
+* **120 s sweep. DID NOT RUN to a usable result.** The full 200-file version was
+  abandoned after 26 files (~2 minutes per file, i.e. 6.5 h, almost all of it
+  re-deciding files that decide in 90 ms); its prefix is kept as
   `qfbv-120s-*-ABANDONED-PREFIX.jsonl` — a prefix of a list is not a sample of
-  it, and those rows must never be read as a 120 s result. Replaced by a
-  targeted sweep over the 28 files whose verdict *can* differ at a longer
-  budget (14 undecided by some arm, 14 more where a pass was truncated); the
-  other 172 decided inside 24 s with every pass at its own fixpoint, so a
-  longer budget and a larger slice change nothing they do. RUNNING.
-* **Per-pass CNF sweep, conflict-budgeted.** DONE — §5b.
-* **Per-pass CNF sweep, wall-clock-budgeted** (`pass-wall-24s.jsonl`, adds the
-  setup/work split per file). RUNNING.
-* **The variance test, under load.** PARTIAL — 6 complete groups per arm of 19
-  (the driver runs a file's five repeats back to back, so every group present is
-  complete and the partial is a prefix of *files*, not of repeats). Reported in
-  §5. Still running.
+  it, and those rows must never be read as a 120 s result. The targeted
+  replacement over the 28 files whose verdict *can* differ at a longer budget
+  reached **4 of 28 rows per arm** before being stopped. **So the handed-down
+  claim was not tested at 120 s directly.** It was tested at 24 s and below,
+  where inprocessing is already at parity — which is what refutes it.
+* **Per-pass CNF sweep, conflict-budgeted.** DONE, 44/44 rows — §5b.
+* **Per-pass CNF sweep, wall-clock-budgeted.** PARTIAL, **36 of 66 rows**
+  (`pass-wall-24s.jsonl`). The setup/work medians in §4 are over 6–7 files per
+  arm, not 11.
+* **Real 12 s sweep** (`qfbv-12s-boundary-inproc.jsonl`). PARTIAL, **23 of 28
+  rows**, `inproc` arm only. Enough to demonstrate the derivation's direction
+  (§3), not enough for a 12 s solved count.
+* **The variance test, under load.** PARTIAL — **8 files complete in both arms**
+  of 19. Every group present has all five repeats (the driver runs a file's
+  repeats back to back), so the partial is a prefix of *files*, never of
+  repeats. Reported in §5.
 * **The variance test, on a quiet host.** NOT RUN. Other lanes took the box to
   load 16–40 shortly after the 24 s sweep finished and it never came back down;
   the quiet half of that comparison is the half I do not control. **So the
