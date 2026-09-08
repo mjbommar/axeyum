@@ -456,3 +456,81 @@ instance:
 On `string4x16.4` alone (3,098,002 variables, 35 s per run) `fatcgu1` is 0.972 —
 the largest single-file win in the matrix, and consistent with LTO's benefit
 growing slightly with working-set size. Still under 3%.
+
+### 2026-09-07 — the trajectory check, and a negative control on it
+
+Every ratio in this file rests on one claim: that two cells ran the *same
+search*, so a wall-time difference is throughput and not a different amount of
+work. Checked across all 385 runs of the eleven-cell pass, over thirteen
+counters (`verdict`, conflicts, decisions, propagations, restarts, reductions,
+watch visits, clause visits, watch relocations, resolutions, redundancy steps,
+DRAT step count, DRAT byte count):
+
+```
+files with divergent trajectories: NONE
+files checked: 7   runs: 385
+```
+
+That result is what a broken checker prints too, so it was given a negative
+control before being believed: **perturb one counter on one run by +1 and
+require the check to fire.**
+
+```
+with one propagation counter perturbed by +1, files flagged: ['string1x8.4']
+negative control passed: the check fires on a single-unit difference
+```
+
+It fires, on exactly the file that was perturbed, at a difference of one
+propagation out of 16,820,000. Without that control, "NONE" would be
+indistinguishable from a check that compares nothing.
+
+### 2026-09-07 — the architecture axis: same bytes, two CPUs, and the sign flips with instance size
+
+The four cells `base`, `o2`, `v3` and `fatcgu1` were re-run on **s4's P-core
+half** (`taskset -c 0-7`; cpu12–15 are the 3.6 GHz E-cores and were excluded).
+No rebuild: **the same sha256 binaries** that ran on s7, which is possible
+because both hosts run glibc 2.43-2ubuntu2.3. The comparison is therefore two
+CPUs on one binary, and the script prints the hash per cell so that is checkable
+rather than asserted.
+
+s4 is a shared dev box, so the pass waited for a quiet window and recorded
+`/proc/loadavg` per run: **min 0.52, median 0.98, p90 1.06** over 84 runs (the
+~1.0 is this lane's own single-threaded process), with the 2.06 maximum landing
+after the last timed run. Trajectories identical to s7's.
+
+| file | vars | s7 (Zen 4) | s4 (Alder Lake P) | **s4 : s7** |
+|---|---:|---:|---:|---:|
+| `mobiledevice_…twocond` | 31,482 | 0.365 | 0.379 | **1.039** |
+| `string1x8.4` | 40,548 | 0.993 | 1.044 | **1.052** |
+| `mobiledevice_…paired` | 58,380 | 1.308 | 1.273 | **0.973** |
+| `compose.s2` | 106,588 | 2.851 | 2.605 | **0.914** |
+| `videoconf_full` | 141,923 | 2.844 | 2.590 | **0.911** |
+| `string4x8.8` | 256,789 | 4.426 | 4.079 | **0.922** |
+| `compose.s3` | 473,949 | 10.008 | 9.203 | **0.920** |
+| **geomean (`base`)** | | | | **0.960** |
+
+**E4 was wrong.** It predicted Zen 4 ahead, from a memory-latency argument. The
+i5-12600K P-core is **4% faster overall** and **8–9% faster on every instance
+above 100,000 variables**, losing only on the two smallest — a clean sign flip
+with a crossover somewhere around 58,000 variables. That shape is what an L3
+capacity difference looks like (20 MB on the 12600K against 16 MB on the
+7840HS): on a small instance the working set fits either cache and Zen 4's
+higher IPC on this code wins; past the crossover the bigger cache decides. It is
+not what a constant background tax looks like, which would shift every file the
+same way.
+
+**The confound, stated rather than buried:** s7 carries a persistent `java`
+daemon at ~13% CPU (30 days resident) that s4 does not. Both arms are
+single-threaded and pinned, so it does not steal their cores, but it shares LLC
+and memory bandwidth on s7, and it biases in s4's favour. The 4% geomean should
+be read as an upper bound on s4's advantage. The size-dependent *sign flip* is
+not explained by it.
+
+**The cell ranking is architecture-independent, which is the result that
+matters for the recommendation.** Within s4: `o2` 1.088, `v3` 1.004, `fatcgu1`
+0.989 — the same order, and the same conclusions, as s7's `o2` 1.058, `v3`
+1.006, `fatcgu1` 0.982. In particular **`x86-64-v3` earns nothing on Intel
+either** (cross-host geomean 0.958 for `v3` against 0.960 for `base`), so the
+`target-cpu` null result is not an AMD artefact — it holds on both
+microarchitectures in the fleet. `opt-level 2` is if anything a slightly worse
+choice on Alder Lake (8.8% against 5.8%).
