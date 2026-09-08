@@ -20,7 +20,9 @@
 //! back-of-the-envelope "20k nodes is nothing" argument gets wrong.
 //!
 //! Usage:
-//!   arena_clone_cost <file.smt2> [rounds]
+//! ```text
+//! arena_clone_cost <file.smt2> [rounds]
+//! ```
 //!
 //! Prints the arena's node count, the median clone time over `rounds` (default
 //! 200), and the per-node cost.

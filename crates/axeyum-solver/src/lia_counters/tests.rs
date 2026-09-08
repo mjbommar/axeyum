@@ -64,14 +64,14 @@ fn parity_query() -> (TermArena, Vec<TermId>) {
 /// A pure conjunction, which the offline decider takes on its own.
 fn conjunctive_query() -> (TermArena, Vec<TermId>) {
     let mut arena = TermArena::new();
-    let x = ivar(&mut arena, "x");
-    let y = ivar(&mut arena, "y");
+    let var_x = ivar(&mut arena, "x");
+    let var_y = ivar(&mut arena, "y");
     let zero = iconst(&mut arena, 0);
     let ten = iconst(&mut arena, 10);
-    let a = arena.int_lt(zero, x).expect("0 < x");
-    let b = arena.int_lt(x, y).expect("x < y");
-    let c = arena.int_lt(y, ten).expect("y < 10");
-    (arena, vec![a, b, c])
+    let x_pos = arena.int_lt(zero, var_x).expect("0 < x");
+    let ordered = arena.int_lt(var_x, var_y).expect("x < y");
+    let y_cap = arena.int_lt(var_y, ten).expect("y < 10");
+    (arena, vec![x_pos, ordered, y_cap])
 }
 
 #[test]
@@ -281,16 +281,16 @@ fn the_simplex_records_the_shape_of_the_system_it_was_handed() {
     // probe is the deterministic way in: one solve, one collected constraint
     // per assertion, no branching.
     let mut arena = TermArena::new();
-    let x = ivar(&mut arena, "x");
-    let y = ivar(&mut arena, "y");
+    let var_x = ivar(&mut arena, "x");
+    let var_y = ivar(&mut arena, "y");
     let zero = iconst(&mut arena, 0);
     let ten = iconst(&mut arena, 10);
-    let a = arena.int_lt(zero, x).expect("0 < x");
-    let b = arena.int_lt(x, y).expect("x < y");
-    let c = arena.int_lt(y, ten).expect("y < 10");
+    let x_pos = arena.int_lt(zero, var_x).expect("0 < x");
+    let ordered = arena.int_lt(var_x, var_y).expect("x < y");
+    let y_cap = arena.int_lt(var_y, ten).expect("y < 10");
 
     let guard = LiaCountersGuard::enable();
-    let relaxation = crate::lra::lp_relaxation_feasibility(&arena, &[a, b, c]);
+    let relaxation = crate::lra::lp_relaxation_feasibility(&arena, &[x_pos, ordered, y_cap]);
     drop(guard);
     assert_eq!(relaxation, crate::lra::LpRelaxation::Feasible);
 

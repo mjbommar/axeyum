@@ -1335,6 +1335,63 @@ fn lia_simplex_with_options(
 
 /// [`lia_simplex_with_options`] with the branch-and-bound node budget supplied
 /// explicitly rather than derived from `deadline.is_some()`.
+/// Integer tightening (gcd-aware), in place; returns how many constraints were
+/// tightened.
+///
+/// A *strict* constraint `L + c0 < 0` whose variable part `L = Σ aᵢ·xᵢ` has
+/// integral coefficients and integral constant is, over the integers,
+/// equivalent to a NON-strict bound — and tightening it makes the LP relaxation
+/// EXACT, so the integer-infeasible cases decide immediately instead of
+/// branch-and-bound grinding. `L` is a multiple of `g = gcd(aᵢ)`, so
+/// `L + c0 < 0` ⟺ `L ≤ -c0-1` ⟺ `L ≤ g·⌊(-c0-1)/g⌋`. The new constant is
+/// `-g·⌊(-c0-1)/g⌋` (which reduces to `c0+1` when `g = 1`). E.g. `2x < 2y`
+/// (g=2) ⟹ `2x-2y ≤ -2` (not the loose `≤ -1`), so `2x<2y ∧ 2y<2x+2` is
+/// LP-infeasible (`unsat`).
+///
+/// Only applied when `L`/`c0` are provably integral, and only within
+/// [`TIGHTEN_COEFF_LIMIT`]; anything else is left strict, which is sound
+/// because the simplex handles strict bounds directly.
+fn tighten_strict_integer_constraints(constraints: &mut [Constraint]) -> u64 {
+    let mut tightened = 0u64;
+    for constraint in constraints {
+        if !constraint.strict
+            || !constraint.expr.constant.is_integer()
+            || !constraint.expr.coeffs.values().all(|r| r.is_integer())
+        {
+            continue;
+        }
+        let c0 = constraint.expr.constant.numerator();
+        // Guard magnitudes so the arithmetic below cannot overflow; an
+        // out-of-range coefficient just leaves this constraint strict.
+        if c0.abs() >= TIGHTEN_COEFF_LIMIT
+            || constraint
+                .expr
+                .coeffs
+                .values()
+                .any(|r| r.numerator().abs() >= TIGHTEN_COEFF_LIMIT)
+        {
+            continue;
+        }
+        let g = constraint
+            .expr
+            .coeffs
+            .values()
+            .fold(0i128, |g, r| gcd_i128(g, r.numerator()));
+        // `L + c0 < 0` (L a multiple of g) ⟺ `L ≤ g·⌊(-c0-1)/g⌋`; the new
+        // constant is its negation. `g = 0` (no variables) ⟹ `c0 + 1`, the same
+        // as the `g = 1` formula.
+        let new_const = if g == 0 {
+            c0 + 1
+        } else {
+            -g * (-c0 - 1).div_euclid(g)
+        };
+        constraint.expr.constant = Rational::integer(new_const);
+        constraint.strict = false;
+        tightened += 1;
+    }
+    tightened
+}
+
 fn lia_simplex_capped(
     arena: &TermArena,
     assertions: &[TermId],
@@ -1379,51 +1436,7 @@ fn lia_simplex_capped(
     let nvars = ctx.variable_count();
     let has_opaque_vars = ctx.has_opaque_vars();
     let mut constraints = ctx.constraints;
-    // Integer tightening (gcd-aware): a *strict* constraint `L + c0 < 0` whose variable
-    // part `L = Σ aᵢ·xᵢ` has integral coefficients and integral constant is, over the
-    // integers, equivalent to a NON-strict bound — and tightening it makes the LP
-    // relaxation EXACT, so the integer-infeasible cases decide immediately instead of
-    // branch-and-bound grinding. `L` is a multiple of `g = gcd(aᵢ)`, so `L + c0 < 0`
-    // ⟺ `L ≤ -c0-1` ⟺ `L ≤ g·⌊(-c0-1)/g⌋`. The new constant is `-g·⌊(-c0-1)/g⌋`
-    // (which reduces to `c0+1` when `g = 1`). E.g. `2x < 2y` (g=2) ⟹ `2x-2y ≤ -2` (not
-    // the loose `≤ -1`), so `2x<2y ∧ 2y<2x+2` is LP-infeasible (`unsat`). Only applied
-    // when `L`/`c0` are provably integral (else left strict — sound; simplex handles it).
-    let mut tightened = 0u64;
-    for constraint in &mut constraints {
-        if !constraint.strict
-            || !constraint.expr.constant.is_integer()
-            || !constraint.expr.coeffs.values().all(|r| r.is_integer())
-        {
-            continue;
-        }
-        let c0 = constraint.expr.constant.numerator();
-        // Guard magnitudes so the arithmetic below cannot overflow; an out-of-range
-        // coefficient just leaves this constraint strict (sound — simplex handles it).
-        if c0.abs() >= TIGHTEN_COEFF_LIMIT
-            || constraint
-                .expr
-                .coeffs
-                .values()
-                .any(|r| r.numerator().abs() >= TIGHTEN_COEFF_LIMIT)
-        {
-            continue;
-        }
-        let g = constraint
-            .expr
-            .coeffs
-            .values()
-            .fold(0i128, |g, r| gcd_i128(g, r.numerator()));
-        // `L + c0 < 0` (L a multiple of g) ⟺ `L ≤ g·⌊(-c0-1)/g⌋`; new constant is its
-        // negation. `g = 0` (no variables) ⟹ `c0 + 1`, the same as the `g = 1` formula.
-        let new_const = if g == 0 {
-            c0 + 1
-        } else {
-            -g * (-c0 - 1).div_euclid(g)
-        };
-        constraint.expr.constant = Rational::integer(new_const);
-        constraint.strict = false;
-        tightened += 1;
-    }
+    let tightened = tighten_strict_integer_constraints(&mut constraints);
     // The offline group's entry counter, recorded once the system this call is
     // actually going to search is known. Every early return above records an
     // early exit instead, so `offline_calls` counts entries either way and a
