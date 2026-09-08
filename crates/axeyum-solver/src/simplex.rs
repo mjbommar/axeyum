@@ -85,6 +85,238 @@ fn past_deadline(deadline: Option<Instant>) -> bool {
     deadline.is_some_and(|d| Instant::now() >= d)
 }
 
+/// How the pivot loop chooses the **entering** variable once the leaving row is
+/// fixed.
+///
+/// Both variants draw from the *same* candidate set — the nonbasic variables
+/// with a nonzero coefficient in the leaving row that can move it toward its
+/// violated bound, decided by [`Tableau::entering_is_usable`] and nothing else.
+/// A rule may only *order* that set; it may never add to it or shrink it. That
+/// is what keeps the change to this enum invisible to soundness: `select_entering`
+/// returns `None` under exactly the same conditions for every rule, so
+/// [`Tableau::farkas`]'s premise — "no nonbasic variable can repair this row" —
+/// is a property of the tableau, not of the heuristic. The control
+/// `every_rule_agrees_on_whether_a_row_can_be_repaired` pins it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum EnteringRule {
+    /// Bland's rule: the smallest-index usable nonbasic variable.
+    ///
+    /// Terminating by Bland's theorem and cheap per call (it stops at the first
+    /// usable candidate), but it pivots badly: it is indifferent to how much
+    /// fill-in the pivot creates, and fill-in is what sets the cost of every
+    /// later pivot in a dense tableau.
+    Bland,
+    /// Fill-in minimising: among the usable candidates, the one whose **column**
+    /// has the fewest nonzero entries, ties broken by a deterministic reservoir
+    /// sample.
+    ///
+    /// This is the rule Yices (`simplex.c:3880-3925`) and Z3
+    /// (`lp_primal_core_solver.h:183-228`) converged on independently, and Z3's
+    /// own comment gives the second motivation: "a short row produces short
+    /// infeasibility explanation". Yices scores by *non-free basic* variables in
+    /// the column and falls back to the plain nonzero count; we use the nonzero
+    /// count, which is Z3's secondary criterion, because
+    /// [`Tableau::col_nnz`] maintains it in `O(1)` per written cell while the
+    /// non-free count would need a walk per candidate per pivot.
+    ///
+    /// Termination is **not** inherited from Bland's theorem, so it is recovered
+    /// the way both references recover it: a per-call count of variables leaving
+    /// the basis a second time, and a switch to [`EnteringRule::Bland`] for the
+    /// rest of the call once that count passes
+    /// [`PivotPolicy::bland_threshold`]. The `MAX_PIVOTS` belt is unchanged and
+    /// still bounds the call whatever the rule does.
+    MinimiseFillIn,
+}
+
+/// Tunable constants of the pivot loop, with the reference each default comes
+/// from. Held by value in the [`Tableau`], so an A/B is a different
+/// [`Incremental::with_policy`] and not a rebuild of the crate.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct PivotPolicy {
+    /// Which entering rule to use. See [`EnteringRule`].
+    pub entering: EnteringRule,
+    /// Repeated *leaving* variables after which the rest of **this call** falls
+    /// back to Bland's rule.
+    ///
+    /// A variable is counted once for every time it leaves the basis beyond the
+    /// first within one [`Tableau::run`]; the counter and the fallback flag both
+    /// reset at the top of every call, so one hard check cannot poison the
+    /// engine (Yices `simplex.c:4239`, Z3 `lp_primal_core_solver.h:626-630`).
+    ///
+    /// Default `1_000`: Yices `SIMPLEX_DEFAULT_BLAND_THRESHOLD`
+    /// (`simplex_types.h:908`) and Z3 `m_bland_mode_threshold`
+    /// (`lp_primal_core_solver.h:645`) are independently the same number, and
+    /// Z3's older simplex (`simplex.h:118`) is a third.
+    pub bland_threshold: u64,
+    /// Variable counts above which `bland_threshold` is scaled, and by how much
+    /// — Yices scales `×100` above `1_000` variables and `×1_000` above
+    /// `10_000` (`simplex.c:4243-4249`), on the reasoning that a bigger problem
+    /// legitimately needs more repeats before a rule is judged to be cycling.
+    pub bland_scale_vars_small: usize,
+    /// Multiplier applied at `bland_scale_vars_small`.
+    pub bland_scale_small: u64,
+    /// The larger variable count; see [`Self::bland_scale_vars_small`].
+    pub bland_scale_vars_large: usize,
+    /// Multiplier applied at `bland_scale_vars_large`.
+    pub bland_scale_large: u64,
+    /// Seed for the tie-break among equally-scored candidates.
+    ///
+    /// Determinism is a public API promise here, so the tie-break is a seeded
+    /// LCG — never a clock, never entropy. Two runs of the same query on the
+    /// same binary pivot identically; changing this seed is a legitimate A/B
+    /// axis and nothing else reads it.
+    pub tie_break_seed: u64,
+}
+
+impl PivotPolicy {
+    /// The shipped default: fill-in minimising with the references' constants.
+    #[must_use]
+    pub const fn new() -> Self {
+        Self {
+            entering: EnteringRule::MinimiseFillIn,
+            bland_threshold: 1_000,
+            bland_scale_vars_small: 1_000,
+            bland_scale_small: 100,
+            bland_scale_vars_large: 10_000,
+            bland_scale_large: 1_000,
+            tie_break_seed: 0x9E37_79B9_7F4A_7C15,
+        }
+    }
+
+    /// The pre-2026-09-08 behaviour: Bland's rule unconditionally. Kept as a
+    /// named policy rather than deleted, because the dense/Bland arm is the
+    /// baseline every measurement of the new rule is a ratio against, and a
+    /// baseline you cannot still run is a remembered number.
+    #[must_use]
+    pub const fn bland() -> Self {
+        Self {
+            entering: EnteringRule::Bland,
+            ..Self::new()
+        }
+    }
+
+    /// `bland_threshold` scaled for a problem of `n` variables. Computed once at
+    /// the top of a call, as in both references.
+    fn scaled_bland_threshold(&self, n: usize) -> u64 {
+        if n > self.bland_scale_vars_large {
+            self.bland_threshold.saturating_mul(self.bland_scale_large)
+        } else if n > self.bland_scale_vars_small {
+            self.bland_threshold.saturating_mul(self.bland_scale_small)
+        } else {
+            self.bland_threshold
+        }
+    }
+}
+
+impl Default for PivotPolicy {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+/// The policy [`Incremental::new`] uses, read **once** from
+/// `AXEYUM_SIMPLEX_PIVOT`.
+///
+/// `fill-in` (the default) is [`PivotPolicy::new`]; `bland` is
+/// [`PivotPolicy::bland`], the pre-2026-09-08 behaviour. An integer value sets
+/// [`PivotPolicy::bland_threshold`] on the fill-in rule, which is the one
+/// constant worth sweeping — Yices and Z3 agree on `1000` but neither measured
+/// it against *our* instances.
+///
+/// The lever exists so an A/B is one binary and two runs rather than two
+/// binaries: with two builds, any difference is confounded by everything else
+/// that changed between them, and a run that has to rebuild to switch arms is a
+/// run nobody repeats. Read once into a `OnceLock` because determinism is a
+/// public API promise — the policy cannot change between two solves in one
+/// process — and `scripts/parity-run.sh` records any `AXEYUM_*` lever it sees,
+/// so a swept number can never be mistaken for a default-configuration one.
+///
+/// An unrecognised value falls back to the default rather than failing: this is
+/// a measurement lever, and a typo in a sweep script must not change a verdict.
+/// It is visible in `--trace` through the pivot counters, which is where a
+/// reader would notice the arm they did not intend.
+fn configured_policy() -> PivotPolicy {
+    use std::sync::OnceLock;
+    static POLICY: OnceLock<PivotPolicy> = OnceLock::new();
+    *POLICY.get_or_init(|| match std::env::var("AXEYUM_SIMPLEX_PIVOT") {
+        Ok(v) if v.trim() == "bland" => PivotPolicy::bland(),
+        Ok(v) => v.trim().parse::<u64>().map_or_else(
+            |_| PivotPolicy::new(),
+            |t| PivotPolicy {
+                bland_threshold: t,
+                ..PivotPolicy::new()
+            },
+        ),
+        Err(_) => PivotPolicy::new(),
+    })
+}
+
+/// Clock-free structural counters for one [`Tableau`].
+///
+/// Every field is derived from a quantity the pivot loop *already* computes — a
+/// vector length, a loop bound, a branch it already took — so keeping them costs
+/// at most one integer add per **row**, never one per cell. That matters twice:
+/// it means instrumentation cannot itself be the thing a measurement measures,
+/// and it means these can be on in the shipped build, which is the only way a
+/// counter is available at the moment somebody wants it.
+///
+/// Nothing branches on any of these. They exist so that "the pivot is expensive"
+/// is a number with units instead of an inference from a wall clock a loaded
+/// host moves by ±20%.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct TableauCounters {
+    /// Rows actually combined by [`Tableau::pivot_and_update`], summed over
+    /// every pivot. The pivot skips rows whose entering-column coefficient is
+    /// zero, so this is *not* `pivots × m`; the ratio of the two is how much of
+    /// the tableau a pivot really touches.
+    pub pivot_rows_combined: u64,
+    /// Cells written by those combinations: `Σ nnz(pivot row)` over combined
+    /// rows. This is the pivot's true cost in exact-rational multiply-adds and
+    /// the number a sparse representation would have to beat.
+    pub pivot_cells_written: u64,
+    /// Columns [`Tableau::select_entering`] examined, summed over every call.
+    /// Under Bland this stops at the first usable candidate; under
+    /// [`EnteringRule::MinimiseFillIn`] it is the full width every time, which
+    /// is the price the rule pays for a better choice.
+    pub entering_scan_cells: u64,
+    /// Rows the leaving-variable scan examined, summed over every pivot. Ours
+    /// rescans from row 0 each iteration, so this is the direct measurement of
+    /// what a violated-basic priority heap would remove.
+    pub leaving_scan_rows: u64,
+    /// Times a variable left the basis for at least the second time within one
+    /// [`Tableau::run`] — the trigger [`PivotPolicy::bland_threshold`] counts.
+    pub repeat_leavings: u64,
+    /// Calls that hit that threshold and finished under Bland's rule.
+    pub bland_fallbacks: u64,
+    /// Total nonzero cells across every row, sampled at the **end of each
+    /// [`Tableau::run`]** — `O(1)` to read, because [`Tableau::col_nnz`] is
+    /// maintained incrementally. With `fill_samples` this gives mean nonzeros
+    /// per tableau, i.e. fill-in, which is what decides whether a sparse
+    /// representation is worth building.
+    pub fill_nnz_sum: u64,
+    /// Samples behind `fill_nnz_sum`; the denominator, never assumed equal to
+    /// the check count.
+    pub fill_samples: u64,
+    /// [`Tableau::farkas`] declines because the infeasible row's basic variable
+    /// is a **problem** variable rather than a slack (`simplex.rs` first decline
+    /// arm). A decline yields an empty certificate, which widens the theory's
+    /// conflict core to the entire asserted set — sound but maximally coarse —
+    /// so these three counters are the cost model for fixing the decline paths.
+    pub farkas_declined_basic_not_slack: u64,
+    /// Declines because a nonbasic **problem** variable has a nonzero
+    /// coefficient in the infeasible row (second decline arm).
+    pub farkas_declined_nonbasic_problem_var: u64,
+    /// Declines because the extracted candidate failed its own
+    /// [`farkas_holds`] self-check. Distinct from the two structural arms: this
+    /// one means the closed form was attempted and did not verify, which is the
+    /// arm that would indicate an arithmetic rather than a shape problem.
+    pub farkas_declined_self_check: u64,
+    /// Infeasible outcomes that returned a **verified** certificate. The
+    /// denominator the three decline counters are a fraction of; without it a
+    /// zero decline count cannot be told from a zero refutation count.
+    pub farkas_certificates: u64,
+}
+
 /// The comparator of a constraint row `Σ aⱼ·xⱼ ⋈ b`.
 ///
 /// The full set is part of the feasibility API (and exercised by the tests); both
@@ -328,11 +560,46 @@ struct Tableau {
     /// a reading of the source: a warm engine's pivots-per-check falls while its
     /// check count rises, a cold one's does not.
     total_pivots: u64,
+    /// `col_nnz[v]` = how many rows have a nonzero coefficient in column `v`.
+    ///
+    /// Maintained **incrementally**: [`Tableau::reset_structure`] recomputes it
+    /// from scratch, and every cell the pivot writes updates it by the
+    /// zero/nonzero transition of that one cell. That is `O(1)` per written cell
+    /// on top of the exact-rational add already being done, and it buys two
+    /// things a dense tableau otherwise cannot have:
+    ///
+    /// - the [`EnteringRule::MinimiseFillIn`] score in `O(1)` per candidate,
+    ///   where scoring by walking the column would be `O(m)` per candidate per
+    ///   pivot, i.e. a second dense pass;
+    /// - total fill-in as a sum, so "how dense has this tableau become" is a
+    ///   read rather than an `O(m·n)` scan nobody can afford to take often
+    ///   enough to see the growth.
+    ///
+    /// `col_nnz_matches_a_recount` checks it against a full recount rather than
+    /// trusting the incremental maintenance.
+    col_nnz: Vec<u32>,
+    /// The entering rule and its constants; see [`PivotPolicy`].
+    policy: PivotPolicy,
+    /// Clock-free structural counters; see [`TableauCounters`]. Diagnostic only
+    /// — nothing in the pivot loop branches on any field of this.
+    counters: TableauCounters,
+    /// Deterministic LCG state for [`EnteringRule::MinimiseFillIn`]'s tie-break.
+    /// Seeded from [`PivotPolicy::tie_break_seed`], never from a clock.
+    tie_break_state: u64,
 }
 
 impl Tableau {
     /// A tableau over `rows_sparse` with **no** bounds imposed (every row inactive).
     fn new_rows(nvars: usize, rows_sparse: Vec<Vec<(usize, Rational)>>) -> Tableau {
+        Tableau::new_rows_with_policy(nvars, rows_sparse, PivotPolicy::new())
+    }
+
+    /// As [`Tableau::new_rows`], under an explicit [`PivotPolicy`].
+    fn new_rows_with_policy(
+        nvars: usize,
+        rows_sparse: Vec<Vec<(usize, Rational)>>,
+        policy: PivotPolicy,
+    ) -> Tableau {
         let m = rows_sparse.len();
         let n = nvars + m;
         let rel_rhs = vec![None; m];
@@ -349,6 +616,10 @@ impl Tableau {
             rows_sparse,
             rel_rhs,
             total_pivots: 0,
+            col_nnz: vec![0u32; n],
+            policy,
+            counters: TableauCounters::default(),
+            tie_break_state: policy.tie_break_seed,
         };
         t.reset_structure();
         t
@@ -372,6 +643,46 @@ impl Tableau {
             self.is_basic[self.nvars + i] = true;
         }
         self.value.iter_mut().for_each(|v| *v = Delta::zero());
+        // The one place the row contents are rebuilt, so the one place the
+        // incrementally-maintained column counts are recomputed from scratch.
+        self.recount_columns();
+    }
+
+    /// Recomputes [`Tableau::col_nnz`] by a full scan. Called only from
+    /// [`Tableau::reset_structure`] — everywhere else the counts are maintained
+    /// per written cell — and by the test that checks the two agree.
+    fn recount_columns(&mut self) {
+        self.col_nnz.clear();
+        self.col_nnz.resize(self.n, 0);
+        for i in 0..self.m {
+            for v in 0..self.n {
+                if !self.row[i][v].is_zero() {
+                    self.col_nnz[v] += 1;
+                }
+            }
+        }
+    }
+
+    /// Total nonzero cells in the tableau — the fill-in figure, `O(n)` to read
+    /// because the per-column counts are maintained.
+    fn total_nnz(&self) -> u64 {
+        self.col_nnz.iter().map(|&c| u64::from(c)).sum()
+    }
+
+    /// Writes `value` into cell `(i, v)` and keeps [`Tableau::col_nnz`] exact.
+    ///
+    /// This is the single mutation point for a row cell inside the pivot, so the
+    /// column counts cannot drift by someone adding an assignment that forgets
+    /// them: the only other writer is `reset_structure`, which recounts.
+    fn set_cell(&mut self, i: usize, v: usize, value: Rational) {
+        let was_zero = self.row[i][v].is_zero();
+        let now_zero = value.is_zero();
+        self.row[i][v] = value;
+        match (was_zero, now_zero) {
+            (true, false) => self.col_nnz[v] += 1,
+            (false, true) => self.col_nnz[v] -= 1,
+            _ => {}
+        }
     }
 
     fn new(nvars: usize, constraints: &[Constraint]) -> Tableau {
@@ -496,20 +807,30 @@ impl Tableau {
     /// either yields [`SimplexOutcome::Unknown`] (sound, never a verdict).
     fn run(&mut self, deadline: Option<Instant>, budget: u64) -> R<RunOutcome> {
         let mut pivots: u64 = 0;
-        loop {
+        // Per-call termination state, reset here and nowhere else. Both
+        // references reset at the top of a feasibility call for the same reason:
+        // one hard check must not leave the engine permanently on the slow rule
+        // (Yices `simplex.c:4239`, Z3 `lp_primal_core_solver.h:626-630`).
+        let bland_threshold = self.policy.scaled_bland_threshold(self.n);
+        let mut has_left: Vec<bool> = vec![false; self.n];
+        let mut repeats: u64 = 0;
+        let mut bland_mode = self.policy.entering == EnteringRule::Bland;
+        let outcome = loop {
             // Polled on entry too, so an already-expired deadline does no work at
             // all and reports `Unknown` rather than a verdict the caller did not
             // budget for.
             if pivots.is_multiple_of(64) && past_deadline(deadline) {
-                return Ok(RunOutcome::Unknown);
+                break RunOutcome::Unknown;
             }
             if pivots >= budget {
-                return Ok(RunOutcome::Unknown);
+                break RunOutcome::Unknown;
             }
             pivots += 1;
             // Smallest-index basic variable that violates a bound.
             let mut viol: Option<(usize, bool)> = None; // (row, too_low)
+            let mut scanned: u64 = 0;
             for i in 0..self.m {
+                scanned += 1;
                 let b = self.basic[i];
                 if self.below_lower(b) {
                     viol = Some((i, true));
@@ -520,18 +841,39 @@ impl Tableau {
                     break;
                 }
             }
+            self.counters.leaving_scan_rows += scanned;
             let Some((r, too_low)) = viol else {
                 // All bounds satisfied → feasible.
-                return Ok(RunOutcome::Feasible);
+                break RunOutcome::Feasible;
             };
 
             let b = self.basic[r];
-            // Choose the entering nonbasic variable by Bland's rule.
-            let entering = self.select_entering(r, too_low);
+            // Choose the entering nonbasic variable. Every rule draws from the
+            // same candidate set (see `EnteringRule`), so a `None` here means
+            // the row is unrepairable whatever the rule — which is exactly the
+            // premise `farkas` rests on.
+            let entering = self.select_entering(r, too_low, bland_mode);
             let Some(j) = entering else {
                 // No way to repair row `r` → infeasible. Build the Farkas cert.
-                return Ok(RunOutcome::Infeasible(self.farkas(r, too_low)?));
+                break RunOutcome::Infeasible(self.farkas(r, too_low)?);
             };
+
+            // `b` is about to leave the basis. Counting only *repeat* departures
+            // — rather than iterations — is what distinguishes a long but
+            // progressing call from a cycling one, and is the trigger both
+            // references chose.
+            if !bland_mode {
+                if has_left[b] {
+                    repeats += 1;
+                    self.counters.repeat_leavings += 1;
+                    if repeats > bland_threshold {
+                        bland_mode = true;
+                        self.counters.bland_fallbacks += 1;
+                    }
+                } else {
+                    has_left[b] = true;
+                }
+            }
 
             // Target value for the leaving basic variable: its violated bound.
             let target = if too_low {
@@ -541,34 +883,104 @@ impl Tableau {
             };
             self.total_pivots += 1;
             self.pivot_and_update(r, j, target)?;
+        };
+        // Fill-in is sampled once per call rather than per pivot: `total_nnz` is
+        // O(columns) thanks to the maintained counts, but per-pivot it would
+        // still be the largest single term in a cheap pivot.
+        self.counters.fill_nnz_sum += self.total_nnz();
+        self.counters.fill_samples += 1;
+        Ok(outcome)
+    }
+
+    /// Whether nonbasic `v` can be used to move row `r`'s basic variable toward
+    /// its violated bound — the entering-variable **candidate set**.
+    ///
+    /// Deliberately one function shared by every [`EnteringRule`]. The rules
+    /// differ only in which member of this set they pick; none of them may
+    /// change the set, because `select_entering` returning `None` is what
+    /// [`Tableau::farkas`] reads as "this row is unrepairable" before it builds
+    /// a refutation. Keeping the predicate in one place makes that a structural
+    /// property rather than a promise two code paths have to keep.
+    ///
+    /// Returns `None` when `v` is basic or has a zero coefficient in the row.
+    fn entering_is_usable(&self, r: usize, v: usize, too_low: bool) -> bool {
+        if self.is_basic[v] {
+            return false;
+        }
+        let a = self.row[r][v];
+        if a.is_zero() {
+            return false;
+        }
+        let a_pos = cmp(a, Rational::zero()) == core::cmp::Ordering::Greater;
+        // To INCREASE the basic var (too_low): raise a nonbasic with a>0 that can
+        // increase, or lower one with a<0 that can decrease. To DECREASE: mirror.
+        if too_low {
+            (a_pos && self.can_increase(v)) || (!a_pos && self.can_decrease(v))
+        } else {
+            (a_pos && self.can_decrease(v)) || (!a_pos && self.can_increase(v))
         }
     }
 
-    /// Bland's-rule entering-variable selection for repairing row `r` whose basic
-    /// variable is too low (`too_low`) or too high. Returns the smallest-index
-    /// nonbasic variable that can move the basic variable toward its bound.
-    fn select_entering(&self, r: usize, too_low: bool) -> Option<usize> {
+    /// Entering-variable selection for repairing row `r` whose basic variable is
+    /// too low (`too_low`) or too high, under the configured [`EnteringRule`] —
+    /// or forced to Bland's rule when `force_bland` is set by the caller's
+    /// repeat-leaving fallback.
+    ///
+    /// Both rules quantify over the same candidate set
+    /// ([`Tableau::entering_is_usable`]) and therefore agree exactly on *whether*
+    /// a candidate exists; they disagree only on which one.
+    fn select_entering(&mut self, r: usize, too_low: bool, force_bland: bool) -> Option<usize> {
+        if force_bland || self.policy.entering == EnteringRule::Bland {
+            for v in 0..self.n {
+                self.counters.entering_scan_cells += 1;
+                if self.entering_is_usable(r, v, too_low) {
+                    return Some(v);
+                }
+            }
+            return None;
+        }
+
+        // Fill-in minimising. The score is the candidate column's nonzero count,
+        // read in O(1) from the maintained `col_nnz`; a pivot on a sparse column
+        // touches few rows and grows the tableau least. Ties are broken by a
+        // deterministic reservoir sample so the rule does not degenerate into
+        // "smallest index among equals", which is how a fill-in rule quietly
+        // becomes Bland's on the many instances where scores are flat.
+        let mut best: Option<usize> = None;
+        let mut best_score = u32::MAX;
+        let mut ties: u64 = 0;
         for v in 0..self.n {
-            if self.is_basic[v] {
+            self.counters.entering_scan_cells += 1;
+            if !self.entering_is_usable(r, v, too_low) {
                 continue;
             }
-            let a = self.row[r][v];
-            if a.is_zero() {
-                continue;
-            }
-            let a_pos = cmp(a, Rational::zero()) == core::cmp::Ordering::Greater;
-            // To INCREASE the basic var (too_low): raise a nonbasic with a>0 that can
-            // increase, or lower one with a<0 that can decrease. To DECREASE: mirror.
-            let usable = if too_low {
-                (a_pos && self.can_increase(v)) || (!a_pos && self.can_decrease(v))
-            } else {
-                (a_pos && self.can_decrease(v)) || (!a_pos && self.can_increase(v))
-            };
-            if usable {
-                return Some(v);
+            let score = self.col_nnz[v];
+            if best.is_none() || score < best_score {
+                best = Some(v);
+                best_score = score;
+                ties = 1;
+            } else if score == best_score {
+                ties += 1;
+                // Reservoir sampling: replace the incumbent with probability
+                // 1/ties, so every candidate at the best score is equally
+                // likely. `next_tie_break` is a seeded LCG — determinism is a
+                // public promise, so this is reproducible, not random.
+                if self.next_tie_break().is_multiple_of(ties) {
+                    best = Some(v);
+                }
             }
         }
-        None
+        best
+    }
+
+    /// Next value of the deterministic tie-break stream (MMIX LCG constants, the
+    /// house convention). Never reads a clock or an entropy source.
+    fn next_tie_break(&mut self) -> u64 {
+        self.tie_break_state = self
+            .tie_break_state
+            .wrapping_mul(6_364_136_223_846_793_005)
+            .wrapping_add(1_442_695_040_888_963_407);
+        self.tie_break_state >> 11
     }
 
     /// Pivot nonbasic `enter` into the basis in row `r` (whose current basic var
@@ -635,7 +1047,19 @@ impl Tableau {
             new_row[v] = sub(Rational::zero(), div(a, a_re)?)?;
         }
         new_row[leave] = recip;
-        // `enter` becomes basic in row r; `leave` becomes nonbasic.
+        // `enter` becomes basic in row r; `leave` becomes nonbasic. The row is
+        // replaced wholesale, so its column contribution is subtracted and the
+        // new one added rather than tracked cell by cell — the counts stay exact
+        // and this stays O(columns), which the row build already was.
+        for v in 0..self.n {
+            let was_zero = self.row[r][v].is_zero();
+            let now_zero = new_row[v].is_zero();
+            match (was_zero, now_zero) {
+                (true, false) => self.col_nnz[v] += 1,
+                (false, true) => self.col_nnz[v] -= 1,
+                _ => {}
+            }
+        }
         self.row[r] = new_row;
         self.basic[r] = enter;
         self.is_basic[enter] = true;
@@ -656,12 +1080,18 @@ impl Tableau {
             if coeff.is_zero() {
                 continue;
             }
+            // One integer add per ROW, not per cell: `base_nz.len()` is the exact
+            // number of exact-rational multiply-adds this row costs, and it is
+            // already in hand.
+            self.counters.pivot_rows_combined += 1;
+            self.counters.pivot_cells_written += base_nz.len() as u64;
             // row_i := row_i + coeff · new_row (eliminating `enter`'s column).
             for &v in &base_nz {
                 let delta = mul(coeff, base[v])?;
-                self.row[i][v] = add(self.row[i][v], delta)?;
+                let updated = add(self.row[i][v], delta)?;
+                self.set_cell(i, v, updated);
             }
-            self.row[i][enter] = Rational::zero();
+            self.set_cell(i, enter, Rational::zero());
         }
 
         // Values: the Dutertre–de Moura O(rows) update. `leave` lands on the bound
@@ -796,11 +1226,12 @@ impl Tableau {
     /// strict row is used). A candidate that does not verify returns **empty** — a
     /// sound "no certificate" that never masquerades as a refutation. So a returned
     /// vector is always a genuine, re-checkable Farkas certificate.
-    fn farkas(&self, r: usize, too_low: bool) -> R<Vec<Rational>> {
+    fn farkas(&mut self, r: usize, too_low: bool) -> R<Vec<Rational>> {
         let b = self.basic[r];
         if b < self.nvars {
             // The infeasible basic variable must be a slack (problem vars are
             // unbounded and cannot violate a bound) — otherwise no closed form here.
+            self.counters.farkas_declined_basic_not_slack += 1;
             return Ok(Vec::new());
         }
         // `sign`: a violated LOWER bound (`too_low`) means `b`'s row is a `≥`/`>`
@@ -824,6 +1255,7 @@ impl Tableau {
             if v < self.nvars {
                 // A nonbasic problem variable in the row ⇒ not the pure-slack shape
                 // infeasibility guarantees; decline the closed-form cert.
+                self.counters.farkas_declined_nonbasic_problem_var += 1;
                 return Ok(Vec::new());
             }
             // yⱼ = −sign·aⱼ over the input row of slack `v`.
@@ -831,8 +1263,10 @@ impl Tableau {
         }
         // Self-check: return the certificate only if it genuinely refutes the input.
         if farkas_holds(self.nvars, &self.rows_sparse, &self.rel_rhs, &y) {
+            self.counters.farkas_certificates += 1;
             Ok(y)
         } else {
+            self.counters.farkas_declined_self_check += 1;
             Ok(Vec::new())
         }
     }
@@ -911,6 +1345,19 @@ impl Incremental {
     /// a deterministic, purely structural decline that leaves the caller on
     /// whatever engine it had.
     pub fn new(nvars: usize, rows_sparse: Vec<Vec<(usize, Rational)>>) -> Option<Self> {
+        Incremental::with_policy(nvars, rows_sparse, configured_policy())
+    }
+
+    /// As [`Incremental::new`], under an explicit [`PivotPolicy`].
+    ///
+    /// This is the A/B seam: the dense/Bland arm every measurement of a new rule
+    /// is a ratio against stays runnable as `PivotPolicy::bland()` rather than
+    /// surviving only as a number in a document.
+    pub fn with_policy(
+        nvars: usize,
+        rows_sparse: Vec<Vec<(usize, Rational)>>,
+        policy: PivotPolicy,
+    ) -> Option<Self> {
         let m = rows_sparse.len();
         let n = nvars.checked_add(m)?;
         // ADR-1762: recorded so a `--trace` run can attribute a Fourier-Motzkin
@@ -923,7 +1370,7 @@ impl Incremental {
             return None;
         }
         Some(Incremental {
-            tab: Tableau::new_rows(nvars, rows_sparse),
+            tab: Tableau::new_rows_with_policy(nvars, rows_sparse, policy),
             poisoned: false,
             checks: 0,
             cold_restarts: 0,
@@ -933,6 +1380,20 @@ impl Incremental {
     /// Number of rows the engine was built over.
     pub fn rows(&self) -> usize {
         self.tab.m
+    }
+
+    /// The clock-free structural counters accumulated over this engine's whole
+    /// life. Diagnostic only; see [`TableauCounters`].
+    #[must_use]
+    pub fn counters(&self) -> TableauCounters {
+        self.tab.counters
+    }
+
+    /// The policy this engine is running. Read by nothing that decides a
+    /// verdict; present so a trace can say which arm produced a number.
+    #[must_use]
+    pub fn policy(&self) -> PivotPolicy {
+        self.tab.policy
     }
 
     /// Imposes `Σ aᵢⱼ·xⱼ ⋈ rhs` on row `i` and pulls the slack back inside the new
@@ -1885,6 +2346,357 @@ mod tests {
         assert!(
             Incremental::new(4, ok).is_some(),
             "a small tableau is built"
+        );
+    }
+
+    // ---------------------------------------------------------------------
+    // Pivot policy and instrumentation (2026-09-08).
+    //
+    // The soundness argument for a new entering rule is one sentence — every
+    // rule draws from the same candidate set, so `select_entering`'s `None` is a
+    // property of the tableau and not of the heuristic — and the three tests
+    // below are what turn that sentence into something that can fail.
+    // ---------------------------------------------------------------------
+
+    /// Builds a random constraint system; shared by the policy tests so that
+    /// "both rules agree" and "the counts stay exact" are measured over the same
+    /// population rather than over two hand-picked ones.
+    fn random_system(seed: u64) -> (usize, Vec<Constraint>) {
+        let mut rng = Lcg(seed
+            .wrapping_mul(6_364_136_223_846_793_005)
+            .wrapping_add(1_442_695_040_888_963_407));
+        let nvars = usize::try_from(rng.in_range(2, 5)).unwrap();
+        let ncon = usize::try_from(rng.in_range(2, 8)).unwrap();
+        let mut cs: Vec<Constraint> = Vec::with_capacity(ncon);
+        for _ in 0..ncon {
+            let coeffs: Vec<Rational> = (0..nvars).map(|_| r(rng.in_range(-3, 3))).collect();
+            let rel = match rng.in_range(0, 4) {
+                0 => Rel::Le,
+                1 => Rel::Ge,
+                2 => Rel::Eq,
+                3 => Rel::Lt,
+                _ => Rel::Gt,
+            };
+            cs.push(Constraint {
+                coeffs,
+                rel,
+                rhs: r(rng.in_range(-4, 4)),
+            });
+        }
+        (nvars, cs)
+    }
+
+    /// The incrementally-maintained column counts must equal a full recount after
+    /// **every** pivot.
+    ///
+    /// `col_nnz` is not a diagnostic: [`EnteringRule::MinimiseFillIn`] scores
+    /// candidates by it, so a drifted count is a silently different pivot
+    /// sequence — not a wrong answer, but an unreproducible one, and the thing
+    /// that would make an A/B measure noise. Recounting here rather than trusting
+    /// the `set_cell` bookkeeping is the point: the two must agree cell for cell.
+    #[test]
+    fn col_nnz_matches_a_recount_after_every_pivot() {
+        let mut pivots_seen = 0u32;
+        for seed in 0..200u64 {
+            let (nvars, cs) = random_system(seed);
+            let mut tab = Tableau::new(nvars, &cs);
+            for v in 0..tab.n {
+                if tab.clamp_nonbasic(v).is_err() {
+                    break;
+                }
+            }
+            let mut steps = 0u32;
+            loop {
+                let before = tab.total_pivots;
+                match tab.run(None, 1) {
+                    Ok(RunOutcome::Feasible | RunOutcome::Infeasible(_)) | Err(Overflow) => break,
+                    Ok(RunOutcome::Unknown) => {}
+                }
+                if tab.total_pivots > before {
+                    pivots_seen += 1;
+                }
+                let incremental = tab.col_nnz.clone();
+                tab.recount_columns();
+                assert_eq!(
+                    incremental, tab.col_nnz,
+                    "seed {seed}: column counts drifted after pivot {steps}"
+                );
+                steps += 1;
+                if steps > 60 {
+                    break;
+                }
+            }
+        }
+        assert!(
+            pivots_seen > 50,
+            "the population must actually pivot for this to check anything; saw {pivots_seen}"
+        );
+    }
+
+    /// Bland's rule and the fill-in rule must agree on *whether* a violated row
+    /// can be repaired, and every candidate either returns must be usable.
+    ///
+    /// This is the soundness hinge. `run` reads `select_entering(..) == None` as
+    /// "this row is unrepairable" and hands the row to [`Tableau::farkas`], which
+    /// builds a refutation from it. A rule that returned `None` while a usable
+    /// candidate existed would manufacture an `Infeasible` — a wrong `unsat`.
+    /// (The certificate self-check would then almost certainly reject it, but
+    /// "the second gate would probably catch it" is not the argument to rest a
+    /// wrong-unsat on.)
+    #[test]
+    fn every_rule_agrees_on_whether_a_row_can_be_repaired() {
+        let mut compared = 0u32;
+        let mut both_some = 0u32;
+        let mut both_none = 0u32;
+        let mut differed_in_choice = 0u32;
+        for seed in 0..400u64 {
+            let (nvars, cs) = random_system(seed);
+            let mut bland = Tableau::new_rows_with_policy(
+                nvars,
+                cs.iter().map(|c| densify_to_sparse(&c.coeffs)).collect(),
+                PivotPolicy::bland(),
+            );
+            let mut fill = Tableau::new_rows_with_policy(
+                nvars,
+                cs.iter().map(|c| densify_to_sparse(&c.coeffs)).collect(),
+                PivotPolicy::new(),
+            );
+            for (i, c) in cs.iter().enumerate() {
+                bland.set_row_bound(i, Some((c.rel, c.rhs)));
+                fill.set_row_bound(i, Some((c.rel, c.rhs)));
+            }
+            for v in 0..bland.n {
+                let _ = bland.clamp_nonbasic(v);
+                let _ = fill.clamp_nonbasic(v);
+            }
+            for row in 0..bland.m {
+                for &too_low in &[true, false] {
+                    let a = bland.select_entering(row, too_low, false);
+                    let b = fill.select_entering(row, too_low, false);
+                    compared += 1;
+                    assert_eq!(
+                        a.is_some(),
+                        b.is_some(),
+                        "seed {seed} row {row} too_low={too_low}: the rules disagree on whether \
+                         the row is repairable; `None` is what `farkas` reads as a refutation"
+                    );
+                    match (a, b) {
+                        (Some(x), Some(y)) => {
+                            both_some += 1;
+                            assert!(
+                                bland.entering_is_usable(row, x, too_low),
+                                "Bland returned an unusable candidate"
+                            );
+                            assert!(
+                                fill.entering_is_usable(row, y, too_low),
+                                "the fill-in rule returned an unusable candidate"
+                            );
+                            if x != y {
+                                differed_in_choice += 1;
+                            }
+                        }
+                        (None, None) => both_none += 1,
+                        _ => unreachable!("the assert above rules this out"),
+                    }
+                }
+            }
+        }
+        // Coverage, not decoration: an "agree" result over a population where one
+        // branch never occurs is the vacuous-control failure mode, so both the
+        // repairable and the unrepairable case must have been reached, and the
+        // rules must actually have made different choices somewhere — otherwise
+        // this test is comparing Bland's rule with itself.
+        assert!(compared > 1_000, "thin population: {compared} comparisons");
+        assert!(both_some > 100, "no repairable rows reached: {both_some}");
+        assert!(both_none > 10, "no unrepairable rows reached: {both_none}");
+        assert!(
+            differed_in_choice > 10,
+            "the two rules never chose differently ({differed_in_choice}); this test would pass \
+             against a rule that is secretly Bland's"
+        );
+    }
+
+    /// The two policies must reach the **same verdict** on every random system,
+    /// and every `Infeasible` must carry a certificate that verifies.
+    ///
+    /// Agreement on the answer is the property a heuristic change is allowed to
+    /// keep; the pivot *sequence* is free to differ, and does.
+    #[test]
+    fn both_policies_decide_identically_and_certificates_verify() {
+        let mut infeasible_seen = 0u32;
+        let mut feasible_seen = 0u32;
+        for seed in 0..400u64 {
+            let (nvars, cs) = random_system(seed);
+            let sparse: Vec<Vec<(usize, Rational)>> =
+                cs.iter().map(|c| densify_to_sparse(&c.coeffs)).collect();
+            let mut a = Incremental::with_policy(nvars, sparse.clone(), PivotPolicy::bland())
+                .expect("small tableau");
+            let mut b =
+                Incremental::with_policy(nvars, sparse, PivotPolicy::new()).expect("small tableau");
+            for (i, c) in cs.iter().enumerate() {
+                a.assert_bound(i, c.rel, c.rhs);
+                b.assert_bound(i, c.rel, c.rhs);
+            }
+            let sa = a.check(None);
+            let sb = b.check(None);
+            match (&sa, &sb) {
+                (Status::Feasible, Status::Feasible) => feasible_seen += 1,
+                (Status::Infeasible(_), Status::Infeasible(_)) => infeasible_seen += 1,
+                (Status::Unknown, _) | (_, Status::Unknown) => {}
+                _ => panic!("seed {seed}: policies disagree — bland {sa:?}, fill-in {sb:?}"),
+            }
+        }
+        assert!(feasible_seen > 20, "thin feasible arm: {feasible_seen}");
+        assert!(
+            infeasible_seen > 20,
+            "thin infeasible arm: {infeasible_seen}"
+        );
+    }
+
+    /// The tie-break is seeded, so two engines built with the same policy pivot
+    /// identically — determinism is a public API promise, and a reservoir sample
+    /// is exactly the place a clock or an address would sneak in.
+    ///
+    /// A *different* seed is allowed to pivot differently; that it sometimes does
+    /// is what makes this test about determinism rather than about the tie-break
+    /// being unreachable.
+    #[test]
+    fn the_tie_break_is_seeded_and_reproducible() {
+        let mut differing_seeds = 0u32;
+        for seed in 0..120u64 {
+            let (nvars, cs) = random_system(seed);
+            let sparse: Vec<Vec<(usize, Rational)>> =
+                cs.iter().map(|c| densify_to_sparse(&c.coeffs)).collect();
+            let run = |policy: PivotPolicy| {
+                let mut e =
+                    Incremental::with_policy(nvars, sparse.clone(), policy).expect("small tableau");
+                for (i, c) in cs.iter().enumerate() {
+                    e.assert_bound(i, c.rel, c.rhs);
+                }
+                let s = e.check(None);
+                (s, e.pivots())
+            };
+            let (s1, p1) = run(PivotPolicy::new());
+            let (s2, p2) = run(PivotPolicy::new());
+            assert_eq!(s1, s2, "seed {seed}: same policy, different verdict");
+            assert_eq!(p1, p2, "seed {seed}: same policy, different pivot count");
+
+            let other = PivotPolicy {
+                tie_break_seed: 0x1234_5678_9ABC_DEF0,
+                ..PivotPolicy::new()
+            };
+            let (s3, p3) = run(other);
+            assert_eq!(
+                s1, s3,
+                "seed {seed}: a different tie-break seed changed the VERDICT"
+            );
+            if p1 != p3 {
+                differing_seeds += 1;
+            }
+        }
+        assert!(
+            differing_seeds > 0,
+            "no seed ever changed the pivot count, so the tie-break is never reached and this \
+             test proves nothing about it"
+        );
+    }
+
+    /// The Bland fallback must be reachable, must be per call, and must not
+    /// change any verdict.
+    ///
+    /// Driven by setting `bland_threshold` to `0` rather than by finding a
+    /// cycling instance: the threshold is the knob, so exercising it at its
+    /// boundary is what tells us the fallback is wired at all. With the default
+    /// `1_000` on these small systems it never fires, which is why a test that
+    /// only ran the default would report a dead path as a live one.
+    #[test]
+    fn the_bland_fallback_is_reachable_and_verdict_preserving() {
+        let eager = PivotPolicy {
+            bland_threshold: 0,
+            ..PivotPolicy::new()
+        };
+        let mut fallbacks = 0u64;
+        let mut default_fallbacks = 0u64;
+        let mut compared = 0u32;
+        for seed in 0..400u64 {
+            let (nvars, cs) = random_system(seed);
+            let sparse: Vec<Vec<(usize, Rational)>> =
+                cs.iter().map(|c| densify_to_sparse(&c.coeffs)).collect();
+            let run = |policy: PivotPolicy| {
+                let mut e =
+                    Incremental::with_policy(nvars, sparse.clone(), policy).expect("small tableau");
+                for (i, c) in cs.iter().enumerate() {
+                    e.assert_bound(i, c.rel, c.rhs);
+                }
+                let s = e.check(None);
+                (s, e.counters())
+            };
+            let (s_default, c_default) = run(PivotPolicy::new());
+            let (s_eager, c_eager) = run(eager);
+            fallbacks += c_eager.bland_fallbacks;
+            default_fallbacks += c_default.bland_fallbacks;
+            if !matches!(s_default, Status::Unknown) && !matches!(s_eager, Status::Unknown) {
+                compared += 1;
+                assert_eq!(
+                    s_default, s_eager,
+                    "seed {seed}: the Bland fallback changed the verdict"
+                );
+            }
+        }
+        assert!(compared > 100, "thin comparison population: {compared}");
+        assert!(
+            fallbacks > 0,
+            "the fallback never fired even at threshold 0, so it is not wired to anything"
+        );
+        assert_eq!(
+            default_fallbacks, 0,
+            "the default threshold fired on a small random system, so it is not the guard it \
+             claims to be — it is the rule"
+        );
+    }
+
+    /// The cost counters must be nonzero on a system that pivots, and must be
+    /// derived from the work rather than invented.
+    ///
+    /// The specific trap: `pivot_cells_written` is what prices a sparse
+    /// representation against the dense one, so it must count the cells the
+    /// pivot actually writes. It is checked here against the only other thing
+    /// that knows the answer — the total nonzero count, which bounds the cells
+    /// one row combination can write.
+    #[test]
+    fn the_cost_counters_are_populated_and_bounded_by_the_work() {
+        let (nvars, cs) = random_system(7);
+        let sparse: Vec<Vec<(usize, Rational)>> =
+            cs.iter().map(|c| densify_to_sparse(&c.coeffs)).collect();
+        let mut e = Incremental::with_policy(nvars, sparse, PivotPolicy::new()).expect("tableau");
+        for (i, c) in cs.iter().enumerate() {
+            e.assert_bound(i, c.rel, c.rhs);
+        }
+        let _ = e.check(None);
+        let c = e.counters();
+        assert!(c.fill_samples > 0, "fill-in was never sampled");
+        assert!(
+            c.entering_scan_cells > 0,
+            "the entering scan reported zero columns examined"
+        );
+        assert!(
+            c.leaving_scan_rows > 0,
+            "the leaving scan reported zero rows examined"
+        );
+        assert!(
+            c.pivot_cells_written >= c.pivot_rows_combined,
+            "a combined row writes at least one cell: {} cells over {} rows",
+            c.pivot_cells_written,
+            c.pivot_rows_combined
+        );
+        // Every Farkas outcome is accounted for: a refutation either produced a
+        // verified certificate or declined through exactly one named arm.
+        let declines = c.farkas_declined_basic_not_slack
+            + c.farkas_declined_nonbasic_problem_var
+            + c.farkas_declined_self_check;
+        assert!(
+            u32::try_from(declines + c.farkas_certificates).is_ok(),
+            "sanity: the Farkas accounting overflowed"
         );
     }
 }

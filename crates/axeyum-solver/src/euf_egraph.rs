@@ -217,6 +217,57 @@ pub struct TheoryEngineCounters {
     pub bound_scan_calls: u64,
     /// Atoms those calls examined; see `bound_scan_calls`.
     pub bound_scan_atoms: u64,
+    /// Cells the simplex pivot actually wrote, summed over its life
+    /// (`simplex::TableauCounters::pivot_cells_written`).
+    ///
+    /// This is the counter that prices a sparse tableau. `pivot_cells_written /
+    /// simplex_pivots` is the *measured* cost of one pivot in exact-rational
+    /// multiply-adds; `simplex_rows × simplex_columns` is the dense worst case.
+    /// The ratio between them is how much sparsity the pivot already exploits,
+    /// and therefore how much a representation change could still win — a
+    /// number, where before there was an `O(rows × columns)` in a comment.
+    pub pivot_cells_written: u64,
+    /// Rows the pivot combined, summed over its life. With
+    /// `pivot_cells_written` this splits "a pivot touches many rows" from "a
+    /// pivot touches long rows", which want different fixes.
+    pub pivot_rows_combined: u64,
+    /// Columns the entering-variable scan examined, summed over its life. Bland
+    /// stops at the first usable candidate and the fill-in rule does not, so
+    /// this is the price the better rule pays, in the same units as the pivot.
+    pub entering_scan_cells: u64,
+    /// Rows the leaving-variable scan examined, summed over its life. Ours
+    /// rescans from row 0 every iteration; this is exactly what a violated-basic
+    /// priority heap would remove, measured rather than estimated.
+    pub leaving_scan_rows: u64,
+    /// Nonzero tableau cells summed over `fill_samples` samples (one per
+    /// feasibility call). `fill_nnz_sum / fill_samples` against
+    /// `simplex_rows × simplex_columns` is fill-in as a fraction — the second of
+    /// the two numbers that decide whether the sparse rewrite is worth it.
+    pub fill_nnz_sum: u64,
+    /// Samples behind `fill_nnz_sum`; its denominator, never assumed to equal
+    /// `simplex_checks`.
+    pub fill_samples: u64,
+    /// Feasibility calls that finished under the Bland fallback because the
+    /// entering rule was repeating leaving variables. Nonzero means the fill-in
+    /// rule was judged to be cycling on this query and the terminating rule took
+    /// over — sound either way, but it is what tells a slow instance apart from
+    /// a degenerate one.
+    pub bland_fallbacks: u64,
+    /// Infeasibility outcomes that produced a **verified** Farkas certificate.
+    pub farkas_certificates: u64,
+    /// Infeasibility outcomes where the closed-form Farkas extraction declined,
+    /// by arm. A decline returns an empty support, which widens the theory's
+    /// conflict core to the whole asserted set — so these are the direct cost
+    /// model for the two decline paths, where before only their *consequence*
+    /// (`final_check_core_widenings`) was visible and neither arm could be told
+    /// from the other.
+    pub farkas_declined_basic_not_slack: u64,
+    /// Declines because a nonbasic problem variable appears in the row.
+    pub farkas_declined_nonbasic_problem_var: u64,
+    /// Declines because the extracted candidate failed its own self-check —
+    /// distinct from the two structural arms, and the one that would point at
+    /// arithmetic rather than shape.
+    pub farkas_declined_self_check: u64,
 }
 
 /// An opaque, theory-owned handle to an explanation the theory has **not**

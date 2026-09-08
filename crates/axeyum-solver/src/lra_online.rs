@@ -920,6 +920,23 @@ impl LraTheory {
             final_check_live_rows: self.final_check_live_rows,
             bound_scan_calls: self.bound_scan_calls,
             bound_scan_atoms: self.bound_scan_atoms,
+            pivot_cells_written: engine.inner.counters().pivot_cells_written,
+            pivot_rows_combined: engine.inner.counters().pivot_rows_combined,
+            entering_scan_cells: engine.inner.counters().entering_scan_cells,
+            leaving_scan_rows: engine.inner.counters().leaving_scan_rows,
+            fill_nnz_sum: engine.inner.counters().fill_nnz_sum,
+            fill_samples: engine.inner.counters().fill_samples,
+            bland_fallbacks: engine.inner.counters().bland_fallbacks,
+            farkas_certificates: engine.inner.counters().farkas_certificates,
+            farkas_declined_basic_not_slack: engine
+                .inner
+                .counters()
+                .farkas_declined_basic_not_slack,
+            farkas_declined_nonbasic_problem_var: engine
+                .inner
+                .counters()
+                .farkas_declined_nonbasic_problem_var,
+            farkas_declined_self_check: engine.inner.counters().farkas_declined_self_check,
         })
     }
 

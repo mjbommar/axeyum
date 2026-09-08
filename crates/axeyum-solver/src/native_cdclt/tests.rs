@@ -656,7 +656,31 @@ fn the_channel_reset_scopes_the_count_to_one_dispatch() {
 /// source field fails as loudly as one that copies nothing.
 #[test]
 fn every_engine_counter_reaches_the_trace_line() {
-    let counters = crate::euf_egraph::TheoryEngineCounters {
+    let counters = distinct_engine_counters();
+    let stats = super::theory_layer_stats(&axeyum_cnf::NativeLayerStats::default(), Some(counters));
+    for (name, got, want) in forwarding_table(&stats, counters) {
+        assert_eq!(
+            got,
+            Some(want),
+            "`{name}` did not reach the trace line; `n/a` there reads as \
+             'not measured' about a counter the engine measured"
+        );
+    }
+
+    // The other half of the contract: a theory with no feasibility engine must
+    // still report `None` (rendered `n/a`) and never a manufactured zero.
+    let none = super::theory_layer_stats(&axeyum_cnf::NativeLayerStats::default(), None);
+    assert_eq!(
+        none.final_check_core_widenings, None,
+        "absent engine must read `n/a`, not `0`"
+    );
+    assert_eq!(none.simplex_pivots, None, "absent engine must read `n/a`");
+}
+
+/// Every counter at a **distinct** value, so a forward that copies the wrong
+/// source field fails as loudly as one that copies nothing.
+fn distinct_engine_counters() -> crate::euf_egraph::TheoryEngineCounters {
+    crate::euf_egraph::TheoryEngineCounters {
         simplex_pivots: 1,
         simplex_checks: 2,
         simplex_cold_restarts: 3,
@@ -672,8 +696,35 @@ fn every_engine_counter_reaches_the_trace_line() {
         final_check_live_rows: 13,
         bound_scan_calls: 14,
         bound_scan_atoms: 15,
-    };
-    // No `..` rest — adding a counter breaks this line, which is the guard.
+        pivot_cells_written: 16,
+        pivot_rows_combined: 17,
+        entering_scan_cells: 18,
+        leaving_scan_rows: 19,
+        fill_nnz_sum: 20,
+        fill_samples: 21,
+        bland_fallbacks: 22,
+        farkas_certificates: 23,
+        farkas_declined_basic_not_slack: 24,
+        farkas_declined_nonbasic_problem_var: 25,
+        farkas_declined_self_check: 26,
+    }
+}
+
+/// Pairs each engine counter with the [`crate::layers::TheoryLayerStats`] field
+/// it must reach.
+///
+/// The exhaustive `let TheoryEngineCounters { … }` below carries **no** `..`
+/// rest, so the compiler refuses this function the moment a counter is added.
+/// That is the guard: the field list is the struct's, not the maintainer's
+/// memory of it.
+// One line per counter is the guard, not incidental length: shortening this by
+// looping or by a macro would put the field list back under the maintainer's
+// control, which is exactly what the exhaustive destructure exists to prevent.
+#[allow(clippy::too_many_lines)]
+fn forwarding_table(
+    stats: &crate::layers::TheoryLayerStats,
+    counters: crate::euf_egraph::TheoryEngineCounters,
+) -> [(&'static str, Option<u64>, u64); 26] {
     let crate::euf_egraph::TheoryEngineCounters {
         simplex_pivots,
         simplex_checks,
@@ -690,11 +741,20 @@ fn every_engine_counter_reaches_the_trace_line() {
         final_check_live_rows,
         bound_scan_calls,
         bound_scan_atoms,
+        pivot_cells_written,
+        pivot_rows_combined,
+        entering_scan_cells,
+        leaving_scan_rows,
+        fill_nnz_sum,
+        fill_samples,
+        bland_fallbacks,
+        farkas_certificates,
+        farkas_declined_basic_not_slack,
+        farkas_declined_nonbasic_problem_var,
+        farkas_declined_self_check,
     } = counters;
 
-    let stats = super::theory_layer_stats(&axeyum_cnf::NativeLayerStats::default(), Some(counters));
-
-    let observed: [(&str, Option<u64>, u64); 15] = [
+    [
         ("simplex_pivots", stats.simplex_pivots, simplex_pivots),
         ("simplex_checks", stats.simplex_checks, simplex_checks),
         (
@@ -742,22 +802,48 @@ fn every_engine_counter_reaches_the_trace_line() {
         ),
         ("bound_scan_calls", stats.bound_scan_calls, bound_scan_calls),
         ("bound_scan_atoms", stats.bound_scan_atoms, bound_scan_atoms),
-    ];
-    for (name, got, want) in observed {
-        assert_eq!(
-            got,
-            Some(want),
-            "`{name}` did not reach the trace line; `n/a` there reads as \
-             'not measured' about a counter the engine measured"
-        );
-    }
-
-    // The other half of the contract: a theory with no feasibility engine must
-    // still report `None` (rendered `n/a`) and never a manufactured zero.
-    let none = super::theory_layer_stats(&axeyum_cnf::NativeLayerStats::default(), None);
-    assert_eq!(
-        none.final_check_core_widenings, None,
-        "absent engine must read `n/a`, not `0`"
-    );
-    assert_eq!(none.simplex_pivots, None, "absent engine must read `n/a`");
+        (
+            "pivot_cells_written",
+            stats.pivot_cells_written,
+            pivot_cells_written,
+        ),
+        (
+            "pivot_rows_combined",
+            stats.pivot_rows_combined,
+            pivot_rows_combined,
+        ),
+        (
+            "entering_scan_cells",
+            stats.entering_scan_cells,
+            entering_scan_cells,
+        ),
+        (
+            "leaving_scan_rows",
+            stats.leaving_scan_rows,
+            leaving_scan_rows,
+        ),
+        ("fill_nnz_sum", stats.fill_nnz_sum, fill_nnz_sum),
+        ("fill_samples", stats.fill_samples, fill_samples),
+        ("bland_fallbacks", stats.bland_fallbacks, bland_fallbacks),
+        (
+            "farkas_certificates",
+            stats.farkas_certificates,
+            farkas_certificates,
+        ),
+        (
+            "farkas_declined_basic_not_slack",
+            stats.farkas_declined_basic_not_slack,
+            farkas_declined_basic_not_slack,
+        ),
+        (
+            "farkas_declined_nonbasic_problem_var",
+            stats.farkas_declined_nonbasic_problem_var,
+            farkas_declined_nonbasic_problem_var,
+        ),
+        (
+            "farkas_declined_self_check",
+            stats.farkas_declined_self_check,
+            farkas_declined_self_check,
+        ),
+    ]
 }

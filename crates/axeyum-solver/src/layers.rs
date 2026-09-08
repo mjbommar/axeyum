@@ -648,6 +648,36 @@ pub struct TheoryLayerStats {
     pub bound_scan_calls: Option<u64>,
     /// Atoms those calls examined; see `bound_scan_calls`.
     pub bound_scan_atoms: Option<u64>,
+    /// Cells the simplex pivot actually wrote, summed over the engine's life.
+    /// `pivot_cells_written / simplex_pivots` is the measured cost of one pivot
+    /// in exact-rational multiply-adds; `simplex_rows × simplex_columns` is the
+    /// dense worst case, and the ratio says how much sparsity the pivot already
+    /// exploits and therefore how much a sparse representation could still win.
+    pub pivot_cells_written: Option<u64>,
+    /// Rows the pivot combined. With `pivot_cells_written` this separates "a
+    /// pivot touches many rows" from "a pivot touches long rows".
+    pub pivot_rows_combined: Option<u64>,
+    /// Columns the entering-variable scan examined.
+    pub entering_scan_cells: Option<u64>,
+    /// Rows the leaving-variable scan examined — what a violated-basic priority
+    /// heap would remove.
+    pub leaving_scan_rows: Option<u64>,
+    /// Nonzero tableau cells summed over `fill_samples` feasibility calls;
+    /// divided by that, fill-in.
+    pub fill_nnz_sum: Option<u64>,
+    /// The denominator of `fill_nnz_sum`.
+    pub fill_samples: Option<u64>,
+    /// Feasibility calls that finished under the Bland fallback.
+    pub bland_fallbacks: Option<u64>,
+    /// Infeasibility outcomes that produced a verified Farkas certificate.
+    pub farkas_certificates: Option<u64>,
+    /// Farkas declines because the infeasible row's basic variable is not a
+    /// slack; a decline widens the conflict core to the whole asserted set.
+    pub farkas_declined_basic_not_slack: Option<u64>,
+    /// Farkas declines because a nonbasic problem variable appears in the row.
+    pub farkas_declined_nonbasic_problem_var: Option<u64>,
+    /// Farkas declines because the candidate failed its own self-check.
+    pub farkas_declined_self_check: Option<u64>,
 }
 
 impl TheoryLayerStats {
