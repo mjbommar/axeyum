@@ -227,6 +227,37 @@ that drops files it never saw is how a stable number becomes a wrong one.
 Every figure above is therefore over the 1,104 files with a trail, and the 96
 are reported, not dropped.
 
+## "No measurable cost with collection off" — measured, not asserted
+
+The gating argument (one `Cell<bool>` read, no clock, no allocation) is a claim
+about the code. It is now a claim about the binary:
+`bench-results/route-attribution-2026-09-07/cost_ab.{sh,py,tsv,txt}`.
+
+Two prebuilt release `smtcomp_cli` binaries — baseline at `9d40c1ec8`
+(pre-attribution) and new at `4853ad9fd` — over the same 60 files (first 30
+`QF_BV` + first 30 `QF_LIA` of the parity lists), 3 repetitions, **alternating
+arms** so machine drift is shared rather than accumulating on the second arm,
+and **no `--trace`** on either: the question is the default path.
+
+| | |
+| --- | --- |
+| total baseline | 172,829 ms |
+| total instrumented | 172,740 ms |
+| ratio | **0.9995** |
+| median per-file delta | **+0.0000%** |
+| verdict | no measurable cost (3% threshold) |
+
+The scorer also cross-checks verdicts between the two binaries and refuses to
+report any timing number if they ever disagree — a second, independent
+confirmation of verdict invariance, taken from the shipped binary rather than
+the library. It did not fire.
+
+**And the instrument was shown able to see a regression.** `--self-check`
+injects a synthetic 5% slowdown into the new arm and requires the verdict to
+flip: it reads +4.55% and reports REGRESSION. Without that, "no measurable
+cost" would be indistinguishable from an instrument too blunt to measure
+anything — which is exactly the failure this repository keeps finding.
+
 ## A divergence this work surfaced: the memory-budget entry guard
 
 Delegating to `check_auto_explained` rests on the two functions being verdict-
