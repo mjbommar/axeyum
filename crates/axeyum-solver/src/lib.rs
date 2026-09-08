@@ -207,6 +207,7 @@ macro_rules! full_modules {
         mod skolem_alethe;
         pub mod smtlib;
         mod solver;
+        pub mod span_log;
         mod strategy;
         mod string_length_cert;
         mod string_theory;
@@ -1427,6 +1428,10 @@ macro_rules! full_exports {
         #[doc(hidden)]
         pub use solver::InterpolantOutcome;
         pub use solver::Solver;
+        pub use span_log::{
+            EdgeType, Outcome, Reading, SpanKind, SpanLog, SpanLogInputs, Termination,
+            division_from_path,
+        };
         pub use strategy::{
             Strategy, recommended_portfolio, solve_with_portfolio, solve_with_strategy,
         };
