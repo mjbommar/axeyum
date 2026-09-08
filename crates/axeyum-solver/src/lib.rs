@@ -1372,7 +1372,10 @@ macro_rules! full_exports {
         pub use records::{RecordError, RecordSort};
         #[doc(hidden)]
         pub use regex_reconstruct::reconstruct_regex_emptiness_to_lean_module;
-        pub use route_trace::{DeclineReason, RouteAttempt, RouteOutcome, RouteTrace, Verdict};
+        pub use route_trace::{
+            DeclineReason, RouteAttempt, RouteAttributionGuard, RouteOutcome, RouteTrace, Verdict,
+            attribution_collecting, front_door_stage, last_route_attribution,
+        };
         #[doc(hidden)]
         pub use set_cardinality::{
             SetCardinalityRefutationCertificate, set_cardinality_refutation,

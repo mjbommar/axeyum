@@ -1,0 +1,292 @@
+{
+  "population": {
+    "rows": 1200,
+    "with_trail": 1104,
+    "without_trail": 96,
+    "decided": 754,
+    "unsolved": 350
+  },
+  "deciding_route_distribution": {
+    "dl-online": 161,
+    "euf-online": 133,
+    "qf-bv": 90,
+    "nra": 69,
+    "fd:source-string": 53,
+    "abv-online-cdclt": 50,
+    "lia-dpll": 47,
+    "lia-simplex": 38,
+    "array-fast-path": 32,
+    "int-blast-ladder": 31,
+    "fd:string-gate": 10,
+    "uf-arith-online": 10,
+    "uf-arith-lazy-overbound": 9,
+    "int-box-eval": 4,
+    "nia-linearize": 4,
+    "ufbv-declared-sort-lazy": 4,
+    "array-unsat-refuter": 3,
+    "bv2nat-blast": 3,
+    "disjunct-refutation": 2,
+    "uf-arithmetic": 1
+  },
+  "distinct_deciding_routes": 20,
+  "binding_route_distribution_on_losses": {
+    "dl-online": 95,
+    "nia-linearize": 49,
+    "nra": 41,
+    "uf-arith-lazy-overbound": 30,
+    "int-blast-ladder": 28,
+    "euf-online": 28,
+    "fd:parse": 26,
+    "fd:string-gate": 17,
+    "uf-arith-lazy-overbound-pre-lia": 16,
+    "qf-bv": 7,
+    "lia-simplex": 5,
+    "array-fast-path": 4,
+    "lia-dpll": 2,
+    "nra-real-root": 2
+  },
+  "distinct_binding_routes": 14,
+  "bound_by_differs_from_last_on_losses": {
+    "count": 348,
+    "of": 350,
+    "share": 0.9942857142857143,
+    "meaning": "files where the route that CONSUMED the budget is not the route that printed last -- every one of these would be misclassified by a last-message census"
+  },
+  "virtual_best_over_our_own_routes": {
+    "method": "sequential trail; see the module docstring for what this can and cannot measure",
+    "decided_files": 754,
+    "winner_was_not_the_first_route_tried": 701,
+    "trail_total_ms": 1394361.189489,
+    "shared_preamble_ms": 38692.18002,
+    "declined_prefix_ms": 346651.690329,
+    "winning_route_ms": 1009017.31914,
+    "recoverable_share": 0.24860968086471164,
+    "recoverable_share_meaning": "fraction of in-dispatch wall time on DECIDED files spent in COMPETING routes that declined before the winner. A parallel portfolio does not spend this. EXACT, not a bound. Shared preamble (parse, fragment probe) is EXCLUDED: every arm of a portfolio pays it, so counting it as recoverable overstates the prize.",
+    "portfolio_projected_ms": 1047709.49916,
+    "portfolio_projected_meaning": "what these same decided files would cost if every route ran concurrently and the winner were not queued behind the losers: shared preamble plus the winning route's own time.",
+    "diversity_caveat": "the deciding-route distribution is an UPPER bound on route diversity: a later route that never ran might also have decided the file."
+  },
+  "portfolio_headroom_on_losses": {
+    "losses_with_a_trail": 350,
+    "median_binder_share_of_trail": 0.8411636514825631,
+    "mean_binder_share_of_trail": 0.7612697066280874,
+    "losses_where_binder_held_over_90pct": 166,
+    "losses_where_binder_held_under_50pct": 52,
+    "meaning": "on a file we LOSE, the share of in-dispatch time the binding route already held. A portfolio's prize here is giving that route the WHOLE budget instead of the remainder. A binder already holding ~100% gains nothing from more cores -- that file needs a better route. A binder holding under 50% would get more than 2x the time it had."
+  },
+  "per_division": {
+    "QF_ABV": {
+      "files": 100,
+      "decided": 87,
+      "unsolved": 5,
+      "deciding_routes": {
+        "abv-online-cdclt": 50,
+        "array-fast-path": 32,
+        "array-unsat-refuter": 3,
+        "qf-bv": 2
+      },
+      "binding_routes_on_losses": {
+        "array-fast-path": 4,
+        "fd:parse": 1
+      },
+      "bound_differs_from_last": 4,
+      "recoverable_share": 0.6437541363247982,
+      "trail_total_ms": 336754.17018,
+      "portfolio_projected_ms": 119967.280202
+    },
+    "QF_BV": {
+      "files": 100,
+      "decided": 87,
+      "unsolved": 7,
+      "deciding_routes": {
+        "qf-bv": 87
+      },
+      "binding_routes_on_losses": {
+        "qf-bv": 7
+      },
+      "bound_differs_from_last": 7,
+      "recoverable_share": 0.1756670642774055,
+      "trail_total_ms": 76131.329911,
+      "portfolio_projected_ms": 62757.562686
+    },
+    "QF_IDL": {
+      "files": 100,
+      "decided": 52,
+      "unsolved": 35,
+      "deciding_routes": {
+        "dl-online": 51,
+        "lia-dpll": 1
+      },
+      "binding_routes_on_losses": {
+        "dl-online": 35
+      },
+      "bound_differs_from_last": 35,
+      "recoverable_share": 0.12804034523133628,
+      "trail_total_ms": 140891.02607,
+      "portfolio_projected_ms": 122851.290452
+    },
+    "QF_LIA": {
+      "files": 100,
+      "decided": 86,
+      "unsolved": 7,
+      "deciding_routes": {
+        "lia-simplex": 38,
+        "lia-dpll": 38,
+        "dl-online": 4,
+        "int-box-eval": 4,
+        "disjunct-refutation": 2
+      },
+      "binding_routes_on_losses": {
+        "lia-simplex": 5,
+        "lia-dpll": 2
+      },
+      "bound_differs_from_last": 7,
+      "recoverable_share": 0.399238109956005,
+      "trail_total_ms": 85590.311245,
+      "portfolio_projected_ms": 51419.397153
+    },
+    "QF_LRA": {
+      "files": 100,
+      "decided": 30,
+      "unsolved": 67,
+      "deciding_routes": {
+        "dl-online": 20,
+        "nra": 10
+      },
+      "binding_routes_on_losses": {
+        "dl-online": 52,
+        "nra": 10,
+        "fd:parse": 5
+      },
+      "bound_differs_from_last": 67,
+      "recoverable_share": 0.0015159423731546762,
+      "trail_total_ms": 68216.124723,
+      "portfolio_projected_ms": 68112.713009
+    },
+    "QF_NIA": {
+      "files": 100,
+      "decided": 5,
+      "unsolved": 77,
+      "deciding_routes": {
+        "nia-linearize": 4,
+        "int-blast-ladder": 1
+      },
+      "binding_routes_on_losses": {
+        "nia-linearize": 49,
+        "int-blast-ladder": 28
+      },
+      "bound_differs_from_last": 77,
+      "recoverable_share": 0.2535197160036611,
+      "trail_total_ms": 42469.999595,
+      "portfolio_projected_ms": 31703.017359
+    },
+    "QF_NRA": {
+      "files": 100,
+      "decided": 58,
+      "unsolved": 34,
+      "deciding_routes": {
+        "nra": 58
+      },
+      "binding_routes_on_losses": {
+        "nra": 30,
+        "nra-real-root": 2,
+        "fd:parse": 2
+      },
+      "bound_differs_from_last": 33,
+      "recoverable_share": 0.0043627186435418255,
+      "trail_total_ms": 89996.245479,
+      "portfolio_projected_ms": 89603.617181
+    },
+    "QF_RDL": {
+      "files": 100,
+      "decided": 86,
+      "unsolved": 8,
+      "deciding_routes": {
+        "dl-online": 85,
+        "nra": 1
+      },
+      "binding_routes_on_losses": {
+        "dl-online": 7,
+        "nra": 1
+      },
+      "bound_differs_from_last": 8,
+      "recoverable_share": 9.99142193508868e-07,
+      "trail_total_ms": 202816.97772,
+      "portfolio_projected_ms": 202816.775077
+    },
+    "QF_SLIA": {
+      "files": 100,
+      "decided": 97,
+      "unsolved": 1,
+      "deciding_routes": {
+        "fd:source-string": 53,
+        "int-blast-ladder": 30,
+        "fd:string-gate": 10,
+        "bv2nat-blast": 3,
+        "dl-online": 1
+      },
+      "binding_routes_on_losses": {
+        "dl-online": 1
+      },
+      "bound_differs_from_last": 1,
+      "recoverable_share": 0.3960684136478382,
+      "trail_total_ms": 31532.421851,
+      "portfolio_projected_ms": 19043.42555
+    },
+    "QF_UF": {
+      "files": 100,
+      "decided": 96,
+      "unsolved": 4,
+      "deciding_routes": {
+        "euf-online": 92,
+        "ufbv-declared-sort-lazy": 3,
+        "qf-bv": 1
+      },
+      "binding_routes_on_losses": {
+        "euf-online": 4
+      },
+      "bound_differs_from_last": 4,
+      "recoverable_share": 0.08308151992041361,
+      "trail_total_ms": 186457.649822,
+      "portfolio_projected_ms": 170966.464874
+    },
+    "QF_UFLIA": {
+      "files": 100,
+      "decided": 28,
+      "unsolved": 64,
+      "deciding_routes": {
+        "uf-arith-online": 10,
+        "uf-arith-lazy-overbound": 9,
+        "lia-dpll": 8,
+        "uf-arithmetic": 1
+      },
+      "binding_routes_on_losses": {
+        "uf-arith-lazy-overbound": 30,
+        "fd:parse": 18,
+        "uf-arith-lazy-overbound-pre-lia": 16
+      },
+      "bound_differs_from_last": 64,
+      "recoverable_share": 0.06812449947026467,
+      "trail_total_ms": 115332.618472,
+      "portfolio_projected_ms": 107475.641566
+    },
+    "UF": {
+      "files": 100,
+      "decided": 42,
+      "unsolved": 41,
+      "deciding_routes": {
+        "euf-online": 41,
+        "ufbv-declared-sort-lazy": 1
+      },
+      "binding_routes_on_losses": {
+        "euf-online": 24,
+        "fd:string-gate": 17
+      },
+      "bound_differs_from_last": 41,
+      "recoverable_share": 0.9453941843613889,
+      "trail_total_ms": 18172.314421,
+      "portfolio_projected_ms": 992.314051
+    }
+  },
+  "impossibility_guard_violations": []
+}

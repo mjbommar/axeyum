@@ -284,6 +284,71 @@ impl RouteTrace {
         self.tick();
     }
 
+    /// Appends every attempt of `other` onto this trace, **preserving each
+    /// attempt's own measured elapsed time** rather than re-timing it.
+    ///
+    /// This is how a completed dispatch [`RouteTrace`] (produced by
+    /// [`crate::check_auto_explained`], which times itself from its own
+    /// creation) is folded into the front door's attribution without either
+    /// losing the per-route timing or charging the whole dispatch to a single
+    /// segment. The clock is then restarted, so the next locally recorded
+    /// attempt measures only the time after `other` finished — without this the
+    /// following front-door stage would be charged the entire dispatch again.
+    pub fn absorb(&mut self, other: &Self) {
+        self.attempts.extend_from_slice(&other.attempts);
+        self.elapsed.extend_from_slice(&other.elapsed);
+        self.last = Instant::now();
+    }
+
+    /// The attempt that **decided** the query: the last recorded
+    /// [`RouteOutcome::Decided`], with its index and its own elapsed time.
+    /// `None` when nothing decided (the query came back `unknown`).
+    ///
+    /// The *last* decided entry rather than the first because the front door's
+    /// second-chance ladder can legitimately re-decide: a route returns `sat`
+    /// and a later gate confirms or replaces it. The final decisive entry is
+    /// the one whose verdict was actually returned.
+    #[must_use]
+    pub fn decided_by(&self) -> Option<(usize, &RouteAttempt, Duration)> {
+        self.attempts
+            .iter()
+            .enumerate()
+            .rev()
+            .find(|(_, a)| matches!(a.outcome, RouteOutcome::Decided(_)))
+            .map(|(i, a)| (i, a, self.elapsed[i]))
+    }
+
+    /// The attempt that **bound** the query: the one that consumed the most
+    /// wall-clock time, with its index and elapsed.
+    ///
+    /// # Why this is a different question from [`Self::last`]
+    ///
+    /// For an *undecided* file, "which route printed last" and "which route
+    /// actually consumed the budget" are routinely different routes, and this
+    /// repository has been wrong about the difference more than once: a census
+    /// classified 403 files by the last route's message and was refuted on 67
+    /// of 70 in two divisions; "23 admission declines" in another division
+    /// turned out to be timeouts. The last entry is whichever cheap route
+    /// happened to decline after the expensive one gave up — it is a *message*,
+    /// not a *constraint*.
+    ///
+    /// The binding route is the one a portfolio would have to beat, so it is
+    /// the one that decides whether more budget, a better route, or parallelism
+    /// is the fix. `None` for an empty trace.
+    #[must_use]
+    pub fn bound_by(&self) -> Option<(usize, &RouteAttempt, Duration)> {
+        // `max_by_key` returns the LAST maximum on ties, which is the right
+        // tie-break here: among equally expensive segments the later one is
+        // the closer cause of the budget running out.
+        let (index, elapsed) = self
+            .elapsed
+            .iter()
+            .copied()
+            .enumerate()
+            .max_by_key(|(_, d)| *d)?;
+        Some((index, &self.attempts[index], elapsed))
+    }
+
     /// Records the terminal outcome derived from a [`CheckResult`]: a `Decided`
     /// entry for `Sat`/`Unsat`, or a `Declined(Incomplete/Budget)` entry that
     /// preserves the `Unknown` reason. This is the single sink that closes a
@@ -505,6 +570,222 @@ pub(crate) type Recorder<'a> = Option<&'a mut RouteTrace>;
 pub(crate) fn with_recorder(rec: &mut Recorder<'_>, f: impl FnOnce(&mut RouteTrace)) {
     if let Some(trace) = rec.as_deref_mut() {
         f(trace);
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Front-door route attribution (ADR-1760)
+// ---------------------------------------------------------------------------
+
+/// Labels for the stages the **front door** (`crate::solve_smtlib` and friends)
+/// runs that are *not* inside [`crate::check_auto`]'s dispatch ladder.
+///
+/// # Why this exists at all
+///
+/// [`RouteTrace`] was only ever reachable through [`crate::check_auto_explained`],
+/// which decides the *flat assertion view* of a script. The shipped front door
+/// does considerably more than that: a word-only source fallback, an FP prefix
+/// fold, a source-level string ladder, a `StringGate` confirmation, and seven
+/// post-dispatch string second chances all sit **outside** `check_auto` and can
+/// each supply the file's verdict on their own. That is why `explain_corpus`
+/// (which classifies from the flat view) disagrees with the front door on 134
+/// of 397 benchmarks — the two are not running the same decision procedure.
+///
+/// So attributing "which route decided this file" *from the front door* needs
+/// entries for these stages as well as for the dispatch ladder. The labels are
+/// `&'static str` for the same reason the dispatch route labels are: a closed,
+/// deterministic vocabulary, not free text. They are `fd:`-prefixed so a
+/// consumer can tell a front-door stage from a dispatch route by inspection.
+pub mod front_door_stage {
+    /// Script ingest (parse). Recorded so a file whose whole budget went to
+    /// parsing is attributed to parsing rather than to whichever route printed
+    /// last.
+    pub const PARSE: &str = "fd:parse";
+    /// The source-first word-only parse fallback (`decide_word_only`).
+    pub const WORD_ONLY_FALLBACK: &str = "fd:word-only-fallback";
+    /// The source-level FP prefix monotonic fold.
+    pub const SOURCE_FP_PREFIX: &str = "fd:source-fp-prefix";
+    /// The source-level string route ladder, given first refusal ahead of the
+    /// bounded encoding.
+    pub const SOURCE_STRING: &str = "fd:source-string";
+    /// The flat auto-dispatch (`crate::check_auto`) seen as one front-door
+    /// stage. Recorded only when the dispatch produced no attempts of its own,
+    /// so the stage is never double-counted against its own route entries.
+    pub const DISPATCH: &str = "fd:dispatch";
+    /// The `StringGate` confirmation applied to the flat dispatch's verdict.
+    pub const STRING_GATE: &str = "fd:string-gate";
+    /// The source-level semantic-unsat upgrade.
+    pub const SOURCE_STRING_SEMANTIC_UNSAT: &str = "fd:source-string-semantic-unsat";
+    /// The flat word-equation second chance.
+    pub const WORD_ROUTE: &str = "fd:word-route";
+    /// The online CDCL(T) string second chance.
+    pub const ONLINE_STRING: &str = "fd:online-string";
+    /// The regex-membership second chance.
+    pub const MEMBERSHIP: &str = "fd:membership";
+    /// The lexicographic-order second chance.
+    pub const LEX_ORDER: &str = "fd:lex-order";
+    /// The length-to-LIA second chance.
+    pub const LENGTH_LIA: &str = "fd:length-lia";
+    /// The bounded concrete source-witness probe.
+    pub const SOURCE_STRING_SAT_PROBE: &str = "fd:source-string-sat-probe";
+    /// The bounded-completeness `unknown` -> `unsat` upgrade.
+    pub const BOUNDED_COMPLETENESS_UNSAT: &str = "fd:bounded-completeness-unsat";
+}
+
+std::thread_local! {
+    /// Whether front-door route attribution is being collected on this thread.
+    /// A single `Cell<bool>` read is the entire cost on the default path.
+    static COLLECT_ATTRIBUTION: core::cell::Cell<bool> =
+        const { core::cell::Cell::new(false) };
+    /// The attribution accumulated since the active [`RouteAttributionGuard`]
+    /// (or the most recently dropped one) was created.
+    static ATTRIBUTION: core::cell::RefCell<RouteTrace> =
+        core::cell::RefCell::new(RouteTrace::new());
+    /// Re-entrancy depth of [`crate::check_auto`] while collecting. Only the
+    /// OUTERMOST dispatch publishes its trace: `check_auto` is called from
+    /// inside a dozen routes (IMC, PDR, quantifier instantiation, the
+    /// conjunct/disjunct refuters, the finite-domain splitter, ...), and those
+    /// nested solves are internal detail of the route that made them, not
+    /// top-level dispatch decisions. Without this a single file's attribution
+    /// is dominated by whichever route recursed the most.
+    static DISPATCH_DEPTH: core::cell::Cell<u32> = const { core::cell::Cell::new(0) };
+}
+
+/// Whether route attribution is currently enabled on this thread.
+///
+/// Every recording site is gated on this, so with collection off the added
+/// cost is one thread-local `Cell<bool>` read per site — no clock read, no
+/// allocation. Same convention as `crate::FrontDoorStatsGuard` and
+/// `crate::BvLayerStatsGuard`.
+#[must_use]
+pub fn attribution_collecting() -> bool {
+    COLLECT_ATTRIBUTION.with(core::cell::Cell::get)
+}
+
+/// Enables front-door route attribution on this thread for the lifetime of the
+/// returned guard, restoring the previous setting on drop and clearing the
+/// accumulator on `enable()` — the same shape as `crate::FrontDoorStatsGuard`,
+/// `crate::BvLayerStatsGuard` and `crate::DlOnlineStatsGuard`. That is
+/// deliberate: `smtcomp_cli` composes all of them from the one existing
+/// `--trace` flag, with no new CLI surface.
+///
+/// # Verdict invariance
+///
+/// Enabling this guard cannot change a verdict. On the dispatch side it
+/// switches [`crate::check_auto`] to obtain its result from
+/// [`crate::check_auto_explained`] — and those two returning the same verdict
+/// for every query is the invariant this module already exists to uphold,
+/// pinned by `tests/route_trace.rs`. On the front-door side every recording
+/// site is a statement-level side effect between two existing stages; none
+/// appears in a branch condition. `tests/route_attribution.rs` pins the
+/// end-to-end property directly: the front door returns the identical verdict
+/// with the guard on and off, over a corpus.
+pub struct RouteAttributionGuard(bool);
+
+impl RouteAttributionGuard {
+    /// Enables collection for the lifetime of the returned guard.
+    #[must_use]
+    pub fn enable() -> Self {
+        let previous = COLLECT_ATTRIBUTION.with(|c| c.replace(true));
+        ATTRIBUTION.with(|a| *a.borrow_mut() = RouteTrace::new());
+        DISPATCH_DEPTH.with(|d| d.set(0));
+        RouteAttributionGuard(previous)
+    }
+}
+
+impl Drop for RouteAttributionGuard {
+    fn drop(&mut self) {
+        COLLECT_ATTRIBUTION.with(|c| c.set(self.0));
+    }
+}
+
+/// The [`RouteTrace`] accumulated on this thread since the active
+/// [`RouteAttributionGuard`] (or the most recently dropped one) was created.
+///
+/// Reading is independent of whether the guard is still live: the intended use
+/// is to read this right after a guarded `solve_smtlib` call returns and the
+/// guard has already dropped, exactly like `crate::last_front_door_stats`.
+///
+/// An empty trace means collection was never enabled — a front-door call that
+/// ran at all records at least its parse stage.
+#[must_use]
+pub fn last_route_attribution() -> RouteTrace {
+    ATTRIBUTION.with(|a| a.borrow().clone())
+}
+
+/// Records one front-door stage attempt, if collection is on. A no-op
+/// otherwise, with no clock read and no allocation.
+///
+/// `try_borrow_mut` rather than `borrow_mut` because this is telemetry: a
+/// re-entrant record (which no current call path produces) must drop the entry,
+/// never panic mid-solve.
+pub(crate) fn record_front_door(route: &'static str, outcome: RouteOutcome) {
+    if !attribution_collecting() {
+        return;
+    }
+    ATTRIBUTION.with(|a| {
+        if let Ok(mut trace) = a.try_borrow_mut() {
+            trace.attempts.push(RouteAttempt { route, outcome });
+            trace.tick();
+        }
+    });
+}
+
+/// Records a front-door stage's [`CheckResult`], if collection is on: a
+/// `Decided` entry for `sat`/`unsat`, a `Declined` entry preserving the
+/// `Unknown` reason.
+pub(crate) fn record_front_door_result(route: &'static str, result: &CheckResult) {
+    if !attribution_collecting() {
+        return;
+    }
+    ATTRIBUTION.with(|a| {
+        if let Ok(mut trace) = a.try_borrow_mut() {
+            trace.record_result(route, result);
+        }
+    });
+}
+
+/// Appends a completed dispatch [`RouteTrace`] into this thread's attribution,
+/// preserving each attempt's own measured elapsed time.
+pub(crate) fn absorb_dispatch_trace(dispatch: &RouteTrace) {
+    if !attribution_collecting() {
+        return;
+    }
+    ATTRIBUTION.with(|a| {
+        if let Ok(mut trace) = a.try_borrow_mut() {
+            trace.absorb(dispatch);
+        }
+    });
+}
+
+/// Runs `f` as the outermost dispatch if attribution is on and no dispatch is
+/// already in progress on this thread, handing it `true`; otherwise hands it
+/// `false`. The depth counter is restored even if `f` returns early or unwinds.
+///
+/// This is what keeps nested [`crate::check_auto`] calls (a route solving a
+/// sub-query) out of the top-level attribution.
+pub(crate) fn with_outermost_dispatch<R>(f: impl FnOnce(bool) -> R) -> R {
+    if !attribution_collecting() {
+        return f(false);
+    }
+    let outermost = DISPATCH_DEPTH.with(|d| {
+        let depth = d.get();
+        d.set(depth + 1);
+        depth == 0
+    });
+    let _depth = DepthGuard;
+    f(outermost)
+}
+
+/// Decrements [`DISPATCH_DEPTH`] on drop, so the depth is restored even if the
+/// dispatch returns early or unwinds. Declared at module scope rather than
+/// inside [`with_outermost_dispatch`] because an item after a statement reads
+/// as if it were scoped to the branch above it, and it is not.
+struct DepthGuard;
+
+impl Drop for DepthGuard {
+    fn drop(&mut self) {
+        DISPATCH_DEPTH.with(|d| d.set(d.get().saturating_sub(1)));
     }
 }
 

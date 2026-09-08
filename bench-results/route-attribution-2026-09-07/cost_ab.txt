@@ -1,0 +1,25 @@
+# cost_ab.py output, 2026-09-07, host server5 (16 cores, idle)
+# baseline = smtcomp_cli at 9d40c1ec8 (pre-attribution); new = at 4853ad9fd
+# 60 files (first 30 QF_BV + first 30 QF_LIA of the parity lists), 3 reps, alternating arms, NO --trace
+
+=== real run ===
+files            60
+reps per arm     3
+total base ms    172829
+total new  ms    172740
+total ratio      0.9995
+median per-file  +0.0000%
+verdict          no measurable cost (threshold 3%)
+exit=0
+
+=== self-check (5% slowdown injected into the new arm) ===
+files            60
+reps per arm     3
+total base ms    172829
+total new  ms    181349
+total ratio      1.0493
+median per-file  +4.5455%
+verdict          REGRESSION (threshold 3%)
+
+self-check ok: an injected 5% slowdown IS detected, so a clean result from the real run is a measurement rather than an insensitive instrument.
+exit=0

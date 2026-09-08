@@ -40,6 +40,7 @@ use crate::lra::{check_with_lia_simplex_within, check_with_lra};
 use crate::model::Model;
 use crate::qinst_egraph::prove_quantified_unsat_via_egraph;
 use crate::quant_guarded_int::{expand_guarded_int_universals, skolemize_positive_existentials};
+use crate::route_trace;
 use crate::route_trace::{DeclineReason, Recorder, RouteTrace, Verdict, with_recorder};
 use crate::sat_bv_backend::SatBvBackend;
 
@@ -1106,6 +1107,51 @@ pub fn check_auto(
     assertions: &[TermId],
     config: &SolverConfig,
 ) -> Result<CheckResult, SolverError> {
+    // Front-door route attribution (ADR-1760), opt-in and OFF by default. When a
+    // `RouteAttributionGuard` is live on this thread, the OUTERMOST `check_auto`
+    // takes its result from `check_auto_explained` and publishes that call's
+    // trace into the thread-local attribution, so the shipped front door
+    // (`solve_smtlib`, as `smtcomp_cli` runs it) can say which route decided the
+    // file. It does NOT change the answer: `check_auto_explained` returning the
+    // same verdict as `check_auto` for every query is exactly the invariant
+    // `route_trace` exists to uphold and `tests/route_trace.rs` pins.
+    //
+    // Nested `check_auto` calls (a route solving a sub-query — IMC, PDR,
+    // quantifier instantiation, the refuters) take the plain path unchanged;
+    // their dispatch is internal detail of the route that made them, and
+    // publishing them would bury the top-level decision under whichever route
+    // recursed the most.
+    //
+    // With the guard off this is one thread-local `Cell<bool>` read.
+    //
+    // MEASURED DIVERGENCE, repaired here rather than inherited.
+    // `check_auto_explained` does NOT run `memory_budget_decline` at entry; only
+    // `check_auto` does. So a query under a memory budget that `check_auto`
+    // declines at the door would, if delegated naively, run the whole dispatch
+    // instead — a real verdict change, on exactly the axis `smtcomp_cli`'s
+    // `--memory-limit-mb` exercises. The entry guard therefore runs BEFORE the
+    // delegation and both paths return the same decline.
+    //
+    // This is a pre-existing gap in the two functions' contract, not one this
+    // lane introduced: the differential corpus in `tests/route_trace.rs` never
+    // sets `memory_limit_mb`, so it passes vacuously on this axis.
+    // `route_attribution_is_verdict_identical_under_a_memory_budget` in
+    // `tests/route_attribution.rs` pins the repaired behaviour.
+    if let Some(decline) = memory_budget_decline(config, "check_auto entry") {
+        return Ok(decline);
+    }
+    if let Some(attributed) = route_trace::with_outermost_dispatch(|outermost| {
+        if !outermost {
+            return None;
+        }
+        Some(
+            check_auto_explained(arena, assertions, config).inspect(|(_, trace)| {
+                route_trace::absorb_dispatch_trace(trace);
+            }),
+        )
+    }) {
+        return attributed.map(|(result, _)| result);
+    }
     // Thin wrapper: the *same* dispatch as `check_auto_explained`, with no trace
     // recorder. The recorder is a pure side effect at the existing decide/decline
     // sites — it never participates in a branch condition — so this returns
@@ -1113,10 +1159,10 @@ pub fn check_auto(
     // pinned by `tests/route_trace.rs`).
     // The caller's budget is a WALL-CLOCK deadline for the whole call, not a fresh
     // allowance per fallback rung (see `fallback_deadline`).
+    // (The `memory_budget_decline` entry guard that used to sit here now runs
+    // ABOVE the attribution branch, so BOTH paths are gated by it rather than
+    // only this one — see the comment there.)
     let deadline = fallback_deadline(config);
-    if let Some(decline) = memory_budget_decline(config, "check_auto entry") {
-        return Ok(decline);
-    }
     let result = check_auto_with_recorder(arena, assertions, config, &mut None)?;
     if matches!(result, CheckResult::Unknown(_)) {
         // Integer-algebraic identity refutation (QF_NIA): cheap, exact, unsat-only.
