@@ -188,6 +188,8 @@ def main():
     # these strictly sooner. Files whose winner WAS first gain nothing from
     # parallelism beyond scheduling.
     winner_not_first = 0
+    # Per-loss share of the trail held by the binding route (see the call site).
+    loss_binder_shares = []
 
     for r in rows:
         div = r["division"]
@@ -252,6 +254,14 @@ def main():
             if a["bound_route"] != a["last_route"]:
                 bound_differs += 1
                 d["bound_differs_from_last"] += 1
+            # THE strategic number on the loss side. A portfolio's prize on a
+            # file we lose is giving the binding route the WHOLE budget instead
+            # of whatever was left after the routes ahead of it. If the binder
+            # already holds ~100% of the trail, parallelism hands it nothing and
+            # the fix is a better route, not more cores. If it holds 40%, a
+            # portfolio hands it 2.5x more time to work with.
+            if a["total_ns"] > 0:
+                loss_binder_shares.append(a["bound_ns"] / a["total_ns"])
 
     report = {
         "population": {
@@ -301,6 +311,26 @@ def main():
             "diversity_caveat": "the deciding-route distribution is an UPPER "
                                 "bound on route diversity: a later route that "
                                 "never ran might also have decided the file.",
+        },
+        "portfolio_headroom_on_losses": {
+            "losses_with_a_trail": len(loss_binder_shares),
+            "median_binder_share_of_trail": (
+                sorted(loss_binder_shares)[len(loss_binder_shares) // 2]
+                if loss_binder_shares else None),
+            "mean_binder_share_of_trail": (
+                sum(loss_binder_shares) / len(loss_binder_shares)
+                if loss_binder_shares else None),
+            "losses_where_binder_held_over_90pct": sum(
+                1 for s in loss_binder_shares if s > 0.90),
+            "losses_where_binder_held_under_50pct": sum(
+                1 for s in loss_binder_shares if s < 0.50),
+            "meaning": "on a file we LOSE, the share of in-dispatch time the "
+                       "binding route already held. A portfolio's prize here is "
+                       "giving that route the WHOLE budget instead of the "
+                       "remainder. A binder already holding ~100% gains nothing "
+                       "from more cores -- that file needs a better route. A "
+                       "binder holding under 50% would get more than 2x the "
+                       "time it had.",
         },
         "per_division": {
             div: {

@@ -455,11 +455,33 @@ fn route_attribution_report_lines(trace: &axeyum_solver::RouteTrace) -> Vec<Stri
 /// but multiplying near-duplicate "unavailable" lines was judged not worth
 /// the output-format churn for a diagnostic-only path; see
 /// docs/research/12-performance/instrument-coverage-2026-09-07.md.
+///
+/// # Why `; route unavailable: …` IS worth a second line (2026-09-07, ADR-1760)
+///
+/// The judgement above — that multiplying near-duplicate `unavailable` markers
+/// is not worth the output churn — is kept for the stage-timing instruments and
+/// deliberately NOT extended to route attribution, because the measurement that
+/// motivated it says otherwise. In the 1,200-file sweep,
+/// `bench-results/route-attribution-2026-09-07`, **96 files printed no route
+/// line at all, and every one of them was `unsolved`.** That is the population
+/// the instrument exists to explain, so its blind spot sits exactly where the
+/// question is hardest.
+///
+/// Making the absence SPEAK does not close the blind spot — the trail really is
+/// unreadable from this thread — but it makes "the watchdog fired before
+/// anything could be read" distinguishable from "collection was off" and from
+/// "the harness dropped the line", without a consumer having to guess which.
+/// An aggregation can then count what it cannot attribute instead of quietly
+/// shrinking its own denominator, which is how a coverage number becomes wrong
+/// while staying stable.
 fn watchdog_unavailable_line(trace_mode: bool, reason: &str) -> Vec<String> {
-    trace_mode
-        .then(|| format!("; theory-layer unavailable: {reason}"))
-        .into_iter()
-        .collect()
+    if !trace_mode {
+        return Vec::new();
+    }
+    vec![
+        format!("; theory-layer unavailable: {reason}"),
+        format!("; route unavailable: {reason}"),
+    ]
 }
 
 /// Installs the progress sink (see the module header) on `config` when
@@ -1095,7 +1117,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn watchdog_unavailable_line_is_empty_off_trace_and_one_line_on_trace() {
+    fn watchdog_unavailable_line_is_empty_off_trace_and_names_both_instruments_on_trace() {
         assert_eq!(
             watchdog_unavailable_line(false, "anything"),
             Vec::<String>::new(),
@@ -1108,15 +1130,32 @@ mod tests {
         );
         assert_eq!(
             lines.len(),
-            1,
-            "trace_mode=true must always yield exactly one line, never nothing: got {lines:?}"
+            2,
+            "trace_mode=true must always yield a line, never nothing: got {lines:?}"
         );
-        let line = &lines[0];
         assert!(
-            line.starts_with("; theory-layer unavailable: "),
-            "got: {line}"
+            lines[0].starts_with("; theory-layer unavailable: "),
+            "got: {}",
+            lines[0]
         );
-        assert!(line.contains("watchdog fired"), "got: {line}");
+        // ADR-1760: the route line specifically. In the 1,200-file sweep, 96
+        // files printed no route line and every one was `unsolved` — the exact
+        // population the instrument exists to explain — so an aggregation must
+        // be able to COUNT what it cannot attribute rather than silently
+        // shrinking its denominator.
+        assert!(
+            lines[1].starts_with("; route unavailable: "),
+            "got: {}",
+            lines[1]
+        );
+        for line in &lines {
+            assert!(line.contains("watchdog fired"), "got: {line}");
+            assert!(
+                line.starts_with("; "),
+                "every trace line must be an SMT-LIB comment so it can never \
+                 match ^(sat|unsat)$: got {line}"
+            );
+        }
     }
 
     /// End-to-end regression for the actual race in `main`: a worker that
@@ -1152,13 +1191,23 @@ mod tests {
         assert_eq!(verdict, "unknown");
         assert_eq!(
             trace_lines.len(),
-            1,
-            "a timed-out solve with --trace must still print exactly one line: got {trace_lines:?}"
+            2,
+            "a timed-out solve with --trace must still print both unavailable \
+             lines, never nothing: got {trace_lines:?}"
         );
         assert!(
             trace_lines[0].starts_with("; theory-layer"),
             "got: {}",
             trace_lines[0]
+        );
+        // ADR-1760: the route line must survive the watchdog path too. This is
+        // the ONLY signal a hard-timeout file gives about attribution, and the
+        // 1,200-file sweep found 96 such files -- all of them `unsolved`, which
+        // is precisely the population the instrument exists to explain.
+        assert!(
+            trace_lines[1].starts_with("; route unavailable"),
+            "got: {}",
+            trace_lines[1]
         );
     }
 }
