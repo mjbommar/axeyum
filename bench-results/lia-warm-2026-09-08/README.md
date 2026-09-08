@@ -13,9 +13,11 @@ Raw data behind
 | `mutate.py` | the five staleness/drift mutations applied to the warm decider, one at a time, in a `lane-snapshot.sh` scratch tree. |
 | `mutation-results.txt` | baseline plus three mutants. |
 | `mutation-results-2.txt` | the remaining two, under an external wall bound, because `no-tightening` does not fail — it grinds. |
-| `stage1-8s.json` | every run: verdict, wall time, and the full `; lia-warm` counter set. |
-| `stage1-8s.summary.txt` | `score.py` output. |
-| `stage1-8s.perfile.txt` | `perfile.py` output. |
+| `stage1-8s.json` | every run: verdict, wall time, and the full `; lia-warm` counter set. All 85 loss files, 8,000 ms. |
+| `stage1-8s.{summary,perfile}.txt` | `score.py` and `perfile.py` output for stage 1. |
+| `stage2-24s.json` | the 29 engaged files at the 24,000 ms parity budget. |
+| `stage2-24s.{summary,perfile}.txt` | the same two views for stage 2. |
+| `xs2434-repeat.json` | `xs_24_34.smt2` alone, three repetitions per arm. Stage 2 showed it `unknown` in two arms and `sat` in a third, which would read as a coverage change; the repeat is `sat` in every arm every time, and in the arm that "won" the warm decider recorded ZERO checks. A host artefact, recorded rather than quoted. |
 | `engaged.txt` | the 29 of 85 loss files where the online `LIA` theory is actually entered. |
 
 ## Reading the numbers
@@ -33,7 +35,10 @@ Raw data behind
 ## Conditions
 
 Host s4, load average 8-11 throughout (a second lane was running a 24 s parity
-sweep on the same box). Release binary at `ca7717c5e`. 8,000 ms budget, one
-repetition per arm per file. The alternating arm order is what keeps the
+sweep on the same box). Release binary at `ca7717c5e` for both stages. Stage 1:
+all 85 loss files, 8,000 ms, one repetition per arm. Stage 2: the 29 engaged
+files, 24,000 ms, one repetition per arm. The `xs_24_34` repeat used the binary
+at `68258cf23`, where the arm names changed (`filter` became the default and the
+no-filter arm became `nofilter`). The alternating arm order is what keeps the
 contention from landing on one arm; it does not make the absolute wall times
 comparable to an idle run, and no claim here rests on them.

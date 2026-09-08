@@ -184,12 +184,51 @@ Per-file, the families separate cleanly:
   `off.off` is 0 on seven of them, and warming the offline path is a no-op;
 * `FISCHER10-13-fair`, `prp-0-19` — likewise filter-dominated.
 
+## Result 3: confirmation at the real 24 s budget, and the one flip that was not one
+
+Stage 1 ran at 8 s to cover all 85 files. Stage 2 re-ran the 29 engaged files at
+the **24 s** budget the parity sweep uses, same three arms, same alternating
+order, release binary `ca7717c5e`.
+
+| arm | live-set decisions | offline decisions | filter answered / refuted | verdicts |
+| --- | --- | --- | --- | --- |
+| `off` | 156,014 (x1.00) | 18,152 (x1.00) | 137,862 / 31,998 | 13 sat, 16 unknown |
+| `filter` | 168,462 (x1.08) | 30,272 (**x1.67**) | 138,190 / 31,829 | 13 sat, 16 unknown |
+| `warm` (no filter) | 124,848 (x0.80) | 124,848 (x6.88) | 0 / 0 | 14 sat, 15 unknown |
+
+Both stage-1 results hold: warming gives the offline decider **x1.67** the
+throughput with the filter held fixed (stage 1: x1.79), the end-to-end gain is
+**x1.08** (stage 1: x1.05), and dropping the filter costs 20% of the decisions
+(stage 1: 24%). The warm cache is doing more at the longer budget: **92.9% of
+the live literal set reused per check, 8.3% of the constraints rebuilt.**
+
+**The one apparent coverage change was a host artefact, and checking it is why
+this section exists.** `xs_24_34.smt2` came back `unknown` in the `off` and
+`filter` arms and `sat` in the `warm` arm — which would read as "dropping the
+filter closed a loss". Two things say otherwise:
+
+1. In the arm that decided it, the warm decider recorded **zero** checks
+   (`off=0 flt=0`) — the online `LIA` theory was never entered, so it cannot be
+   the cause of the decision.
+2. Re-run alone, three repetitions per arm: **`sat` in all three arms, every
+   repetition, at 13.3–17.1 s** (`xs2434-repeat.json`). Under the stage-2 sweep's
+   own load two arms crossed the 24 s budget and one did not.
+
+So: **no file changed verdict because of this work, in either stage.** Zero
+disagreements between arms on a decided file at either budget.
+
+Per file at 24 s the median offline ratio is **x1.01**, against x1.31 at 8 s,
+with total x1.67 and max x4.77. The gain is concentrated, not spread: `RF-13`
+x4.77, `xs_24_34` x4.21, `xs_19_29` x1.76, and most files unchanged because
+another route owns their budget. Reporting the median alone would understate it
+and the total alone would overstate how broadly it applies; both are above.
+
 ## What is warm and what is still cold
 
-Warm: the per-literal collection cache (**99.2% hit rate**, 25,930 collections
-against 3.1 M hits), the tightening, and the assembled system —
-**81.8% of the live literal set is reused per check** and only **19.7% of the
-constraints are rebuilt**.
+Warm: the per-literal collection cache (**97.7% hit rate** in the shipped
+configuration at 24 s, 24,282 collections against 1.03 M hits), the tightening,
+and the assembled system — **92.9% of the live literal set is reused per check**
+and only **8.3% of the constraints are rebuilt**.
 
 Still cold, and stated in the module docs rather than implied away: the
 standard-form tableau and the LP. `build_gomory_tableau` writes a dense
@@ -200,8 +239,10 @@ separate work with a separate soundness argument.
 
 ## The next thing to fix, named by the counters rather than guessed
 
-Half the checks are cold starts: `assembly_cold-start` = 120,664 of 238,831
-(`warm` arm). The cause is visible in the reason histogram — conflict-core
+Cold starts are the largest single assembly reason: `assembly_cold-start` =
+35,949 of 82,684 checks in the shipped configuration at 24 s (43%), and 154,462
+of 350,014 in the no-filter arm. The cause is visible in the reason histogram —
+conflict-core
 minimization drops literal **0** first, which makes the shared prefix empty, and
 every subsequent probe in that minimization is a `diverged` (51,182). Iterating
 the deletion loop from the other end would fix the prefix but produce a

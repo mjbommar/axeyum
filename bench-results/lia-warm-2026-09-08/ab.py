@@ -44,12 +44,11 @@ def parse_counters(text: str) -> dict[str, str]:
 
 def run_one(binary: str, path: str, budget_ms: int, arm: str) -> dict:
     env = dict(os.environ)
-    if arm == "off":
-        env["AXEYUM_LIA_WARM"] = "off"
-    elif arm == "filter":
-        env["AXEYUM_LIA_WARM"] = "filter"
-    else:
+    if arm == "warm":
+        # The shipped default: no override, so the run exercises what ships.
         env.pop("AXEYUM_LIA_WARM", None)
+    else:
+        env["AXEYUM_LIA_WARM"] = arm
     started = time.monotonic()
     try:
         proc = subprocess.run(

@@ -1,0 +1,49 @@
+arms: ['off', 'filter', 'warm']
+files: 29
+
+== verdicts ==
+  off      {'unknown': 16, 'sat': 13}
+  filter   {'unknown': 16, 'sat': 13}
+  warm     {'unknown': 15, 'sat': 14}
+  SOUNDNESS: 0 file(s) where two arms gave different decided verdicts
+  coverage changes (decided in one arm, unknown in another): 1
+    ~  xs_24_34.smt2 {'off': 'unknown', 'filter': 'unknown', 'warm': 'sat'}
+
+== population the online LIA theory was actually entered on ==
+  28 of 29 files
+  0 file(s) where some arm printed no `; lia-warm` line at all
+
+== live-set decisions in the same budget (offline + filter answers) ==
+  off      total=   156014  x1.00 vs off   median per-file ratio 1.00
+  filter   total=   168462  x1.08 vs off   median per-file ratio 1.00
+  warm     total=   124848  x0.80 vs off   median per-file ratio 1.00
+
+== offline decisions only (the stage the warm cache serves) ==
+  off      total=    18152  x1.00 vs off
+  filter   total=    30272  x1.67 vs off
+  warm     total=   124848  x6.88 vs off
+
+== the rational filter, where it ran ==
+  off      answered=   137862  refuted=    31998
+  filter   answered=   138190  refuted=    31829
+  warm     answered=        0  refuted=        0
+
+== warm cache behaviour (warm arms only) ==
+  off      the warm decider was never entered (cold arm)
+  filter:
+    checks=82684 warm_updates=46735 (56.5%) rebuilds=35949
+    literals kept=13866549 added=1055312 removed=1037875  -> 92.9% of the live set reused
+    constraints copied=1306044 of 15736786 live  -> 8.3% rebuilt per check
+    literal collections=24282 cache hits=1031030  -> 97.7% hit rate
+    assembly: {'assembly_unchanged': 9394, 'assembly_extended': 19273, 'assembly_shortened': 787, 'assembly_diverged': 17281, 'assembly_cold-start': 35949, 'assembly_policy-cold': 0}
+  warm:
+    checks=350014 warm_updates=195552 (55.9%) rebuilds=154462
+    literals kept=15414522 added=3891762 removed=3861129  -> 79.8% of the live set reused
+    constraints copied=4348728 of 21418177 live  -> 20.3% rebuilt per check
+    literal collections=35404 cache hits=3856358  -> 99.1% hit rate
+    assembly: {'assembly_unchanged': 72797, 'assembly_extended': 42408, 'assembly_shortened': 6610, 'assembly_diverged': 73737, 'assembly_cold-start': 154462, 'assembly_policy-cold': 0}
+
+== wall time (reported, NOT the score -- the population is budget-bound) ==
+  off      total=603665ms over 28 files
+  filter   total=609147ms over 28 files
+  warm     total=602308ms over 28 files
