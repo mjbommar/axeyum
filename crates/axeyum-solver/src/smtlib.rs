@@ -2112,6 +2112,16 @@ fn record_front_door_stage(
     result
 }
 
+// 142 lines, ~20 of them the ADR-1760 route attribution added on 2026-09-07;
+// the function was over the limit's spirit before that and is now over its
+// letter. This is the front door's decision ladder, and its ORDER is the logic:
+// each second chance may only act on an `unknown` the previous rung left, so
+// splitting it to satisfy a line count would move the ordering out of the one
+// place a reader can see it whole — which is exactly the reasoning `auto.rs`
+// records at its own six allow sites for the dispatch ladder. Same lint,
+// allowed for the same reason, at the one place in this file that has the same
+// shape.
+#[allow(clippy::too_many_lines)]
 fn solve_smtlib_at_string_bound(
     input: &str,
     config: &SolverConfig,

@@ -773,14 +773,20 @@ pub(crate) fn with_outermost_dispatch<R>(f: impl FnOnce(bool) -> R) -> R {
         d.set(depth + 1);
         depth == 0
     });
-    struct DepthGuard;
-    impl Drop for DepthGuard {
-        fn drop(&mut self) {
-            DISPATCH_DEPTH.with(|d| d.set(d.get().saturating_sub(1)));
-        }
-    }
     let _depth = DepthGuard;
     f(outermost)
+}
+
+/// Decrements [`DISPATCH_DEPTH`] on drop, so the depth is restored even if the
+/// dispatch returns early or unwinds. Declared at module scope rather than
+/// inside [`with_outermost_dispatch`] because an item after a statement reads
+/// as if it were scoped to the branch above it, and it is not.
+struct DepthGuard;
+
+impl Drop for DepthGuard {
+    fn drop(&mut self) {
+        DISPATCH_DEPTH.with(|d| d.set(d.get().saturating_sub(1)));
+    }
 }
 
 #[cfg(test)]

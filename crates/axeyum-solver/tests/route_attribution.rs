@@ -292,24 +292,20 @@ fn decided_by_agrees_with_the_returned_verdict() {
         };
         checked += 1;
         let (_, attributed, trace) = solve_both(&text);
-        let named = trace.decided_by();
-        match (attributed, named) {
-            // Decided, and a route claimed it: consistent.
-            ("sat" | "unsat", Some(_)) => {}
-            // Undecided and nothing claimed it: consistent.
-            ("unknown" | "error", None) => {}
-            // Undecided but a route recorded a decide. This is legitimate when
-            // an inner route decided a sub-query and an outer stage then
-            // declined the whole file, so it is reported, not failed.
-            ("unknown" | "error", Some(_)) => {}
-            // Decided but NO route claimed it — the instrument has a hole.
-            (v, None) => {
-                disagreements.push(format!(
-                    "{}: verdict={v} but no deciding route",
-                    path.display()
-                ));
-            }
-            _ => {}
+        // The one inconsistency worth failing on: the file was DECIDED but no
+        // route in the trail claimed the decision, which means the instrument
+        // has a hole where a verdict came from.
+        //
+        // The converse — an `unknown` whose trail does contain a decide — is
+        // deliberately NOT a failure. It is the legitimate shape of a query
+        // where an inner round decided a sub-problem and a later stage then
+        // declined the file as a whole (measured on the UFLIA re-dispatch case
+        // in `nested_dispatch_does_not_flood_the_attribution`).
+        if matches!(attributed, "sat" | "unsat") && trace.decided_by().is_none() {
+            disagreements.push(format!(
+                "{}: verdict={attributed} but no deciding route",
+                path.display()
+            ));
         }
     }
     assert!(checked >= 100, "only {checked} files examined");
