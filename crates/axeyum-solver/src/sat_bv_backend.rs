@@ -26,11 +26,12 @@ use axeyum_bv::{
 };
 use axeyum_cnf::{
     BveOptions, BveOutcome, CnfAssignment, CnfConstructionProfile, CnfDuplicateOriginProfile,
-    CnfEncoding, CnfError, CnfFormula, CompactMap, DEFAULT_PROOF_SAT_CONFLICT_LIMIT, EncodedLit,
-    ProofSolveOutcome, Reconstruction, SatProofStatus, SatResult, SatUnknownReason,
-    SatUnsatEvidence, VivifyOptions, XorCdclResult, XorPropagation, check_drat, compact,
-    eliminate_variables_within, extract_xors, simplify_within, solve_with_drat_proof,
-    solve_with_drat_proof_with_limits, solve_with_xor_cdcl, tseitin_encode,
+    CnfEncoding, CnfError, CnfFormula, CompactMap, DEFAULT_PROOF_SAT_CONFLICT_LIMIT, DratStep,
+    EncodedLit, ProofCoverage, ProofSolveOutcome, Reconstruction, ReducedReason, ReductionLink,
+    SatProofStatus, SatResult, SatUnknownReason, SatUnsatEvidence, VivifyOptions, XorCdclResult,
+    XorPropagation, check_drat, compact, eliminate_variables_within,
+    eliminate_variables_within_recorded, extract_xors, simplify_within, simplify_within_recorded,
+    solve_with_drat_proof, solve_with_drat_proof_with_limits, solve_with_xor_cdcl, tseitin_encode,
     tseitin_encode_profiled_with_origins, vivify_within, write_drat, xor_gauss_drat_refutation,
     xor_propagate,
 };
@@ -265,7 +266,14 @@ impl SatBvBackend {
         // Primary SAT search: the deadline-bounded native CDCL core, on every
         // path (ADR-1703). Its result feeds the reconstruction + replay below
         // (see `solve_with_native_cdcl`).
-        let mut sat_result = primary_sat_search(config, solve_formula, deadline, &mut stats);
+        // The reduction, handed to the search so its `unsat` proof is checked
+        // against `encoding.formula()` — the formula this backend built — and
+        // not merely against the reduced one it happened to search.
+        let reduction = inprocessed
+            .as_ref()
+            .map(|out| (encoding.formula(), &out.link));
+        let mut sat_result =
+            primary_sat_search(config, solve_formula, deadline, &mut stats, reduction);
         stats.solve = solve_start.elapsed();
         if deadline.is_some_and(|deadline| Instant::now() >= deadline) {
             self.stats = Some(stats);
@@ -295,9 +303,13 @@ impl SatBvBackend {
         // synthesized proof). Skip the proof route for it; only the native core's
         // `unsat` is DRAT-checked here.
         let prove = config.prove_unsat && !xor_cdcl_unsat;
-        if let Some(reason) =
-            ensure_unsat_proof_checked(prove, &sat_result, solve_formula, &mut stats)?
-        {
+        if let Some(reason) = ensure_unsat_proof_checked(
+            prove,
+            &sat_result,
+            solve_formula,
+            &mut stats,
+            inprocessed.is_some(),
+        )? {
             self.stats = Some(stats);
             return Ok(CheckResult::Unknown(reason));
         }
@@ -1044,6 +1056,20 @@ struct Inprocessed {
     compaction: CompactMap,
     /// Lifts a BVE-reduced model back to the original pre-BVE variables.
     reconstruction: Reconstruction,
+    /// The `unsat` direction of the same reduction: the passes' own `DRAT`
+    /// derivation plus the compaction's variable bijection, so a refutation of
+    /// [`Self::formula`] lifts to a refutation of the formula the caller
+    /// encoded (ADR-1750's open item). Empty and identity unless
+    /// `config.prove_unsat` asked for it — recording a 37.7 M-step BVE prefix
+    /// nobody is going to check is pure cost.
+    ///
+    /// Note which direction each map runs. `compaction`/`reconstruction` carry
+    /// **models** UP from the reduced formula to the original; `link` carries a
+    /// **refutation** the same way. They are not inverses of each other and
+    /// neither substitutes for the other: BVE is equisatisfiable, so the `sat`
+    /// direction needs the reconstruction stack and the `unsat` direction needs
+    /// the resolvents' derivation.
+    link: ReductionLink,
 }
 
 /// Inprocessing admission bound. Since T1.1.4 both passes are occurrence-list
@@ -1065,6 +1091,27 @@ struct Inprocessed {
 /// occurrence lists would not fit a single pass even to start.
 const INPROCESS_MAX_VARIABLES: usize = 4_000_000;
 const INPROCESS_MAX_CLAUSES: usize = 16_000_000;
+
+/// Ceiling on the concatenated `DRAT` proof (reduction prefix + search steps)
+/// this backend will hold in RAM to check against the original formula.
+///
+/// It exists because the prefix is proportional to the FORMULA, not to the
+/// search: ADR-1750 measured BVE's at **37.7 M steps** on a 3.1 M-variable
+/// `p4dfa` instance against the search's ~36 k, three orders of magnitude
+/// apart. A `Vec<DratStep>` of that size is several gigabytes before the
+/// checker allocates anything of its own, so an unbounded in-RAM
+/// concatenation would turn a checked `unsat` into an OOM on exactly the
+/// instances where inprocessing pays.
+///
+/// Exceeding it is **not** a silent downgrade: the check falls back to the
+/// reduced formula and says so through
+/// `unsat_proof_checked_against_reduced` + `unsat_proof_reduced_reason = 2`,
+/// with the step count that would have been needed. The streaming route past
+/// this ceiling is `ReductionLink::lifting_sink` into a file plus
+/// `check_drat_backward_reader`; it is not wired here because nothing on the
+/// shipping `QF_BV` path has yet produced a prefix near the bound (measured
+/// max on the parity corpus is four orders of magnitude below it).
+const MAX_LINKED_PROOF_STEPS: usize = 8_000_000;
 
 /// XOR-propagation admission bound. Unlike subsumption/BVE, `xor_propagate` runs
 /// Gaussian elimination over the recovered XOR system, which is `O(gates²·vars)`
@@ -1315,6 +1362,35 @@ fn run_bve(formula: &CnfFormula, grant: Option<u64>, deadline: Option<Instant>) 
     }
 }
 
+/// [`run_bve`] with the pass's `DRAT` derivation appended to `proof`.
+///
+/// Deliberately a separate function rather than an `Option<&mut Vec<_>>`
+/// parameter on `run_bve`: the two differ only in whether the recorder is
+/// threaded, and a shared body would make "the recording path ran the pass with
+/// a different budget" a one-character edit that compiles, runs, and produces
+/// identical verdicts — the exact defect class `run_bve`'s own doc comment
+/// records as having survived a full mutation sweep. Both bodies name
+/// `work_budget` explicitly so a divergence is visible side by side.
+fn run_bve_recorded(
+    formula: &CnfFormula,
+    grant: Option<u64>,
+    deadline: Option<Instant>,
+    proof: &mut Vec<DratStep>,
+) -> BveOutcome {
+    match grant {
+        Some(work_budget) => eliminate_variables_within_recorded(
+            formula,
+            BveOptions {
+                work_budget: Some(work_budget),
+                ..BveOptions::DEFAULT
+            },
+            deadline,
+            Some(proof),
+        ),
+        None => BveOutcome::skipped(formula),
+    }
+}
+
 /// Runs clause vivification on `simplified` when `config.cnf_vivify` is set,
 /// returning the strengthened (model-preserving) formula; otherwise returns
 /// `simplified` unchanged.
@@ -1336,6 +1412,7 @@ fn maybe_vivify(
     simplified: &CnfFormula,
     deadline: Option<Instant>,
     stats: &mut SolveStats,
+    link: Option<&mut ReductionLink>,
 ) -> CnfFormula {
     if !config.cnf_vivify {
         return simplified.clone();
@@ -1358,6 +1435,14 @@ fn maybe_vivify(
             // the pre-vivify formula. Model-preserving either way, so no verdict change.
             return simplified.clone();
         }
+    }
+    // The pass's derivation joins the link, so its strengthenings are part of
+    // the certificate rather than a step-checked side-guard. The `step_ok`
+    // check above stays: it is a cheap local alarm that names vivify as the
+    // culprit, where a link failure only says the concatenation did not verify.
+    if let Some(link) = link {
+        push_count(stats, "vivify_proof_steps", outcome.proof.len() as u64);
+        link.record(outcome.proof.iter().cloned());
     }
     stats.backend.push((
         "vivify_clauses_strengthened".to_owned(),
@@ -1434,7 +1519,24 @@ fn inprocess(
                     "xor_equalities_available".to_owned(),
                     usize_to_f64(xstats.equalities_available),
                 ));
-                (xstats.units_added > 0).then_some(augmented)
+                // The units are entailed by the formula but are derived by
+                // GAUSSIAN elimination over the recovered XOR subsystem, and a
+                // Gaussian-implied unit is not RUP in general — ADR-1750 says
+                // so about the XOR route in its own words. So under
+                // `prove_unsat` this augmentation would be the one link in the
+                // chain no `DRAT` step can justify. Skip it rather than emit a
+                // proof that quietly covers less than it claims: the units only
+                // strengthen propagation, and dropping them costs speed, not
+                // soundness. Recorded, so the cost is visible rather than
+                // inferred from a missing key.
+                if config.prove_unsat && xstats.units_added > 0 {
+                    stats
+                        .backend
+                        .push(("xor_propagate_skipped_for_proof".to_owned(), 1.0));
+                    None
+                } else {
+                    (xstats.units_added > 0).then_some(augmented)
+                }
             }
             XorPropagation::Unsat => {
                 stats.backend.push(("xor_subsystem_unsat".to_owned(), 1.0));
@@ -1450,8 +1552,23 @@ fn inprocess(
     push_duration_ms(stats, "xor_propagate_ms", xor_start.elapsed());
     let base: &CnfFormula = xor_base.as_ref().unwrap_or(formula);
 
+    // The link is built only when someone is going to check it. Recording a
+    // prefix costs a `Vec<DratStep>` proportional to the FORMULA (ADR-1750
+    // measured BVE's at 37.7 M steps on a 3.1 M-variable instance), which is
+    // not something to pay for on a path that will never look at it.
+    let mut link = ReductionLink::identity();
+    let recording = config.prove_unsat;
+    let mut steps: Vec<DratStep> = Vec::new();
+
     let subsume_start = Instant::now();
-    let (simplified, subsume) = simplify_within(base, deadline);
+    let (simplified, subsume) = if recording {
+        let out = simplify_within_recorded(base, deadline, Some(&mut steps));
+        push_count(stats, "subsume_proof_steps", steps.len() as u64);
+        link.record(steps.drain(..));
+        out
+    } else {
+        simplify_within(base, deadline)
+    };
     push_duration_ms(stats, "subsume_ms", subsume_start.elapsed());
     push_deadline_expired(stats, "subsume_deadline_expired", deadline);
     // Optional clause vivification between subsumption and BVE. Vivify is
@@ -1459,14 +1576,27 @@ fn inprocess(
     // reconstruction trail), so its output feeds BVE in place of `simplified` and
     // the model-lift stack is unchanged. See `maybe_vivify`.
     let vivify_start = Instant::now();
-    let vivified = maybe_vivify(config, &simplified, deadline, stats);
+    let vivified = maybe_vivify(
+        config,
+        &simplified,
+        deadline,
+        stats,
+        recording.then_some(&mut link),
+    );
     if config.cnf_vivify {
         push_duration_ms(stats, "vivify_ms", vivify_start.elapsed());
         push_deadline_expired(stats, "vivify_deadline_expired", deadline);
     }
     let bve_start = Instant::now();
     let bve_grant = bve_admission(&vivified, deadline, stats);
-    let bve = run_bve(&vivified, bve_grant, deadline);
+    let bve = if recording {
+        let out = run_bve_recorded(&vivified, bve_grant, deadline, &mut steps);
+        push_count(stats, "bve_proof_steps", steps.len() as u64);
+        link.record(steps.drain(..));
+        out
+    } else {
+        run_bve(&vivified, bve_grant, deadline)
+    };
     push_duration_ms(stats, "bve_ms", bve_start.elapsed());
     push_deadline_expired(stats, "bve_deadline_expired", deadline);
     push_count(stats, "bve_work_spent", bve.stats.work_spent);
@@ -1514,6 +1644,16 @@ fn inprocess(
     let bve_variable_count = bve.formula.variable_count();
     let compact_start = Instant::now();
     let (compacted, compaction) = compact(&bve.formula);
+    // Compose the renumbering into the link. THIS is the step whose absence
+    // kept the backend checking against the reduced formula: without it the
+    // prefix talks about original variables and the search's steps talk about
+    // compacted ones, and no concatenation of the two is a proof of anything.
+    if recording {
+        let new_to_old: Vec<usize> = (0..compaction.live_count())
+            .map(|new| compaction.original_of(new))
+            .collect();
+        link.rename(&new_to_old);
+    }
     push_duration_ms(stats, "compact_ms", compact_start.elapsed());
     let compacted_variable_count = compacted.variable_count();
     stats.backend.push((
@@ -1544,10 +1684,19 @@ fn inprocess(
         usize_to_f64(compacted_variable_count),
     ));
 
+    if recording {
+        push_count(stats, "inprocess_proof_steps", link.prefix_len() as u64);
+        stats.backend.push((
+            "inprocess_link_checkable".to_owned(),
+            f64::from(u8::from(link.is_checkable())),
+        ));
+    }
+
     Inprocessed {
         formula: compacted,
         compaction,
         reconstruction: bve.reconstruction,
+        link,
     }
 }
 
@@ -2148,13 +2297,64 @@ fn primary_sat_search(
     formula: &CnfFormula,
     deadline: Option<Instant>,
     stats: &mut SolveStats,
+    reduction: Option<(&CnfFormula, &ReductionLink)>,
 ) -> SatResult {
-    let outcome =
-        solve_with_native_cdcl(formula, deadline, config.resource_limit, config.prove_unsat);
+    let outcome = solve_with_native_cdcl(
+        formula,
+        deadline,
+        config.resource_limit,
+        config.prove_unsat,
+        reduction,
+    );
     if let Some(duration) = outcome.proof_replay {
         push_duration_ms(stats, "unsat_proof_replay_ms", duration);
     }
+    if let Some(coverage) = &outcome.coverage {
+        record_proof_coverage(stats, coverage, outcome.prefix_steps, outcome.search_steps);
+    }
     outcome.result
+}
+
+/// Records WHICH formula an `unsat` proof was checked against, and why when it
+/// was not the caller's.
+///
+/// Exactly one of `unsat_proof_checked_against_original` /
+/// `unsat_proof_checked_against_reduced` is emitted per checked `unsat`, so a
+/// consumer that reads only one of the two keys still cannot mistake a missing
+/// key for a passing one — the pair is a partition, not a flag and its absence.
+/// The `reason` key names the cause as a small integer so a sweep can group by
+/// it without parsing prose.
+fn record_proof_coverage(
+    stats: &mut SolveStats,
+    coverage: &ProofCoverage,
+    prefix_steps: usize,
+    search_steps: usize,
+) {
+    push_count(stats, "unsat_proof_prefix_steps", prefix_steps as u64);
+    push_count(stats, "unsat_proof_search_steps", search_steps as u64);
+    match coverage {
+        ProofCoverage::Original => {
+            stats
+                .backend
+                .push(("unsat_proof_checked_against_original".to_owned(), 1.0));
+        }
+        ProofCoverage::Reduced(reason) => {
+            stats
+                .backend
+                .push(("unsat_proof_checked_against_reduced".to_owned(), 1.0));
+            let (code, detail) = match reason {
+                ReducedReason::Unjustified(_) => (1.0, None),
+                ReducedReason::OverBudget { steps, .. } => (2.0, Some(*steps)),
+                ReducedReason::RenamingOutOfRange(_) => (3.0, None),
+            };
+            stats
+                .backend
+                .push(("unsat_proof_reduced_reason".to_owned(), code));
+            if let Some(steps) = detail {
+                push_count(stats, "unsat_proof_steps_over_budget", steps as u64);
+            }
+        }
+    }
 }
 
 /// Runs the in-tree proof-producing CDCL core as the primary SAT search,
@@ -2178,6 +2378,17 @@ struct NativeCdclOutcome {
     /// Time spent independently checking the emitted DRAT proof. This is nested
     /// within SAT search time, not an additional sequential pipeline stage.
     proof_replay: Option<Duration>,
+    /// Which formula the proof was checked against, when one was checked.
+    ///
+    /// Produced by the same call that chose the formula
+    /// ([`ReductionLink::check_unsat`]), never asserted alongside it — a
+    /// coverage flag a caller sets by hand is the shape that lets a checker
+    /// report "original" for a check it did not make.
+    coverage: Option<ProofCoverage>,
+    /// Steps of the reduction prefix that were part of the checked proof.
+    prefix_steps: usize,
+    /// Steps the search itself emitted.
+    search_steps: usize,
 }
 
 fn solve_with_native_cdcl(
@@ -2185,6 +2396,7 @@ fn solve_with_native_cdcl(
     deadline: Option<Instant>,
     resource_limit: Option<u64>,
     check_proof: bool,
+    reduction: Option<(&CnfFormula, &ReductionLink)>,
 ) -> NativeCdclOutcome {
     let max_conflicts = resource_limit.map_or(DEFAULT_PROOF_SAT_CONFLICT_LIMIT, |limit| {
         usize::try_from(limit).unwrap_or(usize::MAX)
@@ -2193,6 +2405,9 @@ fn solve_with_native_cdcl(
         ProofSolveOutcome::Sat(assignment) => NativeCdclOutcome {
             result: SatResult::Sat(assignment),
             proof_replay: None,
+            coverage: None,
+            prefix_steps: 0,
+            search_steps: 0,
         },
         ProofSolveOutcome::Unsat(proof) => {
             if !check_proof {
@@ -2202,30 +2417,53 @@ fn solve_with_native_cdcl(
                         failed_assumptions: Vec::new(),
                     }),
                     proof_replay: None,
+                    coverage: None,
+                    prefix_steps: 0,
+                    search_steps: proof.len(),
                 };
             }
             // Verify the inline proof in place. Only a checked proof yields an
             // accepted `unsat`; anything else is a conservative downgrade — we
             // never pass off an unverified `unsat` as checked.
-            let replay_start = Instant::now();
-            let checked = check_drat(formula, &proof);
-            let proof_replay = Some(replay_start.elapsed());
-            let result = match checked {
-                Ok(true) => SatResult::Unsat(SatUnsatEvidence {
+            //
+            // WHICH formula it is checked against is the whole question here.
+            // Without a reduction the two are the same formula and the
+            // identity link says so. With one, the link concatenates the
+            // passes' derivation with the search's steps lifted out of the
+            // compacted variable space, and the check runs against the
+            // ENCODED formula — so the reduction is inside the certificate
+            // instead of underneath it.
+            let identity = ReductionLink::identity();
+            let (original, link) = reduction.map_or((formula, &identity), |(f, l)| (f, l));
+            let check = link.check_unsat(original, formula, &proof, MAX_LINKED_PROOF_STEPS);
+            let result = if check.verified {
+                SatResult::Unsat(SatUnsatEvidence {
                     proof: SatProofStatus::Checked,
                     failed_assumptions: Vec::new(),
-                }),
-                Ok(false) => SatResult::Unknown(SatUnknownReason {
-                    detail: "native unsat proof failed to check: did not derive the empty clause"
-                        .to_owned(),
-                }),
-                Err(error) => SatResult::Unknown(SatUnknownReason {
-                    detail: format!("native unsat proof failed to check: {error}"),
-                }),
+                })
+            } else {
+                let against = if check.coverage.is_original() {
+                    "the original formula"
+                } else {
+                    "the reduced formula"
+                };
+                let detail = match &check.error {
+                    Some(error) => {
+                        format!("native unsat proof failed to check against {against}: {error}")
+                    }
+                    None => format!(
+                        "native unsat proof failed to check against {against}: did not derive \
+                         the empty clause"
+                    ),
+                };
+                SatResult::Unknown(SatUnknownReason { detail })
             };
             NativeCdclOutcome {
                 result,
-                proof_replay,
+                proof_replay: Some(check.check_duration),
+                coverage: Some(check.coverage),
+                prefix_steps: check.prefix_steps,
+                search_steps: check.search_steps,
             }
         }
         ProofSolveOutcome::ResourceOut => NativeCdclOutcome {
@@ -2233,12 +2471,18 @@ fn solve_with_native_cdcl(
                 detail: "native CDCL core exhausted its conflict budget".to_owned(),
             }),
             proof_replay: None,
+            coverage: None,
+            prefix_steps: 0,
+            search_steps: 0,
         },
         ProofSolveOutcome::Interrupted => NativeCdclOutcome {
             result: SatResult::Unknown(SatUnknownReason {
                 detail: "native CDCL core timeout".to_owned(),
             }),
             proof_replay: None,
+            coverage: None,
+            prefix_steps: 0,
+            search_steps: 0,
         },
     }
 }
@@ -2261,6 +2505,7 @@ fn ensure_unsat_proof_checked(
     sat_result: &SatResult,
     formula: &CnfFormula,
     stats: &mut SolveStats,
+    reduced: bool,
 ) -> Result<Option<UnknownReason>, SolverError> {
     if !prove || !matches!(sat_result, SatResult::Unsat(_)) {
         return Ok(None);
@@ -2275,9 +2520,25 @@ fn ensure_unsat_proof_checked(
             .push(("unsat_proof_checked_inline".to_owned(), 1.0));
         return Ok(None);
     }
-    // The reduced formula is equisatisfiable with the original, so an independent
-    // UNSAT proof of it certifies the original is UNSAT. Fail CLOSED for the
-    // batsat path.
+    // The re-derivation route. It re-solves `formula`, which is whatever the
+    // search ran over, so when a reduction happened this certifies the REDUCED
+    // formula and the link to the original is trusted — the exact state the
+    // primary path no longer has. Say so rather than leave the coverage keys
+    // unset: a missing key reads as "not applicable" and this is a real
+    // narrowing.
+    //
+    // The reduced formula is equisatisfiable with the original, so the verdict
+    // is still sound. Fail CLOSED when no checkable proof can be produced.
+    if reduced {
+        record_proof_coverage(
+            stats,
+            &ProofCoverage::Reduced(ReducedReason::Unjustified(
+                "re-derivation route re-solves the reduced formula".to_owned(),
+            )),
+            0,
+            0,
+        );
+    }
     verify_unsat_proof(formula, stats)
 }
 
@@ -2774,6 +3035,144 @@ mod tests {
         );
     }
 
+    /// An unsatisfiable `QF_BV` goal big enough that inprocessing has something
+    /// to do: a 6-bit multiplier's Tseitin encoding is hundreds of clauses of
+    /// gate definitions, which is exactly what BVE eats, and commutativity is
+    /// refutable without the search having to redo the multiplier.
+    fn unsat_bv_goal() -> (TermArena, Vec<TermId>) {
+        let mut arena = TermArena::new();
+        let x = arena.bv_var("x", 6).unwrap();
+        let y = arena.bv_var("y", 6).unwrap();
+        let xy = arena.bv_mul(x, y).unwrap();
+        let yx = arena.bv_mul(y, x).unwrap();
+        let same = arena.eq(xy, yx).unwrap();
+        let assertion = arena.not(same).unwrap();
+        (arena, vec![assertion])
+    }
+
+    /// THE test this lane exists for. With inprocessing on and `prove_unsat`
+    /// set, the `unsat` must be backed by a proof checked against the formula
+    /// this backend ENCODED, not against the reduced formula the search
+    /// happened to run over.
+    ///
+    /// Every assertion below is load-bearing, and three of them exist to stop
+    /// the headline one from passing vacuously:
+    ///
+    /// * `inprocess_proof_steps > 0` — the passes actually derived clauses. A
+    ///   reduction that changed nothing makes "checked against the original"
+    ///   true and meaningless.
+    /// * `cnf_compaction_variables_dropped > 0` — the compaction actually
+    ///   renumbered, so the search's steps really were in a different variable
+    ///   space and the lift really had to run. This is the half ADR-1750 left
+    ///   open; without it the test would pass for a build with no renaming at
+    ///   all.
+    /// * `unsat_proof_search_steps > 0` — the search contributed a refutation
+    ///   rather than the prefix having refuted the formula on its own, which
+    ///   ADR-1750 measured as a real vacuity trap on small pigeonholes.
+    #[test]
+    fn inprocessed_unsat_is_checked_against_the_original_formula() {
+        let (arena, assertions) = unsat_bv_goal();
+        let config = SolverConfig::default()
+            .with_prove_unsat(true)
+            .with_cnf_inprocessing(true)
+            .with_cnf_vivify(true)
+            .with_timeout(Duration::from_secs(60));
+        let mut backend = SatBvBackend::new();
+        let result = backend.check(&arena, &assertions, &config).expect("check");
+        assert_eq!(result, CheckResult::Unsat);
+
+        let stats = backend.last_stats().expect("stats");
+        assert_eq!(
+            stat(stats, "cnf_inprocessing"),
+            Some(1.0),
+            "inprocessing must have run, or this test is about the wrong path"
+        );
+        assert_eq!(
+            stat(stats, "unsat_proof_checked_against_original"),
+            Some(1.0),
+            "the unsat must be checked against the ORIGINAL formula; stats: {:?}",
+            stats.backend
+        );
+        assert_eq!(
+            stat(stats, "unsat_proof_checked_against_reduced"),
+            None,
+            "the two coverage keys are a partition — never both, never neither"
+        );
+        assert!(
+            stat(stats, "inprocess_proof_steps").is_some_and(|v| v > 0.0),
+            "the passes must have derived something: {:?}",
+            stats.backend
+        );
+        assert!(
+            stat(stats, "cnf_compaction_variables_dropped").is_some_and(|v| v > 0.0),
+            "compaction must actually renumber, or the lift is untested: {:?}",
+            stats.backend
+        );
+        assert!(
+            stat(stats, "unsat_proof_search_steps").is_some_and(|v| v > 0.0),
+            "the search must contribute steps, or the prefix refuted alone"
+        );
+        assert_eq!(
+            stat(stats, "unsat_proof_prefix_steps"),
+            stat(stats, "inprocess_proof_steps"),
+            "every step the passes recorded must be part of the checked proof"
+        );
+    }
+
+    /// Without inprocessing the searched formula IS the encoded one, so the
+    /// same coverage key must read `original` — and it must do so through the
+    /// identity link rather than through a special case, which is what makes
+    /// the flag one mechanism instead of two.
+    #[test]
+    fn an_unreduced_unsat_is_also_covered_and_carries_no_prefix() {
+        let (arena, assertions) = unsat_bv_goal();
+        let config = SolverConfig::default()
+            .with_prove_unsat(true)
+            .with_timeout(Duration::from_secs(60));
+        let mut backend = SatBvBackend::new();
+        let result = backend.check(&arena, &assertions, &config).expect("check");
+        assert_eq!(result, CheckResult::Unsat);
+        let stats = backend.last_stats().expect("stats");
+        assert_eq!(stat(stats, "cnf_inprocessing"), None);
+        assert_eq!(
+            stat(stats, "unsat_proof_checked_against_original"),
+            Some(1.0)
+        );
+        assert_eq!(stat(stats, "unsat_proof_prefix_steps"), Some(0.0));
+    }
+
+    /// The XOR-propagation stage adds units derived by GAUSSIAN elimination,
+    /// which are entailed but not `RUP`, so under `prove_unsat` they are not
+    /// applied — otherwise they would be the one link no `DRAT` step can
+    /// justify, and the coverage flag would have to read `reduced` for a reason
+    /// nobody chose.
+    ///
+    /// This asserts the arrangement rather than the frequency: whether or not
+    /// the skip fires on this instance, no pass may leave the link
+    /// unjustifiable.
+    #[test]
+    fn xor_units_never_break_the_link_silently() {
+        let (arena, assertions) = unsat_bv_goal();
+        let config = SolverConfig::default()
+            .with_prove_unsat(true)
+            .with_cnf_inprocessing(true)
+            .with_timeout(Duration::from_secs(60));
+        let mut backend = SatBvBackend::new();
+        let result = backend.check(&arena, &assertions, &config).expect("check");
+        assert_eq!(result, CheckResult::Unsat);
+        let stats = backend.last_stats().expect("stats");
+        assert_eq!(
+            stat(stats, "inprocess_link_checkable"),
+            Some(1.0),
+            "no pass may leave the link unjustifiable: {:?}",
+            stats.backend
+        );
+        assert_eq!(
+            stat(stats, "unsat_proof_checked_against_original"),
+            Some(1.0)
+        );
+    }
+
     #[test]
     fn cold_cnf_construction_profile_is_opt_in_and_partitioned() {
         let mut arena = TermArena::new();
@@ -3118,7 +3517,7 @@ mod tests {
     fn native_cdcl_checks_inline_proof_for_unsat() {
         // `x ∧ ¬x` is unsat.
         let f = formula(1, &[&[(0, false)], &[(0, true)]]);
-        let result = solve_with_native_cdcl(&f, None, None, true);
+        let result = solve_with_native_cdcl(&f, None, None, true, None);
         assert_eq!(
             result.result,
             SatResult::Unsat(SatUnsatEvidence {
@@ -3135,7 +3534,7 @@ mod tests {
     #[test]
     fn native_cdcl_skips_inline_check_when_not_requested() {
         let f = formula(1, &[&[(0, false)], &[(0, true)]]);
-        let result = solve_with_native_cdcl(&f, None, None, false);
+        let result = solve_with_native_cdcl(&f, None, None, false, None);
         assert_eq!(
             result.result,
             SatResult::Unsat(SatUnsatEvidence {
@@ -3157,7 +3556,7 @@ mod tests {
             failed_assumptions: Vec::new(),
         });
         let mut stats = SolveStats::default();
-        let outcome = ensure_unsat_proof_checked(true, &checked, &f, &mut stats)
+        let outcome = ensure_unsat_proof_checked(true, &checked, &f, &mut stats, false)
             .expect("checked proof must not error");
         assert!(outcome.is_none(), "a Checked unsat must be accepted");
         assert!(
@@ -3188,7 +3587,7 @@ mod tests {
             failed_assumptions: Vec::new(),
         });
         let mut stats = SolveStats::default();
-        let outcome = ensure_unsat_proof_checked(true, &unchecked, &f, &mut stats)
+        let outcome = ensure_unsat_proof_checked(true, &unchecked, &f, &mut stats, false)
             .expect("re-derivation of a genuine unsat must certify");
         assert!(
             outcome.is_none(),
