@@ -209,6 +209,48 @@
 //! `DlOnlineStatsGuard`), and none of the three can change a verdict — they
 //! only add stdout lines before it. Full measurement/methodology:
 //! docs/research/12-performance/instrument-coverage-2026-09-07.md.
+//!
+//! # Which configuration this run used (same `--trace` flag), 2026-09-07
+//!
+//! Every line above says what the run SPENT. None said what the run was
+//! CONFIGURED with, so a stage timing could not be compared against another
+//! run's without an assumption nobody wrote down — and `AXEYUM_NRA_ADMISSION`
+//! alone selects between two admission policies that differ by 15x while
+//! leaving no trace in the output. `--trace` now prints one more line, first:
+//!
+//! ```text
+//! ; config digest=3f2a9c4e17b05d88 entries=113 dated=24 \
+//!   env:AXEYUM_NRA_ADMISSION=legacy consulted=2 \
+//!   crates/axeyum-solver/src/lra_theory.rs::MAX_ONLINE_LRA_ATOMS \
+//!   crates/axeyum-solver/src/nra.rs::MCCORMICK_ATOMS_PER_TRIPLE
+//! ```
+//!
+//! - `digest` — FNV-1a over the registry's sorted `key=value` pairs AND the
+//!   active environment overrides. Two runs printing the same digest used the
+//!   same configuration; two printing different digests did not, and the
+//!   `env:` fields say how. This is the reproducibility handle: it is what a
+//!   surprising result gets compared against first.
+//! - `entries` / `dated` — the size of the governing surface and how much of
+//!   it carries a justification with a date. The ratio is reported in the run
+//!   because a registry that did not report it could grow undated entries
+//!   indefinitely with nothing noticing.
+//! - `env:` — only variables a registry entry NAMES. An unrecognized
+//!   `AXEYUM_*` variable is not reported, because a line that reported
+//!   everything could not be wrong about anything.
+//! - `consulted` — governing values this run actually reached, sorted. This is
+//!   the part that traces a verdict to a bound: it is how a `--trace` reader
+//!   sees that `nia_linearize::MAX_CONGRUENCE_GROUPS` was consulted at all,
+//!   which is a bound that otherwise crosses with no branch and no signal.
+//!
+//! Printed first among the stage lines because the others have to be read
+//! against it. Same off-by-default discipline: with no `--trace` the guard is
+//! never constructed, `note_consulted` is one thread-local `Cell<bool>` read,
+//! and nothing is allocated. The verdict is byte-identical either way — the
+//! registry is a description of the values, never a source of them. Sorted
+//! output throughout, from a `BTreeSet`, because determinism is a public API
+//! promise here and a `HashSet` would make the line depend on per-process hash
+//! seeding. Full record: ADR-1762 and
+//! docs/research/12-performance/config-registry-2026-09-07.md.
 
 use std::process::ExitCode;
 use std::sync::mpsc;
@@ -216,10 +258,11 @@ use std::time::{Duration, Instant};
 
 use axeyum_solver::theories::cdclt_diagnostics::{TheoryLayerStatsGuard, last_theory_layer_stats};
 use axeyum_solver::{
-    BvLayerStatsGuard, CheckProgress, CheckResult, CheckingProgress, DlOnlineStatsGuard, Evidence,
-    EvidenceCheck, EvidenceReport, FrontDoorStatsGuard, ProofProgress, RouteAttributionGuard,
-    SolverConfig, last_bv_layer_stats, last_dl_online_stats, last_front_door_stats,
-    last_route_attribution, produce_evidence_smtlib, solve_smtlib,
+    BvLayerStatsGuard, CheckProgress, CheckResult, CheckingProgress, ConfigTraceGuard,
+    DlOnlineStatsGuard, Evidence, EvidenceCheck, EvidenceReport, FrontDoorStatsGuard,
+    ProofProgress, RouteAttributionGuard, SolverConfig, config_trace_line, last_bv_layer_stats,
+    last_dl_online_stats, last_front_door_stats, last_route_attribution, produce_evidence_smtlib,
+    solve_smtlib,
 };
 
 /// Formats one `axeyum_cnf::ProofSearchProgress` snapshot as the `;`-prefixed
@@ -945,12 +988,20 @@ fn main() -> ExitCode {
         // `solve_smtlib` below when `--trace` is on; dropped (disarmed) right
         // after, restoring whatever this thread's setting was before. A
         // no-op when `trace_mode` is `false` — no extra clock read, for any
-        // of the four (same convention every guard in this tree follows).
+        // of the six (same convention every guard in this tree follows). The
+        // count is stated because it has been stale twice: ADR-1760's route
+        // guard and ADR-1762's config guard landed on the same day, each from a
+        // lane that read "four" and left it.
         let _theory_guard = trace_mode.then(TheoryLayerStatsGuard::enable);
         let _bv_guard = trace_mode.then(BvLayerStatsGuard::enable);
         let _dl_guard = trace_mode.then(DlOnlineStatsGuard::enable);
         let _front_door_guard = trace_mode.then(FrontDoorStatsGuard::enable);
+        // ADR-1760. Which route decided the file, and which route consumed the
+        // budget.
         let _route_guard = trace_mode.then(RouteAttributionGuard::enable);
+        // ADR-1762. The sixth guard on the same flag: which governing values
+        // this run consulted, and which environment overrides were in force.
+        let _config_guard = trace_mode.then(ConfigTraceGuard::enable);
         // A parse or solver error is reported as `unknown` — never a wrong
         // verdict, and never a crash that the harness would read as an abort.
         let mut give_up: Option<String> = None;
@@ -981,6 +1032,12 @@ fn main() -> ExitCode {
             // — unlike `; bv-layer …`/`; theory-layer …` (only the ONE
             // backend a query actually dispatched to ran) it is never
             // legitimately absent when `--trace` is on.
+            // ADR-1762: the configuration this run used. Printed FIRST among
+            // the stage lines because it is what the others have to be read
+            // against — a stage timing means something different under a
+            // different admission policy, and until this line existed nothing
+            // in a run's own output said which one was in force.
+            trace_lines.push(config_trace_line());
             trace_lines.push(front_door_report_line(&last_front_door_stats()));
             // `dispatch_difference_logic` runs on every numeric-featured
             // query ahead of the linear-arithmetic chain (probing whether the

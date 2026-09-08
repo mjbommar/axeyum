@@ -150,6 +150,10 @@ now. Nothing was deleted.
 | 2026-09-07 | `1777d7a8e` | `string_theory` joins them; `SatModelCtx::solver` moves from `&CdclT` to `&NativeModel`. Counts attributed by pairing each `Running tests/<file>` line with its own result — cargo runs test binaries alphabetically, not in flag order, and a first pass at the message had two suites' counts swapped. |
 | 2026-09-07 | `a945efdd7` | The trust step reaches the front door, and the ledger is readable from a sweep. `produce_evidence` records around its whole dispatch; the ambiguity guard declines when more than one native refutation happened, because `auto::check_auto` enumerates case-split branches and discards each one's `Unsat` (relaxing `== 1` killed exactly one test). `smtcomp_cli --evidence` gains `trusted=`, whose position is FORCED: `execute-autogenesis-operation.py`'s regex was anchored at both ends and required `certified=` immediately before `recheck=`, so every placement broke it. Also measured: small queries never reach the bare arm — QF_UF transitivity gets `unsat-alethe`, a UF pigeonhole `unsat-bool-euf-exhaustive` — so this is a large-query metric. |
 | 2026-09-07 | `7da79642f` | `witness_function_abstraction` ports ADR-1721 §7 onto `eliminate_functions`, wired into `AckermannUnsatCertificate::recheck` as step 2. **The straight port did not catch the defect it exists for.** With the elimination mutated so every application of one function shares one fresh symbol, the satisfiable `f(a) = 1 & f(b) = 2` becomes a wrong `unsat` and `recheck` still returned `Ok(true)` — the two sides are compared as BOOLEANS and both are simply `false` at almost every sample. The witness therefore carries a structural count, `unnamed_applications`; with it, `recheck` returns `Ok(false)`. Mutation controls: never incrementing that count kills exactly one test; never recording a value disagreement kills three. |
+| 2026-09-07 | `9b9b6149e` | `axeyum-egraph`: opt-in `EGraphCounters` for merge/find/process_pending/explain, plus 4 tests. |
+| 2026-09-07 | `dbc901288` | `axeyum-rewrite`: opt-in `PassSize`/`PassSizeDelta` term-size-before/after wrappers for the five hot passes, plus `rule_application_counts` and 4 tests. |
+| 2026-09-07 | `0855f7db4` | `axeyum-smtlib`: opt-in `IngestStatsGuard` for tokens/s-expressions/assertions/declared symbols and sorts, the `ingest_shape_probe` example, and 3 tests. |
+| 2026-09-07 | `51208e369` | docs: the foundation-counters diary. |
 | 2026-09-07 | `3ba12a718` | A deletion names a literal MULTISET: `check_drat` and `check_drat_backward` disagreed on an inprocessed proof because all three deletion lookups matched only the literal SET, and the normalization prelude puts `(b)` and `(b OR b)` live at the same moment. Fixed in `drat.rs`, `drat_backward.rs` and `lrat.rs`; a completeness fix, mutation-controlled. |
 | 2026-09-07 | `8f24e7f23` | The measurement (ADR-1750) plus `examples/inprocess_profile.rs` and `examples/inprocess_proof_check.rs`. |
 | 2026-09-07 | `f7321fcc0` | `axeyum_cnf::inprocess` + `solve_with_drat_proof_inprocessed`: the passes now say what they did. `simplify`/`bve` gained recorders threaded through their fixpoint loops (a diff of input against output has no ordering guaranteed to verify). `tests/inprocess_proof_path.rs`, 8 tests over 19 instances x 6 arms. |
@@ -46851,6 +46855,64 @@ Ten declarations across three new files, all under `crates/axeyum-lean-kernel/sr
   sweep, `EXPECTED_STEP_ORDER`)
 - `docs/research/09-decisions/adr-1656-the-complex-polynomial-derivative-is-a-transport-and-the-cauchy-riemann-block-is-component-extraction.md`
 
+**`WIP`, config-registry, 2026-09-07.** The solver's behaviour is governed by
+dozens of caps, bounds, budgets and thresholds held as private constants.
+Nothing enumerated them, nothing recorded which values a run used, and their
+justifications went stale silently. Four measured instances in two days, all of
+which are now cited in [ADR-1762](docs/research/09-decisions/adr-1762-the-configuration-surface-is-enumerable-recordable-and-dated.md):
+
+- `MAX_ONLINE_LRA_ATOMS = 1_024` rested on a 2026-08-03 measurement of an 8 GiB
+  abort. The bound that caps exactly that cost landed **2026-08-06 — three days
+  later** — and the measurement was never re-taken. Replaced by
+  [ADR-1752](docs/research/09-decisions/adr-1752-the-lra-admission-cap-becomes-budget-relative.md).
+- The QF_NRA cross-product bound metered in **cross-products** while the engine
+  consuming its output meters in **atoms**: two gates, incommensurable units,
+  15x apart ([ADR-1751](docs/research/09-decisions/adr-1751-nra-admission-is-the-consumers-capacity.md)).
+- `MAX_CONGRUENCE_GROUPS = 48` changes soundness mode above the cap with **no
+  branch and no signal to the caller**.
+- A cap whose rationale said the code OOM-killed the host at 64 GiB re-measured
+  at 3.3 GiB peak and zero aborts in 124 runs.
+
+**This lane reads and registers. It does not retune.** No constant's value
+changes. Full record: [the diary](docs/research/12-performance/config-registry-2026-09-07.md).
+
+**Measured: 113 governing values registered, 24 dated (21%), 89 undated.**
+Zero genuinely stale. **35 of 113 change behaviour with no branch and no signal
+to the caller** — each now names what guards it, a question that previously had
+no field to be answered in. No verdict moves: 155 files across `corpus/micro`
+and `corpus/regression`, recording off and on, zero differences.
+
+The staleness check is real: dating `MAX_ONLINE_LRA_ATOMS` 2026-08-03 — its true
+original date — reproduces the thirteen-month failure in one command. Its own
+positive control found three defects in it, two of which made it structurally
+unable to fire while printing exactly what a working one prints.
+
+## Landed
+
+| Change | SHA |
+| --- | --- |
+| Lane status file and diary; the enumeration filter fixed up front | `0e64e41bb` |
+| The registry: 113 entries, four checks, two self-imposed invariants (ADR-1762) | `0e77c7346` |
+| `scripts/check-config-registry-staleness.py` plus its positive control | `a0b60ddd9` |
+| `--trace` emits the configuration; four gates record what they consulted | `8a4c96efc` |
+
+## Owed at merge
+
+`scripts/gen-plan.py` has NOT been run (per the brief). `gen-plan.py --check`
+passes with this file removed and fails with it present, so the regeneration is
+owed and is caused by nothing else. The duplicate ADR numbers
+`check-merge-hygiene.sh` reports (0166, 0167) are pre-existing on `main` and are
+not this lane's.
+
+## Findings recorded, NOT fixed
+
+This lane reads and registers; it retunes nothing. Seven findings are in
+ADR-1762, including two same-name/same-value constant pairs with different
+contracts (`MAX_CONGRUENCE_GROUPS`, `MAX_CERTIFIABLE_BOOLS`), a budget-sharing
+policy that is bypassed silently when the share underflows
+(`auto::INT_REAL_RELAX_BUDGET_SHARE`), and a size gate whose refusal is
+indistinguishable from a structural decline (`dl_online::MAX_DL_ATOMS`).
+
 **Your lane's block (`DONE`, conics, 2026-09-05).** W3-9 is landed in a NEW
 file (`crates/axeyum-lean-kernel/src/creal_point/conic.rs`, registered from
 `creal_point.rs` per the brief's isolation constraint — `complex.rs` and
@@ -50411,6 +50473,53 @@ at `Kernel::add_declaration` with a `TypeMismatch`:
 Both are blunt: the package is one build, so a rejected declaration takes every
 test with it. Neither isolates the theorem it targets, and that is a property of
 the prelude-shaped fixture, not of the guards.
+
+**`DONE`, foundation-counters, 2026-09-07.** A bottom-of-stack survey found
+`axeyum-egraph`, `axeyum-rewrite`, and `axeyum-smtlib` with zero counter/stats
+types while `axeyum-cnf` had ten. All three now have opt-in, clock-free
+counters in the style already used here (`axeyum_cnf::SearchCounters`'s
+bool-gate, and the thread-local guard pattern from
+`axeyum_solver::smtlib::FrontDoorStatsGuard`). Full record, including the
+orphaned `proof_reroot_steps` counter this lane found (landed, unread, no
+test) and the bounded-not-settled result on the "58 MB / ~54 s" ingest
+figure: [the diary](../research/12-performance/foundation-counters-2026-09-07.md).
+
+**egraph:** `EGraphCounters` (merges/finds/process_pending's declaration-set
+copy-sort-dedup work — the operation a sibling lane measured at 72x at
+N=51,200 — and explain/explain_steps). Opt-in via `EGraph::set_counting`.
+Four new tests, including a counting-on-vs-off byte-identical-output check.
+
+**rewrite:** `pass_stats` module — `PassSize`/`PassSizeDelta`
+(`axeyum_ir::TermStats` before/after) plus `rule_application_counts`, as a
+`_with_stats` wrapper per hot pass (`canonicalize_terms`, `eliminate_arrays`,
+`eliminate_functions`, `eliminate_int_divmod`, `blast_integers`) that leaves
+the five unwrapped entry points completely untouched. Four new tests.
+
+**smtlib:** `ingest_stats` module — thread-local `IngestStatsGuard` /
+`last_ingest_stats()` counting tokenizer atoms/lists/nesting depth plus
+parser assertions/declared-symbols/declared-sorts. Three new tests, plus a
+new example `ingest_shape_probe` that bounds (does not settle) the
+ingest-throughput discrepancy: three synthetic shapes up to 8 MB all measure
+well above the ~1.1 MB/s the in-tree figure implies, so "file shape alone" is
+weakened as the explanation. Both affected doc comments are annotated with
+this finding, not silently rewritten.
+
+**Verified:** `cargo check --workspace --all-targets --all-features` and
+`cargo clippy --workspace --all-targets --all-features -- -D warnings` both
+clean after all four commits. Per-crate: `axeyum-egraph` 39/39 lib tests,
+`axeyum-rewrite` 158/158 lib tests, `axeyum-smtlib` 96/96 lib tests, all with
+`rustfmt --edition 2024` applied file-by-file (never `cargo fmt`).
+`cargo test -p axeyum-solver --lib --features full` run to confirm this
+lane's changes (none of which touch `axeyum-solver`) leave that gate exactly
+as it was; see the diary for the exact pass/fail counts once that run
+finished.
+
+**Left undone (see the diary's closing section for the full list):**
+`EGraph::counters()` is not wired into `axeyum-solver`'s `euf_egraph.rs` or
+the `--trace` channel `smtcomp_cli` composes — out of this lane's declared
+crate boundary and risk budget. The 58 MB ingest figure is bounded, not
+settled; the file itself was never obtained. "Symbol/sort table growth" was
+scoped to final-size counters, not a resize trajectory.
 
 **Four-wise uncorrelatedness, the fourth central moment of a sum, and the `1/m²`
 tail that follows, all at ℚ and all axiom-free** (`DONE`, fourth-moment,

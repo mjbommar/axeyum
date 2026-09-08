@@ -32,6 +32,7 @@
 //! ```
 
 mod bounded_completeness;
+mod ingest_stats;
 mod parse;
 mod regex;
 mod regex_membership;
@@ -39,6 +40,7 @@ mod sexpr;
 mod write;
 
 pub use bounded_completeness::is_bounded_complete;
+pub use ingest_stats::{IngestStats, IngestStatsGuard, last_ingest_stats};
 pub use parse::{
     FpUsage, IntBound, IntBoundKind, Script, ScriptCommand, SourceStringSatProblem,
     SourceStringWitness, WordObligation, WordProblem, decode_packed_string, packed_string_max_len,
@@ -89,6 +91,22 @@ pub enum SmtError {
     /// runs of 39.9 s, 49.4 s and 66 s — and under SMT-COMP those are `SIGKILL`ed
     /// processes, which score strictly worse than the first-class `unknown` a
     /// resource-exhausted solver owes its caller.
+    ///
+    /// **This "58 MB / ~54 s" figure (~1.1 MB/s) is ~30x slower than
+    /// `parse_script` measures on committed files up to 10.5 MB (30–58 MB/s,
+    /// roughly linear) — an open discrepancy, not a correction, because the
+    /// 58 MB file is not in the tree
+    /// (`docs/research/12-performance/bench-primitives-2026-09-07.md`,
+    /// Finding 2).** `ingest_stats::IngestStatsGuard` was added to test the
+    /// leading candidate explanation, "the file's *shape* is the cost, not
+    /// its size": none of three synthetic shapes up to 8 MB (flat
+    /// declarations, a 65k-entry symbol table, `bvnot` nesting to depth
+    /// 1,000,000) reproduced a rate anywhere near 1.1 MB/s — deep nesting
+    /// alone shows real super-linear cost (100k→1M deep is 10x the bytes but
+    /// ~17x the time) but stays at 13.8 MB/s even at that extreme, so shape
+    /// alone is not a plausible sole explanation at sizes this deep. See
+    /// `docs/research/12-performance/foundation-counters-2026-09-07.md` and
+    /// `examples/ingest_shape_probe.rs`.
     ///
     /// This is a RESOURCE limit, never a statement about the query: a caller
     /// must map it to `unknown`, never to a verdict.

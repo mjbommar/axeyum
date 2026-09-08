@@ -305,6 +305,17 @@ fn eliminate_variable_divmod(
     // turned unsat). Bounded by `MAX_CONGRUENCE_GROUPS` to keep the O(k²) lemma
     // count small — a larger group set simply forgoes the lemmas (still sound, just
     // less complete) and relies on the width ladder / other routes.
+    // ADR-1762. This gate is the registry's worked example of a bound that
+    // changes behaviour with NO branch and NO signal: the `if` below has no
+    // `else`, so above the cap the congruence lemmas are simply never emitted
+    // and nothing downstream can tell. Recording the consultation does not add
+    // the missing signal — the verdict is byte-identical either way, and the
+    // `sat` side stays guarded by `replay_sat` against the ORIGINAL assertions
+    // — but it does make the mode visible under `--trace`, where before it was
+    // visible nowhere. Off by default: one thread-local `Cell<bool>` read.
+    crate::config_registry::note_consulted(
+        "crates/axeyum-solver/src/nia_linearize.rs::MAX_CONGRUENCE_GROUPS",
+    );
     if infos.len() <= MAX_CONGRUENCE_GROUPS {
         for first in 0..infos.len() {
             for second in (first + 1)..infos.len() {

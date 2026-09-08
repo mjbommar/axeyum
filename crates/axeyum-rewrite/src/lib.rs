@@ -34,6 +34,7 @@ mod functions;
 mod int_blast;
 mod int_divmod;
 mod lower_bv;
+mod pass_stats;
 mod propagate_values;
 mod quantifiers;
 mod reconstruct;
@@ -64,6 +65,11 @@ pub use int_divmod::{
     MAX_CONGRUENCE_GROUPS, ZeroDivisorCongruence, eliminate_int_divmod, witness_int_divmod,
 };
 pub use lower_bv::lower_derived_bv;
+pub use pass_stats::{
+    PassSize, PassSizeDelta, blast_integers_with_stats, canonicalize_terms_with_stats,
+    eliminate_arrays_with_stats, eliminate_functions_with_stats, eliminate_int_divmod_with_stats,
+    rule_application_counts,
+};
 pub use propagate_values::{ValuePropagation, propagate_values};
 pub use quantifiers::{
     Instantiation, QUANT_EXPAND_BIT_LIMIT, QuantExpandError, expand_quantifiers,
