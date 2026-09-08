@@ -1074,6 +1074,11 @@ fn watchdog_span_lines(
         verdict: "unknown",
         wall_ns: facts.wall_ns,
         budget_ns: facts.budget_ns,
+        // Read on the way OUT of a killed run too: the process is still alive
+        // (it is the worker that did not return), so `VmHWM` is exactly the
+        // peak the run reached. This is the row that was missing when three
+        // files went to 26.6 GB and only `dmesg` knew.
+        peak_rss_bytes: axeyum_solver::peak_resident_bytes(),
         termination: facts.termination,
         host: facts.host,
         solver_commit: facts.commit,
@@ -1799,6 +1804,7 @@ fn main() -> ExitCode {
                 verdict,
                 wall_ns: u64::try_from(run_started.elapsed().as_nanos()).unwrap_or(u64::MAX),
                 budget_ns: budget_ns_for_log,
+                peak_rss_bytes: axeyum_solver::peak_resident_bytes(),
                 termination: Termination::Returned,
                 host: worker_host.as_deref(),
                 solver_commit: worker_commit.as_deref(),

@@ -54,6 +54,15 @@ mod lazy_smt_counters;
 pub mod live_instruments;
 mod memory_budget;
 mod model;
+
+/// The process's peak resident set (`VmHWM` on Linux), or `None` where the
+/// target has no mechanism.
+///
+/// Exported so a harness can put a run's memory cost in its own artifacts
+/// beside wall time and deterministic work. Before this, the only place a
+/// solver run's memory appeared was `dmesg` after the kernel had killed it —
+/// which is the one place a span log can never read.
+pub use memory_budget::peak_resident_bytes;
 mod proof;
 mod sat_bv_backend;
 
