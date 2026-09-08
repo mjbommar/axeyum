@@ -9613,7 +9613,7 @@ mod tests {
     /// the solver now decides it. Crossing on ATOMS instead would need >10,240
     /// distinct arithmetic atoms, and `ArithAbstractor::abstract_term` dedups
     /// each new atom against every prior one with a linear scan, so that is
-    /// >100M comparisons in a debug build. So the fixture now crosses on the
+    /// over 100M comparisons in a debug build. So the fixture now crosses on the
     /// CNF-VARIABLE dimension, which the envelope's `||` makes sufficient and
     /// which plain Boolean padding reaches linearly.
     #[test]

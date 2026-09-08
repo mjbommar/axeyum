@@ -159,7 +159,7 @@ pub struct Dependency {
 /// `dpll_lia::MAX_PRE_SAT_ARITH_ATOMS` was justified, in prose, by "`BatSat`
 /// allocate\[d\] past an 8 GiB process ceiling … before its cooperative
 /// deadline poll" (`d599b682f`, 2026-08-08). ADR-1703 (`317be80fe`,
-/// 2026-09-05) took BatSat off every shipping path and re-based
+/// 2026-09-05) took `BatSat` off every shipping path and re-based
 /// `IncrementalSat` — the exact object the bound protects — onto
 /// `NativeIncrementalCdcl`. Not one line of `dpll_lia.rs` changed, so no
 /// `rests_on` dependency could have fired; the justification simply stopped
@@ -173,8 +173,8 @@ pub enum Basis {
     /// An identifier the reasoning names, which must still occur in `in_path`.
     ///
     /// `in_path` is deliberately a **specific file or directory**, not the
-    /// workspace: "BatSat exists somewhere in the tree" stays true forever
-    /// behind an optional dev-dependency, while "BatSat is what
+    /// workspace: "`BatSat` exists somewhere in the tree" stays true forever
+    /// behind an optional dev-dependency, while "`BatSat` is what
     /// `crates/axeyum-cnf/src/lib.rs`'s warm solver uses" is exactly the claim
     /// the bound rested on and exactly the claim that became false.
     LiveSymbol {

@@ -92,7 +92,7 @@ const MAX_PRE_SAT_CNF_VARS: usize = 4_096;
 ///
 /// # Re-derived 2026-09-08 against the native CDCL core
 ///
-/// Method: every QF_LIA reference-only loss file that declines here
+/// Method: every `QF_LIA` reference-only loss file that declines here
 /// (`bench-results/parity-losses-20260905/QF_LIA.txt`, 10 of the 26 remaining)
 /// run through `smtcomp_cli --timeout-ms 24000` in release, `taskset -c 0-7`,
 /// each inside a `systemd-run --scope -p MemoryMax=8G -p MemorySwapMax=0`
