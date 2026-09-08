@@ -59,10 +59,50 @@ while IFS= read -r file; do
   # budget on purpose: if it ever fires it means the internal watchdog did not,
   # and that is a finding, not a run to quietly discard.
   outer=$(( (timeout_ms / 1000) + 30 ))
+  status=0
   timeout -k 5 "${outer}s" "$bin" "$file" \
     --timeout-ms "$timeout_ms" \
     --memory-limit-mb 8192 \
-    --trace-json "$out" >/dev/null 2>&1 || echo "outer-timeout-or-error: $file" >&2
+    --trace-json "$out" >/dev/null 2>&1 || status=$?
+  if [ "$status" -ne 0 ]; then
+    # The process never got to write a span log, so nothing about this file
+    # would reach the log at all -- and a file MISSING from a sweep is read
+    # downstream as a file that was not swept. Measured 2026-09-08: three
+    # QF_LRA files were killed by the KERNEL at 26 GB RSS in 18 s, under a
+    # `--memory-limit-mb 8192` that did not bind, and each simply vanished from
+    # the output. So the harness writes the row the binary could not.
+    #
+    # `wall_ns` is null rather than the outer budget: the run was killed from
+    # outside and its own clock was never read, so any number here would be
+    # invented. Exit 137 is SIGKILL, which on this host has meant the OOM killer
+    # every time it has been seen.
+    python3 - "$file" "$division" "$status" "$AXEYUM_TRACE_HOST" "$AXEYUM_TRACE_COMMIT" \
+      "$timeout_ms" >> "$out" <<'PYEOF'
+import json, sys
+path, division, status, host, commit, timeout_ms = sys.argv[1:7]
+print(json.dumps({
+    "kind": "run",
+    "schema_version": 1,
+    "file": path,
+    "division": division,
+    "verdict": "no-log",
+    "wall_ns": None,
+    "budget_ns": int(timeout_ms) * 1_000_000,
+    "termination": "harness-kill",
+    "host": host,
+    "solver_commit": commit,
+    "config": None,
+    "instrumented": False,
+    "instruments": [],
+    "work_unit": None,
+    "work": None,
+    "time_basis": "none",
+    "spans": 0,
+    "harness_exit": int(status),
+}, separators=(",", ":")))
+PYEOF
+    echo "harness-kill exit=$status: $file" >&2
+  fi
 done < "$list"
 
 echo "$division: $count files -> $out ($(wc -l < "$out") span rows)" >&2
