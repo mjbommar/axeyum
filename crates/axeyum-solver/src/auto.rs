@@ -2817,10 +2817,10 @@ pub enum UfArithOverboundPolicy {
     /// behaviour that made the routes below unreachable; kept as a named arm so
     /// the change can be measured against it rather than only remembered.
     CegarTerminal,
-    /// The lazy CEGAR receives `1/`[`UF_ARITH_CEGAR_PROBE_SHARE`] of the
-    /// remaining budget as a **probe**; a decided verdict is returned, and an
-    /// `Unknown` declines the route so the ladder below runs on what is left.
-    /// Default.
+    /// The lazy CEGAR receives the remaining budget **less the ladder's
+    /// reserve** (`1/`[`UF_ARITH_LADDER_RESERVE_SHARE`]) as a probe; a decided
+    /// verdict is returned, and an `Unknown` declines the route so the ladder
+    /// below runs on the reserve. Default.
     CegarProbe,
     /// The lazy CEGAR does not run at all. A measurement arm: it reports what
     /// the routes underneath decide on their own, with no budget split to
@@ -2828,18 +2828,41 @@ pub enum UfArithOverboundPolicy {
     SkipCegar,
 }
 
-/// The lazy-Ackermann CEGAR's share of the wall-clock budget under
-/// [`UfArithOverboundPolicy::CegarProbe`]: the probe gets half the remaining
-/// budget, and the ladder below runs against the dispatcher's *entry* deadline,
-/// so the two together stay inside the caller's budget rather than re-spending
-/// it.
+/// The fraction of the remaining wall-clock budget held back from the lazy
+/// CEGAR for the ladder underneath it, under
+/// [`UfArithOverboundPolicy::CegarProbe`]. The CEGAR gets everything else, and
+/// the ladder runs against the dispatcher's *entry* deadline, so the two
+/// together stay inside the caller's budget rather than re-spending it.
 ///
-/// `2` mirrors the established in-tree precedent for exactly this split —
-/// [`probe_budget`], which halves the budget so the online EUF+arithmetic probe
-/// cannot starve the eager fallback behind it. An unbounded configuration
-/// (`timeout == None`) is left unbounded: there is no clock to share, and both
-/// arms then decline only on their deterministic size guards.
-const UF_ARITH_CEGAR_PROBE_SHARE: u32 = 2;
+/// **A RESERVE, not a split, and the difference is measured.** The first
+/// version of this constant halved the budget, copying [`probe_budget`]'s
+/// precedent. On the committed 200-file `QF_UFLIA` list that cost one file we
+/// previously decided — `mathsat/Hash/hash_sat_05_14`, `sat` at 12.7 s under
+/// the whole budget, `unknown` when the CEGAR was cut to 12 s — while buying
+/// nothing, because the routes it unblocks do not need half the clock. On the
+/// nine files the change wins, the ladder decides in **307–625 ms** (the `skip`
+/// arm's wall clock, where no CEGAR runs at all). A half-budget split therefore
+/// spent twelve seconds to buy four hundred milliseconds of work.
+///
+/// `4` is chosen against **both** bounds the measurement gives, which is why it
+/// is neither the largest nor the smallest defensible value:
+///
+/// - it leaves the CEGAR 18 s of a 24 s budget, **above the 12.7 s** the one
+///   regressing file needs, with 42% of margin;
+/// - it gives the ladder 6 s, about **ten times** the largest ladder time
+///   observed (625 ms).
+///
+/// A bigger reserve starves the CEGAR on files it still decides; a smaller one
+/// leaves the ladder's 0.4 s of work sitting behind 21 s of CEGAR on a 24 s
+/// budget, where contention alone can eat the difference. Neither failure is
+/// hypothetical: the half-budget version cost `hash_sat_05_14`, and the
+/// 1/8-reserve version was rejected before it shipped for the second reason.
+/// Measurement: `docs/research/12-performance/uf-arith-overbound-2026-09-08.md`.
+///
+/// An unbounded configuration (`timeout == None`) is left unbounded: there is
+/// no clock to share, and both arms then decline only on their deterministic
+/// size guards.
+const UF_ARITH_LADDER_RESERVE_SHARE: u32 = 4;
 
 impl UfArithOverboundPolicy {
     /// The short name this policy is selected by and reported as.
@@ -3041,15 +3064,19 @@ enum OverboundOutcome {
 }
 
 /// The lazy CEGAR's probe configuration: the *remaining* budget at `deadline`,
-/// divided by [`UF_ARITH_CEGAR_PROBE_SHARE`]. Falls back to `config.timeout`
-/// when the caller set no deadline; an unbounded configuration stays unbounded.
+/// less the ladder's reserve of `1/`[`UF_ARITH_LADDER_RESERVE_SHARE`] of it.
+/// Falls back to `config.timeout` when the caller set no deadline; an unbounded
+/// configuration stays unbounded.
 fn cegar_probe_budget(config: &SolverConfig, deadline: Option<Instant>) -> SolverConfig {
     let mut probe = config.clone();
     let remaining = deadline
         .map(|d| d.saturating_duration_since(Instant::now()))
         .or(config.timeout);
     if let Some(remaining) = remaining {
-        probe.timeout = Some(remaining / UF_ARITH_CEGAR_PROBE_SHARE);
+        // `saturating_sub` cannot fire (the reserve is a fraction of `remaining`),
+        // but the lint is right that a bare `Duration` subtraction is a panic in
+        // waiting if the expression is ever rearranged.
+        probe.timeout = Some(remaining.saturating_sub(remaining / UF_ARITH_LADDER_RESERVE_SHARE));
     }
     probe
 }
@@ -10532,26 +10559,38 @@ mod tests {
     }
 
     #[test]
-    fn overbound_cegar_probe_takes_half_the_remaining_budget() {
-        // Half of what is LEFT at the dispatcher's entry deadline, so the ladder
-        // after it gets the other half out of the same clock.
-        for (timeout, expected) in [
-            (Duration::ZERO, Duration::ZERO),
-            (Duration::from_secs(24), Duration::from_secs(12)),
-            (Duration::from_secs(3), Duration::from_millis(1_500)),
+    fn overbound_cegar_probe_keeps_all_but_the_ladder_reserve() {
+        // The CEGAR keeps everything left at the dispatcher's entry deadline
+        // EXCEPT the ladder's reserve. This is the assertion that fails if
+        // anyone turns the reserve back into a half-budget split: on the
+        // committed 200-file list that split cost `hash_sat_05_14`, a file that
+        // decides at 12.7 s and cannot decide in 12.
+        for (timeout, ceiling, floor) in [
+            (Duration::ZERO, Duration::ZERO, Duration::ZERO),
+            (
+                Duration::from_secs(24),
+                Duration::from_secs(18),
+                Duration::from_secs(17),
+            ),
+            (
+                Duration::from_secs(8),
+                Duration::from_secs(6),
+                Duration::from_secs(5),
+            ),
         ] {
             let config = SolverConfig::new().with_timeout(timeout);
             let deadline = Instant::now().checked_add(timeout);
             let probe = cegar_probe_budget(&config, deadline).timeout.unwrap();
-            // The remaining budget shrinks by the time this loop takes, so assert a
-            // tight upper bound rather than exact equality (a clock read cannot be
-            // asserted to the nanosecond without making the test flaky).
+            // The remaining budget shrinks by the time this loop takes, so bound
+            // it from both sides rather than asserting an exact clock reading.
+            // The FLOOR is the load-bearing half: an upper bound alone is
+            // satisfied by a probe of zero, which is the failure this guards.
             assert!(
-                probe <= expected,
-                "probe budget {probe:?} exceeds half of {timeout:?}"
+                probe <= ceiling && probe >= floor,
+                "probe budget {probe:?} outside [{floor:?}, {ceiling:?}] for {timeout:?}"
             );
         }
-        // An unbounded configuration stays unbounded: there is no clock to split.
+        // An unbounded configuration stays unbounded: there is no clock to share.
         assert_eq!(cegar_probe_budget(&SolverConfig::new(), None).timeout, None);
     }
 

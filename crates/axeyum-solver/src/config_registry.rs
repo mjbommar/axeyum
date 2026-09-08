@@ -887,10 +887,10 @@ pub static REGISTRY: &[ConfigEntry] = &[
         note: "Caps the fast-path array-refuter chain. One line of doc, no measurement.",
     },
     ConfigEntry {
-        name: "UF_ARITH_CEGAR_PROBE_SHARE",
+        name: "UF_ARITH_LADDER_RESERVE_SHARE",
         module: "crates/axeyum-solver/src/auto.rs",
-        value: "2",
-        unit: "divisor of the dispatcher's remaining deadline",
+        value: "4",
+        unit: "divisor of the dispatcher's remaining deadline, held back for the ladder",
         protects: Protects::Completeness,
         on_exceed: OnExceed::DeclineRoute,
         signal: Signal::ToCaller,
@@ -921,12 +921,18 @@ pub static REGISTRY: &[ConfigEntry] = &[
                 ),
             ],
         ),
-        note: "The lazy-Ackermann CEGAR's share of the budget on an over-bound UF+arithmetic \
-               query. Before this constant existed the CEGAR took the WHOLE budget and its \
-               `Unknown` was the dispatcher's final answer, so `euf-online`, `euf-offline` and \
-               `dispatch_uf_arith_online` were unreachable above 64 congruence pairs. The env \
-               override selects the whole policy (`terminal` restores that behaviour, `skip` \
-               removes the CEGAR), not just this divisor.",
+        note: "The slice of the budget held back from the lazy-Ackermann CEGAR for the routes \
+               under it on an over-bound UF+arithmetic query. Before this constant existed the \
+               CEGAR took the WHOLE budget and its `Unknown` was the dispatcher's final answer, \
+               so `euf-online`, `euf-offline` and `dispatch_uf_arith_online` were unreachable \
+               above 64 congruence pairs; on the 58-file QF_UFLIA loss list that was 52 of 58 \
+               files. MEASURED, not copied: the first version halved the budget (mirroring \
+               `probe_budget`) and cost one previously-decided file, `hash_sat_05_14`, which \
+               needs 12.7 s of 24; the nine files this unblocks need 307-625 ms of ladder, so a \
+               reserve is the right shape and a split is not. `4` clears BOTH bounds: 18 s for \
+               the CEGAR (above 12.7) and 6 s for the ladder (about ten times 625 ms). The env override selects the \
+               whole policy (`terminal` restores the old behaviour, `skip` removes the CEGAR), \
+               not just this divisor.",
     },
     ConfigEntry {
         name: "MAX_CYCLE_WALK",
