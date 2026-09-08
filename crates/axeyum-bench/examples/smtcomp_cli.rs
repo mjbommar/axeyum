@@ -289,10 +289,13 @@
 //!   exactly the two `unavailable` lines it printed before — so "never got far
 //!   enough" stays distinguishable from "collection was off" (no lines at all).
 //! - **Not everything survives.** The `; config` line does not: its
-//!   consulted-key set is thread-local to the worker with no publish site. A
-//!   `sat-bv` check killed mid-solve does not report `; bv-layer` either; its
-//!   Boolean search reports through the `; progress` channel instead, which
-//!   this path already prints.
+//!   consulted-key set is thread-local to the worker with no publish site, and
+//!   printing the rest of it from this thread would leave a `consulted=` field
+//!   silently absent, which reads as "nothing was consulted". A `sat-bv` check
+//!   killed mid-solve does not report `; bv-layer` either: its stage timings
+//!   are lifted only when the check returns. Its Boolean search is visible
+//!   through the `; progress` lines this path already prints — but only when
+//!   `--progress` is ALSO on, since `--trace` does not install a progress sink.
 //!
 //! Same off-by-default discipline: with no `--trace` no board is installed and
 //! every mirror site is one thread-local `bool` read.
@@ -642,8 +645,9 @@ fn partial_line(line: &str) -> String {
 /// search that has NOT returned — the theory layer. What does not survive is a
 /// stage with no mirror point at all: the `; config` line, whose consulted-key
 /// set is thread-local to the worker with no publish site, and a `sat-bv` check
-/// killed mid-solve, whose Boolean search reports through the `; progress`
-/// channel instead (already printed on this path).
+/// killed mid-solve, whose stage timings are lifted only when the check
+/// returns — its Boolean search shows up in the `; progress` lines this path
+/// already prints, but only when `--progress` is also on.
 ///
 /// With nothing mirrored this returns exactly what it always returned — the two
 /// `unavailable` lines — so a run that never got far enough to instrument
