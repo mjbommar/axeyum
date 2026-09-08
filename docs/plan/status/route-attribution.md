@@ -1,5 +1,6 @@
-<!-- plan-section: route-attribution -->
-## Lane: route-attribution
+# Lane: route-attribution — which route decided the file, and which route bound it
+
+<!-- plan-section: lane-status -->
 
 **Goal.** Make route attribution available from the SHIPPED front door
 (`solve_smtlib`, as `smtcomp_cli` runs it), separate "which route decided" from
