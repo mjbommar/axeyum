@@ -1,0 +1,10 @@
+; partial at=watchdog-kill recovered=7 sampled=config:in-flight,front-door:complete,dl-online:complete,bv-layer:complete,lia:in-flight,lazy-smt:in-flight,route:in-flight reason: watchdog fired before the worker thread returned
+; partial config digest=8b689de6256e9e11 entries=114 dated=29
+; partial front-door parse_ms=4
+; partial dl-online total_ms=0
+; partial bv-layer bit_blast_ms=2 cnf_encode_ms=1 cnf_inprocess_ms=0 solve_ms=4 model_lift_ms=0 model_replay_ms=0 total_ms=8 bit_demand_analysis_nested_in_bit_blast_ms=0 range_demand_admission_nested_in_bit_blast_ms=0 aig_nodes=6386 cnf_variables=3494 cnf_clauses=8445
+; theory-layer unavailable: watchdog fired before the worker thread returned
+; partial lia offline=not-reached offline_calls=0 offline_constraints=0 offline_early_exits=0 tightened=0 gomory_calls=0 gomory_decided=0 gomory_rounds=0 gomory_cuts=0 gomory_pivots=0 gomory_rows=0 gomory_columns=0 bnb_roots=0 bnb_nodes=0 bnb_budget_exhausted=0 simplex_solves=0 simplex_pivots=0 simplex_rows=0 simplex_columns=0 simplex_declines=0 lp_relaxations=0 theory=not-reached theory_asserts=0 feasibility_checks=0 arena_clones=0 arena_clone_nodes=0 live_literals=0 filter_refuted=0 filter_integral=0 filter_inconclusive=0 core_minimizations=0 core_minimization_probes=0 propagation=not-reached propagate_calls=0 propagate_atoms=0 propagate_probes=0 propagations_offered=0
+; partial lazy-smt reading=measured lra_entries=1 lra_rounds=5 nra_entries=0 nra_rounds=0 skeleton_ms=113 skeleton_sat=5 skeleton_unsat=0 skeleton_unknown=0 theory_ms=13732 theory_sat=0 theory_unsat=5 theory_unknown=0 core_ms=9998 blocking_clauses=4 blocking_literals=8 atoms=1409 accounted_ms=23844
+; partial route decided_by=none bound_by=milp last=nra-real-root bound_ms=36 total_ms=43 attempts=5
+; partial route-open ms=24955 after=nra-real-root attributed_ms=43 note: bound_by is NOT the answer: most of the budget is in the open segment
