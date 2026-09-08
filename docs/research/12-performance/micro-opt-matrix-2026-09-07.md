@@ -373,3 +373,86 @@ nothing outside its own crate. It is that LTO re-optimises the whole crate graph
 as one module *and keeps rustc's unit partitioning downstream of that*, which is
 a different thing from forcing one unit up front. `cgu1` alone shows what
 forcing one unit up front costs.
+
+### 2026-09-07 — the like-for-like Kissat number: there was no handicap to correct
+
+Both engines on **one host** (s7, idle Zen 4, `taskset -c 0-7`), the same eight
+p4dfa instances, the same Kissat 4.0.4 binary the prior studies used —
+`sha256 9caf66ae3516911d…`, commit `8af8e56`, copied from s5 rather than rebuilt
+so the bytes are provably the same ones. Kissat at `-s --time=60`; the native
+core at a 20,000-conflict budget under three build cells, three interleaved
+repeats, minimum of three. All eight files this time, including the
+3.1-million-variable one that the throughput matrix dropped for time.
+
+| file | vars | nat p/c | kis p/c | **p/c n:k** | `base` p/s | `fatcgu1` p/s | `v3fatcgu1` p/s | kis p/s (run) | kis p/s (search) | kis srch% |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| `mobiledevice_…twocond` | 31,482 | 735 | 827 | 0.89 | 17.2M | 17.4M | 17.5M | 13.6M | 27.6M | 49.4 |
+| `string1x8.4` | 40,548 | 841 | 226 | 3.72 | 16.8M | 17.0M | 17.0M | 8.3M | 12.7M | 65.6 |
+| `mobiledevice_…paired` | 58,380 | 966 | 1,039 | 0.93 | 14.8M | 14.8M | 15.0M | 11.9M | 25.1M | 47.4 |
+| `compose.s2` | 106,588 | 1,828 | 1,311 | 1.39 | 12.9M | 13.2M | 13.0M | 10.9M | 22.7M | 47.8 |
+| `videoconf_full` | 141,923 | 1,752 | 224 | 7.83 | 12.3M | 12.6M | 12.4M | 5.6M | 7.6M | 73.9 |
+| `string4x8.8` | 256,789 | 2,436 | 347 | 7.01 | 11.0M | 11.2M | 11.2M | 5.8M | 8.6M | 67.6 |
+| `compose.s3` | 473,949 | 4,272 | 872 | 4.90 | 8.5M | 8.8M | 8.8M | 6.0M | 10.7M | 56.5 |
+| `string4x16.4` | 3,098,002 | 11,055 | 15,530 | 0.71 | 6.1M | 6.3M | 6.3M | 5.6M | 10.9M | 51.6 |
+| **median** | | | | **2.56** | | | | | | |
+
+**The answer, in one line: the comparison was not handicapped, and the fairest
+build is worth 2.5% on the only factor a build flag can touch.**
+
+- **Propagation volume — unchanged, and unchangeable here.** Median **2.56x**,
+  reproducing the `bench-boolean-core` figure exactly, independently, from this
+  lane's own runs. It *cannot* move across cells: the driver verifies the
+  trajectory counters are identical, which is what makes the throughput ratio
+  meaningful in the first place. A build setting changes how fast each
+  propagation is, never how many the search needs.
+- **Propagation rate — moves by 2.5%.** Median search-only ratio (our
+  propagations per second against Kissat's, divided by the fraction of wall time
+  Kissat's own profiler attributes to `search`):
+
+  | cell | median rate ratio n:k | reading |
+  |---|---:|---|
+  | `base` (what we ship) | **0.708** | Kissat 1.41x faster per second of search |
+  | `fatcgu1` (best cell) | **0.726** | Kissat 1.38x faster |
+  | `v3fatcgu1` | 0.727 | Kissat 1.38x faster |
+
+  1.41x → 1.38x. That is the whole size of the correction the brief asked to be
+  quantified.
+
+**And the premise it rested on does not hold.** The brief's reason for expecting
+a handicap was that Kissat is "a single-TU C program built aggressively". It is
+not: its own `build.h` on the measurement host records
+`gcc -W -Wall -O3 -DNDEBUG` — **baseline `x86-64`, no LTO**, separately compiled
+`.o` files. On target features and link-time optimisation we and Kissat ship the
+*same* configuration, so `base` is already flag parity, and the 0.708 figure was
+never unfair. Running `fatcgu1` against a stock Kissat is if anything the arm
+that favours us.
+
+Cross-check that this reproduction is faithful rather than a fresh set of
+numbers that happen to look similar: Kissat's own statistics on s7 land on the
+2026-09-05 study's values almost exactly — `search%` 49.4 / 65.6 / 47.4 / 47.8 /
+73.9 / 67.6 / 56.5 / 51.6 against their 49.4 / 65.6 / 47.6 / 47.9 / 73.9 / 68.7 /
+56.7 / 50.4, and `compose.s3` at 416,842 conflicts against their 416,842. The
+small residual differences are on the time-budgeted files, where a 60 s run is
+not deterministic in conflict count.
+
+**E5 was right.** Predicted "under 10% movement, headline 2.56x unchanged";
+measured 2.5% movement, headline 2.56x unchanged to two decimal places.
+
+### 2026-09-07 — the same picture on all eight files, including the 3.1 M-variable one
+
+The eight-file finalist pass (three interleaved repeats, min of three) against
+the seven-file eleven-cell pass (five repeats) agrees cell by cell, which is the
+check that the seven-file result was not an artefact of dropping the largest
+instance:
+
+| cell | 7 files, 5 repeats | 8 files, 3 repeats |
+|---|---:|---:|
+| `cgu1` | 1.011 | 1.011 |
+| `v3` | 1.006 | 1.006 |
+| `fat` | 0.989 | 0.985 |
+| `fatcgu1` | 0.982 | 0.981 |
+| `v3fatcgu1` | 0.983 | 0.982 |
+
+On `string4x16.4` alone (3,098,002 variables, 35 s per run) `fatcgu1` is 0.972 —
+the largest single-file win in the matrix, and consistent with LTO's benefit
+growing slightly with working-set size. Still under 3%.
