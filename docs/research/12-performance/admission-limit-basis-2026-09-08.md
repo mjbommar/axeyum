@@ -173,7 +173,7 @@ re-derived rather than quoted.
 |---:|---|---:|---|
 | 1 | `euf` Ackermann pairs `> 64` | 52 of 58 QF_UFLIA | measured by the lane that owns it; **not re-measured here** |
 | 2 | `dpll_lia` pre-SAT rectangle | **10 of 26** QF_LIA (census said 15 of 27) | **measured** by this lane through the shipped front door; the census figure is refuted — see below |
-| 3 | `dl_online::MAX_DL_ATOMS` and the QF_IDL/QF_RDL admission declines | 46 of 54 QF_IDL, 24 of 47 QF_RDL | census `class`, **reasoned**: those divisions were confirmed by the slices that acted on them, but not attributed to a single constant |
+| 3 | the QF_IDL admission declines | 46 of 54 QF_IDL name **this same rectangle** | census `class`, **and probably wrong**: every one of those 46 rows has `dominant_stage = dl-online`, i.e. the budget was spent before `lia-dpll` was ever reached, which is exactly the "last route's message, not the route that spent the budget" defect the census correction documents. Not re-measured here. |
 | 4 | the 52 undated admission-class entries | unknown | **cannot be ranked**: no route-attribution data exists for a crossing that emits no signal |
 
 Rank 4 is the reason `note_crossed` matters more than any single constant. Until
@@ -284,6 +284,37 @@ instead of stopping at `OVERSIZED_ADMISSION_PROBE_BUDGET` (~10 s). Under PAR-2
 an `unknown` scores identically either way and each file carries its own budget,
 so the three recovered decisions are a straight gain and the cost is wall-clock
 on a sweep, not score. Stated here rather than left to be rediscovered.
+
+### Confirmed on the committed build
+
+The A/B above compares a scratch mutant against the shipped binary. The landed
+change was then re-run on its own, same conditions, same 11 files:
+
+| | before | after |
+|---|---:|---:|
+| decline on the rectangle | 10 | **0** |
+| decided (`sat`) | 0 | **3** — `RF-13`, `ex8280`, `ex9600` |
+| peak RSS, worst case | 72.5 MiB | 71.6 MiB |
+| `pursuit-safety-16` | unknown, 3.47 GiB | unchanged |
+
+QF_LIA's reference-only loss population goes from 26 to **23**.
+
+### The attribution, end to end
+
+A query that crosses the envelope now says so in its own `--trace` output —
+which bound, the observed quantity, and the bound it crossed:
+
+```text
+; config digest=49563b270d0d8d9c entries=113 dated=28 consulted=3 … crossed=2
+    crates/axeyum-solver/src/dpll_lia.rs::MAX_PRE_SAT_ARITH_ATOMS=1300/1024
+    crates/axeyum-solver/src/dpll_lia.rs::MAX_PRE_SAT_CNF_VARS=26599/4096
+```
+
+`consulted=` and `crossed=` are deliberately different fields: three values were
+consulted on that run and two of them bit. Reproduce with a `QF_LIA` disjunction
+of ~1,300 non-difference-logic integer atoms padded with ~12,000 Boolean
+disjuncts — the atoms must carry a coefficient, or `dl-online` decides the query
+before `lia-dpll` is ever reached.
 
 ### The real fix, not done here
 
