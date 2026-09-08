@@ -578,6 +578,29 @@ struct Tableau {
     /// `col_nnz_matches_a_recount` checks it against a full recount rather than
     /// trusting the incremental maintenance.
     col_nnz: Vec<u32>,
+    /// `row_nz[i]` = the **sorted** column indices at which row `i` is nonzero.
+    ///
+    /// This is a sparse *index* over dense storage, not a sparse representation:
+    /// `row[i][v]` stays an `O(1)` random access — which `farkas`, the value
+    /// repair and every existing test rely on — while everything that
+    /// *iterates* a row iterates this instead of `0..n`. Measured on
+    /// `QF_LRA/2019-ezsmt/blending/1.smt2` the tableau is 350 x 425 and holds
+    /// about 2,100 nonzeros, i.e. **1.4% dense** with roughly 6 nonzeros per
+    /// row, so the three `O(columns)` scans a pivot used to make were each
+    /// touching about 70x more cells than they could act on.
+    ///
+    /// Kept **sorted**, at an `O(len)` memmove per insert or remove, for two
+    /// reasons and not for tidiness: Bland's rule is defined as the
+    /// smallest-index usable candidate, so an unsorted index would silently
+    /// change the terminating rule into a different one; and the pivot's
+    /// exact-rational adds are performed in this order, so an unstable order
+    /// would make an overflow decline depend on hash order. Determinism is a
+    /// public API promise.
+    ///
+    /// Maintained through the same single mutation point as `col_nnz`
+    /// ([`Tableau::set_cell`]), and checked against a recount by
+    /// `col_nnz_matches_a_recount_after_every_pivot`.
+    row_nz: Vec<Vec<usize>>,
     /// The entering rule and its constants; see [`PivotPolicy`].
     policy: PivotPolicy,
     /// Clock-free structural counters; see [`TableauCounters`]. Diagnostic only
@@ -617,6 +640,7 @@ impl Tableau {
             rel_rhs,
             total_pivots: 0,
             col_nnz: vec![0u32; n],
+            row_nz: vec![Vec::new(); m],
             policy,
             counters: TableauCounters::default(),
             tie_break_state: policy.tie_break_seed,
@@ -654,10 +678,13 @@ impl Tableau {
     fn recount_columns(&mut self) {
         self.col_nnz.clear();
         self.col_nnz.resize(self.n, 0);
+        self.row_nz.clear();
+        self.row_nz.resize(self.m, Vec::new());
         for i in 0..self.m {
             for v in 0..self.n {
                 if !self.row[i][v].is_zero() {
                     self.col_nnz[v] += 1;
+                    self.row_nz[i].push(v);
                 }
             }
         }
@@ -679,8 +706,17 @@ impl Tableau {
         let now_zero = value.is_zero();
         self.row[i][v] = value;
         match (was_zero, now_zero) {
-            (true, false) => self.col_nnz[v] += 1,
-            (false, true) => self.col_nnz[v] -= 1,
+            (true, false) => {
+                self.col_nnz[v] += 1;
+                let at = self.row_nz[i].partition_point(|&c| c < v);
+                self.row_nz[i].insert(at, v);
+            }
+            (false, true) => {
+                self.col_nnz[v] -= 1;
+                if let Ok(at) = self.row_nz[i].binary_search(&v) {
+                    self.row_nz[i].remove(at);
+                }
+            }
             _ => {}
         }
     }
@@ -930,8 +966,14 @@ impl Tableau {
     /// ([`Tableau::entering_is_usable`]) and therefore agree exactly on *whether*
     /// a candidate exists; they disagree only on which one.
     fn select_entering(&mut self, r: usize, too_low: bool, force_bland: bool) -> Option<usize> {
+        // Only a column where the row is NONZERO can be usable, so iterating the
+        // row's sorted nonzero index visits exactly the candidates and no
+        // others. Under Bland the index is sorted, so "first usable in this
+        // order" is still "smallest usable index" — the rule is unchanged, not
+        // approximated.
         if force_bland || self.policy.entering == EnteringRule::Bland {
-            for v in 0..self.n {
+            for k in 0..self.row_nz[r].len() {
+                let v = self.row_nz[r][k];
                 self.counters.entering_scan_cells += 1;
                 if self.entering_is_usable(r, v, too_low) {
                     return Some(v);
@@ -949,7 +991,8 @@ impl Tableau {
         let mut best: Option<usize> = None;
         let mut best_score = u32::MAX;
         let mut ties: u64 = 0;
-        for v in 0..self.n {
+        for k in 0..self.row_nz[r].len() {
+            let v = self.row_nz[r][k];
             self.counters.entering_scan_cells += 1;
             if !self.entering_is_usable(r, v, too_low) {
                 continue;
@@ -1031,19 +1074,15 @@ impl Tableau {
         // New row (for the now-basic `enter`): coefficient of `leave` becomes 1/a_re,
         // every other nonbasic v becomes -a_rv/a_re, and `enter`'s own column 0.
         let mut new_row = vec![Rational::zero(); self.n];
-        for v in 0..self.n {
-            if v == enter {
-                continue;
-            }
-            if v == leave {
+        // Driven by the row's nonzero index: the old form scanned all `n`
+        // columns to skip the ~98.6% that are zero, and the zero test it made
+        // per column is precisely what the index already answers.
+        for k in 0..self.row_nz[r].len() {
+            let v = self.row_nz[r][k];
+            if v == enter || v == leave {
                 continue;
             }
             let a = self.row[r][v];
-            if a.is_zero() {
-                // `new_row[v]` is already zero; skipping saves an exact division
-                // per zero cell, and a tableau row is mostly zeros.
-                continue;
-            }
             new_row[v] = sub(Rational::zero(), div(a, a_re)?)?;
         }
         new_row[leave] = recip;
@@ -1051,7 +1090,19 @@ impl Tableau {
         // replaced wholesale, so its column contribution is subtracted and the
         // new one added rather than tracked cell by cell — the counts stay exact
         // and this stays O(columns), which the row build already was.
-        for v in 0..self.n {
+        // The pivot row is replaced wholesale. Only columns that are nonzero in
+        // the OLD row or the NEW one can change state, so the union of the old
+        // index and the new row's nonzeros is the exact set to reconcile — no
+        // `O(columns)` pass.
+        // `new_row` was built from the old row's index and then given `leave` a
+        // value, so every column it can be nonzero at lies in
+        // `row_nz[r] union {leave}` — which is therefore the exact reconcile set.
+        let mut touched: Vec<usize> = self.row_nz[r].clone();
+        if let Err(at) = touched.binary_search(&leave) {
+            touched.insert(at, leave);
+        }
+        let mut fresh: Vec<usize> = Vec::with_capacity(touched.len());
+        for &v in &touched {
             let was_zero = self.row[r][v].is_zero();
             let now_zero = new_row[v].is_zero();
             match (was_zero, now_zero) {
@@ -1061,6 +1112,12 @@ impl Tableau {
             }
         }
         self.row[r] = new_row;
+        for v in &touched {
+            if !self.row[r][*v].is_zero() {
+                fresh.push(*v);
+            }
+        }
+        self.row_nz[r] = fresh;
         self.basic[r] = enter;
         self.is_basic[enter] = true;
         self.is_basic[leave] = false;
@@ -1071,7 +1128,7 @@ impl Tableau {
         // NONZERO columns are visited: adding `coeff · 0` is an exact multiply and
         // add that provably cannot change the cell.
         let base = self.row[r].clone();
-        let base_nz: Vec<usize> = (0..self.n).filter(|&v| !base[v].is_zero()).collect();
+        let base_nz: Vec<usize> = self.row_nz[r].clone();
         for i in 0..self.m {
             if i == r {
                 continue;
@@ -2415,12 +2472,28 @@ mod tests {
                 if tab.total_pivots > before {
                     pivots_seen += 1;
                 }
-                let incremental = tab.col_nnz.clone();
+                let incremental_cols = tab.col_nnz.clone();
+                let incremental_rows = tab.row_nz.clone();
                 tab.recount_columns();
                 assert_eq!(
-                    incremental, tab.col_nnz,
+                    incremental_cols, tab.col_nnz,
                     "seed {seed}: column counts drifted after pivot {steps}"
                 );
+                // The row index is the one the pivot and the entering scan
+                // ITERATE, so a drifted entry is a cell silently skipped — a
+                // wrong tableau, not a slow one. It must be sorted, because
+                // Bland's rule is "smallest usable index" and the index order
+                // is what makes that true.
+                assert_eq!(
+                    incremental_rows, tab.row_nz,
+                    "seed {seed}: row nonzero index drifted after pivot {steps}"
+                );
+                for (i, nz) in tab.row_nz.iter().enumerate() {
+                    assert!(
+                        nz.windows(2).all(|w| w[0] < w[1]),
+                        "seed {seed}: row {i}'s nonzero index is not strictly sorted"
+                    );
+                }
                 steps += 1;
                 if steps > 60 {
                     break;
