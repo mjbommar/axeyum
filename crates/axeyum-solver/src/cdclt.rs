@@ -142,6 +142,15 @@ pub(crate) fn layer_stats_enabled() -> bool {
 /// thing whichever engine ran.
 pub(crate) fn publish_theory_layer_stats(stats: &TheoryLayerStats) {
     LAST_THEORY_LAYER_STATS.with(|c| c.set(Some(*stats)));
+    // The single mirror point for a COMPLETED search, whichever engine ran it
+    // (see `crate::live_instruments`): a watchdog on another thread cannot read
+    // the thread-local above, so a query that times out in a later stage would
+    // otherwise lose the stats of every search that did finish.
+    crate::live_instruments::publish_live(
+        crate::live_instruments::instrument::THEORY_LAYER,
+        *stats,
+        crate::live_instruments::Sampled::Complete,
+    );
 }
 
 /// The [`TheoryLayerStats`] collected by the most recently completed
@@ -297,6 +306,14 @@ const REDUCE_FIRST: usize = 2_000;
 const REDUCE_INCREMENT: usize = 300;
 /// Clauses at or below this literal-block distance are permanent glue clauses.
 const GLUE_LBD: usize = 2;
+
+/// Search-loop iterations between two mirrors of this search's stats onto the
+/// cross-thread board (see [`crate::live_instruments`]).
+///
+/// A fixed iteration count, never a clock read, so the mirror cannot perturb
+/// the very timings it is copying. It bounds how stale a watchdog's reading can
+/// be; it is not a budget and crossing it changes nothing the search decides.
+const LIVE_MIRROR_STEPS: usize = 1_024;
 
 /// Trail literals [`CdclT::unit_propagate`] processes between two deadline
 /// reads. Small enough that the deadline-blind window stays negligible next to
@@ -2210,8 +2227,10 @@ impl CdclT {
     pub fn solve<T: TheorySolver>(&mut self, theory: &mut T) -> Outcome {
         let outcome = self.solve_inner(theory);
         if self.collect_layer_stats {
-            let stats = self.theory_layer_stats(theory);
-            LAST_THEORY_LAYER_STATS.with(|c| c.set(Some(stats)));
+            // Through the shared publish point rather than straight into the
+            // thread-local, so this driver and the native one mirror onto the
+            // cross-thread board through exactly one site.
+            publish_theory_layer_stats(&self.theory_layer_stats(theory));
         }
         outcome
     }
@@ -2329,6 +2348,23 @@ impl CdclT {
                 return Outcome::Unknown;
             }
             self.steps += 1;
+            // Mirror partial counters where a watchdog on another thread can
+            // read them (`crate::live_instruments`). This is the only point at
+            // which a search that never returns says anything: everything else
+            // here publishes on the way out. Off unless collection is armed AND
+            // a board is installed, so a default search pays one `bool` field
+            // read per iteration and evaluates neither the modulo nor the
+            // snapshot.
+            if self.collect_layer_stats
+                && self.steps.is_multiple_of(LIVE_MIRROR_STEPS)
+                && crate::live_instruments::installed()
+            {
+                crate::live_instruments::publish_live(
+                    crate::live_instruments::instrument::THEORY_LAYER,
+                    self.theory_layer_stats(theory),
+                    crate::live_instruments::Sampled::InFlight,
+                );
+            }
             if self.timed_out() {
                 return Outcome::Unknown;
             }

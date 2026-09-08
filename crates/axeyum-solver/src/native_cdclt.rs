@@ -35,6 +35,7 @@
 //! and nothing upstream of it sees the clause form.
 
 use std::cell::RefCell;
+use std::sync::{Arc, Mutex, PoisonError};
 use std::time::Instant;
 
 use axeyum_cnf::theory::{
@@ -42,14 +43,17 @@ use axeyum_cnf::theory::{
     PropagationQueue as NativeQueue, TheoryExplanation as NativeExplanation,
 };
 use axeyum_cnf::{
-    CnfAssignment, CnfClause, CnfFormula, CnfLit, CnfVar, TheoryRefutation, TheorySolveOptions,
-    TheorySolveOutcome, solve_with_theory_and_drat_proof_with_options,
+    CnfAssignment, CnfClause, CnfFormula, CnfLit, CnfVar, NativeLayerStatsMirror, TheoryRefutation,
+    TheorySolveOptions, TheorySolveOutcome, solve_with_theory_and_drat_proof_mirrored,
 };
 
 use crate::cdclt::Lit;
 use crate::euf_egraph::{
-    ExplanationId, FinalCheckOutcome, PropagationQueue, TheoryExplanation, TheoryLit, TheorySolver,
+    ExplanationId, FinalCheckOutcome, PropagationQueue, TheoryEngineCounters, TheoryExplanation,
+    TheoryLit, TheorySolver,
 };
+use crate::layers::TheoryLayerStats;
+use crate::live_instruments::{LiveInstruments, LiveSample, Sampled, instrument, publish_live};
 
 thread_local! {
     /// The ADR-1704 artifact of the most recent native CDCL(T) refutation on
@@ -227,6 +231,19 @@ impl NativeModel {
 /// `CdclT::new` builds) and extended on each dynamic registration.
 struct NativeTheoryAdapter<'a, T: TheorySolver> {
     theory: &'a mut T,
+    /// Where this adapter copies `TheorySolver::engine_counters` while the
+    /// search runs, so a watchdog on another thread reads real simplex numbers
+    /// instead of `na`.
+    ///
+    /// The native core cannot do this itself: at its own flush point the theory
+    /// is mutably borrowed by the search, so the driver-side counters
+    /// (`axeyum_cnf::NativeLayerStatsMirror`) are all it can reach. The adapter
+    /// is the one place that holds both. `None` on every solve that did not ask
+    /// for a mirror, which is all of them but a `--trace` run under a watchdog.
+    engine_mirror: Option<Arc<EngineCountersMirror>>,
+    /// `push` calls since the last engine-counter mirror; see
+    /// [`ENGINE_MIRROR_PUSHES`].
+    engine_pushes: usize,
     /// The atom a SAT variable stands for, `None` for a pure Tseitin variable.
     atom_for_var: Vec<Option<usize>>,
     /// The SAT variable an atom stands for.
@@ -241,7 +258,12 @@ struct NativeTheoryAdapter<'a, T: TheorySolver> {
 }
 
 impl<'a, T: TheorySolver> NativeTheoryAdapter<'a, T> {
-    fn new(theory: &'a mut T, var_count: usize, theory_atom_count: usize) -> Self {
+    fn new(
+        theory: &'a mut T,
+        var_count: usize,
+        theory_atom_count: usize,
+        engine_mirror: Option<Arc<EngineCountersMirror>>,
+    ) -> Self {
         assert!(
             theory_atom_count <= var_count,
             "every theory atom needs a SAT variable"
@@ -252,10 +274,19 @@ impl<'a, T: TheorySolver> NativeTheoryAdapter<'a, T> {
         }
         Self {
             theory,
+            engine_mirror,
+            engine_pushes: 0,
             atom_for_var,
             var_for_atom: (0..theory_atom_count).collect(),
             next_var: var_count,
             queue: PropagationQueue::new(),
+        }
+    }
+
+    /// Copies the theory's engine counters to the mirror, if one is installed.
+    fn mirror_engine_counters(&self) {
+        if let Some(mirror) = self.engine_mirror.as_ref() {
+            mirror.store(self.theory.engine_counters());
         }
     }
 
@@ -303,6 +334,16 @@ impl<T: TheorySolver> NativeTheory for NativeTheoryAdapter<'_, T> {
 
     fn push(&mut self) {
         self.theory.push();
+        // One decision per `push`, so this is already far coarser than
+        // `assert`; the cadence makes it coarser still. With no mirror
+        // installed the whole block is one `Option` test on a field the call
+        // just touched.
+        if self.engine_mirror.is_some() {
+            self.engine_pushes += 1;
+            if self.engine_pushes.is_multiple_of(ENGINE_MIRROR_PUSHES) {
+                self.mirror_engine_counters();
+            }
+        }
     }
 
     fn pop(&mut self) {
@@ -342,6 +383,10 @@ impl<T: TheorySolver> NativeTheory for NativeTheoryAdapter<'_, T> {
     }
 
     fn final_check(&mut self) -> NativeFinalCheck {
+        // Every complete check, not on a cadence: a search can reach a total
+        // assignment rarely, and when it does the engine counters have moved
+        // the most.
+        self.mirror_engine_counters();
         match self.theory.final_check() {
             FinalCheckOutcome::Sat => NativeFinalCheck::Sat,
             FinalCheckOutcome::Unknown => NativeFinalCheck::Unknown,
@@ -383,6 +428,87 @@ impl<T: TheorySolver> NativeTheory for NativeTheoryAdapter<'_, T> {
             self.var_for_atom.push(var);
         }
         fresh
+    }
+}
+
+/// `NativeTheoryAdapter::push` calls between two engine-counter mirrors.
+///
+/// One `push` is one decision, so this is already a decision cadence; the
+/// multiple keeps a decision-heavy search from paying a lock per decision. It
+/// bounds how stale a watchdog's simplex numbers can be and nothing else.
+const ENGINE_MIRROR_PUSHES: usize = 256;
+
+/// The theory-side counters a *running* search's adapter copies out, for a
+/// reader on another thread.
+///
+/// Separate from `axeyum_cnf::NativeLayerStatsMirror` because the two halves of
+/// [`TheoryLayerStats`] come from two places that cannot see each other while
+/// the search runs: the driver owns the stage timings and search counters, the
+/// `TheorySolver` owns `simplex_pivots` and friends, and at the driver's flush
+/// point the theory is mutably borrowed. [`live_theory_layer_stats`] is where
+/// the halves are put back together.
+#[derive(Debug, Default)]
+pub struct EngineCountersMirror {
+    /// The most recent counters, or `None` before the first store and for a
+    /// theory that keeps no feasibility engine.
+    slot: Mutex<Option<TheoryEngineCounters>>,
+}
+
+impl EngineCountersMirror {
+    /// Stores `counters`, overwriting the previous store. A poisoned lock is
+    /// recovered rather than propagated: telemetry must not turn one panic into
+    /// two.
+    fn store(&self, counters: Option<TheoryEngineCounters>) {
+        let mut slot = self.slot.lock().unwrap_or_else(PoisonError::into_inner);
+        *slot = counters;
+    }
+
+    /// The most recent counters, readable from any thread at any time.
+    #[must_use]
+    pub fn sample(&self) -> Option<TheoryEngineCounters> {
+        *self.slot.lock().unwrap_or_else(PoisonError::into_inner)
+    }
+}
+
+/// The best theory-layer reading `board` holds: the completed snapshot when the
+/// last CDCL(T) search on the worker returned, otherwise a partial reading
+/// mirrored out of the search that is still running.
+///
+/// # Why this is a function and not two `board.sample` calls
+///
+/// A query runs many searches. The board therefore carries both a `Complete`
+/// snapshot of whichever search last returned and a live handle onto whichever
+/// one is running now, and which of the two answers the question "what is this
+/// query doing" depends on their order: a mirror installed AFTER the last
+/// completed snapshot means a search is in flight, and its partial counters are
+/// the ones a reader wants, stale though they are. Reversing that would report
+/// a finished search's numbers for a file that is currently stuck somewhere
+/// else — the kind of stable, wrong number that is worse than no number.
+///
+/// The returned [`LiveSample::sampled`] says which case it is, and a consumer
+/// must print that: an `InFlight` reading is a lower bound on every counter it
+/// carries and is never a rate's denominator.
+#[must_use]
+pub fn live_theory_layer_stats(board: &LiveInstruments) -> Option<LiveSample<TheoryLayerStats>> {
+    let completed = board.sample::<TheoryLayerStats>(instrument::THEORY_LAYER);
+    let mirror = board.sample::<Arc<NativeLayerStatsMirror>>(instrument::THEORY_LAYER_MIRROR);
+    let in_flight = mirror.and_then(|handle| {
+        let (native, _flushes) = handle.value.sample()?;
+        let engine = board
+            .sample::<Arc<EngineCountersMirror>>(instrument::THEORY_ENGINE_MIRROR)
+            .and_then(|m| m.value.sample());
+        Some(LiveSample {
+            value: theory_layer_stats(&native, engine),
+            // Always partial: the mirror is written on an iteration cadence
+            // from inside the search loop, never at a verdict.
+            sampled: Sampled::InFlight,
+            sequence: handle.sequence,
+        })
+    });
+    match (completed, in_flight) {
+        (Some(done), Some(live)) if live.sequence > done.sequence => Some(live),
+        (Some(done), _) => Some(done),
+        (None, live) => live,
     }
 }
 
@@ -440,7 +566,34 @@ pub(crate) fn solve_native<T: TheorySolver>(
             .add_clause(CnfClause::new(lits))
             .expect("clause literals are in range");
     }
-    let mut adapter = NativeTheoryAdapter::new(theory, var_count, theory_atom_count);
+    // Collection is read once here and governs both the returned stats and the
+    // mirrors: a mirror without collection would publish measured zeros, which
+    // is worse than publishing nothing.
+    let collect_layer_stats = crate::cdclt::layer_stats_enabled();
+    // Only worth building when something can read them. `installed()` is a
+    // thread-local `bool`: on a default run this is false and the two `Arc`s,
+    // the two `Mutex`es and every store below do not exist.
+    let mirroring = collect_layer_stats && crate::live_instruments::installed();
+    let layer_mirror = mirroring.then(|| Arc::new(NativeLayerStatsMirror::new()));
+    let engine_mirror = mirroring.then(|| Arc::new(EngineCountersMirror::default()));
+    if let (Some(layers), Some(engine)) = (layer_mirror.as_ref(), engine_mirror.as_ref()) {
+        // Published as HANDLES, not snapshots: the search writes through them
+        // for as long as it runs, so a reader always sees the latest flush
+        // without the search having to publish again. The sequence numbers are
+        // what `live_theory_layer_stats` orders against the completed snapshot
+        // `publish_theory_layer_stats` leaves behind when this call returns.
+        publish_live(
+            instrument::THEORY_ENGINE_MIRROR,
+            Arc::clone(engine),
+            Sampled::InFlight,
+        );
+        publish_live(
+            instrument::THEORY_LAYER_MIRROR,
+            Arc::clone(layers),
+            Sampled::InFlight,
+        );
+    }
+    let mut adapter = NativeTheoryAdapter::new(theory, var_count, theory_atom_count, engine_mirror);
     clear_last_theory_refutation();
     // `CdclT`'s heuristics, not the one-shot SAT path's, so moving a route onto
     // this core is a swap of ENGINES and not also a swap of decision
@@ -454,7 +607,6 @@ pub(crate) fn solve_native<T: TheorySolver>(
     // `lra_theory::tests::theory_layer_stats_are_populated_on_a_theory_conflict`
     // caught the moment `lra_theory` moved. Off unless asked: the timing hooks
     // are per-call clock reads.
-    let collect_layer_stats = crate::cdclt::layer_stats_enabled();
     let options = TheorySolveOptions {
         initial_phase: true,
         target_rephase: false,
@@ -462,12 +614,13 @@ pub(crate) fn solve_native<T: TheorySolver>(
         record_proof: recording_artifacts(),
         proof_literal_budget: PROOF_LITERAL_BUDGET,
     };
-    let (outcome, native_stats) = solve_with_theory_and_drat_proof_with_options(
+    let (outcome, native_stats) = solve_with_theory_and_drat_proof_mirrored(
         &formula,
         &mut adapter,
         deadline,
         usize::MAX,
         options,
+        layer_mirror,
     );
     if collect_layer_stats {
         // The engine counters come from the THEORY, exactly as

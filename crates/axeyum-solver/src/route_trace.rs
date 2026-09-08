@@ -729,6 +729,32 @@ pub(crate) fn record_front_door(route: &'static str, outcome: RouteOutcome) {
             trace.tick();
         }
     });
+    mirror_attribution();
+}
+
+/// Copies this thread's attribution onto the cross-thread board
+/// (`crate::live_instruments`), so a watchdog firing on another thread can
+/// still say which routes ran and which one was consuming the budget.
+///
+/// Always `InFlight`: the trail is appended to as the front door proceeds, so
+/// a reading is by construction a prefix — the elapsed time of the attempt
+/// currently running is not in it, and `bound_by` may still change.
+///
+/// A no-op with no board installed, and reached only from a site already gated
+/// on [`attribution_collecting`], so a default run neither clones the trace nor
+/// tests anything extra.
+fn mirror_attribution() {
+    if !crate::live_instruments::installed() {
+        return;
+    }
+    let trace = ATTRIBUTION.with(|a| a.try_borrow().ok().map(|t| t.clone()));
+    if let Some(trace) = trace {
+        crate::live_instruments::publish_live(
+            crate::live_instruments::instrument::ROUTE,
+            trace,
+            crate::live_instruments::Sampled::InFlight,
+        );
+    }
 }
 
 /// Records a front-door stage's [`CheckResult`], if collection is on: a
@@ -743,6 +769,7 @@ pub(crate) fn record_front_door_result(route: &'static str, result: &CheckResult
             trace.record_result(route, result);
         }
     });
+    mirror_attribution();
 }
 
 /// Appends a completed dispatch [`RouteTrace`] into this thread's attribution,
@@ -756,6 +783,7 @@ pub(crate) fn absorb_dispatch_trace(dispatch: &RouteTrace) {
             trace.absorb(dispatch);
         }
     });
+    mirror_attribution();
 }
 
 /// Runs `f` as the outermost dispatch if attribution is on and no dispatch is

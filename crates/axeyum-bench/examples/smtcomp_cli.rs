@@ -253,16 +253,17 @@
 //! docs/research/12-performance/config-registry-2026-09-07.md.
 
 use std::process::ExitCode;
-use std::sync::mpsc;
+use std::sync::{Arc, mpsc};
 use std::time::{Duration, Instant};
 
 use axeyum_solver::theories::cdclt_diagnostics::{TheoryLayerStatsGuard, last_theory_layer_stats};
 use axeyum_solver::{
-    BvLayerStatsGuard, CheckProgress, CheckResult, CheckingProgress, ConfigTraceGuard,
-    DlOnlineStatsGuard, Evidence, EvidenceCheck, EvidenceReport, FrontDoorStatsGuard,
-    ProofProgress, RouteAttributionGuard, SolverConfig, config_trace_line, last_bv_layer_stats,
-    last_dl_online_stats, last_front_door_stats, last_route_attribution, produce_evidence_smtlib,
-    solve_smtlib,
+    BvLayerStats, BvLayerStatsGuard, CheckProgress, CheckResult, CheckingProgress,
+    ConfigTraceGuard, DlOnlineStatsGuard, Evidence, EvidenceCheck, EvidenceReport, FrontDoorStats,
+    FrontDoorStatsGuard, LiveInstruments, ProofProgress, RouteAttributionGuard, RouteTrace,
+    Sampled, SolverConfig, config_trace_line, install_live_instruments, instrument,
+    last_bv_layer_stats, last_dl_online_stats, last_front_door_stats, last_route_attribution,
+    live_theory_layer_stats, produce_evidence_smtlib, solve_smtlib,
 };
 
 /// Formats one `axeyum_cnf::ProofSearchProgress` snapshot as the `;`-prefixed
@@ -525,6 +526,120 @@ fn watchdog_unavailable_line(trace_mode: bool, reason: &str) -> Vec<String> {
         format!("; theory-layer unavailable: {reason}"),
         format!("; route unavailable: {reason}"),
     ]
+}
+
+/// Re-labels one ordinary `--trace` line as a partial reading.
+///
+/// `; theory-layer x=1` becomes `; partial theory-layer x=1`. The leading token
+/// changes rather than a field being appended, and that is the whole point: a
+/// consumer that greps `^; theory-layer ` keeps matching only COMPLETE lines,
+/// so a mid-search count can never be swept into an aggregate that thinks it
+/// has totals. A consumer that wants the partial data asks for `^; partial `
+/// and takes on the obligation that comes with it.
+///
+/// Which reading each recovered instrument gave — `complete` or `in-flight` —
+/// is on the header line rather than appended here, so the body of every line
+/// (including the route trail's JSON, which ends the line) is byte-identical to
+/// what a completed run prints.
+fn partial_line(line: &str) -> String {
+    // Every renderer in this file emits `"; "`-prefixed lines. One that did not
+    // is passed through with the marker in front rather than mangled.
+    line.strip_prefix("; ").map_or_else(
+        || format!("; partial {line}"),
+        |body| format!("; partial {body}"),
+    )
+}
+
+/// The `--trace` lines a watchdog timeout prints: whatever the instruments
+/// mirrored onto `board` before the kill, each labelled partial, plus an
+/// `unavailable` line for whichever of the two headline instruments mirrored
+/// nothing at all.
+///
+/// # Why partial data has to be labelled, not just reported
+///
+/// Every counter here was read while the worker was still running. A truncated
+/// count that reads like a complete one is worse than no count, because
+/// somebody divides by it — so nothing on these lines shares a leading token
+/// with the completed lines, and the header says both where the reading was
+/// taken and which instruments were still in flight when it was.
+///
+/// # What survives, and what still does not
+///
+/// An instrument survives here exactly when it mirrors onto the board (see
+/// `axeyum_solver::live_instruments`): the front door's parse time, the
+/// `dl-online` route (entered as well as completed), a completed `sat-bv`
+/// check's `bv-layer` stages, the route trail, and — through
+/// [`live_theory_layer_stats`], which is the only one that can report from a
+/// search that has NOT returned — the theory layer. What does not survive is a
+/// stage with no mirror point at all: the `; config` line, whose consulted-key
+/// set is thread-local to the worker with no publish site, and a `sat-bv` check
+/// killed mid-solve, whose Boolean search reports through the `; progress`
+/// channel instead (already printed on this path).
+///
+/// With nothing mirrored this returns exactly what it always returned — the two
+/// `unavailable` lines — so a run that never got far enough to instrument
+/// anything is still distinguishable from a run with collection switched off
+/// (no lines at all).
+fn watchdog_trace_lines(trace_mode: bool, board: &LiveInstruments, reason: &str) -> Vec<String> {
+    if !trace_mode {
+        return Vec::new();
+    }
+    let mut lines = Vec::new();
+    // `(instrument name, how the reading was taken)`, for the header.
+    let mut provenance: Vec<String> = Vec::new();
+    let mut note = |name: &str, sampled: Sampled| {
+        provenance.push(format!("{name}:{}", sampled.label()));
+    };
+
+    if let Some(front_door) = board.sample::<FrontDoorStats>(instrument::FRONT_DOOR) {
+        lines.push(partial_line(&front_door_report_line(&front_door.value)));
+        note("front-door", front_door.sampled);
+    }
+    if let Some(dl) = board.sample::<(Duration, u64)>(instrument::DL_ONLINE) {
+        let (elapsed, calls) = dl.value;
+        // Same `calls > 0` gate the completed path uses: a zero count means the
+        // dispatch branch was never reached, which is not the same as a route
+        // that ran and cost nothing.
+        if calls > 0 {
+            lines.push(partial_line(&dl_online_report_line(elapsed.as_millis())));
+            note("dl-online", dl.sampled);
+        }
+    }
+    if let Some(bv) = board.sample::<BvLayerStats>(instrument::BV_LAYER) {
+        lines.push(partial_line(&bv_layer_report_line(&bv.value)));
+        note("bv-layer", bv.sampled);
+    }
+    if let Some(theory) = live_theory_layer_stats(board) {
+        lines.push(partial_line(&theory_layer_report_line(&theory.value)));
+        note("theory-layer", theory.sampled);
+    } else {
+        lines.push(format!("; theory-layer unavailable: {reason}"));
+    }
+    match board.sample::<RouteTrace>(instrument::ROUTE) {
+        Some(route) if !route.value.is_empty() => {
+            for line in route_attribution_report_lines(&route.value) {
+                lines.push(partial_line(&line));
+            }
+            note("route", route.sampled);
+        }
+        _ => lines.push(format!("; route unavailable: {reason}")),
+    }
+
+    if provenance.is_empty() {
+        // Nothing was mirrored before the kill. Report exactly what this path
+        // reported before any of it existed, rather than a header announcing
+        // zero recovered instruments.
+        return watchdog_unavailable_line(trace_mode, reason);
+    }
+    lines.insert(
+        0,
+        format!(
+            "; partial at=watchdog-kill recovered={} sampled={} reason: {reason}",
+            provenance.len(),
+            provenance.join(",")
+        ),
+    );
+    lines
 }
 
 /// Installs the progress sink (see the module header) on `config` when
@@ -963,7 +1078,21 @@ fn main() -> ExitCode {
     // decide never runs the CDCL(T) driver and vice versa), but
     // `; front-door …` and `; dl-online …` are independent stages that can
     // coexist with either.
+    // The cross-thread instrument board (`axeyum_solver::live_instruments`).
+    // Created HERE, on the thread that enforces the wall clock, so it outlives
+    // the worker: a watchdog timeout reads it after giving up on a thread that
+    // is still running and will never publish anything again. Installed inside
+    // the closure below rather than here, because a thread-local install has to
+    // happen on the thread that will do the publishing.
+    let board = LiveInstruments::new();
+    let worker_board = Arc::clone(&board);
     let solve = move || -> (&'static str, Option<String>, Vec<String>) {
+        // The seventh lever on the same `--trace` flag, and the only one that
+        // is not itself an instrument: it gives the other six somewhere to
+        // publish that is not this thread's thread-local storage. Off without
+        // `--trace`, so a default run installs nothing and every publish site
+        // returns on one `bool` read.
+        let _live_board = trace_mode.then(|| install_live_instruments(&worker_board));
         if evidence_mode {
             let started = Instant::now();
             // A parse or solver error is `unknown` here too — and an evidence run
@@ -1129,10 +1258,10 @@ fn main() -> ExitCode {
             Err(_) => (
                 "unknown",
                 None,
-                watchdog_unavailable_line(
+                watchdog_trace_lines(
                     trace_mode,
-                    "watchdog fired before the worker thread returned (no CDCL(T) \
-                     search on this query completed before the deadline)",
+                    &board,
+                    "watchdog fired before the worker thread returned",
                 ),
             ),
         },
@@ -1141,7 +1270,11 @@ fn main() -> ExitCode {
         Err(_) => (
             "unknown",
             None,
-            watchdog_unavailable_line(trace_mode, "failed to spawn the solver worker thread"),
+            watchdog_trace_lines(
+                trace_mode,
+                &board,
+                "failed to spawn the solver worker thread",
+            ),
         ),
     };
 
@@ -1266,5 +1399,151 @@ mod tests {
             "got: {}",
             trace_lines[1]
         );
+    }
+
+    /// A board nothing published to yields exactly what this path yielded
+    /// before any of the mirroring existed — so "the search never got far
+    /// enough to instrument anything" stays distinguishable from "collection
+    /// was off" (no lines at all).
+    #[test]
+    fn an_empty_board_falls_back_to_the_unavailable_lines() {
+        let board = LiveInstruments::new();
+        assert_eq!(
+            watchdog_trace_lines(false, &board, "anything"),
+            Vec::<String>::new(),
+            "a default (non-trace) run's output must stay byte-identical"
+        );
+        assert_eq!(
+            watchdog_trace_lines(true, &board, "watchdog fired"),
+            watchdog_unavailable_line(true, "watchdog fired"),
+        );
+    }
+
+    /// The test that matters: a worker abandoned by the watchdog, whose
+    /// instruments mirrored something before the kill, reports that something —
+    /// and reports it as PARTIAL.
+    ///
+    /// The worker below is still blocked when the lines are built, exactly as a
+    /// real one is: `recv_timeout` has expired and the thread has published
+    /// nothing on its way out because it has no way out yet.
+    #[test]
+    fn an_abandoned_worker_reports_partial_counters_under_a_distinct_token() {
+        let board = LiveInstruments::new();
+        let worker_board = Arc::clone(&board);
+        let (tx, rx) = std::sync::mpsc::channel::<(&'static str, Option<String>, Vec<String>)>();
+        let (published_tx, published_rx) = std::sync::mpsc::channel::<()>();
+        let (release_tx, release_rx) = std::sync::mpsc::channel::<()>();
+        let _worker = std::thread::spawn(move || {
+            let _live = install_live_instruments(&worker_board);
+            let stats = axeyum_solver::theories::cdclt_diagnostics::TheoryLayerStats {
+                decisions: 4_242,
+                boolean_propagate: Duration::from_millis(17),
+                ..Default::default()
+            };
+            axeyum_solver::publish_live(instrument::THEORY_LAYER, stats, Sampled::InFlight);
+            published_tx.send(()).expect("receiver alive");
+            let _ = release_rx.recv();
+            let _ = tx.send(("unknown", None, Vec::new()));
+        });
+        published_rx
+            .recv()
+            .expect("the worker mirrored its counters");
+
+        let (verdict, _evidence, trace_lines) = match rx.recv_timeout(Duration::from_millis(10)) {
+            Ok(outcome) => outcome,
+            Err(_) => (
+                "unknown",
+                None,
+                watchdog_trace_lines(true, &board, "watchdog fired"),
+            ),
+        };
+        assert_eq!(verdict, "unknown");
+
+        let joined = trace_lines.join("\n");
+        assert!(
+            joined.contains("decisions=4242"),
+            "the counters the worker mirrored must come back: {joined}"
+        );
+        // The distinct leading token is the labelling: a consumer that greps
+        // `^; theory-layer ` for complete lines must not pick this up, because
+        // a truncated count that reads like a complete one is worse than none.
+        assert!(
+            trace_lines
+                .iter()
+                .any(|l| l.starts_with("; partial theory-layer ")),
+            "{trace_lines:?}"
+        );
+        assert!(
+            !trace_lines.iter().any(|l| l.starts_with("; theory-layer ")),
+            "no partial reading may wear the complete line's token: {trace_lines:?}"
+        );
+        assert!(
+            trace_lines[0].starts_with("; partial at=watchdog-kill "),
+            "the header says where the reading was taken: {}",
+            trace_lines[0]
+        );
+        assert!(
+            trace_lines[0].contains("theory-layer:in-flight"),
+            "and that this instrument was still running: {}",
+            trace_lines[0]
+        );
+        // The route mirrored nothing, so it keeps saying so rather than being
+        // silently dropped from a partial report.
+        assert!(
+            trace_lines
+                .iter()
+                .any(|l| l.starts_with("; route unavailable: ")),
+            "{trace_lines:?}"
+        );
+        for line in &trace_lines {
+            assert!(
+                line.starts_with("; "),
+                "every trace line must be an SMT-LIB comment so it can never \
+                 match ^(sat|unsat)$: got {line}"
+            );
+        }
+        let _ = release_tx.send(());
+    }
+
+    /// A stage that finished is still reported under the partial token: the
+    /// QUERY did not return even when one of its stages did, so nothing on this
+    /// path may look like a normal-return line. The header carries the
+    /// distinction instead.
+    #[test]
+    fn a_stage_that_completed_is_still_reported_under_the_partial_token() {
+        let board = LiveInstruments::new();
+        board.publish(
+            instrument::DL_ONLINE,
+            (Duration::from_millis(931), 2_u64),
+            Sampled::Complete,
+        );
+        let lines = watchdog_trace_lines(true, &board, "watchdog fired");
+        assert!(
+            lines
+                .iter()
+                .any(|l| l == "; partial dl-online total_ms=931"),
+            "{lines:?}"
+        );
+        assert!(
+            lines[0].contains("dl-online:complete"),
+            "the header distinguishes a finished stage from a mid-flight one: {}",
+            lines[0]
+        );
+        assert!(
+            !lines.iter().any(|l| l.starts_with("; dl-online ")),
+            "{lines:?}"
+        );
+    }
+
+    /// `partial_line` re-labels rather than rewrites: the body of the line is
+    /// byte-identical to what a completed run prints, which is what lets one
+    /// parser read both families.
+    #[test]
+    fn partial_line_only_replaces_the_leading_token() {
+        assert_eq!(
+            partial_line("; route-trail {\"schema\":1}"),
+            "; partial route-trail {\"schema\":1}"
+        );
+        assert_eq!(partial_line("no prefix"), "; partial no prefix");
     }
 }

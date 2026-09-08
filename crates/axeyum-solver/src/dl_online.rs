@@ -2038,8 +2038,46 @@ pub(crate) fn dl_online_stats_collecting() -> bool {
 /// already gated on [`dl_online_stats_collecting`] — this itself does not
 /// re-check the flag.
 pub(crate) fn record_dl_online_time(elapsed: Duration) {
-    DL_ONLINE_TIME_ACCUM.with(|c| c.set(c.get() + elapsed));
-    DL_ONLINE_CALL_COUNT.with(|c| c.set(c.get() + 1));
+    let total = DL_ONLINE_TIME_ACCUM.with(|c| {
+        let total = c.get() + elapsed;
+        c.set(total);
+        total
+    });
+    let calls = DL_ONLINE_CALL_COUNT.with(|c| {
+        let calls = c.get() + 1;
+        c.set(calls);
+        calls
+    });
+    // See `record_dl_online_entry`: the call this closes is the one that slot
+    // was marked in-flight for, so overwriting it with the completed totals is
+    // the whole state transition.
+    crate::live_instruments::publish_live(
+        crate::live_instruments::instrument::DL_ONLINE,
+        (total, calls),
+        crate::live_instruments::Sampled::Complete,
+    );
+}
+
+/// Marks a `try_check_qf_dl` call as **entered** on the cross-thread board.
+///
+/// The thread-local accumulator above is written when the call returns, which
+/// is exactly what a query that times out INSIDE this route never does: three
+/// of five traced `QF_IDL` timeouts sat in this call when the watchdog fired
+/// and reported nothing at all. This publishes the totals of the calls that
+/// have already closed, with the entered call included in the count and marked
+/// `InFlight`, so a reader learns that the route was running and how long the
+/// PREVIOUS calls took — never that the in-flight call took zero.
+pub(crate) fn record_dl_online_entry() {
+    if !dl_online_stats_collecting() {
+        return;
+    }
+    let total = DL_ONLINE_TIME_ACCUM.with(std::cell::Cell::get);
+    let calls = DL_ONLINE_CALL_COUNT.with(std::cell::Cell::get) + 1;
+    crate::live_instruments::publish_live(
+        crate::live_instruments::instrument::DL_ONLINE,
+        (total, calls),
+        crate::live_instruments::Sampled::InFlight,
+    );
 }
 
 /// Enables `--trace`'s dl-online call timing on this thread for the lifetime
@@ -2105,6 +2143,7 @@ pub(crate) fn try_check_qf_dl(
     config: &SolverConfig,
     extended_timeout: Option<Duration>,
 ) -> Option<CheckResult> {
+    record_dl_online_entry();
     let probe_started = Instant::now();
     // The probe budget covers the entire route, including the conservative
     // fragment scan and skeleton encoding. Starting this deadline after those

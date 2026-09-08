@@ -50,6 +50,7 @@ mod config_registry;
 mod error;
 mod incremental;
 mod layers;
+pub mod live_instruments;
 mod memory_budget;
 mod model;
 mod proof;
@@ -906,6 +907,10 @@ pub use incremental::{
     IncrementalSolver, ReplayCheckedSatCachePolicy, ReplayCheckedSatCacheStats,
 };
 pub use layers::{BvLayerStats, BvLayerStatsGuard, last_bv_backend_counters, last_bv_layer_stats};
+pub use live_instruments::{
+    LiveInstruments, LiveInstrumentsGuard, LiveSample, Sampled,
+    install as install_live_instruments, instrument, publish_live,
+};
 pub use model::Model;
 #[doc(hidden)]
 pub use proof::{
@@ -1180,6 +1185,7 @@ macro_rules! full_exports {
         pub use mbp::{mbp_lia, mbp_lra};
         #[doc(hidden)]
         pub use nat_induction::prove_by_nat_induction;
+        pub use native_cdclt::{EngineCountersMirror, live_theory_layer_stats};
         #[doc(hidden)]
         pub use nra::check_with_nra;
         #[doc(hidden)]
