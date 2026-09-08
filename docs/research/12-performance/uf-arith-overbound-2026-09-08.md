@@ -102,6 +102,25 @@ whatever is in `target/` at the time.
 
 Raw per-file results: `bench-results/uf-arith-overbound-20260908/`.
 
+### Result, all 58 files, base solver
+
+| | |
+|---|---:|
+| reached the over-bound decision point | **52 of 58** |
+| ...and no solver route ran after it | **52 of 52** |
+| the CEGAR was the single most expensive segment (`bound_by`) | 37 |
+| its share of that file's wall clock, median | **98.6%** (min 17.3%, max 98.8%) |
+| decided | 0 |
+
+The other six are the wide-integer-literal ingest rejects (`bound_by=fd:parse`),
+already understood and not this lane's subject.
+
+So the `[I]` in the survey's finding #1 is now measured, and the number it
+guessed — 52 of 58 — is the number: **52 of the 58 files we lose in QF_UFLIA
+reach a decision point where one route answers for the whole dispatcher, and on
+every one of them nothing else was allowed to try.** On 37 of them that route
+also spent essentially the entire budget.
+
 <!-- RESULTS-BASELINE -->
 
 ## 3. What was changed
@@ -143,6 +162,95 @@ clock would only give a reader two numbers to reconcile.
 
 `terminal_unknown` is the field this lane exists for: it is the count of files
 where a route declined and **nothing else was allowed to try**.
+
+### The guard was checked against its own removal
+
+`cargo test -p axeyum-solver --lib --features full -- overbound` — **12 tests,
+a nonzero count confirmed**, all passing.
+
+Then the mutation that matters, applied in this isolated worktree with a
+restoring trap (`scripts/…/mutate.sh` in this lane's scratch, recorded here
+rather than committed): make `OverboundOutcome::FallThrough` answer for the
+dispatcher, i.e. put back the behaviour this change removes. The script asserts
+its own anchor is present first, so a green run cannot come from a mutation
+that never applied.
+
+**Exactly two tests died**, and they are the two that assert the ladder runs:
+
+```
+overbound_ladder_is_reachable_when_the_cegar_is_skipped ... FAILED
+every_policy_gives_the_same_verdict_on_an_overbound_query ... FAILED
+test result: FAILED. 10 passed; 2 failed
+```
+
+The other ten survived, including `overbound_terminal_policy_still_answers_for_the_whole_dispatcher`
+— which *should* survive, because the mutation is that arm's own behaviour.
+
+Two earlier honest failures are worth recording, because both were the test
+being wrong rather than the code: the first version of the fixture used 20
+padding applications and reported `engaged == 0` on a query unambiguously over
+the eager bound — the pre-LIA probe
+(`dispatch_arith_uf_overbound_probe_before_lia`) decides such a query on its
+own clone and `dispatch_uf_fast_paths` is never reached at all. The fixture now
+exceeds `MAX_PRE_LIA_UF_PROBE_ASSERTIONS` (256) so dispatch actually reaches the
+decision point under test.
+
+## The measured effect
+
+Three arms over the same committed 58-file loss list, two pinned binaries, run
+**concurrently** on one host so the contention is common-mode (this box carried
+other lanes throughout, `loadavg` 31.5 at start; read the decided set, not the
+milliseconds).
+
+| arm | decided | reached the decision point | nothing ran after it | disagreements |
+|---|---:|---:|---:|---:|
+| base (pre-change) | 0 | 52 | **52** | — |
+| `probe` (new default) | **9 `sat`** | 26 | **0** | 0 |
+| `skip` | **9 `sat`** | 47 | **0** | 0 |
+
+**+9 files on the QF_UFLIA loss population, 0 lost, 0 disagreements.** The gap
+on this list goes 58 → 49.
+
+Every one of the nine is decided by **`uf-arith-online`** — the online
+model-based EUF + linear-arithmetic combination, the route that was previously
+unreachable. All nine are `sat`, and all nine match the reference's verdict in
+the committed census (`reference_verdict=sat` for each), so the agreement is
+against an independent solver and not just against ourselves.
+
+The nine:
+`hash_sat_04_11`, `hash_sat_04_14`, `hash_sat_04_17`, `hash_sat_05_05`,
+`hash_sat_05_08`, `hash_sat_05_11`, `hash_sat_06_05`, `hash_sat_06_08`,
+`hash_sat_07_05` (all `mathsat/Hash`).
+
+**`probe` and `skip` decide the same nine.** That is the load-bearing detail:
+the gain is the *reachability*, not the budget split. Halving the CEGAR's budget
+neither bought nor cost a file here — what bought them was letting its `Unknown`
+fall through. It also means `UF_ARITH_CEGAR_PROBE_SHARE` is not yet a tuned
+number; it is a safety margin whose value this population does not constrain.
+
+### What did not move, and the honest limit of the claim
+
+**Twenty-six of the fifty-two still lose.** On those the probe arm ends at the
+24 s watchdog with `route unavailable` (the ladder was still running when the
+budget expired) and the skip arm ends at `uf-arithmetic`. Those are genuine
+search timeouts and the reachability fix does not touch them; they need the
+arithmetic work (`LiaTheory` re-solving from scratch per theory check, the
+tableau shape) that the companion survey ranks as findings #2 and #3.
+
+`probe` runs slightly past the internal budget on the timeout population
+(25.05 s wall against base's 24.31 s, so the harness watchdog is what stops it,
+not our own deadline). Not a correctness problem under the parity protocol, and
+not investigated further here.
+
+### The regression check on the files we already win
+
+Also run: the full committed 200-file division list, base against `probe`, both
+arms concurrent, artifacts `base-QF_UFLIA200.tsv` / `probe-QF_UFLIA200.tsv`.
+The budget split can only cost files here — a query the CEGAR used to decide in
+more than half the budget now has half of it — so this is the check that decides
+whether the default is safe.
+
+<!-- RESULTS-200 -->
 
 <!-- RESULTS-AB -->
 

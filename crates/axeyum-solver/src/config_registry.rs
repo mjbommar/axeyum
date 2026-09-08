@@ -2239,7 +2239,7 @@ pub fn dated_count() -> usize {
 /// The one-line configuration summary a `--trace` run prints.
 ///
 /// Deliberately one line and digest-first: a corpus sweep's output is grepped,
-/// and a per-run dump of 113 entries would not be. The full table is available
+/// and a per-run dump of 114 entries would not be. The full table is available
 /// through [`REGISTRY`] and from `scripts/check-config-registry-staleness.py`.
 #[must_use]
 pub fn config_trace_line() -> String {
