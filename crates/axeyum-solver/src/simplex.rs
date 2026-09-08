@@ -2720,6 +2720,74 @@ mod tests {
         );
     }
 
+    /// An arithmetic overflow now leaves the pivot row **half-rewritten**, where
+    /// the previous code built a replacement row and only installed it on
+    /// success. The recovery path must therefore actually recover.
+    ///
+    /// This is the one behavioural difference the in-place rewrite introduces,
+    /// so it gets a test rather than an argument. The argument, for the record,
+    /// is that `Incremental::point` materialises from `rows_sparse` (the
+    /// immutable INPUT rows) and `value`, never from `row`, so a torn `row`
+    /// cannot reach a witness — but "I read the code and nothing else touches
+    /// it" is exactly the claim this repository has been wrong about before.
+    ///
+    /// Corruption is injected directly rather than provoked through an i128
+    /// overflow: the point is that recovery is total regardless of HOW the
+    /// state was torn, and a test that had to construct a specific overflow
+    /// would be pinning that overflow instead.
+    #[test]
+    fn a_poisoned_engine_recovers_a_consistent_tableau() {
+        let (nvars, cs) = random_system(11);
+        let sparse: Vec<Vec<(usize, Rational)>> =
+            cs.iter().map(|c| densify_to_sparse(&c.coeffs)).collect();
+        let mut clean =
+            Incremental::with_policy(nvars, sparse.clone(), PivotPolicy::new()).expect("tableau");
+        let mut torn =
+            Incremental::with_policy(nvars, sparse, PivotPolicy::new()).expect("tableau");
+        for (i, c) in cs.iter().enumerate() {
+            clean.assert_bound(i, c.rel, c.rhs);
+            torn.assert_bound(i, c.rel, c.rhs);
+        }
+
+        // Tear the tableau the way a mid-pivot overflow would: some cells
+        // rewritten, the derived indices no longer describing them.
+        for i in 0..torn.tab.m {
+            for v in 0..torn.tab.n {
+                if (i + v).is_multiple_of(3) {
+                    torn.tab.row[i][v] = Rational::integer(7);
+                }
+            }
+        }
+        torn.tab.col_nnz.iter_mut().for_each(|c| *c = 0);
+        torn.tab.row_nz.iter_mut().for_each(Vec::clear);
+        torn.poisoned = true;
+
+        let expected = clean.check(None);
+        let recovered = torn.check(None);
+        assert_eq!(
+            torn.cold_restarts(),
+            1,
+            "the poisoned engine must have taken the cold-restart path"
+        );
+        assert_eq!(
+            expected, recovered,
+            "a poisoned engine did not recover the verdict a clean one reaches"
+        );
+
+        // And the derived indices must describe the rebuilt rows exactly.
+        let after_cols = torn.tab.col_nnz.clone();
+        let after_rows = torn.tab.row_nz.clone();
+        torn.tab.recount_columns();
+        assert_eq!(
+            after_cols, torn.tab.col_nnz,
+            "recovery left the column counts describing the torn rows"
+        );
+        assert_eq!(
+            after_rows, torn.tab.row_nz,
+            "recovery left the row index describing the torn rows"
+        );
+    }
+
     /// The cost counters must be nonzero on a system that pivots, and must be
     /// derived from the work rather than invented.
     ///
