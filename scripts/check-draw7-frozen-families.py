@@ -97,9 +97,18 @@ def main() -> int:
     # crashed here regardless of what it contained.
     #
     # The distinction the exit codes now carry, which the crash destroyed:
-    #   2 = NO BASELINE at that ref -- nothing to compare, nothing asserted
+    #   0 + NO-BASELINE line = nothing to compare, nothing asserted
     #   1 = a real frozen-family violation
     #   0 = compared, clean
+    #
+    # NO-BASELINE exits **0**, not 2, and that is deliberate. `hooks/pre-push`
+    # treats ANY nonzero as `L0 gate rejected this push`, so a nonzero
+    # "I could not compare" is indistinguishable to the hook from "the
+    # invariant is broken" -- which is the very conflation this fix exists to
+    # remove, reintroduced one level up. Measured 2026-09-08: exit 2 blocked a
+    # 102-commit push while printing a message that correctly said nothing had
+    # been asserted. A gate must not reject a push for a comparison it did not
+    # make; the finding belongs on stderr, where it is visible in the log.
     # A checker that cannot tell "nothing to compare against" from "the
     # invariant is broken" reports neither.
     shown = subprocess.run(
@@ -112,7 +121,7 @@ def main() -> int:
             f"(git said: {shown.stderr.strip().splitlines()[0] if shown.stderr.strip() else 'no such path'})",
             file=sys.stderr,
         )
-        return 2
+        return 0
     before = partitions(shown.stdout)
     after = partitions((ROOT / MANIFEST).read_text())
 
