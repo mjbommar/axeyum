@@ -191,14 +191,14 @@ pub enum DeleteFraction {
 ///   factorisation instances, the watch entries a reduce round touches are
 ///   **0.3%–2.8% of the watch entries propagation visits** (median under 0.8%).
 ///   Removing the sweep entirely would not reach 1%.
-/// * Order is not free. Over the seven corpus instances that reduce at all,
-///   `InPlace` needed **more** conflicts on six — 0.7% to 6% more. There is a
-///   mechanism for it: a rebuild leaves every list in clause-id order, which
-///   puts the short input clauses ahead of the long learned ones, and it
-///   refreshes each blocker to the clause's actual other watched literal
-///   instead of whatever `propagate` last cached.
+/// * Order is not free. Over the eight corpus instances that reduce at all,
+///   `InPlace` needed **more** conflicts on seven — +1.3% to +6.3% — and fewer
+///   on one (-2.3%). There is a mechanism for it: a rebuild leaves every list
+///   in clause-id order, which puts the short input clauses ahead of the long
+///   learned ones, and it refreshes each blocker to the clause's actual other
+///   watched literal instead of whatever `propagate` last cached.
 ///
-/// Six of seven is suggestive, not conclusive (n = 7), which is exactly why
+/// Seven of eight is suggestive, not conclusive (n = 8), which is exactly why
 /// this is a selectable policy with both arms measurable rather than a decision
 /// welded into the search. What is *not* in doubt is the denominator: whichever
 /// sweep wins, it is worth less than 1% of propagation.

@@ -120,27 +120,27 @@ fn bitblast_formula(factor_width: u32, constraints: usize) -> CnfFormula {
     let mut conjuncts = Vec::with_capacity(constraints);
     for i in 0..constraints {
         // A fixed, index-derived pair of distinct primes: no randomness.
-        let p = PRIMES[i % PRIMES.len()];
-        let q = PRIMES[(i / PRIMES.len() + i % PRIMES.len() + 1) % PRIMES.len()];
+        let left = PRIMES[i % PRIMES.len()];
+        let right = PRIMES[(i / PRIMES.len() + i % PRIMES.len() + 1) % PRIMES.len()];
         let mask = if factor_width >= 128 {
             u128::MAX
         } else {
             (1u128 << factor_width) - 1
         };
-        let n = (p & mask) * (q & mask);
+        let product_value = (left & mask) * (right & mask);
         let a_sym = arena
             .declare(&format!("a{i}"), Sort::BitVec(factor_width))
             .unwrap();
         let b_sym = arena
             .declare(&format!("b{i}"), Sort::BitVec(factor_width))
             .unwrap();
-        let a = arena.var(a_sym);
-        let b = arena.var(b_sym);
+        let factor_a = arena.var(a_sym);
+        let factor_b = arena.var(b_sym);
         // Zero-extend by concatenation so the product cannot wrap.
-        let a_wide = arena.concat(zero, a).unwrap();
-        let b_wide = arena.concat(zero, b).unwrap();
+        let a_wide = arena.concat(zero, factor_a).unwrap();
+        let b_wide = arena.concat(zero, factor_b).unwrap();
         let product = arena.bv_mul(a_wide, b_wide).unwrap();
-        let target = arena.bv_const(product_width, n).unwrap();
+        let target = arena.bv_const(product_width, product_value).unwrap();
         conjuncts.push(arena.eq(product, target).unwrap());
     }
     let lowering = lower_terms(&arena, &conjuncts).unwrap();
@@ -301,7 +301,7 @@ fn main() {
                      not satisfy the formula"
                 );
             }
-            emit(path, name, &outcome, c, elapsed, sink.deletions);
+            emit(path, name, &outcome, &c, elapsed, sink.deletions);
         }
     }
 }
@@ -311,7 +311,7 @@ fn emit(
     path: &str,
     arm_name: &str,
     outcome: &StreamingProofOutcome,
-    c: SearchCounters,
+    c: &SearchCounters,
     seconds: f64,
     deletions: u64,
 ) {
@@ -379,12 +379,12 @@ fn emit(
         c.reduce_headers_scanned,
         c.reduce_headers_skipped,
         c.reduce_watch_entries_scanned,
-        axeyum_cnf::ticks::TickModel::DEFAULT.breakdown(&c).total(),
+        axeyum_cnf::ticks::TickModel::DEFAULT.breakdown(c).total(),
         axeyum_cnf::ticks::TickModel::DEFAULT
-            .breakdown(&c)
+            .breakdown(c)
             .watch_scan,
         axeyum_cnf::ticks::TickModel::DEFAULT
-            .breakdown(&c)
+            .breakdown(c)
             .clause_derefs,
         c.conflicts as f64 / seconds.max(1e-9),
         c.propagations as f64 / conflicts,
