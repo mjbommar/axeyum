@@ -913,8 +913,11 @@ fn main() -> ExitCode {
     // `cnf_inprocessing` (subsumption + BVE) and `cnf_vivify` already exist in
     // `axeyum-cnf` and are sound (model-preserving / equisatisfiable with a
     // reconstruction stack, and every `sat` is still replay-checked against the
-    // original terms) — but they default to `false`, and this binary had no way
-    // to turn them on, so EVERY parity measurement to date ran with them off.
+    // original terms) — but `cnf_inprocessing` defaults to `false`, and this
+    // binary had no way to turn it on, so EVERY parity measurement to date ran
+    // with these passes off. (`cnf_vivify` has defaulted to `true` since
+    // 2026-09-08; it is a no-op while `cnf_inprocessing` is `false`, which is
+    // why the baseline is unaffected.)
     // The 2026-07-07 gap analysis puts ~9 of the residual QF_BV files in the
     // "search-bound" bucket, which is exactly what these passes target, and it
     // says the first step there is a MEASUREMENT, not a build. This makes that
@@ -927,6 +930,16 @@ fn main() -> ExitCode {
         // A no-op unless inprocessing is also on; turn both on together so the
         // flag cannot silently do nothing.
         config = config.with_cnf_inprocessing(true).with_cnf_vivify(true);
+    }
+    // `cnf_vivify` defaults to TRUE as of 2026-09-08 (measured: with BVE under
+    // its work budget, vivification is cheaper AND shrinks more —
+    // `docs/research/03-measurements/inprocessing-admission-2026-09-08.md`), so
+    // `AXEYUM_CNF_VIVIFY=1` above is now the same configuration as
+    // `AXEYUM_CNF_INPROCESSING=1` alone. This is the off-switch that keeps the
+    // un-vivified arm reachable, which a measurement comparing the two needs
+    // and which no `=1` flag can express.
+    if enabled("AXEYUM_CNF_NO_VIVIFY") {
+        config = config.with_cnf_vivify(false);
     }
 
     let (config, progress_rx) = install_progress_sink(config, progress_mode);

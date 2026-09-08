@@ -284,7 +284,39 @@ decomposition documented as flipping under load. A BVE budget cannot help it;
 
 ---
 
-## 5. What was not done
+## 5. Mutation controls
+
+Every guard added here was deleted once and the resulting failure recorded. A
+guard whose removal leaves the suite green is not a guard.
+
+| deleted | tests that died |
+|---|---|
+| the `work_budget` check in BVE's queue loop | 1 — `work_budget_stops_the_pass_early_and_keeps_the_result_sound` |
+| the `live_ids` occurrence-scan charge | 2 — `the_occurrence_scan_is_charged_even_when_the_variable_is_rejected`, `work_at_last_elimination_brackets_the_free_budget` |
+| `.with_init_cost(BVE_MIN_RECOVERY_MULTIPLE)` | 1 — `a_spent_slice_delays_bve_instead_of_paying_for_setup_it_cannot_use` |
+| the slice cap inside `reference` | 1 — same test |
+| compute the budget, hand BVE `BveOptions::DEFAULT` | 1 — `the_granted_budget_reaches_the_pass` |
+
+Two of these are worth their own sentence.
+
+**The scan-charge guard did not exist at first.** The original test asserted
+`work_spent > setup` on a formula that also resolves, and the mutant **survived**
+— the resolvent-merge charges alone satisfied it. The shipped fixture puts three
+hub variables past `occurrence_limit` so they are rejected *after* both lists
+are walked and *before* any resolvent is merged; scanning is then the only
+post-setup work and the assertion is an exact equality.
+
+**The wiring guard did not exist either.** With the decision inline at the call
+site, computing the budget correctly and then passing `BveOptions::DEFAULT`
+compiled, ran, produced identical verdicts, and **survived the whole
+`--lib --features full` sweep**. `run_bve` exists as a named function so the
+wiring is reachable by a test at all, and its fixture derives the budget under
+test from the unbudgeted run rather than from a literal, so it cannot quietly go
+vacuous when the charging rules change.
+
+---
+
+## 6. What was not done
 
 * **Subsumption is unbudgeted in the same way BVE was.** It is 18 % of
   inprocessing cost overall, but on `div3.c.50` it spends the entire 11.4 s
