@@ -180,16 +180,28 @@ So: inprocessing decides one more file and costs 283 s more wall time to do it.
 Which of those matters is a scheduling decision, not a measurement — but a
 report that quoted only the decided count would be choosing the flattering one.
 
-### The derived columns are licensed, but only just
+### The derived columns are biased, and they are biased AGAINST inprocessing
 
 Thresholding a 24 s run to read off a 6 s result assumes behaviour does not
 depend on the budget given. **It does**: inprocessing is granted half the
-remaining solve budget, so a 6 s budget is a 3 s slice. The truncation counters
-say how far that assumption is stretched — 16 files already exhaust the 12 s
-slice at a 24 s budget, so at 6 s the derived column is optimistic for the `on`
-arms on at least those files, and they are a floor, not an estimate. The 6 s
-columns are therefore reported as **derived**, and the honest reading is
-directional (inprocessing loses badly below ~12 s) rather than exact.
+remaining solve budget, so a 6 s budget is a 3 s slice, not a 12 s one.
+
+I first wrote that this made the derived columns optimistic for the `on` arms.
+**That is backwards, and the direction matters.** Take `bench_3708`: at a 24 s
+budget it spends 12.0 s in a truncated BVE and then decides in ~0.1 s, wall
+12,114 ms, so the derived 12 s column scores it NOT solved. At a *real* 12 s
+budget the slice is 6 s, so the same file would spend ~6 s and decide at ~6.1 s
+— **solved**. The derivation charges the `on` arm for a slice it would never
+have been granted at the smaller budget.
+
+So the sub-24 s columns are **exact for `off`** (nothing in that arm depends on
+the budget except when it stops) and a **lower bound for the `on` arms**. The
+true crossover is therefore at or below the 12–24 s band, not above it — which
+moves the answer further from the handed-down 120 s, not closer.
+
+Measured rather than left as an argument: a real 12 s sweep over the 28-file
+population where the derivation can differ (see §6) — RUNNING at the time of
+writing.
 
 ---
 
