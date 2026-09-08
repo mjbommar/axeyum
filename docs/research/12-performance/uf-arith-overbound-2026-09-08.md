@@ -132,7 +132,7 @@ selected by `AXEYUM_UF_ARITH_OVERBOUND` or, in-process, by
 | arm | what it does |
 |---|---|
 | `terminal` | the historical behaviour: the CEGAR gets the whole budget and its `Unknown` is the final answer |
-| `probe` (default) | the CEGAR gets half the *remaining* budget; its `Unknown` declines the route and the ladder below runs on what is left |
+| `probe` (default) | the CEGAR gets the *remaining* budget less the ladder's reserve (a quarter); its `Unknown` declines the route and the ladder below runs on the reserve |
 | `skip` | the CEGAR does not run; a measurement arm for what the routes underneath decide alone |
 
 Three properties the change keeps:
@@ -145,8 +145,9 @@ Three properties the change keeps:
    `pathological_refusals` so "we refused" is never read as "the CEGAR tried".
 2. **One clock.** The dispatcher takes its deadline at entry; the probe budget
    and the ladder's remaining budget both come out of it, so a probe that
-   spends half the budget leaves the ladder the other half instead of
-   restarting the clock.
+   spends its share leaves the ladder the reserve instead of restarting the
+   clock. `dispatch_uf_arith_online`'s own half-budget probe is taken from the
+   remaining budget for the same reason.
 3. **The probe runs on a cloned arena**, for the same reason
    `dispatch_uf_arith_online` does: the CEGAR appends abstraction symbols and
    congruence lemmas, and leaving them behind would enlarge every route the
@@ -249,6 +250,40 @@ arms concurrent, artifacts `base-QF_UFLIA200.tsv` / `probe-QF_UFLIA200.tsv`.
 The budget split can only cost files here — a query the CEGAR used to decide in
 more than half the budget now has half of it — so this is the check that decides
 whether the default is safe.
+
+### What it measured, and why the constant changed
+
+| arm | list | decided | gained | lost | disagreements |
+|---|---|---:|---:|---:|---:|
+| base | 200 | 116 | — | — | — |
+| `probe`, CEGAR gets **half** | 200 | 121 | +9 | **−4** | 0 |
+| base | 58 losses | 0 | — | — | — |
+| `probe`, CEGAR gets **3/4** | 58 losses | 9 | **+9** | **0** | 0 |
+
+The half-budget version lost four files, and all four are files the CEGAR
+decides *given more than half the clock*: `hash_sat_05_14` (12.7 s),
+`xs_23_33` (13.3 s), `hash_uns_05_17` (15.5 s), `hash_uns_05_20` (23.7 s).
+
+It bought nothing for that cost. On the nine files the change wins, the ladder
+decides in **307–625 ms** — read off the `skip` arm, where no CEGAR runs at
+all. A half-budget split spent twelve seconds to buy four hundred milliseconds
+of work, which is the wrong shape: the routes it unblocks need a **reserve**,
+not a share.
+
+`UF_ARITH_CEGAR_PROBE_SHARE` therefore became
+`UF_ARITH_LADDER_RESERVE_SHARE = 4`. The CEGAR keeps everything except a
+quarter: 18 s of a 24 s budget, above three of the four regressing files'
+requirements, and the ladder gets 6 s, about ten times the largest ladder time
+observed. The fourth, at 23.7 s of 24 s, cannot be recovered by any reserve —
+a route needing 99% of the clock cannot share it — and is the named cost of
+making the ladder reachable.
+
+A 1/8 reserve was written and rejected before it shipped: it leaves the
+ladder's 0.4 s of work behind 21 s of CEGAR on a 24 s budget, where contention
+alone can eat the difference.
+
+**Re-measured at the shipped value on the 58-file loss list: +9, 0 lost, 0
+disagreements** (`reserve-QF_UFLIA58.tsv`, binary digest `f18559b05bd8`).
 
 <!-- RESULTS-200 -->
 

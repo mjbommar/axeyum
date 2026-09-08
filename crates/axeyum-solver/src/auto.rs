@@ -2836,27 +2836,33 @@ pub enum UfArithOverboundPolicy {
 ///
 /// **A RESERVE, not a split, and the difference is measured.** The first
 /// version of this constant halved the budget, copying [`probe_budget`]'s
-/// precedent. On the committed 200-file `QF_UFLIA` list that cost one file we
-/// previously decided — `mathsat/Hash/hash_sat_05_14`, `sat` at 12.7 s under
-/// the whole budget, `unknown` when the CEGAR was cut to 12 s — while buying
-/// nothing, because the routes it unblocks do not need half the clock. On the
-/// nine files the change wins, the ladder decides in **307–625 ms** (the `skip`
-/// arm's wall clock, where no CEGAR runs at all). A half-budget split therefore
-/// spent twelve seconds to buy four hundred milliseconds of work.
+/// precedent. On the committed 200-file `QF_UFLIA` list that cost **four** files
+/// we previously decided, all of them files the CEGAR needs more than half the
+/// budget for: `hash_sat_05_14` (12.7 s), `xs_23_33` (13.3 s),
+/// `hash_uns_05_17` (15.5 s), `hash_uns_05_20` (23.7 s). It bought nothing for
+/// that, because the routes the change unblocks do not need half the clock: on
+/// the nine files it wins, the ladder decides in **307–625 ms** (the `skip`
+/// arm's wall clock, where no CEGAR runs at all). A half-budget split spent
+/// twelve seconds to buy four hundred milliseconds of work.
 ///
 /// `4` is chosen against **both** bounds the measurement gives, which is why it
 /// is neither the largest nor the smallest defensible value:
 ///
-/// - it leaves the CEGAR 18 s of a 24 s budget, **above the 12.7 s** the one
-///   regressing file needs, with 42% of margin;
+/// - it leaves the CEGAR 18 s of a 24 s budget, above **three of the four**
+///   regressing files' requirements (12.7 / 13.3 / 15.5 s);
 /// - it gives the ladder 6 s, about **ten times** the largest ladder time
 ///   observed (625 ms).
+///
+/// The fourth, `hash_uns_05_20` at 23.7 s of a 24 s budget, is not recoverable
+/// by any reserve at all: a route that needs 99% of the clock cannot share it.
+/// That file is the honest, named cost of making the ladder reachable, not an
+/// oversight.
 ///
 /// A bigger reserve starves the CEGAR on files it still decides; a smaller one
 /// leaves the ladder's 0.4 s of work sitting behind 21 s of CEGAR on a 24 s
 /// budget, where contention alone can eat the difference. Neither failure is
-/// hypothetical: the half-budget version cost `hash_sat_05_14`, and the
-/// 1/8-reserve version was rejected before it shipped for the second reason.
+/// hypothetical: the half-budget version cost four files, and the 1/8-reserve
+/// version was rejected before it shipped for the second reason.
 /// Measurement: `docs/research/12-performance/uf-arith-overbound-2026-09-08.md`.
 ///
 /// An unbounded configuration (`timeout == None`) is left unbounded: there is

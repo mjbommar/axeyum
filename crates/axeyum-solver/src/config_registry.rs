@@ -927,10 +927,12 @@ pub static REGISTRY: &[ConfigEntry] = &[
                so `euf-online`, `euf-offline` and `dispatch_uf_arith_online` were unreachable \
                above 64 congruence pairs; on the 58-file QF_UFLIA loss list that was 52 of 58 \
                files. MEASURED, not copied: the first version halved the budget (mirroring \
-               `probe_budget`) and cost one previously-decided file, `hash_sat_05_14`, which \
-               needs 12.7 s of 24; the nine files this unblocks need 307-625 ms of ladder, so a \
-               reserve is the right shape and a split is not. `4` clears BOTH bounds: 18 s for \
-               the CEGAR (above 12.7) and 6 s for the ladder (about ten times 625 ms). The env override selects the \
+               `probe_budget`) and cost FOUR previously-decided files on the 200-file list, all \
+               needing more than half the budget (12.7 / 13.3 / 15.5 / 23.7 s), while the nine \
+               files it unblocks need 307-625 ms of ladder -- so a reserve is the right shape \
+               and a split is not. `4` clears both bounds: 18 s for the CEGAR (above three of \
+               the four) and 6 s for the ladder (about ten times 625 ms). The fourth, at 23.7 s \
+               of 24, is not recoverable by any reserve and is the named cost of the change. The env override selects the \
                whole policy (`terminal` restores the old behaviour, `skip` removes the CEGAR), \
                not just this divisor.",
     },
