@@ -501,7 +501,7 @@ pub fn eliminate_variables_within(
 /// *equisatisfiable*. The model direction is carried by the returned
 /// [`Reconstruction`]; the proof only has to justify the `unsat` direction, and
 /// for that the resolvents are ordinary resolution steps.
-pub(crate) fn eliminate_variables_within_recorded(
+pub fn eliminate_variables_within_recorded(
     formula: &CnfFormula,
     opts: BveOptions,
     deadline: Option<Instant>,

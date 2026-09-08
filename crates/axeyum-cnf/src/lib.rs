@@ -57,6 +57,7 @@ mod interpolant;
 mod lrat;
 pub mod phase_policy;
 mod proof_sat;
+mod reduction_link;
 mod simplify;
 /// The deterministic tick: a cache-aware, clock-free proxy for search work,
 /// derived from [`SearchCounters`] so it costs nothing on the hot path.
@@ -83,7 +84,7 @@ pub use batsat_reference::{
 };
 pub use bve::{
     BveOptions, BveOutcome, BveStats, Reconstruction, eliminate_variables,
-    eliminate_variables_within,
+    eliminate_variables_within, eliminate_variables_within_recorded,
 };
 pub use compact::{CompactMap, compact};
 #[cfg(unix)]
@@ -131,7 +132,10 @@ pub use proof_sat::{
     solve_with_theory_and_drat_proof, solve_with_theory_and_drat_proof_mirrored,
     solve_with_theory_and_drat_proof_traced, solve_with_theory_and_drat_proof_with_options,
 };
-pub use simplify::{SubsumeStats, simplify, simplify_within};
+pub use reduction_link::{
+    LiftingSink, LinkedProofCheck, ProofCoverage, ReducedReason, ReductionLink,
+};
+pub use simplify::{SubsumeStats, simplify, simplify_within, simplify_within_recorded};
 pub use vivify::{VivifyOptions, VivifyOutcome, VivifyStats, vivify, vivify_within};
 pub use weighted::{
     WeightedAtMostEncoding, WeightedAtMostError, WeightedAtMostLimits, encode_weighted_at_most,
