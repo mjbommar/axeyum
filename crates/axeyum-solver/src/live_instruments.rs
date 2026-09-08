@@ -87,6 +87,13 @@ pub mod instrument {
     pub const DL_ONLINE: &str = "dl-online";
     /// `crate::RouteTrace` as of the last recorded route attempt.
     pub const ROUTE: &str = "route";
+    /// `crate::AbvStats` as of the last `QF_ABV` array-route recording site.
+    ///
+    /// Always sampled [`super::Sampled::InFlight`]: the array routes publish
+    /// between recording sites, not at a stage boundary, which is the whole
+    /// point — the route that spends a lost `QF_ABV` file's budget is the one
+    /// that never reaches a boundary to publish at.
+    pub const ABV: &str = "abv";
 }
 
 /// Whether a reading is an instrument's finished answer or a state the run

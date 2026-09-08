@@ -28,8 +28,13 @@
 > QF_LRA and QF_UFLIA by the slices that acted on them, and **UF, whose classes
 > were re-derived through the front door on 2026-09-06** — re-derived and
 > **superseded**, not confirmed: all 32 rows were wrong, and the replacement is
-> [the UF front-door census](2026-09-06-uf-front-door-census.md). Divisions
-> **not** confirmed: QF_LIA, QF_ABV, QF_SLIA, QF_BV, QF_NIA.
+> [the UF front-door census](2026-09-06-uf-front-door-census.md). **QF_ABV was
+> re-derived through the front door on 2026-09-08 and is likewise superseded,
+> not confirmed** — five of its nineteen files are decided by the current tree,
+> and of the fourteen that are not, the route that spent the budget is one the
+> trail could not name because it never returned; the replacement is
+> [the QF_ABV route attribution](../12-performance/qf-abv-route-attribution-2026-09-08.md).
+> Divisions **not** confirmed: QF_LIA, QF_SLIA, QF_BV, QF_NIA.
 >
 > The general shape, worth carrying beyond this file: **a diagnostic tool with
 > partial coverage does not merely fail to find things — it manufactures
@@ -145,6 +150,12 @@ Top routes: ~~`ufbv-declared-sort-lazy` (32, all of them)~~ — no front-door tr
 of any of the 32 reaches that route.
 
 ### QF_ABV -- 19 files (s5)
+
+> **SUPERSEDED 2026-09-08.** Every `class` and `last_route` below is wrong for
+> this division, and the population is stale: five of these files are decided
+> by the current tree. Read
+> [the front-door route attribution](../12-performance/qf-abv-route-attribution-2026-09-08.md)
+> instead. The wall times and `smtcomp_cli` verdicts in the TSV remain good.
 
 | class | files |
 |---|---:|
