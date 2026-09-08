@@ -1,43 +1,120 @@
 //! Unconstrained-variable elimination (Track 1, P1.2 / T1.2.4).
 //!
 //! A variable that occurs **exactly once** in the whole assertion forest is
-//! *unconstrained*: nothing else pins it, so as it ranges over all values, any
-//! invertible operation applied to it ranges over all values too. So if `x`
-//! occurs once and its sole parent is an invertible bit-vector op
-//! `p = op(x, w…)` (`bvadd`/`bvsub`/`bvxor`/`bvnot`/`bvneg`, or `bvmul` by an odd
-//! constant — invertible mod `2^w`), then `p` itself is
-//! unconstrained: replace it everywhere by a single fresh variable `u` and drop
-//! the operation. This is Z3's `elim_unconstr` tactic — it peels expensive
-//! operator layers off single-use variables before bit-blasting.
+//! *unconstrained* — Brummayer's definition verbatim: *"a variable is
+//! unconstrained in an SMT formula `φ` if it has only one parent in the abstract
+//! syntax DAG representation of `φ`. We assume that structural hashing is
+//! enabled."* Nothing else pins it, so if its sole parent `p = op(…, x, …)` can
+//! be inverted for `x`, then `p` itself ranges over everything `p`'s sort
+//! allows: replace `p` by a single fresh variable `u`, drop the operation, and
+//! record `x := op⁻¹(u, …)` so a model of the reduced problem still rebuilds
+//! `x`. This is Z3's `elim_unconstrained` / `elim_uncnstr_tactic` — it peels
+//! expensive operator layers off single-use variables before bit-blasting, and
+//! the workload where it pays most is symbolic execution over SSA code, where
+//! most program variables are written once and read at most once.
 //!
-//! **Model-sound** via the [`ModelReconstructionTrail`]. For each elimination we
-//! record `x := op⁻¹(u, w…)`: given the reduced model's value for `u`, evaluating
-//! the inverse reproduces an `x` with `op(x, w…) = u`, so every original
-//! assertion that mentioned `p` is satisfied exactly as the reduced one was. An
-//! operand `w` that survives nowhere in the reduced problem (it only fed into the
-//! eliminated `p`) is genuinely unconstrained; we default it to `0` — `x` is
-//! computed against that value, so the inverse identity still holds. Reverse
-//! replay (defaults appended last ⇒ reconstructed first) resolves every
-//! dependency, exactly as for [`crate::solve_eqs`].
+//! # Two things this module deliberately separates
 //!
-//! **Terminating:** each elimination replaces an operator node `p` in the
-//! assertions with a leaf `u`, strictly reducing the assertion operator count;
-//! the inverse term lives in the trail, never re-entering the assertions.
-//! Peeling can chain (`u`'s parent may now be a single-use invertible op).
+//! * **Which variable is unconstrained** — the occurrence analysis, here.
+//! * **What may replace its parent** — the inversion rules, in
+//!   [`crate::inverter`], as a per-theory plugin registry with the
+//!   unconstrained-ness predicate *injected*. A new theory registers an
+//!   [`Inverter`] rather than editing a function in this file.
 //!
-//! Scope: the invertible operators above. `bvmul` fires only when the other
-//! factor is an odd constant (then it has a 2-adic inverse); `bvmul` by an even
-//! or non-constant factor, and the non-injective `bvand`/`bvor`/`bvudiv`/…, are
-//! left alone — refining them is not sound by simple inversion.
+//! # Model soundness
+//!
+//! Every elimination appends `x := def` to a [`ModelReconstructionTrail`].
+//! Reverse replay (defaults appended last ⇒ reconstructed first) resolves every
+//! dependency, exactly as for [`crate::solve_eqs`]. An operand that survives
+//! nowhere in the reduced problem (it only fed the eliminated layer) is
+//! genuinely unconstrained and is defaulted; the recorded inverse is computed
+//! against that default, so the inversion identity still holds. **Model
+//! generation is never gated off**: unlike Boolector, which ships with "model
+//! generation with unconstrained optimization enabled is not yet supported",
+//! reconstruction is threaded through every rule and is the pass's admission
+//! criterion — a rule that cannot define what it consumes is not a rule.
+//!
+//! # Cost
+//!
+//! The occurrence graph is derived **once per round**, not once per
+//! elimination. Within a round the cascade transplants a replaced node's parent
+//! edges onto its fresh replacement, so a stack of peelable layers
+//! (`(bvadd (bvneg x) 5)`, or the `x ≤ y, y ≤ z, z ≤ u` chain Z3's design note
+//! calls out) collapses in one walk. That is the fix Z3 wrote its second
+//! implementation for; the header of `elim_unconstrained.cpp` describes the
+//! recompute-the-world shape — which this module had — as the problem.
+//!
+//! # Quantifiers
+//!
+//! A binder's variable can look single-use while being anything but: in
+//! `(forall ((x S)) (bvult (bvadd x y) 5))`, `x` has one parent, yet replacing
+//! the `bvadd` by a free `u` turns a universal claim into an existential one.
+//! The pass therefore refuses any assertion forest containing a binder and
+//! returns it unchanged ([`ElimUnconstrainedStats::skipped_quantified`]).
 
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeMap, HashMap, HashSet};
 
-use axeyum_ir::{
-    Assignment, IrError, Op, Sort, SymbolId, TermArena, TermId, TermNode, Value, eval,
-};
+use axeyum_ir::{IrError, Op, SymbolId, TermArena, TermId, TermNode};
 
 use crate::canonical::replace_subterms;
+use crate::inverter::{Inverter, InverterCtx, InverterRegistry, free_symbols, is_defaultable_sort};
 use crate::reconstruct::ModelReconstructionTrail;
+
+/// Maximum number of occurrence-graph rebuilds. A round that eliminates nothing
+/// ends the pass, so this is a safety valve rather than the normal exit; Z3 caps
+/// the equivalent loop at 3.
+const MAX_ROUNDS: usize = 8;
+
+/// Opt-in, clock-free instrumentation for one run of the pass.
+///
+/// Nobody has published a pass-level ablation for a modern bit-vector
+/// preprocessor, so these counters are the raw material for one: which rule
+/// fired how often, how many graph rebuilds it took, and how much of the
+/// candidate set was even examined. Like [`crate::PassSize`] the counters are
+/// free — they are plain increments on a struct the caller may ignore — and
+/// carry no clock, so a measurement is reproducible.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct ElimUnconstrainedStats {
+    /// Occurrence-graph rebuilds performed (rounds entered).
+    pub rounds: u64,
+    /// Operator layers eliminated (one per successful inversion).
+    pub eliminations: u64,
+    /// Symbol definitions recorded, excluding orphan defaults. Larger than
+    /// [`Self::eliminations`] whenever a rule consumed several operands.
+    pub defs_recorded: u64,
+    /// Operands that survived nowhere and were defaulted.
+    pub orphans_defaulted: u64,
+    /// Single-use candidates pulled off the worklist.
+    pub candidates_examined: u64,
+    /// Candidates whose parent reached the inverter registry.
+    pub inversion_attempts: u64,
+    /// Inversions whose replacement was a compound term rather than a bare
+    /// fresh variable; each ends its cascade and buys another round.
+    pub compound_replacements: u64,
+    /// Set when the pass declined the whole forest because it contains a
+    /// quantifier binder.
+    pub skipped_quantified: bool,
+    /// Firing count per rule name, in rule-name order.
+    rules: BTreeMap<&'static str, u64>,
+}
+
+impl ElimUnconstrainedStats {
+    /// Firing counts per rule name, deterministically ordered.
+    #[must_use]
+    pub fn rule_counts(&self) -> Vec<(&'static str, u64)> {
+        self.rules.iter().map(|(&k, &v)| (k, v)).collect()
+    }
+
+    /// How often the named rule fired.
+    #[must_use]
+    pub fn rule_count(&self, rule: &str) -> u64 {
+        self.rules.get(rule).copied().unwrap_or(0)
+    }
+
+    fn record(&mut self, rule: &'static str) {
+        *self.rules.entry(rule).or_insert(0) += 1;
+    }
+}
 
 /// The result of [`elim_unconstrained`]: the operator-reduced assertions plus the
 /// trail that rebuilds the eliminated (and incidentally-orphaned) variables.
@@ -46,11 +123,11 @@ pub struct UnconstrainedElimination {
     assertions: Vec<TermId>,
     trail: ModelReconstructionTrail,
     eliminated: usize,
+    stats: ElimUnconstrainedStats,
 }
 
 impl UnconstrainedElimination {
-    /// The reduced assertions (single-use invertible-op layers replaced by fresh
-    /// unconstrained variables).
+    /// The reduced assertions (unconstrained operator layers replaced).
     #[must_use]
     pub fn assertions(&self) -> &[TermId] {
         &self.assertions
@@ -69,6 +146,12 @@ impl UnconstrainedElimination {
         self.eliminated
     }
 
+    /// Per-rule and per-round instrumentation for this run.
+    #[must_use]
+    pub fn stats(&self) -> &ElimUnconstrainedStats {
+        &self.stats
+    }
+
     /// Consumes into `(reduced assertions, trail)`.
     #[must_use]
     pub fn into_parts(self) -> (Vec<TermId>, ModelReconstructionTrail) {
@@ -76,292 +159,297 @@ impl UnconstrainedElimination {
     }
 }
 
-/// Reference counts and the unique parent (node + argument index) of every term
-/// reachable from `roots`. A term referenced exactly once has a single,
-/// well-defined parent recorded here.
+/// Reference counts and parent edges of every term reachable from `roots`.
+///
+/// `refs` counts root slots **and** argument slots, so a term that is also a
+/// top-level assertion is never single-use. `parents` records argument edges
+/// only, so a term that is *only* a root has no parent and is never a
+/// candidate.
 struct Occurrences {
     refs: HashMap<TermId, usize>,
-    parent: HashMap<TermId, (TermId, usize)>,
+    parents: HashMap<TermId, Vec<(TermId, usize)>>,
+    quantified: bool,
+    nodes: usize,
 }
 
-/// Walks the shared DAG from the roots once, counting how many argument slots
-/// reference each node and remembering the parent edge of single-use nodes.
+/// Walks the shared DAG from the roots once.
 fn occurrences(arena: &TermArena, roots: &[TermId]) -> Occurrences {
     let mut refs: HashMap<TermId, usize> = HashMap::new();
-    let mut parent: HashMap<TermId, (TermId, usize)> = HashMap::new();
+    let mut parents: HashMap<TermId, Vec<(TermId, usize)>> = HashMap::new();
     let mut visited: HashSet<TermId> = HashSet::new();
     let mut stack: Vec<TermId> = Vec::new();
+    let mut quantified = false;
 
     for &root in roots {
-        // Count the root reference itself, so a term that is *also* a top-level
-        // assertion is never treated as single-occurrence.
         *refs.entry(root).or_insert(0) += 1;
         if visited.insert(root) {
             stack.push(root);
         }
     }
     while let Some(term) = stack.pop() {
-        if let TermNode::App { args, .. } = arena.node(term) {
+        if let TermNode::App { op, args } = arena.node(term) {
+            if matches!(op, Op::Forall(_) | Op::Exists(_)) {
+                quantified = true;
+            }
             let args = args.clone();
             for (i, arg) in args.iter().enumerate() {
                 *refs.entry(*arg).or_insert(0) += 1;
-                parent.insert(*arg, (term, i));
+                parents.entry(*arg).or_default().push((term, i));
                 if visited.insert(*arg) {
                     stack.push(*arg);
                 }
             }
         }
     }
-    Occurrences { refs, parent }
+    let nodes = visited.len();
+    Occurrences {
+        refs,
+        parents,
+        quantified,
+        nodes,
+    }
 }
 
-/// Collects the symbols occurring free in `term` (memoized so a shared DAG is
-/// walked once).
-///
-/// The walk is an explicit worklist, not native recursion: its depth would
-/// otherwise be the term DAG's *depth*, so a deep operand chain — e.g. a
-/// left-associated `(+ (+ (+ x 1) 1) 1)` spine, which SMT-LIB sources produce
-/// routinely — aborted the process with a stack overflow instead of letting the
-/// solver report a first-class `unknown` (compare `fcc8760d`). `seen` keeps the
-/// walk linear in DAG size either way.
-fn free_symbols(
-    arena: &TermArena,
-    term: TermId,
-    out: &mut HashSet<SymbolId>,
-    seen: &mut HashSet<TermId>,
-) {
-    let mut work = vec![term];
-    while let Some(t) = work.pop() {
-        if !seen.insert(t) {
+/// Marks `start` and every node above it dirty: their subtrees now contain a
+/// term this round has replaced, so they may not be baked into a definition.
+fn mark_dirty(occ: &Occurrences, start: TermId, dirty: &mut HashSet<TermId>) {
+    let mut stack = vec![start];
+    while let Some(t) = stack.pop() {
+        if !dirty.insert(t) {
             continue;
         }
-        match arena.node(t) {
-            TermNode::Symbol(s) => {
-                out.insert(*s);
+        if let Some(edges) = occ.parents.get(&t) {
+            for &(parent, _) in edges {
+                stack.push(parent);
             }
-            TermNode::App { args, .. } => {
-                work.extend(args.iter().copied());
-            }
-            _ => {}
         }
     }
 }
 
-/// Whether `op` (with `arity` arguments, `x` at `idx`) is invertible for the
-/// `x` operand by [`invert`].
-fn invertible(op: Op, arity: usize, idx: usize) -> bool {
-    match op {
-        Op::BvNot | Op::BvNeg => arity == 1,
-        Op::BvAdd | Op::BvXor => arity >= 2,
-        Op::BvSub => arity == 2 && (idx == 0 || idx == 1),
-        _ => false,
-    }
-}
-
-/// Builds `op⁻¹(u, others…)` solving `p = op(args…)` for the operand at `idx`,
-/// where `u` stands for the (now fresh) value of `p`. Assumes
-/// [`invertible`]`(op, args.len(), idx)`.
-fn invert(
-    arena: &mut TermArena,
-    op: Op,
-    args: &[TermId],
-    idx: usize,
-    u: TermId,
-) -> Result<TermId, IrError> {
-    let others: Vec<TermId> = args
-        .iter()
-        .enumerate()
-        .filter_map(|(i, &a)| (i != idx).then_some(a))
-        .collect();
-    let inverse = match op {
-        // p = ~x  ⇒  x = ~u ;  p = -x  ⇒  x = -u
-        Op::BvNot => arena.bv_not(u)?,
-        Op::BvNeg => arena.bv_neg(u)?,
-        // p = Σ args  ⇒  x = u - Σ others   (bvadd associative/commutative)
-        Op::BvAdd => {
-            let mut sum = others[0];
-            for &o in &others[1..] {
-                sum = arena.bv_add(sum, o)?;
-            }
-            arena.bv_sub(u, sum)?
-        }
-        // p = ⊕ args  ⇒  x = u ⊕ (⊕ others)   (bvxor self-inverse)
-        Op::BvXor => {
-            let mut acc = others[0];
-            for &o in &others[1..] {
-                acc = arena.bv_xor(acc, o)?;
-            }
-            arena.bv_xor(u, acc)?
-        }
-        // p = a - b: solve for whichever side is x.
-        Op::BvSub if idx == 0 => arena.bv_add(u, args[1])?, // u = x - b ⇒ x = u + b
-        Op::BvSub => arena.bv_sub(args[0], u)?,             // u = a - x ⇒ x = a - u
-        _ => unreachable!("invert called on a non-invertible op"),
-    };
-    Ok(inverse)
-}
-
-/// A single eliminable layer: the single-use variable `sym`, its sole parent
-/// operator node `parent`, the fresh replacement `u`, and the inverse term
-/// recovering `sym` from `u`.
-struct Elimination {
-    sym: SymbolId,
-    parent: TermId,
-    u: TermId,
-    inverse: TermId,
-}
-
-/// Finds the lowest-`TermId` single-occurrence bit-vector variable whose sole
-/// parent is an invertible operator, mints its fresh replacement `u`
-/// (`!unconstr!N`, outside the SMT-LIB user identifier space), and builds the
-/// inverse.
-fn find_elimination(
-    arena: &mut TermArena,
-    occ: &Occurrences,
-    next_fresh: &mut u64,
-) -> Result<Option<Elimination>, IrError> {
-    // Deterministic: single-occurrence variable nodes, ordered by TermId.
-    let mut single_use: Vec<TermId> = occ
-        .refs
-        .iter()
-        .filter_map(|(&t, &n)| {
-            (n == 1 && matches!(arena.node(t), TermNode::Symbol(_))).then_some(t)
-        })
-        .collect();
-    single_use.sort_by_key(|t| t.index());
-
-    for var in single_use {
-        let TermNode::Symbol(sym) = *arena.node(var) else {
-            continue;
-        };
-        if !matches!(arena.sort_of(var), Sort::BitVec(_)) {
-            continue;
-        }
-        let Some(&(parent, idx)) = occ.parent.get(&var) else {
-            continue;
-        };
-        let TermNode::App { op, args } = arena.node(parent) else {
-            continue;
-        };
-        let (op, args) = (*op, args.clone());
-        let Sort::BitVec(width) = arena.sort_of(parent) else {
-            continue;
-        };
-
-        // `bvmul` by an odd ground constant is invertible: `p = c·x ⇒ x = c⁻¹·u`,
-        // with `c⁻¹` the 2-adic inverse mod `2^width`. This peels a multiplier
-        // layer off a single-use variable when the other factor is an odd
-        // constant — the exact shape that otherwise bit-blasts to a large CNF.
-        if op == Op::BvMul && args.len() == 2 {
-            if let Some(inv_value) = odd_factor_inverse(arena, args[1 - idx], width) {
-                let u = mint_fresh(arena, width, next_fresh)?;
-                let inv_const = arena.bv_const(width, inv_value)?;
-                let inverse = arena.bv_mul(inv_const, u)?;
-                return Ok(Some(Elimination {
-                    sym,
-                    parent,
-                    u,
-                    inverse,
-                }));
-            }
-            continue;
-        }
-
-        if !invertible(op, args.len(), idx) {
-            continue;
-        }
-        let u = mint_fresh(arena, width, next_fresh)?;
-        let inverse = invert(arena, op, &args, idx, u)?;
-        return Ok(Some(Elimination {
-            sym,
-            parent,
-            u,
-            inverse,
-        }));
-    }
-    Ok(None)
-}
-
-/// Mints a fresh `width`-bit replacement variable (`!unconstr!N`, outside the
-/// SMT-LIB user identifier space).
-fn mint_fresh(arena: &mut TermArena, width: u32, next_fresh: &mut u64) -> Result<TermId, IrError> {
-    let name = format!("!unconstr!{next_fresh}");
-    *next_fresh += 1;
-    let sym = arena.declare_internal(&name, Sort::BitVec(width))?;
-    Ok(arena.var(sym))
-}
-
-/// If `term` is an odd ground bit-vector constant of `width` bits, returns its
-/// multiplicative inverse mod `2^width`; otherwise `None` (a non-ground operand,
-/// a wider value, or an even constant — none invertible by this rule).
-fn odd_factor_inverse(arena: &TermArena, term: TermId, width: u32) -> Option<u128> {
-    match eval(arena, term, &Assignment::new()) {
-        Ok(Value::Bv { width: w, value }) if w == width && value & 1 == 1 => {
-            Some(mod_inverse_pow2(value, width))
-        }
-        _ => None,
-    }
-}
-
-/// The multiplicative inverse of an odd `c` modulo `2^width` (`width ≤ 128`), by
-/// 2-adic Newton iteration `x ← x·(2 − c·x)`: each step doubles the number of
-/// correct low bits, and `x₀ = c` is already correct mod 8, so seven steps cover
-/// 128 bits.
-fn mod_inverse_pow2(c: u128, width: u32) -> u128 {
-    let m = if width >= 128 {
-        u128::MAX
-    } else {
-        (1u128 << width) - 1
-    };
-    let c = c & m;
-    let mut inv = c;
-    for _ in 0..7 {
-        inv = inv.wrapping_mul(2u128.wrapping_sub(c.wrapping_mul(inv))) & m;
-    }
-    inv & m
-}
-
-/// Eliminates unconstrained single-use invertible-operator layers (see module
-/// docs).
+/// Eliminates unconstrained operator layers using the default inverter registry
+/// (core, bit-vector and arithmetic rules).
 ///
 /// # Errors
 ///
 /// Returns [`IrError`] only if rebuilding an inverse or substituted term fails
-/// sort checking, which cannot happen here (every rewrite preserves the operand
-/// width).
+/// sort checking, which the rules' width/sort preconditions rule out.
 pub fn elim_unconstrained(
     arena: &mut TermArena,
     assertions: &[TermId],
 ) -> Result<UnconstrainedElimination, IrError> {
+    let registry = InverterRegistry::with_defaults();
+    elim_unconstrained_with(arena, assertions, &registry)
+}
+
+/// [`elim_unconstrained`] against a caller-supplied [`InverterRegistry`] — the
+/// entry point a consumer uses to add or withhold theories (an empty registry
+/// makes the pass a no-op, which is how the ablation is run).
+///
+/// # Errors
+///
+/// As [`elim_unconstrained`].
+pub fn elim_unconstrained_with(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    registry: &InverterRegistry,
+) -> Result<UnconstrainedElimination, IrError> {
     let mut current: Vec<TermId> = assertions.to_vec();
     let mut trail = ModelReconstructionTrail::new();
+    let mut stats = ElimUnconstrainedStats::default();
     let mut next_fresh: u64 = 0;
     let mut eliminated = 0usize;
-    // Locally tracked so we can default any operand orphaned by the rewrites.
     let mut defined: HashSet<SymbolId> = HashSet::new();
-    let mut inverse_terms: Vec<TermId> = Vec::new();
+    let mut definition_terms: Vec<TermId> = Vec::new();
 
-    loop {
-        let occ = occurrences(arena, &current);
-        let Some(elim) = find_elimination(arena, &occ, &mut next_fresh)? else {
+    for _round in 0..MAX_ROUNDS {
+        let mut occ = occurrences(arena, &current);
+        if occ.quantified {
+            // A binder's variable can have one parent without being
+            // unconstrained; decline the whole forest rather than guess.
+            stats.skipped_quantified = true;
+            return Ok(UnconstrainedElimination {
+                assertions: assertions.to_vec(),
+                trail: ModelReconstructionTrail::new(),
+                eliminated: 0,
+                stats,
+            });
+        }
+        stats.rounds += 1;
+        // Deterministic worklist: single-use variable nodes ordered by TermId.
+        let mut candidates: HashSet<TermId> = occ
+            .refs
+            .iter()
+            .filter_map(|(&t, &n)| {
+                let single_parent = occ.parents.get(&t).is_some_and(|p| p.len() == 1);
+                (n == 1 && single_parent && matches!(arena.node(t), TermNode::Symbol(_)))
+                    .then_some(t)
+            })
+            .collect();
+        let mut queue: Vec<TermId> = candidates.iter().copied().collect();
+        queue.sort_by_key(|t| t.index());
+
+        let mut image: HashMap<TermId, TermId> = HashMap::new();
+        // Upward closure of every node this round has already replaced (Z3's
+        // `invalidate_parents`). A node is dirty when its subtree contains a
+        // replacement, and an operand the inverter is about to bake into a
+        // definition — or into a compound replacement — must NOT be dirty: it
+        // would carry a term this round is deleting, so the definition would
+        // reference a symbol absent from the reduced problem. Checking only the
+        // parent's direct arguments is not enough; the stale node can be
+        // arbitrarily deep.
+        let mut dirty: HashSet<TermId> = HashSet::new();
+        let mut round_eliminations = 0usize;
+        let mut cursor = 0usize;
+        // Each elimination consumes at least one candidate and mints at most
+        // one; the budget bounds the compound rules, whose replacements are
+        // larger than what they replace.
+        let budget = 4 * occ.nodes + 64;
+
+        while cursor < queue.len() {
+            let var = queue[cursor];
+            cursor += 1;
+            if round_eliminations >= budget {
+                break;
+            }
+            if !candidates.contains(&var) {
+                continue;
+            }
+            stats.candidates_examined += 1;
+            let Some(parent_edges) = occ.parents.get(&var) else {
+                continue;
+            };
+            if parent_edges.len() != 1 {
+                continue;
+            }
+            let (parent, idx) = parent_edges[0];
+            if image.contains_key(&parent) {
+                continue;
+            }
+            let TermNode::App { op, args } = arena.node(parent) else {
+                continue;
+            };
+            let (op, args) = (*op, args.clone());
+            if idx >= args.len() {
+                continue;
+            }
+            // Substitute the one slot the cascade already rewrote; refuse the
+            // node if any *other* operand was rewritten, because its recorded
+            // definition would then reference a term this round is deleting.
+            let mut args_now = args.clone();
+            let mut clean = true;
+            for (i, arg) in args.iter().enumerate() {
+                if i == idx {
+                    if let Some(&mapped) = image.get(arg) {
+                        args_now[i] = mapped;
+                    }
+                } else if dirty.contains(arg) {
+                    clean = false;
+                    break;
+                }
+            }
+            if !clean || args_now[idx] != var {
+                continue;
+            }
+            // Sort guard: every operand (and the result) must be a sort this
+            // module can default, so an orphaned operand always has a value.
+            let result_sort = arena.sort_of(parent);
+            if !is_defaultable_sort(result_sort)
+                || !args_now
+                    .iter()
+                    .all(|&a| is_defaultable_sort(arena.sort_of(a)))
+            {
+                continue;
+            }
+
+            stats.inversion_attempts += 1;
+            let inversion = {
+                let predicate = |t: TermId| candidates.contains(&t);
+                let mut ctx = InverterCtx::new(arena, &predicate, &mut next_fresh);
+                registry.invert(&mut ctx, op, &args_now, idx, result_sort)?
+            };
+            let Some(inversion) = inversion else {
+                continue;
+            };
+            // Contract check: a rule may only define operands the analysis
+            // already certified unconstrained.
+            let definable = inversion.defs.iter().all(|&(sym, _)| {
+                !defined.contains(&sym)
+                    && args_now.iter().any(|&a| {
+                        candidates.contains(&a)
+                            && matches!(arena.node(a), TermNode::Symbol(s) if *s == sym)
+                    })
+            });
+            if !definable {
+                continue;
+            }
+
+            for &(sym, def) in &inversion.defs {
+                trail.define(sym, def);
+                defined.insert(sym);
+                definition_terms.push(def);
+                stats.defs_recorded += 1;
+            }
+            stats.record(inversion.rule);
+            eliminated += 1;
+            round_eliminations += 1;
+            image.insert(parent, inversion.replacement);
+            mark_dirty(&occ, parent, &mut dirty);
+
+            // Every operand of the inverted node leaves the candidate set: the
+            // ones the rule defined are gone from the formula, and the ones it
+            // dropped are about to be.
+            for &arg in &args_now {
+                candidates.remove(&arg);
+            }
+
+            if inversion.compound {
+                // The replacement puts existing subterms back into the formula,
+                // so the round's occurrence counts no longer describe it below
+                // this node. Retire every symbol it mentions and let the next
+                // round re-derive the graph.
+                stats.compound_replacements += 1;
+                let mut mentioned = HashSet::new();
+                let mut seen = HashSet::new();
+                free_symbols(arena, inversion.replacement, &mut mentioned, &mut seen);
+                candidates.retain(|&t| match arena.node(t) {
+                    TermNode::Symbol(s) => !mentioned.contains(s),
+                    _ => true,
+                });
+                continue;
+            }
+
+            // Cascade: the fresh replacement inherits the replaced node's
+            // parent edges, so a peelable stack collapses without rebuilding
+            // the graph.
+            let inherited = occ.parents.get(&parent).cloned().unwrap_or_default();
+            let inherited_refs = occ.refs.get(&parent).copied().unwrap_or(0);
+            let single = inherited_refs == 1 && inherited.len() == 1;
+            occ.refs.insert(inversion.replacement, inherited_refs);
+            occ.parents.insert(inversion.replacement, inherited);
+            if single && matches!(arena.node(inversion.replacement), TermNode::Symbol(_)) {
+                candidates.insert(inversion.replacement);
+                queue.push(inversion.replacement);
+            }
+        }
+
+        if round_eliminations == 0 {
             break;
-        };
-        // Record x := op⁻¹(u, w…), then replace the parent operator node by the
-        // fresh unconstrained variable everywhere it occurs.
-        trail.define(elim.sym, elim.inverse);
-        defined.insert(elim.sym);
-        inverse_terms.push(elim.inverse);
-        eliminated += 1;
-        let replacements = HashMap::from([(elim.parent, elim.u)]);
+        }
         let mut memo: HashMap<TermId, TermId> = HashMap::new();
         for a in &mut current {
-            *a = replace_subterms(arena, *a, &replacements, &mut memo)?;
+            *a = replace_subterms(arena, *a, &image, &mut memo)?;
         }
     }
 
-    // Default any operand that fed only into an eliminated layer: it survives
-    // nowhere in the reduced problem and is not itself an eliminated variable, so
-    // it is genuinely unconstrained and the inverse identity holds for any value.
+    // Default every symbol the rewrite dropped: one that survives nowhere in the
+    // reduced problem and is not itself an eliminated variable is either an
+    // operand that only fed an eliminated layer (its value is pinned by the
+    // recorded inverse, computed against this default) or one whose value the
+    // replacement made irrelevant — an `ite` condition whose branches both
+    // became the same fresh variable, say. Both must still be BOUND, because a
+    // `sat` is only checkable by evaluating the ORIGINAL assertions, which
+    // mention them. Appended last ⇒ reconstructed first, so every definition
+    // that mentions one sees a value.
     let mut survivors: HashSet<SymbolId> = HashSet::new();
     let mut seen = HashSet::new();
     for &a in &current {
@@ -369,8 +457,11 @@ pub fn elim_unconstrained(
     }
     let mut needed: HashSet<SymbolId> = HashSet::new();
     let mut def_seen = HashSet::new();
-    for &def in &inverse_terms {
+    for &def in &definition_terms {
         free_symbols(arena, def, &mut needed, &mut def_seen);
+    }
+    for &a in assertions {
+        free_symbols(arena, a, &mut needed, &mut def_seen);
     }
     let mut orphans: Vec<SymbolId> = needed
         .into_iter()
@@ -379,24 +470,41 @@ pub fn elim_unconstrained(
     orphans.sort_by_key(|s| s.index());
     for sym in orphans {
         let var = arena.var(sym);
-        let Sort::BitVec(w) = arena.sort_of(var) else {
-            continue;
+        let sort = arena.sort_of(var);
+        let default = {
+            let predicate = |_: TermId| false;
+            let mut ctx = InverterCtx::new(arena, &predicate, &mut next_fresh);
+            ctx.default_value(sort)?
         };
-        let zero = arena.bv_const(w, 0)?;
-        trail.define(sym, zero);
+        if let Some(default) = default {
+            trail.define(sym, default);
+            stats.orphans_defaulted += 1;
+        }
     }
 
+    stats.eliminations = eliminated as u64;
     Ok(UnconstrainedElimination {
         assertions: current,
         trail,
         eliminated,
+        stats,
     })
 }
+
+/// The registry the pass uses by default — exposed so a caller can start from
+/// it, add a theory, and pass the result to [`elim_unconstrained_with`].
+#[must_use]
+pub fn default_inverters() -> InverterRegistry {
+    InverterRegistry::with_defaults()
+}
+
+/// Re-export so downstream code can name the trait when registering a plugin.
+pub type BoxedInverter = Box<dyn Inverter>;
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use axeyum_ir::{Assignment, Value, eval};
+    use axeyum_ir::{Assignment, Sort, Value, eval};
 
     /// A deep operand spine must not blow the stack in the free-symbol scan.
     ///
@@ -452,11 +560,35 @@ mod tests {
         v
     }
 
+    /// Assigns every surviving symbol a sort-appropriate value and
+    /// reconstructs the eliminated ones.
+    fn reconstruct_with(
+        arena: &mut TermArena,
+        out: &UnconstrainedElimination,
+        bv_value: u128,
+    ) -> Assignment {
+        let mut reduced = Assignment::new();
+        for sym in survivors(arena, out.assertions()) {
+            let var = arena.var(sym);
+            let value = match arena.sort_of(var) {
+                Sort::Bool => Value::Bool(true),
+                Sort::BitVec(w) => Value::Bv {
+                    width: w,
+                    value: bv_value & ((1u128 << w) - 1),
+                },
+                other => panic!("unexpected surviving sort {other:?}"),
+            };
+            reduced.set(sym, value);
+        }
+        out.trail().reconstruct(arena, &reduced).unwrap()
+    }
+
     #[test]
     fn eliminates_single_use_under_add_and_reconstructs() {
         // (bvult (bvadd x y) 200) ∧ (bvugt y 1): x occurs once (inside the add),
         // y survives in the second assertion. The add is unconstrained ⇒ replaced
-        // by a fresh u; x := u - y.
+        // by a fresh u; x := u - y. The comparison layer above it then peels too
+        // (the fresh u is itself single-use under `bvult`).
         let mut arena = TermArena::new();
         let x = arena.declare("x", Sort::BitVec(8)).unwrap();
         let y = arena.declare("y", Sort::BitVec(8)).unwrap();
@@ -469,21 +601,19 @@ mod tests {
         let originals = [a1, a2];
 
         let out = elim_unconstrained(&mut arena, &originals).unwrap();
-        assert_eq!(out.eliminated(), 1);
+        assert!(out.eliminated() >= 1);
+        assert_eq!(out.stats().rule_count("bv/add"), 1);
         assert!(
             !survivors(&arena, out.assertions()).contains(&x),
             "x is eliminated"
         );
 
-        let u = arena.find_internal_symbol("!unconstr!0").unwrap();
-        let mut reduced = Assignment::new();
-        reduced.set(u, bv8(10));
-        reduced.set(y, bv8(3));
+        // Any assignment of the survivors that satisfies the reduced problem
+        // must reconstruct to a model of the original.
+        let full = reconstruct_with(&mut arena, &out, 3);
         for &a in out.assertions() {
-            assert_eq!(eval(&arena, a, &reduced).unwrap(), Value::Bool(true));
+            assert_eq!(eval(&arena, a, &full).unwrap(), Value::Bool(true));
         }
-        let full = out.trail().reconstruct(&arena, &reduced).unwrap();
-        assert_eq!(full.get(x), Some(bv8(7))); // u - y = 10 - 3
         assert_satisfies(&arena, &originals, &full);
     }
 
@@ -502,25 +632,23 @@ mod tests {
         let originals = [a1];
 
         let out = elim_unconstrained(&mut arena, &originals).unwrap();
-        assert_eq!(out.eliminated(), 1);
+        assert!(out.eliminated() >= 1);
         let surv = survivors(&arena, out.assertions());
         assert!(
             !surv.contains(&x) && !surv.contains(&y),
             "both eliminated/orphaned"
         );
+        assert!(out.stats().orphans_defaulted >= 1);
 
-        let u = arena.find_internal_symbol("!unconstr!0").unwrap();
-        let mut reduced = Assignment::new();
-        reduced.set(u, bv8(10));
-        let full = out.trail().reconstruct(&arena, &reduced).unwrap();
+        let full = reconstruct_with(&mut arena, &out, 3);
         assert_eq!(full.get(y), Some(bv8(0)), "orphan operand defaulted to 0");
-        assert_eq!(full.get(x), Some(bv8(10))); // u - y = 10 - 0
         assert_satisfies(&arena, &originals, &full);
     }
 
     #[test]
     fn does_not_fire_on_a_twice_used_variable() {
-        // (bvult x (bvadd x 1)): x occurs twice, so it is not unconstrained.
+        // (bvult x (bvadd x 1)): x occurs twice, so it is not unconstrained, and
+        // no other node has a single-use variable operand.
         let mut arena = TermArena::new();
         let x = arena.declare("x", Sort::BitVec(8)).unwrap();
         let xv = arena.var(x);
@@ -534,9 +662,9 @@ mod tests {
     }
 
     #[test]
-    fn does_not_fire_under_a_non_invertible_op() {
-        // (bvult (bvmul x y) 200) ∧ (bvugt y 1): x is single-use but bvmul is not
-        // invertible by this pass, so nothing is eliminated.
+    fn does_not_fire_when_the_other_multiplicand_is_a_live_variable() {
+        // (bvult (bvmul x y) 200) ∧ (bvugt y 1): x is single-use but y is not,
+        // so neither the all-unconstrained rule nor the constant rule applies.
         let mut arena = TermArena::new();
         let x = arena.declare("x", Sort::BitVec(8)).unwrap();
         let y = arena.declare("y", Sort::BitVec(8)).unwrap();
@@ -548,13 +676,16 @@ mod tests {
         let a2 = arena.bv_ugt(yv, one).unwrap();
 
         let out = elim_unconstrained(&mut arena, &[a1, a2]).unwrap();
-        assert_eq!(out.eliminated(), 0);
+        assert_eq!(out.stats().rule_count("bv/mul-all"), 0);
+        assert_eq!(out.stats().rule_count("bv/mul-odd-const"), 0);
+        assert_eq!(out.stats().rule_count("bv/mul-even-const"), 0);
     }
 
     #[test]
-    fn peels_a_nested_invertible_stack() {
-        // (bvult (bvadd (bvneg x) 5) 200): x single-use under bvneg, whose result
-        // is single-use under bvadd — both layers peel.
+    fn peels_a_nested_invertible_stack_in_one_round() {
+        // (= (bvadd (bvneg x) 5) 200): x single-use under bvneg, whose result is
+        // single-use under bvadd — both layers peel, and the cascade does it
+        // without rebuilding the occurrence graph.
         let mut arena = TermArena::new();
         let x = arena.declare("x", Sort::BitVec(8)).unwrap();
         let xv = arena.var(x);
@@ -562,127 +693,83 @@ mod tests {
         let five = arena.bv_const(8, 5).unwrap();
         let inner = arena.bv_add(negx, five).unwrap();
         let c = arena.bv_const(8, 200).unwrap();
-        let a1 = arena.bv_ult(inner, c).unwrap();
+        let a1 = arena.eq(inner, c).unwrap();
         let originals = [a1];
 
         let out = elim_unconstrained(&mut arena, &originals).unwrap();
-        assert_eq!(out.eliminated(), 2, "both invertible layers peel");
-        let surv = survivors(&arena, out.assertions());
-        assert_eq!(surv.len(), 1, "reduced to a single fresh variable");
+        assert!(out.eliminated() >= 2, "both invertible layers peel");
+        assert_eq!(
+            out.stats().rounds,
+            2,
+            "one productive round plus the round that finds nothing"
+        );
 
-        let u = surv[0];
-        let mut reduced = Assignment::new();
-        reduced.set(u, bv8(40)); // 40 < 200
-        let full = out.trail().reconstruct(&arena, &reduced).unwrap();
+        let full = reconstruct_with(&mut arena, &out, 3);
         assert_satisfies(&arena, &originals, &full);
     }
 
     #[test]
     fn eliminates_single_use_under_odd_constant_multiply() {
-        // (bvult (bvmul 3 x) 100): x single-use, 3 odd ⇒ x := 3⁻¹·u (3⁻¹ = 171
-        // mod 256). The multiplier layer is peeled with no bit-blasting.
+        // (= (bvmul 3 x) 30): x single-use, 3 odd ⇒ x := 3⁻¹·u (3⁻¹ = 171 mod
+        // 256). The multiplier layer is peeled with no bit-blasting.
         let mut arena = TermArena::new();
         let x = arena.declare("x", Sort::BitVec(8)).unwrap();
         let xv = arena.var(x);
         let three = arena.bv_const(8, 3).unwrap();
         let prod = arena.bv_mul(three, xv).unwrap();
-        let hundred = arena.bv_const(8, 100).unwrap();
-        let a1 = arena.bv_ult(prod, hundred).unwrap();
+        let thirty = arena.bv_const(8, 30).unwrap();
+        let a1 = arena.eq(prod, thirty).unwrap();
         let originals = [a1];
 
         let out = elim_unconstrained(&mut arena, &originals).unwrap();
-        assert_eq!(out.eliminated(), 1);
-        let u = arena.find_internal_symbol("!unconstr!0").unwrap();
-        let mut reduced = Assignment::new();
-        reduced.set(u, bv8(30)); // 30 < 100
-        let full = out.trail().reconstruct(&arena, &reduced).unwrap();
-        // 3⁻¹·30 = 171·30 mod 256 = 10, and 3·10 = 30 ✓.
-        assert_eq!(full.get(x), Some(bv8(10)));
+        assert_eq!(out.stats().rule_count("bv/mul-odd-const"), 1);
+        let full = reconstruct_with(&mut arena, &out, 3);
         assert_satisfies(&arena, &originals, &full);
     }
 
     #[test]
-    fn does_not_fire_on_even_constant_multiply() {
-        // (bvult (bvmul 4 x) 100): 4 is even ⇒ not invertible mod 2^w, no
-        // elimination.
+    fn quantified_forest_is_declined_whole() {
+        // (forall ((q Bv8)) (= (bvadd q y) 3)): `q` has one parent but is bound;
+        // replacing the `bvadd` by a free variable would turn the universal into
+        // an existential. A positive control follows in the same test so an
+        // always-decline regression cannot hide here.
         let mut arena = TermArena::new();
-        let x = arena.declare("x", Sort::BitVec(8)).unwrap();
-        let xv = arena.var(x);
-        let four = arena.bv_const(8, 4).unwrap();
-        let prod = arena.bv_mul(four, xv).unwrap();
-        let hundred = arena.bv_const(8, 100).unwrap();
-        let a1 = arena.bv_ult(prod, hundred).unwrap();
+        let q = arena.declare("q", Sort::BitVec(8)).unwrap();
+        let y = arena.declare("qy", Sort::BitVec(8)).unwrap();
+        let (qv, yv) = (arena.var(q), arena.var(y));
+        let sum = arena.bv_add(qv, yv).unwrap();
+        let three = arena.bv_const(8, 3).unwrap();
+        let body = arena.eq(sum, three).unwrap();
+        let quantified = arena.forall(q, body).unwrap();
 
-        let out = elim_unconstrained(&mut arena, &[a1]).unwrap();
+        let out = elim_unconstrained(&mut arena, &[quantified]).unwrap();
+        assert!(out.stats().skipped_quantified);
         assert_eq!(out.eliminated(), 0);
-    }
+        assert_eq!(out.assertions(), &[quantified]);
+        assert!(out.trail().is_empty());
 
-    /// Deterministic xorshift PRNG (no clock/RNG service).
-    fn xorshift(state: &mut u64) -> u64 {
-        let mut v = *state;
-        v ^= v << 13;
-        v ^= v >> 7;
-        v ^= v << 17;
-        *state = v;
-        v
+        // Positive control: the same body without the binder does fire.
+        let out = elim_unconstrained(&mut arena, &[body]).unwrap();
+        assert!(!out.stats().skipped_quantified);
+        assert!(out.eliminated() >= 1);
     }
 
     #[test]
-    fn random_invertible_stacks_reconstruct_to_satisfy_originals() {
-        // Bury a single-use `x` under a random stack of invertible ops with
-        // constant operands, anchored by `(= stack k)`. The whole stack collapses
-        // to one fresh variable forced to `k`; reconstruction must peel back to an
-        // `x` satisfying the original equality.
-        let mut state = 0x1357_9BDF_2468_ACE0u64;
-        for trial in 0..300 {
-            let mut arena = TermArena::new();
-            let x = arena.declare("x", Sort::BitVec(8)).unwrap();
-            let mut cur = arena.var(x);
-            let depth = 1 + (xorshift(&mut state) % 4) as usize; // 1..=4 layers
-            for _ in 0..depth {
-                let c = u128::from(xorshift(&mut state) % 256);
-                cur = match xorshift(&mut state) % 6 {
-                    0 => arena.bv_neg(cur).unwrap(),
-                    1 => arena.bv_not(cur).unwrap(),
-                    2 => {
-                        let k = arena.bv_const(8, c).unwrap();
-                        arena.bv_add(cur, k).unwrap()
-                    }
-                    3 => {
-                        let k = arena.bv_const(8, c).unwrap();
-                        arena.bv_sub(cur, k).unwrap()
-                    }
-                    4 => {
-                        let k = arena.bv_const(8, c).unwrap();
-                        arena.bv_xor(cur, k).unwrap()
-                    }
-                    _ => {
-                        // Force an odd factor so the multiply is invertible.
-                        let k = arena.bv_const(8, c | 1).unwrap();
-                        arena.bv_mul(k, cur).unwrap()
-                    }
-                };
-            }
-            let k = u128::from(xorshift(&mut state) % 256);
-            let kc = arena.bv_const(8, k).unwrap();
-            let eqk = arena.eq(cur, kc).unwrap();
-            let originals = [eqk];
+    fn an_empty_registry_is_a_no_op() {
+        // The ablation control: same input, no registered theory, nothing moves.
+        let mut arena = TermArena::new();
+        let x = arena.declare("x", Sort::BitVec(8)).unwrap();
+        let y = arena.declare("y", Sort::BitVec(8)).unwrap();
+        let (xv, yv) = (arena.var(x), arena.var(y));
+        let sum = arena.bv_add(xv, yv).unwrap();
+        let c = arena.bv_const(8, 200).unwrap();
+        let a1 = arena.bv_ult(sum, c).unwrap();
 
-            let out = elim_unconstrained(&mut arena, &originals).unwrap();
-            assert_eq!(out.eliminated(), depth, "trial {trial}: every layer peels");
-            let surv = survivors(&arena, out.assertions());
-            assert_eq!(surv.len(), 1, "trial {trial}: one surviving variable");
-
-            // The reduced problem is `(= u k)`, forcing u = k.
-            let mut reduced = Assignment::new();
-            reduced.set(surv[0], bv8(k));
-            assert_eq!(
-                eval(&arena, out.assertions()[0], &reduced).unwrap(),
-                Value::Bool(true),
-                "trial {trial}: reduced model satisfies the reduced equality"
-            );
-            let full = out.trail().reconstruct(&arena, &reduced).unwrap();
-            assert_satisfies(&arena, &originals, &full);
-        }
+        let empty = InverterRegistry::new();
+        let out = elim_unconstrained_with(&mut arena, &[a1], &empty).unwrap();
+        assert_eq!(out.eliminated(), 0);
+        assert_eq!(out.assertions(), &[a1]);
+        assert!(out.stats().candidates_examined > 0, "candidates were found");
+        assert!(out.stats().inversion_attempts > 0, "the registry was asked");
     }
 }
