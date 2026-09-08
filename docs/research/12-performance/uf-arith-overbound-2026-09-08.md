@@ -285,7 +285,38 @@ alone can eat the difference.
 **Re-measured at the shipped value on the 58-file loss list: +9, 0 lost, 0
 disagreements** (`reserve-QF_UFLIA58.tsv`, binary digest `f18559b05bd8`).
 
-<!-- RESULTS-200 -->
+### The shipped default, over the whole division list
+
+`base-QF_UFLIA200.tsv` against `reserve-QF_UFLIA200.tsv`, 200 files, pinned
+binaries, both arms concurrent:
+
+| | base | reserve (shipped) |
+|---|---:|---:|
+| decided | 116 | **125** |
+| gained | — | 10 |
+| lost | — | **1** |
+| disagreements | — | **0** |
+
+**Net +9 on the full division list, which is the same number the 58-file loss
+population gives — as it should be, since the files it wins are exactly those
+losses.**
+
+Two entries in that table need their own sentence rather than a footnote:
+
+- The one loss is **`hash_uns_05_20`**, `unsat` at 23.7 s of a 24 s budget under
+  base. It is the file the constant's own doc names as unrecoverable: a route
+  that needs 99% of the clock cannot share it with anything. The three other
+  files the half-budget split lost — `hash_sat_05_14` (12.7 s), `xs_23_33`
+  (13.3 s), `hash_uns_05_17` (15.5 s) — are all **recovered** by the reserve,
+  which is what choosing the constant against that bound was for.
+- One of the ten gains, **`medium6`**, is *not* a policy effect and should not
+  be counted as one. Base timed out on it at 24.4 s; the reserve arm decided it
+  `unsat` in 14.7 s **at `uf-arith-lazy-overbound`** — the same route, with
+  *less* budget. A policy that gives a route less time cannot make it finish
+  sooner, so this is run-to-run variance on a contended host. The defensible
+  claim is **+9 / −1**, not +10 / −1.
+
+
 
 <!-- RESULTS-AB -->
 

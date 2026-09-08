@@ -16,10 +16,14 @@ attribution), `trail` (the `; route-trail …` JSON).
   committed 58-file 2026-09-05 loss list
   (`bench-results/parity-losses-20260905/QF_UFLIA.txt`) under the lane's base
   commit and under the two new arms.
-- `base-QF_UFLIA200.tsv`, `probe-QF_UFLIA200.tsv` — the same two solvers over
-  the full committed 200-file division list
-  (`bench-results/parity-lists/QF_UFLIA.txt`), which is the regression check on
-  the files we already win.
+- `base-QF_UFLIA200.tsv`, `reserve-QF_UFLIA200.tsv` — base against the shipped
+  default over the full committed 200-file division list
+  (`bench-results/parity-lists/QF_UFLIA.txt`): the regression check on the files
+  we already win. 116 -> 125 decided, +10 / -1, zero disagreements.
+- `probe-half-QF_UFLIA200.tsv` — the REJECTED half-budget version of the same
+  arm, kept because it is the evidence that set the constant: +9 / -4 against
+  the same base.
+- `reserve-QF_UFLIA58.tsv` — the shipped default on the loss population: +9 / -0.
 - `hard12.perf.flat.txt` — a flat CPU profile of one loss file under the base
   solver: where the 24 s actually goes inside the route that consumes it.
 - `scripts/build-pinned.sh` — builds the base and working-tree binaries and
