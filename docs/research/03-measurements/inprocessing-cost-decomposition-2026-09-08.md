@@ -514,7 +514,7 @@ queue. Row counts are given so nothing here can be mistaken for a full sweep.
   claim was not tested at 120 s directly.** It was tested at 24 s and below,
   where inprocessing is already at parity — which is what refutes it.
 * **Per-pass CNF sweep, conflict-budgeted.** DONE, 44/44 rows — §5b.
-* **Per-pass CNF sweep, wall-clock-budgeted.** PARTIAL, **36 of 66 rows**
+* **Per-pass CNF sweep, wall-clock-budgeted.** PARTIAL, **37 of 66 rows**
   (`pass-wall-24s.jsonl`). The setup/work medians in §4 are over 6–7 files per
   arm, not 11.
 * **Real 12 s sweep** (`qfbv-12s-boundary-inproc.jsonl`). PARTIAL, **23 of 28
