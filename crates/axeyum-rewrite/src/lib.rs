@@ -55,8 +55,8 @@ pub use canonical::{
 };
 pub use datatypes::simplify_datatypes;
 pub use elim_unconstrained::{
-    BoxedInverter, ElimUnconstrainedStats, UnconstrainedElimination, default_inverters,
-    elim_unconstrained, elim_unconstrained_with,
+    ElimUnconstrainedStats, UnconstrainedElimination, default_inverters, elim_unconstrained,
+    elim_unconstrained_with,
 };
 pub use functions::{
     FUNCTION_ABSTRACTION_WITNESS_SAMPLES, FuncElimError, FunctionAbstraction,

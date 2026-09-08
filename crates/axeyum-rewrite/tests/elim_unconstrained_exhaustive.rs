@@ -27,6 +27,15 @@
 //!   free Boolean.
 //! * `111 <u v` — unsat, the same trap at the other end.
 
+#![allow(
+    clippy::cast_possible_truncation,
+    clippy::items_after_statements,
+    clippy::manual_is_multiple_of,
+    clippy::many_single_char_names,
+    clippy::similar_names,
+    clippy::too_many_lines
+)]
+
 use std::collections::{HashMap, HashSet};
 
 use axeyum_ir::{Assignment, Op, Sort, SymbolId, TermArena, TermId, TermNode, Value, eval};

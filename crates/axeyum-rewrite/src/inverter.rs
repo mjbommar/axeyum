@@ -592,8 +592,9 @@ fn invert_ite(
 // Arithmetic: Int and Real
 // ---------------------------------------------------------------------------
 
-/// `Int`/`Real` arithmetic — the rules that fire in QF_LIA, QF_LRA, QF_IDL,
-/// QF_NIA and QF_NRA, where this pass previously did nothing at all.
+/// `Int`/`Real` arithmetic — the rules that fire in `QF_LIA`, `QF_LRA`,
+/// `QF_IDL`, `QF_NIA` and `QF_NRA`, where this pass previously did nothing at
+/// all.
 #[derive(Debug, Clone, Copy)]
 pub struct ArithInverter;
 

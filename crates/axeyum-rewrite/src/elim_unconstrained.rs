@@ -57,7 +57,9 @@ use std::collections::{BTreeMap, HashMap, HashSet};
 use axeyum_ir::{IrError, Op, SymbolId, TermArena, TermId, TermNode};
 
 use crate::canonical::replace_subterms;
-use crate::inverter::{Inverter, InverterCtx, InverterRegistry, free_symbols, is_defaultable_sort};
+use crate::inverter::{
+    Inversion, InverterCtx, InverterRegistry, free_symbols, is_defaultable_sort,
+};
 use crate::reconstruct::ModelReconstructionTrail;
 
 /// Maximum number of occurrence-graph rebuilds. A round that eliminates nothing
@@ -254,190 +256,30 @@ pub fn elim_unconstrained_with(
     registry: &InverterRegistry,
 ) -> Result<UnconstrainedElimination, IrError> {
     let mut current: Vec<TermId> = assertions.to_vec();
-    let mut trail = ModelReconstructionTrail::new();
-    let mut stats = ElimUnconstrainedStats::default();
-    let mut next_fresh: u64 = 0;
-    let mut eliminated = 0usize;
-    let mut defined: HashSet<SymbolId> = HashSet::new();
-    let mut definition_terms: Vec<TermId> = Vec::new();
+    let mut state = PassState::default();
 
     for _round in 0..MAX_ROUNDS {
         let mut occ = occurrences(arena, &current);
         if occ.quantified {
             // A binder's variable can have one parent without being
             // unconstrained; decline the whole forest rather than guess.
-            stats.skipped_quantified = true;
+            state.stats.skipped_quantified = true;
             return Ok(UnconstrainedElimination {
                 assertions: assertions.to_vec(),
                 trail: ModelReconstructionTrail::new(),
                 eliminated: 0,
-                stats,
+                stats: state.stats,
             });
         }
-        stats.rounds += 1;
-        // Deterministic worklist: single-use variable nodes ordered by TermId.
-        let mut candidates: HashSet<TermId> = occ
-            .refs
-            .iter()
-            .filter_map(|(&t, &n)| {
-                let single_parent = occ.parents.get(&t).is_some_and(|p| p.len() == 1);
-                (n == 1 && single_parent && matches!(arena.node(t), TermNode::Symbol(_)))
-                    .then_some(t)
-            })
-            .collect();
-        let mut queue: Vec<TermId> = candidates.iter().copied().collect();
-        queue.sort_by_key(|t| t.index());
-
-        let mut image: HashMap<TermId, TermId> = HashMap::new();
-        // Upward closure of every node this round has already replaced (Z3's
-        // `invalidate_parents`). A node is dirty when its subtree contains a
-        // replacement, and an operand the inverter is about to bake into a
-        // definition — or into a compound replacement — must NOT be dirty: it
-        // would carry a term this round is deleting, so the definition would
-        // reference a symbol absent from the reduced problem. Checking only the
-        // parent's direct arguments is not enough; the stale node can be
-        // arbitrarily deep.
-        let mut dirty: HashSet<TermId> = HashSet::new();
-        let mut round_eliminations = 0usize;
-        let mut cursor = 0usize;
-        // Each elimination consumes at least one candidate and mints at most
-        // one; the budget bounds the compound rules, whose replacements are
-        // larger than what they replace.
-        let budget = 4 * occ.nodes + 64;
-
-        while cursor < queue.len() {
-            let var = queue[cursor];
-            cursor += 1;
-            if round_eliminations >= budget {
-                break;
-            }
-            if !candidates.contains(&var) {
-                continue;
-            }
-            stats.candidates_examined += 1;
-            let Some(parent_edges) = occ.parents.get(&var) else {
-                continue;
-            };
-            if parent_edges.len() != 1 {
-                continue;
-            }
-            let (parent, idx) = parent_edges[0];
-            if image.contains_key(&parent) {
-                continue;
-            }
-            let TermNode::App { op, args } = arena.node(parent) else {
-                continue;
-            };
-            let (op, args) = (*op, args.clone());
-            if idx >= args.len() {
-                continue;
-            }
-            // Substitute the one slot the cascade already rewrote; refuse the
-            // node if any *other* operand was rewritten, because its recorded
-            // definition would then reference a term this round is deleting.
-            let mut args_now = args.clone();
-            let mut clean = true;
-            for (i, arg) in args.iter().enumerate() {
-                if i == idx {
-                    if let Some(&mapped) = image.get(arg) {
-                        args_now[i] = mapped;
-                    }
-                } else if dirty.contains(arg) {
-                    clean = false;
-                    break;
-                }
-            }
-            if !clean || args_now[idx] != var {
-                continue;
-            }
-            // Sort guard: every operand (and the result) must be a sort this
-            // module can default, so an orphaned operand always has a value.
-            let result_sort = arena.sort_of(parent);
-            if !is_defaultable_sort(result_sort)
-                || !args_now
-                    .iter()
-                    .all(|&a| is_defaultable_sort(arena.sort_of(a)))
-            {
-                continue;
-            }
-
-            stats.inversion_attempts += 1;
-            let inversion = {
-                let predicate = |t: TermId| candidates.contains(&t);
-                let mut ctx = InverterCtx::new(arena, &predicate, &mut next_fresh);
-                registry.invert(&mut ctx, op, &args_now, idx, result_sort)?
-            };
-            let Some(inversion) = inversion else {
-                continue;
-            };
-            // Contract check: a rule may only define operands the analysis
-            // already certified unconstrained.
-            let definable = inversion.defs.iter().all(|&(sym, _)| {
-                !defined.contains(&sym)
-                    && args_now.iter().any(|&a| {
-                        candidates.contains(&a)
-                            && matches!(arena.node(a), TermNode::Symbol(s) if *s == sym)
-                    })
-            });
-            if !definable {
-                continue;
-            }
-
-            for &(sym, def) in &inversion.defs {
-                trail.define(sym, def);
-                defined.insert(sym);
-                definition_terms.push(def);
-                stats.defs_recorded += 1;
-            }
-            stats.record(inversion.rule);
-            eliminated += 1;
-            round_eliminations += 1;
-            image.insert(parent, inversion.replacement);
-            mark_dirty(&occ, parent, &mut dirty);
-
-            // Every operand of the inverted node leaves the candidate set: the
-            // ones the rule defined are gone from the formula, and the ones it
-            // dropped are about to be.
-            for &arg in &args_now {
-                candidates.remove(&arg);
-            }
-
-            if inversion.compound {
-                // The replacement puts existing subterms back into the formula,
-                // so the round's occurrence counts no longer describe it below
-                // this node. Retire every symbol it mentions and let the next
-                // round re-derive the graph.
-                stats.compound_replacements += 1;
-                let mut mentioned = HashSet::new();
-                let mut seen = HashSet::new();
-                free_symbols(arena, inversion.replacement, &mut mentioned, &mut seen);
-                candidates.retain(|&t| match arena.node(t) {
-                    TermNode::Symbol(s) => !mentioned.contains(s),
-                    _ => true,
-                });
-                continue;
-            }
-
-            // Cascade: the fresh replacement inherits the replaced node's
-            // parent edges, so a peelable stack collapses without rebuilding
-            // the graph.
-            let inherited = occ.parents.get(&parent).cloned().unwrap_or_default();
-            let inherited_refs = occ.refs.get(&parent).copied().unwrap_or(0);
-            let single = inherited_refs == 1 && inherited.len() == 1;
-            occ.refs.insert(inversion.replacement, inherited_refs);
-            occ.parents.insert(inversion.replacement, inherited);
-            if single && matches!(arena.node(inversion.replacement), TermNode::Symbol(_)) {
-                candidates.insert(inversion.replacement);
-                queue.push(inversion.replacement);
-            }
-        }
-
-        if round_eliminations == 0 {
+        state.stats.rounds += 1;
+        let mut round = Round::new(arena, &occ);
+        round.run(arena, &mut occ, registry, &mut state)?;
+        if round.eliminations == 0 {
             break;
         }
         let mut memo: HashMap<TermId, TermId> = HashMap::new();
         for a in &mut current {
-            *a = replace_subterms(arena, *a, &image, &mut memo)?;
+            *a = replace_subterms(arena, *a, &round.image, &mut memo)?;
         }
     }
 
@@ -457,7 +299,7 @@ pub fn elim_unconstrained_with(
     }
     let mut needed: HashSet<SymbolId> = HashSet::new();
     let mut def_seen = HashSet::new();
-    for &def in &definition_terms {
+    for &def in &state.definition_terms {
         free_symbols(arena, def, &mut needed, &mut def_seen);
     }
     for &a in assertions {
@@ -465,7 +307,7 @@ pub fn elim_unconstrained_with(
     }
     let mut orphans: Vec<SymbolId> = needed
         .into_iter()
-        .filter(|s| !survivors.contains(s) && !defined.contains(s))
+        .filter(|s| !survivors.contains(s) && !state.defined.contains(s))
         .collect();
     orphans.sort_by_key(|s| s.index());
     for sym in orphans {
@@ -473,22 +315,247 @@ pub fn elim_unconstrained_with(
         let sort = arena.sort_of(var);
         let default = {
             let predicate = |_: TermId| false;
-            let mut ctx = InverterCtx::new(arena, &predicate, &mut next_fresh);
+            let mut ctx = InverterCtx::new(arena, &predicate, &mut state.next_fresh);
             ctx.default_value(sort)?
         };
         if let Some(default) = default {
-            trail.define(sym, default);
-            stats.orphans_defaulted += 1;
+            state.trail.define(sym, default);
+            state.stats.orphans_defaulted += 1;
         }
     }
 
-    stats.eliminations = eliminated as u64;
+    state.stats.eliminations = state.eliminated as u64;
     Ok(UnconstrainedElimination {
         assertions: current,
-        trail,
-        eliminated,
-        stats,
+        trail: state.trail,
+        eliminated: state.eliminated,
+        stats: state.stats,
     })
+}
+
+/// The state the pass threads across rounds.
+#[derive(Default)]
+struct PassState {
+    trail: ModelReconstructionTrail,
+    stats: ElimUnconstrainedStats,
+    next_fresh: u64,
+    eliminated: usize,
+    defined: HashSet<SymbolId>,
+    definition_terms: Vec<TermId>,
+}
+
+/// One round's cascade: the candidate set, the worklist, the node → replacement
+/// image the round accumulates, and the upward dirty closure that keeps a stale
+/// subterm out of a recorded definition.
+struct Round {
+    candidates: HashSet<TermId>,
+    queue: Vec<TermId>,
+    image: HashMap<TermId, TermId>,
+    dirty: HashSet<TermId>,
+    eliminations: usize,
+    budget: usize,
+}
+
+impl Round {
+    /// Seeds the worklist with every single-use variable node, ordered by
+    /// `TermId` so the round is deterministic.
+    fn new(arena: &TermArena, occ: &Occurrences) -> Self {
+        let candidates: HashSet<TermId> = occ
+            .refs
+            .iter()
+            .filter_map(|(&t, &n)| {
+                let single_parent = occ.parents.get(&t).is_some_and(|p| p.len() == 1);
+                (n == 1 && single_parent && matches!(arena.node(t), TermNode::Symbol(_)))
+                    .then_some(t)
+            })
+            .collect();
+        let mut queue: Vec<TermId> = candidates.iter().copied().collect();
+        queue.sort_by_key(|t| t.index());
+        Self {
+            candidates,
+            queue,
+            image: HashMap::new(),
+            dirty: HashSet::new(),
+            eliminations: 0,
+            // Each elimination consumes at least one candidate and mints at
+            // most one; the budget bounds the compound rules, whose
+            // replacements are larger than what they replace.
+            budget: 4 * occ.nodes + 64,
+        }
+    }
+
+    /// Drains the worklist, cascading into each fresh replacement.
+    fn run(
+        &mut self,
+        arena: &mut TermArena,
+        occ: &mut Occurrences,
+        registry: &InverterRegistry,
+        state: &mut PassState,
+    ) -> Result<(), IrError> {
+        let mut cursor = 0usize;
+        while cursor < self.queue.len() && self.eliminations < self.budget {
+            let var = self.queue[cursor];
+            cursor += 1;
+            self.step(arena, occ, registry, state, var)?;
+        }
+        Ok(())
+    }
+
+    /// Attempts one candidate. Returns without effect whenever the candidate is
+    /// stale, its parent is not invertible, or no rule applies.
+    fn step(
+        &mut self,
+        arena: &mut TermArena,
+        occ: &mut Occurrences,
+        registry: &InverterRegistry,
+        state: &mut PassState,
+        var: TermId,
+    ) -> Result<(), IrError> {
+        if !self.candidates.contains(&var) {
+            return Ok(());
+        }
+        state.stats.candidates_examined += 1;
+        let Some(parent_edges) = occ.parents.get(&var) else {
+            return Ok(());
+        };
+        if parent_edges.len() != 1 {
+            return Ok(());
+        }
+        let (parent, idx) = parent_edges[0];
+        if self.image.contains_key(&parent) {
+            return Ok(());
+        }
+        let TermNode::App { op, args } = arena.node(parent) else {
+            return Ok(());
+        };
+        let (op, args) = (*op, args.clone());
+        if idx >= args.len() {
+            return Ok(());
+        }
+        let Some(args_now) = self.rewritten_args(&args, idx, var) else {
+            return Ok(());
+        };
+        // Sort guard: every operand (and the result) must be a sort this module
+        // can default, so an orphaned operand always has a value.
+        let result_sort = arena.sort_of(parent);
+        if !is_defaultable_sort(result_sort)
+            || !args_now
+                .iter()
+                .all(|&a| is_defaultable_sort(arena.sort_of(a)))
+        {
+            return Ok(());
+        }
+
+        state.stats.inversion_attempts += 1;
+        let inversion = {
+            let predicate = |t: TermId| self.candidates.contains(&t);
+            let mut ctx = InverterCtx::new(arena, &predicate, &mut state.next_fresh);
+            registry.invert(&mut ctx, op, &args_now, idx, result_sort)?
+        };
+        let Some(inversion) = inversion else {
+            return Ok(());
+        };
+        if !self.definable(arena, &inversion, &args_now, state) {
+            return Ok(());
+        }
+        self.apply(arena, occ, state, parent, &inversion, &args_now);
+        Ok(())
+    }
+
+    /// The parent's arguments with the one slot the cascade already rewrote
+    /// substituted, or `None` when any *other* operand's subtree contains a
+    /// replacement — its recorded definition would then reference a term this
+    /// round is deleting, and the stale node can be arbitrarily deep, so
+    /// checking only the direct arguments is not enough.
+    fn rewritten_args(&self, args: &[TermId], idx: usize, var: TermId) -> Option<Vec<TermId>> {
+        let mut args_now = args.to_vec();
+        for (i, arg) in args.iter().enumerate() {
+            if i == idx {
+                if let Some(&mapped) = self.image.get(arg) {
+                    args_now[i] = mapped;
+                }
+            } else if self.dirty.contains(arg) {
+                return None;
+            }
+        }
+        (args_now[idx] == var).then_some(args_now)
+    }
+
+    /// Contract check: a rule may only define operands the analysis already
+    /// certified unconstrained, and never one an earlier elimination defined.
+    fn definable(
+        &self,
+        arena: &TermArena,
+        inversion: &Inversion,
+        args_now: &[TermId],
+        state: &PassState,
+    ) -> bool {
+        inversion.defs.iter().all(|&(sym, _)| {
+            !state.defined.contains(&sym)
+                && args_now.iter().any(|&a| {
+                    self.candidates.contains(&a)
+                        && matches!(arena.node(a), TermNode::Symbol(s) if *s == sym)
+                })
+        })
+    }
+
+    /// Records the inversion and updates the round's bookkeeping.
+    fn apply(
+        &mut self,
+        arena: &TermArena,
+        occ: &mut Occurrences,
+        state: &mut PassState,
+        parent: TermId,
+        inversion: &Inversion,
+        args_now: &[TermId],
+    ) {
+        for &(sym, def) in &inversion.defs {
+            state.trail.define(sym, def);
+            state.defined.insert(sym);
+            state.definition_terms.push(def);
+            state.stats.defs_recorded += 1;
+        }
+        state.stats.record(inversion.rule);
+        state.eliminated += 1;
+        self.eliminations += 1;
+        self.image.insert(parent, inversion.replacement);
+        mark_dirty(occ, parent, &mut self.dirty);
+
+        // Every operand of the inverted node leaves the candidate set: the ones
+        // the rule defined are gone from the formula, and the ones it dropped
+        // are about to be.
+        for &arg in args_now {
+            self.candidates.remove(&arg);
+        }
+
+        if inversion.compound {
+            // The replacement puts existing subterms back into the formula, so
+            // the round's occurrence counts no longer describe it below this
+            // node. Retire every symbol it mentions and let the next round
+            // re-derive the graph.
+            state.stats.compound_replacements += 1;
+            let mut mentioned = HashSet::new();
+            let mut seen = HashSet::new();
+            free_symbols(arena, inversion.replacement, &mut mentioned, &mut seen);
+            self.candidates.retain(|&t| match arena.node(t) {
+                TermNode::Symbol(s) => !mentioned.contains(s),
+                _ => true,
+            });
+            return;
+        }
+
+        // Cascade: the fresh replacement inherits the replaced node's parent
+        // edges, so a peelable stack collapses without rebuilding the graph.
+        let inherited = occ.parents.get(&parent).cloned().unwrap_or_default();
+        let inherited_refs = occ.refs.get(&parent).copied().unwrap_or(0);
+        let single = inherited_refs == 1 && inherited.len() == 1;
+        occ.refs.insert(inversion.replacement, inherited_refs);
+        occ.parents.insert(inversion.replacement, inherited);
+        if single && matches!(arena.node(inversion.replacement), TermNode::Symbol(_)) {
+            self.candidates.insert(inversion.replacement);
+            self.queue.push(inversion.replacement);
+        }
+    }
 }
 
 /// The registry the pass uses by default — exposed so a caller can start from
@@ -497,9 +564,6 @@ pub fn elim_unconstrained_with(
 pub fn default_inverters() -> InverterRegistry {
     InverterRegistry::with_defaults()
 }
-
-/// Re-export so downstream code can name the trait when registering a plugin.
-pub type BoxedInverter = Box<dyn Inverter>;
 
 #[cfg(test)]
 mod tests {

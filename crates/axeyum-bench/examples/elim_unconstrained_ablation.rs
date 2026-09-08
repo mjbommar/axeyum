@@ -25,7 +25,11 @@
 //! ```sh
 //! cargo run --release -p axeyum-bench --example elim_unconstrained_ablation -- <dir>…
 //! ```
-#![allow(clippy::doc_markdown)]
+#![allow(
+    clippy::doc_markdown,
+    clippy::cast_precision_loss,
+    clippy::too_many_lines
+)]
 
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
