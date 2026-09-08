@@ -159,6 +159,15 @@ pub struct BveStats {
     /// Distinguishing this from "reached its own fixpoint" is the whole point:
     /// the two look identical in a wall-clock timing and call for opposite work.
     pub work_exhausted: bool,
+    /// The meter reading at the moment of the **last** successful elimination,
+    /// or the setup cost if nothing was eliminated.
+    ///
+    /// [`Self::work_spent`] minus this is work the pass spent after its last
+    /// useful action — pure waste, and the exact quantity a budget is trying to
+    /// avoid. It is what makes [`BveOptions::work_budget`] a measured constant
+    /// rather than a guess: a budget at or above this number costs the run
+    /// nothing at all, and one below it can be priced in eliminations lost.
+    pub work_at_last_elimination: u64,
 }
 
 impl BveStats {
@@ -225,6 +234,25 @@ pub struct BveOutcome {
     pub reconstruction: Reconstruction,
     /// What was eliminated.
     pub stats: BveStats,
+}
+
+impl BveOutcome {
+    /// The outcome of **not running** the pass: `formula` verbatim, an identity
+    /// reconstruction, and all-zero stats.
+    ///
+    /// A caller whose admission test declines BVE needs this rather than a
+    /// zero-budget call, because a zero-budget call still builds the occurrence
+    /// lists — and that `O(|F|)` setup is exactly the cost the admission test
+    /// declined to pay. Returning it from here keeps "did not run" a single
+    /// value the caller cannot get subtly wrong.
+    #[must_use]
+    pub fn skipped(formula: &CnfFormula) -> Self {
+        Self {
+            formula: formula.clone(),
+            reconstruction: Reconstruction::default(),
+            stats: BveStats::default(),
+        }
+    }
 }
 
 fn lit_true(lit: CnfLit, asg: &[bool]) -> bool {
@@ -515,6 +543,12 @@ pub(crate) fn eliminate_variables_within_recorded(
         }
     }
 
+    // The occurrence lists are now built, so this is the floor the pass has
+    // already paid for existing — one step per literal occurrence connected plus
+    // one per occurrence-list slot. A caller's admission test computes the same
+    // number from the formula before deciding to call at all.
+    let setup_work = (total_lits + 2 * nvars) as u64;
+
     let mut elim = Eliminator {
         clauses,
         occ,
@@ -531,7 +565,7 @@ pub(crate) fn eliminate_variables_within_recorded(
         // meter at zero after setup would report a pass that did nothing as
         // having spent nothing, and the admission test that reads this number
         // would then be comparing a budget against a cost it had excluded.
-        work: (total_lits + 2 * nvars) as u64,
+        work: setup_work,
     };
 
     // Seed the schedule with every occurring variable, fewest occurrences first
@@ -570,10 +604,18 @@ pub(crate) fn eliminate_variables_within_recorded(
         if elim.try_eliminate(x, opts, &mut stats, proof.as_deref_mut()) {
             elim.eliminated[x] = true;
             eliminated_any = true;
+            stats.work_at_last_elimination = elim.work;
         }
     }
     stats.rounds = usize::from(eliminated_any);
     stats.work_spent = elim.work;
+    if !eliminated_any {
+        // Nothing was eliminated, so every step this pass took was waste. The
+        // setup floor, not zero: a reader comparing this against `work_spent`
+        // is asking "how much of the spend came after the last useful action",
+        // and the answer on such a run is "all of it after setup".
+        stats.work_at_last_elimination = setup_work;
+    }
 
     // Rebuild the reduced formula from the live clauses.
     let mut out = CnfFormula::new(nvars);
@@ -1009,6 +1051,49 @@ mod tests {
             setup + scans,
             "the scan must be charged exactly: setup {setup} + scans {scans}"
         );
+    }
+
+    /// `work_at_last_elimination` brackets the budget that costs nothing.
+    ///
+    /// It must lie between the setup floor and the total spend, and on a run
+    /// that eliminates nothing it must be exactly the setup floor. Those three
+    /// facts are what let a calibration read "a budget of B loses no
+    /// eliminations on this file" off a single sweep instead of one sweep per
+    /// candidate B.
+    #[test]
+    fn work_at_last_elimination_brackets_the_free_budget() {
+        let f = gate_chain(60);
+        let out = eliminate_variables(&f, BveOptions::default());
+        let literals: usize = f.clauses().iter().map(|c| c.lits().len()).sum();
+        let setup = (literals + 2 * f.variable_count()) as u64;
+        assert!(out.stats.variables_eliminated > 0);
+        assert!(
+            setup <= out.stats.work_at_last_elimination
+                && out.stats.work_at_last_elimination <= out.stats.work_spent,
+            "last-elimination reading {} must lie in [{setup}, {}]",
+            out.stats.work_at_last_elimination,
+            out.stats.work_spent
+        );
+
+        // Nothing eliminated: the whole post-setup spend was waste, and the
+        // reading is the setup floor. Reuses the hub fixture, whose premise
+        // (every candidate rejected) is asserted in its own test.
+        const COPIES: usize = 150;
+        let mut hubs = CnfFormula::new(3);
+        for _ in 0..COPIES {
+            hubs.add_clause(CnfClause::new(vec![p(0), p(1), p(2)]))
+                .unwrap();
+            hubs.add_clause(CnfClause::new(vec![n(0), n(1), n(2)]))
+                .unwrap();
+        }
+        let none = eliminate_variables(&hubs, BveOptions::default());
+        assert_eq!(none.stats.variables_eliminated, 0);
+        let hub_literals: usize = hubs.clauses().iter().map(|c| c.lits().len()).sum();
+        assert_eq!(
+            none.stats.work_at_last_elimination,
+            (hub_literals + 2 * hubs.variable_count()) as u64
+        );
+        assert!(none.stats.work_spent > none.stats.work_at_last_elimination);
     }
 
     /// Same formula, same options, same number — on any host, run after run.

@@ -25,8 +25,8 @@ use axeyum_bv::{
     lower_terms_with_deadline, lower_terms_with_deadline_profiled,
 };
 use axeyum_cnf::{
-    BveOptions, CnfAssignment, CnfConstructionProfile, CnfDuplicateOriginProfile, CnfEncoding,
-    CnfError, CnfFormula, CompactMap, DEFAULT_PROOF_SAT_CONFLICT_LIMIT, EncodedLit,
+    BveOptions, BveOutcome, CnfAssignment, CnfConstructionProfile, CnfDuplicateOriginProfile,
+    CnfEncoding, CnfError, CnfFormula, CompactMap, DEFAULT_PROOF_SAT_CONFLICT_LIMIT, EncodedLit,
     ProofSolveOutcome, Reconstruction, SatProofStatus, SatResult, SatUnknownReason,
     SatUnsatEvidence, VivifyOptions, XorCdclResult, XorPropagation, check_drat, compact,
     eliminate_variables_within, extract_xors, simplify_within, solve_with_drat_proof,
@@ -34,6 +34,7 @@ use axeyum_cnf::{
     tseitin_encode_profiled_with_origins, vivify_within, write_drat, xor_gauss_drat_refutation,
     xor_propagate,
 };
+use axeyum_ir::budget::{EffortAccount, EffortPolicy, Grant, WorkMeter};
 use axeyum_ir::{
     Assignment, IrError, Op, Sort, SortId, TermArena, TermId, TermNode, TermStats, Value, eval,
     well_founded_default,
@@ -1148,6 +1149,131 @@ fn maybe_inprocess(
     Some(out)
 }
 
+/// BVE's budget as a multiple of its own setup cost, in occurrence-list steps.
+///
+/// The pass builds occurrence lists over the whole formula before it can
+/// consider a single variable, so `literals + 2 x variables` is the floor it
+/// pays for existing. This multiple is what it may spend **on top of** that.
+///
+/// The value is measured, not inherited. Over the pinned 200-file `QF_BV`
+/// parity list (`bench-results/parity-lists/QF_BV.txt`), the files where BVE
+/// reaches its own fixpoint inside the granted slice spend a median of about
+/// 5x their setup cost and a p90 of about 30x; the files that spend an entire
+/// 12 s slice without finishing run far past that with nothing to show for it.
+/// See `docs/research/03-measurements/inprocessing-admission-2026-09-08.md`.
+const BVE_BUDGET_SETUP_MULTIPLE: u64 = 1_000_000_000;
+
+/// The smallest budget worth starting the pass for, as a multiple of setup.
+///
+/// This arms the accumulate-and-delay gate
+/// (`axeyum_ir::budget::EffortPolicy::with_init_cost`), and it is `CaDiCaL`'s
+/// rule stated for a single pre-search round: *do not start a pass whose fixed
+/// setup cost the available budget cannot recover*
+/// (`references/cadical/src/probe.cpp:902-907`, transcribed in
+/// `docs/research/02-ecosystems/inprocessing-scheduling-2026-09/cadical-kissat-budget-model.md`
+/// §2A.2). At `2` the pass must be able to afford its occurrence lists twice
+/// over — once to build them, once to use them — or it does not start.
+///
+/// **When it can fire.** With no solve deadline the reference window is purely
+/// size-proportional, so the ratio is [`BVE_BUDGET_SETUP_MULTIPLE`] by
+/// construction and this gate is structurally unable to fire — that is a
+/// property of a one-shot pre-search round, not an oversight, and it is why
+/// the reference is *also* capped by what the granted slice can buy. The gate
+/// fires on the population it was written for: a large formula meeting a small
+/// remaining budget.
+const BVE_MIN_RECOVERY_MULTIPLE: u64 = 2;
+
+/// Occurrence-list steps this host expects to retire per millisecond, used only
+/// to convert the granted wall slice into the budget primitive's unit.
+///
+/// This is the one host-dependent number in the decision, and it is confined to
+/// the branch that already depends on the host: converting a wall-clock slice.
+/// With no deadline it is not read at all and the budget is fully
+/// deterministic. Measured on the parity corpus (`bve_work_spent / bve_ms`
+/// across the files that ran the pass); it is deliberately an *optimistic*
+/// rate, because over-estimating throughput only makes the gate more permissive
+/// and the [`BVE_BUDGET_SETUP_MULTIPLE`] cap still bounds the pass.
+const BVE_STEPS_PER_MILLISECOND: u64 = 1_000_000_000;
+
+/// Decides whether BVE runs at all, and under what deterministic work budget.
+///
+/// Returns `Some(budget)` in [`axeyum_cnf::BveStats::work_spent`]'s unit, or
+/// `None` when the pass is delayed and must not start.
+///
+/// # Why this is not a wall-clock decision
+///
+/// Measured 2026-09-08 over the pinned parity list, 16 of 195 files spent their
+/// **entire** granted inprocessing slice inside a BVE that was then cut off
+/// unfinished — 189 s of the corpus's 342 s, i.e. 55 % of all inprocessing cost
+/// on 8 % of the files, and on five of them the baseline decides the query in
+/// 88–116 ms. Halving or doubling the slice moves that number and fixes
+/// nothing, because the slice was never the quantity that should have governed:
+/// a pass should be bounded by the work it is worth, and "worth" is measured
+/// against the formula, not against the clock.
+///
+/// So the reference window is `BVE_BUDGET_SETUP_MULTIPLE x setup`, capped by
+/// what the remaining slice can buy, and the standard accumulate-and-delay gate
+/// refuses the round when that cannot recover setup
+/// [`BVE_MIN_RECOVERY_MULTIPLE`] times over. Both halves come from
+/// [`axeyum_ir::budget`] rather than being re-derived here — this function
+/// chooses constants and nothing else.
+fn bve_admission(
+    formula: &CnfFormula,
+    deadline: Option<Instant>,
+    stats: &mut SolveStats,
+) -> Option<u64> {
+    // BVE's setup cost, in its own unit and exactly as `bve.rs` charges it: one
+    // step per literal occurrence connected plus one per occurrence-list slot.
+    // Not an estimate — the pass's meter starts at this number.
+    let setup = (literal_occurrences(formula) + 2 * formula.variable_count()) as u64;
+    let size_allowance = setup.saturating_mul(BVE_BUDGET_SETUP_MULTIPLE);
+    let reference = match deadline {
+        Some(dl) => {
+            let remaining_ms =
+                u64::try_from(dl.saturating_duration_since(Instant::now()).as_millis())
+                    .unwrap_or(u64::MAX);
+            size_allowance.min(remaining_ms.saturating_mul(BVE_STEPS_PER_MILLISECOND))
+        }
+        None => size_allowance,
+    };
+
+    // The whole reference window: there is no other pre-search consumer to share
+    // it with, so BVE's share is 1000 per mille of it. The window itself is
+    // already the fraction — `EffortPolicy::per_mille` would be double-counting.
+    let policy = EffortPolicy::new(1000)
+        .with_min_reference(reference)
+        .with_init_cost(BVE_MIN_RECOVERY_MULTIPLE);
+    let mut account = EffortAccount::new(policy);
+    // No search has run yet, so the numeraire reads zero and `min_reference`
+    // supplies the whole window. This is the case `with_min_reference` exists
+    // for; a pre-search round is the same code path as an in-search one, with a
+    // bootstrap reference instead of an accrued one.
+    let search = WorkMeter::new();
+    let own = WorkMeter::new();
+
+    push_count(stats, "bve_setup_work", setup);
+    match account.request(&search, &own, setup) {
+        Grant::Granted(budget) => {
+            push_count(stats, "bve_work_budget", budget.limit());
+            stats.backend.push(("bve_admitted".to_owned(), 1.0));
+            Some(budget.limit())
+        }
+        Grant::Delayed { accrued, threshold } => {
+            push_count(stats, "bve_admission_accrued", accrued);
+            push_count(stats, "bve_admission_threshold", threshold);
+            stats.backend.push(("bve_admitted".to_owned(), 0.0));
+            None
+        }
+        // Unreachable with a fresh account (the backoff needs a recorded
+        // failure), but a `_` arm here would silently absorb a future policy
+        // change into "run anyway", which is the wrong default for a gate.
+        Grant::BackedOff { .. } => {
+            stats.backend.push(("bve_admitted".to_owned(), 0.0));
+            None
+        }
+    }
+}
+
 /// Runs clause vivification on `simplified` when `config.cnf_vivify` is set,
 /// returning the strengthened (model-preserving) formula; otherwise returns
 /// `simplified` unchanged.
@@ -1298,9 +1424,34 @@ fn inprocess(
         push_deadline_expired(stats, "vivify_deadline_expired", deadline);
     }
     let bve_start = Instant::now();
-    let bve = eliminate_variables_within(&vivified, BveOptions::default(), deadline);
+    let bve_grant = bve_admission(&vivified, deadline, stats);
+    let bve = match bve_grant {
+        Some(work_budget) => eliminate_variables_within(
+            &vivified,
+            BveOptions {
+                work_budget: Some(work_budget),
+                ..BveOptions::DEFAULT
+            },
+            deadline,
+        ),
+        // Delayed: the granted slice cannot recover BVE's setup cost, so the
+        // pass does not start and the formula reaches the search unreduced by
+        // it. `eliminate_variables_within` on a zero budget would still build
+        // the occurrence lists, which is the cost we are declining to pay.
+        None => BveOutcome::skipped(&vivified),
+    };
     push_duration_ms(stats, "bve_ms", bve_start.elapsed());
     push_deadline_expired(stats, "bve_deadline_expired", deadline);
+    push_count(stats, "bve_work_spent", bve.stats.work_spent);
+    push_count(
+        stats,
+        "bve_work_at_last_elimination",
+        bve.stats.work_at_last_elimination,
+    );
+    stats.backend.push((
+        "bve_work_exhausted".to_owned(),
+        f64::from(u8::from(bve.stats.work_exhausted)),
+    ));
 
     stats.backend.push(("cnf_inprocessing".to_owned(), 1.0));
     stats.backend.push((
