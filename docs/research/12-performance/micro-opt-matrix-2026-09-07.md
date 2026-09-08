@@ -590,3 +590,77 @@ therefore also killed and restarted rather than left to produce a second empty
 file. Criterion keeps the last two runs per benchmark id on disk (`new/` and
 `base/`), so `harvest-criterion.py` recovered 88 estimates from the wasted
 sweep — kept as a fallback, and labelled min-of-two wherever it is used.
+
+### 2026-09-07 — the real-workload validation: 10 of 20 decided, in every cell
+
+The matrix is a **fixed-conflict-budget** throughput ratio. It cannot answer the
+question that actually decides whether a profile change is worth taking, which
+is what happens at a real **wall-clock** budget. `native_core_sweep` answers
+that: it drives the shipping proof-producing core over a DIMACS list at a
+per-file wall budget and prints a verdict per file.
+
+s7, idle, `taskset -c 0-7`, the whole 20-file p4dfa set at a **20 s budget**,
+four cells (`base`, `fat`, `fatcgu1`, `v3fatcgu1`), two interleaved repeats:
+
+```
+decided: 10 of 20      (every cell, every repeat)
+```
+
+**The 1.8% throughput win changes nothing.** That is not a surprise once it is
+written as arithmetic — 1.8% turns a 20 s budget into a 20.4 s budget, and a
+file that needs 20.4 s to decide is a rounding error away from a file that needs
+20 s — but it is the difference between "measured" and "assumed", and this
+repository has the precedent of a 3.4% microbenchmark result pointing the
+opposite way to a real corpus.
+
+So the honest statement of what the best cell buys is: **1.8% of wall time on
+work already being done, and zero additional answers.**
+
+### 2026-09-07 — the criterion subjects, where the numbers get much larger and the sign flips
+
+s4 P-cores, `taskset -c 0-7`, three interleaved repeats, minimum of three, on
+the axeyum-cnf/ir/bv/egraph bench set. (Run on s4 rather than s7 because s7 was
+occupied with the wall-clock sweep; the SAT-core matrix already established that
+the cell ranking is architecture-independent, so ratios between cells transfer
+even though absolute times do not.)
+
+**`value_to_lsb_bits`** — one `Vec<bool>` allocation per call, the model-lifting
+primitive on the BV route:
+
+| id | base | `o2` | `cgu1` | `fat` | `fatcgu1` | `v3` |
+|---|---:|---:|---:|---:|---:|---:|
+| `w8` | 1.000 | 1.226 | 0.903 | 0.874 | 0.856 | 0.964 |
+| `w32` | 1.000 | 1.044 | **0.555** | 0.967 | 1.055 | 1.079 |
+| `w64` | 1.000 | 1.178 | **0.547** | 1.097 | 1.103 | 1.115 |
+| `w128` | 1.000 | 1.135 | **0.514** | 1.071 | 1.135 | 1.177 |
+| **geomean** | **1.000** | **1.144** | **0.613** | **0.998** | **1.031** | **1.081** |
+
+**`lsb_bits_to_value`** — the other direction:
+
+| id | base | `o2` | `cgu1` | `fat` | `fatcgu1` | `v3` |
+|---|---:|---:|---:|---:|---:|---:|
+| **geomean** | **1.000** | **1.017** | **1.002** | **1.084** | **1.004** | **1.136** |
+
+Within-cell spread over the three repeats is **median 0.6–0.7%, max 2.4%** on
+both groups, so these are not noise: they are five to twenty times the spread.
+
+Three things here contradict the SAT-core matrix, and that contradiction is the
+most useful result in this file:
+
+- **`codegen-units = 1` is worth 39% on `value_to_lsb_bits`** and grows with
+  width (0.903 → 0.514 from 8 to 128 bits). On the SAT core the same flag was
+  **1.1% slower**. Same flag, same workspace, opposite sign, and a 40x
+  difference in magnitude.
+- **Fat LTO destroys that win.** `cgu1` 0.613, `fatcgu1` 1.031 — combining the
+  two is worse than either. It is also 8% *slower* than baseline on
+  `lsb_bits_to_value`. On the SAT core `fatcgu1` was the best cell.
+- **`x86-64-v3` is 8% and 14% SLOWER** on the two directions respectively, and
+  it is the worst or second-worst cell on both. This is the third independent
+  subject on which AVX2 does not pay, and the first on which it clearly costs.
+
+**No single workspace-wide `[profile.release]` is right for both subjects.** The
+setting that is worth 39% on a model-lifting primitive is worth −1.1% on the SAT
+core; the setting that is best on the SAT core is worth −3% on that primitive.
+That is a stronger argument against a global profile than the small SAT-core
+numbers are on their own — a workspace profile is a single choice, and the
+measurements disagree about what it should be.
