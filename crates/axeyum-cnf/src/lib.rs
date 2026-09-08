@@ -55,6 +55,7 @@ mod gf2;
 pub mod inprocess;
 mod interpolant;
 mod lrat;
+pub mod pass_work;
 pub mod phase_policy;
 mod proof_sat;
 mod simplify;
@@ -131,7 +132,10 @@ pub use proof_sat::{
     solve_with_theory_and_drat_proof, solve_with_theory_and_drat_proof_mirrored,
     solve_with_theory_and_drat_proof_traced, solve_with_theory_and_drat_proof_with_options,
 };
-pub use simplify::{SubsumeStats, simplify, simplify_within};
+pub use simplify::{
+    SUBSUME_MAX_ROUNDS, SubsumeOptions, SubsumeStats, simplify, simplify_with_options,
+    simplify_within,
+};
 pub use vivify::{VivifyOptions, VivifyOutcome, VivifyStats, vivify, vivify_within};
 pub use weighted::{
     WeightedAtMostEncoding, WeightedAtMostError, WeightedAtMostLimits, encode_weighted_at_most,

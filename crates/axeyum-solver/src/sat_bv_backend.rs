@@ -28,9 +28,9 @@ use axeyum_cnf::{
     BveOptions, BveOutcome, CnfAssignment, CnfConstructionProfile, CnfDuplicateOriginProfile,
     CnfEncoding, CnfError, CnfFormula, CompactMap, DEFAULT_PROOF_SAT_CONFLICT_LIMIT, EncodedLit,
     ProofSolveOutcome, Reconstruction, SatProofStatus, SatResult, SatUnknownReason,
-    SatUnsatEvidence, VivifyOptions, XorCdclResult, XorPropagation, check_drat, compact,
-    eliminate_variables_within, extract_xors, simplify_within, solve_with_drat_proof,
-    solve_with_drat_proof_with_limits, solve_with_xor_cdcl, tseitin_encode,
+    SatUnsatEvidence, SubsumeOptions, SubsumeStats, VivifyOptions, XorCdclResult, XorPropagation,
+    check_drat, compact, eliminate_variables_within, extract_xors, simplify_with_options,
+    solve_with_drat_proof, solve_with_drat_proof_with_limits, solve_with_xor_cdcl, tseitin_encode,
     tseitin_encode_profiled_with_origins, vivify_within, write_drat, xor_gauss_drat_refutation,
     xor_propagate,
 };
@@ -1210,10 +1210,103 @@ const BVE_MIN_RECOVERY_MULTIPLE: u64 = 2;
 /// which is why the size term, not this one, is the real brake.
 const BVE_STEPS_PER_MILLISECOND: u64 = 400_000;
 
-/// Decides whether BVE runs at all, and under what deterministic work budget.
+/// Subsumption's budget as a multiple of its own setup cost, in the same
+/// occurrence-list-step unit BVE is budgeted in.
 ///
-/// Returns `Some(budget)` in [`axeyum_cnf::BveStats::work_spent`]'s unit, or
-/// `None` when the pass is delayed and must not start.
+/// Subsumption is the pass BVE's admission measurement could not help. On
+/// `div3.c.50` — the single file the gated inprocessing arm lost to the
+/// baseline on 2026-09-08 — subsumption spends 10.7 s of an 11.4 s inprocessing
+/// slice while BVE spends 97 ms, so no BVE budget can reach it. Its own cap
+/// counts *subsumption checks*, the candidates that survive the length and
+/// signature pre-filters, and like BVE's resolution cap it is a bound on a
+/// component rather than on the pass.
+///
+/// The value is measured over the pinned 200-file `QF_BV` parity list from an
+/// unbudgeted calibration sweep, priced the same way BVE's was: each file's
+/// `subsume_work_at_last_progress` says what budget would have cost it nothing.
+/// See `docs/research/03-measurements/subsumption-work-meter-2026-09-08.md`.
+const SUBSUME_BUDGET_SETUP_MULTIPLE: u64 = 200;
+
+/// Occurrence-list steps subsumption retires per millisecond on this host, used
+/// only to convert a remaining wall slice into the budget's unit.
+///
+/// Separate from [`BVE_STEPS_PER_MILLISECOND`] because the two passes do
+/// different things per step — subsumption's inner loop is a signature test and
+/// a marked-literal walk, BVE's is a resolvent merge — so one number for both
+/// would be a guess dressed as a shared constant. Measured as
+/// `subsume_work_spent / subsume_ms` over the parity files whose subsumption ran
+/// at least 20 ms.
+const SUBSUME_STEPS_PER_MILLISECOND: u64 = 900_000;
+
+/// Whether BVE drops lazily-removed clause ids from its occurrence lists.
+///
+/// BVE's lists live for the whole pass and an elimination kills clauses that sit
+/// in many of them, so the dead-id constant is real here and
+/// `bve_dead_occurrence_entries` measures it.
+const BVE_COMPACT_OCCURRENCES: bool = false;
+
+/// Whether subsumption compacts its occurrence lists.
+///
+/// See `subsume_dead_occurrence_entries`: this pass rebuilds its lists every
+/// round and only ever removes the candidate it is currently examining, which
+/// has not been connected yet, so there is nothing to compact.
+const SUBSUME_COMPACT_OCCURRENCES: bool = false;
+
+/// Reads a measurement lever overriding one pass's budget multiple.
+///
+/// **This exists to make the A/B arms of a corpus sweep runnable against one
+/// binary, and for nothing else.** The shipped default is the constant; the
+/// variable is how a sweep asks for "the same build with this pass unbudgeted"
+/// without a second build whose differences it would then have to argue are
+/// irrelevant. `off` (or `0`) means unbudgeted, which is why the multiple is
+/// clamped at 1 rather than allowed to be a silent zero.
+///
+/// An unparseable value is ignored rather than defaulted to something else: a
+/// typo must not quietly measure a different arm than the one named.
+fn env_override_multiple(name: &str, default: u64) -> u64 {
+    match std::env::var(name) {
+        Ok(v) if v.eq_ignore_ascii_case("off") || v == "0" => u64::MAX,
+        Ok(v) => v.parse::<u64>().map_or(default, |n| n.max(1)),
+        Err(_) => default,
+    }
+}
+
+/// Whether occurrence-list compaction is enabled for the inprocessing passes.
+///
+/// A measurement lever like [`env_override_multiple`], and the default is the
+/// answer this lane measured — see
+/// `docs/research/03-measurements/subsumption-work-meter-2026-09-08.md`.
+fn env_compact_occurrences(default: bool) -> bool {
+    match std::env::var("AXEYUM_OCC_COMPACT") {
+        Ok(v) => v == "1" || v.eq_ignore_ascii_case("on"),
+        Err(_) => default,
+    }
+}
+
+/// The constants one occurrence-list pass is admitted and budgeted by.
+///
+/// BVE and subsumption are budgeted by the *same* policy with *different*
+/// numbers, so the policy is written once here and the numbers are named per
+/// pass. Copying it would let the two drift into different shapes, and then
+/// "BVE was granted 2000 x setup and subsumption 400 x" would stop being a
+/// comparison — which is the whole reason both meters charge in the same unit.
+#[derive(Debug, Clone, Copy)]
+struct PassAdmission {
+    /// Stat-key prefix (`bve` / `subsume`), so a reader can tell whose decision
+    /// a counter describes.
+    name: &'static str,
+    /// What the pass may spend on top of its setup cost, as a multiple of it.
+    budget_setup_multiple: u64,
+    /// The smallest budget worth starting the pass for, as a multiple of setup.
+    /// Arms the accumulate-and-delay gate; see [`BVE_MIN_RECOVERY_MULTIPLE`].
+    min_recovery_multiple: u64,
+    /// Occurrence-list steps this host retires per millisecond, used only to
+    /// convert a remaining wall slice into the budget's unit.
+    steps_per_millisecond: u64,
+}
+
+/// Decides whether one occurrence-list pass runs at all, and under what
+/// deterministic work budget. `None` means it must not start.
 ///
 /// # Why this is not a wall-clock decision
 ///
@@ -1226,38 +1319,45 @@ const BVE_STEPS_PER_MILLISECOND: u64 = 400_000;
 /// a pass should be bounded by the work it is worth, and "worth" is measured
 /// against the formula, not against the clock.
 ///
-/// So the reference window is `BVE_BUDGET_SETUP_MULTIPLE x setup`, capped by
-/// what the remaining slice can buy, and the standard accumulate-and-delay gate
-/// refuses the round when that cannot recover setup
-/// [`BVE_MIN_RECOVERY_MULTIPLE`] times over. Both halves come from
-/// [`axeyum_ir::budget`] rather than being re-derived here — this function
-/// chooses constants and nothing else.
-fn bve_admission(
+/// So the reference window is `budget_setup_multiple x setup`, capped by what
+/// the remaining slice can buy, and the standard accumulate-and-delay gate
+/// refuses the round when that cannot recover setup `min_recovery_multiple`
+/// times over. Both halves come from [`axeyum_ir::budget`] rather than being
+/// re-derived here — this function chooses nothing but the arithmetic that
+/// feeds them.
+///
+/// # Setup is exact, not an estimate
+///
+/// `literal_occurrences + 2 x variable_count` is what the passes' meters start
+/// at (`axeyum_cnf::pass_work`): one step per literal occurrence connected plus
+/// one per occurrence-list slot. Both passes charge in that unit, so one
+/// admission function serves both. Subsumption's first round is at most this,
+/// and below it only when clauses past its size limit go unconnected.
+fn admit_occurrence_pass(
+    admission: PassAdmission,
     formula: &CnfFormula,
     deadline: Option<Instant>,
     stats: &mut SolveStats,
 ) -> Option<u64> {
-    // BVE's setup cost, in its own unit and exactly as `bve.rs` charges it: one
-    // step per literal occurrence connected plus one per occurrence-list slot.
-    // Not an estimate — the pass's meter starts at this number.
     let setup = (literal_occurrences(formula) + 2 * formula.variable_count()) as u64;
-    let size_allowance = setup.saturating_mul(BVE_BUDGET_SETUP_MULTIPLE);
+    let size_allowance = setup.saturating_mul(admission.budget_setup_multiple);
     let reference = match deadline {
         Some(dl) => {
             let remaining_ms =
                 u64::try_from(dl.saturating_duration_since(Instant::now()).as_millis())
                     .unwrap_or(u64::MAX);
-            size_allowance.min(remaining_ms.saturating_mul(BVE_STEPS_PER_MILLISECOND))
+            size_allowance.min(remaining_ms.saturating_mul(admission.steps_per_millisecond))
         }
         None => size_allowance,
     };
 
-    // The whole reference window: there is no other pre-search consumer to share
-    // it with, so BVE's share is 1000 per mille of it. The window itself is
-    // already the fraction — `EffortPolicy::per_mille` would be double-counting.
+    // The whole reference window: there is no other consumer to share it with at
+    // the moment this pass is offered, so its share is 1000 per mille of it. The
+    // window itself is already the fraction — `EffortPolicy::per_mille` would be
+    // double-counting.
     let policy = EffortPolicy::new(1000)
         .with_min_reference(reference)
-        .with_init_cost(BVE_MIN_RECOVERY_MULTIPLE);
+        .with_init_cost(admission.min_recovery_multiple);
     let mut account = EffortAccount::new(policy);
     // No search has run yet, so the numeraire reads zero and `min_reference`
     // supplies the whole window. This is the case `with_min_reference` exists
@@ -1266,27 +1366,102 @@ fn bve_admission(
     let search = WorkMeter::new();
     let own = WorkMeter::new();
 
-    push_count(stats, "bve_setup_work", setup);
+    push_count(stats, &format!("{}_setup_work", admission.name), setup);
     match account.request(&search, &own, setup) {
         Grant::Granted(budget) => {
-            push_count(stats, "bve_work_budget", budget.limit());
-            stats.backend.push(("bve_admitted".to_owned(), 1.0));
+            push_count(
+                stats,
+                &format!("{}_work_budget", admission.name),
+                budget.limit(),
+            );
+            stats
+                .backend
+                .push((format!("{}_admitted", admission.name), 1.0));
             Some(budget.limit())
         }
         Grant::Delayed { accrued, threshold } => {
-            push_count(stats, "bve_admission_accrued", accrued);
-            push_count(stats, "bve_admission_threshold", threshold);
-            stats.backend.push(("bve_admitted".to_owned(), 0.0));
+            push_count(
+                stats,
+                &format!("{}_admission_accrued", admission.name),
+                accrued,
+            );
+            push_count(
+                stats,
+                &format!("{}_admission_threshold", admission.name),
+                threshold,
+            );
+            stats
+                .backend
+                .push((format!("{}_admitted", admission.name), 0.0));
             None
         }
         // Unreachable with a fresh account (the backoff needs a recorded
         // failure), but a `_` arm here would silently absorb a future policy
         // change into "run anyway", which is the wrong default for a gate.
         Grant::BackedOff { .. } => {
-            stats.backend.push(("bve_admitted".to_owned(), 0.0));
+            stats
+                .backend
+                .push((format!("{}_admitted", admission.name), 0.0));
             None
         }
     }
+}
+
+/// BVE's admission constants.
+const BVE_ADMISSION: PassAdmission = PassAdmission {
+    name: "bve",
+    budget_setup_multiple: BVE_BUDGET_SETUP_MULTIPLE,
+    min_recovery_multiple: BVE_MIN_RECOVERY_MULTIPLE,
+    steps_per_millisecond: BVE_STEPS_PER_MILLISECOND,
+};
+
+/// Subsumption's admission constants. See [`SUBSUME_BUDGET_SETUP_MULTIPLE`].
+const SUBSUME_ADMISSION: PassAdmission = PassAdmission {
+    name: "subsume",
+    budget_setup_multiple: SUBSUME_BUDGET_SETUP_MULTIPLE,
+    min_recovery_multiple: BVE_MIN_RECOVERY_MULTIPLE,
+    steps_per_millisecond: SUBSUME_STEPS_PER_MILLISECOND,
+};
+
+/// Decides whether BVE runs, and under what budget. See
+/// [`admit_occurrence_pass`]; this names the constants and nothing else.
+fn bve_admission(
+    formula: &CnfFormula,
+    deadline: Option<Instant>,
+    stats: &mut SolveStats,
+) -> Option<u64> {
+    admit_occurrence_pass(
+        PassAdmission {
+            budget_setup_multiple: env_override_multiple(
+                "AXEYUM_BVE_BUDGET_MULTIPLE",
+                BVE_BUDGET_SETUP_MULTIPLE,
+            ),
+            ..BVE_ADMISSION
+        },
+        formula,
+        deadline,
+        stats,
+    )
+}
+
+/// Decides whether subsumption runs, and under what budget.
+fn subsume_admission(
+    formula: &CnfFormula,
+    deadline: Option<Instant>,
+    stats: &mut SolveStats,
+) -> Option<u64> {
+    admit_occurrence_pass(
+        PassAdmission {
+            budget_setup_multiple: env_override_multiple(
+                "AXEYUM_SUBSUME_BUDGET_MULTIPLE",
+                SUBSUME_BUDGET_SETUP_MULTIPLE,
+            ),
+            ..SUBSUME_ADMISSION
+        },
+        formula,
+        deadline,
+        stats,
+    )
 }
 
 /// Runs BVE under `grant`, or not at all.
@@ -1307,11 +1482,42 @@ fn run_bve(formula: &CnfFormula, grant: Option<u64>, deadline: Option<Instant>) 
             formula,
             BveOptions {
                 work_budget: Some(work_budget),
+                compact_occurrences: env_compact_occurrences(BVE_COMPACT_OCCURRENCES),
                 ..BveOptions::DEFAULT
             },
             deadline,
         ),
         None => BveOutcome::skipped(formula),
+    }
+}
+
+/// Runs subsumption under `grant`, or not at all.
+///
+/// The same wiring gap `run_bve` exists to close, in the same shape: with the
+/// decision inline at the call site, computing a budget correctly and then
+/// handing the pass `SubsumeOptions::DEFAULT` compiles, runs, produces
+/// identical answers, and is caught by nothing. Mutation-verified next door,
+/// where exactly that edit survived the whole `--lib --features full` sweep.
+///
+/// `None` means the pass does not run at all, which is **not** the same as a
+/// budget of zero: a zero-budget call still normalizes every clause and builds
+/// the first round's occurrence lists, and that `O(|F|)` setup is exactly what
+/// the admission test declined to pay.
+fn run_subsume(
+    formula: &CnfFormula,
+    grant: Option<u64>,
+    deadline: Option<Instant>,
+) -> (CnfFormula, SubsumeStats) {
+    match grant {
+        Some(work_budget) => simplify_with_options(
+            formula,
+            SubsumeOptions {
+                work_budget: Some(work_budget),
+                compact_occurrences: env_compact_occurrences(SUBSUME_COMPACT_OCCURRENCES),
+            },
+            deadline,
+        ),
+        None => (formula.clone(), SubsumeStats::default()),
     }
 }
 
@@ -1451,9 +1657,25 @@ fn inprocess(
     let base: &CnfFormula = xor_base.as_ref().unwrap_or(formula);
 
     let subsume_start = Instant::now();
-    let (simplified, subsume) = simplify_within(base, deadline);
+    let subsume_grant = subsume_admission(base, deadline, stats);
+    let (simplified, subsume) = run_subsume(base, subsume_grant, deadline);
     push_duration_ms(stats, "subsume_ms", subsume_start.elapsed());
     push_deadline_expired(stats, "subsume_deadline_expired", deadline);
+    push_count(stats, "subsume_work_spent", subsume.work_spent);
+    push_count(
+        stats,
+        "subsume_work_at_last_progress",
+        subsume.work_at_last_progress,
+    );
+    push_count(
+        stats,
+        "subsume_dead_occurrence_entries",
+        subsume.dead_occurrence_entries,
+    );
+    stats.backend.push((
+        "subsume_work_exhausted".to_owned(),
+        f64::from(u8::from(subsume.work_exhausted)),
+    ));
     // Optional clause vivification between subsumption and BVE. Vivify is
     // model-preserving (same satisfying assignments, same `variable_count`, no
     // reconstruction trail), so its output feeds BVE in place of `simplified` and
@@ -1474,6 +1696,11 @@ fn inprocess(
         stats,
         "bve_work_at_last_elimination",
         bve.stats.work_at_last_elimination,
+    );
+    push_count(
+        stats,
+        "bve_dead_occurrence_entries",
+        bve.stats.dead_occurrence_entries,
     );
     stats.backend.push((
         "bve_work_exhausted".to_owned(),

@@ -73,7 +73,7 @@ use std::time::Instant;
 use web_time::Instant;
 
 use crate::bve::{BveOptions, BveStats, Reconstruction, eliminate_variables_within_recorded};
-use crate::simplify::{SubsumeStats, simplify_within_recorded};
+use crate::simplify::{SubsumeOptions, SubsumeStats, simplify_within_recorded};
 use crate::vivify::{VivifyOptions, VivifyStats, vivify_within};
 use crate::{CnfFormula, DratSink, DratStep, ProofSinkError};
 
@@ -94,6 +94,8 @@ pub struct InprocessOptions {
     /// Bounded variable elimination (`crate::bve`). Equisatisfiable; a `sat`
     /// model is lifted back through [`InprocessOutcome::reconstruction`].
     pub bve: bool,
+    /// Tuning for the subsumption pass (ignored unless [`Self::subsume`]).
+    pub subsume_options: SubsumeOptions,
     /// Tuning for the vivification pass (ignored unless [`Self::vivify`]).
     pub vivify_options: VivifyOptions,
     /// Tuning for the elimination pass (ignored unless [`Self::bve`]).
@@ -114,6 +116,7 @@ impl InprocessOptions {
         subsume: false,
         vivify: false,
         bve: false,
+        subsume_options: SubsumeOptions::DEFAULT,
         vivify_options: VivifyOptions::DEFAULT,
         bve_options: BveOptions::DEFAULT,
         max_variables: DEFAULT_MAX_VARIABLES,
@@ -284,8 +287,12 @@ pub fn inprocess_into(
     stats.ran = true;
 
     if options.subsume {
-        let (reduced, subsume_stats) =
-            simplify_within_recorded(&current, deadline, Some(&mut steps));
+        let (reduced, subsume_stats) = simplify_within_recorded(
+            &current,
+            options.subsume_options,
+            deadline,
+            Some(&mut steps),
+        );
         stats.subsume = subsume_stats;
         current = reduced;
         stats.proof_steps += flush(&mut steps, sink)?;

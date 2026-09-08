@@ -79,6 +79,7 @@ use std::time::Instant;
 #[cfg(target_arch = "wasm32")]
 use web_time::Instant;
 
+use crate::pass_work::{PassWork, compact_dead_entries};
 use crate::simplify::NormClause;
 use crate::{CnfClause, CnfFormula, CnfLit, CnfVar, DratStep};
 
@@ -113,6 +114,20 @@ pub struct BveOptions {
     /// budget in this unit is what stops that, and unlike a deadline it is
     /// deterministic (the same formula gives the same cutoff on any host).
     pub work_budget: Option<u64>,
+    /// Drop lazily-removed clause ids from an occurrence list once at least
+    /// half of it is dead ([`crate::pass_work`]'s `compact_dead_entries`).
+    ///
+    /// Removal in this pass is lazy: an eliminated clause's id stays in every
+    /// occurrence list it was ever in, and every later scan of that list pays
+    /// for it again. [`Self::work_budget`] *hides* that constant by stopping the
+    /// pass sooner; this removes it. The two are independent knobs on purpose —
+    /// they are different fixes and one is not a substitute for the other.
+    ///
+    /// With no budget, compaction cannot change which variables are eliminated
+    /// (the live-id sets it returns are identical), only what they cost. With a
+    /// budget the two interact, because a cheaper scan leaves more budget for
+    /// later variables.
+    pub compact_occurrences: bool,
 }
 
 impl BveOptions {
@@ -125,6 +140,7 @@ impl BveOptions {
         occurrence_limit: 100,
         max_rounds: 4,
         work_budget: None,
+        compact_occurrences: false,
     };
 }
 
@@ -168,6 +184,16 @@ pub struct BveStats {
     /// rather than a guess: a budget at or above this number costs the run
     /// nothing at all, and one below it can be priced in eliminations lost.
     pub work_at_last_elimination: u64,
+    /// Occurrence entries examined whose clause had **already been removed**.
+    ///
+    /// Removal here is lazy, so an eliminated clause's id stays in every
+    /// occurrence list it was ever in and every later scan pays for it again.
+    /// This counter is that cost, measured: it is a *subset* of
+    /// [`Self::work_spent`], so `dead / spent` is the fraction of the pass's
+    /// scanning that [`BveOptions::compact_occurrences`] can delete. Without it
+    /// "budgeting hides the constant, compaction removes it" is an argument
+    /// rather than a number.
+    pub dead_occurrence_entries: u64,
 }
 
 impl BveStats {
@@ -282,10 +308,15 @@ struct Eliminator {
     records: Vec<ElimRecord>,
     /// Total resolution attempts so far (bounded by the `max_rounds` cap).
     resolutions: usize,
-    /// Occurrence-list steps spent so far — the unit
-    /// [`BveOptions::work_budget`] is denominated in. See the module's "the work
-    /// unit" section for why this and not `resolutions`.
-    work: u64,
+    /// Occurrence-list steps spent so far, the budget bounding them, and the
+    /// reading at the last elimination — the unit [`BveOptions::work_budget`] is
+    /// denominated in. See the module's "the work unit" section for why this
+    /// and not `resolutions`, and [`crate::pass_work`] for why the type is
+    /// shared with subsumption rather than written twice.
+    work: PassWork,
+    /// Whether to drop lazily-removed clause ids from an occurrence list once
+    /// half of it is dead ([`BveOptions::compact_occurrences`]).
+    compact: bool,
 }
 
 impl Eliminator {
@@ -297,13 +328,28 @@ impl Eliminator {
     /// returned. The gap between those two is the point: removal is lazy, so a
     /// list keeps every dead id forever and this scan keeps paying for them.
     fn live_ids(&mut self, lit: CnfLit) -> Vec<usize> {
-        let entries = self.occ[lit_index(lit)].len();
-        self.work = self.work.saturating_add(entries as u64);
-        self.occ[lit_index(lit)]
+        let slot = lit_index(lit);
+        let entries = self.occ[slot].len();
+        self.work.charge(entries as u64);
+        let ids: Vec<usize> = self.occ[slot]
             .iter()
             .copied()
             .filter(|&ci| self.clauses[ci].is_some())
-            .collect()
+            .collect();
+        // The entries this scan paid for and got nothing from: the size of the
+        // lazy-removal constant, which is what decides whether compaction is
+        // worth anything here.
+        self.work.charge_dead((entries - ids.len()) as u64);
+        if self.compact {
+            // Removing the dead ids is what a budget cannot do: the budget
+            // stops the pass sooner, this makes every later scan of this list
+            // cheaper. Sound because a `None` clause slot is never refilled.
+            let clauses = &self.clauses;
+            compact_dead_entries(&mut self.occ[slot], ids.len(), &mut self.work, |ci| {
+                clauses[ci].is_some()
+            });
+        }
+        ids
     }
 
     /// Re-queues `var` for reconsideration unless it is eliminated or already queued.
@@ -348,9 +394,8 @@ impl Eliminator {
                 // The merge walks both parents and the dedup scan compares
                 // against every resolvent kept so far; both are charged, because
                 // both are `O(size)` work this pass does per attempt.
-                self.work = self
-                    .work
-                    .saturating_add((p.len() + n.len() + resolvents.len()) as u64);
+                self.work
+                    .charge((p.len() + n.len() + resolvents.len()) as u64);
                 let mut merged: Vec<CnfLit> = p.iter().copied().filter(|&l| l != pos_lit).collect();
                 merged.extend(n.iter().copied().filter(|&l| l != neg_lit));
                 match NormClause::from_clause(&CnfClause::new(merged)) {
@@ -436,7 +481,7 @@ impl Eliminator {
         // Append resolvents, connecting their literals and noting their variables.
         for r in resolvents {
             let new_id = self.clauses.len();
-            self.work = self.work.saturating_add(r.len() as u64);
+            self.work.charge(r.len() as u64);
             for &l in &r {
                 self.occ[lit_index(l)].push(new_id);
                 neighbours.push(l.var().index());
@@ -557,15 +602,10 @@ pub(crate) fn eliminate_variables_within_recorded(
         eliminated: vec![false; nvars],
         records: Vec::new(),
         resolutions: 0,
-        // Setup is charged up front rather than left free. Building the
-        // occurrence lists touches every literal once and every literal slot
-        // once, and it is exactly the fixed `O(|F|)` cost CaDiCaL's
-        // accumulate-and-delay gate exists to amortise
-        // (`references/cadical/src/probe.cpp:902-907`). A budget that starts the
-        // meter at zero after setup would report a pass that did nothing as
-        // having spent nothing, and the admission test that reads this number
-        // would then be comparing a budget against a cost it had excluded.
-        work: setup_work,
+        // Setup charged up front; see `PassWork::with_setup` for why, and why
+        // the last-progress reading starts there too.
+        work: PassWork::with_setup(setup_work, opts.work_budget),
+        compact: opts.compact_occurrences,
     };
 
     // Seed the schedule with every occurring variable, fewest occurrences first
@@ -592,8 +632,7 @@ pub(crate) fn eliminate_variables_within_recorded(
         // The deterministic budget, checked before the wall clock so that a run
         // which would stop for both reasons reports the reproducible one. The
         // partial result is equisatisfiable either way.
-        if opts.work_budget.is_some_and(|limit| elim.work >= limit) {
-            stats.work_exhausted = true;
+        if elim.work.must_stop() {
             break;
         }
         // Per-variable deadline poll (`Instant::now()` is tens of ns; a single
@@ -604,18 +643,18 @@ pub(crate) fn eliminate_variables_within_recorded(
         if elim.try_eliminate(x, opts, &mut stats, proof.as_deref_mut()) {
             elim.eliminated[x] = true;
             eliminated_any = true;
-            stats.work_at_last_elimination = elim.work;
+            elim.work.note_progress();
         }
     }
     stats.rounds = usize::from(eliminated_any);
-    stats.work_spent = elim.work;
-    if !eliminated_any {
-        // Nothing was eliminated, so every step this pass took was waste. The
-        // setup floor, not zero: a reader comparing this against `work_spent`
-        // is asking "how much of the spend came after the last useful action",
-        // and the answer on such a run is "all of it after setup".
-        stats.work_at_last_elimination = setup_work;
-    }
+    stats.work_spent = elim.work.spent();
+    stats.work_exhausted = elim.work.exhausted();
+    // On a run that eliminated nothing this is the setup floor, not zero: a
+    // reader comparing it against `work_spent` is asking "how much of the spend
+    // came after the last useful action", and the answer is "all of it after
+    // setup". `PassWork` seeds it there so both cases read the same field.
+    stats.work_at_last_elimination = elim.work.at_last_progress();
+    stats.dead_occurrence_entries = elim.work.dead_entries();
 
     // Rebuild the reduced formula from the live clauses.
     let mut out = CnfFormula::new(nvars);
