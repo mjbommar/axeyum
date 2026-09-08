@@ -215,56 +215,19 @@ pub fn check_with_lra_dpll_within(
             });
         }
 
-        let theory_started = crate::lazy_smt_counters::enabled().then(Instant::now);
-        let theory_result = check_with_lra_within_certified(arena, &theory_lits, deadline);
-        if let Some(started) = theory_started {
-            let outcome = match &theory_result {
-                Ok((CheckResult::Sat(_), _)) => RoundOutcome::Sat,
-                Ok((CheckResult::Unsat, _)) => RoundOutcome::Unsat,
-                Ok((CheckResult::Unknown(_), _)) | Err(_) => RoundOutcome::Unknown,
-            };
-            crate::lazy_smt_counters::record_theory(started.elapsed(), outcome);
-        }
-        // The certificate this decision built, bound to the conjunction it
-        // refutes. Kept rather than dropped: the core extraction below used to
-        // recover it by deciding `theory_lits` a second time.
-        let (verdict, evidence) = theory_result?;
-        let carried = evidence.map(|certificate| CarriedCertificate {
-            lits: theory_lits.clone(),
-            certificate,
-        });
+        let (verdict, carried) = decide_cube(arena, &theory_lits, deadline)?;
         match verdict {
             CheckResult::Sat(theory_model) => {
                 return finish_sat(arena, assertions, &ctx, &propositional, &theory_model);
             }
             CheckResult::Unsat => {
-                // Theory conflict: block this atom assignment and retry. The
-                // Farkas certificate names the infeasible core — the atoms with a
-                // nonzero multiplier — so block only those (a sound, strictly
-                // stronger clause that rules out every assignment sharing the
-                // core, not just this one). `theory_lits`, `assignment`, and the
-                // certificate atoms are all in `ctx.atoms` order, so multiplier
-                // index `i` is `assignment[i]`.
-                // Still timed as its own stage. It no longer re-solves the
-                // refuted conjunction on this path — that SECOND LP per round
-                // is what the 2026-09-08 measurement found holding about half
-                // of this route's wall clock — but the stage has to keep its
-                // own clock for the reading to stay comparable across the fix,
-                // and for the re-derivation paths that survive.
-                let core_started = crate::lazy_smt_counters::enabled().then(Instant::now);
-                let core = conflict_core(
+                blocking.push(learn_blocking_clause(
                     arena,
                     &theory_lits,
                     &assignment,
                     carried.as_ref(),
                     deadline,
-                )?;
-                let clause = block_clause(arena, &core)?;
-                crate::lazy_smt_counters::record_blocking(
-                    core.len() as u64,
-                    core_started.map_or(Duration::ZERO, |s| s.elapsed()),
-                );
-                blocking.push(clause);
+                )?);
             }
             CheckResult::Unknown(reason) => return Ok(CheckResult::Unknown(reason)),
         }
@@ -571,8 +534,7 @@ pub fn certify_lra_dpll_unsat(
             CheckResult::Unsat => {
                 // Record the infeasible core as a lemma (the same minimized core
                 // used for the blocking clause), then block it.
-                let core =
-                    conflict_core(arena, &theory_lits, &assignment, carried.as_ref(), None)?;
+                let core = conflict_core(arena, &theory_lits, &assignment, carried.as_ref(), None)?;
                 let mut lemma = Vec::with_capacity(core.len());
                 for &(prop, truth) in &core {
                     let atom_term = ctx
@@ -812,6 +774,78 @@ fn finish_sat(
         }
     }
     Ok(CheckResult::Sat(model))
+}
+
+/// Decides one round's cube with the exact linear theory, times the stage, and
+/// **keeps** the Farkas certificate bound to the conjunction it refutes.
+///
+/// Keeping it is the whole point: `CheckResult` cannot carry the evidence, so
+/// this loop used to drop the certificate here and have the core extraction
+/// decide the identical literal set a second time. That second decision was
+/// 48.6% of the wall clock across the 22 `QF_LRA` files bound by this route
+/// (`bench-results/watchdog-blind-files-20260908/qf_lra_blind22/`).
+///
+/// # Errors
+///
+/// Propagates the theory decision's errors.
+fn decide_cube(
+    arena: &TermArena,
+    theory_lits: &[TermId],
+    deadline: Option<Instant>,
+) -> Result<(CheckResult, Option<CarriedCertificate>), SolverError> {
+    let started = crate::lazy_smt_counters::enabled().then(Instant::now);
+    let decision = check_with_lra_within_certified(arena, theory_lits, deadline);
+    if let Some(started) = started {
+        let outcome = match &decision {
+            Ok((CheckResult::Sat(_), _)) => RoundOutcome::Sat,
+            Ok((CheckResult::Unsat, _)) => RoundOutcome::Unsat,
+            Ok((CheckResult::Unknown(_), _)) | Err(_) => RoundOutcome::Unknown,
+        };
+        crate::lazy_smt_counters::record_theory(started.elapsed(), outcome);
+    }
+    let (verdict, evidence) = decision?;
+    Ok((
+        verdict,
+        evidence.map(|certificate| CarriedCertificate {
+            lits: theory_lits.to_vec(),
+            certificate,
+        }),
+    ))
+}
+
+/// Turns one theory conflict into the blocking clause the next round solves
+/// against, and times the whole stage.
+///
+/// The Farkas certificate names the infeasible core — the atoms with a nonzero
+/// multiplier — so only those are blocked: a sound, strictly stronger clause
+/// that rules out every assignment sharing the core, not just this one.
+/// `theory_lits`, `assignment` and the certificate atoms are all in `ctx.atoms`
+/// order, so multiplier index `i` is `assignment[i]`.
+///
+/// Still timed as its own stage even though it no longer re-solves the refuted
+/// conjunction — that SECOND LP per round is what the 2026-09-08 measurement
+/// found holding about half of this route's wall clock. The stage keeps its own
+/// clock so the reading stays comparable across the fix, and so the
+/// re-derivation paths that survive are still attributed.
+///
+/// # Errors
+///
+/// Propagates the core extraction's and the clause construction's errors.
+fn learn_blocking_clause(
+    arena: &mut TermArena,
+    theory_lits: &[TermId],
+    assignment: &[(SymbolId, bool)],
+    carried: Option<&CarriedCertificate>,
+    deadline: Option<Instant>,
+) -> Result<TermId, SolverError> {
+    let started = crate::lazy_smt_counters::enabled().then(Instant::now);
+    let core = conflict_core(arena, theory_lits, assignment, carried, deadline)?;
+    let clause = block_clause(arena, &core)?;
+    crate::lazy_smt_counters::record_blocking(
+        core.len() as u64,
+        started.map_or(Duration::ZERO, |s| s.elapsed()),
+    );
+    Ok(clause)
 }
 
 /// Builds the blocking clause that rules out the current atom assignment: the
@@ -1147,17 +1181,17 @@ mod tests {
         let zero = arena.real_const(Rational::integer(0));
         let seven = arena.real_const(Rational::integer(7));
 
-        let x_lt_0 = arena.real_lt(x, zero).unwrap();
-        let x_gt_0 = arena.real_lt(zero, x).unwrap();
-        let y_lt_0 = arena.real_lt(y, zero).unwrap();
-        let y_gt_7 = arena.real_lt(seven, y).unwrap();
+        let x_neg = arena.real_lt(x, zero).unwrap();
+        let x_pos = arena.real_lt(zero, x).unwrap();
+        let y_neg = arena.real_lt(y, zero).unwrap();
+        let y_over_seven = arena.real_lt(seven, y).unwrap();
 
         // Donor cube: refuted by literals 0 and 1; literal 2 is a spectator, so
         // its multiplier is zero and the donor core is `{0, 1}`.
-        let donor = vec![x_lt_0, x_gt_0, y_gt_7];
+        let donor = vec![x_neg, x_pos, y_over_seven];
         // Recipient cube: refuted by literals 0 and 2. Same length, different
         // infeasible pair.
-        let recipient = vec![y_lt_0, x_gt_0, y_gt_7];
+        let recipient = vec![y_neg, x_pos, y_over_seven];
 
         let assignment = props(&mut arena, "p", 3);
 
