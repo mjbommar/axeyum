@@ -131,6 +131,10 @@ fn needs_quoting(inner: &str) -> bool {
 ///
 /// Returns [`SmtError::Syntax`] on unbalanced parentheses, unterminated
 /// strings/quoted symbols, or stray closing parens.
+// The opt-in ingest-counter hooks (`crate::ingest_stats`) pushed this over
+// clippy's line count, not new branching complexity; each hook is a single
+// self-gated call.
+#[allow(clippy::too_many_lines)]
 pub fn read_all(input: &str) -> Result<Vec<SExpr>, SmtError> {
     let mut top = Vec::new();
     // Stack of open lists; pushes/pops instead of recursion.
@@ -140,6 +144,7 @@ pub fn read_all(input: &str) -> Result<Vec<SExpr>, SmtError> {
     let n = bytes.len();
 
     let emit = |stack: &mut Vec<Vec<SExpr>>, top: &mut Vec<SExpr>, e: SExpr| {
+        crate::ingest_stats::record_emitted(&e);
         if let Some(open) = stack.last_mut() {
             open.push(e);
         } else {
@@ -158,6 +163,7 @@ pub fn read_all(input: &str) -> Result<Vec<SExpr>, SmtError> {
             }
             b'(' => {
                 stack.push(Vec::new());
+                crate::ingest_stats::record_depth(stack.len());
                 i += 1;
             }
             b')' => {
@@ -254,6 +260,7 @@ pub fn read_all(input: &str) -> Result<Vec<SExpr>, SmtError> {
             "unbalanced '(' at end of input".to_owned(),
         ));
     }
+    crate::ingest_stats::record_top_level_forms(top.len() as u64);
     Ok(top)
 }
 
