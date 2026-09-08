@@ -327,7 +327,11 @@ fn theory_layer_report_line(
          simplex_rows={} simplex_columns={} assert_partial_conflicts={} \
          final_check_conflicts={} final_check_core_literals={} \
          final_check_core_widenings={} final_check_live_rows={} \
-         bound_scan_calls={} bound_scan_atoms={}",
+         bound_scan_calls={} bound_scan_atoms={} \
+         pivot_cells_written={} pivot_rows_combined={} entering_scan_cells={} \
+         leaving_scan_rows={} fill_nnz_sum={} fill_samples={} bland_fallbacks={} \
+         farkas_certificates={} farkas_declined_basic_not_slack={} \
+         farkas_declined_nonbasic_problem_var={} farkas_declined_self_check={}",
         stats.boolean_propagate.as_millis(),
         stats.theory_assert.as_millis(),
         stats.theory_propagate.as_millis(),
@@ -358,6 +362,17 @@ fn theory_layer_report_line(
         optional(stats.final_check_live_rows),
         optional(stats.bound_scan_calls),
         optional(stats.bound_scan_atoms),
+        optional(stats.pivot_cells_written),
+        optional(stats.pivot_rows_combined),
+        optional(stats.entering_scan_cells),
+        optional(stats.leaving_scan_rows),
+        optional(stats.fill_nnz_sum),
+        optional(stats.fill_samples),
+        optional(stats.bland_fallbacks),
+        optional(stats.farkas_certificates),
+        optional(stats.farkas_declined_basic_not_slack),
+        optional(stats.farkas_declined_nonbasic_problem_var),
+        optional(stats.farkas_declined_self_check),
     )
 }
 

@@ -2263,6 +2263,18 @@ impl CdclT {
             final_check_live_rows: engine.map(|e| e.final_check_live_rows),
             bound_scan_calls: engine.map(|e| e.bound_scan_calls),
             bound_scan_atoms: engine.map(|e| e.bound_scan_atoms),
+            pivot_cells_written: engine.map(|e| e.pivot_cells_written),
+            pivot_rows_combined: engine.map(|e| e.pivot_rows_combined),
+            entering_scan_cells: engine.map(|e| e.entering_scan_cells),
+            leaving_scan_rows: engine.map(|e| e.leaving_scan_rows),
+            fill_nnz_sum: engine.map(|e| e.fill_nnz_sum),
+            fill_samples: engine.map(|e| e.fill_samples),
+            bland_fallbacks: engine.map(|e| e.bland_fallbacks),
+            farkas_certificates: engine.map(|e| e.farkas_certificates),
+            farkas_declined_basic_not_slack: engine.map(|e| e.farkas_declined_basic_not_slack),
+            farkas_declined_nonbasic_problem_var: engine
+                .map(|e| e.farkas_declined_nonbasic_problem_var),
+            farkas_declined_self_check: engine.map(|e| e.farkas_declined_self_check),
         }
     }
 
