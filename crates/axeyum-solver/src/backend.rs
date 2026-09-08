@@ -149,8 +149,23 @@ pub struct SolverConfig {
     /// `variable_count` — no reconstruction trail), so the model-lift stack is
     /// unchanged and every `sat` result is still replay-checked against the
     /// original terms; it only strengthens (shrinks) clauses, never changing the
-    /// verdict. A no-op unless `cnf_inprocessing` is set. Off by default so
-    /// recorded baselines reflect the un-vivified inprocessing path.
+    /// verdict. **A no-op unless `cnf_inprocessing` is set**, which is what makes
+    /// the default safe: turning this on changes nothing for a caller who has
+    /// not opted into inprocessing, and the default build has not.
+    ///
+    /// **On by default since 2026-09-08, against vivification's reputation as
+    /// the expensive pass.** Measured over the pinned 200-file `QF_BV` parity
+    /// list, with BVE under its work budget: vivification costs **2.7 s** across
+    /// the corpus and buys **8.5 s less BVE** (90.1 s -> 81.6 s), **more**
+    /// variables eliminated (2.20 M -> 2.45 M), a better literal ratio (0.844 ->
+    /// 0.777), and it removes the last two files whose BVE was still being cut
+    /// off by the clock. The mechanism is visible per file: on `bench_2598`,
+    /// `bench_3708`, `bench_869` and `bench_3293`, vivification turns an
+    /// 11,000 ms BVE that hits its budget into a **27 ms** one that reaches its
+    /// own fixpoint and eliminates roughly **twice** as many variables. Shorter
+    /// clauses mean shorter occurrence lists, and occurrence-list scanning is
+    /// what BVE spends. See
+    /// `docs/research/03-measurements/inprocessing-admission-2026-09-08.md`.
     ///
     /// Proof accounting: in `prove_unsat` mode the vivify pass's `DRAT` is
     /// *step-checked* (RUP-verified by [`axeyum_cnf::check_drat`] against the
@@ -373,7 +388,7 @@ impl Default for SolverConfig {
             cnf_clause_budget: None,
             prove_unsat: false,
             cnf_inprocessing: false,
-            cnf_vivify: false,
+            cnf_vivify: true,
             preprocess: true,
             profile_bit_demand: false,
             profile_cnf_construction: false,

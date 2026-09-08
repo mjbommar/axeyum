@@ -122,8 +122,19 @@ impl InprocessOptions {
 
     /// Subsumption then bounded variable elimination — the two passes that
     /// remove clauses and variables, which is what the propagation-volume
-    /// hypothesis is about. Vivification is **off**: it shortens clauses without
-    /// removing propagation targets, and it is the most expensive of the three.
+    /// hypothesis is about. Vivification is **off** here so that this and
+    /// [`Self::preprocess_full`] stay two distinguishable arms for measurement.
+    ///
+    /// The reason originally given for leaving it off — "it shortens clauses
+    /// without removing propagation targets, and it is the most expensive of the
+    /// three" — was **measured false on the `QF_BV` parity corpus** on
+    /// 2026-09-08 and should not be repeated. Vivification cost 2.7 s across the
+    /// 200-file list and bought 8.5 s less BVE, more variables eliminated, and a
+    /// better literal ratio; on four files it turned an 11,000 ms BVE into a
+    /// 27 ms one by shortening the clauses whose occurrence lists BVE scans.
+    /// The shipping SMT path enables it by default with inprocessing
+    /// (`SolverConfig::cnf_vivify`). See
+    /// `docs/research/03-measurements/inprocessing-admission-2026-09-08.md`.
     #[must_use]
     pub const fn preprocess() -> Self {
         Self {
