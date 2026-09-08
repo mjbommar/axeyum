@@ -928,6 +928,7 @@ pub use sat_bv_backend::SatBvBackend;
 macro_rules! full_exports {
     () => {
         pub use abduct::{MAX_CANDIDATES, abduct};
+        pub use abv::{AbvStats, AbvStatsGuard, last_abv_stats};
         #[doc(hidden)]
         pub use abv::{
             ArrayElimUnsatCertificate, CrossStoreArrayDisequalityCertificate,

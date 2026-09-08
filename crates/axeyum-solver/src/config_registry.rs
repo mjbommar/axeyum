@@ -38,6 +38,30 @@
 //! entry cannot make the solver behave differently — it can only fail this
 //! module's own checks.
 //!
+//! # How far to trust the judgement fields
+//!
+//! `name`, `module` and `value` are checked against the source, and
+//! `Signal::None` iff `guarded_by` is enforced. **`protects` and `on_exceed`
+//! are neither, and they are human judgement.** Read them as informed opinion
+//! about the code, not as a verified property of it.
+//!
+//! There is a measurement rather than an assurance. The 2026-09-08 coverage
+//! sweep had `quant_bool_model_sat.rs` read independently by two people: on
+//! seven constants they agreed on those two fields **five times and disagreed
+//! twice** (`Time`/`DeclineRoute` against `Soundness`/`RefuseUnknown`), both
+//! resolved by hand at the call site. Three more constants
+//! (`abv::MAX_ROW_ROUNDS`, `abv::MAX_ROW_SITES`,
+//! `ufbv_online::MAX_INPUT_DAG_NODES`) were registered independently by two
+//! lanes the same day and merged: **one agreed on both fields and two did
+//! not.** Ten constants, seven agreements. Roughly **70 % independent
+//! agreement**, on a small sample.
+//!
+//! That is not a reason to distrust the table — every disagreement above was
+//! settled by reading the call site, and the wrong reading in each case was the
+//! one that had not been measured firing. It is a reason to check the code
+//! before quoting a `protects` or an `on_exceed` in an argument, and to
+//! re-derive rather than inherit when one of them is load-bearing.
+//!
 //! # The ways this registry can be wrong, and what catches each
 //!
 //! A registry that cannot be wrong is worthless, so each failure mode has a
@@ -129,6 +153,19 @@ pub enum Signal {
 /// Something an entry's justification depends on: if this changed after the
 /// justification was measured, the measurement describes a tree that no longer
 /// exists.
+///
+/// # Do not check a dependency with `git log -G'fn <name>'`
+///
+/// It is the obvious command and it answers the wrong question. Measured
+/// 2026-09-08 on `euf::MAX_ACKERMANN_CONGRUENCE_PAIRS`, the bound reported to
+/// carry 52 of 58 `QF_UFLIA` losses: `git log -G'fn eliminate_functions'` over
+/// the window since its 2026-06-24 measurement is **EMPTY**, while
+/// `git log -G'eliminate_functions'` — the query
+/// `scripts/check-config-registry-staleness.py` actually runs — finds **five**
+/// commits, the last on 2026-09-07. The signature never moved; the body did,
+/// and the body is what the measurement was of. A survey that asks about the
+/// declaration line gets a clean bill of health on a justification that has
+/// stopped describing the tree.
 ///
 /// This is the field that would have caught `MAX_ONLINE_LRA_ATOMS`. Its
 /// 2026-08-03 measurement named `AtomBuilder` normalization as the cost;
@@ -2308,21 +2345,37 @@ pub static REGISTRY: &[ConfigEntry] = &[
         signal: Signal::ToCaller,
         guarded_by: "",
         env_override: None,
-        justification: undated("doc comment"),
-        note: "`check_row_cegar`'s `for round in 0..MAX_ROW_ROUNDS` loop; exhausting it returns `row_unknown(\"lazy-ROW refinement did not converge within {MAX_ROW_ROUNDS} rounds\")`, a `CheckResult::Unknown` naming the bound in its detail. Also used (via `.clamp(1, MAX_ROW_ROUNDS)`) as the upper end of a query-scaled round budget in `realize_structural_array_equalities`. NOT the same constant as `incremental.rs`'s similarly-purposed `MAX_WARM_STRUCTURAL_REFINEMENT_ROUNDS` (value 512, defined there as `= MAX_WARM_STRUCTURAL_ARRAY_NODES`) -- same role, different file, different value.",
+        justification: dated(
+            "docs/research/12-performance/qf-abv-route-attribution-2026-09-08.md",
+            "2026-09-08",
+            Some("f24c61f91"),
+            &[sym("crates/axeyum-solver/src/abv.rs", "MAX_ROW_ROUNDS")],
+            &[doc(
+                "docs/research/12-performance/qf-abv-route-attribution-2026-09-08.md",
+            )],
+        ),
+        note: "Bounds the lazy ROW / extensionality CEGAR. IT, NOT THE CLOCK, is what refuses two files of the committed QF_ABV loss list: `dwp cat.next_line_num` reaches 64 rounds after 3.3 s of a 24 s budget and `dwp vdir.strcmp_size` after 14.6 s, and the message the caller then prints names an array SHAPE, not a round count. Registered undated-to-dated by that measurement; the value itself is unchanged and unjustified by anything but a doc comment.",
     },
     ConfigEntry {
         name: "MAX_ROW_SITES",
         module: "crates/axeyum-solver/src/abv.rs",
         value: "4096",
-        unit: "select/store resolution sites",
+        unit: "abstracted read sites",
         protects: Protects::Memory,
-        on_exceed: OnExceed::RefuseUnknown,
-        signal: Signal::ToCaller,
-        guarded_by: "",
+        on_exceed: OnExceed::DeclineRoute,
+        signal: Signal::None,
+        guarded_by: "a refused site aborts the abstraction, so the route declines to `unknown` and never returns a verdict from a partial abstraction",
         env_override: None,
-        justification: undated("doc comment"),
-        note: "`RowCtx::resolve_select` declines (`return Ok(None)`) once `self.sites.len() >= MAX_ROW_SITES`; in `check_row_cegar` that `None` becomes `row_unknown(\"...outside the modelled store/variable/const-array fragment\")`, a `CheckResult::Unknown`. The same `RowCtx` (and hence the same site cap) is shared by `abstract_rows_for_online`, whose only caller (`ufbv_online.rs`) turns a declined abstraction into `SolverError::Unsupported`, an Err, not Unknown -- so which of the two this bound produces depends on which entry point hit it.",
+        justification: dated(
+            "docs/research/12-performance/qf-abv-route-attribution-2026-09-08.md",
+            "2026-09-08",
+            Some("f24c61f91"),
+            &[sym("crates/axeyum-solver/src/abv.rs", "MAX_ROW_SITES")],
+            &[doc(
+                "docs/research/12-performance/qf-abv-route-attribution-2026-09-08.md",
+            )],
+        ),
+        note: "SIGNAL IS `None` ON PURPOSE, AND THAT IS THE PROBLEM IT IS REGISTERED FOR: the refusal is an `Ok(None)` the caller cannot tell apart from an unmodelled array shape, so the route reports \"an array read is outside the modelled store/variable/const-array fragment\" for a CAPACITY event. Fired on `brummayerbiere/fifo32ia04k08` (4,109 sites) and `wchains140se` (4,484) on 2026-09-08. `crate::AbvStats::row_site_cap_refusals` counts the refusals and, since 2026-09-08, `note_crossed` carries them with their numbers. AND IT IS TWO CONTRACTS, NOT ONE: the same `RowCtx` (hence the same site cap) is shared by `abstract_rows_for_online`, whose only caller (`ufbv_online.rs`) turns a declined abstraction into `SolverError::Unsupported` — an `Err`, not an unknown — so which of the two this bound produces depends on the entry point.",
     },
     ConfigEntry {
         name: "MAX_SCALAR_CLOSURE_STEPS",
@@ -7018,13 +7071,24 @@ pub static REGISTRY: &[ConfigEntry] = &[
         module: "crates/axeyum-solver/src/ufbv_online.rs",
         value: "16_384",
         unit: "input DAG nodes",
-        protects: Protects::Time,
-        on_exceed: OnExceed::RefuseUnknown,
+        protects: Protects::Memory,
+        on_exceed: OnExceed::DeclineRoute,
         signal: Signal::ToCaller,
         guarded_by: "",
         env_override: None,
-        justification: undated("doc comment"),
-        note: "`admit_input` returns `build_unknown(UnknownKind::NodeBudget, \"...exceeding the admission cap of {node_cap}\")` (ufbv_online.rs:1596-1603). `node_cap` is `config.node_budget.unwrap_or(MAX_INPUT_DAG_NODES).min(MAX_INPUT_DAG_NODES)`, so this constant is always the ceiling regardless of caller-supplied config.",
+        justification: dated(
+            "docs/research/12-performance/qf-abv-route-attribution-2026-09-08.md",
+            "2026-09-08",
+            Some("f24c61f91"),
+            &[sym(
+                "crates/axeyum-solver/src/ufbv_online.rs",
+                "MAX_INPUT_DAG_NODES",
+            )],
+            &[doc(
+                "docs/research/12-performance/qf-abv-route-attribution-2026-09-08.md",
+            )],
+        ),
+        note: "Admits `abv-online-cdclt`, the FIRST route every array query tries. Declined `2018-Mann/arbiter_array_cex_w32d32q16n4b34.smt2` at 32,695 nodes on 2026-09-08. Registered because that route is the entry point for a whole division and had no registry presence at all; `crates/axeyum-solver/src/ufbv_online.rs` is still not in `GOVERNED_FILES`, so its other ~20 bounds remain unclaimed. The VALUE is unchanged and still rests on a doc comment.",
     },
     ConfigEntry {
         name: "MAX_INPUT_DEPTH",

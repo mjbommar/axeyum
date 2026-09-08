@@ -306,13 +306,14 @@ use std::time::{Duration, Instant};
 
 use axeyum_solver::theories::cdclt_diagnostics::{TheoryLayerStatsGuard, last_theory_layer_stats};
 use axeyum_solver::{
-    BvLayerStats, BvLayerStatsGuard, CheckProgress, CheckResult, CheckingProgress,
-    ConfigTraceGuard, DlOnlineStatsGuard, Evidence, EvidenceCheck, EvidenceReport, FrontDoorStats,
-    FrontDoorStatsGuard, LiaCountersGuard, LiveInstruments, ProofProgress, RouteAttributionGuard,
-    RouteTrace, Sampled, SolverConfig, UfArithOverboundStatsGuard, config_trace_line,
-    install_live_instruments, instrument, last_bv_layer_stats, last_dl_online_stats,
-    last_front_door_stats, last_lia_counters, last_route_attribution,
-    last_uf_arith_overbound_stats, live_theory_layer_stats, produce_evidence_smtlib, solve_smtlib,
+    AbvStats, AbvStatsGuard, BvLayerStats, BvLayerStatsGuard, CheckProgress, CheckResult,
+    CheckingProgress, ConfigTraceGuard, DlOnlineStatsGuard, Evidence, EvidenceCheck,
+    EvidenceReport, FrontDoorStats, FrontDoorStatsGuard, LiaCountersGuard, LiveInstruments,
+    ProofProgress, RouteAttributionGuard, RouteTrace, Sampled, SolverConfig,
+    UfArithOverboundStatsGuard, config_trace_line, install_live_instruments, instrument,
+    last_abv_stats, last_bv_layer_stats, last_dl_online_stats, last_front_door_stats,
+    last_lia_counters, last_route_attribution, last_uf_arith_overbound_stats,
+    live_theory_layer_stats, produce_evidence_smtlib, solve_smtlib,
 };
 
 /// Formats one `axeyum_cnf::ProofSearchProgress` snapshot as the `;`-prefixed
@@ -779,6 +780,16 @@ fn watchdog_trace_lines(trace_mode: bool, board: &LiveInstruments, reason: &str)
         note("theory-layer", theory.sampled);
     } else {
         lines.push(format!("; theory-layer unavailable: {reason}"));
+    }
+    if let Some(abv) = board.sample::<AbvStats>(instrument::ABV) {
+        // Same `engaged()` gate as the completed path, for the same reason.
+        // Unlike the other instruments here this one is ALWAYS `in-flight`:
+        // it publishes between recording sites rather than at a stage boundary,
+        // which is exactly what lets it report a route that never returned.
+        if abv.value.engaged() {
+            lines.push(partial_line(&abv.value.trace_line()));
+            note("abv", abv.sampled);
+        }
     }
     match board.sample::<RouteTrace>(instrument::ROUTE) {
         Some(route) if !route.value.is_empty() => {
@@ -1320,6 +1331,12 @@ fn main() -> ExitCode {
         // `lia-simplex` decider is not a `TheorySolver`, so neither could ever
         // appear on the `; theory-layer` line.
         let _lia_guard = trace_mode.then(LiaCountersGuard::enable);
+        // The ninth: the `QF_ABV` array routes' own counters. The route that
+        // spends a lost array file's budget is the one that does not return, so
+        // the route trail — which records on return — cannot name it; these
+        // counters are recorded on ENTRY and mirrored onto the live board, so a
+        // watchdog kill still reports which array route was running.
+        let _abv_guard = trace_mode.then(AbvStatsGuard::enable);
         // A parse or solver error is reported as `unknown` — never a wrong
         // verdict, and never a crash that the harness would read as an abort.
         let mut give_up: Option<String> = None;
@@ -1387,6 +1404,14 @@ fn main() -> ExitCode {
             // routes did nothing" and must not print as a row of zeros.
             if let Some(counters) = last_lia_counters() {
                 trace_lines.push(lia_counters_report_line(&counters));
+            }
+            // Only when an array route was actually reached: a row of zeros on
+            // a `QF_BV` file would say only "this query has no arrays", which
+            // the line's absence already says. Same discipline as the
+            // `; uf-overbound` line above.
+            let abv = last_abv_stats();
+            if abv.engaged() {
+                trace_lines.push(abv.trace_line());
             }
             // Route attribution (ADR-1760) LAST, so a reader who scans to the
             // end of the `;` block finds the one line that names which route

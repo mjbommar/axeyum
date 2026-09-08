@@ -531,7 +531,7 @@ pub fn simplify_with_options(
 ///
 /// Every emitted `Add` is plain `RUP`; no step here needs `RAT` or an extension
 /// variable, so the prefix verifies against the original formula on its own.
-pub(crate) fn simplify_within_recorded(
+pub fn simplify_within_recorded(
     formula: &CnfFormula,
     opts: SubsumeOptions,
     deadline: Option<Instant>,
