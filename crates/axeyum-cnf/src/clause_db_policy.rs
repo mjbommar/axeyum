@@ -169,6 +169,32 @@ pub enum DeleteFraction {
     },
 }
 
+/// How a reduce round restores the watch lists after tombstoning its
+/// deletions.
+///
+/// Both alternatives leave the **same set** of watches: `propagate` keeps a
+/// long clause's two watched literals at arena slots 0 and 1, and a binary
+/// clause's two literals are both watched, so re-watching "the first two
+/// literals of every live clause" re-derives exactly what was already there.
+/// What differs is the cost and the **order within each list**, and the order
+/// is visible to the search: it decides which of several unit clauses
+/// propagates first and therefore which conflict is analysed.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum WatchSweep {
+    /// The pre-2026-09 sweep: clear all `2n` lists and re-push a pair per live
+    /// clause, reading `headers[cid]` and two arena cells for each. Walks the
+    /// whole database including input clauses, which are never deletable, and
+    /// leaves every list in clause-id order. Kept selectable so
+    /// [`ClauseDbPolicy::legacy`] reproduces the pre-2026-09 trajectory
+    /// exactly.
+    Rebuild,
+    /// Retain in place: drop only the watches pointing at a clause this round
+    /// tombstoned. Touches no header and no arena cell, allocates nothing, and
+    /// preserves each list's existing order. The reference behaviour
+    /// (Kissat `reduce.c:161,183`). Default.
+    InPlace,
+}
+
 /// When a reduce round fires.
 ///
 /// This is not an independent knob: the trigger and the keep rule interact, and
@@ -431,6 +457,8 @@ pub struct ClauseDbPolicy {
     /// reduce fire on every conflict and scan the whole clause list each time.
     /// Default 300, matching the learned-budget growth step.
     pub empty_round_backoff: u64,
+    /// How a reduce round restores the watch lists after its deletions.
+    pub watch_sweep: WatchSweep,
     /// The dynamic tier boundaries. State, not configuration.
     pub tiers: TierEstimator,
 }
@@ -461,6 +489,7 @@ impl ClauseDbPolicy {
             min_deletable_len: 2,
             promote_on_use: true,
             empty_round_backoff: 300,
+            watch_sweep: WatchSweep::InPlace,
             tiers: TierEstimator::default(),
         }
     }
@@ -482,6 +511,7 @@ impl ClauseDbPolicy {
             min_deletable_len: 2,
             promote_on_use: false,
             empty_round_backoff: 300,
+            watch_sweep: WatchSweep::Rebuild,
             tiers: TierEstimator::default(),
         }
     }

@@ -26,11 +26,13 @@
 use std::hint::black_box;
 use std::time::{Duration, Instant};
 
+use axeyum_bv::lower_terms;
 use axeyum_cnf::clause_db_policy::DeleteFraction;
 use axeyum_cnf::{
-    DratSink, SearchCounters, SearchPolicies, StreamingProofOutcome, parse_dimacs,
-    solve_with_drat_proof_counted_with_policies,
+    CnfFormula, DratSink, SearchCounters, SearchPolicies, StreamingProofOutcome, parse_dimacs,
+    solve_with_drat_proof_counted_with_policies, tseitin_encode,
 };
+use axeyum_ir::{Sort, TermArena};
 
 /// The no-proof control sink: accepts every step and keeps nothing, so the
 /// measurement is search cost and not proof-recording cost. The core still
@@ -86,6 +88,83 @@ fn tiered_tuned(max_used: u8, permille: u32) -> SearchPolicies {
     p
 }
 
+/// A **bit-blasted** instance built in process, named on the command line as
+/// `bitblast:<factor_width>x<constraints>` where a plain path would go.
+///
+/// The committed CNF in this repository is combinatorial (van der Waerden,
+/// Rado), and a clause-database or watch-layout change measured only on those
+/// is measured on the wrong shape: our real workload is `QF_BV` bit-blasted
+/// through `axeyum-bv` and Tseitin-encoded, which has a completely different
+/// clause-length profile — in particular a far larger binary population, since
+/// a Tseitin AND gate emits two binary clauses and one ternary. Bit-blasted
+/// files from the real corpus are 2-270 MB and cannot be committed, so the
+/// fixture is *generated*: `constraints` independent bounded-factor
+/// multiplications of `factor_width`-bit factors against fixed semiprimes, the
+/// same construction as `benches/proof_sat_propagate.rs`, whose measured shape
+/// sits in the p4dfa range rather than the pigeonhole range.
+///
+/// Deterministic and seed-free: the two integers in the name fix the formula.
+fn bitblast_formula(factor_width: u32, constraints: usize) -> CnfFormula {
+    // Primes just under 2^31, so both factors of every product need the full
+    // 32-bit width and the degenerate `N x 1` factorisation is unrepresentable.
+    const PRIMES: [u128; 5] = [
+        2_147_483_647,
+        2_147_483_629,
+        2_147_483_587,
+        2_147_483_579,
+        2_147_483_563,
+    ];
+    let product_width = factor_width * 2;
+    let mut arena = TermArena::new();
+    let zero = arena.bv_const(factor_width, 0).unwrap();
+    let mut conjuncts = Vec::with_capacity(constraints);
+    for i in 0..constraints {
+        // A fixed, index-derived pair of distinct primes: no randomness.
+        let p = PRIMES[i % PRIMES.len()];
+        let q = PRIMES[(i / PRIMES.len() + i % PRIMES.len() + 1) % PRIMES.len()];
+        let mask = if factor_width >= 128 {
+            u128::MAX
+        } else {
+            (1u128 << factor_width) - 1
+        };
+        let n = (p & mask) * (q & mask);
+        let a_sym = arena
+            .declare(&format!("a{i}"), Sort::BitVec(factor_width))
+            .unwrap();
+        let b_sym = arena
+            .declare(&format!("b{i}"), Sort::BitVec(factor_width))
+            .unwrap();
+        let a = arena.var(a_sym);
+        let b = arena.var(b_sym);
+        // Zero-extend by concatenation so the product cannot wrap.
+        let a_wide = arena.concat(zero, a).unwrap();
+        let b_wide = arena.concat(zero, b).unwrap();
+        let product = arena.bv_mul(a_wide, b_wide).unwrap();
+        let target = arena.bv_const(product_width, n).unwrap();
+        conjuncts.push(arena.eq(product, target).unwrap());
+    }
+    let lowering = lower_terms(&arena, &conjuncts).unwrap();
+    let roots: Vec<_> = lowering.roots().iter().map(|r| r.bits()[0]).collect();
+    let encoding = tseitin_encode(lowering.aig(), &roots).expect("fixed AIG encodes cleanly");
+    encoding.formula().clone()
+}
+
+/// Resolves a command-line instance name to a formula: either a DIMACS path or
+/// a `bitblast:<width>x<count>` synthetic instance.
+fn load(name: &str) -> CnfFormula {
+    if let Some(spec) = name.strip_prefix("bitblast:") {
+        let (width, count) = spec
+            .split_once('x')
+            .expect("bitblast spec is <factor_width>x<constraints>");
+        return bitblast_formula(
+            width.parse().expect("factor width is an integer"),
+            count.parse().expect("constraint count is an integer"),
+        );
+    }
+    let text = std::fs::read_to_string(name).expect("read the DIMACS file");
+    parse_dimacs(&text).expect("parse the DIMACS file")
+}
+
 fn arm(name: &str) -> Option<SearchPolicies> {
     if let Some(rest) = name.strip_prefix("tiered-tuned") {
         let (used, frac) = rest.split_once('-')?;
@@ -104,6 +183,16 @@ fn arm(name: &str) -> Option<SearchPolicies> {
     match name {
         // The shipped default: tier clause database, pinned phasing.
         "tiered" => Some(SearchPolicies::default()),
+        // The tier database with the pre-2026-09 reduce-round watch sweep
+        // (clear all lists, re-push a pair per live clause from the arena).
+        // Isolates the R10 sweep change from everything else: this arm and
+        // `tiered` differ ONLY in how the watch lists are restored after a
+        // reduce round.
+        "tiered-rebuild" => {
+            let mut p = SearchPolicies::default();
+            p.clause_db.watch_sweep = axeyum_cnf::clause_db_policy::WatchSweep::Rebuild;
+            Some(p)
+        }
         // Everything as it was before 2026-09.
         "legacy" => Some(SearchPolicies::legacy()),
         // Only the clause database reverted -- isolates the tier change.
@@ -155,15 +244,15 @@ fn main() {
     }
     assert!(
         !files.is_empty(),
-        "usage: clause_db_policy_ab [--arms a,b] [--max-conflicts N] [--seconds S] <file.cnf>..."
+        "usage: clause_db_policy_ab [--arms a,b] [--max-conflicts N] [--seconds S] \
+         <file.cnf | bitblast:WIDTHxCOUNT>..."
     );
     for name in &arms {
         assert!(arm(name).is_some(), "unknown arm {name:?}");
     }
 
     for path in &files {
-        let text = std::fs::read_to_string(path).expect("read the DIMACS file");
-        let formula = parse_dimacs(&text).expect("parse the DIMACS file");
+        let formula = load(path);
         for name in &arms {
             let policies = arm(name).expect("arm was validated above");
             let mut sink = CountingNullSink::default();
@@ -225,6 +314,10 @@ fn emit(
          \"target_snapshots\":{},\"best_snapshots\":{},\"rephases\":{},\
          \"target_resets\":{},\
          \"watch_visits\":{},\"clause_visits\":{},\"resolutions\":{},\
+         \"binary_watch_visits\":{},\"binary_arena_derefs_avoided\":{},\
+         \"binary_watch_visit_rate\":{:.3},\
+         \"reduce_headers_scanned\":{},\"reduce_headers_skipped\":{},\
+         \"reduce_watch_entries_scanned\":{},\
          \"conflicts_per_second\":{:.1},\"props_per_conflict\":{:.1},\
          \"watch_visits_per_conflict\":{:.1},\"clause_deref_rate\":{:.3},\
          \"mean_live_learned\":{:.0},\
@@ -258,6 +351,12 @@ fn emit(
         c.watch_visits,
         c.clause_visits,
         c.resolutions,
+        c.binary_watch_visits,
+        c.binary_arena_derefs_avoided,
+        c.binary_watch_visit_rate(),
+        c.reduce_headers_scanned,
+        c.reduce_headers_skipped,
+        c.reduce_watch_entries_scanned,
         c.conflicts as f64 / seconds.max(1e-9),
         c.propagations as f64 / conflicts,
         c.watch_visits_per_conflict(),

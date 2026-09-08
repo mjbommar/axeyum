@@ -25,7 +25,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, PoisonError};
 use std::time::Duration;
 
-use crate::clause_db_policy::{ClauseDbPolicy, KeepReason, Tier};
+use crate::clause_db_policy::{ClauseDbPolicy, KeepReason, Tier, WatchSweep};
 use crate::drat::{DratSink, DratStep, ProofSinkError, VecProofSink};
 use crate::inprocess::{InprocessOptions, InprocessStats, inprocess_into};
 use crate::phase_policy::{PhasePolicy, RephaseAction};
@@ -260,6 +260,21 @@ pub struct SearchCounters {
     /// complement (`watch_visits - clause_visits`) is what the blocking-literal
     /// optimisation saves.
     pub clause_visits: u64,
+    /// **Watch entries examined whose clause is binary.** A subset of
+    /// [`SearchCounters::watch_visits`], so `watch_visits -
+    /// binary_watch_visits` is the long-clause traffic. This is the number that
+    /// says whether the binary special case is worth having on a given formula
+    /// — a formula whose watch traffic is 5% binary cannot be helped by it, and
+    /// reporting the ratio is the honest way to find that out.
+    pub binary_watch_visits: u64,
+    /// **Arena dereferences the binary watch layout avoided.** A binary watch
+    /// that missed the blocking-literal fast path is decided from the watch
+    /// alone; under the pre-2026-09 layout every one of these read
+    /// `headers[cid]`, read (and sometimes wrote) the arena, and ran an empty
+    /// replacement scan. So this counter is exactly the reduction in
+    /// [`SearchCounters::clause_visits`] against that layout, and it is the
+    /// quantity the change is *for*.
+    pub binary_arena_derefs_avoided: u64,
     /// Watches moved to a different literal's list (a new non-false literal was
     /// found). Each is a `push` onto another `Vec<Watch>`.
     pub watch_relocations: u64,
@@ -334,6 +349,20 @@ pub struct SearchCounters {
     /// deletion step, so this is also the number of `d` lines the proof gained
     /// from reduction.
     pub reduce_deleted: u64,
+    /// Clause headers a reduce round examined, summed over rounds — the cost
+    /// of the candidate scan.
+    pub reduce_headers_scanned: u64,
+    /// Clause headers a reduce round skipped by starting at
+    /// `first_reducible` instead of at clause 0, summed over rounds. Against
+    /// [`SearchCounters::reduce_headers_scanned`] this is what the sweep-start
+    /// saves; a large value means the database is mostly input clauses or
+    /// mostly tombstones, both of which the old scan walked every round.
+    pub reduce_headers_skipped: u64,
+    /// Watch entries a reduce round walked to drop tombstoned clauses, summed
+    /// over rounds — the cost of the watch-list half of a round. The
+    /// pre-2026-09 rebuild walked the same entries *and* re-read a header and
+    /// two arena cells per live clause.
+    pub reduce_watch_entries_scanned: u64,
     /// Reduce rounds that deleted nothing because the keep rule protected the
     /// whole database. Nonzero here means the size-triggered schedule is being
     /// held off by the backoff rather than doing work, and the tier boundaries
@@ -365,6 +394,20 @@ impl SearchCounters {
         #[allow(clippy::cast_precision_loss)]
         {
             self.watch_visits as f64 / self.conflicts as f64
+        }
+    }
+
+    /// Fraction of examined watches whose clause is binary. Zero when nothing
+    /// was counted. This is the ceiling on what the binary watch layout can do
+    /// for a formula: no arena access it removes lies outside this population.
+    #[must_use]
+    pub fn binary_watch_visit_rate(&self) -> f64 {
+        if self.watch_visits == 0 {
+            return 0.0;
+        }
+        #[allow(clippy::cast_precision_loss)]
+        {
+            self.binary_watch_visits as f64 / self.watch_visits as f64
         }
     }
 
@@ -1387,16 +1430,88 @@ fn lit_code(lit: CnfLit) -> usize {
 }
 
 /// One entry in a literal's watch list (the `MiniSat`/`BatSat` blocking-literal
-/// scheme). `clause` is the watched clause's id; `blocker` is a *cached* literal
-/// of that clause OTHER than the watched one. In `propagate`, if `blocker` is
+/// scheme, plus Kissat's binary tag). `blocker` is a *cached* literal of the
+/// watched clause OTHER than the watched one. In `propagate`, if `blocker` is
 /// already true under the current assignment the clause is satisfied and is
 /// skipped *without dereferencing the clause array* — the cache hit that makes
 /// BCP fast. The blocker is purely a performance hint: it never changes which
 /// propagations or conflicts are derived.
+///
+/// # The binary tag
+///
+/// `tagged` packs the clause reference with a one-bit `binary` flag in bit 0:
+/// `cid << 1 | binary`. For a **binary** clause the blocker is not a hint but
+/// the clause's *other literal in full* — a two-literal clause has exactly one
+/// literal besides the watched one — so once the blocker's value is known the
+/// propagation is decided:
+///
+/// * blocker true  → the clause is satisfied,
+/// * blocker false → the clause is the conflict,
+/// * blocker unassigned → the clause implies the blocker.
+///
+/// None of those three needs the clause header or the arena, so a binary watch
+/// **never touches the clause arena at all** (Kissat `src/watch.h:18-42`,
+/// `src/proplit.h:82-93`; `CaDiCaL`'s `Watch::binary` in `src/watch.hpp`). That
+/// is the whole point of the tag: before it, every binary watch that missed the
+/// blocker cache paid a header read, an arena read, a possible arena write and
+/// an empty replacement scan to rediscover a literal the watch already held.
+///
+/// The tag is packed into the reference rather than added as a field because
+/// [`WATCH_BYTES`] is a *model* constant that denominates every tick budget in
+/// the tree: `CnfLit` is 8 bytes, so a `bool` field would push `Watch` from 16
+/// to 24 bytes on a 64-bit target and silently re-denominate every budget. A
+/// tag bit keeps the layout byte-identical, which the assertion below enforces.
+///
+/// # Invariant it gives up
+///
+/// A *long* clause keeps the classical placement: the two watched literals are
+/// arena slots 0 and 1, and the implied literal of a propagation is slot 0. A
+/// **binary** clause does not: nothing swaps its arena slots any more, so the
+/// literal it implies may sit in either slot. Three readers used to assume
+/// "slot 0 is the implied literal" and now identify that literal by *variable*
+/// instead: [`Cdcl::is_locked`], [`Cdcl::lit_redundant`] and
+/// [`Cdcl::analyze_final`]. `analyze` never assumed it (it skips the pivot by
+/// variable already).
 #[derive(Clone, Copy)]
 struct Watch {
-    clause: CRef,
+    /// `clause << 1 | u8::from(binary)`.
+    tagged: usize,
     blocker: CnfLit,
+}
+
+impl Watch {
+    /// A watch on a clause of length > 2: `blocker` is a cached hint.
+    #[inline]
+    fn long(clause: CRef, blocker: CnfLit) -> Self {
+        Self::new(clause, blocker, false)
+    }
+
+    /// The tagged constructor. `binary` must be `len == 2`; every call site
+    /// derives it from the clause it is watching rather than from a guess.
+    #[inline]
+    fn new(clause: CRef, blocker: CnfLit, binary: bool) -> Self {
+        debug_assert!(
+            clause <= usize::MAX >> 1,
+            "clause reference does not fit beside the binary tag"
+        );
+        Self {
+            tagged: (clause << 1) | usize::from(binary),
+            blocker,
+        }
+    }
+
+    /// The watched clause.
+    #[inline]
+    const fn clause(self) -> CRef {
+        self.tagged >> 1
+    }
+
+    /// Whether the watched clause has exactly two literals, in which case
+    /// [`Watch::blocker`] is the other one and no arena access is needed.
+    #[inline]
+    const fn is_binary(self) -> bool {
+        self.tagged & 1 == 1
+    }
 }
 
 /// Width of one [`Watch`], as the deterministic tick model
@@ -1837,6 +1952,17 @@ struct Cdcl<'progress, S: DratSink, T: NativeTheory = NullTheory> {
     next_reduce_conflicts: u64,
     /// Number of live (non-deleted) learned clauses. Drives the reduce trigger.
     learned_live: usize,
+    /// Lowest clause id a reduce round still has to look at — Kissat's
+    /// `first_reducible` (`reduce.c:37-61`).
+    ///
+    /// Everything below it is permanently uninteresting: a clause id's
+    /// `learned` flag is written once at allocation and never changed, and
+    /// `deleted` is monotone, so a prefix of ids that are all "input clause or
+    /// already tombstoned" can never contain a future candidate. Advanced once
+    /// per round by [`Cdcl::advance_reduce_scan_start`]; starts at 0, so the
+    /// first round scans the whole database exactly as before and every later
+    /// round skips at least the input clauses.
+    reduce_scan_start: CRef,
     /// VSIDS order heap: a binary max-heap of variable indices keyed by
     /// `activity` (highest activity at the root), tie-broken by lowest index.
     /// `heap` holds the variables; `heap_pos[v]` is `v`'s position in `heap`,
@@ -2000,14 +2126,9 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
                     // Watch the first two literals; each watch's blocker is the
                     // OTHER watched literal of the same clause.
                     let (l0, l1) = (arena[h.offset], arena[h.offset + 1]);
-                    watches[lit_code(l0)].push(Watch {
-                        clause: cid,
-                        blocker: l1,
-                    });
-                    watches[lit_code(l1)].push(Watch {
-                        clause: cid,
-                        blocker: l0,
-                    });
+                    let binary = h.len == 2;
+                    watches[lit_code(l0)].push(Watch::new(cid, l1, binary));
+                    watches[lit_code(l1)].push(Watch::new(cid, l0, binary));
                 }
             }
         }
@@ -2068,6 +2189,7 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
             reduce_backoff_until: 0,
             next_reduce_conflicts: 0,
             learned_live: 0,
+            reduce_scan_start: 0,
             heap: Vec::with_capacity(n),
             heap_pos: vec![HEAP_ABSENT; n],
             progress: None,
@@ -2184,14 +2306,9 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
             1 => self.initial_units.push(normalized[0]),
             _ => {
                 let (l0, l1) = (normalized[0], normalized[1]);
-                self.watches[lit_code(l0)].push(Watch {
-                    clause: cid,
-                    blocker: l1,
-                });
-                self.watches[lit_code(l1)].push(Watch {
-                    clause: cid,
-                    blocker: l0,
-                });
+                let binary = normalized.len() == 2;
+                self.watches[lit_code(l0)].push(Watch::new(cid, l1, binary));
+                self.watches[lit_code(l1)].push(Watch::new(cid, l0, binary));
             }
         }
         for lit in &normalized {
@@ -3129,14 +3246,9 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
         let asserting = learned[0];
         let clause_id = self.alloc_clause(&learned);
         if learned.len() >= 2 {
-            self.watches[lit_code(learned[0])].push(Watch {
-                clause: clause_id,
-                blocker: learned[1],
-            });
-            self.watches[lit_code(learned[1])].push(Watch {
-                clause: clause_id,
-                blocker: learned[0],
-            });
+            let binary = learned.len() == 2;
+            self.watches[lit_code(learned[0])].push(Watch::new(clause_id, learned[1], binary));
+            self.watches[lit_code(learned[1])].push(Watch::new(clause_id, learned[0], binary));
         }
         // Register the new learned clause's deletion metadata.
         self.lbd.push(lbd);
@@ -3333,14 +3445,9 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
         // NOT `true`: an input clause, never a `reduce_db` candidate.
         self.learned.push(false);
         if clause.len() >= 2 {
-            self.watches[lit_code(clause[0])].push(Watch {
-                clause: cid,
-                blocker: clause[1],
-            });
-            self.watches[lit_code(clause[1])].push(Watch {
-                clause: cid,
-                blocker: clause[0],
-            });
+            let binary = clause.len() == 2;
+            self.watches[lit_code(clause[0])].push(Watch::new(cid, clause[1], binary));
+            self.watches[lit_code(clause[1])].push(Watch::new(cid, clause[0], binary));
         }
         self.theory_lemmas.push(clause.to_vec());
         cid
@@ -3437,20 +3544,54 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
             let mut i = 0usize;
             let mut j = 0usize;
             'clauses: while i < end {
+                let watch = watchers[i];
                 if self.count_search {
                     self.counters.watch_visits += 1;
+                    if watch.is_binary() {
+                        self.counters.binary_watch_visits += 1;
+                    }
                 }
                 // (1) Fast path: a true blocker means the clause is satisfied;
                 // keep the watch and move on without inspecting the clause.
-                let blocker = watchers[i].blocker;
+                let blocker = watch.blocker;
                 if self.value(blocker) == Some(true) {
-                    watchers[j] = watchers[i];
+                    watchers[j] = watch;
                     j += 1;
                     i += 1;
                     continue;
                 }
 
-                let cid = watchers[i].clause;
+                let cid = watch.clause();
+
+                // (1b) Binary fast path: a two-literal clause's blocker IS its
+                // other literal, so the watch alone decides the propagation and
+                // the clause header and arena are never touched (Kissat
+                // `proplit.h:82-93`). Under the pre-2026-09 layout every watch
+                // that reached this point dereferenced the clause; that is what
+                // `binary_arena_derefs_avoided` counts.
+                if watch.is_binary() {
+                    if self.count_search {
+                        self.counters.binary_arena_derefs_avoided += 1;
+                    }
+                    watchers[j] = watch;
+                    j += 1;
+                    i += 1;
+                    if self.value(blocker) == Some(false) {
+                        conflict = Some(cid);
+                        while i < end {
+                            watchers[j] = watchers[i];
+                            j += 1;
+                            i += 1;
+                        }
+                        break;
+                    }
+                    if self.count_search {
+                        self.counters.propagations += 1;
+                    }
+                    self.enqueue(blocker, Reason::clause(cid));
+                    continue;
+                }
+
                 if self.count_search {
                     self.counters.clause_visits += 1;
                 }
@@ -3465,10 +3606,7 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
                 // satisfied; keep this watch with its blocker refreshed to it.
                 let first = self.arena[off];
                 if first != blocker && self.value(first) == Some(true) {
-                    watchers[j] = Watch {
-                        clause: cid,
-                        blocker: first,
-                    };
+                    watchers[j] = Watch::long(cid, first);
                     j += 1;
                     continue;
                 }
@@ -3482,10 +3620,7 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
                         // is the surviving (slot-0) watched literal. This watch
                         // is dropped from the current list (not copied to `j`).
                         let new_code = lit_code(self.arena[off + 1]);
-                        self.watches[new_code].push(Watch {
-                            clause: cid,
-                            blocker: first,
-                        });
+                        self.watches[new_code].push(Watch::long(cid, first));
                         if self.count_search {
                             self.counters.watch_relocations += 1;
                         }
@@ -3495,10 +3630,7 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
 
                 // No replacement: the clause is unit or conflicting under the
                 // current assignment. Keep this watch (blocker = index-0 lit).
-                watchers[j] = Watch {
-                    clause: cid,
-                    blocker: first,
-                };
+                watchers[j] = Watch::long(cid, first);
                 j += 1;
                 if self.value(first) == Some(false) {
                     // Conflict: stop scanning, but preserve the remaining (not
@@ -3715,14 +3847,9 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
         // NOT `true`: an input clause, never a `reduce_db` candidate.
         self.learned.push(false);
         if clause.len() >= 2 {
-            self.watches[lit_code(clause[0])].push(Watch {
-                clause: cid,
-                blocker: clause[1],
-            });
-            self.watches[lit_code(clause[1])].push(Watch {
-                clause: cid,
-                blocker: clause[0],
-            });
+            let binary = clause.len() == 2;
+            self.watches[lit_code(clause[0])].push(Watch::new(cid, clause[1], binary));
+            self.watches[lit_code(clause[1])].push(Watch::new(cid, clause[0], binary));
         }
         self.theory_lemmas.push(clause);
         cid
@@ -3808,19 +3935,23 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
             if self.reason[var].is_decision() {
                 failed.push(self.true_literal(var));
             } else {
-                // Slot 0 holds the implied literal; the rest are its
-                // antecedents (the invariant `propagate` and the learned-clause
-                // enqueue both maintain). A theory reason is resolved into an
-                // input clause here exactly as `analyze` resolves it.
+                // The reason clause is `var`'s implied literal together with
+                // its antecedents. The implied literal is identified by
+                // VARIABLE rather than by slot 0: that placement holds for a
+                // long clause but not for a binary one, whose arena slots
+                // `propagate` no longer permutes (see [`Watch`]). A theory
+                // reason is resolved into an input clause here exactly as
+                // `analyze` resolves it.
                 let cid = match self.reason[var].as_clause() {
                     Some(cid) => cid,
                     None => self.resolve_reason(var),
                 };
                 let len = self.clause_len(cid);
-                for slot in 1..len {
+                for slot in 0..len {
                     let q = self.lit_at(cid, slot);
-                    if self.level[q.var().index()] > 0 {
-                        seen[q.var().index()] = true;
+                    let qv = q.var().index();
+                    if qv != var && self.level[qv] > 0 {
+                        seen[qv] = true;
                     }
                 }
             }
@@ -3931,9 +4062,19 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
                 Some(cid) => cid,
                 None => self.resolve_reason(qv),
             };
-            // Skip the propagated literal itself (slot 0 of its reason clause).
-            for &l in &self.lits(rid)[1..] {
+            // Skip the propagated literal itself. It is identified by
+            // VARIABLE, not by slot: a long clause keeps it at arena slot 0,
+            // but a binary clause's slots are no longer permuted by
+            // `propagate` (see [`Watch`]), so its implied literal may sit in
+            // either. A clause holds at most one literal per variable
+            // (`add_input_clause` de-duplicates, `analyze` builds from a
+            // `seen` set), so this skips exactly the one literal a slot index
+            // used to.
+            for &l in self.lits(rid) {
                 let lv = l.var().index();
+                if lv == qv {
+                    continue;
+                }
                 if self.level[lv] == 0 || seen[lv] {
                     continue;
                 }
@@ -4058,8 +4199,21 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
         if self.clause_len(cid) == 0 {
             return false;
         }
-        let v = self.lit_at(cid, 0).var().index();
-        self.assign[v].is_some() && self.reason[v].as_clause() == Some(cid)
+        // A clause is locked when it is the reason for one of its own
+        // literals. For a long clause that literal is at slot 0 by the
+        // `propagate` invariant; a binary clause's slots are no longer
+        // permuted (see [`Watch`]), so both are checked. Two slots at most:
+        // for a longer clause only slot 0 can be the reason, since `propagate`
+        // put the implied literal there.
+        let head = self.lit_at(cid, 0).var().index();
+        if self.assign[head].is_some() && self.reason[head].as_clause() == Some(cid) {
+            return true;
+        }
+        if self.clause_len(cid) != 2 {
+            return false;
+        }
+        let other = self.lit_at(cid, 1).var().index();
+        self.assign[other].is_some() && self.reason[other].as_clause() == Some(cid)
     }
 
     /// One reduce round, driven entirely by [`Cdcl::db_policy`].
@@ -4107,7 +4261,19 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
         // as in the references -- a clause that is locked this round has still
         // aged, and pretending otherwise would make locked clauses immortal.
         let mut candidates: Vec<(u64, CRef)> = Vec::new();
-        for cid in 0..self.headers.len() {
+        // Kissat's `first_reducible` (`reduce.c:37-61`): the scan starts at the
+        // lowest clause id that could still be a candidate, not at 0. Input
+        // clauses are never deletable and always precede the first learned
+        // clause, so on a bit-blasted formula this skips the bulk of the
+        // database on every round, and the skipped prefix grows as the oldest
+        // learned clauses are deleted.
+        let scan_start = self.reduce_scan_start;
+        if self.count_search {
+            self.counters.reduce_headers_scanned +=
+                (self.headers.len().saturating_sub(scan_start)) as u64;
+            self.counters.reduce_headers_skipped += scan_start as u64;
+        }
+        for cid in scan_start..self.headers.len() {
             if !self.learned[cid] || self.deleted[cid] {
                 continue;
             }
@@ -4177,32 +4343,100 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
         if self.count_search {
             self.counters.reduce_deleted += to_delete as u64;
         }
-        self.rebuild_watches();
+        self.sweep_watches();
+        self.advance_reduce_scan_start();
         Ok(())
     }
 
+    /// Advances [`Cdcl::reduce_scan_start`] past the prefix of clause ids that
+    /// can never be deletion candidates again — input clauses (their `learned`
+    /// flag is written once at allocation) and already-tombstoned learned ones
+    /// (`deleted` is monotone). Called once, after a round has done its
+    /// deletions, so the newly tombstoned prefix is included.
+    ///
+    /// This is trajectory-preserving: every id it skips would have been
+    /// skipped by the scan's own `!learned || deleted` guard, so the candidate
+    /// set is identical and only the cost of reaching it changes.
+    fn advance_reduce_scan_start(&mut self) {
+        let mut start = self.reduce_scan_start;
+        while start < self.headers.len() && (!self.learned[start] || self.deleted[start]) {
+            start += 1;
+        }
+        self.reduce_scan_start = start;
+    }
+
+    /// Restores the watch lists after `reduce_db` tombstoned its deletions, by
+    /// whichever sweep [`ClauseDbPolicy::watch_sweep`] selects.
+    ///
+    /// The two sweeps agree on the resulting *set* of watches and differ in
+    /// cost and in per-list order; [`WatchSweep`] documents why the order is
+    /// visible to the search.
+    fn sweep_watches(&mut self) {
+        match self.db_policy.watch_sweep {
+            WatchSweep::Rebuild => self.rebuild_watches(),
+            WatchSweep::InPlace => self.prune_watches(),
+        }
+    }
+
+    /// Drops every watch that points at a clause `reduce_db` just tombstoned,
+    /// in place, and leaves every surviving watch exactly where it was
+    /// ([`WatchSweep::InPlace`]).
+    ///
+    /// Against [`Cdcl::rebuild_watches`] this removes, per round, a
+    /// `headers[cid]` read and two arena reads **per live clause** over the
+    /// WHOLE database — input clauses included, and on a bit-blasted formula
+    /// those are the overwhelming majority and can never be deleted — plus
+    /// clearing and re-growing `2n` lists, which writes every watch entry
+    /// rather than read-and-shifting only the survivors.
+    ///
+    /// It keeps the same watched literals: the two-watched-literal invariant is
+    /// maintained by `propagate` itself, so nothing needs re-deriving.
+    ///
+    /// This is the sweep half of Kissat's `reduce.c:161,183`
+    /// (`first_reducible` plus `kissat_sparse_collect`); the scan half is
+    /// [`Cdcl::reduce_scan_start`]. We do not compact the arena: our `CRef`s
+    /// are stable indices with no relocation map, and tombstoned literals are
+    /// never read.
+    fn prune_watches(&mut self) {
+        let deleted = &self.deleted;
+        let mut scanned: u64 = 0;
+        for list in &mut self.watches {
+            scanned += list.len() as u64;
+            list.retain(|w| !deleted[w.clause()]);
+        }
+        if self.count_search {
+            self.counters.reduce_watch_entries_scanned += scanned;
+        }
+    }
+
     /// Rebuilds every watch list from scratch over the live (non-deleted)
-    /// clauses, watching the first two literals of each. Called after
-    /// `reduce_db` so no watch list references a tombstoned clause id.
+    /// clauses, watching the first two literals of each
+    /// ([`WatchSweep::Rebuild`], the pre-2026-09 sweep).
+    ///
+    /// Correct because `propagate` keeps a long clause's watched literals at
+    /// arena slots 0 and 1, and both literals of a binary clause are watched:
+    /// re-watching the first two literals re-derives the same watch set, in
+    /// clause-id order.
     fn rebuild_watches(&mut self) {
+        let mut scanned: u64 = 0;
         for w in &mut self.watches {
+            scanned += w.len() as u64;
             w.clear();
+        }
+        if self.count_search {
+            self.counters.reduce_watch_entries_scanned += scanned;
         }
         for cid in 0..self.headers.len() {
             if self.deleted[cid] {
                 continue;
             }
-            if self.clause_len(cid) >= 2 {
+            let len = self.clause_len(cid);
+            if len >= 2 {
                 let (l0, l1) = (self.lit_at(cid, 0), self.lit_at(cid, 1));
                 // Each watch's blocker is the other watched literal.
-                self.watches[lit_code(l0)].push(Watch {
-                    clause: cid,
-                    blocker: l1,
-                });
-                self.watches[lit_code(l1)].push(Watch {
-                    clause: cid,
-                    blocker: l0,
-                });
+                let binary = len == 2;
+                self.watches[lit_code(l0)].push(Watch::new(cid, l1, binary));
+                self.watches[lit_code(l1)].push(Watch::new(cid, l0, binary));
             }
         }
     }
@@ -5504,14 +5738,8 @@ mod tests {
         // Add a learned clause that implies d, watched on its first two lits.
         let learned = vec![lit(4), lit(-1), lit(-2), lit(-3)]; // d ∨ ¬a ∨ ¬b ∨ ¬c
         let cid = cdcl.alloc_clause(&learned);
-        cdcl.watches[lit_code(learned[0])].push(Watch {
-            clause: cid,
-            blocker: learned[1],
-        });
-        cdcl.watches[lit_code(learned[1])].push(Watch {
-            clause: cid,
-            blocker: learned[0],
-        });
+        cdcl.watches[lit_code(learned[0])].push(Watch::new(cid, learned[1], learned.len() == 2));
+        cdcl.watches[lit_code(learned[1])].push(Watch::new(cid, learned[0], learned.len() == 2));
         cdcl.lbd.push(4); // distinct levels among ¬a,¬b,¬c,d (d will be @3)
         cdcl.cla_activity.push(0.0);
         cdcl.used.push(0); // cold: only the LOCK may save it
