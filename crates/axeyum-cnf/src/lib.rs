@@ -56,6 +56,9 @@ mod interpolant;
 mod lrat;
 mod proof_sat;
 mod simplify;
+/// The deterministic tick: a cache-aware, clock-free proxy for search work,
+/// derived from [`SearchCounters`] so it costs nothing on the hot path.
+pub mod ticks;
 mod vivify;
 mod weighted;
 mod xor_cdcl;

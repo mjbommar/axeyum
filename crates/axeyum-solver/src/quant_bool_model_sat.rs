@@ -11,6 +11,7 @@
 
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 
+use axeyum_ir::budget::{Budget, WorkMeter};
 use axeyum_ir::{
     Assignment, Op, Sort, SymbolId, TermArena, TermId, TermNode, Value, eval, well_founded_default,
 };
@@ -1197,11 +1198,66 @@ impl Truth {
     }
 }
 
-#[derive(Default)]
+/// Resource caps for the structural certificate walk, expressed with the
+/// shared deterministic work-budget primitive rather than as another pair of
+/// hand-rolled `u64` counters compared against two constants.
+///
+/// This is the primitive's cross-division demonstration: nothing here is SAT,
+/// the two units are *term nodes* and *bound-Boolean branches*, and both are
+/// budgeted by the same [`WorkMeter`]/[`Budget`] pair the CNF passes use. The
+/// unit deliberately does not live in the type -- a pass pays in what it
+/// actually spends.
+///
+/// Semantics are unchanged from the counters this replaces: both limits are the
+/// first *disallowed* count, so a walk that charges exactly `MAX_CHECK_NODES`
+/// nodes still completes, and `exhausted` is sticky -- once a walk has run out,
+/// every later sub-result is `Unknown` rather than a value derived from a
+/// truncated traversal.
 struct CheckBudget {
-    nodes: u64,
-    bool_branches: u64,
+    nodes: WorkMeter,
+    bool_branches: WorkMeter,
     exhausted: bool,
+}
+
+impl CheckBudget {
+    /// `+ 1` because a [`Budget`] stops at its limit while the counters this
+    /// replaces stopped *above* their constant, so the walk keeps the same
+    /// allowance to the node.
+    const NODES: Budget = Budget::until(MAX_CHECK_NODES + 1);
+    const BOOL_BRANCHES: Budget = Budget::until(MAX_BOUND_BOOL_BRANCHES + 1);
+
+    /// Charges one visited node. Returns `true` when the walk must stop --
+    /// either this charge exhausted the node budget, or an earlier charge
+    /// exhausted either budget.
+    fn charge_node(&mut self) -> bool {
+        self.nodes.charge(1);
+        if Self::NODES.exhausted(&self.nodes) || self.exhausted {
+            self.exhausted = true;
+            return true;
+        }
+        false
+    }
+
+    /// Charges `branches` bound-Boolean case splits. Returns `true` when the
+    /// walk must stop.
+    fn charge_bool_branches(&mut self, branches: u64) -> bool {
+        self.bool_branches.charge(branches);
+        if Self::BOOL_BRANCHES.exhausted(&self.bool_branches) {
+            self.exhausted = true;
+            return true;
+        }
+        false
+    }
+}
+
+impl Default for CheckBudget {
+    fn default() -> Self {
+        Self {
+            nodes: WorkMeter::new(),
+            bool_branches: WorkMeter::new(),
+            exhausted: false,
+        }
+    }
 }
 
 fn eval_truth(
@@ -1210,9 +1266,7 @@ fn eval_truth(
     environment: &mut BTreeMap<SymbolId, bool>,
     budget: &mut CheckBudget,
 ) -> Truth {
-    budget.nodes += 1;
-    if budget.nodes > MAX_CHECK_NODES || budget.exhausted {
-        budget.exhausted = true;
+    if budget.charge_node() {
         return Truth::Unknown;
     }
     match arena.node(term) {
@@ -1321,9 +1375,7 @@ fn eval_quantifier(
     if arena.symbol(symbol).1 != Sort::Bool {
         return eval_truth(arena, *body, environment, budget);
     }
-    budget.bool_branches += 2;
-    if budget.bool_branches > MAX_BOUND_BOOL_BRANCHES {
-        budget.exhausted = true;
+    if budget.charge_bool_branches(2) {
         return Truth::Unknown;
     }
     let previous = environment.insert(symbol, false);
@@ -1466,9 +1518,7 @@ fn normalize_affine(
     environment: &mut BTreeMap<SymbolId, bool>,
     budget: &mut CheckBudget,
 ) -> Option<Affine> {
-    budget.nodes += 1;
-    if budget.nodes > MAX_CHECK_NODES || budget.exhausted {
-        budget.exhausted = true;
+    if budget.charge_node() {
         return None;
     }
     match arena.node(term) {
@@ -1539,6 +1589,13 @@ mod tests {
         let result = eval_truth(&arena, formula, &mut BTreeMap::new(), &mut budget);
         assert_ne!(result, Truth::True);
         assert!(budget.exhausted);
-        assert!(budget.nodes > MAX_CHECK_NODES || budget.bool_branches > MAX_BOUND_BOOL_BRANCHES);
+        assert!(
+            budget.nodes.spent() > MAX_CHECK_NODES
+                || budget.bool_branches.spent() > MAX_BOUND_BOOL_BRANCHES,
+            "the walk stopped without either budget actually running out: \
+             nodes={}, bool_branches={}",
+            budget.nodes.spent(),
+            budget.bool_branches.spent()
+        );
     }
 }
