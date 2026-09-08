@@ -900,7 +900,26 @@ pub static REGISTRY: &[ConfigEntry] = &[
             "docs/research/12-performance/uf-arith-overbound-2026-09-08.md",
             "2026-09-08",
             None,
-            &[],
+            // The measurement is "+9 files on the QF_UFLIA loss population, and
+            // `probe` and `skip` decide the same nine". It rests on the routes
+            // BELOW the decision point being what decides them — the nine are
+            // all decided by `dispatch_uf_arith_online` — and on the CEGAR entry
+            // still being the thing that fires above the eager bound. Change
+            // either and the number stops describing this tree.
+            &[
+                sym(
+                    "crates/axeyum-solver/src/auto.rs",
+                    "dispatch_uf_arith_overbound",
+                ),
+                sym(
+                    "crates/axeyum-solver/src/auto.rs",
+                    "dispatch_uf_arith_online",
+                ),
+                sym(
+                    "crates/axeyum-solver/src/euf.rs",
+                    "try_lazy_arith_for_overbound",
+                ),
+            ],
         ),
         note: "The lazy-Ackermann CEGAR's share of the budget on an over-bound UF+arithmetic \
                query. Before this constant existed the CEGAR took the WHOLE budget and its \

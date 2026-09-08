@@ -2887,10 +2887,10 @@ impl Drop for UfArithOverboundPolicyGuard {
 /// value is the default, so a typo degrades to the shipped behaviour rather
 /// than to an arm nobody chose.
 fn uf_arith_overbound_policy() -> UfArithOverboundPolicy {
+    static RESOLVED: std::sync::OnceLock<UfArithOverboundPolicy> = std::sync::OnceLock::new();
     if let Some(policy) = UF_ARITH_OVERBOUND_OVERRIDE.with(std::cell::Cell::get) {
         return policy;
     }
-    static RESOLVED: std::sync::OnceLock<UfArithOverboundPolicy> = std::sync::OnceLock::new();
     *RESOLVED.get_or_init(
         || match std::env::var("AXEYUM_UF_ARITH_OVERBOUND").as_deref() {
             Ok("terminal") => UfArithOverboundPolicy::CegarTerminal,
