@@ -1,5 +1,16 @@
 # Admission limits whose justification has outlived its basis, 2026-09-08
 
+> **Superseded counts.** The enumeration below is over the registry's 19
+> governed files, which was the whole registry when it was written. The coverage
+> sweep in
+> [admission-limit-coverage-2026-09-08.md](admission-limit-coverage-2026-09-08.md)
+> took the registry to 454 entries over 98 modules: the admission class is
+> **296**, not 70, and the population that crosses with **no signal** is
+> **128**, not 12. Every count in this document is correct about its sample and
+> is a sample. The method, the three instances, and the `dpll_lia`
+> re-derivation are unaffected.
+
+
 Companion to
 [config-registry-2026-09-07.md](config-registry-2026-09-07.md), which built the
 registry, and to [ADR-1762](../09-decisions/adr-1762-the-configuration-surface-is-enumerable-recordable-and-dated.md),
