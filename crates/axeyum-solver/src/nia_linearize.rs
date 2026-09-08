@@ -1946,8 +1946,8 @@ mod tests {
             magnitude,
             vec![(
                 "crates/axeyum-solver/src/nia_linearize.rs::MCCORMICK_MAX_ABS_BOUND",
-                (MCCORMICK_MAX_ABS_BOUND + 1) as u64,
-                MCCORMICK_MAX_ABS_BOUND as u64,
+                u64::try_from(MCCORMICK_MAX_ABS_BOUND + 1).unwrap(),
+                u64::try_from(MCCORMICK_MAX_ABS_BOUND).unwrap(),
             )]
         );
 
@@ -1964,8 +1964,8 @@ mod tests {
             width,
             vec![(
                 "crates/axeyum-solver/src/nia_linearize.rs::MAX_SMALL_DOMAIN_WIDTH",
-                (MAX_SMALL_DOMAIN_WIDTH + 1) as u64,
-                MAX_SMALL_DOMAIN_WIDTH as u64,
+                u64::try_from(MAX_SMALL_DOMAIN_WIDTH + 1).unwrap(),
+                u64::try_from(MAX_SMALL_DOMAIN_WIDTH).unwrap(),
             )]
         );
 

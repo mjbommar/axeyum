@@ -900,8 +900,9 @@ pub use backend::{
 };
 pub use config_registry::{
     Basis, ConfigEntry, ConfigTraceGuard, Dependency, EXEMPT, GOVERNED_FILES, Justification,
-    OnExceed, Protects, REGISTRY, Signal, active_env_overrides, config_trace_line, consulted,
-    crossings, dated_count, digest, note_consulted, note_crossed,
+    OnExceed, Protects, REGISTRY, SILENT_UNATTRIBUTED, SILENT_UNATTRIBUTED_MAX,
+    SILENT_UNINSTRUMENTED, Signal, active_env_overrides, config_trace_line, consulted, crossings,
+    dated_count, digest, note_consulted, note_crossed,
 };
 pub use incremental::{
     AssumptionOutcome, IncrementalBvSolver, IncrementalBvStats, IncrementalModelLiftStats,
