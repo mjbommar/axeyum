@@ -1,0 +1,2 @@
+sweep arm=inproc-vivify budget_ms=24000 cpus=4 load_start=2.17 2.97 1.51
+sweep arm=inproc-vivify measured=200 rows=200 load_end=2.53 3.36 2.60
