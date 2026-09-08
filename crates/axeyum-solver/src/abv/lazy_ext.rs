@@ -2,9 +2,10 @@ use super::{
     ArrayDefs, Assignment, CheckResult, HashSet, Instant, LastExtReplay, MAX_DIFF_SKOLEMS,
     MAX_ROW_ROUNDS, ReplayTargets, RowCtx, RowKind, SolverBackend, SolverConfig, SolverError,
     SymbolId, TermArena, TermId, UnknownReason, Value, check_row_cegar, check_scalar_abstraction,
-    complete_assignment, config_with_remaining_deadline, ext_unknown, indices_equal, past_deadline,
+    complete_assignment, config_with_remaining_deadline, ext_unknown, past_deadline,
     project_replay_ext, read_indices_for, read_terms_differ, replay_last_ext_candidate,
-    results_differ, row_axiom_lemma, row_violated, select_congruence_lemma,
+    row_axiom_lemma, row_violated, select_congruence_lemma, var_congruence_sites,
+    violated_congruence_pairs,
 };
 
 #[derive(Clone, Copy)]
@@ -175,6 +176,7 @@ fn ext_cegar_loop<B: SolverBackend>(
     let mut last_candidate: Option<Assignment> = None;
 
     for round in 0..MAX_ROW_ROUNDS {
+        crate::abv::note_abv(|stats| stats.cegar_rounds += 1);
         if past_deadline(deadline) {
             let replay = replay_last_ext_candidate(arena, ctx, originals, last_candidate.as_ref());
             let replay_note = match replay {
@@ -284,22 +286,15 @@ fn refine_row_and_congruence(
             new_row.push(idx);
         }
     }
-    let mut new_cong: Vec<(usize, usize)> = Vec::new();
-    for a in 0..ctx.sites.len() {
-        for b in (a + 1)..ctx.sites.len() {
-            if added_cong.contains(&(a, b)) {
-                continue;
-            }
-            if let (RowKind::Var { array: va }, RowKind::Var { array: vb }) =
-                (&ctx.sites[a].kind, &ctx.sites[b].kind)
-                && va == vb
-                && indices_equal(arena, ctx.sites[a].index, ctx.sites[b].index, assignment)?
-                && results_differ(assignment, ctx.sites[a].fresh, ctx.sites[b].fresh)
-            {
-                new_cong.push((a, b));
-            }
-        }
-    }
+    // Grouped by index value rather than enumerated pairwise — see
+    // `super::violated_congruence_pairs`. This loop's sites list grows between
+    // rounds (`refine_extensionality` adds diff-skolem reads), so the view is
+    // rebuilt here rather than hoisted.
+    let new_cong =
+        violated_congruence_pairs(arena, &var_congruence_sites(ctx), assignment, added_cong)?;
+    crate::abv::note_abv(|stats| {
+        stats.row_lemmas += u32::try_from(new_row.len()).unwrap_or(u32::MAX);
+    });
 
     let progressed = !new_row.is_empty() || !new_cong.is_empty();
     for idx in new_row {
@@ -348,6 +343,7 @@ fn refine_extensionality(
             }
             refine_diff_skolem(arena, ctx, atom_idx, working)?;
             *diff_skolems += 1;
+            crate::abv::note_abv(|stats| stats.diff_skolems += 1);
             progressed = true;
         }
     }

@@ -965,14 +965,22 @@ pub fn check_qf_aufbv_online_cdclt(
     assertions: &[TermId],
     config: &SolverConfig,
 ) -> Result<CheckResult, SolverError> {
+    // Recorded on ENTRY (see `crate::AbvStats`): this is the `abv-online-cdclt`
+    // route, and `crate::RouteTrace` records only on return, so a query the
+    // watchdog kills inside here is absent from the trail — measured on
+    // `QF_ABV`'s `bmc-arrays/bubbleSort.smt2`, whose trail named `fd:parse` at
+    // 20 ms for a file that spent 25 s in this call.
+    crate::abv::note_abv(|stats| stats.online_entered += 1);
     let deadline = config
         .timeout
         .and_then(|timeout| Instant::now().checked_add(timeout));
-    match build_and_solve(arena, assertions, config, deadline, true) {
+    let outcome = match build_and_solve(arena, assertions, config, deadline, true) {
         Ok(result) => Ok(result),
         Err(BuildFailure::Unknown(reason)) => Ok(CheckResult::Unknown(reason)),
         Err(BuildFailure::Error(error)) => Err(error),
-    }
+    };
+    crate::abv::note_abv(|stats| stats.online_returned += 1);
+    outcome
 }
 
 fn build_and_solve(

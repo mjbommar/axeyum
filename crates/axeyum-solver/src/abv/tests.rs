@@ -1,6 +1,6 @@
 use super::{
-    ExtReplay, LastExtReplay, ProjectionRepairStats, RowCtx, RowKind, RowSite, StoreChainSide,
-    array_value_from_entries, check_qf_abv_lazy, check_with_array_elimination,
+    CongruenceSite, ExtReplay, LastExtReplay, ProjectionRepairStats, RowCtx, RowKind, RowSite,
+    StoreChainSide, array_value_from_entries, check_qf_abv_lazy, check_with_array_elimination,
     collect_base_array_entries, complete_assignment, const_array_default_mismatch_refutation,
     cross_store_array_disequality_refutation, default_value_for_symbol,
     first_false_replay_conjunct, first_projected_replay_failure, positive_replay_conjunct_count,
@@ -12,12 +12,16 @@ use super::{
     repair_projected_replay_branch_choice, repair_projected_replay_branch_pair_choice,
     repair_projected_replay_branch_select_cycle, repair_projected_replay_failure,
     repair_projected_scalar_equalities, replay_failure_with_branch_candidate_diagnostics,
-    replay_last_ext_candidate, select_value, store_chain_readback_refutation, store_value,
+    replay_last_ext_candidate, results_differ, select_value, store_chain_readback_refutation,
+    store_value, violated_congruence_pairs,
 };
-use crate::backend::{CheckResult, SolverConfig};
+use crate::backend::{CheckResult, SolverConfig, SolverError};
 use crate::sat_bv_backend::SatBvBackend;
-use axeyum_ir::{ArraySortKey, ArrayValue, Assignment, Sort, TermArena, TermNode, Value, eval};
+use axeyum_ir::{
+    ArraySortKey, ArrayValue, Assignment, Sort, SymbolId, TermArena, TermId, TermNode, Value, eval,
+};
 use axeyum_smtlib::parse_script;
+use std::collections::HashSet;
 use std::time::Instant;
 
 fn bv_value(width: u32, value: u128) -> Value {
@@ -3507,4 +3511,158 @@ fn verdict(result: &CheckResult) -> Option<bool> {
         CheckResult::Unsat => Some(false),
         CheckResult::Unknown(_) => None,
     }
+}
+
+/// The pairwise select-congruence scan [`violated_congruence_pairs`] replaced,
+/// written from its DEFINITION rather than copied from the deleted code: two
+/// reads on the same array violate congruence when their indices evaluate equal
+/// and their results differ.
+///
+/// This is the oracle the grouped scan is checked against below. It lives in
+/// the test rather than in the solver precisely because it is the `O(n²)` walk
+/// that evaluates two index terms per pair — the cost the grouped scan exists
+/// to avoid.
+fn pairwise_violated_congruence_pairs(
+    arena: &TermArena,
+    sites: &[CongruenceSite],
+    assignment: &Assignment,
+    already_added: &HashSet<(usize, usize)>,
+) -> Result<Vec<(usize, usize)>, SolverError> {
+    let mut out = Vec::new();
+    for a in 0..sites.len() {
+        for b in (a + 1)..sites.len() {
+            let (site_a, site_b) = (sites[a], sites[b]);
+            if site_a.array != site_b.array {
+                continue;
+            }
+            let pair = if site_a.position < site_b.position {
+                (site_a.position, site_b.position)
+            } else {
+                (site_b.position, site_a.position)
+            };
+            if already_added.contains(&pair) {
+                continue;
+            }
+            let indices_equal = site_a.index == site_b.index || {
+                let va = eval(arena, site_a.index, assignment).map_err(|e| {
+                    SolverError::Backend(format!("lazy select-congruence eval failed: {e}"))
+                })?;
+                let vb = eval(arena, site_b.index, assignment).map_err(|e| {
+                    SolverError::Backend(format!("lazy select-congruence eval failed: {e}"))
+                })?;
+                va == vb
+            };
+            if indices_equal && results_differ(assignment, site_a.result, site_b.result) {
+                out.push(pair);
+            }
+        }
+    }
+    out.sort_unstable();
+    Ok(out)
+}
+
+/// A fixture with two arrays and reads whose indices are a mix of literals, a
+/// shared term, and two DIFFERENT terms that evaluate to the same value, with
+/// result values chosen so some pairs agree and some do not.
+fn congruence_scan_fixture() -> (TermArena, Vec<CongruenceSite>, Assignment) {
+    let mut arena = TermArena::new();
+    let array_a_term = arena.array_var("cong_a", 8, 8).unwrap();
+    let array_b_term = arena.array_var("cong_b", 8, 8).unwrap();
+    let TermNode::Symbol(array_a) = *arena.node(array_a_term) else {
+        panic!("array variable must be a symbol");
+    };
+    let TermNode::Symbol(array_b) = *arena.node(array_b_term) else {
+        panic!("array variable must be a symbol");
+    };
+
+    // Index terms: two literals, a symbol, and `x + 0` — a DIFFERENT term that
+    // evaluates to the same value as `x`. That last pair is exactly what a
+    // `TermId`-keyed grouping would miss and a value grouping must catch.
+    let one = arena.bv_const(8, 1).unwrap();
+    let two = arena.bv_const(8, 2).unwrap();
+    let zero = arena.bv_const(8, 0).unwrap();
+    let x = arena.bv_var("cong_x", 8).unwrap();
+    let x_plus_zero = arena.bv_add(x, zero).unwrap();
+
+    let plan: Vec<(TermId, u128, SymbolId)> = vec![
+        (one, 10, array_a),
+        (one, 11, array_a), // same index term, different result -> violation
+        (two, 10, array_a), // different index value -> no violation above
+        (x, 20, array_a),
+        (x_plus_zero, 21, array_a), // different term, same VALUE -> violation
+        (one, 10, array_b),         // other array: never pairs with array_a
+        (one, 99, array_b),         // ...but does pair with the read above it
+    ];
+
+    let mut assignment = Assignment::new();
+    let mut sites = Vec::new();
+    for (position, (index, value, array)) in plan.into_iter().enumerate() {
+        let result = arena
+            .declare_internal(&format!("cong_r{position}"), Sort::BitVec(8))
+            .unwrap();
+        assignment.set(result, bv_value(8, value));
+        sites.push(CongruenceSite {
+            position,
+            array,
+            index,
+            result,
+        });
+    }
+    // `x` needs a value or its index terms cannot be evaluated at all.
+    let TermNode::Symbol(x_symbol) = *arena.node(x) else {
+        panic!("bit-vector variable must be a symbol");
+    };
+    assignment.set(x_symbol, bv_value(8, 7));
+    (arena, sites, assignment)
+}
+
+#[test]
+fn grouped_congruence_scan_matches_the_pairwise_definition() {
+    let (arena, sites, assignment) = congruence_scan_fixture();
+    let none = HashSet::new();
+    let grouped = violated_congruence_pairs(&arena, &sites, &assignment, &none).unwrap();
+    let pairwise = pairwise_violated_congruence_pairs(&arena, &sites, &assignment, &none).unwrap();
+    assert_eq!(
+        grouped, pairwise,
+        "grouped scan disagrees with its definition"
+    );
+    // The fixture has to exercise the thing: an empty agreement would pass
+    // whatever the scan does.
+    assert!(
+        !grouped.is_empty(),
+        "fixture produced no violations, so the agreement is vacuous"
+    );
+    // ...and it must contain the pair whose indices are DIFFERENT TERMS with
+    // the same value, which is what a `TermId`-keyed grouping would miss.
+    assert!(
+        grouped.contains(&(3, 4)),
+        "the equal-value/different-term pair is missing: {grouped:?}"
+    );
+    // ...and must never pair reads on different arrays.
+    assert!(
+        !grouped
+            .iter()
+            .any(|&(i, j)| sites[i].array != sites[j].array),
+        "a cross-array pair was reported: {grouped:?}"
+    );
+}
+
+#[test]
+fn grouped_congruence_scan_honours_already_added() {
+    let (arena, sites, assignment) = congruence_scan_fixture();
+    let none = HashSet::new();
+    let all = violated_congruence_pairs(&arena, &sites, &assignment, &none).unwrap();
+    let suppress: HashSet<(usize, usize)> = all.iter().copied().take(1).collect();
+    let rest = violated_congruence_pairs(&arena, &sites, &assignment, &suppress).unwrap();
+    let expected: Vec<(usize, usize)> = all
+        .iter()
+        .copied()
+        .filter(|pair| !suppress.contains(pair))
+        .collect();
+    assert_eq!(rest, expected);
+    assert_eq!(
+        rest.len(),
+        all.len() - 1,
+        "suppressing one already-added pair must remove exactly that pair"
+    );
 }
