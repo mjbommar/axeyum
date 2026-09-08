@@ -33,6 +33,15 @@
 mod algebraic_bridge;
 mod arena;
 mod bits;
+/// Deterministic work budgets: the stack-wide resource-limit primitive.
+///
+/// This lives in the IR crate for the same reason [`fast_map`] does — it is a
+/// dependency-free utility that every layer above needs, and this is the
+/// lowest crate all of them already depend on. It is not about terms; it is
+/// about how any pass in any division decides how much work it may do, without
+/// reading a clock. Adding a crate for it would need an ADR (ADR-0001 keeps the
+/// crate split minimal until a boundary is proven by use).
+pub mod budget;
 mod error;
 mod eval;
 pub mod fast_map;
