@@ -33,6 +33,7 @@ mod elim_unconstrained;
 mod functions;
 mod int_blast;
 mod int_divmod;
+mod inverter;
 mod lower_bv;
 mod pass_stats;
 mod propagate_values;
@@ -53,7 +54,10 @@ pub use canonical::{
     canonicalize_terms, default_manifest, replace_subterms,
 };
 pub use datatypes::simplify_datatypes;
-pub use elim_unconstrained::{UnconstrainedElimination, elim_unconstrained};
+pub use elim_unconstrained::{
+    ElimUnconstrainedStats, UnconstrainedElimination, default_inverters, elim_unconstrained,
+    elim_unconstrained_with,
+};
 pub use functions::{
     FUNCTION_ABSTRACTION_WITNESS_SAMPLES, FuncElimError, FunctionAbstraction,
     FunctionAbstractionDisagreement, FunctionAbstractionWitness, FunctionElimination,
@@ -64,11 +68,15 @@ pub use int_divmod::{
     INT_DIVMOD_WITNESS_SAMPLES, IntDivModElimination, IntDivModFinding, IntDivModWitness,
     MAX_CONGRUENCE_GROUPS, ZeroDivisorCongruence, eliminate_int_divmod, witness_int_divmod,
 };
+pub use inverter::{
+    ArithInverter, BvInverter, CoreInverter, Inversion, Inverter, InverterCtx, InverterRegistry,
+    Theory, is_defaultable_sort, mod_inverse_pow2, theory_of,
+};
 pub use lower_bv::lower_derived_bv;
 pub use pass_stats::{
     PassSize, PassSizeDelta, blast_integers_with_stats, canonicalize_terms_with_stats,
-    eliminate_arrays_with_stats, eliminate_functions_with_stats, eliminate_int_divmod_with_stats,
-    rule_application_counts,
+    elim_unconstrained_with_stats, eliminate_arrays_with_stats, eliminate_functions_with_stats,
+    eliminate_int_divmod_with_stats, rule_application_counts,
 };
 pub use propagate_values::{ValuePropagation, propagate_values};
 pub use quantifiers::{
