@@ -676,6 +676,22 @@ pub(crate) fn wait_for_watchdog_sample(timeout: Duration) -> bool {
     false
 }
 
+/// Test seam: install a budget WITHOUT starting the sampler, so a test of a
+/// PROJECTION gate is not also a test of the live resident set.
+///
+/// Needed because the two are genuinely independent and a test that used the
+/// real installer could only exercise the projection at budgets above the test
+/// binary's own resident set — which is hundreds of megabytes and moves with
+/// whatever else `cargo test` is running in parallel. Measured: a 1 MiB budget
+/// installed for real trips the watchdog on the FIRST check site, so the
+/// projection under test never runs.
+#[cfg(test)]
+pub(crate) fn set_limit_for_test(limit_bytes: u64) {
+    WATCHDOG_LIMIT_BYTES.store(limit_bytes, Ordering::Relaxed);
+    WATCHDOG_TRIPPED.store(false, Ordering::Relaxed);
+    WATCHDOG_PEAK_BYTES.store(0, Ordering::Relaxed);
+}
+
 /// Test seam: assert the tripped state directly, without arranging a real
 /// over-limit resident set.
 ///
@@ -1067,10 +1083,19 @@ mod watchdog_tests {
         let peak = peak_resident_bytes().expect("Linux exposes VmHWM");
         let live = resident_bytes().expect("Linux exposes VmRSS");
         assert!(peak > 0, "a running process has a nonzero peak");
+        // `peak >= live` is what a high-water mark ought to satisfy and it is
+        // NOT what the kernel guarantees: measured here at VmHWM 171 630 592
+        // against a live VmRSS of 171 716 608, 84 KiB (21 pages) BELOW. The two
+        // lines are read from one `/proc/self/status` but the kernel updates
+        // the peak on its own accounting boundaries, so it trails a growing
+        // process by a small, bounded amount. The tolerance is stated here
+        // rather than the assertion being deleted, because the property that
+        // matters downstream — the reported peak is the run's scale, not a
+        // sample that could miss a spike — still holds at this resolution.
         assert!(
-            peak >= live,
-            "VmHWM {peak} is below the live VmRSS {live}, which is not a \
-             high-water mark"
+            peak.saturating_mul(100) >= live.saturating_mul(99),
+            "VmHWM {peak} is more than 1% below the live VmRSS {live}, which is \
+             not a high-water mark trailing by an accounting batch"
         );
     }
 }

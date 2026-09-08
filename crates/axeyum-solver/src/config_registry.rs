@@ -4159,6 +4159,44 @@ pub static REGISTRY: &[ConfigEntry] = &[
         note: "Clause-count companion to `DEFER_LIA_FEASIBILITY_ATOMS`; doc: 'for generated Boolean skeletons with fewer theory atoms but a large Tseitin surface.'",
     },
     ConfigEntry {
+        name: "BYTES_PER_FARKAS_MULTIPLIER",
+        module: "crates/axeyum-solver/src/lra.rs",
+        value: "32",
+        unit: "bytes per retained Farkas multiplier",
+        protects: Protects::Memory,
+        on_exceed: OnExceed::RefuseUnknown,
+        signal: Signal::ToCaller,
+        guarded_by: "",
+        env_override: Some("AXEYUM_MEMORY_LIMIT_MB"),
+        justification: dated(
+            "docs/research/12-performance/span-log-sweep-2026-09-08.md",
+            "2026-09-08",
+            Some("5d406a12b"),
+            &[
+                sym(
+                    "crates/axeyum-solver/src/lra.rs",
+                    "BYTES_PER_FARKAS_MULTIPLIER",
+                ),
+                sym("crates/axeyum-solver/src/lra.rs", "MAX_FM_CONSTRAINTS"),
+            ],
+            // The value is STRUCTURAL, so what has to still exist is the shape
+            // it counts (`Rational` is two `i128`s inside `LinExpr`'s home
+            // crate) and the two gates that spend it, plus the sweep the
+            // measurement is written up in.
+            &[
+                live("pub struct Rational", "crates/axeyum-ir/src/rational.rs"),
+                live("fn fm_admission", "crates/axeyum-solver/src/lra.rs"),
+                live(
+                    "fn simplex_tableau_bytes",
+                    "crates/axeyum-solver/src/lra.rs",
+                ),
+                live("fn reset_structure", "crates/axeyum-solver/src/simplex.rs"),
+                doc("docs/research/12-performance/span-log-sweep-2026-09-08.md"),
+            ],
+        ),
+        note: "The constant behind the 2026-09-08 kernel OOM. `decide_within` gave every collected constraint a dense unit multiplier vector of length `n`, so `32*n^2` bytes, allocated BEFORE `MAX_FM_CONSTRAINTS` -- the one bound that could have stopped it -- was consulted inside `eliminate`. At ~29 200 constraints that matrix is the kernel's own `anon-rss:26639452kB`. Unlike a divided peak-RSS figure this is a count of what the program allocates, so it cannot drift with corpus or host; the only thing that invalidates it is changing `Rational`'s representation, which is what the first `Basis` watches. `simplex_admission` charges the exact-rational simplex retry at the same rate deliberately -- two gates metering one resource in different units is the defect this registry exists to surface -- but on its TABLEAU and not on its input rows: `Tableau::reset_structure` builds `m` dense rows of `nvars + m` cells, so it is quadratic in the row count too. Pricing it as `n * nvars` was tried and let 11.8 GB through after the multiplier matrix was already gated; a stack sample found the real allocation inside `reset_structure`, 17x the projection. Related gap, reported and NOT closed here: `simplex::MAX_TABLEAU_CELLS` (4 000 000) is checked only in `Incremental::new`, so `feasible` -- the constructor this route calls -- consults no cell bound at all and reached 360 million cells on the measured file.",
+    },
+    ConfigEntry {
         name: "GOMORY_MAGNITUDE_LIMIT",
         module: "crates/axeyum-solver/src/lra.rs",
         value: "1 << 40",
@@ -4287,8 +4325,8 @@ pub static REGISTRY: &[ConfigEntry] = &[
         env_override: None,
         justification: dated(
             "ADR-1752",
-            "2026-09-07",
-            None,
+            "2026-09-08",
+            Some("5d406a12b"),
             &[
                 sym(
                     "crates/axeyum-solver/src/lra_online.rs",
@@ -4299,9 +4337,25 @@ pub static REGISTRY: &[ConfigEntry] = &[
                     "MAX_ONLINE_LRA_ATOMS",
                 ),
             ],
-            &[adr("ADR-1752")],
+            // Re-derived 2026-09-08. The value is kept for the ONE property that
+            // is checkable in the tree rather than in a corpus run -- it
+            // reproduces `MAX_ONLINE_LRA_ATOMS` exactly at the default budget --
+            // so `MAX_ONLINE_LRA_ATOMS` is a basis, not just a dependency. The
+            // sweep is a basis because it is where the mis-attribution that the
+            // re-derivation corrects is written down, and `fm_admission` is a
+            // basis because it is the gate that now owns the bytes this
+            // constant was blamed for.
+            &[
+                adr("ADR-1752"),
+                live(
+                    "MAX_ONLINE_LRA_ATOMS",
+                    "crates/axeyum-solver/src/lra_theory.rs",
+                ),
+                live("fn fm_admission", "crates/axeyum-solver/src/lra.rs"),
+                doc("docs/research/12-performance/span-log-sweep-2026-09-08.md"),
+            ],
         ),
-        note: "A SCREEN, explicitly not a cost model — the doc names three replacement cost models the corpus falsified. Calibrated so the default budget reproduces the flat 1,024-atom cap byte-identically, which is why its definition divides by exactly that number.",
+        note: "A SCREEN, explicitly not a cost model. RE-DERIVED 2026-09-08 and the value KEPT, but its evidence changed: the doc named `_sanfoundry_10_ground.i_6_3_3.bpl_13.smt2` aborting at 7.8 GB as the falsification of cost model 1, and a live stack sample at 4.4 GB on the way to a 26.6 GB kernel OOM put those bytes in `lra::decide_within` -- the OFFLINE Fourier-Motzkin route, which no cost model of the ONLINE construction could have predicted. The value survives on the property that is checkable in-tree (it reproduces the flat 1,024-atom cap byte-identically at the default budget) rather than on a corpus measurement that belonged to another route. The 8 GiB this screen derives 13,107 atoms from was ALSO not an enforced budget until 2026-09-08; it is one now.",
     },
     ConfigEntry {
         name: "BYTES_PER_LRA_COEFFICIENT",
@@ -4705,6 +4759,60 @@ pub static REGISTRY: &[ConfigEntry] = &[
             ],
         ),
         note: "THE BEST-JUSTIFIED ENTRY IN THIS REGISTRY, and the model for the rest: the doc carries a table of measured peaks over `bvmul` commutativity miters, names the host, gives the date, AND ships a re-measurement test (`crates/axeyum-solver/tests/memory_budget.rs`) so the number can be re-taken rather than re-argued. Converts a byte budget into `clause_ceiling()`.",
+    },
+    ConfigEntry {
+        name: "WATCHDOG_IDLE_INTERVAL",
+        module: "crates/axeyum-solver/src/memory_budget.rs",
+        value: "Duration::from_millis(500)",
+        unit: "milliseconds between wake-ups while NO budget is installed",
+        protects: Protects::Time,
+        on_exceed: OnExceed::SearchEvent,
+        signal: Signal::NotApplicable,
+        guarded_by: "",
+        env_override: None,
+        justification: dated(
+            "doc comment",
+            "2026-09-08",
+            Some("5d406a12b"),
+            &[sym(
+                "crates/axeyum-solver/src/memory_budget.rs",
+                "WATCHDOG_IDLE_INTERVAL",
+            )],
+            &[live(
+                "watchdog_loop",
+                "crates/axeyum-solver/src/memory_budget.rs",
+            )],
+        ),
+        note: "NOT an admission bound, which is why it carries the `SearchEvent`/`NotApplicable` class: it is the backstop period on a condvar wait, and crossing it means the sampler woke up, found no budget installed, and went back to sleep. It cannot delay the arming of a budget -- every install notifies the condvar -- so it only bounds how long a MISSED notification could go unnoticed, and even then no verdict changes, because the projection gates (`fm_admission`, `simplex_admission`, `clause_ceiling`) do not consult the sampler at all. The cost is two wake-ups a second in a process that has installed a budget at least once; a process that never sets `memory_limit_mb` never spawns the thread.",
+    },
+    ConfigEntry {
+        name: "WATCHDOG_SAMPLE_INTERVAL",
+        module: "crates/axeyum-solver/src/memory_budget.rs",
+        value: "Duration::from_millis(20)",
+        unit: "milliseconds between resident-set samples while a budget is installed",
+        protects: Protects::Memory,
+        on_exceed: OnExceed::RefuseUnknown,
+        signal: Signal::ToCaller,
+        guarded_by: "",
+        env_override: Some("AXEYUM_MEMORY_LIMIT_MB"),
+        justification: dated(
+            "docs/research/12-performance/span-log-sweep-2026-09-08.md",
+            "2026-09-08",
+            Some("5d406a12b"),
+            &[sym(
+                "crates/axeyum-solver/src/memory_budget.rs",
+                "WATCHDOG_SAMPLE_INTERVAL",
+            )],
+            &[
+                live("watchdog_tripped", "crates/axeyum-solver/src/lra.rs"),
+                live(
+                    "the_watchdog_samples_and_trips_on_an_over_limit_reading",
+                    "crates/axeyum-solver/src/memory_budget.rs",
+                ),
+                doc("docs/research/12-performance/span-log-sweep-2026-09-08.md"),
+            ],
+        ),
+        note: "Sets how far past `memory_limit_mb` a route can get before anything notices: at 20 ms a route allocating 1 GiB/s is at most ~20 MiB over when the flag is set. Derived from the module's own measured 9.4 us `/proc/self/status` read -- 0.047 % of one core -- which is also the reason this is a THREAD and not another inline probe: the inline probes cost 32 us per check and therefore could never go in a loop, which is exactly why the field did not bind on the route that reached 26.6 GB. The two `Basis` entries are the deepest consumer of the flag and the test that pins BOTH directions of the trip; a sampler that trips unconditionally is as useless as one that never does.",
     },
     ConfigEntry {
         name: "PROOF_LITERAL_BUDGET",
@@ -7308,6 +7416,11 @@ pub static GOVERNED_FILES: &[&str] = &[
     "crates/axeyum-solver/src/dl_online.rs",
     "crates/axeyum-solver/src/dpll_lia.rs",
     "crates/axeyum-solver/src/euf.rs",
+    // Joined the governed set on 2026-09-08 with the memory-limit work. Nine of
+    // its ten constants were already registered, so the file was one entry away
+    // from claimable and nobody had claimed it -- and it is the file the three
+    // OOM-killed `QF_LRA` runs actually died in.
+    "crates/axeyum-solver/src/lra.rs",
     "crates/axeyum-solver/src/lra_online.rs",
     "crates/axeyum-solver/src/lra_theory.rs",
     "crates/axeyum-solver/src/memory_budget.rs",

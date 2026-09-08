@@ -362,47 +362,8 @@ fn fm_multiplier_bytes(n: usize) -> u64 {
         .saturating_add(n.saturating_mul(24))
 }
 
-/// Whether Fourier–Motzkin should be entered for a system of `n` constraints,
-/// and if not, why.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum FmAdmission {
-    /// Build the multiplier matrix and eliminate.
-    Run,
-    /// `n` is above [`MAX_FM_CONSTRAINTS`], so the very first elimination step
-    /// refuses (`out.len()` alone already exceeds the bound) — the matrix would
-    /// be built and thrown away without deriving one row.
-    ///
-    /// This branch is **not** a policy choice and cannot lose a decision: the
-    /// system was already going to be refused. What changes is that the
-    /// `32*n^2` bytes are no longer spent to learn it.
-    AboveSizeGuard,
-    /// The matrix does not fit in `SolverConfig::memory_limit_mb`.
-    OverBudget { projected: u64, budget: u64 },
-}
-
-impl FmAdmission {
-    /// The decline this admission produces once the simplex retry has also
-    /// failed to decide the query. States the numbers, because a refusal that
-    /// says only "too big" is what nobody could act on.
-    fn decline(self, n: usize, nvars: usize) -> Decision {
-        match self {
-            // `decide_within` never calls this on `Run`; keeping FM's own
-            // wording means the existing `TimedOut` detail is unchanged for
-            // every query that still enters the elimination.
-            Self::Run => Decision::TimedOut,
-            Self::AboveSizeGuard => Decision::TimedOut,
-            Self::OverBudget { projected, budget } => Decision::OutOfMemory(format!(
-                "lra: Fourier–Motzkin's Farkas multiplier matrix for {n} constraints over \
-                 {nvars} variables needs {} MiB at {BYTES_PER_FARKAS_MULTIPLIER} B/multiplier, \
-                 over memory_limit_mb {} (raise SolverConfig::memory_limit_mb)",
-                projected / (1024 * 1024),
-                budget / (1024 * 1024),
-            )),
-        }
-    }
-}
-
-/// Prices the multiplier matrix before it is allocated.
+/// Prices the multiplier matrix before it is allocated, returning the decline
+/// when it does not fit `SolverConfig::memory_limit_mb`.
 ///
 /// # Why an entry guard, when [`MAX_FM_CONSTRAINTS`] already exists
 ///
@@ -416,18 +377,46 @@ impl FmAdmission {
 /// currency it is made in, before making it — applied to the OFFLINE route,
 /// which that ADR did not cover and which is the route those three files
 /// actually took.
-fn fm_admission(n: usize) -> FmAdmission {
-    if n > MAX_FM_CONSTRAINTS {
-        return FmAdmission::AboveSizeGuard;
-    }
+///
+/// # The guard that is deliberately NOT here
+///
+/// The obvious extra guard is "`n > MAX_FM_CONSTRAINTS` means the first
+/// elimination step will refuse anyway, so skip the matrix unconditionally".
+/// It was written, and then checked, and it is **wrong**: [`eliminate`] refuses
+/// on `out.len() + pos.len() * neg.len()`, and a variable with no NEGATIVE
+/// coefficient has `neg` empty, so the product is zero and the step proceeds —
+/// dropping the `pos` constraints entirely. A system of 25 000 constraints can
+/// therefore enter Fourier–Motzkin legitimately and be decided by it. Skipping
+/// the matrix for every large `n` would lose those decisions on the DEFAULT
+/// build, where nobody asked for a memory bound.
+///
+/// So the only gate is the caller's own budget, and it is redundant with the
+/// size guard where they overlap: above 20 000 constraints the matrix is
+/// already 12.8 GB, so any budget small enough to make the skip worth having
+/// refuses here first. The default build's admission behaviour is byte-identical
+/// to what it was.
+fn fm_admission(n: usize, nvars: usize) -> Option<Decision> {
+    let budget = crate::memory_budget::current_limit_bytes()?;
     let projected = fm_multiplier_bytes(n);
-    match crate::memory_budget::current_limit_bytes() {
-        Some(budget) if projected > budget => FmAdmission::OverBudget { projected, budget },
-        _ => FmAdmission::Run,
+    if projected <= budget {
+        return None;
     }
+    Some(Decision::OutOfMemory(format!(
+        "lra: Fourier–Motzkin's Farkas multiplier matrix for {n} constraints over \
+         {nvars} variables needs {} MiB at {BYTES_PER_FARKAS_MULTIPLIER} B/multiplier, \
+         over memory_limit_mb {} (raise SolverConfig::memory_limit_mb)",
+        projected / (1024 * 1024),
+        budget / (1024 * 1024),
+    )))
 }
 
-/// Prices the exact-rational simplex retry's dense `n x nvars` tableau before
+fn simplex_tableau_bytes(n: usize, nvars: usize) -> u64 {
+    let rows = n as u64;
+    rows.saturating_mul(rows.saturating_add(nvars as u64))
+        .saturating_mul(BYTES_PER_FARKAS_MULTIPLIER as u64)
+}
+
+/// Prices the exact-rational simplex retry's dense tableau before
 /// [`simplex_fallback`] allocates it, returning the decline when it does not fit.
 ///
 /// It matters more now than it did: a system above [`MAX_FM_CONSTRAINTS`] no
@@ -437,18 +426,29 @@ fn fm_admission(n: usize) -> FmAdmission {
 /// [`Rational`] costs the same whichever matrix holds it, and two gates metering
 /// one resource in different units is a defect the config registry exists to
 /// make visible.
+///
+/// # The bound that exists and does not reach here
+///
+/// `simplex::MAX_TABLEAU_CELLS` is 4 000 000 and is checked in
+/// `simplex::Incremental::new` — the INCREMENTAL constructor. `feasible`, which
+/// is what this route calls, builds a `Tableau` directly and consults no cell
+/// bound at all, so the file above reached 360 million cells against a
+/// 4-million ceiling living in the same file. This gate does not change that:
+/// it binds only when a caller set `memory_limit_mb`, so the default build's
+/// behaviour is unchanged and the gap is reported rather than quietly closed
+/// with an untested admission change.
 fn simplex_admission(n: usize, nvars: usize) -> Option<Decision> {
     let budget = crate::memory_budget::current_limit_bytes()?;
-    let projected = (n as u64)
-        .saturating_mul(nvars as u64)
-        .saturating_mul(BYTES_PER_FARKAS_MULTIPLIER as u64);
+    let projected = simplex_tableau_bytes(n, nvars);
     if projected <= budget {
         return None;
     }
     Some(Decision::OutOfMemory(format!(
-        "lra: the exact-rational simplex retry needs a dense {n} x {nvars} tableau, \
-         {} MiB at {BYTES_PER_FARKAS_MULTIPLIER} B/cell, over memory_limit_mb {} \
+        "lra: the exact-rational simplex retry needs a dense {n} x {} tableau \
+         ({n} rows over {nvars} variables plus one slack each), {} MiB at \
+         {BYTES_PER_FARKAS_MULTIPLIER} B/cell, over memory_limit_mb {} \
          (raise SolverConfig::memory_limit_mb)",
+        n.saturating_add(nvars),
         projected / (1024 * 1024),
         budget / (1024 * 1024),
     )))
@@ -461,6 +461,19 @@ fn decide_within(
 ) -> Result<Decision, SolverError> {
     let mut ctx = Collector::default();
     for (index, &assertion) in assertions.iter().enumerate() {
+        // Collection is itself a growth site — one `LinExpr` (a `BTreeMap`) per
+        // atom, tens of thousands of them on these benchmarks — and it runs
+        // before any of the gates below can price anything, because the
+        // constraint count they price is what this loop is producing. One
+        // relaxed atomic load per assertion.
+        if crate::memory_budget::watchdog_tripped() {
+            return Ok(Decision::OutOfMemory(
+                crate::memory_budget::watchdog_decline("lra constraint collection").map_or_else(
+                    || "lra: memory budget exceeded while collecting constraints".to_owned(),
+                    |reason| reason.detail,
+                ),
+            ));
+        }
         ctx.current_origin = index;
         ctx.collect(arena, assertion, false)?;
     }
@@ -478,29 +491,21 @@ fn decide_within(
     let n = ctx.constraints.len();
     let nvars = ctx.vars.len();
 
-    let admission = fm_admission(n);
-    if !matches!(admission, FmAdmission::Run) {
+    if let Some(fm_refusal) = fm_admission(n, nvars) {
         // Fourier–Motzkin is not entered at all, so the multiplier matrix is
         // never built. The exact-rational simplex decides the same query
         // without one, and returns a decision only for a replay-checked `sat`
-        // or a Farkas-verified `unsat` — so skipping FM cannot produce a wrong
-        // verdict, only forgo a decision FM was already never going to make.
-        // Its own dense tableau is priced first, for the same reason.
-        let simplex_refusal = simplex_admission(n, nvars);
-        if simplex_refusal.is_none()
+        // or a Farkas-verified `unsat` — so trying it here cannot produce a
+        // wrong verdict. Its own dense tableau is priced first, for exactly the
+        // reason this branch exists.
+        if simplex_admission(n, nvars).is_none()
             && let Some(decision) = simplex_fallback(arena, assertions, &ctx)?
         {
             return Ok(decision);
         }
-        // Report whichever gate refused FIRST, so the detail names a bound the
-        // caller can actually move: FM's own budget when that is what stopped
-        // it, otherwise the simplex tableau's, otherwise the size guard.
-        return Ok(match admission {
-            FmAdmission::OverBudget { .. } | FmAdmission::Run => admission.decline(n, nvars),
-            FmAdmission::AboveSizeGuard => {
-                simplex_refusal.unwrap_or_else(|| admission.decline(n, nvars))
-            }
-        });
+        // FM's refusal is the one reported: it is the gate that fired first,
+        // and its number is the one the caller would have to raise.
+        return Ok(fm_refusal);
     }
 
     // Snapshot the original atoms for the (independent) certificate, and the
@@ -3455,7 +3460,8 @@ mod memory_limit_tests {
 
     use crate::backend::{CheckResult, SolverConfig, UnknownKind};
     use crate::memory_budget::{
-        MemoryWatchdog, WATCHDOG_LOCK, clear_watchdog_for_test, trip_watchdog_for_test,
+        MemoryWatchdog, WATCHDOG_LOCK, clear_watchdog_for_test, set_limit_for_test,
+        trip_watchdog_for_test,
     };
 
     /// `count` real constraints `x_i <= i` over `count` distinct variables — a
@@ -3495,11 +3501,13 @@ mod memory_limit_tests {
             "the control must DECIDE, or the refusal below proves nothing: {decided:?}"
         );
 
-        let config = SolverConfig::default().with_memory_limit_mb(1);
-        let watchdog = MemoryWatchdog::install(&config).expect("Linux installs a watchdog");
+        // A 1 MiB budget with NO sampler: this is a test of the projection,
+        // and a real 1 MiB install would trip the watchdog on the first check
+        // site (the test binary is hundreds of MiB) so the gate under test
+        // would never run. Measured that way round first.
+        set_limit_for_test(1024 * 1024);
         let (result, certificate) =
             check_with_lra_within_certified(&arena, &assertions, None).expect("a budgeted check");
-        drop(watchdog);
         clear_watchdog_for_test();
 
         assert!(certificate.is_none(), "a refusal carries no certificate");
@@ -3606,16 +3614,62 @@ mod memory_limit_tests {
         );
     }
 
-    /// A system above [`MAX_FM_CONSTRAINTS`] is refused by FM's own first
-    /// elimination step, so building its matrix cannot buy a decision — only
-    /// bytes. That is why `AboveSizeGuard` skips the matrix with no budget
-    /// installed at all, and why doing so is not a policy change.
+    /// The simplex retry is priced on the TABLEAU it builds, not on the rows it
+    /// is handed — a distinction worth a test because getting it wrong is what
+    /// let 11.8 GB through after the multiplier matrix was already gated.
+    ///
+    /// `Tableau::reset_structure` builds `m` dense rows of `nvars + m` cells,
+    /// so the two models differ by a factor of `(nvars + n)/nvars`, which on
+    /// the measured file is **17x**: 690 MB projected against 11.0 GiB real.
     #[test]
-    fn a_system_above_the_size_guard_never_builds_a_matrix() {
-        assert_eq!(fm_admission(MAX_FM_CONSTRAINTS), FmAdmission::Run);
-        assert_eq!(
-            fm_admission(MAX_FM_CONSTRAINTS + 1),
-            FmAdmission::AboveSizeGuard
+    fn the_simplex_retry_is_priced_on_its_tableau_and_not_on_its_input_rows() {
+        // The measured file: 18 402 constraints over 1 173 variables.
+        let rows_only = 18_402u64 * 1_173 * 32;
+        let tableau = simplex_tableau_bytes(18_402, 1_173);
+        assert!(
+            tableau > 16 * rows_only,
+            "the tableau model must be far above the input-row model; it is \
+             {tableau} against {rows_only}"
         );
+        // 360 million cells is 11.0 GiB, which is what the sampler saw.
+        let gib = 1024 * 1024 * 1024;
+        assert!(
+            (10 * gib..12 * gib).contains(&tableau),
+            "18 402 x 19 575 cells project to {tableau} bytes; the sampler \
+             measured a peak of 11 769 MiB"
+        );
+        // A square-ish small system is dominated by the slack columns, not the
+        // variables — the property the wrong model missed entirely.
+        assert_eq!(simplex_tableau_bytes(10, 0), 10 * 10 * 32);
+    }
+
+    /// With NO budget installed the gate admits everything, at any size.
+    ///
+    /// This is the property that keeps the default build byte-identical, and it
+    /// is asserted rather than assumed because the first version of this gate
+    /// did NOT have it: it skipped the matrix unconditionally above
+    /// [`MAX_FM_CONSTRAINTS`], on the belief that `eliminate` would refuse such
+    /// a system anyway. `eliminate` refuses on
+    /// `out.len() + pos.len() * neg.len()`, so a variable with no negative
+    /// coefficient makes the product zero and the step proceeds — a 25 000
+    /// constraint system can be decided by Fourier–Motzkin, and that version
+    /// would have lost it for a caller who never asked for a memory bound.
+    #[test]
+    fn no_budget_admits_the_matrix_at_any_size() {
+        let _lock = WATCHDOG_LOCK
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
+        clear_watchdog_for_test();
+        assert!(fm_admission(MAX_FM_CONSTRAINTS + 1, 10).is_none());
+        assert!(fm_admission(10_000_000, 10).is_none());
+        assert!(simplex_admission(10_000_000, 10).is_none());
+
+        // ...and with one installed, the same sizes are refused, so the test
+        // above is measuring the ABSENCE of a budget rather than a gate that
+        // never fires.
+        set_limit_for_test(1024 * 1024);
+        assert!(fm_admission(MAX_FM_CONSTRAINTS + 1, 10).is_some());
+        assert!(simplex_admission(MAX_FM_CONSTRAINTS + 1, 10).is_some());
+        clear_watchdog_for_test();
     }
 }

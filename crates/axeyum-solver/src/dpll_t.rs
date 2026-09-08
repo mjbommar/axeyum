@@ -163,6 +163,14 @@ pub fn check_with_lra_dpll_within(
                 detail: "lazy SMT: wall-clock timeout reached".to_owned(),
             }));
         }
+        // Memory bound, at the same boundary and for the same reason: the
+        // per-round work grows as blocking clauses accumulate, so this loop is
+        // where an over-budget process spends the rest of its life. One relaxed
+        // atomic load, and it reports the memory reason rather than borrowing
+        // the timeout's — the two demand opposite fixes.
+        if let Some(reason) = crate::memory_budget::watchdog_decline("lazy SMT refinement round") {
+            return Ok(CheckResult::Unknown(reason));
+        }
         // 2. Decide the skeleton (real atoms abstracted to props; every other
         //    theory — bit-vectors, arrays, functions, bounded integers — left
         //    intact) plus learned blocking clauses, with the full bit-blasting

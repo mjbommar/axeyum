@@ -59,6 +59,39 @@ model. It now aborts at 26.6 GB. **"Where do these bytes go" is the open work
 that ADR-1752's admission constant is a placeholder for, and this is a second
 measurement of the same file at 3.4x the earlier figure.**
 
+> **Answered and fixed, 2026-09-08 (same day, later).** The bytes were not on
+> the online CDCL(T) route ADR-1752's screen gates at all. A `gdb` stack sample
+> taken while the process was at 4.4 GB names `lra::decide_within` — the
+> **offline** Fourier–Motzkin route — which gave every collected constraint a
+> dense unit multiplier vector of length `n`, an `n x n` matrix of `Rational`
+> at 32 B/cell. `MAX_FM_CONSTRAINTS` bounds the *derived* system inside
+> `eliminate`, i.e. it is consulted after the runaway allocation it was meant
+> to prevent. `lra::fm_admission` now prices that matrix against
+> `memory_limit_mb` before allocating it, `lra::simplex_admission` prices the
+> exact-rational simplex retry's dense `n x (nvars + n)` tableau the same way,
+> and a sampling watchdog (`memory_budget::MemoryWatchdog`) turns an overrun
+> anywhere else into a reported `unknown`. Re-measured on `s7` under the same
+> `--timeout-ms 24000 --memory-limit-mb 8192`:
+>
+> | file | before | after |
+> |---|---|---|
+> | `_sanfoundry_10_ground.i_6_3_3.bpl_13` | killed at 26.6 GB, 18.2 s, **no row** | `unknown`, **161 MiB**, 1.4 s |
+> | `afagp-fail…Lasso_7-phaseTemplate` | killed | `unknown`, **3 852 MiB**, 4.3 s |
+> | `elmhes…Loop_6-phaseTemplate` | killed | `unknown`, **170 MiB**, 1.8 s |
+>
+> Each names its own numbers, e.g. *"Fourier–Motzkin's Farkas multiplier matrix
+> for 18402 constraints over 1173 variables needs 10334 MiB at 32 B/multiplier,
+> over memory_limit_mb 8192"*. The span log's run header now carries
+> `peak_rss_bytes` (`VmHWM`), so this axis is readable from the artifact instead
+> of from `dmesg`.
+>
+> Two things this did NOT change, stated so they are not read as fixed:
+> the gates bind only when a caller sets `memory_limit_mb` — with no limit the
+> matrix is as unbounded as it was — and `simplex::MAX_TABLEAU_CELLS` (4 000 000)
+> is still checked only in `Incremental::new`, so `feasible`, the constructor
+> this route calls, consults no cell bound and reached 360 million cells on the
+> file above.
+
 ### 2. Two admission screens, two policies, and one refusal 2.3% over its cap
 
 Grouping every `outcome: exhausted` span by the bound it names:
