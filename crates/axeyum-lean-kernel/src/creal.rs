@@ -2625,7 +2625,7 @@ pub struct CRealPrelude {
     /// module alone.
     ///
     /// Reached as `p.power_series.power_series_partial` and documented in
-    /// [`PowerSeriesNames`] rather than here.
+    /// `PowerSeriesNames` rather than here.
     pub power_series: PowerSeriesNames,
     /// `CReal.one_le_pow_of_one_le : ∀ x, le one x → ∀ n, le one (pow x n)` —
     /// the mirror of [`Self::pow_le_one`]: powers of a base at least `1` stay
@@ -6268,7 +6268,7 @@ pub struct CRealPrelude {
     /// module alone.
     ///
     /// Reached as `p.field_s.field_s` (`CReal.fieldS : AlgS.Field`) and
-    /// documented in [`FieldSNames`] rather than here.
+    /// documented in `FieldSNames` rather than here.
     pub field_s: FieldSNames,
     // --- `CReal.pi` (creal/pi.rs) --------------------------------------------
     /// `creal/pi.rs`'s own 14 names, moved out of this struct by

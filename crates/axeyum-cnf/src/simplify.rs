@@ -55,6 +55,7 @@ use std::time::Instant;
 #[cfg(target_arch = "wasm32")]
 use web_time::Instant;
 
+use crate::pass_work::PassWork;
 use crate::{CnfClause, CnfFormula, CnfLit, DratStep};
 
 /// What a [`simplify`] pass removed, for diagnostics and benchmark accounting.
@@ -66,13 +67,82 @@ pub struct SubsumeStats {
     pub clauses_subsumed: usize,
     /// Literals removed by self-subsuming resolution.
     pub literals_strengthened: usize,
+    /// Deterministic work the pass spent, in occurrence-list steps
+    /// ([`crate::pass_work`]'s unit, the same one `crate::bve` charges in).
+    /// Always recorded, whether or not [`SubsumeOptions::work_budget`] was set —
+    /// a budget you cannot see the spend against is a constant nobody can
+    /// calibrate.
+    pub work_spent: u64,
+    /// `true` if the pass stopped because [`SubsumeOptions::work_budget`] ran
+    /// out. Distinguishing this from "reached its own fixpoint" is the whole
+    /// point: the two look identical in a wall-clock timing and call for
+    /// opposite work.
+    pub work_exhausted: bool,
+    /// The meter reading at the **last** clause subsumed or strengthened, or the
+    /// first round's setup cost if nothing changed.
+    ///
+    /// [`Self::work_spent`] minus this is spend after the last useful action.
+    /// A budget at or above this number costs the run nothing at all, so one
+    /// sweep with the budget disabled prices every candidate budget.
+    pub work_at_last_progress: u64,
+    /// Occurrence entries examined whose clause had **already been removed**.
+    ///
+    /// This is the lazy-removal constant, measured rather than assumed. In
+    /// `crate::bve` it is large — a clause eliminated early leaves its id in
+    /// every occurrence list it was ever in, and every later scan pays for it —
+    /// which is what makes compaction a candidate fix there. Here it is
+    /// structurally zero, and this counter is how that is checked rather than
+    /// argued: see `try_subsume`'s scan loop.
+    pub dead_occurrence_entries: u64,
 }
 
 impl SubsumeStats {
     /// Whether the pass changed anything.
+    ///
+    /// Named fields rather than `self == Self::default()`: the work counters
+    /// are non-zero on every run, including one that changed nothing, and a
+    /// derived comparison would have silently turned this into "the pass ran".
     #[must_use]
     pub fn is_empty(self) -> bool {
-        self == SubsumeStats::default()
+        self.tautologies_removed == 0
+            && self.clauses_subsumed == 0
+            && self.literals_strengthened == 0
+    }
+}
+
+/// Tuning knobs for [`simplify_with_options`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct SubsumeOptions {
+    /// Deterministic **total** work budget across all rounds, in
+    /// [`SubsumeStats::work_spent`]'s unit. `None` is unbounded — the pass then
+    /// stops only at its per-round check cap, [`SUBSUME_MAX_ROUNDS`], or the
+    /// caller's wall-clock deadline, which is exactly today's behaviour.
+    ///
+    /// **This is the budget that should bind, and the per-round check cap is
+    /// not it.** That cap counts *subsumption checks* — the candidates that
+    /// survive the length and signature pre-filters — and measured 2026-09-08
+    /// on the pinned 200-file `QF_BV` parity list, the file where subsumption
+    /// costs the most spends 10.7 s of an 11.4 s inprocessing slice here
+    /// without ever reaching it. The dominant cost is the occurrence-list scan,
+    /// which the check cap does not count at all.
+    pub work_budget: Option<u64>,
+}
+
+impl SubsumeOptions {
+    /// The shipping default: unbudgeted, i.e. exactly the behaviour every
+    /// caller had before the meter existed.
+    ///
+    /// There is deliberately no compaction knob here, unlike
+    /// `crate::bve::BveOptions`. This pass cannot produce a dead occurrence
+    /// entry to compact — see `this_pass_cannot_produce_a_dead_occurrence_entry`
+    /// and `SubsumeStats::dead_occurrence_entries`, which measures the zero
+    /// rather than asserting it in prose.
+    pub const DEFAULT: Self = Self { work_budget: None };
+}
+
+impl Default for SubsumeOptions {
+    fn default() -> Self {
+        Self::DEFAULT
     }
 }
 
@@ -89,7 +159,7 @@ const SUBSUME_OCCURRENCE_LIMIT: usize = 1_000;
 /// Hard cap on subsumption rounds. Real inputs reach a fixpoint in a couple of
 /// rounds; the cap only bounds pathological inputs (soundness is unaffected —
 /// stopping early leaves a still model-preserving formula).
-const SUBSUME_MAX_ROUNDS: usize = 32;
+pub const SUBSUME_MAX_ROUNDS: usize = 32;
 
 /// One bit of the signature for a literal, keyed by **variable** (sign-agnostic).
 ///
@@ -201,10 +271,14 @@ fn try_subsume(
     occs: &[Vec<usize>],
     marks: &mut [i8],
     checks: &mut usize,
+    work: &mut PassWork,
 ) -> Outcome {
     let c = clauses[ci].as_ref().expect("live candidate");
     let c_len = c.lits.len();
     let c_sig = c.sig;
+    // Marking and unmarking each literal of the candidate: `O(|C|)` twice, paid
+    // on every candidate whether or not a witness is found.
+    work.charge(2 * c_len as u64);
     for &l in &c.lits {
         marks[l.var().index()] = if l.is_negated() { -1 } else { 1 };
     }
@@ -215,16 +289,38 @@ fn try_subsume(
     // walking both phases of each literal of `C` finds every witness exactly once.
     'outer: for &l in &c.lits {
         for sgn in [l, l.negated()] {
-            for &d_id in &occs[lit_index(sgn)] {
+            let slot = lit_index(sgn);
+            for &d_id in &occs[slot] {
+                // ONE STEP PER ENTRY EXAMINED, not per entry that survives the
+                // filters. The gap between those two is the finding: removal is
+                // lazy, so a dead id stays here forever and every later scan
+                // keeps paying for it, and the pre-existing `checks` cap counts
+                // only the entries that reach `subsume_check`.
+                //
+                // Charged per entry rather than as the list length up front
+                // because the scan can exit early on a witness, and a budget
+                // must be denominated in work done, not work available.
+                work.charge(1);
                 if d_id == ci {
                     continue;
                 }
                 let Some(d) = clauses[d_id].as_ref() else {
-                    continue; // removed earlier this round
+                    // A dead entry: the id of a clause removed earlier. Counted
+                    // rather than merely skipped, because "how many of these are
+                    // there" is the question compaction answers, and the honest
+                    // answer for THIS pass is zero — a clause is connected only
+                    // on the `Keep` arm, and the only clause a round ever
+                    // removes is the candidate it is currently examining, which
+                    // is not yet connected. The branch stays because the
+                    // invariant is a property of the schedule, not of the type.
+                    work.charge_dead(1);
+                    continue;
                 };
                 if d.lits.len() > c_len || (d.sig & !c_sig) != 0 {
                     continue;
                 }
+                // The subset test walks every literal of `d`.
+                work.charge(d.lits.len() as u64);
                 *checks += 1;
                 match subsume_check(d, marks) {
                     Check::Subsumed => {
@@ -270,6 +366,7 @@ fn subsume_round(
     clauses: &mut [Option<NormClause>],
     nvars: usize,
     marks: &mut [i8],
+    work: &mut PassWork,
     deadline: Option<Instant>,
     mut proof: Option<&mut Vec<DratStep>>,
 ) -> Option<SubsumeStats> {
@@ -296,11 +393,28 @@ fn subsume_round(
     let mut checks = 0usize;
     let budget = 64 * (total_lits + nvars) + (1 << 16);
 
+    // THIS ROUND'S SETUP, charged before any candidate is examined: one step per
+    // literal occurrence counted into `noccs` and one per occurrence-list slot
+    // allocated. Every round pays it again, because the occurrence lists are
+    // rebuilt from scratch each time — which is why the meter lives outside this
+    // function and accumulates across rounds. On the first round it is bounded
+    // by `literal_occurrences(formula) + 2 * nvars`, the same quantity `crate::bve`
+    // charges and an admission test computes from the formula; it is below that
+    // only because clauses past `SUBSUME_CLAUSE_LIMIT` are not connected.
+    work.charge((total_lits + lit_slots) as u64);
+
     for &ci in &order {
+        // The deterministic budget, checked between candidates (an in-flight
+        // candidate always finishes, so `marks` is left zeroed). Checked before
+        // the wall clock at the bottom of the loop so a run that would stop for
+        // both reasons reports the reproducible one.
+        if work.must_stop() {
+            break;
+        }
         if clauses[ci].is_none() {
             continue; // subsumed earlier this round
         }
-        match try_subsume(ci, clauses, &occs, marks, &mut checks) {
+        match try_subsume(ci, clauses, &occs, marks, &mut checks, work) {
             Outcome::Subsumed => {
                 if let Some(p) = proof.as_deref_mut() {
                     // Pure deletion. Sound unconditionally in `DRAT` — a deletion
@@ -312,6 +426,7 @@ fn subsume_round(
                 }
                 clauses[ci] = None;
                 stats.clauses_subsumed += 1;
+                work.note_progress();
             }
             Outcome::Strengthen(remove) => {
                 let before = clauses[ci].as_ref().expect("live candidate").lits.clone();
@@ -331,9 +446,13 @@ fn subsume_round(
                     p.push(DratStep::Delete(before));
                 }
                 stats.literals_strengthened += 1;
+                work.note_progress();
                 // The shrunken clause is reconsidered (and reconnected) next round.
             }
             Outcome::Keep => {
+                // Choosing the watch literal walks the clause, and connecting
+                // writes one occurrence entry.
+                work.charge(clauses[ci].as_ref().map_or(0, |c| c.lits.len() as u64) + 1);
                 connect(
                     ci,
                     clauses[ci].as_ref().expect("live candidate"),
@@ -367,7 +486,21 @@ pub fn simplify_within(
     formula: &CnfFormula,
     deadline: Option<Instant>,
 ) -> (CnfFormula, SubsumeStats) {
-    simplify_within_recorded(formula, deadline, None)
+    simplify_with_options(formula, SubsumeOptions::DEFAULT, deadline)
+}
+
+/// Like [`simplify_within`], but under an explicit [`SubsumeOptions`] — a
+/// deterministic work budget, occurrence-list compaction, or both.
+///
+/// [`SubsumeOptions::DEFAULT`] reproduces [`simplify_within`] exactly, so this
+/// is a widening of the API and not a change to it.
+#[must_use]
+pub fn simplify_with_options(
+    formula: &CnfFormula,
+    opts: SubsumeOptions,
+    deadline: Option<Instant>,
+) -> (CnfFormula, SubsumeStats) {
+    simplify_within_recorded(formula, opts, deadline, None)
 }
 
 /// Like [`simplify_within`], but records a `DRAT` derivation of every change
@@ -398,17 +531,24 @@ pub fn simplify_within(
 ///
 /// Every emitted `Add` is plain `RUP`; no step here needs `RAT` or an extension
 /// variable, so the prefix verifies against the original formula on its own.
-pub(crate) fn simplify_within_recorded(
+pub fn simplify_within_recorded(
     formula: &CnfFormula,
+    opts: SubsumeOptions,
     deadline: Option<Instant>,
     mut proof: Option<&mut Vec<DratStep>>,
 ) -> (CnfFormula, SubsumeStats) {
     let nvars = formula.variable_count();
     let mut stats = SubsumeStats::default();
+    // The meter spans every round, because every round rebuilds the occurrence
+    // lists and pays their setup again. A per-round budget would bound each
+    // round and nothing at all about the pass, which is `SUBSUME_MAX_ROUNDS`
+    // times larger. Normalization below is charged as one step per literal read.
+    let mut work = PassWork::with_setup(0, opts.work_budget);
 
     // Normalize; drop tautologies up front (they constrain nothing).
     let mut clauses: Vec<Option<NormClause>> = Vec::with_capacity(formula.clauses().len());
     for clause in formula.clauses() {
+        work.charge(clause.lits().len() as u64);
         if let Some(nc) = NormClause::from_clause(clause) {
             if let Some(p) = proof.as_deref_mut()
                 && nc.lits.len() != clause.lits().len()
@@ -428,6 +568,12 @@ pub(crate) fn simplify_within_recorded(
     // Rounds to a fixpoint: strengthening a clause can expose new subsumptions.
     let mut marks = vec![0i8; nvars];
     for _ in 0..SUBSUME_MAX_ROUNDS {
+        // Checked before the round starts, because starting one costs a full
+        // `O(|F|)` rebuild of the occurrence lists before it can subsume
+        // anything.
+        if work.must_stop() {
+            break;
+        }
         if deadline.is_some_and(|dl| Instant::now() >= dl) {
             break;
         }
@@ -435,6 +581,7 @@ pub(crate) fn simplify_within_recorded(
             &mut clauses,
             nvars,
             &mut marks,
+            &mut work,
             deadline,
             proof.as_deref_mut(),
         ) {
@@ -445,6 +592,13 @@ pub(crate) fn simplify_within_recorded(
             None => break,
         }
     }
+
+    stats.work_spent = work.spent();
+    stats.work_exhausted = work.exhausted();
+    // Seeded at the setup floor by `PassWork`, so a run that changed nothing
+    // reports "all of it after setup" rather than zero.
+    stats.work_at_last_progress = work.at_last_progress();
+    stats.dead_occurrence_entries = work.dead_entries();
 
     let mut out = CnfFormula::new(nvars);
     for c in clauses.into_iter().flatten() {
@@ -705,5 +859,274 @@ mod tests {
             out.evaluate(&all_true).unwrap(),
             "a model of the input must satisfy the simplified formula"
         );
+    }
+
+    /// A formula with many clauses that die mid-round, so their ids sit in
+    /// occurrence lists that later candidates keep re-scanning. This is the
+    /// population compaction exists for.
+    fn stale_entry_fixture() -> CnfFormula {
+        const NVARS: usize = 10;
+        let mut f = CnfFormula::new(NVARS);
+        // Every long clause here is subsumed by a short one, so the long ones
+        // die while their neighbours are still being examined.
+        for i in 0..NVARS {
+            f.add_clause(clause(&[p(i), n((i + 1) % NVARS)])).unwrap();
+        }
+        for i in 0..NVARS {
+            for j in 0..NVARS {
+                if i != j {
+                    f.add_clause(clause(&[p(i), n((i + 1) % NVARS), p(j)]))
+                        .unwrap();
+                }
+            }
+        }
+        f
+    }
+
+    /// Every charge site, on a formula small enough to enumerate by hand.
+    ///
+    /// The expectation is a SUM OF NAMED TERMS, not a total: each line is one
+    /// place the pass touches memory proportionally to formula size, so
+    /// deleting any single charge — including the occurrence-entry charge this
+    /// lane exists for — moves the number and fails this test. A test asserting
+    /// only `work_spent > setup` would not: the marking and connect charges
+    /// alone satisfy that inequality, which is exactly how the sibling lane's
+    /// first scan-charge guard survived its own mutation.
+    ///
+    /// The fixture: `(a ∨ b)` and `(a ∨ b ∨ c)` over three variables, so
+    /// `SUBSUME_CLAUSE_LIMIT` and the occurrence cap are both far away and the
+    /// only interesting event is the second clause being subsumed by the first.
+    #[test]
+    fn every_occurrence_step_is_charged_exactly_once() {
+        let f = formula(3, &[&[p(0), p(1)], &[p(0), p(1), p(2)]]);
+        let (_, stats) = simplify(&f);
+        assert_eq!(stats.clauses_subsumed, 1, "the fixture must subsume");
+
+        let expected = 2 + 3   // normalization reads 2 then 3 literals
+            + (5 + 6)          // round 1 setup: 5 literal occurrences, 6 lit slots
+            + 2 * 2            // (a v b) marked and unmarked
+            + (2 + 1)          // ...kept: 2 literals walked for the watch, 1 entry written
+            + 2 * 3            // (a v b v c) marked and unmarked
+            + 1                // ONE occurrence entry examined: the scan charge
+            + 2                // the subset test walks (a v b)'s two literals
+            + (2 + 6)          // round 2 setup: 2 literal occurrences, 6 lit slots
+            + 2 * 2            // (a v b) marked and unmarked again
+            + (2 + 1); // ...and connected again
+        assert_eq!(
+            stats.work_spent, expected,
+            "every step the pass takes must be charged exactly once"
+        );
+    }
+
+    /// One unbudgeted run prices every candidate budget: a budget at the
+    /// last-progress reading costs the run **nothing at all**.
+    ///
+    /// This is the property the corpus measurement is derived from, so it is
+    /// asserted rather than assumed. It is also the guard on `note_progress`:
+    /// delete the call in the `Subsumed` arm and the recorded reading falls back
+    /// to an earlier one, which truncates the pass and changes the output
+    /// formula, failing here.
+    #[test]
+    fn a_budget_at_the_last_progress_reading_loses_nothing() {
+        let f = stale_entry_fixture();
+        let (unbudgeted, free) = simplify(&f);
+        assert!(free.clauses_subsumed > 0, "the fixture must subsume");
+        assert!(
+            !free.work_exhausted,
+            "the unbudgeted run must not stop early"
+        );
+        assert!(
+            free.work_at_last_progress < free.work_spent,
+            "the fixture must waste work after its last useful action"
+        );
+
+        let (bounded, capped) = simplify_with_options(
+            &f,
+            SubsumeOptions {
+                work_budget: Some(free.work_at_last_progress),
+            },
+            None,
+        );
+        assert!(capped.work_exhausted, "the budget must have bound");
+        assert_eq!(capped.clauses_subsumed, free.clauses_subsumed);
+        assert_eq!(capped.literals_strengthened, free.literals_strengthened);
+        assert_eq!(
+            bounded.clauses(),
+            unbudgeted.clauses(),
+            "a budget at the last-progress reading must cost the run nothing"
+        );
+    }
+
+    /// A budget below that reading stops the pass, and the partial result is
+    /// still logically equivalent to the input.
+    ///
+    /// Mutation control for the `work.must_stop()` check in `subsume_round`'s
+    /// candidate loop: delete it and the pass runs to its fixpoint, so
+    /// `work_exhausted` is false and `work_spent` overruns the budget.
+    #[test]
+    fn the_work_budget_stops_the_pass_and_keeps_the_result_equivalent() {
+        const NVARS: usize = 6;
+        let mut f = CnfFormula::new(NVARS);
+        for i in 0..NVARS {
+            f.add_clause(clause(&[p(i)])).unwrap();
+            for j in 0..NVARS {
+                f.add_clause(clause(&[p(i), p(j), n((i + j) % NVARS)]))
+                    .unwrap();
+            }
+        }
+        let (_, free) = simplify(&f);
+        let limit = free.work_spent / 4;
+        assert!(limit > 0);
+
+        let (out, stats) = simplify_with_options(
+            &f,
+            SubsumeOptions {
+                work_budget: Some(limit),
+            },
+            None,
+        );
+        assert!(stats.work_exhausted, "the budget must have bound");
+        assert!(
+            stats.work_spent < free.work_spent,
+            "a bound pass must spend less than a free one: {} vs {}",
+            stats.work_spent,
+            free.work_spent
+        );
+        equivalent(&f, &out, NVARS);
+    }
+
+    /// **This pass cannot produce a dead occurrence entry**, so compaction has
+    /// nothing to remove here.
+    ///
+    /// That is a property of the schedule, not of the fixture. Occurrence lists
+    /// are rebuilt from the live clauses at the top of every round, and the only
+    /// clause a round ever removes is the candidate it is currently examining —
+    /// which is connected on the `Keep` arm, i.e. only when it is *not* removed.
+    /// So no entry in any list can ever refer to a removed clause.
+    ///
+    /// The claim is asserted through the counter rather than argued in a
+    /// comment, on a fixture that subsumes dozens of clauses and would show a large
+    /// count if the invariant were false. It is the negative half of the
+    /// compaction question: `crate::bve`'s lists live for the whole pass and its
+    /// eliminations kill clauses sitting in many of them, which is where the
+    /// dead-id constant actually is.
+    #[test]
+    fn this_pass_cannot_produce_a_dead_occurrence_entry() {
+        let f = stale_entry_fixture();
+        let (_, stats) = simplify(&f);
+        assert!(
+            stats.clauses_subsumed >= 50,
+            "the fixture must remove many clauses mid-round: {}",
+            stats.clauses_subsumed
+        );
+        assert_eq!(
+            stats.dead_occurrence_entries, 0,
+            "a connected clause is never removed, so no scan can meet a dead id"
+        );
+    }
+
+    /// The default options are today's behaviour, stated as a test rather than
+    /// as a comment: an unbudgeted, non-compacting run must never report a
+    /// budget stop.
+    #[test]
+    fn the_default_options_never_stop_the_pass() {
+        assert_eq!(SubsumeOptions::DEFAULT.work_budget, None);
+        let (_, stats) = simplify(&stale_entry_fixture());
+        assert!(!stats.work_exhausted);
+        assert!(stats.work_spent > 0, "the meter must run even unbudgeted");
+    }
+
+    /// The budget binds WITHIN a round, not only between rounds.
+    ///
+    /// This guard was added because its mutation **survived**: deleting the
+    /// `must_stop()` check in the candidate loop left every other test green,
+    /// since the round loop checks too and the budget still appeared to bind.
+    /// It does not: the first round always starts, so with only the round-level
+    /// check a single round overruns the budget by however much that round
+    /// costs — unbounded on a large formula, which is the entire population a
+    /// budget exists for.
+    ///
+    /// The fixture reaches its fixpoint in ONE round (no clause subsumes or
+    /// strengthens another, so `subsume_round` reports no change and the loop
+    /// stops), which makes the round-level check unable to stop anything at
+    /// all. A budget at a quarter of the unbudgeted spend must therefore be
+    /// enforced by the candidate loop or not at all.
+    #[test]
+    fn the_budget_binds_within_a_round_and_not_only_between_rounds() {
+        const NVARS: usize = 400;
+        let mut f = CnfFormula::new(NVARS);
+        for i in 0..NVARS {
+            f.add_clause(clause(&[p(i), p((i + 1) % NVARS)])).unwrap();
+        }
+        let (_, free) = simplify(&f);
+        assert_eq!(
+            free.clauses_subsumed, 0,
+            "the fixture must reach its fixpoint in one round"
+        );
+        assert_eq!(free.literals_strengthened, 0);
+
+        let limit = free.work_spent / 4;
+        assert!(limit > 0);
+        let (_, capped) = simplify_with_options(
+            &f,
+            SubsumeOptions {
+                work_budget: Some(limit),
+            },
+            None,
+        );
+        assert!(capped.work_exhausted, "the budget must have bound");
+        assert!(
+            capped.work_spent < free.work_spent / 2,
+            "a budget enforced only between rounds lets the single round run to \
+             completion: spent {} against an unbudgeted {}",
+            capped.work_spent,
+            free.work_spent
+        );
+    }
+
+    /// A dead occurrence entry IS counted when one is reachable.
+    ///
+    /// The pass cannot produce one (see
+    /// `this_pass_cannot_produce_a_dead_occurrence_entry`), which makes that
+    /// invariant test vacuous on its own: a counter hard-wired to zero would
+    /// satisfy it. This plants one directly — a connected id whose clause slot
+    /// is `None`, the state the scan's `else` branch exists for — and requires
+    /// the counter to see it.
+    ///
+    /// So the pair says both halves: the counting path works, and the pass
+    /// never exercises it. Without this one, "subsumption reports zero dead
+    /// entries" would be a statement about the instrument rather than about the
+    /// pass.
+    #[test]
+    fn a_dead_occurrence_entry_is_counted_when_one_is_reachable() {
+        let nvars = 4;
+        let live = NormClause::from_clause(&clause(&[p(0), p(1)])).expect("not a tautology");
+        let candidate = NormClause::from_clause(&clause(&[p(2), p(3)])).expect("not a tautology");
+        // Slot 0 is dead; slot 1 is the candidate being examined.
+        let clauses = vec![None, Some(candidate)];
+        let mut occs: Vec<Vec<usize>> = vec![Vec::new(); 2 * nvars];
+        // Connect the DEAD clause id on a literal the candidate carries, so the
+        // candidate's scan reaches it.
+        occs[lit_index(p(2))].push(0);
+        drop(live);
+
+        let mut marks = vec![0i8; nvars];
+        let mut checks = 0usize;
+        let mut work = PassWork::with_setup(0, None);
+        let outcome = try_subsume(1, &clauses, &occs, &mut marks, &mut checks, &mut work);
+        assert!(
+            matches!(outcome, Outcome::Keep),
+            "a dead entry must not decide anything"
+        );
+        assert_eq!(
+            work.dead_entries(),
+            1,
+            "the scan must count the entry it paid for and got nothing from"
+        );
+        assert_eq!(
+            checks, 0,
+            "and a dead entry must never reach the subsumption check"
+        );
+        assert_eq!(marks, vec![0i8; nvars], "marks must be left zeroed");
     }
 }

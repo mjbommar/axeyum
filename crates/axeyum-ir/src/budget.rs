@@ -18,15 +18,15 @@
 //!
 //! # The model, in one paragraph
 //!
-//! A pass is budgeted in **its own natural unit of work** -- a [`WorkMeter`]
+//! A pass is budgeted in **its own natural unit of work** -- a [`crate::budget::WorkMeter`]
 //! counting ticks, resolution attempts, occurrence-list steps, rewrite
-//! applications, whatever that pass actually spends. A [`Budget`] is an
+//! applications, whatever that pass actually spends. A [`crate::budget::Budget`] is an
 //! absolute stop value in that meter, so a check is one `u64` comparison and
-//! never a syscall. An [`EffortPolicy`] computes the stop value as a *per-mille
+//! never a syscall. An [`crate::budget::EffortPolicy`] computes the stop value as a *per-mille
 //! slice of the work some **other** meter has done since this pass last ran*,
-//! so a pass can never outgrow the thing it is helping. An [`EffortAccount`]
+//! so a pass can never outgrow the thing it is helping. An [`crate::budget::EffortAccount`]
 //! owns the watermark, the accumulate-and-delay gate, the failure backoff, and
-//! the spend attribution for one pass. [`Delayed`] wraps a [`BudgetedPass`] in
+//! the spend attribution for one pass. [`crate::budget::Delayed`] wraps a [`crate::budget::BudgetedPass`] in
 //! that account so the delay logic is a policy, not an `if` inside each pass.
 //!
 //! This is the design CaDiCaL and Kissat converged on (`kimits.h:135-170`,
@@ -34,7 +34,7 @@
 //! `docs/research/02-ecosystems/inprocessing-scheduling-2026-09/cadical-kissat-budget-model.md`.
 //! Their `<pass>effort` defaults are 100 per mille for the major passes, and an
 //! independent empirical study (Wotzlaw et al., arXiv:1310.4756) landed on the
-//! same 10 % in wall-clock terms -- hence [`EffortPolicy::MAJOR_PASS`].
+//! same 10 % in wall-clock terms -- hence [`crate::budget::EffortPolicy::MAJOR_PASS`].
 //!
 //! # Determinism rules this module obeys, and how they are enforced
 //!
@@ -44,8 +44,8 @@
 //!    so a schedule boundary computed that way can differ by one round between
 //!    two hosts -- which would silently break the determinism this module
 //!    exists to provide. Every computation here is integer-only, including the
-//!    growth ladder ([`Growth`]) and the success-rate test
-//!    ([`EffortAccount::record_success_rate`]), which cross-multiplies instead
+//!    growth ladder ([`crate::budget::Growth`]) and the success-rate test
+//!    ([`crate::budget::EffortAccount::record_success_rate`]), which cross-multiplies instead
 //!    of comparing a ratio against a fractional constant.
 //! 3. **No allocation on a decision path**, so a budget check cannot fail and
 //!    cannot perturb the thing it measures.

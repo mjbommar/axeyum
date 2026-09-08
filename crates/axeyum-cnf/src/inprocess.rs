@@ -14,7 +14,7 @@
 //! standing, explicitly as *not run* rather than ruled out: Kissat's `probe`
 //! umbrella shrinks the formula its propagation runs over, and
 //! [`crate::solve_with_drat_proof`] runs none of this crate's own [`crate::vivify`],
-//! [`crate::simplify`] or [`crate::bve`].
+//! [`crate::simplify`] or `crate::bve`.
 //!
 //! [bench]: https://github.com/../docs/research/12-performance/bench-boolean-core-2026-09-07.md
 //!
@@ -48,7 +48,7 @@
 //! |---|---|---|
 //! | [`crate::simplify`] | model-preserving | `Delete` per subsumed clause; `Add`+`Delete` per strengthening |
 //! | [`crate::vivify`] | model-preserving | `Add`+`Delete` per strengthened clause |
-//! | [`crate::bve`] | equisatisfiable | `Add` per resolvent, `Delete` per pivot clause |
+//! | `crate::bve` | equisatisfiable | `Add` per resolvent, `Delete` per pivot clause |
 //!
 //! BVE is the only one that is not model-preserving, and it is also the only one
 //! that makes the proof *grow*: it adds resolvents. The others only ever shrink
@@ -73,7 +73,7 @@ use std::time::Instant;
 use web_time::Instant;
 
 use crate::bve::{BveOptions, BveStats, Reconstruction, eliminate_variables_within_recorded};
-use crate::simplify::{SubsumeStats, simplify_within_recorded};
+use crate::simplify::{SubsumeOptions, SubsumeStats, simplify_within_recorded};
 use crate::vivify::{VivifyOptions, VivifyStats, vivify_within};
 use crate::{CnfFormula, DratSink, DratStep, ProofSinkError};
 
@@ -91,9 +91,11 @@ pub struct InprocessOptions {
     pub subsume: bool,
     /// Clause vivification ([`crate::vivify`]). Model-preserving.
     pub vivify: bool,
-    /// Bounded variable elimination ([`crate::bve`]). Equisatisfiable; a `sat`
+    /// Bounded variable elimination (`crate::bve`). Equisatisfiable; a `sat`
     /// model is lifted back through [`InprocessOutcome::reconstruction`].
     pub bve: bool,
+    /// Tuning for the subsumption pass (ignored unless [`Self::subsume`]).
+    pub subsume_options: SubsumeOptions,
     /// Tuning for the vivification pass (ignored unless [`Self::vivify`]).
     pub vivify_options: VivifyOptions,
     /// Tuning for the elimination pass (ignored unless [`Self::bve`]).
@@ -114,6 +116,7 @@ impl InprocessOptions {
         subsume: false,
         vivify: false,
         bve: false,
+        subsume_options: SubsumeOptions::DEFAULT,
         vivify_options: VivifyOptions::DEFAULT,
         bve_options: BveOptions::DEFAULT,
         max_variables: DEFAULT_MAX_VARIABLES,
@@ -122,8 +125,19 @@ impl InprocessOptions {
 
     /// Subsumption then bounded variable elimination — the two passes that
     /// remove clauses and variables, which is what the propagation-volume
-    /// hypothesis is about. Vivification is **off**: it shortens clauses without
-    /// removing propagation targets, and it is the most expensive of the three.
+    /// hypothesis is about. Vivification is **off** here so that this and
+    /// [`Self::preprocess_full`] stay two distinguishable arms for measurement.
+    ///
+    /// The reason originally given for leaving it off — "it shortens clauses
+    /// without removing propagation targets, and it is the most expensive of the
+    /// three" — was **measured false on the `QF_BV` parity corpus** on
+    /// 2026-09-08 and should not be repeated. Vivification cost 2.7 s across the
+    /// 200-file list and bought 8.5 s less BVE, more variables eliminated, and a
+    /// better literal ratio; on four files it turned an 11,000 ms BVE into a
+    /// 27 ms one by shortening the clauses whose occurrence lists BVE scans.
+    /// The shipping SMT path enables it by default with inprocessing
+    /// (`SolverConfig::cnf_vivify`). See
+    /// `docs/research/03-measurements/inprocessing-admission-2026-09-08.md`.
     #[must_use]
     pub const fn preprocess() -> Self {
         Self {
@@ -273,8 +287,12 @@ pub fn inprocess_into(
     stats.ran = true;
 
     if options.subsume {
-        let (reduced, subsume_stats) =
-            simplify_within_recorded(&current, deadline, Some(&mut steps));
+        let (reduced, subsume_stats) = simplify_within_recorded(
+            &current,
+            options.subsume_options,
+            deadline,
+            Some(&mut steps),
+        );
         stats.subsume = subsume_stats;
         current = reduced;
         stats.proof_steps += flush(&mut steps, sink)?;

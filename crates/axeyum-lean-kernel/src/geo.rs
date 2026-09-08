@@ -11,7 +11,7 @@
 //!
 //! An incidence structure is two carriers and a relation between them, plus
 //! Hilbert's three incidence axioms. It is declared through the same
-//! [`declare_record`] spine every algebraic structure in this kernel uses
+//! `declare_record` spine every algebraic structure in this kernel uses
 //! (ADR-1578), at `Sort 2`, with the ADR-1595 setoid discipline: both
 //! carriers come with their **own** equivalence relation and the incidence
 //! relation carries a congruence field for each. Nothing here uses `funext`
@@ -197,7 +197,7 @@ pub const TRIANGLE: usize = 20;
 /// The number of fields the record carries.
 pub const FIELD_COUNT: usize = 21;
 
-/// The selector suffixes, in field order. Paired against [`declare_record`]'s
+/// The selector suffixes, in field order. Paired against `declare_record`'s
 /// own output in [`build_geo_prelude`] so this file's two descriptions of one
 /// record cannot drift apart.
 pub(crate) const FIELD_SUFFIXES: [&str; FIELD_COUNT] = [
@@ -779,8 +779,8 @@ pub(crate) fn intern(kernel: &mut Kernel, cpoint: CPointPrelude) -> GeoPrelude {
 /// # Panics
 ///
 /// Panics if the field list has drifted from [`FIELD_COUNT`] or if
-/// [`declare_record`] returns selectors under names other than the ones
-/// [`intern`] pre-computed — the two internal descriptions of one record.
+/// `declare_record` returns selectors under names other than the ones
+/// `intern` pre-computed — the two internal descriptions of one record.
 pub fn build_geo_prelude(kernel: &mut Kernel) -> Result<GeoPrelude, KernelError> {
     let cpoint = crate::build_cpoint_prelude(kernel)?;
     let p = intern(kernel, cpoint);

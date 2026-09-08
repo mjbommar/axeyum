@@ -32,6 +32,33 @@
 //! case. Occurrence lists are transient and rebuilt per call (correctness-first);
 //! per-literal incremental count maintenance is a later refinement.
 //!
+//! # The work unit, and why the resolution cap is not it
+//!
+//! [`BveStats::work_spent`] counts **occurrence-list steps**: one per
+//! occurrence-list entry examined, per literal merged into a candidate
+//! resolvent, per resolvent compared during deduplication, and per occurrence
+//! entry written when a resolvent is connected. It is the unit the reference
+//! solvers budget elimination in, and it is charged everywhere the pass touches
+//! memory proportionally to formula size.
+//!
+//! It exists because the pre-existing `max_rounds · 30 · (literals + variables)`
+//! cap counts only *resolution attempts* — the `pos × neg` pairs inside
+//! `try_eliminate` — and that is not where the time goes. Every variable popped
+//! from the touched queue pays two full occurrence-list scans before a single
+//! resolution is attempted, including the variables that are then rejected by a
+//! bound, and a variable is re-queued once per neighbour of every later
+//! elimination. Measured 2026-09-08 over the pinned 200-file `QF_BV` parity
+//! list: 16 files spent their entire granted wall slice inside BVE without ever
+//! reaching the resolution cap, 189 s of the corpus's 342 s of inprocessing.
+//! Budgeting the counter that was already bounded could not have stopped that;
+//! budgeting this one does.
+//!
+//! Two properties, both load-bearing. It is **deterministic** — a fixed formula
+//! and fixed options give a fixed step count on any host, which a
+//! `deadline: Option<Instant>` cannot — and it is **monotone in the work that
+//! actually costs**, so a budget in it is a bound on the pass rather than a
+//! bound on one component of it.
+//!
 //! # `DRAT` accounting
 //!
 //! [`eliminate_variables`] / [`eliminate_variables_within`] emit nothing.
@@ -52,6 +79,7 @@ use std::time::Instant;
 #[cfg(target_arch = "wasm32")]
 use web_time::Instant;
 
+use crate::pass_work::{PassWork, compact_dead_entries};
 use crate::simplify::NormClause;
 use crate::{CnfClause, CnfFormula, CnfLit, CnfVar, DratStep};
 
@@ -71,6 +99,35 @@ pub struct BveOptions {
     /// fixpoint, bounded by roughly `max_rounds · 30 · (literals + variables)`
     /// total resolution attempts (the near-linear guarantee's safety net).
     pub max_rounds: usize,
+    /// Deterministic **total** work budget in [`BveStats::work_spent`]'s unit
+    /// (occurrence-list steps, see [`crate::bve`]'s "the work unit" section).
+    /// `None` is unbounded — the pass then stops only at [`Self::max_rounds`]'s
+    /// resolution cap or the caller's wall-clock deadline.
+    ///
+    /// **This is the budget that should bind, and the resolution cap is not
+    /// it.** `max_rounds` bounds *resolution attempts*, which measured 2026-09-08
+    /// are a minority of what BVE actually spends: the dominant cost is the
+    /// occurrence-list scan in `live_ids`, which the resolution cap does not
+    /// count at all. On the pinned 200-file `QF_BV` parity list, 16 files spent
+    /// their entire granted wall slice inside a BVE that never reached the
+    /// resolution cap — 55 % of all inprocessing cost on 8 % of the files. A
+    /// budget in this unit is what stops that, and unlike a deadline it is
+    /// deterministic (the same formula gives the same cutoff on any host).
+    pub work_budget: Option<u64>,
+    /// Drop lazily-removed clause ids from an occurrence list once at least
+    /// half of it is dead ([`crate::pass_work`]'s `compact_dead_entries`).
+    ///
+    /// Removal in this pass is lazy: an eliminated clause's id stays in every
+    /// occurrence list it was ever in, and every later scan of that list pays
+    /// for it again. [`Self::work_budget`] *hides* that constant by stopping the
+    /// pass sooner; this removes it. The two are independent knobs on purpose —
+    /// they are different fixes and one is not a substitute for the other.
+    ///
+    /// With no budget, compaction cannot change which variables are eliminated
+    /// (the live-id sets it returns are identical), only what they cost. With a
+    /// budget the two interact, because a cheaper scan leaves more budget for
+    /// later variables.
+    pub compact_occurrences: bool,
 }
 
 impl BveOptions {
@@ -82,6 +139,8 @@ impl BveOptions {
         growth: 0,
         occurrence_limit: 100,
         max_rounds: 4,
+        work_budget: None,
+        compact_occurrences: false,
     };
 }
 
@@ -107,6 +166,34 @@ pub struct BveStats {
     /// `1` if any variable was eliminated, else `0` (the schedule runs to a single
     /// fixpoint drain; retained for source compatibility with the round-based API).
     pub rounds: usize,
+    /// Deterministic work the pass spent, in occurrence-list steps (see the
+    /// module's "the work unit" section). Always recorded, whether or not
+    /// [`BveOptions::work_budget`] was set — a budget you cannot see the spend
+    /// against is a constant nobody can calibrate.
+    pub work_spent: u64,
+    /// `true` if the pass stopped because [`BveOptions::work_budget`] ran out.
+    /// Distinguishing this from "reached its own fixpoint" is the whole point:
+    /// the two look identical in a wall-clock timing and call for opposite work.
+    pub work_exhausted: bool,
+    /// The meter reading at the moment of the **last** successful elimination,
+    /// or the setup cost if nothing was eliminated.
+    ///
+    /// [`Self::work_spent`] minus this is work the pass spent after its last
+    /// useful action — pure waste, and the exact quantity a budget is trying to
+    /// avoid. It is what makes [`BveOptions::work_budget`] a measured constant
+    /// rather than a guess: a budget at or above this number costs the run
+    /// nothing at all, and one below it can be priced in eliminations lost.
+    pub work_at_last_elimination: u64,
+    /// Occurrence entries examined whose clause had **already been removed**.
+    ///
+    /// Removal here is lazy, so an eliminated clause's id stays in every
+    /// occurrence list it was ever in and every later scan pays for it again.
+    /// This counter is that cost, measured: it is a *subset* of
+    /// [`Self::work_spent`], so `dead / spent` is the fraction of the pass's
+    /// scanning that [`BveOptions::compact_occurrences`] can delete. Without it
+    /// "budgeting hides the constant, compaction removes it" is an argument
+    /// rather than a number.
+    pub dead_occurrence_entries: u64,
 }
 
 impl BveStats {
@@ -175,6 +262,25 @@ pub struct BveOutcome {
     pub stats: BveStats,
 }
 
+impl BveOutcome {
+    /// The outcome of **not running** the pass: `formula` verbatim, an identity
+    /// reconstruction, and all-zero stats.
+    ///
+    /// A caller whose admission test declines BVE needs this rather than a
+    /// zero-budget call, because a zero-budget call still builds the occurrence
+    /// lists — and that `O(|F|)` setup is exactly the cost the admission test
+    /// declined to pay. Returning it from here keeps "did not run" a single
+    /// value the caller cannot get subtly wrong.
+    #[must_use]
+    pub fn skipped(formula: &CnfFormula) -> Self {
+        Self {
+            formula: formula.clone(),
+            reconstruction: Reconstruction::default(),
+            stats: BveStats::default(),
+        }
+    }
+}
+
 fn lit_true(lit: CnfLit, asg: &[bool]) -> bool {
     let v = asg[lit.var().index()];
     if lit.is_negated() { !v } else { v }
@@ -200,20 +306,50 @@ struct Eliminator {
     eliminated: Vec<bool>,
     /// Reverse-replay records in elimination order.
     records: Vec<ElimRecord>,
-    /// Total resolution attempts so far (bounded by the work budget).
+    /// Total resolution attempts so far (bounded by the `max_rounds` cap).
     resolutions: usize,
+    /// Occurrence-list steps spent so far, the budget bounding them, and the
+    /// reading at the last elimination — the unit [`BveOptions::work_budget`] is
+    /// denominated in. See the module's "the work unit" section for why this
+    /// and not `resolutions`, and [`crate::pass_work`] for why the type is
+    /// shared with subsumption rather than written twice.
+    work: PassWork,
+    /// Whether to drop lazily-removed clause ids from an occurrence list once
+    /// half of it is dead ([`BveOptions::compact_occurrences`]).
+    compact: bool,
 }
 
 impl Eliminator {
     /// Live clause ids containing `lit` (skipping lazily-removed clauses). A clause
     /// is immutable once created, so membership in `occ[lit]` never goes stale
     /// except by removal.
-    fn live_ids(&self, lit: CnfLit) -> Vec<usize> {
-        self.occ[lit_index(lit)]
+    ///
+    /// Charges one work step per occurrence entry **examined**, not per entry
+    /// returned. The gap between those two is the point: removal is lazy, so a
+    /// list keeps every dead id forever and this scan keeps paying for them.
+    fn live_ids(&mut self, lit: CnfLit) -> Vec<usize> {
+        let slot = lit_index(lit);
+        let entries = self.occ[slot].len();
+        self.work.charge(entries as u64);
+        let ids: Vec<usize> = self.occ[slot]
             .iter()
             .copied()
             .filter(|&ci| self.clauses[ci].is_some())
-            .collect()
+            .collect();
+        // The entries this scan paid for and got nothing from: the size of the
+        // lazy-removal constant, which is what decides whether compaction is
+        // worth anything here.
+        self.work.charge_dead((entries - ids.len()) as u64);
+        if self.compact {
+            // Removing the dead ids is what a budget cannot do: the budget
+            // stops the pass sooner, this makes every later scan of this list
+            // cheaper. Sound because a `None` clause slot is never refilled.
+            let clauses = &self.clauses;
+            compact_dead_entries(&mut self.occ[slot], ids.len(), &mut self.work, |ci| {
+                clauses[ci].is_some()
+            });
+        }
+        ids
     }
 
     /// Re-queues `var` for reconsideration unless it is eliminated or already queued.
@@ -255,6 +391,11 @@ impl Eliminator {
                 self.resolutions += 1;
                 let p = self.clauses[pi].as_ref().expect("live");
                 let n = self.clauses[ni].as_ref().expect("live");
+                // The merge walks both parents and the dedup scan compares
+                // against every resolvent kept so far; both are charged, because
+                // both are `O(size)` work this pass does per attempt.
+                self.work
+                    .charge((p.len() + n.len() + resolvents.len()) as u64);
                 let mut merged: Vec<CnfLit> = p.iter().copied().filter(|&l| l != pos_lit).collect();
                 merged.extend(n.iter().copied().filter(|&l| l != neg_lit));
                 match NormClause::from_clause(&CnfClause::new(merged)) {
@@ -340,6 +481,7 @@ impl Eliminator {
         // Append resolvents, connecting their literals and noting their variables.
         for r in resolvents {
             let new_id = self.clauses.len();
+            self.work.charge(r.len() as u64);
             for &l in &r {
                 self.occ[lit_index(l)].push(new_id);
                 neighbours.push(l.var().index());
@@ -404,7 +546,7 @@ pub fn eliminate_variables_within(
 /// *equisatisfiable*. The model direction is carried by the returned
 /// [`Reconstruction`]; the proof only has to justify the `unsat` direction, and
 /// for that the resolvents are ordinary resolution steps.
-pub(crate) fn eliminate_variables_within_recorded(
+pub fn eliminate_variables_within_recorded(
     formula: &CnfFormula,
     opts: BveOptions,
     deadline: Option<Instant>,
@@ -446,6 +588,12 @@ pub(crate) fn eliminate_variables_within_recorded(
         }
     }
 
+    // The occurrence lists are now built, so this is the floor the pass has
+    // already paid for existing — one step per literal occurrence connected plus
+    // one per occurrence-list slot. A caller's admission test computes the same
+    // number from the formula before deciding to call at all.
+    let setup_work = (total_lits + 2 * nvars) as u64;
+
     let mut elim = Eliminator {
         clauses,
         occ,
@@ -454,6 +602,10 @@ pub(crate) fn eliminate_variables_within_recorded(
         eliminated: vec![false; nvars],
         records: Vec::new(),
         resolutions: 0,
+        // Setup charged up front; see `PassWork::with_setup` for why, and why
+        // the last-progress reading starts there too.
+        work: PassWork::with_setup(setup_work, opts.work_budget),
+        compact: opts.compact_occurrences,
     };
 
     // Seed the schedule with every occurring variable, fewest occurrences first
@@ -477,6 +629,12 @@ pub(crate) fn eliminate_variables_within_recorded(
         if elim.resolutions > budget {
             break; // bounded work: stop (the partial result is still equisatisfiable)
         }
+        // The deterministic budget, checked before the wall clock so that a run
+        // which would stop for both reasons reports the reproducible one. The
+        // partial result is equisatisfiable either way.
+        if elim.work.must_stop() {
+            break;
+        }
         // Per-variable deadline poll (`Instant::now()` is tens of ns; a single
         // `try_eliminate` is bounded by `occurrence_limit²`, so overshoot is tiny).
         if deadline.is_some_and(|dl| Instant::now() >= dl) {
@@ -485,9 +643,18 @@ pub(crate) fn eliminate_variables_within_recorded(
         if elim.try_eliminate(x, opts, &mut stats, proof.as_deref_mut()) {
             elim.eliminated[x] = true;
             eliminated_any = true;
+            elim.work.note_progress();
         }
     }
     stats.rounds = usize::from(eliminated_any);
+    stats.work_spent = elim.work.spent();
+    stats.work_exhausted = elim.work.exhausted();
+    // On a run that eliminated nothing this is the setup floor, not zero: a
+    // reader comparing it against `work_spent` is asking "how much of the spend
+    // came after the last useful action", and the answer is "all of it after
+    // setup". `PassWork` seeds it there so both cases read the same field.
+    stats.work_at_last_elimination = elim.work.at_last_progress();
+    stats.dead_occurrence_entries = elim.work.dead_entries();
 
     // Rebuild the reduced formula from the live clauses.
     let mut out = CnfFormula::new(nvars);
@@ -771,5 +938,303 @@ mod tests {
                 }
             }
         }
+    }
+
+    /// A formula with many independently eliminable definition gates: `k` copies
+    /// of `(¬x∨a)(¬x∨b)(x∨¬a∨¬b)`, chained so eliminating one re-queues the
+    /// next. Big enough that BVE spends real occurrence-list work on it.
+    fn gate_chain(gates: usize) -> CnfFormula {
+        let mut formula = CnfFormula::new(3 * gates + 1);
+        for i in 0..gates {
+            let gate = 3 * i;
+            let left = 3 * i + 1;
+            let right = 3 * i + 2;
+            formula
+                .add_clause(CnfClause::new(vec![n(gate), p(left)]))
+                .unwrap();
+            formula
+                .add_clause(CnfClause::new(vec![n(gate), p(right)]))
+                .unwrap();
+            formula
+                .add_clause(CnfClause::new(vec![p(gate), n(left), n(right)]))
+                .unwrap();
+            // Tie consecutive gates together so the touched queue keeps moving.
+            formula
+                .add_clause(CnfClause::new(vec![n(left), p(3 * (i + 1))]))
+                .unwrap();
+        }
+        formula
+    }
+
+    /// Three hub variables, each with `copies` positive and `copies` negative
+    /// occurrences, so every one of them is rejected by `occurrence_limit`
+    /// (100) after `live_ids` has walked both lists and before any resolvent is
+    /// merged. Post-setup work on this formula is occurrence scanning and
+    /// nothing else, which is what makes the two tests using it exact.
+    fn hub_formula(copies: usize) -> CnfFormula {
+        let mut formula = CnfFormula::new(3);
+        for _ in 0..copies {
+            formula
+                .add_clause(CnfClause::new(vec![p(0), p(1), p(2)]))
+                .unwrap();
+            formula
+                .add_clause(CnfClause::new(vec![n(0), n(1), n(2)]))
+                .unwrap();
+        }
+        formula
+    }
+
+    /// Hub copies per polarity. Comfortably above `occurrence_limit` (100), so
+    /// a change to that default cannot silently make the hub tests vacuous.
+    const HUB_COPIES: usize = 150;
+
+    /// The meter is not a restatement of the resolution cap.
+    ///
+    /// `resolutions` counts only the `pos × neg` pairs inside `try_eliminate`.
+    /// The occurrence-list scan every popped variable pays first — including the
+    /// ones a bound then rejects — is invisible to it. If the two counters moved
+    /// together there would be no reason for this budget to exist, so the gap is
+    /// asserted directly rather than taken from the module docs.
+    #[test]
+    fn work_counts_occurrence_scanning_that_the_resolution_cap_never_sees() {
+        let f = gate_chain(60);
+        let out = eliminate_variables(&f, BveOptions::default());
+        let literals: usize = f.clauses().iter().map(|c| c.lits().len()).sum();
+        let setup = (literals + 2 * f.variable_count()) as u64;
+        assert!(
+            out.stats.work_spent > setup,
+            "work must include post-setup scanning: spent {} vs setup {setup}",
+            out.stats.work_spent
+        );
+        // Positive control: the fixture is not trivially rejected by a bound.
+        assert!(
+            out.stats.variables_eliminated > 0,
+            "fixture must give BVE something to do"
+        );
+        assert!(
+            !out.stats.work_exhausted,
+            "an unbudgeted run can never report the budget as exhausted"
+        );
+    }
+
+    /// The budget binds, and what it stops is still equisatisfiable.
+    ///
+    /// This is the mutation control for the `work_budget` check in the queue
+    /// loop: delete that check and the budgeted run becomes identical to the
+    /// unbudgeted one, which is exactly what this asserts against.
+    #[test]
+    fn work_budget_stops_the_pass_early_and_keeps_the_result_sound() {
+        let f = gate_chain(60);
+        let full = eliminate_variables(&f, BveOptions::default());
+        assert!(
+            full.stats.variables_eliminated > 4,
+            "fixture must eliminate enough that a budget can cut it short: got {}",
+            full.stats.variables_eliminated
+        );
+
+        let literals: usize = f.clauses().iter().map(|c| c.lits().len()).sum();
+        let setup = (literals + 2 * f.variable_count()) as u64;
+        let budgeted = eliminate_variables(
+            &f,
+            BveOptions {
+                // Setup plus a sliver: enough to start, nowhere near enough to
+                // finish. Denominated in the pass's own unit, so this constant
+                // does not move with the host.
+                work_budget: Some(setup + 8),
+                ..BveOptions::DEFAULT
+            },
+        );
+
+        assert!(
+            budgeted.stats.work_exhausted,
+            "a budget of {} must be exhausted (spent {})",
+            setup + 8,
+            budgeted.stats.work_spent
+        );
+        assert!(
+            budgeted.stats.variables_eliminated < full.stats.variables_eliminated,
+            "the budget must cut the pass short: {} vs {} eliminated",
+            budgeted.stats.variables_eliminated,
+            full.stats.variables_eliminated
+        );
+
+        // Sound anyway. `gate_chain` is satisfiable by construction, so this is
+        // a real reconstruction check and not a vacuously-skipped branch.
+        match solve_with_native_core(&budgeted.formula) {
+            Ok(SatResult::Sat(model)) => {
+                let full_model = budgeted.reconstruction.extend(model.values());
+                assert!(
+                    f.evaluate(&full_model).unwrap(),
+                    "a truncated BVE's model must still satisfy the original"
+                );
+            }
+            other => panic!("gate_chain is satisfiable; got {other:?}"),
+        }
+    }
+
+    /// The occurrence-list scan is charged even when the variable is then
+    /// rejected without a single resolution.
+    ///
+    /// This is the whole reason the meter exists, so it gets a fixture where
+    /// scanning is the *only* post-setup work: three hub variables, each with
+    /// 150 positive and 150 negative occurrences, so every one of them is
+    /// rejected by `occurrence_limit` (100) **after** `live_ids` has walked both
+    /// lists and **before** any resolvent is merged. Nothing is eliminated,
+    /// nothing is re-queued, and the resolution counter stays at zero — so the
+    /// only number that can move is the scan charge, and deleting that charge
+    /// makes `work_spent` exactly the setup cost.
+    ///
+    /// A weaker assertion (`work_spent > setup` on a formula that also
+    /// resolves) does not test this: the resolvent-merge charges alone satisfy
+    /// it, and the mutation survives. Measured — it did.
+    #[test]
+    fn the_occurrence_scan_is_charged_even_when_the_variable_is_rejected() {
+        let f = hub_formula(HUB_COPIES);
+        let out = eliminate_variables(&f, BveOptions::default());
+
+        // Positive control on the fixture's premise: every variable really was
+        // rejected by the occurrence bound, so no resolution work happened.
+        assert_eq!(
+            out.stats.variables_eliminated, 0,
+            "fixture must reject every candidate"
+        );
+        assert_eq!(out.stats.variables_skipped_bound, 3);
+        assert_eq!(out.stats.clauses_added, 0);
+
+        let literals: usize = f.clauses().iter().map(|c| c.lits().len()).sum();
+        let setup = (literals + 2 * f.variable_count()) as u64;
+        // Three variables, each scanning a 150-entry list per polarity.
+        let scans = 3 * 2 * HUB_COPIES as u64;
+        assert_eq!(
+            out.stats.work_spent,
+            setup + scans,
+            "the scan must be charged exactly: setup {setup} + scans {scans}"
+        );
+    }
+
+    /// `work_at_last_elimination` brackets the budget that costs nothing.
+    ///
+    /// It must lie between the setup floor and the total spend, and on a run
+    /// that eliminates nothing it must be exactly the setup floor. Those three
+    /// facts are what let a calibration read "a budget of B loses no
+    /// eliminations on this file" off a single sweep instead of one sweep per
+    /// candidate B.
+    #[test]
+    fn work_at_last_elimination_brackets_the_free_budget() {
+        let f = gate_chain(60);
+        let out = eliminate_variables(&f, BveOptions::default());
+        let literals: usize = f.clauses().iter().map(|c| c.lits().len()).sum();
+        let setup = (literals + 2 * f.variable_count()) as u64;
+        assert!(out.stats.variables_eliminated > 0);
+        assert!(
+            setup <= out.stats.work_at_last_elimination
+                && out.stats.work_at_last_elimination <= out.stats.work_spent,
+            "last-elimination reading {} must lie in [{setup}, {}]",
+            out.stats.work_at_last_elimination,
+            out.stats.work_spent
+        );
+
+        // Nothing eliminated: the whole post-setup spend was waste, and the
+        // reading is the setup floor. Reuses the hub fixture, whose premise
+        // (every candidate rejected) is asserted in its own test.
+        let hubs = hub_formula(HUB_COPIES);
+        let none = eliminate_variables(&hubs, BveOptions::default());
+        assert_eq!(none.stats.variables_eliminated, 0);
+        let hub_literals: usize = hubs.clauses().iter().map(|c| c.lits().len()).sum();
+        assert_eq!(
+            none.stats.work_at_last_elimination,
+            (hub_literals + 2 * hubs.variable_count()) as u64
+        );
+        assert!(none.stats.work_spent > none.stats.work_at_last_elimination);
+    }
+
+    /// Same formula, same options, same number — on any host, run after run.
+    /// This is the property a `deadline: Option<Instant>` cannot provide, and
+    /// the reason the budget is denominated in steps rather than milliseconds.
+    #[test]
+    fn work_spent_is_deterministic_across_runs() {
+        let f = gate_chain(40);
+        let a = eliminate_variables(&f, BveOptions::default());
+        let b = eliminate_variables(&f, BveOptions::default());
+        assert_eq!(a.stats.work_spent, b.stats.work_spent);
+        assert!(a.stats.work_spent > 0);
+    }
+
+    /// BVE's occurrence lists DO go stale, and the counter says by how much.
+    ///
+    /// This is the positive half of the compaction question — subsumption's
+    /// `this_pass_cannot_produce_a_dead_occurrence_entry` is the negative half.
+    /// Here the lists live for the whole pass and an elimination kills clauses
+    /// sitting in many of them, so a later scan meets ids of clauses that are
+    /// already gone and pays for them again.
+    ///
+    /// Mutation control for `charge_dead` in `live_ids`: delete it and the
+    /// count is zero, which fails the strict inequality — and would have made
+    /// the corpus measurement of the lazy-removal constant silently read
+    /// "there is no constant".
+    #[test]
+    fn eliminations_leave_dead_ids_behind_for_later_scans_to_pay_for() {
+        let f = gate_chain(200);
+        let out = eliminate_variables(&f, BveOptions::DEFAULT);
+        assert!(
+            out.stats.variables_eliminated > 0,
+            "the fixture must eliminate"
+        );
+        assert!(
+            out.stats.dead_occurrence_entries > 0,
+            "lazy removal must leave entries for later scans to re-examine"
+        );
+        assert!(
+            out.stats.dead_occurrence_entries < out.stats.work_spent,
+            "dead entries are a subset of the spend, not an addition to it"
+        );
+    }
+
+    /// Compaction changes what the pass SPENDS and not what it DECIDES.
+    ///
+    /// Unbudgeted, dropping dead ids cannot change which variables are
+    /// eliminated — the entries removed are exactly the ones every scan already
+    /// filtered out, and `live_ids` returns the same set either way — so the
+    /// reduced formula and the elimination count must be identical. That
+    /// invariance is what makes compaction safe to enable at all, and it is the
+    /// difference between the two fixes: compaction removes work without giving
+    /// anything up, a budget declines work and gives up the progress that work
+    /// would have made.
+    ///
+    /// **The direction of the cost change is deliberately not asserted.** On
+    /// this fixture compaction costs MORE — 8,982 steps against 7,386 — because
+    /// every variable here is eliminated on its first visit, so a compacted list
+    /// is never scanned again and the rewrite (charged honestly) buys nothing.
+    /// Whether compaction pays depends on how often a variable is re-queued and
+    /// how stale its lists are by then, which is a property of real formulas and
+    /// is measured on the corpus, not decided by a fixture tuned until it agreed.
+    ///
+    /// Mutation control for the `if self.compact` block in `live_ids`: delete it
+    /// and the two runs spend identically, failing the inequality.
+    #[test]
+    fn compaction_changes_the_cost_and_not_the_result() {
+        let f = gate_chain(200);
+        let plain = eliminate_variables(&f, BveOptions::DEFAULT);
+        let compacted = eliminate_variables(
+            &f,
+            BveOptions {
+                compact_occurrences: true,
+                ..BveOptions::DEFAULT
+            },
+        );
+        assert_eq!(
+            compacted.formula.clauses(),
+            plain.formula.clauses(),
+            "unbudgeted, compaction must not change the reduced formula"
+        );
+        assert_eq!(
+            compacted.stats.variables_eliminated,
+            plain.stats.variables_eliminated
+        );
+        assert_ne!(
+            compacted.stats.work_spent, plain.stats.work_spent,
+            "compaction must be reachable and charged: {} vs {}",
+            compacted.stats.work_spent, plain.stats.work_spent
+        );
     }
 }

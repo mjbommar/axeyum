@@ -3,7 +3,7 @@
 //!
 //! ## What the emitted term is made of
 //!
-//! Only lemmas that already exist in [`NatPrelude`](crate::NatPrelude). This
+//! Only lemmas that already exist in [`crate::NatPrelude`]. This
 //! producer never declares anything of its own, so it adds no trusted
 //! surface and nothing it produces can be admitted except through
 //! [`Kernel::add_declaration`](crate::Kernel::add_declaration).

@@ -8,7 +8,7 @@
 //! [ADR-1602](../../../docs/research/09-decisions/adr-1602-the-metric-layer-first-then-pointfree-and-not-open-sets.md)
 //! decided that when a topological carrier is finally built it is built
 //! **pointfree**: a frame is an *algebraic structure over a carrier*, which is
-//! exactly the shape [`declare_record`] already builds nine of, whereas a
+//! exactly the shape `declare_record` already builds nine of, whereas a
 //! family of open subsets needs closure under arbitrary unions over an index
 //! `Sort` — pushing the record's universe up and putting undecidable
 //! membership in a union on the critical path. This module is that decision,
@@ -721,7 +721,7 @@ fn intern(kernel: &mut Kernel, creal: CRealPrelude) -> TopFramePrelude {
 /// # Panics
 ///
 /// Panics if the field-shape list has drifted from [`FIELD_COUNT`], or if
-/// [`declare_record`] returns selectors under names other than the ones
+/// `declare_record` returns selectors under names other than the ones
 /// `intern` pre-computed. Both are internal-consistency assertions between
 /// this file's two descriptions of the same record.
 pub fn build_top_frame_prelude(kernel: &mut Kernel) -> Result<TopFramePrelude, KernelError> {

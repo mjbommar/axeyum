@@ -5257,7 +5257,7 @@ pub struct NatPrelude {
     /// (`nat_prelude/omniscience.rs`, roadmap W1-9): LPO, WLPO, Markov's
     /// principle and LLPO over `Nat`, each carried as an explicit HYPOTHESIS
     /// so the axiom footprint stays empty. Reached as
-    /// `p.omniscience.em_implies_lpo` and documented in [`OmniscienceNames`]
+    /// `p.omniscience.em_implies_lpo` and documented in `OmniscienceNames`
     /// rather than here, so the map costs this struct one field.
     pub omniscience: OmniscienceNames,
 
@@ -6185,7 +6185,7 @@ pub struct NatPrelude {
     /// (if s q then count m q else 0)` — UNCONDITIONAL, with no `q < bound m`
     /// side condition, because `restrict` keeps the bound and `count`
     /// truncates in its own definition. One `Bool.rec` on `s q`, whose `false`
-    /// branch is [`bool_select_nat_same`] and whose `true` branch is
+    /// branch is `bool_select_nat_same` and whose `true` branch is
     /// `Eq.refl` (`multiset_select.rs`).
     pub multiset_count_restrict: NameId,
     /// `Nat.Multiset.count_restrict_pos : ∀ m s q,
@@ -6582,7 +6582,7 @@ pub struct NatPrelude {
     /// and `m` stays a variable, so no large numeral is ever formed.
     pub rado_is_rado_number_of_succ: NameId,
     /// `Nat.Rado.schurSet : Nat.Finset` — the lower-bound certificate for
-    /// `R_2(x = y+z)`, found by [`rado`]'s own search over the `2^4` subsets
+    /// `R_2(x = y+z)`, found by `rado`'s own search over the `2^4` subsets
     /// of `[1,4]`: `{2,3}`, i.e. the partition `{1,4} / {2,3}`.
     pub rado_schur_set: NameId,
     /// `Nat.Rado.schur_arrows_five : Arrows 1 1 2 5` — every 2-colouring of
@@ -7370,16 +7370,16 @@ pub struct NatPrelude {
 
     /// The abstract algebra spine (ADR-1578): ten independent `Sort 2`
     /// records `Magma -> ... -> Field`, each carrying `carrier : Sort 1` as
-    /// a field. See [`structures`] for the field lists and every selector
+    /// a field. See `structures` for the field lists and every selector
     /// name (`.sel(i)`, index documented per record's `*_fields()`
     /// function). Declared under a fresh `Alg` root, never under `Nat`.
     pub structures: StructuresNames,
 
-    /// ADR-1588: the Setoid-flavored twin of [`structures`] — `AlgS.Magma
+    /// ADR-1588: the Setoid-flavored twin of `structures` — `AlgS.Magma
     /// .. AlgS.CommRing`, whose law fields are stated over a caller-supplied
     /// `equiv` relation instead of `Eq`, built so a carrier like `CReal`
     /// (whose equality is a *defined* relation, not `Eq`) can be an
-    /// instance. See [`structures_setoid`].
+    /// instance. See `structures_setoid`.
     pub structures_s_names: StructuresSNames,
     /// The nine declared `AlgS.*` records themselves (selectors etc.).
     pub structures_s: StructuresSRecordNames,

@@ -49,7 +49,7 @@
 //! negation) and the incidence hypothesis kills the first, leaving
 //! `u*(U*s+V*t+W) = 0`; `Rat.mul_eq_zero` and `u ≠ 0` finish.
 //!
-//! [`Geo.QPlane.onOfProp`] wraps it in the `a ≠ 0 ∨ b ≠ 0` case split, and
+//! `Geo.QPlane.onOfProp` wraps it in the `a ≠ 0 ∨ b ≠ 0` case split, and
 //! **uses the same lemma in both branches** — the `b` branch is `onPivot` with
 //! `(u,v,s,t)` and `(U,V)` swapped, so the second case costs three `ring`
 //! rearrangements rather than a second proof.
@@ -60,7 +60,7 @@
 //! Geo.QPlane.join P Q := Geo.QLine0.mk (y Q - y P) (x P - x Q) (y P * x Q - x P * y Q)
 //! ```
 //!
-//! and [`Geo.QPlane.joinProp`]: *any* line through `P` and `Q` is proportional
+//! and `Geo.QPlane.joinProp`: *any* line through `P` and `Q` is proportional
 //! to `join P Q`, with **no** non-degeneracy hypothesis at all. The three
 //! proportionality relations are three unconditional ring identities with the
 //! two incidence hypotheses added as summands on either side:
@@ -78,7 +78,7 @@
 //! # `twoPoints`, and why the shift is uniform
 //!
 //! A line's second point is its first plus the direction `(-b, a)`:
-//! [`Geo.QPlane.shift`]. `shiftOn` is one ring identity (the `a*b` terms
+//! `Geo.QPlane.shift`. `shiftOn` is one ring identity (the `a*b` terms
 //! cancel) and `shiftApart` needs only `Nondeg` — so the case split on which
 //! coefficient is nonzero is needed **only** to produce the first point, where
 //! `Rat.inv` and `Rat.mul_inv_cancel_of_ne_zero` do the work — at exactly one
@@ -109,7 +109,7 @@ use crate::rat_prelude::ops::{
     radd, rat_ty, rchain, rcongr, rmul, rneg, rone, rsymm, rtrans, rzero,
 };
 
-/// The interned names [`declare_all`] produces.
+/// The interned names `declare_all` produces.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct QPlaneNames {
     /// `Geo.QPoint : Type 0`.

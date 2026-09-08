@@ -885,7 +885,7 @@ fn scan_dl(
 
 /// Cheap, purely structural check: does the whole query fit the
 /// difference-logic fragment [`scan_dl`] would accept, *before* any search
-/// runs? Exactly [`try_check_qf_dl`]'s own `None` — the "not-applicable"
+/// runs? Exactly `try_check_qf_dl`'s own `None` — the "not-applicable"
 /// outcome `dispatch_difference_logic` records — reused rather than
 /// re-derived, so a caller cannot silently drift from what `dl-online`
 /// actually accepts.
@@ -2010,14 +2010,14 @@ std::thread_local! {
     /// Whether `--trace`'s `; dl-online …` line is being collected on this
     /// thread. See [`DlOnlineStatsGuard`].
     static COLLECT_DL_ONLINE_STATS: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
-    /// Cumulative wall time inside [`try_check_qf_dl`] (timed at its single
+    /// Cumulative wall time inside `try_check_qf_dl` (timed at its single
     /// call site, `crate::auto::dispatch_difference_logic`, so every
     /// internal early-return path is covered without instrumenting them
     /// individually) since the active [`DlOnlineStatsGuard`] was created.
     static DL_ONLINE_TIME_ACCUM: std::cell::Cell<Duration> =
         const { std::cell::Cell::new(Duration::ZERO) };
     /// Number of times `dispatch_difference_logic`'s call to
-    /// [`try_check_qf_dl`] has been timed since the active
+    /// `try_check_qf_dl` has been timed since the active
     /// [`DlOnlineStatsGuard`] was created. Distinguishes "this dispatch
     /// branch never ran for this query" (0, e.g. every `QF_BV` query, which
     /// never reaches the linear-arithmetic dispatch chain at all) from "it
@@ -2027,7 +2027,7 @@ std::thread_local! {
     static DL_ONLINE_CALL_COUNT: std::cell::Cell<u64> = const { std::cell::Cell::new(0) };
 }
 
-/// Whether [`try_check_qf_dl`] call timing is currently enabled on this
+/// Whether `try_check_qf_dl` call timing is currently enabled on this
 /// thread.
 pub(crate) fn dl_online_stats_collecting() -> bool {
     COLLECT_DL_ONLINE_STATS.with(std::cell::Cell::get)
@@ -2035,11 +2035,49 @@ pub(crate) fn dl_online_stats_collecting() -> bool {
 
 /// Adds `elapsed` to this thread's cumulative dl-online time and increments
 /// the call count. Only called from `crate::auto::dispatch_difference_logic`,
-/// already gated on [`dl_online_stats_collecting`] — this itself does not
+/// already gated on `dl_online_stats_collecting` — this itself does not
 /// re-check the flag.
 pub(crate) fn record_dl_online_time(elapsed: Duration) {
-    DL_ONLINE_TIME_ACCUM.with(|c| c.set(c.get() + elapsed));
-    DL_ONLINE_CALL_COUNT.with(|c| c.set(c.get() + 1));
+    let total = DL_ONLINE_TIME_ACCUM.with(|c| {
+        let total = c.get() + elapsed;
+        c.set(total);
+        total
+    });
+    let calls = DL_ONLINE_CALL_COUNT.with(|c| {
+        let calls = c.get() + 1;
+        c.set(calls);
+        calls
+    });
+    // See `record_dl_online_entry`: the call this closes is the one that slot
+    // was marked in-flight for, so overwriting it with the completed totals is
+    // the whole state transition.
+    crate::live_instruments::publish_live(
+        crate::live_instruments::instrument::DL_ONLINE,
+        (total, calls),
+        crate::live_instruments::Sampled::Complete,
+    );
+}
+
+/// Marks a `try_check_qf_dl` call as **entered** on the cross-thread board.
+///
+/// The thread-local accumulator above is written when the call returns, which
+/// is exactly what a query that times out INSIDE this route never does: three
+/// of five traced `QF_IDL` timeouts sat in this call when the watchdog fired
+/// and reported nothing at all. This publishes the totals of the calls that
+/// have already closed, with the entered call included in the count and marked
+/// `InFlight`, so a reader learns that the route was running and how long the
+/// PREVIOUS calls took — never that the in-flight call took zero.
+pub(crate) fn record_dl_online_entry() {
+    if !dl_online_stats_collecting() {
+        return;
+    }
+    let total = DL_ONLINE_TIME_ACCUM.with(std::cell::Cell::get);
+    let calls = DL_ONLINE_CALL_COUNT.with(std::cell::Cell::get) + 1;
+    crate::live_instruments::publish_live(
+        crate::live_instruments::instrument::DL_ONLINE,
+        (total, calls),
+        crate::live_instruments::Sampled::InFlight,
+    );
 }
 
 /// Enables `--trace`'s dl-online call timing on this thread for the lifetime
@@ -2048,7 +2086,7 @@ pub(crate) fn record_dl_online_time(elapsed: Duration) {
 /// `smtlib::FrontDoorStatsGuard` / `layers::BvLayerStatsGuard` /
 /// `cdclt::TheoryLayerStatsGuard`, the other opt-in, off-by-default,
 /// thread-local diagnostics `--trace` composes. Off by default costs nothing:
-/// [`dl_online_stats_collecting`] is one thread-local `bool` read, and the
+/// `dl_online_stats_collecting` is one thread-local `bool` read, and the
 /// clock is read only when it returns `true` (`.then(Instant::now)` at the
 /// call site), so the default path adds no clock read.
 pub struct DlOnlineStatsGuard(bool);
@@ -2074,7 +2112,7 @@ impl Drop for DlOnlineStatsGuard {
 /// recently dropped) [`DlOnlineStatsGuard`] was created, paired with the
 /// number of times the call was timed. `(Duration::ZERO, 0)` when either
 /// collection was never enabled on this thread OR the query never reached
-/// `dispatch_difference_logic`'s call to [`try_check_qf_dl`] at all (e.g. a
+/// `dispatch_difference_logic`'s call to `try_check_qf_dl` at all (e.g. a
 /// `QF_BV` query, which never enters the linear-arithmetic dispatch chain) -
 /// a caller distinguishes the two the same way it distinguishes "never
 /// enabled" for `smtlib::last_front_door_stats`: by whether it enabled a
@@ -2105,6 +2143,7 @@ pub(crate) fn try_check_qf_dl(
     config: &SolverConfig,
     extended_timeout: Option<Duration>,
 ) -> Option<CheckResult> {
+    record_dl_online_entry();
     let probe_started = Instant::now();
     // The probe budget covers the entire route, including the conservative
     // fragment scan and skeleton encoding. Starting this deadline after those

@@ -570,6 +570,50 @@ pub(crate) type Recorder<'a> = Option<&'a mut RouteTrace>;
 pub(crate) fn with_recorder(rec: &mut Recorder<'_>, f: impl FnOnce(&mut RouteTrace)) {
     if let Some(trace) = rec.as_deref_mut() {
         f(trace);
+        mirror_dispatch_progress(trace);
+    }
+}
+
+/// Mirrors the front-door attribution with the dispatch's IN-PROGRESS trail
+/// merged in, for a reader on another thread.
+///
+/// The dispatch ladder records into a local [`RouteTrace`] and only hands it to
+/// this thread's attribution when it returns ([`absorb_dispatch_trace`]). A
+/// query killed by a watchdog *inside* the ladder therefore mirrored only the
+/// stages that ran before it — a trail with one `fd:parse` entry, whose
+/// `bound_by` is `fd:parse` and is not the route that was actually eating the
+/// budget. That is the exact failure mode ADR-1760 exists to prevent, since
+/// `bound_by` is the field that matters on an undecided file.
+///
+/// Merged onto a CLONE, so the thread-local attribution is untouched and the
+/// eventual `absorb_dispatch_trace` still produces the authoritative trail.
+/// Only the outermost dispatch mirrors, matching what `absorb` publishes:
+/// `check_auto` is called from inside a dozen routes, and a nested solve's
+/// ladder is internal detail of the route that made it, not a top-level
+/// attribution.
+///
+/// Costs one `Cell<bool>` read per recorded attempt with no board installed,
+/// and dispatch attempts are counted in the tens per query, never in the loop.
+fn mirror_dispatch_progress(dispatch: &RouteTrace) {
+    if !attribution_collecting()
+        || !crate::live_instruments::installed()
+        || DISPATCH_DEPTH.with(core::cell::Cell::get) > 1
+    {
+        return;
+    }
+    let merged = ATTRIBUTION.with(|a| {
+        a.try_borrow().ok().map(|attribution| {
+            let mut merged = attribution.clone();
+            merged.absorb(dispatch);
+            merged
+        })
+    });
+    if let Some(merged) = merged {
+        crate::live_instruments::publish_live(
+            crate::live_instruments::instrument::ROUTE,
+            merged,
+            crate::live_instruments::Sampled::InFlight,
+        );
     }
 }
 
@@ -729,6 +773,32 @@ pub(crate) fn record_front_door(route: &'static str, outcome: RouteOutcome) {
             trace.tick();
         }
     });
+    mirror_attribution();
+}
+
+/// Copies this thread's attribution onto the cross-thread board
+/// (`crate::live_instruments`), so a watchdog firing on another thread can
+/// still say which routes ran and which one was consuming the budget.
+///
+/// Always `InFlight`: the trail is appended to as the front door proceeds, so
+/// a reading is by construction a prefix — the elapsed time of the attempt
+/// currently running is not in it, and `bound_by` may still change.
+///
+/// A no-op with no board installed, and reached only from a site already gated
+/// on [`attribution_collecting`], so a default run neither clones the trace nor
+/// tests anything extra.
+fn mirror_attribution() {
+    if !crate::live_instruments::installed() {
+        return;
+    }
+    let trace = ATTRIBUTION.with(|a| a.try_borrow().ok().map(|t| t.clone()));
+    if let Some(trace) = trace {
+        crate::live_instruments::publish_live(
+            crate::live_instruments::instrument::ROUTE,
+            trace,
+            crate::live_instruments::Sampled::InFlight,
+        );
+    }
 }
 
 /// Records a front-door stage's [`CheckResult`], if collection is on: a
@@ -743,6 +813,7 @@ pub(crate) fn record_front_door_result(route: &'static str, result: &CheckResult
             trace.record_result(route, result);
         }
     });
+    mirror_attribution();
 }
 
 /// Appends a completed dispatch [`RouteTrace`] into this thread's attribution,
@@ -756,6 +827,7 @@ pub(crate) fn absorb_dispatch_trace(dispatch: &RouteTrace) {
             trace.absorb(dispatch);
         }
     });
+    mirror_attribution();
 }
 
 /// Runs `f` as the outermost dispatch if attribution is on and no dispatch is

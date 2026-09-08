@@ -251,19 +251,69 @@
 //! promise here and a `HashSet` would make the line depend on per-process hash
 //! seeding. Full record: ADR-1762 and
 //! docs/research/12-performance/config-registry-2026-09-07.md.
+//!
+//! # What a TIMED-OUT file prints (same `--trace` flag), 2026-09-08
+//!
+//! Every line above is built after `solve()` returns, from thread-local
+//! accumulators owned by the worker thread. A wall-clock timeout is enforced
+//! from the main thread, on a worker that has not returned — so until now a
+//! timed-out file printed none of them: 22 of 33 lost `QF_LRA` files had no
+//! theory-layer line at all, which is the opposite of what a diagnostic should
+//! do, since the files we lose are the files we most need to explain.
+//!
+//! The instruments now also mirror onto a cross-thread board
+//! (`axeyum_solver::live_instruments`), and the native CDCL(T) search mirrors
+//! its own counters from inside its loop on a fixed iteration cadence, so a
+//! watchdog kill prints what accumulated up to the kill:
+//!
+//! ```text
+//! ; partial at=watchdog-kill recovered=3 sampled=front-door:complete,\
+//!   theory-layer:in-flight,route:in-flight reason: watchdog fired before …
+//! ; partial front-door parse_ms=18
+//! ; partial theory-layer boolean_propagate_ms=412 … decisions=63623 …
+//! ; partial route decided_by=none bound_by=nra last=nra …
+//! ```
+//!
+//! - **The leading token is `; partial `, not the completed line's token.** A
+//!   consumer that greps `^; theory-layer ` keeps matching only complete lines,
+//!   so a mid-search count cannot be swept into an aggregate that thinks it has
+//!   totals — a truncated count that reads like a complete one is worse than no
+//!   count, because somebody divides by it. The line BODY is byte-identical to
+//!   the completed form, so one parser reads both families.
+//! - **The header says where the reading was taken and which instruments were
+//!   still running.** `front-door:complete` is a stage that finished inside a
+//!   query that did not; `theory-layer:in-flight` is a search that was mid-loop
+//!   when it was read, so every counter on that line is a lower bound.
+//! - **An instrument that mirrored nothing still says so** (`; theory-layer
+//!   unavailable: …`), and a kill before ANY instrument published prints
+//!   exactly the two `unavailable` lines it printed before — so "never got far
+//!   enough" stays distinguishable from "collection was off" (no lines at all).
+//! - **Not everything survives.** The `; config` line does not: its
+//!   consulted-key set is thread-local to the worker with no publish site, and
+//!   printing the rest of it from this thread would leave a `consulted=` field
+//!   silently absent, which reads as "nothing was consulted". A `sat-bv` check
+//!   killed mid-solve does not report `; bv-layer` either: its stage timings
+//!   are lifted only when the check returns. Its Boolean search is visible
+//!   through the `; progress` lines this path already prints — but only when
+//!   `--progress` is ALSO on, since `--trace` does not install a progress sink.
+//!
+//! Same off-by-default discipline: with no `--trace` no board is installed and
+//! every mirror site is one thread-local `bool` read.
 
 use std::process::ExitCode;
-use std::sync::mpsc;
+use std::sync::{Arc, mpsc};
 use std::time::{Duration, Instant};
 
 use axeyum_solver::theories::cdclt_diagnostics::{TheoryLayerStatsGuard, last_theory_layer_stats};
 use axeyum_solver::{
-    BvLayerStatsGuard, CheckProgress, CheckResult, CheckingProgress, ConfigTraceGuard,
-    DlOnlineStatsGuard, Evidence, EvidenceCheck, EvidenceReport, FrontDoorStatsGuard,
-    LiaWarmProcessStatsGuard, ProofProgress, RouteAttributionGuard, SolverConfig,
-    UfArithOverboundStatsGuard, config_trace_line, last_bv_layer_stats, last_dl_online_stats,
-    last_front_door_stats, last_route_attribution, last_uf_arith_overbound_stats,
-    live_lia_warm_stats, produce_evidence_smtlib, solve_smtlib,
+    AbvStats, AbvStatsGuard, BvLayerStats, BvLayerStatsGuard, CheckProgress, CheckResult,
+    CheckingProgress, ConfigTraceGuard, DlOnlineStatsGuard, Evidence, EvidenceCheck,
+    EvidenceReport, FrontDoorStats, FrontDoorStatsGuard, LiaCountersGuard, LiveInstruments,
+    ProofProgress, RouteAttributionGuard, RouteTrace, Sampled, SolverConfig,
+    UfArithOverboundStatsGuard, config_trace_line, install_live_instruments, instrument,
+    last_abv_stats, last_bv_layer_stats, last_dl_online_stats, last_front_door_stats,
+    last_lia_counters, last_route_attribution, last_uf_arith_overbound_stats,
+    live_theory_layer_stats, produce_evidence_smtlib, solve_smtlib,
 };
 
 /// Formats one `axeyum_cnf::ProofSearchProgress` snapshot as the `;`-prefixed
@@ -435,6 +485,99 @@ fn dl_online_report_line(elapsed_ms: u128) -> String {
     format!("; dl-online total_ms={elapsed_ms}")
 }
 
+/// Formats this query's integer-arithmetic route counters as one `;`-prefixed
+/// `--trace` line.
+///
+/// Each of the three groups is prefixed by its **reading** — `measured`,
+/// `not-reached` (collected, never entered) or `off` (excluded by policy) —
+/// because the fields are `u64` and a bare zero is otherwise three different
+/// statements wearing the same eight bytes. The line is emitted only when a
+/// snapshot exists at all; a thread that never armed the guard prints nothing
+/// rather than a row of zeros.
+fn lia_counters_report_line(counters: &axeyum_solver::LiaCounters) -> String {
+    use axeyum_solver::{GroupReading, LiaCounterGroup};
+    fn reading(counters: &axeyum_solver::LiaCounters, group: LiaCounterGroup) -> &'static str {
+        match counters.group_reading(group) {
+            GroupReading::Measured => "measured",
+            GroupReading::NotReached => "not-reached",
+            GroupReading::NotCollected => "off",
+        }
+    }
+    format!(
+        "; lia offline={} offline_calls={} offline_constraints={} offline_early_exits={} \
+         tightened={} gomory_calls={} gomory_decided={} gomory_rounds={} gomory_cuts={} \
+         gomory_pivots={} gomory_rows={} gomory_columns={} \
+         bnb_roots={} bnb_nodes={} bnb_budget_exhausted={} simplex_solves={} simplex_pivots={} \
+         simplex_rows={} simplex_columns={} simplex_declines={} lp_relaxations={} \
+         theory={} theory_asserts={} feasibility_checks={} arena_clones={} arena_clone_nodes={} \
+         live_literals={} filter_refuted={} filter_integral={} filter_inconclusive={} \
+         filter_skipped={} core_minimizations={} core_minimization_probes={} \
+         propagation={} propagate_calls={} propagate_atoms={} propagate_probes={} \
+         propagations_offered={} \
+         warm={} warm_checks={} warm_updates={} warm_rebuilds={} \
+         warm_unchanged={} warm_extended={} warm_shortened={} warm_diverged={} \
+         warm_cold_start={} warm_policy_cold={} \
+         warm_delta_added={} warm_delta_removed={} warm_delta_kept={} \
+         warm_literal_collections={} warm_literal_cache_hits={} \
+         warm_literal_cache_evicted={} warm_constraints_copied={}",
+        reading(counters, LiaCounterGroup::Offline),
+        counters.offline_calls,
+        counters.offline_constraints,
+        counters.offline_early_exits,
+        counters.tightened_constraints,
+        counters.gomory_calls,
+        counters.gomory_decided,
+        counters.gomory_rounds,
+        counters.gomory_cuts,
+        counters.gomory_pivots,
+        counters.gomory_rows,
+        counters.gomory_columns,
+        counters.bnb_roots,
+        counters.bnb_nodes,
+        counters.bnb_budget_exhausted,
+        counters.simplex_solves,
+        counters.simplex_pivots,
+        counters.simplex_rows,
+        counters.simplex_columns,
+        counters.simplex_declines,
+        counters.lp_relaxation_calls,
+        reading(counters, LiaCounterGroup::Theory),
+        counters.theory_asserts,
+        counters.theory_feasibility_checks,
+        counters.arena_clones,
+        counters.arena_clone_nodes,
+        counters.live_literals,
+        counters.filter_refuted,
+        counters.filter_integral,
+        counters.filter_inconclusive,
+        counters.filter_skipped,
+        counters.core_minimizations,
+        counters.core_minimization_probes,
+        reading(counters, LiaCounterGroup::Propagation),
+        counters.propagate_calls,
+        counters.propagate_atoms_scanned,
+        counters.propagate_probes,
+        counters.propagations_offered,
+        reading(counters, LiaCounterGroup::Warm),
+        counters.warm_checks,
+        counters.warm_updates,
+        counters.warm_rebuilds,
+        counters.warm_assembly_unchanged,
+        counters.warm_assembly_extended,
+        counters.warm_assembly_shortened,
+        counters.warm_assembly_diverged,
+        counters.warm_assembly_cold_start,
+        counters.warm_assembly_policy_cold,
+        counters.warm_delta_added,
+        counters.warm_delta_removed,
+        counters.warm_delta_kept,
+        counters.warm_literal_collections,
+        counters.warm_literal_cache_hits,
+        counters.warm_literal_cache_evicted,
+        counters.warm_constraints_copied,
+    )
+}
+
 /// Formats this front-door call's route attribution (ADR-1760) as two
 /// `;`-prefixed `--trace` lines: a one-line summary and the full ordered trail
 /// as JSON.
@@ -533,6 +676,30 @@ fn route_attribution_report_lines(trace: &axeyum_solver::RouteTrace) -> Vec<Stri
 /// An aggregation can then count what it cannot attribute instead of quietly
 /// shrinking its own denominator, which is how a coverage number becomes wrong
 /// while staying stable.
+///
+/// # The blind spot IS closed now, and this is the fallback (2026-09-08)
+///
+/// Two judgements above have been superseded by measurement and are kept only
+/// as the record of why this function still exists.
+///
+/// "The trail really is unreadable from this thread" was true of thread-local
+/// storage, not of the instrument. `axeyum_solver::live_instruments` gives every
+/// instrument a shared board to mirror onto, and the native CDCL(T) search
+/// mirrors its own counters on a fixed iteration cadence
+/// (`axeyum_cnf::NativeLayerStatsMirror`), so a watchdog now reads real partial
+/// data — see [`watchdog_trace_lines`], which is what `main` calls.
+///
+/// "Rather than add shared mutable state to a hot search loop for a
+/// diagnostic-only line" priced that state as expensive without measuring it.
+/// Measured: the added cost is one already-loaded `bool` test per search-loop
+/// iteration, and an A/B against the pre-change binary put both a default run
+/// and a `--trace` run inside a ±1.5% noise band on a loaded host — a
+/// fixed-3 s-budget `QF_LRA` run did 0.4–0.6% MORE simplex pivots after. The
+/// snapshot copy happens once per 1,024 iterations, never per propagation.
+///
+/// This function is now reached only when nothing mirrored at all — a query
+/// killed before any instrument published — and returns exactly what it always
+/// returned, so that case's output is unchanged.
 fn watchdog_unavailable_line(trace_mode: bool, reason: &str) -> Vec<String> {
     if !trace_mode {
         return Vec::new();
@@ -540,7 +707,150 @@ fn watchdog_unavailable_line(trace_mode: bool, reason: &str) -> Vec<String> {
     vec![
         format!("; theory-layer unavailable: {reason}"),
         format!("; route unavailable: {reason}"),
+        // The integer-route counters are thread-local to the worker for the
+        // same reason, so they are unreadable on exactly this path. Measured
+        // 2026-09-08: 10 of the 27 committed `QF_LIA` losses take it, which is
+        // the hardest 37% of the population — the part any aggregate most needs
+        // to be able to COUNT rather than silently drop. Without this line the
+        // absence is indistinguishable from a run that never armed the guard.
+        format!("; lia unavailable: {reason}"),
     ]
+}
+
+/// Re-labels one ordinary `--trace` line as a partial reading.
+///
+/// `; theory-layer x=1` becomes `; partial theory-layer x=1`. The leading token
+/// changes rather than a field being appended, and that is the whole point: a
+/// consumer that greps `^; theory-layer ` keeps matching only COMPLETE lines,
+/// so a mid-search count can never be swept into an aggregate that thinks it
+/// has totals. A consumer that wants the partial data asks for `^; partial `
+/// and takes on the obligation that comes with it.
+///
+/// Which reading each recovered instrument gave — `complete` or `in-flight` —
+/// is on the header line rather than appended here, so the body of every line
+/// (including the route trail's JSON, which ends the line) is byte-identical to
+/// what a completed run prints.
+fn partial_line(line: &str) -> String {
+    // Every renderer in this file emits `"; "`-prefixed lines. One that did not
+    // is passed through with the marker in front rather than mangled.
+    line.strip_prefix("; ").map_or_else(
+        || format!("; partial {line}"),
+        |body| format!("; partial {body}"),
+    )
+}
+
+/// The `--trace` lines a watchdog timeout prints: whatever the instruments
+/// mirrored onto `board` before the kill, each labelled partial, plus an
+/// `unavailable` line for whichever of the two headline instruments mirrored
+/// nothing at all.
+///
+/// # Why partial data has to be labelled, not just reported
+///
+/// Every counter here was read while the worker was still running. A truncated
+/// count that reads like a complete one is worse than no count, because
+/// somebody divides by it — so nothing on these lines shares a leading token
+/// with the completed lines, and the header says both where the reading was
+/// taken and which instruments were still in flight when it was.
+///
+/// # What survives, and what still does not
+///
+/// An instrument survives here exactly when it mirrors onto the board (see
+/// `axeyum_solver::live_instruments`): the front door's parse time, the
+/// `dl-online` route (entered as well as completed), a completed `sat-bv`
+/// check's `bv-layer` stages, the route trail, and — through
+/// [`live_theory_layer_stats`], which is the only one that can report from a
+/// search that has NOT returned — the theory layer. What does not survive is a
+/// stage with no mirror point at all: the `; config` line, whose consulted-key
+/// set is thread-local to the worker with no publish site, and a `sat-bv` check
+/// killed mid-solve, whose stage timings are lifted only when the check
+/// returns — its Boolean search shows up in the `; progress` lines this path
+/// already prints, but only when `--progress` is also on.
+///
+/// With nothing mirrored this returns exactly what it always returned — the two
+/// `unavailable` lines — so a run that never got far enough to instrument
+/// anything is still distinguishable from a run with collection switched off
+/// (no lines at all).
+fn watchdog_trace_lines(trace_mode: bool, board: &LiveInstruments, reason: &str) -> Vec<String> {
+    if !trace_mode {
+        return Vec::new();
+    }
+    let mut lines = Vec::new();
+    // `(instrument name, how the reading was taken)`, for the header.
+    let mut provenance: Vec<String> = Vec::new();
+    let mut note = |name: &str, sampled: Sampled| {
+        provenance.push(format!("{name}:{}", sampled.label()));
+    };
+
+    if let Some(front_door) = board.sample::<FrontDoorStats>(instrument::FRONT_DOOR) {
+        lines.push(partial_line(&front_door_report_line(&front_door.value)));
+        note("front-door", front_door.sampled);
+    }
+    if let Some(dl) = board.sample::<(Duration, u64)>(instrument::DL_ONLINE) {
+        let (elapsed, calls) = dl.value;
+        // Same `calls > 0` gate the completed path uses: a zero count means the
+        // dispatch branch was never reached, which is not the same as a route
+        // that ran and cost nothing.
+        if calls > 0 {
+            lines.push(partial_line(&dl_online_report_line(elapsed.as_millis())));
+            note("dl-online", dl.sampled);
+        }
+    }
+    if let Some(bv) = board.sample::<BvLayerStats>(instrument::BV_LAYER) {
+        lines.push(partial_line(&bv_layer_report_line(&bv.value)));
+        note("bv-layer", bv.sampled);
+    }
+    if let Some(theory) = live_theory_layer_stats(board) {
+        lines.push(partial_line(&theory_layer_report_line(&theory.value)));
+        note("theory-layer", theory.sampled);
+    } else {
+        lines.push(format!("; theory-layer unavailable: {reason}"));
+    }
+    match axeyum_solver::live_lia_counters(board) {
+        Some(lia) => {
+            lines.push(partial_line(&lia_counters_report_line(&lia.value)));
+            note("lia", lia.sampled);
+        }
+        // Distinct from the mirrored case and from every other instrument here:
+        // the integer routes may simply not have run. `unavailable` says the
+        // reading could not be taken, which is the honest statement when the
+        // mirror never flushed — it does not claim the routes did nothing.
+        None => lines.push(format!("; lia unavailable: {reason}")),
+    }
+    if let Some(abv) = board.sample::<AbvStats>(instrument::ABV) {
+        // Same `engaged()` gate as the completed path, for the same reason.
+        // Unlike the other instruments here this one is ALWAYS `in-flight`:
+        // it publishes between recording sites rather than at a stage boundary,
+        // which is exactly what lets it report a route that never returned.
+        if abv.value.engaged() {
+            lines.push(partial_line(&abv.value.trace_line()));
+            note("abv", abv.sampled);
+        }
+    }
+    match board.sample::<RouteTrace>(instrument::ROUTE) {
+        Some(route) if !route.value.is_empty() => {
+            for line in route_attribution_report_lines(&route.value) {
+                lines.push(partial_line(&line));
+            }
+            note("route", route.sampled);
+        }
+        _ => lines.push(format!("; route unavailable: {reason}")),
+    }
+
+    if provenance.is_empty() {
+        // Nothing was mirrored before the kill. Report exactly what this path
+        // reported before any of it existed, rather than a header announcing
+        // zero recovered instruments.
+        return watchdog_unavailable_line(trace_mode, reason);
+    }
+    lines.insert(
+        0,
+        format!(
+            "; partial at=watchdog-kill recovered={} sampled={} reason: {reason}",
+            provenance.len(),
+            provenance.join(",")
+        ),
+    );
+    lines
 }
 
 /// Installs the progress sink (see the module header) on `config` when
@@ -891,234 +1201,6 @@ fn parse_cli_args() -> CliArgs {
 }
 
 #[allow(clippy::too_many_lines)] // linear CLI driver: arg parsing + solve dispatch + watchdog
-/// The reason string the watchdog path reports when the worker outlives the
-/// deadline. Named once, so the production path and its regression test cannot
-/// drift into checking different strings.
-const WATCHDOG_REASON: &str = "watchdog fired before the worker thread returned (no CDCL(T) \
-                               search on this query completed before the deadline)";
-
-/// The `; lia-warm …` `--trace` line: what the warm offline `QF_LIA` decider did.
-///
-/// `warm=not-collected` and `checks=0` are deliberately different outputs. The
-/// first says no guard was ever armed in this process; the second says the guard
-/// was armed and the decider was never entered on this query. A `u64` cannot tell
-/// those apart, and reporting the first as zeros is how a counter manufactures a
-/// confident nothing.
-fn lia_warm_report_line() -> String {
-    match live_lia_warm_stats() {
-        Some(stats) => format!("; lia-warm {}", stats.summary()),
-        None => "; lia-warm warm=not-collected (no guard armed in this process)".to_owned(),
-    }
-}
-
-/// Every `--trace` line the watchdog path owes when the worker did not return.
-///
-/// The thread-local guards cannot be read from here, so they report
-/// `unavailable`; the warm-decider counters are process-wide and monotone, so
-/// this path CAN report them, and what it reports is a lower bound on the work
-/// the worker got through before the watchdog gave up.
-fn watchdog_trace_lines(trace_mode: bool, reason: &str) -> Vec<String> {
-    let mut lines = watchdog_unavailable_line(trace_mode, reason);
-    if trace_mode {
-        lines.push(lia_warm_report_line());
-    }
-    lines
-}
-
-/// Prints one solve's output in the order the competition interface promises:
-/// progress lines, then `;`-prefixed trace lines, then the evidence line, then
-/// the verdict as the final line of stdout.
-///
-/// Extracted from `main` because both exit paths — the deadline-free branch and
-/// the watchdog branch — owe exactly this, and two copies of an ordering
-/// contract is how one of them stops honouring it.
-fn emit_report(
-    progress_rx: &std::sync::mpsc::Receiver<axeyum_cnf::ProofSearchProgress>,
-    check_progress_rx: &std::sync::mpsc::Receiver<CheckingProgress>,
-    trace_lines: &[String],
-    evidence: Option<&str>,
-    verdict: &str,
-) {
-    // Progress lines first, so the verdict stays last. If the watchdog gave up
-    // before the worker finished, this still prints whatever snapshots the
-    // search sent before the timeout — an honest partial picture, not nothing.
-    for snapshot in progress_rx.try_iter() {
-        println!("{}", progress_report_line(&snapshot));
-    }
-    for event in check_progress_rx.try_iter() {
-        println!("{}", checking_report_line(&event));
-    }
-    for line in trace_lines {
-        println!("{line}");
-    }
-    if let Some(line) = evidence {
-        println!("{line}");
-    }
-    println!("{verdict}");
-}
-
-/// Every `;`-prefixed `--trace` line the completed-solve path owes, in the
-/// order a reader scans them.
-///
-/// Extracted from `main`'s worker closure so the ordering rationale lives in one
-/// place: the configuration line first because every other line has to be read
-/// against it, and route attribution last because it names the two questions the
-/// others are only evidence for.
-fn completed_trace_lines(trace_mode: bool) -> Vec<String> {
-    let mut trace_lines = Vec::new();
-    if trace_mode {
-        // Parse always runs exactly once (or more, on a string-bound
-        // ladder rung) per front-door call, so this line is unconditional
-        // — unlike `; bv-layer …`/`; theory-layer …` (only the ONE
-        // backend a query actually dispatched to ran) it is never
-        // legitimately absent when `--trace` is on.
-        // ADR-1762: the configuration this run used. Printed FIRST among
-        // the stage lines because it is what the others have to be read
-        // against — a stage timing means something different under a
-        // different admission policy, and until this line existed nothing
-        // in a run's own output said which one was in force.
-        trace_lines.push(config_trace_line());
-        trace_lines.push(front_door_report_line(&last_front_door_stats()));
-        // `dispatch_difference_logic` runs on every numeric-featured
-        // query ahead of the linear-arithmetic chain (probing whether the
-        // query is difference-shaped), but NOT on e.g. a `QF_BV` query,
-        // which never reaches that dispatch branch at all — the call
-        // count (see `axeyum_solver::last_dl_online_stats`'s docs) is
-        // what distinguishes that absence from "ran and cost nothing
-        // measurable" (`total_ms=0`), which a bare duration cannot.
-        let (dl_online_elapsed, dl_online_calls) = last_dl_online_stats();
-        if dl_online_calls > 0 {
-            trace_lines.push(dl_online_report_line(dl_online_elapsed.as_millis()));
-        }
-        if let Some(stats) = last_bv_layer_stats() {
-            trace_lines.push(bv_layer_report_line(&stats));
-        }
-        if let Some(stats) = last_theory_layer_stats() {
-            trace_lines.push(theory_layer_report_line(&stats));
-        }
-        // Only when the eager Ackermann bound actually fired on this query:
-        // an all-zero line on every non-UF file would be noise, and the
-        // absence of the line is itself the information "this decision point
-        // was never reached".
-        let uf_overbound = last_uf_arith_overbound_stats();
-        if uf_overbound.engaged > 0 {
-            trace_lines.push(uf_overbound.trace_line());
-        }
-        trace_lines.push(lia_warm_report_line());
-        // Route attribution (ADR-1760) LAST, so a reader who scans to the
-        // end of the `;` block finds the one line that names which route
-        // decided the file and which route consumed the budget -- the two
-        // questions every other line here can only be evidence for.
-        trace_lines.extend(route_attribution_report_lines(&last_route_attribution()));
-    }
-    trace_lines
-}
-
-/// The `--timeout-ms` / `--memory-limit-mb` flags plus the environment A/B
-/// levers, resolved into one [`SolverConfig`].
-///
-/// Extracted from `main` so the levers and their rationale sit together; the
-/// defaults are unchanged, so a default invocation is byte-identical.
-fn build_config(timeout_ms: Option<u64>, memory_limit_mb: Option<u64>) -> SolverConfig {
-    let mut config = SolverConfig::new();
-    if let Some(ms) = timeout_ms {
-        config = config.with_timeout(Duration::from_millis(ms));
-    }
-    if let Some(mb) = memory_limit_mb {
-        config = config.with_memory_limit_mb(mb);
-    }
-
-    // A/B levers for head-to-head probing, OFF unless explicitly asked for, so
-    // the default invocation `scripts/parity-run.sh` uses stays exactly the
-    // shipped configuration and recorded baselines keep their meaning.
-    //
-    // `cnf_inprocessing` (subsumption + BVE) and `cnf_vivify` already exist in
-    // `axeyum-cnf` and are sound (model-preserving / equisatisfiable with a
-    // reconstruction stack, and every `sat` is still replay-checked against the
-    // original terms) — but they default to `false`, and this binary had no way
-    // to turn them on, so EVERY parity measurement to date ran with them off.
-    // The 2026-07-07 gap analysis puts ~9 of the residual QF_BV files in the
-    // "search-bound" bucket, which is exactly what these passes target, and it
-    // says the first step there is a MEASUREMENT, not a build. This makes that
-    // measurement a one-line env change instead of a code edit.
-    let enabled = |name: &str| std::env::var(name).is_ok_and(|v| v == "1");
-    if enabled("AXEYUM_CNF_INPROCESSING") {
-        config = config.with_cnf_inprocessing(true);
-    }
-    if enabled("AXEYUM_CNF_VIVIFY") {
-        // A no-op unless inprocessing is also on; turn both on together so the
-        // flag cannot silently do nothing.
-        config = config.with_cnf_inprocessing(true).with_cnf_vivify(true);
-    }
-    config
-}
-
-/// The evidence-mode outcome triple: a certified report, or the `unknown` an
-/// errored evidence run owes rather than being scored as an uncertified decide.
-fn evidence_outcome(
-    input: &str,
-    config: &SolverConfig,
-    started: std::time::Instant,
-) -> (&'static str, Option<String>, Vec<String>) {
-    match produce_evidence_smtlib(input, config) {
-        Ok(report) => {
-            let (verdict, line) =
-                evidence_report_line(input, &report, started.elapsed().as_millis());
-            (verdict, Some(line), Vec::new())
-        }
-        Err(_) => (
-            "unknown",
-            Some(format!(
-                "; evidence kind=unknown certified=0 trusted=0 recheck=na arena=na ms={}",
-                started.elapsed().as_millis()
-            )),
-            Vec::new(),
-        ),
-    }
-}
-
-/// The seven thread-local stats guards that collect for the dynamic extent of
-/// one `solve_smtlib` call.
-///
-/// One struct rather than seven `let _guard` bindings because the count has gone
-/// stale twice — ADR-1760's route guard and ADR-1762's config guard landed on
-/// the same day, each from a lane that read "four" and left it. A field list is
-/// counted by the compiler; a number in a comment is counted by whoever last
-/// read it.
-///
-/// Every field is `None` when `--trace` is off, which is a no-op with no extra
-/// clock read, the convention every guard in this tree follows. Dropped
-/// together, restoring each collector to whatever this thread had before.
-struct WorkerTraceGuards {
-    _theory: Option<TheoryLayerStatsGuard>,
-    _bv: Option<BvLayerStatsGuard>,
-    _dl: Option<DlOnlineStatsGuard>,
-    _front_door: Option<FrontDoorStatsGuard>,
-    /// ADR-1760. Which route decided the file, and which consumed the budget.
-    _route: Option<RouteAttributionGuard>,
-    /// ADR-1762. Which governing values this run consulted, and which
-    /// environment overrides were in force.
-    _config: Option<ConfigTraceGuard>,
-    /// What the over-bound UF+arithmetic decision point did. A route that
-    /// declines and hands back `Unknown` with nothing after it is invisible in a
-    /// verdict and nearly invisible in a trail.
-    _uf_overbound: Option<UfArithOverboundStatsGuard>,
-}
-
-impl WorkerTraceGuards {
-    fn arm(trace_mode: bool) -> Self {
-        Self {
-            _theory: trace_mode.then(TheoryLayerStatsGuard::enable),
-            _bv: trace_mode.then(BvLayerStatsGuard::enable),
-            _dl: trace_mode.then(DlOnlineStatsGuard::enable),
-            _front_door: trace_mode.then(FrontDoorStatsGuard::enable),
-            _route: trace_mode.then(RouteAttributionGuard::enable),
-            _config: trace_mode.then(ConfigTraceGuard::enable),
-            _uf_overbound: trace_mode.then(UfArithOverboundStatsGuard::enable),
-        }
-    }
-}
-
 fn main() -> ExitCode {
     let CliArgs {
         path,
@@ -1142,7 +1224,49 @@ fn main() -> ExitCode {
         }
     };
 
-    let config = build_config(timeout_ms, memory_limit_mb);
+    let mut config = SolverConfig::new();
+    if let Some(ms) = timeout_ms {
+        config = config.with_timeout(Duration::from_millis(ms));
+    }
+    if let Some(mb) = memory_limit_mb {
+        config = config.with_memory_limit_mb(mb);
+    }
+
+    // A/B levers for head-to-head probing, OFF unless explicitly asked for, so
+    // the default invocation `scripts/parity-run.sh` uses stays exactly the
+    // shipped configuration and recorded baselines keep their meaning.
+    //
+    // `cnf_inprocessing` (subsumption + BVE) and `cnf_vivify` already exist in
+    // `axeyum-cnf` and are sound (model-preserving / equisatisfiable with a
+    // reconstruction stack, and every `sat` is still replay-checked against the
+    // original terms) — but `cnf_inprocessing` defaults to `false`, and this
+    // binary had no way to turn it on, so EVERY parity measurement to date ran
+    // with these passes off. (`cnf_vivify` has defaulted to `true` since
+    // 2026-09-08; it is a no-op while `cnf_inprocessing` is `false`, which is
+    // why the baseline is unaffected.)
+    // The 2026-07-07 gap analysis puts ~9 of the residual QF_BV files in the
+    // "search-bound" bucket, which is exactly what these passes target, and it
+    // says the first step there is a MEASUREMENT, not a build. This makes that
+    // measurement a one-line env change instead of a code edit.
+    let enabled = |name: &str| std::env::var(name).is_ok_and(|v| v == "1");
+    if enabled("AXEYUM_CNF_INPROCESSING") {
+        config = config.with_cnf_inprocessing(true);
+    }
+    if enabled("AXEYUM_CNF_VIVIFY") {
+        // A no-op unless inprocessing is also on; turn both on together so the
+        // flag cannot silently do nothing.
+        config = config.with_cnf_inprocessing(true).with_cnf_vivify(true);
+    }
+    // `cnf_vivify` defaults to TRUE as of 2026-09-08 (measured: with BVE under
+    // its work budget, vivification is cheaper AND shrinks more —
+    // `docs/research/03-measurements/inprocessing-admission-2026-09-08.md`), so
+    // `AXEYUM_CNF_VIVIFY=1` above is now the same configuration as
+    // `AXEYUM_CNF_INPROCESSING=1` alone. This is the off-switch that keeps the
+    // un-vivified arm reachable, which a measurement comparing the two needs
+    // and which no `=1` flag can express.
+    if enabled("AXEYUM_CNF_NO_VIVIFY") {
+        config = config.with_cnf_vivify(false);
+    }
 
     let (config, progress_rx) = install_progress_sink(config, progress_mode);
     let (config, check_progress_rx) = install_check_progress_sink(config, progress_mode);
@@ -1178,12 +1302,40 @@ fn main() -> ExitCode {
     // decide never runs the CDCL(T) driver and vice versa), but
     // `; front-door …` and `; dl-online …` are independent stages that can
     // coexist with either.
+    // The cross-thread instrument board (`axeyum_solver::live_instruments`).
+    // Created HERE, on the thread that enforces the wall clock, so it outlives
+    // the worker: a watchdog timeout reads it after giving up on a thread that
+    // is still running and will never publish anything again. Installed inside
+    // the closure below rather than here, because a thread-local install has to
+    // happen on the thread that will do the publishing.
+    let board = LiveInstruments::new();
+    let worker_board = Arc::clone(&board);
     let solve = move || -> (&'static str, Option<String>, Vec<String>) {
+        // The seventh lever on the same `--trace` flag, and the only one that
+        // is not itself an instrument: it gives the other six somewhere to
+        // publish that is not this thread's thread-local storage. Off without
+        // `--trace`, so a default run installs nothing and every publish site
+        // returns on one `bool` read.
+        let _live_board = trace_mode.then(|| install_live_instruments(&worker_board));
         if evidence_mode {
             let started = Instant::now();
             // A parse or solver error is `unknown` here too — and an evidence run
             // that errors must not be silently scored as an uncertified decide.
-            return evidence_outcome(&input, &config, started);
+            return match produce_evidence_smtlib(&input, &config) {
+                Ok(report) => {
+                    let (verdict, line) =
+                        evidence_report_line(&input, &report, started.elapsed().as_millis());
+                    (verdict, Some(line), Vec::new())
+                }
+                Err(_) => (
+                    "unknown",
+                    Some(format!(
+                        "; evidence kind=unknown certified=0 trusted=0 recheck=na arena=na ms={}",
+                        started.elapsed().as_millis()
+                    )),
+                    Vec::new(),
+                ),
+            };
         }
         // Each `_*_guard` collects its own stats for the dynamic extent of
         // `solve_smtlib` below when `--trace` is on; dropped (disarmed) right
@@ -1193,7 +1345,46 @@ fn main() -> ExitCode {
         // count is stated because it has been stale twice: ADR-1760's route
         // guard and ADR-1762's config guard landed on the same day, each from a
         // lane that read "four" and left it.
-        let _worker_guards = WorkerTraceGuards::arm(trace_mode);
+        let _theory_guard = trace_mode.then(TheoryLayerStatsGuard::enable);
+        let _bv_guard = trace_mode.then(BvLayerStatsGuard::enable);
+        let _dl_guard = trace_mode.then(DlOnlineStatsGuard::enable);
+        let _front_door_guard = trace_mode.then(FrontDoorStatsGuard::enable);
+        // ADR-1760. Which route decided the file, and which route consumed the
+        // budget.
+        let _route_guard = trace_mode.then(RouteAttributionGuard::enable);
+        // ADR-1762. The sixth guard on the same flag: which governing values
+        // this run consulted, and which environment overrides were in force.
+        let _config_guard = trace_mode.then(ConfigTraceGuard::enable);
+        // The seventh guard on the same flag: what the over-bound UF+arithmetic
+        // decision point did. A route that declines and hands back `Unknown`
+        // with nothing after it is invisible in a verdict and nearly invisible
+        // in a trail; `terminal_unknown` names it outright.
+        let _uf_overbound_guard = trace_mode.then(UfArithOverboundStatsGuard::enable);
+        // The eighth: the integer-arithmetic routes' own counters. `QF_LIA` and
+        // `QF_UFLIA` produced no engine figure at all before this — the online
+        // integer theory implements no `engine_counters`, and the offline
+        // `lia-simplex` decider is not a `TheorySolver`, so neither could ever
+        // appear on the `; theory-layer` line.
+        let _lia_guard = trace_mode.then(LiaCountersGuard::enable);
+        // ...and the mirror that makes them readable after a watchdog kill.
+        // Installed on the WORKER thread, because that is where the integer
+        // routes run and where the thread-local counters live; the board it
+        // publishes to is shared, so the watchdog samples it from the main
+        // thread. Measured 2026-09-08: without this, 10 of the 27 committed
+        // `QF_LIA` losses and every one of the six hardest `QF_UFLIA` losses
+        // printed `; lia unavailable` — the hardest part of the population, and
+        // the part any aggregate most needs to be able to count.
+        if trace_mode {
+            axeyum_solver::install_lia_mirror(std::sync::Arc::new(
+                axeyum_solver::LiaCountersMirror::new(),
+            ));
+        }
+        // The ninth: the `QF_ABV` array routes' own counters. The route that
+        // spends a lost array file's budget is the one that does not return, so
+        // the route trail — which records on return — cannot name it; these
+        // counters are recorded on ENTRY and mirrored onto the live board, so a
+        // watchdog kill still reports which array route was running.
+        let _abv_guard = trace_mode.then(AbvStatsGuard::enable);
         // A parse or solver error is reported as `unknown` — never a wrong
         // verdict, and never a crash that the harness would read as an abort.
         let mut give_up: Option<String> = None;
@@ -1217,7 +1408,65 @@ fn main() -> ExitCode {
             },
             Err(_) => "unknown",
         };
-        let mut trace_lines = completed_trace_lines(trace_mode);
+        let mut trace_lines = Vec::new();
+        if trace_mode {
+            // Parse always runs exactly once (or more, on a string-bound
+            // ladder rung) per front-door call, so this line is unconditional
+            // — unlike `; bv-layer …`/`; theory-layer …` (only the ONE
+            // backend a query actually dispatched to ran) it is never
+            // legitimately absent when `--trace` is on.
+            // ADR-1762: the configuration this run used. Printed FIRST among
+            // the stage lines because it is what the others have to be read
+            // against — a stage timing means something different under a
+            // different admission policy, and until this line existed nothing
+            // in a run's own output said which one was in force.
+            trace_lines.push(config_trace_line());
+            trace_lines.push(front_door_report_line(&last_front_door_stats()));
+            // `dispatch_difference_logic` runs on every numeric-featured
+            // query ahead of the linear-arithmetic chain (probing whether the
+            // query is difference-shaped), but NOT on e.g. a `QF_BV` query,
+            // which never reaches that dispatch branch at all — the call
+            // count (see `axeyum_solver::last_dl_online_stats`'s docs) is
+            // what distinguishes that absence from "ran and cost nothing
+            // measurable" (`total_ms=0`), which a bare duration cannot.
+            let (dl_online_elapsed, dl_online_calls) = last_dl_online_stats();
+            if dl_online_calls > 0 {
+                trace_lines.push(dl_online_report_line(dl_online_elapsed.as_millis()));
+            }
+            if let Some(stats) = last_bv_layer_stats() {
+                trace_lines.push(bv_layer_report_line(&stats));
+            }
+            if let Some(stats) = last_theory_layer_stats() {
+                trace_lines.push(theory_layer_report_line(&stats));
+            }
+            // Only when the eager Ackermann bound actually fired on this query:
+            // an all-zero line on every non-UF file would be noise, and the
+            // absence of the line is itself the information "this decision point
+            // was never reached".
+            let uf_overbound = last_uf_arith_overbound_stats();
+            if uf_overbound.engaged > 0 {
+                trace_lines.push(uf_overbound.trace_line());
+            }
+            // Only when a snapshot exists: a `None` here means the guard was
+            // never armed on this thread, which is not the same as "the integer
+            // routes did nothing" and must not print as a row of zeros.
+            if let Some(counters) = last_lia_counters() {
+                trace_lines.push(lia_counters_report_line(&counters));
+            }
+            // Only when an array route was actually reached: a row of zeros on
+            // a `QF_BV` file would say only "this query has no arrays", which
+            // the line's absence already says. Same discipline as the
+            // `; uf-overbound` line above.
+            let abv = last_abv_stats();
+            if abv.engaged() {
+                trace_lines.push(abv.trace_line());
+            }
+            // Route attribution (ADR-1760) LAST, so a reader who scans to the
+            // end of the `;` block finds the one line that names which route
+            // decided the file and which route consumed the budget -- the two
+            // questions every other line here can only be evidence for.
+            trace_lines.extend(route_attribution_report_lines(&last_route_attribution()));
+        }
         // ADR-1752: the budget-relative atom cap can refuse before any stage
         // runs, and that refusal names the count, the budget and the remedy.
         // It is prepended so a `--trace` reader sees WHY nothing else appears.
@@ -1256,14 +1505,6 @@ fn main() -> ExitCode {
         return ExitCode::SUCCESS;
     };
 
-    // The eighth guard on the `--trace` flag: the warm offline `QF_LIA`
-    // decider. Armed HERE, on the main thread, and process-wide rather than
-    // thread-local — the seven guards above are thread-local to the worker, so
-    // on a file whose solve never returns (which is every file this counter was
-    // built to measure) their lines say "unavailable". This one stays readable
-    // from the watchdog path.
-    let _lia_warm_guard = trace_mode.then(LiaWarmProcessStatsGuard::enable);
-
     let (tx, rx) = std::sync::mpsc::channel();
     let worker = std::thread::Builder::new()
         .stack_size(WORKER_STACK_BYTES)
@@ -1282,18 +1523,25 @@ fn main() -> ExitCode {
     // a live in-progress snapshot without new cross-thread state). Three of
     // five traced `QF_IDL` timeouts hit exactly this path
     // (`docs/research/11-design-review/2026-09-05-arith-timeout-profiles.md`,
-    // Finding 0). Rather than add shared mutable state to a hot search loop for
-    // a diagnostic-only line, a watchdog timeout now always prints an explicit
-    // `; theory-layer unavailable: <reason>` line when `--trace` is set, so a
-    // trace is never silently empty — a caller can tell "no stats yet" apart
-    // from "collection was never enabled" without guessing.
+    // Finding 0). The first fix printed an explicit
+    // `; theory-layer unavailable: <reason>` line so a trace was never silently
+    // empty. That distinction is kept, but it is now the FALLBACK: the shared
+    // cross-thread state it declined to add turned out to cost nothing
+    // measurable (see `watchdog_unavailable_line`'s docs for the A/B), so
+    // `watchdog_trace_lines` reports the counters the instruments mirrored
+    // before the kill, under a `; partial …` token that cannot be mistaken for
+    // a completed line.
     let (verdict, evidence, trace_lines) = match worker {
         Ok(_) => match rx.recv_timeout(Duration::from_millis(ms) + WATCHDOG_GRACE) {
             Ok(outcome) => outcome,
             Err(_) => (
                 "unknown",
                 None,
-                watchdog_trace_lines(trace_mode, WATCHDOG_REASON),
+                watchdog_trace_lines(
+                    trace_mode,
+                    &board,
+                    "watchdog fired before the worker thread returned",
+                ),
             ),
         },
         // Could not spawn a worker: a resource failure, which is `unknown` —
@@ -1301,17 +1549,32 @@ fn main() -> ExitCode {
         Err(_) => (
             "unknown",
             None,
-            watchdog_trace_lines(trace_mode, "failed to spawn the solver worker thread"),
+            watchdog_trace_lines(
+                trace_mode,
+                &board,
+                "failed to spawn the solver worker thread",
+            ),
         ),
     };
 
-    emit_report(
-        &progress_rx,
-        &check_progress_rx,
-        &trace_lines,
-        evidence.as_deref(),
-        verdict,
-    );
+    // Progress lines first (see the no-timeout branch above for why), then the
+    // evidence line, so the verdict stays the final line of stdout, exactly as
+    // the competition interface promises. If the watchdog gave up before the
+    // worker finished, this still prints whatever snapshots the search sent
+    // before the timeout — an honest partial picture, not nothing.
+    for snapshot in progress_rx.try_iter() {
+        println!("{}", progress_report_line(&snapshot));
+    }
+    for event in check_progress_rx.try_iter() {
+        println!("{}", checking_report_line(&event));
+    }
+    for line in &trace_lines {
+        println!("{line}");
+    }
+    if let Some(line) = evidence {
+        println!("{line}");
+    }
+    println!("{verdict}");
     // The worker may still be inside ingest; the verdict is already printed and
     // correct, so exit rather than block on a thread that has no deadline.
     std::io::Write::flush(&mut std::io::stdout()).ok();
@@ -1336,7 +1599,7 @@ mod tests {
         );
         assert_eq!(
             lines.len(),
-            2,
+            3,
             "trace_mode=true must always yield a line, never nothing: got {lines:?}"
         );
         assert!(
@@ -1353,6 +1616,14 @@ mod tests {
             lines[1].starts_with("; route unavailable: "),
             "got: {}",
             lines[1]
+        );
+        // Same argument, same population: 10 of the 27 committed `QF_LIA`
+        // losses take this path, so a `; lia` aggregate that could not count
+        // them would be reporting on the 63% that finished.
+        assert!(
+            lines[2].starts_with("; lia unavailable: "),
+            "got: {}",
+            lines[2]
         );
         for line in &lines {
             assert!(line.contains("watchdog fired"), "got: {line}");
@@ -1382,30 +1653,24 @@ mod tests {
             let _ = tx.send(("unknown", None, Vec::new()));
         });
         let trace_mode = true;
-        // The SHIPPED constructor, not a copy of it: this test used to rebuild
-        // the watchdog's trace lines inline, so a line added to the real path
-        // would have left the test green while saying nothing about it.
         let (verdict, _evidence, trace_lines) = match rx.recv_timeout(Duration::from_millis(10)) {
             Ok(outcome) => outcome,
             Err(_) => (
                 "unknown",
                 None,
-                watchdog_trace_lines(trace_mode, WATCHDOG_REASON),
+                watchdog_unavailable_line(
+                    trace_mode,
+                    "watchdog fired before the worker thread returned (no CDCL(T) \
+                     search on this query completed before the deadline)",
+                ),
             ),
         };
         assert_eq!(verdict, "unknown");
         assert_eq!(
             trace_lines.len(),
-            3,
-            "a timed-out solve with --trace must still print every line the \
-             watchdog path owes, never nothing: got {trace_lines:?}"
-        );
-        assert!(
-            trace_lines
-                .iter()
-                .any(|line| line.starts_with("; lia-warm")),
-            "the watchdog path must report the warm-decider counters, which are \
-             process-wide and therefore readable here: got {trace_lines:?}"
+            2,
+            "a timed-out solve with --trace must still print both unavailable \
+             lines, never nothing: got {trace_lines:?}"
         );
         assert!(
             trace_lines[0].starts_with("; theory-layer"),
@@ -1421,5 +1686,151 @@ mod tests {
             "got: {}",
             trace_lines[1]
         );
+    }
+
+    /// A board nothing published to yields exactly what this path yielded
+    /// before any of the mirroring existed — so "the search never got far
+    /// enough to instrument anything" stays distinguishable from "collection
+    /// was off" (no lines at all).
+    #[test]
+    fn an_empty_board_falls_back_to_the_unavailable_lines() {
+        let board = LiveInstruments::new();
+        assert_eq!(
+            watchdog_trace_lines(false, &board, "anything"),
+            Vec::<String>::new(),
+            "a default (non-trace) run's output must stay byte-identical"
+        );
+        assert_eq!(
+            watchdog_trace_lines(true, &board, "watchdog fired"),
+            watchdog_unavailable_line(true, "watchdog fired"),
+        );
+    }
+
+    /// The test that matters: a worker abandoned by the watchdog, whose
+    /// instruments mirrored something before the kill, reports that something —
+    /// and reports it as PARTIAL.
+    ///
+    /// The worker below is still blocked when the lines are built, exactly as a
+    /// real one is: `recv_timeout` has expired and the thread has published
+    /// nothing on its way out because it has no way out yet.
+    #[test]
+    fn an_abandoned_worker_reports_partial_counters_under_a_distinct_token() {
+        let board = LiveInstruments::new();
+        let worker_board = Arc::clone(&board);
+        let (tx, rx) = std::sync::mpsc::channel::<(&'static str, Option<String>, Vec<String>)>();
+        let (published_tx, published_rx) = std::sync::mpsc::channel::<()>();
+        let (release_tx, release_rx) = std::sync::mpsc::channel::<()>();
+        let _worker = std::thread::spawn(move || {
+            let _live = install_live_instruments(&worker_board);
+            let stats = axeyum_solver::theories::cdclt_diagnostics::TheoryLayerStats {
+                decisions: 4_242,
+                boolean_propagate: Duration::from_millis(17),
+                ..Default::default()
+            };
+            axeyum_solver::publish_live(instrument::THEORY_LAYER, stats, Sampled::InFlight);
+            published_tx.send(()).expect("receiver alive");
+            let _ = release_rx.recv();
+            let _ = tx.send(("unknown", None, Vec::new()));
+        });
+        published_rx
+            .recv()
+            .expect("the worker mirrored its counters");
+
+        let (verdict, _evidence, trace_lines) = match rx.recv_timeout(Duration::from_millis(10)) {
+            Ok(outcome) => outcome,
+            Err(_) => (
+                "unknown",
+                None,
+                watchdog_trace_lines(true, &board, "watchdog fired"),
+            ),
+        };
+        assert_eq!(verdict, "unknown");
+
+        let joined = trace_lines.join("\n");
+        assert!(
+            joined.contains("decisions=4242"),
+            "the counters the worker mirrored must come back: {joined}"
+        );
+        // The distinct leading token is the labelling: a consumer that greps
+        // `^; theory-layer ` for complete lines must not pick this up, because
+        // a truncated count that reads like a complete one is worse than none.
+        assert!(
+            trace_lines
+                .iter()
+                .any(|l| l.starts_with("; partial theory-layer ")),
+            "{trace_lines:?}"
+        );
+        assert!(
+            !trace_lines.iter().any(|l| l.starts_with("; theory-layer ")),
+            "no partial reading may wear the complete line's token: {trace_lines:?}"
+        );
+        assert!(
+            trace_lines[0].starts_with("; partial at=watchdog-kill "),
+            "the header says where the reading was taken: {}",
+            trace_lines[0]
+        );
+        assert!(
+            trace_lines[0].contains("theory-layer:in-flight"),
+            "and that this instrument was still running: {}",
+            trace_lines[0]
+        );
+        // The route mirrored nothing, so it keeps saying so rather than being
+        // silently dropped from a partial report.
+        assert!(
+            trace_lines
+                .iter()
+                .any(|l| l.starts_with("; route unavailable: ")),
+            "{trace_lines:?}"
+        );
+        for line in &trace_lines {
+            assert!(
+                line.starts_with("; "),
+                "every trace line must be an SMT-LIB comment so it can never \
+                 match ^(sat|unsat)$: got {line}"
+            );
+        }
+        let _ = release_tx.send(());
+    }
+
+    /// A stage that finished is still reported under the partial token: the
+    /// QUERY did not return even when one of its stages did, so nothing on this
+    /// path may look like a normal-return line. The header carries the
+    /// distinction instead.
+    #[test]
+    fn a_stage_that_completed_is_still_reported_under_the_partial_token() {
+        let board = LiveInstruments::new();
+        board.publish(
+            instrument::DL_ONLINE,
+            (Duration::from_millis(931), 2_u64),
+            Sampled::Complete,
+        );
+        let lines = watchdog_trace_lines(true, &board, "watchdog fired");
+        assert!(
+            lines
+                .iter()
+                .any(|l| l == "; partial dl-online total_ms=931"),
+            "{lines:?}"
+        );
+        assert!(
+            lines[0].contains("dl-online:complete"),
+            "the header distinguishes a finished stage from a mid-flight one: {}",
+            lines[0]
+        );
+        assert!(
+            !lines.iter().any(|l| l.starts_with("; dl-online ")),
+            "{lines:?}"
+        );
+    }
+
+    /// `partial_line` re-labels rather than rewrites: the body of the line is
+    /// byte-identical to what a completed run prints, which is what lets one
+    /// parser read both families.
+    #[test]
+    fn partial_line_only_replaces_the_leading_token() {
+        assert_eq!(
+            partial_line("; route-trail {\"schema\":1}"),
+            "; partial route-trail {\"schema\":1}"
+        );
+        assert_eq!(partial_line("no prefix"), "; partial no prefix");
     }
 }

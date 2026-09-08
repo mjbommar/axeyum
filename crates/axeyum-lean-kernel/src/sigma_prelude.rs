@@ -137,7 +137,7 @@ use crate::{BinderInfo, Kernel, KernelError};
 #[cfg(test)]
 mod sigma_prelude_tests;
 
-/// The interned names [`declare_sigma_family`] produces.
+/// The interned names `declare_sigma_family` produces.
 ///
 /// Handles belong to the kernel they were built in; do not mix them across
 /// kernels.

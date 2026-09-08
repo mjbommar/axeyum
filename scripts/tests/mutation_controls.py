@@ -1974,6 +1974,218 @@ SUITES["ir-bv-nego-width"] = (
 
 
 # --------------------------------------------------------------------------
+# `cnf-pass-work-meter` — the meter/budget pair both occurrence-list passes
+# share.  Every number the 2026-09-08 subsumption measurement is stated in comes
+# out of this type, so a guard here that cannot fail makes that measurement
+# unfalsifiable rather than merely unchecked.
+# --------------------------------------------------------------------------
+
+SUITES["cnf-pass-work-meter"] = (
+    "crates/axeyum-cnf/src/pass_work.rs",
+    Cargo(("-p", "axeyum-cnf", "--lib", "pass_work"), "cnf-pass-work-meter"),
+    [
+        (
+            # Setup inside the meter, not before it: an admission test reads
+            # this number and would otherwise compare a budget against a cost
+            # it had excluded.
+            "the setup cost is charged before the pass does anything",
+            "            spent: setup,",
+            "            spent: 0,",
+        ),
+        (
+            # The stop reason is latched by the check, so a pass cannot break
+            # out of its loop without recording WHY it stopped.
+            "must_stop latches the reason it fired",
+            "        if self.spent >= self.limit {\n            self.exhausted = true;",
+            "        if self.spent >= self.limit {",
+        ),
+        (
+            # Compaction waits for half the list to die; without the threshold
+            # it rewrites every list on every scan.
+            "compaction's half-dead threshold",
+            "    if live_count * 2 > before {\n        return false; // fewer than half the entries are dead\n    }",
+            "    if false {\n        return false; // fewer than half the entries are dead\n    }",
+        ),
+        (
+            # The rewrite is charged: a "free" optimisation the meter cannot
+            # see is one nobody can price.
+            "the compaction rewrite is charged to the meter",
+            "    list.retain(|&id| live(id));\n    work.charge(before as u64);",
+            "    list.retain(|&id| live(id));",
+        ),
+        (
+            # Dead entries are a SUBSET of the spend, not an addition to it, or
+            # `dead / spent` stops being a fraction of the same denominator.
+            "counting a dead entry does not also charge it",
+            "    pub const fn charge_dead(&mut self, count: u64) {\n        self.dead_entries = self.dead_entries.saturating_add(count);",
+            "    pub const fn charge_dead(&mut self, count: u64) {\n        self.spent = self.spent.saturating_add(count);\n        self.dead_entries = self.dead_entries.saturating_add(count);",
+        ),
+    ],
+)
+
+
+# --------------------------------------------------------------------------
+# `cnf-subsume-work-meter` — subsumption's meter, budget, and the invariant
+# that it cannot produce a dead occurrence entry.
+#
+# The first mutation is the one the sibling BVE lane got wrong first: its
+# scan-charge guard asserted `work_spent > setup` and the mutant SURVIVED,
+# because unrelated charges satisfied the inequality.  The guard here is an
+# exact equality on a two-clause fixture, so deleting any single charge moves
+# the number.
+# --------------------------------------------------------------------------
+
+SUITES["cnf-subsume-work-meter"] = (
+    "crates/axeyum-cnf/src/simplify.rs",
+    Cargo(("-p", "axeyum-cnf", "--lib", "simplify"), "cnf-subsume-work-meter"),
+    [
+        (
+            "one step per occurrence entry examined",
+            "                work.charge(1);\n                if d_id == ci {",
+            "                if d_id == ci {",
+        ),
+        (
+            "the subset test's literal walk is charged",
+            "                work.charge(d.lits.len() as u64);\n                *checks += 1;",
+            "                *checks += 1;",
+        ),
+        (
+            "marking and unmarking the candidate is charged",
+            "    work.charge(2 * c_len as u64);",
+            "    work.charge(0);",
+        ),
+        (
+            "each round's occurrence-list rebuild is charged",
+            "    work.charge((total_lits + lit_slots) as u64);",
+            "    work.charge(0);",
+        ),
+        (
+            # The budget check between candidates. Without it the pass runs to
+            # its own fixpoint and `work_exhausted` is never set.
+            "the work budget stops the candidate loop",
+            "        if work.must_stop() {\n            break;\n        }\n        if clauses[ci].is_none() {",
+            "        if clauses[ci].is_none() {",
+        ),
+        (
+            # `work_at_last_progress` is what prices every candidate budget from
+            # one sweep; a missed progress note truncates the pass early.
+            "progress is noted when a clause is subsumed",
+            "                stats.clauses_subsumed += 1;\n                work.note_progress();",
+            "                stats.clauses_subsumed += 1;",
+        ),
+        (
+            # The counting path itself. The pass-level assignment
+            # (`stats.dead_occurrence_entries = work.dead_entries()`) is NOT
+            # listed: it is not independently distinguishable, because this pass
+            # cannot produce a nonzero value for any input, so `= 0` passes
+            # every test that could exist. That impossibility is the finding;
+            # what IS testable is that the counter fires when a dead entry is
+            # planted, which is what makes the invariant test non-vacuous.
+            "a dead occurrence entry is counted when one is reachable",
+            "                    work.charge_dead(1);",
+            "                    work.charge_dead(0);",
+        ),
+    ],
+)
+
+
+# --------------------------------------------------------------------------
+# `cnf-bve-compaction` — the dead-entry counter and the occurrence-list
+# compaction in BVE, which is where the lists actually do go stale.
+#
+# The counter is what bounds compaction's value at 0.10 % of BVE's scan on the
+# pinned parity list.  Without it that ceiling is an argument.
+# --------------------------------------------------------------------------
+
+SUITES["cnf-bve-compaction"] = (
+    "crates/axeyum-cnf/src/bve.rs",
+    Cargo(("-p", "axeyum-cnf", "--lib", "bve"), "cnf-bve-compaction"),
+    [
+        (
+            "dead occurrence entries are counted in live_ids",
+            "        self.work.charge_dead((entries - ids.len()) as u64);",
+            "        self.work.charge_dead(0);",
+        ),
+        (
+            "compaction runs at all",
+            "        if self.compact {",
+            "        if false {",
+        ),
+        (
+            "the occurrence scan is charged",
+            "        self.work.charge(entries as u64);",
+            "        self.work.charge(0);",
+        ),
+        (
+            "the work budget stops the elimination queue",
+            "        if elim.work.must_stop() {\n            break;\n        }",
+            "        if false {\n            break;\n        }",
+        ),
+    ],
+)
+
+
+# --------------------------------------------------------------------------
+# `solver-occurrence-pass-admission` — the shared admission decision and the
+# wiring of its grant into each pass.
+#
+# The wiring mutation is not hypothetical: with the decision inline at the call
+# site, computing a budget correctly and then handing the pass its DEFAULT
+# options compiled, ran, produced identical verdicts, and survived the whole
+# `--lib --features full` sweep next door.  `run_bve` and `run_subsume` exist as
+# named functions so a test can reach the wiring at all.
+# --------------------------------------------------------------------------
+
+SUITES["solver-occurrence-pass-admission"] = (
+    "crates/axeyum-solver/src/sat_bv_backend.rs",
+    Cargo(
+        (
+            "-p",
+            "axeyum-solver",
+            "--lib",
+            "--features",
+            "full",
+            "sat_bv_backend::tests",
+            "--",
+            "--test-threads=4",
+        ),
+        "solver-occurrence-pass-admission",
+    ),
+    [
+        (
+            "the granted budget reaches subsumption",
+            "            SubsumeOptions {\n                work_budget: Some(work_budget),\n            },",
+            "            SubsumeOptions::DEFAULT,",
+        ),
+        (
+            "the granted budget reaches BVE",
+            "            BveOptions {\n                work_budget: Some(work_budget),",
+            "            BveOptions {\n                work_budget: None,",
+        ),
+        (
+            # The accumulate-and-delay gate, which is the only thing that can
+            # refuse a pass outright. Without the init cost it never fires.
+            "the accumulate-and-delay gate is armed",
+            "        .with_init_cost(admission.min_recovery_multiple);",
+            "        .with_init_cost(0);",
+        ),
+        (
+            # The slice cap is what makes the gate reachable for a one-shot
+            # pre-search round at all.
+            "the remaining slice caps the reference window",
+            "            size_allowance.min(remaining_ms.saturating_mul(admission.steps_per_millisecond))",
+            "            size_allowance",
+        ),
+        (
+            "an unparseable lever keeps the shipped constant",
+            "        Some(v) => v.parse::<u64>().map_or(default, |n| n.max(1)),",
+            "        Some(v) => v.parse::<u64>().unwrap_or(1),",
+        ),
+    ],
+)
+
+
+# --------------------------------------------------------------------------
 # `mutation-controls` — the harness applied to itself.  The table lives in the
 # sibling module: an anchor stored in the file it mutates matches twice and the
 # harness rightly refuses it (`AMBIGUOUS ANCHOR`).

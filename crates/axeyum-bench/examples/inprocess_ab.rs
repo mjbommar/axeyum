@@ -72,7 +72,13 @@ fn arm_config(arm: &str, timeout_ms: u64) -> SolverConfig {
     let base = SolverConfig::new().with_timeout(Duration::from_millis(timeout_ms));
     match arm {
         "off" => base,
-        "inproc" => base.with_cnf_inprocessing(true),
+        // `with_cnf_vivify(false)` is not redundant: `SolverConfig`'s default
+        // for it became `true` on 2026-09-08 (it is a no-op unless inprocessing
+        // is on, and it measured better on every axis when inprocessing is on).
+        // Without the explicit `false` this arm would silently become the
+        // `inproc-vivify` arm, and the A/B would compare a thing against
+        // itself while still printing two different arm names.
+        "inproc" => base.with_cnf_inprocessing(true).with_cnf_vivify(false),
         "inproc-vivify" => base.with_cnf_inprocessing(true).with_cnf_vivify(true),
         other => panic!("unknown arm `{other}`: expected off, inproc or inproc-vivify"),
     }

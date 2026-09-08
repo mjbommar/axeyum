@@ -47,6 +47,7 @@ use web_time::Instant;
 use axeyum_ir::{Op, Rational, Sort, SymbolId, TermArena, TermId, TermNode, Value, eval};
 
 use crate::backend::{CheckResult, SolverError, UnknownKind, UnknownReason};
+use crate::lia_counters;
 use crate::model::Model;
 
 /// Whether `deadline` (if set) has passed.
@@ -1337,27 +1338,27 @@ fn lia_simplex_with_options(
     lia_simplex_capped(arena, assertions, deadline, allow_opaque_apps, node_cap)
 }
 
-/// Integer-tightens a collected constraint set in place: the gcd-aware
-/// strict-to-non-strict rewrite the offline `QF_LIA` decider applies between
-/// collection and the Gomory/branch-and-bound dispatch.
+/// [`lia_simplex_with_options`] with the branch-and-bound node budget supplied
+/// explicitly rather than derived from `deadline.is_some()`.
+/// Integer tightening (gcd-aware), in place; returns how many constraints were
+/// tightened.
 ///
-/// Factored out of [`lia_simplex_capped`] so the warm decider ([`warm`]) applies
-/// the SAME rewrite to a literal it caches. Two copies of this loop would drift,
-/// and a drift here is not a slowdown: tightening decides whether the LP
-/// relaxation is exact, so a warm copy that tightened differently would answer
-/// `unknown` where the cold path answers `unsat` (or, with a rewrite that is
-/// wrong rather than merely absent, worse).
-fn tighten_int_constraints(constraints: &mut [Constraint]) {
-    // Integer tightening (gcd-aware): a *strict* constraint `L + c0 < 0` whose variable
-    // part `L = Σ aᵢ·xᵢ` has integral coefficients and integral constant is, over the
-    // integers, equivalent to a NON-strict bound — and tightening it makes the LP
-    // relaxation EXACT, so the integer-infeasible cases decide immediately instead of
-    // branch-and-bound grinding. `L` is a multiple of `g = gcd(aᵢ)`, so `L + c0 < 0`
-    // ⟺ `L ≤ -c0-1` ⟺ `L ≤ g·⌊(-c0-1)/g⌋`. The new constant is `-g·⌊(-c0-1)/g⌋`
-    // (which reduces to `c0+1` when `g = 1`). E.g. `2x < 2y` (g=2) ⟹ `2x-2y ≤ -2` (not
-    // the loose `≤ -1`), so `2x<2y ∧ 2y<2x+2` is LP-infeasible (`unsat`). Only applied
-    // when `L`/`c0` are provably integral (else left strict — sound; simplex handles it).
-    for constraint in constraints.iter_mut() {
+/// A *strict* constraint `L + c0 < 0` whose variable part `L = Σ aᵢ·xᵢ` has
+/// integral coefficients and integral constant is, over the integers,
+/// equivalent to a NON-strict bound — and tightening it makes the LP relaxation
+/// EXACT, so the integer-infeasible cases decide immediately instead of
+/// branch-and-bound grinding. `L` is a multiple of `g = gcd(aᵢ)`, so
+/// `L + c0 < 0` ⟺ `L ≤ -c0-1` ⟺ `L ≤ g·⌊(-c0-1)/g⌋`. The new constant is
+/// `-g·⌊(-c0-1)/g⌋` (which reduces to `c0+1` when `g = 1`). E.g. `2x < 2y`
+/// (g=2) ⟹ `2x-2y ≤ -2` (not the loose `≤ -1`), so `2x<2y ∧ 2y<2x+2` is
+/// LP-infeasible (`unsat`).
+///
+/// Only applied when `L`/`c0` are provably integral, and only within
+/// [`TIGHTEN_COEFF_LIMIT`]; anything else is left strict, which is sound
+/// because the simplex handles strict bounds directly.
+fn tighten_strict_integer_constraints(constraints: &mut [Constraint]) -> u64 {
+    let mut tightened = 0u64;
+    for constraint in constraints {
         if !constraint.strict
             || !constraint.expr.constant.is_integer()
             || !constraint.expr.coeffs.values().all(|r| r.is_integer())
@@ -1365,8 +1366,8 @@ fn tighten_int_constraints(constraints: &mut [Constraint]) {
             continue;
         }
         let c0 = constraint.expr.constant.numerator();
-        // Guard magnitudes so the arithmetic below cannot overflow; an out-of-range
-        // coefficient just leaves this constraint strict (sound — simplex handles it).
+        // Guard magnitudes so the arithmetic below cannot overflow; an
+        // out-of-range coefficient just leaves this constraint strict.
         if c0.abs() >= TIGHTEN_COEFF_LIMIT
             || constraint
                 .expr
@@ -1381,8 +1382,9 @@ fn tighten_int_constraints(constraints: &mut [Constraint]) {
             .coeffs
             .values()
             .fold(0i128, |g, r| gcd_i128(g, r.numerator()));
-        // `L + c0 < 0` (L a multiple of g) ⟺ `L ≤ g·⌊(-c0-1)/g⌋`; new constant is its
-        // negation. `g = 0` (no variables) ⟹ `c0 + 1`, the same as the `g = 1` formula.
+        // `L + c0 < 0` (L a multiple of g) ⟺ `L ≤ g·⌊(-c0-1)/g⌋`; the new
+        // constant is its negation. `g = 0` (no variables) ⟹ `c0 + 1`, the same
+        // as the `g = 1` formula.
         let new_const = if g == 0 {
             c0 + 1
         } else {
@@ -1390,16 +1392,22 @@ fn tighten_int_constraints(constraints: &mut [Constraint]) {
         };
         constraint.expr.constant = Rational::integer(new_const);
         constraint.strict = false;
+        tightened += 1;
     }
+    tightened
 }
 
-/// Runs the offline `QF_LIA` engines over an already-collected, already-tightened
-/// constraint set: the bounded Gomory cut round first, then branch-and-bound when
-/// it declines.
+/// Runs the offline `QF_LIA` engines over an already-collected,
+/// already-tightened constraint set: the bounded Gomory cut round first, then
+/// branch-and-bound when it declines.
 ///
 /// Factored out of [`lia_simplex_capped`] so the warm decider ([`warm`]) drives
-/// the identical engines in the identical order over a system it assembled
-/// incrementally, rather than growing a second dispatch that could diverge.
+/// the identical engines, in the identical order, with the identical counter
+/// recording, over a system it assembled incrementally. The counters matter as
+/// much as the engines here: `lia_counters::offline_calls` is the offline
+/// group's entry counter, and a warm path that decided systems without
+/// recording would make that counter read zero on exactly the queries it was
+/// built to measure.
 fn decide_int_constraints(
     constraints: &mut Vec<Constraint>,
     nvars: usize,
@@ -1425,7 +1433,13 @@ fn decide_int_constraints(
         decided
     } else {
         let mut budget = node_cap;
-        lia_branch_and_bound(constraints, nvars, &mut budget, deadline)
+        let result = lia_branch_and_bound(constraints, nvars, &mut budget, deadline);
+        // Node count from the budget delta rather than an increment per node, so
+        // arming the counters cannot change the shape of the search being
+        // measured. `budget == 0` is exactly the branch that returns the
+        // "node budget exhausted" `Unknown`.
+        lia_counters::record_bnb(node_cap.saturating_sub(budget), budget == 0);
+        result
     }
 }
 
@@ -1451,7 +1465,7 @@ pub(crate) fn cold_int_system(
     let trivially_unsat = ctx.trivially_unsat;
     let overflow = ctx.overflow;
     let mut constraints = ctx.constraints;
-    tighten_int_constraints(&mut constraints);
+    tighten_strict_integer_constraints(&mut constraints);
     Ok(ColdIntSystem {
         constraints,
         nvars,
@@ -1472,8 +1486,6 @@ pub(crate) struct ColdIntSystem {
     pub(crate) overflow: bool,
 }
 
-/// [`lia_simplex_with_options`] with the branch-and-bound node budget supplied
-/// explicitly rather than derived from `deadline.is_some()`.
 fn lia_simplex_capped(
     arena: &TermArena,
     assertions: &[TermId],
@@ -1484,14 +1496,27 @@ fn lia_simplex_capped(
     let mut ctx = IntCollector::new(allow_opaque_apps);
     for (index, &assertion) in assertions.iter().enumerate() {
         ctx.current_origin = index;
-        if !ctx.collect_within(arena, assertion, false, deadline)? {
-            return Ok(lia_collection_timeout());
+        match ctx.collect_within(arena, assertion, false, deadline) {
+            Ok(true) => {}
+            Ok(false) => {
+                lia_counters::record_offline_early_exit();
+                return Ok(lia_collection_timeout());
+            }
+            // Outside the conjunctive linear-integer fragment: still an entry to
+            // this decider, and one whose cost is the collection walk. Counted
+            // before the `?` so a query that only ever declines is visible as
+            // `offline_calls == offline_early_exits` rather than as silence.
+            Err(error) => {
+                lia_counters::record_offline_early_exit();
+                return Err(error);
+            }
         }
     }
     // An `i128` overflow while linearizing poisons the collection; degrade to a
     // graceful `unknown` before any constraint is interpreted (never a wrong
     // verdict).
     if ctx.overflow {
+        lia_counters::record_offline_early_exit();
         return Ok(CheckResult::Unknown(UnknownReason {
             kind: UnknownKind::ResourceLimit,
             detail: "lia simplex: i128 overflow while linearizing the integer constraints"
@@ -1499,12 +1524,19 @@ fn lia_simplex_capped(
         }));
     }
     if ctx.trivially_unsat {
+        lia_counters::record_offline_early_exit();
         return Ok(CheckResult::Unsat);
     }
     let nvars = ctx.variable_count();
     let has_opaque_vars = ctx.has_opaque_vars();
     let mut constraints = ctx.constraints;
-    tighten_int_constraints(&mut constraints);
+    let tightened = tighten_strict_integer_constraints(&mut constraints);
+    // The offline group's entry counter, recorded once the system this call is
+    // actually going to search is known. Every early return above records an
+    // early exit instead, so `offline_calls` counts entries either way and a
+    // zero in any other offline field is readable against it.
+    lia_counters::record_offline_call(constraints.len() as u64);
+    lia_counters::record_tightened(tightened);
     let outcome = decide_int_constraints(&mut constraints, nvars, node_cap, deadline);
     match outcome {
         LiaBnb::Unsat => Ok(CheckResult::Unsat),
@@ -1603,6 +1635,7 @@ fn lp_relaxation_feasibility_with_options(
     assertions: &[TermId],
     allow_opaque_apps: bool,
 ) -> LpRelaxation {
+    lia_counters::record_lp_relaxation();
     let mut ctx = IntCollector::new(allow_opaque_apps);
     for (index, &assertion) in assertions.iter().enumerate() {
         ctx.current_origin = index;
@@ -1616,7 +1649,7 @@ fn lp_relaxation_feasibility_with_options(
     if ctx.trivially_unsat {
         return LpRelaxation::Infeasible;
     }
-    match simplex_feasible(&ctx.constraints, ctx.variable_count()) {
+    match simplex_feasible_lia(&ctx.constraints, ctx.variable_count()) {
         Some(SimplexOutcome::Sat(_)) => LpRelaxation::Feasible,
         Some(SimplexOutcome::Unsat(_)) => LpRelaxation::Infeasible,
         // Iteration backstop without a verdict: stay conservative.
@@ -1646,7 +1679,7 @@ pub(crate) fn lia_lp_relaxation_unsat_core(
         return Ok(None);
     }
     let Some(SimplexOutcome::Unsat(multipliers)) =
-        simplex_feasible(&ctx.constraints, ctx.variable_count())
+        simplex_feasible_lia(&ctx.constraints, ctx.variable_count())
     else {
         return Ok(None);
     };
@@ -1747,7 +1780,7 @@ fn lia_branch_and_bound(
     }
     *budget -= 1;
 
-    let values = match simplex_feasible(constraints, nvars) {
+    let values = match simplex_feasible_lia(constraints, nvars) {
         Some(SimplexOutcome::Sat(values)) => values,
         Some(SimplexOutcome::Unsat(_)) => return LiaBnb::Unsat,
         None => {
@@ -1961,7 +1994,7 @@ enum GomoryLp {
 /// in standard form), `Decline` on overflow or the iteration backstop.
 ///
 /// All structural variables are `>= 0`; a feasible vertex has every `rhs[i] >= 0`.
-fn gomory_solve_lp(t: &mut GomoryTableau) -> GomoryLp {
+fn gomory_solve_lp(t: &mut GomoryTableau, pivots: &mut u64) -> GomoryLp {
     let nrows = t.body.len();
     let ncols = t.nonbasic.len();
     // Generous deterministic backstop; Bland's rule (smallest-index choice)
@@ -1998,6 +2031,7 @@ fn gomory_solve_lp(t: &mut GomoryTableau) -> GomoryLp {
             // x_basic >= 0. The standard-form system is infeasible.
             return GomoryLp::Infeasible;
         };
+        *pivots += 1;
         if gomory_pivot(t, li, ej).is_none() {
             return GomoryLp::Decline;
         }
@@ -2176,16 +2210,72 @@ fn lia_gomory_cuts(
     nvars: usize,
     deadline: Option<Instant>,
 ) -> Option<LiaBnb> {
+    // Work is accumulated in a local and recorded ONCE, after the inner
+    // function returns, so counting adds nothing to the pivot loop and no exit
+    // path can forget to report. A call that never builds a tableau is not
+    // recorded at all: it ran no rounds, and counting it would put a structural
+    // zero into `gomory_rounds / gomory_calls`.
+    let mut work = GomoryWork::default();
+    let outcome = lia_gomory_cuts_counting(constraints, nvars, deadline, &mut work);
+    if work.built {
+        lia_counters::record_gomory_work(
+            outcome.is_some(),
+            work.rounds,
+            work.cuts,
+            work.pivots,
+            work.rows,
+            work.columns,
+        );
+    }
+    outcome
+}
+
+/// What one [`lia_gomory_cuts`] call did, for [`crate::lia_counters`].
+///
+/// `gomory_pivots` is the counter that was missing when this instrumentation
+/// first landed, and its absence was actively misleading: on
+/// `BART-PT-020/RF-13.smt2` the sweep reported `simplex_pivots=0` against
+/// 10,102 Gomory calls, which reads as "no pivoting happened" when in fact
+/// every pivot had moved into this engine, where nothing was watching. A
+/// counter that is silent about the engine actually doing the work is the
+/// confident zero in its most expensive form.
+#[derive(Default)]
+struct GomoryWork {
+    /// Whether a tableau was built at all. False means this call is not a
+    /// `gomory_call` — see [`lia_gomory_cuts`].
+    built: bool,
+    /// Cut-and-re-solve rounds entered.
+    rounds: u64,
+    /// Cut rows appended.
+    cuts: u64,
+    /// Pivots performed inside `gomory_solve_lp`, summed over rounds.
+    pivots: u64,
+    /// Rows of the standard-form tableau as built (before cuts).
+    rows: u64,
+    /// Columns of the standard-form tableau as built (before cuts).
+    columns: u64,
+}
+
+fn lia_gomory_cuts_counting(
+    constraints: &[Constraint],
+    nvars: usize,
+    deadline: Option<Instant>,
+    work: &mut GomoryWork,
+) -> Option<LiaBnb> {
     if past_deadline(deadline) {
         return None;
     }
     let mut t = build_gomory_tableau(constraints, nvars)?;
+    work.built = true;
+    work.rows = t.body.len() as u64;
+    work.columns = t.nonbasic.len() as u64;
 
     for _round in 0..MAX_GOMORY_ROUNDS {
         if past_deadline(deadline) {
             return None;
         }
-        match gomory_solve_lp(&mut t) {
+        work.rounds += 1;
+        match gomory_solve_lp(&mut t, &mut work.pivots) {
             GomoryLp::Infeasible => return Some(LiaBnb::Unsat),
             GomoryLp::Decline => return None,
             GomoryLp::Feasible => {}
@@ -2208,6 +2298,7 @@ fn lia_gomory_cuts(
             return gomory_reconstruct(&t, nvars).map(LiaBnb::Sat);
         };
         add_gomory_cut(&mut t, li)?;
+        work.cuts += 1;
     }
     None // round bound hit ⇒ decline (never loop, never a wrong verdict).
 }
@@ -2730,6 +2821,38 @@ enum SimplexOutcome {
 /// multipliers refuting the system ([`SimplexOutcome::Unsat`]); `None` only if
 /// the iteration backstop is reached without deciding.
 fn simplex_feasible(constraints: &[Constraint], nvars: usize) -> Option<SimplexOutcome> {
+    let mut pivots = 0;
+    simplex_feasible_counting_pivots(constraints, nvars, &mut pivots)
+}
+
+/// [`simplex_feasible`] with its pivot count recorded into the integer-route
+/// counters ([`crate::lia_counters`]).
+///
+/// Separate from [`simplex_feasible`] on purpose: the LRA entry point
+/// ([`check_with_lra_simplex`]) shares this engine, and folding its solves into
+/// `simplex_solves` would make a `QF_LIA` figure include work no integer route
+/// did. Only the three integer call sites — branch-and-bound, the LP relaxation
+/// probe and the relaxation-core extractor — go through here.
+fn simplex_feasible_lia(constraints: &[Constraint], nvars: usize) -> Option<SimplexOutcome> {
+    let mut pivots = 0u64;
+    let outcome = simplex_feasible_counting_pivots(constraints, nvars, &mut pivots);
+    lia_counters::record_simplex_solve(
+        pivots,
+        constraints.len() as u64,
+        (nvars + constraints.len()) as u64,
+        outcome.is_none(),
+    );
+    outcome
+}
+
+/// The engine itself. `pivots` is incremented once per `pivot_and_update`; it is
+/// a local at every call site and recorded (if at all) once on return, so the
+/// hot loop takes no thread-local read.
+fn simplex_feasible_counting_pivots(
+    constraints: &[Constraint],
+    nvars: usize,
+    pivots: &mut u64,
+) -> Option<SimplexOutcome> {
     use core::cmp::Ordering;
     let zero = Rational::zero();
     let m = constraints.len();
@@ -2831,6 +2954,7 @@ fn simplex_feasible(constraints: &[Constraint], nvars: usize) -> Option<SimplexO
             return Some(SimplexOutcome::Unsat(multipliers));
         };
 
+        *pivots += 1;
         pivot_and_update(
             &mut row,
             &mut basic,

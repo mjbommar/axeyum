@@ -22,7 +22,8 @@
 //!
 //! * collection — the term walk and linearization of one polarity-applied atom;
 //! * tightening — the gcd-aware strict-to-non-strict rewrite, which
-//!   [`super::tighten_int_constraints`] applies constraint by constraint.
+//!   [`super::tighten_strict_integer_constraints`] applies constraint by
+//!   constraint.
 //!
 //! and it keeps the assembled system across calls, updating it by the trail
 //! delta rather than rebuilding it.
@@ -69,7 +70,8 @@
 //! conflict-core minimization drops a literal from the *middle* of the list, and
 //! a restart replaces the list wholesale. Both fall back to rebuilding from the
 //! common prefix — still not a cold start, since the per-literal collection cache
-//! survives — and [`LiaWarmCounters::assembly_reasons`] says how often.
+//! survives — and `lia_counters`' warm group says how often, naming the reason
+//! rather than summing to one rebuild total.
 //!
 //! What is NOT warmed here is the standard-form tableau or the LP itself.
 //! `build_gomory_tableau` writes a dense `m` by `2*nvars` body whose column
@@ -79,10 +81,7 @@
 //! separate soundness argument, and this module's counters are what say whether
 //! it is worth doing.
 
-use std::cell::{Cell, RefCell};
 use std::collections::BTreeMap;
-use std::fmt::Write as _;
-use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 
 // Native uses the std clock; wasm uses the `web_time` drop-in (ADR-0017).
 #[cfg(not(target_arch = "wasm32"))]
@@ -94,9 +93,10 @@ use axeyum_ir::{SymbolId, TermArena, TermId, Value, eval};
 
 use super::{
     Constraint, IntCollector, LiaBnb, LinExpr, decide_int_constraints, lia_bnb_undecided,
-    lia_collection_timeout, past_deadline, tighten_int_constraints,
+    lia_collection_timeout, past_deadline, tighten_strict_integer_constraints,
 };
 use crate::backend::{CheckResult, SolverError, UnknownKind, UnknownReason};
+use crate::lia_counters::{self, WarmAssembly};
 use crate::model::Model;
 
 // ---------------------------------------------------------------------------
@@ -118,16 +118,6 @@ pub struct LiaWarmPolicy {
     /// `false` restores the cold path exactly: a fresh collector walk, a fresh
     /// tightening pass and a fresh assembly on every call.
     pub warm: bool,
-    /// Reuse each literal's polarity-applied term instead of cloning the whole
-    /// arena per check.
-    ///
-    /// The cold path clones the theory's arena on every feasibility check purely
-    /// so that building `(not atom)` cannot mutate it. Building those negations
-    /// **once**, at construction, removes the clone; term interning makes the
-    /// resulting ids stable, so nothing downstream can tell the difference. This
-    /// is separate from [`Self::warm`] because it is a separate cost with a
-    /// separate measurement, and one flag would conflate them.
-    pub reuse_polarity_terms: bool,
     /// Run the warm rational filter in front of the offline decider.
     ///
     /// **Left ON by default, against the hypothesis this module started from.**
@@ -149,7 +139,7 @@ pub struct LiaWarmPolicy {
     /// A cached literal costs its own constraints, and the population is the atom
     /// set of one query, so this is a runaway-memory backstop rather than a
     /// tuning knob. Past it, literals are collected per check as the cold path
-    /// does, and [`LiaWarmCounters::literal_cache_evicted`] records that it fired.
+    /// does, and `LiaCounters::warm_literal_cache_evicted` records that it fired.
     pub max_cached_literals: usize,
 }
 
@@ -162,11 +152,10 @@ pub struct LiaWarmPolicy {
 pub const DEFAULT_MAX_CACHED_LIA_LITERALS: usize = 1 << 16;
 
 impl LiaWarmPolicy {
-    /// Warming on, per-check arena cloning off, rational filter kept: the
-    /// measured-best configuration and the default.
+    /// Warming on, rational filter kept: the measured-best configuration and
+    /// the default.
     pub const WARM: Self = Self {
         warm: true,
-        reuse_polarity_terms: true,
         rational_filter: true,
         max_cached_literals: DEFAULT_MAX_CACHED_LIA_LITERALS,
     };
@@ -174,7 +163,6 @@ impl LiaWarmPolicy {
     /// Everything off — the pre-existing cold path, verbatim. The A/B baseline.
     pub const OFF: Self = Self {
         warm: false,
-        reuse_polarity_terms: false,
         rational_filter: true,
         max_cached_literals: 0,
     };
@@ -194,7 +182,7 @@ impl LiaWarmPolicy {
     /// Whether this policy leaves every pre-existing behaviour in place.
     #[must_use]
     pub const fn is_cold(self) -> bool {
-        !self.warm && !self.reuse_polarity_terms && self.rational_filter
+        !self.warm && self.rational_filter
     }
 }
 
@@ -222,447 +210,6 @@ pub fn ambient_lia_warm_policy() -> LiaWarmPolicy {
         Ok(value) if value.eq_ignore_ascii_case("nofilter") => LiaWarmPolicy::WARM_NO_FILTER,
         _ => LiaWarmPolicy::WARM,
     })
-}
-
-// ---------------------------------------------------------------------------
-// Counters
-// ---------------------------------------------------------------------------
-
-/// Why one check could not simply continue from the previous check's assembled
-/// system.
-///
-/// These are named rather than summed into one `rebuilds` total because a warm
-/// cache that silently degrades to a rebuild on every call has the same call
-/// count and the same verdicts as one that is working: it reads as a
-/// disappointing performance result rather than as a bug.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum AssemblyReason {
-    /// The live list is exactly the previous one — no assembly work at all.
-    Unchanged,
-    /// The live list extends the previous one: pure append, nothing discarded.
-    Extended,
-    /// The live list is a proper prefix of the previous one: a pop, with nothing
-    /// collected.
-    Shortened,
-    /// The lists share a proper prefix and then differ — a backjump that
-    /// re-asserted different literals, or conflict-core minimization dropping a
-    /// literal from the middle of the set.
-    Diverged,
-    /// Nothing was shared: the first check, a restart, or a wholesale change.
-    ColdStart,
-    /// [`LiaWarmPolicy::warm`] is off, so the system was built from scratch.
-    PolicyCold,
-}
-
-impl AssemblyReason {
-    /// A stable, lowercase name for a report.
-    #[must_use]
-    pub const fn name(self) -> &'static str {
-        match self {
-            Self::Unchanged => "unchanged",
-            Self::Extended => "extended",
-            Self::Shortened => "shortened",
-            Self::Diverged => "diverged",
-            Self::ColdStart => "cold-start",
-            Self::PolicyCold => "policy-cold",
-        }
-    }
-
-    /// Every variant, in report order.
-    #[must_use]
-    pub const fn all() -> [Self; 6] {
-        [
-            Self::Unchanged,
-            Self::Extended,
-            Self::Shortened,
-            Self::Diverged,
-            Self::ColdStart,
-            Self::PolicyCold,
-        ]
-    }
-
-    /// This reason's index into [`LiaWarmCounters::assembly_reasons`].
-    #[must_use]
-    pub const fn slot(self) -> usize {
-        match self {
-            Self::Unchanged => 0,
-            Self::Extended => 1,
-            Self::Shortened => 2,
-            Self::Diverged => 3,
-            Self::ColdStart => 4,
-            Self::PolicyCold => 5,
-        }
-    }
-}
-
-/// Clock-free counters for the warm decider.
-///
-/// Every field is a `u64`, so a `0` is indistinguishable from "never collected"
-/// — which is why [`last_lia_warm_stats`] returns an [`Option`] and why
-/// [`LiaWarmCounters::checks`] is incremented before anything else can move. A
-/// zero anywhere below with `checks > 0` is a measurement; with `checks == 0` it
-/// says the decider was never entered on this thread.
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
-pub struct LiaWarmCounters {
-    /// Entries into [`WarmLiaDecider::check`] — the group's entry counter.
-    pub checks: u64,
-    /// Checks whose assembled system continued from the previous one rather than
-    /// being built from nothing.
-    pub warm_updates: u64,
-    /// Checks whose assembled system was built from nothing.
-    pub rebuilds: u64,
-    /// Per-[`AssemblyReason`] check counts, indexed by [`AssemblyReason::slot`].
-    pub assembly_reasons: [u64; 6],
-    /// Literals appended to the assembled system, summed over checks.
-    pub delta_added: u64,
-    /// Literals discarded from the assembled system, summed over checks.
-    pub delta_removed: u64,
-    /// Literals kept from the previous check, summed over checks — the quantity
-    /// warming exists to avoid recomputing.
-    pub delta_kept: u64,
-    /// Literals collected from their term graph for the first time.
-    pub literal_collections: u64,
-    /// Literal lookups served from the collection cache.
-    pub literal_cache_hits: u64,
-    /// Literals not cached because [`LiaWarmPolicy::max_cached_literals`] was
-    /// reached.
-    pub literal_cache_evicted: u64,
-    /// Constraints copied into the assembled system, summed over checks. Compare
-    /// against `assembled_constraints_live` to see how much of the system a warm
-    /// update actually touched.
-    pub assembled_constraints_copied: u64,
-    /// Constraints in the assembled system at the point it was handed to the
-    /// engines, summed over checks.
-    pub assembled_constraints_live: u64,
-    /// Local columns in the assembled system when handed to the engines, summed
-    /// over checks.
-    pub assembled_columns_live: u64,
-    /// Checks that ended in `unsat`.
-    pub verdict_unsat: u64,
-    /// Checks that ended in `sat`, model replayed.
-    pub verdict_sat: u64,
-    /// Checks that ended in `unknown`.
-    pub verdict_unknown: u64,
-    /// Checks that ended in a [`SolverError`] — input outside the conjunctive
-    /// linear-integer fragment, or a replay failure.
-    pub verdict_error: u64,
-    /// Offline conjunctive decisions the online `LIA` theory asked for, counted
-    /// on **both** arms — warm and cold.
-    ///
-    /// This is the field an A/B is scored on, and it is separate from
-    /// [`Self::checks`] for a reason: `checks` only moves on the warm arm, so
-    /// comparing it across arms would compare a number against zero. The loss
-    /// population is budget-bound — nearly every file spends its whole timeout in
-    /// either arm — so wall time cannot be the measure; how many decisions the
-    /// lazy loop got through in the same budget can.
-    pub theory_offline_checks: u64,
-    /// Of [`Self::theory_offline_checks`], those that took the cold path (a fresh
-    /// collector walk and a fresh tightening pass).
-    pub theory_cold_checks: u64,
-    /// Offline decisions the online theory did NOT have to make because the warm
-    /// rational filter answered first. Counted on both arms, so the filter's
-    /// contribution is visible where it is switched off as well as where it is on.
-    pub theory_filter_answers: u64,
-    /// Of [`Self::theory_filter_answers`], those that were **refutations**. The
-    /// number the case for gating the filter rests on.
-    pub theory_filter_refuted: u64,
-}
-
-/// Records one offline conjunctive decision the online `LIA` theory asked for.
-/// See [`LiaWarmCounters::theory_offline_checks`].
-pub fn record_theory_offline_check(cold: bool) {
-    bump(Slot::TheoryOfflineChecks, 1);
-    if cold {
-        bump(Slot::TheoryColdChecks, 1);
-    }
-}
-
-/// Records one live set the warm rational filter answered outright.
-/// See [`LiaWarmCounters::theory_filter_answers`].
-pub fn record_theory_filter_answer(refuted: bool) {
-    bump(Slot::TheoryFilterAnswers, 1);
-    if refuted {
-        bump(Slot::TheoryFilterRefuted, 1);
-    }
-}
-
-impl LiaWarmCounters {
-    /// The check count for one assembly reason.
-    #[must_use]
-    pub const fn assembly_reason(&self, reason: AssemblyReason) -> u64 {
-        self.assembly_reasons[reason.slot()]
-    }
-
-    /// A one-line, stable rendering for a trace or a sweep log.
-    #[must_use]
-    pub fn summary(&self) -> String {
-        let mut out = format!(
-            "warm=measured checks={} warm_updates={} rebuilds={} delta_added={} \
-             delta_removed={} delta_kept={} literal_collections={} literal_cache_hits={} \
-             literal_cache_evicted={} constraints_copied={} constraints_live={} \
-             columns_live={} unsat={} sat={} unknown={} error={} theory_offline_checks={} \
-             theory_cold_checks={} theory_filter_answers={} theory_filter_refuted={}",
-            self.checks,
-            self.warm_updates,
-            self.rebuilds,
-            self.delta_added,
-            self.delta_removed,
-            self.delta_kept,
-            self.literal_collections,
-            self.literal_cache_hits,
-            self.literal_cache_evicted,
-            self.assembled_constraints_copied,
-            self.assembled_constraints_live,
-            self.assembled_columns_live,
-            self.verdict_unsat,
-            self.verdict_sat,
-            self.verdict_unknown,
-            self.verdict_error,
-            self.theory_offline_checks,
-            self.theory_cold_checks,
-            self.theory_filter_answers,
-            self.theory_filter_refuted,
-        );
-        for reason in AssemblyReason::all() {
-            let _ = write!(
-                out,
-                " assembly_{}={}",
-                reason.name(),
-                self.assembly_reason(reason)
-            );
-        }
-        out
-    }
-}
-
-/// The counter slots, in the order they are stored.
-///
-/// An index enum rather than a struct of atomics, so that adding a counter is
-/// one line in three places the compiler checks (`Slot`, `SLOT_COUNT`,
-/// [`snapshot`]) instead of a field that silently reads zero because nobody
-/// wired it.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[repr(usize)]
-enum Slot {
-    Checks = 0,
-    WarmUpdates,
-    Rebuilds,
-    // The six assembly reasons occupy `ASSEMBLY_BASE .. ASSEMBLY_BASE + 6`.
-    AssemblyUnchanged,
-    AssemblyExtended,
-    AssemblyShortened,
-    AssemblyDiverged,
-    AssemblyColdStart,
-    AssemblyPolicyCold,
-    DeltaAdded,
-    DeltaRemoved,
-    DeltaKept,
-    LiteralCollections,
-    LiteralCacheHits,
-    LiteralCacheEvicted,
-    ConstraintsCopied,
-    ConstraintsLive,
-    ColumnsLive,
-    VerdictUnsat,
-    VerdictSat,
-    VerdictUnknown,
-    VerdictError,
-    TheoryOfflineChecks,
-    TheoryColdChecks,
-    TheoryFilterAnswers,
-    TheoryFilterRefuted,
-}
-
-/// The slot the first [`AssemblyReason`] occupies; the rest follow in
-/// [`AssemblyReason::slot`] order.
-const ASSEMBLY_BASE: usize = Slot::AssemblyUnchanged as usize;
-
-/// How many slots there are.
-const SLOT_COUNT: usize = Slot::TheoryFilterRefuted as usize + 1;
-
-/// The six assembly-reason slots, in [`AssemblyReason::slot`] order.
-const ASSEMBLY_SLOTS: [Slot; 6] = [
-    Slot::AssemblyUnchanged,
-    Slot::AssemblyExtended,
-    Slot::AssemblyShortened,
-    Slot::AssemblyDiverged,
-    Slot::AssemblyColdStart,
-    Slot::AssemblyPolicyCold,
-];
-
-/// The counters, shared across threads.
-///
-/// **Process-global and atomic, not thread-local, deliberately.** The workload
-/// this instrument exists to measure is budget-bound: the solve runs on a worker
-/// thread and a watchdog on the main thread gives up on it, so a thread-local
-/// snapshot is unreachable on exactly the files that matter — measured here,
-/// every one of the six hardest `QF_UFLIA` losses printed no counters at all
-/// under a thread-local design, which is an instrument that goes blind precisely
-/// where the question is. Relaxed monotone adds are the whole synchronisation:
-/// no counter is read by the search, so no verdict can depend on the ordering,
-/// and a reader on another thread sees a consistent-enough live total for a
-/// diagnostic.
-static SLOTS: [AtomicU64; SLOT_COUNT] = [const { AtomicU64::new(0) }; SLOT_COUNT];
-
-/// Whether a [`LiaWarmProcessStatsGuard`] is armed.
-static PROCESS_COLLECT: AtomicBool = AtomicBool::new(false);
-
-/// Set once a process-wide guard has ever been armed, so a reader can tell
-/// "measured zero" from "never collected".
-static PROCESS_EVER_ARMED: AtomicBool = AtomicBool::new(false);
-
-thread_local! {
-    /// Whether a [`LiaWarmStatsGuard`] is armed on this thread.
-    static THREAD_COLLECT: Cell<bool> = const { Cell::new(false) };
-    /// Set once a thread-local guard has ever been armed on this thread.
-    static THREAD_EVER_ARMED: Cell<bool> = const { Cell::new(false) };
-    /// This thread's own slots.
-    static THREAD_SLOTS: RefCell<[u64; SLOT_COUNT]> =
-        const { RefCell::new([0; SLOT_COUNT]) };
-}
-
-/// Adds `n` to one counter, into whichever collectors are armed.
-///
-/// With neither armed this is one relaxed atomic load, one thread-local read and
-/// a branch: no clock, no allocation, and nothing the search can observe — so no
-/// verdict can depend on whether a guard exists.
-fn bump(slot: Slot, n: u64) {
-    if n == 0 {
-        return;
-    }
-    if PROCESS_COLLECT.load(Ordering::Relaxed) {
-        SLOTS[slot as usize].fetch_add(n, Ordering::Relaxed);
-    }
-    if THREAD_COLLECT.with(Cell::get) {
-        THREAD_SLOTS.with(|slots| slots.borrow_mut()[slot as usize] += n);
-    }
-}
-
-/// Builds a snapshot from whichever backing store `read` indexes.
-fn assemble_counters(read: impl Fn(usize) -> u64) -> LiaWarmCounters {
-    let mut assembly_reasons = [0u64; 6];
-    for (index, entry) in assembly_reasons.iter_mut().enumerate() {
-        *entry = read(ASSEMBLY_BASE + index);
-    }
-    LiaWarmCounters {
-        checks: read(Slot::Checks as usize),
-        warm_updates: read(Slot::WarmUpdates as usize),
-        rebuilds: read(Slot::Rebuilds as usize),
-        assembly_reasons,
-        delta_added: read(Slot::DeltaAdded as usize),
-        delta_removed: read(Slot::DeltaRemoved as usize),
-        delta_kept: read(Slot::DeltaKept as usize),
-        literal_collections: read(Slot::LiteralCollections as usize),
-        literal_cache_hits: read(Slot::LiteralCacheHits as usize),
-        literal_cache_evicted: read(Slot::LiteralCacheEvicted as usize),
-        assembled_constraints_copied: read(Slot::ConstraintsCopied as usize),
-        assembled_constraints_live: read(Slot::ConstraintsLive as usize),
-        assembled_columns_live: read(Slot::ColumnsLive as usize),
-        verdict_unsat: read(Slot::VerdictUnsat as usize),
-        verdict_sat: read(Slot::VerdictSat as usize),
-        verdict_unknown: read(Slot::VerdictUnknown as usize),
-        verdict_error: read(Slot::VerdictError as usize),
-        theory_offline_checks: read(Slot::TheoryOfflineChecks as usize),
-        theory_cold_checks: read(Slot::TheoryColdChecks as usize),
-        theory_filter_answers: read(Slot::TheoryFilterAnswers as usize),
-        theory_filter_refuted: read(Slot::TheoryFilterRefuted as usize),
-    }
-}
-
-/// Enables warm-decider counter collection **on this thread**, for the guard's
-/// lifetime, and zeroes this thread's counters.
-///
-/// This is the guard a unit test wants: thread-local, so a test's numbers cannot
-/// be polluted by whatever else the harness is running in parallel. For a solve
-/// that runs on a worker thread and is read from another — the case that matters
-/// on a budget-bound file — use [`LiaWarmProcessStatsGuard`].
-#[derive(Debug)]
-pub struct LiaWarmStatsGuard(bool);
-
-impl LiaWarmStatsGuard {
-    /// Arms this thread's collection and zeroes this thread's counters.
-    #[must_use]
-    pub fn enable() -> Self {
-        let previous = THREAD_COLLECT.with(|c| c.replace(true));
-        THREAD_EVER_ARMED.with(|c| c.set(true));
-        THREAD_SLOTS.with(|slots| *slots.borrow_mut() = [0; SLOT_COUNT]);
-        LiaWarmStatsGuard(previous)
-    }
-}
-
-impl Drop for LiaWarmStatsGuard {
-    fn drop(&mut self) {
-        THREAD_COLLECT.with(|c| c.set(self.0));
-    }
-}
-
-/// This thread's warm-decider counters since the active — or most recently
-/// dropped — [`LiaWarmStatsGuard`] was created.
-///
-/// `None` means a thread-local guard was **never armed on this thread**, which
-/// is not the same statement as every counter being zero. That distinction is
-/// the whole reason for the [`Option`].
-#[must_use]
-pub fn last_lia_warm_stats() -> Option<LiaWarmCounters> {
-    if !THREAD_EVER_ARMED.with(Cell::get) {
-        return None;
-    }
-    Some(THREAD_SLOTS.with(|slots| {
-        let slots = *slots.borrow();
-        assemble_counters(|index| slots[index])
-    }))
-}
-
-/// Enables warm-decider counter collection **process-wide**, for the guard's
-/// lifetime, and zeroes the shared counters.
-///
-/// Why this exists at all, given the thread-local guard above: the workload this
-/// instrument is for is budget-bound. The solve runs on a worker thread and a
-/// watchdog on the main thread gives up on it, so a thread-local snapshot is
-/// unreachable on exactly the files that matter — measured 2026-09-08, every one
-/// of the six hardest `QF_UFLIA` losses printed no counters at all, which is an
-/// instrument that goes blind precisely where the question is.
-///
-/// Counts from every thread land in one set of totals. Relaxed monotone adds are
-/// the whole synchronisation: nothing here is read by the search, so no verdict
-/// can depend on the ordering.
-#[derive(Debug)]
-pub struct LiaWarmProcessStatsGuard(bool);
-
-impl LiaWarmProcessStatsGuard {
-    /// Arms process-wide collection and zeroes the shared counters.
-    #[must_use]
-    pub fn enable() -> Self {
-        let previous = PROCESS_COLLECT.swap(true, Ordering::Relaxed);
-        PROCESS_EVER_ARMED.store(true, Ordering::Relaxed);
-        for slot in &SLOTS {
-            slot.store(0, Ordering::Relaxed);
-        }
-        LiaWarmProcessStatsGuard(previous)
-    }
-}
-
-impl Drop for LiaWarmProcessStatsGuard {
-    fn drop(&mut self) {
-        PROCESS_COLLECT.store(self.0, Ordering::Relaxed);
-    }
-}
-
-/// The process-wide warm-decider counters since the active — or most recently
-/// dropped — [`LiaWarmProcessStatsGuard`] was created.
-///
-/// `None` means a process-wide guard was never armed. Safe to call while a solve
-/// is still running on another thread: the counters are monotone, so a live read
-/// is a lower bound on the work done so far, not a torn value. That is the whole
-/// point — the files this measures never let the solve return.
-#[must_use]
-pub fn live_lia_warm_stats() -> Option<LiaWarmCounters> {
-    if !PROCESS_EVER_ARMED.load(Ordering::Relaxed) {
-        return None;
-    }
-    Some(assemble_counters(|index| {
-        SLOTS[index].load(Ordering::Relaxed)
-    }))
 }
 
 // ---------------------------------------------------------------------------
@@ -905,18 +452,8 @@ impl WarmLiaDecider {
         node_cap: u64,
         deadline: Option<Instant>,
     ) -> Result<CheckResult, SolverError> {
-        bump(Slot::Checks, 1);
-        let result = self.check_inner(arena, live, node_cap, deadline);
-        bump(
-            match &result {
-                Ok(CheckResult::Unsat) => Slot::VerdictUnsat,
-                Ok(CheckResult::Sat(_)) => Slot::VerdictSat,
-                Ok(CheckResult::Unknown(_)) => Slot::VerdictUnknown,
-                Err(_) => Slot::VerdictError,
-            },
-            1,
-        );
-        result
+        lia_counters::record_warm_check();
+        self.check_inner(arena, live, node_cap, deadline)
     }
 
     fn check_inner(
@@ -928,8 +465,7 @@ impl WarmLiaDecider {
     ) -> Result<CheckResult, SolverError> {
         if !self.policy.warm {
             self.assembly.clear();
-            bump(Slot::Rebuilds, 1);
-            bump(Slot::AssemblyPolicyCold, 1);
+            lia_counters::record_warm_assembly(WarmAssembly::PolicyCold, 0, 0, 0);
         }
         if self.assemble(arena, live, deadline)?.is_none() {
             return Ok(lia_collection_timeout());
@@ -938,6 +474,7 @@ impl WarmLiaDecider {
         // graceful `unknown` before any constraint is interpreted, exactly as the
         // cold path does (never a wrong verdict).
         if self.assembly.overflow() {
+            lia_counters::record_offline_early_exit();
             return Ok(CheckResult::Unknown(UnknownReason {
                 kind: UnknownKind::ResourceLimit,
                 detail: "lia simplex: i128 overflow while linearizing the integer constraints"
@@ -945,13 +482,19 @@ impl WarmLiaDecider {
             }));
         }
         if self.assembly.trivially_unsat() {
+            lia_counters::record_offline_early_exit();
             return Ok(CheckResult::Unsat);
         }
         let nvars = self.assembly.local_to_global.len();
         let has_opaque_vars = self.assembly.has_opaque();
         let live_constraints = self.assembly.constraints.len();
-        bump(Slot::ConstraintsLive, live_constraints as u64);
-        bump(Slot::ColumnsLive, nvars as u64);
+        // The OFFLINE group's entry counter, recorded here for the same reason
+        // `lia_simplex_capped` records it: this is a decision by the offline
+        // decider, and a warm path that decided systems without saying so would
+        // make `offline_calls` read zero on exactly the queries the counter was
+        // added to measure. The tightening count is not re-recorded — it was
+        // recorded once, when the literal was collected and cached.
+        lia_counters::record_offline_call(live_constraints as u64);
         // The engines take the system by `&mut` because branch-and-bound uses it
         // as a backtracking stack — it pushes a bound constraint, recurses and
         // pops it on every path out. Handing them the assembly directly is what
@@ -1042,29 +585,22 @@ impl WarmLiaDecider {
         let previous = self.assembly.keys.len();
         if self.policy.warm {
             let reason = if shared == previous && shared == live.len() {
-                AssemblyReason::Unchanged
+                WarmAssembly::Unchanged
             } else if shared == 0 {
-                AssemblyReason::ColdStart
+                WarmAssembly::ColdStart
             } else if shared == previous {
-                AssemblyReason::Extended
+                WarmAssembly::Extended
             } else if shared == live.len() {
-                AssemblyReason::Shortened
+                WarmAssembly::Shortened
             } else {
-                AssemblyReason::Diverged
+                WarmAssembly::Diverged
             };
-            let removed = previous - shared;
-            let added = live.len() - shared;
-            bump(ASSEMBLY_SLOTS[reason.slot()], 1);
-            if matches!(reason, AssemblyReason::ColdStart) {
-                bump(Slot::Rebuilds, 1);
-            } else {
-                bump(Slot::WarmUpdates, 1);
-            }
-            bump(Slot::DeltaKept, shared as u64);
-            bump(Slot::DeltaRemoved, removed as u64);
-            bump(Slot::DeltaAdded, added as u64);
-        } else {
-            bump(Slot::DeltaAdded, live.len() as u64);
+            lia_counters::record_warm_assembly(
+                reason,
+                shared as u64,
+                (previous - shared) as u64,
+                (live.len() - shared) as u64,
+            );
         }
         self.assembly.truncate(shared);
         for (offset, &key) in live[shared..].iter().enumerate() {
@@ -1085,7 +621,7 @@ impl WarmLiaDecider {
                 }
             };
             let copied = self.assembly.append(key, &entry, shared + offset);
-            bump(Slot::ConstraintsCopied, copied as u64);
+            lia_counters::record_warm_constraints_copied(copied as u64);
             self.stash(key, entry);
         }
         Ok(Some(()))
@@ -1104,10 +640,10 @@ impl WarmLiaDecider {
         deadline: Option<Instant>,
     ) -> Result<Option<LiteralEntry>, SolverError> {
         if let Some(entry) = self.cache.get(key).and_then(Option::as_ref) {
-            bump(Slot::LiteralCacheHits, 1);
+            lia_counters::record_warm_literal_cache_hit();
             return Ok(Some(entry.clone()));
         }
-        bump(Slot::LiteralCollections, 1);
+        lia_counters::record_warm_literal_collection();
         let Some(term) = self.term_of(key) else {
             // Fail closed. Treating a key with no term as contributing nothing
             // would silently drop a live literal from the conjunction — a weaker
@@ -1146,7 +682,7 @@ impl WarmLiaDecider {
         }
         let has_opaque = touched.iter().any(|&g| self.global_opaque[g]);
         let mut constraints = std::mem::take(&mut self.collector.constraints);
-        tighten_int_constraints(&mut constraints);
+        tighten_strict_integer_constraints(&mut constraints);
         let entry = LiteralEntry {
             constraints,
             touched,
@@ -1165,7 +701,7 @@ impl WarmLiaDecider {
             return;
         }
         if self.cached_literals >= self.policy.max_cached_literals {
-            bump(Slot::LiteralCacheEvicted, 1);
+            lia_counters::record_warm_literal_cache_evicted();
             return;
         }
         self.cached_literals += 1;

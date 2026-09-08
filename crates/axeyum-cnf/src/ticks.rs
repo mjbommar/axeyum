@@ -45,12 +45,12 @@
 //!
 //! # Where this model differs from Kissat's, deliberately
 //!
-//! [`TickModel::DEFAULT`] charges one term Kissat has no counterpart for: the
+//! [`crate::ticks::TickModel::DEFAULT`] charges one term Kissat has no counterpart for: the
 //! per-conflict mark array `analyze` allocates and zeroes, which is
 //! `conflicts x variables` bytes and is *the* cost in this core that scales
 //! with the formula rather than with the conflict. Leaving a known
 //! formula-scaled cost out of a cost model makes the model wrong about exactly
-//! the instances where budgeting matters most. [`TickModel::PROPAGATION_ONLY`]
+//! the instances where budgeting matters most. [`crate::ticks::TickModel::PROPAGATION_ONLY`]
 //! omits it, for when the point is to compare our tick counts against a
 //! reference solver's rather than to budget our own work.
 //!
@@ -78,7 +78,7 @@ pub const ASSUMED_CACHE_LINE_BYTES: u64 = 128;
 /// Derived from **our** `Watch` (a clause reference plus a blocking literal),
 /// not copied from Kissat's number: their watch is a 4-byte tagged word, so
 /// they amortise over 32 and we over 8. `proof_sat.rs` carries a compile-time
-/// assertion that `Watch` really is [`WATCH_BYTES`] wide, so growing the watch
+/// assertion that `Watch` really is `WATCH_BYTES` wide, so growing the watch
 /// breaks the build rather than silently re-denominating every budget
 /// calibrated in ticks.
 pub const WATCHES_PER_CACHE_LINE: u64 = ASSUMED_CACHE_LINE_BYTES / WATCH_BYTES as u64;

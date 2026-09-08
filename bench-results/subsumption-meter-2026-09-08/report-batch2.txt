@@ -1,0 +1,36 @@
+population: 200 files, budget 24000 ms
+
+| arm | decided | PAR-2 | inproc s | subsume s | vivify s | bve s | subsume clock-cut | subsume work-cut | bve dead/spent |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| off | 184 | 926.8 | 0.0 | 0.0 | 0.0 | 0.0 | 0 | 0 | — |
+| base | 185 | 1003.7 | 160.2 | 74.4 | 2.9 | 79.1 | 1 | 53 | 0.001 |
+| subsume-gated-100 | 184 | 1020.5 | 120.9 | 37.4 | 2.6 | 77.8 | 0 | 135 | 0.001 |
+| subsume-gated-50 | 186 | 960.5 | 149.4 | 29.9 | 3.5 | 111.1 | 0 | 152 | 0.001 |
+
+cross-arm verdict conflicts: 0
+
+files that ran subsumption and recorded the counters: 141 of 200
+
+last progress, in units of the pass's own setup cost:
+  p50 135x  p75 170x  p90 179x  p95 182x  max 193x
+total spend, same units: p50 135x  p90 180x  max 194x
+spend after the last useful action: 1.5% of all subsumption work
+throughput (steps/ms, 76 files >= 20 ms): p10 85,471  median 172,489  p90 220,577
+
+| K (x setup) | files cut | sec saved | files keeping 100% |
+|---:|---:|---:|---:|
+| 10 | 127 | 69.7 s | 22 |
+| 25 | 109 | 62.7 s | 34 |
+| 50 | 98 | 51.1 s | 46 |
+| 100 | 84 | 28.4 s | 58 |
+| 200 | 0 | 0.0 s | 141 |
+| 500 | 0 | 0.0 s | 141 |
+| 1000 | 0 | 0.0 s | 141 |
+| 2000 | 0 | 0.0 s | 141 |
+| 5000 | 0 | 0.0 s | 141 |
+
+the named file:
+  off                    unknown  wall   25000 ms  subsume        0 ms  bve        0 ms  subsume_work               0
+  base                   unknown  wall   24439 ms  subsume    10764 ms  bve       73 ms  subsume_work   1,245,284,660
+  subsume-gated-100      unknown  wall   25000 ms  subsume        0 ms  bve        0 ms  subsume_work               0
+  subsume-gated-50       sat      wall   22402 ms  subsume     4221 ms  bve     4501 ms  subsume_work     452,526,023

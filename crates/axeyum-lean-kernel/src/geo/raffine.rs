@@ -88,7 +88,7 @@ use crate::name::NameId;
 use crate::nat_prelude::NatOps;
 use crate::nat_prelude::structures::mk_instance;
 
-/// The interned names [`declare_all`] produces.
+/// The interned names `declare_all` produces.
 ///
 /// Handles belong to the kernel they were built in; do not mix them across
 /// kernels.

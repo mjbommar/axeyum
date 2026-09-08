@@ -640,6 +640,48 @@ pub static REGISTRY: &[ConfigEntry] = &[
         note: "Signalled through `EqSolution::bailed()`. The doc records ~1.2 s on a 17.6 MB / 340k-node input but no date, so the measurement cannot be compared against the code.",
     },
     ConfigEntry {
+        name: "MAX_ROW_ROUNDS",
+        module: "crates/axeyum-solver/src/abv.rs",
+        value: "64",
+        unit: "CEGAR refinement rounds",
+        protects: Protects::Time,
+        on_exceed: OnExceed::RefuseUnknown,
+        signal: Signal::ToCaller,
+        guarded_by: "",
+        env_override: None,
+        justification: dated(
+            "docs/research/12-performance/qf-abv-route-attribution-2026-09-08.md",
+            "2026-09-08",
+            Some("f24c61f91"),
+            &[sym("crates/axeyum-solver/src/abv.rs", "MAX_ROW_ROUNDS")],
+            &[doc(
+                "docs/research/12-performance/qf-abv-route-attribution-2026-09-08.md",
+            )],
+        ),
+        note: "Bounds the lazy ROW / extensionality CEGAR. IT, NOT THE CLOCK, is what refuses two files of the committed QF_ABV loss list: `dwp cat.next_line_num` reaches 64 rounds after 3.3 s of a 24 s budget and `dwp vdir.strcmp_size` after 14.6 s, and the message the caller then prints names an array SHAPE, not a round count. Registered undated-to-dated by that measurement; the value itself is unchanged and unjustified by anything but a doc comment.",
+    },
+    ConfigEntry {
+        name: "MAX_ROW_SITES",
+        module: "crates/axeyum-solver/src/abv.rs",
+        value: "4096",
+        unit: "abstracted read sites",
+        protects: Protects::Memory,
+        on_exceed: OnExceed::DeclineRoute,
+        signal: Signal::None,
+        guarded_by: "a refused site aborts the abstraction, so the route declines to `unknown` and never returns a verdict from a partial abstraction",
+        env_override: None,
+        justification: dated(
+            "docs/research/12-performance/qf-abv-route-attribution-2026-09-08.md",
+            "2026-09-08",
+            Some("f24c61f91"),
+            &[sym("crates/axeyum-solver/src/abv.rs", "MAX_ROW_SITES")],
+            &[doc(
+                "docs/research/12-performance/qf-abv-route-attribution-2026-09-08.md",
+            )],
+        ),
+        note: "SIGNAL IS `None` ON PURPOSE, AND THAT IS THE PROBLEM IT IS REGISTERED FOR: the refusal is an `Ok(None)` the caller cannot tell apart from an unmodelled array shape, so the route reports \"an array read is outside the modelled store/variable/const-array fragment\" for a CAPACITY event. Fired on `brummayerbiere/fifo32ia04k08` (4,109 sites) and `wchains140se` (4,484) on 2026-09-08. `crate::AbvStats::row_site_cap_refusals` is what separates the two readings.",
+    },
+    ConfigEntry {
         name: "DL_EXTENDED_FALLBACK_RESERVE",
         module: "crates/axeyum-solver/src/auto.rs",
         value: "Duration::from_secs(3)",
@@ -1576,9 +1618,9 @@ pub static REGISTRY: &[ConfigEntry] = &[
                query's atom set, and the online LIA theory is only built below its own admission \
                bound, so it is not expected to fire on any query that theory accepts. The env \
                variable does not select this VALUE -- it selects the whole `LiaWarmPolicy` \
-               (`off` = the pre-warm cold path, `filter` = warm with the rational filter kept, \
-               unset = warm) -- which is why it is attached to the only registered constant the \
-               policy carries.",
+               (`off` = the pre-warm cold path, `nofilter` = warm with the rational filter \
+               switched off, unset = warm with it kept, which is the shipped default) -- which is \
+               why it is attached to the only registered constant the policy carries.",
     },
     ConfigEntry {
         name: "BYTES_PER_ADMITTED_ATOM",
@@ -2273,6 +2315,30 @@ pub static REGISTRY: &[ConfigEntry] = &[
         env_override: None,
         justification: undated("doc comment"),
         note: "About 128 MB at two `i128`s per cell. `Incremental::new` returns `None`, so the caller falls back to Fourier-Motzkin. Deterministic (no clock, no resident-set probe), which is what lets it be part of a reproducible verdict.",
+    },
+    ConfigEntry {
+        name: "MAX_INPUT_DAG_NODES",
+        module: "crates/axeyum-solver/src/ufbv_online.rs",
+        value: "16_384",
+        unit: "input DAG nodes",
+        protects: Protects::Memory,
+        on_exceed: OnExceed::DeclineRoute,
+        signal: Signal::ToCaller,
+        guarded_by: "",
+        env_override: None,
+        justification: dated(
+            "docs/research/12-performance/qf-abv-route-attribution-2026-09-08.md",
+            "2026-09-08",
+            Some("f24c61f91"),
+            &[sym(
+                "crates/axeyum-solver/src/ufbv_online.rs",
+                "MAX_INPUT_DAG_NODES",
+            )],
+            &[doc(
+                "docs/research/12-performance/qf-abv-route-attribution-2026-09-08.md",
+            )],
+        ),
+        note: "Admits `abv-online-cdclt`, the FIRST route every array query tries. Declined `2018-Mann/arbiter_array_cex_w32d32q16n4b34.smt2` at 32,695 nodes on 2026-09-08. Registered because that route is the entry point for a whole division and had no registry presence at all; `crates/axeyum-solver/src/ufbv_online.rs` is still not in `GOVERNED_FILES`, so its other ~20 bounds remain unclaimed. The VALUE is unchanged and still rests on a doc comment.",
     },
 ];
 

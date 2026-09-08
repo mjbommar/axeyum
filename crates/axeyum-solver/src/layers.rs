@@ -453,7 +453,7 @@ std::thread_local! {
 /// previous setting on drop (so nested/recursive solves compose correctly).
 /// Off by default: constructing no guard means no extra work beyond what
 /// `SatBvBackend` already computes unconditionally (see
-/// [`COLLECT_BV_LAYER_STATS`]'s docs).
+/// `COLLECT_BV_LAYER_STATS`'s docs).
 ///
 /// ```ignore
 /// let _guard = axeyum_solver::BvLayerStatsGuard::enable();
@@ -492,8 +492,21 @@ pub fn last_bv_layer_stats() -> Option<BvLayerStats> {
 /// `SatBvBackend`'s many internal construction sites ran.
 pub(crate) fn publish_bv_layer_stats(stats: &SolveStats) {
     if COLLECT_BV_LAYER_STATS.with(std::cell::Cell::get) {
-        LAST_BV_LAYER_STATS.with(|c| c.set(BvLayerStats::from_solve_stats(stats)));
+        let lifted = BvLayerStats::from_solve_stats(stats);
+        LAST_BV_LAYER_STATS.with(|c| c.set(lifted));
         LAST_BV_BACKEND_COUNTERS.with(|c| c.borrow_mut().clone_from(&stats.backend));
+        // Mirror onto the cross-thread board as well, so a watchdog on
+        // another thread can still read this check's stage timings when a
+        // LATER stage of the same query runs past the wall clock. The check
+        // itself finished, so this reading is `Complete` for the check even
+        // though the query it belongs to may never finish.
+        if let Some(lifted) = lifted {
+            crate::live_instruments::publish_live(
+                crate::live_instruments::instrument::BV_LAYER,
+                lifted,
+                crate::live_instruments::Sampled::Complete,
+            );
+        }
     }
 }
 

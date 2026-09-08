@@ -16,8 +16,8 @@ use axeyum_ir::{
     TermArena, TermId, TermNode, Value, eval, well_founded_default,
 };
 use axeyum_rewrite::{
-    ArrayElimError, ArrayElimination, READ_OVER_WRITE_WITNESS_SAMPLES, eliminate_arrays,
-    witness_read_over_write,
+    ArrayAbstraction, ArrayElimError, ArrayElimination, READ_OVER_WRITE_WITNESS_SAMPLES,
+    abstract_arrays, eliminate_arrays, witness_read_over_write,
 };
 
 use crate::backend::{
@@ -42,7 +42,7 @@ pub fn check_with_array_elimination<B: SolverBackend>(
     assertions: &[TermId],
     config: &SolverConfig,
 ) -> Result<CheckResult, SolverError> {
-    let elimination = eliminate_arrays(arena, assertions).map_err(map_elim_error)?;
+    let elimination = eliminate_arrays_counted(arena, assertions).map_err(map_elim_error)?;
     let eliminated = elimination.assertions().to_vec();
     let result = backend.check(arena, &eliminated, config)?;
 
@@ -92,7 +92,7 @@ pub fn check_qf_abv_lazy<B: SolverBackend>(
     assertions: &[TermId],
     config: &SolverConfig,
 ) -> Result<CheckResult, SolverError> {
-    let elim = eliminate_arrays(arena, assertions).map_err(map_elim_error)?;
+    let elim = abstract_arrays_counted(arena, assertions).map_err(map_elim_error)?;
     if !elim.had_arrays() {
         // No array constructs: nothing to abstract, solve directly.
         return backend.check(arena, assertions, config);
@@ -103,18 +103,23 @@ pub fn check_qf_abv_lazy<B: SolverBackend>(
     // lemmas.
     let selects: Vec<(SymbolId, TermId, SymbolId)> = elim.selects();
 
-    // Group select indices by array symbol, preserving discovery order (linear
-    // find — no hash-map iteration in any output).
-    let mut groups: Vec<(SymbolId, Vec<usize>)> = Vec::new();
-    for (idx, (array, _index, _fresh)) in selects.iter().enumerate() {
-        if let Some((_, members)) = groups.iter_mut().find(|(a, _)| a == array) {
-            members.push(idx);
-        } else {
-            groups.push((*array, vec![idx]));
-        }
-    }
+    // The scan's view of those selects. Built once: the select set is fixed by
+    // the abstraction, and only the lemmas added around it change per round.
+    let congruence_sites: Vec<CongruenceSite> = selects
+        .iter()
+        .enumerate()
+        .map(|(position, &(array, index, result))| CongruenceSite {
+            position,
+            array,
+            index,
+            result,
+        })
+        .collect();
 
-    let mut working = elim.abstraction().to_vec();
+    // `ArrayAbstraction::assertions` IS the post-read-over-write abstraction —
+    // the same list `ArrayElimination::abstraction` returns, without the
+    // congruence lemmas ever having been built.
+    let mut working = elim.assertions().to_vec();
     // Index pairs whose congruence lemma has already been asserted; bounds the
     // loop and prevents re-adding the same lemma.
     let mut added: HashSet<(usize, usize)> = HashSet::new();
@@ -128,6 +133,7 @@ pub fn check_qf_abv_lazy<B: SolverBackend>(
                     .to_owned(),
             }));
         }
+        note_abv(|stats| stats.cegar_rounds += 1);
         let round_config = config_with_remaining_deadline(config, deadline);
         let assignment = match backend.check(arena, &working, &round_config)? {
             // The abstraction is a relaxation; its UNSAT implies the original's.
@@ -137,41 +143,17 @@ pub fn check_qf_abv_lazy<B: SolverBackend>(
         };
 
         // Collect every newly-violated pair before mutating the arena, so the
-        // `assignment` borrow does not collide with the IR builders.
-        let mut new_lemmas: Vec<(usize, usize)> = Vec::new();
-        for (_array, members) in &groups {
-            if past_deadline(deadline) {
-                return Ok(CheckResult::Unknown(UnknownReason {
-                    kind: UnknownKind::Timeout,
-                    detail: "lazy select-congruence deadline exceeded while checking pairs"
-                        .to_owned(),
-                }));
-            }
-            for a in 0..members.len() {
-                for b in (a + 1)..members.len() {
-                    if past_deadline(deadline) {
-                        return Ok(CheckResult::Unknown(UnknownReason {
-                            kind: UnknownKind::Timeout,
-                            detail: "lazy select-congruence deadline exceeded while checking pairs"
-                                .to_owned(),
-                        }));
-                    }
-                    let i = members[a];
-                    let j = members[b];
-                    if added.contains(&(i, j)) {
-                        continue;
-                    }
-                    let (_ai, index_i, fresh_i) = selects[i];
-                    let (_aj, index_j, fresh_j) = selects[j];
-                    if indices_equal(arena, index_i, index_j, &assignment)?
-                        && results_differ(&assignment, fresh_i, fresh_j)
-                    {
-                        new_lemmas.push((i, j));
-                    }
-                }
-            }
-        }
-
+        // `assignment` borrow does not collide with the IR builders. The scan
+        // is grouped by index VALUE rather than pairwise — see
+        // [`violated_congruence_pairs`] for the measurement that motivated it
+        // and the argument that the pair set and its order are unchanged.
+        //
+        // The per-pair deadline poll the pairwise scan carried is gone with the
+        // pairwise walk: it read the clock once per candidate pair (722,240
+        // times in six rounds on `bmc-arrays/bubbleSort.smt2`), which is a
+        // meaningful share of the cost it was there to bound. The round's own
+        // poll at the top of this loop still bounds the refinement.
+        let new_lemmas = violated_congruence_pairs(arena, &congruence_sites, &assignment, &added)?;
         if new_lemmas.is_empty() {
             // Model is select-consistent: project, replay, and return.
             return project_replay_build(arena, &elim, assertions, &assignment);
@@ -200,9 +182,51 @@ pub fn check_qf_abv_lazy<B: SolverBackend>(
 ///
 /// Returns [`SolverError::Backend`] if model projection fails or if any original
 /// assertion fails to replay to `true` under the projected model.
-fn project_replay_build(
+/// The projection half of an array reduction: what a `sat` candidate needs in
+/// order to become a model over the original query.
+///
+/// Two reductions implement it, and the difference between them is the point:
+/// [`ArrayElimination`] additionally materialises the quadratic Ackermann
+/// constraint set, while `axeyum_rewrite::ArrayAbstraction` performs the same
+/// read-over-write rewrite and stops. A CEGAR route needs only the second, so
+/// this trait is what lets it ask for the second without losing model
+/// projection.
+trait ArrayModelProjection {
+    /// Projects a select-consistent abstraction model back to array values.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`axeyum_ir::IrError`] if a select index cannot be evaluated.
+    fn project_model(
+        &self,
+        arena: &TermArena,
+        model: &Assignment,
+    ) -> Result<Assignment, axeyum_ir::IrError>;
+}
+
+impl ArrayModelProjection for ArrayElimination {
+    fn project_model(
+        &self,
+        arena: &TermArena,
+        model: &Assignment,
+    ) -> Result<Assignment, axeyum_ir::IrError> {
+        ArrayElimination::project_model(self, arena, model)
+    }
+}
+
+impl ArrayModelProjection for ArrayAbstraction {
+    fn project_model(
+        &self,
+        arena: &TermArena,
+        model: &Assignment,
+    ) -> Result<Assignment, axeyum_ir::IrError> {
+        ArrayAbstraction::project_model(self, arena, model)
+    }
+}
+
+fn project_replay_build<P: ArrayModelProjection>(
     arena: &TermArena,
-    elimination: &ArrayElimination,
+    elimination: &P,
     assertions: &[TermId],
     assignment: &Assignment,
 ) -> Result<CheckResult, SolverError> {
@@ -248,29 +272,6 @@ fn project_replay_build(
     Ok(CheckResult::Sat(out))
 }
 
-/// Whether two select index terms evaluate to the same value under `assignment`.
-///
-/// # Errors
-///
-/// Returns [`SolverError::Backend`] if an index term fails to evaluate.
-fn indices_equal(
-    arena: &TermArena,
-    index_i: TermId,
-    index_j: TermId,
-    assignment: &Assignment,
-) -> Result<bool, SolverError> {
-    if index_i == index_j {
-        return Ok(true);
-    }
-    let vi = eval(arena, index_i, assignment).map_err(|error| {
-        SolverError::Backend(format!("lazy select-congruence eval failed: {error}"))
-    })?;
-    let vj = eval(arena, index_j, assignment).map_err(|error| {
-        SolverError::Backend(format!("lazy select-congruence eval failed: {error}"))
-    })?;
-    Ok(vi == vj)
-}
-
 /// Whether the two fresh select-result symbols hold different values under
 /// `assignment` (an unassigned symbol is treated as a non-match, conservatively
 /// no violation).
@@ -293,6 +294,179 @@ fn read_terms_differ(
     let lhs = eval(arena, lhs, assignment).map_err(ir)?;
     let rhs = eval(arena, rhs, assignment).map_err(ir)?;
     Ok(lhs != rhs)
+}
+
+/// The [`CongruenceSite`] view of a [`RowCtx`]'s array-**variable** reads.
+///
+/// Only `RowKind::Var` sites participate in read-over-read congruence: a store
+/// site is governed by the ROW axiom and a const-array site by its
+/// unconditional value lemma, both handled separately. `position` is the site's
+/// index in `ctx.sites`, which is what `added_cong` is keyed by.
+fn var_congruence_sites(ctx: &RowCtx) -> Vec<CongruenceSite> {
+    ctx.sites
+        .iter()
+        .enumerate()
+        .filter_map(|(position, site)| match site.kind {
+            RowKind::Var { array } => Some(CongruenceSite {
+                position,
+                array,
+                index: site.index,
+                result: site.fresh,
+            }),
+            _ => None,
+        })
+        .collect()
+}
+
+/// One abstracted read the select-congruence scan considers.
+///
+/// `position` is the read's index in whatever list the caller keeps its sites
+/// in, and is what the returned pairs are expressed in — the three CEGAR loops
+/// that share this scan keep their sites in three different lists.
+#[derive(Debug, Clone, Copy)]
+struct CongruenceSite {
+    /// The read's position in the caller's own site list.
+    position: usize,
+    /// The array symbol this read is on. Only reads on the *same* array can
+    /// violate select congruence.
+    array: SymbolId,
+    /// The (already abstracted) index term.
+    index: TermId,
+    /// The fresh symbol holding the read's value in the abstraction.
+    result: SymbolId,
+}
+
+/// The select-congruence violations of one candidate model, **without**
+/// enumerating every site pair.
+///
+/// # What it replaces, and why
+///
+/// The pairwise scan this is factored out of is `O(n²)` in the reads on one
+/// array and evaluates *both* index terms of every pair it looks at. Measured
+/// 2026-09-08 on the committed `QF_ABV` loss list at a 24 s budget:
+/// `bmc-arrays/bubbleSort.smt2` scanned 722,240 pairs and performed 1,444,400
+/// index evaluations in six refinement rounds and was killed by the watchdog;
+/// `klee-selected-smt2/cu-large-qids/_lbracket-query-052.smt2` and
+/// `klee-selected-smt2/cu-no-caches/_lbracket-query-000333.smt2` both ended
+/// with the route's own message *"lazy select-congruence deadline exceeded
+/// **while checking pairs**"* — the budget went to the scan, not to the search.
+///
+/// Two reads violate congruence exactly when their index *values* agree and
+/// their result values differ, so bucketing by the index value finds the same
+/// pairs with **one evaluation per distinct index term** instead of two per
+/// pair.
+///
+/// # Equivalence
+///
+/// The returned set is the pairwise scan's set, and the returned *order* is the
+/// pairwise scan's order (ascending `(position_i, position_j)`), because lemma
+/// order reaches the SAT solver and determinism is a public API promise here.
+///
+/// Index terms are evaluated only for an array whose reads carry at least two
+/// distinct index `TermId`s — which is exactly when the pairwise scan's
+/// `index_i == index_j` short circuit would have let an evaluation happen. An
+/// array all of whose reads share one index term is therefore still decided
+/// with no evaluation at all, as before.
+///
+/// # Errors
+///
+/// Returns [`SolverError::Backend`] if an index term fails to evaluate, the
+/// same condition (and the same message) [`indices_equal`] fails on.
+fn violated_congruence_pairs(
+    arena: &TermArena,
+    sites: &[CongruenceSite],
+    assignment: &Assignment,
+    already_added: &HashSet<(usize, usize)>,
+) -> Result<Vec<(usize, usize)>, SolverError> {
+    // Group by array symbol in first-seen order (linear find, as the pairwise
+    // scan's own grouping does — no hash-map iteration reaches any output).
+    let mut groups: Vec<(SymbolId, Vec<usize>)> = Vec::new();
+    for (slot, site) in sites.iter().enumerate() {
+        if let Some((_, members)) = groups.iter_mut().find(|(a, _)| *a == site.array) {
+            members.push(slot);
+        } else {
+            groups.push((site.array, vec![slot]));
+        }
+    }
+
+    let mut violated: Vec<(usize, usize)> = Vec::new();
+    for (_array, members) in &groups {
+        if members.len() < 2 {
+            continue;
+        }
+        // Distinct index terms, in first-seen order.
+        let mut distinct_indices: Vec<TermId> = Vec::new();
+        for &slot in members {
+            let index = sites[slot].index;
+            if !distinct_indices.contains(&index) {
+                distinct_indices.push(index);
+            }
+        }
+
+        // Bucket id per member. When every read shares one index term the
+        // pairwise scan never evaluated anything, so neither does this.
+        let buckets: Vec<Vec<usize>> = if distinct_indices.len() < 2 {
+            vec![members.clone()]
+        } else {
+            let mut by_value: HashMap<Value, usize> = HashMap::new();
+            let mut buckets: Vec<Vec<usize>> = Vec::new();
+            // One evaluation per DISTINCT index term, memoised by term.
+            let mut bucket_of_term: HashMap<TermId, usize> = HashMap::new();
+            for &index in &distinct_indices {
+                let value = eval(arena, index, assignment).map_err(|error| {
+                    SolverError::Backend(format!("lazy select-congruence eval failed: {error}"))
+                })?;
+                note_abv(|stats| stats.index_evals += 1);
+                let bucket = *by_value.entry(value).or_insert_with(|| {
+                    buckets.push(Vec::new());
+                    buckets.len() - 1
+                });
+                bucket_of_term.insert(index, bucket);
+            }
+            for &slot in members {
+                // Every member's index term is in `distinct_indices`, so the
+                // lookup cannot miss.
+                if let Some(&bucket) = bucket_of_term.get(&sites[slot].index) {
+                    buckets[bucket].push(slot);
+                }
+            }
+            buckets
+        };
+
+        for bucket in &buckets {
+            // The pairs this scan actually examines. Quadratic only WITHIN one
+            // index-value bucket, which is the difference from the pairwise
+            // walk this replaced — the closed form is exact because nothing
+            // breaks out of the two loops below.
+            let size = bucket.len() as u64;
+            let scanned = size * size.saturating_sub(1) / 2;
+            note_abv(|stats| stats.congruence_pairs_scanned += scanned);
+            for a in 0..bucket.len() {
+                for b in (a + 1)..bucket.len() {
+                    let site_a = sites[bucket[a]];
+                    let site_b = sites[bucket[b]];
+                    let pair = if site_a.position < site_b.position {
+                        (site_a.position, site_b.position)
+                    } else {
+                        (site_b.position, site_a.position)
+                    };
+                    if already_added.contains(&pair) {
+                        continue;
+                    }
+                    if results_differ(assignment, site_a.result, site_b.result) {
+                        violated.push(pair);
+                    }
+                }
+            }
+        }
+    }
+    // The pairwise scan emits in ascending `(i, j)`; a bucketed walk does not,
+    // and lemma order reaches the SAT solver.
+    violated.sort_unstable();
+    note_abv(|stats| {
+        stats.congruence_lemmas += u32::try_from(violated.len()).unwrap_or(u32::MAX);
+    });
+    Ok(violated)
 }
 
 /// Builds the select-consistency lemma `(index_i = index_j) => (fresh_i =
@@ -343,6 +517,64 @@ const MAX_ROW_SITES: usize = 4096;
 /// Maximum structural store/ITE layers followed while realizing one array term.
 const MAX_STRUCTURAL_ARRAY_REALIZATION_STEPS: usize = 4_096;
 const SCALAR_LOCAL_SEARCH_PROBE_MS: u64 = 100;
+
+/// [`eliminate_arrays`] with the array instruments recorded around it.
+///
+/// Every eager-elimination call on the `QF_ABV` dispatch path goes through
+/// here, including the ones made purely as an **admission test** whose result is
+/// then discarded ([`check_qf_abv_lazy_row`] makes one). That is the point: a
+/// discarded call still materialises the full quadratic Ackermann set into the
+/// arena, so a counter that only saw the calls whose output was used would
+/// report a fraction of the work done.
+///
+/// The pair count is derived from the returned value rather than reported by
+/// `axeyum-rewrite`: [`ArrayElimination::abstraction`] is the assertion list
+/// *before* the congruence lemmas are appended and
+/// [`ArrayElimination::assertions`] is the list after, so their difference is
+/// exactly the number of lemmas built, with no second accounting to keep in
+/// step.
+fn eliminate_arrays_counted(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+) -> Result<ArrayElimination, ArrayElimError> {
+    let result = eliminate_arrays(arena, assertions);
+    match &result {
+        Ok(elimination) => {
+            let pairs = elimination
+                .assertions()
+                .len()
+                .saturating_sub(elimination.abstraction().len()) as u64;
+            note_abv(|stats| {
+                stats.array_reduction_calls += 1;
+                stats.eager_ackermann_pairs += pairs;
+            });
+        }
+        Err(_) => note_abv(|stats| stats.array_reduction_refusals += 1),
+    }
+    result
+}
+
+/// `axeyum_rewrite::abstract_arrays` with the array instruments recorded around
+/// it.
+///
+/// The lazy routes use THIS, not [`eliminate_arrays_counted`]: they consume
+/// only the abstraction, and the eager form's Ackermann set is pure waste on
+/// their path — 1,233,416 constraints, built twice and discarded, on
+/// `klee-selected-smt2/cu-large-qids/_lbracket-query-052.smt2` (measured
+/// 2026-09-08). The two forms accept and refuse exactly the same queries: the
+/// `Unsupported` cases are raised by the shared rewrite, before either builds
+/// anything, so this cannot admit a shape the eager admission test refused.
+fn abstract_arrays_counted(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+) -> Result<ArrayAbstraction, ArrayElimError> {
+    let result = abstract_arrays(arena, assertions);
+    match &result {
+        Ok(_) => note_abv(|stats| stats.array_reduction_calls += 1),
+        Err(_) => note_abv(|stats| stats.array_reduction_refusals += 1),
+    }
+    result
+}
 
 /// Builds the `unknown` result with the lazy-ROW resource-limit classification.
 fn row_unknown(detail: String) -> CheckResult {
@@ -443,10 +675,30 @@ pub fn check_qf_abv_lazy_row<B: SolverBackend>(
     assertions: &[TermId],
     config: &SolverConfig,
 ) -> Result<CheckResult, SolverError> {
+    // Recorded on ENTRY, not on return: this route is `array-fast-path`, and a
+    // file it does not finish is exactly the file whose budget it consumed —
+    // `crate::RouteTrace` records on return, so on a watchdog kill the route
+    // that spent the time is the one missing from the trail. The matching
+    // `lazy_returned` is recorded by the wrapper below, so the difference of
+    // the two names the in-flight route (`AbvStats::in_flight_route`).
+    note_abv(|stats| stats.lazy_entered += 1);
+    let result = check_qf_abv_lazy_row_inner(backend, arena, assertions, config);
+    note_abv(|stats| stats.lazy_returned += 1);
+    result
+}
+
+/// The body of [`check_qf_abv_lazy_row`], split out so the entry/return pair
+/// around it cannot be skipped by an early `return` or a `?`.
+fn check_qf_abv_lazy_row_inner<B: SolverBackend>(
+    backend: &mut B,
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    config: &SolverConfig,
+) -> Result<CheckResult, SolverError> {
     // If the eager elimination accepts the query, it (or the existing lazy
     // select-congruence path built on it) already decides it — delegate and never
     // change a decided verdict.
-    match eliminate_arrays(arena, assertions) {
+    match abstract_arrays_counted(arena, assertions) {
         Ok(_) => return check_qf_abv_lazy(backend, arena, assertions, config),
         Err(ArrayElimError::Ir(inner)) => return Err(SolverError::Backend(inner.to_string())),
         // The refused case: engage the lazy-ROW path below.
@@ -2316,7 +2568,7 @@ impl RowCtx {
                 op: Op::Store,
                 args,
             } => {
-                if self.sites.len() >= MAX_ROW_SITES {
+                if !self.site_budget_available() {
                     return Ok(None);
                 }
                 let Some(store_index) = self.abstract_term(arena, args[1])? else {
@@ -2335,7 +2587,7 @@ impl RowCtx {
                     inner,
                 };
                 let fresh = self.fresh_symbol(arena, element_sort)?;
-                self.sites.push(RowSite { fresh, index, kind });
+                self.record_site(fresh, index, kind);
                 arena.var(fresh)
             }
             TermNode::App { op: Op::Ite, args } => {
@@ -2353,30 +2605,30 @@ impl RowCtx {
                     .map_err(|e| SolverError::Backend(format!("lazy-ROW ite read failed: {e}")))?
             }
             TermNode::Symbol(sym) if matches!(arena.sort_of(base), Sort::Array { .. }) => {
-                if self.sites.len() >= MAX_ROW_SITES {
+                if !self.site_budget_available() {
                     return Ok(None);
                 }
                 let kind = RowKind::Var { array: sym };
                 let fresh = self.fresh_symbol(arena, element_sort)?;
-                self.sites.push(RowSite { fresh, index, kind });
+                self.record_site(fresh, index, kind);
                 arena.var(fresh)
             }
             TermNode::App {
                 op: Op::Apply(_), ..
             } if self.allow_array_apply => {
-                if self.sites.len() >= MAX_ROW_SITES {
+                if !self.site_budget_available() {
                     return Ok(None);
                 }
                 let kind = RowKind::Apply { application: base };
                 let fresh = self.fresh_symbol(arena, element_sort)?;
-                self.sites.push(RowSite { fresh, index, kind });
+                self.record_site(fresh, index, kind);
                 arena.var(fresh)
             }
             TermNode::App {
                 op: Op::ConstArray { .. },
                 args,
             } => {
-                if self.sites.len() >= MAX_ROW_SITES {
+                if !self.site_budget_available() {
                     return Ok(None);
                 }
                 let Some(value) = self.abstract_term(arena, args[0])? else {
@@ -2384,7 +2636,7 @@ impl RowCtx {
                 };
                 let kind = RowKind::Const { value };
                 let fresh = self.fresh_symbol(arena, element_sort)?;
-                self.sites.push(RowSite { fresh, index, kind });
+                self.record_site(fresh, index, kind);
                 arena.var(fresh)
             }
             // Other array-valued structural bases remain outside this fragment.
@@ -2392,6 +2644,37 @@ impl RowCtx {
         };
         self.memo.insert((base, index), read);
         Ok(Some(read))
+    }
+
+    /// Whether one more abstraction site fits under `MAX_ROW_SITES`.
+    ///
+    /// **Counts the refusal.** Every caller turns a `false` into `Ok(None)`,
+    /// which [`check_row_cegar`] reports as *"an array read is outside the
+    /// modelled store/variable/const-array fragment"* — a capability message
+    /// for a capacity event. The counter is the only thing that tells the two
+    /// apart, which is why it lives here rather than at the four call sites
+    /// that would each have to remember it.
+    fn site_budget_available(&self) -> bool {
+        if self.sites.len() < MAX_ROW_SITES {
+            return true;
+        }
+        note_abv(|stats| stats.row_site_cap_refusals += 1);
+        false
+    }
+
+    /// Records and pushes one abstraction site.
+    ///
+    /// The single push point for [`RowSite`], so the site counters cannot drift
+    /// from `self.sites` as new site kinds are added.
+    fn record_site(&mut self, fresh: SymbolId, index: TermId, kind: RowKind) {
+        let is_store = matches!(kind, RowKind::Store { .. });
+        note_abv(|stats| {
+            stats.row_sites += 1;
+            if is_store {
+                stats.row_store_sites += 1;
+            }
+        });
+        self.sites.push(RowSite { fresh, index, kind });
     }
 
     fn fresh_symbol(&mut self, arena: &mut TermArena, sort: Sort) -> Result<SymbolId, SolverError> {
@@ -3010,6 +3293,7 @@ fn check_row_cegar<B: SolverBackend>(
                 "lazy-ROW deadline exceeded before refinement converged".to_owned(),
             ));
         }
+        note_abv(|stats| stats.cegar_rounds += 1);
         let round_config = config_with_remaining_deadline(config, deadline);
         let assignment = match check_scalar_abstraction(backend, arena, &working, &round_config)? {
             // The abstraction is a relaxation; its UNSAT implies the original's.
@@ -3040,29 +3324,24 @@ fn check_row_cegar<B: SolverBackend>(
                 new_row.push(idx);
             }
         }
-        // Read-over-read congruence for selects on the same array variable.
-        let mut new_cong: Vec<(usize, usize)> = Vec::new();
-        for a in 0..ctx.sites.len() {
-            for b in (a + 1)..ctx.sites.len() {
-                if added_cong.contains(&(a, b)) {
-                    continue;
-                }
-                if let (RowKind::Var { array: va }, RowKind::Var { array: vb }) =
-                    (&ctx.sites[a].kind, &ctx.sites[b].kind)
-                    && va == vb
-                    && indices_equal(arena, ctx.sites[a].index, ctx.sites[b].index, &assignment)?
-                    && results_differ(&assignment, ctx.sites[a].fresh, ctx.sites[b].fresh)
-                {
-                    new_cong.push((a, b));
-                }
-            }
-        }
+        // Read-over-read congruence for selects on the same array variable,
+        // grouped by index value rather than enumerated pairwise — see
+        // [`violated_congruence_pairs`].
+        let new_cong = violated_congruence_pairs(
+            arena,
+            &var_congruence_sites(&ctx),
+            &assignment,
+            &added_cong,
+        )?;
 
         if new_row.is_empty() && new_cong.is_empty() {
             // Model is ROW- and congruence-consistent: project, replay, return.
             return project_replay_row(arena, &ctx, replay, &assignment);
         }
 
+        note_abv(|stats| {
+            stats.row_lemmas += u32::try_from(new_row.len()).unwrap_or(u32::MAX);
+        });
         for idx in new_row {
             let lemma = row_axiom_lemma(arena, &ctx, idx)?;
             working.push(lemma);
@@ -10677,8 +10956,11 @@ fn first_false_replay_conjunct(
 }
 
 mod array_elim_certificate;
+mod instruments;
 mod lazy_ext;
 pub use array_elim_certificate::{ArrayElimUnsatCertificate, certify_array_elim_unsat};
+pub(crate) use instruments::note_abv;
+pub use instruments::{AbvStats, AbvStatsGuard, last_abv_stats};
 
 #[cfg(test)]
 #[path = "abv/tests.rs"]

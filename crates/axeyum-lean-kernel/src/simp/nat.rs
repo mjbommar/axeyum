@@ -224,7 +224,7 @@ fn r_right_distrib<D: NatOps>(d: &mut D, a: &[ExprId]) -> (ExprId, ExprId) {
 /// and matches only when the multiplicand's LEFT operand is itself
 /// `add`-headed, so it is safe to add for a goal whose shape needs exactly
 /// one distribution step, but it is a caller decision, not a default: the
-/// budget in [`rewrite_to_fixpoint`] is the backstop if a goal's operands
+/// budget in `rewrite_to_fixpoint` is the backstop if a goal's operands
 /// make it reapply more than expected.
 pub fn rule_right_distrib<D: NatOps>(p: &NatPrelude) -> Rule<D> {
     Rule {
@@ -430,7 +430,7 @@ fn rewrite_to_fixpoint<D: NatOps>(
 }
 
 /// Rewrite `start` to a fixed point under `rules`, returning
-/// `(final_term, proof: Eq start final_term)` — [`rewrite_to_fixpoint`]
+/// `(final_term, proof: Eq start final_term)` — `rewrite_to_fixpoint`
 /// without the step count, which is all a caller needs when it does not
 /// intend to prove an `Eq` goal itself but instead wants to hand the
 /// **normalized** term to a different producer and glue the two proofs back
@@ -440,7 +440,7 @@ fn rewrite_to_fixpoint<D: NatOps>(
 ///
 /// # Errors
 ///
-/// [`Decline::BudgetExceeded`], as [`rewrite_to_fixpoint`].
+/// [`Decline::BudgetExceeded`], as `rewrite_to_fixpoint`.
 pub(crate) fn normalize<D: NatOps>(
     d: &mut D,
     rules: &[Rule<D>],

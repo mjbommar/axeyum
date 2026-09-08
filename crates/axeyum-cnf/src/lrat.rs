@@ -803,7 +803,7 @@ fn elaborate_addition(
 ///
 /// The formula's clauses take ids `1..=n`; new clauses take ids from `n+1`.
 /// Each [`DratStep::Add`] is re-checked, recording the antecedent ids (see
-/// [`elaborate_addition`]); the resulting [`LratStep`] sequence is guaranteed
+/// `elaborate_addition`); the resulting [`LratStep`] sequence is guaranteed
 /// to pass [`check_lrat`]. Each [`DratStep::Delete`] maps to a deletion of the
 /// matching active id.
 ///

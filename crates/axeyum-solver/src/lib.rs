@@ -50,6 +50,7 @@ mod config_registry;
 mod error;
 mod incremental;
 mod layers;
+pub mod live_instruments;
 mod memory_budget;
 mod model;
 mod proof;
@@ -118,6 +119,7 @@ macro_rules! full_modules {
         mod lazy_bv;
         mod lex_reconstruct;
         mod lia;
+        mod lia_counters;
         mod lia_gcd;
         mod lia_interpolant;
         mod lia_interpolant_cnf;
@@ -240,8 +242,8 @@ full_modules!();
 /// §4 item 3).
 ///
 /// `benches/*.rs` is a separate crate and cannot name a `pub(crate)` item or
-/// a private (`mod cdclt;`/`mod simplex;`) module path, so [`crate::cdclt`]'s
-/// `CdclT`/`Lit`/`Outcome` and [`crate::simplex`]'s `Incremental`/`Status`
+/// a private (`mod cdclt;`/`mod simplex;`) module path, so `crate::cdclt`'s
+/// `CdclT`/`Lit`/`Outcome` and `crate::simplex`'s `Incremental`/`Status`
 /// were promoted from `pub(crate)` to `pub` (their containing modules stay
 /// crate-private) and are re-exported here. This module — and therefore the
 /// only reachable path to any of them from outside the crate — exists solely
@@ -722,7 +724,7 @@ pub mod theories {
     /// theory route above — the counterpart to
     /// [`crate::layers::BvLayerStats`] for the pure bit-blast pipeline. Off by
     /// default (each `CdclT::new` reads no clock beyond the deadline check
-    /// unless a [`TheoryLayerStatsGuard`] is active): see [`TheoryLayerStatsGuard::enable`].
+    /// unless a `TheoryLayerStatsGuard` is active): see `TheoryLayerStatsGuard::enable`.
     pub mod cdclt_diagnostics {
         pub use crate::cdclt::{TheoryLayerStatsGuard, last_theory_layer_stats};
         pub use crate::layers::TheoryLayerStats;
@@ -906,6 +908,10 @@ pub use incremental::{
     IncrementalSolver, ReplayCheckedSatCachePolicy, ReplayCheckedSatCacheStats,
 };
 pub use layers::{BvLayerStats, BvLayerStatsGuard, last_bv_backend_counters, last_bv_layer_stats};
+pub use live_instruments::{
+    LiveInstruments, LiveInstrumentsGuard, LiveSample, Sampled,
+    install as install_live_instruments, instrument, publish_live,
+};
 pub use model::Model;
 #[doc(hidden)]
 pub use proof::{
@@ -921,6 +927,7 @@ pub use sat_bv_backend::SatBvBackend;
 macro_rules! full_exports {
     () => {
         pub use abduct::{MAX_CANDIDATES, abduct};
+        pub use abv::{AbvStats, AbvStatsGuard, last_abv_stats};
         #[doc(hidden)]
         pub use abv::{
             ArrayElimUnsatCertificate, CrossStoreArrayDisequalityCertificate,
@@ -1149,6 +1156,12 @@ macro_rules! full_exports {
         #[doc(hidden)]
         pub use lia::{DEFAULT_INT_WIDTH, check_with_int_blasting};
         #[doc(hidden)]
+        pub use lia_counters::{
+            GroupReading, LiaCounterGroup, LiaCounterPolicy, LiaCounterPolicyBits, LiaCounters,
+            LiaCountersGuard, LiaCountersMirror, WarmAssembly, install_lia_mirror,
+            last_lia_counters, live_lia_counters,
+        };
+        #[doc(hidden)]
         pub use lia_gcd::{
             DiophantineCertificate, Equality, check_diophantine_certificate,
             prove_lia_unsat_by_diophantine, prove_lia_unsat_by_diophantine_certified,
@@ -1165,11 +1178,7 @@ macro_rules! full_exports {
         #[doc(hidden)]
         pub use lia_theory::check_qf_lia_online_cdclt;
         #[doc(hidden)]
-        pub use lra::warm::{
-            AssemblyReason, LiaWarmCounters, LiaWarmPolicy, LiaWarmProcessStatsGuard,
-            LiaWarmStatsGuard, WarmLiaDecider, ambient_lia_warm_policy, last_lia_warm_stats,
-            live_lia_warm_stats,
-        };
+        pub use lra::warm::{LiaWarmPolicy, WarmLiaDecider, ambient_lia_warm_policy};
         #[doc(hidden)]
         pub use lra::{FarkasAtom, FarkasCertificate, lra_farkas_certificate};
         #[doc(hidden)]
@@ -1190,6 +1199,7 @@ macro_rules! full_exports {
         pub use mbp::{mbp_lia, mbp_lra};
         #[doc(hidden)]
         pub use nat_induction::prove_by_nat_induction;
+        pub use native_cdclt::{EngineCountersMirror, live_theory_layer_stats};
         #[doc(hidden)]
         pub use nra::check_with_nra;
         #[doc(hidden)]

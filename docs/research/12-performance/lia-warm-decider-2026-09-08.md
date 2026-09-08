@@ -149,11 +149,27 @@ throughput. On twelve of the 29 files the offline decider is never reached at
 all in the `off` arm (`off.off = 0`), so warming it cannot help there by
 construction.
 
-This does not say the sibling lane's `filter_refuted = 0` was a bad
-measurement. It says the two numbers do not share a population or a method, and
-whichever is quoted must name which. This lane's is: 29 files, 8 s budget, the
-`off` arm, counter `theory_filter_refuted` incremented at
-`RationalFilter::Refuted`.
+### CONTESTED — two measurements of the same counter, and this note settles neither
+
+The `lia-counters` lane measured **`filter_refuted = 0`**. This lane measured
+**20,102 refutations of 79,763 answers**. Both numbers stand; neither is
+withdrawn here, and a reader quoting either must name which.
+
+They do not share a population or a method:
+
+| | `lia-counters` lane | this lane |
+| --- | --- | --- |
+| population | its own `QF_LIA` sweep | the 29 of 85 `QF_LIA`+`QF_UFLIA` loss files where the online theory is entered |
+| budget | 24 s | 8 s (confirmed at 24 s below) |
+| arm | shipped default | the `off` arm — cold decider, filter on |
+| counter | `LiaCounters::filter_refuted` | `theory_filter_refuted`, incremented at the same `RationalFilter::Refuted` site |
+
+After the 2026-09-08 merge the two counters are literally the same field
+(`LiaCounters::filter_refuted`), so a future sweep can settle this without
+either lane's instrument being in question. Until such a sweep exists, the
+default keeps the filter — which is the conservative choice under BOTH numbers,
+since a filter that refutes nothing costs only its own pass while one that
+refutes a quarter of what it answers is load-bearing.
 
 Acted on: `LiaWarmPolicy::WARM` keeps the filter; the arm that turns it off is
 renamed `WARM_NO_FILTER` and documented as a diagnostic. A test pins the
@@ -261,6 +277,12 @@ AXEYUM_LIA_WARM=nofilter target/release/examples/smtcomp_cli <file> --timeout-ms
                          target/release/examples/smtcomp_cli <file> --timeout-ms 8000 --trace
 ```
 
-The `; lia-warm …` line carries every counter above. `warm=not-collected` and
-`checks=0` are deliberately different outputs: the first says no guard was armed
-in this process, the second says the decider was never entered on this query.
+The counters are on the `; lia …` line — the warm group's fields are prefixed
+`warm_`. `warm=off`, `warm=not-reached` and `warm=measured` are deliberately
+three different outputs: the policy switched the group off, the group was
+collected and the decider never ran, and the group ran. A bare `0` cannot tell
+those apart, which is what `LiaCounters::group_reading` exists for.
+
+On a file whose solve never returns, the same counters come back on a
+`; partial lia …` line, recovered from the live-instruments board. That line is
+a lower bound, never a rate's denominator — see `crate::live_instruments`.

@@ -1857,7 +1857,21 @@ fn front_door_stats_collecting() -> bool {
 /// returning `true` (see the call site in [`solve_smtlib_at_string_bound`]),
 /// so this itself does not re-check the flag.
 fn record_parse_time(elapsed: Duration) {
-    PARSE_TIME_ACCUM.with(|c| c.set(c.get() + elapsed));
+    let total = PARSE_TIME_ACCUM.with(|c| {
+        let total = c.get() + elapsed;
+        c.set(total);
+        total
+    });
+    // Mirror onto the cross-thread board (`crate::live_instruments`) so a
+    // watchdog that fires later in the query can still say how much of the
+    // budget went to ingest. `Complete` because the parse it accounts for
+    // returned; the accumulator may still grow if a further ladder rung parses
+    // again.
+    crate::live_instruments::publish_live(
+        crate::live_instruments::instrument::FRONT_DOOR,
+        FrontDoorStats { parse: total },
+        crate::live_instruments::Sampled::Complete,
+    );
 }
 
 /// Enables front-door stage timing (currently just cumulative parse time; see

@@ -1,0 +1,3 @@
+arm=off harness=off cpu=0 bve_mult=shipped subsume_mult=shipped compact=shipped
+sweep arm=off budget_ms=24000 cpus=0 load_start=3.91 6.01 5.19
+sweep arm=off measured=200 rows=200 load_end=20.01 13.67 9.03

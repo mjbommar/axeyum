@@ -12,8 +12,12 @@
 
 use axeyum_ir::{Sort, TermArena, TermId};
 
-use super::{AssemblyReason, LiaWarmPolicy, WarmLiaDecider, last_lia_warm_stats};
+use super::{LiaWarmPolicy, WarmLiaDecider};
 use crate::backend::CheckResult;
+use crate::lia_counters::{
+    GroupReading, LiaCounterGroup, LiaCounterPolicy, LiaCounters, LiaCountersGuard,
+    last_lia_counters,
+};
 use crate::lra::{check_with_lia_simplex, cold_int_system, lia_bnb_node_cap};
 
 // --- fixtures ---------------------------------------------------------------
@@ -143,10 +147,22 @@ fn random_live(rng: &mut Rng, fixture: &Fixture) -> Vec<usize> {
 /// builds for the same conjunction: same constraints, same order, same column
 /// numbering, same `origin` tags, same `nvars`.
 ///
-/// This is the check that the module's central claim is true. A weaker
-/// verdict-only differential cannot see a permuted or padded system, because
-/// both engines are sound on any input — it would only ever show up as a
-/// coverage difference nobody attributed.
+/// This is the check that the module's central claim is true, and it is not a
+/// theoretical worry: it was mutation-tested, and the result is the reason this
+/// test compares a system rather than a verdict.
+///
+/// Mutant `sorted-columns` allocates local columns in ascending global order
+/// instead of touch order. The system it builds is a sound PERMUTATION of the
+/// right one — so it can never return a wrong `sat`/`unsat`, it just decides a
+/// different set of cases. Under it, **every verdict-level test in this crate
+/// passes**, including both theory-level differentials in `lia_online`, and
+/// exactly two die: this one and
+/// `warm_verdicts_survive_arbitrary_retraction_sequences`. A verdict-only
+/// differential would have let that drift ship and kept passing.
+///
+/// (The three staleness mutants — `stale-columns`, `unchecked-prefix`,
+/// `stale-constraints` — kill six tests each, so those ARE caught by verdicts.
+/// The permutation is the one that is not.)
 #[test]
 fn warm_assembles_the_same_system_the_cold_path_builds() {
     let mut rng = Rng(0x7a5e_1a17_2026_0908);
@@ -368,13 +384,13 @@ fn warm_verdicts_survive_arbitrary_retraction_sequences() {
 // --- policy -----------------------------------------------------------------
 
 /// `LiaWarmPolicy::OFF` must genuinely disable warming: every check rebuilds,
-/// and the verdicts are the cold ones.
+/// and the rebuild is attributed to the policy rather than to a cold start.
 #[test]
 fn policy_off_rebuilds_every_check() {
     let mut rng = Rng(0x0ff0_1a17_2026_0908);
     let fixture = Fixture::random(&mut rng, 3, 4).expect("fixture");
     let mut decider = fixture.decider(LiaWarmPolicy::OFF);
-    let guard = super::LiaWarmStatsGuard::enable();
+    let guard = LiaCountersGuard::enable();
     let mut expected = 0u64;
     for _ in 0..8 {
         let keys = random_live(&mut rng, &fixture);
@@ -384,12 +400,12 @@ fn policy_off_rebuilds_every_check() {
         let _ = decider.check(&fixture.arena, &keys, lia_bnb_node_cap(None), None);
         expected += 1;
     }
-    let stats = last_lia_warm_stats().expect("armed");
+    let stats = last_lia_counters().expect("armed");
     drop(guard);
     assert!(expected > 0, "the test made no checks");
-    assert_eq!(stats.checks, expected);
+    assert_eq!(stats.warm_checks, expected);
     assert_eq!(
-        stats.rebuilds, expected,
+        stats.warm_rebuilds, expected,
         "policy OFF must rebuild on every check"
     );
     assert_eq!(
@@ -397,20 +413,20 @@ fn policy_off_rebuilds_every_check() {
         "policy OFF must never report a warm update"
     );
     assert_eq!(
-        stats.assembly_reason(AssemblyReason::PolicyCold),
-        expected,
-        "every rebuild under policy OFF must be attributed to the policy"
+        stats.warm_assembly_policy_cold, expected,
+        "every rebuild under policy OFF must be attributed to the policy, not to a cold start"
     );
+    assert_eq!(stats.warm_assembly_cold_start, 0);
 }
 
-/// Warming on, the counters must show the assembly actually being reused, and the
-/// reasons must add up to the check count.
+/// Warming on, the counters must show the assembly actually being reused, and
+/// every check must be attributed to exactly one assembly reason.
 #[test]
 fn warm_counters_attribute_every_check() {
     let mut rng = Rng(0xc017_1a17_2026_0908);
     let fixture = Fixture::random(&mut rng, 3, 5).expect("fixture");
     let mut decider = fixture.decider(LiaWarmPolicy::WARM);
-    let guard = super::LiaWarmStatsGuard::enable();
+    let guard = LiaCountersGuard::enable();
     let mut live: Vec<usize> = Vec::new();
     let mut checks = 0u64;
     for atom in 0..fixture.atoms.len() {
@@ -424,115 +440,129 @@ fn warm_counters_attribute_every_check() {
         checks += 1;
     }
     // Re-push everything: every literal is now a cache hit, which is the whole
-    // point of the per-literal cache and the only way this counter can move.
+    // point of the per-literal cache and the only way that counter can move.
     for atom in 1..fixture.atoms.len() {
         live.push(atom * 2 + 1);
         let _ = decider.check(&fixture.arena, &live, lia_bnb_node_cap(None), None);
         checks += 1;
     }
-    let stats = last_lia_warm_stats().expect("armed");
+    let stats = last_lia_counters().expect("armed");
     drop(guard);
 
-    assert_eq!(stats.checks, checks);
-    let attributed: u64 = AssemblyReason::all()
-        .iter()
-        .map(|&r| stats.assembly_reason(r))
-        .sum();
+    assert_eq!(stats.warm_checks, checks);
+    assert_eq!(
+        stats.group_reading(LiaCounterGroup::Warm),
+        GroupReading::Measured,
+        "the warm group must read as measured, not as an uncollected zero"
+    );
+    let attributed = assembly_total(&stats);
     assert_eq!(
         attributed, checks,
         "every check must be attributed to exactly one assembly reason"
     );
-    assert_eq!(stats.rebuilds + stats.warm_updates, checks);
+    assert_eq!(stats.warm_rebuilds + stats.warm_updates, checks);
     assert!(
-        stats.assembly_reason(AssemblyReason::Extended) > 0,
+        stats.warm_assembly_extended > 0,
         "a monotone push sequence must produce extended assemblies"
     );
     assert!(
-        stats.assembly_reason(AssemblyReason::Shortened) > 0,
+        stats.warm_assembly_shortened > 0,
         "a pop sequence must produce shortened assemblies"
     );
-    // The literal cache is the point: each literal is collected once, and every
-    // later appearance is a hit.
     assert_eq!(
-        stats.literal_collections,
+        stats.warm_literal_collections,
         fixture.atoms.len() as u64,
         "each literal must be collected exactly once"
     );
     assert!(
-        stats.literal_cache_hits > 0,
+        stats.warm_literal_cache_hits > 0,
         "a repeated live set must hit the literal cache"
     );
-    // And the work really is delta-proportional: a system reused across N checks
-    // copies far fewer constraints than it holds.
+    // The work really is delta-proportional: a system reused across N checks
+    // copies far fewer constraints than the offline group reports living in it.
     assert!(
-        stats.assembled_constraints_copied < stats.assembled_constraints_live,
+        stats.warm_constraints_copied < stats.offline_constraints,
         "copied {} constraints for {} live — the assembly is not being reused",
-        stats.assembled_constraints_copied,
-        stats.assembled_constraints_live
+        stats.warm_constraints_copied,
+        stats.offline_constraints
     );
 }
 
-/// `last_lia_warm_stats` must distinguish "never armed" from "measured zero".
-/// Run on its own thread, because the thread-local flag is what carries that
-/// distinction and every other test in this file arms it on its own thread.
-#[test]
-fn unarmed_counters_read_none_not_zero() {
-    std::thread::spawn(|| {
-        assert!(
-            last_lia_warm_stats().is_none(),
-            "an unarmed thread must read None, never a zeroed snapshot"
-        );
-        let guard = super::LiaWarmStatsGuard::enable();
-        drop(guard);
-        assert_eq!(
-            last_lia_warm_stats().map(|s| s.checks),
-            Some(0),
-            "an armed thread that ran nothing must read a measured zero"
-        );
-    })
-    .join()
-    .expect("thread");
-}
-
-/// The process-wide collector must see work done on ANOTHER thread — the whole
-/// reason it exists beside the thread-local one, since the solves this
-/// instrument measures run on a worker thread the reader never joins.
+/// Every check the warm decider makes is also an entry to the OFFLINE decider,
+/// and must be counted as one.
 ///
-/// The thread-local guard on this thread must NOT see that work, or the two
-/// collectors are not actually independent and a unit test's numbers could be
-/// polluted by whatever else the harness is running.
+/// Without this, `offline_calls` reads zero on exactly the queries the warm path
+/// serves — a counter that says the decider never ran, on a run where it decided
+/// every live set. The sibling `lia-counters` lane's whole instrument rests on
+/// that field being an entry counter.
 #[test]
-fn the_process_collector_sees_another_thread_and_the_thread_local_one_does_not() {
-    let mut rng = Rng(0xc205_5731_2026_0908);
+fn a_warm_check_is_still_an_offline_call() {
+    let mut rng = Rng(0x0ff1_1a17_2026_0908);
     let fixture = Fixture::random(&mut rng, 3, 4).expect("fixture");
-    let arena = fixture.arena.clone();
-    let lit_terms = fixture.lit_terms.clone();
-    let keys: Vec<usize> = (0..fixture.atoms.len()).map(|i| i * 2 + 1).collect();
-
-    let process_guard = super::LiaWarmProcessStatsGuard::enable();
-    let thread_guard = super::LiaWarmStatsGuard::enable();
-    std::thread::spawn(move || {
-        let mut decider = WarmLiaDecider::new(LiaWarmPolicy::WARM, false, lit_terms);
-        for take in 1..=keys.len() {
-            let _ = decider.check(&arena, &keys[..take], lia_bnb_node_cap(None), None);
+    let mut decider = fixture.decider(LiaWarmPolicy::WARM);
+    let guard = LiaCountersGuard::enable();
+    let mut answers = 0u64;
+    let mut live: Vec<usize> = Vec::new();
+    for atom in 0..fixture.atoms.len() {
+        live.push(atom * 2 + 1);
+        // An error is outside the fragment; every other outcome is an answer.
+        if decider
+            .check(&fixture.arena, &live, lia_bnb_node_cap(None), None)
+            .is_ok()
+        {
+            answers += 1;
         }
-    })
-    .join()
-    .expect("worker");
-
-    let process = super::live_lia_warm_stats().expect("process guard armed");
-    let local = last_lia_warm_stats().expect("thread guard armed");
-    drop(thread_guard);
-    drop(process_guard);
-
-    assert!(
-        process.checks >= fixture.atoms.len() as u64,
-        "the process collector saw {} checks from the worker thread",
-        process.checks
+    }
+    let stats = last_lia_counters().expect("armed");
+    drop(guard);
+    assert!(answers > 0, "the test decided nothing");
+    assert_eq!(
+        stats.offline_calls + stats.offline_early_exits,
+        stats.warm_checks,
+        "every warm check must be an offline call or an offline early exit, never neither"
     );
     assert_eq!(
-        local.checks, 0,
-        "the thread-local collector must not see another thread's work"
+        stats.group_reading(LiaCounterGroup::Offline),
+        GroupReading::Measured,
+        "the offline group must read as measured on a warm run"
+    );
+}
+
+/// The six assembly reasons, summed.
+fn assembly_total(stats: &LiaCounters) -> u64 {
+    stats.warm_assembly_unchanged
+        + stats.warm_assembly_extended
+        + stats.warm_assembly_shortened
+        + stats.warm_assembly_diverged
+        + stats.warm_assembly_cold_start
+        + stats.warm_assembly_policy_cold
+}
+
+/// The warm group must be switchable off on its own, and read as
+/// `NotCollected` — not as a measured zero — when it is.
+#[test]
+fn the_warm_group_can_be_switched_off_without_silencing_the_offline_one() {
+    let mut rng = Rng(0x5177_1a17_2026_0908);
+    let fixture = Fixture::random(&mut rng, 3, 4).expect("fixture");
+    let mut decider = fixture.decider(LiaWarmPolicy::WARM);
+    let policy = LiaCounterPolicy {
+        warm: false,
+        ..LiaCounterPolicy::ALL
+    };
+    let guard = LiaCountersGuard::enable_with(policy);
+    let keys: Vec<usize> = (0..fixture.atoms.len()).map(|i| i * 2 + 1).collect();
+    let _ = decider.check(&fixture.arena, &keys, lia_bnb_node_cap(None), None);
+    let stats = last_lia_counters().expect("armed");
+    drop(guard);
+    assert_eq!(
+        stats.group_reading(LiaCounterGroup::Warm),
+        GroupReading::NotCollected,
+        "a group switched off by policy must not read as a measured zero"
+    );
+    assert_eq!(stats.warm_checks, 0);
+    assert!(
+        stats.offline_calls > 0,
+        "switching the warm group off must not silence the offline one"
     );
 }
 

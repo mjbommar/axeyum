@@ -55,8 +55,10 @@ mod gf2;
 pub mod inprocess;
 mod interpolant;
 mod lrat;
+pub mod pass_work;
 pub mod phase_policy;
 mod proof_sat;
+mod reduction_link;
 mod simplify;
 /// The deterministic tick: a cache-aware, clock-free proxy for search work,
 /// derived from [`SearchCounters`] so it costs nothing on the hot path.
@@ -83,7 +85,7 @@ pub use batsat_reference::{
 };
 pub use bve::{
     BveOptions, BveOutcome, BveStats, Reconstruction, eliminate_variables,
-    eliminate_variables_within,
+    eliminate_variables_within, eliminate_variables_within_recorded,
 };
 pub use compact::{CompactMap, compact};
 #[cfg(unix)]
@@ -120,17 +122,24 @@ pub use proof_sat::incremental::{IncrementalSolveOutcome, NativeIncrementalCdcl}
 pub use proof_sat::theory;
 pub use proof_sat::{
     DEFAULT_PROGRESS_CONFLICT_INTERVAL, DEFAULT_PROOF_SAT_CONFLICT_LIMIT, InprocessedSearch,
-    NativeLayerStats, ProofSearchProgress, ProofSolveOutcome, SearchCounters, SearchPolicies,
-    StreamingProofOutcome, TheoryProofOutcome, TheoryRefutation, TheoryRefutationCheck,
-    TheoryRefutationError, TheorySolveOptions, TheorySolveOutcome, solve_with_drat_proof,
-    solve_with_drat_proof_counted, solve_with_drat_proof_counted_inprocessed,
-    solve_with_drat_proof_counted_with_policies, solve_with_drat_proof_inprocessed,
-    solve_with_drat_proof_streaming, solve_with_drat_proof_streaming_with_progress,
-    solve_with_drat_proof_with_limits, solve_with_drat_proof_with_limits_and_progress,
-    solve_with_drat_proof_within, solve_with_theory_and_drat_proof,
+    NativeLayerStats, NativeLayerStatsMirror, ProofSearchProgress, ProofSolveOutcome,
+    SearchCounters, SearchPolicies, StreamingProofOutcome, TheoryProofOutcome, TheoryRefutation,
+    TheoryRefutationCheck, TheoryRefutationError, TheorySolveOptions, TheorySolveOutcome,
+    solve_with_drat_proof, solve_with_drat_proof_counted,
+    solve_with_drat_proof_counted_inprocessed, solve_with_drat_proof_counted_with_policies,
+    solve_with_drat_proof_inprocessed, solve_with_drat_proof_streaming,
+    solve_with_drat_proof_streaming_with_progress, solve_with_drat_proof_with_limits,
+    solve_with_drat_proof_with_limits_and_progress, solve_with_drat_proof_within,
+    solve_with_theory_and_drat_proof, solve_with_theory_and_drat_proof_mirrored,
     solve_with_theory_and_drat_proof_traced, solve_with_theory_and_drat_proof_with_options,
 };
-pub use simplify::{SubsumeStats, simplify, simplify_within};
+pub use reduction_link::{
+    LiftingSink, LinkedProofCheck, ProofCoverage, ReducedReason, ReductionLink,
+};
+pub use simplify::{
+    SUBSUME_MAX_ROUNDS, SubsumeOptions, SubsumeStats, simplify, simplify_with_options,
+    simplify_within, simplify_within_recorded,
+};
 pub use vivify::{VivifyOptions, VivifyOutcome, VivifyStats, vivify, vivify_within};
 pub use weighted::{
     WeightedAtMostEncoding, WeightedAtMostError, WeightedAtMostLimits, encode_weighted_at_most,
