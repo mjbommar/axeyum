@@ -221,8 +221,7 @@ fn warm_verdicts_agree_with_the_cold_offline_decider() {
             match (&warm, &cold) {
                 (Ok(CheckResult::Unsat), Ok(CheckResult::Unsat)) => unsat += 1,
                 (Ok(CheckResult::Sat(_)), Ok(CheckResult::Sat(_))) => sat += 1,
-                (Ok(CheckResult::Unknown(_)), Ok(CheckResult::Unknown(_))) => {}
-                (Err(_), Err(_)) => {}
+                (Ok(CheckResult::Unknown(_)), Ok(CheckResult::Unknown(_))) | (Err(_), Err(_)) => {}
                 _ => panic!("warm {warm:?} disagrees with cold {cold:?} on {keys:?}"),
             }
         }

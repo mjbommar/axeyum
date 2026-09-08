@@ -81,6 +81,7 @@
 
 use std::cell::{Cell, RefCell};
 use std::collections::BTreeMap;
+use std::fmt::Write as _;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 
 // Native uses the std clock; wasm uses the `web_time` drop-in (ADR-0017).
@@ -408,11 +409,12 @@ impl LiaWarmCounters {
             self.theory_filter_refuted,
         );
         for reason in AssemblyReason::all() {
-            out.push_str(&format!(
+            let _ = write!(
+                out,
                 " assembly_{}={}",
                 reason.name(),
                 self.assembly_reason(reason)
-            ));
+            );
         }
         out
     }
@@ -844,7 +846,7 @@ impl WarmLiaDecider {
         lit_terms: Vec<Option<TermId>>,
     ) -> Self {
         let mut collector = IntCollector::new(allow_opaque_apps);
-        collector.record_touches = true;
+        collector.record_touches = super::TouchLog::On;
         let keys = lit_terms.len();
         Self {
             policy,

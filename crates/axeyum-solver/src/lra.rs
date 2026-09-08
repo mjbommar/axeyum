@@ -2255,6 +2255,18 @@ fn unsupported_lia(what: &str) -> SolverError {
 /// same dense `Constraint`/`LinExpr` form the simplex consumes. Mirrors the LRA
 /// [`Collector`] for the integer operator set; the LRA collector is left
 /// untouched.
+/// Whether an [`IntCollector`] records the column touch order of the assertion
+/// it is collecting. See [`IntCollector::record_touches`].
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+enum TouchLog {
+    /// Do not record. Every cold-path collector.
+    #[default]
+    Off,
+    /// Record every touch, repeats included — what the warm decider needs to
+    /// re-derive the cold path's column numbering.
+    On,
+}
+
 #[derive(Default, Debug)]
 struct IntCollector {
     var_index: BTreeMap<SymbolId, usize>,
@@ -2281,9 +2293,13 @@ struct IntCollector {
     /// earlier literal must still take its place in a later literal's order when
     /// that earlier literal is not live.
     ///
-    /// `false` on every cold-path collector, where it costs one branch per column
-    /// touch and nothing else.
-    record_touches: bool,
+    /// [`TouchLog::Off`] on every cold-path collector, where it costs one branch
+    /// per column touch and nothing else.
+    ///
+    /// An enum rather than a fourth `bool`: it is a MODE fixed for the
+    /// collector's whole life, while `allow_opaque_apps`, `trivially_unsat` and
+    /// `overflow` are per-collection state.
+    record_touches: TouchLog,
     /// Column indices in touch order for the assertion currently being collected
     /// (see [`IntCollector::record_touches`]). Never read unless recording is on.
     touch_log: Vec<usize>,
@@ -2335,7 +2351,7 @@ impl IntCollector {
 
     /// Records one column touch when [`IntCollector::record_touches`] is on.
     fn touch(&mut self, index: usize) {
-        if self.record_touches {
+        if self.record_touches == TouchLog::On {
             self.touch_log.push(index);
         }
     }

@@ -925,29 +925,101 @@ fn watchdog_trace_lines(trace_mode: bool, reason: &str) -> Vec<String> {
     lines
 }
 
-fn main() -> ExitCode {
-    let CliArgs {
-        path,
-        timeout_ms,
-        memory_limit_mb,
-        evidence_mode,
-        progress_mode,
-        trace_mode,
-    } = parse_cli_args();
+/// Prints one solve's output in the order the competition interface promises:
+/// progress lines, then `;`-prefixed trace lines, then the evidence line, then
+/// the verdict as the final line of stdout.
+///
+/// Extracted from `main` because both exit paths — the deadline-free branch and
+/// the watchdog branch — owe exactly this, and two copies of an ordering
+/// contract is how one of them stops honouring it.
+fn emit_report(
+    progress_rx: &std::sync::mpsc::Receiver<axeyum_cnf::ProofSearchProgress>,
+    check_progress_rx: &std::sync::mpsc::Receiver<CheckingProgress>,
+    trace_lines: &[String],
+    evidence: Option<&str>,
+    verdict: &str,
+) {
+    // Progress lines first, so the verdict stays last. If the watchdog gave up
+    // before the worker finished, this still prints whatever snapshots the
+    // search sent before the timeout — an honest partial picture, not nothing.
+    for snapshot in progress_rx.try_iter() {
+        println!("{}", progress_report_line(&snapshot));
+    }
+    for event in check_progress_rx.try_iter() {
+        println!("{}", checking_report_line(&event));
+    }
+    for line in trace_lines {
+        println!("{line}");
+    }
+    if let Some(line) = evidence {
+        println!("{line}");
+    }
+    println!("{verdict}");
+}
 
-    let Some(path) = path else {
-        eprintln!("usage: smtcomp_cli <benchmark.smt2> [--timeout-ms N] [--memory-limit-mb N]");
-        return ExitCode::from(2);
-    };
-
-    let input = match std::fs::read_to_string(&path) {
-        Ok(s) => s,
-        Err(e) => {
-            eprintln!("read error: {e}");
-            return ExitCode::from(2);
+/// Every `;`-prefixed `--trace` line the completed-solve path owes, in the
+/// order a reader scans them.
+///
+/// Extracted from `main`'s worker closure so the ordering rationale lives in one
+/// place: the configuration line first because every other line has to be read
+/// against it, and route attribution last because it names the two questions the
+/// others are only evidence for.
+fn completed_trace_lines(trace_mode: bool) -> Vec<String> {
+    let mut trace_lines = Vec::new();
+    if trace_mode {
+        // Parse always runs exactly once (or more, on a string-bound
+        // ladder rung) per front-door call, so this line is unconditional
+        // — unlike `; bv-layer …`/`; theory-layer …` (only the ONE
+        // backend a query actually dispatched to ran) it is never
+        // legitimately absent when `--trace` is on.
+        // ADR-1762: the configuration this run used. Printed FIRST among
+        // the stage lines because it is what the others have to be read
+        // against — a stage timing means something different under a
+        // different admission policy, and until this line existed nothing
+        // in a run's own output said which one was in force.
+        trace_lines.push(config_trace_line());
+        trace_lines.push(front_door_report_line(&last_front_door_stats()));
+        // `dispatch_difference_logic` runs on every numeric-featured
+        // query ahead of the linear-arithmetic chain (probing whether the
+        // query is difference-shaped), but NOT on e.g. a `QF_BV` query,
+        // which never reaches that dispatch branch at all — the call
+        // count (see `axeyum_solver::last_dl_online_stats`'s docs) is
+        // what distinguishes that absence from "ran and cost nothing
+        // measurable" (`total_ms=0`), which a bare duration cannot.
+        let (dl_online_elapsed, dl_online_calls) = last_dl_online_stats();
+        if dl_online_calls > 0 {
+            trace_lines.push(dl_online_report_line(dl_online_elapsed.as_millis()));
         }
-    };
+        if let Some(stats) = last_bv_layer_stats() {
+            trace_lines.push(bv_layer_report_line(&stats));
+        }
+        if let Some(stats) = last_theory_layer_stats() {
+            trace_lines.push(theory_layer_report_line(&stats));
+        }
+        // Only when the eager Ackermann bound actually fired on this query:
+        // an all-zero line on every non-UF file would be noise, and the
+        // absence of the line is itself the information "this decision point
+        // was never reached".
+        let uf_overbound = last_uf_arith_overbound_stats();
+        if uf_overbound.engaged > 0 {
+            trace_lines.push(uf_overbound.trace_line());
+        }
+        trace_lines.push(lia_warm_report_line());
+        // Route attribution (ADR-1760) LAST, so a reader who scans to the
+        // end of the `;` block finds the one line that names which route
+        // decided the file and which route consumed the budget -- the two
+        // questions every other line here can only be evidence for.
+        trace_lines.extend(route_attribution_report_lines(&last_route_attribution()));
+    }
+    trace_lines
+}
 
+/// The `--timeout-ms` / `--memory-limit-mb` flags plus the environment A/B
+/// levers, resolved into one [`SolverConfig`].
+///
+/// Extracted from `main` so the levers and their rationale sit together; the
+/// defaults are unchanged, so a default invocation is byte-identical.
+fn build_config(timeout_ms: Option<u64>, memory_limit_mb: Option<u64>) -> SolverConfig {
     let mut config = SolverConfig::new();
     if let Some(ms) = timeout_ms {
         config = config.with_timeout(Duration::from_millis(ms));
@@ -978,6 +1050,99 @@ fn main() -> ExitCode {
         // flag cannot silently do nothing.
         config = config.with_cnf_inprocessing(true).with_cnf_vivify(true);
     }
+    config
+}
+
+/// The evidence-mode outcome triple: a certified report, or the `unknown` an
+/// errored evidence run owes rather than being scored as an uncertified decide.
+fn evidence_outcome(
+    input: &str,
+    config: &SolverConfig,
+    started: std::time::Instant,
+) -> (&'static str, Option<String>, Vec<String>) {
+    match produce_evidence_smtlib(input, config) {
+        Ok(report) => {
+            let (verdict, line) =
+                evidence_report_line(input, &report, started.elapsed().as_millis());
+            (verdict, Some(line), Vec::new())
+        }
+        Err(_) => (
+            "unknown",
+            Some(format!(
+                "; evidence kind=unknown certified=0 trusted=0 recheck=na arena=na ms={}",
+                started.elapsed().as_millis()
+            )),
+            Vec::new(),
+        ),
+    }
+}
+
+/// The seven thread-local stats guards that collect for the dynamic extent of
+/// one `solve_smtlib` call.
+///
+/// One struct rather than seven `let _guard` bindings because the count has gone
+/// stale twice — ADR-1760's route guard and ADR-1762's config guard landed on
+/// the same day, each from a lane that read "four" and left it. A field list is
+/// counted by the compiler; a number in a comment is counted by whoever last
+/// read it.
+///
+/// Every field is `None` when `--trace` is off, which is a no-op with no extra
+/// clock read, the convention every guard in this tree follows. Dropped
+/// together, restoring each collector to whatever this thread had before.
+struct WorkerTraceGuards {
+    _theory: Option<TheoryLayerStatsGuard>,
+    _bv: Option<BvLayerStatsGuard>,
+    _dl: Option<DlOnlineStatsGuard>,
+    _front_door: Option<FrontDoorStatsGuard>,
+    /// ADR-1760. Which route decided the file, and which consumed the budget.
+    _route: Option<RouteAttributionGuard>,
+    /// ADR-1762. Which governing values this run consulted, and which
+    /// environment overrides were in force.
+    _config: Option<ConfigTraceGuard>,
+    /// What the over-bound UF+arithmetic decision point did. A route that
+    /// declines and hands back `Unknown` with nothing after it is invisible in a
+    /// verdict and nearly invisible in a trail.
+    _uf_overbound: Option<UfArithOverboundStatsGuard>,
+}
+
+impl WorkerTraceGuards {
+    fn arm(trace_mode: bool) -> Self {
+        Self {
+            _theory: trace_mode.then(TheoryLayerStatsGuard::enable),
+            _bv: trace_mode.then(BvLayerStatsGuard::enable),
+            _dl: trace_mode.then(DlOnlineStatsGuard::enable),
+            _front_door: trace_mode.then(FrontDoorStatsGuard::enable),
+            _route: trace_mode.then(RouteAttributionGuard::enable),
+            _config: trace_mode.then(ConfigTraceGuard::enable),
+            _uf_overbound: trace_mode.then(UfArithOverboundStatsGuard::enable),
+        }
+    }
+}
+
+fn main() -> ExitCode {
+    let CliArgs {
+        path,
+        timeout_ms,
+        memory_limit_mb,
+        evidence_mode,
+        progress_mode,
+        trace_mode,
+    } = parse_cli_args();
+
+    let Some(path) = path else {
+        eprintln!("usage: smtcomp_cli <benchmark.smt2> [--timeout-ms N] [--memory-limit-mb N]");
+        return ExitCode::from(2);
+    };
+
+    let input = match std::fs::read_to_string(&path) {
+        Ok(s) => s,
+        Err(e) => {
+            eprintln!("read error: {e}");
+            return ExitCode::from(2);
+        }
+    };
+
+    let config = build_config(timeout_ms, memory_limit_mb);
 
     let (config, progress_rx) = install_progress_sink(config, progress_mode);
     let (config, check_progress_rx) = install_check_progress_sink(config, progress_mode);
@@ -1018,21 +1183,7 @@ fn main() -> ExitCode {
             let started = Instant::now();
             // A parse or solver error is `unknown` here too — and an evidence run
             // that errors must not be silently scored as an uncertified decide.
-            return match produce_evidence_smtlib(&input, &config) {
-                Ok(report) => {
-                    let (verdict, line) =
-                        evidence_report_line(&input, &report, started.elapsed().as_millis());
-                    (verdict, Some(line), Vec::new())
-                }
-                Err(_) => (
-                    "unknown",
-                    Some(format!(
-                        "; evidence kind=unknown certified=0 trusted=0 recheck=na arena=na ms={}",
-                        started.elapsed().as_millis()
-                    )),
-                    Vec::new(),
-                ),
-            };
+            return evidence_outcome(&input, &config, started);
         }
         // Each `_*_guard` collects its own stats for the dynamic extent of
         // `solve_smtlib` below when `--trace` is on; dropped (disarmed) right
@@ -1042,21 +1193,7 @@ fn main() -> ExitCode {
         // count is stated because it has been stale twice: ADR-1760's route
         // guard and ADR-1762's config guard landed on the same day, each from a
         // lane that read "four" and left it.
-        let _theory_guard = trace_mode.then(TheoryLayerStatsGuard::enable);
-        let _bv_guard = trace_mode.then(BvLayerStatsGuard::enable);
-        let _dl_guard = trace_mode.then(DlOnlineStatsGuard::enable);
-        let _front_door_guard = trace_mode.then(FrontDoorStatsGuard::enable);
-        // ADR-1760. Which route decided the file, and which route consumed the
-        // budget.
-        let _route_guard = trace_mode.then(RouteAttributionGuard::enable);
-        // ADR-1762. The sixth guard on the same flag: which governing values
-        // this run consulted, and which environment overrides were in force.
-        let _config_guard = trace_mode.then(ConfigTraceGuard::enable);
-        // The seventh guard on the same flag: what the over-bound UF+arithmetic
-        // decision point did. A route that declines and hands back `Unknown`
-        // with nothing after it is invisible in a verdict and nearly invisible
-        // in a trail; `terminal_unknown` names it outright.
-        let _uf_overbound_guard = trace_mode.then(UfArithOverboundStatsGuard::enable);
+        let _worker_guards = WorkerTraceGuards::arm(trace_mode);
         // A parse or solver error is reported as `unknown` — never a wrong
         // verdict, and never a crash that the harness would read as an abort.
         let mut give_up: Option<String> = None;
@@ -1080,52 +1217,7 @@ fn main() -> ExitCode {
             },
             Err(_) => "unknown",
         };
-        let mut trace_lines = Vec::new();
-        if trace_mode {
-            // Parse always runs exactly once (or more, on a string-bound
-            // ladder rung) per front-door call, so this line is unconditional
-            // — unlike `; bv-layer …`/`; theory-layer …` (only the ONE
-            // backend a query actually dispatched to ran) it is never
-            // legitimately absent when `--trace` is on.
-            // ADR-1762: the configuration this run used. Printed FIRST among
-            // the stage lines because it is what the others have to be read
-            // against — a stage timing means something different under a
-            // different admission policy, and until this line existed nothing
-            // in a run's own output said which one was in force.
-            trace_lines.push(config_trace_line());
-            trace_lines.push(front_door_report_line(&last_front_door_stats()));
-            // `dispatch_difference_logic` runs on every numeric-featured
-            // query ahead of the linear-arithmetic chain (probing whether the
-            // query is difference-shaped), but NOT on e.g. a `QF_BV` query,
-            // which never reaches that dispatch branch at all — the call
-            // count (see `axeyum_solver::last_dl_online_stats`'s docs) is
-            // what distinguishes that absence from "ran and cost nothing
-            // measurable" (`total_ms=0`), which a bare duration cannot.
-            let (dl_online_elapsed, dl_online_calls) = last_dl_online_stats();
-            if dl_online_calls > 0 {
-                trace_lines.push(dl_online_report_line(dl_online_elapsed.as_millis()));
-            }
-            if let Some(stats) = last_bv_layer_stats() {
-                trace_lines.push(bv_layer_report_line(&stats));
-            }
-            if let Some(stats) = last_theory_layer_stats() {
-                trace_lines.push(theory_layer_report_line(&stats));
-            }
-            // Only when the eager Ackermann bound actually fired on this query:
-            // an all-zero line on every non-UF file would be noise, and the
-            // absence of the line is itself the information "this decision point
-            // was never reached".
-            let uf_overbound = last_uf_arith_overbound_stats();
-            if uf_overbound.engaged > 0 {
-                trace_lines.push(uf_overbound.trace_line());
-            }
-            trace_lines.push(lia_warm_report_line());
-            // Route attribution (ADR-1760) LAST, so a reader who scans to the
-            // end of the `;` block finds the one line that names which route
-            // decided the file and which route consumed the budget -- the two
-            // questions every other line here can only be evidence for.
-            trace_lines.extend(route_attribution_report_lines(&last_route_attribution()));
-        }
+        let mut trace_lines = completed_trace_lines(trace_mode);
         // ADR-1752: the budget-relative atom cap can refuse before any stage
         // runs, and that refusal names the count, the budget and the remedy.
         // It is prepended so a `--trace` reader sees WHY nothing else appears.
@@ -1213,24 +1305,13 @@ fn main() -> ExitCode {
         ),
     };
 
-    // Progress lines first (see the no-timeout branch above for why), then the
-    // evidence line, so the verdict stays the final line of stdout, exactly as
-    // the competition interface promises. If the watchdog gave up before the
-    // worker finished, this still prints whatever snapshots the search sent
-    // before the timeout — an honest partial picture, not nothing.
-    for snapshot in progress_rx.try_iter() {
-        println!("{}", progress_report_line(&snapshot));
-    }
-    for event in check_progress_rx.try_iter() {
-        println!("{}", checking_report_line(&event));
-    }
-    for line in &trace_lines {
-        println!("{line}");
-    }
-    if let Some(line) = evidence {
-        println!("{line}");
-    }
-    println!("{verdict}");
+    emit_report(
+        &progress_rx,
+        &check_progress_rx,
+        &trace_lines,
+        evidence.as_deref(),
+        verdict,
+    );
     // The worker may still be inside ingest; the verdict is already printed and
     // correct, so exit rather than block on a thread that has no deadline.
     std::io::Write::flush(&mut std::io::stdout()).ok();
