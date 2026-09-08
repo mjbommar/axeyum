@@ -3547,9 +3547,11 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
                 let watch = watchers[i];
                 if self.count_search {
                     self.counters.watch_visits += 1;
-                    if watch.is_binary() {
-                        self.counters.binary_watch_visits += 1;
-                    }
+                    // Branchless: the instrumentation for a throughput change
+                    // must not cost more on the hot path than the change
+                    // saves, and a second conditional here is exactly the
+                    // shape that would.
+                    self.counters.binary_watch_visits += u64::from(watch.is_binary());
                 }
                 // (1) Fast path: a true blocker means the clause is satisfied;
                 // keep the watch and move on without inspecting the clause.
@@ -4397,6 +4399,11 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
     /// [`Cdcl::reduce_scan_start`]. We do not compact the arena: our `CRef`s
     /// are stable indices with no relocation map, and tombstoned literals are
     /// never read.
+    ///
+    /// **Not the default**, despite being strictly cheaper: the reduce sweep is
+    /// under 1% of propagation traffic here and the order it preserves cost
+    /// conflicts on six of seven corpus instances. [`WatchSweep`] carries the
+    /// measurement.
     fn prune_watches(&mut self) {
         let deleted = &self.deleted;
         let mut scanned: u64 = 0;
@@ -4411,7 +4418,7 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
 
     /// Rebuilds every watch list from scratch over the live (non-deleted)
     /// clauses, watching the first two literals of each
-    /// ([`WatchSweep::Rebuild`], the pre-2026-09 sweep).
+    /// ([`WatchSweep::Rebuild`], the pre-2026-09 sweep and still the default).
     ///
     /// Correct because `propagate` keeps a long clause's watched literals at
     /// arena slots 0 and 1, and both literals of a binary clause are watched:
@@ -4705,8 +4712,9 @@ mod tests {
     use crate::{SatResult, solve_with_rustsat_batsat};
 
     use super::{
-        Cdcl, DEFAULT_PROOF_SAT_CONFLICT_LIMIT, Instant, ProofSearchProgress, ProofSolveOutcome,
-        Reason, StreamingProofOutcome, TheoryProofOutcome, Watch, lit_code, solve_with_drat_proof,
+        CRef, Cdcl, DEFAULT_PROOF_SAT_CONFLICT_LIMIT, Instant, ProofSearchProgress,
+        ProofSolveOutcome, Reason, StreamingProofOutcome, TheoryProofOutcome,
+        WATCH_BYTES_ON_TARGET, Watch, WatchSweep, lit_code, solve_with_drat_proof,
         solve_with_drat_proof_counted, solve_with_drat_proof_streaming,
         solve_with_drat_proof_with_limits, solve_with_drat_proof_with_limits_and_progress,
         solve_with_drat_proof_within, solve_with_theory_and_drat_proof,
@@ -5695,6 +5703,228 @@ mod tests {
             }
             other => panic!("expected unsat, got {other:?}"),
         }
+    }
+
+    /// R9: the binary tag rides in bit 0 of the clause reference, so it must
+    /// survive a reference that uses every other bit. A tag packed into the
+    /// wrong end, or a `clause()` that forgets to shift, passes every
+    /// small-formula test in this file and corrupts a large one.
+    #[test]
+    fn the_binary_tag_round_trips_beside_the_largest_clause_reference() {
+        let biggest: CRef = usize::MAX >> 1;
+        for cid in [0, 1, 2, 1_000_000, biggest] {
+            for binary in [false, true] {
+                let w = Watch::new(cid, lit(3), binary);
+                assert_eq!(w.clause(), cid, "clause id must survive the tag");
+                assert_eq!(w.is_binary(), binary, "tag must survive the clause id");
+                assert_eq!(w.blocker, lit(3));
+            }
+        }
+        // The packing is what keeps the tick unit fixed; see `WATCH_BYTES`.
+        assert_eq!(size_of::<Watch>(), WATCH_BYTES_ON_TARGET);
+    }
+
+    /// R9, the property the change exists for: on a formula whose every clause
+    /// is binary, propagation must never dereference the clause arena.
+    ///
+    /// `clause_visits` counts exactly the watches that had to read the clause,
+    /// so `== 0` here is the claim itself and not a proxy for it. The two
+    /// positive assertions are what stop it being vacuous: without them a build
+    /// that visited no watches at all would pass.
+    #[test]
+    fn an_all_binary_formula_is_solved_without_one_arena_dereference() {
+        // 2-SAT, unsatisfiable, and not by unit propagation alone: there are no
+        // unit clauses, so the solver must decide, and either polarity of `x1`
+        // falsifies one of the two pairs below. The chained implications give
+        // the propagator real watch traffic to run through.
+        let f = formula(
+            8,
+            &[
+                &[1, 2],
+                &[1, -2],
+                &[-1, 3],
+                &[-1, -3],
+                &[-4, 5],
+                &[-5, 6],
+                &[-6, 7],
+                &[-7, 8],
+                &[4, -8],
+                &[2, 4],
+            ],
+        );
+        let mut sink = VecProofSink::new();
+        let (outcome, c) =
+            solve_with_drat_proof_counted(&f, None, DEFAULT_PROOF_SAT_CONFLICT_LIMIT, &mut sink);
+        assert!(
+            matches!(outcome, StreamingProofOutcome::Unsat),
+            "the fixture must be unsat, got {outcome:?}"
+        );
+        assert_eq!(
+            check_drat(&f, &sink.into_steps()),
+            Ok(true),
+            "the proof of an all-binary refutation must still check"
+        );
+        assert!(
+            c.watch_visits > 0,
+            "the fixture must actually propagate, or the claim below is vacuous"
+        );
+        assert!(
+            c.binary_arena_derefs_avoided > 0,
+            "the binary fast path must fire, or the claim below is vacuous"
+        );
+        assert_eq!(
+            c.binary_watch_visits, c.watch_visits,
+            "every clause here is binary, so every watch visit must be tagged binary"
+        );
+        assert_eq!(
+            c.clause_visits, 0,
+            "a binary clause must be decided from its watch alone; {} arena \
+             dereferences means the fast path is not taken",
+            c.clause_visits
+        );
+    }
+
+    /// R9's cost: a binary clause's arena slots are no longer permuted, so the
+    /// implied literal of a binary reason can sit at slot 1. `is_locked` reads
+    /// slot 0 first, so a reader that stops there reports a locked clause as
+    /// unlocked — and `reduce_db` would then be free to delete the reason for a
+    /// currently-assigned literal.
+    ///
+    /// The two assertions are ordered deliberately: the first pins the *broken*
+    /// invariant, so the test cannot quietly become a tautology if some future
+    /// change restores the swap; the second is the behaviour that has to
+    /// survive it.
+    #[test]
+    fn a_binary_clause_is_locked_through_the_literal_at_either_slot() {
+        let f = formula(2, &[&[1, 2]]);
+        let mut sink = VecProofSink::new();
+        let mut cdcl = Cdcl::new(&f, &mut sink);
+        let cid: CRef = 0;
+        // Decide ~x1 at level 1; the only clause then implies x2.
+        cdcl.push_level();
+        cdcl.enqueue(lit(-1), Reason::DECISION);
+        assert!(cdcl.propagate().is_none(), "no conflict is possible here");
+        let implied = lit(2).var().index();
+        assert_eq!(
+            cdcl.reason[implied].as_clause(),
+            Some(cid),
+            "setup: x2 must be implied by the binary clause"
+        );
+        assert_eq!(
+            cdcl.lit_at(cid, 0),
+            lit(1),
+            "the implied literal must NOT have been swapped to slot 0 — that is \
+             the invariant this change gives up, and the point of the test"
+        );
+        assert!(
+            cdcl.is_locked(cid),
+            "a binary clause that is the reason for an assigned literal is locked \
+             wherever that literal sits"
+        );
+    }
+
+    /// R10: the two reduce-round watch sweeps must agree on the watch *set* and
+    /// may differ only in per-list order — which is exactly what makes the
+    /// choice visible to the search, and why it is a policy knob rather than a
+    /// replacement.
+    #[test]
+    fn the_two_reduce_sweeps_agree_on_the_watch_set_and_differ_only_in_order() {
+        let f = formula(5, &[&[1, 2, 3], &[-1, 2, 4], &[1, -2, 5], &[2, 3, -4]]);
+        let mut sink = VecProofSink::new();
+        let mut cdcl = Cdcl::new(&f, &mut sink);
+        let code = lit_code(lit(2));
+        let ids = |c: &Cdcl<'_, &mut VecProofSink>| -> Vec<CRef> {
+            c.watches[code].iter().map(|w| w.clause()).collect()
+        };
+        assert!(
+            ids(&cdcl).len() >= 3,
+            "setup: literal 2 must be watched by several clauses"
+        );
+        // Stand in for what propagation does over a run: a relocated watch is
+        // appended to its new list, so a list is not in clause-id order.
+        cdcl.watches[code].rotate_left(1);
+        let rotated = ids(&cdcl);
+
+        cdcl.prune_watches();
+        assert_eq!(
+            ids(&cdcl),
+            rotated,
+            "the in-place sweep must preserve each list's order exactly"
+        );
+
+        cdcl.rebuild_watches();
+        let rebuilt = ids(&cdcl);
+        assert_ne!(
+            rebuilt, rotated,
+            "the rebuild sweep must put the list back into clause-id order; if it \
+             did not, the two sweeps would be the same search and the A/B arm \
+             would measure nothing"
+        );
+        let mut a = rotated;
+        let mut b = rebuilt;
+        a.sort_unstable();
+        b.sort_unstable();
+        assert_eq!(a, b, "the two sweeps must keep the same watch SET");
+
+        // And the part that makes either sweep correct at all: a tombstoned
+        // clause must lose every watch under both.
+        for sweep in [WatchSweep::InPlace, WatchSweep::Rebuild] {
+            let mut sink = VecProofSink::new();
+            let mut cdcl = Cdcl::new(&f, &mut sink);
+            cdcl.db_policy.watch_sweep = sweep;
+            cdcl.deleted[1] = true;
+            cdcl.sweep_watches();
+            assert!(
+                cdcl.watches.iter().flatten().all(|w| w.clause() != 1),
+                "{sweep:?} left a watch on a tombstoned clause"
+            );
+            assert!(
+                cdcl.watches.iter().flatten().any(|w| w.clause() == 0),
+                "{sweep:?} dropped a live clause's watches"
+            );
+        }
+    }
+
+    /// R10: the reduce scan may only skip clause ids that the scan's own guard
+    /// would have skipped anyway. Skipping a live learned clause would silently
+    /// make it immortal, which no counter in this file would notice.
+    #[test]
+    fn the_reduce_scan_start_never_passes_a_live_learned_clause() {
+        let f = formula(4, &[&[1, 2], &[3, 4]]);
+        let mut sink = VecProofSink::new();
+        let mut cdcl = Cdcl::new(&f, &mut sink);
+        // Two input clauses (never candidates) then three learned ones.
+        for lits in [
+            vec![lit(1), lit(3)],
+            vec![lit(2), lit(4)],
+            vec![lit(1), lit(4)],
+        ] {
+            let cid = cdcl.alloc_clause(&lits);
+            cdcl.lbd.push(2);
+            cdcl.cla_activity.push(0.0);
+            cdcl.used.push(0);
+            cdcl.deleted.push(false);
+            cdcl.learned.push(true);
+            assert_eq!(cid + 1, cdcl.headers.len());
+        }
+        cdcl.deleted[3] = true;
+
+        cdcl.advance_reduce_scan_start();
+        assert_eq!(
+            cdcl.reduce_scan_start, 2,
+            "the scan must skip the two input clauses and stop at the first live \
+             learned one"
+        );
+        // Tombstone that one too: the start may then move past it AND past the
+        // already-dead clause behind it, but not past the live clause at 4.
+        cdcl.deleted[2] = true;
+        cdcl.advance_reduce_scan_start();
+        assert_eq!(cdcl.reduce_scan_start, 4);
+        assert!(
+            (cdcl.reduce_scan_start..cdcl.headers.len())
+                .any(|cid| cdcl.learned[cid] && !cdcl.deleted[cid]),
+            "the surviving learned clause must still be inside the scanned range"
+        );
     }
 
     /// Determinism with reduction active: the same reducing instance produces a

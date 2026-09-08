@@ -183,14 +183,14 @@ fn arm(name: &str) -> Option<SearchPolicies> {
     match name {
         // The shipped default: tier clause database, pinned phasing.
         "tiered" => Some(SearchPolicies::default()),
-        // The tier database with the pre-2026-09 reduce-round watch sweep
-        // (clear all lists, re-push a pair per live clause from the arena).
-        // Isolates the R10 sweep change from everything else: this arm and
-        // `tiered` differ ONLY in how the watch lists are restored after a
-        // reduce round.
-        "tiered-rebuild" => {
+        // The tier database with the reference (Kissat) reduce-round watch
+        // sweep: retain in place rather than clear-and-re-push. Isolates the
+        // sweep from everything else — this arm and `tiered` differ ONLY in how
+        // the watch lists are restored after a reduce round. Not the default;
+        // `WatchSweep`'s docs carry the measurement that decided that.
+        "tiered-inplace" => {
             let mut p = SearchPolicies::default();
-            p.clause_db.watch_sweep = axeyum_cnf::clause_db_policy::WatchSweep::Rebuild;
+            p.clause_db.watch_sweep = axeyum_cnf::clause_db_policy::WatchSweep::InPlace;
             Some(p)
         }
         // Everything as it was before 2026-09.
@@ -220,6 +220,7 @@ fn main() {
     let mut arms = vec!["tiered".to_string(), "legacy".to_string()];
     let mut max_conflicts = 2_000_000usize;
     let mut seconds: Option<u64> = None;
+    let mut dump_dir: Option<String> = None;
     let mut files: Vec<String> = Vec::new();
 
     let argv: Vec<String> = std::env::args().skip(1).collect();
@@ -238,6 +239,14 @@ fn main() {
                 i += 1;
                 seconds = Some(argv[i].parse().expect("--seconds takes an integer"));
             }
+            // Write each named instance out as DIMACS instead of solving it.
+            // The point is the synthetic `bitblast:` instances: a build that
+            // does not have this example's generator (an older commit, in an
+            // A/B) can still be pointed at the identical formula.
+            "--dump-dimacs" => {
+                i += 1;
+                dump_dir = Some(argv[i].clone());
+            }
             other => files.push(other.to_string()),
         }
         i += 1;
@@ -249,6 +258,18 @@ fn main() {
     );
     for name in &arms {
         assert!(arm(name).is_some(), "unknown arm {name:?}");
+    }
+
+    if let Some(dir) = &dump_dir {
+        std::fs::create_dir_all(dir).expect("create the dump directory");
+        for path in &files {
+            let formula = load(path);
+            let name = path.replace([':', '/'], "_");
+            let out = std::path::Path::new(dir).join(format!("{name}.cnf"));
+            std::fs::write(&out, formula.to_dimacs()).expect("write the DIMACS file");
+            println!("{}", out.display());
+        }
+        return;
     }
 
     for path in &files {
@@ -318,6 +339,7 @@ fn emit(
          \"binary_watch_visit_rate\":{:.3},\
          \"reduce_headers_scanned\":{},\"reduce_headers_skipped\":{},\
          \"reduce_watch_entries_scanned\":{},\
+         \"ticks\":{},\"tick_watch_scan\":{},\"tick_clause_derefs\":{},\
          \"conflicts_per_second\":{:.1},\"props_per_conflict\":{:.1},\
          \"watch_visits_per_conflict\":{:.1},\"clause_deref_rate\":{:.3},\
          \"mean_live_learned\":{:.0},\
@@ -357,6 +379,13 @@ fn emit(
         c.reduce_headers_scanned,
         c.reduce_headers_skipped,
         c.reduce_watch_entries_scanned,
+        axeyum_cnf::ticks::TickModel::DEFAULT.breakdown(&c).total(),
+        axeyum_cnf::ticks::TickModel::DEFAULT
+            .breakdown(&c)
+            .watch_scan,
+        axeyum_cnf::ticks::TickModel::DEFAULT
+            .breakdown(&c)
+            .clause_derefs,
         c.conflicts as f64 / seconds.max(1e-9),
         c.propagations as f64 / conflicts,
         c.watch_visits_per_conflict(),
