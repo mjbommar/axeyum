@@ -67,6 +67,7 @@
 
 use std::cell::{Cell, RefCell};
 use std::collections::BTreeSet;
+use std::fmt::Write as _;
 
 /// What a bound is defending. Derived from what the **code** does when the
 /// bound is crossed, never from what its comment says it is for.
@@ -2087,7 +2088,8 @@ std::thread_local! {
     /// A `BTreeSet`, never a `HashSet`: the emitted line is part of a run's
     /// output, and this tree's determinism promise forbids output whose order
     /// depends on per-process hash seeding.
-    static CONSULTED: RefCell<BTreeSet<&'static str>> = RefCell::new(BTreeSet::new());
+    static CONSULTED: RefCell<BTreeSet<&'static str>> =
+        const { RefCell::new(BTreeSet::new()) };
 }
 
 /// Enables configuration recording for the lifetime of the returned guard,
@@ -2225,11 +2227,11 @@ pub fn config_trace_line() -> String {
         dated_count()
     );
     for (k, v) in active_env_overrides() {
-        s.push_str(&format!(" env:{k}={v}"));
+        let _ = write!(s, " env:{k}={v}");
     }
     let consulted = consulted();
     if !consulted.is_empty() {
-        s.push_str(&format!(" consulted={}", consulted.len()));
+        let _ = write!(s, " consulted={}", consulted.len());
         for key in consulted {
             s.push(' ');
             s.push_str(key);
@@ -2413,7 +2415,7 @@ mod tests {
             match found.get(e.name) {
                 Some(v) if v == e.value => {}
                 Some(v) => {
-                    wrong_value.push(format!("{}: registry {} vs source {}", e.key(), e.value, v))
+                    wrong_value.push(format!("{}: registry {} vs source {}", e.key(), e.value, v));
                 }
                 None => {
                     // A function-local `const` is invisible to a module-level
