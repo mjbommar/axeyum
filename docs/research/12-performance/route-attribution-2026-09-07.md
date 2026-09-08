@@ -273,3 +273,25 @@ regression corpus:
   vacuously on a corpus where they happen to coincide.
 - `decided_by_agrees_with_the_returned_verdict`.
 - `nested_dispatch_does_not_flood_the_attribution`.
+- `route_attribution_is_verdict_identical_under_a_memory_budget` — the axis the
+  corpus sweep is silent on (above).
+
+## What this lane did not do
+
+Stated plainly so the next reader does not have to infer it from absence.
+
+- **No strict virtual best.** Each route run alone on each file is not
+  measurable without a route-selection knob on `SolverConfig`, and adding one is
+  a dispatch change with its own soundness surface, not an instrumentation
+  change. The recoverable-time figures are exact; the diversity figure is an
+  upper bound.
+- **The watchdog blind spot is not closed**, only made audible. 96 hard-timeout
+  files still carry no trail.
+- **`check_auto_explained` still lacks the memory-budget entry guard.** The
+  shipped path is correct because `check_auto` now runs it ahead of the
+  delegation, but the two functions still differ and `explain_corpus` still
+  inherits the difference.
+- **Whether the 52 recoverable-headroom losses would actually decide with more
+  budget is not measured.** A route given 2x its time is not a route that
+  succeeds, and claiming those 52 as portfolio wins would be exactly the kind of
+  inherited-number error this lane exists to stop.
