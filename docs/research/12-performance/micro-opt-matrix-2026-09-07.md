@@ -664,3 +664,39 @@ core; the setting that is best on the SAT core is worth −3% on that primitive.
 That is a stronger argument against a global profile than the small SAT-core
 numbers are on their own — a workspace profile is a single choice, and the
 measurements disagree about what it should be.
+
+### 2026-09-07 — and the corpus wall time, where the microbenchmark and the corpus agree
+
+The decided count is a coarse instrument (a file either fits the budget or it
+does not), so the same sweep's per-file wall time was also compared, restricted
+to the ten files every arm actually decided — the ten that time out all report
+the budget, and including them would dilute any real difference to nothing by
+construction.
+
+s7, 20 s budget, all 20 p4dfa files, two interleaved repeats, min per cell:
+
+| cell | total ms on the 10 decided files | ratio | decided |
+|---|---:|---:|---:|
+| `base` | 53,859 | 1.000 | 10 of 20 |
+| `fat` | 53,213 | 0.988 | 10 of 20 |
+| `fatcgu1` | **52,289** | **0.971** | 10 of 20 |
+| `v3fatcgu1` | 52,486 | 0.975 | 10 of 20 |
+
+**The decided *set* is identical across all eight arms**, not merely the count —
+the comparison checks the set and would have named any file that moved.
+
+`fatcgu1` is **2.9% faster** in total corpus wall time, against **1.8%** on the
+fixed-conflict-budget matrix. Same sign, same order of magnitude, slightly
+larger on the corpus. **The microbenchmark predicted the corpus here.** That is
+worth stating explicitly, because this repository's standing warning is the
+opposite case — a 42-variable pigeonhole that said one engine beat another by
+3.4% while a 330,000-variable real instance went the other way. The reason the
+warning does not bite here is structural, not lucky: the "microbenchmark" in
+this lane *is* real p4dfa DIMACS driven through the shipping core, differing
+from the corpus arm only in whether the stopping rule is a conflict count or a
+clock. The one subject where a genuine micro/macro disagreement did appear is
+`value_to_lsb_bits` (previous entry), and it disagrees with the SAT core rather
+than with the corpus.
+
+The agreement is what makes the recommendation safe to state as a negative:
+2.9% of wall time, zero additional answers, for 4.6x the build.
