@@ -23,8 +23,10 @@ use web_time::Instant;
 
 use std::time::Duration;
 
+use crate::clause_db_policy::{ClauseDbPolicy, KeepReason, MAX_USED, Tier};
 use crate::drat::{DratSink, DratStep, ProofSinkError, VecProofSink};
 use crate::inprocess::{InprocessOptions, InprocessStats, inprocess_into};
+use crate::phase_policy::{PhasePolicy, RephaseAction};
 use crate::{CnfAssignment, CnfFormula, CnfLit, CnfVar};
 
 pub mod theory;
@@ -92,9 +94,6 @@ const REDUCE_FIRST: usize = 2_000;
 /// budget is `REDUCE_FIRST + REDUCE_INC * reductions`, so reductions become
 /// less frequent over time (the standard schedule shape).
 const REDUCE_INC: usize = 300;
-/// Learned clauses with literal-block distance at or below this are "glue"
-/// clauses and are never deleted (the canonical Glucose protection rule).
-const GLUE_LBD: usize = 2;
 /// Clause-activity decay: each conflict the clause bump increment grows by
 /// `1/CLAUSE_DECAY`, so older clause bumps decay relative to fresh ones.
 const CLAUSE_DECAY: f64 = 0.999;
@@ -283,6 +282,82 @@ pub struct SearchCounters {
     /// Reason-chain steps taken by `lit_redundant` during recursive learned-clause
     /// minimization (one per literal popped off its work stack).
     pub redundancy_steps: u64,
+
+    // --- Clause-database policy instrumentation (see `crate::clause_db_policy`).
+    // These describe the *lifetime* policy, which is the thing a tuning lane
+    // needs to see and which nothing in this core previously exposed: a policy
+    // nobody can observe cannot be tuned, and cannot be shown to be doing
+    // anything at all.
+    /// Times a learned clause's `used` counter was refreshed to
+    /// `clause_db_policy::MAX_USED` — once per resolution through a learned
+    /// clause, plus once per clause at learning. This is the numerator of the
+    /// lifetime signal that replaced clause activity.
+    pub clause_used_marks: u64,
+    /// Learned clauses whose glue was recomputed on resolution and found to be
+    /// *smaller* than the recorded value, promoting the clause toward tier1.
+    /// Zero when `promote_on_use` is off.
+    pub clause_promotions: u64,
+    /// Times the dynamic tier boundaries were recomputed from the used-glue
+    /// histogram (a doubling conflict schedule, so this grows like
+    /// `log2(conflicts)` until the interval caps).
+    pub tier_recomputes: u64,
+    /// The `tier1` boundary at the most recent recomputation.
+    pub tier1_limit_last: u32,
+    /// The `tier2` boundary at the most recent recomputation.
+    pub tier2_limit_last: u32,
+    /// Sum of the `tier1` boundary over every recomputation. Divided by
+    /// [`SearchCounters::tier_recomputes`] this is the mean boundary over the
+    /// run — the cheapest clock-free way to see the boundary move, which is the
+    /// whole claim of the dynamic-boundary change.
+    pub tier1_limit_sum: u64,
+    /// Sum of the `tier2` boundary over every recomputation.
+    pub tier2_limit_sum: u64,
+    /// Live learned clauses classified into tier1 at reduce time, summed over
+    /// rounds. The three tier counters plus
+    /// [`SearchCounters::reduce_locked`] and
+    /// [`SearchCounters::reduce_too_short`] partition every clause examined.
+    pub reduce_tier1_seen: u64,
+    /// Live learned clauses classified into tier2 at reduce time, summed over
+    /// rounds.
+    pub reduce_tier2_seen: u64,
+    /// Live learned clauses classified into tier3 at reduce time, summed over
+    /// rounds.
+    pub reduce_tier3_seen: u64,
+    /// Clauses a reduce round kept because they were tier1 and used since the
+    /// previous round.
+    pub reduce_kept_tier1: u64,
+    /// Clauses a reduce round kept because they were tier2 and within their
+    /// one round of grace.
+    pub reduce_kept_tier2: u64,
+    /// Clauses a reduce round kept because they were the reason for an assigned
+    /// literal (locked).
+    pub reduce_locked: u64,
+    /// Clauses a reduce round skipped as too short to delete (binaries).
+    pub reduce_too_short: u64,
+    /// Deletion candidates a reduce round produced, summed over rounds.
+    pub reduce_candidates: u64,
+    /// Clauses actually deleted, summed over rounds. Each one emitted a DRAT
+    /// deletion step, so this is also the number of `d` lines the proof gained
+    /// from reduction.
+    pub reduce_deleted: u64,
+    /// Reduce rounds that deleted nothing because the keep rule protected the
+    /// whole database. Nonzero here means the size-triggered schedule is being
+    /// held off by the backoff rather than doing work, and the tier boundaries
+    /// are probably too generous for this formula.
+    pub reduce_empty_rounds: u64,
+    /// Fresh high-water marks recorded for the *target* phase (the one restarts
+    /// re-descend into). Under a released ratchet this keeps growing all run;
+    /// under a pinned one it stops early, which is exactly the symptom that
+    /// motivated the reset.
+    pub target_phase_snapshots: u64,
+    /// Fresh high-water marks recorded for the long-run *best* phase archive.
+    pub best_phase_snapshots: u64,
+    /// Times the target-phase high-water mark was reset so the ratchet could
+    /// release. Zero means the target is a monotone mark that never releases.
+    pub target_phase_resets: u64,
+    /// Rephases performed (a scheduled reinstallation of a whole phase vector),
+    /// as distinct from the per-restart copy of the target phase.
+    pub rephases: u64,
 }
 
 impl SearchCounters {
@@ -418,7 +493,114 @@ pub fn solve_with_drat_proof_counted(
     max_conflicts: usize,
     sink: &mut impl DratSink,
 ) -> (StreamingProofOutcome, SearchCounters) {
-    Cdcl::new(formula, sink).solve_counted(deadline, max_conflicts)
+    solve_with_drat_proof_counted_with_policies(
+        formula,
+        deadline,
+        max_conflicts,
+        sink,
+        &SearchPolicies::default(),
+    )
+}
+
+/// The search heuristics this core runs, as objects rather than constants.
+///
+/// The search loop asks these for every clause-database and decision-phase
+/// decision it makes; swapping one changes the search's behaviour without any
+/// edit to the loop. That is the point of the split, and it is what makes an
+/// A/B honest: both arms are the same binary on the same trajectory code, and
+/// the only difference is the policy object.
+///
+/// [`SearchPolicies::default`] is what every shipping entry point uses.
+/// [`SearchPolicies::legacy_clause_db`] reproduces the pre-2026-09 clause
+/// database (glue &le; 2 immortal, activity ranking, delete the worst half) so
+/// the tier scheme can be measured against the thing it replaced.
+#[derive(Debug, Clone)]
+pub struct SearchPolicies {
+    /// Which learned clauses survive a reduce round, in what order the rest are
+    /// deleted, and how many go. Owns the dynamic tier boundaries.
+    pub clause_db: ClauseDbPolicy,
+    /// The target/best phase split and the rephase schedule.
+    pub phase: PhasePolicy,
+}
+
+impl Default for SearchPolicies {
+    /// The shipped defaults, stated in one place.
+    ///
+    /// `clause_db` is the tier scheme: it replaced an activity-ranked
+    /// delete-the-worst-half rule that neither reference solver uses.
+    ///
+    /// `phase` is deliberately still [`PhasePolicy::pinned`] — the pre-2026-09
+    /// behaviour. The rephase schedule and the target-mark release are
+    /// implemented and tested, but changing two heuristics at once makes
+    /// neither measurable; this default flips only when the measurement says it
+    /// should.
+    fn default() -> Self {
+        Self {
+            clause_db: ClauseDbPolicy::tiered(),
+            phase: PhasePolicy::pinned(),
+        }
+    }
+}
+
+impl SearchPolicies {
+    /// The target/best split with the full `(B I B O)` rephase schedule.
+    #[must_use]
+    pub fn scheduled_phase() -> Self {
+        Self {
+            phase: PhasePolicy::scheduled(),
+            ..Self::default()
+        }
+    }
+
+    /// The target-mark release on its own, with no phase reinstallation — the
+    /// minimal fix for a ratchet that never releases, isolated so it is
+    /// separately attributable.
+    #[must_use]
+    pub fn releasing_phase() -> Self {
+        Self {
+            phase: PhasePolicy::releasing(),
+            ..Self::default()
+        }
+    }
+
+    /// The pre-2026-09 clause database, with the current phase policy.
+    #[must_use]
+    pub fn legacy_clause_db() -> Self {
+        Self {
+            clause_db: ClauseDbPolicy::legacy(),
+            ..Self::default()
+        }
+    }
+
+    /// Both pre-2026-09 policies: the search as it behaved before the tier
+    /// scheme and the rephase schedule landed.
+    #[must_use]
+    pub fn legacy() -> Self {
+        Self {
+            clause_db: ClauseDbPolicy::legacy(),
+            phase: PhasePolicy::pinned(),
+        }
+    }
+}
+
+/// [`solve_with_drat_proof_counted`] with the search heuristics supplied
+/// explicitly.
+///
+/// The verdict is a property of the formula, not of the policy: every policy
+/// choice here only orders decisions and decides which *redundant* learned
+/// clauses to forget, and both are verdict-preserving. What changes is the
+/// trajectory, and therefore the counters and the DRAT stream's contents (never
+/// its validity — deletions are still emitted for every clause dropped).
+pub fn solve_with_drat_proof_counted_with_policies(
+    formula: &CnfFormula,
+    deadline: Option<Instant>,
+    max_conflicts: usize,
+    sink: &mut impl DratSink,
+    policies: &SearchPolicies,
+) -> (StreamingProofOutcome, SearchCounters) {
+    let mut cdcl = Cdcl::new(formula, sink);
+    cdcl.set_policies(policies);
+    cdcl.solve_counted(deadline, max_conflicts)
 }
 
 /// A search that ran over an inprocessed formula: the verdict, the search
@@ -1028,8 +1210,10 @@ fn solve_with_theory_and_drat_proof_impl<T: NativeTheory>(
     cdcl.collect_layer_stats = options.collect_layer_stats;
     cdcl.use_target_rephase = options.target_rephase;
     if options.initial_phase {
+        cdcl.initial_phase = true;
         cdcl.phase.fill(true);
         cdcl.best_phase.fill(true);
+        cdcl.target_phase.fill(true);
     }
     let outcome = cdcl.run(&[], deadline, max_conflicts);
     let lemmas = core::mem::take(&mut cdcl.theory_lemmas);
@@ -1368,9 +1552,39 @@ struct Cdcl<'progress, S: DratSink, T: NativeTheory = NullTheory> {
     /// best assignment instead of the last-seen polarities. Pure decision-order
     /// heuristic (verdict-preserving).
     best_phase: Vec<bool>,
-    /// The trail length at which [`Cdcl::best_phase`] was last snapshotted (a
-    /// monotone high-water mark; a new maximum triggers a fresh snapshot).
+    /// The trail length at which [`Cdcl::best_phase`] was last snapshotted.
+    ///
+    /// This is the **long-run archive** mark. It is deliberately monotone
+    /// within a solve: `best_phase` is the deepest assignment the whole search
+    /// ever reached, and a `Best` rephase restores from it. It is *not* what
+    /// restarts read — see [`Cdcl::target_trail_len`] for why that distinction
+    /// exists.
     best_trail_len: usize,
+    /// Target phase: the polarities restarts re-descend into.
+    ///
+    /// Separate from [`Cdcl::best_phase`] because the two have opposite
+    /// requirements. `best` must never release, or the archive is lost; `target`
+    /// must release periodically, or the search is pinned.
+    target_phase: Vec<bool>,
+    /// The trail length at which [`Cdcl::target_phase`] was last snapshotted —
+    /// a high-water mark that is **reset on every rephase**.
+    ///
+    /// Before 2026-09 there was one mark serving both roles and nothing ever
+    /// reset it inside a solve. That is a ratchet with no release: once the
+    /// search has had one deep dive, no later assignment beats the mark, the
+    /// snapshot stops firing, and the restart-time `phase := best_phase` pins
+    /// every subsequent descent into the same region for the rest of the run.
+    /// Resetting the target mark is what makes the restart-time copy a
+    /// *direction* rather than a commitment: the search is pushed to find larger
+    /// and larger targets between rephases, and the largest is what lands in the
+    /// archive.
+    target_trail_len: usize,
+    /// Phase installed by an `Original` rephase and used before any variable has
+    /// been assigned. `false` unless the caller asked for an all-true initial
+    /// phase.
+    initial_phase: bool,
+    /// Phase-policy state: the rephase schedule and its conflict interval.
+    phase_policy: PhasePolicy,
     /// When set (the default), restarts rephase [`Cdcl::phase`] to
     /// [`Cdcl::best_phase`] (target rephasing); otherwise plain phase saving is kept.
     use_target_rephase: bool,
@@ -1415,11 +1629,38 @@ struct Cdcl<'progress, S: DratSink, T: NativeTheory = NullTheory> {
     /// unchanged.
     learned: Vec<bool>,
     /// Literal-block distance per clause (distinct decision levels among its
-    /// literals at learning time). Meaningful for learned clauses only.
+    /// literals). Written at learning time and lowered by promotion when the
+    /// clause is resolved and its levels turn out to be more compact than they
+    /// were. Meaningful for learned clauses only.
     lbd: Vec<usize>,
+    /// Stamp table for [`Cdcl::compute_lbd`]: one generation tag per decision
+    /// level. Paired with [`Cdcl::lbd_generation`] this counts distinct levels
+    /// in O(clause length) with no allocation and no clearing pass.
+    lbd_stamp: Vec<u64>,
+    /// Monotone generation counter for [`Cdcl::lbd_stamp`]. A level counts as
+    /// seen for the current clause iff its stamp equals this. `u64`, so it
+    /// cannot wrap in any reachable run.
+    lbd_generation: u64,
     /// Clause activity per clause (bumped when the clause participates in a
     /// conflict). Meaningful for learned clauses only.
+    ///
+    /// Maintained under every policy, but consulted by `reduce_db` only when
+    /// [`ClauseDbPolicy::rank_key`] is `Activity`. The default tier policy
+    /// ranks by `(glue desc, size desc)` and never reads this — as neither
+    /// `CaDiCaL` nor Kissat does.
     cla_activity: Vec<f64>,
+    /// Saturating lifetime counter per clause: set to
+    /// [`crate::clause_db_policy::MAX_USED`] on learning and on every
+    /// resolution through the clause, decremented once per `reduce_db` round.
+    /// Meaningful for learned clauses only (a clause the policy can never
+    /// delete never needs one).
+    ///
+    /// This is the signal the tier scheme is built on, and it differs from
+    /// activity in the one way that matters: it *expires*. A clause resolved
+    /// heavily long ago falls to zero and becomes deletable, where a decayed
+    /// activity score merely becomes small and can still outrank a clause that
+    /// was resolved last round.
+    used: Vec<u8>,
     /// Tombstone flag: a deleted learned clause keeps its id (so reasons and
     /// later clause ids stay valid) but is removed from the watch lists and
     /// skipped everywhere. Original clauses are never tombstoned.
@@ -1428,6 +1669,20 @@ struct Cdcl<'progress, S: DratSink, T: NativeTheory = NullTheory> {
     cla_inc: f64,
     /// Number of `reduce_db` reductions performed so far (drives the budget).
     reductions: usize,
+    /// Clause-database policy: the keep predicate, the deletion ranking, the
+    /// deleted fraction, and the dynamic tier boundaries (which are *state*, fed
+    /// by every resolution). Swapping this object changes the whole reduce
+    /// behaviour without touching the search loop; see
+    /// [`ClauseDbPolicy::legacy`] for the pre-2026-09 baseline.
+    db_policy: ClauseDbPolicy,
+    /// Conflict count before which `reduce_db` will not attempt another round,
+    /// set after a round that deleted nothing. Our reduce trigger is a
+    /// learned-clause *budget*, not a conflict interval, so a database the keep
+    /// rule fully protects would otherwise re-scan every clause on every
+    /// conflict until the budget grew past it. The backoff bounds that to one
+    /// scan per [`ClauseDbPolicy::empty_round_backoff`] conflicts and is
+    /// counted in [`SearchCounters::reduce_empty_rounds`].
+    reduce_backoff_until: u64,
     /// Number of live (non-deleted) learned clauses. Drives the reduce trigger.
     learned_live: usize,
     /// VSIDS order heap: a binary max-heap of variable indices keyed by
@@ -1618,6 +1873,11 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
             branchable,
             best_phase: vec![false; n],
             best_trail_len: 0,
+            target_phase: vec![false; n],
+            target_trail_len: 0,
+            initial_phase: false,
+            // The shipped defaults live in one place; see `SearchPolicies`.
+            phase_policy: SearchPolicies::default().phase,
             use_target_rephase: true,
             conflicts_since_restart: 0,
             restart_count: 1,
@@ -1630,10 +1890,15 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
             use_ema_restart: false,
             learned: vec![false; num_clauses],
             lbd: vec![0; num_clauses],
+            lbd_stamp: vec![0; n + 1],
+            lbd_generation: 0,
             cla_activity: vec![0.0; num_clauses],
+            used: vec![0; num_clauses],
             deleted: vec![false; num_clauses],
             cla_inc: 1.0,
             reductions: 0,
+            db_policy: SearchPolicies::default().clause_db,
+            reduce_backoff_until: 0,
             learned_live: 0,
             heap: Vec::with_capacity(n),
             heap_pos: vec![HEAP_ABSENT; n],
@@ -1691,6 +1956,8 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
         self.activity.resize(count, 0.0);
         self.phase.resize(count, false);
         self.best_phase.resize(count, false);
+        self.target_phase.resize(count, self.initial_phase);
+        self.lbd_stamp.resize(count + 1, 0);
         self.branchable.resize(count, false);
         self.heap_pos.resize(count, HEAP_ABSENT);
         self.initial_unit_seen.resize(count, false);
@@ -1736,6 +2003,10 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
         let cid = self.alloc_clause(&normalized);
         self.lbd.push(0);
         self.cla_activity.push(0.0);
+        // Not a learned clause: `reduce_db` can never delete it, so its
+        // lifetime counter is never read. Pushed to keep the per-clause vectors
+        // index-aligned.
+        self.used.push(0);
         self.deleted.push(false);
         self.learned.push(false);
 
@@ -1821,11 +2092,21 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
         self.conflicts_since_restart = 0;
         self.restart_count = 1;
         self.best_trail_len = 0;
+        self.target_trail_len = 0;
+        self.phase_policy.reset();
+        self.reduce_backoff_until = 0;
         for var in 0..self.branchable.len() {
             if self.branchable[var] && !self.heap_contains(var) {
                 self.heap_insert(var);
             }
         }
+    }
+
+    /// Installs the clause-database and phase policies. Called before
+    /// [`Cdcl::solve`]; the default entry points leave the defaults in place.
+    fn set_policies(&mut self, policies: &SearchPolicies) {
+        self.db_policy = policies.clause_db.clone();
+        self.phase_policy = policies.phase.clone();
     }
 
     /// Installs a progress callback, polled every `interval` conflicts (and
@@ -2135,14 +2416,69 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
     /// and only walks the trail on a fresh high-water mark, so the amortized cost is
     /// negligible.
     fn snapshot_target_phase(&mut self) {
-        if self.trail.len() <= self.best_trail_len {
+        let depth = self.trail.len();
+        let fresh_target = depth > self.target_trail_len;
+        let fresh_best = depth > self.best_trail_len;
+        if !fresh_target && !fresh_best {
             return;
         }
-        self.best_trail_len = self.trail.len();
-        for idx in 0..self.trail.len() {
-            let var = self.trail[idx];
-            self.best_phase[var] = self.assign[var] == Some(true);
+        if fresh_target {
+            self.target_trail_len = depth;
+            if self.count_search {
+                self.counters.target_phase_snapshots += 1;
+            }
         }
+        if fresh_best {
+            self.best_trail_len = depth;
+            if self.count_search {
+                self.counters.best_phase_snapshots += 1;
+            }
+        }
+        for idx in 0..depth {
+            let var = self.trail[idx];
+            let polarity = self.assign[var] == Some(true);
+            if fresh_target {
+                self.target_phase[var] = polarity;
+            }
+            if fresh_best {
+                self.best_phase[var] = polarity;
+            }
+        }
+    }
+
+    /// Applies one scheduled rephase: installs a phase vector and releases the
+    /// target high-water mark so the ratchet can move again.
+    ///
+    /// Called at a restart, where the trail is about to be (or has just been)
+    /// unwound to level 0, so overwriting the saved phases cannot contradict a
+    /// live assignment.
+    fn apply_rephase(&mut self, action: RephaseAction) {
+        if self.count_search {
+            self.counters.rephases += 1;
+            self.counters.target_phase_resets += 1;
+        }
+        match action {
+            // Release the mark and change nothing else: the search keeps its
+            // saved phases and simply regains the ability to record a target.
+            RephaseAction::TargetOnly => {}
+            RephaseAction::Best => {
+                self.phase.copy_from_slice(&self.best_phase);
+                // The archive has been consumed; let it be rebuilt from the
+                // targets found between now and the next `Best`.
+                self.best_trail_len = 0;
+            }
+            RephaseAction::Inverted => {
+                self.phase.fill(!self.initial_phase);
+            }
+            RephaseAction::Original => {
+                self.phase.fill(self.initial_phase);
+            }
+        }
+        // The target restarts read is re-seeded from the saved phases and its
+        // mark released, so the next deep dive -- however shallow relative to
+        // the run's best -- becomes the new target.
+        self.target_phase.copy_from_slice(&self.phase);
+        self.target_trail_len = 0;
     }
 
     fn decision_level(&self) -> usize {
@@ -2397,10 +2733,22 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
                     self.conflicts_since_restart = 0;
                     self.restart_count += 1;
                     self.backtrack_to(0);
-                    // Target rephasing (T1.3.1): re-descend toward the best assignment
-                    // seen, not the last-seen polarities. Pure decision-order heuristic.
+                    // Target phasing (T1.3.1): re-descend toward the deepest
+                    // conflict-free assignment seen SINCE THE LAST REPHASE, not
+                    // the last-seen polarities. Pure decision-order heuristic.
                     if self.use_target_rephase {
-                        self.phase.copy_from_slice(&self.best_phase);
+                        self.phase.copy_from_slice(&self.target_phase);
+                    }
+                    // Scheduled rephase (R6): release the target high-water mark
+                    // so the ratchet does not saturate, and install whatever
+                    // vector the schedule calls for. Applied AFTER the target
+                    // copy, so a rephase both replaces this restart's phases and
+                    // opens the next interval. Nothing here is read by the
+                    // verdict -- phases only order decisions.
+                    let conflicts = self.conflicts as u64;
+                    if self.use_target_rephase && self.phase_policy.should_rephase(conflicts) {
+                        let action = self.phase_policy.next_action(conflicts);
+                        self.apply_rephase(action);
                     }
                     continue;
                 }
@@ -2541,6 +2889,19 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
             return Ok(Some(SearchOutcome::Unsat));
         }
         self.conflicts += 1;
+        // Tier boundaries are recomputed from the used-glue histogram on a
+        // doubling conflict interval (capped at 2^16), so this is O(1)
+        // amortized and O(128) on the rare firing conflict.
+        if self.db_policy.on_conflict(self.conflicts as u64) {
+            let (tier1, tier2) = self.db_policy.tiers.limits();
+            if self.count_search {
+                self.counters.tier_recomputes += 1;
+                self.counters.tier1_limit_last = tier1;
+                self.counters.tier2_limit_last = tier2;
+                self.counters.tier1_limit_sum += u64::from(tier1);
+                self.counters.tier2_limit_sum += u64::from(tier2);
+            }
+        }
         if self.conflicts > max_conflicts {
             self.report_progress();
             return Ok(Some(SearchOutcome::ResourceOut));
@@ -2592,6 +2953,10 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
         // Register the new learned clause's deletion metadata.
         self.lbd.push(lbd);
         self.cla_activity.push(0.0);
+        // A freshly learned clause starts with a full lifetime budget: it was
+        // just derived from the current conflict, so it is by construction
+        // "used" this round.
+        self.used.push(MAX_USED);
         self.deleted.push(false);
         self.learned.push(true);
         self.learned_live += 1;
@@ -2608,7 +2973,9 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
         // consistent; here we are immediately after a backjump+enqueue
         // and before propagation, which is safe (locked-clause check
         // reads the current trail).
-        if self.learned_live > self.reduce_budget() {
+        if self.learned_live > self.reduce_budget()
+            && (self.conflicts as u64) >= self.reduce_backoff_until
+        {
             self.reduce_db()?;
             self.reductions += 1;
         }
@@ -2761,6 +3128,10 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
         let cid = self.alloc_clause(clause);
         self.lbd.push(0);
         self.cla_activity.push(0.0);
+        // Not a learned clause: `reduce_db` can never delete it, so its
+        // lifetime counter is never read. Pushed to keep the per-clause vectors
+        // index-aligned.
+        self.used.push(0);
         self.deleted.push(false);
         // NOT `true`: an input clause, never a `reduce_db` candidate.
         self.learned.push(false);
@@ -2979,13 +3350,18 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
             if self.count_search {
                 self.counters.resolutions += 1;
             }
-            // Bump the activity of any learned clause that participates in this
-            // conflict, so frequently-useful learned clauses survive reduceDB.
-            self.bump_clause(clause_id);
             // Clone the reason clause's literals so we can bump activities while
             // walking it (the borrow checker forbids reading the arena and
             // mutating `self.activity` at once; reason clauses are short).
             let lits = self.lits(clause_id).to_vec();
+            // Two independent lifetime signals, both fed once per antecedent.
+            // `bump_clause` maintains the decayed activity score (read only by
+            // the legacy ranking); `mark_clause_used` refreshes the `used`
+            // counter, feeds the tier estimator's histogram, and promotes the
+            // clause if its glue has dropped. The tier policy reads only the
+            // latter. Both take the clone above, so neither allocates.
+            self.bump_clause(clause_id);
+            self.mark_clause_used(clause_id, &lits);
             for q in lits {
                 let v = q.var().index();
                 if Some(v) == pivot_var || seen[v] || self.level[v] == 0 {
@@ -3134,6 +3510,10 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
         let cid = self.alloc_clause(&clause);
         self.lbd.push(0);
         self.cla_activity.push(0.0);
+        // Not a learned clause: `reduce_db` can never delete it, so its
+        // lifetime counter is never read. Pushed to keep the per-clause vectors
+        // index-aligned.
+        self.used.push(0);
         self.deleted.push(false);
         // NOT `true`: an input clause, never a `reduce_db` candidate.
         self.learned.push(false);
@@ -3385,13 +3765,70 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
     /// levels among its literals' current assignments. Computed at learning
     /// time (every literal of a freshly learned clause is assigned). LBD = 2
     /// "glue" clauses are the most valuable and are kept permanently.
-    fn compute_lbd(&self, clause: &[CnfLit]) -> usize {
-        // Small clauses dominate; a stack-free de-dup over a bounded set of
-        // levels via a sorted scratch vec keeps this deterministic and cheap.
-        let mut levels: Vec<usize> = clause.iter().map(|l| self.level[l.var().index()]).collect();
-        levels.sort_unstable();
-        levels.dedup();
-        levels.len()
+    fn compute_lbd(&mut self, clause: &[CnfLit]) -> usize {
+        // Stamp table rather than sort+dedup: a monotone generation counter and
+        // one `u64` per decision level. A level is "already counted for this
+        // clause" iff its stamp equals the current generation, so nothing is
+        // allocated, nothing is sorted, and nothing has to be cleared
+        // afterwards. Values are identical to the sorted-dedup form -- the
+        // number of distinct decision levels among the clause's literals -- and
+        // that equality is asserted by
+        // `tests::stamped_lbd_matches_the_sorted_dedup_definition`.
+        self.lbd_generation += 1;
+        let generation = self.lbd_generation;
+        if self.lbd_stamp.len() < self.level.len() + 1 {
+            self.lbd_stamp.resize(self.level.len() + 1, 0);
+        }
+        let mut distinct = 0usize;
+        for lit in clause {
+            let level = self.level[lit.var().index()];
+            if self.lbd_stamp[level] != generation {
+                self.lbd_stamp[level] = generation;
+                distinct += 1;
+            }
+        }
+        distinct
+    }
+
+    /// Marks a learned clause as *used* this round and feeds the tier
+    /// estimator's used-glue histogram; promotes the clause if its glue has
+    /// dropped since it was recorded.
+    ///
+    /// This is the lifetime signal the tier scheme runs on. It fires once per
+    /// antecedent in `analyze` — exactly Kissat's `deduce.c` hook — plus once
+    /// when the clause is learned.
+    ///
+    /// Promotion recomputes the glue and only ever *lowers* it. There is no
+    /// demotion in either reference: a clause that has once been level-compact
+    /// has demonstrated it, and re-raising its glue because the current trail
+    /// happens to be fragmented would throw that away. Promotion is what lets a
+    /// clause move into tier1 after it was learned deep, which is the mechanism
+    /// that makes a glue-derived tier a *lifetime* policy rather than a
+    /// birth-order one.
+    /// `lits` is the clause's literals, which `analyze` has already cloned for
+    /// its own walk — taking them as an argument keeps this off the allocator.
+    fn mark_clause_used(&mut self, cid: usize, lits: &[CnfLit]) {
+        if !self.learned[cid] || self.deleted[cid] {
+            return;
+        }
+        if self.db_policy.promote_on_use {
+            // Every literal of a reason or conflict clause is assigned when
+            // `analyze` walks it, so every `level[]` read here is live.
+            let glue = self.compute_lbd(lits);
+            if glue < self.lbd[cid] {
+                self.lbd[cid] = glue;
+                if self.count_search {
+                    self.counters.clause_promotions += 1;
+                }
+            }
+        }
+        #[allow(clippy::cast_possible_truncation)]
+        self.db_policy
+            .on_clause_used(self.lbd[cid].min(u32::MAX as usize) as u32);
+        self.used[cid] = MAX_USED;
+        if self.count_search {
+            self.counters.clause_used_marks += 1;
+        }
     }
 
     /// Bumps a learned clause's activity, rescaling all clause activities (and
@@ -3434,16 +3871,34 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
         self.assign[v].is_some() && self.reason[v].as_clause() == Some(cid)
     }
 
-    /// Glucose/MiniSat `reduceDB`: delete the worst (low-activity) half of the
-    /// deletable learned clauses, protecting originals, locked clauses, and
-    /// glue (LBD ≤ [`GLUE_LBD`]) clauses. Each deleted clause emits a DRAT
-    /// deletion step so the proof stays checkable, and the watch lists are
-    /// rebuilt over the surviving clauses (no dangling ids).
+    /// One reduce round, driven entirely by [`Cdcl::db_policy`].
+    ///
+    /// The round has three separable decisions and the search makes none of
+    /// them: which clauses are exempt ([`ClauseDbPolicy::classify`]), how the
+    /// rest are ordered ([`ClauseDbPolicy::rank`]), and how many of them go
+    /// ([`ClauseDbPolicy::delete_count`]). Under the default tier policy this is
+    /// a **lifetime** rule: every live learned clause has its `used` counter
+    /// decremented, a tier1 clause survives if it was resolved at all since the
+    /// previous round, a tier2 clause survives one further round of grace, and
+    /// a tier3 clause is always a candidate. Candidates are deleted worst-first
+    /// by `(glue desc, size desc)`.
+    ///
+    /// Note what does *not* appear: clause activity. A decayed activity score
+    /// never expires, so a clause resolved heavily long ago outranks one
+    /// resolved last round; neither `CaDiCaL` nor Kissat consults it in `reduce`
+    /// for that reason. It is still maintained, and
+    /// [`ClauseDbPolicy::legacy`] still ranks by it, so the two are A/B
+    /// comparable.
     ///
     /// Soundness/completeness: every learned clause was RUP-derived, so the
     /// formula's models are unchanged by deletion; protecting locked clauses
     /// keeps the implication graph intact; the search can re-derive any deleted
-    /// clause, so completeness is preserved.
+    /// clause, so completeness is preserved. Only `learned[cid]` clauses are
+    /// ever candidates, so an input clause or a theory lemma can never be
+    /// deleted — deleting either would weaken the formula and could produce a
+    /// wrong `sat`. Every deletion emits a DRAT `d` step, so the proof stays
+    /// checkable no matter what the policy decides; the policy is visible to the
+    /// *trajectory* and invisible to the *proof stream's validity*.
     ///
     /// # Errors
     ///
@@ -3453,30 +3908,70 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
         if self.count_search {
             self.counters.reductions += 1;
         }
-        // Candidates for deletion: live, learned, non-glue, non-locked clauses.
-        let mut candidates: Vec<CRef> = (0..self.headers.len())
-            .filter(|&cid| {
-                self.learned[cid]
-                    && !self.deleted[cid]
-                    && self.clause_len(cid) > 2
-                    && self.lbd[cid] > GLUE_LBD
-                    && !self.is_locked(cid)
-            })
-            .collect();
-        if candidates.is_empty() {
+        let round = self.reductions as u64 + 1;
+        // One pass over the live learned clauses: decrement every lifetime
+        // counter, classify against the current tier boundaries, and collect the
+        // candidates with their ranking keys. The decrement happens for every
+        // live learned clause including the locked and the exempt ones, exactly
+        // as in the references -- a clause that is locked this round has still
+        // aged, and pretending otherwise would make locked clauses immortal.
+        let mut candidates: Vec<(u64, CRef)> = Vec::new();
+        for cid in 0..self.headers.len() {
+            if !self.learned[cid] || self.deleted[cid] {
+                continue;
+            }
+            let used_before = self.used[cid];
+            self.used[cid] = used_before.saturating_sub(1);
+            let glue = self.lbd[cid];
+            let size = self.clause_len(cid);
+            #[allow(clippy::cast_possible_truncation)]
+            let glue_u32 = glue.min(u32::MAX as usize) as u32;
+            if self.count_search {
+                match self.db_policy.tier_of(glue_u32) {
+                    Tier::One => self.counters.reduce_tier1_seen += 1,
+                    Tier::Two => self.counters.reduce_tier2_seen += 1,
+                    Tier::Three => self.counters.reduce_tier3_seen += 1,
+                }
+            }
+            let locked = self.is_locked(cid);
+            let reason = self.db_policy.classify(glue_u32, size, used_before, locked);
+            if self.count_search {
+                match reason {
+                    KeepReason::Locked => self.counters.reduce_locked += 1,
+                    KeepReason::TooShort => self.counters.reduce_too_short += 1,
+                    KeepReason::Tier1Used => self.counters.reduce_kept_tier1 += 1,
+                    KeepReason::Tier2Recent => self.counters.reduce_kept_tier2 += 1,
+                    KeepReason::PermanentGlue | KeepReason::Candidate => {}
+                }
+            }
+            if reason == KeepReason::Candidate {
+                let rank = self.db_policy.rank(glue_u32, size, self.cla_activity[cid]);
+                candidates.push((rank, cid));
+            }
+        }
+        if self.count_search {
+            self.counters.reduce_candidates += candidates.len() as u64;
+        }
+        let to_delete = self.db_policy.delete_count(candidates.len(), round);
+        if to_delete == 0 {
+            // Nothing to do this round. Our reduce trigger is a learned-clause
+            // budget rather than a conflict interval, so without a backoff a
+            // fully-protected database would re-run this whole scan on every
+            // conflict until the budget grew past it.
+            if self.count_search {
+                self.counters.reduce_empty_rounds += 1;
+            }
+            self.reduce_backoff_until =
+                (self.conflicts as u64).saturating_add(self.db_policy.empty_round_backoff);
             return Ok(());
         }
-        // Sort worst-first: lower activity is worse. Tie-break by clause id so
-        // the order is total and deterministic (no hashmap iteration).
-        candidates.sort_by(|&x, &y| {
-            self.cla_activity[x]
-                .partial_cmp(&self.cla_activity[y])
-                .unwrap_or(core::cmp::Ordering::Equal)
-                .then(x.cmp(&y))
-        });
-        // Delete the worst half (the standard fraction).
-        let to_delete = candidates.len() / 2;
-        for &cid in candidates.iter().take(to_delete) {
+        // Ascending rank is worst-first under both ranking keys. The clause id
+        // tie-break makes the order total (no hash-map or float-equality
+        // ambiguity), and because ids increase with age it deletes the OLDER of
+        // two otherwise-identical clauses -- the same tie-break CaDiCaL gets
+        // from its stable sort.
+        candidates.sort_unstable_by(|a, b| a.0.cmp(&b.0).then(a.1.cmp(&b.1)));
+        for &(_, cid) in candidates.iter().take(to_delete) {
             self.deleted[cid] = true;
             self.learned_live -= 1;
             // Emit a DRAT deletion so the proof replays consistently. The
@@ -3488,9 +3983,10 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
             self.record_proof_step(true, &lits);
             self.sink.delete_clause(&lits)?;
         }
-        if to_delete > 0 {
-            self.rebuild_watches();
+        if self.count_search {
+            self.counters.reduce_deleted += to_delete as u64;
         }
+        self.rebuild_watches();
         Ok(())
     }
 
@@ -4827,6 +5323,7 @@ mod tests {
         });
         cdcl.lbd.push(4); // distinct levels among ¬a,¬b,¬c,d (d will be @3)
         cdcl.cla_activity.push(0.0);
+        cdcl.used.push(0); // cold: only the LOCK may save it
         cdcl.deleted.push(false);
         cdcl.learned.push(true); // parallel to `headers`; `reduce_db` reads it
         cdcl.learned_live += 1;
@@ -4837,6 +5334,358 @@ mod tests {
         assert!(
             !cdcl.deleted[cid],
             "reduce_db must never delete a locked reason clause"
+        );
+    }
+
+    /// The stamped LBD must agree with the definition it replaced -- the number
+    /// of distinct decision levels among a clause's literals -- on every input,
+    /// not merely on the ones the search happens to produce.
+    ///
+    /// The old implementation (collect levels, sort, dedup, count) is written
+    /// out here as the oracle rather than referenced, because the point is to
+    /// check the new code against the DEFINITION and not against itself.
+    #[test]
+    fn stamped_lbd_matches_the_sorted_dedup_definition() {
+        let f = formula(16, &[&[1]]);
+        let mut sink = VecProofSink::new();
+        let mut cdcl = Cdcl::new(&f, &mut sink);
+        // A deterministic spread of level patterns: all-distinct, all-equal,
+        // repeats, level zero, and the maximum level.
+        let patterns: &[&[usize]] = &[
+            &[0],
+            &[3, 3, 3],
+            &[1, 2, 3, 4],
+            &[4, 1, 4, 1, 4],
+            &[0, 0, 7, 7, 2],
+            &[15, 15, 15, 15, 15, 15, 15, 15],
+            &[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
+        ];
+        for pattern in patterns {
+            let lits: Vec<CnfLit> = (0..pattern.len())
+                .map(|i| CnfLit::positive(CnfVar::new(i % 16).unwrap()))
+                .collect();
+            // Levels are written after the literals are built, so a repeated
+            // variable index takes the LAST assignment -- which is exactly what
+            // the oracle below reads too.
+            for (i, l) in lits.iter().enumerate() {
+                cdcl.level[l.var().index()] = pattern[i];
+            }
+            let mut oracle: Vec<usize> = lits.iter().map(|l| cdcl.level[l.var().index()]).collect();
+            oracle.sort_unstable();
+            oracle.dedup();
+            assert_eq!(
+                cdcl.compute_lbd(&lits),
+                oracle.len(),
+                "stamped LBD disagreed with sorted-dedup on levels {pattern:?}"
+            );
+        }
+        // And back-to-back calls must not leak state between clauses: a second
+        // call on a one-level clause must not inherit the first's stamps.
+        cdcl.level[0] = 5;
+        let single = vec![CnfLit::positive(CnfVar::new(0).unwrap())];
+        assert_eq!(cdcl.compute_lbd(&single), 1);
+        assert_eq!(
+            cdcl.compute_lbd(&single),
+            1,
+            "stamp generation did not advance"
+        );
+    }
+
+    /// The keep rule must be *consulted*, not merely present. Under the tier
+    /// policy a glue-2 clause that has gone cold is deletable; under the legacy
+    /// rule it is immortal. Constructing exactly that clause and running one
+    /// reduce round with each policy is the discriminating fixture: a
+    /// `reduce_db` that ignored `db_policy` would give the same answer twice.
+    #[test]
+    fn a_cold_low_glue_clause_is_deletable_under_tiers_and_not_under_legacy() {
+        use crate::clause_db_policy::ClauseDbPolicy;
+
+        for (policy, expect_deleted) in [
+            (ClauseDbPolicy::tiered(), true),
+            (ClauseDbPolicy::legacy(), false),
+        ] {
+            let f = formula(8, &[&[1]]);
+            let mut sink = VecProofSink::new();
+            let mut cdcl = Cdcl::new(&f, &mut sink);
+            cdcl.db_policy = policy;
+            // Three learned clauses, all glue 2, all length 3, none locked and
+            // none the reason for anything (the trail is empty).
+            let mut ids = Vec::new();
+            for base in [2i64, 3, 4] {
+                let learned = vec![lit(base), lit(base + 1), lit(base + 2)];
+                let cid = cdcl.alloc_clause(&learned);
+                cdcl.lbd.push(2);
+                cdcl.cla_activity.push(0.0);
+                cdcl.used.push(0); // cold: not resolved since the last round
+                cdcl.deleted.push(false);
+                cdcl.learned.push(true);
+                cdcl.learned_live += 1;
+                ids.push(cid);
+            }
+            cdcl.reduce_db().expect("the vec sink cannot fail");
+            let deleted = ids.iter().filter(|&&cid| cdcl.deleted[cid]).count();
+            assert_eq!(
+                deleted > 0,
+                expect_deleted,
+                "cold glue-2 clauses: deleted {deleted} of 3, expected \
+                 deleted>0 == {expect_deleted}"
+            );
+        }
+    }
+
+    /// The other half of the tier rule: a low-glue clause that WAS resolved
+    /// since the previous round survives, on the same fixture that deletes the
+    /// cold one. Without this, the test above would also pass a policy that
+    /// simply deleted everything.
+    #[test]
+    fn a_recently_used_tier1_clause_survives_the_round_that_deletes_a_cold_one() {
+        let f = formula(8, &[&[1]]);
+        let mut sink = VecProofSink::new();
+        let mut cdcl = Cdcl::new(&f, &mut sink);
+        let mut ids = Vec::new();
+        for (i, base) in [2i64, 3, 4, 5].into_iter().enumerate() {
+            let learned = vec![lit(base), lit(base + 1), lit(base + 2)];
+            let cid = cdcl.alloc_clause(&learned);
+            cdcl.lbd.push(2);
+            cdcl.cla_activity.push(0.0);
+            // Alternate hot and cold.
+            cdcl.used.push(if i % 2 == 0 {
+                crate::clause_db_policy::MAX_USED
+            } else {
+                0
+            });
+            cdcl.deleted.push(false);
+            cdcl.learned.push(true);
+            cdcl.learned_live += 1;
+            ids.push(cid);
+        }
+        cdcl.reduce_db().expect("the vec sink cannot fail");
+        for (i, &cid) in ids.iter().enumerate() {
+            if i % 2 == 0 {
+                assert!(
+                    !cdcl.deleted[cid],
+                    "a tier1 clause resolved since the last round must survive"
+                );
+            }
+        }
+        assert!(
+            ids.iter().any(|&cid| cdcl.deleted[cid]),
+            "the round must delete the cold clauses; deleting nothing would make \
+             the assertion above vacuous"
+        );
+    }
+
+    /// Every reduce round ages every live learned clause. Without the
+    /// decrement, `used` would stay at its maximum forever and the tier rule
+    /// would degenerate into "keep everything ever resolved".
+    #[test]
+    fn a_reduce_round_ages_every_live_learned_clause() {
+        let f = formula(8, &[&[1]]);
+        let mut sink = VecProofSink::new();
+        let mut cdcl = Cdcl::new(&f, &mut sink);
+        let learned = vec![lit(2), lit(3), lit(4)];
+        let cid = cdcl.alloc_clause(&learned);
+        cdcl.lbd.push(2);
+        cdcl.cla_activity.push(0.0);
+        cdcl.used.push(crate::clause_db_policy::MAX_USED);
+        cdcl.deleted.push(false);
+        cdcl.learned.push(true);
+        cdcl.learned_live += 1;
+        cdcl.reduce_db().expect("the vec sink cannot fail");
+        assert!(!cdcl.deleted[cid], "setup: this clause must survive");
+        assert_eq!(
+            cdcl.used[cid],
+            crate::clause_db_policy::MAX_USED - 1,
+            "a reduce round must decrement the lifetime counter"
+        );
+    }
+
+    /// The dynamic boundaries must actually move on a real search, or R2 is
+    /// implemented but inert. PHP(8) resolves through enough clauses that the
+    /// used-glue histogram is well populated, and its glue profile is not 2/6.
+    #[test]
+    fn tier_boundaries_are_recomputed_and_leave_the_fallback_on_a_real_search() {
+        let f = pigeonhole(8);
+        let mut sink = VecProofSink::new();
+        let (outcome, c) =
+            solve_with_drat_proof_counted(&f, None, DEFAULT_PROOF_SAT_CONFLICT_LIMIT, &mut sink);
+        assert!(matches!(outcome, StreamingProofOutcome::Unsat));
+        assert!(
+            c.tier_recomputes > 0,
+            "the tier estimator never recomputed; the schedule is inert"
+        );
+        assert!(
+            c.clause_used_marks > 0,
+            "no clause was ever marked used; the histogram is empty by construction"
+        );
+        // The boundaries must be a *measurement*, not the fallback echoed back.
+        // An estimator that never read its histogram would report 2/6 forever,
+        // so a mean that differs from the fallback is the discriminating check.
+        #[allow(clippy::cast_precision_loss)]
+        let mean_tier2 = c.tier2_limit_sum as f64 / c.tier_recomputes as f64;
+        assert!(
+            (c.tier1_limit_last, c.tier2_limit_last) != (2, 6) || (mean_tier2 - 6.0).abs() > 1e-9,
+            "tier boundaries never left the 2/6 fallback over {} recomputations",
+            c.tier_recomputes
+        );
+        assert!(
+            c.tier2_limit_last >= c.tier1_limit_last,
+            "tier2 ({}) must never fall below tier1 ({})",
+            c.tier2_limit_last,
+            c.tier1_limit_last
+        );
+    }
+
+    /// Reduce-round accounting must partition the population it examined: every
+    /// live learned clause is locked, too short, kept by a tier rule, or a
+    /// candidate. A counter set that did not add up would make every tuning
+    /// conclusion drawn from it unfalsifiable.
+    #[test]
+    fn reduce_counters_partition_the_clauses_they_examined() {
+        let f = pigeonhole(8);
+        let mut sink = VecProofSink::new();
+        let (_, c) =
+            solve_with_drat_proof_counted(&f, None, DEFAULT_PROOF_SAT_CONFLICT_LIMIT, &mut sink);
+        assert!(
+            c.reductions > 0,
+            "no reduce round ran; the test measures nothing"
+        );
+        let by_tier = c.reduce_tier1_seen + c.reduce_tier2_seen + c.reduce_tier3_seen;
+        let by_outcome = c.reduce_locked
+            + c.reduce_too_short
+            + c.reduce_kept_tier1
+            + c.reduce_kept_tier2
+            + c.reduce_candidates;
+        assert_eq!(
+            by_tier, by_outcome,
+            "every examined clause must be counted exactly once by tier and \
+             exactly once by outcome ({by_tier} by tier vs {by_outcome} by outcome)"
+        );
+        assert!(
+            c.reduce_deleted > 0 && c.reduce_deleted <= c.reduce_candidates,
+            "deleted {} of {} candidates",
+            c.reduce_deleted,
+            c.reduce_candidates
+        );
+    }
+
+    /// The policy decides which clauses are forgotten; it must not decide the
+    /// verdict, and it must not break the proof. Both policies, over
+    /// resolution-hard instances, must return `unsat` with a DRAT proof that
+    /// the independent checker accepts *including its deletion lines*.
+    #[test]
+    fn both_clause_db_policies_are_sound_and_their_proofs_check() {
+        use super::{SearchPolicies, solve_with_drat_proof_counted_with_policies};
+
+        // PHP(6) is small enough that neither policy reduces at all; it is kept
+        // in the sweep as a soundness case, but only the instances that
+        // actually reduce can say anything about the clause database.
+        let mut reducing_instances = 0;
+        for pigeons in [6, 7, 8] {
+            let f = pigeonhole(pigeons);
+            let mut fingerprints = Vec::new();
+            let mut deletions = Vec::new();
+            for policies in [SearchPolicies::default(), SearchPolicies::legacy()] {
+                let mut sink = VecProofSink::new();
+                let (outcome, c) = solve_with_drat_proof_counted_with_policies(
+                    &f,
+                    None,
+                    DEFAULT_PROOF_SAT_CONFLICT_LIMIT,
+                    &mut sink,
+                    &policies,
+                );
+                assert!(
+                    matches!(outcome, StreamingProofOutcome::Unsat),
+                    "PHP({pigeons}) must be unsat under every policy, got {outcome:?}"
+                );
+                let proof = sink.into_steps();
+                assert_eq!(
+                    check_drat(&f, &proof),
+                    Ok(true),
+                    "PHP({pigeons}) proof must DRAT-check with its deletions"
+                );
+                deletions.push(deletion_count(&proof));
+                fingerprints.push((c.conflicts, proof.len()));
+            }
+            if deletions.iter().all(|&d| d == 0) {
+                continue;
+            }
+            reducing_instances += 1;
+            // The two policies are genuinely different searches, not the same
+            // one behind two names. If this ever holds, the A/B measurement it
+            // exists to support is measuring nothing.
+            assert_ne!(
+                fingerprints[0], fingerprints[1],
+                "PHP({pigeons}): the tier policy and the legacy policy produced \
+                 identical (conflicts, proof length); the policy object is not \
+                 reaching the search"
+            );
+        }
+        assert!(
+            reducing_instances > 0,
+            "no instance in the sweep reduced, so nothing about the clause \
+             database was tested"
+        );
+    }
+
+    /// R6: the target high-water mark is a ratchet, and whether it releases is
+    /// a policy choice. Under the pinned policy it never resets; under the
+    /// rephase schedule it does, and the schedule fires.
+    #[test]
+    fn the_target_phase_ratchet_releases_only_under_a_rephase_schedule() {
+        use super::{SearchPolicies, solve_with_drat_proof_counted_with_policies};
+
+        let f = pigeonhole(8);
+        let mut pinned_sink = VecProofSink::new();
+        let (pinned_outcome, pinned) = solve_with_drat_proof_counted_with_policies(
+            &f,
+            None,
+            DEFAULT_PROOF_SAT_CONFLICT_LIMIT,
+            &mut pinned_sink,
+            &SearchPolicies::default(),
+        );
+        let mut scheduled_sink = VecProofSink::new();
+        let (scheduled_outcome, scheduled) = solve_with_drat_proof_counted_with_policies(
+            &f,
+            None,
+            DEFAULT_PROOF_SAT_CONFLICT_LIMIT,
+            &mut scheduled_sink,
+            &SearchPolicies::scheduled_phase(),
+        );
+
+        assert!(matches!(pinned_outcome, StreamingProofOutcome::Unsat));
+        assert!(matches!(scheduled_outcome, StreamingProofOutcome::Unsat));
+        assert_eq!(
+            check_drat(&f, &scheduled_sink.into_steps()),
+            Ok(true),
+            "the rephasing run's proof must still check"
+        );
+        assert_eq!(
+            pinned.target_phase_resets, 0,
+            "the pinned policy must never release the mark"
+        );
+        assert!(
+            scheduled.rephases > 0,
+            "the rephase schedule never fired over {} conflicts",
+            scheduled.conflicts
+        );
+        assert_eq!(
+            scheduled.target_phase_resets, scheduled.rephases,
+            "every rephase releases the target mark"
+        );
+        // The measurable symptom of a pinned ratchet: the snapshot stops firing.
+        // With a release it keeps firing, so the rate must be strictly larger.
+        // Stated as a ratio because the two runs take different trajectories
+        // and therefore analyse different numbers of conflicts.
+        #[allow(clippy::cast_precision_loss)]
+        let pinned_rate = pinned.target_phase_snapshots as f64 / pinned.conflicts.max(1) as f64;
+        #[allow(clippy::cast_precision_loss)]
+        let released_rate =
+            scheduled.target_phase_snapshots as f64 / scheduled.conflicts.max(1) as f64;
+        assert!(
+            released_rate > pinned_rate,
+            "releasing the ratchet did not increase the target-snapshot rate \
+             ({released_rate} vs {pinned_rate}); the reset is not reaching the mark"
         );
     }
 
