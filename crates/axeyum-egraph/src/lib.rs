@@ -29,6 +29,7 @@
 
 #![forbid(unsafe_code)]
 
+use std::cell::Cell;
 use std::collections::{BTreeSet, HashMap, HashSet};
 use std::sync::atomic::{AtomicU64, Ordering};
 
@@ -285,6 +286,68 @@ enum Undo {
     ClassDeclarationsReplaced { node: ENodeId, old: Vec<u32> },
 }
 
+/// Diagnostic counters for `EGraph`'s union-find and congruence-closure
+/// machinery.
+///
+/// Counting is **opt in** — [`EGraph::set_counting`] enables it, and every
+/// increment site is gated on the same flag; when it is off (the default)
+/// none of these fields is touched, so the merge trajectory and every
+/// `find`/`equal`/`explain` answer are identical whether counting is on or
+/// off (asserted by `tests::counting_does_not_change_congruence_outcomes`).
+/// Same convention as `axeyum_cnf::SearchCounters`'s `count_search` flag.
+///
+/// All fields are cumulative **lifetime** totals (like the crate's existing
+/// `proof_reroot_steps`), not reset by [`EGraph::push`]/[`EGraph::pop`] —
+/// they describe work done, which backtracking does not undo. Use
+/// [`EGraph::reset_counters`] to zero them for a fresh measurement window.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+#[non_exhaustive]
+pub struct EGraphCounters {
+    /// [`EGraph::merge`] calls (asserted equalities from the caller, not
+    /// counting the congruence pairs the cascade itself enqueues).
+    pub merge_calls: u64,
+    /// Pending pairs popped in `process_pending` whose endpoints were already
+    /// in the same class — wasted work relative to `unions`.
+    pub redundant_pending: u64,
+    /// Pending pairs that produced a real union-find merge (`ra != rb`).
+    pub unions: u64,
+    /// Congruence pairs enqueued because two parents collided on the same
+    /// post-union signature.
+    pub congruence_pending: u64,
+    /// [`EGraph::find`] calls.
+    pub finds: u64,
+    /// Union-find parent-pointer hops walked across every `find` call (no
+    /// path compression, so this is the union-by-size chain length actually
+    /// paid).
+    pub find_steps: u64,
+    /// Total elements in `class_declarations` copied out of the child side of
+    /// a union (`process_pending`'s `child_declarations.clone()`), summed
+    /// over every union — the size of the clone this hot spot pays whether or
+    /// not anything new ends up in the root's set.
+    pub declaration_elems_copied: u64,
+    /// Of `declaration_elems_copied`, the subset actually `extend`ed into the
+    /// root's set (i.e. the union found at least one new declaration). The
+    /// gap between the two is copy-then-discard.
+    pub declaration_elems_merged: u64,
+    /// Times the root's `class_declarations` was `extend`ed, `sort_unstable`d
+    /// and `dedup`ed in one union — the operation a lane measured as 72x at
+    /// N=51,200 (`docs/research/12-performance/foundation-counters-2026-09-07.md`).
+    pub declaration_dedup_calls: u64,
+    /// Largest union-find class size observed after any union, over this
+    /// e-graph's whole life.
+    pub max_class_size: u32,
+    /// [`EGraph::explain`] and [`EGraph::explain_steps`] calls combined.
+    pub explain_calls: u64,
+    /// Recursive steps walked by `explain_into`/`steps_into` combined, summed
+    /// over every `explain`/`explain_steps` call.
+    pub explain_steps: u64,
+    /// Snapshot of [`EGraph::proof_reroot_steps`] at read time. This field is
+    /// always populated (that counter has been unconditional since it landed)
+    /// regardless of [`EGraph::set_counting`]; it is included here so one
+    /// struct carries every congruence-closure diagnostic.
+    pub proof_reroot_steps: u64,
+}
+
 /// An incremental, **backtrackable** congruence-closure e-graph.
 #[derive(Debug)]
 pub struct EGraph {
@@ -314,6 +377,19 @@ pub struct EGraph {
     /// counter answers exactly; see
     /// `docs/research/12-performance/bench-theories-2026-09-07.md`.
     proof_reroot_steps: u64,
+    /// Whether [`EGraphCounters`] collection is enabled. Off by default;
+    /// every increment site checks this first, so counting off costs one
+    /// predicted-false bool read per site and touches no counter memory (see
+    /// [`EGraphCounters`]'s doc comment).
+    count_ops: bool,
+    /// Counters mutated only from `&mut self` methods (`merge`,
+    /// `process_pending`, `find`) — gated on `count_ops`.
+    counters: EGraphCounters,
+    /// `explain`/`explain_steps` are `&self` (read-only) on purpose, so their
+    /// two counters live in `Cell`s rather than in `counters` above. Merged
+    /// into `counters` by [`EGraph::counters`] at read time.
+    explain_calls: Cell<u64>,
+    explain_steps: Cell<u64>,
 }
 
 impl Default for EGraph {
@@ -328,6 +404,10 @@ impl Default for EGraph {
             rollback_epoch: 0,
             merge_events: Vec::new(),
             proof_reroot_steps: 0,
+            count_ops: false,
+            counters: EGraphCounters::default(),
+            explain_calls: Cell::new(0),
+            explain_steps: Cell::new(0),
         }
     }
 }
@@ -874,6 +954,15 @@ impl EGraph {
     /// keeps `find` at `O(log n)`. Takes `&mut self` for call-site symmetry with
     /// the mutating operations.
     pub fn find(&mut self, id: ENodeId) -> ENodeId {
+        if self.count_ops {
+            self.counters.finds += 1;
+            let mut cur = id;
+            while self.nodes[cur.index()].root != cur {
+                cur = self.nodes[cur.index()].root;
+                self.counters.find_steps += 1;
+            }
+            return cur;
+        }
         self.root(id)
     }
 
@@ -896,6 +985,9 @@ impl EGraph {
     /// congruence over the consequences. The `reason` is what [`Self::explain`]
     /// returns for equalities that depend on this assertion.
     pub fn merge(&mut self, a: ENodeId, b: ENodeId, reason: u32) {
+        if self.count_ops {
+            self.counters.merge_calls += 1;
+        }
         self.pending.push((a, b, Edge::Input(reason)));
         self.process_pending();
     }
@@ -921,6 +1013,44 @@ impl EGraph {
     #[must_use]
     pub fn proof_reroot_steps(&self) -> u64 {
         self.proof_reroot_steps
+    }
+
+    /// Enables or disables [`EGraphCounters`] collection. Off by default.
+    /// Does not reset the accumulated counters — call
+    /// [`Self::reset_counters`] for that.
+    pub fn set_counting(&mut self, enabled: bool) {
+        self.count_ops = enabled;
+    }
+
+    /// Whether counter collection is currently enabled.
+    #[must_use]
+    pub fn counting(&self) -> bool {
+        self.count_ops
+    }
+
+    /// Zeroes every counter (does not touch [`Self::set_counting`]'s flag).
+    pub fn reset_counters(&mut self) {
+        self.counters = EGraphCounters::default();
+        self.explain_calls.set(0);
+        self.explain_steps.set(0);
+        // `proof_reroot_steps` is intentionally NOT reset here: it has always
+        // been an unconditional lifetime total independent of the counting
+        // flag, and resetting it here would silently change that contract for
+        // the one existing reader of `EGraph::proof_reroot_steps`.
+    }
+
+    /// A snapshot of every counter, merging the `&mut self`-side counters
+    /// with the `Cell`-backed `explain` counters and the always-on
+    /// `proof_reroot_steps`. All zero (except `proof_reroot_steps`) unless
+    /// [`Self::set_counting`] was called with `true`.
+    #[must_use]
+    pub fn counters(&self) -> EGraphCounters {
+        EGraphCounters {
+            explain_calls: self.explain_calls.get(),
+            explain_steps: self.explain_steps.get(),
+            proof_reroot_steps: self.proof_reroot_steps,
+            ..self.counters
+        }
     }
 
     /// Closes the most recent scope, reverting every mutation since its
@@ -1005,7 +1135,13 @@ impl EGraph {
             let ra = self.find(a);
             let rb = self.find(b);
             if ra == rb {
+                if self.count_ops {
+                    self.counters.redundant_pending += 1;
+                }
                 continue;
+            }
+            if self.count_ops {
+                self.counters.unions += 1;
             }
 
             // Record the proof-forest edge between the *original* endpoints (not
@@ -1040,6 +1176,12 @@ impl EGraph {
             self.nodes[child.index()].root = root;
             let child_size = self.nodes[child.index()].size;
             self.nodes[root.index()].size += child_size;
+            if self.count_ops {
+                self.counters.max_class_size = self
+                    .counters
+                    .max_class_size
+                    .max(self.nodes[root.index()].size);
+            }
             self.trail.push(Undo::Unioned {
                 child,
                 root,
@@ -1050,12 +1192,19 @@ impl EGraph {
             self.merge_events.push(MergeEvent { root, child });
 
             let child_declarations = self.nodes[child.index()].class_declarations.clone();
+            if self.count_ops {
+                self.counters.declaration_elems_copied += child_declarations.len() as u64;
+            }
             if child_declarations.iter().any(|declaration| {
                 self.nodes[root.index()]
                     .class_declarations
                     .binary_search(declaration)
                     .is_err()
             }) {
+                if self.count_ops {
+                    self.counters.declaration_elems_merged += child_declarations.len() as u64;
+                    self.counters.declaration_dedup_calls += 1;
+                }
                 let old = self.nodes[root.index()].class_declarations.clone();
                 self.nodes[root.index()]
                     .class_declarations
@@ -1082,6 +1231,9 @@ impl EGraph {
                 let key = self.signature_of(p);
                 if let Some(&rep) = self.table.get(&key) {
                     if self.find(rep) != self.find(p) {
+                        if self.count_ops {
+                            self.counters.congruence_pending += 1;
+                        }
                         self.pending.push((rep, p, Edge::Congruence));
                     }
                 } else {
@@ -1149,6 +1301,9 @@ impl EGraph {
     /// explain — call only when [`Self::equal`] holds).
     #[must_use]
     pub fn explain(&self, a: ENodeId, b: ENodeId) -> Vec<u32> {
+        if self.count_ops {
+            self.explain_calls.set(self.explain_calls.get() + 1);
+        }
         let mut reasons = Vec::new();
         self.explain_into(a, b, &mut reasons);
         reasons.sort_unstable();
@@ -1173,6 +1328,9 @@ impl EGraph {
     /// Panics if `a` and `b` are not in the same class (nothing to explain).
     #[must_use]
     pub fn explain_steps(&self, a: ENodeId, b: ENodeId) -> Vec<ProofStep> {
+        if self.count_ops {
+            self.explain_calls.set(self.explain_calls.get() + 1);
+        }
         let mut steps = Vec::new();
         self.steps_into(a, b, &mut steps);
         steps
@@ -1199,6 +1357,9 @@ impl EGraph {
 
     /// The single proof step justifying the edge from `n` to its proof parent.
     fn step_for(&self, n: ENodeId) -> ProofStep {
+        if self.count_ops {
+            self.explain_steps.set(self.explain_steps.get() + 1);
+        }
         let parent = self.nodes[n.index()]
             .proof_parent
             .expect("a node before the LCA has a proof parent");
@@ -1294,6 +1455,9 @@ impl EGraph {
 
     /// Adds the input reasons justifying the proof edge from `n` to its parent.
     fn collect_edge(&self, n: ENodeId, reasons: &mut Vec<u32>) {
+        if self.count_ops {
+            self.explain_steps.set(self.explain_steps.get() + 1);
+        }
         match self.nodes[n.index()].proof_edge {
             Some(Edge::Input(r)) => reasons.push(r),
             Some(Edge::Congruence) => {
@@ -2372,5 +2536,140 @@ mod tests {
                 }
             }
         }
+    }
+
+    /// [`EGraphCounters`] must report real work: a merge chain that forces
+    /// congruence cascades and re-triggers the declaration-set union path
+    /// (T1.4.6) should show nonzero `merge_calls`, `unions`,
+    /// `congruence_pending`, `finds`, `explain_calls`/`explain_steps`, and a
+    /// `max_class_size` that grew past 1.
+    #[test]
+    fn counters_report_merge_find_and_explain_work() {
+        const F_DECL: u32 = 100;
+        let mut g = EGraph::new();
+        g.set_counting(true);
+        assert!(g.counting());
+
+        // Two chains under one function symbol, so merging the leaves forces a
+        // congruence-cascade merge of f(a_i)/f(b_i) (exercising
+        // `congruence_pending`) and grows class_declarations on both sides
+        // (exercising the declaration counters via T1.4.6's per-class labels).
+        let a: Vec<_> = (0..5).map(|i| g.add(i, &[])).collect();
+        let fa: Vec<_> = a.iter().map(|&x| g.add(F_DECL, &[x])).collect();
+        for w in a.windows(2) {
+            g.merge(w[0], w[1], 0);
+        }
+        assert!(g.equal(fa[0], fa[4]), "congruence must chain across f(a_i)");
+        let reasons = g.explain(fa[0], fa[4]);
+        assert!(!reasons.is_empty());
+        let steps = g.explain_steps(fa[0], fa[4]);
+        assert!(!steps.is_empty());
+
+        let counters = g.counters();
+        assert_eq!(counters.merge_calls, 4, "4 explicit a_i = a_{{i+1}} merges");
+        assert!(counters.unions > 0, "at least the 4 explicit unions ran");
+        assert!(
+            counters.congruence_pending > 0,
+            "f(a_i) merging must have been driven by a signature collision"
+        );
+        assert!(counters.finds > 0);
+        assert!(
+            counters.max_class_size > 1,
+            "the leaf chain must have grown a class past size 1"
+        );
+        assert_eq!(
+            counters.explain_calls, 2,
+            "one explain() call and one explain_steps() call"
+        );
+        assert!(counters.explain_steps > 0);
+        // proof_reroot_steps is always-on and independent of set_counting.
+        assert_eq!(counters.proof_reroot_steps, g.proof_reroot_steps());
+    }
+
+    /// Counting must be strictly observational: the same merge/explain
+    /// sequence run with counting on vs. off must produce byte-identical
+    /// `equal`/`explain`/`explain_steps` answers. This is the non-negotiable
+    /// from the counters brief — "no verdict may change".
+    #[test]
+    fn counting_does_not_change_congruence_outcomes() {
+        const F_DECL: u32 = 200;
+        fn build_and_query(count: bool) -> (Vec<bool>, Vec<Vec<u32>>, Vec<Vec<ProofStep>>) {
+            let mut g = EGraph::new();
+            g.set_counting(count);
+            let a: Vec<_> = (0..6).map(|i| g.add(i, &[])).collect();
+            let fa: Vec<_> = a.iter().map(|&x| g.add(F_DECL, &[x])).collect();
+            g.merge(a[0], a[1], 0);
+            g.merge(a[2], a[3], 1);
+            g.merge(a[1], a[2], 2);
+            g.merge(a[3], a[4], 3);
+            let mut equalities = Vec::new();
+            let mut reasons = Vec::new();
+            let mut steps = Vec::new();
+            for i in 0..fa.len() {
+                for j in 0..fa.len() {
+                    equalities.push(g.equal(fa[i], fa[j]));
+                    if g.equal(fa[i], fa[j]) {
+                        reasons.push(g.explain(fa[i], fa[j]));
+                        steps.push(g.explain_steps(fa[i], fa[j]));
+                    }
+                }
+            }
+            (equalities, reasons, steps)
+        }
+
+        let counted = build_and_query(true);
+        let uncounted = build_and_query(false);
+        assert_eq!(
+            counted, uncounted,
+            "enabling EGraphCounters must not change any equal/explain/explain_steps answer"
+        );
+    }
+
+    /// Counting off (the default) leaves every counter at zero except the
+    /// always-on `proof_reroot_steps`, over the same workload the counting
+    /// test above exercises.
+    #[test]
+    fn counters_stay_zero_when_counting_is_off() {
+        let mut g = EGraph::new();
+        assert!(!g.counting(), "counting is off by default");
+        let a: Vec<_> = (0..4).map(|i| g.add(i, &[])).collect();
+        for w in a.windows(2) {
+            g.merge(w[0], w[1], 0);
+        }
+        let _ = g.explain(a[0], a[3]);
+        let counters = g.counters();
+        assert_eq!(counters.merge_calls, 0);
+        assert_eq!(counters.unions, 0);
+        assert_eq!(counters.finds, 0);
+        assert_eq!(counters.explain_calls, 0);
+        assert_eq!(counters.explain_steps, 0);
+        assert_eq!(counters.declaration_elems_copied, 0);
+        assert_eq!(counters.max_class_size, 0);
+    }
+
+    /// [`EGraph::reset_counters`] zeroes the counting-gated fields but leaves
+    /// the always-on `proof_reroot_steps` alone (its contract predates the
+    /// counting flag and has no reader relying on reset semantics for it).
+    #[test]
+    fn reset_counters_zeroes_gated_fields_only() {
+        let mut g = EGraph::new();
+        g.set_counting(true);
+        let a = g.add(0, &[]);
+        let b = g.add(1, &[]);
+        g.merge(a, b, 0);
+        assert!(g.counters().merge_calls > 0);
+        let reroot_before = g.proof_reroot_steps();
+        g.reset_counters();
+        let counters = g.counters();
+        assert_eq!(counters.merge_calls, 0);
+        assert_eq!(counters.unions, 0);
+        assert_eq!(
+            counters.proof_reroot_steps, reroot_before,
+            "proof_reroot_steps must survive reset_counters"
+        );
+        assert!(
+            g.counting(),
+            "reset_counters must not disable the counting flag"
+        );
     }
 }
