@@ -178,6 +178,16 @@ fn admission_fits_consumer(arena: &TermArena, system: &[TermId], triples: usize)
     let projected = atoms
         .len()
         .saturating_add(triples.saturating_mul(MCCORMICK_ATOMS_PER_TRIPLE));
+    // ADR-1762. Two constants from two files decide one admission, which is
+    // exactly the shape that hid the cross-products/atoms unit mismatch until
+    // ADR-1751: nothing in either file's own text said the other existed. Both
+    // are recorded so a `--trace` run names both.
+    crate::config_registry::note_consulted(
+        "crates/axeyum-solver/src/nra.rs::MCCORMICK_ATOMS_PER_TRIPLE",
+    );
+    crate::config_registry::note_consulted(
+        "crates/axeyum-solver/src/lra_theory.rs::MAX_ONLINE_LRA_ATOMS",
+    );
     (
         projected <= crate::lra_theory::MAX_ONLINE_LRA_ATOMS,
         projected,

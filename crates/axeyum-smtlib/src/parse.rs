@@ -739,6 +739,11 @@ pub fn parse_script(input: &str) -> Result<Script, SmtError> {
 ///
 /// `deadline = None` is byte-identical to [`parse_script`] — no clock is read.
 ///
+/// See [`crate::SmtError::DeadlineExceeded`]'s doc comment for a
+/// `crate::ingest_stats`-based bound on the "58 MB / ~54 s" figure: it is an
+/// open discrepancy against measured `parse_script` throughput, not a
+/// settled explanation.
+///
 /// The deadline is checked between top-level commands and before each of the
 /// two measured-expensive semantic phases, so the granularity is one command or
 /// one phase, not one token. That is enough to convert a multi-minute ingest
@@ -1073,6 +1078,13 @@ fn parse_script_bounded_inner(
         if let Some(skeleton) = build_length_skeleton(&mut script.arena, &exprs) {
             script.length_skeleton = skeleton;
         }
+    }
+    if crate::ingest_stats::collecting() {
+        crate::ingest_stats::record_script_totals(
+            script.assertions.len() as u64,
+            script.arena.symbols().count() as u64,
+            script.arena.uninterpreted_sort_ids().count() as u64,
+        );
     }
     Ok(script)
 }

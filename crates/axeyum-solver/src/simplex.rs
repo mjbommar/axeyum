@@ -913,6 +913,12 @@ impl Incremental {
     pub fn new(nvars: usize, rows_sparse: Vec<Vec<(usize, Rational)>>) -> Option<Self> {
         let m = rows_sparse.len();
         let n = nvars.checked_add(m)?;
+        // ADR-1762: recorded so a `--trace` run can attribute a Fourier-Motzkin
+        // fallback to this bound rather than to the query's shape. Off by
+        // default; the verdict is identical either way.
+        crate::config_registry::note_consulted(
+            "crates/axeyum-solver/src/simplex.rs::MAX_TABLEAU_CELLS",
+        );
         if m.checked_mul(n)? > MAX_TABLEAU_CELLS {
             return None;
         }
