@@ -272,6 +272,15 @@ impl<'a, T: TheorySolver> NativeTheoryAdapter<'a, T> {
         for (atom, slot) in atom_for_var.iter_mut().take(theory_atom_count).enumerate() {
             *slot = Some(atom);
         }
+        // A theory either keeps a feasibility engine or does not — `TheorySolver`
+        // has a default `engine_counters` returning `None`, and an implementor
+        // that overrides it returns a struct on every call. Deciding once here
+        // means a theory with no engine (`lia_theory`, `euf_egraph`, the string
+        // theory) never takes the mirror's lock at all, instead of locking on
+        // every complete check to store the same `None`. Measured on a
+        // `QF_LIA` pigeonhole through `--trace`: this is the difference between
+        // roughly 1% and nothing.
+        let engine_mirror = engine_mirror.filter(|_| theory.engine_counters().is_some());
         Self {
             theory,
             engine_mirror,

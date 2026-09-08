@@ -251,6 +251,51 @@
 //! promise here and a `HashSet` would make the line depend on per-process hash
 //! seeding. Full record: ADR-1762 and
 //! docs/research/12-performance/config-registry-2026-09-07.md.
+//!
+//! # What a TIMED-OUT file prints (same `--trace` flag), 2026-09-08
+//!
+//! Every line above is built after `solve()` returns, from thread-local
+//! accumulators owned by the worker thread. A wall-clock timeout is enforced
+//! from the main thread, on a worker that has not returned — so until now a
+//! timed-out file printed none of them: 22 of 33 lost `QF_LRA` files had no
+//! theory-layer line at all, which is the opposite of what a diagnostic should
+//! do, since the files we lose are the files we most need to explain.
+//!
+//! The instruments now also mirror onto a cross-thread board
+//! (`axeyum_solver::live_instruments`), and the native CDCL(T) search mirrors
+//! its own counters from inside its loop on a fixed iteration cadence, so a
+//! watchdog kill prints what accumulated up to the kill:
+//!
+//! ```text
+//! ; partial at=watchdog-kill recovered=3 sampled=front-door:complete,\
+//!   theory-layer:in-flight,route:in-flight reason: watchdog fired before …
+//! ; partial front-door parse_ms=18
+//! ; partial theory-layer boolean_propagate_ms=412 … decisions=63623 …
+//! ; partial route decided_by=none bound_by=nra last=nra …
+//! ```
+//!
+//! - **The leading token is `; partial `, not the completed line's token.** A
+//!   consumer that greps `^; theory-layer ` keeps matching only complete lines,
+//!   so a mid-search count cannot be swept into an aggregate that thinks it has
+//!   totals — a truncated count that reads like a complete one is worse than no
+//!   count, because somebody divides by it. The line BODY is byte-identical to
+//!   the completed form, so one parser reads both families.
+//! - **The header says where the reading was taken and which instruments were
+//!   still running.** `front-door:complete` is a stage that finished inside a
+//!   query that did not; `theory-layer:in-flight` is a search that was mid-loop
+//!   when it was read, so every counter on that line is a lower bound.
+//! - **An instrument that mirrored nothing still says so** (`; theory-layer
+//!   unavailable: …`), and a kill before ANY instrument published prints
+//!   exactly the two `unavailable` lines it printed before — so "never got far
+//!   enough" stays distinguishable from "collection was off" (no lines at all).
+//! - **Not everything survives.** The `; config` line does not: its
+//!   consulted-key set is thread-local to the worker with no publish site. A
+//!   `sat-bv` check killed mid-solve does not report `; bv-layer` either; its
+//!   Boolean search reports through the `; progress` channel instead, which
+//!   this path already prints.
+//!
+//! Same off-by-default discipline: with no `--trace` no board is installed and
+//! every mirror site is one thread-local `bool` read.
 
 use std::process::ExitCode;
 use std::sync::{Arc, mpsc};
@@ -518,6 +563,30 @@ fn route_attribution_report_lines(trace: &axeyum_solver::RouteTrace) -> Vec<Stri
 /// An aggregation can then count what it cannot attribute instead of quietly
 /// shrinking its own denominator, which is how a coverage number becomes wrong
 /// while staying stable.
+///
+/// # The blind spot IS closed now, and this is the fallback (2026-09-08)
+///
+/// Two judgements above have been superseded by measurement and are kept only
+/// as the record of why this function still exists.
+///
+/// "The trail really is unreadable from this thread" was true of thread-local
+/// storage, not of the instrument. `axeyum_solver::live_instruments` gives every
+/// instrument a shared board to mirror onto, and the native CDCL(T) search
+/// mirrors its own counters on a fixed iteration cadence
+/// (`axeyum_cnf::NativeLayerStatsMirror`), so a watchdog now reads real partial
+/// data — see [`watchdog_trace_lines`], which is what `main` calls.
+///
+/// "Rather than add shared mutable state to a hot search loop for a
+/// diagnostic-only line" priced that state as expensive without measuring it.
+/// Measured: the added cost is one already-loaded `bool` test per search-loop
+/// iteration, and an A/B against the pre-change binary put both a default run
+/// and a `--trace` run inside a ±1.5% noise band on a loaded host — a
+/// fixed-3 s-budget `QF_LRA` run did 0.4–0.6% MORE simplex pivots after. The
+/// snapshot copy happens once per 1,024 iterations, never per propagation.
+///
+/// This function is now reached only when nothing mirrored at all — a query
+/// killed before any instrument published — and returns exactly what it always
+/// returned, so that case's output is unchanged.
 fn watchdog_unavailable_line(trace_mode: bool, reason: &str) -> Vec<String> {
     if !trace_mode {
         return Vec::new();
@@ -1247,11 +1316,14 @@ fn main() -> ExitCode {
     // a live in-progress snapshot without new cross-thread state). Three of
     // five traced `QF_IDL` timeouts hit exactly this path
     // (`docs/research/11-design-review/2026-09-05-arith-timeout-profiles.md`,
-    // Finding 0). Rather than add shared mutable state to a hot search loop for
-    // a diagnostic-only line, a watchdog timeout now always prints an explicit
-    // `; theory-layer unavailable: <reason>` line when `--trace` is set, so a
-    // trace is never silently empty — a caller can tell "no stats yet" apart
-    // from "collection was never enabled" without guessing.
+    // Finding 0). The first fix printed an explicit
+    // `; theory-layer unavailable: <reason>` line so a trace was never silently
+    // empty. That distinction is kept, but it is now the FALLBACK: the shared
+    // cross-thread state it declined to add turned out to cost nothing
+    // measurable (see `watchdog_unavailable_line`'s docs for the A/B), so
+    // `watchdog_trace_lines` reports the counters the instruments mirrored
+    // before the kill, under a `; partial …` token that cannot be mistaken for
+    // a completed line.
     let (verdict, evidence, trace_lines) = match worker {
         Ok(_) => match rx.recv_timeout(Duration::from_millis(ms) + WATCHDOG_GRACE) {
             Ok(outcome) => outcome,
