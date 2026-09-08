@@ -1168,8 +1168,9 @@ macro_rules! full_exports {
         pub use lra::{FarkasAtom, FarkasCertificate, lra_farkas_certificate};
         #[doc(hidden)]
         pub use lra::warm::{
-            AssemblyReason, LiaWarmCounters, LiaWarmPolicy, LiaWarmStatsGuard, WarmLiaDecider,
-            ambient_lia_warm_policy, last_lia_warm_stats,
+            AssemblyReason, LiaWarmCounters, LiaWarmPolicy, LiaWarmProcessStatsGuard,
+            LiaWarmStatsGuard, WarmLiaDecider, ambient_lia_warm_policy, last_lia_warm_stats,
+            live_lia_warm_stats,
         };
         #[doc(hidden)]
         pub use lra::{

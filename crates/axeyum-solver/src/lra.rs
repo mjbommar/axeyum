@@ -597,7 +597,7 @@ fn add_vec(a: &[Rational], b: &[Rational]) -> Option<Vec<Rational>> {
 /// A linear expression `sum coeff_i * x_i + constant` over real variables
 /// (indexed densely).
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
-struct LinExpr {
+pub(crate) struct LinExpr {
     coeffs: BTreeMap<usize, Rational>,
     constant: Rational,
 }
@@ -678,7 +678,7 @@ impl LinExpr {
 /// derived contradiction names its Farkas multipliers. The collector leaves
 /// `mult` empty; [`decide`] fills it in once the constraint count is known.
 #[derive(Debug, Clone, PartialEq, Eq)]
-struct Constraint {
+pub(crate) struct Constraint {
     expr: LinExpr,
     strict: bool,
     mult: Vec<Rational>,

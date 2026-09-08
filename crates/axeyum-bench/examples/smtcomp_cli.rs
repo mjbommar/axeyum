@@ -260,10 +260,10 @@ use axeyum_solver::theories::cdclt_diagnostics::{TheoryLayerStatsGuard, last_the
 use axeyum_solver::{
     BvLayerStatsGuard, CheckProgress, CheckResult, CheckingProgress, ConfigTraceGuard,
     DlOnlineStatsGuard, Evidence, EvidenceCheck, EvidenceReport, FrontDoorStatsGuard,
-    LiaWarmStatsGuard, ProofProgress, RouteAttributionGuard, SolverConfig,
+    LiaWarmProcessStatsGuard, ProofProgress, RouteAttributionGuard, SolverConfig,
     UfArithOverboundStatsGuard, config_trace_line, last_bv_layer_stats, last_dl_online_stats,
-    last_front_door_stats, last_lia_warm_stats, last_route_attribution,
-    last_uf_arith_overbound_stats, produce_evidence_smtlib, solve_smtlib,
+    last_front_door_stats, last_route_attribution, last_uf_arith_overbound_stats,
+    live_lia_warm_stats, produce_evidence_smtlib, solve_smtlib,
 };
 
 /// Formats one `axeyum_cnf::ProofSearchProgress` snapshot as the `;`-prefixed
@@ -891,6 +891,40 @@ fn parse_cli_args() -> CliArgs {
 }
 
 #[allow(clippy::too_many_lines)] // linear CLI driver: arg parsing + solve dispatch + watchdog
+/// The reason string the watchdog path reports when the worker outlives the
+/// deadline. Named once, so the production path and its regression test cannot
+/// drift into checking different strings.
+const WATCHDOG_REASON: &str = "watchdog fired before the worker thread returned (no CDCL(T) \
+                               search on this query completed before the deadline)";
+
+/// The `; lia-warm …` `--trace` line: what the warm offline `QF_LIA` decider did.
+///
+/// `warm=not-collected` and `checks=0` are deliberately different outputs. The
+/// first says no guard was ever armed in this process; the second says the guard
+/// was armed and the decider was never entered on this query. A `u64` cannot tell
+/// those apart, and reporting the first as zeros is how a counter manufactures a
+/// confident nothing.
+fn lia_warm_report_line() -> String {
+    match live_lia_warm_stats() {
+        Some(stats) => format!("; lia-warm {}", stats.summary()),
+        None => "; lia-warm warm=not-collected (no guard armed in this process)".to_owned(),
+    }
+}
+
+/// Every `--trace` line the watchdog path owes when the worker did not return.
+///
+/// The thread-local guards cannot be read from here, so they report
+/// `unavailable`; the warm-decider counters are process-wide and monotone, so
+/// this path CAN report them, and what it reports is a lower bound on the work
+/// the worker got through before the watchdog gave up.
+fn watchdog_trace_lines(trace_mode: bool, reason: &str) -> Vec<String> {
+    let mut lines = watchdog_unavailable_line(trace_mode, reason);
+    if trace_mode {
+        lines.push(lia_warm_report_line());
+    }
+    lines
+}
+
 fn main() -> ExitCode {
     let CliArgs {
         path,
@@ -1023,12 +1057,6 @@ fn main() -> ExitCode {
         // with nothing after it is invisible in a verdict and nearly invisible
         // in a trail; `terminal_unknown` names it outright.
         let _uf_overbound_guard = trace_mode.then(UfArithOverboundStatsGuard::enable);
-        // The eighth guard on the same flag: the warm offline `QF_LIA` decider.
-        // Whether a check continued from the previous system or rebuilt it, and
-        // why — the only way to tell a warm cache that is working from one that
-        // silently rebuilds on every call, since the two have identical verdicts
-        // and identical call counts.
-        let _lia_warm_guard = trace_mode.then(LiaWarmStatsGuard::enable);
         // A parse or solver error is reported as `unknown` — never a wrong
         // verdict, and never a crash that the harness would read as an abort.
         let mut give_up: Option<String> = None;
@@ -1091,17 +1119,7 @@ fn main() -> ExitCode {
             if uf_overbound.engaged > 0 {
                 trace_lines.push(uf_overbound.trace_line());
             }
-            // `None` means the guard was never armed on the worker thread, which
-            // is a different statement from every counter being zero — so the
-            // line says which, rather than printing zeros that read as a
-            // measurement. `checks=0` with the line present is "the warm decider
-            // was never entered on this query".
-            match last_lia_warm_stats() {
-                Some(stats) => trace_lines.push(format!("; lia-warm {}", stats.summary())),
-                None => {
-                    trace_lines.push("; lia-warm warm=not-collected (guard never armed)".to_owned())
-                }
-            }
+            trace_lines.push(lia_warm_report_line());
             // Route attribution (ADR-1760) LAST, so a reader who scans to the
             // end of the `;` block finds the one line that names which route
             // decided the file and which route consumed the budget -- the two
@@ -1146,6 +1164,14 @@ fn main() -> ExitCode {
         return ExitCode::SUCCESS;
     };
 
+    // The eighth guard on the `--trace` flag: the warm offline `QF_LIA`
+    // decider. Armed HERE, on the main thread, and process-wide rather than
+    // thread-local — the seven guards above are thread-local to the worker, so
+    // on a file whose solve never returns (which is every file this counter was
+    // built to measure) their lines say "unavailable". This one stays readable
+    // from the watchdog path.
+    let _lia_warm_guard = trace_mode.then(LiaWarmProcessStatsGuard::enable);
+
     let (tx, rx) = std::sync::mpsc::channel();
     let worker = std::thread::Builder::new()
         .stack_size(WORKER_STACK_BYTES)
@@ -1175,11 +1201,7 @@ fn main() -> ExitCode {
             Err(_) => (
                 "unknown",
                 None,
-                watchdog_unavailable_line(
-                    trace_mode,
-                    "watchdog fired before the worker thread returned (no CDCL(T) \
-                     search on this query completed before the deadline)",
-                ),
+                watchdog_trace_lines(trace_mode, WATCHDOG_REASON),
             ),
         },
         // Could not spawn a worker: a resource failure, which is `unknown` —
@@ -1187,7 +1209,7 @@ fn main() -> ExitCode {
         Err(_) => (
             "unknown",
             None,
-            watchdog_unavailable_line(trace_mode, "failed to spawn the solver worker thread"),
+            watchdog_trace_lines(trace_mode, "failed to spawn the solver worker thread"),
         ),
     };
 
@@ -1279,24 +1301,30 @@ mod tests {
             let _ = tx.send(("unknown", None, Vec::new()));
         });
         let trace_mode = true;
+        // The SHIPPED constructor, not a copy of it: this test used to rebuild
+        // the watchdog's trace lines inline, so a line added to the real path
+        // would have left the test green while saying nothing about it.
         let (verdict, _evidence, trace_lines) = match rx.recv_timeout(Duration::from_millis(10)) {
             Ok(outcome) => outcome,
             Err(_) => (
                 "unknown",
                 None,
-                watchdog_unavailable_line(
-                    trace_mode,
-                    "watchdog fired before the worker thread returned (no CDCL(T) \
-                     search on this query completed before the deadline)",
-                ),
+                watchdog_trace_lines(trace_mode, WATCHDOG_REASON),
             ),
         };
         assert_eq!(verdict, "unknown");
         assert_eq!(
             trace_lines.len(),
-            2,
-            "a timed-out solve with --trace must still print both unavailable \
-             lines, never nothing: got {trace_lines:?}"
+            3,
+            "a timed-out solve with --trace must still print every line the \
+             watchdog path owes, never nothing: got {trace_lines:?}"
+        );
+        assert!(
+            trace_lines
+                .iter()
+                .any(|line| line.starts_with("; lia-warm")),
+            "the watchdog path must report the warm-decider counters, which are \
+             process-wide and therefore readable here: got {trace_lines:?}"
         );
         assert!(
             trace_lines[0].starts_with("; theory-layer"),

@@ -81,6 +81,7 @@
 
 use std::cell::{Cell, RefCell};
 use std::collections::BTreeMap;
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 
 // Native uses the std clock; wasm uses the `web_time` drop-in (ADR-0017).
 #[cfg(not(target_arch = "wasm32"))]
@@ -354,23 +355,19 @@ pub struct LiaWarmCounters {
 /// Records one offline conjunctive decision the online `LIA` theory asked for.
 /// See [`LiaWarmCounters::theory_offline_checks`].
 pub fn record_theory_offline_check(cold: bool) {
-    record(|c| {
-        c.theory_offline_checks += 1;
-        if cold {
-            c.theory_cold_checks += 1;
-        }
-    });
+    bump(Slot::TheoryOfflineChecks, 1);
+    if cold {
+        bump(Slot::TheoryColdChecks, 1);
+    }
 }
 
 /// Records one live set the warm rational filter answered outright.
 /// See [`LiaWarmCounters::theory_filter_answers`].
 pub fn record_theory_filter_answer(refuted: bool) {
-    record(|c| {
-        c.theory_filter_answers += 1;
-        if refuted {
-            c.theory_filter_refuted += 1;
-        }
-    });
+    bump(Slot::TheoryFilterAnswers, 1);
+    if refuted {
+        bump(Slot::TheoryFilterRefuted, 1);
+    }
 }
 
 impl LiaWarmCounters {
@@ -421,62 +418,234 @@ impl LiaWarmCounters {
     }
 }
 
-thread_local! {
-    /// Whether a [`LiaWarmStatsGuard`] is armed on this thread.
-    static COLLECT: Cell<bool> = const { Cell::new(false) };
-    /// Set once collection has ever been armed on this thread, so a reader can
-    /// tell "measured zero" from "never collected".
-    static EVER_ARMED: Cell<bool> = const { Cell::new(false) };
-    /// This thread's counters.
-    static COUNTERS: RefCell<LiaWarmCounters> = RefCell::new(LiaWarmCounters::default());
+/// The counter slots, in the order they are stored.
+///
+/// An index enum rather than a struct of atomics, so that adding a counter is
+/// one line in three places the compiler checks (`Slot`, `SLOT_COUNT`,
+/// [`snapshot`]) instead of a field that silently reads zero because nobody
+/// wired it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[repr(usize)]
+enum Slot {
+    Checks = 0,
+    WarmUpdates,
+    Rebuilds,
+    // The six assembly reasons occupy `ASSEMBLY_BASE .. ASSEMBLY_BASE + 6`.
+    AssemblyUnchanged,
+    AssemblyExtended,
+    AssemblyShortened,
+    AssemblyDiverged,
+    AssemblyColdStart,
+    AssemblyPolicyCold,
+    DeltaAdded,
+    DeltaRemoved,
+    DeltaKept,
+    LiteralCollections,
+    LiteralCacheHits,
+    LiteralCacheEvicted,
+    ConstraintsCopied,
+    ConstraintsLive,
+    ColumnsLive,
+    VerdictUnsat,
+    VerdictSat,
+    VerdictUnknown,
+    VerdictError,
+    TheoryOfflineChecks,
+    TheoryColdChecks,
+    TheoryFilterAnswers,
+    TheoryFilterRefuted,
 }
 
-/// Records into this thread's counters when a [`LiaWarmStatsGuard`] is armed.
+/// The slot the first [`AssemblyReason`] occupies; the rest follow in
+/// [`AssemblyReason::slot`] order.
+const ASSEMBLY_BASE: usize = Slot::AssemblyUnchanged as usize;
+
+/// How many slots there are.
+const SLOT_COUNT: usize = Slot::TheoryFilterRefuted as usize + 1;
+
+/// The six assembly-reason slots, in [`AssemblyReason::slot`] order.
+const ASSEMBLY_SLOTS: [Slot; 6] = [
+    Slot::AssemblyUnchanged,
+    Slot::AssemblyExtended,
+    Slot::AssemblyShortened,
+    Slot::AssemblyDiverged,
+    Slot::AssemblyColdStart,
+    Slot::AssemblyPolicyCold,
+];
+
+/// The counters, shared across threads.
 ///
-/// Off, this is one thread-local `Cell` read and a branch: no clock, no
-/// allocation, and nothing the search can observe — so no verdict can depend on
-/// whether a guard exists.
-fn record(f: impl FnOnce(&mut LiaWarmCounters)) {
-    if COLLECT.with(Cell::get) {
-        COUNTERS.with(|c| f(&mut c.borrow_mut()));
+/// **Process-global and atomic, not thread-local, deliberately.** The workload
+/// this instrument exists to measure is budget-bound: the solve runs on a worker
+/// thread and a watchdog on the main thread gives up on it, so a thread-local
+/// snapshot is unreachable on exactly the files that matter — measured here,
+/// every one of the six hardest `QF_UFLIA` losses printed no counters at all
+/// under a thread-local design, which is an instrument that goes blind precisely
+/// where the question is. Relaxed monotone adds are the whole synchronisation:
+/// no counter is read by the search, so no verdict can depend on the ordering,
+/// and a reader on another thread sees a consistent-enough live total for a
+/// diagnostic.
+static SLOTS: [AtomicU64; SLOT_COUNT] = [const { AtomicU64::new(0) }; SLOT_COUNT];
+
+/// Whether a [`LiaWarmProcessStatsGuard`] is armed.
+static PROCESS_COLLECT: AtomicBool = AtomicBool::new(false);
+
+/// Set once a process-wide guard has ever been armed, so a reader can tell
+/// "measured zero" from "never collected".
+static PROCESS_EVER_ARMED: AtomicBool = AtomicBool::new(false);
+
+thread_local! {
+    /// Whether a [`LiaWarmStatsGuard`] is armed on this thread.
+    static THREAD_COLLECT: Cell<bool> = const { Cell::new(false) };
+    /// Set once a thread-local guard has ever been armed on this thread.
+    static THREAD_EVER_ARMED: Cell<bool> = const { Cell::new(false) };
+    /// This thread's own slots.
+    static THREAD_SLOTS: RefCell<[u64; SLOT_COUNT]> =
+        const { RefCell::new([0; SLOT_COUNT]) };
+}
+
+/// Adds `n` to one counter, into whichever collectors are armed.
+///
+/// With neither armed this is one relaxed atomic load, one thread-local read and
+/// a branch: no clock, no allocation, and nothing the search can observe — so no
+/// verdict can depend on whether a guard exists.
+fn bump(slot: Slot, n: u64) {
+    if n == 0 {
+        return;
+    }
+    if PROCESS_COLLECT.load(Ordering::Relaxed) {
+        SLOTS[slot as usize].fetch_add(n, Ordering::Relaxed);
+    }
+    if THREAD_COLLECT.with(Cell::get) {
+        THREAD_SLOTS.with(|slots| slots.borrow_mut()[slot as usize] += n);
     }
 }
 
-/// Enables warm-decider counter collection for this thread, for the guard's
-/// lifetime, and resets the counters.
+/// Builds a snapshot from whichever backing store `read` indexes.
+fn assemble_counters(read: impl Fn(usize) -> u64) -> LiaWarmCounters {
+    let mut assembly_reasons = [0u64; 6];
+    for (index, entry) in assembly_reasons.iter_mut().enumerate() {
+        *entry = read(ASSEMBLY_BASE + index);
+    }
+    LiaWarmCounters {
+        checks: read(Slot::Checks as usize),
+        warm_updates: read(Slot::WarmUpdates as usize),
+        rebuilds: read(Slot::Rebuilds as usize),
+        assembly_reasons,
+        delta_added: read(Slot::DeltaAdded as usize),
+        delta_removed: read(Slot::DeltaRemoved as usize),
+        delta_kept: read(Slot::DeltaKept as usize),
+        literal_collections: read(Slot::LiteralCollections as usize),
+        literal_cache_hits: read(Slot::LiteralCacheHits as usize),
+        literal_cache_evicted: read(Slot::LiteralCacheEvicted as usize),
+        assembled_constraints_copied: read(Slot::ConstraintsCopied as usize),
+        assembled_constraints_live: read(Slot::ConstraintsLive as usize),
+        assembled_columns_live: read(Slot::ColumnsLive as usize),
+        verdict_unsat: read(Slot::VerdictUnsat as usize),
+        verdict_sat: read(Slot::VerdictSat as usize),
+        verdict_unknown: read(Slot::VerdictUnknown as usize),
+        verdict_error: read(Slot::VerdictError as usize),
+        theory_offline_checks: read(Slot::TheoryOfflineChecks as usize),
+        theory_cold_checks: read(Slot::TheoryColdChecks as usize),
+        theory_filter_answers: read(Slot::TheoryFilterAnswers as usize),
+        theory_filter_refuted: read(Slot::TheoryFilterRefuted as usize),
+    }
+}
+
+/// Enables warm-decider counter collection **on this thread**, for the guard's
+/// lifetime, and zeroes this thread's counters.
+///
+/// This is the guard a unit test wants: thread-local, so a test's numbers cannot
+/// be polluted by whatever else the harness is running in parallel. For a solve
+/// that runs on a worker thread and is read from another — the case that matters
+/// on a budget-bound file — use [`LiaWarmProcessStatsGuard`].
 #[derive(Debug)]
 pub struct LiaWarmStatsGuard(bool);
 
 impl LiaWarmStatsGuard {
-    /// Arms collection and zeroes the counters.
+    /// Arms this thread's collection and zeroes this thread's counters.
     #[must_use]
     pub fn enable() -> Self {
-        let previous = COLLECT.with(|c| c.replace(true));
-        EVER_ARMED.with(|c| c.set(true));
-        COUNTERS.with(|c| *c.borrow_mut() = LiaWarmCounters::default());
+        let previous = THREAD_COLLECT.with(|c| c.replace(true));
+        THREAD_EVER_ARMED.with(|c| c.set(true));
+        THREAD_SLOTS.with(|slots| *slots.borrow_mut() = [0; SLOT_COUNT]);
         LiaWarmStatsGuard(previous)
     }
 }
 
 impl Drop for LiaWarmStatsGuard {
     fn drop(&mut self) {
-        COLLECT.with(|c| c.set(self.0));
+        THREAD_COLLECT.with(|c| c.set(self.0));
     }
 }
 
 /// This thread's warm-decider counters since the active — or most recently
 /// dropped — [`LiaWarmStatsGuard`] was created.
 ///
-/// `None` means collection was **never armed on this thread**, which is not the
-/// same statement as every counter being zero. That distinction is the whole
-/// reason for the [`Option`].
+/// `None` means a thread-local guard was **never armed on this thread**, which
+/// is not the same statement as every counter being zero. That distinction is
+/// the whole reason for the [`Option`].
 #[must_use]
 pub fn last_lia_warm_stats() -> Option<LiaWarmCounters> {
-    if EVER_ARMED.with(Cell::get) {
-        Some(COUNTERS.with(|c| *c.borrow()))
-    } else {
-        None
+    if !THREAD_EVER_ARMED.with(Cell::get) {
+        return None;
     }
+    Some(THREAD_SLOTS.with(|slots| {
+        let slots = *slots.borrow();
+        assemble_counters(|index| slots[index])
+    }))
+}
+
+/// Enables warm-decider counter collection **process-wide**, for the guard's
+/// lifetime, and zeroes the shared counters.
+///
+/// Why this exists at all, given the thread-local guard above: the workload this
+/// instrument is for is budget-bound. The solve runs on a worker thread and a
+/// watchdog on the main thread gives up on it, so a thread-local snapshot is
+/// unreachable on exactly the files that matter — measured 2026-09-08, every one
+/// of the six hardest `QF_UFLIA` losses printed no counters at all, which is an
+/// instrument that goes blind precisely where the question is.
+///
+/// Counts from every thread land in one set of totals. Relaxed monotone adds are
+/// the whole synchronisation: nothing here is read by the search, so no verdict
+/// can depend on the ordering.
+#[derive(Debug)]
+pub struct LiaWarmProcessStatsGuard(bool);
+
+impl LiaWarmProcessStatsGuard {
+    /// Arms process-wide collection and zeroes the shared counters.
+    #[must_use]
+    pub fn enable() -> Self {
+        let previous = PROCESS_COLLECT.swap(true, Ordering::Relaxed);
+        PROCESS_EVER_ARMED.store(true, Ordering::Relaxed);
+        for slot in &SLOTS {
+            slot.store(0, Ordering::Relaxed);
+        }
+        LiaWarmProcessStatsGuard(previous)
+    }
+}
+
+impl Drop for LiaWarmProcessStatsGuard {
+    fn drop(&mut self) {
+        PROCESS_COLLECT.store(self.0, Ordering::Relaxed);
+    }
+}
+
+/// The process-wide warm-decider counters since the active — or most recently
+/// dropped — [`LiaWarmProcessStatsGuard`] was created.
+///
+/// `None` means a process-wide guard was never armed. Safe to call while a solve
+/// is still running on another thread: the counters are monotone, so a live read
+/// is a lower bound on the work done so far, not a torn value. That is the whole
+/// point — the files this measures never let the solve return.
+#[must_use]
+pub fn live_lia_warm_stats() -> Option<LiaWarmCounters> {
+    if !PROCESS_EVER_ARMED.load(Ordering::Relaxed) {
+        return None;
+    }
+    Some(assemble_counters(|index| {
+        SLOTS[index].load(Ordering::Relaxed)
+    }))
 }
 
 // ---------------------------------------------------------------------------
@@ -719,14 +888,17 @@ impl WarmLiaDecider {
         node_cap: u64,
         deadline: Option<Instant>,
     ) -> Result<CheckResult, SolverError> {
-        record(|c| c.checks += 1);
+        bump(Slot::Checks, 1);
         let result = self.check_inner(arena, live, node_cap, deadline);
-        record(|c| match &result {
-            Ok(CheckResult::Unsat) => c.verdict_unsat += 1,
-            Ok(CheckResult::Sat(_)) => c.verdict_sat += 1,
-            Ok(CheckResult::Unknown(_)) => c.verdict_unknown += 1,
-            Err(_) => c.verdict_error += 1,
-        });
+        bump(
+            match &result {
+                Ok(CheckResult::Unsat) => Slot::VerdictUnsat,
+                Ok(CheckResult::Sat(_)) => Slot::VerdictSat,
+                Ok(CheckResult::Unknown(_)) => Slot::VerdictUnknown,
+                Err(_) => Slot::VerdictError,
+            },
+            1,
+        );
         result
     }
 
@@ -739,10 +911,8 @@ impl WarmLiaDecider {
     ) -> Result<CheckResult, SolverError> {
         if !self.policy.warm {
             self.assembly.clear();
-            record(|c| {
-                c.rebuilds += 1;
-                c.assembly_reasons[AssemblyReason::PolicyCold.slot()] += 1;
-            });
+            bump(Slot::Rebuilds, 1);
+            bump(Slot::AssemblyPolicyCold, 1);
         }
         if self.assemble(arena, live, deadline)?.is_none() {
             return Ok(lia_collection_timeout());
@@ -763,10 +933,8 @@ impl WarmLiaDecider {
         let nvars = self.assembly.local_to_global.len();
         let has_opaque_vars = self.assembly.has_opaque();
         let live_constraints = self.assembly.constraints.len();
-        record(|c| {
-            c.assembled_constraints_live += live_constraints as u64;
-            c.assembled_columns_live += nvars as u64;
-        });
+        bump(Slot::ConstraintsLive, live_constraints as u64);
+        bump(Slot::ColumnsLive, nvars as u64);
         // The engines take the system by `&mut` because branch-and-bound uses it
         // as a backtracking stack — it pushes a bound constraint, recurses and
         // pops it on every path out. Handing them the assembly directly is what
@@ -869,20 +1037,17 @@ impl WarmLiaDecider {
             };
             let removed = previous - shared;
             let added = live.len() - shared;
-            record(|c| {
-                c.assembly_reasons[reason.slot()] += 1;
-                if matches!(reason, AssemblyReason::ColdStart) {
-                    c.rebuilds += 1;
-                } else {
-                    c.warm_updates += 1;
-                }
-                c.delta_kept += shared as u64;
-                c.delta_removed += removed as u64;
-                c.delta_added += added as u64;
-            });
+            bump(ASSEMBLY_SLOTS[reason.slot()], 1);
+            if matches!(reason, AssemblyReason::ColdStart) {
+                bump(Slot::Rebuilds, 1);
+            } else {
+                bump(Slot::WarmUpdates, 1);
+            }
+            bump(Slot::DeltaKept, shared as u64);
+            bump(Slot::DeltaRemoved, removed as u64);
+            bump(Slot::DeltaAdded, added as u64);
         } else {
-            let added = live.len();
-            record(|c| c.delta_added += added as u64);
+            bump(Slot::DeltaAdded, live.len() as u64);
         }
         self.assembly.truncate(shared);
         for (offset, &key) in live[shared..].iter().enumerate() {
@@ -903,7 +1068,7 @@ impl WarmLiaDecider {
                 }
             };
             let copied = self.assembly.append(key, &entry, shared + offset);
-            record(|c| c.assembled_constraints_copied += copied as u64);
+            bump(Slot::ConstraintsCopied, copied as u64);
             self.stash(key, entry);
         }
         Ok(Some(()))
@@ -922,10 +1087,10 @@ impl WarmLiaDecider {
         deadline: Option<Instant>,
     ) -> Result<Option<LiteralEntry>, SolverError> {
         if let Some(entry) = self.cache.get(key).and_then(Option::as_ref) {
-            record(|c| c.literal_cache_hits += 1);
+            bump(Slot::LiteralCacheHits, 1);
             return Ok(Some(entry.clone()));
         }
-        record(|c| c.literal_collections += 1);
+        bump(Slot::LiteralCollections, 1);
         let Some(term) = self.term_of(key) else {
             // Fail closed. Treating a key with no term as contributing nothing
             // would silently drop a live literal from the conjunction — a weaker
@@ -983,7 +1148,7 @@ impl WarmLiaDecider {
             return;
         }
         if self.cached_literals >= self.policy.max_cached_literals {
-            record(|c| c.literal_cache_evicted += 1);
+            bump(Slot::LiteralCacheEvicted, 1);
             return;
         }
         self.cached_literals += 1;
@@ -1002,13 +1167,6 @@ impl WarmLiaDecider {
             trivially_unsat: self.assembly.trivially_unsat(),
             overflow: self.assembly.overflow(),
         }
-    }
-
-    /// How many literals the current assembly holds. Test-only: the delta
-    /// counters are per-thread and a unit test needs the per-decider figure.
-    #[cfg(test)]
-    pub(crate) fn assembled_literals(&self) -> usize {
-        self.assembly.keys.len()
     }
 
     /// Grows the global column tables to cover the columns the last collection

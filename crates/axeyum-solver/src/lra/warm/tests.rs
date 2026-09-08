@@ -474,8 +474,8 @@ fn warm_counters_attribute_every_check() {
 }
 
 /// `last_lia_warm_stats` must distinguish "never armed" from "measured zero".
-/// Run on its own thread, because the flag is thread-local and every other test
-/// in this file arms it.
+/// Run on its own thread, because the thread-local flag is what carries that
+/// distinction and every other test in this file arms it on its own thread.
 #[test]
 fn unarmed_counters_read_none_not_zero() {
     std::thread::spawn(|| {
@@ -493,6 +493,48 @@ fn unarmed_counters_read_none_not_zero() {
     })
     .join()
     .expect("thread");
+}
+
+/// The process-wide collector must see work done on ANOTHER thread — the whole
+/// reason it exists beside the thread-local one, since the solves this
+/// instrument measures run on a worker thread the reader never joins.
+///
+/// The thread-local guard on this thread must NOT see that work, or the two
+/// collectors are not actually independent and a unit test's numbers could be
+/// polluted by whatever else the harness is running.
+#[test]
+fn the_process_collector_sees_another_thread_and_the_thread_local_one_does_not() {
+    let mut rng = Rng(0xc205_5731_2026_0908);
+    let fixture = Fixture::random(&mut rng, 3, 4).expect("fixture");
+    let arena = fixture.arena.clone();
+    let lit_terms = fixture.lit_terms.clone();
+    let keys: Vec<usize> = (0..fixture.atoms.len()).map(|i| i * 2 + 1).collect();
+
+    let process_guard = super::LiaWarmProcessStatsGuard::enable();
+    let thread_guard = super::LiaWarmStatsGuard::enable();
+    std::thread::spawn(move || {
+        let mut decider = WarmLiaDecider::new(LiaWarmPolicy::WARM, false, lit_terms);
+        for take in 1..=keys.len() {
+            let _ = decider.check(&arena, &keys[..take], lia_bnb_node_cap(None), None);
+        }
+    })
+    .join()
+    .expect("worker");
+
+    let process = super::live_lia_warm_stats().expect("process guard armed");
+    let local = last_lia_warm_stats().expect("thread guard armed");
+    drop(thread_guard);
+    drop(process_guard);
+
+    assert!(
+        process.checks >= fixture.atoms.len() as u64,
+        "the process collector saw {} checks from the worker thread",
+        process.checks
+    );
+    assert_eq!(
+        local.checks, 0,
+        "the thread-local collector must not see another thread's work"
+    );
 }
 
 /// A key the decider has no term for is a contract violation, and it must fail
