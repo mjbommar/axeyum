@@ -26,9 +26,9 @@
 //! 2. `hS : le 0 S` — the left-associated `add_nonneg` fold over the atoms,
 //!    each repeated `kₖ` times.
 //! 3. `idS : Eq Rat S T`, where `T` is `t = b + (−a)` repeated `M` times —
-//!    proved by [`crate::ring::rat::prove_eq`], never asserted.
+//!    proved by `crate::ring::rat::prove_eq`, never asserted.
 //! 4. `hT : le 0 T` — `hS` transported along `idS`.
-//! 5. `hDiff : le 0 t` — [`divide_by_scale`], the only step that is not a
+//! 5. `hDiff : le 0 t` — `divide_by_scale`, the only step that is not a
 //!    one-liner; see its own docs.
 //! 6. `le (a + 0) (a + t)` by `add_le_add a a 0 t (le_refl a) hDiff`, rewritten
 //!    to `le a (a + t)` by `add_zero`, and then to `le a b` along the second
@@ -189,7 +189,7 @@ impl Parser {
 /// `t` repeated `count` times, left-associated: `((t + t) + t) + …`.
 ///
 /// `count` must be `≥ 1`. Shared by the certificate's right-hand side and
-/// [`divide_by_scale`]'s fold, so the two are the same expression by
+/// `divide_by_scale`'s fold, so the two are the same expression by
 /// construction rather than by hope — the kernel hash-conses, so "the same
 /// expression" is `==`, not a defeq the normalizer might paper over.
 fn repeat_add(d: &mut IntDev<'_>, t: ExprId, count: i128) -> ExprId {

@@ -37,12 +37,12 @@
 //!   exercises its failing side. A sound, documented, sized restriction, the
 //!   same spirit as `super::nat`'s original
 //!   no-intra-monomial-sorting gap.
-//! - **[`Problem::cancel_pairs`] was added later, not omitted, and it does
+//! - **`Problem::cancel_pairs` was added later, not omitted, and it does
 //!   two things here.** The five original ℚ targets produced no `x + (-x)`
 //!   summand pair, so the pass was not built. The coordinate-geometry
 //!   identities of [`crate::geo::qplane`] produce nothing but such pairs —
 //!   every one asserts that a determinant expansion collapses — so the first
-//!   arm is now here, ported from [`super::int::Problem::cancel_pairs`] with
+//!   arm is now here, ported from `super::int::Problem::cancel_pairs` with
 //!   the same adjacent-pairs-only completeness bound. The **second** arm is
 //!   new to ℚ and independent of it: `scale_item` emits `Item::Num(0)` for
 //!   every `x * 0`, the additive normalizer never merges two `Num`s, and so
@@ -787,7 +787,7 @@ impl Problem {
 
     /// One fixpoint pass doing two things a normalized ℚ sum needs before it
     /// can be compared against `0`: cancelling adjacent `x` / `neg x`
-    /// summands (the ℚ twin of [`super::int::Problem::cancel_pairs`]), and
+    /// summands (the ℚ twin of `super::int::Problem::cancel_pairs`), and
     /// dropping a `Num(0)` summand when it is not the only item.
     ///
     /// Both arms exist because of [`crate::geo::qplane`]. Its identities

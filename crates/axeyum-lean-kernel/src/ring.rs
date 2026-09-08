@@ -27,7 +27,7 @@
 //! the same sorted factor-index key `[x,y]` and the procedure proves them
 //! equal — the same three-step `mul_assoc`/`mul_comm`/`symm(mul_assoc)`
 //! adjacent-transposition trick the outer sum's `sort_items` already uses,
-//! applied to a monomial's own factor list. See [`nat::tests`] for the
+//! applied to a monomial's own factor list. See `nat::tests` for the
 //! positive test and its negative control.
 //!
 //! ## Why coefficients are additive, not `Nat.mul` by a numeral

@@ -25,7 +25,7 @@
 //!   second tactic on THAT, and glue the three equalities back into a proof
 //!   of the original goal with `Eq.rec`-based transport (`Eq.trans`'s own
 //!   shape for an `Eq` goal; the same construction generalizes to `Nat.le`
-//!   /`Nat.lt` because [`NatOps::eq_motive`](crate::NatOps::eq_motive) is
+//!   /`Nat.lt` because [`crate::NatOps::eq_motive`] is
 //!   generic in the predicate, not specific to `Eq`).
 //! - **First is anything else**: there is no residue to chain, so `Then`
 //!   degrades to "try the first, and if it declines, try the second on the
@@ -53,7 +53,7 @@ use crate::linarith;
 use crate::ring;
 use crate::simp;
 
-/// The context a [`Tactic::run`] needs: the prelude every producer takes,
+/// The context a `Tactic::run` needs: the prelude every producer takes,
 /// the hypothesis list [`linarith`] searches over, and the rewrite set
 /// [`simp`] rewrites with.
 pub struct Ctx<'a, D: NatOps> {

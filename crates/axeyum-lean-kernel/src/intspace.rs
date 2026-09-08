@@ -643,7 +643,7 @@ pub struct IntSpacePrelude {
     /// ADR-1616: `IntSpace.ratExpectation_integral` — the RATIONAL
     /// expectation is that integral, carried across `CReal.ofRat`. The join
     /// ADR-1612 named as its next step; see
-    /// [`probability_bridge`](self::probability_bridge) for why the
+    /// `probability_bridge` for why the
     /// `ℚ`-valued form cannot be stated at all.
     pub rat_expectation_integral: NameId,
 
@@ -827,7 +827,7 @@ fn intern(kernel: &mut Kernel, creal: CRealPrelude) -> IntSpacePrelude {
 /// # Panics
 ///
 /// Panics if the field-shape list has drifted from [`FIELD_COUNT`], or if
-/// [`declare_record`] returns selectors under names other than the ones
+/// `declare_record` returns selectors under names other than the ones
 /// `intern` pre-computed. Both are internal-consistency assertions between
 /// this file's two descriptions of the same record.
 pub fn build_intspace_prelude(kernel: &mut Kernel) -> Result<IntSpacePrelude, KernelError> {

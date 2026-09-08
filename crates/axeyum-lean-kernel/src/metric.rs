@@ -624,8 +624,8 @@ fn intern(kernel: &mut Kernel, cpoint: CPointPrelude) -> MetricPrelude {
 /// # Panics
 ///
 /// Panics if the field-shape list has drifted from [`FIELD_COUNT`], or if
-/// [`declare_record`] returns selectors under names other than the ones
-/// [`intern`] pre-computed. Both are internal-consistency assertions between
+/// `declare_record` returns selectors under names other than the ones
+/// `intern` pre-computed. Both are internal-consistency assertions between
 /// this file's two descriptions of the same record -- the `FIELD_SUFFIXES`
 /// array that names the selectors and the `metric_fields` list that types
 /// them -- and a drift between them would otherwise surface as a `Metric.*`

@@ -1,6 +1,6 @@
 //! Theory hooks for the native CDCL core (ADR-1701 slice 2 **spike**).
 //!
-//! This module is the shape a theory would attach to [`super::Cdcl`] with,
+//! This module is the shape a theory would attach to `super::Cdcl` with,
 //! mirroring `axeyum_solver::euf_egraph::TheorySolver` as ADR-1701 widened it:
 //! assert-on-assignment, propagation into a driver-owned queue, a complete
 //! `final_check` at a total assignment, `push`/`pop` in lockstep with decision
@@ -21,8 +21,8 @@
 //!
 //! # The literal convention: every explanation is a CLAUSE
 //!
-//! Every literal list this trait passes to the driver -- an [`Self::assert`]
-//! conflict, a [`Self::final_check`] conflict, and an [`Self::explain`]
+//! Every literal list this trait passes to the driver -- an `Self::assert`
+//! conflict, a `Self::final_check` conflict, and an `Self::explain`
 //! answer -- is **the clause itself**, not the asserted literals whose
 //! conjunction is refuted. So a conflict `a & b` is reported as
 //! `[~a, ~b]`, with every literal FALSE under the current assignment, and a
@@ -241,7 +241,7 @@ impl NativeTheory for NullTheory {
 /// A theory reached through a mutable borrow is the same theory.
 ///
 /// This is what lets a caller keep ownership of its theory across a solve —
-/// [`super::Cdcl`] owns its `T`, so the entry point passes `&mut theory` and
+/// `super::Cdcl` owns its `T`, so the entry point passes `&mut theory` and
 /// reads the theory's state back afterwards to build a model. Without it every
 /// caller would have to hand the theory over and get it back by value.
 impl<T: NativeTheory + ?Sized> NativeTheory for &mut T {

@@ -519,7 +519,7 @@ pub fn check_qf_ufbv_lazy<B: SolverBackend>(
 /// The bound exists to stop this route stealing an *enclosing* search's budget,
 /// not because the refinement is unsound above it — so the ladder that owns the
 /// budget is the right place to choose it. `check_qf_ufbv_lazy` keeps the
-/// conservative default ([`MAX_ENCODED_DECLARED_SORT_CEGAR_PAIRS`]); the
+/// conservative default (`MAX_ENCODED_DECLARED_SORT_CEGAR_PAIRS`); the
 /// quantifier-free dispatcher, which reaches this route as its terminal rung
 /// with the whole wall-clock budget still unspent, passes
 /// [`DECLARED_SORT_CEGAR_PAIRS_TERMINAL_RUNG`]. Scalar `QF_UFBV` queries (no

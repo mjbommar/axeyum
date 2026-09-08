@@ -54,7 +54,7 @@
 //! the two representations (confirmed directly: `def_eq(pair 0 0, zero)` is
 //! `true` even though `whnf(pair 0 0)` is a `Lit`, not a `Const zero`), so
 //! this producer's own value-peeling has to recognise both, or it declines
-//! on perfectly good closed goals. [`nat_value`] checks for a `Lit` at every
+//! on perfectly good closed goals. `nat_value` checks for a `Lit` at every
 //! step, not only at the end, since a `succ` argument can itself whnf to one.
 
 #![allow(clippy::many_single_char_names)]
@@ -204,7 +204,7 @@ pub(crate) fn nat_value<D: NatOps>(
     }
 }
 
-/// Finish [`nat_value`]'s count from a `Lit` reached partway through
+/// Finish `nat_value`'s count from a `Lit` reached partway through
 /// peeling: `lit`'s own magnitude, added to the `succ` layers already
 /// counted, bounded the same way.
 fn lit_value(mut n: u32, lit: NatLit) -> Result<u32, Decline> {

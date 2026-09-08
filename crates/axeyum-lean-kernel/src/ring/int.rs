@@ -1,7 +1,7 @@
 //! The ℤ fragment: parse `ExprId`s into a canonical **signed** sum of
 //! monomials, and emit a kernel proof term for `t₁ = t₂` when the two sides
 //! agree — the same shape as [`super::nat`], forced into a different design
-//! by the carrier ([`crate::int_prelude::ops::IntDev`], ADR-1582).
+//! by the carrier (`crate::int_prelude::ops::IntDev`, ADR-1582).
 //!
 //! ## What differs from [`super::nat`]
 //!
@@ -1299,7 +1299,7 @@ pub(crate) fn prove(
     problem.prove_eq(d, lhs, rhs, true)
 }
 
-/// Why [`theorem`] produced no declaration.
+/// Why `theorem` produced no declaration.
 #[derive(Debug)]
 pub enum RingError {
     /// The procedure declined.
@@ -1350,7 +1350,7 @@ pub(crate) fn theorem(
     Ok(ty)
 }
 
-/// [`theorem`], with the outcome collapsed into the prelude build's own
+/// `theorem`, with the outcome collapsed into the prelude build's own
 /// error channel.
 ///
 /// # Errors

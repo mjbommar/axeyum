@@ -14,7 +14,7 @@
 //! standing, explicitly as *not run* rather than ruled out: Kissat's `probe`
 //! umbrella shrinks the formula its propagation runs over, and
 //! [`crate::solve_with_drat_proof`] runs none of this crate's own [`crate::vivify`],
-//! [`crate::simplify`] or [`crate::bve`].
+//! [`crate::simplify`] or `crate::bve`.
 //!
 //! [bench]: https://github.com/../docs/research/12-performance/bench-boolean-core-2026-09-07.md
 //!
@@ -48,7 +48,7 @@
 //! |---|---|---|
 //! | [`crate::simplify`] | model-preserving | `Delete` per subsumed clause; `Add`+`Delete` per strengthening |
 //! | [`crate::vivify`] | model-preserving | `Add`+`Delete` per strengthened clause |
-//! | [`crate::bve`] | equisatisfiable | `Add` per resolvent, `Delete` per pivot clause |
+//! | `crate::bve` | equisatisfiable | `Add` per resolvent, `Delete` per pivot clause |
 //!
 //! BVE is the only one that is not model-preserving, and it is also the only one
 //! that makes the proof *grow*: it adds resolvents. The others only ever shrink
@@ -91,7 +91,7 @@ pub struct InprocessOptions {
     pub subsume: bool,
     /// Clause vivification ([`crate::vivify`]). Model-preserving.
     pub vivify: bool,
-    /// Bounded variable elimination ([`crate::bve`]). Equisatisfiable; a `sat`
+    /// Bounded variable elimination (`crate::bve`). Equisatisfiable; a `sat`
     /// model is lifted back through [`InprocessOutcome::reconstruction`].
     pub bve: bool,
     /// Tuning for the vivification pass (ignored unless [`Self::vivify`]).

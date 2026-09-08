@@ -19,8 +19,8 @@
 //!
 //! Field 0 has type `Geo.Incidence : Sort 2`, which is the same universe
 //! situation a carrier field is in (`Sort 1 : Sort 2`), so it is declared with
-//! that [`FieldKind`] and the record lands at `Sort 2` through the same
-//! [`declare_record`] spine — including the ADR-1578 universe control that
+//! that `FieldKind` and the record lands at `Sort 2` through the same
+//! `declare_record` spine — including the ADR-1578 universe control that
 //! requires the SAME field list to be REFUSED at `Sort 1`.
 //!
 //! # The one design decision: `parPos`, not `Geo.Incidence.Parallel`
@@ -137,7 +137,7 @@ pub const PLAYFAIR_UNIQUE: usize = 6;
 /// The number of fields `Geo.Affine` carries.
 pub const AFFINE_FIELD_COUNT: usize = 7;
 
-/// The selector suffixes, in field order. Paired against [`declare_record`]'s
+/// The selector suffixes, in field order. Paired against `declare_record`'s
 /// own output in [`declare_affine_record`] so this file's two descriptions of
 /// one record cannot drift apart.
 pub(crate) const AFFINE_FIELD_SUFFIXES: [&str; AFFINE_FIELD_COUNT] = [
@@ -168,7 +168,7 @@ const A_H5: u64 = 83_114;
 // Field shapes.
 // ---------------------------------------------------------------------------
 
-/// `Geo.Incidence` itself — a `Sort 2` inhabitant, so the same [`FieldKind`]
+/// `Geo.Incidence` itself — a `Sort 2` inhabitant, so the same `FieldKind`
 /// a carrier gets, which is what puts the selector's motive at `Sort 2`.
 fn inc_field(p: GeoPrelude) -> FieldSpec {
     FieldSpec {
@@ -388,7 +388,7 @@ pub(crate) fn intern(kernel: &mut Kernel, geo: NameId) -> AffineNames {
 /// # Panics
 ///
 /// Panics if the field list has drifted from [`AFFINE_FIELD_COUNT`] or if
-/// [`declare_record`] returns selectors under names other than the ones
+/// `declare_record` returns selectors under names other than the ones
 /// [`intern`] pre-computed.
 pub(crate) fn declare_affine_record(
     kernel: &mut Kernel,

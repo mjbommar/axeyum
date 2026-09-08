@@ -241,8 +241,8 @@ full_modules!();
 /// §4 item 3).
 ///
 /// `benches/*.rs` is a separate crate and cannot name a `pub(crate)` item or
-/// a private (`mod cdclt;`/`mod simplex;`) module path, so [`crate::cdclt`]'s
-/// `CdclT`/`Lit`/`Outcome` and [`crate::simplex`]'s `Incremental`/`Status`
+/// a private (`mod cdclt;`/`mod simplex;`) module path, so `crate::cdclt`'s
+/// `CdclT`/`Lit`/`Outcome` and `crate::simplex`'s `Incremental`/`Status`
 /// were promoted from `pub(crate)` to `pub` (their containing modules stay
 /// crate-private) and are re-exported here. This module — and therefore the
 /// only reachable path to any of them from outside the crate — exists solely
@@ -723,7 +723,7 @@ pub mod theories {
     /// theory route above — the counterpart to
     /// [`crate::layers::BvLayerStats`] for the pure bit-blast pipeline. Off by
     /// default (each `CdclT::new` reads no clock beyond the deadline check
-    /// unless a [`TheoryLayerStatsGuard`] is active): see [`TheoryLayerStatsGuard::enable`].
+    /// unless a `TheoryLayerStatsGuard` is active): see `TheoryLayerStatsGuard::enable`.
     pub mod cdclt_diagnostics {
         pub use crate::cdclt::{TheoryLayerStatsGuard, last_theory_layer_stats};
         pub use crate::layers::TheoryLayerStats;

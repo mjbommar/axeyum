@@ -2797,11 +2797,11 @@ fn dispatch_arith_uf_overbound_probe_before_lia(
 /// # Why this is a policy and not a constant
 ///
 /// `try_lazy_arith_for_overbound` returns `Some(..)` **exactly when** the eager
-/// bound would have fired, and [`dispatch_uf_fast_paths`] used to return that
+/// bound would have fired, and `dispatch_uf_fast_paths` used to return that
 /// result unconditionally — *including its `Unknown`*. So on any non-array
 /// UF+arithmetic query with more than 64 congruence pairs, every route below it
 /// in the ladder was unreachable: `euf-online`, `euf-offline`, and
-/// [`dispatch_uf_arith_online`] — the online model-based EUF+LIA combination,
+/// `dispatch_uf_arith_online` — the online model-based EUF+LIA combination,
 /// which is the architecture Z3 (`setup_QF_UFLIA` registers `theory_lra` over
 /// native congruence closure) and cvc5 (`--ackermann` is expert-only, default
 /// false, and force-disabled when UF is present) actually use for this logic.
@@ -2818,7 +2818,7 @@ pub enum UfArithOverboundPolicy {
     /// the change can be measured against it rather than only remembered.
     CegarTerminal,
     /// The lazy CEGAR receives the remaining budget **less the ladder's
-    /// reserve** (`1/`[`UF_ARITH_LADDER_RESERVE_SHARE`]) as a probe; a decided
+    /// reserve** (`1/``UF_ARITH_LADDER_RESERVE_SHARE`) as a probe; a decided
     /// verdict is returned, and an `Unknown` declines the route so the ladder
     /// below runs on the reserve. Default.
     CegarProbe,
@@ -3070,7 +3070,7 @@ enum OverboundOutcome {
 }
 
 /// The lazy CEGAR's probe configuration: the *remaining* budget at `deadline`,
-/// less the ladder's reserve of `1/`[`UF_ARITH_LADDER_RESERVE_SHARE`] of it.
+/// less the ladder's reserve of `1/``UF_ARITH_LADDER_RESERVE_SHARE` of it.
 /// Falls back to `config.timeout` when the caller set no deadline; an unbounded
 /// configuration stays unbounded.
 fn cegar_probe_budget(config: &SolverConfig, deadline: Option<Instant>) -> SolverConfig {
@@ -3653,7 +3653,7 @@ fn pre_lia_uf_probe_budget(config: &SolverConfig) -> SolverConfig {
 }
 
 /// The **online** EUF + linear-arithmetic combination, tried *before* the eager
-/// Ackermann route in [`dispatch_uf_fast_paths`]. Routes by sort — reals present
+/// Ackermann route in `dispatch_uf_fast_paths`. Routes by sort — reals present
 /// ⇒ [`crate::check_qf_uflra_online`] (`QF_UFLRA`), otherwise
 /// [`crate::check_qf_uflia_online`] (`QF_UFLIA`) — and returns:
 ///

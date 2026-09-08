@@ -516,7 +516,7 @@ fn push_step_binary(out: &mut Vec<u8>, delete: bool, lits: &[CnfLit]) {
 }
 
 /// Serializes a DRAT proof to the standard **binary** format (SAT Competition
-/// entry; see the module comment above [`push_step_binary`]'s block for the
+/// entry; see the module comment above `push_step_binary`'s block for the
 /// source). Roughly 3x smaller than [`write_drat`]'s text output on typical
 /// proofs. Round-trips through [`parse_drat_binary`], and — because both
 /// ultimately encode the same [`DratStep`] sequence — `write_drat` of a proof
@@ -534,7 +534,7 @@ pub fn write_drat_binary(proof: &[DratStep]) -> Vec<u8> {
 }
 
 /// Parses a DRAT proof in the standard binary format (see the module comment
-/// above [`push_step_binary`]'s block for the source).
+/// above `push_step_binary`'s block for the source).
 ///
 /// # Errors
 ///

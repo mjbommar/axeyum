@@ -182,7 +182,7 @@ pub struct MetricCompletionNames {
     /// `Metric.embedSeq : Π (M : Metric), M.carrier → CompletionSeq M` — a
     /// point as the constant sequence at it. Its regularity witness is
     /// `Metric.dist_self` widened by `CReal.le_of_equiv_le`-shaped
-    /// nonnegativity of the rate; see [`declare_embed_seq`].
+    /// nonnegativity of the rate; see `declare_embed_seq`.
     pub embed_seq: NameId,
     /// `Metric.embedSeq_val : ∀ M a n,
     /// Eq M.carrier (completionVal M (embedSeq M a) n) a` — `Eq.refl`: the

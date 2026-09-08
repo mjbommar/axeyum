@@ -14,7 +14,7 @@
 //!   rows: `yᵢ ≥ 0` for a `≤` row, `yᵢ ≤ 0` for a `≥` row, `yᵢ` free for an `=`
 //!   row, with `Σ yᵢ·aᵢ = 0` (the combined left-hand side vanishes) and
 //!   `Σ yᵢ·bᵢ < 0` — a self-checkable refutation, the same certificate shape the
-//!   Fourier–Motzkin path's [`crate::lra`] already consumes, or
+//!   Fourier–Motzkin path's `crate::lra` already consumes, or
 //! - [`SimplexOutcome::Unknown`] iff the exact rational arithmetic declines
 //!   (never a wrong verdict — the same `checked_*` discipline as the rest of the
 //!   solver).
@@ -45,7 +45,7 @@
 //! # Two entry points
 //!
 //! - [`feasible`] — the one-shot decision over a fixed constraint list (the
-//!   offline [`crate::lra`] overflow fallback).
+//!   offline `crate::lra` overflow fallback).
 //! - [`Incremental`] — the **warm** engine a `DPLL(T)` theory drives: the tableau
 //!   structure is built **once** over every row the theory could ever assert, and
 //!   `assert`/`retract` only move *bounds*, so a re-check resumes from the previous
@@ -307,7 +307,7 @@ pub struct TableauCounters {
     /// coefficient in the infeasible row (second decline arm).
     pub farkas_declined_nonbasic_problem_var: u64,
     /// Declines because the extracted candidate failed its own
-    /// [`farkas_holds`] self-check. Distinct from the two structural arms: this
+    /// `farkas_holds` self-check. Distinct from the two structural arms: this
     /// one means the closed form was attempted and did not verify, which is the
     /// arm that would indicate an arithmetic rather than a shape problem.
     pub farkas_declined_self_check: u64,
@@ -320,7 +320,7 @@ pub struct TableauCounters {
 /// The comparator of a constraint row `Σ aⱼ·xⱼ ⋈ b`.
 ///
 /// The full set is part of the feasibility API (and exercised by the tests); both
-/// in-tree callers — the LRA fallback in [`crate::lra`] and the online
+/// in-tree callers — the LRA fallback in `crate::lra` and the online
 /// [`crate::lra_online::LraTheory`] — normalize every atom to a `≤`/`<` row, so
 /// they only construct `Le`/`Lt`.
 #[allow(dead_code)]
@@ -551,7 +551,7 @@ struct Tableau {
     /// when the row carries **no bound at all** (the [`Incremental`] engine's "this
     /// atom is not asserted" state). An unbounded slack can never violate a bound
     /// and — being always an eligible entering variable — can never appear in a
-    /// Farkas certificate; [`farkas_holds`] rejects any candidate that puts a
+    /// Farkas certificate; `farkas_holds` rejects any candidate that puts a
     /// nonzero multiplier on one.
     rel_rhs: Vec<Option<(Rel, Rational)>>,
     /// Pivots performed over this tableau's whole life, across every
@@ -1330,7 +1330,7 @@ impl Tableau {
 /// dependent of the crate.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Status {
-    /// The currently-bounded rows are jointly feasible; [`Incremental::point`]
+    /// The currently-bounded rows are jointly feasible; `Incremental::point`
     /// materializes the witness.
     Feasible,
     /// Infeasible. The payload is the set of **bounded row indices carrying a
@@ -1357,12 +1357,12 @@ pub enum Status {
 /// # Scope and soundness
 ///
 /// Rows carry **upper** bounds only (`Σ a·x ≤ rhs`, strict on request) — the shape
-/// [`crate::lra_online`] normalizes every atom polarity into. Consequently no
+/// `crate::lra_online` normalizes every atom polarity into. Consequently no
 /// variable ever has a lower bound, so the "lower > upper" immediate conflict of
 /// the general algorithm cannot arise and every infeasibility is found by the
 /// pivot loop, which is where the Farkas certificate comes from.
 ///
-/// Every `Infeasible` support is self-verified by [`farkas_holds`] before it is
+/// Every `Infeasible` support is self-verified by `farkas_holds` before it is
 /// handed back; a candidate that fails verification is **discarded** (empty
 /// support), never trusted. An arithmetic overflow poisons the cached assignment,
 /// which the next [`Incremental::check`] repairs by rebuilding from the pristine
@@ -1545,7 +1545,7 @@ impl Incremental {
 /// row is used (the δ-aware `0 < 0`). Used by the tests here and by any caller
 /// before trusting an `Infeasible` verdict.
 // The dense public verifier is the module's *contract* surface: the in-tree callers
-// verify differently ([`crate::lra`] rebuilds its own `FarkasCertificate`, the warm
+// verify differently (`crate::lra` rebuilds its own `FarkasCertificate`, the warm
 // engine self-checks over the sparse rows), so nothing but the tests calls this.
 #[allow(dead_code)]
 #[must_use]
@@ -2358,7 +2358,7 @@ mod tests {
     }
 
     /// The dense public [`check_farkas`] and the sparse engine-internal
-    /// [`farkas_holds`] are one implementation; this pins that they cannot drift.
+    /// `farkas_holds` are one implementation; this pins that they cannot drift.
     #[test]
     fn dense_and_sparse_farkas_verifiers_agree() {
         let cs = [con(&[1, 0], Rel::Ge, 3), con(&[1, 1], Rel::Le, 1)];

@@ -453,7 +453,7 @@ std::thread_local! {
 /// previous setting on drop (so nested/recursive solves compose correctly).
 /// Off by default: constructing no guard means no extra work beyond what
 /// `SatBvBackend` already computes unconditionally (see
-/// [`COLLECT_BV_LAYER_STATS`]'s docs).
+/// `COLLECT_BV_LAYER_STATS`'s docs).
 ///
 /// ```ignore
 /// let _guard = axeyum_solver::BvLayerStatsGuard::enable();

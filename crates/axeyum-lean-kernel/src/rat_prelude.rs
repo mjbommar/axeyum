@@ -3183,30 +3183,30 @@ pub struct RatPrelude {
 
     /// ADR-1578: the ℕ/ℤ/ℚ instances of `nat_prelude::structures`'s
     /// `Alg.*` record spine, three generic theorems, and a generic
-    /// `det_one` over an arbitrary `Alg.CommRing`. See [`algebra_instances`].
+    /// `det_one` over an arbitrary `Alg.CommRing`. See `algebra_instances`.
     pub algebra: AlgebraNames,
 
     /// ADR-1584: forgetful projections between `Alg.*` records, more
     /// cross-carrier generic theorems, and `Alg.OrderedRing`. See
-    /// [`algebra_ext`].
+    /// `algebra_ext`.
     pub algebra_ext: AlgebraExtNames,
 
     /// ADR-1585: `Alg.ofNat` and its two laws, plus three derived order
     /// lemmas `linarith::generic`'s emitter cites. See
-    /// [`ordered_ring_ext`].
+    /// `ordered_ring_ext`.
     pub ordered_ring_ext: OrderedRingExtNames,
 
     /// ADR-1592: the setoid twin of [`Self::ordered_ring_ext`] — `AlgS.
     /// ofNat` and its two laws, three derived order lemmas, and the
     /// `AlgS.OrderedRing` instances at `Int`/`Rat` (via `ofAlg`). See
-    /// [`ordered_ring_ext_s`].
+    /// `ordered_ring_ext_s`.
     pub ordered_ring_ext_s: OrderedRingExtSNames,
 
     /// ADR-1616 (roadmap W1-10): the finite probability layer stated once
     /// over `(R : AlgS.OrderedRing)` — `sumRange`, `IsDistribution`,
     /// `expectation`, `variance`, `covariance`, Markov's inequality, and the
     /// three auxiliary ring lemmas the record's field set makes necessary.
-    /// See [`probability_s`].
+    /// See `probability_s`.
     pub probability_s: ProbSNames,
     /// `rat_prelude/field_setoid_instance.rs`'s own 8 names (an ADR-1512-style
     /// per-module registry, ADR-1627): `Rat.fieldS : AlgS.Field` and the
@@ -3221,18 +3221,18 @@ pub struct RatPrelude {
     /// variable, the mass function, `IsDistribution` discharged rather than
     /// assumed, `E[X] ≃ q`, `Var[X] ≃ q·(1 − q)`, and the two generic ring
     /// lemmas (`mul_neg`, `zero_add`) that computation needs.
-    /// See [`binomial_s`].
+    /// See `binomial_s`.
     pub binomial_s: BinomialSNames,
 
     /// ADR-1631, second half: the binomial at `ℚ` — `E[Σ] = m·q`,
     /// `Var[Σ] = m·q(1 − q)` under pairwise uncorrelatedness, and Chebyshev
     /// with that variance substituted. At `ℚ` rather than over the record
-    /// because the variance of a sum needs `mulComm`; see [`binomial_rat`].
+    /// because the variance of a sum needs `mulComm`; see `binomial_rat`.
     pub binomial_rat: BinomialRatNames,
 
     /// ADR-1653, the slice after: `Rat.FourwiseUncorrelated`, the `sumVars`
     /// peeling lemmas the fourth-moment expansion runs on, the fourth central
-    /// moment of a sum, and the `1/m²` tail. See [`fourth_moment`].
+    /// moment of a sum, and the `1/m²` tail. See `fourth_moment`.
     pub fourth_moment: FourthMomentNames,
 
     /// ADR-1677: **the k-fold product probability space**. `Rat.prodWeight`
@@ -3240,7 +3240,7 @@ pub struct RatPrelude {
     /// normalisation, `Rat.expectationMaps`, and the k-fold independence
     /// statement `Rat.KIndependent` together with the witness
     /// `Rat.kIndependent_prodWeight` that keeps it from being an
-    /// undischargeable hypothesis. See [`product_space`].
+    /// undischargeable hypothesis. See `product_space`.
     pub product_space: ProductSpaceNames,
 }
 

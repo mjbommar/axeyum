@@ -67,7 +67,7 @@
 //!   `Metric.CPoint.dotLeSqrtMul`** rather than a rebuild: the induction step
 //!   at dimension `n+1` is literally one application of that plane lemma, at
 //!   the two points `(‖u‖ₙ, uₙ)` and `(‖v‖ₙ, vₙ)`. See
-//!   [`declare_cauchy_schwarz`].
+//!   `declare_cauchy_schwarz`.
 //! - [`RNPrelude::norm_add_le`] (Minkowski) and hence
 //!   [`RNPrelude::metric_inst`] — ℝⁿ as a `Metric` instance for **every** `n`,
 //!   so `Metric.dist_self`, `Metric.dist_quadrilateral`, `Metric.Cauchy`,
@@ -260,7 +260,7 @@ pub struct RNPrelude {
     pub norm_congr: NameId,
     /// `RN.cauchy_schwarz : forall u v n, le (dot u v n) (mul (norm u n) (norm v n))`
     /// — **Cauchy–Schwarz, UNSQUARED, at symbolic dimension.** See
-    /// [`declare_cauchy_schwarz`] for why the induction step is one
+    /// `declare_cauchy_schwarz` for why the induction step is one
     /// application of `Metric.CPoint.dotLeSqrtMul`.
     pub cauchy_schwarz: NameId,
     /// `RN.norm_add_le : forall u v n,

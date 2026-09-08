@@ -824,7 +824,7 @@ pub fn solve_with_drat_proof_streaming_with_progress(
 /// # Collection is opt-in and off by default
 ///
 /// Every field stays at `Default` unless the search was built with
-/// [`Cdcl::collect_layer_stats`] set, which only
+/// `Cdcl::collect_layer_stats` set, which only
 /// [`solve_with_theory_and_drat_proof_traced`] does. A default run reads no
 /// extra clock, so the shipping `NullTheory` trajectory and its DRAT stream are
 /// untouched.
@@ -835,7 +835,7 @@ pub fn solve_with_drat_proof_streaming_with_progress(
 /// exactly as it does today.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct NativeLayerStats {
-    /// Time inside Boolean unit propagation ([`Cdcl::propagate`]).
+    /// Time inside Boolean unit propagation (`Cdcl::propagate`).
     pub boolean_propagate: Duration,
     /// Time inside [`theory::NativeTheory::assert`] calls.
     pub theory_assert: Duration,
@@ -843,7 +843,7 @@ pub struct NativeLayerStats {
     pub theory_propagate: Duration,
     /// Time inside [`theory::NativeTheory::push`] / [`theory::NativeTheory::pop`].
     pub theory_push_pop: Duration,
-    /// Time inside 1-UIP conflict analysis ([`Cdcl::analyze`]).
+    /// Time inside 1-UIP conflict analysis (`Cdcl::analyze`).
     pub conflict_analysis: Duration,
     /// Time inside [`theory::NativeTheory::final_check`] calls.
     pub theory_final_check: Duration,
@@ -911,7 +911,7 @@ const LAYER_STATS_MIRROR_INTERVAL: usize = 1_024;
 /// of 33 lost `QF_LRA` files printed no theory-layer line at all.
 ///
 /// This is the missing half. The search stores a snapshot here every
-/// [`LAYER_STATS_MIRROR_INTERVAL`] theory iterations, so a sampler on any
+/// `LAYER_STATS_MIRROR_INTERVAL` theory iterations, so a sampler on any
 /// thread reads counters that are at most that many iterations stale.
 ///
 /// # What a sample means, and what it does not
@@ -924,7 +924,7 @@ const LAYER_STATS_MIRROR_INTERVAL: usize = 1_024;
 ///
 /// # Cost
 ///
-/// Off unless the caller both enables [`Cdcl::collect_layer_stats`] *and*
+/// Off unless the caller both enables `Cdcl::collect_layer_stats` *and*
 /// supplies a mirror; with either absent the added cost is one already-loaded
 /// `bool` test per search-loop iteration and nothing else. With both, it is one
 /// uncontended `Mutex` lock and a 15-field `Copy` store per 1,024 iterations —
@@ -1148,7 +1148,7 @@ pub fn solve_with_theory_and_drat_proof_with_options<T: NativeTheory>(
 /// [`NativeLayerStatsMirror`] attached.
 ///
 /// Identical in every observable way but one: while the search runs it copies
-/// its own counters into `mirror` every [`LAYER_STATS_MIRROR_INTERVAL`] theory
+/// its own counters into `mirror` every `LAYER_STATS_MIRROR_INTERVAL` theory
 /// iterations, so a thread that is not this one can read partial counters from
 /// a search that has not returned — the case an external watchdog creates and
 /// the case every on-the-way-out publish in this workspace misses. The returned
@@ -1407,8 +1407,35 @@ struct Watch {
 /// cache line, so widening the watch re-denominates every budget in the tree.
 /// The assertion below turns that into a build failure instead.
 pub(crate) const WATCH_BYTES: usize = 16;
+
+/// The width `Watch` actually has on THIS target.
+///
+/// Deliberately separate from [`WATCH_BYTES`], which is a **model** constant.
+/// The two were the same number and got conflated, which broke the
+/// `wasm32-unknown-unknown` build (a supported target, CLAUDE.md): `CRef` is a
+/// `usize`, so `Watch` is 16 bytes on a 64-bit target and 12 on a 32-bit one,
+/// and the pinned assertion below was only ever true for one pointer width.
+///
+/// They must NOT be unified in either direction:
+///
+/// * Deriving `WATCH_BYTES` from `size_of::<Watch>()` would make
+///   `ticks::WATCHES_PER_CACHE_LINE` -- and therefore every budget denominated
+///   in ticks -- differ between a 64-bit and a 32-bit host. Determinism is a
+///   public API promise here, and it has to hold ACROSS platforms, not just
+///   across runs on one. The tick is a model unit, not a measurement of the
+///   machine it happens to be running on.
+/// * Leaving the assertion pinned at 16 makes 32-bit targets unbuildable.
+///
+/// So: the model stays fixed at 16 everywhere, and the assertion checks the
+/// real layout per target. Adding a field to `Watch` still breaks the build on
+/// whichever target you compile, which is what the guard is for.
+#[cfg(target_pointer_width = "64")]
+const WATCH_BYTES_ON_TARGET: usize = 16;
+#[cfg(target_pointer_width = "32")]
+const WATCH_BYTES_ON_TARGET: usize = 12;
+
 const _: () = assert!(
-    size_of::<Watch>() == WATCH_BYTES,
+    size_of::<Watch>() == WATCH_BYTES_ON_TARGET,
     "`Watch` changed width: `ticks::WATCHES_PER_CACHE_LINE` and every budget \
      calibrated in ticks are denominated in it. Re-decide the constant \
      deliberately rather than letting the unit move."
@@ -1884,14 +1911,14 @@ struct Cdcl<'progress, S: DratSink, T: NativeTheory = NullTheory> {
     /// search that existed before this field.
     collect_layer_stats: bool,
     /// Where this search copies its own [`NativeLayerStats`] every
-    /// [`LAYER_STATS_MIRROR_INTERVAL`] theory iterations, so a thread other
+    /// `LAYER_STATS_MIRROR_INTERVAL` theory iterations, so a thread other
     /// than this one can read partial counters from a search that never
     /// returns. `None` on every entry point that does not ask for one, which is
     /// all of them but `axeyum_solver`'s watchdog-instrumented route; see
     /// [`NativeLayerStatsMirror`] for why the on-the-way-out publish every
     /// other instrument uses is unreachable from a watchdog thread.
     ///
-    /// Read together with [`Cdcl::collect_layer_stats`]: a mirror with
+    /// Read together with `Cdcl::collect_layer_stats`: a mirror with
     /// collection off would flush all-zero snapshots, which is worse than no
     /// snapshot because it reads as a measured zero.
     layer_stats_mirror: Option<Arc<NativeLayerStatsMirror>>,
@@ -1914,7 +1941,7 @@ struct Cdcl<'progress, S: DratSink, T: NativeTheory = NullTheory> {
     /// ones: when it is clear, no counter is touched, so an uncounted run is
     /// the search that existed before this field.
     ///
-    /// Distinct from [`Cdcl::collect_layer_stats`] deliberately: that flag
+    /// Distinct from `Cdcl::collect_layer_stats` deliberately: that flag
     /// gates per-stage `Instant::now()` pairs, which are far more expensive
     /// than an integer increment and which perturb exactly the propagation
     /// timing a throughput measurement is trying to read.
@@ -2660,7 +2687,7 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
     /// [`NativeLayerStats`] — the native-core counterpart of
     /// `CdclT::theory_layer_stats`.
     ///
-    /// All-zero when [`Cdcl::collect_layer_stats`] was never set, which is the
+    /// All-zero when `Cdcl::collect_layer_stats` was never set, which is the
     /// honest reading: nothing was measured. `restarts` is derived from
     /// `restart_count`, which starts at 1 and advances once per completed
     /// restart — the same `restart_index - 1` `CdclT::restarts` computes.
@@ -3720,7 +3747,7 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
     /// analysis needs its antecedent.
     ///
     /// **Out of line and cold on purpose.** Both callers
-    /// ([`Cdcl::analyze`] and [`Cdcl::lit_redundant`]) test `as_clause()`
+    /// (`Cdcl::analyze` and [`Cdcl::lit_redundant`]) test `as_clause()`
     /// inline first, so on every `NullTheory` search this function is never
     /// entered at all. Inlining it would drag
     /// [`Cdcl::install_theory_lemma`]'s body into the two hottest loops in the
@@ -7533,7 +7560,7 @@ mod layer_stats_tests {
         assert!(stats.learned_clauses > 0, "and still learns: {stats:?}");
     }
 
-    /// A fixture whose search takes far more than [`LAYER_STATS_MIRROR_INTERVAL`]
+    /// A fixture whose search takes far more than `LAYER_STATS_MIRROR_INTERVAL`
     /// theory iterations, so a mirror has to have been written to *during* the
     /// search rather than at the end of one.
     ///

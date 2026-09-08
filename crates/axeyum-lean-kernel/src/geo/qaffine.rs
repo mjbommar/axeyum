@@ -68,7 +68,7 @@ use crate::rat_prelude::ops::{
     radd, rat_ty, rchain, rcongr, req, rmul, rneg, rsymm, rtrans, rzero,
 };
 
-/// The interned names [`declare_all`] produces.
+/// The interned names `declare_all` produces.
 ///
 /// Handles belong to the kernel they were built in; do not mix them across
 /// kernels.

@@ -433,7 +433,7 @@ pub struct LogicPrelude {
     /// The dependent-pair / subtype family (ADR-1613): `Sigma`, `PSigma`,
     /// `Subtype`, their constructors and recursors, and `Sigma`'s /
     /// `Subtype`'s projections with their defining equations. Declared by
-    /// [`crate::sigma_prelude::declare_sigma_family`] at the end of this
+    /// `crate::sigma_prelude::declare_sigma_family` at the end of this
     /// prelude, so every downstream package that already has `Eq` has them.
     pub sigma: SigmaNames,
 }
