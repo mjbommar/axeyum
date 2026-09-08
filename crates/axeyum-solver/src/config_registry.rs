@@ -887,6 +887,29 @@ pub static REGISTRY: &[ConfigEntry] = &[
         note: "Caps the fast-path array-refuter chain. One line of doc, no measurement.",
     },
     ConfigEntry {
+        name: "UF_ARITH_CEGAR_PROBE_SHARE",
+        module: "crates/axeyum-solver/src/auto.rs",
+        value: "2",
+        unit: "divisor of the dispatcher's remaining deadline",
+        protects: Protects::Completeness,
+        on_exceed: OnExceed::DeclineRoute,
+        signal: Signal::ToCaller,
+        guarded_by: "",
+        env_override: Some("AXEYUM_UF_ARITH_OVERBOUND"),
+        justification: dated(
+            "docs/research/12-performance/uf-arith-overbound-2026-09-08.md",
+            "2026-09-08",
+            None,
+            &[],
+        ),
+        note: "The lazy-Ackermann CEGAR's share of the budget on an over-bound UF+arithmetic \
+               query. Before this constant existed the CEGAR took the WHOLE budget and its \
+               `Unknown` was the dispatcher's final answer, so `euf-online`, `euf-offline` and \
+               `dispatch_uf_arith_online` were unreachable above 64 congruence pairs. The env \
+               override selects the whole policy (`terminal` restores that behaviour, `skip` \
+               removes the CEGAR), not just this divisor.",
+    },
+    ConfigEntry {
         name: "MAX_CYCLE_WALK",
         module: "crates/axeyum-solver/src/dl_online.rs",
         value: "1 << 20",

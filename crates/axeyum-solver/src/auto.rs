@@ -2790,6 +2790,397 @@ fn dispatch_arith_uf_overbound_probe_before_lia(
     }
 }
 
+/// How the dispatcher spends its budget when the eager Ackermann admission
+/// bound (`crate::euf::MAX_ACKERMANN_CONGRUENCE_PAIRS`, `64`) fires on a
+/// UF+arithmetic query.
+///
+/// # Why this is a policy and not a constant
+///
+/// `try_lazy_arith_for_overbound` returns `Some(..)` **exactly when** the eager
+/// bound would have fired, and [`dispatch_uf_fast_paths`] used to return that
+/// result unconditionally — *including its `Unknown`*. So on any non-array
+/// UF+arithmetic query with more than 64 congruence pairs, every route below it
+/// in the ladder was unreachable: `euf-online`, `euf-offline`, and
+/// [`dispatch_uf_arith_online`] — the online model-based EUF+LIA combination,
+/// which is the architecture Z3 (`setup_QF_UFLIA` registers `theory_lra` over
+/// native congruence closure) and cvc5 (`--ackermann` is expert-only, default
+/// false, and force-disabled when UF is present) actually use for this logic.
+/// Neither reference solver Ackermannizes UFLIA at all.
+///
+/// Selected by `AXEYUM_UF_ARITH_OVERBOUND` (`terminal` / `probe` / `skip`) so
+/// the three arms can be A/B-ed on one binary; the default is
+/// [`Self::CegarProbe`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum UfArithOverboundPolicy {
+    /// The lazy CEGAR receives the whole wall-clock budget and its result —
+    /// `Unknown` included — is the dispatcher's final answer. This is the
+    /// behaviour that made the routes below unreachable; kept as a named arm so
+    /// the change can be measured against it rather than only remembered.
+    CegarTerminal,
+    /// The lazy CEGAR receives `1/`[`UF_ARITH_CEGAR_PROBE_SHARE`] of the
+    /// remaining budget as a **probe**; a decided verdict is returned, and an
+    /// `Unknown` declines the route so the ladder below runs on what is left.
+    /// Default.
+    CegarProbe,
+    /// The lazy CEGAR does not run at all. A measurement arm: it reports what
+    /// the routes underneath decide on their own, with no budget split to
+    /// confound the comparison.
+    SkipCegar,
+}
+
+/// The lazy-Ackermann CEGAR's share of the wall-clock budget under
+/// [`UfArithOverboundPolicy::CegarProbe`]: the probe gets half the remaining
+/// budget, and the ladder below runs against the dispatcher's *entry* deadline,
+/// so the two together stay inside the caller's budget rather than re-spending
+/// it.
+///
+/// `2` mirrors the established in-tree precedent for exactly this split —
+/// [`probe_budget`], which halves the budget so the online EUF+arithmetic probe
+/// cannot starve the eager fallback behind it. An unbounded configuration
+/// (`timeout == None`) is left unbounded: there is no clock to share, and both
+/// arms then decline only on their deterministic size guards.
+const UF_ARITH_CEGAR_PROBE_SHARE: u32 = 2;
+
+impl UfArithOverboundPolicy {
+    /// The short name this policy is selected by and reported as.
+    #[must_use]
+    pub const fn name(self) -> &'static str {
+        match self {
+            Self::CegarTerminal => "terminal",
+            Self::CegarProbe => "probe",
+            Self::SkipCegar => "skip",
+        }
+    }
+}
+
+std::thread_local! {
+    /// A per-thread override of the process policy, set by
+    /// [`UfArithOverboundPolicyGuard`]. It exists because the process policy is
+    /// read once from the environment: without it, the three arms could only be
+    /// A/B-ed across separate processes, and no test could exercise more than
+    /// one of them.
+    static UF_ARITH_OVERBOUND_OVERRIDE: std::cell::Cell<Option<UfArithOverboundPolicy>> =
+        const { std::cell::Cell::new(None) };
+}
+
+/// Forces `policy` on this thread for the lifetime of the guard, restoring the
+/// previous setting on drop.
+pub struct UfArithOverboundPolicyGuard(Option<UfArithOverboundPolicy>);
+
+impl UfArithOverboundPolicyGuard {
+    /// Overrides the process policy on this thread.
+    #[must_use]
+    pub fn set(policy: UfArithOverboundPolicy) -> Self {
+        UfArithOverboundPolicyGuard(UF_ARITH_OVERBOUND_OVERRIDE.with(|c| c.replace(Some(policy))))
+    }
+}
+
+impl Drop for UfArithOverboundPolicyGuard {
+    fn drop(&mut self) {
+        UF_ARITH_OVERBOUND_OVERRIDE.with(|c| c.set(self.0));
+    }
+}
+
+/// The [`UfArithOverboundPolicy`] in force on this thread: a live
+/// [`UfArithOverboundPolicyGuard`]'s choice, else the process policy resolved
+/// once from `AXEYUM_UF_ARITH_OVERBOUND`. An unset or unrecognised environment
+/// value is the default, so a typo degrades to the shipped behaviour rather
+/// than to an arm nobody chose.
+fn uf_arith_overbound_policy() -> UfArithOverboundPolicy {
+    if let Some(policy) = UF_ARITH_OVERBOUND_OVERRIDE.with(std::cell::Cell::get) {
+        return policy;
+    }
+    static RESOLVED: std::sync::OnceLock<UfArithOverboundPolicy> = std::sync::OnceLock::new();
+    *RESOLVED.get_or_init(
+        || match std::env::var("AXEYUM_UF_ARITH_OVERBOUND").as_deref() {
+            Ok("terminal") => UfArithOverboundPolicy::CegarTerminal,
+            Ok("skip") => UfArithOverboundPolicy::SkipCegar,
+            _ => UfArithOverboundPolicy::CegarProbe,
+        },
+    )
+}
+
+std::thread_local! {
+    /// Whether over-bound UF+arithmetic dispatch counters are being collected on
+    /// this thread. See [`UfArithOverboundStatsGuard`].
+    static COLLECT_UF_ARITH_OVERBOUND_STATS: std::cell::Cell<bool> =
+        const { std::cell::Cell::new(false) };
+    /// The counters accumulated since the active guard was created.
+    static UF_ARITH_OVERBOUND_STATS: std::cell::Cell<UfArithOverboundStats> =
+        const { std::cell::Cell::new(UfArithOverboundStats::ZERO) };
+}
+
+/// Clock-free counters for the over-bound UF+arithmetic decision point: how
+/// often the eager Ackermann bound fired, what the lazy CEGAR did with the
+/// query, and whether the ladder below it got to run.
+///
+/// Every field is a count, never a duration — timing for this decision point is
+/// already carried by [`crate::RouteTrace`]'s per-attempt `bound_by`/`bound_ms`,
+/// and a second clock here would only give a reader two numbers to reconcile.
+/// What the route trail cannot say is *why* the route stopped: `cegar_unknown`
+/// split from `cegar_decided`, and `fell_through` split from `terminal_unknown`,
+/// is the difference between "the CEGAR could not decide this" and "the CEGAR
+/// could not decide this **and nothing else was allowed to try**".
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[non_exhaustive]
+pub struct UfArithOverboundStats {
+    /// Queries on which the eager Ackermann bound fired, so this decision point
+    /// was reached at all.
+    pub engaged: u32,
+    /// Of those, the ones on which the lazy CEGAR was skipped entirely
+    /// ([`UfArithOverboundPolicy::SkipCegar`]).
+    pub cegar_skipped: u32,
+    /// Of those, the ones the lazy CEGAR decided (`sat` or `unsat`).
+    pub cegar_decided: u32,
+    /// Of those, the ones on which the lazy CEGAR returned `Unknown`.
+    pub cegar_unknown: u32,
+    /// `Unknown`s returned as the dispatcher's final answer, with the ladder
+    /// below never entered. A nonzero count here on a division we lose is the
+    /// signal this counter exists for.
+    pub terminal_unknown: u32,
+    /// `Unknown`s after which the ladder below (`euf-online`, `euf-offline`,
+    /// `uf-arith-online`, eager `uf-arithmetic`) was allowed to run.
+    pub fell_through: u32,
+    /// Queries refused **before** the CEGAR by the secondary (pathological)
+    /// lazy bounds — pair count above `MAX_LAZY_ACKERMANN_CONGRUENCE_PAIRS`,
+    /// DAG above `MAX_LAZY_DAG_NODES`, or depth above `MAX_LAZY_DEPTH`. These
+    /// stay terminal under every policy: they are the inputs on which the
+    /// routes below would blow up exactly as the eager route would, which is
+    /// what the bound exists for. Counted separately so "we refused" is never
+    /// read as "the CEGAR tried and failed".
+    pub pathological_refusals: u32,
+}
+
+impl UfArithOverboundStats {
+    /// The all-zero counters, so the thread-local can be a `const` initializer.
+    const ZERO: Self = Self {
+        engaged: 0,
+        cegar_skipped: 0,
+        cegar_decided: 0,
+        cegar_unknown: 0,
+        terminal_unknown: 0,
+        fell_through: 0,
+        pathological_refusals: 0,
+    };
+
+    /// One `;`-prefixed `--trace` line, in the `key=value` shape every other
+    /// instrument in this tree prints.
+    #[must_use]
+    pub fn trace_line(&self) -> String {
+        format!(
+            "; uf-overbound policy={} engaged={} cegar_skipped={} cegar_decided={} \
+             cegar_unknown={} terminal_unknown={} fell_through={} pathological_refusals={}",
+            uf_arith_overbound_policy().name(),
+            self.engaged,
+            self.cegar_skipped,
+            self.cegar_decided,
+            self.cegar_unknown,
+            self.terminal_unknown,
+            self.fell_through,
+            self.pathological_refusals
+        )
+    }
+}
+
+/// Enables over-bound UF+arithmetic counter collection on this thread for the
+/// lifetime of the guard, resetting the counters on construction and restoring
+/// the previous setting on drop. Same opt-in, off-by-default convention as
+/// [`crate::FrontDoorStatsGuard`] and [`crate::BvLayerStatsGuard`]: with no
+/// guard live, the recording path reads one thread-local `Cell<bool>` and
+/// returns.
+pub struct UfArithOverboundStatsGuard(bool);
+
+impl UfArithOverboundStatsGuard {
+    /// Enables collection for the lifetime of the returned guard.
+    #[must_use]
+    pub fn enable() -> Self {
+        let previous = COLLECT_UF_ARITH_OVERBOUND_STATS.with(|c| c.replace(true));
+        UF_ARITH_OVERBOUND_STATS.with(|c| c.set(UfArithOverboundStats::ZERO));
+        UfArithOverboundStatsGuard(previous)
+    }
+}
+
+impl Drop for UfArithOverboundStatsGuard {
+    fn drop(&mut self) {
+        COLLECT_UF_ARITH_OVERBOUND_STATS.with(|c| c.set(self.0));
+    }
+}
+
+/// The counters accumulated on this thread since the active
+/// [`UfArithOverboundStatsGuard`] (or the most recently dropped one) was
+/// created. All-zero means either "collection was never enabled" or "the eager
+/// Ackermann bound never fired on this thread" — the caller knows which, because
+/// it decides whether to construct the guard.
+#[must_use]
+pub fn last_uf_arith_overbound_stats() -> UfArithOverboundStats {
+    UF_ARITH_OVERBOUND_STATS.with(std::cell::Cell::get)
+}
+
+/// Applies `f` to this thread's counters when collection is enabled; otherwise
+/// reads one `Cell<bool>` and returns.
+fn note_uf_arith_overbound(f: impl FnOnce(&mut UfArithOverboundStats)) {
+    if !COLLECT_UF_ARITH_OVERBOUND_STATS.with(std::cell::Cell::get) {
+        return;
+    }
+    UF_ARITH_OVERBOUND_STATS.with(|c| {
+        let mut stats = c.get();
+        f(&mut stats);
+        c.set(stats);
+    });
+}
+
+/// What the over-bound UF+arithmetic decision point concluded for one query.
+enum OverboundOutcome {
+    /// The eager Ackermann bound did not fire (or this query is not
+    /// UF+arithmetic): in-bound dispatch, unchanged.
+    NotEngaged,
+    /// This is the dispatcher's answer.
+    Answer(CheckResult),
+    /// The ladder below this decision point should run.
+    FallThrough,
+}
+
+/// The lazy CEGAR's probe configuration: the *remaining* budget at `deadline`,
+/// divided by [`UF_ARITH_CEGAR_PROBE_SHARE`]. Falls back to `config.timeout`
+/// when the caller set no deadline; an unbounded configuration stays unbounded.
+fn cegar_probe_budget(config: &SolverConfig, deadline: Option<Instant>) -> SolverConfig {
+    let mut probe = config.clone();
+    let remaining = deadline
+        .map(|d| d.saturating_duration_since(Instant::now()))
+        .or(config.timeout);
+    if let Some(remaining) = remaining {
+        probe.timeout = Some(remaining / UF_ARITH_CEGAR_PROBE_SHARE);
+    }
+    probe
+}
+
+/// Runs the over-bound UF+arithmetic decision point under the resolved
+/// [`UfArithOverboundPolicy`], recording both the route attempt and the
+/// clock-free counters.
+///
+/// `deadline` is the dispatcher's **entry** deadline, so the probe arm's budget
+/// and the ladder's remaining budget come out of one clock rather than two.
+///
+/// # Soundness
+///
+/// Every arm returns either a verdict the lazy CEGAR produced (its `sat` is
+/// replayed against the original assertions inside
+/// `check_with_function_consistency`, its `unsat` is a relaxation refutation) or
+/// declines. Falling through cannot produce a wrong verdict: the routes below
+/// re-derive their own answers, and the eager `check_with_uf_arithmetic` route
+/// re-applies `refuse_oversized_ackermann` at its own entry (`combined.rs:86`),
+/// so the O(k²) blow-up the bound exists to prevent is still refused.
+///
+/// # Errors
+///
+/// Propagates [`SolverError`] from the lazy route's IR builders / dispatcher.
+fn dispatch_uf_arith_overbound(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    config: &SolverConfig,
+    features: &Features,
+    deadline: Option<Instant>,
+    rec: &mut Recorder<'_>,
+) -> Result<OverboundOutcome, SolverError> {
+    if !(features.has_function && has_arithmetic_function(arena)) {
+        return Ok(OverboundOutcome::NotEngaged);
+    }
+    if crate::euf::refuse_oversized_ackermann(arena, assertions, "UF+arithmetic").is_none() {
+        // In-bound: unchanged dispatch, and the decision point is not "engaged"
+        // so no counter moves.
+        return Ok(OverboundOutcome::NotEngaged);
+    }
+    // The secondary (pathological-input) bounds are TERMINAL under every policy.
+    // They are the case the eager bound exists for — a pair count above two
+    // million, a DAG above two million nodes, or a term deeper than 65 536 — and
+    // the ladder below recurses over the same assertion, so letting these fall
+    // through would reintroduce exactly the blow-up the guard prevents. Falling
+    // through is for the CEGAR's own inconclusive `Unknown`, not for a refusal
+    // taken before it ran.
+    if let Some(refusal) =
+        crate::euf::refuse_pathological_for_lazy(arena, assertions, "UF+arithmetic")
+    {
+        note_uf_arith_overbound(|s| {
+            s.engaged += 1;
+            s.pathological_refusals += 1;
+            s.terminal_unknown += 1;
+        });
+        with_recorder(rec, |t| match &refusal {
+            CheckResult::Unknown(reason) => t.record_declined(
+                "uf-arith-lazy-overbound",
+                DeclineReason::from_unknown(reason),
+            ),
+            _ => unreachable!("refuse_pathological_for_lazy only ever refuses"),
+        });
+        return Ok(OverboundOutcome::Answer(refusal));
+    }
+    let policy = uf_arith_overbound_policy();
+    if policy == UfArithOverboundPolicy::SkipCegar {
+        note_uf_arith_overbound(|s| {
+            s.engaged += 1;
+            s.cegar_skipped += 1;
+            s.fell_through += 1;
+        });
+        with_recorder(rec, |t| {
+            t.record_declined("uf-arith-lazy-overbound", DeclineReason::NotApplicable);
+        });
+        return Ok(OverboundOutcome::FallThrough);
+    }
+
+    // `CegarTerminal` keeps the caller's arena (byte-identical to the behaviour
+    // that arm names). `CegarProbe` runs on a CLONE, for the same reason
+    // `dispatch_uf_arith_online` does: the CEGAR appends abstraction symbols and
+    // congruence lemmas, and leaving them in the caller's arena would enlarge
+    // every route the fall-through then runs. A `sat` model is keyed by
+    // `SymbolId`, which the clone preserves, so returning it is sound.
+    let terminal = policy == UfArithOverboundPolicy::CegarTerminal;
+    let cegar_config = if terminal {
+        config.clone()
+    } else {
+        cegar_probe_budget(config, deadline)
+    };
+    let mut scratch;
+    let cegar_arena: &mut TermArena = if terminal {
+        arena
+    } else {
+        scratch = arena.clone();
+        &mut scratch
+    };
+    let Some(result) = crate::euf::try_lazy_arith_for_overbound(
+        cegar_arena,
+        assertions,
+        &cegar_config,
+        "UF+arithmetic",
+    )?
+    else {
+        return Ok(OverboundOutcome::NotEngaged);
+    };
+    note_uf_arith_overbound(|s| s.engaged += 1);
+    with_recorder(rec, |t| match &result {
+        CheckResult::Sat(_) => t.record_decided("uf-arith-lazy-overbound", Verdict::Sat),
+        CheckResult::Unsat => {
+            t.record_decided("uf-arith-lazy-overbound", Verdict::Unsat);
+        }
+        CheckResult::Unknown(reason) => t.record_declined(
+            "uf-arith-lazy-overbound",
+            DeclineReason::from_unknown(reason),
+        ),
+    });
+    if !matches!(result, CheckResult::Unknown(_)) {
+        note_uf_arith_overbound(|s| s.cegar_decided += 1);
+        return Ok(OverboundOutcome::Answer(result));
+    }
+    note_uf_arith_overbound(|s| s.cegar_unknown += 1);
+    // An array query already fell through before this change; keep that, and add
+    // the probe arm's fall-through for everything else.
+    if features.has_array || !terminal {
+        note_uf_arith_overbound(|s| s.fell_through += 1);
+        return Ok(OverboundOutcome::FallThrough);
+    }
+    note_uf_arith_overbound(|s| s.terminal_unknown += 1);
+    Ok(OverboundOutcome::Answer(result))
+}
+
 /// The uninterpreted-function fast paths (online CDCL(T) EUF → offline EUF
 /// enumeration → EUF + linear-arithmetic combination), split from
 /// [`check_auto_dispatch`] for length. Returns `Some(verdict)` when one decides
@@ -2807,6 +3198,13 @@ fn dispatch_uf_fast_paths(
     features: &Features,
     rec: &mut Recorder<'_>,
 ) -> Result<Option<CheckResult>, SolverError> {
+    // ONE deadline for this whole dispatcher, taken at entry. The over-bound
+    // UF+arithmetic probe below and the ladder after it both derive their
+    // remaining budget from it, so a probe that spends half the budget leaves the
+    // ladder the other half instead of restarting the clock (which is what
+    // computing this after the probe would do).
+    let entry_deadline = config.timeout.and_then(|t| Instant::now().checked_add(t));
+
     // Deterministic admission bound (graceful `unknown`, never an unbounded
     // hang/OOM) for **UF + arithmetic** instances, applied *before* any of the
     // recursive e-graph / arithmetic passes below. The eager UF+arithmetic route
@@ -2834,25 +3232,17 @@ fn dispatch_uf_fast_paths(
     // would-be hang with a decided verdict or a sound `Unknown`; no verdict changes
     // (a query with no applied arith function has zero congruence pairs, so the eager
     // bound never fired for it anyway).
-    if features.has_function
-        && has_arithmetic_function(arena)
-        && let Some(result) =
-            crate::euf::try_lazy_arith_for_overbound(arena, assertions, config, "UF+arithmetic")?
-    {
-        let array_unknown = features.has_array && matches!(result, CheckResult::Unknown(_));
-        with_recorder(rec, |t| match &result {
-            CheckResult::Sat(_) => t.record_decided("uf-arith-lazy-overbound", Verdict::Sat),
-            CheckResult::Unsat => {
-                t.record_decided("uf-arith-lazy-overbound", Verdict::Unsat);
-            }
-            CheckResult::Unknown(reason) => t.record_declined(
-                "uf-arith-lazy-overbound",
-                DeclineReason::from_unknown(reason),
-            ),
-        });
-        if !array_unknown {
-            return Ok(Some(result));
-        }
+    //
+    // WHAT HAPPENS TO ITS `Unknown` IS NOW A POLICY, NOT A CONSTANT
+    // ([`UfArithOverboundPolicy`]). Returning it unconditionally — the historical
+    // behaviour, kept as [`UfArithOverboundPolicy::CegarTerminal`] — made every
+    // route below this point unreachable on any non-array UF+arithmetic query
+    // with more than 64 congruence pairs, `dispatch_uf_arith_online` (our online
+    // model-based EUF+LIA combination) included. See that enum's docs for the
+    // measurement.
+    match dispatch_uf_arith_overbound(arena, assertions, config, features, entry_deadline, rec)? {
+        OverboundOutcome::NotEngaged | OverboundOutcome::FallThrough => {}
+        OverboundOutcome::Answer(result) => return Ok(Some(result)),
     }
 
     // Eliminate uninterpreted-sort `ite` *only for the e-graph deciders* (which
@@ -2873,8 +3263,10 @@ fn dispatch_uf_fast_paths(
     // config to consecutive routes re-spends the same wall-clock budget once
     // per route (measured at 2-3x the intended budget on large predicate
     // skeletons). Re-deriving the remaining timeout before each heavy route
-    // keeps the whole ladder inside the caller's budget.
-    let ladder_deadline = config.timeout.and_then(|t| Instant::now().checked_add(t));
+    // keeps the whole ladder inside the caller's budget. It is the dispatcher's
+    // ENTRY deadline, so an over-bound probe that already ran comes out of the
+    // same budget rather than restarting the clock.
+    let ladder_deadline = entry_deadline;
 
     // Try the **online** CDCL(T) decider on the backtrackable e-graph first: it
     // keeps one incremental congruence graph across the Boolean search and honors
@@ -2937,7 +3329,8 @@ fn dispatch_uf_fast_paths(
     if features.has_int
         && features.has_uninterpreted_sort
         && !features.has_function
-        && let Some(result) = dispatch_uf_arith_online(arena, assertions, config, features, rec)?
+        && let Some(result) =
+            dispatch_uf_arith_online(arena, assertions, config, features, ladder_deadline, rec)?
     {
         return Ok(Some(result));
     }
@@ -2960,7 +3353,9 @@ fn dispatch_uf_fast_paths(
         // shape) we FALL THROUGH to the eager `check_with_uf_arithmetic` route
         // below, byte-unchanged. Strictly additive: it only ever turns the eager
         // route's would-be result into the same verdict sooner, or declines.
-        if let Some(result) = dispatch_uf_arith_online(arena, assertions, config, features, rec)? {
+        if let Some(result) =
+            dispatch_uf_arith_online(arena, assertions, config, features, ladder_deadline, rec)?
+        {
             return Ok(Some(result));
         }
         match crate::check_with_uf_arithmetic(arena, assertions, config)? {
@@ -3246,6 +3641,7 @@ fn dispatch_uf_arith_online(
     assertions: &[TermId],
     config: &SolverConfig,
     features: &Features,
+    ladder_deadline: Option<Instant>,
     rec: &mut Recorder<'_>,
 ) -> Result<Option<CheckResult>, SolverError> {
     // Run the online attempt on a CLONE of the arena, never the caller's, so that
@@ -3266,7 +3662,14 @@ fn dispatch_uf_arith_online(
     // wall-clock budget is set (`timeout == None`) there is nothing to split — both
     // routes decline only on their deterministic size guards, identically — so the
     // probe runs unbounded and the online combination keeps its full power.
-    let probe_config = probe_budget(config);
+    //
+    // The share is taken out of what is LEFT at `ladder_deadline`, not out of the
+    // caller's original timeout: an over-bound query may already have spent half
+    // its budget in the lazy-CEGAR probe above, and halving the original timeout
+    // again there would let this route run past the caller's deadline.
+    let probe_config = probe_budget(
+        &config_with_remaining_timeout(config, ladder_deadline).unwrap_or_else(|| config.clone()),
+    );
     // Int vs Real detection mirrors the surrounding dispatch: a real-sorted term
     // anywhere routes to the `QF_UFLRA` decider, otherwise the integer one.
     let online = if features.has_real {
@@ -10052,5 +10455,270 @@ mod tests {
             check_auto(&mut arena, &[satisfiable], &SolverConfig::new()).unwrap(),
             CheckResult::Sat(_)
         ));
+    }
+
+    // ---------------------------------------------------------------------
+    // The over-bound UF+arithmetic decision point (`UfArithOverboundPolicy`).
+    // ---------------------------------------------------------------------
+
+    /// Padding applications in the over-bound fixture below.
+    ///
+    /// It must exceed [`MAX_PRE_LIA_UF_PROBE_ASSERTIONS`] (`256`), or the
+    /// pre-LIA probe (`dispatch_arith_uf_overbound_probe_before_lia`) decides
+    /// the query on its own clone and `dispatch_uf_fast_paths` is never
+    /// reached — which is exactly how the first version of these tests failed,
+    /// reporting `engaged == 0` on a query that is unambiguously over the eager
+    /// bound. The fixture emits `n + 2` assertions, so `260` clears it.
+    const PADDING_APPS: usize = 260;
+
+    /// An UNSAT `QF_UFLIA` query with `n` padding applications of one `Int -> Int`
+    /// function, so it carries `C(n+2, 2)` Ackermann congruence pairs: over the
+    /// eager bound of 64 for `n >= 8`, and far under the secondary (pathological)
+    /// bound of two million. The refutation itself is pure congruence:
+    /// `a = b` with `f(a) != f(b)`.
+    fn overbound_uflia_unsat(arena: &mut TermArena, n: usize) -> Vec<TermId> {
+        let f = arena.declare_fun("f", &[Sort::Int], Sort::Int).unwrap();
+        let mut assertions = Vec::new();
+        for i in 0..n {
+            let v = arena.int_var(&format!("pad{i}")).unwrap();
+            let app = arena.apply(f, &[v]).unwrap();
+            let value = arena.int_const(i128::try_from(i).unwrap());
+            assertions.push(arena.eq(app, value).unwrap());
+        }
+        let a = arena.int_var("a").unwrap();
+        let b = arena.int_var("b").unwrap();
+        let fa = arena.apply(f, &[a]).unwrap();
+        let fb = arena.apply(f, &[b]).unwrap();
+        let eq = arena.eq(fa, fb).unwrap();
+        assertions.push(arena.not(eq).unwrap());
+        assertions.push(arena.eq(a, b).unwrap());
+        assertions
+    }
+
+    #[test]
+    fn overbound_policy_defaults_to_the_probe_arm() {
+        // No guard, no environment variable set in this test: the shipped default
+        // must be the arm that lets the ladder run. A future edit that flips the
+        // default back to `CegarTerminal` makes every route below the CEGAR
+        // unreachable again, silently — this test is what says so.
+        assert_eq!(
+            uf_arith_overbound_policy(),
+            UfArithOverboundPolicy::CegarProbe
+        );
+    }
+
+    #[test]
+    fn overbound_policy_guard_overrides_and_restores() {
+        let outer = uf_arith_overbound_policy();
+        {
+            let _g = UfArithOverboundPolicyGuard::set(UfArithOverboundPolicy::CegarTerminal);
+            assert_eq!(
+                uf_arith_overbound_policy(),
+                UfArithOverboundPolicy::CegarTerminal
+            );
+            {
+                let _inner = UfArithOverboundPolicyGuard::set(UfArithOverboundPolicy::SkipCegar);
+                assert_eq!(
+                    uf_arith_overbound_policy(),
+                    UfArithOverboundPolicy::SkipCegar
+                );
+            }
+            assert_eq!(
+                uf_arith_overbound_policy(),
+                UfArithOverboundPolicy::CegarTerminal
+            );
+        }
+        assert_eq!(uf_arith_overbound_policy(), outer);
+    }
+
+    #[test]
+    fn overbound_cegar_probe_takes_half_the_remaining_budget() {
+        // Half of what is LEFT at the dispatcher's entry deadline, so the ladder
+        // after it gets the other half out of the same clock.
+        for (timeout, expected) in [
+            (Duration::ZERO, Duration::ZERO),
+            (Duration::from_secs(24), Duration::from_secs(12)),
+            (Duration::from_secs(3), Duration::from_millis(1_500)),
+        ] {
+            let config = SolverConfig::new().with_timeout(timeout);
+            let deadline = Instant::now().checked_add(timeout);
+            let probe = cegar_probe_budget(&config, deadline).timeout.unwrap();
+            // The remaining budget shrinks by the time this loop takes, so assert a
+            // tight upper bound rather than exact equality (a clock read cannot be
+            // asserted to the nanosecond without making the test flaky).
+            assert!(
+                probe <= expected,
+                "probe budget {probe:?} exceeds half of {timeout:?}"
+            );
+        }
+        // An unbounded configuration stays unbounded: there is no clock to split.
+        assert_eq!(cegar_probe_budget(&SolverConfig::new(), None).timeout, None);
+    }
+
+    #[test]
+    fn overbound_ladder_is_reachable_when_the_cegar_is_skipped() {
+        // THE REACHABILITY TEST. Above 64 congruence pairs the lazy CEGAR used to
+        // answer for the whole dispatcher: `euf-online`, `euf-offline` and
+        // `uf-arith-online` never ran, whatever they would have decided. With the
+        // CEGAR removed entirely, the routes underneath must still decide this
+        // query — which is the fact the old structure made unobservable.
+        let mut arena = TermArena::new();
+        let assertions = overbound_uflia_unsat(&mut arena, PADDING_APPS);
+        assert!(
+            crate::euf::ackermann_congruence_pairs(&arena, &assertions)
+                > crate::euf::MAX_ACKERMANN_CONGRUENCE_PAIRS,
+            "fixture must be over the eager Ackermann bound"
+        );
+
+        let config = SolverConfig::new().with_timeout(Duration::from_secs(20));
+        let _policy = UfArithOverboundPolicyGuard::set(UfArithOverboundPolicy::SkipCegar);
+        let _stats = crate::UfArithOverboundStatsGuard::enable();
+        let _routes = crate::RouteAttributionGuard::enable();
+
+        let verdict = check_auto(&mut arena, &assertions, &config).unwrap();
+        assert_eq!(
+            verdict,
+            CheckResult::Unsat,
+            "with the CEGAR skipped, the ladder below it must still refute this"
+        );
+
+        let stats = crate::last_uf_arith_overbound_stats();
+        assert_eq!(stats.engaged, 1, "the eager bound must have fired once");
+        assert_eq!(stats.cegar_skipped, 1);
+        assert_eq!(stats.fell_through, 1);
+        assert_eq!(stats.terminal_unknown, 0);
+
+        let trace = crate::last_route_attribution();
+        let attempts = trace.attempts();
+        let overbound = attempts
+            .iter()
+            .position(|a| a.route == "uf-arith-lazy-overbound")
+            .expect("the over-bound decision point must be recorded");
+        assert!(
+            overbound + 1 < attempts.len(),
+            "no route ran after the over-bound decision point; trail: {:?}",
+            attempts.iter().map(|a| a.route).collect::<Vec<_>>()
+        );
+    }
+
+    #[test]
+    fn overbound_terminal_policy_still_answers_for_the_whole_dispatcher() {
+        // The negative control for the test above, on the same fixture: under the
+        // policy that names the old behaviour, the CEGAR's answer IS the
+        // dispatcher's answer. If this ever stops holding, `CegarTerminal` no
+        // longer describes what it claims to and the A/B is meaningless.
+        let mut arena = TermArena::new();
+        let assertions = overbound_uflia_unsat(&mut arena, PADDING_APPS);
+        let config = SolverConfig::new().with_timeout(Duration::from_secs(20));
+        let _policy = UfArithOverboundPolicyGuard::set(UfArithOverboundPolicy::CegarTerminal);
+        let _stats = crate::UfArithOverboundStatsGuard::enable();
+        let _routes = crate::RouteAttributionGuard::enable();
+
+        let verdict = check_auto(&mut arena, &assertions, &config).unwrap();
+        assert_eq!(verdict, CheckResult::Unsat);
+
+        let stats = crate::last_uf_arith_overbound_stats();
+        assert_eq!(stats.engaged, 1);
+        assert_eq!(stats.cegar_decided, 1, "the CEGAR decides this fixture");
+        assert_eq!(stats.fell_through, 0, "nothing may run after it here");
+
+        let trace = crate::last_route_attribution();
+        let decided = trace.decided_by().expect("a decided file names its route");
+        assert_eq!(
+            decided.1.route, "uf-arith-lazy-overbound",
+            "the terminal arm must be answered by the CEGAR itself"
+        );
+    }
+
+    #[test]
+    fn every_policy_gives_the_same_verdict_on_an_overbound_query() {
+        // The soundness bar for making this a policy at all: three arms, one
+        // query, one verdict. A policy that can change a `sat`/`unsat` is not a
+        // policy, it is a bug with a name.
+        for policy in [
+            UfArithOverboundPolicy::CegarTerminal,
+            UfArithOverboundPolicy::CegarProbe,
+            UfArithOverboundPolicy::SkipCegar,
+        ] {
+            let mut arena = TermArena::new();
+            let assertions = overbound_uflia_unsat(&mut arena, PADDING_APPS);
+            let config = SolverConfig::new().with_timeout(Duration::from_secs(20));
+            let _policy = UfArithOverboundPolicyGuard::set(policy);
+            assert_eq!(
+                check_auto(&mut arena, &assertions, &config).unwrap(),
+                CheckResult::Unsat,
+                "policy {} changed the verdict",
+                policy.name()
+            );
+        }
+    }
+
+    #[test]
+    fn pathological_overbound_stays_terminal_under_every_policy() {
+        // The secondary (pathological-input) bounds are NOT relaxed by this
+        // change. A query above `MAX_LAZY_ACKERMANN_CONGRUENCE_PAIRS` is the case
+        // the eager bound exists for: the ladder below recurses over the same
+        // assertion, so it must be refused before anything runs, under every arm.
+        // Smallest `k` with C(k,2) strictly above the two-million secondary bound.
+        let mut k = 2usize;
+        while k * (k - 1) / 2 <= crate::euf::MAX_LAZY_ACKERMANN_CONGRUENCE_PAIRS {
+            k += 1;
+        }
+        for policy in [
+            UfArithOverboundPolicy::CegarTerminal,
+            UfArithOverboundPolicy::CegarProbe,
+            UfArithOverboundPolicy::SkipCegar,
+        ] {
+            let mut arena = TermArena::new();
+            let assertions = overbound_uflia_unsat(&mut arena, k);
+            let config = SolverConfig::new().with_timeout(Duration::from_secs(5));
+            let _policy = UfArithOverboundPolicyGuard::set(policy);
+            let _stats = crate::UfArithOverboundStatsGuard::enable();
+            let started = Instant::now();
+            let verdict = check_auto(&mut arena, &assertions, &config).unwrap();
+            let elapsed = started.elapsed();
+            assert!(
+                matches!(verdict, CheckResult::Unknown(_)),
+                "policy {} admitted a pathological query: {verdict:?}",
+                policy.name()
+            );
+            let stats = crate::last_uf_arith_overbound_stats();
+            assert_eq!(
+                stats.pathological_refusals,
+                1,
+                "policy {} did not take the pathological refusal",
+                policy.name()
+            );
+            assert_eq!(stats.terminal_unknown, 1);
+            assert_eq!(stats.fell_through, 0);
+            assert!(
+                elapsed < Duration::from_secs(5),
+                "the pathological refusal must be taken before the budget, took {elapsed:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn overbound_counters_are_silent_without_a_guard() {
+        // The opt-in half of the instrumentation contract: with no guard live, the
+        // recording path must not accumulate anything. A counter that keeps
+        // counting after its guard drops reports another query's work.
+        let mut arena = TermArena::new();
+        let assertions = overbound_uflia_unsat(&mut arena, PADDING_APPS);
+        let config = SolverConfig::new().with_timeout(Duration::from_secs(20));
+        {
+            let _stats = crate::UfArithOverboundStatsGuard::enable();
+            let mut probe_arena = arena.clone();
+            let _ = check_auto(&mut probe_arena, &assertions, &config).unwrap();
+            assert_eq!(crate::last_uf_arith_overbound_stats().engaged, 1);
+        }
+        // Guard dropped: a second solve must not move the counters.
+        let before = crate::last_uf_arith_overbound_stats();
+        let _ = check_auto(&mut arena, &assertions, &config).unwrap();
+        assert_eq!(
+            crate::last_uf_arith_overbound_stats(),
+            before,
+            "counters moved after the guard was dropped"
+        );
     }
 }

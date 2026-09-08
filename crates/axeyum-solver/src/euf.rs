@@ -235,7 +235,7 @@ fn has_uninterpreted_sort_term(arena: &TermArena, assertions: &[TermId]) -> bool
 /// ([`ackermann_congruence_pairs`], [`TermStats::compute`]) so the guard itself
 /// never recurses or hangs. A refusal only ever replaces a would-be hang/OOM/
 /// stack-overflow with a sound `Unknown`; it never changes a decided verdict.
-fn refuse_pathological_for_lazy(
+pub(crate) fn refuse_pathological_for_lazy(
     arena: &TermArena,
     assertions: &[TermId],
     context: &str,
