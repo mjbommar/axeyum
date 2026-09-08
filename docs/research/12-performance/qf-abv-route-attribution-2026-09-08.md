@@ -127,6 +127,67 @@ has no such reserve. Acting on it needs an A/B over the full 200-file division
 (which files does that route decide today, and how long do they take?), so it is
 recorded here as a measured opportunity rather than taken blind.
 
+## What the two fixes did, measured the same way
+
+Re-run of the same population and the same command after the value-grouped
+congruence scan and the abstraction-only reduction landed (same host, same
+budget, same afternoon; the host was carrying two other lanes in both runs).
+
+**Two files that were watchdog kills are now decided**, both from the congruence-scan
+class:
+
+| file | before | after |
+|---|---|---|
+| `klee-selected-smt2/cu-large-qids/_lbracket-query-052.smt2` | `unknown`, 25.1 s | **`sat`, 4.2 s** |
+| `klee-selected-smt2/cu-no-caches/_lbracket-query-000333.smt2` | `unknown`, 24.9 s | **`sat`, 4.8 s** |
+
+Nothing else on the population changed verdict. Over the whole committed
+200-file division, run end to end (200 of 200), **186 files are solved against
+the 179 the ledger records at `9914a1c0e`** — five of the seven gains are files
+the current tree already decided before this change, and two are the files
+above. Exactly two files outside the loss list are unsolved
+(`20230321-UltimateAutomizerSvcomp2023/tree-1.i_8.smt2` and
+`platania/no_init_multi_delete/no_init_multi_delete135.smt2`), which is the
+division's own "solved by neither side" count
+(200 = 178 both + 1 ours-only + 19 reference-only + 2 neither) — so this run
+shows **no regression** against the previously-solved complement. The first of
+the two stops after parse and never enters an array route at all, so it prints
+no `; abv` line.
+
+That is a same-command, same-host comparison against a COMMITTED population,
+not against a re-run baseline: the previously-solved set is the parity list
+minus the parity loss list, both committed at `9914a1c0e`. Five of the seven
+gains predate this lane, so read them as "the tree moved", not as this change's
+effect; the effect this change is entitled to claim is the two rows in the
+table above.
+
+The counters say why:
+
+| file | pairs scanned | index evaluations | eager Ackermann pairs |
+|---|---|---|---|
+| `_csplit-query-000018` | 73,970,610 → **4,096** | 147,940,030 → **1,106,432** | 4,226,892 → **0** |
+| `_lbracket-query-052` | 49,953,348 → **4,044** | 100,220,996 → **236,930** | 1,233,416 → **0** |
+| `_lbracket-query-000333` | 30,166,801 → **3,432** | 60,327,512 → **243,100** | 1,231,298 → **0** |
+| `arbiter_array_cex…` | 722,240 → **870** | 1,444,400 → **45,670** | 288,896 → **0** |
+| `fifo32ia04k08` | 2,416 → **16** | 4,832 → **304** | 4,832 → **0** |
+
+On `arbiter_array_cex…` and `fifo32ia04k08` the round count and the lemma
+count are **unchanged** (6 rounds / 31 lemmas and 2 rounds / 13 lemmas
+respectively) while the work behind them collapsed: that is the grouping
+behaving exactly as its equivalence argument says it must, on real input
+rather than on the fixture.
+
+## The next bottleneck, now visible
+
+With the scan out of the way the four `_csplit` files run **489 to 513**
+refinement rounds in the same 24 s and add almost exactly **one congruence
+lemma per round** (513 rounds / 512 lemmas on `_csplit-query-000018`, against
+36 rounds / 35 lemmas before). The refinement is not starved for candidate
+pairs any more; it finds one violation per candidate model and pays a full
+scalar re-solve for each. That is a lemma-throughput question — how many
+lemmas one round is allowed to learn from one model — and it is the next thing
+to measure on this division, not another scan cost.
+
 ## Bounds this division reaches, and their registry status
 
 Every one of these fired or was reached in this measurement. None of them was in
