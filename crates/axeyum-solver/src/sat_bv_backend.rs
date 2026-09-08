@@ -1106,11 +1106,23 @@ const INPROCESS_MAX_CLAUSES: usize = 16_000_000;
 /// Exceeding it is **not** a silent downgrade: the check falls back to the
 /// reduced formula and says so through
 /// `unsat_proof_checked_against_reduced` + `unsat_proof_reduced_reason = 2`,
-/// with the step count that would have been needed. The streaming route past
-/// this ceiling is `ReductionLink::lifting_sink` into a file plus
-/// `check_drat_backward_reader`; it is not wired here because nothing on the
-/// shipping `QF_BV` path has yet produced a prefix near the bound (measured
-/// max on the parity corpus is four orders of magnitude below it).
+/// with the step count that would have been needed.
+///
+/// **The headroom is thin and the number is measured, not assumed.** Over the
+/// 200-file `QF_BV` parity list on 2026-09-08 (117 `unsat`, every one checked
+/// against the original) the prefix was a median of 658 steps, p90 71,881, and
+/// a **maximum of 1,971,102** — so the cap clears the worst observed instance
+/// by only **4.06x**, not by the orders of magnitude a reader might assume from
+/// its size. Two things follow. A larger corpus can be expected to cross it,
+/// which is the intended signal to wire the streaming route
+/// (`ReductionLink::lifting_sink` into a `TextProofSink`, checked by
+/// `check_drat_backward_reader`) rather than to raise the constant. And the
+/// peak is about **twice** what the step count suggests, because
+/// `check_unsat` clones the stored prefix into the concatenation — the cap is
+/// on steps, and the allocation it is standing in for is roughly
+/// `2 x steps x (32 + 8 x literals-per-clause)` bytes.
+///
+/// See `docs/research/03-measurements/inprocessed-unsat-proof-coverage-2026-09-08.md`.
 const MAX_LINKED_PROOF_STEPS: usize = 8_000_000;
 
 /// XOR-propagation admission bound. Unlike subsumption/BVE, `xor_propagate` runs

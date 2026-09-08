@@ -186,15 +186,13 @@ impl ReductionLink {
     /// worse.
     pub fn record<I: IntoIterator<Item = DratStep>>(&mut self, steps: I) {
         for step in steps {
-            match self.lift_step(&step) {
-                Some(lifted) => self.prefix.push(lifted),
-                None => {
-                    self.mark_unjustified(
-                        "a recorded step named a variable outside the composed renaming",
-                    );
-                    return;
-                }
-            }
+            let Some(lifted) = self.lift_step(&step) else {
+                self.mark_unjustified(
+                    "a recorded step named a variable outside the composed renaming",
+                );
+                return;
+            };
+            self.prefix.push(lifted);
         }
     }
 
@@ -326,10 +324,10 @@ impl ReductionLink {
     ) -> LinkedProofCheck {
         let total = self.prefix.len().saturating_add(search_proof.len());
         if let Some(reason) = self.unjustified.clone() {
-            return self.check_reduced(reduced, search_proof, ReducedReason::Unjustified(reason));
+            return Self::check_reduced(reduced, search_proof, ReducedReason::Unjustified(reason));
         }
         if total > max_total_steps {
-            return self.check_reduced(
+            return Self::check_reduced(
                 reduced,
                 search_proof,
                 ReducedReason::OverBudget {
@@ -347,7 +345,7 @@ impl ReductionLink {
                 // the link disagree about the formula. Fall back rather than
                 // check a proof we know is mistranslated.
                 let bad = out_of_range_var(self, step).unwrap_or(usize::MAX);
-                return self.check_reduced(
+                return Self::check_reduced(
                     reduced,
                     search_proof,
                     ReducedReason::RenamingOutOfRange(bad),
@@ -371,8 +369,12 @@ impl ReductionLink {
 
     /// The fallback half of [`Self::check_unsat`]: check the search's own proof
     /// against the formula it was produced from, and say so.
+    /// Takes no `self` on purpose: the fallback checks the search's own proof
+    /// against the formula it was produced from, so it must not consult the
+    /// link. Making that a fact of the signature means a future edit cannot
+    /// quietly let a broken link contribute to a check that claims not to use
+    /// it.
     fn check_reduced(
-        &self,
         reduced: &CnfFormula,
         search_proof: &[DratStep],
         reason: ReducedReason,

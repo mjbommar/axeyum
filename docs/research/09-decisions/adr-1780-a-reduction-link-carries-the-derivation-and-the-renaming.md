@@ -91,8 +91,13 @@ on exactly the instances where inprocessing pays. Over the bound the check
 falls back and reports `unsat_proof_reduced_reason = 2` with the step count it
 would have needed. The streaming route past it already exists — a search
 writing through `ReductionLink::lifting_sink` into a `TextProofSink`, checked
-by `check_drat_backward_reader` — and is deliberately not wired, because
-nothing measured on the shipping `QF_BV` path has come near the bound.
+by `check_drat_backward_reader` — and is deliberately not wired. **The headroom
+is thinner than the constant suggests**: over the 200-file `QF_BV` parity list
+the largest prefix was 1,971,102 steps, so the cap clears the worst observed
+instance by 4.06x, and the concatenation's peak allocation is about twice the
+step count implies because `check_unsat` clones the stored prefix. A larger
+corpus should be expected to cross it, and the right response is to wire the
+streaming route, not to raise the constant.
 
 **6. `cnf_inprocessing` stays OFF.** This ADR removes the certificate blocker;
 it does not spend it. The flag is measured as not a net win at a 24 s budget
