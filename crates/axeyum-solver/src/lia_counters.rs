@@ -432,10 +432,10 @@ impl LiaCountersMirror {
     /// Stores `counters`, overwriting the previous flush and bumping the flush
     /// count. A poisoned lock is recovered rather than propagated: telemetry
     /// must never turn one panic into two.
-    fn store(&self, counters: LiaCounters) {
+    fn store(&self, counters: &LiaCounters) {
         let mut slot = self.slot.lock().unwrap_or_else(PoisonError::into_inner);
         let flushes = slot.map_or(0, |(_, n)| n).saturating_add(1);
-        *slot = Some((counters, flushes));
+        *slot = Some((*counters, flushes));
     }
 
     /// The most recent flush and the flush count, readable from any thread at
@@ -656,8 +656,16 @@ fn record(group: LiaCounterGroup, f: impl FnOnce(&mut LiaCounters)) {
         c.set(next);
         next
     });
-    if records.is_multiple_of(LIVE_MIRROR_RECORDS) {
-        mirror_lia_counters(counters);
+    // The FIRST record flushes too, not only every `LIVE_MIRROR_RECORDS`-th.
+    // Without it a query killed after fewer than 1,024 recordings mirrors
+    // nothing, and the watchdog path prints no `; lia` line at all — which is
+    // the same output as a query that never touched the integer routes. Two
+    // different facts, one token. Measured 2026-09-08 on the 27 `QF_LIA`
+    // losses: 8 took the watchdog path and 7 printed no `; lia` line, and only
+    // the flush at record 1 makes "the routes were never reached" separable
+    // from "they were reached and the cadence had not come round".
+    if records == 1 || records.is_multiple_of(LIVE_MIRROR_RECORDS) {
+        mirror_lia_counters(&counters);
     }
 }
 
@@ -668,7 +676,7 @@ fn record(group: LiaCounterGroup, f: impl FnOnce(&mut LiaCounters)) {
 /// `crate::live_instruments::publish_live` uses it: this is telemetry reached
 /// from deep inside a search, and a re-entrant flush (which no current call
 /// path produces) must drop the reading, never panic mid-solve.
-fn mirror_lia_counters(counters: LiaCounters) {
+fn mirror_lia_counters(counters: &LiaCounters) {
     LIA_MIRROR.with(|c| {
         if let Ok(slot) = c.try_borrow()
             && let Some(mirror) = slot.as_ref()

@@ -2423,9 +2423,23 @@ std::thread_local! {
 /// a loop takes the shared lock once, not once per iteration.
 #[derive(Debug, Default)]
 pub struct ConfigTraceMirror {
-    /// `(consulted keys, crossed bounds)`, behind one lock so a reader cannot
-    /// observe a crossing whose key is not yet in the consulted set.
-    state: Mutex<(BTreeSet<&'static str>, BTreeMap<&'static str, (u64, u64)>)>,
+    /// Both sets under one lock; see [`ConfigTraceState`].
+    state: Mutex<ConfigTraceState>,
+}
+
+/// The two sets a [`ConfigTraceMirror`] holds, behind one lock so a reader
+/// cannot observe a crossing whose key is not yet in the consulted set.
+///
+/// A named struct rather than the tuple this started as: the tuple tripped
+/// `clippy::type_complexity`, and naming the halves is the fix that also makes
+/// that invariant readable at the field.
+#[derive(Debug, Default)]
+struct ConfigTraceState {
+    /// Every governing key looked at, mirroring [`CONSULTED`].
+    consulted: BTreeSet<&'static str>,
+    /// Every bound crossed, with the observed quantity and the bound it
+    /// crossed, mirroring [`CROSSED`].
+    crossed: BTreeMap<&'static str, (u64, u64)>,
 }
 
 impl ConfigTraceMirror {
@@ -2433,15 +2447,15 @@ impl ConfigTraceMirror {
     /// propagated: telemetry must never turn one panic into two.
     fn note_consulted(&self, key: &'static str) {
         let mut state = self.state.lock().unwrap_or_else(PoisonError::into_inner);
-        state.0.insert(key);
+        state.consulted.insert(key);
     }
 
     /// Records `key` as crossed at `observed` against `bound`, keeping the
     /// first crossing exactly as [`CROSSED`] does.
     fn note_crossed(&self, key: &'static str, observed: u64, bound: u64) {
         let mut state = self.state.lock().unwrap_or_else(PoisonError::into_inner);
-        state.0.insert(key);
-        state.1.entry(key).or_insert((observed, bound));
+        state.consulted.insert(key);
+        state.crossed.entry(key).or_insert((observed, bound));
     }
 
     /// The consulted keys and crossed bounds accumulated so far, readable from
@@ -2450,8 +2464,12 @@ impl ConfigTraceMirror {
     pub fn sample(&self) -> (Vec<&'static str>, Vec<(&'static str, u64, u64)>) {
         let state = self.state.lock().unwrap_or_else(PoisonError::into_inner);
         (
-            state.0.iter().copied().collect(),
-            state.1.iter().map(|(k, (o, b))| (*k, *o, *b)).collect(),
+            state.consulted.iter().copied().collect(),
+            state
+                .crossed
+                .iter()
+                .map(|(k, (o, b))| (*k, *o, *b))
+                .collect(),
         )
     }
 }

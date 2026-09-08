@@ -429,6 +429,12 @@ pub(crate) fn record_entry(which: LazySmtLoop, atoms: u64) {
         }
         c.atoms = c.atoms.saturating_add(atoms);
     });
+    // The entry flushes as well as the rounds. A query killed inside the FIRST
+    // round mirrors nothing otherwise, so `entered-no-rounds` — the reading
+    // invented for exactly that state — would never appear on the path it was
+    // invented for, and the watchdog would print no `; lazy-smt` line at all:
+    // indistinguishable from a query that never reached the route.
+    flush();
 }
 
 /// The outcome of one half of a round, kept as an enum so a recording site

@@ -716,6 +716,57 @@ fn partial_line(line: &str) -> String {
     )
 }
 
+/// The `sat-bv` lines a partial reading prints: the stage the check was inside,
+/// then its stage timings if it got far enough to have any.
+///
+/// # Why the stage line is never omitted
+///
+/// [`axeyum_solver::BvLayerStats`] defaults an absent stage counter to
+/// `Duration::ZERO`. On a completed check that is right — a stage that ran and
+/// cost nothing measurable really is zero. On a check killed mid-pipeline it is
+/// a lie: `solve_ms=0` from a check still inside bit-blasting says nothing
+/// whatever about the SAT search, and a consumer that read it as a measurement
+/// would conclude the search was free. `pending=` names exactly the fields that
+/// are NOT REACHED rather than measured, and `pending=none` says every stage
+/// ran.
+///
+/// Split out of [`watchdog_trace_lines`] because that function had grown past
+/// the line limit — and because this block is the one part of it carrying a
+/// rule rather than a lookup.
+fn partial_bv_lines(reading: &axeyum_solver::LiveBvReading) -> Vec<String> {
+    let mut lines = Vec::new();
+    if let Some(stage) = reading.stage {
+        let pending = stage.pending();
+        let pending = if pending.is_empty() {
+            "none".to_owned()
+        } else {
+            pending
+                .iter()
+                .map(|s| s.name())
+                .collect::<Vec<_>>()
+                .join(",")
+        };
+        lines.push(format!(
+            "; partial bv-stage in={} pending={pending}",
+            stage.name()
+        ));
+    }
+    match &reading.stats {
+        Some(stats) => lines.push(partial_line(&bv_layer_report_line(stats))),
+        // Killed before the CNF encoding published the counters that identify a
+        // `sat-bv` run. The stage line above is then the whole reading, and
+        // saying so is the point: an absent `; bv-layer` line beside a
+        // `; partial bv-stage in=bit_blast` one cannot be misread as a pipeline
+        // that cost nothing.
+        None => lines.push(
+            "; partial bv-layer unavailable: killed before the CNF encoding published \
+             aig_nodes/cnf_variables; the bv-stage line above is the whole reading"
+                .to_owned(),
+        ),
+    }
+    lines
+}
+
 /// The `--trace` lines a watchdog timeout prints: whatever the instruments
 /// mirrored onto `board` before the kill, each labelled partial, plus an
 /// `unavailable` line for whichever of the two headline instruments mirrored
@@ -783,41 +834,7 @@ fn watchdog_trace_lines(trace_mode: bool, board: &LiveInstruments, reason: &str)
         }
     }
     if let Some(bv) = live_bv_layer_stats(board) {
-        // The STAGE line comes first and is never omitted, because it is what
-        // makes the numbers below readable. `BvLayerStats` defaults an absent
-        // stage counter to `Duration::ZERO`, which on a completed check is
-        // right and on a killed one is a lie: `solve_ms=0` from a check still
-        // inside bit-blasting says nothing about the SAT search. `pending=`
-        // names the fields that are NOT REACHED rather than measured, and
-        // `pending=none` says every stage ran.
-        if let Some(stage) = bv.value.stage {
-            let pending = stage.pending();
-            let pending = if pending.is_empty() {
-                "none".to_owned()
-            } else {
-                pending
-                    .iter()
-                    .map(|s| s.name())
-                    .collect::<Vec<_>>()
-                    .join(",")
-            };
-            lines.push(format!(
-                "; partial bv-stage in={} pending={pending}",
-                stage.name()
-            ));
-        }
-        match &bv.value.stats {
-            Some(stats) => lines.push(partial_line(&bv_layer_report_line(stats))),
-            // Killed before the CNF encoding published the counters that
-            // identify a `sat-bv` run. The stage line above is then the whole
-            // reading, and saying so is the point: an absent `; bv-layer` line
-            // next to a `; partial bv-stage in=bit_blast` one cannot be misread
-            // as a pipeline that cost nothing.
-            None => lines.push(
-                "; partial bv-layer unavailable: killed before the CNF encoding published                  aig_nodes/cnf_variables; the bv-stage line above is the whole reading"
-                    .to_owned(),
-            ),
-        }
+        lines.extend(partial_bv_lines(&bv.value));
         note("bv-layer", bv.sampled);
     }
     if let Some(theory) = live_theory_layer_stats(board) {
