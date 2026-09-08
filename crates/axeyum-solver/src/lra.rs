@@ -111,19 +111,58 @@ pub fn check_with_lra_within(
     assertions: &[TermId],
     deadline: Option<Instant>,
 ) -> Result<CheckResult, SolverError> {
-    match decide_within(arena, assertions, deadline)? {
-        Decision::Sat(model) => Ok(CheckResult::Sat(model)),
-        Decision::UnsatFarkas { .. } | Decision::UnsatTrivial(_) => Ok(CheckResult::Unsat),
-        Decision::TimedOut => Ok(CheckResult::Unknown(UnknownReason {
-            kind: UnknownKind::ResourceLimit,
-            detail: "lra: Fourier–Motzkin elimination exceeded the wall-clock / size budget"
-                .to_owned(),
-        })),
-        Decision::Incomplete(detail) => Ok(CheckResult::Unknown(UnknownReason {
-            kind: UnknownKind::Incomplete,
-            detail,
-        })),
-    }
+    Ok(check_with_lra_within_certified(arena, assertions, deadline)?.0)
+}
+
+/// [`check_with_lra_within`] that also hands back the Farkas certificate the
+/// decision **already built**, instead of dropping it.
+///
+/// `Some(certificate)` accompanies exactly the `unsat` verdicts that came from a
+/// linear refutation; a trivially-`false` assertion yields `unsat` with `None`,
+/// because no linear refutation of it exists. The certificate is the one
+/// [`decide_within`] self-checked before returning, so it is already verified —
+/// but see [`crate::dpll_t`], whose reuse path re-verifies it against the
+/// literal set it is applied to, because "this certificate verifies" and "this
+/// certificate refutes *that* system" are different statements.
+///
+/// # Why this exists
+///
+/// Measured 2026-09-08 on the 22 `QF_LRA` files bound by the lazy-SMT route
+/// (`bench-results/watchdog-blind-files-20260908/qf_lra_blind22/`): the
+/// refinement loop decided each refuted cube here and then had
+/// `lra_farkas_certificate` **decide the identical literal set a second time**
+/// to recover the multipliers, at 48.6% of the whole population's wall clock.
+/// A `CheckResult` cannot carry the evidence, so the loop could not do anything
+/// else; this signature can.
+///
+/// # Errors
+///
+/// Same as [`check_with_lra`].
+pub(crate) fn check_with_lra_within_certified(
+    arena: &TermArena,
+    assertions: &[TermId],
+    deadline: Option<Instant>,
+) -> Result<(CheckResult, Option<FarkasCertificate>), SolverError> {
+    Ok(match decide_within(arena, assertions, deadline)? {
+        Decision::Sat(model) => (CheckResult::Sat(model), None),
+        Decision::UnsatFarkas { certificate, .. } => (CheckResult::Unsat, Some(certificate)),
+        Decision::UnsatTrivial(_) => (CheckResult::Unsat, None),
+        Decision::TimedOut => (
+            CheckResult::Unknown(UnknownReason {
+                kind: UnknownKind::ResourceLimit,
+                detail: "lra: Fourier–Motzkin elimination exceeded the wall-clock / size budget"
+                    .to_owned(),
+            }),
+            None,
+        ),
+        Decision::Incomplete(detail) => (
+            CheckResult::Unknown(UnknownReason {
+                kind: UnknownKind::Incomplete,
+                detail,
+            }),
+            None,
+        ),
+    })
 }
 
 /// Decides a conjunctive `QF_LRA` query and, on `unsat`, returns the Farkas
@@ -145,7 +184,29 @@ pub fn lra_farkas_certificate(
     arena: &TermArena,
     assertions: &[TermId],
 ) -> Result<Option<FarkasCertificate>, SolverError> {
-    match decide(arena, assertions)? {
+    lra_farkas_certificate_within(arena, assertions, None)
+}
+
+/// [`lra_farkas_certificate`] bounded by an absolute `deadline`.
+///
+/// The unbounded form is a whole `QF_LRA` decision with no interruption point,
+/// so calling it from inside a budgeted search means the budget is not a
+/// budget: the lazy-SMT refinement loop checked its deadline once per round and
+/// then entered an unbounded Fourier–Motzkin elimination to recover the
+/// multipliers. `deadline == None` is exactly [`lra_farkas_certificate`], and a
+/// deadline that fires yields `Ok(None)` — the caller's documented "no
+/// certificate available" case, which is sound because it only widens the
+/// blocking clause.
+///
+/// # Errors
+///
+/// Same as [`lra_farkas_certificate`].
+pub(crate) fn lra_farkas_certificate_within(
+    arena: &TermArena,
+    assertions: &[TermId],
+    deadline: Option<Instant>,
+) -> Result<Option<FarkasCertificate>, SolverError> {
+    match decide_within(arena, assertions, deadline)? {
         Decision::UnsatFarkas { certificate, .. } => Ok(Some(certificate)),
         Decision::Sat(_)
         | Decision::UnsatTrivial(_)

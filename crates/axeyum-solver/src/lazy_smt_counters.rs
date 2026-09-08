@@ -170,6 +170,34 @@ pub struct LazySmtCounters {
     /// gives the mean skeleton width, which bounds how many rounds the loop can
     /// possibly need.
     pub atoms: u64,
+
+    /// Blocking clauses whose Farkas certificate came from the theory decision
+    /// that refuted the cube — no second LP.
+    ///
+    /// This and the three `cores_rederived_*` fields partition the
+    /// [`Self::blocking_clauses`] total exactly, so a reader can check the
+    /// accounting rather than take it on trust.
+    pub cores_reused: u64,
+    /// Re-derivations because the round carried **no** certificate: the cube was
+    /// refuted without a linear refutation (a literally-`false` literal), so
+    /// there was nothing to reuse.
+    pub cores_rederived_absent: u64,
+    /// Re-derivations because the carried certificate did not bind to the
+    /// literal set the core was requested for. Zero on every current call path
+    /// — the round hands over the certificate for the cube it just refuted —
+    /// and non-zero would mean a refactor moved the two apart, which is the
+    /// wrong-`unsat` shape this counter exists to make visible.
+    pub cores_rederived_stale: u64,
+    /// Re-derivations because the carried certificate failed its self-check on
+    /// the reuse path. A producer never returns an unverified certificate, so
+    /// this is a corruption tripwire and any non-zero reading is a defect.
+    pub cores_rederived_unverified: u64,
+    /// Conflicts blocked by the **whole** cube because no certificate lined up
+    /// one-to-one with the assignment (an equality atom splits into two
+    /// constraints, so the multiplier vector is longer than the assignment).
+    /// Sound but coarse: a wide blocking clause rules out fewer assignments, so
+    /// this is the counter that says the loop is learning weak lemmas.
+    pub cores_full_assignment: u64,
 }
 
 impl LazySmtCounters {
@@ -190,6 +218,20 @@ impl LazySmtCounters {
     #[must_use]
     pub fn rounds(&self) -> u64 {
         self.lra_rounds.saturating_add(self.nra_rounds)
+    }
+
+    /// Farkas certificates the core extraction had to derive a **second** time,
+    /// across all three reasons.
+    ///
+    /// The number this instrument was added to drive to zero: each one is a
+    /// whole extra `QF_LRA` decision on a literal set the round had just
+    /// decided. Read it against [`Self::cores_reused`] — a ratio, not a total,
+    /// since both scale with the round count.
+    #[must_use]
+    pub fn cores_rederived(&self) -> u64 {
+        self.cores_rederived_absent
+            .saturating_add(self.cores_rederived_stale)
+            .saturating_add(self.cores_rederived_unverified)
     }
 
     /// The loop cost this instrument accounts for: the propositional half plus
@@ -216,7 +258,9 @@ impl LazySmtCounters {
              skeleton_ms={} skeleton_sat={} skeleton_unsat={} skeleton_unknown={} \
              theory_ms={} theory_sat={} theory_unsat={} theory_unknown={} \
              core_ms={} blocking_clauses={} blocking_literals={} atoms={} \
-             accounted_ms={}",
+             cores_reused={} cores_rederived={} cores_rederived_absent={} \
+             cores_rederived_stale={} cores_rederived_unverified={} \
+             cores_full_assignment={} accounted_ms={}",
             self.reading().label(),
             self.lra_entries,
             self.lra_rounds,
@@ -234,6 +278,12 @@ impl LazySmtCounters {
             self.blocking_clauses,
             self.blocking_literals,
             self.atoms,
+            self.cores_reused,
+            self.cores_rederived(),
+            self.cores_rederived_absent,
+            self.cores_rederived_stale,
+            self.cores_rederived_unverified,
+            self.cores_full_assignment,
             self.accounted().as_millis(),
         )
     }
@@ -284,6 +334,11 @@ const fn zero_counters() -> LazySmtCounters {
         blocking_clauses: 0,
         blocking_literals: 0,
         atoms: 0,
+        cores_reused: 0,
+        cores_rederived_absent: 0,
+        cores_rederived_stale: 0,
+        cores_rederived_unverified: 0,
+        cores_full_assignment: 0,
     }
 }
 
@@ -504,6 +559,43 @@ pub(crate) fn record_theory(elapsed: Duration, outcome: RoundOutcome) {
         }
     });
     flush();
+}
+
+/// Where one conflict's Farkas certificate came from.
+///
+/// An enum rather than a `bool` because "we re-derived it" is three different
+/// statements with three different remedies, and the one that matters most —
+/// [`CoreSource::RederivedStale`] — is the shape a wrong `unsat` would take.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum CoreSource {
+    /// The certificate the round's own theory decision produced.
+    Reused,
+    /// The round carried no certificate (the cube was refuted trivially).
+    RederivedAbsent,
+    /// The carried certificate did not bind to the literal set it was asked
+    /// about, so it was rejected and rebuilt.
+    RederivedStale,
+    /// The carried certificate failed its self-check on the reuse path.
+    RederivedUnverified,
+}
+
+/// Where one conflict's certificate came from; see [`CoreSource`].
+pub(crate) fn record_core_source(source: CoreSource) {
+    record(|c| {
+        let field = match source {
+            CoreSource::Reused => &mut c.cores_reused,
+            CoreSource::RederivedAbsent => &mut c.cores_rederived_absent,
+            CoreSource::RederivedStale => &mut c.cores_rederived_stale,
+            CoreSource::RederivedUnverified => &mut c.cores_rederived_unverified,
+        };
+        *field = field.saturating_add(1);
+    });
+}
+
+/// One conflict blocked by the whole cube because no certificate lined up with
+/// the assignment.
+pub(crate) fn record_full_assignment_core() {
+    record(|c| c.cores_full_assignment = c.cores_full_assignment.saturating_add(1));
 }
 
 /// One blocking clause learned, with its literal count.

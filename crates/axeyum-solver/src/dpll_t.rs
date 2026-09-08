@@ -45,9 +45,12 @@ use web_time::Instant;
 
 use crate::backend::{CheckResult, SolverConfig, SolverError, UnknownKind, UnknownReason};
 use crate::combined::check_with_all_theories;
-use crate::lazy_smt_counters::{LazySmtLoop, RoundOutcome};
+use crate::lazy_smt_counters::{CoreSource, LazySmtLoop, RoundOutcome};
 use crate::lia::DEFAULT_INT_WIDTH;
-use crate::lra::{check_with_lra, check_with_lra_within, lra_farkas_certificate};
+use crate::lra::{
+    FarkasCertificate, check_with_lra, check_with_lra_within_certified,
+    lra_farkas_certificate_within,
+};
 use crate::model::Model;
 use crate::sat_bv_backend::SatBvBackend;
 
@@ -213,16 +216,24 @@ pub fn check_with_lra_dpll_within(
         }
 
         let theory_started = crate::lazy_smt_counters::enabled().then(Instant::now);
-        let theory_result = check_with_lra_within(arena, &theory_lits, deadline);
+        let theory_result = check_with_lra_within_certified(arena, &theory_lits, deadline);
         if let Some(started) = theory_started {
             let outcome = match &theory_result {
-                Ok(CheckResult::Sat(_)) => RoundOutcome::Sat,
-                Ok(CheckResult::Unsat) => RoundOutcome::Unsat,
-                Ok(CheckResult::Unknown(_)) | Err(_) => RoundOutcome::Unknown,
+                Ok((CheckResult::Sat(_), _)) => RoundOutcome::Sat,
+                Ok((CheckResult::Unsat, _)) => RoundOutcome::Unsat,
+                Ok((CheckResult::Unknown(_), _)) | Err(_) => RoundOutcome::Unknown,
             };
             crate::lazy_smt_counters::record_theory(started.elapsed(), outcome);
         }
-        match theory_result? {
+        // The certificate this decision built, bound to the conjunction it
+        // refutes. Kept rather than dropped: the core extraction below used to
+        // recover it by deciding `theory_lits` a second time.
+        let (verdict, evidence) = theory_result?;
+        let carried = evidence.map(|certificate| CarriedCertificate {
+            lits: theory_lits.clone(),
+            certificate,
+        });
+        match verdict {
             CheckResult::Sat(theory_model) => {
                 return finish_sat(arena, assertions, &ctx, &propositional, &theory_model);
             }
@@ -234,14 +245,20 @@ pub fn check_with_lra_dpll_within(
                 // core, not just this one). `theory_lits`, `assignment`, and the
                 // certificate atoms are all in `ctx.atoms` order, so multiplier
                 // index `i` is `assignment[i]`.
-                // Timed as its own stage: `conflict_core` re-solves the
-                // refuted conjunction for its Farkas multipliers, so this is a
-                // SECOND LP per round on top of the one the theory check above
-                // already paid for. Folding it into either neighbour would hide
-                // a cost centre that the 2026-09-08 measurement found holding
-                // about half of this route's wall clock.
+                // Still timed as its own stage. It no longer re-solves the
+                // refuted conjunction on this path — that SECOND LP per round
+                // is what the 2026-09-08 measurement found holding about half
+                // of this route's wall clock — but the stage has to keep its
+                // own clock for the reading to stay comparable across the fix,
+                // and for the re-derivation paths that survive.
                 let core_started = crate::lazy_smt_counters::enabled().then(Instant::now);
-                let core = conflict_core(arena, &theory_lits, &assignment)?;
+                let core = conflict_core(
+                    arena,
+                    &theory_lits,
+                    &assignment,
+                    carried.as_ref(),
+                    deadline,
+                )?;
                 let clause = block_clause(arena, &core)?;
                 crate::lazy_smt_counters::record_blocking(
                     core.len() as u64,
@@ -536,7 +553,15 @@ pub fn certify_lra_dpll_unsat(
             });
         }
 
-        match check_with_lra(arena, &theory_lits)? {
+        // Same reuse as the refinement loop above: the decision that refutes
+        // the cube is the only place the Farkas multipliers exist without a
+        // second `QF_LRA` solve.
+        let (verdict, evidence) = check_with_lra_within_certified(arena, &theory_lits, None)?;
+        let carried = evidence.map(|certificate| CarriedCertificate {
+            lits: theory_lits.clone(),
+            certificate,
+        });
+        match verdict {
             CheckResult::Sat(theory_model) => {
                 return match finish_sat(arena, assertions, &ctx, &propositional, &theory_model)? {
                     CheckResult::Sat(model) => Ok(LraDpllOutcome::Sat(model)),
@@ -546,7 +571,8 @@ pub fn certify_lra_dpll_unsat(
             CheckResult::Unsat => {
                 // Record the infeasible core as a lemma (the same minimized core
                 // used for the blocking clause), then block it.
-                let core = conflict_core(arena, &theory_lits, &assignment)?;
+                let core =
+                    conflict_core(arena, &theory_lits, &assignment, carried.as_ref(), None)?;
                 let mut lemma = Vec::with_capacity(core.len());
                 for &(prop, truth) in &core {
                     let atom_term = ctx
@@ -808,6 +834,36 @@ fn block_clause(
     clause.ok_or_else(|| SolverError::Backend("empty theory conflict".to_owned()))
 }
 
+/// A Farkas certificate together with **the literal set it refutes**.
+///
+/// The two halves travel as one value because the certificate alone cannot say
+/// what it is a refutation *of*: [`FarkasCertificate::verify`] proves the
+/// multipliers collapse its own atoms to a contradiction, and that stays true
+/// after the surrounding cube has changed. Applying those multipliers to a
+/// different assignment would name a "core" that is not infeasible, and the
+/// blocking clause built from it would rule out satisfiable assignments — a
+/// wrong `unsat`, not a slow one. So reuse is gated on
+/// [`CarriedCertificate::binds_to`], never on the certificate being present.
+struct CarriedCertificate {
+    /// The conjunction handed to the theory decision that produced
+    /// [`Self::certificate`], in that order. `TermId`s are interned in one
+    /// arena, so slice equality is term equality.
+    lits: Vec<TermId>,
+    /// The refutation that decision self-checked before returning it.
+    certificate: FarkasCertificate,
+}
+
+impl CarriedCertificate {
+    /// Whether this certificate is a refutation of `theory_lits` — i.e. whether
+    /// it came from deciding exactly this conjunction, in this order.
+    ///
+    /// Order matters as well as membership: the multipliers are positional, and
+    /// `conflict_core` reads multiplier `i` as assignment entry `i`.
+    fn binds_to(&self, theory_lits: &[TermId]) -> bool {
+        self.lits == theory_lits
+    }
+}
+
 /// Returns the sub-assignment forming the infeasible core of a theory conflict.
 ///
 /// The Farkas certificate's nonzero-multiplier atoms are exactly the literals
@@ -816,12 +872,52 @@ fn block_clause(
 /// assignment. Falls back to the full assignment when no certificate is
 /// available or its shape does not line up one-to-one with the literals — still
 /// sound, since a larger blocking clause only rules out fewer assignments.
+///
+/// # The certificate is the round's own, or it is rebuilt
+///
+/// `carried` is the certificate the theory decision that refuted this very cube
+/// already produced. Before this parameter existed, that certificate was
+/// dropped on the floor by `check_with_lra_within`'s `CheckResult` and this
+/// function re-decided the identical literal set to get it back — 48.6% of the
+/// wall clock across the 22 `QF_LRA` files bound by this route, measured
+/// 2026-09-08. Reuse is admitted only when the certificate **binds to**
+/// `theory_lits` and re-verifies here, on the path that consumes it; anything
+/// else re-derives, and the reason is counted.
+///
+/// The re-derivation now takes `deadline`. The unbounded form is a whole
+/// `QF_LRA` decision with no interruption point, so a loop that checks its
+/// deadline once per round could still spend unbounded time inside one round.
 fn conflict_core(
     arena: &TermArena,
     theory_lits: &[TermId],
     assignment: &[(SymbolId, bool)],
+    carried: Option<&CarriedCertificate>,
+    deadline: Option<Instant>,
 ) -> Result<Vec<(SymbolId, bool)>, SolverError> {
-    if let Some(certificate) = lra_farkas_certificate(arena, theory_lits)?
+    // The reused certificate is re-verified HERE, not merely where it was
+    // built: a check that only ever runs on the producing path cannot fail on
+    // the consuming one, and the consuming one is what turns multipliers into a
+    // blocking clause.
+    let certificate = match carried {
+        Some(carried) if !carried.binds_to(theory_lits) => {
+            crate::lazy_smt_counters::record_core_source(CoreSource::RederivedStale);
+            lra_farkas_certificate_within(arena, theory_lits, deadline)?
+        }
+        Some(carried) if !carried.certificate.verify() => {
+            crate::lazy_smt_counters::record_core_source(CoreSource::RederivedUnverified);
+            lra_farkas_certificate_within(arena, theory_lits, deadline)?
+        }
+        Some(carried) => {
+            crate::lazy_smt_counters::record_core_source(CoreSource::Reused);
+            Some(carried.certificate.clone())
+        }
+        None => {
+            crate::lazy_smt_counters::record_core_source(CoreSource::RederivedAbsent);
+            lra_farkas_certificate_within(arena, theory_lits, deadline)?
+        }
+    };
+
+    if let Some(certificate) = certificate
         && certificate.multipliers.len() == assignment.len()
     {
         let core: Vec<(SymbolId, bool)> = assignment
@@ -834,6 +930,7 @@ fn conflict_core(
             return Ok(core);
         }
     }
+    crate::lazy_smt_counters::record_full_assignment_core();
     Ok(assignment.to_vec())
 }
 
@@ -968,5 +1065,204 @@ impl Abstractor {
         self.props.insert(prop);
         self.atoms.push(AtomBinding { prop, term });
         prop
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{CarriedCertificate, conflict_core};
+    use axeyum_ir::{Rational, Sort, SymbolId, TermArena, TermId};
+
+    use crate::lazy_smt_counters::{LazySmtCountersGuard, last_lazy_smt_counters};
+    use crate::lra::{check_with_lra, check_with_lra_within_certified};
+    use crate::{CheckResult, SolverError};
+
+    /// A carried certificate for `lits`, obtained the way the refinement loop
+    /// obtains it: from the theory decision that refutes them.
+    fn carry(arena: &TermArena, lits: &[TermId]) -> CarriedCertificate {
+        let (verdict, evidence) =
+            check_with_lra_within_certified(arena, lits, None).expect("decides");
+        assert!(
+            matches!(verdict, CheckResult::Unsat),
+            "fixture must be unsat"
+        );
+        CarriedCertificate {
+            lits: lits.to_vec(),
+            certificate: evidence.expect("a linear refutation carries a certificate"),
+        }
+    }
+
+    /// Whether the sub-conjunction named by `core` is genuinely unsatisfiable —
+    /// the property a blocking clause built from that core depends on.
+    fn core_is_infeasible(
+        arena: &TermArena,
+        lits: &[TermId],
+        assignment: &[(SymbolId, bool)],
+        core: &[(SymbolId, bool)],
+    ) -> Result<bool, SolverError> {
+        let selected: Vec<TermId> = assignment
+            .iter()
+            .zip(lits)
+            .filter(|(entry, _)| core.contains(entry))
+            .map(|(_, &lit)| lit)
+            .collect();
+        Ok(matches!(
+            check_with_lra(arena, &selected)?,
+            CheckResult::Unsat
+        ))
+    }
+
+    /// `n` fresh `true` propositions, one per literal of a cube.
+    fn props(arena: &mut TermArena, prefix: &str, n: usize) -> Vec<(SymbolId, bool)> {
+        (0..n)
+            .map(|i| {
+                (
+                    arena.declare(&format!("{prefix}{i}"), Sort::Bool).unwrap(),
+                    true,
+                )
+            })
+            .collect()
+    }
+
+    /// **The staleness guard.** A Farkas certificate keeps verifying after the
+    /// cube it refutes has changed — `verify()` is a statement about the
+    /// certificate's own atoms, not about the literals it is being applied to.
+    /// So reuse must be gated on the certificate BINDING to the literal set, and
+    /// this test is what says that gate is load-bearing.
+    ///
+    /// Both systems have three literals, so the length check
+    /// `multipliers.len() == assignment.len()` cannot catch the substitution;
+    /// the multiplier vectors differ only in WHICH entry is zero. Applying the
+    /// donor's `(nonzero, nonzero, 0)` to the recipient names `{p0, p1}` —
+    /// `y < 0` and `x > 0`, which are jointly SATISFIABLE. A blocking clause
+    /// built from that would rule out satisfiable assignments: a wrong `unsat`.
+    ///
+    /// Mutation control: make reuse unconditional in `conflict_core` (drop the
+    /// `binds_to` arm) and exactly this test dies.
+    #[test]
+    fn a_certificate_from_a_different_literal_set_is_rejected_and_rebuilt() {
+        let mut arena = TermArena::new();
+        let x = arena.real_var("x").unwrap();
+        let y = arena.real_var("y").unwrap();
+        let zero = arena.real_const(Rational::integer(0));
+        let seven = arena.real_const(Rational::integer(7));
+
+        let x_lt_0 = arena.real_lt(x, zero).unwrap();
+        let x_gt_0 = arena.real_lt(zero, x).unwrap();
+        let y_lt_0 = arena.real_lt(y, zero).unwrap();
+        let y_gt_7 = arena.real_lt(seven, y).unwrap();
+
+        // Donor cube: refuted by literals 0 and 1; literal 2 is a spectator, so
+        // its multiplier is zero and the donor core is `{0, 1}`.
+        let donor = vec![x_lt_0, x_gt_0, y_gt_7];
+        // Recipient cube: refuted by literals 0 and 2. Same length, different
+        // infeasible pair.
+        let recipient = vec![y_lt_0, x_gt_0, y_gt_7];
+
+        let assignment = props(&mut arena, "p", 3);
+
+        let carried = carry(&arena, &donor);
+        assert_eq!(
+            carried.certificate.multipliers.len(),
+            assignment.len(),
+            "the fixture is only adversarial if the length check cannot reject it"
+        );
+        assert!(
+            carried.certificate.multipliers[2].is_zero(),
+            "the donor must leave a spectator, or its core is the whole cube and \
+             the substitution is invisible"
+        );
+        assert!(
+            carried.certificate.verify(),
+            "the stale certificate still self-verifies: that is exactly why \
+             `verify()` alone cannot gate reuse"
+        );
+
+        let core = conflict_core(&arena, &recipient, &assignment, Some(&carried), None)
+            .expect("core extraction decides");
+
+        // The property, stated over the recipient: whatever core comes back, the
+        // literals it names must actually be jointly unsatisfiable.
+        assert!(
+            core_is_infeasible(&arena, &recipient, &assignment, &core).expect("re-decides"),
+            "the returned core must refute the recipient cube; got {core:?}"
+        );
+        // And the identity, so a future change that returns the full assignment
+        // (sound but coarse) is still visible as a change.
+        assert_eq!(
+            core,
+            vec![assignment[0], assignment[2]],
+            "the rebuilt core is the recipient's own infeasible pair"
+        );
+    }
+
+    /// The reuse path is the one that runs on every real conflict, and it must
+    /// produce the same core the re-derivation would — otherwise the fix trades
+    /// a wrong answer for a fast one.
+    #[test]
+    fn a_bound_certificate_is_reused_and_gives_the_same_core_as_re_deriving() {
+        let mut arena = TermArena::new();
+        let x = arena.real_var("x").unwrap();
+        let y = arena.real_var("y").unwrap();
+        let zero = arena.real_const(Rational::integer(0));
+        let seven = arena.real_const(Rational::integer(7));
+
+        let lits = vec![
+            arena.real_lt(y, zero).unwrap(),
+            arena.real_lt(zero, x).unwrap(),
+            arena.real_lt(seven, y).unwrap(),
+        ];
+        let assignment = props(&mut arena, "q", 3);
+        let carried = carry(&arena, &lits);
+
+        let guard = LazySmtCountersGuard::enable();
+        let reused = conflict_core(&arena, &lits, &assignment, Some(&carried), None).unwrap();
+        let counters = last_lazy_smt_counters().expect("armed");
+        assert_eq!(counters.cores_reused, 1);
+        assert_eq!(
+            counters.cores_rederived(),
+            0,
+            "a certificate for this very cube must not be re-derived"
+        );
+        drop(guard);
+
+        let guard = LazySmtCountersGuard::enable();
+        let rederived = conflict_core(&arena, &lits, &assignment, None, None).unwrap();
+        let counters = last_lazy_smt_counters().expect("armed");
+        assert_eq!(counters.cores_reused, 0);
+        assert_eq!(counters.cores_rederived_absent, 1);
+        drop(guard);
+
+        assert_eq!(
+            reused, rederived,
+            "reuse must not change which literals are blocked"
+        );
+        assert_eq!(reused, vec![assignment[0], assignment[2]]);
+    }
+
+    /// A certificate that does not line up one-to-one with the assignment blocks
+    /// the whole cube, and that coarsening has its own counter rather than being
+    /// invisible inside the reuse total.
+    #[test]
+    fn a_certificate_that_does_not_line_up_blocks_the_whole_cube() {
+        let mut arena = TermArena::new();
+        let x = arena.real_var("x").unwrap();
+        let zero = arena.real_const(Rational::integer(0));
+        let lits = vec![
+            arena.real_lt(x, zero).unwrap(),
+            arena.real_lt(zero, x).unwrap(),
+        ];
+        // One proposition too few: the multiplier vector cannot be read
+        // positionally against this assignment.
+        let assignment = props(&mut arena, "r", 1);
+
+        let _guard = LazySmtCountersGuard::enable();
+        let core = conflict_core(&arena, &lits, &assignment, None, None).unwrap();
+        let counters = last_lazy_smt_counters().expect("armed");
+        assert_eq!(counters.cores_rederived_absent, 1);
+        assert_eq!(counters.cores_rederived_stale, 0);
+        assert_eq!(counters.cores_reused, 0);
+        assert_eq!(counters.cores_full_assignment, 1);
+        assert_eq!(core, assignment);
     }
 }
