@@ -76,6 +76,71 @@ def main():
     files = sorted(next(iter(populations)))
     print(f"\npopulation: {len(files)} files, identical across {len(arms)} arms\n")
 
+    # SOUNDNESS FIRST, BEFORE ANY PERFORMANCE TABLE.
+    #
+    # Inprocessing changes the formula the SAT core decides, and a `sat` model
+    # comes back through a reconstruction stack. A performance report over
+    # verdicts nobody cross-checked would be measuring how fast we get answers
+    # of unknown correctness. Every benchmark that declares `(set-info :status
+    # ...)` is ground truth; a disagreement is an immediate FAIL, not a
+    # percentage, exactly as the parity protocol requires.
+    #
+    # A file with no declared status is NOT dropped — it is counted as
+    # unverifiable and reported, so "we checked everything we could" and "we
+    # checked everything" stay distinguishable.
+    print("## declared-`:status` cross-check (a disagreement is a FAIL, not a footnote)")
+    print("| arm | decided | agreed | DISAGREED | no declared status |")
+    print("|---|---:|---:|---:|---:|")
+    disagreements = []
+    declared = {}
+    for f in files:
+        try:
+            with open(f, encoding="utf-8", errors="replace") as handle:
+                for line in handle:
+                    if ":status" in line:
+                        for word in ("unsat", "sat", "unknown"):
+                            if word in line.split(":status", 1)[1]:
+                                declared[f] = word
+                                break
+                        break
+        except OSError:
+            pass
+    for arm, rows in arms.items():
+        decided = agreed = disagreed = nostatus = 0
+        for f in files:
+            v = rows[f]["verdict"]
+            if v not in ("sat", "unsat"):
+                continue
+            decided += 1
+            want = declared.get(f)
+            if want is None or want == "unknown":
+                nostatus += 1
+            elif want == v:
+                agreed += 1
+            else:
+                disagreed += 1
+                disagreements.append((arm, f, want, v))
+        print(f"| {arm} | {decided} | {agreed} | {disagreed} | {nostatus} |")
+    if disagreements:
+        print("\n**FAIL — a verdict contradicts the benchmark's declared status:**")
+        for arm, f, want, got in disagreements:
+            print(f"  {arm}: {f} declared {want}, we answered {got}")
+
+    # Cross-arm agreement is the second check, and it is independent of the
+    # first: it catches a wrong verdict on a file that declares no status.
+    if len(arms) > 1:
+        cross = []
+        arm_names = list(arms)
+        for f in files:
+            verdicts = {
+                arms[a][f]["verdict"] for a in arm_names if arms[a][f]["verdict"] in ("sat", "unsat")
+            }
+            if len(verdicts) > 1:
+                cross.append((f, {a: arms[a][f]["verdict"] for a in arm_names}))
+        print(f"\ncross-arm verdict conflicts: {len(cross)}")
+        for f, v in cross:
+            print(f"  CONFLICT {f}: {v}")
+
     budgets = [1000, 3000, 6000, 12000, 24000, 60000, 120000]
     print("## solved count vs budget (ms). `at-budget` is the run's own budget.")
     header = "| arm | " + " | ".join(f"{b // 1000}s" for b in budgets) + " | run budget |"
