@@ -6574,6 +6574,18 @@ after every edit in this lane (re-run after each file, not just at the end).
 No marker added here reds the gate; every stale correction was verified
 against the fresh authority BEFORE editing, never after.
 
+**Mathematical operating system roadmap (`TODO`, mathematical-operating-system, 2026-09-07).**
+The [research roadmap](docs/plan/mathematical-operating-system-roadmap-2026-09-07.md)
+is documented against `a103b3db3`. It derives an IVT application/composition pilot
+from MMT, Math-in-the-Middle, Ωmega, Theorema, IMPS, and LeanAgent, within
+existing L0–L4 order. Next: MOS-0 binds statement, context, and receipt identities;
+MOS-1 checks applications and bridges before MOS-2 may rank them. Current
+metadata matching is not mathematical applicability. No engine implementation,
+new dispatcher authority, or new-theorem credit is claimed by this planning work.
+
+A software follow-on binds executable Rust contracts and source semantics to
+reusable evidence, with Verus, SAW, Why3, and AutoVerus as additional precedents.
+
 **Your lane's block (`landed`, graph-carrier, 2026-09-04).** Roadmap **W1-6**,
 **W2-11**, **W2-12**; **ADR-1608**. The combinatorics reviewer's largest gap is
 closed: `Nat.Graph` exists, `R(3,3) = 6` is a kernel theorem with both halves
