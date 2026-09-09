@@ -1,0 +1,5 @@
+file	arm	verdict	wall_ms	bound_by	bound_ms	total_ms	decided_by
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_SLIA/20180523-Reynolds/pyex/peterc-pyex-doc-cav17-zz/httplib2/httplib2-entry-disposition/19b9f9b1c0e8755567fc4cbac3df2e979b5a4b35fa5a3cd57dd17639.smt2	on	sat	24336	fd:parse	70	158	int-blast-ladder
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_SLIA/20180523-Reynolds/pyex/peterc-pyex-doc-cav17-zz/httplib2/httplib2-entry-disposition/2424fcbfb39930f8020af9b8e61b7472852e5aed1b06d72eeaeeba27.smt2	on	sat	18829	fd:source-string	18752	18762	fd:source-string
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_SLIA/20180523-Reynolds/pyex/peterc-pyex-doc-cav17-zz/httplib2/httplib2-entry-disposition/2f86026bdb894bf239848c9012b54ce6eecda8dab5ba9c0ace22aa8a.smt2	on	sat	24339	fd:parse	75	166	int-blast-ladder
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_SLIA/20180523-Reynolds/pyex/peterc-pyex-doc-cav17-zz/httplib2/httplib2-entry-disposition/3ab99205fb43437813f1b0792dc037c825e18dc7dbbfd72769a661db.smt2	on	sat	24240	dl-online	18	47	int-blast-ladder

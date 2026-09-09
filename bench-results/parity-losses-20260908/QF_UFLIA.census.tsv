@@ -1,0 +1,59 @@
+file	division	class	sweep_verdict	sweep_ms	sweep_over_budget	confirm_verdict	confirm_ms	confirm_over_budget	declared
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/20230314-Jaroslav-Bendik-Certora/3106_1c933134166dbad31f79_41_QF_UFLIA.smt2	QF_UFLIA	loss	unsolved	212	no	unsolved	206	no	unknown
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/20230314-Jaroslav-Bendik-Certora/44289_e5a2e5c780236919ee6a_18_QF_UFLIA.smt2	QF_UFLIA	loss	unsolved	4314	no	unsolved	3610	no	unknown
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/20230314-Jaroslav-Bendik-Certora/63058_64ab9a7ef7b6c3492507_22_QF_UFLIA.smt2	QF_UFLIA	loss	unsolved	3115	no	unsolved	2608	no	unknown
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/20230314-Jaroslav-Bendik-Certora/63058_aa742630eef64f949de269382c1f9035_25_UFLIA.smt2	QF_UFLIA	loss	unsolved	107	no	unsolved	107	no	unknown
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/20230314-Jaroslav-Bendik-Certora/65782_cd31513fdcd15701933b_7_QF_UFLIA.smt2	QF_UFLIA	loss	unsolved	107	no	unsolved	106	no	unknown
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/20230314-Jaroslav-Bendik-Certora/72771_f9d228efc97cf1458e38_64_QF_UFLIA.smt2	QF_UFLIA	loss	unsolved	106	no	unsolved	106	no	unknown
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/EufLaArithmetic/hard/hard12.smt2	QF_UFLIA	loss	unsolved	25032	yes	unsolved	25026	yes	unsat
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/EufLaArithmetic/hard/hard15.smt2	QF_UFLIA	loss	unsolved	25026	yes	unsolved	25029	yes	unsat
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/EufLaArithmetic/hard/hard18.smt2	QF_UFLIA	loss	unsolved	25024	yes	unsolved	25035	yes	unsat
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/EufLaArithmetic/medium/medium10.smt2	QF_UFLIA	loss	unsolved	25049	yes	unsolved	25070	yes	unsat
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/EufLaArithmetic/medium/medium13.smt2	QF_UFLIA	loss	unsolved	25051	yes	unsolved	25038	yes	unsat
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/EufLaArithmetic/medium/medium16.smt2	QF_UFLIA	loss	unsolved	25048	yes	unsolved	25038	yes	unsat
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/EufLaArithmetic/medium/medium19.smt2	QF_UFLIA	loss	unsolved	25090	yes	unsolved	25035	yes	unsat
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/EufLaArithmetic/medium/medium9.smt2	QF_UFLIA	loss	unsolved	25065	yes	unsolved	25050	yes	unsat
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_sat_04_11.smt2	QF_UFLIA	recovered	sat	18346	no	not-run			sat
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_sat_04_14.smt2	QF_UFLIA	recovered	sat	18343	no	not-run			sat
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_sat_04_17.smt2	QF_UFLIA	recovered	sat	18454	no	not-run			sat
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_sat_05_05.smt2	QF_UFLIA	recovered	sat	18341	no	not-run			sat
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_sat_05_08.smt2	QF_UFLIA	recovered	sat	18409	no	not-run			sat
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_sat_05_11.smt2	QF_UFLIA	recovered	sat	18451	no	not-run			sat
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_sat_05_17.smt2	QF_UFLIA	recovered	sat	18433	no	not-run			sat
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_sat_05_20.smt2	QF_UFLIA	recovered	sat	18433	no	not-run			sat
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_sat_06_05.smt2	QF_UFLIA	recovered	sat	18330	no	not-run			sat
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_sat_06_08.smt2	QF_UFLIA	recovered	sat	18427	no	not-run			sat
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_sat_06_11.smt2	QF_UFLIA	recovered	sat	18431	no	not-run			sat
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_sat_06_14.smt2	QF_UFLIA	recovered	sat	18428	no	not-run			sat
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_sat_06_17.smt2	QF_UFLIA	recovered	sat	18550	no	not-run			sat
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_sat_06_20.smt2	QF_UFLIA	recovered	sat	18657	no	not-run			sat
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_sat_07_05.smt2	QF_UFLIA	recovered	sat	18543	no	not-run			sat
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_sat_07_08.smt2	QF_UFLIA	recovered	sat	18643	no	not-run			sat
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_sat_07_11.smt2	QF_UFLIA	recovered	sat	18729	no	not-run			sat
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_sat_07_14.smt2	QF_UFLIA	recovered	sat	18941	no	not-run			sat
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_sat_07_17.smt2	QF_UFLIA	recovered	sat	19150	no	not-run			sat
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_sat_07_20.smt2	QF_UFLIA	recovered	sat	19363	no	not-run			sat
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_sat_08_05.smt2	QF_UFLIA	recovered	sat	18424	no	not-run			sat
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_sat_08_08.smt2	QF_UFLIA	recovered	sat	18530	no	not-run			sat
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_sat_08_11.smt2	QF_UFLIA	recovered	sat	18747	no	not-run			sat
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_sat_08_14.smt2	QF_UFLIA	recovered	sat	19060	no	not-run			sat
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_sat_08_17.smt2	QF_UFLIA	recovered	sat	18877	no	not-run			sat
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_sat_08_20.smt2	QF_UFLIA	recovered	sat	20142	no	not-run			sat
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_sat_09_05.smt2	QF_UFLIA	recovered	sat	18429	no	not-run			sat
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_sat_09_08.smt2	QF_UFLIA	recovered	sat	18535	no	not-run			sat
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_sat_09_11.smt2	QF_UFLIA	recovered	sat	18724	no	not-run			sat
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_sat_09_14.smt2	QF_UFLIA	recovered	sat	18721	no	not-run			sat
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_sat_09_17.smt2	QF_UFLIA	loss	unsolved	25030	yes	unsolved	25076	yes	sat
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_sat_09_20.smt2	QF_UFLIA	loss	unsolved	25048	yes	unsolved	25098	yes	sat
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_sat_10_05.smt2	QF_UFLIA	recovered	sat	18528	no	not-run			sat
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_sat_10_08.smt2	QF_UFLIA	recovered	sat	18624	no	not-run			sat
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_sat_10_11.smt2	QF_UFLIA	recovered	sat	18927	no	not-run			sat
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_sat_10_14.smt2	QF_UFLIA	loss	unsolved	25038	yes	unsolved	25032	yes	sat
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_sat_10_17.smt2	QF_UFLIA	loss	unsolved	25031	yes	unsolved	25077	yes	sat
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_sat_10_20.smt2	QF_UFLIA	loss	unsolved	25037	yes	unsolved	25057	yes	sat
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_uns_04_14.smt2	QF_UFLIA	loss	unsolved	25023	yes	unsolved	25053	yes	unsat
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_uns_05_08.smt2	QF_UFLIA	loss	unsolved	25027	yes	unsolved	25050	yes	unsat
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_uns_05_11.smt2	QF_UFLIA	loss	unsolved	25026	yes	unsolved	25044	yes	unsat
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/wisas/xs_19_29.smt2	QF_UFLIA	loss	unsolved	25025	yes	unsolved	25058	yes	sat
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/wisas/xs_24_34.smt2	QF_UFLIA	recovered	sat	14516	no	not-run			sat
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/wisas/xs_25_35.smt2	QF_UFLIA	recovered	sat	7911	no	not-run			sat

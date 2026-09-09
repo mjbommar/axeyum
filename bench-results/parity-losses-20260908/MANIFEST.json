@@ -1,0 +1,21 @@
+{
+  "as_of": "2026-09-09T00:00:00Z",
+  "solver_commit": "00231d87a1",
+  "binary_sha256": "411fbff961bc57dfec5663f8b9b761c9a9de98e500bb4d47fb56b189890bd75c",
+  "budget_s": 24,
+  "memory_gb": 8,
+  "external_timeout_s": 29,
+  "host": "s4, 16 cores, taskset-pinned slots, one solve per pinned core pair",
+  "load_average_range": "11.5 - 27 across the sweep; the host carried another lane's progress_frontier run throughout. Per-slot frames in frames/.",
+  "divisions": [
+    "QF_ABV", "QF_BV", "QF_IDL", "QF_LIA", "QF_LRA", "QF_NIA",
+    "QF_NRA", "QF_RDL", "QF_SLIA", "QF_UF", "QF_UFLIA", "UF"
+  ],
+  "files": 318,
+  "population_before": 480,
+  "recovered": 157,
+  "flaky": 5,
+  "supersedes": ["parity-losses-20260905", "parity-losses-20260906"],
+  "reference": "none. Only z3 is installed on s4 and these divisions score against cvc5/bitwuzla/yices, so no reference was re-run. A <DIV>.txt entry means 'the reference decided it on 2026-09-05/06 and we do not decide it today'. bench-results/PARITY.md remains the ledger; scripts/reconcile.py joins the two at the count level.",
+  "note": "The binary digest is the release build of crates/axeyum-bench/examples/smtcomp_cli at 00231d87a1, re-hashed after the sweep and unchanged. The only later commit of this lane that touches crates/ is a clippy fix to examples/route_solo.rs (two pedantic lints), which is not on any code path this sweep executes."
+}

@@ -1,5 +1,16 @@
 # Reference-only file lists, 2026-09-05 (S3 loss census)
 
+SUPERSEDED-BY: parity-losses-20260908
+
+> **DO NOT BRIEF A LANE AGAINST THE LISTS IN THIS DIRECTORY.** Re-measured
+> 2026-09-08 at the shipped default, a large fraction of these 403 files are
+> already decided. The lists are correct as a record of 2026-09-05 and are kept
+> byte-identical for that reason; the population to cite is
+> [`../parity-losses-20260908/`](../parity-losses-20260908/), and
+> `python3 scripts/check-loss-list-freshness.py` prints the per-division
+> authority table. This set reads `behind=606` commits touching `crates/` as of
+> 2026-09-08.
+
 > **The `class` and `last_route` columns in the `*.census.tsv` files here are
 > NOT reliable.** They were produced through `explain_corpus`, which runs the
 > flat assertion view rather than the shipped front door and disagrees with it

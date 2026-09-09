@@ -1,0 +1,13 @@
+file	division	verdict	wall_ms	declared	over_budget
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_ABV/2018-Mann/arbiter_array_cex_w32d32q16n4b34.smt2	QF_ABV	unsolved	24328	sat	yes
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_ABV/bmc-arrays/bubbleSort.smt2	QF_ABV	unsolved	25024	unsat	yes
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_ABV/brummayerbiere/fifo32ia04k08.smt2	QF_ABV	unsolved	24329	sat	yes
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_ABV/brummayerbiere/wchains140se.smt2	QF_ABV	unsolved	25754	sat	yes
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_ABV/dwp_formulas/try5_small_difret_functions_dwp_cat.next_line_num.il.dwp.smt2	QF_ABV	unsolved	3226	sat	no
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_ABV/dwp_formulas/try5_small_difret_functions_dwp_mkfifo.get_quoting_style.il.dwp.smt2	QF_ABV	unsolved	24150	unsat	yes
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_ABV/dwp_formulas/try5_small_difret_functions_dwp_vdir.strcmp_size.il.dwp.smt2	QF_ABV	unsolved	9619	unsat	no
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_ABV/klee-selected-smt2/cu-no-caches/_csplit-query-000018.smt2	QF_ABV	unsolved	24137	unsat	yes
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_ABV/klee-selected-smt2/cu-no-caches/_csplit-query-000093.smt2	QF_ABV	unsolved	24132	unsat	yes
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_ABV/klee-selected-smt2/cu-no-caches/_csplit-query-000188.smt2	QF_ABV	unsolved	24135	unsat	yes
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_ABV/klee-selected-smt2/cu-no-caches/_csplit-query-000263.smt2	QF_ABV	unsolved	24113	unsat	yes
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_ABV/platania/no_init_simple_delete/no_init_simple_delete55.smt2	QF_ABV	unsolved	25096	sat	yes

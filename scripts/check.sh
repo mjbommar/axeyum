@@ -997,6 +997,13 @@ step local-ci-freshness-controls ./scripts/tests/test-check-local-ci-freshness.s
 # project's history and nothing went red. This is the gate that reds.
 step parity-freshness ./scripts/check-parity-freshness.py
 step parity-freshness-controls ./scripts/tests/test-check-parity-freshness.sh
+# `bench-results/parity-losses-*/<DIV>.txt` is the population every optimisation
+# brief is written against. Measured 2026-09-08, 141 of the 403 files on the
+# 2026-09-05 lists were already decided and several lanes had been dispatched at
+# files the tree wins. Nothing was wrong with the lists; the date in the path
+# was simply not a signal anyone acted on. This gate enforces the signal.
+step loss-list-freshness ./scripts/check-loss-list-freshness.py
+step loss-list-freshness-controls ./scripts/tests/test-check-loss-list-freshness.sh
 # L1 phase G0 (docs/plan/graph-directed-library-roadmap-2026-08-30.md): the
 # Mathlib module-import baseline receipt reproduces, and source/parser drift
 # each fail independently -- see scripts/check-module-baseline.py's header.
