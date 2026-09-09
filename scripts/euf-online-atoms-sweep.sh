@@ -106,11 +106,29 @@ printf 'file\tverdict\twall_ms\teuf_online_outcome\teuf_online_ms\tdecided_by\tb
 # `xargs -P` rather than a shell loop: the sweep is 200 files x 24 s and a
 # serial run is 80 minutes per arm. Rows arrive out of order and are sorted
 # below, so the artifact is deterministic even though the run is not.
-xargs -a "$LIST" -d '\n' -I{} -P "$SLOTS" bash -c 'run_one "$@"' _ {} >> "$OUT_TSV".unsorted 2>/dev/null
+xargs -a "$LIST" -d '\n' -I{} -P "$SLOTS" bash -c 'run_one "$@"' _ {} \
+    >> "$OUT_TSV".unsorted 2>> "$OUT_TSV".stderr
 
 sort "$OUT_TSV".unsorted >> "$OUT_TSV"
 rm -f "$OUT_TSV".unsorted
 
 decided=$(tail -n +2 "$OUT_TSV" | cut -f2 | grep -cE '^(sat|unsat)$')
 total=$(tail -n +2 "$OUT_TSV" | wc -l)
+wanted=$(grep -c . "$LIST")
 echo "arm=$ARM decided=$decided/$total  -> $OUT_TSV" >&2
+
+# COVERAGE, and it is a gate rather than a note. Measured 2026-09-08: the `UF`
+# sweep emitted 198 rows for a 200-file list -- two files produced no row at all
+# -- and the first version of this script discarded stderr to /dev/null and
+# printed `decided=84/198` without a word about the missing two. A sweep that
+# silently narrows its own denominator is a measurement of the subset it
+# happened to finish, reported as a measurement of the list. So: the stderr goes
+# to a file, and a short run FAILS.
+if [ "$total" -ne "$wanted" ]; then
+    echo "euf-online-atoms-sweep: COVERAGE SHORTFALL -- $total rows for a \
+$wanted-file list; $((wanted - total)) file(s) produced no row. Missing:" >&2
+    comm -23 <(grep . "$LIST" | sort) <(tail -n +2 "$OUT_TSV" | cut -f1 | sort) >&2
+    echo "euf-online-atoms-sweep: worker stderr is in $OUT_TSV.stderr" >&2
+    exit 4
+fi
+rm -f "$OUT_TSV".stderr
