@@ -25,6 +25,7 @@ Raw data behind
 | `engaged.txt` | the 29 of 85 loss files where the online `LIA` theory is actually entered (pre-merge, 8 s). |
 | `merge1-24s.json` | **the result that supersedes the rest**: the whole 85-file population at 24 s, three arms, on idle s5 at `39c493ba5`. |
 | `merge1-24s.summary.txt` | `score.py` output for it. |
+| `merge2-24s.{json,summary,attribution}` | the same sweep on a DIFFERENT host (s6) and a different tree (`1a01d335d`). Every figure the conclusion rests on reproduces, including the contested filter count to within 1 of 46,193. |
 | `merge1-24s.attribution.txt` | `attribute.py` output: where the offline decider's entries actually come from. This is the file that explains the flat ratio — the warm decider serves 9.7% of them. |
 | `attribute.py` | the attribution. Written because `offline_calls` is a denominator the warm path can only touch a tenth of, and a ratio over a denominator the change cannot move is not a measurement of the change. |
 | `off-equivalence.{py,json}` | pristine `origin/main` vs this lane with `AXEYUM_LIA_WARM=off`, two binaries, 91 files: 0 verdict mismatches, 0 runs where the `off` arm entered the warm decider. Returns non-zero if nothing was decided, so it cannot pass vacuously. |

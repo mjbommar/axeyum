@@ -1,0 +1,51 @@
+arms: ['off', 'warm', 'nofilter']
+files: 85
+
+== verdicts ==
+  off      {'unknown': 68, 'sat': 17}
+  warm     {'unknown': 68, 'sat': 17}
+  nofilter {'unknown': 68, 'sat': 17}
+  SOUNDNESS: 0 file(s) where two arms gave different decided verdicts
+  coverage changes (decided in one arm, unknown in another): 0
+
+== reading provenance == {'complete': 114, 'partial': 141}
+  files whose arms did NOT all report the same reading kind: 0  (a partial total is a lower bound; mixing one with a complete one is not a ratio)
+
+== population the online LIA theory was actually entered on ==
+  71 of 85 files
+  0 file(s) where some arm printed no `; lia-warm` line at all
+
+== live-set decisions in the same budget (offline + filter answers) ==
+  off      total=   786657  x1.00 vs off   median per-file ratio 1.00
+  warm     total=   788859  x1.00 vs off   median per-file ratio 1.00
+  nofilter total=   977646  x1.24 vs off   median per-file ratio 1.00
+
+== offline decisions only (the stage the warm cache serves) ==
+  off      total=   605296  x1.00 vs off
+  warm     total=   607499  x1.00 vs off
+  nofilter total=   977646  x1.62 vs off
+
+== the rational filter, where it ran ==
+  off      answered=   181361  refuted=    46192  integral=   135169  inconclusive=    30469  skipped=        0
+  warm     answered=   181360  refuted=    46192  integral=   135168  inconclusive=    33220  skipped=        0
+  nofilter answered=        0  refuted=        0  integral=        0  inconclusive=        0  skipped=   139420
+
+== warm cache behaviour (warm arms only) ==
+  off      the warm decider was never entered (cold arm)
+  warm:
+    checks=57270 warm_updates=41264 (72.1%) rebuilds=16006
+    literals kept=50973702 added=481569 removed=454660  -> 99.1% of the live set reused
+    constraints copied=603368 of 93827386 live  -> 0.6% rebuilt per check
+    literal collections=30432 cache hits=451137  -> 93.7% hit rate
+    assembly: {'warm_unchanged': 4786, 'warm_extended': 27637, 'warm_shortened': 409, 'warm_diverged': 8432, 'warm_cold_start': 16006, 'warm_policy_cold': 0}
+  nofilter:
+    checks=430502 warm_updates=230482 (53.5%) rebuilds=200020
+    literals kept=53345934 added=5114649 removed=5073882  -> 91.3% of the live set reused
+    constraints copied=5692385 of 102540487 live  -> 5.6% rebuilt per check
+    literal collections=46016 cache hits=5068633  -> 99.1% hit rate
+    assembly: {'warm_unchanged': 72964, 'warm_extended': 54753, 'warm_shortened': 8299, 'warm_diverged': 94466, 'warm_cold_start': 200020, 'warm_policy_cold': 0}
+
+== wall time (reported, NOT the score -- the population is budget-bound) ==
+  off      total=1595408ms over 71 files
+  warm     total=1593871ms over 71 files
+  nofilter total=1594393ms over 71 files

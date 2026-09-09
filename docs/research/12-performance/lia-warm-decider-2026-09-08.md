@@ -342,6 +342,32 @@ counters to watch are `warm_checks` against `offline_calls`; on this population
 that ratio is 0.097, and any warming work should be expected to move it before
 it is expected to move a verdict.
 
+### Reproduced, on a different host and a different tree
+
+Result 4 was s5 at `39c493ba5`. The same sweep on **s6** at `1a01d335d` — which
+adds main's second batch of `lra`/instrument work — agrees on everything the
+conclusion rests on:
+
+| | s5, `39c493ba5` | s6, `1a01d335d` |
+| --- | --- | --- |
+| offline decisions, `off` | 591,180 | 605,296 |
+| offline decisions, `warm` | 594,072 (x1.00) | 607,499 (x1.00) |
+| offline decisions, `nofilter` | 981,519 (x1.66) | 977,646 (x1.62) |
+| filter refuted | 46,193 | 46,192 |
+| warm share of offline entries | 9.7% | 9.4% |
+| live literal set reused | 99.1% | 99.1% |
+| verdicts | 17 sat / 68 unknown, 0 disagreements | identical |
+
+The contested filter count reproduces to within **one refutation out of 46,193**
+across two hosts and two trees. Whatever explains the disagreement with the
+`lia-counters` lane's `filter_refuted = 0`, it is not noise in this arm.
+
+One difference, and it is somebody else's fix working: s5 reported 21
+`; lia unavailable` readings, s6 reports **zero**. Main's `9c4a2b9e6` — the
+mirror flushing at its FIRST record rather than only every 1,024th — landed
+between the two trees, and those 21 files are exactly the population its commit
+message describes. The instrument stopped going blind.
+
 ## Result 5: `AXEYUM_LIA_WARM=off` is the pre-existing path, checked as two binaries
 
 The A/B rests on `LiaWarmPolicy::OFF` reproducing what shipped before. That is
