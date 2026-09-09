@@ -242,11 +242,39 @@ it is measured against records its own load average of 1–3 against this sweep'
 11–27, so a single-file residual is inside the noise the comparison carries.
 The QF_UF row is the one worth acting on.
 
-## 7. `over_budget`: the grace-win class is closed on this population
+## 7. `over_budget`: closed on the loss population, open in QF_SLIA
 
-Every over-budget run in the sweep is an `unsolved` — **not one newly recovered
-file needed the watchdog's grace period to be counted.** The recoveries are wins
-inside the budget, which is what survives a hard external limit.
+Across the 803 runs of the sweep and confirm passes over the 2026-09-05/06
+population: 162 decided, **0 decided past the budget**, 377 unsolved past it.
+Not one newly recovered file needed the watchdog's grace period to be counted.
+The recoveries are wins inside the budget, which is what survives a hard
+external limit, and the grace-dependent class the portfolio lane found in
+QF_ABV is closed there.
+
+The **complement** passes are not clean, and the exception is worth naming
+because it is the same shape in a different division. Of 1,989 complement runs,
+**four** are decided past the budget — all four QF_SLIA, all four in
+`20180523-Reynolds/pyex/…/httplib2-entry-disposition/`, at 24,240–25,055 ms
+wall. They are `QF_SLIA.grace-wins.txt`. Under a hard external 24 s limit they
+are four losses.
+
+**And the route trail cannot say where the time went.** Re-run with `--trace`,
+three of the four reproduce, and their trails read:
+
+| file | wall | `bound_by` | `bound_ms` | `total_ms` | `decided_by` |
+|---|---:|---|---:|---:|---|
+| `…57dd17639` | 24,336 | `fd:parse` | 70 | **158** | `int-blast-ladder` |
+| `…ace22aa8a` | 24,339 | `fd:parse` | 75 | **166** | `int-blast-ladder` |
+| `…769a661db` | 24,240 | `dl-online` | 18 | **47** | `int-blast-ladder` |
+
+24.1 seconds of a 24.3 second run is attributed to no route attempt at all. It
+is not I/O — the files are 49 KB. This is the prefix-sum caveat the
+[span-log sweep](ladder-budget-discipline-2026-09-08.md) records ("a route that
+never returns leaves its budget on whichever attempt is recorded next, or on no
+attempt at all") in its worst form: on this shape the trail accounts for 0.7% of
+the wall clock. **Do not attribute QF_SLIA cost from the route trail** until
+that is fixed; the fourth file (`…eeaeeba27`) came back at 18.8 s on the
+re-run, so it is flaky rather than grace-dependent.
 
 ## 8. `dispatch_abv_online` was already clamped — verified, not assumed
 
