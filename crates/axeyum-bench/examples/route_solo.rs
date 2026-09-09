@@ -86,6 +86,12 @@ struct Route {
 /// literals at ~85 recording sites, with no registry to read. So the coverage
 /// claim here is exactly "these routes", never "every route", and a name absent
 /// from this table is untested rather than shown irrelevant.
+///
+/// `too_many_lines` is allowed because this IS the table: every line is one
+/// `Route { name, run }` pair, and splitting it into `routes_a()` /
+/// `routes_b()` to satisfy a line count would hide the one property a reader
+/// needs from it — that the whole list is visible in one place.
+#[allow(clippy::too_many_lines)]
 fn routes() -> Vec<Route> {
     vec![
         Route {
@@ -326,16 +332,13 @@ fn main() -> ExitCode {
             return ExitCode::FAILURE;
         }
     };
-    match worker.join() {
-        Ok((verdict, wall_ms, detail)) => {
-            println!("{name}\t{verdict}\t{wall_ms}\t{detail}");
-            ExitCode::SUCCESS
-        }
-        Err(_) => {
-            // A panic is a real answer about this route on this file, and one a
-            // portfolio arm would have to survive; it is never silence.
-            println!("{name}\tpanic\t0\t");
-            ExitCode::FAILURE
-        }
+    if let Ok((verdict, wall_ms, detail)) = worker.join() {
+        println!("{name}\t{verdict}\t{wall_ms}\t{detail}");
+        ExitCode::SUCCESS
+    } else {
+        // A panic is a real answer about this route on this file, and one a
+        // portfolio arm would have to survive; it is never silence.
+        println!("{name}\tpanic\t0\t");
+        ExitCode::FAILURE
     }
 }
