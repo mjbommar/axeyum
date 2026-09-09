@@ -1953,8 +1953,18 @@ claims:
 # the suite skips the external half, which is the right default (drat-trim is a
 # gitignored clone, `just references`) but the wrong thing for a gate that exists
 # to prove a third party accepts our artifact -- a skip and a pass look identical.
+#
+# ...EXCEPT that the variable is honoured by exactly ONE of the suite's three
+# drat-trim tests (measured 2026-09-09). The other two -- including
+# `the_independent_checker_rejects_a_tampered_certificate`, the negative control
+# for the external checker itself -- take a bare `let Some(bin) = ... else {
+# eprintln!("SKIP: no drat-trim binary"); return; }` with no assertion, so on a
+# host without the binary the control that shows drat-trim can say no does not
+# run and nothing says so. The wrapper resolves the binary, exports it, and
+# FAILS on any `SKIP: no drat-trim` line and on a run of zero tests, so a skip
+# cannot reach this gate whatever the suite does.
 interpolant-certificate:
-    AXEYUM_REQUIRE_DRAT_TRIM=1 cargo test -p axeyum-cnf --test propositional_interpolant_certified
+    ./scripts/check-drat-trim-gate.sh
 
 # Run the committed micro corpus through the pure Rust BV backend.
 bench-micro:
