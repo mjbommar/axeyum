@@ -3720,10 +3720,49 @@ impl Dpll {
 pub(crate) struct Encoder {
     pub(crate) term_var: HashMap<TermId, usize>,
     pub(crate) var_count: usize,
+    /// Which connectives this encoder is allowed to cover; see
+    /// [`SkeletonEncoding`].
+    encoding: SkeletonEncoding,
+}
+
+/// Which Boolean connectives the skeleton encoder covers.
+///
+/// A policy object rather than a fixed list because widening the encoder is a
+/// **routing** change: a shape it declines sends the whole query to a different
+/// engine, and the only way to attribute a measured difference to the widening
+/// is to be able to run both arms from one binary. [`SkeletonEncoding::legacy`]
+/// is the pre-2026-09-08 coverage exactly.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct SkeletonEncoding {
+    /// Cover Boolean equality (`iff`), i.e. `(= a b)` at [`Sort::Bool`].
+    pub(crate) bool_eq: bool,
+}
+
+impl SkeletonEncoding {
+    /// The shipped coverage.
+    pub(crate) const fn new() -> Self {
+        Self { bool_eq: true }
+    }
+
+    /// The pre-2026-09-08 coverage: no Boolean equality, so every assertion
+    /// containing an `iff` declines the whole online route.
+    pub(crate) const fn legacy() -> Self {
+        Self { bool_eq: false }
+    }
+}
+
+impl Default for SkeletonEncoding {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl Encoder {
     pub(crate) fn new(atom_terms: &[TermId]) -> Self {
+        Self::with_encoding(atom_terms, crate::lra_route::configured().encoding)
+    }
+
+    pub(crate) fn with_encoding(atom_terms: &[TermId], encoding: SkeletonEncoding) -> Self {
         let mut term_var = HashMap::new();
         for (i, &t) in atom_terms.iter().enumerate() {
             term_var.insert(t, i);
@@ -3731,6 +3770,7 @@ impl Encoder {
         Self {
             term_var,
             var_count: atom_terms.len(),
+            encoding,
         }
     }
 
@@ -3772,7 +3812,7 @@ impl Encoder {
                     pending.extend(args.iter().rev().map(|&arg| (arg, false)));
                     continue;
                 }
-                TermNode::App { op, args } => self.encode_app(*op, args, clauses)?,
+                TermNode::App { op, args } => self.encode_app(arena, *op, args, clauses)?,
                 _ => return None,
             };
             self.term_var.insert(current, v);
@@ -3782,6 +3822,7 @@ impl Encoder {
 
     fn encode_app(
         &mut self,
+        arena: &TermArena,
         op: Op,
         args: &[TermId],
         clauses: &mut Vec<Vec<Lit>>,
@@ -3819,6 +3860,25 @@ impl Encoder {
                 clauses.push(vec![gl, *a]);
                 clauses.push(vec![gl, b.negate()]);
                 clauses.push(vec![gl.negate(), a.negate(), *b]);
+            }
+            // Boolean equality (`iff`). Behind [`SkeletonEncoding::bool_eq`]
+            // because it is the gap that decided a route: measured 2026-09-08,
+            // every one of the nineteen `QF_LRA` files that exhaust 24 s in the
+            // OFFLINE lazy-SMT loop got there because this arm was missing and
+            // the online CDCL(T) probe declined `skeleton-unsupported`. The
+            // offline abstractor has covered the same shape since it was
+            // written (`dpll_t.rs`, `Op::Eq if sort_of(args[0]) == Bool`), so
+            // the two halves of one route disagreed about the input language.
+            //
+            // Sort-guarded: a REAL equality is a registered atom and never
+            // reaches here, and an equality at any other sort has unencodable
+            // operands whose lookup already failed above. The guard is what
+            // makes that an assertion rather than a coincidence.
+            (Op::Eq, [a, b]) if self.encoding.bool_eq && arena.sort_of(args[0]) == Sort::Bool => {
+                clauses.push(vec![gl.negate(), a.negate(), *b]);
+                clauses.push(vec![gl.negate(), *a, b.negate()]);
+                clauses.push(vec![gl, *a, *b]);
+                clauses.push(vec![gl, a.negate(), b.negate()]);
             }
             (Op::BoolXor, [a, b]) => {
                 clauses.push(vec![gl.negate(), *a, *b]);
@@ -4151,6 +4211,71 @@ mod tests {
     fn rvar(arena: &mut TermArena, name: &str) -> TermId {
         let s = arena.declare(name, Sort::Real).expect("declare real");
         arena.var(s)
+    }
+
+    /// Every model of `clauses` over `vars` Boolean variables.
+    ///
+    /// Small and exhaustive on purpose: the question a Tseitin arm has to answer
+    /// is what its clauses MEAN, and a semantic check over every assignment is
+    /// the only form of that answer which cannot be satisfied by clauses that
+    /// merely parse.
+    fn models(clauses: &[Vec<Lit>], vars: usize) -> Vec<Vec<bool>> {
+        (0..(1usize << vars))
+            .map(|bits| (0..vars).map(|v| bits >> v & 1 == 1).collect::<Vec<bool>>())
+            .filter(|assignment| {
+                clauses
+                    .iter()
+                    .all(|clause| clause.iter().any(|lit| assignment[lit.var] == lit.positive))
+            })
+            .collect()
+    }
+
+    /// The encoder gap that decided a route, in both arms.
+    ///
+    /// `(= p q)` at [`Sort::Bool`] is what the offline abstractor has always
+    /// covered (`dpll_t.rs`) and the online encoder did not, so every `QF_LRA`
+    /// file containing an `iff` declined the online CDCL(T) engine and took the
+    /// offline lazy-SMT loop instead. The legacy arm must still decline — it is
+    /// the baseline the measurement is a ratio against — and the shipped arm
+    /// must encode the connective **correctly**, which is asserted over every
+    /// assignment rather than by counting clauses.
+    #[test]
+    fn boolean_equality_declines_on_the_legacy_arm_and_means_iff_on_the_shipped_one() {
+        let mut arena = TermArena::new();
+        let p = arena.declare("iff_p", Sort::Bool).expect("declare p");
+        let q = arena.declare("iff_q", Sort::Bool).expect("declare q");
+        let (p, q) = (arena.var(p), arena.var(q));
+        let iff = arena.eq(p, q).expect("p = q");
+
+        let mut legacy = Encoder::with_encoding(&[], SkeletonEncoding::legacy());
+        let mut legacy_clauses = Vec::new();
+        assert!(
+            legacy.encode(&arena, iff, &mut legacy_clauses).is_none(),
+            "the legacy arm must decline a Boolean equality, or it is not the baseline"
+        );
+
+        let mut shipped = Encoder::with_encoding(&[], SkeletonEncoding::new());
+        let mut clauses = Vec::new();
+        let top = shipped
+            .encode(&arena, iff, &mut clauses)
+            .expect("the shipped arm covers a Boolean equality");
+        let pv = shipped.term_var[&p];
+        let qv = shipped.term_var[&q];
+
+        let models = models(&clauses, shipped.var_count);
+        assert_eq!(
+            models.len(),
+            4,
+            "the gate defines its own variable and constrains nothing else, so exactly \
+             the four (p, q) rows survive: {models:?}"
+        );
+        for model in &models {
+            assert_eq!(
+                model[top],
+                model[pv] == model[qv],
+                "the gate variable must equal `p <-> q` at {model:?}"
+            );
+        }
     }
 
     #[test]

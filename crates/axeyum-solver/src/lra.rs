@@ -315,6 +315,35 @@ enum Decision {
     Incomplete(String),
 }
 
+/// One conjunctive decision's stage timings, so every exit records the same
+/// shape.
+///
+/// A struct rather than four locals because the decider has five exits and an
+/// exit that forgets to record is invisible: the counters would still add up
+/// against each other and simply describe fewer decisions than happened. With
+/// this, `cube_decisions` is the count of decisions that got past collection
+/// and the three timings are that population's.
+#[derive(Debug, Clone, Copy, Default)]
+struct CubeStages {
+    collect: Duration,
+    fm: Duration,
+    fm_declined: bool,
+    simplex: Option<Duration>,
+}
+
+impl CubeStages {
+    fn record(self, staged: bool) {
+        if staged {
+            crate::lazy_smt_counters::record_cube_stages(
+                self.collect,
+                self.fm,
+                self.fm_declined,
+                self.simplex,
+            );
+        }
+    }
+}
+
 fn decide(arena: &TermArena, assertions: &[TermId]) -> Result<Decision, SolverError> {
     decide_within(arena, assertions, None)
 }
@@ -342,25 +371,19 @@ fn decide_within(
     // a graceful `unknown` BEFORE any constraint is solved (overflow never becomes
     // a wrong sat/unsat).
     if ctx.overflow {
-        if staged {
-            crate::lazy_smt_counters::record_cube_stages(
-                collect_elapsed,
-                Duration::ZERO,
-                false,
-                None,
-            );
+        CubeStages {
+            collect: collect_elapsed,
+            ..CubeStages::default()
         }
+        .record(staged);
         return Ok(Decision::TimedOut);
     }
     if ctx.trivially_unsat {
-        if staged {
-            crate::lazy_smt_counters::record_cube_stages(
-                collect_elapsed,
-                Duration::ZERO,
-                false,
-                None,
-            );
+        CubeStages {
+            collect: collect_elapsed,
+            ..CubeStages::default()
         }
+        .record(staged);
         return Ok(Decision::UnsatTrivial(ctx.trivial_origin.unwrap_or(0)));
     }
 
@@ -377,12 +400,46 @@ fn decide_within(
     let origins: Vec<usize> = ctx.constraints.iter().map(|c| c.origin).collect();
 
     let nvars = ctx.vars.len();
+    let mut stages = CubeStages {
+        collect: collect_elapsed,
+        ..CubeStages::default()
+    };
+
+    // Which engine gets the system first. Both are sound and each declines on
+    // cases the other decides, so the ORDER is a pure cost choice and the union
+    // of what the pair decides does not depend on it.
+    //
+    // Measured 2026-09-08 over the 22 `QF_LRA` files bound by the offline
+    // lazy-SMT loop: Fourier–Motzkin declined on **every one of the 2,745
+    // cubes**, a 0% success rate, having spent 96-99.9% of `theory_ms` — 21.5
+    // to 23.7 s of a 24 s budget — reaching its size guard. The simplex then
+    // decided every one of those same cubes in 43-696 ms IN TOTAL. That is not
+    // a tuning ratio; it is a first choice that is never right on this
+    // population, and the elimination's cost is doubly exponential in the
+    // variable count while the simplex's is polynomial.
+    if crate::lra_route::configured().simplex_first(ctx.constraints.len()) {
+        let started = staged.then(Instant::now);
+        let fallback = simplex_fallback(arena, assertions, &ctx);
+        stages.simplex = Some(started.map_or(Duration::ZERO, |s| s.elapsed()));
+        match fallback {
+            Ok(Some(decision)) => {
+                stages.record(staged);
+                return Ok(decision);
+            }
+            Ok(None) => {}
+            Err(error) => {
+                stages.record(staged);
+                return Err(error);
+            }
+        }
+    }
+
     let fm_started = staged.then(Instant::now);
     let feasibility = solve(&ctx.constraints, nvars, deadline);
-    let fm_elapsed = fm_started.map_or(Duration::ZERO, |s| s.elapsed());
-    let fm_declined = matches!(feasibility, Feasibility::TimedOut);
-    if staged && !fm_declined {
-        crate::lazy_smt_counters::record_cube_stages(collect_elapsed, fm_elapsed, false, None);
+    stages.fm = fm_started.map_or(Duration::ZERO, |s| s.elapsed());
+    stages.fm_declined = matches!(feasibility, Feasibility::TimedOut);
+    if !stages.fm_declined {
+        stages.record(staged);
     }
     match feasibility {
         Feasibility::TimedOut => {
@@ -391,16 +448,18 @@ fn decide_within(
             // which scales polynomially. Sound: `simplex_fallback` returns a decision
             // only for a replay-checked `sat` or a Farkas-verified `unsat`; otherwise
             // we keep the FM `unknown`.
+            //
+            // Skipped when the simplex already ran and declined: the two calls
+            // would be on the identical constraint system, so the second cannot
+            // decide what the first did not.
+            if stages.simplex.is_some() {
+                stages.record(staged);
+                return Ok(Decision::TimedOut);
+            }
             let simplex_started = staged.then(Instant::now);
             let fallback = simplex_fallback(arena, assertions, &ctx);
-            if staged {
-                crate::lazy_smt_counters::record_cube_stages(
-                    collect_elapsed,
-                    fm_elapsed,
-                    true,
-                    Some(simplex_started.map_or(Duration::ZERO, |s| s.elapsed())),
-                );
-            }
+            stages.simplex = Some(simplex_started.map_or(Duration::ZERO, |s| s.elapsed()));
+            stages.record(staged);
             if let Some(decision) = fallback? {
                 return Ok(decision);
             }

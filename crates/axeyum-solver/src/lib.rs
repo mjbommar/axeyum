@@ -129,6 +129,7 @@ macro_rules! full_modules {
         mod lra;
         mod lra_interpolant_cnf;
         mod lra_online;
+        mod lra_route;
         mod lra_theory;
         mod maxsat;
         mod mbp;

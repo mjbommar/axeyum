@@ -124,13 +124,24 @@ pub fn check_with_lra_dpll_within(
     // the caller's remaining budget and returns directly; only structural or
     // arithmetic-incompleteness declines fall through to the legacy mixed route.
     let probe_config = config_with_remaining_deadline(config, deadline);
+    let route = crate::lra_route::configured();
     match crate::lra_theory::check_qf_lra_online_cdclt(arena, assertions, &probe_config)? {
         result @ (CheckResult::Sat(_) | CheckResult::Unsat) => return Ok(result),
+        // A `Timeout`/`ResourceLimit` decline USED to end the query
+        // unconditionally, on the reading that the online engine had owned the
+        // caller's budget. That is true of a timeout and false of the ADR-1752
+        // admission screen and the two build ceilings, which refuse in
+        // microseconds on a structural property of the input — leaving the
+        // budget entirely unspent and the offline loop, which is exactly their
+        // fallback, unrun. `past_deadline` is the observation that separates
+        // the two, so the rule tests it instead of the reason kind.
         CheckResult::Unknown(reason)
-            if matches!(
-                reason.kind,
-                UnknownKind::Timeout | UnknownKind::ResourceLimit
-            ) || past_deadline(deadline) =>
+            if past_deadline(deadline)
+                || (!route.fall_through_on_cheap_decline
+                    && matches!(
+                        reason.kind,
+                        UnknownKind::Timeout | UnknownKind::ResourceLimit
+                    )) =>
         {
             return Ok(CheckResult::Unknown(reason));
         }
