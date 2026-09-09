@@ -657,8 +657,8 @@ pub mod theories {
     /// Array decision procedures.
     pub mod arrays {
         pub use crate::abv::{
-            check_qf_abv_lazy, check_qf_abv_lazy_row, check_qf_ax_declared_sort_lazy_row,
-            check_with_array_elimination,
+            check_qf_abv_lazy, check_qf_abv_lazy_row, check_qf_abv_lazy_row_warm,
+            check_qf_ax_declared_sort_lazy_row, check_with_array_elimination,
         };
     }
 
@@ -961,10 +961,11 @@ macro_rules! full_exports {
             ArrayElimUnsatCertificate, CrossStoreArrayDisequalityCertificate,
             certify_array_elim_unsat, cross_store_array_disequality_refutation,
         };
+        pub use abv::{RowCegarWarmth, RowCegarWarmthGuard, last_row_cegar_warmth};
         #[doc(hidden)]
         pub use abv::{
-            check_qf_abv_lazy, check_qf_abv_lazy_row, check_qf_ax_declared_sort_lazy_row,
-            check_with_array_elimination,
+            check_qf_abv_lazy, check_qf_abv_lazy_row, check_qf_abv_lazy_row_warm,
+            check_qf_ax_declared_sort_lazy_row, check_with_array_elimination,
         };
         #[doc(hidden)]
         pub use alethe_lra::{
