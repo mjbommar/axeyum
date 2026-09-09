@@ -1012,10 +1012,15 @@ pub struct EufOnlineAtomStats {
     pub entered: u32,
     /// Of those, the ones on which at least one Boolean-position subterm was
     /// abstracted (under [`EufOnlineAtomPolicy::Refuse`] this is always zero and
-    /// the route declined instead).
+    /// [`Self::refused`] counts them instead).
     pub abstracted_queries: u32,
     /// Total distinct Boolean-position subterms abstracted across those queries.
     pub abstracted_atoms: u32,
+    /// Of those entered, the ones the encoder gave up on entirely — the
+    /// historical behaviour, and the field this instrument exists for. A
+    /// nonzero count on a division we lose is the signal: the route was reached
+    /// and threw the query away.
+    pub refused: u32,
     /// The policy in force, as [`EufOnlineAtomPolicy::name`] reports it.
     pub policy: &'static str,
 }
@@ -1026,6 +1031,7 @@ impl EufOnlineAtomStats {
         entered: 0,
         abstracted_queries: 0,
         abstracted_atoms: 0,
+        refused: 0,
         policy: "unset",
     };
 
@@ -1033,10 +1039,27 @@ impl EufOnlineAtomStats {
     #[must_use]
     pub fn trace_line(&self) -> String {
         format!(
-            "euf-online-atoms policy={} entered={} abstracted_queries={} abstracted_atoms={}",
-            self.policy, self.entered, self.abstracted_queries, self.abstracted_atoms
+            "euf-online-atoms policy={} entered={} abstracted_queries={} \
+             abstracted_atoms={} refused={}",
+            self.policy, self.entered, self.abstracted_queries, self.abstracted_atoms, self.refused
         )
     }
+}
+
+/// What the skeleton encoding did on one query — the three states a reader has
+/// to be able to tell apart, and the reason the recording is a single call with
+/// an enum rather than two booleans nobody can order.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum EncodeOutcome {
+    /// Everything was inside the encoder's connective set; the abstraction never
+    /// fired and the route runs exactly as it did before this policy existed.
+    Clean,
+    /// `n` Boolean-position subterms became opaque skeleton variables.
+    Abstracted(usize),
+    /// The encoder gave up and the route returned `Unknown` (the
+    /// [`EufOnlineAtomPolicy::Refuse`] arm, or an unencodable NON-Boolean
+    /// position that no policy abstracts).
+    Refused,
 }
 
 std::thread_local! {
@@ -1087,7 +1110,7 @@ pub fn last_euf_online_atom_stats() -> EufOnlineAtomStats {
 
 /// Records one `euf-online` skeleton encoding when collection is enabled;
 /// otherwise reads one `Cell<bool>` and returns.
-fn note_euf_online_atoms(policy: EufOnlineAtomPolicy, abstracted: bool, atoms: usize) {
+fn note_euf_online_atoms(policy: EufOnlineAtomPolicy, outcome: EncodeOutcome) {
     if !COLLECT_EUF_ONLINE_ATOM_STATS.with(std::cell::Cell::get) {
         return;
     }
@@ -1095,11 +1118,15 @@ fn note_euf_online_atoms(policy: EufOnlineAtomPolicy, abstracted: bool, atoms: u
         let mut stats = c.get();
         stats.policy = policy.name();
         stats.entered = stats.entered.saturating_add(1);
-        if abstracted {
-            stats.abstracted_queries = stats.abstracted_queries.saturating_add(1);
-            stats.abstracted_atoms = stats
-                .abstracted_atoms
-                .saturating_add(u32::try_from(atoms).unwrap_or(u32::MAX));
+        match outcome {
+            EncodeOutcome::Clean => {}
+            EncodeOutcome::Abstracted(atoms) => {
+                stats.abstracted_queries = stats.abstracted_queries.saturating_add(1);
+                stats.abstracted_atoms = stats
+                    .abstracted_atoms
+                    .saturating_add(u32::try_from(atoms).unwrap_or(u32::MAX));
+            }
+            EncodeOutcome::Refused => stats.refused = stats.refused.saturating_add(1),
         }
         c.set(stats);
         stats
@@ -1165,6 +1192,13 @@ pub fn check_qf_uf_online_cdclt(
     let mut clauses: Vec<Vec<Lit>> = Vec::new();
     for &assertion in assertions {
         let Some(top) = enc.encode(arena, assertion, &mut clauses) else {
+            // RECORDED, not just returned. The refusal is the whole reason this
+            // instrument exists, and an early `return` that skipped the counter
+            // would leave the refusing arm reporting an all-zero line — the
+            // exact blind spot that cost a division-sized measurement to find.
+            // Caught by `the_counters_separate_abstracted_from_merely_entered`,
+            // which read `policy="unset"` on the `Refuse` arm.
+            note_euf_online_atoms(policy, EncodeOutcome::Refused);
             return CheckResult::Unknown(unknown(
                 "boolean skeleton outside the online CDCL(T) encoder",
             ));
@@ -1195,7 +1229,14 @@ pub fn check_qf_uf_online_cdclt(
     // no abstracted atom keeps the caller's whole timeout under every arm, so
     // pure `QF_UF` is byte-identical to the pre-policy behaviour.
     let abstracted = enc.opaque_atoms > 0;
-    note_euf_online_atoms(policy, abstracted, enc.opaque_atoms);
+    note_euf_online_atoms(
+        policy,
+        if abstracted {
+            EncodeOutcome::Abstracted(enc.opaque_atoms)
+        } else {
+            EncodeOutcome::Clean
+        },
+    );
     let deadline = policy
         .route_timeout(config, abstracted)
         .and_then(|t| Instant::now().checked_add(t));
