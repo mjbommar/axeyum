@@ -135,6 +135,47 @@ This is the fifth instance in this session of the same failure — **searching f
 a module or concept by name instead of by the identifier a caller would actually
 write**. Four of the five were the coordinator's.
 
+## Sixth correction: BOTH duplicate-pipeline rows were wrong about which side is trusted (2026-09-09)
+
+Found by the ADR lane executing roadmap items 1.3/1.4, which was told to verify
+the inventory rather than take it on trust, and did. The coordinator re-verified
+both against the source before accepting them.
+
+**The `/0` witness claim.** The inventory published: "Neither preprocessing
+pipeline is a superset of the other … the front door's path does not carry it."
+False. `auto.rs:2344` carries `real_div_zeros` — same comment as
+`preprocess.rs:221-224`, present since 2026-07-25 — and `auto.rs:2335`
+additionally carries function interpretations, which `preprocess.rs` never
+builds (zero `set_function` calls). The front door is a strict SUPERSET, and the
+hazard described has not existed for months.
+
+**The `ReductionLink` claim.** The inventory implied the shipping inprocessing
+path used "a different certificate mechanism" and was therefore the untrusted
+side. False. `ReductionLink` is `axeyum-cnf/src/reduction_link.rs:156` — the
+SAME crate as `inprocess.rs` — and ADR-1780 (2026-09-08, one day before the
+inventory was written) made the shipping path check its `unsat` against the
+original formula through it (`sat_bv_backend.rs:2812`). `inprocess.rs` is the
+side that structurally cannot, having no way to express the backend's
+`compact()` renumbering.
+
+What survives: `inprocess.rs` genuinely has no caller in `axeyum-solver`, and
+the duplication in both subsystems is real. What does not survive: the claim
+about which side carries the evidence — which was the framing of the whole
+section, and its title.
+
+**How the error was made.** Two independent passes verified `preprocess.rs`'s
+witness loop and `auto.rs`'s pass ORDER, each in isolation, and inferred an
+asymmetry from the pair. Neither asked whether `auto.rs` ALSO had the witness.
+Every individual citation was correct; the conclusion drawn across them was not.
+
+This is the same shape as the ten grep failures recorded above, at a larger
+scale: **a partial view of each half is not a view of the whole.** It is also
+the first error in this folder that a reader acting on the documents would have
+paid for — the roadmap's item 1.4 was written to fix a hazard that did not
+exist. Corrected in `00-README.md` §1, `02-frontend-ir-and-rewriting.md`, and
+roadmap items 1.3 and 1.4, each carrying a dated correction note rather than a
+silent edit.
+
 ## What was not verified
 
 - No claim in this folder was confirmed by execution. Nothing here was built,

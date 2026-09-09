@@ -160,24 +160,38 @@ you read all nine, with the lane that found each. Every claim below was
 re-checked by the coordinator against the cited lines, including positive
 controls on the negative results.
 
-### 1. Duplicate implementations where the front door uses the untrusted one
+### 1. Duplicate implementations of the same work
 
-Three lanes independently found the same shape: a documented, evidence-carrying
-implementation that nothing calls, beside a second implementation that the
-shipping path actually uses.
+> **Corrected 2026-09-09.** This section was first published as "Duplicate
+> implementations where the front door uses the untrusted one." Two of its three
+> rows were wrong about WHICH side is trusted, and the error is recorded in
+> [10-verification-log.md](10-verification-log.md) and in ADR-1810 / ADR-1811.
+> The duplication is real; the framing was not. Corrected text follows.
+
+Three lanes independently found the same shape: two implementations of one job,
+where only one is reachable from the shipping path. What is NOT true in general
+is that the reachable one is the weaker one — see the corrections below each row.
 
 | Subsystem | Documented / evidence-carrying | What the front door uses |
 |---|---|---|
-| CNF inprocessing | `axeyum-cnf/src/inprocess.rs` (ADR-1750, proof-carrying). Zero callers outside its own crate's tests. | Hand-rolled passes in `sat_bv_backend.rs:1827-2083` with a different certificate mechanism (`ReductionLink`) |
-| Word-level preprocessing | `preprocess.rs`, up to 8 rounds (`MAX_PREPROCESS_ROUNDS`, `preprocess.rs:32`), carries `real_div_zeros` model witnesses | `auto::preprocess_reduce` (`auto.rs:2158`), a single straight-line round carrying function interpretations instead |
+| CNF inprocessing | `axeyum-cnf/src/inprocess.rs` (ADR-1750). Zero callers in `axeyum-solver` — this half stands. | Passes sequenced in `sat_bv_backend.rs:1827-2083`. **Correction:** this is the PROOF-CARRYING side. `ReductionLink` is `axeyum-cnf/src/reduction_link.rs:156` — the same crate as `inprocess.rs` — and since ADR-1780 (2026-09-08) the shipping path checks its `unsat` against the ORIGINAL formula through it (`sat_bv_backend.rs:2812`). `inprocess.rs` structurally cannot: it has no way to express the `compact()` renumbering the backend runs. |
+| Word-level preprocessing | `preprocess.rs`, up to 8 rounds (`MAX_PREPROCESS_ROUNDS`, `:32`). Carries `real_div_zeros`, but has **no** function-interpretation loop. | `auto::preprocess_reduce` (`auto.rs:2158`), one straight-line round. **Correction:** it carries BOTH function interpretations (`:2335`) and `real_div_zeros` (`:2344`, since 2026-07-25) — a strict superset of the other pipeline's witnesses. |
 | Bounded strings | `axeyum-solver/src/strings.rs` (`BoundedString`, 1,305 lines, public API), consumed only by `tests/strings.rs` | An independent encoder inside `axeyum-smtlib/src/parse.rs` |
 
-Neither preprocessing pipeline is a superset of the other. `preprocess.rs:221-224`
-states that dropping the `real_div_zeros` witness "would hand the caller a model
-that no longer replays — a wrong `sat` through the preprocessed path"; the front
-door's path does not carry it. **This is a divergence needing an owner, not a
-demonstrated bug** — whether `auto.rs`'s path can ever see a real `/0` witness
-was not determined here, and settling it needs a run, not a read.
+**Corrected.** The first published version of this paragraph said "neither
+preprocessing pipeline is a superset of the other" and that the front door does
+not carry the `/0` witness. Both are false. `auto.rs:2344` carries
+`real_div_zeros` — with the same comment as `preprocess.rs:221-224`, and since
+2026-07-25 — and `auto.rs:2335` additionally carries function interpretations
+that `preprocess.rs` never builds. The front door is the superset, and the
+hazard the original text described has not existed for months.
+
+How the error was made, since it is the more useful lesson: two passes verified
+`preprocess.rs`'s witness loop and `auto.rs`'s pass ORDER, each in isolation, and
+inferred an asymmetry from the pair. Neither checked whether `auto.rs` ALSO had
+the witness. A partial view of each half is not a view of the whole.
+
+The duplication itself is still real, and ADR-1811 decides it.
 
 The strings case cannot be fixed by discipline: `axeyum-smtlib` does not depend
 on `axeyum-solver`, so `parse.rs` structurally cannot call `BoundedString`. The

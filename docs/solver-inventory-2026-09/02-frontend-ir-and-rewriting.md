@@ -109,12 +109,17 @@ example (`crates/axeyum-bench/examples/elim_unconstrained_ablation.rs:170`).
 (`preprocess.rs:65`) runs the same five steps inside `for _round in
 0..MAX_PREPROCESS_ROUNDS` with an early exit when a round eliminates nothing
 (`preprocess.rs:89, 133`). It has the same replay discipline
-(`preprocess.rs:177-228`) plus one thing the `auto.rs` copy lacks: it carries
-`real_div_zeros` witnesses into the returned model (`preprocess.rs:225-227`),
-with a comment stating that dropping them would produce "a wrong `sat` through
-the preprocessed path". The `auto.rs` copy carries function interpretations
-(`auto.rs:2335`) which the `preprocess.rs` copy does not. Neither is a superset
-of the other.
+(`preprocess.rs:177-228`) and carries `real_div_zeros` witnesses into the
+returned model (`preprocess.rs:225-227`), with a comment stating that dropping
+them would produce "a wrong `sat` through the preprocessed path".
+
+> **Corrected 2026-09-09.** This paragraph originally said the `auto.rs` copy
+> LACKS the `real_div_zeros` carry and that "neither is a superset of the
+> other". Both are false. `auto.rs:2344` carries `real_div_zeros` (since
+> 2026-07-25, same comment), *and* `auto.rs:2335` carries function
+> interpretations, which `preprocess.rs` does not build at all (zero
+> `set_function` calls). The `auto.rs` pipeline is a strict SUPERSET on model
+> witnesses. See ADR-1811.
 
 ## Inventory
 
@@ -558,13 +563,15 @@ correctly says `set-logic` is recorded metadata with dispatch by term shape
 
 ## Gaps and open questions
 
-1. **Why two preprocessing pipelines?** `auto::preprocess_reduce` (one round,
-   no `real_div_zeros` carry, has function-interpretation carry) and
-   `preprocess::check_with_preprocessing_impl` (up to 8 rounds, carries
+1. **Why two preprocessing pipelines?** `auto::preprocess_reduce` (one round;
+   carries function interpretations AND `real_div_zeros`) and
+   `preprocess::check_with_preprocessing_impl` (up to 8 rounds; carries
    `real_div_zeros`, no function carry) implement the same five steps. Neither
-   file references the other's round count. Determining whether the single round
-   is deliberate would need either an ADR or an A/B measurement on the public
-   corpus. `[unverified]` — this is a source-level observation only.
+   file references the other's round count. **Corrected 2026-09-09:** the
+   original text here said `auto.rs` had "no `real_div_zeros` carry" — it does,
+   at `:2344`. ANSWERED by ADR-1811, which keeps `preprocess.rs` as the one home
+   and lands the merge at cap 1, because `reduction_shrinks_encoding`'s
+   calibration rows were measured against a one-round reduction.
 2. **`pass_stats.rs` has no consumer.** The module exists to answer "did this
    pass shrink or blow up the shared DAG" and nothing asks. Either a bench
    should call it or it should go; a 345-line module whose only exercise is its
