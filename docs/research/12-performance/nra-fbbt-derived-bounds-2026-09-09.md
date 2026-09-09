@@ -84,6 +84,17 @@ separability comes from each test asserting the *rejection reason*, not just
 `is_err()`: without that, a certificate violating two guards is rejected by
 whichever runs first and deleting the second changes nothing observable.
 
+The route has its own suite, `nra-fbbt-route`, over the six front-door tests:
+
+| mutation | tests killed |
+|---|---|
+| the propagation's bound SENSE reversed | 3 |
+| `max_component_vars: 2 → 0` (the route turned off, nothing else changed) | 2 |
+
+Both mutations kill `the_fuzz_seed_class_shape_reaches_the_derived_bound_route`,
+which is the point of that test: it is the one that fails when the route stops
+being reached, which no verdict assertion can detect.
+
 ### Proving the adversarial test can fail
 
 The rule is that a checker which cannot fail is worse than none, so the
@@ -267,3 +278,14 @@ suite requires them; a zero count would mean the suite compiled to nothing.
 | `scripts/check-links.sh` | all links ok |
 | `mutation_controls.py nra-fbbt-checker` | 7 of 7 guards killed |
 | `mutation_controls.py nra-fbbt-route` | 2 of 2 mutations killed |
+
+One gate is red and it is **not** this lane's:
+`RUSTDOCFLAGS="-D warnings" cargo doc -p axeyum-solver --all-features --no-deps`
+reports 11 private-intra-doc-link errors, in `auto.rs`, `euf_egraph.rs`,
+`lazy_smt_counters.rs`, `lia_counters.rs`, `memory_budget.rs` and
+`qinst_egraph.rs`. This lane touches none of those six files (its diff is
+`nra_fbbt.rs`, `nra_real_root.rs`, one `use` line in `lib.rs`, one registry
+entry, two test files, `mutation_controls.py` and this document), and none of
+the eleven names a symbol it introduced. It is reported rather than fixed
+because fixing another lane's doc links inside this diff would make the diff
+unreviewable.
