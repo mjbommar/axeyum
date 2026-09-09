@@ -317,9 +317,64 @@ and useful negative) and it can nominate candidates, but it cannot establish a
 prize. Only running a route **alone at the competition budget** — the solo
 prober — can, and that is the arm whose band table is above.
 
-**So the middle band is empty in every case actually measured at the competition
-budget**, and each of the five candidates that appeared to populate it was an
-artifact of measuring a route under a budget it will never be given.
+So each of the probe's middle-band candidates was an artifact of measuring a
+route under a budget it will never be given.
+
+### One confirmed middle-band file, found by the right instrument
+
+The solo prober then produced one, and it survives every check:
+
+`QF_UFLIA/mathsat/Hash/hash_sat_08_05.smt2` is `unknown` at 24 s and `unknown`
+at 120 s. `uflia-online`, run **alone at the 24 s competition budget**, decides
+it `sat` — declared `sat`, reference `sat` — three times running:
+
+```
+run1  uflia-online  sat  18,173 ms
+run2  uflia-online  sat  18,885 ms
+run3  uflia-online  sat  19,278 ms
+```
+
+18–19 s of a 24 s budget: **76–80% of the clock, needed by one route.** No
+reserve can serve that and still protect the routes below it, which is the
+definition of the band only a portfolio reaches. This one is not an artifact of
+an enlarged budget — it was measured at the budget that counts, by the
+instrument that runs one route and nothing else, and it reproduces.
+
+**So the middle band is not empty. It has one confirmed member in the roughly
+330 files measured**, and the earlier "empty" reading in this note is corrected
+by it. The recommendation below does not change — one file does not pay for a
+concurrent dispatcher — but the mechanism is real rather than theoretical, and
+the honest form of the negative is *"one confirmed case in 330"*, not *"none"*.
+
+And the ladder's own trail on it is the mechanism in one picture:
+
+```
+uf-arith-lazy-overbound-pre-lia  declined budget         272.2ms
+lia-dpll                         declined budget           0.2ms
+uf-arith-lazy-overbound          declined budget      18,006.1ms   <- 24000 * 3/4
+euf-online                       declined incomplete      11.8ms
+euf-offline                      declined incomplete       1.3ms
+uf-arith-online                  declined incomplete   5,181.6ms   <- what was left
+```
+
+`uf-arith-online` **is** `check_qf_uflia_online` (`auto.rs:3747`); the trail
+calls it by the dispatch site's name. So the file needs two things at once:
+
+- `uf-arith-lazy-overbound` takes 18.0 s — three quarters of the clock, by
+  `cegar_probe_budget`'s design — and fails;
+- the route that wins needs 18–19 s and is handed the **5.5 s that were left**.
+
+**Two routes, each needing about eighteen seconds, and one twenty-four-second
+clock.** There is no split of one clock that serves both, and no reserve setting
+that does either — any reserve large enough for the winner starves the route
+that wins other files. Two cores serve both trivially. That is the portfolio's
+case, demonstrated rather than argued.
+
+The `QF_UFLIA` solo sweep had covered 35 of 58 files when this was written, and
+this file came out of those 35 — a division whose ladder happens to contain two
+eighteen-second routes. **Finishing that sweep, and `QF_NIA`'s, is the cheapest
+thing anyone can do to change this answer**, and it is the first thing to do
+before the question is treated as closed.
 
 ## Neither instrument confirms a prize on its own, and the first two did not survive
 
@@ -499,14 +554,30 @@ That band is, in this population, close to empty — and the two ends explain wh
   87.2 s, 94.5 s, 107.0 s of a single route's own time. No arm of a 24 s
   portfolio reaches any of them. They need a faster route.
 
-So the recommendation is **do not build the portfolio**, and the reason is not
-the one the 2026-09-07 sweep gave. That sweep said parallelism cannot help
-because the binder already holds the clock. The measured reason is different and
-more useful: **every file we found that a portfolio would win is also won by a
-sub-second reserve, and every file a reserve cannot win is out of a portfolio's
-reach as well.**
+That band is, in this population, nearly empty — **one confirmed member in
+roughly 330 files measured** (`hash_sat_08_05.smt2`, above) — and the two ends
+explain why the rest is not in it.
 
-What to build instead, in the order the measurements support it:
+So the recommendation is **do not build the portfolio yet**, and the reason is
+not the one the 2026-09-07 sweep gave. That sweep said parallelism cannot help
+because the binder already holds the clock; that is refuted — on
+`hash_sat_08_05` there are two routes each wanting 18 s of one 24 s clock, and
+handing the binder more cores is exactly what would help. The measured reason to
+wait is narrower and honest: **the band a portfolio uniquely serves has one
+confirmed member so far, and the solo sweep that found it had covered 35 of that
+division's 58 files.** One file does not pay for a concurrent dispatcher; three
+or four might, and the measurement that would say so is already running.
+
+What to do next, in the order the measurements support it:
+
+0. **Finish the `QF_UFLIA` and `QF_NIA` solo sweeps** (`scripts/route-solo-slot.sh`;
+   partial progress logs are committed). They are the only measurement that can
+   move the band count, and the single confirmed portfolio case came out of the
+   35 `QF_UFLIA` files already covered. Decide the portfolio on the finished
+   number, not on this one.
+
+Then, whatever that number says, these three are worth more per hour than a
+concurrent dispatcher:
 
 1. **Clamp `dispatch_abv_online`.** It is the only dispatch site of its kind
    that passes `config` through unmodified, it costs nine QF_ABV files their
