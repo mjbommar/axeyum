@@ -242,6 +242,9 @@ same computation through different doors, not four arms.
 
 ### The band that decides it
 
+From the **solo** arm, over the divisions where it is complete (`QF_ABV` and
+`UF`, 44 ladder-losing files):
+
 ```
 fastest route that decides ALONE, on files the ladder loses:
   under 1 s (a reserve reaches it)                       2
@@ -251,7 +254,72 @@ fastest route that decides ALONE, on files the ladder loses:
   no route decides alone at all                         42
 ```
 
-**The middle band is empty.** That, not the count, is the answer.
+**The middle band is empty there.** That, not the count, is what the decision
+turns on — and it is why the answer below is what it is.
+
+### Two outstanding middle-band candidates, and they are the ones to settle
+
+Honesty requires the other half. The **probe** arm proposes five more candidates
+in the two divisions whose solo sweeps had not finished, and two of them land in
+the middle band:
+
+| division | file | winning route | probe's arm estimate | band |
+|---|---|---|---:|---|
+| QF_NIA | `From_T2__ex36…p26` | `nia-linearize` | 4,595 ms | reserve reaches it |
+| QF_NIA | `From_T2__ex36…p28` | `nia-linearize` | 3,778 ms | reserve reaches it |
+| QF_NIA | `From_T2__ex36…p29` | `nia-linearize` | 4,186 ms | reserve reaches it |
+| QF_NIA | `SAT14/1509.smt2` | `nia-linearize` | 10,149 ms | **MIDDLE** |
+| QF_UFLIA | `Hash/hash_sat_05_17` | `uf-arith-lazy-overbound` | 21,309 ms | **MIDDLE** |
+
+A 21.3 s arm against a 24 s budget is exactly the case a reserve cannot serve:
+there is no way to guarantee a route 89% of the clock and still protect the
+routes below it. If either survived confirmation it would be a portfolio case
+and nothing else would be. So both were confirmed, and both failed.
+
+**`hash_sat_05_17` — the 21.3 s estimate was one lucky run.** At a 120 s budget
+`uf-arith-lazy-overbound` decides it in 17,819 ms with a clean trail (9
+attempts, exactly one `decided`, so not looped). Walking the budget:
+
+```
+budget= 24000  unknown  route given 18,003 ms  (24000 * 3/4)
+budget= 24000  unknown  route given 18,004 ms
+budget= 30000  unknown  route given 22,506 ms
+budget= 40000  unknown  route given 30,006 ms
+budget= 60000  sat      route DECIDED in 33,353 ms
+budget= 90000  sat      route DECIDED in 34,107 ms
+```
+
+The route's real cost is **33–34 s**, twice the probe's estimate and well past a
+24 s budget. It fails at 40 s while holding 30 s — more than the 21.3 s it was
+credited with. The single 17,819 ms reading was the outlier, not the signal.
+
+**`SAT14/1509.smt2` — no starvation at all.** At 24 s the ladder finishes in
+10,860 ms and returns `unknown`; at 40 s it finishes in 17,980 ms and still
+returns `unknown`. Nothing ran out of clock. `nia-linearize` declines on a
+**deterministic bound that scales with the configured budget**, so at 120 s it is
+a more capable procedure than at 24 s — not the same procedure with more time.
+
+### Why the enlarged-budget probe can never confirm a prize
+
+Four candidates tested, four refuted, and the fourth one gives the mechanism:
+
+> **A route's own cost is a function of the budget it was handed.** The routes
+> here are anytime / CEGAR / bounded procedures: `cegar_probe_budget` hands one
+> three quarters of what remains, `nia-linearize`'s admission bound scales with
+> the budget, and a CEGAR loop's refinement schedule is set from its deadline.
+> So "the deciding route's own segment under a 5x budget" is not the cost that
+> route would incur at 1x. It can be smaller — a lucky search path — or the
+> route can simply be a *different, stronger* procedure at the larger budget.
+
+That is a limitation of the method, not of any one file, and it retires the
+probe as an oracle: it can say *the ladder does not decide this at 5x* (a real
+and useful negative) and it can nominate candidates, but it cannot establish a
+prize. Only running a route **alone at the competition budget** — the solo
+prober — can, and that is the arm whose band table is above.
+
+**So the middle band is empty in every case actually measured at the competition
+budget**, and each of the five candidates that appeared to populate it was an
+artifact of measuring a route under a budget it will never be given.
 
 ## Neither instrument confirms a prize on its own, and the first two did not survive
 
