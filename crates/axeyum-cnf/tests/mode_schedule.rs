@@ -364,6 +364,105 @@ fn a_real_search_switches_modes_under_the_policy_and_not_under_the_default() {
     );
 }
 
+/// The committed curated instance, `corpus/micro-cnf/unsat-pigeonhole-6-7.cnf`
+/// (PHP(7,6), `c status unsat`), run through the mode-switching policy.
+///
+/// The exit criterion for this work asks for "a curated corpus shows the mode
+/// schedule in the span log". The span log lives in `axeyum-solver`, which this
+/// crate cannot reach — the dependency runs the other way — so the schedule is
+/// shown here instead, from the committed file rather than from a formula the
+/// test invented. What a later solver-side lane has to add is a route from its
+/// backend to `solve_with_drat_proof_mode_traced` and an emitter for
+/// `mode_sequence()` plus each transition's `at_ticks`.
+///
+/// # The measurement this test records
+///
+/// **Under the shipped policy this instance never leaves focused mode**, and
+/// that is correct rather than a defect: it is decided in 691 conflicts, and
+/// the shipped bootstrap is 1000. The whole committed CNF corpus is three
+/// files — two of them two-clause instances — so nothing in it is large enough
+/// to exercise the shipped interval. The schedule below therefore runs at a
+/// 100-conflict bootstrap, which changes the interval sizes and nothing else
+/// about the mechanism. Both arms are asserted, so the reading is the policy's
+/// and not the instance's.
+#[test]
+fn the_curated_corpus_instance_shows_a_mode_schedule() {
+    let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../corpus/micro-cnf/unsat-pigeonhole-6-7.cnf");
+    let text = std::fs::read_to_string(&path)
+        .unwrap_or_else(|e| panic!("{} must be readable: {e}", path.display()));
+    let f = axeyum_cnf::parse_dimacs(&text).expect("the committed corpus file must parse");
+
+    let shortened = SearchPolicies {
+        restart: RestartPolicy::mode_switching_after(100),
+        ..SearchPolicies::default()
+    };
+    let mut sink = VecProofSink::new();
+    let (outcome, counters) =
+        solve_with_drat_proof_counted_with_policies(&f, None, 200_000, &mut sink, &shortened);
+    assert_eq!(
+        outcome,
+        StreamingProofOutcome::Unsat,
+        "the file's `c status unsat` header must still hold"
+    );
+    assert_eq!(
+        check_drat(&f, &sink.into_steps()),
+        Ok(true),
+        "the refutation must still check under a switching schedule"
+    );
+    assert!(
+        counters.mode_switches >= 2,
+        "the curated instance must exhibit a schedule, saw {} switches over {} \
+         conflicts and {} ticks",
+        counters.mode_switches,
+        counters.conflicts,
+        counters.ticks()
+    );
+
+    // The default policy over the same file switches zero times, so the
+    // assertion above is about the policy and not about the instance.
+    let mut sink = VecProofSink::new();
+    let (_, baseline) = solve_with_drat_proof_counted_with_policies(
+        &f,
+        None,
+        200_000,
+        &mut sink,
+        &SearchPolicies::default(),
+    );
+    assert_eq!(baseline.mode_switches, 0);
+
+    // And the SHIPPED mode-switching policy also switches zero times here,
+    // because 691 conflicts is inside its first phase. Pinned rather than
+    // hidden: if this ever becomes nonzero, either the instance or the
+    // bootstrap moved and the paragraph above is stale.
+    let mut sink = VecProofSink::new();
+    let (_, shipped) = solve_with_drat_proof_counted_with_policies(
+        &f,
+        None,
+        200_000,
+        &mut sink,
+        &SearchPolicies::mode_switching(),
+    );
+    assert!(
+        shipped.conflicts < 1_000,
+        "the reason there is no switch must be that the solve is shorter than \
+         the bootstrap, not something else: {} conflicts",
+        shipped.conflicts
+    );
+    assert_eq!(
+        shipped.mode_switches, 0,
+        "PHP(7,6) is decided in {} conflicts, inside the shipped 1000-conflict \
+         bootstrap",
+        shipped.conflicts
+    );
+    // The two arms do NOT take the same trajectory even though neither
+    // switches: `mode_switching` runs the glue-EMA rule in focused mode from
+    // the first conflict, where the default runs Luby. Measured 756 conflicts
+    // for the default and 691 here. Pinning the difference keeps this test from
+    // being read as "the policy changes nothing on small instances".
+    assert_ne!(shipped.conflicts, baseline.conflicts);
+}
+
 /// Mode switching is verdict-preserving and certificate-preserving. It reorders
 /// decisions and restarts; it must not change what the formula is, and the
 /// `DRAT` stream it emits must still refute the original.
