@@ -4698,11 +4698,21 @@ fn dispatch_nonlinear_int_tail(
         // resetting the clock.
         let remaining_config = config_with_remaining_deadline(config, deadline);
         let relax_config = int_real_relax_budget(&remaining_config);
-        if crate::int_real_relax::refute_int_via_real_relaxation(arena, assertions, &relax_config)?
-        {
+        let mut relax_why = None;
+        if crate::int_real_relax::refute_int_via_real_relaxation(
+            arena,
+            assertions,
+            &relax_config,
+            &mut relax_why,
+        )? {
             with_recorder(rec, |t| t.record_decided("int-real-relax", Verdict::Unsat));
             return Ok(CheckResult::Unsat);
         }
+        // Recorded on the DECLINE too. A trace attempt's `elapsed` runs from the
+        // previous recorded attempt, so without this row every second this route
+        // spends is charged to `nia-linearize` below — measured at 4.04 s of the
+        // 10.73 s that route was credited with on `QF_NIA` file 34, 2026-09-08.
+        record_nia_decline(rec, "int-real-relax", relax_why);
         if past_deadline(deadline) {
             return Ok(CheckResult::Unknown(timeout_reason(
                 "auto-dispatch timeout after nonlinear integer real relaxation",

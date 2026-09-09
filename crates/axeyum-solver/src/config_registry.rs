@@ -4966,9 +4966,24 @@ pub static REGISTRY: &[ConfigEntry] = &[
         on_exceed: OnExceed::Truncate,
         signal: Signal::NotApplicable,
         guarded_by: "",
-        env_override: None,
-        justification: undated("doc comment"),
-        note: "Grants an extra slice only when envelopes were actually emitted.",
+        env_override: Some("AXEYUM_NIA_REFINEMENT"),
+        justification: dated(
+            "docs/research/12-performance/nia-refinement-round-2026-09-08.md",
+            "2026-09-08",
+            Some("5d406a12b"),
+            &[sym(
+                "crates/axeyum-solver/src/nia_linearize.rs",
+                "NIA_MCCORMICK_BUDGET_SHARE",
+            )],
+            &[
+                doc("docs/research/12-performance/nia-refinement-round-2026-09-08.md"),
+                live(
+                    "the_off_arm_reproduces_the_committed_slice_and_round_budget",
+                    "crates/axeyum-solver/src/nia_linearize.rs",
+                ),
+            ],
+        ),
+        note: "MEASURED, AND THE MEASUREMENT DID NOT MOVE IT. First 50 files of the committed `QF_NIA` parity list, 24 s budget, one process per host on idle s6/s7. At 3 the loop gets a median 6.65 s slice, runs 1-15 rounds (median 1, 26 of 50 files exactly one) and emits 2,476 tangent lemmas. The `AXEYUM_NIA_REFINEMENT=1/1` arm hands it the whole remaining budget (median 19.96 s): 22 files get more rounds, 1,280 more tangent lemmas are emitted, and TWO files move `unknown` -> `sat` -- neither reproducibly (file 13 sat in 3 of 4 repeats, file 30 in 1 of 7). The inner search consumes whatever budget it is given rather than converging, exactly as `OVERSIZED_ADMISSION_PROBE_BUDGET`'s justification already records, so a larger slice moves which states are visited and not how deep the search goes. Left at 3; the lever ships OFF so the next A/B needs no rebuild.",
     },
     ConfigEntry {
         name: "NIA_SLICE_MS",
@@ -4979,9 +4994,24 @@ pub static REGISTRY: &[ConfigEntry] = &[
         on_exceed: OnExceed::Truncate,
         signal: Signal::NotApplicable,
         guarded_by: "",
-        env_override: None,
-        justification: undated("doc comment"),
-        note: "Default slice for the pre-ladder NIA relaxation so it cannot hang before the width ladder is reached.",
+        env_override: Some("AXEYUM_NIA_REFINEMENT"),
+        justification: dated(
+            "docs/research/12-performance/nia-refinement-round-2026-09-08.md",
+            "2026-09-08",
+            Some("5d406a12b"),
+            &[sym(
+                "crates/axeyum-solver/src/nia_linearize.rs",
+                "NIA_SLICE_MS",
+            )],
+            &[
+                doc("docs/research/12-performance/nia-refinement-round-2026-09-08.md"),
+                live(
+                    "the_off_arm_reproduces_the_committed_slice_and_round_budget",
+                    "crates/axeyum-solver/src/nia_linearize.rs",
+                ),
+            ],
+        ),
+        note: "Default slice for the pre-ladder NIA relaxation so it cannot hang before the width ladder is reached. THE ARM THAT SELECTS IT IS NARROW: measured 2026-09-08 over the first 50 files of the committed `QF_NIA` parity list, only 3 of 50 top-level calls take this floor at all -- the other 47 have `McCormick` envelopes or exact splits and take `NIA_MCCORMICK_BUDGET_SHARE` instead. It bounds a hang, not a search, and `NiaRefinementPolicy` deliberately does not move it: raising the hang guard is a different decision from raising the search budget.",
     },
     ConfigEntry {
         name: "POW2_TABLE_MAX_CASES",
