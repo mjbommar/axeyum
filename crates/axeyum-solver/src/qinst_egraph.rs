@@ -120,7 +120,7 @@ pub struct GroundBudget {
     pub name: &'static str,
     /// Ceiling on accumulated ground terms across the whole instantiation loop.
     /// Crossing it makes the loop run one final refutation check and return
-    /// `unknown` ([`egraph_ground_limit`]), even with no wall clock configured
+    /// `unknown` (`egraph_ground_limit`), even with no wall clock configured
     /// — this is the "never hang" ceiling.
     pub ceiling: usize,
     /// Ceiling on one retained matching round's tuple join, which prevents a
@@ -254,6 +254,48 @@ const RELEVANCE_NARROW_RESIDUAL_WIDTH: usize = 3;
 /// would be pure overhead on files that are going to refute from the dump.
 const RELEVANCE_EVICT_MIN_GROUND: usize = FLOOD_THROTTLE_MIN_GROUND;
 
+/// What the selection policy is allowed to know when it judges a candidate.
+///
+/// A filter with one hard-coded notion of "useless" is a narrow special case of
+/// a policy that takes the criterion as a parameter, and different callers want
+/// different strictness. cvc5's instantiation-evaluation layer carries five such
+/// criteria for exactly this reason (`NONE` / `CONFLICT` / `PROP` / `NO_ENTAIL`
+/// / `MODEL`), and its E-matching triggers request the entailment one on every
+/// trigger while its conflict-find requests the conflict one.
+///
+/// This is that axis, with the two values our evaluator can actually support
+/// today. The gap between them is the finding of
+/// `docs/research/12-performance/uf-instance-selection-2026-09-09.md`: on the
+/// `UF` loss population **85.6 % of scored candidates carry a literal
+/// [`RelevanceCriterion::EqualityOnly`] cannot value at all**, so the shipped
+/// criterion is blind on six sevenths of what it is asked to rank.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RelevanceCriterion {
+    /// Equalities and disequalities in the congruence, and nothing else.
+    ///
+    /// This is what `evaluate_equality_clause_with` knows, and it is the
+    /// shipped admission classifier's criterion. A literal that is not an
+    /// equality — an uninterpreted predicate application, say — is not
+    /// *undetermined* to this criterion; it is unspeakable, and the clause
+    /// carrying it is deferred by default rather than by judgement.
+    EqualityOnly,
+    /// Equalities, plus **ground Boolean units, closed under congruence**.
+    ///
+    /// A ground conjunct that is a Boolean application asserts that
+    /// application; its negation asserts the negation; and two congruent
+    /// applications share the value. That is the minimum an evaluator needs in
+    /// order to have an opinion about a predicate atom at all, and it is the
+    /// prerequisite for any partial-substitution pruning layer here: a
+    /// criterion that cannot value a completed body cannot value a partial one
+    /// either.
+    ///
+    /// Sound as an admission filter: a literal this valuation calls `True` is
+    /// entailed by the ground set, because the unit that gave it the value is
+    /// itself a ground conjunct and congruence is a consequence of the ground
+    /// equalities.
+    BooleanUnits,
+}
+
 /// Which generated instances the loop admits, and in what order.
 ///
 /// [`GroundBudget`] is the **volume** policy: how many ground terms the loop may
@@ -275,10 +317,10 @@ const RELEVANCE_EVICT_MIN_GROUND: usize = FLOOD_THROTTLE_MIN_GROUND;
 /// instances were admitted while still undetermined and were entailed later, by
 /// facts that arrived after them. See [`RelevancePolicy::evict_entailed`] for
 /// the part of that population which can actually be acted on, and
-/// [`floodprobe_cap_census`] for the part which cannot.
+/// `floodprobe_cap_census` for the part which cannot.
 ///
 /// What the shipped loop does *not* do is rank. Above
-/// [`FLOOD_ROUND_ADMISSION_CAP`] the deferred pool is ordered by instantiation
+/// `FLOOD_ROUND_ADMISSION_CAP` the deferred pool is ordered by instantiation
 /// generation and then term index — a *provenance* order, which says how deep a
 /// candidate was derived and nothing about whether it is close to a conflict.
 ///
@@ -298,7 +340,7 @@ pub struct RelevancePolicy {
     /// Decline a deferred candidate wider than this while the flood throttle is
     /// engaged. [`usize::MAX`] declines nothing, which is shipped.
     pub max_residual_width: usize,
-    /// Once the ground set reaches [`RELEVANCE_EVICT_MIN_GROUND`], re-evaluate
+    /// Once the ground set reaches `RELEVANCE_EVICT_MIN_GROUND`, re-evaluate
     /// retained instances against the current congruence and drop those it now
     /// entails, freeing ceiling slots.
     ///
@@ -315,18 +357,23 @@ pub struct RelevancePolicy {
     /// Accumulated ground size at which the deferred throttle -- and therefore
     /// this whole selection point -- engages. Below it every release behaves
     /// like the historical dump-everything admission and no candidate is
-    /// scored. [`FLOOD_THROTTLE_MIN_GROUND`] in every shipped arm; a test arm
+    /// scored. `FLOOD_THROTTLE_MIN_GROUND` in every shipped arm; a test arm
     /// lowers it, which is the only way a unit test can reach the selection
     /// point at all without building a two-thousand-term ground set.
     pub throttle_min_ground: usize,
     /// How many *deep* deferred candidates one round admits once the throttle
-    /// is engaged. [`FLOOD_ROUND_ADMISSION_CAP`] in every shipped arm. It is
+    /// is engaged. `FLOOD_ROUND_ADMISSION_CAP` in every shipped arm. It is
     /// also the pool size below which the slice is returned untouched, so a
     /// test arm has to lower this to reach the selection point too.
     pub round_admission_cap: usize,
+    /// What the policy is allowed to know when it judges a candidate.
+    /// [`RelevanceCriterion::EqualityOnly`] in every shipped arm, because that
+    /// is what the shipped admission classifier knows and an arm that widened
+    /// the criterion while also moving a lever would not be measuring either.
+    pub criterion: RelevanceCriterion,
     /// Deferred candidates at or below this instantiation generation bypass the
     /// selection point entirely and are admitted in the historical index order.
-    /// [`FLOOD_EAGER_GENERATION_MAX`] in every shipped arm — delaying shallow
+    /// `FLOOD_EAGER_GENERATION_MAX` in every shipped arm — delaying shallow
     /// candidates was measured to LOSE refuters, so no shipped arm touches it,
     /// and a selection experiment that also changed it would not be measuring
     /// selection. Lowered only by test arms, which is how a fixture reaches the
@@ -334,17 +381,29 @@ pub struct RelevancePolicy {
     pub eager_generation_max: u32,
 }
 
+/// The shipped selection policy: every lever off, every threshold the value of
+/// the constant it stands in for.
+///
+/// At module level rather than only as [`RelevancePolicy::SHIPPED`] for the same
+/// reason [`ONLINE_QUANTIFIER_LIMITS`] is: `config_registry` names constants,
+/// and its coverage scanner reads only scalar and `Duration` types, so a
+/// struct-valued governing value has to be a module-level `const` for the
+/// registry to be able to point at it at all. It is registered by hand — no gate
+/// would have caught its absence.
+const SHIPPED_RELEVANCE_POLICY: RelevancePolicy = RelevancePolicy {
+    name: "shipped",
+    rank_by_residual: false,
+    max_residual_width: usize::MAX,
+    evict_entailed: false,
+    criterion: RelevanceCriterion::EqualityOnly,
+    throttle_min_ground: FLOOD_THROTTLE_MIN_GROUND,
+    round_admission_cap: FLOOD_ROUND_ADMISSION_CAP,
+    eager_generation_max: FLOOD_EAGER_GENERATION_MAX,
+};
+
 impl RelevancePolicy {
     /// Today's behaviour: no ranking, no width filter, no eviction.
-    pub const SHIPPED: Self = Self {
-        name: "shipped",
-        rank_by_residual: false,
-        max_residual_width: usize::MAX,
-        evict_entailed: false,
-        throttle_min_ground: FLOOD_THROTTLE_MIN_GROUND,
-        round_admission_cap: FLOOD_ROUND_ADMISSION_CAP,
-        eager_generation_max: FLOOD_EAGER_GENERATION_MAX,
-    };
+    pub const SHIPPED: Self = SHIPPED_RELEVANCE_POLICY;
 
     /// Residual-width ranking only. Admits exactly as many candidates per round
     /// as shipped, and changes only *which*.
@@ -355,7 +414,7 @@ impl RelevancePolicy {
     };
 
     /// Ranking plus the width filter: candidates further than
-    /// [`RELEVANCE_NARROW_RESIDUAL_WIDTH`] from a conflict wait.
+    /// `RELEVANCE_NARROW_RESIDUAL_WIDTH` from a conflict wait.
     pub const NARROW: Self = Self {
         name: "narrow",
         rank_by_residual: true,
@@ -371,7 +430,27 @@ impl RelevancePolicy {
         ..Self::SHIPPED
     };
 
-    /// Every lever at once.
+    /// Ranking under the wider criterion: the same ordering as
+    /// [`Self::RANKED`], over an evaluator that can value a predicate atom.
+    /// Isolates the criterion from every other lever.
+    pub const ENTAIL: Self = Self {
+        name: "entail",
+        rank_by_residual: true,
+        criterion: RelevanceCriterion::BooleanUnits,
+        ..Self::SHIPPED
+    };
+
+    /// The wider criterion plus the width filter — [`Self::NARROW`]'s levers
+    /// over [`Self::ENTAIL`]'s evaluator.
+    pub const ENTAIL_NARROW: Self = Self {
+        name: "entail-narrow",
+        rank_by_residual: true,
+        max_residual_width: RELEVANCE_NARROW_RESIDUAL_WIDTH,
+        criterion: RelevanceCriterion::BooleanUnits,
+        ..Self::SHIPPED
+    };
+
+    /// Every lever at once, under the shipped criterion.
     pub const FULL: Self = Self {
         name: "full",
         rank_by_residual: true,
@@ -388,6 +467,8 @@ impl RelevancePolicy {
         Self::RANKED,
         Self::NARROW,
         Self::EVICT,
+        Self::ENTAIL,
+        Self::ENTAIL_NARROW,
         Self::FULL,
     ];
 }
@@ -489,6 +570,17 @@ pub struct RelevanceFunnel {
     /// predates this policy; it is counted here so a reader can see its size
     /// next to the levers that are new.
     pub redundant_at_generation: usize,
+    /// Scored candidates the shipped classifier cannot value at all — clauses
+    /// carrying a literal that is not an equality, so
+    /// `evaluate_equality_clause_with` returns `None` and the candidate is
+    /// deferred by default rather than by judgement.
+    ///
+    /// This is the ceiling on what any congruence-based relevance signal can
+    /// ever do here. A candidate in this bucket is not "far from a conflict";
+    /// it is a candidate whose remaining literals the equality oracle has no
+    /// opinion about, so ranking it against another one is ranking two numbers
+    /// that mean nothing.
+    pub scored_unclassifiable: usize,
     /// Retained instances the eviction sweep examined.
     pub evict_scanned: usize,
     /// Retained instances the eviction sweep dropped.
@@ -537,21 +629,42 @@ impl RelevanceFunnel {
         }
     }
 
+    /// The narrowest residual seen, or `"-"` when nothing was scored. Printed
+    /// rather than the raw field because the raw field's zero-initialized value
+    /// is `0`, and `residual_min=0` reads as "a conflict was in the pool" —
+    /// which is exactly the opposite of "the policy never ran".
+    fn residual_band(&self) -> String {
+        if self.scored == 0 {
+            "-".to_owned()
+        } else {
+            self.residual_min.to_string()
+        }
+    }
+
+    fn residual_band_max(&self) -> String {
+        if self.scored == 0 {
+            "-".to_owned()
+        } else {
+            self.residual_max.to_string()
+        }
+    }
+
     fn report(&self, ground: usize) {
         eprintln!(
             "QPROBE relevance policy={} scored={} declined_wide={} reordered_rounds={} \
-             declined_tautology={} redundant_at_generation={} evict_scanned={} evicted={} \
-             residual_min={} residual_max={} ground={ground}",
+             declined_tautology={} redundant_at_generation={} unclassifiable={} \
+             evict_scanned={} evicted={} residual_min={} residual_max={} ground={ground}",
             self.policy,
             self.scored,
             self.declined_wide,
             self.declined_tautology,
             self.reordered_rounds,
             self.redundant_at_generation,
+            self.scored_unclassifiable,
             self.evict_scanned,
             self.evicted,
-            self.residual_min,
-            self.residual_max,
+            self.residual_band(),
+            self.residual_band_max(),
         );
     }
 }
@@ -2674,9 +2787,11 @@ fn admit_next_source_batch(
     // constraining instances preserve the legacy loop's reach.
     if admitted.is_empty() {
         if ground.len() >= policy.throttle_min_ground {
+            let bools = BooleanUnitValuation::new(policy.criterion, arena, matcher, ground);
             deferred = budget_flood_slice(
                 arena,
                 matcher,
+                &bools,
                 deferred,
                 seen,
                 &derivations,
@@ -2708,10 +2823,13 @@ fn admit_next_source_batch(
     admitted
 }
 
-/// Flood-regime slicing for the deferred admission pool: pools at or under
-/// [`FLOOD_ROUND_ADMISSION_CAP`] pass through untouched (byte-identical
-/// historical admission). Larger pools keep every candidate at or under
-/// [`FLOOD_EAGER_GENERATION_MAX`] eagerly, in the historical index order
+/// Flood-regime slicing for the deferred admission pool, and the loop's one
+/// instance-SELECTION point: everything [`RelevancePolicy`] can act on, it acts
+/// on here.
+///
+/// Pools at or under `policy.round_admission_cap` pass through untouched
+/// (byte-identical historical admission). Larger pools keep every candidate at
+/// or under `policy.eager_generation_max` eagerly, in the historical index order
 /// (Z3's `qi.eager_threshold`: shallow-derivation instances are never
 /// delayed — delaying them was measured to lose ~3-4s refuters that win off
 /// the dump itself), and narrow only the deeper-derived remainder to the
@@ -2721,10 +2839,18 @@ fn admit_next_source_batch(
 /// with thousands of unseen candidates waiting). The deep remainder is never
 /// dropped — the retained matcher re-materializes and re-classifies it
 /// (possibly as a conflict by then) on every later round.
+///
+/// Under [`RelevancePolicy::SHIPPED`] that is the whole function: the early
+/// return below is the historical body verbatim, and no candidate is scored.
+/// Under a selecting arm the deep remainder is additionally scored by
+/// [`clause_residual_width`], and the counts of what was seen and what was
+/// declined land in `funnel` — which is the only thing that distinguishes an
+/// arm that ran and agreed from an arm that never reached a candidate.
 #[allow(clippy::too_many_arguments)]
 fn budget_flood_slice(
     arena: &TermArena,
     matcher: &IncrementalEmatchSession,
+    bools: &BooleanUnitValuation,
     pool: Vec<TermId>,
     seen: &HashSet<TermId>,
     derivations: &HashMap<TermId, QuantifierGroundDerivation>,
@@ -2765,13 +2891,21 @@ fn budget_flood_slice(
 
     let mut scored: Vec<(usize, u32, TermId)> = Vec::with_capacity(deep.len());
     for (generation, term) in deep {
-        let Some(width) =
-            clause_residual_width(arena, term, &mut |lhs, rhs| matcher.equality(lhs, rhs))
-        else {
+        let Some(width) = clause_residual_width(
+            arena,
+            term,
+            &mut |lhs, rhs| matcher.equality(lhs, rhs),
+            &mut |atom| bools.value(matcher, atom),
+        ) else {
             funnel.declined_tautology += 1;
             continue;
         };
         funnel.observe_residual(width);
+        // Counted under the POLICY's criterion, not the shipped one, so the two
+        // arms' blindness numbers are a comparison rather than a constant.
+        if clause_is_unvaluable(arena, term, &mut |atom| bools.value(matcher, atom)) {
+            funnel.scored_unclassifiable += 1;
+        }
         if width > policy.max_residual_width {
             funnel.declined_wide += 1;
             continue;
@@ -5802,6 +5936,86 @@ fn equality_literal(arena: &TermArena, term: TermId) -> Option<(bool, TermId, Te
     }
 }
 
+/// Ground Boolean units, closed under the matcher's congruence: the evidence
+/// [`RelevanceCriterion::BooleanUnits`] adds over the shipped criterion.
+///
+/// Built from the ground set, not from the instance pool, so nothing an
+/// instance asserts about itself can enter it circularly — the same hazard the
+/// census's `clause_true_self_merged` split exposed for equalities.
+struct BooleanUnitValuation {
+    /// Congruence-class root of a Boolean application, to the value the ground
+    /// set asserts for it.
+    by_root: HashMap<ENodeId, bool>,
+}
+
+impl BooleanUnitValuation {
+    /// Empty under [`RelevanceCriterion::EqualityOnly`], so a caller can build
+    /// one unconditionally and the criterion decides whether it says anything.
+    fn new(
+        criterion: RelevanceCriterion,
+        arena: &TermArena,
+        matcher: &IncrementalEmatchSession,
+        ground: &[TermId],
+    ) -> Self {
+        let mut by_root = HashMap::new();
+        if criterion == RelevanceCriterion::BooleanUnits {
+            for &term in ground {
+                let (atom, value) = match arena.node(term) {
+                    TermNode::App {
+                        op: Op::BoolNot,
+                        args,
+                    } if args.len() == 1 => (args[0], false),
+                    _ => (term, true),
+                };
+                if !is_opaque_boolean_atom(arena, atom) {
+                    continue;
+                }
+                if let Some(root) = class_root(matcher, atom) {
+                    // A ground set asserting both polarities is already unsat and
+                    // the ground check will say so; keeping the first reading
+                    // makes this deterministic rather than order-dependent.
+                    by_root.entry(root).or_insert(value);
+                }
+            }
+        }
+        Self { by_root }
+    }
+
+    fn value(&self, matcher: &IncrementalEmatchSession, literal: TermId) -> LiteralValue {
+        match class_root(matcher, literal).and_then(|root| self.by_root.get(&root)) {
+            Some(true) => LiteralValue::True,
+            Some(false) => LiteralValue::False,
+            None => LiteralValue::Undetermined,
+        }
+    }
+}
+
+/// The congruence-class root of `term` in the matcher's e-graph, or `None` when
+/// the matcher has never seen the term.
+fn class_root(matcher: &IncrementalEmatchSession, term: TermId) -> Option<ENodeId> {
+    matcher
+        .bridge
+        .term_to_node
+        .get(&term)
+        .map(|&node| matcher.bridge.egraph.root(node))
+}
+
+/// Whether `term` is a Boolean atom the equality criterion cannot speak about:
+/// a `Bool`-sorted application that is neither an equality nor a Boolean
+/// connective. Exactly the literals [`evaluate_equality_clause_with`] returns
+/// `None` on.
+fn is_opaque_boolean_atom(arena: &TermArena, term: TermId) -> bool {
+    arena.sort_of(term) == Sort::Bool
+        && matches!(
+            arena.node(term),
+            TermNode::App { op, .. }
+                if !matches!(
+                    op,
+                    Op::Eq | Op::BoolNot | Op::BoolOr | Op::BoolAnd | Op::BoolXor | Op::BoolImplies
+                )
+        )
+}
+
 /// How many of `clause`'s literals the equality oracle has **not** already
 /// falsified: how many more facts must arrive before the clause can conflict.
 /// `None` means some literal is already true, so the clause is a tautology
@@ -5824,6 +6038,7 @@ fn clause_residual_width(
     arena: &TermArena,
     clause: TermId,
     equality: &mut impl FnMut(TermId, TermId) -> LiteralValue,
+    atom: &mut impl FnMut(TermId) -> LiteralValue,
 ) -> Option<usize> {
     let mut literals = Vec::new();
     collect_clause_literals(arena, clause, &mut literals);
@@ -5838,8 +6053,15 @@ fn clause_residual_width(
         } else if let Some((positive, lhs, rhs)) = equality_literal(arena, literal) {
             let value = equality(lhs, rhs);
             if positive { value } else { value.negate() }
+        } else if let TermNode::App {
+            op: Op::BoolNot,
+            args,
+        } = arena.node(literal)
+            && args.len() == 1
+        {
+            atom(args[0]).negate()
         } else {
-            LiteralValue::Undetermined
+            atom(literal)
         };
         match value {
             LiteralValue::True => return None,
@@ -5848,6 +6070,43 @@ fn clause_residual_width(
         }
     }
     Some(open)
+}
+
+/// Whether the policy's criterion has **no opinion at all** about at least one
+/// of `clause`'s literals — the population no relevance ranking can order,
+/// because the numbers it would compare are not about anything.
+///
+/// Under [`RelevanceCriterion::EqualityOnly`] this is exactly
+/// "[`evaluate_equality_clause_with`] returns `None`". Under
+/// [`RelevanceCriterion::BooleanUnits`] a predicate atom the ground units value
+/// no longer counts, which is the whole point of the wider criterion and the
+/// number an A/B between the two arms reads.
+fn clause_is_unvaluable(
+    arena: &TermArena,
+    clause: TermId,
+    atom: &mut impl FnMut(TermId) -> LiteralValue,
+) -> bool {
+    let mut literals = Vec::new();
+    collect_clause_literals(arena, clause, &mut literals);
+    literals.into_iter().any(|literal| {
+        if matches!(arena.node(literal), TermNode::BoolConst(_)) {
+            return false;
+        }
+        // An equality is inside every criterion's vocabulary: `Undetermined`
+        // there is a judgement ("the congruence does not know yet"), not an
+        // absence of one.
+        if equality_literal(arena, literal).is_some() {
+            return false;
+        }
+        let inner = match arena.node(literal) {
+            TermNode::App {
+                op: Op::BoolNot,
+                args,
+            } if args.len() == 1 => args[0],
+            _ => literal,
+        };
+        atom(inner) == LiteralValue::Undetermined
+    })
 }
 
 /// Drops retained instances the current congruence already entails, freeing
@@ -7497,6 +7756,7 @@ mod tests {
         assert_eq!(shipped.name, "shipped");
         assert!(!shipped.rank_by_residual);
         assert!(!shipped.evict_entailed);
+        assert_eq!(shipped.criterion, RelevanceCriterion::EqualityOnly);
         assert_eq!(shipped.max_residual_width, usize::MAX);
         assert_eq!(shipped.throttle_min_ground, FLOOD_THROTTLE_MIN_GROUND);
         assert_eq!(shipped.round_admission_cap, FLOOD_ROUND_ADMISSION_CAP);
@@ -7517,6 +7777,16 @@ mod tests {
                     shipped.eager_generation_max
                 ),
                 "arm {} moved a threshold, not a lever",
+                arm.name
+            );
+            // Exactly the two `entail*` arms widen the criterion. An arm that
+            // widened it silently would make its own A/B unattributable: a file
+            // it moved could be the criterion or the lever, and nothing in the
+            // funnel separates them.
+            assert_eq!(
+                arm.criterion == RelevanceCriterion::BooleanUnits,
+                arm.name.starts_with("entail"),
+                "arm {} disagrees with its name about the criterion",
                 arm.name
             );
         }
@@ -7544,17 +7814,44 @@ mod tests {
                 assert_ne!(arm, other, "two arms are the same policy");
             }
         }
-        // The levers each arm claims in its own docs.
-        assert!(RelevancePolicy::RANKED.rank_by_residual);
-        assert_eq!(RelevancePolicy::RANKED.max_residual_width, usize::MAX);
-        assert!(!RelevancePolicy::RANKED.evict_entailed);
+        // The levers each arm claims in its own docs, as one comparison per arm
+        // so a failure names the arm rather than a bare `false`.
         assert_eq!(
-            RelevancePolicy::NARROW.max_residual_width,
-            RELEVANCE_NARROW_RESIDUAL_WIDTH
+            (
+                RelevancePolicy::RANKED.rank_by_residual,
+                RelevancePolicy::RANKED.max_residual_width,
+                RelevancePolicy::RANKED.evict_entailed,
+            ),
+            (true, usize::MAX, false),
+            "`ranked` is ordering alone"
         );
-        assert!(RelevancePolicy::EVICT.evict_entailed);
-        assert!(RelevancePolicy::FULL.evict_entailed);
-        assert!(RelevancePolicy::FULL.rank_by_residual);
+        assert_eq!(
+            (
+                RelevancePolicy::NARROW.rank_by_residual,
+                RelevancePolicy::NARROW.max_residual_width,
+                RelevancePolicy::NARROW.evict_entailed,
+            ),
+            (true, RELEVANCE_NARROW_RESIDUAL_WIDTH, false),
+            "`narrow` adds the width filter and nothing else"
+        );
+        assert_eq!(
+            (
+                RelevancePolicy::EVICT.rank_by_residual,
+                RelevancePolicy::EVICT.max_residual_width,
+                RelevancePolicy::EVICT.evict_entailed,
+            ),
+            (true, usize::MAX, true),
+            "`evict` adds the sweep and nothing else"
+        );
+        assert_eq!(
+            (
+                RelevancePolicy::FULL.rank_by_residual,
+                RelevancePolicy::FULL.max_residual_width,
+                RelevancePolicy::FULL.evict_entailed,
+            ),
+            (true, RELEVANCE_NARROW_RESIDUAL_WIDTH, true),
+            "`full` is every lever at once"
+        );
     }
 
     /// Every way of writing the override badly resolves to the shipped arm.
@@ -7629,6 +7926,8 @@ mod tests {
 
         // An oracle that knows only `a = b`, exactly as a congruence that has
         // merged those two classes and nothing else.
+        // The `EqualityOnly` criterion, as an oracle: no opinion about any atom.
+        let mut blind_to_atoms = |_: TermId| LiteralValue::Undetermined;
         let mut knows_a_eq_b = |lhs: TermId, rhs: TermId| {
             if (lhs, rhs) == (a, b) || (lhs, rhs) == (b, a) {
                 LiteralValue::True
@@ -7639,13 +7938,13 @@ mod tests {
 
         let two_open = arena.or(a_eq_c, p_a).unwrap();
         assert_eq!(
-            clause_residual_width(&arena, two_open, &mut knows_a_eq_b),
+            clause_residual_width(&arena, two_open, &mut knows_a_eq_b, &mut blind_to_atoms),
             Some(2),
             "an undetermined equality and an atom the oracle cannot speak about \
              are both open literals"
         );
         assert_eq!(
-            clause_residual_width(&arena, p_a, &mut knows_a_eq_b),
+            clause_residual_width(&arena, p_a, &mut knows_a_eq_b, &mut blind_to_atoms),
             Some(1),
             "a bare unclassifiable atom is one open literal, not a refusal"
         );
@@ -7660,7 +7959,12 @@ mod tests {
             "the shipped classifier cannot value this clause"
         );
         assert_eq!(
-            clause_residual_width(&arena, hidden_tautology, &mut knows_a_eq_b),
+            clause_residual_width(
+                &arena,
+                hidden_tautology,
+                &mut knows_a_eq_b,
+                &mut blind_to_atoms
+            ),
             None,
             "but it is already true, so no selection policy should admit it"
         );
@@ -7670,6 +7974,7 @@ mod tests {
     /// act on: `f(c_i)` applications for the triggers to fire on, one universal
     /// producing two-literal undetermined clauses, and one producing clauses the
     /// shipped classifier cannot value at all.
+    #[allow(clippy::many_single_char_names)]
     fn relevance_fixture(arena: &mut TermArena) -> Vec<TermId> {
         let carrier = arena.declare_uninterpreted_sort("FunnelS");
         let sort = Sort::Uninterpreted(carrier);
@@ -7749,6 +8054,7 @@ mod tests {
             rank_by_residual: true,
             max_residual_width: 1,
             evict_entailed: false,
+            criterion: RelevanceCriterion::EqualityOnly,
             throttle_min_ground: 0,
             round_admission_cap: 1,
             eager_generation_max: 0,
@@ -7823,11 +8129,111 @@ mod tests {
         );
     }
 
+    /// The criterion axis, measured on the one thing it is supposed to change:
+    /// a predicate atom. `EqualityOnly` has no opinion about `p(b)` even when
+    /// the ground set asserts `p(a)` and `a = b`; `BooleanUnits` values it
+    /// `True` by congruence, which is what makes the clause carrying it
+    /// judgeable at all.
+    #[test]
+    #[allow(clippy::many_single_char_names)]
+    fn boolean_units_value_the_atoms_the_equality_criterion_cannot() {
+        let mut arena = TermArena::new();
+        let carrier = arena.declare_uninterpreted_sort("UnitS");
+        let sort = Sort::Uninterpreted(carrier);
+        let predicate = arena.declare_fun("unit_p", &[sort], Sort::Bool).unwrap();
+        let other = arena.declare_fun("unit_q", &[sort], Sort::Bool).unwrap();
+        let a_symbol = arena.declare("unit_a", sort).unwrap();
+        let a = arena.var(a_symbol);
+        let b_symbol = arena.declare("unit_b", sort).unwrap();
+        let b = arena.var(b_symbol);
+        let c_symbol = arena.declare("unit_c", sort).unwrap();
+        let c = arena.var(c_symbol);
+        let p_a = arena.apply(predicate, &[a]).unwrap();
+        let p_b = arena.apply(predicate, &[b]).unwrap();
+        let q_c = arena.apply(other, &[c]).unwrap();
+        let not_q_c = arena.not(q_c).unwrap();
+        let a_eq_b = arena.eq(a, b).unwrap();
+
+        let x = arena.declare("unit_x", sort).unwrap();
+        let xv = arena.var(x);
+        let body = arena.apply(predicate, &[xv]).unwrap();
+        let universal = arena.forall(x, body).unwrap();
+
+        // `p(a)` asserted, `a = b` asserted, `q(c)` asserted FALSE, and one
+        // non-unit conjunct whose only job is to put `p(b)` in the e-graph.
+        // That last part is not decoration: this valuation reads a congruence
+        // CLASS, so like `IncrementalEmatchSession::equality` it has nothing to
+        // say about a term the matcher has never seen — a limitation the two
+        // criteria share and which is asserted below.
+        let carrier_clause = arena.or(p_b, q_c).unwrap();
+        let ground = vec![p_a, a_eq_b, not_q_c, carrier_clause];
+        let mut matcher = IncrementalEmatchSession::new(&mut arena, &[universal]);
+        matcher.extend_ground_with_derivations(&arena, &ground, &HashMap::new());
+
+        let blind =
+            BooleanUnitValuation::new(RelevanceCriterion::EqualityOnly, &arena, &matcher, &ground);
+        let units =
+            BooleanUnitValuation::new(RelevanceCriterion::BooleanUnits, &arena, &matcher, &ground);
+
+        assert_eq!(
+            blind.value(&matcher, p_a),
+            LiteralValue::Undetermined,
+            "the shipped criterion has no opinion about an atom the ground set ASSERTS"
+        );
+        assert_eq!(blind.value(&matcher, q_c), LiteralValue::Undetermined);
+        assert_eq!(units.value(&matcher, p_a), LiteralValue::True);
+        assert_eq!(
+            units.value(&matcher, p_b),
+            LiteralValue::True,
+            "closed under congruence: `a = b` carries the value to `p(b)`"
+        );
+        assert_eq!(
+            units.value(&matcher, q_c),
+            LiteralValue::False,
+            "a negated ground unit gives its atom the false value"
+        );
+        // The shared limitation, stated rather than assumed: a term outside the
+        // matcher's e-graph has no class, so neither criterion can value it.
+        let unseen_symbol = arena.declare("unit_unseen", sort).unwrap();
+        let unseen = arena.var(unseen_symbol);
+        let p_unseen = arena.apply(predicate, &[unseen]).unwrap();
+        assert_eq!(
+            units.value(&matcher, p_unseen),
+            LiteralValue::Undetermined,
+            "widening the criterion does not conjure a class for a term the \
+             matcher has never seen"
+        );
+
+        // And the consequence for selection: a clause carrying `p(b)` is
+        // unvaluable to one criterion and a tautology to the other.
+        let a_eq_c = arena.eq(a, c).unwrap();
+        let clause = arena.or(p_b, a_eq_c).unwrap();
+        assert!(
+            clause_is_unvaluable(&arena, clause, &mut |atom| blind.value(&matcher, atom)),
+            "the shipped criterion cannot judge this clause at all"
+        );
+        assert!(
+            !clause_is_unvaluable(&arena, clause, &mut |atom| units.value(&matcher, atom)),
+            "the wider criterion can"
+        );
+        assert_eq!(
+            clause_residual_width(
+                &arena,
+                clause,
+                &mut |lhs, rhs| matcher.equality(lhs, rhs),
+                &mut |atom| units.value(&matcher, atom)
+            ),
+            None,
+            "and having judged it, declines it: `p(b)` is already true"
+        );
+    }
+
     /// The eviction sweep drops a retained instance the congruence has come to
     /// entail, and — the load-bearing half — leaves alone the one whose only
     /// justification is its own merge. Without the second restriction the sweep
     /// would delete real facts from the ground check.
     #[test]
+    #[allow(clippy::many_single_char_names)]
     fn eviction_drops_entailed_clauses_and_never_self_justified_equalities() {
         let mut arena = TermArena::new();
         let carrier = arena.declare_uninterpreted_sort("EvictS");
