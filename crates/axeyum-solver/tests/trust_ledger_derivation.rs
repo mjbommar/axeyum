@@ -111,10 +111,7 @@ fn without_the_route_table(text: &str) -> String {
         return text.to_owned();
     };
     let tail = &text[start..];
-    let end = tail
-        .find("\n];")
-        .map(|at| start + at + 3)
-        .unwrap_or(text.len());
+    let end = tail.find("\n];").map_or(text.len(), |at| start + at + 3);
     let mut out = String::from(&text[..start]);
     out.push_str(&text[end..]);
     out

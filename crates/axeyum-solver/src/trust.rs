@@ -662,7 +662,7 @@ impl fmt::Display for TrustId {
 
 /// A trust step a particular result depended on: the reduction and whether the
 /// run that produced this result actually carried an independent certificate for
-/// it. Bit-blast is `certified: true` on the QF_BV **Alethe** route, where
+/// it. Bit-blast is `certified: true` on the `QF_BV` **Alethe** route, where
 /// `check_alethe` re-derives every `bitblast_<op>` step, and `false` on the plain
 /// DRAT export route, whose proof re-derives the CNF refutation and says nothing
 /// about the lowering. That split is exactly what makes
