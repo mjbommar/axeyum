@@ -1875,6 +1875,220 @@ fn config_with_remaining_deadline(
     out
 }
 
+// ---------------------------------------------------------------------------
+// One ladder, one clock: how much of it each route may spend
+// ---------------------------------------------------------------------------
+
+/// The floor on any route's slice of a ladder's clock, capped at **half** the
+/// remaining budget by [`LadderSlice::slice_of`].
+///
+/// It replaces a branch that handed the route the WHOLE budget when its share
+/// rounded to zero, in the two places that divided rather than reserved:
+/// `int_real_relax_budget` returned `config` unchanged when `timeout / 6` was
+/// zero, and `pre_lia_uf_probe_budget` returned the full `timeout` when
+/// `timeout / 10` was. The first is recorded as a FINDING against
+/// `INT_REAL_RELAX_BUDGET_SHARE` in [`crate::config_registry`]; the second was
+/// found by this lane looking for more of the same shape.
+///
+/// **How reachable that was, corrected.** The FINDING says the policy is
+/// bypassed "at exactly the small-budget end where starvation matters most",
+/// and this lane repeated that before measuring it. `Duration` division is in
+/// NANOSECONDS: `Duration::from_millis(5) / 6` is 833 µs, not zero. `is_zero()`
+/// there needs a budget under **six nanoseconds**, so the band the old branch
+/// actually inverted on is six nanoseconds wide and no caller has ever been in
+/// it. The defect was structural, not behavioural, and saying otherwise is the
+/// kind of claim this file's own rules exist to stop. Removing the special case
+/// is still right — a branch that returns the unshared budget is one edit away
+/// from being reachable — but it bought no measured behaviour.
+///
+/// A millisecond is chosen because it is the smallest slice any route in this
+/// tree can act on, and because the alternative — skipping the route entirely
+/// when its share underflows — is a *different* policy that changes which routes
+/// run, not just how long they run for. The **half** cap is the load-bearing
+/// half: without it this constant recreates the very inversion it replaced on
+/// every budget under a millisecond, which is a band a hundred thousand times
+/// wider than the one it closed. That is not hypothetical — it is what the first
+/// version of this code did, and the mutation that restores the old branch is
+/// what found it, by making no test fail at all.
+const MIN_LADDER_SLICE: Duration = Duration::from_millis(1);
+
+/// The shape of one route's claim on a ladder's remaining wall clock.
+///
+/// The tree grew three hand-rolled versions of this arithmetic before it grew a
+/// name for it (`dl_probe_budget`, `cegar_probe_budget`, `int_real_relax_budget`),
+/// and a fourth was needed for `abv-online-cdclt` — the route that took
+/// `config.timeout` in FULL on every array query, declined, and left the array
+/// ladder underneath it nothing. Measured on the committed 50-file `QF_ABV`
+/// span-log sweep: on four files it spent 24.009 s of a 24 s budget and
+/// `array-fast-path` then decided the file in 0.007–0.174 s.
+///
+/// The distinction the two variants draw is the one the `QF_UFLIA` measurement
+/// paid four files to learn (see [`UF_ARITH_LADDER_RESERVE_SHARE`]): a route
+/// that decides most of what it is given needs a **reserve** (it keeps
+/// everything but a slice), while a route that is speculative insurance takes a
+/// **fraction** (it keeps only a slice). Halving a budget is the worst of both
+/// — it starves the deciding route without buying the ladder anything it
+/// needed.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum SliceShape {
+    /// The route keeps everything except `1/reserve_share` of what is left,
+    /// with that reserve itself capped at `reserve_ceiling` when present.
+    AllButReserve {
+        /// Divisor of the remaining budget that is held back for the ladder.
+        reserve_share: u32,
+        /// Ceiling on the held-back slice, for budgets large enough that a flat
+        /// reserve is cheaper insurance than a proportional one.
+        reserve_ceiling: Option<Duration>,
+    },
+    /// The route may spend `1/share` of what is left; the ladder keeps the rest.
+    Fraction {
+        /// Divisor of the remaining budget granted to the route.
+        share: u32,
+        /// Ceiling on the granted slice, when the route is a quick screen whose
+        /// usefulness does not scale with the clock.
+        ceiling: Option<Duration>,
+    },
+}
+
+/// One route's slice of a ladder's clock, as a named policy rather than a
+/// divisor written at the call site.
+///
+/// **A route that runs before others must leave them something.** Every field
+/// here is a policy statement about one route, and every constructed value in
+/// this file is a `const` with a dated justification in
+/// [`crate::config_registry`], so "why does this route get 18 s of a 24 s
+/// budget" is answerable from the registry rather than from a literal in an
+/// expression.
+///
+/// The type deliberately does **not** own a clock. It converts a *remaining*
+/// budget the caller measured into a slice, so a caller that has a dispatch
+/// deadline passes what is left of it (one clock for the whole ladder) and a
+/// caller that only has `config.timeout` passes that. Which one a call site
+/// uses is a property of that ladder, not of this policy.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct LadderSlice {
+    /// The route this policy governs, spelled as it appears in the route trail.
+    /// Carried so a reader of the constant can find the attribution rows it
+    /// explains; nothing branches on it.
+    pub(crate) route: &'static str,
+    /// How much of what is left this route may spend.
+    pub(crate) shape: SliceShape,
+}
+
+impl LadderSlice {
+    /// The route keeps everything but `1/reserve_share` of the remaining budget.
+    pub(crate) const fn all_but_reserve(route: &'static str, reserve_share: u32) -> Self {
+        Self {
+            route,
+            shape: SliceShape::AllButReserve {
+                reserve_share,
+                reserve_ceiling: None,
+            },
+        }
+    }
+
+    /// As [`Self::all_but_reserve`], with the reserve capped at a flat ceiling.
+    pub(crate) const fn all_but_capped_reserve(
+        route: &'static str,
+        reserve_share: u32,
+        reserve_ceiling: Duration,
+    ) -> Self {
+        Self {
+            route,
+            shape: SliceShape::AllButReserve {
+                reserve_share,
+                reserve_ceiling: Some(reserve_ceiling),
+            },
+        }
+    }
+
+    /// The route may spend `1/share` of the remaining budget.
+    pub(crate) const fn fraction(route: &'static str, share: u32) -> Self {
+        Self {
+            route,
+            shape: SliceShape::Fraction {
+                share,
+                ceiling: None,
+            },
+        }
+    }
+
+    /// As [`Self::fraction`], with the granted slice capped at a flat ceiling.
+    pub(crate) const fn capped_fraction(
+        route: &'static str,
+        share: u32,
+        ceiling: Duration,
+    ) -> Self {
+        Self {
+            route,
+            shape: SliceShape::Fraction {
+                share,
+                ceiling: Some(ceiling),
+            },
+        }
+    }
+
+    /// The slice this policy grants out of `remaining`.
+    ///
+    /// Never zero unless `remaining` is (see [`MIN_LADDER_SLICE`]), and never
+    /// more than `remaining`: a policy that hands a route more clock than the
+    /// ladder has is the bug this type exists to make unwritable.
+    pub(crate) fn slice_of(self, remaining: Duration) -> Duration {
+        let want = match self.shape {
+            SliceShape::AllButReserve {
+                reserve_share,
+                reserve_ceiling,
+            } => {
+                let mut reserve = remaining / reserve_share.max(1);
+                if let Some(ceiling) = reserve_ceiling {
+                    reserve = reserve.min(ceiling);
+                }
+                remaining.saturating_sub(reserve)
+            }
+            SliceShape::Fraction { share, ceiling } => {
+                let mut slice = remaining / share.max(1);
+                if let Some(ceiling) = ceiling {
+                    slice = slice.min(ceiling);
+                }
+                slice
+            }
+        };
+        // The floor is capped at HALF the remaining budget, not at the whole of
+        // it. `MIN_LADDER_SLICE.min(remaining)` was written first and is wrong
+        // in the direction this whole type exists to prevent: on any budget
+        // under a millisecond it resolves to `remaining`, so the clamp hands
+        // the route the entire clock and the ladder nothing — the same
+        // inversion as the code it replaced, with a band a hundred thousand
+        // times wider. Caught by the mutation that restores the old
+        // `share.is_zero()` branch and found it made NO test fail.
+        want.clamp(MIN_LADDER_SLICE.min(remaining / 2), remaining)
+    }
+
+    /// What the ladder below this route keeps out of `remaining`.
+    ///
+    /// Exposed so a test can assert the reserve directly rather than by
+    /// subtracting two numbers it also computed.
+    #[cfg(test)]
+    pub(crate) fn reserved_from(self, remaining: Duration) -> Duration {
+        remaining.saturating_sub(self.slice_of(remaining))
+    }
+
+    /// `config` with this route's slice of `remaining` as its timeout.
+    ///
+    /// `remaining == None` (an unbounded caller budget) stays unbounded: there
+    /// is no clock to share, and both the route and the ladder below it then
+    /// decline only on their deterministic size guards. This only ever divides
+    /// an existing budget, never invents one.
+    pub(crate) fn apply(self, config: &SolverConfig, remaining: Option<Duration>) -> SolverConfig {
+        let Some(remaining) = remaining else {
+            return config.clone();
+        };
+        let mut sliced = config.clone();
+        sliced.timeout = Some(self.slice_of(remaining));
+        sliced
+    }
+}
+
 /// Whether an [`UnknownKind`] is a **resource/budget** decline (wall-clock,
 /// deterministic resource, memory, translation-node, or CNF-size cap) rather than a
 /// logical incompleteness. A budget `Unknown` from a route that ran out of its
@@ -3110,18 +3324,15 @@ enum OverboundOutcome {
 /// Falls back to `config.timeout` when the caller set no deadline; an unbounded
 /// configuration stays unbounded.
 fn cegar_probe_budget(config: &SolverConfig, deadline: Option<Instant>) -> SolverConfig {
-    let mut probe = config.clone();
     let remaining = deadline
         .map(|d| d.saturating_duration_since(Instant::now()))
         .or(config.timeout);
-    if let Some(remaining) = remaining {
-        // `saturating_sub` cannot fire (the reserve is a fraction of `remaining`),
-        // but the lint is right that a bare `Duration` subtraction is a panic in
-        // waiting if the expression is ever rearranged.
-        probe.timeout = Some(remaining.saturating_sub(remaining / UF_ARITH_LADDER_RESERVE_SHARE));
-    }
-    probe
+    UF_ARITH_CEGAR_SLICE.apply(config, remaining)
 }
+
+/// The lazy CEGAR's slice: everything but the ladder's quarter.
+const UF_ARITH_CEGAR_SLICE: LadderSlice =
+    LadderSlice::all_but_reserve("uf-arith-lazy-overbound", UF_ARITH_LADDER_RESERVE_SHARE);
 
 /// Runs the over-bound UF+arithmetic decision point under the resolved
 /// [`UfArithOverboundPolicy`], recording both the route attempt and the
@@ -3610,12 +3821,21 @@ fn dispatch_declared_sort_ufbv_lazy(
 /// wall-clock budget to split, and both routes then decline only on their
 /// deterministic size guards, so the online combination keeps its full power.
 fn probe_budget(config: &SolverConfig) -> SolverConfig {
-    let mut probe = config.clone();
-    if let Some(t) = probe.timeout {
-        probe.timeout = Some(t / 2);
-    }
-    probe
+    UFBV_ONLINE_PROBE_SLICE.apply(config, config.timeout)
 }
+
+/// Divisor of the caller's budget the declared-sort `QF_UFBV` online probe may
+/// spend. A HALF, not a reserve, and deliberately left as one: the eager
+/// fallback below it computes a fresh deadline at entry, so this is a split
+/// across two clocks rather than a share of one. The `QF_UFLIA` measurement
+/// behind [`UF_ARITH_LADDER_RESERVE_SHARE`] says a half-budget split is the
+/// wrong shape when the two routes share ONE clock; whether it is wrong here is
+/// unmeasured, and this lane did not retune it.
+const UFBV_ONLINE_PROBE_SHARE: u32 = 2;
+
+/// The declared-sort `QF_UFBV` online probe's slice: half the caller's clock.
+const UFBV_ONLINE_PROBE_SLICE: LadderSlice =
+    LadderSlice::fraction("ufbv-online-probe", UFBV_ONLINE_PROBE_SHARE);
 
 /// The first-refusal MBQI rung of the quantified effort ladder: 1/8 of the
 /// remaining wall budget. Returns `None` for unbounded configurations — with no
@@ -3623,10 +3843,23 @@ fn probe_budget(config: &SolverConfig) -> SolverConfig {
 /// engine order (e-graph loop first) keeps byte-identical behavior.
 fn mbqi_first_refusal_budget(config: &SolverConfig) -> Option<SolverConfig> {
     let timeout = config.timeout?;
-    let mut quick = config.clone();
-    quick.timeout = Some(timeout / 8);
-    Some(quick)
+    Some(MBQI_FIRST_REFUSAL_SLICE.apply(config, Some(timeout)))
 }
+
+/// Divisor of the remaining budget the first-refusal MBQI rung may spend.
+const MBQI_FIRST_REFUSAL_SHARE: u32 = 8;
+
+/// The first-refusal MBQI rung's slice: an eighth of what is left.
+const MBQI_FIRST_REFUSAL_SLICE: LadderSlice =
+    LadderSlice::fraction("mbqi-quick", MBQI_FIRST_REFUSAL_SHARE);
+
+/// Divisor of the remaining budget the incremental e-graph quantifier retry may
+/// spend, so the callers' later SAT-only stages are not starved.
+const QINST_EGRAPH_RETRY_SHARE: u32 = 2;
+
+/// The incremental e-graph quantifier retry's slice: half of what is left.
+const QINST_EGRAPH_RETRY_SLICE: LadderSlice =
+    LadderSlice::fraction("qinst-egraph-retry", QINST_EGRAPH_RETRY_SHARE);
 
 /// Runs the bounded first-refusal MBQI rung. `Ok(Some(_))` carries only a
 /// fully anchored verdict (a replay-checked `sat` or the refuter's `unsat`);
@@ -3674,18 +3907,27 @@ fn mbqi_first_refusal(
     }
 }
 
+/// Ceiling on the pre-LIA UF probe's slice: it is a quick screen, so its
+/// usefulness does not scale with the clock.
+const PRE_LIA_UF_PROBE_CEILING: Duration = Duration::from_millis(250);
+
+/// Divisor of the caller's budget the pre-LIA UF probe may spend, before
+/// [`PRE_LIA_UF_PROBE_CEILING`] caps it.
+const PRE_LIA_UF_PROBE_SHARE: u32 = 10;
+
+/// The pre-LIA UF probe's slice: `min(t/10, 250 ms)`.
+const PRE_LIA_UF_PROBE_SLICE: LadderSlice = LadderSlice::capped_fraction(
+    "uf-arith-overbound-pre-lia",
+    PRE_LIA_UF_PROBE_SHARE,
+    PRE_LIA_UF_PROBE_CEILING,
+);
+
+/// **Behaviour change, 2026-09-08**, the same one [`int_real_relax_budget`]
+/// carries: a `timeout / 10` that rounded to zero used to hand this probe the
+/// FULL timeout, which is the sharing policy inverted. It now clamps to
+/// [`MIN_LADDER_SLICE`], differing from the old behaviour only under 10 ms.
 fn pre_lia_uf_probe_budget(config: &SolverConfig) -> SolverConfig {
-    let mut probe = config.clone();
-    if let Some(timeout) = probe.timeout {
-        let tenth = timeout / 10;
-        let bounded = if tenth.is_zero() {
-            timeout
-        } else {
-            tenth.min(Duration::from_millis(250))
-        };
-        probe.timeout = Some(bounded);
-    }
-    probe
+    PRE_LIA_UF_PROBE_SLICE.apply(config, config.timeout)
 }
 
 /// The **online** EUF + linear-arithmetic combination, tried *before* the eager
@@ -4020,23 +4262,44 @@ fn dispatch_difference_logic(
 /// maximum probe budget for a preregistered equality-heavy shape, but it may
 /// never exceed it. The dispatcher therefore stays *strictly additive*.
 pub(crate) fn dl_probe_budget(config: &SolverConfig) -> SolverConfig {
-    /// Ceiling on the slice held back for the routes below the probe.
-    const DL_FALLBACK_RESERVE: Duration = Duration::from_secs(6);
-    let mut probe = config.clone();
-    probe.timeout = config
-        .timeout
-        .map(|t| t.saturating_sub((t / 4).min(DL_FALLBACK_RESERVE)));
-    probe
+    DL_PROBE_SLICE.apply(config, config.timeout)
 }
+
+/// Ceiling on the slice held back for the routes below the difference-logic
+/// probe.
+const DL_FALLBACK_RESERVE: Duration = Duration::from_secs(6);
+
+/// Divisor of the caller's budget held back for the routes below the
+/// difference-logic probe, before [`DL_FALLBACK_RESERVE`] caps it. Named rather
+/// than written as a `/ 4` at the call site so the registry can key an entry on
+/// it: it is the same policy number as [`UF_ARITH_LADDER_RESERVE_SHARE`] and
+/// [`ABV_ONLINE_LADDER_RESERVE_SHARE`], and three copies of a quarter that
+/// cannot be found by name is how a fourth gets hand-rolled.
+const DL_LADDER_RESERVE_SHARE: u32 = 4;
+
+/// The difference-logic probe's slice: everything but `min(t/4, 6 s)`.
+const DL_PROBE_SLICE: LadderSlice =
+    LadderSlice::all_but_capped_reserve("dl-online", DL_LADDER_RESERVE_SHARE, DL_FALLBACK_RESERVE);
 
 /// Larger DL slice available only after the route's standard-budget scan
 /// proves the query is in the preregistered large equality-heavy class.
 pub(crate) fn extended_dl_probe_timeout(config: &SolverConfig) -> Option<Duration> {
-    const DL_EXTENDED_FALLBACK_RESERVE: Duration = Duration::from_secs(3);
-    config
-        .timeout
-        .map(|t| t.saturating_sub((t / 8).min(DL_EXTENDED_FALLBACK_RESERVE)))
+    config.timeout.map(|t| DL_EXTENDED_PROBE_SLICE.slice_of(t))
 }
+
+/// Ceiling on the slice held back from the *extended* difference-logic probe.
+const DL_EXTENDED_FALLBACK_RESERVE: Duration = Duration::from_secs(3);
+
+/// Divisor of the caller's budget held back from the extended difference-logic
+/// probe, before [`DL_EXTENDED_FALLBACK_RESERVE`] caps it.
+const DL_EXTENDED_LADDER_RESERVE_SHARE: u32 = 8;
+
+/// The extended difference-logic probe's slice: everything but `min(t/8, 3 s)`.
+const DL_EXTENDED_PROBE_SLICE: LadderSlice = LadderSlice::all_but_capped_reserve(
+    "dl-online-extended",
+    DL_EXTENDED_LADDER_RESERVE_SHARE,
+    DL_EXTENDED_FALLBACK_RESERVE,
+);
 
 /// The theory dispatcher (coercions already relaxed away by [`check_auto`]).
 /// `rec` records each route attempt + outcome at the existing decide/decline
@@ -4312,10 +4575,35 @@ fn check_auto_dispatch(
         return Ok(result);
     }
     if features.has_array {
-        if let Some(result) = dispatch_abv_online(arena, assertions, config, &features, rec)? {
+        if let Some(result) =
+            dispatch_abv_online(arena, assertions, config, &features, dispatch_deadline, rec)?
+        {
             return Ok(result);
         }
-        if let Some(result) = dispatch_array_fast_paths(arena, assertions, config, &features)? {
+        // ONE CLOCK for the array ladder. `abv-online-cdclt` above now keeps
+        // all but a reserve of the dispatcher's entry deadline, and this route
+        // runs on what is left of that same deadline rather than on a fresh
+        // copy of the caller's full timeout. Handing it `config` unchanged is
+        // what made the four measured `QF_ABV` files finish only inside the
+        // harness watchdog's grace period: 24 s spent above plus a fresh 24 s
+        // budget here is 48 s of a 24 s promise, and a hard external limit
+        // would have taken all four.
+        //
+        // The `off` arm keeps the ORIGINAL config here, not the remaining
+        // deadline, because it exists to reproduce the historical behaviour
+        // exactly. An arm that gave the online route the whole budget AND then
+        // handed this route what was left of it would leave the ladder zero
+        // milliseconds — strictly worse than the code it is meant to be a
+        // control for, and a mislabelled arm is a measurement of nothing.
+        let ladder_config = match abv_online_reserve_policy() {
+            AbvOnlineReservePolicy::WholeBudget => config.clone(),
+            AbvOnlineReservePolicy::LadderReserve => {
+                config_with_remaining_deadline(config, dispatch_deadline)
+            }
+        };
+        if let Some(result) =
+            dispatch_array_fast_paths(arena, assertions, &ladder_config, &features)?
+        {
             with_recorder(rec, |t| t.record_result("array-fast-path", &result));
             return Ok(result);
         }
@@ -4383,11 +4671,144 @@ fn check_auto_dispatch(
     }
 }
 
+/// The fraction of the remaining wall-clock budget held back from
+/// `abv-online-cdclt` for the array ladder underneath it.
+///
+/// **The route it governs used to take `config.timeout` in FULL.** It is the
+/// first route every array query tries, and `array-fast-path` — the route
+/// immediately below it — never saw a millisecond on any file the online search
+/// could not decide. Measured 2026-09-08 over the committed 50-file `QF_ABV`
+/// span-log sweep (`docs/research/12-performance/span-log-sweep-2026-09-08.md`,
+/// shard `QF_ABV.json`), 24 s per file:
+///
+/// - on **four** files `abv-online-cdclt` spent 24.001–24.011 s of a 24 s budget,
+///   declined, and `array-fast-path` then decided the file `sat` in
+///   **0.007–0.174 s**. Those four are decided today only because the harness
+///   watchdog's grace period outlasts the budget; under a hard external limit
+///   they are losses;
+/// - the ladder below never needed more than **2.898 s** on any file in the
+///   sweep (the slowest `array-fast-path` decision), and its median decision
+///   took 168 ms;
+/// - `abv-online-cdclt` itself decided 24 of 47 files it entered, and its
+///   **slowest decision was 5.723 s** — 8 of the 24 took over one second.
+///
+/// `4` is chosen against both of those bounds, the method
+/// [`UF_ARITH_LADDER_RESERVE_SHARE`] paid four files to establish:
+///
+/// - it leaves the online route 18 s of a 24 s budget, **above every decision it
+///   made** in the sweep (5.7 s, the slowest);
+/// - it gives the ladder 6 s, about **twice** the slowest ladder decision
+///   observed (2.9 s) and thirty-five times the median.
+///
+/// A reserve cannot recover a route that needs 99% of the clock, and nothing in
+/// this population does — unlike `QF_UFLIA`, where `hash_uns_05_20` at 23.7 s of
+/// 24 s was the named cost of the same change. If such a file exists outside
+/// this sample it is the cost here too, and
+/// [`AbvOnlineReservePolicy::WholeBudget`] is the arm that measures it.
+const ABV_ONLINE_LADDER_RESERVE_SHARE: u32 = 4;
+
+/// `abv-online-cdclt`'s slice: everything but the array ladder's quarter.
+const ABV_ONLINE_SLICE: LadderSlice =
+    LadderSlice::all_but_reserve("abv-online-cdclt", ABV_ONLINE_LADDER_RESERVE_SHARE);
+
+/// What `abv-online-cdclt` is allowed to spend before the array ladder runs.
+///
+/// Selected by `AXEYUM_ABV_ONLINE_RESERVE` (`off` / `on`) so both arms are
+/// runnable from one binary — the A/B protocol
+/// `docs/research/12-performance/uf-arith-overbound-2026-09-08.md` had to
+/// establish after an unpinned baseline mixed two binaries in one sweep.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AbvOnlineReservePolicy {
+    /// The historical behaviour: the online route receives the caller's whole
+    /// wall-clock budget and the array ladder below it runs on whatever the
+    /// harness's grace period leaves. Kept as a named arm so the change can be
+    /// measured against it rather than only remembered.
+    WholeBudget,
+    /// The online route receives the remaining budget less the ladder's reserve
+    /// (`1/`[`ABV_ONLINE_LADDER_RESERVE_SHARE`]), and the ladder below runs on
+    /// the reserve, out of the same clock. Default.
+    LadderReserve,
+}
+
+impl AbvOnlineReservePolicy {
+    /// The short name this policy is selected by and reported as.
+    #[must_use]
+    pub const fn name(self) -> &'static str {
+        match self {
+            Self::WholeBudget => "off",
+            Self::LadderReserve => "on",
+        }
+    }
+}
+
+std::thread_local! {
+    /// A per-thread override of the process policy, set by
+    /// [`AbvOnlineReservePolicyGuard`]. The process policy is read once from the
+    /// environment, so without this no test could exercise more than one arm.
+    static ABV_ONLINE_RESERVE_OVERRIDE: std::cell::Cell<Option<AbvOnlineReservePolicy>> =
+        const { std::cell::Cell::new(None) };
+}
+
+/// Forces `policy` on this thread for the lifetime of the guard, restoring the
+/// previous setting on drop.
+pub struct AbvOnlineReservePolicyGuard(Option<AbvOnlineReservePolicy>);
+
+impl AbvOnlineReservePolicyGuard {
+    /// Overrides the process policy on this thread.
+    #[must_use]
+    pub fn set(policy: AbvOnlineReservePolicy) -> Self {
+        AbvOnlineReservePolicyGuard(ABV_ONLINE_RESERVE_OVERRIDE.with(|c| c.replace(Some(policy))))
+    }
+}
+
+impl Drop for AbvOnlineReservePolicyGuard {
+    fn drop(&mut self) {
+        ABV_ONLINE_RESERVE_OVERRIDE.with(|c| c.set(self.0));
+    }
+}
+
+/// The [`AbvOnlineReservePolicy`] in force on this thread: a live
+/// [`AbvOnlineReservePolicyGuard`]'s choice, else the process policy resolved
+/// once from `AXEYUM_ABV_ONLINE_RESERVE`. An unset or unrecognised value is the
+/// default, so a typo degrades to the shipped behaviour rather than to an arm
+/// nobody chose.
+fn abv_online_reserve_policy() -> AbvOnlineReservePolicy {
+    static RESOLVED: std::sync::OnceLock<AbvOnlineReservePolicy> = std::sync::OnceLock::new();
+    if let Some(policy) = ABV_ONLINE_RESERVE_OVERRIDE.with(std::cell::Cell::get) {
+        return policy;
+    }
+    *RESOLVED.get_or_init(
+        || match std::env::var("AXEYUM_ABV_ONLINE_RESERVE").as_deref() {
+            Ok("off") => AbvOnlineReservePolicy::WholeBudget,
+            _ => AbvOnlineReservePolicy::LadderReserve,
+        },
+    )
+}
+
+/// The budget handed to `abv-online-cdclt`: the remaining clock at `deadline`
+/// less the array ladder's reserve, or the caller's whole budget under
+/// [`AbvOnlineReservePolicy::WholeBudget`].
+///
+/// `deadline` is the dispatcher's **entry** deadline, so this route's slice and
+/// the ladder's remainder come out of one clock rather than two — the same
+/// property `cegar_probe_budget` keeps, and the reason a route that spends its
+/// share cannot also spend the ladder's.
+fn abv_online_probe_budget(config: &SolverConfig, deadline: Option<Instant>) -> SolverConfig {
+    if abv_online_reserve_policy() == AbvOnlineReservePolicy::WholeBudget {
+        return config.clone();
+    }
+    let remaining = deadline
+        .map(|d| d.saturating_duration_since(Instant::now()))
+        .or(config.timeout);
+    ABV_ONLINE_SLICE.apply(config, remaining)
+}
+
 fn dispatch_abv_online(
     arena: &mut TermArena,
     assertions: &[TermId],
     config: &SolverConfig,
     features: &Features,
+    deadline: Option<Instant>,
     rec: &mut Recorder<'_>,
 ) -> Result<Option<CheckResult>, SolverError> {
     if features.has_function
@@ -4399,8 +4820,13 @@ fn dispatch_abv_online(
     {
         return Ok(None);
     }
+    let online_config = abv_online_probe_budget(config, deadline);
     let mut online_arena = arena.clone();
-    match crate::ufbv_online::check_qf_aufbv_online_cdclt(&mut online_arena, assertions, config) {
+    match crate::ufbv_online::check_qf_aufbv_online_cdclt(
+        &mut online_arena,
+        assertions,
+        &online_config,
+    ) {
         Ok(result @ (CheckResult::Sat(_) | CheckResult::Unsat)) => {
             with_recorder(rec, |t| t.record_result("abv-online-cdclt", &result));
             Ok(Some(result))
@@ -4611,16 +5037,21 @@ fn record_nia_decline(rec: &mut Recorder<'_>, route: &'static str, why: Option<D
 /// divides an existing budget, never invents one.
 const INT_REAL_RELAX_BUDGET_SHARE: u32 = 6;
 
+/// The real-relaxation refuter's slice: one sixth of the caller's clock.
+const INT_REAL_RELAX_SLICE: LadderSlice =
+    LadderSlice::fraction("int-real-relax", INT_REAL_RELAX_BUDGET_SHARE);
+
 /// `config` with the real-relaxation refuter's budget share applied.
+///
+/// **Behaviour change, 2026-09-08.** This used to return the caller's config
+/// UNCHANGED — the full, unshrunk timeout — whenever `timeout / 6` rounded to
+/// zero, so the sharing policy inverted itself at exactly the small-budget end
+/// where starvation matters most (recorded as a FINDING against
+/// `INT_REAL_RELAX_BUDGET_SHARE` in [`crate::config_registry`]). It now clamps
+/// to [`MIN_LADDER_SLICE`], which differs from the old behaviour only for
+/// budgets under 6 ms.
 fn int_real_relax_budget(config: &SolverConfig) -> SolverConfig {
-    let Some(timeout) = config.timeout else {
-        return config.clone();
-    };
-    let share = timeout / INT_REAL_RELAX_BUDGET_SHARE;
-    if share.is_zero() {
-        return config.clone();
-    }
-    config.clone().with_timeout(share)
+    INT_REAL_RELAX_SLICE.apply(config, config.timeout)
 }
 
 /// The pure-integer nonlinear tail of [`check_auto_dispatch`] (`features.has_int`
@@ -8051,11 +8482,10 @@ pub fn prove_unsat_by_ematching(
     // falls through to the established decline. Half the remaining budget, so
     // the callers' later SAT-only stages are not starved.
     if retried.residual_quantifier
-        && let Some(mut loop_config) = config_with_remaining_timeout(config, deadline)
+        && let Some(remaining_config) = config_with_remaining_timeout(config, deadline)
     {
-        if let Some(timeout) = loop_config.timeout {
-            loop_config.timeout = Some(timeout / 2);
-        }
+        let loop_config =
+            QINST_EGRAPH_RETRY_SLICE.apply(&remaining_config, remaining_config.timeout);
         let probe = std::env::var_os("AXEYUM_QPROBE").is_some();
         let started = Instant::now();
         // The skolemized set alone, NOT its union with the originals: the
@@ -9569,6 +9999,7 @@ mod tests {
             &assertions,
             &SolverConfig::default(),
             &features,
+            None,
             &mut recorder,
         )
         .unwrap();
@@ -10710,6 +11141,253 @@ mod tests {
             );
         }
         assert_eq!(uf_arith_overbound_policy(), outer);
+    }
+
+    #[test]
+    fn ladder_slice_arithmetic_matches_the_policy_each_route_declares() {
+        let day = Duration::from_secs(86_400);
+        // A reserve: the route keeps everything but 1/N.
+        let quarter = LadderSlice::all_but_reserve("test", 4);
+        assert_eq!(
+            quarter.slice_of(Duration::from_secs(24)),
+            Duration::from_secs(18)
+        );
+        assert_eq!(
+            quarter.reserved_from(Duration::from_secs(24)),
+            Duration::from_secs(6)
+        );
+        // A capped reserve: proportional on tight budgets, flat once the cap
+        // binds. Both sides of the `min` are exercised, because a ceiling that
+        // never binds and a ceiling that always binds are different policies
+        // and one test hitting only one of them cannot tell them apart.
+        assert_eq!(
+            DL_PROBE_SLICE.reserved_from(Duration::from_secs(8)),
+            Duration::from_secs(2),
+            "under the cap the reserve is proportional"
+        );
+        assert_eq!(
+            DL_PROBE_SLICE.reserved_from(day),
+            DL_FALLBACK_RESERVE,
+            "over the cap the reserve is flat"
+        );
+        assert_eq!(
+            DL_EXTENDED_PROBE_SLICE.reserved_from(day),
+            DL_EXTENDED_FALLBACK_RESERVE
+        );
+        // A fraction: the route takes 1/N and the ladder keeps the rest, which
+        // is the opposite division and the one `int-real-relax` uses.
+        assert_eq!(
+            INT_REAL_RELAX_SLICE.slice_of(Duration::from_secs(24)),
+            Duration::from_secs(4)
+        );
+        // A capped fraction.
+        assert_eq!(
+            PRE_LIA_UF_PROBE_SLICE.slice_of(Duration::from_secs(1)),
+            Duration::from_millis(100)
+        );
+        assert_eq!(
+            PRE_LIA_UF_PROBE_SLICE.slice_of(day),
+            PRE_LIA_UF_PROBE_CEILING
+        );
+        // No policy may hand a route more clock than the ladder has.
+        for slice in [
+            quarter,
+            DL_PROBE_SLICE,
+            DL_EXTENDED_PROBE_SLICE,
+            UF_ARITH_CEGAR_SLICE,
+            ABV_ONLINE_SLICE,
+            INT_REAL_RELAX_SLICE,
+            PRE_LIA_UF_PROBE_SLICE,
+            UFBV_ONLINE_PROBE_SLICE,
+            MBQI_FIRST_REFUSAL_SLICE,
+            QINST_EGRAPH_RETRY_SLICE,
+        ] {
+            for remaining in [
+                Duration::ZERO,
+                Duration::from_millis(1),
+                Duration::from_millis(7),
+                Duration::from_secs(24),
+                day,
+            ] {
+                assert!(
+                    slice.slice_of(remaining) <= remaining,
+                    "{} granted more than the ladder had at {remaining:?}",
+                    slice.route
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn a_slice_that_rounds_to_zero_is_never_the_whole_budget() {
+        // THE INVERSION GUARD. Two helpers used to return the caller's config
+        // UNCHANGED when their share underflowed -- `int_real_relax_budget` at
+        // `timeout / 6 == 0` and `pre_lia_uf_probe_budget` at `timeout / 10 ==
+        // 0` -- so a route asked for a sixth of the clock got all of it. The
+        // first is recorded as a FINDING in `crate::config_registry`; the
+        // second was found looking for more of the same shape.
+        //
+        // THE BUDGETS BELOW ARE IN NANOSECONDS, and that is the whole point of
+        // this test. `Duration` division is nanosecond-based, so
+        // `from_millis(5) / 6` is 833 us, NOT zero: the old branch could only
+        // fire under SIX NANOSECONDS. A first version of this test used 5 ms
+        // and 9 ms, believing the FINDING's "small-budget end" was milliseconds
+        // -- and the mutation that restores the old branch made no test fail at
+        // all. A guard for a band six nanoseconds wide has to be written in
+        // nanoseconds.
+        for tight in [
+            Duration::from_nanos(1),
+            Duration::from_nanos(5),
+            Duration::from_nanos(9),
+            Duration::from_nanos(100),
+            Duration::from_micros(1),
+            Duration::from_millis(1),
+            Duration::from_millis(5),
+        ] {
+            let config = SolverConfig::new().with_timeout(tight);
+            let relax = int_real_relax_budget(&config).timeout.unwrap();
+            assert!(
+                relax < tight,
+                "a sixth of {tight:?} became {relax:?} -- the whole clock"
+            );
+            let pre_lia = pre_lia_uf_probe_budget(&config).timeout.unwrap();
+            assert!(
+                pre_lia < tight,
+                "a tenth of {tight:?} became {pre_lia:?} -- the whole clock"
+            );
+            // ...and it must not become ZERO either: a route handed no clock at
+            // all is a route deleted, which is a different policy from a route
+            // shared. Below 2 ns there is no nonzero slice smaller than the
+            // budget, so that is where the promise stops.
+            if tight >= Duration::from_nanos(2) {
+                assert!(!relax.is_zero(), "a sixth of {tight:?} became nothing");
+                assert!(!pre_lia.is_zero(), "a tenth of {tight:?} became nothing");
+            }
+        }
+        // An unbounded caller stays unbounded: this divides a budget, it never
+        // invents one.
+        assert_eq!(int_real_relax_budget(&SolverConfig::new()).timeout, None);
+        assert_eq!(pre_lia_uf_probe_budget(&SolverConfig::new()).timeout, None);
+    }
+
+    #[test]
+    fn abv_online_probe_keeps_all_but_the_array_ladder_reserve() {
+        // Measured 2026-09-08 (span-log sweep, `QF_ABV.json`): on four files
+        // `abv-online-cdclt` spent 24.009 s of a 24 s budget, declined, and
+        // `array-fast-path` decided the file in 0.007-0.174 s. This asserts the
+        // ladder now gets a reserve out of the SAME clock, and that the arm
+        // which reproduces the old behaviour still exists to measure against.
+        let timeout = Duration::from_secs(24);
+        let config = SolverConfig::new().with_timeout(timeout);
+        let deadline = Instant::now().checked_add(timeout);
+
+        let reserved = {
+            let _policy = AbvOnlineReservePolicyGuard::set(AbvOnlineReservePolicy::LadderReserve);
+            abv_online_probe_budget(&config, deadline).timeout.unwrap()
+        };
+        // Bounded from both sides: the clock moves while the test runs, and an
+        // upper bound alone is satisfied by a probe of zero.
+        assert!(
+            reserved <= Duration::from_secs(18) && reserved >= Duration::from_secs(17),
+            "abv-online probe budget {reserved:?} is not 3/4 of a 24 s clock"
+        );
+        assert!(
+            timeout.saturating_sub(reserved) >= Duration::from_millis(2900),
+            "the array ladder's reserve must exceed the 2.898 s slowest \
+             array-fast-path decision in the measured sweep"
+        );
+
+        let whole = {
+            let _policy = AbvOnlineReservePolicyGuard::set(AbvOnlineReservePolicy::WholeBudget);
+            abv_online_probe_budget(&config, deadline).timeout.unwrap()
+        };
+        assert_eq!(
+            whole, timeout,
+            "the `off` arm must reproduce the old budget"
+        );
+
+        // An unbounded configuration stays unbounded under both arms.
+        for policy in [
+            AbvOnlineReservePolicy::LadderReserve,
+            AbvOnlineReservePolicy::WholeBudget,
+        ] {
+            let _policy = AbvOnlineReservePolicyGuard::set(policy);
+            assert_eq!(
+                abv_online_probe_budget(&SolverConfig::new(), None).timeout,
+                None,
+                "{}: no clock to share means no clock to divide",
+                policy.name()
+            );
+        }
+    }
+
+    #[test]
+    fn every_route_budget_in_this_file_goes_through_the_slice_policy() {
+        // THE RATCHET. The pattern this policy exists for -- a route that runs
+        // before others and takes the whole clock -- was hand-rolled four times
+        // in this file before it had a name, and each copy had to be found by
+        // measuring a division. So the population here is derived from the
+        // SOURCE, not from a list: every site that sets a route's `timeout` is
+        // read out of `auto.rs` and must be one of the three helpers that
+        // narrow a config to the REMAINING clock, or `LadderSlice::apply`.
+        //
+        // A fifth hand-rolled divisor fails this test at the moment it is
+        // written, which is the only moment it is cheap to notice.
+        const NARROWS_TO_REMAINING: &[&str] = &[
+            "config_with_remaining_timeout",
+            "config_with_remaining_deadline",
+            "mbqi_config_with_deadline",
+            "apply",
+        ];
+        let source = std::fs::read_to_string(
+            std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src/auto.rs"),
+        )
+        .expect("read this file's own source");
+        let non_test = source
+            .split_once("\nmod tests {")
+            .map_or(source.as_str(), |(before, _)| before);
+        let mut enclosing = String::new();
+        let mut sites: Vec<(String, String)> = Vec::new();
+        for line in non_test.lines() {
+            let trimmed = line.trim_start();
+            if let Some(rest) = trimmed
+                .strip_prefix("pub(crate) fn ")
+                .or_else(|| trimmed.strip_prefix("pub fn "))
+                .or_else(|| trimmed.strip_prefix("fn "))
+            {
+                enclosing = rest
+                    .split(['(', '<'])
+                    .next()
+                    .unwrap_or_default()
+                    .trim()
+                    .to_owned();
+            }
+            if trimmed.contains(".timeout = Some(") {
+                sites.push((enclosing.clone(), trimmed.to_owned()));
+            }
+        }
+        // A scan that found nothing would pass every assertion below, so the
+        // count is checked first: this is the control, not decoration.
+        assert!(
+            sites.len() >= 4,
+            "the scan found only {} timeout assignments in auto.rs -- it stopped \
+             matching the source rather than the source getting cleaner",
+            sites.len()
+        );
+        assert!(
+            sites.iter().any(|(f, _)| f == "apply"),
+            "LadderSlice::apply must be one of the sites the scan sees"
+        );
+        let hand_rolled: Vec<&(String, String)> = sites
+            .iter()
+            .filter(|(f, _)| !NARROWS_TO_REMAINING.contains(&f.as_str()))
+            .collect();
+        assert!(
+            hand_rolled.is_empty(),
+            "route budgets computed outside the ladder-slice policy: {hand_rolled:#?}\n\
+             Express the share as a named `LadderSlice` constant with a registry \
+             entry instead, so the next reader can find it by name."
+        );
     }
 
     #[test]
