@@ -34,7 +34,38 @@ Only a **solo prober** — one route, one process, at the real 24 s budget — c
 establish a prize. Retired the enlarged-budget probe as an oracle; it still
 establishes the denominator.
 
-## The table (completed divisions)
+## The table — FULL 403-file loss population, not the partial one
+
+The lane continued past its first report to the whole population. The
+conclusion holds and the evidence is much stronger; these numbers supersede the
+105-file table below.
+
+| division | files | ladder wins | ladder loses | decided alone | none |
+|---|---:|---:|---:|---:|---:|
+| QF_ABV | 19 | 7 | 12 | **2** | 10 |
+| QF_BV | 6 | 0 | 6 | 0 | 6 |
+| QF_LRA | 54 | 5 | 49 | 0 | 49 |
+| QF_NIA | 30 | 3 | 27 | 0 | 27 |
+| QF_UF | 38 | 35 | 3 | 0 | 3 |
+| UF | 32 | 0 | 32 | 0 | 32 |
+| **total** | **179** | **50** | **129** | **2** | **127** |
+
+**The cheap probe nominated 10 candidates across 403 files and every one tested
+was refuted**, by three distinct mechanisms rather than one: a looped front door
+scored on 1 of 55 rounds (1,172 ms scored against 110,546 ms real); a result
+that does not reproduce (decided once at 27 s, then failed at 24/25/26/27 s
+under load); and seven files where nothing was starved at all — the ladder
+finished in 10.8-15.8 s of a 24 s budget and the route is simply stronger under
+a bigger one.
+
+## The number that changes planning
+
+**141 of the 403 loss files are already decided.** The lists were cut on
+2026-09-05 and today moved three divisions. Planning against them is planning
+against a number that moved, and every lane pointed at "the N files we lose" is
+partly pointed at files we now win.
+
+## The table (first report, 105 files — superseded above)
 
 | division | files | ladder wins | ladder loses | decided alone in budget | no route decides alone |
 |---|---:|---:|---:|---:|---:|
