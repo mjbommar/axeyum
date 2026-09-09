@@ -244,6 +244,54 @@ not add up to one that sees everything**, and the honest form of this table is a
 candidate column with the confirmation gap named, not a prize column with a
 footnote.
 
+## Five QF_UFLIA files are unsat in 2 ms, and the reason we lose them is not scheduling
+
+`mathsat/EufLaArithmetic/medium/{9,10,13,16,19}.smt2` are on the committed loss
+list, `unknown` at 24 s and still `unknown` at 120 s. `euf-online` run alone
+decides **unsat in 2, 2, 5, 10 and 13 ms**. All five are declared `unsat` with a
+matching `reference_verdict`, so these are right answers — and an abstraction
+that drops arithmetic semantics refutes soundly, so a fast `unsat` here is not
+the over-abstraction it would be if it said `sat`.
+
+It looked like the portfolio's best case. It is not, and three controls say so.
+
+**The ladder does try `euf-online`, and it declines in 1.1 ms.** Not an ordering
+problem:
+
+```
+uf-arith-lazy-overbound-pre-lia  declined budget       254.2ms
+lia-dpll                         declined budget         0.0ms
+uf-arith-lazy-overbound          declined budget     18002.9ms
+euf-online                       declined incomplete     1.1ms  boolean skeleton
+                                                                outside the online CDCL
+```
+
+**Control 1 — the reduction is not the cause.** `route_solo`'s `auto` and
+`auto-nopre` arms run the shipped `check_auto` on the same parsed input with
+`config.preprocess` on and off. Both lose (42,279 ms and 42,271 ms), so
+`preprocess_reduce` is not what takes the admission away. My hypothesis, tested
+and refuted.
+
+**Control 2 — removing the route that eats the budget does not help.**
+`AXEYUM_UF_ARITH_OVERBOUND=skip` is the one route-skip switch in the tree. With
+`uf-arith-lazy-overbound` gone, `uf-arithmetic` takes the whole 24 s instead
+(`bound_by=uf-arithmetic bound_ms=24001`) and all five files are still lost.
+
+**Control 3 — the budget is not the cause either.** At a 500 ms budget the
+ladder reaches 22 attempts and `euf-online` declines just the same, on an arena
+barely touched by the routes ahead of it.
+
+So `check_auto` loses on exactly the input `euf-online` decides in 2 ms, with
+preprocessing off, at every budget. The transformation that costs the route its
+admission is **inside `check_auto` and is not `preprocess_reduce`** — the
+remaining candidate is `check_auto_inner`'s `to_real`/`to_int` normalization.
+Located, not identified; that is a defect lead for whoever owns the UF ladder.
+
+**And it is not a portfolio finding.** A portfolio arm running inside the
+dispatcher receives the same transformed query and declines the same way. These
+five files are worth more than anything else in this note, and parallelism is
+not what recovers them.
+
 ## The reservation itself costs a win, and that is the portfolio's structural edge
 
 `QF_RDL/scheduling/orb06_900.smt2` is on the committed loss list and is still
