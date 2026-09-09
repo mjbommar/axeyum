@@ -73,7 +73,8 @@ way to ask what a different value would do short of editing the source.
 
 ## The printed reason is not the operative one
 
-21 of the 32 files print
+**Measured on the binary as it stood before this note's fix** (solver commit
+`0c8afe970`), 21 of the 32 files print
 
 ```
 ; give-up kind=Incomplete detail=query has quantifiers instantiation does not
