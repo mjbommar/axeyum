@@ -7,6 +7,10 @@
 //! The measurement is on *encoded clause count* (deterministic), not wall-clock
 //! (flaky in CI). Both engines must also agree on every per-branch verdict.
 #![cfg(feature = "full")]
+// Array tests name arrays/indices/elements with the conventional single letters
+// (`a`, `b`, `c`, `d`, `i`, `j`, `k`, `m`, `v`); mirror the lint configuration
+// the other `abv` suites use for the same reason.
+#![allow(clippy::many_single_char_names, clippy::similar_names)]
 
 use std::time::Duration;
 

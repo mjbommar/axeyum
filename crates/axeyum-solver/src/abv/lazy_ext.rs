@@ -1,11 +1,11 @@
 use super::{
     ArrayDefs, Assignment, CheckResult, HashSet, Instant, LastExtReplay, MAX_DIFF_SKOLEMS,
-    MAX_ROW_ROUNDS, ReplayTargets, RowCtx, RowEngine, RowKind, SolverBackend, SolverConfig,
-    SolverError, SymbolId, TermArena, TermId, UnknownReason, Value, check_row_cegar,
-    check_scalar_abstraction, complete_assignment, config_with_remaining_deadline, ext_unknown,
-    past_deadline, project_replay_ext, read_indices_for, read_terms_differ,
-    replay_last_ext_candidate, row_axiom_lemma, row_violated, select_congruence_lemma,
-    var_congruence_sites, violated_congruence_pairs,
+    MAX_ROW_ROUNDS, ReplayTargets, RowCtx, RowEngine, RowKind, RowWarmth, SolverBackend,
+    SolverConfig, SolverError, SymbolId, TermArena, TermId, UnknownReason, Value, check_row_cegar,
+    complete_assignment, config_with_remaining_deadline, ext_unknown, past_deadline,
+    project_replay_ext, read_indices_for, read_terms_differ, replay_last_ext_candidate,
+    row_axiom_lemma, row_violated, select_congruence_lemma, var_congruence_sites,
+    violated_congruence_pairs,
 };
 
 #[derive(Clone, Copy)]
@@ -95,6 +95,7 @@ pub(super) fn check_qf_abv_lazy_ext<B: SolverBackend>(
     arena: &mut TermArena,
     assertions: &[TermId],
     config: &SolverConfig,
+    warmth: RowWarmth,
 ) -> Result<CheckResult, SolverError> {
     let deadline = config.timeout.and_then(|t| Instant::now().checked_add(t));
     let mut ctx = RowCtx::default();
@@ -123,17 +124,22 @@ pub(super) fn check_qf_abv_lazy_ext<B: SolverBackend>(
             originals: assertions,
             defs: &defs,
         };
-        // The lazy-extensionality path keeps the one-shot backend for now: its
-        // own refinement loop (`ext_cegar_loop`) retracts nothing either, but
-        // wiring it onto the warm engine is a separate, separately measured
-        // step. `RowEngine::cold` is the historical behaviour, unchanged.
-        let mut engine = RowEngine::cold(backend);
+        let mut engine = RowEngine::for_warmth(backend, config, warmth);
         return check_row_cegar(&mut engine, arena, assertions, &replay, config, deadline);
     }
 
     add_const_lemmas(arena, &ctx, &mut working)?;
+    // The extensionality loop appends too -- ROW, congruence and diff-skolem
+    // lemmas -- and never retracts, so the same retained engine applies.
+    let mut engine = RowEngine::for_warmth(backend, config, warmth);
     ext_cegar_loop(
-        backend, arena, &mut ctx, working, assertions, config, deadline,
+        &mut engine,
+        arena,
+        &mut ctx,
+        working,
+        assertions,
+        config,
+        deadline,
     )
 }
 
@@ -167,7 +173,7 @@ fn add_const_lemmas(
 /// bound.
 #[allow(clippy::too_many_arguments)]
 fn ext_cegar_loop<B: SolverBackend>(
-    backend: &mut B,
+    engine: &mut RowEngine<'_, B>,
     arena: &mut TermArena,
     ctx: &mut RowCtx,
     mut working: Vec<TermId>,
@@ -202,7 +208,7 @@ fn ext_cegar_loop<B: SolverBackend>(
             ));
         }
         let round_config = config_with_remaining_deadline(config, deadline);
-        let assignment = match check_scalar_abstraction(backend, arena, &working, &round_config)? {
+        let assignment = match engine.solve_round(arena, &working, &round_config)? {
             CheckResult::Unsat => return Ok(CheckResult::Unsat),
             CheckResult::Unknown(reason) => {
                 let replay =

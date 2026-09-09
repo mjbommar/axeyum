@@ -748,7 +748,7 @@ fn check_qf_abv_lazy_row_inner<B: SolverBackend>(
     // case: hand it to the lazy-extensionality CEGAR path (diff-skolem witnesses +
     // on-demand select-congruence) instead of declining.
     let Some((substituted, defs)) = substitute_array_definitions(arena, assertions)? else {
-        return lazy_ext::check_qf_abv_lazy_ext(backend, arena, assertions, config);
+        return lazy_ext::check_qf_abv_lazy_ext(backend, arena, assertions, config, warmth);
     };
 
     let deadline = config.timeout.and_then(|t| Instant::now().checked_add(t));
@@ -756,10 +756,7 @@ fn check_qf_abv_lazy_row_inner<B: SolverBackend>(
         originals: assertions,
         defs: &defs,
     };
-    let mut engine = match warmth {
-        RowWarmth::Cold => RowEngine::cold(backend),
-        RowWarmth::Warm => RowEngine::warm(backend, config),
-    };
+    let mut engine = RowEngine::for_warmth(backend, config, warmth);
     check_row_cegar(&mut engine, arena, &substituted, &replay, config, deadline)
 }
 
@@ -3349,6 +3346,14 @@ impl<'b, B: SolverBackend> RowEngine<'b, B> {
         }
     }
 
+    /// The engine `warmth` asks for.
+    pub(crate) fn for_warmth(backend: &'b mut B, config: &SolverConfig, warmth: RowWarmth) -> Self {
+        match warmth {
+            RowWarmth::Cold => Self::cold(backend),
+            RowWarmth::Warm => Self::warm(backend, config),
+        }
+    }
+
     /// Discards the warm engine; every later round runs one-shot.
     fn go_cold(&mut self) {
         self.warm = None;
@@ -3397,8 +3402,7 @@ impl<'b, B: SolverBackend> RowEngine<'b, B> {
         warm.set_timeout(config.timeout);
 
         let mut added = 0u64;
-        for index in self.encoded..working.len() {
-            let term = working[index];
+        for &term in &working[self.encoded..] {
             // Arrays and UF applications are not on the warm bit-blaster's
             // path. The ROW abstraction should have removed them; one that
             // survived must send the round to the one-shot backend rather than
