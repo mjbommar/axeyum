@@ -208,6 +208,44 @@ lands). Everything above this heading is measured and complete on its own terms;
 the per-division prize table is what this section will carry, and no conclusion
 about whether to build a portfolio is drawn until it is here.
 
+## The reservation itself costs a win, and that is the portfolio's structural edge
+
+`QF_RDL/scheduling/orb06_900.smt2` is on the committed loss list and is still
+lost by the current tree at 24 s. The probe decides it at 120 s via `dl-online`,
+whose **own** cost is 19,690 ms — comfortably inside a 24 s budget, so it scores
+as a prize. The mechanism is not a slow route. It is the reserve:
+
+```
+budget=24000  unknown  bound_by=dl-online bound_ms=18010 total_ms=24003 attempts=14
+budget=27000  unsat    decided_by=dl-online bound_ms=17685 total_ms=17689 attempts=3
+budget=32000  unsat    decided_by=dl-online bound_ms=15014 total_ms=15017 attempts=3
+```
+
+`dl_probe_budget` hands the probe `remaining − min(timeout/4, 6 s)`, so at a 24 s
+budget `dl-online` gets **18,010 ms** — the number the trace prints — and the
+route needs more. Raise the budget to 27 s and the same route decides the same
+file in 17.7 s. Nothing about the route changed; the ladder's guarantee to the
+routes below it is what took the win away.
+
+That is the sharpest available statement of what a portfolio buys that a
+reservation cannot: **a reserve is zero-sum over one clock.** Every second it
+guarantees to the routes below is a second the leading route does not get, and
+on a file the leading route would have won, the guarantee is the loss. A
+portfolio arm has no such trade — it starts at t = 0 and gets the whole budget,
+and so does every other arm.
+
+The bound is tight rather than comfortable, and the note says so: at 27 s the
+route finished in 17.7 s, *less* than the 18.0 s it was refused at 24 s, because
+its deadline checks are wall-clock and the host was carrying other lanes. This
+file sits on the edge and flips with load. The structural point does not depend
+on which side of the edge it lands on today; the measured `bound_ms=18010`
+against a 24,003 ms total does.
+
+The same division's five `TOO-SLOW-ARM` files are the honest other half:
+`dl-online` needs 26.4 s, 29.4 s, 42.0 s, 62.7 s and 107.0 s of its own time
+there. Removing the reserve would hand it 24 s and still lose all five. Neither
+a reservation nor a portfolio reaches them; they need a faster route.
+
 ## A portfolio and a reservation are the same policy in two execution modes
 
 A sibling lane is building the **sequential reservation**: a route that runs
