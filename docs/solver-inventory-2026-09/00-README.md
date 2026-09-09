@@ -55,7 +55,8 @@ carry no information.
 [`docs/solver-comparison-2026-09/`](../solver-comparison-2026-09/00-README.md)
 inventories the reference SAT/SMT solvers against the same subject matter, and
 [its gap analysis](../solver-comparison-2026-09/10-gap-analysis.md) joins the
-two. Its headline bears on how you read this folder: the largest gaps against
+two; [the roadmap](../solver-comparison-2026-09/11-roadmap-and-plan.md) turns
+both into ordered work with exit criteria. Its headline bears on how you read this folder: the largest gaps against
 the reference solvers are not missing capability but capability recorded here as
 built-and-unwired.
 

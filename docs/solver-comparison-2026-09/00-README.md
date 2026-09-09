@@ -85,6 +85,7 @@ easiest way to produce a confident wrong answer.
 | [08-proof-checking-ecosystem.md](08-proof-checking-ecosystem.md) | Carcara, drat-trim, Lean 4 | The trusted-checking half of "untrusted fast search, trusted small checking" |
 | [09-abc-and-aiger.md](09-abc-and-aiger.md) | ABC, AIGER | What a mature AIG layer does beyond being an intermediate representation |
 | [10-gap-analysis.md](10-gap-analysis.md) | — | The synthesis: ranked gaps, by axis, with effort and evidence |
+| [11-roadmap-and-plan.md](11-roadmap-and-plan.md) | — | The plan: four phases ordered by value ÷ cost, each item with a falsifiable exit criterion |
 
 ## How to read the gap analysis
 

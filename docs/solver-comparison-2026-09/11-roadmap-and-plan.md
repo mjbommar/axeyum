@@ -1,0 +1,131 @@
+# Roadmap and plan — from the inventory and gap analysis (2026-09-09)
+
+This distills [`docs/solver-inventory-2026-09/`](../solver-inventory-2026-09/00-README.md)
+(what we have, and what is actually wired), the nine reference-solver files in
+this folder, and [10-gap-analysis.md](10-gap-analysis.md) into an ordered plan.
+
+It is written backwards from **exit criteria**. Every item names the observation
+that would show it is done, and that observation is one a referee can re-run.
+Items without a falsifiable exit criterion were left out on purpose.
+
+Ordering rule: **value today ÷ cost to close**, then dependencies. That rule puts
+checker fixes first (a checker that cannot fail makes the whole ledger
+unfalsifiable), routing second (the engines exist), and algorithm work last.
+
+## What the evidence says, in one paragraph
+
+We are not behind on capability in the way the crate count suggests. We are
+behind on **integration**: a warm incremental SAT engine, five inprocessing
+passes, a machine-independent work meter, and both halves of stable/focused mode
+switching all exist in the tree and are not reached by a default solve. On
+evidence we lead the field by more than we have said — four reference solvers
+produce no proofs, Z3 removed interpolation and ships a bit-vector proof checker
+whose six functions all `return true` — but our own external-checker gates skip
+and pass, so we cannot currently *demonstrate* that lead. The real algorithmic
+gaps are specific and mostly in the SAT layer: equivalent-literal substitution,
+a gate-structure interface to CNF, and propagation-based local search.
+
+## Phase 0 — make the checkers able to fail (days)
+
+Rationale: the repository's own rule. At N lanes the ledger is the product, and
+every claim in Phases 1–3 will be *measured* through these gates. They must be
+trustworthy before anything else is.
+
+| # | Item | Do | Exit criterion (falsifiable) |
+|---|---|---|---|
+| 0.1 | `minus_simplify` | Add the name to `CARCARA_CHECKED_RULES` (`crates/axeyum-cnf/src/alethe.rs:868` region). Carcara aliases it at `carcara/src/checker/shared.rs:292`. | The pinned list has 180 entries and equals the set of Carcara's `get_rule` match-arm strings at clone `6624ea80c`; a test derives that set from the clone rather than a literal. |
+| 0.2 | A Carcara gate that runs Carcara | `scripts/check-carcara-gate.sh` modeled on `check-lean-gate.sh`; `AXEYUM_REQUIRE_CARCARA=1` mode in `tests/carcara_crosscheck.rs`. Copy cvc5's shape (`references/cvc5/test/regress/cli/run_regression.py:312-335`): check exit status **and** `"valid" in stdout`, and pass `--allowed-rules` naming our three in-tree-only rules explicitly. | Under `AXEYUM_REQUIRE_CARCARA=1`, a proof with one rule renamed to `hole` **fails** the gate; with the binary absent the gate **fails**, not skips. Register the gate in `just check`. |
+| 0.3 | drat-trim exit contract | Audit every recipe that invokes drat-trim; require the `s VERIFIED` grep that `check-claim-certificates.py:1227` already does. drat-trim has 17 `exit (0)` sites incl. MEMOUT and TIMEOUT (`drat-trim.c:905`). | A deliberately truncated proof reports failure from every recipe; `exit 0` alone never counts as a pass. |
+| 0.4 | Support matrix behavioral probes | `SUPPORT_MATRIX` (19 rows) and `CAPABILITIES` (105) are hand-written literals dispatch never reads. Add a probe per row that runs a one-line query through the front door and asserts the claimed verdict class. | Flipping any row's claimed logic support makes exactly one probe fail. 12 of 19 matrix rows currently have no probe; `CAPABILITIES` has none. |
+| 0.5 | Trust ledger derived, not typed | `ALL_TRUST_IDS` (15) and `is_certified` are hand-written. Derive the certified set from which `Evidence` variants carry a checked certificate. | Adding a `TrustId` without an evidence route fails a test; the ledger markdown regenerates from the derived set. |
+| 0.6 | Documentation drift | Fix the ten drifted docs and two ADRs listed in the gap analysis §7, and `CLAUDE.md:319` (axeyum-fp deps) and the varisat sentence (splr ships DRAT; varisat remains the only Rust SAT solver with LRAT). Update `07-strings-and-regex.md` to include `str.update` and `seq.*`. | `docs/internals/cnf-and-sat.md` no longer says RAT is rejected; `support-matrix.md` column count matches source; ADR-0009 no longer claims a real incremental façade until 1.1 lands. |
+
+## Phase 1 — wire what already exists (weeks)
+
+Rationale: the top of the gap analysis. No new algorithms; each item has an
+engine with tests already in tree.
+
+| # | Item | Do | Exit criterion |
+|---|---|---|---|
+| 1.1 | **Warm solver on the front door** | Route `Solver::check` and `solve_smtlib` to `IncrementalBvSolver` (used today by `pdr.rs`, `dpll_t.rs`, `symexec.rs`, `ufbv_online.rs`, `bmc.rs`; zero references in `solver.rs`/`smtlib.rs`). Replace the five `SatBvBackend::new()` sites in `auto.rs` (`:3993`, `:4735`, `:4853`, `:5563`, `:6672`) inside CEGAR loops with a per-query warm instance. | `warm_vs_cold.rs` extended to the array CEGAR: round *n*+1 reuses round *n*'s clauses (assert clause count is monotone, lowering map unchanged). Corpus verdicts identical before/after (the `:status` sweep). ADR-0009's claim becomes true. |
+| 1.2 | **Inprocessing on by default** | Flip `cnf_inprocessing` (`backend.rs:390`) after measurement, not before. Run the capability ratchets (`progress_frontier`, `--features full`, pinned cores) and the QF_BV parity slice with the flag on. | Ratchets report PROGRESS or NOT COMPARABLE never REGRESSION at the pinned reference frame; every unsat under inprocessing still produces a DRAT that `check_drat` accepts. Then the default flips and the `inprocess.rs:138` comment is corrected. |
+| 1.3 | **One inprocessing pipeline** | Decide between `axeyum-cnf/src/inprocess.rs` (proof-carrying, no caller) and the hand-rolled copy at `sat_bv_backend.rs:1827-2083` (`ReductionLink`). Record the decision as an ADR; delete the loser. | One implementation remains; the other's file is gone; the ADR names why. |
+| 1.4 | **One preprocessing pipeline** | `preprocess.rs` (8 rounds, carries `real_div_zeros`) vs `auto::preprocess_reduce` (1 round, carries function interpretations). Neither is a superset. Merge into one that carries both witness kinds and loops to fixpoint under the existing cap. ADR. | A fixture with a `/0` real witness *and* a function interpretation replays through the merged path; `preprocess.rs:221`'s "wrong `sat`" comment describes a case that is now tested, not a case the front door can hit. |
+| 1.5 | **The tick valve** | Give `ticks.rs` consumers: gate each inprocessing pass on `effort/1000 × ticks since last run`, refusing below `thresh × clauses` (CaDiCaL `limit.hpp:136`), with `Delay`-style back-off. Convert the conflict-denominated budgets that mean "work" to ticks. | `span_log.rs:75` no longer says "No ticks"; a run's tick count is identical across two hosts with different load (the deterministic-work test), and pass scheduling is reproducible from the log. |
+| 1.6 | **Stable/focused switching** | Expose the `proof_sat.rs` EMA restart and `phase_policy.rs` target/best-phase machinery outside `#[cfg(test)]`; add the mode switch on a tick budget with quadratic interval growth, starting focused (`restart.cpp:19-84`). | `use_ema_restart` has a production setter; a curated corpus shows the mode schedule in the span log; ratchets non-regressing. |
+| 1.7 | **Portfolio default** | `portfolio::FusedGroup` needs `AXEYUM_PORTFOLIO_WORKERS ≥ 2`; default is 1. Commit `613bc3f35` measured two workers faster on decided files. Make it default where the measurement holds. | Default run on that slice reproduces the +6/−0 result; verdicts deterministic under the race (the divergence at `auto.rs:2890-2894` is either removed or shown verdict-neutral). |
+| 1.8 | **Route trace for quantified inputs** | The quantified ladder (`auto.rs:492-1108`) records nothing; eleven rungs report only to stderr under `AXEYUM_QTRACE`. Add `RouteTrace` recording. | A quantified corpus file's trace names the rung that decided it, not the QF sub-route it fell into. |
+
+## Phase 2 — cheap, well-bounded engineering (weeks)
+
+| # | Item | Do | Exit criterion |
+|---|---|---|---|
+| 2.1 | **SCC / equivalent-literal substitution** | The cheapest CaDiCaL pass (`decompose.cpp`) and the one every other pass feeds. Tarjan over the binary implication graph, substitute representatives, emit RUP for each replaced clause. | A curated instance with *k* equivalence classes shrinks by the expected variable count; DRAT accepted; the pass runs under the 1.5 valve. |
+| 2.2 | **Keep gate structure across the CNF boundary** | CaDiCaL spends 7,925 lines (`congruence.cpp`) recovering AND/XOR/ITE that Tseitin destroyed; we still have it in the AIG and discard it at `tseitin_encode`. Carry a gate table beside the CNF so `xor_extract.rs` reads it instead of re-mining clauses. **Size this as an interface, not an algorithm.** | `xor_extract` finds the same XOR set from the table as from clause mining on the XOR curated corpus, in a fraction of the time; the mining path becomes a fallback for foreign CNF. |
+| 2.3 | **The `i128` boundary** | `simplex.rs:420` `narrow()` returns `None` (→ `unknown`) if any witness or Farkas multiplier `is_big()`. Let big values through to the model and certificate paths; the evaluator already handles `Value::WideInt`. | A fixture whose witness exceeds `i128` returns `sat` with a model that replays, not `unknown`. |
+| 2.4 | **ABC as a bit-blasting cross-check** | Our AIGER export is ASCII (`aig/lib.rs:636`); ABC reads binary only (`giaAiger.c:1980`). One hop through `aigtoaig`. Add an optional gate: export, convert, `cec` against a second lowering. | `just abc-crosscheck` fails on a deliberately mis-lowered operator (one negative control), passes on the curated set. Optional dependency; skip-and-**fail** under `AXEYUM_REQUIRE_ABC=1`. |
+| 2.5 | **Vendor the string corpus** | cvc5's strings/seq regression is 583 files (150 `QF_SLIA`, 74 `QF_S`); we vendored 20, zero `QF_SLIA`. Vendor the rest with `:status`; add the missing operators to the `:status` sweep. | `corpus/regression/cvc5/qf_slia/` exists; the sweep's file count rises accordingly; every new file's verdict is either matched or explicitly `unknown` — never wrong. |
+| 2.6 | **Differential fuzz where none exists** | Difference logic runs *first* in the ladder and has no oracle fuzz; nor do pure `QF_LIA`, `int_real_relax`, `lia_gcd`, `bmc`/`imc`/`pdr`. | A `--features z3` suite per route; each generates the route's degenerate case (Hard Rule) and reports a nonzero test count. |
+| 2.7 | **Retire or wire the eleven test-only modules** | `abduct`, `enums`, `faithfulness`, `horn`, `hypothesis_min`, `imc_lia`, `lex_reconstruct`, `pb`, `pdr_lia`, `records`, `toy_bv_vm`. Per module: dispatch it, move it to an example, or delete it. ADR for the deletions. | Module-level measurement (`11-wiring-and-integration.md` method) reports 0 test-only modules, or each survivor has a recorded reason. |
+| 2.8 | **Lean-kernel-checked interpolants** | The seven `*_certified` interpolant variants have no caller in `src/`. Route the always-on interpolant check through them, or delete them. | Either `dispatch_interpolant` consumes the certified variants, or they are gone. |
+
+## Phase 3 — the real algorithmic gaps (months, prioritize by corpus evidence)
+
+Each of these should be gated by a measurement showing the gap costs us on a
+public corpus *before* the work starts. Several may not survive that gate.
+
+| # | Item | Evidence | Prerequisite measurement |
+|---|---|---|---|
+| 3.1 | **Propagation-based local search with invertibility conditions** | Bitwuzla `src/lib/ls/`, 10,227 lines: four functions × 17 operator classes, `preprop` portfolio. Ours is WalkSAT scoring (`pbls.rs`, 1,456 lines). | Count QF_BV *sat* instances where `pbls` fails and bit-blasting is slow; if small, defer. |
+| 3.2 | **Remaining inprocessing passes** | Failed-literal probing, hyper-binary resolution, blocked/covered clause elimination, BVA, SAT sweeping. 19 missing; take them in CaDiCaL's schedule order after 2.1. | Per-pass ratchet delta on the QF_BV parity slice; keep only passes that move it. |
+| 3.3 | **Word-level rewrite depth with levels** | 59 rules, no levels, vs Bitwuzla 296 (levels 0–2 + arithmetic) and Boolector 127 (0–3). | Measure AIG size before/after on the parity slice per candidate rule; land rules by measured reduction. |
+| 3.4 | **LIA branching as SAT lemmas** | All three arithmetic references branch by lemma and have no node cap; we cap at 50,000 and return `unknown`. Two use HNF cuts-from-proofs. | Count `unknown` verdicts on `QF_LIA` public corpora attributable to the cap. |
+| 3.5 | **Instantiation strategies** | cvc5: conflict-based (default on), CEGQI per theory, enumerative, pool, SyGuS, sub-conflict. Ours: E-matching + MBQI + a certificate family. | The UF corpus's declined files (dated 2026-09-09 comment in `auto.rs`) — classify which strategy each needs. |
+| 3.6 | **Strings inference depth** | 87 cvc5 inference ids vs our 4; loop detection; four disequality procedures. | After 2.5, count `unknown` on the vendored `QF_SLIA` set by missing inference kind. |
+| 3.7 | **Interpolation strength and shape** | No strength parameter, no tree/sequence interpolants, decline on AB-mixed literals (`euf_interpolant.rs:503`). OpenSMT has six systems; SMTInterpol checks every leaf. | Only when a consumer (IMC/PDR) needs it; those routes are themselves unwired (2.7). |
+| 3.8 | **Store-pattern recognition** | Boolector recognizes `memset`/`memcpy` chains into lambdas with range conditions; we expand store chains (STP measured 48× slower than refinement). | Count store-chain depth on `QF_ABV` public corpora. |
+
+## Phase 4 — decisions to record, not code to write
+
+| # | Decision | Inputs |
+|---|---|---|
+| 4.1 | **The Z3 demotion path (ADR-0002).** Our three differential suites use exactly `Solver::new`, `set_params("timeout")`, `assert`, `check` — no tactics, cores, proofs, assumptions or push/pop anywhere in the workspace. The oracle we depend on is `smt_context` + `theory_lra` + exact simplex. | A replacement oracle needs only that surface. Candidates: cvc5, Yices2 (no proofs, but fast and exact). Decide and record. |
+| 4.2 | **Eager vs lazy arrays.** Keep ADR-0010 (it buys a certificate nobody else produces) but adopt STP's staged rule (eager only when reads < 10 and expansion < 200) to remove the `MAX_ARRAY_EQ_INDEX_BITS = 8` refusal. | 3.8's measurement. |
+| 4.3 | **Proof format target.** cvc5's default is CPC/Eunoia, not Alethe; its Alethe printer translates 97 of 172 rules and holes the entire strings family. Carcara remains the checker for what we emit. | Decide whether to stay Alethe-only or add an Ethos route; do not do both without a consumer. |
+| 4.4 | **FP.** We eliminate at parse (ADR-0028, replay checks the same circuit); Bitwuzla/STP word-blast lazily via SymFPU. This is a fork, not a gap. | Revisit only if an FP corpus shows parse-time elimination losing on size. |
+| 4.5 | **Stop claiming exact arithmetic as a differentiator.** Z3's `lp::mpq` is bignum rational + δ, same as ours. | Remove from any comparison prose. |
+
+## What not to do
+
+- **Do not size 2.2 as CaDiCaL's 7,925 lines.** They recover structure we never lost.
+- **Do not build an FP theory solver because Bitwuzla has one** (4.4).
+- **Do not flip `cnf_inprocessing` before 1.2's measurement.** The ratchets exist for this.
+- **Do not add a reference solver as a dependency** for anything but oracle, differential, or cross-check duty (ADR-0002, ADR-1703). ABC in 2.4 is a cross-check.
+- **Do not search for a thing by the name you have in mind.** Ten coordinator greps failed this way in the session that produced these documents (`exit(0)` vs `exit (0)`, a module name vs its exported function, a nested `carcara/carcara/`). Search for the string an author would have written, and run a positive control.
+
+## Metrics to carry
+
+Each phase reports against the existing instruments, not new ones:
+
+| Metric | Instrument | Phase |
+|---|---|---|
+| Gates that can fail | The delete-one-guard, exactly-one-test-dies rule, per checker | 0 |
+| Modules reachable from the default solve path | `11-wiring-and-integration.md` method, re-run | 1, 2.7 |
+| Capability frontier | `progress_frontier` at a stated reference frame | 1.2, 1.6, 3.2 |
+| Z3 parity | `bench-public-qfbv-sat-bv-compare` | 1.1, 3.1, 3.3 |
+| Unsat routes with no evidence | count of `Evidence::Unsat(None)` construction sites (8 today) | ongoing |
+| Trusted base | kernel `axiom_footprint`, never source text | unchanged |
+
+## Sequencing
+
+```
+Phase 0  ──►  Phase 1.1–1.4  ──►  1.5–1.8  ──►  2.1–2.3  ──►  measure  ──►  Phase 3 (gated)
+(days)        (routing)           (valve,       (SAT layer)                  (only what the
+                                   modes)                                     measurement justifies)
+Phase 4 decisions can be taken at any point; 4.1 and 4.5 now.
+```
+
+Phase 0 and Phase 1 fit in a small number of lanes with clear file ownership and
+no shared allocation points beyond one ADR number each. Phase 3 should not
+start until Phase 2's measurements say which items are worth it — several of
+them may turn out to cost nothing on the corpora we actually run.
