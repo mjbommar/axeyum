@@ -26,3 +26,5 @@
 [26/61] QF_NIA deciders=0 best=no-route (107s)  From_T2__ex36.t2__p26914_safety_0.smt2
 [27/61] QF_NIA deciders=0 best=no-route (104s)  From_T2__ex36.t2__p28763_safety_0.smt2
 [28/61] QF_NIA deciders=0 best=no-route (92s)  From_T2__ex36.t2__p29986_safety_0.smt2
+[29/61] QF_NIA deciders=0 best=no-route (102s)  From_T2__ex36.t2__p31135_safety_0.smt2
+[30/61] QF_NIA deciders=0 best=no-route (131s)  From_T2__fun1b.t2__terminationS_11_0.smt2

@@ -240,9 +240,19 @@ covers them, and it had reached 35 of that division's 58 files.
 | division | files | ladder wins | ladder loses | decided alone in budget | no route decides alone |
 |---|---:|---:|---:|---:|---:|
 | QF_ABV | 19 | 7 | 12 | **2** | 10 |
+| QF_BV | 6 | 0 | 6 | **0** | 6 |
 | QF_LRA | 54 | 5 | 49 | **0** | 49 |
+| QF_NIA (files 32-61) | 30 | 3 | 27 | **0** | 27 |
+| QF_UF | 38 | 35 | 3 | **0** | 3 |
 | UF | 32 | 0 | 32 | **0** | 32 |
-| **total** | **105** | **12** | **93** | **2** | **91** |
+| **total** | **179** | **50** | **129** | **2** | **127** |
+
+`QF_NIA`'s second half is worth its own line: three files *are* decided alone
+there, and all three are files **the ladder already wins**. They never were
+prizes. (Re-run on another host two of the three do not even reproduce —
+`datatype-native` / `datatype-elim` internally run a preprocessed dispatch, so
+their cost moves between machines. Either reading disqualifies them; the
+`STALE-DECIDED` one is the cheaper check.)
 
 `QF_UFLIA`'s sweep was still running: over its first 35 files it found 7
 ladder-losses with a solo decider — five are the 2 ms `euf-online` class above
@@ -256,18 +266,18 @@ same computation through different doors, not four arms.
 
 ### The band that decides it
 
-From the **solo** arm, over the three divisions where it is complete (`QF_ABV`,
-`QF_LRA`, `UF` — 93 ladder-losing files):
+From the **solo** arm, over the six divisions where it is complete — 129
+ladder-losing files:
 
 ```
 fastest route that decides ALONE, on files the ladder loses:
   under 1 s (a reserve reaches it)                       2
   1 s to 6 s (a reserve reaches it)                      0
   6 s to 24 s (MIDDLE BAND: only a portfolio)            0
-  no route decides alone at all                         91
+  no route decides alone at all                        127
 ```
 
-**The middle band is empty across those 93 files.** That, not the count, is what
+**The middle band is empty across those 129 files.** That, not the count, is what
 the decision turns on. `QF_UFLIA`'s incomplete sweep then supplied exactly one
 member of it, which is why the answer below is "not yet" rather than "no".
 
