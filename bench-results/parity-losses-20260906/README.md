@@ -1,5 +1,15 @@
 # QF_NRA loss census, 2026-09-06
 
+SUPERSEDED-BY: parity-losses-20260908
+
+> **The `QF_NRA.txt` POPULATION here is superseded** by
+> [`../parity-losses-20260908/QF_NRA.txt`](../parity-losses-20260908/), which
+> re-ran all 77 files at the shipped default on 2026-09-08. The census,
+> the A/B tables and the admission-bound analysis below are unaffected and
+> remain the record for this division; only the list of files still lost has
+> moved. `python3 scripts/check-loss-list-freshness.py` prints the per-division
+> authority table.
+
 The QF_NRA entry slice (`docs/plan/families/smt-quantifier-free/qf-nra.md`).
 Population is `QF_NRA.txt`, the 77 reference-only files from the parity sweep
 recorded in `bench-results/PARITY.md` (`## QF_NRA — 2026-09-07T01:33:46Z`,
