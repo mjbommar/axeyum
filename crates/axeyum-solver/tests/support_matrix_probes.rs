@@ -125,11 +125,12 @@ mod probes {
             })
     }
 
-    /// Probes run in an aggregate gate, so they are deliberately small. The
-    /// slowest case measured 2.6 s (the `QF_NIA` Pell witness) and the whole
-    /// suite ran in well under a minute; this budget exists only so a route that
-    /// regresses into a search cannot hang the gate. A probe that NEEDS this
-    /// budget is a bug in the probe: an `unknown` produced by hitting it carries
+    /// Probes run in an aggregate gate, so they are deliberately small: measured
+    /// 2026-09-09, the whole 21-test suite ran in **2.53 s** at
+    /// `--test-threads=4`, and its slowest single case was the `QF_NIA` Pell
+    /// witness at 2.5 s. This budget exists only so a route that regresses into
+    /// a search cannot hang the gate. A probe that NEEDS this budget is a bug in
+    /// the probe: an `unknown` produced by hitting it carries
     /// `UnknownKind::Timeout`, which `classify` rejects.
     fn config() -> SolverConfig {
         SolverConfig {
@@ -370,9 +371,19 @@ mod probes {
                   (assert (forall ((x (_ BitVec 2))) (p x)))(assert (not (p #b00)))(check-sat)", Class::Unsat),
             case("(declare-fun p ((_ BitVec 2)) Bool)\
                   (assert (forall ((x (_ BitVec 2))) (p x)))(check-sat)", Class::Sat),
-            case("(declare-fun f (Int) Int)\
-                  (assert (forall ((x Int)) (> (f (f x)) (f x))))\
-                  (assert (exists ((y Int)) (< (f y) 0)))(check-sat)", Class::UnknownIncomplete),
+            // Incompleteness witness: a forall/exists alternation over an
+            // INFINITE domain, outside the finite (Bool/BV), guarded-finite Int
+            // and single-variable Fourier-Motzkin fragments the row claims to be
+            // complete over. The route says so structurally -- "instantiation is
+            // satisfiable; the universal may still be violated outside the
+            // instantiated terms" -- in 0.00 s.
+            //
+            // An earlier candidate here (a f(f(x)) > f(x) refutation) reached
+            // `Incomplete` only after 20 s of search, and at a 5 s budget the
+            // SAME query returned `ResourceLimit` instead. That is a probe whose
+            // verdict depends on host load, so it was replaced rather than kept.
+            case("(assert (forall ((x Int)) (exists ((y Int)) (= (* x y) 1))))\
+                  (check-sat)", Class::UnknownIncomplete),
         ]),
 
         probe_datatypes: "datatypes (algebraic)" => Kind::Scripts(&[
