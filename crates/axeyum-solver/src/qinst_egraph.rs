@@ -229,6 +229,446 @@ fn parse_ground_budget(raw: Option<&str>) -> GroundBudget {
     }
 }
 
+/// Widest residual a deferred candidate may carry and still be admitted under
+/// the narrowing arms of [`RelevancePolicy`].
+///
+/// A clause's **residual width** is how many of its literals the current
+/// congruence has not already falsified — how many more facts must arrive
+/// before it can conflict. `1` is a unit (already eager and unbudgeted here),
+/// `0` is a conflict, and everything the flood regime actually admits is `>= 2`.
+/// The value is the first band above unit: a candidate two or three facts away
+/// from a conflict is admitted, one eight facts away waits.
+///
+/// **Not a shipped bound.** [`RelevancePolicy::SHIPPED`] sets
+/// `max_residual_width: usize::MAX`, so nothing is declined by width unless an
+/// A/B arm is selected. It is registered as a bound because a selected arm makes
+/// it one.
+const RELEVANCE_NARROW_RESIDUAL_WIDTH: usize = 3;
+
+/// The accumulated ground size at which the entailed-instance sweep of
+/// [`RelevancePolicy::evict_entailed`] starts running.
+///
+/// Tied to [`FLOOD_THROTTLE_MIN_GROUND`] for the same reason that bound exists:
+/// below it the loop is not under ceiling pressure, every release behaves like
+/// the historical dump-everything admission, and a sweep over the retained pool
+/// would be pure overhead on files that are going to refute from the dump.
+const RELEVANCE_EVICT_MIN_GROUND: usize = FLOOD_THROTTLE_MIN_GROUND;
+
+/// What the selection policy is allowed to know when it judges a candidate.
+///
+/// A filter with one hard-coded notion of "useless" is a narrow special case of
+/// a policy that takes the criterion as a parameter, and different callers want
+/// different strictness. cvc5's instantiation-evaluation layer carries five such
+/// criteria for exactly this reason (`NONE` / `CONFLICT` / `PROP` / `NO_ENTAIL`
+/// / `MODEL`), and its E-matching triggers request the entailment one on every
+/// trigger while its conflict-find requests the conflict one.
+///
+/// This is that axis, with the two values our evaluator can actually support
+/// today. The gap between them is the finding of
+/// `docs/research/12-performance/uf-instance-selection-2026-09-09.md`: on the
+/// `UF` loss population **85.6 % of scored candidates carry a literal
+/// [`RelevanceCriterion::EqualityOnly`] cannot value at all**, so the shipped
+/// criterion is blind on six sevenths of what it is asked to rank.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RelevanceCriterion {
+    /// Equalities and disequalities in the congruence, and nothing else.
+    ///
+    /// This is what `evaluate_equality_clause_with` knows, and it is the
+    /// shipped admission classifier's criterion. A literal that is not an
+    /// equality — an uninterpreted predicate application, say — is not
+    /// *undetermined* to this criterion; it is unspeakable, and the clause
+    /// carrying it is deferred by default rather than by judgement.
+    EqualityOnly,
+    /// Equalities, plus **ground Boolean units, closed under congruence**.
+    ///
+    /// A ground conjunct that is a Boolean application asserts that
+    /// application; its negation asserts the negation; and two congruent
+    /// applications share the value. That is the minimum an evaluator needs in
+    /// order to have an opinion about a predicate atom at all, and it is the
+    /// prerequisite for any partial-substitution pruning layer here: a
+    /// criterion that cannot value a completed body cannot value a partial one
+    /// either.
+    ///
+    /// Sound as an admission filter: a literal this valuation calls `True` is
+    /// entailed by the ground set, because the unit that gave it the value is
+    /// itself a ground conjunct and congruence is a consequence of the ground
+    /// equalities.
+    BooleanUnits,
+}
+
+/// Which generated instances the loop admits, and in what order.
+///
+/// [`GroundBudget`] is the **volume** policy: how many ground terms the loop may
+/// accumulate. This is the **selection** policy: given more candidates than the
+/// round will admit, which ones. The two were measured to be different levers on
+/// 2026-09-09 — raising the volume ceiling to 32768 decided **zero** additional
+/// files of the 32-file `UF` loss population, because the pool it filled was
+/// inert (`docs/research/12-performance/uf-quantified-loss-attribution-2026-09-09.md`).
+///
+/// # What the shipped loop already does, and what it does not
+///
+/// Read this before adding an arm, because the obvious first idea is already
+/// implemented. A candidate whose clause the current congruence already makes
+/// `ClauseValue::True` is **never admitted**: `lazy_clause_batches` counts it in
+/// `LazyClauseBatch::redundant` and pushes it into no pool. That classification
+/// is re-run from scratch every round against the round's congruence, so it does
+/// not go stale either. The census figure of "67.6 % of the admitted pool is
+/// TRUE" is a *retrospective* reading against the FINAL congruence: those
+/// instances were admitted while still undetermined and were entailed later, by
+/// facts that arrived after them. See [`RelevancePolicy::evict_entailed`] for
+/// the part of that population which can actually be acted on, and
+/// `floodprobe_cap_census` for the part which cannot.
+///
+/// What the shipped loop does *not* do is rank. Above
+/// `FLOOD_ROUND_ADMISSION_CAP` the deferred pool is ordered by instantiation
+/// generation and then term index — a *provenance* order, which says how deep a
+/// candidate was derived and nothing about whether it is close to a conflict.
+///
+/// # Fields
+///
+/// Every field is a separate, independently selectable change to that ordering,
+/// so an A/B can attribute a moved file to one of them.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct RelevancePolicy {
+    /// The arm this value came from, as it appears in a `--trace` reading.
+    /// Carried for attribution; nothing branches on it.
+    pub name: &'static str,
+    /// Order the budgeted deferred slice by residual width (fewest open
+    /// literals first) before the generation axis. `false` is the shipped
+    /// generation-then-index order.
+    pub rank_by_residual: bool,
+    /// Decline a deferred candidate wider than this while the flood throttle is
+    /// engaged. [`usize::MAX`] declines nothing, which is shipped.
+    pub max_residual_width: usize,
+    /// Once the ground set reaches `RELEVANCE_EVICT_MIN_GROUND`, re-evaluate
+    /// retained instances against the current congruence and drop those it now
+    /// entails, freeing ceiling slots.
+    ///
+    /// **Restricted to instances that are not themselves a top-level positive
+    /// equality**, and that restriction is what makes the sweep both sound and
+    /// non-circular. The matcher's congruence is generated by exactly the
+    /// top-level positive equalities in the ground set. If `C` is not one of
+    /// them, `C` contributes no merge, so every merge justifying `C` is still
+    /// present in `ground \ {C}` — hence `ground \ {C} ⊨ C` and the two sets are
+    /// equisatisfiable. Without the restriction the sweep would evict unit
+    /// equalities that are "entailed" only by their own merge, deleting real
+    /// facts from the ground check.
+    pub evict_entailed: bool,
+    /// Accumulated ground size at which the deferred throttle -- and therefore
+    /// this whole selection point -- engages. Below it every release behaves
+    /// like the historical dump-everything admission and no candidate is
+    /// scored. `FLOOD_THROTTLE_MIN_GROUND` in every shipped arm; a test arm
+    /// lowers it, which is the only way a unit test can reach the selection
+    /// point at all without building a two-thousand-term ground set.
+    pub throttle_min_ground: usize,
+    /// How many *deep* deferred candidates one round admits once the throttle
+    /// is engaged. `FLOOD_ROUND_ADMISSION_CAP` in every shipped arm. It is
+    /// also the pool size below which the slice is returned untouched, so a
+    /// test arm has to lower this to reach the selection point too.
+    pub round_admission_cap: usize,
+    /// What the policy is allowed to know when it judges a candidate.
+    /// [`RelevanceCriterion::EqualityOnly`] in every shipped arm, because that
+    /// is what the shipped admission classifier knows and an arm that widened
+    /// the criterion while also moving a lever would not be measuring either.
+    pub criterion: RelevanceCriterion,
+    /// Deferred candidates at or below this instantiation generation bypass the
+    /// selection point entirely and are admitted in the historical index order.
+    /// `FLOOD_EAGER_GENERATION_MAX` in every shipped arm — delaying shallow
+    /// candidates was measured to LOSE refuters, so no shipped arm touches it,
+    /// and a selection experiment that also changed it would not be measuring
+    /// selection. Lowered only by test arms, which is how a fixture reaches the
+    /// selection point without first deriving a generation-2 pool.
+    pub eager_generation_max: u32,
+}
+
+/// The shipped selection policy: every lever off, every threshold the value of
+/// the constant it stands in for.
+///
+/// At module level rather than only as [`RelevancePolicy::SHIPPED`] for the same
+/// reason [`ONLINE_QUANTIFIER_LIMITS`] is: `config_registry` names constants,
+/// and its coverage scanner reads only scalar and `Duration` types, so a
+/// struct-valued governing value has to be a module-level `const` for the
+/// registry to be able to point at it at all. It is registered by hand — no gate
+/// would have caught its absence.
+const SHIPPED_RELEVANCE_POLICY: RelevancePolicy = RelevancePolicy {
+    name: "shipped",
+    rank_by_residual: false,
+    max_residual_width: usize::MAX,
+    evict_entailed: false,
+    criterion: RelevanceCriterion::EqualityOnly,
+    throttle_min_ground: FLOOD_THROTTLE_MIN_GROUND,
+    round_admission_cap: FLOOD_ROUND_ADMISSION_CAP,
+    eager_generation_max: FLOOD_EAGER_GENERATION_MAX,
+};
+
+impl RelevancePolicy {
+    /// Today's behaviour: no ranking, no width filter, no eviction.
+    pub const SHIPPED: Self = SHIPPED_RELEVANCE_POLICY;
+
+    /// Residual-width ranking only. Admits exactly as many candidates per round
+    /// as shipped, and changes only *which*.
+    pub const RANKED: Self = Self {
+        name: "ranked",
+        rank_by_residual: true,
+        ..Self::SHIPPED
+    };
+
+    /// Ranking plus the width filter: candidates further than
+    /// `RELEVANCE_NARROW_RESIDUAL_WIDTH` from a conflict wait.
+    pub const NARROW: Self = Self {
+        name: "narrow",
+        rank_by_residual: true,
+        max_residual_width: RELEVANCE_NARROW_RESIDUAL_WIDTH,
+        ..Self::SHIPPED
+    };
+
+    /// Ranking plus the entailed-instance sweep.
+    pub const EVICT: Self = Self {
+        name: "evict",
+        rank_by_residual: true,
+        evict_entailed: true,
+        ..Self::SHIPPED
+    };
+
+    /// Ranking under the wider criterion: the same ordering as
+    /// [`Self::RANKED`], over an evaluator that can value a predicate atom.
+    /// Isolates the criterion from every other lever.
+    pub const ENTAIL: Self = Self {
+        name: "entail",
+        rank_by_residual: true,
+        criterion: RelevanceCriterion::BooleanUnits,
+        ..Self::SHIPPED
+    };
+
+    /// The wider criterion plus the width filter — [`Self::NARROW`]'s levers
+    /// over [`Self::ENTAIL`]'s evaluator.
+    pub const ENTAIL_NARROW: Self = Self {
+        name: "entail-narrow",
+        rank_by_residual: true,
+        max_residual_width: RELEVANCE_NARROW_RESIDUAL_WIDTH,
+        criterion: RelevanceCriterion::BooleanUnits,
+        ..Self::SHIPPED
+    };
+
+    /// Every lever at once, under the shipped criterion.
+    pub const FULL: Self = Self {
+        name: "full",
+        rank_by_residual: true,
+        max_residual_width: RELEVANCE_NARROW_RESIDUAL_WIDTH,
+        evict_entailed: true,
+        ..Self::SHIPPED
+    };
+
+    /// The arms `AXEYUM_QINST_RELEVANCE` can name, in the order they are
+    /// documented. `relevance_policy_arms_are_distinct_and_named` pins that the
+    /// names round-trip and that no two arms are the same value.
+    const ARMS: &'static [Self] = &[
+        Self::SHIPPED,
+        Self::RANKED,
+        Self::NARROW,
+        Self::EVICT,
+        Self::ENTAIL,
+        Self::ENTAIL_NARROW,
+        Self::FULL,
+    ];
+}
+
+std::thread_local! {
+    /// A per-thread override of the process policy, set by
+    /// [`RelevancePolicyGuard`]. The process policy is read once from the
+    /// environment, so without this no test could exercise more than one arm.
+    static RELEVANCE_POLICY_OVERRIDE: std::cell::Cell<Option<RelevancePolicy>> =
+        const { std::cell::Cell::new(None) };
+}
+
+/// Forces `policy` on this thread for the lifetime of the guard, restoring the
+/// previous setting on drop.
+pub struct RelevancePolicyGuard(Option<RelevancePolicy>);
+
+impl RelevancePolicyGuard {
+    /// Overrides the process policy on this thread.
+    #[must_use]
+    pub fn set(policy: RelevancePolicy) -> Self {
+        RelevancePolicyGuard(RELEVANCE_POLICY_OVERRIDE.with(|cell| cell.replace(Some(policy))))
+    }
+}
+
+impl Drop for RelevancePolicyGuard {
+    fn drop(&mut self) {
+        RELEVANCE_POLICY_OVERRIDE.with(|cell| cell.set(self.0));
+    }
+}
+
+/// The [`RelevancePolicy`] in force on this thread: a live
+/// [`RelevancePolicyGuard`]'s choice, else the process policy resolved once from
+/// `AXEYUM_QINST_RELEVANCE`.
+///
+/// The variable holds an arm name (`AXEYUM_QINST_RELEVANCE=ranked`). An unset or
+/// unrecognized value is [`RelevancePolicy::SHIPPED`], so a typo degrades to the
+/// shipped selection rather than to an arm nobody chose.
+#[must_use]
+pub fn relevance_policy() -> RelevancePolicy {
+    static RESOLVED: std::sync::OnceLock<RelevancePolicy> = std::sync::OnceLock::new();
+    if let Some(policy) = RELEVANCE_POLICY_OVERRIDE.with(std::cell::Cell::get) {
+        return policy;
+    }
+    *RESOLVED.get_or_init(|| {
+        parse_relevance_policy(std::env::var("AXEYUM_QINST_RELEVANCE").ok().as_deref())
+    })
+}
+
+/// The arm `AXEYUM_QINST_RELEVANCE`'s raw value selects.
+///
+/// Split out of [`relevance_policy`] for the same reason [`parse_ground_budget`]
+/// is split out of [`ground_budget`]: the resolver caches in a `OnceLock` over a
+/// process-wide variable, so a test that went through it could only ever
+/// exercise the arm that process started with.
+fn parse_relevance_policy(raw: Option<&str>) -> RelevancePolicy {
+    let Some(raw) = raw else {
+        return RelevancePolicy::SHIPPED;
+    };
+    let raw = raw.trim();
+    RelevancePolicy::ARMS
+        .iter()
+        .copied()
+        .find(|arm| arm.name.eq_ignore_ascii_case(raw))
+        .unwrap_or(RelevancePolicy::SHIPPED)
+}
+
+/// What the selection policy actually saw and actually rejected, accumulated
+/// over the whole instantiation loop.
+///
+/// This is a **funnel**, not an agreement tally, and the distinction is the
+/// point: a policy arm that never reaches a candidate and a policy arm that
+/// reaches every candidate and changes nothing produce identical verdicts, and
+/// only `scored` tells them apart. Every A/B reading of an arm must quote
+/// `scored` alongside the verdict, and
+/// `relevance_funnel_counts_what_the_policy_saw` pins that a selected arm moves
+/// it off zero on a real deferred pool.
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+pub struct RelevanceFunnel {
+    /// The [`RelevancePolicy`] arm that produced these counts. Carried on the
+    /// reading itself: a funnel sampled off the live board has no other way to
+    /// say which arm it is a funnel for.
+    pub policy: &'static str,
+    /// Deferred candidates the policy computed a residual width for. Zero means
+    /// the policy never ran, whatever the verdict was.
+    pub scored: usize,
+    /// Candidates dropped from a round's slice by `max_residual_width`.
+    pub declined_wide: usize,
+    /// Candidates dropped because the congruence already makes some literal
+    /// true, and the shipped classifier could not say so: it returns `None` on
+    /// the first non-equality literal, so on a predicate-carrying clause it
+    /// never reaches the true one. This is the only population on which the
+    /// shipped "do not admit entailed instances" filter has a hole.
+    pub declined_tautology: usize,
+    /// Rounds whose admitted slice differs from the one the shipped order would
+    /// have produced. Zero with `scored > 0` means the policy ran and agreed.
+    pub reordered_rounds: usize,
+    /// Candidates the *generator* declined as already entailed, summed over
+    /// rounds. This is the shipped "do not admit TRUE instances" filter, which
+    /// predates this policy; it is counted here so a reader can see its size
+    /// next to the levers that are new.
+    pub redundant_at_generation: usize,
+    /// Scored candidates the shipped classifier cannot value at all — clauses
+    /// carrying a literal that is not an equality, so
+    /// `evaluate_equality_clause_with` returns `None` and the candidate is
+    /// deferred by default rather than by judgement.
+    ///
+    /// This is the ceiling on what any congruence-based relevance signal can
+    /// ever do here. A candidate in this bucket is not "far from a conflict";
+    /// it is a candidate whose remaining literals the equality oracle has no
+    /// opinion about, so ranking it against another one is ranking two numbers
+    /// that mean nothing.
+    pub scored_unclassifiable: usize,
+    /// Retained instances the eviction sweep examined.
+    pub evict_scanned: usize,
+    /// Retained instances the eviction sweep dropped.
+    pub evicted: usize,
+    /// Narrowest residual seen. Meaningless while `scored == 0`.
+    pub residual_min: usize,
+    /// Widest residual seen.
+    pub residual_max: usize,
+}
+
+impl RelevanceFunnel {
+    /// An empty funnel labelled with the arm it will count for.
+    fn for_policy(policy: RelevancePolicy) -> Self {
+        Self {
+            policy: policy.name,
+            ..Self::default()
+        }
+    }
+
+    fn observe_residual(&mut self, width: usize) {
+        if self.scored == 0 {
+            self.residual_min = width;
+            self.residual_max = width;
+        } else {
+            self.residual_min = self.residual_min.min(width);
+            self.residual_max = self.residual_max.max(width);
+        }
+        self.scored += 1;
+    }
+
+    /// Publishes the funnel to the live-instruments board, if one is
+    /// installed, and prints it under `AXEYUM_QPROBE`.
+    ///
+    /// Both halves matter and they fail differently. The printed line is lost
+    /// when a watchdog kills the process mid-solve, which on this population is
+    /// the common case -- 13 of the 32 `UF` losses time out or are killed. The
+    /// board survives it, because the sampling thread is not the one that died.
+    fn record(&self, ground: usize, sampled: crate::live_instruments::Sampled) {
+        crate::live_instruments::publish_live(
+            crate::live_instruments::instrument::QINST_RELEVANCE,
+            *self,
+            sampled,
+        );
+        if qprobe_enabled() {
+            self.report(ground);
+        }
+    }
+
+    /// The narrowest residual seen, or `"-"` when nothing was scored. Printed
+    /// rather than the raw field because the raw field's zero-initialized value
+    /// is `0`, and `residual_min=0` reads as "a conflict was in the pool" —
+    /// which is exactly the opposite of "the policy never ran".
+    fn residual_band(&self) -> String {
+        if self.scored == 0 {
+            "-".to_owned()
+        } else {
+            self.residual_min.to_string()
+        }
+    }
+
+    fn residual_band_max(&self) -> String {
+        if self.scored == 0 {
+            "-".to_owned()
+        } else {
+            self.residual_max.to_string()
+        }
+    }
+
+    fn report(&self, ground: usize) {
+        eprintln!(
+            "QPROBE relevance policy={} scored={} declined_wide={} reordered_rounds={} \
+             declined_tautology={} redundant_at_generation={} unclassifiable={} \
+             evict_scanned={} evicted={} residual_min={} residual_max={} ground={ground}",
+            self.policy,
+            self.scored,
+            self.declined_wide,
+            self.declined_tautology,
+            self.reordered_rounds,
+            self.redundant_at_generation,
+            self.scored_unclassifiable,
+            self.evict_scanned,
+            self.evicted,
+            self.residual_band(),
+            self.residual_band_max(),
+        );
+    }
+}
+
 /// Flood-regime budget for one round's *deferred* (undetermined-clause)
 /// admissions; conflict and unit instances stay eager and unbudgeted. The
 /// measured flood mechanism (2026-08-01, `AXEYUM_FLOODPROBE` on the UF parity
@@ -1481,6 +1921,10 @@ fn prove_quantified_unsat_via_egraph_impl(
     // instance's subterm generations.
     let mut generations = TermGenerations::seed_sources(arena, &assertions);
     let mut last_round_duration = std::time::Duration::ZERO;
+    // The selection policy is resolved once per attempt, not per round: an arm
+    // that changed mid-loop would make a funnel reading unattributable.
+    let policy = relevance_policy();
+    let mut funnel = RelevanceFunnel::for_policy(policy);
     for round in 0..MAX_EXTENDED_INSTANTIATION_ROUNDS {
         let round_started = Instant::now();
         if deadline.is_some_and(|d| round_started >= d) {
@@ -1499,11 +1943,25 @@ fn prove_quantified_unsat_via_egraph_impl(
         {
             break;
         }
+        // Free ceiling slots held by instances the congruence has since
+        // entailed. Runs before the ceiling test, because the whole point is
+        // that the test may then not fire.
+        if policy.evict_entailed && ground.len() >= RELEVANCE_EVICT_MIN_GROUND {
+            matcher.extend_ground_with_derivations(arena, &ground, &ground_derivations);
+            evict_entailed_instances(
+                arena,
+                &matcher,
+                &mut ground,
+                &mut ground_derivations,
+                &mut funnel,
+            );
+        }
         if ground.len() > ground_budget().ceiling {
             if floodprobe_enabled() {
                 eprintln!("FLOODPROBE cap-hit round={round} ground={}", ground.len());
                 floodprobe_cap_census(arena, &matcher, &ground_derivations, &assertions);
             }
+            funnel.record(ground.len(), crate::live_instruments::Sampled::Complete);
             if matches!(
                 quantifier_qf_refutation_check(
                     arena,
@@ -1582,12 +2040,23 @@ fn prove_quantified_unsat_via_egraph_impl(
             &mut ground_derivations,
             &mut generations,
             deadline,
+            policy,
+            &mut funnel,
         );
         crate::auto::qtrace(
             "egraph-seg",
             work_started,
             &format!("admit-batch round={round} ground={}", ground.len()),
         );
+        // Republished every round rather than at the exits only: the files this
+        // policy exists for are the ones that never reach an exit.
+        if crate::live_instruments::installed() {
+            crate::live_instruments::publish_live(
+                crate::live_instruments::instrument::QINST_RELEVANCE,
+                funnel,
+                crate::live_instruments::Sampled::InFlight,
+            );
+        }
         if let Some(discovery) = discovery.as_mut() {
             let outcome = nested_discovery_step(
                 arena,
@@ -1671,8 +2140,7 @@ fn prove_quantified_unsat_via_egraph_impl(
                     &mut ground_derivations,
                     &mut generations,
                 );
-                if std::env::var_os("AXEYUM_QPROBE").is_some() && (seeded > 0 || !direct.is_empty())
-                {
+                if qprobe_enabled() && (seeded > 0 || !direct.is_empty()) {
                     eprintln!(
                         "QPROBE term-invention round={round} seeded={seeded} direct={} \
                          totals={}/{} ground={}",
@@ -1693,7 +2161,7 @@ fn prove_quantified_unsat_via_egraph_impl(
                 }
             }
             if admitted.is_empty() {
-                if std::env::var_os("AXEYUM_QPROBE").is_some() {
+                if qprobe_enabled() {
                     let triggerless = matcher
                         .quantifiers
                         .iter()
@@ -1733,6 +2201,7 @@ fn prove_quantified_unsat_via_egraph_impl(
                     eprintln!("FLOODPROBE fixpoint round={round} ground={}", ground.len());
                     floodprobe_cap_census(arena, &matcher, &ground_derivations, &assertions);
                 }
+                funnel.record(ground.len(), crate::live_instruments::Sampled::Complete);
                 break; // source, scoped-candidate, and invention fixpoint
             }
         }
@@ -2273,6 +2742,8 @@ fn admit_next_source_batch(
     retained: &mut HashMap<TermId, QuantifierGroundDerivation>,
     generations: &mut TermGenerations,
     deadline: Option<Instant>,
+    policy: RelevancePolicy,
+    funnel: &mut RelevanceFunnel,
 ) -> Vec<TermId> {
     matcher.extend_ground_with_derivations(arena, ground, retained);
     let GeneratedGroundBatch {
@@ -2280,7 +2751,9 @@ fn admit_next_source_batch(
         units,
         mut deferred,
         derivations,
+        redundant,
     } = collect_generated_ground(matcher, arena, assertions, deadline);
+    funnel.redundant_at_generation += redundant;
     urgent.sort_by_key(|term| term.index());
     urgent.dedup();
     deferred.sort_by_key(|term| term.index());
@@ -2313,8 +2786,19 @@ fn admit_next_source_batch(
     // Once urgent traffic is exhausted, release unresolved clauses so mutually
     // constraining instances preserve the legacy loop's reach.
     if admitted.is_empty() {
-        if ground.len() >= FLOOD_THROTTLE_MIN_GROUND {
-            deferred = budget_flood_slice(deferred, seen, &derivations, generations);
+        if ground.len() >= policy.throttle_min_ground {
+            let bools = BooleanUnitValuation::new(policy.criterion, arena, matcher, ground);
+            deferred = budget_flood_slice(
+                arena,
+                matcher,
+                &bools,
+                deferred,
+                seen,
+                &derivations,
+                generations,
+                policy,
+                funnel,
+            );
         }
         admitted = admit_generated_ground(
             arena,
@@ -2339,10 +2823,13 @@ fn admit_next_source_batch(
     admitted
 }
 
-/// Flood-regime slicing for the deferred admission pool: pools at or under
-/// [`FLOOD_ROUND_ADMISSION_CAP`] pass through untouched (byte-identical
-/// historical admission). Larger pools keep every candidate at or under
-/// [`FLOOD_EAGER_GENERATION_MAX`] eagerly, in the historical index order
+/// Flood-regime slicing for the deferred admission pool, and the loop's one
+/// instance-SELECTION point: everything [`RelevancePolicy`] can act on, it acts
+/// on here.
+///
+/// Pools at or under `policy.round_admission_cap` pass through untouched
+/// (byte-identical historical admission). Larger pools keep every candidate at
+/// or under `policy.eager_generation_max` eagerly, in the historical index order
 /// (Z3's `qi.eager_threshold`: shallow-derivation instances are never
 /// delayed — delaying them was measured to lose ~3-4s refuters that win off
 /// the dump itself), and narrow only the deeper-derived remainder to the
@@ -2352,13 +2839,26 @@ fn admit_next_source_batch(
 /// with thousands of unseen candidates waiting). The deep remainder is never
 /// dropped — the retained matcher re-materializes and re-classifies it
 /// (possibly as a conflict by then) on every later round.
+///
+/// Under [`RelevancePolicy::SHIPPED`] that is the whole function: the early
+/// return below is the historical body verbatim, and no candidate is scored.
+/// Under a selecting arm the deep remainder is additionally scored by
+/// [`clause_residual_width`], and the counts of what was seen and what was
+/// declined land in `funnel` — which is the only thing that distinguishes an
+/// arm that ran and agreed from an arm that never reached a candidate.
+#[allow(clippy::too_many_arguments)]
 fn budget_flood_slice(
+    arena: &TermArena,
+    matcher: &IncrementalEmatchSession,
+    bools: &BooleanUnitValuation,
     pool: Vec<TermId>,
     seen: &HashSet<TermId>,
     derivations: &HashMap<TermId, QuantifierGroundDerivation>,
     generations: &TermGenerations,
+    policy: RelevancePolicy,
+    funnel: &mut RelevanceFunnel,
 ) -> Vec<TermId> {
-    if pool.len() <= FLOOD_ROUND_ADMISSION_CAP {
+    if pool.len() <= policy.round_admission_cap {
         return pool;
     }
     let mut eager = Vec::new();
@@ -2367,20 +2867,79 @@ fn budget_flood_slice(
         let generation = derivations.get(&term).map_or(u32::MAX, |derivation| {
             generations.derivation_generation(derivation)
         });
-        if generation <= FLOOD_EAGER_GENERATION_MAX {
+        if generation <= policy.eager_generation_max {
             eager.push(term);
         } else if !seen.contains(&term) {
             deep.push((generation, term));
         }
     }
-    deep.sort_by_key(|&(generation, term)| (generation, term.index()));
-    deep.truncate(FLOOD_ROUND_ADMISSION_CAP);
-    eager.extend(deep.into_iter().map(|(_, term)| term));
+    // The eager prefix is never rescored. Delaying shallow-generation
+    // candidates was measured net-negative (see the constant's own docs), and a
+    // selection experiment that also changed that is not measuring selection.
+    if !policy.rank_by_residual && policy.max_residual_width == usize::MAX {
+        deep.sort_by_key(|&(generation, term)| (generation, term.index()));
+        deep.truncate(policy.round_admission_cap);
+        eager.extend(deep.into_iter().map(|(_, term)| term));
+        return eager;
+    }
+    // The shipped slice, always computed under a selecting arm: it is the
+    // baseline `reordered_rounds` is measured against, so the funnel can
+    // distinguish "the policy ran and agreed" from "the policy never ran".
+    let mut baseline: Vec<(u32, TermId)> = deep.clone();
+    baseline.sort_by_key(|&(generation, term)| (generation, term.index()));
+    baseline.truncate(policy.round_admission_cap);
+
+    let mut scored: Vec<(usize, u32, TermId)> = Vec::with_capacity(deep.len());
+    for (generation, term) in deep {
+        let Some(width) = clause_residual_width(
+            arena,
+            term,
+            &mut |lhs, rhs| matcher.equality(lhs, rhs),
+            &mut |atom| bools.value(matcher, atom),
+        ) else {
+            funnel.declined_tautology += 1;
+            continue;
+        };
+        funnel.observe_residual(width);
+        // Counted under the POLICY's criterion, not the shipped one, so the two
+        // arms' blindness numbers are a comparison rather than a constant.
+        if clause_is_unvaluable(arena, term, &mut |atom| bools.value(matcher, atom)) {
+            funnel.scored_unclassifiable += 1;
+        }
+        if width > policy.max_residual_width {
+            funnel.declined_wide += 1;
+            continue;
+        }
+        scored.push((width, generation, term));
+    }
+    if policy.rank_by_residual {
+        scored.sort_by_key(|&(width, generation, term)| (width, generation, term.index()));
+    } else {
+        scored.sort_by_key(|&(_, generation, term)| (generation, term.index()));
+    }
+    scored.truncate(policy.round_admission_cap);
+    let chosen: Vec<TermId> = scored.into_iter().map(|(_, _, term)| term).collect();
+    if chosen
+        != baseline
+            .into_iter()
+            .map(|(_, term)| term)
+            .collect::<Vec<TermId>>()
+    {
+        funnel.reordered_rounds += 1;
+    }
+    eager.extend(chosen);
     eager
 }
 
 fn floodprobe_enabled() -> bool {
     std::env::var_os("AXEYUM_FLOODPROBE").is_some()
+}
+
+/// Whether the opt-in `AXEYUM_QPROBE` instrumentation is on. Reading the
+/// environment costs nothing measurable next to a round of e-matching, and the
+/// probes are clock-free, so this is checked at the exits rather than cached.
+fn qprobe_enabled() -> bool {
+    std::env::var_os("AXEYUM_QPROBE").is_some()
 }
 
 /// Z3-style instantiation generations (T2.6.4; `qi_queue.cpp` cost
@@ -2470,6 +3029,13 @@ fn floodprobe_cap_census(
     let (mut instances, mut propagations) = (0usize, 0usize);
     let (mut val_true, mut val_false, mut val_unit, mut val_undet) =
         (0usize, 0usize, 0usize, 0usize);
+    // How much of the TRUE bucket is an artifact of the census itself. The
+    // matcher's e-graph merges every top-level positive equality in the ground
+    // set, so an admitted instance that IS such an equality is made true by its
+    // own admission and would be counted TRUE no matter what the rest of the
+    // congruence knows. Only `true_by_others` is a population any selection
+    // policy could have declined.
+    let (mut true_self_merged, mut true_by_others) = (0usize, 0usize);
     let (mut gen1, mut deeper) = (0usize, 0usize);
     let mut per_universal: HashMap<TermId, usize> = HashMap::new();
     for derivation in retained.values() {
@@ -2491,7 +3057,17 @@ fn floodprobe_cap_census(
         match evaluate_equality_clause_with(arena, certificate.instance, &mut |lhs, rhs| {
             matcher.equality(lhs, rhs)
         }) {
-            Some(ClauseValue::True) => val_true += 1,
+            Some(ClauseValue::True) => {
+                val_true += 1;
+                if matches!(
+                    equality_literal(arena, certificate.instance),
+                    Some((true, _, _))
+                ) {
+                    true_self_merged += 1;
+                } else {
+                    true_by_others += 1;
+                }
+            }
             Some(ClauseValue::False) => val_false += 1,
             Some(ClauseValue::Unit) => val_unit += 1,
             Some(ClauseValue::Undetermined) | None => val_undet += 1,
@@ -2499,8 +3075,9 @@ fn floodprobe_cap_census(
     }
     eprintln!(
         "FLOODPROBE cap-census instances={instances} propagations={propagations} \
-         clause_true={val_true} clause_false={val_false} clause_unit={val_unit} \
-         clause_undet={val_undet} gen1={gen1} deeper={deeper}"
+         clause_true={val_true} clause_true_self_merged={true_self_merged} \
+         clause_true_by_others={true_by_others} clause_false={val_false} \
+         clause_unit={val_unit} clause_undet={val_undet} gen1={gen1} deeper={deeper}"
     );
     let mut per: Vec<(TermId, usize)> = per_universal.into_iter().collect();
     per.sort_by_key(|(term, _)| term.index());
@@ -2552,6 +3129,11 @@ struct GeneratedGroundBatch {
     units: Vec<TermId>,
     deferred: Vec<TermId>,
     derivations: HashMap<TermId, QuantifierGroundDerivation>,
+    /// Candidates the generator declined because the round's congruence already
+    /// makes their clause `ClauseValue::True`. Summed out of the per-universal
+    /// `LazyClauseBatch::redundant` counters so the loop can report the size of
+    /// the shipped entailment filter next to the newer selection levers.
+    redundant: usize,
 }
 
 struct ScopedCandidateBatch {
@@ -2849,7 +3431,9 @@ fn collect_generated_ground(
     let mut deferred = Vec::new();
     let mut propagations = Vec::new();
     let mut derivations = HashMap::new();
+    let mut redundant = 0usize;
     for batch in matcher.lazy_clause_batches(arena, deadline) {
+        redundant += batch.redundant;
         urgent.extend(batch.urgent);
         units.extend(batch.units);
         propagations.extend(batch.propagations);
@@ -2869,6 +3453,7 @@ fn collect_generated_ground(
         units,
         deferred,
         derivations,
+        redundant,
     }
 }
 
@@ -3792,7 +4377,7 @@ impl IncrementalEmatchSession {
                 // because term invention can reach an instance the trigger
                 // excludes. `AXEYUM_QPROBE=1` says so directly, including the
                 // declined case, which is the one that looks like success.
-                if std::env::var_os("AXEYUM_QPROBE").is_some()
+                if qprobe_enabled()
                     && let Some(annotation) = &annotation
                 {
                     eprintln!(
@@ -4194,6 +4779,7 @@ impl IncrementalEmatchSession {
                     units: Vec::new(),
                     deferred: Vec::new(),
                     derivations: HashMap::new(),
+                    redundant: 0,
                 },
                 pattern_executions: 0,
                 applications_scanned: 0,
@@ -4314,6 +4900,7 @@ impl IncrementalEmatchSession {
             units: Vec::new(),
             deferred: Vec::new(),
             derivations,
+            redundant: 0,
         }
     }
 
@@ -5347,6 +5934,220 @@ fn equality_literal(arena: &TermArena, term: TermId) -> Option<(bool, TermId, Te
         },
         _ => None,
     }
+}
+
+/// Ground Boolean units, closed under the matcher's congruence: the evidence
+/// [`RelevanceCriterion::BooleanUnits`] adds over the shipped criterion.
+///
+/// Built from the ground set, not from the instance pool, so nothing an
+/// instance asserts about itself can enter it circularly — the same hazard the
+/// census's `clause_true_self_merged` split exposed for equalities.
+struct BooleanUnitValuation {
+    /// Congruence-class root of a Boolean application, to the value the ground
+    /// set asserts for it.
+    by_root: HashMap<ENodeId, bool>,
+}
+
+impl BooleanUnitValuation {
+    /// Empty under [`RelevanceCriterion::EqualityOnly`], so a caller can build
+    /// one unconditionally and the criterion decides whether it says anything.
+    fn new(
+        criterion: RelevanceCriterion,
+        arena: &TermArena,
+        matcher: &IncrementalEmatchSession,
+        ground: &[TermId],
+    ) -> Self {
+        let mut by_root = HashMap::new();
+        if criterion == RelevanceCriterion::BooleanUnits {
+            for &term in ground {
+                let (atom, value) = match arena.node(term) {
+                    TermNode::App {
+                        op: Op::BoolNot,
+                        args,
+                    } if args.len() == 1 => (args[0], false),
+                    _ => (term, true),
+                };
+                if !is_opaque_boolean_atom(arena, atom) {
+                    continue;
+                }
+                if let Some(root) = class_root(matcher, atom) {
+                    // A ground set asserting both polarities is already unsat and
+                    // the ground check will say so; keeping the first reading
+                    // makes this deterministic rather than order-dependent.
+                    by_root.entry(root).or_insert(value);
+                }
+            }
+        }
+        Self { by_root }
+    }
+
+    fn value(&self, matcher: &IncrementalEmatchSession, literal: TermId) -> LiteralValue {
+        match class_root(matcher, literal).and_then(|root| self.by_root.get(&root)) {
+            Some(true) => LiteralValue::True,
+            Some(false) => LiteralValue::False,
+            None => LiteralValue::Undetermined,
+        }
+    }
+}
+
+/// The congruence-class root of `term` in the matcher's e-graph, or `None` when
+/// the matcher has never seen the term.
+fn class_root(matcher: &IncrementalEmatchSession, term: TermId) -> Option<ENodeId> {
+    matcher
+        .bridge
+        .term_to_node
+        .get(&term)
+        .map(|&node| matcher.bridge.egraph.root(node))
+}
+
+/// Whether `term` is a Boolean atom the equality criterion cannot speak about:
+/// a `Bool`-sorted application that is neither an equality nor a Boolean
+/// connective. Exactly the literals [`evaluate_equality_clause_with`] returns
+/// `None` on.
+fn is_opaque_boolean_atom(arena: &TermArena, term: TermId) -> bool {
+    arena.sort_of(term) == Sort::Bool
+        && matches!(
+            arena.node(term),
+            TermNode::App { op, .. }
+                if !matches!(
+                    op,
+                    Op::Eq | Op::BoolNot | Op::BoolOr | Op::BoolAnd | Op::BoolXor | Op::BoolImplies
+                )
+        )
+}
+
+/// How many of `clause`'s literals the equality oracle has **not** already
+/// falsified: how many more facts must arrive before the clause can conflict.
+/// `None` means some literal is already true, so the clause is a tautology
+/// against this congruence and can never contribute to a refutation.
+///
+/// This is an ORDERING score and never a clause value, which is exactly why it
+/// is a separate function from [`evaluate_equality_clause_with`]. That one
+/// returns `None` at the first literal it cannot classify, because concluding
+/// `ClauseValue::False` from "no literal is determined true" would be wrong
+/// when a literal is not an equality at all. Here such a literal is simply one
+/// more fact the clause is waiting for, so the count is total and every
+/// candidate is comparable — including on the predicate-carrying files where
+/// the classifier declines to speak about any instance at all.
+///
+/// The `None` case is the practical consequence of that difference: a clause
+/// whose first literal is an uninterpreted predicate application and whose
+/// third literal the congruence has already made true is `None` here, and
+/// `None` (unclassifiable, hence *deferred and admitted*) to the classifier.
+fn clause_residual_width(
+    arena: &TermArena,
+    clause: TermId,
+    equality: &mut impl FnMut(TermId, TermId) -> LiteralValue,
+    atom: &mut impl FnMut(TermId) -> LiteralValue,
+) -> Option<usize> {
+    let mut literals = Vec::new();
+    collect_clause_literals(arena, clause, &mut literals);
+    let mut open = 0usize;
+    for literal in literals {
+        let value = if let TermNode::BoolConst(value) = arena.node(literal) {
+            if *value {
+                LiteralValue::True
+            } else {
+                LiteralValue::False
+            }
+        } else if let Some((positive, lhs, rhs)) = equality_literal(arena, literal) {
+            let value = equality(lhs, rhs);
+            if positive { value } else { value.negate() }
+        } else if let TermNode::App {
+            op: Op::BoolNot,
+            args,
+        } = arena.node(literal)
+            && args.len() == 1
+        {
+            atom(args[0]).negate()
+        } else {
+            atom(literal)
+        };
+        match value {
+            LiteralValue::True => return None,
+            LiteralValue::False => {}
+            LiteralValue::Undetermined => open += 1,
+        }
+    }
+    Some(open)
+}
+
+/// Whether the policy's criterion has **no opinion at all** about at least one
+/// of `clause`'s literals — the population no relevance ranking can order,
+/// because the numbers it would compare are not about anything.
+///
+/// Under [`RelevanceCriterion::EqualityOnly`] this is exactly
+/// "[`evaluate_equality_clause_with`] returns `None`". Under
+/// [`RelevanceCriterion::BooleanUnits`] a predicate atom the ground units value
+/// no longer counts, which is the whole point of the wider criterion and the
+/// number an A/B between the two arms reads.
+fn clause_is_unvaluable(
+    arena: &TermArena,
+    clause: TermId,
+    atom: &mut impl FnMut(TermId) -> LiteralValue,
+) -> bool {
+    let mut literals = Vec::new();
+    collect_clause_literals(arena, clause, &mut literals);
+    literals.into_iter().any(|literal| {
+        if matches!(arena.node(literal), TermNode::BoolConst(_)) {
+            return false;
+        }
+        // An equality is inside every criterion's vocabulary: `Undetermined`
+        // there is a judgement ("the congruence does not know yet"), not an
+        // absence of one.
+        if equality_literal(arena, literal).is_some() {
+            return false;
+        }
+        let inner = match arena.node(literal) {
+            TermNode::App {
+                op: Op::BoolNot,
+                args,
+            } if args.len() == 1 => args[0],
+            _ => literal,
+        };
+        atom(inner) == LiteralValue::Undetermined
+    })
+}
+
+/// Drops retained instances the current congruence already entails, freeing
+/// accumulated-ground slots. Returns nothing; the counts land in `funnel`.
+///
+/// Sound and completeness-preserving for the reason spelled out on
+/// [`RelevancePolicy::evict_entailed`]: an instance that is itself a top-level
+/// positive equality is skipped, so every merge that justifies a dropped clause
+/// is generated by a clause that stays, and `ground \ dropped` entails every
+/// member of `dropped`.
+///
+/// Dropped terms stay in the loop's `seen` set deliberately. The matcher's
+/// congruence only ever grows, so an entailed clause stays entailed and can
+/// never be needed again; re-admitting it would be pure churn.
+fn evict_entailed_instances(
+    arena: &TermArena,
+    matcher: &IncrementalEmatchSession,
+    ground: &mut Vec<TermId>,
+    retained: &mut HashMap<TermId, QuantifierGroundDerivation>,
+    funnel: &mut RelevanceFunnel,
+) {
+    let mut dropped: HashSet<TermId> = HashSet::new();
+    for (&term, derivation) in retained.iter() {
+        if !matches!(derivation, QuantifierGroundDerivation::Instance(_))
+            || matches!(equality_literal(arena, term), Some((true, _, _)))
+        {
+            continue;
+        }
+        funnel.evict_scanned += 1;
+        if evaluate_equality_clause_with(arena, term, &mut |lhs, rhs| matcher.equality(lhs, rhs))
+            == Some(ClauseValue::True)
+        {
+            dropped.insert(term);
+        }
+    }
+    if dropped.is_empty() {
+        return;
+    }
+    funnel.evicted += dropped.len();
+    ground.retain(|term| !dropped.contains(term));
+    retained.retain(|term, _| !dropped.contains(term));
 }
 
 fn evaluate_equality_clause(
@@ -6944,6 +7745,576 @@ mod tests {
         let wide = parse_ground_budget(Some(" 32768 "));
         assert_eq!(wide.name, "env");
         assert_eq!(wide, GroundBudget::from_ceiling("env", 32_768));
+    }
+
+    /// The shipped selection arm must have every lever off and every threshold
+    /// equal to the constant it stands in for. Without this an A/B could move a
+    /// threshold while claiming to measure a lever.
+    #[test]
+    fn shipped_relevance_policy_is_the_shipped_selection() {
+        let shipped = RelevancePolicy::SHIPPED;
+        assert_eq!(shipped.name, "shipped");
+        assert!(!shipped.rank_by_residual);
+        assert!(!shipped.evict_entailed);
+        assert_eq!(shipped.criterion, RelevanceCriterion::EqualityOnly);
+        assert_eq!(shipped.max_residual_width, usize::MAX);
+        assert_eq!(shipped.throttle_min_ground, FLOOD_THROTTLE_MIN_GROUND);
+        assert_eq!(shipped.round_admission_cap, FLOOD_ROUND_ADMISSION_CAP);
+        assert_eq!(shipped.eager_generation_max, FLOOD_EAGER_GENERATION_MAX);
+        // Every other arm differs from shipped in its levers ONLY. A lane that
+        // added an arm and quietly moved a threshold with it would make its own
+        // A/B unreadable, and this is the assertion that dies.
+        for arm in RelevancePolicy::ARMS {
+            assert_eq!(
+                (
+                    arm.throttle_min_ground,
+                    arm.round_admission_cap,
+                    arm.eager_generation_max
+                ),
+                (
+                    shipped.throttle_min_ground,
+                    shipped.round_admission_cap,
+                    shipped.eager_generation_max
+                ),
+                "arm {} moved a threshold, not a lever",
+                arm.name
+            );
+            // Exactly the two `entail*` arms widen the criterion. An arm that
+            // widened it silently would make its own A/B unattributable: a file
+            // it moved could be the criterion or the lever, and nothing in the
+            // funnel separates them.
+            assert_eq!(
+                arm.criterion == RelevanceCriterion::BooleanUnits,
+                arm.name.starts_with("entail"),
+                "arm {} disagrees with its name about the criterion",
+                arm.name
+            );
+        }
+    }
+
+    /// Every arm is reachable by name, no two arms are the same policy, and no
+    /// two names collide.
+    #[test]
+    fn relevance_policy_arms_are_distinct_and_named() {
+        let arms = RelevancePolicy::ARMS;
+        for (index, arm) in arms.iter().enumerate() {
+            assert_eq!(
+                parse_relevance_policy(Some(arm.name)),
+                *arm,
+                "AXEYUM_QINST_RELEVANCE={} must select its own arm",
+                arm.name
+            );
+            assert_eq!(
+                parse_relevance_policy(Some(&arm.name.to_uppercase())),
+                *arm,
+                "arm selection is case-insensitive"
+            );
+            for other in &arms[index + 1..] {
+                assert_ne!(arm.name, other.name, "two arms share a name");
+                assert_ne!(arm, other, "two arms are the same policy");
+            }
+        }
+        // The levers each arm claims in its own docs, as one comparison per arm
+        // so a failure names the arm rather than a bare `false`.
+        assert_eq!(
+            (
+                RelevancePolicy::RANKED.rank_by_residual,
+                RelevancePolicy::RANKED.max_residual_width,
+                RelevancePolicy::RANKED.evict_entailed,
+            ),
+            (true, usize::MAX, false),
+            "`ranked` is ordering alone"
+        );
+        assert_eq!(
+            (
+                RelevancePolicy::NARROW.rank_by_residual,
+                RelevancePolicy::NARROW.max_residual_width,
+                RelevancePolicy::NARROW.evict_entailed,
+            ),
+            (true, RELEVANCE_NARROW_RESIDUAL_WIDTH, false),
+            "`narrow` adds the width filter and nothing else"
+        );
+        assert_eq!(
+            (
+                RelevancePolicy::EVICT.rank_by_residual,
+                RelevancePolicy::EVICT.max_residual_width,
+                RelevancePolicy::EVICT.evict_entailed,
+            ),
+            (true, usize::MAX, true),
+            "`evict` adds the sweep and nothing else"
+        );
+        assert_eq!(
+            (
+                RelevancePolicy::FULL.rank_by_residual,
+                RelevancePolicy::FULL.max_residual_width,
+                RelevancePolicy::FULL.evict_entailed,
+            ),
+            (true, RELEVANCE_NARROW_RESIDUAL_WIDTH, true),
+            "`full` is every lever at once"
+        );
+    }
+
+    /// Every way of writing the override badly resolves to the shipped arm.
+    #[test]
+    fn a_bad_relevance_override_degrades_to_the_shipped_arm() {
+        for raw in [
+            None,
+            Some(""),
+            Some("  "),
+            Some("nope"),
+            Some("1"),
+            Some("-"),
+        ] {
+            assert_eq!(
+                parse_relevance_policy(raw),
+                RelevancePolicy::SHIPPED,
+                "AXEYUM_QINST_RELEVANCE={raw:?} must resolve to the shipped arm"
+            );
+        }
+        assert_eq!(
+            parse_relevance_policy(Some(" ranked ")),
+            RelevancePolicy::RANKED,
+            "surrounding whitespace must not change the arm"
+        );
+    }
+
+    /// A guard's arm is in force for its lifetime and the enclosing arm — not
+    /// the process default — comes back on drop.
+    #[test]
+    fn relevance_policy_guards_nest_and_restore() {
+        let outside = relevance_policy();
+        assert_eq!(
+            outside,
+            RelevancePolicy::SHIPPED,
+            "the suite must run under the shipped arm unless a guard says otherwise"
+        );
+        {
+            let _outer = RelevancePolicyGuard::set(RelevancePolicy::NARROW);
+            assert_eq!(relevance_policy(), RelevancePolicy::NARROW);
+            {
+                let _inner = RelevancePolicyGuard::set(RelevancePolicy::FULL);
+                assert_eq!(relevance_policy(), RelevancePolicy::FULL);
+            }
+            assert_eq!(
+                relevance_policy(),
+                RelevancePolicy::NARROW,
+                "the inner guard must restore the ENCLOSING arm"
+            );
+        }
+        assert_eq!(relevance_policy(), outside);
+    }
+
+    /// The residual score against a stub oracle, including the one case that is
+    /// the whole reason it exists: a clause the shipped classifier declines to
+    /// value at all (`None`, hence *deferred and admitted*) but which the
+    /// congruence has already made true.
+    #[test]
+    fn clause_residual_width_counts_open_literals_and_finds_tautologies() {
+        let mut arena = TermArena::new();
+        let carrier = arena.declare_uninterpreted_sort("ResS");
+        let sort = Sort::Uninterpreted(carrier);
+        let a_symbol = arena.declare("res_a", sort).unwrap();
+        let a = arena.var(a_symbol);
+        let b_symbol = arena.declare("res_b", sort).unwrap();
+        let b = arena.var(b_symbol);
+        let c_symbol = arena.declare("res_c", sort).unwrap();
+        let c = arena.var(c_symbol);
+        let predicate = arena.declare_fun("res_p", &[sort], Sort::Bool).unwrap();
+        let p_a = arena.apply(predicate, &[a]).unwrap();
+        let a_eq_b = arena.eq(a, b).unwrap();
+        let a_eq_c = arena.eq(a, c).unwrap();
+
+        // An oracle that knows only `a = b`, exactly as a congruence that has
+        // merged those two classes and nothing else.
+        // The `EqualityOnly` criterion, as an oracle: no opinion about any atom.
+        let mut blind_to_atoms = |_: TermId| LiteralValue::Undetermined;
+        let mut knows_a_eq_b = |lhs: TermId, rhs: TermId| {
+            if (lhs, rhs) == (a, b) || (lhs, rhs) == (b, a) {
+                LiteralValue::True
+            } else {
+                LiteralValue::Undetermined
+            }
+        };
+
+        let two_open = arena.or(a_eq_c, p_a).unwrap();
+        assert_eq!(
+            clause_residual_width(&arena, two_open, &mut knows_a_eq_b, &mut blind_to_atoms),
+            Some(2),
+            "an undetermined equality and an atom the oracle cannot speak about \
+             are both open literals"
+        );
+        assert_eq!(
+            clause_residual_width(&arena, p_a, &mut knows_a_eq_b, &mut blind_to_atoms),
+            Some(1),
+            "a bare unclassifiable atom is one open literal, not a refusal"
+        );
+
+        // THE CASE. The classifier walks literals in order and returns `None` at
+        // `p_a`, so it never reaches the true one and the clause is deferred and
+        // admitted. The width score reaches it and reports a tautology.
+        let hidden_tautology = arena.or(p_a, a_eq_b).unwrap();
+        assert_eq!(
+            evaluate_equality_clause_with(&arena, hidden_tautology, &mut knows_a_eq_b),
+            None,
+            "the shipped classifier cannot value this clause"
+        );
+        assert_eq!(
+            clause_residual_width(
+                &arena,
+                hidden_tautology,
+                &mut knows_a_eq_b,
+                &mut blind_to_atoms
+            ),
+            None,
+            "but it is already true, so no selection policy should admit it"
+        );
+    }
+
+    /// A ground set whose universals generate a deferred pool the policy can
+    /// act on: `f(c_i)` applications for the triggers to fire on, one universal
+    /// producing two-literal undetermined clauses, and one producing clauses the
+    /// shipped classifier cannot value at all.
+    #[allow(clippy::many_single_char_names)]
+    fn relevance_fixture(arena: &mut TermArena) -> Vec<TermId> {
+        let carrier = arena.declare_uninterpreted_sort("FunnelS");
+        let sort = Sort::Uninterpreted(carrier);
+        let f = arena.declare_fun("funnel_f", &[sort], sort).unwrap();
+        // A free Boolean CONSTANT, deliberately not a predicate applied to the
+        // bound variable: the only trigger the second universal may have is
+        // `f(y)`, the same one the first universal fires on. A `p(y)` here would
+        // be selected as the trigger, find no ground application, and the
+        // universal would silently never instantiate — which is exactly the
+        // "the route was never reached" reading a funnel exists to expose.
+        let q_symbol = arena.declare("funnel_q", Sort::Bool).unwrap();
+        let q = arena.var(q_symbol);
+        let a_symbol = arena.declare("funnel_a", sort).unwrap();
+        let a = arena.var(a_symbol);
+        let b_symbol = arena.declare("funnel_b", sort).unwrap();
+        let b = arena.var(b_symbol);
+        let e_symbol = arena.declare("funnel_e", sort).unwrap();
+        let e = arena.var(e_symbol);
+        let d_symbol = arena.declare("funnel_d", sort).unwrap();
+        let d = arena.var(d_symbol);
+
+        let mut assertions = Vec::new();
+        let mut first = None;
+        for index in 0..6 {
+            let symbol = arena.declare(&format!("funnel_c{index}"), sort).unwrap();
+            let constant = arena.var(symbol);
+            let f_c = arena.apply(f, &[constant]).unwrap();
+            if first.is_none() {
+                first = Some(f_c);
+            }
+            let equal = arena.eq(f_c, d).unwrap();
+            assertions.push(arena.not(equal).unwrap());
+        }
+        // Merges `f(c0)` with `e`, which is what makes the second universal's
+        // instance at `c0` a tautology the classifier cannot see.
+        assertions.push(arena.eq(first.unwrap(), e).unwrap());
+
+        let x = arena.declare("funnel_x", sort).unwrap();
+        let xv = arena.var(x);
+        let f_x = arena.apply(f, &[xv]).unwrap();
+        let f_x_eq_a = arena.eq(f_x, a).unwrap();
+        let f_x_eq_b = arena.eq(f_x, b).unwrap();
+        let open_body = arena.or(f_x_eq_a, f_x_eq_b).unwrap();
+        assertions.push(arena.forall(x, open_body).unwrap());
+
+        let y = arena.declare("funnel_y", sort).unwrap();
+        let yv = arena.var(y);
+        let f_y = arena.apply(f, &[yv]).unwrap();
+        let f_y_eq_e = arena.eq(f_y, e).unwrap();
+        // `q` FIRST: the shipped classifier walks literals in order and returns
+        // `None` at the first one it cannot value, so it never reaches the
+        // equality that the congruence has already made true at `c0`.
+        let opaque_body = arena.or(q, f_y_eq_e).unwrap();
+        assertions.push(arena.forall(y, opaque_body).unwrap());
+        assertions
+    }
+
+    /// THE FUNNEL GATE. A selection policy that never reaches a candidate and a
+    /// selection policy that reaches every candidate and changes nothing produce
+    /// the same verdict, so a verdict cannot tell them apart. `scored` can, and
+    /// this test requires it to be non-zero AND requires the policy to have
+    /// actually rejected something — on a query whose verdict does not move.
+    ///
+    /// The shipped arm is the negative control in the same test: it must score
+    /// nothing at all, which is what makes a non-zero count under the test arm
+    /// evidence that the filter ran rather than evidence that the counter is
+    /// nailed high.
+    #[test]
+    fn relevance_funnel_counts_what_the_policy_saw() {
+        use crate::live_instruments::{LiveInstruments, Sampled, install, instrument};
+
+        // A test arm, not a shipped one: the shipped thresholds require a
+        // two-thousand-term ground set and a generation-2 pool before the
+        // selection point is reached at all.
+        let reaching = RelevancePolicy {
+            name: "test-reaching",
+            rank_by_residual: true,
+            max_residual_width: 1,
+            evict_entailed: false,
+            criterion: RelevanceCriterion::EqualityOnly,
+            throttle_min_ground: 0,
+            round_admission_cap: 1,
+            eager_generation_max: 0,
+        };
+
+        let read = |policy: RelevancePolicy| {
+            let board = LiveInstruments::new();
+            let _board_guard = install(&board);
+            let _policy_guard = RelevancePolicyGuard::set(policy);
+            let mut arena = TermArena::new();
+            let assertions = relevance_fixture(&mut arena);
+            let result = prove_quantified_unsat_via_egraph(
+                &mut arena,
+                &assertions,
+                &SolverConfig::default(),
+            )
+            .expect("the fixture is a well-formed quantified query");
+            let sample = board
+                .sample::<RelevanceFunnel>(instrument::QINST_RELEVANCE)
+                .expect("the loop publishes its funnel on every round and at every exit");
+            assert_eq!(sample.value.policy, policy.name);
+            assert!(matches!(
+                sample.sampled,
+                Sampled::InFlight | Sampled::Complete
+            ));
+            (result, sample.value)
+        };
+
+        let (shipped_result, shipped_funnel) = read(RelevancePolicy::SHIPPED);
+        let (reaching_result, reaching_funnel) = read(reaching);
+
+        // The verdict is the control, not the finding: this query is
+        // satisfiable, so no arm may refute it and the counters are the only
+        // thing that moves.
+        assert!(
+            !matches!(shipped_result, CheckResult::Unsat),
+            "the fixture is satisfiable"
+        );
+        assert!(
+            !matches!(reaching_result, CheckResult::Unsat),
+            "a selection policy must not manufacture a refutation"
+        );
+
+        assert_eq!(
+            shipped_funnel.scored, 0,
+            "the shipped arm has no selection point to reach on a six-term ground set"
+        );
+        assert_eq!(shipped_funnel.declined_wide, 0);
+        assert_eq!(shipped_funnel.declined_tautology, 0);
+
+        assert!(
+            reaching_funnel.scored > 0,
+            "the policy must have SEEN candidates: {reaching_funnel:?}"
+        );
+        assert!(
+            reaching_funnel.declined_wide > 0,
+            "the policy must have REJECTED candidates it saw: {reaching_funnel:?}"
+        );
+        assert!(
+            reaching_funnel.residual_min >= 2,
+            "every scored candidate here is two facts from a conflict: {reaching_funnel:?}"
+        );
+        assert!(
+            reaching_funnel.declined_tautology > 0,
+            "the fixture's second universal instantiates to a clause the shipped \
+             classifier cannot value but the congruence already makes true; the \
+             width score is what finds it: {reaching_funnel:?}"
+        );
+        assert!(
+            reaching_funnel.reordered_rounds > 0,
+            "declining candidates must change the admitted slice: {reaching_funnel:?}"
+        );
+    }
+
+    /// The criterion axis, measured on the one thing it is supposed to change:
+    /// a predicate atom. `EqualityOnly` has no opinion about `p(b)` even when
+    /// the ground set asserts `p(a)` and `a = b`; `BooleanUnits` values it
+    /// `True` by congruence, which is what makes the clause carrying it
+    /// judgeable at all.
+    #[test]
+    #[allow(clippy::many_single_char_names)]
+    fn boolean_units_value_the_atoms_the_equality_criterion_cannot() {
+        let mut arena = TermArena::new();
+        let carrier = arena.declare_uninterpreted_sort("UnitS");
+        let sort = Sort::Uninterpreted(carrier);
+        let predicate = arena.declare_fun("unit_p", &[sort], Sort::Bool).unwrap();
+        let other = arena.declare_fun("unit_q", &[sort], Sort::Bool).unwrap();
+        let a_symbol = arena.declare("unit_a", sort).unwrap();
+        let a = arena.var(a_symbol);
+        let b_symbol = arena.declare("unit_b", sort).unwrap();
+        let b = arena.var(b_symbol);
+        let c_symbol = arena.declare("unit_c", sort).unwrap();
+        let c = arena.var(c_symbol);
+        let p_a = arena.apply(predicate, &[a]).unwrap();
+        let p_b = arena.apply(predicate, &[b]).unwrap();
+        let q_c = arena.apply(other, &[c]).unwrap();
+        let not_q_c = arena.not(q_c).unwrap();
+        let a_eq_b = arena.eq(a, b).unwrap();
+
+        let x = arena.declare("unit_x", sort).unwrap();
+        let xv = arena.var(x);
+        let body = arena.apply(predicate, &[xv]).unwrap();
+        let universal = arena.forall(x, body).unwrap();
+
+        // `p(a)` asserted, `a = b` asserted, `q(c)` asserted FALSE, and one
+        // non-unit conjunct whose only job is to put `p(b)` in the e-graph.
+        // That last part is not decoration: this valuation reads a congruence
+        // CLASS, so like `IncrementalEmatchSession::equality` it has nothing to
+        // say about a term the matcher has never seen — a limitation the two
+        // criteria share and which is asserted below.
+        let carrier_clause = arena.or(p_b, q_c).unwrap();
+        let ground = vec![p_a, a_eq_b, not_q_c, carrier_clause];
+        let mut matcher = IncrementalEmatchSession::new(&mut arena, &[universal]);
+        matcher.extend_ground_with_derivations(&arena, &ground, &HashMap::new());
+
+        let blind =
+            BooleanUnitValuation::new(RelevanceCriterion::EqualityOnly, &arena, &matcher, &ground);
+        let units =
+            BooleanUnitValuation::new(RelevanceCriterion::BooleanUnits, &arena, &matcher, &ground);
+
+        assert_eq!(
+            blind.value(&matcher, p_a),
+            LiteralValue::Undetermined,
+            "the shipped criterion has no opinion about an atom the ground set ASSERTS"
+        );
+        assert_eq!(blind.value(&matcher, q_c), LiteralValue::Undetermined);
+        assert_eq!(units.value(&matcher, p_a), LiteralValue::True);
+        assert_eq!(
+            units.value(&matcher, p_b),
+            LiteralValue::True,
+            "closed under congruence: `a = b` carries the value to `p(b)`"
+        );
+        assert_eq!(
+            units.value(&matcher, q_c),
+            LiteralValue::False,
+            "a negated ground unit gives its atom the false value"
+        );
+        // The shared limitation, stated rather than assumed: a term outside the
+        // matcher's e-graph has no class, so neither criterion can value it.
+        let unseen_symbol = arena.declare("unit_unseen", sort).unwrap();
+        let unseen = arena.var(unseen_symbol);
+        let p_unseen = arena.apply(predicate, &[unseen]).unwrap();
+        assert_eq!(
+            units.value(&matcher, p_unseen),
+            LiteralValue::Undetermined,
+            "widening the criterion does not conjure a class for a term the \
+             matcher has never seen"
+        );
+
+        // And the consequence for selection: a clause carrying `p(b)` is
+        // unvaluable to one criterion and a tautology to the other.
+        let a_eq_c = arena.eq(a, c).unwrap();
+        let clause = arena.or(p_b, a_eq_c).unwrap();
+        assert!(
+            clause_is_unvaluable(&arena, clause, &mut |atom| blind.value(&matcher, atom)),
+            "the shipped criterion cannot judge this clause at all"
+        );
+        assert!(
+            !clause_is_unvaluable(&arena, clause, &mut |atom| units.value(&matcher, atom)),
+            "the wider criterion can"
+        );
+        assert_eq!(
+            clause_residual_width(
+                &arena,
+                clause,
+                &mut |lhs, rhs| matcher.equality(lhs, rhs),
+                &mut |atom| units.value(&matcher, atom)
+            ),
+            None,
+            "and having judged it, declines it: `p(b)` is already true"
+        );
+    }
+
+    /// The eviction sweep drops a retained instance the congruence has come to
+    /// entail, and — the load-bearing half — leaves alone the one whose only
+    /// justification is its own merge. Without the second restriction the sweep
+    /// would delete real facts from the ground check.
+    #[test]
+    #[allow(clippy::many_single_char_names)]
+    fn eviction_drops_entailed_clauses_and_never_self_justified_equalities() {
+        let mut arena = TermArena::new();
+        let carrier = arena.declare_uninterpreted_sort("EvictS");
+        let sort = Sort::Uninterpreted(carrier);
+        let f = arena.declare_fun("evict_f", &[sort], sort).unwrap();
+        let a_symbol = arena.declare("evict_a", sort).unwrap();
+        let a = arena.var(a_symbol);
+        let b_symbol = arena.declare("evict_b", sort).unwrap();
+        let b = arena.var(b_symbol);
+        let c_symbol = arena.declare("evict_c", sort).unwrap();
+        let c = arena.var(c_symbol);
+        let f_a = arena.apply(f, &[a]).unwrap();
+        let f_b = arena.apply(f, &[b]).unwrap();
+        let a_eq_b = arena.eq(a, b).unwrap();
+        let f_a_eq_f_b = arena.eq(f_a, f_b).unwrap();
+        let a_eq_c = arena.eq(a, c).unwrap();
+
+        let x = arena.declare("evict_x", sort).unwrap();
+        let xv = arena.var(x);
+        let reflexive = arena.eq(xv, xv).unwrap();
+        let universal = arena.forall(x, reflexive).unwrap();
+
+        // `a = b` is a source fact, so the congruence merges it; `f(a) = f(b)`
+        // then follows by congruence.
+        let mut ground = vec![a_eq_b, f_a_eq_f_b, a_eq_c];
+        let mut retained: HashMap<TermId, QuantifierGroundDerivation> = HashMap::new();
+        for instance in [f_a_eq_f_b, a_eq_c] {
+            retained.insert(
+                instance,
+                QuantifierGroundDerivation::Instance(QuantifierInstanceCertificate {
+                    assertion: universal,
+                    bindings: vec![a],
+                    instance,
+                }),
+            );
+        }
+        let mut matcher = IncrementalEmatchSession::new(&mut arena, &[universal]);
+        matcher.extend_ground_with_derivations(&arena, &ground, &retained);
+
+        let mut funnel = RelevanceFunnel::default();
+        evict_entailed_instances(&arena, &matcher, &mut ground, &mut retained, &mut funnel);
+
+        // Both retained instances ARE top-level positive equalities, so both are
+        // ineligible and the sweep must not have looked at either.
+        assert_eq!(
+            funnel.evict_scanned, 0,
+            "a top-level positive equality merges itself and can never be judged \
+             entailed by the rest"
+        );
+        assert_eq!(funnel.evicted, 0);
+        assert_eq!(
+            ground,
+            vec![a_eq_b, f_a_eq_f_b, a_eq_c],
+            "nothing may be dropped"
+        );
+
+        // A clause that contributes no merge and that the congruence entails: it
+        // is eligible, and it goes.
+        let disjunct = arena.or(f_a_eq_f_b, a_eq_c).unwrap();
+        ground.push(disjunct);
+        retained.insert(
+            disjunct,
+            QuantifierGroundDerivation::Instance(QuantifierInstanceCertificate {
+                assertion: universal,
+                bindings: vec![a],
+                instance: disjunct,
+            }),
+        );
+        matcher.extend_ground_with_derivations(&arena, &ground, &retained);
+        evict_entailed_instances(&arena, &matcher, &mut ground, &mut retained, &mut funnel);
+        assert_eq!(
+            funnel.evict_scanned, 1,
+            "exactly the one eligible clause is examined"
+        );
+        assert_eq!(funnel.evicted, 1, "and it is entailed, so it goes");
+        assert!(!ground.contains(&disjunct));
+        assert!(!retained.contains_key(&disjunct));
+        assert!(
+            ground.contains(&a_eq_b) && ground.contains(&f_a_eq_f_b) && ground.contains(&a_eq_c),
+            "the facts that justified the eviction must all still be asserted"
+        );
     }
 
     #[test]

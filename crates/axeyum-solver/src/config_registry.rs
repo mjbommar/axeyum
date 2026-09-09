@@ -6554,6 +6554,62 @@ pub static REGISTRY: &[ConfigEntry] = &[
         note: "Found UNREGISTERED on 2026-09-09 while attributing the `UF` loss population. It is the only constant in `qinst_egraph.rs` (31 of them) that this registry did not carry, and the reason is mechanical rather than an oversight: it is a STRUCT-valued constant (`OnlineQuantifierLimits`), and the coverage scanner in this file matches only scalar and `Duration` types, so `every_governing_constant_is_registered` could never have named it even had the file been in `GOVERNED_FILES`. That blind spot is the finding; this entry closes the instance. Exceeding any of the three disables only the retained-CDCL(T) accelerator (ADR-0119) -- the established fresh-QF route stays live, so a crossing costs speed and never a verdict.",
     },
     ConfigEntry {
+        name: "RELEVANCE_EVICT_MIN_GROUND",
+        module: "crates/axeyum-solver/src/qinst_egraph.rs",
+        value: "FLOOD_THROTTLE_MIN_GROUND",
+        unit: "accumulated ground terms",
+        protects: Protects::Time,
+        on_exceed: OnExceed::SearchEvent,
+        signal: Signal::None,
+        guarded_by: "the sweep it gates only DROPS ground conjuncts the congruence already entails, and only ones that are not themselves a top-level positive equality -- so `ground \\ dropped` still entails every dropped clause and the two sets are equisatisfiable; not reaching this threshold therefore costs nothing but the sweep",
+        env_override: Some("AXEYUM_QINST_RELEVANCE"),
+        justification: dated(
+            "docs/research/12-performance/uf-instance-selection-2026-09-09.md",
+            "2026-09-09",
+            None,
+            &[sym(
+                "crates/axeyum-solver/src/qinst_egraph.rs",
+                "RelevancePolicy",
+            )],
+            &[
+                doc("docs/research/12-performance/uf-instance-selection-2026-09-09.md"),
+                live(
+                    "evict_entailed_instances",
+                    "crates/axeyum-solver/src/qinst_egraph.rs",
+                ),
+            ],
+        ),
+        note: "NOT A SHIPPED BOUND: `RelevancePolicy::SHIPPED` sets `evict_entailed: false`, so this threshold is never consulted unless an A/B arm (`evict`, `full`) is selected. Tied to FLOOD_THROTTLE_MIN_GROUND by definition and for its reason: below it the loop is not under ceiling pressure and every release behaves like the historical dump-everything admission, so a sweep over the retained pool is pure overhead on the files that refute from the dump. Measured 2026-09-09 on the 32-file UF loss population: the sweep examined 846,617 eligible retained instances and evicted 1,368 of them (0.16 %), and decided 0 additional files.",
+    },
+    ConfigEntry {
+        name: "RELEVANCE_NARROW_RESIDUAL_WIDTH",
+        module: "crates/axeyum-solver/src/qinst_egraph.rs",
+        value: "3",
+        unit: "open (not-yet-falsified) literals in a candidate clause",
+        protects: Protects::Time,
+        on_exceed: OnExceed::Truncate,
+        signal: Signal::None,
+        guarded_by: "a declined candidate is never DROPPED: the retained matcher re-materializes and re-classifies the whole deferred pool on every later round, so a candidate this width filter passes over is re-offered (and may be a conflict or a unit by then, in which case it is admitted eagerly and unbudgeted)",
+        env_override: Some("AXEYUM_QINST_RELEVANCE"),
+        justification: dated(
+            "docs/research/12-performance/uf-instance-selection-2026-09-09.md",
+            "2026-09-09",
+            None,
+            &[sym(
+                "crates/axeyum-solver/src/qinst_egraph.rs",
+                "RelevancePolicy",
+            )],
+            &[
+                doc("docs/research/12-performance/uf-instance-selection-2026-09-09.md"),
+                live(
+                    "clause_residual_width",
+                    "crates/axeyum-solver/src/qinst_egraph.rs",
+                ),
+            ],
+        ),
+        note: "NOT A SHIPPED BOUND: `RelevancePolicy::SHIPPED` sets `max_residual_width: usize::MAX`, so nothing is declined by width unless an A/B arm (`narrow`, `full`) is selected. The value is the first band above a unit clause. Measured 2026-09-09 on the 32-file UF loss population, and the measurement is the reason the arm is not shipped: the residual band of the whole population is 1 to 4, so this declines only the width-4 tail (8,259 of 290,116 scored candidates, 2.8 %) and decides 0 additional files. 85.6 % of the scored candidates carry a literal the congruence classifier cannot value at all, which is the ceiling on what any width-based bound can do here.",
+    },
+    ConfigEntry {
         name: "ROUND_GROWTH_HEADROOM",
         module: "crates/axeyum-solver/src/qinst_egraph.rs",
         value: "8",
@@ -6565,6 +6621,34 @@ pub static REGISTRY: &[ConfigEntry] = &[
         env_override: None,
         justification: undated("doc comment"),
         note: "A new round starts only when the remaining budget is at least this multiple of the last round's duration: per-round work has grown 10x+ round-over-round on real corpora with an e-matcher that carries no internal deadline, so starting a round without this headroom risks a deadline overshoot as large as the round itself.",
+    },
+    ConfigEntry {
+        name: "SHIPPED_RELEVANCE_POLICY",
+        module: "crates/axeyum-solver/src/qinst_egraph.rs",
+        value: "rank_by_residual false / max_residual_width usize::MAX / evict_entailed false / criterion EqualityOnly / throttle_min_ground 2048 / round_admission_cap 256 / eager_generation_max 1",
+        unit: "instance-selection levers and the thresholds they are gated by",
+        protects: Protects::Time,
+        on_exceed: OnExceed::SearchEvent,
+        signal: Signal::None,
+        guarded_by: "every lever is off in the shipped arm, and `budget_flood_slice`'s shipped branch is the historical body verbatim -- so the shipped configuration of this object is not a bound at all, it is the absence of one; the three thresholds are aliases of FLOOD_THROTTLE_MIN_GROUND, FLOOD_ROUND_ADMISSION_CAP and FLOOD_EAGER_GENERATION_MAX, each registered in its own right, and the shipped criterion is what the shipped admission classifier already knows",
+        env_override: Some("AXEYUM_QINST_RELEVANCE"),
+        justification: dated(
+            "docs/research/12-performance/uf-instance-selection-2026-09-09.md",
+            "2026-09-09",
+            None,
+            &[sym(
+                "crates/axeyum-solver/src/qinst_egraph.rs",
+                "RelevancePolicy",
+            )],
+            &[
+                doc("docs/research/12-performance/uf-instance-selection-2026-09-09.md"),
+                live(
+                    "relevance_policy",
+                    "crates/axeyum-solver/src/qinst_egraph.rs",
+                ),
+            ],
+        ),
+        note: "REGISTERED BY HAND, and that is the entry's second purpose. `RelevancePolicy` is STRUCT-valued, and this file's coverage scanner matches only scalar and `Duration` types -- the same blind spot recorded on ONLINE_QUANTIFIER_LIMITS on 2026-09-09, which is not closed by either entry. A struct-valued governing constant anywhere in a governed file is still invisible to `every_governing_constant_is_registered`, so it is registered here because someone chose to, not because a gate would have caught its absence. The object itself is the selection policy of the quantifier instantiation loop, the counterpart to GroundBudget's volume policy; `shipped_relevance_policy_is_the_shipped_selection` pins that no arm moves one of the three thresholds instead of one of the three levers, which is what would make an A/B on a lever not an A/B on that lever.",
     },
     ConfigEntry {
         name: "MAX_BOUND_BOOL_BRANCHES",
