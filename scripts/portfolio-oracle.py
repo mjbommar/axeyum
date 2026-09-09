@@ -65,6 +65,32 @@ What this does NOT measure, stated rather than absorbed
    external limit would kill.  `control_ms` is printed so that case stays
    visible rather than being absorbed into a verdict.
 
+RETIRED AS AN ORACLE (2026-09-08, four candidates tested and four refuted)
+--------------------------------------------------------------------------
+
+This script nominates candidates; it **cannot confirm one**, and every
+`PRIZE-CANDIDATE` it emits must be settled by running the route alone at the
+competition budget (`examples/route_solo`).  The reason is not a bug here:
+
+> **A route's own cost is a function of the budget it was handed.**  These are
+> anytime / CEGAR / bounded procedures.  `cegar_probe_budget` gives one three
+> quarters of what remains, `nia-linearize`'s admission bound scales with the
+> budget, and a CEGAR loop takes its refinement schedule from its deadline.  So
+> "the deciding route's own segment under a 5x budget" is not the cost that
+> route incurs at 1x, and it errs in both directions.
+
+Measured on `QF_UFLIA/mathsat/Hash/hash_sat_05_17.smt2`: the probe read 21.3 s
+from a clean, unlooped 120 s trail, and a budget walk found the route needs
+**33-34 s** — it fails at a 40 s budget while holding 30 s.  On
+`QF_NIA/.../SAT14/1509.smt2` the ladder is not starved at all (10,860 ms of a
+24 s budget, `unknown`); `nia-linearize` is simply a *stronger procedure* under
+a bigger budget.
+
+What this script still does well, and why it is kept: it establishes the
+**denominator** — which files the current tree still loses at the competition
+budget and does not decide at 5x — and the loss population it is run against
+goes stale fast (122 of the first 230 files probed were already decided).
+
 Output is a TSV, one row per file, plus a `#` summary block.  Every field is
 measured; nothing is inferred from a message.
 """
