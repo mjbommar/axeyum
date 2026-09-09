@@ -311,10 +311,11 @@ mod probes {
             case("(declare-const x Int)(declare-const y Int)\
                   (assert (= (* x y) 6))(assert (> x 1))(assert (> y 1))(check-sat)", Class::Sat),
             // Incompleteness witness. Pell: x² − 2y² = 1 with y > 10⁹ IS
-            // satisfiable (y = 15,994,428 is the first such solution), but the
-            // witness lies outside the bounded integer blast, so the route
-            // returns a sound structural unknown ("no model within the bounded
-            // integer width 32") rather than a wrong `unsat`. Measured 2.6 s.
+            // satisfiable — the first such solution is y = 3,166,815,962
+            // (x = 4,478,554,083), and y exceeds 2³¹ = 2,147,483,648, so the
+            // witness lies outside the bounded integer blast. The route returns
+            // a sound structural unknown ("no model within the bounded integer
+            // width 32") rather than a wrong `unsat`. Measured 2.5 s.
             case("(declare-const x Int)(declare-const y Int)\
                   (assert (= (- (* x x) (* 2 (* y y))) 1))\
                   (assert (> y 1000000000))(check-sat)", Class::UnknownIncomplete),
