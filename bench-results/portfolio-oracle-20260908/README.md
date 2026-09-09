@@ -63,6 +63,37 @@ disagreement, and `route-solo-sweep.py --expected` exits 3 on a verdict that
 contradicts the census's `reference_verdict` — cross-route agreement is not a
 correctness check, since routes can agree with each other and all be wrong.
 
+## Unfinished sweeps, and how to collect them
+
+Five solo sweeps were still running when this landed. **They are the measurement
+that decides the open question** — the one confirmed portfolio-only file came
+out of `QF_UFLIA`'s first 35 files, and no other finished division has one.
+
+| host | slot | divisions | state at hand-off |
+|---|---|---|---|
+| s7 | 12-15 | `QF_UFLIA` | 35 of 58 |
+| s5 | 0-3 | `QF_NIA` | 24 of 61 |
+| s7 | 8-11 | `QF_NIA_b` (files 32-61) | ~5 of 30 |
+| s6 | 4-7 | `QF_IDL` | 26 of 54 |
+| s6 | 8-11 | `QF_RDL`, then `QF_SLIA` | 21 of 47 |
+| s5 | 4-7 | `QF_LIA` | 9 of 27 |
+
+Each writes its TSV only on completion; the per-file lines already produced are
+in `partial/<DIV>.solo.progress.txt` here, so the coverage is visible rather
+than implied. To collect a finished one:
+
+```sh
+scp <host>:~/pp-oracle/solo/<DIV>.tsv   bench-results/portfolio-oracle-20260908/solo/
+scp <host>:~/pp-oracle/solo/<DIV>.frame bench-results/portfolio-oracle-20260908/frames/<DIV>.solo.frame
+```
+
+`QF_NIA_b` is the second half of `QF_NIA`'s list run on a separate core set; its
+rows merge with `QF_NIA`'s without overlap.
+
+A second pass adding `dl-online` and `qf-bv` (which the first sweeps predate) is
+queued behind `QF_LRA` and `QF_UFLIA` on s6/s7 and has already run for the four
+divisions in `solo2/`.
+
 ## Reproducing
 
 ```sh
