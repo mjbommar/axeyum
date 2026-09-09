@@ -184,6 +184,53 @@ Same list, same binary, same host, same day; only the neighbours differ.
 | QF_ABV | axeyum | 186 | 186 | +0 | 0 |
 | QF_ABV | reference | 197 | 197 | +0 | 0 |
 
+### Table 3b — load at the start and the end of every one of the twenty passes
+
+Stamped by `parity-run.sh` itself, not reconstructed. Six passes swung by more
+than 2x between their own start and end reading, and those are flagged: for
+them the solved COUNT is a floor and the RATIO is not comparable to anything.
+
+| division | pass | host | load at start (1/5/15) | load at end (1/5/15) | comparability |
+|---|---|---|---|---|---|
+| QF_UFLIA | 24 s | `s7` | 4.02 4.10 4.05 | 2.94 3.03 3.44 | — |
+| QF_UFLIA | 6 s | `s7` | 2.94 3.03 3.44 | 9.00 6.67 4.71 | **>2x swing — count is a floor, ratio is not** |
+| QF_UFLIA | 12 s | `s7` | 9.00 6.67 4.71 | 2.64 3.30 3.30 | **>2x swing — count is a floor, ratio is not** |
+| QF_UFLIA | 60 s | `s7` | 2.64 3.30 3.30 | 2.13 2.04 2.05 | — |
+| QF_UFLIA | 24 s repeat | `s7` | 2.04 2.02 2.05 | 2.00 2.02 2.04 | — |
+| QF_LRA | 24 s | `s6` | 3.15 3.26 3.47 | 9.85 7.14 5.28 | **>2x swing — count is a floor, ratio is not** |
+| QF_LRA | 6 s | `s6` | 9.85 7.14 5.28 | 5.72 3.49 3.96 | — |
+| QF_LRA | 12 s | `s6` | 5.72 3.49 3.96 | 1.98 2.48 4.51 | **>2x swing — count is a floor, ratio is not** |
+| QF_LRA | 60 s | `s6` | 1.98 2.48 4.51 | 0.97 1.02 1.26 | **>2x swing — count is a floor, ratio is not** |
+| QF_LRA | 24 s repeat | `s6` | 0.59 0.92 1.22 | 1.00 1.00 1.00 | — |
+| QF_LIA | 24 s | `s5` | 3.02 3.07 3.00 | 2.03 3.49 3.80 | — |
+| QF_LIA | 6 s | `s5` | 2.03 3.49 3.80 | 2.41 4.88 4.24 | — |
+| QF_LIA | 12 s | `s5` | 2.41 4.88 4.24 | 1.01 1.00 1.28 | **>2x swing — count is a floor, ratio is not** |
+| QF_LIA | 60 s | `s5` | 1.01 1.00 1.28 | 0.97 1.00 1.00 | — |
+| QF_LIA | 24 s repeat | `s5` | 0.69 0.94 0.97 | 0.98 1.01 1.00 | — |
+| QF_ABV | 24 s | `s7` | 4.75 4.30 4.12 | 4.46 5.15 4.99 | — |
+| QF_ABV | 6 s | `s7` | 4.46 5.15 4.99 | 2.99 3.86 4.48 | — |
+| QF_ABV | 12 s | `s7` | 2.99 3.84 4.47 | 3.15 3.21 3.85 | — |
+| QF_ABV | 60 s | `s7` | 3.15 3.21 3.85 | 3.60 5.23 4.46 | — |
+| QF_ABV | 24 s repeat | `s7` | 1.66 1.94 2.01 | 2.26 2.08 2.02 | — |
+
+The flag is not a guess, and Table 3 is what validates it. The one flagged pass
+whose ratio actually moved is **QF_LRA at 24 s**, which ran 3.15 → 9.85 and read
+**72.4 %**; its repeat ran 0.59 → 1.00 and read **66.9 %**. Every other flagged
+pass moved zero files against its neighbours. So the load stamp caught the one
+row it needed to catch, and the noise floor says the rest of the curve is not
+made of contention.
+
+One structural property of the harness does a lot of work here, and it is worth
+naming because it is why a contended box is usable at all: `parity-run.sh`
+alternates the two solvers **file by file** — `axeyum` then the reference, on
+the same benchmark, seconds apart. A load transient therefore hits both arms at
+almost the same moment, which is a much stronger guarantee than the 2026-08-21
+case that produced the standing warning (two *separate whole sweeps* taken at
+different loads). It is not a complete guarantee — the QF_LRA pair above shows
+a sustained load difference still costs the reference files it does not cost
+us — but it is why 24 s and 24 s-repeat agree to one file in three of the four
+divisions despite very different neighbours.
+
 ### Table 4 — time-bound versus capability-bound losses
 
 A LOSS is a file the reference decides and we do not, at the 24 s
