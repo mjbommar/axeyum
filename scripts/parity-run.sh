@@ -204,9 +204,28 @@ solver_sha="$(git rev-parse --short HEAD)"
 # finite model finding — precisely what wins the files our own FMF work wins).
 # Recording "<none>" makes that visible in the entry instead of in a footnote
 # someone has to remember.
+#
+# The list below WAS a literal, and on 2026-09-08 it covered NONE of the nine
+# levers `crates/axeyum-solver/src/config_registry.rs` declares in its
+# `env_override` fields — `AXEYUM_NRA_ADMISSION`, `AXEYUM_LIA_WARM`,
+# `AXEYUM_UF_ARITH_OVERBOUND` and six more. A board entry measured with any of
+# them set would have recorded "<none — shipped default configuration>", which
+# is precisely the failure the paragraph above says this block prevents. So the
+# set is DERIVED from the registry (the authority on what a lever is) and
+# unioned with the levers the registry does not name, rather than remembered
+# here.
+axeyum_levers=(AXEYUM_NESTED_QUANT AXEYUM_CNF_INPROCESSING AXEYUM_CNF_VIVIFY
+               AXEYUM_EVIDENCE AXEYUM_TIMEOUT_MS AXEYUM_MAX_GROUND_TERMS
+               AXEYUM_SIMPLEX_PIVOT)
+registry="crates/axeyum-solver/src/config_registry.rs"
+if [[ -r "$registry" ]]; then
+  while IFS= read -r lever; do
+    axeyum_levers+=("$lever")
+  done < <(grep -oE 'env_override: Some\("[A-Za-z0-9_]+"\)' "$registry" |
+           grep -oE 'AXEYUM_[A-Z0-9_]+' | sort -u)
+fi
 axeyum_options=""
-for lever in AXEYUM_NESTED_QUANT AXEYUM_CNF_INPROCESSING AXEYUM_CNF_VIVIFY \
-             AXEYUM_EVIDENCE AXEYUM_TIMEOUT_MS AXEYUM_MAX_GROUND_TERMS; do
+for lever in $(printf '%s\n' "${axeyum_levers[@]}" | sort -u); do
   if [[ -n "${!lever:-}" ]]; then
     axeyum_options+="${axeyum_options:+ }${lever}=${!lever}"
   fi
