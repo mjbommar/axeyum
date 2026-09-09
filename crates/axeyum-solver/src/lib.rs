@@ -1232,6 +1232,7 @@ macro_rules! full_exports {
         pub use nra::check_with_nra;
         #[doc(hidden)]
         pub use nra_even_power::{NraEvenPowerRefutationCertificate, nra_even_power_refutation};
+        pub use nra_fbbt::{NraDerivedBoundCoverage, nra_derived_bound_coverage};
         #[doc(hidden)]
         pub use nra_real_root::SosCertificate;
         #[doc(hidden)]

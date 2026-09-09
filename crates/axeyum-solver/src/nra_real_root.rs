@@ -8074,6 +8074,7 @@ fn refute_with_derived_bounds(
     if !policy.enabled || deadline_reached(deadline) || isolate_deadline_reached() {
         return None;
     }
+    crate::nra_fbbt::note_consulted();
 
     let mut atoms: Vec<MultiAtom> = Vec::new();
     for &a in assertions {
@@ -8102,11 +8103,23 @@ fn refute_with_derived_bounds(
     if facts.is_empty() {
         return None;
     }
+    crate::nra_fbbt::note_split_ok();
 
     let derived = crate::nra_fbbt::derive_bounds(&facts, &policy);
+    // The propagation and its checker must AGREE on every proposal: a rejection
+    // means `propose` computed a value its OWN certificate does not support,
+    // which is a bug in the search, not an ordinary decline. The bound is dropped
+    // either way (sound), so this must be an assertion or the disagreement is
+    // invisible. Debug-only: the gates run debug, and in release a bad proposal
+    // still cannot reach a verdict.
+    debug_assert_eq!(
+        derived.rejected, 0,
+        "FBBT propagation proposed a bound its own certificate does not support"
+    );
     if derived.bounds.is_empty() {
         return None;
     }
+    crate::nra_fbbt::note_bounds_derived();
 
     // Components over the NONLINEAR atoms ALONE. This is the whole point: the
     // existing `decompose_multivariate` unions over every atom, so one linear atom
@@ -8149,6 +8162,7 @@ fn refute_with_derived_bounds(
         }
         refs.extend(owned.iter());
 
+        crate::nra_fbbt::note_component_offered();
         if matches!(decide_component(&refs), Some(ComponentOutcome::Unsat)) {
             return Some(crate::nra_fbbt::Refutation::new(
                 comp.len(),

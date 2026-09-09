@@ -198,6 +198,15 @@ impl Instance {
         if rng.below(5) == 0 {
             return Instance::generate_tight_anchored(rng);
         }
+        // ~1 in 4 of the remainder is the **FBBT shape**: a nonlinear component in
+        // 1-2 variables coupled to the rest only through LINEAR atoms, with a
+        // chain of linear atoms that bounds the nonlinear variables TRANSITIVELY.
+        // The general distribution below structurally cannot reach it -- see
+        // [`Instance::generate_fbbt_bound_chain`] for why, and why a new `unsat`
+        // producer without its own seed class is an ungated one.
+        if rng.below(4) == 0 {
+            return Instance::generate_fbbt_bound_chain(rng);
+        }
         let num_vars = rng.below(3) + 2; // 2..=4
         let num_atoms = rng.below(4) + 1; // 1..=4
         let mut atoms = Vec::with_capacity(num_atoms);
@@ -239,6 +248,206 @@ impl Instance {
                 divisor,
             });
         }
+        Instance { num_vars, atoms }
+    }
+
+
+    /// The **FBBT seed class**: a nonlinear component in 1–2 variables, coupled
+    /// to the rest of the query through LINEAR atoms only, with a chain of linear
+    /// atoms that bounds the nonlinear variables TRANSITIVELY.
+    ///
+    /// # Why this class had to be added
+    ///
+    /// `nra_fbbt` (2026-09-09) derives constant bounds on a nonlinear component's
+    /// variables from the query's linear atoms and re-offers the component to the
+    /// exact deciders. It is a **new `unsat` producer**, so a wrong bound is a
+    /// wrong `unsat`, and this fuzz is the only check that compares its verdicts
+    /// against an independent solver.
+    ///
+    /// The general generator above **structurally cannot reach it**. It emits
+    /// 1..=4 atoms with coefficients in `-3..=3` and a uniform comparator, so the
+    /// probability that it produces (a) a nonlinear atom confined to ≤ 2 of its
+    /// 2..=4 variables, (b) a linear atom giving one of the *other* variables a
+    /// constant bound, and (c) a further linear atom carrying that bound onto the
+    /// nonlinear variable, in the right directions, is negligible — and the last
+    /// one is the whole mechanism. That is the shape CLAUDE.md's hard rule names:
+    /// a corpus sweep plus a fuzz that avoids the corner is not a soundness gate
+    /// (`a946f925`).
+    ///
+    /// So this class builds the corner deliberately:
+    ///
+    /// - variables `0..nl_vars` (1 or 2) carry ALL the nonlinear content;
+    /// - the last variable gets a two-sided CONSTANT bound;
+    /// - each earlier variable is tied to the next by two linear atoms, so the
+    ///   bound propagates down the chain onto the nonlinear variables — a
+    ///   transitive bound, which `nra::extract_bounds` (syntactic) cannot see;
+    /// - one link is dropped at random, so roughly a third of the instances leave
+    ///   a nonlinear variable UNBOUNDED and the route must decline rather than
+    ///   invent an extreme;
+    /// - comparators are randomised between strict and non-strict on every atom,
+    ///   because the strictness of a derived bound is itself a claim the checker
+    ///   has to justify (its `GUARD 4`).
+    ///
+    /// Z3 adjudicates, exactly as for the other classes.
+    fn generate_fbbt_bound_chain(rng: &mut Lcg) -> Instance {
+        let num_vars = rng.below(2) + 3; // 3..=4
+        // One variable carries the nonlinear content (index 0); every other
+        // variable occurs ONLY in the linear chain. That is the population's shape:
+        // 37 of the 75 QF_NRA losses have every nonlinear atom in 1-2 variables and
+        // all of them declare more.
+        let last = num_vars - 1;
+        // A nonzero small coefficient: a zero one silently deletes the monomial it
+        // was meant to create, which would quietly shrink this class back toward
+        // the general one.
+        let nonzero = |rng: &mut Lcg| -> i128 {
+            let mag = i128::from(rng.in_range(1, 3));
+            if rng.below(2) == 0 { mag } else { -mag }
+        };
+        let mut atoms = Vec::new();
+
+        // --- the nonlinear atom, in variable 0 only ---
+        //
+        // DEGREE 2..=6, and the comparator is never `!=`. Both choices are from
+        // measurement, not taste. At degree 2 the class reached the route ZERO
+        // times in 2,000 instances: `decompose_multivariate`'s N-variable CAD
+        // decides a small quadratic system outright, and this route is consulted
+        // only after that has declined. And a `!=` atom over a polynomial is
+        // satisfiable almost everywhere, so an instance carrying one is decided
+        // upstream and never reaches the nonlinear decider at all -- the first
+        // draft of this class emitted them and the funnel read `consulted = 0`.
+        let degree = rng.below(5) + 2; // 2..=6
+        let monomials = vec![
+            Monomial {
+                num: nonzero(rng),
+                den: 1,
+                factors: vec![0; degree],
+            },
+            Monomial {
+                num: i128::from(rng.in_range(-3, 3)),
+                den: 1,
+                factors: vec![0],
+            },
+            // A constant large enough to matter against the derived box: the whole
+            // question this route answers is whether the atom's solution set meets
+            // the interval the LINEAR atoms imply, and a constant of magnitude 6
+            // against `x^6` never decides anything either way.
+            Monomial {
+                num: i128::from(rng.in_range(-400, 400)),
+                den: 1,
+                factors: Vec::new(),
+            },
+        ];
+        atoms.push(Atom {
+            monomials,
+            cmp: match rng.below(5) {
+                0 => Cmp::Lt,
+                1 => Cmp::Le,
+                2 => Cmp::Gt,
+                3 => Cmp::Ge,
+                _ => Cmp::Eq,
+            },
+            divisor: None,
+        });
+
+        // --- the constant anchor on the LAST variable, both sides ---
+        //
+        // Dropped outright ~1 in 5 times, so that fraction of the class leaves the
+        // nonlinear variable UNBOUNDED and the route must decline rather than
+        // invent an extreme. Dropping a link in the MIDDLE of the chain instead
+        // (the first draft) has the same effect but is indistinguishable from a
+        // chain that simply does not reach, so it measures less.
+        let anchored = rng.below(5) != 0;
+        if anchored {
+            let lo = i128::from(rng.in_range(-2, 0));
+            let hi = lo + i128::from(rng.in_range(0, 2));
+            atoms.push(Atom {
+                monomials: vec![
+                    Monomial {
+                        num: 1,
+                        den: 1,
+                        factors: vec![last],
+                    },
+                    Monomial {
+                        num: -hi,
+                        den: 1,
+                        factors: Vec::new(),
+                    },
+                ],
+                cmp: if rng.below(2) == 0 { Cmp::Le } else { Cmp::Lt },
+                divisor: None,
+            });
+            atoms.push(Atom {
+                monomials: vec![
+                    Monomial {
+                        num: 1,
+                        den: 1,
+                        factors: vec![last],
+                    },
+                    Monomial {
+                        num: -lo,
+                        den: 1,
+                        factors: Vec::new(),
+                    },
+                ],
+                cmp: if rng.below(2) == 0 { Cmp::Ge } else { Cmp::Gt },
+                divisor: None,
+            });
+        }
+
+        // --- the chain: `x_i` tied to `x_{i+1}` on both sides ---
+        //
+        // `gap >= 1`, because a gap of 0 with the strict comparators below is
+        // `x_i - x_{i+1} < 0` AND `x_i - x_{i+1} >= 0`, a LINEAR contradiction that
+        // the front door refutes before any nonlinear route runs. The first draft
+        // allowed `gap = 0` and most of its instances were exactly that.
+        for i in (0..last).rev() {
+            let gap = i128::from(rng.in_range(1, 3));
+            // `x_i - x_{i+1} - gap <= 0`   (x_i bounded above by x_{i+1} + gap)
+            atoms.push(Atom {
+                monomials: vec![
+                    Monomial {
+                        num: 1,
+                        den: 1,
+                        factors: vec![i],
+                    },
+                    Monomial {
+                        num: -1,
+                        den: 1,
+                        factors: vec![i + 1],
+                    },
+                    Monomial {
+                        num: -gap,
+                        den: 1,
+                        factors: Vec::new(),
+                    },
+                ],
+                cmp: if rng.below(2) == 0 { Cmp::Le } else { Cmp::Lt },
+                divisor: None,
+            });
+            // `x_i - x_{i+1} + gap >= 0`   (x_i bounded below by x_{i+1} - gap)
+            atoms.push(Atom {
+                monomials: vec![
+                    Monomial {
+                        num: 1,
+                        den: 1,
+                        factors: vec![i],
+                    },
+                    Monomial {
+                        num: -1,
+                        den: 1,
+                        factors: vec![i + 1],
+                    },
+                    Monomial {
+                        num: gap,
+                        den: 1,
+                        factors: Vec::new(),
+                    },
+                ],
+                cmp: if rng.below(2) == 0 { Cmp::Ge } else { Cmp::Gt },
+                divisor: None,
+            });
+        }
+
         Instance { num_vars, atoms }
     }
 
@@ -689,6 +898,25 @@ fn nra_differential_fuzz_disagree_zero() {
         jointly_decided > 100,
         "too few jointly-decided instances ({jointly_decided}); the differential \
          gate is not meaningfully exercised"
+    );
+
+    // COVERAGE of the derived-bound refutation route (`nra_fbbt`), read from the
+    // route's own counters rather than inferred from the tally above.
+    //
+    // This assertion exists because the tally CANNOT support the claim it looks
+    // like it supports. Measured 2026-09-09 over this whole sweep, with the route
+    // on and with `AXEYUM_NRA_FBBT=off`: 1,927 jointly decided and 1,927
+    // agreements in BOTH arms, identical. That reading is equally consistent with
+    // "the route ran and changed no verdict" and with "the route was never
+    // reached", and only the second would make the seed class decoration. So the
+    // gate is on the counter, not on the verdicts.
+    let coverage = axeyum_solver::nra_derived_bound_coverage();
+    println!("FBBT funnel: {coverage:?}");
+    assert!(
+        coverage.components_offered > 0,
+        "the FBBT seed class generated its shape but no component ever reached \
+         the derived-bound route ({coverage:?}); the class is decoration and this \
+         producer is not differentially gated"
     );
 }
 

@@ -69,8 +69,96 @@
 //! exact rationals; nothing about how the `λ` were found enters it.
 
 use std::collections::{BTreeMap, BTreeSet};
+use std::sync::atomic::{AtomicU64, Ordering};
 
 use axeyum_ir::{Rational, SymbolId};
+
+// ============================================================================
+// Coverage — so "the fuzz covers this route" is a measurement, not a hope
+// ============================================================================
+
+static CONSULTED: AtomicU64 = AtomicU64::new(0);
+static SPLIT_OK: AtomicU64 = AtomicU64::new(0);
+static BOUNDS_DERIVED: AtomicU64 = AtomicU64::new(0);
+static COMPONENTS_OFFERED: AtomicU64 = AtomicU64::new(0);
+static REFUTATIONS: AtomicU64 = AtomicU64::new(0);
+
+/// How much work this route has been given, and how much it decided, since the
+/// process started.
+///
+/// This exists because of a specific failure this lane hit and measured. A new
+/// seed class was added to `nra_differential_fuzz` to generate exactly this
+/// route's shape, and running the whole 2,000-instance sweep with the route on
+/// and with it off produced **identical** tallies — 1,927 jointly decided, 1,927
+/// agreements, 0 disagreements, both arms. That is consistent with two opposite
+/// stories: the route being exercised and adding nothing, or the route never
+/// being reached at all. A verdict tally cannot separate them, and "the fuzz
+/// covers the new producer" is a claim about the second.
+///
+/// So the fuzz reads these instead of inferring coverage from verdicts, and a
+/// zero here fails it. An instrument whose reading nothing depends on is not an
+/// instrument.
+/// The counters are a **funnel**, not one number, because "the route did
+/// nothing" has four different causes and they have four different fixes:
+/// the query never got here, its atoms did not split into a usable
+/// linear/nonlinear pair, no bound could be derived, or the derived bounds did
+/// not close the component. A single counter reads the same for all four.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct NraDerivedBoundCoverage {
+    /// Queries that reached the route with the policy enabled — i.e. the
+    /// multivariate decomposition declined or could not certify, and this route
+    /// was asked.
+    pub consulted: u64,
+    /// Of those, the ones that split into at least one nonlinear atom and at
+    /// least one usable linear fact, within the policy's caps.
+    pub split_ok: u64,
+    /// Of those, the ones where at least one bound survived the checker.
+    pub bounds_derived: u64,
+    /// Nonlinear components handed to an exact decider **with** at least one
+    /// certified derived bound attached. This counts the route actually running,
+    /// not merely being consulted and declining at an entry guard.
+    pub components_offered: u64,
+    /// Refutations the route produced. Necessarily `≤ components_offered`.
+    pub refutations: u64,
+}
+
+/// Read the process-wide coverage counters for the derived-bound refutation
+/// route.
+///
+/// Counters are process-wide and monotone; they are diagnostics only and nothing
+/// in the solver branches on them, so they cannot perturb a verdict or the
+/// determinism promise.
+#[must_use]
+pub fn nra_derived_bound_coverage() -> NraDerivedBoundCoverage {
+    NraDerivedBoundCoverage {
+        consulted: CONSULTED.load(Ordering::Relaxed),
+        split_ok: SPLIT_OK.load(Ordering::Relaxed),
+        bounds_derived: BOUNDS_DERIVED.load(Ordering::Relaxed),
+        components_offered: COMPONENTS_OFFERED.load(Ordering::Relaxed),
+        refutations: REFUTATIONS.load(Ordering::Relaxed),
+    }
+}
+
+/// Record that the route was asked about one query, with the policy enabled.
+pub(crate) fn note_consulted() {
+    CONSULTED.fetch_add(1, Ordering::Relaxed);
+}
+
+/// Record that a query split into a usable linear/nonlinear pair.
+pub(crate) fn note_split_ok() {
+    SPLIT_OK.fetch_add(1, Ordering::Relaxed);
+}
+
+/// Record that at least one bound survived the checker on this query.
+pub(crate) fn note_bounds_derived() {
+    BOUNDS_DERIVED.fetch_add(1, Ordering::Relaxed);
+}
+
+/// Record that one nonlinear component reached an exact decider with derived
+/// bounds attached.
+pub(crate) fn note_component_offered() {
+    COMPONENTS_OFFERED.fetch_add(1, Ordering::Relaxed);
+}
 
 // ============================================================================
 // Policy
@@ -659,6 +747,7 @@ impl Refutation {
         derived_bounds: usize,
         component_vars: usize,
     ) -> Self {
+        REFUTATIONS.fetch_add(1, Ordering::Relaxed);
         Refutation {
             nonlinear_atoms,
             derived_bounds,
