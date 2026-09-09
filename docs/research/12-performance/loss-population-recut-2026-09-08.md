@@ -162,10 +162,15 @@ population.
 Only z3 is installed on s4; these divisions score against cvc5, bitwuzla and
 yices. The tempting substitute is the benchmark's own `(set-info :status …)`,
 and it does not work: SMT-LIB carries a curated status whether or not any
-competition solver decides the file. In the QF_LRA complement, **37 of the 39
+competition solver decides the file. In the QF_LRA complement, **52 of the 54
 unsolved files declare `sat` or `unsat`** — and the ledger's own arithmetic puts
-all 49 of that division's reference-only losses on the OLD list, so those 37 are
+all 49 of that division's reference-only losses on the OLD list, so those 52 are
 the division's `neither` set, not losses.
+
+(Commit `21ef9b1a4`'s message quotes this as "37 of 39", which was the count when
+QF_LRA's complement pass was two thirds through. 52 of 54 is the finished run.
+The conclusion is the same and got stronger; the number is corrected here
+because a commit message cannot be.)
 
 What the complement pass can honestly do is reconcile at the count level: the
 old-list survivors plus the complement's unsolved files should equal the
@@ -181,25 +186,24 @@ implies, which is the expected direction when the tree has moved.
 
 | division | re-cut | comp unsolved | sum | ledger r-only + neither | residual | ledger entry | behind |
 |---|---:|---:|---:|---:|---:|---|---:|
-| QF_ABV | 12 | 2 | 14 | 21 | **−7** | 2026-09-05T21:59 | 606 |
-| QF_BV | 6 | 8 | 14 | 12 | **+2** | 2026-09-05T21:14 | 606 |
-| QF_IDL | 19 | 76 | 95 | 95 | **0** | 2026-09-06T22:21 | 246 |
-| QF_LIA | 22 | 60 | 82 | 81 | **+1** | 2026-09-08T20:50 | 72 |
-| QF_LRA | 49 | 54 | 103 | 103 | **0** | 2026-09-08T20:39 | 72 |
-| QF_NRA | 75 | 13 | 88 | 90 | −2 | 2026-09-07T01:33 | 217 |
-| QF_RDL | 9 | 47 | 56 | 58 | −2 | 2026-09-06T23:10 | 246 |
-| QF_SLIA | 7 | 0 | 7 | 7 | **0** | 2026-09-06T01:04 | 606 |
-| QF_UF | 6 | 1 | 7 | 4 | **+3** | 2026-09-06T21:10 | 246 |
-| QF_UFLIA | 23 | 26 | 49 | 71 | **−22** | 2026-09-08T20:27 | 72 |
+| QF_ABV | 12 | 2 | 14 | 21 | **−7** | 2026-09-05T21:59 | 607 |
+| QF_BV | 6 | 8 | 14 | 12 | **+2** | 2026-09-05T21:14 | 607 |
+| QF_IDL | 19 | 76 | 95 | 95 | **0** | 2026-09-06T22:21 | 247 |
+| QF_LIA | 22 | 60 | 82 | 81 | **+1** | 2026-09-08T20:50 | 73 |
+| QF_LRA | 49 | 54 | 103 | 103 | **0** | 2026-09-08T20:39 | 73 |
+| QF_NIA | 58 | 101 | 159 | 161 | −2 | 2026-09-06T00:51 | 607 |
+| QF_NRA | 75 | 13 | 88 | 90 | −2 | 2026-09-07T01:33 | 218 |
+| QF_RDL | 9 | 47 | 56 | 58 | −2 | 2026-09-06T23:10 | 247 |
+| QF_SLIA | 7 | 0 | 7 | 7 | **0** | 2026-09-06T01:04 | 607 |
+| QF_UF | 6 | 1 | 7 | 4 | **+3** | 2026-09-06T21:10 | 247 |
+| QF_UFLIA | 23 | 26 | 49 | 71 | **−22** | 2026-09-08T20:27 | 73 |
+| UF | 32 | 84 | 116 | 115 | **+1** | 2026-09-06T22:35 | 247 |
 
-(QF_NIA and UF are omitted: their complement passes were still running when this
-was written, so their residual would be an artifact of an incomplete run rather
-than a finding. Their `<DIV>.txt` lists are complete — the complement pass does
-not feed them.)
-
-**Three divisions reconcile to zero** (QF_IDL, QF_LRA, QF_SLIA) and one to +1
-(QF_LIA). On those, the loss list is exactly the old-list survivors and the
-complement's unsolved files are the division's `neither` set.
+**Three divisions reconcile to zero** (QF_IDL, QF_LRA, QF_SLIA) and four to
+within two files. On those, the loss list is exactly the old-list survivors and
+the complement's unsolved files are the division's `neither` set — which is also
+why the declared-`:status` heuristic would have been wrong about 52 of QF_LRA's
+54.
 
 **Two independent reproductions fall out of it.** QF_ABV lands on 14 unsolved of
 200, i.e. 186 decided — the `ladder-budget` lane's number. QF_UFLIA lands on 49
@@ -207,24 +211,36 @@ unsolved of 200, i.e. **151 decided** — the `uflia-interface-caps` lane's
 number, which `PARITY.md`'s own same-day entry does not have, for the reason in
 §3.
 
-### Three divisions decide FEWER files than their ledger entry implies
+### Four divisions decide FEWER files than their ledger entry implies
 
-QF_BV **+2**, QF_UF **+3**, QF_LIA **+1**. Each survived a `comp-confirm` pass —
-a second run of the complement's unsolved files, which by construction can only
-move the residual toward the ledger — so this sweep's contention does not
-explain them. `<DIV>.regression-candidates.txt` names the superset:
+QF_UF **+3**, QF_BV **+2**, QF_LIA **+1**, UF **+1**. Each survived a
+`comp-confirm` pass — a second run of the complement's unsolved files, which by
+construction can only move the residual toward the ledger — so this sweep's
+contention does not explain them.
 
-- **QF_UF is one file**, exactly, and it can be named: that division's ledger
-  entry has `neither = 0`, so every unsolved complement file is a file we used
-  to decide. It is
+How big a superset the residual sits in is what decides whether it is
+actionable, and it varies by two orders of magnitude:
+
+- **QF_UF: 3 files in a superset of 7.** That division's ledger entry has
+  `neither = 0`, so *every* file we do not decide is one the reference does. One
+  of the three can be named exactly, because it is not on the 2026-09-05 list at
+  all and therefore sat in the ledger's `both` column:
   `QF_UF/QG-classification/qg7/iso_brn_repgen041.smt2`, declared `sat`, timing
-  out at 24.2 s in both passes.
-- **QF_BV is eight candidates**, of which the ledger's `neither = 6` accounts
-  for six. Two of them are regressions and this sweep cannot say which; it has
-  no reference.
+  out at 24.2 s in both passes. It is
+  `QF_UF.regression-candidates.txt`. The other two are among the six old-list
+  survivors and cannot be separated without the reference.
+- **QF_BV: 2 files in a superset of 8** (`QF_BV.regression-candidates.txt`); the
+  ledger's `neither = 6` accounts for the rest.
+- **QF_LIA: 1 in 60. UF: 1 in 84.** No candidate list is emitted for these —
+  a "regression candidates" file that is 98% `neither` would be a worse artifact
+  than none, and naming it that would be the same over-claim the
+  declared-`:status` heuristic makes.
 
-These are candidates, not confirmed regressions. Confirming one needs the
-division's reference re-run on the named files, which s4 cannot do.
+None of these is a confirmed regression. Confirming one needs the division's
+reference re-run on the named files, which s4 cannot do — and each ledger entry
+it is measured against records its own load average of 1–3 against this sweep's
+11–27, so a single-file residual is inside the noise the comparison carries.
+The QF_UF row is the one worth acting on.
 
 ## 7. `over_budget`: the grace-win class is closed on this population
 

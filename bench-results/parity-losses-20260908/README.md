@@ -9,16 +9,49 @@ here.
 `python3 scripts/check-loss-list-freshness.py` prints the per-division
 authority table and reds when a set goes unmarked or past its age budget. Its
 `behind=` line is the one to read before briefing anyone: the 2026-09-05 set
-reads **`behind=606`** commits touching `crates/` as of 2026-09-08.
+read **`behind=606`** commits touching `crates/` when this set was cut, and the
+number only grows.
 
 ## Why it was re-cut
 
-Measured by the `parallel-portfolio` lane and re-measured here: **141 of the
-403 files on the 2026-09-05 lists were already decided** by the shipped
-default. Every lane briefed against "the N files we lose in `<DIV>`" was partly
+The `parallel-portfolio` lane measured 141 of the 403 files on the 2026-09-05
+lists as already decided. Re-measured here a day later, on the same 403, it is
+**156 decided plus 4 flaky** — the number moved again between the two
+measurements, which is the point rather than a correction. Every lane briefed against "the N files we lose in `<DIV>`" was partly
 aimed at files the tree wins. Nothing was wrong with the old lists — they were
 a correct measurement of 2026-09-05 sitting in a directory whose name says so,
 and everyone read them as current anyway.
+
+## The result
+
+**480 → 318 files.** 157 already decided, 5 flaky.
+
+| division | 2026-09-05/06 | **2026-09-08** | recovered | flaky |
+|---|---:|---:|---:|---:|
+| QF_ABV | 19 | **12** | 7 | 0 |
+| QF_BV | 6 | **6** | 0 | 0 |
+| QF_IDL | 54 | **19** | 35 | 0 |
+| QF_LIA | 27 | **22** | 3 | 2 |
+| QF_LRA | 54 | **49** | 5 | 0 |
+| QF_NIA | 61 | **58** | 3 | 0 |
+| QF_NRA | 77 | **75** | 1 | 1 |
+| QF_RDL | 47 | **9** | 38 | 0 |
+| QF_SLIA | 7 | **7** | 0 | 0 |
+| QF_UF | 38 | **6** | 30 | 2 |
+| QF_UFLIA | 58 | **23** | 35 | 0 |
+| UF | 32 | **32** | 0 | 0 |
+| **total** | **480** | **318** | **157** | **5** |
+
+`python3 bench-results/parity-losses-20260908/scripts/reconcile.py` joins this to
+`bench-results/PARITY.md`. QF_IDL, QF_LRA and QF_SLIA reconcile to zero; four
+more to within two files. Four divisions decide FEWER files than their ledger
+entry implies (QF_UF +3, QF_BV +2, QF_LIA +1, UF +1) and each survived a second
+pass — `QF_UF.regression-candidates.txt` and `QF_BV.regression-candidates.txt`
+name the supersets. No candidate list is emitted for QF_LIA (1 in 60) or UF
+(1 in 84): a file that is 98% `neither` would be a worse artifact than none.
+
+The writeup is
+[`docs/research/12-performance/loss-population-recut-2026-09-08.md`](../../docs/research/12-performance/loss-population-recut-2026-09-08.md).
 
 ## Protocol
 
@@ -91,9 +124,9 @@ files we lost do we now win?" and is *structurally incapable* of answering
 - **The declared `:status` is not a stand-in for the reference.** SMT-LIB
   benchmarks carry a curated status whether or not any competition solver
   decides them, so "unsolved with a declared status" over-counts losses badly:
-  in the QF_LRA complement 37 of 39 unsolved files declare `sat`/`unsat`, and
-  the ledger's own arithmetic puts all 49 of that division's reference-only
-  losses on the old list, i.e. those 37 are the division's `neither` set. The
+  in the QF_LRA complement **52 of 54** unsolved files declare `sat`/`unsat`,
+  and the ledger's own arithmetic puts all 49 of that division's reference-only
+  losses on the old list, i.e. those 52 are the division's `neither` set. The
   complement's unsolved files are reconciled against the ledger's
   `reference-only` + `neither` cells at the COUNT level, and the residual is
   reported rather than absorbed.
