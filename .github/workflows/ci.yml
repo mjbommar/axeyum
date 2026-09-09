@@ -360,6 +360,14 @@ jobs:
       # is gone, so do not shallow this job.
       - run: ./scripts/tests/test-check-parity-freshness.sh
       - run: ./scripts/check-parity-freshness.py
+      # Row-to-row commit ordering, which the freshness gate structurally
+      # cannot see: both of its commit comparisons are against HEAD, so two
+      # merged branches both read `ok`, and the newest board row can be the
+      # older tree. `fetch-depth: 0` is load-bearing here too -- on a shallow
+      # clone every sha degrades to `unresolvable`, which is ADVISORY, so this
+      # gate would pass while checking nothing.
+      - run: ./scripts/tests/test-check-parity-ancestry.sh
+      - run: ./scripts/check-parity-ancestry.py
       - run: python3 -m unittest scripts.tests.test_lean_u2_test_authority
       - run: python3 scripts/gen-lean-u2-test-authority.py --check
       - run: python3 -m unittest scripts.tests.test_lean_u2_official_ci_profiles

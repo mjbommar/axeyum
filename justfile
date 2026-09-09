@@ -55,7 +55,7 @@ axiom-freedom:
 # not hide any of them — the chain still fails — it stops them hiding everything
 # else. Note the earlier claim that `adr-remote-collisions` was already last was
 # wrong: it was #40 of 41, so `local-ci-freshness` sat behind it.
-check: fmt fmt-all facts facts-replay clippy gate-controls kernel-stack-envelope deep-stack-call-sites axiom-freedom external-coupling autogenesis-knowledge-controls tactic-catalog-controls autogenesis-proposer-isolation autogenesis-induction-search autogenesis-apply-search autogenesis-result autogenesis-nursery autogenesis-mathlib-source autogenesis-mathlib-dependencies autogenesis-mathlib-review autogenesis-mathlib-facts test frontier gate-liveness golden-lean-pins kernel-suite-partition lean-gate prelude-reuse moment-proofs ntheory-certificates doc py-check qfbv-profile reflection-semantics-gate benchmark-repetition-tests glaurung-qfbv-regular foundational-resources rules-as-code smtcomp-resume parity-docs generated-trackers solver-module-graph plan-authority links gate-step-timeout shared-index sos-negative-controls evidence-portability aggregate-scope adr-remote-collisions local-ci-freshness parity-freshness episodes product-health obstruction-graph mobility-census python-coverage lane-turn-controls correspondences autogenesis-kernel-projection autogenesis-kernel-lemma-index autogenesis-obstruction-projection autogenesis-transport-projection autogenesis-capability-gap autogenesis-concept-coverage autogenesis-producer-outcomes autogenesis-producer-evaluation-frontier autogenesis-binomial-arrow autogenesis-next-reusable-family autogenesis-producer-evaluation-protocol autogenesis-producer-evaluation-result-contract autogenesis-capability-demand autogenesis-nat-modeq-imported-bridge-assay autogenesis-nat-modeq-remainder-contract autogenesis-nat-modeq-remainder-contract-v2 autogenesis-nat-modeq-remainder-operation tock-log2-maestro-controls library-artifact-contract module-baseline module-baseline-controls kernel-differential kernel-conformance lean-divergences declaration-graph graph-join infrastructure-frontier effort-taxonomy graph-dispatcher structural-index checked-interchange lean-adapter lean-tactic declaration-spec proof-plan absence-claims curriculum-bucket-cohesion curriculum-bucket-cohesion-controls lean-creal-library-slice lean-read-round-trip
+check: fmt fmt-all facts facts-replay clippy gate-controls kernel-stack-envelope deep-stack-call-sites axiom-freedom external-coupling autogenesis-knowledge-controls tactic-catalog-controls autogenesis-proposer-isolation autogenesis-induction-search autogenesis-apply-search autogenesis-result autogenesis-nursery autogenesis-mathlib-source autogenesis-mathlib-dependencies autogenesis-mathlib-review autogenesis-mathlib-facts test frontier gate-liveness golden-lean-pins kernel-suite-partition lean-gate prelude-reuse moment-proofs ntheory-certificates doc py-check qfbv-profile reflection-semantics-gate benchmark-repetition-tests glaurung-qfbv-regular foundational-resources rules-as-code smtcomp-resume parity-docs generated-trackers solver-module-graph plan-authority links gate-step-timeout shared-index sos-negative-controls evidence-portability aggregate-scope adr-remote-collisions local-ci-freshness parity-freshness parity-ancestry episodes product-health obstruction-graph mobility-census python-coverage lane-turn-controls correspondences autogenesis-kernel-projection autogenesis-kernel-lemma-index autogenesis-obstruction-projection autogenesis-transport-projection autogenesis-capability-gap autogenesis-concept-coverage autogenesis-producer-outcomes autogenesis-producer-evaluation-frontier autogenesis-binomial-arrow autogenesis-next-reusable-family autogenesis-producer-evaluation-protocol autogenesis-producer-evaluation-result-contract autogenesis-capability-demand autogenesis-nat-modeq-imported-bridge-assay autogenesis-nat-modeq-remainder-contract autogenesis-nat-modeq-remainder-contract-v2 autogenesis-nat-modeq-remainder-operation tock-log2-maestro-controls library-artifact-contract module-baseline module-baseline-controls kernel-differential kernel-conformance lean-divergences declaration-graph graph-join infrastructure-frontier effort-taxonomy graph-dispatcher structural-index checked-interchange lean-adapter lean-tactic declaration-spec proof-plan absence-claims curriculum-bucket-cohesion curriculum-bucket-cohesion-controls lean-creal-library-slice lean-read-round-trip
 
 fmt:
     cargo fmt --all --check
@@ -737,6 +737,17 @@ gate-controls:
     # the REAL committed ledger, because a parser never pointed at its subject
     # returns the same empty answer as a strong negative result.
     scripts/tests/test-check-parity-freshness.sh
+    # Controls for `parity-ancestry` below. Fifteen cases over a REAL throwaway
+    # commit graph (A─B─C plus a side branch D), fifteen guard mutations, all
+    # fifteen killed and nine of them killing exactly one case -- the table in
+    # the suite's header was recorded from the mutation driver, not predicted.
+    # A newest row measured on an ancestor of an earlier row, and one measured
+    # on a divergent branch, must each red it; a second-reference row, a voided
+    # row and an unresolvable sha must NOT. One case replays the real
+    # 2026-09-08 QF_UFLIA incident with the actual shas, and one runs against
+    # the REAL committed ledger, because a parser never pointed at its subject
+    # returns the same empty answer as a strong negative result.
+    scripts/tests/test-check-parity-ancestry.sh
     # Controls for `loss-list-freshness` below. Fifteen cases, twelve guard
     # mutations, all twelve killed (the table is in the suite's header and was
     # recorded from `scripts/tests/loss_list_freshness_mutations.py`, not
@@ -931,6 +942,19 @@ local-ci-freshness:
 # going down stays visible.
 parity-freshness:
     scripts/check-parity-freshness.py
+
+# Does the board's newest row for a division measure the NEWEST code?
+# `parity-freshness` above compares each row's timestamp to the clock and each
+# row's `solver commit` to HEAD -- never one row to another row. So once two
+# lanes' branches have merged, a measurement taken BEFORE a fix and one taken
+# AFTER it are both `ok behind=N`, and the board can publish the older number
+# with no signal at all. Measured 2026-09-08: QF_UFLIA `129/200` at
+# `f24c61f91` sat twenty-two lines from a `151/200` at `26d9d80e3`, one day
+# apart. This gate fails when a division's newest row is not a descendant of
+# every earlier row for that division; the remedy is one sweep from current
+# main, appended -- never an edit to the older row.
+parity-ancestry:
+    scripts/check-parity-ancestry.py
 
 # Is the loss population a lane is briefed against the CURRENT one?
 # `bench-results/parity-losses-<date>/<DIV>.txt` is what every "the N files we

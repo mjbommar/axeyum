@@ -997,6 +997,17 @@ step local-ci-freshness-controls ./scripts/tests/test-check-local-ci-freshness.s
 # project's history and nothing went red. This is the gate that reds.
 step parity-freshness ./scripts/check-parity-freshness.py
 step parity-freshness-controls ./scripts/tests/test-check-parity-freshness.sh
+# Freshness answers "when", never "on what". Both of the gate above's commit
+# comparisons are against HEAD, so once two lanes' branches merge, a row
+# measured BEFORE a fix and a row measured AFTER it both read `ok behind=N` --
+# and the board's newest row can be the older tree with nothing saying so. That
+# happened on 2026-09-08: QF_UFLIA `129/200` at `f24c61f91` sat twenty-two lines
+# from a `151/200` at `26d9d80e3`, one day apart, and no row was ordered against
+# any other row. This gate asks the question freshness structurally cannot --
+# is the newest row for a division a DESCENDANT of every earlier row for it --
+# and its remedy is one sweep from current main.
+step parity-ancestry ./scripts/check-parity-ancestry.py
+step parity-ancestry-controls ./scripts/tests/test-check-parity-ancestry.sh
 # `bench-results/parity-losses-*/<DIV>.txt` is the population every optimisation
 # brief is written against. Measured 2026-09-08, 141 of the 403 files on the
 # 2026-09-05 lists were already decided and several lanes had been dispatched at
