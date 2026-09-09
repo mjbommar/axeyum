@@ -142,6 +142,17 @@ pub mod instrument {
     /// Sampled through `crate::live_lazy_smt_counters`, which orders it against
     /// [`LAZY_SMT`].
     pub const LAZY_SMT_MIRROR: &str = "lazy-smt-mirror";
+    /// `crate::RelevanceFunnel` for the quantifier instantiation loop's
+    /// instance-selection policy: how many deferred candidates the policy
+    /// scored and how many it declined.
+    ///
+    /// Republished on every instantiation round as `Sampled::InFlight` and once
+    /// more at the loop's fixpoint or ground-ceiling exit as
+    /// `Sampled::Complete`. The in-flight cadence is not decoration: on the
+    /// population this policy was built for, 13 of 32 files time out or are
+    /// killed and never reach an exit at all, so the only reading that exists
+    /// for them is the one a running round left behind.
+    pub const QINST_RELEVANCE: &str = "qinst-relevance";
 }
 
 /// Whether a reading is an instrument's finished answer or a state the run
