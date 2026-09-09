@@ -136,3 +136,22 @@ sub-increment: `axeyum_ir::Value` currently derives `Copy`, but an array value
   scenarios, a memory-using symbolic-execution client, and eager-elimination
   blow-up measurement on the fetched QF_ABV corpus (to decide whether a lazy
   array procedure earns a future ADR).
+
+## Status correction (2026-09-09)
+
+The Decision and "Sub-increment 3 finish" text above treats a lazy array
+procedure as a hypothetical future increment. That is stale: lazy, CEGAR-based
+array routes now exist in `crates/axeyum-solver/src/abv.rs` —
+`check_qf_abv_lazy` (a CEGAR refinement of the eager elimination this ADR
+decided, adding read-over-write lemmas on demand instead of eagerly) and
+`check_qf_abv_lazy_row`, which additionally builds an on-demand read-over-write
+abstraction and CEGAR-refines it. Both are strictly additive over the eager
+route this ADR describes: `check_qf_abv_lazy_row` delegates to
+`check_qf_abv_lazy` verbatim before its own lazy-ROW path engages, so the
+verdict this ADR's eager procedure gives is unchanged where the lazy routes
+are not selected. This is not a correction to the *decision* (eager
+elimination as the QF_ABV default remains correct and undisputed) — only to
+the "not by a lazy array decision procedure (yet)" and "remain future ADRs"
+framing, which should not be cited as current. Whether/when a lazy route
+becomes a *default* dispatch path, and under what ADR, is tracked separately;
+this note only corrects "does not exist".

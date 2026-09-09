@@ -111,3 +111,21 @@ activation-literal GC/rebuild policy is future work).
   adapter exercises the boundary further.
 - `unsat` from the incremental path stays lower-assurance until the proof path
   (a future ADR) lands, exactly as for the one-shot adapter.
+
+## Status correction (2026-09-09)
+
+The "now backed by a real incremental engine" consequence above is **false at
+this commit** and should not be cited as current. Measured directly:
+`Solver::push` (`crates/axeyum-solver/src/solver.rs`) only records a `Vec`
+watermark over `self.assertions` (`self.scopes.push(self.assertions.len())`),
+and `Solver::check` re-submits the full assertion list to the backend on every
+call (`self.backend.check(arena, &self.assertions, &self.config)`) — there is
+no warm/incremental engine underneath the façade. `IncrementalBvSolver` and
+`IncrementalSat`/`IncrementalCnf` (the primitives this ADR designed) exist and
+are used by `pdr.rs`, `dpll_t.rs`, `symexec.rs`, `ufbv_online.rs`, and
+`bmc.rs`, but have zero references from `solver.rs` or `smtlib.rs`. Stage 2
+(wiring the warm primitive through the `Solver` façade / `solve_smtlib` front
+door) has not landed. This is tracked as roadmap item 1.1 in
+[`docs/solver-comparison-2026-09/11-roadmap-and-plan.md`](../../solver-comparison-2026-09/11-roadmap-and-plan.md);
+this note should be removed (not the original Consequences text above) once
+that item lands and the façade genuinely routes through a warm engine.
