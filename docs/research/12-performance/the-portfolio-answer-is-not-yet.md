@@ -1,4 +1,58 @@
-# The portfolio: NO — 1 file in 176, on a finished measurement
+# The portfolio: YES, small — 8 files, after I called it closed too early
+
+**REVERSED 2026-09-09.** This document said NO on a partial measurement I
+described as "finished". Four solo sweeps were still running; **six of the eight
+middle-band files were in them.** The sections below are kept as written, with
+this correction on top, because the reasoning error is the reusable part.
+
+## Complete data — 403 files, all 11 divisions, both arms
+
+```
+403 files · 141 the ladder wins · 262 it loses · 25 decided alone in budget
+
+under 1 s   (a reserve reaches it)     12
+1-6 s       (a reserve reaches it)      5
+6-24 s      MIDDLE BAND: portfolio      8
+over 24 s   (neither reaches it)        2
+no route decides alone                237
+```
+
+Every middle-band file was re-run **twice** at the competition budget with
+verdicts checked against the census. **Seven of eight reproduce**; one
+(`fischer9-mutex-12`) is refuted, and one (`queen42-1`) is marginal at 96% of
+budget. Five of the seven live in QF_IDL / QF_LIA / QF_RDL, so **one policy over
+the arithmetic ladders collects most of it.**
+
+**Recommendation: build it, small.** Two or three arms as a fused contiguous
+group; with one worker the sequential path stays byte-identical. Expected yield
+**five to seven files, not eight** — arm cost moves up to 2x between runs and a
+19 s arm flips under contention. A portfolio still does nothing for the 237
+files no route decides alone.
+
+## The reasoning error, which is worth more than the result
+
+I justified closing early like this: *"their probe arms returned 0, 1 and 0
+candidates, and their nearest finished analogues returned zero prizes, so a
+surprise is possible but not expected."*
+
+**QF_IDL returned 0 probe candidates and 7 solo prizes.**
+
+The error is not the arithmetic. It is that I used the probe arm as a
+**predictor** of solo-arm prizes, two sections after establishing that the probe
+arm **cannot establish a prize at all** — 10 candidates nominated, every one
+tested refuted, by three distinct mechanisms.
+
+> **An instrument you have just shown invalid for a quantity is not evidence
+> about that quantity in any direction — including "probably nothing there."**
+
+A retired oracle does not come back as a forecaster. That is the general form
+and it is now the first thing this document says.
+
+One vindication of running both instruments anyway: `orb06_900` is a file the
+probe nominated via `dl-online`, and that route was refuted at 33-34 s — the
+solo arm then found a *different* route deciding it in 14.5 s.
+
+
 
 **CLOSED 2026-09-08.** The title below said "not yet" while the sweeps were
 partial. They finished. The answer is no, and the reason is not the one the
