@@ -1,0 +1,28 @@
+file	division	class	sweep_verdict	sweep_ms	sweep_over_budget	confirm_verdict	confirm_ms	confirm_over_budget	declared
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LIA/20180326-Bromberger/more_slacked/CAV_2009_benchmarks/smt/30-vars/v30_problem_2__023.smt2.slack.smt2	QF_LIA	loss	unsolved	24306	yes	unsolved	24327	yes	sat
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LIA/2019-cmodelsdiff/stillLive/0006-still_live-11-1.smt2	QF_LIA	recovered	sat	2919	no	not-run			unknown
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LIA/2019-ezsmt/incrementalScheduling/182-incremental_scheduling-17280-0.smt2	QF_LIA	loss	unsolved	24134	yes	unsolved	24126	yes	unknown
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LIA/20210219-Dartagnan/ReachSafety-Loops/apache-get-tag-O0.smt2	QF_LIA	loss	unsolved	25086	yes	unsolved	25125	yes	unknown
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LIA/20210219-Dartagnan/ReachSafety-Loops/jm2006_variant-O0.smt2	QF_LIA	loss	unsolved	25050	yes	unsolved	25029	yes	unknown
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LIA/20220307-SMPT/BART-PT-020/RF-13.smt2	QF_LIA	recovered	sat	10030	no	not-run			sat
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LIA/20220307-SMPT/FamilyReunion-PT-L00400M0040C020P020G001/RC-07.smt2	QF_LIA	loss	unsolved	25345	yes	unsolved	21527	no	sat
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LIA/20220307-SMPT/RwMutex-PT-r0010w0500/RC-09.smt2	QF_LIA	loss	unsolved	25034	yes	unsolved	25020	yes	sat
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LIA/20220307-SMPT/RwMutex-PT-r0010w2000/RC-11.smt2	QF_LIA	loss	unsolved	25033	yes	unsolved	25020	yes	unsat
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LIA/20220307-SMPT/RwMutex-PT-r1000w0010/RC-15.smt2	QF_LIA	loss	unsolved	25140	yes	unsolved	25121	yes	sat
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LIA/CAV_2009_benchmarks/coef-size/smt/size-100/problem__006.smt2	QF_LIA	loss	unsolved	110	no	unsolved	105	no	unsat
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LIA/CAV_2009_benchmarks/smt/25-vars/problem_2__034.smt2	QF_LIA	loss	unsolved	24241	yes	unsolved	24120	yes	sat
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LIA/CAV_2009_benchmarks/smt/35-vars/problem_2__026.smt2	QF_LIA	loss	unsolved	24232	yes	unsolved	24220	yes	sat
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LIA/bofill-scheduling/SMT_random_LIA/ex13800_2600_100.smt2	QF_LIA	loss	unsolved	24334	yes	unsolved	24224	yes	unsat
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LIA/bofill-scheduling/SMT_random_LIA/ex20400_2600_100.smt2	QF_LIA	loss	unsolved	24239	yes	unsolved	24221	yes	sat
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LIA/bofill-scheduling/SMT_random_LIA/ex27000_2600_100.smt2	QF_LIA	loss	unsolved	24230	yes	unsolved	24140	yes	sat
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LIA/bofill-scheduling/SMT_random_LIA/ex8500_2600_100.smt2	QF_LIA	loss	unsolved	24227	yes	unsolved	24238	yes	unsat
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LIA/bofill-scheduling/SMT_real_LIA/ex5640_2400_100.smt2	QF_LIA	loss	unsolved	24229	yes	unsolved	24123	yes	sat
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LIA/bofill-scheduling/SMT_real_LIA/ex6960_2400_100.smt2	QF_LIA	flaky	unsolved	24229	yes	sat	20620	no	sat
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LIA/bofill-scheduling/SMT_real_LIA/ex8280_2400_100.smt2	QF_LIA	flaky	unsolved	24127	yes	sat	17317	no	sat
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LIA/bofill-scheduling/SMT_real_LIA/ex9600_2400_100.smt2	QF_LIA	recovered	sat	21424	no	not-run			sat
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LIA/convert/convert-jpg2gif-query-1423.smt2	QF_LIA	loss	unsolved	24161	yes	unsolved	24132	yes	sat
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LIA/mathsat/FISCHER10-13-fair.smt2	QF_LIA	loss	unsolved	25038	yes	unsolved	25029	yes	unsat
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LIA/nec-smt/med/checkpass_pwd/prp-0-19.smt2	QF_LIA	loss	unsolved	24135	yes	unsolved	24121	yes	sat
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LIA/nec-smt/med/checkpass_pwd/prp-8-22.smt2	QF_LIA	loss	unsolved	25057	yes	unsolved	25028	yes	sat
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LIA/nec-smt/small/print_file/prp-0-47.smt2	QF_LIA	loss	unsolved	25064	yes	unsolved	25024	yes	sat
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LIA/rings/ring_2exp8_4vars_1ite_unsat.smt2	QF_LIA	loss	unsolved	24151	yes	unsolved	24220	yes	unsat

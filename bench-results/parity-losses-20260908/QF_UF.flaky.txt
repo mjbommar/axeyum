@@ -1,0 +1,2 @@
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UF/QG-classification/qg6/iso_icl_nogen_sk009.smt2
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UF/QG-classification/qg7/iso_brn_nogen005.smt2
