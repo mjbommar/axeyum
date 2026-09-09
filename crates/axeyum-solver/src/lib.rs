@@ -996,6 +996,7 @@ macro_rules! full_exports {
         };
         #[doc(hidden)]
         pub use aufbv::check_with_arrays_and_functions;
+        pub use auto::{AbvOnlineReservePolicy, AbvOnlineReservePolicyGuard};
         #[doc(hidden)]
         pub use auto::{BoundedIntBlastCertificate, certify_bounded_int_blast};
         pub use auto::{

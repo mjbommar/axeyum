@@ -2601,6 +2601,53 @@ pub static REGISTRY: &[ConfigEntry] = &[
         note: "`finite_bv_domain_size` returns `None` (declining the finite-domain array-extensionality refuter) when `2^width > MAX_FINITE_ARRAY_EXT_READS`. Doc comment frames it as keeping the certificate 'small enough to be readable in Lean and cheap in dominance audits' -- an evidence-size rationale, not a search-cost one, though the effect is the same admission gate.",
     },
     ConfigEntry {
+        name: "ABV_ONLINE_LADDER_RESERVE_SHARE",
+        module: "crates/axeyum-solver/src/auto.rs",
+        value: "4",
+        unit: "divisor of the dispatcher's remaining deadline, held back for the array ladder",
+        protects: Protects::Completeness,
+        on_exceed: OnExceed::DeclineRoute,
+        signal: Signal::ToCaller,
+        guarded_by: "",
+        env_override: Some("AXEYUM_ABV_ONLINE_RESERVE"),
+        justification: dated(
+            "docs/research/12-performance/ladder-budget-discipline-2026-09-08.md",
+            "2026-09-08",
+            None,
+            // The measurement is "on four QF_ABV files `abv-online-cdclt` spent
+            // 24.009 s of a 24 s budget, declined, and `array-fast-path` then
+            // decided the file in 0.007-0.174 s". It rests on the online route
+            // still being the first thing an array query enters, on the array
+            // fast paths still being what runs after it, and on the online
+            // route still honouring the `timeout` it is handed -- change any of
+            // the three and the numbers stop describing this tree.
+            &[
+                sym("crates/axeyum-solver/src/auto.rs", "dispatch_abv_online"),
+                sym(
+                    "crates/axeyum-solver/src/auto.rs",
+                    "dispatch_array_fast_paths",
+                ),
+                sym(
+                    "crates/axeyum-solver/src/ufbv_online.rs",
+                    "check_qf_aufbv_online_cdclt",
+                ),
+            ],
+            // The basis names the route the reserve is FOR. If
+            // `dispatch_array_fast_paths` leaves auto.rs, this constant holds a
+            // quarter of every array query's clock back for a ladder with no
+            // rung left, and the reasoning above stops meaning anything --
+            // while a basis naming the constant or the doc would keep passing.
+            &[
+                live(
+                    "dispatch_array_fast_paths",
+                    "crates/axeyum-solver/src/auto.rs",
+                ),
+                doc("docs/research/12-performance/qf-abv-route-attribution-2026-09-08.md"),
+            ],
+        ),
+        note: "The slice of the budget held back from `abv-online-cdclt` -- the FIRST route every array query tries -- for the array ladder under it. Before this constant existed that route took `config.timeout` in FULL, so on any file it could not decide, `array-fast-path` ran only inside the harness watchdog's grace period (24 s spent above plus a fresh 24 s budget below is 48 s of a 24 s promise). Chosen against BOTH bounds the sweep gives, the method `UF_ARITH_LADDER_RESERVE_SHARE` paid four files to establish: 18 s left to the online route is above its slowest decision in the sweep (5.723 s, of 24 decisions), and 6 s to the ladder is twice its slowest decision (2.898 s) and 35x its median (168 ms). A route needing 99% of the clock is not recoverable by any reserve; none in this population does, unlike QF_UFLIA's `hash_uns_05_20`. The env override selects the whole policy (`off` restores the unreserved budget), not just this divisor.",
+    },
+    ConfigEntry {
         name: "DL_EXTENDED_FALLBACK_RESERVE",
         module: "crates/axeyum-solver/src/auto.rs",
         value: "Duration::from_secs(3)",
@@ -2614,6 +2661,19 @@ pub static REGISTRY: &[ConfigEntry] = &[
         note: "`min(t/8, 3s)` withheld from the extended difference-logic probe so later routes keep budget. Unlike its sibling below it cites no measurement at all.",
     },
     ConfigEntry {
+        name: "DL_EXTENDED_LADDER_RESERVE_SHARE",
+        module: "crates/axeyum-solver/src/auto.rs",
+        value: "8",
+        unit: "divisor of the caller's deadline, held back for the routes below the probe",
+        protects: Protects::Completeness,
+        on_exceed: OnExceed::Truncate,
+        signal: Signal::NotApplicable,
+        guarded_by: "",
+        env_override: None,
+        justification: undated("doc comment"),
+        note: "The `/ 8` half of `min(t/8, 3s)`, given a name on 2026-09-08 when the four hand-rolled copies of this arithmetic were replaced by one `LadderSlice` policy. A divisor written as a literal at a call site cannot be found by name, and finding the four copies is what cost this lane's predecessors a division-sized measurement each. The VALUE is unchanged and, like its `DL_EXTENDED_FALLBACK_RESERVE` sibling, cites no measurement at all.",
+    },
+    ConfigEntry {
         name: "DL_FALLBACK_RESERVE",
         module: "crates/axeyum-solver/src/auto.rs",
         value: "Duration::from_secs(6)",
@@ -2625,6 +2685,19 @@ pub static REGISTRY: &[ConfigEntry] = &[
         env_override: None,
         justification: undated("doc comment"),
         note: "`min(t/4, 6s)` withheld from the difference-logic probe. The doc names a real regression (`QF_IDL/sal/lpsat/lpsat-goal-18`, decided unsat by lia-dpll in 4.2 s, turned `unknown` by an unreserved probe) but gives it no date.",
+    },
+    ConfigEntry {
+        name: "DL_LADDER_RESERVE_SHARE",
+        module: "crates/axeyum-solver/src/auto.rs",
+        value: "4",
+        unit: "divisor of the caller's deadline, held back for the routes below the probe",
+        protects: Protects::Completeness,
+        on_exceed: OnExceed::Truncate,
+        signal: Signal::NotApplicable,
+        guarded_by: "",
+        env_override: None,
+        justification: undated("doc comment"),
+        note: "The `/ 4` half of `min(t/4, 6s)`, named on 2026-09-08 alongside `ABV_ONLINE_LADDER_RESERVE_SHARE` and `UF_ARITH_LADDER_RESERVE_SHARE` -- three copies of the same quarter, in three ladders, none of which could be found from the others by name. The regression the reserve prevents is recorded on `DL_FALLBACK_RESERVE` (`QF_IDL/sal/lpsat/lpsat-goal-18`, decided unsat by lia-dpll in 4.2 s, turned `unknown` by an unreserved probe) and is undated there; naming this divisor does not date it. FINDING, measured 2026-09-08 and NOT acted on: on the first 50 QF_IDL files of the committed parity list, `dl-online` spends 421.9 s without deciding and the routes its reserve pays for decide ZERO of them -- the reserve's justification rests entirely on one file outside that sample.",
     },
     ConfigEntry {
         name: "INT_BLAST_DENSE_MAX_WIDTH",
@@ -2947,6 +3020,47 @@ pub static REGISTRY: &[ConfigEntry] = &[
         note: "Records a `ResourceLimit` decline through the route recorder, so the decline is traceable even though the verdict is unaffected.",
     },
     ConfigEntry {
+        name: "MBQI_FIRST_REFUSAL_SHARE",
+        module: "crates/axeyum-solver/src/auto.rs",
+        value: "8",
+        unit: "divisor of the remaining deadline granted to the route",
+        protects: Protects::Time,
+        on_exceed: OnExceed::Truncate,
+        signal: Signal::NotApplicable,
+        guarded_by: "",
+        env_override: None,
+        justification: undated("doc comment"),
+        note: "The first-refusal MBQI rung's eighth of the remaining budget. A FRACTION, not a reserve: the route takes 1/8 and the rungs below keep 7/8, which is the opposite division from the `*_LADDER_RESERVE_SHARE` entries and the distinction the 2026-09-08 QF_UFLIA measurement paid four files to learn. Named on 2026-09-08; value unchanged and unmeasured.",
+    },
+    ConfigEntry {
+        name: "MIN_LADDER_SLICE",
+        module: "crates/axeyum-solver/src/auto.rs",
+        value: "Duration::from_millis(1)",
+        unit: "milliseconds, floor on any route's slice of a ladder's clock",
+        protects: Protects::Time,
+        on_exceed: OnExceed::Truncate,
+        signal: Signal::NotApplicable,
+        guarded_by: "",
+        env_override: None,
+        justification: dated(
+            "docs/research/12-performance/ladder-budget-discipline-2026-09-08.md",
+            "2026-09-08",
+            None,
+            &[
+                sym("crates/axeyum-solver/src/auto.rs", "int_real_relax_budget"),
+                sym(
+                    "crates/axeyum-solver/src/auto.rs",
+                    "pre_lia_uf_probe_budget",
+                ),
+            ],
+            &[
+                live("int_real_relax_budget", "crates/axeyum-solver/src/auto.rs"),
+                doc("docs/research/12-performance/ladder-budget-discipline-2026-09-08.md"),
+            ],
+        ),
+        note: "CLOSES A FINDING recorded against `INT_REAL_RELAX_BUDGET_SHARE`: a route asked for one sixth of the clock used to be handed ALL of it whenever `timeout / 6` rounded to zero, because the helper returned the caller's config unchanged. `pre_lia_uf_probe_budget` had the identical inversion at `timeout / 10`. Both now clamp here instead, so the sharing policy cannot invert at the small-budget end where starvation matters most; the behaviour differs from the old code only under 6 ms and 10 ms respectively. A millisecond rather than zero because a route handed no clock at all is a route DELETED, which is a different policy from a route shared, and this constant is not the place to choose it.",
+    },
+    ConfigEntry {
         name: "MIN_QUANTIFIED_CONJUNCTS",
         module: "crates/axeyum-solver/src/auto.rs",
         value: "32",
@@ -2960,6 +3074,45 @@ pub static REGISTRY: &[ConfigEntry] = &[
         note: "A FLOOR, not a ceiling: the ground-core accelerator fires only ABOVE it, so it gates where the accelerator's cost is repaid. The only lower-bound gate in this registry.",
     },
     ConfigEntry {
+        name: "PRE_LIA_UF_PROBE_CEILING",
+        module: "crates/axeyum-solver/src/auto.rs",
+        value: "Duration::from_millis(250)",
+        unit: "milliseconds, ceiling on the slice granted to the route",
+        protects: Protects::Time,
+        on_exceed: OnExceed::Truncate,
+        signal: Signal::NotApplicable,
+        guarded_by: "",
+        env_override: None,
+        justification: undated("doc comment"),
+        note: "The `250 ms` half of `min(t/10, 250ms)` for the pre-LIA UF probe: a quick screen whose usefulness does not scale with the clock, so its slice is capped as well as divided. Named on 2026-09-08 when the budget arithmetic moved into one policy; value unchanged and unmeasured.",
+    },
+    ConfigEntry {
+        name: "PRE_LIA_UF_PROBE_SHARE",
+        module: "crates/axeyum-solver/src/auto.rs",
+        value: "10",
+        unit: "divisor of the caller's deadline granted to the route",
+        protects: Protects::Time,
+        on_exceed: OnExceed::Truncate,
+        signal: Signal::NotApplicable,
+        guarded_by: "",
+        env_override: None,
+        justification: undated("doc comment"),
+        note: "The `/ 10` half of `min(t/10, 250ms)`. Its helper carried the same inversion as `INT_REAL_RELAX_BUDGET_SHARE` -- a tenth that rounded to zero became the FULL timeout -- which `MIN_LADDER_SLICE` now closes. That defect was found by looking for a second instance of a registered FINDING, which is the argument for writing findings down rather than fixing one site quietly.",
+    },
+    ConfigEntry {
+        name: "QINST_EGRAPH_RETRY_SHARE",
+        module: "crates/axeyum-solver/src/auto.rs",
+        value: "2",
+        unit: "divisor of the remaining deadline granted to the route",
+        protects: Protects::Time,
+        on_exceed: OnExceed::Truncate,
+        signal: Signal::NotApplicable,
+        guarded_by: "",
+        env_override: None,
+        justification: undated("doc comment"),
+        note: "Half the remaining budget for the incremental e-graph quantifier retry, so the callers' later SAT-only stages are not starved. Was a bare `timeout / 2` inside the dispatch body until 2026-09-08; the doc comment beside it already stated the sharing INTENT, which is exactly the kind of policy a name-keyed registry cannot see while it is written as a literal.",
+    },
+    ConfigEntry {
         name: "TIMED_ARRAY_REFUTER_SLICE",
         module: "crates/axeyum-solver/src/auto.rs",
         value: "Duration::from_millis(250)",
@@ -2971,6 +3124,19 @@ pub static REGISTRY: &[ConfigEntry] = &[
         env_override: None,
         justification: undated("doc comment"),
         note: "Caps the fast-path array-refuter chain. One line of doc, no measurement.",
+    },
+    ConfigEntry {
+        name: "UFBV_ONLINE_PROBE_SHARE",
+        module: "crates/axeyum-solver/src/auto.rs",
+        value: "2",
+        unit: "divisor of the caller's deadline granted to the route",
+        protects: Protects::Time,
+        on_exceed: OnExceed::Truncate,
+        signal: Signal::NotApplicable,
+        guarded_by: "",
+        env_override: None,
+        justification: undated("doc comment"),
+        note: "The declared-sort QF_UFBV online probe's half of the budget. Deliberately left a HALF and not converted to a reserve: the eager fallback below it computes a FRESH deadline at entry, so this is a split across two clocks rather than a share of one, and the 2026-09-08 QF_UFLIA measurement that condemned a half-budget split was about two routes sharing ONE clock. Whether it is wrong here is unmeasured. `UF_ARITH_LADDER_RESERVE_SHARE`'s doc names this constant as the precedent its own first version copied and the measurement then rejected.",
     },
     ConfigEntry {
         name: "UF_ARITH_LADDER_RESERVE_SHARE",
